@@ -144,7 +144,7 @@ svn_error_t *svn_fs_base__set_txn_base(svn_fs_t *fs,
                                        apr_pool_t *pool);
 
 
-/* Set a PATH to VALUE for the SVN_FS_PROP_TXN_MERGEINFO property (a
+/* Set a PATH to VALUE for the SVN_FS__PROP_TXN_MERGEINFO property (a
    serialized hash table) on transaction TXN_NAME's proplist in FS as
    part of TRAIL.  Use POOL for any necessary allocations.
 

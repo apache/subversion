@@ -26,7 +26,7 @@
 #include <apr_atomic.h>
 
 #include "svn_error.h"
-#include "private/svn_compat.h"
+#include "private/svn_dep_compat.h"
 
 #ifdef __cplusplus
 extern "C" {

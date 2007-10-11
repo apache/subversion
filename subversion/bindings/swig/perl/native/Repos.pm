@@ -65,8 +65,7 @@ be loaded by Subversion 1.0.x.
 
 According to svn_repos.h, the C<$cancel_func> is a function that is called
 periodically and given C<$cancel_baton> as a parameter to determine whether the
-client wishes to cancel the dump.  I have not tested this functionality, but
-you must supply C<undef> at the very least.
+client wishes to cancel the dump; you must supply C<undef> at the very least.
 
 Example:
 

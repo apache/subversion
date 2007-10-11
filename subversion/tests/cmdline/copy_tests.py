@@ -3249,33 +3249,41 @@ def copy_multiple_repo_wc(sbox):
 
   chi_url = sbox.repo_url + '/A/D/H/chi'
   psi_url = sbox.repo_url + '/A/D/H/psi'
-  omega_url = sbox.repo_url + '/A/D/H/omega'
+  omega_with_space_url = sbox.repo_url + '/A/D/H/omega 2'
   E_url = sbox.repo_url + '/A/B/E'
   C_path = os.path.join(wc_dir, 'A', 'C')
+
+  # We need this in order to check that we don't end up with URI-encoded
+  # paths in the WC (issue #2955)
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv', '-m', 'log_msg',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     sbox.repo_url + '/A/D/H/omega',
+                                     omega_with_space_url)
 
   # Perform the copy and check the output
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
-                                     chi_url, psi_url, omega_url, E_url,
-                                     C_path)
+                                     chi_url, psi_url, omega_with_space_url,
+                                     E_url, C_path)
 
   # Commit the changes, and verify the content actually got copied
   expected_output = svntest.wc.State(wc_dir, {
     'A/C/chi'     : Item(verb='Adding'),
     'A/C/psi'     : Item(verb='Adding'),
-    'A/C/omega'   : Item(verb='Adding'),
+    'A/C/omega 2' : Item(verb='Adding'),
     'A/C/E'       : Item(verb='Adding'),
     })
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'A/C/chi'     : Item(status='  ', wc_rev=2),
-    'A/C/psi'     : Item(status='  ', wc_rev=2),
-    'A/C/omega'   : Item(status='  ', wc_rev=2),
-    'A/C/E'       : Item(status='  ', wc_rev=2),
-    'A/C/E/alpha' : Item(status='  ', wc_rev=2),
-    'A/C/E/beta'  : Item(status='  ', wc_rev=2),
+    'A/C/chi'     : Item(status='  ', wc_rev=3),
+    'A/C/psi'     : Item(status='  ', wc_rev=3),
+    'A/C/omega 2' : Item(status='  ', wc_rev=3),
+    'A/C/E'       : Item(status='  ', wc_rev=3),
+    'A/C/E/alpha' : Item(status='  ', wc_rev=3),
+    'A/C/E/beta'  : Item(status='  ', wc_rev=3),
     })
 
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -3825,16 +3833,14 @@ def copy_make_parents_repo_repo(sbox):
 def URI_encoded_repos_to_wc(sbox):
   "copy a URL that needs URI encoding to WC"
 
-  # Test marked as XFail until issue # 2894 is fixed.
-
   sbox.build()
   wc_dir = sbox.wc_dir
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_disk = svntest.main.greek_state.copy()
 
   def copy_URL_to_WC(URL_rel_path, dest_name, rev):
-    expected = svntest.verify.UnorderedOutput(
-      ["A    " + os.path.join(wc_dir, dest_name, "B") + "\n",
+    lines = [
+       "A    " + os.path.join(wc_dir, dest_name, "B") + "\n",
        "A    " + os.path.join(wc_dir, dest_name, "B", "lambda") + "\n",
        "A    " + os.path.join(wc_dir, dest_name, "B", "E") + "\n",
        "A    " + os.path.join(wc_dir, dest_name, "B", "E", "alpha") + "\n",
@@ -3853,7 +3859,11 @@ def URI_encoded_repos_to_wc(sbox):
        "A    " + os.path.join(wc_dir, dest_name, "D", "H", "omega") + "\n",
        "A    " + os.path.join(wc_dir, dest_name, "D", "H", "psi") + "\n",
        "Checked out revision " + str(rev - 1) + ".\n",
-       "A         " + os.path.join(wc_dir, dest_name) + "\n"])
+       "A         " + os.path.join(wc_dir, dest_name) + "\n"]
+    if rev == 3:
+      lines.append(" U   " + os.path.join(wc_dir, dest_name) + "\n")
+
+    expected = svntest.verify.UnorderedOutput(lines)
     expected_status.add({
       dest_name + "/B"         : Item(status='  ', wc_rev=rev),
       dest_name + "/B/lambda"  : Item(status='  ', wc_rev=rev),
@@ -3909,7 +3919,8 @@ def URI_encoded_repos_to_wc(sbox):
                                        os.path.join(wc_dir,
                                                     dest_name))
 
-    expected_output = wc.State(wc_dir, {dest_name : Item(verb='Adding')})
+    expected_output = svntest.wc.State(wc_dir,
+                                       {dest_name : Item(verb='Adding')})
     svntest.actions.run_and_verify_commit(wc_dir,
                                           expected_output,
                                           expected_status,
@@ -3993,7 +4004,7 @@ test_list = [ None,
               copy_make_parents_repo_wc,
               copy_make_parents_wc_repo,
               copy_make_parents_repo_repo,
-              XFail(URI_encoded_repos_to_wc),
+              URI_encoded_repos_to_wc,
              ]
 
 if __name__ == '__main__':

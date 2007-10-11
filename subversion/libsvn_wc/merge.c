@@ -416,8 +416,8 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
               cdesc.action = svn_wc_conflict_action_edit;
               cdesc.reason = svn_wc_conflict_reason_edited;
               cdesc.base_file = left;
-              cdesc.repos_file = right;
-              cdesc.user_file = tmp_target;
+              cdesc.their_file = right;
+              cdesc.my_file = tmp_target;
               cdesc.merged_file = result_target;
 
               SVN_ERR(conflict_func(&result, &cdesc, conflict_baton, pool));
@@ -436,7 +436,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                       contains_conflicts = FALSE;
                       goto merge_complete;
                     }
-                  case svn_wc_conflict_result_choose_repos:
+                  case svn_wc_conflict_result_choose_theirs:
                     {
                       SVN_ERR(svn_wc__loggy_copy
                               (log_accum, NULL, adm_access,
@@ -447,7 +447,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                       contains_conflicts = FALSE;
                       goto merge_complete;
                     }
-                  case svn_wc_conflict_result_choose_user:
+                  case svn_wc_conflict_result_choose_mine:
                     {
                       /* Do nothing to merge_target, let it live untouched! */
                       *merge_outcome = svn_wc_merge_merged;
@@ -648,8 +648,8 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
           cdesc.action = svn_wc_conflict_action_edit;
           cdesc.reason = svn_wc_conflict_reason_edited;
           cdesc.base_file = left;
-          cdesc.repos_file = right;
-          cdesc.user_file = tmp_target;
+          cdesc.their_file = right;
+          cdesc.my_file = tmp_target;
           cdesc.merged_file = NULL;     /* notice there is NO merged file! */
 
           SVN_ERR(conflict_func(&result, &cdesc, conflict_baton, pool));
@@ -669,7 +669,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                   contains_conflicts = FALSE;
                   goto merge_complete;
                 }
-              case svn_wc_conflict_result_choose_repos:
+              case svn_wc_conflict_result_choose_theirs:
                 {
                   SVN_ERR(svn_wc__loggy_copy
                           (log_accum, NULL, adm_access,
@@ -685,7 +685,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                    the response claims to have already resolved the
                    problem.*/
               case svn_wc_conflict_result_resolved:
-              case svn_wc_conflict_result_choose_user:
+              case svn_wc_conflict_result_choose_mine:
                 {
                   *merge_outcome = svn_wc_merge_merged;
                   contains_conflicts = FALSE;

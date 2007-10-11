@@ -50,7 +50,6 @@
 #include "svn_io.h"
 #include "svn_path.h"
 #include "svn_utf.h"
-#include "private/svn_client_private.h"
 #include "svn_private_config.h"
 #include "../include/org_tigris_subversion_javahl_Revision.h"
 #include "../include/org_tigris_subversion_javahl_NodeKind.h"
@@ -484,7 +483,8 @@ void SVNClient::cleanup(const char *path)
     SVN_JNI_ERR(svn_client_cleanup(intPath.c_str(), ctx, requestPool.pool()),);
 }
 
-void SVNClient::resolved(const char *path, svn_depth_t depth)
+void SVNClient::resolved(const char *path, svn_depth_t depth,
+                         svn_wc_conflict_result_t result)
 {
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -494,7 +494,7 @@ void SVNClient::resolved(const char *path, svn_depth_t depth)
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_resolved2(intPath.c_str(), depth, svn_accept_none,
+    SVN_JNI_ERR(svn_client_resolved2(intPath.c_str(), depth, result,
                                      ctx, requestPool.pool()), );
 }
 

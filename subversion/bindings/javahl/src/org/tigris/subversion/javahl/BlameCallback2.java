@@ -30,7 +30,7 @@ public interface BlameCallback2
 {
     /**
      * the method will be called for every line in a file.
-     * @param changed           the date of the last change.
+     * @param date              the date of the last change.
      * @param revision          the revision of the last change.
      * @param author            the author of the last change.
      * @param merged_date       the date of the last merged change.

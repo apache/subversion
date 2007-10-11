@@ -294,11 +294,5 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
 
   SVN_ERR(err);
 
-  if (loc_ctx->status_code == 404)
-    {
-      return svn_error_create(SVN_ERR_FS_NOT_FOUND, NULL,
-                              _("File doesn't exist on HEAD"));
-    }
-
   return SVN_NO_ERROR;
 }

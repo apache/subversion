@@ -320,6 +320,20 @@ svn_ra_local__reparent(svn_ra_session_t *session,
 }
 
 static svn_error_t *
+svn_ra_local__get_session_url(svn_ra_session_t *session,
+                              const char **url,
+                              apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *baton = session->priv;
+  const char *fs_path = apr_pstrmemdup(pool, baton->fs_path->data, 
+                                       baton->fs_path->len);
+  *url = svn_path_join(baton->repos_url,
+                       svn_path_uri_encode(fs_path + 1, pool),
+                       pool);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 svn_ra_local__get_latest_revnum(svn_ra_session_t *session,
                                 svn_revnum_t *latest_revnum,
                                 apr_pool_t *pool)
@@ -1395,6 +1409,7 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__get_schemes,
   svn_ra_local__open,
   svn_ra_local__reparent,
+  svn_ra_local__get_session_url,
   svn_ra_local__get_latest_revnum,
   svn_ra_local__get_dated_revision,
   svn_ra_local__change_rev_prop,

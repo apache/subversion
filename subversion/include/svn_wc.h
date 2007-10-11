@@ -475,6 +475,30 @@ void svn_wc_edited_externals(apr_hash_t **externals_old,
                              svn_wc_traversal_info_t *traversal_info);
 
 
+/** Set @a *depths to a hash table mapping <tt>const char *</tt>
+ * directory names (directories traversed by @a traversal_info) to
+ * <tt>const char *</tt> values (the depths of those directories, as
+ * converted by svn_depth_to_word()).
+ *
+ * @a traversal_info is obtained from svn_wc_init_traversal_info(), but is
+ * only useful after it has been passed through another function, such
+ * as svn_wc_crawl_revisions(), svn_wc_get_update_editor(),
+ * svn_wc_get_switch_editor(), etc.
+ *
+ * The dir names are full paths -- that is, anchor plus target, not target
+ * alone.  The values are not allocated, they are static constant strings.
+ * Although the values are never NULL, not all directories traversed
+ * are necessarily listed.  For example, directories which did not
+ * have an svn:externals property set or modified are not included.
+ *
+ * The hashes and keys have the same lifetime as @a traversal_info.
+ *
+ * @since New in 1.5.
+ */
+void svn_wc_traversed_depths(apr_hash_t **depths,
+                             svn_wc_traversal_info_t *traversal_info);
+
+
 /** One external item.  This usually represents one line from an
  * svn:externals description but with the path and URL
  * canonicalized.
@@ -738,6 +762,10 @@ typedef enum svn_wc_notify_action_t
 
   /** Failed to update a path's changelist association. @since New in 1.5. */
   svn_wc_notify_changelist_failed,
+
+  /** Warn user that a path has moved from one changelist to another.
+      @since New in 1.5. */
+  svn_wc_notify_changelist_moved,
 
   /** A merge operation (to path) has begun.  See @c merge_range in
       @c svn_wc_notify_t.  @since New in 1.5   */
@@ -1011,8 +1039,8 @@ typedef struct svn_wc_conflict_description_t
    * they default to NULL.) */
 
   const char *base_file;     /* common ancestor of the two files being merged */
-  const char *repos_file;    /* repository's version of the file */
-  const char *user_file;     /* user's locally-edited version of the file */
+  const char *their_file;    /* their version of the file */
+  const char *my_file;       /* my locally-edited version of the file */
   const char *merged_file;   /* merged version of file; has conflict markers */
 
 } svn_wc_conflict_description_t;
@@ -1040,8 +1068,8 @@ typedef enum svn_wc_conflict_result_t
      "installing" the chosen file as the final version of the file.*/
 
   svn_wc_conflict_result_choose_base,   /* user chooses the base file */
-  svn_wc_conflict_result_choose_repos,  /* user chooses the repository file */
-  svn_wc_conflict_result_choose_user,   /* user chooses own version of file */
+  svn_wc_conflict_result_choose_theirs, /* user chooses their file */
+  svn_wc_conflict_result_choose_mine,   /* user chooses own version of file */
   svn_wc_conflict_result_choose_merged  /* user chooses the merged-file
                                            (which she may have
                                            manually edited) */
@@ -2666,15 +2694,12 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  * if any); if @c svn_depth_infinity, resolve @a path and every
  * conflicted file or directory anywhere beneath it.
  *
- * @a accept_ is the argument used to facilitate automatic conflict resolution.
- * If @a accept_ is svn_accept_left, the contents of the conflicted file will
- * be replaced with the prestine contents of the pre-modification base file
- * contents.  If @a accept_ is svn_accept_right, the contents of the conflicted
- * file will be replaced with the post-conflict base file contents.  If @a
- * accept_ is svn_accept_working, the contents of the conflicted file will be
- * the content of the pre-conflict working copy file.  If @a accept_ is
- * svn_accept_default, conflict resolution will be handled just like before
- * automatic conflict resolution was availble.
+ * If @a conflict_result is svn_wc_conflict_result_choose_base, resolve the
+ * conflict with the old file contents; if
+ * svn_wc_conflict_result_choose_user, use the original working contents;
+ * if svn_wc_conflict_result_choose_theirs, the new contents; and if
+ * svn_wc_conflict_result_choose_merged, don't change the contents at all,
+ * just remove the conflict status (i.e. pre-1.5 behavior).
  *
  * @a adm_access is an access baton, with a write lock, for @a path.
  *
@@ -2704,7 +2729,7 @@ svn_error_t *svn_wc_resolved_conflict3(const char *path,
                                        svn_boolean_t resolve_text,
                                        svn_boolean_t resolve_props,
                                        svn_depth_t depth,
-                                       svn_accept_t accept_,
+                                       svn_wc_conflict_result_t conflict_result,
                                        svn_wc_notify_func2_t notify_func,
                                        void *notify_baton,
                                        svn_cancel_func_t cancel_func,
@@ -3204,6 +3229,12 @@ svn_error_t *svn_wc_get_update_editor(svn_revnum_t *target_revision,
  * If @a cancel_func is non-NULL, it will be called with @a cancel_baton as
  * the switch progresses to determine if it should continue.
  *
+ * If @a conflict_func is non-NULL, then invoke it with @a
+ * conflict_baton whenever a conflict is encountered, giving the
+ * callback a chance to resolve the conflict before the editor takes
+ * more drastic measures (such as marking a file conflicted, or
+ * bailing out of the switch).
+ *
  * If @a diff3_cmd is non-NULL, then use it as the diff3 command for
  * any merging; otherwise, use the built-in merge code.
  *
@@ -3241,6 +3272,8 @@ svn_error_t *svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                                        void *notify_baton,
                                        svn_cancel_func_t cancel_func,
                                        void *cancel_baton,
+                                       svn_wc_conflict_resolver_func_t conflict_func,
+                                       void *conflict_baton,
                                        const char *diff3_cmd,
                                        apr_array_header_t *preserved_exts,
                                        const svn_delta_editor_t **editor,
@@ -3251,9 +3284,9 @@ svn_error_t *svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
 /**
  * Similar to svn_wc_get_switch_editor3() but with the
  * @a allow_unver_obstructions parameter always set to false,
- * @a preserved_exts set to NULL, and @a depth set according to @a
- * recurse: if @a recurse is true, pass @c svn_depth_infinity, if
- * false, pass @c svn_depth_files.
+ * @a preserved_exts set to NULL, @a conflict_func and baton set to NULL,
+ * and @a depth set according to @a recurse: if @a recurse is true, pass @c
+ * svn_depth_infinity, if false, pass @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -4368,6 +4401,10 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
  * For each path in @a paths, set its entry's 'changelist' attribute
  * to @a changelist.  (If @a changelist is NULL, then path is no
  * longer a member of any changelist).
+ *
+ * NOTE:  for now, directories are NOT allowed to be associated with
+ * changelists;  there is confusion about whether they should/do
+ * behave as depth-0 or depth-infinity objects.
  *
  * If @a matching_changelist is not NULL, then enforce that each
  * path's existing entry->changelist field matches @a

@@ -1289,6 +1289,20 @@ def retrieve_revprops(sbox):
     args=['-r1', '--with-revprop', custom_name])
 
 
+def log_xml_with_bad_data(sbox):
+  "log --xml escapes non-utf8 data (issue #2866)"
+  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
+                                               'log_tests_data',
+                                               'xml-invalid-chars.dump'))
+  r0_props = {
+    'svn:date' : '',
+    'svn:log'  : 'After the colon are a space, 3 bad chars, '
+               + '2 good chars, and a period: '
+               + '?\\021?\\022?\\017\t\n.' }
+  svntest.actions.run_and_verify_log_xml(
+    expected_revprops=(r0_props,), args=[sbox.repo_url])
+
+
 ########################################################################
 # Run the tests
 
@@ -1319,6 +1333,7 @@ test_list = [ None,
               XFail(log_changes_list),
               only_one_wc_path,
               retrieve_revprops,
+              log_xml_with_bad_data,
              ]
 
 if __name__ == '__main__':

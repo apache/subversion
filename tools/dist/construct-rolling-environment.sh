@@ -1,14 +1,21 @@
 #!/bin/sh
 set -e
 
-AUTOCONF=autoconf-2.59
-LIBTOOL=libtool-1.5.22
-SWIG=swig-1.3.25
-APR=apr-0.9.12
-APR_UTIL=apr-util-0.9.12
-HTTPD=httpd-2.0.58
-NEON=neon-0.25.5
+AUTOCONF=autoconf-2.61
+LIBTOOL=libtool-1.5.24
+SWIG=swig-1.3.31
+
+APR=apr-1.2.11
+APR_UTIL=apr-util-1.2.10
+NEON=neon-0.27.2
 ZLIB=zlib-1.2.3
+
+HTTPD=httpd-2.2.6
+HTTPD_OOPS=-r2
+APR_ICONV=apr-iconv-1.2.0
+APR_ICONV_OOPS=-r2
+
+WIN32_APR_VIA_HTTPD=1
 
 LOCATION=${LOCATION-US}
 
@@ -93,7 +100,13 @@ create_prefix() {
 create_deps() {
     wget -nc $APACHE_MIRROR/apr/$APR.tar.bz2
     wget -nc $APACHE_MIRROR/apr/$APR_UTIL.tar.bz2
-    wget -nc $APACHE_MIRROR/httpd/$HTTPD-win32-src.zip
+    if [ -n "$WIN32_APR_VIA_HTTPD" ]; then
+      wget -nc $APACHE_MIRROR/httpd/$HTTPD-win32-src$HTTPD_OOPS.zip
+    else
+      wget -nc $APACHE_MIRROR/apr/$APR-win32-src.zip
+      wget -nc $APACHE_MIRROR/apr/$APR_UTIL-win32-src.zip
+      wget -nc $APACHE_MIRROR/apr/$APR_ICONV-win32-src$APR_ICONV_OOPS.zip
+    fi
     wget -nc http://webdav.org/neon/$NEON.tar.gz
     wget -nc http://www.zlib.net/$ZLIB.tar.bz2
 
@@ -115,11 +128,20 @@ create_deps() {
     tar jxvf $TEMPDIR/$ZLIB.tar.bz2
     mv $NEON neon
     mv $ZLIB zlib
-    unzip $TEMPDIR/$HTTPD-win32-src.zip
-    for i in apr apr-util apr-iconv; do
-      mv $HTTPD/srclib/$i .
-    done
-    rm -rf $HTTPD
+    if [ -n "$WIN32_APR_VIA_HTTPD" ]; then
+      unzip $TEMPDIR/$HTTPD-win32-src$HTTPD_OOPS.zip
+      for i in apr apr-util apr-iconv; do
+        mv $HTTPD/srclib/$i .
+      done
+      rm -rf $HTTPD
+    else
+      unzip $TEMPDIR/$APR-win32-src.zip
+      unzip $TEMPDIR/$APR_UTIL-win32-src.zip
+      unzip $TEMPDIR/$APR_ICONV-win32-src$APR_ICONV_OOPS.zip
+      mv $APR apr
+      mv $APR_UTIL apr-util
+      mv $APR_ICONV apr-iconv
+    fi
     cd $TEMPDIR
 }
 

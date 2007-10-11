@@ -28,7 +28,9 @@
 #include <ctype.h>
 #include <assert.h>
 
+#include <apr_env.h>
 #include <apr_errno.h>
+#include <apr_file_info.h>
 #include <apr_strings.h>
 #include <apr_tables.h>
 #include <apr_general.h>
@@ -134,7 +136,7 @@ find_editor_binary(const char **editor,
   else
     return svn_error_create
       (SVN_ERR_CL_NO_EXTERNAL_EDITOR, NULL,
-       _("None of the environment variables SVN_EDITOR, VISUAL or EDITOR is "
+       _("None of the environment variables SVN_EDITOR, VISUAL or EDITOR are "
          "set, and no 'editor-cmd' run-time configuration option was found"));
 
   *editor = e;
@@ -175,7 +177,7 @@ svn_cl__edit_file_externally(const char *path,
     return svn_error_wrap_apr
       (apr_err, _("Can't change working directory to '%s'"), base_dir);
 
-  cmd = apr_psprintf(pool, "%s \'%s\'", editor, file_name);
+  cmd = apr_psprintf(pool, "%s %s", editor, file_name);
   sys_err = system(cmd);
 
   apr_err = apr_filepath_set(old_cwd, pool);
@@ -193,7 +195,60 @@ svn_cl__edit_file_externally(const char *path,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_cl__merge_file_externally(const char *base_path,
+                              const char *their_path,
+                              const char *my_path,
+                              const char *merged_path,
+                              apr_hash_t *config,
+                              apr_pool_t *pool)
+{
+  char *merge_tool;
+  /* Error if there is no editor specified */
+  if (apr_env_get(&merge_tool, "SVN_MERGE", pool) != APR_SUCCESS)
+    {
+      struct svn_config_t *cfg;
+      merge_tool = NULL;
+      cfg = config ? apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG,
+                                  APR_HASH_KEY_STRING) : NULL;
+      /* apr_env_get wants char **, this wants const char ** */
+      svn_config_get(cfg, (const char **)&merge_tool,
+                     SVN_CONFIG_SECTION_HELPERS,
+                     SVN_CONFIG_OPTION_MERGE_TOOL_CMD, NULL);
+    }
 
+  if (merge_tool)
+    {
+      const char *c;
+
+      for (c = merge_tool; *c; c++)
+        if (!svn_ctype_isspace(*c))
+          break;
+
+      if (! *c)
+        return svn_error_create
+          (SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL, NULL,
+           _("The SVN_MERGE environment variable is empty or "
+             "consists solely of whitespace. Expected a shell command.\n"));
+    }
+  else
+      return svn_error_create
+        (SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL, NULL,
+         _("The environment variable SVN_MERGE and the merge-tool-cmd run-time "
+           "configuration option were not set.\n"));
+
+  {
+    const char *arguments[] = { merge_tool, base_path, their_path,
+                                my_path, merged_path, NULL};
+    char *cwd;
+    apr_status_t status = apr_filepath_get(&cwd, APR_FILEPATH_NATIVE, pool);
+    if (status != 0)
+      return svn_error_wrap_apr(status, NULL);
+    return svn_io_run_cmd(svn_path_internal_style(cwd, pool), merge_tool,
+                          arguments, NULL, NULL, TRUE, NULL, NULL, NULL,
+                          pool);
+  }
+}
 
 svn_error_t *
 svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
@@ -753,7 +808,7 @@ svn_cl__get_log_message(const char **log_msg,
           SVN_ERR(svn_cmdline_prompt_user
                   (&reply,
                    _("\nLog message unchanged or not specified\n"
-                     "a)bort, c)ontinue, e)dit\n"), pool));
+                     "(a)bort, (c)ontinue, (e)dit :\n"), pool));
           if (reply)
             {
               char letter = apr_tolower(reply[0]);

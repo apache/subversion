@@ -16,6 +16,8 @@
  * @endcopyright
  */
 
+#include "svn_compat.h"
+
 /* This file is a template for a compatibility wrapper for an RA library.
  * It contains an svn_ra_plugin_t and wrappers for all of its functions,
  * implemented in terms of svn_ra__vtable_t functions.  It also contains

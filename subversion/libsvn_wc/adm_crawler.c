@@ -88,7 +88,8 @@ restore_file(const char *file_path,
 
   /* Remove any text conflict */
   SVN_ERR(svn_wc_resolved_conflict3(file_path, adm_access, TRUE, FALSE,
-                                    svn_depth_empty, svn_accept_left,
+                                    svn_depth_empty,
+                                    svn_wc_conflict_result_choose_merged,
                                     NULL, NULL, NULL, NULL, pool));
 
   if (use_commit_times)
@@ -159,11 +160,13 @@ restore_file(const char *file_path,
    If TRAVERSAL_INFO is non-null, record this directory's
    value of svn:externals in both TRAVERSAL_INFO->externals_old and
    TRAVERSAL_INFO->externals_new, using wc_path + dir_path as the key,
-   and the raw (unparsed) value of the property as the value.  NOTE:
-   We set the value in both places, because its absence in just one or
+   and the raw (unparsed) value of the property as the value; store
+   this directory's depth in TRAVERSAL_INFO->depths, using the same
+   key and svn_depth_to_word(depth) as the value.  (Note: We set the
+   property value in both places, because its absence in just one or
    the other place signals that the property was added or deleted;
    thus, storing it in both places signals that it is present and, by
-   default, unchanged.
+   default, unchanged.)
 
    If RESTORE_FILES is set, then unexpectedly missing working files
    will be restored from text-base and NOTIFY_FUNC/NOTIFY_BATON
@@ -207,7 +210,7 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
                            APR_HASH_KEY_STRING);
 
   /* If "this dir" has "svn:externals" property set on it, store its name
-     in traversal_info. */
+     and depth in traversal_info. */
   if (traversal_info)
     {
       const svn_string_t *val;
@@ -222,6 +225,9 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
                        dup_path, APR_HASH_KEY_STRING, dup_val);
           apr_hash_set(traversal_info->externals_new,
                        dup_path, APR_HASH_KEY_STRING, dup_val);
+          apr_hash_set(traversal_info->depths,
+                       dup_path, APR_HASH_KEY_STRING,
+                       svn_depth_to_word(dot_entry->depth));
         }
     }
 

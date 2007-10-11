@@ -32,6 +32,7 @@
 #include "svn_string.h"
 #include "svn_opt.h"
 #include "svn_auth.h"
+#include "svn_cmdline.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -88,6 +89,44 @@ typedef enum {
   svn_cl__parents_opt,
   svn_cl__accept_opt
 } svn_cl__longopt_t;
+
+
+/* --accept actions */
+typedef enum
+{
+  /* invalid or unspecified accept action */
+  svn_cl__accept_invalid = -1,
+
+  /* Leave conflicts alone, for later resolution. */
+  svn_cl__accept_postpone,
+
+  /* Resolve the conflict with the pre-conflict base file. */
+  svn_cl__accept_base,
+
+  /* Resolve the conflict with the pre-conflict working copy file. */
+  svn_cl__accept_mine,
+
+  /* Resolve the conflict with the post-conflict base file. */
+  svn_cl__accept_theirs,
+
+  /* Launch user's editor and resolve conflict with edited file. */
+  svn_cl__accept_edit,
+
+  /* Launch user's resolver and resolve conflict with edited file. */
+  svn_cl__accept_launch,
+} svn_cl__accept_t;
+
+/* --accept action user input words */
+#define SVN_CL__ACCEPT_POSTPONE "postpone"
+#define SVN_CL__ACCEPT_BASE "base"
+#define SVN_CL__ACCEPT_MINE "mine"
+#define SVN_CL__ACCEPT_THEIRS "theirs"
+#define SVN_CL__ACCEPT_EDIT "edit"
+#define SVN_CL__ACCEPT_LAUNCH "launch"
+
+/* Return svn_cl__accept_t value corresponding to word. */
+svn_cl__accept_t
+svn_cl__accept_from_word(const char *word);
 
 
 
@@ -161,7 +200,7 @@ typedef struct svn_cl__opt_state_t
   apr_hash_t *revprop_table;     /* table of revision properties to get/set */
   svn_boolean_t parents;         /* create intermediate directories */
   svn_boolean_t use_merge_history; /* use/display extra merge information */
-  svn_accept_t accept_which;     /* automatically resolve conflict */
+  svn_cl__accept_t accept_which;     /* how to handle conflicts */
 
 } svn_cl__opt_state_t;
 
@@ -248,6 +287,23 @@ svn_error_t *svn_cl__check_cancel(void *baton);
 
 /* Various conflict-resolution callbacks. */
 
+typedef struct {
+  svn_cl__accept_t accept_which;
+  apr_hash_t *config;
+  const char *editor_cmd;
+  svn_boolean_t external_failed;
+  svn_cmdline_prompt_baton_t *pb;
+} svn_cl__conflict_baton_t;
+
+/* Return address of newly allocated and initialized
+   svn_cl__conflict_baton_t. */
+svn_cl__conflict_baton_t *
+svn_cl__conflict_baton_make(svn_cl__accept_t accept_which,
+                            apr_hash_t *config,
+                            const char *editor_cmd,
+                            svn_cmdline_prompt_baton_t *pb,
+                            apr_pool_t *pool);
+
 /* A mindless implementation of svn_wc_conflict_resolver_func_t that
  * does absolutely nothing to resolve conflicts. */
 svn_error_t *
@@ -260,10 +316,10 @@ svn_cl__ignore_conflicts(svn_wc_conflict_result_t *result,
    one of the 3 fulltexts, edit the merged file on the spot, or just
    skip the conflict (to be resolved later). */
 svn_error_t *
-svn_cl__interactive_conflict_handler(svn_wc_conflict_result_t *result,
-                                     const svn_wc_conflict_description_t *desc,
-                                     void *baton,
-                                     apr_pool_t *pool);
+svn_cl__conflict_handler(svn_wc_conflict_result_t *result,
+                         const svn_wc_conflict_description_t *desc,
+                         void *baton,
+                         apr_pool_t *pool);
 
 
 
@@ -409,6 +465,20 @@ svn_cl__edit_file_externally(const char *path,
                              apr_hash_t *config,
                              apr_pool_t *pool);
 
+/* Search for a merge tool command in environment variables,
+   and use it to perform the merge of the four given files.
+   Use POOL for all allocations.
+
+   CONFIG is a hash of svn_config_t * items keyed on a configuration
+   category (SVN_CONFIG_CATEGORY_CONFIG et al), and may be NULL.
+   */
+svn_error_t *
+svn_cl__merge_file_externally(const char *base_path,
+                              const char *their_path,
+                              const char *my_path,
+                              const char *merged_path,
+                              apr_hash_t *config,
+                              apr_pool_t *pool);
 
 
 

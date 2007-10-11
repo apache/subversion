@@ -539,6 +539,14 @@ svn_error_t *svn_ra_reparent(svn_ra_session_t *ra_session,
                              const char *url,
                              apr_pool_t *pool);
 
+/** Set @a *repos_URL to the repository URL to which @a ra_session was
+ * opened or most recently reparented.
+ */
+svn_error_t *svn_ra_get_session_url(svn_ra_session_t *ra_session,
+                                    const char **url,
+                                    apr_pool_t *pool);
+
+
 /**
  * Get the latest revision number from the repository of @a session.
  *
@@ -1282,10 +1290,6 @@ svn_error_t *svn_ra_get_repos_root(svn_ra_session_t *session,
  * location_revision, that revision will be ignored.
  *
  * Use @a pool for all allocations.
- *
- * @note This functionality is not available in pre-1.1 servers.  If the
- * server doesn't implement it, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is
- * returned.
  *
  * @since New in 1.2.
  */

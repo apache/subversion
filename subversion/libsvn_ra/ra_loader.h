@@ -58,6 +58,9 @@ typedef struct svn_ra__vtable_t {
   svn_error_t *(*reparent)(svn_ra_session_t *session,
                            const char *url,
                            apr_pool_t *pool);
+  svn_error_t *(*get_session_url)(svn_ra_session_t *session,
+                                  const char **url,
+                                  apr_pool_t *pool);
   svn_error_t *(*get_latest_revnum)(svn_ra_session_t *session,
                                     svn_revnum_t *latest_revnum,
                                     apr_pool_t *pool);
@@ -262,6 +265,34 @@ svn_error_t *svn_ra_neon__init(const svn_version_t *loader_version,
 svn_error_t *svn_ra_serf__init(const svn_version_t *loader_version,
                                const svn_ra__vtable_t **vtable,
                                apr_pool_t *pool);
+
+
+
+/*** Compat Functions ***/
+
+/**
+ * Set *LOCATIONS to the locations (at the repository revisions
+ * LOCATION_REVISIONS) of the file identified by PATH in PEG_REVISION.
+ * PATH is relative to the URL to which SESSION was opened.
+ * LOCATION_REVISIONS is an array of svn_revnum_t's.  *LOCATIONS will
+ * be a mapping from the revisions to their appropriate absolute
+ * paths.  If the file doesn't exist in a location_revision, that
+ * revision will be ignored.
+ *
+ * Use POOL for all allocations.
+ *
+ * NOTE: This function uses the RA get_log interfaces to do its work,
+ * as a fallback mechanism for servers which don't support the native
+ * get_locations API.
+ */
+svn_error_t *
+svn_ra__locations_from_log(svn_ra_session_t *session,
+                           apr_hash_t **locations_p,
+                           const char *path,
+                           svn_revnum_t peg_revision,
+                           apr_array_header_t *location_revisions,
+                           apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }

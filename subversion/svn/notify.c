@@ -410,6 +410,11 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       svn_error_clear(n->err);
       break;
 
+    case svn_wc_notify_changelist_moved:
+      svn_handle_warning(stderr, n->err);
+      svn_error_clear(n->err);
+      break;
+
     case svn_wc_notify_merge_begin:
       if (n->merge_range == NULL)
         err = svn_cmdline_printf(pool,

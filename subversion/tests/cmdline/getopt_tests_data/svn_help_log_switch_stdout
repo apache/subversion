@@ -33,7 +33,7 @@ Valid options:
                                 'BASE'       base rev of item's working copy
                                 'COMMITTED'  last commit at or before BASE
                                 'PREV'       revision just before COMMITTED
-  -q [--quiet]             : print as little as possible
+  -q [--quiet]             : print nothing, or only summary information
   -v [--verbose]           : print extra information
   -g [--use-merge-history] : use/display additional information from merge
                              history
@@ -87,7 +87,7 @@ Valid options:
   -N [--non-recursive]     : obsolete; try --depth=files or --depth=immediates
   --depth ARG              : pass depth ('empty', 'files', 'immediates', or
                             'infinity') as ARG
-  -q [--quiet]             : print as little as possible
+  -q [--quiet]             : print nothing, or only summary information
   --diff3-cmd ARG          : use ARG as merge command
   --relocate               : relocate via URL-rewriting
   --username ARG           : specify a username ARG
@@ -97,4 +97,7 @@ Valid options:
   --config-dir ARG         : read user configuration files from directory ARG
   --ignore-externals       : ignore externals definitions
   --force                  : force operation to run
+  --accept ARG             : specify automatic conflict resolution action
+                            ('postpone', 'base', 'mine', 'theirs', 'edit',
+                             'launch')
 

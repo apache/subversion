@@ -28,6 +28,7 @@
 #include <apr_hash.h>
 #include <apr_uri.h>
 
+#include "svn_compat.h"
 #include "svn_version.h"
 #include "svn_types.h"
 #include "svn_error.h"
@@ -507,6 +508,13 @@ svn_error_t *svn_ra_reparent(svn_ra_session_t *session,
   return session->vtable->reparent(session, url, pool);
 }
 
+svn_error_t *svn_ra_get_session_url(svn_ra_session_t *session,
+                                    const char **url,
+                                    apr_pool_t *pool)
+{
+  return session->vtable->get_session_url(session, url, pool);
+}
+
 svn_error_t *svn_ra_get_latest_revnum(svn_ra_session_t *session,
                                       svn_revnum_t *latest_revnum,
                                       apr_pool_t *pool)
@@ -918,9 +926,20 @@ svn_error_t *svn_ra_get_locations(svn_ra_session_t *session,
                                   apr_array_header_t *location_revisions,
                                   apr_pool_t *pool)
 {
-  return session->vtable->get_locations(session, locations, path,
-                                        peg_revision, location_revisions,
-                                        pool);
+  svn_error_t *err = session->vtable->get_locations(session, locations, path,
+                                                    peg_revision, 
+                                                    location_revisions,
+                                                    pool);
+  if (err && (err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED))
+    {
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+      
+      /* Do it the slow way, using get-logs, for older servers. */
+      SVN_ERR(svn_ra__locations_from_log(session, locations, path, peg_revision,
+                                         location_revisions, pool));
+    }
+  return err;
 }
 
 svn_error_t *svn_ra_get_file_revs(svn_ra_session_t *session,

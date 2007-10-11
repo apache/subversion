@@ -297,6 +297,7 @@ svn_path_component_count(const char *path)
   return count;
 }
 
+
 /* Return the length of substring necessary to encompass the entire
  * previous path segment in PATH, which should be a LEN byte string.
  *
@@ -319,6 +320,7 @@ previous_segment(const char *path,
   else
     return len;
 }
+
 
 void
 svn_path_add_component(svn_stringbuf_t *path,
@@ -350,6 +352,7 @@ svn_path_remove_component(svn_stringbuf_t *path)
   path->len = previous_segment(path->data, path->len);
   path->data[path->len] = '\0';
 }
+
 
 void
 svn_path_remove_components(svn_stringbuf_t *path, apr_size_t n)
@@ -392,7 +395,6 @@ svn_path_basename(const char *path, apr_pool_t *pool)
 
   return apr_pstrmemdup(pool, path + start, len - start);
 }
-
 
 
 void
@@ -668,6 +670,7 @@ svn_path_is_child(const char *path1,
   return NULL;
 }
 
+
 svn_boolean_t
 svn_path_is_ancestor(const char *path1, const char *path2)
 {
@@ -689,6 +692,8 @@ svn_path_is_ancestor(const char *path1, const char *path2)
 
   return FALSE;
 }
+
+
 apr_array_header_t *
 svn_path_decompose(const char *path,
                    apr_pool_t *pool)
@@ -737,6 +742,53 @@ svn_path_decompose(const char *path,
   while (path[i-1]);
 
   return components;
+}
+
+
+const char *
+svn_path_compose(const apr_array_header_t *components,
+                 apr_pool_t *pool)
+{
+  apr_size_t *lengths = apr_palloc(pool, components->nelts*sizeof(*lengths));
+  apr_size_t max_length = components->nelts;
+  char *path;
+  char *p;
+  int i;
+
+  /* Get the length of each component so a total length can be
+     calculated. */
+  for (i = 0; i < components->nelts; ++i)
+    {
+      apr_size_t l = strlen(APR_ARRAY_IDX(components, i, const char *));
+      lengths[i] = l;
+      max_length += l;
+    }
+
+  path = apr_palloc(pool, max_length + 1);
+  p = path;
+
+  for (i = 0; i < components->nelts; ++i)
+    {
+      /* Append a '/' to the path.  Handle the case with an absolute
+         path where a '/' appears in the first component.  Only append
+         a '/' if the component is the second component that does not
+         follow a "/" first component; or it is the third or later
+         component. */
+      if (i > 1 ||
+          (i == 1 && strcmp("/", APR_ARRAY_IDX(components,
+                                               0,
+                                               const char *)) != 0))
+        {
+          *p++ = '/';
+        }
+
+      memcpy(p, APR_ARRAY_IDX(components, i, const char *), lengths[i]);
+      p += lengths[i];
+    }
+
+  *p = '\0';
+
+  return path;
 }
 
 
@@ -792,15 +844,17 @@ skip_uri_scheme(const char *path)
 {
   apr_size_t j;
 
-  for (j = 0; path[j]; ++j)
-    if (path[j] == ':' || path[j] == '/')
-       break;
+  /* A scheme is terminated by a : and cannot contain any /'s. */
+  for (j = 0; path[j] && path[j] != ':'; ++j)
+    if (path[j] == '/')
+      return NULL;
 
   if (j > 0 && path[j] == ':' && path[j+1] == '/' && path[j+2] == '/')
     return path + j + 3;
 
   return NULL;
 }
+
 
 svn_boolean_t
 svn_path_is_url(const char *path)
@@ -857,6 +911,7 @@ static const char uri_char_validity[256] = {
   0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
 };
 
+
 svn_boolean_t
 svn_path_is_uri_safe(const char *path)
 {
@@ -898,6 +953,7 @@ svn_path_is_uri_safe(const char *path)
 
   return TRUE;
 }
+
 
 /* URI-encode each character c in PATH for which TABLE[c] is 0.
    If no encoding was needed, return PATH, else return a new string allocated
@@ -953,6 +1009,7 @@ uri_escape(const char *path, const char table[], apr_pool_t *pool)
 
   return retstr->data;
 }
+
 
 const char *
 svn_path_uri_encode(const char *path, apr_pool_t *pool)

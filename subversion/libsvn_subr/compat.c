@@ -21,6 +21,7 @@
 
 #include "svn_types.h"
 #include "svn_error.h"
+#include "svn_compat.h"
 
 
 /* Baton for use with svn_compat_wrap_commit_callback */

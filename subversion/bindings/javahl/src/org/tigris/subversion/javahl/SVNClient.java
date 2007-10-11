@@ -27,10 +27,9 @@ import java.util.Iterator;
 import java.util.Date;
 
 /**
- * This is the main interface class.  All subversion commandline client
- * svn and svnversion operation are implemented in this class.  This
- * class is not threadsafe.  If you need threadsafe access, use
- * SVNClientSynchronized.
+ * This is the main client class.  All Subversion client APIs are
+ * implemented in this class.  This class is not threadsafe; if you
+ * need threadsafe access, use SVNClientSynchronized.
  */
 public class SVNClient implements SVNClientInterface
 {
@@ -94,9 +93,9 @@ public class SVNClient implements SVNClientInterface
      * @return The name of the working copy's administrative
      * directory, which is usually <code>.svn</code>.
      * @see <a
-     * href="http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt">Instructions</a>
-     * on changing this as a work-around for the behavior of ASP.Net
-     * on Windows.
+     * href="http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt">
+     * Instructions on changing this as a work-around for the behavior of
+     * ASP.Net on Windows.</a>
      * @since 1.3
      */
     public native String getAdminDirectoryName();
@@ -170,8 +169,8 @@ public class SVNClient implements SVNClientInterface
     {
         MyStatusCallback callback = new MyStatusCallback();
 
-        status(path, Depth.fromRecurse(descend), onServer, getAll, noIgnore,
-               ignoreExternals, callback);
+        status(path, Depth.infinityOrImmediates(descend), onServer, getAll,
+               noIgnore, ignoreExternals, callback);
 
         return callback.getStatusArray();
     }
@@ -185,7 +184,6 @@ public class SVNClient implements SVNClientInterface
      * @param getAll    get status for uninteresting (unchanged) files.
      * @param noIgnore  get status for normaly ignored files and directories.
      * @param ignoreExternals if externals are ignored during status
-     * @return Array of Status entries.
      * @since 1.5
      */
     public native void status(String path, int depth, boolean onServer,
@@ -222,8 +220,7 @@ public class SVNClient implements SVNClientInterface
     {
         MyListCallback callback = new MyListCallback();
 
-        list(url, revision, pegRevision,
-             recurse ? Depth.infinity : Depth.immediates,
+        list(url, revision, pegRevision, Depth.infinityOrImmediates(recurse),
              DirEntry.Fields.all, false, callback);
 
         return callback.getDirEntryArray();
@@ -372,7 +369,6 @@ public class SVNClient implements SVNClientInterface
      * @param omitLogText   supress log message text.
      * @param limit         limit the number of log messages (if 0 or less no
      *                      limit)
-     * @return array of LogMessages
      * @since 1.5
      */
     public native void logMessages(String path,
@@ -422,7 +418,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         return checkout(moduleName, destPath, revision, revision,
-                        Depth.fromRecurse(recurse), ignoreExternals,
+                        Depth.infinityOrFiles(recurse), ignoreExternals,
                         false);
     }
 
@@ -462,7 +458,7 @@ public class SVNClient implements SVNClientInterface
     public native void notification2(Notify2 notify);
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface#setConflictResolver(ConflictResolverCallback)
+     * @see SVNClientInterface#setConflictResolver(ConflictResolverCallback)
      * @since 1.5
      */
     public native void setConflictResolver(ConflictResolverCallback listener);
@@ -518,7 +514,7 @@ public class SVNClient implements SVNClientInterface
     public void revert(String path, boolean recurse)
             throws ClientException
     {
-        revert(path, Depth.fromRecurse(recurse));
+        revert(path, Depth.infinityOrEmpty(recurse));
     }
 
     /**
@@ -555,7 +551,7 @@ public class SVNClient implements SVNClientInterface
     public void add(String path, boolean recurse, boolean force)
             throws ClientException
     {
-        add(path, Depth.fromRecurse(recurse), force, false, false);
+        add(path, Depth.infinityOrEmpty(recurse), force, false, false);
     }
 
     /**
@@ -586,8 +582,8 @@ public class SVNClient implements SVNClientInterface
     public long update(String path, Revision revision, boolean recurse)
             throws ClientException
     {
-        return update(new String[]{path}, revision, Depth.fromRecurse(recurse),
-                      false, false)[0];
+        return update(new String[]{path}, revision,
+                      Depth.infinityOrFiles(recurse), false, false)[0];
     }
 
     /**
@@ -605,7 +601,7 @@ public class SVNClient implements SVNClientInterface
                          boolean recurse, boolean ignoreExternals)
             throws ClientException
     {
-        return update(path, revision, Depth.fromRecurse(recurse),
+        return update(path, revision, Depth.infinityOrFiles(recurse),
                       ignoreExternals, false);
     }
 
@@ -648,7 +644,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.commit(String[], String, boolean)
+     * @see SVNClientInterface#commit(String[], String, boolean)
      */
     public long commit(String[] path, String message, boolean recurse)
             throws ClientException
@@ -657,7 +653,7 @@ public class SVNClient implements SVNClientInterface
     }
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.commit(String[], String, int, boolean, boolean, String)
+     * @see SVNClientInterface#commit(String[], String, int, boolean, boolean, String)
      * @since 1.5
      */
     public native long commit(String[] path, String message, int depth,
@@ -668,7 +664,7 @@ public class SVNClient implements SVNClientInterface
     /**
      * Copy versioned paths with the history preserved.
      *
-     * @see org.tigris.subversion.javahl.SVNClientInterface.copy(String[], String, String, Revision, boolean)
+     * @see SVNClientInterface#copy(CopySource[], String, String, boolean, boolean, boolean)
      * @since 1.5
      */
     public native void copy(CopySource[] sources, String destPath,
@@ -708,7 +704,7 @@ public class SVNClient implements SVNClientInterface
      * children of <code>destPath</code>.
      * @param makeParents Whether to create intermediate parents
      * @throws ClientException If the move operation fails.
-     * @see org.tigris.subversion.javahl.SVNClientInterface.move(String[], String, String, boolean, boolean)
+     * @see SVNClientInterface#move(String[], String, String, boolean, boolean, boolean, boolean)
      * @since 1.5
      */
     public native void move(String[] srcPaths, String destPath, String message,
@@ -718,7 +714,7 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use move() without a Revision parameter.
-     * @see org.tigris.subversion.javahl.SVNClientInterface.move(String[], String, String, boolean, boolean)
+     * @see SVNClientInterface#move(String[], String, String, boolean, boolean, boolean, boolean)
      * @since 1.2
      */
     public void move(String srcPath, String destPath, String message,
@@ -784,21 +780,22 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.resolved(String, int)
+     * @see SVNClientInterface#resolved(String, int, int)
      * @since 1.5
      */
-    public native void resolved(String path, int depth)
+    public native void resolved(String path, int depth, int conflictResult)
         throws SubversionException;
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.resolved(String, boolean)
+     * @see SVNClientInterface#resolved(String, boolean)
      */
     public void resolved(String path, boolean recurse)
         throws ClientException
     {
         try
         {
-            resolved(path, (recurse ? Depth.infinity : Depth.empty));
+            resolved(path, Depth.infinityOrEmpty(recurse),
+                     ConflictResolverCallback.Result.chooseMerged);
         }
         catch (SubversionException e)
         {
@@ -847,7 +844,8 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         return doExport(srcPath, destPath, revision, pegRevision, force,
-                        ignoreExternals, Depth.fromRecurse(recurse), nativeEOL);
+                        ignoreExternals, Depth.infinityOrFiles(recurse),
+                        nativeEOL);
     }
 
     /**
@@ -873,7 +871,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.doSwitch(String, String, Revision, int, boolean, boolean)
+     * @see SVNClientInterface#doSwitch(String, String, Revision, int, boolean, boolean)
      * @since 1.5
      */
     public native long doSwitch(String path, String url, Revision revision,
@@ -893,7 +891,7 @@ public class SVNClient implements SVNClientInterface
                          boolean recurse)
             throws ClientException
     {
-        return doSwitch(path, url, revision, Depth.fromRecurse(recurse),
+        return doSwitch(path, url, revision, Depth.infinityOrFiles(recurse),
                         false, false);
     }
 
@@ -910,7 +908,7 @@ public class SVNClient implements SVNClientInterface
                          boolean recurse)
             throws ClientException
     {
-        doImport(path, url, message, Depth.fromRecurse(recurse),
+        doImport(path, url, message, Depth.infinityOrFiles(recurse),
                  false, false);
     }
 
@@ -934,7 +932,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface#suggestMergeSources(String)
+     * @see SVNClientInterface#suggestMergeSources(String, Revision)
      */
     public native String[] suggestMergeSources(String path, 
                                                Revision pegRevision)
@@ -981,7 +979,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         merge(path1, revision1, path2, revision2, localPath, force,
-              Depth.fromRecurse(recurse), ignoreAncestry, dryRun);
+              Depth.infinityOrFiles(recurse), ignoreAncestry, dryRun);
     }
 
     /**
@@ -1026,7 +1024,7 @@ public class SVNClient implements SVNClientInterface
            throws ClientException
     {
         merge(path, pegRevision, revision1, revision2, localPath, force,
-              Depth.fromRecurse(recurse), ignoreAncestry, dryRun);
+              Depth.infinityOrFiles(recurse), ignoreAncestry, dryRun);
     }
 
     /**
@@ -1084,14 +1082,14 @@ public class SVNClient implements SVNClientInterface
     }
 
     /**
-     * @see 1.5 org.tigris.subversion.javahl.SVNClientInterface#getMergeInfo(String, Revision)
+     * @see SVNClientInterface#getMergeInfo(String, Revision)
      * @since 1.5
      */
     public native MergeInfo getMergeInfo(String path, Revision pegRevision)
             throws SubversionException;
 
     /**
-     * @see 1.5 org.tigris.subversion.javahl.SVNClientInterface#getAvailableMerges(String, Revision, String)
+     * @see SVNClientInterface#getAvailableMerges(String, Revision, String)
      * @since 1.5
      */
     public native RevisionRange[] getAvailableMerges(String path,
@@ -1140,7 +1138,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         diff(target1, revision1, target2, revision2, outFileName,
-             Depth.fromRecurse(recurse), ignoreAncestry, noDiffDeleted,
+             Depth.infinityOrFiles(recurse), ignoreAncestry, noDiffDeleted,
              force);
     }
 
@@ -1187,7 +1185,8 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         diff(target, pegRevision, startRevision, endRevision, outFileName,
-             Depth.fromRecurse(recurse), ignoreAncestry, noDiffDeleted, force);
+             Depth.infinityOrFiles(recurse), ignoreAncestry, noDiffDeleted,
+             force);
     }
 
     /**
@@ -1245,7 +1244,7 @@ public class SVNClient implements SVNClientInterface
      * @param pegRevision Revision at which to interpret
      * <code>target</code>.  If {@link RevisionKind#unspecified} or
      * <code>null</code>, behave identically to {@link
-     * diffSummarize(String, Revision, String, Revision, boolean,
+     * #diffSummarize(String, Revision, String, Revision, int,
      * boolean, DiffSummaryReceiver)}, using <code>path</code> for
      * both of that method's targets.
      * @param startRevision Beginning of range for comparsion of
@@ -1309,9 +1308,6 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         ProplistCallbackImpl callback = new ProplistCallbackImpl();
-        // Depth.fromRecurse() will return info about immediate file
-        // children of a directory, so instead inline an expression to
-        // preserve backward compatibility.
         properties(path, revision, pegRevision, Depth.empty, callback);
 
         Map propMap = callback.getProperties(path);
@@ -1377,11 +1373,7 @@ public class SVNClient implements SVNClientInterface
                                    boolean recurse, boolean force)
             throws ClientException
     {
-        // Depth.fromRecurse() will affect immediate file children of
-        // a directory, so instead inline an expression to preserve
-        // backward compatibility.
-        propertySet(path, name, value,
-                    (recurse ? Depth.infinity : Depth.empty), force);
+        propertySet(path, name, value, Depth.infinityOrEmpty(recurse), force);
     }
 
     /**
@@ -1442,10 +1434,7 @@ public class SVNClient implements SVNClientInterface
     public void propertyRemove(String path, String name, boolean recurse)
             throws ClientException
     {
-        // Depth.fromRecurse() will affect immediate file children of
-        // a directory, so instead inline an expression to preserve
-        // backward compatibility.
-        propertyRemove(path, name, (recurse ? Depth.infinity : Depth.empty));
+        propertyRemove(path, name, Depth.infinityOrEmpty(recurse));
     }
 
     /**
@@ -1757,7 +1746,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.setConfigDirectory(String)
+     * @see SVNClientInterface#setConfigDirectory(String)
      */
     public native void setConfigDirectory(String configDir)
             throws ClientException;
@@ -1868,14 +1857,14 @@ public class SVNClient implements SVNClientInterface
     public static native int versionMicro();
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.commit(String[], String, boolean, boolean)
+     * @see SVNClientInterface#commit(String[], String, boolean, boolean)
      * @since 1.2
      */
     public long commit(String[] path, String message, boolean recurse,
                        boolean noUnlock)
             throws ClientException
     {
-        return commit(path, message, Depth.fromRecurse(recurse), noUnlock,
+        return commit(path, message, Depth.infinityOrEmpty(recurse), noUnlock,
                       false, null);
     }
 
@@ -1903,7 +1892,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.info2(String, Revision, Revision, int, InfoCallback)
+     * @see SVNClientInterface#info2(String, Revision, Revision, int, InfoCallback)
      * @since 1.5
      */
     public Info2[] info2(String pathOrUrl, Revision revision,
@@ -1911,11 +1900,8 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         MyInfoCallback callback = new MyInfoCallback();
-        // Depth.fromRecurse() will return info about immediate file
-        // children of a directory, so instead inline an expression to
-        // preserve backward compatibility.
         info2(pathOrUrl, revision, pegRevision,
-              (recurse ? Depth.infinity : Depth.empty), callback);
+              Depth.infinityOrEmpty(recurse), callback);
         return callback.getInfoArray();
     }
 
@@ -1926,7 +1912,6 @@ public class SVNClient implements SVNClientInterface
      * @param pegRevision   the revision to interpret pathOrUrl
      * @param depth         the depth to recurse
      * @param callback      a callback to receive the infos retreived
-     * @return              the information objects
      * @since 1.5
      */
     public native void info2(String pathOrUrl, Revision revision,

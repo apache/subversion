@@ -2220,8 +2220,10 @@ finish_report(void *report_baton,
       sess->conns[i]->last_status_code = -1;
       sess->conns[i]->ssl_context = NULL;
       sess->conns[i]->session = sess;
-      sess->conns[i]->auth_header = sess->auth_header;
-      sess->conns[i]->auth_value = sess->auth_value;
+      /* Authentication protocol specific initalization. */
+      if (sess->auth_protocol)
+        sess->auth_protocol->init_conn_func(sess, sess->conns[i], pool);
+
       sess->conns[i]->conn = serf_connection_create(sess->context,
                                                     sess->conns[i]->address,
                                                     svn_ra_serf__conn_setup,

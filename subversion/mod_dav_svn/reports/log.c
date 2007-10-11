@@ -278,6 +278,8 @@ dav_svn__log_report(const dav_resource *resource,
     = apr_array_make(resource->pool, 1, sizeof(const char *));
   svn_stringbuf_t *comma_separated_paths =
     svn_stringbuf_create("", resource->pool);
+  svn_stringbuf_t *comma_separated_revprops =
+    svn_stringbuf_create("", resource->pool);
 
   /* Sanity check. */
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
@@ -319,6 +321,7 @@ dav_svn__log_report(const dav_resource *resource,
         {
           revprops = NULL; /* presence indicates fetch all revprops */
           seen_revprop_element = lrb.requested_custom_revprops = TRUE;
+          svn_stringbuf_appendcstr(comma_separated_revprops, "[all]");
         }
       else if (strcmp(child->name, "revprop") == 0)
         {
@@ -332,6 +335,11 @@ dav_svn__log_report(const dav_resource *resource,
                   && strcmp(name, SVN_PROP_REVISION_DATE) != 0
                   && strcmp(name, SVN_PROP_REVISION_LOG) != 0)
                 lrb.requested_custom_revprops = TRUE;
+
+              /* Gather a formatted list of revprops for operational logging. */
+              if (comma_separated_revprops->len > 0)
+                svn_stringbuf_appendbytes(comma_separated_revprops, ", ", 2);
+              svn_stringbuf_appendcstr(comma_separated_revprops, name);
             }
           seen_revprop_element = TRUE;
         }
@@ -423,8 +431,10 @@ dav_svn__log_report(const dav_resource *resource,
 
   /* We've detected a 'high level' svn action to log. */
   action = apr_psprintf(resource->pool,
-                        "log '%s' r%ld:%ld",
-                        comma_separated_paths->data, start, end);
+                        "log%s '%s' r%ld:%ld '%s'",
+                        include_merged_revisions ? "-merge-sensitive" : "",
+                        comma_separated_paths->data, start, end,
+                        comma_separated_revprops->data);
   apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION", action);
 
 

@@ -27,6 +27,7 @@
 #include <apr_want.h>
 
 #include "svn_client.h"
+#include "svn_compat.h"
 #include "svn_string.h"
 #include "svn_path.h"
 #include "svn_error.h"
@@ -322,6 +323,13 @@ log_entry_receiver_xml(void *baton,
     SVN_ERR(lb->cancel_func(lb->cancel_baton));
 
   svn_compat_log_revprops_out(&author, &date, &message, log_entry->revprops);
+
+  if (author)
+    author = svn_xml_fuzzy_escape(author, pool);
+  if (date)
+    date = svn_xml_fuzzy_escape(date, pool);
+  if (message)
+    message = svn_xml_fuzzy_escape(message, pool);
 
   if (log_entry->revision == 0 && message == NULL)
     return SVN_NO_ERROR;

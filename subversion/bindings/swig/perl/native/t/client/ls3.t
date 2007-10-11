@@ -51,7 +51,7 @@ foreach my $args (([$repo_url, 1, 1, 1],
     is($iota->size(), 25, '/iota is 25 bytes');
     is($iota->has_props(), 0, '/iota has no properties');
     is($iota->created_rev(), 1, '/iota was changed in this rev');
-    is($iota->time, 1171532569978151, '/iota has correct change time');
+    is($iota->time, '1171532569978151', '/iota has correct change time');
     is($iota->last_author(), 'nik', '/iota has correct author');
 }
 

@@ -861,7 +861,7 @@ def status_ignored_dir(sbox):
   new_dir = os.path.join(wc_dir, "dir.o")
   new_dir_url = sbox.repo_url + "/dir.o"
 
-  svntest.actions.run_and_verify_svn("Create dir", "Committed revision 2.", [],
+  svntest.actions.run_and_verify_svn("Create dir", "\n|Committed revision 2.", [],
                                      'mkdir', new_dir_url, '-m', 'msg',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd)

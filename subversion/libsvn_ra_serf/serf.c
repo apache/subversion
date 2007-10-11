@@ -176,6 +176,8 @@ svn_ra_serf__open(svn_ra_session_t *session,
   serf_sess->conns[0]->using_ssl = serf_sess->using_ssl;
   serf_sess->conns[0]->using_compression = serf_sess->using_compression;
   serf_sess->conns[0]->hostinfo = url.hostinfo;
+  serf_sess->conns[0]->auth_header = NULL;
+  serf_sess->conns[0]->auth_value = NULL;
 
   /* go ahead and tell serf about the connection. */
   serf_sess->conns[0]->conn =
@@ -217,6 +219,16 @@ svn_ra_serf__reparent(svn_ra_session_t *ra_session,
   session->repos_url.path = new_url.path;
   session->repos_url_str = apr_pstrdup(pool, url);
 
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+svn_ra_serf__get_session_url(svn_ra_session_t *ra_session,
+                             const char **url,
+                             apr_pool_t *pool)
+{
+  svn_ra_serf__session_t *session = ra_session->priv;
+  *url = apr_pstrdup(pool, session->repos_url_str);
   return SVN_NO_ERROR;
 }
 
@@ -726,6 +738,7 @@ static const svn_ra__vtable_t serf_vtable = {
   ra_serf_get_schemes,
   svn_ra_serf__open,
   svn_ra_serf__reparent,
+  svn_ra_serf__get_session_url,
   svn_ra_serf__get_latest_revnum,
   svn_ra_serf__get_dated_revision,
   svn_ra_serf__change_rev_prop,

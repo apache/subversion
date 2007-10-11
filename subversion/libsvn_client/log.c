@@ -31,13 +31,13 @@
 #include "client.h"
 
 #include "svn_client.h"
+#include "svn_compat.h"
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_sorts.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
-#include "private/svn_client_private.h"
 
 
 /*** Getting misc. information ***/

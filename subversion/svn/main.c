@@ -63,7 +63,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"help",          'h', 0, N_("show help on a subcommand")},
   {NULL,            '?', 0, N_("show help on a subcommand")},
   {"message",       'm', 1, N_("specify log message ARG")},
-  {"quiet",         'q', 0, N_("print as little as possible")},
+  {"quiet",         'q', 0, N_("print nothing, or only summary information")},
   {"recursive",     'R', 0, N_("descend recursively, same as --depth=infinity")},
   {"non-recursive", 'N', 0, N_("obsolete; try --depth=files or --depth=immediates")},
   {"change",        'c', 1, N_
@@ -211,9 +211,15 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "history")},
   {"accept", svn_cl__accept_opt, 1,
-                    N_("specify automatic conflict resolution source\n"
+                    N_("specify automatic conflict resolution action\n"
                        "                            "
-                       "('left', 'right', or 'working')")},
+                       "('" SVN_CL__ACCEPT_POSTPONE "',"
+                       " '" SVN_CL__ACCEPT_BASE "',"
+                       " '" SVN_CL__ACCEPT_MINE "',"
+                       " '" SVN_CL__ACCEPT_THEIRS "',"
+                       " '" SVN_CL__ACCEPT_EDIT "',"
+                       "\n                            "
+                       " '" SVN_CL__ACCEPT_LAUNCH "')")},
   {0,               0, 0, 0},
 };
 
@@ -309,7 +315,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  to the working copy.  All properties from the repository are applied\n"
      "  to the obstructing path.\n"),
     {'r', 'q', 'N', svn_cl__depth_opt, svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__config_dir_opt, svn_cl__ignore_externals_opt} },
+     svn_cl__config_dir_opt, svn_cl__ignore_externals_opt,
+     svn_cl__accept_opt} },
 
   { "cleanup", svn_cl__cleanup, {0}, N_
     ("Recursively clean up the working copy, removing locks, resuming\n"
@@ -558,7 +565,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {'r', 'c', 'N', svn_cl__depth_opt, 'q', svn_cl__force_opt,
      svn_cl__dry_run_opt, svn_cl__merge_cmd_opt, svn_cl__record_only_opt,
      'g', 'x', svn_cl__ignore_ancestry_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__config_dir_opt} },
+     svn_cl__config_dir_opt, svn_cl__accept_opt} },
 
   { "mergeinfo", svn_cl__mergeinfo, {0}, N_
     ("Query merge-related information.\n"
@@ -715,7 +722,12 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  remove conflict markers; it merely removes the conflict-related\n"
      "  artifact files and allows PATH to be committed again.\n"),
     {svn_cl__targets_opt, 'R', svn_cl__depth_opt, 'q',
-     svn_cl__config_dir_opt, svn_cl__accept_opt} },
+     svn_cl__config_dir_opt, svn_cl__accept_opt},
+    {{svn_cl__accept_opt, N_("specify automatic conflict resolution source\n"
+                             "                            "
+                             " '" SVN_CL__ACCEPT_BASE "',"
+                             " '" SVN_CL__ACCEPT_MINE "',"
+                             " '" SVN_CL__ACCEPT_THEIRS "')")}} },
 
   { "revert", svn_cl__revert, {0}, N_
     ("Restore pristine working copy file (undo most local edits).\n"
@@ -731,6 +743,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "usage: status [PATH...]\n"
      "\n"
      "  With no args, print only locally modified items (no network access).\n"
+     "  With -q, print only summary information about locally modified items.\n"
      "  With -u, add working revision and server out-of-date information.\n"
      "  With -v, print full revision information on every item.\n"
      "\n"
@@ -829,7 +842,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  are applied to the obstructing path.\n"),
     { 'r', 'N', svn_cl__depth_opt, 'q', svn_cl__merge_cmd_opt,
       svn_cl__relocate_opt, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt,
-      svn_cl__ignore_externals_opt, svn_cl__force_opt} },
+      svn_cl__ignore_externals_opt, svn_cl__force_opt, svn_cl__accept_opt} },
 
   { "unlock", svn_cl__unlock, {0}, N_
     ("Unlock working copy paths or URLs.\n"
@@ -874,7 +887,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  in the first column with code 'E'.\n"),
     {'r', 'N', svn_cl__depth_opt, 'q', svn_cl__merge_cmd_opt,
      svn_cl__force_opt, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt,
-     svn_cl__ignore_externals_opt, svn_cl__changelist_opt} },
+     svn_cl__ignore_externals_opt, svn_cl__changelist_opt,
+     svn_cl__editor_cmd_opt, svn_cl__accept_opt} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -1031,7 +1045,7 @@ main(int argc, const char *argv[])
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
   opt_state.end_revision.kind = svn_opt_revision_unspecified;
   opt_state.depth = svn_depth_unknown;
-  opt_state.accept_which = svn_accept_none;
+  opt_state.accept_which = svn_cl__accept_invalid;
 
   /* No args?  Show usage. */
   if (argc <= 1)
@@ -1388,20 +1402,13 @@ main(int argc, const char *argv[])
         opt_state.use_merge_history = TRUE;
         break;
       case svn_cl__accept_opt:
-        opt_state.accept_which = svn_accept_from_word(opt_arg);
-
-        /* We need to make sure that the value passed to the accept flag
-         * was one of the available options.  Since svn_accept_invalid is what
-         * gets set when one of the three expected are not passed, checking
-         * for this as part of the command line parsing makes sense. */
-        if (opt_state.accept_which == svn_accept_invalid)
-          {
-            return svn_cmdline_handle_exit_error
+        opt_state.accept_which = svn_cl__accept_from_word(opt_arg);
+        if (opt_state.accept_which == svn_cl__accept_invalid)
+          return svn_cmdline_handle_exit_error
             (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                               _("'%s' is not a valid accept value; try "
-                                 "'left', 'right', or 'working'"),
-                               opt_arg), pool, "svn: ");
-          }
+                               _("'%s' is not a valid accept value"), opt_arg),
+             pool, "svn: ");
+        break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
@@ -1734,21 +1741,46 @@ main(int argc, const char *argv[])
                                                  we can change this. */
     svn_handle_error2(err, stderr, TRUE, "svn: ");
 
-  if (interactive_conflicts
-      && (! opt_state.non_interactive ))
+  if ((opt_state.accept_which == svn_cl__accept_invalid
+       && (!interactive_conflicts || opt_state.non_interactive))
+      || opt_state.accept_which == svn_cl__accept_postpone)
     {
-      svn_cmdline_prompt_baton_t *pb = apr_palloc(pool, sizeof(*pb));
-
-      pb->cancel_func = ctx->cancel_func;
-      pb->cancel_baton = ctx->cancel_baton;
-
-      ctx->conflict_func = svn_cl__interactive_conflict_handler;
-      ctx->conflict_baton = pb;
+      /* If no --accept option at all and we're non-interactive, we're
+         leaving the conflicts behind, so don't need the callback.  Same if
+         the user said to postpone. */
+      ctx->conflict_func = NULL;
+      ctx->conflict_baton = NULL;
     }
   else
     {
-      ctx->conflict_func = NULL;
-      ctx->conflict_baton = NULL;
+      svn_cmdline_prompt_baton_t *pb = apr_palloc(pool, sizeof(*pb));
+      pb->cancel_func = ctx->cancel_func;
+      pb->cancel_baton = ctx->cancel_baton;
+
+      if (opt_state.non_interactive)
+        {
+          if (opt_state.accept_which == svn_cl__accept_edit)
+            return svn_cmdline_handle_exit_error
+              (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("--accept=%s incompatible with"
+                                   " --non-interactive"), SVN_CL__ACCEPT_EDIT),
+               pool, "svn: ");
+          if (opt_state.accept_which == svn_cl__accept_launch)
+            return svn_cmdline_handle_exit_error
+              (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("--accept=%s incompatible with"
+                                   " --non-interactive"),
+                                 SVN_CL__ACCEPT_LAUNCH),
+               pool, "svn: ");
+        }
+
+      ctx->conflict_func = svn_cl__conflict_handler;
+      ctx->conflict_baton = svn_cl__conflict_baton_make(
+          opt_state.accept_which,
+          ctx->config,
+          opt_state.editor_cmd,
+          pb,
+          pool);
     }
 
   /* And now we finally run the subcommand. */

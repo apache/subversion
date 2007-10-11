@@ -409,6 +409,16 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 27,
              "Conflict resolution failed")
 
+  SVN_ERRDEF(SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND,
+             SVN_ERR_WC_CATEGORY_START + 28,
+             "Failed to locate 'copyfrom' path in working copy.")
+
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_WC_CHANGELIST_MOVE,
+             SVN_ERR_WC_CATEGORY_START + 29,
+             "Moving a path from one changelist to another")
+
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,
@@ -1128,6 +1138,10 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_CL_UNNECESSARY_LOG_MESSAGE,
              SVN_ERR_CL_CATEGORY_START + 9,
              "A log message was given where none was necessary")
+  
+  SVN_ERRDEF(SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL,
+             SVN_ERR_CL_CATEGORY_START + 10,
+             "No external merge tool available")
 
 SVN_ERROR_END
 

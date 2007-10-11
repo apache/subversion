@@ -641,8 +641,7 @@ public class BasicTests extends SVNTests
         client.propertyCreate(itemPath, "cqcq", "qrz", false, false);
         ProplistCallbackImpl callback = new ProplistCallbackImpl();
 
-        client.properties(itemPath, null, null, Depth.fromRecurse(false),
-                          callback);
+        client.properties(itemPath, null, null, Depth.empty, callback);
         Map propMap = callback.getProperties(itemPath);
         Iterator it = propMap.keySet().iterator();
 
@@ -2326,7 +2325,7 @@ public class BasicTests extends SVNTests
             {
                 public int resolve(ConflictDescriptor descrip)
                 {
-                    return ConflictResolverCallback.Result.choose_repos;
+                    return ConflictResolverCallback.Result.chooseTheirs;
                 }
             });
 

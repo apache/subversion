@@ -1,6 +1,7 @@
 #!/usr/bin/perl -w
 
 use Test::More tests => 193;
+use Data::Dumper;
 use strict;
 
 # shut up about variables that are only used once.
@@ -423,6 +424,7 @@ is($ctx->status($wcpath, undef, sub {
    'status returns INVALID_REVNUM when run against a working copy');
 
 my ($ci_commit2) = $ctx->commit($wcpath,0);
+print STDERR Data::Dumper->Dump([$ci_commit2],[qw($ci_commit2)]);
 isa_ok($ci_commit2,'_p_svn_client_commit_info_t',
        'commit returns a _p_svn_client_commit_info_t');
 $current_rev++;

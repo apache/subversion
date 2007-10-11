@@ -3013,11 +3013,15 @@ def mergeinfo_update_elision(sbox):
   os.chdir(svntest.main.work_dir)
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
+  update_line = 'U    ' + short_alpha_COPY_path + '\n'
+  if sys.platform == 'win32':
+    # Construct a properly escaped regex when dealing with
+    # '\' riddled paths on Windows.
+    update_line = update_line.replace("\\", "\\\\")
   svntest.actions.run_and_verify_svn(None,
                                      '|'.join(
                                         [svntest.main.merge_notify_line(3, 5),
-                                         'U    ' + short_alpha_COPY_path +
-                                         '\n']),
+                                         update_line]),
                                      [], 'merge', '-r2:5',
                                      sbox.repo_url + '/A/B/E/alpha',
                                      short_alpha_COPY_path)
@@ -3188,9 +3192,11 @@ def mergeinfo_update_elision(sbox):
 
 
 #----------------------------------------------------------------------
+# If the update editor receives add_file(foo, copyfrom='blah'), it
+# should attempt to locate 'blah' in the wc, and then copy it into place.
 
 def update_handles_copyfrom(sbox):
-  "update should understand copyfrom"
+  "update should make use of copyfrom args"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -3217,9 +3223,10 @@ def update_handles_copyfrom(sbox):
                                         expected_status, None,
                                         None, None, None, None, wc_dir)
 
-  # Make a local edit to rho in the backup working copy.
+  # Make a local edits to rho in the backup working copy - both text and props
   rho2_path = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
   svntest.main.file_append(rho2_path, "Some new text.\n")
+  svntest.main.run_svn(None, 'propset', 'Kubla', 'Khan', rho2_path)
 
   # Now try updating our backup working copy: it should receive glub,
   # but with copyfrom args of rho@1, and thus copy the existing
@@ -3233,20 +3240,309 @@ def update_handles_copyfrom(sbox):
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/D/G/rho',
-                      contents="This is the file 'rho'.\Some new text.\n")
+                      contents="This is the file 'rho'.\nSome new text.\n",
+                      props={'Kubla' : 'Khan'})
   expected_disk.add({
-    'A/D/G/glub' : Item("This is the file 'rho'.\nSome new text.\n"),
+    'A/D/G/glub' : Item("This is the file 'rho'.\nSome new text.\n",
+                        props={'Kubla' : 'Khan', 'svn:mergeinfo' : ''})
     })
 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak('A/D/G/rho', wc_rev=2, status='M ')
+  expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
+  expected_status.tweak('A/D/G/rho', wc_rev=2, status='MM')
   expected_status.add({
-    'A/D/G/glub' : Item(status='M ', wc_rev=2),
+    'A/D/G/glub' : Item(status='MM', wc_rev=2),
     })
-  svntest.actions.run_and_verify_update(wc_dir,
+  svntest.actions.run_and_verify_update(wc_backup,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        check_props = True)
+
+#----------------------------------------------------------------------
+# if the update_editor receives add_file(copyfrom=...), and the
+# copyfrom_path simply isn't available in the working copy, it should
+# fall back to doing an RA request to fetch the file.
+
+def copyfrom_degrades_gracefully(sbox):
+  "update degrades well if copyfrom_path unavailable"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a backup copy of the working copy.
+  wc_backup = sbox.add_wc_path('backup')
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+
+  # Move 'alpha' to 'glub'
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  glub_path = os.path.join(wc_dir, 'A', 'D', 'G', 'glub')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mv', alpha_path, glub_path)
+
+  # Commit that change, creating r2.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha' : Item(verb='Deleting'),
+    'A/D/G/glub' : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/D/G/glub' : Item(status='  ', wc_rev=2),
+    })
+  expected_status.remove('A/B/E/alpha')
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # In the 2nd working copy, update just one side of the move -- so that
+  # alpha gets deleted, but glub not yet added.
+  E_path = os.path.join(wc_backup, 'A', 'B', 'E')
+  expected_output = svntest.wc.State(E_path, {
+      'alpha' : Item(status='D '),
+      })
+  expected_disk = wc.State('', {
+      'beta'  : wc.StateItem("This is the file 'beta'.\n"),
+      })
+  expected_status = svntest.wc.State(E_path, {
+    ''           : Item(status='  '),
+    'beta'     : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev=2)
+  svntest.actions.run_and_verify_update(E_path,
                                         expected_output,
                                         expected_disk,
                                         expected_status)
+
+  # Now update the entire working copy, which should cause an
+  # add_file(glub, copyfrom_path=alpha)... except alpha is already gone.
+  # Update editor should gracefully fetch it via RA request.
+  expected_output = svntest.wc.State(wc_backup, { })
+  expected_output = wc.State(wc_backup, {
+    'A/D/G/glub' : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha')
+  expected_disk.add({
+    'A/D/G/glub' : Item("This is the file 'alpha'.\n"),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
+  expected_status.remove('A/B/E/alpha')
+  expected_status.add({
+    'A/D/G/glub' : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_update(wc_backup,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+#----------------------------------------------------------------------
+
+
+def update_accept_conflicts(sbox):
+  "update --accept automatic conflict resolution"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a backup copy of the working copy
+  wc_backup = sbox.add_wc_path('backup')
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+
+  # Make a few local mods to files which will be committed
+  iota_path = os.path.join(wc_dir, 'iota')
+  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  beta_path = os.path.join(wc_dir, 'A', 'B', 'E', 'beta')
+  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  svntest.main.file_append(lambda_path, 'Their appended text for lambda\n')
+  svntest.main.file_append(iota_path, 'Their appended text for iota\n')
+  svntest.main.file_append(mu_path, 'Their appended text for mu\n')
+  svntest.main.file_append(alpha_path, 'Their appended text for alpha\n')
+  svntest.main.file_append(beta_path, 'Their appended text for beta\n')
+  svntest.main.file_append(pi_path, 'Their appended text for pi\n')
+  svntest.main.file_append(rho_path, 'Their appended text for rho\n')
+
+  # Make a few local mods to files which will be conflicted
+  iota_path_backup = os.path.join(wc_backup, 'iota')
+  lambda_path_backup = os.path.join(wc_backup, 'A', 'B', 'lambda')
+  mu_path_backup = os.path.join(wc_backup, 'A', 'mu')
+  alpha_path_backup = os.path.join(wc_backup, 'A', 'B', 'E', 'alpha')
+  beta_path_backup = os.path.join(wc_backup, 'A', 'B', 'E', 'beta')
+  pi_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'pi')
+  rho_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
+  svntest.main.file_append(iota_path_backup,
+                           'My appended text for iota\n')
+  svntest.main.file_append(lambda_path_backup,
+                           'My appended text for lambda\n')
+  svntest.main.file_append(mu_path_backup,
+                           'My appended text for mu\n')
+  svntest.main.file_append(alpha_path_backup,
+                           'My appended text for alpha\n')
+  svntest.main.file_append(beta_path_backup,
+                           'My appended text for beta\n')
+  svntest.main.file_append(pi_path_backup,
+                           'My appended text for pi\n')
+  svntest.main.file_append(rho_path_backup,
+                           'My appended text for rho\n')
+
+  # Created expected output tree for 'svn ci'
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    'A/B/lambda' : Item(verb='Sending'),
+    'A/mu' : Item(verb='Sending'),
+    'A/B/E/alpha': Item(verb='Sending'),
+    'A/B/E/beta': Item(verb='Sending'),
+    'A/D/G/pi' : Item(verb='Sending'),
+    'A/D/G/rho' : Item(verb='Sending'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', wc_rev=2)
+  expected_status.tweak('A/B/lambda', wc_rev=2)
+  expected_status.tweak('A/mu', wc_rev=2)
+  expected_status.tweak('A/B/E/alpha', wc_rev=2)
+  expected_status.tweak('A/B/E/beta', wc_rev=2)
+  expected_status.tweak('A/D/G/pi', wc_rev=2)
+  expected_status.tweak('A/D/G/rho', wc_rev=2)
+
+  # Commit.
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # Now we'll update each of our 5 files in wc_backup; each one will get
+  # conflicts, and we'll handle each with a different --accept option.
+
+  # Setup SVN_EDITOR and SVN_MERGE for --accept={edit,launch}.
+  svntest.main.use_editor('append_foo')
+
+  # iota: no accept option
+  # Just leave the conflicts alone, since run_and_verify_svn already uses
+  # the --non-interactive option.
+  svntest.actions.run_and_verify_svn(None,
+                                     ['C    %s\n' % (iota_path_backup,),
+                                      'Updated to revision 2.\n'],
+                                     [],
+                                     'update', iota_path_backup)
+
+  # lambda: --accept=postpone
+  # Just leave the conflicts alone.
+  svntest.actions.run_and_verify_svn(None,
+                                     ['C    %s\n' % (lambda_path_backup,),
+                                      'Updated to revision 2.\n'],
+                                     [],
+                                     'update', '--accept=postpone',
+                                     lambda_path_backup)
+
+  # mu: --accept=base
+  # Accept the pre-update base file.
+  svntest.actions.run_and_verify_svn(None,
+                                     ['G    %s\n' % (mu_path_backup,),
+                                      'Updated to revision 2.\n'],
+                                     [],
+                                     'update', '--accept=base',
+                                     mu_path_backup)
+
+  # alpha: --accept=mine
+  # Accept the user's working file.
+  svntest.actions.run_and_verify_svn(None,
+                                     ['G    %s\n' % (alpha_path_backup,),
+                                      'Updated to revision 2.\n'],
+                                     [],
+                                     'update', '--accept=mine',
+                                     alpha_path_backup)
+
+  # beta: --accept=theirs
+  # Accept their file.
+  svntest.actions.run_and_verify_svn(None,
+                                     ['G    %s\n' % (beta_path_backup,),
+                                      'Updated to revision 2.\n'],
+                                     [],
+                                     'update', '--accept=theirs',
+                                     beta_path_backup)
+
+  # pi: --accept=edit
+  # Run editor and accept the edited file.
+  svntest.actions.run_and_verify_svn(None,
+                                     ['G    %s\n' % (pi_path_backup,),
+                                      'Updated to revision 2.\n'],
+                                     [],
+                                     'update', '--accept=edit',
+                                     pi_path_backup)
+
+  # rho: --accept=launch
+  # Run SVN_MERGE and accept the merged file.
+  svntest.actions.run_and_verify_svn(None,
+                                     ['G    %s\n' % (rho_path_backup,),
+                                      'Updated to revision 2.\n'],
+                                     [],
+                                     'update', '--accept=launch',
+                                     rho_path_backup)
+
+  # Set the expected disk contents for the test
+  expected_disk = svntest.main.greek_state.copy()
+
+  expected_disk.tweak('iota', contents=("This is the file 'iota'.\n"
+                                        '<<<<<<< .mine\n'
+                                        'My appended text for iota\n'
+                                        '=======\n'
+                                        'Their appended text for iota\n'
+                                        '>>>>>>> .r2\n'))
+  expected_disk.tweak('A/B/lambda', contents=("This is the file 'lambda'.\n"
+                                              '<<<<<<< .mine\n'
+                                              'My appended text for lambda\n'
+                                              '=======\n'
+                                              'Their appended text for lambda\n'
+                                              '>>>>>>> .r2\n'))
+  expected_disk.tweak('A/mu', contents="This is the file 'mu'.\n")
+  expected_disk.tweak('A/B/E/alpha', contents=("This is the file 'alpha'.\n"
+                                               'My appended text for alpha\n'))
+  expected_disk.tweak('A/B/E/beta', contents=("This is the file 'beta'.\n"
+                                              'Their appended text for beta\n'))
+  expected_disk.tweak('A/D/G/pi', contents=("This is the file 'pi'.\n"
+                                             '<<<<<<< .mine\n'
+                                             'My appended text for pi\n'
+                                             '=======\n'
+                                             'Their appended text for pi\n'
+                                             '>>>>>>> .r2\n'
+                                             'foo\n'))
+  expected_disk.tweak('A/D/G/rho', contents=("This is the file 'rho'.\n"
+                                             '<<<<<<< .mine\n'
+                                             'My appended text for rho\n'
+                                             '=======\n'
+                                             'Their appended text for rho\n'
+                                             '>>>>>>> .r2\n'
+                                             'foo\n'))
+
+  # Set the expected extra files for the test
+  extra_files = ['iota.*\.r1', 'iota.*\.r2', 'iota.*\.mine',
+                 'lambda.*\.r1', 'lambda.*\.r2', 'lambda.*\.mine']
+
+  # Set the expected status for the test
+  expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
+  expected_status.tweak('iota', 'A/B/lambda', 'A/mu',
+                        'A/B/E/alpha', 'A/B/E/beta',
+                        'A/D/G/pi', 'A/D/G/rho', wc_rev=2)
+  expected_status.tweak('iota', status='C ')
+  expected_status.tweak('A/B/lambda', status='C ')
+  expected_status.tweak('A/mu', status='M ')
+  expected_status.tweak('A/B/E/alpha', status='M ')
+  expected_status.tweak('A/B/E/beta', status='  ')
+  expected_status.tweak('A/D/G/pi', status='M ')
+  expected_status.tweak('A/D/G/rho', status='M ')
+
+  # Set the expected output for the test
+  expected_output = wc.State(wc_backup, {})
+
+  # Do the update and check the results in three ways.
+  svntest.actions.run_and_verify_update(wc_backup,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None,
+                                        svntest.tree.detect_conflict_files,
+                                        extra_files)
 
 
 #######################################################################
@@ -3292,6 +3588,8 @@ test_list = [ None,
               update_conflicted,
               mergeinfo_update_elision,
               XFail(update_handles_copyfrom),
+              copyfrom_degrades_gracefully,
+              update_accept_conflicts,
              ]
 
 if __name__ == '__main__':

@@ -1,7 +1,7 @@
-dnl configure.in: Autoconfiscation for Subversion
+dnl configure.ac: Autoconfiscation for Subversion
 dnl Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.50)
+AC_PREREQ(2.58)
 
 dnl Get the version of Subversion, using m4's esyscmd() command to do this
 dnl at m4-time, since AC_INIT() requires it then.
@@ -74,7 +74,7 @@ NEON_RECOMMENDED_VER=0.25.5
 NEON_URL="http://www.webdav.org/neon/neon-${NEON_RECOMMENDED_VER}.tar.gz"
 dnl You can skip the neon version check only if you know what you are doing 
 AC_ARG_ENABLE(neon-version-check,
-  AC_HELP_STRING([--disable-neon-version-check],
+  AS_HELP_STRING([--disable-neon-version-check],
 		 [do not check the Neon version]),
   [
     if test "$enableval" = "no" ; then
@@ -137,7 +137,7 @@ AC_DEFINE_UNQUOTED(SVN_LOCALE_DIR, "${svn_localedir}",
 dnl Check for libtool -- we'll definitely need it for all our shared libs!
 echo "configuring libtool now"
 AC_ARG_ENABLE(experimental-libtool,
-  AC_HELP_STRING([--enable-experimental-libtool],[Use APR's libtool]),
+  AS_HELP_STRING([--enable-experimental-libtool],[Use APR's libtool]),
   [experimental_libtool=$enableval],[experimental_libtool=no])
 
 if test "$experimental_libtool" = "yes"; then
@@ -175,7 +175,7 @@ AC_SUBST(SVN_LT_CXXTAG)
 
 dnl Before configuring libtool check for --enable-all-static option
 AC_ARG_ENABLE(all-static,
-  AC_HELP_STRING([--enable-all-static],
+  AS_HELP_STRING([--enable-all-static],
                  [Build completely static (standalone) binaries.]),
   [
     if test "$enableval" = "yes" ; then
@@ -216,7 +216,7 @@ esac
 dnl Check for trang.
 trang=yes
 AC_ARG_WITH(trang,
-AC_HELP_STRING([--with-trang=PATH],
+AS_HELP_STRING([--with-trang=PATH],
 	       [Specify the command to run the trang schema converter]),
 [
     trang="$withval"
@@ -270,7 +270,7 @@ fi
 dnl Mac OS KeyChain -------------------
 
 AC_ARG_ENABLE(keychain,
-  AC_HELP_STRING([--disable-keychain], 
+  AS_HELP_STRING([--disable-keychain], 
   [Disable use of Mac OS KeyChain for auth credentials]),
   [enable_keychain=$enableval],[enable_keychain=yes])
 
@@ -308,7 +308,7 @@ fi
 dnl I18n -------------------
 
 AC_ARG_ENABLE(nls,
-  AC_HELP_STRING([--disable-nls],[Disable gettext functionality]),
+  AS_HELP_STRING([--disable-nls],[Disable gettext functionality]),
   [enable_nls=$enableval],[enable_nls=yes])
 
 USE_NLS="no"
@@ -434,7 +434,7 @@ AC_CHECK_FUNCS(symlink readlink)
 dnl Process some configuration options ----------
 
 AC_ARG_WITH(ssl,
-AC_HELP_STRING([--with-ssl],
+AS_HELP_STRING([--with-ssl],
                [This option does NOT affect the Subversion build process in any
                 way. It enables OpenSSL support in the Neon library. If and
                 only if you are building Neon as an integrated part of the
@@ -445,7 +445,7 @@ AC_HELP_STRING([--with-ssl],
 [])
 
 AC_ARG_ENABLE(debug,
-AC_HELP_STRING([--enable-debug],
+AS_HELP_STRING([--enable-debug],
 	       [Turn on debugging]),
 [
     if test "$enableval" = "yes" ; then
@@ -456,7 +456,7 @@ AC_HELP_STRING([--enable-debug],
 ])
 
 AC_ARG_ENABLE(maintainer-mode,
-AC_HELP_STRING([--enable-maintainer-mode],
+AS_HELP_STRING([--enable-maintainer-mode],
 	       [Turn on debugging and very strict compile-time warnings]),
 [
     if test "$enableval" = "yes" ; then
@@ -466,6 +466,7 @@ AC_HELP_STRING([--enable-maintainer-mode],
       enable_debugging=yes
       if test "$GCC" = "yes"; then
         CFLAGS="$CFLAGS -std=c89 -Wpointer-arith -Wwrite-strings -Wshadow"
+        CXXFLAGS="$CXXFLAGS -Wpointer-arith -Wwrite-strings -Wshadow"
       fi
     fi
 ])
@@ -474,18 +475,21 @@ if test "$enable_debugging" = "yes" ; then
   dnl At the moment, we don't want optimization, because we're
   dnl debugging.
   CFLAGS=["`echo $CFLAGS' ' | sed -e 's/-O[^ ]* //g'`"]
+  CXXFLAGS=["`echo $CXXFLAGS' ' | sed -e 's/-O[^ ]* //g'`"]
   dnl SVN_DEBUG enables specific features for developer builds
   dnl AP_DEBUG enables specific (Apache) features for developer builds
   CFLAGS="$CFLAGS -DSVN_DEBUG -DAP_DEBUG"
+  CXXFLAGS="$CXXFLAGS -DSVN_DEBUG -DAP_DEBUG"
 else
   if test "$enable_debugging" = "no" ; then
     CFLAGS=["`echo $CFLAGS' ' | sed -e 's/-g[0-9] //g' | sed -e 's/-g//g'`"]
+    CXXFLAGS=["`echo $CXXFLAGS' ' | sed -e 's/-g[0-9] //g' | sed -e 's/-g//g'`"]
   fi
 fi
 
 
 AC_ARG_WITH(editor,
-AC_HELP_STRING([--with-editor=PATH],
+AS_HELP_STRING([--with-editor=PATH],
                [Specify a default editor for the subversion client.]),
 [
 
@@ -504,7 +508,7 @@ SVN_LIB_Z
 
 MOD_ACTIVATION="-a"
 AC_ARG_ENABLE(mod-activation,
-AC_HELP_STRING([--disable-mod-activation],
+AS_HELP_STRING([--disable-mod-activation],
 	       [Do not enable mod_dav_svn in httpd.conf]),
 [
     if test "$enableval" = "no" ; then
@@ -519,7 +523,7 @@ AC_SUBST(MOD_ACTIVATION)
 
 
 AC_ARG_ENABLE(gprof,
-AC_HELP_STRING([--enable-gprof],
+AS_HELP_STRING([--enable-gprof],
 	       [Produce gprof profiling data in 'gmon.out' (GCC only).]),
 [
     if test "$enableval" = "yes" ; then
@@ -535,6 +539,7 @@ AC_HELP_STRING([--enable-gprof],
         fi
         AC_MSG_NOTICE([Enabling gprof profiling data (to gmon.out).])
         CFLAGS="$CFLAGS -pg"
+        CXXFLAGS="$CXXFLAGS -pg"
         LT_LDFLAGS="$LT_LDFLAGS -pg"
       else
         AC_MSG_ERROR(We only support --enable-gprof with GCC right now.)
@@ -595,7 +600,7 @@ SVN_CHECK_SWIG
 
 dnl decide whether we want to link against the RA libraries
 AC_ARG_ENABLE(dso,
-AC_HELP_STRING([--enable-dso], [Turn on DSO loading of RA libraries]),
+AS_HELP_STRING([--enable-dso], [Turn on DSO loading of RA libraries]),
 [
     if test "$enableval" = "yes"; then
       enable_dso=yes
@@ -673,7 +678,7 @@ AC_SUBST(SVN_FS_LIB_LINK)
 dnl Possibly compile JavaHL
 do_javahl_build=no
 AC_ARG_ENABLE(javahl,
-  AC_HELP_STRING([--enable-javahl],
+  AS_HELP_STRING([--enable-javahl],
              [Enable compilation of Java high-level bindings (requires C++)]),
   [ if test "$enableval" = "yes" ; then
         do_javahl_build="yes"
@@ -724,7 +729,7 @@ AC_SUBST(FIX_JAVAHL_LIB)
 AC_SUBST(LT_CXX_LIBADD)
 
 AC_ARG_WITH(junit,
-AC_HELP_STRING([--with-junit=PATH],
+AS_HELP_STRING([--with-junit=PATH],
                [Specify a path to the junit JAR file.]),
 [
     if test "$withval" = "yes" ; then
