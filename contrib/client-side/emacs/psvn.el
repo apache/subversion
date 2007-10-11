@@ -1105,7 +1105,9 @@ If there is no .svn directory, examine if there is CVS and run
   (let* ((in-status-buffer (eq major-mode 'svn-status-mode))
          (hist (if in-status-buffer (cdr svn-status-directory-history) svn-status-directory-history))
          (dir (funcall svn-status-completing-read-function "svn-status on directory: " hist))
-         (svn-buffer-available (with-current-buffer (get-buffer svn-status-buffer-name) (string= default-directory dir))))
+         (svn-status-buffer (get-buffer svn-status-buffer-name))
+         (svn-buffer-available (and svn-status-buffer
+                                    (with-current-buffer svn-status-buffer-name (string= default-directory dir)))))
     (if (file-directory-p dir)
         (if svn-buffer-available
             (svn-status-switch-to-status-buffer)
