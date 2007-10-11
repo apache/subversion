@@ -936,7 +936,19 @@ svn_repos_node_location_segments(svn_repos_t *repos,
           current_rev = prev_rev;
         }
       
-      /* Report our segment. */
+      /* Report our segment, providing it passes authz muster. */
+      if (authz_read_func)
+        {
+          svn_boolean_t readable;
+          svn_fs_root_t *cur_rev_root;
+          
+          SVN_ERR(svn_fs_revision_root(&cur_rev_root, fs, 
+                                       segment->range_end, subpool));
+          SVN_ERR(authz_read_func(&readable, cur_rev_root, segment->path,
+                                  authz_read_baton, subpool));
+          if (! readable)
+            return SVN_NO_ERROR;
+        }
       SVN_ERR(receiver(segment, receiver_baton, pool));
 
       /* If we've set CURRENT_REV to SVN_INVALID_REVNUM, we're done
