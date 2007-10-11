@@ -66,9 +66,12 @@ extern "C" {
  *
  * The change from 7 to 8 was putting wcprops in one file per directory.
  *
+ * The change from 8 to 9 was the addition of changelists, keep-local,
+ * and sticky depth (for selective/sparse checkouts).
+ *
  * Please document any further format changes here.
  */
-#define SVN_WC__VERSION       8
+#define SVN_WC__VERSION       9
 
 /* A version <= this doesn't have property caching in the entries file. */
 #define SVN_WC__NO_PROPCACHING_VERSION 5
