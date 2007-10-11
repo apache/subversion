@@ -1514,6 +1514,18 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+ra_svn_get_location_segments(svn_ra_session_t *session,
+                             const char *path,
+                             svn_revnum_t start_rev,
+                             svn_revnum_t end_rev,
+                             svn_location_segment_receiver_t receiver,
+                             void *receiver_baton,
+                             apr_pool_t *pool)
+{
+  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
+}
+
 static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
                                          const char *path,
                                          svn_revnum_t start, svn_revnum_t end,
@@ -2109,6 +2121,7 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_get_uuid,
   ra_svn_get_repos_root,
   ra_svn_get_locations,
+  ra_svn_get_location_segments,
   ra_svn_get_file_revs,
   ra_svn_lock,
   ra_svn_unlock,

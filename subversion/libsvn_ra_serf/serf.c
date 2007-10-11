@@ -758,6 +758,7 @@ static const svn_ra__vtable_t serf_vtable = {
   svn_ra_serf__get_uuid,
   svn_ra_serf__get_repos_root,
   svn_ra_serf__get_locations,
+  svn_ra_serf__get_location_segments,
   svn_ra_serf__get_file_revs,
   svn_ra_serf__lock,
   svn_ra_serf__unlock,
