@@ -1894,6 +1894,21 @@ node_location_segments(const char **msg,
                                     expected_segments, pool));
   }
 
+  /* Check locations for A/D/G@HEAD. */
+  {
+    svn_location_segment_t expected_segments[] =
+      {
+        { 7, 7, "A/D/G" },
+        { 6, 6, "A/D2/G" },
+        { 5, 5, NULL },
+        { 3, 4, "A/D2/G" },
+        { 1, 2, "A/D2/G" },
+        { 0 }
+      };
+    SVN_ERR(check_location_segments(repos, "A/D/G", SVN_INVALID_REVNUM,
+                                    expected_segments, pool));
+  }
+
   return SVN_NO_ERROR;
 }
 
