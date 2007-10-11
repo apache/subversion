@@ -308,10 +308,22 @@ href="http://subversion.tigris.org/issues/show_bug.cgi?id=503">issue
 </div>  <!-- multi-op-copy-move -->
 
 <div class="h4" id="multi-src-copy" title="multi-src-copy">
-<h4>Improved handling for updates which copy/move locally modified
-files (<em>client</em>)</h4>
+<h4>Improved handling multiple copy/move sources (<em>client</em>)</h4>
 
-<p>XXX: 'svn cp *.c dir'</p>
+<p>Clients now accept multiple sources for copy and move operations, with 
+the ability to copy/move each of the sources to the specified directory.
+This mirrors the behavior of standard command-line copy and move tools,
+such as <code>cp</code> and <code>mv</code>.  In practice, this means
+users can take advantage of shell globbing when doing a local copy
+or move:</p>
+<pre>
+svn cp *.c dir
+</pre>
+
+<p>Multiple source copy/move also works for all previously defined
+copy/move working copy and repository combinations.  This was
+<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=747">issue
+#747</a>.</p>
 
 </div>  <!-- multi-src-copy -->
 
