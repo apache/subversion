@@ -3587,7 +3587,7 @@ test_list = [ None,
               update_with_obstructing_additions,
               update_conflicted,
               mergeinfo_update_elision,
-              XFail(update_handles_copyfrom),
+              update_handles_copyfrom,
               copyfrom_degrades_gracefully,
               update_accept_conflicts,
              ]
