@@ -176,6 +176,12 @@ typedef struct report_info_t
   /* our delta base, if present (NULL if we're adding the file) */
   const svn_string_t *delta_base;
 
+  /* Path of original item if add with history */
+  const char *copyfrom_path;
+
+  /* Revision of original item if add with history */
+  svn_revnum_t copyfrom_rev;
+
   /* The propfind request for our current file (if present) */
   svn_ra_serf__propfind_context_t *propfind;
 
@@ -753,8 +759,8 @@ handle_fetch(serf_request_t *request,
         {
           err = info->dir->update_editor->add_file(info->name,
                                                    info->dir->dir_baton,
-                                                   NULL,
-                                                   info->base_rev,
+                                                   info->copyfrom_path,
+                                                   info->copyfrom_rev,
                                                    info->editor_pool,
                                                    &info->file_baton);
         }
@@ -1037,8 +1043,8 @@ handle_propchange_only(report_info_t *info)
     {
       SVN_ERR(info->dir->update_editor->add_file(info->name,
                                                  info->dir->dir_baton,
-                                                 NULL,
-                                                 info->base_rev,
+                                                 info->copyfrom_path,
+                                                 info->copyfrom_rev,
                                                  info->editor_pool,
                                                  &info->file_baton));
     }
@@ -1309,7 +1315,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "add-directory") == 0)
     {
-      const char *dir_name;
+      const char *dir_name, *cf, *cr;
       report_dir_t *dir;
       report_info_t *info;
 
@@ -1320,6 +1326,8 @@ start_report(svn_ra_serf__xml_parser_t *parser,
             (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
              _("Missing name attr in add-directory element"));
         }
+      cf = svn_xml_get_attr_value("copyfrom-path", attrs);
+      cr = svn_xml_get_attr_value("copyfrom-rev", attrs);
 
       info = push_state(parser, ctx, ADD_DIR);
 
@@ -1334,6 +1342,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       dir->name = dir->name_buf->data;
       info->name = dir->name;
+
+      info->copyfrom_path = cf ? apr_pstrdup(info->pool, cf) : NULL;
+      info->copyfrom_rev = cr ? apr_atoi64(cr) : SVN_INVALID_REVNUM;
 
       /* Mark that we don't have a base. */
       info->base_rev = SVN_INVALID_REVNUM;
@@ -1377,10 +1388,12 @@ start_report(svn_ra_serf__xml_parser_t *parser,
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "add-file") == 0)
     {
-      const char *file_name;
+      const char *file_name, *cf, *cr;
       report_info_t *info;
 
       file_name = svn_xml_get_attr_value("name", attrs);
+      cf = svn_xml_get_attr_value("copyfrom-path", attrs);
+      cr = svn_xml_get_attr_value("copyfrom-rev", attrs);
 
       if (!file_name)
         {
@@ -1398,6 +1411,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       info->base_name = apr_pstrdup(info->pool, file_name);
       info->name = NULL;
+
+      info->copyfrom_path = cf ? apr_pstrdup(info->pool, cf) : NULL;
+      info->copyfrom_rev = cr ? apr_atoi64(cr) : SVN_INVALID_REVNUM;
     }
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "delete-entry") == 0)
