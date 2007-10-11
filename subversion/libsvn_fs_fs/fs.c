@@ -27,6 +27,7 @@
 #include "svn_fs.h"
 #include "svn_delta.h"
 #include "svn_version.h"
+#include "svn_pools.h"
 #include "fs.h"
 #include "err.h"
 #include "fs_fs.h"
@@ -169,6 +170,9 @@ initialize_fs_struct(svn_fs_t *fs)
   fs_fs_data_t *ffd = apr_pcalloc(fs->pool, sizeof(*ffd));
   fs->vtable = &fs_vtable;
   fs->fsap_data = ffd;
+
+  ffd->rev_root_id_cache_pool = svn_pool_create(fs->pool);
+  ffd->rev_root_id_cache = apr_hash_make(ffd->rev_root_id_cache_pool);
 
   ffd->rev_node_cache = apr_hash_make(fs->pool);
   ffd->rev_node_list.prev = &ffd->rev_node_list;

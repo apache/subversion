@@ -82,12 +82,8 @@ extern "C" {
 #define NUM_DIR_CACHE_ENTRIES 128
 #define DIR_CACHE_ENTRIES_MASK(x) ((x) & (NUM_DIR_CACHE_ENTRIES - 1))
 
-/* Maximum number of revroot ids to cache dirents for.
-   This *must* be a power of 2 for RRI_CACHE_ENTRIES_MASK
-   to work.  */
-#define NUM_RRI_CACHE_ENTRIES 64
-#define RRI_CACHE_ENTRIES_MASK(x) ((x) & (NUM_RRI_CACHE_ENTRIES - 1))
-
+/* Maximum number of revroot ids to cache dirents for at a time. */
+#define NUM_RRI_CACHE_ENTRIES 4096
 
 /* Private FSFS-specific data shared between all svn_txn_t objects that
    relate to a particular transaction in a filesystem (as identified
@@ -175,9 +171,12 @@ typedef struct
   apr_hash_t *dir_cache[NUM_DIR_CACHE_ENTRIES];
   apr_pool_t *dir_cache_pool[NUM_DIR_CACHE_ENTRIES];
 
-  /* A cache of revision root IDs, each in their own pool. */
-  svn_fs_id_t *rev_root_id_cache[NUM_RRI_CACHE_ENTRIES];
-  apr_pool_t *rev_root_id_cache_pool[NUM_RRI_CACHE_ENTRIES];
+  /* A cache of revision root IDs, allocated in this subpool.  (IDs
+   * are so small that one pool per ID would be overkill;
+   * unfortunately, this means the only way we expire cache entries is
+   * by wiping the whole cache.) */
+  apr_hash_t *rev_root_id_cache;
+  apr_pool_t *rev_root_id_cache_pool;
 
   /* The format number of this FS. */
   int format;
