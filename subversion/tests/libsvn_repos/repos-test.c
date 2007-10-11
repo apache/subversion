@@ -1913,6 +1913,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(authz),
     SVN_TEST_PASS(commit_editor_authz),
     SVN_TEST_PASS(commit_continue_txn),
-    SVN_TEST_XFAIL(node_location_segments),
+    SVN_TEST_PASS(node_location_segments),
     SVN_TEST_NULL
   };

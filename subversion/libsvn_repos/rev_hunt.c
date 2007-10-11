@@ -835,6 +835,23 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
 }
 
 
+/* This implements the `svn_repos_history_func_t' interface, and is
+   used by svn_repos_node_location_segments() to determine, for a path
+   and revision which has no prior affecting copies, the revision in
+   which the path was created.  It's baton is a pointer to an
+   svn_revnum_t, which is clobbered by each successive REVISION. */
+static svn_error_t *
+nls_history_func(void *baton,
+                 const char *path,
+                 svn_revnum_t revision,
+                 apr_pool_t *pool)
+{
+  svn_revnum_t *b = baton;
+  *b = revision;
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_repos_node_location_segments(svn_repos_t *repos,
                                  const char *path,
@@ -847,7 +864,9 @@ svn_repos_node_location_segments(svn_repos_t *repos,
                                  apr_pool_t *pool)
 {
   svn_fs_t *fs = svn_repos_fs(repos);
+  svn_stringbuf_t *current_path;
   svn_revnum_t current_rev;
+  apr_pool_t *subpool;
 
   /* No START_REV?  We'll use HEAD. */
   if (! SVN_IS_VALID_REVNUM(start_rev))
@@ -860,13 +879,83 @@ svn_repos_node_location_segments(svn_repos_t *repos,
      demands it. */
   assert(end_rev <= start_rev);
   
+  /* Ensure that PATH is absolute, because our path-math will depend
+     on that being the case.  */
+  if (*path != '/')
+    path = apr_pstrcat(pool, "/", path, NULL);
+
+  /* Auth check. */
+  if (authz_read_func)
+    {
+      svn_fs_root_t *peg_root;
+      SVN_ERR(svn_fs_revision_root(&peg_root, fs, start_rev, pool));
+      SVN_ERR(check_readability(peg_root, path,
+                                authz_read_func, authz_read_baton, pool));
+    }
+
   /* Okay, let's get searching! */
+  subpool = svn_pool_create(pool);
   current_rev = start_rev;
+  current_path = svn_stringbuf_create(path, pool);
   while (current_rev >= end_rev)
     {
-      /* ### TODO:  Um ... actually generate output?  */
-      break;
+      svn_revnum_t appeared_rev, prev_rev;
+      const char *cur_path, *prev_path;
+      svn_location_segment_t *segment;
+
+      svn_pool_clear(subpool);
+
+      cur_path = apr_pstrmemdup(subpool, current_path->data,
+                                current_path->len);
+      segment = apr_pcalloc(subpool, sizeof(*segment));
+      segment->range_end = current_rev;
+      segment->range_start = end_rev;
+      segment->path = cur_path + 1;
+
+      SVN_ERR(prev_location(&appeared_rev, &prev_path, &prev_rev, fs, 
+                            current_rev, cur_path, subpool));
+
+      /* If there are no previous locations for this thing (meaning,
+         it originated at the current path), then we simply need to
+         find its revision of origin to populate our final segment.
+         Otherwise, the APPEARED_REV is the start of current segment's
+         range. */
+      if (! prev_path)
+        {
+          svn_revnum_t first_rev;
+          SVN_ERR(svn_repos_history2(fs, cur_path, nls_history_func,
+                                     &first_rev, NULL, NULL, 
+                                     current_rev, end_rev, TRUE, subpool));
+          segment->range_start = first_rev;
+          current_rev = SVN_INVALID_REVNUM;
+        }
+      else
+        {
+          segment->range_start = appeared_rev;
+          svn_stringbuf_set(current_path, prev_path);
+          current_rev = prev_rev;
+        }
+      
+      /* Report our segment. */
+      SVN_ERR(receiver(segment, receiver_baton, pool));
+
+      /* If we've set CURRENT_REV to SVN_INVALID_REVNUM, we're done
+         (and didn't ever reach END_REV).  */
+      if (! SVN_IS_VALID_REVNUM(current_rev))
+        break;
+
+      /* If there's a gap in the history, we need to report as much. */
+      if (segment->range_start - current_rev > 1)
+        {
+          svn_location_segment_t *gap_segment;
+          gap_segment = apr_pcalloc(subpool, sizeof(*gap_segment));
+          gap_segment->range_end = segment->range_start - 1;
+          gap_segment->range_start = current_rev + 1;
+          gap_segment->path = NULL;
+          SVN_ERR(receiver(gap_segment, receiver_baton, pool));
+        }
     }
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
