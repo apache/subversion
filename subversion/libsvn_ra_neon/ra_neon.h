@@ -941,6 +941,17 @@ svn_ra_neon__get_locations(svn_ra_session_t *session,
 
 
 /*
+ * Implements the get_location_segments RA layer function. */
+svn_error_t *
+svn_ra_neon__get_location_segments(svn_ra_session_t *session,
+                                   const char *path,
+                                   svn_revnum_t start_rev,
+                                   svn_revnum_t end_rev,
+                                   svn_location_segment_receiver_t receiver,
+                                   void *receiver_baton,
+                                   apr_pool_t *pool);
+
+/*
  * Implements the get_locks RA layer function. */
 svn_error_t *
 svn_ra_neon__get_locks(svn_ra_session_t *session,

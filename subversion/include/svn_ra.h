@@ -1300,6 +1300,33 @@ svn_error_t *svn_ra_get_locations(svn_ra_session_t *session,
                                   apr_array_header_t *location_revisions,
                                   apr_pool_t *pool);
 
+
+/**
+ * Call @a receiver (with @a receiver_baton) for each segment in the
+ * location history of @a path in @a start_rev, working backwards in
+ * time from @a start_rev to @a end_rev.
+ *
+ * @a end_rev may be @c SVN_INVALID_REVNUM to indicate that you want
+ * to trace the history of the object to its origin.
+ *
+ * @a start_rev may be @c SVN_INVALID_REVNUM to indicate that you want
+ * to trace the history of the object beginning in the HEAD revision.
+ * Otherwise, @a start_rev must be younger than @a end_rev (unless @a
+ * end_rev is @c SVN_INVALID_REVNUM).
+ *
+ * Use @a pool for all allocations.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_ra_get_location_segments(svn_ra_session_t *session,
+                             const char *path,
+                             svn_revnum_t start_rev,
+                             svn_revnum_t end_rev,
+                             svn_location_segment_receiver_t receiver,
+                             void *receiver_baton,
+                             apr_pool_t *pool);
+
 /**
  * Retrieve a subset of the interesting revisions of a file @a path
  * as seen in revision @a end (see svn_fs_history_prev() for a

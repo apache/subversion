@@ -936,10 +936,26 @@ svn_error_t *svn_ra_get_locations(svn_ra_session_t *session,
       err = SVN_NO_ERROR;
       
       /* Do it the slow way, using get-logs, for older servers. */
-      SVN_ERR(svn_ra__locations_from_log(session, locations, path, peg_revision,
-                                         location_revisions, pool));
+      SVN_ERR(svn_ra__locations_from_log(session, locations, path, 
+                                         peg_revision, location_revisions, 
+                                         pool));
     }
   return err;
+}
+
+svn_error_t *
+svn_ra_get_location_segments(svn_ra_session_t *session,
+                             const char *path,
+                             svn_revnum_t start_rev,
+                             svn_revnum_t end_rev,
+                             svn_location_segment_receiver_t receiver,
+                             void *receiver_baton,
+                             apr_pool_t *pool)
+{
+  return session->vtable->get_location_segments(session, path, 
+                                                start_rev, end_rev, 
+                                                receiver, receiver_baton,
+                                                pool);
 }
 
 svn_error_t *svn_ra_get_file_revs(svn_ra_session_t *session,

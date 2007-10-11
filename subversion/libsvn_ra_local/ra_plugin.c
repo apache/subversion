@@ -1189,6 +1189,7 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+
 static svn_error_t *
 svn_ra_local__get_locations(svn_ra_session_t *session,
                             apr_hash_t **locations,
@@ -1211,6 +1212,28 @@ svn_ra_local__get_locations(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+svn_ra_local__get_location_segments(svn_ra_session_t *session,
+                                    const char *path,
+                                    svn_revnum_t start_rev,
+                                    svn_revnum_t end_rev,
+                                    svn_location_segment_receiver_t receiver,
+                                    void *receiver_baton,
+                                    apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *sbaton = session->priv;
+  const char *abs_path;
+
+  /* Append the relative path to the base FS path to get an
+     absolute repository path. */
+  abs_path = svn_path_join(sbaton->fs_path->data, path, pool);
+
+  return svn_repos_node_location_segments(sbaton->repos, abs_path,
+                                          start_rev, end_rev,
+                                          receiver, receiver_baton,
+                                          NULL, NULL, pool);
+}
 
 
 static svn_error_t *
@@ -1429,6 +1452,7 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__get_uuid,
   svn_ra_local__get_repos_root,
   svn_ra_local__get_locations,
+  svn_ra_local__get_location_segments,
   svn_ra_local__get_file_revs,
   svn_ra_local__lock,
   svn_ra_local__unlock,
