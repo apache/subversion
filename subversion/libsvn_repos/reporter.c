@@ -651,7 +651,7 @@ add_file_smartly(report_baton_t *b,
           /* If the destination of the copy event is the same path as
              o_path, then we've found something interesting that should
              have 'copyfrom' history. */
-          if (strcmp(closest_copy_path + 1, o_path) == 0)
+          if (strcmp(closest_copy_path, o_path) == 0)
             {
               SVN_ERR(svn_fs_copied_from(copyfrom_rev, copyfrom_path,
                                          closest_copy_root, closest_copy_path,
