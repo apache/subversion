@@ -105,7 +105,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   svn_boolean_t sleep_here = FALSE;
   svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
   const char *diff3_cmd;
-  svn_ra_session_t *ra_session, *ra_session2;
+  svn_ra_session_t *ra_session;
   svn_wc_adm_access_t *dir_access;
   svn_wc_adm_access_t *path_adm_access;
   apr_hash_t *children_with_mergeinfo;
