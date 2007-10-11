@@ -1870,16 +1870,27 @@ node_location_segments(const char **msg,
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
   svn_pool_clear(subpool);
 
-  /* Check locations for A/D2@HEAD. */
+  /* Check locations for A/D@HEAD. */
   {
-    static svn_location_segment_t expected_segments[] =
+    svn_location_segment_t expected_segments[] =
       {
         { 7, 7, "A/D" },
         { 3, 6, "A/D2" },
         { 1, 2, "A/D" },
         { 0 }
       };
-    SVN_ERR(check_location_segments(repos, "A/D2", SVN_INVALID_REVNUM,
+    SVN_ERR(check_location_segments(repos, "A/D", SVN_INVALID_REVNUM,
+                                    expected_segments, pool));
+  }
+
+  /* Check locations for A/D@6. */
+  {
+    svn_location_segment_t expected_segments[] =
+      {
+        { 1, 6, "A/D" },
+        { 0 }
+      };
+    SVN_ERR(check_location_segments(repos, "A/D", 6,
                                     expected_segments, pool));
   }
 
