@@ -43,6 +43,16 @@
 /*** Code. ***/
 
 
+/* Context baton for file_fetcher below. */
+struct ff_baton
+{
+  svn_client_ctx_t *ctx;       /* client context used to open ra session */
+  const char *repos_root;      /* the root of the ra session */
+  svn_ra_session_t *session;   /* the secondary ra session itself */
+  apr_pool_t *pool;            /* the pool where the ra session is allocated */
+};
+
+
 /* Implementation of svn_wc_get_file_t.  A feeble callback wrapper
    around svn_ra_get_file(), so that the update_editor can use it to
    fetch any file, any time. */
@@ -55,8 +65,14 @@ file_fetcher(void *baton,
              apr_hash_t **props,
              apr_pool_t *pool)
 {
-  svn_ra_session_t *session = (svn_ra_session_t *)baton;
-  SVN_ERR(svn_ra_get_file(session, path, revision, stream,
+  struct ff_baton *ffb = (struct ff_baton *)baton;
+
+  if (! ffb->session)
+    SVN_ERR(svn_client__open_ra_session_internal(&(ffb->session),
+                                                 ffb->repos_root,
+                                                 NULL, NULL, NULL, FALSE, TRUE,
+                                                 ffb->ctx, pool));
+  SVN_ERR(svn_ra_get_file(ffb->session, path, revision, stream,
                           fetched_rev, props, pool));
   return SVN_NO_ERROR;
 }
@@ -95,6 +111,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   apr_hash_t *children_with_mergeinfo;
   const char *preserved_exts_str;
   apr_array_header_t *preserved_exts;
+  struct ff_baton *ffb;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
@@ -182,13 +199,11 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
   SVN_ERR(svn_wc_maybe_set_repos_root(dir_access, path, repos_root, pool));
 
-  /* Open a *second* RA session to the root of the repository, so that
-     we have the ability to fetch any file.  This is a fallback in
-     case the server passes 'copyfrom' args to editor->add_file(), and
-     we don't already have that file in the working copy.  */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session2, repos_root,
-                                               NULL, NULL, NULL, FALSE, TRUE,
-                                               ctx, pool));
+  /* Build a baton for the file-fetching callback. */
+  ffb = apr_pcalloc(pool, sizeof(*ffb));
+  ffb->ctx = ctx;
+  ffb->repos_root = repos_root;
+  ffb->pool = pool;
 
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */
@@ -198,7 +213,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->conflict_func, ctx->conflict_baton,
-                                    file_fetcher, ra_session2,
+                                    file_fetcher, ffb,
                                     diff3_cmd, preserved_exts,
                                     &update_editor, &update_edit_baton,
                                     traversal_info,
