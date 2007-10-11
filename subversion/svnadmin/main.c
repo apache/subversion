@@ -374,8 +374,9 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     svnadmin__parent_dir} },
 
   {"lslocks", subcommand_lslocks, {0}, N_
-   ("usage: svnadmin lslocks REPOS_PATH\n\n"
-    "Print descriptions of all locks.\n"),
+   ("usage: svnadmin lslocks REPOS_PATH [PATH-IN-REPOS]\n\n"
+    "Print descriptions of all locks on or under PATH-IN-REPOS (which,\n"
+    "if not provided, is the root of the repository).\n"),
    {0} },
 
   {"lstxns", subcommand_lstxns, {0}, N_
@@ -1100,16 +1101,27 @@ static svn_error_t *
 subcommand_lslocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
+  apr_array_header_t *targets;
   svn_repos_t *repos;
+  const char *fs_path = "/";
   svn_fs_t *fs;
   apr_hash_t *locks;
   apr_hash_index_t *hi;
+
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
+                                        apr_array_make(pool, 0,
+                                                       sizeof(const char *)),
+                                        pool));
+  if (targets->nelts > 1)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
+  if (targets->nelts)
+    fs_path = APR_ARRAY_IDX(targets, 0, const char *);
 
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs(repos);
 
   /* Fetch all locks on or below the root directory. */
-  SVN_ERR(svn_repos_fs_get_locks(&locks, repos, "/", NULL, NULL, pool));
+  SVN_ERR(svn_repos_fs_get_locks(&locks, repos, fs_path, NULL, NULL, pool));
 
   for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
     {
