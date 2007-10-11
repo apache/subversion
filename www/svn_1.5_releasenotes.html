@@ -265,25 +265,33 @@ href="http://www.farside.org.uk/200704/tree_structured_fsfs">here</a>.
 
 
 <div class="h4" id="leverage-copyfrom" title="leverage-copyfrom">
-<h4>Improved handling for updates which copy/move locally modified
-files (<em>client and server</em>)</h4>
+<h4>Improved copy-handling during updates (<em>client and server</em>)</h4>
 
-<p>Repositories now provide "copied from" information to clients when
-sending deltas which result in a copy or move of paths in the client's
-working copy.  This allows the
-<code>update</code>/<code>switch</code>/<code>merge</code>
-sub-commands to preserve changes to locally modified, versioned files
-during the copy/move process.</p>
+<p>A common problem in older versions of Subversion was the way in
+which <code>svn update</code> handled incoming copies and moves.</p>
 
-<p>In previous releases, locally modified files would simply become
-unversioned, with local modifications not propagated on to the file's
-new location.</p>
+<p>For example, suppose Harry runs <code>svn move foo bar; svn
+commit</code>, and meanwhile Sally makes local changes to 'foo', and
+then runs <code>svn update</code>.  In earlier versions of Subversion,
+the server would send down a completely new file 'bar', and remove the
+file 'foo' (or rather, make it unversioned, since it has uncommitted
+changes.)  From Sally's point of view, her changes seem to be lost;
+the newly added 'bar' file has the older content.  In Subversion 1.5,
+the client and server both attempt to be smarter about this.  The
+server doesn't send a whole new file during the update, but rather
+instructions to copy something that may likely already exists in the
+working copy.  So Sally's 'foo' file is copied to 'bar' (with local
+edits intact!).</p>
 
-<p>The corresponding behavior for directories remains unhandled (see <a
-href="http://svn.collab.net/repos/svn/trunk/notes/tree-conflicts.txt">this
-document</a> for details on the complications, and/or <a
+<p>In theory, this is the best-case scenario.  There are a few
+caveats: this "proper copying" of existing working-copy resources only
+works on files, not (yet) on directories.  Also, if an incoming
+move-operation deletes 'foo' before it attempts to copy it to 'bar',
+then the copy will fail, and the client reverts to the old behavior of
+fetching a pristine copy of the file from the repository.  We hope to
+address this in svn 1.6.  For details on the this issue see <a
 href="http://subversion.tigris.org/issues/show_bug.cgi?id=503">issue
-#503</a> for scheduling).</p>
+#503</a>.</p>
 
 </div> <!-- leverage-copyfrom -->
 
