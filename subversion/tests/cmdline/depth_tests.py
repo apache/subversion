@@ -638,7 +638,7 @@ def depth_empty_unreceive_delete(sbox):
                                         expected_status,
                                         None, None, None, None, None, wc)
 
-  # Update the depth-0 wc, expecting not to receive the deletion of iota.
+  # Update the depth-empty wc, expecting not to receive the deletion of iota.
   expected_output = svntest.wc.State(wc_empty, { })
   expected_disk = svntest.wc.State('', { })
   expected_status = svntest.wc.State(wc_empty, { '' : svntest.wc.StateItem() })
@@ -692,7 +692,7 @@ def depth_immediates_unreceive_delete(sbox):
 
 #----------------------------------------------------------------------
 def depth_immediates_receive_delete(sbox):
-  "depth-1 working copy receives a deletion"
+  "depth-immediates working copy receives a deletion"
   # Check out a depth-immediates greek tree to wc1.  In wc2, delete A and
   # commit.  Update wc1  should receive the delete.
 
@@ -733,7 +733,7 @@ def depth_immediates_receive_delete(sbox):
 
 #----------------------------------------------------------------------
 def depth_immediates_subdir_propset_1(sbox):
-  "depth-1 commit subdirectory propset, then update"
+  "depth-immediates commit subdir propset, update"
   ign_a, ign_b, wc_immediates, ign_c \
          = set_up_depthy_working_copies(sbox, immediates=True)
 
@@ -787,7 +787,7 @@ def depth_immediates_subdir_propset_1(sbox):
 
 #----------------------------------------------------------------------
 def depth_immediates_subdir_propset_2(sbox):
-  "depth-1 update receives a subdirectory propset"
+  "depth-immediates update receives subdir propset"
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -1185,7 +1185,7 @@ def commit_depth_immediates(sbox):
                                         wc_dir, G_path)
 
 def depth_immediates_receive_new_dir(sbox):
-  "depth-1 working copy receives a new directory"
+  "depth-immediates wc receives new directory"
 
   ign_a, ign_b, wc_immed, wc = set_up_depthy_working_copies(sbox,
                                                             immediates=True,
