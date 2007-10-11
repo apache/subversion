@@ -909,6 +909,10 @@ Use this instead of `alist', for XEmacs 21.4 compatibility."
                                          ,value-type)))))
     widget))
 
+;; process launch functions
+(defvar svn-call-process-function (if (fboundp 'process-file) 'process-file 'call-process))
+(defvar svn-start-process-function (if (fboundp 'start-file-process) 'start-file-process 'start-process))
+
 
 ;;; keymaps
 
@@ -1206,7 +1210,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                     ;; run on a TTY without $DISPLAY, this will fail; in
                     ;; such cases, the user should start ssh-agent and
                     ;; then run ssh-add explicitly.
-                    (setq svn-proc (apply 'start-process "svn" proc-buf svn-exe arglist)))
+                    (setq svn-proc (apply svn-start-process-function "svn" proc-buf svn-exe arglist)))
                   (when svn-status-svn-process-coding-system
                     (set-process-coding-system svn-proc svn-status-svn-process-coding-system
                                                svn-status-svn-process-coding-system))
@@ -1217,7 +1221,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
               (let ((process-environment (svn-process-environment)))
                 ;; `call-process' ignores `process-connection-type' and
                 ;; never opens a pseudoterminal.
-                (apply 'call-process svn-exe nil proc-buf nil arglist))
+                (apply svn-call-process-function svn-exe nil proc-buf nil arglist))
               (setq svn-status-last-output-buffer-name svn-process-buffer-name)
               (run-hooks 'svn-post-process-svn-output-hook)
               (setq svn-status-mode-line-process-status "")
@@ -3833,6 +3837,7 @@ user can enter a new file name, or an existing directory: this is used as the ar
          ((eq original-filemarks ??) ;original is unversioned: use fallback
           (if (yes-or-no-p (format "%s is unversioned.  Use `%s -i -- %s %s'? "
                                    original-name fallback original-name dest))
+              ;; TODO: consider svn-call-process-function here also...
               (progn (call-process fallback nil (get-buffer-create svn-process-buffer-name) nil
                                    "-i" "--" original-name dest)
                      (setq moved t))
