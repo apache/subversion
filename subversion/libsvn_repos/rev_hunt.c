@@ -792,6 +792,43 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_repos_node_location_segments(svn_repos_t *repos,
+                                 const char *path,
+                                 svn_revnum_t start_rev,
+                                 svn_revnum_t end_rev,
+                                 svn_location_segment_receiver_t receiver,
+                                 void *receiver_baton,
+                                 svn_repos_authz_func_t authz_read_func,
+                                 void *authz_read_baton,
+                                 apr_pool_t *pool)
+{
+  svn_fs_t *fs = svn_repos_fs(repos);
+  svn_revnum_t current_rev;
+
+  /* No START_REV?  We'll use HEAD. */
+  if (! SVN_IS_VALID_REVNUM(start_rev))
+    SVN_ERR(svn_fs_youngest_rev(&start_rev, fs, pool));
+
+  /* No END_REV?  We'll use 0. */
+  end_rev = SVN_IS_VALID_REVNUM(end_rev) ? end_rev : 0;
+
+  /* Are the revision properly ordered?  They better be -- the API
+     demands it. */
+  assert(end_rev <= start_rev);
+  
+  /* Okay, let's get searching! */
+  current_rev = start_rev;
+  while (current_rev >= end_rev)
+    {
+      /* ### TODO:  Um ... actually generate output?  */
+      break;
+    }
+  return SVN_NO_ERROR;
+}
+
+
 struct path_revision
 {
   svn_revnum_t revnum;

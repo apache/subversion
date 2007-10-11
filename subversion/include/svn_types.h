@@ -865,6 +865,44 @@ typedef enum
   svn_mergeinfo_nearest_ancestor
 } svn_mergeinfo_inheritance_t;
 
+
+
+/* Node location segment reporting. */
+
+/**
+ * A representation of a segment of a object's version history with an
+ * emphasis on the object's location in the repository as of various
+ * revisions.
+ *
+ * @since New in 1.5.
+ */
+typedef struct svn_location_segment_t
+{
+  /* The beginning (oldest) and ending (youngest) revisions for this
+     segment. */
+  svn_revnum_t range_start;
+  svn_revnum_t range_end;
+  
+  /* The absolute (sans leading slash) path for this segment.  May be
+     NULL to indicate gaps in an object's history.  */
+  const char *path;
+
+} svn_location_segment_t;
+
+
+/**
+ * A callback invoked by generators of @c svn_location_segment_t
+ * objects, used to report information about a versioned object's
+ * history in terms of its location in the repository filesystem over
+ * time.
+ */
+typedef svn_error_t *(*svn_location_segment_receiver_t)
+  (svn_location_segment_t *segment,
+   void *baton,
+   apr_pool_t *pool);
+
+
+
 /** Return a constant string expressing @a inherit as an English word,
  * i.e., "explicit" (default), "inherited", or "nearest_ancestor".
  * The string is not localized, as it may be used for client<->server

@@ -1102,6 +1102,44 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
                                void *authz_read_baton,
                                apr_pool_t *pool);
 
+
+/* Call @a receiver and @a receiver_baton to report successive
+ * location segments in revisions between @a start_rev and @a end_rev
+ * (inclusive) for the line of history identified by the peg-object @a
+ * path in @a start_rev (and in @a repos).
+ *
+ * @a end_rev may be @c SVN_INVALID_REVNUM to indicate that you want
+ * to trace the history of the object to its origin.
+ *
+ * @a start_rev may be @c SVN_INVALID_REVNUM to indicate that you want
+ * to trace the history of the object beginning in the HEAD revision.
+ * Otherwise, @a start_rev must be younger than @a end_rev (unless @a
+ * end_rev is @c SVN_INVALID_REVNUM).
+ * 
+ * If optional @a authz_read_func is not @c NULL, then use it (and @a
+ * authz_read_baton) to verify that the peg-object is readable.  If
+ * not, return @c SVN_ERR_AUTHZ_UNREADABLE.  Also use the @a
+ * authz_read_func to check that every path reported in a location
+ * segment is readable.  If an unreadable path is encountered, report
+ * a final (possibly truncated) location segment (if any), stop
+ * tracing history, and return @c SVN_NO_ERROR.
+ *
+ * @a pool is used for all allocations.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_repos_node_location_segments(svn_repos_t *repos,
+                                 const char *path,
+                                 svn_revnum_t start_rev,
+                                 svn_revnum_t end_rev,
+                                 svn_location_segment_receiver_t receiver,
+                                 void *receiver_baton,
+                                 svn_repos_authz_func_t authz_read_func,
+                                 void *authz_read_baton,
+                                 apr_pool_t *pool);
+
+
 /* ### other queries we can do someday --
 
      * fetch the last revision created by <user>
