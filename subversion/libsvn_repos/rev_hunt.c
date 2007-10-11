@@ -610,6 +610,64 @@ check_ancestry_of_peg_path(svn_boolean_t *is_ancestor,
 }
 
 
+/* Set *PREV_PATH and *PREV_REV to the path and revision which
+   represent the location at which PATH in FS was located immediately
+   prior to REVISION iff there was a copy operation (to PATH or one of
+   its parent directories) between that previous location and
+   PATH@REVISION, and set *APPEARED_REV to the first revision in which
+   PATH@REVISION appeared at PATH as a result of that copy operation.
+
+   If there was no such copy operation in that portion
+   of PATH's history, set *PREV_PATH to NULL, and set *PREV_REV and
+   *APPEARED_REV to SVN_INVALID_REVNUM.  */
+static svn_error_t *
+prev_location(svn_revnum_t *appeared_rev,
+              const char **prev_path,
+              svn_revnum_t *prev_rev,
+              svn_fs_t *fs,
+              svn_revnum_t revision,
+              const char *path,
+              apr_pool_t *pool)
+{
+  svn_fs_root_t *root, *copy_root;
+  const char *copy_path, *copy_src_path, *remainder = "";
+  svn_revnum_t copy_src_rev;
+
+  /* Initialize return variables. */
+  *appeared_rev = *prev_rev = SVN_INVALID_REVNUM;
+  *prev_path = NULL;
+
+  /* Ask about the most recent copy which affected PATH@REVISION.  If
+     there was no such copy, we're done.  */
+  SVN_ERR(svn_fs_revision_root(&root, fs, revision, pool));
+  SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, root, path, pool));
+  if (! copy_root)
+    return SVN_NO_ERROR;    
+
+  /* Ultimately, it's not the path of the closest copy's source that
+     we care about -- it's our own path's location in the copy source
+     revision.  So we'll tack the relative path that expresses the
+     difference between the copy destination and our path in the copy
+     revision onto the copy source path to determine this information.
+
+     In other words, if our path is "/branches/my-branch/foo/bar", and
+     we know that the closest relevant copy was a copy of "/trunk" to
+     "/branches/my-branch", then that relative path under the copy
+     destination is "/foo/bar".  Tacking that onto the copy source
+     path tells us that our path was located at "/trunk/foo/bar"
+     before the copy.
+  */
+  SVN_ERR(svn_fs_copied_from(&copy_src_rev, &copy_src_path, 
+                             copy_root, copy_path, pool));
+  if (! strcmp(copy_path, path) == 0)
+    remainder = svn_path_is_child(copy_path, path, pool);
+  *prev_path = svn_path_join(copy_src_path, remainder, pool);
+  *appeared_rev = svn_fs_revision_root_revision(copy_root);
+  *prev_rev = copy_src_rev;
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_repos_trace_node_locations(svn_fs_t *fs,
                                apr_hash_t **locations,
@@ -687,15 +745,14 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
   while (revision_ptr < revision_ptr_end)
     {
       apr_pool_t *tmppool;
-      svn_fs_root_t *croot;
-      svn_revnum_t crev, srev;
-      const char *cpath, *spath, *remainder;
+      svn_revnum_t appeared_rev, prev_rev;
+      const char *prev_path;
 
       /* Find the target of the innermost copy relevant to path@revision.
          The copy may be of path itself, or of a parent directory. */
-      SVN_ERR(svn_fs_revision_root(&root, fs, revision, currpool));
-      SVN_ERR(svn_fs_closest_copy(&croot, &cpath, root, path, currpool));
-      if (! croot)
+      SVN_ERR(prev_location(&appeared_rev, &prev_path, &prev_rev, fs, 
+                            revision, path, currpool));
+      if (! prev_path)
         break;
 
       if (authz_read_func)
@@ -714,8 +771,8 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
 
       /* Assign the current path to all younger revisions until we reach
          the copy target rev. */
-      crev = svn_fs_revision_root_revision(croot);
-      while ((revision_ptr < revision_ptr_end) && (*revision_ptr >= crev))
+      while ((revision_ptr < revision_ptr_end) 
+             && (*revision_ptr >= appeared_rev))
         {
           /* *revision_ptr is allocated out of pool, so we can point
              to in the hash table. */
@@ -724,30 +781,15 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
           revision_ptr++;
         }
 
-      /* Follow the copy to its source.  Ignore all revs between the
-         copy target rev and the copy source rev (non-inclusive). */
-      SVN_ERR(svn_fs_copied_from(&srev, &spath, croot, cpath, currpool));
-      while ((revision_ptr < revision_ptr_end) && (*revision_ptr > srev))
+      /* Ignore all revs between the copy target rev and the copy
+         source rev (non-inclusive). */
+      while ((revision_ptr < revision_ptr_end) 
+             && (*revision_ptr > prev_rev))
         revision_ptr++;
 
-      /* Ultimately, it's not the path of the closest copy's source
-         that we care about -- it's our own path's location in the
-         copy source revision.  So we'll tack the relative path that
-         expresses the difference between the copy destination and our
-         path in the copy revision onto the copy source path to
-         determine this information.
-
-         In other words, if our path is "/branches/my-branch/foo/bar",
-         and we know that the closest relevant copy was a copy of
-         "/trunk" to "/branches/my-branch", then that relative path
-         under the copy destination is "/foo/bar".  Tacking that onto
-         the copy source path tells us that our path was located at
-         "/trunk/foo/bar" before the copy.
-      */
-      remainder = (strcmp(cpath, path) == 0) ? "" :
-        svn_path_is_child(cpath, path, currpool);
-      path = svn_path_join(spath, remainder, currpool);
-      revision = srev;
+      /* State update. */
+      path = prev_path;
+      revision = prev_rev;
 
       /* Clear last pool and switch. */
       svn_pool_clear(lastpool);
