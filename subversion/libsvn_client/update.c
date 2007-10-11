@@ -70,8 +70,9 @@ file_fetcher(void *baton,
   if (! ffb->session)
     SVN_ERR(svn_client__open_ra_session_internal(&(ffb->session),
                                                  ffb->repos_root,
-                                                 NULL, NULL, NULL, FALSE, TRUE,
-                                                 ffb->ctx, pool));
+                                                 NULL, NULL, NULL, 
+                                                 FALSE, TRUE,
+                                                 ffb->ctx, ffb->pool));
   SVN_ERR(svn_ra_get_file(ffb->session, path, revision, stream,
                           fetched_rev, props, pool));
   return SVN_NO_ERROR;
