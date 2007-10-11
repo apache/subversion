@@ -30,12 +30,10 @@ describes what is planned for the release.</p>
 <ul>
   <li>Merge Tracking</li>
   <li>Sparse checkouts</li>
-  <li>Improved handling for updates which copy/move locally modified files</li>
+  <li>Copy/move-related improvements</li>
   <li>Interactive conflict resolution</li>
   <li>WebDAV transparent write-through proxy</li>
   <li>Cyrus SASL support for ra_svn and <tt>svnserve</tt></li>
-  <li>Copy/move improvements: peg revisions, 'svn mv file1 file2; svn
-    mv file2 file3', 'svn cp *.c dir'</li>
   <li>Cancellation improvements</li>
   <li>Changelist support</li>
   <li>FSFS sharding</li>
@@ -156,29 +154,6 @@ href="http://svn.collab.net/repos/svn/trunk/notes/sparse-directories.txt"
 
 </div> <!-- sparse-checkouts -->
 
-<div class="h3" id="leverage-copyfrom" title="sparse-checkouts">
-<h3>Improved handling for updates which copy/move locally modified
-files (<em>client and server</em>)</h3>
-
-<p>Repositories now provide "copied from" information to clients when
-sending deltas which result in a copy or move of paths in the client's
-working copy.  This allows the
-<code>update</code>/<code>switch</code>/<code>merge</code>
-sub-commands to preserve changes to locally modified, versioned files
-during the copy/move process.</p>
-
-<p>In previous releases, locally modified files would simply become
-unversioned, with local modifications not propagated on to the file's
-new location.</p>
-
-<p>The corresponding behavior for directories remains unhandled (see <a
-href="http://svn.collab.net/repos/svn/trunk/notes/tree-conflicts.txt">this
-document</a> for details on the complications, and/or <a
-href="http://subversion.tigris.org/issues/show_bug.cgi?id=503">issue
-#503</a> for scheduling).</p>
-
-</div> <!-- leverage-copyfrom -->
-
 <div class="h3" id="conflict-resolution" title="conflict-resolution">
 <h3>Interactive Conflict Resolution (<em>client</em>)</h3>
 
@@ -283,9 +258,54 @@ href="http://www.farside.org.uk/200704/tree_structured_fsfs">here</a>.
 <h2>Enhancements and Bugfixes</h2>
 
 <div class="h3" id="copy-move-improvements" title="copy-move-improvements">
-<h3>Copy/move improvements</h3>
+<h3>Copy/move-related improvements (<em>client and server</em>)</h3>
 
-<p>XXX</p>
+<p>The abilities and behavior of <code>copy</code> and
+<code>move</code> operations has improved significantly.</p>
+
+
+<div class="h4" id="leverage-copyfrom" title="leverage-copyfrom">
+<h4>Improved handling for updates which copy/move locally modified
+files (<em>client and server</em>)</h4>
+
+<p>Repositories now provide "copied from" information to clients when
+sending deltas which result in a copy or move of paths in the client's
+working copy.  This allows the
+<code>update</code>/<code>switch</code>/<code>merge</code>
+sub-commands to preserve changes to locally modified, versioned files
+during the copy/move process.</p>
+
+<p>In previous releases, locally modified files would simply become
+unversioned, with local modifications not propagated on to the file's
+new location.</p>
+
+<p>The corresponding behavior for directories remains unhandled (see <a
+href="http://svn.collab.net/repos/svn/trunk/notes/tree-conflicts.txt">this
+document</a> for details on the complications, and/or <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=503">issue
+#503</a> for scheduling).</p>
+
+</div> <!-- leverage-copyfrom -->
+
+<div class="h4" id="copy-move-peg-revs" title="copy-move-peg-revs">
+<h4>Peg revisions (<em>client</em>)</h4>
+
+</div>  <!-- copy-move-peg-revs -->
+
+<div class="h4" id="multi-op-copy-move" title="multi-op-copy-move">
+<h4>Multiple working copy copy/move operations (<em>client</em>)</h4>
+
+<p>XXX: 'svn mv file1 file2; svn mv file2 file3'</p>
+
+</div>  <!-- multi-op-copy-move -->
+
+<div class="h4" id="multi-src-copy" title="multi-src-copy">
+<h4>Improved handling for updates which copy/move locally modified
+files (<em>client</em>)</h4>
+
+<p>XXX: 'svn cp *.c dir'</p>
+
+</div>  <!-- multi-src-copy -->
 
 </div>  <!-- copy-move-improvements -->
 
@@ -335,6 +355,8 @@ href="http://www.farside.org.uk/200704/tree_structured_fsfs">here</a>.
   <li>A <code>--keep-local</code> option to retain paths locally has
     been added to the <code>delete</code> sub-command.</li>
 </ul>
+
+<p>XXX: More...</p>
 
 </div>  <!-- cmdline -->
 
