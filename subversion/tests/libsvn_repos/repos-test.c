@@ -1810,7 +1810,7 @@ node_location_segments(const char **msg,
     return SVN_NO_ERROR;
 
   /* Create the repository. */
-  SVN_ERR(svn_test__create_repos(&repos, "test-repo-node-locations2",
+  SVN_ERR(svn_test__create_repos(&repos, "test-repo-node-location-segments",
                                  opts->fs_type, pool));
   fs = svn_repos_fs(repos);
 
