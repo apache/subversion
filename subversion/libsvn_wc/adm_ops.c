@@ -2946,26 +2946,6 @@ svn_wc_set_changelist(const apr_array_header_t *paths,
           continue;
         }
 
-      /* If the path is already a member of a changelist, warn the
-         user about this, but still allow the reassignment to happen.
-      */
-      if (entry->changelist && changelist)
-        {
-          if (notify_func)
-            {
-              svn_error_t *unversioned_err =
-                  svn_error_createf(SVN_ERR_WC_CHANGELIST_MOVE, NULL,
-                                    _("'%s' is already a member of"
-                                      " changelist '%s'."),
-                                    path, entry->changelist);
-              notify = svn_wc_create_notify(path,
-                                            svn_wc_notify_changelist_moved,
-                                            iterpool);
-              notify->err = unversioned_err;
-              notify_func(notify_baton, notify, iterpool);
-            }
-        }
-
       /* Possibly enforce matching with an existing changelist. */
       if (matching_changelist != NULL)
         {
@@ -2986,6 +2966,26 @@ svn_wc_set_changelist(const apr_array_header_t *paths,
                   notify_func(notify_baton, notify, iterpool);
                 }
               continue;
+            }
+        }
+
+      /* If the path is already a member of a changelist, warn the
+         user about this, but still allow the reassignment to happen.
+      */
+      if (entry->changelist && changelist)
+        {
+          if (notify_func)
+            {
+              svn_error_t *unversioned_err =
+                  svn_error_createf(SVN_ERR_WC_CHANGELIST_MOVE, NULL,
+                                    _("Removing '%s' from"
+                                      " changelist '%s'."),
+                                    path, entry->changelist);
+              notify = svn_wc_create_notify(path,
+                                            svn_wc_notify_changelist_moved,
+                                            iterpool);
+              notify->err = unversioned_err;
+              notify_func(notify_baton, notify, iterpool);
             }
         }
 
