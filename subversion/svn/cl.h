@@ -84,6 +84,7 @@ typedef enum {
   svn_cl__xml_opt,
   svn_cl__keep_local_opt,
   svn_cl__with_revprop_opt,
+  svn_cl__with_all_revprops_opt,
   svn_cl__parents_opt,
   svn_cl__accept_opt
 } svn_cl__longopt_t;
@@ -105,7 +106,7 @@ typedef struct svn_cl__opt_state_t
   int limit;
 
   /* Note: after option processing is done, the depth flag will
-     reflect the switch actually given on the command line, or 
+     reflect the switch actually given on the command line, or
      svn_depth_unknown if none. */
   svn_depth_t depth;
 
@@ -156,7 +157,8 @@ typedef struct svn_cl__opt_state_t
   const char *changelist;        /* operate on this changelist */
   svn_boolean_t keep_changelist; /* don't remove changelist after commit */
   svn_boolean_t keep_local;      /* delete path only from repository */
-  apr_hash_t *revprop_table;     /* table with revision properties to set */
+  svn_boolean_t all_revprops;    /* retrieve all props */
+  apr_hash_t *revprop_table;     /* table of revision properties to get/set */
   svn_boolean_t parents;         /* create intermediate directories */
   svn_boolean_t use_merge_history; /* use/display extra merge information */
   svn_accept_t accept_which;     /* automatically resolve conflict */
@@ -175,6 +177,7 @@ typedef struct
 svn_opt_subcommand_t
   svn_cl__add,
   svn_cl__blame,
+  svn_cl__cat,
   svn_cl__changelist,
   svn_cl__checkout,
   svn_cl__cleanup,
@@ -190,6 +193,7 @@ svn_opt_subcommand_t
   svn_cl__log,
   svn_cl__list,
   svn_cl__merge,
+  svn_cl__mergeinfo,
   svn_cl__mkdir,
   svn_cl__move,
   svn_cl__propdel,
@@ -202,8 +206,7 @@ svn_opt_subcommand_t
   svn_cl__status,
   svn_cl__switch,
   svn_cl__unlock,
-  svn_cl__update,
-  svn_cl__cat;
+  svn_cl__update;
 
 
 /* See definition in main.c for documentation. */
@@ -216,7 +219,7 @@ extern const apr_getopt_option_t svn_cl__options[];
 /* A helper for the many subcommands that wish to merely warn when
  * invoked on an unversioned, nonexistent, or otherwise innocuously
  * errorful resource.  Meant to be wrapped with SVN_ERR().
- * 
+ *
  * If ERR is null, return SVN_NO_ERROR, setting *SUCCESS to TRUE
  * if SUCCESS is not NULL.
  *
@@ -247,20 +250,20 @@ svn_error_t *svn_cl__check_cancel(void *baton);
 
 /* A mindless implementation of svn_wc_conflict_resolver_func_t that
  * does absolutely nothing to resolve conflicts. */
-svn_error_t *svn_cl__ignore_conflicts(
-    svn_wc_conflict_result_t *result,
-    const svn_wc_conflict_description_t *description,
-    void *baton,
-    apr_pool_t *pool);
+svn_error_t *
+svn_cl__ignore_conflicts(svn_wc_conflict_result_t *result,
+                         const svn_wc_conflict_description_t *description,
+                         void *baton,
+                         apr_pool_t *pool);
 
 /* A conflict-resolution callback which prompts the user to choose
    one of the 3 fulltexts, edit the merged file on the spot, or just
    skip the conflict (to be resolved later). */
-svn_error_t *svn_cl__interactive_conflict_handler(
-                          svn_wc_conflict_result_t *result,
-                          const svn_wc_conflict_description_t *desc,
-                          void *baton,
-                          apr_pool_t *pool);
+svn_error_t *
+svn_cl__interactive_conflict_handler(svn_wc_conflict_result_t *result,
+                                     const svn_wc_conflict_description_t *desc,
+                                     void *baton,
+                                     apr_pool_t *pool);
 
 
 
@@ -413,15 +416,15 @@ svn_cl__edit_file_externally(const char *path,
 
 /* Set *NOTIFY_FUNC_P and *NOTIFY_BATON_P to a notifier/baton for all
  * operations, allocated in POOL.
- * 
+ *
  * If this is a checkout, set IS_CHECKOUT to true, so that the
  * notifier will print the appropriate summary line at the end of the
  * output.
- * 
+ *
  * If this is an export, set IS_EXPORT to true, so that the
  * notifier will print the appropriate summary line at the end of the
  * output.
- * 
+ *
  * If don't want a summary line at the end of notifications, set
  * SUPPRESS_FINAL_LINE.
  */
@@ -437,7 +440,7 @@ void svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
 
 /* Allocate in POOL a baton for use with svn_cl__get_log_message().
 
-   OPT_STATE is the set of command-line options given.  
+   OPT_STATE is the set of command-line options given.
 
    BASE_DIR is a directory in which to create temporary files if an
    external editor is used to edit the log message.  If BASE_DIR is
@@ -447,7 +450,7 @@ void svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
    we ask APR to tell us where a suitable tmp directory is (like, /tmp
    on Unix and C:\Windows\Temp on Win32 or something), and use it.
    But APR doesn't yet have that capability.
-   
+
    CONFIG is a client configuration hash of svn_config_t * items keyed
    on config categories, and may be NULL.
 
@@ -497,7 +500,7 @@ void svn_cl__xml_tagged_cdata(svn_stringbuf_t **sb,
 svn_error_t *svn_cl__xml_print_header(const char *tagname,
                                       apr_pool_t *pool);
 
-/* Print the XML document root element end-tag to stdout, using TAGNAME as the 
+/* Print the XML document root element end-tag to stdout, using TAGNAME as the
    root element name.  Use pool for temporary allocations. */
 svn_error_t *svn_cl__xml_print_footer(const char *tagname,
                                       apr_pool_t *pool);

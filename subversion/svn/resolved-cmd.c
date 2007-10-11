@@ -46,16 +46,16 @@ svn_cl__resolved(apr_getopt_t *os,
   int i;
   apr_pool_t *subpool;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
                                         opt_state->targets, pool));
   if (! targets->nelts)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
-    
+
   subpool = svn_pool_create(pool);
   if (! opt_state->quiet)
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
                          FALSE, FALSE, pool);
-  
+
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_empty;
 
@@ -63,19 +63,19 @@ svn_cl__resolved(apr_getopt_t *os,
     {
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
       svn_pool_clear(subpool);
-      SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));    
+      SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
       err = svn_client_resolved2(target,
-                                SVN_DEPTH_TO_RECURSE(opt_state->depth),
-                                opt_state->accept_which,
-                                ctx,
-                                subpool);
+                                 opt_state->depth,
+                                 opt_state->accept_which,
+                                 ctx,
+                                 subpool);
       if (err)
         {
           svn_handle_warning(stderr, err);
           svn_error_clear(err);
         }
     }
-  
+
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }

@@ -42,6 +42,26 @@
 
 /*** Code. ***/
 
+
+/* Implementation of svn_wc_get_file_t.  A feeble callback wrapper
+   around svn_ra_get_file(), so that the update_editor can use it to
+   fetch any file, any time. */
+static svn_error_t *
+file_fetcher(void *baton,
+             const char *path,
+             svn_revnum_t revision,
+             svn_stream_t *stream,
+             svn_revnum_t *fetched_rev,
+             apr_hash_t **props,
+             apr_pool_t *pool)
+{
+  svn_ra_session_t *session = (svn_ra_session_t *)baton;
+  SVN_ERR(svn_ra_get_file(session, path, revision, stream,
+                          fetched_rev, props, pool));
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_client__update_internal(svn_revnum_t *result_rev,
                             const char *path,
@@ -62,39 +82,39 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   const char *repos_root;
   svn_error_t *err;
   svn_revnum_t revnum;
-  int adm_open_depth;
+  int levels_to_lock;
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info(pool);
   svn_wc_adm_access_t *adm_access;
   svn_boolean_t use_commit_times;
   svn_boolean_t sleep_here = FALSE;
   svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
   const char *diff3_cmd;
-  svn_ra_session_t *ra_session;
+  svn_ra_session_t *ra_session, *ra_session2;
   svn_wc_adm_access_t *dir_access;
   svn_wc_adm_access_t *path_adm_access;
   apr_hash_t *children_with_mergeinfo;
   const char *preserved_exts_str;
   apr_array_header_t *preserved_exts;
-  svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config, 
+  svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
 
-  /* ### TODO(sd): Ah, the irony.  We'd like to base our adm_open depth on
-     ### the depth we're going to use for the update.  But that
-     ### may depend on the depth in the working copy, which we can't
-     ### discover without calling adm_open.  We could expend an extra
-     ### call, with adm_open_depth=0, to get the real depth (but only
-     ### if we need to) and then make the real call... but it's not
-     ### worth the complexity right now.  Locking the entire tree when
-     ### we didn't need to is a performance hit, but (except for
-     ### access contention) not a correctness problem. */
+  /* ### Ah, the irony.  We'd like to base our levels_to_lock on the
+     ### depth we're going to use for the update.  But that may depend
+     ### on the depth in the working copy, which we can't discover
+     ### without calling adm_open.  We could expend an extra call,
+     ### with levels_to_lock=0, to get the real depth (but only if we
+     ### need to) and then make the real call... but it's not worth
+     ### the complexity right now.  Locking the entire tree when we
+     ### didn't need to is a performance hit, but (except for access
+     ### contention) not a correctness problem. */
 
   if (depth == svn_depth_empty
       || depth == svn_depth_files)
-    adm_open_depth = 0;
+    levels_to_lock = 0;
   else
-    adm_open_depth = -1;
-  
+    levels_to_lock = -1;
+
   /* Sanity check.  Without this, the update is meaningless. */
   assert(path);
 
@@ -105,7 +125,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 
   /* Use PATH to get the update's anchor and targets and get a write lock */
   SVN_ERR(svn_wc_adm_open_anchor(&adm_access, &dir_access, &target, path,
-                                 TRUE, adm_open_depth,
+                                 TRUE, levels_to_lock,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  pool));
   anchor = svn_wc_adm_access_path(adm_access);
@@ -124,7 +144,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   else
     revnum = SVN_INVALID_REVNUM;
 
-  /* Get the external diff3, if any. */    
+  /* Get the external diff3, if any. */
   svn_config_get(cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
                  SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
 
@@ -137,14 +157,14 @@ svn_client__update_internal(svn_revnum_t *result_rev,
      conflict files are made. */
   svn_config_get(cfg, &preserved_exts_str, SVN_CONFIG_SECTION_MISCELLANY,
                  SVN_CONFIG_OPTION_PRESERVED_CF_EXTS, "");
-  preserved_exts = *preserved_exts_str 
+  preserved_exts = *preserved_exts_str
     ? svn_cstring_split(preserved_exts_str, "\n\r\t\v ", FALSE, pool)
     : NULL;
 
   /* Open an RA session for the URL */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, entry->url,
                                                anchor, adm_access,
-                                               NULL, TRUE, TRUE, 
+                                               NULL, TRUE, TRUE,
                                                ctx, pool));
 
   /* ### todo: shouldn't svn_client__get_revision_number be able
@@ -162,6 +182,14 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
   SVN_ERR(svn_wc_maybe_set_repos_root(dir_access, path, repos_root, pool));
 
+  /* Open a *second* RA session to the root of the repository, so that
+     we have the ability to fetch any file.  This is a fallback in
+     case the server passes 'copyfrom' args to editor->add_file(), and
+     we don't already have that file in the working copy.  */
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session2, repos_root,
+                                               NULL, NULL, NULL, FALSE, TRUE,
+                                               ctx, pool));
+
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */
   SVN_ERR(svn_wc_get_update_editor3(&revnum, adm_access, target,
@@ -170,6 +198,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->conflict_func, ctx->conflict_baton,
+                                    file_fetcher, ra_session2,
                                     diff3_cmd, preserved_exts,
                                     &update_editor, &update_edit_baton,
                                     traversal_info,
@@ -182,6 +211,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             revnum,
                             target,
                             depth,
+                            TRUE, /* send copyfrom args, please */
                             update_editor, update_edit_baton, pool));
 
   /* Drive the reporter structure, describing the revisions within
@@ -191,7 +221,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                                 TRUE, depth, use_commit_times,
                                 ctx->notify_func2, ctx->notify_baton2,
                                 traversal_info, pool);
-      
+
   if (err)
     {
       /* Don't rely on the error handling to handle the sleep later, do
@@ -200,23 +230,22 @@ svn_client__update_internal(svn_revnum_t *result_rev,
       return err;
     }
   *use_sleep = TRUE;
-  
+
   /* We handle externals after the update is complete, so that
      handling external items (and any errors therefrom) doesn't delay
      the primary operation.  */
-  if ((depth == svn_depth_infinity || depth == svn_depth_unknown)
-      && (! ignore_externals))
-    SVN_ERR(svn_client__handle_externals(traversal_info, 
+  if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
+    SVN_ERR(svn_client__handle_externals(traversal_info,
                                          TRUE, /* update unchanged ones */
                                          use_sleep, ctx, pool));
 
   if (sleep_here)
     svn_sleep_for_timestamps();
 
-  if (adm_open_depth)
+  if (levels_to_lock)
     {
       SVN_ERR(svn_wc_adm_probe_retrieve(&path_adm_access, adm_access, path,
-                                        pool));  
+                                        pool));
     }
   else
     {
@@ -230,20 +259,23 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 
     /* Check if any mergeinfo on PATH or any its children elides as a
      result of the update. */
-  children_with_mergeinfo = apr_hash_make(pool);  
+  children_with_mergeinfo = apr_hash_make(pool);
   err = svn_client__get_prop_from_wc(children_with_mergeinfo,
                                      SVN_PROP_MERGE_INFO, path, FALSE,
-                                     entry, path_adm_access, TRUE, ctx,
-                                     pool);
+                                     entry, path_adm_access,
+                                     depth, ctx, pool);
   if (err)
     {
-      if (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)
+      svn_error_t *root_err = svn_error_root_cause(err);
+      switch (root_err->apr_err)
         {
+        case SVN_ERR_WC_PATH_NOT_FOUND:
+        case SVN_ERR_UNVERSIONED_RESOURCE:
           svn_error_clear(err);
           err = SVN_NO_ERROR;
-        }
-      else
-        {
+          break;
+
+        default:
           return err;
         }
     }
@@ -253,7 +285,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                                                    adm_access, ctx, pool));
     }
 
-  SVN_ERR(svn_wc_adm_close(adm_open_depth ? path_adm_access : adm_access));
+  SVN_ERR(svn_wc_adm_close(levels_to_lock ? path_adm_access : adm_access));
 
   /* Let everyone know we're finished here. */
   if (ctx->notify_func2)
@@ -271,7 +303,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   /* If the caller wants the result revision, give it to them. */
   if (result_rev)
     *result_rev = revnum;
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -343,7 +375,7 @@ svn_client_update2(apr_array_header_t **result_revs,
                    apr_pool_t *pool)
 {
   return svn_client_update3(result_revs, paths, revision,
-                            SVN_DEPTH_FROM_RECURSE(recurse),
+                            SVN_DEPTH_INFINITY_OR_FILES(recurse),
                             ignore_externals, FALSE, ctx, pool);
 }
 
@@ -356,6 +388,6 @@ svn_client_update(svn_revnum_t *result_rev,
                   apr_pool_t *pool)
 {
   return svn_client__update_internal(result_rev, path, revision,
-                                     SVN_DEPTH_FROM_RECURSE(recurse), 
+                                     SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                      FALSE, FALSE, NULL, ctx, pool);
 }

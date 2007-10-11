@@ -45,6 +45,9 @@ const char **test_argv;
 /* Test option: Print more output */
 static int verbose_mode = 0;
 
+/* Test option: Print only unexpected results */
+static int quiet_mode = 0;
+
 /* Test option: Remove test directories after success */
 static int cleanup_mode = 0;
 
@@ -53,7 +56,8 @@ enum {
   cleanup_opt = SVN_OPT_FIRST_LONGOPT_ID,
   fstype_opt,
   list_opt,
-  verbose_opt
+  verbose_opt,
+  quiet_opt
 };
 
 static const apr_getopt_option_t cl_options[] =
@@ -66,6 +70,8 @@ static const apr_getopt_option_t cl_options[] =
                     N_("lists all the tests with their short description")},
   {"verbose",       verbose_opt, 0,
                     N_("print extra information")},
+  {"quiet",         quiet_opt, 0,
+                    N_("print only unexpected results")},
   {0,               0, 0, 0}
 };
 
@@ -88,7 +94,7 @@ cleanup_rmtree(void *data)
       const char *path = data;
 
       /* Ignore errors here. */
-      svn_error_t *err = svn_io_remove_dir2(path, FALSE, pool);
+      svn_error_t *err = svn_io_remove_dir2(path, FALSE, NULL, NULL, pool);
       if (verbose_mode)
         {
           if (err)
@@ -150,8 +156,8 @@ get_array_size(void)
 /* Execute a test number TEST_NUM.  Pretty-print test name and dots
    according to our test-suite spec, and return the result code. */
 static int
-do_test_num(const char *progname, 
-            int test_num, 
+do_test_num(const char *progname,
+            int test_num,
             svn_boolean_t msg_only,
             svn_test_opts_t *opts,
             apr_pool_t *pool)
@@ -160,6 +166,7 @@ do_test_num(const char *progname,
   svn_boolean_t skip, xfail;
   svn_error_t *err;
   int array_size = get_array_size();
+  int test_failed = 0;
   const char *msg = 0;  /* the message this individual test prints out */
 
   /* Check our array bounds! */
@@ -178,6 +185,9 @@ do_test_num(const char *progname,
   /* Do test */
   err = func(&msg, msg_only || skip, opts, pool);
 
+  /* Failure means unexpected results -- FAIL or XPASS. */
+  test_failed = ((err != SVN_NO_ERROR) != (xfail != 0));
+
   /* If we got an error, print it out.  */
   if (err)
     {
@@ -192,14 +202,14 @@ do_test_num(const char *progname,
              (xfail ? "XFAIL" : (skip ? "SKIP" : "")),
              msg ? msg : "(test did not provide name)");
     }
-  else
+  else if ((! quiet_mode) || test_failed)
     {
-      printf("%s %s %d: %s\n", 
+      printf("%s %s %d: %s\n",
              (err
               ? (xfail ? "XFAIL:" : "FAIL: ")
               : (xfail ? "XPASS:" : (skip ? "SKIP: " : "PASS: "))),
              progname,
-             test_num, 
+             test_num,
              msg ? msg : "(test did not provide name)");
     }
 
@@ -213,10 +223,10 @@ do_test_num(const char *progname,
       if (apr_isupper(msg[0]))
         printf("WARNING: Test docstring is capitalized\n");
     }
-    
-  /* Fail on unexpected result -- FAIL or XPASS. */
-  skip_cleanup = ((err != SVN_NO_ERROR) != (xfail != 0));
-  return skip_cleanup;
+
+  skip_cleanup = test_failed;
+
+  return test_failed;
 }
 
 
@@ -238,7 +248,7 @@ main(int argc, const char *argv[])
   char errmsg[200];
   /* How many tests are there? */
   int array_size = get_array_size();
-  
+
   svn_test_opts_t opts = { NULL };
 
   opts.fs_type = DEFAULT_FS_TYPE;
@@ -305,7 +315,17 @@ main(int argc, const char *argv[])
         case verbose_opt:
           verbose_mode = 1;
           break;
+        case quiet_opt:
+          quiet_mode = 1;
+          break;
       }
+    }
+
+  /* You can't be both quiet and verbose. */
+  if (quiet_mode && verbose_mode)
+    {
+      fprintf(stderr, "FAIL: --verbose and --quiet are mutually exclusive\n");
+      exit(1);
     }
 
   /* Create an iteration pool for the tests */

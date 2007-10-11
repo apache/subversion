@@ -39,7 +39,7 @@ extern "C" {
    and creating a lock. The cleanup code uses this function, but stealing
    locks is not a good idea because the code cannot determine whether a
    lock is still in use. Try not to write any more code that requires this
-   feature. 
+   feature.
 
    PATH is the directory to lock, and the lock is returned in
    *ADM_ACCESS.  ASSOCIATED can be another lock in which case the locks

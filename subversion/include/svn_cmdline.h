@@ -113,7 +113,7 @@ svn_error_t *svn_cmdline_fputs(const char *string,
 
 /** Flush output buffers of the stdio @a stream, returning an error if that
  * fails.  This is just a wrapper for the standard fflush() function for
- * consistent error handling. 
+ * consistent error handling.
  *
  * @since New in 1.1.
  */
@@ -139,16 +139,6 @@ int svn_cmdline_handle_exit_error(svn_error_t *error,
                                   apr_pool_t *pool,
                                   const char *prefix);
 
-/** Prompt the user for input, using @a prompt_str for the prompt and
- * returning the user's response in @a result, allocated in @a pool.
- *
- * @since New in 1.4.
- */
-svn_error_t *
-svn_cmdline_prompt_user(const char **result,
-                        const char *prompt_str,
-                        apr_pool_t *pool);
-
 /** A cancellation function/baton pair to be passed as the baton argument
  * to the @c svn_cmdline_*_prompt functions.
  *
@@ -158,6 +148,28 @@ typedef struct svn_cmdline_prompt_baton_t {
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
 } svn_cmdline_prompt_baton_t;
+
+/** Prompt the user for input, using @a prompt_str for the prompt and
+ * @a baton (which may be @c NULL) for cancellation, and returning the
+ * user's response in @a result, allocated in @a pool.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_cmdline_prompt_user2(const char **result,
+                         const char *prompt_str,
+                         svn_cmdline_prompt_baton_t *baton,
+                         apr_pool_t *pool);
+
+/** Similar to svn_cmdline_prompt_user2, but without cancellation
+ * support.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
+ */
+svn_error_t *
+svn_cmdline_prompt_user(const char **result,
+                        const char *prompt_str,
+                        apr_pool_t *pool);
 
 /** An implementation of @c svn_auth_simple_prompt_func_t that prompts
  * the user for keyboard input on the command line.
@@ -242,7 +254,7 @@ svn_cmdline_auth_ssl_client_cert_pw_prompt
 
 /** Initialize auth baton @a ab with the standard set of authentication
  * providers used by the command line client.  @a non_interactive,
- * @a username, @a password, @a config_dir, and @a no_auth_cache are the 
+ * @a username, @a password, @a config_dir, and @a no_auth_cache are the
  * values of the command line options of the same names.  @a cfg is the
  * @c SVN_CONFIG_CATEGORY_CONFIG configuration, and @a cancel_func and
  * @a cancel_baton control the cancellation of the prompting providers
@@ -265,7 +277,7 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
 /** Wrapper for apr_getopt_init(), which see.
  *
  * @since New in 1.4.
- * 
+ *
  * On OS400 V5R4, prior to calling apr_getopt_init(), converts each of the
  * @a argc strings in @a argv[] in place from EBCDIC to UTF-8, allocating
  * each new UTF-8 string in @a pool.

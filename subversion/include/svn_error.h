@@ -71,7 +71,7 @@ const char *svn_err_best_message(svn_error_t *err,
 
 
 
-/** SVN error creation and destruction. 
+/** SVN error creation and destruction.
  *
  * @defgroup svn_error_error_creation_destroy error creation and destruction
  * @{
@@ -109,7 +109,7 @@ svn_error_t *svn_error_create(apr_status_t apr_err,
  */
 svn_error_t *svn_error_createf(apr_status_t apr_err,
                                svn_error_t *child,
-                               const char *fmt, 
+                               const char *fmt,
                                ...)
   __attribute__ ((format(printf, 3, 4)));
 
@@ -142,19 +142,19 @@ svn_error_t *svn_error_quick_wrap(svn_error_t *child, const char *new_msg);
 #define svn_error_quick_wrap \
   (svn_error__locate(__FILE__,__LINE__), (svn_error_quick_wrap))
 
-/** Add @a new_err to the end of @a chain's chain of errors.  The @a new_err 
- * chain will be copied into @a chain's pool and destroyed, so @a new_err 
+/** Add @a new_err to the end of @a chain's chain of errors.  The @a new_err
+ * chain will be copied into @a chain's pool and destroyed, so @a new_err
  * itself becomes invalid after this function.
  */
 void svn_error_compose(svn_error_t *chain, svn_error_t *new_err);
 
-/** Return whether @a apr_err exists as the root cause of @a err by
- * finding the last error in its chain (e.g. it or its children), and
- * comparing its @c apr_error field.
+/** Return the root cause of @a err by finding the last error in its
+ * chain (e.g. it or its children).  @a err may be @c SVN_NO_ERROR, in
+ * which case @c SVN_NO_ERROR is returned.
  *
  * @since New in 1.5.
  */
-svn_boolean_t svn_error_root_cause_is(svn_error_t *err, apr_status_t apr_err);
+svn_error_t *svn_error_root_cause(svn_error_t *err);
 
 /** Create a new error that is a deep copy of @a err and return it.
  *
@@ -163,12 +163,12 @@ svn_boolean_t svn_error_root_cause_is(svn_error_t *err, apr_status_t apr_err);
 svn_error_t *svn_error_dup(svn_error_t *err);
 
 /** Free the memory used by @a error, as well as all ancestors and
- * descendants of @a error. 
+ * descendants of @a error.
  *
- * Unlike other Subversion objects, errors are managed explicitly; you 
- * MUST clear an error if you are ignoring it, or you are leaking memory. 
- * For convenience, @a error may be @c NULL, in which case this function does 
- * nothing; thus, svn_error_clear(svn_foo(...)) works as an idiom to 
+ * Unlike other Subversion objects, errors are managed explicitly; you
+ * MUST clear an error if you are ignoring it, or you are leaking memory.
+ * For convenience, @a error may be @c NULL, in which case this function does
+ * nothing; thus, svn_error_clear(svn_foo(...)) works as an idiom to
  * ignore errors.
  */
 void svn_error_clear(svn_error_t *error);
@@ -218,7 +218,7 @@ void svn_handle_warning(FILE *stream, svn_error_t *error);
  * Evaluate @a expr.  If it yields an error, return that error from the
  * current function.  Otherwise, continue.
  *
- * The <tt>do { ... } while (0)</tt> wrapper has no semantic effect, 
+ * The <tt>do { ... } while (0)</tt> wrapper has no semantic effect,
  * but it makes this macro syntactically equivalent to the expression
  * statement it resembles.  Without it, statements like
  *
@@ -241,7 +241,7 @@ void svn_handle_warning(FILE *stream, svn_error_t *error);
 
 /** A statement macro, very similar to @c SVN_ERR.
  *
- * This macro will wrap the error with the specified text before 
+ * This macro will wrap the error with the specified text before
  * returning the error.
  */
 #define SVN_ERR_W(expr, wrap_msg)                           \
@@ -270,7 +270,7 @@ void svn_handle_warning(FILE *stream, svn_error_t *error);
 
 /**
  * Return TRUE if @a err is an error specifically related to locking a
- * path in the repository, FALSE otherwise. 
+ * path in the repository, FALSE otherwise.
  *
  * SVN_ERR_FS_OUT_OF_DATE is in here because it's a non-fatal error
  * that can be thrown when attempting to lock an item.

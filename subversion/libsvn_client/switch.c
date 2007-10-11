@@ -83,11 +83,11 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info(pool);
   const char *preserved_exts_str;
   apr_array_header_t *preserved_exts;
-  svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config, 
-                                                 SVN_CONFIG_CATEGORY_CONFIG,  
+  svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
+                                                 SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING)
                                   : NULL;
-  
+
   /* Get the external diff3, if any. */
   svn_config_get(cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
                  SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
@@ -101,7 +101,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
      conflict files are made. */
   svn_config_get(cfg, &preserved_exts_str, SVN_CONFIG_SECTION_MISCELLANY,
                  SVN_CONFIG_OPTION_PRESERVED_CF_EXTS, "");
-  preserved_exts = *preserved_exts_str 
+  preserved_exts = *preserved_exts_str
     ? svn_cstring_split(preserved_exts_str, "\n\r\t\v ", FALSE, pool)
     : NULL;
 
@@ -132,16 +132,16 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
     revnum = SVN_INVALID_REVNUM; /* no matter, do real conversion later */
 
   /* Open an RA session to 'source' URL */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL, anchor, 
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL, anchor,
                                                adm_access, NULL, TRUE, FALSE,
                                                ctx, pool));
   SVN_ERR(svn_client__get_revision_number
           (&revnum, ra_session, revision, path, pool));
   SVN_ERR(svn_ra_get_repos_root(ra_session, &source_root, pool));
-  
+
   /* Disallow a switch operation to change the repository root of the target. */
   if (! svn_path_is_ancestor(source_root, switch_url))
-    return svn_error_createf 
+    return svn_error_createf
       (SVN_ERR_WC_INVALID_SWITCH, NULL,
        _("'%s'\n"
          "is not the same repository as\n"
@@ -149,7 +149,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
   /* Check to make sure that the switch target actually exists. */
   SVN_ERR(svn_ra_reparent(ra_session, source_root, pool));
-  SVN_ERR(svn_ra_check_path(ra_session, 
+  SVN_ERR(svn_ra_check_path(ra_session,
                             svn_path_is_child(source_root, switch_url, pool),
                             revnum,
                             &switch_url_kind,
@@ -186,13 +186,13 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
      We pass NULL for traversal_info because this is a switch, not an
      update, and therefore we don't want to handle any externals
-     except the ones directly affected by the switch. */ 
+     except the ones directly affected by the switch. */
   err = svn_wc_crawl_revisions3(path, dir_access, reporter, report_baton,
                                 TRUE, depth, use_commit_times,
                                 ctx->notify_func2, ctx->notify_baton2,
                                 NULL, /* no traversal info */
                                 pool);
-    
+
   if (err)
     {
       /* Don't rely on the error handling to handle the sleep later, do
@@ -205,8 +205,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   /* We handle externals after the switch is complete, so that
      handling external items (and any errors therefrom) doesn't delay
      the primary operation. */
-  if ((depth == svn_depth_infinity || depth == svn_depth_unknown)
-      && (! ignore_externals))
+  if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
     err = svn_client__handle_externals(traversal_info, FALSE,
                                        use_sleep, ctx, pool);
 
@@ -220,8 +219,8 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                                         pool));
       err = svn_client__get_prop_from_wc(children_with_mergeinfo,
                                          SVN_PROP_MERGE_INFO, path, FALSE,
-                                         entry, path_adm_access, TRUE, ctx,
-                                         pool);
+                                         entry, path_adm_access,
+                                         depth, ctx, pool);
       if (err)
         {
           if (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)
@@ -265,7 +264,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   /* If the caller wants the result revision, give it to them. */
   if (result_rev)
     *result_rev = revnum;
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -295,6 +294,6 @@ svn_client_switch(svn_revnum_t *result_rev,
                   apr_pool_t *pool)
 {
   return svn_client__switch_internal(result_rev, path, switch_url, revision,
-                                     SVN_DEPTH_FROM_RECURSE(recurse),
+                                     SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                      NULL, FALSE, FALSE, ctx, pool);
 }

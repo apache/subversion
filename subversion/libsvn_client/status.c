@@ -229,10 +229,10 @@ svn_client_status3(svn_revnum_t *result_rev,
   sb.real_status_baton = status_baton;
   sb.deleted_in_repos = FALSE;
 
-  /* Try to open the target directory. If the target is a file or an 
+  /* Try to open the target directory. If the target is a file or an
      unversioned directory, open the parent directory instead */
   err = svn_wc_adm_open3(&anchor_access, NULL, path, FALSE,
-                         SVN_DEPTH_TO_RECURSE(depth) ? -1 : 1,
+                         SVN_DEPTH_IS_RECURSIVE(depth) ? -1 : 1,
                          ctx->cancel_func, ctx->cancel_baton,
                          pool);
   if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
@@ -240,7 +240,7 @@ svn_client_status3(svn_revnum_t *result_rev,
       svn_error_clear(err);
       SVN_ERR(svn_wc_adm_open_anchor(&anchor_access, &target_access, &target,
                                      path, FALSE,
-                                     SVN_DEPTH_TO_RECURSE(depth) ? -1 : 1,
+                                     SVN_DEPTH_IS_RECURSIVE(depth) ? -1 : 1,
                                      ctx->cancel_func, ctx->cancel_baton,
                                      pool));
     }
@@ -271,7 +271,7 @@ svn_client_status3(svn_revnum_t *result_rev,
 
   /* If we want to know about out-of-dateness, we crawl the working copy and
      let the RA layer drive the editor for real.  Otherwise, we just close the
-     edit.  :-) */ 
+     edit.  :-) */
   if (update)
     {
       svn_ra_session_t *ra_session;
@@ -292,7 +292,7 @@ svn_client_status3(svn_revnum_t *result_rev,
       /* Open a repository session to the URL. */
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL, anchor,
                                                    anchor_access, NULL,
-                                                   FALSE, TRUE, 
+                                                   FALSE, TRUE,
                                                    ctx, pool));
 
       /* Verify that URL exists in HEAD.  If it doesn't, this can save
@@ -317,7 +317,7 @@ svn_client_status3(svn_revnum_t *result_rev,
         {
           svn_revnum_t revnum;
           report_baton_t rb;
-            
+
           if (revision->kind == svn_opt_revision_head)
             {
               /* Cause the revision number to be omitted from the request,
@@ -334,7 +334,7 @@ svn_client_status3(svn_revnum_t *result_rev,
           /* Do the deed.  Let the RA layer drive the status editor. */
           SVN_ERR(svn_ra_do_status2(ra_session, &rb.wrapped_reporter,
                                     &rb.wrapped_report_baton,
-                                    target, revnum, depth, editor, 
+                                    target, revnum, depth, editor,
                                     edit_baton, pool));
 
           /* Init the report baton. */
@@ -342,7 +342,7 @@ svn_client_status3(svn_revnum_t *result_rev,
           rb.set_locks_baton = set_locks_baton;
           rb.ctx = ctx;
           rb.pool = pool;
-          
+
           /* Drive the reporter structure, describing the revisions
              within PATH.  When we call reporter->finish_report,
              EDITOR will be driven to describe differences between our
@@ -380,11 +380,17 @@ svn_client_status3(svn_revnum_t *result_rev,
      all the statuses, we will change unversioned status items that
      are interesting to an svn:externals property to
      svn_wc_status_unversioned, otherwise we'll just remove the status
-     item altogether. */
+     item altogether.
+
+     We only descend into an external if depth==svn_depth_infinity.
+     However, there are conceivable behaviors that would involve
+     descending under other circumstances; thus, we pass depth anyway,
+     so the code will DTRT if we change the conditional in the future.
+  */
   if ((depth == svn_depth_infinity) && (! ignore_externals))
     SVN_ERR(svn_client__do_external_status(traversal_info, status_func,
-                                           status_baton, get_all, update,
-                                           no_ignore, ctx, pool));
+                                           status_baton, depth, get_all,
+                                           update, no_ignore, ctx, pool));
 
   return SVN_NO_ERROR;
 }
@@ -405,7 +411,7 @@ svn_client_status2(svn_revnum_t *result_rev,
 {
   return svn_client_status3(result_rev, path, revision,
                             status_func, status_baton,
-                            SVN_DEPTH_FROM_RECURSE_STATUS(recurse),
+                            SVN_DEPTH_INFINITY_OR_IMMEDIATES(recurse),
                             get_all, update,
                             no_ignore, ignore_externals,
                             ctx, pool);
@@ -421,7 +427,7 @@ struct old_status_func_cb_baton
 
 /* Help svn_client_status() accept an old-style status func and baton,
    by wrapping them before passing along to svn_client_status2().
-   
+
    This implements the 'svn_wc_status_func2_t' function type. */
 static void old_status_func_cb(void *baton,
                                const char *path,
@@ -429,7 +435,7 @@ static void old_status_func_cb(void *baton,
 {
   struct old_status_func_cb_baton *b = baton;
   svn_wc_status_t *stat = (svn_wc_status_t *) status;
-  
+
   b->original_func(b->original_baton, path, stat);
 }
 
@@ -451,7 +457,7 @@ svn_client_status(svn_revnum_t *result_rev,
   b->original_func = status_func;
   b->original_baton = status_baton;
 
-  return svn_client_status2(result_rev, path, revision, 
+  return svn_client_status2(result_rev, path, revision,
                             old_status_func_cb, b,
                             recurse, get_all, update, no_ignore, FALSE,
                             ctx, pool);

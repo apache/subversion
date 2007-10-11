@@ -31,12 +31,14 @@ extern "C" {
 
 /** Names for XML child elements of the custom HTTP REPORTs understood
     by mod_dav_svn, sans namespace. */
+#define SVN_DAV__CREATIONDATE "creationdate"
 #define SVN_DAV__MERGEINFO_ITEM "mergeinfo-item"
 #define SVN_DAV__MERGEINFO_PATH "mergeinfo-path"
 #define SVN_DAV__MERGEINFO_INFO "mergeinfo-info"
 #define SVN_DAV__PATH "path"
 #define SVN_DAV__INHERIT "inherit"
 #define SVN_DAV__REVISION "revision"
+#define SVN_DAV__VERSION_NAME "version-name"
 
 #ifdef __cplusplus
 }

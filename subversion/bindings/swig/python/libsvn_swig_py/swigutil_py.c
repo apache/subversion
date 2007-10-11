@@ -44,6 +44,11 @@
 #include "swig_python_external_runtime.swg"
 #include "swigutil_py.h"
 
+/* Define handy Python 2.4 macro if this is older Python. */
+#ifndef Py_RETURN_NONE
+#define Py_RETURN_NONE return Py_INCREF(Py_None), Py_None
+#endif
+
 
 
 /*** Manage the Global Interpreter Lock ***/
@@ -163,7 +168,7 @@ int svn_swig_py_get_parent_pool(PyObject *args, swig_type_info *type,
 
   if (proxy == NULL)
     return 1;
-  
+
   *py_pool = PyObject_GetAttrString(proxy, parentPool);
 
   if (*py_pool == NULL)
@@ -245,7 +250,7 @@ PyObject *svn_swig_NewPointerObj(void *obj, swig_type_info *type,
             svn_swig_TypeQuery("apr_pool_t *"), &pool, &tmp))
         PyErr_Clear();
     }
-  
+
   if (proxy_set_pool(&proxy, pool))
     {
       Py_DECREF(proxy);
@@ -446,9 +451,12 @@ static PyObject *convert_hash(apr_hash_t *hash,
                               void *ctx, PyObject *py_pool)
 {
     apr_hash_index_t *hi;
-    PyObject *dict = PyDict_New();
+    PyObject *dict;
 
-    if (dict == NULL)
+    if (hash == NULL)
+        Py_RETURN_NONE;
+
+    if ((dict = PyDict_New()) == NULL)
         return NULL;
 
     for (hi = apr_hash_first(NULL, hash); hi; hi = apr_hash_next(hi))
@@ -589,7 +597,7 @@ static PyObject *convert_string(void *value, void *ctx,
                                 PyObject *py_pool)
 {
   /* ### gotta cast this thing cuz Python doesn't use "const" */
-  return PyString_FromString((const char *)value); 
+  return PyString_FromString((const char *)value);
 }
 
 PyObject *svn_swig_py_stringhash_to_dict(apr_hash_t *hash)
@@ -623,20 +631,20 @@ PyObject *svn_swig_py_rangelist_to_list(apr_array_header_t *rangelist,
   return convert_rangelist(rangelist, type, py_pool);
 }
 
-PyObject *svn_swig_py_mergeinfo_to_dict(apr_hash_t *hash, 
+PyObject *svn_swig_py_mergeinfo_to_dict(apr_hash_t *hash,
                                         swig_type_info *type,
                                         PyObject *py_pool)
 {
   return convert_hash(hash, convert_rangelist, type, py_pool);
 }
 
-static PyObject *convert_mergeinfo_hash(void *value, void *ctx, 
+static PyObject *convert_mergeinfo_hash(void *value, void *ctx,
                                          PyObject *py_pool)
 {
   return svn_swig_py_mergeinfo_to_dict(value, ctx, py_pool);
 }
 
-PyObject *svn_swig_py_mergeinfo_hash_to_dict(apr_hash_t *hash, 
+PyObject *svn_swig_py_mergeinfo_hash_to_dict(apr_hash_t *hash,
                                         swig_type_info *type,
                                         PyObject *py_pool)
 {
@@ -786,12 +794,48 @@ PyObject *svn_swig_py_c_strings_to_list(char **strings)
     return NULL;
 }
 
+PyObject *svn_swig_py_changed_path_hash_to_dict(apr_hash_t *hash)
+{
+  apr_hash_index_t *hi;
+  PyObject *dict;
+
+  if (hash == NULL)
+    Py_RETURN_NONE;
+
+  if ((dict = PyDict_New()) == NULL)
+    return NULL;
+
+  for (hi = apr_hash_first(NULL, hash); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      PyObject *value;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      value = make_ob_log_changed_path(val);
+      if (value == NULL)
+        {
+            Py_DECREF(dict);
+            return NULL;
+        }
+      if (PyDict_SetItemString(dict, (char *)key, value) == -1)
+        {
+          Py_DECREF(value);
+          Py_DECREF(dict);
+          return NULL;
+        }
+      Py_DECREF(value);
+    }
+
+  return dict;
+}
+
 apr_array_header_t *svn_swig_py_rangelist_to_array(PyObject *list,
                                                    apr_pool_t *pool)
 {
   int targlen;
   apr_array_header_t *temp;
-  
+
   if (!PySequence_Check(list)) {
     PyErr_SetString(PyExc_TypeError, "not a sequence");
     return NULL;
@@ -808,10 +852,10 @@ apr_array_header_t *svn_swig_py_rangelist_to_array(PyObject *list,
 
       if (o == NULL)
         return NULL;
-      if (svn_swig_ConvertPtrString(o, (void **)&range, 
+      if (svn_swig_ConvertPtrString(o, (void **)&range,
                                     "svn_merge_range_t *"))
         {
-          PyErr_SetString(PyExc_TypeError, 
+          PyErr_SetString(PyExc_TypeError,
                           "list values are not svn_merge_range_t *'s");
           Py_DECREF(list);
           return NULL;
@@ -870,7 +914,7 @@ apr_hash_t *svn_swig_py_mergeinfo_from_dict(PyObject *dict,
   apr_hash_t *hash;
   PyObject *keys;
   int i, num_keys;
-  
+
   if (dict == Py_None)
     return NULL;
 
@@ -879,7 +923,7 @@ apr_hash_t *svn_swig_py_mergeinfo_from_dict(PyObject *dict,
     return NULL;
   }
 
-  hash = apr_hash_make(pool);  
+  hash = apr_hash_make(pool);
   keys = PyDict_Keys(dict);
   num_keys = PyList_Size(keys);
   for (i = 0; i < num_keys; i++)
@@ -891,7 +935,7 @@ apr_hash_t *svn_swig_py_mergeinfo_from_dict(PyObject *dict,
 
       if (! (pathname && ranges))
         {
-          PyErr_SetString(PyExc_TypeError, 
+          PyErr_SetString(PyExc_TypeError,
                           "dictionary keys aren't strings or values aren't svn_merge_range_t *'s");
           Py_DECREF(keys);
           return NULL;
@@ -1019,7 +1063,7 @@ apr_hash_t *svn_swig_py_path_revs_hash_from_dict(PyObject *dict,
         *revnum = PyInt_AsLong(value);
       else if (PyLong_Check(value))
         *revnum = PyLong_AsLong(value);
-      else 
+      else
         {
           PyErr_SetString(PyExc_TypeError, "dictionary values aren't revnums");
           Py_DECREF(keys);
@@ -1032,11 +1076,61 @@ apr_hash_t *svn_swig_py_path_revs_hash_from_dict(PyObject *dict,
   return hash;
 }
 
+apr_hash_t *svn_swig_py_changed_path_hash_from_dict(PyObject *dict,
+                                                    apr_pool_t *pool)
+{
+  apr_hash_t *hash;
+  PyObject *keys;
+  int i, num_keys;
+
+  if (dict == Py_None)
+    return NULL;
+
+  if (!PyDict_Check(dict))
+    {
+      PyErr_SetString(PyExc_TypeError, "not a dictionary");
+      return NULL;
+    }
+
+  hash = apr_hash_make(pool);
+  keys = PyDict_Keys(dict);
+  num_keys = PyList_Size(keys);
+  for (i = 0; i < num_keys; i++)
+    {
+      PyObject *key = PyList_GetItem(keys, i);
+      PyObject *py_changed_path = PyDict_GetItem(dict, key);
+      const char *path = make_string_from_ob(key, pool);
+      svn_log_changed_path_t *changed_path;
+      if (!path)
+        {
+          PyErr_SetString(PyExc_TypeError,
+                          "dictionary keys aren't strings");
+          Py_DECREF(keys);
+          return NULL;
+        }
+      svn_swig_ConvertPtrString(py_changed_path, (void *)&changed_path,
+                                "svn_log_changed_path_t *");
+      if (!changed_path)
+        {
+          PyErr_SetString(PyExc_TypeError,
+                          "dictionary values aren't svn_log_changed_path_t");
+          Py_DECREF(keys);
+          return NULL;
+        }
+      apr_hash_set(hash, path, APR_HASH_KEY_STRING, changed_path);
+    }
+  Py_DECREF(keys);
+  return hash;
+}
+
 const apr_array_header_t *svn_swig_py_strings_to_array(PyObject *source,
                                                        apr_pool_t *pool)
 {
     int targlen;
     apr_array_header_t *temp;
+
+    if (source == Py_None)
+      return NULL;
 
     if (!PySequence_Check(source))
       {
@@ -2039,7 +2133,7 @@ void svn_swig_py_status_func2(void *baton,
   /* Our error has no place to go. :-( */
   if (err)
     svn_error_clear(err);
-    
+
   svn_swig_py_release_py_lock();
 }
 
@@ -2317,6 +2411,49 @@ svn_error_t *svn_swig_py_log_receiver(void *baton,
     }
 
   Py_DECREF(chpaths);
+  Py_DECREF(py_pool);
+finished:
+  svn_swig_py_release_py_lock();
+  return err;
+}
+
+svn_error_t *svn_swig_py_log_entry_receiver(void *baton,
+                                            svn_log_entry_t *log_entry,
+                                            apr_pool_t *pool)
+{
+  PyObject *receiver = baton;
+  PyObject *result, *py_pool;
+  svn_error_t *err = SVN_NO_ERROR;
+  PyObject *py_log_entry;
+
+  if ((receiver == NULL) || (receiver == Py_None))
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  py_pool = make_ob_pool(pool);
+  if (py_pool == NULL)
+    {
+      err = callback_exception_error();
+      goto finished;
+    }
+
+  py_log_entry = svn_swig_NewPointerObjString(log_entry, "svn_log_entry_t *",
+                                              py_pool);
+  if ((result = PyObject_CallFunction(receiver,
+                                      (char *)"OO", py_log_entry,
+                                      py_pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      if (result != Py_None)
+        err = callback_bad_return_error("Not None");
+      Py_DECREF(result);
+    }
+
+  Py_DECREF(py_log_entry);
   Py_DECREF(py_pool);
 finished:
   svn_swig_py_release_py_lock();
@@ -2954,16 +3091,16 @@ svn_swig_py_setup_ra_callbacks(svn_ra_callbacks2_t **callbacks,
 
   py_auth_baton = PyObject_GetAttrString(py_callbacks, (char *)"auth_baton");
 
-  if (svn_swig_ConvertPtrString(py_auth_baton, 
+  if (svn_swig_ConvertPtrString(py_auth_baton,
                                 (void **)&((*callbacks)->auth_baton),
-                                "svn_auth_baton_t *")) 
+                                "svn_auth_baton_t *"))
     {
       err = type_conversion_error("svn_auth_baton_t *");
       svn_swig_py_svn_exception(err);
       Py_XDECREF(py_auth_baton);
       return;
     }
-  
+
   Py_XDECREF(py_auth_baton);
 
   (*callbacks)->get_wc_prop = ra_callbacks_get_wc_prop;
@@ -3192,7 +3329,7 @@ static svn_error_t *reporter_delete_path(void *report_baton,
   if ((result = PyObject_CallMethod(py_reporter,
                                     (char *)"delete_path",
                                     (char *)"sO&",
-                                    path, 
+                                    path,
                                     make_ob_pool, pool)) == NULL)
     {
       err = callback_exception_error();
@@ -3208,7 +3345,7 @@ static svn_error_t *reporter_delete_path(void *report_baton,
 
   return err;
 }
-    
+
 static svn_error_t *reporter_link_path(void *report_baton,
                             const char *path,
                             const char *url,

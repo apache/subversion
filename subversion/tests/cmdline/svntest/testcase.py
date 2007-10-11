@@ -27,7 +27,12 @@ class TestCase:
   several methods that need to be overridden."""
 
   def __init__(self):
-    self._result_text = ['PASS: ', 'FAIL: ', 'SKIP: ']
+    # Each element is a tuple whose second element indicates benignity:
+    # e.g., True means "can be ignored when in quiet_mode".  See also
+    # XFail.run_test().
+    self._result_text = [('PASS: ', True),
+                         ('FAIL: ', False),
+                         ('SKIP: ', True)]
     self._list_mode_text = ''
 
   def get_description(self):
@@ -151,7 +156,10 @@ class XFail(TestCase):
 
   def run_text(self, result=0):
     if self.cond_func():
-      return ['XFAIL:', 'XPASS:', self.test_case.run_text(2)][result]
+      # Tuple elements mean same as in TestCase._result_text.
+      return [('XFAIL:', True),
+              ('XPASS:', False),
+              self.test_case.run_text(2)][result]
     else:
       return self.test_case.run_text(result)
 
@@ -163,10 +171,10 @@ class Skip(TestCase):
     """Create an Skip instance based on TEST_CASE.  COND_FUNC is a
     callable that is evaluated at test run time and should return a
     boolean value.  If COND_FUNC returns true, then TEST_CASE is
-    skipped; otherwise, TEST_CASE is run normally.  
-    The evaluation of COND_FUNC is deferred so that it can base its 
-    decision on useful bits of information that are not available at 
-    __init__ time (like the fact that we're running over a 
+    skipped; otherwise, TEST_CASE is run normally.
+    The evaluation of COND_FUNC is deferred so that it can base its
+    decision on useful bits of information that are not available at
+    __init__ time (like the fact that we're running over a
     particular RA layer)."""
 
     TestCase.__init__(self)

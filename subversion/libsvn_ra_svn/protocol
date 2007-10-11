@@ -306,7 +306,8 @@ second place for auth-request point as noted below.
     returned.  If rev is not specified, the youngest revision is used.
 
   update
-    params:   ( [ rev:number ] target:string recurse:bool ? depth:word)
+    params:   ( [ rev:number ] target:string recurse:bool
+                ? depth:word send_copyfrom_param:bool )
     Client switches to report command set.
     Upon finish-report, server sends auth-request.
     After auth exchange completes, server switches to editor command set.
@@ -342,14 +343,18 @@ second place for auth-request point as noted below.
   log
     params:   ( ( target-path:string ... ) [ start-rev:number ]
                 [ end-rev:number ] changed-paths:bool strict-node:bool
-                ? limit:number 
-                ? include-merged-revisions:bool omit-log-text:bool )
+                ? limit:number
+                ? include-merged-revisions:bool
+                all-revprops | revprops
+                ? ( revprop:string ... ) )
     Before sending response, server sends log entries, ending with "done".
     If a client does not want to specify a limit, it should send 0 as the
-    limit parameter.
+    limit parameter.  rev-props excludes author, date, and log; they are
+    sent separately for backwards-compatibility.
     log-entry: ( ( change:changed-path-entry ... ) rev:number
-                 [ author:string ] [ date:string ] [ message:string ] 
-                 ? nbr-children:number )
+                 [ author:string ] [ date:string ] [ message:string ]
+                 ? has-children:bool invalid-revnum:bool
+                 revprop-count:number rev-props:proplist )
              | done
     changed-path-entry: ( path:string A|D|R|M [ copy-path:string ]
                           [ copy-rev:number ] )

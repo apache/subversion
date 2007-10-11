@@ -136,7 +136,7 @@ class GeneratorBase(gen_base.GeneratorBase):
 
     # Initialize parent
     gen_base.GeneratorBase.__init__(self, fname, verfname, options)
-    
+
     # Find Berkeley DB
     self._find_bdb()
 
@@ -152,7 +152,7 @@ class GeneratorBase(gen_base.GeneratorBase):
       self.bdb_lib = None
 
 class WinGeneratorBase(GeneratorBase):
-  "Base class for all Windows project files generators"	
+  "Base class for all Windows project files generators"
 
   def __init__(self, fname, verfname, options, subdir):
     """
@@ -164,7 +164,7 @@ class WinGeneratorBase(GeneratorBase):
 
     # Initialize parent
     GeneratorBase.__init__(self, fname, verfname, options)
-    
+
     if self.sqlite_path == None:
       sys.stderr.write('ERROR: Sqlite path not specifed. ' + \
                        'Use --with-sqlite option.')
@@ -187,7 +187,7 @@ class WinGeneratorBase(GeneratorBase):
                          ' assumimg "%s"\n' % (self.vsnet_version, '7.00'))
         self.vsnet_version = '7.00'
         self.vsnet_proj_ver = '7.00'
-    
+
     # Find the right Ruby include and libraries dirs and
     # library name to link SWIG bindings with
     self._find_ruby()
@@ -211,7 +211,7 @@ class WinGeneratorBase(GeneratorBase):
     # Look for ML
     if self.zlib_path:
       self._find_ml()
-      
+
     # Find neon version
     if self.neon_path:
       self._find_neon()
@@ -260,7 +260,7 @@ class WinGeneratorBase(GeneratorBase):
       os.makedirs(self.projfilesdir)
 
     #Here we can add additional platforms to compile for
-    self.platforms = ['Win32']
+    self.platforms = ['Win32','x64']
 
     #Here we can add additional modes to compile for
     self.configs = ['Debug','Release']
@@ -273,11 +273,11 @@ class WinGeneratorBase(GeneratorBase):
         swig.Generator(self.conf, self.swig_exe).write()
     else:
       print "%s not found; skipping SWIG file generation..." % self.swig_exe
-      
+
   def path(self, *paths):
     """Convert build path to msvc path and prepend root"""
     return msvc_path_join(self.rootpath, *map(msvc_path, paths))
-  
+
   def apath(self, path, *paths):
     """Convert build path to msvc path and prepend root if not absolute"""
     ### On Unix, os.path.isabs won't do the right thing if "item"
@@ -298,7 +298,7 @@ class WinGeneratorBase(GeneratorBase):
     # Don't create projects for scripts
     install_targets = filter(lambda x: not isinstance(x, gen_base.TargetScript),
                              install_targets)
-    
+
     # Drop the libsvn_fs_base target and tests if we don't have BDB
     if not self.bdb_lib:
       install_targets = filter(lambda x: x.name != 'libsvn_fs_base',
@@ -306,8 +306,8 @@ class WinGeneratorBase(GeneratorBase):
       install_targets = filter(lambda x: not (isinstance(x, gen_base.TargetExe)
                                               and x.install == 'bdb-test'),
                                install_targets)
-      
-    # Drop the serf target if we don't have both serf and openssl 
+
+    # Drop the serf target if we don't have both serf and openssl
     if not self.serf_lib:
       install_targets = filter(lambda x: x.name != 'serf', install_targets)
       install_targets = filter(lambda x: x.name != 'libsvn_ra_serf',
@@ -328,7 +328,7 @@ class WinGeneratorBase(GeneratorBase):
           else:
             dll_targets.append(self.create_dll_target(target))
     install_targets.extend(dll_targets)
-    
+
     # sort these for output stability, to watch out for regressions.
     install_targets.sort(lambda t1, t2: cmp(t1.name, t2.name))
     return install_targets
@@ -343,12 +343,12 @@ class WinGeneratorBase(GeneratorBase):
     self.graph.add(gen_base.DT_LINK, section.target.name, dep)
     dep.msvc_fake = section.target
     return section.target
-    
+
   def create_dll_target(self, dep):
     "Return a dynamic library that depends on a static library"
-    target = gen_base.TargetLib(dep.name, 
+    target = gen_base.TargetLib(dep.name,
                                 { 'path'      : dep.path,
-                                  'msvc-name' : dep.name + "_dll" }, 
+                                  'msvc-name' : dep.name + "_dll" },
                                 self)
     target.msvc_export = dep.msvc_export
 
@@ -359,7 +359,7 @@ class WinGeneratorBase(GeneratorBase):
     # The dependency should now be static.
     dep.msvc_export = None
     dep.msvc_static = True
-    
+
     # Remove the 'lib' prefix, so that the static library will be called
     # svn_foo.lib
     dep.name = dep.name[3:]
@@ -396,7 +396,7 @@ class WinGeneratorBase(GeneratorBase):
                     libs=self.get_win_libs(target, cfg),
                     ))
     return configs
-  
+
   def get_proj_sources(self, quote_path, target):
     "Get the list of source files for each project"
     sources = [ ]
@@ -408,7 +408,7 @@ class WinGeneratorBase(GeneratorBase):
       javac_exe = os.path.join(self.jdk_path, "bin", javac_exe)
       javah_exe = os.path.join(self.jdk_path, "bin", javah_exe)
       jar_exe = os.path.join(self.jdk_path, "bin", jar_exe)
-    
+
     if not isinstance(target, gen_base.TargetProject):
       cbuild = None
       ctarget = None
@@ -506,7 +506,7 @@ class WinGeneratorBase(GeneratorBase):
       sources.append(ProjectItem(path=gsrc, reldir=None, custom_build=cbuild,
                                  user_deps=deps, custom_target=def_file))
 
-      sources.append(ProjectItem(path=def_file, reldir=None, 
+      sources.append(ProjectItem(path=def_file, reldir=None,
                                  custom_build=None, user_deps=[]))
 
     sources.sort(lambda x, y: cmp(x.path, y.path))
@@ -612,7 +612,7 @@ class WinGeneratorBase(GeneratorBase):
     if self.zlib_path and (name == 'neon' or name == 'serf'):
       depends.extend(self.sections['zlib'].get_targets())
 
-    # To set the correct build order of the JavaHL targets, the javahl-javah 
+    # To set the correct build order of the JavaHL targets, the javahl-javah
     # and libsvnjavahl targets are defined with extra dependencies in build.conf
     # like this:
     # add-deps = $(javahl_javah_DEPS) $(javahl_java_DEPS)
@@ -720,7 +720,7 @@ class WinGeneratorBase(GeneratorBase):
     # add any libraries that static library dependencies depend on
     for dep, dep_kind in direct_deps:
       is_proj, is_lib, is_static = dep_kind
-      
+
       # recurse for projectless dependencies
       if not is_proj:
         self.get_linked_win_depends(dep, deps, 0)
@@ -758,7 +758,7 @@ class WinGeneratorBase(GeneratorBase):
     # check if they wanted nls
     if self.enable_nls:
       fakedefines.append("ENABLE_NLS")
-      
+
     # check for neon 0.26.x or newer
     if self.neon_ver >= 26000:
       fakedefines.append("SVN_NEON_0_26=1")
@@ -780,7 +780,7 @@ class WinGeneratorBase(GeneratorBase):
 
   def get_win_includes(self, target):
     "Return the list of include directories for target"
-    
+
     fakeincludes = [ self.path("subversion/include"),
                      self.path("subversion"),
                      self.apath(self.apr_path, "include"),
@@ -809,7 +809,7 @@ class WinGeneratorBase(GeneratorBase):
 
     if self.libintl_path:
       fakeincludes.append(self.apath(self.libintl_path, 'inc'))
-    
+
     if self.serf_lib:
       fakeincludes.append(self.apath(self.serf_path))
 
@@ -836,7 +836,7 @@ class WinGeneratorBase(GeneratorBase):
     if target.name == "libsvnjavahl" and self.jdk_path:
       fakeincludes.append(os.path.join(self.jdk_path, 'include'))
       fakeincludes.append(os.path.join(self.jdk_path, 'include', 'win32'))
-    
+
     return fakeincludes
 
   def get_win_lib_dirs(self, target, cfg):
@@ -862,7 +862,7 @@ class WinGeneratorBase(GeneratorBase):
     if isinstance(target, gen_base.TargetApacheMod):
       fakelibdirs.append(self.apath(self.httpd_path, cfg))
       if target.name == 'mod_dav_svn':
-        fakelibdirs.append(self.apath(self.httpd_path, "modules/dav/main", 
+        fakelibdirs.append(self.apath(self.httpd_path, "modules/dav/main",
                                       cfg))
     if self.swig_libdir \
        and (isinstance(target, gen_base.TargetSWIG)
@@ -910,7 +910,7 @@ class WinGeneratorBase(GeneratorBase):
     if isinstance(target, gen_base.TargetExe):
       nondeplibs.append('setargv.obj')
 
-    if ((isinstance(target, gen_base.TargetSWIG) 
+    if ((isinstance(target, gen_base.TargetSWIG)
          or isinstance(target, gen_base.TargetSWIGLib))
         and target.lang == 'perl'):
       nondeplibs.append(self.perl_lib)
@@ -928,16 +928,16 @@ class WinGeneratorBase(GeneratorBase):
 
       if dep.external_lib == '$(SVN_SQLITE_LIBS)':
         nondeplibs.append('sqlite3.lib')
-        
+
       if self.neon_lib and dep.external_lib == '$(NEON_LIBS)':
         nondeplibs.append(neonlib)
-        
+
       if self.serf_lib and dep.external_lib == '$(SVN_SERF_LIBS)':
         nondeplibs.append(serflib)
 
       if dep.external_lib == '$(SVN_SASL_LIBS)':
         nondeplibs.append(sasllib)
-        
+
       if dep.external_lib == '$(SVN_APR_LIBS)':
         nondeplibs.append(self.apr_lib)
 
@@ -1026,7 +1026,7 @@ class WinGeneratorBase(GeneratorBase):
                          ('expat_path',
                           os.path.join(os.path.abspath(self.apr_util_path),
                                        'xml', 'expat', 'lib')),
-                         ('zlib_path', self.zlib_path 
+                         ('zlib_path', self.zlib_path
                                        and os.path.abspath(self.zlib_path)),
                          ('openssl_path',
                           self.openssl_path
@@ -1047,7 +1047,7 @@ class WinGeneratorBase(GeneratorBase):
                           glob.glob(os.path.join(serf_path, '*.h'))
                           + glob.glob(os.path.join(serf_path, 'buckets',
                                                    '*.h'))),
-                         ('zlib_path', self.zlib_path 
+                         ('zlib_path', self.zlib_path
                                        and os.path.abspath(self.zlib_path)),
                          ('openssl_path',
                           self.openssl_path
@@ -1143,7 +1143,7 @@ class WinGeneratorBase(GeneratorBase):
         if name == "CurrentVersion":
           jdk_ver = value
           break
-      
+
       # Find the JDK path.
       if jdk_ver is not None:
         key = _winreg.OpenKey(key, jdk_ver)
@@ -1249,7 +1249,7 @@ class WinGeneratorBase(GeneratorBase):
         txt = fp.read()
         vermatch = re.compile(r'(\d+)\.(\d+)\.(\d+)$', re.M) \
                      .search(txt)
-  
+
         if vermatch:
           version = (int(vermatch.group(1)),
                      int(vermatch.group(2)),
@@ -1282,7 +1282,7 @@ class WinGeneratorBase(GeneratorBase):
 
     version_file_path = os.path.join(self.apr_path, 'include',
                                      'apr_version.h')
-    
+
     if not os.path.exists(version_file_path):
       sys.stderr.write("ERROR: '%s' not found.\n" % version_file_path);
       sys.stderr.write("Use '--with-apr' option to configure APR location.\n");
@@ -1293,19 +1293,19 @@ class WinGeneratorBase(GeneratorBase):
     fp.close()
     vermatch = re.compile(r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)', re.M) \
                  .search(txt)
-    
+
     major_ver = int(vermatch.group(1))
     if major_ver > 0:
       self.apr_lib = 'libapr-%d.lib' % major_ver
     else:
       self.apr_lib = 'libapr.lib'
-   
+
   def _find_apr_util(self):
     "Find the APR-util library and version"
 
     version_file_path = os.path.join(self.apr_util_path, 'include',
                                      'apu_version.h')
-    
+
     if not os.path.exists(version_file_path):
       sys.stderr.write("ERROR: '%s' not found.\n" % version_file_path);
       sys.stderr.write("Use '--with-apr-util' option to configure APR-Util location.\n");
@@ -1316,7 +1316,7 @@ class WinGeneratorBase(GeneratorBase):
     fp.close()
     vermatch = re.compile(r'^\s*#define\s+APU_MAJOR_VERSION\s+(\d+)', re.M) \
                  .search(txt)
-    
+
     major_ver = int(vermatch.group(1))
     if major_ver > 0:
       self.aprutil_lib = 'libaprutil-%d.lib' % major_ver

@@ -2,7 +2,7 @@
  * getlocks.c :  entry point for get_locks RA functions for ra_serf
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -34,6 +34,8 @@
 #include "svn_version.h"
 #include "svn_path.h"
 #include "svn_time.h"
+
+#include "private/svn_dav_protocol.h"
 #include "svn_private_config.h"
 
 #include "ra_serf.h"
@@ -93,7 +95,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
 
       info->pool = lock_ctx->pool;
       info->lock = svn_lock_create(lock_ctx->pool);
-      info->lock->path = 
+      info->lock->path =
 
       parser->state->private = info;
     }
@@ -140,7 +142,7 @@ start_getlocks(svn_ra_serf__xml_parser_t *parser,
         {
           push_state(parser, lock_ctx, COMMENT);
         }
-      else if (strcmp(name.name, "creationdate") == 0)
+      else if (strcmp(name.name, SVN_DAV__CREATIONDATE) == 0)
         {
           push_state(parser, lock_ctx, CREATION_DATE);
         }
@@ -208,7 +210,7 @@ end_getlocks(svn_ra_serf__xml_parser_t *parser,
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == CREATION_DATE &&
-           strcmp(name.name, "creationdate") == 0)
+           strcmp(name.name, SVN_DAV__CREATIONDATE) == 0)
     {
       SVN_ERR(svn_time_from_cstring(&info->lock->creation_date,
                                     info->tmp, info->pool));

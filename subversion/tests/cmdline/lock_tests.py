@@ -181,7 +181,10 @@ def commit_propchange(sbox):
 
   # make a property change and commit it, allowing lock to be released
   svntest.main.run_svn(None, 'propset', 'blue', 'azul', file_path)
-  svntest.main.run_svn(None, 'commit', '-m', '', file_path)
+  svntest.main.run_svn(None, 'commit', 
+                             '--username', svntest.main.wc_author,
+                             '--password', svntest.main.wc_passwd,
+                             '-m', '', file_path)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak(fname, wc_rev=2)
@@ -375,7 +378,7 @@ def enforce_lock(sbox):
   svntest.actions.set_prop(None, 'svn:needs-lock', '*', lambda_path,
                            propval_path)
   expected_err = ".*svn: warning: To turn off the svn:needs-lock property,.*"
-  svntest.actions.set_prop(expected_err, 'svn:needs-lock', '      ', 
+  svntest.actions.set_prop(expected_err, 'svn:needs-lock', '      ',
                            mu_path, propval_path)
 
   # Check svn:needs-lock
@@ -437,9 +440,18 @@ def update_while_needing_lock(sbox):
   wc_dir = sbox.wc_dir
 
   iota_path = os.path.join(wc_dir, 'iota')
-  svntest.main.run_svn(None, 'propset', 'svn:needs-lock', 'foo', iota_path)
-  svntest.main.run_svn(None, 'commit', '-m', 'log msg', iota_path)
-  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'propset', 'svn:needs-lock', 'foo', iota_path)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'commit', '-m', 'log msg', iota_path)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'up', wc_dir)
 
   # Lock, modify, commit, unlock, to create r3.
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
@@ -453,10 +465,16 @@ def update_while_needing_lock(sbox):
                        '-m', '', iota_path) # auto-unlocks
 
   # Backdate to r2.
-  svntest.main.run_svn(None, 'update', '-r2', iota_path)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'update', '-r2', iota_path)
 
   # Try updating forward to r3 again.  This is where the bug happened.
-  svntest.main.run_svn(None, 'update', '-r3', iota_path)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'update', '-r3', iota_path)
 
 
 #----------------------------------------------------------------------
@@ -512,7 +530,7 @@ def defunct_lock(sbox):
 
 
 #----------------------------------------------------------------------
-# Tests dealing with a lock on a deleted path 
+# Tests dealing with a lock on a deleted path
 def deleted_path_lock(sbox):
   "verify lock removal on a deleted path"
 
@@ -622,12 +640,12 @@ def lock_status(sbox):
                        '--password', svntest.main.wc_passwd,
                        '-m', '', file_path)
 
-  svntest.main.run_svn(None, 'lock', 
+  svntest.main.run_svn(None, 'lock',
                        '--username', svntest.main.wc_author,
                        '--password', svntest.main.wc_passwd,
-                       '-m', '', file_path) 
+                       '-m', '', file_path)
 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)  
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak(fname, wc_rev=2)
   expected_status.tweak(fname, writelocked='K')
 
@@ -649,7 +667,7 @@ def lock_status(sbox):
 
 #----------------------------------------------------------------------
 # III.c : Steal lock on a file from another working copy with 'svn lock
-# --force', and check the status of lock in the repository from the 
+# --force', and check the status of lock in the repository from the
 # working copy in which the file was initially locked.
 def stolen_lock_status(sbox):
   "verify status of stolen lock"
@@ -688,7 +706,7 @@ def stolen_lock_status(sbox):
                        '--username', svntest.main.wc_author,
                        '--password', svntest.main.wc_passwd,
                        '-m', '', '--force', file_path_b)
- 
+
   # Verify status from working copy where file was initially locked
   expected_status.tweak(fname, writelocked='T')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -786,7 +804,7 @@ def out_of_date(sbox):
 
   # --- Meanwhile, in our other working copy... ---
   svntest.actions.run_and_verify_svn(None, None,
-                                     ".*newer version of '/iota' exists", 
+                                     ".*newer version of '/iota' exists",
                                      'lock',
                                      '--username', svntest.main.wc_author2,
                                      '--password', svntest.main.wc_passwd,
@@ -804,7 +822,7 @@ def revert_lock(sbox):
 
   mode = stat.S_IWGRP | stat.S_IWOTH | stat.S_IWRITE
 
-  # set the prop in wc 
+  # set the prop in wc
   svntest.actions.run_and_verify_svn(None, None, [], 'propset',
                                   'svn:needs-lock', 'foo', iota_path)
 
@@ -834,7 +852,7 @@ def revert_lock(sbox):
     print "Deleting the 'svn:needs-lock' property "
     print "did not remove read-only-ness"
     raise svntest.Failure
-  
+
   # revert the change
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', iota_path)
 
@@ -843,7 +861,7 @@ def revert_lock(sbox):
     print "Reverting a file with 'svn:needs-lock'"
     print "did not set the file back to read-only"
     raise svntest.Failure
- 
+
   # try propdel and revert from a different directory so
   # full filenames are used
   extra_name = 'xx'
@@ -853,7 +871,7 @@ def revert_lock(sbox):
                        '--username', svntest.main.wc_author,
                        '--password', svntest.main.wc_passwd,
                        '-m', '', iota_path)
-  
+
   # modify it
   svntest.main.file_append(iota_path, "This line added\n")
 
@@ -861,7 +879,7 @@ def revert_lock(sbox):
   expected_status.tweak('iota', wc_rev=2)
   expected_status.tweak('iota', status='M ', writelocked='K')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
-  
+
   # revert it
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', iota_path)
 
@@ -870,7 +888,7 @@ def revert_lock(sbox):
     print "Reverting a 'svn:needs-lock' file (with lock in wc) "
     print "did not leave the file writable"
     raise svntest.Failure
-  
+
 
 #----------------------------------------------------------------------
 def examine_lock_via_url(sbox):
@@ -907,7 +925,7 @@ def lock_several_files(sbox):
                                      '--no-auth-cache',
                                      '-m', 'lock several',
                                      iota_path, lambda_path, alpha_path)
-  
+
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', 'A/B/lambda', 'A/B/E/alpha', writelocked='K')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -1040,7 +1058,7 @@ def lock_and_exebit1(sbox):
   mode_w = stat.S_IWUSR
   mode_x = stat.S_IXUSR
   mode_r = stat.S_IRUSR
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -1053,7 +1071,7 @@ def lock_and_exebit1(sbox):
   expected_err = ".*svn: warning: To turn off the svn:executable property,.*"
   svntest.actions.run_and_verify_svn(None, None, expected_err, 'ps',
                                      'svn:executable', ' ', gamma_path)
-  
+
   # commit
   svntest.actions.run_and_verify_svn(None, None, [], 'commit',
                                      '--username', svntest.main.wc_author,
@@ -1075,8 +1093,8 @@ def lock_and_exebit1(sbox):
                                      '-m', '', gamma_path)
   # mode should be +r, +w, +x
   gamma_stat = os.stat(gamma_path)[0]
-  if (not gamma_stat & mode_r 
-      or not gamma_stat & mode_w 
+  if (not gamma_stat & mode_r
+      or not gamma_stat & mode_w
       or not gamma_stat & mode_x):
     print "Locking a file with 'svn:needs-lock, svn:executable'"
     print "did not set the file to read-write, executable"
@@ -1084,32 +1102,32 @@ def lock_and_exebit1(sbox):
 
   # modify
   svntest.main.file_append(gamma_path, "check stat output after mod & unlock")
-  
+
   # unlock
   svntest.actions.run_and_verify_svn(None, ".*unlocked", [], 'unlock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      gamma_path)
-  
+
   # Mode should be +r, -w, +x
   gamma_stat = os.stat(gamma_path)[0]
-  if (not gamma_stat & mode_r 
-      or gamma_stat & mode_w 
+  if (not gamma_stat & mode_r
+      or gamma_stat & mode_w
       or not gamma_stat & mode_x):
     print "Unlocking a file with 'svn:needs-lock, svn:executable'"
     print "did not set the file to read-only, executable"
     raise svntest.Failure
-  
+
   # ci
   svntest.actions.run_and_verify_svn(None, None, [], 'commit',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', '', gamma_path)
-  
+
   # Mode should be still +r, -w, +x
   gamma_stat = os.stat(gamma_path)[0]
-  if (not gamma_stat & mode_r 
-      or gamma_stat & mode_w 
+  if (not gamma_stat & mode_r
+      or gamma_stat & mode_w
       or not gamma_stat & mode_x):
     print "Commiting a file with 'svn:needs-lock, svn:executable'"
     print "after unlocking modified file's permissions"
@@ -1124,7 +1142,7 @@ def lock_and_exebit2(sbox):
   mode_w = stat.S_IWUSR
   mode_x = stat.S_IXUSR
   mode_r = stat.S_IRUSR
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -1137,7 +1155,7 @@ def lock_and_exebit2(sbox):
   expected_err = ".*svn: warning: To turn off the svn:executable property,.*"
   svntest.actions.run_and_verify_svn(None, None, expected_err, 'ps',
                                      'svn:executable', ' ', gamma_path)
-  
+
   # commit
   svntest.actions.run_and_verify_svn(None, None, [], 'commit',
                                      '--username', svntest.main.wc_author,
@@ -1159,8 +1177,8 @@ def lock_and_exebit2(sbox):
                                      '-m', '', gamma_path)
   # mode should be +r, +w, +x
   gamma_stat = os.stat(gamma_path)[0]
-  if (not gamma_stat & mode_r 
-      or not gamma_stat & mode_w 
+  if (not gamma_stat & mode_r
+      or not gamma_stat & mode_w
       or not gamma_stat & mode_x):
     print "Locking a file with 'svn:needs-lock, svn:executable'"
     print "did not set the file to read-write, executable"
@@ -1168,17 +1186,17 @@ def lock_and_exebit2(sbox):
 
   # modify
   svntest.main.file_append(gamma_path, "check stat output after mod & unlock")
-  
+
   # commit
   svntest.actions.run_and_verify_svn(None, None, [], 'commit',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', '', gamma_path)
-  
+
   # Mode should be +r, -w, +x
   gamma_stat = os.stat(gamma_path)[0]
-  if (not gamma_stat & mode_r 
-      or gamma_stat & mode_w 
+  if (not gamma_stat & mode_r
+      or gamma_stat & mode_w
       or not gamma_stat & mode_x):
     print "Commiting a file with 'svn:needs-lock, svn:executable'"
     print "did not set the file to read-only, executable"
@@ -1194,7 +1212,10 @@ def commit_xml_unsafe_file_unlock(sbox):
   file_path = os.path.join(sbox.wc_dir, fname)
   svntest.main.file_append(file_path, "Initial data.\n")
   svntest.main.run_svn(None, 'add', file_path)
-  svntest.main.run_svn(None, 'commit', '-m', '', file_path)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'commit', '-m', '', file_path)
 
   # lock fname as wc_author
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
@@ -1204,7 +1225,10 @@ def commit_xml_unsafe_file_unlock(sbox):
 
   # make a change and commit it, allowing lock to be released
   svntest.main.file_append(file_path, "Followup data.\n")
-  svntest.main.run_svn(None, 'commit', '-m', '', file_path)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'commit', '-m', '', file_path)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({ fname : Item(status='  ', wc_rev=3), })
@@ -1305,7 +1329,7 @@ def unlock_already_unlocked_files(sbox):
                                      '--no-auth-cache',
                                      '-m', 'lock several',
                                      iota_path, lambda_path, alpha_path)
-  
+
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', 'A/B/lambda', 'A/B/E/alpha', writelocked='K')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -1458,7 +1482,7 @@ def ls_url_encoded(sbox):
   expected_output = " +2 " + re.escape(svntest.main.wc_author) + " +O .+f"
   svntest.actions.run_and_verify_svn("List space dir",
                                      expected_output, [],
-                                     "list", "-v", dirname)  
+                                     "list", "-v", dirname)
 
 #----------------------------------------------------------------------
 # Make sure unlocking a path with the wrong lock token fails.

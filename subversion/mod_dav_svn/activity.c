@@ -178,7 +178,7 @@ dav_svn__delete_activity(const dav_svn_repos *repos, const char *activity_id)
           else
             {
               err = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "could not open transaction.", 
+                                         "could not open transaction.",
                                          repos->pool);
               return err;
             }
@@ -189,7 +189,7 @@ dav_svn__delete_activity(const dav_svn_repos *repos, const char *activity_id)
           if (serr)
             {
               err = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "could not abort transaction.", 
+                                         "could not abort transaction.",
                                          repos->pool);
               return err;
             }
@@ -286,17 +286,17 @@ dav_svn__create_activity(const dav_svn_repos *repos,
   if (serr != NULL)
     {
       return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                  "could not determine youngest revision", 
+                                  "could not determine youngest revision",
                                   repos->pool);
     }
 
   serr = svn_repos_fs_begin_txn_for_commit(&txn, repos->repos, rev,
-                                           repos->username, NULL, 
+                                           repos->username, NULL,
                                            repos->pool);
   if (serr != NULL)
     {
       return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                  "could not begin a transaction", 
+                                  "could not begin a transaction",
                                   repos->pool);
     }
 
@@ -304,7 +304,7 @@ dav_svn__create_activity(const dav_svn_repos *repos,
   if (serr != NULL)
     {
       return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                  "could not fetch transaction name", 
+                                  "could not fetch transaction name",
                                   repos->pool);
     }
 

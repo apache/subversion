@@ -22,7 +22,7 @@ module Svn
       alias_method "_#{target}", target
     end
     @@alias_targets = nil
-    
+
     module_function
     def locked?(path)
       Wc.locked(path)
@@ -44,11 +44,11 @@ module Svn
     def normal_prop?(name)
       Wc.is_normal_prop(name)
     end
-    
+
     def wc_prop?(name)
       Wc.is_wc_prop(name)
     end
-    
+
     def entry_prop?(name)
       Wc.is_entry_prop(name)
     end
@@ -60,7 +60,7 @@ module Svn
     def default_ignores(config)
       Wc.get_default_ignores(config)
     end
-    
+
     def cleanup(path, diff3_cmd=nil, cancel_func=nil)
       Wc.cleanup2(path, diff3_cmd, cancel_func)
     end
@@ -146,7 +146,7 @@ module Svn
       def retrieve(path)
         Wc.adm_retrieve(self, path)
       end
-        
+
       def probe_retrieve(path)
         Wc.adm_probe_retrieve(self, path)
       end
@@ -174,7 +174,7 @@ module Svn
       def text_modified?(filename, force=false)
         Wc.text_modified_p(filename, force, self)
       end
-      
+
       def props_modified?(path)
         Wc.props_modified_p(path, self)
       end
@@ -191,8 +191,10 @@ module Svn
         Wc.get_ancestry(path, self)
       end
 
-      def walk_entries(path, callbacks, show_hidden=false, cancel_func=nil)
-        Wc.walk_entries3(path, self, callbacks, show_hidden, cancel_func)
+      def walk_entries(path, callbacks, show_hidden=false, cancel_func=nil,
+                       depth=nil)
+        Wc.walk_entries3(path, self, callbacks, depth, show_hidden,
+                         cancel_func)
       end
 
       def mark_missing_deleted(path)
@@ -202,7 +204,7 @@ module Svn
       def maybe_set_repos_root(path, repos)
         Wc.maybe_set_repos_root(self, path, repos)
       end
-      
+
       def status(path)
         Wc.status2(path, self)
       end
@@ -301,10 +303,15 @@ module Svn
                         preserved_exts=nil, conflict_func=nil)
         preserved_exts ||= []
         traversal_info ||= _traversal_info
+
+        # TODO(rb support fetch_fun): implement support for the fetch_func
+        # callback.
+        fetch_func = nil
         results = Wc.get_update_editor3(target_revision, self, target,
                                         use_commit_times, depth,
                                         allow_unver_obstruction,
-                                        notify_func, cancel_func, conflict_func, diff3_cmd,
+                                        notify_func, cancel_func, conflict_func,
+                                        fetch_func, diff3_cmd,
                                         preserved_exts, traversal_info)
         target_revision_address, editor, editor_baton = results
         editor.__send__(:target_revision_address=, target_revision_address)
@@ -519,11 +526,11 @@ module Svn
       def text_conflicted?(dir_path)
         conflicted(dir_path)[0]
       end
-      
+
       def prop_conflicted?(dir_path)
         conflicted(dir_path)[1]
       end
-      
+
       def dir?
         kind == Core::NODE_DIR
       end
@@ -540,12 +547,12 @@ module Svn
         schedule == SCHEDULE_NORMAL
       end
     end
-    
+
     class Status2
       def dup
         Wc.dup_status2(self, Core::Pool.new)
       end
-      
+
       def text_added?
         text_status == STATUS_ADDED
       end

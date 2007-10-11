@@ -74,7 +74,7 @@ svn_fs_base__create_successor(const svn_fs_id_t **new_id_p,
                                        txn_id, trail, pool));
 
   /* Store the new skel under that ID.  */
-  SVN_ERR(svn_fs_bdb__put_node_revision(fs, new_id, new_noderev, 
+  SVN_ERR(svn_fs_bdb__put_node_revision(fs, new_id, new_noderev,
                                         trail, pool));
 
   *new_id_p = new_id;

@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
 # See usage() for details, or run with --help option.
-# 
+#
 #          .-------------------------------------------------.
 #          |  "An ad hoc format deserves an ad hoc parser."  |
 #          `-------------------------------------------------'
-# 
+#
 # Some Subversion project log messages include parseable data to help
 # track who's contributing what.  The exact syntax is described in
 # hacking.html#crediting, but here's an example, indented by three
@@ -94,7 +94,7 @@ def spam_guard_in_html_block(str):
   """Take a block of HTML data, and run html_spam_guard() on parts of it."""
   return _spam_guard_in_html_block_re.subn(_spam_guard_in_html_block_func,
                                            str)[0]
-  
+
 def html_header(title, page_heading=None):
   """Write HTML file header.  TITLE and PAGE_HEADING parameters are
   expected to already by HTML-escaped if needed."""
@@ -297,7 +297,7 @@ class Contributor:
       except ValueError:
         retval = self.email
     elif self.real_name:
-      # Last resort: construct canonical name based on real name.  
+      # Last resort: construct canonical name based on real name.
       retval = ''.join(self.real_name.lower().split(' '))
     if retval is None:
       complain('Unable to construct a canonical name for Contributor.', True)
@@ -467,7 +467,7 @@ class LogMessage:
     if a > b: return -1
     if a < b: return 1
     else:     return 0
-    
+
   def __hash__(self):
     """I don't really understand why defining __cmp__() but not
     __hash__() renders an object type unfit to be a dictionary key,
@@ -507,7 +507,7 @@ parenthetical_aside_re = re.compile('^\s*\(.*\)\s*$')
 
 def graze(input):
   just_saw_separator = False
-  
+
   while True:
     line = input.readline()
     if line == '': break
@@ -586,12 +586,13 @@ href="http://subversion.tigris.org/hacking.html#crediting">special
 contribution format</a>.</p>
 
 <p><i>Please do not use this list as a generic guide to who has
-contributed what to Subversion!</i> It omits existing full committers,
-for example, because they are irrelevant to our search for new
-committers.  Also, it merely counts changes, it does not evaluate
-them.  To truly understand what someone has contributed, you have to
-read their changes in detail.  This page can only assist human
-judgement, not substitute for it.</p>
+contributed what to Subversion!</i> It omits existing <a
+href="http://svn.collab.net/repos/svn/trunk/COMMITTERS"
+>full committers</a>, for example, because they are irrelevant to our
+search for new committers.  Also, it merely counts changes, it does
+not evaluate them.  To truly understand what someone has contributed,
+you have to read their changes in detail.  This page can only assist
+human judgement, not substitute for it.</p>
 
 '''
 

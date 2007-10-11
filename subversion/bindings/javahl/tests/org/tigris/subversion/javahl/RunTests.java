@@ -17,6 +17,10 @@
  */
 package org.tigris.subversion.javahl;
 
+import java.lang.reflect.Constructor;
+import java.util.StringTokenizer;
+
+import junit.framework.TestCase;
 import junit.framework.TestResult;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
@@ -33,15 +37,66 @@ public class RunTests
     {
         /**
          * Create a conglomerate test suite containing all our test
-         * suites.
+         * suites, or the fully qualified method names specified by
+         * the <code>test.tests</code> system property.
          *
          * @return The complete test suite.
          */
         public static TestSuite suite()
         {
             TestSuite suite = new SVNTestSuite();
-            suite.addTestSuite(SVNAdminTests.class);
-            suite.addTestSuite(BasicTests.class);
+
+            // Determine whether the caller requested that a specific
+            // set of test cases be run, and verify that they exist.
+            TestCase[] testCases = null;
+            String testNames = System.getProperty("test.tests");
+            if (testNames != null)
+            {
+                StringTokenizer tok = new StringTokenizer(testNames, ", ");
+                testCases = new TestCase[tok.countTokens()];
+                int testCaseIndex = 0;
+                while (tok.hasMoreTokens())
+                {
+                    // ASSUMPTION: Class names are fully-qualified
+                    // (with package), and are included with method
+                    // names in test names.
+                    String methodName = tok.nextToken();
+                    int i = methodName.lastIndexOf('.');
+                    String className = methodName.substring(0, i);
+                    try
+                    {
+                        Class clazz = Class.forName(className);
+                        final Class[] argTypes = new Class[] { String.class };
+                        Constructor ctor =
+                            clazz.getDeclaredConstructor(argTypes);
+                        methodName = methodName.substring(i + 1);
+                        String[] args = { methodName };
+                        testCases[testCaseIndex++] =
+                            (TestCase) ctor.newInstance(args);
+                    }
+                    catch (Exception e)
+                    {
+                        testCases = null;
+                        break;
+                    }
+                }
+            }
+
+            // Add the appropriate set of tests to our test suite.
+            if (testCases == null || testCases.length == 0)
+            {
+                // Add default test suites.
+                suite.addTestSuite(SVNAdminTests.class);
+                suite.addTestSuite(BasicTests.class);
+            }
+            else
+            {
+                // Add specific test methods.
+                for (int i = 0; i < testCases.length; i++)
+                {
+                    suite.addTest(testCases[i]);
+                }
+            }
             return suite;
         }
     }

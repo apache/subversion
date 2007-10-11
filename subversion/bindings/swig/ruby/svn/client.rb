@@ -185,15 +185,16 @@ module Svn
       def propset(name, value, target, recurse=true, force=false,
                   base_revision_for_url=nil)
         base_revision_for_url ||= Svn::Core::INVALID_REVNUM
-        Client.propset3(name, value, target, recurse, force,
+        depth = recurse ? Svn::Core::DEPTH_INFINITY : Svn::Core::DEPTH_EMPTY
+        Client.propset3(name, value, target, depth, force,
                         base_revision_for_url, self)
       end
       alias prop_set propset
       alias pset propset
       alias ps propset
 
-      def propdel(name, target, recurse=true, force=false)
-        Client.propset2(name, nil, target, recurse, force, self)
+      def propdel(name, *args)
+        propset(name, nil, *args)
       end
       alias prop_del propdel
       alias pdel propdel
@@ -204,7 +205,8 @@ module Svn
       def propget(name, target, rev=nil, peg_rev=nil, recurse=true)
         rev ||= "HEAD"
         peg_rev ||= rev
-        Client.propget2(name, target, rev, peg_rev, recurse, self)
+        depth = recurse ? Svn::Core::DEPTH_INFINITY : Svn::Core::DEPTH_EMPTY
+        Client.propget4(name, target, peg_rev, rev, depth, self).first
       end
       alias prop_get propget
       alias pget propget
@@ -230,7 +232,8 @@ module Svn
       alias plist proplist
       alias pl proplist
 
-      def copy(src_paths, dst_path, rev_or_copy_as_child=nil, make_parents=nil)
+      def copy(src_paths, dst_path, rev_or_copy_as_child=nil,
+               make_parents=nil, with_merge_history=nil)
         if src_paths.is_a?(Array)
           copy_as_child = rev_or_copy_as_child
           if copy_as_child.nil?
@@ -250,14 +253,17 @@ module Svn
           end
           src_paths = [src_paths]
         end
-        Client.copy4(src_paths, dst_path, copy_as_child, make_parents, self)
+        Client.copy4(src_paths, dst_path, copy_as_child, make_parents,
+                     with_merge_history, self)
       end
       alias cp copy
 
-      def move(src_paths, dst_path, force=false, move_as_child=nil, make_parents=nil)
+      def move(src_paths, dst_path, force=false, move_as_child=nil,
+               make_parents=nil, with_merge_history=nil)
         src_paths = [src_paths] unless src_paths.is_a?(Array)
         move_as_child = src_paths.size == 1 ? false : true if move_as_child.nil?
-        Client.move5(src_paths, dst_path, force, move_as_child, make_parents, self)
+        Client.move5(src_paths, dst_path, force, move_as_child, make_parents,
+                     with_merge_history, self)
       end
       alias mv move
 
@@ -315,10 +321,12 @@ module Svn
                       dry_run, options, self)
       end
 
+
       def merge_peg(src, rev1, rev2, target_wcpath,
                     peg_rev=nil, depth=nil,
                     ignore_ancestry=false, force=false,
                     dry_run=false, options=nil, record_only=false)
+        peg_rev ||= uri?(src) ? 'HEAD' : 'WORKING'
         Client.merge_peg3(src, rev1, rev2, peg_rev,
                           target_wcpath, depth, ignore_ancestry,
                           force, record_only, dry_run, options, self)
@@ -620,12 +628,11 @@ module Svn
         Client.get_config(self)
       end
 
-      def merge_info(path_or_url, revision=nil)
-        info = Client.get_mergeinfo(path_or_url, revision, self)
+      def mergeinfo(path_or_url, revision=nil)
+        info = Client.mergeinfo_get_merged(path_or_url, revision, self)
         return nil if info.nil?
         Core::MergeInfo.new(info)
       end
-      alias_method :mergeinfo, :merge_info
 
       def add_to_change_list(change_list_name, *paths)
         paths = paths[0] if paths.size == 1 and paths[0].is_a?(Array)
@@ -692,6 +699,14 @@ module Svn
         paths.collect do |path|
           path.chomp(File::SEPARATOR)
         end
+      end
+
+      def uri?(path)
+        uri = URI.parse(path)
+        # URI.parse is pretty liberal in what it will accept as a scheme,
+        # but if we get a scheme and a host we can be pretty sure it's a
+        # URI as far as subversion is concerned.
+        uri.scheme and uri.host
       end
     end
 

@@ -47,6 +47,7 @@
     const char *base_checksum,
     const char *result_checksum,
     const char *token,
+    const char *uuid,
     const char *comment
 };
 

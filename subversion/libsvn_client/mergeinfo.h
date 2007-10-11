@@ -19,6 +19,69 @@
 #ifndef SVN_LIBSVN_CLIENT_MERGEINFO_H
 #define SVN_LIBSVN_CLIENT_MERGEINFO_H
 
+
+/*** Data Structures ***/
+
+
+/* Structure used by discover_and_merge_children() and consumers of the
+   children_with_mergeinfo array it populates.  The struct describes
+   working copy paths that meet one or more of the following criteria:
+
+     1) Path has explicit mergeinfo
+     2) Path is switched
+     3) Path has an immediate child which is switched or otherwise
+        missing from the WC.
+     4) Path has a sibling which is switched or otherwise missing
+        from the WC.
+*/
+typedef struct svn_client__merge_path_t
+{
+  const char *path;
+  svn_boolean_t missing_child;       /* PATH has an immediate child which is
+                                        missing. */
+  svn_boolean_t switched;            /* PATH is switched. */
+  svn_boolean_t has_noninheritable;  /* PATH has svn:mergeinfo set on it which
+                                        includes non-inheritable revision
+                                        ranges. */
+  svn_boolean_t absent;              /* PATH is absent from the WC, probably
+                                        due to authz restrictions. */
+  const svn_string_t *propval;       /* Working mergeinfo for PATH at start
+                                        of merge.  May be NULL. */
+  apr_array_header_t *remaining_ranges; /* Per path remaining ranges list. */
+  apr_hash_t *pre_merge_mergeinfo;      /* mergeinfo on a path prior to a
+                                           merge.*/
+  svn_boolean_t indirect_mergeinfo;
+} svn_client__merge_path_t;
+
+
+
+/*** Functions ***/
+
+/* Find explicit or inherited WC mergeinfo for WCPATH, and return it
+   in *MERGEINFO (NULL if no mergeinfo is set).  Set *INHERITED to
+   whether the mergeinfo was inherited (TRUE or FALSE).
+
+   INHERIT indicates whether explicit, explicit or inherited, or only
+   inherited mergeinfo for WCPATH is retrieved.
+
+   Don't look for inherited mergeinfo any higher than LIMIT_PATH
+   (ignored if NULL).
+
+   Set *WALKED_PATH to the path climbed from WCPATH to find inherited
+   mergeinfo, or "" if none was found. (ignored if NULL). */
+svn_error_t *
+svn_client__get_wc_mergeinfo(apr_hash_t **mergeinfo,
+                             svn_boolean_t *inherited,
+                             svn_boolean_t pristine,
+                             svn_mergeinfo_inheritance_t inherit,
+                             const svn_wc_entry_t *entry,
+                             const char *wcpath,
+                             const char *limit_path,
+                             const char **walked_path,
+                             svn_wc_adm_access_t *adm_access,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *pool);
+
 /* Obtain any mergeinfo for the session-relative path REL_PATH from
    the repository, and set it in *TARGET_MERGEINFO.
 
@@ -34,6 +97,34 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
                                 svn_revnum_t rev,
                                 svn_mergeinfo_inheritance_t inherit,
                                 apr_pool_t *pool);
+
+/* Retrieve the direct mergeinfo for the TARGET_WCPATH from the WC's
+   mergeinfo prop, or that inherited from its nearest ancestor if the
+   target has no info of its own.
+
+   If no mergeinfo can be obtained from the WC or REPOS_ONLY is TRUE,
+   get it from the repository (opening a new RA session if RA_SESSION
+   is NULL).  Store any mergeinfo obtained for TARGET_WCPATH -- which
+   is reflected by ENTRY -- in *TARGET_MERGEINFO, if no mergeinfo is
+   found *TARGET_MERGEINFO is NULL.
+
+   INHERIT indicates whether explicit, explicit or inherited, or only
+   inherited mergeinfo for TARGET_WCPATH is retrieved.
+
+   If TARGET_WCPATH inherited its mergeinfo from a working copy ancestor
+   or if it was obtained from the repository, set *INDIRECT to TRUE, set it
+   to FALSE *otherwise. */
+svn_error_t *
+svn_client__get_wc_or_repos_mergeinfo(apr_hash_t **target_mergeinfo,
+                                      const svn_wc_entry_t *entry,
+                                      svn_boolean_t *indirect,
+                                      svn_boolean_t repos_only,
+                                      svn_mergeinfo_inheritance_t inherit,
+                                      svn_ra_session_t *ra_session,
+                                      const char *target_wcpath,
+                                      svn_wc_adm_access_t *adm_access,
+                                      svn_client_ctx_t *ctx,
+                                      apr_pool_t *pool);
 
 /* Parse any mergeinfo from the WCPATH's ENTRY and store it in
    MERGEINFO.  If PRISTINE is true parse the pristine mergeinfo,
@@ -95,6 +186,22 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
 
+/* For each path in CHILDREN_WITH_MERGEINFO which is an immediate child of
+   TARGET_WCPATH, check if that path's mergeinfo elides to TARGET_WCPATH.
+   If it does elide, clear all mergeinfo from the path.
+
+   CHILDREN_WITH_MERGEINFO is filled with child paths (struct
+   merge_path_t *) of TARGET_WCPATH which have svn:mergeinfo set on
+   them, arranged in depth first order (see
+   discover_and_merge_children). */
+svn_error_t *
+svn_client__elide_children(apr_array_header_t *children_with_mergeinfo,
+                           const char *target_wcpath,
+                           const svn_wc_entry_t *entry,
+                           svn_wc_adm_access_t *adm_access,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *pool);
+
 /* A wrapper which calls svn_client__elide_mergeinfo() on each child
    in CHILDREN_WITH_MERGEINFO_HASH in depth-first. */
 svn_error_t *
@@ -102,5 +209,14 @@ svn_client__elide_mergeinfo_for_tree(apr_hash_t *children_with_mergeinfo,
                                      svn_wc_adm_access_t *adm_access,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool);
+
+/* Get the repository URL and revision number for which to request
+   mergeinfo for a WC entry, which sometimes needs to be the entry's
+   copyfrom info rather than its actual URL and revision. */
+void
+svn_client__derive_mergeinfo_location(const char **url,
+                                      svn_revnum_t *rev,
+                                      const svn_wc_entry_t *entry);
+
 
 #endif /* SVN_LIBSVN_CLIENT_MERGEINFO_H */

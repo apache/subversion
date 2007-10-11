@@ -392,6 +392,15 @@ public interface SVNClientInterface
     void revert(String path, boolean recurse) throws ClientException;
 
     /**
+     * Reverts a file to a pristine state.
+     * @param path      path of the file.
+     * @param depth     the depth to recurse into subdirectories
+     * @throws ClientException
+     * @since 1.5
+     */
+    void revert(String path, int depth) throws ClientException;
+
+    /**
      * Adds a file to the repository.
      * @param path      path to be added.
      * @param recurse   recurse into subdirectories
@@ -414,7 +423,7 @@ public interface SVNClientInterface
     /**
      * Adds a file to the repository.
      * @param path      path to be added.
-     * @param recurse   recurse into subdirectories
+     * @param depth     the depth to recurse into subdirectories
      * @param force     if adding a directory and recurse true and path is a
      *                  directory, all not already managed files are added.
      * @param noIgnores if false, don't add files or directories matching
@@ -423,7 +432,7 @@ public interface SVNClientInterface
      * @throws ClientException
      * @since 1.5
      */
-    void add(String path, boolean recurse, boolean force, boolean noIgnores,
+    void add(String path, int depth, boolean force, boolean noIgnores,
              boolean addParents)
         throws ClientException;
 
@@ -517,7 +526,7 @@ public interface SVNClientInterface
      * Commits changes to the repository.
      * @param path            files to commit.
      * @param message         log message.
-     * @param recurse         whether the operation should be done recursively.
+     * @param depth           how deep to recurse in subdirectories
      * @param noUnlock        do remove any locks
      * @param keepChangelist  keep changelist associations after the commit.
      * @param changelistName  if non-null, filter paths using changelist
@@ -527,7 +536,7 @@ public interface SVNClientInterface
      * @throws ClientException
      * @since 1.5
      */
-    long commit(String[] path, String message, boolean recurse,
+    long commit(String[] path, String message, int depth,
                 boolean noUnlock, boolean keepChangelist, String changelistName)
             throws ClientException;
 
@@ -541,11 +550,14 @@ public interface SVNClientInterface
      * @param copyAsChild Whether to copy <code>srcPaths</code> as
      * children of <code>destPath</code>.
      * @param makeParents Whether to create intermediate parents
+     * @param withMergeHistory Whether to propagate merge history from
+     * <code>srcPaths</code> to <code>destPath</code>.
      * @throws ClientException If the copy operation fails.
      * @since 1.5
      */
     void copy(CopySource[] sources, String destPath, String message,
-              boolean copyAsChild, boolean makeParents)
+              boolean copyAsChild, boolean makeParents,
+              boolean withMergeHistory)
         throws ClientException;
 
     /**
@@ -572,12 +584,15 @@ public interface SVNClientInterface
      * modifications exist.
      * @param moveAsChild Whether to move <code>srcPaths</code> as
      * children of <code>destPath</code>.
-     * @param makeParents Whether to create intermediate parents
+     * @param makeParents Whether to create intermediate parents.
+     * @param withMergeHistory Whether to propagate merge history from
+     * <code>srcPaths</code> to <code>destPath</code>.
      * @throws ClientException If the move operation fails.
      * @since 1.5
      */
     void move(String[] srcPaths, String destPath, String message,
-              boolean force, boolean moveAsChild, boolean makeParents)
+              boolean force, boolean moveAsChild, boolean makeParents,
+              boolean withMergeHistory)
         throws ClientException;
 
     /**
@@ -633,10 +648,19 @@ public interface SVNClientInterface
     void cleanup(String path) throws ClientException;
 
     /**
-     * Removes the 'conflicted' state on a file.
-     * @param path      path to cleanup
-     * @param recurse   recurce into subdirectories
-     * @throws ClientException
+     * Removes the <i>conflicted</i> state on a WC path (or tree).
+     * @param path The path to resolve.
+     * @param depth How deep to recurse into child paths.
+     * @throws SubversionException If an error occurs.
+     * @since 1.5
+     */
+    void resolved(String path, int depth)
+        throws SubversionException;
+
+    /**
+     * Removes the <i>conflicted</i> state on a WC path (or tree).
+     * @see #resolved(String, int)
+     * @deprecated Use resolved(String, int) instead.
      */
     void resolved(String path, boolean recurse) throws ClientException;
 
@@ -730,6 +754,35 @@ public interface SVNClientInterface
      */
     void doImport(String path, String url, String message, boolean recurse)
             throws ClientException;
+
+    /**
+     * Import a file or directory into a repository directory  at
+     * head.
+     * @param path      the local path
+     * @param url       the target url
+     * @param message   the log message.
+     * @param depth     depth to traverse into subdirectories
+     * @param noIgnore  whether to add files matched by ignore patterns
+     * @param ignoreUnknownNodeTypes whether to ignore files which
+     *                  the node type is not konwn, just as pipes
+     * @throws ClientException
+     *
+     * @since 1.5
+     */
+    void doImport(String path, String url, String message, int depth,
+                  boolean noIgnore, boolean ignoreUnknownNodeTypes)
+            throws ClientException;
+
+    /**
+     * Return an ordered list of suggested merge source URLs.
+     * @param path The merge target path for which to suggest sources.
+     * @param pegRevision Peg revision used to interpret path.
+     * @return The list of URLs, empty if there are no suggestions.
+     * @throws ClientException If an error occurs.
+     * @since 1.5
+     */
+    String[] suggestMergeSources(String path, Revision pegRevision)
+            throws SubversionException;
 
     /**
      * Merge changes from two paths into a new local path.
@@ -842,14 +895,32 @@ public interface SVNClientInterface
                boolean ignoreAncestry, boolean dryRun) throws ClientException;
 
     /**
-     * Get merge info for <code>path</code> at <code>revision</code>.
-     * @param path Path or URL.
+     * Get merge info for <code>path</code> at <code>pegRevision</code>.
+     * @param path WC path or URL.
      * @param revision Revision at which to get the merge info for
      * <code>path</code>.
+     * @return The merge history of <code>path</code>.
      * @throws SubversionException
      * @since 1.5
      */
-    MergeInfo getMergeInfo(String path, Revision revision)
+    MergeInfo getMergeInfo(String path, Revision pegRevision)
+        throws SubversionException;
+
+    /**
+     * Get merge info for <code>path</code> at <code>pegRevision</code>.
+     * @param path WC path or URL.
+     * @param pegRevision Revision at which to get the merge info for
+     * <code>path</code>.
+     * @param mergeSource The merge source for which the list of
+     * revisions is available.
+     * @return The list of revisions available for merge from
+     * <code>mergeSource</code>, or <code>null</code> if all eligible
+     * revisions have been merged.
+     * @throws SubversionException
+     * @since 1.5
+     */
+    RevisionRange[] getAvailableMerges(String path, Revision pegRevision,
+                                       String mergeSource)
         throws SubversionException;
 
     /**
@@ -1095,6 +1166,21 @@ public interface SVNClientInterface
             throws ClientException;
 
     /**
+     * Sets one property of an item with a String value
+     *
+     * @param path    path of the item
+     * @param name    name of the property
+     * @param value   new value of the property
+     * @param depth   the depth to recurse into subdirectories
+     * @param force   do not check if the value is valid
+     * @throws ClientException
+     * @since 1.5
+     */
+    void propertySet(String path, String name, String value, int depth,
+                     boolean force)
+            throws ClientException;
+
+    /**
      * Remove one property of an item.
      * @param path      path of the item
      * @param name      name of the property
@@ -1102,6 +1188,17 @@ public interface SVNClientInterface
      * @throws ClientException
      */
     void propertyRemove(String path, String name, boolean recurse)
+            throws ClientException;
+
+    /**
+     * Remove one property of an item.
+     * @param path      path of the item
+     * @param name      name of the property
+     * @param depth     the depth to recurse into subdirectories
+     * @throws ClientException
+     * @since 1.5
+     */
+    void propertyRemove(String path, String name, int depth)
             throws ClientException;
 
     /**
@@ -1427,20 +1524,21 @@ public interface SVNClientInterface
      * @since 1.2
      */
     Info2[] info2(String pathOrUrl, Revision revision, Revision pegRevision,
-                 boolean recurse) throws ClientException;
+                  boolean recurse)
+        throws ClientException;
 
     /**
      * Retrieve information about repository or working copy items.
      * @param pathOrUrl     the path or the url of the item
      * @param revision      the revision of the item to return
      * @param pegRevision   the revision to interpret pathOrUrl
-     * @param recurse       flag if to recurse, if the item is a directory
+     * @param depth         the depth to recurse
      * @param callback      a callback to receive the infos retreived
      * @return              the information objects
      * @since 1.5
      */
     void info2(String pathOrUrl, Revision revision, Revision pegRevision,
-               boolean recurse, InfoCallback callback)
+               int depth, InfoCallback callback)
         throws ClientException;
 
     /**
@@ -1454,17 +1552,4 @@ public interface SVNClientInterface
      */
     String getVersionInfo(String path, String trailUrl, boolean lastChanged)
             throws ClientException;
-
-    /**
-     * Return the source a WC path or URL was copied from.
-     * @param path The path to determine a source for.
-     * @param revision The revision at which to determine a source.
-     * @return The last source <code>path</code> was copied from, or
-     * <code>null</code> if never copied.
-     * @throws SubversionException If there is a problem determing the
-     * copy source.
-     * @since 1.5
-     */
-    CopySource getCopySource(String path, Revision revision)
-        throws SubversionException;
 }

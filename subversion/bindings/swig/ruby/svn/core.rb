@@ -602,7 +602,7 @@ module Svn
 
     class MergeRange
       def to_a
-        [self.start, self.end]
+        [self.start, self.end, self.inheritable]
       end
 
       def inspect
@@ -624,14 +624,14 @@ module Svn
         end
       end
 
-      def diff(to)
-        Core.mergeinfo_diff(self, to).collect do |result|
+      def diff(to, consider_inheritance=nil)
+        Core.mergeinfo_diff(self, to, consider_inheritance).collect do |result|
           self.class.new(result)
         end
       end
 
-      def merge(changes)
-        self.class.new(Core.swig_rb_mergeinfo_merge(self, changes))
+      def merge(changes, consider_inheritance=nil)
+        self.class.new(Core.swig_rb_mergeinfo_merge(self, changes, consider_inheritance))
       end
 
       def remove(eraser)
@@ -655,8 +655,8 @@ module Svn
         end
       end
 
-      def diff(to)
-        result = Core.rangelist_diff(self, to)
+      def diff(to, consider_inheritance=nil)
+        result = Core.rangelist_diff(self, to, consider_inheritance)
         deleted = result.pop
         added = result
         [added, deleted].collect do |result|
@@ -664,12 +664,12 @@ module Svn
         end
       end
 
-      def merge(changes)
-        self.class.new(*Core.swig_rb_rangelist_merge(self, changes))
+      def merge(changes, consider_inheritance=nil)
+        self.class.new(*Core.swig_rb_rangelist_merge(self, changes, consider_inheritance))
       end
 
-      def remove(eraser)
-        self.class.new(*Core.rangelist_remove(eraser, self))
+      def remove(eraser, consider_inheritance=nil)
+        self.class.new(*Core.rangelist_remove(eraser, self, consider_inheritance))
       end
 
       def intersect(other)

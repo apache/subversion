@@ -2,9 +2,9 @@
 #
 #  blame_tests.py:  testing line-by-line annotation.
 #
-#  Subversion is a tool for revision control. 
+#  Subversion is a tool for revision control.
 #  See http://subversion.tigris.org for more information.
-#    
+#
 # ====================================================================
 # Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
@@ -29,18 +29,25 @@ XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
 # Helper function to validate the output of a particular run of blame.
-def parse_and_verify_blame(output, expected_blame):
+def parse_and_verify_blame(output, expected_blame, with_merged=0):
   "tokenize and validate the output of blame"
 
   max_split = 2
   keys = ['revision', 'author', 'text']
+  if with_merged:
+    keys.append('merged')
 
   results = []
 
   # Tokenize and parse each line
   for line_str in output:
-    tokens = line_str.split(None, max_split)
     this_line = {}
+
+    if with_merged:
+      this_line['merged'] = (line_str[0] == 'G')
+      line_str = line_str[2:]
+
+    tokens = line_str.split(None, max_split)
 
     if tokens[0] == '-':
       this_line['revision'] = None
@@ -51,7 +58,7 @@ def parse_and_verify_blame(output, expected_blame):
       this_line['author'] = None
     else:
       this_line['author'] = tokens[1]
-      
+
     this_line['text'] = tokens[2]
 
     results.append(this_line)
@@ -78,7 +85,7 @@ def parse_and_verify_blame(output, expected_blame):
 def blame_space_in_name(sbox):
   "annotate a file whose name contains a space"
   sbox.build()
-  
+
   file_path = os.path.join(sbox.wc_dir, 'space in name')
   svntest.main.file_append(file_path, "Hello\n")
   svntest.main.run_svn(None, 'add', file_path)
@@ -120,7 +127,7 @@ def blame_binary(sbox):
                        '--username', svntest.main.wc_author,
                        '--password', svntest.main.wc_passwd,
                        '-m', '', iota)
-  
+
   output, errput = svntest.main.run_svn(2, 'blame', iota)
   if (len(errput) != 1) or (errput[0].find('Skipping') == -1):
     raise svntest.Failure
@@ -129,13 +136,13 @@ def blame_binary(sbox):
   output, errput = svntest.main.run_svn(2, 'blame', '--force', iota)
   if (len(errput) != 0 or len(output) != 4):
     raise svntest.Failure
-  
-    
-  
 
-# Issue #2154 - annotating a directory should fail 
-# (change needed if the desired behavior is to 
-#  run blame recursively on all the files in it) 
+
+
+
+# Issue #2154 - annotating a directory should fail
+# (change needed if the desired behavior is to
+#  run blame recursively on all the files in it)
 #
 def blame_directory(sbox):
   "annotating a directory not allowed"
@@ -303,7 +310,7 @@ def blame_peg_rev(sbox):
 
 def blame_eol_styles(sbox):
   "blame with different eol styles"
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -331,7 +338,7 @@ def blame_eol_styles(sbox):
     svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                           None, None, None, None,
                                           None, None, wc_dir)
-                                     
+
     output, error = svntest.actions.run_and_verify_svn(None, None, [],
                                                        'blame', file_path,
                                                        '-r1:HEAD')
@@ -374,9 +381,9 @@ def blame_ignore_whitespace(sbox):
                                         None, None, wc_dir)
 
   # match the blame output, as defined in the blame code:
-  # "%6ld %10s %s %s%s", rev, author ? author : "         -", 
+  # "%6ld %10s %s %s%s", rev, author ? author : "         -",
   #                      time_stdout , line, APR_EOL_STR
-  expected_output = [                                  
+  expected_output = [
     "     2    jrandom  A  a   \n",
     "     2    jrandom    B b  \n",
     "     2    jrandom     C    c    \n",
@@ -398,7 +405,7 @@ def blame_ignore_whitespace(sbox):
                                         None, None, None, None,
                                         None, None, wc_dir)
 
-  expected_output = [                                  
+  expected_output = [
     "     2    jrandom  A  a   \n",
     "     4    jrandom Xxxx X\n",
     "     4    jrandom    Bb b  \n",
@@ -440,7 +447,7 @@ def blame_ignore_eolstyle(sbox):
                                         None, None, None, None,
                                         None, None, wc_dir)
 
-  expected_output = [                                  
+  expected_output = [
     "     2    jrandom Aa\n",
     "     2    jrandom Bb\n",
     "     3    jrandom Cc\n",
@@ -466,13 +473,15 @@ def blame_merge_info(sbox):
       { 'revision' : 2,
         'author' : 'jrandom',
         'text' : "This is the file 'iota'.\n",
+        'merged' : 0,
       },
       { 'revision' : 11,
         'author' : 'jrandom',
         'text' : "'A' has changed a bit, with 'upsilon', and 'xi'.\n",
+        'merged' : 1,
       },
     ]
-  parse_and_verify_blame(output, expected_blame)
+  parse_and_verify_blame(output, expected_blame, 1)
 
 
 def blame_merge_out_of_range(sbox):
@@ -492,13 +501,59 @@ def blame_merge_out_of_range(sbox):
       { 'revision' : 4,
         'author' : 'jrandom',
         'text' : "This is the file 'upsilon'.\n",
+        'merged' : 1,
       },
       { 'revision' : 11,
         'author': 'jrandom',
         'text' : "There is also the file 'xi'.\n",
+        'merged' : 1,
       },
     ]
-  parse_and_verify_blame(output, expected_blame)
+  parse_and_verify_blame(output, expected_blame, 1)
+
+# test for issue #2888: 'svn blame' aborts over ra_serf
+def blame_peg_rev_file_not_in_head(sbox):
+  "blame target not in HEAD with peg-revisions"
+
+  sbox.build()
+
+  expected_output_r1 = [
+    "     1    jrandom This is the file 'iota'.\n" ]
+
+  os.chdir(sbox.wc_dir)
+
+  # Modify iota and commit it (r2).
+  svntest.main.file_write('iota', "This is no longer the file 'iota'.\n")
+  expected_output = svntest.wc.State('.', {
+    'iota' : Item(verb='Sending'),
+    })
+  svntest.actions.run_and_verify_commit('.', expected_output, None)
+
+  # Delete iota so that it doesn't exist in HEAD
+  svntest.main.run_svn(None, 'rm', sbox.repo_url + '/iota',
+                       '-m', 'log message')
+
+  # Check that we get a blame of r1 when we specify a peg revision of r1
+  # and no explicit revision.
+  svntest.actions.run_and_verify_svn(None, expected_output_r1, [],
+                                     'blame', 'iota@1')
+
+  # Check that an explicit revision overrides the default provided by
+  # the peg revision.
+  svntest.actions.run_and_verify_svn(None, expected_output_r1, [],
+                                     'blame', 'iota@2', '-r1')
+
+def blame_file_not_in_head(sbox):
+  "blame target not in HEAD"
+
+  sbox.build(create_wc = False)
+  notexisting_url = sbox.repo_url + '/notexisting'
+
+  # Check that a correct error message is printed when blaming a target that
+  # doesn't exist (in HEAD).
+  expected_err = ".*notexisting' (is not a file in.*|path not found)"
+  svntest.actions.run_and_verify_svn(None, [], expected_err,
+                                     'blame', notexisting_url)
 
 
 ########################################################################
@@ -518,6 +573,8 @@ test_list = [ None,
               blame_ignore_eolstyle,
               blame_merge_info,
               blame_merge_out_of_range,
+              blame_peg_rev_file_not_in_head,
+              blame_file_not_in_head,
              ]
 
 if __name__ == '__main__':

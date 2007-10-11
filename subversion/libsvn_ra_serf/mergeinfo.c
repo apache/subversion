@@ -26,6 +26,7 @@
 #include "svn_private_config.h"
 #include "svn_mergeinfo.h"
 #include "ra_serf.h"
+#include "svn_path.h"
 #include "svn_string.h"
 #include <apr_tables.h>
 #include <apr_xml.h>
@@ -106,7 +107,7 @@ end_element(svn_ra_serf__xml_parser_t *parser, void *userData,
     {
       svn_ra_serf__xml_pop_state(parser);
     }
-  else if (state == MERGE_INFO_ITEM 
+  else if (state == MERGE_INFO_ITEM
            && strcmp(name.name, SVN_DAV__MERGEINFO_ITEM) == 0)
     {
       if (mergeinfo_ctx->curr_info->len && mergeinfo_ctx->curr_path->len)
@@ -123,12 +124,12 @@ end_element(svn_ra_serf__xml_parser_t *parser, void *userData,
         }
       svn_ra_serf__xml_pop_state(parser);
     }
-  else if (state == MERGE_INFO_PATH 
+  else if (state == MERGE_INFO_PATH
            && strcmp(name.name, SVN_DAV__MERGEINFO_PATH) == 0)
     {
       svn_ra_serf__xml_pop_state(parser);
     }
-  else if (state == MERGE_INFO_INFO 
+  else if (state == MERGE_INFO_INFO
            && strcmp(name.name, SVN_DAV__MERGEINFO_INFO) == 0)
     {
       svn_ra_serf__xml_pop_state(parser);
@@ -195,11 +196,11 @@ create_mergeinfo_body(void *baton,
       for (i = 0; i < mergeinfo_ctx->paths->nelts; i++)
         {
           const char *this_path =
-            apr_xml_quote_string(pool, 
-                                 APR_ARRAY_IDX(mergeinfo_ctx->paths, 
+            apr_xml_quote_string(pool,
+                                 APR_ARRAY_IDX(mergeinfo_ctx->paths,
                                                i, const char *),
                                  0);
-          svn_ra_serf__add_tag_buckets(body_bkt, "S:" SVN_DAV__PATH, 
+          svn_ra_serf__add_tag_buckets(body_bkt, "S:" SVN_DAV__PATH,
                                        this_path, alloc);
         }
     }
@@ -223,11 +224,42 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                            apr_pool_t *pool)
 {
   svn_error_t *err;
+  int status_code;
 
   mergeinfo_context_t *mergeinfo_ctx;
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
+
+
+  /* ras's URL may not exist in HEAD, and thus it's not safe to send
+     it as the main argument to the REPORT request; it might cause
+     dav_get_resource() to choke on the server.  So instead, we pass a
+     baseline-collection URL, which we get from END. */
+  const char *vcc_url, *relative_url, *basecoll_url;
+  apr_hash_t *props;
+  const char *path = session->repos_url_str;
+
+  props = apr_hash_make(pool);
+
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &relative_url,
+                                     session, session->conns[0],
+                                     path, pool));
+
+  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                      vcc_url, revision,
+                                      "0", baseline_props, pool));
+
+  basecoll_url = svn_ra_serf__get_ver_prop(props, vcc_url, revision,
+                                           "DAV:", "baseline-collection");
+  if (!basecoll_url)
+    {
+      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                              _("The OPTIONS response did not include the "
+                                "requested baseline-collection value."));
+    }
+
+  path = svn_path_url_add_component(basecoll_url, relative_url, pool);
 
   mergeinfo_ctx = apr_pcalloc(pool, sizeof(*mergeinfo_ctx));
   mergeinfo_ctx->pool = pool;
@@ -242,7 +274,7 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
   handler = apr_pcalloc(pool, sizeof(*handler));
 
   handler->method = "REPORT";
-  handler->path = session->repos_url_str;
+  handler->path = path;
   handler->conn = session->conns[0];
   handler->session = session;
   handler->body_delegate = create_mergeinfo_body;
@@ -257,6 +289,7 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
   parser_ctx->end = end_element;
   parser_ctx->cdata = cdata_handler;
   parser_ctx->done = &mergeinfo_ctx->done;
+  parser_ctx->status_code = &status_code;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
@@ -264,6 +297,15 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
   svn_ra_serf__request_create(handler);
 
   err = svn_ra_serf__context_run_wait(&mergeinfo_ctx->done, session, pool);
+
+  if (status_code == 404)
+    {
+      svn_error_clear(err);
+      return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL,
+                               "'%s' path not found",
+                               handler->path);
+    }
+
   /* If the server responds with HTTP_NOT_IMPLEMENTED (which ra_serf
      translates into a Subversion error), assume its mod_dav_svn is
      too old to understand the mergeinfo-report REPORT.

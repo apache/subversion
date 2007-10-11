@@ -154,7 +154,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
     {
       const char *rev;
 
-      rev = svn_ra_serf__find_attr(attrs, "rev");
+      rev = svn_xml_get_attr_value("rev", attrs);
       if (!rev)
         {
           return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
@@ -171,7 +171,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       const char *rev;
       replay_info_t *info;
 
-      rev = svn_ra_serf__find_attr(attrs, "rev");
+      rev = svn_xml_get_attr_value("rev", attrs);
 
       if (!rev)
         {
@@ -191,13 +191,13 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       const char *file_name, *rev;
       replay_info_t *info;
 
-      file_name = svn_ra_serf__find_attr(attrs, "name");
+      file_name = svn_xml_get_attr_value("name", attrs);
       if (!file_name)
         {
           return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                     _("Missing name attr in delete-entry element"));
         }
-      rev = svn_ra_serf__find_attr(attrs, "rev");
+      rev = svn_xml_get_attr_value("rev", attrs);
       if (!rev)
         {
           return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
@@ -217,13 +217,13 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       const char *rev, *dirname;
       replay_info_t *info;
 
-      dirname = svn_ra_serf__find_attr(attrs, "name");
+      dirname = svn_xml_get_attr_value("name", attrs);
       if (!dirname)
         {
           return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                     _("Missing name attr in open-directory element"));
         }
-      rev = svn_ra_serf__find_attr(attrs, "rev");
+      rev = svn_xml_get_attr_value("rev", attrs);
       if (!rev)
         {
           return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
@@ -243,14 +243,14 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       svn_revnum_t rev;
       replay_info_t *info;
 
-      dir_name = svn_ra_serf__find_attr(attrs, "name");
+      dir_name = svn_xml_get_attr_value("name", attrs);
       if (!dir_name)
         {
           return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                     _("Missing name attr in add-directory element"));
         }
-      copyfrom = svn_ra_serf__find_attr(attrs, "copyfrom-path");
-      copyrev = svn_ra_serf__find_attr(attrs, "copyfrom-rev");
+      copyfrom = svn_xml_get_attr_value("copyfrom-path", attrs);
+      copyrev = svn_xml_get_attr_value("copyfrom-rev", attrs);
 
       if (copyrev)
         rev = SVN_STR_TO_REV(copyrev);
@@ -278,13 +278,13 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       const char *file_name, *rev;
       replay_info_t *info;
 
-      file_name = svn_ra_serf__find_attr(attrs, "name");
+      file_name = svn_xml_get_attr_value("name", attrs);
       if (!file_name)
         {
           return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                     _("Missing name attr in open-file element"));
         }
-      rev = svn_ra_serf__find_attr(attrs, "rev");
+      rev = svn_xml_get_attr_value("rev", attrs);
       if (!rev)
         {
           return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
@@ -304,14 +304,14 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       svn_revnum_t rev;
       replay_info_t *info;
 
-      file_name = svn_ra_serf__find_attr(attrs, "name");
+      file_name = svn_xml_get_attr_value("name", attrs);
       if (!file_name)
         {
           return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                     _("Missing name attr in add-file element"));
         }
-      copyfrom = svn_ra_serf__find_attr(attrs, "copyfrom-path");
-      copyrev = svn_ra_serf__find_attr(attrs, "copyfrom-rev");
+      copyfrom = svn_xml_get_attr_value("copyfrom-path", attrs);
+      copyrev = svn_xml_get_attr_value("copyfrom-rev", attrs);
 
       info = push_state(parser, ctx, ADD_FILE);
 
@@ -335,7 +335,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
 
       info = push_state(parser, ctx, APPLY_TEXTDELTA);
 
-      checksum = svn_ra_serf__find_attr(attrs, "checksum");
+      checksum = svn_xml_get_attr_value("checksum", attrs);
       if (checksum)
         {
           checksum = apr_pstrdup(info->pool, checksum);
@@ -356,9 +356,9 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       replay_info_t *info = parser->state->private;
       const char *checksum;
 
-      checksum = svn_ra_serf__find_attr(attrs, "checksum");
+      checksum = svn_xml_get_attr_value("checksum", attrs);
 
-      SVN_ERR(ctx->editor->close_file(info->baton, checksum, 
+      SVN_ERR(ctx->editor->close_file(info->baton, checksum,
                                       parser->state->pool));
 
       svn_ra_serf__xml_pop_state(parser);
@@ -371,7 +371,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       const char *prop_name;
       prop_info_t *info;
 
-      prop_name = svn_ra_serf__find_attr(attrs, "name");
+      prop_name = svn_xml_get_attr_value("name", attrs);
       if (!prop_name)
         {
           return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
@@ -383,7 +383,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
 
       info->name = apr_pstrdup(parser->state->pool, prop_name);
 
-      if (svn_ra_serf__find_attr(attrs, "del"))
+      if (svn_xml_get_attr_value("del", attrs))
         info->del_prop = TRUE;
       else
         info->del_prop = FALSE;
@@ -449,7 +449,7 @@ end_replay(svn_ra_serf__xml_parser_t *parser,
     {
       prop_info_t *info = parser->state->private;
       const svn_string_t *prop_val;
-      
+
       if (info->del_prop == TRUE)
         {
           prop_val = NULL;

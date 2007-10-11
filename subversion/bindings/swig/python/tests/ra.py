@@ -23,9 +23,8 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     self.repos = repos.open(REPOS_PATH)
     self.fs = repos.fs(self.repos)
 
-    callbacks = ra.callbacks2_t()
-
-    self.ra_ctx = ra.open2(REPOS_URL, callbacks, None, None)
+    self.callbacks = ra.Callbacks()
+    self.ra_ctx = ra.open2(REPOS_URL, self.callbacks, None, None)
 
   def test_get_file(self):
     # Test getting the properties of a file
@@ -205,7 +204,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     class ChangeReceiver(delta.Editor):
         def __init__(self):
             self.textdeltas = []
-        
+
         def apply_textdelta(self, file_baton, base_checksum):
             def textdelta_handler(textdelta):
                 if textdelta is not None:
@@ -230,8 +229,8 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
   def test_get_locations(self):
     locations = ra.get_locations(self.ra_ctx, "/trunk/README.txt", 2, range(1,5))
     self.assertEqual(locations, {
-        2: '/trunk/README.txt', 
-        3: '/trunk/README.txt', 
+        2: '/trunk/README.txt',
+        3: '/trunk/README.txt',
         4: '/trunk/README.txt'})
 
   def test_get_file_revs(self):
@@ -258,11 +257,66 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
   def test_lock(self):
     def callback(baton, path, do_lock, lock, ra_err, pool):
       pass
-    # This test merely makes sure that the arguments can be wrapped 
-    # properly. svn.ra.lock() currently fails because it is not possible 
+    # This test merely makes sure that the arguments can be wrapped
+    # properly. svn.ra.lock() currently fails because it is not possible
     # to retrieve the username from the auth_baton yet.
-    self.assertRaises(core.SubversionException, 
+    self.assertRaises(core.SubversionException,
       lambda: ra.lock(self.ra_ctx, {"/": 0}, "sleutel", False, callback))
+
+  def test_get_log2(self):
+    # Get an interesting commmit.
+    self.test_commit3()
+    rev = fs.youngest_rev(self.fs)
+    revprops = ra.rev_proplist(self.ra_ctx, rev)
+    self.assert_("svn:log" in revprops)
+    self.assert_("testprop" in revprops)
+
+    def receiver(log_entry, pool):
+      called[0] = True
+      self.assertEqual(log_entry.revision, rev)
+      if discover_changed_paths:
+        self.assertEqual(log_entry.changed_paths.keys(), ['/bla3'])
+        changed_path = log_entry.changed_paths['/bla3']
+        self.assert_(changed_path.action in ['A', 'D', 'R', 'M'])
+        self.assertEqual(changed_path.copyfrom_path, None)
+        self.assertEqual(changed_path.copyfrom_rev, -1)
+      else:
+        self.assertEqual(log_entry.changed_paths, None)
+      if log_revprops is None:
+        self.assertEqual(log_entry.revprops, revprops)
+      elif len(log_revprops) == 0:
+        self.assert_(log_entry.revprops == None or len(log_entry.revprops) == 0)
+      else:
+        revprop_names = log_entry.revprops.keys()
+        revprop_names.sort()
+        log_revprops.sort()
+        self.assertEqual(revprop_names, log_revprops)
+        for i in log_revprops:
+          self.assertEqual(log_entry.revprops[i], revprops[i],
+                           msg="%s != %s on %s"
+                               % (log_entry.revprops[i], revprops[i],
+                                  (log_revprops, discover_changed_paths)))
+
+    for log_revprops in (
+      # Retrieve the standard three.
+      ["svn:author", "svn:date", "svn:log"],
+      # Retrieve just testprop.
+      ["testprop"],
+      # Retrieve all.
+      None,
+      # Retrieve none.
+      [],
+      ):
+      for discover_changed_paths in [True, False]:
+        called = [False]
+        ra.get_log2(self.ra_ctx, [""],
+                    rev, rev,   # start, end
+                    1,          # limit
+                    discover_changed_paths,
+                    True,       # strict_node_history
+                    False,      # include_merged_revisions
+                    log_revprops, receiver)
+        self.assert_(called[0])
 
   def test_update(self):
     class TestEditor(delta.Editor):
@@ -271,7 +325,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     editor = TestEditor()
 
     e_ptr, e_baton = delta.make_editor(editor)
-    
+
     reporter, reporter_baton = ra.do_update(self.ra_ctx, 10, "", True, e_ptr, e_baton)
 
     reporter.set_path(reporter_baton, "", 0, True, None)

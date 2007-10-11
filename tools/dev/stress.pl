@@ -338,7 +338,7 @@ sub ParseCommandLine
   {
     my %cmd_opts;
     my $usage = "
-usage: stress.pl [-cdfhprW] [-i num] [-n num] [-s secs] [-x num] [-D num] 
+usage: stress.pl [-cdfhprW] [-i num] [-n num] [-s secs] [-x num] [-D num]
                  [-F num] [-N num] [-P num] [-R path] [-S path] [-U url]
 
 where

@@ -22,7 +22,9 @@
 
 #include "svn_path.h"
 #include "svn_base64.h"
+#include "svn_xml.h"
 
+#include "private/svn_dav_protocol.h"
 #include "svn_private_config.h"
 
 #include "ra_serf.h"
@@ -268,7 +270,7 @@ start_propfind(svn_ra_serf__xml_parser_t *parser,
       info->ns = name.namespace;
       info->name = apr_pstrdup(info->pool, name.name);
       info->encoding = apr_pstrdup(info->pool,
-                                   svn_ra_serf__find_attr(attrs, "V:encoding"));
+                                   svn_xml_get_attr_value("V:encoding", attrs));
     }
 
   return SVN_NO_ERROR;
@@ -318,7 +320,7 @@ end_propfind(svn_ra_serf__xml_parser_t *parser,
               info->val_len = 0;
             }
         }
-   
+
       if (parser->state->prev->current_state == RESPONSE &&
           strcmp(name.name, "href") == 0)
         {
@@ -500,7 +502,7 @@ check_cache(apr_hash_t *ret_props,
  *
  * This function will not block waiting for the response.  If the
  * request can be satisfied from a local cache, set PROP_CTX to NULL
- * as a signal to callers of that fact.  Otherwise, callers are 
+ * as a signal to callers of that fact.  Otherwise, callers are
  * expected to call svn_ra_serf__wait_for_props().
  */
 svn_error_t *
@@ -528,7 +530,7 @@ svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
 
           cache_satisfy = check_cache(ret_props, sess, path, rev, find_props,
                                       pool);
-          
+
           if (cache_satisfy)
             {
               *prop_ctx = NULL;
@@ -634,6 +636,53 @@ svn_ra_serf__retrieve_props(apr_hash_t *prop_vals,
     {
       SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, sess, pool));
     }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_serf__search_for_base_props(apr_hash_t *props,
+                                   const char **remaining_path,
+                                   const char **missing_path,
+                                   svn_ra_serf__session_t *session,
+                                   svn_ra_serf__connection_t *conn,
+                                   const char *url,
+                                   apr_pool_t *pool)
+{
+  const char *path = url, *present_path = "";
+  const char *vcc_url;
+
+  do
+    {
+      SVN_ERR(svn_ra_serf__retrieve_props(props, session, conn,
+                                          path, SVN_INVALID_REVNUM,
+                                          "0", base_props, pool));
+      vcc_url =
+          svn_ra_serf__get_ver_prop(props, path,
+                                    SVN_INVALID_REVNUM,
+                                    "DAV:",
+                                    "version-controlled-configuration");
+      if (vcc_url)
+        break;
+
+      /* This happens when the file is missing in HEAD. */
+
+      /* Okay, strip off. */
+      present_path = svn_path_join(svn_path_basename(path, pool),
+                                   present_path, pool);
+      path = svn_path_dirname(path, pool);
+    }
+  while (!svn_path_is_empty(path));
+
+  /* Error out if entire URL was bogus (not a single part of it exists
+     in the repository!)  */
+  if (svn_path_is_empty(path))
+    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                             _("No part of path '%s' was found in "
+                               "repository HEAD"), url);
+
+  *missing_path = present_path;
+  *remaining_path = path;
 
   return SVN_NO_ERROR;
 }
@@ -778,9 +827,9 @@ svn_ra_serf__set_baton_props(svn_ra_serf__prop_set_t setprop, void *baton,
     prop_name = apr_pstrcat(pool, SVN_PROP_PREFIX, name, NULL);
   else if (strcmp(ns, "") == 0)
     prop_name = name;
-  else if (strcmp(name, "version-name") == 0)
+  else if (strcmp(name, SVN_DAV__VERSION_NAME) == 0)
     prop_name = SVN_PROP_ENTRY_COMMITTED_REV;
-  else if (strcmp(name, "creationdate") == 0)
+  else if (strcmp(name, SVN_DAV__CREATIONDATE) == 0)
     prop_name = SVN_PROP_ENTRY_COMMITTED_DATE;
   else if (strcmp(name, "creator-displayname") == 0)
     prop_name = SVN_PROP_ENTRY_LAST_AUTHOR;

@@ -93,7 +93,7 @@ file_write_cb(void *baton, const char *buffer, apr_size_t *len)
 }
 
 /* Implements ra_svn_timeout_fn_t */
-static void 
+static void
 file_timeout_cb(void *baton, apr_interval_time_t interval)
 {
   file_baton_t *b = baton;
@@ -114,7 +114,7 @@ file_pending_cb(void *baton)
 }
 
 svn_ra_svn__stream_t *
-svn_ra_svn__stream_from_files(apr_file_t *in_file, 
+svn_ra_svn__stream_from_files(apr_file_t *in_file,
                               apr_file_t *out_file,
                               apr_pool_t *pool)
 {
@@ -142,7 +142,7 @@ sock_read_cb(void *baton, char *buffer, apr_size_t *len)
   status = apr_socket_timeout_get(b->sock, &interval);
   if (status)
     return svn_error_wrap_apr(status, _("Can't get socket timeout"));
-  
+
   /* Always block on read. */
   apr_socket_timeout_set(b->sock, -1);
   status = apr_socket_recv(b->sock, buffer, len);
@@ -189,7 +189,7 @@ sock_pending_cb(void *baton)
 }
 
 svn_ra_svn__stream_t *
-svn_ra_svn__stream_from_sock(apr_socket_t *sock, 
+svn_ra_svn__stream_from_sock(apr_socket_t *sock,
                              apr_pool_t *pool)
 {
   sock_baton_t *b = apr_palloc(pool, sizeof(*b));
@@ -205,9 +205,9 @@ svn_ra_svn__stream_from_sock(apr_socket_t *sock,
 svn_ra_svn__stream_t *
 svn_ra_svn__stream_create(void *baton,
                           svn_read_fn_t read_cb,
-                          svn_write_fn_t write_cb, 
+                          svn_write_fn_t write_cb,
                           ra_svn_timeout_fn_t timeout_cb,
-                          ra_svn_pending_fn_t pending_cb, 
+                          ra_svn_pending_fn_t pending_cb,
                           apr_pool_t *pool)
 {
   svn_ra_svn__stream_t *s = apr_palloc(pool, sizeof(*s));
@@ -241,11 +241,11 @@ void
 svn_ra_svn__stream_timeout(svn_ra_svn__stream_t *stream,
                            apr_interval_time_t interval)
 {
-  stream->timeout_fn(stream->baton, interval);  
+  stream->timeout_fn(stream->baton, interval);
 }
 
 svn_boolean_t
 svn_ra_svn__stream_pending(svn_ra_svn__stream_t *stream)
 {
-  return stream->pending_fn(stream->baton);  
+  return stream->pending_fn(stream->baton);
 }

@@ -121,7 +121,7 @@ test_parse_single_line_mergeinfo(const char **msg,
                                  apr_pool_t *pool)
 {
   int i;
-  
+
   *msg = "parse single line mergeinfo";
 
   if (msg_only)
@@ -145,7 +145,7 @@ test_mergeinfo_dup(const char **msg,
   apr_hash_t *orig_mergeinfo, *copied_mergeinfo;
   apr_pool_t *subpool;
   apr_array_header_t *rangelist;
-  
+
   *msg = "copy a mergeinfo data structure";
 
   if (msg_only)
@@ -183,7 +183,7 @@ test_parse_combine_rangeinfo(const char **msg,
 {
   apr_array_header_t *result;
   svn_merge_range_t *resultrange;
-  
+
   *msg = "parse single line mergeinfo and combine ranges";
 
   if (msg_only)
@@ -203,17 +203,17 @@ test_parse_combine_rangeinfo(const char **msg,
     return fail(pool, "Parsing failed to combine ranges");
 
   resultrange = APR_ARRAY_IDX(result, 0, svn_merge_range_t *);
-  
+
   if (resultrange->start != 4 || resultrange->end != 5)
     return fail(pool, "Range combining produced wrong result");
 
   resultrange = APR_ARRAY_IDX(result, 1, svn_merge_range_t *);
-  
+
   if (resultrange->start != 6 || resultrange->end != 11)
     return fail(pool, "Range combining produced wrong result");
-  
+
   resultrange = APR_ARRAY_IDX(result, 2, svn_merge_range_t *);
-  
+
   if (resultrange->start != 12 || resultrange->end != 14)
     return fail(pool, "Range combining produced wrong result");
 
@@ -364,7 +364,8 @@ test_diff_mergeinfo(const char **msg,
   SVN_ERR(svn_mergeinfo_parse(&from, "/trunk: 1,3-4,7,9,11-12,31-34", pool));
   SVN_ERR(svn_mergeinfo_parse(&to, "/trunk: 1-6,12-16,30-32", pool));
   /* On /trunk: deleted (7, 9, 11, 33-34) and added (2, 5-6, 13-16, 30) */
-  SVN_ERR(svn_mergeinfo_diff(&deleted, &added, from, to, pool));
+  SVN_ERR(svn_mergeinfo_diff(&deleted, &added, from, to,
+                             svn_rangelist_ignore_inheritance, pool));
 
   /* Verify calculation of range list deltas. */
   SVN_ERR(verify_mergeinfo_deltas(deleted, expected_rangelist_deletions,
@@ -460,7 +461,7 @@ test_rangelist_intersect(const char **msg,
 {
   apr_array_header_t *rangelist1, *rangelist2, *intersection;
   svn_merge_range_t expected_intersection[4] =
-    { {0, 1}, {2, 4}, {11, 12}, {30, 32} };
+    { {0, 1, TRUE}, {2, 4, TRUE}, {11, 12, TRUE}, {30, 32, TRUE} };
 
   *msg = "intersection of rangelists";
   if (msg_only)
@@ -470,7 +471,7 @@ test_rangelist_intersect(const char **msg,
   SVN_ERR(svn_mergeinfo_parse(&info2, "/trunk: 1,3-4,7,9,11-12,31-34", pool));
   rangelist1 = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
   rangelist2 = apr_hash_get(info2, "/trunk", APR_HASH_KEY_STRING);
-  
+
   SVN_ERR(svn_rangelist_intersect(&intersection, rangelist1, rangelist2,
                                   pool));
 
@@ -494,7 +495,8 @@ test_merge_mergeinfo(const char **msg,
   SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo1, pool));
   SVN_ERR(svn_mergeinfo_parse(&info2, mergeinfo2, pool));
 
-  SVN_ERR(svn_mergeinfo_merge(&info1, info2, pool));
+  SVN_ERR(svn_mergeinfo_merge(&info1, info2, svn_rangelist_ignore_inheritance,
+                              pool));
 
   if (apr_hash_count(info1) != 2)
     return fail(pool, "Wrong number of paths in merged mergeinfo");
@@ -508,7 +510,7 @@ test_merge_mergeinfo(const char **msg,
     return fail(pool, "Merging failed to combine ranges");
 
   resultrange = APR_ARRAY_IDX(result, 0, svn_merge_range_t *);
-  
+
   if (resultrange->start != 7 || resultrange->end != 12)
     return fail(pool, "Range combining produced wrong result");
 
@@ -522,12 +524,12 @@ test_merge_mergeinfo(const char **msg,
     return fail(pool, "Merging failed to combine ranges");
 
   resultrange = APR_ARRAY_IDX(result, 0, svn_merge_range_t *);
-  
+
   if (resultrange->start != 0 || resultrange->end != 11)
     return fail(pool, "Range combining produced wrong result");
-  
+
   resultrange = APR_ARRAY_IDX(result, 1, svn_merge_range_t *);
-  
+
   if (resultrange->start != 12 || resultrange->end != 14)
     return fail(pool, "Range combining produced wrong result");
 
@@ -555,45 +557,45 @@ test_remove_rangelist(const char **msg,
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo3, pool));
-  
+
   whiteboard = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
   if (!whiteboard)
     return fail(pool, "Missing path in parsed mergeinfo");
 
   SVN_ERR(svn_mergeinfo_parse(&info2, mergeinfo4, pool));
-  
+
   eraser = apr_hash_get(info2, "/trunk", APR_HASH_KEY_STRING);
   if (!eraser)
     return fail(pool, "Missing path in parsed mergeinfo");
 
-  SVN_ERR(svn_rangelist_remove(&result, eraser, whiteboard, pool));
-  
+  SVN_ERR(svn_rangelist_remove(&result, eraser, whiteboard, TRUE, pool));
+
   SVN_ERR(svn_rangelist_to_stringbuf(&outputstring, result, pool));
 
   if (svn_stringbuf_compare(expected1, outputstring) != TRUE)
     return fail(pool, "Rangelist string not what we expected");
 
   SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo5, pool));
-  
+
   whiteboard = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
   if (!whiteboard)
     return fail(pool, "Missing path in parsed mergeinfo");
 
-  SVN_ERR(svn_rangelist_remove(&result, eraser, whiteboard, pool));
-  
+  SVN_ERR(svn_rangelist_remove(&result, eraser, whiteboard, TRUE, pool));
+
   SVN_ERR(svn_rangelist_to_stringbuf(&outputstring, result, pool));
 
   if (svn_stringbuf_compare(expected2, outputstring) != TRUE)
     return fail(pool, "Rangelist string not what we expected");
-  
+
   SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo6, pool));
-  
+
   eraser = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
   if (!eraser)
     return fail(pool, "Missing path in parsed mergeinfo");
 
-  SVN_ERR(svn_rangelist_remove(&result, eraser, whiteboard, pool));
-  
+  SVN_ERR(svn_rangelist_remove(&result, eraser, whiteboard, TRUE, pool));
+
   SVN_ERR(svn_rangelist_to_stringbuf(&outputstring, result, pool));
 
   if (svn_stringbuf_compare(expected3, outputstring) != TRUE)
@@ -646,11 +648,11 @@ test_rangelist_to_string(const char **msg,
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo1, pool));
-  
+
   result = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
   if (!result)
     return fail(pool, "Missing path in parsed mergeinfo");
-  
+
   SVN_ERR(svn_rangelist_to_stringbuf(&output, result, pool));
 
   if (svn_stringbuf_compare(expected, output) != TRUE)
@@ -675,7 +677,7 @@ test_mergeinfo_to_string(const char **msg,
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo1, pool));
-  
+
   SVN_ERR(svn_mergeinfo__to_string(&output, info1, pool));
 
   if (svn_string_compare(expected, output) != TRUE)

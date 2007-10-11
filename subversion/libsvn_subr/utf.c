@@ -125,7 +125,7 @@ svn_utf_initialize(apr_pool_t *pool)
       else
         return;
 #endif
-      
+
       xlate_handle_hash = apr_hash_make(subpool);
       apr_pool_cleanup_register(subpool, NULL, xlate_cleanup,
                                 apr_pool_cleanup_null);
@@ -478,44 +478,34 @@ convert_to_stringbuf(xlate_handle_node_t *node,
   if (src_length == 0)
     return SVN_NO_ERROR;
 
-  do 
+  do
     {
       /* A 1:2 ratio of input bytes to output bytes (as assigned above)
          should be enough for most translations, and if it turns out not
          to be enough, we'll grow the buffer again, sizing it based on a
-         1:3 ratio of the remainder of the string.
+         1:3 ratio of the remainder of the string. */
 
-         We also want to ensure that the output buffer always has at
-         least 3 bytes spare so that we always have room to convert at
-         least one character (we assume that no encoding uses more than
-         three bytes for a character) */
-      if (destlen < 3)
-        buflen += (srclen * 3);
-
-      /* Ensure that *DEST has sufficient storage for the translated
-         result. */
       svn_stringbuf_ensure(*dest, buflen + 1);
-
-      /* Update the destination buffer pointer to the first character
-         after already-converted output. */
-      destbuf = (*dest)->data + (*dest)->len;
 
       /* Set up state variables for xlate. */
       destlen = buflen - (*dest)->len;
-      assert(destlen >= 3);
 
       /* Attempt the conversion. */
       apr_err = apr_xlate_conv_buffer(node->handle,
-                                      src_data + (src_length - srclen), 
+                                      src_data + (src_length - srclen),
                                       &srclen,
-                                      destbuf, 
+                                      (*dest)->data + (*dest)->len,
                                       &destlen);
 
       /* Now, update the *DEST->len to track the amount of output data
          churned out so far from this loop. */
       (*dest)->len += ((buflen - (*dest)->len) - destlen);
+      buflen += srclen * 3; /* 3 is middle ground, 2 wasn't enough
+                               for all characters in the buffer, 4 is
+                               maximum character size (currently) */
 
-    } while (! apr_err && srclen);
+
+    } while (apr_err == APR_SUCCESS && srclen != 0);
 #endif
 
   /* If we exited the loop with an error, return the error. */
@@ -579,7 +569,7 @@ check_non_ascii(const char *data, apr_size_t len, apr_pool_t *pool)
              time tracking down the non-ASCII data, so we want to help
              as much as possible.  And yes, we just call the unsafe
              data "non-ASCII", even though the actual constraint is
-             somewhat more complex than that. */ 
+             somewhat more complex than that. */
 
           if (data - data_start)
             {

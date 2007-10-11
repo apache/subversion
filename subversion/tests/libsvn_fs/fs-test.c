@@ -4490,7 +4490,7 @@ closest_copy_test(const char **msg,
   SVN_ERR(test_commit_txn(&after_rev, txn, NULL, spool));
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, spool));
 
-  /* Anything under Z should have a closest copy pair of ("/A", 1), so
+  /* Anything under Z should have a closest copy pair of ("/Z", 2), so
      we'll pick some spots to test.  Stuff under A should have no
      relevant closest copy. */
   SVN_ERR(svn_fs_closest_copy(&croot, &cpath, rev_root, "Z", spool));
@@ -4526,7 +4526,7 @@ closest_copy_test(const char **msg,
   SVN_ERR(test_commit_txn(&after_rev, txn, NULL, spool));
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, spool));
 
-  /* Okay, just for kicks, let's modify Z2/D/H3/t.  Shouldn't affect
+  /* Okay, just for kicks, let's modify Z2/D/H2/t.  Shouldn't affect
      its closest-copy-ness, right?  */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, spool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, spool));
@@ -4778,6 +4778,51 @@ unordered_txn_dirprops(const char **msg,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+set_uuid(const char **msg,
+         svn_boolean_t msg_only,
+         svn_test_opts_t *opts,
+         apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  const char *fixed_uuid = svn_uuid_generate(pool);
+  const char *fetched_uuid;
+  
+  *msg = "test svn_fs_set_uuid";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Prepare a filesystem. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-set-uuid",
+                              opts->fs_type, pool));
+
+  /* Set the repository UUID to something fixed. */
+  SVN_ERR(svn_fs_set_uuid(fs, fixed_uuid, pool));
+
+  /* Make sure we get back what we set. */
+  SVN_ERR(svn_fs_get_uuid(fs, &fetched_uuid, pool));
+  if (strcmp(fixed_uuid, fetched_uuid) != 0)
+    return svn_error_createf
+      (SVN_ERR_TEST_FAILED, NULL, "expected UUID '%s'; got '%s'",
+       fixed_uuid, fetched_uuid);
+
+  /* Set the repository UUID to something new (and unknown). */
+  SVN_ERR(svn_fs_set_uuid(fs, NULL, pool));
+  
+  /* Make sure we *don't* get back what we previously set (after all,
+     this stuff is supposed to be universally unique!). */
+  SVN_ERR(svn_fs_get_uuid(fs, &fetched_uuid, pool));
+  if (strcmp(fixed_uuid, fetched_uuid) == 0)
+    return svn_error_createf
+      (SVN_ERR_TEST_FAILED, NULL, 
+       "expected something other than UUID '%s', but got that one",
+       fixed_uuid);
+    
+  return SVN_NO_ERROR;
+}
+
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -4785,11 +4830,11 @@ unordered_txn_dirprops(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(get_mergeinfo),
     SVN_TEST_PASS(trivial_transaction),
     SVN_TEST_PASS(reopen_trivial_transaction),
     SVN_TEST_PASS(create_file_transaction),
     SVN_TEST_PASS(verify_txn_list),
+    SVN_TEST_PASS(txn_names_are_not_reused),
     SVN_TEST_PASS(write_and_read_file),
     SVN_TEST_PASS(create_mini_tree_transaction),
     SVN_TEST_PASS(create_greek_tree_transaction),
@@ -4816,8 +4861,9 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(branch_test),
     SVN_TEST_PASS(verify_checksum),
     SVN_TEST_PASS(closest_copy_test),
+    SVN_TEST_PASS(get_mergeinfo),
     SVN_TEST_PASS(root_revisions),
     SVN_TEST_PASS(unordered_txn_dirprops),
-    SVN_TEST_PASS(txn_names_are_not_reused),
+    SVN_TEST_PASS(set_uuid),
     SVN_TEST_NULL
   };

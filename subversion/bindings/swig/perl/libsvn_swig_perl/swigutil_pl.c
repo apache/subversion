@@ -1,4 +1,6 @@
-/**
+/*
+ * swigutil_pl.c: utility functions for the SWIG Perl bindings
+ *
  * @copyright
  * ====================================================================
  * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
@@ -204,9 +206,6 @@ static SV *convert_svn_string_t(svn_string_t *value, void *dummy)
     return obj;
 }
 
-/** Convert @a ptr, which is of type @a *tinfo, to a Perl SV *, and returns
- * the SV *.
- */
 static SV *convert_to_swig_type(void *ptr, swig_type_info *tinfo)
 {
     SV *obj = sv_newmortal();
@@ -290,6 +289,28 @@ SV *svn_swig_pl_convert_array(const apr_array_header_t *array,
   return convert_array(array, (element_converter_t)convert_to_swig_type,
                        tinfo);		          
 }
+
+/* put the va_arg in stack and invoke caller_func with func.
+   fmt:
+   * O: perl object
+   * i: apr_int32_t
+   * u: apr_uint32_t
+   * L: apr_int64_t
+   * U: apr_uint64_t
+   * s: string
+   * S: swigtype
+   * r: svn_revnum_t
+   * b: svn_boolean_t
+   * t: svn_string_t
+   * z: apr_size_t
+   
+   Please do not add C types here.  Add a new format code if needed.
+   Using the underlying C types and not the APR or SVN types can break
+   things if these data types change in the future or on platforms which
+   use different types.
+
+   put returned value in result if result is not NULL
+*/
 
 svn_error_t *svn_swig_pl_callback_thunk(perl_func_invoker_t caller_func,
                                         void *func,
@@ -735,6 +756,19 @@ static svn_error_t * thunk_abort_edit(void *edit_baton,
                                       apr_pool_t *pool)
 {
     return close_baton(edit_baton, "abort_edit", pool);
+}
+
+
+void 
+svn_delta_wrap_window_handler(svn_txdelta_window_handler_t *handler,
+                              void **h_baton,
+                              SV *callback,
+                              apr_pool_t *pool)
+{
+    *handler = thunk_window_handler;
+    *h_baton = callback;
+    SvREFCNT_inc(callback);
+    svn_swig_pl_hold_ref_in_pool(pool, callback);
 }
 
 void svn_delta_make_editor(svn_delta_editor_t **editor,

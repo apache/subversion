@@ -19,12 +19,12 @@
 remove-zombie-locks.py - remove zombie locks on deleted files
 
 Usage: remove-zombie-locks.py REPOS-PATH <REVISION|all>
-  
+
   When REVISION (an interger) is specified this script scans a commited
   revision for deleted files and checks if a lock exists for any of these
   files. If any locks exist they are forcibly removed.
 
-  When "all" is specified this script scans the whole repository for 
+  When "all" is specified this script scans the whole repository for
   locks on files that don't exist in the HEAD revision, removing any found.
 
   This script is a workaround for Subversion issue #2507
@@ -98,7 +98,7 @@ class RepositoryZombieLockRemover:
     self.pool = svn.core.svn_pool_create(None)
     self.repos_ptr = svn.repos.open(self.repos_path, self.pool)
     self.fs_ptr = svn.repos.fs(self.repos_ptr)
-    self.rev_root = svn.fs.revision_root(self.fs_ptr, 
+    self.rev_root = svn.fs.revision_root(self.fs_ptr,
                                          svn.fs.youngest_rev(self.fs_ptr,
                                                              self.pool),
                                          self.pool)

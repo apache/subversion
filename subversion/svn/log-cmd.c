@@ -41,7 +41,7 @@
 
 /*** Code. ***/
 
-/* Baton for log_message_receiver() and log_message_receiver_xml(). */
+/* Baton for log_entry_receiver() and log_entry_receiver_xml(). */
 struct log_receiver_baton
 {
   /* Check for cancellation on each invocation of a log receiver. */
@@ -51,25 +51,11 @@ struct log_receiver_baton
   /* Don't print log message body nor its line count. */
   svn_boolean_t omit_log_message;
 
-  /* Stack which keeps track of merge revision nesting, using 
-     struct merge_frame *'s  */
+  /* Stack which keeps track of merge revision nesting, using svn_revnum_t's */
   apr_array_header_t *merge_stack;
 
   /* Pool for persistent allocations. */
   apr_pool_t *pool;
-};
-
-/* Structure to hold merging revisions, and the number of children they have
-   remaining.  These structures get pushed and popped from
-   log_receiver_baton.merge_stack, and help implement the pre-order traversal
-   of the log message tree. */
-struct merge_frame
-{
-  /* The revision the merge occured in. */
-  svn_revnum_t merge_rev;
-
-  /* The number of outstanding children. */
-  apr_uint64_t children_remaining;
 };
 
 
@@ -78,8 +64,8 @@ struct merge_frame
   "------------------------------------------------------------------------\n"
 
 
-/* Implement `svn_log_message_receiver_t', printing the logs in
- * a human-readable and machine-parseable format.  
+/* Implement `svn_log_entry_receiver_t', printing the logs in
+ * a human-readable and machine-parseable format.
  *
  * BATON is of type `struct log_receiver_baton'.
  *
@@ -93,20 +79,20 @@ struct merge_frame
  * $ svn log -r1847:1846
  * ------------------------------------------------------------------------
  * rev 1847:  cmpilato | Wed 1 May 2002 15:44:26 | 7 lines
- * 
+ *
  * Fix for Issue #694.
- * 
+ *
  * * subversion/libsvn_repos/delta.c
  *   (delta_files): Rework the logic in this function to only call
  * send_text_deltas if there are deltas to send, and within that case,
  * only use a real delta stream if the caller wants real text deltas.
- * 
+ *
  * ------------------------------------------------------------------------
  * rev 1846:  whoever | Wed 1 May 2002 15:23:41 | 1 line
- *   
+ *
  * imagine an example log message here
  * ------------------------------------------------------------------------
- * 
+ *
  * Or:
  *
  * $ svn log -r1847:1846 -v
@@ -114,23 +100,23 @@ struct merge_frame
  * rev 1847:  cmpilato | Wed 1 May 2002 15:44:26 | 7 lines
  * Changed paths:
  *    M /trunk/subversion/libsvn_repos/delta.c
- * 
+ *
  * Fix for Issue #694.
- * 
+ *
  * * subversion/libsvn_repos/delta.c
  *   (delta_files): Rework the logic in this function to only call
  * send_text_deltas if there are deltas to send, and within that case,
  * only use a real delta stream if the caller wants real text deltas.
- * 
+ *
  * ------------------------------------------------------------------------
  * rev 1846:  whoever | Wed 1 May 2002 15:23:41 | 1 line
  * Changed paths:
  *    M /trunk/notes/fs_dumprestore.txt
  *    M /trunk/subversion/libsvn_repos/dump.c
- *   
+ *
  * imagine an example log message here
  * ------------------------------------------------------------------------
- * 
+ *
  * Or:
  *
  * $ svn log -r1847:1846 -q
@@ -156,14 +142,14 @@ struct merge_frame
  *
  */
 static svn_error_t *
-log_message_receiver(void *baton,
-                     svn_log_entry_t *log_entry,
-                     apr_pool_t *pool)
+log_entry_receiver(void *baton,
+                   svn_log_entry_t *log_entry,
+                   apr_pool_t *pool)
 {
   struct log_receiver_baton *lb = baton;
-  const char *author = log_entry->author;
-  const char *date = log_entry->date;
-  const char *msg = log_entry->message;
+  const char *author;
+  const char *date;
+  const char *message;
 
   /* Number of lines in the msg. */
   int lines;
@@ -171,36 +157,44 @@ log_message_receiver(void *baton,
   if (lb->cancel_func)
     SVN_ERR(lb->cancel_func(lb->cancel_baton));
 
-  if (log_entry->revision == 0 && log_entry->message == NULL)
+  svn_compat_log_revprops_out(&author, &date, &message, log_entry->revprops);
+
+  if (log_entry->revision == 0 && message == NULL)
     return SVN_NO_ERROR;
+
+  if (! SVN_IS_VALID_REVNUM(log_entry->revision))
+    {
+      apr_array_pop(lb->merge_stack);
+      return SVN_NO_ERROR;
+    }
 
   /* ### See http://subversion.tigris.org/issues/show_bug.cgi?id=807
      for more on the fallback fuzzy conversions below. */
 
-  if (log_entry->author == NULL)
+  if (author == NULL)
     author = _("(no author)");
 
-  if (log_entry->date && log_entry->date[0])
+  if (date && date[0])
     {
       /* Convert date to a format for humans. */
       apr_time_t time_temp;
-      
+
       SVN_ERR(svn_time_from_cstring(&time_temp, date, pool));
       date = svn_time_to_human_cstring(time_temp, pool);
     }
   else
     date = _("(no date)");
 
-  if (! lb->omit_log_message && log_entry->message == NULL)
-    msg = "";
+  if (! lb->omit_log_message && message == NULL)
+    message = "";
 
   SVN_ERR(svn_cmdline_printf(pool,
                              SEP_STRING "r%ld | %s | %s",
                              log_entry->revision, author, date));
 
-  if (! lb->omit_log_message)
+  if (message != NULL)
     {
-      lines = svn_cstring_count_newlines(msg) + 1;
+      lines = svn_cstring_count_newlines(message) + 1;
       SVN_ERR(svn_cmdline_printf(pool,
                                  (lines != 1)
                                  ? " | %d lines"
@@ -225,15 +219,15 @@ log_message_receiver(void *baton,
           svn_sort__item_t *item = &(APR_ARRAY_IDX(sorted_paths, i,
                                                    svn_sort__item_t));
           const char *path = item->key;
-          svn_log_changed_path_t *log_item 
+          svn_log_changed_path_t *log_item
             = apr_hash_get(log_entry->changed_paths, item->key, item->klen);
           const char *copy_data = "";
-          
-          if (log_item->copyfrom_path 
+
+          if (log_item->copyfrom_path
               && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev))
             {
-              copy_data 
-                = apr_psprintf(pool, 
+              copy_data
+                = apr_psprintf(pool,
                                _(" (from %s:%ld)"),
                                log_item->copyfrom_path,
                                log_item->copyfrom_rev);
@@ -247,67 +241,41 @@ log_message_receiver(void *baton,
   if (lb->merge_stack->nelts > 0)
     {
       int i;
-      struct merge_frame *frame = APR_ARRAY_IDX(lb->merge_stack,
-                                                lb->merge_stack->nelts - 1,
-                                                struct merge_frame *);
 
       /* Print the result of merge line */
       SVN_ERR(svn_cmdline_printf(pool, _("Result of a merge from:")));
       for (i = 0; i < lb->merge_stack->nelts; i++)
         {
-          struct merge_frame *output_frame = APR_ARRAY_IDX(lb->merge_stack, i,
-                                                         struct merge_frame *);
+          svn_revnum_t rev = APR_ARRAY_IDX(lb->merge_stack, i, svn_revnum_t);
 
-          SVN_ERR(svn_cmdline_printf(pool, " r%ld%c", output_frame->merge_rev,
-                                     i == lb->merge_stack->nelts - 1 ? 
+          SVN_ERR(svn_cmdline_printf(pool, " r%ld%c", rev,
+                                     i == lb->merge_stack->nelts - 1 ?
                                                                   '\n' : ','));
         }
-
-      /* Decrement the child_counter */
-      frame->children_remaining--;
     }
 
-  if (! lb->omit_log_message)
+  if (message != NULL)
     {
       /* A blank line always precedes the log message. */
-      SVN_ERR(svn_cmdline_printf(pool, "\n%s\n", msg));
+      SVN_ERR(svn_cmdline_printf(pool, "\n%s\n", message));
     }
 
   SVN_ERR(svn_cmdline_fflush(stdout));
 
-  if (log_entry->nbr_children > 0)
-    {
-      struct merge_frame *frame = apr_palloc(lb->pool, sizeof(*frame));
-    
-      frame->merge_rev = log_entry->revision;
-      frame->children_remaining = log_entry->nbr_children;
-
-      APR_ARRAY_PUSH(lb->merge_stack, struct merge_frame *) = frame;
-    }
-  else
-    while (lb->merge_stack->nelts > 0)
-      {
-        struct merge_frame *frame = APR_ARRAY_IDX(lb->merge_stack,
-                                                  lb->merge_stack->nelts - 1,
-                                                  struct merge_frame *);
-
-        if (frame->children_remaining == 0)
-          apr_array_pop(lb->merge_stack);
-        else
-          break;
-      }
+  if (log_entry->has_children)
+    APR_ARRAY_PUSH(lb->merge_stack, svn_revnum_t) = log_entry->revision;
 
   return SVN_NO_ERROR;
 }
 
 
-/* This implements `svn_log_message_receiver_t', printing the logs in XML.
+/* This implements `svn_log_entry_receiver_t', printing the logs in XML.
  *
  * BATON is of type `struct log_receiver_baton'.
  *
  * Here is an example of the output; note that the "<log>" and
  * "</log>" tags are not emitted by this function:
- * 
+ *
  * $ svn log --xml -r 1648:1649
  * <log>
  * <logentry
@@ -323,13 +291,13 @@ log_message_receiver(void *baton,
  * <date>2002-04-06T17:01:28.185136Z</date>
  * <msg>Fix error handling when the $EDITOR is needed but unavailable.  Ah
  * ... now that&apos;s *much* nicer.
- * 
+ *
  * * subversion/clients/cmdline/util.c
  *   (svn_cl__edit_externally): Clean up the &quot;no external editor&quot;
  *   error message.
- *   (svn_cl__get_log_message): Wrap &quot;no external editor&quot; 
+ *   (svn_cl__get_log_message): Wrap &quot;no external editor&quot;
  *   errors with helpful hints about the -m and -F options.
- * 
+ *
  * * subversion/libsvn_client/commit.c
  *   (svn_client_commit): Actually capture and propogate &quot;no external
  *   editor&quot; errors.</msg>
@@ -338,21 +306,34 @@ log_message_receiver(void *baton,
  *
  */
 static svn_error_t *
-log_message_receiver_xml(void *baton,
-                         svn_log_entry_t *log_entry,
-                         apr_pool_t *pool)
+log_entry_receiver_xml(void *baton,
+                       svn_log_entry_t *log_entry,
+                       apr_pool_t *pool)
 {
   struct log_receiver_baton *lb = baton;
   /* Collate whole log message into sb before printing. */
   svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
   char *revstr;
-  const char *date = log_entry->date;
+  const char *author;
+  const char *date;
+  const char *message;
 
   if (lb->cancel_func)
     SVN_ERR(lb->cancel_func(lb->cancel_baton));
 
-  if (log_entry->revision == 0 && log_entry->message == NULL)
+  svn_compat_log_revprops_out(&author, &date, &message, log_entry->revprops);
+
+  if (log_entry->revision == 0 && message == NULL)
     return SVN_NO_ERROR;
+
+  if (! SVN_IS_VALID_REVNUM(log_entry->revision))
+    {
+      svn_xml_make_close_tag(&sb, pool, "logentry");
+      SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
+      apr_array_pop(lb->merge_stack);
+
+      return SVN_NO_ERROR;
+    }
 
   revstr = apr_psprintf(pool, "%ld", log_entry->revision);
   /* <logentry revision="xxx"> */
@@ -360,13 +341,13 @@ log_message_receiver_xml(void *baton,
                         "revision", revstr, NULL);
 
   /* <author>xxx</author> */
-  svn_cl__xml_tagged_cdata(&sb, pool, "author", log_entry->author);
+  svn_cl__xml_tagged_cdata(&sb, pool, "author", author);
 
   /* Print the full, uncut, date.  This is machine output. */
-  /* According to the docs for svn_log_message_receiver_t, either
+  /* According to the docs for svn_log_entry_receiver_t, either
      NULL or the empty string represents no date.  Avoid outputting an
      empty date element. */
-  if (log_entry->date && log_entry->date[0] == '\0')
+  if (date && date[0] == '\0')
     date = NULL;
   /* <date>xxx</date> */
   svn_cl__xml_tagged_cdata(&sb, pool, "date", date);
@@ -379,7 +360,7 @@ log_message_receiver_xml(void *baton,
       /* <paths> */
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "paths",
                             NULL);
-      
+
       for (hi = apr_hash_first(pool, log_entry->changed_paths);
            hi != NULL;
            hi = apr_hash_next(hi))
@@ -387,7 +368,7 @@ log_message_receiver_xml(void *baton,
           void *val;
           char action[2];
           svn_log_changed_path_t *log_item;
-          
+
           apr_hash_this(hi, (void *) &path, NULL, &val);
           log_item = val;
 
@@ -400,7 +381,7 @@ log_message_receiver_xml(void *baton,
               svn_stringbuf_t *escpath = svn_stringbuf_create("", pool);
               svn_xml_escape_attr_cstring(&escpath,
                                           log_item->copyfrom_path, pool);
-              revstr = apr_psprintf(pool, "%ld", 
+              revstr = apr_psprintf(pool, "%ld",
                                     log_item->copyfrom_rev);
               svn_xml_make_open_tag(&sb, pool, svn_xml_protect_pcdata, "path",
                                     "action", action,
@@ -422,50 +403,26 @@ log_message_receiver_xml(void *baton,
       svn_xml_make_close_tag(&sb, pool, "paths");
     }
 
-  if (! lb->omit_log_message)
+  if (message != NULL)
     {
-      const char *msg = log_entry->message;
-
-      if (log_entry->message == NULL)
-        msg = "";
-
       /* <msg>xxx</msg> */
-      svn_cl__xml_tagged_cdata(&sb, pool, "msg", msg);
+      svn_cl__xml_tagged_cdata(&sb, pool, "msg", message);
     }
 
-  if (lb->merge_stack->nelts > 0)
-    APR_ARRAY_IDX(lb->merge_stack, lb->merge_stack->nelts - 1,
-                  struct merge_frame *)->children_remaining--;
-
-  if (log_entry->nbr_children > 0 )
+  svn_compat_log_revprops_clear(log_entry->revprops);
+  if (log_entry->revprops && apr_hash_count(log_entry->revprops) > 0)
     {
-      struct merge_frame *frame = apr_palloc(lb->pool, sizeof(*frame));
-
-      frame->children_remaining = log_entry->nbr_children;
-      APR_ARRAY_PUSH(lb->merge_stack, struct merge_frame *) = frame;
+      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "revprops", NULL);
+      SVN_ERR(svn_cl__print_xml_prop_hash(&sb, log_entry->revprops,
+                                          FALSE, /* name_only */
+                                          pool));
+      svn_xml_make_close_tag(&sb, pool, "revprops");
     }
+
+  if (log_entry->has_children)
+    APR_ARRAY_PUSH(lb->merge_stack, svn_revnum_t) = log_entry->revision;
   else
-    {
-      while (lb->merge_stack->nelts > 0)
-        {
-          struct merge_frame *frame = APR_ARRAY_IDX(lb->merge_stack,
-                                                    lb->merge_stack->nelts - 1,
-                                                    struct merge_frame *);
-
-          if (frame->children_remaining == 0)
-            {
-              svn_xml_make_close_tag(&sb, pool, "logentry");
-              apr_array_pop(lb->merge_stack);
-            }
-          else
-            {
-              break;
-            }
-        }
-
-      /* </logentry> */
-      svn_xml_make_close_tag(&sb, pool, "logentry");
-    }
+    svn_xml_make_close_tag(&sb, pool, "logentry");
 
   SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
 
@@ -488,6 +445,19 @@ svn_cl__log(apr_getopt_t *os,
   int i;
   svn_opt_revision_t peg_revision;
   const char *true_path;
+  apr_array_header_t *revprops;
+
+  if (!opt_state->xml)
+    {
+      if (opt_state->all_revprops)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("'with-all-revprops' option only valid in"
+                                  " XML mode"));
+      if (opt_state->revprop_table != NULL)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("'with-revprop' option only valid in"
+                                  " XML mode"));
+    }
 
   /* Before allowing svn_opt_args_to_target_array() to canonicalize
      all the targets, we need to build a list of targets made of both
@@ -561,38 +531,29 @@ svn_cl__log(apr_getopt_t *os,
         }
     }
 
-  /* Verify that we pass at most one working copy path. */
-  if (! svn_path_is_url(target) )
+  if (svn_path_is_url(target))
     {
-      if (targets->nelts > 1)
-        return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                _("When specifying working copy paths, only "
-                                  "one target may be given"));
-    }
-  else
-    {
-      /* Check to make sure there are no other URLs. */
       for (i = 1; i < targets->nelts; i++)
         {
           target = APR_ARRAY_IDX(targets, i, const char *);
-          
+
           if (svn_path_is_url(target))
             return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                     _("Only relative paths can be specified "
                                       "after a URL"));
         }
     }
-  
+
   lb.cancel_func = ctx->cancel_func;
   lb.cancel_baton = ctx->cancel_baton;
   lb.omit_log_message = opt_state->quiet;
-  lb.merge_stack = apr_array_make(pool, 1, sizeof(struct merge_frame *));
+  lb.merge_stack = apr_array_make(pool, 0, sizeof(svn_revnum_t));
   lb.pool = pool;
-  
+
   if (! opt_state->quiet)
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
                          FALSE, FALSE, pool);
-  
+
   if (opt_state->xml)
     {
       /* If output is not incremental, output the XML header and wrap
@@ -600,7 +561,37 @@ svn_cl__log(apr_getopt_t *os,
          its entirety a well-formed XML document. */
       if (! opt_state->incremental)
         SVN_ERR(svn_cl__xml_print_header("log", pool));
-      
+
+      if (opt_state->all_revprops)
+        revprops = NULL;
+      else if (opt_state->revprop_table != NULL)
+        {
+          apr_hash_index_t *hi;
+          revprops = apr_array_make(pool,
+                                    apr_hash_count(opt_state->revprop_table),
+                                    sizeof(char *));
+          for (hi = apr_hash_first(pool, opt_state->revprop_table);
+               hi != NULL;
+               hi = apr_hash_next(hi))
+            {
+              char *property;
+              svn_string_t *value;
+              apr_hash_this(hi, (void *)&property, NULL, (void *)&value);
+              if (value && value->data[0] != '\0')
+                return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                         _("cannot assign with 'with-revprop'"
+                                           " option (drop the '=')"));
+              APR_ARRAY_PUSH(revprops, char *) = property;
+            }
+        }
+      else
+        {
+          revprops = apr_array_make(pool, 3, sizeof(char *));
+          APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_AUTHOR;
+          APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_DATE;
+          if (!opt_state->quiet)
+            APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_LOG;
+        }
       SVN_ERR(svn_client_log4(targets,
                               &peg_revision,
                               &(opt_state->start_revision),
@@ -609,17 +600,22 @@ svn_cl__log(apr_getopt_t *os,
                               opt_state->verbose,
                               opt_state->stop_on_copy,
                               opt_state->use_merge_history,
-                              opt_state->quiet,
-                              log_message_receiver_xml,
+                              revprops,
+                              log_entry_receiver_xml,
                               &lb,
                               ctx,
                               pool));
-      
+
       if (! opt_state->incremental)
         SVN_ERR(svn_cl__xml_print_footer("log", pool));
     }
   else  /* default output format */
     {
+      revprops = apr_array_make(pool, 3, sizeof(char *));
+      APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_AUTHOR;
+      APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_DATE;
+      if (!opt_state->quiet)
+        APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_LOG;
       SVN_ERR(svn_client_log4(targets,
                               &peg_revision,
                               &(opt_state->start_revision),
@@ -628,8 +624,8 @@ svn_cl__log(apr_getopt_t *os,
                               opt_state->verbose,
                               opt_state->stop_on_copy,
                               opt_state->use_merge_history,
-                              opt_state->quiet,
-                              log_message_receiver,
+                              revprops,
+                              log_entry_receiver,
                               &lb,
                               ctx,
                               pool));

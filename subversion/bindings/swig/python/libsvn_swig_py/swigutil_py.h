@@ -97,7 +97,7 @@ int svn_swig_py_get_parent_pool(PyObject *args, swig_type_info *type,
 
 /* Wrapper for SWIG_NewPointerObj */
 SVN_SWIG_SWIGUTIL_EXPORT
-PyObject *svn_swig_NewPointerObj(void *obj, swig_type_info *type, 
+PyObject *svn_swig_NewPointerObj(void *obj, swig_type_info *type,
                                  PyObject *pool, PyObject *args);
 
 /* Wrapper for SWIG_ConvertPtr */
@@ -145,14 +145,14 @@ PyObject *svn_swig_py_rangelist_to_list(apr_array_header_t *rangelist,
 /* helper function to convert an apr_hash_t* (const char *->array of
    svn_merge_range_t *) to a Python dict */
 SVN_SWIG_SWIGUTIL_EXPORT
-PyObject *svn_swig_py_mergeinfo_to_dict(apr_hash_t *hash, 
+PyObject *svn_swig_py_mergeinfo_to_dict(apr_hash_t *hash,
                                         swig_type_info *type,
                                         PyObject *py_pool);
 
 /* helper function to convert an apr_hash_t* (const char *->hash of
    mergeinfo hashes) to a Python dict */
 SVN_SWIG_SWIGUTIL_EXPORT
-PyObject *svn_swig_py_mergeinfo_hash_to_dict(apr_hash_t *hash, 
+PyObject *svn_swig_py_mergeinfo_hash_to_dict(apr_hash_t *hash,
                                         swig_type_info *type,
                                         PyObject *py_pool);
 
@@ -164,7 +164,7 @@ PyObject *svn_swig_py_stringhash_to_dict(apr_hash_t *hash);
 
 /* convert a hash of 'const char *' -> TYPE into a Python dict */
 SVN_SWIG_SWIGUTIL_EXPORT
-PyObject *svn_swig_py_convert_hash(apr_hash_t *hash, swig_type_info *type, 
+PyObject *svn_swig_py_convert_hash(apr_hash_t *hash, swig_type_info *type,
                                    PyObject *py_pool);
 
 /* helper function to convert a 'char **' into a Python list of string
@@ -176,6 +176,11 @@ PyObject *svn_swig_py_c_strings_to_list(char **strings);
    of string objects */
 SVN_SWIG_SWIGUTIL_EXPORT
 PyObject *svn_swig_py_array_to_list(const apr_array_header_t *strings);
+
+/* helper function to convert a hash mapping char * to svn_string_t * to a
+ * Python dict mapping str to str. */
+SVN_SWIG_SWIGUTIL_EXPORT
+PyObject *svn_swig_py_changed_path_hash_to_dict(apr_hash_t *hash);
 
 SVN_SWIG_SWIGUTIL_EXPORT
 apr_array_header_t *svn_swig_py_rangelist_to_array(PyObject *list,
@@ -208,7 +213,7 @@ SVN_SWIG_SWIGUTIL_EXPORT
 apr_array_header_t *svn_swig_py_proparray_from_dict(PyObject *dict,
                                                     apr_pool_t *pool);
 
-/* helper function to convert a 'apr_array_header_t *' of 'svn_prop_t 
+/* helper function to convert a 'apr_array_header_t *' of 'svn_prop_t
    to a Python dictionary mapping strings to strings. */
 SVN_SWIG_SWIGUTIL_EXPORT
 PyObject *svn_swig_py_proparray_to_dict(const apr_array_header_t *array);
@@ -226,6 +231,13 @@ apr_hash_t *svn_swig_py_prophash_from_dict(PyObject *dict,
 SVN_SWIG_SWIGUTIL_EXPORT
 apr_hash_t *svn_swig_py_path_revs_hash_from_dict(PyObject *dict,
                                                  apr_pool_t *pool);
+
+/* helper function to convert a Python dictionary mapping strings to
+   strings into an apr_hash_t mapping const char *'s to svn_string_t *'s,
+   allocated in POOL. */
+SVN_SWIG_SWIGUTIL_EXPORT
+apr_hash_t *svn_swig_py_changed_path_hash_from_dict(PyObject *dict,
+                                                    apr_pool_t *pool);
 
 /* helper function to convert a Python sequence of strings into an
    'apr_array_header_t *' of 'const char *' objects.  Note that the
@@ -303,8 +315,8 @@ svn_error_t *svn_swig_py_cancel_func(void *cancel_baton);
 
 /* thunked fs get_locks function */
 SVN_SWIG_SWIGUTIL_EXPORT
-svn_error_t *svn_swig_py_fs_get_locks_func(void *baton, 
-                                           svn_lock_t *lock, 
+svn_error_t *svn_swig_py_fs_get_locks_func(void *baton,
+                                           svn_lock_t *lock,
                                            apr_pool_t *pool);
 
 /* thunked commit log fetcher */
@@ -340,6 +352,12 @@ svn_error_t *svn_swig_py_log_receiver(void *py_receiver,
                                       const char *date,
                                       const char *msg,
                                       apr_pool_t *pool);
+
+/* thunked log receiver2 function */
+SVN_SWIG_SWIGUTIL_EXPORT
+svn_error_t *svn_swig_py_log_entry_receiver(void *baton,
+                                            svn_log_entry_t *log_entry,
+                                            apr_pool_t *pool);
 
 /* thunked info receiver function */
 SVN_SWIG_SWIGUTIL_EXPORT

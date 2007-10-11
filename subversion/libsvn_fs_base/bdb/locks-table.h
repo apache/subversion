@@ -36,7 +36,7 @@ int svn_fs_bdb__open_locks_table(DB **locks_p,
                                  svn_boolean_t create);
 
 
-/* Add a lock to the `locks' table in FS, as part of TRAIL. 
+/* Add a lock to the `locks' table in FS, as part of TRAIL.
 
    Use LOCK_TOKEN as the key, presumably a string form of an apr_uuid_t.
    Convert LOCK into a skel and store it as the value.
@@ -51,7 +51,7 @@ svn_error_t *svn_fs_bdb__lock_add(svn_fs_t *fs,
 
 
 /* Remove the lock whose key is LOCK_TOKEN from the `locks' table of
-   FS, as part of TRAIL.  
+   FS, as part of TRAIL.
 
    Return SVN_ERR_FS_BAD_LOCK_TOKEN if LOCK_TOKEN does not exist as a
    table key. */

@@ -126,7 +126,7 @@ store_mapping(hash_table_t *table, const char* key, apr_size_t idx)
    The article "Delta Algorithms: An Empirical Analysis" by Hunt,
    Vo and Tichy contains a description of the vdelta algorithm,
    but it's incomplete. Here's a detailed description:
-   
+
      1. Look up the four bytes starting at the current position
         pointer.  If there are no matches for those four bytes,
         output an insert, move the position pointer forward by one,

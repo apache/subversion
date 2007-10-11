@@ -116,6 +116,7 @@ typedef struct svn_ra__vtable_t {
                             svn_revnum_t revision_to_update_to,
                             const char *update_target,
                             svn_depth_t depth,
+                            svn_boolean_t send_copyfrom_args,
                             const svn_delta_editor_t *update_editor,
                             void *update_baton,
                             apr_pool_t *pool);
@@ -158,8 +159,8 @@ typedef struct svn_ra__vtable_t {
                           svn_boolean_t discover_changed_paths,
                           svn_boolean_t strict_node_history,
                           svn_boolean_t include_merged_revisions,
-                          svn_boolean_t omit_log_text,
-                          svn_log_message_receiver2_t receiver,
+                          apr_array_header_t *revprops,
+                          svn_log_entry_receiver_t receiver,
                           void *receiver_baton,
                           apr_pool_t *pool);
   svn_error_t *(*check_path)(svn_ra_session_t *session,
@@ -196,13 +197,13 @@ typedef struct svn_ra__vtable_t {
                        apr_hash_t *path_revs,
                        const char *comment,
                        svn_boolean_t force,
-                       svn_ra_lock_callback_t lock_func, 
+                       svn_ra_lock_callback_t lock_func,
                        void *lock_baton,
                        apr_pool_t *pool);
   svn_error_t *(*unlock)(svn_ra_session_t *session,
                          apr_hash_t *path_tokens,
                          svn_boolean_t force,
-                         svn_ra_lock_callback_t lock_func, 
+                         svn_ra_lock_callback_t lock_func,
                          void *lock_baton,
                          apr_pool_t *pool);
   svn_error_t *(*get_lock)(svn_ra_session_t *session,

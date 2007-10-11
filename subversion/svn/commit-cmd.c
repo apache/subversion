@@ -2,7 +2,7 @@
  * commit-cmd.c -- Check changes into the repository.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -24,6 +24,8 @@
 
 #include <apr_general.h>
 
+#include "svn_error.h"
+#include "svn_error_codes.h"
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_path.h"
@@ -39,6 +41,7 @@ svn_cl__commit(apr_getopt_t *os,
                void *baton,
                apr_pool_t *pool)
 {
+  svn_error_t *err;
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
@@ -48,7 +51,7 @@ svn_cl__commit(apr_getopt_t *os,
   svn_boolean_t no_unlock = FALSE;
   svn_commit_info_t *commit_info = NULL;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
                                         opt_state->targets, pool));
 
   /* Add "." if user passed 0 arguments. */
@@ -65,7 +68,7 @@ svn_cl__commit(apr_getopt_t *os,
     {
       const char *parent_dir, *base_name;
 
-      SVN_ERR(svn_wc_get_actual_target(base_dir, &parent_dir, 
+      SVN_ERR(svn_wc_get_actual_target(base_dir, &parent_dir,
                                        &base_name, pool));
       if (*base_name)
         base_dir = apr_pstrdup(pool, parent_dir);
@@ -85,27 +88,40 @@ svn_cl__commit(apr_getopt_t *os,
                                 SVN_CONFIG_SECTION_MISCELLANY,
                                 SVN_CONFIG_OPTION_NO_UNLOCK, FALSE));
 
-  /* We're creating a new log message baton because we can use our base_dir 
-     to store the temp file, instead of the current working directory.  The 
-     client might not have write access to their working directory, but they 
+  /* We're creating a new log message baton because we can use our base_dir
+     to store the temp file, instead of the current working directory.  The
+     client might not have write access to their working directory, but they
      better have write access to the directory they're committing.  */
   SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3),
-                                     opt_state, base_dir, 
+                                     opt_state, base_dir,
                                      ctx->config, pool));
 
   ctx->revprop_table = opt_state->revprop_table;
 
   /* Commit. */
-  SVN_ERR(svn_cl__cleanup_log_msg
-          (ctx->log_msg_baton3,
-           svn_client_commit4(&commit_info,
-                              targets,
-                              SVN_DEPTH_TO_RECURSE(opt_state->depth),
-                              no_unlock,
-                              opt_state->keep_changelist,
-                              opt_state->changelist,
-                              ctx,
-                              pool)));
+  err = svn_client_commit4(&commit_info,
+                           targets,
+                           opt_state->depth,
+                           no_unlock,
+                           opt_state->keep_changelist,
+                           opt_state->changelist,
+                           ctx,
+                           pool);
+  if (err)
+    {
+      svn_error_t *root_err = svn_error_root_cause(err);
+      if (root_err->apr_err == SVN_ERR_UNKNOWN_CHANGELIST)
+        {
+          /* Strip any errors wrapped around this root cause.  Note
+             that this handling differs from that of any other
+             commands, because of the way 'commit' internally harvests
+             its list of committables. */
+          root_err = svn_error_dup(root_err);
+          svn_error_clear(err);
+          err = root_err;
+        }
+    }
+  SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err));
   if (commit_info && ! opt_state->quiet)
     SVN_ERR(svn_cl__print_commit_info(commit_info, pool));
 

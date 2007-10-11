@@ -248,7 +248,7 @@ JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_logMessages
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
  jobject jrevisionStart, jobject jrevisionEnd, jboolean jstopOnCopy,
- jboolean jdisoverPaths, jboolean jincludeMergedRevisions, 
+ jboolean jdisoverPaths, jboolean jincludeMergedRevisions,
  jboolean jomitLogText, jlong jlimit, jobject jlogMessageCallback)
 {
   JNIEntry(SVNClient, logMessages);
@@ -277,7 +277,7 @@ Java_org_tigris_subversion_javahl_SVNClient_logMessages
   LogMessageCallback callback(jlogMessageCallback);
   cl->logMessages(path, pegRevision, revisionStart, revisionEnd,
                   jstopOnCopy ? true: false, jdisoverPaths ? true : false,
-                  jincludeMergedRevisions ? true : false, 
+                  jincludeMergedRevisions ? true : false,
                   jomitLogText ? true : false, jlimit, &callback);
 }
 
@@ -432,7 +432,7 @@ Java_org_tigris_subversion_javahl_SVNClient_remove
 
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_revert
-(JNIEnv *env, jobject jthis, jstring jpath, jboolean jrecurse)
+(JNIEnv *env, jobject jthis, jstring jpath, jint jdepth)
 {
   JNIEntry(SVNClient, revert);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -445,12 +445,12 @@ Java_org_tigris_subversion_javahl_SVNClient_revert
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->revert(path, jrecurse ? true : false);
+  cl->revert(path, (svn_depth_t)jdepth);
 }
 
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_add
-(JNIEnv *env, jobject jthis, jstring jpath, jboolean jrecurse,
+(JNIEnv *env, jobject jthis, jstring jpath, jint jdepth,
  jboolean jforce, jboolean jnoIgnore, jboolean jaddParents)
 {
   JNIEntry(SVNClient, add);
@@ -464,7 +464,7 @@ Java_org_tigris_subversion_javahl_SVNClient_add
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->add(path, jrecurse ? true : false, jforce ? true : false,
+  cl->add(path, (svn_depth_t)jdepth, jforce ? true : false,
           jnoIgnore ? true : false, jaddParents ? true : false);
 }
 
@@ -497,7 +497,7 @@ Java_org_tigris_subversion_javahl_SVNClient_update
 JNIEXPORT jlong JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_commit
 (JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jmessage,
- jboolean jrecurse, jboolean jnoUnlock, jboolean jkeepChangelist,
+ jint jdepth, jboolean jnoUnlock, jboolean jkeepChangelist,
  jstring jchangelistName)
 {
   JNIEntry(SVNClient, commit);
@@ -516,7 +516,7 @@ Java_org_tigris_subversion_javahl_SVNClient_commit
   if (JNIUtil::isExceptionThrown())
     return -1;
 
-  return cl->commit(targets, message, jrecurse ? true : false,
+  return cl->commit(targets, message, (svn_depth_t)jdepth,
                     jnoUnlock ? true : false, jkeepChangelist ? true : false,
                     changelistName);
 }
@@ -524,7 +524,8 @@ Java_org_tigris_subversion_javahl_SVNClient_commit
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_copy
 (JNIEnv *env, jobject jthis, jobjectArray jcopySources, jstring jdestPath,
- jstring jmessage, jboolean jcopyAsChild, jboolean jmakeParents)
+ jstring jmessage, jboolean jcopyAsChild, jboolean jmakeParents,
+ jboolean jwithMergeHistory)
 {
   JNIEntry(SVNClient, copy);
 
@@ -545,14 +546,14 @@ Java_org_tigris_subversion_javahl_SVNClient_copy
     return;
 
   cl->copy(copySources, destPath, message, jcopyAsChild ? true : false,
-           jmakeParents ? true : false);
+           jmakeParents ? true : false, jwithMergeHistory ? true : false);
 }
 
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_move
 (JNIEnv *env, jobject jthis, jobjectArray jsrcPaths, jstring jdestPath,
  jstring jmessage, jboolean jforce, jboolean jmoveAsChild,
- jboolean jmakeParents)
+ jboolean jmakeParents, jboolean jwithMergeHistory)
 {
   JNIEntry(SVNClient, move);
 
@@ -572,7 +573,8 @@ Java_org_tigris_subversion_javahl_SVNClient_move
   if (JNIUtil::isExceptionThrown())
     return;
   cl->move(srcPaths, destPath, message, jforce ? true : false,
-           jmoveAsChild ? true : false, jmakeParents ? true : false);
+           jmoveAsChild ? true : false, jmakeParents ? true : false,
+           jwithMergeHistory ? true : false);
 }
 
 JNIEXPORT void JNICALL
@@ -615,7 +617,7 @@ Java_org_tigris_subversion_javahl_SVNClient_cleanup
 
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_resolved
-(JNIEnv *env, jobject jthis, jstring jpath, jboolean jrecurse)
+(JNIEnv *env, jobject jthis, jstring jpath, jint jdepth)
 {
   JNIEntry(SVNClient, resolved);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -628,7 +630,7 @@ Java_org_tigris_subversion_javahl_SVNClient_resolved
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->resolved(path, jrecurse ? true: false);
+  cl->resolved(path, (svn_depth_t) jdepth);
 }
 
 JNIEXPORT jlong JNICALL
@@ -702,7 +704,7 @@ Java_org_tigris_subversion_javahl_SVNClient_doSwitch
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_doImport
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jurl, jstring jmessage,
- jboolean jrecurse)
+ jint jdepth, jboolean jnoIgnore, jboolean jignoreUnknownNodeTypes)
 {
   JNIEntry(SVNClient, doImport);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -723,7 +725,32 @@ Java_org_tigris_subversion_javahl_SVNClient_doImport
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->doImport(path, url, message, jrecurse ? true : false);
+  cl->doImport(path, url, message, (svn_depth_t)jdepth,
+               jnoIgnore ? true : false,
+               jignoreUnknownNodeTypes ? true : false);
+}
+
+JNIEXPORT jobjectArray JNICALL
+Java_org_tigris_subversion_javahl_SVNClient_suggestMergeSources
+(JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision)
+{
+  JNIEntry(SVNClient, suggestMergeSources);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return NULL;
+    }
+
+  JNIStringHolder path(jpath);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  Revision pegRevision(jpegRevision);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  return cl->suggestMergeSources(path, pegRevision);
 }
 
 JNIEXPORT void JNICALL
@@ -834,7 +861,7 @@ Java_org_tigris_subversion_javahl_SVNClient_properties
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_propertySet
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jstring jvalue,
- jboolean jrecurse, jboolean jforce)
+ jint jdepth, jboolean jforce)
 {
   JNIEntry(SVNClient, propertySet);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -855,13 +882,12 @@ Java_org_tigris_subversion_javahl_SVNClient_propertySet
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->propertySet(path, name, value, jrecurse ? true:false,
-                  jforce ? true:false);
+  cl->propertySet(path, name, value, (svn_depth_t)jdepth, jforce ? true:false);
 }
 
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_propertyRemove
-(JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jboolean jrecurse)
+(JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jint jdepth)
 {
   JNIEntry(SVNClient, propertyRemove);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -878,7 +904,7 @@ Java_org_tigris_subversion_javahl_SVNClient_propertyRemove
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->propertyRemove(path, name, jrecurse ? true:false);
+  cl->propertyRemove(path, name, (svn_depth_t)jdepth);
 }
 
 JNIEXPORT jobject JNICALL
@@ -994,7 +1020,7 @@ Java_org_tigris_subversion_javahl_SVNClient_propertyGet
 
 JNIEXPORT jobject JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_getMergeInfo
-(JNIEnv *env, jobject jthis, jstring jtarget, jobject jrevision)
+(JNIEnv *env, jobject jthis, jstring jtarget, jobject jpegRevision)
 {
   JNIEntry(SVNClient, getMergeInfo);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1006,10 +1032,34 @@ Java_org_tigris_subversion_javahl_SVNClient_getMergeInfo
   JNIStringHolder target(jtarget);
   if (JNIUtil::isExceptionThrown())
     return NULL;
-  Revision revision(jrevision);
+  Revision pegRevision(jpegRevision);
   if (JNIUtil::isExceptionThrown())
     return NULL;
-  return cl->getMergeInfo(target, revision);
+  return cl->getMergeInfo(target, pegRevision);
+}
+
+JNIEXPORT jobjectArray JNICALL
+Java_org_tigris_subversion_javahl_SVNClient_getAvailableMerges
+(JNIEnv *env, jobject jthis, jstring jtarget, jobject jpegRevision,
+ jstring jmergeSource)
+{
+  JNIEntry(SVNClient, getAvailableMerges);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return NULL;
+    }
+  JNIStringHolder target(jtarget);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+  Revision pegRevision(jpegRevision);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+  JNIStringHolder mergeSource(jmergeSource);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+  return cl->getAvailableMerges(target, pegRevision, mergeSource);
 }
 
 JNIEXPORT void JNICALL
@@ -1542,7 +1592,7 @@ Java_org_tigris_subversion_javahl_SVNClient_unlock
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_info2
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
- jobject jpegRevision, jboolean jrecurse, jobject jinfoCallback)
+ jobject jpegRevision, jint jdepth, jobject jinfoCallback)
 {
   JNIEntry(SVNClient, info2);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1564,28 +1614,6 @@ Java_org_tigris_subversion_javahl_SVNClient_info2
     return;
 
   InfoCallback callback(jinfoCallback);
-  cl->info2(path, revision, pegRevision, jrecurse ? true : false,
+  cl->info2(path, revision, pegRevision, (svn_depth_t)jdepth,
             &callback);
-}
-
-JNIEXPORT jobject JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_getCopySource
-(JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision)
-{
-  JNIEntry(SVNClient, getCopySource);
-  SVNClient *cl = SVNClient::getCppObject(jthis);
-  if (cl == NULL)
-    {
-      JNIUtil::throwError("bad C++ this");
-      return NULL;
-    }
-
-  JNIStringHolder path(jpath);
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
-  Revision rev(jrevision);
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
- 
-  return cl->getCopySource(path, rev);
 }

@@ -124,13 +124,13 @@ start_getloc(svn_ra_serf__xml_parser_t *parser,
       svn_revnum_t rev = SVN_INVALID_REVNUM;
       const char *revstr, *path;
 
-      revstr = svn_ra_serf__find_attr(attrs, "rev");
+      revstr = svn_xml_get_attr_value("rev", attrs);
       if (revstr)
         {
           rev = SVN_STR_TO_REV(revstr);
         }
 
-      path = svn_ra_serf__find_attr(attrs, "path");
+      path = svn_xml_get_attr_value("path", attrs);
 
       if (SVN_IS_VALID_REVNUM(rev) && path)
         {
@@ -189,6 +189,7 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   apr_hash_t *props;
   const char *vcc_url, *relative_url, *basecoll_url, *req_url;
   int i;
+  svn_error_t *err;
 
   loc_ctx = apr_pcalloc(pool, sizeof(*loc_ctx));
   loc_ctx->pool = pool;
@@ -252,7 +253,9 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
 
   if (!basecoll_url)
     {
-      abort();
+      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                              _("The OPTIONS response did not include the "
+                                "requested baseline-collection value."));
     }
 
   req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);
@@ -280,14 +283,22 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
 
   svn_ra_serf__request_create(handler);
 
-  SVN_ERR(svn_ra_serf__context_run_wait(&loc_ctx->done, session, pool));
+  err = svn_ra_serf__context_run_wait(&loc_ctx->done, session, pool);
+
+  if (loc_ctx->error || parser_ctx->error)
+    {
+      svn_error_clear(err);
+      SVN_ERR(loc_ctx->error);
+      SVN_ERR(parser_ctx->error);
+    }
+
+  SVN_ERR(err);
 
   if (loc_ctx->status_code == 404)
     {
-      /* TODO Teach the parser to handle our custom error message. */
       return svn_error_create(SVN_ERR_FS_NOT_FOUND, NULL,
                               _("File doesn't exist on HEAD"));
     }
 
-  return loc_ctx->error;
+  return SVN_NO_ERROR;
 }

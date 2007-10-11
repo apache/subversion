@@ -6,7 +6,7 @@
 import sys
 import os
 
-# os.getcwd() is used here to attempt to support VPATH builds - 
+# os.getcwd() is used here to attempt to support VPATH builds -
 # it is expected that the current directory be what 'make check-swig-py'
 # arranges for it to be: i.e. BUILDDIR/subversion/bindings/swig/python .
 src_swig_python_tests_dir = os.path.dirname(__file__)

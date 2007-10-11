@@ -134,7 +134,7 @@ main (int argc, const char **argv)
 
   if (argc <= 1)
     {
-      printf ("Usage:  %s URL\n", argv[0]);  
+      printf ("Usage:  %s URL\n", argv[0]);
       return EXIT_FAILURE;
     }
   else
@@ -159,7 +159,7 @@ main (int argc, const char **argv)
       return EXIT_FAILURE;
     }
 
-  /* Make sure the ~/.subversion run-time config files exist */  
+  /* Make sure the ~/.subversion run-time config files exist */
   err = svn_config_ensure (NULL, pool);
   if (err)
     {
@@ -175,7 +175,7 @@ main (int argc, const char **argv)
         svn_handle_error2 (err, stderr, FALSE, "minimal_client: ");
         return EXIT_FAILURE;
       }
-    
+
     /* Load the run-time config file into a hash */
     if ((err = svn_config_get_config (&(ctx->config), NULL, pool)))
       {
@@ -203,11 +203,11 @@ main (int argc, const char **argv)
        checkouts, updates, commits, etc.  */
     /* ctx->notify_func = my_notification_func;
        ctx->notify_baton = NULL; */
-    
+
     /* A func (& context) which can receive log messages */
     /* ctx->log_msg_func = my_log_msg_receiver_func;
        ctx->log_msg_baton = NULL; */
-    
+
     /* A func (& context) which checks whether the user cancelled */
     /* ctx->cancel_func = my_cancel_checking_func;
        ctx->cancel_baton = NULL; */
@@ -241,13 +241,13 @@ main (int argc, const char **argv)
       APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
       /* Register the auth-providers into the context's auth_baton. */
-      svn_auth_open (&ctx->auth_baton, providers, pool);      
+      svn_auth_open (&ctx->auth_baton, providers, pool);
     }
   } /* end of client_ctx setup */
 
 
   /* Now do the real work. */
-  
+
   /* Set revision to always be the HEAD revision.  It could, however,
      be set to a specific revision number, date, or other values. */
   revision.kind = svn_opt_revision_head;
@@ -269,7 +269,7 @@ main (int argc, const char **argv)
       const char *entryname;
       svn_dirent_t *val;
 
-      apr_hash_this (hi, (void *) &entryname, NULL, (void *) &val);      
+      apr_hash_this (hi, (void *) &entryname, NULL, (void *) &val);
       printf ("   %s\n", entryname);
 
       /* 'val' is actually an svn_dirent_t structure; a more complex

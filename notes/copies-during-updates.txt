@@ -13,8 +13,7 @@ General problem we want to solve:
 Proposal:
 
   When driving the working copy update-editor, have the server send
-  copyfrom-args in add_file() and add_dir().  The server doesn't send
-  any txdeltas in this case.
+  copyfrom-args in add_file() and add_dir().
 
    - The copyfrom-path would be transmitted as an *absolute* fs path;
      it's up to the client to decide whether it has the path@rev
@@ -23,6 +22,8 @@ Proposal:
    - If the client doesn't have it, the client can do an extra RA
      request to fetch it.  (i.e. we degrade to the status quo.)
 
+   - If the server sends extra txdelta data, it would then be applied
+     to the fulltext.
 
 
 Problem:

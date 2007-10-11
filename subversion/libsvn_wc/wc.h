@@ -2,7 +2,7 @@
  * wc.h :  shared stuff internal to the svn_wc library.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -89,7 +89,7 @@ struct svn_wc_traversal_info_t
 
   /* The before and after values of the SVN_PROP_EXTERNALS property,
    * for each directory on which that property changed.  These have
-   * the same layout as those returned by svn_wc_edited_externals(). 
+   * the same layout as those returned by svn_wc_edited_externals().
    *
    * The hashes, their keys, and their values are allocated in the
    * above pool.
@@ -104,7 +104,7 @@ struct svn_wc_traversal_info_t
 
 /* A special timestamp value which means "use the timestamp from the
    working copy".  This is sometimes used in a log entry like:
-   
+
    <modify-entry name="foo.c" revision="5" timestamp="working"/>
  */
 #define SVN_WC__TIMESTAMP_WC   "working"
@@ -252,6 +252,14 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        svn_wc_conflict_resolver_func_t conflict_func,
                        void *conflict_baton,
                        apr_pool_t *pool);
+
+/* A default error handler for svn_wc_walk_entries3().  Returns ERR in
+   all cases. */
+svn_error_t *
+svn_wc__walker_default_error_handler(const char *path,
+                                     svn_error_t *err,
+                                     void *walk_baton,
+                                     apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

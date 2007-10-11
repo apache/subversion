@@ -61,7 +61,7 @@ svn_cl__propedit(apr_getopt_t *os,
                              pname_utf8);
 
   /* Suck up all the remaining arguments into a targets array */
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
                                         opt_state->targets, pool));
 
   if (opt_state->revprop)  /* operate on a revprop */
@@ -84,7 +84,7 @@ svn_cl__propedit(apr_getopt_t *os,
                                      &rev, ctx, pool));
       if (! propval)
         propval = svn_string_create("", pool);
-      
+
       /* Run the editor on a temporary file which contains the
          original property value... */
       SVN_ERR(svn_io_temp_dir(&temp_dir, pool));
@@ -95,16 +95,16 @@ svn_cl__propedit(apr_getopt_t *os,
                ctx->config,
                svn_prop_needs_translation(pname_utf8),
                opt_state->encoding, pool));
-      
+
       /* ...and re-set the property's value accordingly. */
       if (propval)
         {
           if (! svn_prop_needs_translation(pname_utf8)
               && opt_state->encoding)
-            return svn_error_create 
+            return svn_error_create
               (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                _("Bad encoding option: prop value not stored as UTF8"));
-          
+
           SVN_ERR(svn_client_revprop_set(pname_utf8, propval,
                                          URL, &(opt_state->start_revision),
                                          &rev, opt_state->force, ctx, pool));
@@ -135,7 +135,7 @@ svn_cl__propedit(apr_getopt_t *os,
 
       /* The customary implicit dot rule has been prone to user error
        * here.  For example, Jon Trowbridge <trow@gnu.og> did
-       * 
+       *
        *    $ svn propedit HACKING
        *
        * and then when he closed his editor, he was surprised to see
@@ -167,21 +167,21 @@ svn_cl__propedit(apr_getopt_t *os,
           const svn_wc_entry_t *entry;
           svn_opt_revision_t peg_revision;
           svn_revnum_t base_rev = SVN_INVALID_REVNUM;
-          
+
           svn_pool_clear(subpool);
           SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
 
           /* Propedits can only happen on HEAD or the working copy, so
              the peg revision can be as unspecified. */
           peg_revision.kind = svn_opt_revision_unspecified;
-          
+
           /* Fetch the current property. */
-          SVN_ERR(svn_client_propget3(&props, pname_utf8, target,
+          SVN_ERR(svn_client_propget4(&props, pname_utf8, target,
                                       &peg_revision,
                                       &(opt_state->start_revision),
                                       &base_rev,
-                                      FALSE, ctx, subpool));
-          
+                                      svn_depth_empty, ctx, subpool));
+
           /* Get the property value. */
           propval = apr_hash_get(props, target, APR_HASH_KEY_STRING);
           if (! propval)
@@ -194,7 +194,7 @@ svn_cl__propedit(apr_getopt_t *os,
             }
           else
             {
-              if (opt_state->message || opt_state->filedata || 
+              if (opt_state->message || opt_state->filedata ||
                   opt_state->revprop_table)
                 {
                   return svn_error_create
@@ -202,7 +202,7 @@ svn_cl__propedit(apr_getopt_t *os,
                      _("Local, non-commit operations do not take a log message "
                        "or revision properties"));
                 }
-              
+
               /* Split the path if it is a file path. */
               SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target,
                                              FALSE, 0, ctx->cancel_func,
@@ -210,12 +210,12 @@ svn_cl__propedit(apr_getopt_t *os,
               SVN_ERR(svn_wc_entry(&entry, target, adm_access, FALSE, subpool));
               if (! entry)
                 return svn_error_createf
-                  (SVN_ERR_ENTRY_NOT_FOUND, NULL, 
+                  (SVN_ERR_ENTRY_NOT_FOUND, NULL,
                    _("'%s' does not appear to be a working copy path"), target);
               if (entry->kind == svn_node_file)
                 svn_path_split(target, &base_dir, NULL, subpool);
             }
-          
+
           /* Run the editor on a temporary file which contains the
              original property value... */
           SVN_ERR(svn_cl__edit_string_externally(&edited_propval, NULL,
@@ -228,7 +228,7 @@ svn_cl__propedit(apr_getopt_t *os,
                                                  (pname_utf8),
                                                  opt_state->encoding,
                                                  subpool));
-          
+
           target_local = svn_path_is_url(target) ? target
             : svn_path_local_style(target, subpool);
 
@@ -240,7 +240,7 @@ svn_cl__propedit(apr_getopt_t *os,
 
               if (! svn_prop_needs_translation(pname_utf8)
                   && opt_state->encoding)
-                return svn_error_create 
+                return svn_error_create
                   (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                    _("Bad encoding option: prop value not stored as UTF8"));
 
@@ -255,15 +255,15 @@ svn_cl__propedit(apr_getopt_t *os,
               ctx->revprop_table = opt_state->revprop_table;
 
               err = svn_client_propset3(&commit_info,
-                                        pname_utf8, edited_propval, target, 
-                                        FALSE, opt_state->force,
+                                        pname_utf8, edited_propval, target,
+                                        svn_depth_empty, opt_state->force,
                                         base_rev,
                                         ctx, subpool);
               if (ctx->log_msg_func3)
                 SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton2, err));
               else if (err)
                 return err;
-              
+
               /* Print a message if we successfully committed or if it
                  was just a wc propset (but not if the user aborted an URL
                  propedit). */

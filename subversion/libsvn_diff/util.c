@@ -33,7 +33,7 @@
  * "The Adler-32 algorithm is much faster than the CRC32 algorithm yet
  * still provides an extremely low probability of undetected errors"
  */
- 
+
 /*
  * 65521 is the largest prime less than 65536.
  * "That 65521 is prime is important to avoid a possible large class of
@@ -60,7 +60,7 @@ svn_diff__adler32(apr_uint32_t checksum, const char *data, apr_size_t len)
   apr_uint32_t s2 = checksum >> 16;
   apr_uint32_t b;
   apr_size_t blocks = len / ADLER_MOD_BLOCK_SIZE;
-  
+
   len %= ADLER_MOD_BLOCK_SIZE;
 
   while (blocks--)
@@ -321,7 +321,8 @@ svn_diff__normalize_buffer(char **tgt,
           break;
 
         default:
-          if (svn_ctype_isspace(*curp))
+          if (svn_ctype_isspace(*curp)
+              && opts->ignore_space != svn_diff_file_ignore_space_none)
             {
               /* Whitespace but not '\r' or '\n' */
               if (state != svn_diff__normalize_state_whitespace
@@ -345,7 +346,8 @@ svn_diff__normalize_buffer(char **tgt,
             }
           else
             {
-              /* Non-whitespace character */
+              /* Non-whitespace character, or whitespace character in
+                 svn_diff_file_ignore_space_none mode. */
               INCLUDE;
               state = svn_diff__normalize_state_normal;
             }

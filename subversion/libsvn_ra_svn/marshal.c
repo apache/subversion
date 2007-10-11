@@ -366,7 +366,7 @@ static svn_error_t *readbuf_skip_leading_garbage(svn_ra_svn_conn_t *conn,
 }
 
 /* --- WRITING DATA ITEMS --- */
- 
+
 svn_error_t *svn_ra_svn_write_number(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                      apr_uint64_t number)
 {
@@ -394,8 +394,8 @@ svn_error_t *svn_ra_svn_write_word(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return writebuf_printf(conn, pool, "%s ", word);
 }
 
-svn_error_t *svn_ra_svn_write_proplist(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                   	   apr_hash_t *props)
+svn_error_t *svn_ra_svn_write_proplist(svn_ra_svn_conn_t *conn,
+                                       apr_pool_t *pool, apr_hash_t *props)
 {
   apr_pool_t *iterpool;
   apr_hash_index_t *hi;
@@ -412,8 +412,9 @@ svn_error_t *svn_ra_svn_write_proplist(svn_ra_svn_conn_t *conn, apr_pool_t *pool
           svn_pool_clear(iterpool);
           apr_hash_this(hi, &key, NULL, &val);
           propname = key;
-          propval = val;          
-          SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "cs", propname, propval));
+          propval = val;
+          SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "cs",
+                                         propname, propval));
         }
       svn_pool_destroy(iterpool);
     }
@@ -531,7 +532,7 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   /* We can't store strings longer than the maximum size of apr_size_t,
    * so check for wrapping */
-  if (((apr_size_t) len) < len) 
+  if (((apr_size_t) len) < len)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                             _("String length larger than maximum"));
 
@@ -546,13 +547,13 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       svn_stringbuf_appendbytes(stringbuf, readbuf, readbuf_len);
       len -= readbuf_len;
     }
-  
+
   item->kind = SVN_RA_SVN_STRING;
   item->u.string = apr_palloc(pool, sizeof(*item->u.string));
   item->u.string->data = stringbuf->data;
   item->u.string->len = stringbuf->len;
 
-  return SVN_NO_ERROR; 
+  return SVN_NO_ERROR;
 }
 
 /* Given the first non-whitespace character FIRST_CHAR, read an item
@@ -571,8 +572,8 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (++level >= 64)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                             _("Too many nested items"));
-  
-  
+
+
   /* Determine the item type and read it in.  Make sure that c is the
    * first character at the end of the item so we can test to make
    * sure it's whitespace. */
@@ -789,8 +790,8 @@ svn_error_t *svn_ra_svn_read_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 svn_error_t *svn_ra_svn_parse_proplist(apr_array_header_t *list,
-																			 apr_pool_t *pool,
-                                   		 apr_hash_t **props)
+                                       apr_pool_t *pool,
+                                       apr_hash_t **props)
 {
   char *name;
   svn_string_t *value;

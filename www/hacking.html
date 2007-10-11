@@ -2,13 +2,13 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <style type="text/css"> /* <![CDATA[ */
   @import "branding/css/tigris.css";
   @import "branding/css/inst.css";
   /* ]]> */</style>
 <link rel="stylesheet" type="text/css" media="print"
-  href="branding/css/print.css"/>
+  href="branding/css/print.css" />
 <script type="text/javascript" src="branding/scripts/tigris.js"></script>
 <title>Hacker's Guide to Subversion</title>
 </head>
@@ -34,64 +34,35 @@ $LastChangedDate$
 <h1>Table of Contents</h1>
 
 <ul>
-<li><a href="#participating"
-             >Participating in the community</a></li>
-<li><a href="#docs"
-             >Theory and documentation</a></li>
-<li><a href="#code-to-read"
-             >Code to read</a></li>
-<li><a href="#directory-layout"
-             >Directory layout</a></li>
-<li><a href="#coding-style"
-             >Coding style</a></li>
-<li><a href="#secure-coding"
-             >Secure coding guidelines</a></li>
-<li><a href="#destruction-of-stacked-resources"
-             >Destruction of stacked resources</a></li>
-<li><a href="#documenting"
-             >Document everything</a></li>
-<li><a href="#use-page-breaks"
-             >Using page breaks</a></li>
-<li><a href="#error-messages"
-             >Error message conventions</a></li>
-<li><a href="#other-conventions"
-             >Other conventions</a></li>
-<li><a href="#apr-pools"
-             >APR pool usage conventions</a></li>
-<li><a href="#apr-status-codes"
-             >APR status codes</a></li>
-<li><a href="#exception-handling"
-             >Exception handling</a></li>
-<li><a href="#automated-tests"
-             >Automated tests</a></li>
-<li><a href="#write-test-cases-first"
-             >Writing test cases before code</a></li>
-<li><a href="#server-debugging"
-             >Debugging the server</a></li>
-<li><a href="#tracing-memory-leaks"
-             >Tracking down memory leaks</a></li>
-<li><a href="#log-messages"
-             >Writing log messages</a></li>
-<li><a href="#crediting"
-             >Crediting</a></li>
-<li><a href="#patches"
-             >Patch submission guidelines</a></li>
-<li><a href="#filing-issues"
-             >Filing bugs / issues</a></li>
-<li><a href="#commit-access"
-             >Commit access</a></li>
-<li><a href="#configury"
-             >The configuration/build system under unix</a></li>
-<li><a href="#releasing"
-             >How to release a distribution tarball</a></li>
-<li><a href="#release-numbering"
-             >Release numbering, compatibility, and deprecation</a></li>
-<li><a href="#release-stabilization"
-             >Stabilizing and maintaining releases</a></li>
-<li><a href="#tarball-signing"
-             >Signing source distribution packages</a></li>
-<li><a href="#l10n"
-             >Localization (l10n)</a></li>
+<li><a href="#participating">Participating in the community</a></li>
+<li><a href="#docs">Theory and documentation</a></li>
+<li><a href="#code-to-read">Code to read</a></li>
+<li><a href="#directory-layout">Directory layout</a></li>
+<li><a href="#coding-style">Coding style</a></li>
+<li><a href="#secure-coding">Secure coding guidelines</a></li>
+<li><a href="#destruction-of-stacked-resources">Destruction of stacked resources</a></li>
+<li><a href="#documenting">Document everything</a></li>
+<li><a href="#use-page-breaks">Using page breaks</a></li>
+<li><a href="#error-messages">Error message conventions</a></li>
+<li><a href="#other-conventions">Other conventions</a></li>
+<li><a href="#apr-pools">APR pool usage conventions</a></li>
+<li><a href="#apr-status-codes">APR status codes</a></li>
+<li><a href="#exception-handling">Exception handling</a></li>
+<li><a href="#automated-tests">Automated tests</a></li>
+<li><a href="#write-test-cases-first">Writing test cases before code</a></li>
+<li><a href="#server-debugging">Debugging the server</a></li>
+<li><a href="#tracing-memory-leaks">Tracking down memory leaks</a></li>
+<li><a href="#log-messages">Writing log messages</a></li>
+<li><a href="#crediting">Crediting</a></li>
+<li><a href="#patches">Patch submission guidelines</a></li>
+<li><a href="#filing-issues">Filing bugs / issues</a></li>
+<li><a href="#commit-access">Commit access</a></li>
+<li><a href="#configury">The configuration/build system under unix</a></li>
+<li><a href="#releasing">How to release a distribution tarball</a></li>
+<li><a href="#release-numbering">Release numbering, compatibility, and deprecation</a></li>
+<li><a href="#release-stabilization">Stabilizing and maintaining releases</a></li>
+<li><a href="#tarball-signing">Signing source distribution packages</a></li>
+<li><a href="#l10n">Localization (l10n)</a></li>
 </ul>
 
 </div>
@@ -179,11 +150,20 @@ in the description for the svn-breakage list.</p>
      Subversion's various layers.</p>
 </li>
 
-<li><p>API documentation</p>
+<li><p>API Documentation</p>
      <p>The <a href="http://svn.collab.net/svn-doxygen/">API documentation</a>
      is generated by Doxygen from the C header files and gives detailed
      information about all functions, types and so on available in the
      Subversion API. </p>
+</li>
+
+<li><p>Delta Editors</p>
+     <p>Karl Fogel wrote a chapter for O'Reilly's 2007 book
+     <a href="http://beautifulcode.oreillynet.com/">
+     Beautiful Code: Leading Programmers Explain How They Think</a>
+     covering the design and use of
+     <a href="http://www.red-bean.com/kfogel/beautiful-code/bc-chapter-02.html">
+     Subversion's delta editor interface</a>.</p>
 </li>
 
 <li> <p>Network Protocols</p>

@@ -52,8 +52,8 @@ struct validator_baton_t
 
 
 static svn_error_t *
-validator_func(void *baton, 
-               const char *uuid, 
+validator_func(void *baton,
+               const char *uuid,
                const char *url,
                const char *root_url,
                apr_pool_t *pool)
@@ -80,7 +80,7 @@ validator_func(void *baton,
      by destroying the subpool. */
   if (! url_uuid)
     {
-      apr_pool_t *subpool = svn_pool_create(pool); 
+      apr_pool_t *subpool = svn_pool_create(pool);
       svn_ra_session_t *ra_session;
       const char *ra_uuid, *ra_root;
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session, url, NULL,
@@ -110,7 +110,7 @@ validator_func(void *baton,
 
   return SVN_NO_ERROR;
 }
-              
+
 svn_error_t *
 svn_client_relocate(const char *path,
                     const char *from,

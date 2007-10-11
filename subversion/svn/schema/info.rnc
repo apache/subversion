@@ -35,8 +35,10 @@ uuid = element uuid { uuid.type }
 wc-info =
   element wc-info {
     schedule?,
+    changelist?,
     copy-from-url?,
     copy-from-rev?,
+    depth?,
     text-updated?,
     prop-updated?,
     checksum?,
@@ -45,6 +47,9 @@ wc-info =
 
 schedule =
   element schedule { "normal" | "add" | "delete" | "replace" | "none" }
+
+## The name of the changelist that the path may be a member of.
+changelist = element changelist { string }
 
 copy-from-url = element copy-from-url { xsd:anyURI }
 

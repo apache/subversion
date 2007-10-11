@@ -22,7 +22,7 @@ module Svn
       alias_method "_#{target}", target
     end
     @@alias_targets = nil
-    
+
     module_function
     def create(path, config={}, fs_config={}, &block)
       _create(path, nil, nil, config, fs_config, &block)
@@ -72,11 +72,11 @@ module Svn
       def fs
         Repos.fs_wrapper(self)
       end
-      
+
       def set_authz_read_func(&block)
         @authz_read_func = block
       end
-      
+
       def report(rev, username, fs_base, target, tgt_path,
                  editor, text_deltas=true, recurse=true,
                  ignore_ancestry=false, authz_read_func=nil)
@@ -99,11 +99,13 @@ module Svn
       end
 
       def report2(rev, fs_base, target, tgt_path, editor, text_deltas=true,
-                  ignore_ancestry=false, depth=nil, authz_read_func=nil)
+                  ignore_ancestry=false, depth=nil, authz_read_func=nil,
+                  send_copyfrom_args=nil)
         authz_read_func ||= @authz_read_func
         args = [
           rev, self, fs_base, target, tgt_path, text_deltas,
-          ignore_ancestry, editor, authz_read_func,
+          depth, ignore_ancestry, send_copyfrom_args, editor,
+          authz_read_func,
         ]
         report_baton = Repos.begin_report2(*args)
         setup_report_baton(report_baton)
@@ -239,7 +241,7 @@ module Svn
           txn
         end
       end
-      
+
       def commit(txn)
         Repos.fs_commit_txn(self, txn)
       end
@@ -338,11 +340,11 @@ module Svn
         def parser.outstream=(new_stream)
           @outstream = new_stream
         end
-      
+
         def parser.baton=(new_baton)
           @baton = new_baton
         end
-        
+
         def parser.baton
           @baton
         end
@@ -351,7 +353,7 @@ module Svn
         parser.baton = baton
         parser
       end
-    
+
       def delta_tree(root, base_rev)
         base_root = fs.root(base_rev)
         editor = node_editor(base_root, root)
@@ -359,7 +361,7 @@ module Svn
         editor.baton.node
       end
 
-      def merge_info(paths, revision=nil, inherit=nil, &authz_read_func)
+      def mergeinfo(paths, revision=nil, inherit=nil, &authz_read_func)
         path = nil
         unless paths.is_a?(Array)
           path = paths
@@ -371,57 +373,56 @@ module Svn
         results = results[path] if path
         results
       end
-      alias_method :mergeinfo, :merge_info
 
       private
       def setup_report_baton(baton)
         baton.instance_variable_set("@aborted", false)
-        
+
         def baton.aborted?
           @aborted
         end
-        
+
         def baton.set_path(path, revision, start_empty=false, lock_token=nil,
                            depth=nil)
           Repos.set_path3(self, path, revision, depth, start_empty, lock_token)
         end
-        
+
         def baton.link_path(path, link_path, revision, start_empty=false,
                             lock_token=nil, depth=nil)
           Repos.link_path3(self, path, link_path, revision, depth,
                            start_empty, lock_token)
         end
-        
+
         def baton.delete_path(path)
           Repos.delete_path(self, path)
         end
-        
+
         def baton.finish_report
           Repos.finish_report(self)
         end
-        
+
         def baton.abort_report
           Repos.abort_report(self)
           @aborted = true
         end
-        
+
       end
     end
-    
-    
+
+
     class Node
-      
+
       alias text_mod? text_mod
       alias prop_mod? prop_mod
-      
+
       def copy?
         Util.copy?(copyfrom_path, copyfrom_rev)
       end
-      
+
       def add?
         action == "A"
       end
-      
+
       def delete?
         action == "D"
       end
@@ -445,7 +446,7 @@ module Svn
       def unknown?
         kind == Core::NODE_UNKNOWN
       end
-      
+
     end
 
     Authz = SWIG::TYPE_p_svn_authz_t
@@ -456,7 +457,7 @@ module Svn
           Repos.authz_read(file, must_exist)
         end
       end
-      
+
       def can_access?(repos_name, path, user, required_access)
         Repos.authz_check_access(self,
                                  repos_name,

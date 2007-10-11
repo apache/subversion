@@ -2,9 +2,9 @@
 #
 #  history_tests.py:  testing history-tracing code
 #
-#  Subversion is a tool for revision control. 
+#  Subversion is a tool for revision control.
 #  See http://subversion.tigris.org for more information.
-#    
+#
 # ====================================================================
 # Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
@@ -21,7 +21,7 @@ import os
 
 # Our testing module
 import svntest
-from svntest import wc, SVNAnyOutput
+from svntest import wc
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -63,7 +63,7 @@ def cat_traces_renames(sbox):
                                         None, None,
                                         None, None,
                                         wc_dir)
-  
+
   # rename pi to rho.  commit r3.
   svntest.main.run_svn(None, 'mv', pi_path, rho_path)
 
@@ -71,7 +71,7 @@ def cat_traces_renames(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      [ "This is the file 'pi'.\n"], [],
                                      'cat',  '-r', '1', rho_path)
-  
+
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/G/pi' : Item(verb='Deleting'),
     'A/D/G/rho' : Item(verb='Adding')
@@ -104,13 +104,13 @@ def cat_traces_renames(sbox):
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
-                                        expected_status)  
+                                        expected_status)
 
   # 'svn cat bloo' --> should show rho's contents.
   svntest.actions.run_and_verify_svn(None,
                                      [ "This is the file 'rho'.\n"], [],
                                      'cat',  bloo_path)
-  
+
   # svn cat -r1 bloo --> should still show rho's contents.
   svntest.actions.run_and_verify_svn(None,
                                      [ "This is the file 'rho'.\n"], [],
@@ -120,7 +120,7 @@ def cat_traces_renames(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      [ "This is the file 'pi'.\n"], [],
                                      'cat',  '-r', '1', rho_path)
-  
+
   # svn up -r1
   svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r', '1', wc_dir)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -128,7 +128,7 @@ def cat_traces_renames(sbox):
 
   # svn cat -rHEAD rho --> should see 'unrelated object' error.
   svntest.actions.run_and_verify_svn("unrelated object",
-                                     None, SVNAnyOutput,
+                                     None, svntest.verify.AnyOutput,
                                      'cat',  '-r', 'HEAD', rho_path)
 
 def cat_avoids_false_identities(sbox):
@@ -136,7 +136,7 @@ def cat_avoids_false_identities(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  
+
   # Issue #1970
   #
   # Highlight a bug in the client side use of the repository's
@@ -205,7 +205,7 @@ def cat_avoids_false_identities(sbox):
   # 'svn cat -r2 iota' should error, because the line of history
   # currently identified by /iota did not exist in r2, even though a
   # totally unrelated file of the same name did.
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                      'cat', '-r', '2', iota_path)
 
 

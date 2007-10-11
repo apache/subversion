@@ -44,6 +44,13 @@ struct log_receiver_baton
   /* Whether we've written the <S:log-report> header.  Allows for lazy
      writes to support mod_dav-based error handling. */
   svn_boolean_t needs_header;
+
+  /* How deep we are in the log message tree.  We only need to surpress the
+     SVN_INVALID_REVNUM message if the stack_depth is 0. */
+  int stack_depth;
+
+  /* whether the client requested any custom revprops */
+  svn_boolean_t requested_custom_revprops;
 };
 
 
@@ -66,7 +73,7 @@ maybe_send_header(struct log_receiver_baton *lrb)
 }
 
 
-/* This implements `svn_log_message_receiver2_t'.
+/* This implements `svn_log_entry_receiver_t'.
    BATON is a `struct log_receiver_baton *'.  */
 static svn_error_t *
 log_receiver(void *baton,
@@ -74,38 +81,81 @@ log_receiver(void *baton,
              apr_pool_t *pool)
 {
   struct log_receiver_baton *lrb = baton;
+  /* If the client requested any custom revprops, note that we'll need
+     to send a <no-custom-revprops/> element; see below. */
+  svn_boolean_t no_custom_revprops = lrb->requested_custom_revprops;
 
   SVN_ERR(maybe_send_header(lrb));
+
+  if (log_entry->revision == SVN_INVALID_REVNUM)
+    {
+      /* If the stack depth is zero, we've seen the last revision, so don't
+         send it, just return.  The footer will be sent later. */
+      if (lrb->stack_depth == 0)
+        return SVN_NO_ERROR;
+      else
+        lrb->stack_depth--;
+    }
 
   SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                             "<S:log-item>" DEBUG_CR "<D:version-name>%ld"
                             "</D:version-name>" DEBUG_CR, log_entry->revision));
 
-  if (log_entry->author)
+  if (log_entry->revprops)
+    {
+      apr_hash_index_t *hi;
+      for (hi = apr_hash_first(pool, log_entry->revprops);
+           hi != NULL;
+           hi = apr_hash_next(hi))
+        {
+          char *name;
+          svn_string_t *value;
+          apr_hash_this(hi, (void *)&name, NULL, (void *)&value);
+          if (strcmp(name, SVN_PROP_REVISION_AUTHOR) == 0)
+            SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
+                                      "<D:creator-displayname>%s"
+                                      "</D:creator-displayname>" DEBUG_CR,
+                                      apr_xml_quote_string(pool,
+                                                           value->data, 0)));
+          else if (strcmp(name, SVN_PROP_REVISION_DATE) == 0)
+            /* ### this should be DAV:creation-date, but we need to format
+               ### that date a bit differently */
+            SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
+                                      "<S:date>%s</S:date>" DEBUG_CR,
+                                      apr_xml_quote_string(pool,
+                                                           value->data, 0)));
+          else if (strcmp(name, SVN_PROP_REVISION_LOG) == 0)
+            SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
+                                      "<D:comment>%s</D:comment>" DEBUG_CR,
+                                      apr_xml_quote_string
+                                      (pool, svn_xml_fuzzy_escape(value->data,
+                                                                  pool), 0)));
+          else
+            {
+              no_custom_revprops = FALSE;
+              SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
+                                        "<S:revprop name=\"%s\">"
+                                        "%s</S:revprop>"
+                                        DEBUG_CR,
+                                        apr_xml_quote_string(pool, name, 0),
+                                        apr_xml_quote_string(pool,
+                                                             value->data, 0)));
+            }
+        }
+    }
+  if (no_custom_revprops)
+    /* If we didn't send any revprops, ack the request, so the client can
+       distinguish the absence of custom revprops from an older server that
+       didn't send them. */
     SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
-                              "<D:creator-displayname>%s"
-                              "</D:creator-displayname>" DEBUG_CR,
-                              apr_xml_quote_string(pool, log_entry->author, 0)));
+                              "<S:no-custom-revprops/>" DEBUG_CR));
 
-  /* ### this should be DAV:creation-date, but we need to format
-     ### that date a bit differently */
-  if (log_entry->date)
-    SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
-                              "<S:date>%s</S:date>" DEBUG_CR,
-                              apr_xml_quote_string(pool, log_entry->date, 0)));
-
-  if (log_entry->message)
-    SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
-                              "<D:comment>%s</D:comment>" DEBUG_CR,
-                              apr_xml_quote_string
-                              (pool, svn_xml_fuzzy_escape(log_entry->message,
-                                                          pool), 0)));
-
-  if (log_entry->nbr_children)
-    SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
-                              "<S:nbr-children>%" APR_INT64_T_FMT 
-                              "</S:nbr-children>" DEBUG_CR,
-                              log_entry->nbr_children));
+  if (log_entry->has_children)
+    {
+      SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
+                                "<S:has-children/>"));
+      lrb->stack_depth++;
+    }
 
   if (log_entry->changed_paths)
     {
@@ -118,7 +168,7 @@ log_receiver(void *baton,
         {
           void *val;
           svn_log_changed_path_t *log_item;
-          
+
           apr_hash_this(hi, (void *) &path, NULL, &val);
           log_item = val;
 
@@ -127,15 +177,15 @@ log_receiver(void *baton,
           switch (log_item->action)
             {
             case 'A':
-              if (log_item->copyfrom_path 
+              if (log_item->copyfrom_path
                   && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev))
-                SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output, 
+                SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                                           "<S:added-path"
-                                          " copyfrom-path=\"%s\"" 
+                                          " copyfrom-path=\"%s\""
                                           " copyfrom-rev=\"%ld\">"
                                           "%s</S:added-path>" DEBUG_CR,
                                           apr_xml_quote_string
-                                          (pool, 
+                                          (pool,
                                            log_item->copyfrom_path,
                                            1), /* escape quotes */
                                           log_item->copyfrom_rev,
@@ -143,22 +193,22 @@ log_receiver(void *baton,
                                                                path, 0)));
               else
                 SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
-                                          "<S:added-path>%s</S:added-path>" 
-                                          DEBUG_CR, 
+                                          "<S:added-path>%s</S:added-path>"
+                                          DEBUG_CR,
                                           apr_xml_quote_string(pool, path,
                                                                0)));
               break;
 
             case 'R':
-              if (log_item->copyfrom_path 
+              if (log_item->copyfrom_path
                   && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev))
                 SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                                           "<S:replaced-path"
-                                          " copyfrom-path=\"%s\"" 
+                                          " copyfrom-path=\"%s\""
                                           " copyfrom-rev=\"%ld\">"
                                           "%s</S:replaced-path>" DEBUG_CR,
                                           apr_xml_quote_string
-                                          (pool, 
+                                          (pool,
                                            log_item->copyfrom_path,
                                            1), /* escape quotes */
                                           log_item->copyfrom_rev,
@@ -174,7 +224,7 @@ log_receiver(void *baton,
 
             case 'D':
               SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
-                                        "<S:deleted-path>%s</S:deleted-path>" 
+                                        "<S:deleted-path>%s</S:deleted-path>"
                                         DEBUG_CR,
                                         apr_xml_quote_string(pool, path, 0)));
               break;
@@ -185,7 +235,7 @@ log_receiver(void *baton,
                                         "</S:modified-path>" DEBUG_CR,
                                         apr_xml_quote_string(pool, path, 0)));
               break;
-              
+
             default:
               break;
             }
@@ -214,6 +264,7 @@ dav_svn__log_report(const dav_resource *resource,
   const char *target = NULL;
   int limit = 0;
   int ns;
+  svn_boolean_t seen_revprop_element;
 
   /* These get determined from the request document. */
   svn_revnum_t start = SVN_INVALID_REVNUM;   /* defaults to HEAD */
@@ -221,7 +272,8 @@ dav_svn__log_report(const dav_resource *resource,
   svn_boolean_t discover_changed_paths = FALSE;      /* off by default */
   svn_boolean_t strict_node_history = FALSE;         /* off by default */
   svn_boolean_t include_merged_revisions = FALSE;    /* off by default */
-  svn_boolean_t omit_log_text = FALSE;
+  apr_array_header_t *revprops = apr_array_make(resource->pool, 3,
+                                                sizeof(const char *));
   apr_array_header_t *paths
     = apr_array_make(resource->pool, 1, sizeof(const char *));
   svn_stringbuf_t *comma_separated_paths =
@@ -238,9 +290,13 @@ dav_svn__log_report(const dav_resource *resource,
                                     SVN_DAV_ERROR_NAMESPACE,
                                     SVN_DAV_ERROR_TAG);
     }
-  
-  /* ### todo: okay, now go fill in svn_ra_dav__get_log() based on the
-     syntax implied below... */
+
+  /* If this is still FALSE after the loop, we haven't seen either of
+     the revprop elements, meaning a pre-1.5 client; we'll return the
+     standard author/date/log revprops. */
+  seen_revprop_element = FALSE;
+
+  lrb.requested_custom_revprops = FALSE;
   for (child = doc->root->first_child; child != NULL; child = child->next)
     {
       /* if this element isn't one of ours, then skip it */
@@ -259,14 +315,32 @@ dav_svn__log_report(const dav_resource *resource,
         strict_node_history = TRUE; /* presence indicates positivity */
       else if (strcmp(child->name, "include-merged-revisions") == 0)
         include_merged_revisions = TRUE; /* presence indicates positivity */
-      else if (strcmp(child->name, "omit-log-text") == 0)
-        omit_log_text = TRUE; /* presence indicates positivity */
+      else if (strcmp(child->name, "all-revprops") == 0)
+        {
+          revprops = NULL; /* presence indicates fetch all revprops */
+          seen_revprop_element = lrb.requested_custom_revprops = TRUE;
+        }
+      else if (strcmp(child->name, "revprop") == 0)
+        {
+          if (revprops)
+            {
+              /* We're not fetching all revprops, append to fetch list. */
+              const char *name = dav_xml_get_cdata(child, resource->pool, 0);
+              APR_ARRAY_PUSH(revprops, const char *) = name;
+              if (!lrb.requested_custom_revprops
+                  && strcmp(name, SVN_PROP_REVISION_AUTHOR) != 0
+                  && strcmp(name, SVN_PROP_REVISION_DATE) != 0
+                  && strcmp(name, SVN_PROP_REVISION_LOG) != 0)
+                lrb.requested_custom_revprops = TRUE;
+            }
+          seen_revprop_element = TRUE;
+        }
       else if (strcmp(child->name, "path") == 0)
         {
           const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
           if ((derr = dav_svn__test_canonical(rel_path, resource->pool)))
             return derr;
-          target = svn_path_join(resource->info->repos_path, rel_path, 
+          target = svn_path_join(resource->info->repos_path, rel_path,
                                  resource->pool);
           APR_ARRAY_PUSH(paths, const char *) = target;
 
@@ -281,6 +355,14 @@ dav_svn__log_report(const dav_resource *resource,
       /* else unknown element; skip it */
     }
 
+  if (!seen_revprop_element)
+    {
+      /* pre-1.5 client */
+      APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_AUTHOR;
+      APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_DATE;
+      APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_LOG;
+    }
+
   /* Build authz read baton */
   arb.r = resource->info->r;
   arb.repos = resource->info->repos;
@@ -290,8 +372,10 @@ dav_svn__log_report(const dav_resource *resource,
                               output->c->bucket_alloc);
   lrb.output = output;
   lrb.needs_header = TRUE;
+  lrb.stack_depth = 0;
+  /* lrb.requested_custom_revprops set above */
 
-  /* Our svn_log_message_receiver_t sends the <S:log-report> header in
+  /* Our svn_log_entry_receiver_t sends the <S:log-report> header in
      a lazy fashion.  Before writing the first log message, it assures
      that the header has already been sent (checking the needs_header
      flag in our log_receiver_baton structure). */
@@ -305,7 +389,7 @@ dav_svn__log_report(const dav_resource *resource,
                              discover_changed_paths,
                              strict_node_history,
                              include_merged_revisions,
-                             omit_log_text,
+                             revprops,
                              dav_svn__authz_read_func(&arb),
                              &arb,
                              log_receiver,
@@ -317,7 +401,7 @@ dav_svn__log_report(const dav_resource *resource,
                                   resource->pool);
       goto cleanup;
     }
-  
+
   if ((serr = maybe_send_header(&lrb)))
     {
       derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -325,7 +409,7 @@ dav_svn__log_report(const dav_resource *resource,
                                   resource->pool);
       goto cleanup;
     }
-    
+
   if ((serr = dav_svn__send_xml(lrb.bb, lrb.output, "</S:log-report>"
                                 DEBUG_CR)))
     {

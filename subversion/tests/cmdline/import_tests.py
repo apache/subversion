@@ -2,11 +2,11 @@
 #
 #  import_tests.py:  import tests
 #
-#  Subversion is a tool for revision control. 
+#  Subversion is a tool for revision control.
 #  See http://subversion.tigris.org for more information.
-#    
+#
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -21,7 +21,7 @@ import re, os.path
 
 # Our testing module
 import svntest
-from svntest import wc, SVNAnyOutput
+from svntest import wc
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -217,7 +217,7 @@ def import_no_ignores(sbox):
     None, None, [], 'import',
     '--username', svntest.main.wc_author,
     '--password', svntest.main.wc_passwd,
-    '-m', 'Log message for new import', '--no-ignore', 
+    '-m', 'Log message for new import', '--no-ignore',
     dir_path, url)
 
   lastline = output.pop().strip()
@@ -268,29 +268,29 @@ def import_no_ignores(sbox):
 #----------------------------------------------------------------------
 def import_avoid_empty_revision(sbox):
   "avoid creating empty revisions with import"
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # create a new directory 
+  # create a new directory
   empty_dir = os.path.join(wc_dir, "empty_dir")
   os.makedirs(empty_dir)
 
-  url = sbox.repo_url  
+  url = sbox.repo_url
   svntest.actions.run_and_verify_svn(None, None, [], 'import',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
-                                     '-m', 'Log message for new import', 
+                                     '-m', 'Log message for new import',
                                      empty_dir, url)
 
-  svntest.main.safe_rmtree(empty_dir) 
+  svntest.main.safe_rmtree(empty_dir)
 
   # Verify that an empty revision has not been created
-  svntest.actions.run_and_verify_svn(None, [ "At revision 1.\n"], 
-                                     [], "update", 
+  svntest.actions.run_and_verify_svn(None, [ "At revision 1.\n"],
+                                     [], "update",
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
-                                     empty_dir) 
+                                     empty_dir)
 #----------------------------------------------------------------------
 
 # test for issue 2433: "import" does not handle eol-style correctly
@@ -324,9 +324,9 @@ enable-auto-props = yes
   svntest.actions.run_and_verify_svn(None, None, [], 'import',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
-                                     '-m', 'Log message for new import', 
-                                     imp_dir_path, 
-                                     sbox.repo_url, 
+                                     '-m', 'Log message for new import',
+                                     imp_dir_path,
+                                     sbox.repo_url,
                                      '--config-dir', config_dir)
 
   svntest.main.run_svn(None, 'update', wc_dir, '--config-dir', config_dir)
@@ -341,8 +341,8 @@ enable-auto-props = yes
   # -This is file test.dsp.
   # +This is file test.dsp.
   # +Extra line
-  
-  # eol styl of test.dsp is CRLF, so diff will use that too. Make sure we 
+
+  # eol styl of test.dsp is CRLF, so diff will use that too. Make sure we
   # define CRLF in a platform independent way.
   if os.name == 'nt':
     crlf = '\n'
@@ -359,7 +359,7 @@ enable-auto-props = yes
   ]
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     'diff', 
+                                     'diff',
                                      file_path,
                                      '--config-dir', config_dir)
 

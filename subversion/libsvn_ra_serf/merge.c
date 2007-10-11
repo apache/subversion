@@ -2,7 +2,7 @@
  * merge.c :  MERGE response parsing functions for ra_serf
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -33,6 +33,8 @@
 #include "svn_delta.h"
 #include "svn_version.h"
 #include "svn_path.h"
+
+#include "private/svn_dav_protocol.h"
 #include "svn_private_config.h"
 
 #include "ra_serf.h"
@@ -259,8 +261,8 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
         {
           const char *str;
 
-          str = apr_hash_get(info->props, "version-name",
-                                 APR_HASH_KEY_STRING);
+          str = apr_hash_get(info->props, SVN_DAV__VERSION_NAME,
+                             APR_HASH_KEY_STRING);
           if (str)
             {
               ctx->commit_info->revision = SVN_STR_TO_REV(str);
@@ -272,8 +274,8 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
 
           ctx->commit_info->date =
               apr_pstrdup(ctx->pool,
-                          apr_hash_get(info->props,
-                                       "creationdate", APR_HASH_KEY_STRING));
+                          apr_hash_get(info->props, SVN_DAV__CREATIONDATE,
+                                       APR_HASH_KEY_STRING));
 
           ctx->commit_info->author =
               apr_pstrdup(ctx->pool,
@@ -464,7 +466,7 @@ svn_ra_serf__merge_lock_token_list(apr_hash_t *lock_tokens,
 }
 
 #define MERGE_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?><D:merge xmlns:D=\"DAV:\"><D:source><D:href>"
-#define MERGE_BODY "</D:href></D:source><D:no-auto-merge/><D:no-checkout/><D:prop><D:checked-in/><D:version-name/><D:resourcetype/><D:creationdate/><D:creator-displayname/></D:prop>"
+#define MERGE_BODY "</D:href></D:source><D:no-auto-merge/><D:no-checkout/><D:prop><D:checked-in/><D:" SVN_DAV__VERSION_NAME "/><D:resourcetype/><D:" SVN_DAV__CREATIONDATE "/><D:creator-displayname/></D:prop>"
 #define MERGE_TRAILER "</D:merge>"
 
 static serf_bucket_t*

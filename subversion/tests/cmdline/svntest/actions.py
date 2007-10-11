@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -16,46 +16,11 @@
 ######################################################################
 
 import os, shutil, re, sys, errno
+import difflib, pprint
+import xml.parsers.expat
 
-import main, tree, wc  # general svntest routines in this module.
-from svntest import Failure, SVNAnyOutput
-
-class SVNUnexpectedOutput(Failure):
-  """Exception raised if an invocation of svn results in unexpected
-  output of any kind."""
-  pass
-
-class SVNUnexpectedStdout(SVNUnexpectedOutput):
-  """Exception raised if an invocation of svn results in unexpected
-  output on STDOUT."""
-  pass
-
-class SVNUnexpectedStderr(SVNUnexpectedOutput):
-  """Exception raised if an invocation of svn results in unexpected
-  output on STDERR."""
-  pass
-
-class SVNExpectedStdout(SVNUnexpectedOutput):
-  """Exception raised if an invocation of svn results in no output on
-  STDOUT when output was expected."""
-  pass
-
-class SVNExpectedStderr(SVNUnexpectedOutput):
-  """Exception raised if an invocation of svn results in no output on
-  STDERR when output was expected."""
-  pass
-
-class SVNIncorrectDatatype(SVNUnexpectedOutput):
-  """Exception raised if invalid input is passed to the
-  run_and_verify_* API"""
-  pass
-
-class UnorderedOutput:
-  """Simple class to mark unorder output"""
-
-  def __init__(self, output):
-    self.output = output
-
+import main, verify, tree, wc  # general svntest routines in this module.
+from svntest import Failure
 
 def no_sleep_for_timestamps():
   os.environ['SVN_SLEEP_FOR_TIMESTAMPS'] = 'no'
@@ -123,13 +88,13 @@ def setup_pristine_repository():
     try:
       tree.compare_trees(output_tree, expected_output_tree)
     except tree.SVNTreeUnequal:
-      display_trees("ERROR:  output of import command is unexpected.",
-                    'OUTPUT TREE', expected_output_tree, output_tree)
+      verify.display_trees("ERROR:  output of import command is unexpected.",
+                           "OUTPUT TREE", expected_output_tree, output_tree)
       sys.exit(1)
 
 
 ######################################################################
-# Used by every test, so that they can run independently of  one 
+# Used by every test, so that they can run independently of  one
 # another. Every time this routine is called, it recursively copies
 # the `pristine repos' to a new location.
 # Note: make sure setup_pristine_repository was called once before
@@ -156,76 +121,42 @@ def guarantee_greek_repository(path):
 def run_and_verify_svnversion(message, wc_dir, repo_url,
                               expected_stdout, expected_stderr):
   "Run svnversion command and check its output"
-
   out, err = main.run_svnversion(wc_dir, repo_url)
-
-  if type(expected_stdout) is type([]):
-    compare_and_display_lines(message, 'STDOUT', expected_stdout, out)
-  elif expected_stdout == SVNAnyOutput:
-    if len(out) == 0:
-      if message is not None: print message
-      raise SVNExpectedStdout
-  elif expected_stdout is not None:
-    raise SVNIncorrectDatatype("Unexpected specification for stdout data")
-
-  if type(expected_stderr) is type([]):
-    compare_and_display_lines(message, 'STDERR', expected_stderr, err)
-  elif expected_stderr == SVNAnyOutput:
-    if len(err) == 0:
-      if message is not None: print message
-      raise SVNExpectedStderr
-  else:
-    raise SVNIncorrectDatatype("Unexpected specification for stderr data")
+  verify.verify_outputs("Unexpected output", out, err,
+                        expected_stdout, expected_stderr)
   return out, err
 
 
 def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
-  """Invokes main.run_svn with *VARARGS, return stdout and stderr as
-  lists of lines.  For both EXPECTED_STDOUT and EXPECTED_STDERR, do this:
+  """Invokes main.run_svn() with *VARARGS, return stdout and stderr as
+  lists of lines.  For both EXPECTED_STDOUT and EXPECTED_STDERR,
+  create an appropriate instance of verify.ExpectedOutput (if necessary):
 
-     - If it is an array of strings, invoke compare_and_display_lines()
-       on MESSAGE, the expected output, and the actual output.
+     - If it is an array of strings, create a vanilla ExpectedOutput.
 
-     - If it is a single string, invoke match_or_fail() on MESSAGE,
-       the expected output, and the actual output.
+     - If it is a single string, create a RegexOutput.
 
-     - If it is an instance of UnorderedOutput, invoke
-       compare_unordered_and_display_lines() on MESSAGE, the expected
-       output, and the actual output.
+     - If it is already an instance of ExpectedOutput
+       (e.g. UnorderedOutput), leave it alone.
+
+  ...and invoke compare_and_display_lines() on MESSAGE, a label based
+  on the name of the stream being compared (e.g. STDOUT), the
+  ExpectedOutput instance, and the actual output.
 
   If EXPECTED_STDOUT is None, do not check stdout.
   EXPECTED_STDERR may not be None.
 
-  If a comparison function fails, it will raise an error."""
-  ### TODO catch and throw particular exceptions from above
+  If a comparison fails, a Failure will be raised."""
 
   if expected_stderr is None:
-    raise SVNIncorrectDatatype("expected_stderr must not be None")
+    raise verify.SVNIncorrectDatatype("expected_stderr must not be None")
 
   want_err = None
   if expected_stderr is not None and expected_stderr is not []:
-    want_err = 1
+    want_err = True
 
   out, err = main.run_svn(want_err, *varargs)
-
-  for (expected, actual, output_type, raisable) in (
-      (expected_stderr, err, 'stderr', SVNExpectedStderr),
-      (expected_stdout, out, 'stdout', SVNExpectedStdout)):
-    if type(expected) is type([]):
-      compare_and_display_lines(message, output_type.upper(), expected, actual)
-    elif type(expected) is type(''):
-      match_or_fail(message, output_type.upper(), expected, actual)
-    elif isinstance(expected, UnorderedOutput):
-      compare_unordered_and_display_lines(message, output_type.upper(),
-                                          expected.output, actual)
-    elif expected == SVNAnyOutput:
-      if len(actual) == 0:
-        if message is not None:
-          print message
-        raise raisable
-    elif expected is not None:
-      raise SVNIncorrectDatatype("Unexpected type for %s data" % output_type)
-
+  verify.verify_outputs(message, out, err, expected_stdout, expected_stderr)
   return out, err
 
 
@@ -236,19 +167,15 @@ def run_and_verify_load(repo_dir, dump_file_content):
           main.run_command_stdin(main.svnadmin_binary,
     expected_stderr, 1, dump_file_content,
     'load', '--force-uuid', '--quiet', repo_dir)
-  if expected_stderr:
-    actions.compare_and_display_lines(
-      "Standard error output", "STDERR", expected_stderr, errput)
+  verify.verify_outputs("Unexpected stderr output", None, errput,
+                        None, expected_stderr)
 
 
 def run_and_verify_dump(repo_dir):
   "Runs 'svnadmin dump' and reports any errors, returning the dump content."
   output, errput = main.run_svnadmin('dump', repo_dir)
-  if not output:
-    raise svntest.actions.SVNUnexpectedStdout("Missing stdout")
-  if not errput:
-    raise svntest.actions.SVNUnexpectedStderr("Missing stderr")
-
+  verify.verify_outputs("Missing expected output(s)", output, errput,
+                        verify.AnyOutput, verify.AnyOutput)
   return output
 
 
@@ -290,7 +217,7 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
                             *args):
   """Checkout the URL into a new directory WC_DIR_NAME. *ARGS are any
   extra optional args to the checkout subcommand.
- 
+
   The subcommand output will be verified against OUTPUT_TREE,
   and the working copy itself will be verified against DISK_TREE.
   SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
@@ -323,16 +250,16 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
                                  '--username', main.wc_author,
                                  '--password', main.wc_passwd,
                                  URL, wc_dir_name, *args)
-  mytree = tree.build_tree_from_checkout (output)
+  actual = tree.build_tree_from_checkout (output)
 
   # Verify actual output against expected output.
-  tree.compare_trees (mytree, output_tree)
+  tree.compare_trees (actual, output_tree)
 
   # Create a tree by scanning the working copy
-  mytree = tree.build_tree_from_wc (wc_dir_name)
+  actual = tree.build_tree_from_wc (wc_dir_name)
 
   # Verify expected disk against actual disk.
-  tree.compare_trees (mytree, disk_tree,
+  tree.compare_trees (actual, disk_tree,
                       singleton_handler_a, a_baton,
                       singleton_handler_b, b_baton)
 
@@ -363,20 +290,167 @@ def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
                                  '--username', main.wc_author,
                                  '--password', main.wc_passwd,
                                  URL, export_dir_name, *args)
-  mytree = tree.build_tree_from_checkout (output)
+  actual = tree.build_tree_from_checkout (output)
 
   # Verify actual output against expected output.
-  tree.compare_trees (mytree, output_tree)
+  tree.compare_trees (actual, output_tree)
 
   # Create a tree by scanning the working copy.  Don't ignore
   # the .svn directories so that we generate an error if they
   # happen to show up.
-  mytree = tree.build_tree_from_wc (export_dir_name, ignore_svn=0)
+  actual = tree.build_tree_from_wc (export_dir_name, ignore_svn=False)
 
   # Verify expected disk against actual disk.
-  tree.compare_trees (mytree, disk_tree,
+  tree.compare_trees (actual, disk_tree,
                       singleton_handler_a, a_baton,
                       singleton_handler_b, b_baton)
+
+
+# run_and_verify_log_xml
+
+class LogEntry:
+  def __init__(self, revision, changed_paths=None, revprops=None):
+    self.revision = revision
+    if changed_paths == None:
+      self.changed_paths = {}
+    else:
+      self.changed_paths = changed_paths
+    if revprops == None:
+      self.revprops = {}
+    else:
+      self.revprops = revprops
+
+  def assert_changed_paths(self, changed_paths):
+    """Not implemented, so just raises svntest.Failure.
+    """
+    raise Failure('NOT IMPLEMENTED')
+
+  def assert_revprops(self, revprops):
+    """Assert that the dict revprops is the same as this entry's revprops.
+
+    Raises svntest.Failure if not.
+    """
+    if self.revprops != revprops:
+      raise Failure('\n' + '\n'.join(difflib.ndiff(
+            pprint.pformat(revprops).splitlines(),
+            pprint.pformat(self.revprops).splitlines())))
+
+class LogParser:
+  def parse(self, data):
+    """Return a list of LogEntrys parsed from the sequence of strings data.
+
+    This is the only method of interest to callers.
+    """
+    try:
+      for i in data:
+        self.parser.Parse(i)
+      self.parser.Parse('', True)
+    except xml.parsers.expat.ExpatError, e:
+      raise verify.SVNUnexpectedStdout('%s\n%s\n' % (e, ''.join(data),))
+    return self.entries
+
+  def __init__(self):
+    # for expat
+    self.parser = xml.parsers.expat.ParserCreate()
+    self.parser.StartElementHandler = self.handle_start_element
+    self.parser.EndElementHandler = self.handle_end_element
+    self.parser.CharacterDataHandler = self.handle_character_data
+    # Ignore some things.
+    self.ignore_elements('log', 'paths', 'path', 'revprops')
+    self.ignore_tags('logentry_end', 'author_start', 'date_start', 'msg_start')
+    # internal state
+    self.cdata = []
+    self.property = None
+    # the result
+    self.entries = []
+
+  def ignore(self, *args, **kwargs):
+    del self.cdata[:]
+  def ignore_tags(self, *args):
+    for tag in args:
+      setattr(self, tag, self.ignore)
+  def ignore_elements(self, *args):
+    for element in args:
+      self.ignore_tags(element + '_start', element + '_end')
+
+  # expat handlers
+  def handle_start_element(self, name, attrs):
+    getattr(self, name + '_start')(attrs)
+  def handle_end_element(self, name):
+    getattr(self, name + '_end')()
+  def handle_character_data(self, data):
+    self.cdata.append(data)
+
+  # element handler utilities
+  def use_cdata(self):
+    result = ''.join(self.cdata).strip()
+    del self.cdata[:]
+    return result
+  def svn_prop(self, name):
+    self.entries[-1].revprops['svn:' + name] = self.use_cdata()
+
+  # element handlers
+  def logentry_start(self, attrs):
+    self.entries.append(LogEntry(int(attrs['revision'])))
+  def author_end(self):
+    self.svn_prop('author')
+  def msg_end(self):
+    self.svn_prop('log')
+  def date_end(self):
+    # svn:date could be anything, so just note its presence.
+    self.cdata[:] = ['']
+    self.svn_prop('date')
+  def property_start(self, attrs):
+    self.property = attrs['name']
+  def property_end(self):
+    self.entries[-1].revprops[self.property] = self.use_cdata()
+
+def run_and_verify_log_xml(message=None, expected_paths=None,
+                           expected_revprops=None, expected_stdout=None,
+                           expected_stderr=None, args=[]):
+  """Call run_and_verify_svn with log --xml and args (optional) as command
+  arguments, and pass along message, expected_stdout, and expected_stderr.
+
+  If message is None, pass the svn log command as message.
+
+  expected_paths checking is not yet implemented.
+
+  expected_revprops is an optional list of dicts, compared to each
+  revision's revprops.  The list must be in the same order the log entries
+  come in.  Any svn:date revprops in the dicts must be '' in order to
+  match, as the actual dates could be anything.
+
+  expected_paths and expected_revprops are ignored if expected_stdout or
+  expected_stderr is specified.
+  """
+  if message == None:
+    message = ' '.join(args)
+
+  # We'll parse the output unless the caller specifies expected_stderr or
+  # expected_stdout for run_and_verify_svn.
+  parse = True
+  if expected_stderr == None:
+    expected_stderr = []
+  else:
+    parse = False
+  if expected_stdout != None:
+    parse = False
+
+  log_args = list(args)
+  if expected_paths != None:
+    log_args.append('-v')
+
+  (stdout, stderr) = run_and_verify_svn(
+    message, expected_stdout, expected_stderr,
+    'log', '--xml', *log_args)
+  if not parse:
+    return
+
+  for (index, entry) in enumerate(LogParser().parse(stdout)):
+    if expected_revprops != None:
+      entry.assert_revprops(expected_revprops[index])
+    if expected_paths != None:
+      entry.assert_changed_paths(expected_paths[index])
 
 
 def verify_update(actual_output, wc_dir_name,
@@ -388,7 +462,7 @@ def verify_update(actual_output, wc_dir_name,
 
   The subcommand output (found in ACTUAL_OUTPUT) will be verified
   against OUTPUT_TREE, and the working copy itself will be verified
-  against DISK_TREE.  If optional STATUS_OUTPUT_TREE is given, then
+  against DISK_TREE.  If optional STATUS_TREE is given, then
   'svn status' output will be compared.  (This is a good way to check
   that revision numbers were bumped.)  SINGLETON_HANDLER_A and
   SINGLETON_HANDLER_B will be passed to tree.compare_trees - see that
@@ -400,10 +474,10 @@ def verify_update(actual_output, wc_dir_name,
   tree.compare_trees (actual_output, output_tree)
 
   # Create a tree by scanning the working copy
-  mytree = tree.build_tree_from_wc (wc_dir_name, check_props)
+  actual_disk = tree.build_tree_from_wc (wc_dir_name, check_props)
 
   # Verify expected disk against actual disk.
-  tree.compare_trees (mytree, disk_tree,
+  tree.compare_trees (actual_disk, disk_tree,
                       singleton_handler_a, a_baton,
                       singleton_handler_b, b_baton)
 
@@ -419,7 +493,7 @@ def run_and_verify_update(wc_dir_name,
                           a_baton = None,
                           singleton_handler_b = None,
                           b_baton = None,
-                          check_props = 0,
+                          check_props = False,
                           *args):
 
   """Update WC_DIR_NAME.  *ARGS are any extra optional args to the
@@ -466,8 +540,8 @@ def run_and_verify_update(wc_dir_name,
         return
     raise main.SVNUnmatchedError
 
-  mytree = tree.build_tree_from_checkout (output)
-  verify_update (mytree, wc_dir_name,
+  actual = tree.build_tree_from_checkout (output)
+  verify_update (actual, wc_dir_name,
                  output_tree, disk_tree, status_tree,
                  singleton_handler_a, a_baton,
                  singleton_handler_b, b_baton,
@@ -481,8 +555,8 @@ def run_and_verify_merge(dir, rev1, rev2, url,
                          a_baton = None,
                          singleton_handler_b = None,
                          b_baton = None,
-                         check_props = 0,
-                         dry_run = 1,
+                         check_props = False,
+                         dry_run = True,
                          *args):
   """Run 'svn merge -rREV1:REV2 URL DIR', leaving off the '-r'
   argument if both REV1 and REV2 are None."""
@@ -505,8 +579,8 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
                           a_baton = None,
                           singleton_handler_b = None,
                           b_baton = None,
-                          check_props = 0,
-                          dry_run = 1,
+                          check_props = False,
+                          dry_run = True,
                           *args):
   """Run 'svn merge URL1@REV1 URL2@REV2 DIR' if URL2 is not None
   (for a three-way merge between URLs and WC).
@@ -572,16 +646,14 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
   merge_command = merge_command + args
   out, err = main.run_svn (error_re_string, *merge_command)
 
-  if (error_re_string):
-    rm = re.compile(error_re_string)
-    for line in err:
-      match = rm.search(line)
-      if match:
-        return
-    raise main.SVNUnmatchedError
+  if error_re_string:
+    if not error_re_string.startswith(".*"):
+      error_re_string = ".*(" + error_re_string + ")"
+    expected_err = verify.RegexOutput(error_re_string, match_all=False)
+    verify.verify_outputs(None, None, err, None, expected_err)
+    return
   elif err:
-    ### we should raise a less generic error here. which?
-    raise Failure(err)
+    raise verify.SVNUnexpectedStderr(err)
 
   if dry_run and out != out_dry:
     print "============================================================="
@@ -608,8 +680,8 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
   tree.compare_trees(myskiptree, skip_tree,
                      extra_skip, None, missing_skip, None)
 
-  mytree = tree.build_tree_from_checkout(out, 0)
-  verify_update (mytree, dir,
+  actual = tree.build_tree_from_checkout(out, 0)
+  verify_update (actual, dir,
                  output_tree, disk_tree, status_tree,
                  singleton_handler_a, a_baton,
                  singleton_handler_b, b_baton,
@@ -625,7 +697,7 @@ def run_and_verify_switch(wc_dir_name,
                           a_baton = None,
                           singleton_handler_b = None,
                           b_baton = None,
-                          check_props = 0,
+                          check_props = False,
                           *args):
 
   """Switch WC_TARGET (in working copy dir WC_DIR_NAME) to SWITCH_URL.
@@ -637,7 +709,7 @@ def run_and_verify_switch(wc_dir_name,
 
   The subcommand output will be verified against OUTPUT_TREE, and the
   working copy itself will be verified against DISK_TREE.  If optional
-  STATUS_OUTPUT_TREE is given, then 'svn status' output will be
+  STATUS_TREE is given, then 'svn status' output will be
   compared.  (This is a good way to check that revision numbers were
   bumped.)  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
   tree.compare_trees - see that function's doc string for more details.
@@ -657,24 +729,25 @@ def run_and_verify_switch(wc_dir_name,
                                  '--password', main.wc_passwd,
                                  switch_url, wc_target, *args)
 
-  if (error_re_string):
-    rm = re.compile(error_re_string)
-    for line in errput:
-      match = rm.search(line)
-      if match:
-        return
-    raise main.SVNUnmatchedError
+  if error_re_string:
+    if not error_re_string.startswith(".*"):
+      error_re_string = ".*(" + error_re_string + ")"
+    expected_err = verify.RegexOutput(error_re_string, match_all=False)
+    verify.verify_outputs(None, None, errput, None, expected_err)
+    return
+  elif errput:
+    raise verify.SVNUnexpectedStderr(err)
 
-  mytree = tree.build_tree_from_checkout (output)
+  actual = tree.build_tree_from_checkout (output)
 
-  verify_update (mytree, wc_dir_name,
+  verify_update (actual, wc_dir_name,
                  output_tree, disk_tree, status_tree,
                  singleton_handler_a, a_baton,
                  singleton_handler_b, b_baton,
                  check_props)
 
 
-def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
+def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
                           error_re_string = None,
                           singleton_handler_a = None,
                           a_baton = None,
@@ -685,7 +758,7 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
   sending ARGS to the commit subcommand.
 
   The subcommand output will be verified against OUTPUT_TREE.  If
-  optional STATUS_OUTPUT_TREE is given, then 'svn status' output will
+  optional STATUS_TREE is given, then 'svn status' output will
   be compared.  (This is a good way to check that revision numbers
   were bumped.)
 
@@ -699,8 +772,8 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
 
   if isinstance(output_tree, wc.State):
     output_tree = output_tree.old_tree()
-  if isinstance(status_output_tree, wc.State):
-    status_output_tree = status_output_tree.old_tree()
+  if isinstance(status_tree, wc.State):
+    status_tree = status_tree.old_tree()
 
   # Commit.
   output, errput = main.run_svn(error_re_string, 'ci',
@@ -709,13 +782,12 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
                                 '-m', 'log msg',
                                 *args)
 
-  if (error_re_string):
-    rm = re.compile(error_re_string)
-    for line in errput:
-      match = rm.search(line)
-      if match:
-        return
-    raise main.SVNUnmatchedError
+  if error_re_string:
+    if not error_re_string.startswith(".*"):
+      error_re_string = ".*(" + error_re_string + ")"
+    expected_err = verify.RegexOutput(error_re_string, match_all=False)
+    verify.verify_outputs(None, None, errput, None, expected_err)
+    return
 
   # Else not expecting error:
 
@@ -747,19 +819,19 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
       output.append(lastline)
 
   # Convert the output into a tree.
-  mytree = tree.build_tree_from_commit (output)
+  actual = tree.build_tree_from_commit (output)
 
   # Verify actual output against expected output.
   try:
-    tree.compare_trees (mytree, output_tree)
+    tree.compare_trees (actual, output_tree)
   except tree.SVNTreeError:
-      display_trees("Output of commit is unexpected.",
-                    "OUTPUT TREE", output_tree, mytree)
+      verify.display_trees("Output of commit is unexpected",
+                           "OUTPUT TREE", output_tree, actual)
       raise
 
   # Verify via 'status' command too, if possible.
-  if status_output_tree:
-    run_and_verify_status(wc_dir_name, status_output_tree)
+  if status_tree:
+    run_and_verify_status(wc_dir_name, status_tree)
 
 
 # This function always passes '-q' to the status command, which
@@ -783,15 +855,15 @@ def run_and_verify_status(wc_dir_name, output_tree,
                                  '--password', main.wc_passwd,
                                  wc_dir_name)
 
-  mytree = tree.build_tree_from_status (output)
+  actual = tree.build_tree_from_status (output)
 
   # Verify actual output against expected output.
   try:
-    tree.compare_trees (mytree, output_tree,
+    tree.compare_trees (actual, output_tree,
                         singleton_handler_a, a_baton,
                         singleton_handler_b, b_baton)
   except tree.SVNTreeError:
-    display_trees(None, 'STATUS OUTPUT TREE', output_tree, mytree)
+    verify.display_trees(None, 'STATUS OUTPUT TREE', output_tree, actual)
     raise
 
 
@@ -813,15 +885,15 @@ def run_and_verify_unquiet_status(wc_dir_name, output_tree,
 
   output, errput = main.run_svn (None, 'status', '-v', '-u', wc_dir_name)
 
-  mytree = tree.build_tree_from_status (output)
+  actual = tree.build_tree_from_status (output)
 
   # Verify actual output against expected output.
   if (singleton_handler_a or singleton_handler_b):
-    tree.compare_trees (mytree, output_tree,
+    tree.compare_trees (actual, output_tree,
                         singleton_handler_a, a_baton,
                         singleton_handler_b, b_baton)
   else:
-    tree.compare_trees (mytree, output_tree)
+    tree.compare_trees (actual, output_tree)
 
 
 def run_and_verify_diff_summarize(output_tree, error_re_string = None,
@@ -848,23 +920,22 @@ def run_and_verify_diff_summarize(output_tree, error_re_string = None,
                                  '--password', main.wc_passwd,
                                  *args)
 
-  if (error_re_string):
-    rm = re.compile(error_re_string)
-    for line in errput:
-      match = rm.search(line)
-      if match:
-        return
-    raise main.SVNUnmatchedError
+  if error_re_string:
+    if not error_re_string.startswith(".*"):
+      error_re_string = ".*(" + error_re_string + ")"
+    expected_err = verify.RegexOutput(error_re_string, match_all=False)
+    verify.verify_outputs(None, None, errput, None, expected_err)
+    return
 
-  mytree = tree.build_tree_from_diff_summarize (output)
+  actual = tree.build_tree_from_diff_summarize (output)
 
   # Verify actual output against expected output.
   try:
-    tree.compare_trees (mytree, output_tree,
+    tree.compare_trees (actual, output_tree,
                         singleton_handler_a, a_baton,
                         singleton_handler_b, b_baton)
   except tree.SVNTreeError:
-    display_trees(None, 'DIFF OUTPUT TREE', output_tree, mytree)
+    verify.display_trees(None, 'DIFF OUTPUT TREE', output_tree, actual)
     raise
 
 def run_and_validate_lock(path, username, password):
@@ -882,9 +953,10 @@ def run_and_validate_lock(path, username, password):
 
   # Run info and check that we get the lock fields.
   output, err = run_and_verify_svn(None, None, [],
-                                   'info','-R', 
+                                   'info','-R',
                                    path)
 
+  ### TODO: Leverage RegexOuput([...], match_all=True) here.
   # prepare the regexs to compare against
   token_re = re.compile (".*?Lock Token: opaquelocktoken:.*?", re.DOTALL)
   author_re = re.compile (".*?Lock Owner: %s\n.*?" % username, re.DOTALL)
@@ -898,76 +970,6 @@ def run_and_validate_lock(path, username, password):
             created_re.match(output) and \
             comment_re.match(output))):
     raise Failure
-
-######################################################################
-# Displaying expected and actual output
-
-def display_trees(message, label, expected, actual):
-  'Print two trees, expected and actual.'
-  if message is not None:
-    print message
-  if expected is not None:
-    print 'EXPECTED', label + ':'
-    tree.dump_tree(expected)
-  if actual is not None:
-    print 'ACTUAL', label + ':'
-    tree.dump_tree(actual)
-
-
-def display_lines(message, label, expected, actual, expected_is_regexp=None,
-                  expected_is_unordered=None):
-  """Print MESSAGE, unless it is None, then print EXPECTED (labeled
-  with LABEL) followed by ACTUAL (also labeled with LABEL).
-  Both EXPECTED and ACTUAL may be strings or lists of strings."""
-  if message is not None:
-    print message
-  if expected is not None:
-    output = 'EXPECTED %s' % label
-    if expected_is_regexp:
-      output += ' (regexp)'
-    if expected_is_unordered:
-      output += ' (unordered)'
-    output += ':'
-    print output
-    map(sys.stdout.write, expected)
-    if expected_is_regexp:
-      map(sys.stdout.write, '\n')
-  if actual is not None:
-    print 'ACTUAL', label + ':'
-    map(sys.stdout.write, actual)
-
-def compare_and_display_lines(message, label, expected, actual):
-  """Compare two sets of output lines, and print them if they differ.
-  MESSAGE is ignored if None."""
-  # This catches the None vs. [] cases
-  if expected is None: exp = []
-  else: exp = expected
-  if actual is None: act = []
-  else: act = actual
-
-  if exp != act:
-    display_lines(message, label, expected, actual)
-    raise main.SVNLineUnequal
-
-def compare_unordered_and_display_lines(message, label, expected, actual):
-  """Compare two sets of output lines, and print them if they differ,
-  but disregard the order of the lines. MESSAGE is ignored if None."""
-  try:
-    main.compare_unordered_output(expected, actual)
-  except Failure:
-    display_lines(message, label, expected, actual, expected_is_unordered=True)
-    raise main.SVNLineUnequal
-
-def match_or_fail(message, label, expected, actual):
-  """Make sure that regexp EXPECTED matches at least one line in list ACTUAL.
-  If no match, then print MESSAGE (if it's not None), followed by
-  EXPECTED and ACTUAL, both labeled with LABEL, and raise SVNLineUnequal."""
-  for line in actual:
-    if re.match(expected, line):
-      break
-  else:
-    display_lines(message, label, expected, actual, 1)
-    raise main.SVNLineUnequal
 
 ######################################################################
 # Other general utilities
@@ -1099,4 +1101,102 @@ def check_prop(name, path, exp_out):
     print "Actual standard output: ", out, "\n"
     raise Failure
 
-### End of file.
+def fill_file_with_lines(wc_path, line_nbr, line_descrip=None,
+                         append=True):
+  """Change the file at WC_PATH (adding some lines), and return its
+  new contents.  LINE_NBR indicates the line number at which the new
+  contents should assume that it's being appended.  LINE_DESCRIP is
+  something like 'This is line' (the default) or 'Conflicting line'."""
+
+  if line_descrip is None:
+    line_descrip = "This is line"
+
+  # Generate the new contents for the file.
+  contents = ""
+  for n in range(line_nbr, line_nbr + 3):
+    contents = contents + line_descrip + " " + `n` + " in '" + \
+               os.path.basename(wc_path) + "'.\n"
+
+  # Write the new contents to the file.
+  if append:
+    main.file_append(wc_path, contents)
+  else:
+    main.file_write(wc_path, contents)
+
+  return contents
+
+def inject_conflict_into_wc(sbox, state_path, file_path,
+                            expected_disk, expected_status, merged_rev):
+  """Create a conflict at FILE_PATH by replacing its contents,
+  committing the change, backdating it to its previous revision,
+  changing its contents again, then updating it to merge in the
+  previous change."""
+
+  wc_dir = sbox.wc_dir
+
+  # Make a change to the file.
+  contents = fill_file_with_lines(file_path, 1, "This is line", append=False)
+
+  # Commit the changed file, first taking note of the current revision.
+  prev_rev = expected_status.desc[state_path].wc_rev
+  expected_output = wc.State(wc_dir, {
+    state_path : wc.StateItem(verb='Sending'),
+    })
+  if expected_status:
+    expected_status.tweak(state_path, wc_rev=merged_rev)
+  run_and_verify_commit(wc_dir, expected_output, expected_status,
+                        None, None, None, None, None,
+                        file_path)
+
+  # Backdate the file.
+  output, errput = main.run_svn(None, "up", "-r", str(prev_rev),
+                                "--username", main.wc_author,
+                                "--password", main.wc_passwd,
+                                 file_path)
+  if expected_status:
+    expected_status.tweak(state_path, wc_rev=prev_rev)
+
+  # Make a conflicting change to the file, and backdate the file.
+  conflicting_contents = fill_file_with_lines(file_path, 1, "Conflicting line",
+                                              append=False)
+
+  # Merge the previous change into the file to produce a conflict.
+  if expected_disk:
+    expected_disk.tweak(state_path, contents="")
+  expected_output = wc.State(wc_dir, {
+    state_path : wc.StateItem(status='C '),
+    })
+  inject_conflict_into_expected_state(state_path,
+                                      expected_disk, expected_status,
+                                      conflicting_contents, contents,
+                                      merged_rev)
+  output, errput = main.run_svn(None, "up", "-r", str(merged_rev),
+                                "--username", main.wc_author,
+                                "--password", main.wc_passwd,
+                                sbox.repo_url + "/" + state_path, file_path)
+  if expected_status:
+    expected_status.tweak(state_path, wc_rev=merged_rev)
+
+def inject_conflict_into_expected_state(state_path,
+                                        expected_disk, expected_status,
+                                        wc_text, merged_text, merged_rev):
+  """Update the EXPECTED_DISK and EXPECTED_STATUS trees for the
+  conflict at STATE_PATH (ignored if None).  WC_TEXT, MERGED_TEXT, and
+  MERGED_REV are used to determine the contents of the conflict (the
+  text parameters should be newline-terminated)."""
+  if expected_disk:
+    conflict_marker = make_conflict_marker_text(wc_text, merged_text,
+                                                merged_rev)
+    existing_text = expected_disk.desc[state_path].contents or ""
+    expected_disk.tweak(state_path, contents=existing_text + conflict_marker)
+
+  if expected_status:
+    expected_status.tweak(state_path, status='C ')
+
+def make_conflict_marker_text(wc_text, merged_text, merged_rev):
+  """Return the conflict marker text described by WC_TEXT (the current
+  text in the working copy, MERGED_TEXT (the conflicting text merged
+  in), and MERGED_REV (the revision from whence the conflicting text
+  came)."""
+  return "<<<<<<< .working\n" + wc_text + "=======\n" + \
+         merged_text + ">>>>>>> .merge-right.r" + str(merged_rev) + "\n"

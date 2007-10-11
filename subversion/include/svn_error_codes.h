@@ -592,11 +592,6 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_FS_OUT_OF_DATE,
              SVN_ERR_FS_CATEGORY_START + 42,
              "Item is out of date")
-  
-  /** @since New in 1.5. */
-  SVN_ERRDEF(SVN_ERR_FS_SQLITE_ERROR,
-             SVN_ERR_FS_CATEGORY_START + 43,
-             "SQLite error")
 
   /**@since New in 1.2.
    *
@@ -619,6 +614,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_FS_TXN_NAME_TOO_LONG,
              SVN_ERR_FS_CATEGORY_START + 45,
              "The generated transaction name is too long")
+
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_FS_SQLITE_ERROR,
+             SVN_ERR_FS_CATEGORY_START + 46,
+             "SQLite error")
 
   /* repos errors */
 
@@ -1057,7 +1057,7 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_NO_AUTH_FILE_PATH,
              SVN_ERR_MISC_CATEGORY_START + 18,
              "No auth file path available")
-  
+
   /** @since New in 1.1. */
   SVN_ERRDEF(SVN_ERR_VERSION_MISMATCH,
              SVN_ERR_MISC_CATEGORY_START + 19,
@@ -1072,6 +1072,20 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_CEASE_INVOCATION,
              SVN_ERR_MISC_CATEGORY_START + 21,
              "Cease invocation of this API")
+
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_REVNUM_PARSE_FAILURE,
+             SVN_ERR_MISC_CATEGORY_START + 22,
+             "Error parsing revision number")
+
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_ITER_BREAK,
+             SVN_ERR_MISC_CATEGORY_START + 23,
+             "Iteration terminated before completion")
+
+  SVN_ERRDEF(SVN_ERR_UNKNOWN_CHANGELIST,
+             SVN_ERR_MISC_CATEGORY_START + 24,
+             "Unknown changelist")
 
   /* command-line client errors */
 

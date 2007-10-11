@@ -45,7 +45,7 @@ svn_cl__revprop_prepare(const svn_opt_revision_t *revision,
                         apr_pool_t *pool)
 {
   const char *target;
-  
+
   if (revision->kind != svn_opt_revision_number
       && revision->kind != svn_opt_revision_date
       && revision->kind != svn_opt_revision_head)
@@ -63,7 +63,7 @@ svn_cl__revprop_prepare(const svn_opt_revision_t *revision,
   /* (The docs say the target must be either a URL or implicit '.', but
      explicit WC targets are also accepted.) */
   target = APR_ARRAY_IDX(targets, 0, const char *);
-  SVN_ERR(svn_client_url_from_path(URL, target, pool));  
+  SVN_ERR(svn_client_url_from_path(URL, target, pool));
   if (*URL == NULL)
     return svn_error_create
       (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
@@ -134,7 +134,7 @@ svn_cl__print_xml_prop(svn_stringbuf_t **outstr,
       encoding = "base64";
       xml_safe = base64ed->data;
     }
-          
+
   if (encoding)
     svn_xml_make_open_tag(outstr, pool, svn_xml_protect_pcdata,
                           "property", "name", propname,

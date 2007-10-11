@@ -346,8 +346,10 @@ svn_test__validate_tree(svn_fs_root_t *root,
       val = apr_hash_get(tree_entries, key, keylen);
       if (val)
         {
-          if (validate_tree_entry(root, entry->path,
-                                  entry->contents, subpool))
+          svn_error_t *err;
+
+          if ((err = validate_tree_entry(root, entry->path,
+                                         entry->contents, subpool)))
             {
               /* If we don't have a corrupt entries string, make one. */
               if (! corrupt_entries)
@@ -358,6 +360,7 @@ svn_test__validate_tree(svn_fs_root_t *root,
               svn_stringbuf_appendbytes(corrupt_entries, (const char *)key,
                                         keylen);
               svn_stringbuf_appendcstr(corrupt_entries, "\n");
+              svn_error_clear(err);
             }
 
           apr_hash_set(tree_entries, key, keylen, NULL);

@@ -44,13 +44,13 @@ svn_stream_t *svn_quoprint_encode(svn_stream_t *output, apr_pool_t *pool);
 svn_stream_t *svn_quoprint_decode(svn_stream_t *output, apr_pool_t *pool);
 
 
-/** Simpler interface for encoding quoted-printable data assuming we have all 
+/** Simpler interface for encoding quoted-printable data assuming we have all
  * of it present at once.  The returned string will be allocated from @a pool.
  */
 svn_stringbuf_t *svn_quoprint_encode_string(svn_stringbuf_t *str,
                                             apr_pool_t *pool);
 
-/** Simpler interface for decoding quoted-printable data assuming we have all 
+/** Simpler interface for decoding quoted-printable data assuming we have all
  * of it present at once.  The returned string will be allocated from @a pool.
  */
 svn_stringbuf_t *svn_quoprint_decode_string(svn_stringbuf_t *str,

@@ -34,15 +34,23 @@
 
 /*** Code. ***/
 
-/* Attempt to revert PATH, recursively if RECURSIVE is true and PATH
-   is a directory, else non-recursively.  Consult CTX to determine
-   whether or not to revert timestamp to the time of last commit
-   ('use-commit-times = yes').  Use POOL for temporary allocation.
+/* Attempt to revert PATH.
+
+   If DEPTH is svn_depth_empty, revert just the properties on the
+   directory; else if svn_depth_files, revert the properties and any
+   files immediately under the directory; else if
+   svn_depth_immediates, revert all of the preceding plus properties
+   on immediate subdirectories; else if svn_depth_infinity, revert
+   path and everything under it fully recursively.
+
+   Consult CTX to determine whether or not to revert timestamp to the
+   time of last commit ('use-commit-times = yes').  Use POOL for
+   temporary allocation.
 
    If PATH is unversioned, return SVN_ERR_UNVERSIONED_RESOURCE. */
 static svn_error_t *
 revert(const char *path,
-       svn_boolean_t recursive,
+       svn_depth_t depth,
        svn_boolean_t use_commit_times,
        svn_client_ctx_t *ctx,
        apr_pool_t *pool)
@@ -50,13 +58,17 @@ revert(const char *path,
   svn_wc_adm_access_t *adm_access, *target_access;
   const char *target;
   svn_error_t *err;
+  int adm_lock_level = -1;
+
+  if (depth == svn_depth_empty || depth == svn_depth_files)
+    adm_lock_level = 0;
 
   SVN_ERR(svn_wc_adm_open_anchor(&adm_access, &target_access, &target, path,
-                                 TRUE, recursive ? -1 : 0,
+                                 TRUE, adm_lock_level,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  pool));
 
-  err = svn_wc_revert2(path, adm_access, recursive, use_commit_times,
+  err = svn_wc_revert3(path, adm_access, depth, use_commit_times,
                        ctx->cancel_func, ctx->cancel_baton,
                        ctx->notify_func2, ctx->notify_baton2,
                        pool);
@@ -86,10 +98,10 @@ revert(const char *path,
 
 
 svn_error_t *
-svn_client_revert(const apr_array_header_t *paths,
-                  svn_boolean_t recursive,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool)
+svn_client_revert2(const apr_array_header_t *paths,
+                   svn_depth_t depth,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
 {
   apr_pool_t *subpool;
   svn_error_t *err = SVN_NO_ERROR;
@@ -97,7 +109,7 @@ svn_client_revert(const apr_array_header_t *paths,
   svn_config_t *cfg;
   svn_boolean_t use_commit_times;
 
-  cfg = ctx->config ? apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,  
+  cfg = ctx->config ? apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
                                    APR_HASH_KEY_STRING) : NULL;
 
   SVN_ERR(svn_config_get_bool(cfg, &use_commit_times,
@@ -114,19 +126,19 @@ svn_client_revert(const apr_array_header_t *paths,
       svn_pool_clear(subpool);
 
       /* See if we've been asked to cancel this operation. */
-      if ((ctx->cancel_func) 
+      if ((ctx->cancel_func)
           && ((err = ctx->cancel_func(ctx->cancel_baton))))
         goto errorful;
 
-      err = revert(path, recursive, use_commit_times, ctx, subpool);
+      err = revert(path, depth, use_commit_times, ctx, subpool);
       if (err)
         goto errorful;
     }
-  
+
  errorful:
 
   svn_pool_destroy(subpool);
-  
+
   /* Sleep to ensure timestamp integrity. */
   svn_sleep_for_timestamps();
 
@@ -134,3 +146,13 @@ svn_client_revert(const apr_array_header_t *paths,
 }
 
 
+svn_error_t *
+svn_client_revert(const apr_array_header_t *paths,
+                  svn_boolean_t recursive,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  return svn_client_revert2(paths,
+                            recursive ? svn_depth_infinity : svn_depth_empty,
+                            ctx, pool);
+}

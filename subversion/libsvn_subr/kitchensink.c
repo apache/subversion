@@ -2,7 +2,7 @@
  * kitchensink.c :  When no place else seems to fit...
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -20,7 +20,43 @@
 #include <apr_uuid.h>
 
 #include "svn_types.h"
+#include "svn_error.h"
+#include "svn_private_config.h"
 
+svn_error_t *
+svn_revnum_parse(svn_revnum_t *rev,
+                 const char *str,
+                 const char **endptr)
+{
+  char *end;
+
+  svn_revnum_t result = strtol(str, &end, 10);
+
+  if (endptr)
+    *endptr = end;
+
+  if (str == end)
+    return svn_error_createf(SVN_ERR_REVNUM_PARSE_FAILURE, NULL,
+                             _("Invalid revision number found parsing '%s'"),
+                             str);
+
+  if (result < 0)
+    {
+      /* The end pointer from strtol() is valid, but a negative revision
+         number is invalid, so move the end pointer back to the
+         beginning of the string. */
+      if (endptr)
+        *endptr = str;
+
+      return svn_error_createf(SVN_ERR_REVNUM_PARSE_FAILURE, NULL,
+                               _("Negative revision number found parsing '%s'"),
+                               str);
+    }
+
+  *rev = result;
+
+  return SVN_NO_ERROR;
+}
 
 const char *
 svn_uuid_generate(apr_pool_t *pool)
@@ -85,7 +121,10 @@ svn_depth_from_word(const char *word)
   if (strcmp(word, "infinity") == 0)
     return svn_depth_infinity;
   /* There's no special value for invalid depth, and no convincing
-     reason to make one yet, so just fall back to unknown depth. */
+     reason to make one yet, so just fall back to unknown depth.
+     If you ever change that convention, check callers to make sure
+     they're not depending on it (e.g., option parsing in main() ).
+  */
   return svn_depth_unknown;
 }
 

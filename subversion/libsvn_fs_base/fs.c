@@ -320,7 +320,7 @@ base_bdb_set_errcall(svn_fs_t *fs,
 
 /* Write the DB_CONFIG file. */
 static svn_error_t *
-bdb_write_config  (svn_fs_t *fs)
+bdb_write_config(svn_fs_t *fs)
 {
   const char *dbconfig_file_name =
     svn_path_join(fs->path, BDB_CONFIG_FILE, fs->pool);
@@ -627,7 +627,7 @@ base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
             apr_pool_t *common_pool)
 {
   int format = SVN_FS_BASE__FORMAT_NUMBER;
-  
+
   /* Create the environment and databases. */
   svn_error_t *svn_err = open_databases(fs, TRUE, path, pool);
   if (svn_err) goto error;
@@ -670,9 +670,9 @@ check_format(int format)
 
   if (format != SVN_FS_BASE__FORMAT_NUMBER)
     {
-      return svn_error_createf 
+      return svn_error_createf
         (SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
-         _("Expected FS format '%d'; found format '%d'"), 
+         _("Expected FS format '%d'; found format '%d'"),
          SVN_FS_BASE__FORMAT_NUMBER, format);
     }
 
@@ -948,7 +948,7 @@ copy_db_file_safely(const char *src_dir,
 {
   apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
   const char *file_src_path = svn_path_join(src_dir, filename, pool);
-  const char *file_dst_path = svn_path_join(dst_dir, filename, pool);  
+  const char *file_dst_path = svn_path_join(dst_dir, filename, pool);
   char *buf;
 
   /* Open source file. */
@@ -965,11 +965,11 @@ copy_db_file_safely(const char *src_dir,
   buf = apr_palloc(pool, chunksize);
 
   /* Copy bytes till the cows come home. */
-  while (1) 
+  while (1)
     {
       apr_size_t bytes_this_time = chunksize;
       svn_error_t *read_err, *write_err;
-      
+
       /* Read 'em. */
       if ((read_err = svn_io_file_read(s, buf, &bytes_this_time, pool)))
         {
@@ -982,7 +982,7 @@ copy_db_file_safely(const char *src_dir,
               return read_err;
             }
         }
-    
+
       /* Write 'em. */
       if ((write_err = svn_io_file_write_full(d, buf, bytes_this_time, NULL,
                                               pool)))
@@ -1061,7 +1061,7 @@ base_hotcopy(const char *src_path,
 #else
   /* default to 128K chunks, which should be safe.
      BDB almost certainly uses a power-of-2 pagesize. */
-  pagesize = (4096 * 32); 
+  pagesize = (4096 * 32);
 #endif
 
   /* Copy the databases.  */
@@ -1109,7 +1109,7 @@ base_hotcopy(const char *src_path,
           {
             if (log_autoremove)
               return
-                svn_error_quick_wrap 
+                svn_error_quick_wrap
                 (err,
                  _("Error copying logfile;  the DB_LOG_AUTOREMOVE feature \n"
                    "may be interfering with the hotcopy algorithm.  If \n"
@@ -1128,7 +1128,7 @@ base_hotcopy(const char *src_path,
     {
       if (log_autoremove)
         return
-          svn_error_quick_wrap 
+          svn_error_quick_wrap
           (err,
            _("Error running catastrophic recovery on hotcopy;  the \n"
              "DB_LOG_AUTOREMOVE feature may be interfering with the \n"
@@ -1163,7 +1163,7 @@ base_delete_fs(const char *path,
   SVN_ERR(svn_fs_bdb__remove(path, pool));
 
   /* Remove the environment directory. */
-  SVN_ERR(svn_io_remove_dir2(path, FALSE, pool));
+  SVN_ERR(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }

@@ -15,6 +15,13 @@ if sys.hexversion < 0x2000000:
 # don't export this name
 del sys
 
+# Define True and False if not provided by Python (<=2.1)
+try:
+  False
+except:
+  False = 0
+  True = 1
+
 class Failure(Exception):
   'Base class for exceptions that indicate test failure'
   pass
@@ -23,10 +30,4 @@ class Skip(Exception):
   'Base class for exceptions that indicate test was skipped'
   pass
 
-class SVNAnyOutput:
-  """This class should be used to represent that you require output
-  (whether stdout or stderr) from your test--regardless of what the
-  output might be."""
-  pass
-
-import main, tree, actions, wc
+import main, tree, verify, actions, wc

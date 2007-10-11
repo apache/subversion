@@ -48,11 +48,10 @@ describes what is planned for the release.</p>
 <p>Details are described below.</p>
 
 <p>Subversion 1.5 is a superset of all previous Subversion releases,
-and is considered the current "best" release.  Anything in 1.0.x,
-1.1.x, 1.2.x or 1.3.x is also in 1.5, but 1.5 contains features and
-bugfixes not present in any earlier release.  The new features will
-eventually be documented in a 1.5 version of the free Subversion book,
-see <a
+and is considered the current "best" release.  Anything in 1.0.x
+through 1.4.x is also in 1.5, but 1.5 contains features and bugfixes
+not present in any earlier release.  The new features will eventually
+be documented in a 1.5 version of the free Subversion book, see <a
 href="http://svnbook.red-bean.com">svnbook.red-bean.com</a>.</p>
 
 </div>  <!-- news -->
@@ -152,10 +151,11 @@ href="http://svn.collab.net/repos/svn/trunk/notes/sparse-directories.txt"
 <h3>Interactive Conflict Resolution (<em>client</em>)</h3>
 
 <p>Added support for interactive conflict resolution in the command
-line client, and a corresponding callback function in the client library.
-GUI clients can use the callback function to hook in a graphical conflict
-resolution program to the update/switch/merge commands.  Example command
-line output:</p>
+line client, and a corresponding callback function in the client
+library.  GUI clients can use the callback function to hook in a
+graphical conflict resolution program to the
+<code>update</code>/<code>switch</code>/<code>merge</code> commands.
+Example command line output:</p>
 <pre>
     svn up
     U    contrib/client-side/svnmerge/svnmerge_test.py
@@ -177,6 +177,27 @@ line output:</p>
 <p>This feature can be selectively disabled by using the --non-interactive
 option, or disabled permanently by setting '[miscellany] interactive-conflicts
  = no' in your run-time config file.</p>
+
+<p>The API for interactive conflict resolution is exposed via a
+callback function and the following new data types:</p>
+
+<ul>
+  <li><code>svn_wc_conflict_resolver_func_t</code>, the callback API
+    itself</li>
+  <li><code>svn_wc_conflict_description_t</code>, a description of the
+    conflict passed to the callback</li>
+  <li><code>svn_wc_conflict_action_t</code>, the part of the conflict
+    description indicating what the merge was trying to do</li>
+  <li><code>svn_wc_conflict_reason_t</code>, the part of the conflict
+    description indicating the type of conflict</li>
+  <li><code>svn_wc_conflict_result_t</code>, returned by the callback
+    as the result of any conflict resolution attempt</li>
+</ul>
+
+<p>Clients provide their callback function to Subversion's libraries
+by setting it on the (new) <code>conflict_func</code> field of their
+<code>svn_client_ctx_t</code>, and may provide additional state to the
+callback via the corresponding <code>conflict_baton</code> field.</p>
 
 </div>  <!-- conflict-resolution -->
 
@@ -213,9 +234,13 @@ href="http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt"
 <p>XXX: Useful for file systems which don't perform well with a large
 number of files in a directory -- see blog entry <a
 href="http://www.farside.org.uk/200704/tree_structured_fsfs">here</a>.
-<a
-href="http://svn.collab.net/repos/svn/trunk/tools/server-side/fsfs-reshard.py"
->Migration script</a> provided.</p>
+<!-- ### Reshard script is not quite finished and currently 
+     ### aborts if you try to run it.
+ <a
+ href="http://svn.collab.net/repos/svn/trunk/tools/server-side/fsfs-reshard.py"
+ >Migration script</a> provided.
+-->
+</p>
 
 </div>  <!-- fsfs-sharding -->
 
@@ -264,11 +289,13 @@ href="http://svn.collab.net/repos/svn/trunk/tools/server-side/fsfs-reshard.py"
   </li>
 
   <!-- ### Anticipated addition(s):
-  <li><code>--merged-from</code> and <code>--merged-to</code> options
+       ### double-dash sequences inside comment changed to '++' to
+       ### avoid breaking XML rules.
+  <li><code>++merged-from</code> and <code>++merged-to</code> options
     to report on merge info have been added to the <code>info</code>
     sub-command.</li>
 
-  <li>An <code>--accept=orig|mine|repo</code> option to select which
+  <li>An <code>++accept=orig|mine|repo</code> option to select which
     version of a path to retain has been added to the
     <code>resolved</code> sub-command.</li>
   -->

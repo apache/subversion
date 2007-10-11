@@ -2,7 +2,7 @@
  * serf.c :  entry point for ra_serf
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -37,6 +37,8 @@
 #include "svn_version.h"
 #include "svn_path.h"
 #include "svn_time.h"
+
+#include "private/svn_dav_protocol.h"
 #include "svn_private_config.h"
 
 #include "ra_serf.h"
@@ -132,7 +134,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
   if (status)
     {
       return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                               _("Illegal repository URL '%s'"), 
+                               _("Illegal repository URL '%s'"),
                                repos_URL);
     }
 
@@ -235,7 +237,10 @@ svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
 
   if (!vcc_url)
     {
-      abort();
+      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                              _("The OPTIONS response did not include the "
+                                "requested version-controlled-configuration "
+                                "value."));
     }
 
   /* Using the version-controlled-configuration, fetch the checked-in prop. */
@@ -248,7 +253,9 @@ svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
 
   if (!baseline_url)
     {
-      abort();
+      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                              _("The OPTIONS response did not include the "
+                                "requested checked-in value."));
     }
 
   /* Using the checked-in property, fetch:
@@ -259,11 +266,13 @@ svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
                                       "0", baseline_props, pool));
 
   version_name = svn_ra_serf__get_prop(props, baseline_url,
-                                       "DAV:", "version-name");
+                                       "DAV:", SVN_DAV__VERSION_NAME);
 
   if (!version_name)
     {
-      abort();
+      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                              _("The OPTIONS response did not include the "
+                                "requested version-name value."));
     }
 
   *latest_revnum = SVN_STR_TO_REV(version_name);
@@ -356,23 +365,25 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
       SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &relative_url,
                                          session, session->conns[0],
                                          path, pool));
-      
+
       SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
                                           vcc_url, revision,
                                           "0", baseline_props, pool));
-      
+
       basecoll_url = svn_ra_serf__get_ver_prop(props, vcc_url, revision,
                                                "DAV:", "baseline-collection");
-      
+
       if (!basecoll_url)
         {
-          abort();
+          return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                                  _("The OPTIONS response did not include the "
+                                    "requested baseline-collection value."));
         }
-    
-      /* We will try again with our new path; however, we're now 
+
+      /* We will try again with our new path; however, we're now
        * technically an unversioned resource because we are accessing
        * the revision's baseline-collection.
-       */  
+       */
       prop_ctx = NULL;
       path = svn_path_url_add_component(basecoll_url, relative_url, pool);
       revision = SVN_INVALID_REVNUM;
@@ -423,7 +434,9 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
       if (!res_type)
         {
           /* How did this happen? */
-          abort();
+          return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                                  _("The OPTIONS response did not include the "
+                                    "requested resourcetype value. "));
         }
       else if (strcmp(res_type, "collection") == 0)
         {
@@ -457,7 +470,7 @@ dirent_walker(void *baton,
     }
   else if (strcmp(ns, "DAV:") == 0)
     {
-      if (strcmp(name, "version-name") == 0)
+      if (strcmp(name, SVN_DAV__VERSION_NAME) == 0)
         {
           entry->created_rev = SVN_STR_TO_REV(val->data);
         }
@@ -465,7 +478,7 @@ dirent_walker(void *baton,
         {
           entry->last_author = val->data;
         }
-      else if (strcmp(name, "creationdate") == 0)
+      else if (strcmp(name, SVN_DAV__CREATIONDATE) == 0)
         {
           SVN_ERR(svn_time_from_cstring(&entry->time, val->data, pool));
         }
@@ -592,13 +605,15 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
       SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
                                           vcc_url, revision,
                                           "0", baseline_props, pool));
-      
+
       basecoll_url = svn_ra_serf__get_ver_prop(props, vcc_url, revision,
                                                "DAV:", "baseline-collection");
-      
+
       if (!basecoll_url)
         {
-          abort();
+          return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                                  _("The OPTIONS response did not include the "
+                                    "requested baseline-collection value. "));
         }
 
       if (fetched_rev)

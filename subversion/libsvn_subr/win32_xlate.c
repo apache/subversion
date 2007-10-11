@@ -93,7 +93,7 @@ get_page_id_from_name(UINT *page_id_p, const char *page_name, apr_pool_t *pool)
 
   if (FAILED(hr))
     return APR_EGENERAL;
-  
+
   /* Convert page name to wide string. */
   MultiByteToWideChar(CP_UTF8, 0, page_name, -1, ucs2_page_name,
                       sizeof(ucs2_page_name) / sizeof(ucs2_page_name[0]));
@@ -174,10 +174,18 @@ svn_subr__win32_xlate_to_stringbuf(win32_xlate_t *handle,
   if (retval == 0)
     return apr_get_os_error();
 
-  /* ### FIXME: Place for optimization. We can try allocate small strings
-     temporary buffers on stack instead of heap.*/
   wide_size = retval;
-  wide_str = apr_palloc(pool, wide_size * sizeof(WCHAR));
+
+  /* Allocate temporary buffer for small strings on stack instead of heap. */
+  if (wide_size <= MAX_PATH)
+    {
+      wide_str = alloca(wide_size * sizeof(WCHAR));
+    }
+  else
+    {
+      wide_str = apr_palloc(pool, wide_size * sizeof(WCHAR));
+    }
+
   retval = MultiByteToWideChar(handle->from_page_id, 0, src_data, src_length,
                                wide_str, wide_size);
 

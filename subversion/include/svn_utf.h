@@ -83,7 +83,7 @@ svn_error_t *svn_utf_cstring_to_utf8(const char **dest,
 
 /** Set @a *dest to a utf8 encoded C string from @a frompage encoded C
  * string @a src; allocate @a *dest in @a pool.
- * 
+ *
  * @since New in 1.4.
  */
 svn_error_t *svn_utf_cstring_to_utf8_ex2(const char **dest,
@@ -130,7 +130,7 @@ svn_error_t *svn_utf_cstring_from_utf8(const char **dest,
 
 /** Set @a *dest to a @a topage encoded C string from utf8 encoded C string
  * @a src; allocate @a *dest in @a pool.
- * 
+ *
  * @since New in 1.4.
  */
 svn_error_t *svn_utf_cstring_from_utf8_ex2(const char **dest,

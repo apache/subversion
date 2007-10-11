@@ -43,10 +43,15 @@ const char *svn_wc__logfile_path(int log_number,
                                  apr_pool_t *pool);
 
 
+
+/* The svn_wc__loggy_* functions in this section take path arguments
+   with the same base as with which the adm_access was opened.
+
+*/
+
 /* Extend **LOG_ACCUM with log instructions to append the contents
    of SRC to DST.
 */
-
 svn_error_t *
 svn_wc__loggy_append(svn_stringbuf_t **log_accum,
                      svn_wc_adm_access_t *adm_access,
@@ -57,7 +62,6 @@ svn_wc__loggy_append(svn_stringbuf_t **log_accum,
 /* Extend **LOG_ACCUM with log instructions to mark PATH as committed
    with revision REVNUM.
 */
-
 svn_error_t *
 svn_wc__loggy_committed(svn_stringbuf_t **log_accum,
                         svn_wc_adm_access_t *adm_access,
@@ -87,7 +91,6 @@ typedef enum svn_wc__copy_t
   svn_wc__copy_detranslate
 } svn_wc__copy_t;
 
-
 svn_error_t *
 svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
                    svn_boolean_t *dst_modified,
@@ -102,7 +105,6 @@ svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
    file from SRC to DST with translation settings from VERSIONED
    and flags specified in FLAGS.
 */
-
 svn_error_t *
 svn_wc__loggy_translated_file(svn_stringbuf_t **log_accum,
                               svn_wc_adm_access_t *adm_access,
@@ -157,7 +159,6 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
 /* Extend **LOG_ACCUM with log instructions to modify wcprop PROPNAME
    for PATH, setting it to PROPVAL.
 */
-
 svn_error_t *
 svn_wc__loggy_modify_wcprop(svn_stringbuf_t **log_accum,
                             svn_wc_adm_access_t *adm_access,
@@ -173,7 +174,6 @@ svn_wc__loggy_modify_wcprop(svn_stringbuf_t **log_accum,
 
    Sets *DST_MODIFIED, if either the copy or the remove have been carried out.
 */
-
 svn_error_t *
 svn_wc__loggy_move(svn_stringbuf_t **log_accum,
                    svn_boolean_t *dst_modified,
@@ -187,7 +187,6 @@ svn_wc__loggy_move(svn_stringbuf_t **log_accum,
 /* Extend **LOG_ACCUM with log instructions to set permissions of PATH
    to 'executable' if it has the 'executable' property set.
 */
-
 svn_error_t *
 svn_wc__loggy_maybe_set_executable(svn_stringbuf_t **log_accum,
                                    svn_wc_adm_access_t *adm_access,
@@ -198,7 +197,6 @@ svn_wc__loggy_maybe_set_executable(svn_stringbuf_t **log_accum,
    to 'readonly' if it has the 'needs-lock' property set and there is
    no lock for the file in the working copy.
 */
-
 svn_error_t *
 svn_wc__loggy_maybe_set_readonly(svn_stringbuf_t **log_accum,
                                  svn_wc_adm_access_t *adm_access,
@@ -211,7 +209,6 @@ svn_wc__loggy_maybe_set_readonly(svn_stringbuf_t **log_accum,
 
    Use SVN_WC__ENTRY_ATTR_* values for TIME_PROP.
 */
-
 svn_error_t *
 svn_wc__loggy_set_entry_timestamp_from_wc(svn_stringbuf_t **log_accum,
                                           svn_wc_adm_access_t *adm_access,
@@ -222,9 +219,7 @@ svn_wc__loggy_set_entry_timestamp_from_wc(svn_stringbuf_t **log_accum,
 
 /* Extend **LOG_ACCUM with log instructions to set the file size of PATH
    in the entries' WORKING_SIZE field.
-
 */
-
 svn_error_t *
 svn_wc__loggy_set_entry_working_size_from_wc(svn_stringbuf_t **log_accum,
                                              svn_wc_adm_access_t *adm_access,
@@ -235,7 +230,6 @@ svn_wc__loggy_set_entry_working_size_from_wc(svn_stringbuf_t **log_accum,
 /* Extend **LOG_ACCUM with log instructions to set permissions of PATH
    to 'readonly'.
 */
-
 svn_error_t *
 svn_wc__loggy_set_readonly(svn_stringbuf_t **log_accum,
                            svn_wc_adm_access_t *adm_access,
@@ -258,7 +252,7 @@ svn_wc__loggy_set_timestamp(svn_stringbuf_t **log_accum,
 svn_error_t *
 svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
                      svn_wc_adm_access_t *adm_access,
-                     const char *base_name,
+                     const char *path,
                      apr_pool_t *pool);
 
 /* Extend **LOG_ACCUM with instructions to cause the working copy of ADM_ACCESS
@@ -281,7 +275,7 @@ svn_wc__write_log(svn_wc_adm_access_t *adm_access,
                   apr_pool_t *pool);
 
 
-/* Process the instructions in the log file for ADM_ACCESS. 
+/* Process the instructions in the log file for ADM_ACCESS.
    DIFF3_CMD is the external differ used by the 'SVN_WC__LOG_MERGE'
    log entry.  It is always safe to pass null for this.
 

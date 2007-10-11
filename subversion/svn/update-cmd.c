@@ -2,7 +2,7 @@
  * update-cmd.c -- Bring work tree in sync with repository
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -25,6 +25,7 @@
 #include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_path.h"
+#include "svn_error_codes.h"
 #include "svn_error.h"
 #include "cl.h"
 
@@ -55,8 +56,8 @@ svn_cl__update(apr_getopt_t *os,
                                         ctx,
                                         pool));
       if (apr_is_empty_array(changelist_targets))
-        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("no such changelist '%s'"),
+        return svn_error_createf(SVN_ERR_UNKNOWN_CHANGELIST, NULL,
+                                 _("Unknown changelist '%s'"),
                                  opt_state->changelist);
     }
 
@@ -75,7 +76,7 @@ svn_cl__update(apr_getopt_t *os,
   svn_opt_push_implicit_dot_target(targets, pool);
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, 
+    svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
                          FALSE, FALSE, FALSE, pool);
 
   SVN_ERR(svn_client_update3(NULL, targets,

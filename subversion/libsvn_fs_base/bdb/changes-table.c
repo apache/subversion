@@ -260,7 +260,7 @@ svn_fs_bdb__changes_fetch(apr_hash_t **changes_p,
   /* Advance the cursor to the key that we're looking for. */
   svn_fs_base__str_to_dbt(&query, key);
   svn_fs_base__result_dbt(&result);
-  db_err = cursor->c_get(cursor, &query, &result, DB_SET);
+  db_err = svn_bdb_dbc_get(cursor, &query, &result, DB_SET);
   if (! db_err)
     svn_fs_base__track_dbt(&result, pool);
 
@@ -326,7 +326,7 @@ svn_fs_bdb__changes_fetch(apr_hash_t **changes_p,
       /* Advance the cursor to the next record with this same KEY, and
          fetch that record. */
       svn_fs_base__result_dbt(&result);
-      db_err = cursor->c_get(cursor, &query, &result, DB_NEXT_DUP);
+      db_err = svn_bdb_dbc_get(cursor, &query, &result, DB_NEXT_DUP);
       if (! db_err)
         svn_fs_base__track_dbt(&result, pool);
     }
@@ -342,7 +342,7 @@ svn_fs_bdb__changes_fetch(apr_hash_t **changes_p,
 
  cleanup:
   /* Close the cursor. */
-  db_c_err = cursor->c_close(cursor);
+  db_c_err = svn_bdb_dbc_close(cursor);
 
   /* If we had an error prior to closing the cursor, return the error. */
   if (err)
@@ -384,7 +384,7 @@ svn_fs_bdb__changes_fetch_raw(apr_array_header_t **changes_p,
   /* Advance the cursor to the key that we're looking for. */
   svn_fs_base__str_to_dbt(&query, key);
   svn_fs_base__result_dbt(&result);
-  db_err = cursor->c_get(cursor, &query, &result, DB_SET);
+  db_err = svn_bdb_dbc_get(cursor, &query, &result, DB_SET);
   if (! db_err)
     svn_fs_base__track_dbt(&result, pool);
 
@@ -412,7 +412,7 @@ svn_fs_bdb__changes_fetch_raw(apr_array_header_t **changes_p,
       /* Advance the cursor to the next record with this same KEY, and
          fetch that record. */
       svn_fs_base__result_dbt(&result);
-      db_err = cursor->c_get(cursor, &query, &result, DB_NEXT_DUP);
+      db_err = svn_bdb_dbc_get(cursor, &query, &result, DB_NEXT_DUP);
       if (! db_err)
         svn_fs_base__track_dbt(&result, pool);
     }
@@ -425,7 +425,7 @@ svn_fs_bdb__changes_fetch_raw(apr_array_header_t **changes_p,
 
  cleanup:
   /* Close the cursor. */
-  db_c_err = cursor->c_close(cursor);
+  db_c_err = svn_bdb_dbc_close(cursor);
 
   /* If we had an error prior to closing the cursor, return the error. */
   if (err)

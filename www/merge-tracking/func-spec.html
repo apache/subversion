@@ -114,11 +114,13 @@ implementation supports two modes:</p>
   <li>A compatibility mode, which neither contacts the repository, nor
     does any merge info propogation (unless a copy source's merge info
     has been locally modified, in which its value is propogated the as
-    any Subversion revision property).</li>
+    any Subversion revision property).  This is the default mode of
+    operation.</li>
 
   <li>A mode which requires repository access (e.g. isn't offline),
     but which propogates all merge info from source path to
-    destination (<i>unimplemented</i>, start with copy test #31).</li>
+    destination.  This mode is activated via the
+    <code>--use-merge-history</code> option.</li>
 </ul>
 
 <p>This behavior is comparable to the difference between <code>svn
@@ -133,6 +135,28 @@ merge info in the WC).</p>
 </div>  <!-- wc-wc-copy-move -->
 
 </div>  <!-- copy-move -->
+
+<div class="h2" id="sparse-checkouts">
+<h2>Sparse Checkouts</h2>
+
+<p>When merging to a WC with sparsely populated directories, non-inheritable
+mergeinfo for the merge is set on the deepest directories present.</p>
+
+<ul>
+ <li>Directories with depth == empty: The directory gets non-inheritable
+ mergeinfo.</li>
+
+ <li>Directories with depth == files: The directory gets non-inheritable
+ mergeinfo.  Any child files present get inheritable mergeinfo (not to imply
+ files ever have anything but inheritable mergeinfo, they shouldn't!).</li>
+
+ <li>Directories with depth == imediates: The directory and any child files
+ present get inheritable mergeinfo.  And directory children present get
+ non-inheritable mergeinfo.</li>
+
+</ul>
+
+</div>  <!-- sparse-checkouts -->
 
 <div class="h2" id="switched-paths">
 <h2>Switched Paths</h2>
@@ -449,15 +473,15 @@ Merge r12 and r14 from branch to trunk.
 ------------------------------------------------------------------------
 r14 | bob | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 1 line
 Changed paths:
-   M /trunk/death-ray.c
+   M /branches/world-domination/death-ray.c
 Result of a merge from: r24
 
 Remove inadvertent changes to Death-Ray-o-Matic introduced in r12.
 ------------------------------------------------------------------------
 r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 1 line
 Changed paths:
-   M /trunk/frobnicator/frapnalyzer.c
-   M /trunk/death-ray.c
+   M /branches/world-domination/frobnicator/frapnalyzer.c
+   M /branches/world-domination/death-ray.c
 Result of a merge from: r24
 
 Fix frapnalyzer bug in frobnicator.
@@ -759,24 +783,43 @@ resolve the conflicts.  The merge algorithm used by Subversion's Merge
 Tracking implementation makes this problem worse, since it breaks a
 requested merge range into several merges to avoid <a
 href="requirements.html#repeated-merge">repeating merges</a> which
-have already been applied to a merge target or its children.</p>
+have already been applied to a merge target or its children.  After a
+conflict is encountered, merges of subsequent revision ranges must be
+aborted, since <a
+href="http://svn.collab.net/repos/svn/trunk/notes/tree-conflicts.txt"
+>tree conflicts</a> or previous content conflicts cannot be reliably
+merged into (e.g. you can't merge into a file that either isn't there
+or which you could potentially merge inside one side of a conflict
+marker).</p>
 
-<p>To help alleviate the pain of conflict resolution, a merge conflict
-resolution callback can be employed by Subversion clients.  This
-callback is invoked whenever merge conflicts are encountered, and can
-takes steps like launching a graphical merge tool (for interactive
-conflict resolution), or following a pre-specified directive like
-"always use the version from my merge source".  This last
-implementation can be used to support the <a
-href="requirements.html#automated-merge">SCM automated merge</a> use
-case.</p>
+<p>To help alleviate the pain of conflict resolution, a merge <a
+href="design.html#conflict-resolution">conflict resolution
+callback</a> can be employed by Subversion clients.  This callback is
+invoked whenever merge conflicts are encountered, and can takes steps
+like launching a graphical merge tool (for interactive conflict
+resolution), or following a pre-specified directive like "always use
+the version from my merge source".  This last implementation can be
+used to support the <a href="requirements.html#automated-merge">SCM
+automated merge</a> use case.</p>
 
 <p>The command-line client includes a merge conflict resolution
 callback which behaves much like <em>svk</em>, when in interactive
-mode displaying some context for each conflict and prompting for how
-to resolve it, or when in non-interactive mode, taking directives
-beforehand.  See the <a href="../svn_1.5_releasenotes.html">1.5
-release notes</a> for an example.</p>
+mode prompting for how to resolve each conflicted file or property
+value.  When in non-interactive mode (or configured to disallow
+interactive conflict resolution via <code>[miscellany]
+interactive-conflicts = no</code>), conflict resolution is postponed
+until post-merge (as in pre-1.5 releases).  See the <a
+href="../svn_1.5_releasenotes.html">1.5 release notes</a> for an
+example.</p>
+
+<p>In a post-1.5 release, the command-line client will provide an
+interactive conflict resolution option to display some context for
+each conflict in a path or property value, and prompt for how to
+resolve it.  The merge algorithm will attempt to continue applying
+more of the requested merge after conflict is encountered, merging
+what it can around the conflicted area of the WC, and possibly
+supporting an option to complete the remainder of an unfinished merge
+operation after conflicts have been resolved manually.</p>
 
 <p>Related discussion from the dev@ mailing list can be found
 here:</p>

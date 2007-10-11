@@ -243,6 +243,11 @@ a <tt>file:</tt> URL?</a></li>
     old".</a></li>
 <li><a href="#switch-problems">Why doesn't <tt>svn switch</tt> work
     in some cases?</a></li>
+<li><a href="#long-paths">In Windows, when doing an update with the
+    command-line client, I get an error saying "The
+    system cannot find the path specified" and suggesting that my
+    working copy might be corrupt.  But I can update with TortoiseSVN
+    just fine.  What's going on?</a></li>
 </ul>
 
 <h4>Developer questions:</h4>
@@ -3415,7 +3420,6 @@ The fix is simply to upgrade your command-line client to 1.4 or newer.
 
 </div>
 
-
 <div class="h3" id="switch-problems" title="switch-problems">
 <h3>Why doesn't <tt>svn switch</tt> work in some cases?</h3>
 
@@ -3448,8 +3452,8 @@ removed.</b>
 <blockquote>
 <div><pre><code>
 # Check and delete svn unversioned files: 
-svn status --no-ignore | grep ^[I?]" | sed 's/^[I?]//'
-svn status --no-ignore | grep "^[I?]" | sed 's/^[I?]//' |xargs rm -rf
+svn status --no-ignore | grep '^[I?]' | sed 's/^[I?]//'
+svn status --no-ignore | grep '^[I?]' | sed 's/^[I?]//' | xargs rm -rf
 </code></pre></div>
 </blockquote>
 
@@ -3553,6 +3557,71 @@ wc/$ svn status
 
 </div>
 
+<div class="h3" id="long-paths" title="long-paths">
+<h3>In Windows, when doing an update with the command-line client, I
+    get an error saying "The system cannot find the path specified"
+    and suggesting that my working copy might be corrupt.  But I can
+    update with TortoiseSVN just fine.  What's going on?</h3>
+
+<p>A careful examination of the Windows API documentation regarding <a
+href="http://msdn2.microsoft.com/en-us/library/aa365247.aspx#maximum_path_length"
+>Naming a File</a> reveals the most common reason why this happens. In
+short, you can address significantly longer path names when using the
+Unicode versions of the Windows path functions, and providing absolute
+path specifiers instead of relative path specifiers.  Fortunately, the
+Apache Portable Runtime (APR) library that Subversion uses
+transparently converts absolute paths (like
+<tt>C:\WorkingCopy\file.txt</tt>) into the form required by the
+Windows APIs (<tt>\\?\C:\WorkingCopy\file.txt</tt>), and back again.
+<em>Unfortunately</em>, you only get these long-path benefits when
+using absolute paths.</p>
+
+<p>To see if path length is the reason for the problem you're seeing,
+try providing an absolute target path to the Subversion command-line
+client instead of a relative one (or none at all).  In other words,
+instead of doing this:</p>
+
+<blockquote>
+<div><pre><code>
+C:\> svn up WorkingCopy
+</code></pre></div>
+</blockquote>
+
+<p>or this:</p>
+
+<blockquote>
+<div><pre><code>
+C:\> cd C:\WorkingCopy
+C:\WorkingCopy> svn up
+</code></pre></div>
+</blockquote>
+
+<p>do this:</p>
+
+<blockquote>
+<div><pre><code>
+C:\> svn update C:\WorkingCopy
+</code></pre></div>
+</blockquote>
+
+<p>If the problem goes away, congratulations &mdash; you've hit a
+Windows path length limitation.  And now you know the workaround.</p>
+
+<p><strong>Why does this problem not affect TortoiseSVN?</strong>
+Because TortoiseSVN <em>always</em> provides absolute paths to the
+Subversion APIs.</p>
+
+<p><strong>Why, then, does the Subversion command-line client not
+always convert its input into absolute paths and use those?</strong>
+The Subversion developers have been operating under the principle
+that, for reasons of user experience, the display of paths in the
+tool's output should match the syntax of the paths provided as input.
+And while conversion to an absolute path from a relative one is a
+fairly trivial operation, the reverse transformation is fraught with
+complexities.  (In other words, it's a hard problem not high on our
+priority list.)</p>
+
+</div>
 </div>
 
 

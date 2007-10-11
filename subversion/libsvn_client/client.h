@@ -110,6 +110,17 @@ svn_error_t *svn_client__prev_log_path(const char **prev_path_p,
                                        apr_pool_t *pool);
 
 
+/* Set *COPYFROM_PATH and *COPYFROM_REV to the path and revision that
+   served as the source of the copy from which PATH_OR_URL at REVISION
+   was created, or NULL and SVN_INVALID_REVNUM (respectively) if
+   PATH_OR_URL at REVISION was not the result of a copy operation. */
+svn_error_t *svn_client__get_copy_source(const char *path_or_url,
+                                         const svn_opt_revision_t *revision,
+                                         const char **copyfrom_path,
+                                         svn_revnum_t *copyfrom_rev,
+                                         svn_client_ctx_t *ctx,
+                                         apr_pool_t *pool);
+
 /* Set *START_URL and *START_REVISION (and maybe *END_URL
    and *END_REVISION) to the revisions and repository URLs of one
    (or two) points of interest along a particular versioned resource's
@@ -182,6 +193,21 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
 
+/* Set REPOS_ROOT to the URL which represents the root of the
+   repository in with PATH_OR_URL (at PEG_REVISION) is versioned.  Use
+   the authentication baton cached in CTX as necessary.  
+
+   ADM_ACCESS is a working copy administrative access baton associated
+   with PATH_OR_URL (if PATH_OR_URL is a working copy path), or NULL.
+
+   Use POOL for all allocations. */
+svn_error_t *
+svn_client__get_repos_root(const char **repos_root, 
+                           const char *path_or_url,
+                           const svn_opt_revision_t *peg_revision,
+                           svn_wc_adm_access_t *adm_access,
+                           svn_client_ctx_t *ctx, 
+                           apr_pool_t *pool);
 
 /* Return the path of PATH_OR_URL relative to the repository root
    (REPOS_ROOT) in REL_PATH (URI-decoded).
@@ -200,13 +226,16 @@ svn_client__path_relative_to_root(const char **rel_path,
 
 /* Return the property value for any PROPNAME set on TARGET in *PROPS,
    with WC paths of char * for keys and property values of
-   svn_string_t * for values.  Assumes that PROPS is non-NULL. */
+   svn_string_t * for values.  Assumes that PROPS is non-NULL.
+
+   Treat DEPTH as in svn_client_propget4().
+*/
 svn_error_t *
 svn_client__get_prop_from_wc(apr_hash_t *props, const char *propname,
                              const char *target, svn_boolean_t pristine,
                              const svn_wc_entry_t *entry,
                              svn_wc_adm_access_t *adm_access,
-                             svn_boolean_t recurse, svn_client_ctx_t *ctx,
+                             svn_depth_t depth, svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
 /* Retrieve the oldest revision of the node at REL_PATH at REV since
@@ -219,6 +248,14 @@ svn_client__oldest_rev_at_path(svn_revnum_t *oldest_rev,
                                const char *rel_path,
                                svn_revnum_t rev,
                                apr_pool_t *pool);
+
+/* A default error handler for use with svn_wc_walk_entries3().  Returns
+   ERR in all cases. */
+svn_error_t *
+svn_client__default_walker_error_handler(const char *path,
+                                         svn_error_t *err,
+                                         void *walk_baton,
+                                         apr_pool_t *pool);
 
 
 /* ---------------------------------------------------------------- */
@@ -697,8 +734,9 @@ typedef struct
    locked in the process of this crawl.  These will need to be
    unlocked again post-commit.
 
-   If NONRECURSIVE is specified, subdirectories of directory targets
-   found in TARGETS will not be crawled for modifications.
+   If DEPTH is specified, descend (or not) into each target in TARGETS
+   as specified by DEPTH; the behavior is the same as that described
+   for svn_client_commit4().
 
    If JUST_LOCKED is TRUE, treat unmodified items with lock tokens as
    commit candidates.
@@ -715,7 +753,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                  apr_hash_t **lock_tokens,
                                  svn_wc_adm_access_t *parent_dir,
                                  apr_array_header_t *targets,
-                                 svn_boolean_t nonrecursive,
+                                 svn_depth_t depth,
                                  svn_boolean_t just_locked,
                                  const char *changelist_name,
                                  svn_client_ctx_t *ctx,
@@ -849,6 +887,7 @@ svn_error_t *
 svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
                                svn_wc_status_func2_t status_func,
                                void *status_baton,
+                               svn_depth_t depth,
                                svn_boolean_t get_all,
                                svn_boolean_t update,
                                svn_boolean_t no_ignore,

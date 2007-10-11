@@ -45,12 +45,12 @@ svn_cl__add(apr_getopt_t *os,
   int i;
   apr_pool_t *subpool;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
                                         opt_state->targets, pool));
 
   if (! targets->nelts)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
-      
+
   if (! opt_state->quiet)
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
                          FALSE, FALSE, pool);
@@ -65,9 +65,9 @@ svn_cl__add(apr_getopt_t *os,
 
       svn_pool_clear(subpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
-      SVN_ERR(svn_cl__try 
+      SVN_ERR(svn_cl__try
               (svn_client_add4(target,
-                               SVN_DEPTH_TO_RECURSE(opt_state->depth),
+                               opt_state->depth,
                                opt_state->force, opt_state->no_ignore,
                                opt_state->parents, ctx, subpool),
                NULL, opt_state->quiet,

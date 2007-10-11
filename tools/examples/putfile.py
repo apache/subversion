@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# USAGE: putfile.py [-m commitmsg] [-u username] file repos-path 
+# USAGE: putfile.py [-m commitmsg] [-u username] file repos-path
 #
 # put a file into an SVN repository
 #
@@ -34,7 +34,7 @@ def putfile(fname, rpath, uname="", commitmsg=""):
     fs.make_file(root, fname)
   elif kind == core.svn_node_dir:
     print "File '%s' is a dir." % fname
-    return 
+    return
   else:
     print "Updating file '%s'" % fname
 
@@ -44,7 +44,7 @@ def putfile(fname, rpath, uname="", commitmsg=""):
   ### whole file and shove it into the FS.
   delta.svn_txdelta_send_string(open(fname, 'rb').read(),
                                 handler, baton)
-  
+
   newrev = repos.fs_commit_txn(repos_ptr, txn)
   print "revision: ", newrev
 

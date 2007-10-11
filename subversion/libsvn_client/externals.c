@@ -275,7 +275,8 @@ switch_external(const char *path,
 
   /* ... Hello, new hotness. */
   SVN_ERR(svn_client__checkout_internal(NULL, url, path, peg_revision,
-                                        revision, SVN_DEPTH_FROM_RECURSE(TRUE),
+                                        revision,
+                                        SVN_DEPTH_INFINITY_OR_FILES(TRUE),
                                         FALSE, FALSE, timestamp_sleep,
                                         ctx, pool));
 
@@ -340,7 +341,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
       svn_path_split(path, &parent, NULL, ib->pool);
       SVN_ERR(svn_io_make_dir_recursively(parent, ib->pool));
 
-      /* If we were handling renames the fancy way, then  before
+      /* If we were handling renames the fancy way, then before
          checking out a new subdir here, we would somehow learn if
          it's really just a rename of an old one.  That would work in
          tandem with the next case -- this case would do nothing,
@@ -367,13 +368,11 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
                                    TRUE, FALSE, svn_depth_infinity, NULL,
                                    ib->ctx, ib->pool));
       else
-        SVN_ERR(svn_client__checkout_internal(NULL, new_item->url, path,
-                                              &(new_item->peg_revision),
-                                              &(new_item->revision),
-                                              SVN_DEPTH_FROM_RECURSE(TRUE),
-                                              FALSE, FALSE,
-                                              ib->timestamp_sleep,
-                                              ib->ctx, ib->pool));
+        SVN_ERR(svn_client__checkout_internal
+                (NULL, new_item->url, path,
+                 &(new_item->peg_revision), &(new_item->revision),
+                 SVN_DEPTH_INFINITY_OR_FILES(TRUE),
+                 FALSE, FALSE, ib->timestamp_sleep, ib->ctx, ib->pool));
     }
   else if (! new_item)
     {
@@ -468,14 +467,14 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   svn_wc_external_item2_t *item;
 
   if ((old_desc_text = apr_hash_get(cb->externals_old, key, klen)))
-    SVN_ERR(svn_wc_parse_externals_description3(&old_desc, key,
-                                                old_desc_text, cb->pool));
+    SVN_ERR(svn_wc_parse_externals_description3(&old_desc, key, old_desc_text,
+                                                TRUE, cb->pool));
   else
     old_desc = NULL;
 
   if ((new_desc_text = apr_hash_get(cb->externals_new, key, klen)))
-    SVN_ERR(svn_wc_parse_externals_description3(&new_desc, key,
-                                                new_desc_text, cb->pool));
+    SVN_ERR(svn_wc_parse_externals_description3(&new_desc, key, new_desc_text,
+                                                TRUE, cb->pool));
   else
     new_desc = NULL;
 
@@ -598,6 +597,7 @@ svn_error_t *
 svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
                                svn_wc_status_func2_t status_func,
                                void *status_baton,
+                               svn_depth_t depth,
                                svn_boolean_t get_all,
                                svn_boolean_t update,
                                svn_boolean_t no_ignore,
@@ -635,8 +635,8 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
 
       /* Parse the svn:externals property value.  This results in a
          hash mapping subdirectories to externals structures. */
-      SVN_ERR(svn_wc_parse_externals_description3(&exts, path,
-                                                  propval, subpool));
+      SVN_ERR(svn_wc_parse_externals_description3(&exts, path, propval,
+                                                  TRUE, subpool));
 
       /* Make a sub-pool of SUBPOOL. */
       iterpool = svn_pool_create(subpool);
@@ -670,10 +670,7 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
           SVN_ERR(svn_client_status3(NULL, fullpath,
                                      &(external->revision),
                                      status_func, status_baton,
-                                     /* ### TODO(sd): Is it really correct
-                                        ### to unconditionally recurse
-                                        ### here? */
-                                     svn_depth_infinity, get_all, update,
+                                     depth, get_all, update,
                                      no_ignore, FALSE, ctx, iterpool));
         }
     }

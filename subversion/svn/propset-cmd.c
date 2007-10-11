@@ -60,6 +60,10 @@ svn_cl__propset(apr_getopt_t *os,
                                  opt_state->filedata ? 1 : 2, pool));
   pname = APR_ARRAY_IDX(args, 0, const char *);
   SVN_ERR(svn_utf_cstring_to_utf8(&pname_utf8, pname, pool));
+  if (! svn_prop_name_is_valid(pname_utf8))
+    return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
+                             _("'%s' is not a valid Subversion property name"),
+                             pname_utf8);
 
   /* Get the PROPVAL from either an external file, or from the command
      line. */
@@ -73,15 +77,15 @@ svn_cl__propset(apr_getopt_t *os,
       propval = svn_string_create(APR_ARRAY_IDX(args, 1, const char *), pool);
       propval_came_from_cmdline = TRUE;
     }
-  
+
   /* We only want special Subversion property values to be in UTF-8
      and LF line endings.  All other propvals are taken literally. */
   if (svn_prop_needs_translation(pname_utf8))
     SVN_ERR(svn_subst_translate_string(&propval, propval,
                                        opt_state->encoding, pool));
-  else 
+  else
     if (opt_state->encoding)
-      return svn_error_create 
+      return svn_error_create
         (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
          _("Bad encoding option: prop value not stored as UTF8"));
 
@@ -130,13 +134,13 @@ svn_cl__propset(apr_getopt_t *os,
       SVN_ERR(svn_client_revprop_set(pname_utf8, propval,
                                      URL, &(opt_state->start_revision),
                                      &rev, opt_state->force, ctx, pool));
-      if (! opt_state->quiet) 
+      if (! opt_state->quiet)
         {
           SVN_ERR
             (svn_cmdline_printf
              (pool, _("property '%s' set on repository revision %ld\n"),
               pname_utf8, rev));
-        }      
+        }
     }
   else if (opt_state->start_revision.kind != svn_opt_revision_unspecified)
     {
@@ -154,7 +158,7 @@ svn_cl__propset(apr_getopt_t *os,
 
       /* The customary implicit dot rule has been prone to user error
        * here.  People would do intuitive things like
-       * 
+       *
        *    $ svn propset svn:executable script
        *
        * and then be surprised to get an error like:
@@ -164,7 +168,7 @@ svn_cl__propset(apr_getopt_t *os,
        *
        * So we don't do the implicit dot thing anymore.  A * target
        * must always be explicitly provided when setting a versioned
-       * property.  See 
+       * property.  See
        *
        *    http://subversion.tigris.org/issues/show_bug.cgi?id=924
        *
@@ -200,7 +204,7 @@ svn_cl__propset(apr_getopt_t *os,
                               (&commit_info,
                                pname_utf8,
                                propval, target,
-                               SVN_DEPTH_TO_RECURSE(opt_state->depth),
+                               opt_state->depth,
                                opt_state->force,
                                SVN_INVALID_REVNUM,
                                ctx, subpool),
@@ -216,7 +220,7 @@ svn_cl__propset(apr_getopt_t *os,
             {
               SVN_ERR
                 (svn_cmdline_printf
-                 (pool, SVN_DEPTH_TO_RECURSE(opt_state->depth)
+                 (pool, SVN_DEPTH_IS_RECURSIVE(opt_state->depth)
                   ? _("property '%s' set (recursively) on '%s'\n")
                   : _("property '%s' set on '%s'\n"),
                   pname, svn_path_local_style(target, pool)));

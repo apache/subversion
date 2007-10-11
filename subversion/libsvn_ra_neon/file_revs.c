@@ -233,8 +233,8 @@ end_element(void *userdata, int state,
          there were no content changes. */
       if (!rb->had_txdelta)
         SVN_ERR(rb->handler(rb->handler_baton, rb->path, rb->revnum,
-                            rb->rev_props, FALSE, NULL, NULL, rb->prop_diffs,
-                            rb->subpool));
+                            rb->rev_props, rb->merged_rev, NULL, NULL,
+                            rb->prop_diffs, rb->subpool));
       break;
 
     case ELEM_rev_prop:
@@ -314,7 +314,7 @@ svn_ra_neon__get_file_revs(svn_ra_session_t *session,
   static const char request_tail[]
     = "</S:file-revs-report>";
 
-  apr_hash_set(request_headers, "Accept-Encoding", APR_HASH_KEY_STRING, 
+  apr_hash_set(request_headers, "Accept-Encoding", APR_HASH_KEY_STRING,
                "svndiff1;q=0.9,svndiff;q=0.8");
 
   /* Construct request body. */

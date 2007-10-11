@@ -9,6 +9,8 @@
 	<Platforms>
 		<Platform
 			Name="Win32"/>
+		<Platform
+			Name="x64"/>
 	</Platforms>
 	<Configurations>
 		<Configuration
@@ -49,6 +51,44 @@
 			<Tool
 				Name="VCPreBuildEventTool"/>
 		</Configuration>
+		<Configuration
+			Name="Debug|x64"
+			OutputDirectory="."
+			IntermediateDirectory="."
+			ConfigurationType="10"
+			UseOfMFC="0"
+			DeleteExtensionsOnClean="*.obj;*.ilk;*.pdb;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;$(TargetPath)"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCCustomBuildTool"/>
+			<Tool
+				Name="VCMIDLTool"
+				TypeLibraryName="./svn_config.tlb"
+				HeaderFileName=""/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+		</Configuration>
+		<Configuration
+			Name="Release|x64"
+			OutputDirectory="."
+			IntermediateDirectory="."
+			ConfigurationType="10"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE"
+			DeleteExtensionsOnClean="*.obj;*.ilk;*.pdb;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;$(TargetPath)">
+			<Tool
+				Name="VCCustomBuildTool"/>
+			<Tool
+				Name="VCMIDLTool"
+				TypeLibraryName="./svn_config.tlb"
+				HeaderFileName=""/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+		</Configuration>
 	</Configurations>
 	<Files>
 		<File
@@ -61,6 +101,18 @@
 			</FileConfiguration>
 			<FileConfiguration
 				Name="Release|Win32"
+				ExcludedFromBuild="TRUE">
+				<Tool
+					Name="VCCustomBuildTool"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|x64"
+				ExcludedFromBuild="TRUE">
+				<Tool
+					Name="VCCustomBuildTool"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release|x64"
 				ExcludedFromBuild="TRUE">
 				<Tool
 					Name="VCCustomBuildTool"/>
@@ -79,6 +131,24 @@
 			</FileConfiguration>
 			<FileConfiguration
 				Name="Release|Win32">
+				<Tool
+					Name="VCCustomBuildTool"
+					Description="Creating svn_private_config.h from svn_private_config.hw."
+					CommandLine="copy ..\..\subversion\svn_private_config.hw ..\..\subversion\svn_private_config.h &gt; nul
+"
+					Outputs="..\..\subversion\svn_private_config.h"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|x64">
+				<Tool
+					Name="VCCustomBuildTool"
+					Description="Creating svn_private_config.h from svn_private_config.hw."
+					CommandLine="copy ..\..\subversion\svn_private_config.hw ..\..\subversion\svn_private_config.h &gt; nul
+"
+					Outputs="..\..\subversion\svn_private_config.h"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release|x64">
 				<Tool
 					Name="VCCustomBuildTool"
 					Description="Creating svn_private_config.h from svn_private_config.hw."

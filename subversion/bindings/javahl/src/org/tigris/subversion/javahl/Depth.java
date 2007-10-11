@@ -22,30 +22,39 @@ package org.tigris.subversion.javahl;
  * The concept of depth for directories.
  *
  * Note:
- * This is similar to, but not exactly the same as, the WebDAV and LDAP 
+ * This is similar to, but not exactly the same as, the WebDAV and LDAP
  * concepts of depth.
  *
  */
 public final class Depth
 {
-    /** Depth undetermined or ignored. 
-     * ### TODO(sd): If this gets removed in svn_types.h, remove it here. */
+    /* The order of these depths is important: the higher the number,
+       the deeper it descends.  This allows us to compare two depths
+       numerically to decide which should govern. */
+
+    /** Depth undetermined or ignored. */
     public static final int unknown = -2;
 
-    /** Exclude (remove, whatever) directory D.
-     * ### TODO(sd): If this gets removed in svn_types.h, remove it here. */
+    /** Exclude (i.e, don't descend into) directory D. */
     public static final int exclude = -1;
 
-    /** Just the named directory D, no entries. */
+    /** Just the named directory D, no entries.  Updates will not pull in
+        any files or subdirectories not already present. */
     public static final int empty = 0;
 
-    /** D + its file children, but not subdirs. */
+    /** D + its file children, but not subdirs.  Updates will pull in any
+        files not already present, but not subdirectories. */
     public static final int files = 1;
 
-    /** D + immediate children (D and its entries). */
+    /** D + immediate children (D and its entries).  Updates will pull in
+        any files or subdirectories not already present; those
+        subdirectories' this_dir entries will have depth-empty. */
     public static final int immediates = 2;
 
-    /** D + all descendants (full recursion from D). */
+    /** D + all descendants (full recursion from D).  Updates will pull
+        in any files or subdirectories not already present; those
+        subdirectories' this_dir entries will have depth-infinity.
+        Equivalent to the pre-1.5 default update behavior. */
     public static final int infinity = 3;
 
     public static final int fromRecurse(boolean recurse)

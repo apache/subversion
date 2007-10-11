@@ -239,9 +239,9 @@ fs_open_for_recovery(svn_fs_t *fs,
    The CLEAN_LOGS argument is ignored and included for Subversion
    1.0.x compatibility.  Perform all temporary allocations in POOL. */
 static svn_error_t *
-fs_hotcopy(const char *src_path, 
-           const char *dest_path, 
-           svn_boolean_t clean_logs, 
+fs_hotcopy(const char *src_path,
+           const char *dest_path,
+           svn_boolean_t clean_logs,
            apr_pool_t *pool)
 {
   return svn_fs_fs__hotcopy(src_path, dest_path, pool);
@@ -275,7 +275,7 @@ fs_delete_fs(const char *path,
              apr_pool_t *pool)
 {
   /* Remove everything. */
-  return svn_io_remove_dir2(path, FALSE, pool);
+  return svn_io_remove_dir2(path, FALSE, NULL, NULL, pool);
 }
 
 static const svn_version_t *

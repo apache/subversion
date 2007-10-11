@@ -164,6 +164,8 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
   svn_ra_neon__session_t *ras = session->priv;
   svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
   struct mergeinfo_baton mb;
+  svn_string_t bc_url, bc_relative;
+  const char *final_bc_url;
 
   static const char minfo_report_head[] =
     "<S:" SVN_DAV__MERGEINFO_REPORT " xmlns:S=\"" SVN_XML_NAMESPACE "\">"
@@ -205,9 +207,19 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
   mb.result = apr_hash_make(pool);
   mb.err = SVN_NO_ERROR;
 
+  /* ras's URL may not exist in HEAD, and thus it's not safe to send
+     it as the main argument to the REPORT request; it might cause
+     dav_get_resource() to choke on the server.  So instead, we pass a
+     baseline-collection URL, which we get from END. */
+  SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
+                                         ras, ras->url->data, revision,
+                                         pool));
+  final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
+                                            pool);
+
   err = svn_ra_neon__parsed_request(ras,
                                     "REPORT",
-                                    ras->url->data,
+                                    final_bc_url,
                                     request_body->data,
                                     NULL, NULL,
                                     start_element,

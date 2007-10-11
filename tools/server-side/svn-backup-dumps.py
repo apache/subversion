@@ -619,7 +619,7 @@ class SvnBackup:
 
 
 if __name__ == "__main__":
-    usage = "usage: svnbackup.py [options] repospath dumpdir"
+    usage = "usage: svn-backup-dumps.py [options] repospath dumpdir"
     parser = OptionParser(usage=usage, version="%prog "+__version)
     if have_bz2:
         parser.add_option("-b",

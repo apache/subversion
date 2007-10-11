@@ -2,9 +2,9 @@
 #
 #  export_tests.py:  testing export cases.
 #
-#  Subversion is a tool for revision control. 
+#  Subversion is a tool for revision control.
 #  See http://subversion.tigris.org for more information.
-#    
+#
 # ====================================================================
 # Copyright (c) 2000-2004 CollabNet.  All rights reserved.
 #
@@ -28,7 +28,7 @@ Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
- 
+
 ######################################################################
 # Tests
 #
@@ -40,7 +40,7 @@ Item = svntest.wc.StateItem
 def export_empty_directory(sbox):
   "export an empty directory"
   sbox.build(create_wc = False)
-  
+
   svntest.main.safe_rmtree(sbox.wc_dir)
   export_target = sbox.wc_dir
   empty_dir_url = sbox.repo_url + '/A/C'
@@ -72,7 +72,7 @@ def export_nonexistent_url(sbox):
   export_target = os.path.join(sbox.wc_dir, 'nonexistent')
   nonexistent_url = sbox.repo_url + "/nonexistent"
   svntest.actions.run_and_verify_svn("Error about nonexistent URL expected",
-                                     None, svntest.SVNAnyOutput,
+                                     None, svntest.verify.AnyOutput,
                                      'export', nonexistent_url, export_target)
 
 def export_working_copy(sbox):
@@ -134,7 +134,7 @@ def export_over_existing_dir(sbox):
   os.mkdir(export_target)
 
   svntest.actions.run_and_verify_svn("No error where one is expected",
-                                     None, svntest.SVNAnyOutput,
+                                     None, svntest.verify.AnyOutput,
                                      'export', sbox.wc_dir, export_target)
 
   # As an extra precaution, make sure export_target doesn't have
@@ -153,7 +153,7 @@ def export_keyword_translation(sbox):
   # the export operation
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   svntest.main.file_append(mu_path, '$LastChangedRevision$')
-  svntest.main.run_svn(None, 'ps', 'svn:keywords', 
+  svntest.main.run_svn(None, 'ps', 'svn:keywords',
                        'LastChangedRevision', mu_path)
   svntest.main.run_svn(None, 'ci',
                        '--username', svntest.main.wc_author,
@@ -162,7 +162,7 @@ def export_keyword_translation(sbox):
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu',
-                      contents=expected_disk.desc['A/mu'].contents + 
+                      contents=expected_disk.desc['A/mu'].contents +
                       '$LastChangedRevision: 2 $')
 
   export_target = sbox.add_wc_path('export')
@@ -186,7 +186,7 @@ def export_eol_translation(sbox):
   # Set svn:eol-style to 'CR' to see if it's applied correctly in the
   # export operation
   mu_path = os.path.join(wc_dir, 'A', 'mu')
-  svntest.main.run_svn(None, 'ps', 'svn:eol-style', 
+  svntest.main.run_svn(None, 'ps', 'svn:eol-style',
                        'CR', mu_path)
   svntest.main.run_svn(None, 'ci',
                        '--username', svntest.main.wc_author,
@@ -220,12 +220,12 @@ def export_working_copy_with_keyword_translation(sbox):
   # the export operation
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   svntest.main.file_append(mu_path, '$LastChangedRevision$')
-  svntest.main.run_svn(None, 'ps', 'svn:keywords', 
+  svntest.main.run_svn(None, 'ps', 'svn:keywords',
                        'LastChangedRevision', mu_path)
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu',
-                      contents=expected_disk.desc['A/mu'].contents + 
+                      contents=expected_disk.desc['A/mu'].contents +
                       '$LastChangedRevision: 1M $')
 
   export_target = sbox.add_wc_path('export')
@@ -298,7 +298,7 @@ def export_native_eol_option(sbox):
   # Append a '\n' to A/mu and set svn:eol-style to 'native'
   # to see if it's applied correctly in the export operation
   mu_path = os.path.join(wc_dir, 'A', 'mu')
-  svntest.main.run_svn(None, 'ps', 'svn:eol-style', 
+  svntest.main.run_svn(None, 'ps', 'svn:eol-style',
                        'native', mu_path)
   svntest.main.run_svn(None, 'ci',
                        '--username', svntest.main.wc_author,
@@ -334,7 +334,7 @@ def export_nonexistent_file(sbox):
   export_target = sbox.add_wc_path('export')
 
   svntest.actions.run_and_verify_svn("No error where one is expected",
-                                     None, svntest.SVNAnyOutput,
+                                     None, svntest.verify.AnyOutput,
                                      'export', kappa_path, export_target)
 
 def export_unversioned_file(sbox):
@@ -349,7 +349,7 @@ def export_unversioned_file(sbox):
   export_target = sbox.add_wc_path('export')
 
   svntest.actions.run_and_verify_svn("No error where one is expected",
-                                     None, svntest.SVNAnyOutput,
+                                     None, svntest.verify.AnyOutput,
                                      'export', kappa_path, export_target)
 
 def export_with_state_deleted(sbox):

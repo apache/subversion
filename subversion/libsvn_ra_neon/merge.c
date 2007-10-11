@@ -2,7 +2,7 @@
  * merge.c :  routines for performing a MERGE server requests
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -31,6 +31,7 @@
 #include "svn_props.h"
 #include "svn_xml.h"
 
+#include "private/svn_dav_protocol.h"
 #include "svn_private_config.h"
 
 #include "ra_neon.h"
@@ -53,10 +54,10 @@ static const svn_ra_neon__xml_elm_t merge_elements[] =
   { "DAV:", "resourcetype", ELEM_resourcetype, 0 },
   { "DAV:", "collection", ELEM_collection, 0 },
   { "DAV:", "baseline", ELEM_baseline, 0 },
-  { "DAV:", "version-name", ELEM_version_name, SVN_RA_NEON__XML_CDATA },
+  { "DAV:", SVN_DAV__VERSION_NAME, ELEM_version_name, SVN_RA_NEON__XML_CDATA },
   { SVN_XML_NAMESPACE, "post-commit-err",
     ELEM_post_commit_err, SVN_RA_NEON__XML_CDATA },
-  { "DAV:", "creationdate", ELEM_creationdate, SVN_RA_NEON__XML_CDATA },
+  { "DAV:", SVN_DAV__CREATIONDATE, ELEM_creationdate, SVN_RA_NEON__XML_CDATA },
   { "DAV:", "creator-displayname", ELEM_creator_displayname,
     SVN_RA_NEON__XML_CDATA },
 
@@ -141,7 +142,7 @@ static svn_boolean_t okay_to_bump_path(const char *path,
   /* Otherwise, this path is bumpable IFF one of its parents is in the
      hash and marked with a 'recursion' flag. */
   parent_path = svn_stringbuf_create(path, pool);
-  
+
   do {
     apr_size_t len = parent_path->len;
     svn_path_remove_component(parent_path);
@@ -162,7 +163,7 @@ static svn_boolean_t okay_to_bump_path(const char *path,
 
 /* If committed PATH appears in MC->valid_targets, and an MC->push_prop
  * function exists, then store VSN_URL as the SVN_RA_NEON__LP_VSN_URL
- * property on PATH.  Use POOL for all allocations. 
+ * property on PATH.  Use POOL for all allocations.
  *
  * Otherwise, just return SVN_NO_ERROR.
  */
@@ -597,7 +598,7 @@ svn_error_t * svn_ra_neon__assemble_locktoken_body(svn_stringbuf_t **body,
 #define SVN_LOCK_TOKEN_LEN sizeof(SVN_LOCK_TOKEN)-1
 #define SVN_LOCK_TOKEN_CLOSE "</S:lock-token>" DEBUG_CR
 #define SVN_LOCK_TOKEN_CLOSE_LEN sizeof(SVN_LOCK_TOKEN_CLOSE)-1
-  
+
   /* First, figure out how much string data we're talking about,
      and allocate a stringbuf big enough to hold it all... we *never*
      want have the stringbuf do an auto-reallocation.  While here,
@@ -618,7 +619,7 @@ svn_error_t * svn_ra_neon__assemble_locktoken_body(svn_stringbuf_t **body,
       lock_path.len = klen;
       svn_xml_escape_cdata_string(&lock_path_xml, &lock_path, tmppool);
       apr_hash_set(xml_locks, lock_path_xml->data, lock_path_xml->len, val);
-      
+
       /* Now, on with the stringbuf calculations. */
       buf_size += SVN_LOCK_LEN;
       buf_size += SVN_LOCK_PATH_LEN;
@@ -629,11 +630,11 @@ svn_error_t * svn_ra_neon__assemble_locktoken_body(svn_stringbuf_t **body,
       buf_size += SVN_LOCK_TOKEN_CLOSE_LEN;
       buf_size += SVN_LOCK_CLOSE_LEN;
     }
-  
+
   buf_size += closing_tag_size;
-  
+
   svn_stringbuf_ensure(lockbuf, buf_size + 1);
-  
+
   /* Now append all the temporary hash's keys and values into the
      stringbuf.  This is better than doing apr_pstrcat() in a loop,
      because (1) there's no need to constantly re-alloc, and (2) the
@@ -644,9 +645,9 @@ svn_error_t * svn_ra_neon__assemble_locktoken_body(svn_stringbuf_t **body,
       const void *key;
       apr_ssize_t klen;
       void *val;
-      
+
       apr_hash_this(hi, &key, &klen, &val);
-      
+
       svn_stringbuf_appendcstr(lockbuf, SVN_LOCK);
       svn_stringbuf_appendcstr(lockbuf, SVN_LOCK_PATH);
       svn_stringbuf_appendbytes(lockbuf, key, klen);
@@ -656,7 +657,7 @@ svn_error_t * svn_ra_neon__assemble_locktoken_body(svn_stringbuf_t **body,
       svn_stringbuf_appendcstr(lockbuf, SVN_LOCK_TOKEN_CLOSE);
       svn_stringbuf_appendcstr(lockbuf, SVN_LOCK_CLOSE);
     }
-  
+
   svn_stringbuf_appendcstr(lockbuf, closing_tag);
 
 #undef SVN_LOCK
@@ -717,7 +718,7 @@ svn_error_t * svn_ra_neon__merge_activity(svn_revnum_t *new_rev,
   if (post_commit_err)
     mc.post_commit_err = MAKE_BUFFER(pool);
 
-  if (disable_merge_response 
+  if (disable_merge_response
       || (! keep_locks))
     {
       const char *value;
@@ -727,7 +728,7 @@ svn_error_t * svn_ra_neon__merge_activity(svn_revnum_t *new_rev,
                               SVN_DAV_OPTION_NO_MERGE_RESPONSE : "",
                            keep_locks ?
                               "" : SVN_DAV_OPTION_RELEASE_LOCKS);
-      
+
       if (! extra_headers)
         extra_headers = apr_hash_make(pool);
       apr_hash_set(extra_headers, SVN_DAV_OPTIONS_HEADER, APR_HASH_KEY_STRING,
@@ -745,9 +746,9 @@ svn_error_t * svn_ra_neon__merge_activity(svn_revnum_t *new_rev,
                       "<D:merge xmlns:D=\"DAV:\">"
                       "<D:source><D:href>%s</D:href></D:source>"
                       "<D:no-auto-merge/><D:no-checkout/>"
-                      "<D:prop>"
-                      "<D:checked-in/><D:version-name/><D:resourcetype/>"
-                      "<D:creationdate/><D:creator-displayname/>"
+                      "<D:prop><D:checked-in/>"
+                      "<D:" SVN_DAV__VERSION_NAME "/><D:resourcetype/>"
+                      "<D:" SVN_DAV__CREATIONDATE "/><D:creator-displayname/>"
                       "</D:prop>"
                       "%s"
                       "</D:merge>",
@@ -767,7 +768,7 @@ svn_error_t * svn_ra_neon__merge_activity(svn_revnum_t *new_rev,
     *committed_date = mc.committed_date->len
                       ? apr_pstrdup(pool, mc.committed_date->data) : NULL;
   if (committed_author)
-    *committed_author = mc.last_author->len 
+    *committed_author = mc.last_author->len
                         ? apr_pstrdup(pool, mc.last_author->data) : NULL;
   if (post_commit_err)
     *post_commit_err = mc.post_commit_err->len

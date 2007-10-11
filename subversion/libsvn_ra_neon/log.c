@@ -30,6 +30,8 @@
 #include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_xml.h"
+
+#include "private/svn_dav_protocol.h"
 #include "../libsvn_ra/ra_loader.h"
 
 #include "ra_neon.h"
@@ -54,13 +56,21 @@ struct log_baton
 
   /* Information about each log item in turn. */
   svn_log_entry_t *log_entry;
+  /* Place to hold revprop name. */
+  const char *revprop_name;
+  /* pre-1.5 compatibility */
+  svn_boolean_t seen_revprop_element;
+  svn_boolean_t want_author;
+  svn_boolean_t want_date;
+  svn_boolean_t want_message;
+  svn_boolean_t want_custom_revprops;
 
   /* The current changed path item. */
   svn_log_changed_path_t *this_path_item;
 
   /* Client's callback, invoked on the above fields when the end of an
      item is seen. */
-  svn_log_message_receiver2_t receiver;
+  svn_log_entry_receiver_t receiver;
   void *receiver_baton;
 
   int limit;
@@ -84,11 +94,9 @@ static void
 reset_log_item(struct log_baton *lb)
 {
   lb->log_entry->revision      = SVN_INVALID_REVNUM;
-  lb->log_entry->author        = NULL;
-  lb->log_entry->date          = NULL;
-  lb->log_entry->message       = NULL;
+  lb->log_entry->revprops      = NULL;
   lb->log_entry->changed_paths = NULL;
-  lb->log_entry->nbr_children  = 0;
+  lb->log_entry->has_children  = FALSE;
 
   svn_pool_clear(lb->subpool);
 }
@@ -117,11 +125,16 @@ log_start_element(int *elem, void *baton, int parent,
         SVN_RA_NEON__XML_CDATA },
       { SVN_XML_NAMESPACE, "replaced-path", ELEM_replaced_path,
         SVN_RA_NEON__XML_CDATA },
-      { "DAV:", "version-name", ELEM_version_name, SVN_RA_NEON__XML_CDATA },
+      { SVN_XML_NAMESPACE, "no-custom-revprops", ELEM_no_custom_revprops,
+        SVN_RA_NEON__XML_CDATA },
+      { SVN_XML_NAMESPACE, "revprop", ELEM_revprop,
+        SVN_RA_NEON__XML_CDATA },
+      { "DAV:", SVN_DAV__VERSION_NAME, ELEM_version_name,
+        SVN_RA_NEON__XML_CDATA },
       { "DAV:", "creator-displayname", ELEM_creator_displayname,
         SVN_RA_NEON__XML_CDATA },
       { "DAV:", "comment", ELEM_comment, SVN_RA_NEON__XML_CDATA },
-      { SVN_XML_NAMESPACE, "nbr-children", ELEM_nbr_children,
+      { SVN_XML_NAMESPACE, "has-children", ELEM_has_children,
         SVN_RA_NEON__XML_CDATA },
       { NULL }
     };
@@ -141,10 +154,24 @@ log_start_element(int *elem, void *baton, int parent,
     case ELEM_replaced_path:
     case ELEM_deleted_path:
     case ELEM_modified_path:
+    case ELEM_revprop:
     case ELEM_comment:
-    case ELEM_nbr_children:
       lb->want_cdata = lb->cdata;
       svn_stringbuf_setempty(lb->cdata);
+      if (elm->id == ELEM_revprop)
+        {
+          lb->seen_revprop_element = TRUE;
+          lb->revprop_name = svn_xml_get_attr_value("name", atts);
+          if (lb->revprop_name == NULL)
+            return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                     _("Missing name attr in revprop element"));
+        }
+      break;
+    case ELEM_no_custom_revprops:
+      lb->seen_revprop_element = TRUE;
+      break;
+    case ELEM_has_children:
+      lb->log_entry->has_children = TRUE;
       break;
 
     default:
@@ -158,16 +185,16 @@ log_start_element(int *elem, void *baton, int parent,
     case ELEM_replaced_path:
     case ELEM_deleted_path:
     case ELEM_modified_path:
-      lb->this_path_item = apr_pcalloc(lb->subpool, 
+      lb->this_path_item = apr_pcalloc(lb->subpool,
                                        sizeof(*(lb->this_path_item)));
       lb->this_path_item->copyfrom_rev = SVN_INVALID_REVNUM;
 
       /* See documentation for `svn_repos_node_t' in svn_repos.h,
-         and `svn_log_message_receiver_t' in svn_types.h, for more
+         and `svn_log_changed_path_t' in svn_types.h, for more
          about these action codes. */
       if ((elm->id == ELEM_added_path) || (elm->id == ELEM_replaced_path))
         {
-          lb->this_path_item->action 
+          lb->this_path_item->action
             = (elm->id == ELEM_added_path) ? 'A' : 'R';
           copyfrom_path = svn_xml_get_attr_value("copyfrom-path", atts);
           copyfrom_revstr = svn_xml_get_attr_value("copyfrom-rev", atts);
@@ -212,14 +239,25 @@ log_end_element(void *baton, int state,
     case ELEM_version_name:
       lb->log_entry->revision = SVN_STR_TO_REV(lb->cdata->data);
       break;
-    case ELEM_nbr_children:
-      lb->log_entry->nbr_children = atol(lb->cdata->data);
-      break;
     case ELEM_creator_displayname:
-      lb->log_entry->author = apr_pstrdup(lb->subpool, lb->cdata->data);
+      if (lb->want_author)
+        {
+          if (! lb->log_entry->revprops)
+            lb->log_entry->revprops = apr_hash_make(lb->subpool);
+          apr_hash_set(lb->log_entry->revprops, SVN_PROP_REVISION_AUTHOR,
+                       APR_HASH_KEY_STRING,
+                       svn_string_create_from_buf(lb->cdata, lb->subpool));
+        }
       break;
     case ELEM_log_date:
-      lb->log_entry->date = apr_pstrdup(lb->subpool, lb->cdata->data);
+      if (lb->want_date)
+        {
+          if (! lb->log_entry->revprops)
+            lb->log_entry->revprops = apr_hash_make(lb->subpool);
+          apr_hash_set(lb->log_entry->revprops, SVN_PROP_REVISION_DATE,
+                       APR_HASH_KEY_STRING,
+                       svn_string_create_from_buf(lb->cdata, lb->subpool));
+        }
       break;
     case ELEM_added_path:
     case ELEM_replaced_path:
@@ -229,16 +267,37 @@ log_end_element(void *baton, int state,
         char *path = apr_pstrdup(lb->subpool, lb->cdata->data);
         if (! lb->log_entry->changed_paths)
           lb->log_entry->changed_paths = apr_hash_make(lb->subpool);
-        apr_hash_set(lb->log_entry->changed_paths, path, APR_HASH_KEY_STRING, 
+        apr_hash_set(lb->log_entry->changed_paths, path, APR_HASH_KEY_STRING,
                      lb->this_path_item);
         break;
       }
+    case ELEM_revprop:
+      if (! lb->log_entry->revprops)
+        lb->log_entry->revprops = apr_hash_make(lb->subpool);
+      apr_hash_set(lb->log_entry->revprops, lb->revprop_name,
+                   APR_HASH_KEY_STRING,
+                   svn_string_create_from_buf(lb->cdata, lb->subpool));
+      break;
     case ELEM_comment:
-      lb->log_entry->message = apr_pstrdup(lb->subpool, lb->cdata->data);
+      if (lb->want_message)
+        {
+          if (! lb->log_entry->revprops)
+            lb->log_entry->revprops = apr_hash_make(lb->subpool);
+          apr_hash_set(lb->log_entry->revprops, SVN_PROP_REVISION_LOG,
+                       APR_HASH_KEY_STRING,
+                       svn_string_create_from_buf(lb->cdata, lb->subpool));
+        }
       break;
     case ELEM_log_item:
       {
-        /* Compatability cruft so that we can provide limit functionality 
+        if (lb->want_custom_revprops && !lb->seen_revprop_element)
+          {
+            /* Caller asked for custom revprops, but server is too old. */
+            return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
+                                    _("Server does not support custom revprops"
+                                      " via log"));
+          }
+        /* Compatability cruft so that we can provide limit functionality
            even if the server doesn't support it.
 
            If we've seen as many log entries as we're going to show just
@@ -250,59 +309,11 @@ log_end_element(void *baton, int state,
             lb->limit_compat_bailout = TRUE;
             return svn_error_create(APR_EGENERAL, NULL, NULL);
           }
- 
+
         SVN_ERR((*(lb->receiver))(lb->receiver_baton,
                                   lb->log_entry,
                                   lb->subpool));
         reset_log_item(lb);
-      }
-      break;
-    case ELEM_log_report:
-      {
-        /* Do nothing.  But...
-         *
-         * ### Possibility:
-         *
-         * Greg Stein mused that we could treat log_receivers the way
-         * we treat delta window consumers -- "no more calls" would be
-         * indicated by a special last call that passes
-         * SVN_INVALID_REVNUM as the revision number.  That would work
-         * fine, but right now most of the code just handles the
-         * first-call/last-call thing by having one-time code on
-         * either side of the iterator, which works just as well.
-         *
-         * I don't feel any compelling need to change this right now.
-         * If we do change it, the hot spots are:
-         *
-         *    - libsvn_repos/log.c:
-         *         svn_repos_get_logs() would need a new post-loop
-         *         call to (*receiver)(), passing SVN_INVALID_REVNUM.
-         *         Make sure not to destroy that subpool until
-         *         after the new call! :-)
-         *
-         *    - mod_dav_svn/log.c:
-         *        `struct log_receiver_baton' would need a first_call
-         *         flag; dav_svn__log_report() would set it up, and
-         *         then log_receiver() would be responsible for
-         *         emitting "<S:log-report>" and "</S:log-report>"
-         *         instead.
-         *
-         *    - svn/log-cmd.c:
-         *         svn_cl__log() would no longer be responsible for
-         *         emitting the "<log>" and "</log>" elements.  The
-         *         body of this function would get a lot simpler, mmm!
-         *         Instead, log_message_receiver_xml() would pay
-         *         attention to baton->first_call, and handle
-         *         SVN_INVALID_REVNUM, to emit those elements
-         *         instead.  The old log_message_receiver() function
-         *         wouldn't need to change at all, though, I think.
-         *
-         *    - Right here:
-         *      We'd have a new call to (*(lb->receiver)), passing
-         *      SVN_INVALID_REVNUM, of course.
-         *
-         * There, I think that's the change.  Thoughts? :-)
-         */
       }
       break;
     }
@@ -321,19 +332,19 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
                                    svn_boolean_t discover_changed_paths,
                                    svn_boolean_t strict_node_history,
                                    svn_boolean_t include_merged_revisions,
-                                   svn_boolean_t omit_log_text,
-                                   svn_log_message_receiver2_t receiver,
+                                   apr_array_header_t *revprops,
+                                   svn_log_entry_receiver_t receiver,
                                    void *receiver_baton,
                                    apr_pool_t *pool)
 {
   /* The Plan: Send a request to the server for a log report.
    * Somewhere in mod_dav_svn, there will be an implementation, R, of
-   * the `svn_log_message_receiver2_t' function type.  Some other
+   * the `svn_log_entry_receiver_t' function type.  Some other
    * function in mod_dav_svn will use svn_repos_get_logs() to loop R
    * over the log messages, and the successive invocations of R will
    * collectively transmit the report back here, where we parse the
    * report and invoke RECEIVER (which is an entirely separate
-   * instance of `svn_log_message_receiver2_t') on each individual
+   * instance of `svn_log_entry_receiver_t') on each individual
    * message in that report.
    */
 
@@ -395,11 +406,33 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
                                             "<S:include-merged-revisions/>"));
     }
 
-  if (omit_log_text)
+  if (revprops)
+    {
+      lb.want_author = lb.want_date = lb.want_message = FALSE;
+      lb.want_custom_revprops = FALSE;
+      for (i = 0; i < revprops->nelts; i++)
+        {
+          char *name = APR_ARRAY_IDX(revprops, i, char *);
+          svn_stringbuf_appendcstr(request_body, "<S:revprop>");
+          svn_stringbuf_appendcstr(request_body, name);
+          svn_stringbuf_appendcstr(request_body, "</S:revprop>");
+          if (strcmp(name, SVN_PROP_REVISION_AUTHOR) == 0)
+            lb.want_author = TRUE;
+          else if (strcmp(name, SVN_PROP_REVISION_DATE) == 0)
+            lb.want_date = TRUE;
+          else if (strcmp(name, SVN_PROP_REVISION_LOG) == 0)
+            lb.want_message = TRUE;
+          else
+            lb.want_custom_revprops = TRUE;
+        }
+    }
+  else
     {
       svn_stringbuf_appendcstr(request_body,
                                apr_psprintf(pool,
-                                            "<S:omit-log-text/>"));
+                                            "<S:all-revprops/>"));
+      lb.want_author = lb.want_date = lb.want_message = TRUE;
+      lb.want_custom_revprops = TRUE;
     }
 
   if (paths)
@@ -426,6 +459,7 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
   lb.limit_compat_bailout = FALSE;
   lb.cdata = svn_stringbuf_create("", pool);
   lb.log_entry = svn_log_entry_create(pool);
+  lb.seen_revprop_element = FALSE;
   lb.want_cdata = NULL;
   reset_log_item(&lb);
 
@@ -460,8 +494,13 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
 
   if (err && lb.limit_compat_bailout)
     {
+      svn_log_entry_t *log_entry;
+
       svn_error_clear(err);
-      return SVN_NO_ERROR;
+
+      log_entry = svn_log_entry_create(pool);
+      log_entry->revision = SVN_INVALID_REVNUM;
+      return receiver(receiver_baton, log_entry, pool);
     }
 
   return err;

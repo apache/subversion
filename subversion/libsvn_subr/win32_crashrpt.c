@@ -204,6 +204,7 @@ write_process_info(EXCEPTION_RECORD *exception, CONTEXT *context,
   /* write the register info. */
   fprintf(log_file,
                 "Registers:\n");
+#if defined(_M_IX86)
   fprintf(log_file,
                 "eax=%08x ebx=%08x ecx=%08x edx=%08x esi=%08x edi=%08x\n",
                 context->Eax, context->Ebx, context->Ecx,
@@ -213,9 +214,30 @@ write_process_info(EXCEPTION_RECORD *exception, CONTEXT *context,
                 context->Eip, context->Esp,
                 context->Ebp, context->EFlags);
   fprintf(log_file,
-                "cd=%04x  ss=%04x  ds=%04x  es=%04x  fs=%04x  gs=%04x\n",
+                "cs=%04x  ss=%04x  ds=%04x  es=%04x  fs=%04x  gs=%04x\n",
                 context->SegCs, context->SegSs, context->SegDs,
                 context->SegEs, context->SegFs, context->SegGs);
+#elif defined(_M_X64)
+  fprintf(log_file,
+                "Rax=%016I64x Rcx=%016I64x Rdx=%016I64x Rbx=%016I64x\n",
+                context->Rax, context->Rcx, context->Rdx, context->Rbx);
+  fprintf(log_file,
+                "Rsp=%016I64x Rbp=%016I64x Rsi=%016I64x Rdi=%016I64x\n",
+                context->Rsp, context->Rbp, context->Rsi, context->Rdi);
+  fprintf(log_file,
+                "R8= %016I64x R9= %016I64x R10= %016I64x R11=%016I64x\n",
+                context->R8, context->R9, context->R10, context->R11);
+  fprintf(log_file,
+                "R12=%016I64x R13=%016I64x R14=%016I64x R15=%016I64x\n",
+                context->R12, context->R13, context->R14, context->R15);
+
+  fprintf(log_file,
+                "cs=%04x  ss=%04x  ds=%04x  es=%04x  fs=%04x  gs=%04x  ss=%04x\n",
+                context->SegCs, context->SegDs, context->SegEs,
+                context->SegFs, context->SegGs, context->SegSs);
+#else
+#error Unknown processortype, please disable SVN_USE_WIN32_CRASHHANDLER
+#endif
 }
 
 /* formats the value at address based on the specified basic type
@@ -345,7 +367,7 @@ format_value(char *value_str, DWORD64 mod_base, DWORD type, void *value_addr)
 /* Internal structure used to pass some data to the enumerate symbols
  * callback */
 typedef struct {
-  STACKFRAME *stack_frame;
+  STACKFRAME64 *stack_frame;
   FILE *log_file;
   int nr_of_frame;
   BOOL log_params;
@@ -357,7 +379,7 @@ write_var_values(PSYMBOL_INFO sym_info, ULONG sym_size, void *baton)
 {
   static int last_nr_of_frame = 0;
   DWORD_PTR var_data = 0;    /* Will point to the variable's data in memory */
-  STACKFRAME *stack_frame = ((symbols_baton_t*)baton)->stack_frame;
+  STACKFRAME64 *stack_frame = ((symbols_baton_t*)baton)->stack_frame;
   FILE *log_file   = ((symbols_baton_t*)baton)->log_file;
   int nr_of_frame = ((symbols_baton_t*)baton)->nr_of_frame;
   BOOL log_params = ((symbols_baton_t*)baton)->log_params;
@@ -366,7 +388,7 @@ write_var_values(PSYMBOL_INFO sym_info, ULONG sym_size, void *baton)
   /* get the variable's data */
   if (sym_info->Flags & SYMFLAG_REGREL)
     {
-      var_data = stack_frame->AddrFrame.Offset;
+      var_data = (DWORD_PTR)stack_frame->AddrFrame.Offset;
       var_data += (DWORD_PTR)sym_info->Address;
     }
   else
@@ -395,7 +417,7 @@ write_var_values(PSYMBOL_INFO sym_info, ULONG sym_size, void *baton)
 
 /* write the details of one function to the log file */
 static void
-write_function_detail(STACKFRAME stack_frame, void *data)
+write_function_detail(STACKFRAME64 stack_frame, void *data)
 {
   ULONG64 symbolBuffer[(sizeof(SYMBOL_INFO) +
     MAX_PATH +
@@ -405,7 +427,7 @@ write_function_detail(STACKFRAME stack_frame, void *data)
   DWORD64 func_disp=0;
 
   IMAGEHLP_STACK_FRAME ih_stack_frame;
-  IMAGEHLP_LINE ih_line;
+  IMAGEHLP_LINE64 ih_line;
 	DWORD line_disp=0;
 
   HANDLE proc = GetCurrentProcess();
@@ -449,7 +471,7 @@ write_function_detail(STACKFRAME stack_frame, void *data)
 
   /* find the source line for this function. */
   ih_line.SizeOfStruct = sizeof(IMAGEHLP_LINE);
-  if (SymGetLineFromAddr_(proc, stack_frame.AddrPC.Offset,
+  if (SymGetLineFromAddr64_(proc, stack_frame.AddrPC.Offset,
                           &line_disp, &ih_line) != 0)
     {
       fprintf(log_file,
@@ -469,8 +491,9 @@ write_function_detail(STACKFRAME stack_frame, void *data)
 static void
 write_stacktrace(CONTEXT *context, FILE *log_file)
 {
+#if defined (_M_IX86) || defined(_M_X64) || defined(_M_IA64)
   HANDLE proc = GetCurrentProcess();
-  STACKFRAME stack_frame;
+  STACKFRAME64 stack_frame;
   DWORD machine;
   CONTEXT ctx;
   int skip = 0, i = 0;
@@ -490,25 +513,36 @@ write_stacktrace(CONTEXT *context, FILE *log_file)
     return;
 
   /* Write the stack trace */
-  ZeroMemory(&stack_frame, sizeof(STACKFRAME));
+  ZeroMemory(&stack_frame, sizeof(STACKFRAME64));
   stack_frame.AddrPC.Mode = AddrModeFlat;
   stack_frame.AddrStack.Mode   = AddrModeFlat;
   stack_frame.AddrFrame.Mode   = AddrModeFlat;
-#if defined (_M_IX86)
+
+#if defined(_M_IX86)
   machine = IMAGE_FILE_MACHINE_I386;
   stack_frame.AddrPC.Offset    = context->Eip;
   stack_frame.AddrStack.Offset = context->Esp;
   stack_frame.AddrFrame.Offset = context->Ebp;
+#elif defined(_M_X64)
+  machine = IMAGE_FILE_MACHINE_AMD64;
+  stack_frame.AddrPC.Offset     = context->Rip;
+  stack_frame.AddrStack.Offset  = context->Rsp;
+  stack_frame.AddrFrame.Offset  = context->Rbp;
+#elif defined(_M_IA64)
+  machine = IMAGE_FILE_MACHINE_IA64;
+  stack_frame.AddrPC.Offset     = context->StIIP;
+  stack_frame.AddrStack.Offset  = context->SP;
+  stack_frame.AddrBStore.Mode   = AddrModeFlat;
+  stack_frame.AddrBStore.Offset = context->RsBSP;
 #else
-#error This crash handler only works on Win32, undefine\
- SVN_USE_WIN32_CRASHHANDLER to remove it from the build.
+#error Unknown processortype, please disable SVN_USE_WIN32_CRASHHANDLER
 #endif
 
   while (1)
     {
-      if (! StackWalk_(machine, proc, GetCurrentThread(),
-                      &stack_frame, context, NULL, SymFunctionTableAccess_,
-                      SymGetModuleBase_, NULL))
+      if (! StackWalk64_(machine, proc, GetCurrentThread(),
+                         &stack_frame, context, NULL, 
+                         SymFunctionTableAccess64_, SymGetModuleBase64_, NULL))
         {
           break;
         }
@@ -525,6 +559,9 @@ write_stacktrace(CONTEXT *context, FILE *log_file)
         }
       i++;
     }
+#else
+#error Unknown processortype, please disable SVN_USE_WIN32_CRASHHANDLER
+#endif
 }
 
 /* Check if a debugger is attached to this process */
@@ -549,7 +586,7 @@ is_debugger_present()
 
 /* Match the version of dbghelp.dll with the minimum expected version */
 static BOOL
-check_dbghelp_version(WORD exp_major, WORD exp_minor, WORD exp_build, 
+check_dbghelp_version(WORD exp_major, WORD exp_minor, WORD exp_build,
                       WORD exp_qfe)
 {
   HANDLE version_dll = LoadLibrary(VERSION_DLL);
@@ -571,7 +608,7 @@ check_dbghelp_version(WORD exp_major, WORD exp_minor, WORD exp_build,
   if (resource_size)
     {
       void *resource_data = malloc(resource_size);
-      if (GetFileVersionInfo_(DBGHELP_DLL, h, resource_size, 
+      if (GetFileVersionInfo_(DBGHELP_DLL, h, resource_size,
                               resource_data) != FALSE)
         {
           void *buf = NULL;
@@ -623,26 +660,27 @@ load_dbghelp_dll()
            (SYMCLEANUP)GetProcAddress(dbghelp_dll, "SymCleanup");
       SymGetTypeInfo_ =
            (SYMGETTYPEINFO)GetProcAddress(dbghelp_dll, "SymGetTypeInfo");
-      SymGetLineFromAddr_ =
-           (SYMGETLINEFROMADDR)GetProcAddress(dbghelp_dll,
-                                              "SymGetLineFromAddr");
+      SymGetLineFromAddr64_ =
+           (SYMGETLINEFROMADDR64)GetProcAddress(dbghelp_dll,
+                                              "SymGetLineFromAddr64");
       SymEnumSymbols_ =
            (SYMENUMSYMBOLS)GetProcAddress(dbghelp_dll, "SymEnumSymbols");
       SymSetContext_ =
            (SYMSETCONTEXT)GetProcAddress(dbghelp_dll, "SymSetContext");
       SymFromAddr_ = (SYMFROMADDR)GetProcAddress(dbghelp_dll, "SymFromAddr");
-      StackWalk_ = (STACKWALK)GetProcAddress(dbghelp_dll, "StackWalk");
-      SymFunctionTableAccess_ =
-           (SYMFUNCTIONTABLEACCESS)GetProcAddress(dbghelp_dll,
-                                                  "SymFunctionTableAccess");
-      SymGetModuleBase_ =
-           (SYMGETMODULEBASE)GetProcAddress(dbghelp_dll, "SymGetModuleBase");
+	  StackWalk64_ = (STACKWALK64)GetProcAddress(dbghelp_dll, "StackWalk64");
+      SymFunctionTableAccess64_ =
+           (SYMFUNCTIONTABLEACCESS64)GetProcAddress(dbghelp_dll,
+                                                  "SymFunctionTableAccess64");
+      SymGetModuleBase64_ =
+           (SYMGETMODULEBASE64)GetProcAddress(dbghelp_dll, "SymGetModuleBase64");
 
       if (! (MiniDumpWriteDump_ &&
              SymInitialize_ && SymSetOptions_  && SymGetOptions_ &&
-             SymCleanup_    && SymGetTypeInfo_ && SymGetLineFromAddr_ && 
-             SymEnumSymbols_ && SymSetContext_ && SymFromAddr_ && StackWalk_ &&
-             SymFunctionTableAccess_ && SymGetModuleBase_) )
+             SymCleanup_    && SymGetTypeInfo_ && SymGetLineFromAddr64_ &&
+             SymEnumSymbols_ && SymSetContext_ && SymFromAddr_ && 
+             SymGetModuleBase64_ && StackWalk64_ &&
+             SymFunctionTableAccess64_))
         goto cleanup;
 
       /* initialize the symbol loading code */

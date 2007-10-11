@@ -2,9 +2,9 @@
 #
 #  update_tests.py:  testing update cases.
 #
-#  Subversion is a tool for revision control. 
+#  Subversion is a tool for revision control.
 #  See http://subversion.tigris.org for more information.
-#    
+#
 # ====================================================================
 # Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
@@ -21,8 +21,7 @@ import sys, re, os
 
 # Our testing module
 import svntest
-from svntest import wc, SVNAnyOutput
-
+from svntest import wc
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -86,7 +85,7 @@ def update_binary_file(sbox):
   theta_path = os.path.join(wc_dir, 'A', 'theta')
   svntest.main.file_write(theta_path, theta_contents, 'wb')
 
-  svntest.main.run_svn(None, 'add', theta_path)  
+  svntest.main.run_svn(None, 'add', theta_path)
 
   # Created expected output tree for 'svn ci'
   expected_output = svntest.wc.State(wc_dir, {
@@ -140,7 +139,7 @@ def update_binary_file(sbox):
     'A/theta' : Item(status='C '),
     })
 
-  # Create expected disk tree for the update -- 
+  # Create expected disk tree for the update --
   #    look!  binary contents, and a binary property!
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
@@ -161,7 +160,7 @@ def update_binary_file(sbox):
   #                                         [pattern, contents], ...]
   extra_files = [[wc_backup, 'theta.*\.r2', theta_contents],
                  [wc_backup, 'theta.*\.r3', theta_contents_r3]]
-  
+
   # Do the update and check the results in three ways.  Pass our
   # custom singleton handler to verify the .orig file; this handler
   # will verify the existence (and contents) of both binary files
@@ -209,7 +208,7 @@ def update_binary_file_2(sbox):
   svntest.main.file_write(zeta_path, zeta_contents, 'wb')
 
   # Now, `svn add' those two files.
-  svntest.main.run_svn(None, 'add', theta_path, zeta_path)  
+  svntest.main.run_svn(None, 'add', theta_path, zeta_path)
 
   # Created expected output tree for 'svn ci'
   expected_output = svntest.wc.State(wc_dir, {
@@ -234,7 +233,7 @@ def update_binary_file_2(sbox):
   new_theta_contents = theta_contents + "foobar"
   svntest.main.file_append(zeta_path, "foobar")
   new_zeta_contents = zeta_contents + "foobar"
-  
+
   # Created expected output tree for 'svn ci'
   expected_output = svntest.wc.State(wc_dir, {
     'A/theta' : Item(verb='Sending'),
@@ -259,7 +258,7 @@ def update_binary_file_2(sbox):
     'A/zeta' : Item(status='U '),
     })
 
-  # Create expected disk tree for the update -- 
+  # Create expected disk tree for the update --
   #    look!  binary contents, and a binary property!
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
@@ -328,7 +327,7 @@ def update_missing(sbox):
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  
+
   # Do the update and check the results in three ways.
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -349,7 +348,10 @@ def update_ignores_added(sbox):
   # Commit something so there's actually a new revision to update to.
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
   svntest.main.file_append(rho_path, "More stuff in rho.\n")
-  svntest.main.run_svn(None, 'ci', '-m', 'log msg', rho_path)  
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'ci', '-m', 'log msg', rho_path)
 
   # Create a new file, 'zeta', and schedule it for addition.
   zeta_path = os.path.join(wc_dir, 'A', 'B', 'zeta')
@@ -361,7 +363,7 @@ def update_ignores_added(sbox):
   svntest.main.run_svn(None, 'delete', gamma_path)
   svntest.main.file_append(gamma_path, "This is a new 'gamma' now.\n")
   svntest.main.run_svn(None, 'add', gamma_path)
-  
+
   # Now update.  "zeta at revision 0" should *not* be reported at all,
   # so it should remain scheduled for addition at revision 0.  gamma
   # was scheduled for replacement, so it also should remain marked as
@@ -385,13 +387,13 @@ def update_ignores_added(sbox):
   expected_status.add({
     'A/B/zeta' : Item(status='A ', wc_rev=0),
     })
-  
+
   # Do the update and check the results in three ways.
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
                                         expected_status)
-  
+
 
 #----------------------------------------------------------------------
 
@@ -412,7 +414,7 @@ def update_to_rev_zero(sbox):
 
   # Create expected disk tree for the update to rev 0
   expected_disk = svntest.wc.State(wc_dir, { })
-  
+
   # Do the update and check the results.
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -433,13 +435,13 @@ def receive_overlapping_same_change(sbox):
   ### Create working copy foo, modify foo/iota.  Duplicate foo,
   ### complete with locally modified iota, to bar.  Now we should
   ### have:
-  ### 
+  ###
   ###    $ svn st foo
   ###    M    foo/iota
   ###    $ svn st bar
   ###    M    bar/iota
-  ###    $ 
-  ### 
+  ###    $
+  ###
   ### Commit the change from foo, then update bar.  The repository
   ### change should get folded into bar/iota with no conflict, since
   ### the two modifications are identical.
@@ -482,7 +484,7 @@ def receive_overlapping_same_change(sbox):
 
   # Expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(other_wc, 2)
-  
+
   # Do the update and check the results in three ways.
   svntest.actions.run_and_verify_update(other_wc,
                                         expected_output,
@@ -493,7 +495,7 @@ def receive_overlapping_same_change(sbox):
 
 def update_to_resolve_text_conflicts(sbox):
   "delete files and update to resolve text conflicts"
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -539,7 +541,7 @@ def update_to_resolve_text_conflicts(sbox):
     'A/mu' : Item(status='C '),
     'A/D/G/rho' : Item(status='CC'),
     })
-  
+
   # Create expected disk tree for the update.
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu',
@@ -568,7 +570,7 @@ def update_to_resolve_text_conflicts(sbox):
   # These are expressed as list of regexps.  What a cool system!  :-)
   extra_files = ['mu.*\.r1', 'mu.*\.r2', 'mu.*\.mine',
                  'rho.*\.r1', 'rho.*\.r2', 'rho.*\.mine', 'rho.*\.prej']
-  
+
   # Do the update and check the results in three ways.
   # All "extra" files are passed to detect_conflict_files().
   svntest.actions.run_and_verify_update(wc_backup,
@@ -579,7 +581,7 @@ def update_to_resolve_text_conflicts(sbox):
                                         svntest.tree.detect_conflict_files,
                                         extra_files)
 
-  
+
   # verify that the extra_files list is now empty.
   if len(extra_files) != 0:
     print "didn't get expected extra files"
@@ -592,7 +594,7 @@ def update_to_resolve_text_conflicts(sbox):
   # ### TODO: Can't get run_and_verify_update to work here :-( I get
   # the error "Unequal Types: one Node is a file, the other is a
   # directory". Use run_svn and then run_and_verify_status instead
-  stdout_lines, stdout_lines = svntest.main.run_svn(None, 'up', wc_backup)  
+  stdout_lines, stdout_lines = svntest.main.run_svn(None, 'up', wc_backup)
   if len (stdout_lines) > 0:
     print "update 2 failed"
     raise svntest.Failure
@@ -623,14 +625,20 @@ def update_delete_modified_files(sbox):
 
   # Commit
   svntest.actions.run_and_verify_svn("Committing deletes failed", None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m', 'log msg', wc_dir)
 
   # ### Update before backdating to avoid obstructed update error for G
   svntest.actions.run_and_verify_svn("Updating after commit failed", None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'up', wc_dir)
 
   # Backdate to restore deleted items
   svntest.actions.run_and_verify_svn("Backdating failed", None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'up', '-r', '1', wc_dir)
 
   # Modify the file to be deleted, and a file in the directory to be deleted
@@ -712,9 +720,9 @@ def update_after_add_rm_deleted(sbox):
     'A/B/F'       : Item(status='A ', wc_rev=0),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
-  
+
   # Forced removal of new alpha and F must restore "deleted" state
-  
+
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--force',
                                      alpha_path, F_path)
   if os.path.exists(alpha_path) or os.path.exists(F_path):
@@ -748,7 +756,10 @@ def obstructed_update_alters_wc_props(sbox):
 
   # Create a new dir in the repo in prep for creating an obstruction.
   #print "Adding dir to repo"
-  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m',
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'mkdir', '-m',
                                      'prep for obstruction',
                                      sbox.repo_url + '/A/foo')
 
@@ -866,7 +877,7 @@ def update_replace_dir(sbox):
 
 def update_single_file(sbox):
   "update with explicit file target"
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -901,10 +912,10 @@ def update_single_file(sbox):
 #----------------------------------------------------------------------
 def prop_update_on_scheduled_delete(sbox):
   "receive prop update to file scheduled for deletion"
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
-  
+
   other_wc = sbox.add_wc_path('other')
 
   # Make the "other" working copy.
@@ -943,7 +954,7 @@ def prop_update_on_scheduled_delete(sbox):
   # Expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(other_wc, 2)
   expected_status.tweak('iota', status='D ')
-  
+
   # Do the update and check the results in three ways.
   svntest.actions.run_and_verify_update(other_wc,
                                         expected_output,
@@ -959,16 +970,20 @@ def update_receive_illegal_name(sbox):
   wc_dir = sbox.wc_dir
 
   # This tests the revision 4334 fix for issue #1068.
-  
+
   legal_url = sbox.repo_url + '/A/D/G/svn'
   illegal_url = (sbox.repo_url
                  + '/A/D/G/' + svntest.main.get_admin_name())
   # Ha!  The client doesn't allow us to mkdir a '.svn' but it does
   # allow us to copy to a '.svn' so ...
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'mkdir', '-m', 'log msg',
                                      legal_url)
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'mv', '-m', 'log msg',
                                      legal_url, illegal_url)
 
@@ -996,17 +1011,23 @@ def update_deleted_missing_dir(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  
+
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   H_path = os.path.join(wc_dir, 'A', 'D', 'H')
 
   # Create a new revision with directories deleted
-  svntest.main.run_svn(None, 'rm', E_path)  
-  svntest.main.run_svn(None, 'rm', H_path)  
-  svntest.main.run_svn(None, 'ci', '-m', 'log msg', E_path, H_path)  
+  svntest.main.run_svn(None, 'rm', E_path)
+  svntest.main.run_svn(None, 'rm', H_path)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'ci', '-m', 'log msg', E_path, H_path)
 
   # Update back to the old revision
-  svntest.main.run_svn(None, 'up', '-r', '1', wc_dir)  
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'up', '-r', '1', wc_dir)
 
   # Delete the directories from disk
   svntest.main.safe_rmtree(E_path)
@@ -1028,16 +1049,19 @@ def update_deleted_missing_dir(sbox):
   expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
   expected_status.remove('A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
 
-  # Do the update, specifying the deleted paths explicitly. 
+  # Do the update, specifying the deleted paths explicitly.
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, 
+                                        None, None, None, None, None,
                                         0, "-r", "2", E_path, H_path)
 
   # Update back to the old revision again
-  svntest.main.run_svn(None, 'up', '-r', '1', wc_dir)  
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'up', '-r', '1', wc_dir)
 
   # Delete the directories from disk
   svntest.main.safe_rmtree(E_path)
@@ -1051,7 +1075,7 @@ def update_deleted_missing_dir(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, 
+                                        None, None, None, None, None,
                                         0, "-r", "2", wc_dir)
 
 #----------------------------------------------------------------------
@@ -1065,7 +1089,7 @@ def another_hudson_problem(sbox):
   wc_dir = sbox.wc_dir
 
   # Delete/commit gamma thus making it 'deleted'
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma') 
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
   svntest.main.run_svn(None, 'rm', gamma_path)
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/gamma' : Item(verb='Deleting'),
@@ -1109,7 +1133,7 @@ def another_hudson_problem(sbox):
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
-                                        expected_status)  
+                                        expected_status)
 
 #----------------------------------------------------------------------
 def update_deleted_targets(sbox):
@@ -1119,7 +1143,7 @@ def update_deleted_targets(sbox):
   wc_dir = sbox.wc_dir
 
   # Delete/commit thus creating 'deleted=true' entries
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma') 
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
   F_path = os.path.join(wc_dir, 'A', 'B', 'F')
   svntest.main.run_svn(None, 'rm', gamma_path, F_path)
   expected_output = svntest.wc.State(wc_dir, {
@@ -1151,10 +1175,10 @@ def update_deleted_targets(sbox):
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
-                                        expected_status,  
+                                        expected_status,
                                         None, None, None, None, None, 0,
                                         '-r', '1', wc_dir)
-  
+
 
 
 #----------------------------------------------------------------------
@@ -1168,6 +1192,8 @@ def new_dir_with_spaces(sbox):
   # Create a new directory ("spacey dir") directly in repository
   svntest.actions.run_and_verify_svn(None,
                                      ['\n', 'Committed revision 2.\n'], [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'mkdir', '-m', 'log msg',
                                      sbox.repo_url
                                      + '/A/spacey%20dir')
@@ -1188,7 +1214,7 @@ def new_dir_with_spaces(sbox):
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
-                                        expected_status)  
+                                        expected_status)
 
 #----------------------------------------------------------------------
 
@@ -1246,7 +1272,7 @@ def checkout_empty_dir(sbox):
   # incomplete ("!" in status).
   sbox.build(create_wc = False)
   wc_dir = sbox.wc_dir
-  
+
   C_url = sbox.repo_url + '/A/C'
 
   svntest.main.safe_rmtree(wc_dir)
@@ -1295,7 +1321,7 @@ def update_to_deletion(sbox):
                                         None, None,
                                         None, None, None, None, 0,
                                         wc_dir)
-  
+
 
 #----------------------------------------------------------------------
 
@@ -1312,14 +1338,20 @@ def update_deletion_inside_out(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'rm', parent_path)
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m', '', wc_dir)
 
   # Update back to r1.
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'update', '-r', '1', wc_dir)
 
   # Update just the child to r2.
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'update', '-r', '2', child_path)
 
   # Now try a normal update.
@@ -1350,6 +1382,8 @@ def update_schedule_add_dir(sbox):
   G_path = os.path.join(wc_dir, 'A', 'D', 'G')
   G_url = sbox.repo_url + '/A/D/G'
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'rm', G_url, '-m', 'rev 2')
 
   # Update the wc to HEAD (r2)
@@ -1386,7 +1420,7 @@ def update_schedule_add_dir(sbox):
   # The update should be a no-op, and the schedule-add directory
   # should still exist!  'svn status' shouldn't change at all.
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
-  
+
 
 #----------------------------------------------------------------------
 # Test updating items that do not exist in the current WC rev, but do
@@ -1397,7 +1431,7 @@ def update_to_future_add(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  
+
   # Update the entire WC to rev 0
   # Create expected output tree for an update to rev 0
   expected_output = svntest.wc.State(wc_dir, {
@@ -1407,7 +1441,7 @@ def update_to_future_add(sbox):
 
   # Create expected disk tree for the update to rev 0
   expected_disk = svntest.wc.State(wc_dir, { })
-  
+
   # Do the update and check the results.
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -1457,7 +1491,7 @@ def update_to_future_add(sbox):
     'A/D/H/omega'    : Item(status='A ')
     })
   expected_disk = svntest.main.greek_state.copy()
-  
+
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
@@ -1489,7 +1523,7 @@ def nested_in_read_only(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Delete/commit a directory that used to contain the deleted file
-  B_path = os.path.join(wc_dir, 'A', 'B')      
+  B_path = os.path.join(wc_dir, 'A', 'B')
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', B_path)
   expected_output = svntest.wc.State(wc_dir, {
     'A/B' : Item(verb='Deleting'),
@@ -1523,7 +1557,7 @@ def nested_in_read_only(sbox):
 
   # Make enclosing wc read only
   os.chmod(os.path.join(wc_dir, 'A', svntest.main.get_admin_name()), 0555)
-  
+
   try:
     # Update of nested wc should still work
     expected_output = svntest.wc.State(B_path, {
@@ -1560,7 +1594,7 @@ def update_xml_unsafe_dir(sbox):
 
   # Make a couple of local mods to files
   test_path = os.path.join(wc_dir, ' foo & bar')
-  svntest.main.run_svn(None, 'mkdir', test_path)  
+  svntest.main.run_svn(None, 'mkdir', test_path)
 
   # Created expected output tree for 'svn ci'
   expected_output = wc.State(wc_dir, {
@@ -1594,10 +1628,10 @@ def update_xml_unsafe_dir(sbox):
 
 #----------------------------------------------------------------------
 # eol-style handling during update with conflicts, scenario 1:
-# when update creates a conflict on a file, make sure the file and files 
+# when update creates a conflict on a file, make sure the file and files
 # r<left>, r<right> and .mine are in the eol-style defined for that file.
 #
-# This test for 'svn merge' can be found in merge_tests.py as 
+# This test for 'svn merge' can be found in merge_tests.py as
 # merge_conflict_markers_matching_eol.
 def conflict_markers_matching_eol(sbox):
   "conflict markers should match the file's eol style"
@@ -1615,7 +1649,7 @@ def conflict_markers_matching_eol(sbox):
 
   # Checkout a second working copy
   wc_backup = sbox.add_wc_path('backup')
-  svntest.actions.run_and_verify_svn(None, None, [], 'checkout', 
+  svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
                                      sbox.repo_url, wc_backup)
 
   # set starting revision
@@ -1623,7 +1657,7 @@ def conflict_markers_matching_eol(sbox):
 
   expected_disk = svntest.main.greek_state.copy()
   expected_status = svntest.actions.get_virginal_state(wc_dir, cur_rev)
-  expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 
+  expected_backup_status = svntest.actions.get_virginal_state(wc_backup,
                                                               cur_rev)
 
   path_backup = os.path.join(wc_backup, 'A', 'mu')
@@ -1646,7 +1680,7 @@ def conflict_markers_matching_eol(sbox):
       'A/mu' : Item(status='  ', wc_rev = cur_rev + 1),
     })
 
-    # Commit the original change and note the 'base' revision number 
+    # Commit the original change and note the 'base' revision number
     svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                           expected_status, None,
                                           None, None, None, None, wc_dir)
@@ -1656,10 +1690,10 @@ def conflict_markers_matching_eol(sbox):
     svntest.main.run_svn(None, 'update', wc_backup)
 
     # Make a local mod to mu
-    svntest.main.file_append(mu_path, 
+    svntest.main.file_append(mu_path,
                              'Original appended text for mu' + eolchar)
 
-    # Commit the original change and note the 'theirs' revision number 
+    # Commit the original change and note the 'theirs' revision number
     svntest.main.run_svn(None, 'commit', '-m', 'test log', wc_dir)
     cur_rev = cur_rev + 1
     theirs_rev = cur_rev
@@ -1728,7 +1762,7 @@ def conflict_markers_matching_eol(sbox):
 # svn:eol-style, make sure the correct eol-style is applied before
 # calculating the merge (and conflicts if any)
 #
-# This test for 'svn merge' can be found in merge_tests.py as 
+# This test for 'svn merge' can be found in merge_tests.py as
 # merge_eolstyle_handling.
 def update_eolstyle_handling(sbox):
   "handle eol-style propchange during update"
@@ -1752,7 +1786,10 @@ def update_eolstyle_handling(sbox):
   # Test 1: add the eol-style property and commit, change mu in the second
   # working copy and update; there should be no conflict!
   svntest.main.run_svn(None, 'propset', 'svn:eol-style', "CRLF", mu_path)
-  svntest.main.run_svn(None, 'commit', '-m', 'set eol-style property', wc_dir)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'commit', '-m', 'set eol-style property', wc_dir)
 
   svntest.main.file_append_binary(path_backup, 'Added new line of text.\012')
 
@@ -1776,7 +1813,10 @@ def update_eolstyle_handling(sbox):
   # update the still changed mu in the second working copy; there should be
   # no conflict!
   svntest.main.run_svn(None, 'propset', 'svn:eol-style', "CR", mu_path)
-  svntest.main.run_svn(None, 'commit', '-m', 'set eol-style property', wc_dir)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'commit', '-m', 'set eol-style property', wc_dir)
 
   expected_backup_disk = svntest.main.greek_state.copy()
   expected_backup_disk.add({
@@ -1798,7 +1838,10 @@ def update_eolstyle_handling(sbox):
   # changed mu in the second working copy; there should be no conflict!
   # EOL of mu should be unchanged (=CR).
   svntest.main.run_svn(None, 'propdel', 'svn:eol-style', mu_path)
-  svntest.main.run_svn(None, 'commit', '-m', 'del eol-style property', wc_dir)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'commit', '-m', 'del eol-style property', wc_dir)
 
   expected_backup_disk = svntest.main.greek_state.copy()
   expected_backup_disk.add({
@@ -1833,26 +1876,45 @@ def update_copy_of_old_rev(sbox):
 
   # Remember the original text of the file
   text_r1, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                    '--username',
+                                                    svntest.main.wc_author,
+                                                    '--password',
+                                                    svntest.main.wc_passwd,
                                                     'cat', '-r1', url)
 
   # Commit a different version of the file
   svntest.main.file_write(file, "Second revision of 'mu'\n")
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m', '', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'ci', '-m', '', wc_dir)
 
   # Copy an old revision of its directory into a new path in the WC
-  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '-r1', dir, dir2)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'cp', '-r1', dir, dir2)
 
   # Update.  (Should do nothing, but added a bogus "revision" in "entries".)
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'up', wc_dir)
 
   # Commit, and check that it says it's committing the right thing
   exp_out = ['Adding         ' + dir2 + '\n',
              '\n',
              'Committed revision 3.\n']
-  svntest.actions.run_and_verify_svn(None, exp_out, [], 'ci', '-m', '', wc_dir)
+  svntest.actions.run_and_verify_svn(None, exp_out, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'ci', '-m', '', wc_dir)
 
   # Verify the committed file's content
-  svntest.actions.run_and_verify_svn(None, text_r1, [], 'cat', url2)
+  svntest.actions.run_and_verify_svn(None, text_r1, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'cat', url2)
 
 #----------------------------------------------------------------------
 def forced_update(sbox):
@@ -1909,7 +1971,7 @@ def forced_update(sbox):
     'A/C/I'         : Item(status='  ', wc_rev=2),
     'A/C/I/upsilon' : Item(status='  ', wc_rev=2),
     'A/C/I/zeta'    : Item(status='  ', wc_rev=2),
-    })  
+    })
   expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
 
   # Commit.
@@ -2082,11 +2144,11 @@ def forced_update_failures(sbox):
 
 #----------------------------------------------------------------------
 # Test for issue #2556. The tests maps a virtual drive to a working copy
-# and tries some basic update, commit and status actions on the virtual 
+# and tries some basic update, commit and status actions on the virtual
 # drive.
 def update_wc_on_windows_drive(sbox):
   "update wc on the root of a Windows (virtual) drive"
-  
+
   def find_the_next_available_drive_letter():
     "find the first available drive"
 
@@ -2110,7 +2172,7 @@ def update_wc_on_windows_drive(sbox):
   sbox.build(create_wc = False)
   svntest.main.safe_rmtree(sbox.wc_dir)
   os.mkdir(sbox.wc_dir)
-  
+
   # create a virtual drive to the working copy folder
   drive = find_the_next_available_drive_letter()
   if drive is None:
@@ -2146,7 +2208,7 @@ def update_wc_on_windows_drive(sbox):
     })
     svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                           expected_status, None,
-                                          None, None, None, None, 
+                                          None, None, None, None,
                                           wc_dir, zeta_path)
 
     # Non recursive commit
@@ -2167,7 +2229,7 @@ def update_wc_on_windows_drive(sbox):
     })
     svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                           expected_status, None,
-                                          None, None, None, None, 
+                                          None, None, None, None,
                                           '-N',
                                           wc_dir,
                                           dir1_path, file1_path)
@@ -2197,8 +2259,8 @@ def update_wc_on_windows_drive(sbox):
       'A/mu' : Item(status='U '),
       'zeta' : Item(status='A '),
       'dir1' : Item(status='A '),
-      'dir1/file1' : Item(status='A '),      
-      })    
+      'dir1/file1' : Item(status='A '),
+      })
     expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
     expected_status.add({
       'dir1' : Item(status='  ', wc_rev=3),
@@ -2214,8 +2276,8 @@ def update_wc_on_windows_drive(sbox):
     svntest.actions.run_and_verify_update(wc_dir,
                                           expected_output,
                                           expected_disk,
-                                          expected_status)    
-    
+                                          expected_status)
+
   finally:
     os.chdir(was_cwd)
     # cleanup the virtual drive
@@ -2237,7 +2299,10 @@ def update_wc_with_replaced_file(sbox):
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   iota_bu_path = os.path.join(wc_backup, 'iota')
   svntest.main.file_append(iota_bu_path, "New line in 'iota'\n")
-  svntest.main.run_svn(None, 'ci', wc_backup, '-m', 'changed file')
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'ci', wc_backup, '-m', 'changed file')
 
   # First, a replacement without history.
   svntest.main.run_svn(None, 'rm', iota_path)
@@ -2251,12 +2316,12 @@ def update_wc_with_replaced_file(sbox):
   # Now update the wc
   expected_output = svntest.wc.State(wc_dir, {
     'iota' : Item(status='C '),
-    })    
+    })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
     'iota' : Item(status='C ', wc_rev='2'),
     })
-  expected_disk = svntest.main.greek_state.copy()    
+  expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('iota',
                       contents="\n".join(["<<<<<<< .mine",
                                           "=======",
@@ -2277,9 +2342,9 @@ def update_wc_with_replaced_file(sbox):
   svntest.main.run_svn(None, 'revert', iota_path)
   expected_output = svntest.wc.State(wc_dir, {
     'iota' : Item(status='U '),
-    })    
+    })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_disk = svntest.main.greek_state.copy()    
+  expected_disk = svntest.main.greek_state.copy()
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
@@ -2298,12 +2363,12 @@ def update_wc_with_replaced_file(sbox):
   # Now update the wc
   expected_output = svntest.wc.State(wc_dir, {
     'iota' : Item(status='C '),
-    })    
+    })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
-    'iota' : Item(status='C ', wc_rev='-', copied='+'),
+    'iota' : Item(status='CM', wc_rev='-', copied='+'),
     })
-  expected_disk = svntest.main.greek_state.copy()    
+  expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('iota',
                       contents="\n".join(["<<<<<<< .mine",
                                           "This is the file 'mu'.",
@@ -2831,7 +2896,7 @@ def mergeinfo_update_elision(sbox):
                                         wc_dir)
 
   # Make some changes under A/B
-  
+
   # r3 - modify and commit A/B/E/beta
   svntest.main.file_write(beta_path, "New content")
   expected_output = wc.State(wc_dir, {'A/B/E/beta' : Item(verb='Sending')})
@@ -2949,9 +3014,10 @@ def mergeinfo_update_elision(sbox):
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
   svntest.actions.run_and_verify_svn(None,
-                                     [svntest.main.merge_notify_line(3, 5),
-                                      'U    ' + \
-                                      short_alpha_COPY_path + '\n'],
+                                     '|'.join(
+                                        [svntest.main.merge_notify_line(3, 5),
+                                         'U    ' + short_alpha_COPY_path +
+                                         '\n']),
                                      [], 'merge', '-r2:5',
                                      sbox.repo_url + '/A/B/E/alpha',
                                      short_alpha_COPY_path)
@@ -3120,6 +3186,69 @@ def mergeinfo_update_elision(sbox):
                                         None, None, None,
                                         None, None, 1, E_COPY_path)
 
+
+#----------------------------------------------------------------------
+
+def update_handles_copyfrom(sbox):
+  "update should understand copyfrom"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a backup copy of the working copy.
+  wc_backup = sbox.add_wc_path('backup')
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+
+  # Copy 'rho' to 'glub'
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  glub_path = os.path.join(wc_dir, 'A', 'D', 'G', 'glub')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy', rho_path, glub_path)
+
+  # Commit that change, creating r2.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/glub' : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/D/G/glub' : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # Make a local edit to rho in the backup working copy.
+  rho2_path = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
+  svntest.main.file_append(rho2_path, "Some new text.\n")
+
+  # Now try updating our backup working copy: it should receive glub,
+  # but with copyfrom args of rho@1, and thus copy the existing
+  # (edited) rho to glub.  In other words, both rho and glub should be
+  # identical and contain the same local edits.
+
+  expected_output = svntest.wc.State(wc_backup, { })
+  expected_output = wc.State(wc_backup, {
+    'A/D/G/glub' : Item(status='A '),  ### perhaps update should show 'A +' ??
+    })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/D/G/rho',
+                      contents="This is the file 'rho'.\Some new text.\n")
+  expected_disk.add({
+    'A/D/G/glub' : Item("This is the file 'rho'.\nSome new text.\n"),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/D/G/rho', wc_rev=2, status='M ')
+  expected_status.add({
+    'A/D/G/glub' : Item(status='M ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+
 #######################################################################
 # Run the tests
 
@@ -3162,6 +3291,7 @@ test_list = [ None,
               update_with_obstructing_additions,
               update_conflicted,
               mergeinfo_update_elision,
+              XFail(update_handles_copyfrom),
              ]
 
 if __name__ == '__main__':

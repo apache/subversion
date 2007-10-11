@@ -418,7 +418,7 @@ public class SVNClientSynchronized implements SVNClientInterface
         {
             worker.logMessages(path, pegRevision, revisionStart,
                                revisionEnd, stopOnCopy, discoverPath,
-                               includeMergedRevisions, omitLogText, 
+                               includeMergedRevisions, omitLogText,
                                limit, callback);
         }
     }
@@ -607,6 +607,21 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * Reverts a file to a pristine state.
+     * @param path      path of the file.
+     * @param depth     the depth to recurse into subdirectories
+     * @throws ClientException
+     * @since 1.5
+     */
+    public void revert(String path, int depth) throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.revert(path, depth);
+        }
+    }
+
+    /**
      * Adds a file to the repository.
      * @param path      path to be added.
      * @param recurse   recurse into subdirectories
@@ -641,7 +656,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     /**
      * Adds a file to the repository.
      * @param path      path to be added.
-     * @param recurse   recurse into subdirectories
+     * @param depth     the depth to recurse into subdirectories
      * @param force     if adding a directory and recurse true and path is a
      *                  directory, all not already managed files are added.
      * @param noIgnores if false, don't add files or directories matching
@@ -650,13 +665,13 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @throws ClientException
      * @since 1.5
      */
-    public void add(String path, boolean recurse, boolean force,
+    public void add(String path, int depth, boolean force,
                     boolean noIgnores, boolean addParents)
         throws ClientException
     {
         synchronized (clazz)
         {
-            worker.add(path, recurse, force, noIgnores, addParents);
+            worker.add(path, depth, force, noIgnores, addParents);
         }
     }
 
@@ -762,14 +777,14 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @see org.tigris.subversion.javahl.SVNClientInterface.commit(String[], String, boolean, boolean, boolean, String)
      * @since 1.5
      */
-    public long commit(String[] path, String message, boolean recurse,
+    public long commit(String[] path, String message, int depth,
                        boolean noUnlock, boolean keepChangelist,
                        String changelistName)
             throws ClientException
     {
         synchronized (clazz)
         {
-            return worker.commit(path, message, recurse, noUnlock,
+            return worker.commit(path, message, depth, noUnlock,
                                  keepChangelist, changelistName);
         }
     }
@@ -777,25 +792,18 @@ public class SVNClientSynchronized implements SVNClientInterface
     /**
      * Copy versioned paths with the history preserved.
      *
-     * @param sources A list of <code>CopySource</code> objects.
-     * @param destPath Destination path or URL.
-     * @param message Commit message.  May be <code>null</code> if
-     * <code>destPath</code> is not a URL.
-     * @param copyAsChild Whether to copy <code>srcPaths</code> as
-     * children of <code>destPath</code>.
-     * @param makeParents Whether to create intermediate parents
-     * @throws ClientException If the copy operation fails.
+     * @see org.tigris.subversion.javahl.SVNClientInterface.copy(String[], String, String, boolean, boolean, boolean)
      * @since 1.5
-     * @see org.tigris.subversion.javahl.SVNClientInterface.copy(String[], String, String, Revision, boolean)
      */
     public void copy(CopySource[] sources, String destPath, String message,
-                     boolean copyAsChild, boolean makeParents)
+                     boolean copyAsChild, boolean makeParents,
+                     boolean withMergeHistory)
         throws ClientException
     {
         synchronized (clazz)
         {
             worker.copy(sources, destPath, message, copyAsChild,
-                        makeParents);
+                        makeParents, withMergeHistory);
         }
     }
 
@@ -821,28 +829,18 @@ public class SVNClientSynchronized implements SVNClientInterface
     /**
      * Move or rename versioned paths.
      *
-     * @param srcPaths Source paths or URLs.
-     * @param destPath Destination path or URL.
-     * @param message Commit message.  May be <code>null</code> if
-     * <code>destPath</code> is not a URL.
-     * @param force Whether to perform the move even if local
-     * modifications exist.
-     * @param moveAsChild Whether to move <code>srcPaths</code> as
-     * children of <code>destPath</code>.
-     * @param makeParents Whether to create intermediate parents
-     * @throws ClientException If the move operation fails.
+     * @see org.tigris.subversion.javahl.SVNClientInterface.move(String[], String, String, boolean, boolean, boolean)
      * @since 1.5
-     * @see org.tigris.subversion.javahl.SVNClientInterface.move(String[], String, String, boolean, boolean)
      */
     public void move(String[] srcPaths, String destPath, String message,
                      boolean force, boolean moveAsChild,
-                     boolean makeParents)
+                     boolean makeParents, boolean withMergeHistory)
         throws ClientException
     {
         synchronized (clazz)
         {
             worker.move(srcPaths, destPath, message, force, moveAsChild,
-                        makeParents);
+                        makeParents, withMergeHistory);
         }
     }
 
@@ -930,16 +928,26 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Removes the 'conflicted' state on a file.
-     * @param path      path to cleanup
-     * @param recurse   recurce into subdirectories
-     * @throws ClientException
+     * @see org.tigris.subversion.javahl.SVNClientInterface.resolved(String, int)
+     * @since 1.5
+     */
+    public void resolved(String path, int depth)
+        throws SubversionException
+    {
+        synchronized (clazz)
+        {
+            worker.resolved(path, depth);
+        }
+    }
+
+    /**
+     * @see org.tigris.subversion.javahl.SVNClientInterface.resolved(String, boolean)
      */
     public void resolved(String path, boolean recurse) throws ClientException
     {
-        synchronized(clazz)
+        synchronized (clazz)
         {
-            worker.resolved(path,recurse);
+            worker.resolved(path, recurse);
         }
     }
 
@@ -1070,6 +1078,43 @@ public class SVNClientSynchronized implements SVNClientInterface
         synchronized(clazz)
         {
             worker.doImport(path, url, message, recurse);
+        }
+    }
+
+    /**
+     * Import a file or directory into a repository directory  at
+     * head.
+     * @param path      the local path
+     * @param url       the target url
+     * @param message   the log message.
+     * @param depth     depth to traverse into subdirectories
+     * @param noIgnore  whether to add files matched by ignore patterns
+     * @param ignoreUnknownNodeTypes whether to ignore files which
+     *                  the node type is not konwn, just as pipes
+     * @throws ClientException
+     *
+     * @since 1.5
+     */
+    public void doImport(String path, String url, String message, int depth,
+                         boolean noIgnore, boolean ignoreUnknownNodeTypes)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.doImport(path, url, message, depth, noIgnore,
+                            ignoreUnknownNodeTypes);
+        }
+    }
+
+    /**
+     * @see org.tigris.subversion.javahl.SVNClientInterface#suggestMergeSources(String)
+     */
+    public String[] suggestMergeSources(String path, Revision pegRevision)
+            throws SubversionException
+    {
+        synchronized (clazz)
+        {
+            return worker.suggestMergeSources(path, pegRevision);
         }
     }
 
@@ -1233,12 +1278,28 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @see 1.5 org.tigris.subversion.javahl.SVNClientInterface#getMergeInfo(String, Revision)
      * @since 1.5
      */
-    public MergeInfo getMergeInfo(String path, Revision revision)
+    public MergeInfo getMergeInfo(String path, Revision pegRevision)
         throws SubversionException
     {
         synchronized (clazz)
         {
-            return worker.getMergeInfo(path, revision);
+            return worker.getMergeInfo(path, pegRevision);
+        }
+    }
+
+    /**
+     * @see 1.5 org.tigris.subversion.javahl.SVNClientInterface#getAvailableMerges(String, Revision, String)
+     * @since 1.5
+     */
+    public RevisionRange[] getAvailableMerges(String path,
+                                              Revision pegRevision,
+                                              String mergeSource)
+        throws SubversionException
+    {
+        synchronized (clazz)
+        {
+            return worker.getAvailableMerges(path, pegRevision,
+                                             mergeSource);
         }
     }
 
@@ -1598,6 +1659,27 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * Sets one property of an item with a String value
+     *
+     * @param path    path of the item
+     * @param name    name of the property
+     * @param value   new value of the property
+     * @param depth   the depth to recurse into subdirectories
+     * @param force   do not check if the value is valid
+     * @throws ClientException
+     * @since 1.5
+     */
+    public void propertySet(String path, String name, String value, int depth,
+                     boolean force)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.propertySet(path, name, value, depth, force);
+        }
+    }
+
+    /**
      * Remove one property of an item.
      * @param path      path of the item
      * @param name      name of the property
@@ -1610,6 +1692,23 @@ public class SVNClientSynchronized implements SVNClientInterface
         synchronized(clazz)
         {
             worker.propertyRemove(path, name, recurse);
+        }
+    }
+
+    /**
+     * Remove one property of an item.
+     * @param path      path of the item
+     * @param name      name of the property
+     * @param depth     the depth to recurse into subdirectories
+     * @throws ClientException
+     * @since 1.5
+     */
+    public void propertyRemove(String path, String name, int depth)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.propertyRemove(path, name, depth);
         }
     }
 
@@ -2141,36 +2240,17 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Retrieve information about repository or working copy items.
-     * @param pathOrUrl     the path or the url of the item
-     * @param revision      the revision of the item to return
-     * @param pegRevision   the revision to interpret pathOrUrl
-     * @param recurse       flag if to recurse, if the item is a directory
-     * @param callback      a callback to receive the infos retreived
-     * @return              the information objects
+     * @see org.tigris.subversion.javahl.SVNClientInterface.info2(String, Revision, Revision, int, InfoCallback)
      * @since 1.5
      */
     public void info2(String pathOrUrl, Revision revision,
-                      Revision pegRevision, boolean recurse,
+                      Revision pegRevision, int depth,
                       InfoCallback callback)
         throws ClientException
     {
         synchronized (clazz)
         {
-            worker.info2(pathOrUrl, revision, pegRevision, recurse, callback);
-        }
-    }
-
-    /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface#getCopySource(String, Revision)
-     * @since 1.5
-     */
-    public CopySource getCopySource(String path, Revision revision)
-        throws SubversionException
-    {
-        synchronized (clazz)
-        {
-            return worker.getCopySource(path, revision);
+            worker.info2(pathOrUrl, revision, pegRevision, depth, callback);
         }
     }
 

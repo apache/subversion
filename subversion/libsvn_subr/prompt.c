@@ -53,7 +53,7 @@ static apr_status_t wait_for_input(apr_file_t *f,
 #ifdef WIN32
   return APR_ENOTIMPL;
 #endif /* WIN32 */
-  
+
   pollset.desc_type = APR_POLL_FILE;
   pollset.desc.f = f;
   pollset.p = pool;
@@ -113,7 +113,7 @@ prompt(const char **result,
             continue;
           else if (status && status != APR_ENOTIMPL)
             return svn_error_wrap_apr(status, _("Can't read stdin"));
-             
+
           status = apr_file_getc(&c, fp);
           if (status)
             return svn_error_wrap_apr(status, _("Can't read stdin"));
@@ -139,7 +139,7 @@ prompt(const char **result,
                    ever heard of such a thing? */
                 abort();
             }
-          
+
           svn_stringbuf_appendbytes(strbuf, &c, 1);
         }
     }
@@ -260,7 +260,7 @@ svn_cmdline_auth_ssl_server_trust_prompt
     {
       svn_stringbuf_appendcstr
         (buf, _(" - The certificate hostname does not match.\n"));
-    } 
+    }
 
   if (failures & SVN_AUTH_SSL_NOTYETVALID)
     {
@@ -340,7 +340,7 @@ svn_cmdline_auth_ssl_client_cert_prompt
   svn_cmdline_prompt_baton_t *pb = baton;
 
   SVN_ERR(maybe_print_realm(realm, pool));
-  SVN_ERR(prompt(&cert_file, _("Client certificate filename: "), 
+  SVN_ERR(prompt(&cert_file, _("Client certificate filename: "),
                  FALSE, pb, pool));
 
   cred = apr_palloc(pool, sizeof(*cred));
@@ -381,9 +381,19 @@ svn_cmdline_auth_ssl_client_cert_pw_prompt
 /** Generic prompting. **/
 
 svn_error_t *
+svn_cmdline_prompt_user2(const char **result,
+                         const char *prompt_str,
+                         svn_cmdline_prompt_baton_t *baton,
+                         apr_pool_t *pool)
+{
+  return prompt(result, prompt_str, FALSE /* don't hide input */, baton, pool);
+}
+
+
+svn_error_t *
 svn_cmdline_prompt_user(const char **result,
                         const char *prompt_str,
                         apr_pool_t *pool)
 {
-  return prompt(result, prompt_str, FALSE /* don't hide input */, NULL, pool);
+  return svn_cmdline_prompt_user2(result, prompt_str, NULL, pool);
 }

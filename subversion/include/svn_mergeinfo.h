@@ -34,6 +34,10 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/* Suffix for SVN_PROP_MERGE_INFO revision ranges indicating a given
+   range is non-inheritable. */
+#define SVN_MERGEINFO_NONINHERITABLE_STR "*"
+
 /** Parse the mergeinfo from @a input into @a mergehash, mapping from
  * paths to @c apr_array_header_t *'s of @c svn_merge_range_t *
  * elements.  If no mergeinfo is available, return an empty hash
@@ -44,7 +48,7 @@ extern "C" {
  * @since New in 1.5.
  */
 svn_error_t *
-svn_mergeinfo_parse(apr_hash_t **mergehash, const char *input, 
+svn_mergeinfo_parse(apr_hash_t **mergehash, const char *input,
                     apr_pool_t *pool);
 
 /** Calculate the delta between two hashes of mergeinfo (with
@@ -53,15 +57,22 @@ svn_mergeinfo_parse(apr_hash_t **mergehash, const char *input,
  * added (neither output argument will ever be @c NULL), stored as the
  * usual mapping of paths to lists of @c svn_merge_range_t *'s.
  *
+ * @a consider_inheritance determines how to account for the inheritability
+ * of the rangelists in @a mergefrom and @a mergeto when calculating the
+ * diff.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
 svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
                    apr_hash_t *mergefrom, apr_hash_t *mergeto,
+                   svn_merge_range_inheritance_t consider_inheritance,
                    apr_pool_t *pool);
 
 /** Merge hash of mergeinfo, @a changes, into existing hash @a
- * *mergeinfo.
+ * *mergeinfo.  @a consider_inheritance determines how to account for
+ * the inheritability of the rangelists in @a changes and @a *mergeinfo
+ * when merging.
  *
  * Note: @a *mergeinfo and @a changes must have rangelists that are
  * sorted as said by @c svn_sort_compare_ranges().  After the merge @a
@@ -72,6 +83,7 @@ svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
  */
 svn_error_t *
 svn_mergeinfo_merge(apr_hash_t **mergeinfo, apr_hash_t *changes,
+                    svn_merge_range_inheritance_t consider_inheritance,
                     apr_pool_t *pool);
 
 /** Removes @a eraser (the subtrahend) from @a whiteboard (the
@@ -88,24 +100,34 @@ svn_mergeinfo_remove(apr_hash_t **mergeoutput, apr_hash_t *eraser,
  * and @a to, and place the result in @a deleted and @a added (neither
  * output argument will ever be @c NULL).
  *
+ * @a consider_inheritance determines how to account for the inheritability
+ * of @a to and @a from when calculating the diff.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
 svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
                    apr_array_header_t *from, apr_array_header_t *to,
+                   svn_merge_range_inheritance_t consider_inheritance,
                    apr_pool_t *pool);
 
 /** Merge two rangelists consisting of @c svn_merge_range_t *
- * elements, @a *in1 and @a in2, placing the results in @a *in1.
+ * elements, @a *rangelist and @a changes, placing the results in
+ * @a *rangelist.
+ *
+ * @a consider_inheritance determines how to account for the inheritability
+ * of @a changes and @a *rangelist when merging.
  *
  * Note: @a *rangelist and @a changes must be sorted as said by @c
- * svn_sort_compare_ranges(). @a *in1 is guaranteed to remain in
- * sorted order.
+ * svn_sort_compare_ranges().  @a *rangelist is guaranteed to remain
+ * in sorted order.
+ * 
  * @since New in 1.5.
  */
 svn_error_t *
 svn_rangelist_merge(apr_array_header_t **rangelist,
                     apr_array_header_t *changes,
+                    svn_merge_range_inheritance_t consider_inheritance,
                     apr_pool_t *pool);
 
 /** Removes @a eraser (the subtrahend) from @a whiteboard (the
@@ -114,11 +136,17 @@ svn_rangelist_merge(apr_array_header_t **rangelist,
  * Note: @a eraser and @a whiteboard must be sorted as said by @c
  * svn_sort_compare_ranges().  @a output is guaranteed to be in sorted
  * order.
+ *
+ * @a consider_inheritance determines how to account for the inheritability
+ * of @a whiteboard and @a *eraser when removing ranges.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
 svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
-                     apr_array_header_t *whiteboard, apr_pool_t *pool);
+                     apr_array_header_t *whiteboard,
+                     svn_merge_range_inheritance_t consider_inheritance,
+                     apr_pool_t *pool);
 
 /** Find the intersection of two rangelists consisting of @c
  * svn_merge_range_t * elements, @a rangelist1 and @a rangelist2, and
@@ -171,6 +199,41 @@ svn_error_t *
 svn_rangelist_to_revs(apr_array_header_t **revs,
                       const apr_array_header_t *rangelist,
                       apr_pool_t *pool);
+
+/** Return a deep copy of @c svn_merge_range_t *'s in @a rangelist excluding
+ * all non-inheritable @c svn_merge_range_t.  If @a start and @a end are valid
+ * revisions and @start is less than or equal to @end, then exclude only the
+ * non-inheritable revision ranges that intersect inclusively with the range
+ * defined by @a start and @a end.  If @a rangelist contains no elements, return
+ * an empty array.  Allocate the copy in @a pool.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
+                          apr_array_header_t *rangelist,
+                          svn_revnum_t start,
+                          svn_revnum_t end,
+                          apr_pool_t *pool);
+
+/** Return a deep copy of @a mergeinfo, a mapping from paths to
+ * @c apr_array_header_t *'s of @c svn_merge_range_t *, excluding all
+ * non-inheritable @c svn_merge_range_t.  If @a start and @a end are valid
+ * revisions and @start is less than or equal to @end, then exclude only the
+ * non-inheritable revisions that intersect inclusively with the range
+ * defined by @a start and @a end.  If @a path is not NULL remove
+ * non-inheritable ranges only for @a path.  If @a mergeinfo is an empty hash,
+ * return an empty hash.  Allocate the copy in @a pool.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_mergeinfo_inheritable(apr_hash_t **inheritable_mergeinfo,
+                          apr_hash_t *mergeinfo,
+                          const char *path,
+                          svn_revnum_t start,
+                          svn_revnum_t end,
+                          apr_pool_t *pool);
 
 /** Take a hash of mergeinfo in @a mergeinput, and convert it back to
  * a text format mergeinfo in @a output.  If @a input contains no

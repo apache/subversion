@@ -92,7 +92,7 @@ class SubversionClientTestCase(unittest.TestCase):
     # because you can't get a PyObject back out of a PY_AS_VOID field
     test_object1 = lambda *args: "message 1"
     test_object2 = lambda *args: "message 2"
-    
+
     # Verify that the refcount of a Python object is incremented when
     # you insert it into a PY_AS_VOID field.
     temp_client_ctx.log_msg_baton2 = test_object1
@@ -103,7 +103,7 @@ class SubversionClientTestCase(unittest.TestCase):
     # when a PY_AS_VOID field is replaced.
     temp_client_ctx.log_msg_baton2 = test_object2
     self.assertEqual(test_object1(), None)
-  
+
     # Verify that the reference count of the new Python object (which
     # replaced test_object1) was incremented.
     test_object2 = weakref.ref(test_object2)
@@ -122,11 +122,11 @@ class SubversionClientTestCase(unittest.TestCase):
 
     path = os.path.join(tempfile.gettempdir(), 'checkout')
 
-    self.assertRaises(ValueError, client.checkout2, 
-                      REPOS_URL, path, None, None, True, True, 
+    self.assertRaises(ValueError, client.checkout2,
+                      REPOS_URL, path, None, None, True, True,
                       self.client_ctx)
 
-    client.checkout2(REPOS_URL, path, rev, rev, True, True, 
+    client.checkout2(REPOS_URL, path, rev, rev, True, True,
             self.client_ctx)
 
   def test_info(self):
@@ -148,7 +148,7 @@ class SubversionClientTestCase(unittest.TestCase):
   def test_mkdir_url(self):
     """Test svn_client_mkdir2 on a file:// URL"""
     dir = urljoin(REPOS_URL+"/", "dir1")
-    
+
     commit_info = client.mkdir2((dir,), self.client_ctx)
     self.assertEqual(commit_info.revision, 13)
     self.assertEqual(self.log_message_func_calls, 1)
@@ -163,7 +163,7 @@ class SubversionClientTestCase(unittest.TestCase):
     client.log3((dir,), start, start, end, 1, True, False, self.log_receiver,
         self.client_ctx)
     self.assertEqual(self.change_author, "john")
-    self.assertEqual(self.log_message, "More directories.")    
+    self.assertEqual(self.log_message, "More directories.")
     self.assertEqual(len(self.changed_paths), 3)
     for dir in ('/trunk/dir1', '/trunk/dir2', '/trunk/dir3'):
       self.assert_(self.changed_paths.has_key(dir))
@@ -184,7 +184,7 @@ class SubversionClientTestCase(unittest.TestCase):
 
     path = os.path.join(tempfile.gettempdir(), 'url_from_path')
 
-    client.checkout2(REPOS_URL, path, rev, rev, True, True, 
+    client.checkout2(REPOS_URL, path, rev, rev, True, True,
                      self.client_ctx)
 
     self.assertEquals(client.url_from_path(path), REPOS_URL)
@@ -196,15 +196,15 @@ class SubversionClientTestCase(unittest.TestCase):
 
     path = os.path.join(tempfile.gettempdir(), 'uuid_from_path')
 
-    client.checkout2(REPOS_URL, path, rev, rev, True, True, 
+    client.checkout2(REPOS_URL, path, rev, rev, True, True,
                      self.client_ctx)
 
     wc_adm = wc.adm_open3(None, path, False, 0, None)
 
-    self.assertEquals(client.uuid_from_path(path, wc_adm, self.client_ctx), 
+    self.assertEquals(client.uuid_from_path(path, wc_adm, self.client_ctx),
                       client.uuid_from_url(REPOS_URL, self.client_ctx))
 
-    self.assert_(isinstance(client.uuid_from_path(path, wc_adm, 
+    self.assert_(isinstance(client.uuid_from_path(path, wc_adm,
                             self.client_ctx), types.StringTypes))
 
   def test_open_ra_session(self):
@@ -216,12 +216,12 @@ class SubversionClientTestCase(unittest.TestCase):
     """Test svn_client_info on working copy file and remote files."""
 
     # This test requires a file /trunk/README.txt of size 8 bytes
-    # in the repository. 
+    # in the repository.
     rev = core.svn_opt_revision_t()
     rev.kind = core.svn_opt_revision_head
     wc_path = core.svn_path_canonicalize(tempfile.mktemp())
 
-    client.checkout2(REPOS_URL, wc_path, rev, rev, True, True, 
+    client.checkout2(REPOS_URL, wc_path, rev, rev, True, True,
                      self.client_ctx)
     adm_access = wc.adm_open3(None, wc_path, True, -1, None)
 
@@ -247,7 +247,7 @@ class SubversionClientTestCase(unittest.TestCase):
       self.assertEqual(self.path, readme_path)
       self.info.assert_valid()
       self.assertEqual(self.info.size, client.SWIG_SVN_INFO_SIZE_UNKNOWN)
-      # README.txt contains one EOL char, so on Windows it will be expanded from 
+      # README.txt contains one EOL char, so on Windows it will be expanded from
       # LF to CRLF hence the working_size will be 9 instead of 8.
       if os.name == 'nt':
         self.assertEqual(self.info.working_size, 9)

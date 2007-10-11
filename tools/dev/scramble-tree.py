@@ -58,7 +58,7 @@ class VCActions:
 class NoVCActions(VCActions):
   def remove_file(self, path):
     os.unlink(path)
-  
+
 
 class CVSActions(VCActions):
   def add_file(self, path):
@@ -86,7 +86,7 @@ class SVNActions(VCActions):
     os.remove(path)
     os.system('svn rm --quiet --force "%s"' % (path))
 
-    
+
 class hashDir:
   """Given a directory, creates a string containing all directories
   and files under that directory (sorted alphanumerically) and makes a
@@ -171,16 +171,16 @@ talented scramble-tree.py script.
     if not self.quiet:
       print 'delete_file:', path
     if self.dry_run:
-      return    
+      return
     self.vc_actions.remove_file(path)
 
   ### Public Interfaces
   def get_randomizer(self):
     return self.rand
-  
+
   def schedule_munge(self, path):
     self.ops.append(tuple(["munge", path]))
-    
+
   def schedule_addition(self, dir):
     self.ops.append(tuple(["add", dir]))
 
@@ -201,14 +201,14 @@ talented scramble-tree.py script.
       elif op == "munge":
         file_mungers = [self._mod_append_to_file,
                         self._mod_append_to_file,
-                        self._mod_append_to_file,                         
+                        self._mod_append_to_file,
                         self._mod_remove_from_file,
                         self._mod_remove_from_file,
                         self._mod_remove_from_file,
                         self._mod_delete_file,
                         ]
         self.rand.choice(file_mungers)(path)
-                            
+
 
 def usage(retcode=255):
   print 'Usage: %s [OPTIONS] DIRECTORY' % (sys.argv[0])
@@ -244,7 +244,7 @@ def main():
   dry_run = 0
   quiet = 0
   limit = None
-  
+
   # Mm... option parsing.
   optlist, args = my_getopt(sys.argv[1:], "hq",
                             ['seed=', 'use-svn', 'use-cvs',
