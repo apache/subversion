@@ -248,6 +248,9 @@ a <tt>file:</tt> URL?</a></li>
     system cannot find the path specified" and suggesting that my
     working copy might be corrupt.  But I can update with TortoiseSVN
     just fine.  What's going on?</a></li>
+<li><a href="#working-copy-format-change">I got an error saying "This
+    client is too old to work with working copy '...' ".  How can I
+    fix it without upgrading Subversion?</a></li>
 </ul>
 
 <h4>Developer questions:</h4>
@@ -3647,6 +3650,51 @@ complexities.  (In other words, it's a hard problem not high on our
 priority list.)</p>
 
 </div>
+
+<div class="h3"
+     id="working-copy-format-change" title="working-copy-format-change">
+<h3>I got an error saying "This client is too old to work with working
+    copy '...' ".  How can I fix it without upgrading Subversion?</h3>
+
+<p>Sometimes the working copy metadata format changes incompatibly
+between minor releases.  For example, say you have a working copy
+created with Subversion 1.4.4, but one day you decide to try out
+Subversion 1.5.0.  Afterwards, you attempt to switch back to 1.4.4,
+but it doesn't work&nbsp;&mdash;&nbsp;it just gives the above
+error.</p>
+
+<p>This is because 1.5.0 upgraded your working copy format to support
+some new features (in this case, changelists, the keep-local flag, and
+variable-depth directories).  Although 1.4.4 doesn't know anything
+about these new features, it can at least recognize that the working
+copy format has been upgraded to something higher than it can
+handle.</p>
+
+<p>1.5.0 upgraded the working copy for a good reason: it realizes that
+1.4.4 does not know about these new features, and that if 1.4.4 were
+to meddle with the working copy metadata now, important information
+might be lost, possibly causing corruption (see <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=2961" >issue
+#2961</a>, for example).</p>
+
+<p>But this automatic upgrade behavior can be annoying, if you just
+want to try out a new release of Subversion without installing it
+permanently.  For this reason, we distribute a script that can
+downgrade working copies when doing so is safe:</p>
+
+<blockquote>
+<a
+href="http://svn.collab.net/repos/svn/trunk/tools/client-side/change-svn-wc-format.py"
+>http://svn.collab.net/repos/svn/trunk/tools/client-side/change-svn-wc-format.py</a>
+</blockquote>
+
+<p>Run that script with the "<tt>--help</tt>" option to see how to use
+it.  As future versions of Subversion are released, we will try to
+keep this FAQ entry up-to-date with potential downgrade scenarios and
+their implications.</p>
+
+</div>
+
 </div>
 
 
