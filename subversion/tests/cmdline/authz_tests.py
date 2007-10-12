@@ -24,6 +24,7 @@ import svntest
 
 from svntest.main import write_restrictive_svnserve_conf
 from svntest.main import write_authz_file
+from svntest.main import server_authz_has_aliases
 
 # (abbreviation)
 Item = svntest.wc.StateItem
@@ -877,7 +878,8 @@ test_list = [ None,
               Skip(authz_checkout_and_update_test,
                    svntest.main.is_ra_type_file),
               Skip(authz_partial_export_test, svntest.main.is_ra_type_file),
-              Skip(authz_aliases, svntest.main.is_ra_type_file),
+              SkipUnless(Skip(authz_aliases, svntest.main.is_ra_type_file),
+                         server_authz_has_aliases),
               Skip(authz_validate, svntest.main.is_ra_type_file),
               Skip(authz_locking, svntest.main.is_ra_type_file),
               SkipUnless(authz_svnserve_anon_access_read,
