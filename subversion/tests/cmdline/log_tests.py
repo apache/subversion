@@ -23,6 +23,7 @@ import re, os, sys
 import svntest
 from svntest import wc
 
+from svntest.main import server_has_mergeinfo
 
 ######################################################################
 #
@@ -55,6 +56,7 @@ msg_separator = '------------------------------------' \
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
@@ -1324,10 +1326,14 @@ test_list = [ None,
               log_base_peg,
               log_verbose,
               log_parser,
-              merge_sensitive_log_single_revision,
-              merge_sensitive_log_branching_revision,
-              merge_sensitive_log_non_branching_revision,
-              merge_sensitive_log_added_path,
+              SkipUnless(merge_sensitive_log_single_revision,
+                         server_has_mergeinfo),
+              SkipUnless(merge_sensitive_log_branching_revision,
+                         server_has_mergeinfo),
+              SkipUnless(merge_sensitive_log_non_branching_revision,
+                         server_has_mergeinfo),
+              SkipUnless(merge_sensitive_log_added_path,
+                         server_has_mergeinfo),
               XFail(log_single_change),
               XFail(log_changes_range),
               XFail(log_changes_list),
