@@ -36,6 +36,7 @@ int dav_svn__proxy_merge_fixup(request_rec *r)
         /* We know we can always safely handle these. */
         if (r->method_number == M_PROPFIND ||
             r->method_number == M_GET ||
+            r->method_number == M_REPORT ||
             r->method_number == M_OPTIONS) {
             return OK;
         }
