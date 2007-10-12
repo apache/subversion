@@ -745,6 +745,10 @@ def server_sends_copyfrom_on_update():
   _check_command_line_parsed()
   return server_minor_version >= 5
 
+def server_authz_has_aliases():
+  _check_command_line_parsed()
+  return server_minor_version >= 5
+
 
 ######################################################################
 # Sandbox handling
