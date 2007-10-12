@@ -111,7 +111,8 @@ svn_cl__patch(apr_getopt_t *os,
 
   if (err)
     {
-      if (svn_error_root_cause_is(err, SVN_ERR_EXTERNAL_PROGRAM_MISSING))
+      svn_error_t *root_err = svn_error_root_cause(err);
+      if (root_err->apr_err == SVN_ERR_EXTERNAL_PROGRAM_MISSING)
         return svn_error_quick_wrap
                 (err,
                  _("No 'patch' program was found in your system.  Please try\n"
