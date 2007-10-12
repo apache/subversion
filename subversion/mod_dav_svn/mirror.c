@@ -45,7 +45,7 @@ int dav_svn__proxy_merge_fixup(request_rec *r)
             ap_strstr_c(seg, dav_svn__get_special_uri(r)))) {
             seg += strlen(root_dir);
 
-            r->proxyreq = PROXYREQ_PROXY;
+            r->proxyreq = PROXYREQ_REVERSE;
             r->uri = r->unparsed_uri;
             r->filename = apr_pstrcat(r->pool, "proxy:", master_uri,
                                       "/", seg, NULL);
@@ -92,11 +92,9 @@ apr_status_t dav_svn__location_in_filter(ap_filter_t *f,
         ctx = f->ctx = apr_pcalloc(r->pool, sizeof(*ctx));
 
         apr_uri_parse(r->pool, master_uri, &ctx->uri);
-        ctx->remotepath = apr_pstrcat(r->pool, ctx->uri.path, "/",
-                                      dav_svn__get_special_uri(r), NULL);
+        ctx->remotepath = ctx->uri.path;
         ctx->remotepath_len = strlen(ctx->remotepath);
-        ctx->localpath = apr_pstrcat(r->pool, dav_svn__get_root_dir(r), "/",
-                                     dav_svn__get_special_uri(r), NULL);
+        ctx->localpath = dav_svn__get_root_dir(r);
         ctx->localpath_len = strlen(ctx->localpath);
         ctx->pattern = apr_strmatch_precompile(r->pool, ctx->localpath, 0);
         ctx->pattern_len = ctx->localpath_len;
@@ -189,11 +187,9 @@ apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
         ctx = f->ctx = apr_pcalloc(r->pool, sizeof(*ctx));
 
         apr_uri_parse(r->pool, master_uri, &ctx->uri);
-        ctx->remotepath = apr_pstrcat(r->pool, ctx->uri.path, "/",
-                                      dav_svn__get_special_uri(r), NULL);
+        ctx->remotepath = ctx->uri.path;
         ctx->remotepath_len = strlen(ctx->remotepath);
-        ctx->localpath = apr_pstrcat(r->pool, dav_svn__get_root_dir(r), "/",
-                                     dav_svn__get_special_uri(r), NULL);
+        ctx->localpath = dav_svn__get_root_dir(r);
         ctx->localpath_len = strlen(ctx->localpath);
         ctx->pattern = apr_strmatch_precompile(r->pool, ctx->remotepath, 0);
         ctx->pattern_len = ctx->remotepath_len;
