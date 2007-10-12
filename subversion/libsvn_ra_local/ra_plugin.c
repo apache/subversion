@@ -320,6 +320,20 @@ svn_ra_local__reparent(svn_ra_session_t *session,
 }
 
 static svn_error_t *
+svn_ra_local__get_session_url(svn_ra_session_t *session,
+                              const char **url,
+                              apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *baton = session->priv;
+  const char *fs_path = apr_pstrmemdup(pool, baton->fs_path->data, 
+                                       baton->fs_path->len);
+  *url = svn_path_join(baton->repos_url,
+                       svn_path_uri_encode(fs_path + 1, pool),
+                       pool);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 svn_ra_local__get_latest_revnum(svn_ra_session_t *session,
                                 svn_revnum_t *latest_revnum,
                                 apr_pool_t *pool)
@@ -799,7 +813,7 @@ svn_ra_local__do_diff(svn_ra_session_t *session,
 struct log_baton
 {
   svn_ra_local__session_baton_t *session;
-  svn_log_message_receiver2_t real_cb;
+  svn_log_entry_receiver_t real_cb;
   void *real_baton;
 };
 
@@ -826,8 +840,8 @@ svn_ra_local__get_log(svn_ra_session_t *session,
                       svn_boolean_t discover_changed_paths,
                       svn_boolean_t strict_node_history,
                       svn_boolean_t include_merged_revisions,
-                      svn_boolean_t omit_log_text,
-                      svn_log_message_receiver2_t receiver,
+                      apr_array_header_t *revprops,
+                      svn_log_entry_receiver_t receiver,
                       void *receiver_baton,
                       apr_pool_t *pool)
 {
@@ -871,7 +885,7 @@ svn_ra_local__get_log(svn_ra_session_t *session,
                              discover_changed_paths,
                              strict_node_history,
                              include_merged_revisions,
-                             omit_log_text,
+                             revprops,
                              NULL, NULL,
                              receiver,
                              receiver_baton,
@@ -1175,6 +1189,7 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+
 static svn_error_t *
 svn_ra_local__get_locations(svn_ra_session_t *session,
                             apr_hash_t **locations,
@@ -1197,6 +1212,28 @@ svn_ra_local__get_locations(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+svn_ra_local__get_location_segments(svn_ra_session_t *session,
+                                    const char *path,
+                                    svn_revnum_t start_rev,
+                                    svn_revnum_t end_rev,
+                                    svn_location_segment_receiver_t receiver,
+                                    void *receiver_baton,
+                                    apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *sbaton = session->priv;
+  const char *abs_path;
+
+  /* Append the relative path to the base FS path to get an
+     absolute repository path. */
+  abs_path = svn_path_join(sbaton->fs_path->data, path, pool);
+
+  return svn_repos_node_location_segments(sbaton->repos, abs_path,
+                                          start_rev, end_rev,
+                                          receiver, receiver_baton,
+                                          NULL, NULL, pool);
+}
 
 
 static svn_error_t *
@@ -1395,6 +1432,7 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__get_schemes,
   svn_ra_local__open,
   svn_ra_local__reparent,
+  svn_ra_local__get_session_url,
   svn_ra_local__get_latest_revnum,
   svn_ra_local__get_dated_revision,
   svn_ra_local__change_rev_prop,
@@ -1414,6 +1452,7 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__get_uuid,
   svn_ra_local__get_repos_root,
   svn_ra_local__get_locations,
+  svn_ra_local__get_location_segments,
   svn_ra_local__get_file_revs,
   svn_ra_local__lock,
   svn_ra_local__unlock,

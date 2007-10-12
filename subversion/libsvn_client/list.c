@@ -283,11 +283,7 @@ svn_client_list(const char *path_or_url,
   return svn_client_list2(path_or_url,
                           peg_revision,
                           revision,
-                          /* Don't use SVN_DEPTH_FROM_RECURSE() here,
-                             because it defaults to svn_depth_files
-                             in the non-recursive case, whereas we need
-                             svn_depth_immediates for compatibilty. */
-                          recurse ? svn_depth_infinity : svn_depth_immediates,
+                          SVN_DEPTH_INFINITY_OR_IMMEDIATES(recurse),
                           dirent_fields,
                           fetch_locks,
                           list_func,

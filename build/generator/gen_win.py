@@ -260,7 +260,7 @@ class WinGeneratorBase(GeneratorBase):
       os.makedirs(self.projfilesdir)
 
     #Here we can add additional platforms to compile for
-    self.platforms = ['Win32']
+    self.platforms = ['Win32','x64']
 
     #Here we can add additional modes to compile for
     self.configs = ['Debug','Release']

@@ -440,9 +440,18 @@ def update_while_needing_lock(sbox):
   wc_dir = sbox.wc_dir
 
   iota_path = os.path.join(wc_dir, 'iota')
-  svntest.main.run_svn(None, 'propset', 'svn:needs-lock', 'foo', iota_path)
-  svntest.main.run_svn(None, 'commit', '-m', 'log msg', iota_path)
-  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'propset', 'svn:needs-lock', 'foo', iota_path)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'commit', '-m', 'log msg', iota_path)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'up', wc_dir)
 
   # Lock, modify, commit, unlock, to create r3.
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
@@ -456,10 +465,16 @@ def update_while_needing_lock(sbox):
                        '-m', '', iota_path) # auto-unlocks
 
   # Backdate to r2.
-  svntest.main.run_svn(None, 'update', '-r2', iota_path)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'update', '-r2', iota_path)
 
   # Try updating forward to r3 again.  This is where the bug happened.
-  svntest.main.run_svn(None, 'update', '-r3', iota_path)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'update', '-r3', iota_path)
 
 
 #----------------------------------------------------------------------
@@ -1197,7 +1212,10 @@ def commit_xml_unsafe_file_unlock(sbox):
   file_path = os.path.join(sbox.wc_dir, fname)
   svntest.main.file_append(file_path, "Initial data.\n")
   svntest.main.run_svn(None, 'add', file_path)
-  svntest.main.run_svn(None, 'commit', '-m', '', file_path)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'commit', '-m', '', file_path)
 
   # lock fname as wc_author
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
@@ -1207,7 +1225,10 @@ def commit_xml_unsafe_file_unlock(sbox):
 
   # make a change and commit it, allowing lock to be released
   svntest.main.file_append(file_path, "Followup data.\n")
-  svntest.main.run_svn(None, 'commit', '-m', '', file_path)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'commit', '-m', '', file_path)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({ fname : Item(status='  ', wc_rev=3), })
@@ -1458,7 +1479,8 @@ def ls_url_encoded(sbox):
                                      "--password", svntest.main.wc_passwd)
 
   # Make sure ls shows it being locked.
-  expected_output = " +2 " + re.escape(svntest.main.wc_author) + " +O .+f"
+  expected_output = " +2 " + re.escape(svntest.main.wc_author) + " +O .+f|" \
+                    " +2 " + re.escape(svntest.main.wc_author) + "    .+\./"
   svntest.actions.run_and_verify_svn("List space dir",
                                      expected_output, [],
                                      "list", "-v", dirname)

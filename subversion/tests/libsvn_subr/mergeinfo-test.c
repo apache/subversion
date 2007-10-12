@@ -686,6 +686,144 @@ test_mergeinfo_to_string(const char **msg,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_range_compact(const char **msg,
+                   svn_boolean_t msg_only,
+                   svn_test_opts_t *opts,
+                   apr_pool_t *pool)
+{
+  #define SIZE_OF_TEST_ARRAY 44
+  svn_merge_range_t rangelist[SIZE_OF_TEST_ARRAY][4] =
+    /* For each ith element of rangelist[][], try to combine/compact
+       rangelist[i][0] and rangelist[i][1].  If the combined ranges can
+       be combined, then the expected range is rangelist[i][2] and
+       rangelist[i][3] is {-1, -1, TRUE}.  If the ranges cancel each
+       other out, then both rangelist[i][2] and rangelist[i][3] are
+       {-1, -1, TRUE}.       
+           range1      +   range2      =   range3      ,   range4 */
+    { /* Non-intersecting ranges */
+      { { 2,  4, TRUE}, { 6, 13, TRUE}, { 2,  4, TRUE}, { 6, 13, TRUE} },
+      { { 4,  2, TRUE}, { 6, 13, TRUE}, { 4,  2, TRUE}, { 6, 13, TRUE} },
+      { { 4,  2, TRUE}, {13,  6, TRUE}, { 4,  2, TRUE}, {13,  6, TRUE} },
+      { { 2,  4, TRUE}, {13,  6, TRUE}, { 2,  4, TRUE}, {13,  6, TRUE} },
+      { { 6, 13, TRUE}, { 2,  4, TRUE}, { 6, 13, TRUE}, { 2,  4, TRUE} },
+      { { 6, 13, TRUE}, { 4,  2, TRUE}, { 6, 13, TRUE}, { 4,  2, TRUE} },
+      { {13,  6, TRUE}, { 4,  2, TRUE}, {13, 6,  TRUE}, { 4,  2, TRUE} },
+      { {13,  6, TRUE}, { 2,  4, TRUE}, {13, 6,  TRUE}, { 2,  4, TRUE} },
+      /* Intersecting ranges with no common start or end points */
+      { { 2,  5, TRUE}, { 4,  6, TRUE}, { 2,  6, TRUE}, {-1, -1, TRUE} },
+      { { 2,  5, TRUE}, { 6,  4, TRUE}, { 2,  4, TRUE}, { 6,  5, TRUE} },
+      { { 5,  2, TRUE}, { 4,  6, TRUE}, { 4,  2, TRUE}, { 5,  6, TRUE} },
+      { { 5,  2, TRUE}, { 6,  4, TRUE}, { 6,  2, TRUE}, {-1, -1, TRUE} },
+      { { 4,  6, TRUE}, { 2,  5, TRUE}, { 2,  6, TRUE}, {-1, -1, TRUE} },
+      { { 6,  4, TRUE}, { 2,  5, TRUE}, { 6,  5, TRUE}, { 2,  4, TRUE} },
+      { { 4,  6, TRUE}, { 5,  2, TRUE}, { 5,  6, TRUE}, { 4,  2, TRUE} },
+      { { 6,  4, TRUE}, { 5,  2, TRUE}, { 6,  2, TRUE}, {-1, -1, TRUE} },
+      /* One range is a proper subset of the other. */
+      { {33, 43, TRUE}, {37, 38, TRUE}, {33, 43, TRUE}, {-1, -1, TRUE} },
+      { {33, 43, TRUE}, {38, 37, TRUE}, {33, 37, TRUE}, {38, 43, TRUE} },
+      { {43, 33, TRUE}, {37, 38, TRUE}, {37, 33, TRUE}, {43, 38, TRUE} },
+      { {43, 33, TRUE}, {38, 37, TRUE}, {43, 33, TRUE}, {-1, -1, TRUE} },
+      { {37, 38, TRUE}, {33, 43, TRUE}, {33, 43, TRUE}, {-1, -1, TRUE} },
+      { {38, 37, TRUE}, {33, 43, TRUE}, {33, 37, TRUE}, {38, 43, TRUE} },
+      { {37, 38, TRUE}, {43, 33, TRUE}, {37, 33, TRUE}, {43, 38, TRUE} },
+      { {38, 37, TRUE}, {43, 33, TRUE}, {43, 33, TRUE}, {-1, -1, TRUE} }, 
+      /* Intersecting ranges share same start and end points */
+      { { 4, 20, TRUE}, { 4, 20, TRUE}, { 4, 20, TRUE}, {-1, -1, TRUE} },
+      { { 4, 20, TRUE}, {20,  4, TRUE}, {-1, -1, TRUE}, {-1, -1, TRUE} },
+      { {20,  4, TRUE}, { 4, 20, TRUE}, {-1, -1, TRUE}, {-1, -1, TRUE} },
+      { {20,  4, TRUE}, {20,  4, TRUE}, {20,  4, TRUE}, {-1, -1, TRUE} },
+      /* Intersecting ranges share same start point */
+      { { 7, 13, TRUE}, { 7, 19, TRUE}, { 7, 19, TRUE}, {-1, -1, TRUE} },
+      { { 7, 13, TRUE}, {19,  7, TRUE}, {19, 13, TRUE}, {-1, -1, TRUE} }, 
+      { {13,  7, TRUE}, {7,  19, TRUE}, {13, 19, TRUE}, {-1, -1, TRUE} }, 
+      { {13,  7, TRUE}, {19,  7, TRUE}, {19,  7, TRUE}, {-1, -1, TRUE} },
+      { { 7, 19, TRUE}, { 7, 13, TRUE}, { 7, 19, TRUE}, {-1, -1, TRUE} },
+      { {19,  7, TRUE}, { 7, 13, TRUE}, {19, 13, TRUE}, {-1, -1, TRUE} }, 
+      { { 7, 19, TRUE}, {13,  7, TRUE}, {13, 19, TRUE}, {-1, -1, TRUE} }, 
+      { {19,  7, TRUE}, {13,  7, TRUE}, {19,  7, TRUE}, {-1, -1, TRUE} },
+      /* Intersecting ranges share same end point */
+      { {12, 23, TRUE}, {18, 23, TRUE}, {12, 23, TRUE}, {-1, -1, TRUE} },
+      { {12, 23, TRUE}, {23, 18, TRUE}, {12, 18, TRUE}, {-1, -1, TRUE} }, 
+      { {23, 12, TRUE}, {18, 23, TRUE}, {18, 12, TRUE}, {-1, -1, TRUE} }, 
+      { {23, 12, TRUE}, {23, 18, TRUE}, {23, 12, TRUE}, {-1, -1, TRUE} },
+      { {18, 23, TRUE}, {12, 23, TRUE}, {12, 23, TRUE}, {-1, -1, TRUE} },
+      { {23, 18, TRUE}, {12, 23, TRUE}, {12, 18, TRUE}, {-1, -1, TRUE} }, 
+      { {18, 23, TRUE}, {23, 12, TRUE}, {18, 12, TRUE}, {-1, -1, TRUE} }, 
+      { {23, 18, TRUE}, {23, 12, TRUE}, {23, 12, TRUE}, {-1, -1, TRUE} } };
+  int i;
+
+  *msg = "combination of ranges";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  for (i = 0; i < SIZE_OF_TEST_ARRAY; i++)
+    {
+      svn_merge_range_t *r1 = apr_palloc(pool, sizeof(*r1));
+      svn_merge_range_t *r2 = apr_palloc(pool, sizeof(*r2));
+      svn_merge_range_t *r1_expected = &(rangelist[i][2]);
+      svn_merge_range_t *r2_expected = &(rangelist[i][3]);
+
+      r1->start = rangelist[i][0].start;
+      r1->end = rangelist[i][0].end;
+      r1->inheritable = TRUE;
+
+      r2->start = rangelist[i][1].start;
+      r2->end = rangelist[i][1].end;
+      r2->inheritable = TRUE;
+
+      svn_range_compact(&r1, &r2);
+      if (!(((!r1 && r1_expected->start == -1
+              && r1_expected->end == -1)
+           || (r1 && (r1->start == r1_expected->start
+               && r1->end == r1_expected->end)))
+          && ((!r2 && r2_expected->start == -1
+               && r2_expected->end == -1)
+              || (r2 && (r2->start == r2_expected->start
+                  && r2->end == r2_expected->end)))))
+        {
+          const char *fail_msg = "svn_range_compact() should combine ranges ";
+          fail_msg = apr_pstrcat(pool, fail_msg,
+                                 apr_psprintf(pool, "(%ld-%ld),(%ld-%ld) "
+                                              "into ",
+                                              rangelist[i][0].start,
+                                              rangelist[i][0].end,
+                                              rangelist[i][1].start,
+                                              rangelist[i][1].end), NULL);
+          if (r1_expected->start == -1)
+            fail_msg = apr_pstrcat(pool, fail_msg, "(NULL),",NULL);
+          else
+            fail_msg = apr_pstrcat(pool, fail_msg,
+                                   apr_psprintf(pool, "(%ld-%ld),",
+                                                r1_expected->start,
+                                                r1_expected->end), NULL);
+          if (r2_expected->start == -1)
+            fail_msg = apr_pstrcat(pool, fail_msg, "(NULL) ",NULL);
+          else
+            fail_msg = apr_pstrcat(pool, fail_msg,
+                                   apr_psprintf(pool, "(%ld-%ld) ",
+                                                r2_expected->start,
+                                                r2_expected->end), NULL);
+          fail_msg = apr_pstrcat(pool, fail_msg, "but instead resulted in ",
+                                 NULL);
+          if (r1)
+            fail_msg = apr_pstrcat(pool, fail_msg,
+                                   apr_psprintf(pool, "(%ld-%ld),",
+                                                r1->start, r1->end), NULL);
+          else
+            fail_msg = apr_pstrcat(pool, fail_msg, "(NULL),",NULL);
+          if (r2)
+            fail_msg = apr_pstrcat(pool, fail_msg,
+                                   apr_psprintf(pool, "(%ld-%ld),",
+                                                r2->start, r2->end), NULL);
+          else
+            fail_msg = apr_pstrcat(pool, fail_msg, "(NULL)",NULL);
+
+          return fail(pool, fail_msg);
+        }
+    }
+  return SVN_NO_ERROR;
+}
 
 /* The test table.  */
 
@@ -707,5 +845,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_merge_mergeinfo),
     SVN_TEST_PASS(test_rangelist_to_string),
     SVN_TEST_PASS(test_mergeinfo_to_string),
+    SVN_TEST_PASS(test_range_compact),
     SVN_TEST_NULL
   };

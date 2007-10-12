@@ -581,7 +581,7 @@ get_file_mime_types(const char **mimetype1,
  * delete this file.
  */
 static svn_error_t *
-get_file_from_ra(struct file_baton *b)
+get_file_from_ra(struct file_baton *b, svn_revnum_t revision)
 {
   apr_file_t *file;
   svn_stream_t *fstream;
@@ -596,7 +596,7 @@ get_file_from_ra(struct file_baton *b)
   fstream = svn_stream_from_aprfile(file, b->pool);
   SVN_ERR(svn_ra_get_file(b->edit_baton->ra_session,
                           b->path,
-                          b->edit_baton->revision,
+                          revision,
                           fstream, NULL,
                           &(b->pristine_props),
                           b->pool));
@@ -786,7 +786,7 @@ delete_entry(const char *path,
 
             /* Compare a file being deleted against an empty file */
             b = make_file_baton(path, FALSE, eb, pb, NULL, pool);
-            SVN_ERR(get_file_from_ra(b));
+            SVN_ERR(get_file_from_ra(b, eb->revision));
             SVN_ERR(get_empty_file(b->edit_baton, &(b->path_end_revision)));
 
             get_file_mime_types(&mimetype1, &mimetype2, b);
@@ -988,7 +988,7 @@ open_file(const char *path,
   b = make_file_baton(path, FALSE, pb->edit_baton, pb, token, pool);
   *file_baton = b;
 
-  SVN_ERR(get_file_from_ra(b));
+  SVN_ERR(get_file_from_ra(b, base_revision));
 
   if (eb->svnpatch_stream)
     {

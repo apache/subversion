@@ -46,6 +46,7 @@ class InfoCallback;
 class ListCallback;
 class StatusCallback;
 class CommitMessage;
+#include "svn_types.h"
 #include "svn_client.h"
 #include "SVNBase.h"
 
@@ -80,13 +81,15 @@ class SVNClient :public SVNBase
   void streamFileContent(const char *path, Revision &revision,
                          Revision &pegRevision, jobject outputStream,
                          size_t bufSize);
-  void propertyRemove(const char *path, const char *name, bool recurse);
+  void propertyRemove(const char *path, const char *name, svn_depth_t depth);
   void propertySet(const char *path, const char *name, const char *value,
-                   bool recurse, bool force);
+                   svn_depth_t depth, bool force);
   void properties(const char *path, Revision &revision,
                   Revision &pegRevision, svn_depth_t depth,
                   ProplistCallback *callback);
-  jobject getMergeInfo(const char *target, Revision &rev);
+  jobject getMergeInfo(const char *target, Revision &pegRevision);
+  jobjectArray getAvailableMerges(const char *target, Revision &pegRevision,
+                                  const char *mergeSource);
   jobjectArray suggestMergeSources(const char *path, Revision &pegRevision);
   void merge(const char *path1, Revision &revision1, const char *path2,
              Revision &revision2, const char *localPath, bool force,
@@ -103,7 +106,8 @@ class SVNClient :public SVNBase
                  Revision &revision, Revision &pegRevision, bool force,
                  bool ignoreExternals, svn_depth_t depth,
                  const char *nativeEOL);
-  void resolved(const char *path, bool recurse);
+  void resolved(const char *path, svn_depth_t depth,
+                svn_wc_conflict_result_t result);
   void cleanup(const char *path);
   void mkdir(Targets &targets, const char *message, bool makeParents);
   void move(Targets &srcPaths, const char *destPath,
@@ -184,7 +188,7 @@ class SVNClient :public SVNBase
  private:
   static svn_error_t *checkCancel(void *cancelBaton);
   void propertySet(const char *path, const char *name,
-                   svn_string_t *value, bool recurse, bool force,
+                   svn_string_t *value, svn_depth_t depth, bool force,
                    svn_revnum_t baseRevisionForURL);
   jobject createJavaProperty(jobject jthis, const char *path,
                              const char *name, svn_string_t *value);
@@ -213,6 +217,8 @@ class SVNClient :public SVNBase
   Path m_lastPath;
   bool m_cancelOperation;
   CommitMessage *m_commitMessage;
+
+  jobjectArray makeJRevisionRangeArray(apr_array_header_t *ranges);
 
   /**
    * Implements the svn_client_get_commit_log3_t API.

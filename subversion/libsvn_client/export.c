@@ -335,7 +335,7 @@ copy_versioned_files(const char *from,
 
               SVN_ERR(svn_wc_parse_externals_description3(&ext_items, from,
                                                           prop_val->data,
-                                                          pool));
+                                                          TRUE, pool));
               for (i = 0; i < ext_items->nelts; ++i)
                 {
                   svn_wc_external_item2_t *ext_item;
@@ -928,7 +928,7 @@ svn_client_export4(svn_revnum_t *result_rev,
                      ctx->notify_baton2, pool));
 
           if (! ignore_externals && depth == svn_depth_infinity)
-            SVN_ERR(svn_client__fetch_externals(eb->externals, TRUE,
+            SVN_ERR(svn_client__fetch_externals(eb->externals, depth, TRUE,
                                                 &use_sleep, ctx, pool));
         }
       else if (kind == svn_node_none)
@@ -986,7 +986,7 @@ svn_client_export3(svn_revnum_t *result_rev,
 {
   return svn_client_export4(result_rev, from, to, peg_revision, revision,
                             overwrite, ignore_externals,
-                            SVN_DEPTH_FROM_RECURSE(recurse),
+                            SVN_DEPTH_INFINITY_OR_FILES(recurse),
                             native_eol, ctx, pool);
 }
 

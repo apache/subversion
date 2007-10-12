@@ -16,12 +16,3 @@ revprops = element revprops { attlist.revprops, property*}
 attlist.revprops &=
   ## The revision
   attribute rev { revnum.type }
-
-## Property information for one of the properties of path under target.
-property = element property { attlist.property, text }
-attlist.property &=
-  ## The property name
-  attribute name { string },
-  ## The encoding of the element content.  If not present, the value
-  ## is the raw content of the element.
-  attribute encoding { "base64" }?

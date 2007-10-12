@@ -79,10 +79,10 @@
    Smaller values will limit your overall memory consumption, but can
    drastically hurt throughput by necessitating more write operations
    to the database (which also generates more log-files).  */
-#define SVN_FS_WRITE_BUFFER_SIZE          512000
+#define WRITE_BUFFER_SIZE          512000
 
 /* The maximum number of cache items to maintain in the node cache. */
-#define SVN_FS_NODE_CACHE_MAX_KEYS        32
+#define NODE_CACHE_MAX_KEYS        32
 
 
 
@@ -119,7 +119,7 @@ typedef struct
      function that succeeded.  In other words, this cache must never,
      ever, lie. */
   apr_hash_t *node_cache;
-  const char *node_cache_keys[SVN_FS_NODE_CACHE_MAX_KEYS];
+  const char *node_cache_keys[NODE_CACHE_MAX_KEYS];
   int node_cache_idx;
 } base_root_data_t;
 
@@ -189,7 +189,7 @@ dag_node_cache_set(svn_fs_root_t *root,
   /* Assert valid input and state. */
   assert(*path == '/');
   assert((brd->node_cache_idx <= num_keys)
-         && (num_keys <= SVN_FS_NODE_CACHE_MAX_KEYS));
+         && (num_keys <= NODE_CACHE_MAX_KEYS));
 
   /* Only allow revision roots. */
   if (root->is_txn_root)
@@ -222,7 +222,7 @@ dag_node_cache_set(svn_fs_root_t *root,
          here. */
       if (cache_index != (num_keys - 1))
         {
-          int move_num = SVN_FS_NODE_CACHE_MAX_KEYS - cache_index - 1;
+          int move_num = NODE_CACHE_MAX_KEYS - cache_index - 1;
           memmove(brd->node_cache_keys + cache_index,
                   brd->node_cache_keys + cache_index + 1,
                   move_num * sizeof(const char *));
@@ -232,14 +232,14 @@ dag_node_cache_set(svn_fs_root_t *root,
 
       /* Advance the cache pointers. */
       cache_item->idx = cache_index;
-      brd->node_cache_idx = (cache_index + 1) % SVN_FS_NODE_CACHE_MAX_KEYS;
+      brd->node_cache_idx = (cache_index + 1) % NODE_CACHE_MAX_KEYS;
       return;
 #endif
     }
 
   /* We're adding a new cache item.  First, see if we have room for it
      (otherwise, make some room). */
-  if (apr_hash_count(brd->node_cache) == SVN_FS_NODE_CACHE_MAX_KEYS)
+  if (apr_hash_count(brd->node_cache) == NODE_CACHE_MAX_KEYS)
     {
       /* No room.  Expire the oldest thing. */
       cache_path = brd->node_cache_keys[brd->node_cache_idx];
@@ -266,7 +266,7 @@ dag_node_cache_set(svn_fs_root_t *root,
   brd->node_cache_keys[brd->node_cache_idx] = cache_path;
 
   /* Advance the cache pointer. */
-  brd->node_cache_idx = (brd->node_cache_idx + 1) % SVN_FS_NODE_CACHE_MAX_KEYS;
+  brd->node_cache_idx = (brd->node_cache_idx + 1) % NODE_CACHE_MAX_KEYS;
 }
 
 
@@ -302,10 +302,10 @@ txn_body_txn_root(void *baton,
   /* Look for special txn props that represent the 'flags' behavior of
      the transaction. */
   SVN_ERR(svn_fs_base__txn_proplist_in_trail(&txnprops, svn_txn_id, trail));
-  if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_OOD, APR_HASH_KEY_STRING))
+  if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_OOD, APR_HASH_KEY_STRING))
     flags |= SVN_FS_TXN_CHECK_OOD;
 
-  if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_LOCKS, APR_HASH_KEY_STRING))
+  if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS, APR_HASH_KEY_STRING))
     flags |= SVN_FS_TXN_CHECK_LOCKS;
 
   root = make_txn_root(fs, svn_txn_id, txn->base_rev, flags, trail->pool);
@@ -3345,7 +3345,7 @@ window_consumer(svn_txdelta_window_t *window, void *baton)
 
   /* Check to see if we need to purge the portion of the contents that
      have been written thus far. */
-  if ((! window) || (tb->target_string->len > SVN_FS_WRITE_BUFFER_SIZE))
+  if ((! window) || (tb->target_string->len > WRITE_BUFFER_SIZE))
     {
       apr_size_t len = tb->target_string->len;
       SVN_ERR(svn_stream_write(tb->target_stream,

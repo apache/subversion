@@ -120,7 +120,7 @@ class SubversionClientTestCase(unittest.TestCase):
     rev = core.svn_opt_revision_t()
     rev.kind = core.svn_opt_revision_head
 
-    path = os.path.join(tempfile.gettempdir(), 'checkout')
+    path = tempfile.mktemp('-checkout')
 
     self.assertRaises(ValueError, client.checkout2,
                       REPOS_URL, path, None, None, True, True,
@@ -182,7 +182,7 @@ class SubversionClientTestCase(unittest.TestCase):
     rev = core.svn_opt_revision_t()
     rev.kind = core.svn_opt_revision_head
 
-    path = os.path.join(tempfile.gettempdir(), 'url_from_path')
+    path = tempfile.mktemp('-url_from_path')
 
     client.checkout2(REPOS_URL, path, rev, rev, True, True,
                      self.client_ctx)
@@ -194,7 +194,7 @@ class SubversionClientTestCase(unittest.TestCase):
     rev = core.svn_opt_revision_t()
     rev.kind = core.svn_opt_revision_head
 
-    path = os.path.join(tempfile.gettempdir(), 'uuid_from_path')
+    path = tempfile.mktemp('uuid_from_path')
 
     client.checkout2(REPOS_URL, path, rev, rev, True, True,
                      self.client_ctx)

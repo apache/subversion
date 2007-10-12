@@ -101,7 +101,10 @@ except ImportError:
   platform_with_os_wait = False
 
 # The location of our mock svneditor script.
-svneditor_script = os.path.join(sys.path[0], 'svneditor.py')
+if sys.platform == 'win32':
+  svneditor_script = os.path.join(sys.path[0], 'svneditor.bat')
+else:
+  svneditor_script = os.path.join(sys.path[0], 'svneditor.py')
 
 # Username and password used by the working copies
 wc_author = 'jrandom'
@@ -545,7 +548,7 @@ def create_repos(path):
   chmod_tree(path, 0666, 0666)
 
 # For copying a repository
-def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 0):
+def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   "Copy the repository SRC_PATH, with head revision HEAD_REVISION, to DST_PATH"
 
   # Do an svnadmin dump|svnadmin load cycle. Print a fake pipe command so that
@@ -668,14 +671,17 @@ an appropriate list of mappings.
 
 def use_editor(func):
   os.environ['SVN_EDITOR'] = svneditor_script
+  os.environ['SVN_MERGE'] = svneditor_script
   os.environ['SVNTEST_EDITOR_FUNC'] = func
 
 
-def merge_notify_line(revstart=None, revend=None):
+def merge_notify_line(revstart=None, revend=None, same_URL=True):
   """Return an expected output line that describes the beginning of a
   merge operation on revisions REVSTART through REVEND.  Omit both
   REVSTART and REVEND for the case where the left and right sides of
   the merge are from different URLs."""
+  if not same_URL:
+    return "--- Merging differences between repository URLs into '.+':\n"
   if revend is None:
     if revstart is None:
       # The left and right sides of the merge are from different URLs.
@@ -732,6 +738,10 @@ def server_has_mergeinfo():
   return server_minor_version >= 5
 
 def server_has_revprop_commit():
+  _check_command_line_parsed()
+  return server_minor_version >= 5
+
+def server_sends_copyfrom_on_update():
   _check_command_line_parsed()
   return server_minor_version >= 5
 
@@ -942,6 +952,7 @@ class TestRunner:
           print 'EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args)
         else:
           print 'EXCEPTION:', ex.__class__.__name__
+      traceback.print_exc(file=sys.stdout)
     except KeyboardInterrupt:
       print 'Interrupted'
       sys.exit(0)

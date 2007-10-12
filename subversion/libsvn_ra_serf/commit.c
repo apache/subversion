@@ -35,7 +35,7 @@
 #include "svn_version.h"
 #include "svn_path.h"
 #include "svn_private_config.h"
-#include "private/svn_compat.h"
+#include "private/svn_dep_compat.h"
 
 #include "ra_serf.h"
 
@@ -726,7 +726,7 @@ proppatch_resource(proppatch_context_t *proppatch,
   handler->body_delegate = create_proppatch_body;
   handler->body_delegate_baton = proppatch;
 
-  handler->response_handler = svn_ra_serf__handle_status_only;
+  handler->response_handler = svn_ra_serf__handle_multistatus_only;
   handler->response_baton = &proppatch->progress;
 
   svn_ra_serf__request_create(handler);
@@ -735,7 +735,8 @@ proppatch_resource(proppatch_context_t *proppatch,
   SVN_ERR(svn_ra_serf__context_run_wait(&proppatch->progress.done,
                                         commit->session, pool));
 
-  if (proppatch->progress.status != 207)
+  if (proppatch->progress.status != 207 ||
+      proppatch->progress.server_error.error)
     {
       svn_error_t *err;
       err = return_response_err(handler, &proppatch->progress);
@@ -1961,6 +1962,7 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
   commit_context_t *commit;
   const char *vcc_url, *checked_in_href, *ns;
   apr_hash_t *props;
+  svn_error_t *err;
 
   commit = apr_pcalloc(pool, sizeof(*commit));
 
@@ -2017,7 +2019,13 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
                             ns, name, value, proppatch_ctx->pool);
     }
 
-  SVN_ERR(proppatch_resource(proppatch_ctx, commit, proppatch_ctx->pool));
+  err = proppatch_resource(proppatch_ctx, commit, proppatch_ctx->pool);
+  if (err)
+    return
+      svn_error_create
+      (SVN_ERR_RA_DAV_REQUEST_FAILED, err,
+       _("DAV request failed; it's possible that the repository's "
+         "pre-revprop-change hook either failed or is non-existent"));
 
   return SVN_NO_ERROR;
 }

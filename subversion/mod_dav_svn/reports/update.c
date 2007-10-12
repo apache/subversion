@@ -1343,23 +1343,26 @@ dav_svn__update_report(const dav_resource *resource,
            reports it (and it alone) to the server as being empty. */
         if (entry_counter == 1 && entry_is_empty)
           action = apr_psprintf(resource->pool,
-                                "checkout-or-export '%s' r%ld",
+                                "checkout-or-export '%s' r%ld depth-%s",
                                 svn_path_uri_encode(spath, resource->pool),
-                                revnum);
+                                revnum,
+                                svn_depth_to_word(requested_depth));
         else
           {
             if (text_deltas)
               action = apr_psprintf(resource->pool,
-                                    "update '%s' r%ld",
+                                    "update '%s' r%ld depth-%s",
                                     svn_path_uri_encode(spath,
                                                         resource->pool),
-                                    revnum);
+                                    revnum,
+                                    svn_depth_to_word(requested_depth));
             else
               action = apr_psprintf(resource->pool,
-                                    "remote-status '%s' r%ld",
+                                    "remote-status '%s' r%ld depth-%s",
                                     svn_path_uri_encode(spath,
                                                         resource->pool),
-                                    revnum);
+                                    revnum,
+                                    svn_depth_to_word(requested_depth));
           }
       }
 
