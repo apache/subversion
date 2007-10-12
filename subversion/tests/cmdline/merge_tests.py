@@ -28,10 +28,12 @@ from svntest import wc
 Item = wc.StateItem
 XFail = svntest.testcase.XFail
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 
 from svntest.main import SVN_PROP_MERGE_INFO
 from svntest.main import write_restrictive_svnserve_conf
 from svntest.main import write_authz_file
+from svntest.main import server_has_mergeinfo
 from svntest.actions import fill_file_with_lines
 from svntest.actions import make_conflict_marker_text
 from svntest.actions import inject_conflict_into_expected_state
@@ -9281,14 +9283,18 @@ test_list = [ None,
               avoid_repeated_merge_using_inherited_merge_info,
               avoid_repeated_merge_on_subtree_with_merge_info,
               obey_reporter_api_semantics_while_doing_subtree_merges,
-              mergeinfo_inheritance,
+              SkipUnless(mergeinfo_inheritance,
+                         server_has_mergeinfo),
               mergeinfo_elision,
               mergeinfo_inheritance_and_discontinuous_ranges,
-              merge_to_target_with_copied_children,
+              SkipUnless(merge_to_target_with_copied_children,
+                         server_has_mergeinfo),
               merge_to_switched_path,
-              merge_to_path_with_switched_children,
+              SkipUnless(merge_to_path_with_switched_children,
+                         server_has_mergeinfo),
               merge_with_implicit_target_file,
-              empty_rev_range_mergeinfo,
+              SkipUnless(empty_rev_range_mergeinfo,
+                         server_has_mergeinfo),
               detect_copy_src_for_target_with_multiple_ancestors,
               prop_add_to_child_with_mergeinfo,
               diff_repos_does_not_update_mergeinfo,
