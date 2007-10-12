@@ -3385,6 +3385,11 @@ def update_handles_copyfrom_with_txdeltas(sbox):
                                         expected_status, None,
                                         None, None, None, None, wc_dir)
 
+  # Make a local edit to rho in the backup working copy.
+  rho2_path = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
+  svntest.main.file_write(rho2_path,
+                          "New first line.\nThis is the file 'rho'.\n")
+
   # Now try updating our backup working copy: it should receive glub,
   # but with copyfrom args of rho@1, and thus copy the existing rho to
   # glub.  Furthermore, it should then apply the extra r3 edits to the
@@ -3396,14 +3401,17 @@ def update_handles_copyfrom_with_txdeltas(sbox):
     })
 
   expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/D/G/rho',
+                      contents="New first line.\nThis is the file 'rho'.\n")
   expected_disk.add({
-    'A/D/G/glub' : Item("This is the file 'rho'.\nSome new text.\n",
+    'A/D/G/glub' : Item("New first line.\nThis is the file 'rho'.\nSome new text.\n",
                         props={'Kubla' : 'Khan', 'svn:mergeinfo' : ''})
     })
 
   expected_status = svntest.actions.get_virginal_state(wc_backup, 3)
+  expected_status.tweak('A/D/G/rho', wc_rev=3, status='M ')
   expected_status.add({
-    'A/D/G/glub' : Item(status='  ', wc_rev=3),
+    'A/D/G/glub' : Item(status='M ', wc_rev=3),
     })
   svntest.actions.run_and_verify_update(wc_backup,
                                         expected_output,
@@ -3668,7 +3676,8 @@ test_list = [ None,
               SkipUnless(update_handles_copyfrom,
                          server_sends_copyfrom_on_update),
               copyfrom_degrades_gracefully,
-              update_handles_copyfrom_with_txdeltas,
+              SkipUnless(update_handles_copyfrom_with_txdeltas,
+                         server_sends_copyfrom_on_update),
               update_accept_conflicts,
              ]
 
