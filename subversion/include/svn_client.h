@@ -2764,7 +2764,7 @@ typedef struct svn_client_copy_source_t
  * and @a sources will be copied as children of @a dst_path.
  *
  * @a sources must be an array of elements of type
- * <tt>svn_client_copy_item_t *</tt>.
+ * <tt>svn_client_copy_source_t *</tt>.
  *
  * Each @a src in @a sources must be files or directories under version control,
  * or URLs of a versioned item in the repository.  If @a sources has multiple
