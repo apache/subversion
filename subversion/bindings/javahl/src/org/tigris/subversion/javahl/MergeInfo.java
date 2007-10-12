@@ -69,20 +69,14 @@ public class MergeInfo implements java.io.Serializable
      * merge source is already stored, the list of revisions is
      * replaced.
      * @param mergeSrc The merge source URL.
-     * @param range List of RevisionRange objects to add.
+     * @param ranges RevisionRange objects to add.
      * @throws SubversionException If range list contains objects of
      * type other than RevisionRange.
      */
-    public void addRevisions(String mergeSrc, List range)
-            throws SubversionException
+    public void addRevisions(String mergeSrc, RevisionRange[] ranges)
     {
-        for (Iterator iterator = range.iterator(); iterator.hasNext();)
-        {
-            if (!(iterator.next() instanceof RevisionRange))
-                throw new SubversionException(
-                      "List must only contain objects of type RevisionRange");
-        }
-        this.setRevisionList(mergeSrc, range);
+        for (int i = 0; i < ranges.length; i++)
+            addRevisionRange(mergeSrc, ranges[i]);
     }
 
     /**
