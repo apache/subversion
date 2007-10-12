@@ -77,21 +77,15 @@ against older libraries.</p>
 <div class="h3" id="wc-and-repos-format-change" title="wc-format-change">
 <h3>Working Copy and Repository Format Changes</h3>
 
-<p>XXX: 1.5 currently uses the same SVN_WC__VERSION (8) as 1.4.x.
-However, some changes <em>sussman</em> and some other folks are
-considering for Merge Tracking may impact this.  If these changes turn
-out not to require a WC format bump, remove this section.</p>
-
 <p>Due to certain improvements and bugfixes made to the working copy
 library, the version number of the working copy format has been
 incremented. This means that Subversion clients earlier than 1.5 will
 <em>not</em> be able to work with working copies produced by Subversion
 1.5.  Similarly, the repository format has changed as well, meaning
 that pre-1.5 Subversion tools that normally access a repository
-directly
-(e.g. <tt>svnserve</tt>, <tt>mod_dav_svn</tt>, <tt>svnadmin</tt>)
+directly (e.g. <tt>svnserve</tt>, <tt>mod_dav_svn</tt>, <tt>svnadmin</tt>)
 won't be able to read a repository originally created by Subversion
-1.5. </p>
+1.5.</p>
 
 <p><strong>WARNING:</strong> if a Subversion 1.5 client encounters a pre-1.5
 working copy, it will <em>automatically</em> upgrade the working copy
@@ -333,7 +327,11 @@ copy/move working copy and repository combinations.  This was
      title="cancellation-improvements">
 <h3>Cancellation improvements (<em>client</em>)</h3>
 
-<p>XXX</p>
+<p>Clients operations are now significantly more responsive to
+cancellation (e.g. via <tt>control-c</tt>).  In pre-1.5 releases,
+after directing an operation to stop, one sometimes had to wait for
+some time (e.g. while I/O occurred) before the operation would
+actually stop.</p>
 
 </div>  <!-- cancellation-improvements -->
 
