@@ -4455,8 +4455,6 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   /* Write out our new node-revision. */
   SVN_ERR(write_noderev_txn(file, noderev, pool));
 
-  SVN_ERR(svn_fs_fs__put_node_revision(fs, id, noderev, FALSE, pool));
-
   /* Return our ID that references the revision file. */
   *new_id_p = noderev->id;
 
