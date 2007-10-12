@@ -752,10 +752,6 @@ test_range_compact(const char **msg,
       { {18, 23, TRUE}, {23, 12, TRUE}, {18, 12, TRUE}, {-1, -1, TRUE} }, 
       { {23, 18, TRUE}, {23, 12, TRUE}, {23, 12, TRUE}, {-1, -1, TRUE} } };
   int i;
-  apr_array_header_t *rangelist1 =
-    apr_array_make(pool, SIZE_OF_TEST_ARRAY, sizeof(svn_merge_range_t *));
-  apr_array_header_t *rangelist2 =
-    apr_array_make(pool, SIZE_OF_TEST_ARRAY, sizeof(svn_merge_range_t *));
 
   *msg = "combination of ranges";
   if (msg_only)
