@@ -2444,8 +2444,13 @@ svn_client_merge(const char *source1,
 
 /**
  * Merge the changes between the filesystem object @a source in peg
- * revision @a peg_revision, as it changed between @a revision1 and @a
- * revision2.
+ * revision @a peg_revision, as it changed between the ranges described
+ * in @a ranges_to_merge.
+ *
+ * @a ranges_to_merge is an array of <tt>svn_opt_revision_range_t *</tt>
+ * ranges.  These ranges may describe additive and/or subtractive merge
+ * ranges, they may overlap fully or partially, and/or they may partially
+ * or fully negate each other.
  *
  * All other options are handled identically to svn_client_merge3().
  *
@@ -2453,8 +2458,7 @@ svn_client_merge(const char *source1,
  */
 svn_error_t *
 svn_client_merge_peg3(const char *source,
-                      const svn_opt_revision_t *revision1,
-                      const svn_opt_revision_t *revision2,
+                      apr_array_header_t *ranges_to_merge,
                       const svn_opt_revision_t *peg_revision,
                       const char *target_wcpath,
                       svn_depth_t depth,

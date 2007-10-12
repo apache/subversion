@@ -216,6 +216,34 @@ svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
                           svn_revnum_t end,
                           apr_pool_t *pool);
 
+/** Remove redundancies between @ *range_1 and @ *range_2.  @ *range_1 and/or
+ * @ *range_2 may be additive or subtractive ranges.  The ranges should be
+ * sorted such that the minimum of @ *range_1->start and @ *range_1->end is
+ * less than or equal to the minimum of @ *range_2->start and
+ * @ *range_2->end.
+ *
+ * If either @ *range_1 or @ *range_2 is NULL, either range contains
+ * invalid svn_revnum_t's, or the two ranges do not intersect, then do
+ * nothing and return false.
+ *
+ * If the two ranges can be reduced to one range, set @ *range_1 to represent
+ * that range, set @ *range_2 to NULL, and return true.
+ *
+ * If the two ranges cancel each other out set both @ *range_1 and
+ * @ *range_2 to NULL and return true.
+ *
+ * If the two ranges intersect but cannot be represented by one range (because
+ * one range is additive and the other subtractive) then modify @ *range_1 and
+ * @ *range_2 to remove the intersecting ranges and return true.
+ *
+ * The inheritability of @ *range_1 or @ *range_2 is not taken into account.
+ *
+ * @since New in 1.5.
+ */
+svn_boolean_t
+svn_range_compact(svn_merge_range_t **range_1,
+                  svn_merge_range_t **range_2);
+
 /** Return a deep copy of @a mergeinfo, a mapping from paths to
  * @c apr_array_header_t *'s of @c svn_merge_range_t *, excluding all
  * non-inheritable @c svn_merge_range_t.  If @a start and @a end are valid
