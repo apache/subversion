@@ -218,6 +218,8 @@ class SVNClient :public SVNBase
   bool m_cancelOperation;
   CommitMessage *m_commitMessage;
 
+  jobjectArray makeJRevisionRangeArray(apr_array_header_t *ranges);
+
   /**
    * Implements the svn_client_get_commit_log3_t API.
    */

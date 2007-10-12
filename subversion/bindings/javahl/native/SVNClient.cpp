@@ -721,7 +721,7 @@ SVNClient::getMergeInfo(const char *target, Revision &pegRevision)
     {
         addRevisions = env->GetMethodID(clazz, "addRevisions",
                                         "(Ljava/lang/String;"
-                                        "Ljava/util/List;)V");
+                                        "[L"JAVA_PACKAGE"/RevisionRange;)V");
         if (JNIUtil::isJavaExceptionThrown())
             return NULL;
     }
@@ -729,22 +729,6 @@ SVNClient::getMergeInfo(const char *target, Revision &pegRevision)
     jobject jmergeinfo = env->NewObject(clazz, ctor);
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
-
-    clazz = env->FindClass("java/util/ArrayList");
-    static jmethodID listCtor = 0;
-    if (listCtor == 0)
-    {
-        listCtor = env->GetMethodID(clazz, "<init>", "(I)V");
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-    }
-    static jmethodID addToList = 0;
-    if (addToList == 0)
-    {
-        addToList = env->GetMethodID(clazz, "add", "(Ljava/lang/Object;)Z");
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-    }
 
     apr_hash_index_t *hi;
     for (hi = apr_hash_first(requestPool.pool(), mergeinfo);
@@ -756,25 +740,8 @@ SVNClient::getMergeInfo(const char *target, Revision &pegRevision)
         apr_hash_this(hi, &path, NULL, &val);
 
         jstring jpath = JNIUtil::makeJString((const char *) path);
-        apr_array_header_t *ranges = (apr_array_header_t *) val;
-        jobject jranges = env->NewObject(clazz, listCtor, ranges->nelts);
-        for (int i = 0; i < ranges->nelts; ++i)
-        {
-            // Convert svn_merge_range_t *'s to Java RevisionRange objects.
-            svn_merge_range_t *range = APR_ARRAY_IDX(ranges, i,
-                                                     svn_merge_range_t *);
-            jobject jrange = RevisionRange::makeJRevisionRange(range);
-            if (jrange == NULL)
-                return NULL;
-
-            env->CallBooleanMethod(jranges, addToList, jrange);
-            if (JNIUtil::isJavaExceptionThrown())
-                return NULL;
-
-            env->DeleteLocalRef(jrange);
-            if (JNIUtil::isJavaExceptionThrown())
-                return NULL;
-        }
+        jobjectArray jranges =
+            makeJRevisionRangeArray((apr_array_header_t *) val);
 
         env->CallVoidMethod(jmergeinfo, addRevisions, jpath, jranges);
 
@@ -816,31 +783,7 @@ SVNClient::getAvailableMerges(const char *target, Revision &pegRevision,
         return NULL;
 
     // Transform ranges into a Java array of RevisionRange objects.
-    jclass clazz = env->FindClass(JAVA_PACKAGE "/RevisionRange");
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
- 
-    jobjectArray jranges = env->NewObjectArray(ranges->nelts, clazz, NULL);
-
-    for (int i = 0; i < ranges->nelts; ++i)
-    {
-        // Convert svn_merge_range_t *'s to Java RevisionRange objects.
-        svn_merge_range_t *range =
-            APR_ARRAY_IDX(ranges, i, svn_merge_range_t *);
-        jobject jrange = RevisionRange::makeJRevisionRange(range);
-        if (jrange == NULL)
-            return NULL;
-
-        env->SetObjectArrayElement(jranges, i, jrange);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-
-        env->DeleteLocalRef(jrange);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-    }
-
-    return jranges;
+    return makeJRevisionRangeArray(ranges);
 }
 
 /**
@@ -2203,4 +2146,35 @@ SVNClient::info2(const char *path, Revision &revision, Revision &pegRevision,
                                  InfoCallback::callback,
                                  callback,
                                  depth, ctx, requestPool.pool()), );
+}
+
+jobjectArray SVNClient::makeJRevisionRangeArray(apr_array_header_t *ranges)
+{
+    JNIEnv *env = JNIUtil::getEnv();
+
+    jclass clazz = env->FindClass(JAVA_PACKAGE "/RevisionRange");
+    if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+ 
+    jobjectArray jranges = env->NewObjectArray(ranges->nelts, clazz, NULL);
+
+    for (int i = 0; i < ranges->nelts; ++i)
+    {
+        // Convert svn_merge_range_t *'s to Java RevisionRange objects.
+        svn_merge_range_t *range =
+            APR_ARRAY_IDX(ranges, i, svn_merge_range_t *);
+        jobject jrange = RevisionRange::makeJRevisionRange(range);
+        if (jrange == NULL)
+            return NULL;
+
+        env->SetObjectArrayElement(jranges, i, jrange);
+        if (JNIUtil::isJavaExceptionThrown())
+            return NULL;
+
+        env->DeleteLocalRef(jrange);
+        if (JNIUtil::isJavaExceptionThrown())
+            return NULL;
+    }
+
+    return jranges;
 }
