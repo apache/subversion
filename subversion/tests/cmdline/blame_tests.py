@@ -552,7 +552,7 @@ def blame_file_not_in_head(sbox):
 
   # Check that a correct error message is printed when blaming a target that
   # doesn't exist (in HEAD).
-  expected_err = ".*notexisting' (is not a file in.*|path not found)"
+  expected_err = ".*notexisting' (is not a file.*|path not found)"
   svntest.actions.run_and_verify_svn(None, [], expected_err,
                                      'blame', notexisting_url)
 
