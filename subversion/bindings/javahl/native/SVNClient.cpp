@@ -666,8 +666,15 @@ void SVNClient::merge(const char *path, Revision &pegRevision,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_merge_peg3(srcPath.c_str(), revision1.revision(),
-                                      revision2.revision(),
+    /* ### Stop gap until we get the JavaHL API to catch up. */
+    apr_array_header_t *ranges_to_merge =
+        apr_array_make(requestPool.pool(), 1,
+                       sizeof(svn_opt_revision_range_t *) );
+    svn_opt_revision_range_t range = 
+        { *revision1.revision(), *revision2.revision() };
+    APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = &range;
+
+    SVN_JNI_ERR(svn_client_merge_peg3(srcPath.c_str(), ranges_to_merge,
                                       pegRevision.revision(),
                                       intLocalPath.c_str(),
                                       depth,
