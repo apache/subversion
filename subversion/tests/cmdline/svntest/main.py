@@ -741,6 +741,10 @@ def server_has_revprop_commit():
   _check_command_line_parsed()
   return server_minor_version >= 5
 
+def server_sends_copyfrom_on_update():
+  _check_command_line_parsed()
+  return server_minor_version >= 5
+
 
 ######################################################################
 # Sandbox handling
