@@ -176,6 +176,12 @@ typedef struct report_info_t
   /* our delta base, if present (NULL if we're adding the file) */
   const svn_string_t *delta_base;
 
+  /* Path of original item if add with history */
+  const char *copyfrom_path;
+
+  /* Revision of original item if add with history */
+  svn_revnum_t copyfrom_rev;
+
   /* The propfind request for our current file (if present) */
   svn_ra_serf__propfind_context_t *propfind;
 
@@ -753,8 +759,8 @@ handle_fetch(serf_request_t *request,
         {
           err = info->dir->update_editor->add_file(info->name,
                                                    info->dir->dir_baton,
-                                                   NULL,
-                                                   info->base_rev,
+                                                   info->copyfrom_path,
+                                                   info->copyfrom_rev,
                                                    info->editor_pool,
                                                    &info->file_baton);
         }
@@ -1037,8 +1043,8 @@ handle_propchange_only(report_info_t *info)
     {
       SVN_ERR(info->dir->update_editor->add_file(info->name,
                                                  info->dir->dir_baton,
-                                                 NULL,
-                                                 info->base_rev,
+                                                 info->copyfrom_path,
+                                                 info->copyfrom_rev,
                                                  info->editor_pool,
                                                  &info->file_baton));
     }
@@ -1188,7 +1194,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
     {
       /* If the server didn't reply with an actual depth value, it
          isn't depth-aware, and we'll need to filter its response. */
-      if (! svn_ra_serf__find_attr(attrs, "depth"))
+      if (! svn_xml_get_attr_value("depth", attrs))
         {
           const svn_delta_editor_t *filter_editor;
           void *filter_baton;
@@ -1215,7 +1221,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
     {
       const char *rev;
 
-      rev = svn_ra_serf__find_attr(attrs, "rev");
+      rev = svn_xml_get_attr_value("rev", attrs);
 
       if (!rev)
         {
@@ -1233,7 +1239,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       const char *rev;
       report_info_t *info;
 
-      rev = svn_ra_serf__find_attr(attrs, "rev");
+      rev = svn_xml_get_attr_value("rev", attrs);
 
       if (!rev)
         {
@@ -1268,7 +1274,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       report_dir_t *dir;
       report_info_t *info;
 
-      rev = svn_ra_serf__find_attr(attrs, "rev");
+      rev = svn_xml_get_attr_value("rev", attrs);
 
       if (!rev)
         {
@@ -1277,7 +1283,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
              _("Missing revision attr in open-directory element"));
         }
 
-      dirname = svn_ra_serf__find_attr(attrs, "name");
+      dirname = svn_xml_get_attr_value("name", attrs);
 
       if (!dirname)
         {
@@ -1309,17 +1315,19 @@ start_report(svn_ra_serf__xml_parser_t *parser,
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "add-directory") == 0)
     {
-      const char *dir_name;
+      const char *dir_name, *cf, *cr;
       report_dir_t *dir;
       report_info_t *info;
 
-      dir_name = svn_ra_serf__find_attr(attrs, "name");
+      dir_name = svn_xml_get_attr_value("name", attrs);
       if (!dir_name)
         {
           return svn_error_create
             (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
              _("Missing name attr in add-directory element"));
         }
+      cf = svn_xml_get_attr_value("copyfrom-path", attrs);
+      cr = svn_xml_get_attr_value("copyfrom-rev", attrs);
 
       info = push_state(parser, ctx, ADD_DIR);
 
@@ -1335,6 +1343,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       dir->name = dir->name_buf->data;
       info->name = dir->name;
 
+      info->copyfrom_path = cf ? apr_pstrdup(info->pool, cf) : NULL;
+      info->copyfrom_rev = cr ? apr_atoi64(cr) : SVN_INVALID_REVNUM;
+
       /* Mark that we don't have a base. */
       info->base_rev = SVN_INVALID_REVNUM;
       dir->base_rev = info->base_rev;
@@ -1347,7 +1358,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       const char *file_name, *rev;
       report_info_t *info;
 
-      file_name = svn_ra_serf__find_attr(attrs, "name");
+      file_name = svn_xml_get_attr_value("name", attrs);
 
       if (!file_name)
         {
@@ -1356,7 +1367,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
              _("Missing name attr in open-file element"));
         }
 
-      rev = svn_ra_serf__find_attr(attrs, "rev");
+      rev = svn_xml_get_attr_value("rev", attrs);
 
       if (!rev)
         {
@@ -1377,10 +1388,12 @@ start_report(svn_ra_serf__xml_parser_t *parser,
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "add-file") == 0)
     {
-      const char *file_name;
+      const char *file_name, *cf, *cr;
       report_info_t *info;
 
-      file_name = svn_ra_serf__find_attr(attrs, "name");
+      file_name = svn_xml_get_attr_value("name", attrs);
+      cf = svn_xml_get_attr_value("copyfrom-path", attrs);
+      cr = svn_xml_get_attr_value("copyfrom-rev", attrs);
 
       if (!file_name)
         {
@@ -1398,6 +1411,9 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       info->base_name = apr_pstrdup(info->pool, file_name);
       info->name = NULL;
+
+      info->copyfrom_path = cf ? apr_pstrdup(info->pool, cf) : NULL;
+      info->copyfrom_rev = cr ? apr_atoi64(cr) : SVN_INVALID_REVNUM;
     }
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "delete-entry") == 0)
@@ -1407,7 +1423,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       report_info_t *info;
       apr_pool_t *tmppool;
 
-      file_name = svn_ra_serf__find_attr(attrs, "name");
+      file_name = svn_xml_get_attr_value("name", attrs);
 
       if (!file_name)
         {
@@ -1438,7 +1454,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       const char *file_name;
       report_info_t *info;
 
-      file_name = svn_ra_serf__find_attr(attrs, "name");
+      file_name = svn_xml_get_attr_value("name", attrs);
 
       if (!file_name)
         {
@@ -1461,7 +1477,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       const char *file_name;
       report_info_t *info;
 
-      file_name = svn_ra_serf__find_attr(attrs, "name");
+      file_name = svn_xml_get_attr_value("name", attrs);
 
       if (!file_name)
         {
@@ -1499,7 +1515,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
           info = push_state(parser, ctx, PROP);
 
-          full_prop_name = svn_ra_serf__find_attr(attrs, "name");
+          full_prop_name = svn_xml_get_attr_value("name", attrs);
           if (!full_prop_name)
             {
               return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
@@ -1517,7 +1533,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
           info->prop_ns = apr_pstrmemdup(info->dir->pool, full_prop_name,
                                          colon - full_prop_name);
           info->prop_name = apr_pstrdup(parser->state->pool, colon);
-          info->prop_encoding = svn_ra_serf__find_attr(attrs, "encoding");
+          info->prop_encoding = svn_xml_get_attr_value("encoding", attrs);
           info->prop_val = NULL;
           info->prop_val_len = 0;
         }
@@ -1576,7 +1592,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
           info = push_state(parser, ctx, PROP);
 
-          full_prop_name = svn_ra_serf__find_attr(attrs, "name");
+          full_prop_name = svn_xml_get_attr_value("name", attrs);
           if (!full_prop_name)
             {
               return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
@@ -1593,7 +1609,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
           info->prop_ns = apr_pstrmemdup(info->dir->pool, full_prop_name,
                                          colon - full_prop_name);
           info->prop_name = apr_pstrdup(parser->state->pool, colon);
-          info->prop_encoding = svn_ra_serf__find_attr(attrs, "encoding");
+          info->prop_encoding = svn_xml_get_attr_value("encoding", attrs);
           info->prop_val = NULL;
           info->prop_val_len = 0;
         }
@@ -2220,8 +2236,10 @@ finish_report(void *report_baton,
       sess->conns[i]->last_status_code = -1;
       sess->conns[i]->ssl_context = NULL;
       sess->conns[i]->session = sess;
-      sess->conns[i]->auth_header = sess->auth_header;
-      sess->conns[i]->auth_value = sess->auth_value;
+      /* Authentication protocol specific initalization. */
+      if (sess->auth_protocol)
+        sess->auth_protocol->init_conn_func(sess, sess->conns[i], pool);
+
       sess->conns[i]->conn = serf_connection_create(sess->context,
                                                     sess->conns[i]->address,
                                                     svn_ra_serf__conn_setup,

@@ -154,7 +154,10 @@ def do_routine_switching(wc_dir, repo_url, verify):
                                           expected_disk,
                                           expected_status)
   else:
-    svntest.main.run_svn(None, 'switch', ADG_url, AB_path)
+    svntest.main.run_svn(None,
+                         '--username', svntest.main.wc_author,
+                         '--password', svntest.main.wc_passwd,
+                         'switch', ADG_url, AB_path)
 
 
 #----------------------------------------------------------------------
@@ -215,7 +218,10 @@ def commit_routine_switching(wc_dir, verify):
                                           None, None, None, None, None,
                                           wc_dir)
   else:
-    svntest.main.run_svn(None, 'ci', '-m', 'log msg', wc_dir)
+    svntest.main.run_svn(None,
+                         '--username', svntest.main.wc_author,
+                         '--password', svntest.main.wc_passwd,
+                         'ci', '-m', 'log msg', wc_dir)
 
 
 ######################################################################
@@ -500,7 +506,10 @@ def log_switched_file(sbox):
   # edit and commit switched file 'iota'
   iota_path = os.path.join(wc_dir, 'iota')
   svntest.main.run_svn(None, 'ps', 'x', 'x', iota_path)
-  svntest.main.run_svn(None, 'ci', '-m',
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'ci', '-m',
                        'set prop on switched iota',
                        iota_path)
 
@@ -554,7 +563,7 @@ def relocate_deleted_missing_copied(sbox):
   repo_dir = sbox.repo_dir
   repo_url = sbox.repo_url
   other_repo_dir, other_repo_url = sbox.add_repo_path('other')
-  svntest.main.copy_repos(repo_dir, other_repo_dir, 2)
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 2, 0)
   svntest.main.safe_rmtree(repo_dir, 1)
   svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
                                      repo_url, other_repo_url, wc_dir)
@@ -609,10 +618,14 @@ def delete_subdir(sbox):
 
   svntest.actions.run_and_verify_svn(None,
                                      ['\n', 'Committed revision 2.\n'], [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'cp', '-m', 'make copy', A_url, A2_url)
 
   svntest.actions.run_and_verify_svn(None,
                                      ['\n', 'Committed revision 3.\n'], [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'rm', '-m', 'delete subdir', A2_B_F_url)
 
   expected_output = svntest.wc.State(wc_dir, {
@@ -645,9 +658,13 @@ def file_dir_file(sbox):
   dir_url = sbox.repo_url + '/A/C'
 
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'switch', dir_url, file_path)
 
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'switch', file_url, file_path)
 
 #----------------------------------------------------------------------
@@ -679,15 +696,26 @@ def nonrecursive_switching(sbox):
   svntest.main.run_svn(None, 'co', trunk_url, wc2_dir)
 
   # Make a branch, and add a new file, in "wc_dir" and repository
-  svntest.main.run_svn(None, 'mkdir', '-m', '', branch_url)
-  svntest.main.run_svn(None, 'cp', '-m', '', trunk_url, version1_url)
-  svntest.main.run_svn(None, 'up', wc1_dir)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'mkdir', '-m', '', branch_url)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'cp', '-m', '', trunk_url, version1_url)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'up', wc1_dir)
   svntest.main.file_append(wc1_new_file, "This is the file 'newfile'.\n")
   svntest.main.run_svn(None, 'add', wc1_new_file)
   svntest.main.run_svn(None, 'ci', '-m', '', wc1_dir)
 
   # Try to switch "wc2" to the branch (non-recursively)
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'switch', '-N', version1_url, wc2_dir)
 
   # Check the URLs of the (not switched) directories.
@@ -736,6 +764,8 @@ def failed_anchor_is_target(sbox):
   G_psi_url = G_url + '/psi'
   svntest.actions.run_and_verify_svn(None,
                                      ['\n', 'Committed revision 2.\n'], [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'mkdir', '-m', 'log msg', G_psi_url)
 
   H_path = os.path.join(wc_dir, 'A', 'D', 'H')
@@ -808,6 +838,8 @@ def bad_intermediate_urls(sbox):
   C_A_Z_url = sbox.repo_url + '/A/C/A/Z'
   svntest.actions.run_and_verify_svn(None,
                                      ['\n', 'Committed revision 2.\n'], [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'mkdir', '-m', 'log msg',
                                      C_A_url, C_A_Z_url)
 
@@ -845,6 +877,8 @@ def obstructed_switch(sbox):
   E_url2     = sbox.repo_url + '/A/B/Esave'
   svntest.actions.run_and_verify_svn(None,
                                      ['\n', 'Committed revision 2.\n'], [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'cp', '-m', 'msgcopy', E_url, E_url2)
 
   E_path     = os.path.join(wc_dir, 'A', 'B', 'E')
@@ -861,7 +895,10 @@ def obstructed_switch(sbox):
                                         wc_dir)
 
   svntest.main.file_append(alpha_path, "hello")
-  out, err = svntest.main.run_svn(1, 'sw', E_url2, E_path)
+  out, err = svntest.main.run_svn(1,
+                                  '--username', svntest.main.wc_author,
+                                  '--password', svntest.main.wc_passwd,
+                                  'sw', E_url2, E_path)
   for line in err:
     if line.find("object of the same name already exists") != -1:
       break
@@ -942,7 +979,7 @@ def relocate_beyond_repos_root(sbox):
   repo_dir = sbox.repo_dir
   repo_url = sbox.repo_url
   other_repo_dir, other_repo_url = sbox.add_repo_path('other')
-  svntest.main.copy_repos(repo_dir, other_repo_dir, 1)
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
   svntest.main.safe_rmtree(repo_dir, 1)
 
   A_url = repo_url + "/A"
@@ -972,7 +1009,8 @@ def relocate_beyond_repos_root(sbox):
   # relocate actually changed the URI.  Escape the expected URI to
   # avoid problems from any regex meta-characters it may contain
   # (e.g. '+').
-  escaped_exp = '^URL: ' + re.escape(other_A_url) + '$'
+  escaped_exp = '^URL: ' + re.escape(other_A_url) + '$' \
+                '|Path.+|Repository.+|Revision.+|Node.+|Last.+|\n'
   svntest.actions.run_and_verify_svn(None, escaped_exp, [],
                                      'info', '-rHEAD', A_wc_dir)
 
@@ -995,6 +1033,8 @@ def refresh_read_only_attribute(sbox):
   branch_url = sbox.repo_url + '/A-branch'
   svntest.actions.run_and_verify_svn(None,
                                      ['\n', 'Committed revision 2.\n'], [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'cp', '-m', 'svn:needs-lock not set',
                                      url, branch_url)
 
@@ -1064,6 +1104,8 @@ def switch_change_repos_root(sbox):
   svntest.actions.run_and_verify_svn(None, None,
                                      ".*not the same repository.*",
                                      'switch',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      other_A_url, A_wc_dir)
 
   # Make sure we didn't break the WC.
@@ -1101,7 +1143,7 @@ def relocate_and_propset(sbox):
 
   # Relocate
   other_repo_dir, other_repo_url = sbox.add_repo_path('other')
-  svntest.main.copy_repos(repo_dir, other_repo_dir, 1)
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
   svntest.main.safe_rmtree(repo_dir, 1)
   svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
                                      repo_url, other_repo_url, wc_dir)
@@ -1266,7 +1308,12 @@ def forced_switch_failures(sbox):
   I_url = sbox.repo_url + "/A/D/H/I"
   so, se = svntest.actions.run_and_verify_svn("Unexpected error during mkdir",
                                               ['\n', 'Committed revision 2.\n'],
-                                              [], "mkdir", I_url,
+                                              [],
+                                              '--username',
+                                              svntest.main.wc_author,
+                                              '--password',
+                                              svntest.main.wc_passwd,
+                                              "mkdir", I_url,
                                               "-m", "Log Message")
 
   # Make A/D/G/I and co A/D/H/I into it.
@@ -1274,7 +1321,12 @@ def forced_switch_failures(sbox):
   os.mkdir(I_path)
   so, se = svntest.actions.run_and_verify_svn("Unexpected error during co",
                                               ['Checked out revision 2.\n'],
-                                              [], "co", I_url, I_path)
+                                              [],
+                                              '--username',
+                                              svntest.main.wc_author,
+                                              '--password',
+                                              svntest.main.wc_passwd,
+                                              "co", I_url, I_path)
 
   # Try the forced switch.  A/D/G/I obstructs the dir A/D/G/I coming
   # from the repos.  Normally this isn't a problem, but A/D/G/I is already
@@ -1401,6 +1453,8 @@ def switch_scheduled_add(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'add', file_path)
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'switch', switch_url, file_path)
 
 #----------------------------------------------------------------------
@@ -1442,6 +1496,8 @@ def mergeinfo_switch_elision(sbox):
      "Checked out revision 1.\n",
      "A         " + B_COPY_1_path + "\n"],
     [],
+    '--username', svntest.main.wc_author,
+    '--password', svntest.main.wc_passwd,
     'copy',
     sbox.repo_url + "/A/B",
     B_COPY_1_path)
@@ -1456,6 +1512,8 @@ def mergeinfo_switch_elision(sbox):
      "Checked out revision 1.\n",
      "A         " + B_COPY_2_path + "\n"],
     [],
+    '--username', svntest.main.wc_author,
+    '--password', svntest.main.wc_passwd,
     'copy',
     sbox.repo_url + "/A/B",
     B_COPY_2_path)

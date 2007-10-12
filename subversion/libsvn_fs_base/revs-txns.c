@@ -591,7 +591,7 @@ svn_fs_base__set_txn_mergeinfo(svn_fs_t *fs,
 
   /* De-serialize the current mergeinfo. */
   target_mergeinfo = apr_hash_make(pool);
-  serialized_str = apr_hash_get(txn->proplist, SVN_FS_PROP_TXN_MERGEINFO,
+  serialized_str = apr_hash_get(txn->proplist, SVN_FS__PROP_TXN_MERGEINFO,
                                 APR_HASH_KEY_STRING);
   if (serialized_str)
     {
@@ -612,7 +612,7 @@ svn_fs_base__set_txn_mergeinfo(svn_fs_t *fs,
   serialized_str = svn_string_create_from_buf(serialized_buf, pool);
 
   /* Set the property. */
-  apr_hash_set(txn->proplist, SVN_FS_PROP_TXN_MERGEINFO,
+  apr_hash_set(txn->proplist, SVN_FS__PROP_TXN_MERGEINFO,
                APR_HASH_KEY_STRING, serialized_str);
 
   /* Now overwrite the transaction. */
@@ -705,7 +705,7 @@ txn_body_begin_txn(void *baton, trail_t *trail)
       struct change_txn_prop_args cpargs;
       cpargs.fs = trail->fs;
       cpargs.id = txn_id;
-      cpargs.name = SVN_FS_PROP_TXN_CHECK_OOD;
+      cpargs.name = SVN_FS__PROP_TXN_CHECK_OOD;
       cpargs.value = svn_string_create("true", trail->pool);
 
       SVN_ERR(txn_body_change_txn_prop(&cpargs, trail));
@@ -716,7 +716,7 @@ txn_body_begin_txn(void *baton, trail_t *trail)
       struct change_txn_prop_args cpargs;
       cpargs.fs = trail->fs;
       cpargs.id = txn_id;
-      cpargs.name = SVN_FS_PROP_TXN_CHECK_LOCKS;
+      cpargs.name = SVN_FS__PROP_TXN_CHECK_LOCKS;
       cpargs.value = svn_string_create("true", trail->pool);
 
       SVN_ERR(txn_body_change_txn_prop(&cpargs, trail));

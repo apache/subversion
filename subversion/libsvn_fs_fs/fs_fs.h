@@ -307,8 +307,9 @@ svn_error_t *svn_fs_fs__get_uuid(svn_fs_t *fs,
                                  const char **uuid,
                                  apr_pool_t *pool);
 
-/* Set the uuid of repository FS to UUID.  Perform temporary
-   allocations in POOL. */
+/* Set the uuid of repository FS to UUID, if UUID is not NULL;
+   otherwise, set the uuid of FS to a newly generated UUID.  Perform
+   temporary allocations in POOL. */
 svn_error_t *svn_fs_fs__set_uuid(svn_fs_t *fs,
                                  const char *uuid,
                                  apr_pool_t *pool);

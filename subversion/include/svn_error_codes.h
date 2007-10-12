@@ -409,6 +409,16 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 27,
              "Conflict resolution failed")
 
+  SVN_ERRDEF(SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND,
+             SVN_ERR_WC_CATEGORY_START + 28,
+             "Failed to locate 'copyfrom' path in working copy.")
+
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_WC_CHANGELIST_MOVE,
+             SVN_ERR_WC_CATEGORY_START + 29,
+             "Moving a path from one changelist to another")
+
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,
@@ -593,11 +603,6 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 42,
              "Item is out of date")
 
-  /** @since New in 1.5. */
-  SVN_ERRDEF(SVN_ERR_FS_SQLITE_ERROR,
-             SVN_ERR_FS_CATEGORY_START + 43,
-             "SQLite error")
-
   /**@since New in 1.2.
    *
    * This is analogous to SVN_ERR_REPOS_UNSUPPORTED_VERSION.  To avoid
@@ -619,6 +624,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_FS_TXN_NAME_TOO_LONG,
              SVN_ERR_FS_CATEGORY_START + 45,
              "The generated transaction name is too long")
+
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_FS_SQLITE_ERROR,
+             SVN_ERR_FS_CATEGORY_START + 46,
+             "SQLite error")
 
   /* repos errors */
 
@@ -1083,8 +1093,12 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 23,
              "Iteration terminated before completion")
 
-  SVN_ERRDEF(SVN_ERR_EXTERNAL_PROGRAM_MISSING,
+  SVN_ERRDEF(SVN_ERR_UNKNOWN_CHANGELIST,
              SVN_ERR_MISC_CATEGORY_START + 24,
+             "Unknown changelist")
+
+  SVN_ERRDEF(SVN_ERR_EXTERNAL_PROGRAM_MISSING,
+             SVN_ERR_MISC_CATEGORY_START + 25,
              "External program is missing")
 
   /* command-line client errors */
@@ -1128,6 +1142,10 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_CL_UNNECESSARY_LOG_MESSAGE,
              SVN_ERR_CL_CATEGORY_START + 9,
              "A log message was given where none was necessary")
+  
+  SVN_ERRDEF(SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL,
+             SVN_ERR_CL_CATEGORY_START + 10,
+             "No external merge tool available")
 
 SVN_ERROR_END
 

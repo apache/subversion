@@ -25,6 +25,7 @@
 #include "svn_cmdline.h"
 #include "svn_pools.h"
 #include "svn_client.h"
+#include "svn_error_codes.h"
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_xml.h"
@@ -123,8 +124,8 @@ svn_cl__proplist(apr_getopt_t *os,
                                         ctx,
                                         pool));
       if (apr_is_empty_array(changelist_targets))
-        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("no such changelist '%s'"),
+        return svn_error_createf(SVN_ERR_UNKNOWN_CHANGELIST, NULL,
+                                 _("Unknown changelist '%s'"),
                                  opt_state->changelist);
     }
 

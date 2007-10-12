@@ -2,7 +2,7 @@
  * cmdline.c :  Helpers for command-line programs.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -18,6 +18,7 @@
 
 
 #include <stdlib.h>             /* for atexit() */
+#include <stdio.h>              /* for setvbuf() */
 #include <locale.h>             /* for setlocale() */
 
 #ifndef WIN32
@@ -86,6 +87,14 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
         return EXIT_FAILURE;
       }
   }
+#endif
+
+  /* Ignore any errors encountered while attempting to change stream
+     buffering, as the streams should retain their default buffering
+     modes. */
+  setvbuf(error_stream, NULL, _IONBF, 0);
+#ifndef WIN32
+  setvbuf(stdout, NULL, _IOLBF, 0);
 #endif
 
 #ifdef WIN32

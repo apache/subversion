@@ -32,7 +32,7 @@ EOF
 AC_DEFUN([SVN_EXTERNAL_PROJECT_SETUP], [
   do_subdir_config="yes"
   AC_ARG_ENABLE([subdir-config],
-    AC_HELP_STRING([--disable-subdir-config],
+    AS_HELP_STRING([--disable-subdir-config],
                    [do not reconfigure packages in subdirectories]),
     [if test "$enableval" = "no"; then do_subdir_config="no"; fi])
   AC_SUBST([SVN_EXTERNAL_PROJECT_SUBDIRS], [""])
@@ -139,9 +139,9 @@ AC_DEFUN(SVN_MAYBE_ADD_TO_CFLAGS,
   svn_maybe_add_to_cflags_saved_flags="$CFLAGS"
   CFLAGS="$CFLAGS $option"
   AC_MSG_CHECKING([if $CC accepts $option])
-  AC_TRY_COMPILE(
-    [#include <apr_portable.h>],
-    [],
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM(
+    [[#include <apr_portable.h>]],
+    [[]])],
     [svn_maybe_add_to_cflags_ok="yes"],
     [svn_maybe_add_to_cflags_ok="no"]
   )

@@ -90,28 +90,16 @@ svn_boolean_t
 svn_client__revision_is_local(const svn_opt_revision_t *revision);
 
 
-/* Given the CHANGED_PATHS and REVISION from an instance of a
-   svn_log_message_receiver_t function, determine at which location
-   PATH may be expected in the next log message, and set *PREV_PATH_P
-   to that value.  KIND is the node kind of PATH.  Set *ACTION_P to a
-   character describing the change that caused this revision (as
-   listed in svn_log_changed_path_t) and set *COPYFROM_REV_P to the
-   revision PATH was copied from, or SVN_INVALID_REVNUM if it was not
-   copied.  ACTION_P and COPYFROM_REV_P may be NULL, in which case
-   they are not used.  Perform all allocations in POOL.
-
-   This is useful for tracking the various changes in location a
-   particular resource has undergone when performing an RA->get_logs()
-   operation on that resource.  */
-svn_error_t *svn_client__prev_log_path(const char **prev_path_p,
-                                       char *action_p,
-                                       svn_revnum_t *copyfrom_rev_p,
-                                       apr_hash_t *changed_paths,
-                                       const char *path,
-                                       svn_node_kind_t kind,
-                                       svn_revnum_t revision,
-                                       apr_pool_t *pool);
-
+/* Set *COPYFROM_PATH and *COPYFROM_REV to the path and revision that
+   served as the source of the copy from which PATH_OR_URL at REVISION
+   was created, or NULL and SVN_INVALID_REVNUM (respectively) if
+   PATH_OR_URL at REVISION was not the result of a copy operation. */
+svn_error_t *svn_client__get_copy_source(const char *path_or_url,
+                                         const svn_opt_revision_t *revision,
+                                         const char **copyfrom_path,
+                                         svn_revnum_t *copyfrom_rev,
+                                         svn_client_ctx_t *ctx,
+                                         apr_pool_t *pool);
 
 /* Set *START_URL and *START_REVISION (and maybe *END_URL
    and *END_REVISION) to the revisions and repository URLs of one
@@ -218,13 +206,16 @@ svn_client__path_relative_to_root(const char **rel_path,
 
 /* Return the property value for any PROPNAME set on TARGET in *PROPS,
    with WC paths of char * for keys and property values of
-   svn_string_t * for values.  Assumes that PROPS is non-NULL. */
+   svn_string_t * for values.  Assumes that PROPS is non-NULL.
+
+   Treat DEPTH as in svn_client_propget4().
+*/
 svn_error_t *
 svn_client__get_prop_from_wc(apr_hash_t *props, const char *propname,
                              const char *target, svn_boolean_t pristine,
                              const svn_wc_entry_t *entry,
                              svn_wc_adm_access_t *adm_access,
-                             svn_boolean_t recurse, svn_client_ctx_t *ctx,
+                             svn_depth_t depth, svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
 /* Retrieve the oldest revision of the node at REL_PATH at REV since
@@ -394,7 +385,7 @@ svn_error_t * svn_client__wc_delete(const char *path,
 /* Return the set of WC paths to entries which would have been deleted
    by an update/merge if not in "dry run" mode, or NULL if not in "dry
    run" mode.  MERGE_CMD_BATON is expected to be of type "struct
-   merge_cmd_baton" (from diff.c).  It contains the list, which is
+   merge_cmd_baton" (from merge.c).  It contains the list, which is
    intended for direct modification. */
 apr_hash_t *svn_client__dry_run_deletions(void *merge_cmd_baton);
 
@@ -836,6 +827,17 @@ svn_client__do_commit(const char *base_url,
    subdir, or call svn_wc_remove_from_revision_control() on an
    existing one, or both.
 
+   REQUESTED_DEPTH is the requested depth of the driving operation
+   (e.g., update, switch, etc).  If it is neither svn_depth_infinity
+   nor svn_depth_unknown, then changes to svn:externals will have no
+   effect.  If REQUESTED_DEPTH is svn_depth_unknown, then the ambient
+   depth of each working copy directory holding an svn:externals value
+   will determine whether that value is interpreted there (the ambient
+   depth must be svn_depth_infinity).  If REQUESTED_DEPTH is
+   svn_depth_infinity, then it is presumed to be expanding any
+   shallower ambient depth, so changes to svn:externals values will be
+   interpreted.
+
    Pass NOTIFY_FUNC with NOTIFY_BATON along to svn_client_checkout().
 
    ### todo: AUTH_BATON may not be so useful.  It's almost like we
@@ -853,6 +855,7 @@ svn_client__do_commit(const char *base_url,
    Use POOL for temporary allocation. */
 svn_error_t *
 svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
+                             svn_depth_t requested_depth,
                              svn_boolean_t update_unchanged,
                              svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
@@ -864,6 +867,10 @@ svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
    IS_EXPORT is set, the external items will be exported instead of
    checked out -- they will have no administrative subdirectories.
 
+   REQUESTED_DEPTH is the requested_depth of the driving operation; it
+   behaves as for svn_client__handle_externals(), except that ambient
+   depths are presumed to be svn_depth_infinity.
+
    *TIMESTAMP_SLEEP will be set TRUE if a sleep is required to ensure
    timestamp integrity, *TIMESTAMP_SLEEP will be unchanged if no sleep
    is required.
@@ -871,6 +878,7 @@ svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
    Use POOL for temporary allocation. */
 svn_error_t *
 svn_client__fetch_externals(apr_hash_t *externals,
+                            svn_depth_t requested_depth,
                             svn_boolean_t is_export,
                             svn_boolean_t *timestamp_sleep,
                             svn_client_ctx_t *ctx,

@@ -65,7 +65,7 @@ BUILDING SWIG BINDINGS FOR SVN ON UNIX
 
 
 Step 1:  Install a suitable version of SWIG (which is
-         currently swig version 1.3.24 - 1.3.29).
+         currently swig version 1.3.24 - 1.3.31).
 
     * Perhaps your distribution packages a suitable version - if it does
       install it, and skip to the last bullet point in this section.

@@ -9,12 +9,17 @@ include "common.rnc"
 
 start = status
 
-status = element status { target* }
+status = element status { (target | changelist)* }
 
 target = element target { attlist.target, entry*, against? }
 attlist.target &=
   ## The target path.
   attribute path { string }
+
+target = element changelist { attlist.changelist, entry*, against? }
+attlist.changelist &=
+  ## The changelist name.
+  attribute name { string }
 
 ## Status information for a path under the target.
 entry = element entry { attlist.entry, wc-status, repos-status? }

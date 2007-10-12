@@ -28,6 +28,7 @@
 #include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_props.h"
+#include "svn_sorts.h"
 
 #include "svn_private_config.h"
 
@@ -948,6 +949,144 @@ struct log_message_baton {
   apr_pool_t *pool;
 };
 
+/* Given the CHANGED_PATHS and REVISION from an instance of a
+   svn_log_message_receiver_t function, determine at which location
+   PATH may be expected in the next log message, and set *PREV_PATH_P
+   to that value.  KIND is the node kind of PATH.  Set *ACTION_P to a
+   character describing the change that caused this revision (as
+   listed in svn_log_changed_path_t) and set *COPYFROM_REV_P to the
+   revision PATH was copied from, or SVN_INVALID_REVNUM if it was not
+   copied.  ACTION_P and COPYFROM_REV_P may be NULL, in which case
+   they are not used.  Perform all allocations in POOL.
+
+   This is useful for tracking the various changes in location a
+   particular resource has undergone when performing an RA->get_logs()
+   operation on that resource. 
+
+   ### NOTE: This is a perfect duplicate of
+   ### libsvn_ra/compat.c:prev_log_path(), and should someday go away
+   ### when this compat code is moved into that file.
+ */
+static svn_error_t *
+prev_log_path(const char **prev_path_p,
+              char *action_p,
+              svn_revnum_t *copyfrom_rev_p,
+              apr_hash_t *changed_paths,
+              const char *path,
+              svn_node_kind_t kind,
+              svn_revnum_t revision,
+              apr_pool_t *pool)
+{
+  svn_log_changed_path_t *change;
+  const char *prev_path = NULL;
+
+  /* It's impossible to find the predecessor path of a NULL path. */
+  assert(path);
+
+  /* Initialize our return values for the action and copyfrom_rev in
+     case we have an unhandled case later on. */
+  if (action_p)
+    *action_p = 'M';
+  if (copyfrom_rev_p)
+    *copyfrom_rev_p = SVN_INVALID_REVNUM;
+
+  /* See if PATH was explicitly changed in this revision. */
+  change = apr_hash_get(changed_paths, path, APR_HASH_KEY_STRING);
+  if (change)
+    {
+      /* If PATH was not newly added in this revision, then it may or may
+         not have also been part of a moved subtree.  In this case, set a
+         default previous path, but still look through the parents of this
+         path for a possible copy event. */
+      if (change->action != 'A' && change->action != 'R')
+        {
+          prev_path = path;
+        }
+      else
+        {
+          /* PATH is new in this revision.  This means it cannot have been
+             part of a copied subtree. */
+          if (change->copyfrom_path)
+            prev_path = apr_pstrdup(pool, change->copyfrom_path);
+          else
+            prev_path = NULL;
+
+          *prev_path_p = prev_path;
+          if (action_p)
+            *action_p = change->action;
+          if (copyfrom_rev_p)
+            *copyfrom_rev_p = change->copyfrom_rev;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  if (apr_hash_count(changed_paths))
+    {
+      /* The path was not explicitly changed in this revision.  The
+         fact that we're hearing about this revision implies, then,
+         that the path was a child of some copied directory.  We need
+         to find that directory, and effectively "re-base" our path on
+         that directory's copyfrom_path. */
+      int i;
+      apr_array_header_t *paths;
+
+      /* Build a sorted list of the changed paths. */
+      paths = svn_sort__hash(changed_paths,
+                             svn_sort_compare_items_as_paths, pool);
+
+      /* Now, walk the list of paths backwards, looking a parent of
+         our path that has copyfrom information. */
+      for (i = paths->nelts; i > 0; i--)
+        {
+          svn_sort__item_t item = APR_ARRAY_IDX(paths,
+                                                i - 1, svn_sort__item_t);
+          const char *ch_path = item.key;
+          int len = strlen(ch_path);
+
+          /* See if our path is the child of this change path.  If
+             not, keep looking.  */
+          if (! ((strncmp(ch_path, path, len) == 0) && (path[len] == '/')))
+            continue;
+
+          /* Okay, our path *is* a child of this change path.  If
+             this change was copied, we just need to apply the
+             portion of our path that is relative to this change's
+             path, to the change's copyfrom path.  Otherwise, this
+             change isn't really interesting to us, and our search
+             continues. */
+          change = apr_hash_get(changed_paths, ch_path, len);
+          if (change->copyfrom_path)
+            {
+              if (action_p)
+                *action_p = change->action;
+              if (copyfrom_rev_p)
+                *copyfrom_rev_p = change->copyfrom_rev;
+              prev_path = svn_path_join(change->copyfrom_path,
+                                        path + len + 1, pool);
+              break;
+            }
+        }
+    }
+
+  /* If we didn't find what we expected to find, return an error.
+     (Because directories bubble-up, we get a bunch of logs we might
+     not want.  Be forgiving in that case.)  */
+  if (! prev_path)
+    {
+      if (kind == svn_node_dir)
+        prev_path = apr_pstrdup(pool, path);
+      else
+        return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
+                                 _("Missing changed-path information for "
+                                   "'%s' in revision %ld"),
+                                 svn_path_local_style(path, pool), revision);
+    }
+
+  *prev_path_p = prev_path;
+  return SVN_NO_ERROR;
+}
+
+
 /* Callback for log messages: accumulates revision metadata into
    a chronologically ordered list stored in the baton. */
 static svn_error_t *
@@ -973,12 +1112,10 @@ log_message_receiver(void *baton,
   rev->next = lmb->eldest;
   lmb->eldest = rev;
 
-  SVN_ERR(svn_client__prev_log_path(&lmb->path, &lmb->action,
-                                    &lmb->copyrev, changed_paths,
-                                    lmb->path, svn_node_file, revision,
-                                    lmb->pool));
-
-  return SVN_NO_ERROR;
+  return prev_log_path(&lmb->path, &lmb->action,
+                       &lmb->copyrev, changed_paths,
+                       lmb->path, svn_node_file, revision,
+                       lmb->pool);
 }
 
 /* This is used when there is no get_file_revs available. */

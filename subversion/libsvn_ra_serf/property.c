@@ -22,6 +22,7 @@
 
 #include "svn_path.h"
 #include "svn_base64.h"
+#include "svn_xml.h"
 
 #include "private/svn_dav_protocol.h"
 #include "svn_private_config.h"
@@ -269,7 +270,7 @@ start_propfind(svn_ra_serf__xml_parser_t *parser,
       info->ns = name.namespace;
       info->name = apr_pstrdup(info->pool, name.name);
       info->encoding = apr_pstrdup(info->pool,
-                                   svn_ra_serf__find_attr(attrs, "V:encoding"));
+                                   svn_xml_get_attr_value("V:encoding", attrs));
     }
 
   return SVN_NO_ERROR;

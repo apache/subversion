@@ -9,7 +9,7 @@ AC_DEFUN(SVN_LIB_Z,
 [
   zlib_found=no
 
-  AC_ARG_WITH(zlib,AC_HELP_STRING([--with-zlib=PREFIX],
+  AC_ARG_WITH(zlib,AS_HELP_STRING([--with-zlib=PREFIX],
                                   [zlib compression library]),
   [
     if test "$withval" = "yes" ; then

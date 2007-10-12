@@ -306,8 +306,8 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
                                    svn_boolean_t discover_changed_paths,
                                    svn_boolean_t strict_node_history,
                                    svn_boolean_t include_merged_revisions,
-                                   svn_boolean_t omit_log_text,
-                                   svn_log_message_receiver2_t receiver,
+                                   apr_array_header_t *revprops,
+                                   svn_log_entry_receiver_t receiver,
                                    void *receiver_baton,
                                    apr_pool_t *pool);
 
@@ -698,6 +698,8 @@ enum {
   ELEM_checked_in,
   ELEM_collection,
   ELEM_comment,
+  ELEM_no_custom_revprops,
+  ELEM_revprop,
   ELEM_creationdate,
   ELEM_creator_displayname,
   ELEM_ignored_set,
@@ -939,6 +941,17 @@ svn_ra_neon__get_locations(svn_ra_session_t *session,
 
 
 /*
+ * Implements the get_location_segments RA layer function. */
+svn_error_t *
+svn_ra_neon__get_location_segments(svn_ra_session_t *session,
+                                   const char *path,
+                                   svn_revnum_t start_rev,
+                                   svn_revnum_t end_rev,
+                                   svn_location_segment_receiver_t receiver,
+                                   void *receiver_baton,
+                                   apr_pool_t *pool);
+
+/*
  * Implements the get_locks RA layer function. */
 svn_error_t *
 svn_ra_neon__get_locks(svn_ra_session_t *session,
@@ -975,6 +988,8 @@ svn_ra_neon__get_lock(svn_ra_session_t *session,
                       const char *path,
                       apr_pool_t *pool);
 
+/*
+ * Implements the replay RA layer function. */
 svn_error_t *
 svn_ra_neon__replay(svn_ra_session_t *session,
                     svn_revnum_t revision,

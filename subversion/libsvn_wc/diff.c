@@ -2690,7 +2690,7 @@ svn_wc_get_diff_editor3(svn_wc_adm_access_t *anchor,
                                  target,
                                  callbacks,
                                  callback_baton,
-                                 SVN_DEPTH_FROM_RECURSE(recurse),
+                                 SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                  ignore_ancestry,
                                  use_text_base,
                                  reverse_order,
@@ -2846,7 +2846,7 @@ svn_wc_diff3(svn_wc_adm_access_t *anchor,
              apr_pool_t *pool)
 {
   return svn_wc_diff4(anchor, target, callbacks, callback_baton,
-                      SVN_DEPTH_FROM_RECURSE(recurse), ignore_ancestry,
+                      SVN_DEPTH_INFINITY_OR_FILES(recurse), ignore_ancestry,
                       FALSE, pool);
 }
 

@@ -557,7 +557,7 @@ svn_client_add3(const char *path,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
-  return svn_client_add4(path, SVN_DEPTH_FROM_RECURSE(recursive),
+  return svn_client_add4(path, SVN_DEPTH_INFINITY_OR_FILES(recursive),
                          force, no_ignore, FALSE, ctx,
                          pool);
 }

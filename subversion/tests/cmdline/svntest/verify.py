@@ -58,14 +58,14 @@ class SVNIncorrectDatatype(SVNUnexpectedOutput):
 ######################################################################
 # Comparison of expected vs. actual output
 
-def createExpectedOutput(expected):
+def createExpectedOutput(expected, match_all=True):
   """Return EXPECTED, promoted to an ExpectedOutput instance if not
   None.  Raise SVNIncorrectDatatype if the data type of EXPECTED is
   not handled."""
   if isinstance(expected, type([])):
     expected = ExpectedOutput(expected)
   elif isinstance(expected, type('')):
-    expected = RegexOutput(expected, False)
+    expected = RegexOutput(expected, match_all)
   elif expected == AnyOutput:
     expected = AnyOutput()
   elif expected is not None and not isinstance(expected, ExpectedOutput):
@@ -80,6 +80,7 @@ class ExpectedOutput:
     comparsisons.  If False, allow any lines to match."""
     self.output = output
     self.match_all = match_all
+    self.is_reg_exp = False
 
   def __str__(self):
     return str(self.output)
@@ -113,7 +114,7 @@ class ExpectedOutput:
 
   def is_equivalent_list(self, expected, actual):
     "Return whether EXPECTED and ACTUAL are equivalent."
-    if self.match_all:
+    if not self.is_reg_exp:
       if len(expected) != len(actual):
         return False
       for i in range(0, len(actual)):
@@ -121,11 +122,24 @@ class ExpectedOutput:
           return False
       return True
     else:
-      for expected_re in expected:
-        for i in range(0, len(actual)):
+      expected_re = expected[0]
+      # If we want to check that every line matches the regexp
+      # assume they all match and look for any that don't.  If
+      # only one line matching the regexp is enough, assume none
+      # match and look for even one that does.
+      if self.match_all:
+        all_lines_match_re = True
+      else:
+        all_lines_match_re = False
+      for i in range(0, len(actual)):
+        if self.match_all:
+          if not self.is_equivalent_line(expected_re, actual[i]):
+            all_lines_match_re = False
+            break
+        else:
           if self.is_equivalent_line(expected_re, actual[i]):
             return True
-      return False
+      return all_lines_match_re
 
   def is_equivalent_line(self, expected, actual):
     "Return whether EXPECTED and ACTUAL are equal."
@@ -160,6 +174,11 @@ class AnyOutput(ExpectedOutput):
       print message
 
 class RegexOutput(ExpectedOutput):
+  def __init__(self, output, match_all=True, is_reg_exp=True):
+    self.output = output
+    self.match_all = match_all
+    self.is_reg_exp = is_reg_exp
+
   def is_equivalent_line(self, expected, actual):
     "Return whether the regex EXPECTED matches the ACTUAL text."
     return re.match(expected, actual) is not None
@@ -275,9 +294,13 @@ def compare_and_display_lines(message, label, expected, actual,
 def verify_outputs(message, actual_stdout, actual_stderr,
                    expected_stdout, expected_stderr):
   """Compare and display expected vs. actual stderr and stdout lines,
-  raising an exception if outputs don't match."""
-  expected_stderr = createExpectedOutput(expected_stderr)
-  expected_stdout = createExpectedOutput(expected_stdout)
+  raising an exception if outputs don't match.  If EXPECTED_STDERR or
+  EXPECTED_STDOUT is a string the string is interpreted as a regular
+  expression.  For EXPECTED_STDOUT and ACTUAL_STDOUT to match, every
+  line in ACTUAL_STDOUT must match the EXPECTED_STDOUT regex.  For
+  EXPECTED_STDERR regexes only one line in ACTUAL_STDERR need match."""
+  expected_stderr = createExpectedOutput(expected_stderr, False)
+  expected_stdout = createExpectedOutput(expected_stdout, True)
 
   for (actual, expected, label, raisable) in (
       (actual_stderr, expected_stderr, 'STDERR', SVNExpectedStderr),

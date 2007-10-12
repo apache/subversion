@@ -27,6 +27,7 @@
 #include <apr_strings.h>
 #include <apr_md5.h>
 
+#include "svn_compat.h"
 #include "svn_private_config.h"  /* For SVN_PATH_LOCAL_SEPARATOR */
 #include "svn_types.h"
 #include "svn_string.h"
@@ -1321,7 +1322,7 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
   else
-    depth = SVN_DEPTH_FROM_RECURSE(recurse);
+    depth = SVN_DEPTH_INFINITY_OR_FILES(recurse);
 
   send_copyfrom_args = (send_copyfrom_param == SVN_RA_SVN_UNSPECIFIED_NUMBER) ?
       FALSE : send_copyfrom_param;
@@ -1358,7 +1359,7 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
   else
-    depth = SVN_DEPTH_FROM_RECURSE(recurse);
+    depth = SVN_DEPTH_INFINITY_OR_FILES(recurse);
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
   if (!SVN_IS_VALID_REVNUM(rev))
@@ -1436,7 +1437,7 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
   else
-    depth = SVN_DEPTH_FROM_RECURSE(recurse);
+    depth = SVN_DEPTH_INFINITY_OR_FILES(recurse);
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
 
@@ -1525,6 +1526,8 @@ static svn_error_t *log_receiver(void *baton,
   svn_log_changed_path_t *change;
   svn_boolean_t invalid_revnum = FALSE;
   char action[2];
+  const char *author, *date, *message;
+  apr_uint64_t revprop_count;
 
   if (log_entry->revision == SVN_INVALID_REVNUM)
     {
@@ -1556,13 +1559,19 @@ static svn_error_t *log_receiver(void *baton,
                                          change->copyfrom_rev));
         }
     }
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)r(?c)(?c)(?c)bb",
+  svn_compat_log_revprops_out(&author, &date, &message, log_entry->revprops);
+  svn_compat_log_revprops_clear(log_entry->revprops);
+  if (log_entry->revprops)
+    revprop_count = apr_hash_count(log_entry->revprops);
+  else
+    revprop_count = 0;
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)r(?c)(?c)(?c)bbn(!",
                                  log_entry->revision,
-                                 log_entry->author,
-                                 log_entry->date,
-                                 log_entry->message,
+                                 author, date, message,
                                  log_entry->has_children,
-                                 invalid_revnum));
+                                 invalid_revnum, revprop_count));
+  SVN_ERR(svn_ra_svn_write_proplist(conn, pool, log_entry->revprops));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)"));
 
   if (log_entry->has_children)
     b->stack_depth++;
@@ -1578,28 +1587,49 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_revnum_t start_rev, end_rev;
   const char *full_path;
   svn_boolean_t changed_paths, strict_node, include_merged_revisions;
-  svn_boolean_t omit_log_text;
-  apr_array_header_t *paths, *full_paths;
+  apr_array_header_t *paths, *full_paths, *revprop_items, *revprops;
+  char *revprop_word;
   svn_ra_svn_item_t *elt;
   int i;
-  apr_uint64_t limit, include_merged_revs_param, omit_log_text_param;
+  apr_uint64_t limit, include_merged_revs_param;
   log_baton_t lb;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)(?r)bb?n?BB", &paths,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)(?r)bb?n?Bwl", &paths,
                                  &start_rev, &end_rev, &changed_paths,
                                  &strict_node, &limit,
                                  &include_merged_revs_param,
-                                 &omit_log_text_param));
+                                 &revprop_word, &revprop_items));
 
   if (include_merged_revs_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
     include_merged_revisions = FALSE;
   else
     include_merged_revisions = include_merged_revs_param;
 
-  if (omit_log_text_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
-    omit_log_text = FALSE;
+  if (revprop_word == NULL)
+    /* pre-1.5 client */
+    revprops = svn_compat_log_revprops_in(pool);
+  else if (strcmp(revprop_word, "all-revprops") == 0)
+    revprops = NULL;
+  else if (strcmp(revprop_word, "revprops") == 0)
+    {
+      revprops = apr_array_make(pool, revprop_items->nelts,
+                                sizeof(char *));
+      if (revprop_items)
+        {
+          for (i = 0; i < revprop_items->nelts; i++)
+            {
+              elt = &APR_ARRAY_IDX(revprop_items, i, svn_ra_svn_item_t);
+              if (elt->kind != SVN_RA_SVN_STRING)
+                return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                        _("Log revprop entry not a string"));
+              APR_ARRAY_PUSH(revprops, const char *) = elt->u.string->data;
+            }
+        }
+    }
   else
-    omit_log_text = omit_log_text_param;
+    return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                             _("Unknown revprop word '%s' in log command"),
+                             revprop_word);
 
   /* If we got an unspecified number then the user didn't send us anything,
      so we assume no limit.  If it's larger than INT_MAX then someone is
@@ -1614,7 +1644,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       elt = &APR_ARRAY_IDX(paths, i, svn_ra_svn_item_t);
       if (elt->kind != SVN_RA_SVN_STRING)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                "Log path entry not a string");
+                                _("Log path entry not a string"));
       full_path = svn_path_join(b->fs_path->data,
                                 svn_path_canonicalize(elt->u.string->data,
                                                       pool),
@@ -1629,7 +1659,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   lb.stack_depth = 0;
   err = svn_repos_get_logs4(b->repos, full_paths, start_rev, end_rev,
                             (int) limit, changed_paths, strict_node,
-                            include_merged_revisions, omit_log_text,
+                            include_merged_revisions, revprops,
                             authz_check_access_cb_func(b), b, log_receiver,
                             &lb, pool);
 

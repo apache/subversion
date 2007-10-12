@@ -29,7 +29,7 @@ public class ConflictDescriptor
     private String path;
 
     /**
-     * @see org.tigris.subversion.javahl.NodeKind
+     * @see NodeKind
      */
     private int nodeKind;
 
@@ -87,7 +87,7 @@ public class ConflictDescriptor
     }
 
     /**
-     * @see org.tigris.subversion.javahl.NodeKind
+     * @see NodeKind
      */
     public int getNodeKind()
     {
@@ -105,7 +105,7 @@ public class ConflictDescriptor
     }
 
     /**
-     * @see #Action
+     * @see .Action
      */
     public int getAction()
     {
@@ -113,7 +113,7 @@ public class ConflictDescriptor
     }
 
     /**
-     * @see #Reason
+     * @see .Reason
      */
     public int getReason()
     {
