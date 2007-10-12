@@ -2458,7 +2458,7 @@ svn_client_merge(const char *source1,
  */
 svn_error_t *
 svn_client_merge_peg3(const char *source,
-                      apr_array_header_t *ranges_to_merge,
+                      const apr_array_header_t *ranges_to_merge,
                       const svn_opt_revision_t *peg_revision,
                       const char *target_wcpath,
                       svn_depth_t depth,
