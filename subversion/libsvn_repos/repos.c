@@ -644,6 +644,7 @@ PREWRITTEN_HOOKS_TEXT
 "if [ \"$LOCK_OWNER\" = \"\" ]; then"                                        NL
 "  exit 0"                                                                   NL
 "fi"                                                                         NL
+""                                                                           NL
 "# If the person unlocking matches the lock's owner, return success:"        NL
 "if [ \"$LOCK_OWNER\" = \"$USER\" ]; then"                                   NL
 "  exit 0"                                                                   NL
