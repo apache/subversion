@@ -296,7 +296,11 @@ href="http://subversion.tigris.org/issues/show_bug.cgi?id=503">issue
 <div class="h4" id="multi-op-copy-move" title="multi-op-copy-move">
 <h4>Multiple working copy copy/move operations (<em>client</em>)</h4>
 
-<p>XXX: 'svn mv file1 file2; svn mv file2 file3'</p>
+<p>Clients may now perform multiple local copy/move operations on a
+single object in a working copy:</p>
+<blockquote><code><pre>
+svn mv path1 path2; svn mv path2 path3
+</pre></code></blockquote>
 
 </div>  <!-- multi-op-copy-move -->
 
