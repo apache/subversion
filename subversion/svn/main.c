@@ -1044,6 +1044,8 @@ main(int argc, const char *argv[])
   /* Begin processing arguments. */
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
   opt_state.end_revision.kind = svn_opt_revision_unspecified;
+  opt_state.ranges_to_merge =
+    apr_array_make(pool, 0, sizeof(svn_opt_revision_range_t *));
   opt_state.depth = svn_depth_unknown;
   opt_state.accept_which = svn_cl__accept_invalid;
 
@@ -1110,14 +1112,6 @@ main(int argc, const char *argv[])
         {
           char *end;
           svn_revnum_t changeno;
-          if (opt_state.start_revision.kind != svn_opt_revision_unspecified)
-            {
-              err = svn_error_create
-                (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                 _("Multiple revision arguments encountered; "
-                   "can't specify -c twice, or both -c and -r"));
-              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-            }
           if (opt_state.old_target)
             {
               err = svn_error_create
@@ -1141,34 +1135,29 @@ main(int argc, const char *argv[])
           /* Figure out the range:
                 -c N  -> -r N-1:N
                 -c -N -> -r N:N-1 */
+          {
+            svn_opt_revision_range_t *range = apr_palloc(pool, sizeof(*range));            
           if (changeno > 0)
             {
-              opt_state.start_revision.value.number = changeno - 1;
-              opt_state.end_revision.value.number = changeno;
+                range->start.value.number = changeno - 1;
+                range->end.value.number = changeno;
             }
           else
             {
               changeno = -changeno;
-              opt_state.start_revision.value.number = changeno;
-              opt_state.end_revision.value.number = changeno - 1;
+                range->start.value.number = changeno;
+                range->end.value.number = changeno - 1;
             }
-          opt_state.start_revision.kind = svn_opt_revision_number;
-          opt_state.end_revision.kind = svn_opt_revision_number;
           used_change_arg = TRUE;
+            range->start.kind = svn_opt_revision_number;
+            range->end.kind = svn_opt_revision_number;
+            APR_ARRAY_PUSH(opt_state.ranges_to_merge,
+                           svn_opt_revision_range_t *) = range;
+        }
         }
         break;
       case 'r':
-        if (opt_state.start_revision.kind != svn_opt_revision_unspecified)
-          {
-            err = svn_error_create
-              (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-               _("Multiple revision arguments encountered; "
-                 "can't specify -r and -c, or "
-                 "try '-r N:M' instead of '-r N -r M'"));
-            return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-          }
-        if (svn_opt_parse_revision(&(opt_state.start_revision),
-                                   &(opt_state.end_revision),
+        if (svn_opt_parse_revision2(&(opt_state.ranges_to_merge),
                                    opt_arg, pool) != 0)
           {
             err = svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool);
@@ -1517,6 +1506,36 @@ main(int argc, const char *argv[])
           svn_pool_destroy(pool);
           return EXIT_FAILURE;
         }
+    }
+
+  /* Only merge supports multiple revisions/revision ranges. */
+  if (subcommand->cmd_func != svn_cl__merge)
+    {
+      if (opt_state.ranges_to_merge->nelts > 1)
+        {
+          err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("Multiple revision arguments "
+                                   "encountered; can't specify -c twice, "
+                                   "or both -c and -r"));
+          return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+        }
+      else if (opt_state.ranges_to_merge->nelts == 1)
+        {
+          opt_state.start_revision =
+            APR_ARRAY_IDX(opt_state.ranges_to_merge, 0,
+                          svn_opt_revision_range_t *)->start;
+          opt_state.end_revision =
+            APR_ARRAY_IDX(opt_state.ranges_to_merge, 0,
+                          svn_opt_revision_range_t *)->end;
+        }
+    }
+  else if (opt_state.ranges_to_merge->nelts == 0)
+    {
+      svn_opt_revision_range_t *range = apr_palloc(pool, sizeof(*range));
+      range->start.kind = svn_opt_revision_unspecified;
+      range->end.kind = svn_opt_revision_unspecified;
+      APR_ARRAY_PUSH(opt_state.ranges_to_merge,
+                     svn_opt_revision_range_t *) = range;
     }
 
   /* if we're running a command that could result in a commit, verify
