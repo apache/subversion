@@ -4212,11 +4212,11 @@ svn_client_merge_peg3(const char *source,
 
   if (merge_cmd_baton.same_repos && record_only)
     {
-      int i;
-      for (i = 0; i < compacted_sources->nelts; i++)
+      int j;
+      for (j = 0; j < compacted_sources->nelts; j++)
         {
           svn_merge_range_t *range =
-            APR_ARRAY_IDX(compacted_sources, i, svn_merge_range_t *);
+            APR_ARRAY_IDX(compacted_sources, j, svn_merge_range_t *);
           SVN_ERR(record_mergeinfo_for_record_only_merge(
             URL1, range, merge_type == merge_type_3_way_merge,
             entry, adm_access, &merge_cmd_baton, pool));
