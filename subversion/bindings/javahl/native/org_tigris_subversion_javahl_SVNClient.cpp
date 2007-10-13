@@ -27,6 +27,7 @@
 #include "JNIByteArray.h"
 #include "SVNClient.h"
 #include "Revision.h"
+#include "RevisionRange.h"
 #include "Notify.h"
 #include "Notify2.h"
 #include "ConflictResolverCallback.h"
@@ -792,9 +793,9 @@ Java_org_tigris_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_tigri
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2ZIZZ
+Java_org_tigris_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2_3Lorg_tigris_subversion_javahl_RevisionRange_2Ljava_lang_String_2ZIZZ
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
- jobject jrevision1, jobject jrevision2, jstring jlocalPath, jboolean jforce,
+ jobjectArray jranges, jstring jlocalPath, jboolean jforce,
  jint jdepth, jboolean jignoreAncestry, jboolean jdryRun)
 {
   JNIEntry(SVNClient, merge);
@@ -804,15 +805,8 @@ Java_org_tigris_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_tigri
       JNIUtil::throwError(_("bad C++ this"));
       return;
     }
-  Revision revision1(jrevision1);
-  if (JNIUtil::isExceptionThrown())
-    return;
 
   JNIStringHolder path(jpath);
-  if (JNIUtil::isExceptionThrown())
-    return;
-
-  Revision revision2(jrevision2);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -824,7 +818,31 @@ Java_org_tigris_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_tigri
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->merge(path, pegRevision, revision1, revision2, localPath,
+  // Build the revision range vector from the Java array.
+  std::vector<RevisionRange> revisionRanges;
+
+  jint arraySize = env->GetArrayLength(jranges);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  jclass clazz = env->FindClass(JAVA_PACKAGE"/RevisionRange");
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  for (int i = 0; i < arraySize; ++i)
+    {
+      jobject elem = env->GetObjectArrayElement(jranges, i);
+      if (JNIUtil::isExceptionThrown())
+        return;
+
+      RevisionRange revisionRange(elem);
+      if (JNIUtil::isExceptionThrown())
+        return;
+
+      revisionRanges.push_back(revisionRange);
+    }
+
+  cl->merge(path, pegRevision, revisionRanges, localPath,
             jforce ? true:false, (svn_depth_t)jdepth,
             jignoreAncestry ? true:false, jdryRun ? true:false);
 }
