@@ -4182,7 +4182,7 @@ svn_client_merge_peg3(const char *source,
             if (!notify_b.same_urls && record_only)
               return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
                                       _("Use of two URLs is not compatible "
-                                        " with mergeinfo modification"));
+                                        "with mergeinfo modification"));
           }
 
         ENSURE_VALID_REVISION_KINDS(opt_r1_explicit->kind,
