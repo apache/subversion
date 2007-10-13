@@ -1138,6 +1138,13 @@ svn_error_t * svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                                          svn_mergeinfo_inheritance_t inherit,
                                          apr_pool_t *pool);
 
+/* Implements the has_capability RA layer function. */
+svn_error_t *
+svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
+                            svn_boolean_t *has,
+                            const char *capability,
+                            apr_pool_t *pool);
+
 
 /*** Authentication handler declarations ***/
 

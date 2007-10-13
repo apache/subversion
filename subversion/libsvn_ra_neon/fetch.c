@@ -193,9 +193,6 @@ typedef struct {
      it's not really updating the top level directory. */
   const char *target;
 
-  /* The depth requested from the server. */
-  svn_depth_t depth;
-
   /* Whether the server should try to send copyfrom arguments. */
   svn_boolean_t send_copyfrom_args;
 
@@ -2041,32 +2038,6 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
       att = svn_xml_get_attr_value("send-all", atts);
       if (att && (strcmp(att, "true") == 0))
         rb->receiving_all = TRUE;
-
-      /* If the server didn't reply with an actual depth value, it
-         isn't depth-aware, and we'll need to filter its response. */
-      if (! svn_xml_get_attr_value("depth", atts))
-        {
-          const svn_delta_editor_t *filter_editor;
-          void *filter_baton;
-          svn_boolean_t has_target = *(rb->target) ? TRUE : FALSE;
-
-          /* We can skip the depth filtering when the user requested
-             depth_files or depth_infinity because the server will
-             transmit the right stuff anyway. */
-          if ((rb->depth != svn_depth_files)
-              && (rb->depth != svn_depth_infinity))
-            {
-              SVN_ERR(svn_delta_depth_filter_editor(&filter_editor, 
-                                                    &filter_baton,
-                                                    rb->editor, 
-                                                    rb->edit_baton,
-                                                    rb->depth, 
-                                                    has_target, 
-                                                    rb->pool));
-              rb->editor = filter_editor;
-              rb->edit_baton = filter_baton;
-            }
-        }
       break;
 
     case ELEM_target_revision:
@@ -3079,6 +3050,29 @@ make_reporter(svn_ra_session_t *session,
   report_baton_t *rb;
   const char *s;
   svn_stringbuf_t *xml_s;
+  const svn_delta_editor_t *filter_editor;
+  void *filter_baton;
+  svn_boolean_t has_target = *target ? TRUE : FALSE, new_server;
+
+  SVN_ERR(svn_ra_neon__has_capability(session, &new_server,
+                                      SVN_RA_CAPABILITY_DEPTH, pool));
+  /* We can skip the depth filtering when the user requested
+     depth_files or depth_infinity because the server will
+     transmit the right stuff anyway. */
+  if ((depth != svn_depth_files)
+      && (depth != svn_depth_infinity)
+      && ! new_server)
+    {
+      SVN_ERR(svn_delta_depth_filter_editor(&filter_editor, 
+                                            &filter_baton,
+                                            editor, 
+                                            edit_baton,
+                                            depth, 
+                                            has_target, 
+                                            pool));
+      editor = filter_editor;
+      edit_baton = filter_baton;
+    }
 
   rb = apr_pcalloc(pool, sizeof(*rb));
   rb->ras = ras;
@@ -3098,7 +3092,6 @@ make_reporter(svn_ra_session_t *session,
   rb->svndiff_decoder = NULL;
   rb->base64_decoder = NULL;
   rb->cdata_accum = svn_stringbuf_create("", pool);
-  rb->depth = (depth == svn_depth_unknown ? svn_depth_infinity : depth);
   rb->send_copyfrom_args = send_copyfrom_args;
 
   /* Neon "pulls" request body content from the caller. The reporter is

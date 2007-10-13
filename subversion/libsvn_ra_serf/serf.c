@@ -837,7 +837,7 @@ discover_capabilities(svn_ra_serf__session_t *serf_sess, apr_pool_t *pool)
 }
 
 
-static svn_error_t *
+svn_error_t *
 svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
                             svn_boolean_t *has,
                             const char *capability,
