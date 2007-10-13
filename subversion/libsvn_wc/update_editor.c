@@ -3061,7 +3061,9 @@ add_file_with_history(const char *path,
                                      (APR_WRITE | APR_TRUNCATE | APR_CREATE),
                                      pool));
 
-      SVN_ERR(eb->fetch_func(eb->fetch_baton, copyfrom_path, copyfrom_rev,
+      /* copyfrom_path is a absolute path, fetch_func requires a path relative
+         to the root of the repository so skip the first '/'. */
+      SVN_ERR(eb->fetch_func(eb->fetch_baton, copyfrom_path + 1, copyfrom_rev,
                              svn_stream_from_aprfile(textbase_file, pool),
                              NULL, &base_props, pool));
     }
