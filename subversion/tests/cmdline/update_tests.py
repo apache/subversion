@@ -3370,7 +3370,7 @@ def update_handles_copyfrom_with_txdeltas(sbox):
                                         None, None, None, None, wc_dir)
 
   # Make additional edits to glub...
-  svntest.main.file_append(glub_path, "Some new text.\n")
+  svntest.main.file_append_binary(glub_path, "Some new text.\n")
   svntest.main.run_svn(None, 'propset', 'Kubla', 'Khan', glub_path)
 
   # Commit the changes, creating r3.
@@ -3388,7 +3388,8 @@ def update_handles_copyfrom_with_txdeltas(sbox):
   # Make a local edit to rho in the backup working copy.
   rho2_path = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
   svntest.main.file_write(rho2_path,
-                          "New first line.\nThis is the file 'rho'.\n")
+                          "New first line.\nThis is the file 'rho'.\n",
+                          "wb")
 
   # Now try updating our backup working copy: it should receive glub,
   # but with copyfrom args of rho@1, and thus copy the existing rho to
