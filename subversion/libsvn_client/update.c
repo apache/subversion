@@ -113,6 +113,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   const char *preserved_exts_str;
   apr_array_header_t *preserved_exts;
   struct ff_baton *ffb;
+  svn_boolean_t server_supports_depth;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
@@ -230,11 +231,15 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             TRUE, /* send copyfrom args, please */
                             update_editor, update_edit_baton, pool));
 
+  SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
+                                SVN_RA_CAPABILITY_DEPTH, pool));
+
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the
      update_editor will be driven by svn_repos_dir_delta2. */
   err = svn_wc_crawl_revisions3(path, dir_access, reporter, report_baton,
-                                TRUE, depth, use_commit_times,
+                                TRUE, depth, (! server_supports_depth),
+                                use_commit_times,
                                 ctx->notify_func2, ctx->notify_baton2,
                                 traversal_info, pool);
 

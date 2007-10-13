@@ -2962,6 +2962,12 @@ svn_error_t *svn_wc_process_committed(const char *path,
  * course.  If @a depth is @c svn_depth_unknown, then just use
  * @c svn_depth_infinity, which in practice means depth of @a path.
  *
+ * Iff @a depth_compatibility_trick is TRUE, then set the @c start_empty
+ * flag on @a reporter->set_path() and @a reporter->link_path() calls
+ * as necessary to trick a pre-1.5 (i.e., depth-unaware) server into
+ * sending back all the items the client might need to upgrade a
+ * working copy from a shallower depth to a deeper one.
+ *
  * If @a restore_files is true, then unexpectedly missing working files
  * will be restored from the administrative directory's cache. For each
  * file restored, the @a notify_func function will be called with the
@@ -2983,6 +2989,7 @@ svn_wc_crawl_revisions3(const char *path,
                         void *report_baton,
                         svn_boolean_t restore_files,
                         svn_depth_t depth,
+                        svn_boolean_t depth_compatibility_trick,
                         svn_boolean_t use_commit_times,
                         svn_wc_notify_func2_t notify_func,
                         void *notify_baton,

@@ -100,6 +100,15 @@ typedef struct {
 
   svn_ra_progress_notify_func_t progress_func;
   void *progress_baton;
+
+  /* Maps SVN_RA_CAPABILITY_foo keys to "yes" or "no" values.
+     If a capability is not yet discovered, it is absent from the table.
+     The table itself is allocated in the svn_ra_neon__session_t's pool;
+     keys and values must have at least that lifetime.  Most likely
+     the keys and values are constants anyway (and sufficiently
+     well-informed internal code may just compare against those
+     constants' addresses, therefore). */ 
+  apr_hash_t *capabilities;
 } svn_ra_neon__session_t;
 
 
@@ -998,6 +1007,15 @@ svn_ra_neon__replay(svn_ra_session_t *session,
                     const svn_delta_editor_t *editor,
                     void *edit_baton,
                     apr_pool_t *pool);
+
+/*
+ * Implements the has_capability RA layer function. */
+svn_error_t *
+svn_ra_neon__has_capability(svn_ra_session_t *session,
+                            svn_boolean_t *has,
+                            const char *capability,
+                            apr_pool_t *pool);
+
 
 /* Helper function.  Loop over LOCK_TOKENS and assemble all keys and
    values into a stringbuf allocated in POOL.  The string will be of

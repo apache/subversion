@@ -1047,6 +1047,14 @@ svn_error_t *svn_ra_replay(svn_ra_session_t *session,
                                  text_deltas, editor, edit_baton, pool);
 }
 
+svn_error_t *svn_ra_has_capability(svn_ra_session_t *session,
+                                   svn_boolean_t *has,
+                                   const char *capability,
+                                   apr_pool_t *pool)
+{
+  return session->vtable->has_capability(session, has, capability, pool);
+}
+
 
 
 svn_error_t *
