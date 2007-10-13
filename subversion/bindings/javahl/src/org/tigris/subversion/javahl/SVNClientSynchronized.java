@@ -1222,33 +1222,6 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Merge changes from two paths into a new local path.
-     *
-     * @param path           path or url
-     * @param pegRevision    revision to interpret path
-     * @param revision1      first revision
-     * @param revision2      second revision
-     * @param localPath      target local path
-     * @param force          overwrite local changes
-     * @param depth          how deep to traverse into subdirectories
-     * @param ignoreAncestry ignore if files are not related
-     * @param dryRun         do not change anything
-     * @throws ClientException
-     * @since 1.5
-     */
-    public void merge(String path, Revision pegRevision, Revision revision1,
-                      Revision revision2, String localPath, boolean force,
-                      int depth, boolean ignoreAncestry, boolean dryRun)
-           throws ClientException
-    {
-        synchronized (clazz)
-        {
-            worker.merge(path, pegRevision, revision1, revision2, localPath,
-                         force, depth, ignoreAncestry, dryRun);
-        }
-    }
-
-    /**
      * Merge set of revisions into a new local path.
      * @param path          path or url
      * @param pegRevision   revision to interpret path

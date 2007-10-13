@@ -25,6 +25,8 @@
 #include <jni.h>
 #include "svn_types.h"
 
+class Pool;
+
 /**
  * A container for our copy sources, which can convert them into an
  * array of svn_client_copy_item_t's.
@@ -32,10 +34,21 @@
 class RevisionRange
 {
  public:
+
+  /**
+   * Create a RevisionRange object from a Java object.
+   */
+  RevisionRange(jobject jthis);
+
   /**
    * Destroy a RevisionRange object
    */
   ~RevisionRange();
+
+  /**
+   * Return an svn_opt_revision_range_t.
+   */
+  const svn_opt_revision_range_t *toRange(Pool &pool) const;
 
   /**
    * Make a (single) RevisionRange Java object.
@@ -47,12 +60,6 @@ class RevisionRange
    * A local reference to the Java RevisionRange peer.
    */
   jobject m_range;
-
-  /**
-   * Create a RevisionRange object.
-   * @param jobjectArray An array of CopySource Java objects.
-   */
-  RevisionRange(jobject jthis);
 };
 
-#endif  /* REVISION_RANGE_H */
+#endif  // REVISION_RANGE_H
