@@ -648,8 +648,8 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
   wc_dir         = sbox.wc_dir
 
   # Try to set illegal externals in the original WC.
-  def set_externals_for_path_expect_error(path, val, dir):
-    tmp_f = os.tempnam(dir, 'tmp')
+  def set_externals_for_path_expect_error(path, val):
+    tmp_f = os.tempnam()
     svntest.main.file_append(tmp_f, val)
     svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                        'pset', '-F', tmp_f,
@@ -681,14 +681,14 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
   externals_value_8 = "/foo"           + " " + external_urls.pop() + "\n"
   if not external_urls: external_urls = external_url_for.values()
 
-  set_externals_for_path_expect_error(B_path, externals_value_1, wc_dir)
-  set_externals_for_path_expect_error(G_path, externals_value_2, wc_dir)
-  set_externals_for_path_expect_error(H_path, externals_value_3, wc_dir)
-  set_externals_for_path_expect_error(C_path, externals_value_4, wc_dir)
-  set_externals_for_path_expect_error(F_path, externals_value_5, wc_dir)
-  set_externals_for_path_expect_error(B_path, externals_value_6, wc_dir)
-  set_externals_for_path_expect_error(G_path, externals_value_7, wc_dir)
-  set_externals_for_path_expect_error(H_path, externals_value_8, wc_dir)
+  set_externals_for_path_expect_error(B_path, externals_value_1)
+  set_externals_for_path_expect_error(G_path, externals_value_2)
+  set_externals_for_path_expect_error(H_path, externals_value_3)
+  set_externals_for_path_expect_error(C_path, externals_value_4)
+  set_externals_for_path_expect_error(F_path, externals_value_5)
+  set_externals_for_path_expect_error(B_path, externals_value_6)
+  set_externals_for_path_expect_error(G_path, externals_value_7)
+  set_externals_for_path_expect_error(H_path, externals_value_8)
 
 
 #----------------------------------------------------------------------
