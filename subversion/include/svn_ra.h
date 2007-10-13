@@ -1511,6 +1511,36 @@ svn_error_t *svn_ra_replay(svn_ra_session_t *session,
                            apr_pool_t *pool);
 
 /**
+ * Set @a *has to true if the server represented by @a session has
+ * capability @a capability (one of the capabilities beginning with
+ * @c "SVN_RA_CAPABILITY_"), else set @a *has to false.
+ *
+ * Use @a pool for all allocation.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_ra_has_capability(svn_ra_session_t *session,
+                                   svn_boolean_t *has,
+                                   const char *capability,
+                                   apr_pool_t *pool);
+
+/**
+ * The capability of understanding @c svn_depth_t (e.g., the server
+ * understands what the client means when the client describes the
+ * depth of a working copy to the server.)
+ *
+ * @since New in 1.5.
+ */
+#define SVN_RA_CAPABILITY_DEPTH "depth"
+
+/*       *** PLEASE READ THIS IF YOU ADD A NEW CAPABILITY ***
+ * RA layers generally fetch all capabilities when asked about any
+ * capability, to save future round trips.  So if you add a new
+ * capability here, make sure to update the RA layers to remember
+ * it after any capabilities query.
+ */
+
+/**
  * Append a textual list of all available RA modules to the stringbuf
  * @a output.
  *

@@ -83,6 +83,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info(pool);
   const char *preserved_exts_str;
   apr_array_header_t *preserved_exts;
+  svn_boolean_t server_supports_depth;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING)
@@ -181,6 +182,9 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             target, depth, switch_url,
                             switch_editor, switch_edit_baton, pool));
 
+  SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
+                                SVN_RA_CAPABILITY_DEPTH, pool));
+
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the update_editor
      will be driven by svn_repos_dir_delta2.
@@ -189,7 +193,8 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
      update, and therefore we don't want to handle any externals
      except the ones directly affected by the switch. */
   err = svn_wc_crawl_revisions3(path, dir_access, reporter, report_baton,
-                                TRUE, depth, use_commit_times,
+                                TRUE, depth, (! server_supports_depth),
+                                use_commit_times,
                                 ctx->notify_func2, ctx->notify_baton2,
                                 NULL, /* no traversal info */
                                 pool);

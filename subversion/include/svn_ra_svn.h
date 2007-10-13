@@ -45,6 +45,7 @@ extern "C" {
 #define SVN_RA_SVN_CAP_ABSENT_ENTRIES "absent-entries"
 #define SVN_RA_SVN_CAP_COMMIT_REVPROPS "commit-revprops"
 #define SVN_RA_SVN_CAP_MERGEINFO "mergeinfo"
+#define SVN_RA_SVN_CAP_DEPTH "depth"  /* maps to SVN_RA_CAPABILITY_DEPTH */
 
 /** ra_svn passes @c svn_dirent_t fields over the wire as a list of
  * words, these are the values used to represent each field.

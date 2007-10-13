@@ -2095,6 +2095,31 @@ static svn_error_t *ra_svn_replay(svn_ra_session_t *session,
 }
 
 
+static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
+                                          svn_boolean_t *has,
+                                          const char *capability,
+                                          apr_pool_t *pool)
+{
+  svn_ra_svn__session_baton_t *sess = session->priv;
+
+  if (strcmp(capability, SVN_RA_CAPABILITY_DEPTH) == 0)
+    {
+      if (svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_DEPTH))
+        *has = TRUE;
+      else
+        *has = FALSE;
+    }
+  else  /* Don't know any other capabilities yet, so error. */
+    {
+        return svn_error_createf
+          (SVN_ERR_RA_UNKNOWN_CAPABILITY, NULL,
+           _("Don't know anything about capability '%s'"), capability);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 static const svn_ra__vtable_t ra_svn_vtable = {
   svn_ra_svn_version,
   ra_svn_get_description,
@@ -2128,6 +2153,7 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_get_lock,
   ra_svn_get_locks,
   ra_svn_replay,
+  ra_svn_has_capability
 };
 
 svn_error_t *
