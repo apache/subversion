@@ -322,7 +322,8 @@ static void ra_svn_get_reporter(svn_ra_svn__session_baton_t *sess_baton,
   /* We can skip the depth filtering when the user requested
      depth_files or depth_infinity because the server will
      transmit the right stuff anyway. */
-  if ((depth != svn_depth_files) && (depth != svn_depth_infinity))
+  if ((depth != svn_depth_files) && (depth != svn_depth_infinity)
+      && ! svn_ra_svn_has_capability(sess_baton->conn, SVN_RA_SVN_CAP_DEPTH))
     {
       svn_error_clear(svn_delta_depth_filter_editor(&filter_editor, 
                                                     &filter_baton,
