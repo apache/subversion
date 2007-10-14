@@ -306,7 +306,7 @@ typedef struct
    We keep a record of paths which remain in conflict after any
    resolution attempt from BATON->wrapped_func. */
 static svn_error_t *
-conflict_resolver(svn_wc_conflict_result_t *result,
+conflict_resolver(svn_wc_conflict_result_t **result,
                   const svn_wc_conflict_description_t *description,
                   void *baton, apr_pool_t *pool)
 {
@@ -320,7 +320,8 @@ conflict_resolver(svn_wc_conflict_result_t *result,
     err = SVN_NO_ERROR;
 
   /* Keep a record of paths still in conflict after the resolution attempt. */
-  if (*result == svn_wc_conflict_result_conflicted)
+  if ((! conflict_b->wrapped_func)
+      || (*result && ((*result)->choice == svn_wc_conflict_choose_postpone)))
     {
       const char *conflicted_path = apr_pstrdup(conflict_b->pool,
                                                 description->path);

@@ -2546,11 +2546,11 @@ attempt_deletion(const char *parent_dir,
 
 /* Conflict resolution involves removing the conflict files, if they exist,
    and clearing the conflict filenames from the entry.  The latter needs to
-   be done whether or not the conflict files exist.  If @a conflict_result
-   is svn_wc_conflict_result_choose_base, resolve the conflict with the old
-   file contents; if svn_wc_conflict_result_choose_user, use the original
-   working contents; if svn_wc_conflict_result_choose_theirs, the new
-   contents; and if svn_wc_conflict_result_choose_merged, don't change the
+   be done whether or not the conflict files exist.  If @a conflict_choice
+   is svn_wc_conflict_choose_base, resolve the conflict with the old
+   file contents; if svn_wc_conflict_choose_mine, use the original
+   working contents; if svn_wc_conflict_choose_theirs, the new
+   contents; and if svn_wc_conflict_choose_merged, don't change the
    contents at all, just remove the conflict status (i.e. pre-1.5 behavior).
 
    @since 1.5 Automatic Conflict Resolution (Issue 2784)
@@ -2566,7 +2566,7 @@ resolve_conflict_on_entry(const char *path,
                           const char *base_name,
                           svn_boolean_t resolve_text,
                           svn_boolean_t resolve_props,
-                          svn_wc_conflict_result_t conflict_result,
+                          svn_wc_conflict_choice_t conflict_choice,
                           svn_wc_notify_func2_t notify_func,
                           void *notify_baton,
                           apr_pool_t *pool)
@@ -2578,18 +2578,18 @@ resolve_conflict_on_entry(const char *path,
 
   /* Handle automatic conflict resolution before the temporary files are
    * deleted, if necessary. */
-  switch (conflict_result)
+  switch (conflict_choice)
     {
-    case svn_wc_conflict_result_choose_base:
+    case svn_wc_conflict_choose_base:
       auto_resolve_src = entry->conflict_old;
       break;
-    case svn_wc_conflict_result_choose_mine:
+    case svn_wc_conflict_choose_mine:
       auto_resolve_src = entry->conflict_wrk;
       break;
-    case svn_wc_conflict_result_choose_theirs:
+    case svn_wc_conflict_choose_theirs:
       auto_resolve_src = entry->conflict_new;
       break;
-    case svn_wc_conflict_result_choose_merged:
+    case svn_wc_conflict_choose_merged:
       auto_resolve_src = NULL;
       break;
     default:
@@ -2678,7 +2678,7 @@ struct resolve_callback_baton
   /* TRUE if property conflicts are to be resolved. */
   svn_boolean_t resolve_props;
   /* The type of automatic conflict resolution to perform */
-  svn_wc_conflict_result_t conflict_result;
+  svn_wc_conflict_choice_t conflict_choice;
   /* An access baton for the tree, with write access */
   svn_wc_adm_access_t *adm_access;
   /* Notification function and baton */
@@ -2713,7 +2713,7 @@ resolve_found_entry_callback(const char *path,
 
   return resolve_conflict_on_entry(path, entry, adm_access, base_name,
                                    baton->resolve_text, baton->resolve_props,
-                                   baton->conflict_result, baton->notify_func,
+                                   baton->conflict_choice, baton->notify_func,
                                    baton->notify_baton, pool);
 }
 
@@ -2762,7 +2762,7 @@ svn_wc_resolved_conflict2(const char *path,
 {
   return svn_wc_resolved_conflict3(path, adm_access, resolve_text,
                                    resolve_props, recurse,
-                                   svn_wc_conflict_result_choose_merged,
+                                   svn_wc_conflict_choose_merged,
                                    notify_func, notify_baton, cancel_func,
                                    cancel_baton, pool);
 }
@@ -2773,7 +2773,7 @@ svn_wc_resolved_conflict3(const char *path,
                           svn_boolean_t resolve_text,
                           svn_boolean_t resolve_props,
                           svn_depth_t depth,
-                          svn_wc_conflict_result_t conflict_result,
+                          svn_wc_conflict_choice_t conflict_choice,
                           svn_wc_notify_func2_t notify_func,
                           void *notify_baton,
                           svn_cancel_func_t cancel_func,
@@ -2787,7 +2787,7 @@ svn_wc_resolved_conflict3(const char *path,
   baton->adm_access = adm_access;
   baton->notify_func = notify_func;
   baton->notify_baton = notify_baton;
-  baton->conflict_result = conflict_result;
+  baton->conflict_choice = conflict_choice;
 
   if (depth == svn_depth_empty)
     {

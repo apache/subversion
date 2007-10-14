@@ -89,7 +89,7 @@ restore_file(const char *file_path,
   /* Remove any text conflict */
   SVN_ERR(svn_wc_resolved_conflict3(file_path, adm_access, TRUE, FALSE,
                                     svn_depth_empty,
-                                    svn_wc_conflict_result_choose_merged,
+                                    svn_wc_conflict_choose_merged,
                                     NULL, NULL, NULL, NULL, pool));
 
   if (use_commit_times)
