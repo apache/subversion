@@ -1287,6 +1287,37 @@ svn_swig_rb_prop_apr_array_to_hash_prop(const apr_array_header_t *apr_ary)
   return hash;
 }
 
+apr_array_header_t *
+svn_swig_rb_array_to_apr_array_revision_range(VALUE array, apr_pool_t *pool)
+{
+  int i, len;
+  apr_array_header_t *apr_ary;
+
+  Check_Type(array, T_ARRAY);
+  len = RARRAY(array)->len;
+  apr_ary = apr_array_make(pool, len, sizeof(svn_opt_revision_range_t *));
+  apr_ary->nelts = len;
+  for (i = 0; i < len; i++) {
+    VALUE value;
+    svn_opt_revision_range_t *range;
+
+    value = rb_ary_entry(array, i);
+    if (RTEST(rb_obj_is_kind_of(value, rb_cArray))) {
+      if (RARRAY(value)->len != 2)
+        rb_raise(rb_eArgError,
+                 "revision range should be [start, end]: %s",
+                 r2c_inspect(value));
+      range = apr_palloc(pool, sizeof(*range));
+      svn_swig_rb_set_revision(&range->start, rb_ary_entry(value, 0));
+      svn_swig_rb_set_revision(&range->end, rb_ary_entry(value, 1));
+    } else {
+      range = r2c_swig_type(value, (void *)"svn_opt_revision_range_t *", pool);
+    }
+    APR_ARRAY_IDX(apr_ary, i, svn_opt_revision_range_t *) = range;
+  }
+  return apr_ary;
+}
+
 
 
 /* Ruby Array -> apr_array_t */

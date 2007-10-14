@@ -60,6 +60,10 @@
 %apply apr_array_header_t *SOURCES {
   apr_array_header_t *sources
 }
+
+%apply apr_array_header_t *REVISION_RANGE_LIST {
+  apr_array_header_t *ranges_to_merge
+}
 #endif
 
 #ifdef SWIGRUBY

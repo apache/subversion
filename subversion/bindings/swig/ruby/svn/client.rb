@@ -328,12 +328,16 @@ module Svn
       end
 
 
-      def merge_peg(src, rev1, rev2, target_wcpath,
-                    peg_rev=nil, depth=nil,
-                    ignore_ancestry=false, force=false,
-                    dry_run=false, options=nil, record_only=false)
+      def merge_peg(src, rev1, rev2, *rest)
+        merge_peg2(src, [[rev1, rev2]], *rest)
+      end
+
+      def merge_peg2(src, ranges_to_merge, target_wcpath,
+                     peg_rev=nil, depth=nil,
+                     ignore_ancestry=false, force=false,
+                     dry_run=false, options=nil, record_only=false)
         peg_rev ||= uri?(src) ? 'HEAD' : 'WORKING'
-        Client.merge_peg3(src, rev1, rev2, peg_rev,
+        Client.merge_peg3(src, ranges_to_merge, peg_rev,
                           target_wcpath, depth, ignore_ancestry,
                           force, record_only, dry_run, options, self)
       end
