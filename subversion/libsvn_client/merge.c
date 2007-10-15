@@ -4134,7 +4134,6 @@ svn_client_merge_peg3(const char *source,
   const char *wc_repos_root;
   enum merge_type merge_type = merge_type_no_op;
   svn_opt_revision_t working_rev;
-  svn_boolean_t is_rollback;
   notification_receiver_baton_t notify_b =
     {ctx->notify_func2, ctx->notify_baton2, FALSE, 0,
      0, NULL, NULL, FALSE, NULL, -1, NULL, pool};
@@ -4294,8 +4293,6 @@ svn_client_merge_peg3(const char *source,
       || (record_only && dry_run))
     return SVN_NO_ERROR;
 
-  is_rollback = (merge_type == merge_type_rollback);
-
   if (merge_cmd_baton.same_repos && record_only)
     {
       int j;
@@ -4349,7 +4346,7 @@ svn_client_merge_peg3(const char *source,
           SVN_ERR(do_merge(compacted_sources,
                            URL1,
                            URL2,
-                           is_rollback,
+                           (merge_type == merge_type_rollback),
                            merge_cmd_baton.target_missing_child,
                            target_wcpath,
                            adm_access,
