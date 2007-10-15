@@ -1782,6 +1782,8 @@ close_directory(void *dir_baton,
                                         adm_access, db->path,
                                         NULL /* use baseprops */,
                                         regular_props, TRUE, FALSE,
+                                        db->edit_baton->conflict_func,
+                                        db->edit_baton->conflict_baton,
                                         db->pool, &db->log_accum),
                     _("Couldn't do property merge"));
         }
@@ -2276,6 +2278,9 @@ change_file_prop(void *file_baton,
    reflect the possible removal of a lock token from FILE_PATH's
    entryprops.
 
+   CONFICT_FUNC/BATON is a callback which allows the client to
+   possibly resolve a property conflict interactively.
+
    ADM_ACCESS is the access baton for FILE_PATH.  Append log commands to
    LOG_ACCUM.  Use POOL for temporary allocations. */
 static svn_error_t *
@@ -2285,6 +2290,8 @@ merge_props(svn_stringbuf_t *log_accum,
             svn_wc_adm_access_t *adm_access,
             const char *file_path,
             const apr_array_header_t *prop_changes,
+            svn_wc_conflict_resolver_func_t conflict_func,
+            void *conflict_baton,
             apr_pool_t *pool)
 {
   apr_array_header_t *regular_props = NULL, *wc_props = NULL,
@@ -2307,8 +2314,9 @@ merge_props(svn_stringbuf_t *log_accum,
       SVN_ERR(svn_wc__merge_props(prop_state,
                                   adm_access, file_path,
                                   NULL /* use base props */,
-                                  regular_props, TRUE, FALSE, pool,
-                                  &log_accum));
+                                  regular_props, TRUE, FALSE,
+                                  conflict_func, conflict_baton,
+                                  pool, &log_accum));
     }
 
   /* If there are any ENTRY PROPS, make sure those get appended to the
@@ -2469,7 +2477,8 @@ merge_file(svn_wc_notify_state_t *content_state,
      any file content merging, since that process might expand keywords, in
      which case we want the new entryprops to be in place. */
   SVN_ERR(merge_props(log_accum, prop_state, lock_state, adm_access,
-                      fb->path, fb->propchanges, pool));
+                      fb->path, fb->propchanges,
+                      eb->conflict_func, eb->conflict_baton, pool));
 
   /* Has the user made local mods to the working file?
      Note that this compares to the current pristine file, which is
