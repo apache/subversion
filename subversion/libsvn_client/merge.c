@@ -1253,11 +1253,54 @@ typedef struct
      cleared after each invocation of the callback. */
   apr_hash_t *skipped_paths;
 
+  /* Flag indicating whether it is a single file merge or not. */
+  svn_boolean_t is_single_file_merge;
+
+  /* Depth first ordered list of paths that needs special care while merging.
+   * This defaults to NULL. For 'same_url' merge alone we set it to 
+   * proper array. This is used by notification_receiver to put a 
+   * merge notification begin lines. */
+  apr_array_header_t *children_with_mergeinfo;
+  
+  /* The index in CHILDREN_WITH_MERGEINFO where we found the nearest ancestor
+     for merged path. Default value is '-1'.*/
+  int cur_ancestor_index;
+
+  /* We use this to make a decision on merge begin line notifications. */
+  struct merge_cmd_baton *merge_b;
+
   /* Pool used in notification_receiver() to avoid the iteration
      sub-pool which is passed in, then subsequently destroyed. */
   apr_pool_t *pool;
 } notification_receiver_baton_t;
 
+/* Finds a nearest ancestor in CHILDREN_WITH_MERGEINFO for PATH.
+ * CHILDREN_WITH_MERGEINFO is expected to be sorted in Depth first order
+ * of path. Search starts from START_INDEX. Nearest ancestor's index from 
+ * CHILDREN_WITH_MERGEINFO is returned. */
+static int
+find_nearest_ancestor(apr_array_header_t *children_with_mergeinfo,
+                      const char *path, int start_index)
+{
+  int i;
+  int ancestor_index;
+  ancestor_index = start_index;
+  /* This if condition is not needed as this function should be used from 
+   * the context of same_url merge where CHILDREN_WITH_MERGEINFO will not be 
+   * NULL and of size atleast 1. We have this if condition just to protect
+   * the wrong caller. */
+  if (!children_with_mergeinfo)
+    return 0;
+  for (i = start_index; i < children_with_mergeinfo->nelts; i++)
+    {
+      svn_client__merge_path_t *child =
+                                APR_ARRAY_IDX(children_with_mergeinfo, i,
+                                              svn_client__merge_path_t *);
+      if (svn_path_is_ancestor(child->path, path))
+        ancestor_index = i;
+    }
+  return ancestor_index;
+}
 /* Our svn_wc_notify_func2_t wrapper.*/
 static void
 notification_receiver(void *baton, const svn_wc_notify_t *notify,
@@ -1267,7 +1310,41 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
 
   if (notify_b->same_urls)
     {
+      int new_nearest_ancestor_index;
+      int start_index = (notify_b->cur_ancestor_index == -1)
+                        ? 0 : notify_b->cur_ancestor_index;
       notify_b->nbr_notifications++;
+
+      if (!(notify_b->is_single_file_merge))
+        {
+          new_nearest_ancestor_index = 
+                      find_nearest_ancestor(notify_b->children_with_mergeinfo,
+                                            notify->path, start_index);
+          if (new_nearest_ancestor_index != notify_b->cur_ancestor_index)
+            {
+              svn_client__merge_path_t *child =
+                              APR_ARRAY_IDX(notify_b->children_with_mergeinfo,
+                                            new_nearest_ancestor_index,
+                                            svn_client__merge_path_t *);
+              notify_b->cur_ancestor_index = new_nearest_ancestor_index;
+              if (!child->absent && child->remaining_ranges->nelts > 0
+                  && !(new_nearest_ancestor_index == 0
+                       && (notify_b->merge_b)->target_has_dummy_merge_range))
+                {
+                  svn_wc_notify_t *notify_merge_begin;
+                  notify_merge_begin = 
+                               svn_wc_create_notify(child->path,
+                                                    svn_wc_notify_merge_begin,
+                                                    pool);
+                  notify_merge_begin->merge_range = 
+                                   APR_ARRAY_IDX(child->remaining_ranges, 0,
+                                                 svn_merge_range_t *);
+                  if (notify_b->wrapped_func)
+                    (*notify_b->wrapped_func)(notify_b->wrapped_baton,
+                                              notify_merge_begin, pool);
+                }
+            }
+        }
 
       if (notify->content_state == svn_wc_notify_state_conflicted
           || notify->content_state == svn_wc_notify_state_merged
@@ -2358,7 +2435,6 @@ do_merge(apr_array_header_t *merge_ranges,
          apr_pool_t *pool)
 {
   svn_merge_range_t range;
-  svn_wc_notify_t *notify;
   int i;
 
   /* Establish first RA session to URL1. */
@@ -2382,11 +2458,13 @@ do_merge(apr_array_header_t *merge_ranges,
      its low value (which is indicated by this operation being a
      merge vs. revert). */
 
-  notify = svn_wc_create_notify(target_wcpath, svn_wc_notify_merge_begin,
-                                pool);
-  if (notify_b->same_urls)
-    notify->merge_range = &range;
-  notification_receiver(notify_b, notify, pool);
+  if (!notify_b->same_urls)
+    {
+      svn_wc_notify_t *notify;
+      notify = svn_wc_create_notify(target_wcpath, svn_wc_notify_merge_begin,
+                                    pool);
+      notification_receiver(notify_b, notify, pool);
+    }
 
   /* ### TODO: Drill code to avoid merges for files which are
      ### already in conflict down into the API which requests or
@@ -3582,6 +3660,7 @@ discover_and_merge_children(const svn_wc_entry_t *parent_entry,
                               parent_merge_src_canon_path,
                               parent_entry, adm_access,
                               merge_b->ctx, depth, pool));
+  notify_b->children_with_mergeinfo = children_with_mergeinfo;
 
   /* First item from the CHILDREN_WITH_MERGEINFO is the target
    * due to *Depth First ordering*. */
@@ -3634,6 +3713,7 @@ discover_and_merge_children(const svn_wc_entry_t *parent_entry,
           /* Use persistent pool while playing with remaining_ranges. */
           slice_remaining_ranges(children_with_mergeinfo, is_rollback,
                                  end_rev, pool);
+          notify_b->cur_ancestor_index = -1;
           SVN_ERR(do_merge(merge_source,
                            parent_merge_source_url,
                            parent_merge_source_url,
@@ -3820,7 +3900,8 @@ svn_client_merge3(const char *source1,
   svn_boolean_t is_rollback;
   svn_opt_revision_t working_rev;
   notification_receiver_baton_t notify_b =
-    {ctx->notify_func2, ctx->notify_baton2, FALSE, 0, 0, NULL, NULL, pool};
+    {ctx->notify_func2, ctx->notify_baton2, FALSE, 0, 
+     0, NULL, NULL, FALSE, NULL, -1, NULL, pool};
   apr_array_header_t *merge_ranges =
     apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
   svn_merge_range_t rev_range;
@@ -3877,6 +3958,7 @@ svn_client_merge3(const char *source1,
   merge_cmd_baton.pool = pool;
   merge_cmd_baton.operative_merge = FALSE;
   merge_cmd_baton.target_has_dummy_merge_range = FALSE;
+  notify_b.merge_b = &merge_cmd_baton;
 
   SVN_ERR(svn_client__open_ra_session_internal(&merge_cmd_baton.ra_session1,
                                                URL1, NULL, NULL, NULL,
@@ -3930,6 +4012,7 @@ svn_client_merge3(const char *source1,
      sources are files as well, and do a single-file merge. */
   if (entry->kind == svn_node_file)
     {
+      notify_b.is_single_file_merge = TRUE;
       SVN_ERR(do_single_file_merge(merge_ranges,
                                    URL1,
                                    URL2,
@@ -4053,7 +4136,8 @@ svn_client_merge_peg3(const char *source,
   svn_opt_revision_t working_rev;
   svn_boolean_t is_rollback;
   notification_receiver_baton_t notify_b =
-    {ctx->notify_func2, ctx->notify_baton2, FALSE, 0, 0, NULL, NULL, pool};
+    {ctx->notify_func2, ctx->notify_baton2, FALSE, 0,
+     0, NULL, NULL, FALSE, NULL, -1, NULL, pool};
   apr_array_header_t *initial_merge_sources, *explicit_sources,
     *compacted_sources;
   int i;
@@ -4111,6 +4195,7 @@ svn_client_merge_peg3(const char *source,
   merge_cmd_baton.pool = pool;
   merge_cmd_baton.operative_merge = FALSE;
   merge_cmd_baton.target_has_dummy_merge_range = FALSE;
+  notify_b.merge_b = &merge_cmd_baton;
 
   SVN_ERR(svn_client__open_ra_session_internal(&merge_cmd_baton.ra_session1,
                                                URL, NULL, NULL, NULL,
@@ -4229,6 +4314,7 @@ svn_client_merge_peg3(const char *source,
      sources are files as well, and do a single-file merge. */
   if (entry->kind == svn_node_file)
     {
+      notify_b.is_single_file_merge = TRUE;
       SVN_ERR(do_single_file_merge(compacted_sources,
                                    URL1, URL2,
                                    !notify_b.same_urls,
