@@ -21,7 +21,7 @@
 
 #include "svn_error.h"
 
-#include "../include/org_tigris_subversion_javahl_ConflictResolverCallback_Result.h"
+#include "../include/org_tigris_subversion_javahl_ConflictResolverCallback_Choice.h"
 #include "JNIUtil.h"
 #include "EnumMapper.h"
 #include "ConflictResolverCallback.h"
@@ -73,7 +73,7 @@ ConflictResolverCallback::makeCConflictResolverCallback(jobject jconflictResolve
 }
 
 svn_error_t *
-ConflictResolverCallback::resolveConflict(svn_wc_conflict_result_t *result,
+ConflictResolverCallback::resolveConflict(svn_wc_conflict_result_t **result,
                                           const svn_wc_conflict_description_t *
                                           desc,
                                           void *baton,
@@ -86,7 +86,7 @@ ConflictResolverCallback::resolveConflict(svn_wc_conflict_result_t *result,
 }
 
 svn_error_t *
-ConflictResolverCallback::resolve(svn_wc_conflict_result_t *result,
+ConflictResolverCallback::resolve(svn_wc_conflict_result_t **result,
                                   const svn_wc_conflict_description_t *desc,
                                   apr_pool_t *pool)
 {
@@ -171,7 +171,8 @@ ConflictResolverCallback::resolve(svn_wc_conflict_result_t *result,
       const char *msg = JNIUtil::thrownExceptionToCString();
       return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL, msg);
     }
-  *result = javaResultToC(jresult);
+  // ### FIXME: Pass merged_file instead of NULL!
+  *result = svn_wc_create_conflict_result(javaResultToC(jresult), NULL, pool);
 
   env->DeleteLocalRef(jpath);
   if (JNIUtil::isJavaExceptionThrown())
@@ -199,22 +200,20 @@ ConflictResolverCallback::resolve(svn_wc_conflict_result_t *result,
   return SVN_NO_ERROR;
 }
 
-svn_wc_conflict_result_t ConflictResolverCallback::javaResultToC(jint result)
+svn_wc_conflict_choice_t ConflictResolverCallback::javaResultToC(jint result)
 {
   switch (result)
     {
-    case org_tigris_subversion_javahl_ConflictResolverCallback_Result_conflicted:
+    case org_tigris_subversion_javahl_ConflictResolverCallback_Choice_postpone:
     default:
-      return svn_wc_conflict_result_conflicted;
-    case org_tigris_subversion_javahl_ConflictResolverCallback_Result_resolved:
-      return svn_wc_conflict_result_resolved;
-    case org_tigris_subversion_javahl_ConflictResolverCallback_Result_chooseBase:
-      return svn_wc_conflict_result_choose_base;
-    case org_tigris_subversion_javahl_ConflictResolverCallback_Result_chooseTheirs:
-      return svn_wc_conflict_result_choose_theirs;
-    case org_tigris_subversion_javahl_ConflictResolverCallback_Result_chooseMine:
-      return svn_wc_conflict_result_choose_mine;
-    case org_tigris_subversion_javahl_ConflictResolverCallback_Result_chooseMerged:
-      return svn_wc_conflict_result_choose_merged;
+      return svn_wc_conflict_choose_postpone;
+    case org_tigris_subversion_javahl_ConflictResolverCallback_Choice_chooseBase:
+      return svn_wc_conflict_choose_base;
+    case org_tigris_subversion_javahl_ConflictResolverCallback_Choice_chooseTheirs:
+      return svn_wc_conflict_choose_theirs;
+    case org_tigris_subversion_javahl_ConflictResolverCallback_Choice_chooseMine:
+      return svn_wc_conflict_choose_mine;
+    case org_tigris_subversion_javahl_ConflictResolverCallback_Choice_chooseMerged:
+      return svn_wc_conflict_choose_merged;
     }
 }

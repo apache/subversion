@@ -110,7 +110,7 @@ class SVNClient :public SVNBase
                  bool ignoreExternals, svn_depth_t depth,
                  const char *nativeEOL);
   void resolved(const char *path, svn_depth_t depth,
-                svn_wc_conflict_result_t result);
+                svn_wc_conflict_choice_t choice);
   void cleanup(const char *path);
   void mkdir(Targets &targets, const char *message, bool makeParents);
   void move(Targets &srcPaths, const char *destPath,
