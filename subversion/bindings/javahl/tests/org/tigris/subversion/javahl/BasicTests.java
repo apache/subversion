@@ -2325,7 +2325,7 @@ public class BasicTests extends SVNTests
             {
                 public int resolve(ConflictDescriptor descrip)
                 {
-                    return ConflictResolverCallback.Result.chooseTheirs;
+                    return ConflictResolverCallback.Choice.chooseTheirs;
                 }
             });
 
