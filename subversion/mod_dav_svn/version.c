@@ -967,6 +967,10 @@ deliver_report(request_rec *r,
         {
           return dav_svn__get_locations_report(resource, doc, output);
         }
+      else if (strcmp(doc->root->name, "get-location-segments") == 0)
+        {
+          return dav_svn__get_location_segments_report(resource, doc, output);
+        }
       else if (strcmp(doc->root->name, "file-revs-report") == 0)
         {
           return dav_svn__file_revs_report(resource, doc, output);
