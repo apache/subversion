@@ -795,7 +795,7 @@ public class SVNClient implements SVNClientInterface
         try
         {
             resolved(path, Depth.infinityOrEmpty(recurse),
-                     ConflictResolverCallback.Result.chooseMerged);
+                     ConflictResolverCallback.Choice.chooseMerged);
         }
         catch (SubversionException e)
         {
