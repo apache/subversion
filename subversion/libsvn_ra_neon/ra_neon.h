@@ -759,6 +759,7 @@ enum {
   ELEM_repository_uuid,
   ELEM_get_locations_report,
   ELEM_location,
+  ELEM_get_location_segments_report,
   ELEM_file_revs_report,
   ELEM_file_rev,
   ELEM_rev_prop,
