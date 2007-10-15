@@ -868,8 +868,7 @@ def authz_svnserve_anon_access_read(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               Skip(authz_open_root, svntest.main.is_ra_type_file),
-              XFail(Skip(authz_open_directory, svntest.main.is_ra_type_file),
-                    svntest.main.is_ra_type_dav),
+              Skip(authz_open_directory, svntest.main.is_ra_type_file),
               Skip(broken_authz_file, svntest.main.is_ra_type_file),
               Skip(authz_read_access, svntest.main.is_ra_type_file),
               Skip(authz_write_access, svntest.main.is_ra_type_file),
