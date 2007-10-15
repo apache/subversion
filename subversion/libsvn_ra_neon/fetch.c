@@ -1398,7 +1398,7 @@ static const svn_ra_neon__xml_elm_t gls_report_elements[] =
 {
   { SVN_XML_NAMESPACE, "get-location-segments-report", 
     ELEM_get_locations_report, 0 },
-  { SVN_XML_NAMESPACE, "location", ELEM_location, 0 },
+  { SVN_XML_NAMESPACE, "location-segment", ELEM_location_segment, 0 },
   { NULL }
 };
 
@@ -1424,7 +1424,7 @@ gls_start_element(int *elem, void *userdata, int parent_state,
     }
 
   if (parent_state == ELEM_get_location_segments_report
-      && elm->id == ELEM_location)
+      && elm->id == ELEM_location_segment)
     {
       const char *rev_str;
       svn_revnum_t range_start = SVN_INVALID_REVNUM;

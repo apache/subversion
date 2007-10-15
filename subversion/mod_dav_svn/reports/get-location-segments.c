@@ -59,7 +59,7 @@ location_segment_receiver(svn_location_segment_t *segment,
     {
       const char *path_quoted = apr_xml_quote_string(pool, segment->path, 1);
       apr_err = ap_fprintf(b->output, b->bb, 
-                           "<S:location path=\"%s\" "
+                           "<S:location-segment path=\"%s\" "
                            "range-start=\"%ld\" range-end=\"%ld\"/>" DEBUG_CR,
                            path_quoted,
                            segment->range_start, segment->range_end);
@@ -67,7 +67,7 @@ location_segment_receiver(svn_location_segment_t *segment,
   else
     {
       apr_err = ap_fprintf(b->output, b->bb, 
-                           "<S:location "
+                           "<S:location-segment "
                            "range-start=\"%ld\" range-end=\"%ld\"/>" DEBUG_CR,
                            segment->range_start, segment->range_end);
     }
