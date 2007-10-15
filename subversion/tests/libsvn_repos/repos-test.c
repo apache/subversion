@@ -1746,7 +1746,10 @@ nls_receiver(svn_location_segment_t *segment,
 {
   struct nls_receiver_baton *b = baton;
   svn_location_segment_t *expected_segment = b->expected_segments + b->count;
-  if (! b->expected_segments->range_start)
+
+  /* expected_segments->range_end can't be 0, so if we see that, it's
+     our end-of-the-list sentry. */
+  if (! b->expected_segments->range_end)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "Got unexpected location segment: %s",
                              format_segment(segment, pool));
@@ -1781,10 +1784,12 @@ check_location_segments(svn_repos_t *repos,
                                            SVN_INVALID_REVNUM, nls_receiver, 
                                            &b, NULL, NULL, pool));
 
-  /* Make sure we saw all of our expected segments.  If not, raise an
-     error. */
+  /* Make sure we saw all of our expected segments.  (If the
+     'range_end' member of our expected_segments is 0, it's our
+     end-of-the-list sentry.  Otherwise, it's some segment we expect
+     to see.)  If not, raise an error.  */
   segment = expected_segments + b.count;
-  if (segment->range_start)
+  if (segment->range_end)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "Failed to get expected location segment: %s",
                              format_segment(segment, pool));
@@ -1869,6 +1874,17 @@ node_location_segments(const char **msg,
   SVN_ERR(svn_fs_delete(txn_root, "A/D2", subpool));
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
   svn_pool_clear(subpool);
+
+  /* Check locations for /@HEAD. */
+  {
+    svn_location_segment_t expected_segments[] =
+      {
+        { 0, 7, "" },
+        { 0 }
+      };
+    SVN_ERR(check_location_segments(repos, "", SVN_INVALID_REVNUM,
+                                    expected_segments, pool));
+  }
 
   /* Check locations for A/D@HEAD. */
   {
