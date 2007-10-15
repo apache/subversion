@@ -2416,17 +2416,18 @@ make_update_reporter(svn_ra_session_t *ra_session,
   svn_stringbuf_t *path_buf;
   const svn_delta_editor_t *filter_editor;
   void *filter_baton;
-  svn_boolean_t has_target = *update_target ? TRUE : FALSE, new_server;
+  svn_boolean_t has_target = *update_target ? TRUE : FALSE;
+  svn_boolean_t server_supports_depth;
   svn_ra_serf__session_t *sess = ra_session->priv;
 
-  SVN_ERR(svn_ra_serf__has_capability(ra_session, &new_server,
+  SVN_ERR(svn_ra_serf__has_capability(ra_session, &server_supports_depth,
                                       SVN_RA_CAPABILITY_DEPTH, pool));
   /* We can skip the depth filtering when the user requested
      depth_files or depth_infinity because the server will
      transmit the right stuff anyway. */
   if ((depth != svn_depth_files)
       && (depth != svn_depth_infinity)
-      && ! new_server)
+      && ! server_supports_depth)
     {
       SVN_ERR(svn_delta_depth_filter_editor(&filter_editor, 
                                             &filter_baton,
