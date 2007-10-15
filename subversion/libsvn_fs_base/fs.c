@@ -1111,9 +1111,9 @@ base_hotcopy(const char *src_path,
               return
                 svn_error_quick_wrap
                 (err,
-                 _("Error copying logfile;  the DB_LOG_AUTOREMOVE feature \n"
-                   "may be interfering with the hotcopy algorithm.  If \n"
-                   "the problem persists, try deactivating this feature \n"
+                 _("Error copying logfile;  the DB_LOG_AUTOREMOVE feature\n"
+                   "may be interfering with the hotcopy algorithm.  If\n"
+                   "the problem persists, try deactivating this feature\n"
                    "in DB_CONFIG"));
             else
               return err;
@@ -1130,9 +1130,9 @@ base_hotcopy(const char *src_path,
         return
           svn_error_quick_wrap
           (err,
-           _("Error running catastrophic recovery on hotcopy;  the \n"
-             "DB_LOG_AUTOREMOVE feature may be interfering with the \n"
-             "hotcopy algorithm.  If the problem persists, try deactivating \n"
+           _("Error running catastrophic recovery on hotcopy;  the\n"
+             "DB_LOG_AUTOREMOVE feature may be interfering with the\n"
+             "hotcopy algorithm.  If the problem persists, try deactivating\n"
              "this feature in DB_CONFIG"));
       else
         return err;

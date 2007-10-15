@@ -450,7 +450,7 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
           /* How did this happen? */
           return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                                   _("The OPTIONS response did not include the "
-                                    "requested resourcetype value. "));
+                                    "requested resourcetype value."));
         }
       else if (strcmp(res_type, "collection") == 0)
         {
@@ -627,7 +627,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
         {
           return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                                   _("The OPTIONS response did not include the "
-                                    "requested baseline-collection value. "));
+                                    "requested baseline-collection value."));
         }
 
       if (fetched_rev)

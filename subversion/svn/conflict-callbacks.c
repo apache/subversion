@@ -410,7 +410,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
               _("  (p)ostpone - resolve the conflict later\n"
-                "  (m)ine     - accept pre-existing item \n"
+                "  (m)ine     - accept pre-existing item\n"
                 "  (t)heirs   - accept incoming item\n"
                 "  (h)elp     - show this list\n\n")));
             }
