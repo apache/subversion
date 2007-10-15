@@ -2218,36 +2218,6 @@ svn_swig_rb_notify_func2(void *baton,
 }
 
 svn_error_t *
-svn_swig_rb_conflict_resolver_func(svn_wc_conflict_result_t *result,
-                                   const svn_wc_conflict_description_t *description,
-                                   void *baton,
-                                   apr_pool_t *pool)
-{
-  svn_error_t *err = SVN_NO_ERROR;
-  VALUE proc, rb_pool, rb_result;
-
-  *result = svn_wc_conflict_result_conflicted;
-
-  svn_swig_rb_from_baton((VALUE)baton, &proc, &rb_pool);
-
-  if (!NIL_P(proc)) {
-    callback_baton_t cbb;
-    void *converted_result;
-
-    cbb.receiver = proc;
-    cbb.message = id_call;
-    cbb.args = rb_ary_new3(1,
-             c2r_swig_type((void *)description,
-                           (void *)"const svn_wc_conflict_description_t *"));
-    rb_result = invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
-    converted_result = result;
-    r2c_swig_type2(rb_result, "svn_wc_conflict_result_t *", &converted_result);
-  }
-
-  return err;
-}
-
-svn_error_t *
 svn_swig_rb_commit_callback(svn_revnum_t new_revision,
                             const char *date,
                             const char *author,
