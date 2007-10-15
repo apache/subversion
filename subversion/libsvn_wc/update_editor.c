@@ -1364,6 +1364,22 @@ delete_entry(const char *path,
   if (pb->ambient_depth == svn_depth_exclude)
     return SVN_NO_ERROR;
 
+  if (pb->edit_baton->requested_depth == svn_depth_unknown
+      && pb->ambient_depth < svn_depth_immediates)
+    {
+      /* If the entry we want to delete doesn't exist, that's OK.
+         It's probably an old server that doesn't understand
+         depths. */
+      const svn_wc_entry_t *entry;
+      const char *full_path = svn_path_join(pb->edit_baton->anchor, path,
+                                            pool);
+
+      SVN_ERR(svn_wc_entry(&entry, full_path,
+                           pb->edit_baton->adm_access, FALSE, pool));
+      if (! entry)
+        return SVN_NO_ERROR;
+    }
+
   SVN_ERR(check_path_under_root(pb->path, svn_path_basename(path, pool),
                                 pool));
   return do_entry_deletion(pb->edit_baton, pb->path, path, &pb->log_number,
