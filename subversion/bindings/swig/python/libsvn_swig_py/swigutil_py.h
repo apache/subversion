@@ -366,6 +366,13 @@ svn_error_t *svn_swig_py_info_receiver_func(void *py_receiver,
                                             const svn_info_t *info,
                                             apr_pool_t *pool);
 
+/* thunked location segments receiver function */
+SVN_SWIG_SWIGUTIL_EXPORT
+svn_error_t *
+svn_swig_py_location_segment_receiver_func(svn_location_segment_t *segment,
+                                           void *baton,
+                                           apr_pool_t *pool);
+
 /* thunked blame receiver function */
 SVN_SWIG_SWIGUTIL_EXPORT
 svn_error_t *svn_swig_py_client_blame_receiver_func(void *baton,
