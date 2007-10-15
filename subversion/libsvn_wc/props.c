@@ -1078,6 +1078,23 @@ svn_wc_merge_props(svn_wc_notify_state_t *state,
                    svn_boolean_t dry_run,
                    apr_pool_t *pool)
 {
+  return svn_wc_merge_props2(state, path, adm_access, baseprops, propchanges,
+                             base_merge, dry_run, NULL, NULL, pool);
+}
+
+
+svn_error_t *
+svn_wc_merge_props2(svn_wc_notify_state_t *state,
+                    const char *path,
+                    svn_wc_adm_access_t *adm_access,
+                    apr_hash_t *baseprops,
+                    const apr_array_header_t *propchanges,
+                    svn_boolean_t base_merge,
+                    svn_boolean_t dry_run,
+                    svn_wc_conflict_resolver_func_t conflict_func,
+                    void *conflict_baton,
+                    apr_pool_t *pool)
+{
   const svn_wc_entry_t *entry;
   svn_stringbuf_t *log_accum;
 
@@ -1105,7 +1122,7 @@ svn_wc_merge_props(svn_wc_notify_state_t *state,
      prepping tempfiles and writing log commands.  */
   SVN_ERR(svn_wc__merge_props(state, adm_access, path, baseprops,
                               propchanges, base_merge, dry_run,
-                              pool, &log_accum));
+                              conflict_func, conflict_baton, pool, &log_accum));
 
   if (! dry_run)
     {
@@ -1172,6 +1189,46 @@ set_prop_merge_state(svn_wc_notify_state_t *state,
   *state = new_value;
 }
 
+
+
+/* Helper function for the three apply_* functions below, used when
+ * merging properties together.
+ *
+ * Given property PROPNAME and four property values (any of which
+ * might be NULL), generate four tmpfiles and pass them to
+ * CONFLICT_FUNC callback.  This gives the client an opportunity to
+ * interactively resolve the property conflict.
+ *
+ * (BASE_VAL/WORKING_VAL represent the current state of the working
+ * copy, and OLD_VAL/NEW_VAL represents the incoming propchange.)
+ *
+ * If the callback responds with 'choose_postpone', then set
+ * *CONFLICT_REMAINS to true and return.
+ *
+ * If the callback responds with a choice of 'base', 'theirs', 'mine',
+ * or 'merged', then install the proper value into WORKING_PROPS and
+ * set *CONFLICT_REMAINS to false.
+ *
+ */
+static svn_error_t *
+maybe_generate_propconflict(svn_boolean_t *conflict_remains,
+                            const char *propname,
+                            apr_hash_t *working_props,
+                            const svn_string_t *old_val,
+                            const svn_string_t *new_val,
+                            const svn_string_t *base_val,
+                            const svn_string_t *working_val,
+                            svn_wc_conflict_resolver_func_t conflict_func,
+                            void *conflict_baton,
+                            apr_pool_t *pool)
+{
+  /* ### Assume postponement for the moment. */
+  *conflict_remains = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Add the property with name PROPNAME to the set of WORKING_PROPS,
  * setting *STATE or *CONFLICT according to merge outcomes.
  *
@@ -1180,7 +1237,11 @@ set_prop_merge_state(svn_wc_notify_state_t *state,
  *
  * BASE_VAL contains the working copy base property value
  *
- * NEW_VAL contains the value to be set
+ * NEW_VAL contains the value to be set.
+ *
+ * CONFLICT_FUNC/BATON is a callback to be called before declaring a
+ * property conflict;  it gives the client a chance to resolve the
+ * conflict interactively.
  */
 static svn_error_t *
 apply_single_prop_add(svn_wc_notify_state_t *state,
@@ -1189,9 +1250,12 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
                       const char *propname,
                       const svn_string_t *base_val,
                       const svn_string_t *new_val,
+                      svn_wc_conflict_resolver_func_t conflict_func,
+                      void *conflict_baton,
                       apr_pool_t *pool)
 
 {
+  svn_boolean_t got_conflict = FALSE;
   svn_string_t *working_val
     = apr_hash_get(working_props, propname, APR_HASH_KEY_STRING);
 
@@ -1206,7 +1270,7 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
       else
         {
           /* The WC difference doesn't match the new value.
-           We only merge merge info, conflicts for other props */
+           We only merge mergeinfo;  other props conflict */
           if (strcmp(propname, SVN_PROP_MERGE_INFO) == 0)
             {
               SVN_ERR(combine_mergeinfo_props(&new_val, working_val,
@@ -1216,19 +1280,34 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
               set_prop_merge_state(state, svn_wc_notify_state_merged);
             }
           else
-            *conflict = svn_string_createf
-              (pool,
-               _("Trying to add new property '%s' with value "
-                 "'%s',\nbut property already exists with value '%s'."),
-               propname, new_val->data, working_val->data);
+            {
+              SVN_ERR(maybe_generate_propconflict(&got_conflict, propname,
+                                                  working_props,
+                                                  NULL, new_val,
+                                                  base_val, working_val,
+                                                  conflict_func, conflict_baton,
+                                                  pool));
+              if (got_conflict)
+                *conflict = svn_string_createf
+                    (pool,
+                     _("Trying to add new property '%s' with value "
+                       "'%s',\nbut property already exists with value '%s'."),
+                     propname, new_val->data, working_val->data);
+            }
         }
     }
   else if (base_val)
     {
-      *conflict = svn_string_createf
-        (pool, _("Trying to create property '%s' with value '%s',\n"
-                 "but it has been locally deleted."),
-         propname, new_val->data);
+      SVN_ERR(maybe_generate_propconflict(&got_conflict, propname,
+                                          working_props,
+                                          NULL, new_val,
+                                          base_val, NULL,
+                                          conflict_func, conflict_baton, pool));
+      if (got_conflict)
+        *conflict = svn_string_createf
+            (pool, _("Trying to create property '%s' with value '%s',\n"
+                     "but it has been locally deleted."),
+             propname, new_val->data);
     }
   else  /* property doesn't yet exist in working_props...  */
     /* so just set it */
@@ -1246,7 +1325,11 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
  * BASE_VAL contains the working copy base property value
  *
  * OLD_VAL contains the value the of the property the server
- * thinks it's deleting
+ * thinks it's deleting.
+ *
+ * CONFLICT_FUNC/BATON is a callback to be called before declaring a
+ * property conflict;  it gives the client a chance to resolve the
+ * conflict interactively.
  */
 static svn_error_t *
 apply_single_prop_delete(svn_wc_notify_state_t *state,
@@ -1255,8 +1338,11 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
                          const char *propname,
                          const svn_string_t *base_val,
                          const svn_string_t *old_val,
+                         svn_wc_conflict_resolver_func_t conflict_func,
+                         void *conflict_baton,
                          apr_pool_t *pool)
 {
+  svn_boolean_t got_conflict = FALSE;
   svn_string_t *working_val
     = apr_hash_get(working_props, propname, APR_HASH_KEY_STRING);
 
@@ -1276,11 +1362,21 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
              /* they have the same values, so it's an update */
              apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, NULL);
            else
-             *conflict = svn_string_createf
-               (pool,
-                _("Trying to delete property '%s' with value '%s'\n"
-                  "but it has been modified from '%s' to '%s'."),
-                propname, old_val->data, base_val->data, working_val->data);
+             {
+               SVN_ERR(maybe_generate_propconflict(&got_conflict, propname,
+                                                  working_props,
+                                                  old_val, NULL,
+                                                  base_val, working_val,
+                                                  conflict_func, conflict_baton,
+                                                  pool));
+               if (got_conflict)
+                 *conflict = svn_string_createf
+                     (pool,
+                      _("Trying to delete property '%s' with value '%s'\n"
+                        "but it has been modified from '%s' to '%s'."),
+                      propname, old_val->data,
+                      base_val->data, working_val->data);
+             }
          }
        else
          /* The property is locally deleted, so it's a merge */
@@ -1288,11 +1384,19 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
     }
 
   else
-    *conflict = svn_string_createf
-      (pool,
-       _("Trying to delete property '%s' with value '%s'\n"
-         "but the local value is '%s'."),
-       propname, base_val->data, working_val->data);
+    {
+      SVN_ERR(maybe_generate_propconflict(&got_conflict, propname,
+                                          working_props,
+                                          old_val, NULL,
+                                          base_val, working_val,
+                                          conflict_func, conflict_baton, pool));
+      if (got_conflict)
+        *conflict = svn_string_createf
+            (pool,
+             _("Trying to delete property '%s' with value '%s'\n"
+               "but the local value is '%s'."),
+             propname, base_val->data, working_val->data);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1308,7 +1412,11 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
  * OLD_VAL contains the value the of the property the server
  * thinks it's overwriting
  *
- * NEW_VAL contains the value to be set
+ * NEW_VAL contains the value to be set.
+ *
+ * CONFLICT_FUNC/BATON is a callback to be called before declaring a
+ * property conflict;  it gives the client a chance to resolve the
+ * conflict interactively.
  */
 static svn_error_t *
 apply_single_prop_change(svn_wc_notify_state_t *state,
@@ -1318,8 +1426,11 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
                          const svn_string_t *base_val,
                          const svn_string_t *old_val,
                          const svn_string_t *new_val,
+                         svn_wc_conflict_resolver_func_t conflict_func,
+                         void *conflict_baton,
                          apr_pool_t *pool)
 {
+  svn_boolean_t got_conflict = FALSE;
   svn_string_t *working_val
     = apr_hash_get(working_props, propname, APR_HASH_KEY_STRING);
 
@@ -1349,36 +1460,52 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
                                APR_HASH_KEY_STRING, new_val);
                   set_prop_merge_state(state, svn_wc_notify_state_merged);
                 }
-
               else
                 {
-                  if (base_val)
-                    *conflict = svn_string_createf
-                      (pool,
-                       _("Trying to change property '%s' from '%s' to '%s',\n"
-                         "but property has been locally changed "
-                         "from '%s' to '%s'."),
-                       propname, old_val->data, new_val->data,
-                       base_val->data, working_val->data);
-                  else
-                    *conflict = svn_string_createf
-                      (pool,
-                       _("Trying to change property '%s' from '%s' to '%s',\n"
-                         "but property has been locally added with "
-                         "value '%s'"),
-                       propname, old_val->data, new_val->data,
-                       working_val->data);
+                  SVN_ERR(maybe_generate_propconflict(&got_conflict, propname,
+                                                      working_props,
+                                                      old_val, new_val,
+                                                      base_val, working_val,
+                                                      conflict_func,
+                                                      conflict_baton,
+                                                      pool));
+                  if (got_conflict)
+                    {
+                      if (base_val)
+                        *conflict = svn_string_createf
+                        (pool,
+                         _("Trying to change property '%s' from '%s' to '%s',\n"
+                           "but property has been locally changed "
+                           "from '%s' to '%s'."),
+                         propname, old_val->data, new_val->data,
+                          base_val->data, working_val->data);
+                      else
+                        *conflict = svn_string_createf
+                        (pool,
+                         _("Trying to change property '%s' from '%s' to '%s',\n"
+                           "but property has been locally added with "
+                           "value '%s'"),
+                         propname, old_val->data, new_val->data,
+                         working_val->data);
+                      }
                 }
             }
         }
 
       else
-        *conflict = svn_string_createf
-          (pool,
-           _("Trying to change property '%s' from '%s' to '%s',\n"
-             "but it has been locally deleted."),
-           propname, old_val->data, new_val->data);
-
+        {
+          SVN_ERR(maybe_generate_propconflict(&got_conflict, propname,
+                                              working_props, old_val, new_val,
+                                              base_val, working_val,
+                                              conflict_func, conflict_baton,
+                                              pool));
+          if (got_conflict)
+            *conflict = svn_string_createf
+                (pool,
+                 _("Trying to change property '%s' from '%s' to '%s',\n"
+                   "but it has been locally deleted."),
+                 propname, old_val->data, new_val->data);
+        }
     }
 
   else if (! working_val) /* means !working_val && !base_val due
@@ -1399,11 +1526,19 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
           apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, new_val);
         }
       else
-        *conflict = svn_string_createf
-          (pool,
-           _("Trying to change property '%s' from '%s' to '%s',\n"
-             "but the property does not exist."),
-           propname, old_val->data, new_val->data);
+        {
+          SVN_ERR(maybe_generate_propconflict(&got_conflict, propname,
+                                              working_props, old_val, new_val,
+                                              base_val, working_val,
+                                              conflict_func, conflict_baton,
+                                              pool));
+          if (got_conflict)
+            *conflict = svn_string_createf
+                (pool,
+                 _("Trying to change property '%s' from '%s' to '%s',\n"
+                   "but the property does not exist."),
+                 propname, old_val->data, new_val->data);
+        }
     }
 
   else /* means working && base && svn_string_compare(working, base) */
@@ -1427,15 +1562,23 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
               set_prop_merge_state(state, svn_wc_notify_state_merged);
             }
           else
-            *conflict = svn_string_createf
-              (pool,
-               _("Trying to change property '%s' from '%s' to '%s',\n"
-                 "but property already exists with value '%s'."),
-               propname, old_val->data, new_val->data,
-               working_val->data);
+            {
+              SVN_ERR(maybe_generate_propconflict(&got_conflict, propname,
+                                                  working_props,
+                                                  old_val, new_val,
+                                                  base_val, working_val,
+                                                  conflict_func, conflict_baton,
+                                                  pool));
+              if (got_conflict)
+                *conflict = svn_string_createf
+                    (pool,
+                     _("Trying to change property '%s' from '%s' to '%s',\n"
+                       "but property already exists with value '%s'."),
+                     propname, old_val->data, new_val->data,
+                     working_val->data);
+            }
         }
     }
-
 
   return SVN_NO_ERROR;
 }
@@ -1448,6 +1591,8 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                     const apr_array_header_t *propchanges,
                     svn_boolean_t base_merge,
                     svn_boolean_t dry_run,
+                    svn_wc_conflict_resolver_func_t conflict_func,
+                    void *conflict_baton,
                     apr_pool_t *pool,
                     svn_stringbuf_t **entry_accum)
 {
@@ -1513,18 +1658,20 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
       if (! from_val)  /* adding a new property */
         SVN_ERR(apply_single_prop_add(is_normal ? state : NULL,
                                       working_props, &conflict,
-                                      propname, base_val, to_val, pool));
+                                      propname, base_val, to_val,
+                                      conflict_func, conflict_baton, pool));
 
       else if (! to_val) /* delete an existing property */
         SVN_ERR(apply_single_prop_delete(is_normal ? state : NULL,
                                          working_props, &conflict,
-                                         propname, base_val, from_val, pool));
+                                         propname, base_val, from_val,
+                                         conflict_func, conflict_baton, pool));
 
       else  /* changing an existing property */
         SVN_ERR(apply_single_prop_change(is_normal ? state : NULL,
                                          working_props, &conflict,
-                                         propname, base_val, from_val,
-                                         to_val, pool));
+                                         propname, base_val, from_val, to_val,
+                                         conflict_func, conflict_baton, pool));
 
 
       /* merging logic complete, now we need to possibly log conflict

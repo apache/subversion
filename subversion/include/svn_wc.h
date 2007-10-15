@@ -3962,7 +3962,27 @@ svn_error_t *svn_wc_merge(const char *left,
  * If @a path is not under version control, return the error
  * SVN_ERR_UNVERSIONED_RESOURCE and don't touch anyone's properties.
  *
- * @since New in 1.3.
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_wc_merge_props2(svn_wc_notify_state_t *state,
+                    const char *path,
+                    svn_wc_adm_access_t *adm_access,
+                    apr_hash_t *baseprops,
+                    const apr_array_header_t *propchanges,
+                    svn_boolean_t base_merge,
+                    svn_boolean_t dry_run,
+                    svn_wc_conflict_resolver_func_t conflict_func,
+                    void *conflict_baton,
+                    apr_pool_t *pool);
+
+
+/**
+ * Same as svn_wc_merge_props2(), but with a @a conflict_func (and
+ * baton) of NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
+ *
  */
 svn_error_t *
 svn_wc_merge_props(svn_wc_notify_state_t *state,
