@@ -55,7 +55,7 @@ help(const apr_getopt_option_t *options, apr_pool_t *pool)
         "  within WC_PATH does not rely on TRAIL_URL).  The version number\n"
         "  is written to standard output.  For example:\n"
         "\n"
-        "    $ svnversion . /repos/svn/trunk \n"
+        "    $ svnversion . /repos/svn/trunk\n"
         "    4168\n"
         "\n"
         "  The version number will be a single number if the working\n"
