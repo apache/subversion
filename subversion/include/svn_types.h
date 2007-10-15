@@ -902,6 +902,15 @@ typedef svn_error_t *(*svn_location_segment_receiver_t)
    apr_pool_t *pool);
 
 
+/**
+ * Return a deep copy of @a segment, allocated in @a pool.
+ *
+ * @since New in 1.5.
+ */
+svn_location_segment_t *
+svn_location_segment_dup(svn_location_segment_t *segment,
+                         apr_pool_t *pool);
+
 
 /** Return a constant string expressing @a inherit as an English word,
  * i.e., "explicit" (default), "inherited", or "nearest_ancestor".
