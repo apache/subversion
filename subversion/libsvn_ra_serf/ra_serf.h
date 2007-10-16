@@ -968,6 +968,20 @@ svn_ra_serf__discover_root(const char **vcc_url,
                            const char *orig_path,
                            apr_pool_t *pool);
 
+/* Set *BC_URL to the baseline collection url, and set *BC_RELATIVE to
+ * the path relative to that url for URL in REVISION using SESSION.
+ * REVISION may be SVN_INVALID_REVNUM (to mean "the current HEAD
+ * revision").  If URL is NULL, use SESSION's session url.
+ * Use POOL for all allocations.
+ */
+svn_error_t *
+svn_ra_serf__get_baseline_info(const char **bc_url,
+                               const char **bc_relative,
+                               svn_ra_serf__session_t *session,
+                               const char *url,
+                               svn_revnum_t revision,
+                               apr_pool_t *pool);
+
 /** RA functions **/
 
 svn_error_t *

@@ -443,9 +443,8 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
   serf_bucket_t *buckets, *tmp;
-  apr_hash_t *props;
   svn_revnum_t peg_rev;
-  const char *vcc_url, *relative_url, *baseline_url, *basecoll_url, *req_url;
+  const char *relative_url, *basecoll_url, *req_url;
   svn_error_t *err;
 
   log_ctx = apr_pcalloc(pool, sizeof(*log_ctx));
@@ -553,54 +552,13 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
                                       session->bkt_alloc);
   serf_bucket_aggregate_append(buckets, tmp);
 
-  props = apr_hash_make(pool);
-
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &relative_url,
-                                     session, session->conns[0],
-                                     session->repos_url.path, pool));
-
   /* At this point, we may have a deleted file.  So, we'll match ra_neon's
    * behavior and use the larger of start or end as our 'peg' rev.
    */
   peg_rev = (start > end) ? start : end;
 
-  if (peg_rev != SVN_INVALID_REVNUM)
-    {
-      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                          vcc_url, peg_rev, "0",
-                                          baseline_props, pool));
-
-      basecoll_url = svn_ra_serf__get_ver_prop(props, vcc_url, peg_rev,
-                                               "DAV:", "baseline-collection");
-    }
-  else
-    {
-      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                          vcc_url, peg_rev, "0",
-                                          checked_in_props, pool));
-      baseline_url = svn_ra_serf__get_ver_prop(props, vcc_url, peg_rev,
-                                               "DAV:", "checked-in");
-      if (!baseline_url)
-        {
-          return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                                  _("The OPTIONS response did not include the "
-                                    "requested checked-in value."));
-        }
-
-      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                          baseline_url, peg_rev, "0",
-                                          baseline_props, pool));
-
-      basecoll_url = svn_ra_serf__get_ver_prop(props, baseline_url, peg_rev,
-                                               "DAV:", "baseline-collection");
-    }
-
-  if (!basecoll_url)
-    {
-      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                              _("The OPTIONS response did not include the "
-                                "requested baseline-collection value."));
-    }
+  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, 
+                                         session, NULL, peg_rev, pool));
 
   req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);
 
