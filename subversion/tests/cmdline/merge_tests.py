@@ -9336,6 +9336,106 @@ def propchange_of_subdir_raises_conflict(sbox):
 
   os.chdir(saved_cwd)
 
+# Test for issue #2971: Reverse merge of prop add segfaults if
+# merging to parent of first merge
+def reverse_merge_prop_add_on_child(sbox):
+  "reverse merge of prop add on child"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = setup_branch(sbox, True, 1)
+
+  # Some paths we'll care about
+  G_path = os.path.join(wc_dir, "A", "D", "G")
+  D_COPY_path = os.path.join(wc_dir, "A_COPY", "D")
+  G_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "G")
+
+  # Make some prop changes to some dirs.
+  svntest.actions.run_and_verify_svn(None,
+                                     ["property 'prop:name' set on '" +
+                                      G_path + "'\n"], [], 'ps',
+                                     'prop:name', 'propval', G_path)
+  expected_output = svntest.wc.State(wc_dir, {'A/D/G': Item(verb='Sending'),})
+  wc_status.tweak('A/D/G', wc_rev=3)
+  wc_disk.tweak('A/D/G', props={'prop:name' : 'propval'})
+  
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
+                                        None, None, None, None, None, wc_dir)
+
+  # Merge -c3's prop add to A_COPY/D/G
+  saved_cwd = os.getcwd()
+  short_G_COPY_path = shorten_path_kludge(G_COPY_path)
+  expected_output = wc.State(short_G_COPY_path, {
+    '' : Item(status=' U')
+    })
+  expected_status = wc.State(short_G_COPY_path, {
+    ''    : Item(status=' M', wc_rev=2),
+    'pi'  : Item(status='  ', wc_rev=2),
+    'rho' : Item(status='  ', wc_rev=2),
+    'tau' : Item(status='  ', wc_rev=2),
+    })
+  expected_disk = wc.State('', {
+    ''    : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:1,3',
+                        'prop:name' : 'propval'}),
+    'pi'  : Item("This is the file 'pi'.\n"),
+    'rho' : Item("This is the file 'rho'.\n"),
+    'tau' : Item("This is the file 'tau'.\n"),
+    })
+  expected_skip = wc.State(short_G_COPY_path, { })
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_G_COPY_path, '2', '3',
+                                       sbox.repo_url + \
+                                       '/A/D/G',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1)
+  os.chdir(saved_cwd)
+
+  # Now merge -c-3 but target the previous target's parent instead.
+  short_D_COPY_path = shorten_path_kludge(D_COPY_path)
+  expected_output = wc.State(short_D_COPY_path, {
+    'G' : Item(status=' G'),
+    })
+  expected_status = wc.State(short_D_COPY_path, {
+    ''        : Item(status='  ', wc_rev=2),
+    'G'       : Item(status='  ', wc_rev=2),
+    'G/pi'    : Item(status='  ', wc_rev=2),
+    'G/rho'   : Item(status='  ', wc_rev=2),
+    'G/tau'   : Item(status='  ', wc_rev=2),
+    'H'       : Item(status='  ', wc_rev=2),
+    'H/chi'   : Item(status='  ', wc_rev=2),
+    'H/psi'   : Item(status='  ', wc_rev=2),
+    'H/omega' : Item(status='  ', wc_rev=2),
+    'gamma'   : Item(status='  ', wc_rev=2),
+    })
+  expected_disk = wc.State('', {
+    ''        : Item(),
+    'G'       : Item(),
+    'G/pi'    : Item("This is the file 'pi'.\n"),
+    'G/rho'   : Item("This is the file 'rho'.\n"),
+    'G/tau'   : Item("This is the file 'tau'.\n"),
+    'H'       : Item(),
+    'H/chi'   : Item("This is the file 'chi'.\n"),
+    'H/psi'   : Item("This is the file 'psi'.\n"),
+    'H/omega' : Item("This is the file 'omega'.\n"),
+    'gamma'   : Item("This is the file 'gamma'.\n")
+    })
+  expected_skip = wc.State(short_D_COPY_path, { })
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_D_COPY_path, '3', '2',
+                                       sbox.repo_url + \
+                                       '/A/D',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1)
+  os.chdir(saved_cwd)
+
 ########################################################################
 # Run the tests
 
@@ -9418,6 +9518,9 @@ test_list = [ None,
               XFail(mergeinfo_recording_in_skipped_merge),
               cherry_picking,
               propchange_of_subdir_raises_conflict,
+              Skip(reverse_merge_prop_add_on_child),
+                # reverse_merge_prop_add_on_child currently segfaults
+                # so always skip until issue #2791 is fixed.
              ]
 
 if __name__ == '__main__':
