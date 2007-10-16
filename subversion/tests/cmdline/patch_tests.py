@@ -201,7 +201,7 @@ def patch_unidiff(sbox):
                                        None, # expected err
                                        None, None, None, None,
                                        1, # check-props
-                                       0) # dry-run
+                                       1) # dry-run
 
 ########################################################################
 #Run the tests
