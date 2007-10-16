@@ -1676,7 +1676,7 @@ make_editor_baton(const char *target,
 /* Extract and uncompress-decode the svnpatch block that's in @a
  * original_patch_path, and fill @a *patch_file with its clear-text
  * format. */
-svn_error_t *
+static svn_error_t *
 extract_svnpatch(const char *original_patch_path,
                  apr_file_t **patch_file,
                  apr_pool_t *pool)
