@@ -59,6 +59,14 @@ static const char equal_string[] =
 /*-----------------------------------------------------------------------*/
 
 
+/* Forward declaration to keep things organised. */
+static svn_error_t *
+create_empty_file(apr_file_t **file,
+                  const char **empty_file_path,
+                  svn_wc_adm_access_t *adm_access,
+                  svn_io_file_del_t delete_when,
+                  apr_pool_t *pool);
+
 struct patch_cmd_baton {
   svn_boolean_t force;
   svn_boolean_t dry_run;
@@ -283,6 +291,85 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
+/* This is to keep merge_file_added() clean.  We're dealing with a
+ * schedule-add-with-history operation where @a copyfrom_path is the
+ * source and @a path the destination.  @a adm_access is @a path's
+ * parent access baton.  This is either a file move or a file copy.
+ * When the former, what we do depend on whether (a) the source path has
+ * local modifications and (b) the delete-entry call is past or
+ * forthcoming.  If the copyfrom file has no local modification and the
+ * delete-entry is past, then it was removed from disk thus we use it's
+ * text-base instead as we're offline. */
+static svn_error_t *
+add_file_with_history(const char *path,
+                      svn_wc_adm_access_t *adm_access,
+                      const char *copyfrom_path,
+                      void *patch_baton,
+                      apr_pool_t *pool)
+{
+  svn_node_kind_t copyfrom_kind, copyfrom_textbase_kind;
+  const char *copyfrom_textbase_path;
+  struct patch_cmd_baton *patch_b = patch_baton;
+  const char *path_basename = svn_path_basename(path, pool);
+
+  SVN_ERR(svn_io_check_path(copyfrom_path, &copyfrom_kind, pool));
+
+  if (copyfrom_kind == svn_node_none)
+    {
+      SVN_ERR(svn_wc_get_pristine_copy_path(copyfrom_path,
+                                            &copyfrom_textbase_path,
+                                            pool));
+      SVN_ERR(svn_io_check_path(copyfrom_textbase_path,
+                                &copyfrom_textbase_kind, pool));
+
+      /* When the text-base is missing we really can't help. */
+      if (copyfrom_textbase_kind == svn_node_none)
+        return svn_error_create(SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND,
+                                NULL, NULL);
+    }
+
+  if (! patch_b->dry_run)
+    {
+      if (copyfrom_kind == svn_node_none)
+        {
+          char *copyfrom_url;
+          const char *copyfrom_src; /* copy of copyfrom's text-base */
+          svn_revnum_t copyfrom_rev;
+          svn_wc_adm_access_t *copyfrom_access;
+
+          /* Since @c svn_wc_add_repos_file2() *moves* text-base path to
+           * target-path, operate on a copy of it instead. */
+          SVN_ERR(create_empty_file(NULL, &copyfrom_src, adm_access,
+                                    svn_io_file_del_none, pool));
+          SVN_ERR(svn_io_copy_file(copyfrom_textbase_path, copyfrom_src,
+                                   FALSE, pool));
+
+          /* The file we're about to add needs a copyfrom_url along with
+           * a copyfrom_rev, which we both retrieve through the working
+           * copy administrative area of the source file. */
+          SVN_ERR(svn_wc_adm_probe_open3(&copyfrom_access, NULL,
+                                         copyfrom_path, FALSE, -1,
+                                         patch_b->ctx->cancel_func,
+                                         patch_b->ctx->cancel_baton, pool));
+          SVN_ERR(svn_wc_get_ancestry(&copyfrom_url, &copyfrom_rev,
+                                      copyfrom_path, copyfrom_access, pool));
+          SVN_ERR(svn_wc_add_repos_file2(path, adm_access,
+                                         copyfrom_src, NULL,
+                                         apr_hash_make(pool), NULL,
+                                         copyfrom_url, copyfrom_rev,
+                                         pool));
+        }
+      else
+        SVN_ERR(svn_wc_copy2(copyfrom_path, adm_access, path_basename,
+                             patch_b->ctx->cancel_func,
+                             patch_b->ctx->cancel_baton,
+                             NULL, NULL, /* no notification */
+                             pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* A svn_wc_diff_callbacks3_t function. */
 static svn_error_t *
 merge_file_added(svn_wc_adm_access_t *adm_access,
@@ -303,7 +390,6 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
 {
   struct patch_cmd_baton *patch_b = baton;
   apr_pool_t *subpool = svn_pool_create(patch_b->pool);
-  const char *mine_basename = svn_path_basename(mine, subpool);
   svn_node_kind_t kind;
   int i;
   apr_hash_t *new_props;
@@ -361,52 +447,45 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
             return SVN_NO_ERROR;
           }
 
-        if (! patch_b->dry_run)
+        if (copyfrom_path) /* schedule-add-with-history */
           {
-            if (copyfrom_path) /* schedule-add-with-history */
+            svn_error_t *err;
+            err = add_file_with_history(mine, adm_access, copyfrom_path,
+                                        patch_b, subpool);
+
+            if (err && err->apr_err == SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND)
               {
-                /* Check whether the source we want to copy from exists. */
-                svn_node_kind_t copyfrom_kind; 
-                SVN_ERR(svn_io_check_path(copyfrom_path, &copyfrom_kind,
-                                          subpool));
-
-                if (copyfrom_kind == svn_node_none)
-                  {
-                    if (content_state)
-                      *content_state = svn_wc_notify_state_source_missing;
-                    svn_pool_destroy(subpool);
-                    return SVN_NO_ERROR;
-                  }
-
-                SVN_ERR(svn_wc_copy2(copyfrom_path, adm_access, mine_basename,
-                                     patch_b->ctx->cancel_func,
-                                     patch_b->ctx->cancel_baton,
-                                     NULL, NULL, /* no notification */
-                                     subpool));
+                if (content_state)
+                  *content_state = svn_wc_notify_state_source_missing;
+                svn_error_clear(err);
+                svn_pool_destroy(subpool);
+                return SVN_NO_ERROR;
               }
-            else /* schedule-add */
-              {
-                /* Copy the cached empty file and schedule-add it.  The
-                 * contents will come in either via apply-textdelta
-                 * following calls if this is a binary file or with
-                 * unidiff for text files. */
-                SVN_ERR(svn_io_copy_file(yours, mine, TRUE, subpool));
-                SVN_ERR(svn_wc_add2(mine, adm_access, NULL, SVN_IGNORED_REVNUM,
-                                    patch_b->ctx->cancel_func,
-                                    patch_b->ctx->cancel_baton,
-                                    NULL, NULL, /* no notification */
-                                    subpool));
-              }
-
-            /* Now regardless of the schedule-add nature, merge properties. */
-            if (prop_changes->nelts > 0)
-              SVN_ERR(merge_props_changed(adm_access, prop_state,
-                                          mine, prop_changes,
-                                          original_props, baton));
-            else
-              if (prop_state)
-                *prop_state = svn_wc_notify_state_unchanged;
+            else if (err)
+              return err;
           }
+        else if (! patch_b->dry_run) /* schedule-add */
+          {
+            /* Copy the cached empty file and schedule-add it.  The
+             * contents will come in either via apply-textdelta
+             * following calls if this is a binary file or with
+             * unidiff for text files. */
+            SVN_ERR(svn_io_copy_file(yours, mine, TRUE, subpool));
+            SVN_ERR(svn_wc_add2(mine, adm_access, NULL, SVN_IGNORED_REVNUM,
+                                patch_b->ctx->cancel_func,
+                                patch_b->ctx->cancel_baton,
+                                NULL, NULL, /* no notification */
+                                subpool));
+          }
+
+        /* Now regardless of the schedule-add nature, merge properties. */
+        if (prop_changes->nelts > 0)
+          SVN_ERR(merge_props_changed(adm_access, prop_state,
+                                      mine, prop_changes,
+                                      original_props, baton));
+        else
+          if (prop_state)
+            *prop_state = svn_wc_notify_state_unchanged;
 
         if (content_state)
           *content_state = svn_wc_notify_state_changed;
@@ -491,6 +570,7 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
   svn_wc_adm_access_t *parent_access;
   const char *parent_path;
   svn_error_t *err;
+  svn_boolean_t has_local_mods;
 
   /* Easy out:  if we have no adm_access for the parent directory,
      then this portion of the tree-delta "patch" must be inapplicable.
@@ -511,10 +591,15 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
       svn_path_split(mine, &parent_path, NULL, subpool);
       SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
                                   subpool));
+
+      SVN_ERR(svn_wc_text_modified_p(&has_local_mods, mine, TRUE,
+                                     adm_access, subpool));
       /* Passing NULL for the notify_func and notify_baton because
          delete_entry() will do it for us. */
       err = svn_client__wc_delete(mine, parent_access, patch_b->force,
-                                  patch_b->dry_run, FALSE, NULL, NULL,
+                                  patch_b->dry_run,
+                                  has_local_mods ? TRUE : FALSE,
+                                  NULL, NULL,
                                   patch_b->ctx, subpool);
       if (err && state)
         {
