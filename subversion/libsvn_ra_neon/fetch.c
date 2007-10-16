@@ -1527,6 +1527,7 @@ svn_ra_neon__get_location_segments(svn_ra_session_t *session,
                                     gls_start_element, NULL, NULL,
                                     &request_baton, NULL, &status_code,
                                     FALSE, pool);
+  svn_pool_destroy(request_baton.subpool);
 
   /* Map status 501: Method Not Implemented to our not implemented error.
      1.0.x servers and older don't support this report. */

@@ -217,6 +217,8 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
       SVN_ERR(parser_ctx->error);
     }
 
+  svn_pool_destroy(gls_ctx->subpool);
+
   SVN_ERR(err);
 
   return SVN_NO_ERROR;
