@@ -862,6 +862,25 @@ def authz_svnserve_anon_access_read(sbox):
                                      'checkout',
                                      D_url, D_path)
 
+def authz_switch_to_directory(sbox):
+  "switched to directory, no read access on parents"
+
+  sbox.build()
+
+  write_authz_file(sbox, {"/": "*=rw", "/A/B": "*=", "/A/B/E": "jrandom = rw"})
+
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  wc_dir = sbox.wc_dir
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
+
+  # Switch /A/B/E to /A/B/F.
+  svntest.main.run_svn(None, 'switch', sbox.repo_url + "/A/B/E", G_path, 
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd)
+
 ########################################################################
 # Run the tests
 
@@ -883,6 +902,8 @@ test_list = [ None,
               Skip(authz_locking, svntest.main.is_ra_type_file),
               SkipUnless(authz_svnserve_anon_access_read,
                          svntest.main.is_ra_type_svn),
+              XFail(Skip(authz_switch_to_directory, 
+                         svntest.main.is_ra_type_file)),
              ]
 
 if __name__ == '__main__':
