@@ -9417,7 +9417,7 @@ test_list = [ None,
               merge_with_auto_rev_range_detection,
               XFail(mergeinfo_recording_in_skipped_merge),
               cherry_picking,
-              XFail(propchange_of_subdir_raises_conflict),
+              propchange_of_subdir_raises_conflict,
              ]
 
 if __name__ == '__main__':
