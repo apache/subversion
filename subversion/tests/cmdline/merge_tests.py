@@ -9233,6 +9233,109 @@ def cherry_picking(sbox):
                                      'propget', '-R', SVN_PROP_MERGE_INFO,
                                      D_COPY_path)
 
+def propchange_of_subdir_raises_conflict(sbox):
+  "merge of propchange on subdir raises conflict"
+  
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2969. ##
+
+  # Create a WC with a single branch
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = setup_branch(sbox, True, 1)
+
+  # Some paths we'll care about
+  repo_url = sbox.repo_url
+  B_url = repo_url + '/A/B'
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  A_COPY_B_path = os.path.join(wc_dir, 'A_COPY', 'B')
+  A_COPY_B_E_path = os.path.join(wc_dir, 'A_COPY', 'B', 'E')
+  A_COPY_lambda_path = os.path.join(wc_dir, 'A_COPY', 'B', 'E', 'lambda')
+
+  # Set a property on A/B/E and Make a modification to A/B/lambda
+  svntest.main.run_svn(None, 'propset', 'x', 'x', E_path)
+
+  svntest.main.file_write(lambda_path, "This is the file 'lambda' modified.\n")
+  expected_output = wc.State(wc_dir, {
+    'A/B/lambda' : Item(verb='Sending'),
+    'A/B/E'      : Item(verb='Sending'),
+    })
+  wc_status.add({
+    'A/B/lambda'     : Item(status='  ', wc_rev=3),
+    'A/B/E'          : Item(status='  ', wc_rev=3),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        wc_status, None, None, None,
+                                        None, None, wc_dir)
+
+  short_A_COPY_B = shorten_path_kludge(A_COPY_B_path)
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+
+  # Merge /A/B to /A_COPY/B ie., r1 to r3 with depth files
+  expected_output = wc.State(short_A_COPY_B, {
+    'lambda' : Item(status='U '),
+    })
+  expected_disk = wc.State('', {
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1,2-3*'}),
+    'lambda'  : Item(contents="This is the file 'lambda' modified.\n",
+                     props={SVN_PROP_MERGE_INFO : '/A/B/lambda:1-3'}),
+    'F'       : Item(),
+    'E'       : Item(),
+    'E/alpha' : Item(contents="This is the file 'alpha'.\n"),
+    'E/beta'  : Item(contents="This is the file 'beta'.\n"),
+    })
+  expected_status = wc.State(short_A_COPY_B, {
+    ''         : Item(status=' M', wc_rev=2),
+    'lambda'   : Item(status='MM', wc_rev=2),
+    'F'        : Item(status='  ', wc_rev=2),
+    'E'        : Item(status='  ', wc_rev=2),
+    'E/alpha'  : Item(status='  ', wc_rev=2),
+    'E/beta'   : Item(status='  ', wc_rev=2),
+    })
+  expected_skip = wc.State(short_A_COPY_B, {})
+
+  svntest.actions.run_and_verify_merge(short_A_COPY_B, None, None,
+                                       B_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None,
+                                       1, 1, '-g', '--depth', 'files')
+
+  # Merge /A/B to /A_COPY/B ie., r1 to r3 with infinite depth
+  expected_output = wc.State(short_A_COPY_B, {
+    'E'       : Item(status=' U'),
+    })
+  expected_disk = wc.State('', {
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1-3'}),
+    'lambda'  : Item(contents="This is the file 'lambda' modified.\n"),
+    'F'       : Item(),
+    'E'       : Item(props={'x': 'x'}),
+    'E/alpha' : Item(contents="This is the file 'alpha'.\n"),
+    'E/beta'  : Item(contents="This is the file 'beta'.\n"),
+    })
+  expected_status = wc.State(short_A_COPY_B, {
+    ''         : Item(status=' M', wc_rev=2),
+    'lambda'   : Item(status='M ', wc_rev=2),
+    'F'        : Item(status='  ', wc_rev=2),
+    'E'        : Item(status=' M', wc_rev=2),
+    'E/alpha'  : Item(status='  ', wc_rev=2),
+    'E/beta'   : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_merge(short_A_COPY_B, None, None,
+                                       B_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None,
+                                       1, 1, '-g')
+
+  os.chdir(saved_cwd)
+
 ########################################################################
 # Run the tests
 
@@ -9314,6 +9417,7 @@ test_list = [ None,
               merge_with_auto_rev_range_detection,
               XFail(mergeinfo_recording_in_skipped_merge),
               cherry_picking,
+              XFail(propchange_of_subdir_raises_conflict),
              ]
 
 if __name__ == '__main__':
