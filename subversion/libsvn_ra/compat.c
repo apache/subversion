@@ -32,26 +32,17 @@
 
 
 
-/* ### This is to support 1.0 servers. */
-struct log_receiver_baton
+/* This is just like svn_sort_compare_revisions, save that it sorts
+   the revisions in *ascending* order. */
+static int
+compare_revisions(const void *a, const void *b)
 {
-  /* The kind of the path we're tracing. */
-  svn_node_kind_t kind;
-
-  /* The path at which we are trying to find our versioned resource in
-     the log output. */
-  const char *last_path;
-
-  /* Input revisions and output hash; the whole point of this little game. */
-  svn_revnum_t peg_revision;
-  apr_array_header_t *location_revisions;
-  const char *peg_path;
-  apr_hash_t *locations;
-
-  /* A pool from which to allocate stuff stored in this baton. */
-  apr_pool_t *pool;
-};
-
+  svn_revnum_t a_rev = *(const svn_revnum_t *)a;
+  svn_revnum_t b_rev = *(const svn_revnum_t *)b;
+  if (a_rev == b_rev)
+    return 0;
+  return a_rev < b_rev ? -1 : 1;
+}
 
 /* Given the CHANGED_PATHS and REVISION from an instance of a
    svn_log_message_receiver_t function, determine at which location
@@ -191,6 +182,31 @@ prev_log_path(const char **prev_path_p,
 }
 
 
+
+/*** Fallback implementation of svn_ra_get_locations(). ***/
+
+
+/* ### This is to support 1.0 servers. */
+struct log_receiver_baton
+{
+  /* The kind of the path we're tracing. */
+  svn_node_kind_t kind;
+
+  /* The path at which we are trying to find our versioned resource in
+     the log output. */
+  const char *last_path;
+
+  /* Input revisions and output hash; the whole point of this little game. */
+  svn_revnum_t peg_revision;
+  apr_array_header_t *location_revisions;
+  const char *peg_path;
+  apr_hash_t *locations;
+
+  /* A pool from which to allocate stuff stored in this baton. */
+  apr_pool_t *pool;
+};
+
+
 /* Implements svn_log_entry_receiver_t; helper for slow_get_locations.
    As input, takes log_receiver_baton (defined above) and attempts to
    "fill in" locations in the baton over the course of many
@@ -258,19 +274,6 @@ log_receiver(void *baton,
 }
 
 
-/* This is just like svn_sort_compare_revisions, save that it sorts
-   the revisions in *ascending* order. */
-static int
-compare_revisions(const void *a, const void *b)
-{
-  svn_revnum_t a_rev = *(const svn_revnum_t *)a;
-  svn_revnum_t b_rev = *(const svn_revnum_t *)b;
-  if (a_rev == b_rev)
-    return 0;
-  return a_rev < b_rev ? -1 : 1;
-}
-
-
 svn_error_t *
 svn_ra__locations_from_log(svn_ra_session_t *session,
                            apr_hash_t **locations_p,
@@ -321,8 +324,6 @@ svn_ra__locations_from_log(svn_ra_session_t *session,
   oldest = peg_revision;
   oldest = (oldest_requested < oldest) ? oldest_requested : oldest;
   oldest = (youngest_requested < oldest) ? youngest_requested : oldest;
-
-
 
   /* Populate most of our log receiver baton structure. */
   lrb.kind = kind;
@@ -379,5 +380,172 @@ svn_ra__locations_from_log(svn_ra_session_t *session,
        rel_path, youngest);
 
   *locations_p = locations;
+  return SVN_NO_ERROR;
+}
+
+
+
+
+/*** Fallback implementation of svn_ra_get_location_segments(). ***/
+
+struct gls_log_receiver_baton {
+  /* The kind of the path we're tracing. */
+  svn_node_kind_t kind;
+
+  /* Are we finished (and just listening to log entries because our
+     caller won't shut up?). */
+  svn_boolean_t done;
+
+  /* The path at which we are trying to find our versioned resource in
+     the log output. */
+  const char *last_path;
+
+  /* Input data. */
+  svn_revnum_t start_rev;
+
+  /* Output intermediate state and callback/baton. */
+  svn_revnum_t range_end;
+  svn_location_segment_receiver_t receiver;
+  void *receiver_baton;
+
+  /* A pool from which to allocate stuff stored in this baton. */
+  apr_pool_t *pool;
+};
+
+/* Build a node location segment object from PATH, RANGE_START, and
+   RANGE_END, and pass it off to RECEIVER/RECEIVER_BATON. */
+static svn_error_t *
+send_segment(const char *path, 
+             svn_revnum_t range_start,
+             svn_revnum_t range_end,
+             svn_location_segment_receiver_t receiver,
+             void *receiver_baton,
+             apr_pool_t *pool)
+{
+  svn_location_segment_t *segment = apr_pcalloc(pool, sizeof(*segment));
+  segment->path = path;
+  segment->range_start = range_start;
+  segment->range_end = range_end;
+  return receiver(segment, receiver_baton, pool);
+}
+
+static svn_error_t *
+gls_log_receiver(void *baton,
+                 svn_log_entry_t *log_entry,
+                 apr_pool_t *pool)
+{
+  struct gls_log_receiver_baton *lrb = baton;
+  const char *current_path = lrb->last_path;
+  const char *prev_path;
+  svn_revnum_t copyfrom_rev;
+
+  /* If we're done, ignore this invocation. */
+  if (lrb->done)
+    return SVN_NO_ERROR;
+
+  /* Figure out at which repository path our object of interest lived
+     in the previous revision, and if its current location is the
+     result of copy since then. */
+  SVN_ERR(prev_log_path(&prev_path, NULL, &copyfrom_rev, 
+                        log_entry->changed_paths, current_path, 
+                        lrb->kind, log_entry->revision, pool));
+
+  /* If we've run off the end of the path's history, we need to report
+     our final segment (and then, we're done). */
+  if (! prev_path)
+    {
+      lrb->done = TRUE;
+      return send_segment(current_path, log_entry->revision, lrb->range_end,
+                          lrb->receiver, lrb->receiver_baton, pool);
+    }
+
+  /* If there was a copy operation of interest... */
+  if (SVN_IS_VALID_REVNUM(copyfrom_rev))
+    {
+      /* ...then report the segment between this revision and the
+         last-reported revision. */
+      SVN_ERR(send_segment(current_path, log_entry->revision, lrb->range_end,
+                           lrb->receiver, lrb->receiver_baton, pool));
+      lrb->range_end = log_entry->revision - 1;
+
+      /* And if there was a revision gap, we need to report that, too. */
+      if (log_entry->revision - copyfrom_rev > 1)
+        {
+          SVN_ERR(send_segment(NULL, copyfrom_rev + 1, lrb->range_end,
+                               lrb->receiver, lrb->receiver_baton, pool));
+          lrb->range_end = copyfrom_rev;
+        }
+
+      /* Update our state variables. */
+      lrb->last_path = apr_pstrdup(lrb->pool, prev_path);
+    }
+
+  return SVN_NO_ERROR;
+}
+  
+
+svn_error_t *
+svn_ra__location_segments_from_log(svn_ra_session_t *session,
+                                   const char *path,
+                                   svn_revnum_t start_rev,
+                                   svn_revnum_t end_rev,
+                                   svn_location_segment_receiver_t receiver,
+                                   void *receiver_baton,
+                                   apr_pool_t *pool)
+{
+  struct gls_log_receiver_baton lrb = { 0 };
+  apr_array_header_t *targets;
+  svn_node_kind_t kind;
+  const char *root_url, *url, *rel_path;
+
+  assert(! (SVN_IS_VALID_REVNUM(start_rev)
+            && SVN_IS_VALID_REVNUM(end_rev)
+            && (end_rev > start_rev)));
+
+  /* Fetch the repository root URL and relative path. */
+  SVN_ERR(svn_ra_get_repos_root(session, &root_url, pool));
+  SVN_ERR(svn_ra_get_session_url(session, &url, pool));
+  url = svn_path_join(url, path, pool);
+  rel_path = svn_path_uri_decode(url + strlen(root_url), pool);
+
+  /* Sanity check: verify that the peg-object exists in repos. */
+  SVN_ERR(svn_ra_check_path(session, path, start_rev, &kind, pool));
+  if (kind == svn_node_none)
+    return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                             _("Path '%s' doesn't exist in revision %ld"),
+                             rel_path, start_rev);
+
+  /* If START_REV is invalid, it means HEAD.  If END_REV is
+     SVN_INVALID_REVNUM, we'll use 0. */
+  if (! SVN_IS_VALID_REVNUM(start_rev))
+    SVN_ERR(svn_ra_get_latest_revnum(session, &start_rev, pool));
+  if (! SVN_IS_VALID_REVNUM(end_rev))
+    end_rev = 0;
+
+  /* Populate most of our log receiver baton structure. */
+  lrb.kind = kind;
+  lrb.last_path = rel_path;
+  lrb.done = FALSE;
+  lrb.start_rev = start_rev;
+  lrb.range_end = start_rev;
+  lrb.receiver = receiver;
+  lrb.receiver_baton = receiver_baton;
+  lrb.pool = pool;
+
+  /* Let the RA layer drive our log information handler, which will do
+     the work of finding the actual locations for our resource.
+     Notice that we always run on the youngest rev of the 3 inputs. */
+  targets = apr_array_make(pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(targets, const char *) = path;
+  SVN_ERR(svn_ra_get_log2(session, targets, start_rev, end_rev, 0,
+                          TRUE, FALSE, FALSE, 
+                          apr_array_make(pool, 0, sizeof(const char *)),
+                          gls_log_receiver, &lrb, pool));
+
+  /* If we didn't finish, we need to do so with a final segment send. */
+  if (! lrb.done)
+    SVN_ERR(send_segment(lrb.last_path, end_rev, lrb.range_end,
+                         receiver, receiver_baton, pool));
+
   return SVN_NO_ERROR;
 }
