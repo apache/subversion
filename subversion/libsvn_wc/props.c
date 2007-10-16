@@ -3041,9 +3041,10 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
         return svn_error_createf
           (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
            _("Invalid %s property on '%s': "
-             "target involves '.' or '..' or is an absolute path"),
+             "target '%s' is an absolute path or involves '..'"),
            SVN_PROP_EXTERNALS,
-           parent_directory_display);
+           parent_directory_display,
+           item->target_dir);
 
       if (canonicalize_url)
           item->url = svn_path_canonicalize(item->url, pool);
