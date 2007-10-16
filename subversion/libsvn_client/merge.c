@@ -3773,8 +3773,8 @@ discover_and_merge_children(const svn_wc_entry_t *parent_entry,
                                   merge_b->ctx, iterpool));
       for (i = 0; i < children_with_mergeinfo->nelts; i++)
         {
-          const char *child_url;
           const char *child_repos_path;
+          const char *child_merge_src_canon_path;
           const svn_wc_entry_t *child_entry;
           svn_client__merge_path_t *child =
                          APR_ARRAY_IDX(children_with_mergeinfo, i,
@@ -3787,6 +3787,9 @@ discover_and_merge_children(const svn_wc_entry_t *parent_entry,
           else
             child_repos_path = child->path +
                                  (merge_target_len ? merge_target_len + 1 : 0);
+           child_merge_src_canon_path = 
+                                    svn_path_join(parent_merge_src_canon_path,
+                                                  child_repos_path, iterpool);
 
           SVN_ERR(svn_wc__entry_versioned(&child_entry, child->path, 
                                           adm_access, FALSE, iterpool));
@@ -3794,7 +3797,6 @@ discover_and_merge_children(const svn_wc_entry_t *parent_entry,
           if (merge_b->operative_merge)
             {
               apr_array_header_t *child_merge_rangelist;
-              const char *child_merge_src_canon_path;
               apr_hash_t *child_merges = apr_hash_make(iterpool);
               int j;
               child_merge_rangelist =
@@ -3827,20 +3829,16 @@ discover_and_merge_children(const svn_wc_entry_t *parent_entry,
                                                    adm_access,
                                                    iterpool));
                 }
-              child_merge_src_canon_path = 
-                                    svn_path_join(parent_merge_src_canon_path,
-                                                  child_repos_path, iterpool);
               SVN_ERR(update_wc_mergeinfo(child->path, child_entry,
                                           child_merge_src_canon_path, 
                                           child_merges, FALSE,
                                           adm_access, merge_b->ctx, iterpool));
             }
-          child_url = svn_path_join(parent_merge_source_url,
-                                    child_repos_path, pool);
           SVN_ERR(mark_mergeinfo_as_inheritable_for_a_range(
                                                    child->pre_merge_mergeinfo,
                                                    TRUE,
-                                                   merge_ranges, child_url,
+                                                   merge_ranges,
+                                                   child_merge_src_canon_path,
                                                    child->path,
                                                    adm_access,
                                                    merge_b,
