@@ -952,10 +952,24 @@ svn_ra_get_location_segments(svn_ra_session_t *session,
                              void *receiver_baton,
                              apr_pool_t *pool)
 {
-  return session->vtable->get_location_segments(session, path, 
-                                                start_rev, end_rev, 
-                                                receiver, receiver_baton,
-                                                pool);
+  svn_error_t *err = session->vtable->get_location_segments(session, 
+                                                            path, 
+                                                            start_rev, 
+                                                            end_rev, 
+                                                            receiver, 
+                                                            receiver_baton,
+                                                            pool);
+  if (err && (err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED))
+    {
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+      
+      /* Do it the slow way, using get-logs, for older servers. */
+      SVN_ERR(svn_ra__location_segments_from_log(session, path, start_rev,
+                                                 end_rev, receiver,
+                                                 receiver_baton, pool));
+    }
+  return err;
 }
 
 svn_error_t *svn_ra_get_file_revs(svn_ra_session_t *session,
