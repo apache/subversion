@@ -134,7 +134,6 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
   apr_xml_elem *child;
   const char *path = NULL;
   svn_revnum_t start_rev = SVN_INVALID_REVNUM, end_rev = SVN_INVALID_REVNUM;
-  apr_array_header_t *location_revisions;
 
   /* Sanity check. */
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
@@ -157,15 +156,13 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
 
       if (strcmp(child->name, "start-revision") == 0)
         {
-          svn_revnum_t revision
-            = SVN_STR_TO_REV(dav_xml_get_cdata(child, resource->pool, 1));
-          APR_ARRAY_PUSH(location_revisions, svn_revnum_t) = revision;
+          start_rev = SVN_STR_TO_REV(dav_xml_get_cdata(child, 
+                                                       resource->pool, 1));
         }
       else if (strcmp(child->name, "end-revision") == 0)
         {
-          svn_revnum_t revision
-            = SVN_STR_TO_REV(dav_xml_get_cdata(child, resource->pool, 1));
-          APR_ARRAY_PUSH(location_revisions, svn_revnum_t) = revision;
+          end_rev = SVN_STR_TO_REV(dav_xml_get_cdata(child, 
+                                                     resource->pool, 1));
         }
       else if (strcmp(child->name, "path") == 0)
         {
