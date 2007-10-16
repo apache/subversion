@@ -1397,7 +1397,7 @@ svn_ra_neon__get_locations(svn_ra_session_t *session,
 static const svn_ra_neon__xml_elm_t gls_report_elements[] =
 {
   { SVN_XML_NAMESPACE, "get-location-segments-report", 
-    ELEM_get_locations_report, 0 },
+    ELEM_get_location_segments_report, 0 },
   { SVN_XML_NAMESPACE, "location-segment", ELEM_location_segment, 0 },
   { NULL }
 };
