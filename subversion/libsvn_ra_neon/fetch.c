@@ -1507,7 +1507,7 @@ svn_ra_neon__get_location_segments(svn_ra_session_t *session,
                                   "<S:end-revision>%ld</S:end-revision>" 
                                   DEBUG_CR, end_rev));
 
-  svn_stringbuf_appendcstr(request_body, "</S:get-locations>");
+  svn_stringbuf_appendcstr(request_body, "</S:get-location-segments>");
 
   request_baton.receiver = receiver;
   request_baton.receiver_baton = receiver_baton;
@@ -1516,7 +1516,7 @@ svn_ra_neon__get_location_segments(svn_ra_session_t *session,
   /* ras's URL may not exist in HEAD, and thus it's not safe to send
      it as the main argument to the REPORT request; it might cause
      dav_get_resource() to choke on the server.  So instead, we pass a
-     baseline-collection URL, which we get from the peg revision.  */
+     baseline-collection URL, which we get from the START_REV.  */
   SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
                                          ras, ras->url->data,
                                          start_rev, pool));
