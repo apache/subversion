@@ -2999,7 +2999,7 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
         return svn_error_createf
           (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
            _("Error parsing %s property on '%s': '%s'"),
-               SVN_PROP_EXTERNALS,
+           SVN_PROP_EXTERNALS,
            parent_directory_display,
            line);
 
