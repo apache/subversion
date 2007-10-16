@@ -755,11 +755,13 @@ def run_and_verify_patch(dir, patch_path,
 
   if (error_re_string):
     rm = re.compile(error_re_string)
+    match = None
     for line in err:
       match = rm.search(line)
       if match:
-        return
-    raise main.SVNUnmatchedError
+        break
+    if not match:
+      raise main.SVNUnmatchedError
   elif err:
     ### we should raise a less generic error here. which?
     raise Failure(err)
