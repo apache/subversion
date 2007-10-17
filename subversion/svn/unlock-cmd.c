@@ -45,7 +45,7 @@ svn_cl__unlock(apr_getopt_t *os,
   apr_array_header_t *targets;
   apr_array_header_t *changelist_targets = NULL, *combined_targets = NULL;
 
-  /* Before allowing svn_opt_args_to_target_array() to canonicalize
+  /* Before allowing svn_opt_args_to_target_array2() to canonicalize
      all the targets, we need to build a list of targets made of both
      ones the user typed, as well as any specified by --changelist.  */
   if (opt_state->changelist)

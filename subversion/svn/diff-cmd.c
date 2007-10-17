@@ -120,7 +120,7 @@ svn_cl__diff(apr_getopt_t *os,
   if ((status = apr_file_open_stderr(&errfile, pool)))
     return svn_error_wrap_apr(status, _("Can't open stderr"));
 
-  /* Before allowing svn_opt_args_to_target_array() to canonicalize
+  /* Before allowing svn_opt_args_to_target_array2() to canonicalize
      all the targets, we need to build a list of targets made of both
      ones the user typed, as well as any specified by --changelist.  */
   if (opt_state->changelist)
