@@ -125,6 +125,7 @@ add_file_with_history(const char *path,
 
   if (copyfrom_kind == svn_node_none)
     {
+      /* svn_wc_add_repos_file2 will nicely do data substitution. */
       SVN_ERR(svn_wc_get_pristine_copy_path(copyfrom_path,
                                             &copyfrom_textbase_path,
                                             pool));
