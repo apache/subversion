@@ -1315,7 +1315,7 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
               mergestream = svn_stream_from_aprfile2(merged_file, FALSE,
                                                      filepool);
               SVN_ERR(svn_diff_mem_string_diff3(&diff, base_val, working_val,
-                                                new_val, &options, filepool));
+                                                new_val, options, filepool));
               SVN_ERR(svn_diff_mem_string_output_merge
                       (mergestream, diff, base_val, working_val, new_val,
                        NULL, NULL, NULL, NULL, FALSE, FALSE, filepool));
