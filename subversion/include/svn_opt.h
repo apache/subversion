@@ -519,7 +519,7 @@ svn_opt_parse_all_args(apr_array_header_t **args_p,
  *    "http://a/b@%7B1999-12-31%7D   -> "http://a/b",    (date, 1999-12-31)
  *    "foo/bar@1:2"                  -> error
  *    "foo/bar@baz"                  -> error
- *    "foo/bar@"                     -> "foo/bar",       (head or base)
+ *    "foo/bar@"                     -> "foo/bar",       (base)
  *    "foo/bar/@13"                  -> "foo/bar",       (number, 13)
  *    "foo/bar@@13"                  -> "foo/bar@",      (number, 13)
  *    "foo/@bar@HEAD"                -> "foo/@bar",      (head)
