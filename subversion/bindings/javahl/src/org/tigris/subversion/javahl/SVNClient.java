@@ -169,7 +169,7 @@ public class SVNClient implements SVNClientInterface
     {
         MyStatusCallback callback = new MyStatusCallback();
 
-        status(path, Depth.infinityOrImmediates(descend), onServer, getAll,
+        status(path, Depth.unknownOrImmediates(descend), onServer, getAll,
                noIgnore, ignoreExternals, callback);
 
         return callback.getStatusArray();
@@ -583,7 +583,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         return update(new String[]{path}, revision,
-                      Depth.infinityOrFiles(recurse), false, false)[0];
+                      Depth.unknownOrFiles(recurse), false, false)[0];
     }
 
     /**
@@ -601,7 +601,7 @@ public class SVNClient implements SVNClientInterface
                          boolean recurse, boolean ignoreExternals)
             throws ClientException
     {
-        return update(path, revision, Depth.infinityOrFiles(recurse),
+        return update(path, revision, Depth.unknownOrFiles(recurse),
                       ignoreExternals, false);
     }
 
@@ -891,7 +891,7 @@ public class SVNClient implements SVNClientInterface
                          boolean recurse)
             throws ClientException
     {
-        return doSwitch(path, url, revision, Depth.infinityOrFiles(recurse),
+        return doSwitch(path, url, revision, Depth.unknownOrFiles(recurse),
                         false, false);
     }
 
@@ -1106,7 +1106,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         diff(target1, revision1, target2, revision2, outFileName,
-             Depth.infinityOrFiles(recurse), ignoreAncestry, noDiffDeleted,
+             Depth.unknownOrFiles(recurse), ignoreAncestry, noDiffDeleted,
              force);
     }
 
@@ -1153,7 +1153,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         diff(target, pegRevision, startRevision, endRevision, outFileName,
-             Depth.infinityOrFiles(recurse), ignoreAncestry, noDiffDeleted,
+             Depth.unknownOrFiles(recurse), ignoreAncestry, noDiffDeleted,
              force);
     }
 
