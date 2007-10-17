@@ -35,7 +35,7 @@ class JNIStringHolder
   JNIStringHolder(jstring jtext);
   ~JNIStringHolder();
   operator const char *() { return m_str; }
-  const char * JNIStringHolder::pstrdup(apr_pool_t *pool);
+  const char *pstrdup(apr_pool_t *pool);
 
  protected:
   const char *m_str;
