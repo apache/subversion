@@ -538,7 +538,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     ("Apply the differences between two sources to a working copy path.\n"
      "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
      "       2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
-     "       3. merge [-c M | -r N:M | -g] [SOURCE[@REV] [WCPATH]]\n"
+     "       3. merge [-c M | -r N:M] [SOURCE[@REV] [WCPATH]]\n"
      "\n"
      "  1. In the first form, the source URLs are specified at revisions\n"
      "     N and M.  These are the two sources to be compared.  The revisions\n"
@@ -555,8 +555,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     explicit SOURCE.  This URL in revision REV is compared as it\n"
      "     existed between revisions N and M.  If REV is not specified, HEAD\n"
      "     is assumed.  '-c M' is equivalent to '-r <M-1>:M', and '-c -M'\n"
-     "     does the reverse: '-r M:<M-1>'.  -g is a shorthand for the\n"
-     "     revision range -r OLDEST_REV_OF_SOURCE_AT_URL:HEAD.\n"
+     "     does the reverse: '-r M:<M-1>'.  If neither N nor M is specified,\n"
+     "     they default to OLDEST_CONTIGUOUS_REV_OF_SOURCE_AT_URL and HEAD.\n"
      "\n"
      "  WCPATH is the working copy path that will receive the changes.\n"
      "  If WCPATH is omitted, a default value of '.' is assumed, unless\n"
@@ -564,7 +564,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  in which case, the differences will be applied to that file.\n"),
     {'r', 'c', 'N', svn_cl__depth_opt, 'q', svn_cl__force_opt,
      svn_cl__dry_run_opt, svn_cl__merge_cmd_opt, svn_cl__record_only_opt,
-     'g', 'x', svn_cl__ignore_ancestry_opt, SVN_CL__AUTH_OPTIONS,
+     'x', svn_cl__ignore_ancestry_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt, svn_cl__accept_opt} },
 
   { "mergeinfo", svn_cl__mergeinfo, {0}, N_
