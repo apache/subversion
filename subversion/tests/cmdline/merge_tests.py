@@ -9412,7 +9412,6 @@ def reverse_merge_prop_add_on_child(sbox):
     'gamma'   : Item(status='  ', wc_rev=2),
     })
   expected_disk = wc.State('', {
-    ''        : Item(),
     'G'       : Item(),
     'G/pi'    : Item("This is the file 'pi'.\n"),
     'G/rho'   : Item("This is the file 'rho'.\n"),
@@ -9620,9 +9619,7 @@ test_list = [ None,
               XFail(mergeinfo_recording_in_skipped_merge),
               cherry_picking,
               propchange_of_subdir_raises_conflict,
-              Skip(reverse_merge_prop_add_on_child),
-                # reverse_merge_prop_add_on_child currently segfaults
-                # so always skip until issue #2791 is fixed.
+              reverse_merge_prop_add_on_child,
               XFail(merge_target_with_non_inheritable_mergeinfo),
              ]
 
