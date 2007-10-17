@@ -1194,16 +1194,19 @@ set_prop_merge_state(svn_wc_notify_state_t *state,
 /* Helper function for the three apply_* functions below, used when
  * merging properties together.
  *
- * Given property PROPNAME and four property values (any of which
- * might be NULL), generate four tmpfiles and pass them to
- * CONFLICT_FUNC callback.  This gives the client an opportunity to
- * interactively resolve the property conflict.
+ * Given property PROPNAME on PATH, and four possible property values,
+ * generate four tmpfiles and pass them to CONFLICT_FUNC callback.
+ * This gives the client an opportunity to interactively resolve the
+ * property conflict.  (ADM_ACCESS provides the ability to examine
+ * PATH's entries.)
  *
- * (BASE_VAL/WORKING_VAL represent the current state of the working
- * copy, and OLD_VAL/NEW_VAL represents the incoming propchange.)
+ * BASE_VAL/WORKING_VAL represent the current state of the working
+ * copy, and OLD_VAL/NEW_VAL represents the incoming propchange.  Any
+ * of these values might be NULL, indicating either non-existence or
+ * intent-to-delete.
  *
- * If the callback responds with 'choose_postpone', then set
- * *CONFLICT_REMAINS to true and return.
+ * If the callback isn't available, or if it responds with
+ * 'choose_postpone', then set *CONFLICT_REMAINS to true and return.
  *
  * If the callback responds with a choice of 'base', 'theirs', 'mine',
  * or 'merged', then install the proper value into WORKING_PROPS and
@@ -1212,6 +1215,9 @@ set_prop_merge_state(svn_wc_notify_state_t *state,
  */
 static svn_error_t *
 maybe_generate_propconflict(svn_boolean_t *conflict_remains,
+                            const char *path,
+                            svn_wc_adm_access_t *adm_access,
+                            svn_boolean_t is_dir,
                             const char *propname,
                             apr_hash_t *working_props,
                             const svn_string_t *old_val,
@@ -1222,15 +1228,181 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
                             void *conflict_baton,
                             apr_pool_t *pool)
 {
-  /* ### Assume postponement for the moment. */
-  *conflict_remains = TRUE;
+  svn_wc_conflict_result_t *result = NULL;
+  svn_string_t *mime_propval = NULL;
+  apr_file_t *working_file, *base_file, *new_file, *merged_file;
+  const char *working_path, *base_path, *new_path, *merged_path;
+  apr_pool_t *filepool = svn_pool_create(pool);
+  svn_wc_conflict_description_t *cdesc;
+
+  if (! conflict_func)
+    {
+      /* Just postpone the conflict. */
+      *conflict_remains = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  cdesc = apr_pcalloc(pool, sizeof(*cdesc));
+
+  /* Create a tmpfile for each of the string_t's we've got.  */
+  if (working_val)
+    {
+      SVN_ERR(svn_io_open_unique_file2(&working_file, &working_path,
+                                       path, ".tmp",
+                                       svn_io_file_del_on_pool_cleanup,
+                                       filepool));
+      SVN_ERR(svn_io_file_write_full(working_file, working_val->data,
+                                     working_val->len, NULL, filepool));
+      SVN_ERR(svn_io_file_close(working_file, filepool));
+      cdesc->my_file = working_path;
+    }
+
+  if (new_val)
+    {
+      SVN_ERR(svn_io_open_unique_file2(&new_file, &new_path,
+                                       path, ".tmp",
+                                       svn_io_file_del_on_pool_cleanup,
+                                       filepool));
+      SVN_ERR(svn_io_file_write_full(new_file, new_val->data,
+                                     new_val->len, NULL, filepool));
+      SVN_ERR(svn_io_file_close(new_file, filepool));
+      cdesc->their_file = new_path;
+    }
+
+  /* This is tricky!  What happens if 'base' and 'old' don't match up?
+     In an ideal situation, they would.  But if they don't, this is a
+     classic example of a patch 'hunk' failing to apply due to a lack
+     of context.  For example: imagine that the user is busy changing
+     the propval from "cat" to "dog", but the incoming propchange
+     wants to change the value from "red" to "green".  Total context
+     mismatch.
+
+     In this case, let's have the base_value (i.e. prop-base) be the
+     thing we pass to the conflict callback, assuming that because
+     it's already in the working copy it has more validity as a 'base'
+     value than some random old-value of a (possibly cherrypicked,
+     unrelated) propchange that's being applied.  If there's no 'base'
+     value, then we show the incoming 'old' value to the callback
+     instead; it's better than nothing.
+  */
+  if (base_val || old_val)
+    {
+      SVN_ERR(svn_io_open_unique_file2(&base_file, &base_path,
+                                       path, ".tmp",
+                                       svn_io_file_del_on_pool_cleanup,
+                                       filepool));
+      if (!base_val && old_val)
+        SVN_ERR(svn_io_file_write_full(base_file, old_val->data,
+                                       old_val->len, NULL, filepool));
+      else
+        SVN_ERR(svn_io_file_write_full(base_file, base_val->data,
+                                       base_val->len, NULL, filepool));
+
+      SVN_ERR(svn_io_file_close(base_file, filepool));
+      cdesc->base_file = base_path;
+    }
+
+  /* ### TODO:  This is the place where we might do some intelligent
+     in-memory contextual merging of special svn: properties (like
+     svn:ignore).  When this happens, we'd dump the results into
+     merged_file, and then pass it to the callback by setting
+     cdesc->merged_file = merged_path. */
+
+  cdesc->path = path;
+  cdesc->node_kind = is_dir ? svn_node_dir : svn_node_file;
+  cdesc->kind = svn_wc_conflict_kind_property;
+  cdesc->property_name = propname;
+  cdesc->access = adm_access;
+
+  if (!is_dir && working_props)
+    mime_propval = apr_hash_get(working_props, SVN_PROP_MIME_TYPE,
+                                APR_HASH_KEY_STRING);
+  cdesc->mime_type = mime_propval ? mime_propval->data : NULL;
+  cdesc->is_binary = mime_propval ?
+      svn_mime_type_is_binary(mime_propval->data) : FALSE;
+
+  if (!old_val && new_val)
+    cdesc->action = svn_wc_conflict_action_add;
+  else if (old_val && !new_val)
+    cdesc->action = svn_wc_conflict_action_delete;
+  else
+    cdesc->action = svn_wc_conflict_action_edit;
+
+  if (base_val && !working_val)
+    cdesc->reason = svn_wc_conflict_reason_deleted;
+  else if (!base_val && working_val)
+    cdesc->reason = svn_wc_conflict_reason_obstructed;
+  else
+    cdesc->reason = svn_wc_conflict_reason_edited;
+
+  /* Invoke the callback. */
+  SVN_ERR(conflict_func(&result, cdesc, conflict_baton, pool));
+  if (result == NULL)
+    {
+      /* ###TODO: The callback is violating the API;  throw a real error. */
+      *conflict_remains = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  switch (result->choice)
+    {
+      default:
+      case svn_wc_conflict_choose_postpone:
+        {
+          *conflict_remains = TRUE;
+          break;
+        }
+      case svn_wc_conflict_choose_mine:
+        {
+          /* No need to change working_props; it already contains working_val */
+          *conflict_remains = FALSE;
+          break;
+        }
+      case svn_wc_conflict_choose_theirs:
+        {
+          apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, new_val);
+          *conflict_remains = FALSE;
+          break;
+        }
+      case svn_wc_conflict_choose_base:
+        {
+          apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, base_val);
+          *conflict_remains = FALSE;
+          break;
+        }
+      case svn_wc_conflict_choose_merged:
+        {
+          if (!cdesc->merged_file && !result->merged_file)
+            /* ### TODO: this is an API violation, we should throw an error. */
+            *conflict_remains = TRUE;
+          else
+            {
+              svn_stringbuf_t *merged_stringbuf;
+              svn_string_t *merged_string;
+
+              SVN_ERR(svn_stringbuf_from_file2(&merged_stringbuf,
+                                               result->merged_file ?
+                                                    result->merged_file :
+                                                    cdesc->merged_file,
+                                               pool));
+              merged_string = svn_string_create_from_buf(merged_stringbuf, pool);
+              apr_hash_set(working_props, propname,
+                           APR_HASH_KEY_STRING, merged_string);
+              *conflict_remains = FALSE;
+            }
+          break;
+        }
+    }
+
+  /* Delete any tmpfiles we made. */
+  svn_pool_destroy(filepool);
 
   return SVN_NO_ERROR;
 }
 
 
-/* Add the property with name PROPNAME to the set of WORKING_PROPS,
- * setting *STATE or *CONFLICT according to merge outcomes.
+/* Add the property with name PROPNAME to the set of WORKING_PROPS on
+ * PATH, setting *STATE or *CONFLICT according to merge outcomes.
  *
  * *STATE is an input and output parameter, its value is to be
  * set using set_merge_prop_state().
@@ -1241,10 +1413,13 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
  *
  * CONFLICT_FUNC/BATON is a callback to be called before declaring a
  * property conflict;  it gives the client a chance to resolve the
- * conflict interactively.
+ * conflict interactively.  It uses ADM_ACCESS to possibly examine
+ * PATH's entries.
  */
 static svn_error_t *
 apply_single_prop_add(svn_wc_notify_state_t *state,
+                      const char *path,
+                      svn_boolean_t is_dir,
                       apr_hash_t *working_props,
                       svn_string_t **conflict,
                       const char *propname,
@@ -1252,6 +1427,7 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
                       const svn_string_t *new_val,
                       svn_wc_conflict_resolver_func_t conflict_func,
                       void *conflict_baton,
+                      svn_wc_adm_access_t *adm_access,
                       apr_pool_t *pool)
 
 {
@@ -1281,8 +1457,9 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
             }
           else
             {
-              SVN_ERR(maybe_generate_propconflict(&got_conflict, propname,
-                                                  working_props,
+              SVN_ERR(maybe_generate_propconflict(&got_conflict, path,
+                                                  adm_access, is_dir,
+                                                  propname, working_props,
                                                   NULL, new_val,
                                                   base_val, working_val,
                                                   conflict_func, conflict_baton,
@@ -1298,9 +1475,9 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
     }
   else if (base_val)
     {
-      SVN_ERR(maybe_generate_propconflict(&got_conflict, propname,
-                                          working_props,
-                                          NULL, new_val,
+      SVN_ERR(maybe_generate_propconflict(&got_conflict, path, adm_access,
+                                          is_dir, propname,
+                                          working_props, NULL, new_val,
                                           base_val, NULL,
                                           conflict_func, conflict_baton, pool));
       if (got_conflict)
@@ -1316,8 +1493,10 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
   return SVN_NO_ERROR;
 }
 
-/* Delete the property with name PROPNAME from the set of WORKING_PROPS,
- * setting *STATE or *CONFLICT according to merge outcomes.
+
+/* Delete the property with name PROPNAME from the set of
+ * WORKING_PROPS on PATH, setting *STATE or *CONFLICT according to
+ * merge outcomes.
  *
  * *STATE is an input and output parameter, its value is to be
  * set using set_merge_prop_state().
@@ -1329,10 +1508,13 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
  *
  * CONFLICT_FUNC/BATON is a callback to be called before declaring a
  * property conflict;  it gives the client a chance to resolve the
- * conflict interactively.
+ * conflict interactively.  It uses ADM_ACCESS to possibly examine
+ * PATH's entries.
  */
 static svn_error_t *
 apply_single_prop_delete(svn_wc_notify_state_t *state,
+                         const char *path,
+                         svn_boolean_t is_dir,
                          apr_hash_t *working_props,
                          svn_string_t **conflict,
                          const char *propname,
@@ -1340,6 +1522,7 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
                          const svn_string_t *old_val,
                          svn_wc_conflict_resolver_func_t conflict_func,
                          void *conflict_baton,
+                         svn_wc_adm_access_t *adm_access,
                          apr_pool_t *pool)
 {
   svn_boolean_t got_conflict = FALSE;
@@ -1363,12 +1546,13 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
              apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, NULL);
            else
              {
-               SVN_ERR(maybe_generate_propconflict(&got_conflict, propname,
-                                                  working_props,
-                                                  old_val, NULL,
-                                                  base_val, working_val,
-                                                  conflict_func, conflict_baton,
-                                                  pool));
+               SVN_ERR(maybe_generate_propconflict(&got_conflict, path,
+                                                   adm_access, is_dir,
+                                                   propname, working_props,
+                                                   old_val, NULL,
+                                                   base_val, working_val,
+                                                   conflict_func, conflict_baton,
+                                                   pool));
                if (got_conflict)
                  *conflict = svn_string_createf
                      (pool,
@@ -1385,9 +1569,9 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
 
   else
     {
-      SVN_ERR(maybe_generate_propconflict(&got_conflict, propname,
-                                          working_props,
-                                          old_val, NULL,
+      SVN_ERR(maybe_generate_propconflict(&got_conflict, path, adm_access,
+                                          is_dir, propname,
+                                          working_props, old_val, NULL,
                                           base_val, working_val,
                                           conflict_func, conflict_baton, pool));
       if (got_conflict)
@@ -1401,8 +1585,9 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
   return SVN_NO_ERROR;
 }
 
-/* Change the property with name PROPNAME in the set of WORKING_PROPS,
- * setting *STATE or *CONFLICT according to merge outcomes.
+
+/* Change the property with name PROPNAME in the set of WORKING_PROPS
+ * on PATH, setting *STATE or *CONFLICT according to merge outcomes.
  *
  * *STATE is an input and output parameter, its value is to be
  * set using set_merge_prop_state().
@@ -1416,10 +1601,13 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
  *
  * CONFLICT_FUNC/BATON is a callback to be called before declaring a
  * property conflict;  it gives the client a chance to resolve the
- * conflict interactively.
+ * conflict interactively.  It uses ADM_ACCESS to possibly examine the
+ * path's entries.
  */
 static svn_error_t *
 apply_single_prop_change(svn_wc_notify_state_t *state,
+                         const char *path,
+                         svn_boolean_t is_dir,
                          apr_hash_t *working_props,
                          svn_string_t **conflict,
                          const char *propname,
@@ -1428,6 +1616,7 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
                          const svn_string_t *new_val,
                          svn_wc_conflict_resolver_func_t conflict_func,
                          void *conflict_baton,
+                         svn_wc_adm_access_t *adm_access,
                          apr_pool_t *pool)
 {
   svn_boolean_t got_conflict = FALSE;
@@ -1462,8 +1651,9 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
                 }
               else
                 {
-                  SVN_ERR(maybe_generate_propconflict(&got_conflict, propname,
-                                                      working_props,
+                  SVN_ERR(maybe_generate_propconflict(&got_conflict,
+                                                      path, adm_access, is_dir,
+                                                      propname, working_props,
                                                       old_val, new_val,
                                                       base_val, working_val,
                                                       conflict_func,
@@ -1494,8 +1684,9 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
 
       else
         {
-          SVN_ERR(maybe_generate_propconflict(&got_conflict, propname,
-                                              working_props, old_val, new_val,
+          SVN_ERR(maybe_generate_propconflict(&got_conflict, path, adm_access,
+                                              is_dir, propname, working_props,
+                                              old_val, new_val,
                                               base_val, working_val,
                                               conflict_func, conflict_baton,
                                               pool));
@@ -1527,8 +1718,9 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
         }
       else
         {
-          SVN_ERR(maybe_generate_propconflict(&got_conflict, propname,
-                                              working_props, old_val, new_val,
+          SVN_ERR(maybe_generate_propconflict(&got_conflict, path, adm_access,
+                                              is_dir, propname, working_props,
+                                              old_val, new_val,
                                               base_val, working_val,
                                               conflict_func, conflict_baton,
                                               pool));
@@ -1563,8 +1755,9 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
             }
           else
             {
-              SVN_ERR(maybe_generate_propconflict(&got_conflict, propname,
-                                                  working_props,
+              SVN_ERR(maybe_generate_propconflict(&got_conflict, path,
+                                                  adm_access, is_dir,
+                                                  propname, working_props,
                                                   old_val, new_val,
                                                   base_val, working_val,
                                                   conflict_func, conflict_baton,
@@ -1582,6 +1775,7 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
 
   return SVN_NO_ERROR;
 }
+
 
 svn_error_t *
 svn_wc__merge_props(svn_wc_notify_state_t *state,
@@ -1656,22 +1850,25 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
         set_prop_merge_state(state, svn_wc_notify_state_changed);
 
       if (! from_val)  /* adding a new property */
-        SVN_ERR(apply_single_prop_add(is_normal ? state : NULL,
+        SVN_ERR(apply_single_prop_add(is_normal ? state : NULL, path, is_dir,
                                       working_props, &conflict,
                                       propname, base_val, to_val,
-                                      conflict_func, conflict_baton, pool));
+                                      conflict_func, conflict_baton,
+                                      adm_access, pool));
 
       else if (! to_val) /* delete an existing property */
-        SVN_ERR(apply_single_prop_delete(is_normal ? state : NULL,
+        SVN_ERR(apply_single_prop_delete(is_normal ? state : NULL, path, is_dir,
                                          working_props, &conflict,
                                          propname, base_val, from_val,
-                                         conflict_func, conflict_baton, pool));
+                                         conflict_func, conflict_baton,
+                                         adm_access, pool));
 
       else  /* changing an existing property */
-        SVN_ERR(apply_single_prop_change(is_normal ? state : NULL,
+        SVN_ERR(apply_single_prop_change(is_normal ? state : NULL, path, is_dir,
                                          working_props, &conflict,
                                          propname, base_val, from_val, to_val,
-                                         conflict_func, conflict_baton, pool));
+                                         conflict_func, conflict_baton,
+                                         adm_access, pool));
 
 
       /* merging logic complete, now we need to possibly log conflict
