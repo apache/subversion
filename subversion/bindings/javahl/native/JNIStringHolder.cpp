@@ -20,6 +20,8 @@
  */
 
 #include <jni.h>
+#include <apr_pools.h>
+#include <apr_strings.h>
 #include "JNIStringHolder.h"
 #include "JNIUtil.h"
 
@@ -40,4 +42,10 @@ JNIStringHolder::~JNIStringHolder()
 {
   if (m_jtext && m_str)
     m_env->ReleaseStringUTFChars(m_jtext, m_str);
+}
+
+const char *
+JNIStringHolder::pstrdup(apr_pool_t *pool)
+{
+  return (m_str ? apr_pstrdup(pool, m_str) : NULL);
 }
