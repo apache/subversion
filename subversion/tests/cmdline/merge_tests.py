@@ -9436,6 +9436,108 @@ def reverse_merge_prop_add_on_child(sbox):
                                        None, 1)
   os.chdir(saved_cwd)
 
+def merge_target_with_non_inheritable_mergeinfo(sbox):
+  "merge target with non inheritable mergeinfo"
+  
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2970. ##
+
+  # Create a WC with a single branch
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = setup_branch(sbox, True, 1)
+
+  # Some paths we'll care about
+  repo_url = sbox.repo_url
+  B_url = repo_url + '/A/B'
+  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  newfile_path = os.path.join(wc_dir, 'A', 'B', 'E', 'newfile')
+  A_COPY_B_path = os.path.join(wc_dir, 'A_COPY', 'B')
+
+  # Make a modifications to A/B/lambda and add A/B/E/newfile
+  svntest.main.file_write(lambda_path, "This is the file 'lambda' modified.\n")
+  svntest.main.file_write(newfile_path, "This is the file 'newfile'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', newfile_path)
+  expected_output = wc.State(wc_dir, {
+    'A/B/lambda'    : Item(verb='Sending'),
+    'A/B/E/newfile' : Item(verb='Adding'),
+    })
+  wc_status.add({
+    'A/B/lambda'     : Item(status='  ', wc_rev=3),
+    'A/B/E/newfile'  : Item(status='  ', wc_rev=3),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        wc_status, None, None, None,
+                                        None, None, wc_dir)
+
+  short_A_COPY_B = shorten_path_kludge(A_COPY_B_path)
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+
+  # Merge /A/B to /A_COPY/B ie., r1 to r3 with depth immediates
+  expected_output = wc.State(short_A_COPY_B, {
+    'lambda' : Item(status='U '),
+    })
+  expected_disk = wc.State('', {
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1-3'}),
+    'lambda'  : Item(contents="This is the file 'lambda' modified.\n"),
+    'F'       : Item(props={SVN_PROP_MERGE_INFO : '/A/B/F:1,2-3*'}),
+    'E'       : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:1,2-3*'}),
+    'E/alpha' : Item(contents="This is the file 'alpha'.\n"),
+    'E/beta'  : Item(contents="This is the file 'beta'.\n"),
+    })
+  expected_status = wc.State(short_A_COPY_B, {
+    ''         : Item(status=' M', wc_rev=2),
+    'lambda'   : Item(status='M ', wc_rev=2),
+    'F'        : Item(status=' M', wc_rev=2),
+    'E'        : Item(status=' M', wc_rev=2),
+    'E/alpha'  : Item(status='  ', wc_rev=2),
+    'E/beta'   : Item(status='  ', wc_rev=2),
+    })
+  expected_skip = wc.State(short_A_COPY_B, {})
+
+  svntest.actions.run_and_verify_merge(short_A_COPY_B, None, None,
+                                       B_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None,
+                                       1, 1, '-g', '--depth', 'immediates')
+
+  # Merge /A/B to /A_COPY/B ie., r1 to r3 with infinite depth
+  expected_output = wc.State(short_A_COPY_B, {
+    'E/newfile'     : Item(status='A '),
+    })
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1-3'}),
+    'lambda'    : Item(contents="This is the file 'lambda' modified.\n"),
+    'F'         : Item(),
+    'E'         : Item(),
+    'E/alpha'   : Item(contents="This is the file 'alpha'.\n"),
+    'E/beta'    : Item(contents="This is the file 'beta'.\n"),
+    'E/newfile' : Item(contents="This is the file 'newfile'.\n"),
+    })
+  expected_status = wc.State(short_A_COPY_B, {
+    ''            : Item(status=' M', wc_rev=2),
+    'lambda'      : Item(status='M ', wc_rev=2),
+    'F'           : Item(status='  ', wc_rev=2),
+    'E'           : Item(status='  ', wc_rev=2),
+    'E/alpha'     : Item(status='  ', wc_rev=2),
+    'E/beta'      : Item(status='  ', wc_rev=2),
+    'E/newfile'   : Item(status='A ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_merge(short_A_COPY_B, None, None,
+                                       B_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None,
+                                       1, 1, '-g')
+
+  os.chdir(saved_cwd)
+
 ########################################################################
 # Run the tests
 
@@ -9521,6 +9623,7 @@ test_list = [ None,
               Skip(reverse_merge_prop_add_on_child),
                 # reverse_merge_prop_add_on_child currently segfaults
                 # so always skip until issue #2791 is fixed.
+              XFail(merge_target_with_non_inheritable_mergeinfo),
              ]
 
 if __name__ == '__main__':
