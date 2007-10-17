@@ -814,6 +814,9 @@ get_dir_status(struct edit_baton *eb,
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
+  if (depth == svn_depth_unknown)
+    depth = svn_depth_infinity;
+
   /* Load entries file for the directory into the requested pool. */
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, subpool));
 
