@@ -496,10 +496,8 @@ JNIUtil::thrownExceptionToCString()
           env->DeleteLocalRef(clazz);
         }
       jstring jmsg = (jstring) env->CallObjectMethod(t, getMessage);
-      const char *tmp = env->GetStringUTFChars(jmsg, NULL);
-      // ### Is it wise to use a request pool in this utility function?
-      msg = (const char *) apr_pstrdup(getRequestPool()->pool(), tmp);
-      env->ReleaseStringUTFChars(jmsg, tmp);
+      JNIStringHolder tmp(jmsg);
+      msg = tmp.pstrdup(getRequestPool()->pool());
       // ### Conditionally add t.printStackTrace() to msg?
     }
   else
