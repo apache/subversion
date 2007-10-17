@@ -24,6 +24,7 @@ import copy    # for deepcopy()
 import time    # for time()
 import traceback # for print_exc()
 import threading
+import Queue
 
 import getopt
 try:
@@ -304,7 +305,7 @@ def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
   args = ' '.join(map(_quote_arg, varargs))
 
   # Log the command line
-  if verbose_mode:
+  if verbose_mode and not command.endswith('.py'):
     print 'CMD:', os.path.basename(command) + ' ' + args,
 
   if binary_mode:
@@ -854,23 +855,29 @@ def _cleanup_test_path(path, retrying=None):
       print "WARNING: cleanup failed, will try again later"
     _deferred_test_paths.append(path)
 
-class SpawnTest(threading.Thread):
-  """Encapsulate a single test case, run it in a separate child process.
-  Instead of waiting till the process is finished, add this class to a
-  list of active tests for follow up in the parent process."""
-  def __init__(self, index, tests = None):
+class TestSpawningThread(threading.Thread):
+  """A thread that runs test cases in their own processes.
+  Receives test numbers to run from the queue, and saves results into
+  the results field."""
+  def __init__(self, queue):
     threading.Thread.__init__(self)
-    self.index = index
-    self.tests = tests
-    self.result = None
-    self.stdout_lines = None
-    self.stderr_lines = None
+    self.queue = queue
+    self.results = []
 
   def run(self):
+    while True:
+      try:
+        next_index = self.queue.get_nowait()
+      except Queue.Empty:
+        return
+
+      self.run_one(next_index)
+
+  def run_one(self, index):
     command = sys.argv[0]
 
     args = []
-    args.append(str(self.index))
+    args.append(str(index))
     args.append('-c')
     # add some startup arguments from this process
     if fs_type:
@@ -884,14 +891,14 @@ class SpawnTest(threading.Thread):
     if enable_sasl:
       args.append('--enable-sasl')
 
-    self.result, self.stdout_lines, self.stderr_lines =\
-                                         spawn_process(command, 1, None, *args)
+    result, stdout_lines, stderr_lines = spawn_process(command, 1, None, *args)
     # don't trust the exitcode, will not be correct on Windows
     if filter(lambda x: x.startswith('FAIL: ') or x.startswith('XPASS: '),
-              self.stdout_lines):
-      self.result = 1
-    self.tests.append(self)
+              stdout_lines):
+      result = 1
+    self.results.append((index, result, stdout_lines, stderr_lines))
     sys.stdout.write('.')
+    sys.stdout.flush()
 
 class TestRunner:
   """Encapsulate a single test case (predicate), including logic for
@@ -1027,34 +1034,35 @@ def _internal_run_tests(test_list, testnums, parallel):
       if run_one_test(testnum, test_list) == 1:
           exit_code = 1
   else:
-    for testnum in testnums:
-      # wait till there's a free spot.
-      while tests_started - len(finished_tests) > parallel:
-        time.sleep(0.2)
-      run_one_test(testnum, test_list, parallel, finished_tests)
-      tests_started += 1
+    number_queue = Queue.Queue()
+    for num in testnums:
+      number_queue.put(num)
 
-    # wait for all tests to finish
-    while len(finished_tests) < len(testnums):
-      time.sleep(0.2)
+    threads = [ TestSpawningThread(number_queue) for i in range(parallel) ]
+    for t in threads:
+      t.start()
 
-    # Sort test results list by test nr.
-    deco = [(test.index, test) for test in finished_tests]
-    deco.sort()
-    finished_tests = [test for (ti, test) in deco]
+    for t in threads:
+      t.join()
+
+    # list of (index, result, stdout, stderr)
+    results = []
+    for t in threads:
+      results += t.results
+    results.sort()
 
     # terminate the line of dots
     print
 
     # all tests are finished, find out the result and print the logs.
-    for test in finished_tests:
-      if test.stdout_lines:
-        for line in test.stdout_lines:
+    for (index, result, stdout_lines, stderr_lines) in results:
+      if stdout_lines:
+        for line in stdout_lines:
           sys.stdout.write(line)
-      if test.stderr_lines:
-        for line in test.stderr_lines:
+      if stderr_lines:
+        for line in stderr_lines:
           sys.stdout.write(line)
-      if test.result == 1:
+      if result == 1:
         exit_code = 1
 
   _cleanup_deferred_test_paths()
