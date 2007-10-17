@@ -201,7 +201,7 @@ static const svn_diff_fns_t svn_diff__mem_vtable =
 */
 static void
 fill_source_tokens(source_tokens_t *src,
-                   svn_string_t *text,
+                   const svn_string_t *text,
                    apr_pool_t *pool)
 {
   const char *curp;
@@ -210,7 +210,7 @@ fill_source_tokens(source_tokens_t *src,
 
   src->tokens = apr_array_make(pool, 0, sizeof(svn_string_t *));
   src->next_token = 0;
-  src->source = text;
+  src->source = (svn_string_t *)text;
 
   for (startp = curp = text->data, endp = curp + text->len;
        curp != endp; curp++)
