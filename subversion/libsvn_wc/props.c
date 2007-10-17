@@ -1357,9 +1357,10 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
   SVN_ERR(conflict_func(&result, cdesc, conflict_baton, pool));
   if (result == NULL)
     {
-      /* ###TODO: The callback is violating the API;  throw a real error. */
       *conflict_remains = TRUE;
-      return SVN_NO_ERROR;
+      return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
+                              NULL, _("Conflict callback violated API:"
+                                      " returned no results."));
     }
 
   switch (result->choice)
@@ -1391,8 +1392,10 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
       case svn_wc_conflict_choose_merged:
         {
           if (!cdesc->merged_file && !result->merged_file)
-            /* ### TODO: this is an API violation, we should throw an error. */
-            *conflict_remains = TRUE;
+            return svn_error_create
+                (SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
+                 NULL, _("Conflict callback violated API:"
+                         " returned no merged file."));
           else
             {
               svn_stringbuf_t *merged_stringbuf;

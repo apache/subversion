@@ -423,13 +423,9 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
 
               SVN_ERR(conflict_func(&result, &cdesc, conflict_baton, pool));
               if (result == NULL)
-                {
-                  /* If we were harsh, we'd throw an error here.
-                     Instead, we'll just pretend they want to postpone
-                     the conflict resolution. */
-                  result = svn_wc_create_conflict_result(
-                               svn_wc_conflict_choose_postpone, NULL, pool);
-                }
+                return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
+                                        NULL, _("Conflict callback violated API:"
+                                                " returned no results."));
 
               switch (result->choice)
                 {
@@ -716,9 +712,12 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                 {
                   if (! result->merged_file)
                     {
-                      /* ?? Callback asked us to choose its own
-                         merged file, but didn't provide one? */
-                      contains_conflicts = TRUE;
+                      /* Callback asked us to choose its own
+                         merged file, but didn't provide one! */
+                      return svn_error_create
+                          (SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
+                           NULL, _("Conflict callback violated API:"
+                                   " returned no merged file."));
                     }
                   else
                     {

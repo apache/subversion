@@ -74,23 +74,6 @@ svn_cl__accept_from_word(const char *word)
 }
 
 
-/* A conflict callback which does nothing; useful for debugging and/or
-   printing a description of the conflict. */
-svn_error_t *
-svn_cl__ignore_conflicts(svn_wc_conflict_result_t **result,
-                         const svn_wc_conflict_description_t *description,
-                         void *baton,
-                         apr_pool_t *pool)
-{
-  SVN_ERR(svn_cmdline_printf(pool, _("Discovered a conflict.\n\n")));
-  SVN_ERR(svn_cmdline_printf(pool, "\n\n"));
-
-  *result = svn_wc_create_conflict_result(svn_wc_conflict_choose_postpone,
-                                          NULL, pool);
-  return SVN_NO_ERROR;
-}
-
-
 /* Implement svn_wc_conflict_resolver_func_t; resolves based on
    --accept option if given, else by prompting. */
 svn_error_t *
