@@ -177,7 +177,7 @@ msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-10-17 08:53+0900\n"
-"PO-Revision-Date: 2007-10-18 02:49+0900\n"
+"PO-Revision-Date: 2007-10-18 04:13+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -876,7 +876,7 @@ msgstr "バイナリファイルには適用できない操作です"
 
 #: include/svn_error_codes.h:951
 msgid "Format of an svn:externals property was invalid"
-msgstr "属性 svn:external の形式が不正です"
+msgstr "属性 svn:externals の形式が不正です"
 
 #: include/svn_error_codes.h:955
 msgid "Attempting restricted operation for modified resource"
