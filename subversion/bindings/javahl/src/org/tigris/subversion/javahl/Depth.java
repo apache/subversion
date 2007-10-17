@@ -86,4 +86,34 @@ public final class Depth
     {
         return (recurse ? infinity : immediates);
     }
+
+    /**
+     * @return A depth value of {@link #unknown} when
+     * <code>recurse</code> is <code>true</code>, or {@link #empty}
+     * otherwise.
+     */
+    public static final int unknownOrEmpty(boolean recurse)
+    {
+        return (recurse ? unknown : empty);
+    }
+
+    /**
+     * @return A depth value of {@link #unknown} when
+     * <code>recurse</code> is <code>true</code>, or {@link #files}
+     * otherwise.
+     */
+    public static final int unknownOrFiles(boolean recurse)
+    {
+        return (recurse ? unknown : files);
+    }
+
+    /**
+     * @return A depth value of {@link #unknown} when
+     * <code>recurse</code> is <code>true</code>, or {@link
+     * #immediates} otherwise.
+     */
+    public static final int unknownOrImmediates(boolean recurse)
+    {
+        return (recurse ? unknown : immediates);
+    }
 }
