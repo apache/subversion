@@ -23,6 +23,19 @@ Status of 1.4.6:
 
 Candidate changes:
 
+  * r27256
+    Stop using FSFS's directory cache for mutable (transaction) nodes,
+    because there's no check that the node hasn't been changed by
+    another FS object.
+    Justification:
+      * User-reported problem: if a pre-commit hook tries to modify a
+        part of the repository under a different top-level directory
+        from any changes in the txn, they won't commit.
+      * I suspect that this is the cause of an FSFS corruption
+        observed during performance testing by Dan Christian.
+    Votes:
+      +1: glasser
+
   * r21406-21407, r21540
     Fix issue #2608: Can set directory props on the root of an FSFS
     filesystem from an out-of-date repository.
