@@ -254,11 +254,6 @@ svn_client_status3(svn_revnum_t *result_rev,
 
   anchor = svn_wc_adm_access_path(anchor_access);
 
-  /* For local status default depth = svn_depth_infinity, any directories that
-     are not on disk will be ignored anyway. */
-  if (depth == svn_depth_unknown)
-    depth = svn_depth_infinity;
-
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
   SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
