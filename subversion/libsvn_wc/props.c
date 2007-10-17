@@ -39,6 +39,7 @@
 #include "svn_mergeinfo.h"
 #include "svn_wc.h"
 #include "svn_utf.h"
+#include "svn_diff.h"
 
 #include "private/svn_wc_private.h"
 #include "private/svn_mergeinfo_private.h"
@@ -1269,44 +1270,61 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
       cdesc->their_file = new_path;
     }
 
-  /* This is tricky!  What happens if 'base' and 'old' don't match up?
-     In an ideal situation, they would.  But if they don't, this is a
-     classic example of a patch 'hunk' failing to apply due to a lack
-     of context.  For example: imagine that the user is busy changing
-     the propval from "cat" to "dog", but the incoming propchange
-     wants to change the value from "red" to "green".  Total context
-     mismatch.
-
-     In this case, let's have the base_value (i.e. prop-base) be the
-     thing we pass to the conflict callback, assuming that because
-     it's already in the working copy it has more validity as a 'base'
-     value than some random old-value of a (possibly cherrypicked,
-     unrelated) propchange that's being applied.  If there's no 'base'
-     value, then we show the incoming 'old' value to the callback
-     instead; it's better than nothing.
-  */
-  if (base_val || old_val)
+  /* What happens if 'base' and 'old' don't match up?  In an ideal
+     situation, they would.  But if they don't, this is a classic
+     example of a patch 'hunk' failing to apply due to a lack of
+     context.  For example: imagine that the user is busy changing the
+     propval from "cat" to "dog", but the incoming propchange wants to
+     change the value from "red" to "green".  Total context mismatch.
+     There's no way to represent this sort of conflict using
+     "base"/"mine"/"theirs" files, so we don't bother to call the
+     interactive callback at all... we just mark the conflict and let
+     the .prej file explain the failed hunk. */
+  if (base_val && old_val)
     {
-      SVN_ERR(svn_io_open_unique_file2(&base_file, &base_path,
-                                       path, ".tmp",
-                                       svn_io_file_del_on_pool_cleanup,
-                                       filepool));
-      if (!base_val && old_val)
-        SVN_ERR(svn_io_file_write_full(base_file, old_val->data,
-                                       old_val->len, NULL, filepool));
+      if (! svn_string_compare(base_val, old_val))
+        {
+          *conflict_remains = TRUE;
+          return SVN_NO_ERROR;
+        }
       else
-        SVN_ERR(svn_io_file_write_full(base_file, base_val->data,
-                                       base_val->len, NULL, filepool));
+        {
+          /* If 'base' and 'old' are identical, then we're in really
+             good shape.  Not only can we create a base_file to give
+             to the calback, we can attempt to give it a merged_file too. */
+          SVN_ERR(svn_io_open_unique_file2(&base_file, &base_path,
+                                           path, ".tmp",
+                                           svn_io_file_del_on_pool_cleanup,
+                                           filepool));
+          SVN_ERR(svn_io_file_write_full(base_file, base_val->data,
+                                         base_val->len, NULL, filepool));
+          SVN_ERR(svn_io_file_close(base_file, filepool));
+          cdesc->base_file = base_path;
 
-      SVN_ERR(svn_io_file_close(base_file, filepool));
-      cdesc->base_file = base_path;
+          if (working_val && new_val)
+            {
+              svn_stream_t *mergestream;
+              svn_diff_t *diff;
+              svn_diff_file_options_t *options =
+                  svn_diff_file_options_create(filepool);
+
+              SVN_ERR(svn_io_open_unique_file2(&merged_file, &merged_path,
+                                               path, ".tmp",
+                                               svn_io_file_del_on_pool_cleanup,
+                                               filepool));
+              mergestream = svn_stream_from_aprfile2(merged_file, FALSE,
+                                                     filepool);
+              SVN_ERR(svn_diff_mem_string_diff3(&diff, base_val, working_val,
+                                                new_val, &options, filepool));
+              SVN_ERR(svn_diff_mem_string_output_merge
+                      (mergestream, diff, base_val, working_val, new_val,
+                       NULL, NULL, NULL, NULL, FALSE, FALSE, filepool));
+              svn_stream_close(mergestream);
+
+              cdesc->merged_file = merged_path;
+            }
+        }
     }
-
-  /* ### TODO:  This is the place where we might do some intelligent
-     in-memory contextual merging of special svn: properties (like
-     svn:ignore).  When this happens, we'd dump the results into
-     merged_file, and then pass it to the callback by setting
-     cdesc->merged_file = merged_path. */
 
   cdesc->path = path;
   cdesc->node_kind = is_dir ? svn_node_dir : svn_node_file;

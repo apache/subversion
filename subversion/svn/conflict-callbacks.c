@@ -107,10 +107,6 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
   *result = svn_wc_create_conflict_result(svn_wc_conflict_choose_postpone,
                                           NULL, pool);
 
-  /* We don't deal with property conflicts yet, just postpone such. */
-  if (desc->kind == svn_wc_conflict_kind_property)
-    return SVN_NO_ERROR;
-
   switch (b->accept_which)
     {
     case svn_cl__accept_invalid:
@@ -209,18 +205,55 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
      option or the option did not apply; let's prompt. */
   subpool = svn_pool_create(pool);
 
-  /* Handle conflicting file contents, which is the most common case. */
-  if ((desc->node_kind == svn_node_file)
-      && (desc->action == svn_wc_conflict_action_edit)
-      && (desc->reason == svn_wc_conflict_reason_edited))
-    {
+  /* Handle the most common cases, which is either:
+
+     Conflicting edits on a file's text, or
+     Conflicting edits on a property.
+  */
+  if (((desc->node_kind == svn_node_file)
+       && (desc->action == svn_wc_conflict_action_edit)
+       && (desc->reason == svn_wc_conflict_reason_edited))
+      || (desc->kind == svn_wc_conflict_kind_property))
+  {
       const char *answer;
       char *prompt;
       svn_boolean_t performed_edit = FALSE;
 
-      SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
-                                  _("Conflict discovered in '%s'.\n"),
-                                  desc->path));
+      if (desc->kind == svn_wc_conflict_kind_text)
+        SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                                    _("Conflict discovered in '%s'.\n"),
+                                    desc->path));
+      else if (desc->kind == svn_wc_conflict_kind_property)
+        {
+          SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                                      _("Property conflict for '%s' discovered"
+                                        " on '%s'.\n"),
+                                      desc->property_name, desc->path));
+          if (! desc->merged_file)
+            {
+              svn_stringbuf_t *myval = NULL, *theirval = NULL;
+
+              /* libsvn_wc failed to merge the propvals; at least let
+                 the user see them, so they're not selecting (m)ine or
+                 (t)heirs blindly! */
+
+              if (desc->my_file)
+                SVN_ERR(svn_stringbuf_from_file(&myval, desc->my_file,
+                                                subpool));
+              if (desc->their_file)
+                SVN_ERR(svn_stringbuf_from_file(&theirval, desc->their_file,
+                                                subpool));
+
+              SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                        _("Their value is '%s', your value is '%s'.\n"),
+                          theirval ? theirval->data : "NULL",
+                          myval ? myval->data : "NULL"));
+            }
+        }
+      else
+        /* We don't recognize any other sort of conflict yet */
+        return SVN_NO_ERROR;
+
       while (TRUE)
         {
           svn_pool_clear(subpool);
@@ -228,6 +261,9 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
           prompt = apr_pstrdup(subpool, _("Select: (p)ostpone"));
           if (desc->merged_file)
             prompt = apr_pstrcat(subpool, prompt, _(", (d)iff, (e)dit"),
+                                 NULL);
+          else
+            prompt = apr_pstrcat(subpool, prompt, _(", (m)ine, (t)heirs"),
                                  NULL);
           if (performed_edit)
             prompt = apr_pstrcat(subpool, prompt, _(", (r)esolved"), NULL);
@@ -287,7 +323,8 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                 }
               else
                 SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
-                                            _("Invalid option.\n\n")));
+                                            _("Invalid option; there's no "
+                                              "merged version to diff.\n\n")));
             }
           if (strcmp(answer, "e") == 0)
             {
@@ -317,7 +354,8 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                 }
               else
                 SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
-                                            _("Invalid option.\n\n")));
+                                            _("Invalid option; there's no "
+                                              "merged version to edit.\n\n")));
             }
           if (strcmp(answer, "l") == 0)
             {
