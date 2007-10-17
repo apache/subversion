@@ -799,7 +799,7 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
                                      _("Syntax error parsing revision '%s'"),
                                      path + i + 1);
 
-          *truepath = svn_path_canonicalize(apr_pstrndup(pool, path, i),
+          *truepath = svn_path_canonicalize(apr_pstrmemdup(pool, path, i),
                                             pool);
           rev->kind = start_revision.kind;
           rev->value = start_revision.value;
