@@ -140,7 +140,8 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
           (&revnum, ra_session, revision, path, pool));
   SVN_ERR(svn_ra_get_repos_root(ra_session, &source_root, pool));
 
-  /* Disallow a switch operation to change the repository root of the target. */
+  /* Disallow a switch operation to change the repository root of the
+     target. */
   if (! svn_path_is_ancestor(source_root, switch_url))
     return svn_error_createf
       (SVN_ERR_WC_INVALID_SWITCH, NULL,
