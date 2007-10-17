@@ -41,40 +41,6 @@ public interface ConflictResolverCallback extends EventListener
      * @throws SubversionException If an error occurs.
      * @see .Choice
      */
-    public int resolve(ConflictDescriptor descrip)
+    public ConflictResult resolve(ConflictDescriptor descrip)
         throws SubversionException;
-
-    /**
-     * Poor man's enum for <code>svn_wc_conflict_choice_t</code>.
-     */
-    public final class Choice
-    {
-        /**
-         * Nothing done to resolve the conflict; conflict remains.
-         */
-        public static final int postpone = 0;
-
-        /**
-         * Resolve the conflict by choosing the base file.
-         */
-        public static final int chooseBase = 1;
-
-        /**
-         * Resolve the conflict by choosing the incoming (repository)
-         * version of the object.
-         */
-        public static final int chooseTheirs = 2;
-
-        /**
-         * Resolve the conflict by choosing own (local) version of the
-         * object.
-         */
-        public static final int chooseMine = 3;
-
-        /**
-         * Resolve the conflict by choosing the merged object
-         * (potentially manually edited).
-         */
-        public static final int chooseMerged = 4;
-    }
 }

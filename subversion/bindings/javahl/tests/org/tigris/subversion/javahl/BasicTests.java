@@ -2323,9 +2323,10 @@ public class BasicTests extends SVNTests
         // user's version of a conflicted file.
         client.setConflictResolver(new ConflictResolverCallback()
             {
-                public int resolve(ConflictDescriptor descrip)
+                public ConflictResult resolve(ConflictDescriptor descrip)
                 {
-                    return ConflictResolverCallback.Choice.chooseTheirs;
+                    return new ConflictResult(ConflictResult.chooseTheirs,
+                                              null);
                 }
             });
 
