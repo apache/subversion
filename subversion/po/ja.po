@@ -26,6 +26,7 @@
 # add-file element        add-file 要素
 # ancestor                祖先
 # ancestry                系統
+# another                 他の
 # apply-textdelta element     apply-textdelta 要素
 # attempted ...           〜しようとしました
 # attribute               属性
@@ -176,7 +177,7 @@ msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-10-17 08:53+0900\n"
-"PO-Revision-Date: 2007-10-17 08:53+0900\n"
+"PO-Revision-Date: 2007-10-18 02:49+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -205,7 +206,7 @@ msgstr "不正な MIME タイプです"
 
 #: include/svn_error_codes.h:180
 msgid "Wrong or unexpected property value"
-msgstr "間違ったあるいは予期しない属性値です"
+msgstr "不正な、あるいは予想外の属性値です"
 
 #: include/svn_error_codes.h:184
 msgid "Version file format not correct"
@@ -414,17 +415,15 @@ msgstr "変更リストが一致しません"
 
 #: include/svn_error_codes.h:410
 msgid "Conflict resolution failed"
-msgstr "競合の解決に失敗しました"
+msgstr "競合を解決できませんでした"
 
-# * Description for 'svn --keep-local'.
-# * 29 half-size characters are displayed on the left.
 #: include/svn_error_codes.h:414
 msgid "Failed to locate 'copyfrom' path in working copy."
-msgstr "作業コピー中に 'copyfrom' パスを見つけられませんでした。"
+msgstr "作業コピー内に 'copyfrom' パスが見つかりませんでした。"
 
 #: include/svn_error_codes.h:419
 msgid "Moving a path from one changelist to another"
-msgstr "パスを別の変更リストに移動中です"
+msgstr "パスを他の変更リストに移動中です"
 
 #: include/svn_error_codes.h:426
 msgid "General filesystem error"
@@ -686,7 +685,7 @@ msgstr "RA プラグイン ABI バージョンはサポートされていませ�
 
 #: include/svn_error_codes.h:721
 msgid "Inquiry about unknown capability"
-msgstr "不明な機能に関する問い合わせ"
+msgstr "未知の機能に関する問い合わせです"
 
 #: include/svn_error_codes.h:727
 msgid "RA layer failed to init socket layer"
@@ -1006,23 +1005,23 @@ msgstr "マージ情報のパースエラーです"
 
 #: include/svn_error_codes.h:1088
 msgid "Cease invocation of this API"
-msgstr "この API の起動を停止しました"
+msgstr "この API の呼び出しを中止します"
 
 #: include/svn_error_codes.h:1093
 msgid "Error parsing revision number"
-msgstr "リビジョン番号の解析中にエラーが生じました"
+msgstr "リビジョン番号をパースする際にエラーが生じました"
 
 #: include/svn_error_codes.h:1098
 msgid "Iteration terminated before completion"
-msgstr "完了前に列挙を停止されました"
+msgstr "繰り返しをすべて実行し終える前に途中で終了してしまいました"
 
 #: include/svn_error_codes.h:1102
 msgid "Unknown changelist"
-msgstr "そのような変更リストはありません: '%s'"
+msgstr "そのような変更リストはありません"
 
 #: include/svn_error_codes.h:1108
 msgid "Error parsing arguments"
-msgstr "引数をパースしているときにエラーが生じました"
+msgstr "引数をパースする際にエラーが生じました"
 
 #: include/svn_error_codes.h:1112
 msgid "Not enough arguments provided"
@@ -1062,7 +1061,7 @@ msgstr "必要ないのにログメッセージが指定されました"
 
 #: include/svn_error_codes.h:1148
 msgid "No external merge tool available"
-msgstr "利用できる外部エディタがありません"
+msgstr "利用できる外部マージツールがありません"
 
 #: libsvn_client/add.c:348 libsvn_wc/copy.c:188
 #, c-format
@@ -1276,7 +1275,7 @@ msgstr ""
 #: svn/status-cmd.c:231 svn/unlock-cmd.c:60 svn/update-cmd.c:60
 #, c-format
 msgid "Unknown changelist '%s'"
-msgstr "不明な変更リストです: '%s'"
+msgstr "変更リストが不明です: '%s'"
 
 #: libsvn_client/commit_util.c:976
 #, c-format
@@ -1494,16 +1493,17 @@ msgstr "'%s' は既に存在します"
 msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
 msgstr "'%s' のチェックサムが一致しませんでした。期待: '%s', 実際: '%s'"
 
+# TRANSLATION-FIXME: Improve translation of "ambient depth".
 #: libsvn_client/externals.c:486
 #, c-format
 msgid "Traversal of '%s' found no ambient depth"
-msgstr "'%s'を全探索しましたが、ambient depthは見つかりませんでした"
+msgstr "'%s' を横断して探索しましたが、環境の深さは見つかりませんでした"
 
 #: libsvn_client/info.c:409
 #, c-format
 msgid ""
 "Server does not support retrieving information about the repository root"
-msgstr "サーバは、リポジトリルートに関する情報の検索をサポートしていません"
+msgstr "リポジトリルートに関する情報の取得をサーバがサポートしていません"
 
 #: libsvn_client/info.c:416 libsvn_client/info.c:431 libsvn_client/info.c:441
 #, c-format
@@ -1604,10 +1604,9 @@ msgid ""
 "resolve all conflicts and rerun the merge to apply the remaining\n"
 "unmerged revisions"
 msgstr ""
-"リビジョン %ld:%ld を '%s' にマージ中にひとつまたは複数の\n"
-"競合が発生しました\n"
-"すべての競合を解決して、マージされていないリビジョンを\n"
-"適用するためにマージを再実行してください"
+"r%ld:%ld を '%s' にマージする際に 1 つ以上の競合が発生しました。\n"
+"マージされずに残っているリビジョンの変更を適用するために、\n"
+"すべての競合を解決してマージを再度実行してください"
 
 #: libsvn_client/merge.c:3982 libsvn_client/merge.c:4267
 msgid "Use of two URLs is not compatible with mergeinfo modification"
@@ -1648,7 +1647,7 @@ msgstr "ローカルにない対象 '%s' への再帰的な属性の設定はサ
 #: libsvn_client/prop_commands.c:365
 #, c-format
 msgid "Setting property '%s' on non-local target '%s' is not supported"
-msgstr "属性 '%s' への ローカルにない対象 '%s' の設定はサポートされていません"
+msgstr "属性 '%s' をローカルにない対象 '%s' に設定することはサポートされていません"
 
 #: libsvn_client/prop_commands.c:458
 msgid "Value will not be set unless forced"
@@ -4738,12 +4737,12 @@ msgstr "'%s' の 1 行目に数字以外が含まれています"
 #: libsvn_subr/kitchensink.c:40
 #, c-format
 msgid "Invalid revision number found parsing '%s'"
-msgstr "'%s' を解析中に不正なリビジョン番号が見つかりました"
+msgstr "'%s' をパースする際に不正なリビジョン番号が見つかりました"
 
 #: libsvn_subr/kitchensink.c:52
 #, c-format
 msgid "Negative revision number found parsing '%s'"
-msgstr "'%s' の解析中に負のリビジョン番号が見つかりました"
+msgstr "'%s' をパースする際に負のリビジョン番号が見つかりました"
 
 #: libsvn_subr/mergeinfo.c:143
 #, c-format
@@ -4757,7 +4756,7 @@ msgstr "range list の中に不正な文字 '%c'が見つかりました"
 
 #: libsvn_subr/mergeinfo.c:206
 msgid "Range list parsing ended before hitting newline"
-msgstr "改行を見つける前に range list の解析が終了しました"
+msgstr "改行を見つける前に range list のパースが終了しました"
 
 #: libsvn_subr/mergeinfo.c:225
 msgid "Pathname not terminated by ':'"
@@ -4806,7 +4805,7 @@ msgstr ""
 #: libsvn_subr/opt.c:799
 #, c-format
 msgid "Syntax error parsing revision '%s'"
-msgstr "リビジョン '%s' のパース中に構文エラーが生じました"
+msgstr "リビジョン '%s' をパースする際に構文エラーが生じました"
 
 #: libsvn_subr/opt.c:876
 #, c-format
@@ -9469,7 +9468,7 @@ msgstr ""
 #, c-format
 msgid "Waiting on repository lock; perhaps another process has it open?\n"
 msgstr ""
-"リポジトリにロックがかかるのを待ち続けています。おそらく別のプロセスが\n"
+"リポジトリにロックがかかるのを待ち続けています。おそらく他のプロセスが\n"
 "リポジトリを開いてしまったのでしょう。\n"
 
 #: svnadmin/main.c:839
@@ -14947,7 +14946,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "                             を不使用にします"
 
 #~ msgid "Client error in parsing arguments"
-#~ msgstr "クライアントが引数をパースしているときにエラーが生じました"
+#~ msgstr "クライアントが引数をパースする際にエラーが生じました"
 
 #~ msgid "Can't fetch FSFS mutex"
 #~ msgstr "FSFS の相互排他ロックを取得できません"
