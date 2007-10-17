@@ -799,8 +799,7 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
                                      _("Syntax error parsing revision '%s'"),
                                      path + i + 1);
 
-          *truepath = svn_path_canonicalize(apr_pstrmemdup(pool, path, i),
-                                            pool);
+          *truepath = apr_pstrmemdup(pool, path, i);
           rev->kind = start_revision.kind;
           rev->value = start_revision.value;
 
@@ -809,7 +808,7 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
     }
 
   /* Didn't find an @-sign. */
-  *truepath = svn_path_canonicalize(path, pool);
+  *truepath = path;
   rev->kind = svn_opt_revision_unspecified;
 
   return SVN_NO_ERROR;
