@@ -1430,13 +1430,13 @@ determine_merges_performed(apr_hash_t **merges, const char *target_wcpath,
   if (nbr_skips > 0)
     {
       apr_hash_index_t *hi;
-      const void *skipped_path;
 
       /* Override the mergeinfo for child paths which weren't
          actually merged. */
       for (hi = apr_hash_first(NULL, notify_b->skipped_paths); hi;
            hi = apr_hash_next(hi))
         {
+          const void *skipped_path;
           apr_hash_this(hi, &skipped_path, NULL, NULL);
 
           /* Add an empty range list for this path. */
