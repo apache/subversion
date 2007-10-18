@@ -317,7 +317,13 @@ conflict_resolver(svn_wc_conflict_result_t **result,
     err = (*conflict_b->wrapped_func)(result, description,
                                       conflict_b->wrapped_baton, pool);
   else
-    err = SVN_NO_ERROR;
+    {
+      /* If we have no wrapped callback to invoke, then we still need
+         to behave like a proper conflict-callback ourselves.  */
+      *result = svn_wc_create_conflict_result(svn_wc_conflict_choose_postpone,
+                                              NULL, pool);
+      err = SVN_NO_ERROR;
+    }
 
   /* Keep a record of paths still in conflict after the resolution attempt. */
   if ((! conflict_b->wrapped_func)
