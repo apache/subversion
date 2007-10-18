@@ -189,8 +189,10 @@ add_file(const char *path,
 
   SVN_ERR(write_indent(eb, pool));
   SVN_ERR(svn_stream_printf(eb->out, pool,
-                            " add_file : '%s' [from '%s':%ld]\n",
+                            "add_file : '%s' [from '%s':%ld]\n",
                             path, copyfrom_path, copyfrom_revision));
+
+  eb->indent_level++;
 
   SVN_ERR(eb->wrapped_editor->add_file(path,
                                        pb->wrapped_dir_baton,
