@@ -752,26 +752,22 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
 
       if (path[i] == '@')
         {
-          svn_boolean_t is_url;
           int ret;
           svn_opt_revision_t start_revision, end_revision;
 
           end_revision.kind = svn_opt_revision_unspecified;
 
-          /* URLs get treated differently from wc paths. */
-          is_url = svn_path_is_url(path);
-
           if (path[i + 1] == '\0')  /* looking at empty peg revision */
             {
               ret = 0;
-              start_revision.kind = is_url ? svn_opt_revision_head
-                                           : svn_opt_revision_base;
+              start_revision.kind = svn_opt_revision_unspecified;
             }
           else  /* looking at non-empty peg revision */
             {
               const char *rev_str = path + i + 1;
 
-              if (is_url)
+              /* URLs get treated differently from wc paths. */
+              if (svn_path_is_url(path))
                 {
                   /* URLs are URI-encoded, so we look for dates with
                      URI-encoded delimeters.  */
