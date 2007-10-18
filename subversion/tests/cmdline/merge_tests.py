@@ -8006,10 +8006,12 @@ def no_mergeinfo_from_no_op_merge(sbox):
   wc_disk, wc_status = setup_branch(sbox)
 
   # Some paths we'll care about
+  H_path = os.path.join(wc_dir, "A", "D", "H")
   beta_COPY_path = os.path.join(wc_dir, "A_COPY", "B", "E", "beta")
   G_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "G")
   tau_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "G", "tau")
   C_COPY_path = os.path.join(wc_dir, "A_COPY", "C")
+  D_COPY_path = os.path.join(wc_dir, "A_COPY", "D")
 
   # Merge r5 into A_COPY/B/E/beta and commit it.
   # Search for the comment entitled "The Merge Kluge" elsewhere in
@@ -8108,6 +8110,96 @@ def no_mergeinfo_from_no_op_merge(sbox):
   # A final check of the WC's status to ensure nothing unexpected occurred
   # (that the above merge's stdout/stderr didn't already reveal).
   svntest.actions.run_and_verify_status(wc_dir, wc_status)
+
+  # Reopened Issue #2883 as the following sequence failed:
+  # Commit what we have so far as r8.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A_COPY/D/G'     : Item(verb='Sending'),
+    'A_COPY/D/G/rho' : Item(verb='Sending'),
+    })
+  wc_status.tweak(status='  ')
+  wc_status.tweak('A_COPY/D/G', 'A_COPY/D/G/rho', wc_rev=8)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
+                                        None, None, None, None, None, wc_dir)
+  wc_status.tweak(wc_rev=8)
+  # Update the WC and add a prop to A/D/H and commit that as r9.
+  svntest.actions.run_and_verify_svn(None, ['At revision 8.\n'], [],
+                                     'update', wc_dir)
+
+  svntest.actions.run_and_verify_svn(
+    None, ["property 'prop:name' set on '" + H_path + "'\n"], [],
+    'ps', 'prop:name', 'propval', H_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/H' : Item(verb='Sending'),})
+  wc_status.tweak(status='  ')
+  wc_status.tweak('A/D/H', wc_rev=9)
+  wc_status.tweak('A_COPY/D/G', 'A_COPY/D/G/rho', wc_rev=8)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
+                                        None, None, None, None, None, wc_dir)
+  
+  # Merge r5:9 --depth immediates to A_COPY/D
+  short_D_COPY_path = shorten_path_kludge(D_COPY_path)
+  expected_output = wc.State(short_D_COPY_path, {
+    'H' : Item(status=' U'),
+    })
+  expected_status = wc.State(short_D_COPY_path, {
+    ''        : Item(status=' M', wc_rev=8),
+    'H'       : Item(status=' M', wc_rev=8),
+    'H/chi'   : Item(status='  ', wc_rev=8),
+    'H/omega' : Item(status='  ', wc_rev=8),
+    'H/psi'   : Item(status='  ', wc_rev=8),
+    'G'       : Item(status=' M', wc_rev=8),
+    'G/pi'    : Item(status='  ', wc_rev=8),
+    'G/rho'   : Item(status='  ', wc_rev=8),
+    'G/tau'   : Item(status='  ', wc_rev=8),
+    'gamma'   : Item(status='  ', wc_rev=8),
+    })
+  expected_disk = wc.State('', {
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/D:1,6-9'}),
+    'H'       : Item(props={'prop:name' : 'propval',
+                            SVN_PROP_MERGE_INFO : '/A/D/H:1,6-9*'}),
+    'H/chi'   : Item("This is the file 'chi'.\n"),
+    'H/omega' : Item("This is the file 'omega'.\n"),
+    'H/psi'   : Item("This is the file 'psi'.\n"),
+    'G'       : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:1,4,6-9*'}),
+    'G/pi'    : Item("This is the file 'pi'.\n"),
+    'G/rho'   : Item("New content"),
+    'G/tau'   : Item("This is the file 'tau'.\n"),
+    'gamma'   : Item("This is the file 'gamma'.\n"),
+    })
+  expected_skip = wc.State(short_D_COPY_path, { })
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_D_COPY_path, '5', '9',
+                                       sbox.repo_url + '/A/D',
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       None, None, None, None, None, 1, 1,
+                                       '--depth', 'immediates')
+  os.chdir(saved_cwd)
+
+  # Commit everything so far.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A_COPY/D'   : Item(verb='Sending'),
+    'A_COPY/D/G' : Item(verb='Sending'),
+    'A_COPY/D/H' : Item(verb='Sending'),
+    })
+  wc_status.tweak('A_COPY/D', 'A_COPY/D/G', 'A_COPY/D/H',
+                  wc_rev=10, status='  ')
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
+                                        None, None, None, None, None, wc_dir)
+
+  # Do a no-op merge of -c9 to A_COPY/D.  In issue #2883 this
+  # looked like a no-op but modified subtree mergeinfo.
+  expected_output = wc.State(short_D_COPY_path, {})
+  expected_status.tweak('', 'G', 'H', wc_rev=10, status='  ')
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_D_COPY_path, '8', '9',
+                                       sbox.repo_url + '/A/D',
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       None, None, None, None, None, 1, 1)
+
+  os.chdir(saved_cwd)
 
   # Test for issue #2827
   # Handle merge info for sparsely-populated directories
@@ -9598,7 +9690,7 @@ test_list = [ None,
               merge_to_out_of_date_target,
               merge_with_depth_files,
               merge_fails_if_subtree_is_deleted_on_src,
-              no_mergeinfo_from_no_op_merge,
+              XFail(no_mergeinfo_from_no_op_merge),
               merge_to_sparse_directories,
               merge_old_and_new_revs_from_renamed_dir,
               merge_with_child_having_different_rev_ranges_to_merge,
