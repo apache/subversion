@@ -1285,22 +1285,21 @@ typedef struct
 
 /* Finds a nearest ancestor in CHILDREN_WITH_MERGEINFO for PATH.
  * CHILDREN_WITH_MERGEINFO is expected to be sorted in Depth first order
- * of path. Search starts from START_INDEX. Nearest ancestor's index from 
+ * of path. Nearest ancestor's index from
  * CHILDREN_WITH_MERGEINFO is returned. */
 static int
 find_nearest_ancestor(apr_array_header_t *children_with_mergeinfo,
-                      const char *path, int start_index)
+                      const char *path)
 {
   int i;
-  int ancestor_index;
-  ancestor_index = start_index;
+  int ancestor_index = 0;
   /* This if condition is not needed as this function should be used from 
    * the context of same_url merge where CHILDREN_WITH_MERGEINFO will not be 
    * NULL and of size atleast 1. We have this if condition just to protect
    * the wrong caller. */
   if (!children_with_mergeinfo)
     return 0;
-  for (i = start_index; i < children_with_mergeinfo->nelts; i++)
+  for (i = 0; i < children_with_mergeinfo->nelts; i++)
     {
       svn_client__merge_path_t *child =
                                 APR_ARRAY_IDX(children_with_mergeinfo, i,
@@ -1320,15 +1319,26 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
   if (notify_b->same_urls)
     {
       int new_nearest_ancestor_index;
-      int start_index = (notify_b->cur_ancestor_index == -1)
-                        ? 0 : notify_b->cur_ancestor_index;
+      svn_boolean_t is_operative_notification = FALSE;
       notify_b->nbr_notifications++;
 
-      if (!(notify_b->is_single_file_merge))
+      if (notify->content_state == svn_wc_notify_state_conflicted
+          || notify->content_state == svn_wc_notify_state_merged
+          || notify->content_state == svn_wc_notify_state_changed
+          || notify->prop_state == svn_wc_notify_state_conflicted
+          || notify->prop_state == svn_wc_notify_state_merged
+          || notify->prop_state == svn_wc_notify_state_changed
+          || notify->action == svn_wc_notify_update_add)
+        {
+          notify_b->nbr_operative_notifications++;
+          is_operative_notification = TRUE;
+        }
+
+      if (!(notify_b->is_single_file_merge) && is_operative_notification)
         {
           new_nearest_ancestor_index = 
                       find_nearest_ancestor(notify_b->children_with_mergeinfo,
-                                            notify->path, start_index);
+                                            notify->path);
           if (new_nearest_ancestor_index != notify_b->cur_ancestor_index)
             {
               svn_client__merge_path_t *child =
@@ -1354,15 +1364,6 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
                 }
             }
         }
-
-      if (notify->content_state == svn_wc_notify_state_conflicted
-          || notify->content_state == svn_wc_notify_state_merged
-          || notify->content_state == svn_wc_notify_state_changed
-          || notify->prop_state == svn_wc_notify_state_conflicted
-          || notify->prop_state == svn_wc_notify_state_merged
-          || notify->prop_state == svn_wc_notify_state_changed
-          || notify->action == svn_wc_notify_update_add)
-        notify_b->nbr_operative_notifications++;
 
       if (notify->content_state == svn_wc_notify_state_merged
           || notify->content_state == svn_wc_notify_state_changed
