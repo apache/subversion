@@ -1142,8 +1142,8 @@ calculate_merge_ranges(apr_array_header_t **remaining_ranges,
      repeated merging). */
   if (target_mergeinfo)
     {
-    target_rangelist = apr_hash_get(target_mergeinfo, rel_path,
-                                    APR_HASH_KEY_STRING);
+      target_rangelist = apr_hash_get(target_mergeinfo, rel_path,
+                                      APR_HASH_KEY_STRING);
       if (target_rangelist)
         {
           int i;
@@ -1184,7 +1184,7 @@ calculate_merge_ranges(apr_array_header_t **remaining_ranges,
                  revert to work properly. */
               SVN_ERR(svn_rangelist_reverse(subtractive_merges, pool));
               qsort(subtractive_merges->elts, subtractive_merges->nelts,
-              subtractive_merges->elt_size, svn_sort_compare_ranges);
+                    subtractive_merges->elt_size, svn_sort_compare_ranges);
               SVN_ERR(svn_rangelist_intersect(&after_subtractive_merges,
                                               target_rangelist,
                                               subtractive_merges, pool));
