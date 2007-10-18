@@ -2336,7 +2336,7 @@ mark_mergeinfo_as_inheritable_for_a_range(
           svn_revnum_t hi_rev, low_rev;
           apr_hash_set(inheritable_merges, rel_path, APR_HASH_KEY_STRING,
                        inheritable_ranges);
-          get_hi_lo_revs_in_rangelist(merge_ranges, &hi_rev, &low_rev);
+          get_hi_lo_revs_in_rangelist(merge_ranges, &low_rev, &hi_rev);
           /* Try to remove any non-inheritable ranges bound by the merge
              being performed. */
           SVN_ERR(svn_mergeinfo_inheritable(&merges, target_mergeinfo,

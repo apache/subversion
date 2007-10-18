@@ -7999,7 +7999,6 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
 #
 #   2883: No-op merge (without skip) should not change mergeinfo.
 #   2976: Subtrees can lose non-inhertiable ranges
-#         Set as XFail until 2976 is resolved.
 def no_mergeinfo_from_no_op_merge(sbox):
   "no-op merge without skips doesn't change mergeinfo"
 
@@ -9726,7 +9725,7 @@ test_list = [ None,
               merge_to_out_of_date_target,
               merge_with_depth_files,
               merge_fails_if_subtree_is_deleted_on_src,
-              XFail(no_mergeinfo_from_no_op_merge),
+              no_mergeinfo_from_no_op_merge,
               merge_to_sparse_directories,
               merge_old_and_new_revs_from_renamed_dir,
               merge_with_child_having_different_rev_ranges_to_merge,
