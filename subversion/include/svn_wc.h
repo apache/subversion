@@ -3568,7 +3568,7 @@ typedef svn_error_t *(*svn_wc_canonicalize_svn_prop_get_file_t)
  * skip_some_checks is true, only some validity checks are taken.
  *
  * Some validity checks require access to the contents and MIME type
- * of the target if it is a file; they will call @a getter with @a
+ * of the target if it is a file; they will call @a prop_getter with @a
  * getter_baton, which then needs to set the MIME type and print the
  * contents of the file to the given stream.
  *
@@ -3584,7 +3584,7 @@ svn_error_t *svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
                                           const char *path,
                                           svn_node_kind_t kind,
                                           svn_boolean_t skip_some_checks,
-                                          svn_wc_canonicalize_svn_prop_get_file_t getter,
+                                          svn_wc_canonicalize_svn_prop_get_file_t prop_getter,
                                           void *getter_baton,
                                           apr_pool_t *pool);
 
