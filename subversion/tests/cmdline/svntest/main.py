@@ -94,12 +94,11 @@ else:
   file_scheme_prefix = 'file://'
   _exe = ''
 
-# os.wait() specifics
 try:
-  from os import wait
-  platform_with_os_wait = True
+  from popen2 import Popen3
+  platform_with_popen3_class = True
 except ImportError:
-  platform_with_os_wait = False
+  platform_with_popen3_class = False
 
 # The location of our mock svneditor script.
 if sys.platform == 'win32':
@@ -300,6 +299,43 @@ def _quote_arg(arg):
       arg = arg.replace('$', '\$')
     return '"%s"' % (arg,)
 
+def open_pipe(command, mode):
+  """Opens a popen3 pipe to COMMAND in MODE.
+
+  Returns (infile, outfile, errfile, waiter); waiter
+  should be passed to wait_on_pipe."""
+  if platform_with_popen3_class:
+    kid = Popen3(command, True)
+    return kid.tochild, kid.fromchild, kid.childerr, (kid, command)
+  else:
+    inf, outf, errf = os.popen3(command, mode)
+    return inf, outf, errf, None
+
+def wait_on_pipe(waiter):
+  """Waits for KID (opened with open_pipe) to finish, dying
+  if it does.  Returns kid's exit code."""
+  if waiter is None:
+    return
+  
+  kid, command = waiter
+
+  wait_code = kid.wait()
+
+  if os.WIFSIGNALED(wait_code):
+    exit_signal = os.WTERMSIG(wait_code)
+    sys.stdout.write("".join(stdout_lines))
+    sys.stderr.write("".join(stderr_lines))
+    if verbose_mode:
+      # show the whole path to make it easier to start a debugger
+      sys.stderr.write("CMD: %s terminated by signal %d\n"
+                       % (command, exit_signal))
+    raise SVNProcessTerminatedBySignal
+  else:
+    exit_code = os.WEXITSTATUS(wait_code)
+    if exit_code and verbose_mode:
+      sys.stderr.write("CMD: %s exited with %d\n" % (command, exit_code))
+    return exit_code
+
 # Run any binary, supplying input text, logging the command line
 def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
   args = ' '.join(map(_quote_arg, varargs))
@@ -313,7 +349,7 @@ def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
   else:
     mode = 't'
 
-  infile, outfile, errfile = os.popen3(command + ' ' + args, mode)
+  infile, outfile, errfile, kid = open_pipe(command + ' ' + args, mode)
 
   if stdin_lines:
     map(infile.write, stdin_lines)
@@ -326,24 +362,7 @@ def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
   outfile.close()
   errfile.close()
 
-  exit_code = 0
-
-  if platform_with_os_wait:
-    pid, wait_code = os.wait()
-
-    if os.WIFSIGNALED(wait_code):
-      exit_signal = os.WTERMSIG(wait_code)
-      sys.stdout.write("".join(stdout_lines))
-      sys.stderr.write("".join(stderr_lines))
-      if verbose_mode:
-        # show the whole path to make it easier to start a debugger
-        sys.stderr.write("CMD: %s terminated by signal %d\n"
-                         % (command, exit_signal))
-      raise SVNProcessTerminatedBySignal
-    else:
-      exit_code = os.WEXITSTATUS(wait_code)
-      if exit_code and verbose_mode:
-        sys.stderr.write("CMD: %s exited with %d\n" % (command, exit_code))
+  exit_code = wait_on_pipe(kid)
 
   return exit_code, stdout_lines, stderr_lines
 
@@ -564,8 +583,11 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
     print 'CMD:', os.path.basename(svnadmin_binary) + dump_args, \
           '|', os.path.basename(svnadmin_binary) + load_args,
   start = time.time()
-  dump_in, dump_out, dump_err = os.popen3(svnadmin_binary + dump_args, 'b')
-  load_in, load_out, load_err = os.popen3(svnadmin_binary + load_args, 'b')
+
+  dump_in, dump_out, dump_err, dump_kid = \
+           open_pipe(svnadmin_binary + dump_args, 'b')
+  load_in, load_out, load_err, load_kid = \
+           open_pipe(svnadmin_binary + load_args, 'b')
   stop = time.time()
   if verbose_mode:
     print '<TIME = %.6f>' % (stop - start)
@@ -584,6 +606,9 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   dump_err.close()
   load_out.close()
   load_err.close()
+  # Wait on the pipes; ignore return code.
+  wait_on_pipe(dump_kid)
+  wait_on_pipe(load_kid)
 
   dump_re = re.compile(r'^\* Dumped revision (\d+)\.\r?$')
   expect_revision = 0
