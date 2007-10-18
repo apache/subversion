@@ -160,6 +160,9 @@ struct merge_cmd_baton {
                                          children. */
   svn_boolean_t operative_merge;      /* Whether any changes were actually
                                          made as a result of this merge. */
+  svn_boolean_t override_set;         /* get_mergeinfo_paths set some override
+                                         mergeginfo - see criteria 3) in
+                                         get_mergeinfo_paths' comments. */
   const char *added_path;             /* Set to the dir path whenever the
                                          dir is added as a child of a
                                          versioned dir (dry-run only) */
@@ -3113,9 +3116,15 @@ get_mergeinfo_walk_cb(const char *path,
             child->has_noninheritable = TRUE;
           else
             child->has_noninheritable = FALSE;
+          child->propval =
+            svn_string_create(propval->data,
+                              wb->children_with_mergeinfo->pool);
         }
       else
-        child->has_noninheritable = FALSE;
+        {
+          child->propval = NULL;
+          child->has_noninheritable = FALSE;
+        }
 
       /* A little trickery: If PATH doesn't have any mergeinfo or has
          only inheritable mergeinfo, we still describe it as having
@@ -3335,6 +3344,7 @@ insert_parent_and_siblings_of_switched_or_absent_entry(
       parent->switched = FALSE;
       parent->has_noninheritable = FALSE;
       parent->absent = FALSE;
+      parent->propval = NULL;
       /* Insert PARENT into CHILDREN_WITH_MERGEINFO. */
       insert_child_to_merge(children_with_mergeinfo, parent, parent_index);
       /* Increment for loop index so we don't process the inserted element. */
@@ -3373,6 +3383,7 @@ insert_parent_and_siblings_of_switched_or_absent_entry(
           sibling_of_missing->switched = FALSE;
           sibling_of_missing->has_noninheritable = FALSE;
           sibling_of_missing->absent = FALSE;
+          sibling_of_missing->propval = NULL;
           insert_child_to_merge(children_with_mergeinfo, sibling_of_missing,
                                 insert_index);
         }
@@ -3526,6 +3537,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                   child_of_noninheritable->switched = FALSE;
                   child_of_noninheritable->has_noninheritable = FALSE;
                   child_of_noninheritable->absent = FALSE;
+                  child_of_noninheritable->propval = NULL;
                   insert_child_to_merge(children_with_mergeinfo,
                                         child_of_noninheritable,
                                         insert_index);
@@ -3534,6 +3546,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                     {
                       svn_boolean_t inherited;
                       apr_hash_t *mergeinfo;
+                      merge_cmd_baton->override_set = TRUE;
                       SVN_ERR(svn_client__get_wc_mergeinfo
                               (&mergeinfo, &inherited, FALSE,
                                svn_mergeinfo_nearest_ancestor,
@@ -3567,9 +3580,13 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                              ? TRUE : FALSE;
       item->switched = FALSE;
       item->absent = FALSE;
+      item->propval = NULL;
       item->has_noninheritable = FALSE;
       if (item->missing_child)
         item->has_noninheritable = TRUE;
+      SVN_ERR(svn_wc_prop_get(&(item->propval), SVN_PROP_MERGE_INFO,
+                              merge_cmd_baton->target, adm_access,
+                              children_with_mergeinfo->pool));
       APR_ARRAY_PUSH(children_with_mergeinfo,
                      svn_client__merge_path_t *) = item;
     }
@@ -3590,6 +3607,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                                         ? TRUE : FALSE;
           target_item->switched = FALSE;
           target_item->absent = FALSE;
+          target_item->propval = NULL;
           target_item->has_noninheritable = FALSE;
           if (target_item->missing_child)
             target_item->has_noninheritable = TRUE;
@@ -3778,6 +3796,24 @@ discover_and_merge_children(const svn_wc_entry_t *parent_entry,
                                          iterpool));
       if (!merge_b->operative_merge) 
         {
+          if(merge_b->override_set)
+            {
+              int i;
+
+              /* get_mergeinfo_paths() may have made some mergeinfo
+                 modifications that must be removed if this is a
+                 no-op merge. */
+              for (i = 0; i < children_with_mergeinfo->nelts; i++)
+                {
+                  svn_client__merge_path_t *child = 
+                    APR_ARRAY_IDX(children_with_mergeinfo,
+                                  i, svn_client__merge_path_t *);
+                  if (child)
+                    SVN_ERR(svn_wc_prop_set2(SVN_PROP_MERGE_INFO,
+                                             child->propval, child->path,
+                                             adm_access, TRUE, iterpool));
+                }
+            }
           svn_pool_destroy(iterpool);
           return err;
         }
@@ -3972,6 +4008,7 @@ svn_client_merge3(const char *source1,
   merge_cmd_baton.pool = pool;
   merge_cmd_baton.operative_merge = FALSE;
   merge_cmd_baton.target_has_dummy_merge_range = FALSE;
+  merge_cmd_baton.override_set = FALSE;
   notify_b.merge_b = &merge_cmd_baton;
 
   SVN_ERR(svn_client__open_ra_session_internal(&merge_cmd_baton.ra_session1,
@@ -4208,6 +4245,7 @@ svn_client_merge_peg3(const char *source,
   merge_cmd_baton.pool = pool;
   merge_cmd_baton.operative_merge = FALSE;
   merge_cmd_baton.target_has_dummy_merge_range = FALSE;
+  merge_cmd_baton.override_set = FALSE;
   notify_b.merge_b = &merge_cmd_baton;
 
   SVN_ERR(svn_client__open_ra_session_internal(&merge_cmd_baton.ra_session1,
