@@ -5425,8 +5425,7 @@ def mergeinfo_inheritance_and_discontinuous_ranges(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      expected_merge_output([[4]], 'U    ' +
                                        os.path.join("D", "G", "rho") + '\n'),
-                                     [], 'merge', '-c4',
-                                     '--use-merge-history')
+                                     [], 'merge', '-c4')
   os.chdir(saved_cwd)
 
   # Check the results of the merge.
@@ -6740,7 +6739,7 @@ def detect_copy_src_for_target_with_multiple_ancestors(sbox):
   # Use --record-only to force the setting of mergeinfo since this is
   # a no-op merge.
   svntest.actions.run_and_verify_svn(None, [],
-                                     [], 'merge', '-g', '--record-only')
+                                     [], 'merge', '--record-only')
   os.chdir(saved_cwd)
 
   expected_status.tweak('A/copy-of-B/C',  status=' M')
@@ -8919,7 +8918,7 @@ def merge_with_auto_rev_range_detection(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None,
-                                       1, 1, '-g')
+                                       1, 1)
   os.chdir(saved_cwd)
 
 def mergeinfo_recording_in_skipped_merge(sbox):
@@ -9023,7 +9022,7 @@ def mergeinfo_recording_in_skipped_merge(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None,
-                                       1, 1, '-g')
+                                       1, 1)
 
   os.chdir(saved_cwd)
 
@@ -9291,7 +9290,7 @@ def propchange_of_subdir_raises_conflict(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None,
-                                       1, 1, '-g', '--depth', 'files')
+                                       1, 1, '--depth', 'files')
 
   # Merge /A/B to /A_COPY/B ie., r1 to r3 with infinite depth
   expected_output = wc.State(short_A_COPY_B, {
@@ -9321,7 +9320,7 @@ def propchange_of_subdir_raises_conflict(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None,
-                                       1, 1, '-g')
+                                       1, 1)
 
   os.chdir(saved_cwd)
 
@@ -9490,7 +9489,7 @@ def merge_target_with_non_inheritable_mergeinfo(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None,
-                                       1, 1, '-g', '--depth', 'immediates')
+                                       1, 1, '--depth', 'immediates')
 
   # Merge /A/B to /A_COPY/B ie., r1 to r3 with infinite depth
   expected_output = wc.State(short_A_COPY_B, {
@@ -9522,7 +9521,7 @@ def merge_target_with_non_inheritable_mergeinfo(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None,
-                                       1, 1, '-g')
+                                       1, 1)
 
   os.chdir(saved_cwd)
 
