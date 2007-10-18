@@ -2597,7 +2597,7 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
              we're not interested in the parsed result, only in
              whether or the parsing errored. */
           SVN_ERR(svn_wc_parse_externals_description3
-                  (NULL, path, propval->data, TRUE, pool));
+                  (NULL, path, propval->data, FALSE, pool));
         }
     }
   else if (strcmp(propname, SVN_PROP_KEYWORDS) == 0)
@@ -3184,6 +3184,8 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
       svn_wc_external_item2_t *item;
       const char *token0;
       const char *token1;
+      svn_boolean_t token0_is_url;
+      svn_boolean_t token1_is_url;
 
       /* Index into line_parts where the revision specification
          started. */
@@ -3212,6 +3214,11 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
        * 6) -rN URL DIR
        *
        * The last three allow peg revisions in the URL.
+       *
+       * With relative URLs and no '-rN' or '-r N', there is no way to
+       * distinguish between 'DIR URL' and 'URL DIR' when URL is a
+       * relative URL like /svn/repos/trunk, so this case is taken as
+       * case 4).
        */
       if (line_parts->nelts < 2 || line_parts->nelts > 4)
         return svn_error_createf
@@ -3232,10 +3239,18 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
       token0 = APR_ARRAY_IDX(line_parts, 0, const char *);
       token1 = APR_ARRAY_IDX(line_parts, 1, const char *);
 
+      token0_is_url = svn_path_is_url(token0);
+      token1_is_url = svn_path_is_url(token1);
+
       /* If -r is at the beginning of the line or the first token is
-         an absolute URL, then the URL supports peg revisions. */
-      if (0 == rev_idx || svn_path_is_url(token0))
+         an absolute URL or if the second token is not an absolute
+         URL, then the URL supports peg revisions. */
+      if (0 == rev_idx || token0_is_url || ! token1_is_url)
         {
+          /* The URL is passed to svn_opt_parse_path in
+             uncanonicalized form so that the scheme relative URL
+             //hostname/foo is not collapsed to a server root relative
+             URL /hostname/foo. */
           SVN_ERR(svn_opt_parse_path(&item->peg_revision, &item->url,
                                      token0, pool));
           item->target_dir = token1;
