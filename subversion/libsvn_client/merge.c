@@ -1956,7 +1956,9 @@ drive_merge_report_editor(const char *target_wcpath,
   return SVN_NO_ERROR;
 }
 
-/* For each child in children_with_mergeinfo, it populates the remaing_ranges.
+/* For each child in children_with_mergeinfo, it populates the 
+ * remaining_ranges. CHILDREN_WITH_MERGEINFO is expected to be sorted in 
+ * depth first order.
  * All persistent allocations are from children_with_mergeinfo->pool.
  */
 static svn_error_t *
@@ -2014,17 +2016,25 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                                          child_entry->url,
                                          ra_session, child_entry, merge_b->ctx,
                                          persistent_pool));
-      if ((strcmp(child->path, merge_b->target) == 0)
-          && child->remaining_ranges->nelts == 0)
+    }
+
+  /* Take advantage of the depth first ordering,
+     i.e first(0th) item is target.*/
+  if (children_with_mergeinfo->nelts)
+    {
+      svn_client__merge_path_t *child =
+                                APR_ARRAY_IDX(children_with_mergeinfo, 0,
+                                              svn_client__merge_path_t *);
+      if (child->remaining_ranges->nelts == 0)
         {
           svn_merge_range_t *dummy_merge_range = 
-            apr_palloc(persistent_pool, sizeof(*dummy_merge_range));
-            dummy_merge_range->start = dummy_merge_range->end =
-              APR_ARRAY_IDX(merge_sources, 0, svn_merge_range_t *)->end;
+                  apr_palloc(persistent_pool, sizeof(*dummy_merge_range));
+          dummy_merge_range->start = dummy_merge_range->end =
+                  APR_ARRAY_IDX(merge_sources, 0, svn_merge_range_t *)->end;
           child->remaining_ranges = apr_array_make(persistent_pool, 1,
                                                    sizeof(dummy_merge_range));
           APR_ARRAY_PUSH(child->remaining_ranges, svn_merge_range_t *) =
-            dummy_merge_range;
+                                                             dummy_merge_range;
           merge_b->target_has_dummy_merge_range = TRUE;
         }
     }
