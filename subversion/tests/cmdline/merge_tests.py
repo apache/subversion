@@ -7995,9 +7995,11 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
                                      [], 'merge', '-r1:5', '--force',
                                      A_url, Acopy_path)
 
-# Test for issue:
+# Test for issues:
 #
 #   2883: No-op merge (without skip) should not change mergeinfo.
+#   2976: Subtrees can lose non-inhertiable ranges
+#         Set as XFail until 2976 is resolved.
 def no_mergeinfo_from_no_op_merge(sbox):
   "no-op merge without skips doesn't change mergeinfo"
 
@@ -8013,6 +8015,8 @@ def no_mergeinfo_from_no_op_merge(sbox):
   C_COPY_path = os.path.join(wc_dir, "A_COPY", "C")
   D_COPY_path = os.path.join(wc_dir, "A_COPY", "D")
 
+  # Part 1: Test for issue #2883
+  #
   # Merge r5 into A_COPY/B/E/beta and commit it.
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
@@ -8199,6 +8203,38 @@ def no_mergeinfo_from_no_op_merge(sbox):
                                        expected_status, expected_skip,
                                        None, None, None, None, None, 1, 1)
 
+  os.chdir(saved_cwd)
+
+  # Part 2: Test for issue #2976
+  #
+  # Merge r3:8 A_COPY/D, A_COPY/D/H and A_COPY/D/G should
+  # both retain mergeinfo for r9*
+  short_D_COPY_path = shorten_path_kludge(D_COPY_path)
+  expected_output = wc.State(short_D_COPY_path, {
+    'H/omega' : Item(status='U '),
+    })
+  expected_status.tweak('', 'G', 'H', status=' M')
+  expected_status.tweak('H/omega', status='M ')
+  expected_disk = wc.State('', {
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/D:1,4-9'}),
+    'H'       : Item(props={'prop:name' : 'propval',
+                            SVN_PROP_MERGE_INFO : '/A/D/H:1,4-8,9*'}),
+    'H/chi'   : Item("This is the file 'chi'.\n"),
+    'H/omega' : Item("New content"),
+    'H/psi'   : Item("This is the file 'psi'.\n"),
+    'G'       : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:1,4-8,9*'}),
+    'G/pi'    : Item("This is the file 'pi'.\n"),
+    'G/rho'   : Item("New content"),
+    'G/tau'   : Item("This is the file 'tau'.\n"),
+    'gamma'   : Item("This is the file 'gamma'.\n"),
+    })
+  expected_skip = wc.State(short_D_COPY_path, { })
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_D_COPY_path, '3', '8',
+                                       sbox.repo_url + '/A/D',
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       None, None, None, None, None, 1, 1)
   os.chdir(saved_cwd)
 
   # Test for issue #2827
@@ -9690,7 +9726,7 @@ test_list = [ None,
               merge_to_out_of_date_target,
               merge_with_depth_files,
               merge_fails_if_subtree_is_deleted_on_src,
-              no_mergeinfo_from_no_op_merge,
+              XFail(no_mergeinfo_from_no_op_merge),
               merge_to_sparse_directories,
               merge_old_and_new_revs_from_renamed_dir,
               merge_with_child_having_different_rev_ranges_to_merge,
