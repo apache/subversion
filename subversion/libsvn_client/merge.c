@@ -1131,6 +1131,7 @@ compare_merge_ranges2(const void *a,
 static svn_error_t *
 calculate_merge_ranges(apr_array_header_t **remaining_ranges,
                        const char *rel_path,
+                       const svn_wc_entry_t *entry,
                        apr_hash_t *target_mergeinfo,
                        apr_array_header_t *requested_ranges,
                        svn_boolean_t is_three_way_merge,
@@ -1186,6 +1187,7 @@ calculate_merge_ranges(apr_array_header_t **remaining_ranges,
 
           if (subtractive_merges && subtractive_merges->nelts)
             {
+              const char *target_rel_path;
               /* Return the intersection of the revs which are both
                  already represented by the WC and are requested for
                  revert.  The revert range will need to be reversed
@@ -1194,11 +1196,23 @@ calculate_merge_ranges(apr_array_header_t **remaining_ranges,
               SVN_ERR(svn_rangelist_reverse(subtractive_merges, pool));
               qsort(subtractive_merges->elts, subtractive_merges->nelts,
                     subtractive_merges->elt_size, svn_sort_compare_ranges);
-              SVN_ERR(svn_rangelist_intersect(&after_subtractive_merges,
-                                              target_rangelist,
-                                              subtractive_merges, pool));
-              SVN_ERR(svn_rangelist_reverse(subtractive_merges, pool));
-              SVN_ERR(svn_rangelist_reverse(after_subtractive_merges, pool));
+             /* For merge from the source same as that of target's repo url,
+              * allow repeat reverse merge as commit on a target itself 
+              * implicitly means a forward merge from target to target. */
+              target_rel_path = entry->url + strlen(entry->repos);
+              if (strcmp(target_rel_path, rel_path) == 0)
+                {
+                  SVN_ERR(svn_rangelist_reverse(subtractive_merges, pool));
+                  after_subtractive_merges = subtractive_merges;
+                }
+              else
+                {
+                  SVN_ERR(svn_rangelist_intersect(&after_subtractive_merges,
+                                                  target_rangelist,
+                                                  subtractive_merges, pool));
+                  SVN_ERR(svn_rangelist_reverse(after_subtractive_merges,
+                                                pool));
+                }
             }
           else
             {
@@ -1854,7 +1868,7 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
 
   /* ...and of those ranges, determine which ones actually still
      need merging. */
-  SVN_ERR(calculate_merge_ranges(remaining_ranges, rel_path,
+  SVN_ERR(calculate_merge_ranges(remaining_ranges, rel_path, entry,
                                  target_mergeinfo, requested_rangelist,
                                  is_three_way_merge, pool));
   return SVN_NO_ERROR;
