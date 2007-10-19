@@ -2486,7 +2486,9 @@ svn_wc_status_set_repos_locks(void *set_locks_baton,
  * @a src must be a file or directory under version control; @a dst_parent
  * must be a directory under version control in the same working copy;
  * @a dst_basename will be the name of the copied item, and it must not
- * exist already.
+ * exist already.  Note that when @a src points to a versioned file, the
+ * working file doesn't necessarily exist in which case its text-base is
+ * used instead.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton at
  * various points during the operation.  If it returns an error

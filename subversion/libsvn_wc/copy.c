@@ -371,7 +371,8 @@ determine_copyfrom_info(const char **copyfrom_url, svn_revnum_t *copyfrom_rev,
 
    ASSUMPTIONS:
 
-     - src_path points to a file under version control
+     - src_path is under version control; the working file doesn't
+                  necessarily exist (its text-base does).
      - dst_parent points to a dir under version control, in the same
                   working copy.
      - dst_basename will be the 'new' name of the copied file in dst_parent
@@ -481,7 +482,26 @@ copy_file_administratively(const char *src_path,
                                                 FALSE, special, pool));
         }
       else
-        SVN_ERR(svn_io_copy_file(src_path, tmp_wc_text, TRUE, pool));
+        {
+          svn_error_t *err = SVN_NO_ERROR;
+
+          /* Try with the working file and fallback on its text-base. */
+          err = svn_io_copy_file(src_path, tmp_wc_text, TRUE, pool);
+          if (err)
+            {
+              if (APR_STATUS_IS_ENOENT(err->apr_err))
+                {
+                  svn_error_clear(err);
+                  err = svn_io_copy_file(src_txtb, tmp_wc_text, FALSE, pool);
+                  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+                    return svn_error_create(SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND,
+                                            err, NULL);
+                }
+
+              if (err)
+                return err;
+            }
+        }
     }
 
     SVN_ERR(svn_wc_add_repos_file2(dst_path, dst_parent,
@@ -808,7 +828,8 @@ svn_wc_copy2(const char *src_path,
 
   SVN_ERR(svn_io_check_path(src_path, &src_kind, pool));
 
-  if (src_kind == svn_node_file)
+  if (src_kind == svn_node_file ||
+      (src_entry->kind == svn_node_file && src_kind == svn_node_none))
     {
       /* Check if we are copying a file scheduled for addition,
          these require special handling. */
