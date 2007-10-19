@@ -3797,10 +3797,8 @@ discover_and_merge_children(const svn_wc_entry_t *parent_entry,
                                          iterpool));
       if (!merge_b->operative_merge) 
         {
-          if(merge_b->override_set)
+          if (merge_b->override_set)
             {
-              int i;
-
               /* get_mergeinfo_paths() may have made some mergeinfo
                  modifications that must be removed if this is a
                  no-op merge. */
