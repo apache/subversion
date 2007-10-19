@@ -3421,7 +3421,7 @@ def update_handles_copyfrom_with_txdeltas(sbox):
                                         check_props = True)
 
 #----------------------------------------------------------------------
-# Very obscure bug:
+# Very obscure bug: Issue #2977.
 # Let's say there's a revision with
 #   $ svn mv b c
 #   $ svn mv a b
