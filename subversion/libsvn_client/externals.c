@@ -210,8 +210,8 @@ switch_external(const char *path,
               SVN_ERR(svn_client__update_internal(NULL, path, revision,
                                                   svn_depth_unknown,
                                                   FALSE, FALSE,
-                                                  timestamp_sleep, ctx,
-                                                  subpool));
+                                                  timestamp_sleep, TRUE,
+                                                  ctx, subpool));
               svn_pool_destroy(subpool);
               return SVN_NO_ERROR;
             }
