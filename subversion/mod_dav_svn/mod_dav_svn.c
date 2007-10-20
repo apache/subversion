@@ -3,7 +3,7 @@
  *                repository.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -73,9 +73,9 @@ typedef struct {
   const char *repo_name;             /* repository name */
   const char *xslt_uri;              /* XSL transform URI */
   const char *fs_parent_path;        /* path to parent of SVN FS'es  */
-  enum conf_flag autoversioning;  /* whether autoversioning is active */
+  enum conf_flag autoversioning;     /* whether autoversioning is active */
   enum path_authz_conf path_authz_method; /* how GET subrequests are handled */
-  enum conf_flag list_parentpath; /* whether to allow GET of parentpath */
+  enum conf_flag list_parentpath;    /* whether to allow GET of parentpath */
   const char *root_dir;              /* our top-level directory */
   const char *master_uri;            /* URI to the master SVN repos */
   const char *activities_db;         /* path to activities database(s) */
@@ -287,8 +287,8 @@ SVNPath_cmd(cmd_parms *cmd, void *config, const char *arg1)
   if (conf->fs_parent_path != NULL)
     return "SVNPath cannot be defined at same time as SVNParentPath.";
 
-  conf->fs_path
-    = svn_path_internal_style(apr_pstrdup(cmd->pool, arg1), cmd->pool);
+  conf->fs_path = svn_path_internal_style(apr_pstrdup(cmd->pool, arg1),
+                                          cmd->pool);
 
   return NULL;
 }
@@ -302,8 +302,8 @@ SVNParentPath_cmd(cmd_parms *cmd, void *config, const char *arg1)
   if (conf->fs_path != NULL)
     return "SVNParentPath cannot be defined at same time as SVNPath.";
 
-  conf->fs_parent_path
-    = svn_path_internal_style(apr_pstrdup(cmd->pool, arg1), cmd->pool);
+  conf->fs_parent_path = svn_path_internal_style(apr_pstrdup(cmd->pool, arg1),
+                                                 cmd->pool);
 
   return NULL;
 }
