@@ -87,6 +87,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
                             svn_boolean_t *timestamp_sleep,
+                            svn_boolean_t send_copyfrom_args,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool)
 {
@@ -228,7 +229,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             revnum,
                             target,
                             depth,
-                            TRUE, /* send copyfrom args, please */
+                            send_copyfrom_args,
                             update_editor, update_edit_baton, pool));
 
   SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
@@ -363,7 +364,7 @@ svn_client_update3(apr_array_header_t **result_revs,
       err = svn_client__update_internal(&result_rev, path, revision,
                                         depth, ignore_externals,
                                         allow_unver_obstructions,
-                                        &sleep, ctx, subpool);
+                                        &sleep, TRUE, ctx, subpool);
       if (err && err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
         {
           return err;
@@ -414,5 +415,5 @@ svn_client_update(svn_revnum_t *result_rev,
 {
   return svn_client__update_internal(result_rev, path, revision,
                                      SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                                     FALSE, FALSE, NULL, ctx, pool);
+                                     FALSE, FALSE, NULL, TRUE, ctx, pool);
 }

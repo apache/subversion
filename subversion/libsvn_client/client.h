@@ -423,7 +423,14 @@ svn_client__make_local_parents(const char *path,
 
    If ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children of PATH
    that obstruct items added from the repos are tolerated; if FALSE,
-   these obstructions cause the update to fail. */
+   these obstructions cause the update to fail.
+
+   If SEND_COPYFROM_ARGS is true, then request that the server not
+   send file contents when adding files that have been created by
+   explicit copying; instead, just send copyfrom-args to add_file(),
+   and possibly follow up with an apply_textdelta() against the copied
+   file.
+*/
 svn_error_t *
 svn_client__update_internal(svn_revnum_t *result_rev,
                             const char *path,
@@ -432,6 +439,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
                             svn_boolean_t *timestamp_sleep,
+                            svn_boolean_t send_copyfrom_args,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
 
