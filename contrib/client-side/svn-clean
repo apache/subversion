@@ -28,6 +28,7 @@ my $use_svn_module = eval { require SVN::Client };
 
 my $CWD = getcwd;
 
+my @exclude      = "";
 my $force        = 0;
 my $quiet        = 0;
 my $print        = 0;
@@ -36,6 +37,7 @@ my $man          = 0;
 my $nonrecursive = 0;
 my $path         = $CWD;
 GetOptions(
+    "exclude=s"       => \@exclude,
     "force"           => \$force,
     "non-recursive|N" => \$nonrecursive,
     "quiet"           => \$quiet,
@@ -46,6 +48,9 @@ GetOptions(
 pod2usage(1) if $help;
 pod2usage( -exitstatus => 0, -verbose => 2 ) if $man;
 $path = Cwd::abs_path( $ARGV[0] ) if @ARGV;
+
+# Precompile regexes.
+$_ = qr/$_/ foreach @exclude;
 
 if ($use_svn_module) {
 
@@ -67,6 +72,7 @@ else {
 
     # Main file-wiping loop.
     if ( $^O eq 'MSWin32' ) {
+
         # Perl on Windows currently doesn't have list pipe opens.
         open SVN, join( ' ', @command, @ARGV ) . '|'
           or die "Can't call program \"svn\": $!\n";
@@ -75,9 +81,15 @@ else {
         open SVN, "-|", @command, @ARGV
           or die "Can't call program \"svn\": $!\n";
     }
-    while (<SVN>) {
+  LINE: while (<SVN>) {
         if (/^([\?ID])/) {
             my $file = (split)[-1];
+            foreach my $ex (@exclude) {
+                if ( $file =~ $ex ) {
+                    print "excluded $file\n" unless $quiet or $print;
+                    next LINE;
+                }
+            }
             if ( $1 eq 'D' ) {
                 next unless -f $file;
             }
@@ -111,6 +123,12 @@ sub clean {
         or $status->text_status == $SVN::Wc::Status::ignored
         or $status->text_status == $SVN::Wc::Status::deleted )
     {
+        foreach my $ex (@exclude) {
+            if ( $path =~ $ex ) {
+                print "excluded $path\n" unless $quiet or $print;
+                return;
+            }
+        }
 
         # Make sure the file exists before removing it. Do not remove deleted
         # directories as they are needed to remove the files they contain when
@@ -158,6 +176,35 @@ faster than parsing the output of the B<svn> command-line client.
 =head1 OPTIONS
 
 =over 8
+
+=item B<-e>, B<--exclude>
+
+A regular expression for filenames to be exluded. For example, the following
+command will skip files ending in ".zip":
+
+=over 8
+
+svn-clean --exclude '\.zip$'
+
+=back
+
+Multiple exclude patterns can be specified. If at least one matches, then the
+file is skipped. For example, the following command will skip files ending in
+".jpg" or ".png":
+
+=over 8
+
+svn-clean --exclude '\.jpg$' --exclude '\.png$'
+
+=back
+
+The following command will skip the entire "build" subdirectory:
+
+=over 8
+
+svn-clean --exclude '^build(/|$)'
+
+=back
 
 =item B<-f>, B<--force>
 
