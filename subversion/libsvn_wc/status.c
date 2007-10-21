@@ -814,6 +814,9 @@ get_dir_status(struct edit_baton *eb,
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
+  if (depth == svn_depth_unknown)
+    depth = svn_depth_infinity;
+
   /* Load entries file for the directory into the requested pool. */
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, subpool));
 
@@ -857,7 +860,7 @@ get_dir_status(struct edit_baton *eb,
           /* Now, parse the thing, and copy the parsed results into
              our "global" externals hash. */
           SVN_ERR(svn_wc_parse_externals_description3(&ext_items, path,
-                                                      prop_val->data, TRUE,
+                                                      prop_val->data, FALSE,
                                                       pool));
           for (i = 0; ext_items && i < ext_items->nelts; i++)
             {

@@ -715,6 +715,10 @@ SVN_ERROR_START
              SVN_ERR_RA_CATEGORY_START + 7,
              "Path is not locked")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_RA_UNKNOWN_CAPABILITY,
+             SVN_ERR_RA_CATEGORY_START + 8,
+             "Inquiry about unknown capability")
 
   /* ra_dav errors */
 

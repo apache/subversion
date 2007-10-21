@@ -653,7 +653,7 @@ _svn()
 		;;
 	blame|annotate|ann|praise)
 		cmdOpts="$rOpts $pOpts -v --verbose --incremental --xml \
-		         -x --extensions --force"
+		         -x --extensions --force $gOpts"
 		;;
 	cat)
 		cmdOpts="$rOpts $pOpts"
@@ -707,12 +707,13 @@ _svn()
 		;;
 	log)
 		cmdOpts="$rOpts -v --verbose --targets $pOpts --stop-on-copy \
-		         --incremental --xml $qOpts -l --limit --changelist"
+		         --incremental --xml $qOpts -l --limit --changelist \
+                         $gOpts"
 		;;
 	merge)
 		cmdOpts="$rOpts $nOpts $qOpts --force --dry-run --diff3-cmd \
 		         $pOpts --ignore-ancestry -c --change -x --extensions \
-                         $gOpts --record-only --accept"
+                         --record-only --accept"
 		;;
 	mergeinfo)
 	        cmdOpts="$rOpts $pOpts"
@@ -721,7 +722,8 @@ _svn()
 		cmdOpts="$mOpts $qOpts --editor-cmd $pOpts"
 		;;
 	move|mv|rename|ren)
-		cmdOpts="$mOpts $rOpts $qOpts --force --editor-cmd $pOpts"
+		cmdOpts="$mOpts $rOpts $qOpts --force --editor-cmd $pOpts \
+                         $gOpts"
 		;;
 	propdel|pdel|pd)
 		cmdOpts="$qOpts -R --recursive $rOpts $pOpts"

@@ -591,6 +591,15 @@
 #endif
 
 /* -----------------------------------------------------------------------
+   Input of apr_array_header_t * <svn_opt_revision_range_t *>
+*/
+#ifdef SWIGRUBY
+%typemap(in) apr_array_header_t *REVISION_RANGE_LIST {
+  $1 = svn_swig_rb_array_to_apr_array_revision_range($input, _global_pool);
+}
+#endif
+
+/* -----------------------------------------------------------------------
    Input of
    apr_hash_t * <const char *, apr_array_header_t * <svn_merge_range_t *>>
 */

@@ -26,10 +26,12 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
+#include <vector>
 #include <jni.h>
 #include "Path.h"
 
 class Revision;
+class RevisionRange;
 class Notify;
 class Notify2;
 class ConflictResolverCallback;
@@ -94,9 +96,10 @@ class SVNClient :public SVNBase
   void merge(const char *path1, Revision &revision1, const char *path2,
              Revision &revision2, const char *localPath, bool force,
              svn_depth_t depth, bool ignoreAncestry, bool dryRun);
-  void merge(const char *path, Revision &pegRevision, Revision &revision1,
-             Revision &revision2, const char *localPath, bool force,
-             svn_depth_t depth, bool ignoreAncestry, bool dryRun);
+  void merge(const char *path, Revision &pegRevision,
+             std::vector<RevisionRange> &rangesToMerge,
+             const char *localPath, bool force, svn_depth_t depth,
+             bool ignoreAncestry, bool dryRun);
   void doImport(const char *path, const char *url, const char *message,
                 svn_depth_t depth, bool noIgnore, bool ignoreUnknownNodeTypes);
   jlong doSwitch(const char *path, const char *url, Revision &revision,
@@ -107,7 +110,7 @@ class SVNClient :public SVNBase
                  bool ignoreExternals, svn_depth_t depth,
                  const char *nativeEOL);
   void resolved(const char *path, svn_depth_t depth,
-                svn_wc_conflict_result_t result);
+                svn_wc_conflict_choice_t choice);
   void cleanup(const char *path);
   void mkdir(Targets &targets, const char *message, bool makeParents);
   void move(Targets &srcPaths, const char *destPath,

@@ -136,7 +136,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
             err = svn_client__update_internal(result_rev, path, revision,
                                               depth, ignore_externals,
                                               allow_unver_obstructions,
-                                              use_sleep, ctx, pool);
+                                              use_sleep, FALSE,
+                                              ctx, pool);
             goto done;
           }
 
@@ -154,7 +155,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
           {
             err = svn_client__update_internal(result_rev, path, revision,
                                               depth, ignore_externals,
-                                              allow_unver_obstructions, use_sleep,
+                                              allow_unver_obstructions,
+                                              use_sleep, FALSE,
                                               ctx, pool);
           }
         else

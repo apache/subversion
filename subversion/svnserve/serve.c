@@ -1821,6 +1821,68 @@ static svn_error_t *get_locations(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *gls_receiver(svn_location_segment_t *segment,
+                                 void *baton,
+                                 apr_pool_t *pool)
+{
+  svn_ra_svn_conn_t *conn = baton;
+  return svn_ra_svn_write_tuple(conn, pool, "rr(?c)",
+                                segment->range_start, 
+                                segment->range_end,
+                                segment->path);
+}
+
+static svn_error_t *get_location_segments(svn_ra_svn_conn_t *conn, 
+                                          apr_pool_t *pool,
+                                          apr_array_header_t *params, 
+                                          void *baton)
+{
+  svn_error_t *err, *write_err;
+  server_baton_t *b = baton;
+  svn_revnum_t start_rev, end_rev;
+  const char *relative_path;
+  const char *abs_path;
+
+  /* Parse the arguments. */
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)(?r)", &relative_path,
+                                 &start_rev, &end_rev));
+  relative_path = svn_path_canonicalize(relative_path, pool);
+
+  abs_path = svn_path_join(b->fs_path->data, relative_path, pool);
+
+  if (SVN_IS_VALID_REVNUM(start_rev) 
+      && SVN_IS_VALID_REVNUM(end_rev)
+      && (end_rev > start_rev))
+    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             "Get-location-segments end revision must be "
+                             "older than start revision");
+
+  SVN_ERR(trivial_auth_request(conn, pool, b));
+
+  /* All the parameters are fine - let's perform the query against the
+   * repository. */
+
+  /* We store both err and write_err here, so the client will get
+   * the "done" even if there was an error in fetching the results. */
+
+  err = svn_repos_node_location_segments(b->repos, abs_path, 
+                                         start_rev, end_rev, 
+                                         gls_receiver, (void *)conn,
+                                         authz_check_access_cb_func(b), b,
+                                         pool);
+  write_err = svn_ra_svn_write_word(conn, pool, "done");
+  if (write_err)
+    {
+      svn_error_clear(err);
+      return write_err;
+    }
+  SVN_CMD_ERR(err);
+
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
+
+  return SVN_NO_ERROR;
+}
+
 /* This implements svn_write_fn_t.  Write LEN bytes starting at DATA to the
    client as a string. */
 static svn_error_t *svndiff_handler(void *baton, const char *data,
@@ -2268,6 +2330,7 @@ static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "check-path",      check_path },
   { "stat",            stat },
   { "get-locations",   get_locations },
+  { "get-location-segments",   get_location_segments },
   { "get-file-revs",   get_file_revs },
   { "lock",            lock },
   { "lock-many",       lock_many },
@@ -2450,13 +2513,14 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
 
   /* Send greeting.  We don't support version 1 any more, so we can
    * send an empty mechlist. */
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwww)",
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwww)",
                                         (apr_uint64_t) 2, (apr_uint64_t) 2,
                                         SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                         SVN_RA_SVN_CAP_SVNDIFF1,
                                         SVN_RA_SVN_CAP_ABSENT_ENTRIES,
                                         SVN_RA_SVN_CAP_COMMIT_REVPROPS,
-                                        SVN_RA_SVN_CAP_MERGEINFO));
+                                        SVN_RA_SVN_CAP_MERGEINFO,
+                                        SVN_RA_SVN_CAP_DEPTH));
 
   /* Read client response, which we assume to be in version 2 format:
    * version, capability list, and client URL; then we do an auth

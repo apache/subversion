@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -147,7 +147,7 @@ void SVNAdmin::deltify(const char *path, Revision &revStart, Revision &revEnd)
 
 void SVNAdmin::dump(const char *path, Outputer &dataOut, Outputer &messageOut,
                     Revision &revsionStart, Revision &revisionEnd,
-                    bool incremental)
+                    bool incremental, bool useDeltas)
 {
   Pool requestPool;
   SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -201,10 +201,10 @@ void SVNAdmin::dump(const char *path, Outputer &dataOut, Outputer &messageOut,
                      " (%ld)"), youngest), );
     }
 
-  SVN_JNI_ERR(svn_repos_dump_fs(repos, dataOut.getStream(requestPool),
-                                messageOut.getStream(requestPool),
-                                lower, upper, incremental,
-                                NULL, NULL, requestPool.pool()), );
+  SVN_JNI_ERR(svn_repos_dump_fs2(repos, dataOut.getStream(requestPool),
+                                 messageOut.getStream(requestPool),
+                                 lower, upper, incremental, useDeltas,
+                                 NULL, NULL, requestPool.pool()), );
 }
 
 void SVNAdmin::hotcopy(const char *path, const char *targetPath,
@@ -260,6 +260,8 @@ void SVNAdmin::load(const char *path,
                     Outputer &messageOut,
                     bool ignoreUUID,
                     bool forceUUID,
+                    bool usePreCommitHook,
+                    bool usePostCommitHook,
                     const char *relativePath)
 {
   Pool requestPool;
@@ -273,10 +275,11 @@ void SVNAdmin::load(const char *path,
     uuid_action = svn_repos_load_uuid_force;
   SVN_JNI_ERR(svn_repos_open(&repos, path, requestPool.pool()), );
 
-  SVN_JNI_ERR(svn_repos_load_fs(repos, dataIn.getStream(requestPool),
-                                messageOut.getStream(requestPool),
-                                uuid_action, relativePath,
-                                NULL, NULL, requestPool.pool()), );
+  SVN_JNI_ERR(svn_repos_load_fs2(repos, dataIn.getStream(requestPool),
+                                 messageOut.getStream(requestPool),
+                                 uuid_action, relativePath,
+                                 usePreCommitHook, usePostCommitHook,
+                                 NULL, NULL, requestPool.pool()), );
 }
 
 void SVNAdmin::lstxns(const char *path, MessageReceiver &messageReceiver)
@@ -310,7 +313,7 @@ jlong SVNAdmin::recover(const char *path)
   svn_revnum_t youngest_rev;
   svn_repos_t *repos;
 
-  SVN_JNI_ERR(svn_repos_recover2(path, FALSE, NULL, NULL,
+  SVN_JNI_ERR(svn_repos_recover3(path, FALSE, NULL, NULL, NULL, NULL,
                                  requestPool.pool()),
               -1);
 
@@ -427,10 +430,10 @@ void SVNAdmin::verify(const char *path, Outputer &messageOut,
   SVN_JNI_ERR(svn_repos_open(&repos, path, requestPool.pool()), );
   SVN_JNI_ERR(svn_fs_youngest_rev(&youngest, svn_repos_fs (repos),
                                   requestPool.pool()), );
-  SVN_JNI_ERR(svn_repos_dump_fs(repos, NULL,
-                                messageOut.getStream(requestPool),
-                                0, youngest, FALSE, NULL, NULL,
-                                requestPool.pool()), );
+  SVN_JNI_ERR(svn_repos_dump_fs2(repos, NULL,
+                                 messageOut.getStream(requestPool),
+                                 0, youngest, FALSE, TRUE, NULL, NULL,
+                                 requestPool.pool()), );
 }
 
 jobjectArray SVNAdmin::lslocks(const char *path)

@@ -322,7 +322,8 @@ static void ra_svn_get_reporter(svn_ra_svn__session_baton_t *sess_baton,
   /* We can skip the depth filtering when the user requested
      depth_files or depth_infinity because the server will
      transmit the right stuff anyway. */
-  if ((depth != svn_depth_files) && (depth != svn_depth_infinity))
+  if ((depth != svn_depth_files) && (depth != svn_depth_infinity)
+      && ! svn_ra_svn_has_capability(sess_baton->conn, SVN_RA_SVN_CAP_DEPTH))
     {
       svn_error_clear(svn_delta_depth_filter_editor(&filter_editor, 
                                                     &filter_baton,
@@ -1523,7 +1524,59 @@ ra_svn_get_location_segments(svn_ra_session_t *session,
                              void *receiver_baton,
                              apr_pool_t *pool)
 {
-  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
+  svn_ra_svn__session_baton_t *sess_baton = session->priv;
+  svn_ra_svn_conn_t *conn = sess_baton->conn;
+  svn_ra_svn_item_t *item;
+  svn_boolean_t is_done;
+  svn_revnum_t range_start, range_end;
+  const char *ret_path;
+  svn_location_segment_t *segment;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  /* Transmit the parameters. */
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c(?r)(?r))", 
+                                 "get-location-segments",
+                                 path, start_rev, end_rev));
+
+  /* Servers before 1.1 don't support this command. Check for this here. */
+  SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess_baton, pool),
+                                 _("'get-location-segments' not implemented")));
+
+  /* Parse the response. */
+  is_done = FALSE;
+  while (!is_done)
+    {
+      svn_pool_clear(subpool);
+      SVN_ERR(svn_ra_svn_read_item(conn, subpool, &item));
+      if (item->kind == SVN_RA_SVN_WORD && strcmp(item->u.word, "done") == 0)
+        is_done = 1;
+      else if (item->kind != SVN_RA_SVN_LIST)
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                _("Location segment entry not a list"));
+      else
+        {
+          segment = apr_pcalloc(subpool, sizeof(*segment));
+          SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, subpool, "rr(?c)",
+                                         &range_start, &range_end, &ret_path));
+          if (! (SVN_IS_VALID_REVNUM(range_start) 
+                 && SVN_IS_VALID_REVNUM(range_end)))
+            return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                    _("Expected valid revision range"));
+          if (ret_path)
+            ret_path = svn_path_canonicalize(ret_path, subpool);
+          segment->path = ret_path;
+          segment->range_start = range_start;
+          segment->range_end = range_end;
+          SVN_ERR(receiver(segment, receiver_baton, subpool));
+        }
+    }
+  svn_pool_destroy(subpool);
+
+  /* Read the response. This is so the server would have a chance to
+   * report an error. */
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
@@ -2095,6 +2148,31 @@ static svn_error_t *ra_svn_replay(svn_ra_session_t *session,
 }
 
 
+static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
+                                          svn_boolean_t *has,
+                                          const char *capability,
+                                          apr_pool_t *pool)
+{
+  svn_ra_svn__session_baton_t *sess = session->priv;
+
+  if (strcmp(capability, SVN_RA_CAPABILITY_DEPTH) == 0)
+    {
+      if (svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_DEPTH))
+        *has = TRUE;
+      else
+        *has = FALSE;
+    }
+  else  /* Don't know any other capabilities yet, so error. */
+    {
+        return svn_error_createf
+          (SVN_ERR_RA_UNKNOWN_CAPABILITY, NULL,
+           _("Don't know anything about capability '%s'"), capability);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 static const svn_ra__vtable_t ra_svn_vtable = {
   svn_ra_svn_version,
   ra_svn_get_description,
@@ -2128,6 +2206,7 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_get_lock,
   ra_svn_get_locks,
   ra_svn_replay,
+  ra_svn_has_capability
 };
 
 svn_error_t *

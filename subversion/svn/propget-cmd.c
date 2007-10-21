@@ -181,7 +181,7 @@ svn_cl__propget(apr_getopt_t *os,
                              _("'%s' is not a valid Subversion property name"),
                              pname_utf8);
 
-  /* Before allowing svn_opt_args_to_target_array() to canonicalize
+  /* Before allowing svn_opt_args_to_target_array2() to canonicalize
      all the remaining targets, we need to build a list of targets made of both
      ones the user typed, as well as any specified by --changelist.  */
   if (opt_state->changelist)

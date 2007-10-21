@@ -2498,7 +2498,8 @@ svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
   hid = DIR_CACHE_ENTRIES_MASK(svn_fs_fs__id_rev(noderev->id));
 
   /* If we have this directory cached, return it. */
-  if (ffd->dir_cache_id[hid] && svn_fs_fs__id_eq(ffd->dir_cache_id[hid],
+  if (! svn_fs_fs__id_txn_id(noderev->id) &&
+      ffd->dir_cache_id[hid] && svn_fs_fs__id_eq(ffd->dir_cache_id[hid],
                                                  noderev->id))
     {
       *entries_p = ffd->dir_cache[hid];
@@ -3666,7 +3667,7 @@ svn_fs_fs__abort_txn(svn_fs_txn_t *txn,
   /* Clean out the directory cache. */
   ffd = txn->fs->fsap_data;
   memset(&ffd->dir_cache_id, 0,
-         sizeof(apr_hash_t *) * NUM_DIR_CACHE_ENTRIES);
+         sizeof(svn_fs_id_t *) * NUM_DIR_CACHE_ENTRIES);
 
   /* Now, purge the transaction. */
   SVN_ERR_W(svn_fs_fs__purge_txn(txn->fs, txn->id, pool),
@@ -4454,8 +4455,6 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
   /* Write out our new node-revision. */
   SVN_ERR(write_noderev_txn(file, noderev, pool));
-
-  SVN_ERR(svn_fs_fs__put_node_revision(fs, id, noderev, FALSE, pool));
 
   /* Return our ID that references the revision file. */
   *new_id_p = noderev->id;

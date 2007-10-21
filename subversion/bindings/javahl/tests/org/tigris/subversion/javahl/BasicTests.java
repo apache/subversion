@@ -2323,9 +2323,10 @@ public class BasicTests extends SVNTests
         // user's version of a conflicted file.
         client.setConflictResolver(new ConflictResolverCallback()
             {
-                public int resolve(ConflictDescriptor descrip)
+                public ConflictResult resolve(ConflictDescriptor descrip)
                 {
-                    return ConflictResolverCallback.Result.chooseTheirs;
+                    return new ConflictResult(ConflictResult.chooseTheirs,
+                                              null);
                 }
             });
 
@@ -2347,9 +2348,11 @@ public class BasicTests extends SVNTests
         mu = appendText(thisTest, "A/mu", "yyy", 1);
 
         // Merge in the previous changes to A/mu (from r2).
-        client.merge(thisTest.getUrl(), Revision.HEAD, new Revision.Number(1),
-                     new Revision.Number(2), thisTest.getWCPath(),
-                     false, Depth.infinity, false, false);
+        RevisionRange[] ranges = new RevisionRange[1];
+        ranges[0] = new RevisionRange(new Revision.Number(1),
+                                      new Revision.Number(2));
+        client.merge(thisTest.getUrl(), Revision.HEAD, ranges,
+                     thisTest.getWCPath(), false, Depth.infinity, false, false);
 
         assertFileContentsEquals("Unexpected conflict resolution",
                                  expectedContents, mu);

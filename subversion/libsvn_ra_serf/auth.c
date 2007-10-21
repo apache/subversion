@@ -43,7 +43,7 @@ setup_request_basic_auth(svn_ra_serf__connection_t *conn,
                          serf_bucket_t *hdrs_bkt);
 
 /*** Global variables. ***/
-static const serf_auth_protocol_t serf_auth_protocols[] = {
+static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
   {
     "Basic",
     init_basic_connection,
@@ -59,15 +59,42 @@ static const serf_auth_protocol_t serf_auth_protocols[] = {
 
 /*** Code. ***/
 
+/**
+ * base64 encode the authentication data and build an authentication
+ * header in this format:
+ * [PROTOCOL] [BASE64 AUTH DATA]
+ */
+static void
+encode_auth_header(const char * protocol, char **header, 
+                   const char * data, apr_size_t data_len, 
+                   apr_pool_t *pool)
+{
+  apr_size_t encoded_len, proto_len;
+  char * ptr;
+
+  encoded_len = apr_base64_encode_len(data_len);
+  proto_len = strlen(protocol);
+
+  *header = apr_palloc(pool, encoded_len + proto_len + 1);
+  ptr = *header;
+
+  apr_cpystrn(ptr, protocol, proto_len + 1);
+  ptr += proto_len;
+  *ptr++ = ' ';
+
+  apr_base64_encode(ptr, data, data_len);
+}
+
+
 svn_error_t *
-handle_auth(svn_ra_serf__session_t *session,
-            svn_ra_serf__connection_t *conn,
-            serf_request_t *request,
-            serf_bucket_t *response,
-            apr_pool_t *pool)
+svn_ra_serf__handle_auth(svn_ra_serf__session_t *session,
+                         svn_ra_serf__connection_t *conn,
+                         serf_request_t *request,
+                         serf_bucket_t *response,
+                         apr_pool_t *pool)
 {
   serf_bucket_t *hdrs;
-  const serf_auth_protocol_t *prot;
+  const svn_ra_serf__auth_protocol_t *prot;
   char *auth_name, *auth_attr, *auth_hdr;
 
   hdrs = serf_bucket_response_get_headers(response);
@@ -242,25 +269,4 @@ setup_request_basic_auth(svn_ra_serf__connection_t *conn,
     }
 
   return SVN_NO_ERROR;
-}
-
-void
-encode_auth_header(const char * protocol, char **header, 
-                   const char * data, apr_size_t data_len, 
-                   apr_pool_t *pool)
-{
-  apr_size_t encoded_len, proto_len;
-  char * ptr;
-
-  encoded_len = apr_base64_encode_len(data_len);
-  proto_len = strlen(protocol);
-
-  *header = apr_palloc(pool, encoded_len + proto_len + 1);
-  ptr = *header;
-
-  apr_cpystrn(ptr, protocol, proto_len + 1);
-  ptr += proto_len;
-  *ptr++ = ' ';
-
-  apr_base64_encode(ptr, data, data_len);
 }

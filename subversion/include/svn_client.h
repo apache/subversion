@@ -2464,7 +2464,7 @@ svn_client_merge(const char *source1,
  */
 svn_error_t *
 svn_client_merge_peg3(const char *source,
-                      apr_array_header_t *ranges_to_merge,
+                      const apr_array_header_t *ranges_to_merge,
                       const svn_opt_revision_t *peg_revision,
                       const char *target_wcpath,
                       svn_depth_t depth,
@@ -2717,11 +2717,11 @@ svn_client_resolved(const char *path,
  * if any); if @c svn_depth_infinity, resolve @a path and every
  * conflicted file or directory anywhere beneath it.
  *
- * If @a conflict_result is svn_wc_conflict_result_choose_base, resolve the
+ * If @a conflict_choice is svn_wc_conflict_choose_base, resolve the
  * conflict with the old file contents; if
- * svn_wc_conflict_result_choose_user, use the original working contents;
- * if svn_wc_conflict_result_choose_theirs, the new contents; and if
- * svn_wc_conflict_result_choose_merged, don't change the contents at all,
+ * svn_wc_conflict_choose_mine, use the original working contents;
+ * if svn_wc_conflict_choose_theirs, the new contents; and if
+ * svn_wc_conflict_choose_merged, don't change the contents at all,
  * just remove the conflict status (i.e. pre-1.5 behavior).
  *
  * If @a path is not in a state of conflict to begin with, do nothing.
@@ -2733,7 +2733,7 @@ svn_client_resolved(const char *path,
 svn_error_t *
 svn_client_resolved2(const char *path,
                      svn_depth_t depth,
-                     svn_wc_conflict_result_t conflict_result,
+                     svn_wc_conflict_choice_t conflict_choice,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 
@@ -2770,7 +2770,7 @@ typedef struct svn_client_copy_source_t
  * and @a sources will be copied as children of @a dst_path.
  *
  * @a sources must be an array of elements of type
- * <tt>svn_client_copy_item_t *</tt>.
+ * <tt>svn_client_copy_source_t *</tt>.
  *
  * Each @a src in @a sources must be files or directories under version control,
  * or URLs of a versioned item in the repository.  If @a sources has multiple

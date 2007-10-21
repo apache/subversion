@@ -232,7 +232,7 @@ struct dir_baton
      The depth-filtering editor won't help us here.  It only filters
      based on the requested depth, it never looks in the working copy
      to get ambient depths.  So the update editor itself will have to
-     filter out the unwanted calls.  
+     filter out the unwanted calls.
 
      We do this at the moment of baton construction.  When a file or
      dir is opened, we create its baton with the appropriate ambient
@@ -249,7 +249,7 @@ struct dir_baton
      used anyway.)
 
      See issue #2842 for more.
-  */ 
+  */
   svn_depth_t ambient_depth;
 
   /* The pool in which this baton itself is allocated. */
@@ -445,7 +445,7 @@ make_dir_baton(struct dir_baton **d_p,
       svn_error_t *err;
       const svn_wc_entry_t *entry;
       svn_wc_adm_access_t *adm_access;
-      
+
       err = svn_wc_adm_retrieve(&adm_access, eb->adm_access, d->path, pool);
       if (err &&
           (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
@@ -829,7 +829,7 @@ make_file_baton(struct file_baton **f_p,
       svn_error_t *err;
       const svn_wc_entry_t *entry;
       svn_wc_adm_access_t *adm_access;
-      
+
       err = svn_wc_adm_retrieve(&adm_access, pb->edit_baton->adm_access,
                                 f->path, pool);
       if (err &&
@@ -1364,6 +1364,22 @@ delete_entry(const char *path,
   if (pb->ambient_depth == svn_depth_exclude)
     return SVN_NO_ERROR;
 
+  if (pb->edit_baton->requested_depth == svn_depth_unknown
+      && pb->ambient_depth < svn_depth_immediates)
+    {
+      /* If the entry we want to delete doesn't exist, that's OK.
+         It's probably an old server that doesn't understand
+         depths. */
+      const svn_wc_entry_t *entry;
+      const char *full_path = svn_path_join(pb->edit_baton->anchor, path,
+                                            pool);
+
+      SVN_ERR(svn_wc_entry(&entry, full_path,
+                           pb->edit_baton->adm_access, FALSE, pool));
+      if (! entry)
+        return SVN_NO_ERROR;
+    }
+
   SVN_ERR(check_path_under_root(pb->path, svn_path_basename(path, pool),
                                 pool));
   return do_entry_deletion(pb->edit_baton, pb->path, path, &pb->log_number,
@@ -1751,7 +1767,7 @@ close_directory(void *dir_baton,
                     /* something changed, record the change */
                     {
                       const char *d_path = apr_pstrdup(ti->pool, db->path);
-                      
+
                       apr_hash_set(ti->depths, d_path, APR_HASH_KEY_STRING,
                                    svn_depth_to_word(db->ambient_depth));
 
@@ -1782,6 +1798,8 @@ close_directory(void *dir_baton,
                                         adm_access, db->path,
                                         NULL /* use baseprops */,
                                         regular_props, TRUE, FALSE,
+                                        db->edit_baton->conflict_func,
+                                        db->edit_baton->conflict_baton,
                                         db->pool, &db->log_accum),
                     _("Couldn't do property merge"));
         }
@@ -2048,7 +2066,7 @@ open_file(const char *path,
      aren't actually doing any "work" or fetching any persistent data. */
 
   SVN_ERR(svn_io_check_path(fb->path, &kind, subpool));
-  SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access, 
+  SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                               pb->path, subpool));
   SVN_ERR(svn_wc_entry(&entry, fb->path, adm_access, FALSE, subpool));
 
@@ -2276,6 +2294,9 @@ change_file_prop(void *file_baton,
    reflect the possible removal of a lock token from FILE_PATH's
    entryprops.
 
+   CONFICT_FUNC/BATON is a callback which allows the client to
+   possibly resolve a property conflict interactively.
+
    ADM_ACCESS is the access baton for FILE_PATH.  Append log commands to
    LOG_ACCUM.  Use POOL for temporary allocations. */
 static svn_error_t *
@@ -2285,6 +2306,8 @@ merge_props(svn_stringbuf_t *log_accum,
             svn_wc_adm_access_t *adm_access,
             const char *file_path,
             const apr_array_header_t *prop_changes,
+            svn_wc_conflict_resolver_func_t conflict_func,
+            void *conflict_baton,
             apr_pool_t *pool)
 {
   apr_array_header_t *regular_props = NULL, *wc_props = NULL,
@@ -2307,8 +2330,9 @@ merge_props(svn_stringbuf_t *log_accum,
       SVN_ERR(svn_wc__merge_props(prop_state,
                                   adm_access, file_path,
                                   NULL /* use base props */,
-                                  regular_props, TRUE, FALSE, pool,
-                                  &log_accum));
+                                  regular_props, TRUE, FALSE,
+                                  conflict_func, conflict_baton,
+                                  pool, &log_accum));
     }
 
   /* If there are any ENTRY PROPS, make sure those get appended to the
@@ -2469,7 +2493,8 @@ merge_file(svn_wc_notify_state_t *content_state,
      any file content merging, since that process might expand keywords, in
      which case we want the new entryprops to be in place. */
   SVN_ERR(merge_props(log_accum, prop_state, lock_state, adm_access,
-                      fb->path, fb->propchanges, pool));
+                      fb->path, fb->propchanges,
+                      eb->conflict_func, eb->conflict_baton, pool));
 
   /* Has the user made local mods to the working file?
      Note that this compares to the current pristine file, which is
@@ -2770,7 +2795,7 @@ close_file(void *file_baton,
 
   if (((content_state != svn_wc_notify_state_unchanged) ||
        (prop_state != svn_wc_notify_state_unchanged) ||
-       (lock_state != svn_wc_notify_lock_state_unchanged)) 
+       (lock_state != svn_wc_notify_lock_state_unchanged))
       && eb->notify_func
       && fb->send_notification)
     {
@@ -3061,7 +3086,9 @@ add_file_with_history(const char *path,
                                      (APR_WRITE | APR_TRUNCATE | APR_CREATE),
                                      pool));
 
-      SVN_ERR(eb->fetch_func(eb->fetch_baton, copyfrom_path, copyfrom_rev,
+      /* copyfrom_path is a absolute path, fetch_func requires a path relative
+         to the root of the repository so skip the first '/'. */
+      SVN_ERR(eb->fetch_func(eb->fetch_baton, copyfrom_path + 1, copyfrom_rev,
                              svn_stream_from_aprfile(textbase_file, pool),
                              NULL, &base_props, pool));
     }

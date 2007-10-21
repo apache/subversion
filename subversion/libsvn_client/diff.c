@@ -1272,6 +1272,7 @@ diff_repos_wc(const apr_array_header_t *options,
   void *diff_edit_baton;
   svn_boolean_t rev2_is_base = (revision2->kind == svn_opt_revision_base);
   int levels_to_lock = levels_to_lock_from_depth(depth);
+  svn_boolean_t server_supports_depth;
 
   /* Assert that we have valid input. */
   assert(! svn_path_is_url(path2));
@@ -1358,12 +1359,15 @@ diff_repos_wc(const apr_array_header_t *options,
                           url1,
                           diff_editor, diff_edit_baton, pool));
 
+  SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
+                                SVN_RA_CAPABILITY_DEPTH, pool));
+
   /* Create a txn mirror of path2;  the diff editor will print
      diffs in reverse.  :-)  */
   SVN_ERR(svn_wc_crawl_revisions3(path2, dir_access,
                                   reporter, report_baton,
-                                  FALSE, depth, FALSE,
-                                  NULL, NULL, /* notification is N/A */
+                                  FALSE, depth, (! server_supports_depth),
+                                  FALSE, NULL, NULL, /* notification is N/A */
                                   NULL, pool));
 
   SVN_ERR(svn_wc_adm_close(adm_access));

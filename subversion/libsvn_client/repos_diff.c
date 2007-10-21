@@ -605,14 +605,14 @@ get_file_from_ra(struct file_baton *b, svn_revnum_t revision)
   return SVN_NO_ERROR;
 }
 
-/* Get the props attached to a directory in the repository. */
+/* Get the props attached to a directory in the repository at BASE_REVISION. */
 static svn_error_t *
-get_dirprops_from_ra(struct dir_baton *b)
+get_dirprops_from_ra(struct dir_baton *b, svn_revnum_t base_revision)
 {
   SVN_ERR(svn_ra_get_dir2(b->edit_baton->ra_session,
                           NULL, NULL, &(b->pristine_props),
                           b->path,
-                          b->edit_baton->revision,
+                          base_revision,
                           0,
                           b->pool));
 
@@ -747,7 +747,7 @@ open_root(void *edit_baton,
   /* Override the wcpath in our baton. */
   b->wcpath = apr_pstrdup(pool, eb->target);
 
-  SVN_ERR(get_dirprops_from_ra(b));
+  SVN_ERR(get_dirprops_from_ra(b, base_revision));
 
   if (eb->svnpatch_stream)
     SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
@@ -924,7 +924,7 @@ open_directory(const char *path,
   b = make_dir_baton(path, pb, pb->edit_baton, FALSE, token, pool);
   *child_baton = b;
 
-  SVN_ERR(get_dirprops_from_ra(b));
+  SVN_ERR(get_dirprops_from_ra(b, base_revision));
 
   if (eb->svnpatch_stream)
     {

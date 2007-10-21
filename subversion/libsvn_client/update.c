@@ -2,7 +2,7 @@
  * update.c:  wrappers around wc update functionality
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -87,6 +87,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
                             svn_boolean_t *timestamp_sleep,
+                            svn_boolean_t send_copyfrom_args,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool)
 {
@@ -113,6 +114,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   const char *preserved_exts_str;
   apr_array_header_t *preserved_exts;
   struct ff_baton *ffb;
+  svn_boolean_t server_supports_depth;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
@@ -227,14 +229,18 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             revnum,
                             target,
                             depth,
-                            TRUE, /* send copyfrom args, please */
+                            send_copyfrom_args,
                             update_editor, update_edit_baton, pool));
+
+  SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
+                                SVN_RA_CAPABILITY_DEPTH, pool));
 
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the
      update_editor will be driven by svn_repos_dir_delta2. */
   err = svn_wc_crawl_revisions3(path, dir_access, reporter, report_baton,
-                                TRUE, depth, use_commit_times,
+                                TRUE, depth, (! server_supports_depth),
+                                use_commit_times,
                                 ctx->notify_func2, ctx->notify_baton2,
                                 traversal_info, pool);
 
@@ -252,6 +258,9 @@ svn_client__update_internal(svn_revnum_t *result_rev,
      the primary operation.  */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
     SVN_ERR(svn_client__handle_externals(traversal_info,
+                                         entry->url,
+                                         anchor,
+                                         repos_root,
                                          depth,
                                          TRUE, /* update unchanged ones */
                                          use_sleep, ctx, pool));
@@ -355,7 +364,7 @@ svn_client_update3(apr_array_header_t **result_revs,
       err = svn_client__update_internal(&result_rev, path, revision,
                                         depth, ignore_externals,
                                         allow_unver_obstructions,
-                                        &sleep, ctx, subpool);
+                                        &sleep, TRUE, ctx, subpool);
       if (err && err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
         {
           return err;
@@ -406,5 +415,5 @@ svn_client_update(svn_revnum_t *result_rev,
 {
   return svn_client__update_internal(result_rev, path, revision,
                                      SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                                     FALSE, FALSE, NULL, ctx, pool);
+                                     FALSE, FALSE, NULL, TRUE, ctx, pool);
 }

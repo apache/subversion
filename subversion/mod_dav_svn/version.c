@@ -133,7 +133,7 @@ get_vsn_options(apr_pool_t *p, apr_text_header *phdr)
                   "version-control,checkout,working-resource");
   apr_text_append(p, phdr,
                   "merge,baseline,activity,version-controlled-collection");
-
+  apr_text_append(p, phdr, SVN_DAV_PROP_NS_DAV_SVN_DEPTH);
   /* ### fork-control? */
 }
 
@@ -966,6 +966,10 @@ deliver_report(request_rec *r,
       else if (strcmp(doc->root->name, "get-locations") == 0)
         {
           return dav_svn__get_locations_report(resource, doc, output);
+        }
+      else if (strcmp(doc->root->name, "get-location-segments") == 0)
+        {
+          return dav_svn__get_location_segments_report(resource, doc, output);
         }
       else if (strcmp(doc->root->name, "file-revs-report") == 0)
         {

@@ -24,6 +24,7 @@ import svntest
 
 from svntest.main import write_restrictive_svnserve_conf
 from svntest.main import write_authz_file
+from svntest.main import server_authz_has_aliases
 
 # (abbreviation)
 Item = svntest.wc.StateItem
@@ -861,14 +862,32 @@ def authz_svnserve_anon_access_read(sbox):
                                      'checkout',
                                      D_url, D_path)
 
+def authz_switch_to_directory(sbox):
+  "switched to directory, no read access on parents"
+
+  sbox.build()
+
+  write_authz_file(sbox, {"/": "*=rw", "/A/B": "*=", "/A/B/E": "jrandom = rw"})
+
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  wc_dir = sbox.wc_dir
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
+
+  # Switch /A/B/E to /A/B/F.
+  svntest.main.run_svn(None, 'switch', sbox.repo_url + "/A/B/E", G_path, 
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd)
+
 ########################################################################
 # Run the tests
 
 # list all tests here, starting with None:
 test_list = [ None,
               Skip(authz_open_root, svntest.main.is_ra_type_file),
-              XFail(Skip(authz_open_directory, svntest.main.is_ra_type_file),
-                    svntest.main.is_ra_type_dav),
+              Skip(authz_open_directory, svntest.main.is_ra_type_file),
               Skip(broken_authz_file, svntest.main.is_ra_type_file),
               Skip(authz_read_access, svntest.main.is_ra_type_file),
               Skip(authz_write_access, svntest.main.is_ra_type_file),
@@ -877,11 +896,14 @@ test_list = [ None,
               Skip(authz_checkout_and_update_test,
                    svntest.main.is_ra_type_file),
               Skip(authz_partial_export_test, svntest.main.is_ra_type_file),
-              Skip(authz_aliases, svntest.main.is_ra_type_file),
+              SkipUnless(Skip(authz_aliases, svntest.main.is_ra_type_file),
+                         server_authz_has_aliases),
               Skip(authz_validate, svntest.main.is_ra_type_file),
               Skip(authz_locking, svntest.main.is_ra_type_file),
               SkipUnless(authz_svnserve_anon_access_read,
                          svntest.main.is_ra_type_svn),
+              XFail(Skip(authz_switch_to_directory, 
+                         svntest.main.is_ra_type_file)),
              ]
 
 if __name__ == '__main__':
