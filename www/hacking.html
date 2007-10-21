@@ -58,6 +58,7 @@ $LastChangedDate$
 <li><a href="#filing-issues">Filing bugs / issues</a></li>
 <li><a href="#issue-triage">Issue triage</a></li>
 <li><a href="#commit-access">Commit access</a></li>
+<li><a href="#lightweight-branches">Use lightweight branches</a></li>
 <li><a href="#configury">The configuration/build system under unix</a></li>
 <li><a href="#releasing">How to release a distribution tarball</a></li>
 <li><a href="#release-numbering">Release numbering, compatibility, and deprecation</a></li>
@@ -2031,6 +2032,35 @@ to determine what is "obvious"; if you're not sure, just ask.</p>
 
 </div>
 
+<div class="h2" id="lightweight-branches" title="lightweight-branches">
+<h2>Use lightweight branches</h2>
+
+<p>If you're working on a feature or bugfix in stages involving
+multiple commits, and some of the intermediate stages aren't stable
+enough to go on trunk, then create a temporary branch in /branches.
+There's no need to ask&nbsp;&mdash;&nbsp;just do it.  It's fine to try
+out experimental ideas in a temporary branch, too.  And all the
+preceding applies to partial as well as full committers.</p>
+
+<p>If you're just using the branch to "checkpoint" your code, and
+don't feel it's ready for review, please put some sort of notice at
+the top of the log message, such as:</p>
+
+<pre>
+   *** checkpoint commit -- please don't waste your time reviewing it ***
+</pre>
+
+<p>And if a later commit on that branch <em>should</em> be reviewed,
+then please supply, in the log message, the appropriate 'svn diff'
+command, since the diff would likely involve two non-adjacent commits
+on that branch, and reviewers shouldn't have to spend time figuring
+out which ones they are.</p>
+
+<p>When you're done with the branch&nbsp;&mdash;&nbsp;when you've
+either merged it to trunk or given up on it&nbsp;&mdash;&nbsp;please
+remember to remove it.</p>
+
+</div>
 
 <div class="h2" id="configury" title="configury">
 <h2>The configuration/build system under unix</h2>

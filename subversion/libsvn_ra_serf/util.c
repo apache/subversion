@@ -979,7 +979,8 @@ handle_response(serf_request_t *request,
       /* 401 Authorization required */
       svn_error_t *err;
 
-      err = handle_auth(ctx->session, ctx->conn, request, response, pool);
+      err = svn_ra_serf__handle_auth(ctx->session, ctx->conn,
+                                     request, response, pool);
       if (err)
         {
           ctx->session->pending_error = err;

@@ -102,8 +102,6 @@ svn_cl__merge(apr_getopt_t *os,
 
   if (using_rev_range_syntax)
     {
-      if (targets->nelts < 1 && !opt_state->use_merge_history)
-        return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL, NULL);
       if (targets->nelts > 2)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("Too many arguments given"));

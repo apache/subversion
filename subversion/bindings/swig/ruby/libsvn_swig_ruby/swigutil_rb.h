@@ -153,6 +153,9 @@ apr_array_header_t *svn_swig_rb_array_to_apr_array_merge_range(VALUE array,
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 apr_array_header_t *svn_swig_rb_array_to_apr_array_copy_source(VALUE array,
                                                                apr_pool_t *pool);
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+apr_array_header_t *svn_swig_rb_array_to_apr_array_revision_range(VALUE array,
+                                                                  apr_pool_t *pool);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 apr_array_header_t *svn_swig_rb_to_apr_array_prop(VALUE array_or_hash,
@@ -224,13 +227,6 @@ SVN_RB_SWIG_SWIGUTIL_EXPORT
 void svn_swig_rb_notify_func2(void *baton,
                               const svn_wc_notify_t *notify,
                               apr_pool_t *pool);
-
-SVN_RB_SWIG_SWIGUTIL_EXPORT
-svn_error_t * svn_swig_rb_conflict_resolver_func(
-                            svn_wc_conflict_result_t *result,
-                            const svn_wc_conflict_description_t *description,
-                            void *baton,
-                            apr_pool_t *pool);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 svn_error_t *svn_swig_rb_commit_callback(svn_revnum_t new_revision,

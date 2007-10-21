@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+# Licensed under the same terms as Subversion.
+
 # A pre-commit hook to detect case-insensitive filename clashes.
 #
 # What this script does:

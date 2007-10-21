@@ -149,6 +149,14 @@ extern "C" {
  */
 #define SVN_DAV_PROP_NS_DAV "http://subversion.tigris.org/xmlns/dav/"
 
+/* Presence of this in the DAV header response to an OPTIONS request
+   indicates that the server supports @c svn_depth_t.
+
+   ### TODO: this doesn't really have anything to do with properties,
+   ### but we should re-use the SVN_DAV_PROP_NS_DAV, right?  We could
+   ### change the name of SVN_DAV_PROP_NS_DAV_SVN_DEPTH, though. */
+#define SVN_DAV_PROP_NS_DAV_SVN_DEPTH SVN_DAV_PROP_NS_DAV "svn/depth"
+
 /** @} */
 
 #ifdef __cplusplus

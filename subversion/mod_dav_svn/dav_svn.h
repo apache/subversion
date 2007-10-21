@@ -526,6 +526,10 @@ dav_svn__get_locations_report(const dav_resource *resource,
                               const apr_xml_doc *doc,
                               ap_filter_t *output);
 dav_error *
+dav_svn__get_location_segments_report(const dav_resource *resource,
+                                      const apr_xml_doc *doc,
+                                      ap_filter_t *output);
+dav_error *
 dav_svn__file_revs_report(const dav_resource *resource,
                           const apr_xml_doc *doc,
                           ap_filter_t *output);

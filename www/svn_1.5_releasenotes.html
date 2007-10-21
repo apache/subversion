@@ -38,8 +38,7 @@ describes what is planned for the release.</p>
   <li>Changelist support</li>
   <li>FSFS sharding</li>
   <li>Command-line client improvements</li>
-  <li>JavaHL bindings improvements</li>
-  <li>Many improved APIs</li>
+  <li>Improved APIs and language bindings</li>
   <li>Easier to try out experimental <tt>ra_serf</tt> DAV access module</li>
   <li>More than XXX new bug fixes</li>
 </ul>
@@ -158,7 +157,7 @@ graphical conflict resolution program to the
 <code>update</code>/<code>switch</code>/<code>merge</code>
 sub-commands.  Example command line output:</p>
 <pre>
-    svn up
+    $ svn up
     U    contrib/client-side/svnmerge/svnmerge_test.py
     Conflict discovered in 'contrib/client-side/svnmerge/svnmerge.py'.
     Select: (p)ostpone, (d)iff, (e)dit, (h)elp : h
@@ -289,15 +288,22 @@ href="http://subversion.tigris.org/issues/show_bug.cgi?id=503">issue
 
 </div> <!-- leverage-copyfrom -->
 
-<div class="h4" id="copy-move-peg-revs" title="copy-move-peg-revs">
+<div class="h4" id="copy-peg-revs" title="copy-peg-revs">
 <h4>Peg revisions (<em>client</em>)</h4>
 
-</div>  <!-- copy-move-peg-revs -->
+<p>Copy operations now accept sources with peg revisions.</p>
+
+</div>  <!-- copy-peg-revs -->
 
 <div class="h4" id="multi-op-copy-move" title="multi-op-copy-move">
 <h4>Multiple working copy copy/move operations (<em>client</em>)</h4>
 
-<p>XXX: 'svn mv file1 file2; svn mv file2 file3'</p>
+<p>Clients may now perform multiple local copy/move operations on a
+single object in a working copy:</p>
+<blockquote><code><pre>
+svn mv path1 path2
+svn mv path2 path3
+</pre></code></blockquote>
 
 </div>  <!-- multi-op-copy-move -->
 
@@ -310,9 +316,9 @@ This mirrors the behavior of standard command-line copy and move tools,
 such as <code>cp</code> and <code>mv</code>.  In practice, this means
 users can take advantage of shell globbing when doing a local copy
 or move:</p>
-<pre>
+<blockquote><code><pre>
 svn cp *.c dir
-</pre>
+</pre></code></blockquote>
 
 <p>Multiple source copy/move also works for all previously defined
 copy/move working copy and repository combinations.  This was
@@ -378,13 +384,6 @@ actually stop.</p>
 
 </div>  <!-- cmdline -->
 
-<div class="h3" id="javahl-improvements" title="javahl-improvements">
-<h3>Javahl bindings improvements</h3>
-
-<p>XXX: Should this go into the APIs section?</p>
-
-</div>  <!-- javahl-improvements -->
-
 <div class="h3" id="apis" title="apis">
 <h3>API improvements (<em>client and server</em>)</h3>
 
@@ -399,6 +398,8 @@ actually stop.</p>
     improvements</a> section have been added.</li>
 
   <li>Many APIs have been revised to newer versions.</li>
+
+  <li>Language bindings expanded and improved</li>
 </ul>
 
 </div>  <!-- apis -->

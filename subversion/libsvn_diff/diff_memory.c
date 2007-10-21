@@ -201,7 +201,7 @@ static const svn_diff_fns_t svn_diff__mem_vtable =
 */
 static void
 fill_source_tokens(source_tokens_t *src,
-                   svn_string_t *text,
+                   const svn_string_t *text,
                    apr_pool_t *pool)
 {
   const char *curp;
@@ -210,7 +210,7 @@ fill_source_tokens(source_tokens_t *src,
 
   src->tokens = apr_array_make(pool, 0, sizeof(svn_string_t *));
   src->next_token = 0;
-  src->source = text;
+  src->source = (svn_string_t *)text;
 
   for (startp = curp = text->data, endp = curp + text->len;
        curp != endp; curp++)
@@ -266,8 +266,8 @@ alloc_normalization_bufs(diff_mem_baton_t *btn,
 
 svn_error_t *
 svn_diff_mem_string_diff(svn_diff_t **diff,
-                         svn_string_t *original,
-                         svn_string_t *modified,
+                         const svn_string_t *original,
+                         const svn_string_t *modified,
                          const svn_diff_file_options_t *options,
                          apr_pool_t *pool)
 {
@@ -286,9 +286,9 @@ svn_diff_mem_string_diff(svn_diff_t **diff,
 
 svn_error_t *
 svn_diff_mem_string_diff3(svn_diff_t **diff,
-                          svn_string_t *original,
-                          svn_string_t *modified,
-                          svn_string_t *latest,
+                          const svn_string_t *original,
+                          const svn_string_t *modified,
+                          const svn_string_t *latest,
                           const svn_diff_file_options_t *options,
                           apr_pool_t *pool)
 {
@@ -309,10 +309,10 @@ svn_diff_mem_string_diff3(svn_diff_t **diff,
 
 svn_error_t *
 svn_diff_mem_string_diff4(svn_diff_t **diff,
-                          svn_string_t *original,
-                          svn_string_t *modified,
-                          svn_string_t *latest,
-                          svn_string_t *ancestor,
+                          const svn_string_t *original,
+                          const svn_string_t *modified,
+                          const svn_string_t *latest,
+                          const svn_string_t *ancestor,
                           const svn_diff_file_options_t *options,
                           apr_pool_t *pool)
 {
@@ -539,8 +539,8 @@ svn_diff_mem_string_output_unified(svn_stream_t *output_stream,
                                    const char *original_header,
                                    const char *modified_header,
                                    const char *header_encoding,
-                                   svn_string_t *original,
-                                   svn_string_t *modified,
+                                   const svn_string_t *original,
+                                   const svn_string_t *modified,
                                    apr_pool_t *pool)
 {
 
@@ -724,9 +724,9 @@ detect_eol(svn_string_t *token)
 svn_error_t *
 svn_diff_mem_string_output_merge(svn_stream_t *output_stream,
                                  svn_diff_t *diff,
-                                 svn_string_t *original,
-                                 svn_string_t *modified,
-                                 svn_string_t *latest,
+                                 const svn_string_t *original,
+                                 const svn_string_t *modified,
+                                 const svn_string_t *latest,
                                  const char *conflict_original,
                                  const char *conflict_modified,
                                  const char *conflict_latest,

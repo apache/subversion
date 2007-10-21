@@ -923,8 +923,9 @@ EOE
     Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
       assert("456", access.entry(@wc_path).changelist)
     end
-    assert_equal([[path, nil]],
-                 notifies.collect {|notify| [notify.path, notify.err]})
+    assert_equal([[path, Svn::Error::WcChangelistMove],
+                  [path, NilClass]],
+                 notifies.collect {|notify| [notify.path, notify.err.class]})
 
     notifies = []
     Svn::Wc.set_changelist(path, "789", "000", nil, notify_collector)

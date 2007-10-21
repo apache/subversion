@@ -3370,7 +3370,7 @@ def update_handles_copyfrom_with_txdeltas(sbox):
                                         None, None, None, None, wc_dir)
 
   # Make additional edits to glub...
-  svntest.main.file_append(glub_path, "Some new text.\n")
+  svntest.main.file_append_binary(glub_path, "Some new text.\n")
   svntest.main.run_svn(None, 'propset', 'Kubla', 'Khan', glub_path)
 
   # Commit the changes, creating r3.
@@ -3388,7 +3388,8 @@ def update_handles_copyfrom_with_txdeltas(sbox):
   # Make a local edit to rho in the backup working copy.
   rho2_path = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
   svntest.main.file_write(rho2_path,
-                          "New first line.\nThis is the file 'rho'.\n")
+                          "New first line.\nThis is the file 'rho'.\n",
+                          "wb")
 
   # Now try updating our backup working copy: it should receive glub,
   # but with copyfrom args of rho@1, and thus copy the existing rho to
@@ -3418,6 +3419,116 @@ def update_handles_copyfrom_with_txdeltas(sbox):
                                         expected_disk,
                                         expected_status,
                                         check_props = True)
+
+#----------------------------------------------------------------------
+# Very obscure bug: Issue #2977.
+# Let's say there's a revision with
+#   $ svn mv b c
+#   $ svn mv a b
+#   $ svn ci
+# and a later revision that modifies b.  We then try a fresh checkout.  If
+# the server happens to send us 'b' first, then when it later gets 'c'
+# (with a copyfrom of 'b') it might try to use the 'b' in the wc as the
+# copyfrom base.  This is wrong, because 'b' was changed later; however,
+# due to a bug, the setting of svn:entry:committed-rev on 'b' is not being
+# properly seen by the client, and it chooses the wrong base.  Corruption!
+#
+# Note that because this test depends on the order that the server sends
+# changes, it is very fragile; even changing the file names can avoid
+# triggering the bug.
+
+def update_copied_from_replaced_and_changed(sbox):
+  "update chooses right copyfrom for double move"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  fn1_relpath = os.path.join('A', 'B', 'E', 'aardvark')
+  fn2_relpath = os.path.join('A', 'B', 'E', 'alpha')
+  fn3_relpath = os.path.join('A', 'B', 'E', 'beta')
+  fn1_path = os.path.join(wc_dir, fn1_relpath)
+  fn2_path = os.path.join(wc_dir, fn2_relpath)
+  fn3_path = os.path.join(wc_dir, fn3_relpath)
+
+  # Move fn2 to fn1
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mv', fn2_path, fn1_path)
+
+  # Move fn3 to fn2
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mv', fn3_path, fn2_path)
+
+  # Commit that change, creating r2.
+  expected_output = svntest.wc.State(wc_dir, {
+    fn1_relpath : Item(verb='Adding'),
+    fn2_relpath : Item(verb='Replacing'),
+    fn3_relpath : Item(verb='Deleting'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove(fn2_relpath, fn3_relpath)
+  expected_status.add({
+    fn1_relpath : Item(status='  ', wc_rev=2),
+    fn2_relpath : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # Modify fn2.
+  fn2_final_contents = "I have new contents for the middle file."
+  svntest.main.file_write(fn2_path, fn2_final_contents)
+  
+  # Commit the changes, creating r3.
+  expected_output = svntest.wc.State(wc_dir, {
+    fn2_relpath : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove(fn2_relpath, fn3_relpath)
+  expected_status.add({
+    fn1_relpath : Item(status='  ', wc_rev=2),
+    fn2_relpath : Item(status='  ', wc_rev=3),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # Go back to r1.
+  expected_output = svntest.wc.State(wc_dir, {
+    fn1_relpath: Item(status='D '),
+    fn2_relpath: Item(status='A '), # though actually should be D and A
+    fn3_relpath: Item(status='A '),
+    })
+  # Create expected disk tree for the update to rev 0
+  expected_disk = svntest.main.greek_state.copy()
+  # Do the update and check the results.
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        None, None,
+                                        None, None, None, None, 0,
+                                        '-r', '1', wc_dir)
+
+  # And back up to 3 again.
+  expected_output = svntest.wc.State(wc_dir, {
+    fn1_relpath: Item(status='A '),
+    fn2_relpath: Item(status='A '), # though actually should be D and A
+    fn3_relpath: Item(status='D '),
+    })
+  # Create expected disk tree for the update to rev 0
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    fn1_relpath : Item("This is the file 'alpha'.\n"),
+    })
+  expected_disk.tweak(fn2_relpath, contents=fn2_final_contents)
+  expected_disk.remove(fn3_relpath)
+  # reuse old expected_status, but at r3
+  expected_status.tweak(wc_rev=3)
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status, None,
+                                        None, None, None, None, 0,
+                                        wc_dir)
 
 
 #----------------------------------------------------------------------
@@ -3678,6 +3789,7 @@ test_list = [ None,
               copyfrom_degrades_gracefully,
               SkipUnless(update_handles_copyfrom_with_txdeltas,
                          server_sends_copyfrom_on_update),
+              XFail(update_copied_from_replaced_and_changed),
               update_accept_conflicts,
              ]
 

@@ -91,7 +91,7 @@ svn_cl__propset(apr_getopt_t *os,
 
   /* Suck up all the remaining arguments into a targets array */
 
-  /* Before allowing svn_opt_args_to_target_array() to canonicalize
+  /* Before allowing svn_opt_args_to_target_array2() to canonicalize
      all the targets, we need to build a list of targets made of both
      ones the user typed, as well as any specified by --changelist.  */
   if (opt_state->changelist)

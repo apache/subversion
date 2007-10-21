@@ -968,11 +968,48 @@ typedef svn_error_t *(*svn_wc_get_file_t)(void *baton,
 
 
 /**
- * Conflict handling
+ * Interactive conflict handling
  *
- * @defgroup clnt_diff Conflict callback functionality
+ * @defgroup svn_wc_conflict Conflict callback functionality
  *
  * @{
+ *
+ * This API gives a Subversion client application the opportunity to
+ * define a callback that allows the user to resolve conflicts
+ * interactively during updates and merges.
+ *
+ * If a conflict is discovered, libsvn_wc invokes the callback with an
+ * @c svn_wc_conflict_description_t.  This structure describes the
+ * path in conflict, whether it's a text or property conflict, and may
+ * also present up to three files that can be used to resolve the
+ * conflict (perhaps by launching an editor or 3rd-party merging
+ * tool).  The structure also provides a possible fourth file (@c
+ * merged_file) which, if not NULL, represents libsvn_wc's attempt to
+ * contextually merge the first three files.  (Note that libsvn_wc
+ * will not attempt to merge a file that it believes is binary, and it
+ * will only attempt to merge property values it believes to be a
+ * series of multi-line text.)
+ *
+ * When the callback is finished interacting with the user, it
+ * responds by returning a @c svn_wc_conflict_result_t.  This
+ * structure indicates whether the user wants to postpone the conflict
+ * for later (allowing libsvn_wc to mark the path "conflicted" as
+ * usual), or whether the user wants libsvn_wc to use one of the four
+ * files as the "final" state for resolving the conflict immediately.
+ *
+ * Note that the callback is at liberty (and encouraged) to merge the
+ * three files itself.  If it does so, it signals this to libsvn_wc by
+ * returning a choice of @c svn_wc_conflict_choose_merged.  To return
+ * the 'final' merged file to libsvn_wc, the callback has the option of
+ * either:
+ *
+ *    - editing the original @c merged_file in-place
+ *
+ *        or, if libsvn_wc never supplied a merged_file in the
+ *        description structure (i.e. passed NULL for that field),
+ *
+ *    - return the merged file in the @c svn_wc_conflict_result_t.
+ *
  */
 
 /** The type of action being attempted on an object.
@@ -1003,6 +1040,21 @@ typedef enum svn_wc_conflict_reason_t
 } svn_wc_conflict_reason_t;
 
 
+/** The type of conflict being described by an @c
+ * svn_wc_conflict_description_t (see below).
+ *
+ * @since New in 1.5.
+ */
+typedef enum svn_wc_conflict_kind_t
+{
+  svn_wc_conflict_kind_text,         /* textual conflict (on a file) */
+  svn_wc_conflict_kind_property,     /* property conflict (on a file or dir) */
+
+  /* ### Add future kinds here that represent "tree" conflicts. */
+
+} svn_wc_conflict_kind_t;
+
+
 /** A struct that describes a conflict that has occurred in the
  * working copy.  Passed to @c svn_wc_conflict_resolver_func_t.
  *
@@ -1018,15 +1070,21 @@ typedef struct svn_wc_conflict_description_t
   const char *path;
   svn_node_kind_t node_kind;
 
+  /** What sort of conflict are we describing? */
+  svn_wc_conflict_kind_t kind;
+
+  /** Only set if this is a property conflict. */
+  const char *property_name;
+
   /** The following only apply to file objects:
    *   - Whether svn thinks the object is a binary file.
-   *   - If available (non-NULL), the svn:mime-type of the path */
+   *   - If available (non-NULL), the svn:mime-type property of the path */
   svn_boolean_t is_binary;
   const char *mime_type;
 
-  /** If available (non-NULL), an open working copy access baton to
-   *  either the path itself (if @c path is a directory), or to the
-   *  parent directory (if @c path is a file.) */
+  /** If not NULL, an open working copy access baton to either the
+   *  path itself (if @c path is a directory), or to the parent
+   *  directory (if @c path is a file.) */
   svn_wc_adm_access_t *access;
 
   /* The action being attempted on @c path. */
@@ -1035,49 +1093,90 @@ typedef struct svn_wc_conflict_description_t
   /* The reason for the conflict. */
   svn_wc_conflict_reason_t reason;
 
-  /** If the conflict involves the merging of two files descended from
-   * a common ancestor, here are the paths of up to four fulltext
-   * files that can be used to interactively resolve the conflict.
-   * All four files will be in repository-normal form -- LF line endings
-   * and contracted keywords.  (If any of these files are not available,
-   * they default to NULL.) */
-
+  /** If this is text-conflict and involves the merging of two files
+   * descended from a common ancestor, here are the paths of up to
+   * four fulltext files that can be used to interactively resolve the
+   * conflict.  All four files will be in repository-normal form -- LF
+   * line endings and contracted keywords.  (If any of these files are
+   * not available, they default to NULL.)
+   *
+   * On the other hand, if this is a property-conflict, then these
+   * paths represent temporary files that contain the three different
+   * property-values in conflict.  The fourth path (@c merged_file)
+   * may or may not be NULL;  if set, it represents libsvn_wc's
+   * attempt to merge the property values together.  (Remember that
+   * property values are technically binary values, and thus can't
+   * always be merged.)
+   */
   const char *base_file;     /* common ancestor of the two files being merged */
   const char *their_file;    /* their version of the file */
   const char *my_file;       /* my locally-edited version of the file */
-  const char *merged_file;   /* merged version of file; has conflict markers */
+  const char *merged_file;   /* merged version; may contain conflict markers */
 
 } svn_wc_conflict_description_t;
 
 
-/** The final result returned by the conflict callback.  If the
- * callback wholly resolves the conflict by itself, it would return @c
- * svn_wc_conflict_result_resolved.  If the conflict still persists,
- * then return @c svn_wc_conflict_result_conflicted.  In the case of
- * file conflicts, the callback may instead signal that the user
- * wishes to resolve the conflict by "choosing" one of the four
- * fulltext files.
+/** The way in which the conflict callback chooses a course of action.
  *
  * @since New in 1.5.
  */
-typedef enum svn_wc_conflict_result_t
+typedef enum svn_wc_conflict_choice_t
 {
-  svn_wc_conflict_result_conflicted,    /* user did nothing; conflict remains */
-  svn_wc_conflict_result_resolved,      /* user has resolved the conflict */
+  /* Don't resolve the conflict now.  Let libsvn_wc mark the path
+     'conflicted', so user can run 'svn resolved' later. */
+  svn_wc_conflict_choose_postpone,
 
-  /* The following results only apply to file-conflicts.  Note that
-     they're all specific ways of saying that the conflict is
-     resolved, in the sense that the user has chosen one of the four
-     files. The caller of the conflict-callback is responsible for
-     "installing" the chosen file as the final version of the file.*/
+  /* If their were files to choose from, select one as a way of
+     resolving the conflict here and now.  libsvn_wc will then do the
+     work of "installing" the chosen file.
+  */
+  svn_wc_conflict_choose_base,   /* user chooses the original version */
+  svn_wc_conflict_choose_theirs, /* user chooses incoming version */
+  svn_wc_conflict_choose_mine,   /* user chooses his/her own version */
+  svn_wc_conflict_choose_merged, /* user chooses the merged version */
 
-  svn_wc_conflict_result_choose_base,   /* user chooses the base file */
-  svn_wc_conflict_result_choose_theirs, /* user chooses their file */
-  svn_wc_conflict_result_choose_mine,   /* user chooses own version of file */
-  svn_wc_conflict_result_choose_merged  /* user chooses the merged-file
-                                           (which she may have
-                                           manually edited) */
+} svn_wc_conflict_choice_t;
+
+
+/** The final result returned by @a svn_wc_conflict_resolver_func_t.
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, to preserve binary compatibility, users
+ * should not directly allocate structures of this type.  Instead,
+ * construct this structure using @c svn_wc_create_conflict_result()
+ * below.
+ *
+ * @since New in 1.5.
+ */
+typedef struct svn_wc_conflict_result_t
+{
+  /* A choice to either delay the conflict resolution or select a
+     particular file to resolve the conflict. */
+  svn_wc_conflict_choice_t choice;
+
+  /* If not NULL, this is a path to a file which contains the client's
+     (or more likely, the user's) merging of the three values in
+     conflict.  libsvn_wc accepts this file if (and only if) @c choice
+     is set to @c svn_wc_conflict_choose_merged.*/
+  const char *merged_file;
+
 } svn_wc_conflict_result_t;
+
+
+/**
+ * Allocate an @c svn_wc_conflict_result_t structure in @a pool,
+ * initialize and return it.
+ *
+ * Set the @c choice field of the structure to @a choice, and @c
+ * merged_file to @a merged_file.  Set all other fields to their @c
+ * _unknown, @c NULL or invalid value, respectively.
+ *
+ * @since New in 1.5.
+ */
+svn_wc_conflict_result_t *
+svn_wc_create_conflict_result(svn_wc_conflict_choice_t choice,
+                              const char *merged_file,
+                              apr_pool_t *pool);
 
 
 /** A callback used in svn_client_merge3(), svn_client_update3(), and
@@ -1088,8 +1187,8 @@ typedef enum svn_wc_conflict_result_t
  * provides information to help resolve it.  @a baton is a closure
  * object; it should be provided by the implementation, and passed by
  * the caller.  All allocations should be performed in @a pool.  When
- * finished, the callback signals its resolution by setting @a *result
- * to a proper enumerated state.  (See @c svn_wc_conflict_result_t.)
+ * finished, the callback signals its resolution by returning a
+ * structure in @a *result.  (See @c svn_wc_conflict_result_t.)
  *
  * Implementations of this callback are free to present the conflict
  * using any user interface.  This may include simple contextual
@@ -1103,7 +1202,7 @@ typedef enum svn_wc_conflict_result_t
  * @since New in 1.5.
  */
 typedef svn_error_t *(*svn_wc_conflict_resolver_func_t)
-    (svn_wc_conflict_result_t *result,
+    (svn_wc_conflict_result_t **result,
      const svn_wc_conflict_description_t *description,
      void *baton,
      apr_pool_t *pool);
@@ -2785,11 +2884,11 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  * if any); if @c svn_depth_infinity, resolve @a path and every
  * conflicted file or directory anywhere beneath it.
  *
- * If @a conflict_result is svn_wc_conflict_result_choose_base, resolve the
+ * If @a conflict_choice is svn_wc_conflict_choose_base, resolve the
  * conflict with the old file contents; if
- * svn_wc_conflict_result_choose_user, use the original working contents;
- * if svn_wc_conflict_result_choose_theirs, the new contents; and if
- * svn_wc_conflict_result_choose_merged, don't change the contents at all,
+ * svn_wc_conflict_choose_mine, use the original working contents;
+ * if svn_wc_conflict_choose_theirs, the new contents; and if
+ * svn_wc_conflict_choose_merged, don't change the contents at all,
  * just remove the conflict status (i.e. pre-1.5 behavior).
  *
  * @a adm_access is an access baton, with a write lock, for @a path.
@@ -2820,7 +2919,7 @@ svn_error_t *svn_wc_resolved_conflict3(const char *path,
                                        svn_boolean_t resolve_text,
                                        svn_boolean_t resolve_props,
                                        svn_depth_t depth,
-                                       svn_wc_conflict_result_t conflict_result,
+                                       svn_wc_conflict_choice_t conflict_choice,
                                        svn_wc_notify_func2_t notify_func,
                                        void *notify_baton,
                                        svn_cancel_func_t cancel_func,
@@ -3053,6 +3152,12 @@ svn_error_t *svn_wc_process_committed(const char *path,
  * course.  If @a depth is @c svn_depth_unknown, then just use
  * @c svn_depth_infinity, which in practice means depth of @a path.
  *
+ * Iff @a depth_compatibility_trick is TRUE, then set the @c start_empty
+ * flag on @a reporter->set_path() and @a reporter->link_path() calls
+ * as necessary to trick a pre-1.5 (i.e., depth-unaware) server into
+ * sending back all the items the client might need to upgrade a
+ * working copy from a shallower depth to a deeper one.
+ *
  * If @a restore_files is true, then unexpectedly missing working files
  * will be restored from the administrative directory's cache. For each
  * file restored, the @a notify_func function will be called with the
@@ -3074,6 +3179,7 @@ svn_wc_crawl_revisions3(const char *path,
                         void *report_baton,
                         svn_boolean_t restore_files,
                         svn_depth_t depth,
+                        svn_boolean_t depth_compatibility_trick,
                         svn_boolean_t use_commit_times,
                         svn_wc_notify_func2_t notify_func,
                         void *notify_baton,
@@ -3553,7 +3659,7 @@ typedef svn_error_t *(*svn_wc_canonicalize_svn_prop_get_file_t)
  * skip_some_checks is true, only some validity checks are taken.
  *
  * Some validity checks require access to the contents and MIME type
- * of the target if it is a file; they will call @a getter with @a
+ * of the target if it is a file; they will call @a prop_getter with @a
  * getter_baton, which then needs to set the MIME type and print the
  * contents of the file to the given stream.
  *
@@ -3569,7 +3675,7 @@ svn_error_t *svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
                                           const char *path,
                                           svn_node_kind_t kind,
                                           svn_boolean_t skip_some_checks,
-                                          svn_wc_canonicalize_svn_prop_get_file_t getter,
+                                          svn_wc_canonicalize_svn_prop_get_file_t prop_getter,
                                           void *getter_baton,
                                           apr_pool_t *pool);
 
@@ -3962,7 +4068,27 @@ svn_error_t *svn_wc_merge(const char *left,
  * If @a path is not under version control, return the error
  * SVN_ERR_UNVERSIONED_RESOURCE and don't touch anyone's properties.
  *
- * @since New in 1.3.
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_wc_merge_props2(svn_wc_notify_state_t *state,
+                    const char *path,
+                    svn_wc_adm_access_t *adm_access,
+                    apr_hash_t *baseprops,
+                    const apr_array_header_t *propchanges,
+                    svn_boolean_t base_merge,
+                    svn_boolean_t dry_run,
+                    svn_wc_conflict_resolver_func_t conflict_func,
+                    void *conflict_baton,
+                    apr_pool_t *pool);
+
+
+/**
+ * Same as svn_wc_merge_props2(), but with a @a conflict_func (and
+ * baton) of NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
+ *
  */
 svn_error_t *
 svn_wc_merge_props(svn_wc_notify_state_t *state,

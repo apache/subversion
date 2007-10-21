@@ -426,7 +426,14 @@ svn_client__make_local_parents(const char *path,
 
    If ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children of PATH
    that obstruct items added from the repos are tolerated; if FALSE,
-   these obstructions cause the update to fail. */
+   these obstructions cause the update to fail.
+
+   If SEND_COPYFROM_ARGS is true, then request that the server not
+   send file contents when adding files that have been created by
+   explicit copying; instead, just send copyfrom-args to add_file(),
+   and possibly follow up with an apply_textdelta() against the copied
+   file.
+*/
 svn_error_t *
 svn_client__update_internal(svn_revnum_t *result_rev,
                             const char *path,
@@ -435,6 +442,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
                             svn_boolean_t *timestamp_sleep,
+                            svn_boolean_t send_copyfrom_args,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
 
@@ -820,7 +828,9 @@ svn_client__do_commit(const char *base_url,
 
 /* Handle changes to the svn:externals property in the tree traversed
    by TRAVERSAL_INFO (obtained from svn_wc_get_update_editor or
-   svn_wc_get_switch_editor, for example).
+   svn_wc_get_switch_editor, for example).  The tree's top level
+   directory is at TO_PATH and corresponds to FROM_URL URL in the
+   repository, which has a root URL of REPOS_ROOT_URL.
 
    For each changed value of the property, discover the nature of the
    change and behave appropriately -- either check a new "external"
@@ -855,6 +865,9 @@ svn_client__do_commit(const char *base_url,
    Use POOL for temporary allocation. */
 svn_error_t *
 svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
+                             const char *from_url,
+                             const char *to_path,
+                             const char *repos_root_url,
                              svn_depth_t requested_depth,
                              svn_boolean_t update_unchanged,
                              svn_boolean_t *timestamp_sleep,
@@ -867,6 +880,10 @@ svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
    IS_EXPORT is set, the external items will be exported instead of
    checked out -- they will have no administrative subdirectories.
 
+   The checked out or exported tree's top level directory is at
+   TO_PATH and corresponds to FROM_URL URL in the repository, which
+   has a root URL of REPOS_ROOT_URL.
+
    REQUESTED_DEPTH is the requested_depth of the driving operation; it
    behaves as for svn_client__handle_externals(), except that ambient
    depths are presumed to be svn_depth_infinity.
@@ -878,6 +895,9 @@ svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
    Use POOL for temporary allocation. */
 svn_error_t *
 svn_client__fetch_externals(apr_hash_t *externals,
+                            const char *from_url,
+                            const char *to_path,
+                            const char *repos_root_url,
                             svn_depth_t requested_depth,
                             svn_boolean_t is_export,
                             svn_boolean_t *timestamp_sleep,

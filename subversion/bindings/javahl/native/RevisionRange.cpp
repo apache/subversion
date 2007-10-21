@@ -25,6 +25,8 @@
 
 #include "JNIUtil.h"
 #include "RevisionRange.h"
+#include "Revision.h"
+#include "Pool.h"
 
 RevisionRange::RevisionRange(jobject jrevisionRange)
 {
@@ -35,6 +37,62 @@ RevisionRange::~RevisionRange()
 {
     // m_range is assume to be managed externally, and thus is not
     // explicitly destroyed.
+}
+
+const svn_opt_revision_range_t *RevisionRange::toRange(Pool &pool) const
+{
+  JNIEnv *env = JNIUtil::getEnv();
+
+  jclass clazz = env->FindClass(JAVA_PACKAGE"/RevisionRange");
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  static jmethodID fmid = 0;
+  if (fmid == 0)
+    {
+      fmid = env->GetMethodID(clazz, "getFromRevision",
+                              "()L"JAVA_PACKAGE"/Revision;");
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+    }
+
+  static jmethodID tmid = 0;
+  if (tmid == 0)
+    {
+      tmid = env->GetMethodID(clazz, "getToRevision",
+                              "()L"JAVA_PACKAGE"/Revision;");
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+    }
+
+  jobject jstartRevision = env->CallObjectMethod(m_range, fmid);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  Revision startRevision(jstartRevision);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  jobject jendRevision = env->CallObjectMethod(m_range, tmid);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  Revision endRevision(jendRevision);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  svn_opt_revision_range_t *range = 
+    (svn_opt_revision_range_t *) apr_palloc(pool.pool(), sizeof(*range));
+
+  range->start = *startRevision.revision();
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  range->end = *endRevision.revision();
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  return range;
 }
 
 jobject

@@ -21,10 +21,11 @@ import os, sys
 
 # Our testing module
 import svntest
-
+from svntest.main import server_has_mergeinfo
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
@@ -551,7 +552,7 @@ def blame_file_not_in_head(sbox):
 
   # Check that a correct error message is printed when blaming a target that
   # doesn't exist (in HEAD).
-  expected_err = ".*notexisting' (is not a file in.*|path not found)"
+  expected_err = ".*notexisting' (is not a file.*|path not found)"
   svntest.actions.run_and_verify_svn(None, [], expected_err,
                                      'blame', notexisting_url)
 
@@ -571,8 +572,10 @@ test_list = [ None,
               blame_eol_styles,
               blame_ignore_whitespace,
               blame_ignore_eolstyle,
-              blame_merge_info,
-              blame_merge_out_of_range,
+              SkipUnless(blame_merge_info,
+                         server_has_mergeinfo),
+              SkipUnless(blame_merge_out_of_range,
+                         server_has_mergeinfo),
               blame_peg_rev_file_not_in_head,
               blame_file_not_in_head,
              ]

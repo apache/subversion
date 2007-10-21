@@ -231,6 +231,10 @@ typedef struct svn_ra__vtable_t {
                          const svn_delta_editor_t *editor,
                          void *edit_baton,
                          apr_pool_t *pool);
+  svn_error_t *(*has_capability)(svn_ra_session_t *session,
+                                 svn_boolean_t *has,
+                                 const char *capability,
+                                 apr_pool_t *pool);
 } svn_ra__vtable_t;
 
 /* The RA session object. */
@@ -299,6 +303,34 @@ svn_ra__locations_from_log(svn_ra_session_t *session,
                            svn_revnum_t peg_revision,
                            apr_array_header_t *location_revisions,
                            apr_pool_t *pool);
+
+/**
+ * Call RECEIVER (with RECEIVER_BATON) for each segment in the
+ * location history of PATH in START_REV, working backwards in time
+ * from START_REV to END_REV.
+ *
+ * END_REV may be SVN_INVALID_REVNUM to indicate that you want to
+ * trace the history of the object to its origin.
+ *
+ * START_REV may be SVN_INVALID_REVNUM to indicate that you want to
+ * trace the history of the object beginning in the HEAD revision.
+ * Otherwise, START_REV must be younger than END_REV (unless END_REV
+ * is SVN_INVALID_REVNUM).
+ *
+ * Use POOL for all allocations.
+ *
+ * NOTE: This function uses the RA get_log interfaces to do its work,
+ * as a fallback mechanism for servers which don't support the native
+ * get_location_segments API.
+ */
+svn_error_t *
+svn_ra__location_segments_from_log(svn_ra_session_t *session,
+                                   const char *path,
+                                   svn_revnum_t start_rev,
+                                   svn_revnum_t end_rev,
+                                   svn_location_segment_receiver_t receiver,
+                                   void *receiver_baton,
+                                   apr_pool_t *pool);
 
 
 #ifdef __cplusplus

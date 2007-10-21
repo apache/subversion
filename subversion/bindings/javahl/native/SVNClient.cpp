@@ -484,7 +484,7 @@ void SVNClient::cleanup(const char *path)
 }
 
 void SVNClient::resolved(const char *path, svn_depth_t depth,
-                         svn_wc_conflict_result_t result)
+                         svn_wc_conflict_choice_t choice)
 {
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -494,7 +494,7 @@ void SVNClient::resolved(const char *path, svn_depth_t depth,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_resolved2(intPath.c_str(), depth, result,
+    SVN_JNI_ERR(svn_client_resolved2(intPath.c_str(), depth, choice,
                                      ctx, requestPool.pool()), );
 }
 
@@ -649,7 +649,7 @@ void SVNClient::merge(const char *path1, Revision &revision1,
 }
 
 void SVNClient::merge(const char *path, Revision &pegRevision,
-                      Revision &revision1, Revision &revision2,
+                      std::vector<RevisionRange> &rangesToMerge,
                       const char *localPath, bool force, svn_depth_t depth,
                       bool ignoreAncestry, bool dryRun)
 {
@@ -666,15 +666,21 @@ void SVNClient::merge(const char *path, Revision &pegRevision,
     if (ctx == NULL)
         return;
 
-    /* ### Stop gap until we get the JavaHL API to catch up. */
-    apr_array_header_t *ranges_to_merge =
-        apr_array_make(requestPool.pool(), 1,
-                       sizeof(svn_opt_revision_range_t *) );
-    svn_opt_revision_range_t range = 
-        { *revision1.revision(), *revision2.revision() };
-    APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = &range;
+    apr_array_header_t *ranges =
+      apr_array_make(requestPool.pool(), rangesToMerge.size(),
+                     sizeof(const svn_opt_revision_range_t *));
 
-    SVN_JNI_ERR(svn_client_merge_peg3(srcPath.c_str(), ranges_to_merge,
+    std::vector<RevisionRange>::const_iterator it;
+    for (it = rangesToMerge.begin(); it != rangesToMerge.end(); ++it)
+    {
+        APR_ARRAY_PUSH(ranges, const svn_opt_revision_range_t *) =
+            it->toRange(requestPool);
+        if (JNIUtil::isExceptionThrown())
+            return;
+    }
+
+    SVN_JNI_ERR(svn_client_merge_peg3(srcPath.c_str(),
+                                      ranges,
                                       pegRevision.revision(),
                                       intLocalPath.c_str(),
                                       depth,

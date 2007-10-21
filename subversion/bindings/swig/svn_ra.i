@@ -75,6 +75,10 @@
                   (svn_ra_reporter2_t *)&swig_py_ra_reporter2,
                   ,
                   )
+%callback_typemap(svn_location_segment_receiver_t receiver, void *receiver_baton,
+                  svn_swig_py_location_segment_receiver_func,
+                  ,
+                  )
 #endif
 
 #ifdef SWIGRUBY

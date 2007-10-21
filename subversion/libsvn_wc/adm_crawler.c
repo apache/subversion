@@ -89,7 +89,7 @@ restore_file(const char *file_path,
   /* Remove any text conflict */
   SVN_ERR(svn_wc_resolved_conflict3(file_path, adm_access, TRUE, FALSE,
                                     svn_depth_empty,
-                                    svn_wc_conflict_result_choose_merged,
+                                    svn_wc_conflict_choose_merged,
                                     NULL, NULL, NULL, NULL, pool));
 
   if (use_commit_times)
@@ -157,6 +157,9 @@ restore_file(const char *file_path,
    comes back from the server will be different for svn_depth_unknown
    than for svn_depth_infinity.)
 
+   DEPTH_COMPATIBILITY_TRICK means the same thing here as it does
+   in svn_wc_crawl_revisions3().
+
    If TRAVERSAL_INFO is non-null, record this directory's
    value of svn:externals in both TRAVERSAL_INFO->externals_old and
    TRAVERSAL_INFO->externals_new, using wc_path + dir_path as the key,
@@ -182,6 +185,7 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
                             void *notify_baton,
                             svn_boolean_t restore_files,
                             svn_depth_t depth,
+                            svn_boolean_t depth_compatibility_trick,
                             svn_boolean_t report_everything,
                             svn_boolean_t use_commit_times,
                             svn_wc_traversal_info_t *traversal_info,
@@ -368,6 +372,7 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
         {
           svn_wc_adm_access_t *subdir_access;
           const svn_wc_entry_t *subdir_entry;
+          svn_boolean_t start_empty;
 
           /* If a directory is missing from disk, we have no way to
              recreate it locally, so report as missing and move
@@ -390,6 +395,14 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
           SVN_ERR(svn_wc_entry(&subdir_entry, this_full_path, subdir_access,
                                TRUE, iterpool));
 
+          start_empty = subdir_entry->incomplete;
+          if (depth_compatibility_trick
+              && subdir_entry->depth <= svn_depth_files
+              && depth > subdir_entry->depth)
+            {
+              start_empty = TRUE;
+            }
+
           if (report_everything)
             {
               /* Report the dir unconditionally, one way or another. */
@@ -398,14 +411,14 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
                                             subdir_entry->url,
                                             subdir_entry->revision,
                                             subdir_entry->depth,
-                                            subdir_entry->incomplete,
+                                            start_empty,
                                             subdir_entry->lock_token,
                                             iterpool));
               else
                 SVN_ERR(reporter->set_path(report_baton, this_path,
                                            subdir_entry->revision,
                                            subdir_entry->depth,
-                                           subdir_entry->incomplete,
+                                           start_empty,
                                            subdir_entry->lock_token,
                                            iterpool));
             }
@@ -417,7 +430,7 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
                                         subdir_entry->url,
                                         subdir_entry->revision,
                                         subdir_entry->depth,
-                                        subdir_entry->incomplete,
+                                        start_empty,
                                         subdir_entry->lock_token,
                                         iterpool));
           /* ... or perhaps just a differing revision, lock token, incomplete
@@ -435,7 +448,7 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
                                        this_path,
                                        subdir_entry->revision,
                                        subdir_entry->depth,
-                                       subdir_entry->incomplete,
+                                       start_empty,
                                        subdir_entry->lock_token,
                                        iterpool));
 
@@ -445,7 +458,8 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
                                                 reporter, report_baton,
                                                 notify_func, notify_baton,
                                                 restore_files, depth,
-                                                subdir_entry->incomplete,
+                                                depth_compatibility_trick,
+                                                start_empty,
                                                 use_commit_times,
                                                 traversal_info,
                                                 iterpool));
@@ -470,6 +484,7 @@ svn_wc_crawl_revisions3(const char *path,
                         void *report_baton,
                         svn_boolean_t restore_files,
                         svn_depth_t depth,
+                        svn_boolean_t depth_compatibility_trick,
                         svn_boolean_t use_commit_times,
                         svn_wc_notify_func2_t notify_func,
                         void *notify_baton,
@@ -482,6 +497,7 @@ svn_wc_crawl_revisions3(const char *path,
   svn_boolean_t missing = FALSE;
   const svn_wc_entry_t *parent_entry = NULL;
   svn_wc_notify_t *notify;
+  svn_boolean_t start_empty;
 
   /* The first thing we do is get the base_rev from the working copy's
      ROOT_DIRECTORY.  This is the first revnum that entries will be
@@ -518,6 +534,15 @@ svn_wc_crawl_revisions3(const char *path,
     }
 
   base_rev = entry->revision;
+
+  start_empty = entry->incomplete;
+  if (depth_compatibility_trick
+      && entry->depth <= svn_depth_immediates
+      && depth > entry->depth)
+    {
+      start_empty = TRUE;
+    }
+
   if (base_rev == SVN_INVALID_REVNUM)
     {
       const char *dirname = svn_path_dirname(path, pool);
@@ -530,8 +555,7 @@ svn_wc_crawl_revisions3(const char *path,
      top-level directory being updated is at BASE_REV.  Its PATH
      argument is ignored. */
   SVN_ERR(reporter->set_path(report_baton, "", base_rev, entry->depth,
-                             entry->incomplete , /* start_empty ? */
-                             NULL, pool));
+                             start_empty, NULL, pool));
 
   if (entry->schedule != svn_wc_schedule_delete)
     {
@@ -566,7 +590,8 @@ svn_wc_crawl_revisions3(const char *path,
                                             reporter, report_baton,
                                             notify_func, notify_baton,
                                             restore_files, depth,
-                                            entry->incomplete,
+                                            depth_compatibility_trick,
+                                            start_empty,
                                             use_commit_times,
                                             traversal_info,
                                             pool);
@@ -753,6 +778,7 @@ svn_wc_crawl_revisions2(const char *path,
                                  &wrap_3to2_reporter, &wrb,
                                  restore_files,
                                  SVN_DEPTH_INFINITY_OR_FILES(recurse),
+                                 FALSE,
                                  use_commit_times,
                                  notify_func,
                                  notify_baton,

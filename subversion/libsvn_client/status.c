@@ -254,11 +254,6 @@ svn_client_status3(svn_revnum_t *result_rev,
 
   anchor = svn_wc_adm_access_path(anchor_access);
 
-  /* For local status default depth = svn_depth_infinity, any directories that
-     are not on disk will be ignored anyway. */
-  if (depth == svn_depth_unknown)
-    depth = svn_depth_infinity;
-
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
   SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
@@ -277,6 +272,7 @@ svn_client_status3(svn_revnum_t *result_rev,
       svn_ra_session_t *ra_session;
       const char *URL;
       svn_node_kind_t kind;
+      svn_boolean_t server_supports_depth;
 
       /* Get full URL from the ANCHOR. */
       if (! entry)
@@ -343,14 +339,17 @@ svn_client_status3(svn_revnum_t *result_rev,
           rb.ctx = ctx;
           rb.pool = pool;
 
+          SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
+                                        SVN_RA_CAPABILITY_DEPTH, pool));
+
           /* Drive the reporter structure, describing the revisions
              within PATH.  When we call reporter->finish_report,
              EDITOR will be driven to describe differences between our
              working copy and HEAD. */
           SVN_ERR(svn_wc_crawl_revisions3(path, target_access,
                                           &lock_fetch_reporter, &rb, FALSE,
-                                          depth, FALSE, NULL, NULL, NULL,
-                                          pool));
+                                          depth, (! server_supports_depth),
+                                          FALSE, NULL, NULL, NULL, pool));
         }
     }
   else

@@ -169,7 +169,7 @@ public class SVNClient implements SVNClientInterface
     {
         MyStatusCallback callback = new MyStatusCallback();
 
-        status(path, Depth.infinityOrImmediates(descend), onServer, getAll,
+        status(path, Depth.unknownOrImmediates(descend), onServer, getAll,
                noIgnore, ignoreExternals, callback);
 
         return callback.getStatusArray();
@@ -583,7 +583,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         return update(new String[]{path}, revision,
-                      Depth.infinityOrFiles(recurse), false, false)[0];
+                      Depth.unknownOrFiles(recurse), false, false)[0];
     }
 
     /**
@@ -601,7 +601,7 @@ public class SVNClient implements SVNClientInterface
                          boolean recurse, boolean ignoreExternals)
             throws ClientException
     {
-        return update(path, revision, Depth.infinityOrFiles(recurse),
+        return update(path, revision, Depth.unknownOrFiles(recurse),
                       ignoreExternals, false);
     }
 
@@ -795,7 +795,7 @@ public class SVNClient implements SVNClientInterface
         try
         {
             resolved(path, Depth.infinityOrEmpty(recurse),
-                     ConflictResolverCallback.Result.chooseMerged);
+                     ConflictResult.chooseMerged);
         }
         catch (SubversionException e)
         {
@@ -891,7 +891,7 @@ public class SVNClient implements SVNClientInterface
                          boolean recurse)
             throws ClientException
     {
-        return doSwitch(path, url, revision, Depth.infinityOrFiles(recurse),
+        return doSwitch(path, url, revision, Depth.unknownOrFiles(recurse),
                         false, false);
     }
 
@@ -1023,30 +1023,12 @@ public class SVNClient implements SVNClientInterface
                       boolean recurse, boolean ignoreAncestry, boolean dryRun)
            throws ClientException
     {
-        merge(path, pegRevision, revision1, revision2, localPath, force,
+        RevisionRange[] ranges = new RevisionRange[1];
+        ranges[0] = new RevisionRange(revision1, revision2);
+
+        merge(path, pegRevision, ranges, localPath, force,
               Depth.infinityOrFiles(recurse), ignoreAncestry, dryRun);
     }
-
-    /**
-     * Merge changes from two paths into a new local path.
-     *
-     * @param path           path or url
-     * @param pegRevision    revision to interpret path
-     * @param revision1      first revision
-     * @param revision2      second revision
-     * @param localPath      target local path
-     * @param force          overwrite local changes
-     * @param depth          how deep to traverse into subdirectories
-     * @param ignoreAncestry ignore if files are not related
-     * @param dryRun         do not change anything
-     * @throws ClientException
-     * @since 1.5
-     */
-    public native void merge(String path, Revision pegRevision,
-                             Revision revision1, Revision revision2,
-                             String localPath, boolean force, int depth,
-                             boolean ignoreAncestry, boolean dryRun)
-           throws ClientException;
 
     /**
      * Merge set of revisions into a new local path.
@@ -1061,25 +1043,11 @@ public class SVNClient implements SVNClientInterface
      * @throws ClientException
      * @since 1.5
      */
-    public void merge(String path, Revision pegRevision,
-                      RevisionRange[] revisions, String localPath,
-                      boolean force, int depth, boolean ignoreAncestry,
-                      boolean dryRun)
-            throws ClientException
-    {
-        for (int i = 0; i < revisions.length; i++)
-        {
-            Revision from = revisions[i].getFromRevision();
-            if (from instanceof Revision.Number)
-            {
-                long revNum = ((Revision.Number) from).getNumber();
-                from = new Revision.Number(revNum - 1);
-            }
-            this.merge(path, pegRevision, from,
-                       revisions[i].getToRevision(), localPath, force, depth,
-                       ignoreAncestry, dryRun);
-        }
-    }
+    public native void merge(String path, Revision pegRevision,
+                             RevisionRange[] revisions, String localPath,
+                             boolean force, int depth, boolean ignoreAncestry,
+                             boolean dryRun)
+            throws ClientException;
 
     /**
      * @see SVNClientInterface#getMergeInfo(String, Revision)
@@ -1138,7 +1106,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         diff(target1, revision1, target2, revision2, outFileName,
-             Depth.infinityOrFiles(recurse), ignoreAncestry, noDiffDeleted,
+             Depth.unknownOrFiles(recurse), ignoreAncestry, noDiffDeleted,
              force);
     }
 
@@ -1185,7 +1153,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         diff(target, pegRevision, startRevision, endRevision, outFileName,
-             Depth.infinityOrFiles(recurse), ignoreAncestry, noDiffDeleted,
+             Depth.unknownOrFiles(recurse), ignoreAncestry, noDiffDeleted,
              force);
     }
 

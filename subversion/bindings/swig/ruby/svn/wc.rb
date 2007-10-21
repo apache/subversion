@@ -299,13 +299,16 @@ module Svn
       def update_editor(target_revision, target, use_commit_times=true,
                         depth=nil, allow_unver_obstruction=false, diff3_cmd=nil,
                         notify_func=nil, cancel_func=nil, traversal_info=nil,
-                        preserved_exts=nil, conflict_func=nil)
+                        preserved_exts=nil)
         preserved_exts ||= []
         traversal_info ||= _traversal_info
 
         # TODO(rb support fetch_fun): implement support for the fetch_func
         # callback.
         fetch_func = nil
+        # TODO(rb support conflict_fun): implement support for the
+        # conflict_func callback.
+        conflict_func=nil
         results = Wc.get_update_editor3(target_revision, self, target,
                                         use_commit_times, depth,
                                         allow_unver_obstruction,
@@ -325,7 +328,9 @@ module Svn
                         preserved_exts=nil)
         preserved_exts ||= []
         traversal_info ||= _traversal_info
-        conflict_func = nil
+        # TODO(rb support conflict_fun): implement support for the
+        # conflict_func callback.
+        conflict_func=nil
         results = Wc.get_switch_editor3(target_revision, self, target,
                                         switch_url, use_commit_times, depth,
                                         allow_unver_obstruction,

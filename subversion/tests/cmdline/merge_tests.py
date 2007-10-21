@@ -28,10 +28,12 @@ from svntest import wc
 Item = wc.StateItem
 XFail = svntest.testcase.XFail
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 
 from svntest.main import SVN_PROP_MERGE_INFO
 from svntest.main import write_restrictive_svnserve_conf
 from svntest.main import write_authz_file
+from svntest.main import server_has_mergeinfo
 from svntest.actions import fill_file_with_lines
 from svntest.actions import make_conflict_marker_text
 from svntest.actions import inject_conflict_into_expected_state
@@ -43,42 +45,23 @@ def shorten_path_kludge(path):
   shorten_by = len(svntest.main.work_dir) + len(os.sep)
   return path[shorten_by:]
 
-def expected_merge_output(start_rev, additional_lines=None, end_rev=None,
-                          same_URL=True):
+def expected_merge_output(rev_ranges, additional_lines=None):
   """Generate an (inefficient) regex representing the expected merge
-  output from START_REV, ADDITIONAL_LINES (an array of strings), and
-  END_REV."""
-  lines = [svntest.main.merge_notify_line(start_rev, end_rev, same_URL)]
-  if isinstance(additional_lines, list):
-    # Address "The Backslash Plague"
-    #
-    # If ADDITIONAL_LINES are present there are possibly paths in it with
-    # multiple components and on Windows these components are separated with
-    # '\'.  These need to be escaped properly in the regexp for the match to
-    # work correctly.  See http://aspn.activestate.com/ASPN/docs/ActivePython
-    # /2.2/howto/regex/regex.html#SECTION000420000000000000000.
-    if sys.platform == 'win32':
-      for i in range(0, len(additional_lines)):
-        additional_lines[i] = additional_lines[i].replace("\\", "\\\\")
-    lines.extend(additional_lines)
+  output from REV_RANGES (a list of 'range' lists of the form [start, end] or
+  [single_rev] --> [single_rev - 1, single_rev]), and ADDITIONAL_LINES (a list
+  of strings).  If REV_RANGES is None then only the standard notification for
+  a 3-way merge is expected."""
+  if rev_ranges is None:
+    lines = [svntest.main.merge_notify_line(None, None, False)]
   else:
-    if sys.platform == 'win32' and additional_lines != None:
-      additional_lines = additional_lines.replace("\\", "\\\\")
-    lines.append(str(additional_lines))
-  return "|".join(lines)
-
-def expected_merge_output3(rev_ranges, additional_lines=None, same_URL=True):
-  """Generate an (inefficient) regex representing the expected merge
-  output from START_REV, ADDITIONAL_LINES (an array of strings), and
-  END_REV."""
-  lines = []
-  for rng in rev_ranges:
-    start_rev = rng[0]
-    if len(rng) > 1:
-      end_rev = rng[1]
-    else:
-      end_rev = None
-    lines += [svntest.main.merge_notify_line(start_rev, end_rev, same_URL)]
+   lines = []
+   for rng in rev_ranges:
+     start_rev = rng[0]
+     if len(rng) > 1:
+       end_rev = rng[1]
+     else:
+       end_rev = None
+     lines += [svntest.main.merge_notify_line(start_rev, end_rev, True)]
   if isinstance(additional_lines, list): 
     # Address "The Backslash Plague"
     #
@@ -311,7 +294,7 @@ def textual_merges_galore(sbox):
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(-3, 'G    ' +
+                                     expected_merge_output([[-3]], 'G    ' +
                                                            other_rho_path +
                                                            '\n'),
                                      [], 'merge', '-c-3',
@@ -1214,7 +1197,7 @@ def merge_one_file_helper(sbox, arg_flav, record_only = 0):
   # right.  I think something is still assuming a directory target.
   if arg_flav == 'r':
     svntest.actions.run_and_verify_svn(None ,
-                                       expected_merge_output(2, 'U    ' +
+                                       expected_merge_output([[2]], 'U    ' +
                                                              rho_path + '\n'),
                                        [],
                                        '--username', svntest.main.wc_author,
@@ -1223,7 +1206,7 @@ def merge_one_file_helper(sbox, arg_flav, record_only = 0):
                                        rho_url, rho_path)
   elif arg_flav == 'c':
     svntest.actions.run_and_verify_svn(None ,
-                                       expected_merge_output(2, 'U    ' +
+                                       expected_merge_output([[2]], 'U    ' +
                                                              rho_path + '\n'),
                                        [],
                                        '--username', svntest.main.wc_author,
@@ -1232,7 +1215,7 @@ def merge_one_file_helper(sbox, arg_flav, record_only = 0):
                                        rho_url, rho_path)
   elif arg_flav == '*':
     svntest.actions.run_and_verify_svn(None ,
-                                       expected_merge_output(2, 'U    ' +
+                                       expected_merge_output([[2]], 'U    ' +
                                                              rho_path + '\n'),
                                        [],
                                        '--username', svntest.main.wc_author,
@@ -1272,7 +1255,7 @@ def merge_one_file_helper(sbox, arg_flav, record_only = 0):
     merge_cmd.append('--record-only')
     rho_expected_status = ' M'
   else:
-    expected_output = expected_merge_output(2, 'U    rho\n')
+    expected_output = expected_merge_output([[2]], 'U    rho\n')
     rho_expected_status = 'MM'
   merge_cmd.append(rho_url)
 
@@ -1360,14 +1343,16 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
   # merge using URL for sourcepath
   if arg_flav == 'r':
     svntest.actions.run_and_verify_svn(None,
-                                       expected_merge_output(-2, 'U    mu\n'),
+                                       expected_merge_output([[-2]],
+                                                             'U    mu\n'),
                                        [],
                                        '--username', svntest.main.wc_author,
                                        '--password', svntest.main.wc_passwd,
                                        'merge', '-r', '2:1', mu_url)
   elif arg_flav == 'c':
     svntest.actions.run_and_verify_svn(None,
-                                       expected_merge_output(-2, 'U    mu\n'),
+                                       expected_merge_output([[-2]],
+                                                             'U    mu\n'),
                                        [],
                                        '--username', svntest.main.wc_author,
                                        '--password', svntest.main.wc_passwd,
@@ -1377,7 +1362,8 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
     # forward merges only (e.g. non-reverts).  Undo application of
     # r2 to enable continuation of the test case.
     svntest.actions.run_and_verify_svn(None,
-                                       expected_merge_output(-2, 'U    mu\n'),
+                                       expected_merge_output([[-2]],
+                                                             'U    mu\n'),
                                        [],
                                        '--username', svntest.main.wc_author,
                                        '--password', svntest.main.wc_passwd,
@@ -1393,14 +1379,16 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
   # Cannot use run_and_verify_merge with a file target
   if arg_flav == 'r':
     svntest.actions.run_and_verify_svn(None,
-                                       expected_merge_output(2, 'G    mu\n'),
+                                       expected_merge_output([[2]],
+                                                             'G    mu\n'),
                                        [],
                                        '--username', svntest.main.wc_author,
                                        '--password', svntest.main.wc_passwd,
                                        'merge', '-r', '1:2', 'mu')
   elif arg_flav == 'c':
     svntest.actions.run_and_verify_svn(None,
-                                       expected_merge_output(2, 'G    mu\n'),
+                                       expected_merge_output([[2]],
+                                                             'G    mu\n'),
                                        [],
                                        '--username', svntest.main.wc_author,
                                        '--password', svntest.main.wc_passwd,
@@ -1408,7 +1396,8 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
 
   elif arg_flav == '*':
     svntest.actions.run_and_verify_svn(None,
-                                       expected_merge_output(2, 'G    mu\n'),
+                                       expected_merge_output([[2]],
+                                                             'G    mu\n'),
                                        [],
                                        '--username', svntest.main.wc_author,
                                        '--password', svntest.main.wc_passwd,
@@ -1487,7 +1476,8 @@ def merge_with_prev (sbox):
   # Try to revert the last change to mu via svn merge
   # Cannot use run_and_verify_merge with a file target
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(-2, 'U    mu\n'),
+                                     expected_merge_output([[-2]],
+                                                           'U    mu\n'),
                                      [],
                                      'merge', '-r', 'HEAD:PREV', 'mu')
 
@@ -2388,8 +2378,8 @@ def merge_binary_with_common_ancestry(sbox):
   theta_J_url = sbox.repo_url + '/J/theta'
   theta_L_url = sbox.repo_url + '/L/theta'
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(7, 'U    theta\n',
-                                                           None, False),
+                                     expected_merge_output(None,
+                                                           'U    theta\n'),
                                      [],
                                      'merge', theta_J_url, theta_L_url)
   os.chdir(saved_cwd)
@@ -4578,7 +4568,8 @@ def tweak_src_then_merge_to_dest(sbox, src_path, dst_path,
     merge_url = merge_url.replace('\\', '/')
 
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(new_rev, 'U    ' +
+                                     expected_merge_output([[new_rev]],
+                                                           'U    ' +
                                                            short_dst_path +
                                                            '\n'),
                                      [],
@@ -5108,7 +5099,7 @@ def mergeinfo_inheritance(sbox):
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(6,
+                                     expected_merge_output([[6]],
                                        'U    ' + short_omega_COPY_path + '\n'),
                                      [], 'merge', '-c6',
                                      sbox.repo_url + '/A/D/H/omega',
@@ -5224,7 +5215,7 @@ def mergeinfo_elision(sbox):
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(5,
+                                     expected_merge_output([[5]],
                                        'U    ' + short_beta_COPY_path + '\n'),
                                      [], 'merge', '-c5',
                                      sbox.repo_url + '/A/B/E/beta',
@@ -5362,7 +5353,7 @@ def mergeinfo_elision(sbox):
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(-5,
+                                     expected_merge_output([[-5]],
                                        'U    ' + short_beta_COPY_path + '\n'),
                                      [], 'merge', '-c-5',
                                      sbox.repo_url + '/A/B/E/beta',
@@ -5386,7 +5377,7 @@ def mergeinfo_elision(sbox):
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(5,
+                                     expected_merge_output([[5]],
                                       'G    ' + short_beta_COPY_path + '\n'),
                                      [], 'merge', '-c5',
                                      sbox.repo_url + '/A/B/E/beta',
@@ -5432,10 +5423,9 @@ def mergeinfo_inheritance_and_discontinuous_ranges(sbox):
   # Use run_and_verify_svn rather than run_and_verify_merge so we
   # can test the implied merge source functionality.
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(4, 'U    ' +
+                                     expected_merge_output([[4]], 'U    ' +
                                        os.path.join("D", "G", "rho") + '\n'),
-                                     [], 'merge', '-c4',
-                                     '--use-merge-history')
+                                     [], 'merge', '-c4')
   os.chdir(saved_cwd)
 
   # Check the results of the merge.
@@ -5718,7 +5708,7 @@ def merge_to_switched_path(sbox):
                                       "\n"], [], 'ps', SVN_PROP_MERGE_INFO,
                                      '/A/D:', A_COPY_D_path)
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(-4,
+                                     expected_merge_output([[-4]],
                                        'U    ' + A_COPY_D_G_rho_path + '\n'),
                                      [], 'merge', '-c-4',
                                      sbox.repo_url + '/A/D/G_COPY',
@@ -6418,12 +6408,11 @@ def empty_rev_range_mergeinfo(sbox):
   # run_and_verify_svn('merge') and ran_and_verify_status() covers
   # everything.
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(4,
+                                     expected_merge_output([[4]],
                                        ['G    ' +
                                         os.path.join(short_A_path, "D", "G",
                                                      "rho") + '\n',
-                                        svntest.main.merge_notify_line(4, 3)],
-                                       3),
+                                        svntest.main.merge_notify_line(4, 3)]),
                                      [], 'merge', '-r4:2',
                                      sbox.repo_url + '/A_COPY',
                                      short_A_path)
@@ -6474,7 +6463,7 @@ def empty_rev_range_mergeinfo(sbox):
   # mergeinfo for A_COPY/D/H, A/D/H's mergeinfo should elide to A/D.
   os.chdir(svntest.main.work_dir)
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(-3, 'G    ' +
+                                     expected_merge_output([[-3]], 'G    ' +
                                        os.path.join(short_H_path, "psi") +
                                        '\n'),
                                      [], 'merge', '-r3:2',
@@ -6529,10 +6518,10 @@ def empty_rev_range_mergeinfo(sbox):
   # the mergeinfo should elide.
   os.chdir(svntest.main.work_dir)
   expected = svntest.verify.UnorderedRegexOutput(
-    expected_merge_output(4,
+    expected_merge_output([[4]],
       ["U    " + os.path.join(short_D_path, "G", "rho") + "\n",
-       "U    " + os.path.join(short_D_path, "H", "psi") + "\n"],
-      3), match_all=False)
+       "U    " + os.path.join(short_D_path, "H", "psi") + "\n"]),
+    match_all=False)
   svntest.actions.run_and_verify_svn(None, expected, [], 'merge',
                                      '-r4:2', sbox.repo_url + '/A_COPY/D',
                                      short_D_path)
@@ -6566,7 +6555,7 @@ def empty_rev_range_mergeinfo(sbox):
   short_D_path = shorten_path_kludge(A_D_path)
   os.chdir(svntest.main.work_dir)
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(-4,
+                                     expected_merge_output([[-4]],
                                        'U    ' +
                                        os.path.join(short_D_path, "G", "rho") +
                                        '\n'),
@@ -6612,7 +6601,7 @@ def empty_rev_range_mergeinfo(sbox):
     # mergeinfo from A/D in the repos.
     os.chdir(svntest.main.work_dir)
     svntest.actions.run_and_verify_svn(None,
-                                       expected_merge_output(5,
+                                       expected_merge_output([[5]],
                                          ' U   ' + short_other_omega_path +
                                          '\n'), [], 'merge', '-c5',
                                        sbox.repo_url + '/A_COPY/B/E/beta',
@@ -6642,7 +6631,7 @@ def empty_rev_range_mergeinfo(sbox):
   # path 'A_COPY/D/H/omega', so all the mergeinfo elides.
   os.chdir(svntest.main.work_dir)
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(-5,
+                                     expected_merge_output([[-5]],
                                        ' G   ' + short_other_omega_path +
                                        '\n'), [], 'merge', '-c-5',
                                      sbox.repo_url + '/A_COPY/B/E/beta',
@@ -6689,7 +6678,7 @@ def empty_rev_range_mergeinfo(sbox):
   # since that path doesn't exist in A/D/H/omeaga's nearest ancestor.
   os.chdir(svntest.main.work_dir)
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(-5,
+                                     expected_merge_output([[-5]],
                                       ' G   ' + short_other_omega_path +
                                       '\n'), [], 'merge', '-c-5',
                                      sbox.repo_url + '/A_COPY/B/E/beta',
@@ -6750,7 +6739,7 @@ def detect_copy_src_for_target_with_multiple_ancestors(sbox):
   # Use --record-only to force the setting of mergeinfo since this is
   # a no-op merge.
   svntest.actions.run_and_verify_svn(None, [],
-                                     [], 'merge', '-g', '--record-only')
+                                     [], 'merge', '--record-only')
   os.chdir(saved_cwd)
 
   expected_status.tweak('A/copy-of-B/C',  status=' M')
@@ -6795,7 +6784,7 @@ def prop_add_to_child_with_mergeinfo(sbox):
   saved_cwd = os.getcwd()
   os.chdir(svntest.main.work_dir)
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(5,
+                                     expected_merge_output([[5]],
                                        'U    ' + short_beta_COPY_path +'\n'),
                                      [], 'merge', '-c5',
                                      sbox.repo_url + '/A/B/E/beta',
@@ -6864,7 +6853,7 @@ def diff_repos_does_not_update_mergeinfo(sbox):
 
   os.chdir(svntest.main.work_dir)
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(4,
+                                     expected_merge_output([[4]],
                                       'U    ' +
                                       os.path.join(short_G_COPY_path,
                                                    "rho") + '\n'),
@@ -6880,7 +6869,7 @@ def diff_repos_does_not_update_mergeinfo(sbox):
 
   os.chdir(svntest.main.work_dir)
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(5,
+                                     expected_merge_output([[5]],
                                       'U    ' +
                                       os.path.join(short_E_COPY_path,
                                                    "beta") +'\n'),
@@ -7666,7 +7655,7 @@ def single_file_replace_style_merge_capability(sbox):
 
   # Merge the file mu alone to rev1
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(-2,
+                                     expected_merge_output([[-2]],
                                        ['D    ' + mu_path + '\n',
                                         'A    ' + mu_path + '\n']),
                                      [],
@@ -7995,20 +7984,21 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
                                         None, None, None, None,
                                         wc_dir, wc_dir)
 
-  svntest.actions.run_and_verify_svn(None, expected_merge_output(3,
-                                     'U    ' + Acopy_gamma_path + '\n', 4),
+  svntest.actions.run_and_verify_svn(None, expected_merge_output([[3,4]],
+                                     'U    ' + Acopy_gamma_path + '\n'),
                                      [], 'merge', '-r1:4',
                                      A_url + '/D/gamma' + '@4',
                                      Acopy_gamma_path)
 
-  svntest.actions.run_and_verify_svn(None, expected_merge_output(3,
-                                     'D    ' + Acopy_gamma_path + '\n', 5),
+  svntest.actions.run_and_verify_svn(None, expected_merge_output([[5]],
+                                     'D    ' + Acopy_gamma_path + '\n'),
                                      [], 'merge', '-r1:5', '--force',
                                      A_url, Acopy_path)
 
-# Test for issue:
+# Test for issues:
 #
 #   2883: No-op merge (without skip) should not change mergeinfo.
+#   2976: Subtrees can lose non-inhertiable ranges
 def no_mergeinfo_from_no_op_merge(sbox):
   "no-op merge without skips doesn't change mergeinfo"
 
@@ -8017,11 +8007,15 @@ def no_mergeinfo_from_no_op_merge(sbox):
   wc_disk, wc_status = setup_branch(sbox)
 
   # Some paths we'll care about
+  H_path = os.path.join(wc_dir, "A", "D", "H")
   beta_COPY_path = os.path.join(wc_dir, "A_COPY", "B", "E", "beta")
   G_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "G")
   tau_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "G", "tau")
   C_COPY_path = os.path.join(wc_dir, "A_COPY", "C")
+  D_COPY_path = os.path.join(wc_dir, "A_COPY", "D")
 
+  # Part 1: Test for issue #2883
+  #
   # Merge r5 into A_COPY/B/E/beta and commit it.
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
@@ -8032,7 +8026,7 @@ def no_mergeinfo_from_no_op_merge(sbox):
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(5,
+                                     expected_merge_output([[5]],
                                       'U    ' + short_beta_COPY_path +
                                       '\n'), [], 'merge', '-c5',
                                      sbox.repo_url + '/A/B/E/beta',
@@ -8078,7 +8072,7 @@ def no_mergeinfo_from_no_op_merge(sbox):
   # Do a no-op merge to a file with committed mergeinfo:
   #   -r2:4 into A_COPY/B/E/beta.
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(3, None, 4),
+                                     expected_merge_output([[3,4]], None),
                                      [], 'merge', '-r2:4',
                                      sbox.repo_url + '/A/B/E/beta',
                                      short_beta_COPY_path)
@@ -8087,7 +8081,7 @@ def no_mergeinfo_from_no_op_merge(sbox):
   # -c3 into A_COPY/D/G/tau.
   short_tau_COPY_path = shorten_path_kludge(tau_COPY_path)
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(3),
+                                     expected_merge_output([[3]]),
                                      [], 'merge', '-c3',
                                      sbox.repo_url + '/A/D/G/tau',
                                      short_tau_COPY_path)
@@ -8096,7 +8090,7 @@ def no_mergeinfo_from_no_op_merge(sbox):
   #   -r4:6 into A_COPY/D/G.
   short_tau_COPY_path = shorten_path_kludge(tau_COPY_path)
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(5, None, 6),
+                                     expected_merge_output([[5,6]], None),
                                      [], 'merge', '-r4:6',
                                      sbox.repo_url + '/A/D/G',
                                      short_G_COPY_path)
@@ -8110,7 +8104,7 @@ def no_mergeinfo_from_no_op_merge(sbox):
   os.chdir(svntest.main.work_dir)
   short_C_COPY_path = shorten_path_kludge(C_COPY_path)
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(2, None, 7),
+                                     expected_merge_output([[2,7]], None),
                                      [], 'merge',
                                      sbox.repo_url + '/A/C',
                                      short_C_COPY_path)
@@ -8119,6 +8113,128 @@ def no_mergeinfo_from_no_op_merge(sbox):
   # A final check of the WC's status to ensure nothing unexpected occurred
   # (that the above merge's stdout/stderr didn't already reveal).
   svntest.actions.run_and_verify_status(wc_dir, wc_status)
+
+  # Reopened Issue #2883 as the following sequence failed:
+  # Commit what we have so far as r8.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A_COPY/D/G'     : Item(verb='Sending'),
+    'A_COPY/D/G/rho' : Item(verb='Sending'),
+    })
+  wc_status.tweak(status='  ')
+  wc_status.tweak('A_COPY/D/G', 'A_COPY/D/G/rho', wc_rev=8)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
+                                        None, None, None, None, None, wc_dir)
+  wc_status.tweak(wc_rev=8)
+  # Update the WC and add a prop to A/D/H and commit that as r9.
+  svntest.actions.run_and_verify_svn(None, ['At revision 8.\n'], [],
+                                     'update', wc_dir)
+
+  svntest.actions.run_and_verify_svn(
+    None, ["property 'prop:name' set on '" + H_path + "'\n"], [],
+    'ps', 'prop:name', 'propval', H_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/H' : Item(verb='Sending'),})
+  wc_status.tweak(status='  ')
+  wc_status.tweak('A/D/H', wc_rev=9)
+  wc_status.tweak('A_COPY/D/G', 'A_COPY/D/G/rho', wc_rev=8)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
+                                        None, None, None, None, None, wc_dir)
+  
+  # Merge r5:9 --depth immediates to A_COPY/D
+  short_D_COPY_path = shorten_path_kludge(D_COPY_path)
+  expected_output = wc.State(short_D_COPY_path, {
+    'H' : Item(status=' U'),
+    })
+  expected_status = wc.State(short_D_COPY_path, {
+    ''        : Item(status=' M', wc_rev=8),
+    'H'       : Item(status=' M', wc_rev=8),
+    'H/chi'   : Item(status='  ', wc_rev=8),
+    'H/omega' : Item(status='  ', wc_rev=8),
+    'H/psi'   : Item(status='  ', wc_rev=8),
+    'G'       : Item(status=' M', wc_rev=8),
+    'G/pi'    : Item(status='  ', wc_rev=8),
+    'G/rho'   : Item(status='  ', wc_rev=8),
+    'G/tau'   : Item(status='  ', wc_rev=8),
+    'gamma'   : Item(status='  ', wc_rev=8),
+    })
+  expected_disk = wc.State('', {
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/D:1,6-9'}),
+    'H'       : Item(props={'prop:name' : 'propval',
+                            SVN_PROP_MERGE_INFO : '/A/D/H:1,6-9*'}),
+    'H/chi'   : Item("This is the file 'chi'.\n"),
+    'H/omega' : Item("This is the file 'omega'.\n"),
+    'H/psi'   : Item("This is the file 'psi'.\n"),
+    'G'       : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:1,4,6-9*'}),
+    'G/pi'    : Item("This is the file 'pi'.\n"),
+    'G/rho'   : Item("New content"),
+    'G/tau'   : Item("This is the file 'tau'.\n"),
+    'gamma'   : Item("This is the file 'gamma'.\n"),
+    })
+  expected_skip = wc.State(short_D_COPY_path, { })
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_D_COPY_path, '5', '9',
+                                       sbox.repo_url + '/A/D',
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       None, None, None, None, None, 1, 1,
+                                       '--depth', 'immediates')
+  os.chdir(saved_cwd)
+
+  # Commit everything so far.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A_COPY/D'   : Item(verb='Sending'),
+    'A_COPY/D/G' : Item(verb='Sending'),
+    'A_COPY/D/H' : Item(verb='Sending'),
+    })
+  wc_status.tweak('A_COPY/D', 'A_COPY/D/G', 'A_COPY/D/H',
+                  wc_rev=10, status='  ')
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
+                                        None, None, None, None, None, wc_dir)
+
+  # Do a no-op merge of -c9 to A_COPY/D.  In issue #2883 this
+  # looked like a no-op but modified subtree mergeinfo.
+  expected_output = wc.State(short_D_COPY_path, {})
+  expected_status.tweak('', 'G', 'H', wc_rev=10, status='  ')
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_D_COPY_path, '8', '9',
+                                       sbox.repo_url + '/A/D',
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       None, None, None, None, None, 1, 1)
+
+  os.chdir(saved_cwd)
+
+  # Part 2: Test for issue #2976
+  #
+  # Merge r3:8 A_COPY/D, A_COPY/D/H and A_COPY/D/G should
+  # both retain mergeinfo for r9*
+  short_D_COPY_path = shorten_path_kludge(D_COPY_path)
+  expected_output = wc.State(short_D_COPY_path, {
+    'H/omega' : Item(status='U '),
+    })
+  expected_status.tweak('', 'G', 'H', status=' M')
+  expected_status.tweak('H/omega', status='M ')
+  expected_disk = wc.State('', {
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/D:1,4-9'}),
+    'H'       : Item(props={'prop:name' : 'propval',
+                            SVN_PROP_MERGE_INFO : '/A/D/H:1,4-8,9*'}),
+    'H/chi'   : Item("This is the file 'chi'.\n"),
+    'H/omega' : Item("New content"),
+    'H/psi'   : Item("This is the file 'psi'.\n"),
+    'G'       : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:1,4-8,9*'}),
+    'G/pi'    : Item("This is the file 'pi'.\n"),
+    'G/rho'   : Item("New content"),
+    'G/tau'   : Item("This is the file 'tau'.\n"),
+    'gamma'   : Item("This is the file 'gamma'.\n"),
+    })
+  expected_skip = wc.State(short_D_COPY_path, { })
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_D_COPY_path, '3', '8',
+                                       sbox.repo_url + '/A/D',
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       None, None, None, None, None, 1, 1)
+  os.chdir(saved_cwd)
 
   # Test for issue #2827
   # Handle merge info for sparsely-populated directories
@@ -8585,7 +8701,7 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
                                         None, None, wc_dir)
   # Merge r5 to A_COPY/mu
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(5,
+                                     expected_merge_output([[5]],
                                        ['U    ' + A_COPY_mu_path + '\n']),
                                      [],
                                      '--username', svntest.main.wc_author,
@@ -8655,8 +8771,8 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
   os.chdir(saved_cwd)
   # Revert r5 and r6 on A_COPY/mu
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(6,
-                                       ['G    ' + A_COPY_mu_path + '\n'], 5),
+                                     expected_merge_output([[6,5]],
+                                       ['G    ' + A_COPY_mu_path + '\n']),
                                      [],
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -8701,7 +8817,7 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
   os.chdir(saved_cwd)
   #Revert r5 on A_COPY/mu
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(-5,
+                                     expected_merge_output([[-5]],
                                        ['G    ' + A_COPY_mu_path + '\n']),
                                      [],
                                      '--username', svntest.main.wc_author,
@@ -8929,7 +9045,7 @@ def merge_with_auto_rev_range_detection(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None,
-                                       1, 1, '-g')
+                                       1, 1)
   os.chdir(saved_cwd)
 
 def mergeinfo_recording_in_skipped_merge(sbox):
@@ -8985,9 +9101,9 @@ def mergeinfo_recording_in_skipped_merge(sbox):
   expected_status = wc.State(short_A_COPY, {
     ''         : Item(status=' M', wc_rev=2),
     'mu'       : Item(status='M ', wc_rev=2),
-    'B'        : Item(status='  ', wc_rev=2),
-    'B/lambda' : Item(status='  ', wc_rev=2),
-    'B/F'      : Item(status='  ', wc_rev=2),
+    'B'        : Item(status=' M', wc_rev=2),
+    'B/lambda' : Item(status=' M', wc_rev=2),
+    'B/F'      : Item(status=' M', wc_rev=2),
     'B/E'      : Item(status='D ', wc_rev=2),
     'B/E/alpha': Item(status='D ', wc_rev=2),
     'B/E/beta' : Item(status='D ', wc_rev=2),
@@ -9008,10 +9124,11 @@ def mergeinfo_recording_in_skipped_merge(sbox):
     'mu'       : Item("This is the file 'mu' modified.\n"),
     'C'        : Item(),
     'D'        : Item(),
-    'B'        : Item(props={SVN_PROP_MERGE_INFO : '/A:1'}),
+    'B'        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1'}),
     'B/lambda' : Item(contents="This is the file 'lambda'.\n",
-                      props={SVN_PROP_MERGE_INFO : '/A/B/lambda:1-4'}),
-    'B/F'      : Item(props={SVN_PROP_MERGE_INFO : '/A/B/F:1-4'}),
+                      props={SVN_PROP_MERGE_INFO : '/A/B/lambda:2-4'}),
+    'B/F'      : Item(props={SVN_PROP_MERGE_INFO : '/A/B/F:2-4'}),
+    'B/E'      : Item(),
     'D/gamma'  : Item("This is the file 'gamma'.\n"),
     'D/G'      : Item(),
     'D/G/pi'   : Item("This is the file 'pi'.\n"),
@@ -9032,7 +9149,7 @@ def mergeinfo_recording_in_skipped_merge(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None,
-                                       1, 1, '-g')
+                                       1, 1)
 
   os.chdir(saved_cwd)
 
@@ -9106,7 +9223,7 @@ def cherry_picking(sbox):
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output3(
+                                     expected_merge_output(
                                        [[3,4],[6]],
                                        'U    ' + short_rho_COPY_path + '\n'),
                                      [], 'merge', '-r2:4', '-c6',
@@ -9126,7 +9243,7 @@ def cherry_picking(sbox):
   # Merge -c6 -c8 into A_COPY/D/H
   short_H_COPY_path = shorten_path_kludge(H_COPY_path)
   short_omega_COPY_path = shorten_path_kludge(omega_COPY_path)
-  expected_output = expected_merge_output3(
+  expected_output = expected_merge_output(
     [[6],[8]],
     ['U    ' + short_omega_COPY_path + '\n',
      ' U   ' + short_H_COPY_path + '\n'])
@@ -9153,7 +9270,7 @@ def cherry_picking(sbox):
   # Merge -c-6 -c-3 into A_COPY
   short_A_COPY_path = shorten_path_kludge(A_COPY_path)
   short_omega_COPY_path = shorten_path_kludge(omega_COPY_path)
-  expected_output = expected_merge_output3(
+  expected_output = expected_merge_output(
     [[-3],[-6]], 'G    ' + short_omega_COPY_path + '\n')
   os.chdir(svntest.main.work_dir)
   svntest.actions.run_and_verify_svn(None, expected_output,
@@ -9197,7 +9314,7 @@ def cherry_picking(sbox):
   short_D_COPY_path = shorten_path_kludge(D_COPY_path)
   short_psi_COPY_path = shorten_path_kludge(psi_COPY_path)
   short_G_COPY_path = shorten_path_kludge(G_COPY_path)
-  expected_output = expected_merge_output3(
+  expected_output = expected_merge_output(
     [[3],[-4], [5,7]],
     [' U   ' + short_G_COPY_path     + '\n',
      'U    ' + short_omega_COPY_path + '\n',
@@ -9230,6 +9347,310 @@ def cherry_picking(sbox):
   svntest.actions.run_and_verify_svn(None, expected_out, [],
                                      'propget', '-R', SVN_PROP_MERGE_INFO,
                                      D_COPY_path)
+
+def propchange_of_subdir_raises_conflict(sbox):
+  "merge of propchange on subdir raises conflict"
+  
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2969. ##
+
+  # Create a WC with a single branch
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = setup_branch(sbox, True, 1)
+
+  # Some paths we'll care about
+  repo_url = sbox.repo_url
+  B_url = repo_url + '/A/B'
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  A_COPY_B_path = os.path.join(wc_dir, 'A_COPY', 'B')
+  A_COPY_B_E_path = os.path.join(wc_dir, 'A_COPY', 'B', 'E')
+  A_COPY_lambda_path = os.path.join(wc_dir, 'A_COPY', 'B', 'E', 'lambda')
+
+  # Set a property on A/B/E and Make a modification to A/B/lambda
+  svntest.main.run_svn(None, 'propset', 'x', 'x', E_path)
+
+  svntest.main.file_write(lambda_path, "This is the file 'lambda' modified.\n")
+  expected_output = wc.State(wc_dir, {
+    'A/B/lambda' : Item(verb='Sending'),
+    'A/B/E'      : Item(verb='Sending'),
+    })
+  wc_status.add({
+    'A/B/lambda'     : Item(status='  ', wc_rev=3),
+    'A/B/E'          : Item(status='  ', wc_rev=3),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        wc_status, None, None, None,
+                                        None, None, wc_dir)
+
+  short_A_COPY_B = shorten_path_kludge(A_COPY_B_path)
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+
+  # Merge /A/B to /A_COPY/B ie., r1 to r3 with depth files
+  expected_output = wc.State(short_A_COPY_B, {
+    'lambda' : Item(status='U '),
+    })
+  expected_disk = wc.State('', {
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1,2-3*'}),
+    'lambda'  : Item(contents="This is the file 'lambda' modified.\n",
+                     props={SVN_PROP_MERGE_INFO : '/A/B/lambda:1-3'}),
+    'F'       : Item(),
+    'E'       : Item(),
+    'E/alpha' : Item(contents="This is the file 'alpha'.\n"),
+    'E/beta'  : Item(contents="This is the file 'beta'.\n"),
+    })
+  expected_status = wc.State(short_A_COPY_B, {
+    ''         : Item(status=' M', wc_rev=2),
+    'lambda'   : Item(status='MM', wc_rev=2),
+    'F'        : Item(status='  ', wc_rev=2),
+    'E'        : Item(status='  ', wc_rev=2),
+    'E/alpha'  : Item(status='  ', wc_rev=2),
+    'E/beta'   : Item(status='  ', wc_rev=2),
+    })
+  expected_skip = wc.State(short_A_COPY_B, {})
+
+  svntest.actions.run_and_verify_merge(short_A_COPY_B, None, None,
+                                       B_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None,
+                                       1, 1, '--depth', 'files')
+
+  # Merge /A/B to /A_COPY/B ie., r1 to r3 with infinite depth
+  expected_output = wc.State(short_A_COPY_B, {
+    'E'       : Item(status=' U'),
+    })
+  expected_disk = wc.State('', {
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1-3'}),
+    'lambda'  : Item(contents="This is the file 'lambda' modified.\n"),
+    'F'       : Item(),
+    'E'       : Item(props={'x': 'x'}),
+    'E/alpha' : Item(contents="This is the file 'alpha'.\n"),
+    'E/beta'  : Item(contents="This is the file 'beta'.\n"),
+    })
+  expected_status = wc.State(short_A_COPY_B, {
+    ''         : Item(status=' M', wc_rev=2),
+    'lambda'   : Item(status='M ', wc_rev=2),
+    'F'        : Item(status='  ', wc_rev=2),
+    'E'        : Item(status=' M', wc_rev=2),
+    'E/alpha'  : Item(status='  ', wc_rev=2),
+    'E/beta'   : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_merge(short_A_COPY_B, None, None,
+                                       B_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None,
+                                       1, 1)
+
+  os.chdir(saved_cwd)
+
+# Test for issue #2971: Reverse merge of prop add segfaults if
+# merging to parent of first merge
+def reverse_merge_prop_add_on_child(sbox):
+  "reverse merge of prop add on child"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = setup_branch(sbox, True, 1)
+
+  # Some paths we'll care about
+  G_path = os.path.join(wc_dir, "A", "D", "G")
+  D_COPY_path = os.path.join(wc_dir, "A_COPY", "D")
+  G_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "G")
+
+  # Make some prop changes to some dirs.
+  svntest.actions.run_and_verify_svn(None,
+                                     ["property 'prop:name' set on '" +
+                                      G_path + "'\n"], [], 'ps',
+                                     'prop:name', 'propval', G_path)
+  expected_output = svntest.wc.State(wc_dir, {'A/D/G': Item(verb='Sending'),})
+  wc_status.tweak('A/D/G', wc_rev=3)
+  wc_disk.tweak('A/D/G', props={'prop:name' : 'propval'})
+  
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
+                                        None, None, None, None, None, wc_dir)
+
+  # Merge -c3's prop add to A_COPY/D/G
+  saved_cwd = os.getcwd()
+  short_G_COPY_path = shorten_path_kludge(G_COPY_path)
+  expected_output = wc.State(short_G_COPY_path, {
+    '' : Item(status=' U')
+    })
+  expected_status = wc.State(short_G_COPY_path, {
+    ''    : Item(status=' M', wc_rev=2),
+    'pi'  : Item(status='  ', wc_rev=2),
+    'rho' : Item(status='  ', wc_rev=2),
+    'tau' : Item(status='  ', wc_rev=2),
+    })
+  expected_disk = wc.State('', {
+    ''    : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:1,3',
+                        'prop:name' : 'propval'}),
+    'pi'  : Item("This is the file 'pi'.\n"),
+    'rho' : Item("This is the file 'rho'.\n"),
+    'tau' : Item("This is the file 'tau'.\n"),
+    })
+  expected_skip = wc.State(short_G_COPY_path, { })
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_G_COPY_path, '2', '3',
+                                       sbox.repo_url + \
+                                       '/A/D/G',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1)
+  os.chdir(saved_cwd)
+
+  # Now merge -c-3 but target the previous target's parent instead.
+  short_D_COPY_path = shorten_path_kludge(D_COPY_path)
+  expected_output = wc.State(short_D_COPY_path, {
+    'G' : Item(status=' G'),
+    })
+  expected_status = wc.State(short_D_COPY_path, {
+    ''        : Item(status='  ', wc_rev=2),
+    'G'       : Item(status='  ', wc_rev=2),
+    'G/pi'    : Item(status='  ', wc_rev=2),
+    'G/rho'   : Item(status='  ', wc_rev=2),
+    'G/tau'   : Item(status='  ', wc_rev=2),
+    'H'       : Item(status='  ', wc_rev=2),
+    'H/chi'   : Item(status='  ', wc_rev=2),
+    'H/psi'   : Item(status='  ', wc_rev=2),
+    'H/omega' : Item(status='  ', wc_rev=2),
+    'gamma'   : Item(status='  ', wc_rev=2),
+    })
+  expected_disk = wc.State('', {
+    'G'       : Item(),
+    'G/pi'    : Item("This is the file 'pi'.\n"),
+    'G/rho'   : Item("This is the file 'rho'.\n"),
+    'G/tau'   : Item("This is the file 'tau'.\n"),
+    'H'       : Item(),
+    'H/chi'   : Item("This is the file 'chi'.\n"),
+    'H/psi'   : Item("This is the file 'psi'.\n"),
+    'H/omega' : Item("This is the file 'omega'.\n"),
+    'gamma'   : Item("This is the file 'gamma'.\n")
+    })
+  expected_skip = wc.State(short_D_COPY_path, { })
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_D_COPY_path, '3', '2',
+                                       sbox.repo_url + \
+                                       '/A/D',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1)
+  os.chdir(saved_cwd)
+
+def merge_target_with_non_inheritable_mergeinfo(sbox):
+  "merge target with non inheritable mergeinfo"
+  
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2970. ##
+
+  # Create a WC with a single branch
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = setup_branch(sbox, True, 1)
+
+  # Some paths we'll care about
+  repo_url = sbox.repo_url
+  B_url = repo_url + '/A/B'
+  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  newfile_path = os.path.join(wc_dir, 'A', 'B', 'E', 'newfile')
+  A_COPY_B_path = os.path.join(wc_dir, 'A_COPY', 'B')
+
+  # Make a modifications to A/B/lambda and add A/B/E/newfile
+  svntest.main.file_write(lambda_path, "This is the file 'lambda' modified.\n")
+  svntest.main.file_write(newfile_path, "This is the file 'newfile'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', newfile_path)
+  expected_output = wc.State(wc_dir, {
+    'A/B/lambda'    : Item(verb='Sending'),
+    'A/B/E/newfile' : Item(verb='Adding'),
+    })
+  wc_status.add({
+    'A/B/lambda'     : Item(status='  ', wc_rev=3),
+    'A/B/E/newfile'  : Item(status='  ', wc_rev=3),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        wc_status, None, None, None,
+                                        None, None, wc_dir)
+
+  short_A_COPY_B = shorten_path_kludge(A_COPY_B_path)
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+
+  # Merge /A/B to /A_COPY/B ie., r1 to r3 with depth immediates
+  expected_output = wc.State(short_A_COPY_B, {
+    'lambda' : Item(status='U '),
+    })
+  expected_disk = wc.State('', {
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1-3'}),
+    'lambda'  : Item(contents="This is the file 'lambda' modified.\n"),
+    'F'       : Item(props={SVN_PROP_MERGE_INFO : '/A/B/F:1,2-3*'}),
+    'E'       : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:1,2-3*'}),
+    'E/alpha' : Item(contents="This is the file 'alpha'.\n"),
+    'E/beta'  : Item(contents="This is the file 'beta'.\n"),
+    })
+  expected_status = wc.State(short_A_COPY_B, {
+    ''         : Item(status=' M', wc_rev=2),
+    'lambda'   : Item(status='M ', wc_rev=2),
+    'F'        : Item(status=' M', wc_rev=2),
+    'E'        : Item(status=' M', wc_rev=2),
+    'E/alpha'  : Item(status='  ', wc_rev=2),
+    'E/beta'   : Item(status='  ', wc_rev=2),
+    })
+  expected_skip = wc.State(short_A_COPY_B, {})
+
+  svntest.actions.run_and_verify_merge(short_A_COPY_B, None, None,
+                                       B_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None,
+                                       1, 1, '--depth', 'immediates')
+
+  # Merge /A/B to /A_COPY/B ie., r1 to r3 with infinite depth
+  expected_output = wc.State(short_A_COPY_B, {
+    'E/newfile'     : Item(status='A '),
+    })
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1-3'}),
+    'lambda'    : Item(contents="This is the file 'lambda' modified.\n"),
+    'F'         : Item(),
+    'E'         : Item(),
+    'E/alpha'   : Item(contents="This is the file 'alpha'.\n"),
+    'E/beta'    : Item(contents="This is the file 'beta'.\n"),
+    'E/newfile' : Item(contents="This is the file 'newfile'.\n"),
+    })
+  expected_status = wc.State(short_A_COPY_B, {
+    ''            : Item(status=' M', wc_rev=2),
+    'lambda'      : Item(status='M ', wc_rev=2),
+    'F'           : Item(status='  ', wc_rev=2),
+    'E'           : Item(status='  ', wc_rev=2),
+    'E/alpha'     : Item(status='  ', wc_rev=2),
+    'E/beta'      : Item(status='  ', wc_rev=2),
+    'E/newfile'   : Item(status='A ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_merge(short_A_COPY_B, None, None,
+                                       B_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None,
+                                       1, 1)
+
+  os.chdir(saved_cwd)
 
 ########################################################################
 # Run the tests
@@ -9281,14 +9702,18 @@ test_list = [ None,
               avoid_repeated_merge_using_inherited_merge_info,
               avoid_repeated_merge_on_subtree_with_merge_info,
               obey_reporter_api_semantics_while_doing_subtree_merges,
-              mergeinfo_inheritance,
+              SkipUnless(mergeinfo_inheritance,
+                         server_has_mergeinfo),
               mergeinfo_elision,
               mergeinfo_inheritance_and_discontinuous_ranges,
-              merge_to_target_with_copied_children,
+              SkipUnless(merge_to_target_with_copied_children,
+                         server_has_mergeinfo),
               merge_to_switched_path,
-              merge_to_path_with_switched_children,
+              SkipUnless(merge_to_path_with_switched_children,
+                         server_has_mergeinfo),
               merge_with_implicit_target_file,
-              empty_rev_range_mergeinfo,
+              SkipUnless(empty_rev_range_mergeinfo,
+                         server_has_mergeinfo),
               detect_copy_src_for_target_with_multiple_ancestors,
               prop_add_to_child_with_mergeinfo,
               diff_repos_does_not_update_mergeinfo,
@@ -9299,7 +9724,7 @@ test_list = [ None,
               single_file_replace_style_merge_capability,
               merge_to_out_of_date_target,
               merge_with_depth_files,
-              XFail(merge_fails_if_subtree_is_deleted_on_src),
+              merge_fails_if_subtree_is_deleted_on_src,
               no_mergeinfo_from_no_op_merge,
               merge_to_sparse_directories,
               merge_old_and_new_revs_from_renamed_dir,
@@ -9308,6 +9733,9 @@ test_list = [ None,
               merge_with_auto_rev_range_detection,
               XFail(mergeinfo_recording_in_skipped_merge),
               cherry_picking,
+              propchange_of_subdir_raises_conflict,
+              reverse_merge_prop_add_on_child,
+              XFail(merge_target_with_non_inheritable_mergeinfo),
              ]
 
 if __name__ == '__main__':

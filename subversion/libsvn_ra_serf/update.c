@@ -280,9 +280,6 @@ typedef struct {
   svn_boolean_t ignore_ancestry;
   svn_boolean_t text_deltas;
 
-  /* What was the requested depth? */
-  svn_depth_t depth;
-
   /* Do we want the server to send copyfrom args or not? */
   svn_boolean_t send_copyfrom_args;
 
@@ -1190,34 +1187,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
   state = parser->state->current_state;
 
-  if (state == NONE && strcmp(name.name, "update-report") == 0)
-    {
-      /* If the server didn't reply with an actual depth value, it
-         isn't depth-aware, and we'll need to filter its response. */
-      if (! svn_xml_get_attr_value("depth", attrs))
-        {
-          const svn_delta_editor_t *filter_editor;
-          void *filter_baton;
-          svn_boolean_t has_target = *(ctx->update_target) ? TRUE : FALSE;
-          
-          /* We can skip the depth filtering when the user requested
-             depth_files or depth_infinity because the server will
-             transmit the right stuff anyway. */
-          if ((ctx->depth != svn_depth_files)
-              && (ctx->depth != svn_depth_infinity))
-            {
-              SVN_ERR(svn_delta_depth_filter_editor(&filter_editor, 
-                                                    &filter_baton,
-                                                    ctx->update_editor,
-                                                    ctx->update_baton,
-                                                    ctx->depth, has_target,
-                                                    ctx->sess->pool));
-              ctx->update_editor = filter_editor;
-              ctx->update_baton = filter_baton;
-            }
-        }
-    }
-  else if (state == NONE && strcmp(name.name, "target-revision") == 0)
+  if (state == NONE && strcmp(name.name, "target-revision") == 0)
     {
       const char *rev;
 
@@ -2444,13 +2414,36 @@ make_update_reporter(svn_ra_session_t *ra_session,
   report_context_t *report;
   serf_bucket_t *tmp;
   svn_stringbuf_t *path_buf;
+  const svn_delta_editor_t *filter_editor;
+  void *filter_baton;
+  svn_boolean_t has_target = *update_target ? TRUE : FALSE;
+  svn_boolean_t server_supports_depth;
+  svn_ra_serf__session_t *sess = ra_session->priv;
+
+  SVN_ERR(svn_ra_serf__has_capability(ra_session, &server_supports_depth,
+                                      SVN_RA_CAPABILITY_DEPTH, pool));
+  /* We can skip the depth filtering when the user requested
+     depth_files or depth_infinity because the server will
+     transmit the right stuff anyway. */
+  if ((depth != svn_depth_files)
+      && (depth != svn_depth_infinity)
+      && ! server_supports_depth)
+    {
+      SVN_ERR(svn_delta_depth_filter_editor(&filter_editor, 
+                                            &filter_baton,
+                                            update_editor,
+                                            update_baton,
+                                            depth, has_target,
+                                            sess->pool));
+      update_editor = filter_editor;
+      update_baton = filter_baton;
+    }
 
   report = apr_pcalloc(pool, sizeof(*report));
   report->pool = pool;
-  report->sess = ra_session->priv;
+  report->sess = sess;
   report->conn = report->sess->conns[0];
   report->target_rev = revision;
-  report->depth = (depth == svn_depth_unknown ? svn_depth_infinity : depth);
   report->ignore_ancestry = ignore_ancestry;
   report->send_copyfrom_args = send_copyfrom_args;
   report->text_deltas = text_deltas;
