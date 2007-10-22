@@ -177,7 +177,7 @@ msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-10-17 08:53+0900\n"
-"PO-Revision-Date: 2007-10-18 04:13+0900\n"
+"PO-Revision-Date: 2007-10-23 02:01+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1647,7 +1647,8 @@ msgstr "ローカルにない対象 '%s' への再帰的な属性の設定はサ
 #: libsvn_client/prop_commands.c:365
 #, c-format
 msgid "Setting property '%s' on non-local target '%s' is not supported"
-msgstr "属性 '%s' をローカルにない対象 '%s' に設定することはサポートされていません"
+msgstr ""
+"属性 '%s' をローカルにない対象 '%s' に設定することはサポートされていません"
 
 #: libsvn_client/prop_commands.c:458
 msgid "Value will not be set unless forced"
@@ -2575,17 +2576,18 @@ msgstr "ファイル '%s' に対して排他的なロックを取得できませ
 #: libsvn_fs_fs/fs_fs.c:650
 #, c-format
 msgid "Format file '%s' contains an unexpected non-digit"
-msgstr "format ファイル '%s' に予期しない数字以外が含まれています"
+msgstr "format ファイル '%s' に予想外の非数字が含まれています"
 
 #: libsvn_fs_fs/fs_fs.c:698
 #, c-format
 msgid "Can't read first line of format file '%s'"
-msgstr "format ファイル '%s' の最初の行を読めません"
+msgstr "format ファイル '%s' の 1 行目を読めません"
 
 #: libsvn_fs_fs/fs_fs.c:742
 #, c-format
 msgid "'%s' contains invalid filesystem format option '%s'"
-msgstr "'%s' は無効なファイルシステムオプション '%s'を含んでいます"
+msgstr ""
+"'%s' に含まれている '%s' は、ファイルシステム形式のオプションとして不正です"
 
 #: libsvn_fs_fs/fs_fs.c:803
 #, c-format
@@ -2834,11 +2836,11 @@ msgstr ""
 #: libsvn_ra_serf/serf.c:218
 #, c-format
 msgid "Illegal repository URL '%s'"
-msgstr "Subversion リポジトリの URL '%s' が不正です"
+msgstr "リポジトリの URL '%s' が不正です"
 
 #: libsvn_ra/ra_loader.c:417
 msgid "Invalid config: unknown HTTP library"
-msgstr "不正な設定です: 未知の HTTP ライブラリ"
+msgstr "不正な設定です: 未知の HTTP ライブラリです"
 
 #: libsvn_ra/ra_loader.c:454
 #, c-format
@@ -2874,7 +2876,7 @@ msgstr "URL に対し ra_local セッションを開始できません"
 #: libsvn_ra_serf/serf.c:872 libsvn_ra_svn/client.c:2169
 #, c-format
 msgid "Don't know anything about capability '%s'"
-msgstr "機能 '%s' に関して何もわかりません"
+msgstr "機能 '%s' についての情報がありません"
 
 #: libsvn_ra_local/ra_plugin.c:1509
 #, c-format
@@ -2927,7 +2929,7 @@ msgstr "CHECKOUT レスポンスに 'Location:' ヘッダが含まれていま�
 #: libsvn_ra_serf/commit.c:1651 libsvn_ra_serf/update.c:2107
 #, c-format
 msgid "Unable to parse URL '%s'"
-msgstr "URL '%s' を解析できません"
+msgstr "URL '%s' をパースできません"
 
 #: libsvn_ra_neon/commit.c:1027 libsvn_ra_serf/commit.c:1501
 #, c-format
@@ -2985,7 +2987,7 @@ msgstr "'get-locations' REPORT は実装されていません"
 #: libsvn_ra_neon/fetch.c:1457 libsvn_ra_serf/getlocationsegments.c:101
 #: libsvn_ra_svn/client.c:1564
 msgid "Expected valid revision range"
-msgstr "正しいリビジョン番号を期待しました"
+msgstr "正しいリビジョン範囲を期待しました"
 
 #: libsvn_ra_neon/fetch.c:1536
 msgid "'get-location-segments' REPORT not implemented"
@@ -3066,13 +3068,13 @@ msgstr "ロックの情報を取得できませんでした"
 #: libsvn_ra_neon/log.c:169 libsvn_ra_serf/log.c:210
 #, c-format
 msgid "Missing name attr in revprop element"
-msgstr "リビジョンプロパティ要素に name 属性がありません"
+msgstr "revprop 要素に name 属性がありません"
 
 #: libsvn_ra_neon/log.c:299 libsvn_ra_serf/log.c:299
 #: libsvn_ra_svn/client.c:1290
 msgid "Server does not support custom revprops via log"
 msgstr ""
-"サーバは svn log 経由でのカスタムリビジョンプロパティをサポートしていません"
+"log 経由でのカスタムリビジョン属性の取得がサーバでサポートされていません"
 
 #: libsvn_ra_neon/merge.c:219
 #, c-format
@@ -3115,8 +3117,8 @@ msgid ""
 "The OPTIONS response did not include the requested activity-collection-set; "
 "this often means that the URL is not WebDAV-enabled"
 msgstr ""
-"OPTIONS レスポンスは、リクエストされた activity-collection-set を含んでいませ"
-"ん。このことはしばしば、URL が WebDAV 使用可能でないことを意味します"
+"OPTIONS レスポンスに、リクエストした activity-collection-set が含まれていませ"
+"ん。これは大抵、その URL で WebDAV が使用可能でないという意味です"
 
 #: libsvn_ra_neon/props.c:598
 #, c-format
@@ -3154,6 +3156,7 @@ msgstr "relative-path 属性はリソースには存在しません"
 msgid "'DAV:baseline-collection' was not present on the baseline resource"
 msgstr "'DAV:baseline-collection' はベースラインのリソースには存在しません"
 
+# FIXME: Original message should be fixed.
 #: libsvn_ra_neon/props.c:972
 msgid "'DAV:"
 msgstr "'DAV:"
@@ -3224,7 +3227,7 @@ msgstr "不正な設定です: 未知の HTTP 認証形式です: '%s'"
 #: libsvn_ra_neon/session.c:578
 msgid "Module for accessing a repository via WebDAV protocol using Neon."
 msgstr ""
-"Neonを利用して WebDAV (DeltaV) プロトコルでリポジトリにアクセスするモジュー"
+"Neon を利用して WebDAV (DeltaV) プロトコルでリポジトリにアクセスするモジュー"
 "ル。"
 
 #: libsvn_ra_neon/session.c:633 libsvn_ra_serf/locks.c:539
@@ -3256,12 +3259,13 @@ msgstr "サーバをバージョン 0.19 以降にアップグレードしてく
 #, c-format
 msgid "OPTIONS request (for capabilities) got HTTP response code %d"
 msgstr ""
-"OPTIONS リクエスト(機能問い合わせ) はHTTP リスポンスコード %d を返しました"
+"OPTIONS リクエスト (機能問い合わせ) に対して HTTP レスポンスコード %d が返さ"
+"れました"
 
 #: libsvn_ra_neon/session.c:1098 libsvn_ra_serf/serf.c:879
 #, c-format
 msgid "attempt to fetch capability '%s' resulted in '%s'"
-msgstr "機能 '%s' を取得しようとしましたが、 '%s'という結果になりました"
+msgstr "機能 '%s' を取得しようとしましたが、返ってきたのは '%s' でした"
 
 #: libsvn_ra_neon/session.c:1168
 #, c-format
@@ -3280,7 +3284,7 @@ msgstr "仕様に準拠していない HTTP ステータス行がレスポンス
 #: libsvn_ra_neon/util.c:248
 #, c-format
 msgid "Error setting property '%s': "
-msgstr "属性 %s を 設定する際にエラーが発生しました: "
+msgstr "属性 %s を設定中にエラーが発生しました: "
 
 # * Arguments are (1) method and (2) url.
 #: libsvn_ra_neon/util.c:532
@@ -3356,22 +3360,23 @@ msgid ""
 "The OPTIONS response did not include the requested version-controlled-"
 "configuration value."
 msgstr ""
-"OPTIONS レスポンスは、リクエストされた version-controlled-configuration 値を"
-"含んでいません。"
+"OPTIONS レスポンスに、リクエストした version-controlled-configuration の値が"
+"含まれていません。"
 
 #: libsvn_ra_serf/blame.c:475
 msgid ""
 "The OPTIONS response did not include the requested baseline-relative-path "
 "value."
 msgstr ""
-"OPTIONS レスポンスは、リクエストされた baseline-relative-path 値を含んでいま"
-"せん。"
+"OPTIONS レスポンスに、リクエストした baseline-relative-path の値が含まれてい"
+"ません。"
 
 #: libsvn_ra_serf/blame.c:495 libsvn_ra_serf/commit.c:1057
 #: libsvn_ra_serf/property.c:923 libsvn_ra_serf/serf.c:271
 #: libsvn_ra_serf/update.c:1103 libsvn_ra_serf/update.c:1647
 msgid "The OPTIONS response did not include the requested checked-in value."
-msgstr "OPTIONS レスポンスは、リクエストされた checked-in 値を含んでいません。"
+msgstr ""
+"OPTIONS レスポンスに、リクエストした checked-in の値が含まれていません。"
 
 #: libsvn_ra_serf/blame.c:522 libsvn_ra_serf/commit.c:1283
 #: libsvn_ra_serf/commit.c:1671 libsvn_ra_serf/getlocations.c:257
@@ -3380,7 +3385,7 @@ msgstr "OPTIONS レスポンスは、リクエストされた checked-in 値を�
 msgid ""
 "The OPTIONS response did not include the requested baseline-collection value."
 msgstr ""
-"OPTIONS レスポンスは、リクエストされた baseline-collection 値を含んでいませ"
+"OPTIONS レスポンスに、リクエストした baseline-collection の値が含まれていませ"
 "ん。"
 
 #: libsvn_ra_serf/commit.c:382 libsvn_ra_serf/commit.c:443
@@ -3399,8 +3404,8 @@ msgid ""
 "The OPTIONS response did not include the requested activity-collection-set "
 "value."
 msgstr ""
-"OPTIONS レスポンスは、リクエストされた activity-collection-set 値を含んでいま"
-"せん。"
+"OPTIONS レスポンスに、リクエストした activity-collection-set の値が含まれてい"
+"ません。"
 
 #: libsvn_ra_serf/commit.c:1029
 #, c-format
@@ -3487,12 +3492,12 @@ msgstr "ホスト名を検索できませんでした: %s"
 #: libsvn_ra_serf/serf.c:288
 msgid "The OPTIONS response did not include the requested version-name value."
 msgstr ""
-"OPTIONS レスポンスは、リクエストされた version-name 値を含んでいません。"
+"OPTIONS レスポンスに、リクエストした version-name の値が含まれていません。"
 
 #: libsvn_ra_serf/serf.c:452
 msgid "The OPTIONS response did not include the requested resourcetype value."
 msgstr ""
-"OPTIONS レスポンスは、リクエストされた resourcetype 値を含んでいません。"
+"OPTIONS レスポンスに、リクエストした resourcetype 値が含まれていません。"
 
 #: libsvn_ra_serf/serf.c:943
 #, c-format
@@ -3506,7 +3511,7 @@ msgstr "absent-directory 要素に name 属性がありません"
 
 #: libsvn_ra_serf/update.c:1456
 msgid "Missing name attr in absent-file element"
-msgstr "open-file 要素に name 属性がありません"
+msgstr "absent-file 要素に name 属性がありません"
 
 #: libsvn_ra_serf/update.c:2237
 #, c-format
@@ -3584,11 +3589,12 @@ msgstr "バージョン %d 以上をサーバが必要としています"
 #: libsvn_ra_svn/client.c:558
 #, c-format
 msgid "Server only supports versions up to %d"
-msgstr "サーバは、バージョン %d までをサポートしています"
+msgstr "サーバでサポートされているのはバージョン %d までのみです"
 
+# TRANSLATION-FIXME: Translation for "edit pipelining" must be checked.
 #: libsvn_ra_svn/client.c:566
 msgid "Server does not support edit pipelining"
-msgstr "サーバは、エディットパイプラインをサポートしていません"
+msgstr "編集のパイプライン化がサーバでサポートされていません"
 
 #: libsvn_ra_svn/client.c:592
 msgid "Impossibly long repository root from server"
@@ -3642,11 +3648,11 @@ msgstr "location エントリがリストではありません"
 
 #: libsvn_ra_svn/client.c:1543
 msgid "'get-location-segments' not implemented"
-msgstr "'get-location-segments' REPORT は実装されていません"
+msgstr "'get-location-segments' は実装されていません"
 
 #: libsvn_ra_svn/client.c:1555
 msgid "Location segment entry not a list"
-msgstr "location セグメントはリストではありません"
+msgstr "location segment エントリがリストではありません"
 
 #: libsvn_ra_svn/client.c:1617
 msgid "'get-file-revs' not implemented"
@@ -3654,7 +3660,7 @@ msgstr "'get-file-revs' は実装されていません"
 
 #: libsvn_ra_svn/client.c:1630
 msgid "Revision entry not a list"
-msgstr "revision エントリはリストではありません"
+msgstr "revision エントリがリストではありません"
 
 # ? text delta chunk
 #: libsvn_ra_svn/client.c:1647 libsvn_ra_svn/client.c:1672
@@ -4175,7 +4181,7 @@ msgstr "対象がないのにトップレベルの報告が 2 つあります"
 #: libsvn_repos/reporter.c:1224
 #, c-format
 msgid "Unsupported report depth '%s'"
-msgstr "サポートされていない report depth '%s' です"
+msgstr "報告された深さ '%s' はサポートされていません"
 
 #: libsvn_repos/repos.c:178
 #, c-format
