@@ -255,7 +255,7 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
     {
       return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                               _("The OPTIONS response did not include the "
-                                "requested baseline-collection value."));
+                                "requested baseline-collection value"));
     }
 
   req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);

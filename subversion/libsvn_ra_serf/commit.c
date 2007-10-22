@@ -999,7 +999,7 @@ open_root(void *edit_baton,
     {
       return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                               _("The OPTIONS response did not include the "
-                                "requested activity-collection-set value."));
+                                "requested activity-collection-set value"));
     }
 
   ctx->activity_url = svn_path_url_add_component(activity_str,
@@ -1055,7 +1055,7 @@ open_root(void *edit_baton,
     {
       return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                               _("The OPTIONS response did not include the "
-                                "requested checked-in value."));
+                                "requested checked-in value"));
     }
 
   dir = apr_pcalloc(dir_pool, sizeof(*dir));
@@ -1281,7 +1281,7 @@ add_directory(const char *path,
         {
           return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                                   _("The OPTIONS response did not include the "
-                                    "requested baseline-collection value."));
+                                    "requested baseline-collection value"));
         }
 
       req_url = svn_path_url_add_component(basecoll_url, rel_copy_path,
@@ -1669,7 +1669,7 @@ close_file(void *file_baton,
         {
           return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                                   _("The OPTIONS response did not include the "
-                                    "requested baseline-collection value."));
+                                    "requested baseline-collection value"));
         }
 
       req_url = svn_path_url_add_component(basecoll_url, rel_copy_path, pool);

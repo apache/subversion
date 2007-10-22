@@ -1101,7 +1101,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
     {
       return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                         _("The OPTIONS response did not include the "
-                          "requested checked-in value."));
+                          "requested checked-in value"));
     }
 
   /* If needed, create the PROPFIND to retrieve the file's properties. */
@@ -1645,7 +1645,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
         {
           return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                                   _("The OPTIONS response did not include the "
-                                    "requested checked-in value."));
+                                    "requested checked-in value"));
         }
 
       info->dir->url = checked_in_url;
@@ -2165,7 +2165,7 @@ finish_report(void *report_baton,
       return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                               _("The OPTIONS response did not include the "
                                 "requested version-controlled-configuration "
-                                "value."));
+                                "value"));
     }
 
   /* create and deliver request */

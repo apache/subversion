@@ -411,7 +411,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF(SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND,
              SVN_ERR_WC_CATEGORY_START + 28,
-             "Failed to locate 'copyfrom' path in working copy.")
+             "Failed to locate 'copyfrom' path in working copy")
 
   /** @since New in 1.5. */
   SVN_ERRDEF(SVN_ERR_WC_CHANGELIST_MOVE,
