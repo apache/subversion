@@ -170,7 +170,6 @@ struct merge_cmd_baton {
   const char *url;                    /* The second URL in the merge */
   const char *path;                   /* The wc path of the second target, this
                                          can be NULL if we don't have one. */
-  const svn_opt_revision_t *revision; /* Revision of second URL in the merge */
   svn_client_ctx_t *ctx;              /* Client context for callbacks, etc. */
 
   /* Whether invocation of the merge_file_added() callback required
@@ -4011,7 +4010,6 @@ svn_client_merge3(const char *source1,
   merge_cmd_baton.merge_options = merge_options;
   merge_cmd_baton.target = target_wcpath;
   merge_cmd_baton.url = URL2;
-  merge_cmd_baton.revision = revision2;
   merge_cmd_baton.path = (source2 != URL2 ? source2 : NULL);
   merge_cmd_baton.added_path = NULL;
   merge_cmd_baton.add_necessitated_merge = FALSE;
@@ -4244,11 +4242,6 @@ svn_client_merge_peg3(const char *source,
   merge_cmd_baton.merge_options = merge_options;
   merge_cmd_baton.target = target_wcpath;
   merge_cmd_baton.url = URL;
-  /* ### TODO: This revision field is not used anywhere.
-     ### Maybe it had a purpose once? Setting it to a rather
-     ### arbitrary value for now. Can we get rid of it? */
-  merge_cmd_baton.revision =
-    &(APR_ARRAY_IDX(ranges_to_merge, 0, svn_opt_revision_range_t *)->end);
   merge_cmd_baton.path = path;
   merge_cmd_baton.added_path = NULL;
   merge_cmd_baton.add_necessitated_merge = FALSE;
