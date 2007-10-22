@@ -852,9 +852,38 @@ nls_history_func(void *baton,
 }
 
 
+/* Transmit SEGMENT through RECEIVER/RECEIVER_BATON iff a portion of
+   its revision range fits between END_REV and START_REV, possibly
+   cropping the range so that it fits *entirely* in that range. */
+static svn_error_t *
+maybe_crop_and_send_segment(svn_location_segment_t *segment,
+                            svn_revnum_t start_rev,
+                            svn_revnum_t end_rev,
+                            svn_location_segment_receiver_t receiver,
+                            void *receiver_baton,
+                            apr_pool_t *pool)
+{
+  /* We only want to transmit this segment if some portion of it
+     is between our END_REV and START_REV. */
+  if (! ((segment->range_start > start_rev)
+         || (segment->range_end < end_rev)))
+    {
+      /* Correct our segment range when the range straddles one of
+         our requested revision boundaries. */
+      if (segment->range_start < end_rev)
+        segment->range_start = end_rev;
+      if (segment->range_end > start_rev)
+        segment->range_end = start_rev;
+      SVN_ERR(receiver(segment, receiver_baton, pool));
+    }
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_repos_node_location_segments(svn_repos_t *repos,
                                  const char *path,
+                                 svn_revnum_t peg_revision,
                                  svn_revnum_t start_rev,
                                  svn_revnum_t end_rev,
                                  svn_location_segment_receiver_t receiver,
@@ -865,12 +894,21 @@ svn_repos_node_location_segments(svn_repos_t *repos,
 {
   svn_fs_t *fs = svn_repos_fs(repos);
   svn_stringbuf_t *current_path;
-  svn_revnum_t current_rev;
+  svn_revnum_t youngest_rev = SVN_INVALID_REVNUM, current_rev;
   apr_pool_t *subpool;
 
-  /* No START_REV?  We'll use HEAD. */
+  /* No PEG_REVISION?  We'll use HEAD. */
+  if (! SVN_IS_VALID_REVNUM(peg_revision))
+    SVN_ERR(svn_fs_youngest_rev(&peg_revision, fs, pool));
+
+  /* No START_REV?  We'll use HEAD (which we may have already fetched). */
   if (! SVN_IS_VALID_REVNUM(start_rev))
-    SVN_ERR(svn_fs_youngest_rev(&start_rev, fs, pool));
+    {
+      if (SVN_IS_VALID_REVNUM(youngest_rev))
+        start_rev = youngest_rev;
+      else
+        SVN_ERR(svn_fs_youngest_rev(&start_rev, fs, pool)); 
+    }
 
   /* No END_REV?  We'll use 0. */
   end_rev = SVN_IS_VALID_REVNUM(end_rev) ? end_rev : 0;
@@ -878,7 +916,8 @@ svn_repos_node_location_segments(svn_repos_t *repos,
   /* Are the revision properly ordered?  They better be -- the API
      demands it. */
   assert(end_rev <= start_rev);
-  
+  assert(start_rev <= peg_revision);
+
   /* Ensure that PATH is absolute, because our path-math will depend
      on that being the case.  */
   if (*path != '/')
@@ -888,14 +927,14 @@ svn_repos_node_location_segments(svn_repos_t *repos,
   if (authz_read_func)
     {
       svn_fs_root_t *peg_root;
-      SVN_ERR(svn_fs_revision_root(&peg_root, fs, start_rev, pool));
+      SVN_ERR(svn_fs_revision_root(&peg_root, fs, peg_revision, pool));
       SVN_ERR(check_readability(peg_root, path,
                                 authz_read_func, authz_read_baton, pool));
     }
 
   /* Okay, let's get searching! */
   subpool = svn_pool_create(pool);
-  current_rev = start_rev;
+  current_rev = peg_revision;
   current_path = svn_stringbuf_create(path, pool);
   while (current_rev >= end_rev)
     {
@@ -949,14 +988,18 @@ svn_repos_node_location_segments(svn_repos_t *repos,
           if (! readable)
             return SVN_NO_ERROR;
         }
-      SVN_ERR(receiver(segment, receiver_baton, pool));
+
+      /* Trasmit the segment (if its within the scope of our concern). */
+      SVN_ERR(maybe_crop_and_send_segment(segment, start_rev, end_rev, 
+                                          receiver, receiver_baton, subpool));
 
       /* If we've set CURRENT_REV to SVN_INVALID_REVNUM, we're done
          (and didn't ever reach END_REV).  */
       if (! SVN_IS_VALID_REVNUM(current_rev))
         break;
 
-      /* If there's a gap in the history, we need to report as much. */
+      /* If there's a gap in the history, we need to report as much
+         (if the gap is within the scope of our concern). */
       if (segment->range_start - current_rev > 1)
         {
           svn_location_segment_t *gap_segment;
@@ -964,7 +1007,9 @@ svn_repos_node_location_segments(svn_repos_t *repos,
           gap_segment->range_end = segment->range_start - 1;
           gap_segment->range_start = current_rev + 1;
           gap_segment->path = NULL;
-          SVN_ERR(receiver(gap_segment, receiver_baton, pool));
+          SVN_ERR(maybe_crop_and_send_segment(gap_segment, start_rev, end_rev,
+                                              receiver, receiver_baton, 
+                                              subpool));
         }
     }
   svn_pool_destroy(subpool);
