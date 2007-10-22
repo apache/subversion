@@ -899,7 +899,10 @@ svn_repos_node_location_segments(svn_repos_t *repos,
 
   /* No PEG_REVISION?  We'll use HEAD. */
   if (! SVN_IS_VALID_REVNUM(peg_revision))
-    SVN_ERR(svn_fs_youngest_rev(&peg_revision, fs, pool));
+    {
+      SVN_ERR(svn_fs_youngest_rev(&youngest_rev, fs, pool));
+      peg_revision = youngest_rev;
+    }
 
   /* No START_REV?  We'll use HEAD (which we may have already fetched). */
   if (! SVN_IS_VALID_REVNUM(start_rev))
