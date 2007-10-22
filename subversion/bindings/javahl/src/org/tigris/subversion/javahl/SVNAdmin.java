@@ -284,12 +284,14 @@ public class SVNAdmin
             throws SubversionException;
 
     /**
-     * verify the repository
+     * Verify the repository at <code>path</code> between revisions
+     * <code>start</code> and <code>end</code>.
+     *
      * @param path              the path to the repository
      * @param messageOut        the receiver of all messages
      * @param start             the first revision
      * @param end               the last revision
-     * @throws ClientException  throw in case of problem
+     * @throws ClientException If an error occurred.
      */
     public native void verify(String path,  OutputInterface messageOut,
                               Revision start, Revision end)
