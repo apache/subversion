@@ -6704,7 +6704,7 @@ def detect_copy_src_for_target_with_multiple_ancestors(sbox):
   # Copy A/B as A/copy-of-B
   # Copy A/C as A/copy-of-B/C
   # Commit results in r2.
-  # From A/copy-of-B/C do merge -g. This merge should implicitly detect the
+  # From A/copy-of-B/C do merge. This merge should implicitly detect the
   # merge source to be A/C.
 
   sbox.build()
@@ -8920,8 +8920,7 @@ def merge_old_and_new_revs_from_renamed_file(sbox):
 def merge_with_auto_rev_range_detection(sbox):
   "merge with auto detection of revision ranges"
 
-  # Merge using '-g' option causes merge failure post r26803.
-  ## See Also http://svn.haxx.se/dev/archive-2007-09/0735.shtml ##
+  ## See http://svn.haxx.se/dev/archive-2007-09/0735.shtml ##
 
   # Create a WC
   sbox.build()
