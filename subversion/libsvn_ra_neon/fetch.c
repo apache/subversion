@@ -1466,6 +1466,7 @@ gls_start_element(int *elem, void *userdata, int parent_state,
 svn_error_t *
 svn_ra_neon__get_location_segments(svn_ra_session_t *session,
                                    const char *path,
+                                   svn_revnum_t peg_revision,
                                    svn_revnum_t start_rev,
                                    svn_revnum_t end_rev,
                                    svn_location_segment_receiver_t receiver,
@@ -1493,6 +1494,13 @@ svn_ra_neon__get_location_segments(svn_ra_session_t *session,
   svn_stringbuf_appendcstr(request_body, apr_xml_quote_string(pool, path, 0));
   svn_stringbuf_appendcstr(request_body, "</S:path>" DEBUG_CR);
 
+  /* ...and maybe a peg revision... */
+  if (SVN_IS_VALID_REVNUM(peg_revision))
+    svn_stringbuf_appendcstr
+      (request_body, apr_psprintf(pool, 
+                                  "<S:peg-revision>%ld</S:peg-revision>" 
+                                  DEBUG_CR, peg_revision));
+
   /* ...and maybe a start revision... */
   if (SVN_IS_VALID_REVNUM(start_rev))
     svn_stringbuf_appendcstr
@@ -1516,10 +1524,10 @@ svn_ra_neon__get_location_segments(svn_ra_session_t *session,
   /* ras's URL may not exist in HEAD, and thus it's not safe to send
      it as the main argument to the REPORT request; it might cause
      dav_get_resource() to choke on the server.  So instead, we pass a
-     baseline-collection URL, which we get from the START_REV.  */
+     baseline-collection URL, which we get from the PEG_REVISION.  */
   SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
                                          ras, ras->url->data,
-                                         start_rev, pool));
+                                         peg_revision, pool));
   bc = svn_path_url_add_component(bc_url.data, bc_relative.data, pool);
 
   err = svn_ra_neon__parsed_request(ras, "REPORT", bc,

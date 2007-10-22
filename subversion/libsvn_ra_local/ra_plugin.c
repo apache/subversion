@@ -1216,6 +1216,7 @@ svn_ra_local__get_locations(svn_ra_session_t *session,
 static svn_error_t *
 svn_ra_local__get_location_segments(svn_ra_session_t *session,
                                     const char *path,
+                                    svn_revnum_t peg_revision,
                                     svn_revnum_t start_rev,
                                     svn_revnum_t end_rev,
                                     svn_location_segment_receiver_t receiver,
@@ -1230,7 +1231,7 @@ svn_ra_local__get_location_segments(svn_ra_session_t *session,
   abs_path = svn_path_join(sbaton->fs_path->data, path, pool);
 
   return svn_repos_node_location_segments(sbaton->repos, abs_path,
-                                          start_rev, start_rev, end_rev,
+                                          peg_revision, start_rev, end_rev,
                                           receiver, receiver_baton,
                                           NULL, NULL, pool);
 }
