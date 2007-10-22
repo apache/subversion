@@ -505,6 +505,9 @@ svn_client_log4(const apr_array_header_t *targets,
     SVN_ERR(svn_client__get_revision_number
             (&end_revnum, ra_session, end, path, pool));
 
+    /* TODO(epg): Instead of assuming that NOT_IMPLEMENTED means
+     * revprop-filtering is not supported, introduce a new capability
+     * for the new svn_ra_has_capability feature. */
     if ((err = svn_ra_get_log2(ra_session,
                                condensed_targets,
                                start_revnum,
