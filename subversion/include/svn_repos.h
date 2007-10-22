@@ -1106,15 +1106,17 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
 /* Call @a receiver and @a receiver_baton to report successive
  * location segments in revisions between @a start_rev and @a end_rev
  * (inclusive) for the line of history identified by the peg-object @a
- * path in @a start_rev (and in @a repos).
+ * path in @a peg_revision (and in @a repos).
  *
  * @a end_rev may be @c SVN_INVALID_REVNUM to indicate that you want
  * to trace the history of the object to its origin.
  *
- * @a start_rev may be @c SVN_INVALID_REVNUM to indicate that you want
- * to trace the history of the object beginning in the HEAD revision.
- * Otherwise, @a start_rev must be younger than @a end_rev (unless @a
- * end_rev is @c SVN_INVALID_REVNUM).
+ * @a start_rev may be @c SVN_INVALID_REVNUM to indicate "the HEAD
+ * revision".  Otherwise, @a start_rev must be younger than @a end_rev
+ * (unless @a end_rev is @c SVN_INVALID_REVNUM).
+ *
+ * @a peg_revision may be @c SVN_INVALID_REVNUM to indicate "the HEAD
+ * revision", and must evaluate to be at least as young as @a start_rev.
  * 
  * If optional @a authz_read_func is not @c NULL, then use it (and @a
  * authz_read_baton) to verify that the peg-object is readable.  If
@@ -1131,6 +1133,7 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
 svn_error_t *
 svn_repos_node_location_segments(svn_repos_t *repos,
                                  const char *path,
+                                 svn_revnum_t peg_revision,
                                  svn_revnum_t start_rev,
                                  svn_revnum_t end_rev,
                                  svn_location_segment_receiver_t receiver,

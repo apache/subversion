@@ -107,7 +107,8 @@ send_get_location_segments_report(ap_filter_t *output,
   location_segment_baton.output = output;
   location_segment_baton.bb = bb;
   SVN_ERR(svn_repos_node_location_segments(resource->info->repos->repos,
-                                           path, start_rev, end_rev,
+                                           path, start_rev, 
+                                           start_rev, end_rev,
                                            location_segment_receiver,
                                            &location_segment_baton,
                                            dav_svn__authz_read_func(&arb),

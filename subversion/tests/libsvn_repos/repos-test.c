@@ -1769,7 +1769,9 @@ nls_receiver(svn_location_segment_t *segment,
 static svn_error_t *
 check_location_segments(svn_repos_t *repos,
                         const char *path,
+                        svn_revnum_t peg_rev,
                         svn_revnum_t start_rev,
+                        svn_revnum_t end_rev,
                         svn_location_segment_t *expected_segments,
                         apr_pool_t *pool)
 {
@@ -1780,8 +1782,8 @@ check_location_segments(svn_repos_t *repos,
      validates against EXPECTED_SEGMENTS.  */
   b.count = 0;
   b.expected_segments = expected_segments;
-  SVN_ERR(svn_repos_node_location_segments(repos, path, start_rev, 
-                                           SVN_INVALID_REVNUM, nls_receiver, 
+  SVN_ERR(svn_repos_node_location_segments(repos, path, peg_rev, 
+                                           start_rev, end_rev, nls_receiver, 
                                            &b, NULL, NULL, pool));
 
   /* Make sure we saw all of our expected segments.  (If the
@@ -1882,7 +1884,10 @@ node_location_segments(const char **msg,
         { 0, 7, "" },
         { 0 }
       };
-    SVN_ERR(check_location_segments(repos, "", SVN_INVALID_REVNUM,
+    SVN_ERR(check_location_segments(repos, "", 
+                                    SVN_INVALID_REVNUM, 
+                                    SVN_INVALID_REVNUM,
+                                    SVN_INVALID_REVNUM,
                                     expected_segments, pool));
   }
 
@@ -1895,7 +1900,40 @@ node_location_segments(const char **msg,
         { 1, 2, "A/D" },
         { 0 }
       };
-    SVN_ERR(check_location_segments(repos, "A/D", SVN_INVALID_REVNUM,
+    SVN_ERR(check_location_segments(repos, "A/D", 
+                                    SVN_INVALID_REVNUM, 
+                                    SVN_INVALID_REVNUM,
+                                    SVN_INVALID_REVNUM,
+                                    expected_segments, pool));
+  }
+
+  /* Check a subset of the locations for A/D@HEAD. */
+  {
+    svn_location_segment_t expected_segments[] =
+      {
+        { 3, 5, "A/D2" },
+        { 2, 2, "A/D" },
+        { 0 }
+      };
+    SVN_ERR(check_location_segments(repos, "A/D", 
+                                    SVN_INVALID_REVNUM, 
+                                    5,
+                                    2,
+                                    expected_segments, pool));
+  }
+
+  /* Check a subset of locations for A/D2@5. */
+  {
+    svn_location_segment_t expected_segments[] =
+      {
+        { 3, 3, "A/D2" },
+        { 2, 2, "A/D" },
+        { 0 }
+      };
+    SVN_ERR(check_location_segments(repos, "A/D2", 
+                                    5,
+                                    3,
+                                    2,
                                     expected_segments, pool));
   }
 
@@ -1906,7 +1944,10 @@ node_location_segments(const char **msg,
         { 1, 6, "A/D" },
         { 0 }
       };
-    SVN_ERR(check_location_segments(repos, "A/D", 6,
+    SVN_ERR(check_location_segments(repos, "A/D", 
+                                    6, 
+                                    6,
+                                    SVN_INVALID_REVNUM,
                                     expected_segments, pool));
   }
 
@@ -1921,7 +1962,25 @@ node_location_segments(const char **msg,
         { 1, 2, "A/D2/G" },
         { 0 }
       };
-    SVN_ERR(check_location_segments(repos, "A/D/G", SVN_INVALID_REVNUM,
+    SVN_ERR(check_location_segments(repos, "A/D/G", 
+                                    SVN_INVALID_REVNUM, 
+                                    SVN_INVALID_REVNUM,
+                                    SVN_INVALID_REVNUM,
+                                    expected_segments, pool));
+  }
+
+  /* Check a subset of the locations for A/D/G@HEAD. */
+  {
+    svn_location_segment_t expected_segments[] =
+      {
+        { 3, 3, "A/D2/G" },
+        { 2, 2, "A/D2/G" },
+        { 0 }
+      };
+    SVN_ERR(check_location_segments(repos, "A/D/G", 
+                                    SVN_INVALID_REVNUM, 
+                                    3,
+                                    2,
                                     expected_segments, pool));
   }
 
