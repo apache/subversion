@@ -956,6 +956,7 @@ svn_ra_neon__get_locations(svn_ra_session_t *session,
 svn_error_t *
 svn_ra_neon__get_location_segments(svn_ra_session_t *session,
                                    const char *path,
+                                   svn_revnum_t peg_revision,
                                    svn_revnum_t start_rev,
                                    svn_revnum_t end_rev,
                                    svn_location_segment_receiver_t receiver,

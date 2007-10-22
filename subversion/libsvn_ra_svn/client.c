@@ -1518,6 +1518,7 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
 static svn_error_t *
 ra_svn_get_location_segments(svn_ra_session_t *session,
                              const char *path,
+                             svn_revnum_t peg_revision,
                              svn_revnum_t start_rev,
                              svn_revnum_t end_rev,
                              svn_location_segment_receiver_t receiver,
@@ -1534,9 +1535,9 @@ ra_svn_get_location_segments(svn_ra_session_t *session,
   apr_pool_t *subpool = svn_pool_create(pool);
 
   /* Transmit the parameters. */
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c(?r)(?r))", 
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c(?r)(?r)(?r))", 
                                  "get-location-segments",
-                                 path, start_rev, end_rev));
+                                 path, peg_revision, start_rev, end_rev));
 
   /* Servers before 1.1 don't support this command. Check for this here. */
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess_baton, pool),

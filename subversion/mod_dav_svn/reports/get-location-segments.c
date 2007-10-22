@@ -134,7 +134,9 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
   int ns;
   apr_xml_elem *child;
   const char *path = NULL;
-  svn_revnum_t start_rev = SVN_INVALID_REVNUM, end_rev = SVN_INVALID_REVNUM;
+  svn_revnum_t peg_revision = SVN_INVALID_REVNUM;
+  svn_revnum_t start_rev = SVN_INVALID_REVNUM;
+  svn_revnum_t end_rev = SVN_INVALID_REVNUM;
 
   /* Sanity check. */
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
@@ -155,7 +157,12 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
       if (child->ns != ns)
         continue;
 
-      if (strcmp(child->name, "start-revision") == 0)
+      if (strcmp(child->name, "peg-revision") == 0)
+        {
+          peg_revision = SVN_STR_TO_REV(dav_xml_get_cdata(child, 
+                                                          resource->pool, 1));
+        }
+      else if (strcmp(child->name, "start-revision") == 0)
         {
           start_rev = SVN_STR_TO_REV(dav_xml_get_cdata(child, 
                                                        resource->pool, 1));
@@ -185,8 +192,16 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
       && SVN_IS_VALID_REVNUM(end_rev)
       && (end_rev > start_rev))
     return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
-                                  "end-revision must be older than "
-                                  "start-revision",
+                                  "End revision must not be younger than "
+                                  "start revision",
+                                  SVN_DAV_ERROR_NAMESPACE,
+                                  SVN_DAV_ERROR_TAG);
+  if (SVN_IS_VALID_REVNUM(peg_revision)
+      && SVN_IS_VALID_REVNUM(start_rev)
+      && (start_rev > peg_revision))
+    return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+                                  "Start revision must not be younger than "
+                                  "peg revision",
                                   SVN_DAV_ERROR_NAMESPACE,
                                   SVN_DAV_ERROR_TAG);
 

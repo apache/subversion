@@ -1839,12 +1839,13 @@ static svn_error_t *get_location_segments(svn_ra_svn_conn_t *conn,
 {
   svn_error_t *err, *write_err;
   server_baton_t *b = baton;
-  svn_revnum_t start_rev, end_rev;
+  svn_revnum_t peg_revision, start_rev, end_rev;
   const char *relative_path;
   const char *abs_path;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)(?r)", &relative_path,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)(?r)(?r)", 
+                                 &relative_path, &peg_revision,
                                  &start_rev, &end_rev));
   relative_path = svn_path_canonicalize(relative_path, pool);
 
@@ -1854,8 +1855,15 @@ static svn_error_t *get_location_segments(svn_ra_svn_conn_t *conn,
       && SVN_IS_VALID_REVNUM(end_rev)
       && (end_rev > start_rev))
     return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                             "Get-location-segments end revision must be "
-                             "older than start revision");
+                             "Get-location-segments end revision must not be "
+                             "younger than start revision");
+
+  if (SVN_IS_VALID_REVNUM(peg_revision)
+      && SVN_IS_VALID_REVNUM(start_rev)
+      && (start_rev > peg_revision))
+    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             "Get-location-segments start revision must not "
+                             "be younger than peg revision");
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
 

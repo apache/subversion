@@ -1303,16 +1303,18 @@ svn_error_t *svn_ra_get_locations(svn_ra_session_t *session,
 
 /**
  * Call @a receiver (with @a receiver_baton) for each segment in the
- * location history of @a path in @a start_rev, working backwards in
+ * location history of @a path in @a peg_revision, working backwards in
  * time from @a start_rev to @a end_rev.
  *
  * @a end_rev may be @c SVN_INVALID_REVNUM to indicate that you want
  * to trace the history of the object to its origin.
  *
- * @a start_rev may be @c SVN_INVALID_REVNUM to indicate that you want
- * to trace the history of the object beginning in the HEAD revision.
- * Otherwise, @a start_rev must be younger than @a end_rev (unless @a
- * end_rev is @c SVN_INVALID_REVNUM).
+ * @a start_rev may be @c SVN_INVALID_REVNUM to indicate "the HEAD
+ * revision".  Otherwise, @a start_rev must be younger than @a end_rev
+ * (unless @a end_rev is @c SVN_INVALID_REVNUM).
+ *
+ * @a peg_revision may be @c SVN_INVALID_REVNUM to indicate "the HEAD
+ * revision", and must evaluate to be at least as young as @a start_rev.
  *
  * Use @a pool for all allocations.
  *
@@ -1321,6 +1323,7 @@ svn_error_t *svn_ra_get_locations(svn_ra_session_t *session,
 svn_error_t *
 svn_ra_get_location_segments(svn_ra_session_t *session,
                              const char *path,
+                             svn_revnum_t peg_revision,
                              svn_revnum_t start_rev,
                              svn_revnum_t end_rev,
                              svn_location_segment_receiver_t receiver,

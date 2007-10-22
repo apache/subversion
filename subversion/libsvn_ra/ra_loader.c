@@ -946,6 +946,7 @@ svn_error_t *svn_ra_get_locations(svn_ra_session_t *session,
 svn_error_t *
 svn_ra_get_location_segments(svn_ra_session_t *session,
                              const char *path,
+                             svn_revnum_t peg_revision,
                              svn_revnum_t start_rev,
                              svn_revnum_t end_rev,
                              svn_location_segment_receiver_t receiver,
@@ -954,6 +955,7 @@ svn_ra_get_location_segments(svn_ra_session_t *session,
 {
   svn_error_t *err = session->vtable->get_location_segments(session, 
                                                             path, 
+                                                            peg_revision,
                                                             start_rev, 
                                                             end_rev, 
                                                             receiver, 
@@ -965,7 +967,8 @@ svn_ra_get_location_segments(svn_ra_session_t *session,
       err = SVN_NO_ERROR;
       
       /* Do it the slow way, using get-logs, for older servers. */
-      SVN_ERR(svn_ra__location_segments_from_log(session, path, start_rev,
+      SVN_ERR(svn_ra__location_segments_from_log(session, path, 
+                                                 peg_revision, start_rev,
                                                  end_rev, receiver,
                                                  receiver_baton, pool));
     }

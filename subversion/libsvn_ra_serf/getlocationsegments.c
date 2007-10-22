@@ -121,6 +121,7 @@ end_gls(svn_ra_serf__xml_parser_t *parser,
 svn_error_t *
 svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
                                    const char *path,
+                                   svn_revnum_t peg_revision,
                                    svn_revnum_t start_rev,
                                    svn_revnum_t end_rev,
                                    svn_location_segment_receiver_t receiver,
@@ -166,6 +167,11 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
                                session->bkt_alloc);
 
   svn_ra_serf__add_tag_buckets(buckets,
+                               "S:peg-revision", 
+                               apr_ltoa(pool, peg_revision),
+                               session->bkt_alloc);
+
+  svn_ra_serf__add_tag_buckets(buckets,
                                "S:start-revision", 
                                apr_ltoa(pool, start_rev),
                                session->bkt_alloc);
@@ -181,7 +187,7 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   serf_bucket_aggregate_append(buckets, tmp);
 
   SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, 
-                                         session, NULL, start_rev, pool));
+                                         session, NULL, peg_revision, pool));
 
   req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);
 
