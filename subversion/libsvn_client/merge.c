@@ -1492,11 +1492,11 @@ determine_merges_performed(apr_hash_t **merges, const char *target_wcpath,
                                           merged_path,
                                           adm_access, FALSE,
                                           pool));
-          if (((child_entry->kind == svn_node_dir) && 
-               (strcmp(merge_b->target, merged_path) == 0) &&
-               (depth == svn_depth_immediates))
-              || ((child_entry->kind == svn_node_file) &&
-                  (depth == svn_depth_files)))
+          if (((child_entry->kind == svn_node_dir) 
+               && (strcmp(merge_b->target, merged_path) == 0) 
+               && (depth == svn_depth_immediates))
+              || ((child_entry->kind == svn_node_file) 
+                  && (depth == svn_depth_files)))
             {
               /* Set the explicit inheritable mergeinfo for, 
                  1. Merge target directory if depth is immediates.
@@ -1511,7 +1511,7 @@ determine_merges_performed(apr_hash_t **merges, const char *target_wcpath,
                     APR_ARRAY_IDX(child_merge_ranges, i, svn_merge_range_t *);
                   r->inheritable = TRUE;
                   APR_ARRAY_PUSH(rangelist_of_child, svn_merge_range_t *) = r;
-            }
+                }
               apr_hash_set(*merges, (const char *) merged_path,
                            APR_HASH_KEY_STRING, rangelist_of_child);
             }
@@ -2025,7 +2025,8 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
       SVN_ERR(svn_client__get_wc_or_repos_mergeinfo(
                                                  &(child->pre_merge_mergeinfo),
                                                  child_entry,
-                                                 &(child->indirect_mergeinfo), FALSE,
+                                                 &(child->indirect_mergeinfo),
+                                                 FALSE,
                                                  svn_mergeinfo_inherited,
                                                  NULL, child->path,
                                                  adm_access, merge_b->ctx,
@@ -2301,7 +2302,8 @@ record_mergeinfo_for_record_only_merge(const char *URL1,
                                             adm_access, pool));
 
   return update_wc_mergeinfo(merge_b->target, entry, rel_path, merges,
-                             is_three_way_merge, adm_access, merge_b->ctx, pool);
+                             is_three_way_merge, adm_access,
+                             merge_b->ctx, pool);
 }
 
 /* Marks 'inheritable' RANGE to TARGET_WCPATH by wiping off the 
@@ -2407,10 +2409,8 @@ record_mergeinfo_on_merged_children(svn_depth_t depth,
                    && (depth == svn_depth_files)))
             {
               /* Set the explicit inheritable mergeinfo for, 
-               *  1. Merge target directory if depth is 
-               *     'immediates'.
-               *  2. If merge is on a file and requested depth 
-               *     is 'files'.
+               *  1. Merge target directory if depth is 'immediates'.
+               *  2. If merge is on a file and requested depth is 'files'.
                */
               SVN_ERR(svn_client__get_wc_or_repos_mergeinfo
                                       (&child_target_mergeinfo, child_entry,
@@ -2655,11 +2655,11 @@ compact_merge_ranges(apr_array_header_t **compacted_sources,
         APR_ARRAY_PUSH(additive_sources, svn_merge_range_t *) = range;
     }
 
-  qsort(additive_sources->elts, additive_sources->nelts, additive_sources->elt_size,
-        compare_merge_ranges);
+  qsort(additive_sources->elts, additive_sources->nelts, 
+        additive_sources->elt_size, compare_merge_ranges);
   remove_redundant_ranges(&additive_sources);
-  qsort(subtractive_sources->elts, subtractive_sources->nelts, subtractive_sources->elt_size,
-        compare_merge_ranges);
+  qsort(subtractive_sources->elts, subtractive_sources->nelts, 
+        subtractive_sources->elt_size, compare_merge_ranges);
   remove_redundant_ranges(&subtractive_sources);
   
   for (i = 0; i < subtractive_sources->nelts; i++)
@@ -2770,7 +2770,8 @@ do_single_file_merge(apr_array_header_t *merge_sources,
       int j;
       for (j = 0; j < merge_sources->nelts; j++)
         {
-          svn_merge_range_t *r = APR_ARRAY_IDX(merge_sources, j, svn_merge_range_t *);
+          svn_merge_range_t *r = APR_ARRAY_IDX(merge_sources, j, 
+                                               svn_merge_range_t *);
           const char *location_url;
           svn_opt_revision_t *location_rev;
           svn_opt_revision_t unspecified_revision, rev1_opt, rev2_opt;
@@ -3066,16 +3067,16 @@ get_mergeinfo_walk_cb(const char *path,
         {
           const char* path_relative_to_merge_target;
           int merge_target_len;
-          svn_stringbuf_t *merge_src_child_path =
-                          svn_stringbuf_create(wb->merge_src_canon_path, pool);
+          svn_stringbuf_t *merge_src_child_path = 
+            svn_stringbuf_create(wb->merge_src_canon_path, pool);
+
           /* Note: Merge target is an empty string for '' and explicit '.'.
-           * Such relative merge targets makes path entries to be relative
-           * to current directory and hence for merge src '/trunk'
-           * "path of value 'subdir'" can cause merge_src_child_path to
-           * '/trunksubdir' instead of '/trunk/subdir'.
-           * For such merge targets insert '/' between merge_src_canon_path
-           * and path_relative_to_merge_target.
-           */
+             Such relative merge targets makes path entries to be relative
+             to current directory and hence for merge src '/trunk'
+             "path of value 'subdir'" can cause merge_src_child_path to
+             '/trunksubdir' instead of '/trunk/subdir'.
+             For such merge targets insert '/' between merge_src_canon_path
+             and path_relative_to_merge_target. */
           merge_target_len = strlen(wb->merge_target_path);
           /* Need to append '/' only for subtrees. */
           if (!merge_target_len && strcmp(path, wb->merge_target_path) != 0)
@@ -3507,7 +3508,9 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
          mergeinfo, removing the non-inheritable flag, it appears that the
          child already has been merged to.  To prevent this we set override
          mergeinfo on the child now, before any merging is done, so it has
-         explicit mergeinfo that reflects only CHILD's inheritable mergeinfo. */
+         explicit mergeinfo that reflects only CHILD's inheritable
+         mergeinfo. */
+
       if (child->has_noninheritable)
         {
           apr_hash_t *entries;
