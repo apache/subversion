@@ -118,10 +118,11 @@ svn_stream_t in subversion functions. Returned svn_stream_t are also
 translated into perl io handles, so you could access them with regular
 print, read, etc.
 
-Note that some functions take a stream to read or write, while it
-does not close it but still hold the reference to the handle. In this case
-the handle won't be destroyed properly. You should always use correct
-default pool before calling such functions.
+Note that some functions take a stream to read from or write to, but do not
+close the stream while still holding the reference to the io handle.
+In this case the handle won't be destroyed properly.
+You should always set up the correct default pool before calling
+such functions.
 
 =cut
 
@@ -302,13 +303,12 @@ use SVN::Base qw(Core svn_pool_);
 The perl bindings significantly simplify the usage of pools, while 
 still being manually adjustable.
 
-Functions requiring pool as the last argument (which are, almost all
-of the subversion functions), the pool is optionally. The default pool
+For functions requiring a pool as the last argument (which are, almost all
+of the subversion functions), the pool argument is optional. The default pool
 is used if it is omitted. When C<SVN::Core> is loaded, it creates a
-pool as the default one, which is also available from
-C<SVN::Core-E<gt>gpool>.
+new default pool, which is also available from C<SVN::Core-E<gt>gpool>.
 
-For callback functions providing pool to your subroutine, you could
+For callback functions providing a pool to your subroutine, you could
 also use $pool-E<gt>default to make it the default pool in the scope.
 
 =head3 Methods
@@ -333,10 +333,10 @@ resulting pool as new default pool.
 
 Clear the pool.
 
-=item destroy
+=item DESTROY
 
-Destroy the pool. If the pool is the default pool, restore the
-previous default pool as default. This is normally called
+Destroy the pool. If the pool was the default pool, restore the
+previous default pool. This is normally called
 automatically when the SVN::Pool object is no longer used and
 destroyed by the perl garbage collector.
 
@@ -482,7 +482,7 @@ be an svn_error_t object if an error occurs and a svn_client_commit_info object
 otherwise.  If you leave the parenthesis off around $ci (scalar context) it
 will be the commit_info object, which in the case of an error will be undef.
 
-If you plan on using this exception handling, understanding the exception
+If you plan on using explicit exception handling, understanding the exception
 handling system the C API uses is helpful.  You can find information on it in
 the HACKING file and the API documentation.  Looking at the implementation of
 SVN::Error::croak_on_error and SVN::Error::expanded_message may be helpful as
@@ -590,9 +590,9 @@ sub expanded_message {
 		
 =item SVN::Error::is_error($value)
 
-Returns true if the value is an svn_error type return.  Returns false if the
-value is anything else or undefined.  This is useful for seeing if a call has
-returned an error.
+Returns true if value is of type svn_error.  Returns false if value is
+anything else or undefined.  This is useful for seeing if a call has returned
+an error.
 
 =cut
 
@@ -605,12 +605,12 @@ sub is_error {
 Default error handler.  It takes an svn_error_t and extracts the error messages
 from it and croaks with those messages.
 
-It can be used two ways.  The first is detailed above as setting it as the
+It can be used in two ways.  The first is detailed above as setting it as the
 automatic exception handler via setting $SVN::Error::handler. 
 
-The 2nd is if you have $SVN::Error::handler set to undef as a wrapper for calls
-you want to croak on when there is an error but don't want to have to write an
-explicit error handler for example:
+The second is if you have $SVN::Error::handler set to undef as a wrapper for
+calls you want to croak on when there is an error, but you don't want to write
+an explicit error handler. For example:
 
 my $result_rev=SVN::Error::croak_on_error($ctx-E<gt>checkout($url,$path,'HEAD',1));
 
@@ -634,9 +634,9 @@ sub croak_on_error {
 
 =item SVN::Error::confess_on_error
 
-The same as croak_on_error except it will give a more detailed stack backtrace.
-Including showing internal calls within the implementations of the perl
-bindings.  This is useful if you're working on developing the bindings.
+The same as croak_on_error except it will give a more detailed stack backtrace,
+including internal calls within the implementation of the perl bindings.
+This is useful when you are doing development work on the bindings themselves.
 
 =cut
 
