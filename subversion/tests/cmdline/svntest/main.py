@@ -915,6 +915,10 @@ class TestSpawningThread(threading.Thread):
       args.append('--cleanup')
     if enable_sasl:
       args.append('--enable-sasl')
+    if http_library:
+      args.append('--url=' + http_library)
+    if server_minor_version:
+      args.append('--server-minor-version=' + str(server_minor_version))
 
     result, stdout_lines, stderr_lines = spawn_process(command, 1, None, *args)
     # don't trust the exitcode, will not be correct on Windows
