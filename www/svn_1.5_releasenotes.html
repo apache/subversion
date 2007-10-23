@@ -38,7 +38,7 @@ describes what is planned for the release.</p>
   <li>Changelist support</li>
   <li>FSFS sharding</li>
   <li>Command-line client improvements</li>
-  <li>Improved APIs and language bindings</li>
+  <li>API changes, improvements and language bindings</li>
   <li>Easier to try out experimental <tt>ra_serf</tt> DAV access module</li>
   <li>More than XXX new bug fixes</li>
 </ul>
@@ -71,7 +71,8 @@ ones.</p>
 releases, by only adding new functions.  A program written to the 1.0,
 1.1, 1.2 or 1.3 API can both compile and run using 1.5 libraries.
 However, a program written for 1.5 cannot necessarily compile or run
-against older libraries.</p>
+against older libraries.  However, see the <a href="#apis">API</a>
+section on some clarifications on existing APIs.</p>
 
 <div class="h3" id="wc-and-repos-format-change" title="wc-format-change">
 <h3>Working Copy and Repository Format Changes</h3>
@@ -385,12 +386,57 @@ actually stop.</p>
 </div>  <!-- cmdline -->
 
 <div class="h3" id="apis" title="apis">
-<h3>API improvements (<em>client and server</em>)</h3>
+<h3>API changes, improvements and language bindings
+    (<em>client and server</em>)</h3>
 
 <p>If you develop a 3rd-party client application that uses Subversion
-  APIs, you may want to take notice of some new APIs:</p>
+  APIs, you may want to take notice of the following changes and new
+  APIs:</p>
 
 <ul>
+  <li><tt>svn_opt_parse_path()</tt> changes
+    <ul>
+      <li>
+        Since Subversion 1.3, if a path or URL ends in an empty
+        revision suffix '@', then the returned revision type would be
+        different than an unprotected path or URL:
+        <ul>
+          <li>
+            <tt>some/path/to/foo</tt> returns
+            <tt>svn_opt_revision_unspecified</tt>
+          <li>
+          <li>
+            <tt>some/path/to/foo<b>@</b></tt> returns
+            <tt>svn_opt_revision_base</tt>
+          <li>
+          </li>
+            <tt>http://example.com/some/path/to/foo</tt> returns
+            <tt>svn_opt_revision_unspecified</tt>
+          </li>
+          </li>
+            <tt>http://example.com/some/path/to/foo@</tt> returns
+            <tt>svn_opt_revision_head</tt>
+          </li>
+        </ul>
+        Subversion 1.5 fixes this inconsistency, all the above paths
+        and URLs return <tt>svn_opt_revision_unspecified</tt>.
+      </li>
+      <li>
+        Since Subversion 1.2, <tt>svn_opt_parse_path</tt> would always
+        canonicalize the returned path or URL with
+        <tt>svn_path_canonicalize</tt>, even though this is not
+        documented in <tt>subversion/include/svn_opt.h</tt>.  For the
+        relative externals support, uncanonicalized paths need to be
+        returned, otherwise scheme relative URLs,
+        i.e. <tt>//example.com/some/path</tt> would be canonicalized
+        to server root relative URLs <tt>/example.com/some/path</tt>.
+        Users of this function now much ensure that they canonicalize
+        the result of this function if they pass it to any other
+        Subversion functions that expect a canonicalized path or URL.
+      </li>
+    </ul>
+  </li>
+
   <li>XXX: Enumerate specific new API additions (e.g. merge info
     retrieval?)</li>
 
