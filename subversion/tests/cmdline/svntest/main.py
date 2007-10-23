@@ -916,7 +916,7 @@ class TestSpawningThread(threading.Thread):
     if enable_sasl:
       args.append('--enable-sasl')
     if http_library:
-      args.append('--url=' + http_library)
+      args.append('--http-library=' + http_library)
     if server_minor_version:
       args.append('--server-minor-version=' + str(server_minor_version))
 
