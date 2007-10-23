@@ -238,6 +238,10 @@ of the `svn-log-edit-buffer-name' buffer."
   "*Insert the filelist to commit in the *svn-log* buffer"
   :type 'boolean
   :group 'psvn)
+(defcustom svn-log-edit-show-diff-for-commit nil
+  "*Show the diff being committed when you run `svn-status-commit.'."
+  :type 'boolean
+  :group 'psvn)
 (defcustom svn-log-edit-use-log-edit-mode
   (and (condition-case nil (require 'log-edit) (error nil)) t)
   "*Use log-edit-mode as base for svn-log-edit-mode
@@ -3970,7 +3974,9 @@ If no files have been marked, commit recursively the file at point."
     (svn-log-edit-show-files-to-commit)
     (svn-status-pop-to-commit-buffer)
     (when svn-log-edit-insert-files-to-commit
-      (svn-log-edit-insert-files-to-commit))))
+      (svn-log-edit-insert-files-to-commit))
+    (when svn-log-edit-show-diff-for-commit
+      (svn-log-edit-svn-diff nil))))
 
 (defun svn-status-pop-to-commit-buffer ()
   "Pop to the svn commit buffer.
