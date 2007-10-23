@@ -209,6 +209,229 @@ svn_client__get_copy_source(const char *path_or_url,
 }
 
 
+struct common_ancestor_baton {
+  /* the last place our "path1" was known to live. */
+  svn_stringbuf_t *current_path1;  
+  svn_revnum_t current_rev1;
+
+  /* the last place our "path2" was known to live. */
+  svn_stringbuf_t *current_path2;
+  svn_revnum_t current_rev2;
+};
+
+
+/* This function implements the `svn_log_entry_receiver_t' interface. */
+static svn_error_t *
+common_ancestor_cb(void *baton,
+                   svn_log_entry_t *log_entry,
+                   apr_pool_t *pool)
+{
+  /* ### TODO:  Yep. */
+  return SVN_NO_ERROR;
+}
+
+
+/* Set *NEW_RA_SESSION and *NEW_RA_SESSION_URL to an RA session baton
+   and session url pointing to the PATH_OR_URL's repository url.
+
+   If RA_SESSION_URL and RA_SESSION are non-NULL, they represent an
+   existing RA session baton and session url which will simply be
+   reparented as necessary to point to PATH_OR_URL's repository URL.
+   In this case, the returned values will simply point to RA_SESSION
+   and RA_SESSION_URL, respectively.
+
+   Otherwise (if RA_SESSION_URL and RA_SESSION_URL are NULL), the
+   returned values will be a newly instantiated RA session and session
+   url, allocated in POOL.
+
+   NOTE:  This function will not allow reuse of an RA session baton to
+   point to a url in a different repository that it currently points
+   to. */
+static svn_error_t *
+ensure_ra_session(svn_ra_session_t **new_ra_session,
+                  const char **new_ra_session_url,
+                  const char *path_or_url,
+                  svn_ra_session_t *ra_session,
+                  const char *ra_session_url,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  const char *url;
+
+  SVN_ERR(svn_client_url_from_path(&url, path_or_url, pool));
+  if (ra_session_url)
+    {
+      if (strcmp(url, ra_session_url) != 0)
+        SVN_ERR(svn_ra_reparent(ra_session, url, pool));
+
+      *new_ra_session = ra_session;
+      *new_ra_session_url = ra_session_url;
+    }
+  else
+    {
+      SVN_ERR(svn_client__open_ra_session_internal(new_ra_session, url,
+                                                   NULL, NULL, NULL, FALSE, 
+                                                   TRUE, ctx, pool));
+    }
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_client__get_youngest_common_ancestor(const char **ancestor_path,
+                                         svn_revnum_t *ancestor_revision,
+                                         const char *path_or_url1,
+                                         svn_opt_revision_t *peg_revision1,
+                                         const char *path_or_url2,
+                                         svn_opt_revision_t *peg_revision2,
+                                         svn_client_ctx_t *ctx,
+                                         apr_pool_t *pool)
+{
+  const char *repos_root;
+  const char *ra_session_url = NULL;
+  svn_ra_session_t *ra_session = NULL;
+  svn_revnum_t revision1, revision2;
+  const char *loc_url1, *loc_url2;
+  const char *rel_loc_path1, *rel_loc_path2;
+  svn_opt_revision_t *loc_rev1, *loc_rev2;
+  svn_opt_revision_t oldest, unspecified;
+  apr_array_header_t *targets;
+  struct common_ancestor_baton b;
+
+  /* Setup some static revision structure fields. */
+  oldest.kind = svn_opt_revision_number;
+  unspecified.kind = svn_opt_revision_unspecified;
+
+  /* THE PLAN: We need to crawl the history of our two inputs to try
+     to find a common ancestor.  There are a couple of ways to do
+     this:
+
+        1. We could crawl their histories individually, keeping a full
+           mapping of all location changes, and then comparing those
+           mappings afterwards to see if there's a point of common
+           ancestry.
+
+        2. We can use the svn_ra_get_log2() interface to effectively 
+           crawl the locations simultaneously and do our comparison
+           work as we're getting our history feed.
+
+     For now, we'll go with option 2, which, while possibly more work
+     for the server to perform, should save us in network usage and
+     calculation costs.  To do this, we'll need to normalize our
+     inputs to their repository locations as of the same revision
+     number.  We'll use the oldest of the two location revisions we
+     have, since a common ancestor can't be younger than the older of
+     those two revisions.  */
+
+
+  /* If PATH_OR_URL1 is a URL, we'll acquire an RA session to it and
+     resolve PEG_REVISION1 against it.  Otherwise, we'll resolve
+     PEG_REVISION1 against it as a working copy path.  */
+  if (svn_path_is_url(path_or_url1))
+    {
+      SVN_ERR(ensure_ra_session(&ra_session, &ra_session_url, path_or_url1,
+                                ra_session, ra_session_url, ctx, pool));
+      SVN_ERR(svn_client__get_revision_number(&revision1, ra_session,
+                                              peg_revision1, NULL, pool));
+    }
+  else
+    {
+      SVN_ERR(svn_client__get_revision_number(&revision1, NULL, peg_revision1, 
+                                              path_or_url1, pool));
+    }
+
+  /* If PATH_OR_URL2 is a URL, we'll acquire an RA session to it and
+     resolve PEG_REVISION2 against it.  Otherwise, we'll resolve
+     PEG_REVISION2 against it as a working copy path.  */
+  if (svn_path_is_url(path_or_url2))
+    {
+      SVN_ERR(ensure_ra_session(&ra_session, &ra_session_url, path_or_url2,
+                                ra_session, ra_session_url, ctx, pool));
+      SVN_ERR(svn_client__get_revision_number(&revision2, ra_session,
+                                              peg_revision2, NULL, pool));
+    }
+  else
+    {
+      SVN_ERR(svn_client__get_revision_number(&revision2, NULL, peg_revision2, 
+                                              path_or_url2, pool));
+    }
+
+  /* At this point we have two numeric revisions and two paths or
+     URLs.  We can use this information to normalize our input to two
+     URLs in a single revision.  */
+  oldest.value.number = MIN(peg_revision1->value.number, 
+                            peg_revision2->value.number);
+  SVN_ERR(ensure_ra_session(&ra_session, &ra_session_url, path_or_url1,
+                            ra_session, ra_session_url, ctx, pool));
+  SVN_ERR(svn_client__repos_locations(&loc_url1, &loc_rev1, NULL, NULL,
+                                      ra_session, path_or_url1, peg_revision1,
+                                      &oldest, &unspecified, ctx, pool));
+  SVN_ERR(ensure_ra_session(&ra_session, &ra_session_url, path_or_url2,
+                            ra_session, ra_session_url, ctx, pool));
+  SVN_ERR(svn_client__repos_locations(&loc_url2, &loc_rev2, NULL, NULL,
+                                      ra_session, path_or_url2, peg_revision2,
+                                      &oldest, &unspecified, ctx, pool));
+
+  /* Easy out: if we're looking at the same locations, we already have
+     our answers. */
+  if ((strcmp(loc_url1, loc_url2) == 0)
+      && (loc_rev1->value.number == loc_rev2->value.number))
+    {
+      *ancestor_path = loc_url1;
+      *ancestor_revision = loc_rev1->value.number;
+    }
+
+  /* By now, something (like RA session reparenting) will *surely*
+     have failed if our two inputs are from different repositories
+     altogether.  But we need to get relative paths for use with
+     svn_client_log4() anyway, and this process should be guaranteed
+     to shake out any doubt that we're at least examining two inputs
+     from the same repository. */
+  SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
+  SVN_ERR(svn_client__path_relative_to_root(&rel_loc_path1, loc_url1, 
+                                            repos_root, NULL, NULL, pool));
+  SVN_ERR(svn_client__path_relative_to_root(&rel_loc_path2, loc_url2, 
+                                            repos_root, NULL, NULL, pool)); 
+
+  /* ### FIXME: svn_client__path_relative_to_root() returns paths with
+     ### leading slashes, which is highly inconsistent with our APIs.
+     ### Suck it up and deal for now until we've fixed that function. */
+  rel_loc_path1 = svn_path_uri_decode(rel_loc_path1 + 1, pool);
+  rel_loc_path2 = svn_path_uri_decode(rel_loc_path2 + 1, pool);
+
+  /* It's finally time to trace history! */
+  b.current_path1 = svn_stringbuf_create(rel_loc_path1, pool);
+  b.current_rev1 = loc_rev1->value.number;
+  b.current_path2 = svn_stringbuf_create(rel_loc_path2, pool);
+  b.current_rev2 = loc_rev2->value.number;
+  targets = apr_array_make(pool, 2, sizeof(const char *));
+  APR_ARRAY_PUSH(targets, const char *) = rel_loc_path1;
+  APR_ARRAY_PUSH(targets, const char *) = rel_loc_path2;
+  SVN_ERR(ensure_ra_session(&ra_session, &ra_session_url, repos_root,
+                            ra_session, ra_session_url, ctx, pool));
+  SVN_ERR(svn_ra_get_log2(ra_session, targets, oldest.value.number, 0, 0, 
+                          TRUE, FALSE, FALSE, 
+                          apr_array_make(pool, 0, sizeof(const char *)),
+                          common_ancestor_cb, &b, pool));
+  if (svn_stringbuf_compare(b.current_path1, b.current_path2)
+      && (b.current_rev1 == b.current_rev2))
+    {
+      *ancestor_path = 
+        svn_path_join(repos_root, 
+                      svn_path_uri_encode((b.current_path1)->data, pool),
+                      pool);
+      *ancestor_revision = b.current_rev1;
+      return SVN_NO_ERROR;
+    }
+
+  return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
+                           _("'%s' and '%s' share no common history"),
+                           path_or_url1, path_or_url2);
+}
+
+
+
+
 /* compatibility with pre-1.5 servers, which send only author/date/log
  *revprops in log entries */
 typedef struct
