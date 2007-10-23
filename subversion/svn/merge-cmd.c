@@ -63,11 +63,11 @@ svn_cl__merge(apr_getopt_t *os,
                                    pool));
     }
 
-  if (opt_state->ranges_to_merge->nelts > 0)
+  if (opt_state->revision_ranges->nelts > 0)
     {
-      first_range_start = APR_ARRAY_IDX(opt_state->ranges_to_merge, 0,
+      first_range_start = APR_ARRAY_IDX(opt_state->revision_ranges, 0,
                                         svn_opt_revision_range_t *)->end;
-      first_range_end = APR_ARRAY_IDX(opt_state->ranges_to_merge, 0,
+      first_range_end = APR_ARRAY_IDX(opt_state->revision_ranges, 0,
                                       svn_opt_revision_range_t *)->end;  
     }
   else
@@ -88,7 +88,7 @@ svn_cl__merge(apr_getopt_t *os,
         using_rev_range_syntax = TRUE;
     }
 
-  /* If ranges_to_merge has at least one range at this point, then
+  /* If revision_ranges has at least one range at this point, then
      we know the user must have used the '-r' and/or '-c' switch(es). */
   if (first_range_start.kind != svn_opt_revision_unspecified)
     {
@@ -227,7 +227,7 @@ svn_cl__merge(apr_getopt_t *os,
         }
         
       err = svn_client_merge_peg3(sourcepath1,
-                                  opt_state->ranges_to_merge,
+                                  opt_state->revision_ranges,
                                   &peg_revision1,
                                   targetpath,
                                   opt_state->depth,

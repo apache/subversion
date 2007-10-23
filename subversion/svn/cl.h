@@ -143,9 +143,10 @@ typedef struct svn_cl__opt_state_t
 
   /* This array of svn_opt_revision_range_t *'s get set as a result
      of *multiple* revisions or dates being specified.  Otherwise similar
-     to start_revision and end_revision.  Used only by merge subcommand
-     at present. */
-  apr_array_header_t *ranges_to_merge;
+     to start_revision and end_revision.
+  
+     NOTE: This is currently used only by merge subcommand. */
+  apr_array_header_t *revision_ranges;
 
   /* Max number of log messages to get back from svn_client_log2. */
   int limit;
