@@ -598,7 +598,7 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
 
   /* Resolve good_rev into a real revnum. */
   if (good_rev->kind == svn_opt_revision_unspecified)
-    good_rev->kind == svn_opt_revision_head;
+    good_rev->kind = svn_opt_revision_head;
   SVN_ERR(svn_client__get_revision_number(&rev, NULL, ra_session,
                                           good_rev, url, pool));
 
