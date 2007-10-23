@@ -56,12 +56,24 @@ extern "C" {
  * Else if REVISION->kind is svn_opt_revision_unspecified, set
  * *REVNUM to SVN_INVALID_REVNUM.
  *
+ * If YOUNGEST_REV is non-NULL, it is an in/out parameter.  If
+ * *YOUNGEST_REV is valid, use it as the youngest revision in the
+ * repository (regardless of reality) -- don't bother to lookup the
+ * true value for HEAD, and don't return any value in *REVNUM greater
+ * than *YOUNGEST_REV.  If *YOUNGEST_REV is not valid, and a HEAD
+ * lookup is required to populate *REVNUM, then also populate
+ * *YOUNGEST_REV with the result.  This is useful for making multiple
+ * serialized calls to this function with a basically static view of
+ * the repository, avoiding race conditions which could occur between
+ * multiple invocations with HEAD lookup requests.
+ *
  * Else return SVN_ERR_CLIENT_BAD_REVISION.
  *
  * Use POOL for any temporary allocation.
  */
 svn_error_t *
 svn_client__get_revision_number(svn_revnum_t *revnum,
+                                svn_revnum_t *youngest_rev,
                                 svn_ra_session_t *ra_session,
                                 const svn_opt_revision_t *revision,
                                 const char *path,

@@ -631,7 +631,7 @@ svn_client_blame4(const char *target,
                                            &url, target, peg_revision, end,
                                            ctx, pool));
 
-  SVN_ERR(svn_client__get_revision_number(&start_revnum, ra_session,
+  SVN_ERR(svn_client__get_revision_number(&start_revnum, NULL, ra_session,
                                           start, target, pool));
 
   if (end_revnum < start_revnum)

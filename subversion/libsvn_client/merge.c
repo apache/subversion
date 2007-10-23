@@ -1703,11 +1703,13 @@ grok_range_info_from_opt_revisions(svn_merge_range_t *range,
                                    const svn_opt_revision_t *revision2,
                                    apr_pool_t *pool)
 {
+  svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
+
   /* Resolve the revision numbers. */
   SVN_ERR(svn_client__get_revision_number
-          (&range->start, ra_session1, revision1, NULL, pool));
+          (&range->start, &youngest_rev, ra_session1, revision1, NULL, pool));
   SVN_ERR(svn_client__get_revision_number
-          (&range->end, ra_session2, revision2, NULL, pool));
+          (&range->end, &youngest_rev, ra_session2, revision2, NULL, pool));
 
   /* If comparing revisions from different URLs when doing a 3-way
      merge, there's no way to determine the merge type on the
@@ -1757,7 +1759,7 @@ assume_default_rev_range(const svn_opt_revision_t *revision1,
   /* Provide reasonable defaults for unspecified revisions. */
   if (revision1->kind == svn_opt_revision_unspecified)
     {
-      SVN_ERR(svn_client__get_revision_number(&head_revnum, ra_session,
+      SVN_ERR(svn_client__get_revision_number(&head_revnum, NULL, ra_session,
                                               &head_rev_opt, "", pool));
       SVN_ERR(svn_client__oldest_rev_at_path(&assumed_revision1->value.number,
                                              ra_session, "",

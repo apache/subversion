@@ -470,7 +470,7 @@ svn_client_revprop_set(const char *propname,
   /* Resolve the revision into something real, and return that to the
      caller as well. */
   SVN_ERR(svn_client__get_revision_number
-          (set_rev, ra_session, revision, NULL, pool));
+          (set_rev, NULL, ra_session, revision, NULL, pool));
 
   /* The actual RA call. */
   SVN_ERR(svn_ra_change_rev_prop(ra_session, *set_rev, propname, propval,
@@ -851,7 +851,7 @@ svn_client_propget4(apr_hash_t **props,
       SVN_ERR(svn_wc__entry_versioned(&node, target, adm_access, FALSE, pool));
 
       SVN_ERR(svn_client__get_revision_number
-              (&revnum, NULL, revision, target, pool));
+              (&revnum, NULL, NULL, revision, target, pool));
 
       /* If FALSE, we must want the working revision. */
       pristine = (revision->kind == svn_opt_revision_committed
@@ -940,7 +940,7 @@ svn_client_revprop_get(const char *propname,
   /* Resolve the revision into something real, and return that to the
      caller as well. */
   SVN_ERR(svn_client__get_revision_number
-          (set_rev, ra_session, revision, NULL, pool));
+          (set_rev, NULL, ra_session, revision, NULL, pool));
 
   /* The actual RA call. */
   SVN_ERR(svn_ra_rev_prop(ra_session, *set_rev, propname, propval, pool));
@@ -1213,7 +1213,7 @@ svn_client_proplist3(const char *target,
       SVN_ERR(svn_wc__entry_versioned(&node, target, adm_access, FALSE, pool));
 
       SVN_ERR(svn_client__get_revision_number
-              (&revnum, NULL, revision, target, pool));
+              (&revnum, NULL, NULL, revision, target, pool));
 
       if ((revision->kind == svn_opt_revision_committed)
           || (revision->kind == svn_opt_revision_base))
@@ -1393,7 +1393,7 @@ svn_client_revprop_list(apr_hash_t **props,
   /* Resolve the revision into something real, and return that to the
      caller as well. */
   SVN_ERR(svn_client__get_revision_number
-          (set_rev, ra_session, revision, NULL, pool));
+          (set_rev, NULL, ra_session, revision, NULL, pool));
 
   /* The actual RA call. */
   SVN_ERR(svn_ra_rev_proplist(ra_session, *set_rev, &proplist, pool));
