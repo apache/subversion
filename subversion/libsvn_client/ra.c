@@ -557,7 +557,7 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
 {
   svn_ra_session_t *ra_session;
   const char *initial_url, *url;
-  const svn_opt_revision_t *good_rev;
+  svn_opt_revision_t *good_rev;
   svn_opt_revision_t peg_revision, start_rev;
   svn_opt_revision_t dead_end_rev;
   svn_opt_revision_t *ignored_rev, *new_rev;
@@ -591,7 +591,7 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                       /* search range: */
                                       &start_rev, &dead_end_rev,
                                       ctx, pool));
-  good_rev = new_rev;
+  good_rev = (svn_opt_revision_t *)new_rev;
 
   /* Make the session point to the real URL. */
   SVN_ERR(svn_ra_reparent(ra_session, url, pool));
