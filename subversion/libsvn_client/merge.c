@@ -4318,37 +4318,35 @@ svn_client_merge_peg3(const char *source,
                                 svn_opt_revision_range_t *))->start);
       opt_r2 = &((APR_ARRAY_IDX(initial_merge_sources, i,
                                 svn_opt_revision_range_t *))->end);
+
+      /* Transform opt revisions to actual revision numbers. */
       SVN_ERR(svn_client__repos_locations(&URL1, &opt_r1_explicit,
                                           &URL2, &opt_r2_explicit,
-                                      NULL,
+                                          NULL,
                                           path ? path : URL, peg_revision,
                                           opt_r1, opt_r2, ctx, pool));
         
-        if (i == 0)
-          {
-            /* Transform opt revisions to actual revision numbers. */
-            SVN_ERR(svn_ra_reparent(merge_cmd_baton.ra_session1, URL1, pool));
-            notify_b.same_urls = (strcmp(URL1, URL2) == 0);
-            if (!notify_b.same_urls && record_only)
-              return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                      _("Use of two URLs is not compatible "
-                                        "with mergeinfo modification"));
-          }
+      if (i == 0)
+        {
+          SVN_ERR(svn_ra_reparent(merge_cmd_baton.ra_session1, URL1, pool));
+          notify_b.same_urls = (strcmp(URL1, URL2) == 0);
+          if (!notify_b.same_urls && record_only)
+            return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                    _("Use of two URLs is not compatible "
+                                      "with mergeinfo modification"));
+        }
 
-        ENSURE_VALID_REVISION_KINDS(opt_r1_explicit->kind,
-                                    opt_r2_explicit->kind);
-        SVN_ERR(grok_range_info_from_opt_revisions(
-          APR_ARRAY_IDX(explicit_sources, i, svn_merge_range_t *),
-          &merge_type_tmp,
-          TRUE,
-          merge_cmd_baton.ra_session1,
-          opt_r1_explicit,
-          merge_cmd_baton.ra_session1,
-          opt_r2_explicit,
-                                             pool));
-        /* Any other type of merge overrides a no-op. */
-        if (merge_type_tmp != merge_type_no_op)
-          merge_type = merge_type_tmp;
+      ENSURE_VALID_REVISION_KINDS(opt_r1_explicit->kind, 
+                                  opt_r2_explicit->kind);
+      SVN_ERR(grok_range_info_from_opt_revisions
+              (APR_ARRAY_IDX(explicit_sources, i, svn_merge_range_t *),
+               &merge_type_tmp, TRUE, 
+               merge_cmd_baton.ra_session1, opt_r1_explicit,
+               merge_cmd_baton.ra_session1, opt_r2_explicit,
+               pool));
+      /* Any other type of merge overrides a no-op. */
+      if (merge_type_tmp != merge_type_no_op)
+        merge_type = merge_type_tmp;
     }
 
   SVN_ERR(compact_merge_ranges(&compacted_sources, explicit_sources, pool));
