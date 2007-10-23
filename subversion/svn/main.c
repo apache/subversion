@@ -1060,7 +1060,7 @@ main(int argc, const char *argv[])
   /* Begin processing arguments. */
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
   opt_state.end_revision.kind = svn_opt_revision_unspecified;
-  opt_state.ranges_to_merge =
+  opt_state.revision_ranges =
     apr_array_make(pool, 0, sizeof(svn_opt_revision_range_t *));
   opt_state.depth = svn_depth_unknown;
   opt_state.accept_which = svn_cl__accept_invalid;
@@ -1167,14 +1167,14 @@ main(int argc, const char *argv[])
           used_change_arg = TRUE;
             range->start.kind = svn_opt_revision_number;
             range->end.kind = svn_opt_revision_number;
-            APR_ARRAY_PUSH(opt_state.ranges_to_merge,
+            APR_ARRAY_PUSH(opt_state.revision_ranges,
                            svn_opt_revision_range_t *) = range;
         }
         }
         break;
       case 'r':
-        if (svn_opt_parse_revision2(&(opt_state.ranges_to_merge),
-                                   opt_arg, pool) != 0)
+        if (svn_opt_parse_revision2(&(opt_state.revision_ranges),
+                                    opt_arg, pool) != 0)
           {
             err = svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool);
             if (! err)
@@ -1527,7 +1527,7 @@ main(int argc, const char *argv[])
   /* Only merge supports multiple revisions/revision ranges. */
   if (subcommand->cmd_func != svn_cl__merge)
     {
-      if (opt_state.ranges_to_merge->nelts > 1)
+      if (opt_state.revision_ranges->nelts > 1)
         {
           err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                  _("Multiple revision arguments "
@@ -1535,22 +1535,22 @@ main(int argc, const char *argv[])
                                    "or both -c and -r"));
           return svn_cmdline_handle_exit_error(err, pool, "svn: ");
         }
-      else if (opt_state.ranges_to_merge->nelts == 1)
+      else if (opt_state.revision_ranges->nelts == 1)
         {
           opt_state.start_revision =
-            APR_ARRAY_IDX(opt_state.ranges_to_merge, 0,
+            APR_ARRAY_IDX(opt_state.revision_ranges, 0,
                           svn_opt_revision_range_t *)->start;
           opt_state.end_revision =
-            APR_ARRAY_IDX(opt_state.ranges_to_merge, 0,
+            APR_ARRAY_IDX(opt_state.revision_ranges, 0,
                           svn_opt_revision_range_t *)->end;
         }
     }
-  else if (opt_state.ranges_to_merge->nelts == 0)
+  else if (opt_state.revision_ranges->nelts == 0)
     {
       svn_opt_revision_range_t *range = apr_palloc(pool, sizeof(*range));
       range->start.kind = svn_opt_revision_unspecified;
       range->end.kind = svn_opt_revision_unspecified;
-      APR_ARRAY_PUSH(opt_state.ranges_to_merge,
+      APR_ARRAY_PUSH(opt_state.revision_ranges,
                      svn_opt_revision_range_t *) = range;
     }
 
