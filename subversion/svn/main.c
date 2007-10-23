@@ -57,6 +57,7 @@
  */
 const apr_getopt_option_t svn_cl__options[] =
 {
+  {"filter",        svn_cl__filter_opt, 1, N_("filter output by ARG")},
   {"force",         svn_cl__force_opt, 0, N_("force operation to run")},
   {"force-log",     svn_cl__force_log_opt, 0,
                     N_("force validity of log message source")},
@@ -830,7 +831,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     { 'u', 'v', 'N', svn_cl__depth_opt, 'q', svn_cl__no_ignore_opt,
       svn_cl__incremental_opt, svn_cl__xml_opt, SVN_CL__AUTH_OPTIONS,
       svn_cl__config_dir_opt, svn_cl__ignore_externals_opt,
-      svn_cl__changelist_opt} },
+      svn_cl__changelist_opt, svn_cl__filter_opt},
+    {{svn_cl__filter_opt,
+      N_("only show items matching the list of status codes\n"
+         "                            "
+         "e.g. \"M\" for just modified, \"C*\" for modified or\n"
+         "                            "
+         "out-of-date, and so on\n")}} },
 
   { "switch", svn_cl__switch, {"sw"}, N_
     ("Update the working copy to a different URL.\n"
@@ -1413,6 +1420,9 @@ main(int argc, const char *argv[])
             (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                _("'%s' is not a valid accept value"), opt_arg),
              pool, "svn: ");
+        break;
+      case svn_cl__filter_opt:
+        opt_state.filter_arg = apr_pstrdup(pool, opt_arg);
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away

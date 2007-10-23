@@ -840,11 +840,12 @@ def run_and_verify_status(wc_dir_name, output_tree,
                           singleton_handler_a = None,
                           a_baton = None,
                           singleton_handler_b = None,
-                          b_baton = None):
+                          b_baton = None,
+                          args = ()):
   """Run 'status' on WC_DIR_NAME and compare it with the
   expected OUTPUT_TREE.  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will
   be passed to tree.compare_trees - see that function's doc string for
-  more details.
+  more details.  ARGS is an optional tuple of additional arguments.
   Returns on success, raises on failure."""
 
   if isinstance(output_tree, wc.State):
@@ -853,7 +854,7 @@ def run_and_verify_status(wc_dir_name, output_tree,
   output, errput = main.run_svn (None, 'status', '-v', '-u', '-q',
                                  '--username', main.wc_author,
                                  '--password', main.wc_passwd,
-                                 wc_dir_name)
+                                 wc_dir_name, *args)
 
   actual = tree.build_tree_from_status (output)
 

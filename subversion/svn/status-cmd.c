@@ -39,6 +39,34 @@
 
 /*** Code. ***/
 
+/* values for text and prop fields of struct status_filter */
+enum svn_cl__status_kind {
+  svn_cl__status_none_or_normal        = 1 << 0,
+  svn_cl__status_unversioned           = 1 << 1,
+  svn_cl__status_added                 = 1 << 2,
+  svn_cl__status_incomplete_or_missing = 1 << 3,
+  svn_cl__status_deleted               = 1 << 4,
+  svn_cl__status_replaced              = 1 << 5,
+  svn_cl__status_modified              = 1 << 6,
+  svn_cl__status_merged                = 1 << 7,
+  svn_cl__status_conflicted            = 1 << 8,
+  svn_cl__status_ignored               = 1 << 9,
+  svn_cl__status_obstructed            = 1 << 10,
+  svn_cl__status_external              = 1 << 11,
+};
+
+/* which status types to show */
+struct status_filter
+{
+  svn_boolean_t all;             /* show all */
+  enum svn_cl__status_kind kind; /* bit field for text/prop status to show */
+  svn_boolean_t locked;          /* show items locked with wc lock */
+  svn_boolean_t wc_locked;       /* show items with wc locks */
+  svn_boolean_t copied;          /* show copied items */
+  svn_boolean_t switched;        /* show switched items */
+  svn_boolean_t out_of_date;     /* show outof-date items */
+};
+
 struct status_baton
 {
   /* These fields all correspond to the ones in the
@@ -55,6 +83,7 @@ struct status_baton
   svn_boolean_t had_print_error;  /* To avoid printing lots of errors if we get
                                      errors while printing to stdout */
   svn_boolean_t xml_mode;
+  struct status_filter filter;  /* which status types to show */
 };
 
 
@@ -134,6 +163,95 @@ print_status_normal_or_xml(void *baton,
 }
 
 
+/* Return TRUE if FILTER matches STATUS_KIND, else FALSE. */
+static svn_boolean_t
+filter_match_status_kind(enum svn_cl__status_kind filter,
+                         enum svn_wc_status_kind status_kind)
+{
+  switch (status_kind)
+    {
+    case svn_wc_status_none:
+    case svn_wc_status_normal:
+      if (filter & svn_cl__status_none_or_normal)
+        return TRUE;
+      break;
+    case svn_wc_status_unversioned:
+      if (filter & svn_cl__status_unversioned)
+        return TRUE;
+      break;
+    case svn_wc_status_added:
+      if (filter & svn_cl__status_added)
+        return TRUE;
+      break;
+    case svn_wc_status_incomplete:
+    case svn_wc_status_missing:
+      if (filter & svn_cl__status_incomplete_or_missing)
+        return TRUE;
+      break;
+    case svn_wc_status_deleted:
+      if (filter & svn_cl__status_deleted)
+        return TRUE;
+      break;
+    case svn_wc_status_replaced:
+      if (filter & svn_cl__status_replaced)
+        return TRUE;
+      break;
+    case svn_wc_status_modified:
+      if (filter & svn_cl__status_modified)
+        return TRUE;
+      break;
+    case svn_wc_status_merged:
+      if (filter & svn_cl__status_merged)
+        return TRUE;
+      break;
+    case svn_wc_status_conflicted:
+      if (filter & svn_cl__status_conflicted)
+        return TRUE;
+      break;
+    case svn_wc_status_ignored:
+      if (filter & svn_cl__status_ignored)
+        return TRUE;
+      break;
+    case svn_wc_status_obstructed:
+      if (filter & svn_cl__status_obstructed)
+        return TRUE;
+      break;
+    case svn_wc_status_external:
+      if (filter & svn_cl__status_external)
+        return TRUE;
+      break;
+    }
+  return FALSE;
+}
+
+/* Return TRUE if FILTER matches STATUS, else FALSE. */
+static svn_boolean_t
+filter_match(struct status_filter *filter, svn_wc_status2_t *status)
+{
+  if (filter->all)
+    return TRUE;
+  if (filter_match_status_kind(filter->kind, status->text_status))
+    return TRUE;
+  if (filter_match_status_kind(filter->kind, status->prop_status))
+    return TRUE;
+  if (filter->locked &&
+      ((status->entry && status->entry->lock_token)
+       || status->repos_lock))
+    return TRUE;
+  if (filter->wc_locked && status->locked)
+    return TRUE;
+  if (filter->copied && status->copied)
+    return TRUE;
+  if (filter->switched && status->switched)
+    return TRUE;
+  if (filter->out_of_date
+      && (status->repos_text_status != svn_wc_status_none
+          || status->repos_prop_status != svn_wc_status_none))
+    return TRUE;
+  return FALSE;
+}
+
+
 /* A status callback function for printing STATUS for PATH. */
 static void
 print_status(void *baton,
@@ -141,6 +259,9 @@ print_status(void *baton,
              svn_wc_status2_t *status)
 {
   struct status_baton *sb = baton;
+
+  if (!filter_match(&sb->filter, status))
+    return;
 
   /* If there's a changelist attached to the entry, then we don't print
      the item, but instead dup & cache the status structure for later. */
@@ -200,6 +321,92 @@ do_status(svn_cl__opt_state_t *opt_state,
   return SVN_NO_ERROR;
 }
 
+
+/* Parse status codes from FILTER_ARG into FILTER, allocating in POOL.
+   If FILTER_ARG is NULL, set FILTER->all to TRUE. */
+static svn_error_t *
+parse_filter(struct status_filter *filter, char *filter_arg,
+             apr_pool_t *pool)
+{
+          const char *p;
+  if (filter_arg == NULL)
+    {
+      filter->all = TRUE;
+      return SVN_NO_ERROR;
+    }
+  filter->all = FALSE;
+  filter->kind = 0;
+  filter->locked = filter->wc_locked = filter->copied = FALSE;
+  filter->switched = filter->out_of_date = FALSE;
+
+  for (p = filter_arg; *p; p++)
+    {
+      switch (*p)
+        {
+        /* text and property status codes in columns 1 and 2 */
+        case ' ':
+          filter->kind |= svn_cl__status_none_or_normal;
+          break;
+        case 'A':
+          filter->kind |= svn_cl__status_added;
+          break;
+        case '!':
+          filter->kind |= svn_cl__status_incomplete_or_missing;
+          break;
+        case 'D':
+          filter->kind |= svn_cl__status_deleted;
+          break;
+        case 'R':
+          filter->kind |= svn_cl__status_replaced;
+          break;
+        case 'M':
+          filter->kind |= svn_cl__status_modified;
+          break;
+        case 'G':
+          filter->kind |= svn_cl__status_merged;
+          break;
+        case 'C':
+          filter->kind |= svn_cl__status_conflicted;
+          break;
+        case '~':
+          filter->kind |= svn_cl__status_obstructed;
+          break;
+        case 'I':
+          filter->kind |= svn_cl__status_ignored;
+          break;
+        case 'X':
+          filter->kind |= svn_cl__status_external;
+          break;
+        case '?':
+          filter->kind |= svn_cl__status_unversioned;
+          break;
+        /* status codes in other columns */
+        case 'K':
+        case 'O':
+        case 'T':
+        case 'B':
+          filter->locked = TRUE;
+          break;
+        case 'L':
+          filter->wc_locked = TRUE;
+          break;
+        case '+':
+          filter->copied = TRUE;
+          break;
+        case 'S':
+          filter->switched = TRUE;
+          break;
+        case '*':
+          filter->out_of_date = TRUE;
+          break;
+        default:
+          return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                   _("Unknown --filter status code '%c'"), *p);
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__status(apr_getopt_t *os,
@@ -215,6 +422,8 @@ svn_cl__status(apr_getopt_t *os,
   int i;
   svn_opt_revision_t rev;
   struct status_baton sb;
+
+  SVN_ERR(parse_filter(&sb.filter, opt_state->filter_arg, pool));
 
   /* Before allowing svn_opt_args_to_target_array2() to canonicalize
      all the targets, we need to build a list of targets made of both

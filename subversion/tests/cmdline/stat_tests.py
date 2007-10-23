@@ -1553,6 +1553,128 @@ def status_dash_u_type_change(sbox):
                                      [],
                                      "status", "-u")
 
+def status_filter(sbox):
+  "status --filter"
+
+  # First check invalid usage.
+  svntest.actions.run_and_verify_svn(None, None,
+                                     ".*Unknown --filter status code 'd'",
+                                     'status', '--filter', 'd')
+
+  # Now prepare for real testing.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  A_path = os.path.join(wc_dir, 'A')
+  mu_path = os.path.join(A_path, 'mu')
+  alpha_path = os.path.join(A_path, 'B', 'E', 'alpha')
+  beta_url = sbox.repo_url + '/A/B/E/beta'
+  lambda_path = os.path.join(A_path, 'B', 'lambda')
+  D_path = os.path.join(A_path, 'D')
+  gamma_path = os.path.join(D_path, 'gamma')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  # Add one line to mu and gamma, commit this as r2.
+  change_files_and_commit(wc_dir, ['A/mu', 'A/D/gamma'])
+  # Make a second wc.
+  wc2 = sbox.add_wc_path('wc2')
+  svntest.actions.duplicate_dir(wc_dir, wc2)
+  iota = os.path.join(wc2, 'iota')
+  # Update mu and gamma to r1.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(status='U '),
+    'A/D/gamma' : Item(status='U '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
+                                        expected_disk, expected_status,
+                                        None, None, None, None, None, None,
+                                        '-r1', wc_dir)
+  # Switch alpha.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha' : Item(status='U '),
+    })
+  expected_disk.tweak('A/B/E/alpha', contents="This is the file 'beta'.\n")
+  expected_status.tweak('A/B/E/alpha', wc_rev=2, switched='S')
+  svntest.actions.run_and_verify_switch(wc_dir, alpha_path, beta_url,
+                                        expected_output,
+                                        expected_disk, expected_status)
+  # Add a different line to now-out-of-date mu.
+  svntest.main.file_append(mu_path, "new line for mu\n")
+  expected_disk.tweak('A/mu', contents=("This is the file 'mu'.\n"
+                                        "new line for mu\n"))
+  expected_status.tweak('A/mu', wc_rev=1, status='M ')
+  # Same for gamma, but update it again, giving it a text conflict.
+  svntest.main.file_append(gamma_path, "new line for gamma\n")
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/gamma' : Item(status='C '),
+    })
+  expected_disk.tweak('A/D/gamma', contents=("This is the file 'gamma'.\n"
+                                             "<<<<<<< .mine\n"
+                                             "new line for gamma\n"
+                                             "=======\n"
+                                             "new line of text>>>>>>> .r2\n"))
+  expected_status.tweak('A/D/gamma', wc_rev=2, status='C ')
+  extra_files = ['gamma.*\.r1', 'gamma.*\.r2', 'gamma.*\.mine']
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
+                                        expected_disk, expected_status,
+                                        None,
+                                        svntest.tree.detect_conflict_files,
+                                        extra_files,
+                                        None, None, None,
+                                        gamma_path)
+  # Copy rho to D.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', rho_path, D_path)
+  # Lock lambda in wc_dir and iota in wc2.
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'lambda lock comment', lambda_path)
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'iota lock comment', iota)
+  # Finally we test.
+
+  # only modified
+  expected_status = svntest.wc.State(wc_dir, {
+    'A/mu': Item(status='M ', wc_rev=1),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status,
+                                        args=('--filter', 'M'))
+  # only locked
+  expected_status = svntest.wc.State(wc_dir, {
+    'A/B/lambda': Item(status='  ', writelocked='K', wc_rev=1),
+    'iota': Item(status='  ', writelocked='O', wc_rev=1),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status,
+                                        args=('--filter', 'K'))
+  # only wc locks
+  expected_status = svntest.wc.State(wc_dir, {})
+  svntest.actions.run_and_verify_status(wc_dir, expected_status,
+                                        args=('--filter', 'L'))
+  # only out-of-date or modified
+  expected_status = svntest.wc.State(wc_dir, {
+      'A/mu': Item(status='M ', wc_rev=1),
+      })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status,
+                                        args=('--filter', '*M'))
+  # only out-of-date or conflicts
+  expected_status = svntest.wc.State(wc_dir, {
+      'A/mu': Item(status='M ', wc_rev=1),
+      'A/D/gamma': Item(status='C ', wc_rev=2),
+      })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status,
+                                        args=('--filter', '*C'))
+  # only copied or switched
+  expected_status = svntest.wc.State(wc_dir, {
+      'A/B/E/alpha': Item(status='  ', wc_rev=2, switched='S'),
+      'A/D/rho': Item(status='A ', copied='+', wc_rev='-'),
+      })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status,
+                                        args=('--filter', '+S'))
+
+
 ########################################################################
 # Run the tests
 
@@ -1590,6 +1712,7 @@ test_list = [ None,
               status_depth_local,
               status_depth_update,
               status_dash_u_type_change,
+              status_filter,
              ]
 
 if __name__ == '__main__':

@@ -55,6 +55,7 @@ typedef enum {
   svn_cl__dry_run_opt,
   svn_cl__editor_cmd_opt,
   svn_cl__encoding_opt,
+  svn_cl__filter_opt,
   svn_cl__force_log_opt,
   svn_cl__force_opt,
   svn_cl__keep_changelist_opt,
@@ -207,6 +208,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t parents;         /* create intermediate directories */
   svn_boolean_t use_merge_history; /* use/display extra merge information */
   svn_cl__accept_t accept_which;     /* how to handle conflicts */
+  char *filter_arg;                  /* --filter ARG */
 
 } svn_cl__opt_state_t;
 
