@@ -2639,14 +2639,15 @@ compact_add_sub_ranges(apr_array_header_t **compacted_sources,
 
 /* SOURCES is array of svn_merge_range_t *sorted per compare_merge_ranges(). */
 static svn_error_t *
-compact_merge_ranges(apr_array_header_t **compacted_sources,
+compact_merge_ranges(apr_array_header_t **compacted_sources_p,
                      apr_array_header_t *merge_ranges,
                      apr_pool_t *pool)
 {
   apr_array_header_t *additive_sources =
-   apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
+    apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
   apr_array_header_t *subtractive_sources =
     apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
+  apr_array_header_t *compacted_sources;
   int i;
 
   for (i = 0; i < merge_ranges->nelts; i++)
@@ -2674,9 +2675,11 @@ compact_merge_ranges(apr_array_header_t **compacted_sources,
     }
   qsort(additive_sources->elts, additive_sources->nelts,
         additive_sources->elt_size, compare_merge_ranges);
-  compact_add_sub_ranges(compacted_sources, additive_sources, pool);
-  qsort((*compacted_sources)->elts, (*compacted_sources)->nelts,
-        (*compacted_sources)->elt_size, compare_merge_ranges2);
+  compact_add_sub_ranges(&compacted_sources, additive_sources, pool);
+  qsort(compacted_sources->elts, compacted_sources->nelts,
+        compacted_sources->elt_size, compare_merge_ranges2);
+  
+  *compacted_sources_p = compacted_sources;
   return SVN_NO_ERROR;
 }
 
@@ -3938,6 +3941,234 @@ from_same_repos(struct merge_cmd_baton *merge_b, const svn_wc_entry_t *entry,
   merge_b->same_repos = svn_path_is_ancestor(src_root, entry->repos);
   return SVN_NO_ERROR;
 }
+
+
+
+/*** Merge Source Normalization ***/
+
+struct merge_source_t
+{
+  const char *path;
+  svn_merge_range_t *range;
+  struct merge_source_t *next;
+};
+
+struct nls_receiver_baton_t
+{
+  struct merge_source_t *merge_source_ts;
+  apr_pool_t *pool;
+};
+
+static svn_error_t *
+nls_receiver(svn_location_segment_t *segment,
+             void *baton,
+             apr_pool_t *pool)
+{
+  struct nls_receiver_baton_t b = baton;
+  int i;
+
+  /* This function works by keeping two lists in sync:
+
+        baton->merge_range_ts: the compacted list of revision ranges
+        to merge.
+
+        baton->merge_source_ts: the return list of merge_source_t
+        objects.
+
+     As we get called with successive repository location segments, we
+     populate the bits of information that we can determine from that
+     segment.  Sometimes that means we do nothing.  Sometimes it means
+     we can fill in the placeholder for one or more merge_source_t's.
+     But sometimes things get more complex, and we have to actually
+     split a range up into multiple consecutive ranges, which means
+     dealing with list growth.
+
+     All in all, it should be a fun time.  So let's dive in!
+  */
+  for (i = 0; i < b->merge_range_ts; i++)
+    {
+      svn_merge_range_t *range = APR_ARRAY_IDX(b->merge_range_ts, i,
+                                               svn_merge_range_t *);
+      struct merge_source_t *source = APR_ARRAY_IDX(b->merge_source_ts, i,
+                                                    struct merge_source_t *);
+      svn_revnum_t range_min = MIN(range->start, range->end);
+      svn_revnum_t range_max = MAX(range->start, range->end);
+      
+      /* If we've already mapped this merge range to a source
+         location, or if the merge rarge and our current segment don't
+         overlap at all, we've nothing to do on this iteration. */
+      if (source
+          || (range_max < segment->range_start)
+          || (range_min > segment->range_end))
+        continue;
+
+      /* If this merge range is entirely inside our current
+         location segment, we just need to populate the
+         merge_source_ts list item associated with this range. */
+      if ((range_min > segment->range_start)
+          && (range_max <= segment->range_end))
+        {
+          source = apr_pcalloc(b->pool, sizeof(*source));
+          if (segment->path)
+            source->path = apr_pstrdup(b->pool, segment->path);
+          source->range = range;
+          APR_ARRAY_IDX(b->merge_source_ts, i, 
+                        struct merge_source_t *) = source;
+        }
+      /* Otherwise, our merge range straddles a location segment
+         boundary.  We'll concern ourselves only with the part of the
+         range that's inside our segment, and leave the rest unhandled
+         for now. */
+      else
+        {
+          /* ### TODO:  Uh-huh. */
+        }
+    }
+  
+  return SVN_NO_ERROR;
+}
+
+/* Set *MERGE_RANGES to a list of svn_merge_range_t objects which
+   describe canonical locations for a set of requested merges.
+   Determine the requested merges by examining SOURCE_URL and
+   PEG_REVISION (which specifies the line of history from which merges
+   will be pulled) and RANGES_TO_MERGE (a list of
+   svn_opt_revision_range_t's which provide revision ranges).
+
+   If PEG_REVISION is unspecified, treat that it as HEAD.
+
+   Use RA_SESSION -- whose session URL matches SOURCE_URL -- to answer
+   historical questions.
+
+   Use POOL for all allocation.
+*/
+static svn_error_t *
+normalize_merge_sources(apr_array_header_t **merge_ranges,
+                        const char *source_url,
+                        const svn_opt_revision_t *peg_revision,
+                        apr_array_header_t *ranges_to_merge,
+                        svn_ra_session_t *ra_session,
+                        apr_pool_t *pool)
+{
+  svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
+  svn_revnum_t peg_revnum;
+  svn_revnum_t oldest_requested = SVN_INVALID_REVNUM;
+  svn_revnum_t youngest_requested = SVN_INVALID_REVNUM;
+  svn_opt_revision_t youngest_opt_rev;
+  apr_array_header_t *all_revisions;
+  apr_pool_t *subpool;
+  struct nls_receiver_baton_t nls_receiver_baton;
+  int i;
+  youngest_opt_rev.kind = svn_opt_revision_head;
+
+  /* THE PLAN: We'll first fetch the location segments for our source
+     URL between the maximum and minimum to-be-merged revisions
+     (which, of course, means we have to sanitize our requested
+     revision range values into hard numbers.  Then we'll use those
+     locations, plus the input revision ranges, to build a list of
+     merge ranges.  Note that any given revision range could involve
+     multiple canonical source locations.  It is this set of
+     canonicalized merge source locations that we'll pass off to our
+     merge routines.
+ */
+
+  /* If our PEG_REVISION is "HEAD", resolve that to a real number. */
+  if ((peg_revision->kind == svn_opt_revision_unspecified)
+      || (peg_revision->kind == svn_opt_revision_head))
+    {
+      SVN_ERR(svn_client__get_revision_number(&youngest_rev, ra_session,
+                                              &youngest_opt_rev, "", 
+                                              SVN_INVALID_REVNUM, pool));
+    }
+  SVN_ERR(svn_client__get_revision_number(&peg_revnum, ra_session, 
+                                          peg_revision, "", 
+                                          youngest_rev, pool));
+    
+  /* Create a list to hold svn_merge_range_t's. */
+  merge_range_ts = apr_array_make(pool, ranges_to_merge->nelts, 
+                                  sizeof(svn_merge_range_t *));
+
+  subpool = svn_pool_create(pool);
+  for (i = 0; i < ranges_to_merge->nelts; i++)
+    {
+      svn_revnum_t range_start_rev, range_end_rev;
+      svn_opt_revision_range_t *rev_range = 
+        APR_ARRAY_IDX(ranges_to_merge, i, svn_opt_revision_range_t *);
+      const svn_opt_revision_t *range_start = rev_range->start;
+      const svn_opt_revision_t *range_end = rav_range->end;
+      enum merge_type merge_type;
+
+      svn_pool_clear(subpool);
+
+      /* Let's make sure we have real numbers. */
+      if (range_start->kind == svn_opt_revision_unspecified)
+        range_start->kind = svn_opt_revision_head;
+      SVN_ERR(svn_client__get_revision_number(&range_start_rev, &youngest_rev,
+                                              ra_session, range_start, "", 
+                                              youngest_rev, subpool));
+
+      if (range_end->kind == svn_opt_revision_unspecified)
+        range_end->kind = svn_opt_revision_head;
+      SVN_ERR(svn_client__get_revision_number(&range_end_rev, &youngest_rev,
+                                              ra_session, range_end, "", 
+                                              youngest_rev, subpool));
+
+      /* If this isn't a no-op range... */
+      if (range_start_rev != range_end_rev)
+        {
+          /* ...then create an svn_merge_range_t object for it. */
+          svn_merge_range_t *range = apr_pcalloc(pool, sizeof(*range));
+          range->start = range_start_rev;
+          range->end = range_end_rev;
+          range->inheritable = TRUE;
+         
+          /* Add our merge range to our list thereof. */
+          APR_ARRAY_PUSH(merge_range_ts, svn_merge_range_t *) = range;
+        }
+    }
+
+  /* Okay.  We have a list of svn_merge_range_t's.  Now, we need to
+     compact that list to remove redundances and such. */
+  SVN_ERR(compact_merge_ranges(&merge_range_ts, merge_range_ts, pool));
+
+  /* Find the extremes of the revisions across our set of ranges. */
+  for (i = 0; i < merge_range_ts->nelts; i++)
+    {
+      svn_merge_range_t *range = APR_ARRAY_IDX(merge_range_ts, i, 
+                                               svn_merge_range_t *);
+      svn_revnum_t minrev = MIN(range->start, range->end);
+      svn_revnum_t maxrev = MAX(range->start, range->end);
+
+      if ((! SVN_IS_VALID_REVNUM(oldest_requested))
+          || (minrev < oldest_requested))
+        oldest_requested = minrev;
+      if ((! SVN_IS_VALID_REVNUM(youngest_requested))
+          || (maxrev < youngest_requested))
+        youngest_requested = maxrev;
+    }
+
+  if (peg_revision < youngest_requested)
+    /* ### FIXME:  This is no excuse for program death, but our
+       underlying APIs can't yet handle the case. */
+    abort();
+
+  /* ### TODO: I need a linked-list of merge_source_t's here. */
+  nls.merge_range_ts = merge_range_ts;
+  nls_receiver_baton.merge_source_ts = 
+    apr_array_make(pool, merge_range_ts->nelts, 
+                   sizeof(struct merge_source_t *));
+  for (i = 0; i < merge_range_ts->nelts; i++)
+    {
+      APR_ARRAY_PUSH(merge_source_ts, struct merge_source_t *) = NULL;
+    }
+  SVN_ERR(svn_ra_get_location_segments(ra_session, "", peg_revnum,
+                                       youngest_requested, oldest_requested,
+                                       nls_receiver, nls_receiver_baton,
+                                       pool));
+
+  return SVN_NO_ERROR;
+}
+  
 
 /*-----------------------------------------------------------------------*/
 
