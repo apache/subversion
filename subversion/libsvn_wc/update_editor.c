@@ -2987,6 +2987,12 @@ locate_copyfrom(const char *copyfrom_path,
   if (strcmp(file_url, file_entry->url) != 0)
     return SVN_NO_ERROR;
 
+  /* Do we actually have valid revisions for the file?  (See Issue
+     #2977.) */
+  if (! (SVN_IS_VALID_REVNUM(file_entry->cmt_rev)
+         && SVN_IS_VALID_REVNUM(file_entry->revision)))
+    return SVN_NO_ERROR;
+
   /* Do we have the the right *version* of the file? */
   if (! ((file_entry->cmt_rev <= copyfrom_rev)
          && (copyfrom_rev <= file_entry->revision)))
@@ -3104,6 +3110,9 @@ add_file_with_history(const char *path,
       apr_hash_this(hi, &key, NULL, &val);
       propname = key;
       propval = val;
+
+      if (svn_property_kind(NULL, propname) == svn_prop_entry_kind)
+        continue;
       SVN_ERR(change_file_prop(tfb, propname, propval, pool));
     }
 
