@@ -425,7 +425,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
               if (result == NULL)
                 return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
                                         NULL, _("Conflict callback violated API:"
-                                                " returned no results."));
+                                                " returned no results"));
 
               switch (result->choice)
                 {
@@ -717,7 +717,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                       return svn_error_create
                           (SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
                            NULL, _("Conflict callback violated API:"
-                                   " returned no merged file."));
+                                   " returned no merged file"));
                     }
                   else
                     {
