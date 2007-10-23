@@ -3334,6 +3334,36 @@ def diff_ignore_eolstyle_empty_lines(sbox):
                                      'diff', '-x', '--ignore-eol-style',
                                      file_path)
 
+def diff_backward_repos_wc_copy(sbox):
+  "backward repos->wc diff with copied file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  os.chdir(wc_dir)
+
+  # copy a file
+  mu_path = os.path.join('A', 'mu')
+  mucp_path = os.path.join('A', 'mucopy')
+  svntest.main.run_svn(None, 'cp', mu_path, mucp_path)
+
+  # commit r2 and update back to r1
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+  svntest.main.run_svn(None, 'up', '-r1')
+
+  # diff r2 against working copy
+  diff_repos_wc = [
+    "Index: A/mucopy\n",
+    "===================================================================\n",
+    "--- A/mucopy\t(revision 2)\n",
+    "+++ A/mucopy\t(working copy)\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'mu'.\n",
+  ]
+
+  svntest.actions.run_and_verify_svn(None, diff_repos_wc, [],
+                                     'diff', '-r' , '2')
+
+
 ########################################################################
 #Run the tests
 
@@ -3383,6 +3413,7 @@ test_list = [ None,
               diff_in_renamed_folder,
               diff_with_depth,
               diff_ignore_eolstyle_empty_lines,
+              diff_backward_repos_wc_copy,
               ]
 
 if __name__ == '__main__':
