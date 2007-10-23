@@ -3789,7 +3789,7 @@ test_list = [ None,
               copyfrom_degrades_gracefully,
               SkipUnless(update_handles_copyfrom_with_txdeltas,
                          server_sends_copyfrom_on_update),
-              XFail(update_copied_from_replaced_and_changed),
+              update_copied_from_replaced_and_changed,
               update_accept_conflicts,
              ]
 
