@@ -247,6 +247,7 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
 {
   apr_array_header_t *props;
   struct merge_cmd_baton *merge_b = baton;
+  svn_client_ctx_t *ctx = merge_b->ctx;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_error_t *err;
 
@@ -264,11 +265,12 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
       if (svn_path_compare_paths(svn_wc_adm_access_path(adm_access),
                                  path) != 0)
         SVN_ERR(svn_wc_adm_probe_try3(&adm_access, adm_access, path,
-                                      TRUE, -1, merge_b->ctx->cancel_func,
-                                      merge_b->ctx->cancel_baton, subpool));
+                                      TRUE, -1, ctx->cancel_func,
+                                      ctx->cancel_baton, subpool));
 
-      err = svn_wc_merge_props(state, path, adm_access, original_props, props,
-                               FALSE, merge_b->dry_run, subpool);
+      err = svn_wc_merge_props2(state, path, adm_access, original_props, props,
+                                FALSE, merge_b->dry_run, ctx->conflict_func,
+                                ctx->conflict_baton, subpool);
       if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND
                   || err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE))
         {
