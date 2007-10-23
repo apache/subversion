@@ -3347,7 +3347,10 @@ def diff_backward_repos_wc_copy(sbox):
   svntest.main.run_svn(None, 'cp', mu_path, mucp_path)
 
   # commit r2 and update back to r1
-  svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'ci', '-m', 'log msg')
   svntest.main.run_svn(None, 'up', '-r1')
 
   # diff r2 against working copy
