@@ -324,7 +324,7 @@ svn_client_status3(svn_revnum_t *result_rev,
             {
               /* Get a revision number for our status operation. */
               SVN_ERR(svn_client__get_revision_number
-                      (&revnum, ra_session, revision, target, pool));
+                      (&revnum, NULL, ra_session, revision, target, pool));
             }
 
           /* Do the deed.  Let the RA layer drive the status editor. */

@@ -33,6 +33,7 @@
 
 svn_error_t *
 svn_client__get_revision_number(svn_revnum_t *revnum,
+                                svn_revnum_t *youngest_rev,
                                 svn_ra_session_t *ra_session,
                                 const svn_opt_revision_t *revision,
                                 const char *path,
@@ -49,9 +50,23 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
       break;
 
     case svn_opt_revision_head:
-      if (! ra_session)
-        return svn_error_create(SVN_ERR_CLIENT_RA_ACCESS_REQUIRED, NULL, NULL);
-      SVN_ERR(svn_ra_get_latest_revnum(ra_session, revnum, pool));
+      /* If our caller provided a value for HEAD that he wants us to
+         use, we'll use it.  Otherwise, we have to query the
+         repository (and possible return our fetched value in
+         *YOUNGEST_REV, too). */
+      if (youngest_rev && SVN_IS_VALID_REVNUM(*youngest_rev))
+        {
+          *revnum = *youngest_rev;
+        }
+      else
+        {
+          if (! ra_session)
+            return svn_error_create(SVN_ERR_CLIENT_RA_ACCESS_REQUIRED, 
+                                    NULL, NULL);
+          SVN_ERR(svn_ra_get_latest_revnum(ra_session, revnum, pool));
+          if (youngest_rev)
+            *youngest_rev = *revnum;
+        }
       break;
 
     case svn_opt_revision_committed:
@@ -112,7 +127,16 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
                                  "'%s'"),
                                svn_path_local_style(path, pool));
     }
-    
+
+  /* Final check -- if our caller provided a youngest revision, and
+  the number we wound up with is younger than that revision, we need
+  to stick to our caller's idea of "youngest". */
+  if (youngest_rev 
+      && SVN_IS_VALID_REVNUM(*youngest_rev) 
+      && SVN_IS_VALID_REVNUM(*revnum)
+      && (*revnum > *youngest_rev))
+    *revnum = *youngest_rev;
+
   return SVN_NO_ERROR;
 }
 

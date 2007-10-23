@@ -836,8 +836,8 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session, path_or_url,
                                                    NULL, NULL, NULL, FALSE,
                                                    TRUE, ctx, pool));
-      SVN_ERR(svn_client__get_revision_number(&rev, ra_session, peg_revision, 
-                                              "", pool));
+      SVN_ERR(svn_client__get_revision_number(&rev, NULL, ra_session, 
+                                              peg_revision, "", pool));
       SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
       SVN_ERR(svn_client__path_relative_to_root(&repos_rel_path, path_or_url,
                                                 repos_root, NULL, NULL, pool));
@@ -922,7 +922,7 @@ svn_client_mergeinfo_get_available(apr_array_header_t **merge_ranges,
                                                NULL, NULL, NULL, FALSE,
                                                TRUE, ctx, pool));
   head_revision.kind = svn_opt_revision_head;
-  SVN_ERR(svn_client__get_revision_number(&(full_range->end), ra_session,
+  SVN_ERR(svn_client__get_revision_number(&(full_range->end), NULL, ra_session,
                                           &head_revision, "", pool));
 
   /* ### FIXME: What if MERGE_SOURCE_URL no longer exists in HEAD?

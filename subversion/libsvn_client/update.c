@@ -190,7 +190,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   /* ### todo: shouldn't svn_client__get_revision_number be able
      to take a URL as easily as a local path?  */
   SVN_ERR(svn_client__get_revision_number
-          (&revnum, ra_session, revision, path, pool));
+          (&revnum, NULL, ra_session, revision, path, pool));
 
   /* Take the chance to set the repository root on the target.
      Why do we bother doing this for old working copies?

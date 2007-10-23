@@ -496,14 +496,14 @@ svn_client_log4(const apr_array_header_t *targets,
    * entries if the paths and revisions were passed down.
    */
   {
-    svn_revnum_t start_revnum, end_revnum;
+    svn_revnum_t start_revnum, end_revnum, youngest_rev = SVN_INVALID_REVNUM;
     const char *path = APR_ARRAY_IDX(targets, 0, const char *);
     svn_error_t *err;
 
     SVN_ERR(svn_client__get_revision_number
-            (&start_revnum, ra_session, start, path, pool));
+            (&start_revnum, &youngest_rev, ra_session, start, path, pool));
     SVN_ERR(svn_client__get_revision_number
-            (&end_revnum, ra_session, end, path, pool));
+            (&end_revnum, &youngest_rev, ra_session, end, path, pool));
 
     /* TODO(epg): Instead of assuming that NOT_IMPLEMENTED means
      * revprop-filtering is not supported, introduce a new capability

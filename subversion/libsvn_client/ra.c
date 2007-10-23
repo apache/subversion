@@ -403,6 +403,7 @@ svn_client__repos_locations(const char **start_url,
   const char *end_path = NULL;
   svn_revnum_t peg_revnum = SVN_INVALID_REVNUM;
   svn_revnum_t start_revnum, end_revnum;
+  svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
   apr_array_header_t *revs;
   apr_hash_t *rev_locs;
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -464,16 +465,16 @@ svn_client__repos_locations(const char **start_url,
 
   /* Resolve the opt_revision_ts. */
   if (peg_revnum == SVN_INVALID_REVNUM)
-    SVN_ERR(svn_client__get_revision_number(&peg_revnum,
+    SVN_ERR(svn_client__get_revision_number(&peg_revnum, &youngest_rev,
                                             ra_session, revision, path,
                                             pool));
 
-  SVN_ERR(svn_client__get_revision_number(&start_revnum,
+  SVN_ERR(svn_client__get_revision_number(&start_revnum, &youngest_rev,
                                           ra_session, start, path, pool));
   if (end->kind == svn_opt_revision_unspecified)
     end_revnum = start_revnum;
   else
-    SVN_ERR(svn_client__get_revision_number(&end_revnum,
+    SVN_ERR(svn_client__get_revision_number(&end_revnum, &youngest_rev,
                                             ra_session, end, path, pool));
 
   /* Set the output revision variables. */
@@ -596,10 +597,10 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
   SVN_ERR(svn_ra_reparent(ra_session, url, pool));
 
   /* Resolve good_rev into a real revnum. */
-  SVN_ERR(svn_client__get_revision_number(&rev, ra_session,
+  if (good_rev->kind == svn_opt_revision_unspecified)
+    good_rev->kind == svn_opt_revision_head;
+  SVN_ERR(svn_client__get_revision_number(&rev, NULL, ra_session,
                                           good_rev, url, pool));
-  if (! SVN_IS_VALID_REVNUM(rev))
-    SVN_ERR(svn_ra_get_latest_revnum(ra_session, &rev, pool));
 
   *ra_session_p = ra_session;
   *rev_p = rev;

@@ -883,8 +883,8 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
       /* Pass NULL for the path, to ensure error if trying to get a
          revision based on the working copy. */
       SVN_ERR(svn_client__get_revision_number
-              (&pair->src_revnum, ra_session, &pair->src_op_revision, NULL,
-               pool));
+              (&pair->src_revnum, NULL, ra_session, &pair->src_op_revision, 
+               NULL, pool));
 
       info->src_revnum = pair->src_revnum;
 
@@ -1559,8 +1559,8 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
                                                     svn_client__copy_pair_t *);
 
       SVN_ERR(svn_client__get_revision_number
-              (&pair->src_revnum, ra_session, &pair->src_op_revision, NULL,
-               pool));
+              (&pair->src_revnum, NULL, ra_session, &pair->src_op_revision, 
+               NULL, pool));
     }
 
   /* Get the correct src path for the peg revision used, and verify that we

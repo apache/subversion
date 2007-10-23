@@ -946,7 +946,7 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
 
   /* Resolve revision and get path kind for the second target. */
   SVN_ERR(svn_client__get_revision_number
-          (&drr->rev2, ra_session, params->revision2,
+          (&drr->rev2, NULL, ra_session, params->revision2,
            (params->path2 == drr->url2) ? NULL : params->path2, pool));
   SVN_ERR(svn_ra_check_path(ra_session, "", drr->rev2, &kind2, pool));
   if (kind2 == svn_node_none)
@@ -958,7 +958,7 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
   /* Do the same for the first target. */
   SVN_ERR(svn_ra_reparent(ra_session, drr->url1, pool));
   SVN_ERR(svn_client__get_revision_number
-          (&drr->rev1, ra_session, params->revision1,
+          (&drr->rev1, NULL, ra_session, params->revision1,
            (params->path1 == drr->url1) ? NULL : params->path1, pool));
   SVN_ERR(svn_ra_check_path(ra_session, "", drr->rev1, &kind1, pool));
   if (kind1 == svn_node_none)
@@ -1089,7 +1089,7 @@ diff_wc_wc(const apr_array_header_t *options,
 
   /* Resolve named revisions to real numbers. */
   SVN_ERR(svn_client__get_revision_number
-          (&callback_baton->revnum1, NULL, revision1, path1, pool));
+          (&callback_baton->revnum1, NULL, NULL, revision1, path1, pool));
   callback_baton->revnum2 = SVN_INVALID_REVNUM;  /* WC */
 
   SVN_ERR(svn_wc_diff4(adm_access, target, callbacks, callback_baton,
@@ -1274,7 +1274,7 @@ diff_repos_wc(const apr_array_header_t *options,
 
   /* Tell the RA layer we want a delta to change our txn to URL1 */
   SVN_ERR(svn_client__get_revision_number
-          (&rev, ra_session, revision1,
+          (&rev, NULL, ra_session, revision1,
            (path1 == url1) ? NULL : path1, pool));
 
   if (!reverse)
