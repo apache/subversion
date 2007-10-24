@@ -377,7 +377,6 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision,
     env->ReleaseLongArrayElements(jrevs, jrevArray, 0);
 
     return jrevs;
-
 }
 
 jlong SVNClient::commit(Targets &targets, const char *message,
