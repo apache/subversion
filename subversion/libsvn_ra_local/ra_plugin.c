@@ -1055,7 +1055,6 @@ svn_ra_local__get_file(svn_ra_session_t *session,
                                ? sbaton->callbacks->cancel_func : NULL,
                                sbaton->callback_baton,
                                pool));
-      SVN_ERR(svn_stream_close(contents));
     }
 
   /* Handle props if requested. */
