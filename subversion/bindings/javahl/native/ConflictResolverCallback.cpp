@@ -154,8 +154,8 @@ ConflictResolverCallback::resolve(svn_wc_conflict_result_t **result,
 
   // Instantiate the conflict descriptor.
   jobject jdesc = env->NewObject(clazz, ctor, jpath,
-                                 EnumMapper::mapNodeKind(desc->node_kind),
                                  EnumMapper::mapConflictKind(desc->kind),
+                                 EnumMapper::mapNodeKind(desc->node_kind),
                                  jpropertyName,
                                  (jboolean) desc->is_binary, jmimeType,
                                  EnumMapper::mapConflictAction(desc->action),
