@@ -29,14 +29,14 @@ public class ConflictDescriptor
     private String path;
 
     /**
-     * @see .Kind
-     */
-    private int conflictKind;
-
-    /**
      * @see NodeKind
      */
     private int nodeKind;
+
+    /**
+     * @see .Kind
+     */
+    private int conflictKind;
 
     private String propertyName;
 
@@ -71,15 +71,15 @@ public class ConflictDescriptor
     private String myPath;
     private String mergedPath;
 
-    ConflictDescriptor(String path, int conflictKind, int nodeKind,
+    ConflictDescriptor(String path, int nodeKind, int conflictKind,
                        String propertyName, boolean isBinary, String mimeType,
                        int action, int reason,
                        String basePath, String theirPath,
                        String myPath, String mergedPath)
     {
         this.path = path;
-        this.conflictKind = conflictKind;
         this.nodeKind = nodeKind;
+        this.conflictKind = conflictKind;
         this.propertyName = propertyName;
         this.isBinary = isBinary;
         this.mimeType = mimeType;
@@ -97,19 +97,19 @@ public class ConflictDescriptor
     }
 
     /**
-     * @see .Kind
-     */
-    public int getKind()
-    {
-        return conflictKind;
-    }
-
-    /**
      * @see NodeKind
      */
     public int getNodeKind()
     {
         return nodeKind;
+    }
+
+    /**
+     * @see .Kind
+     */
+    public int getKind()
+    {
+        return conflictKind;
     }
 
     public String getPropertyName()
