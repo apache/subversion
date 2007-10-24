@@ -741,6 +741,9 @@ struct file_baton
   /* Set if this file is new. */
   svn_boolean_t added;
 
+  /* Set if this file is new with history. */
+  svn_boolean_t added_with_history;
+
   /* Set if this file is skipped because it was in conflict. */
   svn_boolean_t skipped;
 
@@ -752,10 +755,6 @@ struct file_baton
      scheduled for addition without history. */
   svn_boolean_t add_existed;
 
-  /* Whether or not we should call the notification callback when
-     close_file() is invoked on this baton. */
-  svn_boolean_t send_notification;
-
   /* The path to the current text base, if any.
      This gets set if there are file content changes. */
   const char *text_base_path;
@@ -763,6 +762,13 @@ struct file_baton
   /* This gets set if the file underwent a text change, which guides
      the code that syncs up the adm dir and working copy. */
   const char *new_text_base_path;
+
+  /* If this file was added with history, this is the path to a copy
+     of the text base of the copyfrom file (in the temporary area). */
+  const char *copyfrom_text_base;
+  
+  /* Set if we've received an apply_textdelta for this file. */
+  svn_boolean_t received_textdelta;
 
   /* An array of svn_prop_t structures, representing all the property
      changes to be applied to this file. */
@@ -876,7 +882,6 @@ make_file_baton(struct file_baton **f_p,
   f->added             = adding;
   f->existed           = FALSE;
   f->add_existed       = FALSE;
-  f->send_notification = TRUE;
   f->dir_baton         = pb;
   f->ambient_depth     = svn_depth_empty;
 
@@ -909,7 +914,11 @@ window_handler(svn_txdelta_window_t *window, void *baton)
      case, clean up the handler.  */
   if (hb->source)
     {
-      err2 = svn_wc__close_text_base(hb->source, fb->path, 0, hb->pool);
+      if (fb->copyfrom_text_base)
+        err2 = svn_io_file_close(hb->source, hb->pool);
+      else
+        err2 = svn_wc__close_text_base(hb->source, fb->path, 0, hb->pool);
+
       if (err2 && !err)
         err = err2;
       else
@@ -2093,6 +2102,7 @@ open_file(const char *path,
           svn_wc_notify_t *notify
             = svn_wc_create_notify(fb->path, svn_wc_notify_skip, pool);
           notify->kind = svn_node_file;
+
           notify->content_state = text_conflicted
             ? svn_wc_notify_state_conflicted
             : svn_wc_notify_state_unknown;
@@ -2108,34 +2118,25 @@ open_file(const char *path,
   return SVN_NO_ERROR;
 }
 
-
+/* Fills out the text_base_path and new_text_base_path fields in
+   FILE_BATON (to text-base or revert-base); if CHECKSUM_P is non-NULL
+   and the path already has an entry, sets *CHECKSUM_P to the checksum
+   from its entry. If non-NULL, set *REPLACED_P and *USE_REVERT_BASE_P
+   to whether or not the entry is replaced and whether or not it needs
+   to use the revert base (ie, it is replaced with history)
+   respectively. */
 static svn_error_t *
-apply_textdelta(void *file_baton,
-                const char *base_checksum,
-                apr_pool_t *pool,
-                svn_txdelta_window_handler_t *handler,
-                void **handler_baton)
+choose_base_paths(const char **checksum_p,
+                  svn_boolean_t *replaced_p,
+                  svn_boolean_t *use_revert_base_p,
+                  struct file_baton *fb,
+                  apr_pool_t *pool)
 {
-  struct file_baton *fb = file_baton;
   struct edit_baton *eb = fb->edit_baton;
-  apr_pool_t *handler_pool = svn_pool_create(fb->pool);
-  struct handler_baton *hb = apr_palloc(handler_pool, sizeof(*hb));
-  svn_error_t *err;
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *ent;
-  svn_boolean_t replaced;
-  svn_boolean_t use_revert_base;
+  svn_boolean_t replaced, use_revert_base;
 
-  if (fb->skipped || fb->ambient_depth == svn_depth_exclude)
-    {
-      *handler = svn_delta_noop_window_handler;
-      *handler_baton = NULL;
-      return SVN_NO_ERROR;
-    }
-
-  /* Before applying incoming svndiff data to text base, make sure
-     text base hasn't been corrupted, and that its checksum
-     matches the expected base checksum. */
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                               svn_path_dirname(fb->path, pool), pool));
   SVN_ERR(svn_wc_entry(&ent, fb->path, adm_access, FALSE, pool));
@@ -2155,12 +2156,58 @@ apply_textdelta(void *file_baton,
                                                       fb->pool);
     }
 
+  if (checksum_p)
+    {
+      *checksum_p = NULL;
+      if (ent)
+        *checksum_p = ent->checksum;
+    } 
+  if (replaced_p)
+    *replaced_p = replaced;
+  if (use_revert_base_p)
+    *use_revert_base_p = use_revert_base;
+  
+  return SVN_NO_ERROR;
+}
+
+
+
+static svn_error_t *
+apply_textdelta(void *file_baton,
+                const char *base_checksum,
+                apr_pool_t *pool,
+                svn_txdelta_window_handler_t *handler,
+                void **handler_baton)
+{
+  struct file_baton *fb = file_baton;
+  apr_pool_t *handler_pool = svn_pool_create(fb->pool);
+  struct handler_baton *hb = apr_palloc(handler_pool, sizeof(*hb));
+  svn_error_t *err;
+  const char *checksum;
+  svn_boolean_t replaced;
+  svn_boolean_t use_revert_base;
+
+  if (fb->skipped || fb->ambient_depth == svn_depth_exclude)
+    {
+      *handler = svn_delta_noop_window_handler;
+      *handler_baton = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  fb->received_textdelta = TRUE;
+
+  /* Before applying incoming svndiff data to text base, make sure
+     text base hasn't been corrupted, and that its checksum
+     matches the expected base checksum. */
+  SVN_ERR(choose_base_paths(&checksum, &replaced, &use_revert_base,
+                            fb, pool));
+
   /* Only compare checksums if this file has an entry, and the entry has
      a checksum.  If there's no entry, it just means the file is
      created in this update, so there won't be any previously recorded
      checksum to compare against.  If no checksum, well, for backwards
      compatibility we assume that no checksum always matches. */
-  if (ent && ent->checksum)
+  if (checksum)
     {
       unsigned char digest[APR_MD5_DIGESTSIZE];
       const char *hex_digest;
@@ -2181,13 +2228,12 @@ apply_textdelta(void *file_baton,
                hex_digest);
         }
 
-      if ((ent && ent->checksum) && ! replaced &&
-          strcmp(hex_digest, ent->checksum) != 0)
+      if (! replaced && strcmp(hex_digest, checksum) != 0)
         {
           return svn_error_createf
             (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
              _("Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"),
-             svn_path_local_style(fb->text_base_path, pool), ent->checksum,
+             svn_path_local_style(fb->text_base_path, pool), checksum,
              hex_digest);
         }
     }
@@ -2219,7 +2265,13 @@ apply_textdelta(void *file_baton,
 
     }
   else
-    hb->source = NULL;
+    {
+      if (fb->copyfrom_text_base)
+        SVN_ERR(svn_io_file_open(&hb->source, fb->copyfrom_text_base,
+                                 APR_READ, APR_OS_DEFAULT, handler_pool));
+      else
+        hb->source = NULL;
+    }
 
   /* Open the text base for writing (this will get us a temporary file).  */
 
@@ -2602,10 +2654,17 @@ merge_file(svn_wc_notify_state_t *content_state,
 
               /* Create strings representing the revisions of the
                  old and new text-bases. */
-              oldrev_str = apr_psprintf(pool, ".r%ld%s%s",
-                                        entry->revision,
-                                        *path_ext ? "." : "",
-                                        *path_ext ? path_ext : "");
+              /* Either an old version, or an add-with-history */
+              if (fb->added_with_history)
+                oldrev_str = apr_psprintf(pool, ".copied%s%s",
+                                          *path_ext ? "." : "",
+                                          *path_ext ? path_ext : "");
+              else
+                oldrev_str = apr_psprintf(pool, ".r%ld%s%s",
+                                          entry->revision,
+                                          *path_ext ? "." : "",
+                                          *path_ext ? path_ext : "");
+                                          
               newrev_str = apr_psprintf(pool, ".r%ld%s%s",
                                         *eb->target_revision,
                                         *path_ext ? "." : "",
@@ -2776,6 +2835,27 @@ close_file(void *file_baton,
       return SVN_NO_ERROR;
     }
 
+  /* Was this an add-with-history, with no apply_textdelta? */
+  if (fb->added_with_history && ! fb->received_textdelta)
+    {
+      assert(! fb->text_base_path && ! fb->new_text_base_path 
+             && fb->copyfrom_text_base);
+
+      /* Set up the base paths like apply_textdelta does. */
+      SVN_ERR(choose_base_paths(NULL, NULL, NULL, fb, pool));
+
+      /* Now simulate applying a trivial delta. */
+      SVN_ERR(svn_io_copy_file(fb->copyfrom_text_base,
+                               fb->new_text_base_path,
+                               TRUE, pool));
+      SVN_ERR(svn_io_file_checksum(fb->digest,
+                                   fb->new_text_base_path,
+                                   pool));
+
+      /* XXXdsg optimization by making that a rename and making sure
+         not to delete later? */
+    }
+
   /* window-handler assembles new pristine text in .svn/tmp/text-base/  */
   if (fb->new_text_base_path && text_checksum)
     {
@@ -2796,8 +2876,7 @@ close_file(void *file_baton,
   if (((content_state != svn_wc_notify_state_unchanged) ||
        (prop_state != svn_wc_notify_state_unchanged) ||
        (lock_state != svn_wc_notify_lock_state_unchanged))
-      && eb->notify_func
-      && fb->send_notification)
+      && eb->notify_func)
     {
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action = svn_wc_notify_update_update;
@@ -3034,26 +3113,20 @@ add_file_with_history(const char *path,
   const char *src_path;
   apr_hash_t *base_props;
   apr_hash_index_t *hi;
-  apr_file_t *textbase_file;
   const svn_wc_entry_t *path_entry;
   svn_error_t *err;
 
-  /* First, fake an add_file() call, just to generate a temporary
-     file_baton that we can push data at.  Notice that we don't send
-     any copyfrom args, lest we end up infinitely recursing.  :-)  */
+  /* First, fake an add_file() call.  Notice that we don't send any
+     copyfrom args, lest we end up infinitely recursing.  :-)  */
   SVN_ERR(add_file(path, parent_baton, NULL, SVN_INVALID_REVNUM, pool, &fb));
   tfb = (struct file_baton *)fb;
+  tfb->added_with_history = TRUE;
 
   if (tfb->ambient_depth == svn_depth_exclude)
     {
       *file_baton = tfb;
       return SVN_NO_ERROR;
     }
-
-  /* Initialize the text-bases for the new file baton, the same way
-     apply_textdelta() does. */
-  tfb->text_base_path = svn_wc__text_base_path(tfb->path, FALSE, tfb->pool);
-  tfb->new_text_base_path = svn_wc__text_base_path(tfb->path, TRUE, tfb->pool);
 
   /* Attempt to locate the copyfrom_path in the working copy first. */
   SVN_ERR(svn_wc_entry(&path_entry, pb->path, eb->adm_access, FALSE, pool));
@@ -3065,21 +3138,33 @@ add_file_with_history(const char *path,
   else if (err)
     return err;
 
+  SVN_ERR(svn_wc_adm_retrieve(&adm_access, pb->edit_baton->adm_access,
+                              pb->path, pb->pool));
+  /* Make a unique file name for the copyfrom text-base. */
+  SVN_ERR(svn_wc_create_tmp_file2(NULL, &tfb->copyfrom_text_base,
+                                  svn_wc_adm_access_path(adm_access),
+                                  svn_io_file_del_none,
+                                  pool));
+
   if (src_path != NULL) /* Found a file to copy */
     {
       /* Copy the existing file's text-base over to the (temporary)
          new text-base, where the file baton expects it to be. */
       const char *src_text_base_path = svn_wc__text_base_path(src_path,
                                                               FALSE, pool);
-      SVN_ERR(svn_io_copy_file(src_text_base_path, tfb->new_text_base_path,
+      SVN_ERR(svn_io_copy_file(src_text_base_path, tfb->copyfrom_text_base,
                                TRUE, pool));
 
+      /* XXXdsg look at props */
       /* Grab the existing file's base-props into memory. */
       SVN_ERR(svn_wc__load_props(&base_props, NULL, NULL,
                                  src_access, src_path, pool));
     }
   else  /* Couldn't find a file to copy  */
     {
+      apr_file_t *textbase_file;
+      svn_stream_t *textbase_stream;
+
       /* Fall back to fetching it from the repository instead. */
 
       if (! eb->fetch_func)
@@ -3088,17 +3173,20 @@ add_file_with_history(const char *path,
 
       /* Fetch the repository file's text-base and base-props;
          svn_stream_close() automatically closes the text-base file for us. */
-      SVN_ERR(svn_wc__open_text_base(&textbase_file, tfb->path,
-                                     (APR_WRITE | APR_TRUNCATE | APR_CREATE),
-                                     pool));
+      SVN_ERR(svn_io_file_open(&textbase_file, tfb->copyfrom_text_base,
+                               (APR_WRITE | APR_TRUNCATE | APR_CREATE),
+                               APR_OS_DEFAULT, pool));
+      textbase_stream = svn_stream_from_aprfile2(textbase_file, FALSE, pool);
 
       /* copyfrom_path is a absolute path, fetch_func requires a path relative
          to the root of the repository so skip the first '/'. */
       SVN_ERR(eb->fetch_func(eb->fetch_baton, copyfrom_path + 1, copyfrom_rev,
-                             svn_stream_from_aprfile(textbase_file, pool),
+                             textbase_stream,
                              NULL, &base_props, pool));
+      SVN_ERR(svn_stream_close(textbase_stream));
     }
 
+  /* XXXdsg think about props */
   /* Loop over whatever base-props we have in memory, faking change_file_prop()
      calls against the file baton. */
   for (hi = apr_hash_first(pool, base_props); hi; hi = apr_hash_next(hi))
@@ -3116,17 +3204,7 @@ add_file_with_history(const char *path,
       SVN_ERR(change_file_prop(tfb, propname, propval, pool));
     }
 
-  /* Now 'install' the file baton in the usual loggy way. */
-  SVN_ERR(close_file(tfb, NULL, pool));
-
-  /* Execute the parent-dir's logs, so that the file *actually* comes
-     into existence, rather than at close_directory() time.  */
-  SVN_ERR(svn_wc_adm_retrieve(&adm_access, pb->edit_baton->adm_access,
-                              pb->path, pb->pool));
-  SVN_ERR(flush_log(pb, pool));
-  SVN_ERR(svn_wc__run_log(adm_access, pb->edit_baton->diff3_cmd, pb->pool));
-  pb->log_number = 0;
-
+  /* XXXdsg: need to loggify this */
   if (src_path != NULL)
     {
       /* If we copied an existing file over, we need copy its working
@@ -3163,24 +3241,12 @@ add_file_with_history(const char *path,
         }
     }
 
+  /* XXXdsg revisit this comment */
   /* At this point we've successfully simulated the normal addition of
      a file.  However, any forthcoming apply_textdelta() calls from
      the server are deltas against this new file.  This means the
      editor-driver needs a file_baton that can be safely passed to
      apply_textdelta(), which means re-opening the file. */
-  SVN_ERR(open_file(path, parent_baton, SVN_INVALID_REVNUM, pool, &fb));
-  tfb = (struct file_baton *)fb;
-
-  if (tfb->ambient_depth == svn_depth_exclude)
-    {
-      *file_baton = tfb;
-      return SVN_NO_ERROR;
-    }
-
-  /* We don't want this trailing open_file()/close_file() combo to be
-     signaled to the client's output, however.  The general policy is
-     to call the notification callback only -once- per file. */
-  tfb->send_notification = FALSE;
 
   *file_baton = tfb;
   return SVN_NO_ERROR;
