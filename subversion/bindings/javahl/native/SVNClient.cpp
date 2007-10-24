@@ -1126,9 +1126,11 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     ctx->progress_func = ProgressListener::progress;
     ctx->progress_baton = m_progressListener;
 
-    ctx->conflict_func = (m_conflictResolver ?
-                          ConflictResolverCallback::resolveConflict : NULL);
-    ctx->conflict_baton = m_conflictResolver;
+    if (m_conflictResolver)
+    {
+        ctx->conflict_func = ConflictResolverCallback::resolveConflict;
+        ctx->conflict_baton = m_conflictResolver;
+    }
 
     return ctx;
 }
