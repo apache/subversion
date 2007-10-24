@@ -765,13 +765,11 @@ struct file_baton
 
   /* If this file was added with history, this is the path to a copy
      of the text base of the copyfrom file (in the temporary area). */
-  /* XXXdsg clean up this file */
   const char *copyfrom_text_base;
   
   /* If this file was added with history, and the copyfrom had local
      mods, this is the path to a copy of the user's version with local
      mods (in the temporary area). */
-  /* XXXdsg clean up this file */
   const char *copied_working_text;
   
   /* Set if we've received an apply_textdelta for this file. */
@@ -2646,7 +2644,7 @@ merge_file(svn_wc_notify_state_t *content_state,
               /* Now we need to let loose svn_wc__merge_internal() to merge
                  the textual changes into the working file. */
               const char *oldrev_str, *newrev_str, *mine_str;
-              const char *merge_left, *merge_target;
+              const char *merge_left;
               const char *path_ext = "";
 
               /* If we have any file extensions we're supposed to
@@ -2697,12 +2695,6 @@ merge_file(svn_wc_notify_state_t *content_state,
               else
                 merge_left = fb->text_base_path;
 
-              merge_target = 
-                fb->copied_working_text ? fb->copied_working_text : fb->path;
-
-              /* XXXdsg need to tell merge_internal that fb->path is
-                 where it ends up but the text is in merge_target */
-
               /* Merge the changes from the old textbase to the new
                  textbase into the file we're updating.
                  Remember that this function wants full paths! */
@@ -2711,6 +2703,7 @@ merge_file(svn_wc_notify_state_t *content_state,
                        merge_left,
                        fb->new_text_base_path,
                        fb->path,
+                       fb->copied_working_text,
                        adm_access,
                        oldrev_str, newrev_str, mine_str,
                        FALSE, eb->diff3_cmd, NULL, fb->propchanges,
@@ -2720,6 +2713,12 @@ merge_file(svn_wc_notify_state_t *content_state,
               if (merge_left != fb->text_base_path)
                 SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
                                              merge_left, pool));
+
+              /* And clean up add-with-history-related temp file too. */
+              if (fb->copied_working_text)
+                SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
+                                             fb->copied_working_text, pool));
+
             } /* end: working file exists and has mods */
         } /* end: working file has mods */
     } /* end: "textual" merging process */
@@ -2809,6 +2808,13 @@ merge_file(svn_wc_notify_state_t *content_state,
               (&log_accum, adm_access, fb->path, pool));
     }
 
+  /* Clean up add-with-history temp file. */
+  if (fb->copyfrom_text_base)
+    SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
+                                 fb->copyfrom_text_base,
+                                 pool));
+
+
   /* Set the returned content state. */
 
   /* This is kind of interesting.  Even if no new text was
@@ -2870,9 +2876,6 @@ close_file(void *file_baton,
       SVN_ERR(svn_io_file_checksum(fb->digest,
                                    fb->new_text_base_path,
                                    pool));
-
-      /* XXXdsg optimization by making that a rename and making sure
-         not to delete later? */
     }
 
   /* window-handler assembles new pristine text in .svn/tmp/text-base/  */
