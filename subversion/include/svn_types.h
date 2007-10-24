@@ -811,6 +811,12 @@ svn_uuid_generate(apr_pool_t *pool);
 
 /**
  * Merge info representing a merge of a range of revisions.
+ *
+ * If the 'start' field is less than the 'end' field then 'start' is exclusive
+ * and 'end' inclusive of the range described.  If 'start' is greater than 'end'
+ * then the opposite is true.  If 'start' equals 'end' the meaning of the range
+ * is not defined.
+ *
  * @since New in 1.5
  */
 typedef struct svn_merge_range_t
