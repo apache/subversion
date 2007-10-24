@@ -765,7 +765,14 @@ struct file_baton
 
   /* If this file was added with history, this is the path to a copy
      of the text base of the copyfrom file (in the temporary area). */
+  /* XXXdsg clean up this file */
   const char *copyfrom_text_base;
+  
+  /* If this file was added with history, and the copyfrom had local
+     mods, this is the path to a copy of the user's version with local
+     mods (in the temporary area). */
+  /* XXXdsg clean up this file */
+  const char *copied_working_text;
   
   /* Set if we've received an apply_textdelta for this file. */
   svn_boolean_t received_textdelta;
@@ -2552,8 +2559,11 @@ merge_file(svn_wc_notify_state_t *content_state,
      Note that this compares to the current pristine file, which is
      different from fb->old_text_base_path if we have a replaced-with-history
      file.  However, in the case we had an obstruction, we check against the
-     new text base. */
-  if (! fb->existed)
+     new text base. (And if we're doing an add-with-history and we've already
+     saved a copy of a locally-modified file, then there certainly are mods.) */
+  if (fb->copied_working_text)
+    is_locally_modified = TRUE;
+  else if (! fb->existed)
     SVN_ERR(svn_wc__text_modified_internal_p(&is_locally_modified, fb->path,
                                              FALSE, adm_access, FALSE, pool));
   else if (fb->new_text_base_path)
@@ -2620,9 +2630,10 @@ merge_file(svn_wc_notify_state_t *content_state,
           svn_node_kind_t wfile_kind = svn_node_unknown;
 
           SVN_ERR(svn_io_check_path(fb->path, &wfile_kind, pool));
-          if (wfile_kind == svn_node_none) /* working file is missing?! */
+          if (wfile_kind == svn_node_none && ! fb->added_with_history)
             {
-              /* Just copy the new text-base to the file. */
+              /* working file is missing?! 
+                 Just copy the new text-base to the file. */
               SVN_ERR(svn_wc__loggy_copy(&log_accum, NULL, adm_access,
                                          svn_wc__copy_translate,
                                          fb->new_text_base_path,
@@ -2635,7 +2646,7 @@ merge_file(svn_wc_notify_state_t *content_state,
               /* Now we need to let loose svn_wc__merge_internal() to merge
                  the textual changes into the working file. */
               const char *oldrev_str, *newrev_str, *mine_str;
-              const char *merge_left;
+              const char *merge_left, *merge_target;
               const char *path_ext = "";
 
               /* If we have any file extensions we're supposed to
@@ -2681,8 +2692,16 @@ merge_file(svn_wc_notify_state_t *content_state,
                                                   svn_io_file_del_none,
                                                   pool));
                 }
+              else if (fb->copyfrom_text_base)
+                merge_left = fb->copyfrom_text_base;
               else
                 merge_left = fb->text_base_path;
+
+              merge_target = 
+                fb->copied_working_text ? fb->copied_working_text : fb->path;
+
+              /* XXXdsg need to tell merge_internal that fb->path is
+                 where it ends up but the text is in merge_target */
 
               /* Merge the changes from the old textbase to the new
                  textbase into the file we're updating.
@@ -3155,7 +3174,6 @@ add_file_with_history(const char *path,
       SVN_ERR(svn_io_copy_file(src_text_base_path, tfb->copyfrom_text_base,
                                TRUE, pool));
 
-      /* XXXdsg look at props */
       /* Grab the existing file's base-props into memory. */
       SVN_ERR(svn_wc__load_props(&base_props, NULL, NULL,
                                  src_access, src_path, pool));
@@ -3186,7 +3204,6 @@ add_file_with_history(const char *path,
       SVN_ERR(svn_stream_close(textbase_stream));
     }
 
-  /* XXXdsg think about props */
   /* Loop over whatever base-props we have in memory, faking change_file_prop()
      calls against the file baton. */
   for (hi = apr_hash_first(pool, base_props); hi; hi = apr_hash_next(hi))
@@ -3204,7 +3221,6 @@ add_file_with_history(const char *path,
       SVN_ERR(change_file_prop(tfb, propname, propval, pool));
     }
 
-  /* XXXdsg: need to loggify this */
   if (src_path != NULL)
     {
       /* If we copied an existing file over, we need copy its working
@@ -3217,36 +3233,40 @@ add_file_with_history(const char *path,
                                       src_access, pool));
 
       if (text_changed)
-        SVN_ERR(svn_io_copy_file(src_path, tfb->path, TRUE, pool));
+        {
+          /* Make a unique file name for the copied_working_text. */
+          SVN_ERR(svn_wc_create_tmp_file2(NULL, &tfb->copied_working_text,
+                                          svn_wc_adm_access_path(adm_access),
+                                          svn_io_file_del_none,
+                                          pool));
+
+          SVN_ERR(svn_io_copy_file(src_path, tfb->copied_working_text, TRUE, 
+                                   pool));
+        }
 
       if (props_changed)
         {
-          /* Apparently just copying the working-props file over
-             isn't a guaranteed-correct way to migrate the local
-             propchanges.  So we'll do it programmatically.  */
-          int i;
-          apr_array_header_t *propchanges;
-          apr_pool_t *iterpool = svn_pool_create(pool);
+          /* XXXdsg: grr.  No idea how to actually move local prop mods
+             over. */
+/*           /\* Apparently just copying the working-props file over */
+/*              isn't a guaranteed-correct way to migrate the local */
+/*              propchanges.  So we'll do it programmatically.  *\/ */
+/*           int i; */
+/*           apr_array_header_t *propchanges; */
+/*           apr_pool_t *iterpool = svn_pool_create(pool); */
 
-          SVN_ERR(svn_wc_get_prop_diffs(&propchanges, NULL, src_path,
-                                        src_access, pool));
-          for (i = 0; i < propchanges->nelts; i++)
-            {
-              const svn_prop_t *change = &APR_ARRAY_IDX(propchanges,
-                                                        i, svn_prop_t);
-              SVN_ERR(svn_wc_prop_set2(change->name, change->value,
-                                       tfb->path, adm_access, FALSE, iterpool));
-              svn_pool_clear(iterpool);
-            }
+/*           SVN_ERR(svn_wc_get_prop_diffs(&propchanges, NULL, src_path, */
+/*                                         src_access, pool)); */
+/*           for (i = 0; i < propchanges->nelts; i++) */
+/*             { */
+/*               const svn_prop_t *change = &APR_ARRAY_IDX(propchanges, */
+/*                                                         i, svn_prop_t); */
+/*               SVN_ERR(svn_wc_prop_set2(change->name, change->value, */
+/*                                        tfb->path, adm_access, FALSE, iterpool)); */
+/*               svn_pool_clear(iterpool); */
+/*             } */
         }
     }
-
-  /* XXXdsg revisit this comment */
-  /* At this point we've successfully simulated the normal addition of
-     a file.  However, any forthcoming apply_textdelta() calls from
-     the server are deltas against this new file.  This means the
-     editor-driver needs a file_baton that can be safely passed to
-     apply_textdelta(), which means re-opening the file. */
 
   *file_baton = tfb;
   return SVN_NO_ERROR;
