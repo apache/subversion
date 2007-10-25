@@ -478,10 +478,14 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
   /* special-case when conflicts occur */
   if (err)
     {
+      /* ### TODO: it's a shame we don't have the full path from the
+         ### root of the drive here, nor the type of the resource.
+         ### Because we lack this information, the error message is
+         ### overly generic.  See issue #2740. */
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
         return svn_error_createf
           (err->apr_err, err,
-           _("Your file or directory '%s' is probably out-of-date"),
+           _("File or directory '%s' is out-of-date; try updating"),
            svn_path_local_style(rsrc->local_path, pool));
       return err;
     }
