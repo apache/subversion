@@ -3111,7 +3111,7 @@ svn_fs_fs__abort_txn(svn_fs_txn_t *txn,
   /* Clean out the directory cache. */
   ffd = txn->fs->fsap_data;
   memset(&ffd->dir_cache_id, 0, 
-         sizeof(apr_hash_t *) * NUM_DIR_CACHE_ENTRIES);
+         sizeof(svn_fs_id_t *) * NUM_DIR_CACHE_ENTRIES);
 
   /* Now, purge the transaction. */
   SVN_ERR_W(svn_fs_fs__purge_txn(txn->fs, txn->id, pool),
