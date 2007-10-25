@@ -2554,7 +2554,7 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
 
 
 /**
- * Set @a *merge_ranges to a list of <tt>svn_merge_range_t *</tt>
+ * Set @a *rangelist to a list of <tt>svn_merge_range_t *</tt>
  * items representing ranges of revisions which have not yet been
  * merged from @a merge_source_url into @a path_or_url as of @a
  * peg_revision, or @c NULL if all candidate revisions of @a
@@ -2565,7 +2565,7 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_mergeinfo_get_available(apr_array_header_t **merge_ranges,
+svn_client_mergeinfo_get_available(apr_array_header_t **rangelist,
                                    const char *path_or_url,
                                    const svn_opt_revision_t *peg_revision,
                                    const char *merge_source_url,
