@@ -563,7 +563,7 @@ bdb_open(bdb_env_t *bdb, u_int32_t flags, int mode)
   flags |= DB_THREAD;
 #endif
   SVN_ERR(convert_bdb_error
-          (bdb, bdb->env->open(bdb->env, bdb->path_bdb, flags, mode)));
+          (bdb, (bdb->env->open)(bdb->env, bdb->path_bdb, flags, mode)));
 
 #if SVN_BDB_AUTO_COMMIT
   /* Assert the BDB_AUTO_COMMIT flag on the opened environment. This

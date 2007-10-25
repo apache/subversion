@@ -153,7 +153,7 @@ class Generator(generator.swig.Generator):
         type = "%s *" % struct
 
         self._write_callback(type, return_type, struct[:-2], name, params,
-                             "_obj->%s" % name)
+                             "(_obj->%s)" % name)
 
       elif match[0] and match[1]:
         # Callbacks declared as a typedef

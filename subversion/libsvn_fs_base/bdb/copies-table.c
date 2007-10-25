@@ -43,9 +43,9 @@ svn_fs_bdb__open_copies_table(DB **copies_p,
 
   BDB_ERR(svn_fs_bdb__check_version());
   BDB_ERR(db_create(&copies, env, 0));
-  BDB_ERR(copies->open(SVN_BDB_OPEN_PARAMS(copies, NULL),
-                       "copies", 0, DB_BTREE,
-                       open_flags, 0666));
+  BDB_ERR((copies->open)(SVN_BDB_OPEN_PARAMS(copies, NULL),
+                         "copies", 0, DB_BTREE,
+                         open_flags, 0666));
 
   /* Create the initial `next-key' table entry.  */
   if (create)
