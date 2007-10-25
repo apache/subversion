@@ -18,7 +18,7 @@ def parse_args(args):
     assert peg_revision >= 0
     url = '@'.join(path_pieces[:-1])
   else:
-    peg_revision = core.svn_invalid_revnum
+    peg_revision = core.SVN_INVALID_REVNUM
     url = path_pieces[0]
   url = core.svn_path_canonicalize(url)
     

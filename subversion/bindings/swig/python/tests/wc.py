@@ -117,7 +117,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
       [info] = infos
       self.assertEqual(readme_path, info.path)
       self.assertEqual(core.svn_node_file, info.kind)
-      self.assertEqual(core.svn_invalid_revnum, info.revision)
+      self.assertEqual(core.SVN_INVALID_REVNUM, info.revision)
 
   def test_create_notify(self):
       wc.create_notify(self.path, wc.notify_add)
