@@ -405,7 +405,7 @@ checkout_dir(dir_context_t *dir)
     {
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
         SVN_ERR_W(err, apr_psprintf(dir->pool,
-                  _("Directory '%s' is out-of-date; try updating"),
+                  _("Directory '%s' is out of date; try updating"),
                   svn_path_local_style(relative_dir_path(dir, dir->pool),
                                        dir->pool)));
       return err;
@@ -425,7 +425,7 @@ checkout_dir(dir_context_t *dir)
       return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
                     return_response_err(handler,
                                         &checkout_ctx->progress),
-                    _("Directory '%s' is out-of-date; try updating"),
+                    _("Directory '%s' is out of date; try updating"),
                     svn_path_local_style(relative_dir_path(dir, dir->pool),
                                          dir->pool));
     }
@@ -487,7 +487,7 @@ checkout_file(file_context_t *file)
       return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
                     return_response_err(handler,
                                         &file->checkout->progress),
-                    _("File '%s' is out-of-date; try updating"),
+                    _("File '%s' is out of date; try updating"),
                     svn_path_local_style(relative_file_path(file, file->pool),
                                          file->pool));
     }

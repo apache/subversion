@@ -149,7 +149,7 @@ struct dir_baton
   /* The URI to this item in the repository. */
   const char *url;
 
-  /* Out of date info corresponding to ood_* fields in svn_wc_status2_t. */
+  /* out-of-date info corresponding to ood_* fields in svn_wc_status2_t. */
   svn_revnum_t ood_last_cmt_rev;
   apr_time_t ood_last_cmt_date;
   svn_node_kind_t ood_kind;
@@ -191,7 +191,7 @@ struct file_baton
   /* The URI to this item in the repository. */
   const char *url;
 
-  /* Out of date info corresponding to ood_* fields in svn_wc_status2_t. */
+  /* out-of-date info corresponding to ood_* fields in svn_wc_status2_t. */
   svn_revnum_t ood_last_cmt_rev;
   apr_time_t ood_last_cmt_date;
   svn_node_kind_t ood_kind;
@@ -1033,8 +1033,8 @@ hash_stash(void *baton,
 
    If IS_DIR_BATON is true, THIS_DIR_BATON is a *dir_baton cotaining the out
    of date (ood) information we want to set in BATON.  This is necessary
-   because this function tweaks the status of out of date directories
-   (BATON == THIS_DIR_BATON) and out of date directories' parents
+   because this function tweaks the status of out-of-date directories
+   (BATON == THIS_DIR_BATON) and out-of-date directories' parents
    (BATON == THIS_DIR_BATON->parent_baton).  In the latter case THIS_DIR_BATON
    contains the ood info we want to bubble up to ancestor directories so these
    accurately reflect the fact they have an ood descendent.
@@ -1115,7 +1115,7 @@ tweak_statushash(void *baton,
   if (repos_prop_status)
     statstruct->repos_prop_status = repos_prop_status;
 
-  /* Copy out of date info. */
+  /* Copy out-of-date info. */
   if (is_dir_baton)
     {
       struct dir_baton *b = this_dir_baton;
