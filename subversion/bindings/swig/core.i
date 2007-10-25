@@ -457,10 +457,9 @@
 */
 
 %apply apr_hash_t **MERGEHASH {
-    apr_hash_t **mergehash,
+    apr_hash_t **mergeinfo,
     apr_hash_t **deleted,
-    apr_hash_t **added,
-    apr_hash_t **mergeoutput
+    apr_hash_t **added
 }
 
 /* -----------------------------------------------------------------------
