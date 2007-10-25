@@ -256,12 +256,12 @@ parse_top(const char **input, const char *end, apr_hash_t *hash,
 
 /* Parse mergeinfo.  */
 svn_error_t *
-svn_mergeinfo_parse(apr_hash_t **mergehash,
+svn_mergeinfo_parse(apr_hash_t **mergeinfo,
                     const char *input,
                     apr_pool_t *pool)
 {
-  *mergehash = apr_hash_make(pool);
-  return parse_top(&input, input + strlen(input), *mergehash, pool);
+  *mergeinfo = apr_hash_make(pool);
+  return parse_top(&input, input + strlen(input), *mergeinfo, pool);
 }
 
 
@@ -854,11 +854,11 @@ svn_mergeinfo_merge(apr_hash_t **mergeinfo, apr_hash_t *changes,
 }
 
 svn_error_t *
-svn_mergeinfo_remove(apr_hash_t **output, apr_hash_t *eraser,
+svn_mergeinfo_remove(apr_hash_t **mergeinfo, apr_hash_t *eraser,
                      apr_hash_t *whiteboard, apr_pool_t *pool)
 {
-  *output = apr_hash_make(pool);
-  SVN_ERR(walk_mergeinfo_hash_for_diff(whiteboard, eraser, *output, NULL,
+  *mergeinfo = apr_hash_make(pool);
+  SVN_ERR(walk_mergeinfo_hash_for_diff(whiteboard, eraser, *mergeinfo, NULL,
                                        TRUE, pool));
   return SVN_NO_ERROR;
 }

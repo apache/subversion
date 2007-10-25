@@ -38,17 +38,17 @@ extern "C" {
    range is non-inheritable. */
 #define SVN_MERGEINFO_NONINHERITABLE_STR "*"
 
-/** Parse the mergeinfo from @a input into @a mergehash, mapping from
+/** Parse the mergeinfo from @a input into @a *mergeinfo, mapping from
  * paths to @c apr_array_header_t *'s of @c svn_merge_range_t *
  * elements.  If no mergeinfo is available, return an empty hash
  * (never @c NULL).  Perform temporary allocations in @a pool.
  *
- * Note: @a mergehash will contain rangelists that are guaranteed to be
- * sorted.
+ * Note: @a *mergeinfo will contain rangelists that are guaranteed to
+ * be sorted (ordered by smallest revision ranges to largest).
  * @since New in 1.5.
  */
 svn_error_t *
-svn_mergeinfo_parse(apr_hash_t **mergehash, const char *input,
+svn_mergeinfo_parse(apr_hash_t **mergeinfo, const char *input,
                     apr_pool_t *pool);
 
 /** Calculate the delta between two hashes of mergeinfo (with
@@ -87,12 +87,12 @@ svn_mergeinfo_merge(apr_hash_t **mergeinfo, apr_hash_t *changes,
                     apr_pool_t *pool);
 
 /** Removes @a eraser (the subtrahend) from @a whiteboard (the
- * minuend), and places the resulting difference in @a output.
+ * minuend), and places the resulting difference in @a *mergeinfo.
  *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_mergeinfo_remove(apr_hash_t **mergeoutput, apr_hash_t *eraser,
+svn_mergeinfo_remove(apr_hash_t **mergeinfo, apr_hash_t *eraser,
                      apr_hash_t *whiteboard, apr_pool_t *pool);
 
 /** Calculate the delta between two rangelists consisting of @c
