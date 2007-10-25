@@ -801,12 +801,12 @@ struct file_baton
      apply_textdelta(). */
   unsigned char digest[APR_MD5_DIGESTSIZE];
 
-  /* Files don't have depth, this field just signifies whether editor
-     calls on this file should be ignored for depth reasons.  If this
-     is svn_depth_exclude, then all other fields in this baton are
+  /* This field signifies whether editor calls on this file should be
+     ignored for depth reasons (ie, because an ancestor was at depth
+     empty).  If this is true, then all other fields in this baton are
      undefined and no editor call should do anything with this file.
-     If it is any other value, proceed as usual. */
-  svn_depth_t ambient_depth;
+     If it is false, proceed as usual. */
+  svn_boolean_t ambiently_excluded;
 };
 
 
@@ -829,7 +829,7 @@ make_file_baton(struct file_baton **f_p,
   /* If parent is being ignored, then everything under it is too. */
   if (pb->ambient_depth == svn_depth_exclude)
     {
-      f->ambient_depth = svn_depth_exclude;
+      f->ambiently_excluded = TRUE;
       *f_p = f;
       return SVN_NO_ERROR;
     }
@@ -856,7 +856,7 @@ make_file_baton(struct file_baton **f_p,
            || err->apr_err == SVN_ERR_WC_NOT_LOCKED))
         {
           svn_error_clear(err);
-          f->ambient_depth = svn_depth_exclude;
+          f->ambiently_excluded = TRUE;
           *f_p = f;
           return SVN_NO_ERROR;
         }
@@ -865,16 +865,12 @@ make_file_baton(struct file_baton **f_p,
       if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
         {
           svn_error_clear(err);
-          f->ambient_depth = svn_depth_exclude;
+          f->ambiently_excluded = TRUE;
           *f_p = f;
           return SVN_NO_ERROR;
         }
       else if (err)
         return err;
-      else if (entry)
-        f->ambient_depth = entry->depth;  /* doesn't really matter */
-      else
-        f->ambient_depth = svn_depth_unknown;
     }
 
   /* Figure out the new_URL for this file. */
@@ -896,7 +892,6 @@ make_file_baton(struct file_baton **f_p,
   f->existed           = FALSE;
   f->add_existed       = FALSE;
   f->dir_baton         = pb;
-  f->ambient_depth     = svn_depth_empty;
 
   /* No need to initialize f->digest, since we used pcalloc(). */
 
@@ -1983,7 +1978,7 @@ add_file(const char *path,
   SVN_ERR(make_file_baton(&fb, pb, path, TRUE, pool));
   *file_baton = fb;
 
-  if (fb->ambient_depth == svn_depth_exclude)
+  if (fb->ambiently_excluded)
     return SVN_NO_ERROR;
 
   SVN_ERR(check_path_under_root(fb->dir_baton->path, fb->name, subpool));
@@ -2080,7 +2075,7 @@ open_file(const char *path,
   SVN_ERR(make_file_baton(&fb, pb, path, FALSE, pool));
   *file_baton = fb;
 
-  if (fb->ambient_depth == svn_depth_exclude)
+  if (fb->ambiently_excluded)
     return SVN_NO_ERROR;
 
   SVN_ERR(check_path_under_root(fb->dir_baton->path, fb->name, subpool));
@@ -2200,7 +2195,7 @@ apply_textdelta(void *file_baton,
   svn_boolean_t replaced;
   svn_boolean_t use_revert_base;
 
-  if (fb->skipped || fb->ambient_depth == svn_depth_exclude)
+  if (fb->skipped || fb->ambiently_excluded)
     {
       *handler = svn_delta_noop_window_handler;
       *handler_baton = NULL;
@@ -2332,7 +2327,7 @@ change_file_prop(void *file_baton,
   struct edit_baton *eb = fb->edit_baton;
   svn_prop_t *propchange;
 
-  if (fb->skipped || fb->ambient_depth == svn_depth_exclude)
+  if (fb->skipped || fb->ambiently_excluded)
     return SVN_NO_ERROR;
 
   /* Push a new propchange to the file baton's array of propchanges */
@@ -2865,7 +2860,7 @@ close_file(void *file_baton,
   svn_wc_notify_state_t content_state, prop_state;
   svn_wc_notify_lock_state_t lock_state;
 
-  if (fb->ambient_depth == svn_depth_exclude)
+  if (fb->ambiently_excluded)
     return SVN_NO_ERROR;
 
   if (fb->skipped)
@@ -3186,7 +3181,7 @@ add_file_with_history(const char *path,
   tfb = (struct file_baton *)fb;
   tfb->added_with_history = TRUE;
 
-  if (tfb->ambient_depth == svn_depth_exclude)
+  if (tfb->ambiently_excluded)
     {
       *file_baton = tfb;
       return SVN_NO_ERROR;
