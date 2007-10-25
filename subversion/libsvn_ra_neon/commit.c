@@ -194,9 +194,10 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
             }
         }
 
-      /* If we know the version resource URL of the parent, use that as a base
-         to calculate the version resource URL of RSRC. */
-      if (parent && parent->vsn_url)
+      /* If we know the version resource URL of the parent and it is
+         the same revision as RSRC, use that as a base to calculate
+         the version resource URL of RSRC. */
+      if (parent && parent->vsn_url && parent->revision == rsrc->revision)
         {
           rsrc->vsn_url = svn_path_url_add_component(parent->vsn_url,
                                                      rsrc->name,
