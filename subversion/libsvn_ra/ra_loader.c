@@ -460,8 +460,8 @@ svn_error_t *svn_ra_open2(svn_ra_session_t **session_p,
   session->pool = pool;
 
   /* Ask the library to open the session. */
-  SVN_ERR(vtable->open(session, repos_URL, callbacks, callback_baton,
-                       config, pool));
+  SVN_ERR(vtable->open_session(session, repos_URL, callbacks, callback_baton,
+                               config, pool));
 
   *session_p = session;
   return SVN_NO_ERROR;

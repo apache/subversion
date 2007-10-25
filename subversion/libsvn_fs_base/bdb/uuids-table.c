@@ -47,9 +47,9 @@ svn_fs_bdb__open_uuids_table(DB **uuids_p,
   BDB_ERR(db_create(&uuids, env, 0));
   BDB_ERR(uuids->set_re_len(uuids, APR_UUID_FORMATTED_LENGTH));
 
-  error = uuids->open(SVN_BDB_OPEN_PARAMS(uuids, NULL),
-                      "uuids", 0, DB_RECNO,
-                      open_flags, 0666);
+  error = (uuids->open)(SVN_BDB_OPEN_PARAMS(uuids, NULL),
+                        "uuids", 0, DB_RECNO,
+                        open_flags, 0666);
 
   /* This is a temporary compatibility check; it creates the
      UUIDs table if one does not already exist. */

@@ -48,12 +48,12 @@ typedef struct svn_ra__vtable_t {
 
   /* All fields in SESSION, except priv, have been initialized by the
      time this is called.  SESSION->priv may be set by this function. */
-  svn_error_t *(*open)(svn_ra_session_t *session,
-                       const char *repos_URL,
-                       const svn_ra_callbacks2_t *callbacks,
-                       void *callback_baton,
-                       apr_hash_t *config,
-                       apr_pool_t *pool);
+  svn_error_t *(*open_session)(svn_ra_session_t *session,
+                               const char *repos_URL,
+                               const svn_ra_callbacks2_t *callbacks,
+                               void *callback_baton,
+                               apr_hash_t *config,
+                               apr_pool_t *pool);
   /* URL is guaranteed to have what get_repos_root() returns as a prefix. */
   svn_error_t *(*reparent)(svn_ra_session_t *session,
                            const char *url,
