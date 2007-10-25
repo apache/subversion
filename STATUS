@@ -34,7 +34,7 @@ Candidate changes:
       * I suspect that this is the cause of an FSFS corruption
         observed during performance testing by Dan Christian.
     Votes:
-      +1: glasser
+      +1: glasser, hwright
 
   * r21406-21407, r21540
     Fix issue #2608: Can set directory props on the root of an FSFS
