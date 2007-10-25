@@ -427,7 +427,13 @@ maybe_crop_and_send_segment(const char *path,
   segment->path = path;
   segment->range_start = range_start;
   segment->range_end = range_end;
-  return receiver(segment, receiver_baton, pool);
+  if (segment->range_start <= start_rev)
+    {
+      if (segment->range_end > start_rev)
+        segment->range_end = start_rev;
+      return receiver(segment, receiver_baton, pool);
+    }
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *

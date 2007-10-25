@@ -153,6 +153,29 @@ svn_client__repos_locations(const char **start_url,
                             apr_pool_t *pool);
 
 
+/* Set *SEGMENTS to an array of svn_location_segment_t * objects, each
+   representing a reposition location segment for the history of PATH
+   (which is relative to RA_SESSION's session URL) in PEG_REVISION
+   between END_REVISION and START_REVISION.
+
+   This is basically a thin de-stream-ifying wrapper around the
+   svn_ra_get_location_segments() interface, which see for the rules
+   governing PEG_REVISION, START_REVISION, and END_REVISION.
+
+   CTX is the client context baton.
+
+   Use POOL for all allocations.  */
+svn_error_t *
+svn_client__repos_location_segments(apr_array_header_t **segments,
+                                    svn_ra_session_t *ra_session,
+                                    const char *path,
+                                    svn_revnum_t peg_revision,
+                                    svn_revnum_t start_revision,
+                                    svn_revnum_t end_revision,
+                                    svn_client_ctx_t *ctx,
+                                    apr_pool_t *pool);
+
+
 /* Given PATH_OR_URL, which contains either a working copy path or an
    absolute URL, a peg revision PEG_REVISION, and a desired revision
    REVISION, create an RA connection to that object as it exists in
