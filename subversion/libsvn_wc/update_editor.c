@@ -442,35 +442,15 @@ make_dir_baton(struct dir_baton **d_p,
          already have an entry for the new dir, then the parent
          doesn't want the new dir at all, thus we should initialize
          it at svn_depth_exclude. */
-      svn_error_t *err;
       const svn_wc_entry_t *entry;
-      svn_wc_adm_access_t *adm_access;
 
-      err = svn_wc_adm_retrieve(&adm_access, eb->adm_access, d->path, pool);
-      if (err &&
-          (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
-           || err->apr_err == SVN_ERR_WC_NOT_LOCKED))
+      SVN_ERR(svn_wc_entry(&entry, d->path, eb->adm_access, FALSE, pool));
+      if (! entry)
         {
-          svn_error_clear(err);
           d->ambient_depth = svn_depth_exclude;
           *d_p = d;
           return SVN_NO_ERROR;
         }
-
-      err = svn_wc_entry(&entry, d->path, adm_access, FALSE, pool);
-      if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
-        {
-          svn_error_clear(err);
-          d->ambient_depth = svn_depth_exclude;
-          *d_p = d;
-          return SVN_NO_ERROR;
-        }
-      else if (err)
-        return err;
-      else if (entry)
-        d->ambient_depth = entry->depth;
-      else
-        d->ambient_depth = svn_depth_unknown;
     }
 
   if (added)
@@ -496,7 +476,8 @@ make_dir_baton(struct dir_baton **d_p,
     }
   else
     {
-      /* For opened directories, we'll get the real depth later. */
+      /* For opened directories, we'll get the real depth back in
+         open_directory or open_root. */
       d->ambient_depth = svn_depth_unknown;
     }
 
