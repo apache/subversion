@@ -1121,7 +1121,7 @@ svn_wc_merge_props2(svn_wc_notify_state_t *state,
 
   /* Note that while this routine does the "real" work, it's only
      prepping tempfiles and writing log commands.  */
-  SVN_ERR(svn_wc__merge_props(state, adm_access, path, baseprops,
+  SVN_ERR(svn_wc__merge_props(state, adm_access, path, baseprops, NULL, NULL,
                               propchanges, base_merge, dry_run,
                               conflict_func, conflict_baton, pool, &log_accum));
 
@@ -1803,6 +1803,8 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                     svn_wc_adm_access_t *adm_access,
                     const char *path,
                     apr_hash_t *server_baseprops,
+                    apr_hash_t *base_props,
+                    apr_hash_t *working_props,
                     const apr_array_header_t *propchanges,
                     svn_boolean_t base_merge,
                     svn_boolean_t dry_run,
@@ -1814,9 +1816,6 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
   int i;
   svn_boolean_t is_dir;
 
-  apr_hash_t *working_props;   /* all `working' properties */
-  apr_hash_t *base_props;    /* all `pristine' properties */
-
   const char *reject_path = NULL;
   apr_file_t *reject_tmp_fp = NULL;       /* the temporary conflicts file */
   const char *reject_tmp_path = NULL;
@@ -1826,9 +1825,11 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
   else
     is_dir = FALSE;
 
-  /* Load the base & working property files into hashes */
-  SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL,
-                             adm_access, path, pool));
+  /* If not provided, load the base & working property files into hashes */
+  if (! base_props || ! working_props)
+    SVN_ERR(svn_wc__load_props(base_props ? NULL : &base_props, 
+                               working_props ? NULL : &working_props, 
+                               NULL, adm_access, path, pool));
   if (!server_baseprops)
     server_baseprops = base_props;
 

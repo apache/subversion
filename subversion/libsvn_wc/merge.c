@@ -274,6 +274,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        const char *left,
                        const char *right,
                        const char *merge_target,
+                       const char *copyfrom_text,
                        svn_wc_adm_access_t *adm_access,
                        const char *left_label,
                        const char *right_label,
@@ -286,17 +287,18 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        void *conflict_baton,
                        apr_pool_t *pool)
 {
-  const char *tmp_target, *result_target;
+  const char *tmp_target, *result_target, *working_text;
   const char *adm_path = svn_wc_adm_access_path(adm_access);
   apr_file_t *result_f;
-  svn_boolean_t is_binary;
+  svn_boolean_t is_binary = FALSE;
   const svn_wc_entry_t *entry;
   svn_boolean_t contains_conflicts;
   const svn_prop_t *mimeprop;
 
-  /* Sanity check:  the merge target must be under revision control. */
+  /* Sanity check:  the merge target must be under revision control (unless
+     this is an add-with-history). */
   SVN_ERR(svn_wc_entry(&entry, merge_target, adm_access, FALSE, pool));
-  if (! entry)
+  if (! entry && ! copyfrom_text)
     {
       *merge_outcome = svn_wc_merge_no_merge;
       return SVN_NO_ERROR;
@@ -306,10 +308,11 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
   if ((mimeprop = get_prop(prop_diff, SVN_PROP_MIME_TYPE))
       && mimeprop->value)
     is_binary = svn_mime_type_is_binary(mimeprop->value->data);
-  else
+  else if (! copyfrom_text)
     SVN_ERR(svn_wc_has_binary_prop(&is_binary, merge_target, adm_access, pool));
 
-  SVN_ERR(detranslate_wc_file(&tmp_target, merge_target, adm_access,
+  working_text = copyfrom_text ? copyfrom_text : merge_target;
+  SVN_ERR(detranslate_wc_file(&tmp_target, working_text, adm_access,
                               (! is_binary) && diff3_cmd != NULL,
                               prop_diff, pool));
 
@@ -612,6 +615,10 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
         {
           *merge_outcome = svn_wc_merge_conflict;
         } /* end of conflict handling */
+      else if (copyfrom_text)
+        {
+          *merge_outcome = svn_wc_merge_merged;
+        }
       else
         {
           svn_boolean_t same;
@@ -847,6 +854,7 @@ svn_wc_merge3(enum svn_wc_merge_outcome_t *merge_outcome,
 
   SVN_ERR(svn_wc__merge_internal(&log_accum, merge_outcome,
                                  left, right, merge_target,
+                                 NULL,
                                  adm_access,
                                  left_label, right_label, target_label,
                                  dry_run,
