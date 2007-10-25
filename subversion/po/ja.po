@@ -177,7 +177,7 @@ msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-10-17 08:53+0900\n"
-"PO-Revision-Date: 2007-10-24 01:00+0900\n"
+"PO-Revision-Date: 2007-10-26 04:21+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -5181,7 +5181,7 @@ msgstr "'%s' のテキストを元に戻す際にエラーが発生しました"
 
 #: libsvn_wc/adm_ops.c:1980
 msgid "Cannot revert."
-msgstr "変換できません"
+msgstr "元に戻せません。"
 
 #: libsvn_wc/adm_ops.c:2007
 #, c-format
@@ -5213,12 +5213,12 @@ msgstr "ファイル '%s' にはローカルでの変更が加えられていま
 
 #: libsvn_wc/adm_ops.c:2597
 msgid "Invalid 'conflict_result' argument"
-msgstr "不正な 'conflict_result' 引数です"
+msgstr "'conflict_result' の引数が不正です"
 
 #: libsvn_wc/adm_ops.c:2937
 #, c-format
 msgid "'%s' is a directory, and thus cannot be a member of a changelist."
-msgstr "'%s' はディレクトリです。そのため変更リストには登録できません。"
+msgstr "'%s' はディレクトリです。そのため変更リストに含めることはできません。"
 
 #: libsvn_wc/adm_ops.c:2959
 #, c-format
@@ -5228,7 +5228,7 @@ msgstr "パス '%s' は変更リスト '%s' に属していません。"
 #: libsvn_wc/adm_ops.c:2981
 #, c-format
 msgid "Removing '%s' from changelist '%s'."
-msgstr "'%s' を削除しています (変更リスト '%s')"
+msgstr "'%s' を変更リスト '%s' から削除しています。"
 
 #: libsvn_wc/copy.c:197
 #, c-format
@@ -5285,10 +5285,11 @@ msgstr "エスケープされた文字が不正です"
 msgid "Unexpected end of entry"
 msgstr "エントリが突然途切れました"
 
+# TRANSLATION-FIXME: What does "non-canonical" mean?
 #: libsvn_wc/entries.c:192
 #, c-format
 msgid "Entry contains non-canonical path '%s'"
-msgstr "正規化されていないパス '%s' を含んでいます"
+msgstr "標準的でないパス '%s' を含んでいます"
 
 #: libsvn_wc/entries.c:244
 #, c-format
@@ -5668,8 +5669,8 @@ msgid ""
 "Trying to add new property '%s' with value '%s',\n"
 "but property already exists with value '%s'."
 msgstr ""
-"新しい属性 '%s' に値 '%s' を与えて追加しようとしています。\n"
-"しかし属性には値 '%s' が既についています。"
+"新しい属性 '%s' に値 '%s' を設定して追加しようとしています。\n"
+"しかしその属性は値を '%s' と設定されて既に存在しています。"
 
 #: libsvn_wc/props.c:1308
 #, c-format
@@ -5678,7 +5679,7 @@ msgid ""
 "but it has been locally deleted."
 msgstr ""
 "新しい属性 '%s' に値 '%s' を与えて追加しようとしています。\n"
-"しかし属性はすでに削除されています。"
+"しかしその属性はローカルで既に削除されています。"
 
 #: libsvn_wc/props.c:1375
 #, c-format
@@ -5686,8 +5687,8 @@ msgid ""
 "Trying to delete property '%s' with value '%s'\n"
 "but it has been modified from '%s' to '%s'."
 msgstr ""
-"属性 '%s' を削除しようとしています。(値 '%s' が設定されています)\n"
-"しかし値が '%s' から '%s' に変更されています。"
+"属性 '%s' (値は '%s') を削除しようとしています。\n"
+"しかしその属性の値は '%s' から '%s' に変更されています。"
 
 #: libsvn_wc/props.c:1396
 #, c-format
@@ -5695,8 +5696,8 @@ msgid ""
 "Trying to delete property '%s' with value '%s'\n"
 "but the local value is '%s'."
 msgstr ""
-"属性 '%s' を削除しようとしています。(値 '%s' が設定されています)\n"
-"しかし属性には値 '%s' が既についています。"
+"属性 '%s' (値は '%s') を削除しようとしています。\n"
+"しかしその属性のローカルでの値は '%s' となっています。"
 
 #: libsvn_wc/props.c:1477
 #, c-format
@@ -5704,8 +5705,8 @@ msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
 "but property has been locally changed from '%s' to '%s'."
 msgstr ""
-"属性 '%s' を '%s' から '%s' に変更しようとしています。\n"
-"しかし属性には'%s' から '%s' に変更されています。"
+"属性 '%s' の値を '%s' から '%s' に変更しようとしています。\n"
+"しかしその属性の値はローカルで '%s' から '%s' に変更されています。"
 
 #: libsvn_wc/props.c:1485
 #, c-format
@@ -5713,8 +5714,8 @@ msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
 "but property has been locally added with value '%s'"
 msgstr ""
-"属性 '%s' を '%s' から '%s' に変更しようとしています。\n"
-"しかし属性には値 '%s' が追加されています。"
+"属性 '%s' の値を '%s' から '%s' に変更しようとしています。\n"
+"しかしその属性は値を '%s' と設定されてローカルで追加されています。"
 
 #: libsvn_wc/props.c:1505
 #, c-format
@@ -5722,8 +5723,8 @@ msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
 "but it has been locally deleted."
 msgstr ""
-"属性 '%s' を '%s' から '%s' に変更しようとしています。\n"
-"しかしその属性は削除されています。"
+"属性 '%s' の値を '%s' から '%s' に変更しようとしています。\n"
+"しかしその属性はローカルで既に削除されています。"
 
 #: libsvn_wc/props.c:1538
 #, c-format
@@ -5731,7 +5732,7 @@ msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
 "but the property does not exist."
 msgstr ""
-"属性 '%s' を '%s' から '%s' に変更しようとしています。\n"
+"属性 '%s' の値を '%s' から '%s' に変更しようとしています。\n"
 "しかしその属性は存在しません。"
 
 #: libsvn_wc/props.c:1575
@@ -5740,8 +5741,8 @@ msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
 "but property already exists with value '%s'."
 msgstr ""
-"属性 '%s' を '%s' から '%s' に変更しようとしています。\n"
-"しかし属性には値 '%s' が既についています。"
+"属性 '%s' の値を '%s' から '%s' に変更しようとしています。\n"
+"しかしその属性は値を '%s' と設定されて既に存在しています。"
 
 #: libsvn_wc/props.c:1875 libsvn_wc/props.c:1903 libsvn_wc/props.c:2048
 #: libsvn_wc/props.c:2263
@@ -5788,8 +5789,8 @@ msgstr "属性 %s を '%s' においてパースする際にエラーが発生�
 msgid ""
 "Invalid %s property on '%s': target '%s' is an absolute path or involves '..'"
 msgstr ""
-"不正な属性 %s が '%s' にあります: 対象 '%s' は 絶対パスまたは'..' を含んでい"
-"ます"
+"不正な属性 %s が '%s' に設定されています: 対象 '%s' が絶対パスであるか、また"
+"は '..' を含んでいます"
 
 #: libsvn_wc/questions.c:122
 #, c-format
@@ -5808,11 +5809,11 @@ msgid ""
 "See http://subversion.tigris.org/faq.html#working-copy-format-change\n"
 "for details."
 msgstr ""
-"クライアントが古すぎて、作業コピー '%s' を扱うことができません。新しい\n"
-"バージョンのSubversion を取得する必要があります。あるいは作業コピーを\n"
-"ダウングレードする必要があります。\n"
-"詳細は http://subversion.tigris.org/faq.html#working-copy-format-change\n"
-" を見てください。"
+"クライアントが古すぎて、作業コピー '%s' を扱うことができません。\n"
+"もっと新しい Subversion クライアントをインストールするか、作業コピーをダウン"
+"グレードする必要があります。\n"
+"詳しくは http://subversion.tigris.org/faq.html#working-copy-format-change を"
+"参照してください。"
 
 #: libsvn_wc/questions.c:344
 #, c-format
@@ -5902,7 +5903,7 @@ msgstr ""
 
 #: libsvn_wc/update_editor.c:1949
 msgid "Bad copyfrom arguments received."
-msgstr "不正な copyfrom 引数を受け取りました"
+msgstr "受け取った copyfrom の引数が不正です。"
 
 #: libsvn_wc/update_editor.c:1990
 #, c-format
@@ -5941,15 +5942,17 @@ msgstr "'%s' のチェックサムが一致しませんでした。記録: '%s',
 
 #: libsvn_wc/update_editor.c:2864
 msgid "Destination directory of add-with-history is missing a URL."
-msgstr "add-with-history のコピー先 / 移動先ディレクトリには URL がありません"
+msgstr ""
+"add-with-history のコピー先 (もしくは移動先) のディレクトリに URL がありませ"
+"ん。"
 
 #: libsvn_wc/update_editor.c:2879
 msgid "Destination URLs are broken."
-msgstr "コピー先 (もしくは移動先) URL は壊れています"
+msgstr "コピー先 (もしくは移動先) の URL が壊れています。"
 
 #: libsvn_wc/update_editor.c:3081
 msgid "No fetch_func supplied to update_editor."
-msgstr "fetch_func は update_editor に与えられていません"
+msgstr "fetch_func が update_editor に与えられていません。"
 
 #: libsvn_wc/update_editor.c:3719
 #, c-format
@@ -5973,7 +5976,7 @@ msgstr "ディレクトリを作れません"
 #: libsvn_wc/util.c:281
 #, c-format
 msgid "Cannot find a URL for '%s'"
-msgstr "'%s' に対する URL が見つかりません"
+msgstr "'%s' の URL が見つかりません"
 
 #: svn/blame-cmd.c:247 svn/list-cmd.c:233
 msgid "'verbose' option invalid in XML mode"
