@@ -259,7 +259,7 @@
 }
 
 /* -----------------------------------------------------------------------
-   input mergeinfo hash to svn_mergeinfo_to_stringbuf
+   input mergeinfo hash
 */
 %apply apr_hash_t *MERGEINFO {
    apr_hash_t *mergeinput,
