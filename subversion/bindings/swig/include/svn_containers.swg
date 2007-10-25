@@ -657,7 +657,7 @@
                                array_header_t * <svn_merge_range_t *>>>
 */
 #ifdef SWIGRUBY
-%typemap(argout) apr_hash_t **HASH_OF_MERGE_INFO_HASH
+%typemap(argout) apr_hash_t **MERGEINFO_HASH
 {
   %append_output(svn_swig_rb_apr_hash_to_hash_merge_range_hash(*$1));
 }
