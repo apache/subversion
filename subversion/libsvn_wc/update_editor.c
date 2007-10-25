@@ -771,6 +771,14 @@ struct file_baton
      mods, this is the path to a copy of the user's version with local
      mods (in the temporary area). */
   const char *copied_working_text;
+
+  /* If this file was added with history, this hash contains the base
+     properties of the copied file. */
+  apr_hash_t *copied_base_props;
+
+  /* If this file was added with history, this hash contains the working
+     properties of the copied file. */
+  apr_hash_t *copied_working_props;
   
   /* Set if we've received an apply_textdelta for this file. */
   svn_boolean_t received_textdelta;
@@ -1811,6 +1819,7 @@ close_directory(void *dir_baton,
           SVN_ERR_W(svn_wc__merge_props(&prop_state,
                                         adm_access, db->path,
                                         NULL /* use baseprops */,
+                                        NULL, NULL,
                                         regular_props, TRUE, FALSE,
                                         db->edit_baton->conflict_func,
                                         db->edit_baton->conflict_baton,
@@ -2349,7 +2358,8 @@ change_file_prop(void *file_baton,
    properties as well as entryprops and wcprops.  Update *PROP_STATE
    to reflect the result of the regular prop merge.  Make *LOCK_STATE
    reflect the possible removal of a lock token from FILE_PATH's
-   entryprops.
+   entryprops.  BASE_PROPS and WORKING_PROPS are hashes of the base and 
+   working props of the file; if NULL they are read from the wc.
 
    CONFICT_FUNC/BATON is a callback which allows the client to
    possibly resolve a property conflict interactively.
@@ -2363,6 +2373,8 @@ merge_props(svn_stringbuf_t *log_accum,
             svn_wc_adm_access_t *adm_access,
             const char *file_path,
             const apr_array_header_t *prop_changes,
+            apr_hash_t *base_props,
+            apr_hash_t *working_props,
             svn_wc_conflict_resolver_func_t conflict_func,
             void *conflict_baton,
             apr_pool_t *pool)
@@ -2386,7 +2398,9 @@ merge_props(svn_stringbuf_t *log_accum,
          props.  */
       SVN_ERR(svn_wc__merge_props(prop_state,
                                   adm_access, file_path,
-                                  NULL /* use base props */,
+                                  NULL /* update, not merge */,
+                                  base_props,
+                                  working_props,
                                   regular_props, TRUE, FALSE,
                                   conflict_func, conflict_baton,
                                   pool, &log_accum));
@@ -2551,6 +2565,7 @@ merge_file(svn_wc_notify_state_t *content_state,
      which case we want the new entryprops to be in place. */
   SVN_ERR(merge_props(log_accum, prop_state, lock_state, adm_access,
                       fb->path, fb->propchanges,
+                      fb->copied_base_props, fb->copied_working_props,
                       eb->conflict_func, eb->conflict_baton, pool));
 
   /* Has the user made local mods to the working file?
@@ -3108,6 +3123,31 @@ locate_copyfrom(const char *copyfrom_path,
 }
 
 
+static apr_hash_t *
+copy_non_entry_props(apr_hash_t *props_in,
+                     apr_pool_t *pool)
+{
+  apr_hash_t *props_out = apr_hash_make(pool);
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(pool, props_in); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      const char *propname;
+      svn_string_t *propval;
+      apr_hash_this(hi, &key, NULL, &val);
+      propname = key;
+      propval = val;
+
+      if (svn_property_kind(NULL, propname) == svn_prop_entry_kind)
+        continue;
+      apr_hash_set(props_out, propname, APR_HASH_KEY_STRING, propval);
+    }
+  return props_out;
+}
+
+
 /* Similar to add_file(), but not actually part of the editor vtable.
 
    Attempt to locate COPYFROM_PATH@COPYFROM_REV within the existing
@@ -3133,10 +3173,13 @@ add_file_with_history(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   svn_wc_adm_access_t *adm_access, *src_access;
   const char *src_path;
-  apr_hash_t *base_props;
-  apr_hash_index_t *hi;
+  apr_hash_t *base_props, *working_props;
   const svn_wc_entry_t *path_entry;
   svn_error_t *err;
+
+  /* ### TODO: consider, a la add_file, doing temporary allocations
+     ### that don't need to stick around with the baton in a
+     ### subpool */
 
   /* First, fake an add_file() call.  Notice that we don't send any
      copyfrom args, lest we end up infinitely recursing.  :-)  */
@@ -3178,7 +3221,7 @@ add_file_with_history(const char *path,
                                TRUE, pool));
 
       /* Grab the existing file's base-props into memory. */
-      SVN_ERR(svn_wc__load_props(&base_props, NULL, NULL,
+      SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL,
                                  src_access, src_path, pool));
     }
   else  /* Couldn't find a file to copy  */
@@ -3205,35 +3248,22 @@ add_file_with_history(const char *path,
                              textbase_stream,
                              NULL, &base_props, pool));
       SVN_ERR(svn_stream_close(textbase_stream));
+      working_props = base_props;
     }
 
-  /* Loop over whatever base-props we have in memory, faking change_file_prop()
-     calls against the file baton. */
-  for (hi = apr_hash_first(pool, base_props); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      void *val;
-      const char *propname;
-      svn_string_t *propval;
-      apr_hash_this(hi, &key, NULL, &val);
-      propname = key;
-      propval = val;
-
-      if (svn_property_kind(NULL, propname) == svn_prop_entry_kind)
-        continue;
-      SVN_ERR(change_file_prop(tfb, propname, propval, pool));
-    }
+  /* Loop over whatever props we have in memory, and add any
+     non-entry-specific props to hashes in the baton. */
+  tfb->copied_base_props = copy_non_entry_props(base_props, pool);
+  tfb->copied_working_props = copy_non_entry_props(working_props, pool);
 
   if (src_path != NULL)
     {
       /* If we copied an existing file over, we need copy its working
          text and props too, to preserve any local mods. */
-      svn_boolean_t text_changed, props_changed;
+      svn_boolean_t text_changed;
 
       SVN_ERR(svn_wc_text_modified_p(&text_changed, src_path, FALSE,
                                      src_access, pool));
-      SVN_ERR(svn_wc_props_modified_p(&props_changed, src_path,
-                                      src_access, pool));
 
       if (text_changed)
         {
@@ -3245,29 +3275,6 @@ add_file_with_history(const char *path,
 
           SVN_ERR(svn_io_copy_file(src_path, tfb->copied_working_text, TRUE, 
                                    pool));
-        }
-
-      if (props_changed)
-        {
-          /* XXXdsg: grr.  No idea how to actually move local prop mods
-             over. */
-/*           /\* Apparently just copying the working-props file over */
-/*              isn't a guaranteed-correct way to migrate the local */
-/*              propchanges.  So we'll do it programmatically.  *\/ */
-/*           int i; */
-/*           apr_array_header_t *propchanges; */
-/*           apr_pool_t *iterpool = svn_pool_create(pool); */
-
-/*           SVN_ERR(svn_wc_get_prop_diffs(&propchanges, NULL, src_path, */
-/*                                         src_access, pool)); */
-/*           for (i = 0; i < propchanges->nelts; i++) */
-/*             { */
-/*               const svn_prop_t *change = &APR_ARRAY_IDX(propchanges, */
-/*                                                         i, svn_prop_t); */
-/*               SVN_ERR(svn_wc_prop_set2(change->name, change->value, */
-/*                                        tfb->path, adm_access, FALSE, iterpool)); */
-/*               svn_pool_clear(iterpool); */
-/*             } */
         }
     }
 
