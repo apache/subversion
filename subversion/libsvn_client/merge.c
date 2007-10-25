@@ -4615,15 +4615,16 @@ svn_client_merge_peg3(const char *source,
                                             FALSE, 0, 0, NULL, NULL, 
                                             FALSE, NULL, -1, NULL, pool};
 
-  if (depth == svn_depth_unknown)
-    depth = entry->depth;
-
   /* Fetch the entry for the TARGET_WCPATH. */
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target_wcpath,
                                  ! dry_run, -1, ctx->cancel_func,
                                  ctx->cancel_baton, pool));
   SVN_ERR(svn_wc__entry_versioned(&entry, target_wcpath, adm_access, 
                                   FALSE, pool));
+
+  /* Grab the depth from the entry, unless it's being overridden. */
+  if (depth == svn_depth_unknown)
+    depth = entry->depth;
 
   /* Ensure we have a source URL (as opposed to a local path). */
   SVN_ERR(svn_client_url_from_path(&URL, source, pool));
@@ -4640,8 +4641,7 @@ svn_client_merge_peg3(const char *source,
   working_rev.kind = svn_opt_revision_working;
   SVN_ERR(svn_client__get_repos_root(&wc_repos_root, target_wcpath, 
                                      &working_rev, adm_access, ctx, pool));
-  SVN_ERR(svn_client__get_repos_root(&source_repos_root, NULL, peg_revision,
-                                     NULL, ctx, pool));
+  SVN_ERR(svn_ra_get_repos_root(ra_session, &source_repos_root, pool));
 
   /* If we were given revisions to merge, that's great -- normalize
      those merge sources.  Otherwise, we'll need to choose some sane
