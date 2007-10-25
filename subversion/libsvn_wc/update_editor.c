@@ -193,63 +193,8 @@ struct dir_baton
   /* The current log buffer. */
   svn_stringbuf_t *log_accum;
 
-  /* The working copy depth of the directory.
-
-     If this is svn_depth_exclude, then all other fields in this
-     structure are undefined, and no editor calls at or below this
-     directory should have any effect -- they should return
-     immediately with SVN_NO_ERROR.
-
-     Notes on the general depth-filtering strategy.
-     ==============================================
-
-     When a depth-aware (>= 1.5) client pulls an update from a
-     non-depth-aware server, the server may send back too much data,
-     because it doesn't hear what the client tells it about the
-     "requested depth" of the update (the "foo" in "--depth=foo"), nor
-     about the "ambient depth" of the each working copy directory.
-
-     For example, suppose a 1.5 client does this against a 1.4 server:
-
-       $ svn co --depth=empty -rSOME_OLD_REV http://url/repos/blah/ wc
-       $ cd wc
-       $ svn up
-
-     In the initial checkout, the requested depth is 'empty', so the
-     depth-filtering editor (see libsvn_delta/depth_filter_editor.c)
-     that wraps the main update editor transparently filters out all
-     the unwanted calls.
-
-     In the 'svn up', the requested depth is unspecified, meaning that
-     the ambient depth(s) of the working copy should be preserved.
-     Since there's only one directory, and its depth is 'empty',
-     clearly we should filter out or render no-ops all editor calls
-     after open_root(), except maybe for change_dir_prop() on the
-     top-level directory.  (Note that the server will have stuff to
-     send down, because we checked out at an old revision in the first
-     place, to set up this scenario.)
-
-     The depth-filtering editor won't help us here.  It only filters
-     based on the requested depth, it never looks in the working copy
-     to get ambient depths.  So the update editor itself will have to
-     filter out the unwanted calls.
-
-     We do this at the moment of baton construction.  When a file or
-     dir is opened, we create its baton with the appropriate ambient
-     depth, either taking the depth directly from the corresponding
-     working copy object (if available), or from its parent baton.  In
-     the latter case, we don't just copy the parent baton's depth, but
-     rather use it to choose the correct depth for this child.  The
-     usual depth demotion rules apply, with the additional stipulation
-     that as soon as we find a subtree is not present at all, due to
-     being omitted for depth reasons, we put ambient_depth=exclude in
-     its baton, which signals that all descendant batons should get
-     ambient_depth=exclude automatically.  (In fact, we may just
-     re-use the parent baton, since none of the other fields will be
-     used anyway.)
-
-     See issue #2842 for more.
-  */
+  /* The depth of the directory in the wc (or inferred if added).  Not
+     used for filtering; we have a separate wrapping editor for that. */
   svn_depth_t ambient_depth;
 
   /* The pool in which this baton itself is allocated. */
@@ -409,14 +354,6 @@ make_dir_baton(struct dir_baton **d_p,
   if (pb && (! path))
     abort();
 
-  if (pb && pb->ambient_depth == svn_depth_exclude)
-    {
-      /* Just re-use the parent baton, since the only field that
-         matters is depth==svn_depth_exclude. */
-      *d_p = pb;
-      return SVN_NO_ERROR;
-    }
-
   /* Okay, no easy out, so allocate and initialize a dir baton. */
   d = apr_pcalloc(pool, sizeof(*d));
 
@@ -430,55 +367,6 @@ make_dir_baton(struct dir_baton **d_p,
   else
     {
       d->name = NULL;
-    }
-
-  if (eb->requested_depth == svn_depth_unknown
-      && pb
-      && (pb->ambient_depth == svn_depth_empty
-          || pb->ambient_depth == svn_depth_files))
-    {
-      /* This is not a depth upgrade, and the parent directory is
-         depth==empty or depth==files.  So if the parent doesn't
-         already have an entry for the new dir, then the parent
-         doesn't want the new dir at all, thus we should initialize
-         it at svn_depth_exclude. */
-      const svn_wc_entry_t *entry;
-
-      SVN_ERR(svn_wc_entry(&entry, d->path, eb->adm_access, FALSE, pool));
-      if (! entry)
-        {
-          d->ambient_depth = svn_depth_exclude;
-          *d_p = d;
-          return SVN_NO_ERROR;
-        }
-    }
-
-  if (added)
-    {
-      if (strcmp(eb->target, path) == 0)
-        {
-          /* The target of the edit is being added, give it the requested
-             depth of the edit (but convert svn_depth_unknown to
-             svn_depth_infinity). */
-          d->ambient_depth = (eb->requested_depth == svn_depth_unknown)
-            ? svn_depth_infinity : eb->requested_depth;
-        }
-      else if (eb->requested_depth == svn_depth_immediates
-               || (eb->requested_depth == svn_depth_unknown
-                   && pb->ambient_depth == svn_depth_immediates))
-        {
-          d->ambient_depth = svn_depth_empty;
-        }
-      else
-        {
-          d->ambient_depth = svn_depth_infinity;
-        }
-    }
-  else
-    {
-      /* For opened directories, we'll get the real depth back in
-         open_directory or open_root. */
-      d->ambient_depth = svn_depth_unknown;
     }
 
   /* Figure out the new_URL for this directory. */
@@ -540,6 +428,9 @@ make_dir_baton(struct dir_baton **d_p,
   d->bump_info    = bdi;
   d->log_number   = 0;
   d->log_accum    = svn_stringbuf_create("", pool);
+
+  /* The caller of this function needs to fill this in. */
+  d->ambient_depth = svn_depth_unknown;
 
   apr_pool_cleanup_register(d->pool, d, cleanup_dir_baton,
                             cleanup_dir_baton_child);
@@ -781,13 +672,6 @@ struct file_baton
      last window is handled by the handler returned from
      apply_textdelta(). */
   unsigned char digest[APR_MD5_DIGESTSIZE];
-
-  /* This field signifies whether editor calls on this file should be
-     ignored for depth reasons (ie, because an ancestor was at depth
-     empty).  If this is true, then all other fields in this baton are
-     undefined and no editor call should do anything with this file.
-     If it is false, proceed as usual. */
-  svn_boolean_t ambiently_excluded;
 };
 
 
@@ -807,36 +691,9 @@ make_file_baton(struct file_baton **f_p,
   if (! path)
     abort();
 
-  /* If parent is being ignored, then everything under it is too. */
-  if (pb->ambient_depth == svn_depth_exclude)
-    {
-      f->ambiently_excluded = TRUE;
-      *f_p = f;
-      return SVN_NO_ERROR;
-    }
-
   /* Make the file's on-disk name. */
   f->path = svn_path_join(pb->edit_baton->anchor, path, pool);
   f->name = svn_path_basename(path, pool);
-
-  if (pb->edit_baton->requested_depth == svn_depth_unknown
-      && pb->ambient_depth == svn_depth_empty)
-    {
-      const svn_wc_entry_t *entry;
-
-      /* This is not a depth upgrade, and the parent directory is
-         depth==empty.  So if the parent doesn't already have an entry
-         for the file, then the parent doesn't want to hear about the
-         file at all, thus we should initialize it at svn_depth_exclude. */
-      SVN_ERR(svn_wc_entry(&entry, f->path, pb->edit_baton->adm_access, 
-                           FALSE, pool));
-      if (! entry)
-        {
-          f->ambiently_excluded = TRUE;
-          *f_p = f;
-          return SVN_NO_ERROR;
-        }
-    }
 
   /* Figure out the new_URL for this file. */
   if (pb->edit_baton->switch_url)
@@ -1158,9 +1015,6 @@ open_root(void *edit_baton,
   SVN_ERR(make_dir_baton(&d, NULL, eb, NULL, FALSE, pool));
   *dir_baton = d;
 
-  if (d->ambient_depth == svn_depth_exclude)
-    return SVN_NO_ERROR;
-
   if (! *eb->target)
     {
       /* For an update with a NULL target, this is equivalent to open_dir(): */
@@ -1343,25 +1197,6 @@ delete_entry(const char *path,
 {
   struct dir_baton *pb = parent_baton;
 
-  if (pb->ambient_depth == svn_depth_exclude)
-    return SVN_NO_ERROR;
-
-  if (pb->edit_baton->requested_depth == svn_depth_unknown
-      && pb->ambient_depth < svn_depth_immediates)
-    {
-      /* If the entry we want to delete doesn't exist, that's OK.
-         It's probably an old server that doesn't understand
-         depths. */
-      const svn_wc_entry_t *entry;
-      const char *full_path = svn_path_join(pb->edit_baton->anchor, path,
-                                            pool);
-
-      SVN_ERR(svn_wc_entry(&entry, full_path,
-                           pb->edit_baton->adm_access, FALSE, pool));
-      if (! entry)
-        return SVN_NO_ERROR;
-    }
-
   SVN_ERR(check_path_under_root(pb->path, svn_path_basename(path, pool),
                                 pool));
   return do_entry_deletion(pb->edit_baton, pb->path, path, &pb->log_number,
@@ -1385,8 +1220,25 @@ add_directory(const char *path,
   SVN_ERR(make_dir_baton(&db, path, eb, pb, TRUE, pool));
   *child_baton = db;
 
-  if (db->ambient_depth == svn_depth_exclude)
-    return SVN_NO_ERROR;
+  if (strcmp(eb->target, path) == 0)
+    {
+      /* The target of the edit is being added, give it the requested
+         depth of the edit (but convert svn_depth_unknown to
+         svn_depth_infinity). */
+      db->ambient_depth = (eb->requested_depth == svn_depth_unknown)
+        ? svn_depth_infinity : eb->requested_depth;
+    }
+  else if (eb->requested_depth == svn_depth_immediates
+           || (eb->requested_depth == svn_depth_unknown
+               && pb->ambient_depth == svn_depth_immediates))
+    {
+      db->ambient_depth = svn_depth_empty;
+    }
+  else
+    {
+      db->ambient_depth = svn_depth_infinity;
+    }
+
 
   /* Flush the log for the parent directory before going into this subtree. */
   SVN_ERR(flush_log(pb, pool));
@@ -1592,9 +1444,6 @@ open_directory(const char *path,
   SVN_ERR(make_dir_baton(&db, path, eb, pb, FALSE, pool));
   *child_baton = db;
 
-  if (db->ambient_depth == svn_depth_exclude)
-    return SVN_NO_ERROR;
-
   /* Flush the log for the parent directory before going into this subtree. */
   SVN_ERR(flush_log(pb, pool));
 
@@ -1665,9 +1514,6 @@ change_dir_prop(void *dir_baton,
   svn_prop_t *propchange;
   struct dir_baton *db = dir_baton;
 
-  if (db->ambient_depth == svn_depth_exclude)
-    return SVN_NO_ERROR;
-
   if (db->bump_info->skipped)
     return SVN_NO_ERROR;
 
@@ -1707,9 +1553,6 @@ close_directory(void *dir_baton,
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   apr_array_header_t *entry_props, *wc_props, *regular_props;
   svn_wc_adm_access_t *adm_access;
-
-  if (db->ambient_depth == svn_depth_exclude)
-    return SVN_NO_ERROR;
 
   SVN_ERR(svn_categorize_props(db->propchanges, &entry_props, &wc_props,
                                &regular_props, pool));
@@ -1844,9 +1687,6 @@ absent_file_or_dir(const char *path,
   const svn_wc_entry_t *ent;
   svn_wc_entry_t tmp_entry;
 
-  if (pb->ambient_depth == svn_depth_exclude)
-    return SVN_NO_ERROR;
-
   /* Extra check: an item by this name may not exist, but there may
      still be one scheduled for addition.  That's a genuine
      tree-conflict.  */
@@ -1943,8 +1783,6 @@ add_file(const char *path,
   SVN_ERR(make_file_baton(&fb, pb, path, TRUE, pool));
   *file_baton = fb;
 
-  if (fb->ambiently_excluded)
-    return SVN_NO_ERROR;
 
   SVN_ERR(check_path_under_root(fb->dir_baton->path, fb->name, subpool));
 
@@ -2039,9 +1877,6 @@ open_file(const char *path,
 
   SVN_ERR(make_file_baton(&fb, pb, path, FALSE, pool));
   *file_baton = fb;
-
-  if (fb->ambiently_excluded)
-    return SVN_NO_ERROR;
 
   SVN_ERR(check_path_under_root(fb->dir_baton->path, fb->name, subpool));
 
@@ -2160,7 +1995,7 @@ apply_textdelta(void *file_baton,
   svn_boolean_t replaced;
   svn_boolean_t use_revert_base;
 
-  if (fb->skipped || fb->ambiently_excluded)
+  if (fb->skipped)
     {
       *handler = svn_delta_noop_window_handler;
       *handler_baton = NULL;
@@ -2292,7 +2127,7 @@ change_file_prop(void *file_baton,
   struct edit_baton *eb = fb->edit_baton;
   svn_prop_t *propchange;
 
-  if (fb->skipped || fb->ambiently_excluded)
+  if (fb->skipped)
     return SVN_NO_ERROR;
 
   /* Push a new propchange to the file baton's array of propchanges */
@@ -2825,9 +2660,6 @@ close_file(void *file_baton,
   svn_wc_notify_state_t content_state, prop_state;
   svn_wc_notify_lock_state_t lock_state;
 
-  if (fb->ambiently_excluded)
-    return SVN_NO_ERROR;
-
   if (fb->skipped)
     {
       SVN_ERR(maybe_bump_dir_info(eb, fb->bump_info, pool));
@@ -3146,12 +2978,6 @@ add_file_with_history(const char *path,
   tfb = (struct file_baton *)fb;
   tfb->added_with_history = TRUE;
 
-  if (tfb->ambiently_excluded)
-    {
-      *file_baton = tfb;
-      return SVN_NO_ERROR;
-    }
-
   /* Attempt to locate the copyfrom_path in the working copy first. */
   SVN_ERR(svn_wc_entry(&path_entry, pb->path, eb->adm_access, FALSE, pool));
   err = locate_copyfrom(copyfrom_path, copyfrom_rev,
@@ -3339,6 +3165,8 @@ make_editor(svn_revnum_t *target_revision,
   struct edit_baton *eb;
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(subpool);
+  const svn_delta_editor_t *ambient_editor;
+  void *ambient_baton;
   const svn_wc_entry_t *entry;
 
   /* Get the anchor entry, so we can fetch the repository root. */
@@ -3396,10 +3224,20 @@ make_editor(svn_revnum_t *target_revision,
   tree_editor->absent_file = absent_file;
   tree_editor->close_edit = close_edit;
 
+  SVN_ERR(svn_wc__ambient_depth_filter_editor(&ambient_editor,
+                                              &ambient_baton,
+                                              tree_editor,
+                                              eb,
+                                              anchor,
+                                              target,
+                                              adm_access,
+                                              depth,
+                                              pool));
+
   SVN_ERR(svn_delta_get_cancellation_editor(cancel_func,
                                             cancel_baton,
-                                            tree_editor,
-                                            eb,
+                                            ambient_editor,
+                                            ambient_baton,
                                             editor,
                                             edit_baton,
                                             pool));
