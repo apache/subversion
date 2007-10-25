@@ -103,7 +103,7 @@
 #endif
 
 #ifdef SWIGRUBY
-%apply apr_hash_t **HASH_OF_MERGE_INFO_HASH {
+%apply apr_hash_t **MERGEINFO_HASH {
   apr_hash_t **mergeoutput
 };
 #endif
