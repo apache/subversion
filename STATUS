@@ -23,16 +23,6 @@ Status of 1.4.6:
 
 Candidate changes:
 
-  * r27263
-    Use the correct pointer type for a sizeof used to calculate the
-    size of a memset.
-    Justification:
-      In some hypothetical architecture where sizeof(apr_hash_t *) !=
-      sizeof(svn_fs_id_t *), the current code could either fail to clear
-      a cache or zero out an unexpected part of memory.
-    Votes:
-      +1: glasser, dlr
-
   * r27256
     Stop using FSFS's directory cache for mutable (transaction) nodes,
     because there's no check that the node hasn't been changed by
@@ -224,3 +214,13 @@ Approved changes:
     Branch: TBD
     Votes:
       +1: dionisos, dlr, hwright
+
+  * r27263
+    Use the correct pointer type for a sizeof used to calculate the
+    size of a memset.
+    Justification:
+      In some hypothetical architecture where sizeof(apr_hash_t *) !=
+      sizeof(svn_fs_id_t *), the current code could either fail to clear
+      a cache or zero out an unexpected part of memory.
+    Votes:
+      +1: glasser, dlr, hwright
