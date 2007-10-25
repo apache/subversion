@@ -536,7 +536,7 @@ dav_svn__checkout(dav_resource *resource,
          the version resource URL, we're in a bit of a quandry, and
          one of a few things could be true.
 
-         - The client is trying to modify an old (out of date)
+         - The client is trying to modify an old (out-of-date)
            revision of the resource.  This is, of course,
            unacceptable!
 

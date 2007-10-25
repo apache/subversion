@@ -485,7 +485,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
         return svn_error_createf
           (err->apr_err, err,
-           _("File or directory '%s' is out-of-date; try updating"),
+           _("File or directory '%s' is out of date; try updating"),
            svn_path_local_style(rsrc->local_path, pool));
       return err;
     }
@@ -564,7 +564,7 @@ propchange.  Therefore:
 2. when ra_neon's commit editor receives a directory propchange, it
    *is* able to get the VR cache (because the dir is a "committable"),
    and thus it does a CHECKOUT of the older directory.  And mod_dav_svn
-   will scream if the VR is out-of-date, which is exactly what we want in
+   will scream if the VR is out of date, which is exactly what we want in
    the directory propchange scenario.
 
 The only potential badness here is the case of committing a directory

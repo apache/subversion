@@ -1653,7 +1653,7 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
  *
  *    - If @a get_all is set, retrieve all entries; otherwise,
  *      retrieve only "interesting" entries (local mods and/or
- *      out-of-date).
+ *      out of date).
  *
  *    - If @a update is set, contact the repository and augment the
  *      status structures with information about out-of-dateness (with
@@ -3841,7 +3841,7 @@ svn_client_get_changelist_streamy(svn_changelist_receiver_t callback_func,
  * For each target @a ctx->notify_func2/notify_baton2 will be used to indicate
  * whether it was locked.  An action of @c svn_wc_notify_state_locked
  * means that the path was locked.  If the path was not locked because
- * it was out-of-date or there was already a lock in the repository,
+ * it was out of date or there was already a lock in the repository,
  * the notification function will be called with @c
  * svn_wc_notify_failed_lock, and the error passed in the notification
  * structure.
