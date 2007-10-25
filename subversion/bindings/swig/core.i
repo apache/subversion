@@ -669,15 +669,18 @@ PyObject *svn_swig_py_exception_type(void);
 
 
 /* ----------------------------------------------------------------------- */
+// These APIs take an "inout" parameter that necessitates more careful
+// definition.
+%ignore svn_mergeinfo_merge;
+%ignore svn_mergeinfo_sort;
+%ignore svn_rangelist_merge;
+%ignore svn_rangelist_reverse;
+
 #ifdef SWIGRUBY
 %ignore svn_auth_open;
 %ignore svn_diff_file_options_create;
 %ignore svn_create_commit_info;
 %ignore svn_commit_info_dup;
-%ignore svn_mergeinfo_merge;
-%ignore svn_mergeinfo_sort;
-%ignore svn_rangelist_merge;
-%ignore svn_rangelist_reverse;
 
 %ignore svn_opt_args_to_target_array2;
 %ignore svn_opt_parse_num_args;
