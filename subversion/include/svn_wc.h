@@ -771,6 +771,9 @@ typedef enum svn_wc_notify_action_t
       @c svn_wc_notify_t.  @since New in 1.5   */
   svn_wc_notify_merge_begin,
 
+  /** Replace notification. */
+  svn_wc_notify_update_replace,
+
 } svn_wc_notify_action_t;
 
 

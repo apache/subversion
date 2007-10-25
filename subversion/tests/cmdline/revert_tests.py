@@ -439,7 +439,7 @@ def revert_file_merge_replace_with_history(sbox):
 
   # merge changes from r3:1
   expected_output = svntest.wc.State(wc_dir, {
-    'A/D/G/rho': Item(status='A ')
+    'A/D/G/rho': Item(status='R ')
     })
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
   expected_skip = wc.State(wc_dir, { })
@@ -689,7 +689,7 @@ def revert_replaced_with_history_file_1(sbox):
 
   # now revert back to the state in r1
   expected_output = svntest.wc.State(wc_dir, {
-    'A/mu': Item(status='A '),
+    'A/mu': Item(status='R '),
     'iota': Item(status='A ')
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -802,10 +802,9 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
   ### Eventually, expected output for 'A/D/G' should be 'R '
   ### (replaced) instead of 'A ' (added).  See issue #571 for details.
   expected_output = svntest.wc.State(wc_dir, {
-    'A/D/G': Item(status='D '),
+    'A/D/G': Item(status='R '),
     'A/D/G/alpha': Item(status='D '),
     'A/D/G/beta': Item(status='D '),
-    'A/D/G': Item(status='A '),
     'A/D/G/rho': Item(status='A '),
     'A/D/G/pi': Item(status='A '),
     'A/D/G/tau': Item(status='A '),
