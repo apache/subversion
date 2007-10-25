@@ -50,12 +50,6 @@
 }
 #endif
 
-#if defined(SWIGPYTHON) || defined(SWIGRUBY)
-%apply apr_hash_t **MERGEHASH {
-  apr_hash_t **mergeinfo
-}
-#endif
-
 #ifdef SWIGRUBY
 %apply apr_array_header_t *SOURCES {
   apr_array_header_t *sources
