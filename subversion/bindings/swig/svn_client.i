@@ -51,10 +51,6 @@
 #endif
 
 #if defined(SWIGPYTHON) || defined(SWIGRUBY)
-%apply apr_array_header_t **RANGELIST {
-  apr_array_header_t **rangelist
-}
-
 %apply apr_hash_t **MERGEHASH {
   apr_hash_t **mergeinfo
 }
