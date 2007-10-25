@@ -54,9 +54,9 @@ svn_fs_bdb__open_changes_table(DB **changes_p,
      one-per-row.  Note: this must occur before ->open().  */
   BDB_ERR(changes->set_flags(changes, DB_DUP));
 
-  BDB_ERR(changes->open(SVN_BDB_OPEN_PARAMS(changes, NULL),
-                        "changes", 0, DB_BTREE,
-                        open_flags, 0666));
+  BDB_ERR((changes->open)(SVN_BDB_OPEN_PARAMS(changes, NULL),
+                          "changes", 0, DB_BTREE,
+                          open_flags, 0666));
 
   *changes_p = changes;
   return 0;

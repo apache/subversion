@@ -41,9 +41,9 @@ int svn_fs_bdb__open_revisions_table(DB **revisions_p,
 
   BDB_ERR(svn_fs_bdb__check_version());
   BDB_ERR(db_create(&revisions, env, 0));
-  BDB_ERR(revisions->open(SVN_BDB_OPEN_PARAMS(revisions, NULL),
-                          "revisions", 0, DB_RECNO,
-                          open_flags, 0666));
+  BDB_ERR((revisions->open)(SVN_BDB_OPEN_PARAMS(revisions, NULL),
+                            "revisions", 0, DB_RECNO,
+                            open_flags, 0666));
 
   *revisions_p = revisions;
   return 0;

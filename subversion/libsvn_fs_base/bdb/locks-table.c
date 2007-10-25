@@ -45,9 +45,9 @@ svn_fs_bdb__open_locks_table(DB **locks_p,
 
   BDB_ERR(svn_fs_bdb__check_version());
   BDB_ERR(db_create(&locks, env, 0));
-  error = locks->open(SVN_BDB_OPEN_PARAMS(locks, NULL),
-                      "locks", 0, DB_BTREE,
-                      open_flags, 0666);
+  error = (locks->open)(SVN_BDB_OPEN_PARAMS(locks, NULL),
+                        "locks", 0, DB_BTREE,
+                        open_flags, 0666);
 
   /* Create the table if it doesn't yet exist.  This is a form of
      automagical repository upgrading. */
