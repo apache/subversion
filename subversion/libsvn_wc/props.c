@@ -1489,7 +1489,7 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
                 *conflict = svn_string_createf
                     (pool,
                      _("Trying to add new property '%s' with value "
-                       "'%s',\nbut property already exists with value '%s'"),
+                       "'%s',\nbut property already exists with value '%s'."),
                      propname, new_val->data, working_val->data);
             }
         }
@@ -1504,7 +1504,7 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
       if (got_conflict)
         *conflict = svn_string_createf
             (pool, _("Trying to create property '%s' with value '%s',\n"
-                     "but it has been locally deleted"),
+                     "but it has been locally deleted."),
              propname, new_val->data);
     }
   else  /* property doesn't yet exist in working_props...  */
@@ -1577,8 +1577,8 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
                if (got_conflict)
                  *conflict = svn_string_createf
                      (pool,
-                      _("Trying to delete property '%s' with value '%s',\n"
-                        "but it has been modified from '%s' to '%s'"),
+                      _("Trying to delete property '%s' with value '%s'\n"
+                        "but it has been modified from '%s' to '%s'."),
                       propname, old_val->data,
                       base_val->data, working_val->data);
              }
@@ -1598,8 +1598,8 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
       if (got_conflict)
         *conflict = svn_string_createf
             (pool,
-             _("Trying to delete property '%s' with value '%s',\n"
-               "but the local value is '%s'"),
+             _("Trying to delete property '%s' with value '%s'\n"
+               "but the local value is '%s'."),
              propname, base_val->data, working_val->data);
     }
 
@@ -1687,7 +1687,7 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
                         (pool,
                          _("Trying to change property '%s' from '%s' to '%s',\n"
                            "but property has been locally changed "
-                           "from '%s' to '%s'"),
+                           "from '%s' to '%s'."),
                          propname, old_val->data, new_val->data,
                           base_val->data, working_val->data);
                       else
@@ -1715,7 +1715,7 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
             *conflict = svn_string_createf
                 (pool,
                  _("Trying to change property '%s' from '%s' to '%s',\n"
-                   "but it has been locally deleted"),
+                   "but it has been locally deleted."),
                  propname, old_val->data, new_val->data);
         }
     }
@@ -1749,7 +1749,7 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
             *conflict = svn_string_createf
                 (pool,
                  _("Trying to change property '%s' from '%s' to '%s',\n"
-                   "but the property does not exist"),
+                   "but the property does not exist."),
                  propname, old_val->data, new_val->data);
         }
     }
@@ -1787,7 +1787,7 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
                 *conflict = svn_string_createf
                     (pool,
                      _("Trying to change property '%s' from '%s' to '%s',\n"
-                       "but property already exists with value '%s'"),
+                       "but property already exists with value '%s'."),
                      propname, old_val->data, new_val->data,
                      working_val->data);
             }
