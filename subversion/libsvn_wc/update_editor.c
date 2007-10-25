@@ -1948,7 +1948,7 @@ add_file(const char *path,
       /* Sanity checks */
       if (! (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev)))
         return svn_error_create(SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
-                                  _("Bad copyfrom arguments received."));
+                                  _("Bad copyfrom arguments received"));
 
       return add_file_with_history(path, parent_baton,
                                    copyfrom_path, copyfrom_rev,
@@ -2956,7 +2956,7 @@ locate_copyfrom(const char *copyfrom_path,
   if ((! dest_entry->repos) || (! dest_entry->url))
     return svn_error_create(SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND, NULL,
                             _("Destination directory of add-with-history "
-                              "is missing a URL."));
+                              "is missing a URL"));
 
   svn_path_split(copyfrom_path, &copyfrom_parent, &copyfrom_file, pool);
   SVN_ERR(svn_path_get_absolute(&abs_dest_dir, dest_dir, pool));
@@ -2970,7 +2970,7 @@ locate_copyfrom(const char *copyfrom_path,
         dest_fs_path = "";  /* the urls are identical; that's ok. */
       else
         return svn_error_create(SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND, NULL,
-                                _("Destination URLs are broken."));
+                                _("Destination URLs are broken"));
     }
   dest_fs_path = apr_pstrcat(pool, "/", dest_fs_path, NULL);
   dest_fs_path = svn_path_canonicalize(dest_fs_path, pool);
@@ -3211,7 +3211,7 @@ add_file_with_history(const char *path,
 
       if (! eb->fetch_func)
         return svn_error_create(SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
-                                _("No fetch_func supplied to update_editor."));
+                                _("No fetch_func supplied to update_editor"));
 
       /* Fetch the repository file's text-base and base-props;
          svn_stream_close() automatically closes the text-base file for us. */
