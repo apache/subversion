@@ -841,36 +841,20 @@ make_file_baton(struct file_baton **f_p,
   if (pb->edit_baton->requested_depth == svn_depth_unknown
       && pb->ambient_depth == svn_depth_empty)
     {
+      const svn_wc_entry_t *entry;
+
       /* This is not a depth upgrade, and the parent directory is
          depth==empty.  So if the parent doesn't already have an entry
          for the file, then the parent doesn't want to hear about the
          file at all, thus we should initialize it at svn_depth_exclude. */
-      svn_error_t *err;
-      const svn_wc_entry_t *entry;
-      svn_wc_adm_access_t *adm_access;
-
-      err = svn_wc_adm_retrieve(&adm_access, pb->edit_baton->adm_access,
-                                f->path, pool);
-      if (err &&
-          (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
-           || err->apr_err == SVN_ERR_WC_NOT_LOCKED))
+      SVN_ERR(svn_wc_entry(&entry, f->path, pb->edit_baton->adm_access, 
+                           FALSE, pool));
+      if (! entry)
         {
-          svn_error_clear(err);
           f->ambiently_excluded = TRUE;
           *f_p = f;
           return SVN_NO_ERROR;
         }
-
-      err = svn_wc_entry(&entry, f->path, adm_access, FALSE, pool);
-      if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
-        {
-          svn_error_clear(err);
-          f->ambiently_excluded = TRUE;
-          *f_p = f;
-          return SVN_NO_ERROR;
-        }
-      else if (err)
-        return err;
     }
 
   /* Figure out the new_URL for this file. */

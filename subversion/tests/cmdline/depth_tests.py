@@ -312,12 +312,29 @@ def depth_empty_with_file(sbox):
                                         expected_status,
                                         None, None, None, None, None, wc)
 
-  # Update the depth-empty wc, expecting to receive the deletion of iota.
+  # Update the depth-empty wc just a little, expecting to receive
+  # the change in iota.
   expected_output = svntest.wc.State(\
-    wc_empty, { 'iota' : svntest.wc.StateItem(status='D ') })
+    wc_empty, { 'iota' : Item(status='U ') })
+  expected_disk = svntest.wc.State(\
+    '', { 'iota' : Item(contents="This is the file 'iota'.\nnew text\n") })
+  expected_status = svntest.wc.State(wc_empty,
+    { ''     : Item(status='  ', wc_rev=2),
+      'iota' : Item(status='  ', wc_rev=2),})
+  svntest.actions.run_and_verify_update(wc_empty,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, False,
+                                        '-r2', wc_empty)
+  
+  # Update the depth-empty wc all the way, expecting to receive the deletion
+  # of iota.
+  expected_output = svntest.wc.State(\
+    wc_empty, { 'iota' : Item(status='D ') })
   expected_disk = svntest.wc.State('', { })
   expected_status = svntest.wc.State(\
-    wc_empty, { '' : svntest.wc.StateItem(status='  ', wc_rev=3) })
+    wc_empty, { '' : Item(status='  ', wc_rev=3) })
   svntest.actions.run_and_verify_update(wc_empty,
                                         expected_output,
                                         expected_disk,
