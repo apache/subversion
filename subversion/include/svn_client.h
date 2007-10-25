@@ -1594,7 +1594,9 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
 /**
  * Similar to svn_client_commit4(), but always with NULL for
- * @a changelist_name and false for @a keep_changelist.
+ * @a changelist_name, false for @a keep_changelist, and @a depth
+ * set according to @a recurse: if @a recurse is true, use
+ * @c svn_depth_infinity, else @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  *
