@@ -348,9 +348,10 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         MyLogMessageCallback callback = new MyLogMessageCallback();
+        String[] revProps = { "svn:log", "svn:date", "svn:author" };
 
         logMessages(path, revisionEnd, revisionStart, revisionEnd,
-                    stopOnCopy, discoverPath, false, false, limit, callback);
+                    stopOnCopy, discoverPath, false, revProps, limit, callback);
 
         return callback.getMessages();
     }
@@ -366,7 +367,7 @@ public class SVNClient implements SVNClientInterface
      *                      returned objects
      * @param includeMergedRevisions include log messages for revisions which
      *                               were merged.
-     * @param omitLogText   supress log message text.
+     * @param revProps      the revprops to retrieve
      * @param limit         limit the number of log messages (if 0 or less no
      *                      limit)
      * @since 1.5
@@ -378,7 +379,7 @@ public class SVNClient implements SVNClientInterface
                                    boolean stopOnCopy,
                                    boolean discoverPath,
                                    boolean includeMergedRevisions,
-                                   boolean omitLogText,
+                                   String[] revProps,
                                    long limit,
                                    LogMessageCallback callback)
             throws ClientException;
