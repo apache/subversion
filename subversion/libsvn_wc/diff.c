@@ -1716,6 +1716,8 @@ svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
 {
   struct edit_baton *eb;
   svn_delta_editor_t *tree_editor;
+  const svn_delta_editor_t *ambient_editor;
+  void *ambient_baton;
 
   eb = make_editor_baton(anchor, target, callbacks, callback_baton,
                          depth, ignore_ancestry, use_text_base,
@@ -1736,10 +1738,20 @@ svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
   tree_editor->close_file = close_file;
   tree_editor->close_edit = close_edit;
 
+  SVN_ERR(svn_wc__ambient_depth_filter_editor(&ambient_editor,
+                                              &ambient_baton,
+                                              tree_editor,
+                                              eb,
+                                              svn_wc_adm_access_path(anchor),
+                                              target,
+                                              anchor,
+                                              depth,
+                                              pool));
+
   SVN_ERR(svn_delta_get_cancellation_editor(cancel_func,
                                             cancel_baton,
-                                            tree_editor,
-                                            eb,
+                                            ambient_editor,
+                                            ambient_baton,
                                             editor,
                                             edit_baton,
                                             pool));
