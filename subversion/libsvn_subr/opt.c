@@ -137,16 +137,31 @@ svn_opt_get_option_from_code(int code,
 
 
 svn_boolean_t
-svn_opt_subcommand_takes_option2(const svn_opt_subcommand_desc2_t *command,
-                                 int option_code)
+svn_opt_subcommand_takes_option3(const svn_opt_subcommand_desc2_t *command,
+                                 int option_code,
+                                 const int *global_options)
 {
   apr_size_t i;
 
   for (i = 0; i < SVN_OPT_MAX_OPTIONS; i++)
     if (command->valid_options[i] == option_code)
       return TRUE;
+  
+  if (global_options)
+    for (i = 0; global_options[i]; i++)
+      if (global_options[i] == option_code)
+        return TRUE;
 
   return FALSE;
+}
+
+svn_boolean_t
+svn_opt_subcommand_takes_option2(const svn_opt_subcommand_desc2_t *command,
+                                 int option_code)
+{
+  return svn_opt_subcommand_takes_option3(command,
+                                          option_code,
+                                          NULL);
 }
 
 
@@ -170,6 +185,7 @@ svn_opt_subcommand_takes_option(const svn_opt_subcommand_desc_t *command,
 static svn_error_t *
 print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
                     const apr_getopt_option_t *options_table,
+                    const int *global_options,
                     svn_boolean_t help,
                     apr_pool_t *pool,
                     FILE *stream)
@@ -235,6 +251,32 @@ print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
                 }
             }
         }
+      /* And global options too */
+      if (global_options)
+        for (i = 0; global_options[i]; i++)
+          {
+            if (have_options == FALSE)
+              {
+                SVN_ERR(svn_cmdline_fputs(_("\nValid options:\n"),
+                                          stream, pool));
+                have_options = TRUE;
+              }
+
+            /* convert each option code into an option */
+            option =
+              svn_opt_get_option_from_code2(global_options[i],
+                                            options_table,
+                                            cmd, pool);
+
+            /* print the option's docstring */
+            if (option)
+              {
+                const char *optstr;
+                svn_opt_format_option(&optstr, option, TRUE, pool);
+                SVN_ERR(svn_cmdline_fprintf(stream, pool, "  %s\n",
+                                            optstr));
+              }
+          }
 
       if (have_options)
         SVN_ERR(svn_cmdline_fprintf(stream, pool, "\n"));
@@ -338,7 +380,8 @@ svn_opt_print_generic_help2(const char *header,
   while (cmd_table[i].name)
     {
       if ((err = svn_cmdline_fputs("   ", stream, pool))
-          || (err = print_command_info2(cmd_table + i, opt_table, FALSE,
+          || (err = print_command_info2(cmd_table + i, opt_table, 
+                                        NULL, FALSE,
                                         pool, stream))
           || (err = svn_cmdline_fputs("\n", stream, pool)))
         goto print_error;
@@ -431,9 +474,10 @@ svn_opt_format_option(const char **string,
 
 
 void
-svn_opt_subcommand_help2(const char *subcommand,
+svn_opt_subcommand_help3(const char *subcommand,
                          const svn_opt_subcommand_desc2_t *table,
                          const apr_getopt_option_t *options_table,
+                         const int *global_options,
                          apr_pool_t *pool)
 {
   const svn_opt_subcommand_desc2_t *cmd =
@@ -441,7 +485,8 @@ svn_opt_subcommand_help2(const char *subcommand,
   svn_error_t *err;
 
   if (cmd)
-    err = print_command_info2(cmd, options_table, TRUE, pool, stdout);
+    err = print_command_info2(cmd, options_table, global_options,
+                              TRUE, pool, stdout);
   else
     err = svn_cmdline_fprintf(stderr, pool,
                               _("\"%s\": unknown command.\n\n"), subcommand);
@@ -450,6 +495,16 @@ svn_opt_subcommand_help2(const char *subcommand,
     svn_handle_error2(err, stderr, FALSE, "svn: ");
     svn_error_clear(err);
   }
+}
+
+void
+svn_opt_subcommand_help2(const char *subcommand,
+                         const svn_opt_subcommand_desc2_t *table,
+                         const apr_getopt_option_t *options_table,
+                         apr_pool_t *pool)
+{
+  svn_opt_subcommand_help3(subcommand, table, options_table,
+                           NULL, pool);
 }
 
 
@@ -1025,7 +1080,7 @@ print_version_info(const char *pgm_name,
 
 
 svn_error_t *
-svn_opt_print_help2(apr_getopt_t *os,
+svn_opt_print_help3(apr_getopt_t *os,
                     const char *pgm_name,
                     svn_boolean_t print_version,
                     svn_boolean_t quiet,
@@ -1033,6 +1088,7 @@ svn_opt_print_help2(apr_getopt_t *os,
                     const char *header,
                     const svn_opt_subcommand_desc2_t *cmd_table,
                     const apr_getopt_option_t *option_table,
+                    const int *global_options,
                     const char *footer,
                     apr_pool_t *pool)
 {
@@ -1045,8 +1101,9 @@ svn_opt_print_help2(apr_getopt_t *os,
   if (os && targets->nelts)  /* help on subcommand(s) requested */
     for (i = 0; i < targets->nelts; i++)
       {
-        svn_opt_subcommand_help2(APR_ARRAY_IDX(targets, i, const char *),
-                                 cmd_table, option_table, pool);
+        svn_opt_subcommand_help3(APR_ARRAY_IDX(targets, i, const char *),
+                                 cmd_table, option_table, 
+                                 global_options, pool);
       }
   else if (print_version)   /* just --version */
     SVN_ERR(print_version_info(pgm_name, version_footer, quiet, pool));
@@ -1062,6 +1119,32 @@ svn_opt_print_help2(apr_getopt_t *os,
                                 _("Type '%s help' for usage.\n"), pgm_name));
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_opt_print_help2(apr_getopt_t *os,
+                    const char *pgm_name,
+                    svn_boolean_t print_version,
+                    svn_boolean_t quiet,
+                    const char *version_footer,
+                    const char *header,
+                    const svn_opt_subcommand_desc2_t *cmd_table,
+                    const apr_getopt_option_t *option_table,
+                    const char *footer,
+                    apr_pool_t *pool)
+{
+  return svn_opt_print_help3(os,
+                             pgm_name,
+                             print_version,
+                             quiet,
+                             version_footer,
+                             header,
+                             cmd_table,
+                             option_table,
+                             NULL,
+                             footer,
+                             pool);
 }
 
 

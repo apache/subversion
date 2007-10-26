@@ -259,6 +259,9 @@ svn_opt_subcommand_t
 extern const svn_opt_subcommand_desc2_t svn_cl__cmd_table[];
 
 /* See definition in main.c for documentation. */
+extern const int svn_cl__global_options[];
+
+/* See definition in main.c for documentation. */
 extern const apr_getopt_option_t svn_cl__options[];
 
 
