@@ -527,8 +527,6 @@ def status_add_deleted_directory(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', A_path)
   svntest.main.safe_rmtree(A_path)
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m', 'log msg', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', A_path)
 
@@ -543,8 +541,6 @@ def status_add_deleted_directory(sbox):
   # Update will *not* remove the entry for A despite it being marked
   # deleted.
   svntest.actions.run_and_verify_svn(None, ['At revision 2.\n'], [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'up', wc_dir)
   expected_status.tweak('', 'iota', wc_rev=2)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)

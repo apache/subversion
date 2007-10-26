@@ -253,15 +253,11 @@ def revert_reexpand_keyword(sbox):
   # Commit, without svn:keywords property set.
   svntest.main.run_svn(None, 'add', newfile_path)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'commit', '-m', 'r2', newfile_path)
 
   # Set the property and commit.  This should expand the keyword.
   svntest.main.run_svn(None, 'propset', 'svn:keywords', 'rev', newfile_path)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'commit', '-m', 'r3', newfile_path)
 
   # Verify that the keyword got expanded.
@@ -554,12 +550,8 @@ def revert_after_manual_conflict_resolution__text(sbox):
   svntest.main.file_write(iota_path_1, 'Modified iota text')
   svntest.main.file_write(iota_path_2, 'Conflicting iota text')
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'commit', '-m', 'r2', wc_dir_1)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'update', wc_dir_2)
 
   # Resolve the conflict "manually"
@@ -588,12 +580,8 @@ def revert_after_manual_conflict_resolution__prop(sbox):
   svntest.main.run_svn(None, 'propset', 'foo', '1', iota_path_1)
   svntest.main.run_svn(None, 'propset', 'foo', '2', iota_path_2)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'commit', '-m', 'r2', wc_dir_1)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'update', wc_dir_2)
 
   # Resolve the conflict "manually"
@@ -635,8 +623,6 @@ def revert_propdel__dir(sbox):
   a_path = os.path.join(wc_dir, 'A')
   svntest.main.run_svn(None, 'propset', 'foo', 'x', a_path)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'commit', '-m', 'ps', a_path)
   svntest.main.run_svn(None, 'propdel', 'foo', a_path)
   expected_output = re.escape("Reverted '" + a_path + "'")
@@ -651,8 +637,6 @@ def revert_propdel__file(sbox):
   iota_path = os.path.join(wc_dir, 'iota')
   svntest.main.run_svn(None, 'propset', 'foo', 'x', iota_path)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'commit', '-m', 'ps', iota_path)
   svntest.main.run_svn(None, 'propdel', 'foo', iota_path)
   expected_output = re.escape("Reverted '" + iota_path + "'")

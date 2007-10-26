@@ -437,13 +437,13 @@ def _with_config_dir(args):
     return args + ('--config-dir', default_config_dir)
 
 def _with_auth(args):
+  assert '--password' not in args
+  args = args + ('--password', wc_passwd,
+                 '--no-auth-cache' )
   if '--username' in args:
-    assert '--password' in args
     return args
   else:
-    assert '--password' not in args
-    return args + ('--username', wc_author,
-                   '--password', wc_passwd)
+    return args + ('--username', wc_author )
 
 # For running subversion and returning the output
 def run_svn(error_expected, *varargs):
