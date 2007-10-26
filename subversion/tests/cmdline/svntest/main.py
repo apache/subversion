@@ -436,13 +436,23 @@ def _with_config_dir(args):
   else:
     return args + ('--config-dir', default_config_dir)
 
+def _with_auth(args):
+  if '--username' in args:
+    assert '--password' in args
+    return args
+  else:
+    assert '--password' not in args
+    return args + ('--username', wc_author,
+                   '--password', wc_passwd)
+
 # For running subversion and returning the output
 def run_svn(error_expected, *varargs):
   """Run svn with VARARGS; return stdout, stderr as lists of lines.
   If ERROR_EXPECTED is None, any stderr also will be printed.  If
   you're just checking that something does/doesn't come out of
   stdout/stderr, you might want to use actions.run_and_verify_svn()."""
-  return run_command(svn_binary, error_expected, 0, *(_with_config_dir(varargs)))
+  return run_command(svn_binary, error_expected, 0,
+                     *(_with_auth(_with_config_dir(varargs))))
 
 # For running svnadmin.  Ignores the output.
 def run_svnadmin(*varargs):
