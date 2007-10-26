@@ -111,7 +111,7 @@ Options:
                        bz2 : Creates a bzip2 compressed tar file.
                        gz  : Creates a gzip compressed tar file.
                        zip : Creates a compressed zip file.
-  --num-backups=N    Number of prior backups to keep around (0 for keeping all).
+  --num-backups=N    Number of prior backups to keep around (0 to keep all).
   --help      -h     Print this help message and exit.
 
 """ % (scriptname,))
