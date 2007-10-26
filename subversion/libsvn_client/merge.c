@@ -2739,43 +2739,6 @@ do_single_file_merge(const char *url1,
       svn_error_clear(err);
       err = SVN_NO_ERROR;
 
-      if (notify_b->same_urls)
-        {
-          if (!merge_b->dry_run && merge_b->same_repos)
-            {
-              /* Update the WC mergeinfo here to account for our new
-                 merges, minus any unresolved conflicts and skips. */
-              apr_hash_t *merges;
-              SVN_ERR(determine_merges_performed(&merges, target_wcpath,
-                                                 r, svn_depth_infinity,
-                                                 adm_access, notify_b, merge_b,
-                                                 subpool));
-              /* If this whole merge was simply a no-op merge to a file then
-                 we don't touch the local mergeinfo. */
-              if (merge_b->operative_merge)
-                {
-                  /* If merge target has indirect mergeinfo set it before
-                     recording the first merge range. */
-                  if (i == 0 && indirect)
-                    SVN_ERR(svn_client__record_wc_mergeinfo(target_wcpath,
-                                                            target_mergeinfo,
-                                                            adm_access, subpool));
-
-                  SVN_ERR(update_wc_mergeinfo(target_wcpath, entry, rel_path,
-                                              merges, is_rollback, adm_access,
-                                              ctx, subpool));
-                }
-            }
-
-          /* Clear the notification counter and list of skipped paths
-             in preparation for the next revision range merge. */
-          notify_b->nbr_notifications = 0;
-          if (notify_b->skipped_paths != NULL)
-            svn_hash__clear(notify_b->skipped_paths);
-          if (notify_b->merged_paths != NULL)
-            svn_hash__clear(notify_b->merged_paths);
-        }
-
       if (i < remaining_ranges->nelts - 1 &&
           is_path_conflicted_by_merge(merge_b))
         {
@@ -2784,6 +2747,34 @@ do_single_file_merge(const char *url1,
         }
     }
 
+  if (notify_b->same_urls && remaining_ranges->nelts)
+    {
+      if (!merge_b->dry_run && merge_b->same_repos)
+        {
+          /* Update the WC mergeinfo here to account for our new
+             merges, minus any unresolved conflicts and skips. */
+          apr_hash_t *merges;
+          SVN_ERR(determine_merges_performed(&merges, target_wcpath,
+                                             &range, svn_depth_infinity,
+                                             adm_access, notify_b, merge_b,
+                                             subpool));
+          /* If this whole merge was simply a no-op merge to a file then
+             we don't touch the local mergeinfo. */
+          if (merge_b->operative_merge)
+            {
+              /* If merge target has indirect mergeinfo set it before
+                 recording the first merge range. */
+              if (indirect)
+                SVN_ERR(svn_client__record_wc_mergeinfo(target_wcpath,
+                                                        target_mergeinfo,
+                                                        adm_access, subpool));
+
+              SVN_ERR(update_wc_mergeinfo(target_wcpath, entry, rel_path,
+                                          merges, is_rollback, adm_access,
+                                          ctx, subpool));
+            }
+        }
+    }
   apr_pool_destroy(subpool);
 
   /* Sleep to ensure timestamp integrity. */
