@@ -43,11 +43,22 @@ public class BasicTests extends SVNTests
      */
     public final static String testName = "basic_test";
 
+    public BasicTests()
+    {
+        init();
+    }
+
+    public BasicTests(String name)
+    {
+        super(name);
+        init();
+    }
+
     /**
      * Initialize the testBaseName and the testCounter, if this is the
      * first test of this class.
      */
-    public BasicTests()
+    private void init()
     {
         if (!testName.equals(testBaseName))
         {
@@ -630,8 +641,7 @@ public class BasicTests extends SVNTests
         client.propertyCreate(itemPath, "cqcq", "qrz", false, false);
         ProplistCallbackImpl callback = new ProplistCallbackImpl();
 
-        client.properties(itemPath, null, null, Depth.fromRecurse(false),
-                          callback);
+        client.properties(itemPath, null, null, Depth.empty, callback);
         Map propMap = callback.getProperties(itemPath);
         Iterator it = propMap.keySet().iterator();
 
@@ -2096,11 +2106,14 @@ public class BasicTests extends SVNTests
     {
         OneTest thisTest = setupAndPerformMerge();
 
-        // Test retrieval of uncommitted, inerhited merge info from a WC path.
+        // Test retrieval of inerhited mergeinfo from a WC path.
         String targetPath =
             new File(thisTest.getWCPath(), "branches/A/mu").getPath();
-        final String mergeSrc = "/A/mu";
-        acquireMergeInfoAndAssertEquals("0-2", targetPath, mergeSrc);
+        final String mergeSrc = thisTest.getUrl() + "/A/mu";
+        acquireMergeInfoAndAssertEquals("0-2", "2-3", targetPath, mergeSrc);
+
+        // TODO: Test retrieval of uncommitted, inerhited mergeinfo
+        // from a WC path.
 
         // Commit the result of the merge in preparation for testing
         // retrieval of merge info from the repository.
@@ -2109,19 +2122,29 @@ public class BasicTests extends SVNTests
                      client.commit(new String[] { thisTest.getWCPath() },
                                    "log msg", true));
 
-        // Test retrieval of inherited merge info from the repository.
+        // Test retrieval of inherited mergeinfo from the repository.
         targetPath = thisTest.getUrl() + "/branches/A/mu";
-        acquireMergeInfoAndAssertEquals("0-2", targetPath, mergeSrc);
+        acquireMergeInfoAndAssertEquals("0-2", "2-3", targetPath, mergeSrc);
     }
 
     /**
-     * Helper method for {@link #testMergeInfoRetrieval()}.
+     * Helper method for {@link #testMergeInfoRetrieval()}.  Assumes
+     * that <code>targetPath</code> has both merge history and
+     * available merges.
+     * @param expectedMergedRevs The expected revision ranges from the
+     * merge history for <code>mergeSrc</code>.
+     * @param expectedMergedRevs The expected available revision
+     * ranges from the available merges for <code>mergeSrc</code>.
+     * @param targetPath The path for which to acquire mergeinfo.
+     * @param mergeSrc The URL from which to consider merges.
      */
-    private void acquireMergeInfoAndAssertEquals(String expectedFirstRange,
+    private void acquireMergeInfoAndAssertEquals(String expectedMergedRevs,
+                                                 String expectedAvailableRevs,
                                                  String targetPath,
                                                  String mergeSrc)
         throws SubversionException
     {
+        // Verify expected merge history.
         MergeInfo mergeInfo = client.getMergeInfo(targetPath, Revision.HEAD);
         assertNotNull("Missing merge info on '" + targetPath + '\'',
                       mergeInfo);
@@ -2129,9 +2152,18 @@ public class BasicTests extends SVNTests
         assertTrue("Missing merge info for source '" + mergeSrc + "' on '" +
                    targetPath + '\'', ranges != null && !ranges.isEmpty());
         RevisionRange range = (RevisionRange) ranges.get(0);
-        assertEquals("Unexpected first revision range for '" + mergeSrc +
-                     "' on '" + targetPath + '\'', expectedFirstRange,
-                     range.toString());
+        assertEquals("Unexpected first merged revision range for '" +
+                     mergeSrc + "' on '" + targetPath + '\'',
+                     expectedMergedRevs, range.toString());
+
+        // Verify expected available merges.
+        RevisionRange[] revRanges =
+            client.getAvailableMerges(targetPath, Revision.HEAD, mergeSrc);
+        assertTrue("Missing available merges on '" + targetPath + '\'',
+                   revRanges != null && revRanges.length > 0);
+        assertEquals("Unexpected first available revision range for '" +
+                     mergeSrc + "' on '" + targetPath + '\'',
+                     expectedAvailableRevs, revRanges[0].toString());
     }
 
     /**
@@ -2291,9 +2323,10 @@ public class BasicTests extends SVNTests
         // user's version of a conflicted file.
         client.setConflictResolver(new ConflictResolverCallback()
             {
-                public int resolve(ConflictDescriptor descrip)
+                public ConflictResult resolve(ConflictDescriptor descrip)
                 {
-                    return ConflictResolverCallback.Result.choose_repos;
+                    return new ConflictResult(ConflictResult.chooseTheirs,
+                                              null);
                 }
             });
 
@@ -2315,9 +2348,11 @@ public class BasicTests extends SVNTests
         mu = appendText(thisTest, "A/mu", "yyy", 1);
 
         // Merge in the previous changes to A/mu (from r2).
-        client.merge(thisTest.getUrl(), Revision.HEAD, new Revision.Number(1),
-                     new Revision.Number(2), thisTest.getWCPath(),
-                     false, Depth.infinity, false, false);
+        RevisionRange[] ranges = new RevisionRange[1];
+        ranges[0] = new RevisionRange(new Revision.Number(1),
+                                      new Revision.Number(2));
+        client.merge(thisTest.getUrl(), Revision.HEAD, ranges,
+                     thisTest.getWCPath(), false, Depth.infinity, false, false);
 
         assertFileContentsEquals("Unexpected conflict resolution",
                                  expectedContents, mu);

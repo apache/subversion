@@ -946,7 +946,7 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
 
   /* Resolve revision and get path kind for the second target. */
   SVN_ERR(svn_client__get_revision_number
-          (&drr->rev2, ra_session, params->revision2,
+          (&drr->rev2, NULL, ra_session, params->revision2,
            (params->path2 == drr->url2) ? NULL : params->path2, pool));
   SVN_ERR(svn_ra_check_path(ra_session, "", drr->rev2, &kind2, pool));
   if (kind2 == svn_node_none)
@@ -958,7 +958,7 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
   /* Do the same for the first target. */
   SVN_ERR(svn_ra_reparent(ra_session, drr->url1, pool));
   SVN_ERR(svn_client__get_revision_number
-          (&drr->rev1, ra_session, params->revision1,
+          (&drr->rev1, NULL, ra_session, params->revision1,
            (params->path1 == drr->url1) ? NULL : params->path1, pool));
   SVN_ERR(svn_ra_check_path(ra_session, "", drr->rev1, &kind1, pool));
   if (kind1 == svn_node_none)
@@ -1089,7 +1089,7 @@ diff_wc_wc(const apr_array_header_t *options,
 
   /* Resolve named revisions to real numbers. */
   SVN_ERR(svn_client__get_revision_number
-          (&callback_baton->revnum1, NULL, revision1, path1, pool));
+          (&callback_baton->revnum1, NULL, NULL, revision1, path1, pool));
   callback_baton->revnum2 = SVN_INVALID_REVNUM;  /* WC */
 
   SVN_ERR(svn_wc_diff4(adm_access, target, callbacks, callback_baton,
@@ -1206,6 +1206,7 @@ diff_repos_wc(const apr_array_header_t *options,
   void *diff_edit_baton;
   svn_boolean_t rev2_is_base = (revision2->kind == svn_opt_revision_base);
   int levels_to_lock = levels_to_lock_from_depth(depth);
+  svn_boolean_t server_supports_depth;
 
   /* Assert that we have valid input. */
   assert(! svn_path_is_url(path2));
@@ -1273,7 +1274,7 @@ diff_repos_wc(const apr_array_header_t *options,
 
   /* Tell the RA layer we want a delta to change our txn to URL1 */
   SVN_ERR(svn_client__get_revision_number
-          (&rev, ra_session, revision1,
+          (&rev, NULL, ra_session, revision1,
            (path1 == url1) ? NULL : path1, pool));
 
   if (!reverse)
@@ -1291,12 +1292,15 @@ diff_repos_wc(const apr_array_header_t *options,
                           url1,
                           diff_editor, diff_edit_baton, pool));
 
+  SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
+                                SVN_RA_CAPABILITY_DEPTH, pool));
+
   /* Create a txn mirror of path2;  the diff editor will print
      diffs in reverse.  :-)  */
   SVN_ERR(svn_wc_crawl_revisions3(path2, dir_access,
                                   reporter, report_baton,
-                                  FALSE, depth, FALSE,
-                                  NULL, NULL, /* notification is N/A */
+                                  FALSE, depth, (! server_supports_depth),
+                                  FALSE, NULL, NULL, /* notification is N/A */
                                   NULL, pool));
 
   SVN_ERR(svn_wc_adm_close(adm_access));
@@ -1553,7 +1557,7 @@ svn_client_diff3(const apr_array_header_t *options,
                  apr_pool_t *pool)
 {
   return svn_client_diff4(options, path1, revision1, path2,
-                          revision2, SVN_DEPTH_FROM_RECURSE(recurse),
+                          revision2, SVN_DEPTH_INFINITY_OR_FILES(recurse),
                           ignore_ancestry, no_diff_deleted,
                           ignore_content_type, header_encoding,
                           outfile, errfile, ctx, pool);
@@ -1679,7 +1683,7 @@ svn_client_diff_peg3(const apr_array_header_t *options,
                               peg_revision,
                               start_revision,
                               end_revision,
-                              SVN_DEPTH_FROM_RECURSE(recurse),
+                              SVN_DEPTH_INFINITY_OR_FILES(recurse),
                               ignore_ancestry,
                               no_diff_deleted,
                               ignore_content_type,
@@ -1706,7 +1710,8 @@ svn_client_diff_peg2(const apr_array_header_t *options,
                      apr_pool_t *pool)
 {
   return svn_client_diff_peg3(options, path, peg_revision, start_revision,
-                              end_revision, SVN_DEPTH_FROM_RECURSE(recurse),
+                              end_revision,
+                              SVN_DEPTH_INFINITY_OR_FILES(recurse),
                               ignore_ancestry, no_diff_deleted,
                               ignore_content_type, SVN_APR_LOCALE_CHARSET,
                               outfile, errfile, ctx, pool);
@@ -1778,7 +1783,8 @@ svn_client_diff_summarize(const char *path1,
                           apr_pool_t *pool)
 {
   return svn_client_diff_summarize2(path1, revision1, path2,
-                                    revision2, SVN_DEPTH_FROM_RECURSE(recurse),
+                                    revision2,
+                                    SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                     ignore_ancestry, summarize_func,
                                     summarize_baton, ctx, pool);
 }
@@ -1827,7 +1833,7 @@ svn_client_diff_summarize_peg(const char *path,
 {
   return svn_client_diff_summarize_peg2(path, peg_revision,
                                         start_revision, end_revision,
-                                        SVN_DEPTH_FROM_RECURSE(recurse),
+                                        SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                         ignore_ancestry,
                                         summarize_func, summarize_baton,
                                         ctx, pool);

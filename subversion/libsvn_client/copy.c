@@ -883,8 +883,8 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
       /* Pass NULL for the path, to ensure error if trying to get a
          revision based on the working copy. */
       SVN_ERR(svn_client__get_revision_number
-              (&pair->src_revnum, ra_session, &pair->src_op_revision, NULL,
-               pool));
+              (&pair->src_revnum, NULL, ra_session, &pair->src_op_revision, 
+               NULL, pool));
 
       info->src_revnum = pair->src_revnum;
 
@@ -1370,7 +1370,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
       SVN_ERR(svn_client__checkout_internal
               (NULL, pair->src_original, pair->dst, &pair->src_peg_revision,
                &pair->src_op_revision,
-               SVN_DEPTH_FROM_RECURSE(TRUE),
+               SVN_DEPTH_INFINITY_OR_FILES(TRUE),
                FALSE, FALSE, NULL, ctx, pool));
 
       /* Rewrite URLs recursively, remove wcprops, and mark everything
@@ -1559,8 +1559,8 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
                                                     svn_client__copy_pair_t *);
 
       SVN_ERR(svn_client__get_revision_number
-              (&pair->src_revnum, ra_session, &pair->src_op_revision, NULL,
-               pool));
+              (&pair->src_revnum, NULL, ra_session, &pair->src_op_revision, 
+               NULL, pool));
     }
 
   /* Get the correct src path for the peg revision used, and verify that we
@@ -1575,6 +1575,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
       svn_pool_clear(iterpool);
 
       pair->src_rel = svn_path_is_child(top_src_url, pair->src, pool);
+      pair->src_rel = svn_path_uri_decode(pair->src_rel, pool);
 
       /* Next, make sure that the path exists in the repository. */
       SVN_ERR(svn_ra_check_path(ra_session, pair->src_rel, pair->src_revnum,
@@ -1770,6 +1771,8 @@ setup_copy(svn_commit_info_t **commit_info_p,
                                             TRUE,
                                             iterpool));
           src_basename = svn_path_basename(pair->src, iterpool);
+          if (srcs_are_urls && ! dst_is_url)
+            src_basename = svn_path_uri_decode(src_basename, pool);
 
           /* Check to see if all the sources are urls or all working copy
            * paths. */
@@ -2001,6 +2004,8 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
       svn_pool_clear(subpool);
 
       src_basename = svn_path_basename(src_path, subpool);
+      if (svn_path_is_url(src_path) && ! svn_path_is_url(dst_path))
+        src_basename = svn_path_uri_decode(src_basename, pool);
 
       err = setup_copy(&commit_info,
                        sources,

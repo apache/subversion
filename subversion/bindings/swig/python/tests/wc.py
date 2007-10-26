@@ -12,6 +12,11 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
   def setUp(self):
     """Load a Subversion repository"""
 
+    # Isolate each test from the others with a fresh repository.
+    # Eventually, we should move this into a shared TestCase base
+    # class that all test cases in this directory can use.
+    SubversionRepositoryTestSetup().setUp()
+
     # Open repository directly for cross-checking
     self.repos = repos.open(REPOS_PATH)
     self.fs = repos.fs(self.repos)
@@ -112,7 +117,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
       [info] = infos
       self.assertEqual(readme_path, info.path)
       self.assertEqual(core.svn_node_file, info.kind)
-      self.assertEqual(core.svn_invalid_revnum, info.revision)
+      self.assertEqual(core.SVN_INVALID_REVNUM, info.revision)
 
   def test_create_notify(self):
       wc.create_notify(self.path, wc.notify_add)
@@ -121,7 +126,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
       self.assert_(wc.check_wc(self.path) > 0)
 
   def test_get_ancestry(self):
-      self.assertEqual([REPOS_URL, 13],
+      self.assertEqual([REPOS_URL, 12],
                        wc.get_ancestry(self.path, self.wc))
 
   def test_status(self):
@@ -256,8 +261,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
       core.svn_io_remove_dir(self.path)
 
 def suite():
-    return unittest.makeSuite(SubversionWorkingCopyTestCase, 'test',
-                              suiteClass=SubversionRepositoryTestSetup)
+    return unittest.makeSuite(SubversionWorkingCopyTestCase, 'test')
 
 if __name__ == '__main__':
     runner = unittest.TextTestRunner()

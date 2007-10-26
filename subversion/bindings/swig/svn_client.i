@@ -1,6 +1,6 @@
 /*
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -50,15 +50,13 @@
 }
 #endif
 
-#if defined(SWIGPYTHON) || defined(SWIGRUBY)
-%apply apr_hash_t **MERGEHASH {
-  apr_hash_t **mergeinfo
-}
-#endif
-
 #ifdef SWIGRUBY
 %apply apr_array_header_t *SOURCES {
   apr_array_header_t *sources
+}
+
+%apply apr_array_header_t *REVISION_RANGE_LIST {
+  apr_array_header_t *ranges_to_merge
 }
 #endif
 

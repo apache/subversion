@@ -20,6 +20,7 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
+#include "svn_compat.h"
 #include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -38,9 +39,9 @@ do_merged_log(svn_fs_t *fs,
               const char *path,
               svn_revnum_t rev,
               svn_boolean_t discover_changed_paths,
-              svn_boolean_t omit_log_text,
+              apr_array_header_t *revprops,
               svn_boolean_t descending_order,
-              svn_log_message_receiver2_t receiver,
+              svn_log_entry_receiver_t receiver,
               void *receiver_baton,
               svn_repos_authz_func_t authz_read_func,
               void *authz_read_baton,
@@ -729,21 +730,13 @@ fill_log_entry(svn_log_entry_t *log_entry,
                svn_revnum_t rev,
                svn_fs_t *fs,
                svn_boolean_t discover_changed_paths,
-               svn_boolean_t omit_log_text,
+               apr_array_header_t *revprops,
                svn_repos_authz_func_t authz_read_func,
                void *authz_read_baton,
                apr_pool_t *pool)
 {
-  svn_string_t *author, *date, *message;
   apr_hash_t *r_props, *changed_paths = NULL;
-
-  SVN_ERR(svn_fs_revision_proplist(&r_props, fs, rev, pool));
-  author = apr_hash_get(r_props, SVN_PROP_REVISION_AUTHOR,
-                        APR_HASH_KEY_STRING);
-  date = apr_hash_get(r_props, SVN_PROP_REVISION_DATE,
-                      APR_HASH_KEY_STRING);
-  message = apr_hash_get(r_props, SVN_PROP_REVISION_LOG,
-                         APR_HASH_KEY_STRING);
+  svn_boolean_t get_revprops = TRUE, censor_revprops = FALSE;
 
   /* Discover changed paths if the user requested them
      or if we need to check that they are readable. */
@@ -765,18 +758,16 @@ fill_log_entry(svn_log_entry_t *log_entry,
           /* All changed-paths are unreadable, so clear all fields. */
           svn_error_clear(patherr);
           changed_paths = NULL;
-          author = NULL;
-          date = NULL;
-          message = NULL;
+          get_revprops = FALSE;
         }
       else if (patherr
                && patherr->apr_err == SVN_ERR_AUTHZ_PARTIALLY_READABLE)
         {
-          /* At least one changed-path was unreadable, so omit the
-             log message.  (The unreadable paths are already
+          /* At least one changed-path was unreadable, so censor all
+             but author and date.  (The unreadable paths are already
              missing from the hash.) */
           svn_error_clear(patherr);
-          message = NULL;
+          censor_revprops = TRUE;
         }
       else if (patherr)
         return patherr;
@@ -787,15 +778,54 @@ fill_log_entry(svn_log_entry_t *log_entry,
         changed_paths = NULL;
     }
 
-  /* Intentionally omit the log message if requested. */
-  if (omit_log_text)
-    message = NULL;
+  if (get_revprops)
+    {
+      /* User is allowed to see at least some revprops. */
+      SVN_ERR(svn_fs_revision_proplist(&r_props, fs, rev, pool));
+      if (revprops == NULL)
+        {
+          /* Requested all revprops... */
+          if (censor_revprops)
+            {
+              /* ... but we can only return author/date. */
+              log_entry->revprops = apr_hash_make(pool);
+              apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_AUTHOR,
+                           APR_HASH_KEY_STRING,
+                           apr_hash_get(r_props, SVN_PROP_REVISION_AUTHOR,
+                                        APR_HASH_KEY_STRING));
+              apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_DATE,
+                           APR_HASH_KEY_STRING,
+                           apr_hash_get(r_props, SVN_PROP_REVISION_DATE,
+                                        APR_HASH_KEY_STRING));
+            }
+          else
+            /* ... so return all we got. */
+            log_entry->revprops = r_props;
+        }
+      else
+        {
+          /* Requested only some revprops... */
+          int i;
+          for (i = 0; i < revprops->nelts; i++)
+            {
+              char *name = APR_ARRAY_IDX(revprops, i, char *);
+              svn_string_t *value = apr_hash_get(r_props, name,
+                                                 APR_HASH_KEY_STRING);
+              if (censor_revprops
+                  && !(strcmp(name, SVN_PROP_REVISION_AUTHOR) == 0
+                       || strcmp(name, SVN_PROP_REVISION_DATE) == 0))
+                /* ... but we can only return author/date. */
+                continue;
+              if (log_entry->revprops == NULL)
+                log_entry->revprops = apr_hash_make(pool);
+              apr_hash_set(log_entry->revprops, name,
+                           APR_HASH_KEY_STRING, value);
+            }
+        }
+    }
 
   log_entry->changed_paths = changed_paths;
   log_entry->revision = rev;
-  log_entry->author = author ? author->data : NULL;
-  log_entry->date = date ? date->data : NULL;
-  log_entry->message = message ? message->data : NULL;
 
   return SVN_NO_ERROR;
 }
@@ -837,14 +867,15 @@ find_merge_source(const char **merge_source,
 /* Send log tree, beging with REV to RECEIVER with its RECEIVER_BATON.
  *
  * FS is used with REV to fetch the interesting history information,
- * such as author, date, etc.
+ * such as changed paths, revprops, etc.
  *
  * The detect_changed function is used if either AUTHZ_READ_FUNC is
  * not NULL, or if DISCOVER_CHANGED_PATHS is TRUE.  See it for details.
  *
  * If DESCENDING_ORDER is true, send child messages in descending order.
  *
- * If OMIT_LOG_TEXT is true, don't send the log text to RECEIVER.
+ * If REVPROPS is NULL, retrieve all revprops; else, retrieve only the
+ * revprops named in the array (i.e. retrieve none if the array is empty).
  *
  * If INCLUDE_MERGED_REVISIONS is TRUE, send history information for any
  * revisions which were merged in as a result of REV immediately following
@@ -857,9 +888,9 @@ send_logs(const apr_array_header_t *paths,
           svn_fs_t *fs,
           svn_boolean_t discover_changed_paths,
           svn_boolean_t include_merged_revisions,
-          svn_boolean_t omit_log_text,
+          apr_array_header_t *revprops,
           svn_boolean_t descending_order,
-          svn_log_message_receiver2_t receiver,
+          svn_log_entry_receiver_t receiver,
           void *receiver_baton,
           svn_repos_authz_func_t authz_read_func,
           void *authz_read_baton,
@@ -871,7 +902,7 @@ send_logs(const apr_array_header_t *paths,
 
   log_entry = svn_log_entry_create(pool);
   SVN_ERR(fill_log_entry(log_entry, rev, fs, discover_changed_paths,
-                         omit_log_text, authz_read_func, authz_read_baton,
+                         revprops, authz_read_func, authz_read_baton,
                          pool));
 
   /* Check to see if we need to include any extra merged revisions. */
@@ -926,7 +957,7 @@ send_logs(const apr_array_header_t *paths,
             continue;
 
           SVN_ERR(do_merged_log(fs, merge_source, revision,
-                                discover_changed_paths, omit_log_text,
+                                discover_changed_paths, revprops,
                                 descending_order, receiver, receiver_baton,
                                 authz_read_func, authz_read_baton, pool));
         }
@@ -1029,9 +1060,9 @@ do_merged_log(svn_fs_t *fs,
               const char *path,
               svn_revnum_t rev,
               svn_boolean_t discover_changed_paths,
-              svn_boolean_t omit_log_text,
+              apr_array_header_t *revprops,
               svn_boolean_t descending_order,
-              svn_log_message_receiver2_t receiver,
+              svn_log_entry_receiver_t receiver,
               void *receiver_baton,
               svn_repos_authz_func_t authz_read_func,
               void *authz_read_baton,
@@ -1065,7 +1096,7 @@ do_merged_log(svn_fs_t *fs,
   if (changed)
     {
       SVN_ERR(send_logs(paths, rev, fs, discover_changed_paths, TRUE,
-                        omit_log_text, descending_order,
+                        revprops, descending_order,
                         receiver, receiver_baton,
                         authz_read_func, authz_read_baton, pool));
     }
@@ -1084,9 +1115,9 @@ do_logs(svn_fs_t *fs,
         svn_boolean_t discover_changed_paths,
         svn_boolean_t strict_node_history,
         svn_boolean_t include_merged_revisions,
-        svn_boolean_t omit_log_text,
+        apr_array_header_t *revprops,
         svn_boolean_t descending_order,
-        svn_log_message_receiver2_t receiver,
+        svn_log_entry_receiver_t receiver,
         void *receiver_baton,
         svn_repos_authz_func_t authz_read_func,
         void *authz_read_baton,
@@ -1142,7 +1173,7 @@ do_logs(svn_fs_t *fs,
           if (descending_order)
             {
               SVN_ERR(send_logs(paths, current, fs, discover_changed_paths,
-                                include_merged_revisions, omit_log_text,
+                                include_merged_revisions, revprops,
                                 descending_order, receiver, receiver_baton,
                                 authz_read_func, authz_read_baton, iterpool));
 
@@ -1171,7 +1202,7 @@ do_logs(svn_fs_t *fs,
                                                  svn_revnum_t),
                             fs, discover_changed_paths,
                             include_merged_revisions,
-                            omit_log_text, descending_order,
+                            revprops, descending_order,
                             receiver, receiver_baton,
                             authz_read_func, authz_read_baton, iterpool));
 
@@ -1194,10 +1225,10 @@ svn_repos_get_logs4(svn_repos_t *repos,
                     svn_boolean_t discover_changed_paths,
                     svn_boolean_t strict_node_history,
                     svn_boolean_t include_merged_revisions,
-                    svn_boolean_t omit_log_text,
+                    apr_array_header_t *revprops,
                     svn_repos_authz_func_t authz_read_func,
                     void *authz_read_baton,
-                    svn_log_message_receiver2_t receiver,
+                    svn_log_entry_receiver_t receiver,
                     void *receiver_baton,
                     apr_pool_t *pool)
 {
@@ -1272,7 +1303,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
           SVN_ERR(send_logs(paths, rev, fs,
                             discover_changed_paths,
                             include_merged_revisions,
-                            omit_log_text, descending_order,
+                            revprops, descending_order,
                             receiver, receiver_baton,
                             authz_read_func, authz_read_baton,
                             iterpool));
@@ -1284,7 +1315,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
 
   SVN_ERR(do_logs(repos->fs, paths, hist_start, hist_end, limit,
                   discover_changed_paths, strict_node_history,
-                  include_merged_revisions, omit_log_text,
+                  include_merged_revisions, revprops,
                   descending_order, receiver, receiver_baton,
                   authz_read_func, authz_read_baton, pool));
 
@@ -1306,7 +1337,7 @@ svn_repos_get_logs3(svn_repos_t *repos,
                     void *receiver_baton,
                     apr_pool_t *pool)
 {
-  svn_log_message_receiver2_t receiver2;
+  svn_log_entry_receiver_t receiver2;
   void *receiver2_baton;
 
   svn_compat_wrap_log_receiver(&receiver2, &receiver2_baton,
@@ -1315,7 +1346,8 @@ svn_repos_get_logs3(svn_repos_t *repos,
 
   return svn_repos_get_logs4(repos, paths, start, end, limit,
                              discover_changed_paths, strict_node_history,
-                             FALSE, FALSE, authz_read_func, authz_read_baton,
+                             FALSE, svn_compat_log_revprops_in(pool),
+                             authz_read_func, authz_read_baton,
                              receiver2, receiver2_baton,
                              pool);
 }

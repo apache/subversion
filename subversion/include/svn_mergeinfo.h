@@ -38,17 +38,17 @@ extern "C" {
    range is non-inheritable. */
 #define SVN_MERGEINFO_NONINHERITABLE_STR "*"
 
-/** Parse the mergeinfo from @a input into @a mergehash, mapping from
+/** Parse the mergeinfo from @a input into @a *mergeinfo, mapping from
  * paths to @c apr_array_header_t *'s of @c svn_merge_range_t *
  * elements.  If no mergeinfo is available, return an empty hash
  * (never @c NULL).  Perform temporary allocations in @a pool.
  *
- * Note: @a mergehash will contain rangelists that are guaranteed to be
- * sorted.
+ * Note: @a *mergeinfo will contain rangelists that are guaranteed to
+ * be sorted (ordered by smallest revision ranges to largest).
  * @since New in 1.5.
  */
 svn_error_t *
-svn_mergeinfo_parse(apr_hash_t **mergehash, const char *input,
+svn_mergeinfo_parse(apr_hash_t **mergeinfo, const char *input,
                     apr_pool_t *pool);
 
 /** Calculate the delta between two hashes of mergeinfo (with
@@ -87,12 +87,12 @@ svn_mergeinfo_merge(apr_hash_t **mergeinfo, apr_hash_t *changes,
                     apr_pool_t *pool);
 
 /** Removes @a eraser (the subtrahend) from @a whiteboard (the
- * minuend), and places the resulting difference in @a output.
+ * minuend), and places the resulting difference in @a *mergeinfo.
  *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_mergeinfo_remove(apr_hash_t **mergeoutput, apr_hash_t *eraser,
+svn_mergeinfo_remove(apr_hash_t **mergeinfo, apr_hash_t *eraser,
                      apr_hash_t *whiteboard, apr_pool_t *pool);
 
 /** Calculate the delta between two rangelists consisting of @c
@@ -215,6 +215,34 @@ svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
                           svn_revnum_t start,
                           svn_revnum_t end,
                           apr_pool_t *pool);
+
+/** Remove redundancies between @ *range_1 and @ *range_2.  @ *range_1 and/or
+ * @ *range_2 may be additive or subtractive ranges.  The ranges should be
+ * sorted such that the minimum of @ *range_1->start and @ *range_1->end is
+ * less than or equal to the minimum of @ *range_2->start and
+ * @ *range_2->end.
+ *
+ * If either @ *range_1 or @ *range_2 is NULL, either range contains
+ * invalid svn_revnum_t's, or the two ranges do not intersect, then do
+ * nothing and return false.
+ *
+ * If the two ranges can be reduced to one range, set @ *range_1 to represent
+ * that range, set @ *range_2 to NULL, and return true.
+ *
+ * If the two ranges cancel each other out set both @ *range_1 and
+ * @ *range_2 to NULL and return true.
+ *
+ * If the two ranges intersect but cannot be represented by one range (because
+ * one range is additive and the other subtractive) then modify @ *range_1 and
+ * @ *range_2 to remove the intersecting ranges and return true.
+ *
+ * The inheritability of @ *range_1 or @ *range_2 is not taken into account.
+ *
+ * @since New in 1.5.
+ */
+svn_boolean_t
+svn_range_compact(svn_merge_range_t **range_1,
+                  svn_merge_range_t **range_2);
 
 /** Return a deep copy of @a mergeinfo, a mapping from paths to
  * @c apr_array_header_t *'s of @c svn_merge_range_t *, excluding all

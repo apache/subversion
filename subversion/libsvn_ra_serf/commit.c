@@ -35,7 +35,7 @@
 #include "svn_version.h"
 #include "svn_path.h"
 #include "svn_private_config.h"
-#include "private/svn_compat.h"
+#include "private/svn_dep_compat.h"
 
 #include "ra_serf.h"
 
@@ -287,6 +287,44 @@ handle_checkout(serf_request_t *request,
   return status;
 }
 
+/* Return the relative path from DIR's topmost parent to DIR, in
+   Subversion's internal path style, allocated in POOL.  Use POOL for
+   temporary work as well.  */
+static const char *
+relative_dir_path(dir_context_t *dir, apr_pool_t *pool)
+{
+  const char *rel_path = "";
+  apr_array_header_t *components;
+  dir_context_t *dir_ptr = dir;
+  int i;
+
+  components = apr_array_make(pool, 1, sizeof(const char *));
+
+  for (dir_ptr = dir; dir_ptr; dir_ptr = dir_ptr->parent_dir)
+    APR_ARRAY_PUSH(components, const char *) = dir_ptr->name;
+
+  for (i = 0; i < components->nelts; i++)
+    {
+      rel_path = svn_path_join(rel_path,
+                               APR_ARRAY_IDX(components, i, const char *),
+                               pool);
+    }
+
+  return rel_path;
+}
+
+
+/* Return the relative path from FILE's topmost parent to FILE, in
+   Subversion's internal path style, allocated in POOL.  Use POOL for
+   temporary work as well.  */
+static const char *
+relative_file_path(file_context_t *f, apr_pool_t *pool)
+{
+  const char *dir_path = relative_dir_path(f->parent_dir, pool);
+  return svn_path_join(dir_path, f->name, pool);
+}
+
+
 static svn_error_t *
 checkout_dir(dir_context_t *dir)
 {
@@ -367,8 +405,9 @@ checkout_dir(dir_context_t *dir)
     {
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
         SVN_ERR_W(err, apr_psprintf(dir->pool,
-                  _("Your file or directory '%s' is probably out-of-date"),
-                  svn_path_local_style(dir->name, dir->pool)));
+                  _("Directory '%s' is out of date; try updating"),
+                  svn_path_local_style(relative_dir_path(dir, dir->pool),
+                                       dir->pool)));
       return err;
     }
 
@@ -386,8 +425,9 @@ checkout_dir(dir_context_t *dir)
       return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
                     return_response_err(handler,
                                         &checkout_ctx->progress),
-                    _("Your file or directory '%s' is probably out-of-date"),
-                    svn_path_local_style(dir->name, dir->pool));
+                    _("Directory '%s' is out of date; try updating"),
+                    svn_path_local_style(relative_dir_path(dir, dir->pool),
+                                         dir->pool));
     }
 
   return SVN_NO_ERROR;
@@ -447,8 +487,9 @@ checkout_file(file_context_t *file)
       return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
                     return_response_err(handler,
                                         &file->checkout->progress),
-                    _("Your file or directory '%s' is probably out-of-date"),
-                    svn_path_local_style(file->name, file->pool));
+                    _("File '%s' is out of date; try updating"),
+                    svn_path_local_style(relative_file_path(file, file->pool),
+                                         file->pool));
     }
 
   return SVN_NO_ERROR;
@@ -726,7 +767,7 @@ proppatch_resource(proppatch_context_t *proppatch,
   handler->body_delegate = create_proppatch_body;
   handler->body_delegate_baton = proppatch;
 
-  handler->response_handler = svn_ra_serf__handle_status_only;
+  handler->response_handler = svn_ra_serf__handle_multistatus_only;
   handler->response_baton = &proppatch->progress;
 
   svn_ra_serf__request_create(handler);
@@ -735,7 +776,8 @@ proppatch_resource(proppatch_context_t *proppatch,
   SVN_ERR(svn_ra_serf__context_run_wait(&proppatch->progress.done,
                                         commit->session, pool));
 
-  if (proppatch->progress.status != 207)
+  if (proppatch->progress.status != 207 ||
+      proppatch->progress.server_error.error)
     {
       svn_error_t *err;
       err = return_response_err(handler, &proppatch->progress);
@@ -998,7 +1040,7 @@ open_root(void *edit_baton,
     {
       return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                               _("The OPTIONS response did not include the "
-                                "requested activity-collection-set value."));
+                                "requested activity-collection-set value"));
     }
 
   ctx->activity_url = svn_path_url_add_component(activity_str,
@@ -1054,7 +1096,7 @@ open_root(void *edit_baton,
     {
       return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                               _("The OPTIONS response did not include the "
-                                "requested checked-in value."));
+                                "requested checked-in value"));
     }
 
   dir = apr_pcalloc(dir_pool, sizeof(*dir));
@@ -1280,7 +1322,7 @@ add_directory(const char *path,
         {
           return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                                   _("The OPTIONS response did not include the "
-                                    "requested baseline-collection value."));
+                                    "requested baseline-collection value"));
         }
 
       req_url = svn_path_url_add_component(basecoll_url, rel_copy_path,
@@ -1668,7 +1710,7 @@ close_file(void *file_baton,
         {
           return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                                   _("The OPTIONS response did not include the "
-                                    "requested baseline-collection value."));
+                                    "requested baseline-collection value"));
         }
 
       req_url = svn_path_url_add_component(basecoll_url, rel_copy_path, pool);
@@ -1961,6 +2003,7 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
   commit_context_t *commit;
   const char *vcc_url, *checked_in_href, *ns;
   apr_hash_t *props;
+  svn_error_t *err;
 
   commit = apr_pcalloc(pool, sizeof(*commit));
 
@@ -2017,7 +2060,13 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
                             ns, name, value, proppatch_ctx->pool);
     }
 
-  SVN_ERR(proppatch_resource(proppatch_ctx, commit, proppatch_ctx->pool));
+  err = proppatch_resource(proppatch_ctx, commit, proppatch_ctx->pool);
+  if (err)
+    return
+      svn_error_create
+      (SVN_ERR_RA_DAV_REQUEST_FAILED, err,
+       _("DAV request failed; it's possible that the repository's "
+         "pre-revprop-change hook either failed or is non-existent"));
 
   return SVN_NO_ERROR;
 }

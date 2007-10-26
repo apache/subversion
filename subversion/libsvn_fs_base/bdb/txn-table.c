@@ -51,9 +51,9 @@ svn_fs_bdb__open_transactions_table(DB **transactions_p,
 
   BDB_ERR(svn_fs_bdb__check_version());
   BDB_ERR(db_create(&txns, env, 0));
-  BDB_ERR(txns->open(SVN_BDB_OPEN_PARAMS(txns, NULL),
-                     "transactions", 0, DB_BTREE,
-                     open_flags, 0666));
+  BDB_ERR((txns->open)(SVN_BDB_OPEN_PARAMS(txns, NULL),
+                       "transactions", 0, DB_BTREE,
+                       open_flags, 0666));
 
   /* Create the `next-key' table entry.  */
   if (create)

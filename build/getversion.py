@@ -3,7 +3,9 @@
 # getversion.py - Parse version numbers from C header files.
 #
 
+import os
 import re
+import sys
 
 __all__ = ['Parser', 'Result']
 
@@ -34,17 +36,27 @@ class Parser:
     stream.close()
     return result
 
+def usage_and_exit(msg):
+  if msg:
+    print >> sys.stderr, "%s\n" % msg
+  print >> sys.stderr, "usage: %s SVN_VERSION.H" % \
+    os.path.basename(sys.argv[0])
+  sys.exit(1)
 
 if __name__ == '__main__':
+  if len(sys.argv) == 2:
+    include_file = sys.argv[1]
+  else:
+    usage_and_exit("Incorrect number of arguments")
+
   # Extract and print the version number
   p = Parser()
   p.search('SVN_VER_MAJOR', 'major')
   p.search('SVN_VER_MINOR', 'minor')
   p.search('SVN_VER_PATCH', 'patch')
 
-  import os, sys
-  r = p.parse(sys.argv[1])
+  try:
+    r = p.parse(include_file)
+  except IOError, e:
+    usage_and_exit(str(e))
   sys.stdout.write("%d.%d.%d" % (r.major, r.minor, r.patch))
-
-
-### End of file.

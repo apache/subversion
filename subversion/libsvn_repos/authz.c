@@ -602,7 +602,7 @@ static svn_boolean_t authz_validate_rule(const char *rule_match_string,
     {
       const char *alias = &match[1];
 
-      svn_config_get (b->config, &val, "aliases", alias, NULL);
+      svn_config_get(b->config, &val, "aliases", alias, NULL);
 
       if (!val)
         {

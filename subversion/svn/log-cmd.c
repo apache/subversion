@@ -27,6 +27,7 @@
 #include <apr_want.h>
 
 #include "svn_client.h"
+#include "svn_compat.h"
 #include "svn_string.h"
 #include "svn_path.h"
 #include "svn_error.h"
@@ -41,7 +42,7 @@
 
 /*** Code. ***/
 
-/* Baton for log_message_receiver() and log_message_receiver_xml(). */
+/* Baton for log_entry_receiver() and log_entry_receiver_xml(). */
 struct log_receiver_baton
 {
   /* Check for cancellation on each invocation of a log receiver. */
@@ -64,7 +65,7 @@ struct log_receiver_baton
   "------------------------------------------------------------------------\n"
 
 
-/* Implement `svn_log_message_receiver2_t', printing the logs in
+/* Implement `svn_log_entry_receiver_t', printing the logs in
  * a human-readable and machine-parseable format.
  *
  * BATON is of type `struct log_receiver_baton'.
@@ -142,14 +143,14 @@ struct log_receiver_baton
  *
  */
 static svn_error_t *
-log_message_receiver(void *baton,
-                     svn_log_entry_t *log_entry,
-                     apr_pool_t *pool)
+log_entry_receiver(void *baton,
+                   svn_log_entry_t *log_entry,
+                   apr_pool_t *pool)
 {
   struct log_receiver_baton *lb = baton;
-  const char *author = log_entry->author;
-  const char *date = log_entry->date;
-  const char *msg = log_entry->message;
+  const char *author;
+  const char *date;
+  const char *message;
 
   /* Number of lines in the msg. */
   int lines;
@@ -157,7 +158,9 @@ log_message_receiver(void *baton,
   if (lb->cancel_func)
     SVN_ERR(lb->cancel_func(lb->cancel_baton));
 
-  if (log_entry->revision == 0 && log_entry->message == NULL)
+  svn_compat_log_revprops_out(&author, &date, &message, log_entry->revprops);
+
+  if (log_entry->revision == 0 && message == NULL)
     return SVN_NO_ERROR;
 
   if (! SVN_IS_VALID_REVNUM(log_entry->revision))
@@ -169,10 +172,10 @@ log_message_receiver(void *baton,
   /* ### See http://subversion.tigris.org/issues/show_bug.cgi?id=807
      for more on the fallback fuzzy conversions below. */
 
-  if (log_entry->author == NULL)
+  if (author == NULL)
     author = _("(no author)");
 
-  if (log_entry->date && log_entry->date[0])
+  if (date && date[0])
     {
       /* Convert date to a format for humans. */
       apr_time_t time_temp;
@@ -183,16 +186,16 @@ log_message_receiver(void *baton,
   else
     date = _("(no date)");
 
-  if (! lb->omit_log_message && log_entry->message == NULL)
-    msg = "";
+  if (! lb->omit_log_message && message == NULL)
+    message = "";
 
   SVN_ERR(svn_cmdline_printf(pool,
                              SEP_STRING "r%ld | %s | %s",
                              log_entry->revision, author, date));
 
-  if (! lb->omit_log_message)
+  if (message != NULL)
     {
-      lines = svn_cstring_count_newlines(msg) + 1;
+      lines = svn_cstring_count_newlines(message) + 1;
       SVN_ERR(svn_cmdline_printf(pool,
                                  (lines != 1)
                                  ? " | %d lines"
@@ -252,10 +255,10 @@ log_message_receiver(void *baton,
         }
     }
 
-  if (! lb->omit_log_message)
+  if (message != NULL)
     {
       /* A blank line always precedes the log message. */
-      SVN_ERR(svn_cmdline_printf(pool, "\n%s\n", msg));
+      SVN_ERR(svn_cmdline_printf(pool, "\n%s\n", message));
     }
 
   SVN_ERR(svn_cmdline_fflush(stdout));
@@ -267,7 +270,7 @@ log_message_receiver(void *baton,
 }
 
 
-/* This implements `svn_log_message_receiver2_t', printing the logs in XML.
+/* This implements `svn_log_entry_receiver_t', printing the logs in XML.
  *
  * BATON is of type `struct log_receiver_baton'.
  *
@@ -304,20 +307,31 @@ log_message_receiver(void *baton,
  *
  */
 static svn_error_t *
-log_message_receiver_xml(void *baton,
-                         svn_log_entry_t *log_entry,
-                         apr_pool_t *pool)
+log_entry_receiver_xml(void *baton,
+                       svn_log_entry_t *log_entry,
+                       apr_pool_t *pool)
 {
   struct log_receiver_baton *lb = baton;
   /* Collate whole log message into sb before printing. */
   svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
   char *revstr;
-  const char *date = log_entry->date;
+  const char *author;
+  const char *date;
+  const char *message;
 
   if (lb->cancel_func)
     SVN_ERR(lb->cancel_func(lb->cancel_baton));
 
-  if (log_entry->revision == 0 && log_entry->message == NULL)
+  svn_compat_log_revprops_out(&author, &date, &message, log_entry->revprops);
+
+  if (author)
+    author = svn_xml_fuzzy_escape(author, pool);
+  if (date)
+    date = svn_xml_fuzzy_escape(date, pool);
+  if (message)
+    message = svn_xml_fuzzy_escape(message, pool);
+
+  if (log_entry->revision == 0 && message == NULL)
     return SVN_NO_ERROR;
 
   if (! SVN_IS_VALID_REVNUM(log_entry->revision))
@@ -335,13 +349,13 @@ log_message_receiver_xml(void *baton,
                         "revision", revstr, NULL);
 
   /* <author>xxx</author> */
-  svn_cl__xml_tagged_cdata(&sb, pool, "author", log_entry->author);
+  svn_cl__xml_tagged_cdata(&sb, pool, "author", author);
 
   /* Print the full, uncut, date.  This is machine output. */
-  /* According to the docs for svn_log_message_receiver_t, either
+  /* According to the docs for svn_log_entry_receiver_t, either
      NULL or the empty string represents no date.  Avoid outputting an
      empty date element. */
-  if (log_entry->date && log_entry->date[0] == '\0')
+  if (date && date[0] == '\0')
     date = NULL;
   /* <date>xxx</date> */
   svn_cl__xml_tagged_cdata(&sb, pool, "date", date);
@@ -397,15 +411,20 @@ log_message_receiver_xml(void *baton,
       svn_xml_make_close_tag(&sb, pool, "paths");
     }
 
-  if (! lb->omit_log_message)
+  if (message != NULL)
     {
-      const char *msg = log_entry->message;
-
-      if (log_entry->message == NULL)
-        msg = "";
-
       /* <msg>xxx</msg> */
-      svn_cl__xml_tagged_cdata(&sb, pool, "msg", msg);
+      svn_cl__xml_tagged_cdata(&sb, pool, "msg", message);
+    }
+
+  svn_compat_log_revprops_clear(log_entry->revprops);
+  if (log_entry->revprops && apr_hash_count(log_entry->revprops) > 0)
+    {
+      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "revprops", NULL);
+      SVN_ERR(svn_cl__print_xml_prop_hash(&sb, log_entry->revprops,
+                                          FALSE, /* name_only */
+                                          pool));
+      svn_xml_make_close_tag(&sb, pool, "revprops");
     }
 
   if (log_entry->has_children)
@@ -434,8 +453,21 @@ svn_cl__log(apr_getopt_t *os,
   int i;
   svn_opt_revision_t peg_revision;
   const char *true_path;
+  apr_array_header_t *revprops;
 
-  /* Before allowing svn_opt_args_to_target_array() to canonicalize
+  if (!opt_state->xml)
+    {
+      if (opt_state->all_revprops)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("'with-all-revprops' option only valid in"
+                                  " XML mode"));
+      if (opt_state->revprop_table != NULL)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("'with-revprop' option only valid in"
+                                  " XML mode"));
+    }
+
+  /* Before allowing svn_opt_args_to_target_array2() to canonicalize
      all the targets, we need to build a list of targets made of both
      ones the user typed, as well as any specified by --changelist.  */
   if (opt_state->changelist)
@@ -507,17 +539,8 @@ svn_cl__log(apr_getopt_t *os,
         }
     }
 
-  /* Verify that we pass at most one working copy path. */
-  if (! svn_path_is_url(target) )
+  if (svn_path_is_url(target))
     {
-      if (targets->nelts > 1)
-        return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                _("When specifying working copy paths, only "
-                                  "one target may be given"));
-    }
-  else
-    {
-      /* Check to make sure there are no other URLs. */
       for (i = 1; i < targets->nelts; i++)
         {
           target = APR_ARRAY_IDX(targets, i, const char *);
@@ -547,6 +570,36 @@ svn_cl__log(apr_getopt_t *os,
       if (! opt_state->incremental)
         SVN_ERR(svn_cl__xml_print_header("log", pool));
 
+      if (opt_state->all_revprops)
+        revprops = NULL;
+      else if (opt_state->revprop_table != NULL)
+        {
+          apr_hash_index_t *hi;
+          revprops = apr_array_make(pool,
+                                    apr_hash_count(opt_state->revprop_table),
+                                    sizeof(char *));
+          for (hi = apr_hash_first(pool, opt_state->revprop_table);
+               hi != NULL;
+               hi = apr_hash_next(hi))
+            {
+              char *property;
+              svn_string_t *value;
+              apr_hash_this(hi, (void *)&property, NULL, (void *)&value);
+              if (value && value->data[0] != '\0')
+                return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                         _("cannot assign with 'with-revprop'"
+                                           " option (drop the '=')"));
+              APR_ARRAY_PUSH(revprops, char *) = property;
+            }
+        }
+      else
+        {
+          revprops = apr_array_make(pool, 3, sizeof(char *));
+          APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_AUTHOR;
+          APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_DATE;
+          if (!opt_state->quiet)
+            APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_LOG;
+        }
       SVN_ERR(svn_client_log4(targets,
                               &peg_revision,
                               &(opt_state->start_revision),
@@ -555,8 +608,8 @@ svn_cl__log(apr_getopt_t *os,
                               opt_state->verbose,
                               opt_state->stop_on_copy,
                               opt_state->use_merge_history,
-                              opt_state->quiet,
-                              log_message_receiver_xml,
+                              revprops,
+                              log_entry_receiver_xml,
                               &lb,
                               ctx,
                               pool));
@@ -566,6 +619,11 @@ svn_cl__log(apr_getopt_t *os,
     }
   else  /* default output format */
     {
+      revprops = apr_array_make(pool, 3, sizeof(char *));
+      APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_AUTHOR;
+      APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_DATE;
+      if (!opt_state->quiet)
+        APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_LOG;
       SVN_ERR(svn_client_log4(targets,
                               &peg_revision,
                               &(opt_state->start_revision),
@@ -574,8 +632,8 @@ svn_cl__log(apr_getopt_t *os,
                               opt_state->verbose,
                               opt_state->stop_on_copy,
                               opt_state->use_merge_history,
-                              opt_state->quiet,
-                              log_message_receiver,
+                              revprops,
+                              log_entry_receiver,
                               &lb,
                               ctx,
                               pool));

@@ -1,6 +1,6 @@
 /*
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -201,6 +201,7 @@
 %ignore svn_path_condense_targets;
 %ignore svn_path_remove_redundancies;
 %ignore svn_path_decompose;
+%ignore svn_path_compose;
 %ignore svn_path_is_single_path_component;
 %ignore svn_path_is_backpath_present;
 %ignore svn_path_is_child;
@@ -245,6 +246,7 @@
    output rangelist
 */
 %apply apr_array_header_t **RANGELIST {
+  apr_array_header_t **rangelist,
   apr_array_header_t **deleted,
   apr_array_header_t **added,
   apr_array_header_t **output
@@ -258,7 +260,7 @@
 }
 
 /* -----------------------------------------------------------------------
-   input mergeinfo hash to svn_mergeinfo_to_stringbuf
+   input mergeinfo hash
 */
 %apply apr_hash_t *MERGEINFO {
    apr_hash_t *mergeinput,
@@ -456,10 +458,9 @@
 */
 
 %apply apr_hash_t **MERGEHASH {
-    apr_hash_t **mergehash,
+    apr_hash_t **mergeinfo,
     apr_hash_t **deleted,
-    apr_hash_t **added,
-    apr_hash_t **mergeoutput
+    apr_hash_t **added
 }
 
 /* -----------------------------------------------------------------------
@@ -608,15 +609,6 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 #ifdef SWIGPYTHON
 %typemap(in,parse="z") const char *config_dir "";
 #endif
-#ifdef SWIGRUBY
-%typemap(in) const char *config_dir {
-  if (NIL_P($input)) {
-    $1 = "";
-  } else {
-    $1 = StringValuePtr($input);
-  }
-}
-#endif
 
 #ifdef SWIGPYTHON
 PyObject *svn_swig_py_exception_type(void);
@@ -678,15 +670,18 @@ PyObject *svn_swig_py_exception_type(void);
 
 
 /* ----------------------------------------------------------------------- */
+// These APIs take an "inout" parameter that necessitates more careful
+// definition.
+%ignore svn_mergeinfo_merge;
+%ignore svn_mergeinfo_sort;
+%ignore svn_rangelist_merge;
+%ignore svn_rangelist_reverse;
+
 #ifdef SWIGRUBY
 %ignore svn_auth_open;
 %ignore svn_diff_file_options_create;
 %ignore svn_create_commit_info;
 %ignore svn_commit_info_dup;
-%ignore svn_mergeinfo_merge;
-%ignore svn_mergeinfo_sort;
-%ignore svn_rangelist_merge;
-%ignore svn_rangelist_reverse;
 
 %ignore svn_opt_args_to_target_array2;
 %ignore svn_opt_parse_num_args;
@@ -781,6 +776,10 @@ struct apr_pool_wrapper_t
 /* Leave memory administration to ruby's GC */
 %extend apr_pool_wrapper_t
 {
+  static void destroy(VALUE object) {
+    svn_swig_rb_destroy_internal_pool(object);
+  }
+
   apr_pool_wrapper_t(apr_pool_wrapper_t *parent) {
     apr_pool_wrapper_t *self;
     apr_pool_t *parent_pool;

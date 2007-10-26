@@ -274,6 +274,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        const char *left,
                        const char *right,
                        const char *merge_target,
+                       const char *copyfrom_text,
                        svn_wc_adm_access_t *adm_access,
                        const char *left_label,
                        const char *right_label,
@@ -286,17 +287,18 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        void *conflict_baton,
                        apr_pool_t *pool)
 {
-  const char *tmp_target, *result_target;
+  const char *tmp_target, *result_target, *working_text;
   const char *adm_path = svn_wc_adm_access_path(adm_access);
   apr_file_t *result_f;
-  svn_boolean_t is_binary;
+  svn_boolean_t is_binary = FALSE;
   const svn_wc_entry_t *entry;
   svn_boolean_t contains_conflicts;
   const svn_prop_t *mimeprop;
 
-  /* Sanity check:  the merge target must be under revision control. */
+  /* Sanity check:  the merge target must be under revision control (unless
+     this is an add-with-history). */
   SVN_ERR(svn_wc_entry(&entry, merge_target, adm_access, FALSE, pool));
-  if (! entry)
+  if (! entry && ! copyfrom_text)
     {
       *merge_outcome = svn_wc_merge_no_merge;
       return SVN_NO_ERROR;
@@ -306,10 +308,11 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
   if ((mimeprop = get_prop(prop_diff, SVN_PROP_MIME_TYPE))
       && mimeprop->value)
     is_binary = svn_mime_type_is_binary(mimeprop->value->data);
-  else
+  else if (! copyfrom_text)
     SVN_ERR(svn_wc_has_binary_prop(&is_binary, merge_target, adm_access, pool));
 
-  SVN_ERR(detranslate_wc_file(&tmp_target, merge_target, adm_access,
+  working_text = copyfrom_text ? copyfrom_text : merge_target;
+  SVN_ERR(detranslate_wc_file(&tmp_target, working_text, adm_access,
                               (! is_binary) && diff3_cmd != NULL,
                               prop_diff, pool));
 
@@ -403,12 +406,12 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
              up the conflict before we mark the file 'conflicted' */
           if (conflict_func)
             {
-              svn_wc_conflict_result_t result =
-                svn_wc_conflict_result_conflicted;
+              svn_wc_conflict_result_t *result = NULL;
               svn_wc_conflict_description_t cdesc;
 
               cdesc.path = merge_target;
               cdesc.node_kind = svn_node_file;
+              cdesc.kind = svn_wc_conflict_kind_text;
               cdesc.is_binary = FALSE;
               cdesc.mime_type = (mimeprop && mimeprop->value)
                                   ? mimeprop->value->data : NULL;
@@ -416,16 +419,22 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
               cdesc.action = svn_wc_conflict_action_edit;
               cdesc.reason = svn_wc_conflict_reason_edited;
               cdesc.base_file = left;
-              cdesc.repos_file = right;
-              cdesc.user_file = tmp_target;
+              cdesc.their_file = right;
+              cdesc.my_file = tmp_target;
               cdesc.merged_file = result_target;
+              cdesc.property_name = NULL;
 
               SVN_ERR(conflict_func(&result, &cdesc, conflict_baton, pool));
-              switch (result)
+              if (result == NULL)
+                return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
+                                        NULL, _("Conflict callback violated API:"
+                                                " returned no results"));
+
+              switch (result->choice)
                 {
                   /* If the callback wants to use one of the fulltexts
                      to resolve the conflict, so be it.*/
-                  case svn_wc_conflict_result_choose_base:
+                  case svn_wc_conflict_choose_base:
                     {
                       SVN_ERR(svn_wc__loggy_copy
                               (log_accum, NULL, adm_access,
@@ -436,7 +445,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                       contains_conflicts = FALSE;
                       goto merge_complete;
                     }
-                  case svn_wc_conflict_result_choose_repos:
+                  case svn_wc_conflict_choose_theirs:
                     {
                       SVN_ERR(svn_wc__loggy_copy
                               (log_accum, NULL, adm_access,
@@ -447,7 +456,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                       contains_conflicts = FALSE;
                       goto merge_complete;
                     }
-                  case svn_wc_conflict_result_choose_user:
+                  case svn_wc_conflict_choose_mine:
                     {
                       /* Do nothing to merge_target, let it live untouched! */
                       *merge_outcome = svn_wc_merge_merged;
@@ -461,18 +470,21 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        resolved" the situation, we still interpret
                        that as "OK, we'll assume the merged version is
                        good to use". */
-                  case svn_wc_conflict_result_resolved:
-                  case svn_wc_conflict_result_choose_merged:
+                  case svn_wc_conflict_choose_merged:
                     {
                       SVN_ERR(svn_wc__loggy_copy
                               (log_accum, NULL, adm_access,
                                svn_wc__copy_translate,
-                               result_target, merge_target,
+                               /* Look for callback's own merged-file first: */
+                               result->merged_file ?
+                                  result->merged_file : result_target,
+                               merge_target,
                                FALSE, pool));
                       *merge_outcome = svn_wc_merge_merged;
                       contains_conflicts = FALSE;
                       goto merge_complete;
                     }
+                  case svn_wc_conflict_choose_postpone:
                   default:
                     {
                       /* Assume conflict remains, fall through to code below. */
@@ -603,6 +615,10 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
         {
           *merge_outcome = svn_wc_merge_conflict;
         } /* end of conflict handling */
+      else if (copyfrom_text)
+        {
+          *merge_outcome = svn_wc_merge_merged;
+        }
       else
         {
           svn_boolean_t same;
@@ -635,12 +651,12 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
          up the conflict before we mark the file 'conflicted' */
       if (conflict_func)
         {
-          svn_wc_conflict_result_t result =
-            svn_wc_conflict_result_conflicted;
+          svn_wc_conflict_result_t *result = NULL;
           svn_wc_conflict_description_t cdesc;
 
           cdesc.path = merge_target;
           cdesc.node_kind = svn_node_file;
+          cdesc.kind = svn_wc_conflict_kind_text;
           cdesc.is_binary = TRUE;
           cdesc.mime_type = (mimeprop && mimeprop->value)
                                 ? mimeprop->value->data : NULL;
@@ -648,17 +664,26 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
           cdesc.action = svn_wc_conflict_action_edit;
           cdesc.reason = svn_wc_conflict_reason_edited;
           cdesc.base_file = left;
-          cdesc.repos_file = right;
-          cdesc.user_file = tmp_target;
+          cdesc.their_file = right;
+          cdesc.my_file = tmp_target;
           cdesc.merged_file = NULL;     /* notice there is NO merged file! */
+          cdesc.property_name = NULL;
 
           SVN_ERR(conflict_func(&result, &cdesc, conflict_baton, pool));
-          switch (result)
+          if (result == NULL)
             {
-              /* For a binary file, there's no merged file to look at.
-                 Two reasonable responses are to choose the base or
-                 repos versions of the file. */
-              case svn_wc_conflict_result_choose_base:
+              /* If we were harsh, we'd throw an error here.
+                 Instead, we'll just pretend they want to postpone
+                 the conflict resolution. */
+              result = svn_wc_create_conflict_result(
+                               svn_wc_conflict_choose_postpone, NULL, pool);
+            }
+
+          switch (result->choice)
+            {
+              /* For a binary file, there's no merged file to look at,
+                 unless the conflict-callback did the merging itself. */
+              case svn_wc_conflict_choose_base:
                 {
                   SVN_ERR(svn_wc__loggy_copy
                           (log_accum, NULL, adm_access,
@@ -669,7 +694,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                   contains_conflicts = FALSE;
                   goto merge_complete;
                 }
-              case svn_wc_conflict_result_choose_repos:
+              case svn_wc_conflict_choose_theirs:
                 {
                   SVN_ERR(svn_wc__loggy_copy
                           (log_accum, NULL, adm_access,
@@ -684,13 +709,36 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                    user's file, we do nothing.  We also do nothing if
                    the response claims to have already resolved the
                    problem.*/
-              case svn_wc_conflict_result_resolved:
-              case svn_wc_conflict_result_choose_user:
+              case svn_wc_conflict_choose_mine:
                 {
                   *merge_outcome = svn_wc_merge_merged;
                   contains_conflicts = FALSE;
                   goto merge_complete;
                 }
+              case svn_wc_conflict_choose_merged:
+                {
+                  if (! result->merged_file)
+                    {
+                      /* Callback asked us to choose its own
+                         merged file, but didn't provide one! */
+                      return svn_error_create
+                          (SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
+                           NULL, _("Conflict callback violated API:"
+                                   " returned no merged file"));
+                    }
+                  else
+                    {
+                      SVN_ERR(svn_wc__loggy_copy
+                              (log_accum, NULL, adm_access,
+                               svn_wc__copy_translate,
+                               result->merged_file, merge_target,
+                               FALSE, pool));
+                      *merge_outcome = svn_wc_merge_merged;
+                      contains_conflicts = FALSE;
+                      goto merge_complete;
+                    }
+                }
+              case svn_wc_conflict_choose_postpone:
               default:
                 {
                   /* Assume conflict remains, fall through to code below. */
@@ -806,6 +854,7 @@ svn_wc_merge3(enum svn_wc_merge_outcome_t *merge_outcome,
 
   SVN_ERR(svn_wc__merge_internal(&log_accum, merge_outcome,
                                  left, right, merge_target,
+                                 NULL,
                                  adm_access,
                                  left_label, right_label, target_label,
                                  dry_run,
@@ -863,4 +912,21 @@ svn_wc_merge(const char *left,
                        left_label, right_label, target_label,
                        dry_run, diff3_cmd, NULL, NULL, NULL,
                        NULL, pool);
+}
+
+
+
+/* Constructor for the result-structure returned by conflict callbacks. */
+svn_wc_conflict_result_t *
+svn_wc_create_conflict_result(svn_wc_conflict_choice_t choice,
+                              const char *merged_file,
+                              apr_pool_t *pool)
+{
+  svn_wc_conflict_result_t *result = apr_pcalloc(pool, sizeof(*result));
+  result->choice = choice;
+  result->merged_file = merged_file;
+
+  /* If we add more fields to svn_wc_conflict_result_t, add them here. */
+
+  return result;
 }

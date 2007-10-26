@@ -3,7 +3,7 @@
 #define SVN_SWIG_SWIGUTIL_RB_C
 
 #ifdef WIN32
-#  include "ruby/rubyhead.swg"
+#  include "rubyhead.swg"
 #endif
 #include "swig_ruby_external_runtime.swg"
 #include "swigutil_rb.h"
@@ -853,9 +853,9 @@ svn_swig_rb_to_depth(VALUE value)
   if (NIL_P(value)) {
     return svn_depth_infinity;
   } else if (value == Qtrue) {
-    return SVN_DEPTH_FROM_RECURSE(TRUE);
+    return SVN_DEPTH_INFINITY_OR_FILES(TRUE);
   } else if (value == Qfalse) {
-    return SVN_DEPTH_FROM_RECURSE(FALSE);
+    return SVN_DEPTH_INFINITY_OR_FILES(FALSE);
   } else if (RTEST(rb_obj_is_kind_of(value, rb_cString)) ||
              RTEST(rb_obj_is_kind_of(value, rb_cSymbol))) {
     value = rb_funcall(value, id_to_s, 0);
@@ -1285,6 +1285,37 @@ svn_swig_rb_prop_apr_array_to_hash_prop(const apr_array_header_t *apr_ary)
   }
 
   return hash;
+}
+
+apr_array_header_t *
+svn_swig_rb_array_to_apr_array_revision_range(VALUE array, apr_pool_t *pool)
+{
+  int i, len;
+  apr_array_header_t *apr_ary;
+
+  Check_Type(array, T_ARRAY);
+  len = RARRAY(array)->len;
+  apr_ary = apr_array_make(pool, len, sizeof(svn_opt_revision_range_t *));
+  apr_ary->nelts = len;
+  for (i = 0; i < len; i++) {
+    VALUE value;
+    svn_opt_revision_range_t *range;
+
+    value = rb_ary_entry(array, i);
+    if (RTEST(rb_obj_is_kind_of(value, rb_cArray))) {
+      if (RARRAY(value)->len != 2)
+        rb_raise(rb_eArgError,
+                 "revision range should be [start, end]: %s",
+                 r2c_inspect(value));
+      range = apr_palloc(pool, sizeof(*range));
+      svn_swig_rb_set_revision(&range->start, rb_ary_entry(value, 0));
+      svn_swig_rb_set_revision(&range->end, rb_ary_entry(value, 1));
+    } else {
+      range = r2c_swig_type(value, (void *)"svn_opt_revision_range_t *", pool);
+    }
+    APR_ARRAY_IDX(apr_ary, i, svn_opt_revision_range_t *) = range;
+  }
+  return apr_ary;
 }
 
 
@@ -2187,36 +2218,6 @@ svn_swig_rb_notify_func2(void *baton,
 }
 
 svn_error_t *
-svn_swig_rb_conflict_resolver_func(svn_wc_conflict_result_t *result,
-                                   const svn_wc_conflict_description_t *description,
-                                   void *baton,
-                                   apr_pool_t *pool)
-{
-  svn_error_t *err = SVN_NO_ERROR;
-  VALUE proc, rb_pool, rb_result;
-
-  *result = svn_wc_conflict_result_conflicted;
-
-  svn_swig_rb_from_baton((VALUE)baton, &proc, &rb_pool);
-
-  if (!NIL_P(proc)) {
-    callback_baton_t cbb;
-    void *converted_result;
-
-    cbb.receiver = proc;
-    cbb.message = id_call;
-    cbb.args = rb_ary_new3(1,
-             c2r_swig_type((void *)description,
-                           (void *)"const svn_wc_conflict_description_t *"));
-    rb_result = invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
-    converted_result = result;
-    r2c_swig_type2(rb_result, "svn_wc_conflict_result_t *", &converted_result);
-  }
-
-  return err;
-}
-
-svn_error_t *
 svn_swig_rb_commit_callback(svn_revnum_t new_revision,
                             const char *date,
                             const char *author,
@@ -2602,16 +2603,20 @@ svn_swig_rb_setup_ra_callbacks(svn_ra_callbacks2_t **callbacks,
                                VALUE rb_callbacks,
                                apr_pool_t *pool)
 {
-  VALUE rb_auth_baton;
+  void *auth_baton = NULL;
 
-  rb_auth_baton = rb_funcall(rb_callbacks, id_auth_baton, 0);
+  if (!NIL_P(rb_callbacks)) {
+    VALUE rb_auth_baton = Qnil;
+    rb_auth_baton = rb_funcall(rb_callbacks, id_auth_baton, 0);
+    auth_baton = r2c_swig_type(rb_auth_baton,
+                               (void *)"svn_auth_baton_t *",
+                               pool);
+  }
 
   *callbacks = apr_pcalloc(pool, sizeof(**callbacks));
 
   (*callbacks)->open_tmp_file = ra_callbacks_open_tmp_file;
-  (*callbacks)->auth_baton = r2c_swig_type(rb_auth_baton,
-                                           (void *)"svn_auth_baton_t *",
-                                           pool);
+  (*callbacks)->auth_baton = auth_baton;
   (*callbacks)->get_wc_prop = ra_callbacks_get_wc_prop;
   (*callbacks)->set_wc_prop = ra_callbacks_set_wc_prop;
   (*callbacks)->push_wc_prop = ra_callbacks_push_wc_prop;

@@ -256,12 +256,12 @@ parse_top(const char **input, const char *end, apr_hash_t *hash,
 
 /* Parse mergeinfo.  */
 svn_error_t *
-svn_mergeinfo_parse(apr_hash_t **mergehash,
+svn_mergeinfo_parse(apr_hash_t **mergeinfo,
                     const char *input,
                     apr_pool_t *pool)
 {
-  *mergehash = apr_hash_make(pool);
-  return parse_top(&input, input + strlen(input), *mergehash, pool);
+  *mergeinfo = apr_hash_make(pool);
+  return parse_top(&input, input + strlen(input), *mergeinfo, pool);
 }
 
 
@@ -854,11 +854,11 @@ svn_mergeinfo_merge(apr_hash_t **mergeinfo, apr_hash_t *changes,
 }
 
 svn_error_t *
-svn_mergeinfo_remove(apr_hash_t **output, apr_hash_t *eraser,
+svn_mergeinfo_remove(apr_hash_t **mergeinfo, apr_hash_t *eraser,
                      apr_hash_t *whiteboard, apr_pool_t *pool)
 {
-  *output = apr_hash_make(pool);
-  SVN_ERR(walk_mergeinfo_hash_for_diff(whiteboard, eraser, *output, NULL,
+  *mergeinfo = apr_hash_make(pool);
+  SVN_ERR(walk_mergeinfo_hash_for_diff(whiteboard, eraser, *mergeinfo, NULL,
                                        TRUE, pool));
   return SVN_NO_ERROR;
 }
@@ -1105,6 +1105,111 @@ svn_rangelist_dup(apr_array_header_t *rangelist, apr_pool_t *pool)
     }
 
   return new_rl;
+}
+
+svn_boolean_t
+svn_range_compact(svn_merge_range_t **range_1,
+                  svn_merge_range_t **range_2)
+{
+  svn_boolean_t is_compacted = FALSE;
+  svn_boolean_t range_1_is_reversed, range_2_is_reversed;
+
+  /* Wave the white flag if out preconditions are not met. */
+  if (!*range_1
+      || !*range_2
+      || !SVN_IS_VALID_REVNUM(*range_1)
+      || !SVN_IS_VALID_REVNUM(*range_2))
+    return FALSE;
+
+  /* "Normalize" the ranges so start <= end. */
+  range_1_is_reversed = (*range_1)->start > (*range_1)->end ? TRUE : FALSE;
+  range_2_is_reversed = (*range_2)->start > (*range_2)->end ? TRUE : FALSE;
+  if (range_1_is_reversed)
+    range_swap_endpoints(*range_1);
+  if (range_2_is_reversed)
+    range_swap_endpoints(*range_2);
+
+  /* Do the ranges overlap?
+     Range overlapping detection algorithm from
+     http://c2.com/cgi-bin/wiki/fullSearch?TestIfDateRangesOverlap */
+  if ((*range_1)->start <= (*range_2)->end
+      && (*range_2)->start <= (*range_1)->end)
+    {
+      /* If the ranges are both in the same direction simply combine them. */
+      if (range_1_is_reversed == range_2_is_reversed)
+        {
+          (*range_1)->start = MIN((*range_1)->start, (*range_2)->start);
+          (*range_1)->end = MAX((*range_1)->end, (*range_2)->end);
+          *range_2 = NULL;
+        }
+      else /* *Exactly* one of the ranges is a reverse range. */
+        {
+          svn_revnum_t range_tmp;
+
+          if ((*range_1)->start == (*range_2)->start)
+            {
+              if ((*range_1)->end == (*range_2)->end)
+                {
+                  /* A range and its reverse just cancel each other out. */
+                  *range_1 = *range_2 = NULL;
+                }
+              else
+                {
+                  (*range_1)->start = (*range_1)->end;
+                  (*range_1)->end = (*range_2)->end;
+                  *range_2 = NULL;
+                  /* RANGE_2 is a superset of RANGE_1, the intersecting
+                     portions of each range cancel each other out.
+                     The resulting compacted range is stored in RANGE_1 so
+                     it takes on the reversed property of  RANGE_2. */
+                  range_1_is_reversed = range_2_is_reversed;
+                }
+            }
+          else /* (*range_1)->start != (*range_2)->start) */
+            {
+              if ((*range_1)->end > (*range_2)->end)
+                {
+                  /* RANGE_1 is a superset of RANGE_2 */
+                  if ((*range_1)->start < (*range_2)->start)
+                    {
+                      range_tmp = (*range_1)->end;
+                      (*range_1)->end = (*range_2)->start;
+                      (*range_2)->start = (*range_2)->end;
+                      (*range_2)->end = range_tmp;
+                      range_2_is_reversed = range_1_is_reversed;
+                    }
+                  else
+                    {
+                      range_tmp = (*range_1)->start;
+                      (*range_1)->start = (*range_2)->end;
+                      (*range_2)->end = range_tmp;
+                    }
+                }
+              else if ((*range_1)->end < (*range_2)->end)
+                {
+                  /* RANGE_1 and RANGE_2 intersect. */
+                  range_tmp = (*range_1)->end;
+                  (*range_1)->end = (*range_2)->start;
+                  (*range_2)->start = range_tmp;
+                  (*range_2)->end = (*range_2)->end;
+                }
+              else /* (*range_1)->end == (*range_2)->end */
+                {
+                  /* RANGE_2 is a proper subset of RANGE_1. */
+                  (*range_1)->end = (*range_2)->start;
+                  *range_2 = NULL;
+                }
+            }
+        }
+      is_compacted = TRUE;
+    } /* ranges overlap */
+
+  /* Return compacted ranges to their original direction. */
+  if (*range_1 && range_1_is_reversed)
+    range_swap_endpoints(*range_1);
+  if (*range_2 && range_2_is_reversed)
+    range_swap_endpoints(*range_2);
+  return is_compacted;
 }
 
 svn_merge_range_t *

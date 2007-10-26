@@ -102,7 +102,7 @@ svn_cl__switch(apr_getopt_t *os,
   /* handle only-rewrite case specially */
   if (opt_state->relocate)
     return rewrite_urls(targets,
-                        SVN_DEPTH_TO_RECURSE(opt_state->depth),
+                        SVN_DEPTH_IS_RECURSIVE(opt_state->depth),
                         ctx, pool);
 
   if (targets->nelts < 1)

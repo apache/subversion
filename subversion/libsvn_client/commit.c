@@ -35,6 +35,7 @@
 #include "svn_string.h"
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_error_codes.h"
 #include "svn_path.h"
 #include "svn_io.h"
 #include "svn_md5.h"
@@ -828,7 +829,8 @@ svn_client_import2(svn_commit_info_t **commit_info_p,
                    apr_pool_t *pool)
 {
   return svn_client_import3(commit_info_p,
-                            path, url, SVN_DEPTH_FROM_RECURSE(! nonrecursive),
+                            path, url,
+                            SVN_DEPTH_INFINITY_OR_FILES(! nonrecursive),
                             no_ignore, FALSE, ctx, pool);
 }
 
@@ -1768,7 +1770,9 @@ svn_client_commit3(svn_commit_info_t **commit_info_p,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  return svn_client_commit4(commit_info_p, targets, recurse, keep_locks,
+  svn_depth_t depth = SVN_DEPTH_INFINITY_OR_FILES(recurse);
+
+  return svn_client_commit4(commit_info_p, targets, depth, keep_locks,
                             FALSE, NULL, ctx, pool);
 }
 

@@ -365,6 +365,17 @@ svn_path_remove_redundancies(apr_array_header_t **pcondensed_targets,
 apr_array_header_t *svn_path_decompose(const char *path,
                                        apr_pool_t *pool);
 
+/** Join an array of <tt>const char *</tt> components into a '/'
+ * separated path, allocated in @pool.  The joined path is absolute if
+ * the first component is a lone dir separator.
+ *
+ * Calling svn_path_compose() on the output of svn_path_decompose()
+ * will return the exact same path.
+ *
+ * @since New in 1.5.
+ */
+const char *svn_path_compose(const apr_array_header_t *components,
+                             apr_pool_t *pool);
 
 /** Test that @a name is a single path component, that is:
  *   - not @c NULL or empty.

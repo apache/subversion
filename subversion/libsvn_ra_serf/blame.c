@@ -185,8 +185,8 @@ start_blame(svn_ra_serf__xml_parser_t *parser,
       info = push_state(parser, blame_ctx, FILE_REV);
 
       info->path = apr_pstrdup(info->pool,
-                               svn_ra_serf__find_attr(attrs, "path"));
-      info->rev = SVN_STR_TO_REV(svn_ra_serf__find_attr(attrs, "rev"));
+                               svn_xml_get_attr_value("path", attrs));
+      info->rev = SVN_STR_TO_REV(svn_xml_get_attr_value("rev", attrs));
     }
   else if (state == FILE_REV)
     {
@@ -230,11 +230,11 @@ start_blame(svn_ra_serf__xml_parser_t *parser,
         case SET_PROP:
         case REMOVE_PROP:
           info->prop_name = apr_pstrdup(info->pool,
-                                        svn_ra_serf__find_attr(attrs, "name"));
+                                        svn_xml_get_attr_value("name", attrs));
           info->prop_attr = NULL;
           info->prop_attr_len = 0;
 
-          enc = svn_ra_serf__find_attr(attrs, "encoding");
+          enc = svn_xml_get_attr_value("encoding", attrs);
           if (enc && strcmp(enc, "base64") == 0)
             {
               info->prop_base64 = TRUE;
@@ -452,7 +452,7 @@ process_request(svn_ra_session_t *ra_session,
       return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                               _("The OPTIONS response did not include the "
                                 "requested version-controlled-configuration "
-                                "value."));
+                                "value"));
     }
 
   /* Send the request to the baseline URL */
@@ -463,7 +463,7 @@ process_request(svn_ra_session_t *ra_session,
     {
       return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                               _("The OPTIONS response did not include the "
-                                "requested baseline-relative-path value."));
+                                "requested baseline-relative-path value"));
     }
   relative_url = svn_path_join(relative_url,
                                svn_path_uri_decode(lopped_path, pool),
@@ -483,7 +483,7 @@ process_request(svn_ra_session_t *ra_session,
         {
           return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                                   _("The OPTIONS response did not include the "
-                                    "requested checked-in value."));
+                                    "requested checked-in value"));
         }
 
       SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
@@ -510,7 +510,7 @@ process_request(svn_ra_session_t *ra_session,
     {
       return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                               _("The OPTIONS response did not include the "
-                                "requested baseline-collection value."));
+                                "requested baseline-collection value"));
     }
 
   req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);

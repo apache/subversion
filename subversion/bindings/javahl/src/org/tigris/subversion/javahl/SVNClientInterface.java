@@ -40,9 +40,9 @@ public interface SVNClientInterface
      * @return The name of the working copy's administrative
      * directory, which is usually <code>.svn</code>.
      * @see <a
-     * href="http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt">Instructions</a>
-     * on changing this as a work-around for the behavior of ASP.Net
-     * on Windows.
+     * href="http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt">
+     * Instructions on changing this as a work-around for the behavior of
+     * ASP.Net on Windows.</a>
      * @since 1.3
      */
     public String getAdminDirectoryName();
@@ -56,10 +56,10 @@ public interface SVNClientInterface
     public boolean isAdminDirectory(String name);
 
     /**
-      * Returns the last destination path submitted.
-      * @deprecated
-      * @return path in Subversion format.
-      */
+     * Returns the last destination path submitted.
+     * @deprecated
+     * @return path in Subversion format.
+     */
     String getLastPath();
 
     /**
@@ -112,7 +112,6 @@ public interface SVNClientInterface
      * @param getAll    get status for uninteresting (unchanged) files.
      * @param noIgnore  get status for normaly ignored files and directories.
      * @param ignoreExternals if externals are ignored during status
-     * @return Array of Status entries.
      * @since 1.5
      */
     void status(String path, int depth, boolean onServer,
@@ -500,7 +499,7 @@ public interface SVNClientInterface
      * @param message   log message.
      * @param recurse   whether the operation should be done recursively.
      * @return The new revision number created by the commit, or
-     * {@link Revision.SVN_INVALID_REVNUM} if the revision number is
+     * {@link Revision#SVN_INVALID_REVNUM} if the revision number is
      * invalid.
      * @throws ClientException
      */
@@ -514,7 +513,7 @@ public interface SVNClientInterface
      * @param recurse   whether the operation should be done recursively.
      * @param noUnlock  do remove any locks
      * @return The new revision number created by the commit, or
-     * {@link Revision.SVN_INVALID_REVNUM} if the revision number is
+     * {@link Revision#SVN_INVALID_REVNUM} if the revision number is
      * invalid.
      * @throws ClientException
      * @since 1.2
@@ -531,7 +530,7 @@ public interface SVNClientInterface
      * @param keepChangelist  keep changelist associations after the commit.
      * @param changelistName  if non-null, filter paths using changelist
      * @return The new revision number created by the commit, or
-     * {@link Revision.SVN_INVALID_REVNUM} if the revision number is
+     * {@link Revision#SVN_INVALID_REVNUM} if the revision number is
      * invalid.
      * @throws ClientException
      * @since 1.5
@@ -597,7 +596,7 @@ public interface SVNClientInterface
 
     /**
      * @deprecated Use move() without a Revision parameter.
-     * @see org.tigris.subversion.javahl.SVNClientInterface.move(String[], String, String, boolean, boolean)
+     * @see #move(String[], String, String, boolean, boolean, boolean, boolean)
      * @since 1.2
      */
     void move(String srcPath, String destPath, String message,
@@ -648,10 +647,21 @@ public interface SVNClientInterface
     void cleanup(String path) throws ClientException;
 
     /**
-     * Removes the 'conflicted' state on a file.
-     * @param path      path to cleanup
-     * @param recurse   recurce into subdirectories
-     * @throws ClientException
+     * Removes the <i>conflicted</i> state on a WC path (or tree).
+     * @param path The path to resolve.
+     * @param depth How deep to recurse into child paths.
+     * @param conflictResult Which version to choose in the event of a
+     *                       conflict.
+     * @throws SubversionException If an error occurs.
+     * @since 1.5
+     */
+    void resolved(String path, int depth, int conflictResult)
+        throws SubversionException;
+
+    /**
+     * Removes the <i>conflicted</i> state on a WC path (or tree).
+     * @see #resolved(String, int, int)
+     * @deprecated Use resolved(String, int) instead.
      */
     void resolved(String path, boolean recurse) throws ClientException;
 
@@ -849,26 +859,6 @@ public interface SVNClientInterface
             throws ClientException;
 
     /**
-     * Merge changes from two paths into a new local path.
-     *
-     * @param path           path or url
-     * @param pegRevision    revision to interpret path
-     * @param revision1      first revision
-     * @param revision2      second revision
-     * @param localPath      target local path
-     * @param force          overwrite local changes
-     * @param depth          how deep to traverse into subdirectories
-     * @param ignoreAncestry ignore if files are not related
-     * @param dryRun         do not change anything
-     * @throws ClientException
-     * @since 1.5
-     */
-    void merge(String path, Revision pegRevision, Revision revision1,
-               Revision revision2, String localPath, boolean force, int depth,
-               boolean ignoreAncestry, boolean dryRun)
-           throws ClientException;
-
-    /**
      * Merge set of revisions into a new local path.
      * @param path          path or url
      * @param pegRevision   revision to interpret path
@@ -886,14 +876,32 @@ public interface SVNClientInterface
                boolean ignoreAncestry, boolean dryRun) throws ClientException;
 
     /**
-     * Get merge info for <code>path</code> at <code>revision</code>.
-     * @param path Path or URL.
-     * @param revision Revision at which to get the merge info for
+     * Get merge info for <code>path</code> at <code>pegRevision</code>.
+     * @param path WC path or URL.
+     * @param pegRevision peg revision at which to get the merge info for
      * <code>path</code>.
+     * @return The merge history of <code>path</code>.
      * @throws SubversionException
      * @since 1.5
      */
-    MergeInfo getMergeInfo(String path, Revision revision)
+    MergeInfo getMergeInfo(String path, Revision pegRevision)
+        throws SubversionException;
+
+    /**
+     * Get merge info for <code>path</code> at <code>pegRevision</code>.
+     * @param path WC path or URL.
+     * @param pegRevision Revision at which to get the merge info for
+     * <code>path</code>.
+     * @param mergeSource The merge source for which the list of
+     * revisions is available.
+     * @return The list of revisions available for merge from
+     * <code>mergeSource</code>, or <code>null</code> if all eligible
+     * revisions have been merged.
+     * @throws SubversionException
+     * @since 1.5
+     */
+    RevisionRange[] getAvailableMerges(String path, Revision pegRevision,
+                                       String mergeSource)
         throws SubversionException;
 
     /**
@@ -1020,7 +1028,7 @@ public interface SVNClientInterface
      * @param pegRevision Revision at which to interpret
      * <code>target</code>.  If {@link RevisionKind#unspecified} or
      * <code>null</code>, behave identically to {@link
-     * diffSummarize(String, Revision, String, Revision, boolean,
+     * #diffSummarize(String, Revision, String, Revision, int,
      * boolean, DiffSummaryReceiver)}, using <code>path</code> for
      * both of that method's targets.
      * @param startRevision Beginning of range for comparsion of
@@ -1139,6 +1147,21 @@ public interface SVNClientInterface
             throws ClientException;
 
     /**
+     * Sets one property of an item with a String value
+     *
+     * @param path    path of the item
+     * @param name    name of the property
+     * @param value   new value of the property
+     * @param depth   the depth to recurse into subdirectories
+     * @param force   do not check if the value is valid
+     * @throws ClientException
+     * @since 1.5
+     */
+    void propertySet(String path, String name, String value, int depth,
+                     boolean force)
+            throws ClientException;
+
+    /**
      * Remove one property of an item.
      * @param path      path of the item
      * @param name      name of the property
@@ -1146,6 +1169,17 @@ public interface SVNClientInterface
      * @throws ClientException
      */
     void propertyRemove(String path, String name, boolean recurse)
+            throws ClientException;
+
+    /**
+     * Remove one property of an item.
+     * @param path      path of the item
+     * @param name      name of the property
+     * @param depth     the depth to recurse into subdirectories
+     * @throws ClientException
+     * @since 1.5
+     */
+    void propertyRemove(String path, String name, int depth)
             throws ClientException;
 
     /**
@@ -1300,10 +1334,10 @@ public interface SVNClientInterface
      * @param path        the path of the file
      * @param revision    the revision to retrieve
      * @param pegRevision the revision at which to interpret the path
-     * @param the stream to write the file's content to
+     * @param stream      the stream to write the file's content to
      * @throws ClientException
-     * @see <a href="http://java.sun.com/j2se/1.4.2/docs/api/java/io/PipedOutputStream.html">PipedOutputStream</a>
-     * @see <a href="http://java.sun.com/j2se/1.4.2/docs/api/java/io/PipedInputStream.html">PipedInputStream</a>
+     * @see java.io.PipedOutputStream
+     * @see java.io.PipedInputStream
      */
     void streamFileContent(String path, Revision revision, Revision pegRevision,
                            int bufferSize, OutputStream stream)
@@ -1471,7 +1505,8 @@ public interface SVNClientInterface
      * @since 1.2
      */
     Info2[] info2(String pathOrUrl, Revision revision, Revision pegRevision,
-                 boolean recurse) throws ClientException;
+                  boolean recurse)
+        throws ClientException;
 
     /**
      * Retrieve information about repository or working copy items.
@@ -1480,7 +1515,6 @@ public interface SVNClientInterface
      * @param pegRevision   the revision to interpret pathOrUrl
      * @param depth         the depth to recurse
      * @param callback      a callback to receive the infos retreived
-     * @return              the information objects
      * @since 1.5
      */
     void info2(String pathOrUrl, Revision revision, Revision pegRevision,

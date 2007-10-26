@@ -35,6 +35,7 @@
 #include "svn_private_config.h"
 
 
+
 svn_error_t *
 svn_client__parse_mergeinfo(apr_hash_t **mergeinfo,
                             const svn_wc_entry_t *entry,
@@ -52,7 +53,7 @@ svn_client__parse_mergeinfo(apr_hash_t **mergeinfo,
      ### svn_client__get_prop_from_wc(). */
   SVN_ERR(svn_client__get_prop_from_wc(props, SVN_PROP_MERGE_INFO,
                                        wcpath, pristine, entry, adm_access,
-                                       FALSE, ctx, pool));
+                                       svn_depth_empty, ctx, pool));
   propval = apr_hash_get(props, wcpath, APR_HASH_KEY_STRING);
   if (propval)
     SVN_ERR(svn_mergeinfo_parse(mergeinfo, propval->data, pool));
@@ -372,7 +373,8 @@ svn_client__get_wc_or_repos_mergeinfo(apr_hash_t **target_mergeinfo,
           */
           SVN_ERR(svn_client__get_prop_from_wc(props, SVN_PROP_MERGE_INFO,
                                                target_wcpath, TRUE, entry,
-                                               adm_access, FALSE, ctx, pool));
+                                               adm_access, svn_depth_empty,
+                                               ctx, pool));
           if (apr_hash_get(props, target_wcpath, APR_HASH_KEY_STRING) == NULL)
             {
               if (ra_session == NULL)
@@ -834,8 +836,8 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session, path_or_url,
                                                    NULL, NULL, NULL, FALSE,
                                                    TRUE, ctx, pool));
-      SVN_ERR(svn_client__get_revision_number(&rev, ra_session, peg_revision, 
-                                              "", pool));
+      SVN_ERR(svn_client__get_revision_number(&rev, NULL, ra_session, 
+                                              peg_revision, "", pool));
       SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
       SVN_ERR(svn_client__path_relative_to_root(&repos_rel_path, path_or_url,
                                                 repos_root, NULL, NULL, pool));
@@ -893,7 +895,7 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
 
 
 svn_error_t *
-svn_client_mergeinfo_get_available(apr_array_header_t **merge_ranges,
+svn_client_mergeinfo_get_available(apr_array_header_t **rangelist,
                                    const char *path_or_url,
                                    const svn_opt_revision_t *peg_revision,
                                    const char *merge_source_url,
@@ -920,7 +922,7 @@ svn_client_mergeinfo_get_available(apr_array_header_t **merge_ranges,
                                                NULL, NULL, NULL, FALSE,
                                                TRUE, ctx, pool));
   head_revision.kind = svn_opt_revision_head;
-  SVN_ERR(svn_client__get_revision_number(&(full_range->end), ra_session,
+  SVN_ERR(svn_client__get_revision_number(&(full_range->end), NULL, ra_session,
                                           &head_revision, "", pool));
 
   /* ### FIXME: What if MERGE_SOURCE_URL no longer exists in HEAD?
@@ -944,11 +946,76 @@ svn_client_mergeinfo_get_available(apr_array_header_t **merge_ranges,
      ### merges from there, fine, but if not ...
   */
   if (! already_merged_ranges)
-    *merge_ranges = full_range_list;
+    *rangelist = full_range_list;
   else
-    SVN_ERR(svn_rangelist_remove(merge_ranges, already_merged_ranges,
+    SVN_ERR(svn_rangelist_remove(rangelist, already_merged_ranges,
                                  full_range_list, 
                                  svn_rangelist_equal_inheritance, pool));
   
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
+                                 const char *path_or_url,
+                                 const svn_opt_revision_t *peg_revision,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *pool)
+{
+  const char *repos_root;
+  const char *copyfrom_path;
+  apr_array_header_t *list;
+  svn_revnum_t copyfrom_rev;
+  apr_hash_t *mergeinfo;
+  apr_hash_index_t *hi;
+
+  list = apr_array_make(pool, 1, sizeof(const char *));
+
+  /* In our ideal algorithm, the list of recommendations should be
+     ordered by:
+
+        1. The most recent existing merge source.
+        2. The copyfrom source (which will also be listed as a merge
+           source if the copy was made with a 1.5+ client and server).
+        3. All other merge sources, most recent to least recent.
+
+     However, determining the order of application of merge sources
+     requires a new RA API.  Until such an API is available, our
+     algorithm will be:
+
+        1. The copyfrom source.
+        2. All remaining merge sources (unordered).
+  */
+
+  /* ### TODO: Share ra_session batons to improve efficiency? */
+  SVN_ERR(svn_client__get_repos_root(&repos_root, path_or_url, peg_revision, 
+                                     NULL, ctx, pool));
+  SVN_ERR(svn_client__get_copy_source(path_or_url, peg_revision, 
+                                      &copyfrom_path, &copyfrom_rev, 
+                                      ctx, pool));
+  if (copyfrom_path)
+    {
+      copyfrom_path = svn_path_join(repos_root, 
+                                    svn_path_uri_encode(copyfrom_path + 1, 
+                                                        pool),
+                                    pool);
+      APR_ARRAY_PUSH(list, const char *) = copyfrom_path;
+    }
+
+  SVN_ERR(svn_client_mergeinfo_get_merged(&mergeinfo, path_or_url, 
+                                          peg_revision, ctx, pool));
+  if (mergeinfo)
+    {
+      for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
+        {
+          const char *merge_path;
+          apr_hash_this(hi, (void *)(&merge_path), NULL, NULL);
+          if (copyfrom_path == NULL || strcmp(merge_path, copyfrom_path) != 0)
+            APR_ARRAY_PUSH(list, const char *) = merge_path;
+        }
+    }
+
+  *suggestions = list;
   return SVN_NO_ERROR;
 }

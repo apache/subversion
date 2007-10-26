@@ -638,7 +638,12 @@ add_file_smartly(report_baton_t *b,
   if (b->send_copyfrom_args)
     {
       /* Find the destination of the nearest 'copy event' which may have
-         caused o_path@t_root to exist.  */
+         caused o_path@t_root to exist. svn_fs_closest_copy only returns paths 
+         starting with '/', so make sure o_path always starts with a '/' 
+         too. */
+      if (*o_path != '/')
+        o_path = apr_pstrcat(pool, "/", o_path, NULL);
+
       SVN_ERR(svn_fs_closest_copy(&closest_copy_root, &closest_copy_path,
                                   b->t_root, o_path, pool));
       if (closest_copy_root != NULL)
@@ -646,7 +651,7 @@ add_file_smartly(report_baton_t *b,
           /* If the destination of the copy event is the same path as
              o_path, then we've found something interesting that should
              have 'copyfrom' history. */
-          if (strcmp(closest_copy_path + 1, o_path) == 0)
+          if (strcmp(closest_copy_path, o_path) == 0)
             {
               SVN_ERR(svn_fs_copied_from(copyfrom_rev, copyfrom_path,
                                          closest_copy_root, closest_copy_path,
@@ -1015,7 +1020,7 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                   /* There is no corresponding target entry, so delete. */
                   e_fullpath = svn_path_join(e_path, s_entry->name, subpool);
                   SVN_ERR(svn_repos_deleted_rev(svn_fs_root_fs(b->t_root),
-                                               svn_path_join(t_path,
+                                                svn_path_join(t_path,
                                                               s_entry->name,
                                                               subpool),
                                                 s_rev, b->t_rev,
@@ -1405,7 +1410,7 @@ svn_repos_begin_report(void **report_baton,
                                  s_operand,
                                  switch_path,
                                  text_deltas,
-                                 SVN_DEPTH_FROM_RECURSE(recurse),
+                                 SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                  ignore_ancestry,
                                  FALSE, /* don't send copyfrom args */
                                  editor,

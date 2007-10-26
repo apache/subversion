@@ -71,12 +71,24 @@ struct edit_baton {
   /* Empty hash used for adds. */
   apr_hash_t *empty_hash;
 
+  /* Hash used to check replaced paths. Key is path relative CWD,
+   * Value is *kind_action_state.
+   * All allocations are from edit_baton's pool. */
+  apr_hash_t *deleted_paths;
+
   /* If the func is non-null, send notifications of actions. */
   svn_wc_notify_func2_t notify_func;
   void *notify_baton;
 
   apr_pool_t *pool;
 };
+
+typedef struct kind_action_state
+{
+  svn_node_kind_t kind;
+  svn_wc_notify_action_t action;
+  svn_wc_notify_state_t state;
+}kind_action_state;
 
 /* Directory level baton.
  */
@@ -250,7 +262,7 @@ get_file_mime_types(const char **mimetype1,
  * delete this file.
  */
 static svn_error_t *
-get_file_from_ra(struct file_baton *b)
+get_file_from_ra(struct file_baton *b, svn_revnum_t revision)
 {
   apr_file_t *file;
   svn_stream_t *fstream;
@@ -265,7 +277,7 @@ get_file_from_ra(struct file_baton *b)
   fstream = svn_stream_from_aprfile(file, b->pool);
   SVN_ERR(svn_ra_get_file(b->edit_baton->ra_session,
                           b->path,
-                          b->edit_baton->revision,
+                          revision,
                           fstream, NULL,
                           &(b->pristine_props),
                           b->pool));
@@ -274,14 +286,14 @@ get_file_from_ra(struct file_baton *b)
   return SVN_NO_ERROR;
 }
 
-/* Get the props attached to a directory in the repository. */
+/* Get the props attached to a directory in the repository at BASE_REVISION. */
 static svn_error_t *
-get_dirprops_from_ra(struct dir_baton *b)
+get_dirprops_from_ra(struct dir_baton *b, svn_revnum_t base_revision)
 {
   SVN_ERR(svn_ra_get_dir2(b->edit_baton->ra_session,
                           NULL, NULL, &(b->pristine_props),
                           b->path,
-                          b->edit_baton->revision,
+                          base_revision,
                           0,
                           b->pool));
 
@@ -415,7 +427,7 @@ open_root(void *edit_baton,
   /* Override the wcpath in our baton. */
   b->wcpath = apr_pstrdup(pool, eb->target);
 
-  SVN_ERR(get_dirprops_from_ra(b));
+  SVN_ERR(get_dirprops_from_ra(b, base_revision));
 
   *root_baton = b;
   return SVN_NO_ERROR;
@@ -450,7 +462,7 @@ delete_entry(const char *path,
 
             /* Compare a file being deleted against an empty file */
             b = make_file_baton(path, FALSE, eb, pool);
-            SVN_ERR(get_file_from_ra(b));
+            SVN_ERR(get_file_from_ra(b, eb->revision));
             SVN_ERR(get_empty_file(b->edit_baton, &(b->path_end_revision)));
 
             get_file_mime_types(&mimetype1, &mimetype2, b);
@@ -497,13 +509,13 @@ delete_entry(const char *path,
 
   if (eb->notify_func)
     {
-      svn_wc_notify_t *notify
-        = svn_wc_create_notify(svn_path_join(eb->target, path, pool),
-                               action, pool);
-      notify->kind = kind;
-      notify->content_state = notify->prop_state = state;
-      notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-      (*eb->notify_func)(eb->notify_baton, notify, pool);
+      const char* deleted_path;
+      kind_action_state *kas = apr_palloc(eb->pool, sizeof(*kas));
+      deleted_path = svn_path_join(eb->target, path, eb->pool);
+      kas->kind = kind;
+      kas->action = action;
+      kas->state = state;
+      apr_hash_set(eb->deleted_paths, deleted_path, APR_HASH_KEY_STRING, kas);
     }
   return SVN_NO_ERROR;
 }
@@ -545,9 +557,36 @@ add_directory(const char *path,
 
   if (eb->notify_func)
     {
-      svn_wc_notify_t *notify = svn_wc_create_notify(b->wcpath, action, pool);
-      notify->kind = svn_node_dir;
-      (*eb->notify_func)(eb->notify_baton, notify, pool);
+      svn_wc_notify_t *notify;
+      svn_boolean_t is_replace = FALSE;
+      kind_action_state *kas = apr_hash_get(eb->deleted_paths, b->wcpath,
+                                            APR_HASH_KEY_STRING);
+      if (kas)
+        {
+          svn_wc_notify_action_t new_action;
+          if (kas->action == svn_wc_notify_update_delete
+              && action == svn_wc_notify_update_add)
+            {
+              is_replace = TRUE;
+              new_action = svn_wc_notify_update_replace;
+            }
+          else
+            new_action = kas->action;
+          notify  = svn_wc_create_notify(b->wcpath, new_action, pool);
+          notify->kind = kas->kind;
+          notify->content_state = notify->prop_state = kas->state;
+          notify->lock_state = svn_wc_notify_lock_state_inapplicable;
+          (*eb->notify_func)(eb->notify_baton, notify, pool);
+          apr_hash_set(eb->deleted_paths, b->wcpath,
+                       APR_HASH_KEY_STRING, NULL);
+        }
+
+      if (!is_replace)
+        {
+          notify = svn_wc_create_notify(b->wcpath, action, pool);
+          notify->kind = svn_node_dir;
+          (*eb->notify_func)(eb->notify_baton, notify, pool);
+        }
     }
 
   return SVN_NO_ERROR;
@@ -567,7 +606,7 @@ open_directory(const char *path,
   b = make_dir_baton(path, pb, pb->edit_baton, FALSE, pool);
   *child_baton = b;
 
-  SVN_ERR(get_dirprops_from_ra(b));
+  SVN_ERR(get_dirprops_from_ra(b, base_revision));
 
   return SVN_NO_ERROR;
 }
@@ -610,7 +649,7 @@ open_file(const char *path,
   b = make_file_baton(path, FALSE, pb->edit_baton, pool);
   *file_baton = b;
 
-  SVN_ERR(get_file_from_ra(b));
+  SVN_ERR(get_file_from_ra(b, base_revision));
 
   return SVN_NO_ERROR;
 }
@@ -770,12 +809,38 @@ close_file(void *file_baton,
 
   if (eb->notify_func)
     {
-      svn_wc_notify_t *notify = svn_wc_create_notify(b->wcpath, action,
-                                                     pool);
-      notify->kind = svn_node_file;
-      notify->content_state = content_state;
-      notify->prop_state = prop_state;
-      (*eb->notify_func)(eb->notify_baton, notify, pool);
+      svn_wc_notify_t *notify;
+      svn_boolean_t is_replace = FALSE;
+      kind_action_state *kas = apr_hash_get(eb->deleted_paths, b->wcpath,
+                                            APR_HASH_KEY_STRING);
+      if (kas)
+        {
+          svn_wc_notify_action_t new_action;
+          if (kas->action == svn_wc_notify_update_delete
+              && action == svn_wc_notify_update_add)
+            {
+              is_replace = TRUE;
+              new_action = svn_wc_notify_update_replace;
+            }
+          else
+            new_action = kas->action;
+          notify  = svn_wc_create_notify(b->wcpath, new_action, pool);
+          notify->kind = kas->kind;
+          notify->content_state = notify->prop_state = kas->state;
+          notify->lock_state = svn_wc_notify_lock_state_inapplicable;
+          (*eb->notify_func)(eb->notify_baton, notify, pool);
+          apr_hash_set(eb->deleted_paths, b->wcpath, 
+                       APR_HASH_KEY_STRING, NULL);
+        }
+
+      if (!is_replace)
+        {
+          notify = svn_wc_create_notify(b->wcpath, action, pool);
+          notify->kind = svn_node_file;
+          notify->content_state = content_state;
+          notify->prop_state = prop_state;
+          (*eb->notify_func)(eb->notify_baton, notify, pool);
+        }
     }
 
   return SVN_NO_ERROR;
@@ -835,8 +900,26 @@ close_directory(void *dir_baton,
      isn't getting all the information? */
   if (!b->added && eb->notify_func)
     {
-      svn_wc_notify_t *notify
-        = svn_wc_create_notify(b->wcpath, svn_wc_notify_update_update, pool);
+      svn_wc_notify_t *notify;
+      apr_hash_index_t *hi;
+
+      for (hi = apr_hash_first(NULL, eb->deleted_paths); hi;
+           hi = apr_hash_next(hi))
+        {
+          const void *deleted_path;
+          kind_action_state *kas;
+          apr_hash_this(hi, &deleted_path, NULL, (void *)&kas);
+          notify  = svn_wc_create_notify(deleted_path, kas->action, pool);
+          notify->kind = kas->kind;
+          notify->content_state = notify->prop_state = kas->state;
+          notify->lock_state = svn_wc_notify_lock_state_inapplicable;
+          (*eb->notify_func)(eb->notify_baton, notify, pool);
+          apr_hash_set(eb->deleted_paths, deleted_path,
+                       APR_HASH_KEY_STRING, NULL);
+        }
+
+      notify = svn_wc_create_notify(b->wcpath,
+                                    svn_wc_notify_update_update, pool);
       notify->kind = svn_node_dir;
       notify->content_state = svn_wc_notify_state_inapplicable;
       notify->prop_state = prop_state;
@@ -977,6 +1060,7 @@ svn_client__get_diff_editor(const char *target,
   eb->revision = revision;
   eb->empty_file = NULL;
   eb->empty_hash = apr_hash_make(subpool);
+  eb->deleted_paths = apr_hash_make(subpool);
   eb->pool = subpool;
   eb->notify_func = notify_func;
   eb->notify_baton = notify_baton;

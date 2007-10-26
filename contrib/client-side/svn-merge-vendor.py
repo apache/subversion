@@ -437,7 +437,7 @@ def main():
     except ValueError:
         usage("the revision parameter is not a number")
 
-    if r_from >= r_to:
+    if r_from_int >= r_to_int:
         usage("the 'from revision' must be inferior to the 'to revision'")
 
     if not merged_vendor:

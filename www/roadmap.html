@@ -79,7 +79,11 @@ extracted from the ever-changing consensus of the Subversion developer
 community.  Because this is a volunteer open-source project, it's hard
 to predict exact dates or timetables for these new features.  At most,
 we can express dependencies and predict the order in which things will
-be worked on.  The best way to track development is to <a
+be worked on.  <em>Just because a feature is listed for a particular
+release does not guarantee that it will be in that release.</em>  Hard
+feature lists don't actually get set until the <a
+href="release-process.html#release-branches">release branch</a> is
+created.  The best way to track development is to <a
 href="/servlets/ProjectMailingListList">subscribe</a> to the
 development mailing list, <a href="mailto:dev@subversion.tigris.org"
 >dev@subversion.tigris.org</a>.</p>
@@ -88,36 +92,48 @@ development mailing list, <a href="mailto:dev@subversion.tigris.org"
 
 <li><b>Medium-term Goals:</b>
   <ul>
-    <li><p>Merge tracking (tracking of merge history coming in 1.5.0,
-    see <a href="merge-tracking/">info</a>)</p>
+    <li>1.5
+      <ul>
+        <li>Merge tracking: tracking of merge history (see
+        <a href="merge-tracking/">info</a>)</li>
+
+        <li>Sparsely populated checkouts (full API and basic
+        command-line support coming in 1.5)</li>
+      </ul>
     </li>
 
-    <li><p>Sparsely populated checkouts (full API and basic
-    command-line support coming in 1.5)</p>
+    <li>1.6
+      <ul>
+        <li>Augmented diff representation (svnpatch)</li>
+
+        <li>Python C-types bindings</li>
+      </ul>
     </li>
 
-    <li><p>Improved rename support (see <a
-    href="http://subversion.tigris.org/issues/show_bug.cgi?id=898"
-    >issue #898</a>)</p>
-    </li>
+    <li>Eventually
+      <ul>
+        <li>Improved rename support (see <a
+        href="http://subversion.tigris.org/issues/show_bug.cgi?id=898"
+        >issue #898</a>)</li>
 
-    <li><p>Log message templates  (see <a href="http://subversion.tigris.org/servlets/BrowseList?list=dev&amp;by=thread&amp;from=325870"
-    >discussion thread</a>)</p>
-    </li>
+        <li>Log message templates  (see <a href="http://subversion.tigris.org/servlets/BrowseList?list=dev&amp;by=thread&amp;from=325870"
+        >discussion thread</a>)</li>
 
-    <li><p>Repository-defined autoprops (see <a href="http://subversion.tigris.org/servlets/BrowseList?list=dev&amp;by=thread&amp;from=329707"
-    >discussion thread</a>)</p>
-    </li>
+        <li>Repository-defined autoprops (see <a href="http://subversion.tigris.org/servlets/BrowseList?list=dev&amp;by=thread&amp;from=329707"
+        >discussion thread</a>)</li>
 
-    <li><p>Inherited properties (see <a href="http://subversion.tigris.org/servlets/BrowseList?list=dev&amp;by=thread&amp;from=326933"
-    >discussion thread</a>)</p>
+        <li>Inherited properties (see <a href="http://subversion.tigris.org/servlets/BrowseList?list=dev&amp;by=thread&amp;from=326933"
+        >discussion thread</a>)</li>
+
+        <li>Rewrite the working-copy library to feature centralized metadata
+        storage</li>
+      </ul>
     </li>
   </ul>
 </li>
 
 <li><b>Long-term Goals</b>
   <ul>
-    <li><p>rewrite of working-copy library</p></li>
     <li><p>hybrid distributed/centralized VC model</p></li>
     <li><p>repository-level ACLs</p></li>
     <li><p>broader WebDAV/deltaV compatibility</p></li>

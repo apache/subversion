@@ -48,3 +48,12 @@ created = element created { xsd:dateTime }
 
 ## Expiration date.
 expires = element expires { xsd:dateTime }
+
+## Node and revision properties.
+property = element property { attlist.property, text }
+attlist.property &=
+  ## The property name
+  attribute name { string },
+  ## The encoding of the element content.  If not present, the value
+  ## is the raw content of the element.
+  attribute encoding { "base64" }?

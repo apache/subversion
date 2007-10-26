@@ -23,6 +23,7 @@
 /*** Includes. ***/
 
 #include "svn_client.h"
+#include "svn_error_codes.h"
 #include "svn_error.h"
 #include "cl.h"
 
@@ -43,7 +44,7 @@ svn_cl__revert(apr_getopt_t *os,
   apr_array_header_t *changelist_targets = NULL, *combined_targets = NULL;
   svn_error_t *err;
 
-  /* Before allowing svn_opt_args_to_target_array() to canonicalize
+  /* Before allowing svn_opt_args_to_target_array2() to canonicalize
      all the targets, we need to build a list of targets made of both
      ones the user typed, as well as any specified by --changelist.  */
   if (opt_state->changelist)
@@ -54,8 +55,8 @@ svn_cl__revert(apr_getopt_t *os,
                                         ctx,
                                         pool));
       if (apr_is_empty_array(changelist_targets))
-        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("no such changelist '%s'"),
+        return svn_error_createf(SVN_ERR_UNKNOWN_CHANGELIST, NULL,
+                                 _("Unknown changelist '%s'"),
                                  opt_state->changelist);
     }
 
@@ -86,7 +87,7 @@ svn_cl__revert(apr_getopt_t *os,
 
   if (err
       && (err->apr_err == SVN_ERR_WC_NOT_LOCKED)
-      && (! SVN_DEPTH_TO_RECURSE(opt_state->depth)))
+      && (! SVN_DEPTH_IS_RECURSIVE(opt_state->depth)))
     {
       err = svn_error_quick_wrap
         (err, _("Try 'svn revert --recursive' instead?"));

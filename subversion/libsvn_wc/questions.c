@@ -125,10 +125,18 @@ svn_wc__check_format(int wc_format, const char *path, apr_pool_t *pool)
     }
   else if (wc_format > SVN_WC__VERSION)
     {
+      /* This won't do us much good for the 1.4<->1.5 crossgrade,
+         since 1.4.x clients don't refer to this FAQ entry, but at
+         least post-1.5 crossgrades will be somewhat less painful. */
       return svn_error_createf
         (SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
-         _("This client is too old to work with working copy '%s'; "
-           "please get a newer Subversion client"),
+         _("This client is too old to work with working copy '%s'.  You need\n"
+           "to get a newer Subversion client, or to downgrade this working "
+           "copy.\n"
+           "See "
+           "http://subversion.tigris.org/faq.html#working-copy-format-change\n"
+           "for details."
+           ),
          svn_path_local_style(path, pool));
     }
 

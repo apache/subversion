@@ -126,3 +126,15 @@ svn_log_entry_create(apr_pool_t *pool)
 
   return log_entry;
 }
+
+svn_location_segment_t *
+svn_location_segment_dup(svn_location_segment_t *segment,
+                         apr_pool_t *pool)
+{
+  svn_location_segment_t *new_segment = 
+    apr_pcalloc(pool, sizeof(*new_segment));
+  *new_segment = *segment;
+  if (segment->path)
+    new_segment->path = apr_pstrdup(pool, segment->path);
+  return new_segment;
+}

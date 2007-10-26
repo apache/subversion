@@ -24,6 +24,7 @@ import svntest
 
 from svntest.main import write_restrictive_svnserve_conf
 from svntest.main import write_authz_file
+from svntest.main import server_authz_has_aliases
 
 # (abbreviation)
 Item = svntest.wc.StateItem
@@ -406,6 +407,8 @@ def authz_checkout_test(sbox):
 
   # checkout a working copy, should fail
   svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'co', sbox.repo_url, local_dir)
 
   # 2nd part: now enable read access
@@ -541,12 +544,17 @@ def authz_log_and_tracing_test(sbox):
   svntest.main.file_append(rho_path, 'new appended text for rho')
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                 'ci', '-m', 'add file rho', sbox.wc_dir)
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'ci', '-m', 'add file rho', sbox.wc_dir)
 
   svntest.main.file_append(rho_path, 'extra change in rho')
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                 'ci', '-m', 'changed file rho', sbox.wc_dir)
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'ci', '-m', 'changed file rho',
+                                     sbox.wc_dir)
 
   # copy a remote file
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
@@ -562,15 +570,19 @@ def authz_log_and_tracing_test(sbox):
   else:
     expected_err = ".*svn: Authorization failed.*"
 
-  write_authz_file(sbox, { "/": "* = rw",
-                           "/A/D/G": "* ="})
+  authz = { "/": "* = rw",
+            "/A/D/G": "* ="}
+  write_authz_file(sbox, authz)
 
   ## log
 
   # changed file in this rev. is not readable anymore, so author and date
   # should be hidden, like this:
   # r2 | (no author) | (no date) | 1 line
-  svntest.actions.run_and_verify_svn(None, ".*(no author).*(no date).*", [],
+  svntest.actions.run_and_verify_svn(None,
+                                     ".*(no author).*(no date).*|-+\n|\n", [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'log', '-r', '2', '--limit', '1',
                                      wc_dir)
 
@@ -582,18 +594,42 @@ def authz_log_and_tracing_test(sbox):
   # if we do the same thing directly on the unreadable file, we get:
   # svn: Item is not readable
   svntest.actions.run_and_verify_svn(None, None, expected_err2,
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'log', rho_path)
 
   # while the HEAD rev of the copy is readable in /A/D, its parent in
   # /A/D/G is not, so don't spill any info there either.
-  svntest.actions.run_and_verify_svn(None, ".*(no author).*(no date).*", [],
+  svntest.actions.run_and_verify_svn(None,
+                                     ".*(no author).*(no date).*|-+\n|\n", [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                     'log', '-r', '2', '--limit', '1', D_url)
+
+  # Test that only author/date are shown for partially visible revisions.
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
+  write_authz_file(sbox, { "/": "* = rw"})
+  svntest.actions.run_and_verify_svn(
+    None, None, [],        # message, expected_stdout, expected_stderr
+    'ps', '--revprop', '-r1', 'foobar', 'foo bar', sbox.repo_url)
+  svntest.actions.run_and_verify_log_xml(
+    expected_revprops=[{'svn:author': svntest.main.wc_author, 'svn:date': '',
+                        'svn:log': 'Log message for revision 1.',
+                        'foobar': 'foo bar'}],
+    args=['--with-all-revprops', '-r1', sbox.repo_url])
+  write_authz_file(sbox, authz)
+  svntest.actions.run_and_verify_log_xml(
+    expected_revprops=[{'svn:author': svntest.main.wc_author, 'svn:date': ''}],
+    args=['--with-all-revprops', '-r1', sbox.repo_url])
+
 
   ## cat
 
   # now see if we can look at the older version of rho
   svntest.actions.run_and_verify_svn(None, None, expected_err,
-                                    'cat', '-r', '2', D_url+'/rho')
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'cat', '-r', '2', D_url+'/rho')
 
   if sbox.repo_url.startswith('http'):
     expected_err2 = expected_err
@@ -601,19 +637,27 @@ def authz_log_and_tracing_test(sbox):
     expected_err2 = ".*svn: Unreadable path encountered; access denied.*"
 
   svntest.actions.run_and_verify_svn(None, None, expected_err2,
-                                    'cat', '-r', '2', G_url+'/rho')
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'cat', '-r', '2', G_url+'/rho')
 
   ## diff
 
   # we shouldn't see the diff of a file in an unreadable path
   svntest.actions.run_and_verify_svn(None, None, expected_err,
-                                    'diff', '-r', 'HEAD', G_url+'/rho')
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'diff', '-r', 'HEAD', G_url+'/rho')
 
   svntest.actions.run_and_verify_svn(None, None, expected_err,
-                                    'diff', '-r', '2', D_url+'/rho')
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'diff', '-r', '2', D_url+'/rho')
 
   svntest.actions.run_and_verify_svn(None, None, expected_err,
-                                    'diff', '-r', '2:4', D_url+'/rho')
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'diff', '-r', '2:4', D_url+'/rho')
 
 # test whether read access is correctly granted and denied
 def authz_aliases(sbox):
@@ -818,14 +862,32 @@ def authz_svnserve_anon_access_read(sbox):
                                      'checkout',
                                      D_url, D_path)
 
+def authz_switch_to_directory(sbox):
+  "switched to directory, no read access on parents"
+
+  sbox.build()
+
+  write_authz_file(sbox, {"/": "*=rw", "/A/B": "*=", "/A/B/E": "jrandom = rw"})
+
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  wc_dir = sbox.wc_dir
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
+
+  # Switch /A/B/E to /A/B/F.
+  svntest.main.run_svn(None, 'switch', sbox.repo_url + "/A/B/E", G_path, 
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd)
+
 ########################################################################
 # Run the tests
 
 # list all tests here, starting with None:
 test_list = [ None,
               Skip(authz_open_root, svntest.main.is_ra_type_file),
-              XFail(Skip(authz_open_directory, svntest.main.is_ra_type_file),
-                    svntest.main.is_ra_type_dav),
+              Skip(authz_open_directory, svntest.main.is_ra_type_file),
               Skip(broken_authz_file, svntest.main.is_ra_type_file),
               Skip(authz_read_access, svntest.main.is_ra_type_file),
               Skip(authz_write_access, svntest.main.is_ra_type_file),
@@ -834,11 +896,14 @@ test_list = [ None,
               Skip(authz_checkout_and_update_test,
                    svntest.main.is_ra_type_file),
               Skip(authz_partial_export_test, svntest.main.is_ra_type_file),
-              Skip(authz_aliases, svntest.main.is_ra_type_file),
+              SkipUnless(Skip(authz_aliases, svntest.main.is_ra_type_file),
+                         server_authz_has_aliases),
               Skip(authz_validate, svntest.main.is_ra_type_file),
               Skip(authz_locking, svntest.main.is_ra_type_file),
               SkipUnless(authz_svnserve_anon_access_read,
                          svntest.main.is_ra_type_svn),
+              XFail(Skip(authz_switch_to_directory, 
+                         svntest.main.is_ra_type_file)),
              ]
 
 if __name__ == '__main__':

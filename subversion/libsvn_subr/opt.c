@@ -610,6 +610,24 @@ svn_opt_parse_revision(svn_opt_revision_t *start_revision,
 }
 
 
+int
+svn_opt_parse_revision2(apr_array_header_t **ranges_to_merge,
+                        const char *arg,
+                        apr_pool_t *pool)
+{
+  svn_opt_revision_range_t *range = apr_palloc(pool, sizeof(*range));
+  
+  range->start.kind = svn_opt_revision_unspecified;
+  range->end.kind = svn_opt_revision_unspecified;
+
+  if (svn_opt_parse_revision(&(range->start), &(range->end),
+                             arg, pool) == -1)
+    return -1;
+  
+  APR_ARRAY_PUSH(*ranges_to_merge, svn_opt_revision_range_t *) = range;
+  return 0;
+}
+
 svn_error_t *
 svn_opt_resolve_revisions(svn_opt_revision_t *peg_rev,
                           svn_opt_revision_t *op_rev,
@@ -734,26 +752,22 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
 
       if (path[i] == '@')
         {
-          svn_boolean_t is_url;
           int ret;
           svn_opt_revision_t start_revision, end_revision;
 
           end_revision.kind = svn_opt_revision_unspecified;
 
-          /* URLs get treated differently from wc paths. */
-          is_url = svn_path_is_url(path);
-
           if (path[i + 1] == '\0')  /* looking at empty peg revision */
             {
               ret = 0;
-              start_revision.kind = is_url ? svn_opt_revision_head
-                                           : svn_opt_revision_base;
+              start_revision.kind = svn_opt_revision_unspecified;
             }
           else  /* looking at non-empty peg revision */
             {
               const char *rev_str = path + i + 1;
 
-              if (is_url)
+              /* URLs get treated differently from wc paths. */
+              if (svn_path_is_url(path))
                 {
                   /* URLs are URI-encoded, so we look for dates with
                      URI-encoded delimeters.  */
@@ -781,8 +795,7 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
                                      _("Syntax error parsing revision '%s'"),
                                      path + i + 1);
 
-          *truepath = svn_path_canonicalize(apr_pstrndup(pool, path, i),
-                                            pool);
+          *truepath = apr_pstrmemdup(pool, path, i);
           rev->kind = start_revision.kind;
           rev->value = start_revision.value;
 
@@ -791,7 +804,7 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
     }
 
   /* Didn't find an @-sign. */
-  *truepath = svn_path_canonicalize(path, pool);
+  *truepath = path;
   rev->kind = svn_opt_revision_unspecified;
 
   return SVN_NO_ERROR;

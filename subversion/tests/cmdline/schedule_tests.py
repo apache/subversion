@@ -527,6 +527,8 @@ def status_add_deleted_directory(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', A_path)
   svntest.main.safe_rmtree(A_path)
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m', 'log msg', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', A_path)
 
@@ -541,6 +543,8 @@ def status_add_deleted_directory(sbox):
   # Update will *not* remove the entry for A despite it being marked
   # deleted.
   svntest.actions.run_and_verify_svn(None, ['At revision 2.\n'], [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'up', wc_dir)
   expected_status.tweak('', 'iota', wc_rev=2)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -566,12 +570,6 @@ def add_recursive_already_versioned(sbox):
   svntest.main.file_append(zeta_path, "This is the file 'zeta'.")
   svntest.main.file_append(epsilon_path, "This is the file 'epsilon'.")
 
-  saved_wd = os.getcwd()
-
-  os.chdir(wc_dir)
-  svntest.main.run_svn(None, 'add', '--force', '.')
-  os.chdir(saved_wd)
-
   # Make sure the adds show up as such in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
@@ -580,7 +578,22 @@ def add_recursive_already_versioned(sbox):
     'A/D/G/epsilon' : Item(status='A ', wc_rev=0),
     })
 
-  return svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  # Perform the add with the --force flag, and check the status.
+  ### TODO:  This part won't work -- you have to be inside the working copy
+  ### or else Subversion will think you're trying to add the working copy
+  ### to its parent directory, and will (possibly, if the parent directory
+  ### isn't versioned) fail.
+  #svntest.main.run_svn(None, 'add', '--force', wc_dir)
+  #svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Now revert, and do the adds again from inside the working copy.
+  svntest.main.run_svn(None, 'revert', '--recursive', wc_dir)
+  saved_wd = os.getcwd()
+  os.chdir(wc_dir)
+  svntest.main.run_svn(None, 'add', '--force', '.')
+  os.chdir(saved_wd)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 
 #----------------------------------------------------------------------
 # Regression test for the case where "svn mkdir" outside a working copy

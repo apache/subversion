@@ -26,7 +26,7 @@
 /* -----------------------------------------------------------------------
    Generic handling for "type **" parameters.  Almost all such parameters
    are OUTPUT parameters.  Handling is as follows:
-   - "in" typemap which allocates storage for a pointer, and points the 
+   - "in" typemap which allocates storage for a pointer, and points the
      argument to that storage.
    - Default "argout" typemap which complains at compile time, and raises
      an exception at runtime.
@@ -716,6 +716,21 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #endif
 
 /* -----------------------------------------------------------------------
+   Callback: svn_log_entry_receiver_t
+   svn_client_log4()
+   svn_ra_get_log2()
+   svn_repos_get_logs4()
+*/
+
+#ifdef SWIGPYTHON
+%typemap(in) (svn_log_entry_receiver_t receiver,
+                      void *receiver_baton) {
+    $1 = svn_swig_py_log_entry_receiver;
+    $2 = (void *)$input;
+}
+#endif
+
+/* -----------------------------------------------------------------------
    Callback: svn_commit_callback_t
    svn_ra get_commit_editor()
    svn_repos_get_commit_editor()
@@ -804,8 +819,12 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #ifdef SWIGRUBY
 %typemap(in) (svn_wc_conflict_resolver_func_t conflict_func, void *conflict_baton)
 {
+  /* ### TODO(rb support conflict_fun): implement
   $1 = svn_swig_rb_conflict_resolver_func;
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+  */
+  $1 = NULL;
+  $2 = NULL;
 }
 
 %typemap(argout) (svn_wc_conflict_resolver_func_t conflict_func, void *conflict_baton)
@@ -964,7 +983,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 
      Output parameter in: svn_fs_file_md5_checksum(), svn_io_file_checksum(),
                           svn_wc_transmit_text_deltas2()
-     
+
      *but* appears as an input parameter in svn_base64_from_md5() -
      practically, this means that svn_base64_from_md5 is in error, and
      should be using 'const unsigned char digest[]', but fortunately, we
@@ -982,7 +1001,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
      These are *delayed* output parameters in svn_stream_checksummed().
      Would be quite complex to wrap, so this function is %ignore-d in the
      svn_io.h cherrypicking section.
-     
+
    'unsigned char *result_digest'
      This parameter serves as a buffer for the digest results of
      svn_txdelta_apply. As you supply data to this function via
@@ -992,7 +1011,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 
     FIXME: Both Ruby and Perl have broken typemaps for result_digest.
     The Python bindings ignore this parameter altogether.
-   
+
    Function Parameters (Category 3):
 
    'const unsigned char digest[]' (also, 'd1', 'd2'):

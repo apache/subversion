@@ -29,6 +29,15 @@ import org.tigris.subversion.javahl.SubversionException;
  */
 public class SVNAdminTests extends SVNTests
 {
+    public SVNAdminTests()
+    {
+    }
+
+    public SVNAdminTests(String name)
+    {
+        super(name);
+    }
+
     /**
      * Test the basic SVNAdmin.create functionality
      * @throws SubversionException

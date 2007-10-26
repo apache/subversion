@@ -66,9 +66,12 @@ extern "C" {
  *
  * The change from 7 to 8 was putting wcprops in one file per directory.
  *
+ * The change from 8 to 9 was the addition of changelists, keep-local,
+ * and sticky depth (for selective/sparse checkouts).
+ *
  * Please document any further format changes here.
  */
-#define SVN_WC__VERSION       8
+#define SVN_WC__VERSION       9
 
 /* A version <= this doesn't have property caching in the entries file. */
 #define SVN_WC__NO_PROPCACHING_VERSION 5
@@ -96,6 +99,11 @@ struct svn_wc_traversal_info_t
    */
   apr_hash_t *externals_old;
   apr_hash_t *externals_new;
+
+  /* The ambient depths of the working copy directories.  The keys are
+     working copy paths (as for svn_wc_edited_externals()), the values
+     are the result of svn_depth_to_word(depth_of_each_dir). */
+  apr_hash_t *depths;
 };
 
 
@@ -215,6 +223,10 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
 /* Merge the difference between LEFT and RIGHT into MERGE_TARGET,
    accumulating instructions to update the working copy into LOG_ACCUM.
 
+   If COPYFROM_TEXT is not NULL, the "local mods" text should be taken
+   from the path named their instead of MERGE_TARGET (but the merge
+   should still be installed into MERGE_TARGET).
+
    The merge result is stored in *MERGE_OUTCOME and merge conflicts
    are marked in MERGE_RESULT using LEFT_LABEL, RIGHT_LABEL and
    TARGET_LABEL.
@@ -241,6 +253,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        const char *left,
                        const char *right,
                        const char *merge_target,
+                       const char *copyfrom_text,
                        svn_wc_adm_access_t *adm_access,
                        const char *left_label,
                        const char *right_label,
@@ -260,6 +273,33 @@ svn_wc__walker_default_error_handler(const char *path,
                                      svn_error_t *err,
                                      void *walk_baton,
                                      apr_pool_t *pool);
+
+/* Set *EDITOR and *EDIT_BATON to an ambient-depth-based filtering
+ * editor that wraps WRAPPED_EDITOR and WRAPPED_BATON.  Only required
+ * if REQUESTED_DEPTH is svn_depth_unknown and the editor driver
+ * doesn't understand depth.
+ *
+ * ANCHOR, TARGET, and ADM_ACCESS are as in svn_wc_get_update_editor3.
+ *
+ * @a requested_depth must be one of the following depth values:
+ * @c svn_depth_infinity, @c svn_depth_empty, @c svn_depth_files,
+ * @c svn_depth_immediates, or @c svn_depth_unknown.
+ *
+ * If filtering is deemed unncessary (REQUESTED_DEPTH is not
+ * svn_depth_unknown), *EDITOR and *EDIT_BATON will be set to
+ * WRAPPED_EDITOR and WRAPPED_BATON, respectively; otherwise,
+ * they'll be set to new objects allocated from POOL.
+ */
+svn_error_t *
+svn_wc__ambient_depth_filter_editor(const svn_delta_editor_t **editor,
+                                    void **edit_baton,
+                                    const svn_delta_editor_t *wrapped_editor,
+                                    void *wrapped_edit_baton,
+                                    const char *anchor,
+                                    const char *target,
+                                    svn_wc_adm_access_t *adm_access,
+                                    svn_depth_t requested_depth,
+                                    apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

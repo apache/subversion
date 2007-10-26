@@ -381,9 +381,19 @@ svn_cmdline_auth_ssl_client_cert_pw_prompt
 /** Generic prompting. **/
 
 svn_error_t *
+svn_cmdline_prompt_user2(const char **result,
+                         const char *prompt_str,
+                         svn_cmdline_prompt_baton_t *baton,
+                         apr_pool_t *pool)
+{
+  return prompt(result, prompt_str, FALSE /* don't hide input */, baton, pool);
+}
+
+
+svn_error_t *
 svn_cmdline_prompt_user(const char **result,
                         const char *prompt_str,
                         apr_pool_t *pool)
 {
-  return prompt(result, prompt_str, FALSE /* don't hide input */, NULL, pool);
+  return svn_cmdline_prompt_user2(result, prompt_str, NULL, pool);
 }

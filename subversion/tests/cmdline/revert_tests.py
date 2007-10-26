@@ -102,13 +102,20 @@ def revert_replacement_with_props(sbox, wc_copy,
   else:
     pi_src = sbox.repo_url + '/A/D/G/pi'
 
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'cp', pi_src, rho_path)
+  if contact_repos_for_merge_info:
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'cp', '-g', pi_src, rho_path)
+  else:
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'cp', pi_src, rho_path)
 
   # Verify both content and props have been copied
   props = { 'phony-prop' : '*' }
   if not wc_copy or contact_repos_for_merge_info:
     props['svn:mergeinfo'] = '/A/D/G/pi:1-2'
+  else:
+    props['svn:mergeinfo'] = ''
+
   expected_disk.tweak('A/D/G/rho',
                       contents="This is the file 'pi'.\n",
                       props=props)
@@ -245,11 +252,17 @@ def revert_reexpand_keyword(sbox):
 
   # Commit, without svn:keywords property set.
   svntest.main.run_svn(None, 'add', newfile_path)
-  svntest.main.run_svn(None, 'commit', '-m', 'r2', newfile_path)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'commit', '-m', 'r2', newfile_path)
 
   # Set the property and commit.  This should expand the keyword.
   svntest.main.run_svn(None, 'propset', 'svn:keywords', 'rev', newfile_path)
-  svntest.main.run_svn(None, 'commit', '-m', 'r3', newfile_path)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'commit', '-m', 'r3', newfile_path)
 
   # Verify that the keyword got expanded.
   def check_expanded(path):
@@ -426,7 +439,7 @@ def revert_file_merge_replace_with_history(sbox):
 
   # merge changes from r3:1
   expected_output = svntest.wc.State(wc_dir, {
-    'A/D/G/rho': Item(status='A ')
+    'A/D/G/rho': Item(status='R ')
     })
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
   expected_skip = wc.State(wc_dir, { })
@@ -463,7 +476,6 @@ def revert_wc_to_wc_replace_with_props(sbox):
   "revert svn cp PATH PATH replace file with props"
 
   revert_replacement_with_props(sbox, 1)
-  ### FIXME: WC -> WC copies don't yet handle merge info.
   revert_replacement_with_props(sbox, 1, 1)
 
 def revert_repos_to_wc_replace_with_props(sbox):
@@ -541,8 +553,14 @@ def revert_after_manual_conflict_resolution__text(sbox):
   iota_path_2 = os.path.join(wc_dir_2, 'iota')
   svntest.main.file_write(iota_path_1, 'Modified iota text')
   svntest.main.file_write(iota_path_2, 'Conflicting iota text')
-  svntest.main.run_svn(None, 'commit', '-m', 'r2', wc_dir_1)
-  svntest.main.run_svn(None, 'update', wc_dir_2)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'commit', '-m', 'r2', wc_dir_1)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'update', wc_dir_2)
 
   # Resolve the conflict "manually"
   svntest.main.file_write(iota_path_2, 'Modified iota text')
@@ -569,8 +587,14 @@ def revert_after_manual_conflict_resolution__prop(sbox):
   iota_path_2 = os.path.join(wc_dir_2, 'iota')
   svntest.main.run_svn(None, 'propset', 'foo', '1', iota_path_1)
   svntest.main.run_svn(None, 'propset', 'foo', '2', iota_path_2)
-  svntest.main.run_svn(None, 'commit', '-m', 'r2', wc_dir_1)
-  svntest.main.run_svn(None, 'update', wc_dir_2)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'commit', '-m', 'r2', wc_dir_1)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'update', wc_dir_2)
 
   # Resolve the conflict "manually"
   svntest.main.run_svn(None, 'propset', 'foo', '1', iota_path_2)
@@ -610,7 +634,10 @@ def revert_propdel__dir(sbox):
   wc_dir = sbox.wc_dir
   a_path = os.path.join(wc_dir, 'A')
   svntest.main.run_svn(None, 'propset', 'foo', 'x', a_path)
-  svntest.main.run_svn(None, 'commit', '-m', 'ps', a_path)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'commit', '-m', 'ps', a_path)
   svntest.main.run_svn(None, 'propdel', 'foo', a_path)
   expected_output = re.escape("Reverted '" + a_path + "'")
   svntest.actions.run_and_verify_svn(None, expected_output, [], "revert",
@@ -623,7 +650,10 @@ def revert_propdel__file(sbox):
   wc_dir = sbox.wc_dir
   iota_path = os.path.join(wc_dir, 'iota')
   svntest.main.run_svn(None, 'propset', 'foo', 'x', iota_path)
-  svntest.main.run_svn(None, 'commit', '-m', 'ps', iota_path)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'commit', '-m', 'ps', iota_path)
   svntest.main.run_svn(None, 'propdel', 'foo', iota_path)
   expected_output = re.escape("Reverted '" + iota_path + "'")
   svntest.actions.run_and_verify_svn(None, expected_output, [], "revert",
@@ -659,7 +689,7 @@ def revert_replaced_with_history_file_1(sbox):
 
   # now revert back to the state in r1
   expected_output = svntest.wc.State(wc_dir, {
-    'A/mu': Item(status='A '),
+    'A/mu': Item(status='R '),
     'iota': Item(status='A ')
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -772,10 +802,9 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
   ### Eventually, expected output for 'A/D/G' should be 'R '
   ### (replaced) instead of 'A ' (added).  See issue #571 for details.
   expected_output = svntest.wc.State(wc_dir, {
-    'A/D/G': Item(status='D '),
+    'A/D/G': Item(status='R '),
     'A/D/G/alpha': Item(status='D '),
     'A/D/G/beta': Item(status='D '),
-    'A/D/G': Item(status='A '),
     'A/D/G/rho': Item(status='A '),
     'A/D/G/pi': Item(status='A '),
     'A/D/G/tau': Item(status='A '),
@@ -865,7 +894,7 @@ test_list = [ None,
               revert_reexpand_keyword,
               revert_replaced_file_without_props,
               XFail(revert_moved_file),
-              XFail(revert_wc_to_wc_replace_with_props),
+              revert_wc_to_wc_replace_with_props,
               revert_file_merge_replace_with_history,
               revert_repos_to_wc_replace_with_props,
               revert_after_second_replace,

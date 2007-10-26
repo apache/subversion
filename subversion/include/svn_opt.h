@@ -344,6 +344,12 @@ typedef struct svn_opt_revision_t
   svn_opt_revision_value_t value;   /**< Extra data qualifying the @c kind */
 } svn_opt_revision_t;
 
+/** A revision range, specified in one of @c svn_opt_revision_kind ways. */
+typedef struct svn_opt_revision_range_t
+{
+  svn_opt_revision_t start;
+  svn_opt_revision_t end;
+} svn_opt_revision_range_t;
 
 /**
  * Set @a *start_revision and/or @a *end_revision according to @a arg,
@@ -370,6 +376,17 @@ int svn_opt_parse_revision(svn_opt_revision_t *start_revision,
                            svn_opt_revision_t *end_revision,
                            const char *arg,
                            apr_pool_t *pool);
+
+/**
+ * Similar to svn_opt_parse_revision but stores result in
+ * @a *ranges_to_merge, an array of @c svn_opt_revision_range_t *'s.
+ *
+ * @since New in 1.5.
+ */
+int
+svn_opt_parse_revision2(apr_array_header_t **ranges_to_merge,
+                        const char *arg,
+                        apr_pool_t *pool);
 
 /**
  * Resolve peg revisions and operational revisions in the following way:
@@ -502,8 +519,8 @@ svn_opt_parse_all_args(apr_array_header_t **args_p,
  *    "http://a/b@%7B1999-12-31%7D   -> "http://a/b",    (date, 1999-12-31)
  *    "foo/bar@1:2"                  -> error
  *    "foo/bar@baz"                  -> error
- *    "foo/bar@"                     -> error
- *    "foo/bar/@13"                  -> "foo/bar",       (number, 13)
+ *    "foo/bar@"                     -> "foo/bar",       (base)
+ *    "foo/bar/@13"                  -> "foo/bar/",      (number, 13)
  *    "foo/bar@@13"                  -> "foo/bar@",      (number, 13)
  *    "foo/@bar@HEAD"                -> "foo/@bar",      (head)
  *    "foo@/bar"                     -> "foo@/bar",      (unspecified)
@@ -517,6 +534,10 @@ svn_opt_parse_all_args(apr_array_header_t **args_p,
  * specifier is invalid.  If no trailing revision specifier is found,
  * set @a *truepath to @a path and @a rev->kind to @c
  * svn_opt_revision_unspecified.
+ *
+ * This function does not require that @a path be in canonical form.
+ * No canonicalization is done and @a *truepath will only be in
+ * canonical form if @a path is in canonical form.
  *
  * @since New in 1.1.
  */

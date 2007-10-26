@@ -177,6 +177,11 @@ PyObject *svn_swig_py_c_strings_to_list(char **strings);
 SVN_SWIG_SWIGUTIL_EXPORT
 PyObject *svn_swig_py_array_to_list(const apr_array_header_t *strings);
 
+/* helper function to convert a hash mapping char * to svn_string_t * to a
+ * Python dict mapping str to str. */
+SVN_SWIG_SWIGUTIL_EXPORT
+PyObject *svn_swig_py_changed_path_hash_to_dict(apr_hash_t *hash);
+
 SVN_SWIG_SWIGUTIL_EXPORT
 apr_array_header_t *svn_swig_py_rangelist_to_array(PyObject *list,
                                                    apr_pool_t *pool);
@@ -226,6 +231,13 @@ apr_hash_t *svn_swig_py_prophash_from_dict(PyObject *dict,
 SVN_SWIG_SWIGUTIL_EXPORT
 apr_hash_t *svn_swig_py_path_revs_hash_from_dict(PyObject *dict,
                                                  apr_pool_t *pool);
+
+/* helper function to convert a Python dictionary mapping strings to
+   strings into an apr_hash_t mapping const char *'s to svn_string_t *'s,
+   allocated in POOL. */
+SVN_SWIG_SWIGUTIL_EXPORT
+apr_hash_t *svn_swig_py_changed_path_hash_from_dict(PyObject *dict,
+                                                    apr_pool_t *pool);
 
 /* helper function to convert a Python sequence of strings into an
    'apr_array_header_t *' of 'const char *' objects.  Note that the
@@ -341,12 +353,25 @@ svn_error_t *svn_swig_py_log_receiver(void *py_receiver,
                                       const char *msg,
                                       apr_pool_t *pool);
 
+/* thunked log receiver2 function */
+SVN_SWIG_SWIGUTIL_EXPORT
+svn_error_t *svn_swig_py_log_entry_receiver(void *baton,
+                                            svn_log_entry_t *log_entry,
+                                            apr_pool_t *pool);
+
 /* thunked info receiver function */
 SVN_SWIG_SWIGUTIL_EXPORT
 svn_error_t *svn_swig_py_info_receiver_func(void *py_receiver,
                                             const char *path,
                                             const svn_info_t *info,
                                             apr_pool_t *pool);
+
+/* thunked location segments receiver function */
+SVN_SWIG_SWIGUTIL_EXPORT
+svn_error_t *
+svn_swig_py_location_segment_receiver_func(svn_location_segment_t *segment,
+                                           void *baton,
+                                           apr_pool_t *pool);
 
 /* thunked blame receiver function */
 SVN_SWIG_SWIGUTIL_EXPORT

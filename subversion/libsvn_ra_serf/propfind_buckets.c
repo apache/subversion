@@ -157,11 +157,9 @@ static void become_request(serf_bucket_t *bucket)
     {
       serf_bucket_headers_setn(hdrs_bkt, "Label", ctx->label);
     }
-  if (ctx->conn->auth_header && ctx->conn->auth_value)
-    {
-      serf_bucket_headers_setn(hdrs_bkt,
-                               ctx->conn->auth_header, ctx->conn->auth_value);
-    }
+  if (ctx->conn->session->auth_protocol)
+    ctx->conn->session->auth_protocol->setup_request_func(ctx->conn, 
+                                                          hdrs_bkt);
 
   serf_bucket_mem_free(bucket->allocator, ctx);
 }

@@ -249,6 +249,8 @@ class Contributor:
            angle brackets, or
        - Just an email address in angle brackets.
 
+     (The email address may have '@' disguised as '{_AT_}'.)
+
      Return a tuple of (committer_username, real_name, email_address)
      any of which can be None if not available in NAME."""
     username  = None
@@ -259,7 +261,7 @@ class Contributor:
       name = name_components[0] # Effectively, name = name.strip()
       if name[0] == '<' and name[-1] == '>':
         email = name[1:-1]
-      elif name.find('@') != -1:
+      elif name.find('@') != -1 or name.find('{_AT_}') != -1:
         email = name
       else:
         username = name
@@ -268,6 +270,12 @@ class Contributor:
       email = name_components[-1][1:-1]
     else:
       real_name = ' '.join(name_components)
+
+    if email is not None:
+      # We unobfuscate here and work with the '@' internally, since
+      # we'll obfuscate it again (differently) before writing it out.
+      email = email.replace('{_AT_}', '@')
+
     return username, real_name, email
   parse = staticmethod(parse)
 

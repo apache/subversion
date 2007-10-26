@@ -1570,7 +1570,9 @@ svn_error_t *svn_client_import(svn_client_commit_info_t **commit_info_p,
  * on items that are committed;  that is, don't commit anything unless
  * it's a member of changelist @a changelist_name.  After the commit
  * completes successfully, remove changelist associations from the
- * targets, unless @a keep_changelist is set.
+ * targets, unless @a keep_changelist is set.  If no items are
+ * committed, return an error with @c SVN_ERR_UNKNOWN_CHANGELIST as
+ * its root cause.
  *
  * Use @a pool for any temporary allocations.
  *
@@ -1592,7 +1594,9 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
 /**
  * Similar to svn_client_commit4(), but always with NULL for
- * @a changelist_name and false for @a keep_changelist.
+ * @a changelist_name, false for @a keep_changelist, and @a depth
+ * set according to @a recurse: if @a recurse is true, use
+ * @c svn_depth_infinity, else @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  *
@@ -1651,7 +1655,7 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
  *
  *    - If @a get_all is set, retrieve all entries; otherwise,
  *      retrieve only "interesting" entries (local mods and/or
- *      out-of-date).
+ *      out of date).
  *
  *    - If @a update is set, contact the repository and augment the
  *      status structures with information about out-of-dateness (with
@@ -1686,7 +1690,7 @@ svn_client_status3(svn_revnum_t *result_rev,
 /**
  * Like svn_client_status3(), except with @a recurse instead of @a depth.
  * If @a recurse is true, behave as if for @c svn_depth_infinity; else
- * if @a recurse is false, behave as if for @c svn_depth_files.
+ * if @a recurse is false, behave as if for @c svn_depth_immediates.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -1742,15 +1746,12 @@ svn_client_status(svn_revnum_t *result_rev,
  * given log message more than once).
  *
  * @a targets contains either a URL followed by zero or more relative
- * paths, or a list of working copy paths, as <tt>const char *</tt>,
- * for which log messages are desired.  The repository info is
- * determined by taking the common prefix of the target entries' URLs.
- * @a receiver is invoked only on messages whose revisions involved a
- * change to some path in @a targets.  @a peg_revision indicates in
- * which revision @a targets are valid.  If @a peg_revision is @c
- * svn_opt_revision_unspecified, it defaults to @c
- * svn_opt_revision_head for URLs or @c svn_opt_revision_working for
- * WC paths.
+ * paths, or 1 working copy path, as <tt>const char *</tt>, for which log
+ * messages are desired.  @a receiver is invoked only on messages whose
+ * revisions involved a change to some path in @a targets.  @a peg_revision
+ * indicates in which revision @a targets are valid.  If @a peg_revision is
+ * @c svn_opt_revision_unspecified, it defaults to @c svn_opt_revision_head
+ * for URLs or @c svn_opt_revision_working for WC paths.
  *
  * If @a limit is non-zero only invoke @a receiver on the first @a limit
  * logs.
@@ -1764,8 +1765,8 @@ svn_client_status(svn_revnum_t *result_rev,
  * If @a include_merged_revisions is set, log information for revisions
  * which have been merged to @a targets will also be returned.
  *
- * If @a omit_log_text is set, the contents of the log message will not
- * be returned.
+ * If @a revprops is NULL, retrieve all revprops; else, retrieve only the
+ * revprops named in the array (i.e. retrieve none if the array is empty).
  *
  * If @a start->kind or @a end->kind is @c svn_opt_revision_unspecified,
  * return the error @c SVN_ERR_CLIENT_BAD_REVISION.
@@ -1794,16 +1795,17 @@ svn_client_log4(const apr_array_header_t *targets,
                 svn_boolean_t discover_changed_paths,
                 svn_boolean_t strict_node_history,
                 svn_boolean_t include_merged_revisions,
-                svn_boolean_t omit_log_text,
-                svn_log_message_receiver2_t receiver,
+                apr_array_header_t *revprops,
+                svn_log_entry_receiver_t receiver,
                 void *receiver_baton,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool);
 
 /**
  * Similar to svn_client_log4(), but using @c svn_log_message_receiver_t
- * instead of @c svn_log_message_receiver2_t.  Also, @a
- * include_merged_revisions and @a omit_log_text are set to @c FALSE
+ * instead of @c svn_log_entry_receiver_t.  Also, @a
+ * include_merged_revisions is set to @c FALSE and @a revprops is
+ * svn:author, svn:date, and svn:log.
  *
  * @deprecated Provided for compatibility with the 1.4 API.
  * @since New in 1.4.
@@ -2444,8 +2446,13 @@ svn_client_merge(const char *source1,
 
 /**
  * Merge the changes between the filesystem object @a source in peg
- * revision @a peg_revision, as it changed between @a revision1 and @a
- * revision2.
+ * revision @a peg_revision, as it changed between the ranges described
+ * in @a ranges_to_merge.
+ *
+ * @a ranges_to_merge is an array of <tt>svn_opt_revision_range_t *</tt>
+ * ranges.  These ranges may describe additive and/or subtractive merge
+ * ranges, they may overlap fully or partially, and/or they may partially
+ * or fully negate each other.
  *
  * All other options are handled identically to svn_client_merge3().
  *
@@ -2453,8 +2460,7 @@ svn_client_merge(const char *source1,
  */
 svn_error_t *
 svn_client_merge_peg3(const char *source,
-                      const svn_opt_revision_t *revision1,
-                      const svn_opt_revision_t *revision2,
+                      const apr_array_header_t *ranges_to_merge,
                       const svn_opt_revision_t *peg_revision,
                       const char *target_wcpath,
                       svn_depth_t depth,
@@ -2550,7 +2556,7 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
 
 
 /**
- * Set @a *merge_ranges to a list of <tt>svn_merge_range_t *</tt>
+ * Set @a *rangelist to a list of <tt>svn_merge_range_t *</tt>
  * items representing ranges of revisions which have not yet been
  * merged from @a merge_source_url into @a path_or_url as of @a
  * peg_revision, or @c NULL if all candidate revisions of @a
@@ -2561,7 +2567,7 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_mergeinfo_get_available(apr_array_header_t **merge_ranges,
+svn_client_mergeinfo_get_available(apr_array_header_t **rangelist,
                                    const char *path_or_url,
                                    const svn_opt_revision_t *peg_revision,
                                    const char *merge_source_url,
@@ -2699,21 +2705,20 @@ svn_client_resolved(const char *path,
 /** Remove the 'conflicted' state on a working copy @a path.  This will
  * not semantically resolve conflicts;  it just allows @a path to be
  * committed in the future.  The implementation details are opaque.
- * If @a recursive is set, recurse below @a path, looking for conflicts
- * to resolve.
  *
- * @a accept_ is the argument used to facilitate automatic conflict resolution.
- * If @a accept_ is svn_accept_left, the contents of the conflicted file will
- * be replaced with the prestine contents of the pre-modification base file
- * contents.  If @a accept_ is svn_accept_right, the contents of the conflicted
- * file will be replaced with the post-conflict base file contents.  If @a
- * accept_ is svn_accept_working, the contents of the conflicted file will be
- * the content of the pre-conflict working copy file.  If @a accept_ is
- * svn_accept_default, conflict resolution will be handled just like before
- * automatic conflict resolution was availble.
+ * If @a depth is @c svn_depth_empty, act only on @a path; if
+ * @c svn_depth_files, resolve @a path and its conflicted file
+ * children (if any); if @c svn_depth_immediates, resolve @a path and
+ * all its immediate conflicted children (both files and directories,
+ * if any); if @c svn_depth_infinity, resolve @a path and every
+ * conflicted file or directory anywhere beneath it.
  *
- * ### TODO(sd): I don't see any reason to change this recurse parameter
- * ### to a depth, but making a note to re-check this logic later.
+ * If @a conflict_choice is svn_wc_conflict_choose_base, resolve the
+ * conflict with the old file contents; if
+ * svn_wc_conflict_choose_mine, use the original working contents;
+ * if svn_wc_conflict_choose_theirs, the new contents; and if
+ * svn_wc_conflict_choose_merged, don't change the contents at all,
+ * just remove the conflict status (i.e. pre-1.5 behavior).
  *
  * If @a path is not in a state of conflict to begin with, do nothing.
  * If @a path's conflict state is removed and @a ctx->notify_func2 is non-null,
@@ -2723,8 +2728,8 @@ svn_client_resolved(const char *path,
  */
 svn_error_t *
 svn_client_resolved2(const char *path,
-                     svn_boolean_t recursive,
-                     svn_accept_t accept_,
+                     svn_depth_t depth,
+                     svn_wc_conflict_choice_t conflict_choice,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 
@@ -2761,7 +2766,7 @@ typedef struct svn_client_copy_source_t
  * and @a sources will be copied as children of @a dst_path.
  *
  * @a sources must be an array of elements of type
- * <tt>svn_client_copy_item_t *</tt>.
+ * <tt>svn_client_copy_source_t *</tt>.
  *
  * Each @a src in @a sources must be files or directories under version control,
  * or URLs of a versioned item in the repository.  If @a sources has multiple
@@ -3056,26 +3061,25 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
 
 
 /**
- * Set @a propname to @a propval on @a target.  If @a recurse is true,
- * then @a propname will be set on recursively on @a target and all
- * children.  If @a recurse is false, and @a target is a directory, @a
- * propname will be set on _only_ @a target.
- *
- * ### TODO(sd): I don't see any reason to change this recurse parameter
- * ### to a depth right now; it's not exactly part of the
- * ### sparse-directories feature, although it's related.
- *
+ * Set @a propname to @a propval on @a target.
  * A @a propval of @c NULL will delete the property.
+ *
+ * If @a depth is @c svn_depth_empty, set the property on @a target
+ * only; if @c svn_depth_files, set it on @a target and its file
+ * children (if any); if @c svn_depth_immediates, on @a target and all
+ * of its immediate children (both files and directories); if
+ * @c svn_depth_infinity, on @a target and everything beneath it.
  *
  * The @a target may only be an URL if @a base_revision_for_url is not
  * @c SVN_INVALID_REVNUM; in this case, the property will only be set
- * if it has not changed since revision @a base_revision_for_url.  @a
- * base_revision_for_url must be @c SVN_INVALID_REVNUM if @a target is
- * not an URL.  @a recurse is not supported on URLs.  The
- * authentication baton in @a ctx and @a ctx->log_msg_func3/@a
- * ctx->log_msg_baton3 will be used to immediately attempt to commit
- * the property change in the repository.  If the commit succeeds,
- * allocate (in @a pool) and populate @a *commit_info_p.
+ * if it has not changed since revision @a base_revision_for_url.
+ * @a base_revision_for_url must be @c SVN_INVALID_REVNUM if @a target
+ * is not an URL.  @a depth deeper than @c svn_depth_empty is not
+ * supported on URLs.  The authentication baton in @a ctx and @a
+ * ctx->log_msg_func3/@a ctx->log_msg_baton3 will be used to
+ * immediately attempt to commit the property change in the
+ * repository.  If the commit succeeds, allocate (in @a pool) and
+ * populate @a *commit_info_p.
  *
  * If @a propname is an svn-controlled property (i.e. prefixed with
  * @c SVN_PROP_PREFIX), then the caller is responsible for ensuring that
@@ -3100,7 +3104,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
                     const char *propname,
                     const svn_string_t *propval,
                     const char *target,
-                    svn_boolean_t recurse,
+                    svn_depth_t depth,
                     svn_boolean_t skip_checks,
                     svn_revnum_t base_revision_for_url,
                     svn_client_ctx_t *ctx,
@@ -3108,7 +3112,9 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
 
 /**
  * Like svn_client_propset3(), but with @a base_revision_for_url
- * always @c SVN_INVALID_REVNUM, and @a commit_info_p always NULL.
+ * always @c SVN_INVALID_REVNUM; @a commit_info_p always NULL; and
+ * @a depth set according to @a recurse: if @a recurse is true,
+ * @a depth is @c svn_depth_infinity, else @c svn_depth_empty.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -3146,7 +3152,7 @@ svn_client_propset(const char *propname,
  * @c SVN_PROP_PREFIX), then the caller is responsible for ensuring that
  * the value UTF8-encoded and uses LF line-endings.
  *
- * Note that unlike its cousin svn_client_propset2(), this routine
+ * Note that unlike its cousin svn_client_propset3(), this routine
  * doesn't affect the working copy at all;  it's a pure network
  * operation that changes an *unversioned* property attached to a
  * revision.  This can be used to tweak log messages, dates, authors,
@@ -3188,19 +3194,34 @@ svn_client_revprop_set(const char *propname,
  * If @a actual_revnum is not @c NULL, the actual revision number used
  * for the fetch is stored in @a *actual_revnum.
  *
- * If @a target is a file or @a recurse is false, @a *props will have
- * at most one element.
- *
- * ### TODO(sd): I don't see any reason to change this recurse parameter
- * ### to a depth right now; it's not exactly part of the
- * ### sparse-directories feature, although it's related.  Usually
- * ### you would just name the target carefully... Is there a
- * ### situation where depth support would be useful here?
+ * If @a depth is @c svn_depth_empty, fetch the property from
+ * @a target only; if @c svn_depth_files, fetch from @a target and its
+ * file children (if any); if @c svn_depth_immediates, from @a target
+ * and all of its immediate children (both files and directories); if
+ * @c svn_depth_infinity, from @a target and everything beneath it.
  *
  * If error, don't touch @a *props, otherwise @a *props is a hash table
  * even if empty.
  *
- * @since New in 1.4.
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_propget4(apr_hash_t **props,
+                    const char *propname,
+                    const char *target,
+                    const svn_opt_revision_t *peg_revision,
+                    const svn_opt_revision_t *revision,
+                    svn_revnum_t *actual_revnum,
+                    svn_depth_t depth,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_propget4(), but with @a depth set according
+ * to @a recurse: if @a recurse is true, then @a depth is
+ * @c svn_depth_infinity, else @c svn_depth_empty.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_client_propget3(apr_hash_t **props,
@@ -3212,6 +3233,7 @@ svn_client_propget3(apr_hash_t **props,
                     svn_boolean_t recurse,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
+
 
 /**
  * Similar to svn_client_propget3(), except that @a actual_revnum is
@@ -3821,7 +3843,7 @@ svn_client_get_changelist_streamy(svn_changelist_receiver_t callback_func,
  * For each target @a ctx->notify_func2/notify_baton2 will be used to indicate
  * whether it was locked.  An action of @c svn_wc_notify_state_locked
  * means that the path was locked.  If the path was not locked because
- * it was out-of-date or there was already a lock in the repository,
+ * it was out of date or there was already a lock in the repository,
  * the notification function will be called with @c
  * svn_wc_notify_failed_lock, and the error passed in the notification
  * structure.
@@ -4046,7 +4068,7 @@ svn_client_info2(const char *path_or_url,
 /*
  * Similar to svn_client_info2() but with @a depth set according to
  * @a recurse: if @a recurse is true, @a depth is @c svn_depth_infinity,
- * else @c svn_depth_files.
+ * else @c svn_depth_empty.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */

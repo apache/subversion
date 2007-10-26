@@ -10,10 +10,8 @@ dnl  to `no'.
 
 AC_DEFUN(SVN_LIB_SASL,
 [
-  AC_ARG_WITH(sasl, 
-  [
-  --with-sasl=PATH       Compile with libsasl2 in PATH
-  ],
+  AC_ARG_WITH(sasl, [AS_HELP_STRING([--with-sasl=PATH],
+                                    [Compile with libsasl2 in PATH])],
   [
     with_sasl="$withval"
     required="yes"

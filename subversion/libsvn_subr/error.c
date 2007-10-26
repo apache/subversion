@@ -230,19 +230,18 @@ svn_error_compose(svn_error_t *chain, svn_error_t *new_err)
   apr_pool_destroy(oldpool);
 }
 
-svn_boolean_t
-svn_error_root_cause_is(svn_error_t *err, apr_status_t apr_err)
+svn_error_t *
+svn_error_root_cause(svn_error_t *err)
 {
   while (err)
     {
       if (err->child)
         err = err->child;
       else
-        /* We've reached the end of the line. */
-        return (err->apr_err == apr_err);
+        break;
     }
 
-  return FALSE;
+  return err;
 }
 
 svn_error_t *

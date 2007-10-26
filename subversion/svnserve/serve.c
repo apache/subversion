@@ -27,6 +27,7 @@
 #include <apr_strings.h>
 #include <apr_md5.h>
 
+#include "svn_compat.h"
 #include "svn_private_config.h"  /* For SVN_PATH_LOCAL_SEPARATOR */
 #include "svn_types.h"
 #include "svn_string.h"
@@ -1321,7 +1322,7 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
   else
-    depth = SVN_DEPTH_FROM_RECURSE(recurse);
+    depth = SVN_DEPTH_INFINITY_OR_FILES(recurse);
 
   send_copyfrom_args = (send_copyfrom_param == SVN_RA_SVN_UNSPECIFIED_NUMBER) ?
       FALSE : send_copyfrom_param;
@@ -1358,7 +1359,7 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
   else
-    depth = SVN_DEPTH_FROM_RECURSE(recurse);
+    depth = SVN_DEPTH_INFINITY_OR_FILES(recurse);
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
   if (!SVN_IS_VALID_REVNUM(rev))
@@ -1436,7 +1437,7 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
   else
-    depth = SVN_DEPTH_FROM_RECURSE(recurse);
+    depth = SVN_DEPTH_INFINITY_OR_FILES(recurse);
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
 
@@ -1525,6 +1526,8 @@ static svn_error_t *log_receiver(void *baton,
   svn_log_changed_path_t *change;
   svn_boolean_t invalid_revnum = FALSE;
   char action[2];
+  const char *author, *date, *message;
+  apr_uint64_t revprop_count;
 
   if (log_entry->revision == SVN_INVALID_REVNUM)
     {
@@ -1556,13 +1559,19 @@ static svn_error_t *log_receiver(void *baton,
                                          change->copyfrom_rev));
         }
     }
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)r(?c)(?c)(?c)bb",
+  svn_compat_log_revprops_out(&author, &date, &message, log_entry->revprops);
+  svn_compat_log_revprops_clear(log_entry->revprops);
+  if (log_entry->revprops)
+    revprop_count = apr_hash_count(log_entry->revprops);
+  else
+    revprop_count = 0;
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)r(?c)(?c)(?c)bbn(!",
                                  log_entry->revision,
-                                 log_entry->author,
-                                 log_entry->date,
-                                 log_entry->message,
+                                 author, date, message,
                                  log_entry->has_children,
-                                 invalid_revnum));
+                                 invalid_revnum, revprop_count));
+  SVN_ERR(svn_ra_svn_write_proplist(conn, pool, log_entry->revprops));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)"));
 
   if (log_entry->has_children)
     b->stack_depth++;
@@ -1578,28 +1587,49 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_revnum_t start_rev, end_rev;
   const char *full_path;
   svn_boolean_t changed_paths, strict_node, include_merged_revisions;
-  svn_boolean_t omit_log_text;
-  apr_array_header_t *paths, *full_paths;
+  apr_array_header_t *paths, *full_paths, *revprop_items, *revprops;
+  char *revprop_word;
   svn_ra_svn_item_t *elt;
   int i;
-  apr_uint64_t limit, include_merged_revs_param, omit_log_text_param;
+  apr_uint64_t limit, include_merged_revs_param;
   log_baton_t lb;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)(?r)bb?n?BB", &paths,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)(?r)bb?n?Bwl", &paths,
                                  &start_rev, &end_rev, &changed_paths,
                                  &strict_node, &limit,
                                  &include_merged_revs_param,
-                                 &omit_log_text_param));
+                                 &revprop_word, &revprop_items));
 
   if (include_merged_revs_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
     include_merged_revisions = FALSE;
   else
     include_merged_revisions = include_merged_revs_param;
 
-  if (omit_log_text_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
-    omit_log_text = FALSE;
+  if (revprop_word == NULL)
+    /* pre-1.5 client */
+    revprops = svn_compat_log_revprops_in(pool);
+  else if (strcmp(revprop_word, "all-revprops") == 0)
+    revprops = NULL;
+  else if (strcmp(revprop_word, "revprops") == 0)
+    {
+      revprops = apr_array_make(pool, revprop_items->nelts,
+                                sizeof(char *));
+      if (revprop_items)
+        {
+          for (i = 0; i < revprop_items->nelts; i++)
+            {
+              elt = &APR_ARRAY_IDX(revprop_items, i, svn_ra_svn_item_t);
+              if (elt->kind != SVN_RA_SVN_STRING)
+                return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                        _("Log revprop entry not a string"));
+              APR_ARRAY_PUSH(revprops, const char *) = elt->u.string->data;
+            }
+        }
+    }
   else
-    omit_log_text = omit_log_text_param;
+    return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                             _("Unknown revprop word '%s' in log command"),
+                             revprop_word);
 
   /* If we got an unspecified number then the user didn't send us anything,
      so we assume no limit.  If it's larger than INT_MAX then someone is
@@ -1614,7 +1644,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       elt = &APR_ARRAY_IDX(paths, i, svn_ra_svn_item_t);
       if (elt->kind != SVN_RA_SVN_STRING)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                "Log path entry not a string");
+                                _("Log path entry not a string"));
       full_path = svn_path_join(b->fs_path->data,
                                 svn_path_canonicalize(elt->u.string->data,
                                                       pool),
@@ -1629,7 +1659,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   lb.stack_depth = 0;
   err = svn_repos_get_logs4(b->repos, full_paths, start_rev, end_rev,
                             (int) limit, changed_paths, strict_node,
-                            include_merged_revisions, omit_log_text,
+                            include_merged_revisions, revprops,
                             authz_check_access_cb_func(b), b, log_receiver,
                             &lb, pool);
 
@@ -1778,6 +1808,76 @@ static svn_error_t *get_locations(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
         }
     }
 
+  write_err = svn_ra_svn_write_word(conn, pool, "done");
+  if (write_err)
+    {
+      svn_error_clear(err);
+      return write_err;
+    }
+  SVN_CMD_ERR(err);
+
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *gls_receiver(svn_location_segment_t *segment,
+                                 void *baton,
+                                 apr_pool_t *pool)
+{
+  svn_ra_svn_conn_t *conn = baton;
+  return svn_ra_svn_write_tuple(conn, pool, "rr(?c)",
+                                segment->range_start, 
+                                segment->range_end,
+                                segment->path);
+}
+
+static svn_error_t *get_location_segments(svn_ra_svn_conn_t *conn, 
+                                          apr_pool_t *pool,
+                                          apr_array_header_t *params, 
+                                          void *baton)
+{
+  svn_error_t *err, *write_err;
+  server_baton_t *b = baton;
+  svn_revnum_t peg_revision, start_rev, end_rev;
+  const char *relative_path;
+  const char *abs_path;
+
+  /* Parse the arguments. */
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)(?r)(?r)", 
+                                 &relative_path, &peg_revision,
+                                 &start_rev, &end_rev));
+  relative_path = svn_path_canonicalize(relative_path, pool);
+
+  abs_path = svn_path_join(b->fs_path->data, relative_path, pool);
+
+  if (SVN_IS_VALID_REVNUM(start_rev) 
+      && SVN_IS_VALID_REVNUM(end_rev)
+      && (end_rev > start_rev))
+    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             "Get-location-segments end revision must not be "
+                             "younger than start revision");
+
+  if (SVN_IS_VALID_REVNUM(peg_revision)
+      && SVN_IS_VALID_REVNUM(start_rev)
+      && (start_rev > peg_revision))
+    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             "Get-location-segments start revision must not "
+                             "be younger than peg revision");
+
+  SVN_ERR(trivial_auth_request(conn, pool, b));
+
+  /* All the parameters are fine - let's perform the query against the
+   * repository. */
+
+  /* We store both err and write_err here, so the client will get
+   * the "done" even if there was an error in fetching the results. */
+
+  err = svn_repos_node_location_segments(b->repos, abs_path, 
+                                         start_rev, start_rev, end_rev, 
+                                         gls_receiver, (void *)conn,
+                                         authz_check_access_cb_func(b), b,
+                                         pool);
   write_err = svn_ra_svn_write_word(conn, pool, "done");
   if (write_err)
     {
@@ -2228,6 +2328,7 @@ static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "check-path",      check_path },
   { "stat",            stat },
   { "get-locations",   get_locations },
+  { "get-location-segments",   get_location_segments },
   { "get-file-revs",   get_file_revs },
   { "lock",            lock },
   { "lock-many",       lock_many },
@@ -2410,13 +2511,14 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
 
   /* Send greeting.  We don't support version 1 any more, so we can
    * send an empty mechlist. */
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwww)",
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwww)",
                                         (apr_uint64_t) 2, (apr_uint64_t) 2,
                                         SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                         SVN_RA_SVN_CAP_SVNDIFF1,
                                         SVN_RA_SVN_CAP_ABSENT_ENTRIES,
                                         SVN_RA_SVN_CAP_COMMIT_REVPROPS,
-                                        SVN_RA_SVN_CAP_MERGEINFO));
+                                        SVN_RA_SVN_CAP_MERGEINFO,
+                                        SVN_RA_SVN_CAP_DEPTH));
 
   /* Read client response, which we assume to be in version 2 format:
    * version, capability list, and client URL; then we do an auth

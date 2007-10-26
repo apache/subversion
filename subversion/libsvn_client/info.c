@@ -519,7 +519,7 @@ svn_client_info(const char *path_or_url,
 {
   return svn_client_info2(path_or_url, peg_revision, revision,
                           receiver, receiver_baton,
-                          SVN_DEPTH_FROM_RECURSE(recurse),
+                          SVN_DEPTH_INFINITY_OR_EMPTY(recurse),
                           ctx, pool);
 }
 

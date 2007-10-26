@@ -184,9 +184,16 @@ static svn_wc_entry_callbacks2_t add_tokens_callbacks = {
   svn_client__default_walker_error_handler
 };
 
-/* Whether ENTRY->changelist (which may be NULL) matches CHANGELIST_NAME. */
-#define CHANGELIST_MATCHES(changelist_name, entry) \
-        (entry->changelist && strcmp(changelist_name, entry->changelist) == 0)
+/* Whether CHANGELIST_NAME is NULL, or ENTRY->changelist (which may be
+   NULL) matches CHANGELIST_NAME. */
+static APR_INLINE svn_boolean_t
+considered_committable(const char *changelist_name,
+                       const svn_wc_entry_t *entry)
+{
+  return (changelist_name == NULL ||
+          (entry->changelist &&
+           strcmp(changelist_name, entry->changelist) == 0) ? TRUE : FALSE);
+}
 
 /* Recursively search for commit candidates in (and under) PATH (with
    entry ENTRY and ancestry URL), and add those candidates to
@@ -344,8 +351,7 @@ harvest_committables(apr_hash_t *committables,
     {
       /* Paths in conflict which are not part of our changelist should
          be ignored. */
-      if (changelist_name == NULL &&
-          !CHANGELIST_MATCHES(changelist_name, entry))
+      if (considered_committable(changelist_name, entry))
         return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
                                  _("Aborting commit: '%s' remains in conflict"),
                                  svn_path_local_style(path, pool));
@@ -504,7 +510,7 @@ harvest_committables(apr_hash_t *committables,
   /* Now, if this is something to commit, add it to our list. */
   if (state_flags)
     {
-      if (changelist_name == NULL || CHANGELIST_MATCHES(changelist_name, entry))
+      if (considered_committable(changelist_name, entry))
         {
           /* Finally, add the committable item. */
           add_committable(committables, path, entry->kind, url,
@@ -599,8 +605,8 @@ harvest_committables(apr_hash_t *committables,
                               && (this_entry->schedule
                                   == svn_wc_schedule_delete))
                             {
-                              if ((changelist_name == NULL)
-                                  || CHANGELIST_MATCHES(changelist_name, entry))
+                              if (considered_committable(changelist_name,
+                                                         entry))
                                 {
                                   add_committable(
                                     committables, full_path,
@@ -681,6 +687,7 @@ harvest_committables(apr_hash_t *committables,
 }
 
 
+/* BATON is an apr_hash_t * of harvested committables. */
 static svn_error_t *
 validate_dangler(void *baton,
                  const void *key, apr_ssize_t klen, void *val,
@@ -849,6 +856,11 @@ svn_client__harvest_committables(apr_hash_t **committables,
       i++;
     }
   while (i < targets->nelts);
+
+  if (changelist_name && apr_hash_count(*committables) == 0)
+    /* None of the paths we examined were in the changelist. */
+    return svn_error_createf(SVN_ERR_UNKNOWN_CHANGELIST, NULL,
+                             _("Unknown changelist '%s'"), changelist_name);
 
   /* Make sure that every path in danglers is part of the commit. */
   SVN_ERR(svn_iter_apr_hash(NULL,

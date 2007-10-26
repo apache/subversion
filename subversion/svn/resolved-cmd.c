@@ -29,6 +29,8 @@
 #include "svn_pools.h"
 #include "cl.h"
 
+#include "svn_private_config.h"
+
 
 
 /*** Code. ***/
@@ -41,10 +43,30 @@ svn_cl__resolved(apr_getopt_t *os,
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
+  svn_wc_conflict_choice_t conflict_choice;
   svn_error_t *err;
   apr_array_header_t *targets;
   int i;
   apr_pool_t *subpool;
+
+  switch (opt_state->accept_which)
+    {
+    case svn_cl__accept_invalid:
+      conflict_choice = svn_wc_conflict_choose_merged;
+      break;
+    case svn_cl__accept_base:
+      conflict_choice = svn_wc_conflict_choose_base;
+      break;
+    case svn_cl__accept_theirs:
+      conflict_choice = svn_wc_conflict_choose_theirs;
+      break;
+    case svn_cl__accept_mine:
+      conflict_choice = svn_wc_conflict_choose_mine;
+      break;
+    default:
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("invalid 'accept' ARG"));
+    }
 
   SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
                                         opt_state->targets, pool));
@@ -65,10 +87,9 @@ svn_cl__resolved(apr_getopt_t *os,
       svn_pool_clear(subpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
       err = svn_client_resolved2(target,
-                                SVN_DEPTH_TO_RECURSE(opt_state->depth),
-                                opt_state->accept_which,
-                                ctx,
-                                subpool);
+                                 opt_state->depth, conflict_choice,
+                                 ctx,
+                                 subpool);
       if (err)
         {
           svn_handle_warning(stderr, err);

@@ -1,4 +1,6 @@
 require "English"
+require "forwardable"
+
 require "svn/error"
 require "svn/util"
 require "svn/core"
@@ -235,11 +237,15 @@ module Svn
       def close_edit
         args = [self, @baton]
         Svn::Delta.editor_invoke_close_edit(*args)
+      ensure
+        Core::Pool.destroy(self)
       end
 
       def abort_edit
         args = [self, @baton]
         Svn::Delta.editor_invoke_abort_edit(*args)
+      ensure
+        Core::Pool.destroy(self)
       end
     end
 
@@ -478,5 +484,20 @@ module Svn
       end
     end
 
+    class WrapEditor
+      extend Forwardable
+
+      def_delegators :@wrapped_editor, :set_target_revision, :open_root
+      def_delegators :@wrapped_editor, :delete_entry, :add_directory
+      def_delegators :@wrapped_editor, :open_directory, :change_dir_prop
+      def_delegators :@wrapped_editor, :close_directory, :absent_directory
+      def_delegators :@wrapped_editor, :add_file, :open_file, :apply_textdelta
+      def_delegators :@wrapped_editor, :change_file_prop, :close_file
+      def_delegators :@wrapped_editor, :absent_file, :close_edit, :abort_edit
+
+      def initialize(wrapped_editor)
+        @wrapped_editor = wrapped_editor
+      end
+    end
   end
 end

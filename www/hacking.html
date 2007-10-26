@@ -56,7 +56,9 @@ $LastChangedDate$
 <li><a href="#crediting">Crediting</a></li>
 <li><a href="#patches">Patch submission guidelines</a></li>
 <li><a href="#filing-issues">Filing bugs / issues</a></li>
+<li><a href="#issue-triage">Issue triage</a></li>
 <li><a href="#commit-access">Commit access</a></li>
+<li><a href="#lightweight-branches">Use lightweight branches</a></li>
 <li><a href="#configury">The configuration/build system under unix</a></li>
 <li><a href="#releasing">How to release a distribution tarball</a></li>
 <li><a href="#release-numbering">Release numbering, compatibility, and deprecation</a></li>
@@ -1863,6 +1865,67 @@ software is optional, but recommended :-).</p>
    
 </div>
 
+<div class="h2" id="issue-triage" title="issue-triage">
+<h2>Issue triage</h2>
+
+<p>When an issue is filed, it goes into the special milestone "---",
+meaning <em>unmilestoned</em>.  This is a holding area that issues
+live in until someone gets a chance to look at them and decide what to
+do.</p>
+
+<p>The unmilestoned issues are listed first when you sort by
+milestone, and <em>issue triage</em> is the process of trawling
+through all the <a
+href="http://subversion.tigris.org/issues/buglist.cgi?component=subversion&amp;issue_status=UNCONFIRMED&amp;issue_status=NEW&amp;issue_status=STARTED&amp;issue_status=REOPENED&amp;order=issues.target_milestone%2C%20issues.priority%2C%20issues.issue_type"
+>open issues</a> (starting with the unmilestoned ones), determining
+which are important enough to be fixed now, which can wait until
+another release, which are duplicates of existing issues, which have
+been resolved already, etc.  For each issue that will remain open, it
+also means making sure that the various fields are set appropriately:
+type, subcomponent, platform, OS, version, keywords (if any), and so
+on.</p>
+
+<p>Here's an overview of the process (in this example, 1.5 is the next
+release, so urgent issues would go there):</p>
+
+<pre>
+    for i in issues_marked_as("---"):
+      if issue_is_a_dup_of_some_other_issue(i):
+        close_as_dup(i)
+      elif issue_is_invalid(i):
+        # A frequent reason for invalidity is that the reporter
+        # did not follow the <a href="http://subversion.tigris.org/project_issues.html#buddy-system">"buddy system"</a> for filing.
+        close_as_invalid(i)
+      elif issue_already_fixed(i):
+        close_as_fixed(i)
+      elif issue_unreproducible(i):
+        close_as_worksforme(i)
+      elif issue_is_real_but_we_won't_fix_it(i):
+        close_as_wontfix(i)
+      elif issue_is_closeable_for_some_other_reason(i):
+        close_as_it_for_that_reason(i)
+
+      # Else issue should remain open, so DTRT with it...
+
+      # Set priority, platform, subcomponent, etc, as needed.
+      adjust_all_fields_that_need_adjustment(i)
+
+      # Figure out where to put it.
+      if issue_is_a_lovely_fantasy(i):
+        move_to_milestone(i, "blue-sky")
+      if issue_is_not_important_enough_to_block_any_particular_release(i):
+        move_to_milestone(i, "nonblocking")
+      elif issue_resolution_would_require_incompatible_changes(i):
+        move_to_milestone(i, "2.0")
+      elif issue_hurts_people_somewhat(i):
+        move_to_milestone(i, "1.6")  # or whatever
+      elif issue_hurts_people_a_lot(i):
+        move_to_milestone(i, "1.5-consider")
+      elif issue_hurts_and_hurts_and_won't_stop_hurting(i):
+        move_to_milestone(i, "1.5")
+</pre>
+
+</div>
 
 <div class="h2" id="commit-access" title="commit-access">
 <h2>Commit access</h2>
@@ -1969,6 +2032,35 @@ to determine what is "obvious"; if you're not sure, just ask.</p>
 
 </div>
 
+<div class="h2" id="lightweight-branches" title="lightweight-branches">
+<h2>Use lightweight branches</h2>
+
+<p>If you're working on a feature or bugfix in stages involving
+multiple commits, and some of the intermediate stages aren't stable
+enough to go on trunk, then create a temporary branch in /branches.
+There's no need to ask&nbsp;&mdash;&nbsp;just do it.  It's fine to try
+out experimental ideas in a temporary branch, too.  And all the
+preceding applies to partial as well as full committers.</p>
+
+<p>If you're just using the branch to "checkpoint" your code, and
+don't feel it's ready for review, please put some sort of notice at
+the top of the log message, such as:</p>
+
+<pre>
+   *** checkpoint commit -- please don't waste your time reviewing it ***
+</pre>
+
+<p>And if a later commit on that branch <em>should</em> be reviewed,
+then please supply, in the log message, the appropriate 'svn diff'
+command, since the diff would likely involve two non-adjacent commits
+on that branch, and reviewers shouldn't have to spend time figuring
+out which ones they are.</p>
+
+<p>When you're done with the branch&nbsp;&mdash;&nbsp;when you've
+either merged it to trunk or given up on it&nbsp;&mdash;&nbsp;please
+remember to remove it.</p>
+
+</div>
 
 <div class="h2" id="configury" title="configury">
 <h2>The configuration/build system under unix</h2>

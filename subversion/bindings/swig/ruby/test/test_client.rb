@@ -1898,13 +1898,13 @@ class SvnClientTest < Test::Unit::TestCase
     assert_equal({"my-prop" => "XXX"}, context.revprop_table)
   end
 
-  def assert_change_list
+  def assert_changelist
     log = "sample log"
     file1 = "hello1.txt"
     file2 = "hello2.txt"
     src = "Hello"
-    change_list1 = "XXX"
-    change_list2 = "YYY"
+    changelist1 = "XXX"
+    changelist2 = "YYY"
     path1 = File.join(@wc_path, file1)
     path2 = File.join(@wc_path, file2)
 
@@ -1915,45 +1915,45 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.add(path2)
     ctx.commit(@wc_path)
 
-    assert_equal([], yield(ctx, change_list1, @wc_path))
-    ctx.add_to_change_list(change_list1, path1)
-    assert_equal([path1], yield(ctx, change_list1, @wc_path))
+    assert_equal([], yield(ctx, changelist1, @wc_path))
+    ctx.add_to_changelist(changelist1, path1)
+    assert_equal([path1], yield(ctx, changelist1, @wc_path))
 
-    assert_equal([], yield(ctx, change_list2, @wc_path))
-    ctx.add_to_change_list(change_list2, path1, path2)
+    assert_equal([], yield(ctx, changelist2, @wc_path))
+    ctx.add_to_changelist(changelist2, path1, path2)
     assert_equal([path1, path2].sort,
-                 yield(ctx, change_list2, @wc_path).sort)
-    assert_equal([], yield(ctx, change_list1, @wc_path))
+                 yield(ctx, changelist2, @wc_path).sort)
+    assert_equal([], yield(ctx, changelist1, @wc_path))
 
-    ctx.add_to_change_list(change_list1, [path1, path2])
+    ctx.add_to_changelist(changelist1, [path1, path2])
     assert_equal([path1, path2].sort,
-                 yield(ctx, change_list1, @wc_path).sort)
-    assert_equal([], yield(ctx, change_list2, @wc_path))
+                 yield(ctx, changelist1, @wc_path).sort)
+    assert_equal([], yield(ctx, changelist2, @wc_path))
 
-    ctx.remove_from_change_list(change_list1, path1)
-    assert_equal([path2], yield(ctx, change_list1, @wc_path))
-    ctx.remove_from_change_list(change_list1, [path2])
-    assert_equal([], yield(ctx, change_list1, @wc_path))
+    ctx.remove_from_changelist(changelist1, path1)
+    assert_equal([path2], yield(ctx, changelist1, @wc_path))
+    ctx.remove_from_changelist(changelist1, [path2])
+    assert_equal([], yield(ctx, changelist1, @wc_path))
 
-    ctx.add_to_change_list(change_list1, path1)
-    ctx.add_to_change_list(change_list2, path2)
-    assert_equal([path1], yield(ctx, change_list1, @wc_path))
-    assert_equal([path2], yield(ctx, change_list2, @wc_path))
-    ctx.remove_from_change_list(nil, [path1, path2])
-    assert_equal([], yield(ctx, change_list1, @wc_path))
-    assert_equal([], yield(ctx, change_list2, @wc_path))
+    ctx.add_to_changelist(changelist1, path1)
+    ctx.add_to_changelist(changelist2, path2)
+    assert_equal([path1], yield(ctx, changelist1, @wc_path))
+    assert_equal([path2], yield(ctx, changelist2, @wc_path))
+    ctx.remove_from_changelist(nil, [path1, path2])
+    assert_equal([], yield(ctx, changelist1, @wc_path))
+    assert_equal([], yield(ctx, changelist2, @wc_path))
   end
 
-  def test_change_list_get_without_block
-    assert_change_list do |ctx, change_list_name, root_path|
-      ctx.change_list(change_list_name, root_path)
+  def test_changelist_get_without_block
+    assert_changelist do |ctx, changelist_name, root_path|
+      ctx.changelist(changelist_name, root_path)
     end
   end
 
-  def test_change_list_get_with_block
-    assert_change_list do |ctx, change_list_name, root_path|
+  def test_changelist_get_with_block
+    assert_changelist do |ctx, changelist_name, root_path|
       paths = []
-      ctx.change_list(change_list_name, root_path) do |path|
+      ctx.changelist(changelist_name, root_path) do |path|
         paths << path
       end
       paths

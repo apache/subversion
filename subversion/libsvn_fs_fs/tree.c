@@ -72,35 +72,18 @@
    Smaller values will limit your overall memory consumption, but can
    drastically hurt throughput by necessitating more write operations
    to the database (which also generates more log-files).  */
-#define SVN_FS_WRITE_BUFFER_SIZE          512000
+#define WRITE_BUFFER_SIZE          512000
 
 /* The maximum number of cache items to maintain in the node cache. */
-#define SVN_FS_NODE_CACHE_MAX_KEYS        32
+#define TXN_NODE_CACHE_MAX_KEYS        32
+#define REV_NODE_CACHE_MAX_KEYS        128
 
 
 
 /* The root structure.  */
-
-/* Structure for svn_fs_root_t's node_cache hash values.  Cache items
-   are arranged in a circular LRU list with a dummy entry, and also
-   indexed with a hash table. */
-typedef struct dag_node_cache_t
-{
-  const char *path;               /* Path of cached node */
-  dag_node_t *node;               /* Cached node */
-  struct dag_node_cache_t *prev;  /* Next node in LRU list */
-  struct dag_node_cache_t *next;  /* Previous node in LRU list */
-  apr_pool_t *pool;               /* Pool in which node is allocated */
-} dag_node_cache_t;
-
-
-typedef enum root_kind_t {
-  unspecified_root = 0,
-  revision_root,
-  transaction_root
-} root_kind_t;
-
-
+/* ### TODO: Consider splitting this into two separate structures (one
+   ### for txn and one for rev), because the only field they have in
+   ### common is the copyfrom_cache.  */
 typedef struct
 {
   /* For revision roots, this is a dag node for the revision's root
@@ -110,8 +93,8 @@ typedef struct
   dag_node_t *root_dir;
 
   /* Dummy entry for circular LRU cache, and associated hash table. */
-  dag_node_cache_t node_list;
-  apr_hash_t *node_cache;
+  dag_node_cache_t txn_node_list;
+  apr_hash_t *txn_node_cache;
 
   /* Cache structure for mapping const char * PATH to const char
      *COPYFROM_STRING, so that paths_changed can remember all the
@@ -137,6 +120,31 @@ static svn_fs_root_t *make_txn_root(svn_fs_t *fs, const char *txn,
 
 /*** Node Caching in the Roots. ***/
 
+static void
+locate_cache(dag_node_cache_t **node_list,
+             apr_hash_t **node_cache,
+             const char **key,
+             svn_fs_root_t *root,
+             const char *path,
+             apr_pool_t *pool)
+{
+  if (root->is_txn_root)
+    {
+      fs_root_data_t *frd = root->fsap_data;
+      *node_list = &frd->txn_node_list;
+      *node_cache = frd->txn_node_cache;
+      *key = path;
+    }
+  else
+    {
+      fs_fs_data_t *ffd = root->fs->fsap_data;
+      *node_list = &ffd->rev_node_list;
+      *node_cache = ffd->rev_node_cache;
+      *key = apr_psprintf(pool, "%ld%s",
+                          root->rev, path);
+    }
+}
+
 /* Return NODE for PATH from ROOT's node cache, or NULL if the node
    isn't cached. */
 static dag_node_t *
@@ -144,21 +152,25 @@ dag_node_cache_get(svn_fs_root_t *root,
                    const char *path,
                    apr_pool_t *pool)
 {
-  fs_root_data_t *frd = root->fsap_data;
-  dag_node_cache_t *item;
+  dag_node_cache_t *item, *node_list;
+  apr_hash_t *node_cache;
+  const char *key;
 
   /* Assert valid input. */
   assert(*path == '/');
 
+  locate_cache(&node_list, &node_cache, &key,
+               root, path, pool);
+
   /* Look in the cache for our desired item. */
-  item = apr_hash_get(frd->node_cache, path, APR_HASH_KEY_STRING);
+  item = apr_hash_get(node_cache, key, APR_HASH_KEY_STRING);
   if (item && item->node)
     {
       /* Move this cache item to the front of the LRU list. */
       item->prev->next = item->next;
       item->next->prev = item->prev;
-      item->prev = &frd->node_list;
-      item->next = frd->node_list.next;
+      item->prev = node_list;
+      item->next = node_list->next;
       item->prev->next = item;
       item->next->prev = item;
 
@@ -174,13 +186,18 @@ dag_node_cache_get(svn_fs_root_t *root,
 static void
 dag_node_cache_set(svn_fs_root_t *root,
                    const char *path,
-                   dag_node_t *node)
+                   dag_node_t *node,
+                   apr_pool_t *temp_pool)
 {
-  fs_root_data_t *frd = root->fsap_data;
-  dag_node_cache_t *item;
+  dag_node_cache_t *item, *node_list;
+  apr_hash_t *node_cache;
+  const char *key;
   apr_pool_t *pool;
+  int max_keys = root->is_txn_root
+      ? TXN_NODE_CACHE_MAX_KEYS : REV_NODE_CACHE_MAX_KEYS;
 
-  /* What?  No POOL passed to this function?
+  /* The pool passed to this function can *only* be used for
+     short-term calculations, not for the actual cache value!
 
      To ensure that our cache values live as long as the svn_fs_root_t
      in which they are ultimately stored, and to allow us to free()
@@ -193,40 +210,44 @@ dag_node_cache_set(svn_fs_root_t *root,
   /* Assert valid input and state. */
   assert(*path == '/');
 
+  locate_cache(&node_list, &node_cache, &key,
+               root, path, temp_pool);
+
   /* If we have an existing entry for this path, reuse it. */
-  item = apr_hash_get(frd->node_cache, path, APR_HASH_KEY_STRING);
+  item = apr_hash_get(node_cache, key, APR_HASH_KEY_STRING);
 
   /* Otherwise, if the cache is full, reuse the tail of the LRU list. */
-  if (!item && apr_hash_count(frd->node_cache) == SVN_FS_NODE_CACHE_MAX_KEYS)
-    item = frd->node_list.prev;
+  if (!item && apr_hash_count(node_cache) == max_keys)
+    item = node_list->prev;
 
   if (item)
     {
       /* Remove the existing item from the cache and reuse its pool. */
       item->prev->next = item->next;
       item->next->prev = item->prev;
-      apr_hash_set(frd->node_cache, item->path, APR_HASH_KEY_STRING, NULL);
+      apr_hash_set(node_cache, item->key, APR_HASH_KEY_STRING, NULL);
       pool = item->pool;
       svn_pool_clear(pool);
     }
   else
     {
       /* Allocate a new pool. */
-      pool = svn_pool_create(root->pool);
+      apr_pool_t *parent_pool = root->is_txn_root ? root->pool : root->fs->pool;
+      pool = svn_pool_create(parent_pool);
     }
 
   /* Create and fill in the cache item. */
   item = apr_palloc(pool, sizeof(*item));
-  item->path = apr_pstrdup(pool, path);
+  item->key = apr_pstrdup(pool, key);
   item->node = svn_fs_fs__dag_dup(node, pool);
   item->pool = pool;
 
   /* Link it into the head of the LRU list and hash table. */
-  item->prev = &frd->node_list;
-  item->next = frd->node_list.next;
+  item->prev = node_list;
+  item->next = node_list->next;
   item->prev->next = item;
   item->next->prev = item;
-  apr_hash_set(frd->node_cache, item->path, APR_HASH_KEY_STRING, item);
+  apr_hash_set(node_cache, item->key, APR_HASH_KEY_STRING, item);
 }
 
 
@@ -240,9 +261,13 @@ dag_node_cache_invalidate(svn_fs_root_t *root,
   const char *key;
   dag_node_cache_t *item;
 
-  for (item = frd->node_list.next; item != &frd->node_list; item = item->next)
+  assert(root->is_txn_root);
+
+  for (item = frd->txn_node_list.next; 
+       item != &frd->txn_node_list; 
+       item = item->next)
     {
-      key = item->path;
+      key = item->key;
       if (strncmp(key, path, len) == 0 && (key[len] == '/' || !key[len]))
         item->node = NULL;
     }
@@ -265,11 +290,11 @@ svn_fs_fs__txn_root(svn_fs_root_t **root_p,
   SVN_ERR(svn_fs_fs__txn_proplist(&txnprops, txn, pool));
   if (txnprops)
     {
-      if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_OOD,
+      if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_OOD,
                        APR_HASH_KEY_STRING))
         flags |= SVN_FS_TXN_CHECK_OOD;
 
-      if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_LOCKS,
+      if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS,
                        APR_HASH_KEY_STRING))
         flags |= SVN_FS_TXN_CHECK_LOCKS;
     }
@@ -649,7 +674,7 @@ open_path(parent_path_t **parent_path_p,
 
           /* Cache the node we found (if it wasn't already cached). */
           if (! cached_node)
-            dag_node_cache_set(root, path_so_far, child);
+            dag_node_cache_set(root, path_so_far, child, pool);
         }
 
       /* Are we finished traversing the path?  */
@@ -685,7 +710,7 @@ make_path_mutable(svn_fs_root_t *root,
   const char *txn_id = root->txn;
 
   /* Is the node mutable already?  */
-  if (svn_fs_fs__dag_check_mutable(parent_path->node, txn_id))
+  if (svn_fs_fs__dag_check_mutable(parent_path->node))
     return SVN_NO_ERROR;
 
   /* Are we trying to clone the root, or somebody's child node?  */
@@ -751,7 +776,8 @@ make_path_mutable(svn_fs_root_t *root,
                                          pool));
 
       /* Update the path cache. */
-      dag_node_cache_set(root, parent_path_path(parent_path, pool), clone);
+      dag_node_cache_set(root, parent_path_path(parent_path, pool), clone, 
+                         pool);
     }
   else
     {
@@ -1002,7 +1028,7 @@ fs_change_mergeinfo(svn_fs_root_t *root,
   SVN_ERR(svn_fs_fs__change_txn_mergeinfo(txn, path, mergeinfo_str, pool));
 
   SVN_ERR(svn_fs_fs__change_txn_prop(txn,
-                                     SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
+                                     SVN_FS__PROP_TXN_CONTAINS_MERGEINFO,
                                      svn_string_create("true", pool),
                                      pool));
   return SVN_NO_ERROR;
@@ -1066,7 +1092,7 @@ fs_change_node_prop(svn_fs_root_t *root,
       SVN_ERR(svn_fs_fs__change_txn_mergeinfo(txn, canon_path, value, pool));
 
       SVN_ERR(svn_fs_fs__change_txn_prop(txn,
-                                         SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
+                                         SVN_FS__PROP_TXN_CONTAINS_MERGEINFO,
                                          svn_string_create("true", pool),
                                          pool));
     }
@@ -1076,7 +1102,7 @@ fs_change_node_prop(svn_fs_root_t *root,
 
   /* Overwrite the node's proplist. */
   SVN_ERR(svn_fs_fs__dag_set_proplist(parent_path->node, proplist,
-                                      txn_id, pool));
+                                      pool));
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path,
@@ -1110,8 +1136,8 @@ fs_props_changed(svn_boolean_t *changed_p,
 
   SVN_ERR(get_dag(&node1, root1, path1, pool));
   SVN_ERR(get_dag(&node2, root2, path2, pool));
-  SVN_ERR(svn_fs_fs__things_different(changed_p, NULL,
-                                      node1, node2, pool));
+  SVN_ERR(svn_fs_fs__dag_things_different(changed_p, NULL,
+                                          node1, node2, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1133,7 +1159,6 @@ static svn_error_t *
 update_ancestry(svn_fs_t *fs,
                 const svn_fs_id_t *source_id,
                 const svn_fs_id_t *target_id,
-                const char *txn_id,
                 const char *target_path,
                 int source_pred_count,
                 apr_pool_t *pool)
@@ -1494,7 +1519,7 @@ merge(svn_stringbuf_t *conflict_p,
   svn_pool_destroy(iterpool);
 
   SVN_ERR(svn_fs_fs__dag_get_predecessor_count(&pred_count, source, pool));
-  SVN_ERR(update_ancestry(fs, source_id, target_id, txn_id, target_path,
+  SVN_ERR(update_ancestry(fs, source_id, target_id, target_path,
                           pred_count, pool));
 
   return SVN_NO_ERROR;
@@ -1817,7 +1842,7 @@ fs_make_dir(svn_fs_root_t *root,
                                   pool));
 
   /* Add this directory to the path cache. */
-  dag_node_cache_set(root, parent_path_path(parent_path, pool), sub_dir);
+  dag_node_cache_set(root, parent_path_path(parent_path, pool), sub_dir, pool);
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path, svn_fs_fs__dag_get_id(sub_dir),
@@ -2131,7 +2156,7 @@ fs_make_file(svn_fs_root_t *root,
                                    pool));
 
   /* Add this file to the path cache. */
-  dag_node_cache_set(root, parent_path_path(parent_path, pool), child);
+  dag_node_cache_set(root, parent_path_path(parent_path, pool), child, pool);
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path, svn_fs_fs__dag_get_id(child),
@@ -2288,7 +2313,7 @@ window_consumer(svn_txdelta_window_t *window, void *baton)
 
   /* Check to see if we need to purge the portion of the contents that
      have been written thus far. */
-  if ((! window) || (tb->target_string->len > SVN_FS_WRITE_BUFFER_SIZE))
+  if ((! window) || (tb->target_string->len > WRITE_BUFFER_SIZE))
     {
       apr_size_t len = tb->target_string->len;
       SVN_ERR(svn_stream_write(tb->target_stream,
@@ -2306,7 +2331,7 @@ window_consumer(svn_txdelta_window_t *window, void *baton)
       SVN_ERR(svn_stream_close(tb->target_stream));
 
       SVN_ERR(svn_fs_fs__dag_finalize_edits(tb->node, tb->result_checksum,
-                                            tb->root->txn, tb->pool));
+                                            tb->pool));
     }
 
   return SVN_NO_ERROR;
@@ -2362,7 +2387,7 @@ apply_textdelta(void *baton, apr_pool_t *pool)
 
   /* Make a writable "target" stream */
   SVN_ERR(svn_fs_fs__dag_get_edit_stream(&(tb->target_stream), tb->node,
-                                         txn_id, tb->pool));
+                                         tb->pool));
 
   /* Make a writable "string" stream which writes data to
      tb->target_string. */
@@ -2489,7 +2514,7 @@ text_stream_closer(void *baton)
 
   /* Need to tell fs that we're done sending text */
   SVN_ERR(svn_fs_fs__dag_finalize_edits(tb->node, tb->result_checksum,
-                                        tb->root->txn, tb->pool));
+                                        tb->pool));
 
   return SVN_NO_ERROR;
 }
@@ -2520,7 +2545,7 @@ apply_text(void *baton, apr_pool_t *pool)
 
   /* Make a writable stream for replacing the file's text. */
   SVN_ERR(svn_fs_fs__dag_get_edit_stream(&(tb->file_stream), tb->node,
-                                         txn_id, tb->pool));
+                                         tb->pool));
 
   /* Create a 'returnable' stream which writes to the file_stream. */
   tb->stream = svn_stream_create(tb, tb->pool);
@@ -2603,7 +2628,8 @@ fs_contents_changed(svn_boolean_t *changed_p,
 
   SVN_ERR(get_dag(&node1, root1, path1, pool));
   SVN_ERR(get_dag(&node2, root2, path2, pool));
-  SVN_ERR(svn_fs_fs__things_different(NULL, changed_p, node1, node2, pool));
+  SVN_ERR(svn_fs_fs__dag_things_different(NULL, changed_p, 
+                                          node1, node2, pool));
 
   return SVN_NO_ERROR;
 }
@@ -3146,9 +3172,6 @@ make_root(svn_fs_t *fs,
   root->pool = subpool;
 
   /* Init the node ID cache. */
-  frd->node_cache = apr_hash_make(subpool);
-  frd->node_list.prev = &frd->node_list;
-  frd->node_list.next = &frd->node_list;
   frd->copyfrom_cache = apr_hash_make(subpool);
   root->vtable = &root_vtable;
   root->fsap_data = frd;
@@ -3187,10 +3210,16 @@ make_txn_root(svn_fs_t *fs,
               apr_pool_t *pool)
 {
   svn_fs_root_t *root = make_root(fs, pool);
+  fs_root_data_t *frd = root->fsap_data;
+
   root->is_txn_root = TRUE;
   root->txn = apr_pstrdup(root->pool, txn);
   root->txn_flags = flags;
   root->rev = base_rev;
+
+  frd->txn_node_cache = apr_hash_make(root->pool);
+  frd->txn_node_list.prev = &frd->txn_node_list;
+  frd->txn_node_list.next = &frd->txn_node_list;
 
   return root;
 }

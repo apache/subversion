@@ -8,7 +8,7 @@ start = log
 log = element log { logentry* }
 
 logentry =
-  element logentry { attlist.logentry, author?, date?, paths?, msg?, logentry* }
+  element logentry { attlist.logentry, author?, date?, paths?, msg?, revprops?, logentry* }
 attlist.logentry &=
   attribute revision { revnum.type }
 
@@ -28,3 +28,6 @@ attlist.path &=
 
 ## Log message.
 msg = element msg { text }
+
+## Revision properties.
+revprops = element revprops { property+ }

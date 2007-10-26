@@ -1,12 +1,12 @@
 ;;; dsvn.el --- Subversion interface
 
-;; Copyright (C) 2006 Virtutech
+;; Copyright 2006-2007 Virtutech AB
 
 ;; Author: David Kågedal <david@virtutech.com>
 ;;	Mattias Engdegård <mattias@virtutech.com>
 ;; Maintainer: David Kågedal <david@virtutech.com>
 ;; Created: 27 Jan 2006
-;; Version: 1.3
+;; Version: 1.4
 ;; Keywords: docs
 
 ;; This program is free software; you can redistribute it and/or
@@ -78,6 +78,8 @@
 ;;   R      Resolve conflicts
 ;;   M      Rename/move files
 ;;   U      Revert files
+;;   P      View or edit properties of the file or directory under point
+;;            (does not use marks)
 ;;
 ;; These commands update what is shown in the status buffer:
 ;;
@@ -102,14 +104,7 @@
 ;; - Annotate (blame).
 ;; - Log, with a useful log mode where the user can easily view any revision
 ;;   as a diff or visit a revision of a file in a buffer.
-;; - A way to look at or alter properties. Maybe diff should show prop
-;;   changes too.
 ;; - Integration with ediff or similar to resolve conflicts.
-
-;;; History:
-;; 
-
-;;; Code:
 
 (require 'vc)
 (require 'log-edit)
@@ -140,12 +135,11 @@ Optional argument ARGS are the arguments to svn."
       (accept-process-output proc 5)
       (sit-for 0))))
 
-(defun svn-run-with-output (subcommand &optional args mode in-top-dir)
+(defun svn-run-with-output (subcommand &optional args mode)
   "Run 'svn' with output to another window.
 Argument SUBCOMMAND is the command to execute.
 Optional argument ARGS is a list of the arguments to the command.
 Optional argument MODE is the major mode to use for the output buffer.
-Optional argument IN-TOP-DIR .
 
 Return non-NIL if there was any output."
   (let ((buf (get-buffer-create "*svn output*"))
@@ -161,9 +155,6 @@ Return non-NIL if there was any output."
       (setq buffer-read-only t)
       (let ((cmd `(,svn-program ,subcommand ,@args))
             proc)
-        (if in-top-dir
-            (setq cmd (append (list "env" (concat "SVN_DIR=" (get-svn-dir)))
-                              cmd)))
         (setq proc (apply 'start-process "svn" buf cmd))
         (set-process-coding-system proc 'utf-8)
         (set-process-filter proc 'svn-output-filter)
@@ -206,7 +197,8 @@ Argument STR is the output string."
           (delete-region (point) (match-beginning 0))))
       (goto-char p))))
 
-(defvar svn-status-buffer nil)
+(defvar svn-status-buffer nil
+  "svn-status buffer describing the files that a commit operation applies to")
 (make-variable-buffer-local 'svn-status-buffer)
 
 (defun svn-current-url ()
@@ -278,7 +270,6 @@ buffer to describe what is going on."
         (set-svn-process-status 'finished))
       (move-to-column goal-column))))
 
-(defvar svn-diff-history nil)
 (defun svn-diff (arg)
   "Run `svn diff'.
 Argument ARG are the command line arguments."
@@ -293,16 +284,16 @@ Argument ARG are the command line arguments."
         (commit-buf (get-buffer-create "*svn commit*")))
     (switch-to-buffer-other-window commit-buf)
     (log-edit 'svn-confirm-commit)
-    (make-local-variable 'svn-status-buf)
-    (setq svn-status-buf status-buf)))
+    (setq svn-status-buffer status-buf)))
 
 (defun svn-confirm-commit ()
   "Commit changes with the current buffer as commit message."
   (interactive)
-  (let ((files (with-current-buffer svn-status-buf
+  (let ((files (with-current-buffer svn-status-buffer
                  (svn-action-files)))
         (commit-buf (current-buffer))
-        (status-buf svn-status-buf)
+        (status-buf svn-status-buffer)
+	;; XEmacs lacks make-temp-file but has make-temp-name + temp-directory
         (msg-file (if (fboundp 'make-temp-file)
 		      (make-temp-file "svn-commit")
 		    (make-temp-name (expand-file-name "svn-commit"
@@ -465,6 +456,194 @@ Argument ARG is the command-line arguments, as a string."
       (goto-char start)
       (insert str))))
 
+;;; Svn propedit
+
+(defun svn-propget (file propname)
+  "Return the Subversion property PROPNAME of FILE."
+  (with-current-buffer (svn-run-hidden 'propget (list propname file))
+    (substring (buffer-string) 0 -1)))	; trim final newline added by svn
+
+(defun svn-get-props (file)
+  "Return an alist containing the properties of FILE"
+  ;; First retrieve the property names, and then the value of each.
+  ;; We can't use proplist -v because is output is ambiguous when values
+  ;; consist of multiple lines.
+  (let (propnames)
+    (with-current-buffer (svn-run-hidden 'proplist (list file))
+      (goto-char (point-min))
+      (when (looking-at "Properties on ")
+	(forward-line 1)
+	(while (looking-at "  \\(.+\\)$")
+	  (setq propnames (cons (match-string 1) propnames))
+	  (forward-line 1))))
+    (mapcar (lambda (propname)
+	      (cons propname (svn-propget file propname)))
+	    propnames)))
+
+(defun svn-propedit (file)
+  "Edit properties of FILE."
+  (interactive (list (expand-file-name
+		      (or (svn-getprop (point) 'file)
+			  (read-file-name "Edit properties of file: "
+					  default-directory
+					  nil t
+					  (svn-getprop (point) 'dir))))))
+  (let ((local-file (svn-local-file-name file)))
+    (when (string-equal local-file "")
+	(setq local-file ".")
+	(setq file (concat (file-name-as-directory file) ".")))
+    (svn-check-running)
+    (let ((buf-name (format "*propedit %s*" local-file)))
+      (if (get-buffer buf-name)
+	  (kill-buffer buf-name))
+      (let ((prop-alist (svn-get-props local-file))
+	    (propedit-buf (get-buffer-create buf-name)))
+	(switch-to-buffer-other-window propedit-buf)
+	(svn-propedit-mode)
+	(insert
+      "# Properties of " local-file "\n"
+      "#\n"
+      "# Lines are on the form PROPNAME: VALUE for single-line values,\n"
+      "# or just PROPNAME: followed by one or more lines starting with > for\n"
+      "# multi-line values. Lines starting with # are ignored.\n"
+      "#\n"
+      "# Change, add, delete or rename properties just by editing this\n"
+      "# buffer; then press "
+         (substitute-command-keys "\\[svn-propedit-done]")
+	 " to save changes.\n\n")
+	(mapc (lambda (prop)
+		(let* ((value (cdr prop))
+		       (lines (split-string value "\n")))
+		  ;; split-string ignores single leading and trailing
+		  ;; delimiters, so add them explicitly
+		  (when (not (equal value ""))
+		    (when (equal (substring value 0 1) "\n")
+		      (setq lines (cons "" lines)))
+		    (when (equal (substring value -1) "\n")
+		      (setq lines (append lines (list "")))))
+		  (insert (car prop) ":")
+		  (if (> (length lines) 1)
+		      (progn
+			(insert "\n")
+			(mapc (lambda (line) (insert ">" line "\n"))
+			      lines))
+		    (insert " " (or (car lines) "") "\n"))))
+	      (sort prop-alist #'(lambda (a b) (string< (car a) (car b)))))
+	(make-local-variable 'svn-propedit-file)
+	(setq svn-propedit-file file)
+	(setq default-directory (file-name-directory file))
+	(message
+	 (substitute-command-keys
+	  "Press \\[svn-propedit-done] when you are done editing."))))))
+
+(defvar svn-propedit-mode-map nil
+  "Keymap for `svn-propedit-mode'.")
+(unless svn-propedit-mode-map
+  (setq svn-propedit-mode-map (make-sparse-keymap))
+  (define-key svn-propedit-mode-map "\C-c\C-c" 'svn-propedit-done))
+
+(defun svn-propedit-mode ()
+  "Major mode for editing Subversion properties."
+  (interactive)
+  (kill-all-local-variables)
+  (setq major-mode 'svn-propedit-mode
+	mode-name "Svn propedit")
+  (use-local-map svn-propedit-mode-map)
+  (setq font-lock-defaults
+	'((("^#.*$"			       ;comment
+	    . 'font-lock-comment-face)
+	   ("^\\([^ \t\n#>][^ \t\n]*\\):"      ;property name
+	    . (1 'bold))
+	   ("^[^ \t\n#>][^ \t\n]*: *\\(.*\\)$" ;property value
+	    . (1 'font-lock-function-name-face))
+	   ("^>"			       ;multi-line marker
+	    . 'bold)
+	   ("^>\\(.*\\)$"		       ;property value (continued)
+	    . (1 'font-lock-function-name-face))
+	   )
+	  nil				;keywords-only
+	  nil				;case-fold
+	  nil				;syntax-alist
+	  nil				;syntax-begin
+	  ))
+  (font-lock-mode))
+
+(defun svn-props-from-buffer ()
+  "Parse the current propedit buffer and return an alist of the properties."
+  (save-excursion
+    (let (prop-alist)
+      (goto-char (point-min))
+      (while (not (eobp))
+	(cond ((looking-at "^\\([^ \t\n#>][^ \t\n]*\\): *\\(.*\\)$")
+	       (let ((prop-name (match-string 1))
+		     (value (match-string 2)))
+		 (set-text-properties 0 (length prop-name) nil prop-name)
+		 (set-text-properties 0 (length value) nil value)
+		 (when (assoc prop-name prop-alist)
+		   (error "Duplicated property '%s'" prop-name))
+		 (setq prop-alist (cons (cons prop-name value) prop-alist))))
+	      ((looking-at "^>\\(.*\\)$")
+	       (let ((extra-line (match-string 1)))
+		 (set-text-properties 0 (length extra-line) nil extra-line)
+		 (when (null prop-alist)
+		   (error "Continued line not preceded by property name"))
+		 (let ((old-value (cdar prop-alist)))
+		   (setcdr (car prop-alist)
+			   (concat old-value "\n" extra-line))))))
+	(forward-line 1))
+
+      ;; Remove the extra leading newline from multi-line values
+      (mapcar (lambda (prop)
+		(let ((name (car prop))
+		      (value (cdr prop)))
+		  (if (and (not (equal value ""))
+			   (equal (substring value 0 1) "\n"))
+		      (cons name (substring value 1))
+		    prop)))
+	      prop-alist))))
+
+(defun svn-propdel (file prop-name)
+  "Delete FILE's property PROP-NAME."
+  (svn-run-hidden 'propdel (list prop-name file)))
+
+(defun svn-propset (file prop-name prop-value)
+  "Set FILE's property PROP-NAME to PROP-VALUE."
+  (svn-run-hidden 'propset (list prop-name prop-value file)))
+
+(defun svn-propedit-done ()
+  "Apply property changes to the file."
+  (interactive)
+  (let ((wc-props (svn-get-props svn-propedit-file))
+	(new-props (svn-props-from-buffer))
+	(changes 0))
+
+    ;; first remove properties that the user deleted from the buffer
+    (mapc (lambda (wc-prop)
+	    (let ((prop-name (car wc-prop)))
+	      (when (not (assoc prop-name new-props))
+		(message "Deleting property %s" prop-name)
+		(svn-propdel svn-propedit-file prop-name)
+		(setq changes (1+ changes)))))
+	  wc-props)
+
+    ;; then set the properties that have changed or are new
+    (mapc (lambda (new-prop)
+	    (let* ((prop-name (car new-prop))
+		   (wc-prop (assoc prop-name wc-props)))
+	      (unless (equal new-prop wc-prop)
+		(message "Setting property %s" prop-name)
+		(svn-propset svn-propedit-file prop-name (cdr new-prop))
+		(setq changes (1+ changes)))))
+	  new-props)
+    (cond
+     ((> changes 1) (message "Changed %d properties." changes))
+     ((= changes 0) (message "No properties changed."))))
+  (svn-foreach-svn-buffer
+   svn-propedit-file
+   (lambda (local-file-name file-pos)
+     (svn-refresh-item local-file-name nil)))
+  (kill-buffer (current-buffer)))
+
 ;;; Svn buffer
 
 (defvar svn-files-start nil)
@@ -539,7 +718,10 @@ Argument DIR is the directory to run svn status in."
   (let ((proc (svn-run 'info ())))
     (while (eq (process-status proc) 'run)
       (accept-process-output proc 2 10000)))
-  (svn-refresh))
+  (svn-refresh)
+  (message
+   (substitute-command-keys
+    "Welcome to dsvn. Press \\[svn-status-help] for keyboard help summary.")))
 
 (defun svn-refresh (&optional clear)
   "Run `svn status'.
@@ -553,6 +735,28 @@ If optional argument CLEAR is non-NIL, clear the buffer first."
     (setq svn-last-inserted-filename nil)
     (svn-run 'status '())))
 
+(defun svn-run-status-v (files recursive)
+  "Run svn status -v on FILES. If not RECURSIVE, only applies to files and
+directories explicitly listed in FILES."
+
+  ;; The command 'svn status -N DIR' will process the immediate contents of
+  ;; DIR as well as DIR itself, but that is not what we want if running
+  ;; non-recursively. To compensate, filter the status output through a list
+  ;; of files and directories we are interested in.
+
+  (make-local-variable 'svn-status-v-file-match)
+  (setq svn-status-v-file-match
+	(if recursive
+	    nil
+	  (mapcar (lambda (file)
+		    ;; trim trailing slash for directory comparison to work
+		    (if (equal (substring file -1) "/")
+			(substring file 0 -1)
+		      file))
+		  files)))
+  (let ((flag (if recursive nil '("-N"))))
+    (svn-run 'status-v (append flag files))))
+
 (defun svn-refresh-file ()
   "Run `svn status' on the selected files."
   (interactive)
@@ -564,8 +768,31 @@ If optional argument CLEAR is non-NIL, clear the buffer first."
     (mapc (lambda (pos)
             (svn-setprop pos 'updated nil))
           (mapcar 'cadr actions))
-    (svn-run 'status-v (mapcar 'car actions)))
+    (svn-run-status-v (mapcar 'car actions) t))
   (svn-next-file 1))
+
+(defun svn-local-file-name (file)
+  "Return file name relative the current directory, or raise an error if
+outside."
+  (if (file-directory-p file)
+      (setq file (file-name-as-directory file)))
+  (let ((exp-default-dir (expand-file-name default-directory)))
+    (if (file-name-absolute-p file)
+	(let ((ddl (length exp-default-dir)))
+	  (if (or (< (length file) ddl)
+		  (not (string= (substring file 0 ddl)
+				exp-default-dir)))
+	      (error "Outside working copy")
+	    (substring file ddl)))
+      file)))
+
+(defun svn-refresh-item (file recursive)
+  "Refresh status for FILE. If RECURSIVE, do it recursively (for directories)."
+  (svn-check-running)
+  (let ((inhibit-read-only t))
+    (setq svn-last-inserted-filename nil)
+    (let ((local-file (svn-local-file-name file)))
+      (svn-run-status-v (list local-file) recursive))))
 
 (defun svn-refresh-one (file)
   "Run `svn status' on FILE."
@@ -575,22 +802,7 @@ If optional argument CLEAR is non-NIL, clear the buffer first."
 				      nil t
 				      (or (svn-getprop (point) 'file)
 					  (svn-getprop (point) 'dir))))))
-  (if (file-directory-p file)
-      (setq file (file-name-as-directory file)))
-  (svn-check-running)
-  (let* ((exp-default-dir (expand-file-name default-directory))
-	 (local-file
-	 (if (file-name-absolute-p file)
-	     (let ((ddl (length exp-default-dir)))
-	       (if (or (< (length file) ddl)
-		       (not (string= (substring file 0 ddl)
-				     exp-default-dir)))
-		   (error "Outside working copy")
-		 (substring file ddl)))
-	   file)))
-    (let ((inhibit-read-only t))
-      (setq svn-last-inserted-filename nil)
-      (svn-run 'status-v (list local-file)))))
+  (svn-refresh-item file t))
 
 (defun svn-cleanup-status ()
   (save-excursion
@@ -638,7 +850,9 @@ If optional argument CLEAR is non-NIL, clear the buffer first."
               (filename (match-string 6)))
           (delete-region (match-beginning 0)
                          (match-end 0))
-          (svn-insert-file filename status))))))
+	  (when (or (not svn-status-v-file-match)
+		    (member filename svn-status-v-file-match))
+	    (svn-insert-file filename status)))))))
 
 (defun svn-status-v-sentinel (proc reason)
   (with-current-buffer (process-buffer proc)
@@ -1018,7 +1232,6 @@ been modified."
   (define-key svn-status-mode-map "\r" 'svn-find-file)
   (define-key svn-status-mode-map "g" 'svn-refresh)
   (define-key svn-status-mode-map "\M-u" 'svn-update-current)
-  ;;(define-key svn-status-mode-map "i" 'svn-ignore)
   (define-key svn-status-mode-map " " 'svn-toggle-mark)
   (define-key svn-status-mode-map "m" 'svn-mark-forward)
   (define-key svn-status-mode-map "\177" 'svn-unmark-backward)
@@ -1040,6 +1253,7 @@ been modified."
   (define-key svn-status-mode-map "\M-m" 'svn-merge)
   (define-key svn-status-mode-map "q" 'bury-buffer)
   (define-key svn-status-mode-map "?" 'svn-status-help)
+  (define-key svn-status-mode-map "P" 'svn-propedit)
 )
 
 (unless svn-status-mode-map (svn-status-set-default-mode-map))
@@ -1254,7 +1468,7 @@ argument."
   (if (= (process-exit-status proc) 0)
       (with-current-buffer (process-buffer proc)
         (let ((inhibit-read-only t))
-          (svn-run 'status-v (cons "-N" svn-reverted-files)))))
+          (svn-run-status-v svn-reverted-files nil))))
   (mapc #'svn-revert-if-needed svn-reverted-files))
 
 (defun svn-resolve ()
@@ -1275,7 +1489,7 @@ argument."
   (if (= (process-exit-status proc) 0)
       (with-current-buffer (process-buffer proc)
         (let ((inhibit-read-only t))
-          (svn-run 'status-v (cons "-N" svn-resolved-files))))))
+          (svn-run-status-v svn-resolved-files nil)))))
 
 (defun svn-move ()
   "Move/rename the selected file."
@@ -1381,23 +1595,6 @@ files instead."
                            (error "No file on line"))))))
     (unless (svn-run-with-output "diff" files 'diff-mode)
       (message "No difference found"))))
-
-;;;(defun svn-ignore ()
-;;;  "Ignore the selected files"
-;;;  (interactive)
-;;;  (let ((actions (svn-action-files)))
-;;;    (while actions
-;;;      (let* ((filename (car actions))
-;;;             (dir (or (file-name-directory filename) "./"))
-;;;             (ignore-buf (find-file-noselect (concat dir ".svnignore"))))
-;;;        (save-excursion
-;;;          (set-buffer ignore-buf)
-;;;          (goto-char (point-max))
-;;;          (insert (file-name-nondirectory filename))
-;;;          (newline)
-;;;          (save-buffer)))
-;;;      (setq actions (cdr actions))))
-;;;  (svn-status))
 
 (defun svn-previous-file (arg)
   "Move to the ARGth previous line containing file information."
@@ -1511,7 +1708,8 @@ files instead."
 		    (svn-resolve "resolve conflicts")
 		    (svn-move "rename/move files")
 		    (svn-switch "switch working tree")
-		    (svn-merge "merge into WC")))
+		    (svn-merge "merge into WC")
+		    (svn-propedit "edit properties")))
 		 (svn-format-help-column
 		  '((svn-mark-forward "mark and go down")
 		    (svn-unmark-backward "unmark and go up")
@@ -1574,13 +1772,12 @@ Argument MSG is the character to use."
     (delete-char 9)
     (insert-and-inherit (format "%9s" msg))))
 
-(defun svn-foreach-svn-buffer (filename function)
-  "Call FUNCTION for each svn status buffer that contains FILENAME.
+(defun svn-foreach-svn-buffer (file-name function)
+  "Call FUNCTION for each svn status buffer that contains FILE-NAME.
 The current buffer will be the svn status buffer, and the arguments to
 the function is the local form of the filename and the buffer position
 where the file information is."
   (let* ((svn-buffers (svn-buffer-list))
-         (file-name (buffer-file-name))
          (inhibit-read-only t))
     (while svn-buffers
       (with-current-buffer (car svn-buffers)
@@ -1602,7 +1799,7 @@ where the file information is."
            (when (= old-status ?\ )
              (svn-update-status-flag file-pos ?M))
            (svn-update-status-msg file-pos ""))
-       (svn-run 'status-v (list local-file-name)))))
+       (svn-run-status-v (list local-file-name) nil))))
   nil)
 
 (add-hook 'after-save-hook 'svn-after-save)
@@ -1625,7 +1822,7 @@ where the file information is."
   (svn-foreach-svn-buffer
    (buffer-file-name)
    (lambda (local-file-name file-pos)
-     (svn-refresh-one local-file-name))))
+     (svn-refresh-item local-file-name t))))
 
 ;;; To get reasonable uniquify behaviour, tell it what path to use
 ;;; for the status buffers.

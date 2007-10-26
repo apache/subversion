@@ -615,6 +615,16 @@ structures.</p>
 
 </div>  <!-- data-structures -->
 
+<div class="h2" id="conflict-resolution">
+<h2>Conflict Resolution</h2>
+
+<p>The <a href="func-spec.html#conflict-resolution">functional
+specification</a> and the <a href="../svn_1.5_releasenotes.html">1.5
+release notes</a> detail the command-line client behavior and conflict
+resolution API.</p>
+
+</div>  <!-- conflict-resolution -->
+
 <div class="h2" id="audit-operations">
 <h2>Audit Operations</h2>
 
@@ -643,8 +653,8 @@ in that revision.  For the 'blame' case, we may also need to include some type
 of line number parameter, the handling of which is going to get ugly, since our
 FS isn't based on a weave.</p>
 
-<p>Existing functions of interest are <code>svn_repos_fs_get_merge_info()</code>
-and <code>svn_fs_merge_info__get_merge_info()</code>.</p>
+<p>Existing functions of interest are <code>svn_repos_fs_get_mergeinfo()</code>
+and <code>svn_fs_merge_info__get_mergeinfo()</code>.</p>
 
 <div class="h4" id="audit-log">
 <h4><code>svn log</code> Implementation</h4>

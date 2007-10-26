@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -125,8 +125,8 @@ Java_org_tigris_subversion_javahl_SVNAdmin_deltify
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNAdmin_dump
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jdataout,
- jobject jmessageout, jobject jrevisionStart,
- jobject jrevisionEnd, jboolean jincremental)
+ jobject jmessageout, jobject jrevisionStart, jobject jrevisionEnd,
+ jboolean jincremental, jboolean juseDeltas)
 {
   JNIEntry(SVNAdmin, dump);
   SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
@@ -157,7 +157,7 @@ Java_org_tigris_subversion_javahl_SVNAdmin_dump
     return;
 
   cl->dump(path, dataOut, messageOut, revisionStart, revisionEnd,
-           jincremental ? true : false);
+           jincremental ? true : false, juseDeltas ? true : false);
 }
 
 JNIEXPORT void JNICALL
@@ -234,7 +234,7 @@ JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNAdmin_load
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jinputData,
  jobject joutputMsg, jboolean jignoreUUID, jboolean jforceUUID,
- jstring jrelativePath)
+ jboolean jusePreCommitHook, jboolean jusePostCommitHook, jstring jrelativePath)
 {
   JNIEntry(SVNAdmin, load);
   SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
@@ -262,7 +262,8 @@ Java_org_tigris_subversion_javahl_SVNAdmin_load
     return;
 
   cl->load(path, inputData, outputMsg, jignoreUUID ? true : false,
-           jforceUUID ? true : false, relativePath);
+           jforceUUID ? true : false, jusePreCommitHook ? true : false,
+           jusePostCommitHook ? true : false, relativePath);
 }
 
 JNIEXPORT void JNICALL

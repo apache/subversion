@@ -59,6 +59,8 @@
 **
 ** LOCAL_PATH is relative to the root of the commit. It will be used
 ** for the get_func, push_func, and close_func callbacks.
+**
+** NAME is the name of the resource.
 */
 typedef struct
 {
@@ -67,6 +69,7 @@ typedef struct
   const char *vsn_url;
   const char *wr_url;
   const char *local_path;
+  const char *name;
   apr_pool_t *pool; /* pool in which this resource is allocated. */
 
 } version_rsrc_t;
@@ -164,6 +167,7 @@ static svn_error_t * delete_activity(void *edit_baton,
 /* Get the version resource URL for RSRC, storing it in
    RSRC->vsn_url.  Use POOL for all temporary allocations. */
 static svn_error_t * get_version_url(commit_ctx_t *cc,
+                                     const version_rsrc_t *parent,
                                      version_rsrc_t *rsrc,
                                      svn_boolean_t force,
                                      apr_pool_t *pool)
@@ -172,18 +176,32 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
   const char *url;
   const svn_string_t *url_str;
 
-  if (!force && cc->get_func != NULL)
+  if (!force)
     {
-      const svn_string_t *vsn_url_value;
-
-      SVN_ERR((*cc->get_func)(cc->cb_baton,
-                              rsrc->local_path,
-                              SVN_RA_NEON__LP_VSN_URL,
-                              &vsn_url_value,
-                              pool));
-      if (vsn_url_value != NULL)
+      if  (cc->get_func != NULL)
         {
-          rsrc->vsn_url = apr_pstrdup(rsrc->pool, vsn_url_value->data);
+          const svn_string_t *vsn_url_value;
+
+          SVN_ERR((*cc->get_func)(cc->cb_baton,
+                                  rsrc->local_path,
+                                  SVN_RA_NEON__LP_VSN_URL,
+                                  &vsn_url_value,
+                                  pool));
+          if (vsn_url_value != NULL)
+            {
+              rsrc->vsn_url = apr_pstrdup(rsrc->pool, vsn_url_value->data);
+              return SVN_NO_ERROR;
+            }
+        }
+
+      /* If we know the version resource URL of the parent and it is
+         the same revision as RSRC, use that as a base to calculate
+         the version resource URL of RSRC. */
+      if (parent && parent->vsn_url && parent->revision == rsrc->revision)
+        {
+          rsrc->vsn_url = svn_path_url_add_component(parent->vsn_url,
+                                                     rsrc->name,
+                                                     rsrc->pool);
           return SVN_NO_ERROR;
         }
 
@@ -351,6 +369,7 @@ static svn_error_t * add_child(version_rsrc_t **child,
   rsrc = apr_pcalloc(pool, sizeof(*rsrc));
   rsrc->pool = pool;
   rsrc->revision = revision;
+  rsrc->name = name;
   rsrc->url = svn_path_url_add_component(parent->url, name, pool);
   rsrc->local_path = svn_path_join(parent->local_path, name, pool);
 
@@ -366,7 +385,7 @@ static svn_error_t * add_child(version_rsrc_t **child,
      This means it has a VR URL already, and the WR URL won't exist
      until it's "checked out". */
   else
-    SVN_ERR(get_version_url(cc, rsrc, FALSE, pool));
+    SVN_ERR(get_version_url(cc, parent, rsrc, FALSE, pool));
 
   *child = rsrc;
   return SVN_NO_ERROR;
@@ -415,6 +434,9 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
                                         allow_404 ? 404 /* Not Found */ : 0,
                                         pool));
 
+  if (allow_404 && *code == 404 && request->err)
+    svn_error_clear(request->err);
+
   *locn = svn_ra_neon__request_get_location(request, pool);
   svn_ra_neon__request_destroy(request);
 
@@ -448,7 +470,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
       locn = NULL;
 
       /* re-fetch, forcing a query to the server */
-      SVN_ERR(get_version_url(cc, rsrc, TRUE, pool));
+      SVN_ERR(get_version_url(cc, NULL, rsrc, TRUE, pool));
 
       /* do it again, but don't allow a 404 this time */
       err = do_checkout(cc, rsrc->vsn_url, FALSE, token, &code, &locn, pool);
@@ -457,10 +479,14 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
   /* special-case when conflicts occur */
   if (err)
     {
+      /* ### TODO: it's a shame we don't have the full path from the
+         ### root of the drive here, nor the type of the resource.
+         ### Because we lack this information, the error message is
+         ### overly generic.  See issue #2740. */
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
         return svn_error_createf
           (err->apr_err, err,
-           _("Your file or directory '%s' is probably out-of-date"),
+           _("File or directory '%s' is out of date; try updating"),
            svn_path_local_style(rsrc->local_path, pool));
       return err;
     }
@@ -539,7 +565,7 @@ propchange.  Therefore:
 2. when ra_neon's commit editor receives a directory propchange, it
    *is* able to get the VR cache (because the dir is a "committable"),
    and thus it does a CHECKOUT of the older directory.  And mod_dav_svn
-   will scream if the VR is out-of-date, which is exactly what we want in
+   will scream if the VR is out of date, which is exactly what we want in
    the directory propchange scenario.
 
 The only potential badness here is the case of committing a directory
@@ -608,7 +634,7 @@ static svn_error_t * commit_open_root(void *edit_baton,
   rsrc->url = cc->ras->root.path;
   rsrc->local_path = "";
 
-  SVN_ERR(get_version_url(cc, rsrc, FALSE, dir_pool));
+  SVN_ERR(get_version_url(cc, NULL, rsrc, FALSE, dir_pool));
 
   root = apr_pcalloc(dir_pool, sizeof(*root));
   root->pool = dir_pool;

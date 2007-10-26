@@ -475,6 +475,30 @@ void svn_wc_edited_externals(apr_hash_t **externals_old,
                              svn_wc_traversal_info_t *traversal_info);
 
 
+/** Set @a *depths to a hash table mapping <tt>const char *</tt>
+ * directory names (directories traversed by @a traversal_info) to
+ * <tt>const char *</tt> values (the depths of those directories, as
+ * converted by svn_depth_to_word()).
+ *
+ * @a traversal_info is obtained from svn_wc_init_traversal_info(), but is
+ * only useful after it has been passed through another function, such
+ * as svn_wc_crawl_revisions(), svn_wc_get_update_editor(),
+ * svn_wc_get_switch_editor(), etc.
+ *
+ * The dir names are full paths -- that is, anchor plus target, not target
+ * alone.  The values are not allocated, they are static constant strings.
+ * Although the values are never NULL, not all directories traversed
+ * are necessarily listed.  For example, directories which did not
+ * have an svn:externals property set or modified are not included.
+ *
+ * The hashes and keys have the same lifetime as @a traversal_info.
+ *
+ * @since New in 1.5.
+ */
+void svn_wc_traversed_depths(apr_hash_t **depths,
+                             svn_wc_traversal_info_t *traversal_info);
+
+
 /** One external item.  This usually represents one line from an
  * svn:externals description but with the path and URL
  * canonicalized.
@@ -502,7 +526,7 @@ typedef struct svn_wc_external_item2_t
       svn_opt_revision_head. */
   svn_opt_revision_t revision;
 
-  /** The peg revision to use when checking out.  THe only valid kinds are
+  /** The peg revision to use when checking out.  The only valid kinds are
       svn_opt_revision_number, svn_opt_revision_date, and
       svn_opt_revision_head. */
   svn_opt_revision_t peg_revision;
@@ -568,7 +592,9 @@ svn_wc_external_item_dup(const svn_wc_external_item_t *item,
 
 /**
  * If @a externals_p is non-NULL, set @a *externals_p to an array of
- * @c svn_wc_external_item2_t * objects based on @a desc.
+ * @c svn_wc_external_item2_t * objects based on @a desc.  The @a url
+ * member of the objects will be canonicalized if @a canonicalize_url
+ * is @c TRUE.
  *
  * If the format of @a desc is invalid, don't touch @a *externals_p and
  * return @c SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION.  Thus, if
@@ -588,12 +614,14 @@ svn_error_t *
 svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
                                     const char *parent_directory,
                                     const char *desc,
+                                    svn_boolean_t canonicalize_url,
                                     apr_pool_t *pool);
 
 /**
- * Similar to svn_wc_parse_externals_description3(), but returns an
- * array of @c svn_wc_external_item_t * objects instead of
- * @c svn_wc_external_item2_t * objects.
+ * Similar to svn_wc_parse_externals_description3() with @a
+ * canonicalize_url set to @c TRUE, but returns an array of @c
+ * svn_wc_external_item_t * objects instead of @c
+ * svn_wc_external_item2_t * objects
  *
  * @since New in 1.1.
  *
@@ -735,9 +763,16 @@ typedef enum svn_wc_notify_action_t
   /** Failed to update a path's changelist association. @since New in 1.5. */
   svn_wc_notify_changelist_failed,
 
+  /** Warn user that a path has moved from one changelist to another.
+      @since New in 1.5. */
+  svn_wc_notify_changelist_moved,
+
   /** A merge operation (to path) has begun.  See @c merge_range in
       @c svn_wc_notify_t.  @since New in 1.5   */
   svn_wc_notify_merge_begin,
+
+  /** Replace notification. */
+  svn_wc_notify_update_replace,
 
 } svn_wc_notify_action_t;
 
@@ -932,11 +967,48 @@ typedef svn_error_t *(*svn_wc_get_file_t)(void *baton,
 
 
 /**
- * Conflict handling
+ * Interactive conflict handling
  *
- * @defgroup clnt_diff Conflict callback functionality
+ * @defgroup svn_wc_conflict Conflict callback functionality
  *
  * @{
+ *
+ * This API gives a Subversion client application the opportunity to
+ * define a callback that allows the user to resolve conflicts
+ * interactively during updates and merges.
+ *
+ * If a conflict is discovered, libsvn_wc invokes the callback with an
+ * @c svn_wc_conflict_description_t.  This structure describes the
+ * path in conflict, whether it's a text or property conflict, and may
+ * also present up to three files that can be used to resolve the
+ * conflict (perhaps by launching an editor or 3rd-party merging
+ * tool).  The structure also provides a possible fourth file (@c
+ * merged_file) which, if not NULL, represents libsvn_wc's attempt to
+ * contextually merge the first three files.  (Note that libsvn_wc
+ * will not attempt to merge a file that it believes is binary, and it
+ * will only attempt to merge property values it believes to be a
+ * series of multi-line text.)
+ *
+ * When the callback is finished interacting with the user, it
+ * responds by returning a @c svn_wc_conflict_result_t.  This
+ * structure indicates whether the user wants to postpone the conflict
+ * for later (allowing libsvn_wc to mark the path "conflicted" as
+ * usual), or whether the user wants libsvn_wc to use one of the four
+ * files as the "final" state for resolving the conflict immediately.
+ *
+ * Note that the callback is at liberty (and encouraged) to merge the
+ * three files itself.  If it does so, it signals this to libsvn_wc by
+ * returning a choice of @c svn_wc_conflict_choose_merged.  To return
+ * the 'final' merged file to libsvn_wc, the callback has the option of
+ * either:
+ *
+ *    - editing the original @c merged_file in-place
+ *
+ *        or, if libsvn_wc never supplied a merged_file in the
+ *        description structure (i.e. passed NULL for that field),
+ *
+ *    - return the merged file in the @c svn_wc_conflict_result_t.
+ *
  */
 
 /** The type of action being attempted on an object.
@@ -967,6 +1039,21 @@ typedef enum svn_wc_conflict_reason_t
 } svn_wc_conflict_reason_t;
 
 
+/** The type of conflict being described by an @c
+ * svn_wc_conflict_description_t (see below).
+ *
+ * @since New in 1.5.
+ */
+typedef enum svn_wc_conflict_kind_t
+{
+  svn_wc_conflict_kind_text,         /* textual conflict (on a file) */
+  svn_wc_conflict_kind_property,     /* property conflict (on a file or dir) */
+
+  /* ### Add future kinds here that represent "tree" conflicts. */
+
+} svn_wc_conflict_kind_t;
+
+
 /** A struct that describes a conflict that has occurred in the
  * working copy.  Passed to @c svn_wc_conflict_resolver_func_t.
  *
@@ -982,15 +1069,21 @@ typedef struct svn_wc_conflict_description_t
   const char *path;
   svn_node_kind_t node_kind;
 
+  /** What sort of conflict are we describing? */
+  svn_wc_conflict_kind_t kind;
+
+  /** Only set if this is a property conflict. */
+  const char *property_name;
+
   /** The following only apply to file objects:
    *   - Whether svn thinks the object is a binary file.
-   *   - If available (non-NULL), the svn:mime-type of the path */
+   *   - If available (non-NULL), the svn:mime-type property of the path */
   svn_boolean_t is_binary;
   const char *mime_type;
 
-  /** If available (non-NULL), an open working copy access baton to
-   *  either the path itself (if @c path is a directory), or to the
-   *  parent directory (if @c path is a file.) */
+  /** If not NULL, an open working copy access baton to either the
+   *  path itself (if @c path is a directory), or to the parent
+   *  directory (if @c path is a file.) */
   svn_wc_adm_access_t *access;
 
   /* The action being attempted on @c path. */
@@ -999,49 +1092,90 @@ typedef struct svn_wc_conflict_description_t
   /* The reason for the conflict. */
   svn_wc_conflict_reason_t reason;
 
-  /** If the conflict involves the merging of two files descended from
-   * a common ancestor, here are the paths of up to four fulltext
-   * files that can be used to interactively resolve the conflict.
-   * All four files will be in repository-normal form -- LF line endings
-   * and contracted keywords.  (If any of these files are not available,
-   * they default to NULL.) */
-
+  /** If this is text-conflict and involves the merging of two files
+   * descended from a common ancestor, here are the paths of up to
+   * four fulltext files that can be used to interactively resolve the
+   * conflict.  All four files will be in repository-normal form -- LF
+   * line endings and contracted keywords.  (If any of these files are
+   * not available, they default to NULL.)
+   *
+   * On the other hand, if this is a property-conflict, then these
+   * paths represent temporary files that contain the three different
+   * property-values in conflict.  The fourth path (@c merged_file)
+   * may or may not be NULL;  if set, it represents libsvn_wc's
+   * attempt to merge the property values together.  (Remember that
+   * property values are technically binary values, and thus can't
+   * always be merged.)
+   */
   const char *base_file;     /* common ancestor of the two files being merged */
-  const char *repos_file;    /* repository's version of the file */
-  const char *user_file;     /* user's locally-edited version of the file */
-  const char *merged_file;   /* merged version of file; has conflict markers */
+  const char *their_file;    /* their version of the file */
+  const char *my_file;       /* my locally-edited version of the file */
+  const char *merged_file;   /* merged version; may contain conflict markers */
 
 } svn_wc_conflict_description_t;
 
 
-/** The final result returned by the conflict callback.  If the
- * callback wholly resolves the conflict by itself, it would return @c
- * svn_wc_conflict_result_resolved.  If the conflict still persists,
- * then return @c svn_wc_conflict_result_conflicted.  In the case of
- * file conflicts, the callback may instead signal that the user
- * wishes to resolve the conflict by "choosing" one of the four
- * fulltext files.
+/** The way in which the conflict callback chooses a course of action.
  *
  * @since New in 1.5.
  */
-typedef enum svn_wc_conflict_result_t
+typedef enum svn_wc_conflict_choice_t
 {
-  svn_wc_conflict_result_conflicted,    /* user did nothing; conflict remains */
-  svn_wc_conflict_result_resolved,      /* user has resolved the conflict */
+  /* Don't resolve the conflict now.  Let libsvn_wc mark the path
+     'conflicted', so user can run 'svn resolved' later. */
+  svn_wc_conflict_choose_postpone,
 
-  /* The following results only apply to file-conflicts.  Note that
-     they're all specific ways of saying that the conflict is
-     resolved, in the sense that the user has chosen one of the four
-     files. The caller of the conflict-callback is responsible for
-     "installing" the chosen file as the final version of the file.*/
+  /* If their were files to choose from, select one as a way of
+     resolving the conflict here and now.  libsvn_wc will then do the
+     work of "installing" the chosen file.
+  */
+  svn_wc_conflict_choose_base,   /* user chooses the original version */
+  svn_wc_conflict_choose_theirs, /* user chooses incoming version */
+  svn_wc_conflict_choose_mine,   /* user chooses his/her own version */
+  svn_wc_conflict_choose_merged, /* user chooses the merged version */
 
-  svn_wc_conflict_result_choose_base,   /* user chooses the base file */
-  svn_wc_conflict_result_choose_repos,  /* user chooses the repository file */
-  svn_wc_conflict_result_choose_user,   /* user chooses own version of file */
-  svn_wc_conflict_result_choose_merged  /* user chooses the merged-file
-                                           (which she may have
-                                           manually edited) */
+} svn_wc_conflict_choice_t;
+
+
+/** The final result returned by @a svn_wc_conflict_resolver_func_t.
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, to preserve binary compatibility, users
+ * should not directly allocate structures of this type.  Instead,
+ * construct this structure using @c svn_wc_create_conflict_result()
+ * below.
+ *
+ * @since New in 1.5.
+ */
+typedef struct svn_wc_conflict_result_t
+{
+  /* A choice to either delay the conflict resolution or select a
+     particular file to resolve the conflict. */
+  svn_wc_conflict_choice_t choice;
+
+  /* If not NULL, this is a path to a file which contains the client's
+     (or more likely, the user's) merging of the three values in
+     conflict.  libsvn_wc accepts this file if (and only if) @c choice
+     is set to @c svn_wc_conflict_choose_merged.*/
+  const char *merged_file;
+
 } svn_wc_conflict_result_t;
+
+
+/**
+ * Allocate an @c svn_wc_conflict_result_t structure in @a pool,
+ * initialize and return it.
+ *
+ * Set the @c choice field of the structure to @a choice, and @c
+ * merged_file to @a merged_file.  Set all other fields to their @c
+ * _unknown, @c NULL or invalid value, respectively.
+ *
+ * @since New in 1.5.
+ */
+svn_wc_conflict_result_t *
+svn_wc_create_conflict_result(svn_wc_conflict_choice_t choice,
+                              const char *merged_file,
+                              apr_pool_t *pool);
 
 
 /** A callback used in svn_client_merge3(), svn_client_update3(), and
@@ -1052,8 +1186,8 @@ typedef enum svn_wc_conflict_result_t
  * provides information to help resolve it.  @a baton is a closure
  * object; it should be provided by the implementation, and passed by
  * the caller.  All allocations should be performed in @a pool.  When
- * finished, the callback signals its resolution by setting @a *result
- * to a proper enumerated state.  (See @c svn_wc_conflict_result_t.)
+ * finished, the callback signals its resolution by returning a
+ * structure in @a *result.  (See @c svn_wc_conflict_result_t.)
  *
  * Implementations of this callback are free to present the conflict
  * using any user interface.  This may include simple contextual
@@ -1067,7 +1201,7 @@ typedef enum svn_wc_conflict_result_t
  * @since New in 1.5.
  */
 typedef svn_error_t *(*svn_wc_conflict_resolver_func_t)
-    (svn_wc_conflict_result_t *result,
+    (svn_wc_conflict_result_t **result,
      const svn_wc_conflict_description_t *description,
      void *baton,
      apr_pool_t *pool);
@@ -2041,10 +2175,10 @@ typedef struct svn_wc_status2_t
   const char *url;
 
   /**
-   * @defgroup svn_wc_status_ood WC out of date info from the repository
+   * @defgroup svn_wc_status_ood WC out-of-date info from the repository
    * @{
    *
-   * When the working copy item is out of date compared to the
+   * When the working copy item is out-of-date compared to the
    * repository, the following fields represent the state of the
    * youngest revision of the item in the repository.  If the working
    * copy is not out of date, the fields are initialized as described
@@ -2070,7 +2204,7 @@ typedef struct svn_wc_status2_t
 
   /** Set to the user name of the youngest commit, or @c NULL if not
    * out of date or non-existent.  Because a non-existent @c
-   * svn:author property has the same behavior as an out of date
+   * svn:author property has the same behavior as an out-of-date
    * working copy, examine @c ood_last_cmt_rev to determine whether
    * the working copy is out of date.
    * @since New in 1.3
@@ -2290,7 +2424,7 @@ svn_error_t *svn_wc_get_status_editor3(const svn_delta_editor_t **editor,
  * provided from the corresponding value in @a config, and @a recurse
  * instead of @a depth.  If @a recurse is true, behave as if for @c
  * svn_depth_infinity; else if @a recurse is false, behave as if for
- * @c svn_depth_files.
+ * @c svn_depth_immediates.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -2653,18 +2787,21 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  * Assuming @a path is under version control and in a state of conflict,
  * then take @a path *out* of this state.  If @a resolve_text is true then
  * any text conflict is resolved, if @a resolve_props is true then any
- * property conflicts are resolved.  If @a recurse is true, then search
- * recursively for conflicts to resolve.
+ * property conflicts are resolved.
  *
- * @a accept_ is the argument used to facilitate automatic conflict resolution.
- * If @a accept_ is svn_accept_left, the contents of the conflicted file will
- * be replaced with the prestine contents of the pre-modification base file
- * contents.  If @a accept_ is svn_accept_right, the contents of the conflicted
- * file will be replaced with the post-conflict base file contents.  If @a
- * accept_ is svn_accept_working, the contents of the conflicted file will be
- * the content of the pre-conflict working copy file.  If @a accept_ is
- * svn_accept_default, conflict resolution will be handled just like before
- * automatic conflict resolution was availble.
+ * If @a depth is @c svn_depth_empty, act only on @a path; if
+ * @c svn_depth_files, resolve @a path and its conflicted file
+ * children (if any); if @c svn_depth_immediates, resolve @a path and
+ * all its immediate conflicted children (both files and directories,
+ * if any); if @c svn_depth_infinity, resolve @a path and every
+ * conflicted file or directory anywhere beneath it.
+ *
+ * If @a conflict_choice is svn_wc_conflict_choose_base, resolve the
+ * conflict with the old file contents; if
+ * svn_wc_conflict_choose_mine, use the original working contents;
+ * if svn_wc_conflict_choose_theirs, the new contents; and if
+ * svn_wc_conflict_choose_merged, don't change the contents at all,
+ * just remove the conflict status (i.e. pre-1.5 behavior).
  *
  * @a adm_access is an access baton, with a write lock, for @a path.
  *
@@ -2693,8 +2830,8 @@ svn_error_t *svn_wc_resolved_conflict3(const char *path,
                                        svn_wc_adm_access_t *adm_access,
                                        svn_boolean_t resolve_text,
                                        svn_boolean_t resolve_props,
-                                       svn_boolean_t recurse,
-                                       svn_accept_t accept_,
+                                       svn_depth_t depth,
+                                       svn_wc_conflict_choice_t conflict_choice,
                                        svn_wc_notify_func2_t notify_func,
                                        void *notify_baton,
                                        svn_cancel_func_t cancel_func,
@@ -2704,7 +2841,9 @@ svn_error_t *svn_wc_resolved_conflict3(const char *path,
 
 /**
  * Similar to svn_wc_resolved_conflict3(), but without automatic conflict
- * resolution support.
+ * resolution support, and with @a depth set according to @a recurse:
+ * if @a recurse is true, @a depth is @c svn_depth_infinity, else it is
+ * @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -2925,6 +3064,12 @@ svn_error_t *svn_wc_process_committed(const char *path,
  * course.  If @a depth is @c svn_depth_unknown, then just use
  * @c svn_depth_infinity, which in practice means depth of @a path.
  *
+ * Iff @a depth_compatibility_trick is TRUE, then set the @c start_empty
+ * flag on @a reporter->set_path() and @a reporter->link_path() calls
+ * as necessary to trick a pre-1.5 (i.e., depth-unaware) server into
+ * sending back all the items the client might need to upgrade a
+ * working copy from a shallower depth to a deeper one.
+ *
  * If @a restore_files is true, then unexpectedly missing working files
  * will be restored from the administrative directory's cache. For each
  * file restored, the @a notify_func function will be called with the
@@ -2946,6 +3091,7 @@ svn_wc_crawl_revisions3(const char *path,
                         void *report_baton,
                         svn_boolean_t restore_files,
                         svn_depth_t depth,
+                        svn_boolean_t depth_compatibility_trick,
                         svn_boolean_t use_commit_times,
                         svn_wc_notify_func2_t notify_func,
                         void *notify_baton,
@@ -3192,6 +3338,12 @@ svn_error_t *svn_wc_get_update_editor(svn_revnum_t *target_revision,
  * If @a cancel_func is non-NULL, it will be called with @a cancel_baton as
  * the switch progresses to determine if it should continue.
  *
+ * If @a conflict_func is non-NULL, then invoke it with @a
+ * conflict_baton whenever a conflict is encountered, giving the
+ * callback a chance to resolve the conflict before the editor takes
+ * more drastic measures (such as marking a file conflicted, or
+ * bailing out of the switch).
+ *
  * If @a diff3_cmd is non-NULL, then use it as the diff3 command for
  * any merging; otherwise, use the built-in merge code.
  *
@@ -3229,6 +3381,8 @@ svn_error_t *svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                                        void *notify_baton,
                                        svn_cancel_func_t cancel_func,
                                        void *cancel_baton,
+                                       svn_wc_conflict_resolver_func_t conflict_func,
+                                       void *conflict_baton,
                                        const char *diff3_cmd,
                                        apr_array_header_t *preserved_exts,
                                        const svn_delta_editor_t **editor,
@@ -3239,9 +3393,9 @@ svn_error_t *svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
 /**
  * Similar to svn_wc_get_switch_editor3() but with the
  * @a allow_unver_obstructions parameter always set to false,
- * @a preserved_exts set to NULL, and @a depth set according to @a
- * recurse: if @a recurse is true, pass @c svn_depth_infinity, if
- * false, pass @c svn_depth_files.
+ * @a preserved_exts set to NULL, @a conflict_func and baton set to NULL,
+ * and @a depth set according to @a recurse: if @a recurse is true, pass @c
+ * svn_depth_infinity, if false, pass @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -3417,7 +3571,7 @@ typedef svn_error_t *(*svn_wc_canonicalize_svn_prop_get_file_t)
  * skip_some_checks is true, only some validity checks are taken.
  *
  * Some validity checks require access to the contents and MIME type
- * of the target if it is a file; they will call @a getter with @a
+ * of the target if it is a file; they will call @a prop_getter with @a
  * getter_baton, which then needs to set the MIME type and print the
  * contents of the file to the given stream.
  *
@@ -3433,7 +3587,7 @@ svn_error_t *svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
                                           const char *path,
                                           svn_node_kind_t kind,
                                           svn_boolean_t skip_some_checks,
-                                          svn_wc_canonicalize_svn_prop_get_file_t getter,
+                                          svn_wc_canonicalize_svn_prop_get_file_t prop_getter,
                                           void *getter_baton,
                                           apr_pool_t *pool);
 
@@ -3811,7 +3965,27 @@ svn_error_t *svn_wc_merge(const char *left,
  * If @a path is not under version control, return the error
  * SVN_ERR_UNVERSIONED_RESOURCE and don't touch anyone's properties.
  *
- * @since New in 1.3.
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_wc_merge_props2(svn_wc_notify_state_t *state,
+                    const char *path,
+                    svn_wc_adm_access_t *adm_access,
+                    apr_hash_t *baseprops,
+                    const apr_array_header_t *propchanges,
+                    svn_boolean_t base_merge,
+                    svn_boolean_t dry_run,
+                    svn_wc_conflict_resolver_func_t conflict_func,
+                    void *conflict_baton,
+                    apr_pool_t *pool);
+
+
+/**
+ * Same as svn_wc_merge_props2(), but with a @a conflict_func (and
+ * baton) of NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
+ *
  */
 svn_error_t *
 svn_wc_merge_props(svn_wc_notify_state_t *state,
@@ -4356,6 +4530,10 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
  * For each path in @a paths, set its entry's 'changelist' attribute
  * to @a changelist.  (If @a changelist is NULL, then path is no
  * longer a member of any changelist).
+ *
+ * NOTE:  for now, directories are NOT allowed to be associated with
+ * changelists;  there is confusion about whether they should/do
+ * behave as depth-0 or depth-infinity objects.
  *
  * If @a matching_changelist is not NULL, then enforce that each
  * path's existing entry->changelist field matches @a

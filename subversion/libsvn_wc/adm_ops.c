@@ -1977,7 +1977,7 @@ svn_wc_revert3(const char *path,
 
   /* Safeguard 1:  is this a versioned resource? */
   SVN_ERR_W(svn_wc__entry_versioned(&entry, path, dir_access, FALSE, pool),
-            _("Cannot revert."));
+            _("Cannot revert"));
 
   /* Safeguard 1.5: is this a missing versioned directory? */
   if (entry->kind == svn_node_dir)
@@ -2546,9 +2546,12 @@ attempt_deletion(const char *parent_dir,
 
 /* Conflict resolution involves removing the conflict files, if they exist,
    and clearing the conflict filenames from the entry.  The latter needs to
-   be done whether or not the conflict files exist.  If @a accept is anything
-   but svn_accept_default, automatically resolve the
-   conflict with the respective temporary file contents.
+   be done whether or not the conflict files exist.  If @a conflict_choice
+   is svn_wc_conflict_choose_base, resolve the conflict with the old
+   file contents; if svn_wc_conflict_choose_mine, use the original
+   working contents; if svn_wc_conflict_choose_theirs, the new
+   contents; and if svn_wc_conflict_choose_merged, don't change the
+   contents at all, just remove the conflict status (i.e. pre-1.5 behavior).
 
    @since 1.5 Automatic Conflict Resolution (Issue 2784)
 
@@ -2563,7 +2566,7 @@ resolve_conflict_on_entry(const char *path,
                           const char *base_name,
                           svn_boolean_t resolve_text,
                           svn_boolean_t resolve_props,
-                          svn_accept_t accept_which,
+                          svn_wc_conflict_choice_t conflict_choice,
                           svn_wc_notify_func2_t notify_func,
                           void *notify_baton,
                           apr_pool_t *pool)
@@ -2575,23 +2578,23 @@ resolve_conflict_on_entry(const char *path,
 
   /* Handle automatic conflict resolution before the temporary files are
    * deleted, if necessary. */
-  switch (accept_which)
+  switch (conflict_choice)
     {
-      case svn_accept_left:
-        auto_resolve_src = entry->conflict_old;
-        break;
-      case svn_accept_working:
-        auto_resolve_src = entry->conflict_wrk;
-        break;
-      case svn_accept_right:
-        auto_resolve_src = entry->conflict_new;
-        break;
-      case svn_accept_none:
-        auto_resolve_src = NULL;
-        break;
-      case svn_accept_invalid:
-        return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                _("Invalid 'accept' argument"));
+    case svn_wc_conflict_choose_base:
+      auto_resolve_src = entry->conflict_old;
+      break;
+    case svn_wc_conflict_choose_mine:
+      auto_resolve_src = entry->conflict_wrk;
+      break;
+    case svn_wc_conflict_choose_theirs:
+      auto_resolve_src = entry->conflict_new;
+      break;
+    case svn_wc_conflict_choose_merged:
+      auto_resolve_src = NULL;
+      break;
+    default:
+      return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                              _("Invalid 'conflict_result' argument"));
     }
 
     if (auto_resolve_src)
@@ -2675,7 +2678,7 @@ struct resolve_callback_baton
   /* TRUE if property conflicts are to be resolved. */
   svn_boolean_t resolve_props;
   /* The type of automatic conflict resolution to perform */
-  svn_accept_t accept_;
+  svn_wc_conflict_choice_t conflict_choice;
   /* An access baton for the tree, with write access */
   svn_wc_adm_access_t *adm_access;
   /* Notification function and baton */
@@ -2710,7 +2713,7 @@ resolve_found_entry_callback(const char *path,
 
   return resolve_conflict_on_entry(path, entry, adm_access, base_name,
                                    baton->resolve_text, baton->resolve_props,
-                                   baton->accept_, baton->notify_func,
+                                   baton->conflict_choice, baton->notify_func,
                                    baton->notify_baton, pool);
 }
 
@@ -2758,7 +2761,8 @@ svn_wc_resolved_conflict2(const char *path,
                           apr_pool_t *pool)
 {
   return svn_wc_resolved_conflict3(path, adm_access, resolve_text,
-                                   resolve_props, recurse, svn_accept_none,
+                                   resolve_props, recurse,
+                                   svn_wc_conflict_choose_merged,
                                    notify_func, notify_baton, cancel_func,
                                    cancel_baton, pool);
 }
@@ -2768,8 +2772,8 @@ svn_wc_resolved_conflict3(const char *path,
                           svn_wc_adm_access_t *adm_access,
                           svn_boolean_t resolve_text,
                           svn_boolean_t resolve_props,
-                          svn_boolean_t recurse,
-                          svn_accept_t accept_,
+                          svn_depth_t depth,
+                          svn_wc_conflict_choice_t conflict_choice,
                           svn_wc_notify_func2_t notify_func,
                           void *notify_baton,
                           svn_cancel_func_t cancel_func,
@@ -2783,9 +2787,9 @@ svn_wc_resolved_conflict3(const char *path,
   baton->adm_access = adm_access;
   baton->notify_func = notify_func;
   baton->notify_baton = notify_baton;
-  baton->accept_ = accept_;
+  baton->conflict_choice = conflict_choice;
 
-  if (! recurse)
+  if (depth == svn_depth_empty)
     {
       const svn_wc_entry_t *entry;
       SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
@@ -2795,10 +2799,7 @@ svn_wc_resolved_conflict3(const char *path,
   else
     {
       SVN_ERR(svn_wc_walk_entries3(path, adm_access,
-                                   &resolve_walk_callbacks, baton,
-                                   /* Reduntant, since we know recurse
-                                      is true, but good style. */
-                                   SVN_DEPTH_FROM_RECURSE(recurse),
+                                   &resolve_walk_callbacks, baton, depth,
                                    FALSE, cancel_func, cancel_baton, pool));
 
     }
@@ -2921,6 +2922,30 @@ svn_wc_set_changelist(const apr_array_header_t *paths,
           continue;
         }
 
+      /* Is path a directory?  Skip it.
+
+         ### TODO(sussman): we may want to allow directories to be
+             members of changelists one day, but we'll have to make
+             them take --depth arguments or something, to Do It Right.
+      */
+      if (entry->kind == svn_node_dir)
+        {
+          if (notify_func)
+            {
+              svn_error_t *unversioned_err =
+                  svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
+                                    _("'%s' is a directory, and thus cannot"
+                                      " be a member of a changelist"),
+                                    path);
+              notify = svn_wc_create_notify(path,
+                                            svn_wc_notify_changelist_failed,
+                                            iterpool);
+              notify->err = unversioned_err;
+              notify_func(notify_baton, notify, iterpool);
+            }
+          continue;
+        }
+
       /* Possibly enforce matching with an existing changelist. */
       if (matching_changelist != NULL)
         {
@@ -2941,6 +2966,26 @@ svn_wc_set_changelist(const apr_array_header_t *paths,
                   notify_func(notify_baton, notify, iterpool);
                 }
               continue;
+            }
+        }
+
+      /* If the path is already a member of a changelist, warn the
+         user about this, but still allow the reassignment to happen.
+      */
+      if (entry->changelist && changelist)
+        {
+          if (notify_func)
+            {
+              svn_error_t *unversioned_err =
+                  svn_error_createf(SVN_ERR_WC_CHANGELIST_MOVE, NULL,
+                                    _("Removing '%s' from"
+                                      " changelist '%s'."),
+                                    path, entry->changelist);
+              notify = svn_wc_create_notify(path,
+                                            svn_wc_notify_changelist_moved,
+                                            iterpool);
+              notify->err = unversioned_err;
+              notify_func(notify_baton, notify, iterpool);
             }
         }
 

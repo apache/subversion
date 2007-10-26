@@ -22,6 +22,7 @@
 #include <apr_file_io.h>
 #include <apr_md5.h>
 
+#include "svn_compat.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_path.h"
@@ -119,11 +120,13 @@ struct file_baton
 
 /* Create and return a generic out-of-dateness error. */
 static svn_error_t *
-out_of_date(const char *path, const char *txn_name)
+out_of_date(const char *path, svn_node_kind_t kind)
 {
   return svn_error_createf(SVN_ERR_FS_TXN_OUT_OF_DATE, NULL,
-                           _("Out of date: '%s' in transaction '%s'"),
-                           path, txn_name);
+                           (kind == svn_node_dir
+                            ? _("Directory '%s' is out of date")
+                            : _("File '%s' is out of date")),
+                           path);
 }
 
 
@@ -241,7 +244,7 @@ delete_entry(const char *path,
      deleting, else return an out-of-dateness error. */
   SVN_ERR(svn_fs_node_created_rev(&cr_rev, eb->txn_root, full_path, pool));
   if (SVN_IS_VALID_REVNUM(revision) && (revision < cr_rev))
-    return out_of_date(full_path, eb->txn_name);
+    return out_of_date(full_path, kind);
 
   /* This routine is a mindless wrapper.  We call svn_fs_delete_tree
      because that will delete files and recursively delete
@@ -311,7 +314,7 @@ add_directory(const char *path,
          out-of-dateness error. */
       SVN_ERR(svn_fs_check_path(&kind, eb->txn_root, full_path, subpool));
       if ((kind != svn_node_none) && (! pb->was_copied))
-        return out_of_date(full_path, eb->txn_name);
+        return out_of_date(full_path, kind);
 
       /* For now, require that the url come from the same repository
          that this commit is operating on. */
@@ -455,7 +458,7 @@ add_file(const char *path,
          out-of-dateness error. */
       SVN_ERR(svn_fs_check_path(&kind, eb->txn_root, full_path, subpool));
       if ((kind != svn_node_none) && (! pb->was_copied))
-        return out_of_date(full_path, eb->txn_name);
+        return out_of_date(full_path, kind);
 
       /* For now, require that the url come from the same repository
          that this commit is operating on. */
@@ -534,7 +537,7 @@ open_file(const char *path,
   /* If the node our caller has is an older revision number than the
      one in our transaction, return an out-of-dateness error. */
   if (SVN_IS_VALID_REVNUM(base_revision) && (base_revision < cr_rev))
-    return out_of_date(full_path, eb->txn_name);
+    return out_of_date(full_path, svn_node_file);
 
   /* Build a new file baton */
   new_fb = apr_pcalloc(pool, sizeof(*new_fb));
@@ -623,7 +626,7 @@ change_dir_prop(void *dir_baton,
                                       eb->txn_root, db->path, pool));
 
       if (db->base_rev < created_rev)
-        return out_of_date(db->path, eb->txn_name);
+        return out_of_date(db->path, svn_node_dir);
     }
 
   return svn_repos_fs_change_node_prop(eb->txn_root, db->path,

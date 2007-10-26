@@ -31,18 +31,18 @@
 #include "client.h"
 
 #include "svn_client.h"
+#include "svn_compat.h"
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_sorts.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
-#include "private/svn_client_private.h"
 
 
 /*** Getting misc. information ***/
 
-/* A log callback conforming to the svn_log_message_receiver2_t
+/* A log callback conforming to the svn_log_entry_receiver_t
    interface for obtaining the last revision of a node at a path and
    storing it in *BATON (an svn_revnum_t). */
 static svn_error_t *
@@ -64,13 +64,14 @@ svn_client__oldest_rev_at_path(svn_revnum_t *oldest_rev,
                                apr_pool_t *pool)
 {
   apr_array_header_t *rel_paths = apr_array_make(pool, 1, sizeof(rel_path));
+  apr_array_header_t *revprops = apr_array_make(pool, 0, sizeof(char *));
   *oldest_rev = SVN_INVALID_REVNUM;
   APR_ARRAY_PUSH(rel_paths, const char *) = rel_path;
 
   /* Trace back in history to find the revision at which this node
      was created (copied or added). */
   return svn_ra_get_log2(ra_session, rel_paths, 1, rev, 1, FALSE, TRUE,
-                         FALSE, TRUE, revnum_receiver, oldest_rev, pool);
+                         FALSE, revprops, revnum_receiver, oldest_rev, pool);
 }
 
 /* The baton for use with copyfrom_info_receiver(). */
@@ -207,70 +208,90 @@ svn_client__get_copy_source(const char *path_or_url,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
-                                 const char *path_or_url,
-                                 const svn_opt_revision_t *peg_revision,
-                                 svn_client_ctx_t *ctx,
-                                 apr_pool_t *pool)
+
+/* compatibility with pre-1.5 servers, which send only author/date/log
+ *revprops in log entries */
+typedef struct
 {
-  const char *repos_root;
-  const char *copyfrom_path;
-  apr_array_header_t *list;
-  svn_revnum_t copyfrom_rev;
-  apr_hash_t *mergeinfo;
-  apr_hash_index_t *hi;
+  svn_client_ctx_t *ctx;
+  /* ra session for retrieving revprops from old servers */
+  svn_ra_session_t *ra_session;
+  /* caller's list of requested revprops, receiver, and baton */
+  apr_array_header_t *revprops;
+  svn_log_entry_receiver_t receiver;
+  void *baton;
+} pre_15_receiver_baton_t;
 
-  list = apr_array_make(pool, 1, sizeof(const char *));
+static svn_error_t *
+pre_15_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
+{
+  pre_15_receiver_baton_t *rb = baton;
 
-  /* In our ideal algorithm, the list of recommendations should be
-     ordered by:
+  if (log_entry->revision == SVN_INVALID_REVNUM)
+    return rb->receiver(rb->baton, log_entry, pool);
 
-        1. The most recent existing merge source.
-        2. The copyfrom source (which will also be listed as a merge
-           source if the copy was made with a 1.5+ client and server).
-        3. All other merge sources, most recent to least recent.
-
-     However, determining the order of application of merge sources
-     requires a new RA API.  Until such an API is available, our
-     algorithm will be:
-
-        1. The copyfrom source.
-        2. All remaining merge sources (unordered).
-  */
-
-  /* ### TODO: Share ra_session batons to improve efficiency? */
-  SVN_ERR(svn_client__get_repos_root(&repos_root, path_or_url, peg_revision, 
-                                     NULL, ctx, pool));
-  SVN_ERR(svn_client__get_copy_source(path_or_url, peg_revision, 
-                                      &copyfrom_path, &copyfrom_rev, 
-                                      ctx, pool));
-  if (copyfrom_path)
+  /* If only some revprops are requested, get them one at a time on the
+     second ra connection.  If all are requested, get them all with
+     svn_ra_rev_proplist.  This avoids getting unrequested revprops (which
+     may be arbitrarily large), but means one round-trip per requested
+     revprop.  epg isn't entirely sure which should be optimized for. */
+  if (rb->revprops)
     {
-      copyfrom_path = svn_path_join(repos_root, 
-                                    svn_path_uri_encode(copyfrom_path + 1, 
-                                                        pool),
-                                    pool);
-      APR_ARRAY_PUSH(list, const char *) = copyfrom_path;
-    }
-
-  SVN_ERR(svn_client_mergeinfo_get_merged(&mergeinfo, path_or_url, 
-                                          peg_revision, ctx, pool));
-  if (mergeinfo)
-    {
-      for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
+      int i;
+      svn_boolean_t want_author, want_date, want_log;
+      want_author = want_date = want_log = FALSE;
+      for (i = 0; i < rb->revprops->nelts; i++)
         {
-          const char *merge_path;
-          apr_hash_this(hi, (void *)(&merge_path), NULL, NULL);
-          if (copyfrom_path == NULL || strcmp(merge_path, copyfrom_path) != 0)
-            APR_ARRAY_PUSH(list, const char *) = merge_path;
+          const char *name = APR_ARRAY_IDX(rb->revprops, i, const char *);
+          svn_string_t *value;
+
+          /* If a standard revprop is requested, we know it is already in
+             log_entry->revprops if available. */
+          if (strcmp(name, SVN_PROP_REVISION_AUTHOR) == 0)
+            {
+              want_author = TRUE;
+              continue;
+            }
+          if (strcmp(name, SVN_PROP_REVISION_DATE) == 0)
+            {
+              want_date = TRUE;
+              continue;
+            }
+          if (strcmp(name, SVN_PROP_REVISION_LOG) == 0)
+            {
+              want_log = TRUE;
+              continue;
+            }
+          SVN_ERR(svn_ra_rev_prop(rb->ra_session, log_entry->revision,
+                                  name, &value, pool));
+          if (log_entry->revprops == NULL)
+            log_entry->revprops = apr_hash_make(pool);
+          apr_hash_set(log_entry->revprops, (const void *)name,
+                       APR_HASH_KEY_STRING, (const void *)value);
+        }
+      if (log_entry->revprops)
+        {
+          /* Pre-1.5 servers send the standard revprops unconditionally;
+             clear those the caller doesn't want. */
+          if (!want_author)
+            apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_AUTHOR,
+                         APR_HASH_KEY_STRING, NULL);
+          if (!want_date)
+            apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_DATE,
+                         APR_HASH_KEY_STRING, NULL);
+          if (!want_log)
+            apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_LOG,
+                         APR_HASH_KEY_STRING, NULL);
         }
     }
+  else
+    {
+      SVN_ERR(svn_ra_rev_proplist(rb->ra_session, log_entry->revision,
+                                  &log_entry->revprops, pool));
+    }
 
-  *suggestions = list;
-  return SVN_NO_ERROR;
+  return rb->receiver(rb->baton, log_entry, pool);
 }
-
 
 
 /*** Public Interface. ***/
@@ -285,19 +306,19 @@ svn_client_log4(const apr_array_header_t *targets,
                 svn_boolean_t discover_changed_paths,
                 svn_boolean_t strict_node_history,
                 svn_boolean_t include_merged_revisions,
-                svn_boolean_t omit_log_text,
-                svn_log_message_receiver2_t receiver,
-                void *receiver_baton,
+                apr_array_header_t *revprops,
+                svn_log_entry_receiver_t real_receiver,
+                void *real_receiver_baton,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
   svn_ra_session_t *ra_session;
   const char *url_or_path;
-  const char *ignored_url;
-  const char *base_name = NULL;
+  const char *actual_url;
   apr_array_header_t *condensed_targets;
   svn_revnum_t ignored_revnum;
   svn_opt_revision_t session_opt_rev;
+  const char *ra_target;
 
   if ((start->kind == svn_opt_revision_unspecified)
       || (end->kind == svn_opt_revision_unspecified))
@@ -349,6 +370,12 @@ svn_client_log4(const apr_array_header_t *targets,
       apr_array_header_t *target_urls;
       apr_array_header_t *real_targets;
       int i;
+
+      /* See FIXME about multiple wc targets, below. */
+      if (targets->nelts > 1)
+        return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                _("When specifying working copy paths, only "
+                                  "one target may be given"));
 
       /* Get URLs for each target */
       target_urls = apr_array_make(pool, 1, sizeof(const char *));
@@ -404,8 +431,6 @@ svn_client_log4(const apr_array_header_t *targets,
     session_opt_rev.kind = svn_opt_revision_unspecified;
 
   {
-    const char *target;
-
     /* If this is a revision type that requires access to the working copy,
      * we use our initial target path to figure out where to root the RA
      * session, otherwise we use our URL. */
@@ -413,12 +438,12 @@ svn_client_log4(const apr_array_header_t *targets,
         || peg_revision->kind == svn_opt_revision_committed
         || peg_revision->kind == svn_opt_revision_previous
         || peg_revision->kind == svn_opt_revision_working)
-      SVN_ERR(svn_path_condense_targets(&target, NULL, targets, TRUE, pool));
+      SVN_ERR(svn_path_condense_targets(&ra_target, NULL, targets, TRUE, pool));
     else
-      target = url_or_path;
+      ra_target = url_or_path;
 
     SVN_ERR(svn_client__ra_session_from_path(&ra_session, &ignored_revnum,
-                                             &ignored_url, target,
+                                             &actual_url, ra_target,
                                              peg_revision, &session_opt_rev,
                                              ctx, pool));
   }
@@ -444,79 +469,74 @@ svn_client_log4(const apr_array_header_t *targets,
    *
    * in which case we want to avoid recomputing the static revision on
    * every iteration.
+   *
+   * ### FIXME: However, we can't yet handle multiple wc targets anyway.
+   *
+   * We used to iterate over each target in turn, getting the logs for
+   * the named range.  This led to revisions being printed in strange
+   * order or being printed more than once.  This is issue 1550.
+   *
+   * In r11599, jpieper blocked multiple wc targets in svn/log-cmd.c,
+   * meaning this block not only doesn't work right in that case, but isn't
+   * even testable that way (svn has no unit test suite; we can only test
+   * via the svn command).  So, that check is now moved into this function
+   * (see above).
+   *
+   * kfogel ponders future enhancements in r4186:
+   * I think that's okay behavior, since the sense of the command is
+   * that one wants a particular range of logs for *this* file, then
+   * another range for *that* file, and so on.  But we should
+   * probably put some sort of separator header between the log
+   * groups.  Of course, libsvn_client can't just print stuff out --
+   * it has to take a callback from the client to do that.  So we
+   * need to define that callback interface, then have the command
+   * line client pass one down here.
+   *
+   * epg wonders if the repository could send a unified stream of log
+   * entries if the paths and revisions were passed down.
    */
   {
-    svn_error_t *err = SVN_NO_ERROR;  /* Because we might have no targets. */
-    svn_revnum_t start_revnum, end_revnum;
+    svn_revnum_t start_revnum, end_revnum, youngest_rev = SVN_INVALID_REVNUM;
+    const char *path = APR_ARRAY_IDX(targets, 0, const char *);
+    svn_error_t *err;
 
-    svn_boolean_t start_is_local = svn_client__revision_is_local(start);
-    svn_boolean_t end_is_local = svn_client__revision_is_local(end);
+    SVN_ERR(svn_client__get_revision_number
+            (&start_revnum, &youngest_rev, ra_session, start, path, pool));
+    SVN_ERR(svn_client__get_revision_number
+            (&end_revnum, &youngest_rev, ra_session, end, path, pool));
 
-    if (! start_is_local)
-      SVN_ERR(svn_client__get_revision_number
-              (&start_revnum, ra_session, start, base_name, pool));
-
-    if (! end_is_local)
-      SVN_ERR(svn_client__get_revision_number
-              (&end_revnum, ra_session, end, base_name, pool));
-
-    if (start_is_local || end_is_local)
+    /* TODO(epg): Instead of assuming that NOT_IMPLEMENTED means
+     * revprop-filtering is not supported, introduce a new capability
+     * for the new svn_ra_has_capability feature. */
+    if ((err = svn_ra_get_log2(ra_session,
+                               condensed_targets,
+                               start_revnum,
+                               end_revnum,
+                               limit,
+                               discover_changed_paths,
+                               strict_node_history,
+                               include_merged_revisions,
+                               revprops,
+                               real_receiver,
+                               real_receiver_baton,
+                               pool))
+        && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
       {
-        /* ### FIXME: At least one revision is locally dynamic, that
-         * is, we're in a case similar to one of these:
-         *
-         *   $ svn log -rCOMMITTED foo.txt bar.c
-         *   $ svn log -rCOMMITTED:42 foo.txt bar.c
-         *
-         * We'll iterate over each target in turn, getting the logs
-         * for the named range.  This means that certain revisions may
-         * be printed out more than once.  I think that's okay
-         * behavior, since the sense of the command is that one wants
-         * a particular range of logs for *this* file, then another
-         * range for *that* file, and so on.  But we should
-         * probably put some sort of separator header between the log
-         * groups.  Of course, libsvn_client can't just print stuff
-         * out -- it has to take a callback from the client to do
-         * that.  So we need to define that callback interface, then
-         * have the command line client pass one down here.
-         *
-         * In any case, at least it will behave uncontroversially when
-         * passed only one argument, which I would think is the common
-         * case when passing a local dynamic revision word.
-         */
-
-        int i;
-
-        for (i = 0; i < targets->nelts; i++)
-          {
-            const char *target = APR_ARRAY_IDX(targets, i, const char *);
-
-            if (start_is_local)
-              SVN_ERR(svn_client__get_revision_number
-                      (&start_revnum, ra_session, start, target, pool));
-
-            if (end_is_local)
-              SVN_ERR(svn_client__get_revision_number
-                      (&end_revnum, ra_session, end, target, pool));
-
-            err = svn_ra_get_log2(ra_session,
-                                  condensed_targets,
-                                  start_revnum,
-                                  end_revnum,
-                                  limit,
-                                  discover_changed_paths,
-                                  strict_node_history,
-                                  include_merged_revisions,
-                                  omit_log_text,
-                                  receiver,
-                                  receiver_baton,
-                                  pool);
-            if (err)
-              break;
-          }
-      }
-    else  /* both revisions are static, so no loop needed */
-      {
+        /* See above pre-1.5 notes. */
+        pre_15_receiver_baton_t rb;
+        rb.ctx = ctx;
+        SVN_ERR(svn_client_open_ra_session(&rb.ra_session, actual_url,
+                                           ctx, pool));
+        rb.revprops = revprops;
+        rb.receiver = real_receiver;
+        rb.baton = real_receiver_baton;
+        SVN_ERR(svn_client__ra_session_from_path(&ra_session,
+                                                 &ignored_revnum,
+                                                 &actual_url, ra_target,
+                                                 peg_revision,
+                                                 &session_opt_rev,
+                                                 ctx, pool));
+        svn_error_clear(err);
         err = svn_ra_get_log2(ra_session,
                               condensed_targets,
                               start_revnum,
@@ -525,12 +545,11 @@ svn_client_log4(const apr_array_header_t *targets,
                               discover_changed_paths,
                               strict_node_history,
                               include_merged_revisions,
-                              omit_log_text,
-                              receiver,
-                              receiver_baton,
+                              svn_compat_log_revprops_in(pool),
+                              pre_15_receiver,
+                              &rb,
                               pool);
       }
-
     return err;
   }
 }
@@ -548,7 +567,7 @@ svn_client_log3(const apr_array_header_t *targets,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
-  svn_log_message_receiver2_t receiver2;
+  svn_log_entry_receiver_t receiver2;
   void *receiver2_baton;
 
   svn_compat_wrap_log_receiver(&receiver2, &receiver2_baton,
@@ -557,7 +576,8 @@ svn_client_log3(const apr_array_header_t *targets,
 
   return svn_client_log4(targets, peg_revision, start, end, limit,
                          discover_changed_paths, strict_node_history, FALSE,
-                         FALSE, receiver2, receiver2_baton, ctx, pool);
+                         svn_compat_log_revprops_in(pool),
+                         receiver2, receiver2_baton, ctx, pool);
 }
 
 svn_error_t *

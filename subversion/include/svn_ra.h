@@ -56,7 +56,7 @@ const svn_version_t *svn_ra_version(void);
  * @a close_baton as appropriate.
  *
  * @a path is relative to the "root" of the session, defined by the
- * @a repos_url passed to the @c RA->open() vtable call.
+ * @a repos_url passed to svn_ra_open2() vtable call.
  *
  * @a name is the name of the property to fetch. If the property is present,
  * then it is returned in @a value. Otherwise, @a *value is set to @c NULL.
@@ -217,7 +217,7 @@ typedef struct svn_ra_reporter3_t
    * implementor should assume the directory has no entries or props.
    *
    * This will *override* any previous set_path() calls made on parent
-   * paths.  @a path is relative to the URL specified in @c RA->open().
+   * paths.  @a path is relative to the URL specified in svn_ra_open2().
    *
    * If @a lock_token is non-NULL, it is the lock token for @a path in the WC.
    *
@@ -362,7 +362,7 @@ typedef struct svn_ra_reporter_t
 /** A collection of callbacks implemented by libsvn_client which allows
  * an RA layer to "pull" information from the client application, or
  * possibly store information.  libsvn_client passes this vtable to
- * @c RA->open().
+ * svn_ra_open2().
  *
  * Each routine takes a @a callback_baton originally provided with the
  * vtable.
@@ -538,6 +538,14 @@ svn_error_t *svn_ra_open(svn_ra_session_t **session_p,
 svn_error_t *svn_ra_reparent(svn_ra_session_t *ra_session,
                              const char *url,
                              apr_pool_t *pool);
+
+/** Set @a *repos_URL to the repository URL to which @a ra_session was
+ * opened or most recently reparented.
+ */
+svn_error_t *svn_ra_get_session_url(svn_ra_session_t *ra_session,
+                                    const char **url,
+                                    apr_pool_t *pool);
+
 
 /**
  * Get the latest revision number from the repository of @a session.
@@ -862,7 +870,8 @@ svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
 
 /**
  * Similar to svn_ra_do_update2(), but taking @c svn_ra_reporter2_t
- * instead of @c svn_ra_reporter3_t.
+ * instead of @c svn_ra_reporter3_t.  If @a recurse is true, pass
+ * @c svn_depth_infinity for @a depth, else pass @c svn_depth_files.
  *
  * @deprecated Provided for compatibility with the 1.4 API.
  */
@@ -933,7 +942,9 @@ svn_error_t *svn_ra_do_switch2(svn_ra_session_t *session,
 /**
  * Similar to svn_ra_do_switch2(), but taking @c svn_ra_reporter2_t
  * instead of @c svn_ra_reporter3_t, and therefore only able to report
- * @c svn_depth_infinity for depths.
+ * @c svn_depth_infinity for depths.  The switch itself is performed
+ * according to @a recurse: if true, then use @c svn_depth_infinity
+ * for @a depth, else use @c svn_depth_files.
  *
  * @deprecated Provided for compatibility with the 1.4 API.
  */
@@ -1000,7 +1011,9 @@ svn_error_t *svn_ra_do_status2(svn_ra_session_t *session,
 /**
  * Similar to svn_ra_do_status2(), but taking @c svn_ra_reporter2_t
  * instead of @c svn_ra_reporter3_t, and therefore only able to report
- * @c svn_depth_infinity for depths.
+ * @c svn_depth_infinity for depths.  The status operation itself is
+ * performed according to @a recurse: if true, then @a depth is
+ * @c svn_depth_infinity, else it is @c svn_depth_immediates.
  *
  * @deprecated Provided for compatibility with the 1.4 API.
  */
@@ -1087,7 +1100,9 @@ svn_error_t *svn_ra_do_diff3(svn_ra_session_t *session,
 /**
  * Similar to svn_ra_do_diff3(), but taking @c svn_ra_reporter2_t
  * instead of @c svn_ra_reporter3_t, and therefore only able to report
- * @c svn_depth_infinity for depths.
+ * @c svn_depth_infinity for depths.  Perform the diff according to
+ * @a recurse: if true, then @a depth is @c svn_depth_infinity, else
+ * it is @c svn_depth_files.
  *
  * @deprecated Provided for compatibility with the 1.4 API.
  */
@@ -1150,8 +1165,8 @@ svn_error_t *svn_ra_do_diff(svn_ra_session_t *session,
  * If @a include_merged_revisions is set, log information for revisions
  * which have been merged to @a targets will also be returned.
  *
- * If @a omit_log_text is set, the contents of the log message will not
- * be returned.
+ * If @a revprops is NULL, retrieve all revprops; else, retrieve only the
+ * revprops named in the array (i.e. retrieve none if the array is empty).
  *
  * If any invocation of @a receiver returns error, return that error
  * immediately and without wrapping it.
@@ -1166,6 +1181,10 @@ svn_error_t *svn_ra_do_diff(svn_ra_session_t *session,
  *
  * Use @a pool for memory allocation.
  *
+ * @note Pre-1.5 servers do not support custom revprop retrieval; if @a
+ * revprops is NULL or contains a revprop other than svn:author, svn:date,
+ * or svn:log, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is returned.
+ *
  * @since New in 1.5.
  */
 
@@ -1177,15 +1196,16 @@ svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
                              svn_boolean_t discover_changed_paths,
                              svn_boolean_t strict_node_history,
                              svn_boolean_t include_merged_revisions,
-                             svn_boolean_t omit_log_text,
-                             svn_log_message_receiver2_t receiver,
+                             apr_array_header_t *revprops,
+                             svn_log_entry_receiver_t receiver,
                              void *receiver_baton,
                              apr_pool_t *pool);
 
 /**
  * Similar to svn_ra_get_log2(), but uses @c svn_log_message_receiver_t
- * instead of @c svn_log_message_recevier2_t.  Also @a omit_log_text is
- * always set to @c FALSE.
+ * instead of @c svn_log_entry_receiver_t.  Also, @a
+ * include_merged_revisions is set to @c FALSE and @a revprops is
+ * svn:author, svn:date, and svn:log.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -1271,10 +1291,6 @@ svn_error_t *svn_ra_get_repos_root(svn_ra_session_t *session,
  *
  * Use @a pool for all allocations.
  *
- * @note This functionality is not available in pre-1.1 servers.  If the
- * server doesn't implement it, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is
- * returned.
- *
  * @since New in 1.2.
  */
 svn_error_t *svn_ra_get_locations(svn_ra_session_t *session,
@@ -1283,6 +1299,36 @@ svn_error_t *svn_ra_get_locations(svn_ra_session_t *session,
                                   svn_revnum_t peg_revision,
                                   apr_array_header_t *location_revisions,
                                   apr_pool_t *pool);
+
+
+/**
+ * Call @a receiver (with @a receiver_baton) for each segment in the
+ * location history of @a path in @a peg_revision, working backwards in
+ * time from @a start_rev to @a end_rev.
+ *
+ * @a end_rev may be @c SVN_INVALID_REVNUM to indicate that you want
+ * to trace the history of the object to its origin.
+ *
+ * @a start_rev may be @c SVN_INVALID_REVNUM to indicate "the HEAD
+ * revision".  Otherwise, @a start_rev must be younger than @a end_rev
+ * (unless @a end_rev is @c SVN_INVALID_REVNUM).
+ *
+ * @a peg_revision may be @c SVN_INVALID_REVNUM to indicate "the HEAD
+ * revision", and must evaluate to be at least as young as @a start_rev.
+ *
+ * Use @a pool for all allocations.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_ra_get_location_segments(svn_ra_session_t *session,
+                             const char *path,
+                             svn_revnum_t peg_revision,
+                             svn_revnum_t start_rev,
+                             svn_revnum_t end_rev,
+                             svn_location_segment_receiver_t receiver,
+                             void *receiver_baton,
+                             apr_pool_t *pool);
 
 /**
  * Retrieve a subset of the interesting revisions of a file @a path
@@ -1463,6 +1509,36 @@ svn_error_t *svn_ra_replay(svn_ra_session_t *session,
                            const svn_delta_editor_t *editor,
                            void *edit_baton,
                            apr_pool_t *pool);
+
+/**
+ * Set @a *has to true if the server represented by @a session has
+ * capability @a capability (one of the capabilities beginning with
+ * @c "SVN_RA_CAPABILITY_"), else set @a *has to false.
+ *
+ * Use @a pool for all allocation.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_ra_has_capability(svn_ra_session_t *session,
+                                   svn_boolean_t *has,
+                                   const char *capability,
+                                   apr_pool_t *pool);
+
+/**
+ * The capability of understanding @c svn_depth_t (e.g., the server
+ * understands what the client means when the client describes the
+ * depth of a working copy to the server.)
+ *
+ * @since New in 1.5.
+ */
+#define SVN_RA_CAPABILITY_DEPTH "depth"
+
+/*       *** PLEASE READ THIS IF YOU ADD A NEW CAPABILITY ***
+ * RA layers generally fetch all capabilities when asked about any
+ * capability, to save future round trips.  So if you add a new
+ * capability here, make sure to update the RA layers to remember
+ * it after any capabilities query.
+ */
 
 /**
  * Append a textual list of all available RA modules to the stringbuf

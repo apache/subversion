@@ -57,7 +57,7 @@ svn_cl__copy(apr_getopt_t *os,
                            sizeof(svn_client_copy_source_t *));
   for (i = 0; i < (targets->nelts - 1); i++)
     {
-      const char *target = ((const char **) (targets->elts))[i];
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
       svn_client_copy_source_t *source = apr_palloc(pool, sizeof(*source));
       const char *src;
       svn_opt_revision_t peg_revision;

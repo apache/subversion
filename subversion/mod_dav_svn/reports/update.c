@@ -73,9 +73,6 @@ typedef struct {
   /* True iff client requested all data inline in the report. */
   svn_boolean_t send_all;
 
-  /* Actual depth used in the response. */
-  svn_depth_t depth;
-
   /* SVNDIFF version to send to client.  */
   int svndiff_version;
 } update_ctx_t;
@@ -500,8 +497,7 @@ maybe_start_update_report(update_ctx_t *uc)
                                 "<S:update-report xmlns:S=\""
                                 SVN_XML_NAMESPACE "\" "
                                 "xmlns:V=\"" SVN_DAV_PROP_NS_DAV "\" "
-                                "xmlns:D=\"DAV:\" depth=\"%s\" %s>" DEBUG_CR,
-                                svn_depth_to_word(uc->depth),
+                                "xmlns:D=\"DAV:\" %s>" DEBUG_CR,
                                 uc->send_all ? "send-all=\"true\"" : ""));
 
       uc->started_update = TRUE;
@@ -1161,10 +1157,6 @@ dav_svn__update_report(const dav_resource *resource,
   if (! uc.send_all)
     text_deltas = FALSE;
 
-  /* Stash away the depth value we determined. */
-  uc.depth = (requested_depth == svn_depth_unknown ? svn_depth_infinity
-                                                   : requested_depth);
-
   /* When we call svn_repos_finish_report, it will ultimately run
      dir_delta() between REPOS_PATH/TARGET and TARGET_PATH.  In the
      case of an update or status, these paths should be identical.  In
@@ -1343,23 +1335,26 @@ dav_svn__update_report(const dav_resource *resource,
            reports it (and it alone) to the server as being empty. */
         if (entry_counter == 1 && entry_is_empty)
           action = apr_psprintf(resource->pool,
-                                "checkout-or-export '%s' r%ld",
+                                "checkout-or-export '%s' r%ld depth-%s",
                                 svn_path_uri_encode(spath, resource->pool),
-                                revnum);
+                                revnum,
+                                svn_depth_to_word(requested_depth));
         else
           {
             if (text_deltas)
               action = apr_psprintf(resource->pool,
-                                    "update '%s' r%ld",
+                                    "update '%s' r%ld depth-%s",
                                     svn_path_uri_encode(spath,
                                                         resource->pool),
-                                    revnum);
+                                    revnum,
+                                    svn_depth_to_word(requested_depth));
             else
               action = apr_psprintf(resource->pool,
-                                    "remote-status '%s' r%ld",
+                                    "remote-status '%s' r%ld depth-%s",
                                     svn_path_uri_encode(spath,
                                                         resource->pool),
-                                    revnum);
+                                    revnum,
+                                    svn_depth_to_word(requested_depth));
           }
       }
 

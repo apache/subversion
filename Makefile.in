@@ -143,6 +143,7 @@ MKDIR = @MKDIR@
 
 # The EXTRA_ parameters can be used to pass extra flags at 'make' time.
 CFLAGS = @CFLAGS@ $(EXTRA_CFLAGS)
+CXXFLAGS = @CXXFLAGS@ $(EXTRA_CXXFLAGS)
 ### A few of the CFLAGS (e.g. -Wmissing-prototypes, -Wstrict-prototypes,
 ### -Wmissing-declarations) are not valid for C++, and should be somehow
 ### suppressed (but they may come from httpd or APR).
@@ -150,7 +151,7 @@ CPPFLAGS = @CPPFLAGS@ $(EXTRA_CPPFLAGS)
 LDFLAGS = @LDFLAGS@ $(EXTRA_LDFLAGS)
 
 COMPILE = $(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES)
-COMPILE_CXX = $(CXX) $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) $(INCLUDES)
+COMPILE_CXX = $(CXX) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDES)
 LT_COMPILE = $(LIBTOOL) $(LTFLAGS) --mode=compile $(COMPILE)
 
 # special compilation for files destined for mod_dav_svn
@@ -179,7 +180,7 @@ COMPILE_RB_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_RB_COMPILE) $(C
 LINK_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_PY_LINK) $(SWIG_LDFLAGS) -rpath $(swig_pydir) -avoid-version -module
 LINK_RB_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_RB_LINK) $(SWIG_LDFLAGS) -rpath $(swig_rbdir) -avoid-version -module
 
-LINK_JAVAHL_CXX = $(LIBTOOL) $(LTCXXFLAGS) --mode=link $(CXX) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) $(LT_CXX_LIBADD) -rpath $(libdir)
+LINK_JAVAHL_CXX = $(LIBTOOL) $(LTCXXFLAGS) --mode=link $(CXX) $(LT_LDFLAGS) $(CXXFLAGS) $(LDFLAGS) $(LT_CXX_LIBADD) -rpath $(libdir)
 
 INSTALL = @INSTALL@
 INSTALL_LIB = $(LIBTOOL) --mode=install $(INSTALL)
@@ -260,6 +261,7 @@ PERL = @PERL@
 JDK = @JDK@
 JAVA = @JAVA@
 JAVAC = @JAVAC@
+JAVADOC = @JAVADOC@
 JAVAC_FLAGS = @JAVAC_FLAGS@
 JAVAH = @JAVAH@
 JAR = @JAR@
@@ -357,7 +359,7 @@ check-javahl: javahl
 	  exit 1; \
 	fi
 	@FIX_JAVAHL_LIB@
-	$(JAVA) "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.fstype=$(FS_TYPE)" -Djava.library.path=@JAVAHL_OBJDIR@:$(libdir) -classpath $(javahl_tests_PATH):$(javahl_tests_CLASSPATH) org.tigris.subversion.javahl.RunTests
+	$(JAVA) "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.fstype=$(FS_TYPE)" -Djava.library.path=@JAVAHL_OBJDIR@:$(libdir) -classpath $(javahl_tests_PATH):$(javahl_tests_CLASSPATH) "-Dtest.tests=$(JAVAHL_TESTS)" org.tigris.subversion.javahl.RunTests
 
 # "make check CLEANUP=true" will clean up directories for successful tests.
 # "make check TESTS=subversion/tests/cmdline/basic_tests.py"
@@ -494,14 +496,21 @@ external-extraclean:
 # DOCUMENTATION RULES
 
 # Every single document in every format.
-doc: doc-misc-docs doc-api
+doc: doc-misc-docs doc-api doc-javahl
 
 # Generate API documentation for the C libraries.
-### This could also generate JavaDoc for JavaHL, POD for swig-perl, etc.
+### This could also generate POD for swig-perl, etc.
 doc-api:
 	( cd $(top_srcdir) && \
 	  sed "s,\(OUTPUT_DIRECTORY *= *\),\1$(abs_builddir)/," \
 	  doc/doxygen.conf | doxygen - )
+
+# Generate API documentation for the JavaHL package.
+doc-javahl:
+	$(JAVADOC) -d $(top_srcdir)/doc/javadoc \
+	  -sourcepath $(top_srcdir)/subversion/bindings/javahl/src \
+	  -link http://java.sun.com/javase/6/docs/api/ \
+	  org.tigris.subversion.javahl
 
 # Build all types of a certain doc.
 doc-misc-docs: doc-misc-docs-html doc-misc-docs-pdf doc-misc-docs-ps
@@ -522,6 +531,7 @@ doc-misc-docs-ps:
 doc-clean:
 	cd $(top_srcdir)/doc/misc-docs && $(MAKE) clean
 	rm -rf $(top_srcdir)/doc/doxygen
+	rm -rf $(top_srcdir)/doc/javadoc
 
 # Converting from the .rnc XML shcemas to various other schema formats.
 SCHEMAS_DTD = $(SCHEMA_DIR)/blame.dtd $(SCHEMA_DIR)/info.dtd \

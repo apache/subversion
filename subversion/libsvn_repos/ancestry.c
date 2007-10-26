@@ -420,7 +420,7 @@ svn_repos__walk_ancestry(const char *path,
                              callbacks, callbacks_baton, authz_read_func,
                              authz_read_baton, pool);
 
-  if (err && svn_error_root_cause_is(err, SVN_ERR_CEASE_INVOCATION))
+  if (err && err->apr_err == SVN_ERR_CEASE_INVOCATION)
     {
       svn_error_clear(err);
       return SVN_NO_ERROR;

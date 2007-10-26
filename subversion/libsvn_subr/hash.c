@@ -32,7 +32,7 @@
 #include "svn_sorts.h"
 #include "svn_io.h"
 #include "svn_pools.h"
-#include "private/svn_compat.h"
+#include "private/svn_dep_compat.h"
 
 
 

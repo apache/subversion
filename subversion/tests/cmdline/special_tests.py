@@ -166,6 +166,8 @@ def import_export_symlink(sbox):
   url = sbox.repo_url + "/dirA/dirB/new_link"
   output, errput = svntest.actions.run_and_verify_svn(
     'Import a symlink', None, [], 'import',
+    '--username', svntest.main.wc_author,
+    '--password', svntest.main.wc_passwd,
     '-m', 'log msg', new_path, url)
 
   regex = "(Committed|Imported) revision [0-9]+."
@@ -180,6 +182,8 @@ def import_export_symlink(sbox):
 
   # run update and verify that the symlink is put back into place
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'up', wc_dir)
 
   # Is the symlink back?
@@ -196,6 +200,8 @@ def import_export_symlink(sbox):
                                (sbox.repo_url, 'export-url')]:
     export_target = sbox.add_wc_path(dest_dir)
     svntest.actions.run_and_verify_svn(None, None, [],
+                                       '--username', svntest.main.wc_author,
+                                       '--password', svntest.main.wc_passwd,
                                        'export', export_src, export_target)
 
     # is the link at the correct place?
@@ -361,8 +367,14 @@ def merge_symlink_into_file(sbox):
   gamma_prime_path = os.path.join(wc_dir, 'A', 'Dprime', 'gamma')
 
   # create a copy of the D directory to play with
-  svntest.main.run_svn(None, 'copy', d_url, dprime_url, '-m', 'copy')
-  svntest.main.run_svn(None, 'update', sbox.wc_dir)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'copy', d_url, dprime_url, '-m', 'copy')
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'update', sbox.wc_dir)
 
   # remove A/Dprime/gamma
   svntest.main.run_svn(None, 'delete', gamma_prime_path)
@@ -388,7 +400,10 @@ def merge_symlink_into_file(sbox):
                                         None, None, None, None, wc_dir)
 
   # merge the creation of the symlink into the original directory
-  svntest.main.run_svn(None, 'merge', '-r', '2:4', dprime_url,
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'merge', '-r', '2:4', dprime_url,
                        os.path.join(wc_dir, 'A', 'D'))
 
   # now revert, and we'll get a strange error
@@ -397,7 +412,10 @@ def merge_symlink_into_file(sbox):
   # assuming we got past the revert because someone fixed that bug, lets
   # try the merge and a commit, since that apparently used to throw us for
   # a loop, see issue 2530
-  svntest.main.run_svn(None, 'merge', '-r', '2:4', dprime_url,
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'merge', '-r', '2:4', dprime_url,
                        os.path.join(wc_dir, 'A', 'D'))
 
   expected_output = svntest.wc.State(wc_dir, {
@@ -422,8 +440,14 @@ def merge_file_into_symlink(sbox):
   gamma_prime_path = os.path.join(wc_dir, 'A', 'Dprime', 'gamma')
 
   # create a copy of the D directory to play with
-  svntest.main.run_svn(None, 'copy', d_url, dprime_url, '-m', 'copy')
-  svntest.main.run_svn(None, 'update', sbox.wc_dir)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'copy', d_url, dprime_url, '-m', 'copy')
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'update', sbox.wc_dir)
 
   # remove A/Dprime/gamma
   svntest.main.run_svn(None, 'delete', gamma_prime_path)
@@ -459,7 +483,10 @@ def merge_file_into_symlink(sbox):
 
   # ok, now merge the change to the file into the symlink we created, this
   # gives us a weird error
-  svntest.main.run_svn(None, 'merge', '-r', '4:5', d_url,
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'merge', '-r', '4:5', d_url,
                        os.path.join(wc_dir, 'A', 'Dprime'))
 
 # Issue 2701: Tests to see repository with symlinks can be checked out on all
@@ -590,9 +617,15 @@ def update_obstructing_symlink(sbox):
   svntest.main.run_svn(None, 'rm', mu_path)
   os.symlink(iota_path, mu_path)
 
-  svntest.main.run_svn(None, 'rm', mu_url, '-m', 'log msg')
+  svntest.main.run_svn(None, 'rm', mu_url,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       '-m', 'log msg')
 
-  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'up', wc_dir)
 
   # check that the symlink is still there
   target = os.readlink(mu_path)

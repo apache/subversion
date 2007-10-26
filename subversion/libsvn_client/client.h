@@ -56,12 +56,24 @@ extern "C" {
  * Else if REVISION->kind is svn_opt_revision_unspecified, set
  * *REVNUM to SVN_INVALID_REVNUM.
  *
+ * If YOUNGEST_REV is non-NULL, it is an in/out parameter.  If
+ * *YOUNGEST_REV is valid, use it as the youngest revision in the
+ * repository (regardless of reality) -- don't bother to lookup the
+ * true value for HEAD, and don't return any value in *REVNUM greater
+ * than *YOUNGEST_REV.  If *YOUNGEST_REV is not valid, and a HEAD
+ * lookup is required to populate *REVNUM, then also populate
+ * *YOUNGEST_REV with the result.  This is useful for making multiple
+ * serialized calls to this function with a basically static view of
+ * the repository, avoiding race conditions which could occur between
+ * multiple invocations with HEAD lookup requests.
+ *
  * Else return SVN_ERR_CLIENT_BAD_REVISION.
  *
  * Use POOL for any temporary allocation.
  */
 svn_error_t *
 svn_client__get_revision_number(svn_revnum_t *revnum,
+                                svn_revnum_t *youngest_rev,
                                 svn_ra_session_t *ra_session,
                                 const svn_opt_revision_t *revision,
                                 const char *path,
@@ -87,28 +99,16 @@ svn_boolean_t
 svn_client__revision_is_local(const svn_opt_revision_t *revision);
 
 
-/* Given the CHANGED_PATHS and REVISION from an instance of a
-   svn_log_message_receiver_t function, determine at which location
-   PATH may be expected in the next log message, and set *PREV_PATH_P
-   to that value.  KIND is the node kind of PATH.  Set *ACTION_P to a
-   character describing the change that caused this revision (as
-   listed in svn_log_changed_path_t) and set *COPYFROM_REV_P to the
-   revision PATH was copied from, or SVN_INVALID_REVNUM if it was not
-   copied.  ACTION_P and COPYFROM_REV_P may be NULL, in which case
-   they are not used.  Perform all allocations in POOL.
-
-   This is useful for tracking the various changes in location a
-   particular resource has undergone when performing an RA->get_logs()
-   operation on that resource.  */
-svn_error_t *svn_client__prev_log_path(const char **prev_path_p,
-                                       char *action_p,
-                                       svn_revnum_t *copyfrom_rev_p,
-                                       apr_hash_t *changed_paths,
-                                       const char *path,
-                                       svn_node_kind_t kind,
-                                       svn_revnum_t revision,
-                                       apr_pool_t *pool);
-
+/* Set *COPYFROM_PATH and *COPYFROM_REV to the path and revision that
+   served as the source of the copy from which PATH_OR_URL at REVISION
+   was created, or NULL and SVN_INVALID_REVNUM (respectively) if
+   PATH_OR_URL at REVISION was not the result of a copy operation. */
+svn_error_t *svn_client__get_copy_source(const char *path_or_url,
+                                         const svn_opt_revision_t *revision,
+                                         const char **copyfrom_path,
+                                         svn_revnum_t *copyfrom_rev,
+                                         svn_client_ctx_t *ctx,
+                                         apr_pool_t *pool);
 
 /* Set *START_URL and *START_REVISION (and maybe *END_URL
    and *END_REVISION) to the revisions and repository URLs of one
@@ -151,6 +151,29 @@ svn_client__repos_locations(const char **start_url,
                             const svn_opt_revision_t *end,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
+
+
+/* Set *SEGMENTS to an array of svn_location_segment_t * objects, each
+   representing a reposition location segment for the history of PATH
+   (which is relative to RA_SESSION's session URL) in PEG_REVISION
+   between END_REVISION and START_REVISION.
+
+   This is basically a thin de-stream-ifying wrapper around the
+   svn_ra_get_location_segments() interface, which see for the rules
+   governing PEG_REVISION, START_REVISION, and END_REVISION.
+
+   CTX is the client context baton.
+
+   Use POOL for all allocations.  */
+svn_error_t *
+svn_client__repos_location_segments(apr_array_header_t **segments,
+                                    svn_ra_session_t *ra_session,
+                                    const char *path,
+                                    svn_revnum_t peg_revision,
+                                    svn_revnum_t start_revision,
+                                    svn_revnum_t end_revision,
+                                    svn_client_ctx_t *ctx,
+                                    apr_pool_t *pool);
 
 
 /* Given PATH_OR_URL, which contains either a working copy path or an
@@ -215,13 +238,16 @@ svn_client__path_relative_to_root(const char **rel_path,
 
 /* Return the property value for any PROPNAME set on TARGET in *PROPS,
    with WC paths of char * for keys and property values of
-   svn_string_t * for values.  Assumes that PROPS is non-NULL. */
+   svn_string_t * for values.  Assumes that PROPS is non-NULL.
+
+   Treat DEPTH as in svn_client_propget4().
+*/
 svn_error_t *
 svn_client__get_prop_from_wc(apr_hash_t *props, const char *propname,
                              const char *target, svn_boolean_t pristine,
                              const svn_wc_entry_t *entry,
                              svn_wc_adm_access_t *adm_access,
-                             svn_boolean_t recurse, svn_client_ctx_t *ctx,
+                             svn_depth_t depth, svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
 /* Retrieve the oldest revision of the node at REL_PATH at REV since
@@ -253,11 +279,11 @@ svn_client__default_walker_error_handler(const char *path,
 #define SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx) \
         ((ctx)->log_msg_func3 || (ctx)->log_msg_func2 || (ctx)->log_msg_func)
 
-/* This is the baton that we pass to RA->open(), and is associated with
+/* This is the baton that we pass svn_ra_open2(), and is associated with
    the callback table we provide to RA. */
 typedef struct
 {
-  /* Holds the directory that corresponds to the REPOS_URL at RA->open()
+  /* Holds the directory that corresponds to the REPOS_URL at svn_ra_open2()
      time. When callbacks specify a relative path, they are joined with
      this base directory. */
   const char *base_dir;
@@ -391,7 +417,7 @@ svn_error_t * svn_client__wc_delete(const char *path,
 /* Return the set of WC paths to entries which would have been deleted
    by an update/merge if not in "dry run" mode, or NULL if not in "dry
    run" mode.  MERGE_CMD_BATON is expected to be of type "struct
-   merge_cmd_baton" (from diff.c).  It contains the list, which is
+   merge_cmd_baton" (from merge.c).  It contains the list, which is
    intended for direct modification. */
 apr_hash_t *svn_client__dry_run_deletions(void *merge_cmd_baton);
 
@@ -432,7 +458,14 @@ svn_client__make_local_parents(const char *path,
 
    If ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children of PATH
    that obstruct items added from the repos are tolerated; if FALSE,
-   these obstructions cause the update to fail. */
+   these obstructions cause the update to fail.
+
+   If SEND_COPYFROM_ARGS is true, then request that the server not
+   send file contents when adding files that have been created by
+   explicit copying; instead, just send copyfrom-args to add_file(),
+   and possibly follow up with an apply_textdelta() against the copied
+   file.
+*/
 svn_error_t *
 svn_client__update_internal(svn_revnum_t *result_rev,
                             const char *path,
@@ -441,6 +474,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
                             svn_boolean_t *timestamp_sleep,
+                            svn_boolean_t send_copyfrom_args,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
 
@@ -819,12 +853,25 @@ svn_client__do_commit(const char *base_url,
 
 /* Handle changes to the svn:externals property in the tree traversed
    by TRAVERSAL_INFO (obtained from svn_wc_get_update_editor or
-   svn_wc_get_switch_editor, for example).
+   svn_wc_get_switch_editor, for example).  The tree's top level
+   directory is at TO_PATH and corresponds to FROM_URL URL in the
+   repository, which has a root URL of REPOS_ROOT_URL.
 
    For each changed value of the property, discover the nature of the
    change and behave appropriately -- either check a new "external"
    subdir, or call svn_wc_remove_from_revision_control() on an
    existing one, or both.
+
+   REQUESTED_DEPTH is the requested depth of the driving operation
+   (e.g., update, switch, etc).  If it is neither svn_depth_infinity
+   nor svn_depth_unknown, then changes to svn:externals will have no
+   effect.  If REQUESTED_DEPTH is svn_depth_unknown, then the ambient
+   depth of each working copy directory holding an svn:externals value
+   will determine whether that value is interpreted there (the ambient
+   depth must be svn_depth_infinity).  If REQUESTED_DEPTH is
+   svn_depth_infinity, then it is presumed to be expanding any
+   shallower ambient depth, so changes to svn:externals values will be
+   interpreted.
 
    Pass NOTIFY_FUNC with NOTIFY_BATON along to svn_client_checkout().
 
@@ -843,6 +890,10 @@ svn_client__do_commit(const char *base_url,
    Use POOL for temporary allocation. */
 svn_error_t *
 svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
+                             const char *from_url,
+                             const char *to_path,
+                             const char *repos_root_url,
+                             svn_depth_t requested_depth,
                              svn_boolean_t update_unchanged,
                              svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
@@ -854,6 +905,14 @@ svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
    IS_EXPORT is set, the external items will be exported instead of
    checked out -- they will have no administrative subdirectories.
 
+   The checked out or exported tree's top level directory is at
+   TO_PATH and corresponds to FROM_URL URL in the repository, which
+   has a root URL of REPOS_ROOT_URL.
+
+   REQUESTED_DEPTH is the requested_depth of the driving operation; it
+   behaves as for svn_client__handle_externals(), except that ambient
+   depths are presumed to be svn_depth_infinity.
+
    *TIMESTAMP_SLEEP will be set TRUE if a sleep is required to ensure
    timestamp integrity, *TIMESTAMP_SLEEP will be unchanged if no sleep
    is required.
@@ -861,6 +920,10 @@ svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
    Use POOL for temporary allocation. */
 svn_error_t *
 svn_client__fetch_externals(apr_hash_t *externals,
+                            const char *from_url,
+                            const char *to_path,
+                            const char *repos_root_url,
+                            svn_depth_t requested_depth,
                             svn_boolean_t is_export,
                             svn_boolean_t *timestamp_sleep,
                             svn_client_ctx_t *ctx,

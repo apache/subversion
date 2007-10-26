@@ -26,6 +26,7 @@
 #include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_string.h"
+#include "svn_error_codes.h"
 #include "svn_error.h"
 #include "svn_utf.h"
 #include "svn_subst.h"
@@ -175,8 +176,12 @@ svn_cl__propget(apr_getopt_t *os,
   SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
   pname = APR_ARRAY_IDX(args, 0, const char *);
   SVN_ERR(svn_utf_cstring_to_utf8(&pname_utf8, pname, pool));
+  if (! svn_prop_name_is_valid(pname_utf8))
+    return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
+                             _("'%s' is not a valid Subversion property name"),
+                             pname_utf8);
 
-  /* Before allowing svn_opt_args_to_target_array() to canonicalize
+  /* Before allowing svn_opt_args_to_target_array2() to canonicalize
      all the remaining targets, we need to build a list of targets made of both
      ones the user typed, as well as any specified by --changelist.  */
   if (opt_state->changelist)
@@ -187,8 +192,8 @@ svn_cl__propget(apr_getopt_t *os,
                                         ctx,
                                         pool));
       if (apr_is_empty_array(changelist_targets))
-        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("no such changelist '%s'"),
+        return svn_error_createf(SVN_ERR_UNKNOWN_CHANGELIST, NULL,
+                                 _("Unknown changelist '%s'"),
                                  opt_state->changelist);
     }
 
@@ -286,17 +291,17 @@ svn_cl__propget(apr_getopt_t *os,
           SVN_ERR(svn_opt_parse_path(&peg_revision, &truepath, target,
                                      subpool));
 
-          SVN_ERR(svn_client_propget2(&props, pname_utf8, truepath,
+          SVN_ERR(svn_client_propget4(&props, pname_utf8, truepath,
                                       &peg_revision,
                                       &(opt_state->start_revision),
-                                      SVN_DEPTH_TO_RECURSE(opt_state->depth),
+                                      NULL, opt_state->depth,
                                       ctx, subpool));
 
           /* Any time there is more than one thing to print, or where
              the path associated with a printed thing is not obvious,
              we'll print filenames.  That is, unless we've been told
              not to do so with the --strict option. */
-          print_filenames = ((SVN_DEPTH_TO_RECURSE(opt_state->depth)
+          print_filenames = ((SVN_DEPTH_IS_RECURSIVE(opt_state->depth)
                               || targets->nelts > 1
                               || apr_hash_count(props) > 1)
                              && (! opt_state->strict));

@@ -250,8 +250,14 @@ def status_with_new_files_pending(sbox):
 
   svntest.main.file_append('newfile', 'this is a new file')
   svntest.main.run_svn(None, 'add', 'newfile')
-  svntest.main.run_svn(None, 'ci', '-m', 'logmsg')
-  svntest.main.run_svn(None, 'up', '-r', '1')
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'ci', '-m', 'logmsg')
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'up', '-r', '1')
 
   output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                    'status', '-u')
@@ -344,6 +350,8 @@ def status_nonrecursive_update_different_cwd(sbox):
   K_path = os.path.join(wc_dir, 'A', 'C', 'K' )
 
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'mkdir', '-m', 'rev 2', J_url)
 
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -361,6 +369,8 @@ def status_nonrecursive_update_different_cwd(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      expected_output,
                                      [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'status', '-v', '-N', '-u', 'C')
 
   expected_output = [
@@ -373,6 +383,8 @@ def status_nonrecursive_update_different_cwd(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      expected_output,
                                      [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'status', '-v', '-N', '-u', '.')
 
 
@@ -417,15 +429,24 @@ def status_file_needs_update(sbox):
   os.chdir(wc_dir)
   svntest.main.file_append('crontab.root', 'New file crontab.root.\n')
   svntest.main.run_svn(None, 'add', 'crontab.root')
-  svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'ci', '-m', 'log msg')
   os.chdir(was_cwd)
   os.chdir(other_wc)
-  svntest.main.run_svn(None, 'up')
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'up')
 
   os.chdir(was_cwd)
   os.chdir(wc_dir)
   svntest.main.file_append('crontab.root', 'New line in crontab.root.\n')
-  svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'ci', '-m', 'log msg')
 
   # The `svntest.actions.run_and_verify_*_status' routines all pass
   # the -v flag, which we don't want, as this bug never appeared when
@@ -480,7 +501,10 @@ def status_uninvited_parent_directory(sbox):
   os.chdir(wc_dir)
   svntest.main.file_append('newfile', 'New file.\n')
   svntest.main.run_svn(None, 'add', 'newfile')
-  svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'ci', '-m', 'log msg')
 
   os.chdir(was_cwd)
   os.chdir(other_wc)
@@ -510,14 +534,20 @@ def status_on_forward_deletion(sbox):
   top_url = sbox.repo_url
   A_url = top_url + '/A'
 
-  svntest.main.run_svn(None, 'rm', '-m', 'Remove A.', A_url)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'rm', '-m', 'Remove A.', A_url)
 
   svntest.main.safe_rmtree(wc_dir)
   os.mkdir(wc_dir)
 
   os.chdir(wc_dir)
 
-  svntest.main.run_svn(None, 'co', '-r1', top_url + "@1", 'wc')
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'co', '-r1', top_url + "@1", 'wc')
   # If the bug is present, this will error with
   #
   #    subversion/libsvn_wc/lock.c:513: (apr_err=155005)
@@ -537,7 +567,10 @@ def status_on_forward_deletion(sbox):
   # (Dang!  Hope a user never has to see that :-) ).
   #
   svntest.main.safe_rmtree('wc')
-  svntest.main.run_svn(None, 'co', '-r1', A_url + "@1", 'wc')
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'co', '-r1', A_url + "@1", 'wc')
   svntest.actions.run_and_verify_svn(None, None, [], 'st', '-u', 'wc')
 
 #----------------------------------------------------------------------
@@ -722,15 +755,27 @@ def status_on_partially_nonrecursive_wc(sbox):
   # whatever change it was that happened between r213 and HEAD in the
   # reproduction recipe.  For us, it's r2.
   svntest.main.file_append(rho, 'Whan that Aprille with his shoores soote\n')
-  svntest.main.run_svn(None, 'ci', '-m', 'log msg', rho)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'ci', '-m', 'log msg', rho)
 
   # Make the working copy weird in the right way, then try status -u.
   D_wc = sbox.add_wc_path('D')
-  svntest.main.run_svn(None, 'co', '-r1', '-N', D_url, D_wc)
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'co', '-r1', '-N', D_url, D_wc)
 
   os.chdir(D_wc)
-  svntest.main.run_svn(None, 'up', '-r1', 'H')
-  svntest.main.run_svn(None, 'st', '-u')
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'up', '-r1', 'H')
+  svntest.main.run_svn(None,
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       'st', '-u')
 
 
 def missing_dir_in_anchor(sbox):
@@ -816,7 +861,7 @@ def status_ignored_dir(sbox):
   new_dir = os.path.join(wc_dir, "dir.o")
   new_dir_url = sbox.repo_url + "/dir.o"
 
-  svntest.actions.run_and_verify_svn("Create dir", "Committed revision 2.", [],
+  svntest.actions.run_and_verify_svn("Create dir", "\n|Committed revision 2.", [],
                                      'mkdir', new_dir_url, '-m', 'msg',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd)
@@ -878,10 +923,15 @@ def status_add_plus_conflict(sbox):
   trunk_url  = sbox.repo_url + '/trunk'
 
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'mkdir', '-m', 'rev 2',
                                      branch_url, trunk_url)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'update', wc_dir)
 
   branch_file = os.path.join(wc_dir, 'branch', 'file')
 
@@ -889,25 +939,40 @@ def status_add_plus_conflict(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [], 'add', branch_file)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'commit',
                                      branch_file, '-m', 'rev 3')
 
   svntest.main.file_write(branch_file, "line 1\nline3\n", 'wb')
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'commit',
                                      branch_file, '-m', 'rev 4')
 
   svntest.main.file_write(branch_file, "line 1\nline2\n", 'wb')
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'commit',
                                      branch_file, '-m', 'rev 5')
 
   trunk_dir = os.path.join(wc_dir, 'trunk')
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'merge',
                                      branch_url, '-r', '2:3', trunk_dir)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'merge',
                                      branch_url, '-r', '4:5', trunk_dir)
 
   expected_output = svntest.verify.UnorderedOutput([

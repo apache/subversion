@@ -68,20 +68,6 @@ svn_uuid_generate(apr_pool_t *pool)
   return uuid_str;
 }
 
-svn_accept_t
-svn_accept_from_word(const char *word)
-{
-  if (strcmp(word, "left") == 0)
-    return svn_accept_left;
-  if (strcmp(word, "working") == 0)
-    return svn_accept_working;
-  if (strcmp(word, "right") == 0)
-    return svn_accept_right;
-  /* Return svn_accept_invalid which means that the passed string is not
-   * a recognized accept option. */
-  return svn_accept_invalid;
-}
-
 const char *
 svn_depth_to_word(svn_depth_t depth)
 {

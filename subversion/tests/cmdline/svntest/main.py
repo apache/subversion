@@ -24,6 +24,7 @@ import copy    # for deepcopy()
 import time    # for time()
 import traceback # for print_exc()
 import threading
+import Queue
 
 import getopt
 try:
@@ -93,15 +94,17 @@ else:
   file_scheme_prefix = 'file://'
   _exe = ''
 
-# os.wait() specifics
 try:
-  from os import wait
-  platform_with_os_wait = True
+  from popen2 import Popen3
+  platform_with_popen3_class = True
 except ImportError:
-  platform_with_os_wait = False
+  platform_with_popen3_class = False
 
 # The location of our mock svneditor script.
-svneditor_script = os.path.join(sys.path[0], 'svneditor.py')
+if sys.platform == 'win32':
+  svneditor_script = os.path.join(sys.path[0], 'svneditor.bat')
+else:
+  svneditor_script = os.path.join(sys.path[0], 'svneditor.py')
 
 # Username and password used by the working copies
 wc_author = 'jrandom'
@@ -296,12 +299,52 @@ def _quote_arg(arg):
       arg = arg.replace('$', '\$')
     return '"%s"' % (arg,)
 
+def open_pipe(command, mode):
+  """Opens a popen3 pipe to COMMAND in MODE.
+
+  Returns (infile, outfile, errfile, waiter); waiter
+  should be passed to wait_on_pipe."""
+  if platform_with_popen3_class:
+    kid = Popen3(command, True)
+    return kid.tochild, kid.fromchild, kid.childerr, (kid, command)
+  else:
+    inf, outf, errf = os.popen3(command, mode)
+    return inf, outf, errf, None
+
+def wait_on_pipe(waiter, stdout_lines, stderr_lines):
+  """Waits for KID (opened with open_pipe) to finish, dying
+  if it does.  Uses STDOUT_LINES and STDERR_LINES for error message
+  if kid fails.  Returns kid's exit code."""
+  if waiter is None:
+    return
+  
+  kid, command = waiter
+
+  wait_code = kid.wait()
+
+  if os.WIFSIGNALED(wait_code):
+    exit_signal = os.WTERMSIG(wait_code)
+    if stdout_lines is not None:
+      sys.stdout.write("".join(stdout_lines))
+    if stderr_lines is not None:
+      sys.stderr.write("".join(stderr_lines))
+    if verbose_mode:
+      # show the whole path to make it easier to start a debugger
+      sys.stderr.write("CMD: %s terminated by signal %d\n"
+                       % (command, exit_signal))
+    raise SVNProcessTerminatedBySignal
+  else:
+    exit_code = os.WEXITSTATUS(wait_code)
+    if exit_code and verbose_mode:
+      sys.stderr.write("CMD: %s exited with %d\n" % (command, exit_code))
+    return exit_code
+
 # Run any binary, supplying input text, logging the command line
 def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
   args = ' '.join(map(_quote_arg, varargs))
 
   # Log the command line
-  if verbose_mode:
+  if verbose_mode and not command.endswith('.py'):
     print 'CMD:', os.path.basename(command) + ' ' + args,
 
   if binary_mode:
@@ -309,7 +352,7 @@ def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
   else:
     mode = 't'
 
-  infile, outfile, errfile = os.popen3(command + ' ' + args, mode)
+  infile, outfile, errfile, kid = open_pipe(command + ' ' + args, mode)
 
   if stdin_lines:
     map(infile.write, stdin_lines)
@@ -322,24 +365,7 @@ def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
   outfile.close()
   errfile.close()
 
-  exit_code = 0
-
-  if platform_with_os_wait:
-    pid, wait_code = os.wait()
-
-    if os.WIFSIGNALED(wait_code):
-      exit_signal = os.WTERMSIG(wait_code)
-      sys.stdout.write("".join(stdout_lines))
-      sys.stderr.write("".join(stderr_lines))
-      if verbose_mode:
-        # show the whole path to make it easier to start a debugger
-        sys.stderr.write("CMD: %s terminated by signal %d\n"
-                         % (command, exit_signal))
-      raise SVNProcessTerminatedBySignal
-    else:
-      exit_code = os.WEXITSTATUS(wait_code)
-      if exit_code and verbose_mode:
-        sys.stderr.write("CMD: %s exited with %d\n" % (command, exit_code))
+  exit_code = wait_on_pipe(kid, stdout_lines, stderr_lines)
 
   return exit_code, stdout_lines, stderr_lines
 
@@ -545,7 +571,7 @@ def create_repos(path):
   chmod_tree(path, 0666, 0666)
 
 # For copying a repository
-def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 0):
+def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   "Copy the repository SRC_PATH, with head revision HEAD_REVISION, to DST_PATH"
 
   # Do an svnadmin dump|svnadmin load cycle. Print a fake pipe command so that
@@ -560,8 +586,11 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 0):
     print 'CMD:', os.path.basename(svnadmin_binary) + dump_args, \
           '|', os.path.basename(svnadmin_binary) + load_args,
   start = time.time()
-  dump_in, dump_out, dump_err = os.popen3(svnadmin_binary + dump_args, 'b')
-  load_in, load_out, load_err = os.popen3(svnadmin_binary + load_args, 'b')
+
+  dump_in, dump_out, dump_err, dump_kid = \
+           open_pipe(svnadmin_binary + dump_args, 'b')
+  load_in, load_out, load_err, load_kid = \
+           open_pipe(svnadmin_binary + load_args, 'b')
   stop = time.time()
   if verbose_mode:
     print '<TIME = %.6f>' % (stop - start)
@@ -580,6 +609,9 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 0):
   dump_err.close()
   load_out.close()
   load_err.close()
+  # Wait on the pipes; ignore return code.
+  wait_on_pipe(dump_kid, None, dump_lines)
+  wait_on_pipe(load_kid, load_lines, None)
 
   dump_re = re.compile(r'^\* Dumped revision (\d+)\.\r?$')
   expect_revision = 0
@@ -668,14 +700,17 @@ an appropriate list of mappings.
 
 def use_editor(func):
   os.environ['SVN_EDITOR'] = svneditor_script
+  os.environ['SVN_MERGE'] = svneditor_script
   os.environ['SVNTEST_EDITOR_FUNC'] = func
 
 
-def merge_notify_line(revstart=None, revend=None):
+def merge_notify_line(revstart=None, revend=None, same_URL=True):
   """Return an expected output line that describes the beginning of a
   merge operation on revisions REVSTART through REVEND.  Omit both
   REVSTART and REVEND for the case where the left and right sides of
   the merge are from different URLs."""
+  if not same_URL:
+    return "--- Merging differences between repository URLs into '.+':\n"
   if revend is None:
     if revstart is None:
       # The left and right sides of the merge are from different URLs.
@@ -732,6 +767,14 @@ def server_has_mergeinfo():
   return server_minor_version >= 5
 
 def server_has_revprop_commit():
+  _check_command_line_parsed()
+  return server_minor_version >= 5
+
+def server_sends_copyfrom_on_update():
+  _check_command_line_parsed()
+  return server_minor_version >= 5
+
+def server_authz_has_aliases():
   _check_command_line_parsed()
   return server_minor_version >= 5
 
@@ -840,23 +883,29 @@ def _cleanup_test_path(path, retrying=None):
       print "WARNING: cleanup failed, will try again later"
     _deferred_test_paths.append(path)
 
-class SpawnTest(threading.Thread):
-  """Encapsulate a single test case, run it in a separate child process.
-  Instead of waiting till the process is finished, add this class to a
-  list of active tests for follow up in the parent process."""
-  def __init__(self, index, tests = None):
+class TestSpawningThread(threading.Thread):
+  """A thread that runs test cases in their own processes.
+  Receives test numbers to run from the queue, and saves results into
+  the results field."""
+  def __init__(self, queue):
     threading.Thread.__init__(self)
-    self.index = index
-    self.tests = tests
-    self.result = None
-    self.stdout_lines = None
-    self.stderr_lines = None
+    self.queue = queue
+    self.results = []
 
   def run(self):
+    while True:
+      try:
+        next_index = self.queue.get_nowait()
+      except Queue.Empty:
+        return
+
+      self.run_one(next_index)
+
+  def run_one(self, index):
     command = sys.argv[0]
 
     args = []
-    args.append(str(self.index))
+    args.append(str(index))
     args.append('-c')
     # add some startup arguments from this process
     if fs_type:
@@ -869,15 +918,19 @@ class SpawnTest(threading.Thread):
       args.append('--cleanup')
     if enable_sasl:
       args.append('--enable-sasl')
+    if http_library:
+      args.append('--http-library=' + http_library)
+    if server_minor_version:
+      args.append('--server-minor-version=' + str(server_minor_version))
 
-    self.result, self.stdout_lines, self.stderr_lines =\
-                                         spawn_process(command, 1, None, *args)
+    result, stdout_lines, stderr_lines = spawn_process(command, 1, None, *args)
     # don't trust the exitcode, will not be correct on Windows
     if filter(lambda x: x.startswith('FAIL: ') or x.startswith('XPASS: '),
-              self.stdout_lines):
-      self.result = 1
-    self.tests.append(self)
+              stdout_lines):
+      result = 1
+    self.results.append((index, result, stdout_lines, stderr_lines))
     sys.stdout.write('.')
+    sys.stdout.flush()
 
 class TestRunner:
   """Encapsulate a single test case (predicate), including logic for
@@ -942,6 +995,7 @@ class TestRunner:
           print 'EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args)
         else:
           print 'EXCEPTION:', ex.__class__.__name__
+      traceback.print_exc(file=sys.stdout)
     except KeyboardInterrupt:
       print 'Interrupted'
       sys.exit(0)
@@ -1012,34 +1066,35 @@ def _internal_run_tests(test_list, testnums, parallel):
       if run_one_test(testnum, test_list) == 1:
           exit_code = 1
   else:
-    for testnum in testnums:
-      # wait till there's a free spot.
-      while tests_started - len(finished_tests) > parallel:
-        time.sleep(0.2)
-      run_one_test(testnum, test_list, parallel, finished_tests)
-      tests_started += 1
+    number_queue = Queue.Queue()
+    for num in testnums:
+      number_queue.put(num)
 
-    # wait for all tests to finish
-    while len(finished_tests) < len(testnums):
-      time.sleep(0.2)
+    threads = [ TestSpawningThread(number_queue) for i in range(parallel) ]
+    for t in threads:
+      t.start()
 
-    # Sort test results list by test nr.
-    deco = [(test.index, test) for test in finished_tests]
-    deco.sort()
-    finished_tests = [test for (ti, test) in deco]
+    for t in threads:
+      t.join()
+
+    # list of (index, result, stdout, stderr)
+    results = []
+    for t in threads:
+      results += t.results
+    results.sort()
 
     # terminate the line of dots
     print
 
     # all tests are finished, find out the result and print the logs.
-    for test in finished_tests:
-      if test.stdout_lines:
-        for line in test.stdout_lines:
+    for (index, result, stdout_lines, stderr_lines) in results:
+      if stdout_lines:
+        for line in stdout_lines:
           sys.stdout.write(line)
-      if test.stderr_lines:
-        for line in test.stderr_lines:
+      if stderr_lines:
+        for line in stderr_lines:
           sys.stdout.write(line)
-      if test.result == 1:
+      if result == 1:
         exit_code = 1
 
   _cleanup_deferred_test_paths()

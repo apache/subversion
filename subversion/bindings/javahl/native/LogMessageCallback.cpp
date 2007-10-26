@@ -23,6 +23,7 @@
 #include "JNIUtil.h"
 #include "svn_time.h"
 #include "svn_sorts.h"
+#include "svn_compat.h"
 
 /**
  * Create a LogMessageCallback object
@@ -98,11 +99,16 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
         return SVN_NO_ERROR;
     }
 
-  apr_time_t commit_time = -1;
-  if (log_entry->date != NULL && *log_entry->date != '\0')
-    SVN_ERR(svn_time_from_cstring(&commit_time, log_entry->date, pool));
+  const char *author;
+  const char *date;
+  const char *message;
+  svn_compat_log_revprops_out(&author, &date, &message, log_entry->revprops);
 
-  jstring jauthor = JNIUtil::makeJString(log_entry->author);
+  apr_time_t commit_time = -1;
+  if (date != NULL && *date != '\0')
+    SVN_ERR(svn_time_from_cstring(&commit_time, date, pool));
+
+  jstring jauthor = JNIUtil::makeJString(author);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 
@@ -165,7 +171,7 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
         }
     }
 
-  jstring jmessage = JNIUtil::makeJString(log_entry->message);
+  jstring jmessage = JNIUtil::makeJString(message);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 

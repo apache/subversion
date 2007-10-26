@@ -9,6 +9,8 @@
 	<Platforms>
 		<Platform
 			Name="Win32"/>
+		<Platform
+			Name="x64"/>
 	</Platforms>
 	<Configurations>
 		<Configuration
@@ -27,6 +29,34 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
+			OutputDirectory="Release"
+			IntermediateDirectory="Release"
+			ConfigurationType="0"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="nmake /nologo /f neon.mak ALL EXPAT_INC=[expat_path] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
+				ReBuildCommandLine="nmake /nologo /f neon.mak CLEAN ALL EXPAT_INC=[expat_path] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
+				CleanCommandLine="nmake /nologo /f neon.mak CLEAN EXPAT_INC=[expat_path] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
+				Output="libneon.lib"/>
+		</Configuration>
+		<Configuration
+			Name="Debug|x64"
+			OutputDirectory="Debug"
+			IntermediateDirectory="Debug"
+			ConfigurationType="0"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="nmake /nologo /f neon.mak ALL DEBUG_BUILD=Aye EXPAT_INC=[expat_path] [if-any zlib_path]ZLIB_SRC=[zlib_path] ZLIB_LIBS=[zlib_path]\zlibstatD.lib[end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
+				ReBuildCommandLine="nmake /nologo /f neon.mak CLEAN ALL DEBUG_BUILD=Aye EXPAT_INC=[expat_path] [if-any zlib_path]ZLIB_SRC=[zlib_path] ZLIB_LIBS=[zlib_path]\zlibstatD.lib[end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
+				CleanCommandLine="nmake /nologo /f neon.mak CLEAN DEBUG_BUILD=Aye EXPAT_INC=[expat_path] [if-any zlib_path]ZLIB_SRC=[zlib_path] ZLIB_LIBS=[zlib_path]\zlibstatD.lib[end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
+				Output="libneonD.lib"/>
+		</Configuration>
+		<Configuration
+			Name="Release|x64"
 			OutputDirectory="Release"
 			IntermediateDirectory="Release"
 			ConfigurationType="0"

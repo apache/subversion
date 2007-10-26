@@ -10,7 +10,34 @@
 
 shopt -s extglob
 
-# Two helper functions which only use bash, to ease readability.
+# Tree helper functions which only use bash, to ease readability.
+
+# look for value associated to key from stdin in K/V hash file format
+# val=$(_svn_read_hashfile svn:realmstring < some/file)
+function _svn_read_hashfile()
+{
+  local tkey=$1 key= val=
+  while true; do  
+    read tag len
+    [ $tag = 'END' ] && break
+    [ $tag != 'K' ] && {
+      #echo "unexpected tag '$tag' instead of 'K'" >&2
+      return
+    }
+    read -r -n $len key ; read 
+    read tag len
+    [ $tag != 'V' ] && {
+      #echo "unexpected tag '$tag' instead of 'V'" >&2
+      return
+    }
+    read -r -n $len val ; read
+    if [[ $key = $tkey ]] ; then
+      echo "$val"
+      return
+    fi
+  done 
+  #echo "target key '$tkey' not found" >&2
+}
 
 # _svn_grcut shell-regular-expression
 # extract filenames from 'svn status' output
@@ -47,8 +74,9 @@ function _svn_lls()
 # This completion guides the command/option order along the one suggested
 # by "svn help", although other syntaxes are allowed.
 #
-# - there is a "real" parser to check for what is available
-#   and deduce what can be suggested further.
+# - there is a "real" parser to check for what is available and deduce what 
+#   can be suggested further.
+# - the syntax should be coherent with subversion/svn/{cl.h,main.c}
 # - although it is not a good practice, mixed options and arguments
 #   is supported by the completion as it is by the svn command.
 # - the completion works in the middle of a line,
@@ -66,20 +94,23 @@ function _svn_lls()
 #   SVN_BASH_ENCODINGS: encodings to be suggested
 #   SVN_BASH_MIME_TYPE: mime types to be suggested
 #   SVN_BASH_KEYWORDS: "svn:keywords" substitutions to be suggested
+#   SVN_BASH_USERNAME: usernames suggested for --username
 #   SVN_BASH_COMPL_EXT: completion extensions for file arguments, based on the
 #      current subcommand, so that for instance only modified files are 
 #      suggested for 'revert', only not svn-managed files for 'add', and so on.
 #      Possible values are:
+#      - username: guess usernames from ~/.subversion/auth/...
 #      - svnstatus: use 'svn status' for completion
-#      - recurse: allow recursion
-#      - externals: recurse into externals
-#     The former option is reasonable, but beware that both later options 
+#      - recurse: allow recursion (expensive)
+#      - externals: recurse into externals (very expensive)
+#     Both former options are reasonable, but beware that both later options 
 #     may be unadvisable if used on large working copies.
-#     Note of these costly completions are activated by default.
+#     None of these costly completions are activated by default.
 #     Argument completion outside a working copy results in an error message.
 #     Filenames with spaces are not completed properly.
 #     
-# - to do: other options? SVN_BASH_USERNAME?
+# - to do: other options? 
+#   obsolete options could be removed from auto-comp? (e.g. -N)
 _svn()
 {
 	local cur cmds cmdOpts pOpts mOpts rOpts qOpts nOpts optsParam opt
@@ -91,7 +122,7 @@ _svn()
 	cmds='add blame annotate praise cat changelist cl \
               checkout co cleanup commit ci \
               copy cp delete remove rm diff export help import info \
-              list ls lock log merge mkdir move mv rename \
+              list ls lock log merge mergeinfo mkdir move mv rename \
               propdel pdel propedit pedit propget pget \
               proplist plist propset pset resolved revert \
               status switch unlock update'
@@ -106,7 +137,8 @@ _svn()
 	optsParam="-r|--revision|--username|--password|--targets|
 	           |-x|--extensions|-m|--message|-F|--file|--encoding|
 	           |--diff-cmd|--diff3-cmd|--editor-cmd|--old|--new|
-	           |--config-dir|--native-eol|--limit"
+	           |--config-dir|--native-eol|-l|--limit|-c|--change|--depth|
+                   |--with-revprop|--changelist|--accept"
 
 	# svn:* and other (env SVN_BASH_*_PROPS) properties
 	local svnProps revProps allProps psCmds propCmds
@@ -315,11 +347,39 @@ _svn()
 		values="--unified --ignore-space-change \
    		        --ignore-all-space --ignore-eol-style"
 
-	    # could look at ~/.subversion/
-	    [[ $previous = '--username' ]] && beep=1
+	    [[ $previous = '--depth' ]] && \
+		values='empty files immediates infinity'
+
+	    [[ $previous = '--accept' ]] && \
+	    {
+	        # the list is reduced for 'resolved'
+                if [[ $cmd = 'resolved' ]] ; then
+		    values='base mine theirs'
+		else # checkout merge switch update
+		    values='postpone base mine theirs edit launch'
+		fi
+	    }
+
+	    if [[ $previous = '--username' ]] ; then
+	      values="$SVN_BASH_USERNAME"
+	      if [[ $SVN_BASH_COMPL_EXT == *username* ]] ; then
+		local file=
+		# digest? others?
+		for file in ~/.subversion/auth/svn.simple/* ; do
+		  if [ -r $file ] ; then
+		    values="$values $(_svn_read_hashfile username < $file)"
+		  fi
+		done
+	      fi
+	      [[ ! "$values" ]] && beep=1
+	    fi
+
+	    # could look at ~/.subversion/ ?
+	    # hmmm... this option should not exist
 	    [[ $previous = '--password' ]] && beep=1
 
-	    # TODO: provide help about other options such as: --old --new
+	    # TODO: provide help about other options such as: 
+	    # --old --new --with-revprop
 
 	    # if the previous option required a parameter, do something
 	    # or fallback on ordinary filename expansion
@@ -447,6 +507,9 @@ _svn()
 	    merge)
 		nExpectArgs=3
 		;;
+	    mergeinfo)
+		nExpectArgs=1
+		;;
 	    copy|cp|move|mv|rename|ren|export|import)
 		nExpectArgs=2
 		;;
@@ -500,7 +563,7 @@ _svn()
 			files=$cur*
 			;;
 		    ci|commit|revert|di*) # anything edited
-			files=$($status $cs| _svn_grcut '@([MADR!]*| M*)')
+			files=$($status $cs| _svn_grcut '@([MADR!]*| M*|_M*)')
 			;;
 		    add) # unknown files
 			files=$($status $cs| _svn_grcut '\?*')
@@ -544,7 +607,7 @@ _svn()
 		    ls|list) # better job? what about URLs?
 			files=$( _svn_lls all $cur* )
 			;;
-		    *) # other commands: changelist export import cat
+		    *) # other commands: changelist export import cat mergeinfo
 			local fallback=1
 			;;
 		esac
@@ -573,10 +636,11 @@ _svn()
 
 	# otherwise build possible options for the command
 	pOpts="--username --password --no-auth-cache --non-interactive"
-	mOpts="-m --message -F --file --encoding --force-log"
+	mOpts="-m --message -F --file --encoding --force-log --with-revprop"
 	rOpts="-r --revision"
 	qOpts="-q --quiet"
-	nOpts="-N --non-recursive"
+	nOpts="-N --non-recursive --depth"
+	gOpts="-g --use-merge-history"
 
 	cmdOpts=
 	case $cmd in
@@ -589,7 +653,7 @@ _svn()
 		;;
 	blame|annotate|ann|praise)
 		cmdOpts="$rOpts $pOpts -v --verbose --incremental --xml \
-		         -x --extensions --force"
+		         -x --extensions --force $gOpts"
 		;;
 	cat)
 		cmdOpts="$rOpts $pOpts"
@@ -599,7 +663,7 @@ _svn()
 		;;
 	checkout|co)
 		cmdOpts="$rOpts $qOpts $nOpts $pOpts --ignore-externals \
-                         --force"
+                         --force --accept"
 		;;
 	cleanup)
 		cmdOpts="--diff3-cmd"
@@ -609,7 +673,7 @@ _svn()
 		         --no-unlock --changelist --keep-changelist"
 		;;
 	copy|cp)
-		cmdOpts="$mOpts $rOpts $qOpts --editor-cmd $pOpts"
+		cmdOpts="$mOpts $rOpts $qOpts --editor-cmd $pOpts $gOpts"
 		;;
 	delete|del|remove|rm)
 		cmdOpts="--force $mOpts $qOpts --targets --editor-cmd $pOpts"
@@ -643,17 +707,23 @@ _svn()
 		;;
 	log)
 		cmdOpts="$rOpts -v --verbose --targets $pOpts --stop-on-copy \
-		         --incremental --xml $qOpts --limit"
+		         --incremental --xml $qOpts -l --limit --changelist \
+                         $gOpts"
 		;;
 	merge)
 		cmdOpts="$rOpts $nOpts $qOpts --force --dry-run --diff3-cmd \
-		         $pOpts --ignore-ancestry -c --change -x --extensions"
+		         $pOpts --ignore-ancestry -c --change -x --extensions \
+                         --record-only --accept"
+		;;
+	mergeinfo)
+	        cmdOpts="$rOpts $pOpts"
 		;;
 	mkdir)
 		cmdOpts="$mOpts $qOpts --editor-cmd $pOpts"
 		;;
 	move|mv|rename|ren)
-		cmdOpts="$mOpts $rOpts $qOpts --force --editor-cmd $pOpts"
+		cmdOpts="$mOpts $rOpts $qOpts --force --editor-cmd $pOpts \
+                         $gOpts"
 		;;
 	propdel|pdel|pd)
 		cmdOpts="$qOpts -R --recursive $rOpts $pOpts"
@@ -680,7 +750,7 @@ _svn()
 		[[ $val ]] || cmdOpts="$cmdOpts -F --file"
 		;;
 	resolved)
-		cmdOpts="--targets -R --recursive $qOpts"
+		cmdOpts="--targets -R --recursive $qOpts --accept"
 		;;
 	revert)
 		cmdOpts="--targets -R --recursive $qOpts --changelist"
@@ -691,14 +761,14 @@ _svn()
 		;;
 	switch|sw)
 		cmdOpts="--relocate $rOpts $nOpts $qOpts $pOpts --diff3-cmd \
-                         --force"
+                         --force --accept"
 		;;
 	unlock)
 		cmdOpts="--targets --force $pOpts"
 		;;
 	update|up)
 		cmdOpts="$rOpts $nOpts $qOpts $pOpts --diff3-cmd \
-                         --ignore-externals --force"
+                         --ignore-externals --force --accept"
 		;;
 	*)
 		;;
@@ -736,13 +806,17 @@ _svn()
 		--quiet)         cmdOpts=${cmdOpts/ -q / } ;;
 		-h)              cmdOpts=${cmdOpts/ --help / } ;;
 		--help)          cmdOpts=${cmdOpts/ -h / } ;;
+		-l)              cmdOpts=${cmdOpts/ --limit / } ;;
+		--limit)         cmdOpts=${cmdOpts/ -l / } ;;
 		-r)              cmdOpts=${cmdOpts/ --revision / } ;;
 		--revision)      cmdOpts=${cmdOpts/ -r / } ;;
 		-c)              cmdOpts=${cmdOpts/ --change / } ;;
 		--change)        cmdOpts=${cmdOpts/ -c / } ;;
 		--auto-props)    cmdOpts=${cmdOpts/ --no-auto-props / } ;;
 		--no-auto-props) cmdOpts=${cmdOpts/ --auto-props / } ;;
-
+		-g)              cmdOpts=${cmdOpts/ --use-merge-history / } ;;
+		--use-merge-history) 
+                                 cmdOpts=${cmdOpts/ -g / } ;;
 		-m|--message|-F|--file)
 			cmdOpts=${cmdOpts/ --message / }
 			cmdOpts=${cmdOpts/ -m / }

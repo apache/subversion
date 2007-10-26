@@ -17,6 +17,18 @@ class SvnRaTest < Test::Unit::TestCase
     assert_equal(Svn::Core.subr_version, Svn::Ra.version)
   end
 
+  def test_uuid
+    session = Svn::Ra::Session.open(@repos_uri)
+    assert_equal(File.read(File.join(@repos_path, "db", "uuid")).strip,
+                 session.uuid)
+  end
+
+  def test_open_without_callback
+    assert_nothing_raised do
+      Svn::Ra::Session.open(@repos_uri)
+    end
+  end
+
   def test_session
     log = "sample log"
     log2 = "sample log2"
@@ -134,7 +146,7 @@ class SvnRaTest < Test::Unit::TestCase
     assert_equal({}, session.get_locks(file))
   end
 
-  def test_prop
+  def assert_property_access
     log = "sample log"
     file = "sample.txt"
     path = File.join(@wc_path, file)
@@ -147,21 +159,51 @@ class SvnRaTest < Test::Unit::TestCase
     ctx.add(path)
     info = ctx.commit(@wc_path)
 
-    assert_equal(@author, session.prop(Svn::Core::PROP_REVISION_AUTHOR))
-    assert_equal(log, session.prop(Svn::Core::PROP_REVISION_LOG))
+    assert_equal(@author, yield(session, :get, Svn::Core::PROP_REVISION_AUTHOR))
+    assert_equal(log, yield(session, :get, Svn::Core::PROP_REVISION_LOG))
     assert_equal([
                    Svn::Core::PROP_REVISION_AUTHOR,
                    Svn::Core::PROP_REVISION_DATE,
                    Svn::Core::PROP_REVISION_LOG,
                  ].sort,
-                 session.proplist.keys.sort)
-    session.set_prop(Svn::Core::PROP_REVISION_LOG, nil)
-    assert_nil(session.prop(Svn::Core::PROP_REVISION_LOG))
+                 yield(session, :list).keys.sort)
+    yield(session, :set, Svn::Core::PROP_REVISION_LOG, nil)
+    assert_nil(yield(session, :get ,Svn::Core::PROP_REVISION_LOG))
     assert_equal([
                    Svn::Core::PROP_REVISION_AUTHOR,
                    Svn::Core::PROP_REVISION_DATE,
                  ].sort,
-                 session.proplist.keys.sort)
+                 yield(session, :list).keys.sort)
+  end
+
+  def test_prop
+    assert_property_access do |session, action, *args|
+      case action
+      when :get
+        key, = args
+        session[key]
+      when :set
+        key, value = args
+        session[key] = value
+      when :list
+        session.properties
+      end
+    end
+  end
+
+  def test_prop_with_no_ruby_way
+    assert_property_access do |session, action, *args|
+      case action
+      when :get
+        key, = args
+        session.prop(key)
+      when :set
+        key, value = args
+        session.set_prop(key, value)
+      when :list
+        session.proplist
+      end
+    end
   end
 
   def test_callback

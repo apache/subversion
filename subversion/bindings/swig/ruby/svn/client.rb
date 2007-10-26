@@ -88,17 +88,23 @@ module Svn
     Context = Ctx
     class Context
       alias _auth_baton auth_baton
-      attr_reader :auth_baton
+      alias _auth_baton= auth_baton=
+      remove_method :auth_baton, :auth_baton=
+      private :_auth_baton, :_auth_baton=
+
+      include Core::Authenticatable
 
       alias _initialize initialize
+      private :_initialize
       def initialize
         _initialize
-        @prompts = []
-        @batons = []
-        @providers = []
-        @auth_baton = Svn::Core::AuthBaton.new
-        self.auth_baton = @auth_baton
+        self.auth_baton = Core::AuthBaton.new
         init_callbacks
+      end
+
+      def auth_baton=(baton)
+        super(baton)
+        self._auth_baton = auth_baton
       end
 
       def checkout(url, path, revision=nil, peg_rev=nil,
@@ -185,15 +191,16 @@ module Svn
       def propset(name, value, target, recurse=true, force=false,
                   base_revision_for_url=nil)
         base_revision_for_url ||= Svn::Core::INVALID_REVNUM
-        Client.propset3(name, value, target, recurse, force,
+        depth = recurse ? Svn::Core::DEPTH_INFINITY : Svn::Core::DEPTH_EMPTY
+        Client.propset3(name, value, target, depth, force,
                         base_revision_for_url, self)
       end
       alias prop_set propset
       alias pset propset
       alias ps propset
 
-      def propdel(name, target, recurse=true, force=false)
-        Client.propset2(name, nil, target, recurse, force, self)
+      def propdel(name, *args)
+        propset(name, nil, *args)
       end
       alias prop_del propdel
       alias pdel propdel
@@ -204,7 +211,8 @@ module Svn
       def propget(name, target, rev=nil, peg_rev=nil, recurse=true)
         rev ||= "HEAD"
         peg_rev ||= rev
-        Client.propget2(name, target, rev, peg_rev, recurse, self)
+        depth = recurse ? Svn::Core::DEPTH_INFINITY : Svn::Core::DEPTH_EMPTY
+        Client.propget4(name, target, peg_rev, rev, depth, self).first
       end
       alias prop_get propget
       alias pget propget
@@ -320,12 +328,16 @@ module Svn
       end
 
 
-      def merge_peg(src, rev1, rev2, target_wcpath,
-                    peg_rev=nil, depth=nil,
-                    ignore_ancestry=false, force=false,
-                    dry_run=false, options=nil, record_only=false)
+      def merge_peg(src, rev1, rev2, *rest)
+        merge_peg2(src, [[rev1, rev2]], *rest)
+      end
+
+      def merge_peg2(src, ranges_to_merge, target_wcpath,
+                     peg_rev=nil, depth=nil,
+                     ignore_ancestry=false, force=false,
+                     dry_run=false, options=nil, record_only=false)
         peg_rev ||= uri?(src) ? 'HEAD' : 'WORKING'
-        Client.merge_peg3(src, rev1, rev2, peg_rev,
+        Client.merge_peg3(src, ranges_to_merge, peg_rev,
                           target_wcpath, depth, ignore_ancestry,
                           force, record_only, dry_run, options, self)
       end
@@ -528,74 +540,6 @@ module Svn
         Client.switch2(path, uri, rev, depth, ignore_externals, allow_unver_obstruction, self)
       end
 
-      def add_simple_provider
-        add_provider(Core.auth_get_simple_provider)
-      end
-
-      if Core.respond_to?(:auth_get_windows_simple_provider)
-        def add_windows_simple_provider
-          add_provider(Core.auth_get_windows_simple_provider)
-        end
-      end
-
-      if Core.respond_to?(:auth_get_keychain_simple_provider)
-        def add_keychain_simple_provider
-          add_provider(Core.auth_get_keychain_simple_provider)
-        end
-      end
-
-      def add_username_provider
-        add_provider(Core.auth_get_username_provider)
-      end
-
-      def add_ssl_client_cert_file_provider
-        add_provider(Core.auth_get_ssl_client_cert_file_provider)
-      end
-
-      def add_ssl_client_cert_pw_file_provider
-        add_provider(Core.auth_get_ssl_client_cert_pw_file_provider)
-      end
-
-      def add_ssl_server_trust_file_provider
-        add_provider(Core.auth_get_ssl_server_trust_file_provider)
-      end
-
-      if Core.respond_to?(:auth_get_windows_ssl_server_trust_provider)
-        def add_windows_ssl_server_trust_provider
-          add_provider(Core.auth_get_windows_ssl_server_trust_provider)
-        end
-      end
-
-      def add_simple_prompt_provider(retry_limit, prompt=Proc.new)
-        args = [retry_limit]
-        klass = Core::AuthCredSimple
-        add_prompt_provider("simple", args, prompt, klass)
-      end
-
-      def add_username_prompt_provider(retry_limit, prompt=Proc.new)
-        args = [retry_limit]
-        klass = Core::AuthCredUsername
-        add_prompt_provider("username", args, prompt, klass)
-      end
-
-      def add_ssl_server_trust_prompt_provider(prompt=Proc.new)
-        args = []
-        klass = Core::AuthCredSSLServerTrust
-        add_prompt_provider("ssl_server_trust", args, prompt, klass)
-      end
-
-      def add_ssl_client_cert_prompt_provider(retry_limit, prompt=Proc.new)
-        args = [retry_limit]
-        klass = Core::AuthCredSSLClientCert
-        add_prompt_provider("ssl_client_cert", args, prompt, klass)
-      end
-
-      def add_ssl_client_cert_pw_prompt_provider(retry_limit, prompt=Proc.new)
-        args = [retry_limit]
-        klass = Core::AuthCredSSLClientCertPw
-        add_prompt_provider("ssl_client_cert_pw", args, prompt, klass)
-      end
-
       def set_log_msg_func(callback=Proc.new)
         callback_wrapper = Proc.new do |items|
           items = items.collect do |item|
@@ -632,27 +576,24 @@ module Svn
         Core::MergeInfo.new(info)
       end
 
-      def add_to_change_list(change_list_name, *paths)
+      def add_to_changelist(changelist_name, *paths)
         paths = paths[0] if paths.size == 1 and paths[0].is_a?(Array)
-        Client.add_to_changelist(paths, change_list_name, self)
+        Client.add_to_changelist(paths, changelist_name, self)
       end
-      alias_method :add_to_changelist, :add_to_change_list
 
-      def change_list(change_list_name, root_path, &block)
-        args = [change_list_name, root_path, self]
+      def changelist(changelist_name, root_path, &block)
+        args = [changelist_name, root_path, self]
         if block
           Client.get_changelist_streamy(block, *args)
         else
           Client.get_changelist(*args)
         end
       end
-      alias_method :changelist, :change_list
 
-      def remove_from_change_list(change_list_name, *paths)
+      def remove_from_changelist(changelist_name, *paths)
         paths = paths[0] if paths.size == 1 and paths[0].is_a?(Array)
-        Client.remove_from_changelist(paths, change_list_name, self)
+        Client.remove_from_changelist(paths, changelist_name, self)
       end
-      alias_method :remove_from_changelist, :remove_from_change_list
 
       private
       def init_callbacks
@@ -667,29 +608,6 @@ module Svn
       %w(notify).each do |type|
         private "#{type}_func2", "#{type}_baton2"
         private "#{type}_func2=", "#{type}_baton2="
-      end
-
-      def add_prompt_provider(name, args, prompt, cred_class)
-        real_prompt = Proc.new do |*prompt_args|
-          cred = cred_class.new
-          prompt.call(cred, *prompt_args)
-          cred
-        end
-        method_name = "swig_rb_auth_get_#{name}_prompt_provider"
-        baton, pro = Core.__send__(method_name, real_prompt, *args)
-        @batons << baton
-        @prompts << real_prompt
-        add_provider(pro)
-      end
-
-      def add_provider(provider)
-        @providers << provider
-        update_auth_baton
-      end
-
-      def update_auth_baton
-        @auth_baton = Core::AuthBaton.new(@providers, @auth_baton.parameters)
-        self.auth_baton = @auth_baton
       end
 
       def normalize_path(paths)

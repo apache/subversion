@@ -1215,7 +1215,7 @@ get_default_file_perms(const char *path, apr_fileperms_t *perms,
 
 /* This is a helper function for the svn_io_set_file_read* functions
    that attempts to honor the users umask when dealing with
-   permission changes. */
+   permission changes.  It is a no-op when invoked on a symlink. */
 static svn_error_t *
 io_set_file_perms(const char *path,
                   svn_boolean_t change_readwrite,
@@ -1236,7 +1236,7 @@ io_set_file_perms(const char *path,
      by getting the current perms and adding bits
      only on where read perms are granted.  If this fails
      fall through to just setting file attributes. */
-  status = apr_stat(&finfo, path_apr, APR_FINFO_PROT, pool);
+  status = apr_stat(&finfo, path_apr, APR_FINFO_PROT | APR_FINFO_LINK, pool);
   if (status)
     {
       if (ignore_enoent && APR_STATUS_IS_ENOENT(status))
@@ -1247,6 +1247,9 @@ io_set_file_perms(const char *path,
                                   svn_path_local_style(path, pool));
       return SVN_NO_ERROR;
     }
+
+  if (finfo.filetype == APR_LNK)
+    return SVN_NO_ERROR;
 
   perms_to_set = finfo.protection;
   if (change_readwrite)

@@ -9,6 +9,8 @@
 	<Platforms>
 		<Platform
 			Name="Win32"/>
+		<Platform
+			Name="x64"/>
 	</Platforms>
 	<Configurations>
 		<Configuration
@@ -24,6 +26,28 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
+			ConfigurationType="0"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="cmd /c build_locale.bat Release"
+				ReBuildCommandLine="cmd /c build_locale.bat Release"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug|x64"
+			ConfigurationType="0"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="cmd /c build_locale.bat Debug"
+				ReBuildCommandLine="cmd /c build_locale.bat Debug"
+                        />
+		</Configuration>
+		<Configuration
+			Name="Release|x64"
 			ConfigurationType="0"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE">

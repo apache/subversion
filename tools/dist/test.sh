@@ -1,7 +1,11 @@
 #!/bin/sh
-set -ex
+set -e
 
-[ ! -e Makefile ] && ./configure --with-apxs --disable-static
+[ -e $HOME/.svndistrc ] && . $HOME/.svndistrc
+
+set -x
+
+[ ! -e Makefile ] && ./configure $TEST_CONFIGURE_OPTIONS
 make
 make swig-py
 make swig-pl

@@ -392,7 +392,7 @@ svn_fs_open(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
   *fs_p = svn_fs_new(fs_config, pool);
   SVN_ERR(acquire_fs_mutex());
-  err = vtable->open(*fs_p, path, pool, common_pool);
+  err = vtable->open_fs(*fs_p, path, pool, common_pool);
   err2 = release_fs_mutex();
   if (err)
     {
@@ -445,7 +445,7 @@ svn_fs_recover(const char *path,
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
   fs = svn_fs_new(NULL, pool);
   SVN_ERR(acquire_fs_mutex());
-  err = vtable->open_for_recovery(fs, path, pool, common_pool);
+  err = vtable->open_fs_for_recovery(fs, path, pool, common_pool);
   err2 = release_fs_mutex();
   if (err)
     {
@@ -494,7 +494,7 @@ svn_fs_open_berkeley(svn_fs_t *fs, const char *path)
 
   SVN_ERR(fs_library_vtable(&vtable, path, fs->pool));
   SVN_ERR(acquire_fs_mutex());
-  err = vtable->open(fs, path, fs->pool, common_pool);
+  err = vtable->open_fs(fs, path, fs->pool, common_pool);
   err2 = release_fs_mutex();
   if (err)
     {

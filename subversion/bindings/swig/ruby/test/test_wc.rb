@@ -894,7 +894,7 @@ EOE
     assert(Svn::Wc.ignore?("xxx.C", ["*.H", "*.C"]))
   end
 
-  def test_change_list
+  def test_changelist
     log = "sample log"
     file = "hello.txt"
     src = "Hello"
@@ -906,30 +906,31 @@ EOE
     rev1 = ctx.commit(@wc_path).revision
 
     Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
-      assert_nil(access.entry(@wc_path).change_list)
+      assert_nil(access.entry(@wc_path).changelist)
     end
 
     notifies = []
     notify_collector = Proc.new {|notify| notifies << notify }
-    Svn::Wc.set_change_list(path, "123", nil, nil, notify_collector)
+    Svn::Wc.set_changelist(path, "123", nil, nil, notify_collector)
     Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
-      assert("123", access.entry(@wc_path).change_list)
+      assert("123", access.entry(@wc_path).changelist)
     end
     assert_equal([[path, nil]],
                  notifies.collect {|notify| [notify.path, notify.err]})
 
     notifies = []
-    Svn::Wc.set_change_list(path, "456", nil, nil, notify_collector)
+    Svn::Wc.set_changelist(path, "456", nil, nil, notify_collector)
     Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
-      assert("456", access.entry(@wc_path).change_list)
+      assert("456", access.entry(@wc_path).changelist)
     end
-    assert_equal([[path, nil]],
-                 notifies.collect {|notify| [notify.path, notify.err]})
+    assert_equal([[path, Svn::Error::WcChangelistMove],
+                  [path, NilClass]],
+                 notifies.collect {|notify| [notify.path, notify.err.class]})
 
     notifies = []
-    Svn::Wc.set_change_list(path, "789", "000", nil, notify_collector)
+    Svn::Wc.set_changelist(path, "789", "000", nil, notify_collector)
     Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
-      assert("456", access.entry(@wc_path).change_list)
+      assert("456", access.entry(@wc_path).changelist)
     end
     assert_equal([[path, Svn::Error::WcMismatchedChangeList]],
                  notifies.collect {|notify| [notify.path, notify.err.class]})

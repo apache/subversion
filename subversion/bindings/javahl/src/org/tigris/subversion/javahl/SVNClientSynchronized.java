@@ -68,10 +68,10 @@ public class SVNClientSynchronized implements SVNClientInterface
     /**
      * @return The name of the working copy's administrative
      * directory, which is usually <code>.svn</code>.
-     * @see <a
-     * href="http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt">Instructions</a>
-     * on changing this as a work-around for the behavior of ASP.Net
-     * on Windows.
+     * @see <a 
+     * href="http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt">
+     * Instructions on changing this as a work-around for the behavior of
+     * ASP.Net on Windows.</a>
      * @since 1.3
      */
     public String getAdminDirectoryName()
@@ -181,7 +181,6 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param getAll    get status for uninteresting (unchanged) files.
      * @param noIgnore  get status for normaly ignored files and directories.
      * @param ignoreExternals if externals are ignored during status
-     * @return Array of Status entries.
      * @since 1.5
      */
     public void status(String path, int depth, boolean onServer,
@@ -429,7 +428,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param destPath destination directory for checkout.
      * @param revision the revision to checkout.
      * @param pegRevision the peg revision to interpret the path
-     * @param recurse how deep to checkout files recursively.
+     * @param depth how deep to checkout files recursively.
      * @param ignoreExternals if externals are ignored during checkout
      * @param allowUnverObstructions allow unversioned paths that obstruct adds
      * @throws ClientException
@@ -521,7 +520,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface#setConflictResolver(ConflictResolverCallback)
+     * @see SVNClientInterface#setConflictResolver(ConflictResolverCallback)
      * @since 1.5
      */
     public void setConflictResolver(ConflictResolverCallback listener)
@@ -762,7 +761,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.commit(String[], String, boolean)
+     * @see SVNClientInterface#commit(String[], String, boolean)
      */
     public long commit(String[] path, String message, boolean recurse)
             throws ClientException
@@ -774,7 +773,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.commit(String[], String, boolean, boolean, boolean, String)
+     * @see SVNClientInterface#commit(String[], String, int, boolean, boolean, String)
      * @since 1.5
      */
     public long commit(String[] path, String message, int depth,
@@ -792,7 +791,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     /**
      * Copy versioned paths with the history preserved.
      *
-     * @see org.tigris.subversion.javahl.SVNClientInterface.copy(String[], String, String, boolean, boolean, boolean)
+     * @see SVNClientInterface#copy(CopySource[], String, String, boolean, boolean, boolean)
      * @since 1.5
      */
     public void copy(CopySource[] sources, String destPath, String message,
@@ -829,7 +828,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     /**
      * Move or rename versioned paths.
      *
-     * @see org.tigris.subversion.javahl.SVNClientInterface.move(String[], String, String, boolean, boolean, boolean)
+     * @see SVNClientInterface#move(String[], String, String, boolean, boolean, boolean, boolean)
      * @since 1.5
      */
     public void move(String[] srcPaths, String destPath, String message,
@@ -846,7 +845,7 @@ public class SVNClientSynchronized implements SVNClientInterface
 
     /**
      * @deprecated Use move() without a Revision parameter.
-     * @see org.tigris.subversion.javahl.SVNClientInterface.move(String[], String, String, boolean, boolean)
+     * @see SVNClientInterface#move(String, String, String, Revision, boolean)
      * @since 1.2
      */
     public void move(String srcPath, String destPath, String message,
@@ -928,16 +927,26 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Removes the 'conflicted' state on a file.
-     * @param path      path to cleanup
-     * @param recurse   recurce into subdirectories
-     * @throws ClientException
+     * @see SVNClientInterface#resolved(String, int, int)
+     * @since 1.5
+     */
+    public void resolved(String path, int depth, int conflictResult)
+        throws SubversionException
+    {
+        synchronized (clazz)
+        {
+            worker.resolved(path, depth, conflictResult);
+        }
+    }
+
+    /**
+     * @see SVNClientInterface#resolved(String, boolean)
      */
     public void resolved(String path, boolean recurse) throws ClientException
     {
-        synchronized(clazz)
+        synchronized (clazz)
         {
-            worker.resolved(path,recurse);
+            worker.resolved(path, recurse);
         }
     }
 
@@ -1019,7 +1028,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.doSwitch(String, String, Revision, int, boolean, boolean)
+     * @see SVNClientInterface#doSwitch(String, String, Revision, int, boolean, boolean)
      * @since 1.5
      */
     public long doSwitch(String path, String url, Revision revision,
@@ -1097,7 +1106,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface#suggestMergeSources(String)
+     * @see SVNClientInterface#suggestMergeSources(String, Revision)
      */
     public String[] suggestMergeSources(String path, Revision pegRevision)
             throws SubversionException
@@ -1213,33 +1222,6 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Merge changes from two paths into a new local path.
-     *
-     * @param path           path or url
-     * @param pegRevision    revision to interpret path
-     * @param revision1      first revision
-     * @param revision2      second revision
-     * @param localPath      target local path
-     * @param force          overwrite local changes
-     * @param depth          how deep to traverse into subdirectories
-     * @param ignoreAncestry ignore if files are not related
-     * @param dryRun         do not change anything
-     * @throws ClientException
-     * @since 1.5
-     */
-    public void merge(String path, Revision pegRevision, Revision revision1,
-                      Revision revision2, String localPath, boolean force,
-                      int depth, boolean ignoreAncestry, boolean dryRun)
-           throws ClientException
-    {
-        synchronized (clazz)
-        {
-            worker.merge(path, pegRevision, revision1, revision2, localPath,
-                         force, depth, ignoreAncestry, dryRun);
-        }
-    }
-
-    /**
      * Merge set of revisions into a new local path.
      * @param path          path or url
      * @param pegRevision   revision to interpret path
@@ -1265,15 +1247,31 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * @see 1.5 org.tigris.subversion.javahl.SVNClientInterface#getMergeInfo(String, Revision)
+     * @see SVNClientInterface#getMergeInfo(String, Revision)
      * @since 1.5
      */
-    public MergeInfo getMergeInfo(String path, Revision revision)
+    public MergeInfo getMergeInfo(String path, Revision pegRevision)
         throws SubversionException
     {
         synchronized (clazz)
         {
-            return worker.getMergeInfo(path, revision);
+            return worker.getMergeInfo(path, pegRevision);
+        }
+    }
+
+    /**
+     * @see SVNClientInterface#getAvailableMerges(String, Revision, String)
+     * @since 1.5
+     */
+    public RevisionRange[] getAvailableMerges(String path,
+                                              Revision pegRevision,
+                                              String mergeSource)
+        throws SubversionException
+    {
+        synchronized (clazz)
+        {
+            return worker.getAvailableMerges(path, pegRevision,
+                                             mergeSource);
         }
     }
 
@@ -1452,7 +1450,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param pegRevision Revision at which to interpret
      * <code>target</code>.  If {@link RevisionKind#unspecified} or
      * <code>null</code>, behave identically to {@link
-     * diffSummarize(String, Revision, String, Revision, boolean,
+     * #diffSummarize(String, Revision, String, Revision, int,
      * boolean, DiffSummaryReceiver)}, using <code>path</code> for
      * both of that method's targets.
      * @param startRevision Beginning of range for comparsion of
@@ -1633,6 +1631,27 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * Sets one property of an item with a String value
+     *
+     * @param path    path of the item
+     * @param name    name of the property
+     * @param value   new value of the property
+     * @param depth   the depth to recurse into subdirectories
+     * @param force   do not check if the value is valid
+     * @throws ClientException
+     * @since 1.5
+     */
+    public void propertySet(String path, String name, String value, int depth,
+                     boolean force)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.propertySet(path, name, value, depth, force);
+        }
+    }
+
+    /**
      * Remove one property of an item.
      * @param path      path of the item
      * @param name      name of the property
@@ -1645,6 +1664,23 @@ public class SVNClientSynchronized implements SVNClientInterface
         synchronized(clazz)
         {
             worker.propertyRemove(path, name, recurse);
+        }
+    }
+
+    /**
+     * Remove one property of an item.
+     * @param path      path of the item
+     * @param name      name of the property
+     * @param depth     the depth to recurse into subdirectories
+     * @throws ClientException
+     * @since 1.5
+     */
+    public void propertyRemove(String path, String name, int depth)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.propertyRemove(path, name, depth);
         }
     }
 
@@ -1883,7 +1919,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param path        the path of the file
      * @param revision    the revision to retrieve
      * @param pegRevision the revision at which to interpret the path
-     * @param the stream to write the file's content to
+     * @param stream      the stream to write the file's content to
      * @throws ClientException
      */
     public void streamFileContent(String path, Revision revision,
@@ -2016,7 +2052,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.setConfigDirectory(String)
+     * @see SVNClientInterface#setConfigDirectory(String)
      */
     public void setConfigDirectory(String configDir) throws ClientException
     {
@@ -2107,7 +2143,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * @see org.tigris.subversion.javahl.SVNClientInterface.commit(String[], String, boolean, boolean)
+     * @see SVNClientInterface#commit(String[], String, boolean, boolean)
      * @since 1.2
      */
     public long commit(String[] path, String message, boolean recurse,
@@ -2176,13 +2212,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Retrieve information about repository or working copy items.
-     * @param pathOrUrl     the path or the url of the item
-     * @param revision      the revision of the item to return
-     * @param pegRevision   the revision to interpret pathOrUrl
-     * @param depth         the depth to recurse
-     * @param callback      a callback to receive the infos retreived
-     * @return              the information objects
+     * @see SVNClientInterface#info2(String, Revision, Revision, int, InfoCallback)
      * @since 1.5
      */
     public void info2(String pathOrUrl, Revision revision,

@@ -124,13 +124,13 @@ start_getloc(svn_ra_serf__xml_parser_t *parser,
       svn_revnum_t rev = SVN_INVALID_REVNUM;
       const char *revstr, *path;
 
-      revstr = svn_ra_serf__find_attr(attrs, "rev");
+      revstr = svn_xml_get_attr_value("rev", attrs);
       if (revstr)
         {
           rev = SVN_STR_TO_REV(revstr);
         }
 
-      path = svn_ra_serf__find_attr(attrs, "path");
+      path = svn_xml_get_attr_value("path", attrs);
 
       if (SVN_IS_VALID_REVNUM(rev) && path)
         {
@@ -255,7 +255,7 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
     {
       return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                               _("The OPTIONS response did not include the "
-                                "requested baseline-collection value."));
+                                "requested baseline-collection value"));
     }
 
   req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);
@@ -293,12 +293,6 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
     }
 
   SVN_ERR(err);
-
-  if (loc_ctx->status_code == 404)
-    {
-      return svn_error_create(SVN_ERR_FS_NOT_FOUND, NULL,
-                              _("File doesn't exist on HEAD"));
-    }
 
   return SVN_NO_ERROR;
 }

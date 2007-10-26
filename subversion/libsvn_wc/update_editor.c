@@ -89,8 +89,8 @@ struct edit_baton
      pointing to the final revision. */
   svn_revnum_t *target_revision;
 
-  /* The depth of this edit */
-  svn_depth_t depth;
+  /* The requested depth of this edit */
+  svn_depth_t requested_depth;
 
   /* Need to know if the user wants us to overwrite the 'now' times on
      edited/added files with the last-commit-time. */
@@ -193,8 +193,9 @@ struct dir_baton
   /* The current log buffer. */
   svn_stringbuf_t *log_accum;
 
-  /* The working copy depth of the directory. */
-  svn_depth_t depth;
+  /* The depth of the directory in the wc (or inferred if added).  Not
+     used for filtering; we have a separate wrapping editor for that. */
+  svn_depth_t ambient_depth;
 
   /* The pool in which this baton itself is allocated. */
   apr_pool_t *pool;
@@ -338,46 +339,23 @@ cleanup_dir_baton_child(void *dir_baton)
 /* Return a new dir_baton to represent NAME (a subdirectory of
    PARENT_BATON).  If PATH is NULL, this is the root directory of the
    edit. */
-static struct dir_baton *
-make_dir_baton(const char *path,
+static svn_error_t *
+make_dir_baton(struct dir_baton **d_p,
+               const char *path,
                struct edit_baton *eb,
                struct dir_baton *pb,
                svn_boolean_t added,
                apr_pool_t *pool)
 {
-  struct dir_baton *d = apr_pcalloc(pool, sizeof(*d));
+  struct dir_baton *d;
   struct bump_dir_info *bdi;
 
   /* Don't do this.  Just do NOT do this to me. */
   if (pb && (! path))
     abort();
 
-  if (added)
-    {
-      if (strcmp(eb->target, path) == 0)
-        {
-          /* The target of the edit is being added, give it the requested
-             depth of the edit (but convert svn_depth_unknown to
-             svn_depth_infinity). */
-          d->depth = (eb->depth == svn_depth_unknown) ?
-                     svn_depth_infinity : eb->depth;
-        }
-      else if (eb->depth == svn_depth_immediates
-               || (eb->depth == svn_depth_unknown
-                   && pb->depth == svn_depth_immediates))
-        {
-          d->depth = svn_depth_empty;
-        }
-      else
-        {
-          d->depth = svn_depth_infinity;
-        }
-    }
-  else
-    {
-      /* For opened directories, we'll get the real depth later. */
-      d->depth = svn_depth_infinity;
-    }
+  /* Okay, no easy out, so allocate and initialize a dir baton. */
+  d = apr_pcalloc(pool, sizeof(*d));
 
   /* Construct the PATH and baseNAME of this directory. */
   d->path = apr_pstrdup(pool, eb->anchor);
@@ -451,10 +429,14 @@ make_dir_baton(const char *path,
   d->log_number   = 0;
   d->log_accum    = svn_stringbuf_create("", pool);
 
+  /* The caller of this function needs to fill this in. */
+  d->ambient_depth = svn_depth_unknown;
+
   apr_pool_cleanup_register(d->pool, d, cleanup_dir_baton,
                             cleanup_dir_baton_child);
 
-  return d;
+  *d_p = d;
+  return SVN_NO_ERROR;
 }
 
 
@@ -500,10 +482,10 @@ complete_directory(struct edit_baton *eb,
   /* After a depth upgrade the entry must reflect the new depth.
      Upgrading to infinity changes the depth of *all* directories,
      upgrading to something else only changes the target. */
-  if (eb->depth == svn_depth_infinity
+  if (eb->requested_depth == svn_depth_infinity
       || (strcmp(path, svn_path_join(eb->anchor, eb->target, pool)) == 0
-          && eb->depth > entry->depth))
-    entry->depth = eb->depth;
+          && eb->requested_depth > entry->depth))
+    entry->depth = eb->requested_depth;
 
   /* Remove any deleted or missing entries. */
   subpool = svn_pool_create(pool);
@@ -631,6 +613,9 @@ struct file_baton
   /* Set if this file is new. */
   svn_boolean_t added;
 
+  /* Set if this file is new with history. */
+  svn_boolean_t added_with_history;
+
   /* Set if this file is skipped because it was in conflict. */
   svn_boolean_t skipped;
 
@@ -642,10 +627,6 @@ struct file_baton
      scheduled for addition without history. */
   svn_boolean_t add_existed;
 
-  /* Whether or not we should call the notification callback when
-     close_file() is invoked on this baton. */
-  svn_boolean_t send_notification;
-
   /* The path to the current text base, if any.
      This gets set if there are file content changes. */
   const char *text_base_path;
@@ -653,6 +634,26 @@ struct file_baton
   /* This gets set if the file underwent a text change, which guides
      the code that syncs up the adm dir and working copy. */
   const char *new_text_base_path;
+
+  /* If this file was added with history, this is the path to a copy
+     of the text base of the copyfrom file (in the temporary area). */
+  const char *copied_text_base;
+  
+  /* If this file was added with history, and the copyfrom had local
+     mods, this is the path to a copy of the user's version with local
+     mods (in the temporary area). */
+  const char *copied_working_text;
+
+  /* If this file was added with history, this hash contains the base
+     properties of the copied file. */
+  apr_hash_t *copied_base_props;
+
+  /* If this file was added with history, this hash contains the working
+     properties of the copied file. */
+  apr_hash_t *copied_working_props;
+  
+  /* Set if we've received an apply_textdelta for this file. */
+  svn_boolean_t received_textdelta;
 
   /* An array of svn_prop_t structures, representing all the property
      changes to be applied to this file. */
@@ -676,8 +677,10 @@ struct file_baton
 
 /* Make a new file baton in the provided POOL, with PB as the parent baton.
    PATH is relative to the root of the edit. */
-static struct file_baton *
-make_file_baton(struct dir_baton *pb,
+
+static svn_error_t *
+make_file_baton(struct file_baton **f_p,
+                struct dir_baton *pb,
                 const char *path,
                 svn_boolean_t adding,
                 apr_pool_t *pool)
@@ -703,22 +706,22 @@ make_file_baton(struct dir_baton *pb,
                                  pb->path, f->name, pool);
     }
 
-  f->pool         = pool;
-  f->edit_baton   = pb->edit_baton;
-  f->propchanges  = apr_array_make(pool, 1, sizeof(svn_prop_t));
-  f->bump_info    = pb->bump_info;
-  f->added        = adding;
-  f->existed      = FALSE;
-  f->add_existed  = FALSE;
-  f->send_notification = TRUE;
-  f->dir_baton    = pb;
+  f->pool              = pool;
+  f->edit_baton        = pb->edit_baton;
+  f->propchanges       = apr_array_make(pool, 1, sizeof(svn_prop_t));
+  f->bump_info         = pb->bump_info;
+  f->added             = adding;
+  f->existed           = FALSE;
+  f->add_existed       = FALSE;
+  f->dir_baton         = pb;
 
   /* No need to initialize f->digest, since we used pcalloc(). */
 
   /* the directory's bump info has one more referer now */
   ++f->bump_info->ref_count;
 
-  return f;
+  *f_p = f;
+  return SVN_NO_ERROR;
 }
 
 
@@ -741,7 +744,11 @@ window_handler(svn_txdelta_window_t *window, void *baton)
      case, clean up the handler.  */
   if (hb->source)
     {
-      err2 = svn_wc__close_text_base(hb->source, fb->path, 0, hb->pool);
+      if (fb->copied_text_base)
+        err2 = svn_io_file_close(hb->source, hb->pool);
+      else
+        err2 = svn_wc__close_text_base(hb->source, fb->path, 0, hb->pool);
+
       if (err2 && !err)
         err = err2;
       else
@@ -798,7 +805,7 @@ prep_directory(struct dir_baton *db,
      or by checking that it is so already. */
   SVN_ERR(svn_wc_ensure_adm3(db->path, NULL,
                              ancestor_url, repos,
-                             ancestor_revision, db->depth, pool));
+                             ancestor_revision, db->ambient_depth, pool));
 
   if (! db->edit_baton->adm_access
       || strcmp(svn_wc_adm_access_path(db->edit_baton->adm_access),
@@ -1005,7 +1012,9 @@ open_root(void *edit_baton,
      edit run. */
   eb->root_opened = TRUE;
 
-  *dir_baton = d = make_dir_baton(NULL, eb, NULL, FALSE, pool);
+  SVN_ERR(make_dir_baton(&d, NULL, eb, NULL, FALSE, pool));
+  *dir_baton = d;
+
   if (! *eb->target)
     {
       /* For an update with a NULL target, this is equivalent to open_dir(): */
@@ -1019,7 +1028,7 @@ open_root(void *edit_baton,
       SVN_ERR(svn_wc_entry(&entry, d->path, eb->adm_access,
                            FALSE, pool));
       if (entry)
-        d->depth = entry->depth;
+        d->ambient_depth = entry->depth;
 
       /* Mark directory as being at target_revision, but incomplete. */
       tmp_entry.revision = *(eb->target_revision);
@@ -1187,6 +1196,7 @@ delete_entry(const char *path,
              apr_pool_t *pool)
 {
   struct dir_baton *pb = parent_baton;
+
   SVN_ERR(check_path_under_root(pb->path, svn_path_basename(path, pool),
                                 pool));
   return do_entry_deletion(pb->edit_baton, pb->path, path, &pb->log_number,
@@ -1204,8 +1214,31 @@ add_directory(const char *path,
 {
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
-  struct dir_baton *db = make_dir_baton(path, eb, pb, TRUE, pool);
+  struct dir_baton *db;
   svn_node_kind_t kind;
+
+  SVN_ERR(make_dir_baton(&db, path, eb, pb, TRUE, pool));
+  *child_baton = db;
+
+  if (strcmp(eb->target, path) == 0)
+    {
+      /* The target of the edit is being added, give it the requested
+         depth of the edit (but convert svn_depth_unknown to
+         svn_depth_infinity). */
+      db->ambient_depth = (eb->requested_depth == svn_depth_unknown)
+        ? svn_depth_infinity : eb->requested_depth;
+    }
+  else if (eb->requested_depth == svn_depth_immediates
+           || (eb->requested_depth == svn_depth_unknown
+               && pb->ambient_depth == svn_depth_immediates))
+    {
+      db->ambient_depth = svn_depth_empty;
+    }
+  else
+    {
+      db->ambient_depth = svn_depth_infinity;
+    }
+
 
   /* Flush the log for the parent directory before going into this subtree. */
   SVN_ERR(flush_log(pb, pool));
@@ -1374,8 +1407,6 @@ add_directory(const char *path,
                          *(eb->target_revision),
                          db->pool));
 
-  *child_baton = db;
-
   /* If this add was obstructed by dir scheduled for addition without
      history let close_file() handle the notification because there
      might be properties to deal with. */
@@ -1410,15 +1441,11 @@ open_directory(const char *path,
 
   svn_wc_adm_access_t *adm_access;
 
+  SVN_ERR(make_dir_baton(&db, path, eb, pb, FALSE, pool));
+  *child_baton = db;
+
   /* Flush the log for the parent directory before going into this subtree. */
   SVN_ERR(flush_log(pb, pool));
-
-  /* kff todo: check that the dir exists locally, find it somewhere if
-     its not there?  Yes, all this and more...  And ancestor_url and
-     ancestor_revision need to get used. */
-
-  db = make_dir_baton(path, eb, pb, FALSE, pool);
-  *child_baton = db;
 
   SVN_ERR(check_path_under_root(pb->path, db->name, pool));
 
@@ -1431,7 +1458,7 @@ open_directory(const char *path,
       svn_boolean_t text_conflicted;
       svn_boolean_t prop_conflicted;
 
-      db->depth = entry->depth;
+      db->ambient_depth = entry->depth;
 
       SVN_ERR(svn_wc_conflicted_p(&text_conflicted, &prop_conflicted,
                                   db->path, entry, pool));
@@ -1561,25 +1588,28 @@ close_directory(void *dir_baton,
                   else if (new_val_s && old_val_s
                            && (svn_string_compare(old_val_s, new_val_s)))
                     ; /* Value did not change... so do nothing. */
-                  else  /* something changed, record the change */
+                  else if (old_val_s || new_val_s)
+                    /* something changed, record the change */
                     {
-                      /* We can't assume that ti came pre-loaded with the
-                         old values of the svn:externals property.  Yes,
-                         most callers will have already initialized ti by
-                         sending it through svn_wc_crawl_revisions, but we
-                         shouldn't count on that here -- so we set both the
-                         old and new values again. */
+                      const char *d_path = apr_pstrdup(ti->pool, db->path);
 
+                      apr_hash_set(ti->depths, d_path, APR_HASH_KEY_STRING,
+                                   svn_depth_to_word(db->ambient_depth));
+
+                      /* We can't assume that ti came pre-loaded with
+                         the old values of the svn:externals property.
+                         Yes, most callers will have already
+                         initialized ti by sending it through
+                         svn_wc_crawl_revisions, but we shouldn't
+                         count on that here -- so we set both the old
+                         and new values again. */
                       if (old_val_s)
-                        apr_hash_set(ti->externals_old,
-                                     apr_pstrdup(ti->pool, db->path),
+                        apr_hash_set(ti->externals_old, d_path,
                                      APR_HASH_KEY_STRING,
                                      apr_pstrmemdup(ti->pool, old_val_s->data,
                                                     old_val_s->len));
-
                       if (new_val_s)
-                        apr_hash_set(ti->externals_new,
-                                     apr_pstrdup(ti->pool, db->path),
+                        apr_hash_set(ti->externals_new, d_path,
                                      APR_HASH_KEY_STRING,
                                      apr_pstrmemdup(ti->pool, new_val_s->data,
                                                     new_val_s->len));
@@ -1592,7 +1622,10 @@ close_directory(void *dir_baton,
           SVN_ERR_W(svn_wc__merge_props(&prop_state,
                                         adm_access, db->path,
                                         NULL /* use baseprops */,
+                                        NULL, NULL,
                                         regular_props, TRUE, FALSE,
+                                        db->edit_baton->conflict_func,
+                                        db->edit_baton->conflict_baton,
                                         db->pool, &db->log_accum),
                     _("Couldn't do property merge"));
         }
@@ -1736,14 +1769,8 @@ add_file(const char *path,
       /* Sanity checks */
       if (! (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev)))
         return svn_error_create(SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
-                                  _("Bad copyfrom arguments received."));
+                                  _("Bad copyfrom arguments received"));
 
-      /* ### TODO(sussman): this is the place where we insert clever
-             heuristics to locate the copyfrom file in the existing wc. */
-
-      /* Fallback mode: fetch and install the copyfrom file using a
-         side-request to the repository, rather than go through with
-         the normal addition process. */
       return add_file_with_history(path, parent_baton,
                                    copyfrom_path, copyfrom_rev,
                                    file_baton, pool);
@@ -1753,7 +1780,9 @@ add_file(const char *path,
      use a subpool for any temporary allocations. */
   subpool = svn_pool_create(pool);
 
-  fb = make_file_baton(pb, path, TRUE, pool);
+  SVN_ERR(make_file_baton(&fb, pb, path, TRUE, pool));
+  *file_baton = fb;
+
 
   SVN_ERR(check_path_under_root(fb->dir_baton->path, fb->name, subpool));
 
@@ -1822,7 +1851,6 @@ add_file(const char *path,
 
   svn_pool_destroy(subpool);
 
-  *file_baton = fb;
   return SVN_NO_ERROR;
 }
 
@@ -1847,7 +1875,8 @@ open_file(const char *path,
      a subpool for any temporary allocations. */
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  fb = make_file_baton(pb, path, FALSE, pool);
+  SVN_ERR(make_file_baton(&fb, pb, path, FALSE, pool));
+  *file_baton = fb;
 
   SVN_ERR(check_path_under_root(fb->dir_baton->path, fb->name, subpool));
 
@@ -1855,7 +1884,7 @@ open_file(const char *path,
      aren't actually doing any "work" or fetching any persistent data. */
 
   SVN_ERR(svn_io_check_path(fb->path, &kind, subpool));
-  SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access, 
+  SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                               pb->path, subpool));
   SVN_ERR(svn_wc_entry(&entry, fb->path, adm_access, FALSE, subpool));
 
@@ -1894,38 +1923,28 @@ open_file(const char *path,
 
   svn_pool_destroy(subpool);
 
-  *file_baton = fb;
   return SVN_NO_ERROR;
 }
 
-
+/* Fills out the text_base_path and new_text_base_path fields in
+   FILE_BATON (to text-base or revert-base); if CHECKSUM_P is non-NULL
+   and the path already has an entry, sets *CHECKSUM_P to the checksum
+   from its entry. If non-NULL, set *REPLACED_P and *USE_REVERT_BASE_P
+   to whether or not the entry is replaced and whether or not it needs
+   to use the revert base (ie, it is replaced with history)
+   respectively. */
 static svn_error_t *
-apply_textdelta(void *file_baton,
-                const char *base_checksum,
-                apr_pool_t *pool,
-                svn_txdelta_window_handler_t *handler,
-                void **handler_baton)
+choose_base_paths(const char **checksum_p,
+                  svn_boolean_t *replaced_p,
+                  svn_boolean_t *use_revert_base_p,
+                  struct file_baton *fb,
+                  apr_pool_t *pool)
 {
-  struct file_baton *fb = file_baton;
   struct edit_baton *eb = fb->edit_baton;
-  apr_pool_t *handler_pool = svn_pool_create(fb->pool);
-  struct handler_baton *hb = apr_palloc(handler_pool, sizeof(*hb));
-  svn_error_t *err;
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *ent;
-  svn_boolean_t replaced;
-  svn_boolean_t use_revert_base;
+  svn_boolean_t replaced, use_revert_base;
 
-  if (fb->skipped)
-    {
-      *handler = svn_delta_noop_window_handler;
-      *handler_baton = NULL;
-      return SVN_NO_ERROR;
-    }
-
-  /* Before applying incoming svndiff data to text base, make sure
-     text base hasn't been corrupted, and that its checksum
-     matches the expected base checksum. */
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                               svn_path_dirname(fb->path, pool), pool));
   SVN_ERR(svn_wc_entry(&ent, fb->path, adm_access, FALSE, pool));
@@ -1945,12 +1964,58 @@ apply_textdelta(void *file_baton,
                                                       fb->pool);
     }
 
+  if (checksum_p)
+    {
+      *checksum_p = NULL;
+      if (ent)
+        *checksum_p = ent->checksum;
+    } 
+  if (replaced_p)
+    *replaced_p = replaced;
+  if (use_revert_base_p)
+    *use_revert_base_p = use_revert_base;
+  
+  return SVN_NO_ERROR;
+}
+
+
+
+static svn_error_t *
+apply_textdelta(void *file_baton,
+                const char *base_checksum,
+                apr_pool_t *pool,
+                svn_txdelta_window_handler_t *handler,
+                void **handler_baton)
+{
+  struct file_baton *fb = file_baton;
+  apr_pool_t *handler_pool = svn_pool_create(fb->pool);
+  struct handler_baton *hb = apr_palloc(handler_pool, sizeof(*hb));
+  svn_error_t *err;
+  const char *checksum;
+  svn_boolean_t replaced;
+  svn_boolean_t use_revert_base;
+
+  if (fb->skipped)
+    {
+      *handler = svn_delta_noop_window_handler;
+      *handler_baton = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  fb->received_textdelta = TRUE;
+
+  /* Before applying incoming svndiff data to text base, make sure
+     text base hasn't been corrupted, and that its checksum
+     matches the expected base checksum. */
+  SVN_ERR(choose_base_paths(&checksum, &replaced, &use_revert_base,
+                            fb, pool));
+
   /* Only compare checksums if this file has an entry, and the entry has
      a checksum.  If there's no entry, it just means the file is
      created in this update, so there won't be any previously recorded
      checksum to compare against.  If no checksum, well, for backwards
      compatibility we assume that no checksum always matches. */
-  if (ent && ent->checksum)
+  if (checksum)
     {
       unsigned char digest[APR_MD5_DIGESTSIZE];
       const char *hex_digest;
@@ -1971,13 +2036,12 @@ apply_textdelta(void *file_baton,
                hex_digest);
         }
 
-      if ((ent && ent->checksum) && ! replaced &&
-          strcmp(hex_digest, ent->checksum) != 0)
+      if (! replaced && strcmp(hex_digest, checksum) != 0)
         {
           return svn_error_createf
             (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
              _("Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"),
-             svn_path_local_style(fb->text_base_path, pool), ent->checksum,
+             svn_path_local_style(fb->text_base_path, pool), checksum,
              hex_digest);
         }
     }
@@ -2009,7 +2073,13 @@ apply_textdelta(void *file_baton,
 
     }
   else
-    hb->source = NULL;
+    {
+      if (fb->copied_text_base)
+        SVN_ERR(svn_io_file_open(&hb->source, fb->copied_text_base,
+                                 APR_READ, APR_OS_DEFAULT, handler_pool));
+      else
+        hb->source = NULL;
+    }
 
   /* Open the text base for writing (this will get us a temporary file).  */
 
@@ -2082,7 +2152,11 @@ change_file_prop(void *file_baton,
    properties as well as entryprops and wcprops.  Update *PROP_STATE
    to reflect the result of the regular prop merge.  Make *LOCK_STATE
    reflect the possible removal of a lock token from FILE_PATH's
-   entryprops.
+   entryprops.  BASE_PROPS and WORKING_PROPS are hashes of the base and 
+   working props of the file; if NULL they are read from the wc.
+
+   CONFICT_FUNC/BATON is a callback which allows the client to
+   possibly resolve a property conflict interactively.
 
    ADM_ACCESS is the access baton for FILE_PATH.  Append log commands to
    LOG_ACCUM.  Use POOL for temporary allocations. */
@@ -2093,6 +2167,10 @@ merge_props(svn_stringbuf_t *log_accum,
             svn_wc_adm_access_t *adm_access,
             const char *file_path,
             const apr_array_header_t *prop_changes,
+            apr_hash_t *base_props,
+            apr_hash_t *working_props,
+            svn_wc_conflict_resolver_func_t conflict_func,
+            void *conflict_baton,
             apr_pool_t *pool)
 {
   apr_array_header_t *regular_props = NULL, *wc_props = NULL,
@@ -2114,9 +2192,12 @@ merge_props(svn_stringbuf_t *log_accum,
          props.  */
       SVN_ERR(svn_wc__merge_props(prop_state,
                                   adm_access, file_path,
-                                  NULL /* use base props */,
-                                  regular_props, TRUE, FALSE, pool,
-                                  &log_accum));
+                                  NULL /* update, not merge */,
+                                  base_props,
+                                  working_props,
+                                  regular_props, TRUE, FALSE,
+                                  conflict_func, conflict_baton,
+                                  pool, &log_accum));
     }
 
   /* If there are any ENTRY PROPS, make sure those get appended to the
@@ -2277,14 +2358,19 @@ merge_file(svn_wc_notify_state_t *content_state,
      any file content merging, since that process might expand keywords, in
      which case we want the new entryprops to be in place. */
   SVN_ERR(merge_props(log_accum, prop_state, lock_state, adm_access,
-                      fb->path, fb->propchanges, pool));
+                      fb->path, fb->propchanges,
+                      fb->copied_base_props, fb->copied_working_props,
+                      eb->conflict_func, eb->conflict_baton, pool));
 
   /* Has the user made local mods to the working file?
      Note that this compares to the current pristine file, which is
      different from fb->old_text_base_path if we have a replaced-with-history
      file.  However, in the case we had an obstruction, we check against the
-     new text base. */
-  if (! fb->existed)
+     new text base. (And if we're doing an add-with-history and we've already
+     saved a copy of a locally-modified file, then there certainly are mods.) */
+  if (fb->copied_working_text)
+    is_locally_modified = TRUE;
+  else if (! fb->existed)
     SVN_ERR(svn_wc__text_modified_internal_p(&is_locally_modified, fb->path,
                                              FALSE, adm_access, FALSE, pool));
   else if (fb->new_text_base_path)
@@ -2351,9 +2437,10 @@ merge_file(svn_wc_notify_state_t *content_state,
           svn_node_kind_t wfile_kind = svn_node_unknown;
 
           SVN_ERR(svn_io_check_path(fb->path, &wfile_kind, pool));
-          if (wfile_kind == svn_node_none) /* working file is missing?! */
+          if (wfile_kind == svn_node_none && ! fb->added_with_history)
             {
-              /* Just copy the new text-base to the file. */
+              /* working file is missing?! 
+                 Just copy the new text-base to the file. */
               SVN_ERR(svn_wc__loggy_copy(&log_accum, NULL, adm_access,
                                          svn_wc__copy_translate,
                                          fb->new_text_base_path,
@@ -2385,10 +2472,17 @@ merge_file(svn_wc_notify_state_t *content_state,
 
               /* Create strings representing the revisions of the
                  old and new text-bases. */
-              oldrev_str = apr_psprintf(pool, ".r%ld%s%s",
-                                        entry->revision,
-                                        *path_ext ? "." : "",
-                                        *path_ext ? path_ext : "");
+              /* Either an old version, or an add-with-history */
+              if (fb->added_with_history)
+                oldrev_str = apr_psprintf(pool, ".copied%s%s",
+                                          *path_ext ? "." : "",
+                                          *path_ext ? path_ext : "");
+              else
+                oldrev_str = apr_psprintf(pool, ".r%ld%s%s",
+                                          entry->revision,
+                                          *path_ext ? "." : "",
+                                          *path_ext ? path_ext : "");
+                                          
               newrev_str = apr_psprintf(pool, ".r%ld%s%s",
                                         *eb->target_revision,
                                         *path_ext ? "." : "",
@@ -2405,6 +2499,8 @@ merge_file(svn_wc_notify_state_t *content_state,
                                                   svn_io_file_del_none,
                                                   pool));
                 }
+              else if (fb->copied_text_base)
+                merge_left = fb->copied_text_base;
               else
                 merge_left = fb->text_base_path;
 
@@ -2416,6 +2512,7 @@ merge_file(svn_wc_notify_state_t *content_state,
                        merge_left,
                        fb->new_text_base_path,
                        fb->path,
+                       fb->copied_working_text,
                        adm_access,
                        oldrev_str, newrev_str, mine_str,
                        FALSE, eb->diff3_cmd, NULL, fb->propchanges,
@@ -2425,6 +2522,12 @@ merge_file(svn_wc_notify_state_t *content_state,
               if (merge_left != fb->text_base_path)
                 SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
                                              merge_left, pool));
+
+              /* And clean up add-with-history-related temp file too. */
+              if (fb->copied_working_text)
+                SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
+                                             fb->copied_working_text, pool));
+
             } /* end: working file exists and has mods */
         } /* end: working file has mods */
     } /* end: "textual" merging process */
@@ -2514,6 +2617,13 @@ merge_file(svn_wc_notify_state_t *content_state,
               (&log_accum, adm_access, fb->path, pool));
     }
 
+  /* Clean up add-with-history temp file. */
+  if (fb->copied_text_base)
+    SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
+                                 fb->copied_text_base,
+                                 pool));
+
+
   /* Set the returned content state. */
 
   /* This is kind of interesting.  Even if no new text was
@@ -2556,6 +2666,24 @@ close_file(void *file_baton,
       return SVN_NO_ERROR;
     }
 
+  /* Was this an add-with-history, with no apply_textdelta? */
+  if (fb->added_with_history && ! fb->received_textdelta)
+    {
+      assert(! fb->text_base_path && ! fb->new_text_base_path 
+             && fb->copied_text_base);
+
+      /* Set up the base paths like apply_textdelta does. */
+      SVN_ERR(choose_base_paths(NULL, NULL, NULL, fb, pool));
+
+      /* Now simulate applying a trivial delta. */
+      SVN_ERR(svn_io_copy_file(fb->copied_text_base,
+                               fb->new_text_base_path,
+                               TRUE, pool));
+      SVN_ERR(svn_io_file_checksum(fb->digest,
+                                   fb->new_text_base_path,
+                                   pool));
+    }
+
   /* window-handler assembles new pristine text in .svn/tmp/text-base/  */
   if (fb->new_text_base_path && text_checksum)
     {
@@ -2575,9 +2703,8 @@ close_file(void *file_baton,
 
   if (((content_state != svn_wc_notify_state_unchanged) ||
        (prop_state != svn_wc_notify_state_unchanged) ||
-       (lock_state != svn_wc_notify_lock_state_unchanged)) 
-      && eb->notify_func
-      && fb->send_notification)
+       (lock_state != svn_wc_notify_lock_state_unchanged))
+      && eb->notify_func)
     {
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action = svn_wc_notify_update_update;
@@ -2604,15 +2731,225 @@ close_file(void *file_baton,
 }
 
 
+
+/* Beginning at DEST_DIR within a working copy, search the working
+   copy for an pre-existing versioned file which is exactly equal to
+   COPYFROM_PATH@COPYFROM_REV.
+
+   If the file is found, return the absolute path to it in
+   *RETURN_PATH, as well as a (read-only) access_t for its parent in
+   *RETURN_ACCESS.  If the file isn't found, set *RETURN_PATH to NULL.
+*/
+static svn_error_t *
+locate_copyfrom(const char *copyfrom_path,
+                svn_revnum_t copyfrom_rev,
+                const char *dest_dir,
+                const svn_wc_entry_t *dest_entry,
+                const char **return_path,
+                svn_wc_adm_access_t **return_access,
+                apr_pool_t *pool)
+{
+  const char *dest_fs_path, *ancestor_fs_path, *ancestor_url, *file_url;
+  const char *copyfrom_parent, *copyfrom_file;
+  const char *abs_dest_dir, *extra_components;
+  const svn_wc_entry_t *ancestor_entry, *file_entry;
+  svn_wc_adm_access_t *ancestor_access;
+  apr_size_t levels_up;
+  svn_stringbuf_t *cwd, *cwd_parent;
+  svn_node_kind_t kind;
+  svn_error_t *err;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  /* Be pessimistic.  This function is basically a series of tests
+     that gives dozens of ways to fail our search, returning
+     SVN_NO_ERROR in each case.  If we make it all the way to the
+     bottom, we have a real discovery to return. */
+  *return_path = NULL;
+
+  if ((! dest_entry->repos) || (! dest_entry->url))
+    return svn_error_create(SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND, NULL,
+                            _("Destination directory of add-with-history "
+                              "is missing a URL"));
+
+  svn_path_split(copyfrom_path, &copyfrom_parent, &copyfrom_file, pool);
+  SVN_ERR(svn_path_get_absolute(&abs_dest_dir, dest_dir, pool));
+
+  /* Subtract the dest_dir's URL from the repository "root" URL to get
+     the absolute FS path represented by dest_dir. */
+  dest_fs_path = svn_path_is_child(dest_entry->repos, dest_entry->url, pool);
+  if (! dest_fs_path)
+    {
+      if (strcmp(dest_entry->repos, dest_entry->url) == 0)
+        dest_fs_path = "";  /* the urls are identical; that's ok. */
+      else
+        return svn_error_create(SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND, NULL,
+                                _("Destination URLs are broken"));
+    }
+  dest_fs_path = apr_pstrcat(pool, "/", dest_fs_path, NULL);
+  dest_fs_path = svn_path_canonicalize(dest_fs_path, pool);
+
+  /* Find nearest FS ancestor dir of current FS path and copyfrom_parent */
+  ancestor_fs_path = svn_path_get_longest_ancestor(dest_fs_path,
+                                                   copyfrom_parent, pool);
+  if (strlen(ancestor_fs_path) == 0)
+    return SVN_NO_ERROR;
+
+  /* Move 'up' the working copy to what ought to be the common ancestor dir. */
+  levels_up = svn_path_component_count(dest_fs_path)
+              - svn_path_component_count(ancestor_fs_path);
+  cwd = svn_stringbuf_create(dest_dir, pool);
+  svn_path_remove_components(cwd, levels_up);
+
+  /* Open up this hypothetical common ancestor directory. */
+  SVN_ERR(svn_io_check_path(cwd->data, &kind, subpool));
+  if (kind != svn_node_dir)
+    return SVN_NO_ERROR;
+  err = svn_wc_adm_open3(&ancestor_access, NULL, cwd->data,
+                         FALSE, /* open read-only, please */
+                         0,     /* open only this directory */
+                         NULL, NULL, subpool);
+  if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
+    {
+      /* The common ancestor directory isn't version-controlled. */
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return err;
+
+  SVN_ERR(svn_wc_entry(&ancestor_entry, cwd->data, ancestor_access,
+                       FALSE, subpool));
+
+  /* If we got this far, we know that the ancestor dir exists, and
+     that it's a working copy too.  But is it from the same
+     repository?  And does it represent the URL we expect it to? */
+  if (dest_entry->uuid && ancestor_entry->uuid
+      && (strcmp(dest_entry->uuid, ancestor_entry->uuid) != 0))
+    return SVN_NO_ERROR;
+
+  ancestor_url = apr_pstrcat(subpool,
+                             dest_entry->repos, ancestor_fs_path, NULL);
+  if (strcmp(ancestor_url, ancestor_entry->url) != 0)
+    return SVN_NO_ERROR;
+
+  svn_pool_clear(subpool);  /* clean up adm_access junk. */
+
+  /* Add the remaining components to cwd, then 'drill down' to where
+     we hope the copyfrom_path file exists. */
+  extra_components = svn_path_is_child(ancestor_fs_path,
+                                       copyfrom_path, pool);
+  svn_path_add_component(cwd, extra_components);
+  cwd_parent = svn_stringbuf_create(cwd->data, pool);
+  svn_path_remove_component(cwd_parent);
+
+  /* First: does the proposed file path even exist? */
+  SVN_ERR(svn_io_check_path(cwd->data, &kind, subpool));
+  if (kind != svn_node_file)
+    return SVN_NO_ERROR;
+
+  /* Next: is the file's parent-dir under version control?   */
+  err = svn_wc_adm_open3(&ancestor_access, NULL, cwd_parent->data,
+                         FALSE, /* open read-only, please */
+                         0,     /* open only the parent dir */
+                         NULL, NULL, pool);
+  if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
+    {
+      svn_error_clear(err);
+
+      /* There's an unversioned directory (and file) in the exact
+         correct place in the working copy.  Chances are high that
+         this file (or some parent) was deleted by 'svn update' --
+         perhaps as part of a move operation -- and this file was left
+         behind becouse it had local edits.  If that's true, we may
+         want this thing copied over to the new place.
+
+         Unfortunately, we have no way of knowing if this file is the
+         one we're looking for.  Guessing incorrectly can be really
+         hazardous, breaking the entire update.: we might find out
+         when the server fails to apply a subsequent txdelta against
+         it.  Or, if the server doesn't try to do that now, what if a
+         future update fails to apply?  For now, the only safe thing
+         to do is return no results. :-/
+      */
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return err;
+
+  /* The candidate file is under version control;  but is it
+     really the file we're looking for?  <wave hand in circle> */
+  SVN_ERR(svn_wc_entry(&file_entry, cwd->data, ancestor_access,
+                       FALSE, subpool));
+  if (! file_entry)
+    /* Parent dir is versioned, but file is not.  Be safe and
+       return no results (see large discourse above.) */
+    return SVN_NO_ERROR;
+
+  /* Is the repos UUID and file's URL what we expect it to be? */
+  if (file_entry->uuid && dest_entry->uuid
+      && (strcmp(file_entry->uuid, dest_entry->uuid) != 0))
+    return SVN_NO_ERROR;
+
+  file_url = apr_pstrcat(subpool, file_entry->repos, copyfrom_path, NULL);
+  if (strcmp(file_url, file_entry->url) != 0)
+    return SVN_NO_ERROR;
+
+  /* Do we actually have valid revisions for the file?  (See Issue
+     #2977.) */
+  if (! (SVN_IS_VALID_REVNUM(file_entry->cmt_rev)
+         && SVN_IS_VALID_REVNUM(file_entry->revision)))
+    return SVN_NO_ERROR;
+
+  /* Do we have the the right *version* of the file? */
+  if (! ((file_entry->cmt_rev <= copyfrom_rev)
+         && (copyfrom_rev <= file_entry->revision)))
+    return SVN_NO_ERROR;
+
+  /* Success!  We found the exact file we wanted! */
+  *return_path = apr_pstrdup(pool, cwd->data);
+  *return_access = ancestor_access;
+
+  svn_pool_clear(subpool);
+  return SVN_NO_ERROR;
+}
+
+
+static apr_hash_t *
+copy_non_entry_props(apr_hash_t *props_in,
+                     apr_pool_t *pool)
+{
+  apr_hash_t *props_out = apr_hash_make(pool);
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(pool, props_in); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      const char *propname;
+      svn_string_t *propval;
+      apr_hash_this(hi, &key, NULL, &val);
+      propname = key;
+      propval = val;
+
+      if (svn_property_kind(NULL, propname) == svn_prop_entry_kind)
+        continue;
+      apr_hash_set(props_out, propname, APR_HASH_KEY_STRING, propval);
+    }
+  return props_out;
+}
+
+
 /* Similar to add_file(), but not actually part of the editor vtable.
 
-   Adding a file with history means:
-      - doing a normal add_file() with no history
-      - downloading the file from the repository
-      - installing the file as usual.
-      - doing an open_file(), so that subsequent apply_txdelta() calls
-        from the server apply to the copied file.
- */
+   Attempt to locate COPYFROM_PATH@COPYFROM_REV within the existing
+   working copy.  If found, copy it to PATH, and install it as a
+   normal versioned file.  (Local edits are copied as well.)  If not
+   found, then resort to fetching the file in a special RA request.
+
+   After the file is fully installed, call the editor's open_file() on
+   it, so that any subsequent apply_textdelta() commands coming from
+   the server can further alter the file.
+*/
 static svn_error_t *
 add_file_with_history(const char *path,
                       void *parent_baton,
@@ -2625,74 +2962,106 @@ add_file_with_history(const char *path,
   struct file_baton *tfb;
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
-  svn_wc_adm_access_t *adm_access;
-  apr_hash_t *props;
-  apr_hash_index_t *hi;
-  apr_file_t *textbase_file;
+  svn_wc_adm_access_t *adm_access, *src_access;
+  const char *src_path;
+  apr_hash_t *base_props, *working_props;
+  const svn_wc_entry_t *path_entry;
+  svn_error_t *err;
 
-  if (! eb->fetch_func)
-    return svn_error_create(SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
-                            _("No fetch_func supplied to update_editor."));
+  /* ### TODO: consider, a la add_file, doing temporary allocations
+     ### that don't need to stick around with the baton in a
+     ### subpool */
 
-  /* First, fake an add_file() call, just to generate a temporary
-     file_baton that we can push data at.  Notice that we don't send
-     any copyfrom args, lest we end up infinitely recursing.  :-)  */
+  /* First, fake an add_file() call.  Notice that we don't send any
+     copyfrom args, lest we end up infinitely recursing.  :-)  */
   SVN_ERR(add_file(path, parent_baton, NULL, SVN_INVALID_REVNUM, pool, &fb));
   tfb = (struct file_baton *)fb;
+  tfb->added_with_history = TRUE;
 
-  /* Initialize the text-bases for an incoming file, the same way
-     apply_textdelta() does. */
-  tfb->text_base_path = svn_wc__text_base_path(tfb->path, FALSE, tfb->pool);
-  tfb->new_text_base_path = svn_wc__text_base_path(tfb->path, TRUE, tfb->pool);
-  SVN_ERR(svn_wc__open_text_base(&textbase_file, tfb->path,
-                                 (APR_WRITE | APR_TRUNCATE | APR_CREATE),
-                                 pool));
+  /* Attempt to locate the copyfrom_path in the working copy first. */
+  SVN_ERR(svn_wc_entry(&path_entry, pb->path, eb->adm_access, FALSE, pool));
+  err = locate_copyfrom(copyfrom_path, copyfrom_rev,
+                        pb->path, path_entry,
+                        &src_path, &src_access, pool);
+  if (err && err->apr_err == SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND)
+    svn_error_clear(err);
+  else if (err)
+    return err;
 
-  /* Fetch the repository file into the text-base; svn_stream_close()
-     should automatically close the file for us. */
-  props = apr_hash_make(pool);
-  SVN_ERR(eb->fetch_func(eb->fetch_baton, copyfrom_path, copyfrom_rev,
-                         svn_stream_from_aprfile(textbase_file, pool),
-                         NULL, &props, pool));
-
-  /* Loop over received properties, faking change_file_prop() calls
-     against the file baton. */
-  for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      void *val;
-      const char *propname;
-      svn_string_t *propval;
-      apr_hash_this(hi, &key, NULL, &val);
-      propname = key;
-      propval = val;
-
-      SVN_ERR(change_file_prop(tfb, propname, propval, pool));
-    }
-
-  /* Now 'install' the file, so that it's fully under version control. */
-  SVN_ERR(close_file(tfb, NULL, pool));
-
-  /* Execute the parent-dir's logs, so that the file *actually* comes
-     into existence, rather than at close_directory() time.  */
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, pb->edit_baton->adm_access,
                               pb->path, pb->pool));
-  SVN_ERR(flush_log(pb, pool));
-  SVN_ERR(svn_wc__run_log(adm_access, pb->edit_baton->diff3_cmd, pb->pool));
-  pb->log_number = 0;
+  /* Make a unique file name for the copyfrom text-base. */
+  SVN_ERR(svn_wc_create_tmp_file2(NULL, &tfb->copied_text_base,
+                                  svn_wc_adm_access_path(adm_access),
+                                  svn_io_file_del_none,
+                                  pool));
 
-  /* At this point we've successfully simulated the normal addition of
-     a file.  However, any forthcoming apply_textdelta() calls from
-     the server are deltas against this new file.  This means the
-     editor-driver needs a file_baton that can be safely passed to
-     apply_textdelta(), which means re-opening the file. */
-  SVN_ERR(open_file(path, parent_baton, SVN_INVALID_REVNUM, pool, &fb));
+  if (src_path != NULL) /* Found a file to copy */
+    {
+      /* Copy the existing file's text-base over to the (temporary)
+         new text-base, where the file baton expects it to be. */
+      const char *src_text_base_path = svn_wc__text_base_path(src_path,
+                                                              FALSE, pool);
+      SVN_ERR(svn_io_copy_file(src_text_base_path, tfb->copied_text_base,
+                               TRUE, pool));
 
-  /* We don't want this trailing open_file()/close_file() combo to be
-     signaled to the client, however.  The general policy is to call
-     the notification callback only -once- per file. */
-  tfb = (struct file_baton *)fb;
-  tfb->send_notification = FALSE;
+      /* Grab the existing file's base-props into memory. */
+      SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL,
+                                 src_access, src_path, pool));
+    }
+  else  /* Couldn't find a file to copy  */
+    {
+      apr_file_t *textbase_file;
+      svn_stream_t *textbase_stream;
+
+      /* Fall back to fetching it from the repository instead. */
+
+      if (! eb->fetch_func)
+        return svn_error_create(SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
+                                _("No fetch_func supplied to update_editor"));
+
+      /* Fetch the repository file's text-base and base-props;
+         svn_stream_close() automatically closes the text-base file for us. */
+      SVN_ERR(svn_io_file_open(&textbase_file, tfb->copied_text_base,
+                               (APR_WRITE | APR_TRUNCATE | APR_CREATE),
+                               APR_OS_DEFAULT, pool));
+      textbase_stream = svn_stream_from_aprfile2(textbase_file, FALSE, pool);
+
+      /* copyfrom_path is a absolute path, fetch_func requires a path relative
+         to the root of the repository so skip the first '/'. */
+      SVN_ERR(eb->fetch_func(eb->fetch_baton, copyfrom_path + 1, copyfrom_rev,
+                             textbase_stream,
+                             NULL, &base_props, pool));
+      SVN_ERR(svn_stream_close(textbase_stream));
+      working_props = base_props;
+    }
+
+  /* Loop over whatever props we have in memory, and add any
+     non-entry-specific props to hashes in the baton. */
+  tfb->copied_base_props = copy_non_entry_props(base_props, pool);
+  tfb->copied_working_props = copy_non_entry_props(working_props, pool);
+
+  if (src_path != NULL)
+    {
+      /* If we copied an existing file over, we need copy its working
+         text and props too, to preserve any local mods. */
+      svn_boolean_t text_changed;
+
+      SVN_ERR(svn_wc_text_modified_p(&text_changed, src_path, FALSE,
+                                     src_access, pool));
+
+      if (text_changed)
+        {
+          /* Make a unique file name for the copied_working_text. */
+          SVN_ERR(svn_wc_create_tmp_file2(NULL, &tfb->copied_working_text,
+                                          svn_wc_adm_access_path(adm_access),
+                                          svn_io_file_del_none,
+                                          pool));
+
+          SVN_ERR(svn_io_copy_file(src_path, tfb->copied_working_text, TRUE, 
+                                   pool));
+        }
+    }
 
   *file_baton = tfb;
   return SVN_NO_ERROR;
@@ -2744,7 +3113,7 @@ close_edit(void *edit_baton,
   if (! eb->target_deleted)
     SVN_ERR(svn_wc__do_update_cleanup(target_path,
                                       eb->adm_access,
-                                      eb->depth,
+                                      eb->requested_depth,
                                       eb->switch_url,
                                       eb->repos,
                                       *(eb->target_revision),
@@ -2796,6 +3165,8 @@ make_editor(svn_revnum_t *target_revision,
   struct edit_baton *eb;
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(subpool);
+  const svn_delta_editor_t *ambient_editor;
+  void *ambient_baton;
   const svn_wc_entry_t *entry;
 
   /* Get the anchor entry, so we can fetch the repository root. */
@@ -2821,7 +3192,7 @@ make_editor(svn_revnum_t *target_revision,
   eb->adm_access               = adm_access;
   eb->anchor                   = anchor;
   eb->target                   = target;
-  eb->depth                    = depth;
+  eb->requested_depth          = depth;
   eb->notify_func              = notify_func;
   eb->notify_baton             = notify_baton;
   eb->traversal_info           = traversal_info;
@@ -2853,10 +3224,20 @@ make_editor(svn_revnum_t *target_revision,
   tree_editor->absent_file = absent_file;
   tree_editor->close_edit = close_edit;
 
+  SVN_ERR(svn_wc__ambient_depth_filter_editor(&ambient_editor,
+                                              &ambient_baton,
+                                              tree_editor,
+                                              eb,
+                                              anchor,
+                                              target,
+                                              adm_access,
+                                              depth,
+                                              pool));
+
   SVN_ERR(svn_delta_get_cancellation_editor(cancel_func,
                                             cancel_baton,
-                                            tree_editor,
-                                            eb,
+                                            ambient_editor,
+                                            ambient_baton,
                                             editor,
                                             edit_baton,
                                             pool));
@@ -2915,7 +3296,7 @@ svn_wc_get_update_editor2(svn_revnum_t *target_revision,
 {
   return svn_wc_get_update_editor3(target_revision, anchor, target,
                                    use_commit_times,
-                                   SVN_DEPTH_FROM_RECURSE(recurse),
+                                   SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                    FALSE, notify_func, notify_baton,
                                    cancel_func, cancel_baton, NULL, NULL,
                                    NULL, NULL,
@@ -2945,7 +3326,7 @@ svn_wc_get_update_editor(svn_revnum_t *target_revision,
 
   return svn_wc_get_update_editor3(target_revision, anchor, target,
                                    use_commit_times,
-                                   SVN_DEPTH_FROM_RECURSE(recurse),
+                                   SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                    FALSE, svn_wc__compat_call_notify_func, nb,
                                    cancel_func, cancel_baton, NULL, NULL,
                                    NULL, NULL,
@@ -2965,6 +3346,8 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                           void *notify_baton,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
+                          svn_wc_conflict_resolver_func_t conflict_func,
+                          void *conflict_baton,
                           const char *diff3_cmd,
                           apr_array_header_t *preserved_exts,
                           const svn_delta_editor_t **editor,
@@ -2978,7 +3361,7 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                      target, use_commit_times, switch_url, depth,
                      allow_unver_obstructions, notify_func, notify_baton,
                      cancel_func, cancel_baton,
-                     NULL, NULL, /* TODO(sussman): add conflict callback here */
+                     conflict_func, conflict_baton,
                      NULL, NULL, /* TODO(sussman): add fetch callback here  */
                      diff3_cmd, preserved_exts,
                      editor, edit_baton, traversal_info, pool);
@@ -3005,9 +3388,10 @@ svn_wc_get_switch_editor2(svn_revnum_t *target_revision,
 
   return svn_wc_get_switch_editor3(target_revision, anchor, target,
                                    switch_url, use_commit_times,
-                                   SVN_DEPTH_FROM_RECURSE(recurse),
+                                   SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                    FALSE, notify_func, notify_baton,
-                                   cancel_func, cancel_baton, diff3_cmd,
+                                   cancel_func, cancel_baton,
+                                   NULL, NULL, diff3_cmd,
                                    NULL, editor, edit_baton, traversal_info,
                                    pool);
 }
@@ -3035,9 +3419,10 @@ svn_wc_get_switch_editor(svn_revnum_t *target_revision,
 
   return svn_wc_get_switch_editor3(target_revision, anchor, target,
                                    switch_url, use_commit_times,
-                                   SVN_DEPTH_FROM_RECURSE(recurse),
+                                   SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                    FALSE, svn_wc__compat_call_notify_func, nb,
-                                   cancel_func, cancel_baton, diff3_cmd,
+                                   cancel_func, cancel_baton,
+                                   NULL, NULL, diff3_cmd,
                                    NULL, editor, edit_baton, traversal_info,
                                    pool);
 }
@@ -3051,6 +3436,7 @@ svn_wc_init_traversal_info(apr_pool_t *pool)
   ti->pool           = pool;
   ti->externals_old  = apr_hash_make(pool);
   ti->externals_new  = apr_hash_make(pool);
+  ti->depths         = apr_hash_make(pool);
 
   return ti;
 }
@@ -3065,6 +3451,13 @@ svn_wc_edited_externals(apr_hash_t **externals_old,
   *externals_new = traversal_info->externals_new;
 }
 
+
+void
+svn_wc_traversed_depths(apr_hash_t **depths,
+                        svn_wc_traversal_info_t *traversal_info)
+{
+  *depths = traversal_info->depths;
+}
 
 
 /* THE GOAL

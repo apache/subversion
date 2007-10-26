@@ -679,8 +679,12 @@ svn_error_t *svn_repos_abort_report(void *report_baton,
  * If @a text_deltas is @c FALSE, send a single @c NULL txdelta window to
  * the window handler returned by @a editor->apply_textdelta().
  *
- * TODO(sd): document @a depth behavior only after taking care of
- * similar comments in libsvn_repos/delta.c:delta_dirs().
+ * If @a depth is @c svn_depth_empty, invoke @a editor calls only on
+ * @a src_entry (or @a src_parent_dir, if @a src_entry is empty).
+ * If @a depth is @c svn_depth_files, also invoke the editor on file
+ * children, if any; if @c svn_depth_immediates, invoke it on
+ * immediate subdirectories as well as files; if @c svn_depth_infinity,
+ * recurse fully.
  *
  * If @a entry_props is @c TRUE, accompany each opened/added entry with
  * propchange editor calls that relay special "entry props" (this
@@ -1098,6 +1102,47 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
                                void *authz_read_baton,
                                apr_pool_t *pool);
 
+
+/* Call @a receiver and @a receiver_baton to report successive
+ * location segments in revisions between @a start_rev and @a end_rev
+ * (inclusive) for the line of history identified by the peg-object @a
+ * path in @a peg_revision (and in @a repos).
+ *
+ * @a end_rev may be @c SVN_INVALID_REVNUM to indicate that you want
+ * to trace the history of the object to its origin.
+ *
+ * @a start_rev may be @c SVN_INVALID_REVNUM to indicate "the HEAD
+ * revision".  Otherwise, @a start_rev must be younger than @a end_rev
+ * (unless @a end_rev is @c SVN_INVALID_REVNUM).
+ *
+ * @a peg_revision may be @c SVN_INVALID_REVNUM to indicate "the HEAD
+ * revision", and must evaluate to be at least as young as @a start_rev.
+ * 
+ * If optional @a authz_read_func is not @c NULL, then use it (and @a
+ * authz_read_baton) to verify that the peg-object is readable.  If
+ * not, return @c SVN_ERR_AUTHZ_UNREADABLE.  Also use the @a
+ * authz_read_func to check that every path reported in a location
+ * segment is readable.  If an unreadable path is encountered, report
+ * a final (possibly truncated) location segment (if any), stop
+ * tracing history, and return @c SVN_NO_ERROR.
+ *
+ * @a pool is used for all allocations.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_repos_node_location_segments(svn_repos_t *repos,
+                                 const char *path,
+                                 svn_revnum_t peg_revision,
+                                 svn_revnum_t start_rev,
+                                 svn_revnum_t end_rev,
+                                 svn_location_segment_receiver_t receiver,
+                                 void *receiver_baton,
+                                 svn_repos_authz_func_t authz_read_func,
+                                 void *authz_read_baton,
+                                 apr_pool_t *pool);
+
+
 /* ### other queries we can do someday --
 
      * fetch the last revision created by <user>
@@ -1138,8 +1183,8 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
  * If @a strict_node_history is set, copy history (if any exists) will
  * not be traversed while harvesting revision logs for each path.
  *
- * If @a omit_log_text is set, the text of the log message will not be
- * returned.
+ * If @a revprops is NULL, retrieve all revprops; else, retrieve only the
+ * revprops named in the array (i.e. retrieve none if the array is empty).
  *
  * If any invocation of @a receiver returns error, return that error
  * immediately and without wrapping it.
@@ -1150,12 +1195,14 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
  * If optional @a authz_read_func is non-NULL, then use this function
  * (along with optional @a authz_read_baton) to check the readability
  * of each changed-path in each revision about to be "pushed" at
- * @a receiver.  If a revision has all unreadable changed-paths, then
- * don't push the revision at all.  If a revision has a mixture of
- * readable and unreadable changed-paths, then silently omit the
- * unreadable changed-paths when pushing the revision.
+ * @a receiver.  If a revision has some changed-paths readable and
+ * others unreadable, unreadable paths are omitted from the
+ * changed_paths field and only svn:author and svn:date will be
+ * available in the revprops field.  If a revision has no
+ * changed-paths readable at all, then all paths are omitted and no
+ * revprops are available.
  *
- * See also the documentation for @c svn_log_message_receiver2_t.
+ * See also the documentation for @c svn_log_entry_receiver_t.
  *
  * Use @a pool for temporary allocations.
  *
@@ -1170,17 +1217,18 @@ svn_repos_get_logs4(svn_repos_t *repos,
                     svn_boolean_t discover_changed_paths,
                     svn_boolean_t strict_node_history,
                     svn_boolean_t include_merged_revisions,
-                    svn_boolean_t omit_log_text,
+                    apr_array_header_t *revprops,
                     svn_repos_authz_func_t authz_read_func,
                     void *authz_read_baton,
-                    svn_log_message_receiver2_t receiver,
+                    svn_log_entry_receiver_t receiver,
                     void *receiver_baton,
                     apr_pool_t *pool);
 
 /**
- * Same as svn_repos_get_logs4(), but with @a receiver being a
- * @c svn_log_message_receiver_t instead of @c svn_log_message_receiver2_t.
- * Also, @a omit_log_text is set to @c FALSE.
+ * Same as svn_repos_get_logs4(), but with @a receiver being @c
+ * svn_log_message_receiver_t instead of @c svn_log_entry_receiver_t.
+ * Also, @a include_merged_revisions is set to @c FALSE and @a revprops is
+ * svn:author, svn:date, and svn:log.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.

@@ -54,16 +54,16 @@ def externals_test_setup(sbox):
 
   The arrangement of the externals in the first repository is:
 
-     /A/C/     ==>  exdir_G       <scheme>:///<other_repos>/A/D/G
-                    exdir_H  -r 1 <scheme>:///<other_repos>/A/D/H
+    /A/C/ ==>  exdir_G                          <scheme>:///<other_repos>/A/D/G
+               ../../../<other_repos_basename>/A/D/H -r 1 exdir_H
 
-     /A/D/     ==>  exdir_A          <scheme>:///<other_repos>/A
-                    exdir_A/G        <scheme>:///<other_repos>/A/D/G
-                    exdir_A/H  -r 3  <scheme>:///<other_repos>/A/D/H
-                    x/y/z/blah       <scheme>:///<other_repos>/A/B
+    /A/D/ ==>  ^/../<other_repos_basename>/A    exdir_A
+               //<other_repos>/A/D/G/           exdir_A/G/
+               exdir_A/H -r 1                   <scheme>:///<other_repos>/A/D/H
+               /<some_paths>/A/B                x/y/z/blah
 
-  NOTE: Before calling this, use externals_test_cleanup(SBOX) to
-  remove a previous incarnation of the other repository.
+  A dictionary is returned keyed by the directory created by the
+  external whose value is the URL of the external.
   """
 
   # The test itself will create a working copy
@@ -75,6 +75,18 @@ def externals_test_setup(sbox):
   repo_dir       = sbox.repo_dir
   repo_url       = sbox.repo_url
   other_repo_dir, other_repo_url = sbox.add_repo_path('other')
+  other_repo_basename = os.path.basename(other_repo_dir)
+
+  # Get a scheme relative URL to the other repository.
+  scheme_relative_other_repo_url = other_repo_url[other_repo_url.find(':')+1:]
+
+  # Get a server root relative URL to the other repository by trimming
+  # off the first three /'s.
+  server_relative_other_repo_url = other_repo_url
+  for i in range(3):
+    j = server_relative_other_repo_url.find('/') + 1
+    server_relative_other_repo_url = server_relative_other_repo_url[j:]
+  server_relative_other_repo_url = '/' + server_relative_other_repo_url
 
   # These files will get changed in revisions 2 through 5.
   mu_path = os.path.join(wc_init_dir, "A/mu")
@@ -99,26 +111,37 @@ def externals_test_setup(sbox):
 
   svntest.main.file_append(mu_path, "Added to mu in revision 2.\n")
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m', 'log msg',
                                      '--quiet', wc_init_dir)
 
   svntest.main.file_append(pi_path, "Added to pi in revision 3.\n")
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m', 'log msg',
                                      '--quiet', wc_init_dir)
 
   svntest.main.file_append(lambda_path, "Added to lambda in revision 4.\n")
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m', 'log msg',
                                      '--quiet', wc_init_dir)
 
   svntest.main.file_append(omega_path, "Added to omega in revision 5.\n")
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m', 'log msg',
                                      '--quiet', wc_init_dir)
 
   # Get the whole working copy to revision 5.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_init_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'up', wc_init_dir)
 
   # Now copy the initial repository to create the "other" repository,
   # the one to which the first repository's `svn:externals' properties
@@ -126,27 +149,43 @@ def externals_test_setup(sbox):
   # of random stuff, with no svn:externals props set yet.
   svntest.main.copy_repos(repo_dir, other_repo_dir, 5)
 
+  # This is the returned dictionary.
+  external_url_for = { }
+
+  external_url_for["A/C/exdir_G"] = other_repo_url + "/A/D/G"
+  external_url_for["A/C/exdir_H"] = "../../../" + \
+                                    other_repo_basename + \
+                                    "/A/D/H"
+
   # Set up the externals properties on A/B/ and A/D/.
   externals_desc = \
-           "exdir_G       " + other_repo_url + "/A/D/G" + "\n" + \
-           "exdir_H  -r 1 " + other_repo_url + "/A/D/H" + "\n"
+           "exdir_G       " + external_url_for["A/C/exdir_G"] + "\n" + \
+           external_url_for["A/C/exdir_H"] + " -r 1 exdir_H\n"
 
   tmp_f = os.tempnam(wc_init_dir, 'tmp')
   svntest.main.file_append(tmp_f, externals_desc)
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'pset',
                                      '-F', tmp_f, 'svn:externals', C_path)
 
   os.remove(tmp_f)
 
+  external_url_for["A/D/exdir_A"]    = "^/../" + other_repo_basename + "/A"
+  external_url_for["A/D/exdir_A/G/"] = scheme_relative_other_repo_url + \
+                                       "/A/D/G/"
+  external_url_for["A/D/exdir_A/H"]  = other_repo_url + "/A/D/H"
+  external_url_for["A/D/x/y/z/blah"] = server_relative_other_repo_url + "/A/B"
+
   externals_desc = \
-           "exdir_A           " + other_repo_url + "/A"      + \
-           "\n"                                              + \
-           "exdir_A/G/        " + other_repo_url + "/A/D/G/" + \
-           "\n"                                              + \
-           "exdir_A/H   -r 1  " + other_repo_url + "/A/D/H"  + \
-           "\n"                                              + \
-           "x/y/z/blah        " + other_repo_url + "/A/B"    + \
+           external_url_for["A/D/exdir_A"] + " exdir_A"           + \
+           "\n"                                                  + \
+           external_url_for["A/D/exdir_A/G/"] + " exdir_A/G/"    + \
+           "\n"                                                  + \
+           "exdir_A/H -r 1 " + external_url_for["A/D/exdir_A/H"] + \
+           "\n"                                                  + \
+           external_url_for["A/D/x/y/z/blah"] + " x/y/z/blah"    + \
            "\n"
 
   svntest.main.file_append(tmp_f, externals_desc)
@@ -171,6 +210,7 @@ def externals_test_setup(sbox):
                                         None, None, None, None, None,
                                         wc_init_dir)
 
+  return external_url_for
 
 def change_external(path, new_val):
   """Change the value of the externals property on PATH to NEW_VAL,
@@ -178,8 +218,12 @@ def change_external(path, new_val):
   tmp_f = os.tempnam(svntest.main.temp_dir, 'tmp')
   svntest.main.file_append(tmp_f, new_val)
   svntest.actions.run_and_verify_svn(None, None, [], 'pset',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '-F', tmp_f, 'svn:externals', path)
   svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      '-m', 'log msg', '--quiet', path)
   os.remove(tmp_f)
 
@@ -222,7 +266,6 @@ def checkout_with_externals(sbox):
   externals_test_setup(sbox)
 
   wc_dir         = sbox.wc_dir
-  repo_dir       = sbox.repo_dir
   repo_url       = sbox.repo_url
 
   # Create a working copy.
@@ -260,11 +303,10 @@ def checkout_with_externals(sbox):
 def update_receive_new_external(sbox):
   "update to receive a new external module"
 
-  externals_test_setup(sbox)
+  external_url_for = externals_test_setup(sbox)
   wc_dir         = sbox.wc_dir
 
   other_wc_dir   = sbox.add_wc_path('other')
-  repo_dir       = sbox.repo_dir
   repo_url       = sbox.repo_url
   other_repo_url = repo_url + ".other"
 
@@ -284,15 +326,15 @@ def update_receive_new_external(sbox):
   # Add one new external item to the property on A/D.  The new item is
   # "exdir_E", deliberately added in the middle not at the end.
   new_externals_desc = \
-           "exdir_A           " + other_repo_url + "/A"     + \
-           "\n"                                             + \
-           "exdir_A/G         " + other_repo_url + "/A/D/G" + \
-           "\n"                                             + \
-           "exdir_E           " + other_repo_url + "/A/B/E" + \
-           "\n"                                             + \
-           "exdir_A/H   -r 1  " + other_repo_url + "/A/D/H" + \
-           "\n"                                             + \
-           "x/y/z/blah        " + other_repo_url + "/A/B/E" + \
+           external_url_for["A/D/exdir_A"] + " exdir_A"           + \
+           "\n"                                                   + \
+           external_url_for["A/D/exdir_A/G/"] + " exdir_A/G/"     + \
+           "\n"                                                   + \
+           "exdir_E           " + other_repo_url + "/A/B/E"       + \
+           "\n"                                                   + \
+           "exdir_A/H -r 1  " + external_url_for["A/D/exdir_A/H"] + \
+           "\n"                                                   + \
+           external_url_for["A/D/x/y/z/blah"] + " x/y/z/blah"     + \
            "\n"
 
   # Set and commit the property
@@ -308,13 +350,11 @@ def update_receive_new_external(sbox):
 def update_lose_external(sbox):
   "update to lose an external module"
 
-  externals_test_setup(sbox)
+  external_url_for = externals_test_setup(sbox)
   wc_dir         = sbox.wc_dir
 
   other_wc_dir   = sbox.add_wc_path('other')
-  repo_dir       = sbox.repo_dir
   repo_url       = sbox.repo_url
-  other_repo_url = repo_url + ".other"
 
   # Checkout two working copies.
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -346,11 +386,11 @@ def update_lose_external(sbox):
   #    A/D/exdir_A/H/...                     A/D/exdir_A/H/...
 
   new_externals_desc = \
-           "exdir_A/G         " + other_repo_url + "/A/D/G" + \
-           "\n"                                             + \
-           "exdir_A/H   -r 1  " + other_repo_url + "/A/D/H" + \
-           "\n"                                             + \
-           "x/y/z/blah        " + other_repo_url + "/A/B/E" + \
+           external_url_for["A/D/exdir_A/G/"] + " exdir_A/G"      + \
+           "\n"                                                   + \
+           "exdir_A/H -r 1  " + external_url_for["A/D/exdir_A/H"] + \
+           "\n"                                                   + \
+           external_url_for["A/D/x/y/z/blah"] + " x/y/z/blah"     + \
            "\n"
 
   # Set and commit the property
@@ -379,11 +419,10 @@ def update_lose_external(sbox):
 def update_change_pristine_external(sbox):
   "update change to an unmodified external module"
 
-  externals_test_setup(sbox)
+  external_url_for = externals_test_setup(sbox)
   wc_dir         = sbox.wc_dir
 
   other_wc_dir   = sbox.add_wc_path('other')
-  repo_dir       = sbox.repo_dir
   repo_url       = sbox.repo_url
   other_repo_url = repo_url + ".other"
 
@@ -404,13 +443,13 @@ def update_change_pristine_external(sbox):
   # URL.  Since no changes were made to the old checked-out external,
   # we should get a clean replace.
   new_externals_desc = \
-           "exdir_A           " + other_repo_url + "/A"     + \
-           "\n"                                             + \
-           "exdir_A/G         " + other_repo_url + "/A/D/G" + \
-           "\n"                                             + \
-           "exdir_A/H   -r 1  " + other_repo_url + "/A/D/H" + \
-           "\n"                                             + \
-           "x/y/z/blah        " + other_repo_url + "/A/B/F" + \
+           external_url_for["A/D/exdir_A"] + " exdir_A"          + \
+           "\n"                                                  + \
+           external_url_for["A/D/exdir_A/G/"] + " exdir_A/G"     + \
+           "\n"                                                  + \
+           "exdir_A/H -r 1 " + external_url_for["A/D/exdir_A/H"] + \
+           "\n"                                                  + \
+           "x/y/z/blah     " + other_repo_url + "/A/B/F"         + \
            "\n"
 
   # Set and commit the property
@@ -430,11 +469,10 @@ def update_change_pristine_external(sbox):
 def update_change_modified_external(sbox):
   "update changes to a modified external module"
 
-  externals_test_setup(sbox)
+  external_url_for = externals_test_setup(sbox)
   wc_dir         = sbox.wc_dir
 
   other_wc_dir   = sbox.add_wc_path('other')
-  repo_dir       = sbox.repo_dir
   repo_url       = sbox.repo_url
   other_repo_url = repo_url + ".other"
 
@@ -463,13 +501,13 @@ def update_change_modified_external(sbox):
   # URL.  There are some local mods under the old checked-out external,
   # so the old dir should be saved under a new name.
   new_externals_desc = \
-           "exdir_A           " + other_repo_url + "/A"     + \
-           "\n"                                             + \
-           "exdir_A/G         " + other_repo_url + "/A/D/G" + \
-           "\n"                                             + \
-           "exdir_A/H   -r 1  " + other_repo_url + "/A/D/H" + \
-           "\n"                                             + \
-           "x/y/z/blah        " + other_repo_url + "/A/B/F" + \
+           external_url_for["A/D/exdir_A"] + " exdir_A"          + \
+           "\n"                                                  + \
+           external_url_for["A/D/exdir_A/G/"] + " exdir_A/G/"    + \
+           "\n"                                                  + \
+           "exdir_A/H -r 1 " + external_url_for["A/D/exdir_A/H"] + \
+           "\n"                                                  + \
+           "x/y/z/blah     " + other_repo_url + "/A/B/F"         + \
            "\n"
 
   # Set and commit the property
@@ -493,7 +531,6 @@ def update_receive_change_under_external(sbox):
   wc_dir         = sbox.wc_dir
 
   other_wc_dir   = sbox.add_wc_path('other')
-  repo_dir       = sbox.repo_dir
   repo_url       = sbox.repo_url
   other_repo_url = repo_url + ".other"
 
@@ -579,12 +616,9 @@ def update_receive_change_under_external(sbox):
 def modify_and_update_receive_new_external(sbox):
   "commit and update additional externals"
 
-  externals_test_setup(sbox)
+  external_url_for = externals_test_setup(sbox)
   wc_dir         = sbox.wc_dir
-
-  repo_dir       = sbox.repo_dir
   repo_url       = sbox.repo_url
-  other_repo_url = repo_url + ".other"
 
   # Checkout a working copy
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -596,9 +630,12 @@ def modify_and_update_receive_new_external(sbox):
   # Add one more external item
   B_path = os.path.join(wc_dir, "A/B")
   externals_desc = \
-          "exdir_G       " + other_repo_url + "/A/D/G" + "\n" + \
-          "exdir_H  -r 1 " + other_repo_url + "/A/D/H" + "\n" + \
-          "exdir_Z       " + other_repo_url + "/A/D/H" + "\n"
+          external_url_for["A/D/exdir_A/G/"] + " exdir_G"     + \
+          "\n"                                                + \
+          "exdir_H -r 1 " + external_url_for["A/D/exdir_A/H"] + \
+          "\n"                                                + \
+          "exdir_Z      " + external_url_for["A/D/exdir_A/H"] + \
+          "\n"
 
   tmp_f = os.tempnam()
   svntest.main.file_append(tmp_f, externals_desc)
@@ -624,13 +661,13 @@ def modify_and_update_receive_new_external(sbox):
 
 def disallow_dot_or_dotdot_directory_reference(sbox):
   "error if external target dir involves '.' or '..'"
-  sbox.build()
+
+  external_url_for = externals_test_setup(sbox)
   wc_dir         = sbox.wc_dir
-  repo_url       = sbox.repo_url
 
   # Try to set illegal externals in the original WC.
-  def set_externals_for_path_expect_error(path, val, dir):
-    tmp_f = os.tempnam(dir, 'tmp')
+  def set_externals_for_path_expect_error(path, val):
+    tmp_f = os.tempnam()
     svntest.main.file_append(tmp_f, val)
     svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
                                        'pset', '-F', tmp_f,
@@ -642,24 +679,34 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
   H_path = os.path.join(wc_dir, 'A', 'D', 'H')
   C_path = os.path.join(wc_dir, 'A', 'C')
   F_path = os.path.join(wc_dir, 'A', 'C', 'F')
-  externals_value_1 = "../foo"         + " " + repo_url + "/A/B/E" + "\n"
-  externals_value_2 = "foo/bar/../baz" + " " + repo_url + "/A/B/E" + "\n"
-  externals_value_3 = "foo/.."         + " " + repo_url + "/A/B/E" + "\n"
-  externals_value_4 = "."              + " " + repo_url + "/A/B/E" + "\n"
-  externals_value_5 = "./"             + " " + repo_url + "/A/B/E" + "\n"
-  externals_value_6 = ".."             + " " + repo_url + "/A/B/E" + "\n"
-  externals_value_7 = "././/.///."     + " " + repo_url + "/A/B/E" + "\n"
-  externals_value_8 = "/foo"           + " " + repo_url + "/A/B/E" + "\n"
 
+  external_urls = external_url_for.values()
 
-  set_externals_for_path_expect_error(B_path, externals_value_1, wc_dir)
-  set_externals_for_path_expect_error(G_path, externals_value_2, wc_dir)
-  set_externals_for_path_expect_error(H_path, externals_value_3, wc_dir)
-  set_externals_for_path_expect_error(C_path, externals_value_4, wc_dir)
-  set_externals_for_path_expect_error(F_path, externals_value_5, wc_dir)
-  set_externals_for_path_expect_error(B_path, externals_value_6, wc_dir)
-  set_externals_for_path_expect_error(G_path, externals_value_7, wc_dir)
-  set_externals_for_path_expect_error(H_path, externals_value_8, wc_dir)
+  externals_value_1 = "../foo"         + " " + external_urls.pop() + "\n"
+  if not external_urls: external_urls = external_url_for.values()
+  externals_value_2 = "foo/bar/../baz" + " " + external_urls.pop() + "\n"
+  if not external_urls: external_urls = external_url_for.values()
+  externals_value_3 = "foo/.."         + " " + external_urls.pop() + "\n"
+  if not external_urls: external_urls = external_url_for.values()
+  externals_value_4 = "."              + " " + external_urls.pop() + "\n"
+  if not external_urls: external_urls = external_url_for.values()
+  externals_value_5 = "./"             + " " + external_urls.pop() + "\n"
+  if not external_urls: external_urls = external_url_for.values()
+  externals_value_6 = ".."             + " " + external_urls.pop() + "\n"
+  if not external_urls: external_urls = external_url_for.values()
+  externals_value_7 = "././/.///."     + " " + external_urls.pop() + "\n"
+  if not external_urls: external_urls = external_url_for.values()
+  externals_value_8 = "/foo"           + " " + external_urls.pop() + "\n"
+  if not external_urls: external_urls = external_url_for.values()
+
+  set_externals_for_path_expect_error(B_path, externals_value_1)
+  set_externals_for_path_expect_error(G_path, externals_value_2)
+  set_externals_for_path_expect_error(H_path, externals_value_3)
+  set_externals_for_path_expect_error(C_path, externals_value_4)
+  set_externals_for_path_expect_error(F_path, externals_value_5)
+  set_externals_for_path_expect_error(B_path, externals_value_6)
+  set_externals_for_path_expect_error(G_path, externals_value_7)
+  set_externals_for_path_expect_error(H_path, externals_value_8)
 
 
 #----------------------------------------------------------------------
@@ -670,7 +717,6 @@ def export_with_externals(sbox):
   externals_test_setup(sbox)
 
   wc_dir         = sbox.wc_dir
-  repo_dir       = sbox.repo_dir
   repo_url       = sbox.repo_url
 
   # Create a working copy.
@@ -761,12 +807,9 @@ def export_wc_with_externals(sbox):
 def external_with_peg_and_op_revision(sbox):
   "use a peg revision to specify an external module"
 
-  externals_test_setup(sbox)
+  external_url_for = externals_test_setup(sbox)
   wc_dir         = sbox.wc_dir
-
-  repo_dir       = sbox.repo_dir
   repo_url       = sbox.repo_url
-  other_repo_url = repo_url + ".other"
 
   # Checkout a working copy.
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -776,19 +819,28 @@ def external_with_peg_and_op_revision(sbox):
                                      repo_url, wc_dir)
 
   # remove A/D/H in the other repo
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', other_repo_url +
-                                     '/A/D/H', '-m', 'remove original A/D/H')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'rm',
+                                     external_url_for["A/D/exdir_A/H"],
+                                     '-m', 'remove original A/D/H')
 
   # Set an external property using peg revision syntax.
   new_externals_desc = \
-           other_repo_url + "/A/D/H@4  exdir_A/H \n" + \
-           other_repo_url + "/A/D/G    exdir_A/G \n"
+           external_url_for["A/D/exdir_A/H"]  + "@4 exdir_A/H" + \
+           "\n"                                                + \
+           external_url_for["A/D/exdir_A/G/"] + "   exdir_A/G" + \
+           "\n"
 
   # Set and commit the property.
   change_external(os.path.join(wc_dir, "A/D"), new_externals_desc)
 
   # Update other working copy, see if we get the right change.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'up', wc_dir)
 
   external_chi_path = os.path.join(wc_dir, 'A', 'D', 'exdir_A', 'H', 'chi')
   fp = open(external_chi_path, 'r')
@@ -804,11 +856,9 @@ def external_with_peg_and_op_revision(sbox):
 def new_style_externals(sbox):
   "check the new '-rN URL PATH' syntax"
 
-  externals_test_setup(sbox)
+  external_url_for = externals_test_setup(sbox)
   wc_dir         = sbox.wc_dir
-
   repo_url       = sbox.repo_url
-  other_repo_url = repo_url + ".other"
 
   # Checkout a working copy.
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -819,15 +869,21 @@ def new_style_externals(sbox):
 
   # Set an external property using the new '-rN URL PATH' syntax.
   new_externals_desc = \
-           other_repo_url + "/A/D/G exdir_G \n" + \
-           "-r 1 " + other_repo_url + "/A/D/H exdir_H \n" + \
-           "-r1 " + other_repo_url + "/A/D/H exdir_I \n"
+           external_url_for["A/C/exdir_G"] + " exdir_G"           + \
+           "\n"                                                   + \
+           "-r 1 " + external_url_for["A/C/exdir_H"] + " exdir_H" + \
+           "\n"                                                   + \
+           "-r1 "  + external_url_for["A/C/exdir_H"] + " exdir_I" + \
+           "\n"
 
   # Set and commit the property.
   change_external(os.path.join(wc_dir, "A/C"), new_externals_desc)
 
   # Update other working copy.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'up', wc_dir)
 
   for dir_name in ["exdir_H", "exdir_I"]:
     exdir_X_omega_path = os.path.join(wc_dir, "A", "C", dir_name, "omega")
@@ -871,6 +927,8 @@ def disallow_propset_invalid_formatted_externals(sbox):
     svntest.actions.run_and_verify_svn("No error for externals '%s'" % ext,
                                        None,
                                        '.*Error parsing svn:externals.*',
+                                       '--username', svntest.main.wc_author,
+                                       '--password', svntest.main.wc_passwd,
                                        'propset',
                                        '-F',
                                        tmp_f,
@@ -888,6 +946,8 @@ def disallow_propset_invalid_formatted_externals(sbox):
     svntest.actions.run_and_verify_svn("No error for externals '%s'" % ext,
                                        None,
                                        '.*Invalid revision number found.*',
+                                       '--username', svntest.main.wc_author,
+                                       '--password', svntest.main.wc_passwd,
                                        'propset',
                                        '-F',
                                        tmp_f,
@@ -900,11 +960,9 @@ def disallow_propset_invalid_formatted_externals(sbox):
 def old_style_externals_ignore_peg_reg(sbox):
   "old 'PATH URL' format should ignore peg revisions"
 
-  externals_test_setup(sbox)
+  external_url_for = externals_test_setup(sbox)
   wc_dir         = sbox.wc_dir
-
   repo_url       = sbox.repo_url
-  other_repo_url = repo_url + ".other"
 
   # Checkout a working copy.
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -914,11 +972,14 @@ def old_style_externals_ignore_peg_reg(sbox):
                                      repo_url, wc_dir)
 
   # Update the working copy.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'up', wc_dir)
 
   # Set an external property using the old 'PATH URL' syntax with
   # @HEAD in the URL.
-  ext = "exdir_G " + other_repo_url + "/A/D/G@HEAD \n"
+  ext = "exdir_G " + external_url_for["A/C/exdir_G"] + "@HEAD\n"
 
   # Set and commit the property.
   change_external(os.path.join(wc_dir, "A"), ext)
@@ -928,6 +989,8 @@ def old_style_externals_ignore_peg_reg(sbox):
   svntest.actions.run_and_verify_svn("External '%s' used pegs" % ext.strip(),
                                      None,
                                      ".*URL '.*/A/D/G@HEAD' doesn't exist",
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
                                      'up',
                                      wc_dir)
 

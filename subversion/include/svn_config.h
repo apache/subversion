@@ -83,6 +83,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_DIFF_CMD                  "diff-cmd"
 #define SVN_CONFIG_OPTION_DIFF3_CMD                 "diff3-cmd"
 #define SVN_CONFIG_OPTION_DIFF3_HAS_PROGRAM_ARG     "diff3-has-program-arg"
+#define SVN_CONFIG_OPTION_MERGE_TOOL_CMD            "merge-tool-cmd"
 #define SVN_CONFIG_SECTION_MISCELLANY           "miscellany"
 #define SVN_CONFIG_OPTION_GLOBAL_IGNORES            "global-ignores"
 #define SVN_CONFIG_OPTION_LOG_ENCODING              "log-encoding"
@@ -121,9 +122,17 @@ typedef struct svn_config_t svn_config_t;
 /*** Configuration Default Values ***/
 
 /* '*' matches leading dots, e.g. '*.rej' matches '.foo.rej'. */
+/* We want this to be printed on two lines in the generated config file,
+ * but we don't want the # character to end up in the variable.
+ */
+#define SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_1 \
+  "*.o *.lo *.la *.al .libs *.so *.so.[0-9]* *.a *.pyc *.pyo"
+#define SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_2 \
+  "*.rej *~ #*# .#* .*.swp .DS_Store"
+
 #define SVN_CONFIG_DEFAULT_GLOBAL_IGNORES \
-    "*.o *.lo *.la *.al .libs *.so *.so.[0-9]* *.a *.pyc *.pyo" \
-    " *.rej *~ #*# .#* .*.swp .DS_Store"
+  SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_1 " " \
+  SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_2
 
 #define SVN_CONFIG_TRUE  "true"
 #define SVN_CONFIG_FALSE "false"

@@ -232,7 +232,7 @@ svn_client_status3(svn_revnum_t *result_rev,
   /* Try to open the target directory. If the target is a file or an
      unversioned directory, open the parent directory instead */
   err = svn_wc_adm_open3(&anchor_access, NULL, path, FALSE,
-                         SVN_DEPTH_TO_RECURSE(depth) ? -1 : 1,
+                         SVN_DEPTH_IS_RECURSIVE(depth) ? -1 : 1,
                          ctx->cancel_func, ctx->cancel_baton,
                          pool);
   if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
@@ -240,7 +240,7 @@ svn_client_status3(svn_revnum_t *result_rev,
       svn_error_clear(err);
       SVN_ERR(svn_wc_adm_open_anchor(&anchor_access, &target_access, &target,
                                      path, FALSE,
-                                     SVN_DEPTH_TO_RECURSE(depth) ? -1 : 1,
+                                     SVN_DEPTH_IS_RECURSIVE(depth) ? -1 : 1,
                                      ctx->cancel_func, ctx->cancel_baton,
                                      pool));
     }
@@ -253,11 +253,6 @@ svn_client_status3(svn_revnum_t *result_rev,
     return err;
 
   anchor = svn_wc_adm_access_path(anchor_access);
-
-  /* For local status default depth = svn_depth_infinity, any directories that
-     are not on disk will be ignored anyway. */
-  if (depth == svn_depth_unknown)
-    depth = svn_depth_infinity;
 
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
@@ -277,6 +272,7 @@ svn_client_status3(svn_revnum_t *result_rev,
       svn_ra_session_t *ra_session;
       const char *URL;
       svn_node_kind_t kind;
+      svn_boolean_t server_supports_depth;
 
       /* Get full URL from the ANCHOR. */
       if (! entry)
@@ -328,7 +324,7 @@ svn_client_status3(svn_revnum_t *result_rev,
             {
               /* Get a revision number for our status operation. */
               SVN_ERR(svn_client__get_revision_number
-                      (&revnum, ra_session, revision, target, pool));
+                      (&revnum, NULL, ra_session, revision, target, pool));
             }
 
           /* Do the deed.  Let the RA layer drive the status editor. */
@@ -343,14 +339,17 @@ svn_client_status3(svn_revnum_t *result_rev,
           rb.ctx = ctx;
           rb.pool = pool;
 
+          SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
+                                        SVN_RA_CAPABILITY_DEPTH, pool));
+
           /* Drive the reporter structure, describing the revisions
              within PATH.  When we call reporter->finish_report,
              EDITOR will be driven to describe differences between our
              working copy and HEAD. */
           SVN_ERR(svn_wc_crawl_revisions3(path, target_access,
                                           &lock_fetch_reporter, &rb, FALSE,
-                                          depth, FALSE, NULL, NULL, NULL,
-                                          pool));
+                                          depth, (! server_supports_depth),
+                                          FALSE, NULL, NULL, NULL, pool));
         }
     }
   else
@@ -411,7 +410,7 @@ svn_client_status2(svn_revnum_t *result_rev,
 {
   return svn_client_status3(result_rev, path, revision,
                             status_func, status_baton,
-                            SVN_DEPTH_FROM_RECURSE_STATUS(recurse),
+                            SVN_DEPTH_INFINITY_OR_IMMEDIATES(recurse),
                             get_all, update,
                             no_ignore, ignore_externals,
                             ctx, pool);

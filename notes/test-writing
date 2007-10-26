@@ -57,8 +57,8 @@ Tests can generate 2 results:
 Sometimes it's necessary to code tests which are supposed to fail,
 if Subversion should behave a certain way, but does not yet.  Tests
 like these are marked XFail (eXpected-to-FAIL).  If the program is
-changed to support the tested behaviour, but the the test is not
-adjusted, it will XPASS (uneXpectedly-PASS).
+changed to support the tested behaviour, but the test is not adjusted,
+it will XPASS (uneXpectedly-PASS).
 
 Next to normal and XFAIL status tests, there's also conditional
 execution of tests, by marking them Skip().  A condition can be

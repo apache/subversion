@@ -47,6 +47,10 @@ typedef struct svn_client__merge_path_t
                                         due to authz restrictions. */
   const svn_string_t *propval;       /* Working mergeinfo for PATH at start
                                         of merge.  May be NULL. */
+  apr_array_header_t *remaining_ranges; /* Per path remaining ranges list. */
+  apr_hash_t *pre_merge_mergeinfo;      /* mergeinfo on a path prior to a
+                                           merge.*/
+  svn_boolean_t indirect_mergeinfo;
 } svn_client__merge_path_t;
 
 
