@@ -2043,8 +2043,8 @@ remove_first_range_from_remaining_ranges(
         {
           apr_array_header_t *orig_remaining_ranges = child->remaining_ranges;
           child->remaining_ranges =
-                       apr_array_make(pool, (child->remaining_ranges->nelts - 1),
-                                      sizeof(svn_merge_range_t *));
+            apr_array_make(pool, (child->remaining_ranges->nelts - 1),
+                           sizeof(svn_merge_range_t *));
           for (j = 1; j < orig_remaining_ranges->nelts; j++)
             {
               svn_merge_range_t *range = APR_ARRAY_IDX(orig_remaining_ranges,
