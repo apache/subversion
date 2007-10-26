@@ -248,7 +248,8 @@ switch_external(const char *path,
                     return err;
                 }
 
-              SVN_ERR(svn_client__switch_internal(NULL, path, url, revision,
+              SVN_ERR(svn_client__switch_internal(NULL, path, url, 
+                                                  peg_revision, revision,
                                                   svn_depth_infinity,
                                                   timestamp_sleep,
                                                   FALSE, FALSE, ctx, subpool));

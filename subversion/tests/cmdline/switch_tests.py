@@ -1859,6 +1859,72 @@ def switch_with_depth(sbox):
                                         None, None, None, None, 0,
                                         '--depth', 'infinity')
 
+#----------------------------------------------------------------------  
+
+def switch_to_dir_with_peg_rev(sbox):
+  "switch to dir@peg where dir doesn't exist in HEAD"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  # prepare two dirs X and Y in rev. 2
+  X_path = os.path.join(wc_dir, 'X')
+  Y_path = os.path.join(wc_dir, 'Y')
+  svntest.main.run_svn(None, 'mkdir', X_path, Y_path)
+  svntest.main.run_svn(None, 'ci',
+                       '-m', 'log message',
+                       wc_dir)
+
+  # change tau in rev. 3
+  ADG_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  tau_path = os.path.join(ADG_path, 'tau')
+  svntest.main.file_append(tau_path, "new line\n")
+  svntest.main.run_svn(None, 'ci',
+                       '-m', 'log message',
+                       wc_dir)
+
+  # delete A/D/G in rev. 4
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'rm', ADG_path)
+  svntest.main.run_svn(None, 'ci',
+                       '-m', 'log message',
+                       wc_dir)
+
+  # Test 1: switch X to A/D/G@2
+  ADG_url = repo_url + '/A/D/G'
+  expected_output = svntest.wc.State(wc_dir, {
+    'X/pi'   : Item(status='A '),
+    'X/rho'   : Item(status='A '),
+    'X/tau'   : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+      'X'           : Item(),
+      'X/pi'        : Item("This is the file 'pi'.\n"),
+      'X/rho'       : Item("This is the file 'rho'.\n"),
+      'X/tau'       : Item("This is the file 'tau'.\n"),
+      'Y'           : Item(),
+      })
+  expected_disk.remove('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.remove('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
+  expected_status.add({
+      'X'           : Item(status='  ', wc_rev=2, switched='S'),
+      'X/pi'        : Item(status='  ', wc_rev=2),
+      'X/rho'       : Item(status='  ', wc_rev=2),
+      'X/tau'       : Item(status='  ', wc_rev=2),
+      'Y'           : Item(status='  ', wc_rev=3)
+      })
+
+  # Do the switch to rev. 2 of /A/D/G@3.
+  svntest.actions.run_and_verify_switch(wc_dir, X_path, ADG_url + '@3',
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status, None,
+                                        None, None, None, None, 0,
+                                        '-r', '2')
+
 ########################################################################
 # Run the tests
 
@@ -1889,6 +1955,7 @@ test_list = [ None,
               mergeinfo_switch_elision,
               switch_with_obstructing_local_adds,
               switch_with_depth,
+              switch_to_dir_with_peg_rev,
              ]
 
 if __name__ == '__main__':

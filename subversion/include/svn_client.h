@@ -1127,7 +1127,7 @@ svn_client_update(svn_revnum_t *result_rev,
  * @{
  */
 
-/** Switch working tree @a path to @a url at @a revision,
+/** Switch working tree @a path to @a url@peg_revision at @a revision,
  * authenticating with the authentication baton cached in @a ctx.  If
  * @a result_rev is not @c NULL, set @a *result_rev to the value of
  * the revision to which the working copy was actually switched.
@@ -1172,6 +1172,7 @@ svn_error_t *
 svn_client_switch2(svn_revnum_t *result_rev,
                    const char *path,
                    const char *url,
+                   const svn_opt_revision_t *peg_revision,
                    const svn_opt_revision_t *revision,
                    svn_depth_t depth,
                    svn_boolean_t ignore_externals,
