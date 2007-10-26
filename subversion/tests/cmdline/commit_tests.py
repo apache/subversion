@@ -2631,7 +2631,7 @@ def commit_out_of_date_file(sbox):
                                         "-m", "log message", wc_dir)
 
   svntest.main.file_append(backup_pi_path, "hello")
-  expected_err = ".*pi.*out of date.*"
+  expected_err = ".*(pi.*out of date|Out of date.*pi).*"
   svntest.actions.run_and_verify_svn(None, None, expected_err,
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
