@@ -61,6 +61,12 @@ class WCFormatConverter:
     """Attempt to write the WC format FORMAT_NBR to the entries file
     for DIRNAME.  Throws LossyConversionException when not in --force
     mode, and unconvertable WC data is encountered."""
+
+    # avoid iterating in unversioned directories.
+    if not ".svn" in paths and not "_svn" in paths:
+      paths = []
+      return
+
     for path in paths:
       # Process the entries file for this versioned directory.
       if path in (".svn", "_svn"):
