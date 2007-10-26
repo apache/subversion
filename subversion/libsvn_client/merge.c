@@ -2631,8 +2631,8 @@ do_single_file_merge(const char *url1,
     }
   else
     {
-        remaining_ranges = apr_array_make(pool, 1, sizeof(&range));
-        APR_ARRAY_PUSH(remaining_ranges, svn_merge_range_t *) = &range;
+      remaining_ranges = apr_array_make(pool, 1, sizeof(&range));
+      APR_ARRAY_PUSH(remaining_ranges, svn_merge_range_t *) = &range;
     }
 
   subpool = svn_pool_create(pool);
