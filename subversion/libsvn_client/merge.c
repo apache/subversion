@@ -4648,10 +4648,11 @@ svn_client_merge_peg3(const char *source,
      in place. */
   if (! revision_ranges->nelts)
     {
+      svn_opt_revision_range_t *revrange;
+
       revision_ranges = 
         apr_array_make(pool, 1, sizeof(svn_opt_revision_range_t *));
-      svn_opt_revision_range_t *revrange = 
-        apr_pcalloc(pool, sizeof(*revrange));
+      revrange = apr_pcalloc(pool, sizeof(*revrange));
       revrange->start.kind = svn_opt_revision_unspecified;
       revrange->end.kind = svn_opt_revision_unspecified;
       APR_ARRAY_PUSH(revision_ranges, svn_opt_revision_range_t *) = revrange;
