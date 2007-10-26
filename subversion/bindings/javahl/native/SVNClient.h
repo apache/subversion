@@ -19,14 +19,11 @@
  * @brief Interface for the SVNClient class
  */
 
-#if !defined(AFX_SVNCLIENT_H__B5A135CD_3D7C_4ABC_8D75_643B14507979__INCLUDED_)
-#define AFX_SVNCLIENT_H__B5A135CD_3D7C_4ABC_8D75_643B14507979__INCLUDED_
-
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
+#ifndef SVNCLIENT_H
+#define SVNCLIENT_H
 
 #include <vector>
+#include <string>
 #include <jni.h>
 #include "Path.h"
 
@@ -242,5 +239,4 @@ class SVNClient :public SVNBase
   std::string m_configDir;
 };
 
-// !defined(AFX_SVNCLIENT_H__B5A135CD_3D7C_4ABC_8D75_643B14507979__INCLUDED_)
-#endif
+#endif // SVNCLIENT_H

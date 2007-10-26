@@ -22,10 +22,6 @@
 #ifndef ENUM_MAPPER_H
 #define ENUM_MAPPER_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
-
 #include <jni.h>
 #include "svn_client.h"
 #include "svn_wc.h"

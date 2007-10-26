@@ -19,12 +19,8 @@
  * @brief Interface of the class Prompter
  */
 
-#if !defined(AFX_PROMPTER_H__6833BB77_DDCC_4BF8_A995_5A5CBC48DF4C__INCLUDED_)
-#define AFX_PROMPTER_H__6833BB77_DDCC_4BF8_A995_5A5CBC48DF4C__INCLUDED_
-
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
+#ifndef PROMPTER_H
+#define PROMPTER_H
 
 #include <jni.h>
 #include "svn_auth.h"
@@ -114,5 +110,4 @@ class Prompter
   svn_auth_provider_object_t *getProviderClientSSLPassword();
 };
 
-#endif
-// !defined(AFX_PROMPTER_H__6833BB77_DDCC_4BF8_A995_5A5CBC48DF4C__INCLUDED_)
+#endif // PROMPTER_H
