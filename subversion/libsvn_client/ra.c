@@ -485,7 +485,7 @@ compare_segments(const void *a, const void *b)
   const svn_location_segment_t *b_seg = b;
   if (a_seg->range_start == b_seg->range_start)
     return 0;
-  return (a_seg->range_start < b_seg->range_start) ? -1 : 1;
+  return (a_seg->range_start < b_seg->range_start) ? 1 : -1;
 }
 
 svn_error_t *
