@@ -19,12 +19,9 @@
  * @brief Interface of the class StatusCallback
  */
 
-#if !defined(AFX_STATUSCALLBACK_H__3BBF3F0F_C80C_45C9_8AC3_E1AF07E5B810__INCLUDED_)
-#define AFX_STATUSCALLBACK_H__3BBF3F0F_C80C_45C9_8AC3_E1AF07E5B810__INCLUDED_
+#ifndef STATUSCALLBACK_H
+#define STATUSCALLBACK_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
 #include <jni.h>
 #include "svn_client.h"
 
@@ -55,5 +52,4 @@ class StatusCallback
                            svn_wc_status2_t *status);
 };
 
-// !defined(AFX_STATUSCALLBACK_H__3BBF3F0F_C80C_45C9_8AC3_E1AF07E5B810__INCLUDED_)
-#endif
+#endif // STATUSCALLBACK_H

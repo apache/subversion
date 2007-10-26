@@ -19,12 +19,9 @@
  * @brief Interface of the class JNIUtil
  */
 
-#if !defined(AFX_JNIUTIL_H__82301908_C6CB_4A77_8A28_899E72FBEEFF__INCLUDED_)
-#define AFX_JNIUTIL_H__82301908_C6CB_4A77_8A28_899E72FBEEFF__INCLUDED_
+#ifndef JNIUTIL_H
+#define JNIUTIL_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
 #include <list>
 struct apr_pool_t;
 struct svn_error;
@@ -242,5 +239,4 @@ class JNIUtil
     }                                                   \
   } while (0)
 
-// !defined(AFX_JNIUTIL_H__82301908_C6CB_4A77_8A28_899E72FBEEFF__INCLUDED_)
-#endif
+#endif  // JNIUTIL_H

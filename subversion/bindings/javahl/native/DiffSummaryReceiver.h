@@ -19,12 +19,9 @@
  * @brief Interface of the class DiffSummaryReceiver
  */
 
-#ifndef DIFF_SUMMARY_RECEIVER_H
-#define DIFF_SUMMARY_RECEIVER_H
+#ifndef DIFFSUMMARYRECEIVER_H
+#define DIFFSUMMARYRECEIVER_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
 #include <jni.h>
 #include "svn_client.h"
 
@@ -73,4 +70,4 @@ class DiffSummaryReceiver
   jobject m_receiver;
 };
 
-#endif  /* DIFF_SUMMARY_RECEIVER_H */
+#endif  // DIFFSUMMARYRECEIVER_H

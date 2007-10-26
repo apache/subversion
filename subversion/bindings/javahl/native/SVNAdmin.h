@@ -19,12 +19,8 @@
  * @brief Interface of the class SVNAdmin
  */
 
-#if !defined(AFX_SVNADMIN_H__9AD95B26_47BF_4430_8217_20B87ACCE87B__INCLUDED_)
-#define AFX_SVNADMIN_H__9AD95B26_47BF_4430_8217_20B87ACCE87B__INCLUDED_
-
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
+#ifndef SVNADMIN_H
+#define SVNADMIN_H
 
 #include <jni.h>
 #include "svn_repos.h"
@@ -74,5 +70,4 @@ class SVNAdmin : public SVNBase
                                 apr_pool_t *pool);
 };
 
-// !defined(AFX_SVNADMIN_H__9AD95B26_47BF_4430_8217_20B87ACCE87B__INCLUDED_)
-#endif
+#endif // SVNADMIN_H
