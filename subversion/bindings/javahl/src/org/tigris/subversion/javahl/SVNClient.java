@@ -1484,6 +1484,24 @@ public class SVNClient implements SVNClientInterface
     }
 
     /**
+     * Create and sets one property of an item with a byte array value
+     *
+     * @param path    path of the item
+     * @param name    name of the property
+     * @param value   new value of the property
+     * @param depth   depth to set property on the subdirectories
+     * @param force   do not check if the value is valid
+     * @throws ClientException
+     * @since 1.5
+     */
+    public void propertyCreate(String path, String name, String value,
+                               int depth, boolean force)
+            throws ClientException
+    {
+        propertySet(path, name, value, depth, force);
+    }
+
+    /**
      * Retrieve one revsision property of one item
      * @param path      path of the item
      * @param name      name of the property
