@@ -1314,17 +1314,11 @@ determine_merges_performed(apr_hash_t **merges, const char *target_wcpath,
                           apr_hash_count(notify_b->skipped_paths) : 0);
   *merges = apr_hash_make(pool);
 
-  /* If there have been no operative merges on any subtree merged so far and
-     we are determining the merges performed on the merge target (i.e. the
-     last such determination to be made), *and* there are no operative merges
-     on the target either, then don't calculate anything.  Just return the
-     empty hash because this whole merge has been a no-op and we don't change
-     the mergeinfo in that case (issue #2883). */
-   if (!notify_b->nbr_operative_notifications
-       && !merge_b->operative_merge
-       && svn_path_compare_paths(target_wcpath, merge_b->target) == 0)
+  /* If there have been no operative merges, then don't calculate anything.
+     Just return the empty hash because this whole merge has been a no-op
+     and we don't change the mergeinfo in that case (issue #2883). */
+   if (!notify_b->nbr_operative_notifications && !merge_b->operative_merge)
      return SVN_NO_ERROR;
-
 
   /* Note in the merge baton when the first operative merge is found. */
   if (notify_b->nbr_operative_notifications > 0
