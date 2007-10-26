@@ -435,7 +435,10 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
                                         pool));
 
   if (allow_404 && *code == 404 && request->err)
-    svn_error_clear(request->err);
+    {
+      svn_error_clear(request->err);
+      request->err = SVN_NO_ERROR;
+    }
 
   *locn = svn_ra_neon__request_get_location(request, pool);
   svn_ra_neon__request_destroy(request);
