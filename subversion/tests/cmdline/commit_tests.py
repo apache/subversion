@@ -2605,6 +2605,38 @@ def no_such_changelist(sbox):
                                      "commit", "--changelist=not-found",
                                      "-m", "msg", wc_dir)
                                         
+def commit_out_of_date_file(sbox):
+  "try to commit a file that is out-of-date"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a backup copy of the working copy
+  wc_backup = sbox.add_wc_path('backup')
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+
+  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  backup_pi_path = os.path.join(wc_backup, 'A', 'D', 'G', 'pi')
+
+  svntest.main.file_append(pi_path, "new line\n")
+  expected_output = svntest.wc.State(wc_dir, {
+    "A/D/G/pi" : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak("A/D/G/pi", wc_rev=2, status="  ")
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        "-m", "log message", wc_dir)
+
+  svntest.main.file_append(backup_pi_path, "hello")
+  expected_err = ".*pi.*out of date.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     'commit', '-m', 'log message',
+                                     wc_backup)
 
 ########################################################################
 # Run the tests
@@ -2666,6 +2698,7 @@ test_list = [ None,
               versioned_log_message,
               changelist_near_conflict,
               no_such_changelist,
+              commit_out_of_date_file,
              ]
 
 if __name__ == '__main__':
