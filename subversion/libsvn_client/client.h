@@ -513,8 +513,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool);
 
-/* Switch a working copy PATH to URL at REVISION, and (if not NULL)
-   set RESULT_REV to the switch revision.  Only switch as deeply as DEPTH
+/* Switch a working copy PATH to URL@PEG_REVISION at REVISION, and (if not 
+   NULL) set RESULT_REV to the switch revision.  Only switch as deeply as DEPTH
    indicates.  If TIMESTAMP_SLEEP is NULL this function will sleep before
    returning to ensure timestamp integrity.  If TIMESTAMP_SLEEP is not
    NULL then the function will not sleep but will set *TIMESTAMP_SLEEP
@@ -527,6 +527,7 @@ svn_error_t *
 svn_client__switch_internal(svn_revnum_t *result_rev,
                             const char *path,
                             const char *url,
+                            const svn_opt_revision_t *peg_revision,
                             const svn_opt_revision_t *revision,
                             svn_depth_t depth,
                             svn_boolean_t *timestamp_sleep,
