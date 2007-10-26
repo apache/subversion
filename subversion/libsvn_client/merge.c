@@ -2059,9 +2059,9 @@ remove_first_range_from_remaining_ranges(
 
 
 /* Blindly record the range specified by the user (rather than refining it
-   as we do for actual merges). */
+   as we do for actual merges) for the merge source URL. */
 static svn_error_t *
-record_mergeinfo_for_record_only_merge(const char *URL1,
+record_mergeinfo_for_record_only_merge(const char *url,
                                        svn_merge_range_t *range,
                                        svn_boolean_t is_rollback,
                                        const svn_wc_entry_t *entry,
@@ -2083,9 +2083,9 @@ record_mergeinfo_for_record_only_merge(const char *URL1,
                                                 merge_b->target,
                                                 adm_access, merge_b->ctx,
                                                 pool));
-  /* Reparent ra_session back to URL1. */
-  SVN_ERR(svn_ra_reparent(merge_b->ra_session1, URL1, pool));
-  SVN_ERR(svn_client__path_relative_to_root(&rel_path, URL1, NULL,
+  /* Reparent ra_session back to URL. */
+  SVN_ERR(svn_ra_reparent(merge_b->ra_session1, url, pool));
+  SVN_ERR(svn_client__path_relative_to_root(&rel_path, url, NULL,
                                             merge_b->ra_session1,
                                             adm_access, pool));
   rangelist = apr_array_make(pool, 1, sizeof(range));
