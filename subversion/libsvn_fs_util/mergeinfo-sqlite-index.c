@@ -458,8 +458,8 @@ parse_mergeinfo_from_db(sqlite3 *db,
       do
         {
           mergedfrom = (char *) sqlite3_column_text(stmt, 0);
-          startrev = sqlite3_column_int64(stmt, 1);
-          endrev = sqlite3_column_int64(stmt, 2);
+          startrev = (svn_revnum_t) sqlite3_column_int64(stmt, 1);
+          endrev = (svn_revnum_t) sqlite3_column_int64(stmt, 2);
           inheritable = sqlite3_column_int64(stmt, 3) == 0 ? FALSE : TRUE;
 
           mergedfrom = apr_pstrdup(pool, mergedfrom);
@@ -550,7 +550,7 @@ get_mergeinfo_for_path(sqlite3 *db,
   apr_hash_t *path_mergeinfo;
   sqlite3_stmt *stmt;
   int sqlite_result;
-  sqlite_int64 lastmerged_rev;
+  svn_revnum_t lastmerged_rev;
 
   if (inherit == svn_mergeinfo_nearest_ancestor)
     {
@@ -580,7 +580,7 @@ get_mergeinfo_for_path(sqlite3 *db,
         return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
                                 sqlite3_errmsg(db));
 
-      lastmerged_rev = sqlite3_column_int64(stmt, 0);
+      lastmerged_rev = (svn_revnum_t) sqlite3_column_int64(stmt, 0);
       SQLITE_ERR(sqlite3_finalize(stmt), db);
 
       /* If we've got mergeinfo data, transform it from the db into a
@@ -684,14 +684,14 @@ get_mergeinfo_for_children(sqlite3 *db,
   sqlite_result = sqlite3_step(stmt);
   while (sqlite_result != SQLITE_DONE)
     {
-      sqlite_int64 lastmerged_rev;
+      svn_revnum_t lastmerged_rev;
       const char *merged_path;
 
       if (sqlite_result == SQLITE_ERROR)
         return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
                                 sqlite3_errmsg(db));
 
-      lastmerged_rev = sqlite3_column_int64(stmt, 0);
+      lastmerged_rev = (svn_revnum_t) sqlite3_column_int64(stmt, 0);
       merged_path = (const char *) sqlite3_column_text(stmt, 1);
 
       /* If we've got a merged revision, go get the mergeinfo from the db */
