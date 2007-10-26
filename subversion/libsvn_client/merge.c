@@ -3853,7 +3853,7 @@ discover_and_merge_children(const svn_wc_entry_t *parent_entry,
           else
             child_repos_path = child->path +
                                  (merge_target_len ? merge_target_len + 1 : 0);
-           child_merge_src_canon_path = 
+          child_merge_src_canon_path = 
                                     svn_path_join(parent_merge_src_canon_path,
                                                   child_repos_path, iterpool);
 
