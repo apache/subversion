@@ -198,8 +198,8 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
                             Revision &revisionStart,
                             Revision &revisionEnd, bool stopOnCopy,
                             bool discoverPaths, bool includeMergedRevisions,
-                            bool omitLogText, long limit,
-                            LogMessageCallback *callback)
+                            std::vector<std::string> &revProps,
+                            long limit, LogMessageCallback *callback)
 {
     Pool requestPool;
 
@@ -213,11 +213,15 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
     const apr_array_header_t *targets = target.array(requestPool);
     SVN_JNI_ERR(target.error_occured(), );
 
-    apr_array_header_t *revprops = apr_array_make(requestPool.pool(), 3,
-                                                  sizeof(char *));
-    APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_AUTHOR;
-    APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_DATE;
-    APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_LOG;
+    apr_array_header_t *cl_revprops = apr_array_make(requestPool.pool(), 3,
+                                                     sizeof(char *));
+    std::vector<std::string>::const_iterator it;
+    for (it = revProps.begin(); it < revProps.end(); ++it)
+    {
+        APR_ARRAY_PUSH(cl_revprops, const char *) = it->c_str();
+        if (JNIUtil::isExceptionThrown())
+            return;
+    }
 
     SVN_JNI_ERR(svn_client_log4(targets,
                                 pegRevision.revision(),
@@ -227,7 +231,7 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
                                 discoverPaths,
                                 stopOnCopy,
                                 includeMergedRevisions,
-                                revprops,
+                                cl_revprops,
                                 LogMessageCallback::callback, callback, ctx,
                                 requestPool.pool()), );
 }

@@ -250,7 +250,7 @@ Java_org_tigris_subversion_javahl_SVNClient_logMessages
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
  jobject jrevisionStart, jobject jrevisionEnd, jboolean jstopOnCopy,
  jboolean jdisoverPaths, jboolean jincludeMergedRevisions,
- jboolean jomitLogText, jlong jlimit, jobject jlogMessageCallback)
+ jobjectArray jrevProps, jlong jlimit, jobject jlogMessageCallback)
 {
   JNIEntry(SVNClient, logMessages);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -276,10 +276,31 @@ Java_org_tigris_subversion_javahl_SVNClient_logMessages
     return;
 
   LogMessageCallback callback(jlogMessageCallback);
+
+  // Build the rev prop vector from the Java array.
+  std::vector<std::string> revProps;
+
+  jint arraySize = env->GetArrayLength(jrevProps);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  for (int i = 0; i < arraySize; ++i)
+    {
+      jobject jrevProp = env->GetObjectArrayElement(jrevProps, i);
+      if (JNIUtil::isExceptionThrown())
+        return;
+
+      JNIStringHolder revProp((jstring)jrevProp);
+      if (JNIUtil::isExceptionThrown())
+        return;
+
+      revProps.push_back(std::string((const char *)revProp));
+    }
+
   cl->logMessages(path, pegRevision, revisionStart, revisionEnd,
                   jstopOnCopy ? true: false, jdisoverPaths ? true : false,
                   jincludeMergedRevisions ? true : false,
-                  jomitLogText ? true : false, jlimit, &callback);
+                  revProps, jlimit, &callback);
 }
 
 JNIEXPORT jlong JNICALL

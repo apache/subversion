@@ -259,7 +259,7 @@ public interface SVNClientInterface
      *                      returned objects
      * @param includeMergedRevisions include log messages for revisions which
      *                               were merged.
-     * @param omitLogText   supress log message text.
+     * @param revProps      the revprops to retrieve
      * @param limit         limit the number of log messages (if 0 or less no
      *                      limit)
      * @param callback      the object to receive the log messages
@@ -269,7 +269,7 @@ public interface SVNClientInterface
                      Revision revisionStart,
                      Revision revisionEnd, boolean stopOnCopy,
                      boolean discoverPath, boolean includeMergedRevisions,
-                     boolean omitLogText, long limit,
+                     String[] revProps, long limit,
                      LogMessageCallback callback)
             throws ClientException;
 

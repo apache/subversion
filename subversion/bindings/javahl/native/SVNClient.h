@@ -137,8 +137,8 @@ class SVNClient :public SVNBase
                    Revision &revisionStart,
                    Revision &revisionEnd, bool stopOnCopy,
                    bool discoverPaths, bool includeMergedRevisions,
-                   bool omitLogText, long limit,
-                   LogMessageCallback *callback);
+                   std::vector<std::string> &revProps,
+                   long limit, LogMessageCallback *callback);
   void setPrompt(Prompter *prompter);
   void password(const char *pi_password);
   void username(const char *pi_username);
