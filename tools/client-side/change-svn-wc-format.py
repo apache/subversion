@@ -232,7 +232,7 @@ class Entry:
     if lossy_fields:
       raise LossyConversionException(
         "Lossy WC format conversion requested for entry '%s'\n"
-        "Data for the following field(s) is unsupported by later versions "
+        "Data for the following field(s) is unsupported by older versions "
         "of\nSubversion, and is likely to be subsequently discarded, and/or "
         "have\nunexpected side-effects: %s"
         % (self.get_name(), ", ".join(lossy_fields)))
