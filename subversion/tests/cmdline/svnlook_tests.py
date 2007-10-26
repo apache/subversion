@@ -239,16 +239,10 @@ def test_print_property_diffs(sbox):
 
   # commit the change
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m', 'log msg', iota_path)
 
   # Grab the diff
   expected_output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                            '--username',
-                                                            svntest.main.wc_author,
-                                                            '--password',
-                                                            svntest.main.wc_passwd,
                                                             'diff',
                                                             '-r', 'PREV',
                                                             iota_path)
@@ -413,13 +407,9 @@ def limit_history(sbox):
   sbox.build(create_wc=False)
   repo_url = sbox.repo_url
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'mv', '-m', 'log msg',
                                      repo_url + "/iota", repo_url + "/iota2")
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'mv', '-m', 'log msg',
                                      repo_url + "/A/mu", repo_url + "/iota")
   history = run_svnlook("history", "--limit=1", sbox.repo_dir)

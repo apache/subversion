@@ -113,8 +113,6 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
       svntest.actions.run_and_verify_svn("Updating to r%s" % (rev+1),
                                          svntest.verify.AnyOutput, [],
                                          "update", "-r%s" % (rev+1),
-                                         '--username', svntest.main.wc_author,
-                                         '--password', svntest.main.wc_passwd,
                                          sbox.wc_dir)
 
       wc_tree = svntest.tree.build_tree_from_wc(sbox.wc_dir)
@@ -147,8 +145,6 @@ def test_create(sbox):
 
   svntest.actions.run_and_verify_svn("Creating rev 0 checkout",
                                      ["Checked out revision 0.\n"], [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      "checkout",
                                      sbox.repo_url, wc_dir)
 
@@ -259,8 +255,6 @@ def empty_date(sbox):
   # Verify that the revision still lacks the svn:date property.
   svntest.actions.run_and_verify_svn(None, [], [], "propget",
                                      "--revprop", "-r1", "svn:date",
-                                     "--username", svntest.main.wc_author,
-                                     "--password", svntest.main.wc_passwd,
                                      sbox.wc_dir)
 
 #----------------------------------------------------------------------
@@ -276,8 +270,6 @@ def dump_copied_dir(sbox):
   new_C_path = os.path.join(wc_dir, 'A', 'B', 'C')
   svntest.main.run_svn(None, 'cp', old_C_path, new_C_path)
   svntest.main.run_svn(None, 'ci', wc_dir, '--quiet',
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        '-m', 'log msg')
 
   output, errput = svntest.main.run_svnadmin("dump", repo_dir)
@@ -302,8 +294,6 @@ def dump_move_dir_modify_child(sbox):
   svntest.main.run_svn(None, 'cp', B_path, Q_path)
   svntest.main.file_append(os.path.join(Q_path, 'lambda'), 'hello')
   svntest.main.run_svn(None, 'ci', wc_dir, '--quiet',
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        '-m', 'log msg')
   output, errput = svntest.main.run_svnadmin("dump", repo_dir)
   svntest.verify.compare_and_display_lines(
@@ -428,8 +418,6 @@ def verify_windows_paths_in_repos(sbox):
   chi_url = sbox.repo_url + '/c:hi'
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'mkdir', '-m', 'log_msg',
                                      chi_url)
 
