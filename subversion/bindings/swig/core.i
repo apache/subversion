@@ -669,10 +669,10 @@ PyObject *svn_swig_py_exception_type(void);
 #endif
 
 
-/* ----------------------------------------------------------------------- */
-// These APIs take an "inout" parameter that necessitates more careful
-// definition.
-%ignore svn_mergeinfo_merge;
+/* -----------------------------------------------------------------------
+   These APIs take an "inout" parameter that necessitates more careful
+   definition.
+*/
 %ignore svn_mergeinfo_sort;
 %ignore svn_rangelist_merge;
 %ignore svn_rangelist_reverse;
