@@ -827,7 +827,8 @@ svn_client_propget4(apr_hash_t **props,
 
       /* Get an RA plugin for this filesystem object. */
       SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
-                                               &url, target, peg_revision,
+                                               &url, target, NULL,
+                                               peg_revision,
                                                revision, ctx, pool));
 
       SVN_ERR(svn_ra_check_path(ra_session, "", revnum, &kind, pool));
@@ -1182,7 +1183,8 @@ svn_client_proplist3(const char *target,
 
       /* Get an RA session for this URL. */
       SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
-                                               &url, target, peg_revision,
+                                               &url, target, NULL, 
+                                               peg_revision,
                                                revision, ctx, pool));
 
       SVN_ERR(svn_ra_check_path(ra_session, "", revnum, &kind, pool));
