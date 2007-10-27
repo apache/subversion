@@ -100,8 +100,8 @@ class SVNClient :public SVNBase
   void doImport(const char *path, const char *url, const char *message,
                 svn_depth_t depth, bool noIgnore, bool ignoreUnknownNodeTypes);
   jlong doSwitch(const char *path, const char *url, Revision &revision,
-                 svn_depth_t depth, bool ignoreExternals,
-                 bool allowUnverObstructions);
+                 Revision &pegRevision, svn_depth_t depth,
+                 bool ignoreExternals, bool allowUnverObstructions);
   jlong doExport(const char *srcPath, const char *destPath,
                  Revision &revision, Revision &pegRevision, bool force,
                  bool ignoreExternals, svn_depth_t depth,

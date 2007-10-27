@@ -876,7 +876,8 @@ public class SVNClient implements SVNClientInterface
      * @since 1.5
      */
     public native long doSwitch(String path, String url, Revision revision,
-                                int depth, boolean ignoreExternals,
+                                Revision pegRevision, int depth,
+                                boolean ignoreExternals,
                                 boolean allowUnverObstructions)
             throws ClientException;
 
@@ -892,8 +893,8 @@ public class SVNClient implements SVNClientInterface
                          boolean recurse)
             throws ClientException
     {
-        return doSwitch(path, url, revision, Depth.unknownOrFiles(recurse),
-                        false, false);
+        return doSwitch(path, url, revision, null,
+                        Depth.unknownOrFiles(recurse), false, false);
     }
 
     /**
