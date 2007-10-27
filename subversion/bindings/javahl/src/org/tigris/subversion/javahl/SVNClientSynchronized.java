@@ -1032,14 +1032,15 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @since 1.5
      */
     public long doSwitch(String path, String url, Revision revision,
+                         Revision pegRevision,
                          int depth, boolean ignoreExternals,
                          boolean allowUnverObstructions)
             throws ClientException
     {
         synchronized(clazz)
         {
-            return worker.doSwitch(path, url, revision, depth, ignoreExternals,
-                                   allowUnverObstructions);
+            return worker.doSwitch(path, url, revision, pegRevision, depth,
+                                   ignoreExternals, allowUnverObstructions);
         }
     }
 

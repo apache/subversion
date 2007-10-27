@@ -696,7 +696,8 @@ Java_org_tigris_subversion_javahl_SVNClient_doExport
 JNIEXPORT jlong JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_doSwitch
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jurl, jobject jrevision,
- jint jdepth, jboolean jignoreExternals, jboolean jallowUnverObstructions)
+ jobject jpegRevision, jint jdepth, jboolean jignoreExternals,
+ jboolean jallowUnverObstructions)
 {
   JNIEntry(SVNClient, doSwitch);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -709,6 +710,10 @@ Java_org_tigris_subversion_javahl_SVNClient_doSwitch
   if (JNIUtil::isExceptionThrown())
     return -1;
 
+  Revision pegRevision(jpegRevision);
+  if (JNIUtil::isExceptionThrown())
+    return -1;
+
   JNIStringHolder path(jpath);
   if (JNIUtil::isExceptionThrown())
     return -1;
@@ -717,7 +722,7 @@ Java_org_tigris_subversion_javahl_SVNClient_doSwitch
   if (JNIUtil::isExceptionThrown())
     return -1;
 
-  return cl->doSwitch(path, url, revision,
+  return cl->doSwitch(path, url, revision, pegRevision,
                       (svn_depth_t)jdepth,
                       jignoreExternals ? true : false,
                       jallowUnverObstructions ? true : false);
