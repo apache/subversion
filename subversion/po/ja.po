@@ -177,7 +177,7 @@ msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-10-17 08:53+0900\n"
-"PO-Revision-Date: 2007-10-27 16:00+0900\n"
+"PO-Revision-Date: 2007-10-28 01:01+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -6038,7 +6038,7 @@ msgstr ", 差分 (d), 編集 (e)"
 
 #: svn/conflict-callbacks.c:233
 msgid ", (r)esolved"
-msgstr ", 解決済み (r)"
+msgstr ", 解決版 (r)"
 
 #: svn/conflict-callbacks.c:235
 msgid ", (h)elp for more options : "
@@ -6057,14 +6057,14 @@ msgid ""
 "  (h)elp     - show this list\n"
 "\n"
 msgstr ""
-"  延期 (p)       - 競合を後で解決する予定であるという印をつけます\n"
-"  差分 (d)       - マージによってファイルに加えられた変更をすべて表示します\n"
-"  編集 (e)       - マージされたファイルをエディタで編集します\n"
-"  解決済み (r)   - マージされたバージョンのファイルを受け入れます\n"
-"  自分 (m)       - 自分のバージョンのファイルを受け入れます\n"
-"  リポジトリ (t) - リポジトリのバージョンを受け入れます\n"
-"  起動 (l)       - 競合を解決するためにサードパーティ製のツールを使用します\n"
-"  ヘルプ (h)     - この選択肢一覧を表示します\n"
+"  延期 (p)     - 競合を後で解決する予定であるという印をつけます\n"
+"  差分 (d)     - マージによってファイルに加えられた変更をすべて表示します\n"
+"  編集 (e)     - マージされたファイルをエディタで編集します\n"
+"  解決版   (r) - マージされたバージョンのファイルを採用します\n"
+"  自分の版 (m) - 自分のバージョンのファイルを採用します\n"
+"  他人の版 (t) - リポジトリに含まれている他人のバージョンを採用します\n"
+"  起動 (l)     - 競合を解決するためにサードパーティ製のツールを使用します\n"
+"  ヘルプ (h)   - この選択肢一覧を表示します\n"
 
 #: svn/conflict-callbacks.c:290 svn/conflict-callbacks.c:320
 #: svn/conflict-callbacks.c:354 svn/conflict-callbacks.c:368
@@ -6095,7 +6095,7 @@ msgstr ""
 
 #: svn/conflict-callbacks.c:401
 msgid "Select: (p)ostpone, (m)ine, (t)heirs, (h)elp :"
-msgstr "選択: 延期 (p), 自分 (m), リポジトリ (t), ヘルプ (h) :"
+msgstr "選択: 延期 (p), 自分の版 (m), 他人の版 (t), ヘルプ (h) :"
 
 #: svn/conflict-callbacks.c:412
 #, c-format
@@ -6106,10 +6106,10 @@ msgid ""
 "  (h)elp     - show this list\n"
 "\n"
 msgstr ""
-"  延期 (p)       - 後で衝突を解決します\n"
-"  自分 (m)       - 既に存在する項目を受け入れます\n"
-"  リポジトリ (t) - リポジトリから入ってくる項目を受け入れます\n"
-"  ヘルプ (h)     - この選択肢一覧を表示します\n"
+"  延期 (p)     - 後で衝突を解決します\n"
+"  自分の版 (m) - 既に存在する項目を採用します\n"
+"  他人の版 (t) - リポジトリから入ってくる項目を採用します\n"
+"  ヘルプ (h)   - この選択肢一覧を表示します\n"
 "\n"
 
 #: svn/copy-cmd.c:124 svn/delete-cmd.c:64 svn/mkdir-cmd.c:65 svn/move-cmd.c:76
