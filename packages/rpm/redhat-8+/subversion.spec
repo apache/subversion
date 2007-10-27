@@ -104,6 +104,9 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Jun 30 2007 David Summers <david@summersoft.fay.ar.us> r27438
+- [RHEL5] Added neon-0.26.1 requirement.
+
 * Sat Jun 30 2007 David Summers <david@summersoft.fay.ar.us> r25592
 - [RHEL5] Added RHEL5 SPEC file.
 
