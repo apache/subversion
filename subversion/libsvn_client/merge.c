@@ -2287,10 +2287,6 @@ do_merge(const char *url1,
       notification_receiver(notify_b, notify, pool);
     }
 
-  /* ### TODO: Drill code to avoid merges for files which are
-     ### already in conflict down into the API which requests or
-     ### applies the diff. */
-
   SVN_ERR(drive_merge_report_editor(target_wcpath, url1, url2,
                                     children_with_mergeinfo, range.start,
                                     range.end, is_rollback, depth,
