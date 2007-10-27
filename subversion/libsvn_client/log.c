@@ -168,7 +168,8 @@ svn_client__get_copy_source(const char *path_or_url,
     svn_revnum_t at_rev;
     const char *at_url;
     SVN_ERR(svn_client__ra_session_from_path(&ra_session, &at_rev, &at_url,
-                                             path_or_url, revision, revision,
+                                             path_or_url, NULL, 
+                                             revision, revision,
                                              ctx, pool));
 
     SVN_ERR(svn_client__path_relative_to_root(&copyfrom_info.target_path,
@@ -443,7 +444,7 @@ svn_client_log4(const apr_array_header_t *targets,
       ra_target = url_or_path;
 
     SVN_ERR(svn_client__ra_session_from_path(&ra_session, &ignored_revnum,
-                                             &actual_url, ra_target,
+                                             &actual_url, ra_target, NULL,
                                              peg_revision, &session_opt_rev,
                                              ctx, pool));
   }
@@ -532,7 +533,7 @@ svn_client_log4(const apr_array_header_t *targets,
         rb.baton = real_receiver_baton;
         SVN_ERR(svn_client__ra_session_from_path(&ra_session,
                                                  &ignored_revnum,
-                                                 &actual_url, ra_target,
+                                                 &actual_url, ra_target, NULL,
                                                  peg_revision,
                                                  &session_opt_rev,
                                                  ctx, pool));
