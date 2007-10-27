@@ -62,7 +62,7 @@ class WCFormatConverter:
     for DIRNAME.  Throws LossyConversionException when not in --force
     mode, and unconvertable WC data is encountered."""
 
-    # avoid iterating in unversioned directories.
+    # Avoid iterating in unversioned directories.
     if not ".svn" in paths and not "_svn" in paths:
       paths = []
       return
