@@ -177,7 +177,7 @@ msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-10-17 08:53+0900\n"
-"PO-Revision-Date: 2007-10-26 04:21+0900\n"
+"PO-Revision-Date: 2007-10-27 16:00+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -6003,7 +6003,7 @@ msgid ""
 "Discovered a conflict.\n"
 "\n"
 msgstr ""
-"競合を発見しました。\n"
+"競合が見つかりました。\n"
 "\n"
 
 #: svn/conflict-callbacks.c:146
@@ -6013,36 +6013,36 @@ msgstr "エディタが見つかりません。すべての競合をそのまま
 #: svn/conflict-callbacks.c:155
 msgid "Error running editor, leaving all conflicts."
 msgstr ""
-"実行中のエディタでエラーが発生しました。すべての競合をそのままにします。"
+"エディタの実行中にエラーが発生しました。すべての競合をそのままにします。"
 
 #: svn/conflict-callbacks.c:187 svn/conflict-callbacks.c:337
 msgid "No merge tool found.\n"
-msgstr "マージツールが見つかりません\n"
+msgstr "マージツールが見つかりません。\n"
 
 #: svn/conflict-callbacks.c:195 svn/conflict-callbacks.c:344
 msgid "Error running merge tool."
-msgstr "マージツールの実行中にエラーが発生しました"
+msgstr "マージツールの実行中にエラーが発生しました。"
 
 #: svn/conflict-callbacks.c:222
 #, c-format
 msgid "Conflict discovered in '%s'.\n"
-msgstr "競合が見つかりました: %s\n"
+msgstr "'%s' で競合が見つかりました。\n"
 
 #: svn/conflict-callbacks.c:228
 msgid "Select: (p)ostpone"
-msgstr "選択; 延期(p)"
+msgstr "選択: 延期 (p)"
 
 #: svn/conflict-callbacks.c:230
 msgid ", (d)iff, (e)dit"
-msgstr ", 差分(d), 編集(e)"
+msgstr ", 差分 (d), 編集 (e)"
 
 #: svn/conflict-callbacks.c:233
 msgid ", (r)esolved"
-msgstr ", 解決(r)"
+msgstr ", 解決済み (r)"
 
 #: svn/conflict-callbacks.c:235
 msgid ", (h)elp for more options : "
-msgstr "オプションのヘルプ (h) : "
+msgstr ", ヘルプでその他のオプションを表示 (h) : "
 
 #: svn/conflict-callbacks.c:242
 #, c-format
@@ -6057,14 +6057,14 @@ msgid ""
 "  (h)elp     - show this list\n"
 "\n"
 msgstr ""
-"  延期(p) - 後で競合を解決するように印をつける\n"
-"  差分(d) - マージされたファイルのすべての変更を比較する\n"
-"  編集(e) - エディタでマージされたファイルを編集する\n"
-"  解決(r) - マージされたバージョンのファイルを受け入れる\n"
-"  自分(m) - 自分のファイルを受け入れる\n"
-"  リポジトリ(t) - リポジトリの最新を受け入れる\n"
-"  起動(l) - 競合を解決するためにサードパーティのツールを使用する\n"
-"  ヘルプ(h) - このヘルプを表示する\n"
+"  延期 (p)       - 競合を後で解決する予定であるという印をつけます\n"
+"  差分 (d)       - マージによってファイルに加えられた変更をすべて表示します\n"
+"  編集 (e)       - マージされたファイルをエディタで編集します\n"
+"  解決済み (r)   - マージされたバージョンのファイルを受け入れます\n"
+"  自分 (m)       - 自分のバージョンのファイルを受け入れます\n"
+"  リポジトリ (t) - リポジトリのバージョンを受け入れます\n"
+"  起動 (l)       - 競合を解決するためにサードパーティ製のツールを使用します\n"
+"  ヘルプ (h)     - この選択肢一覧を表示します\n"
 
 #: svn/conflict-callbacks.c:290 svn/conflict-callbacks.c:320
 #: svn/conflict-callbacks.c:354 svn/conflict-callbacks.c:368
@@ -6073,16 +6073,16 @@ msgid ""
 "Invalid option.\n"
 "\n"
 msgstr ""
-"不正なオプション\n"
+"オプションが不正です。\n"
 "\n"
 
 #: svn/conflict-callbacks.c:303
 msgid "No editor found."
-msgstr "エディタが見つかりません"
+msgstr "エディタが見つかりません。"
 
 #: svn/conflict-callbacks.c:310
 msgid "Error running editor."
-msgstr "エディタの実行中にエラーが発生しました"
+msgstr "エディタの実行中にエラーが発生しました。"
 
 #: svn/conflict-callbacks.c:398
 #, c-format
@@ -6090,12 +6090,12 @@ msgid ""
 "Conflict discovered when trying to add '%s'.\n"
 "An object of the same name already exists.\n"
 msgstr ""
-"'%s' を追加中に競合を見つけました。\n"
+"'%s' を追加しようとしましたが競合が見つかりました。\n"
 "同名のオブジェクトが既に存在します。\n"
 
 #: svn/conflict-callbacks.c:401
 msgid "Select: (p)ostpone, (m)ine, (t)heirs, (h)elp :"
-msgstr "選択: 延期(p), 自分(m), 最新(t), ヘルプ(h) :"
+msgstr "選択: 延期 (p), 自分 (m), リポジトリ (t), ヘルプ (h) :"
 
 #: svn/conflict-callbacks.c:412
 #, c-format
@@ -6106,10 +6106,11 @@ msgid ""
 "  (h)elp     - show this list\n"
 "\n"
 msgstr ""
-"  延期(p)   - 後で衝突を解決する\n"
-"  自分(m)   - 既に存在する項目を承認する\n"
-"  最新(t)   - リポジトリの項目を承認する\n"
-"  ヘルプ(h) - このヘルプを表示する\n"
+"  延期 (p)       - 後で衝突を解決します\n"
+"  自分 (m)       - 既に存在する項目を受け入れます\n"
+"  リポジトリ (t) - リポジトリから入ってくる項目を受け入れます\n"
+"  ヘルプ (h)     - この選択肢一覧を表示します\n"
+"\n"
 
 #: svn/copy-cmd.c:124 svn/delete-cmd.c:64 svn/mkdir-cmd.c:65 svn/move-cmd.c:76
 #: svn/propedit-cmd.c:202
@@ -6455,7 +6456,7 @@ msgstr " (%s:%ld より)"
 #: svn/log-cmd.c:247
 #, c-format
 msgid "Result of a merge from:"
-msgstr "マージ結果:"
+msgstr "以下のリビジョンのマージ結果:"
 
 #: svn/log-cmd.c:462
 msgid "'with-all-revprops' option only valid in XML mode"
@@ -6478,7 +6479,8 @@ msgstr "URL の後の引数で指定できるのは相対パスだけです"
 #, c-format
 msgid "cannot assign with 'with-revprop' option (drop the '=')"
 msgstr ""
-"'with-revprop' オプションで割り当てることはできません ('=' を削ってください)"
+"'with-revprop' オプションを用いた値の設定はできません ('=' を取り除いてくださ"
+"い)"
 
 # * Description for 'svn --force'.
 # * 29 half-size characters are displayed on the left.
