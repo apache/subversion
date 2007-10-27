@@ -1,6 +1,6 @@
 %define apache_version 2.2.3
 %define apr_version 1.2.7
-%define neon_version 0.25.5
+%define neon_version 0.26.1
 %define swig_version 1.3.29
 %define apache_dir /usr
 %define pyver 2.4
@@ -105,6 +105,9 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Jun 30 2007 David Summers <david@summersoft.fay.ar.us> r27438
+- [RHEL5] Added neon-0.26.1 requirement.
+
 * Sat Jun 30 2007 David Summers <david@summersoft.fay.ar.us> r25592
 - [RHEL5] Added RHEL5 SPEC file.
 
