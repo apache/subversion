@@ -1028,12 +1028,12 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * @see SVNClientInterface#doSwitch(String, String, Revision, int, boolean, boolean)
+     * @see SVNClientInterface#doSwitch(String, String, Revision, Revision, int, boolean, boolean)
      * @since 1.5
      */
     public long doSwitch(String path, String url, Revision revision,
-                         Revision pegRevision,
-                         int depth, boolean ignoreExternals,
+                         Revision pegRevision, int depth,
+                         boolean ignoreExternals,
                          boolean allowUnverObstructions)
             throws ClientException
     {

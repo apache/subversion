@@ -872,7 +872,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * @see SVNClientInterface#doSwitch(String, String, Revision, int, boolean, boolean)
+     * @see SVNClientInterface#doSwitch(String, String, Revision, Revision, int, boolean, boolean)
      * @since 1.5
      */
     public native long doSwitch(String path, String url, Revision revision,
@@ -893,7 +893,7 @@ public class SVNClient implements SVNClientInterface
                          boolean recurse)
             throws ClientException
     {
-        return doSwitch(path, url, revision, null,
+        return doSwitch(path, url, revision, Revision.HEAD,
                         Depth.unknownOrFiles(recurse), false, false);
     }
 

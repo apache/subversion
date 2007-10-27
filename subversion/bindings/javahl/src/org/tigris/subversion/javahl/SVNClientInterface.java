@@ -723,7 +723,7 @@ public interface SVNClientInterface
      * @param path      the working copy path
      * @param url       the new url for the working copy
      * @param revision  the new base revision of working copy
-     * @param pegRevision the revision to interpret path
+     * @param pegRevision the revision at which to interpret <code>path</code>
      * @param depth     how deep to traverse into subdirectories
      * @param ignoreExternals whether to process externals definitions
      * @param allowUnverObstructions allow unversioned paths that obstruct adds
