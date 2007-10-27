@@ -138,8 +138,6 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum, &tmp_url,
                                            URL, peg_revision, revision,
                                            ctx, pool));
-/*  SVN_ERR(svn_client__get_revision_number
-          (&revnum, NULL, ra_session, revision, path, pool)); */
   SVN_ERR(svn_ra_get_repos_root(ra_session, &source_root, pool));
 
   /* Disallow a switch operation to change the repository root of the
