@@ -200,6 +200,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
   {
       const char *answer;
       char *prompt;
+      svn_boolean_t diff_allowed = FALSE;
       svn_boolean_t performed_edit = FALSE;
 
       if (desc->kind == svn_wc_conflict_kind_text)
@@ -209,40 +210,56 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
       else if (desc->kind == svn_wc_conflict_kind_property)
         {
           SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
-                                      _("Property conflict for '%s' discovered"
+                                      _("Conflict for property '%s' discovered"
                                         " on '%s'.\n"),
                                       desc->property_name, desc->path));
-          if (! desc->merged_file)
+
+          if ((!desc->my_file && desc->their_file)
+              || (desc->my_file && !desc->their_file))
             {
+              /* One agent wants to change the property, one wants to
+                 delete it.  This is not something we can diff, so we
+                 just tell the user. */
               svn_stringbuf_t *myval = NULL, *theirval = NULL;
 
-              /* libsvn_wc failed to merge the propvals; at least let
-                 the user see them, so they're not selecting (m)ine or
-                 (t)heirs blindly! */
-
               if (desc->my_file)
-                SVN_ERR(svn_stringbuf_from_file(&myval, desc->my_file,
-                                                subpool));
-              if (desc->their_file)
-                SVN_ERR(svn_stringbuf_from_file(&theirval, desc->their_file,
-                                                subpool));
-
-              SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
-                        _("Their value is '%s', your value is '%s'.\n"),
-                          theirval ? theirval->data : "NULL",
-                          myval ? myval->data : "NULL"));
+                {
+                  SVN_ERR(svn_stringbuf_from_file(&myval, desc->my_file,
+                                                  subpool));
+                  SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                        _("They want to delete the property, "
+                          "you want to change the value to '%s'.\n"),
+                          myval->data));
+                }
+              else
+                {
+                  SVN_ERR(svn_stringbuf_from_file(&theirval, desc->their_file,
+                                                  subpool));
+                  SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                        _("They want to change the property value to '%s', "
+                          "you want to delete the property.\n"),
+                           theirval->data));
+                }
             }
         }
       else
         /* We don't recognize any other sort of conflict yet */
         return SVN_NO_ERROR;
 
+      /* Diffing can happen between base and merged, to show conflict
+         markers to the user (this is the typical 3-way merge
+         scenario), or if no base is available, we can show a diff
+         between mine and theirs. */
+      if ((desc->merged_file && desc->base_file)
+          || (!desc->base_file && desc->my_file && desc->their_file))
+        diff_allowed = TRUE;
+
       while (TRUE)
         {
           svn_pool_clear(subpool);
 
           prompt = apr_pstrdup(subpool, _("Select: (p)ostpone"));
-          if (desc->merged_file)
+          if (diff_allowed)
             prompt = apr_pstrcat(subpool, prompt, _(", (d)iff, (e)dit"),
                                  NULL);
           else
@@ -285,29 +302,44 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
             }
           if (strcmp(answer, "d") == 0)
             {
+              const char *path1, *path2;
+              svn_diff_t *diff;
+              svn_stream_t *output;
+              svn_diff_file_options_t *options;
+
+              if (! diff_allowed)
+                {
+                  SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                                 _("Invalid option; there's no "
+                                    "merged version to diff.\n\n")));
+                  continue;
+                }
+
               if (desc->merged_file && desc->base_file)
                 {
-                  svn_diff_t *diff;
-                  svn_stream_t *output;
-                  svn_diff_file_options_t *options =
-                      svn_diff_file_options_create(subpool);
-                  options->ignore_eol_style = TRUE;
-                  SVN_ERR(svn_stream_for_stdout(&output, subpool));
-                  SVN_ERR(svn_diff_file_diff_2(&diff, desc->base_file,
-                                               desc->merged_file,
-                                               options, subpool));
-                  SVN_ERR(svn_diff_file_output_unified2(output, diff,
-                                                        desc->base_file,
-                                                        desc->merged_file,
-                                                        NULL, NULL,
-                                                        APR_LOCALE_CHARSET,
-                                                        subpool));
-                  performed_edit = TRUE;
+                  /* Show the conflict markers to the user */
+                  path1 = desc->base_file;
+                  path2 = desc->merged_file;
                 }
               else
-                SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
-                                            _("Invalid option; there's no "
-                                              "merged version to diff.\n\n")));
+                {
+                  /* There's no base file, but we can show the
+                     difference between mine and theirs. */
+                  path1 = desc->their_file;
+                  path2 = desc->my_file;
+                }
+
+              options = svn_diff_file_options_create(subpool);
+              options->ignore_eol_style = TRUE;
+              SVN_ERR(svn_stream_for_stdout(&output, subpool));
+              SVN_ERR(svn_diff_file_diff_2(&diff, path1, path2,
+                                           options, subpool));
+              SVN_ERR(svn_diff_file_output_unified2(output, diff,
+                                                    path1, path2,
+                                                    NULL, NULL,
+                                                    APR_LOCALE_CHARSET,
+                                                    subpool));
+              performed_edit = TRUE;
             }
           if (strcmp(answer, "e") == 0)
             {
