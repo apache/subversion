@@ -153,7 +153,10 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   /* Check to make sure that the switch target actually exists. */
   SVN_ERR(svn_ra_reparent(ra_session, source_root, pool));
   SVN_ERR(svn_ra_check_path(ra_session,
-                            svn_path_is_child(source_root, switch_url, pool),
+                            svn_path_uri_decode(svn_path_is_child(source_root, 
+                                                                  switch_url, 
+                                                                  pool),
+                                                pool),
                             revnum,
                             &switch_url_kind,
                             pool));
