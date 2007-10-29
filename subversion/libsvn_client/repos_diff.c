@@ -72,7 +72,7 @@ struct edit_baton {
   apr_hash_t *empty_hash;
 
   /* Hash used to check replaced paths. Key is path relative CWD,
-   * Value is *kind_action_state.
+   * Value is *kind_action_state_t.
    * All allocations are from edit_baton's pool. */
   apr_hash_t *deleted_paths;
 
@@ -83,12 +83,12 @@ struct edit_baton {
   apr_pool_t *pool;
 };
 
-typedef struct kind_action_state
+typedef struct kind_action_state_t
 {
   svn_node_kind_t kind;
   svn_wc_notify_action_t action;
   svn_wc_notify_state_t state;
-}kind_action_state;
+} kind_action_state_t;
 
 /* Directory level baton.
  */
@@ -510,7 +510,7 @@ delete_entry(const char *path,
   if (eb->notify_func)
     {
       const char* deleted_path;
-      kind_action_state *kas = apr_palloc(eb->pool, sizeof(*kas));
+      kind_action_state_t *kas = apr_palloc(eb->pool, sizeof(*kas));
       deleted_path = svn_path_join(eb->target, path, eb->pool);
       kas->kind = kind;
       kas->action = action;
@@ -559,8 +559,8 @@ add_directory(const char *path,
     {
       svn_wc_notify_t *notify;
       svn_boolean_t is_replace = FALSE;
-      kind_action_state *kas = apr_hash_get(eb->deleted_paths, b->wcpath,
-                                            APR_HASH_KEY_STRING);
+      kind_action_state_t *kas = apr_hash_get(eb->deleted_paths, b->wcpath,
+                                              APR_HASH_KEY_STRING);
       if (kas)
         {
           svn_wc_notify_action_t new_action;
@@ -811,8 +811,8 @@ close_file(void *file_baton,
     {
       svn_wc_notify_t *notify;
       svn_boolean_t is_replace = FALSE;
-      kind_action_state *kas = apr_hash_get(eb->deleted_paths, b->wcpath,
-                                            APR_HASH_KEY_STRING);
+      kind_action_state_t *kas = apr_hash_get(eb->deleted_paths, b->wcpath,
+                                              APR_HASH_KEY_STRING);
       if (kas)
         {
           svn_wc_notify_action_t new_action;
@@ -907,7 +907,7 @@ close_directory(void *dir_baton,
            hi = apr_hash_next(hi))
         {
           const void *deleted_path;
-          kind_action_state *kas;
+          kind_action_state_t *kas;
           apr_hash_this(hi, &deleted_path, NULL, (void *)&kas);
           notify  = svn_wc_create_notify(deleted_path, kas->action, pool);
           notify->kind = kas->kind;
