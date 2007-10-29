@@ -1484,13 +1484,13 @@ update_wc_mergeinfo(const char *target_wcpath, const svn_wc_entry_t *entry,
       err = svn_client__record_wc_mergeinfo(path, mergeinfo,
                                             adm_access, subpool);
 
-      if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
-        {
-          /* PATH isn't just missing, it's not even versioned as far as this
-             working copy knows.  But it was included in MERGES, which means
-             that the server knows about it.  Likely we don't have access to
-             the source due to authz restrictions.  For now just clear the
-             error and continue...
+          if (err && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+            {
+              /* PATH isn't just missing, it's not even versioned as far as this
+                 working copy knows.  But it was included in MERGES, which means
+                 that the server knows about it.  Likely we don't have access to
+                 the source due to authz restrictions.  For now just clear the
+                 error and continue...
 
              ### TODO:  Set non-inheritable mergeinfo on PATH's immediate
              ### parent and normal mergeinfo on PATH's siblings which we
@@ -1654,10 +1654,10 @@ make_merge_conflict_error(const char *target_wcpath,
 
    TARGET_WCPATH is a directory and CHILDREN_WITH_MERGEINFO is filled
    with paths (svn_client__merge_path_t *) arranged in depth first order,
-   which have mergeinfo set on them or are absent from the WC (see
-   discover_and_merge_children and get_mergeinfo_paths).  Remove any
-   absent paths in CHILDREN_WITH_MERGEINFO which are equal to or are
-   descendents of TARGET_WCPATH by setting those children to NULL.
+   which have mergeinfo set on them or meet one of the other criteria
+   defined in get_mergeinfo_paths().  Remove any paths absent from disk
+   or scheduled for deletion from CHILDREN_WITH_MERGEINFO which are equal to
+   or are descendents of TARGET_WCPATH by setting those children to NULL.
    Also remove the path from the NOTIFY_B->SKIPPED_PATHS hash. */
 static void
 remove_absent_children(const char *target_wcpath,
@@ -1674,7 +1674,7 @@ remove_absent_children(const char *target_wcpath,
         APR_ARRAY_IDX(children_with_mergeinfo, 
                       i, svn_client__merge_path_t *);
       if (child
-          && child->absent
+          && (child->absent || child->scheduled_for_deletion)
           && svn_path_is_ancestor(target_wcpath, child->path))
         {
           if (notify_b->skipped_paths)
@@ -2812,10 +2812,10 @@ struct get_mergeinfo_walk_baton
    Given PATH, its corresponding ENTRY, and WB, where WB is the WALK_BATON
    of type "struct get_mergeinfo_walk_baton *":  If PATH is switched,
    has explicit working svn:mergeinfo from a corresponding merge source, is
-   missing a child due to a sparse checkout, or is absent from disk, then
-   create a svn_client__merge_path_t * representing *PATH, allocated in
-   WB->CHILDREN_WITH_MERGEINFO->POOL, and push it onto the
-   WB->CHILDREN_WITH_MERGEINFO array. */
+   missing a child due to a sparse checkout, is absent from disk, or is
+   scheduled for deletion, then create a svn_client__merge_path_t *
+   representing *PATH, allocated in WB->CHILDREN_WITH_MERGEINFO->POOL, and
+   push it onto the WB->CHILDREN_WITH_MERGEINFO array. */
 static svn_error_t *
 get_mergeinfo_walk_cb(const char *path,
                       const svn_wc_entry_t *entry,
@@ -2839,10 +2839,10 @@ get_mergeinfo_walk_cb(const char *path,
     return SVN_NO_ERROR;
 
   /* Ignore the entry if it does not exist at the time of interest. */
-  if (entry->schedule == svn_wc_schedule_delete || entry->deleted)
+  if (entry->deleted)
     return SVN_NO_ERROR;
 
-  if (entry->absent)
+  if (entry->absent || entry->schedule == svn_wc_schedule_delete)
     {
       propval = NULL;
       switched = FALSE;
@@ -2888,10 +2888,11 @@ get_mergeinfo_walk_cb(const char *path,
     }
 
   /* Store PATHs with explict mergeinfo, which are switched, are missing
-     children due to a sparse checkout, and/or are absent from the WC,
-     first level sub directory relative to merge target if depth is
-     immediates. */
+     children due to a sparse checkout, are scheduled for deletion are absent
+     from the WC, and/or are first level sub directories relative to merge
+     target if depth is immediates. */
   if (has_mergeinfo_from_merge_src
+      || entry->schedule == svn_wc_schedule_delete
       || switched
       || entry->depth == svn_depth_empty
       || entry->depth == svn_depth_files
@@ -2913,6 +2914,8 @@ get_mergeinfo_walk_cb(const char *path,
                               ? TRUE : FALSE;
       child->switched = switched;
       child->absent = entry->absent;
+      child->scheduled_for_deletion =
+        entry->schedule == svn_wc_schedule_delete ? TRUE : FALSE;
       if (propval)
         {
           if (strstr(propval->data, SVN_MERGEINFO_NONINHERITABLE_STR))
@@ -3101,16 +3104,17 @@ compare_merge_path_t_as_paths(const void *a,
   return svn_path_compare_paths(child1->path, child2->path);
 }
 
-/* Helper for get_mergeinfo_paths().  If CHILD->PATH is switched or
-   absent make sure its parent is marked as missing a child.  Start
-   looking up for parent from *CURR_INDEX in CHILDREN_WITH_MERGEINFO.
-   Create the parent and insert it into CHILDREN_WITH_MERGEINFO if
-   necessary (and increment *CURR_INDEX so that caller don't process
-   the inserted element).  Also ensure that CHILD->PATH's siblings
-   which are not already present in CHILDREN_WITH_MERGEINFO are also
-   added to the array. Use POOL for all temporary allocations. */
+/* Helper for get_mergeinfo_paths().  If CHILD->PATH is switched,
+   absent, or scheduled for deletion make sure its parent is marked
+   as missing a child.  Start looking up for parent from *CURR_INDEX
+   in CHILDREN_WITH_MERGEINFO.  Create the parent and insert it into
+   CHILDREN_WITH_MERGEINFO if necessary (and increment *CURR_INDEX
+   so that caller don't process the inserted element).  Also ensure
+   that CHILD->PATH's siblings which are not already present in
+   CHILDREN_WITH_MERGEINFO are also added to the array. Use POOL for
+   all temporary allocations. */
 static svn_error_t *
-insert_parent_and_siblings_of_switched_or_absent_entry(
+insert_parent_and_sibs_of_sw_absent_del_entry(
                                    apr_array_header_t *children_with_mergeinfo,
                                    struct merge_cmd_baton *merge_cmd_baton,
                                    int *curr_index,
@@ -3126,6 +3130,7 @@ insert_parent_and_siblings_of_switched_or_absent_entry(
   int insert_index, parent_index;
 
   if (!(child->absent
+        || child->scheduled_for_deletion
           || (child->switched
               && strcmp(merge_cmd_baton->target, child->path) != 0)))
     return SVN_NO_ERROR;
@@ -3146,6 +3151,7 @@ insert_parent_and_siblings_of_switched_or_absent_entry(
       parent->has_noninheritable = FALSE;
       parent->absent = FALSE;
       parent->propval = NULL;
+      parent->scheduled_for_deletion = FALSE;
       /* Insert PARENT into CHILDREN_WITH_MERGEINFO. */
       insert_child_to_merge(children_with_mergeinfo, parent, parent_index);
       /* Increment for loop index so we don't process the inserted element. */
@@ -3185,6 +3191,7 @@ insert_parent_and_siblings_of_switched_or_absent_entry(
           sibling_of_missing->has_noninheritable = FALSE;
           sibling_of_missing->absent = FALSE;
           sibling_of_missing->propval = NULL;
+          sibling_of_missing->scheduled_for_deletion = FALSE;
           insert_child_to_merge(children_with_mergeinfo, sibling_of_missing,
                                 insert_index);
         }
@@ -3208,8 +3215,10 @@ insert_parent_and_siblings_of_switched_or_absent_entry(
         the child is switched or absent from the WC, or due to a sparse
         checkout.
      5) Path has a sibling (or siblings) missing from the WC because the
-        sibling is switched or absent, or missing due to a sparse checkout.
+        sibling is switched, absent, schduled for deletion, or missing due to
+        a sparse checkout.
      6) Path is absent from disk due to an authz restriction.
+     7) Path is scheduled for deletion.
 
    Criteria 4 and 5 are handled by
    'insert_parent_and_siblings_of_switched_or_absent_entry'.  Store
@@ -3341,6 +3350,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                   child_of_noninheritable->has_noninheritable = FALSE;
                   child_of_noninheritable->absent = FALSE;
                   child_of_noninheritable->propval = NULL;
+                  child_of_noninheritable->scheduled_for_deletion = FALSE;
                   insert_child_to_merge(children_with_mergeinfo,
                                         child_of_noninheritable,
                                         insert_index);
@@ -3363,12 +3373,10 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                 }
             }
         }
-      /* Case 4 and Case 5 are handled by the following function.*/
-      SVN_ERR(insert_parent_and_siblings_of_switched_or_absent_entry(
-                                                      children_with_mergeinfo,
-                                                      merge_cmd_baton, &i,
-                                                      child, adm_access,
-                                                      iterpool));
+      /* Case 4, 5, and 7 are handled by the following function. */
+      SVN_ERR(insert_parent_and_sibs_of_sw_absent_del_entry(
+        children_with_mergeinfo, merge_cmd_baton, &i, child,
+        adm_access, iterpool));
     } /* i < children_with_mergeinfo->nelts */
 
   /* Push default target */
@@ -3412,6 +3420,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
           target_item->absent = FALSE;
           target_item->propval = NULL;
           target_item->has_noninheritable = FALSE;
+          target_item->scheduled_for_deletion = FALSE;
           if (target_item->missing_child)
             target_item->has_noninheritable = TRUE;
           insert_child_to_merge(children_with_mergeinfo, target_item, 0);
