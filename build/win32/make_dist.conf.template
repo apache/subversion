@@ -9,3 +9,4 @@ doxygen = doxygen.exe
 nmake = C:/Program Files/Microsoft Visual Studio/VC98/Bin/NMAKE.EXE
 jar = C:/Program Files/Java/jdk1.5.0_04/bin/jar.exe
 zip = zip.exe
+ruby = C:/Program Files/ruby/bin/ruby.exe
