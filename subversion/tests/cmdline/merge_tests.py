@@ -698,8 +698,6 @@ def simple_property_merges(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy', '-m', 'copy B to B2',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      B_url, B2_url)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
@@ -827,8 +825,6 @@ def simple_property_merges(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      ['\n', 'Committed revision 5.\n'], [],
                                      'copy', '-m', 'copy A to A2',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      A_url, A2_url)
 
   # Re-root the WC at A2.
@@ -959,28 +955,20 @@ def merge_tree_deleted_in_target(sbox):
 
   # Copy B to I, creating r1.
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'cp', B_url, I_url, '-m', 'rev 2')
 
   # Change some files, creating r2.
   svntest.main.file_append(alpha_path, 'A change to alpha.\n')
   svntest.main.file_append(os.path.join(B_path, 'lambda'), 'change lambda.\n')
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m', 'rev 3', B_path)
 
   # Remove E, creating r3.
   E_url = sbox.repo_url + '/A/I/E'
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'rm', E_url, '-m', 'rev 4')
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'up', os.path.join(wc_dir,'A'))
 
   expected_output = wc.State(I_path, {
@@ -1031,23 +1019,15 @@ def merge_added_dir_to_deleted_in_target(sbox):
 
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'cp', B_url, I_url, '-m', 'rev 2')
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'rm', F_url, '-m', 'rev 3')
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'mkdir', '-m', 'rev 4', J_url)
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                       'up', os.path.join(wc_dir,'A'))
 
   expected_output = wc.State(I_path, {})
@@ -1119,8 +1099,6 @@ def merge_similar_unrelated_trees(sbox):
                                   'add', base1_path, base2_path, apply_path)
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m', 'rev 2', wc_dir)
 
   expected_output = wc.State(apply_path, {
@@ -1135,8 +1113,6 @@ def merge_similar_unrelated_trees(sbox):
   os.chdir(svntest.main.work_dir)
   # run_and_verify_merge doesn't support 'svn merge URL URL path'
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'merge',
                                      '--ignore-ancestry',
                                      base1_url, base2_url,
@@ -1187,8 +1163,6 @@ def merge_one_file_helper(sbox, arg_flav, record_only = 0):
 
   # Backdate rho to revision 1, so we can merge in the rev 2 changes.
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'up', '-r', '1', rho_path)
 
   # Try one merge with an explicit target; it should succeed.
@@ -1200,8 +1174,6 @@ def merge_one_file_helper(sbox, arg_flav, record_only = 0):
                                        expected_merge_output([[2]], 'U    ' +
                                                              rho_path + '\n'),
                                        [],
-                                       '--username', svntest.main.wc_author,
-                                       '--password', svntest.main.wc_passwd,
                                        'merge', '-r', '1:2',
                                        rho_url, rho_path)
   elif arg_flav == 'c':
@@ -1209,8 +1181,6 @@ def merge_one_file_helper(sbox, arg_flav, record_only = 0):
                                        expected_merge_output([[2]], 'U    ' +
                                                              rho_path + '\n'),
                                        [],
-                                       '--username', svntest.main.wc_author,
-                                       '--password', svntest.main.wc_passwd,
                                        'merge', '-c', '2',
                                        rho_url, rho_path)
   elif arg_flav == '*':
@@ -1218,8 +1188,6 @@ def merge_one_file_helper(sbox, arg_flav, record_only = 0):
                                        expected_merge_output([[2]], 'U    ' +
                                                              rho_path + '\n'),
                                        [],
-                                       '--username', svntest.main.wc_author,
-                                       '--password', svntest.main.wc_passwd,
                                        'merge', rho_url, rho_path)
 
   expected_status.tweak(wc_rev=1)
@@ -1242,9 +1210,7 @@ def merge_one_file_helper(sbox, arg_flav, record_only = 0):
   os.chdir(G_path)
 
   # Cannot use run_and_verify_merge with a file target
-  merge_cmd = [ '--username', svntest.main.wc_author,
-                '--password', svntest.main.wc_passwd,
-                'merge']
+  merge_cmd = ['merge']
   if arg_flav == 'r':
     merge_cmd += ['-r', '1:2']
   elif arg_flav == 'c':
@@ -1346,16 +1312,12 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
                                        expected_merge_output([[-2]],
                                                              'U    mu\n'),
                                        [],
-                                       '--username', svntest.main.wc_author,
-                                       '--password', svntest.main.wc_passwd,
                                        'merge', '-r', '2:1', mu_url)
   elif arg_flav == 'c':
     svntest.actions.run_and_verify_svn(None,
                                        expected_merge_output([[-2]],
                                                              'U    mu\n'),
                                        [],
-                                       '--username', svntest.main.wc_author,
-                                       '--password', svntest.main.wc_passwd,
                                        'merge', '-c', '-2', mu_url)
   elif arg_flav == '*':
     # Implicit merge source URL and revision range detection is for
@@ -1365,8 +1327,6 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
                                        expected_merge_output([[-2]],
                                                              'U    mu\n'),
                                        [],
-                                       '--username', svntest.main.wc_author,
-                                       '--password', svntest.main.wc_passwd,
                                        'merge', '-c', '-2', mu_url)
 
   # sanity-check resulting file
@@ -1382,16 +1342,12 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
                                        expected_merge_output([[2]],
                                                              'G    mu\n'),
                                        [],
-                                       '--username', svntest.main.wc_author,
-                                       '--password', svntest.main.wc_passwd,
                                        'merge', '-r', '1:2', 'mu')
   elif arg_flav == 'c':
     svntest.actions.run_and_verify_svn(None,
                                        expected_merge_output([[2]],
                                                              'G    mu\n'),
                                        [],
-                                       '--username', svntest.main.wc_author,
-                                       '--password', svntest.main.wc_passwd,
                                        'merge', '-c', '2', 'mu')
 
   elif arg_flav == '*':
@@ -1399,8 +1355,6 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
                                        expected_merge_output([[2]],
                                                              'G    mu\n'),
                                        [],
-                                       '--username', svntest.main.wc_author,
-                                       '--password', svntest.main.wc_passwd,
                                        'merge', 'mu')
 
   # sanity-check resulting file
@@ -1612,8 +1566,6 @@ def three_way_merge_add_of_existing_binary_file(sbox):
   A_url = sbox.repo_url + "/A"
   branch_A_url = sbox.repo_url + "/copy-of-A"
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      "cp",
                                      A_url, branch_A_url,
                                      "-m", "Creating copy-of-A")
@@ -1694,16 +1646,12 @@ def merge_in_new_file_and_diff(sbox):
 
   # Create a branch
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      trunk_url,
                                      sbox.repo_url + '/branch',
                                      '-m', "Creating the Branch")
 
   # Update to revision 2.
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'update', wc_dir)
 
   new_file_path = os.path.join(wc_dir, 'A', 'B', 'E', 'newfile')
@@ -1712,8 +1660,6 @@ def merge_in_new_file_and_diff(sbox):
   # Add the new file, and commit revision 3.
   svntest.actions.run_and_verify_svn(None, None, [], "add", new_file_path)
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m',
                                      "Changing the trunk.", wc_dir)
 
@@ -1760,8 +1706,6 @@ def merge_in_new_file_and_diff(sbox):
     "   Merged /A/B/E:r2-3\n",
     "\n", ]
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      branch_path)
 
 
@@ -2549,16 +2493,12 @@ def merge_keyword_expansions(sbox):
   svntest.main.run_svn(None, "add", tpath)
   # Commit r2.
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      "ci", "-m", "r2", wcpath)
 
   # Copy t to b.
   svntest.main.run_svn(None, "cp", tpath, bpath)
   # Commit r3
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      "ci", "-m", "r3", wcpath)
 
   # Add a file to t.
@@ -2571,14 +2511,10 @@ def merge_keyword_expansions(sbox):
                                      t_fpath)
   # Commit r4
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m', 'r4', wcpath)
 
   # Update the wc before the merge.
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'update', wcpath)
 
   expected_status = svntest.actions.get_virginal_state(wcpath, 4)
@@ -2639,8 +2575,6 @@ def merge_prop_change_to_deleted_target(sbox):
                                         None, None, None, None, None,
                                         wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'up', wc_dir)
 
   # Remove alpha entirely.
@@ -2662,8 +2596,6 @@ def merge_prop_change_to_deleted_target(sbox):
   os.chdir(wc_dir)
   svntest.actions.run_and_verify_svn("Merge errored unexpectedly",
                                      svntest.verify.AnyOutput, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'merge', '-r1:2', '.')
 
 
@@ -2830,8 +2762,7 @@ def merge_dir_replace(sbox):
                                         wc_dir)
   # Merge replacement of foo onto C
   expected_output = wc.State(C_path, {
-    'foo' : Item(status='D '),
-    'foo' : Item(status='A '),
+    'foo' : Item(status='R '),
     'foo/new file 2' : Item(status='D '),
     'foo/file foo'   : Item(status='A '),
     'foo/bar'        : Item(status='A '),
@@ -3012,15 +2943,11 @@ def merge_file_with_space_in_its_name(sbox):
   svntest.main.file_append(new_file, "Initial text in the file.\n")
   svntest.main.run_svn(None, "add", new_file)
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      "ci", "-m", "r2", wc_dir)
 
   # Make r3.
   svntest.main.file_append(new_file, "Next line of text in the file.\n")
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      "ci", "-m", "r3", wc_dir)
 
   # Try to reverse merge.
@@ -3031,8 +2958,6 @@ def merge_file_with_space_in_its_name(sbox):
   os.chdir(wc_dir)
   target_url = sbox.repo_url + '/new%20file'
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      "merge", "-r3:2", target_url)
 
 #----------------------------------------------------------------------
@@ -3132,8 +3057,6 @@ def safe_property_merge(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy', '-m', 'copy B to B2',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      B_url, B2_url)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
@@ -3258,8 +3181,6 @@ def property_merge_from_branch(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy', '-m', 'copy B to B2',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      B_url, B2_url)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
@@ -3443,31 +3364,23 @@ def cherry_pick_text_conflict(sbox):
 
   # Create a branch of A.
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      A_url, branch_A_url,
                                      '-m', "Creating copy-of-A")
 
   # Update to get the branch.
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'update', wc_dir)
 
   # Change mu's text on the branch, producing r3 through r6.
   for rev in range(3, 7):
     svntest.main.file_append(branch_mu_path, ("r%d\n" % rev) * 3)
     svntest.actions.run_and_verify_svn(None, None, [],
-                                       '--username', svntest.main.wc_author,
-                                       '--password', svntest.main.wc_passwd,
                                        'ci', '-m',
                                        'Add lines to mu in r%d.' % rev, wc_dir)
 
   # Mark r5 as merged into trunk, to create disparate revision ranges
   # which need to be merged.
   svntest.actions.run_and_verify_svn(None, [], [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'merge', '-c5', '--record-only',
                                      branch_A_url, A_path)
 
@@ -3597,7 +3510,7 @@ def merge_file_replace(sbox):
 
   # merge changes from r3:1
   expected_output = svntest.wc.State(wc_dir, {
-    'A/D/G/rho': Item(status='A ')
+    'A/D/G/rho': Item(status='R ')
     })
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
   expected_skip = wc.State(wc_dir, { })
@@ -3686,7 +3599,7 @@ def merge_file_replace_to_mixed_rev_wc(sbox):
 
   # merge changes from r3:1
   expected_output = svntest.wc.State(wc_dir, {
-    'A/D/G/rho': Item(status='A ')
+    'A/D/G/rho': Item(status='R ')
     })
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
   expected_skip = wc.State(wc_dir, { })
@@ -4085,8 +3998,6 @@ def merge_eolstyle_handling(sbox):
   # Checkout a second working copy
   wc_backup = sbox.add_wc_path('backup')
   svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      sbox.repo_url, wc_backup)
   path_backup = os.path.join(wc_backup, 'A', 'mu')
 
@@ -4094,8 +4005,6 @@ def merge_eolstyle_handling(sbox):
   # working copy and merge the last revision; there should be no conflict!
   svntest.main.run_svn(None, 'propset', 'svn:eol-style', "CRLF", mu_path)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'commit', '-m', 'set eol-style property', wc_dir)
 
   svntest.main.file_append_binary(path_backup, 'Added new line of text.\012')
@@ -4125,8 +4034,6 @@ def merge_eolstyle_handling(sbox):
   # local change to a versioned resource.)
   svntest.main.run_svn(None, 'propset', 'svn:eol-style', "CR", mu_path)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'commit', '-m', 'set eol-style property', wc_dir)
 
   expected_backup_disk = svntest.main.greek_state.copy()
@@ -4156,8 +4063,6 @@ def merge_eolstyle_handling(sbox):
   # EOL of mu should be unchanged (=CRLF).
   svntest.main.run_svn(None, 'propdel', 'svn:eol-style', mu_path)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'commit', '-m', 'del eol-style property', wc_dir)
 
   expected_backup_disk = svntest.main.greek_state.copy()
@@ -7421,13 +7326,9 @@ def update_loses_mergeinfo(sbox):
   A_B_K_url = sbox.repo_url + '/A/B/K'
   svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 2.\n'],
                                      [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'mkdir', '-m', 'rev 2', A_B_J_url)
   svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 3.\n'],
                                      [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'mkdir', '-m', 'rev 3', A_B_K_url)
 
   other_wc = sbox.add_wc_path('other')
@@ -7519,7 +7420,7 @@ def update_loses_mergeinfo(sbox):
                                         expected_status,
                                         check_props=1)
 
-
+# Tests part of issue# 2829, marked as XFail until that issue is fixed.
 def merge_loses_mergeinfo(sbox):
   "merge does not merge mergeinfo"
 
@@ -7537,13 +7438,9 @@ def merge_loses_mergeinfo(sbox):
   A_B_K_url = sbox.repo_url + '/A/B/K'
   svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 2.\n'],
                                      [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'mkdir', '-m', 'rev 2', A_B_J_url)
   svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 3.\n'],
                                      [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'mkdir', '-m', 'rev 3', A_B_K_url)
 
   short_A_C_wc_dir = shorten_path_kludge(A_C_wc_dir)
@@ -7659,8 +7556,6 @@ def single_file_replace_style_merge_capability(sbox):
                                        ['D    ' + mu_path + '\n',
                                         'A    ' + mu_path + '\n']),
                                      [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'merge',
                                      mu_path + '@2',
                                      mu_path + '@1',
@@ -7792,8 +7687,6 @@ def merge_with_depth_files(sbox):
 
   # Copy A_url to A_copy_url
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      A_url, Acopy_url,
                                      '-m', 'create a new copy of A')
 
@@ -7823,8 +7716,6 @@ def merge_with_depth_files(sbox):
 
   # Update working copy
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'up', Acopy_path)
 
   # Merge r1:3 into A_copy with --depth files.  The merge only affects
@@ -8480,8 +8371,6 @@ def merge_old_and_new_revs_from_renamed_dir(sbox):
   # Move A to A_MOVED
   svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 4.\n'],
                                      [], 'mv', '-m', 'mv A to A_MOVED',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      A_url, A_MOVED_url)
 
   # Update the working copy to get A_MOVED
@@ -8645,8 +8534,6 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
                                         expected_status, None, None, None,
                                         None, None, wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'cp', A_url, A_COPY_url, '-m', 'rev 3')
   # Update the working copy to get A_COPY
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
@@ -8704,8 +8591,6 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
                                      expected_merge_output([[5]],
                                        ['U    ' + A_COPY_mu_path + '\n']),
                                      [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'merge', '-r4:5',
                                      A_mu_url,
                                      A_COPY_mu_path)
@@ -8774,8 +8659,6 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
                                      expected_merge_output([[6,5]],
                                        ['G    ' + A_COPY_mu_path + '\n']),
                                      [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'merge', '-r6:4',
                                      A_mu_url,
                                      A_COPY_mu_path)
@@ -8820,8 +8703,6 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
                                      expected_merge_output([[-5]],
                                        ['G    ' + A_COPY_mu_path + '\n']),
                                      [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'merge', '-r5:4',
                                      A_mu_url,
                                      A_COPY_mu_path)
@@ -8869,8 +8750,6 @@ def merge_old_and_new_revs_from_renamed_file(sbox):
   # Copy mu to mu_COPY
   svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 2.\n'],
                                      [], 'cp', '-m', 'cp mu to mu_COPY',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      mu_url, mu_COPY_url)
 
   # Make a modification to A/mu
@@ -8885,8 +8764,6 @@ def merge_old_and_new_revs_from_renamed_file(sbox):
   # Move mu to mu_MOVED
   svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 4.\n'],
                                      [], 'mv', '-m', 'mv mu to mu_MOVED',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      mu_url, mu_MOVED_url)
 
   # Update the working copy to get mu_MOVED
@@ -8911,8 +8788,6 @@ def merge_old_and_new_revs_from_renamed_file(sbox):
                                                            mu_COPY_path +
                                                            '\n'),
                                      [], 'merge', '-r', '1:5',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      mu_MOVED_url,
                                      mu_COPY_path)
 
@@ -8937,8 +8812,6 @@ def merge_with_auto_rev_range_detection(sbox):
   # Create B1 inside A
   svntest.actions.run_and_verify_svn(None, ["A         " + B1_path + "\n"],
                                      [], 'mkdir',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      B1_path)
 
   # Add a file mu inside B1
@@ -8963,8 +8836,6 @@ def merge_with_auto_rev_range_detection(sbox):
   # Copy A to A_COPY
   svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 3.\n'],
                                      [], 'cp', '-m', 'cp A to A_COPY',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      A_url, A_COPY_url)
 
   # Make a modification to A/B1/mu
@@ -9085,8 +8956,6 @@ def mergeinfo_recording_in_skipped_merge(sbox):
 
   # Delete A_COPY/B/E
   svntest.actions.run_and_verify_svn(None, None, [], 'rm',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      A_COPY_B_E_path)
 
   short_A_COPY = shorten_path_kludge(A_COPY_path)
@@ -9123,10 +8992,10 @@ def mergeinfo_recording_in_skipped_merge(sbox):
     'mu'       : Item("This is the file 'mu' modified.\n"),
     'C'        : Item(),
     'D'        : Item(),
-    'B'        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1'}),
+    'B'        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1,2-4*'}),
     'B/lambda' : Item(contents="This is the file 'lambda'.\n",
-                      props={SVN_PROP_MERGE_INFO : '/A/B/lambda:2-4'}),
-    'B/F'      : Item(props={SVN_PROP_MERGE_INFO : '/A/B/F:2-4'}),
+                      props={SVN_PROP_MERGE_INFO : '/A/B/lambda:1-4'}),
+    'B/F'      : Item(props={SVN_PROP_MERGE_INFO : '/A/B/F:1-4'}),
     'B/E'      : Item(),
     'D/gamma'  : Item("This is the file 'gamma'.\n"),
     'D/G'      : Item(),
@@ -9719,7 +9588,7 @@ test_list = [ None,
               XFail(avoid_reflected_revs),
               Skip(mergeinfo_and_skipped_paths, svntest.main.is_ra_type_file),
               update_loses_mergeinfo,
-              merge_loses_mergeinfo,
+              XFail(merge_loses_mergeinfo),
               single_file_replace_style_merge_capability,
               merge_to_out_of_date_target,
               merge_with_depth_files,
@@ -9730,7 +9599,7 @@ test_list = [ None,
               merge_with_child_having_different_rev_ranges_to_merge,
               merge_old_and_new_revs_from_renamed_file,
               merge_with_auto_rev_range_detection,
-              XFail(mergeinfo_recording_in_skipped_merge),
+              mergeinfo_recording_in_skipped_merge,
               cherry_picking,
               propchange_of_subdir_raises_conflict,
               reverse_merge_prop_add_on_child,

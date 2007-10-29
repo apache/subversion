@@ -19,12 +19,8 @@
  * @brief Interface of the class JNIData
  */
 
-#if !defined(AFX_JNITHREADDATA_H__2BF37407_7EA8_4F74_9080_C86696617F7F__INCLUDED_)
-#define AFX_JNITHREADDATA_H__2BF37407_7EA8_4F74_9080_C86696617F7F__INCLUDED_
-
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
+#ifndef JNITHREADDATA_H
+#define JNITHREADDATA_H
 
 #include <jni.h>
 #include "JNIUtil.h"
@@ -77,5 +73,4 @@ class JNIThreadData
   static apr_threadkey_t *g_key;
 };
 
-// !defined(AFX_JNITHREADDATA_H__2BF37407_7EA8_4F74_9080_C86696617F7F__INCLUDED_)
-#endif
+#endif  // JNITHREADDATA_H

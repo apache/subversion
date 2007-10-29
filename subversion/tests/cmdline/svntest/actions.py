@@ -54,8 +54,6 @@ def setup_pristine_repository():
     ### todo: svn should not be prompting for auth info when using
     ### repositories with no auth/auth requirements
     output, errput = main.run_svn(None, 'import',
-                                  '--username', main.wc_author,
-                                  '--password', main.wc_passwd,
                                   '-m', 'Log message for revision 1.',
                                   main.greek_dump_dir, main.pristine_url)
 
@@ -247,8 +245,6 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
   ### todo: svn should not be prompting for auth info when using
   ### repositories with no auth/auth requirements
   output, errput = main.run_svn (None, 'co',
-                                 '--username', main.wc_author,
-                                 '--password', main.wc_passwd,
                                  URL, wc_dir_name, *args)
   actual = tree.build_tree_from_checkout (output)
 
@@ -287,8 +283,6 @@ def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
   ### todo: svn should not be prompting for auth info when using
   ### repositories with no auth/auth requirements
   output, errput = main.run_svn (None, 'export',
-                                 '--username', main.wc_author,
-                                 '--password', main.wc_passwd,
                                  URL, export_dir_name, *args)
   actual = tree.build_tree_from_checkout (output)
 
@@ -725,8 +719,6 @@ def run_and_verify_switch(wc_dir_name,
 
   # Update and make a tree of the output.
   output, errput = main.run_svn (error_re_string, 'switch',
-                                 '--username', main.wc_author,
-                                 '--password', main.wc_passwd,
                                  switch_url, wc_target, *args)
 
   if error_re_string:
@@ -777,8 +769,6 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
 
   # Commit.
   output, errput = main.run_svn(error_re_string, 'ci',
-                                '--username', main.wc_author,
-                                '--password', main.wc_passwd,
                                 '-m', 'log msg',
                                 *args)
 
@@ -851,8 +841,6 @@ def run_and_verify_status(wc_dir_name, output_tree,
     output_tree = output_tree.old_tree()
 
   output, errput = main.run_svn (None, 'status', '-v', '-u', '-q',
-                                 '--username', main.wc_author,
-                                 '--password', main.wc_passwd,
                                  wc_dir_name)
 
   actual = tree.build_tree_from_status (output)
@@ -916,8 +904,6 @@ def run_and_verify_diff_summarize(output_tree, error_re_string = None,
     output_tree = output_tree.old_tree()
 
   output, errput = main.run_svn (None, 'diff', '--summarize',
-                                 '--username', main.wc_author,
-                                 '--password', main.wc_passwd,
                                  *args)
 
   if error_re_string:
@@ -938,7 +924,7 @@ def run_and_verify_diff_summarize(output_tree, error_re_string = None,
     verify.display_trees(None, 'DIFF OUTPUT TREE', output_tree, actual)
     raise
 
-def run_and_validate_lock(path, username, password):
+def run_and_validate_lock(path, username):
   """`svn lock' the given path and validate the contents of the lock.
      Use the given username. This is important because locks are
      user specific."""
@@ -948,7 +934,6 @@ def run_and_validate_lock(path, username, password):
   # lock the path
   run_and_verify_svn(None, ".*locked by user", [], 'lock',
                      '--username', username,
-                     '--password', password,
                      '-m', comment, path)
 
   # Run info and check that we get the lock fields.
@@ -1150,8 +1135,6 @@ def inject_conflict_into_wc(sbox, state_path, file_path,
 
   # Backdate the file.
   output, errput = main.run_svn(None, "up", "-r", str(prev_rev),
-                                "--username", main.wc_author,
-                                "--password", main.wc_passwd,
                                  file_path)
   if expected_status:
     expected_status.tweak(state_path, wc_rev=prev_rev)
@@ -1171,8 +1154,6 @@ def inject_conflict_into_wc(sbox, state_path, file_path,
                                       conflicting_contents, contents,
                                       merged_rev)
   output, errput = main.run_svn(None, "up", "-r", str(merged_rev),
-                                "--username", main.wc_author,
-                                "--password", main.wc_passwd,
                                 sbox.repo_url + "/" + state_path, file_path)
   if expected_status:
     expected_status.tweak(state_path, wc_rev=merged_rev)

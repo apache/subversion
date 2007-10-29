@@ -198,8 +198,8 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
                             Revision &revisionStart,
                             Revision &revisionEnd, bool stopOnCopy,
                             bool discoverPaths, bool includeMergedRevisions,
-                            bool omitLogText, long limit,
-                            LogMessageCallback *callback)
+                            std::vector<std::string> &revProps,
+                            long limit, LogMessageCallback *callback)
 {
     Pool requestPool;
 
@@ -213,11 +213,15 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
     const apr_array_header_t *targets = target.array(requestPool);
     SVN_JNI_ERR(target.error_occured(), );
 
-    apr_array_header_t *revprops = apr_array_make(requestPool.pool(), 3,
-                                                  sizeof(char *));
-    APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_AUTHOR;
-    APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_DATE;
-    APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_LOG;
+    apr_array_header_t *cl_revprops = apr_array_make(requestPool.pool(), 3,
+                                                     sizeof(char *));
+    std::vector<std::string>::const_iterator it;
+    for (it = revProps.begin(); it < revProps.end(); ++it)
+    {
+        APR_ARRAY_PUSH(cl_revprops, const char *) = it->c_str();
+        if (JNIUtil::isExceptionThrown())
+            return;
+    }
 
     SVN_JNI_ERR(svn_client_log4(targets,
                                 pegRevision.revision(),
@@ -227,7 +231,7 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
                                 discoverPaths,
                                 stopOnCopy,
                                 includeMergedRevisions,
-                                revprops,
+                                cl_revprops,
                                 LogMessageCallback::callback, callback, ctx,
                                 requestPool.pool()), );
 }
@@ -377,7 +381,6 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision,
     env->ReleaseLongArrayElements(jrevs, jrevArray, 0);
 
     return jrevs;
-
 }
 
 jlong SVNClient::commit(Targets &targets, const char *message,
@@ -530,8 +533,9 @@ jlong SVNClient::doExport(const char *srcPath, const char *destPath,
 }
 
 jlong SVNClient::doSwitch(const char *path, const char *url,
-                          Revision &revision, svn_depth_t depth,
-                          bool ignoreExternals, bool allowUnverObstructions)
+                          Revision &revision, Revision &pegRevision,
+                          svn_depth_t depth, bool ignoreExternals,
+                          bool allowUnverObstructions)
 {
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", -1);
@@ -548,6 +552,7 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
 
     SVN_JNI_ERR(svn_client_switch2(&rev, intPath.c_str(),
                                    intUrl.c_str(),
+                                   pegRevision.revision(),
                                    revision.revision(),
                                    depth,
                                    ignoreExternals,
@@ -1127,8 +1132,11 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     ctx->progress_func = ProgressListener::progress;
     ctx->progress_baton = m_progressListener;
 
-    ctx->conflict_func = ConflictResolverCallback::resolveConflict;
-    ctx->conflict_baton = m_conflictResolver;
+    if (m_conflictResolver)
+    {
+        ctx->conflict_func = ConflictResolverCallback::resolveConflict;
+        ctx->conflict_baton = m_conflictResolver;
+    }
 
     return ctx;
 }

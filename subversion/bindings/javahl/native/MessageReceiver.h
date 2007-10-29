@@ -19,12 +19,9 @@
  * @brief Interface of the class MessageReceiver
  */
 
-#if !defined(AFX_MESSAGERECEIVER_H__D30A4B70_A630_45B3_AB3E_402A5AD7E6BA__INCLUDED_)
-#define AFX_MESSAGERECEIVER_H__D30A4B70_A630_45B3_AB3E_402A5AD7E6BA__INCLUDED_
+#ifndef MESSAGERECEIVER_H
+#define MESSAGERECEIVER_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
 #include <jni.h>
 
 /**
@@ -43,5 +40,4 @@ class MessageReceiver
   void receiveMessage(const char *message);
 };
 
-// !defined(AFX_MESSAGERECEIVER_H__D30A4B70_A630_45B3_AB3E_402A5AD7E6BA__INCLUDED_)
-#endif
+#endif  // MESSAGERECEIVER_H

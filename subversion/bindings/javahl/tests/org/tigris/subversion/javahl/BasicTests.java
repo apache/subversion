@@ -2729,7 +2729,8 @@ public class BasicTests extends SVNTests
         // Complete the switch using "--force" and check the status
         client.doSwitch(backupTest.getWCPath() + "/A/B/E",
                         backupTest.getUrl() + "/A/D/H",
-                        null, Depth.infinity, false, true);
+                        Revision.HEAD, Revision.HEAD, Depth.infinity,
+                        false, true);
 
         backupTest.getWc().setItemIsSwitched("A/B/E",true);
         backupTest.getWc().removeItem("A/B/E/alpha");

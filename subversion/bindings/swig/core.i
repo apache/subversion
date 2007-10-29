@@ -1,6 +1,6 @@
 /*
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -246,6 +246,7 @@
    output rangelist
 */
 %apply apr_array_header_t **RANGELIST {
+  apr_array_header_t **rangelist,
   apr_array_header_t **deleted,
   apr_array_header_t **added,
   apr_array_header_t **output
@@ -259,7 +260,7 @@
 }
 
 /* -----------------------------------------------------------------------
-   input mergeinfo hash to svn_mergeinfo_to_stringbuf
+   input mergeinfo hash
 */
 %apply apr_hash_t *MERGEINFO {
    apr_hash_t *mergeinput,
@@ -457,10 +458,9 @@
 */
 
 %apply apr_hash_t **MERGEHASH {
-    apr_hash_t **mergehash,
+    apr_hash_t **mergeinfo,
     apr_hash_t **deleted,
-    apr_hash_t **added,
-    apr_hash_t **mergeoutput
+    apr_hash_t **added
 }
 
 /* -----------------------------------------------------------------------
@@ -669,16 +669,19 @@ PyObject *svn_swig_py_exception_type(void);
 #endif
 
 
-/* ----------------------------------------------------------------------- */
+/* -----------------------------------------------------------------------
+   These APIs take an "inout" parameter that necessitates more careful
+   definition.
+*/
+%ignore svn_mergeinfo_sort;
+%ignore svn_rangelist_merge;
+%ignore svn_rangelist_reverse;
+
 #ifdef SWIGRUBY
 %ignore svn_auth_open;
 %ignore svn_diff_file_options_create;
 %ignore svn_create_commit_info;
 %ignore svn_commit_info_dup;
-%ignore svn_mergeinfo_merge;
-%ignore svn_mergeinfo_sort;
-%ignore svn_rangelist_merge;
-%ignore svn_rangelist_reverse;
 
 %ignore svn_opt_args_to_target_array2;
 %ignore svn_opt_parse_num_args;

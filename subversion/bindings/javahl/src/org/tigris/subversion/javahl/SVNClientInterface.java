@@ -259,7 +259,7 @@ public interface SVNClientInterface
      *                      returned objects
      * @param includeMergedRevisions include log messages for revisions which
      *                               were merged.
-     * @param omitLogText   supress log message text.
+     * @param revProps      the revprops to retrieve
      * @param limit         limit the number of log messages (if 0 or less no
      *                      limit)
      * @param callback      the object to receive the log messages
@@ -269,7 +269,7 @@ public interface SVNClientInterface
                      Revision revisionStart,
                      Revision revisionEnd, boolean stopOnCopy,
                      boolean discoverPath, boolean includeMergedRevisions,
-                     boolean omitLogText, long limit,
+                     String[] revProps, long limit,
                      LogMessageCallback callback)
             throws ClientException;
 
@@ -723,14 +723,16 @@ public interface SVNClientInterface
      * @param path      the working copy path
      * @param url       the new url for the working copy
      * @param revision  the new base revision of working copy
+     * @param pegRevision the revision at which to interpret <code>path</code>
      * @param depth     how deep to traverse into subdirectories
      * @param ignoreExternals whether to process externals definitions
      * @param allowUnverObstructions allow unversioned paths that obstruct adds
      * @throws ClientException
      * @since 1.5
      */
-    long doSwitch(String path, String url, Revision revision, int depth,
-                  boolean ignoreExternals, boolean allowUnverObstructions)
+    long doSwitch(String path, String url, Revision revision,
+                  Revision pegRevision, int depth, boolean ignoreExternals,
+                  boolean allowUnverObstructions)
             throws ClientException;
 
     /**
@@ -1232,6 +1234,21 @@ public interface SVNClientInterface
      */
     void propertyCreate(String path, String name, byte[] value,
                         boolean recurse, boolean force)
+            throws ClientException;
+
+    /**
+     * Create and sets one property of an item with a byte array value
+     *
+     * @param path    path of the item
+     * @param name    name of the property
+     * @param value   new value of the property
+     * @param depth   depth to set property on the subdirectories
+     * @param force   do not check if the value is valid
+     * @throws ClientException
+     * @since 1.5
+     */
+    void propertyCreate(String path, String name, String value, int depth,
+                        boolean force)
             throws ClientException;
 
     /**

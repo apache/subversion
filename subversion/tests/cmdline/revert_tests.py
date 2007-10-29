@@ -253,15 +253,11 @@ def revert_reexpand_keyword(sbox):
   # Commit, without svn:keywords property set.
   svntest.main.run_svn(None, 'add', newfile_path)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'commit', '-m', 'r2', newfile_path)
 
   # Set the property and commit.  This should expand the keyword.
   svntest.main.run_svn(None, 'propset', 'svn:keywords', 'rev', newfile_path)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'commit', '-m', 'r3', newfile_path)
 
   # Verify that the keyword got expanded.
@@ -439,7 +435,7 @@ def revert_file_merge_replace_with_history(sbox):
 
   # merge changes from r3:1
   expected_output = svntest.wc.State(wc_dir, {
-    'A/D/G/rho': Item(status='A ')
+    'A/D/G/rho': Item(status='R ')
     })
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
   expected_skip = wc.State(wc_dir, { })
@@ -554,12 +550,8 @@ def revert_after_manual_conflict_resolution__text(sbox):
   svntest.main.file_write(iota_path_1, 'Modified iota text')
   svntest.main.file_write(iota_path_2, 'Conflicting iota text')
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'commit', '-m', 'r2', wc_dir_1)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'update', wc_dir_2)
 
   # Resolve the conflict "manually"
@@ -588,12 +580,8 @@ def revert_after_manual_conflict_resolution__prop(sbox):
   svntest.main.run_svn(None, 'propset', 'foo', '1', iota_path_1)
   svntest.main.run_svn(None, 'propset', 'foo', '2', iota_path_2)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'commit', '-m', 'r2', wc_dir_1)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'update', wc_dir_2)
 
   # Resolve the conflict "manually"
@@ -635,8 +623,6 @@ def revert_propdel__dir(sbox):
   a_path = os.path.join(wc_dir, 'A')
   svntest.main.run_svn(None, 'propset', 'foo', 'x', a_path)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'commit', '-m', 'ps', a_path)
   svntest.main.run_svn(None, 'propdel', 'foo', a_path)
   expected_output = re.escape("Reverted '" + a_path + "'")
@@ -651,8 +637,6 @@ def revert_propdel__file(sbox):
   iota_path = os.path.join(wc_dir, 'iota')
   svntest.main.run_svn(None, 'propset', 'foo', 'x', iota_path)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'commit', '-m', 'ps', iota_path)
   svntest.main.run_svn(None, 'propdel', 'foo', iota_path)
   expected_output = re.escape("Reverted '" + iota_path + "'")
@@ -689,7 +673,7 @@ def revert_replaced_with_history_file_1(sbox):
 
   # now revert back to the state in r1
   expected_output = svntest.wc.State(wc_dir, {
-    'A/mu': Item(status='A '),
+    'A/mu': Item(status='R '),
     'iota': Item(status='A ')
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -802,10 +786,9 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
   ### Eventually, expected output for 'A/D/G' should be 'R '
   ### (replaced) instead of 'A ' (added).  See issue #571 for details.
   expected_output = svntest.wc.State(wc_dir, {
-    'A/D/G': Item(status='D '),
+    'A/D/G': Item(status='R '),
     'A/D/G/alpha': Item(status='D '),
     'A/D/G/beta': Item(status='D '),
-    'A/D/G': Item(status='A '),
     'A/D/G/rho': Item(status='A '),
     'A/D/G/pi': Item(status='A '),
     'A/D/G/tau': Item(status='A '),

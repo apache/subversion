@@ -19,12 +19,9 @@
  * @brief Interface of the class Inputer
  */
 
-#if !defined(AFX_INPUTER_H__6896EB42_07D2_406B_A4A5_F2908AFF4815__INCLUDED_)
-#define AFX_INPUTER_H__6896EB42_07D2_406B_A4A5_F2908AFF4815__INCLUDED_
+#ifndef INPUTER_H
+#define INPUTER_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
 #include <jni.h>
 #include "svn_io.h"
 #include "Pool.h"
@@ -48,5 +45,4 @@ class Inputer
   svn_stream_t *getStream(const Pool &pool);
 };
 
-// !defined(AFX_INPUTER_H__6896EB42_07D2_406B_A4A5_F2908AFF4815__INCLUDED_)
-#endif
+#endif // INPUTER_H

@@ -19,12 +19,8 @@
  * @brief Interface of the class ListCallback
  */
 
-#if !defined(AFX_LISTCALLBACK_H__3BBF3F0F_C80C_45C9_8AC3_E1AF07E5B810__INCLUDED_)
-#define AFX_LISTCALLBACK_H__3BBF3F0F_C80C_45C9_8AC3_E1AF07E5B810__INCLUDED_
-
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
+#ifndef LISTCALLBACK_H
+#define LISTCALLBACK_H
 
 #include <jni.h>
 #include "svn_client.h"
@@ -64,5 +60,4 @@ private:
                              const svn_dirent_t *dirent);
 };
 
-// !defined(AFX_LISTCALLBACK_H__3BBF3F0F_C80C_45C9_8AC3_E1AF07E5B810__INCLUDED_)
-#endif
+#endif // LISTCALLBACK_H

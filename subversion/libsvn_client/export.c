@@ -812,7 +812,8 @@ svn_client_export4(svn_revnum_t *result_rev,
 
       /* Get the RA connection. */
       SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
-                                               &url, from, peg_revision,
+                                               &url, from, NULL,
+                                               peg_revision,
                                                revision, ctx, pool));
 
       /* Get the repository root. */

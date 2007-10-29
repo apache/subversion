@@ -26,6 +26,7 @@
 #include "svn_props.h"
 #include "repos.h"
 #include "svn_private_config.h"
+#include "svn_mergeinfo.h"
 
 #include <apr_lib.h>
 
@@ -232,6 +233,33 @@ read_key_or_val(char **pbuf,
   return SVN_NO_ERROR;
 }
 
+/* Prepend the mergeinfo source paths in MERGEINFO_ORIG with PARENT_DIR, and
+   return it in *MERGEINFO_VAL. */
+static svn_error_t *
+prefix_mergeinfo_paths(const char **mergeinfo_val, const char *mergeinfo_orig,
+                       const char *parent_dir, apr_pool_t *pool)
+{
+  apr_hash_t *prefixed_mergeinfo, *mergeinfo;
+  apr_hash_index_t *hi;
+  svn_stringbuf_t *merge_val;
+  const char *path;
+  const void *merge_source;
+  void *rangelist;
+
+  SVN_ERR(svn_mergeinfo_parse(&mergeinfo, mergeinfo_orig, pool));
+  prefixed_mergeinfo = apr_hash_make(pool);
+  for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
+    {
+      apr_hash_this(hi, &merge_source, NULL, &rangelist);
+      path = svn_path_join(parent_dir, (const char*)merge_source+1, pool);
+      apr_hash_set(prefixed_mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
+    }
+  svn_mergeinfo_to_stringbuf(&merge_val, prefixed_mergeinfo, pool);
+  *mergeinfo_val = merge_val->data;
+
+  return SVN_NO_ERROR;
+}
+
 /* Read CONTENT_LENGTH bytes from STREAM, parsing the bytes as an
    encoded Subversion properties hash, and making multiple calls to
    PARSE_FNS->set_*_property on RECORD_BATON (depending on the value
@@ -306,9 +334,28 @@ parse_property_block(svn_stream_t *stream,
 
               /* Now, send the property pair to the vtable! */
               if (is_node)
-                SVN_ERR(parse_fns->set_node_property(record_baton,
-                                                     keybuf,
-                                                     &propstring));
+                {
+                  struct node_baton *nb = record_baton;
+                  struct revision_baton *rb = nb->rb;
+                  const char *parent_dir = rb->pb->parent_dir;
+
+                  if (parent_dir && strcmp(keybuf, SVN_PROP_MERGE_INFO) == 0)
+                    {
+                      /* Prefix the merge source paths with PARENT_DIR. */
+                      /* ASSUMPTION: All paths are included in the dump
+                         stream. */
+                      const char *mergeinfo_val;
+                      SVN_ERR(prefix_mergeinfo_paths(&mergeinfo_val,
+                                                     propstring.data,
+                                                     parent_dir, proppool));
+                      mergeinfo_val = apr_pstrdup(pool, mergeinfo_val);
+                      propstring.len = strlen(mergeinfo_val);
+                      propstring.data = mergeinfo_val;
+                    }
+                  SVN_ERR(parse_fns->set_node_property(record_baton,
+                                                       keybuf,
+                                                       &propstring));
+                }
               else
                 SVN_ERR(parse_fns->set_revision_property(record_baton,
                                                          keybuf,

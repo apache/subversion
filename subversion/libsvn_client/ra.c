@@ -392,13 +392,14 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                  svn_revnum_t *rev_p,
                                  const char **url_p,
                                  const char *path_or_url,
+                                 svn_wc_adm_access_t *base_access,
                                  const svn_opt_revision_t *peg_revision_p,
                                  const svn_opt_revision_t *revision,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool)
 {
   svn_ra_session_t *ra_session;
-  const char *initial_url, *url;
+  const char *initial_url, *url, *base_dir = NULL;
   svn_opt_revision_t *good_rev;
   svn_opt_revision_t peg_revision, start_rev;
   svn_opt_revision_t dead_end_rev;
@@ -418,9 +419,13 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                     TRUE,
                                     pool));
 
+  if (base_access)
+    base_dir = svn_wc_adm_access_path(base_access);
+
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, initial_url,
-                                               NULL, NULL, NULL,
-                                               FALSE, FALSE, ctx, pool));
+                                               base_dir, base_access, NULL,
+                                               base_access ? TRUE : FALSE,
+                                               FALSE, ctx, pool));
 
   dead_end_rev.kind = svn_opt_revision_unspecified;
 
@@ -485,7 +490,7 @@ compare_segments(const void *a, const void *b)
   const svn_location_segment_t *b_seg = b;
   if (a_seg->range_start == b_seg->range_start)
     return 0;
-  return (a_seg->range_start < b_seg->range_start) ? -1 : 1;
+  return (a_seg->range_start < b_seg->range_start) ? 1 : -1;
 }
 
 svn_error_t *

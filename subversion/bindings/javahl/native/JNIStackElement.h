@@ -19,12 +19,9 @@
  * @brief Interface of the class JNIStackElement
  */
 
-#if !defined(AFX_JNISTACKELEMENT_H__81945F80_D56F_4782_B8E7_6A82483E6463__INCLUDED_)
-#define AFX_JNISTACKELEMENT_H__81945F80_D56F_4782_B8E7_6A82483E6463__INCLUDED_
+#ifndef JNISTACKELEMENT_H
+#define JNISTACKELEMENT_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
 #include <jni.h>
 #include "JNIUtil.h"
 
@@ -74,5 +71,4 @@ class JNIStackElement
   char m_objectID[JNIUtil::formatBufferSize];
 };
 
-// !defined(AFX_JNISTACKELEMENT_H__81945F80_D56F_4782_B8E7_6A82483E6463__INCLUDED_)
-#endif
+#endif // JNISTACKELEMENT_H

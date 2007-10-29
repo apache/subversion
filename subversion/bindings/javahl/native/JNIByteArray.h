@@ -19,12 +19,8 @@
  * @brief Interface of the class JNIByteArray
  */
 
-#if !defined(AFX_JNIBYTEARRAY_H__FB74054F_CD5E_41D5_A4B0_25DE9A8574CF__INCLUDED_)
-#define AFX_JNIBYTEARRAY_H__FB74054F_CD5E_41D5_A4B0_25DE9A8574CF__INCLUDED_
-
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
+#ifndef JNIBYTEARRAY_H
+#define JNIBYTEARRAY_H
 
 #include <jni.h>
 
@@ -58,5 +54,4 @@ class JNIByteArray
   ~JNIByteArray();
 };
 
-//!defined(AFX_JNIBYTEARRAY_H__FB74054F_CD5E_41D5_A4B0_25DE9A8574CF__INCLUDED_)
-#endif
+#endif // JNIBYTEARRAY_H

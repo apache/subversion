@@ -2347,7 +2347,7 @@ txn_body_commit(void *baton, trail_t *trail)
                                                      trail->pool);
       return svn_error_createf
         (SVN_ERR_FS_TXN_OUT_OF_DATE, NULL,
-         _("Transaction '%s' out of date with respect to revision '%s'"),
+         _("Transaction '%s' out-of-date with respect to revision '%s'"),
          txn_name, id_str->data);
     }
 

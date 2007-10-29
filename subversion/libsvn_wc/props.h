@@ -50,6 +50,9 @@ svn_error_t *svn_wc__has_props(svn_boolean_t *has_props,
    SERVER_BASEPROPS, merge the changes into the working copy.
    Append all necessary log entries to ENTRY_ACCUM.
 
+   If BASE_PROPS or WORKING_PROPS is NULL, use the props from the
+   working copy.
+
    If SERVER_BASEPROPS is NULL then use base props as PROPCHANGES
    base.
 
@@ -68,6 +71,8 @@ svn_error_t *svn_wc__merge_props(svn_wc_notify_state_t *state,
                                  svn_wc_adm_access_t *adm_access,
                                  const char *path,
                                  apr_hash_t *server_baseprops,
+                                 apr_hash_t *base_props,
+                                 apr_hash_t *working_props,
                                  const apr_array_header_t *propchanges,
                                  svn_boolean_t base_merge,
                                  svn_boolean_t dry_run,

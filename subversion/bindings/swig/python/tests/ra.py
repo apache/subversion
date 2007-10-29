@@ -30,7 +30,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     # Test getting the properties of a file
     fs_revnum = fs.youngest_rev(self.fs)
     rev, properties = ra.get_file(self.ra_ctx, "trunk/README2.txt",
-                                  core.svn_invalid_revnum, None)
+                                  core.SVN_INVALID_REVNUM, None)
     self.assertEqual(rev, fs_revnum)
     self.assertEqual(properties["svn:mime-type"], "text/plain")
 

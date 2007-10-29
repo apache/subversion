@@ -895,7 +895,7 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
 
 
 svn_error_t *
-svn_client_mergeinfo_get_available(apr_array_header_t **merge_ranges,
+svn_client_mergeinfo_get_available(apr_array_header_t **rangelist,
                                    const char *path_or_url,
                                    const svn_opt_revision_t *peg_revision,
                                    const char *merge_source_url,
@@ -946,9 +946,9 @@ svn_client_mergeinfo_get_available(apr_array_header_t **merge_ranges,
      ### merges from there, fine, but if not ...
   */
   if (! already_merged_ranges)
-    *merge_ranges = full_range_list;
+    *rangelist = full_range_list;
   else
-    SVN_ERR(svn_rangelist_remove(merge_ranges, already_merged_ranges,
+    SVN_ERR(svn_rangelist_remove(rangelist, already_merged_ranges,
                                  full_range_list, 
                                  svn_rangelist_equal_inheritance, pool));
   

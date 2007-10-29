@@ -311,9 +311,10 @@ def open_pipe(command, mode):
     inf, outf, errf = os.popen3(command, mode)
     return inf, outf, errf, None
 
-def wait_on_pipe(waiter):
+def wait_on_pipe(waiter, stdout_lines, stderr_lines):
   """Waits for KID (opened with open_pipe) to finish, dying
-  if it does.  Returns kid's exit code."""
+  if it does.  Uses STDOUT_LINES and STDERR_LINES for error message
+  if kid fails.  Returns kid's exit code."""
   if waiter is None:
     return
   
@@ -323,8 +324,10 @@ def wait_on_pipe(waiter):
 
   if os.WIFSIGNALED(wait_code):
     exit_signal = os.WTERMSIG(wait_code)
-    sys.stdout.write("".join(stdout_lines))
-    sys.stderr.write("".join(stderr_lines))
+    if stdout_lines is not None:
+      sys.stdout.write("".join(stdout_lines))
+    if stderr_lines is not None:
+      sys.stderr.write("".join(stderr_lines))
     if verbose_mode:
       # show the whole path to make it easier to start a debugger
       sys.stderr.write("CMD: %s terminated by signal %d\n"
@@ -362,7 +365,7 @@ def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
   outfile.close()
   errfile.close()
 
-  exit_code = wait_on_pipe(kid)
+  exit_code = wait_on_pipe(kid, stdout_lines, stderr_lines)
 
   return exit_code, stdout_lines, stderr_lines
 
@@ -433,13 +436,23 @@ def _with_config_dir(args):
   else:
     return args + ('--config-dir', default_config_dir)
 
+def _with_auth(args):
+  assert '--password' not in args
+  args = args + ('--password', wc_passwd,
+                 '--no-auth-cache' )
+  if '--username' in args:
+    return args
+  else:
+    return args + ('--username', wc_author )
+
 # For running subversion and returning the output
 def run_svn(error_expected, *varargs):
   """Run svn with VARARGS; return stdout, stderr as lists of lines.
   If ERROR_EXPECTED is None, any stderr also will be printed.  If
   you're just checking that something does/doesn't come out of
   stdout/stderr, you might want to use actions.run_and_verify_svn()."""
-  return run_command(svn_binary, error_expected, 0, *(_with_config_dir(varargs)))
+  return run_command(svn_binary, error_expected, 0,
+                     *(_with_auth(_with_config_dir(varargs))))
 
 # For running svnadmin.  Ignores the output.
 def run_svnadmin(*varargs):
@@ -607,8 +620,8 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   load_out.close()
   load_err.close()
   # Wait on the pipes; ignore return code.
-  wait_on_pipe(dump_kid)
-  wait_on_pipe(load_kid)
+  wait_on_pipe(dump_kid, None, dump_lines)
+  wait_on_pipe(load_kid, load_lines, None)
 
   dump_re = re.compile(r'^\* Dumped revision (\d+)\.\r?$')
   expect_revision = 0

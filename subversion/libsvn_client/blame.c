@@ -628,7 +628,8 @@ svn_client_blame4(const char *target,
 
   /* Get an RA plugin for this filesystem object. */
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &end_revnum,
-                                           &url, target, peg_revision, end,
+                                           &url, target, NULL, 
+                                           peg_revision, end,
                                            ctx, pool));
 
   SVN_ERR(svn_client__get_revision_number(&start_revnum, NULL, ra_session,

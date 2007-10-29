@@ -1977,7 +1977,7 @@ svn_wc_revert3(const char *path,
 
   /* Safeguard 1:  is this a versioned resource? */
   SVN_ERR_W(svn_wc__entry_versioned(&entry, path, dir_access, FALSE, pool),
-            _("Cannot revert."));
+            _("Cannot revert"));
 
   /* Safeguard 1.5: is this a missing versioned directory? */
   if (entry->kind == svn_node_dir)
@@ -2935,7 +2935,7 @@ svn_wc_set_changelist(const apr_array_header_t *paths,
               svn_error_t *unversioned_err =
                   svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
                                     _("'%s' is a directory, and thus cannot"
-                                      " be a member of a changelist."),
+                                      " be a member of a changelist"),
                                     path);
               notify = svn_wc_create_notify(path,
                                             svn_wc_notify_changelist_failed,

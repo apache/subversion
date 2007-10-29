@@ -287,6 +287,44 @@ handle_checkout(serf_request_t *request,
   return status;
 }
 
+/* Return the relative path from DIR's topmost parent to DIR, in
+   Subversion's internal path style, allocated in POOL.  Use POOL for
+   temporary work as well.  */
+static const char *
+relative_dir_path(dir_context_t *dir, apr_pool_t *pool)
+{
+  const char *rel_path = "";
+  apr_array_header_t *components;
+  dir_context_t *dir_ptr = dir;
+  int i;
+
+  components = apr_array_make(pool, 1, sizeof(const char *));
+
+  for (dir_ptr = dir; dir_ptr; dir_ptr = dir_ptr->parent_dir)
+    APR_ARRAY_PUSH(components, const char *) = dir_ptr->name;
+
+  for (i = 0; i < components->nelts; i++)
+    {
+      rel_path = svn_path_join(rel_path,
+                               APR_ARRAY_IDX(components, i, const char *),
+                               pool);
+    }
+
+  return rel_path;
+}
+
+
+/* Return the relative path from FILE's topmost parent to FILE, in
+   Subversion's internal path style, allocated in POOL.  Use POOL for
+   temporary work as well.  */
+static const char *
+relative_file_path(file_context_t *f, apr_pool_t *pool)
+{
+  const char *dir_path = relative_dir_path(f->parent_dir, pool);
+  return svn_path_join(dir_path, f->name, pool);
+}
+
+
 static svn_error_t *
 checkout_dir(dir_context_t *dir)
 {
@@ -367,8 +405,9 @@ checkout_dir(dir_context_t *dir)
     {
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
         SVN_ERR_W(err, apr_psprintf(dir->pool,
-                  _("Your file or directory '%s' is probably out-of-date"),
-                  svn_path_local_style(dir->name, dir->pool)));
+                  _("Directory '%s' is out of date; try updating"),
+                  svn_path_local_style(relative_dir_path(dir, dir->pool),
+                                       dir->pool)));
       return err;
     }
 
@@ -386,9 +425,73 @@ checkout_dir(dir_context_t *dir)
       return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
                     return_response_err(handler,
                                         &checkout_ctx->progress),
-                    _("Your file or directory '%s' is probably out-of-date"),
-                    svn_path_local_style(dir->name, dir->pool));
+                    _("Directory '%s' is out of date; try updating"),
+                    svn_path_local_style(relative_dir_path(dir, dir->pool),
+                                         dir->pool));
     }
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+get_version_url(svn_ra_serf__session_t *session, 
+                svn_ra_serf__connection_t *conn,
+                const char *name, 
+                svn_revnum_t base_revision,
+                const char *parent_vsn_url,
+                const char **checked_in_url,
+                apr_pool_t *pool)
+{
+  const char *root_checkout;
+
+  if (session->wc_callbacks->get_wc_prop)
+    {
+      const svn_string_t *current_version;
+
+      SVN_ERR(session->wc_callbacks->get_wc_prop(session->wc_callback_baton,
+                                                 name,
+                                                 SVN_RA_SERF__WC_CHECKED_IN_URL,
+                                                 &current_version, pool));
+
+      if (current_version)
+        {
+          *checked_in_url = current_version->data;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  if (parent_vsn_url)
+    {
+      root_checkout = parent_vsn_url;
+    }
+  else
+    {
+      svn_ra_serf__propfind_context_t *propfind_ctx;
+      apr_hash_t *props;
+
+      props = apr_hash_make(pool);
+
+      propfind_ctx = NULL;
+      svn_ra_serf__deliver_props(&propfind_ctx, props, session,
+                                 conn, session->repos_url.path,
+                                 base_revision, "0",
+                                 checked_in_props, FALSE, NULL, pool);
+
+      SVN_ERR(svn_ra_serf__wait_for_props(propfind_ctx, session, pool));
+
+      root_checkout =
+          svn_ra_serf__get_ver_prop(props, session->repos_url.path,
+                                    base_revision, "DAV:", "checked-in");
+
+      if (!root_checkout)
+        return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL,
+                                 _("Path '%s' not present"),
+                                 session->repos_url.path);
+    }
+
+  *checked_in_url = svn_path_url_add_component(root_checkout,
+                                               name, pool);
 
   return SVN_NO_ERROR;
 }
@@ -397,6 +500,7 @@ static svn_error_t *
 checkout_file(file_context_t *file)
 {
   svn_ra_serf__handler_t *handler;
+  svn_error_t *err;
 
   /* Checkout our file into the activity URL now. */
   handler = apr_pcalloc(file->pool, sizeof(*handler));
@@ -409,10 +513,10 @@ checkout_file(file_context_t *file)
   file->checkout->activity_url = file->commit->activity_url;
   file->checkout->activity_url_len = file->commit->activity_url_len;
 
-  /* Append our file name to the baseline to get the resulting checkout. */
-  file->checkout->checkout_url =
-      svn_path_url_add_component(file->commit->checked_in_url,
-                                 file->name, file->pool);
+  SVN_ERR(get_version_url(file->commit->session, file->commit->conn,
+                          file->name, file->base_revision, 
+                          NULL,
+                          &(file->checkout->checkout_url), file->pool));
 
   handler->body_delegate = create_checkout_body;
   handler->body_delegate_baton = file->checkout;
@@ -429,9 +533,18 @@ checkout_file(file_context_t *file)
   /* There's no need to wait here as we only need this when we start the
    * PROPPATCH or PUT of the file.
    */
-  SVN_ERR(svn_ra_serf__context_run_wait(&file->checkout->progress.done,
-                                        file->commit->session,
-                                        file->pool));
+  err = svn_ra_serf__context_run_wait(&file->checkout->progress.done,
+                                      file->commit->session,
+                                      file->pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_FS_CONFLICT)
+        SVN_ERR_W(err, apr_psprintf(file->pool,
+                  _("File '%s' is out of date; try updating"),
+                  svn_path_local_style(relative_file_path(file, file->pool),
+                                       file->pool)));
+      return err;
+    }
 
   if (file->checkout->progress.status != 201)
     {
@@ -447,66 +560,10 @@ checkout_file(file_context_t *file)
       return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
                     return_response_err(handler,
                                         &file->checkout->progress),
-                    _("Your file or directory '%s' is probably out-of-date"),
-                    svn_path_local_style(file->name, file->pool));
+                    _("File '%s' is out of date; try updating"),
+                    svn_path_local_style(relative_file_path(file, file->pool),
+                                         file->pool));
     }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-get_version_url(dir_context_t *dir)
-{
-  svn_ra_serf__session_t *session = dir->commit->session;
-  const char *root_checkout;
-
-  if (dir->commit->session->wc_callbacks->get_wc_prop)
-    {
-      const svn_string_t *current_version;
-
-      SVN_ERR(session->wc_callbacks->get_wc_prop(session->wc_callback_baton,
-                                                 dir->name,
-                                                 SVN_RA_SERF__WC_CHECKED_IN_URL,
-                                                 &current_version, dir->pool));
-
-      if (current_version)
-        {
-          dir->checked_in_url = current_version->data;
-          return SVN_NO_ERROR;
-        }
-    }
-
-  if (dir->commit->checked_in_url)
-    {
-      root_checkout = dir->commit->checked_in_url;
-    }
-  else
-    {
-      svn_ra_serf__propfind_context_t *propfind_ctx;
-      apr_hash_t *props;
-
-      props = apr_hash_make(dir->pool);
-
-      propfind_ctx = NULL;
-      svn_ra_serf__deliver_props(&propfind_ctx, props, session,
-                                 dir->commit->conn, session->repos_url.path,
-                                 dir->base_revision, "0",
-                                 checked_in_props, FALSE, NULL, dir->pool);
-
-      SVN_ERR(svn_ra_serf__wait_for_props(propfind_ctx, session, dir->pool));
-
-      root_checkout =
-          svn_ra_serf__get_ver_prop(props, session->repos_url.path,
-                                    dir->base_revision, "DAV:", "checked-in");
-
-      if (!root_checkout)
-        return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL,
-                                 _("Path '%s' not present"),
-                                 session->repos_url.path);
-    }
-
-  dir->checked_in_url = svn_path_url_add_component(root_checkout,
-                                                   dir->name, dir->pool);
 
   return SVN_NO_ERROR;
 }
@@ -1067,7 +1124,10 @@ open_root(void *edit_baton,
   dir->changed_props = apr_hash_make(dir->pool);
   dir->removed_props = apr_hash_make(dir->pool);
 
-  SVN_ERR(get_version_url(dir));
+  SVN_ERR(get_version_url(dir->commit->session, dir->commit->conn,
+                          dir->name, dir->base_revision, 
+                          dir->commit->checked_in_url,
+                          &dir->checked_in_url, dir->pool));
   ctx->checked_in_url = dir->checked_in_url;
 
   /* Checkout our root dir */
@@ -1339,8 +1399,10 @@ open_directory(const char *path,
   dir->changed_props = apr_hash_make(dir->pool);
   dir->removed_props = apr_hash_make(dir->pool);
 
-  SVN_ERR(get_version_url(dir));
-
+  SVN_ERR(get_version_url(dir->commit->session, dir->commit->conn,
+                          dir->name, dir->base_revision, 
+                          dir->commit->checked_in_url,
+                          &dir->checked_in_url, dir->pool));
   *child_baton = dir;
 
   return SVN_NO_ERROR;

@@ -19,12 +19,8 @@
  * @brief Interface of the class JNIMutex
  */
 
-#if !defined(AFX_JNIMUTEX_H__958B52A6_00A3_458F_981F_0A3095D39EE8__INCLUDED_)
-#define AFX_JNIMUTEX_H__958B52A6_00A3_458F_981F_0A3095D39EE8__INCLUDED_
-
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
+#ifndef JNIMUTEX_H
+#define JNIMUTEX_H
 
 class JNICriticalSection;
 struct apr_pool_t;
@@ -46,5 +42,4 @@ class JNIMutex
   apr_thread_mutex_t *m_mutex;
 };
 
-// !defined(AFX_JNIMUTEX_H__958B52A6_00A3_458F_981F_0A3095D39EE8__INCLUDED_)
-#endif
+#endif  // JNIMUTEX_H

@@ -57,6 +57,7 @@ svn_error_t *
 svn_client__switch_internal(svn_revnum_t *result_rev,
                             const char *path,
                             const char *switch_url,
+                            const svn_opt_revision_t *peg_revision,
                             const svn_opt_revision_t *revision,
                             svn_depth_t depth,
                             svn_boolean_t *timestamp_sleep,
@@ -69,6 +70,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   void *report_baton;
   const svn_wc_entry_t *entry;
   const char *URL, *anchor, *target, *source_root;
+  const char *tmp_url;
   svn_ra_session_t *ra_session;
   svn_revnum_t revnum;
   svn_node_kind_t switch_url_kind;
@@ -133,11 +135,10 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
     revnum = SVN_INVALID_REVNUM; /* no matter, do real conversion later */
 
   /* Open an RA session to 'source' URL */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL, anchor,
-                                               adm_access, NULL, TRUE, FALSE,
-                                               ctx, pool));
-  SVN_ERR(svn_client__get_revision_number
-          (&revnum, NULL, ra_session, revision, path, pool));
+  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum, &tmp_url,
+                                           URL, adm_access, 
+                                           peg_revision, revision,
+                                           ctx, pool));
   SVN_ERR(svn_ra_get_repos_root(ra_session, &source_root, pool));
 
   /* Disallow a switch operation to change the repository root of the
@@ -280,6 +281,7 @@ svn_error_t *
 svn_client_switch2(svn_revnum_t *result_rev,
                    const char *path,
                    const char *switch_url,
+                   const svn_opt_revision_t *peg_revision,
                    const svn_opt_revision_t *revision,
                    svn_depth_t depth,
                    svn_boolean_t ignore_externals,
@@ -287,7 +289,8 @@ svn_client_switch2(svn_revnum_t *result_rev,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  return svn_client__switch_internal(result_rev, path, switch_url, revision,
+  return svn_client__switch_internal(result_rev, path, switch_url,
+                                     peg_revision, revision,
                                      depth, NULL, ignore_externals,
                                      allow_unver_obstructions, ctx, pool);
 }
@@ -301,7 +304,10 @@ svn_client_switch(svn_revnum_t *result_rev,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
-  return svn_client__switch_internal(result_rev, path, switch_url, revision,
+  svn_opt_revision_t peg_revision;
+  peg_revision.kind = svn_opt_revision_unspecified;
+  return svn_client__switch_internal(result_rev, path, switch_url, 
+                                     &peg_revision, revision,
                                      SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                      NULL, FALSE, FALSE, ctx, pool);
 }

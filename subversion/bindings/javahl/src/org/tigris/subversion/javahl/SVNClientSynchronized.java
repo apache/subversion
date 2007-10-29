@@ -398,7 +398,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      *                      returned objects
      * @param includeMergedRevisions include log messages for revisions which
      *                               were merged.
-     * @param omitLogText   supress log message text.
+     * @param revProps      the revprops to retrieve
      * @param limit         limit the number of log messages (if 0 or less no
      *                      limit)
      * @param callback      the object to receive the messages
@@ -409,7 +409,7 @@ public class SVNClientSynchronized implements SVNClientInterface
                             Revision revisionEnd, boolean stopOnCopy,
                             boolean discoverPath,
                             boolean includeMergedRevisions,
-                            boolean omitLogText, long limit,
+                            String[] revProps, long limit,
                             LogMessageCallback callback)
             throws ClientException
     {
@@ -417,7 +417,7 @@ public class SVNClientSynchronized implements SVNClientInterface
         {
             worker.logMessages(path, pegRevision, revisionStart,
                                revisionEnd, stopOnCopy, discoverPath,
-                               includeMergedRevisions, omitLogText,
+                               includeMergedRevisions, revProps,
                                limit, callback);
         }
     }
@@ -1028,18 +1028,19 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * @see SVNClientInterface#doSwitch(String, String, Revision, int, boolean, boolean)
+     * @see SVNClientInterface#doSwitch(String, String, Revision, Revision, int, boolean, boolean)
      * @since 1.5
      */
     public long doSwitch(String path, String url, Revision revision,
-                         int depth, boolean ignoreExternals,
+                         Revision pegRevision, int depth,
+                         boolean ignoreExternals,
                          boolean allowUnverObstructions)
             throws ClientException
     {
         synchronized(clazz)
         {
-            return worker.doSwitch(path, url, revision, depth, ignoreExternals,
-                                   allowUnverObstructions);
+            return worker.doSwitch(path, url, revision, pegRevision, depth,
+                                   ignoreExternals, allowUnverObstructions);
         }
     }
 
@@ -1759,6 +1760,27 @@ public class SVNClientSynchronized implements SVNClientInterface
         synchronized(clazz)
         {
             worker.propertyCreate(path, name, value, recurse, force);
+        }
+    }
+
+    /**
+     * Create and sets one property of an item with a byte array value
+     *
+     * @param path    path of the item
+     * @param name    name of the property
+     * @param value   new value of the property
+     * @param depth   depth to set property on the subdirectories
+     * @param force   do not check if the value is valid
+     * @throws ClientException
+     * @since 1.5
+     */
+    public void propertyCreate(String path, String name, String value,
+                               int depth, boolean force)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.propertyCreate(path, name, value, depth, force);
         }
     }
 

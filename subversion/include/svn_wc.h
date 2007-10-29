@@ -771,6 +771,9 @@ typedef enum svn_wc_notify_action_t
       @c svn_wc_notify_t.  @since New in 1.5   */
   svn_wc_notify_merge_begin,
 
+  /** Replace notification. */
+  svn_wc_notify_update_replace,
+
 } svn_wc_notify_action_t;
 
 
@@ -2172,10 +2175,10 @@ typedef struct svn_wc_status2_t
   const char *url;
 
   /**
-   * @defgroup svn_wc_status_ood WC out of date info from the repository
+   * @defgroup svn_wc_status_ood WC out-of-date info from the repository
    * @{
    *
-   * When the working copy item is out of date compared to the
+   * When the working copy item is out-of-date compared to the
    * repository, the following fields represent the state of the
    * youngest revision of the item in the repository.  If the working
    * copy is not out of date, the fields are initialized as described
@@ -2201,7 +2204,7 @@ typedef struct svn_wc_status2_t
 
   /** Set to the user name of the youngest commit, or @c NULL if not
    * out of date or non-existent.  Because a non-existent @c
-   * svn:author property has the same behavior as an out of date
+   * svn:author property has the same behavior as an out-of-date
    * working copy, examine @c ood_last_cmt_rev to determine whether
    * the working copy is out of date.
    * @since New in 1.3

@@ -1127,7 +1127,7 @@ svn_client_update(svn_revnum_t *result_rev,
  * @{
  */
 
-/** Switch working tree @a path to @a url at @a revision,
+/** Switch working tree @a path to @a url@peg_revision at @a revision,
  * authenticating with the authentication baton cached in @a ctx.  If
  * @a result_rev is not @c NULL, set @a *result_rev to the value of
  * the revision to which the working copy was actually switched.
@@ -1172,6 +1172,7 @@ svn_error_t *
 svn_client_switch2(svn_revnum_t *result_rev,
                    const char *path,
                    const char *url,
+                   const svn_opt_revision_t *peg_revision,
                    const svn_opt_revision_t *revision,
                    svn_depth_t depth,
                    svn_boolean_t ignore_externals,
@@ -1594,7 +1595,9 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
 /**
  * Similar to svn_client_commit4(), but always with NULL for
- * @a changelist_name and false for @a keep_changelist.
+ * @a changelist_name, false for @a keep_changelist, and @a depth
+ * set according to @a recurse: if @a recurse is true, use
+ * @c svn_depth_infinity, else @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  *
@@ -1653,7 +1656,7 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
  *
  *    - If @a get_all is set, retrieve all entries; otherwise,
  *      retrieve only "interesting" entries (local mods and/or
- *      out-of-date).
+ *      out of date).
  *
  *    - If @a update is set, contact the repository and augment the
  *      status structures with information about out-of-dateness (with
@@ -2554,7 +2557,7 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
 
 
 /**
- * Set @a *merge_ranges to a list of <tt>svn_merge_range_t *</tt>
+ * Set @a *rangelist to a list of <tt>svn_merge_range_t *</tt>
  * items representing ranges of revisions which have not yet been
  * merged from @a merge_source_url into @a path_or_url as of @a
  * peg_revision, or @c NULL if all candidate revisions of @a
@@ -2565,7 +2568,7 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_mergeinfo_get_available(apr_array_header_t **merge_ranges,
+svn_client_mergeinfo_get_available(apr_array_header_t **rangelist,
                                    const char *path_or_url,
                                    const svn_opt_revision_t *peg_revision,
                                    const char *merge_source_url,
@@ -3841,7 +3844,7 @@ svn_client_get_changelist_streamy(svn_changelist_receiver_t callback_func,
  * For each target @a ctx->notify_func2/notify_baton2 will be used to indicate
  * whether it was locked.  An action of @c svn_wc_notify_state_locked
  * means that the path was locked.  If the path was not locked because
- * it was out-of-date or there was already a lock in the repository,
+ * it was out of date or there was already a lock in the repository,
  * the notification function will be called with @c
  * svn_wc_notify_failed_lock, and the error passed in the notification
  * structure.

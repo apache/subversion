@@ -19,12 +19,9 @@
  * @brief Interface of the class Revision
  */
 
-#if !defined(AFX_REVISION_H__BEAA0788_C9D9_4A67_B94E_761ABC68ACFE__INCLUDED_)
-#define AFX_REVISION_H__BEAA0788_C9D9_4A67_B94E_761ABC68ACFE__INCLUDED_
+#ifndef REVISION_H
+#define REVISION_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
 #include <jni.h>
 #include "svn_opt.h"
 
@@ -50,5 +47,4 @@ class Revision
   static jobject makeJRevision(svn_revnum_t rev);
 };
 
-// !defined(AFX_REVISION_H__BEAA0788_C9D9_4A67_B94E_761ABC68ACFE__INCLUDED_)
-#endif
+#endif // REVISION_H

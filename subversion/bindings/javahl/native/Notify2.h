@@ -19,12 +19,9 @@
  * @brief Interface of the class Notify2
  */
 
-#if !defined(AFX_NOTIFY2_H__10E278E8_EA8C_4BD1_AF10_4DB1C0608F65__INCLUDED_)
-#define AFX_NOTIFY2_H__10E278E8_EA8C_4BD1_AF10_4DB1C0608F65__INCLUDED_
+#ifndef NOTIFY2_H
+#define NOTIFY2_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
 #include <jni.h>
 #include "svn_wc.h"
 
@@ -68,5 +65,4 @@ class Notify2
                 apr_pool_t *pool);
 };
 
-// !defined(AFX_NOTIFY2_H__10E278E8_EA8C_4BD1_AF10_4DB1C0608F65__INCLUDED_)
-#endif
+#endif  // NOTIFY2_H

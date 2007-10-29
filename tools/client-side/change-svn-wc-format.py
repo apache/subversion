@@ -61,6 +61,12 @@ class WCFormatConverter:
     """Attempt to write the WC format FORMAT_NBR to the entries file
     for DIRNAME.  Throws LossyConversionException when not in --force
     mode, and unconvertable WC data is encountered."""
+
+    # Avoid iterating in unversioned directories.
+    if not ".svn" in paths and not "_svn" in paths:
+      paths = []
+      return
+
     for path in paths:
       # Process the entries file for this versioned directory.
       if path in (".svn", "_svn"):
@@ -232,7 +238,7 @@ class Entry:
     if lossy_fields:
       raise LossyConversionException(
         "Lossy WC format conversion requested for entry '%s'\n"
-        "Data for the following field(s) is unsupported by later versions "
+        "Data for the following field(s) is unsupported by older versions "
         "of\nSubversion, and is likely to be subsequently discarded, and/or "
         "have\nunexpected side-effects: %s"
         % (self.get_name(), ", ".join(lossy_fields)))
