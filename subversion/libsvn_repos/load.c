@@ -256,6 +256,8 @@ prefix_mergeinfo_paths(const char **mergeinfo_val, const char *mergeinfo_orig,
     }
   svn_mergeinfo_to_stringbuf(&merge_val, prefixed_mergeinfo, pool);
   *mergeinfo_val = merge_val->data;
+
+  return SVN_NO_ERROR;
 }
 
 /* Read CONTENT_LENGTH bytes from STREAM, parsing the bytes as an
