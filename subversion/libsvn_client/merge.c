@@ -977,7 +977,7 @@ merge_callbacks =
    mergeinfo, subtract it from *UNREFINED_RANGE, and record the
    result in *REQUESTED_RANGELIST. */
 static svn_error_t *
-calculate_requested_ranges(apr_array_header_t **requested_rangelist,
+filter_reflected_revisions(apr_array_header_t **requested_rangelist,
                            svn_merge_range_t *unrefined_range,
                            const char *src_url, const svn_wc_entry_t *entry,
                            svn_ra_session_t *ra_session,
@@ -1083,13 +1083,13 @@ compare_merge_ranges2(const void *a,
    requested range(s) REQUESTED_MERGE, and storing what's left in
    REMAINING_RANGES.  TARGET_MERGEINFO may be NULL. */
 static svn_error_t *
-calculate_merge_ranges(apr_array_header_t **remaining_ranges,
-                       const char *rel_path,
-                       const svn_wc_entry_t *entry,
-                       apr_hash_t *target_mergeinfo,
-                       apr_array_header_t *requested_merge,
-                       svn_boolean_t is_rollback,
-                       apr_pool_t *pool)
+filter_merged_revisions(apr_array_header_t **remaining_ranges,
+                        const char *rel_path,
+                        const svn_wc_entry_t *entry,
+                        apr_hash_t *target_mergeinfo,
+                        apr_array_header_t *requested_merge,
+                        svn_boolean_t is_rollback,
+                        apr_pool_t *pool)
 {
   apr_array_header_t *target_rangelist;
 
@@ -1704,14 +1704,14 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
 {
   apr_array_header_t *requested_rangelist;
   /* Determine which of the requested ranges to consider merging... */
-  SVN_ERR(calculate_requested_ranges(&requested_rangelist, range, url, entry,
+  SVN_ERR(filter_reflected_revisions(&requested_rangelist, range, url, entry,
                                      ra_session, ctx, pool));
 
   /* ...and of those ranges, determine which ones actually still
      need merging. */
-  SVN_ERR(calculate_merge_ranges(remaining_ranges, rel_path, entry,
-                                 target_mergeinfo, requested_rangelist,
-                                 is_rollback, pool));
+  SVN_ERR(filter_merged_revisions(remaining_ranges, rel_path, entry,
+                                  target_mergeinfo, requested_rangelist,
+                                  is_rollback, pool));
   return SVN_NO_ERROR;
 }
 
