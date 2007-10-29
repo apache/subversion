@@ -44,13 +44,13 @@
 
 
 static svn_error_t *
-read_handler_unsupported (void *baton, char *buffer, apr_size_t *len)
+read_handler_unsupported(void *baton, char *buffer, apr_size_t *len)
 {
   abort();
 }
 
 static svn_error_t *
-write_handler_unsupported (void *baton, const char *buffer, apr_size_t *len)
+write_handler_unsupported(void *baton, const char *buffer, apr_size_t *len)
 {
   abort();
 }
