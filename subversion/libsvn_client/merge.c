@@ -1693,6 +1693,7 @@ remove_absent_children(const char *target_wcpath,
 static svn_error_t *
 calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
                            svn_merge_range_t *range,
+                           svn_boolean_t same_repos,
                            apr_hash_t *target_mergeinfo,
                            svn_boolean_t is_rollback,
                            const char *rel_path,
@@ -1703,15 +1704,27 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
                            apr_pool_t *pool)
 {
   apr_array_header_t *requested_rangelist;
-  /* Determine which of the requested ranges to consider merging... */
-  SVN_ERR(filter_reflected_revisions(&requested_rangelist, range, url, entry,
-                                     ra_session, ctx, pool));
+  if (same_repos)
+    {
+      /* Determine which of the requested ranges to consider merging... */
+      SVN_ERR(filter_reflected_revisions(&requested_rangelist, range, url,
+                                         entry, ra_session, ctx, pool));
 
-  /* ...and of those ranges, determine which ones actually still
-     need merging. */
-  SVN_ERR(filter_merged_revisions(remaining_ranges, rel_path, entry,
-                                  target_mergeinfo, requested_rangelist,
-                                  is_rollback, pool));
+      /* ...and of those ranges, determine which ones actually still
+         need merging. */
+      SVN_ERR(filter_merged_revisions(remaining_ranges, rel_path, entry,
+                                      target_mergeinfo, requested_rangelist,
+                                      is_rollback, pool));
+    }
+  else
+    {
+      /* As we mergeinfo for repositories which don't correspond to
+         the WC isn't record, avoid using of mergeinfo to filter out
+         revisions requested for merge. */
+      requested_rangelist = apr_array_make(pool, 1, sizeof(range));
+      APR_ARRAY_PUSH(requested_rangelist, svn_merge_range_t *) = range;
+      *remaining_ranges = requested_rangelist;
+    }
   return SVN_NO_ERROR;
 }
 
@@ -1875,7 +1888,8 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                                                  persistent_pool));
 
       SVN_ERR(calculate_remaining_ranges(&(child->remaining_ranges),
-                                         range, child->pre_merge_mergeinfo, 
+                                         range, merge_b->same_repos,
+                                         child->pre_merge_mergeinfo,
                                          is_rollback,
                                          child_merge_src_canon_path,
                                          child_entry->url,
@@ -2617,6 +2631,7 @@ do_single_file_merge(const char *url1,
                                                 merge_b->ra_session1,
                                                 adm_access, pool));
       SVN_ERR(calculate_remaining_ranges(&remaining_ranges, &range,
+                                         merge_b->same_repos,
                                          target_mergeinfo, is_rollback,
                                          rel_path, url1,
                                          merge_b->ra_session1,
