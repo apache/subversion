@@ -7420,7 +7420,7 @@ def update_loses_mergeinfo(sbox):
                                         expected_status,
                                         check_props=1)
 
-
+# Tests part of issue# 2829, marked as XFail until that issue is fixed.
 def merge_loses_mergeinfo(sbox):
   "merge does not merge mergeinfo"
 
@@ -9588,7 +9588,7 @@ test_list = [ None,
               XFail(avoid_reflected_revs),
               Skip(mergeinfo_and_skipped_paths, svntest.main.is_ra_type_file),
               update_loses_mergeinfo,
-              merge_loses_mergeinfo,
+              XFail(merge_loses_mergeinfo),
               single_file_replace_style_merge_capability,
               merge_to_out_of_date_target,
               merge_with_depth_files,
@@ -9599,7 +9599,7 @@ test_list = [ None,
               merge_with_child_having_different_rev_ranges_to_merge,
               merge_old_and_new_revs_from_renamed_file,
               merge_with_auto_rev_range_detection,
-              XFail(mergeinfo_recording_in_skipped_merge),
+              mergeinfo_recording_in_skipped_merge,
               cherry_picking,
               propchange_of_subdir_raises_conflict,
               reverse_merge_prop_add_on_child,

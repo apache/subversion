@@ -51,6 +51,7 @@ typedef struct svn_client__merge_path_t
   apr_hash_t *pre_merge_mergeinfo;      /* mergeinfo on a path prior to a
                                            merge.*/
   svn_boolean_t indirect_mergeinfo;
+  svn_boolean_t scheduled_for_deletion; /* PATH is scheduled for deletion. */
 } svn_client__merge_path_t;
 
 
