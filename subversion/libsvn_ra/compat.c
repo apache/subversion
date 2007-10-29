@@ -424,7 +424,7 @@ maybe_crop_and_send_segment(const char *path,
                             apr_pool_t *pool)
 {
   svn_location_segment_t *segment = apr_pcalloc(pool, sizeof(*segment));
-  segment->path = path;
+  segment->path = path ? ((*path == '/') ? path + 1 : path) : NULL;
   segment->range_start = range_start;
   segment->range_end = range_end;
   if (segment->range_start <= start_rev)
