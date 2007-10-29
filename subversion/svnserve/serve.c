@@ -1325,7 +1325,7 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     depth = SVN_DEPTH_INFINITY_OR_FILES(recurse);
 
   send_copyfrom_args = (send_copyfrom_param == SVN_RA_SVN_UNSPECIFIED_NUMBER) ?
-      FALSE : send_copyfrom_param;
+      FALSE : (svn_boolean_t) send_copyfrom_param;
 
   full_path = svn_path_join(b->fs_path->data, target, pool);
   /* Check authorization and authenticate the user if necessary. */
@@ -1603,7 +1603,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (include_merged_revs_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
     include_merged_revisions = FALSE;
   else
-    include_merged_revisions = include_merged_revs_param;
+    include_merged_revisions = (svn_boolean_t) include_merged_revs_param;
 
   if (revprop_word == NULL)
     /* pre-1.5 client */
@@ -1977,7 +1977,7 @@ static svn_error_t *get_file_revs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (include_merged_revs_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
     include_merged_revisions = FALSE;
   else
-    include_merged_revisions = include_merged_revs_param;
+    include_merged_revisions = (svn_boolean_t) include_merged_revs_param;
 
   frb.conn = conn;
   frb.pool = NULL;
