@@ -1317,13 +1317,10 @@ determine_merges_performed(apr_hash_t **merges, const char *target_wcpath,
   /* If there have been no operative merges, then don't calculate anything.
      Just return the empty hash because this whole merge has been a no-op
      and we don't change the mergeinfo in that case (issue #2883). */
-   if (!notify_b->nbr_operative_notifications && !merge_b->operative_merge)
+   if (notify_b->nbr_operative_notifications > 0)
+     merge_b->operative_merge = TRUE;
+   else
      return SVN_NO_ERROR;
-
-  /* Note in the merge baton when the first operative merge is found. */
-  if (notify_b->nbr_operative_notifications > 0
-      && !merge_b->operative_merge)
-    merge_b->operative_merge = TRUE;
 
   rangelist = apr_array_make(pool, 1, sizeof(range));
   APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
@@ -4103,7 +4100,7 @@ svn_client_merge3(const char *source1,
                            URL2,
                            range.end,
                            is_rollback,
-                           merge_cmd_baton.target_missing_child,
+                           FALSE,
                            target_wcpath,
                            adm_access,
                            depth,
