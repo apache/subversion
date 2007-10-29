@@ -30,6 +30,9 @@ XFail = svntest.testcase.XFail
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 
+from merge_tests import setup_branch
+from merge_tests import shorten_path_kludge
+
 from svntest.main import SVN_PROP_MERGE_INFO
 from svntest.main import write_restrictive_svnserve_conf
 from svntest.main import write_authz_file
@@ -37,13 +40,6 @@ from svntest.main import server_has_mergeinfo
 from svntest.actions import fill_file_with_lines
 from svntest.actions import make_conflict_marker_text
 from svntest.actions import inject_conflict_into_expected_state
-
-def shorten_path_kludge(path):
-  '''Search for the comment entitled "The Merge Kluge" elsewhere in
-  this file, to understand why we shorten, and subsequently chdir()
-  after calling this function.'''
-  shorten_by = len(svntest.main.work_dir) + len(os.sep)
-  return path[shorten_by:]
 
 ######################################################################
 # Tests
