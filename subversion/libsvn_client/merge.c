@@ -4534,6 +4534,25 @@ svn_client_merge_peg3(const char *source,
   /* Compact the list to remove redundances and such. */
   SVN_ERR(compact_merge_ranges(&merge_range_ts, merge_range_ts, pool));
 
+  merge_cmd_baton.force = force;
+  merge_cmd_baton.record_only = record_only;
+  merge_cmd_baton.dry_run = dry_run;
+  merge_cmd_baton.ctx = ctx;
+  merge_cmd_baton.target_missing_child = FALSE;
+  merge_cmd_baton.target = target_wcpath;
+  merge_cmd_baton.url = URL;
+  merge_cmd_baton.pool = subpool;
+  merge_cmd_baton.merge_options = merge_options;
+  if (dry_run)
+    merge_cmd_baton.dry_run_deletions = apr_hash_make(pool);
+  notify_b.merge_b = &merge_cmd_baton;
+  /* Set up the diff3 command, so various callers don't have to. */
+  cfg = ctx->config ? apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
+                                   APR_HASH_KEY_STRING) : NULL;
+  svn_config_get(cfg, &(merge_cmd_baton.diff3_cmd),
+                 SVN_CONFIG_SECTION_HELPERS,
+                 SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
+
   for (i = 0; i < merge_range_ts->nelts; i++)
     {
       svn_merge_range_t *mergerange = APR_ARRAY_IDX(merge_range_ts, i, 
@@ -4549,34 +4568,21 @@ svn_client_merge_peg3(const char *source,
       initial_rev2.kind = svn_opt_revision_number;
       initial_rev2.value.number = mergerange->end;
 
-      merge_cmd_baton.force = force;
-      merge_cmd_baton.record_only = record_only;
-      merge_cmd_baton.dry_run = dry_run;
-      merge_cmd_baton.target_missing_child = FALSE;
-      merge_cmd_baton.merge_options = merge_options;
-      merge_cmd_baton.target = target_wcpath;
-      merge_cmd_baton.url = URL;
       merge_cmd_baton.added_path = NULL;
       merge_cmd_baton.add_necessitated_merge = FALSE;
       if (dry_run)
-        merge_cmd_baton.dry_run_deletions = apr_hash_make(subpool);
+        svn_hash__clear(merge_cmd_baton.dry_run_deletions);
       merge_cmd_baton.conflicted_paths = NULL;
-      merge_cmd_baton.ctx = ctx;
-      merge_cmd_baton.pool = subpool;
       merge_cmd_baton.operative_merge = FALSE;
       merge_cmd_baton.target_has_dummy_merge_range = FALSE;
       merge_cmd_baton.override_set = FALSE;
+      /* do_merge and do_single_file_merge makes merge_cmd_baton->ra_session1
+         and merge_cmd_baton->ra_session2 point to memory locations of
+         iteration scope. Reparenting on those temporary locations will cause
+         segfault, So assigning both the sessions with persistent memory. */
       merge_cmd_baton.ra_session1 = ra_session;
       merge_cmd_baton.ra_session2 = NULL;
-      notify_b.merge_b = &merge_cmd_baton;
       SVN_ERR(from_same_repos(&merge_cmd_baton, entry, ctx, subpool));
-
-      /* Set up the diff3 command, so various callers don't have to. */
-      cfg = ctx->config ? apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
-                                       APR_HASH_KEY_STRING) : NULL;
-      svn_config_get(cfg, &(merge_cmd_baton.diff3_cmd),
-                     SVN_CONFIG_SECTION_HELPERS,
-                     SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
 
       /* Transform the peg-rev syntax into two explicit merge source
          locations. */
@@ -4663,7 +4669,7 @@ svn_client_merge_peg3(const char *source,
                                URL2,
                                range.end,
                                is_rollback,
-                               merge_cmd_baton.target_missing_child,
+                               FALSE,
                                target_wcpath,
                                adm_access,
                                depth,
