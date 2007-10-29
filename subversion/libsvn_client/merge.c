@@ -3723,10 +3723,13 @@ combine_range_with_segments(apr_array_header_t **merge_source_ts_p,
         APR_ARRAY_IDX(segments, i, svn_location_segment_t *);
       merge_source_t *merge_source;
       const char *path1 = NULL;
+      svn_revnum_t rev1;
 
-      /* If this segment doesn't overlap our range at all, ignore it. */
+      /* If this segment doesn't overlap our range at all, or
+         represents a gap, ignore it. */
       if ((segment->range_end < minrev)
-          || (segment->range_start > maxrev))
+          || (segment->range_start > maxrev)
+          || (! segment->path))
         continue;
 
       /* Otherwise, there is some overlap, so we want to generate
@@ -3736,18 +3739,34 @@ combine_range_with_segments(apr_array_header_t **merge_source_ts_p,
       /* If our range spans a segment boundary, we have to point our
          merge_source_t's path1 to the path of the immediately older
          segment, else it points to the same location as its path2.  */
-      if (minrev < segment->range_start)
-        path1 = i ? (APR_ARRAY_IDX(segments, i - 1, 
-                                   svn_location_segment_t *))->path : NULL;
+      rev1 = MAX(segment->range_start, minrev) - 1;
+      if (minrev <= segment->range_start)
+        {
+          if (i > 0)
+            {
+              path1 = (APR_ARRAY_IDX(segments, i - 1, 
+                                     svn_location_segment_t *))->path;
+            }
+          /* If we've backed PATH1 up into a segment gap, let's back
+             it up further still to the segment before the gap.  We'll
+             have to adjust rev1, too. */
+          if ((! path1) && (i > 1))
+            {
+              path1 = (APR_ARRAY_IDX(segments, i - 2,
+                                     svn_location_segment_t *))->path;
+              rev1 = (APR_ARRAY_IDX(segments, i - 2,
+                                    svn_location_segment_t *))->range_end;
+            }
+        }
       else
-        path1 = segment->path ? apr_pstrdup(pool, segment->path) : NULL;
+        {
+          path1 = apr_pstrdup(pool, segment->path);
+        }
 
-      merge_source->rev1 = MAX(segment->range_start, minrev) - 1;
+      merge_source->rev1 = rev1;
+      merge_source->path1 = path1 ? apr_pstrdup(pool, path1) : NULL;
       merge_source->rev2 = MIN(segment->range_end, maxrev);
-      merge_source->path1 = 
-        path1 ? apr_pstrdup(pool, path1) : NULL;
-      merge_source->path2 = 
-        segment->path ? apr_pstrdup(pool, segment->path) : NULL;
+      merge_source->path2 = apr_pstrdup(pool, segment->path);
 
       /* If this is subtractive, reverse the whole calculation. */
       if (subtractive)
@@ -3835,20 +3854,19 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
       svn_opt_revision_t *range_end =
         &((APR_ARRAY_IDX(ranges_to_merge, i,
                          svn_opt_revision_range_t *))->end);
+      svn_opt_revision_t assumed_start, assumed_end;
 
       svn_pool_clear(subpool);
 
       /* Let's make sure we have real numbers. */
-      if (range_start->kind == svn_opt_revision_unspecified)
-        range_start->kind = svn_opt_revision_head;
+      SVN_ERR(assume_default_rev_range(range_start, &assumed_start,
+                                       range_end, &assumed_end,
+                                       &youngest_rev, ra_session, subpool));
       SVN_ERR(svn_client__get_revision_number(&range_start_rev, &youngest_rev,
-                                              ra_session, range_start, "", 
+                                              ra_session, &assumed_start, "",
                                               subpool));
-
-      if (range_end->kind == svn_opt_revision_unspecified)
-        range_end->kind = svn_opt_revision_head;
       SVN_ERR(svn_client__get_revision_number(&range_end_rev, &youngest_rev,
-                                              ra_session, range_end, "", 
+                                              ra_session, &assumed_end, "",
                                               subpool));
 
       /* If this isn't a no-op range... */
@@ -3878,7 +3896,7 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
     {
       svn_merge_range_t *range = 
         APR_ARRAY_IDX(merge_range_ts, i, svn_merge_range_t *);
-      svn_revnum_t minrev = MIN(range->start, range->end) + 1;
+      svn_revnum_t minrev = MIN(range->start, range->end);
       svn_revnum_t maxrev = MAX(range->start, range->end);
       
       /* Keep a running tally of the oldest and youngest requested
