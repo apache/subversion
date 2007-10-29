@@ -247,6 +247,7 @@
 */
 %apply apr_array_header_t **RANGELIST {
   apr_array_header_t **rangelist,
+  apr_array_header_t **inheritable_rangelist,
   apr_array_header_t **deleted,
   apr_array_header_t **added,
   apr_array_header_t **output
