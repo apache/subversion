@@ -835,6 +835,12 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
 }
 
 
+struct nls_history_baton_t
+{
+  svn_revnum_t revision;
+  svn_revnum_t end_rev;
+};
+
 /* This implements the `svn_repos_history_func_t' interface, and is
    used by svn_repos_node_location_segments() to determine, for a path
    and revision which has no prior affecting copies, the revision in
@@ -846,8 +852,13 @@ nls_history_func(void *baton,
                  svn_revnum_t revision,
                  apr_pool_t *pool)
 {
-  svn_revnum_t *b = baton;
-  *b = revision;
+  struct nls_history_baton_t *b = baton;
+  b->revision = revision;
+  if (revision < b->end_rev)
+    {
+      b->revision = b->end_rev;
+      return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
+    }
   return SVN_NO_ERROR;
 }
 
@@ -964,11 +975,13 @@ svn_repos_node_location_segments(svn_repos_t *repos,
          range. */
       if (! prev_path)
         {
-          svn_revnum_t first_rev;
+          struct nls_history_baton_t nls_history_baton;
+          nls_history_baton.revision = SVN_INVALID_REVNUM;
+          nls_history_baton.end_rev = end_rev;
           SVN_ERR(svn_repos_history2(fs, cur_path, nls_history_func,
-                                     &first_rev, NULL, NULL, 
-                                     current_rev, end_rev, TRUE, subpool));
-          segment->range_start = first_rev;
+                                     &nls_history_baton, NULL, NULL, 
+                                     current_rev, 0, TRUE, subpool));
+          segment->range_start = nls_history_baton.revision;
           current_rev = SVN_INVALID_REVNUM;
         }
       else
