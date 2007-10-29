@@ -91,13 +91,11 @@ I.    INTRODUCTION
          These diff streams are used everywhere -- over the network,
          in the repository, and in the client's working copy.
 
-      * SQLite (REQUIRED for server)
+      * SQLite (REQUIRED for client and server)
 
          SQLite is a lightweight, embeddable SQL library.  The
          Subversion repository uses a SQLite database to track merge
-         data.  If SQLite is not found at compile time, then no server
-         binaries or libraries will be built -- you'll only get a
-         client.
+         data.
 
       * libneon or libserf  (OPTIONAL for client)
 
