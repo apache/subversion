@@ -1925,6 +1925,75 @@ def switch_to_dir_with_peg_rev(sbox):
                                         None, None, None, None, 0,
                                         '-r', '2')
 
+def switch_urls_with_spaces(sbox):
+  "switch file and dir to url containing spaces"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  # add file and directory with spaces in their names.
+  XYZ_path = os.path.join(wc_dir, 'X Y Z')
+  ABC_path = os.path.join(wc_dir, 'A B C')
+  svntest.main.run_svn(None, 'mkdir', XYZ_path, ABC_path)
+
+  tpm_path = os.path.join(wc_dir, 'tau pau mau')
+  bbb_path = os.path.join(wc_dir, 'bar baz bal')
+  svntest.main.file_write(tpm_path, "This is the file 'tau pau mau'.\n")
+  svntest.main.file_write(bbb_path, "This is the file 'bar baz bal'.\n")
+  svntest.main.run_svn(None, 'add', tpm_path, bbb_path)
+
+  svntest.main.run_svn(None, 'ci', '-m', 'log message', wc_dir)
+
+  # Test 1: switch directory 'A B C' to url 'X Y Z'
+  XYZ_url = repo_url + '/X Y Z'
+  expected_output = svntest.wc.State(wc_dir, {
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+      'X Y Z'         : Item(),
+      'A B C'         : Item(),
+      'tau pau mau'   : Item("This is the file 'tau pau mau'.\n"),
+      'bar baz bal'   : Item("This is the file 'bar baz bal'.\n"),
+      })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+      'X Y Z'         : Item(status='  ', wc_rev=2),
+      'A B C'         : Item(status='  ', wc_rev=2, switched='S'),
+      'tau pau mau'   : Item(status='  ', wc_rev=2),
+      'bar baz bal'   : Item(status='  ', wc_rev=2),
+      })
+
+  svntest.actions.run_and_verify_switch(wc_dir, ABC_path, XYZ_url,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+  # Test 2: switch file 'bar baz bal' to 'tau pau mau'
+  tpm_url = repo_url + '/tau pau mau'
+  expected_output = svntest.wc.State(wc_dir, {
+     'bar baz bal'    : Item(status='U '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+      'X Y Z'         : Item(),
+      'A B C'         : Item(),
+      'tau pau mau'   : Item("This is the file 'tau pau mau'.\n"),
+      'bar baz bal'   : Item("This is the file 'tau pau mau'.\n"),
+      })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+      'X Y Z'         : Item(status='  ', wc_rev=2),
+      'A B C'         : Item(status='  ', wc_rev=2, switched='S'),
+      'tau pau mau'   : Item(status='  ', wc_rev=2),
+      'bar baz bal'   : Item(status='  ', wc_rev=2, switched='S'),
+      })
+
+  svntest.actions.run_and_verify_switch(wc_dir, bbb_path, tpm_url,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
 ########################################################################
 # Run the tests
 
@@ -1956,6 +2025,7 @@ test_list = [ None,
               switch_with_obstructing_local_adds,
               switch_with_depth,
               switch_to_dir_with_peg_rev,
+              XFail(switch_urls_with_spaces),
              ]
 
 if __name__ == '__main__':
