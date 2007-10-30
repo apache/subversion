@@ -1463,7 +1463,7 @@ main(int argc, const char *argv[])
         }
     }
 
-  err = svn_config_get_config(&opt_baton.config, NULL, pool);
+  err = svn_config_get_config(&opt_baton.config, opt_baton.config_dir, pool);
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
 

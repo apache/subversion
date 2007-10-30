@@ -115,13 +115,6 @@ Candidate changes:
       --disable-neon-version-check be passed to configure.
     Votes:
       +1: dlr, hwright
- 
-  * r27056
-    Heed the --config-dir option when it is passed to svnsync.
-    Justification:
-      Otherwise, user-specified configuration is ignored.
-    Votes:
-      +1: dlr, hwright
 
 Veto-blocked changes:
 
