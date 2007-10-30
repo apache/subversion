@@ -1126,6 +1126,39 @@ def removal_schedule_added_props(sbox):
 
 
 
+# test for issue 2743
+def props_on_replaced_file(sbox):
+  """test properties on replaced files"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Add some properties to iota
+  iota_path = os.path.join(wc_dir, "iota")
+  svntest.main.run_svn(None, 'propset', 'red', 'rojo', iota_path)
+  svntest.main.run_svn(None, 'propset', 'blue', 'lagoon', iota_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'log message', wc_dir)
+
+  # replace iota_path
+  svntest.main.run_svn(None, 'rm', iota_path)
+  svntest.main.file_append(iota_path, "some mod")
+  svntest.main.run_svn(None, 'add', iota_path)
+
+  # check that the replaced file has no properties
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', contents="some mod")
+  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
+  svntest.tree.compare_trees(actual_disk_tree, expected_disk.old_tree())
+
+  # now add a new property to iota
+  svntest.main.run_svn(None, 'propset', 'red', 'mojo', iota_path)
+  svntest.main.run_svn(None, 'propset', 'groovy', 'baby', iota_path)
+
+  # What we expect the disk tree to look like:
+  expected_disk.tweak('iota', props={'red' : 'mojo', 'groovy' : 'baby'})
+  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
+  svntest.tree.compare_trees(actual_disk_tree, expected_disk.old_tree())
+
 ########################################################################
 # Run the tests
 
@@ -1151,6 +1184,7 @@ test_list = [ None,
               recursive_base_wc_ops,
               url_props_ops,
               removal_schedule_added_props,
+              props_on_replaced_file,
              ]
 
 if __name__ == '__main__':

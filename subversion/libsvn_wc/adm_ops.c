@@ -1194,12 +1194,17 @@ svn_wc_add2(const char *path,
       modify_flags |= SVN_WC__ENTRY_MODIFY_COPIED;
     }
 
-  /* If this is a replacement we want to remove the checksum so it is not set
-   * to the old value. */
+  /* If this is a replacement we want to remove the checksum and the property
+     flags so they are not set to their respective old values. */
   if (is_replace)
     {
       tmp_entry.checksum = NULL;
       modify_flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
+
+      tmp_entry.has_props = FALSE;
+      tmp_entry.has_prop_mods = FALSE;
+      modify_flags |= SVN_WC__ENTRY_MODIFY_HAS_PROPS;
+      modify_flags |= SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS;
     }
   
   tmp_entry.revision = 0;
@@ -1416,6 +1421,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
   svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
   apr_hash_t *baseprops = NULL;
   const char *adm_path = svn_wc_adm_access_path(adm_access);
+  svn_boolean_t revert_base = FALSE;
 
   /* Build the full path of the thing we're reverting. */
   fullpath = svn_wc_adm_access_path(adm_access);
@@ -1423,24 +1429,34 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
     fullpath = svn_path_join(fullpath, name, pool);
 
   /* Deal with properties. */
-
   if (entry->schedule == svn_wc_schedule_replace)
     {
       const char *rprop;
       svn_node_kind_t kind;
 
+      revert_base = TRUE;
       /* Use the revertpath as the new propsbase if it exists. */
       SVN_ERR(svn_wc__prop_revert_path(&rprop, fullpath, entry->kind, FALSE,
                                        pool));
       SVN_ERR(svn_io_check_path(rprop, &kind, pool));
+
+      /* If the revert-base doesn't exist, check for a normal propsbase */
+      if (kind != svn_node_file)
+        {
+          SVN_ERR(svn_wc__prop_base_path(&rprop, fullpath, entry->kind, FALSE,
+                                         pool));
+          SVN_ERR(svn_io_check_path(rprop, &kind, pool));
+          revert_base = FALSE;
+        }
       if (kind == svn_node_file)
         {
           baseprops = apr_hash_make(pool);
           SVN_ERR(svn_wc__load_prop_file(rprop, baseprops, pool));
           /* Ensure the revert propfile gets removed. */
-          SVN_ERR(svn_wc__loggy_remove
-                  (&log_accum, adm_access,
-                   svn_path_is_child(adm_path, rprop, pool), pool));
+          if (revert_base)
+            SVN_ERR(svn_wc__loggy_remove
+                    (&log_accum, adm_access,
+                     svn_path_is_child(adm_path, rprop, pool), pool));
           *reverted = TRUE;
         }
     }
@@ -1476,7 +1492,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
     {
       SVN_ERR(svn_wc__install_props(&log_accum, adm_access, name, baseprops,
                                     baseprops,
-                                    entry->schedule == svn_wc_schedule_replace,
+                                    revert_base,
                                     pool));
       *reverted = TRUE;
     }
