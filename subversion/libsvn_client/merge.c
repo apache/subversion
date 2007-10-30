@@ -1210,23 +1210,23 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
                       apr_pool_t *pool)
 {
   notification_receiver_baton_t *notify_b = baton;
+  svn_boolean_t is_operative_notification = FALSE;
+
+  if (notify->content_state == svn_wc_notify_state_conflicted
+      || notify->content_state == svn_wc_notify_state_merged
+      || notify->content_state == svn_wc_notify_state_changed
+      || notify->prop_state == svn_wc_notify_state_conflicted
+      || notify->prop_state == svn_wc_notify_state_merged
+      || notify->prop_state == svn_wc_notify_state_changed
+      || notify->action == svn_wc_notify_update_add)
+    {
+      notify_b->nbr_operative_notifications++;
+      is_operative_notification = TRUE;
+    }
 
   if (notify_b->same_urls)
     {
-      svn_boolean_t is_operative_notification = FALSE;
       notify_b->nbr_notifications++;
-
-      if (notify->content_state == svn_wc_notify_state_conflicted
-          || notify->content_state == svn_wc_notify_state_merged
-          || notify->content_state == svn_wc_notify_state_changed
-          || notify->prop_state == svn_wc_notify_state_conflicted
-          || notify->prop_state == svn_wc_notify_state_merged
-          || notify->prop_state == svn_wc_notify_state_changed
-          || notify->action == svn_wc_notify_update_add)
-        {
-          notify_b->nbr_operative_notifications++;
-          is_operative_notification = TRUE;
-        }
 
       if (!(notify_b->is_single_file_merge) && is_operative_notification)
         {
@@ -1284,6 +1284,16 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
           apr_hash_set(notify_b->skipped_paths, skipped_path,
                        APR_HASH_KEY_STRING, skipped_path);
         }
+    }
+  else if (!(notify_b->is_single_file_merge) && is_operative_notification)
+    {
+      svn_wc_notify_t *notify_merge_begin;
+      notify_merge_begin = svn_wc_create_notify(notify_b->merge_b->target,
+                                                svn_wc_notify_merge_begin,
+                                                pool);
+      if (notify_b->wrapped_func)
+        (*notify_b->wrapped_func)(notify_b->wrapped_baton, notify_merge_begin,
+                                  pool);
     }
 
   if (notify_b->wrapped_func)
@@ -2288,14 +2298,6 @@ do_merge(const char *url1,
   /* When using this merge range, account for the exclusivity of
      its low value (which is indicated by this operation being a
      merge vs. revert). */
-
-  if (!notify_b->same_urls)
-    {
-      svn_wc_notify_t *notify;
-      notify = svn_wc_create_notify(target_wcpath, svn_wc_notify_merge_begin,
-                                    pool);
-      notification_receiver(notify_b, notify, pool);
-    }
 
   SVN_ERR(drive_merge_report_editor(target_wcpath, url1, url2,
                                     children_with_mergeinfo, range.start,
