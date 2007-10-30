@@ -284,7 +284,7 @@ struct svnlook_opt_state
   svn_boolean_t full_paths;       /* --full-paths */
   svn_boolean_t copy_info;        /* --copy-info */
   svn_boolean_t non_recursive;    /* --non-recursive */
-  const char *extensions;         /* diff extension args */ /* UTF-8! */
+  const char *extensions;         /* diff extension args (UTF-8!) */
 };
 
 
