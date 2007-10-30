@@ -1213,7 +1213,6 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
 
   if (notify_b->same_urls)
     {
-      int new_nearest_ancestor_index;
       svn_boolean_t is_operative_notification = FALSE;
       notify_b->nbr_notifications++;
 
@@ -1231,7 +1230,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
 
       if (!(notify_b->is_single_file_merge) && is_operative_notification)
         {
-          new_nearest_ancestor_index = 
+          int new_nearest_ancestor_index = 
                       find_nearest_ancestor(notify_b->children_with_mergeinfo,
                                             notify->path);
           if (new_nearest_ancestor_index != notify_b->cur_ancestor_index)
