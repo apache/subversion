@@ -2077,7 +2077,6 @@ remove_first_range_from_remaining_ranges(
 static svn_error_t *
 record_mergeinfo_for_record_only_merge(const char *url,
                                        svn_merge_range_t *range,
-                                       svn_boolean_t is_rollback,
                                        const svn_wc_entry_t *entry,
                                        svn_wc_adm_access_t *adm_access,
                                        struct merge_cmd_baton *merge_b,
@@ -2088,6 +2087,8 @@ record_mergeinfo_for_record_only_merge(const char *url,
   apr_hash_t *target_mergeinfo;
   svn_boolean_t indirect;
   apr_hash_t *merges = apr_hash_make(pool);
+  svn_boolean_t is_rollback = (range->start > range->end);
+
   /* Temporarily reparent ra_session to WC target URL. */
   SVN_ERR(svn_ra_reparent(merge_b->ra_session1, entry->url, pool));
   SVN_ERR(svn_client__get_wc_or_repos_mergeinfo(&target_mergeinfo, entry,
@@ -3444,8 +3445,6 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
    intersecting merges (because they meet one or more of the criteria
    described in get_mergeinfo_paths()).
 
-   IS_ROLLBACK indicates that the merge is subtractive in nature.
-  
    Handle DEPTH as documented for svn_client_merge3().
 
    CHILDREN_WITH_MERGEINFO may contain child paths (svn_client__merge_path_t *)
@@ -4142,7 +4141,7 @@ svn_client_merge3(const char *source1,
 
   if (merge_cmd_baton.same_repos && record_only)
     {
-      return record_mergeinfo_for_record_only_merge(URL1, &range, is_rollback,
+      return record_mergeinfo_for_record_only_merge(URL1, &range,
                                                     entry, adm_access, 
                                                     &merge_cmd_baton,
                                                     pool);
@@ -4274,7 +4273,6 @@ svn_client_merge_peg3(const char *source,
   svn_config_t *cfg;
   const char *wc_repos_root, *source_repos_root;
   svn_opt_revision_t working_rev;
-  svn_boolean_t is_rollback;
   int i;
   svn_ra_session_t *ra_session;
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -4402,7 +4400,6 @@ svn_client_merge_peg3(const char *source,
           range.end = rev2;
           range.inheritable = TRUE;
           return record_mergeinfo_for_record_only_merge(URL2, &range, 
-                                                        is_rollback,
                                                         entry, adm_access, 
                                                         &merge_cmd_baton,
                                                         subpool);
