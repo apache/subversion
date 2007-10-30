@@ -108,15 +108,6 @@ Candidate changes:
     Votes:
       +1: malcolm, glasser
 
-  * r26264
-    Make recursive 'svn info $REPO_ROOT' work against pre-1.2 svnserve, make
-    non-recursive version throw an error rather than do nothing.
-    Justification:
-      Bug fix for user report; and while conditions for reproduction are pretty
-      rare, patch is straightforward.
-    Votes:
-      +1: malcolm, hwright
-
   * r26077
     Alow Subversion to be built against Neon 0.26.4 (by default).
     Justification:

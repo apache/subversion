@@ -373,22 +373,29 @@ svn_client_info(const char *path_or_url,
       /* Fall back to pre-1.2 strategy for fetching dirent's URL. */
       svn_error_clear(err);
 
+      if (strcmp(url, repos_root_URL) == 0)
+        {
+          /* In this universe, there's simply no way to fetch
+             information about the repository's root directory!
+             If we're recursing, degrade gracefully: rather than
+             throw an error, return no information about the
+             repos root. */
+          if (recurse)
+            goto pre_1_2_recurse;
+
+          /* Otherwise, we really are stuck.  Better tell the user
+             what's going on. */
+          return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                   _("Server does not support retrieving "
+                                     "information about the repository root"));
+        }
+
       SVN_ERR(svn_ra_check_path(ra_session, "", rev, &url_kind, pool));      
       if (url_kind == svn_node_none)
         return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                  _("URL '%s' non-existent in revision '%ld'"),
                                  url, rev);
 
-      if (strcmp(url, repos_root_URL) == 0)
-        {
-          /* In this universe, there's simply no way to fetch
-             information about the repository's root directory!  So
-             degrade gracefully.  Rather than throw error, return no
-             information about the repos root, but at least give
-             recursion a chance. */     
-          goto recurse;
-        }        
-      
       /* Open a new RA session to the item's parent. */
       SVN_ERR(svn_client__open_ra_session_internal(&parent_ra_session,
                                                    parent_url, NULL,
@@ -447,12 +454,11 @@ svn_client_info(const char *path_or_url,
   SVN_ERR(receiver(receiver_baton, base_name, info, pool));
 
   /* Possibly recurse, using the original RA session. */  
- recurse:
-  
   if (recurse && (the_ent->kind == svn_node_dir))
     {
       apr_hash_t *locks;
 
+pre_1_2_recurse:
       if (peg_revision->kind == svn_opt_revision_head)
         {
           err = svn_ra_get_locks(ra_session, &locks, "", pool);
