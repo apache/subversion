@@ -536,8 +536,8 @@ module Svn
                     fetch_locks, block, self)
       end
 
-      def switch(path, uri, rev=nil, depth=nil, ignore_externals=false, allow_unver_obstruction=false)
-        Client.switch2(path, uri, rev, depth, ignore_externals, allow_unver_obstruction, self)
+      def switch(path, uri, peg_rev=nil, rev=nil, depth=nil, ignore_externals=false, allow_unver_obstruction=false)
+        Client.switch2(path, uri, peg_rev, rev, depth, ignore_externals, allow_unver_obstruction, self)
       end
 
       def set_log_msg_func(callback=Proc.new)
