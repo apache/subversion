@@ -1262,13 +1262,19 @@ authz(const char **msg,
     APR_EOL_STR
     "* ="
     APR_EOL_STR
+    APR_EOL_STR
+    "[/nowhere]"
+    APR_EOL_STR
+    "nobody = r"
+    APR_EOL_STR
     APR_EOL_STR;
 
   /* Load the test authz rules. */
   SVN_ERR(authz_get_handle(&authz_cfg, contents, subpool));
 
   /* Loop over the test array and test each case. */
-  for (i = 0; test_set[i].path != NULL; i++)
+  for (i = 0; !(test_set[i].path == NULL
+               && test_set[i].required == svn_authz_none); i++)
     {
       SVN_ERR(svn_repos_authz_check_access(authz_cfg, "greek",
                                            test_set[i].path,
