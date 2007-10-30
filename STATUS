@@ -66,6 +66,9 @@ Candidate changes:
       next svnmerge.py will ignore it the second time around.
     Votes:
       +1: blair, cmpilato
+      -0: glasser (while backporting mucc is a reasonable idea, it has changed 
+           a lot since this was proposed, including changing its name; either
+           don't backport at all or backport even more)
 
   * r23815
     Fix bug in authz code related to inconclusive responses to global
