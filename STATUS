@@ -115,17 +115,7 @@ Candidate changes:
       --disable-neon-version-check be passed to configure.
     Votes:
       +1: dlr, hwright
-
-  * r26018
-    When producing unidiffs, don't translate output required by patch(1).
-    Justification:
-      Simple fix for user-reported problem (in issue 2906).
-    Notes:
-      r26018 includes a change to diff_memory.c which doesn't exist in 1.4.x,
-      but that can be safely ignored.
-    Votes:
-      +1: malcolm, hwright
-
+ 
   * r27056
     Heed the --config-dir option when it is passed to svnsync.
     Justification:
