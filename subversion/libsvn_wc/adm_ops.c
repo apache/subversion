@@ -1948,16 +1948,26 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
       
   if (is_file)
     {
+      svn_node_kind_t kind;
+      svn_boolean_t wc_special, local_special;
       svn_boolean_t text_modified_p;
       full_path = svn_path_join(full_path, name, pool);
 
-      /* Check for local mods. before removing entry */
-      SVN_ERR(svn_wc_text_modified_p(&text_modified_p, full_path,
-                                     FALSE, adm_access, pool));
-      if (text_modified_p && instant_error)
-        return svn_error_createf(SVN_ERR_WC_LEFT_LOCAL_MOD, NULL,
-                                 _("File '%s' has local modifications"),
-                                 svn_path_local_style(full_path, pool));
+      /* Only check if the file was modified when it wasn't overwritten with a 
+         special file */
+      SVN_ERR(svn_wc__get_special(&wc_special, full_path, adm_access, pool));
+      SVN_ERR(svn_io_check_special_path(full_path, &kind, &local_special, 
+                                        pool));
+      if (wc_special || ! local_special)
+        {
+          /* Check for local mods. before removing entry */
+          SVN_ERR(svn_wc_text_modified_p(&text_modified_p, full_path,
+                  FALSE, adm_access, pool));
+          if (text_modified_p && instant_error)
+            return svn_error_createf(SVN_ERR_WC_LEFT_LOCAL_MOD, NULL,
+                   _("File '%s' has local modifications"),
+                   svn_path_local_style(full_path, pool));
+        }
 
       /* Remove the wcprops. */
       SVN_ERR(svn_wc__remove_wcprops(adm_access, name, FALSE, pool));
@@ -1994,7 +2004,8 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
          it has local mods. */
       if (destroy_wf)
         {
-          if (text_modified_p)  /* Don't kill local mods. */
+          /* Don't kill local mods. */
+          if (text_modified_p || (! wc_special && local_special))
             return svn_error_create(SVN_ERR_WC_LEFT_LOCAL_MOD, NULL, NULL);
           else  /* The working file is still present; remove it. */
             SVN_ERR(remove_file_if_present(full_path, pool));

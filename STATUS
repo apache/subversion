@@ -78,13 +78,6 @@ Candidate changes:
       +1: lgo, glasser
       +0: giovannibajo (can't review on the patch, but interested in the fix)
 
-  * r25076, -77, -80
-    Fix issue 1808: svn up deletes symlinks which are not under version control
-    Justification:
-      Data loss, small local fix
-    Votes:
-      +1: hwright, lgo
-
   * r25178, -461
     Fix issue 2712: If 'anon-access' is 'read' but anonymous access is
     disallowed via authz rules, updates/checkouts won't work, even for users

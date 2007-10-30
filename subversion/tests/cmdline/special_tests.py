@@ -354,6 +354,30 @@ def remove_symlink(sbox):
                                         expected_status, None,
                                         None, None, None, None, wc_dir)
   
+# test for issue #1808: svn up deletes local symlink that obstructs
+# versioned file
+def update_obstructing_symlink(sbox):
+  "symlink obstructs incoming delete"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu_url = sbox.repo_url + '/A/mu'
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  # delete A/mu and replace it with a symlink
+  svntest.main.run_svn(None, 'rm', mu_path)
+  os.symlink(iota_path, mu_path)
+ 
+  svntest.main.run_svn(None, 'rm', mu_url, '-m', 'log msg')
+
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+  # check that the symlink is still there
+  target = os.readlink(mu_path)
+  if target != iota_path: 
+    raise svntest.Failure
+
 
 ########################################################################
 # Run the tests
@@ -367,6 +391,7 @@ test_list = [ None,
               Skip(copy_tree_with_symlink, (os.name != 'posix')),
               Skip(replace_symlink_with_file, (os.name != 'posix')),
               Skip(remove_symlink, (os.name != 'posix')),
+              Skip(update_obstructing_symlink, (os.name != 'posix')),
              ]
 
 if __name__ == '__main__':
