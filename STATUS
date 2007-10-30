@@ -106,7 +106,7 @@ Candidate changes:
     Justification:
       Makes blame take longer than it should over ra_svn.
     Votes:
-      +1: malcolm
+      +1: malcolm, glasser
 
   * r26264
     Make recursive 'svn info $REPO_ROOT' work against pre-1.2 svnserve, make
