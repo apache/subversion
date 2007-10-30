@@ -33,6 +33,7 @@ public interface SVNClientInterface
 
     /**
      * @return Version information about the underlying native libraries.
+     * @since 1.0
      */
     public Version getVersion();
 
@@ -59,8 +60,22 @@ public interface SVNClientInterface
      * Returns the last destination path submitted.
      * @deprecated
      * @return path in Subversion format.
+     * @since 1.0
      */
     String getLastPath();
+
+    /**
+     * Returns the status of a single file in the path.
+     *
+     * @param path      File to gather status.
+     * @param onServer  Request status information from the server.
+     * @return  the subversion status of the file.
+     * @deprecated Use {@link #status(String, int, boolean, boolean,
+     *                                boolean, boolean, StatusCallback)}
+     *             instead.
+     * @since 1.0
+     */
+    Status singleStatus(String path, boolean onServer) throws ClientException;
 
     /**
      * List a directory or file of the working copy.
@@ -70,6 +85,10 @@ public interface SVNClientInterface
      * @param onServer  Request status information from server.
      * @param getAll    get status for uninteresting (unchanged) files.
      * @return Array of Status entries.
+     * @deprecated Use {@link #status(String, int, boolean, boolean,
+     *                                boolean, boolean, StatusCallback)}
+     *             instead.
+     * @since 1.0
      */
     Status[] status(String path, boolean descend, boolean onServer,
                     boolean getAll) throws ClientException;
@@ -83,6 +102,10 @@ public interface SVNClientInterface
      * @param getAll    get status for uninteresting (unchanged) files.
      * @param noIgnore  get status for normaly ignored files and directories.
      * @return Array of Status entries.
+     * @deprecated Use {@link #status(String, int, boolean, boolean,
+     *                                boolean, boolean, StatusCallback)}
+     *             instead.
+     * @since 1.0
      */
     Status[] status(String path, boolean descend, boolean onServer,
                     boolean getAll, boolean noIgnore) throws ClientException;
@@ -97,6 +120,9 @@ public interface SVNClientInterface
      * @param noIgnore  get status for normaly ignored files and directories.
      * @param ignoreExternals if externals are ignored during status
      * @return Array of Status entries.
+     * @deprecated Use {@link #status(String, int, boolean, boolean,
+     *                                boolean, boolean, StatusCallback)}
+     *             instead.
      * @since 1.2
      */
     Status[] status(String path, boolean descend, boolean onServer,
@@ -125,6 +151,9 @@ public interface SVNClientInterface
      * @param revision  the revision to list
      * @param recurse   recurse into subdirectories
      * @return  Array of DirEntry objects.
+     * @deprecated Use {@link #list(String, Revision, Revision, int, int,
+     *                              boolean, ListCallback)} instead.
+     * @since 1.0
      */
     DirEntry[] list(String url, Revision revision, boolean recurse)
             throws ClientException;
@@ -136,6 +165,8 @@ public interface SVNClientInterface
      * @param pegRevision the revision to interpret url
      * @param recurse   recurse into subdirectories
      * @return  Array of DirEntry objects.
+     * @deprecated Use {@link #list(String, Revision, Revision, int, int,
+     *                              boolean, ListCallback)} instead.
      * @since 1.2
      */
     DirEntry[] list(String url, Revision revision, Revision pegRevision,
@@ -159,21 +190,13 @@ public interface SVNClientInterface
             throws ClientException;
 
     /**
-     * Returns the status of a single file in the path.
-     *
-     * @param path      File to gather status.
-     * @param onServer  Request status information from the server.
-     * @return  the subversion status of the file.
-     */
-    Status singleStatus(String path, boolean onServer) throws ClientException;
-
-    /**
      * Sets the username used for authentication.
      * @param username The username, ignored if the empty string.  Set
      * to the empty string to clear it.
      * @throws IllegalArgumentException If <code>username</code> is
      * <code>null</code>.
      * @see #password(String)
+     * @since 1.0
      */
     void username(String username);
 
@@ -184,12 +207,17 @@ public interface SVNClientInterface
      * @throws IllegalArgumentException If <code>password</code> is
      * <code>null</code>.
      * @see #username(String)
+     * @since 1.0
      */
     void password(String password);
 
     /**
-     * Register callback interface to supply username and password on demand
+     * Register callback interface to supply username and password on demand.
+     * This callback can also be used to provide theequivalent of the
+     * <code>--no-auth-cache</code> and <code>--non-interactive</code> arguments
+     * accepted by the command-line client.
      * @param prompt the callback interface
+     * @since 1.0
      */
     void setPrompt(PromptUserPassword prompt);
 
@@ -199,6 +227,10 @@ public interface SVNClientInterface
      * @param revisionStart first revision to show
      * @param revisionEnd   last revision to show
      * @return array of LogMessages
+     * @deprecated Use {@link #logMessages(String, Revision, Revision, Revision,
+     *                                     boolean, boolean, boolean, String[],
+     *                                     long, LogMessageCallback)} instead.
+     * @since 1.0
      */
     LogMessage[] logMessages(String path, Revision revisionStart,
                              Revision revisionEnd) throws ClientException;
@@ -210,6 +242,10 @@ public interface SVNClientInterface
      * @param revisionEnd   last revision to show
      * @param stopOnCopy    do not continue on copy operations
      * @return array of LogMessages
+     * @deprecated Use {@link #logMessages(String, Revision, Revision, Revision,
+     *                                     boolean, boolean, boolean, String[],
+     *                                     long, LogMessageCallback)} instead.
+     * @since 1.0
      */
     LogMessage[] logMessages(String path, Revision revisionStart,
                              Revision revisionEnd, boolean stopOnCopy)
@@ -224,6 +260,10 @@ public interface SVNClientInterface
      * @param discoverPath  returns the paths of the changed items in the
      *                      returned objects
      * @return array of LogMessages
+     * @deprecated Use {@link #logMessages(String, Revision, Revision, Revision,
+     *                                     boolean, boolean, boolean, String[],
+     *                                     long, LogMessageCallback)} instead.
+     * @since 1.0
      */
     LogMessage[] logMessages(String path, Revision revisionStart,
                              Revision revisionEnd, boolean stopOnCopy,
@@ -242,6 +282,9 @@ public interface SVNClientInterface
      *                      limit)
      * @return array of LogMessages
      * @since 1.2
+     * @deprecated Use {@link #logMessages(String, Revision, Revision, Revision,
+     *                                     boolean, boolean, boolean, String[],
+     *                                     long, LogMessageCallback)} instead.
      */
     LogMessage[] logMessages(String path, Revision revisionStart,
                              Revision revisionEnd, boolean stopOnCopy,
@@ -249,7 +292,7 @@ public interface SVNClientInterface
             throws ClientException;
 
     /**
-     * Retrieve the log messages for an item
+     * Retrieve the log messages for an item.
      * @param path          path or url to get the log message for.
      * @param pegRevision   revision to interpret path
      * @param revisionStart first revision to show
@@ -278,6 +321,38 @@ public interface SVNClientInterface
      * @param moduleName name of the module to checkout.
      * @param destPath destination directory for checkout.
      * @param revision the revision to checkout.
+     * @param recurse whether you want it to checkout files recursively.
+     * @throws ClientException
+     * @deprecated Use {@link #checkout(String, String, Revision, Revision,
+     *                                  int, boolean, boolean)} instead.
+     * @since 1.0
+     */
+    long checkout(String moduleName, String destPath, Revision revision,
+                  boolean recurse)
+            throws ClientException;
+
+    /**
+     * Executes a revision checkout.
+     * @param moduleName name of the module to checkout.
+     * @param destPath destination directory for checkout.
+     * @param revision the revision to checkout.
+     * @param pegRevision the peg revision to interpret the path
+     * @param recurse whether you want it to checkout files recursively.
+     * @param ignoreExternals if externals are ignored during checkout
+     * @throws ClientException
+     * @deprecated Use {@link #checkout(String, String, Revision, Revision,
+     *                                  int, boolean, boolean)} instead.
+     * @since 1.2
+     */
+    long checkout(String moduleName, String destPath, Revision revision,
+                  Revision pegRevision, boolean recurse,
+                  boolean ignoreExternals) throws ClientException;
+
+    /**
+     * Executes a revision checkout.
+     * @param moduleName name of the module to checkout.
+     * @param destPath destination directory for checkout.
+     * @param revision the revision to checkout.
      * @param pegRevision the peg revision to interpret the path
      * @param depth how deep to checkout files recursively.
      * @param ignoreExternals if externals are ignored during checkout
@@ -291,38 +366,12 @@ public interface SVNClientInterface
                   boolean allowUnverObstructions) throws ClientException;
 
     /**
-     * Executes a revision checkout.
-     * @param moduleName name of the module to checkout.
-     * @param destPath destination directory for checkout.
-     * @param revision the revision to checkout.
-     * @param pegRevision the peg revision to interpret the path
-     * @param recurse whether you want it to checkout files recursively.
-     * @param ignoreExternals if externals are ignored during checkout
-     * @throws ClientException
-     * @since 1.2
-     */
-    long checkout(String moduleName, String destPath, Revision revision,
-                  Revision pegRevision, boolean recurse,
-                  boolean ignoreExternals) throws ClientException;
-
-    /**
-     * Executes a revision checkout.
-     * @param moduleName name of the module to checkout.
-     * @param destPath destination directory for checkout.
-     * @param revision the revision to checkout.
-     * @param recurse whether you want it to checkout files recursively.
-     * @throws ClientException
-     */
-    long checkout(String moduleName, String destPath, Revision revision,
-                  boolean recurse)
-            throws ClientException;
-
-    /**
      * Sets the notification callback used to send processing information back
      * to the calling program.
      * @param notify listener that the SVN library should call on many
      *               file operations.
-     * @deprecated use notification2 instead
+     * @deprecated Use {@link #notification2(Notify2)} instead.
+     * @since 1.0
      */
     void notification(Notify notify);
 
@@ -356,6 +405,7 @@ public interface SVNClientInterface
      * with the list of the elements to be commited as input.
      * @param messageHandler    callback for entering commit messages
      *                          if this is set the message parameter is ignored.
+     * @since 1.0
      */
     void commitMessageHandler(CommitMessage messageHandler);
 
@@ -365,6 +415,9 @@ public interface SVNClientInterface
      * @param message   if path is a url, this will be the commit message.
      * @param force     delete even when there are local modifications.
      * @throws ClientException
+     * @deprecated Use {@link #remove(String[], String, boolean, boolean)}
+     *             instead.
+     * @since 1.0
      */
     void remove(String[] path, String message, boolean force)
             throws ClientException;
@@ -387,6 +440,8 @@ public interface SVNClientInterface
      * @param path      path of the file.
      * @param recurse   recurse into subdirectories
      * @throws ClientException
+     * @deprecated Use {@link #revert(String, int)} instead.
+     * @since 1.0
      */
     void revert(String path, boolean recurse) throws ClientException;
 
@@ -404,6 +459,9 @@ public interface SVNClientInterface
      * @param path      path to be added.
      * @param recurse   recurse into subdirectories
      * @throws ClientException
+     * @since 1.0
+     * @deprecated Use {@link #add(String, int, boolean, boolean, boolean)}
+     *             instead.
      */
     void add(String path, boolean recurse) throws ClientException;
 
@@ -415,6 +473,8 @@ public interface SVNClientInterface
      *                  directory, all not already managed files are added.
      * @throws ClientException
      * @since 1.2
+     * @deprecated Use {@link #add(String, int, boolean, boolean, boolean)}
+     *             instead.
      */
     void add(String path, boolean recurse, boolean force)
         throws ClientException;
@@ -443,6 +503,9 @@ public interface SVNClientInterface
      *                 latest revision.
      * @param recurse recursively update.
      * @throws ClientException
+     * @deprecated Use {@link #update(String[], Revision, int, boolean,
+     *                                boolean)} instead.
+     * @since 1.0
      */
     long update(String path, Revision revision, boolean recurse)
             throws ClientException;
@@ -456,6 +519,8 @@ public interface SVNClientInterface
      * @param recurse recursively update.
      * @param ignoreExternals if externals are ignored during update
      * @throws ClientException
+     * @deprecated Use {@link #update(String[], Revision, int, boolean,
+     *                                boolean)} instead.
      * @since 1.2
      */
     long[] update(String[] path, Revision revision, boolean recurse,
@@ -502,6 +567,8 @@ public interface SVNClientInterface
      * {@link Revision#SVN_INVALID_REVNUM} if the revision number is
      * invalid.
      * @throws ClientException
+     * @deprecated Use {@link #commit(String[], String, int, boolean, boolean,
+     *                                String)} instead.
      */
     long commit(String[] path, String message, boolean recurse)
             throws ClientException;
@@ -516,6 +583,8 @@ public interface SVNClientInterface
      * {@link Revision#SVN_INVALID_REVNUM} if the revision number is
      * invalid.
      * @throws ClientException
+     * @deprecated Use {@link #commit(String[], String, int, boolean, boolean,
+     *                                String)} instead.
      * @since 1.2
      */
     long commit(String[] path, String message, boolean recurse,
@@ -568,6 +637,8 @@ public interface SVNClientInterface
      * @param message   commit message if destPath is an url
      * @param revision  source revision
      * @throws ClientException
+     * @deprecated Use {@link #copy(CopySource[], String, String, boolean,
+     *                              boolean, boolean)} instead.
      */
     void copy(String srcPath, String destPath, String message,
               Revision revision) throws ClientException;
@@ -595,8 +666,8 @@ public interface SVNClientInterface
         throws ClientException;
 
     /**
-     * @deprecated Use move() without a Revision parameter.
-     * @see #move(String[], String, String, boolean, boolean, boolean, boolean)
+     * @deprecated Use {@link #move(String[], String, String, boolean, boolean,
+     *                              boolean, boolean)} instead.
      * @since 1.2
      */
     void move(String srcPath, String destPath, String message,
@@ -612,6 +683,8 @@ public interface SVNClientInterface
      * @param message   commit message if destPath is an url
      * @param force     even with local modifications.
      * @throws ClientException
+     * @deprecated Use {@link #move(String[], String, String, boolean, boolean,
+     *                              boolean, boolean)} instead.
      * @since 1.2
      */
     void move(String srcPath, String destPath, String message,
@@ -661,7 +734,7 @@ public interface SVNClientInterface
     /**
      * Removes the <i>conflicted</i> state on a WC path (or tree).
      * @see #resolved(String, int, int)
-     * @deprecated Use resolved(String, int) instead.
+     * @deprecated Use {@link #resolved(String, int, int)} instead.
      */
     void resolved(String path, boolean recurse) throws ClientException;
 
@@ -674,6 +747,9 @@ public interface SVNClientInterface
      * @param revision  the revsion to be exported
      * @param force     set if it is ok to overwrite local files
      * @throws ClientException
+     * @deprecated Use {@link #doExport(String, String, Revision, Revision,
+     *                                  boolean, boolean, int, String)} instead.
+     * @since 1.0
      */
     long doExport(String srcPath, String destPath, Revision revision,
                   boolean force) throws ClientException;
@@ -691,6 +767,8 @@ public interface SVNClientInterface
      * @param recurse   recurse to subdirectories
      * @param nativeEOL which EOL characters to use during export
      * @throws ClientException
+     * @deprecated Use {@link #doExport(String, String, Revision, Revision,
+     *                                  boolean, boolean, int, String)} instead.
      * @since 1.2
      */
     long doExport(String srcPath, String destPath, Revision revision,
@@ -723,6 +801,20 @@ public interface SVNClientInterface
      * @param path      the working copy path
      * @param url       the new url for the working copy
      * @param revision  the new base revision of working copy
+     * @param recurse   traverse into subdirectories
+     * @throws ClientException
+     * @deprecated Use {@link #doSwitch(String, String, Revision, boolean)}
+     *             instead.
+     * @since 1.0
+     */
+    long doSwitch(String path, String url, Revision revision, boolean recurse)
+            throws ClientException;
+
+    /**
+     * Update local copy to mirror a new url.
+     * @param path      the working copy path
+     * @param url       the new url for the working copy
+     * @param revision  the new base revision of working copy
      * @param pegRevision the revision at which to interpret <code>path</code>
      * @param depth     how deep to traverse into subdirectories
      * @param ignoreExternals whether to process externals definitions
@@ -736,17 +828,6 @@ public interface SVNClientInterface
             throws ClientException;
 
     /**
-     * Update local copy to mirror a new url.
-     * @param path      the working copy path
-     * @param url       the new url for the working copy
-     * @param revision  the new base revision of working copy
-     * @param recurse   traverse into subdirectories
-     * @throws ClientException
-     */
-    long doSwitch(String path, String url, Revision revision, boolean recurse)
-            throws ClientException;
-
-    /**
      * Import a file or directory into a repository directory  at
      * head.
      * @param path      the local path
@@ -754,6 +835,9 @@ public interface SVNClientInterface
      * @param message   the log message.
      * @param recurse   traverse into subdirectories
      * @throws ClientException
+     * @deprecated Use {@link #doImport(String, String, String, int, boolean,
+     *                                  boolean)} instead.
+     * @since 1.0
      */
     void doImport(String path, String url, String message, boolean recurse)
             throws ClientException;
@@ -797,6 +881,10 @@ public interface SVNClientInterface
      * @param force         overwrite local changes
      * @param recurse       traverse into subdirectories
      * @throws ClientException
+     * @deprecated Use {@link #merge(String, Revision, String, Revision,
+     *                               String, boolean, int, boolean,
+     *                               boolean)} instead.
+     * @since 1.0
      */
     void merge(String path1, Revision revision1, String path2,
                Revision revision2, String localPath, boolean force,
@@ -814,6 +902,9 @@ public interface SVNClientInterface
      * @param ignoreAncestry ignore if files are not related
      * @param dryRun        do not change anything
      * @throws ClientException
+     * @deprecated Use {@link #merge(String, Revision, String, Revision,
+     *                               String, boolean, int, boolean,
+     *                               boolean)} instead.
      * @since 1.2
      */
     void merge(String path1, Revision revision1, String path2,
@@ -853,6 +944,9 @@ public interface SVNClientInterface
      * @param ignoreAncestry ignore if files are not related
      * @param dryRun        do not change anything
      * @throws ClientException
+     * @deprecated Use {@link #merge(String, Revision, RevisionRange[],
+     *                               String, boolean, int, boolean,
+     *                               boolean)} instead.
      * @since 1.2
      */
     void merge(String path, Revision pegRevision, Revision revision1,
@@ -915,6 +1009,10 @@ public interface SVNClientInterface
      * @param outFileName   file name where difference are written
      * @param recurse       traverse into subdirectories
      * @throws ClientException
+     * @deprecated Use {@link #diff(String, Revision, String, Revision,
+     *                              String, int, boolean, boolean, boolean)}
+     *                              instead.
+     * @since 1.0
      */
     void diff(String target1, Revision revision1, String target2,
               Revision revision2, String outFileName, boolean recurse)
@@ -932,6 +1030,9 @@ public interface SVNClientInterface
      * @param noDiffDeleted no output on deleted files
      * @param force         diff even on binary files
      * @throws ClientException
+     * @deprecated Use {@link #diff(String, Revision, String, Revision,
+     *                              String, int, boolean, boolean, boolean)}
+     *                              instead.
      * @since 1.2
      */
     void diff(String target1, Revision revision1, String target2,
@@ -959,7 +1060,7 @@ public interface SVNClientInterface
             throws ClientException;
 
     /**
-     * Display the differences between two paths
+     * Display the differences between two paths.
      * @param target        path or url
      * @param pegRevision   revision tointerpret target
      * @param startRevision first Revision to compare
@@ -970,6 +1071,9 @@ public interface SVNClientInterface
      * @param noDiffDeleted no output on deleted files
      * @param force         diff even on binary files
      * @throws ClientException
+     * @deprecated Use {@link #diff(String, Revision, Revision, Revision,
+     *                              String, int, boolean, boolean, boolean)}
+     *                              instead.
      * @since 1.2
      */
     void diff(String target, Revision pegRevision, Revision startRevision,
@@ -978,7 +1082,7 @@ public interface SVNClientInterface
             throws ClientException;
 
     /**
-     * Display the differences between two paths
+     * Display the differences between two paths.
      * @param target        path or url
      * @param pegRevision   revision tointerpret target
      * @param startRevision first Revision to compare
@@ -1059,6 +1163,10 @@ public interface SVNClientInterface
      * Retrieves the properties of an item
      * @param path  the path of the item
      * @return array of property objects
+     * @throws ClientException
+     * @deprecated Use {@link #properties(String, Revision, Revision,
+     *                                    int, ProplistCallback)} instead.
+     * @since 1.0
      */
     PropertyData[] properties(String path) throws ClientException;
 
@@ -1067,6 +1175,9 @@ public interface SVNClientInterface
      * @param path      the path of the item
      * @param revision  the revision of the item
      * @return array of property objects
+     * @throws ClientException
+     * @deprecated Use {@link #properties(String, Revision, Revision,
+     *                                    int, ProplistCallback)} instead.
      * @since 1.2
      */
     PropertyData[] properties(String path, Revision revision)
@@ -1078,6 +1189,9 @@ public interface SVNClientInterface
      * @param revision  the revision of the item
      * @param pegRevision the revision to interpret path
      * @return array of property objects
+     * @throws ClientException
+     * @deprecated Use {@link #properties(String, Revision, Revision,
+     *                                    int, ProplistCallback)} instead.
      * @since 1.2
      */
     PropertyData[] properties(String path, Revision revision,
@@ -1092,6 +1206,7 @@ public interface SVNClientInterface
      * @param pegRevision the revision to interpret path
      * @param depth       the depth to recurse into subdirectories
      * @param callback    the callback to use to return the properties
+     * @throws ClientException
      * @since 1.5
      */
     void properties(String path, Revision revision, Revision pegRevision,
@@ -1105,6 +1220,9 @@ public interface SVNClientInterface
      * @param value     new value of the property
      * @param recurse   set property also on the subdirectories
      * @throws ClientException
+     * @deprecated Use {@link #propertySet(String, String, String, int,
+     *                                     boolean)} instead.
+     * @since 1.0
      */
     void propertySet(String path, String name, String value, boolean recurse)
             throws ClientException;
@@ -1117,6 +1235,8 @@ public interface SVNClientInterface
      * @param recurse   set property also on the subdirectories
      * @param force     do not check if the value is valid
      * @throws ClientException
+     * @deprecated Use {@link #propertySet(String, String, String, int,
+     *                                     boolean)} instead.
      * @since 1.2
      */
     void propertySet(String path, String name, String value, boolean recurse,
@@ -1130,6 +1250,9 @@ public interface SVNClientInterface
      * @param value     new value of the property
      * @param recurse   set property also on the subdirectories
      * @throws ClientException
+     * @deprecated Use {@link #propertySet(String, String, String, int,
+     *                                     boolean)} instead.
+     * @since 1.0
      */
     void propertySet(String path, String name, byte[] value, boolean recurse)
             throws ClientException;
@@ -1142,6 +1265,8 @@ public interface SVNClientInterface
      * @param recurse   set property also on the subdirectories
      * @param force     do not check if the value is valid
      * @throws ClientException
+     * @deprecated Use {@link #propertySet(String, String, String, int,
+     *                                     boolean)} instead.
      * @since 1.2
      */
     void propertySet(String path, String name, byte[] value, boolean recurse,
@@ -1169,6 +1294,8 @@ public interface SVNClientInterface
      * @param name      name of the property
      * @param recurse   remove the property also on subdirectories
      * @throws ClientException
+     * @deprecated Use {@link #propertyRemove(String, String, int)} instead.
+     * @since 1.0
      */
     void propertyRemove(String path, String name, boolean recurse)
             throws ClientException;
@@ -1191,6 +1318,9 @@ public interface SVNClientInterface
      * @param value     new value of the property
      * @param recurse   set property also on the subdirectories
      * @throws ClientException
+     * @deprecated Use {@link #propertyCreate(String, String, String, int,
+     *                                        boolean)} instead.
+     * @since 1.0
      */
     void propertyCreate(String path, String name, String value,
                         boolean recurse)
@@ -1204,6 +1334,8 @@ public interface SVNClientInterface
      * @param recurse   set property also on the subdirectories
      * @param force     do not check if the value is valid
      * @throws ClientException
+     * @deprecated Use {@link #propertyCreate(String, String, String, int,
+     *                                        boolean)} instead.
      * @since 1.2
      */
     void propertyCreate(String path, String name, String value,
@@ -1217,6 +1349,9 @@ public interface SVNClientInterface
      * @param value     new value of the property
      * @param recurse   set property also on the subdirectories
      * @throws ClientException
+     * @deprecated Use {@link #propertyCreate(String, String, String, int,
+     *                                        boolean)} instead.
+     * @since 1.0
      */
     void propertyCreate(String path, String name, byte[] value,
                         boolean recurse)
@@ -1230,6 +1365,8 @@ public interface SVNClientInterface
      * @param recurse   set property also on the subdirectories
      * @param force     do not check if the value is valid
      * @throws ClientException
+     * @deprecated Use {@link #propertyCreate(String, String, String, int,
+     *                                        boolean)} instead.
      * @since 1.2
      */
     void propertyCreate(String path, String name, byte[] value,
@@ -1258,6 +1395,7 @@ public interface SVNClientInterface
      * @param rev       revision to retrieve
      * @return the Property
      * @throws ClientException
+     * @since 1.0
      */
     PropertyData revProperty(String path, String name, Revision rev)
             throws ClientException;
@@ -1288,16 +1426,18 @@ public interface SVNClientInterface
             throws ClientException;
 
     /**
-     * Retrieve one property of one iten
+     * Retrieve one property of one item
      * @param path      path of the item
      * @param name      name of property
      * @return the Property
      * @throws ClientException
+     * @deprecated Use {@link #propertyGet(String, String, Revision)} instead.
+     * @since 1.0
      */
     PropertyData propertyGet(String path, String name) throws ClientException;
 
     /**
-     * Retrieve one property of one iten
+     * Retrieve one property of one item
      * @param path      path of the item
      * @param name      name of property
      * @param revision  revision of the item
@@ -1309,7 +1449,7 @@ public interface SVNClientInterface
             throws ClientException;
 
     /**
-     * Retrieve one property of one iten
+     * Retrieve one property of one item
      * @param path      path of the item
      * @param name      name of property
      * @param revision  revision of the item
@@ -1323,16 +1463,19 @@ public interface SVNClientInterface
             throws ClientException;
 
     /**
-     *  Retrieve the content of a file
+     * Retrieve the content of a file
      * @param path      the path of the file
      * @param revision  the revision to retrieve
      * @return  the content as byte array
      * @throws ClientException
+     * @deprecated Use {@link #fileContent(String, Revision, Revision)}
+     *             instead.
+     * @since 1.0
      */
     byte[] fileContent(String path, Revision revision) throws ClientException;
 
     /**
-     *  Retrieve the content of a file
+     * Retrieve the content of a file
      * @param path      the path of the file
      * @param revision  the revision to retrieve
      * @param pegRevision the revision to interpret path
@@ -1355,6 +1498,7 @@ public interface SVNClientInterface
      * @throws ClientException
      * @see java.io.PipedOutputStream
      * @see java.io.PipedInputStream
+     * @since 1.0
      */
     void streamFileContent(String path, Revision revision, Revision pegRevision,
                            int bufferSize, OutputStream stream)
@@ -1367,6 +1511,7 @@ public interface SVNClientInterface
      * @param path      working copy path
      * @param recurse   recurse into subdirectories
      * @throws ClientException
+     * @since 1.0
      */
     void relocate(String from, String to, String path, boolean recurse)
             throws ClientException;
@@ -1380,6 +1525,10 @@ public interface SVNClientInterface
      * @param revisionEnd   the last revision to show
      * @return  the content together with author and revision of last change
      * @throws ClientException
+     * @deprecated Use {@link #blame(String, Revision, Revision, Revision,
+     *                               boolean, boolean, BlameCallback2)}
+     *                               instead.
+     * @since 1.0
      */
     byte[] blame(String path, Revision revisionStart, Revision revisionEnd)
             throws ClientException;
@@ -1393,6 +1542,10 @@ public interface SVNClientInterface
      * @param callback      callback to receive the file content and the other
      *                      information
      * @throws ClientException
+     * @deprecated Use {@link #blame(String, Revision, Revision, Revision,
+     *                               boolean, boolean, BlameCallback2)}
+     *                               instead.
+     * @since 1.0
      */
     void blame(String path, Revision revisionStart, Revision revisionEnd,
                BlameCallback callback) throws ClientException;
@@ -1407,6 +1560,9 @@ public interface SVNClientInterface
      * @param callback      callback to receive the file content and the other
      *                      information
      * @throws ClientException
+     * @deprecated Use {@link #blame(String, Revision, Revision, Revision,
+     *                               boolean, boolean, BlameCallback2)}
+     *                               instead.
      * @since 1.2
      */
     void blame(String path, Revision pegRevision, Revision revisionStart,
@@ -1443,6 +1599,7 @@ public interface SVNClientInterface
      * @param configDir Path of the directory, or <code>null</code>
      * for the platform's default.
      * @throws ClientException
+     * @since 1.0
      */
     void setConfigDirectory(String configDir) throws ClientException;
 
@@ -1450,12 +1607,14 @@ public interface SVNClientInterface
      * Get the configuration directory
      * @return  the directory
      * @throws ClientException
+     * @since 1.0
      */
     String getConfigDirectory() throws ClientException;
 
     /**
      * cancel the active operation
      * @throws ClientException
+     * @since 1.0
      */
     void cancelOperation() throws ClientException;
 
@@ -1464,6 +1623,9 @@ public interface SVNClientInterface
      * @param path  path of the item
      * @return      the information object
      * @throws ClientException
+     * @deprecated Use {@link #info2(String, Revision, Revision, int,
+     *                               InfoCallback)} instead.
+     * @since 1.0
      */
     Info info(String path) throws ClientException;
 
@@ -1471,6 +1633,7 @@ public interface SVNClientInterface
      * Add paths to a changelist
      * @param paths      paths to add to the changelist
      * @param changelist changelist name
+     * @since 1.5
      */
     void addToChangelist(String[] paths, String changelist)
             throws ClientException;
@@ -1479,6 +1642,7 @@ public interface SVNClientInterface
      * Remove paths from a changelist
      * @param paths      paths to remove from the changelist
      * @param changelist changelist name
+     * @since 1.5
      */
     void removeFromChangelist(String[] paths, String changelist)
             throws ClientException;
@@ -1487,6 +1651,7 @@ public interface SVNClientInterface
      * Recursively get the paths which belong to a changelist
      * @param changelist  changelist name
      * @param rootPath    the wc path under which to check
+     * @since 1.5
      */
     String[] getChangelist(String changelist, String rootPath)
             throws ClientException;
@@ -1519,6 +1684,8 @@ public interface SVNClientInterface
      * @param pegRevision   the revision to interpret pathOrUrl
      * @param recurse       flag if to recurse, if the item is a directory
      * @return              the information objects
+     * @deprecated Use {@link #info2(String, Revision, Revision, int,
+     *                               InfoCallback)} instead.
      * @since 1.2
      */
     Info2[] info2(String pathOrUrl, Revision revision, Revision pegRevision,
@@ -1539,7 +1706,7 @@ public interface SVNClientInterface
         throws ClientException;
 
     /**
-     *  Produce a compact "version number" for a working copy
+     * Produce a compact "version number" for a working copy
      * @param path          path of the working copy
      * @param trailUrl      to detect switches of the whole working copy
      * @param lastChanged   last changed rather than current revisions
