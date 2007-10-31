@@ -333,7 +333,7 @@ I.    INTRODUCTION
         (If you link against both, you can configure which one is used
         in your ~/.subversion/servers configuration file.)
 
-        a.  Neon library 0.25 or 0.26 (http://www.webdav.org/neon/)
+        a.  Neon library 0.25, 0.26 or 0.27 (http://www.webdav.org/neon/)
 
             The Neon library allows a Subversion client to interact
             with remote repositories over the Internet via a WebDAV
@@ -343,7 +343,8 @@ I.    INTRODUCTION
             dependencies package, and it can also be obtained from:
 
                http://www.webdav.org/neon/neon-0.25.5.tar.gz
-               http://www.webdav.org/neon/neon-0.26.1.tar.gz
+               http://www.webdav.org/neon/neon-0.26.4.tar.gz
+               http://www.webdav.org/neon/neon-0.27.2.tar.gz
 
             Building Neon inside the subversion build:
 
