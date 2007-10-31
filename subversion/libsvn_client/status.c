@@ -381,12 +381,13 @@ svn_client_status3(svn_revnum_t *result_rev,
      svn_wc_status_unversioned, otherwise we'll just remove the status
      item altogether.
 
-     We only descend into an external if depth==svn_depth_infinity.
-     However, there are conceivable behaviors that would involve
-     descending under other circumstances; thus, we pass depth anyway,
-     so the code will DTRT if we change the conditional in the future.
+     We only descend into an external if depth is svn_depth_infinity or
+     svn_depth_unknown.  However, there are conceivable behaviors that
+     would involve descending under other circumstances; thus, we pass
+     depth anyway, so the code will DTRT if we change the conditional
+     in the future.
   */
-  if ((depth == svn_depth_infinity) && (! ignore_externals))
+  if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
     SVN_ERR(svn_client__do_external_status(traversal_info, status_func,
                                            status_baton, depth, get_all,
                                            update, no_ignore, ctx, pool));
