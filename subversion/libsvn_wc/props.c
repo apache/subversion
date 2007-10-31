@@ -1301,6 +1301,8 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
 
   else  /* base and old are both non-NULL */
     {
+      const svn_string_t *the_val;
+
       if (! svn_string_compare(base_val, old_val))
         {
           /* What happens if 'base' and 'old' don't match up?  In an
@@ -1310,25 +1312,29 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
              is busy changing the property from a value of "cat" to
              "dog", but the incoming propchange wants to change the
              same property value from "red" to "green".  Total context
-             mismatch.  There's no way to represent this sort of
-             conflict using "base"/"mine"/"theirs" files, so we don't
-             bother to call the interactive callback at all... we just
-             mark the conflict and let the .prej file explain the
-             failed hunk. */
-          *conflict_remains = TRUE;
-          return SVN_NO_ERROR;
+             mismatch.
+
+             HOWEVER: we can still pass one of the two base values as
+             'base_file' to the callback anyway.  It's still useful to
+             present the working and new values to the user to
+             compare. */
+
+          if (working_val && svn_string_compare(base_val, working_val))
+            the_val = old_val;
+          else
+            the_val = base_val;
+        }
+      else
+        {
+          the_val = base_val;
         }
 
-      /* 'base' and 'old' are identical, so we're in really good
-         shape.  Not only can we create a base_file to give to the
-         calback, we can attempt to give it a merged_file containing
-         conflict markers. */
       SVN_ERR(svn_io_open_unique_file2(&base_file, &base_path,
                                        path, ".tmp",
                                        svn_io_file_del_on_pool_cleanup,
                                        filepool));
-      SVN_ERR(svn_io_file_write_full(base_file, base_val->data,
-                                     base_val->len, NULL, filepool));
+      SVN_ERR(svn_io_file_write_full(base_file, the_val->data,
+                                     the_val->len, NULL, filepool));
       SVN_ERR(svn_io_file_close(base_file, filepool));
       cdesc->base_file = base_path;
 
@@ -1345,10 +1351,10 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
                                            filepool));
           mergestream = svn_stream_from_aprfile2(merged_file, FALSE,
                                                  filepool);
-          SVN_ERR(svn_diff_mem_string_diff3(&diff, base_val, working_val,
+          SVN_ERR(svn_diff_mem_string_diff3(&diff, the_val, working_val,
                                             new_val, options, filepool));
           SVN_ERR(svn_diff_mem_string_output_merge
-                  (mergestream, diff, base_val, working_val, new_val,
+                  (mergestream, diff, the_val, working_val, new_val,
                    NULL, NULL, NULL, NULL, FALSE, FALSE, filepool));
           svn_stream_close(mergestream);
 
