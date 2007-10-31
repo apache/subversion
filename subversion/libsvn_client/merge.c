@@ -2546,7 +2546,7 @@ do_single_file_merge(const char *url1,
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   svn_wc_notify_state_t text_state = svn_wc_notify_state_unknown;
   svn_client_ctx_t *ctx = merge_b->ctx;
-  const char *rel_path;
+  const char *mergeinfo_path;
   svn_merge_range_t range;
   apr_hash_t *target_mergeinfo;
   const svn_wc_entry_t *entry;
@@ -2554,6 +2554,7 @@ do_single_file_merge(const char *url1,
   svn_boolean_t indirect = FALSE, is_replace = FALSE;
   apr_pool_t *subpool;
   svn_boolean_t is_rollback = (revision1 > revision2);
+  const char *primary_url = is_rollback ? url1 : url2;
 
   /* Ensure that the adm_access we're playing with is our TARGET_WCPATH's
      parent, as required by some of underlying helper functions. */
@@ -2630,13 +2631,13 @@ do_single_file_merge(const char *url1,
       /* Reparent ra_session1 back to URL1. */
       SVN_ERR(svn_ra_reparent(merge_b->ra_session1, url1, pool));
 
-      SVN_ERR(svn_client__path_relative_to_root(&rel_path, url1, NULL,
-                                                merge_b->ra_session1,
+      SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path, primary_url, 
+                                                NULL, merge_b->ra_session1,
                                                 adm_access, pool));
       SVN_ERR(calculate_remaining_ranges(&remaining_ranges, &range,
                                          merge_b->same_repos,
                                          target_mergeinfo, is_rollback,
-                                         rel_path, url1,
+                                         mergeinfo_path, primary_url,
                                          merge_b->ra_session1,
                                          entry, ctx, pool));
     }
@@ -2780,7 +2781,7 @@ do_single_file_merge(const char *url1,
                                                         target_mergeinfo,
                                                         adm_access, subpool));
 
-              SVN_ERR(update_wc_mergeinfo(target_wcpath, entry, rel_path,
+              SVN_ERR(update_wc_mergeinfo(target_wcpath, entry, mergeinfo_path,
                                           merges, is_rollback, adm_access,
                                           ctx, subpool));
             }

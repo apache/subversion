@@ -8435,10 +8435,12 @@ def merge_old_and_new_revs_from_renamed_dir(sbox):
   saved_cwd = os.getcwd()
   os.chdir(svntest.main.work_dir)
 
-  # Merge /A_MOVED to /A_COPY
+  # Merge /A_MOVED to /A_COPY - this happens in multiple passes
+  # because /A_MOVED has renames in its history between the boundaries
+  # of the requested merge range.
   expected_output = wc.State(short_A_COPY, {
     ''   : Item(status=' G'),
-    'mu' : Item(status='U '),
+    'mu' : Item(status='G '), # mu gets touched twice
     })
   expected_status = wc.State(short_A_COPY, {
     ''         : Item(status=' M', wc_rev=4),
@@ -8462,7 +8464,7 @@ def merge_old_and_new_revs_from_renamed_dir(sbox):
     'D/H/psi'  : Item(status='  ', wc_rev=4),
     })
   expected_disk = wc.State('', {
-    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A:1-3'}),
+    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A:1-3\n/A_MOVED:4-5\n'}),
     'mu'       : Item("This is 'mu' in A_MOVED.\n"),
     'C'        : Item(),
     'D'        : Item(),
@@ -8483,13 +8485,17 @@ def merge_old_and_new_revs_from_renamed_dir(sbox):
     'D/H/psi'  : Item("This is the file 'psi'.\n"),
     })
   expected_skip = wc.State(short_A_COPY, {})
+
+  ### Disabling dry_run mode because currently it can't handle the way
+  ### 'mu' gets textually modified in multiple passes.
   svntest.actions.run_and_verify_merge(short_A_COPY, '2', '5',
                                        A_MOVED_url,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None, None, 1)
+                                       None, None, None, None, None,
+                                       True, False)
   os.chdir(saved_cwd)
 
 def merge_with_child_having_different_rev_ranges_to_merge(sbox):
@@ -8782,13 +8788,19 @@ def merge_old_and_new_revs_from_renamed_file(sbox):
                                         expected_status, None, None, None,
                                         None, None, wc_dir)
 
-  # Merge A/mu_MOVED to A/mu_COPY
-  svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(None, 'UG   '+
-                                                           mu_COPY_path +
-                                                           '\n'),
+  # Merge A/mu_MOVED to A/mu_COPY - this happens in multiple passes
+  # because A/mu_MOVED has renames in its history between the
+  # boundaries of the requested merge range.
+  expected_output = expected_merge_output([[2,3],[4,5]],
+                                          ['U    %s\n' % (mu_COPY_path),
+                                           'GG   %s\n' % (mu_COPY_path)])
+  svntest.actions.run_and_verify_svn(None, expected_output,
                                      [], 'merge', '-r', '1:5',
                                      mu_MOVED_url,
+                                     mu_COPY_path)
+  svntest.actions.run_and_verify_svn(None, ['/A/mu:1-3\n',
+                                            '/A/mu_MOVED:4-5\n'],
+                                     [], 'propget', SVN_PROP_MERGE_INFO,
                                      mu_COPY_path)
 
 
