@@ -9245,6 +9245,58 @@ def merge_target_with_non_inheritable_mergeinfo(sbox):
 
   os.chdir(saved_cwd)
 
+def self_reverse_merge(sbox):
+  "revert a commit on a target"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make changes to the working copy
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  svntest.main.file_append(mu_path, 'appended mu text')
+
+  # Created expected output tree for 'svn ci'
+  expected_output = wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    })
+
+  # Create expected status tree; all local revisions should be at 1,
+  # but mu should be at revision 2.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', wc_rev=2)
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+  expected_output = wc.State(wc_dir, {
+    'A/mu' : Item(status='U ')
+    })
+  expected_skip = wc.State(wc_dir, { })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', wc_rev=2, status='M ')
+  svntest.actions.run_and_verify_merge(wc_dir, '2', '1', sbox.repo_url,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       None, None, None, None, None, 1, 1)
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
+  # record dummy self mergeinfo to test the fact that self-reversal should work
+  # irrespective of mergeinfo.
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-c', '1',
+                                     '--record-only', sbox.repo_url, wc_dir)
+  # Bad svntest.main.greek_state does not have '', so adding it explicitly.
+  expected_disk.add({'' : Item(props={SVN_PROP_MERGE_INFO : '/:1'})})
+  expected_status.tweak('', status = ' M')
+  svntest.actions.run_and_verify_merge(wc_dir, '2', '1', sbox.repo_url,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       None, None, None, None, None, 1, 1)
+
 ########################################################################
 # Run the tests
 
@@ -9328,6 +9380,7 @@ test_list = [ None,
               propchange_of_subdir_raises_conflict,
               reverse_merge_prop_add_on_child,
               XFail(merge_target_with_non_inheritable_mergeinfo),
+              XFail(self_reverse_merge),
              ]
 
 if __name__ == '__main__':
