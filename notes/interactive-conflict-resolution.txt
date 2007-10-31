@@ -38,7 +38,7 @@ So your conflict-callback is going to have be careful of NULL values:
   value, then there's no way to do a 3-way merge.  (For example,
   suppose one agent is trying to change property "color" from "red" to
   "green", and the other agent is trying to change the same "color"
-  property from "yellow" to "blue".)  In this case, t conflict
+  property from "yellow" to "blue".)  In this case, the conflict
   callback isn't invoked at all; the property is marked (C)onflicted
   and a .prej file is created to describe the contextual mismatch.
 
