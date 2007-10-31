@@ -141,8 +141,8 @@ class GeneratorBase(gen_base.GeneratorBase):
     self._find_bdb()
 
   def _find_bdb(self):
-    "Find the Berkley DB library and version"
-    for ver in ("45", "44", "43", "42", "41", "40"):
+    "Find the Berkeley DB library and version"
+    for ver in ("46", "45", "44", "43", "42", "41", "40"):
       lib = "libdb" + ver
       path = os.path.join(self.bdb_path, "lib")
       if os.path.exists(os.path.join(path, lib + ".lib")):
