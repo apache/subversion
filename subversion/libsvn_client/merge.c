@@ -57,13 +57,6 @@
 
 /* Sanity check -- ensure that we have valid revisions to look at. */
 #define ENSURE_VALID_REVISION_KINDS(rev1_kind, rev2_kind) \
-  if ((rev1_kind == svn_opt_revision_unspecified) \
-      || (rev2_kind == svn_opt_revision_unspecified)) \
-    { \
-      return svn_error_create \
-        (SVN_ERR_CLIENT_BAD_REVISION, NULL, \
-         _("Not all required revisions are specified")); \
-    }
 
 
 /* Return SVN_ERR_UNSUPPORTED_FEATURE if URL's scheme does not
@@ -1535,6 +1528,12 @@ grok_range_info_from_opt_revisions(svn_merge_range_t *range,
                                    apr_pool_t *pool)
 {
   svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
+
+  /* Sanity-check our input. */
+  if ((revision1->kind == svn_opt_revision_unspecified)
+      || (revision2->kind == svn_opt_revision_unspecified))
+    return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
+                            _("Not all required revisions are specified"));
 
   /* Resolve the revision numbers. */
   SVN_ERR(svn_client__get_revision_number
@@ -4127,7 +4126,6 @@ svn_client_merge3(const char *source1,
                               "mergeinfo modification"));
 
   /* Transform opt revisions to actual revision numbers. */
-  ENSURE_VALID_REVISION_KINDS(revision1->kind, revision2->kind);
   SVN_ERR(grok_range_info_from_opt_revisions(&range, &merge_type, 
                                              notify_b.sources_related,
                                              merge_cmd_baton.ra_session1,
