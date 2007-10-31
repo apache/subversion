@@ -1285,7 +1285,8 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
                        APR_HASH_KEY_STRING, skipped_path);
         }
     }
-  else if (!(notify_b->is_single_file_merge) && is_operative_notification)
+  else if (!(notify_b->is_single_file_merge)
+           && notify_b->nbr_operative_notifications == 1)
     {
       svn_wc_notify_t *notify_merge_begin;
       notify_merge_begin = svn_wc_create_notify(notify_b->merge_b->target,
