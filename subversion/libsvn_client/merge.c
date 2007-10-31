@@ -3196,9 +3196,9 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
 /* Helper for discover_and_merge_children()
 
    Perform a depth first walk of the working copy tree rooted at
-   TARGET (with the corresponding ENTRY).  Create an
-   svn_client__merge_path_t for any path which meets one or more of
-   the following criteria:
+   MERGE_CMD_BATON->TARGET (with the corresponding ENTRY).  Create an
+   svn_client__merge_path_t * for any path which meets one or more of the
+   following criteria:
 
      1) Path has working svn:mergeinfo from corresponding merge source.
      2) Path is switched.
@@ -3214,19 +3214,22 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
         a sparse checkout.
      6) Path is absent from disk due to an authz restriction.
      7) Path is scheduled for deletion.
+     8) Path is equal to MERGE_CMD_BATON->TARGET.
 
-   Criteria 4 and 5 are handled by
-   'insert_parent_and_siblings_of_switched_or_absent_entry'.  Store
-   the svn_client__merge_path_t's in *CHILDREN_WITH_MERGEINFO.
-   *CHILDREN_WITH_MERGEINFO is guaranteed to be in depth-first order
-   based on the svn_client__merge_path_t *s path member.  Cascade
-   MERGE_SRC_CANON_PATH. 
-   *CHILDREN_WITH_MERGEINFO is guaranteed to be non-empty with its first 
-   member being 'target' itself. */
+   Store the svn_client__merge_path_t *'s in *CHILDREN_WITH_MERGEINFO in
+   depth-first order based on the svn_client__merge_path_t *s path member as
+   sorted by svn_path_compare_paths().
+   
+   Note: Since the walk is rooted at MERGE_CMD_BATON->TARGET, the latter is
+   guaranteed to be in *CHILDREN_WITH_MERGEINFO and due to the depth-first
+   ordering it is guaranteed to be the first element in
+   *CHILDREN_WITH_MERGEINFO.
+
+   Cascade MERGE_SRC_CANON_PATH. */
 static svn_error_t *
 get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                     struct merge_cmd_baton *merge_cmd_baton,
-                    const char *target, const char* merge_src_canon_path,
+                    const char* merge_src_canon_path,
                     const svn_wc_entry_t *entry,
                     svn_wc_adm_access_t *adm_access,
                     svn_client_ctx_t *ctx,
@@ -3234,12 +3237,13 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                     apr_pool_t *pool)
 {
   int i;
+  svn_client__merge_path_t *target_item;
   apr_pool_t *iterpool;
   static const svn_wc_entry_callbacks2_t walk_callbacks =
     { get_mergeinfo_walk_cb, get_mergeinfo_error_handler };
   struct get_mergeinfo_walk_baton wb =
     { adm_access, children_with_mergeinfo, 
-      merge_src_canon_path, target, depth};
+      merge_src_canon_path, merge_cmd_baton->target, depth};
 
   /* Cover cases 1), 2), and 6) by walking the WC to get all paths which have
      mergeinfo and/or are switched or are absent from disk. */
@@ -3374,53 +3378,38 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
         adm_access, iterpool));
     } /* i < children_with_mergeinfo->nelts */
 
-  /* Push default target */
-  if (children_with_mergeinfo->nelts == 0)
+  /* Case 8 Make sure MERGE_CMD_BATON->TARGET is present in
+     *CHILDREN_WITH_MERGEINFO. */
+  target_item = NULL;
+  if (children_with_mergeinfo->nelts)
     {
-      svn_client__merge_path_t *item = 
-                      apr_palloc(children_with_mergeinfo->pool, sizeof(*item));
-      item->path = apr_pstrdup(children_with_mergeinfo->pool,
-                               merge_cmd_baton->target);
-      item->missing_child = (entry->depth == svn_depth_empty 
-                             || entry->depth == svn_depth_files)
-                             ? TRUE : FALSE;
-      item->switched = FALSE;
-      item->absent = FALSE;
-      item->propval = NULL;
-      item->has_noninheritable = FALSE;
-      if (item->missing_child)
-        item->has_noninheritable = TRUE;
-      SVN_ERR(svn_wc_prop_get(&(item->propval), SVN_PROP_MERGE_INFO,
-                              merge_cmd_baton->target, adm_access,
-                              children_with_mergeinfo->pool));
-      APR_ARRAY_PUSH(children_with_mergeinfo,
-                     svn_client__merge_path_t *) = item;
+      svn_client__merge_path_t *possible_target_item =
+        APR_ARRAY_IDX(children_with_mergeinfo, 0, svn_client__merge_path_t *);
+      if (strcmp(possible_target_item->path, merge_cmd_baton->target) == 0)
+        target_item = possible_target_item;
     }
-  else
+  if (!target_item)
     {
-      /* See whether children_with_mergeinfo has target itself,
-         if it does not add the same if it has indirect mergeinfo */
-      svn_client__merge_path_t *item = 
-         APR_ARRAY_IDX(children_with_mergeinfo, 0, svn_client__merge_path_t *);
-      if (strcmp(item->path, merge_cmd_baton->target) != 0)
-        {
-          svn_client__merge_path_t *target_item = 
-               apr_palloc(children_with_mergeinfo->pool, sizeof(*target_item));
-          target_item->path = apr_pstrdup(children_with_mergeinfo->pool,
-                                          merge_cmd_baton->target);
-          target_item->missing_child = (entry->depth == svn_depth_empty
-                                        || entry->depth == svn_depth_files)
-                                        ? TRUE : FALSE;
-          target_item->switched = FALSE;
-          target_item->absent = FALSE;
-          target_item->propval = NULL;
-          target_item->has_noninheritable = FALSE;
-          target_item->scheduled_for_deletion = FALSE;
-          if (target_item->missing_child)
-            target_item->has_noninheritable = TRUE;
-          insert_child_to_merge(children_with_mergeinfo, target_item, 0);
-        }
+      target_item = apr_palloc(children_with_mergeinfo->pool,
+                               sizeof(*target_item));
+      target_item->path = apr_pstrdup(children_with_mergeinfo->pool,
+                                      merge_cmd_baton->target);
+      target_item->missing_child = (entry->depth == svn_depth_empty
+                                    || entry->depth == svn_depth_files)
+                                    ? TRUE : FALSE;
+      target_item->switched = FALSE;
+      target_item->has_noninheritable = FALSE;
+      target_item->absent = FALSE;
+      target_item->propval = NULL;
+      target_item->remaining_ranges = NULL;
+      target_item->pre_merge_mergeinfo = NULL;
+      target_item->scheduled_for_deletion = FALSE;
+      target_item->indirect_mergeinfo = FALSE;
+      if (target_item->missing_child)
+        target_item->has_noninheritable = TRUE;
+      insert_child_to_merge(children_with_mergeinfo, target_item, 0);
     }
+
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
@@ -3496,7 +3485,7 @@ discover_and_merge_children(const svn_wc_entry_t *parent_entry,
   children_with_mergeinfo = 
     apr_array_make(pool, 0, sizeof(svn_client__merge_path_t *));
   SVN_ERR(get_mergeinfo_paths(children_with_mergeinfo,
-                              merge_b, merge_b->target,
+                              merge_b,
                               parent_merge_src_canon_path,
                               parent_entry, adm_access,
                               merge_b->ctx, depth, pool));
