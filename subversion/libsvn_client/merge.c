@@ -3488,7 +3488,7 @@ discover_and_merge_children(const char *url1,
   svn_client__merge_path_t *target_merge_path;
   svn_boolean_t is_rollback = (rev1 > rev2);
   const char *primary_url = is_rollback ? url1 : url2;
-  const char *mergeinfo_url;
+  const char *mergeinfo_path;
 
   /* Fill CHILDREN_WITH_MERGEINFO with child paths (const
      svn_client__merge_path_t *) which might have intersecting merges
@@ -3500,10 +3500,10 @@ discover_and_merge_children(const char *url1,
                                                merge_b->ctx, pool));
   children_with_mergeinfo = apr_array_make(pool, 0, 
                                            sizeof(svn_client__merge_path_t *));
-  SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_url, primary_url,
+  SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path, primary_url,
                                             NULL, ra_session, NULL, pool));
   SVN_ERR(get_mergeinfo_paths(children_with_mergeinfo, merge_b, 
-                              merge_b->target, mergeinfo_url,
+                              merge_b->target, mergeinfo_path,
                               parent_entry, adm_access,
                               merge_b->ctx, depth, pool));
   notify_b->children_with_mergeinfo = children_with_mergeinfo;
@@ -3526,7 +3526,7 @@ discover_and_merge_children(const char *url1,
      in CHILDREN_WITH_MERGEINFO, picks the smallest end_rev (or
      biggest, in the rollback case).  */
   SVN_ERR(populate_remaining_ranges(children_with_mergeinfo, primary_url, 
-                                    ra_session, &range, mergeinfo_url,
+                                    ra_session, &range, mergeinfo_path,
                                     is_rollback, adm_access, merge_b));
   if (is_rollback)
     end_rev = get_farthest_end_rev(children_with_mergeinfo);
@@ -3623,7 +3623,7 @@ discover_and_merge_children(const char *url1,
       SVN_ERR(record_mergeinfo_on_merged_children(depth, adm_access, notify_b,
                                                   merge_b, iterpool));
       SVN_ERR(update_wc_mergeinfo(merge_b->target, parent_entry,
-                                  mergeinfo_url, merges,
+                                  mergeinfo_path, merges,
                                   is_rollback, adm_access, merge_b->ctx,
                                   iterpool));
       for (i = 0; i < children_with_mergeinfo->nelts; i++)
@@ -3642,7 +3642,7 @@ discover_and_merge_children(const char *url1,
           else
             child_repos_path = child->path +
               (merge_target_len ? merge_target_len + 1 : 0);
-          child_merge_src_canon_path = svn_path_join(mergeinfo_url, 
+          child_merge_src_canon_path = svn_path_join(mergeinfo_path, 
                                                      child_repos_path, 
                                                      iterpool);
           SVN_ERR(svn_wc__entry_versioned(&child_entry, child->path, 
@@ -4396,11 +4396,13 @@ svn_client_merge_peg3(const char *source,
 
       if (merge_cmd_baton.same_repos && record_only)
         {
+          const char *merge_source_url = (rev1 < rev2) ? URL2 : URL1;
           svn_merge_range_t range;
           range.start = rev1;
           range.end = rev2;
           range.inheritable = TRUE;
-          return record_mergeinfo_for_record_only_merge(URL2, &range, 
+          return record_mergeinfo_for_record_only_merge(merge_source_url, 
+                                                        &range,
                                                         entry, adm_access, 
                                                         &merge_cmd_baton,
                                                         subpool);
@@ -4440,7 +4442,7 @@ svn_client_merge_peg3(const char *source,
         }
 
       /* The final mergeinfo on TARGET_WCPATH may itself elide. */
-      if (!dry_run && merge_cmd_baton.operative_merge)
+      if ((! dry_run) && merge_cmd_baton.operative_merge)
         SVN_ERR(svn_client__elide_mergeinfo(target_wcpath, NULL, entry,
                                             adm_access, ctx, pool));
     }
