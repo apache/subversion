@@ -120,6 +120,8 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     to_add = ['test_delta_driver_commit', 'test_delta_driver_commit2']
     to_dir_prop = ['trunk/dir1/dir3', 'test_delta_driver_commit2.d']
     to_file_prop = ['trunk/README2.txt', 'test_delta_driver_commit2']
+    ### FIXME: The "set" class exists only in Python 2.4+.  Reference
+    ### to it causes a NameError in older versions of Python.
     all_paths = set(to_delete + to_mkdir + to_add + to_dir_prop + to_file_prop)
     # base revision for the commit
     revision = fs.youngest_rev(self.fs)
