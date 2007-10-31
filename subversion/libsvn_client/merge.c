@@ -2938,6 +2938,9 @@ get_mergeinfo_walk_cb(const char *path,
           && (entry->depth == svn_depth_empty
               || entry->depth == svn_depth_files))
       child->has_noninheritable = TRUE;
+      child->remaining_ranges = NULL;
+      child->pre_merge_mergeinfo = NULL;
+      child->indirect_mergeinfo = FALSE;
 
       APR_ARRAY_PUSH(wb->children_with_mergeinfo, 
                      svn_client__merge_path_t *) = child;
@@ -3147,6 +3150,9 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
       parent->absent = FALSE;
       parent->propval = NULL;
       parent->scheduled_for_deletion = FALSE;
+      parent->remaining_ranges = NULL;
+      parent->pre_merge_mergeinfo = NULL;
+      parent->indirect_mergeinfo = FALSE;
       /* Insert PARENT into CHILDREN_WITH_MERGEINFO. */
       insert_child_to_merge(children_with_mergeinfo, parent, parent_index);
       /* Increment for loop index so we don't process the inserted element. */
@@ -3187,6 +3193,9 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
           sibling_of_missing->absent = FALSE;
           sibling_of_missing->propval = NULL;
           sibling_of_missing->scheduled_for_deletion = FALSE;
+          sibling_of_missing->remaining_ranges = NULL;
+          sibling_of_missing->pre_merge_mergeinfo = NULL;
+          sibling_of_missing->indirect_mergeinfo = FALSE;
           insert_child_to_merge(children_with_mergeinfo, sibling_of_missing,
                                 insert_index);
         }
@@ -3350,6 +3359,9 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                   child_of_noninheritable->absent = FALSE;
                   child_of_noninheritable->propval = NULL;
                   child_of_noninheritable->scheduled_for_deletion = FALSE;
+                  child_of_noninheritable->remaining_ranges = NULL;
+                  child_of_noninheritable->pre_merge_mergeinfo = NULL;
+                  child_of_noninheritable->indirect_mergeinfo = FALSE;
                   insert_child_to_merge(children_with_mergeinfo,
                                         child_of_noninheritable,
                                         insert_index);
