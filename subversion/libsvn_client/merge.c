@@ -1114,15 +1114,27 @@ filter_merged_revisions(apr_array_header_t **remaining_ranges,
     {
       if (is_rollback)
         {
-          /* Return the intersection of the revs which are both
-             already represented by the WC and are requested for
-             revert.  The revert range and will need to be reversed
-             for our APIs to work properly, as will the output for the
-             revert to work properly. */
-          SVN_ERR(svn_rangelist_reverse(requested_merge, pool));
-          SVN_ERR(svn_rangelist_intersect(remaining_ranges, target_rangelist,
-                                          requested_merge, pool));
-          SVN_ERR(svn_rangelist_reverse(*remaining_ranges, pool));
+          const char *target_rel_path;
+          /* For merge from the source same as that of target's repo url,
+           * allow repeat reverse merge as commit on a target itself 
+           * implicitly means a forward merge from target to target. */
+          if (strcmp(entry->url, entry->repos) == 0)
+            target_rel_path = "/";
+          else
+            target_rel_path = entry->url + strlen(entry->repos);
+          if (strcmp(target_rel_path, rel_path) != 0)
+            {
+              /* Return the intersection of the revs which are both
+                 already represented by the WC and are requested for
+                 revert.  The revert range and will need to be reversed
+                 for our APIs to work properly, as will the output for the
+                 revert to work properly. */
+              SVN_ERR(svn_rangelist_reverse(requested_merge, pool));
+              SVN_ERR(svn_rangelist_intersect(remaining_ranges,
+                                              target_rangelist,
+                                              requested_merge, pool));
+              SVN_ERR(svn_rangelist_reverse(*remaining_ranges, pool));
+            }
         }
       else
         /* Return only those revs not already represented by this WC. */

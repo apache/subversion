@@ -9380,7 +9380,7 @@ test_list = [ None,
               propchange_of_subdir_raises_conflict,
               reverse_merge_prop_add_on_child,
               XFail(merge_target_with_non_inheritable_mergeinfo),
-              XFail(self_reverse_merge),
+              self_reverse_merge,
              ]
 
 if __name__ == '__main__':
