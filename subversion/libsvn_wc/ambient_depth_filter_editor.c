@@ -31,7 +31,7 @@
      non-depth-aware server, the server may send back too much data,
      because it doesn't hear what the client tells it about the
      "requested depth" of the update (the "foo" in "--depth=foo"), nor
-     about the "ambient depth" of the each working copy directory.
+     about the "ambient depth" of each working copy directory.
 
      For example, suppose a 1.5 client does this against a 1.4 server:
 
@@ -56,23 +56,26 @@
      The depth-filtering editor won't help us here.  It only filters
      based on the requested depth, it never looks in the working copy
      to get ambient depths.  So the update editor itself will have to
-     filter out the unwanted calls.
+     filter out the unwanted calls -- or better yet, it will have to
+     be wrapped in a filtering editor that does the job.
 
-     We do this at the moment of baton construction.  When a file or
-     dir is opened, we create its baton with the appropriate ambient
-     depth, either taking the depth directly from the corresponding
-     working copy object (if available), or from its parent baton.  In
-     the latter case, we don't just copy the parent baton's depth, but
-     rather use it to choose the correct depth for this child.  The
-     usual depth demotion rules apply, with the additional stipulation
-     that as soon as we find a subtree is not present at all, due to
-     being omitted for depth reasons, we put ambient_depth=exclude in
-     its baton, which signals that all descendant batons should get
-     ambient_depth=exclude automatically.  (In fact, we may just
-     re-use the parent baton, since none of the other fields will be
-     used anyway.)
+     This is that filtering editor.  
 
-     See issue #2842 for more.
+     Most of the work is done at the moment of baton construction.
+     When a file or dir is opened, we create its baton with the
+     appropriate ambient depth, either taking the depth directly from
+     the corresponding working copy object (if available), or from its
+     parent baton.  In the latter case, we don't just copy the parent
+     baton's depth, but rather use it to choose the correct depth for
+     this child.  The usual depth demotion rules apply, with the
+     additional stipulation that as soon as we find a subtree is not
+     present at all, due to being omitted for depth reasons, we put
+     ambient_depth=exclude in its baton, which signals that all
+     descendant batons should get ambient_depth=exclude automatically.
+     (In fact, we may just re-use the parent baton, since none of the
+     other fields will be used anyway.)
+
+     See issues #2842 and #2897 for more.
 */
 
 
@@ -310,6 +313,10 @@ add_directory(const char *path,
     }
   else
     {
+      /* There may be a requested depth < svn_depth_infinity, but
+         that's okay, libsvn_delta/depth_filter_editor.c will filter
+         further calls out for us anyway, and the update_editor will
+         do the right thing when it creates the directory. */
       b->ambient_depth = svn_depth_infinity;
     }
 
@@ -532,8 +539,10 @@ svn_wc__ambient_depth_filter_editor(const svn_delta_editor_t **editor,
   svn_delta_editor_t *depth_filter_editor;
   struct edit_baton *eb;
 
-  /* Easy out: this only needs to fiter at all if the caller has
-     no particular depth request in mind. */
+  /* Easy out: this only needs to filter at all if the caller has
+     no particular depth request in mind -- because if a depth was
+     explicitly requested, libsvn_delta/depth_filter_editor.c will
+     ensure that we never see editor calls we don't want anyway. */
   if (requested_depth != svn_depth_unknown)
     {
       *editor = wrapped_editor;
