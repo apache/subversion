@@ -2248,10 +2248,6 @@ record_mergeinfo_on_merged_children(svn_depth_t depth,
 /* URL1, URL2, and TARGET_WCPATH all better be directories.  For the
    single file case, the caller does the merging manually.
 
-   TARGET_MISSING_CHILD indicates whether TARGET_WCPATH is missing any
-   immediate children.  If TRUE this signifies that the mergeinfo resulting
-   from the merge must be non-inheritable.
-
    Handle DEPTH as documented for svn_client_merge3().
 
    CHILDREN_WITH_MERGEINFO may contain child paths (svn_client__merge_path_t *)
@@ -2262,8 +2258,7 @@ record_mergeinfo_on_merged_children(svn_depth_t depth,
    it avoids merging child paths when a merge is driven for their parent path.
 
    CHILDREN_WITH_MERGEINFO may contain TARGET_WCPATH (which may be
-   MERGE_B->TARGET), in that case TARGET_INDEX is the array index for
-   TARGET_WCPATH, otherwise it should be set to a negative value.
+   MERGE_B->TARGET).
 */
 static svn_error_t *
 do_merge(const char *url1,
@@ -2271,7 +2266,6 @@ do_merge(const char *url1,
          const char *url2,
          svn_revnum_t revision2,
          svn_boolean_t is_rollback,
-         svn_boolean_t target_missing_child,
          const char *target_wcpath,
          svn_wc_adm_access_t *adm_access,
          svn_depth_t depth,
@@ -2282,27 +2276,14 @@ do_merge(const char *url1,
          apr_array_header_t *children_with_mergeinfo,
          apr_pool_t *pool)
 {
-  svn_merge_range_t range;
-
   /* Establish first RA session to URL1. */
   SVN_ERR(svn_client__open_ra_session_internal(&merge_b->ra_session1, url1,
                                                NULL, NULL, NULL, FALSE, TRUE,
                                                merge_b->ctx, pool));
 
-  range.start = revision1;
-  range.end = revision2;
-  range.inheritable = (!target_missing_child && 
-                       ((depth == svn_depth_infinity) || 
-                        (depth == svn_depth_immediates)));
-
-
-  /* When using this merge range, account for the exclusivity of
-     its low value (which is indicated by this operation being a
-     merge vs. revert). */
-
   SVN_ERR(drive_merge_report_editor(target_wcpath, url1, url2,
-                                    children_with_mergeinfo, range.start,
-                                    range.end, is_rollback, depth,
+                                    children_with_mergeinfo, revision1,
+                                    revision2, is_rollback, depth,
                                     ignore_ancestry, notify_b, adm_access,
                                     callbacks, merge_b, pool));
 
@@ -3543,9 +3524,9 @@ discover_and_merge_children(const svn_wc_entry_t *parent_entry,
       notify_b->cur_ancestor_index = -1;
       SVN_ERR(do_merge(parent_merge_source_url, start_rev,
                        parent_merge_source_url, end_rev, is_rollback,
-                       merge_b->target_missing_child, merge_b->target,
-                       adm_access, depth, ignore_ancestry, &merge_callbacks,
-                       notify_b, merge_b, children_with_mergeinfo, iterpool));
+                       merge_b->target, adm_access, depth, ignore_ancestry,
+                       &merge_callbacks, notify_b, merge_b,
+                       children_with_mergeinfo, iterpool));
       remove_first_range_from_remaining_ranges(children_with_mergeinfo, pool);
       next_end_rev = get_nearest_end_rev(children_with_mergeinfo);
       if (is_rollback)
@@ -4144,7 +4125,6 @@ svn_client_merge3(const char *source1,
                            URL2,
                            range.end,
                            is_rollback,
-                           FALSE,
                            target_wcpath,
                            adm_access,
                            depth,
@@ -4710,7 +4690,6 @@ svn_client_merge_peg3(const char *source,
                                URL2,
                                range.end,
                                is_rollback,
-                               FALSE,
                                target_wcpath,
                                adm_access,
                                depth,
