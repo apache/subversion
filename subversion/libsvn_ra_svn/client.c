@@ -1294,7 +1294,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
       if (has_children_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
         has_children = FALSE;
       else
-        has_children = has_children_param;
+        has_children = (svn_boolean_t) has_children_param;
 
       /* Because the svn protocol won't let us send an invalid revnum, we have
          to recover that fact using the extra parameter. */
@@ -1639,7 +1639,7 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
       if (merged_rev_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
         merged_rev = FALSE;
       else
-        merged_rev = merged_rev_param;
+        merged_rev = (svn_boolean_t) merged_rev_param;
 
       /* Get the first delta chunk so we know if there is a delta. */
       SVN_ERR(svn_ra_svn_read_item(sess_baton->conn, chunk_pool, &item));
