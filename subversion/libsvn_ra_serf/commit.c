@@ -434,13 +434,16 @@ checkout_dir(dir_context_t *dir)
 }
 
 
-/* Set *CHECKED_IN_URL to the appropriate DAV version url for
+/* Set *CHECKED_IN_URL to the appropriate DAV version url for 
  * RELPATH (relative to the root of SESSION).
  *
- * If SESSION->callbacks->get_wc_prop() is null, but there is a
- * PARENT_VSN_URL, then set *CHECKED_IN_URL to the concatenation of
- * PARENT_VSN_URL with RELPATH.  Else if there is no parent, then
- * fetch the version url for the root of SESSION using CONN and
+ * Try to find this version url in three ways:
+ * First, if SESSION->callbacks->get_wc_prop() is defined, try to read the 
+ * version url from the working copy properties.
+ * Second, if the version url of the parent directory PARENT_VSN_URL is 
+ * defined, set *CHECKED_IN_URL to the concatenation of PARENT_VSN_URL with 
+ * RELPATH.
+ * Else, fetch the version url for the root of SESSION using CONN and
  * BASE_REVISION, and set *CHECKED_IN_URL to the concatenation of that
  * with RELPATH.
  *
