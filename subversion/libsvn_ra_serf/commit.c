@@ -434,13 +434,25 @@ checkout_dir(dir_context_t *dir)
 }
 
 
+/* Set *CHECKED_IN_URL to the appropriate DAV version url for
+ * RELPATH (relative to the root of SESSION).
+ *
+ * If SESSION->callbacks->get_wc_prop() is null, but there is a
+ * PARENT_VSN_URL, then set *CHECKED_IN_URL to the concatenation of
+ * PARENT_VSN_URL with RELPATH.  Else if there is no parent, then
+ * fetch the version url for the root of SESSION using CONN and
+ * BASE_REVISION, and set *CHECKED_IN_URL to the concatenation of that
+ * with RELPATH.
+ *
+ * Allocate the result in POOL, and use POOL for temporary allocation.
+ */
 static svn_error_t *
-get_version_url(svn_ra_serf__session_t *session, 
+get_version_url(const char **checked_in_url,
+                svn_ra_serf__session_t *session, 
                 svn_ra_serf__connection_t *conn,
-                const char *name, 
+                const char *relpath,
                 svn_revnum_t base_revision,
                 const char *parent_vsn_url,
-                const char **checked_in_url,
                 apr_pool_t *pool)
 {
   const char *root_checkout;
@@ -450,7 +462,7 @@ get_version_url(svn_ra_serf__session_t *session,
       const svn_string_t *current_version;
 
       SVN_ERR(session->wc_callbacks->get_wc_prop(session->wc_callback_baton,
-                                                 name,
+                                                 relpath,
                                                  SVN_RA_SERF__WC_CHECKED_IN_URL,
                                                  &current_version, pool));
 
@@ -490,8 +502,7 @@ get_version_url(svn_ra_serf__session_t *session,
                                  session->repos_url.path);
     }
 
-  *checked_in_url = svn_path_url_add_component(root_checkout,
-                                               name, pool);
+  *checked_in_url = svn_path_url_add_component(root_checkout, relpath, pool);
 
   return SVN_NO_ERROR;
 }
@@ -513,10 +524,10 @@ checkout_file(file_context_t *file)
   file->checkout->activity_url = file->commit->activity_url;
   file->checkout->activity_url_len = file->commit->activity_url_len;
 
-  SVN_ERR(get_version_url(file->commit->session, file->commit->conn,
+  SVN_ERR(get_version_url(&(file->checkout->checkout_url),
+                          file->commit->session, file->commit->conn,
                           file->name, file->base_revision, 
-                          NULL,
-                          &(file->checkout->checkout_url), file->pool));
+                          NULL, file->pool));
 
   handler->body_delegate = create_checkout_body;
   handler->body_delegate_baton = file->checkout;
@@ -1124,10 +1135,10 @@ open_root(void *edit_baton,
   dir->changed_props = apr_hash_make(dir->pool);
   dir->removed_props = apr_hash_make(dir->pool);
 
-  SVN_ERR(get_version_url(dir->commit->session, dir->commit->conn,
+  SVN_ERR(get_version_url(&dir->checked_in_url,
+                          dir->commit->session, dir->commit->conn,
                           dir->name, dir->base_revision, 
-                          dir->commit->checked_in_url,
-                          &dir->checked_in_url, dir->pool));
+                          dir->commit->checked_in_url, dir->pool));
   ctx->checked_in_url = dir->checked_in_url;
 
   /* Checkout our root dir */
@@ -1399,10 +1410,10 @@ open_directory(const char *path,
   dir->changed_props = apr_hash_make(dir->pool);
   dir->removed_props = apr_hash_make(dir->pool);
 
-  SVN_ERR(get_version_url(dir->commit->session, dir->commit->conn,
+  SVN_ERR(get_version_url(&dir->checked_in_url,
+                          dir->commit->session, dir->commit->conn,
                           dir->name, dir->base_revision, 
-                          dir->commit->checked_in_url,
-                          &dir->checked_in_url, dir->pool));
+                          dir->commit->checked_in_url, dir->pool));
   *child_baton = dir;
 
   return SVN_NO_ERROR;

@@ -334,28 +334,9 @@ parse_property_block(svn_stream_t *stream,
 
               /* Now, send the property pair to the vtable! */
               if (is_node)
-                {
-                  struct node_baton *nb = record_baton;
-                  struct revision_baton *rb = nb->rb;
-                  const char *parent_dir = rb->pb->parent_dir;
-
-                  if (parent_dir && strcmp(keybuf, SVN_PROP_MERGE_INFO) == 0)
-                    {
-                      /* Prefix the merge source paths with PARENT_DIR. */
-                      /* ASSUMPTION: All paths are included in the dump
-                         stream. */
-                      const char *mergeinfo_val;
-                      SVN_ERR(prefix_mergeinfo_paths(&mergeinfo_val,
-                                                     propstring.data,
-                                                     parent_dir, proppool));
-                      mergeinfo_val = apr_pstrdup(pool, mergeinfo_val);
-                      propstring.len = strlen(mergeinfo_val);
-                      propstring.data = mergeinfo_val;
-                    }
-                  SVN_ERR(parse_fns->set_node_property(record_baton,
-                                                       keybuf,
-                                                       &propstring));
-                }
+                SVN_ERR(parse_fns->set_node_property(record_baton,
+                                                     keybuf,
+                                                     &propstring));
               else
                 SVN_ERR(parse_fns->set_revision_property(record_baton,
                                                          keybuf,
@@ -1115,6 +1096,17 @@ set_node_property(void *baton,
 {
   struct node_baton *nb = baton;
   struct revision_baton *rb = nb->rb;
+  const char *parent_dir = rb->pb->parent_dir;
+
+  if (parent_dir && strcmp(name, SVN_PROP_MERGE_INFO) == 0)
+    {
+      /* Prefix the merge source paths with PARENT_DIR. */
+      /* ASSUMPTION: All source paths are included in the dump stream. */
+      const char *mergeinfo_val;
+      SVN_ERR(prefix_mergeinfo_paths(&mergeinfo_val, value->data,
+                                     parent_dir, nb->pool));
+      value = svn_string_create(mergeinfo_val, nb->pool);
+    }
 
   SVN_ERR(svn_fs_change_node_prop(rb->txn_root, nb->path,
                                   name, value, nb->pool));

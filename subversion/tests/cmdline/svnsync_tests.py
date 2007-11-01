@@ -21,7 +21,8 @@ import sys, os
 
 # Our testing module
 import svntest
-
+from svntest.verify import SVNUnexpectedStdout, SVNUnexpectedStderr
+from svntest.verify import SVNExpectedStderr
 from svntest.main import write_restrictive_svnserve_conf
 
 # (abbreviation)
@@ -52,17 +53,17 @@ def run_sync(url, expected_error=None):
     "--password", svntest.main.wc_passwd)
   if errput:
     if expected_error is None:
-      raise svntest.actions.SVNUnexpectedStderr(errput)
+      raise SVNUnexpectedStderr(errput)
     else:
       expected_error = svntest.verify.RegexOutput(expected_error,
                                                   match_all=False)
       svntest.verify.compare_and_display_lines(None, "STDERR",
                                                expected_error, errput)
   elif expected_error is not None:
-    raise svntest.actions.SVNExpectedStderr()
+    raise SVNExpectedStderr
   if not output and not expected_error:
     # should be: ['Committed revision 1.\n', 'Committed revision 2.\n']
-    raise svntest.actions.SVNUnexpectedStdout("Missing stdout")
+    raise SVNUnexpectedStdout("Missing stdout")
 
 def run_init(dst_url, src_url):
   "Initialize the mirror repository from the master"
@@ -71,9 +72,9 @@ def run_init(dst_url, src_url):
     "--username", svntest.main.wc_author,
     "--password", svntest.main.wc_passwd)
   if errput:
-    raise svntest.actions.SVNUnexpectedStderr(errput)
+    raise SVNUnexpectedStderr(errput)
   if output != ['Copied properties for revision 0.\n']:
-    raise svntest.actions.SVNUnexpectedStdout(output)
+    raise SVNUnexpectedStdout(output)
 
 
 def run_test(sbox, dump_file_name):
@@ -379,7 +380,7 @@ def copy_from_unreadable_dir(sbox):
                                   dest_sbox.repo_url)
 
   if err:
-    raise svntest.actions.SVNUnexpectedStderr(err)
+    raise SVNUnexpectedStderr(err)
 
   svntest.verify.compare_and_display_lines(None,
                                            'LOG',
@@ -504,7 +505,7 @@ def copy_with_mod_from_unreadable_dir(sbox):
                                   dest_sbox.repo_url)
 
   if err:
-    raise svntest.actions.SVNUnexpectedStderr(err)
+    raise SVNUnexpectedStderr(err)
 
   svntest.verify.compare_and_display_lines(None,
                                            'LOG',
@@ -606,7 +607,7 @@ def copy_with_mod_from_unreadable_dir_and_copy(sbox):
                                   dest_sbox.repo_url)
 
   if err:
-    raise svntest.actions.SVNUnexpectedStderr(err)
+    raise SVNUnexpectedStderr(err)
 
   svntest.verify.compare_and_display_lines(None,
                                            'LOG',

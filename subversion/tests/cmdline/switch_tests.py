@@ -2025,7 +2025,7 @@ test_list = [ None,
               switch_with_obstructing_local_adds,
               switch_with_depth,
               switch_to_dir_with_peg_rev,
-              XFail(switch_urls_with_spaces),
+              switch_urls_with_spaces,
              ]
 
 if __name__ == '__main__':

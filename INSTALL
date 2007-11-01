@@ -65,7 +65,7 @@ I.    INTRODUCTION
 
       You'll need the following build tools to compile Subversion:
 
-      * autoconf 2.50 or later (Unix only)
+      * autoconf 2.58 or later (Unix only)
       * libtool 1.4 or later (Unix only)
       * a reasonable C compiler (gcc, Visual Studio, etc.)
 
@@ -137,7 +137,7 @@ I.    INTRODUCTION
          SASL to do various forms of authentication when speaking the
          svnserve protocol.
 
-      *  Python, Perl, Java, Ruby  (OPTIONAL)
+      * Python, Perl, Java, Ruby  (OPTIONAL)
 
          Subversion is mostly a collection of C libraries with
          well-defined APIs, with a small collection of programs that
@@ -290,28 +290,24 @@ I.    INTRODUCTION
             http://www.zlib.net
 
 
-      3. SQLite 3.x or newer  (REQUIRED for server)
+      3. SQLite 3.x or newer  (REQUIRED for client and server)
 
          SQLite is a lightweight, embeddable SQL library necessary to
          build any repository-related code.
 
-         If SQLite is not found at compile time, then no server
-         binaries or libraries will be built -- you'll only get a
-         client.
+         You can get sqlite 3.5.1 from:
 
-         You can get sqlite 3.3.13 from:
-
-               http://www.sqlite.org/sqlite-3.3.13.tar.gz
+               http://www.sqlite.org/sqlite-3.5.1.tar.gz
 
          You can build and install sqlite however you wish.  However,
          you also have the option of unpacking the archive into the
          top of the Subversion source tree and renaming the resulting
          directory within the Subversion source code) from
-         ./sqlite-3.3.13/ to ./sqlite/.  Subversion will then build
+         ./sqlite-3.5.1/ to ./sqlite/.  Subversion will then build
          and install it for you.
 
 
-      4.  autoconf 2.50 or newer (Unix only)
+      4.  autoconf 2.58 or newer (Unix only)
 
       This is required only if you plan to build from the latest source
       (see section II.B). Generally only developers would be doing this.
@@ -337,19 +333,20 @@ I.    INTRODUCTION
         (If you link against both, you can configure which one is used
         in your ~/.subversion/servers configuration file.)
 
-        a.  Neon library 0.25 or 0.26 (http://www.webdav.org/neon/)
+        a. Neon library 0.25, 0.26 or 0.27 (http://www.webdav.org/neon/)
 
-            The Neon library allows a Subversion client to interact
-            with remote repositories over the Internet via a WebDAV
-            based protocol.
+           The Neon library allows a Subversion client to interact
+           with remote repositories over the Internet via a WebDAV
+           based protocol.
 
-            The source code is included with the Subversion
-            dependencies package, and it can also be obtained from:
+           The source code is included with the Subversion
+           dependencies package, and it can also be obtained from:
 
                http://www.webdav.org/neon/neon-0.25.5.tar.gz
-               http://www.webdav.org/neon/neon-0.26.1.tar.gz
+               http://www.webdav.org/neon/neon-0.26.4.tar.gz
+               http://www.webdav.org/neon/neon-0.27.2.tar.gz
 
-            Building Neon inside the subversion build:
+           Building Neon inside the subversion build:
 
            The Neon library source code can be placed in "./neon" if
            you want Subversion to build it as part of the Subversion
@@ -381,7 +378,7 @@ I.    INTRODUCTION
            then there should be a file
            "/usr/local/myneon/bin/neon-config".
 
-       b.  Serf library 0.1.0 (http://code.google.com/p/serf/)
+        b. Serf library 0.1.2 (http://code.google.com/p/serf/)
 
            serf is a library for HTTP and WebDAV which is an
            alternative to Neon for accessing Subversion repositories
@@ -654,7 +651,7 @@ II.   INSTALLATION
       section I.)
 
       Note: if the command "autoconf" on your machine does not run
-      autoconf 2.50 or later, but you do have a new enough autoconf
+      autoconf 2.58 or later, but you do have a new enough autoconf
       available, then you can specify the correct one with the
       AUTOCONF variable.  (The AUTOHEADER variable is similar.)  This
       may be required on Debian GNU/Linux, where "autoconf" is
@@ -663,7 +660,7 @@ II.   INSTALLATION
       APR's configuration systems, the Perl script may get it wrong.
       So for example, you might need to do:
 
-          $ AUTOCONF=autoconf2.50 sh ./autogen.sh
+          $ AUTOCONF=autoconf2.58 sh ./autogen.sh
 
       Once you've prepared the working copy by running autogen.sh,
       just follow the usual configuration and build procedure:
@@ -865,7 +862,7 @@ II.   INSTALLATION
         or nasm which is available from
         http://www.kernel.org/pub/software/devel/nasm/binaries/win32/
 
-   E.2 Notes
+  E.2 Notes
 
       The Neon library supports secure connections with OpenSSL and
       on-the-wire compression with zlib. If you want to use the
@@ -880,7 +877,7 @@ II.   INSTALLATION
           http://download.microsoft.com/download/platformsdk/Redist/
           5.50.4027.300/W9XNT4/EN-US/shfinst.EXE
 
-   E.3 Preparation
+  E.3 Preparation
 
       This section describes how to unpack the files to make a build tree.
 
@@ -963,63 +960,63 @@ II.   INSTALLATION
       * [Optional] Extract MASM32 (only the ML.EXE and ML.ERR files) into
         SVN\asm (or extract nasm into SVN\asm) and put it in your path.
 
-   E.4 Building the Binaries
+  E.4 Building the Binaries
 
-    To build the binaries either follow the instructions here or use
-    build\win32\vc6-build.bat.in after editing its default paths to match
-    yours and saving it as vc6-build.bat.  The vc6-build.bat does a full build
-    using all options so it requires Apache 2 source and the other optional
-    components.
+      To build the binaries either follow the instructions here or use
+      build\win32\vc6-build.bat.in after editing its default paths to match
+      yours and saving it as vc6-build.bat.  The vc6-build.bat does a full build
+      using all options so it requires Apache 2 source and the other optional
+      components.
 
-    Start in the SVN directory you created.
+      Start in the SVN directory you created.
 
-    Set up the environment (commands should be one line even if wrapped here).
+      Set up the environment (commands should be one line even if wrapped here).
 
-    C:>set VER=trunk
-    C:>set DIR=trunk
-    C:>set DRIVE=C
-    C:>set PYTHONDIR=C:\Python22
-    C:>set AWKDIR=C:\SVN\Awk
-    C:>set ASMDIR=C:\SVN\asm
-    C:>set SDKINC=C:\Program Files\Microsoft SDK\include
-    C:>set SDKLIB=C:\Program Files\Microsoft SDK\lib
-    C:>set GETTEXTBIN=C:\SVN\gettext-0.14.1-bin\bin
-    C:>PATH=%PATH%;%DRIVE%:\SVN\src-%DIR%\db4-win32;%ASMDIR%;
-            %PYTHONDIR%;%AWKDIR%;%GETTEXTBIN%
-    C:>set INCLUDE=%SDKINC%;%INCLUDE%
-    C:>set LIB=%SDKLIB%;%LIB%
+      C:>set VER=trunk
+      C:>set DIR=trunk
+      C:>set DRIVE=C
+      C:>set PYTHONDIR=C:\Python22
+      C:>set AWKDIR=C:\SVN\Awk
+      C:>set ASMDIR=C:\SVN\asm
+      C:>set SDKINC=C:\Program Files\Microsoft SDK\include
+      C:>set SDKLIB=C:\Program Files\Microsoft SDK\lib
+      C:>set GETTEXTBIN=C:\SVN\gettext-0.14.1-bin\bin
+      C:>PATH=%PATH%;%DRIVE%:\SVN\src-%DIR%\db4-win32;%ASMDIR%;
+              %PYTHONDIR%;%AWKDIR%;%GETTEXTBIN%
+      C:>set INCLUDE=%SDKINC%;%INCLUDE%
+      C:>set LIB=%SDKLIB%;%LIB%
 
-    OpenSSL
+      OpenSSL
 
-    C:>cd openssl-0.9.7f
-    C:>perl Configure VC-WIN32
-[*] C:>call ms\do_masm
-    C:>nmake -f ms\ntdll.mak
-    C:>cd out32dll
-    C:>call ..\ms\test
-    C:>cd ..\..
+      C:>cd openssl-0.9.7f
+      C:>perl Configure VC-WIN32
+  [*] C:>call ms\do_masm
+      C:>nmake -f ms\ntdll.mak
+      C:>cd out32dll
+      C:>call ..\ms\test
+      C:>cd ..\..
 
-    *Note: Use "call ms\do_nasm" of you have nasm instead of MASM, or
-           "call ms\do_ms" if you don't have an assembler.
+      *Note: Use "call ms\do_nasm" of you have nasm instead of MASM, or
+             "call ms\do_ms" if you don't have an assembler.
 
-    Apache 2
+      Apache 2
 
-    This step is only required for building the server dso modules.
+      This step is only required for building the server dso modules.
 
-    The Subversion gen-make.py script must be run before building Apache or
-    Apache and Subversion will be running incompatible versions of apr.
+      The Subversion gen-make.py script must be run before building Apache or
+      Apache and Subversion will be running incompatible versions of apr.
 
-    C:>cd src-%DIR%
-    C:>python gen-make.py -t dsp --with-httpd=..\httpd-2.0.58
-       --with-berkeley-db=db4-win32 --with-openssl=..\openssl-0.9.7f
-       --with-zlib=..\zlib --with-libintl=..\svn-win32-libintl
-    C:>cd ..
-    C:>set APACHEDIR=C:\Program Files\Apache Group\Apache2
-    C:>msdev httpd-2.0.58\apache.dsw /MAKE "BuildBin - Win32 Release"
+      C:>cd src-%DIR%
+      C:>python gen-make.py -t dsp --with-httpd=..\httpd-2.0.58
+         --with-berkeley-db=db4-win32 --with-openssl=..\openssl-0.9.7f
+         --with-zlib=..\zlib --with-libintl=..\svn-win32-libintl
+      C:>cd ..
+      C:>set APACHEDIR=C:\Program Files\Apache Group\Apache2
+      C:>msdev httpd-2.0.58\apache.dsw /MAKE "BuildBin - Win32 Release"
 
-    Subversion
+      Subversion
 
-    Things to note:
+      Things to note:
 
       * If you don't want to build mod_dav_svn, omit the --with-httpd
         option.  The zip file source distribution contains apr, apr-util and
@@ -1058,118 +1055,117 @@ II.   INSTALLATION
       * If the server dso modules are being built and tested Apache must not
         be running or the copy of the dso modules will fail.
 
-    C:>cd src-%DIR%
+      C:>cd src-%DIR%
 
-    If Apache 2 has been built and the server modules are required then
-    gen-make.py will already have been run. If the source is from the zip
-    file, Apache 2 has not been built so gen-make.py must be run:
+      If Apache 2 has been built and the server modules are required then
+      gen-make.py will already have been run. If the source is from the zip
+      file, Apache 2 has not been built so gen-make.py must be run:
 
-    C:>python gen-make.py -t dsp --with-berkeley-db=db4-win32
-        --with-openssl=..\openssl-0.9.7f --with-zlib=..\zlib
-        --with-libintl=..\svn-win32-libintl
+      C:>python gen-make.py -t dsp --with-berkeley-db=db4-win32
+          --with-openssl=..\openssl-0.9.7f --with-zlib=..\zlib
+          --with-libintl=..\svn-win32-libintl
 
-    Then build subversion:
+      Then build subversion:
 
-    C:>msdev subversion_msvc.dsw /USEENV /MAKE "__ALL_TESTS__ - Win32 Release"
-    C:>cd ..
+      C:>msdev subversion_msvc.dsw /USEENV /MAKE "__ALL_TESTS__ - Win32 Release"
+      C:>cd ..
 
-    Or, with Visual C++.NET 2002, 2003, 2005:
+      Or, with Visual C++.NET 2002, 2003, 2005:
 
-    C:>devenv subversion_vcnet.sln /build "Release" /project "__ALL_TESTS__"
-    C:>cd ..
+      C:>devenv subversion_vcnet.sln /build "Release" /project "__ALL_TESTS__"
+      C:>cd ..
 
-    Or, with Visual C++ Express 2005:
+      Or, with Visual C++ Express 2005:
 
-    C:>msbuild subversion_vcnet.sln /t:__ALL_TESTS__ /p:Configuration=Release
-    C:>cd ..
+      C:>msbuild subversion_vcnet.sln /t:__ALL_TESTS__ /p:Configuration=Release
+      C:>cd ..
 
-    The binaries have now been built.
+      The binaries have now been built.
 
-   E.5 Packaging the binaries
+  E.5 Packaging the binaries
 
-    You now need to copy the binaries ready to make the release zip
-    file. You also need to do this to run the tests as the new binaries
-    need to be in your path. You can use the build/win32/make_dist.py
-    script in the Subversion source directory to do that.
+      You now need to copy the binaries ready to make the release zip
+      file. You also need to do this to run the tests as the new binaries
+      need to be in your path. You can use the build/win32/make_dist.py
+      script in the Subversion source directory to do that.
 
-    [TBD: Describe how to do this. Note dependencies on zip, jar, doxygen.]
+      [TBD: Describe how to do this. Note dependencies on zip, jar, doxygen.]
 
+  E.6 Testing the Binaries
+      [TBD: It's been a long, long while since it was necessary to move
+            binaries around for testing. win-tests.py does that automagically.
+            Fix this section accordingly, and probably reorder, putting
+            the packaging at the end.]
 
-   E.6 Testing the Binaries
-    [TBD: It's been a long, long while since it was necessary to move
-          binaries around for testing. win-tests.py does that automagically.
-          Fix this section accordingly, and probably reorder, putting
-          the packaging at the end.]
+      The build process creates the binary test programs but it does not
+      copy the client tests into the release test area.
 
-    The build process creates the binary test programs but it does not
-    copy the client tests into the release test area.
+      C:>cd src-%DIR%
+      C:>mkdir Release\subversion\tests\cmdline
+      C:>xcopy /S /Y subversion\tests\cmdline Release\subversion\tests\cmdline
 
-    C:>cd src-%DIR%
-    C:>mkdir Release\subversion\tests\cmdline
-    C:>xcopy /S /Y subversion\tests\cmdline Release\subversion\tests\cmdline
+      If the server dso modules  have been built then copy the dso files and
+      dlls into the Apache modules directory.
 
-    If the server dso modules  have been built then copy the dso files and
-    dlls into the Apache modules directory.
+      C:>copy Release\subversion\mod_dav_svn\mod_dav_svn.so "%APACHEDIR%"\modules
+      C:>copy Release\subversion\mod_authz_svn\mod_authz_svn.so
+         "%APACHEDIR%"\modules
+      C:>copy svn-win32-%VER%\bin\intl.dll "%APACHEDIR%\bin"
+      C:>copy svn-win32-%VER%\bin\iconv.dll "%APACHEDIR%\bin"
+      C:>copy svn-win32-%VER%\bin\libdb42.dll "%APACHEDIR%\bin"
+      C:>cd ..
 
-    C:>copy Release\subversion\mod_dav_svn\mod_dav_svn.so "%APACHEDIR%"\modules
-    C:>copy Release\subversion\mod_authz_svn\mod_authz_svn.so
-       "%APACHEDIR%"\modules
-    C:>copy svn-win32-%VER%\bin\intl.dll "%APACHEDIR%\bin"
-    C:>copy svn-win32-%VER%\bin\iconv.dll "%APACHEDIR%\bin"
-    C:>copy svn-win32-%VER%\bin\libdb42.dll "%APACHEDIR%\bin"
-    C:>cd ..
+      Put the svn-win32-trunk\bin directory at the start of your path so
+      you run the newly built binaries and not another version you might
+      have installed.
 
-    Put the svn-win32-trunk\bin directory at the start of your path so
-    you run the newly built binaries and not another version you might
-    have installed.
+      Then run the client tests:
 
-    Then run the client tests:
+      C:>PATH=%DRIVE%:\SVN\svn-win32-%VER%\bin;%PATH%
+      C:>cd src-%DIR%
+      C:>python win-tests.py -c -r -v
 
-    C:>PATH=%DRIVE%:\SVN\svn-win32-%VER%\bin;%PATH%
-    C:>cd src-%DIR%
-    C:>python win-tests.py -c -r -v
+      If the server dso modules were built configure Apache to use the
+      mod_dav_svn and mod_authz_svn modules by making sure these lines appear
+      uncommented in httpd.conf:
 
-    If the server dso modules were built configure Apache to use the
-    mod_dav_svn and mod_authz_svn modules by making sure these lines appear
-    uncommented in httpd.conf:
+        LoadModule dav_module         modules/mod_dav.so
+        LoadModule dav_fs_module      modules/mod_dav_fs.so
+        LoadModule dav_svn_module     modules/mod_dav_svn.so
+        LoadModule authz_svn_module   modules/mod_authz_svn.so
 
-      LoadModule dav_module         modules/mod_dav.so
-      LoadModule dav_fs_module      modules/mod_dav_fs.so
-      LoadModule dav_svn_module     modules/mod_dav_svn.so
-      LoadModule authz_svn_module   modules/mod_authz_svn.so
+      And further down the file add location directives to point to the
+      test repositories. Change the paths to the SVN directory you created
+      (paths should be on one line even if wrapped here):
 
-    And further down the file add location directives to point to the
-    test repositories. Change the paths to the SVN directory you created
-    (paths should be on one line even if wrapped here):
+        <Location /svn-test-work/repositories>
+         DAV svn
+         SVNParentPath C:/SVN/src-trunk/Release/subversion/tests/cmdline/
+                       svn-test-work/repositories
+        </Location>
 
-      <Location /svn-test-work/repositories>
-       DAV svn
-       SVNParentPath C:/SVN/src-trunk/Release/subversion/tests/cmdline/
-                     svn-test-work/repositories
-      </Location>
+        <Location /svn-test-work/local_tmp/repos>
+         DAV svn
+         SVNPath c:/SVN/src-trunk/Release/subversion/tests/cmdline/
+                 svn-test-work/local_tmp/repos
+        </Location>
 
-      <Location /svn-test-work/local_tmp/repos>
-       DAV svn
-       SVNPath c:/SVN/src-trunk/Release/subversion/tests/cmdline/
-               svn-test-work/local_tmp/repos
-      </Location>
+      Then restart Apache and run the tests:
 
-    Then restart Apache and run the tests:
-
-    C:>python win-tests.py -c -r -v -u http://localhost
-    C:>cd ..
+      C:>python win-tests.py -c -r -v -u http://localhost
+      C:>cd ..
 
 III.  BUILDING A SUBVERSION SERVER
       ============================
 
-    Subversion has two servers you can choose from:  svnserve and
-    Apache.  svnserve is a small, lightweight server program that is
-    automatically compiled when you build Subversion's source.  Apache
-    is a more heavyweight HTTP server, but tends to have more features.
+      Subversion has two servers you can choose from:  svnserve and
+      Apache.  svnserve is a small, lightweight server program that is
+      automatically compiled when you build Subversion's source.  Apache
+      is a more heavyweight HTTP server, but tends to have more features.
 
-    This section primarily focuses on how to build Apache and the
-    accompanying mod_dav_svn server module for it.  If you plan to use
-    svnserve instead, jump right to section E for a quick explanation.
+      This section primarily focuses on how to build Apache and the
+      accompanying mod_dav_svn server module for it.  If you plan to use
+      svnserve instead, jump right to section E for a quick explanation.
 
 
   A.  Setting Up Apache

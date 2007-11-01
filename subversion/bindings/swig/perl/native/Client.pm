@@ -5,12 +5,33 @@ use SVN::Core;
 use SVN::Wc;
 
 package SVN::Client;
-use SVN::Base qw(Client svn_client_ checkout update switch add mkdir delete
-                 commit status log blame diff merge cleanup relocate
-                 revert resolved copy move revprop_set propset
-                 proplist revvprop_list export ls cat import propget
-                 uuid_from_url uuid_from_path url_from_path revprop_get
-                 revprop_list info); 
+my @_all_fns;
+BEGIN {
+    @_all_fns = 
+        qw( version diff_summarize_dup create_context checkout3
+            checkout2 checkout update3 update2 update switch2 switch
+            add4 add3 add2 add mkdir3 mkdir2 mkdir delete3 delete2
+            delete import3 import2 import commit4 commit3 commit2
+            commit status3 status2 status log4 log3 log2 log blame4
+            blame3 blame2 blame diff4 diff3 diff2 diff diff_peg4
+            diff_peg3 diff_peg2 diff_peg diff_summarize2
+            diff_summarize diff_summarize_peg2 diff_summarize_peg
+            merge3 merge2 merge merge_peg3 merge_peg2 merge_peg
+            cleanup relocate revert2 revert resolved resolved2 copy4
+            copy3 copy2 copy move5 move4 move3 move2 move propset3
+            propset2 propset revprop_set propget4 propget3 propget2
+            propget revprop_get proplist3 proplist2 proplist
+            revprop_list export4 export3 export2 export list2 list
+            ls3 ls2 ls cat2 cat add_to_changelist
+            remove_from_changelist lock unlock info2 info
+            url_from_path uuid_from_url uuid_from_path open_ra_session
+            invoke_blame_receiver2 invoke_blame_receiver
+            invoke_diff_summarize_func
+          );
+    
+    require SVN::Base;
+    import SVN::Base (qw(Client svn_client_), @_all_fns);
+}
 
 =head1 NAME
 
@@ -820,13 +841,7 @@ Return repository uuid for url.
 
 # import methods into our name space and wrap them in a closure
 # to support method calling style $ctx->log()
-foreach my $function (qw(checkout update switch add mkdir delete commit
-                       status log blame diff merge cleanup relocate
-                       revert resolved copy move revprop_set propset
-                       proplist revvprop_list export ls cat import
-                       propget uuid_from_url uuid_from_path
-                       url_from_path revprop_get revprop_list
-                       info))
+foreach my $function (@_all_fns)
 {
     no strict 'refs';
     my $real_function = \&{"SVN::_Client::svn_client_$function"};
@@ -1300,6 +1315,8 @@ also only useful when working with a WC.
 =item $info->conflict_wrk()
 
 =item $info->prejfile()
+
+=back
 
 =cut
 

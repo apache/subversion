@@ -133,6 +133,37 @@ static const apr_getopt_option_t options_table[] =
   {"version",           svnlook__version, 0,
    N_("show program version information")},
 
+#ifndef AS400
+  {"extensions",    'x', 1,
+                    N_("Default: '-u'. When Subversion is invoking an\n"
+                       "                            "
+                       " external diff program, ARG is simply passed along\n"
+                       "                            "
+                       " to the program. But when Subversion is using its\n"
+                       "                            "
+                       " default internal diff implementation, or when\n"
+                       "                            "
+                       " Subversion is displaying blame annotations, ARG\n"
+                       "                            "
+                       " could be any of the following:\n"
+                       "                            "
+                       "    -u (--unified):\n"
+                       "                            "
+                       "       Output 3 lines of unified context.\n"
+                       "                            "
+                       "    -b (--ignore-space-change):\n"
+                       "                            "
+                       "       Ignore changes in the amount of white space.\n"
+                       "                            "
+                       "    -w (--ignore-all-space):\n"
+                       "                            "
+                       "       Ignore all white space.\n"
+                       "                            "
+                       "    --ignore-eol-style:\n"
+                       "                            "
+                       "       Ignore changes in EOL style")},
+#endif
+
   {0,                   0, 0, 0}
 };
 
@@ -166,7 +197,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
    N_("usage: svnlook diff REPOS_PATH\n\n"
       "Print GNU-style diffs of changed files and properties.\n"),
    {'r', 't', svnlook__no_diff_deleted, svnlook__no_diff_added,
-    svnlook__diff_copy_from} },
+    svnlook__diff_copy_from, 'x'} },
 
   {"dirs-changed", subcommand_dirschanged, {0},
    N_("usage: svnlook dirs-changed REPOS_PATH\n\n"
@@ -253,6 +284,7 @@ struct svnlook_opt_state
   svn_boolean_t full_paths;       /* --full-paths */
   svn_boolean_t copy_info;        /* --copy-info */
   svn_boolean_t non_recursive;    /* --non-recursive */
+  const char *extensions;         /* diff extension args (UTF-8!) */
 };
 
 
@@ -271,6 +303,7 @@ typedef struct svnlook_ctxt_t
   svn_revnum_t rev_id;
   svn_fs_txn_t *txn;
   const char *txn_name /* UTF-8! */;
+  const apr_array_header_t *diff_options;
 
 } svnlook_ctxt_t;
 
@@ -798,14 +831,16 @@ print_diff_tree(svn_fs_root_t *root,
   svn_boolean_t do_diff = FALSE;
   svn_boolean_t orig_empty = FALSE;
   svn_boolean_t is_copy = FALSE;
-  svn_boolean_t printed_header = FALSE;
   svn_boolean_t binary = FALSE;
   apr_pool_t *subpool;
+  svn_stringbuf_t *header;
 
   SVN_ERR(check_cancel(NULL));
 
   if (! node)
     return SVN_NO_ERROR;
+
+  header = svn_stringbuf_create("", pool);
 
   /* Print copyfrom history for the top node of a copied tree. */
   if ((SVN_IS_VALID_REVNUM(node->copyfrom_rev))
@@ -823,10 +858,10 @@ print_diff_tree(svn_fs_root_t *root,
       else
         base_path = apr_pstrdup(pool, node->copyfrom_path);
 
-      SVN_ERR(svn_cmdline_printf(pool, _("Copied: %s (from rev %ld, %s)\n"),
-                                 path, node->copyfrom_rev, base_path));
-
-      printed_header = TRUE;
+      svn_stringbuf_appendcstr
+        (header, 
+         apr_psprintf(pool, _("Copied: %s (from rev %ld, %s)\n"),
+                      path, node->copyfrom_rev, base_path));
 
       SVN_ERR(svn_fs_revision_root(&base_root,
                                    svn_fs_root_fs(base_root),
@@ -886,37 +921,46 @@ print_diff_tree(svn_fs_root_t *root,
                                    tmpdir, pool));
         }
 
-      /* The header for the copy case has already been written, and we don't
+      /* The header for the copy case has already been created, and we don't
          want a header here for files with only property modifications. */
-      if (! printed_header
+      if (header->len == 0
           && (node->action != 'R' || node->text_mod))
         {
-          SVN_ERR(svn_cmdline_printf(pool, "%s: %s\n",
-                                     ((node->action == 'A') ? _("Added") :
-                                      ((node->action == 'D') ? _("Deleted") :
-                                       ((node->action == 'R') ? _("Modified")
-                                        : _("Index")))),
-                                     path));
-          printed_header = TRUE;
+          svn_stringbuf_appendcstr
+            (header, apr_psprintf(pool, "%s: %s\n",
+                                  ((node->action == 'A') ? _("Added") :
+                                   ((node->action == 'D') ? _("Deleted") :
+                                    ((node->action == 'R') ? _("Modified")
+                                     : _("Index")))),
+                                  path));
         }
     }
 
   if (do_diff)
     {
-      SVN_ERR(svn_cmdline_printf(pool, "%s\n", equal_string));
-      SVN_ERR(svn_cmdline_fflush(stdout));
+      svn_stringbuf_appendcstr(header, equal_string);
+      svn_stringbuf_appendcstr(header, "\n");
 
       if (binary)
-        SVN_ERR(svn_cmdline_printf(pool, _("(Binary files differ)\n")));
+        svn_stringbuf_appendcstr(header, _("(Binary files differ)\n\n"));
       else
         {
           svn_diff_t *diff;
-          SVN_ERR(svn_diff_file_diff(&diff, orig_path, new_path, pool));
+          svn_diff_file_options_t *opts = svn_diff_file_options_create(pool);
+
+          if (c->diff_options)
+            SVN_ERR(svn_diff_file_options_parse(opts, c->diff_options, pool));
+
+          SVN_ERR(svn_diff_file_diff_2(&diff, orig_path, 
+                                       new_path, opts, pool));
+
           if (svn_diff_contains_diffs(diff))
             {
               svn_stream_t *ostream;
               const char *orig_label, *new_label;
 
+              /* Print diff header. */
+              SVN_ERR(svn_cmdline_printf(pool, header->data));
               SVN_ERR(svn_stream_for_stdout(&ostream, pool));
 
               if (orig_empty)
@@ -930,14 +974,11 @@ print_diff_tree(svn_fs_root_t *root,
                        orig_label, new_label,
                        svn_cmdline_output_encoding(pool), pool));
               SVN_ERR(svn_stream_close(ostream));
+              SVN_ERR(svn_cmdline_printf(pool, "\n"));
             }
         }
-
-      SVN_ERR(svn_cmdline_printf(pool, "\n"));
       SVN_ERR(svn_cmdline_fflush(stdout));
     }
-  else if (printed_header)
-    SVN_ERR(svn_cmdline_printf(pool, "\n"));
 
   /* Make sure we delete any temporary files. */
   if (orig_path)
@@ -1597,6 +1638,10 @@ get_ctxt_baton(svnlook_ctxt_t **baton_p,
   baton->is_revision = opt_state->txn ? FALSE : TRUE;
   baton->rev_id = opt_state->rev;
   baton->txn_name = apr_pstrdup(pool, opt_state->txn);
+  baton->diff_options = svn_cstring_split(opt_state->extensions 
+                                          ? opt_state->extensions : "",
+                                          " \t\n\r", TRUE, pool);
+  
   if (baton->txn_name)
     SVN_ERR(svn_fs_open_txn(&(baton->txn), baton->fs,
                             baton->txn_name, pool));
@@ -2058,6 +2103,10 @@ main(int argc, const char *argv[])
 
         case svnlook__copy_info:
           opt_state.copy_info = TRUE;
+          break;
+
+        case 'x':
+          opt_state.extensions = opt_arg;
           break;
 
         default:

@@ -120,7 +120,9 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     to_add = ['test_delta_driver_commit', 'test_delta_driver_commit2']
     to_dir_prop = ['trunk/dir1/dir3', 'test_delta_driver_commit2.d']
     to_file_prop = ['trunk/README2.txt', 'test_delta_driver_commit2']
-    all_paths = set(to_delete + to_mkdir + to_add + to_dir_prop + to_file_prop)
+    all_paths = {}
+    for i in to_delete + to_mkdir + to_add + to_dir_prop + to_file_prop:
+      all_paths[i] = True
     # base revision for the commit
     revision = fs.youngest_rev(self.fs)
 
@@ -159,7 +161,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
         if file_baton is not None:
           editor.close_file(file_baton, None, pool)
         return dir_baton
-      delta.path_driver(editor, edit_baton, -1, list(all_paths), driver_cb)
+      delta.path_driver(editor, edit_baton, -1, all_paths.keys(), driver_cb)
       editor.close_edit(edit_baton)
     except:
       try:

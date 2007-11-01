@@ -80,6 +80,7 @@ okay_to_edit(struct edit_baton *eb,
       break;
     }
   abort();
+  return FALSE;
 }
 
 

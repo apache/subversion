@@ -201,6 +201,9 @@ realm = #{@realm}
     def setup_svnserve
       @svnserve_port = nil
       @repos_svnserve_uri = nil
+
+      # Look through the list of potential ports until we're able to
+      # successfully start svnserve on a free one.
       @svnserve_ports.each do |port|
         @svnserve_pid = fork {
           STDERR.close
@@ -211,8 +214,12 @@ realm = #{@realm}
         }
         pid, status = Process.waitpid2(@svnserve_pid, Process::WNOHANG)
         if status and status.exited?
-          STDERR.puts "port #{port} couldn't be used for svnserve"
+          if $DEBUG
+            STDERR.puts "port #{port} couldn't be used for svnserve"
+          end
         else
+          # svnserve started successfully.  Note port number and cease
+          # startup attempts.
           @svnserve_port = port
           @repos_svnserve_uri =
             "svn://#{@svnserve_host}:#{@svnserve_port}#{@full_repos_path}"
