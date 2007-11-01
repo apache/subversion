@@ -111,7 +111,7 @@ def parse_stats(str):
 def draw_graph(dates, counts):
   ###########################################################
   # Drawing takes place here.
-  figure(1, figsize=(6.5, 4.5))
+  figure(1)
 
   ax = subplot(111)
   plot_date(dates, counts, color='r', linestyle='-', marker='o', markersize=3)
