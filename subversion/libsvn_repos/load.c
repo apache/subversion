@@ -27,6 +27,7 @@
 #include "repos.h"
 #include "svn_private_config.h"
 #include "svn_mergeinfo.h"
+#include "svn_md5.h"
 
 #include <apr_lib.h>
 
@@ -70,8 +71,9 @@ struct node_baton
   const char *path;
   svn_node_kind_t kind;
   enum svn_node_action action;
-  const char *base_checksum;     /* null, if not available */
-  const char *result_checksum;     /* null, if not available */
+  const char *base_checksum;        /* null, if not available */
+  const char *result_checksum;      /* null, if not available */
+  const char *copy_source_checksum; /* null, if not available */
 
   svn_revnum_t copyfrom_rev;
   const char *copyfrom_path;
@@ -864,6 +866,12 @@ make_node_baton(apr_hash_t *headers,
       nb->base_checksum = apr_pstrdup(pool, val);
     }
 
+  if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_TEXT_COPY_SOURCE_CHECKSUM,
+                          APR_HASH_KEY_STRING)))
+    {
+      nb->copy_source_checksum = apr_pstrdup(pool, val);
+    }
+
   /* What's cool about this dump format is that the parser just
      ignores any unrecognized headers.  :-)  */
 
@@ -966,6 +974,27 @@ maybe_add_with_history(struct node_baton *nb,
                                  src_rev);
 
       SVN_ERR(svn_fs_revision_root(&copy_root, pb->fs, src_rev, pool));
+      
+      if (nb->copy_source_checksum)
+        {
+          unsigned char md5_digest[APR_MD5_DIGESTSIZE];
+          const char *hex;
+          SVN_ERR(svn_fs_file_md5_checksum(md5_digest, copy_root,
+                                           nb->copyfrom_path, pool));
+          hex = svn_md5_digest_to_cstring(md5_digest, pool);
+          if (hex && (strcmp(nb->copy_source_checksum, hex) != 0))
+            return svn_error_createf
+              (SVN_ERR_CHECKSUM_MISMATCH,
+               NULL,
+               _("Copy source checksum mismatch on copy from '%s'@%ld\n"
+                 " to '%s' in rev based on r%ld:\n"
+                 "   expected:  %s\n"
+                 "     actual:  %s\n"),
+               nb->copyfrom_path, src_rev, 
+               nb->path, rb->rev,
+               nb->copy_source_checksum, hex);
+        }
+
       SVN_ERR(svn_fs_copy(copy_root, nb->copyfrom_path,
                           rb->txn_root, nb->path, pool));
 
