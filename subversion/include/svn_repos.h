@@ -1802,6 +1802,8 @@ svn_repos_node_t *svn_repos_node_from_baton(void *edit_baton);
 #define SVN_REPOS_DUMPFILE_PROP_DELTA                "Prop-delta"
 /* @since New in 1.1. */
 #define SVN_REPOS_DUMPFILE_TEXT_DELTA                "Text-delta"
+/* @since New in 1.5. */
+#define SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_CHECKSUM  "Text-delta-base-md5"
 
 /** The different "actions" attached to nodes in the dumpfile. */
 enum svn_node_action

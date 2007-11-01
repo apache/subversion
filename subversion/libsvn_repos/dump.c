@@ -501,6 +501,17 @@ dump_node(struct edit_baton *eb,
           SVN_ERR(svn_stream_printf(eb->stream, pool,
                                     SVN_REPOS_DUMPFILE_TEXT_DELTA
                                     ": true\n"));
+
+          if (compare_root)
+            {
+              SVN_ERR(svn_fs_file_md5_checksum(md5_digest, compare_root,
+                                               compare_path, pool));
+              hex_digest = svn_md5_digest_to_cstring(md5_digest, pool);
+              if (hex_digest)
+                SVN_ERR(svn_stream_printf(eb->stream, pool,
+                                          SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_CHECKSUM
+                                          ": %s\n", hex_digest));
+            }
         }
       else
         {
