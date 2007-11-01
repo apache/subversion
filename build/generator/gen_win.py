@@ -763,6 +763,10 @@ class WinGeneratorBase(GeneratorBase):
     if self.neon_ver >= 26000:
       fakedefines.append("SVN_NEON_0_26=1")
 
+    # check for neon 0.27.x or newer
+    if self.neon_ver >= 27000:
+      fakedefines.append("SVN_NEON_0_27=1")
+
     if self.serf_lib:
       fakedefines.append("SVN_LIBSVN_CLIENT_LINKS_RA_SERF")
 
