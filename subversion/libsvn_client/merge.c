@@ -2898,7 +2898,7 @@ get_mergeinfo_walk_cb(const char *path,
           (strcmp(parent_path, wb->merge_target_path) == 0)))
     {
       svn_client__merge_path_t *child = 
-        apr_palloc(wb->children_with_mergeinfo->pool, sizeof(*child));
+        apr_pcalloc(wb->children_with_mergeinfo->pool, sizeof(*child));
       child->path = apr_pstrdup(wb->children_with_mergeinfo->pool, path);
       child->missing_child = (entry->depth == svn_depth_empty
                               || entry->depth == svn_depth_files
@@ -2915,16 +2915,9 @@ get_mergeinfo_walk_cb(const char *path,
         {
           if (strstr(propval->data, SVN_MERGEINFO_NONINHERITABLE_STR))
             child->has_noninheritable = TRUE;
-          else
-            child->has_noninheritable = FALSE;
           child->propval =
             svn_string_create(propval->data,
                               wb->children_with_mergeinfo->pool);
-        }
-      else
-        {
-          child->propval = NULL;
-          child->has_noninheritable = FALSE;
         }
 
       /* A little trickery: If PATH doesn't have any mergeinfo or has
@@ -2938,9 +2931,6 @@ get_mergeinfo_walk_cb(const char *path,
           && (entry->depth == svn_depth_empty
               || entry->depth == svn_depth_files))
       child->has_noninheritable = TRUE;
-      child->remaining_ranges = NULL;
-      child->pre_merge_mergeinfo = NULL;
-      child->indirect_mergeinfo = FALSE;
 
       APR_ARRAY_PUSH(wb->children_with_mergeinfo, 
                      svn_client__merge_path_t *) = child;
@@ -3142,17 +3132,9 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
   else
     {
       /* Create a new element to insert into CHILDREN_WITH_MERGEINFO. */
-      parent = apr_palloc(children_with_mergeinfo->pool, sizeof(*parent));
+      parent = apr_pcalloc(children_with_mergeinfo->pool, sizeof(*parent));
       parent->path = apr_pstrdup(children_with_mergeinfo->pool, parent_path);
       parent->missing_child = TRUE;
-      parent->switched = FALSE;
-      parent->has_noninheritable = FALSE;
-      parent->absent = FALSE;
-      parent->propval = NULL;
-      parent->scheduled_for_deletion = FALSE;
-      parent->remaining_ranges = NULL;
-      parent->pre_merge_mergeinfo = NULL;
-      parent->indirect_mergeinfo = FALSE;
       /* Insert PARENT into CHILDREN_WITH_MERGEINFO. */
       insert_child_to_merge(children_with_mergeinfo, parent, parent_index);
       /* Increment for loop index so we don't process the inserted element. */
@@ -3183,19 +3165,10 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
       /* Create the missing child and insert it into CHILDREN_WITH_MERGEINFO.*/
       if (!sibling_of_missing)
         {
-          sibling_of_missing = apr_palloc(children_with_mergeinfo->pool,
-                                          sizeof(*sibling_of_missing));
+          sibling_of_missing = apr_pcalloc(children_with_mergeinfo->pool,
+                                           sizeof(*sibling_of_missing));
           sibling_of_missing->path = apr_pstrdup(children_with_mergeinfo->pool,
                                                  child_path);
-          sibling_of_missing->missing_child = FALSE;
-          sibling_of_missing->switched = FALSE;
-          sibling_of_missing->has_noninheritable = FALSE;
-          sibling_of_missing->absent = FALSE;
-          sibling_of_missing->propval = NULL;
-          sibling_of_missing->scheduled_for_deletion = FALSE;
-          sibling_of_missing->remaining_ranges = NULL;
-          sibling_of_missing->pre_merge_mergeinfo = NULL;
-          sibling_of_missing->indirect_mergeinfo = FALSE;
           insert_child_to_merge(children_with_mergeinfo, sibling_of_missing,
                                 insert_index);
         }
@@ -3349,19 +3322,10 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
               if (!child_of_noninheritable)
                 {
                   child_of_noninheritable =
-                    apr_palloc(children_with_mergeinfo->pool,
-                               sizeof(*child_of_noninheritable));
+                    apr_pcalloc(children_with_mergeinfo->pool,
+                                sizeof(*child_of_noninheritable));
                   child_of_noninheritable->path =
                     apr_pstrdup(children_with_mergeinfo->pool, child_path);
-                  child_of_noninheritable->missing_child = FALSE;
-                  child_of_noninheritable->switched = FALSE;
-                  child_of_noninheritable->has_noninheritable = FALSE;
-                  child_of_noninheritable->absent = FALSE;
-                  child_of_noninheritable->propval = NULL;
-                  child_of_noninheritable->scheduled_for_deletion = FALSE;
-                  child_of_noninheritable->remaining_ranges = NULL;
-                  child_of_noninheritable->pre_merge_mergeinfo = NULL;
-                  child_of_noninheritable->indirect_mergeinfo = FALSE;
                   insert_child_to_merge(children_with_mergeinfo,
                                         child_of_noninheritable,
                                         insert_index);
@@ -3402,21 +3366,13 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
     }
   if (!target_item)
     {
-      target_item = apr_palloc(children_with_mergeinfo->pool,
-                               sizeof(*target_item));
+      target_item = apr_pcalloc(children_with_mergeinfo->pool,
+                                sizeof(*target_item));
       target_item->path = apr_pstrdup(children_with_mergeinfo->pool,
                                       merge_cmd_baton->target);
       target_item->missing_child = (entry->depth == svn_depth_empty
                                     || entry->depth == svn_depth_files)
                                     ? TRUE : FALSE;
-      target_item->switched = FALSE;
-      target_item->has_noninheritable = FALSE;
-      target_item->absent = FALSE;
-      target_item->propval = NULL;
-      target_item->remaining_ranges = NULL;
-      target_item->pre_merge_mergeinfo = NULL;
-      target_item->scheduled_for_deletion = FALSE;
-      target_item->indirect_mergeinfo = FALSE;
       if (target_item->missing_child)
         target_item->has_noninheritable = TRUE;
       insert_child_to_merge(children_with_mergeinfo, target_item, 0);
