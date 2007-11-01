@@ -427,7 +427,7 @@ def diff_ignore_whitespace(sbox):
  
   # Make whitespace-only changes to mu
   mu_path = os.path.join(wc_dir, 'A', 'mu')
-  svntest.main.file_write(mu_path, "This  is   the    file     'mu'.\n")
+  svntest.main.file_write(mu_path, "This  is   the    file     'mu'.\n", "wb")
 
   # Created expected output tree for 'svn ci'
   expected_output = svntest.wc.State(wc_dir, {
