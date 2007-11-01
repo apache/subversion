@@ -966,7 +966,9 @@ commit_callback(const svn_commit_info_t *commit_info,
 }
 
 
-/* Set *FROM_SESSION to an RA session associated with the source
+/* TODO: fix comment
+ *
+ * Set *FROM_SESSION to an RA session associated with the source
  * repository of the synchronization, as determined by reading
  * svn:sync- properties from the destination repository (associated
  * with TO_SESSION).  Set LAST_MERGED_REV to the value of the property
@@ -977,6 +979,7 @@ commit_callback(const svn_commit_info_t *commit_info,
  */
 static svn_error_t *
 open_source_session(svn_ra_session_t **from_session,
+                    svn_ra_session_t **from_rp_session,
                     svn_string_t **last_merged_rev,
                     svn_ra_session_t *to_session,
                     svn_ra_callbacks2_t *callbacks,
@@ -999,11 +1002,20 @@ open_source_session(svn_ra_session_t **from_session,
       (APR_EINVAL, NULL,
        _("Destination repository has not been initialized"));
 
+  /* Open the session to copy the revision data. */
   SVN_ERR(svn_ra_open2(from_session, from_url->data, callbacks, baton,
                        config, pool));
-
   SVN_ERR(check_if_session_is_at_repos_root(*from_session, from_url->data,
                                             pool));
+
+  /* Open the session to copy the revision properties. */
+  if (from_rp_session)
+    {
+      SVN_ERR(svn_ra_open2(from_rp_session, from_url->data, callbacks, baton,
+                           config, pool));
+      SVN_ERR(check_if_session_is_at_repos_root(*from_rp_session, from_url->data,
+                                                pool));
+    }
 
   /* Ok, now sanity check the UUID of the source repository, it
      wouldn't be a good thing to sync from a different repository. */
@@ -1019,6 +1031,134 @@ open_source_session(svn_ra_session_t **from_session,
   return SVN_NO_ERROR;
 }
 
+/* Replay baton, used during sychnronization. */
+typedef struct {
+  svn_ra_session_t *from_session;
+  svn_ra_session_t *to_session;
+  svn_ra_session_t *from_rp_session;
+  subcommand_baton_t *sb;
+} replay_baton_t;
+
+/* Return a replay baton allocated from POOL and populated with
+   data from the provided parameters. */
+static replay_baton_t *
+make_replay_baton(svn_ra_session_t *from_session, svn_ra_session_t *to_session,
+                  svn_ra_session_t *from_rp_session, 
+                  subcommand_baton_t *sb, apr_pool_t *pool)
+{
+  replay_baton_t *rb = apr_pcalloc(pool, sizeof(*rb));
+  rb->from_session = from_session;
+  rb->from_rp_session = from_rp_session;
+  rb->to_session = to_session;
+  rb->sb = sb;
+  return rb;
+}
+
+/* Callback function for svn_ra_replay_range, invoked when starting to parse
+ * a replay report.
+ */
+static svn_error_t * 
+replay_rev_started(svn_revnum_t revision,
+                   void *replay_baton,
+                   const svn_delta_editor_t **editor,
+                   void **edit_baton,
+                   apr_pool_t *pool)
+{
+  const svn_delta_editor_t *commit_editor;
+  const svn_delta_editor_t *cancel_editor;
+  const svn_delta_editor_t *sync_editor;
+  void *commit_baton;
+  void *cancel_baton;
+  void *sync_baton;
+  replay_baton_t *rb = replay_baton;
+
+  /* We set this property so that if we error out for some reason
+     we can later determine where we were in the process of
+     merging a revision.  If we had committed the change, but we
+     hadn't finished copying the revprops we need to know that, so
+     we can go back and finish the job before we move on.
+
+     NOTE: We have to set this before we start the commit editor,
+     because ra_svn doesn't let you change rev props during a
+     commit. */
+  SVN_ERR(svn_ra_change_rev_prop(rb->to_session, 0,
+                                 SVNSYNC_PROP_CURRENTLY_COPYING,
+                                 svn_string_createf(pool, "%ld",
+                                                    revision),
+                                 pool));
+
+  /* The actual copy is just a replay hooked up to a commit. */
+
+  SVN_ERR(svn_ra_get_commit_editor2(rb->to_session, &commit_editor,
+                                    &commit_baton,
+                                    "", /* empty log */
+                                    commit_callback, rb->sb,
+                                    NULL, FALSE, pool));
+
+  /* There's one catch though, the diff shows us props we can't
+     send over the RA interface, so we need an editor that's smart
+     enough to filter those out for us.  */
+
+  SVN_ERR(get_sync_editor(commit_editor, commit_baton, revision - 1,
+                          rb->sb->to_url, rb->sb->quiet, 
+                          &sync_editor, &sync_baton, pool));
+
+  SVN_ERR(svn_delta_get_cancellation_editor(check_cancel, NULL,
+                                            sync_editor, sync_baton,
+                                            &cancel_editor,
+                                            &cancel_baton,
+                                            pool));
+  *editor = cancel_editor;
+  *edit_baton = cancel_baton;
+
+  return SVN_NO_ERROR;
+}
+
+/* Callback function for svn_ra_replay_range, invoked when finishing parsing
+ * a replay report.
+ */
+static svn_error_t * 
+replay_rev_finished(svn_revnum_t revision,
+                    void *replay_baton,
+                    const svn_delta_editor_t *editor,
+                    void *edit_baton,
+                    apr_pool_t *pool)
+{
+  replay_baton_t *rb = replay_baton;
+
+  SVN_ERR(editor->close_edit(edit_baton, pool));
+
+  /* Sanity check that we actually committed the revision we meant to. */
+  if (rb->sb->committed_rev != revision)
+    return svn_error_createf
+             (APR_EINVAL, NULL,
+              _("Commit created rev %ld but should have created %ld"),
+              rb->sb->committed_rev, revision);
+
+  /* Ok, we're done with the data, now we just need to do the
+     revprops and we're all set. */
+
+  SVN_ERR(copy_revprops(rb->from_rp_session, rb->to_session, revision, TRUE,
+                        rb->sb->quiet, pool));
+
+  /* Ok, we're done, bring the last-merged-rev property up to date. */
+
+  SVN_ERR(svn_ra_change_rev_prop
+          (rb->to_session,
+           0,
+           SVNSYNC_PROP_LAST_MERGED_REV,
+           svn_string_create(apr_psprintf(pool, "%ld", revision),
+                             pool),
+           pool));
+
+  /* And finally drop the currently copying prop, since we're done
+     with this revision. */
+
+  SVN_ERR(svn_ra_change_rev_prop(rb->to_session, 0,
+                                 SVNSYNC_PROP_CURRENTLY_COPYING,
+                                 NULL, pool));
+  return SVN_NO_ERROR;
+}
 
 /* Synchronize the repository associated with RA session TO_SESSION,
  * using information found in baton B, while the repository is
@@ -1028,14 +1168,17 @@ static svn_error_t *
 do_synchronize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
 {
   svn_string_t *last_merged_rev;
-  svn_revnum_t from_latest, current;
+  svn_revnum_t from_latest;
   svn_ra_session_t *from_session;
+  svn_ra_session_t *from_rp_session;
   subcommand_baton_t *baton = b;
-  apr_pool_t *subpool;
   svn_string_t *currently_copying;
   svn_revnum_t to_latest, copying, last_merged;
+  svn_revnum_t start_revision, end_revision;
+  replay_baton_t *rb;
 
-  SVN_ERR(open_source_session(&from_session, &last_merged_rev, to_session,
+  SVN_ERR(open_source_session(&from_session, &from_rp_session, 
+                              &last_merged_rev, to_session,
                               &(baton->source_callbacks), baton->config,
                               baton, pool));
 
@@ -1084,7 +1227,7 @@ do_synchronize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
         {
           if (copying > last_merged)
             {
-              SVN_ERR(copy_revprops(from_session, to_session,
+              SVN_ERR(copy_revprops(from_rp_session, to_session,
                                     to_latest, TRUE, baton->quiet, pool));
               last_merged = copying;
               last_merged_rev = svn_string_create
@@ -1121,104 +1264,29 @@ do_synchronize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
 
   /* Now check to see if there are any revisions to copy. */
 
-  SVN_ERR(svn_ra_get_latest_revnum(from_session, &from_latest, pool));
+  SVN_ERR(svn_ra_get_latest_revnum(from_rp_session, &from_latest, pool));
 
   if (from_latest < atol(last_merged_rev->data))
     return SVN_NO_ERROR;
 
-  subpool = svn_pool_create(pool);
-
   /* Ok, so there are new revisions, iterate over them copying them
      into the destination repository. */
 
-  for (current = atol(last_merged_rev->data) + 1;
-       current <= from_latest;
-       ++current)
-    {
-      const svn_delta_editor_t *commit_editor;
-      const svn_delta_editor_t *cancel_editor;
-      const svn_delta_editor_t *sync_editor;
-      void *commit_baton;
-      void *cancel_baton;
-      void *sync_baton;
+  rb = make_replay_baton(from_session, to_session, 
+                         from_rp_session, 
+                         baton, pool);
+    
+  start_revision = atol(last_merged_rev->data) + 1;
+  end_revision = from_latest;
+  
+  SVN_ERR(check_cancel(NULL));
 
-      svn_pool_clear(subpool);
-      SVN_ERR(check_cancel(NULL));
+  SVN_ERR(svn_ra_replay_range(from_session, start_revision, end_revision, 
+                              0, TRUE,
+                              replay_rev_started, replay_rev_finished, 
+                              rb, 
+                              pool));
 
-      /* We set this property so that if we error out for some reason
-         we can later determine where we were in the process of
-         merging a revision.  If we had committed the change, but we
-         hadn't finished copying the revprops we need to know that, so
-         we can go back and finish the job before we move on.
-
-         NOTE: We have to set this before we start the commit editor,
-         because ra_svn doesn't let you change rev props during a
-         commit. */
-      SVN_ERR(svn_ra_change_rev_prop(to_session, 0,
-                                     SVNSYNC_PROP_CURRENTLY_COPYING,
-                                     svn_string_createf(subpool, "%ld",
-                                                        current),
-                                     subpool));
-
-      /* The actual copy is just a replay hooked up to a commit. */
-
-      SVN_ERR(svn_ra_get_commit_editor2(to_session, &commit_editor,
-                                        &commit_baton,
-                                        "", /* empty log */
-                                        commit_callback, baton,
-                                        NULL, FALSE, subpool));
-
-      /* There's one catch though, the diff shows us props we can't
-         send over the RA interface, so we need an editor that's smart
-         enough to filter those out for us.  */
-
-      SVN_ERR(get_sync_editor(commit_editor, commit_baton, current - 1,
-                              baton->to_url, baton->quiet, 
-                              &sync_editor, &sync_baton, subpool));
-
-      SVN_ERR(svn_delta_get_cancellation_editor(check_cancel, NULL,
-                                                sync_editor, sync_baton,
-                                                &cancel_editor,
-                                                &cancel_baton,
-                                                subpool));
-
-      SVN_ERR(svn_ra_replay(from_session, current, 0, TRUE,
-                            cancel_editor, cancel_baton, subpool));
-
-      SVN_ERR(cancel_editor->close_edit(cancel_baton, subpool));
-
-      /* Sanity check that we actually committed the revision we meant to. */
-      if (baton->committed_rev != current)
-        return svn_error_createf
-                 (APR_EINVAL, NULL,
-                  _("Commit created rev %ld but should have created %ld"),
-                  baton->committed_rev, current);
-
-      /* Ok, we're done with the data, now we just need to do the
-         revprops and we're all set. */
-
-      SVN_ERR(copy_revprops(from_session, to_session, current, TRUE, 
-                            baton->quiet, subpool));
-
-      /* Ok, we're done, bring the last-merged-rev property up to date. */
-
-      SVN_ERR(svn_ra_change_rev_prop
-              (to_session,
-               0,
-               SVNSYNC_PROP_LAST_MERGED_REV,
-               svn_string_create(apr_psprintf(subpool, "%ld", current),
-                                 subpool),
-               subpool));
-
-      /* And finally drop the currently copying prop, since we're done
-         with this revision. */
-
-      SVN_ERR(svn_ra_change_rev_prop(to_session, 0,
-                                     SVNSYNC_PROP_CURRENTLY_COPYING,
-                                     NULL, subpool));
-    }
-
-  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -1274,7 +1342,8 @@ do_copy_revprops(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
   svn_revnum_t i;
   svn_revnum_t step = 1;
 
-  SVN_ERR(open_source_session(&from_session, &last_merged_rev, to_session,
+  SVN_ERR(open_source_session(&from_session, NULL, &last_merged_rev, 
+                              to_session,
                               &(baton->source_callbacks), baton->config,
                               baton, pool));
 
