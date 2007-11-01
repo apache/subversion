@@ -290,7 +290,6 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
         {
           const char *href, *checked_in;
           svn_string_t checked_in_str;
-          apr_size_t href_len;
 
           href = apr_hash_get(info->props, "href", APR_HASH_KEY_STRING);
           checked_in = apr_hash_get(info->props, "checked-in",
