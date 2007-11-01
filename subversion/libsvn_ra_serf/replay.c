@@ -91,9 +91,21 @@ typedef struct {
   /* are we done? */
   svn_boolean_t done;
 
+  /* callback to get an editor */
+  svn_ra_replay_revstart_callback_t revstart_func;
+  svn_ra_replay_revfinish_callback_t revfinish_func;
+  void *replay_baton;
+
   /* replay receiver function and baton */
   const svn_delta_editor_t *editor;
   void *editor_baton;
+
+  /* current revision */
+  svn_revnum_t revision;
+
+  /* Information needed to create the replay report body */
+  svn_revnum_t low_water_mark;
+  svn_boolean_t send_deltas;
 } replay_context_t;
 
 
@@ -147,6 +159,9 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
   if (state == NONE &&
       strcmp(name.name, "editor-report") == 0)
     {
+      SVN_ERR(ctx->revstart_func(ctx->revision, ctx->replay_baton, 
+                                 &ctx->editor, &ctx->editor_baton, 
+                                 ctx->pool));
       push_state(parser, ctx, REPORT);
     }
   else if (state == REPORT &&
@@ -414,6 +429,9 @@ end_replay(svn_ra_serf__xml_parser_t *parser,
       strcmp(name.name, "editor-report") == 0)
     {
       svn_ra_serf__xml_pop_state(parser);
+      SVN_ERR(ctx->revfinish_func(ctx->revision, ctx->replay_baton, 
+                                  ctx->editor, ctx->editor_baton,
+                                  ctx->pool));
     }
   else if (state == OPEN_DIR && strcmp(name.name, "open-directory") == 0)
     {
@@ -509,6 +527,52 @@ cdata_replay(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
+static serf_bucket_t *
+create_replay_body(void *baton,
+                   serf_bucket_alloc_t *alloc,
+                   apr_pool_t *pool)
+{
+  replay_context_t *ctx = baton;
+  serf_bucket_t *body_bkt, *tmp;
+
+  body_bkt = serf_bucket_aggregate_create(alloc);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:replay-report xmlns:S=\"",
+                                      sizeof("<S:replay-report xmlns:S=\"")-1,
+                                      alloc);
+  serf_bucket_aggregate_append(body_bkt, tmp);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(SVN_XML_NAMESPACE,
+                                      sizeof(SVN_XML_NAMESPACE)-1,
+                                      alloc);
+  serf_bucket_aggregate_append(body_bkt, tmp);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\">",
+                                      sizeof("\">")-1,
+                                      alloc);
+  serf_bucket_aggregate_append(body_bkt, tmp);
+
+  svn_ra_serf__add_tag_buckets(body_bkt,
+                               "S:revision", apr_ltoa(pool, ctx->revision),
+                               alloc);
+  svn_ra_serf__add_tag_buckets(body_bkt,
+                               "S:low-water-mark",
+                               apr_ltoa(pool, ctx->low_water_mark),
+                               alloc);
+
+  svn_ra_serf__add_tag_buckets(body_bkt,
+                               "S:send-deltas",
+                               apr_ltoa(pool, ctx->send_deltas),
+                               alloc);
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:replay-report>",
+                                      sizeof("</S:replay-report>")-1,
+                                      alloc);
+  serf_bucket_aggregate_append(body_bkt, tmp);
+
+  return body_bkt;
+}
+
 svn_error_t *
 svn_ra_serf__replay(svn_ra_session_t *ra_session,
                     svn_revnum_t revision,
@@ -522,54 +586,21 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
-  serf_bucket_t *buckets, *tmp;
 
   replay_ctx = apr_pcalloc(pool, sizeof(*replay_ctx));
   replay_ctx->pool = pool;
   replay_ctx->editor = editor;
   replay_ctx->editor_baton = edit_baton;
   replay_ctx->done = FALSE;
-
-  buckets = serf_bucket_aggregate_create(session->bkt_alloc);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:replay-report xmlns:S=\"",
-                                      sizeof("<S:replay-report xmlns:S=\"")-1,
-                                      session->bkt_alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(SVN_XML_NAMESPACE,
-                                      sizeof(SVN_XML_NAMESPACE)-1,
-                                      session->bkt_alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\">",
-                                      sizeof("\">")-1,
-                                      session->bkt_alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
-
-  svn_ra_serf__add_tag_buckets(buckets,
-                               "S:revision", apr_ltoa(pool, revision),
-                               session->bkt_alloc);
-  svn_ra_serf__add_tag_buckets(buckets,
-                               "S:low-water-mark",
-                               apr_ltoa(pool, low_water_mark),
-                               session->bkt_alloc);
-
-  svn_ra_serf__add_tag_buckets(buckets,
-                               "S:send-deltas",
-                               apr_ltoa(pool, send_deltas),
-                               session->bkt_alloc);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:replay-report>",
-                                      sizeof("</S:replay-report>")-1,
-                                      session->bkt_alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
+  replay_ctx->low_water_mark = low_water_mark;
+  replay_ctx->send_deltas = send_deltas;
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
   handler->method = "REPORT";
   handler->path = session->repos_url_str;
-  handler->body_buckets = buckets;
+  handler->body_delegate = create_replay_body;
+  handler->body_delegate_baton = replay_ctx;
   handler->body_type = "text/xml";
   handler->conn = session->conns[0];
   handler->session = session;
@@ -588,7 +619,88 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
 
   svn_ra_serf__request_create(handler);
 
-  SVN_ERR(svn_ra_serf__context_run_wait(&replay_ctx->done, session, pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
+                          svn_revnum_t start_revision,
+                          svn_revnum_t end_revision,
+                          svn_revnum_t low_water_mark,
+                          svn_boolean_t send_deltas,
+                          svn_ra_replay_revstart_callback_t revstart_func,
+                          svn_ra_replay_revfinish_callback_t revfinish_func,
+                          void *replay_baton,
+                          apr_pool_t *pool)
+{
+  replay_context_t *replay_ctx;
+  svn_ra_serf__session_t *session = ra_session->priv;
+  svn_ra_serf__handler_t *handler;
+  svn_ra_serf__xml_parser_t *parser_ctx;
+  svn_revnum_t rev = start_revision;
+
+  while (1)
+    {
+      apr_status_t status;
+
+      /* Send pending requests, if any */
+      if (rev <= end_revision)
+        {
+          replay_ctx = apr_pcalloc(pool, sizeof(*replay_ctx));
+          replay_ctx->pool = pool;
+          replay_ctx->revstart_func = revstart_func;
+          replay_ctx->revfinish_func = revfinish_func;
+          replay_ctx->replay_baton = replay_baton;
+          replay_ctx->done = FALSE;
+          replay_ctx->revision = rev;
+          replay_ctx->low_water_mark = low_water_mark;
+          replay_ctx->send_deltas = send_deltas;
+
+          handler = apr_pcalloc(pool, sizeof(*handler));
+
+          handler->method = "REPORT";
+          handler->path = session->repos_url_str;
+          handler->body_delegate = create_replay_body;
+          handler->body_delegate_baton = replay_ctx;
+          handler->conn = session->conns[0];
+          handler->session = session;
+
+          parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
+
+          parser_ctx->pool = pool;
+          parser_ctx->user_data = replay_ctx;
+          parser_ctx->start = start_replay;
+          parser_ctx->end = end_replay;
+          parser_ctx->cdata = cdata_replay;
+          parser_ctx->done = &replay_ctx->done;
+
+          handler->response_handler = svn_ra_serf__handle_xml_parser;
+          handler->response_baton = parser_ctx;
+
+          svn_ra_serf__request_create(handler);
+
+          rev++;
+        }
+
+      /* Run the serf loop, send outgoing and process incoming requests. 
+         Continue doing this if there are enough requests sent or there are no
+         more pending requests. */
+      status = serf_context_run(session->context, SERF_DURATION_FOREVER, pool);
+      if (APR_STATUS_IS_TIMEUP(status))
+        {
+          continue;
+        }
+      if (status)
+        {
+          SVN_ERR(session->pending_error);
+
+          return svn_error_wrap_apr(status, 
+                                    _("Error retrieving replay REPORT (%d)"),
+                                    status);
+        }
+      if (replay_ctx->done)
+        break;
+    }
 
   return SVN_NO_ERROR;
 }

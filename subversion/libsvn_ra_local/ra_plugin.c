@@ -1479,7 +1479,8 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__get_lock,
   svn_ra_local__get_locks,
   svn_ra_local__replay,
-  svn_ra_local__has_capability
+  svn_ra_local__has_capability,
+  NULL /* replay_range */
 };
 
 

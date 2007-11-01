@@ -1064,6 +1064,23 @@ svn_error_t *svn_ra_replay(svn_ra_session_t *session,
                                  text_deltas, editor, edit_baton, pool);
 }
 
+svn_error_t *
+svn_ra_replay_range(svn_ra_session_t *session,
+                    svn_revnum_t start_revision,
+                    svn_revnum_t end_revision,
+                    svn_revnum_t low_water_mark,
+                    svn_boolean_t text_deltas,
+                    svn_ra_replay_revstart_callback_t revstart_func,
+                    svn_ra_replay_revfinish_callback_t revfinish_func,
+                    void *replay_baton,
+                    apr_pool_t *pool)
+{
+  return session->vtable->replay_range(session, start_revision, end_revision, 
+                                       low_water_mark, text_deltas, 
+                                       revstart_func, revfinish_func,
+                                       replay_baton, pool);
+}
+
 svn_error_t *svn_ra_has_capability(svn_ra_session_t *session,
                                    svn_boolean_t *has,
                                    const char *capability,
