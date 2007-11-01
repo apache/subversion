@@ -1118,6 +1118,17 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
                     apr_pool_t *pool);
 
 svn_error_t *
+svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
+                          svn_revnum_t start_revision,
+                          svn_revnum_t end_revision,
+                          svn_revnum_t low_water_mark,
+                          svn_boolean_t send_deltas,
+                          svn_ra_replay_revstart_callback_t revstart_func,
+                          svn_ra_replay_revfinish_callback_t revfinish_func,
+                          void *replay_baton,
+                          apr_pool_t *pool);
+
+svn_error_t *
 svn_ra_serf__lock(svn_ra_session_t *ra_session,
                   apr_hash_t *path_revs,
                   const char *comment,

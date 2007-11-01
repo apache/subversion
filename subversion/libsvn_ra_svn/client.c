@@ -2207,7 +2207,8 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_get_lock,
   ra_svn_get_locks,
   ra_svn_replay,
-  ra_svn_has_capability
+  ra_svn_has_capability,
+  NULL /* replay_range */
 };
 
 svn_error_t *
