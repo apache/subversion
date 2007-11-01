@@ -858,7 +858,7 @@ II.   INSTALLATION
         binaries from http://gnuwin32.sourceforge.net/. You'll need the
         binaries (gettext-0.14.1-bin.zip) and dependencies
         (gettext-0.14.1-dep.zip).
-      * [Optional] An assembler, e.g., MASM32 from http://www.mas32.com/
+      * [Optional] An assembler, e.g., MASM32 from http://www.masm32.com/
         or nasm which is available from
         http://www.kernel.org/pub/software/devel/nasm/binaries/win32/
 
