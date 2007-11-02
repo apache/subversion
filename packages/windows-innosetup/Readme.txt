@@ -155,6 +155,7 @@ Dynamic build data
   path_brkdb_lib      libdb4*.lib
   path_brkdb_inc      db.h, db_cxx.h)
   path_brkdb_inc2     cxx_common.h, cxx_except.h
+  path_sqlite         sqlite3.dll
   path_ssl            libeay32.dll, ssleay32.dll
 
 
