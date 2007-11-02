@@ -696,9 +696,10 @@
   }
 }
 
-%typemap(in) apr_array_header_t **RANGELIST_INOUT
+%typemap(in) apr_array_header_t **RANGELIST_INOUT ($*1_ltype temp)
 {
-  $1 = svn_swig_py_rangelist_to_array($input, _global_pool);
+  $1 = &temp;
+  *$1 = svn_swig_py_rangelist_to_array($input, _global_pool);
   if (PyErr_Occurred()) {
     SWIG_fail;
   }
