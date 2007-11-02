@@ -846,7 +846,7 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *serf_sess = ra_session->priv;
 
   const char *cap_result = apr_hash_get(serf_sess->capabilities,
-                                        SVN_RA_CAPABILITY_DEPTH,
+                                        capability,
                                         APR_HASH_KEY_STRING);
 
   /* If any capability is unknown, they're all unknown, so ask. */
@@ -855,7 +855,7 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
 
   /* Try again, now that we've fetched the capabilities. */
   cap_result = apr_hash_get(serf_sess->capabilities,
-                            SVN_RA_CAPABILITY_DEPTH, APR_HASH_KEY_STRING);
+                            capability, APR_HASH_KEY_STRING);
 
   if (cap_result == capability_yes)
     {
