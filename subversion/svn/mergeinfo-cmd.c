@@ -43,8 +43,9 @@ print_merge_ranges(apr_array_header_t *ranges, apr_pool_t *pool)
     {
       svn_merge_range_t *range = APR_ARRAY_IDX(ranges, i, svn_merge_range_t *);
       svn_cmdline_printf(pool, "r%ld:%ld%s", range->start, range->end,
-                         (i == (ranges->nelts - 1)) ? "\n" : ", ");
+                         (i == (ranges->nelts - 1)) ? "" : ", ");
     }
+  svn_cmdline_printf(pool, "\n");
 }
 
 

@@ -1874,7 +1874,7 @@ static svn_error_t *get_location_segments(svn_ra_svn_conn_t *conn,
    * the "done" even if there was an error in fetching the results. */
 
   err = svn_repos_node_location_segments(b->repos, abs_path, 
-                                         start_rev, start_rev, end_rev, 
+                                         peg_revision, start_rev, end_rev, 
                                          gls_receiver, (void *)conn,
                                          authz_check_access_cb_func(b), b,
                                          pool);

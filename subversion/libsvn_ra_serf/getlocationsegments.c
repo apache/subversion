@@ -219,13 +219,15 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   if (gls_ctx->error || parser_ctx->error)
     {
       svn_error_clear(err);
+      err = SVN_NO_ERROR;
       SVN_ERR(gls_ctx->error);
       SVN_ERR(parser_ctx->error);
     }
 
   svn_pool_destroy(gls_ctx->subpool);
 
-  SVN_ERR(err);
+  if (err && (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE))
+    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err, NULL);
 
-  return SVN_NO_ERROR;
+  return err;
 }

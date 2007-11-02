@@ -85,6 +85,7 @@ static svn_error_t *
 send_get_location_segments_report(ap_filter_t *output,
                                   apr_bucket_brigade *bb,
                                   const dav_resource *resource,
+                                  svn_revnum_t peg_rev,
                                   svn_revnum_t start_rev,
                                   svn_revnum_t end_rev,
                                   const char *path)
@@ -107,7 +108,7 @@ send_get_location_segments_report(ap_filter_t *output,
   location_segment_baton.output = output;
   location_segment_baton.bb = bb;
   SVN_ERR(svn_repos_node_location_segments(resource->info->repos->repos,
-                                           path, start_rev, 
+                                           path, peg_rev, 
                                            start_rev, end_rev,
                                            location_segment_receiver,
                                            &location_segment_baton,
@@ -210,7 +211,8 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
 
   /* Alright, time to drive the response. */
   if ((serr = send_get_location_segments_report(output, bb, resource,
-                                                start_rev, end_rev, path)))
+                                                peg_revision, start_rev, 
+                                                end_rev, path)))
     derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                 "Error writing REPORT response.",
                                 resource->pool);
