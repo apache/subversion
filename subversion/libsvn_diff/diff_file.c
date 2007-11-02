@@ -1133,7 +1133,7 @@ svn_diff_file_output_unified2(svn_stream_t *output_stream,
 
       for (i = 0; i < 2; i++)
         {
-	  SVN_ERR(svn_io_file_close(baton.file[i], pool));
+          SVN_ERR(svn_io_file_close(baton.file[i], pool));
         }
     }
 
