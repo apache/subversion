@@ -2914,9 +2914,11 @@ locate_copyfrom(const char *copyfrom_path,
 }
 
 
+/* Given a set of properties PROPS_IN, find all regular properties
+   and return these in a new set, alloced on POOL. */
 static apr_hash_t *
-copy_non_entry_props(apr_hash_t *props_in,
-                     apr_pool_t *pool)
+copy_regular_props(apr_hash_t *props_in,
+                   apr_pool_t *pool)
 {
   apr_hash_t *props_out = apr_hash_make(pool);
   apr_hash_index_t *hi;
@@ -2931,9 +2933,8 @@ copy_non_entry_props(apr_hash_t *props_in,
       propname = key;
       propval = val;
 
-      if (svn_property_kind(NULL, propname) == svn_prop_entry_kind)
-        continue;
-      apr_hash_set(props_out, propname, APR_HASH_KEY_STRING, propval);
+      if (svn_property_kind(NULL, propname) == svn_prop_regular_kind)
+        apr_hash_set(props_out, propname, APR_HASH_KEY_STRING, propval);
     }
   return props_out;
 }
@@ -3036,10 +3037,11 @@ add_file_with_history(const char *path,
       working_props = base_props;
     }
 
-  /* Loop over whatever props we have in memory, and add any
-     non-entry-specific props to hashes in the baton. */
-  tfb->copied_base_props = copy_non_entry_props(base_props, pool);
-  tfb->copied_working_props = copy_non_entry_props(working_props, pool);
+  /* Loop over whatever props we have in memory, and add all
+     regular props to hashes in the baton. Skip entry and wc
+     properties, these are only valid for the original file. */
+  tfb->copied_base_props = copy_regular_props(base_props, pool);
+  tfb->copied_working_props = copy_regular_props(working_props, pool);
 
   if (src_path != NULL)
     {
