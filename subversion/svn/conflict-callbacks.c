@@ -365,35 +365,40 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
 
           SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt, b->pb, subpool));
 
-          if ((strcmp(answer, "h") == 0) || (strcmp(answer, "?") == 0))
+          /* Check for single charater response. */
+          if (answer[1] != 0)
+            continue;
+
+          if ((answer[0] == 'h') || (answer[0] == '?'))
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
               _("  (p)ostpone    - mark the conflict to be resolved later\n"
                 "  (d)iff        - show all changes made to merged file\n"
                 "  (e)dit        - change merged file in an editor\n"
+                "  (i)nteractive - prompt for each conflicting hunk\n"
                 "  (r)esolved    - accept merged version of file\n"
                 "  (m)ine        - accept my version of file\n"
                 "  (t)heirs      - accept their version of file\n"
                 "  (l)aunch      - use third-party tool to resolve conflict\n"
                 "  (h)elp        - show this list\n\n")));
             }
-          else if (strcmp(answer, "p") == 0)
+          else if (answer[0] == 'p')
             {
               /* Do nothing, let file be marked conflicted. */
               (*result)->choice = svn_wc_conflict_choose_postpone;
               break;
             }
-          else if (strcmp(answer, "m") == 0)
+          else if (answer[0] == 'm')
             {
               (*result)->choice = svn_wc_conflict_choose_mine;
               break;
             }
-          else if (strcmp(answer, "t") == 0)
+          else if (answer[0] == 't')
             {
               (*result)->choice = svn_wc_conflict_choose_theirs;
               break;
             }
-          else if (strcmp(answer, "d") == 0)
+          else if (answer[0] == 'd')
             {
               if (! diff_allowed)
                 {
@@ -405,11 +410,11 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
 
               SVN_ERR(show_diff(&performed_edit, desc, subpool));
             }
-          else if (strcmp(answer, "e") == 0)
+          else if (answer[0] == 'e')
             {
               SVN_ERR(open_editor(&performed_edit, desc, b, subpool));
             }
-          else if (strcmp(answer, "l") == 0)
+          else if (answer[0] == 'l')
             {
               if (desc->base_file && desc->their_file && desc->my_file
                     && desc->merged_file)
@@ -418,7 +423,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                 SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
                                             _("Invalid option.\n\n")));
             }
-          else if (strcmp(answer, "r") == 0)
+          else if (answer[0] == 'r')
             {
               /* We only allow the user accept the merged version of
                  the file if they've edited it, or at least looked at
