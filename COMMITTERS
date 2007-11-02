@@ -107,6 +107,7 @@ Commit access for specific areas:
       dkagedal   David Kågedal <davidk@lysator.liu.se>       (dsvn.el)
         dustin   Dustin J. Mitchell <dustin@zmanda.com>      (svnmerge)
    rocketraman   Raman Gupta <rocketraman@fastmail.fm>       (svnmerge)
+      stylesen   Senthil Kumaran S <senthil@collab.net>      (tests)
 
   Translation of message files:
 
