@@ -65,6 +65,7 @@ Node-kind: file
 Node-action: add
 Node-copyfrom-rev: 1
 Node-copyfrom-path: foo.txt
+Text-copy-source-md5: d41d8cd98f00b204e9800998ecf8427e
 Text-content-length: 9
 Text-content-md5: d2508118d0d39e198d1129d87d692d59
 Content-length: 9
