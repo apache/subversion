@@ -74,6 +74,121 @@ svn_cl__accept_from_word(const char *word)
 }
 
 
+static svn_error_t *
+show_diff(svn_boolean_t *performed_edit,
+          const svn_wc_conflict_description_t *desc,
+          apr_pool_t *pool)
+{
+  const char *path1, *path2;
+  svn_diff_t *diff;
+  svn_stream_t *output;
+  svn_diff_file_options_t *options;
+
+  if (desc->merged_file && desc->base_file)
+    {
+      /* Show the conflict markers to the user */
+      path1 = desc->base_file;
+      path2 = desc->merged_file;
+    }
+  else
+    {
+      /* There's no base file, but we can show the
+         difference between mine and theirs. */
+      path1 = desc->their_file;
+      path2 = desc->my_file;
+    }
+
+  options = svn_diff_file_options_create(pool);
+  options->ignore_eol_style = TRUE;
+  SVN_ERR(svn_stream_for_stdout(&output, pool));
+  SVN_ERR(svn_diff_file_diff_2(&diff, path1, path2,
+                               options, pool));
+  SVN_ERR(svn_diff_file_output_unified2(output, diff,
+                                        path1, path2,
+                                        NULL, NULL,
+                                        APR_LOCALE_CHARSET,
+                                        pool));
+
+  *performed_edit = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+open_editor(svn_boolean_t *performed_edit,
+            const svn_wc_conflict_description_t *desc,
+            svn_cl__conflict_baton_t *b,
+            apr_pool_t *pool)
+{
+  svn_error_t *err;
+
+  if (desc->merged_file)
+    {
+      err = svn_cl__edit_file_externally(desc->merged_file, b->editor_cmd,
+                                         b->config, pool);
+      if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR))
+        {
+          SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
+                                      err->message ? err->message :
+                                      _("No editor found.")));
+          svn_error_clear(err);
+        }
+      else if (err && (err->apr_err == SVN_ERR_EXTERNAL_PROGRAM))
+        {
+          SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
+                                      err->message ? err->message :
+                                      _("Error running editor.")));
+          svn_error_clear(err);
+        }
+      else if (err)
+        return err;
+      else
+        *performed_edit = TRUE;
+    }
+  else
+    SVN_ERR(svn_cmdline_fprintf(stderr, pool,
+                                _("Invalid option; there's no "
+                                  "merged version to edit.\n\n")));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+launch_resolver(svn_boolean_t *performed_edit,
+                const svn_wc_conflict_description_t *desc,
+                svn_cl__conflict_baton_t *b,
+                apr_pool_t *pool)
+{
+  svn_error_t *err;
+
+  err = svn_cl__merge_file_externally(desc->base_file, desc->their_file,
+                                      desc->my_file, desc->merged_file,
+                                      b->config, pool);
+  if (err && err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL)
+    {
+      SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
+                                  err->message ? err->message :
+                                  _("No merge tool found.\n")));
+      svn_error_clear(err);
+    }
+  else if (err && err->apr_err == SVN_ERR_EXTERNAL_PROGRAM)
+    {
+      SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
+                                  err->message ? err->message :
+                             _("Error running merge tool.")));
+      svn_error_clear(err);
+    }
+  else if (err)
+    return err;
+  else if (performed_edit)
+    *performed_edit = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Implement svn_wc_conflict_resolver_func_t; resolves based on
    --accept option if given, else by prompting. */
 svn_error_t *
@@ -153,30 +268,8 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
               return SVN_NO_ERROR;
             }
 
-          err = svn_cl__merge_file_externally(desc->base_file,
-                                              desc->their_file,
-                                              desc->my_file,
-                                              desc->merged_file,
-                                              b->config,
-                                              pool);
-          if (err && err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL)
-            {
-              SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
-                                          err->message ? err->message :
-                                          _("No merge tool found.\n")));
-              svn_error_clear(err);
-              b->external_failed = TRUE;
-            }
-          else if (err && err->apr_err == SVN_ERR_EXTERNAL_PROGRAM)
-            {
-              SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
-                                          err->message ? err->message :
-                                          _("Error running merge tool.")));
-              svn_error_clear(err);
-              b->external_failed = TRUE;
-            }
-          else if (err)
-            return err;
+          SVN_ERR(launch_resolver(NULL, desc, b, pool));
+
           (*result)->choice = svn_wc_conflict_choose_merged;
           return SVN_NO_ERROR;
         }
@@ -275,14 +368,14 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
           if ((strcmp(answer, "h") == 0) || (strcmp(answer, "?") == 0))
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
-              _("  (p)ostpone - mark the conflict to be resolved later\n"
-                "  (d)iff     - show all changes made to merged file\n"
-                "  (e)dit     - change merged file in an editor\n"
-                "  (r)esolved - accept merged version of file\n"
-                "  (m)ine     - accept my version of file\n"
-                "  (t)heirs   - accept their version of file\n"
-                "  (l)aunch   - use third-party tool to resolve conflict\n"
-                "  (h)elp     - show this list\n\n")));
+              _("  (p)ostpone    - mark the conflict to be resolved later\n"
+                "  (d)iff        - show all changes made to merged file\n"
+                "  (e)dit        - change merged file in an editor\n"
+                "  (r)esolved    - accept merged version of file\n"
+                "  (m)ine        - accept my version of file\n"
+                "  (t)heirs      - accept their version of file\n"
+                "  (l)aunch      - use third-party tool to resolve conflict\n"
+                "  (h)elp        - show this list\n\n")));
             }
           else if (strcmp(answer, "p") == 0)
             {
@@ -302,11 +395,6 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
             }
           else if (strcmp(answer, "d") == 0)
             {
-              const char *path1, *path2;
-              svn_diff_t *diff;
-              svn_stream_t *output;
-              svn_diff_file_options_t *options;
-
               if (! diff_allowed)
                 {
                   SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
@@ -315,93 +403,17 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                   continue;
                 }
 
-              if (desc->merged_file && desc->base_file)
-                {
-                  /* Show the conflict markers to the user */
-                  path1 = desc->base_file;
-                  path2 = desc->merged_file;
-                }
-              else
-                {
-                  /* There's no base file, but we can show the
-                     difference between mine and theirs. */
-                  path1 = desc->their_file;
-                  path2 = desc->my_file;
-                }
-
-              options = svn_diff_file_options_create(subpool);
-              options->ignore_eol_style = TRUE;
-              SVN_ERR(svn_stream_for_stdout(&output, subpool));
-              SVN_ERR(svn_diff_file_diff_2(&diff, path1, path2,
-                                           options, subpool));
-              SVN_ERR(svn_diff_file_output_unified2(output, diff,
-                                                    path1, path2,
-                                                    NULL, NULL,
-                                                    APR_LOCALE_CHARSET,
-                                                    subpool));
-              performed_edit = TRUE;
+              SVN_ERR(show_diff(&performed_edit, desc, subpool));
             }
           else if (strcmp(answer, "e") == 0)
             {
-              if (desc->merged_file)
-                {
-                  err = svn_cl__edit_file_externally(desc->merged_file,
-                                                     b->editor_cmd,
-                                                     b->config, subpool);
-                  if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR))
-                    {
-                      SVN_ERR(svn_cmdline_fprintf(stderr, subpool, "%s\n",
-                                                  err->message ? err->message :
-                                                  _("No editor found.")));
-                      svn_error_clear(err);
-                    }
-                  else if (err && (err->apr_err == SVN_ERR_EXTERNAL_PROGRAM))
-                    {
-                      SVN_ERR(svn_cmdline_fprintf(stderr, subpool, "%s\n",
-                                                  err->message ? err->message :
-                                                  _("Error running editor.")));
-                      svn_error_clear(err);
-                    }
-                  else if (err)
-                    return err;
-                  else
-                    performed_edit = TRUE;
-                }
-              else
-                SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
-                                            _("Invalid option; there's no "
-                                              "merged version to edit.\n\n")));
+              SVN_ERR(open_editor(&performed_edit, desc, b, subpool));
             }
           else if (strcmp(answer, "l") == 0)
             {
-              if (desc->base_file && desc->their_file &&
-                  desc->my_file && desc->merged_file)
-                {
-                  err = svn_cl__merge_file_externally(desc->base_file,
-                                                      desc->their_file,
-                                                      desc->my_file,
-                                                      desc->merged_file,
-                                                      b->config,
-                                                      pool);
-                  if (err && err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL)
-                    {
-                      SVN_ERR(svn_cmdline_fprintf(stderr, subpool, "%s\n",
-                                                  err->message ? err->message :
-                                                  _("No merge tool found.\n")));
-                      svn_error_clear(err);
-                    }
-                  else if (err && err->apr_err == SVN_ERR_EXTERNAL_PROGRAM)
-                    {
-                      SVN_ERR(svn_cmdline_fprintf(stderr, subpool, "%s\n",
-                                                  err->message ? err->message :
-                                             _("Error running merge tool.")));
-                      svn_error_clear(err);
-                    }
-                  else if (err)
-                    return err;
-                  else
-                    performed_edit = TRUE;
-                }
+              if (desc->base_file && desc->their_file && desc->my_file
+                    && desc->merged_file)
+                SVN_ERR(launch_resolver(&performed_edit, desc, b, subpool));
               else
                 SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
                                             _("Invalid option.\n\n")));
