@@ -372,15 +372,14 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
           if ((answer[0] == 'h') || (answer[0] == '?'))
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
-              _("  (p)ostpone    - mark the conflict to be resolved later\n"
-                "  (d)iff        - show all changes made to merged file\n"
-                "  (e)dit        - change merged file in an editor\n"
-                "  (i)nteractive - prompt for each conflicting hunk\n"
-                "  (r)esolved    - accept merged version of file\n"
-                "  (m)ine        - accept my version of file\n"
-                "  (t)heirs      - accept their version of file\n"
-                "  (l)aunch      - use third-party tool to resolve conflict\n"
-                "  (h)elp        - show this list\n\n")));
+              _("  (p)ostpone - mark the conflict to be resolved later\n"
+                "  (d)iff     - show all changes made to merged file\n"
+                "  (e)dit     - change merged file in an editor\n"
+                "  (r)esolved - accept merged version of file\n"
+                "  (m)ine     - accept my version of file\n"
+                "  (t)heirs   - accept their version of file\n"
+                "  (l)aunch   - use third-party tool to resolve conflict\n"
+                "  (h)elp     - show this list\n\n")));
             }
           else if (answer[0] == 'p')
             {
