@@ -1229,7 +1229,6 @@ PyObject *svn_swig_py_array_to_list(const apr_array_header_t *array)
     return NULL;
 }
 
-/* Formerly used by pre-1.0 APIs. Now unused
 PyObject *svn_swig_py_revarray_to_list(const apr_array_header_t *array)
 {
     PyObject *list = PyList_New(array->nelts);
@@ -1249,7 +1248,6 @@ PyObject *svn_swig_py_revarray_to_list(const apr_array_header_t *array)
     Py_DECREF(list);
     return NULL;
 }
-*/
 
 static PyObject *
 commit_item_array_to_list(const apr_array_header_t *array)

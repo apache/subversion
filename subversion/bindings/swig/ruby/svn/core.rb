@@ -729,7 +729,7 @@ module Svn
       end
 
       def merge(changes, consider_inheritance=nil)
-        self.class.new(Core.swig_rb_mergeinfo_merge(self, changes, consider_inheritance))
+        self.class.new(Core.swig_mergeinfo_merge(self, changes, consider_inheritance))
       end
 
       def remove(eraser)
@@ -737,7 +737,7 @@ module Svn
       end
 
       def sort
-        self.class.new(Core.swig_rb_mergeinfo_sort(self))
+        self.class.new(Core.swig_mergeinfo_sort(self))
       end
 
       def to_s
@@ -763,7 +763,7 @@ module Svn
       end
 
       def merge(changes, consider_inheritance=nil)
-        self.class.new(*Core.swig_rb_rangelist_merge(self, changes, consider_inheritance))
+        self.class.new(*Core.swig_rangelist_merge(self, changes, consider_inheritance))
       end
 
       def remove(eraser, consider_inheritance=nil)
@@ -775,7 +775,7 @@ module Svn
       end
 
       def reverse
-        self.class.new(*Core.swig_rb_rangelist_reverse(self))
+        self.class.new(*Core.swig_rangelist_reverse(self))
       end
 
       def to_s

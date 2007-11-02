@@ -74,6 +74,12 @@ def svn_path_compare_paths(path1, path2):
   # determine order
   return cmp(char1, char2)
 
+def svn_mergeinfo_merge(mergeinfo, changes, consider_inheritance=0):
+  return _libsvncore.svn_swig_mergeinfo_merge(mergeinfo, changes,
+                                              consider_inheritance)
+
+def svn_mergeinfo_sort(mergeinfo, consider_inheritance=0):
+  return _libsvncore.svn_swig_mergeinfo_sort(mergeinfo, consider_inheritance)
 
 class Stream:
   """A file-object-like wrapper for Subversion svn_stream_t objects."""
