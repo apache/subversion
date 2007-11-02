@@ -284,23 +284,23 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                 "  (l)aunch   - use third-party tool to resolve conflict\n"
                 "  (h)elp     - show this list\n\n")));
             }
-          if (strcmp(answer, "p") == 0)
+          else if (strcmp(answer, "p") == 0)
             {
               /* Do nothing, let file be marked conflicted. */
               (*result)->choice = svn_wc_conflict_choose_postpone;
               break;
             }
-          if (strcmp(answer, "m") == 0)
+          else if (strcmp(answer, "m") == 0)
             {
               (*result)->choice = svn_wc_conflict_choose_mine;
               break;
             }
-          if (strcmp(answer, "t") == 0)
+          else if (strcmp(answer, "t") == 0)
             {
               (*result)->choice = svn_wc_conflict_choose_theirs;
               break;
             }
-          if (strcmp(answer, "d") == 0)
+          else if (strcmp(answer, "d") == 0)
             {
               const char *path1, *path2;
               svn_diff_t *diff;
@@ -341,7 +341,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                                                     subpool));
               performed_edit = TRUE;
             }
-          if (strcmp(answer, "e") == 0)
+          else if (strcmp(answer, "e") == 0)
             {
               if (desc->merged_file)
                 {
@@ -372,7 +372,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                                             _("Invalid option; there's no "
                                               "merged version to edit.\n\n")));
             }
-          if (strcmp(answer, "l") == 0)
+          else if (strcmp(answer, "l") == 0)
             {
               if (desc->base_file && desc->their_file &&
                   desc->my_file && desc->merged_file)
@@ -406,7 +406,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                 SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
                                             _("Invalid option.\n\n")));
             }
-          if (strcmp(answer, "r") == 0)
+          else if (strcmp(answer, "r") == 0)
             {
               /* We only allow the user accept the merged version of
                  the file if they've edited it, or at least looked at
