@@ -491,7 +491,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     { svn_cl__targets_opt, 'm', 'F', svn_cl__force_log_opt,
       svn_cl__encoding_opt, svn_cl__force_opt, svn_cl__changelist_opt },
     {{'F', N_("read lock comment from file ARG")},
-     {'m', N_("specify lock comment ARG")}} },
+     {'m', N_("specify lock comment ARG")},
+     {svn_cl__force_log_opt, N_("force validity of lock comment source")}} },
 
   { "log", svn_cl__log, {0}, N_
     ("Show the log messages for a set of revision(s) and/or file(s).\n"
