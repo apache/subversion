@@ -1550,7 +1550,8 @@ main(int argc, const char *argv[])
           || subcommand->cmd_func == svn_cl__import
           || subcommand->cmd_func == svn_cl__mkdir
           || subcommand->cmd_func == svn_cl__move
-          || subcommand->cmd_func == svn_cl__lock))
+          || subcommand->cmd_func == svn_cl__lock
+          || subcommand->cmd_func == svn_cl__propedit))
     {
       /* If the -F argument is a file that's under revision control,
          that's probably not what the user intended. */
