@@ -366,7 +366,7 @@ I.    INTRODUCTION
            instances.  To do this, just unzip/untar Neon, and build
            and install it according to its own standard installation
            instructions.  Then follow the steps below to use the
-           installed Neon when building
+           installed Neon when building.
 
            Subversion's configuration mechanism should auto-detect the
            installed Neon.  If it does not, you may need to set the
@@ -409,7 +409,7 @@ I.    INTRODUCTION
 
       7. OpenSSL  (OPTIONAL)
 
-      The Neon and Serf libraries has support for SSL encryption by
+      The Neon and Serf libraries have support for SSL encryption by
       relying on the OpenSSL library.
 
       When Neon is created with this dependency, then the Subversion
