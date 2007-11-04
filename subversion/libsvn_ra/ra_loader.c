@@ -1076,10 +1076,10 @@ svn_ra_replay_range(svn_ra_session_t *session,
                     apr_pool_t *pool)
 {
   svn_error_t *err = 
-    svn_ra_replay(session, start_revision, end_revision, 
-                  low_water_mark, text_deltas, 
-                  revstart_func, revfinish_func,
-                  replay_baton, pool);
+    session->vtable->replay_range(session, start_revision, end_revision, 
+                                  low_water_mark, text_deltas, 
+                                  revstart_func, revfinish_func,
+                                  replay_baton, pool);
 
   if (err && (err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED))
     {
