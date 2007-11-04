@@ -195,6 +195,7 @@ typedef svn_error_t *(*svn_ra_replay_revstart_callback_t)
    void *replay_baton,
    const svn_delta_editor_t **editor,
    void **edit_baton,
+   apr_hash_t *rev_props,
    apr_pool_t *pool);
 
   /**
@@ -209,6 +210,7 @@ typedef svn_error_t *(*svn_ra_replay_revfinish_callback_t)
    void *replay_baton,
    const svn_delta_editor_t *editor,
    void *edit_baton,
+   apr_hash_t *rev_props,
    apr_pool_t *pool);
 
 

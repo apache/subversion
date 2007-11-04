@@ -1093,17 +1093,22 @@ svn_ra_replay_range(svn_ra_session_t *session,
         {
           const svn_delta_editor_t *editor;
           void *edit_baton;
+          apr_hash_t *rev_props;
 
           svn_pool_clear(subpool);
 
+          SVN_ERR(svn_ra_rev_proplist(session, rev, &rev_props, subpool));
+
           SVN_ERR(revstart_func(rev, replay_baton, 
                                 &editor, &edit_baton, 
+                                rev_props,
                                 subpool));
           SVN_ERR(svn_ra_replay(session, rev, low_water_mark,
                                 text_deltas, editor, edit_baton, 
                                 subpool));
           SVN_ERR(revfinish_func(rev, replay_baton, 
                                  editor, edit_baton,
+                                 rev_props,
                                  subpool));
         }
       svn_pool_destroy(subpool);
