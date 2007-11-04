@@ -342,6 +342,125 @@ check_if_session_is_at_repos_root(svn_ra_session_t *sess,
 }
 
 
+/* Remove the properties in TARGET_PROPS but not in SOURCE_PROPS from 
+ * revision REV of the repository associated with RA session SESSION.
+ *
+ * All allocations will be done in a subpool of POOL.
+ */
+static svn_error_t *
+remove_props_not_in_source(svn_ra_session_t *session,
+                           svn_revnum_t rev,
+                           apr_hash_t *source_props,
+                           apr_hash_t *target_props,
+                           apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(pool, target_props);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const void *key;
+
+      svn_pool_clear(subpool);
+
+      apr_hash_this(hi, &key, NULL, NULL);
+
+      /* Delete property if the key can't be found in SOURCE_PROPS. */
+      if (! apr_hash_get(source_props, key, APR_HASH_KEY_STRING))
+        SVN_ERR(svn_ra_change_rev_prop(session, rev, key, NULL,
+                                       subpool));
+    }
+
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Make a new set of properties, by copying those properties in PROPS:
+ *  - not matching the EXCLUDE pattern if provided AND
+ *  - matching the INCLUDE pattern if provided.
+ *
+ * Note: EXCLUDE has priority over over INCLUDE.
+ * Note2: If both INCLUDE as EXCLUDE are NULL, the original PROPS will be 
+ *        returned.
+ * The number of filtered properties will be stored in FILTERED_COUNT.
+ *
+ * The returned set of properties is allocated from POOL.
+ */
+static apr_hash_t *
+filter_props(int *filtered_count, apr_hash_t *props, 
+             const char *include, const char *exclude, 
+             apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  apr_hash_t *filtered = apr_hash_make(pool);
+  int ex_len = 0, in_len = 0;
+  *filtered_count = 0;
+
+  if (exclude == NULL && include == NULL)
+    return props;
+
+  ex_len = exclude ? strlen(exclude) : 0;
+  in_len = include ? strlen(include) : 0;
+
+  for (hi = apr_hash_first(pool, props); hi ; hi = apr_hash_next(hi))
+    {
+      void *val;
+      const void *key;
+      apr_ssize_t len;
+
+      apr_hash_this(hi, &key, &len, &val);
+
+      /* Copy all properties:
+          - not matching the exclude pattern if provided OR
+          - matching the include pattern if provided */
+      if ( !(exclude && (strncmp(key, exclude, ex_len) == 0)) &&
+           (!include || (include && strncmp(key, include, in_len)) == 0) )
+        {
+          apr_hash_set(filtered, key, APR_HASH_KEY_STRING, val);
+        }
+      else
+        {
+          *filtered_count += 1;
+        }
+    }
+
+  return filtered;
+}
+
+
+/* Write the set of revision properties REV_PROPS to revision REV to the 
+ * repository associated with RA session SESSION.
+ *
+ * All allocations will be done in a subpool of POOL.
+ */
+static svn_error_t *
+write_revprops(svn_ra_session_t *session,
+               svn_revnum_t rev,
+               apr_hash_t *rev_props,
+               apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(pool, rev_props); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+
+      svn_pool_clear(subpool);
+      apr_hash_this(hi, &key, NULL, &val);
+      SVN_ERR(svn_ra_change_rev_prop(session, rev, key, val, subpool));
+    }
+
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
 /* Copy all the revision properties, except for those that have the
  * "svn:sync-" prefix, from revision REV of the repository associated
  * with RA session FROM_SESSION, to the repository associated with RA
@@ -359,53 +478,33 @@ copy_revprops(svn_ra_session_t *from_session,
               apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
-  apr_hash_t *revprops, *existing_props;
-  svn_boolean_t saw_sync_props = FALSE;
-  apr_hash_index_t *hi;
+  apr_hash_t *existing_props;
+  apr_hash_t *rev_props, *filtered;
+  int svnsync_prop_count = 0;
 
+  /* Get the list of revision properties on REV of TARGET. We're only interested
+     in the property names, but we'll get the values 'for free'. */
   if (sync)
-    SVN_ERR(svn_ra_rev_proplist(to_session, rev, &existing_props, pool));
+    SVN_ERR(svn_ra_rev_proplist(to_session, rev, &existing_props, subpool));
 
-  SVN_ERR(svn_ra_rev_proplist(from_session, rev, &revprops, pool));
+  /* Get the list of revision properties on REV of SOURCE. */
+  SVN_ERR(svn_ra_rev_proplist(from_session, rev, &rev_props, subpool));
 
-  for (hi = apr_hash_first(pool, revprops); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      void *val;
+  /* Copy all but the svn:svnsync properties. */
+  filtered = filter_props(&svnsync_prop_count, rev_props, 
+                          NULL, SVNSYNC_PROP_PREFIX, 
+                          subpool);
 
-      svn_pool_clear(subpool);
-      apr_hash_this(hi, &key, NULL, &val);
+  SVN_ERR(write_revprops(to_session, rev, filtered, pool));
 
-      if (strncmp(key, SVNSYNC_PROP_PREFIX,
-                  sizeof(SVNSYNC_PROP_PREFIX) - 1) == 0)
-        saw_sync_props = TRUE;
-      else
-        SVN_ERR(svn_ra_change_rev_prop(to_session, rev, key, val, subpool));
-
-      if (sync)
-        apr_hash_set(existing_props, key, APR_HASH_KEY_STRING, NULL);
-    }
-
+  /* Delete those properties that were in TARGET but not in SOURCE */
   if (sync)
-    {
-      for (hi = apr_hash_first(pool, existing_props);
-           hi;
-           hi = apr_hash_next(hi))
-        {
-          const void *name;
-
-          svn_pool_clear(subpool);
-
-          apr_hash_this(hi, &name, NULL, NULL);
-
-          SVN_ERR(svn_ra_change_rev_prop(to_session, rev, name, NULL,
-                                         subpool));
-        }
-    }
+    SVN_ERR(remove_props_not_in_source(to_session, rev, 
+                                       rev_props, existing_props, pool));
 
   if (! quiet)
     {
-      if (saw_sync_props)
+      if (svnsync_prop_count > 0)
         SVN_ERR(svn_cmdline_printf(subpool,
                                    _("Copied properties for revision %ld "
                                      "(%s* properties skipped).\n"),
