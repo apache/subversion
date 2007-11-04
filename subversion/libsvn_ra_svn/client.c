@@ -2149,6 +2149,21 @@ static svn_error_t *ra_svn_replay(svn_ra_session_t *session,
 }
 
 
+static svn_error_t *
+ra_svn_replay_range(svn_ra_session_t *session,
+                    svn_revnum_t start_revision,
+                    svn_revnum_t end_revision,
+                    svn_revnum_t low_water_mark,
+                    svn_boolean_t send_deltas,
+                    svn_ra_replay_revstart_callback_t revstart_func,
+                    svn_ra_replay_revfinish_callback_t revfinish_func,
+                    void *replay_baton,
+                    apr_pool_t *pool)
+{
+  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
+}
+
+
 static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
                                           svn_boolean_t *has,
                                           const char *capability,
@@ -2208,7 +2223,7 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_get_locks,
   ra_svn_replay,
   ra_svn_has_capability,
-  NULL /* replay_range */
+  ra_svn_replay_range,
 };
 
 svn_error_t *

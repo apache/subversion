@@ -1143,7 +1143,7 @@ static const svn_ra__vtable_t neon_vtable = {
   svn_ra_neon__get_locks,
   svn_ra_neon__replay,
   svn_ra_neon__has_capability,
-  NULL /* replay_range */
+  svn_ra_neon__replay_range
 };
 
 svn_error_t *
