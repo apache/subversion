@@ -638,8 +638,8 @@ add_file_smartly(report_baton_t *b,
   if (b->send_copyfrom_args)
     {
       /* Find the destination of the nearest 'copy event' which may have
-         caused o_path@t_root to exist. svn_fs_closest_copy only returns paths 
-         starting with '/', so make sure o_path always starts with a '/' 
+         caused o_path@t_root to exist. svn_fs_closest_copy only returns paths
+         starting with '/', so make sure o_path always starts with a '/'
          too. */
       if (*o_path != '/')
         o_path = apr_pstrcat(pool, "/", o_path, NULL);

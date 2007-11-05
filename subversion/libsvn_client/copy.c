@@ -240,7 +240,7 @@ propagate_mergeinfo_within_wc(svn_client__copy_pair_t *pair,
                   pool));
 
           return extend_wc_mergeinfo(pair->dst, entry, mergeinfo, dst_access,
-                                     ctx, pool);  
+                                     ctx, pool);
         }
     }
 
@@ -883,7 +883,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
       /* Pass NULL for the path, to ensure error if trying to get a
          revision based on the working copy. */
       SVN_ERR(svn_client__get_revision_number
-              (&pair->src_revnum, NULL, ra_session, &pair->src_op_revision, 
+              (&pair->src_revnum, NULL, ra_session, &pair->src_op_revision,
                NULL, pool));
 
       info->src_revnum = pair->src_revnum;
@@ -1559,7 +1559,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
                                                     svn_client__copy_pair_t *);
 
       SVN_ERR(svn_client__get_revision_number
-              (&pair->src_revnum, NULL, ra_session, &pair->src_op_revision, 
+              (&pair->src_revnum, NULL, ra_session, &pair->src_op_revision,
                NULL, pool));
     }
 

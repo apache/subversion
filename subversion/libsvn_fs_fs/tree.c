@@ -274,8 +274,8 @@ dag_node_cache_invalidate(svn_fs_root_t *root,
 
   frd = root->fsap_data;
 
-  for (item = frd->txn_node_list.next; 
-       item != &frd->txn_node_list; 
+  for (item = frd->txn_node_list.next;
+       item != &frd->txn_node_list;
        item = item->next)
     {
       key = item->key;
@@ -786,7 +786,7 @@ make_path_mutable(svn_fs_root_t *root,
                                          pool));
 
       /* Update the path cache. */
-      dag_node_cache_set(root, parent_path_path(parent_path, pool), clone, 
+      dag_node_cache_set(root, parent_path_path(parent_path, pool), clone,
                          pool);
     }
   else
@@ -2094,7 +2094,7 @@ fs_copied_from(svn_revnum_t *rev_p,
     fs_rev_root_data_t *frd = root->fsap_data;
     copyfrom_str = apr_hash_get(frd->copyfrom_cache, path, APR_HASH_KEY_STRING);
   }
-    
+
   if (copyfrom_str)
     {
       if (strlen(copyfrom_str) == 0)
@@ -2640,7 +2640,7 @@ fs_contents_changed(svn_boolean_t *changed_p,
 
   SVN_ERR(get_dag(&node1, root1, path1, pool));
   SVN_ERR(get_dag(&node2, root2, path2, pool));
-  SVN_ERR(svn_fs_fs__dag_things_different(NULL, changed_p, 
+  SVN_ERR(svn_fs_fs__dag_things_different(NULL, changed_p,
                                           node1, node2, pool));
 
   return SVN_NO_ERROR;

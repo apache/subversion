@@ -556,7 +556,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
    */
   peg_rev = (start > end) ? start : end;
 
-  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, 
+  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
                                          session, NULL, peg_rev, pool));
 
   req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);

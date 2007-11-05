@@ -129,7 +129,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
   /* Open an RA session to 'source' URL */
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum, &tmp_url,
-                                           URL, adm_access, 
+                                           URL, adm_access,
                                            peg_revision, revision,
                                            ctx, pool));
   SVN_ERR(svn_ra_get_repos_root(ra_session, &source_root, pool));
@@ -146,8 +146,8 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   /* Check to make sure that the switch target actually exists. */
   SVN_ERR(svn_ra_reparent(ra_session, source_root, pool));
   SVN_ERR(svn_ra_check_path(ra_session,
-                            svn_path_uri_decode(svn_path_is_child(source_root, 
-                                                                  switch_url, 
+                            svn_path_uri_decode(svn_path_is_child(source_root,
+                                                                  switch_url,
                                                                   pool),
                                                 pool),
                             revnum,
@@ -302,7 +302,7 @@ svn_client_switch(svn_revnum_t *result_rev,
 {
   svn_opt_revision_t peg_revision;
   peg_revision.kind = svn_opt_revision_unspecified;
-  return svn_client__switch_internal(result_rev, path, switch_url, 
+  return svn_client__switch_internal(result_rev, path, switch_url,
                                      &peg_revision, revision,
                                      SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                      NULL, FALSE, FALSE, ctx, pool);

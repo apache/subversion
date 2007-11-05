@@ -627,7 +627,7 @@ svn_opt_print_help3(apr_getopt_t *os,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
- 
+
 svn_error_t *
 svn_opt_print_help2(apr_getopt_t *os,
                     const char *pgm_name,

@@ -811,7 +811,7 @@ test_list = [ None,
               Skip(authz_locking, svntest.main.is_ra_type_file),
               SkipUnless(authz_svnserve_anon_access_read,
                          svntest.main.is_ra_type_svn),
-              XFail(Skip(authz_switch_to_directory, 
+              XFail(Skip(authz_switch_to_directory,
                          svntest.main.is_ra_type_file)),
              ]
 

@@ -859,7 +859,7 @@ print_diff_tree(svn_fs_root_t *root,
         base_path = apr_pstrdup(pool, node->copyfrom_path);
 
       svn_stringbuf_appendcstr
-        (header, 
+        (header,
          apr_psprintf(pool, _("Copied: %s (from rev %ld, %s)\n"),
                       path, node->copyfrom_rev, base_path));
 
@@ -951,7 +951,7 @@ print_diff_tree(svn_fs_root_t *root,
           if (c->diff_options)
             SVN_ERR(svn_diff_file_options_parse(opts, c->diff_options, pool));
 
-          SVN_ERR(svn_diff_file_diff_2(&diff, orig_path, 
+          SVN_ERR(svn_diff_file_diff_2(&diff, orig_path,
                                        new_path, opts, pool));
 
           if (svn_diff_contains_diffs(diff))
@@ -1638,10 +1638,10 @@ get_ctxt_baton(svnlook_ctxt_t **baton_p,
   baton->is_revision = opt_state->txn ? FALSE : TRUE;
   baton->rev_id = opt_state->rev;
   baton->txn_name = apr_pstrdup(pool, opt_state->txn);
-  baton->diff_options = svn_cstring_split(opt_state->extensions 
+  baton->diff_options = svn_cstring_split(opt_state->extensions
                                           ? opt_state->extensions : "",
                                           " \t\n\r", TRUE, pool);
-  
+
   if (baton->txn_name)
     SVN_ERR(svn_fs_open_txn(&(baton->txn), baton->fs,
                             baton->txn_name, pool));

@@ -860,7 +860,7 @@ public class BasicTests extends SVNTests
     {
         String wcPath = fileToSVNPath(new File(thisTest.getWCPath(),
                                                destPath), false);
-        String[] suggestions = client.suggestMergeSources(wcPath, 
+        String[] suggestions = client.suggestMergeSources(wcPath,
                                                           Revision.WORKING);
         assertNotNull(suggestions);
         assertTrue(suggestions.length >= 1);
@@ -880,7 +880,7 @@ public class BasicTests extends SVNTests
         assertTrue("Unexpected copy source path, expected " +
                    expectedSrc + ", got " + suggestions[0],
                    suggestions[0].endsWith(new File(wcPath).getName()));
-    
+
     }
 
     /**

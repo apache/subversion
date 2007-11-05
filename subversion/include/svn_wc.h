@@ -3233,7 +3233,7 @@ svn_error_t *svn_wc_get_actual_target(const char *path,
  * directory, its file entries, and the presence or absence of
  * subdirectories (but do not descend into the subdirectories).
  * Else if it is @c svn_depth_files, update the uppermost directory
- * and its immediate file entries, but not subdirectories.  
+ * and its immediate file entries, but not subdirectories.
  * Else if it is @c svn_depth_empty, update exactly the uppermost
  * target, and don't touch its entries.
  *
@@ -4164,7 +4164,7 @@ svn_wc_relocate(const char *path,
  * If @a depth is @c svn_depth_empty, revert just @a path (if a
  * directory, then revert just the properties on that directory).
  * Else if @c svn_depth_files, revert @a path and any files
- * directly under @a path if it is directory.  Else if 
+ * directly under @a path if it is directory.  Else if
  * @c svn_depth_immediates, revert all of the preceding plus
  * properties on immediate subdirectories; else if @c svn_depth_infinity,
  * revert path and everything under it fully recursively.

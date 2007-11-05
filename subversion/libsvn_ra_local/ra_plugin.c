@@ -325,7 +325,7 @@ svn_ra_local__get_session_url(svn_ra_session_t *session,
                               apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *baton = session->priv;
-  const char *fs_path = apr_pstrmemdup(pool, baton->fs_path->data, 
+  const char *fs_path = apr_pstrmemdup(pool, baton->fs_path->data,
                                        baton->fs_path->len);
   *url = svn_path_join(baton->repos_url,
                        svn_path_uri_encode(fs_path + 1, pool),

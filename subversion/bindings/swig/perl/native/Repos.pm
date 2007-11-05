@@ -42,9 +42,9 @@ object.
 
 =over
 
-=item $repos-E<gt>dump_fs($dump_fh, $feedback_fh, $start_rev, $end_rev, $incremental, $cancel_func, $cancel_baton) 
+=item $repos-E<gt>dump_fs($dump_fh, $feedback_fh, $start_rev, $end_rev, $incremental, $cancel_func, $cancel_baton)
 
-=item $repos-E<gt>dump_fs2($dump_fh, $feedback_fh, $start_rev, $end_rev, $incremental, $deltify, $cancel_func, $cancel_baton) 
+=item $repos-E<gt>dump_fs2($dump_fh, $feedback_fh, $start_rev, $end_rev, $incremental, $deltify, $cancel_func, $cancel_baton)
 
 Create a dump file of the repository from revision C<$start_rev> to C<$end_rev>
 , store it into the filehandle C<$dump_fh>, and write feedback on the progress
@@ -70,34 +70,34 @@ Example:
 
     use SVN::Core;
     use SVN::Repos;
-    
+
     my $repos = SVN::Repos::open ('/repo/sandbox');
-    
+
     open my $fh, ">/tmp/tmp.dump" or die "Cannot open file: $!\n";
-    
+
     my $start_rev   = 10;
     my $end_rev     = 20;
     my $incremental = 1;
     my $deltify     = 1;
-    
-    $repos->dump_fs2($fh, \*STDOUT,          # Dump file => $fh, Feedback => STDOUT 
+
+    $repos->dump_fs2($fh, \*STDOUT,          # Dump file => $fh, Feedback => STDOUT
                      $start_rev, $end_rev,   # Revision Range
                      $incremental, $deltify, # Options
                      undef, undef);          # Cancel Function
-    
+
     close $fh;
 
 =item $repos->load_fs($dumpfile_fh, $feedback_fh, $uuid_action, $parent_dir, $cancel_func, $cancel_baton);
 
 =item $repos->load_fs2($dumpfile_fh, $feedback_fh, $uuid_action, $parent_dir, $use_pre_commit_hook, $use_post_commit_hook, $cancel_func, $cancel_baton);
 
-Loads a dumpfile specified by the C<$dumpfile_fh> filehandle into the repository. 
-If the dumpstream contains copy history that is unavailable in the repository, 
+Loads a dumpfile specified by the C<$dumpfile_fh> filehandle into the repository.
+If the dumpstream contains copy history that is unavailable in the repository,
 an error will be thrown.
 
 The repository's UUID will be updated iff the dumpstream contains a UUID and
-C<$uuid_action> is not equal to C<$SVN::Repos::load_uuid_ignore> and either the 
-repository contains no revisions or C<$uuid_action> is equal to 
+C<$uuid_action> is not equal to C<$SVN::Repos::load_uuid_ignore> and either the
+repository contains no revisions or C<$uuid_action> is equal to
 C<$SVN::Repos::load_uuid_force>.
 
 If the dumpstream contains no UUID, then C<$uuid_action> is
@@ -117,29 +117,29 @@ If C<$cancel_func> is not NULL, it is called periodically with
 C<$cancel_baton> as argument to see if the client wishes to cancel
 the load.
 
-You must at least provide undef for these parameters for the method call 
+You must at least provide undef for these parameters for the method call
 to work.
 
-Example: 
+Example:
     use SVN::Core;
     use SVN::Repos;
-    
+
     my $repos = SVN::Repos::open ('/repo/test_repo');
-    
+
     open my $fh, "/repo/sandbox.dump" or die "Cannot open file: $!\n";
-    
+
     my $parent_dir = '/';
     my $use_pre_commit_hook  = 0;
     my $use_post_commit_hook = 0;
-    
+
     $repos->load_fs2($fh, \*STDOUT,
                      $SVN::Repos::load_uuid_ignore, # Ignore uuid
-                     $parent_dir,           
+                     $parent_dir,
                      $use_pre_commit_hook,  # Use pre-commit hook?
                      $use_post_commit_hook, # Use post-commit hook?
                      undef, undef);
-    
-                     
+
+
     close $fh;
 
 =cut
@@ -257,7 +257,7 @@ for more details.
 
 =cut
 
-push @methods, 
+push @methods,
      qw( version open create delete hotcopy recover3 recover2
          recover db_logfiles path db_env conf_dir svnserve_conf
          lock_dir db_lockfile db_logs_lockfile hook_dir

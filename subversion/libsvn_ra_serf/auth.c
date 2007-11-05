@@ -65,8 +65,8 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
  * [PROTOCOL] [BASE64 AUTH DATA]
  */
 static void
-encode_auth_header(const char * protocol, char **header, 
-                   const char * data, apr_size_t data_len, 
+encode_auth_header(const char * protocol, char **header,
+                   const char * data, apr_size_t data_len,
                    apr_pool_t *pool)
 {
   apr_size_t encoded_len, proto_len;
@@ -113,7 +113,7 @@ svn_ra_serf__handle_auth(svn_ra_serf__session_t *session,
   auth_name = apr_strtok(auth_hdr, " ", &auth_attr);
 
   /* Find the matching authentication handler.
-     Note that we don't reuse the auth protocol stored in the session, 
+     Note that we don't reuse the auth protocol stored in the session,
      as that may have changed. (ex. fallback from ntlm to basic.) */
   for (prot = serf_auth_protocols; prot->auth_name != NULL; ++prot)
     {
@@ -121,12 +121,12 @@ svn_ra_serf__handle_auth(svn_ra_serf__session_t *session,
         {
           svn_serf__auth_handler_func_t handler = prot->handle_func;
           /* If this is the first time we use this protocol in this session,
-             make sure to initialize the authentication part of the session 
+             make sure to initialize the authentication part of the session
              first. */
           if (session->auth_protocol != prot)
             SVN_ERR(prot->init_conn_func(session, conn, session->pool));
           session->auth_protocol = prot;
-          SVN_ERR(handler(session, conn, request, response, 
+          SVN_ERR(handler(session, conn, request, response,
                           auth_hdr, auth_attr, session->pool));
           break;
         }
@@ -167,7 +167,7 @@ handle_basic_auth(svn_ra_serf__session_t *session,
       if (strcmp(attr, "realm") == 0)
         {
           realm_name = apr_strtok(NULL, "=", &last);
-          if (realm_name[0] == '\"') 
+          if (realm_name[0] == '\"')
             {
               apr_size_t realm_len;
 
@@ -216,7 +216,7 @@ handle_basic_auth(svn_ra_serf__session_t *session,
                                         session->auth_state,
                                         session->pool));
     }
-  
+
   session->auth_attempts++;
 
   if (!creds || session->auth_attempts > 4)
@@ -233,7 +233,7 @@ handle_basic_auth(svn_ra_serf__session_t *session,
                     simple_creds->username, ":", simple_creds->password, NULL);
   tmp_len = strlen(tmp);
 
-  encode_auth_header(session->auth_protocol->auth_name, &session->auth_value, 
+  encode_auth_header(session->auth_protocol->auth_name, &session->auth_value,
                      tmp, tmp_len, pool);
   session->auth_header = "Authorization";
 

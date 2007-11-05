@@ -642,7 +642,7 @@ prev_location(svn_revnum_t *appeared_rev,
   SVN_ERR(svn_fs_revision_root(&root, fs, revision, pool));
   SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, root, path, pool));
   if (! copy_root)
-    return SVN_NO_ERROR;    
+    return SVN_NO_ERROR;
 
   /* Ultimately, it's not the path of the closest copy's source that
      we care about -- it's our own path's location in the copy source
@@ -657,7 +657,7 @@ prev_location(svn_revnum_t *appeared_rev,
      path tells us that our path was located at "/trunk/foo/bar"
      before the copy.
   */
-  SVN_ERR(svn_fs_copied_from(&copy_src_rev, &copy_src_path, 
+  SVN_ERR(svn_fs_copied_from(&copy_src_rev, &copy_src_path,
                              copy_root, copy_path, pool));
   if (! strcmp(copy_path, path) == 0)
     remainder = svn_path_is_child(copy_path, path, pool);
@@ -750,7 +750,7 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
 
       /* Find the target of the innermost copy relevant to path@revision.
          The copy may be of path itself, or of a parent directory. */
-      SVN_ERR(prev_location(&appeared_rev, &prev_path, &prev_rev, fs, 
+      SVN_ERR(prev_location(&appeared_rev, &prev_path, &prev_rev, fs,
                             revision, path, currpool));
       if (! prev_path)
         break;
@@ -771,7 +771,7 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
 
       /* Assign the current path to all younger revisions until we reach
          the copy target rev. */
-      while ((revision_ptr < revision_ptr_end) 
+      while ((revision_ptr < revision_ptr_end)
              && (*revision_ptr >= appeared_rev))
         {
           /* *revision_ptr is allocated out of pool, so we can point
@@ -783,7 +783,7 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
 
       /* Ignore all revs between the copy target rev and the copy
          source rev (non-inclusive). */
-      while ((revision_ptr < revision_ptr_end) 
+      while ((revision_ptr < revision_ptr_end)
              && (*revision_ptr > prev_rev))
         revision_ptr++;
 
@@ -921,7 +921,7 @@ svn_repos_node_location_segments(svn_repos_t *repos,
       if (SVN_IS_VALID_REVNUM(youngest_rev))
         start_rev = youngest_rev;
       else
-        SVN_ERR(svn_fs_youngest_rev(&start_rev, fs, pool)); 
+        SVN_ERR(svn_fs_youngest_rev(&start_rev, fs, pool));
     }
 
   /* No END_REV?  We'll use 0. */
@@ -965,7 +965,7 @@ svn_repos_node_location_segments(svn_repos_t *repos,
       segment->range_start = end_rev;
       segment->path = cur_path + 1;
 
-      SVN_ERR(prev_location(&appeared_rev, &prev_path, &prev_rev, fs, 
+      SVN_ERR(prev_location(&appeared_rev, &prev_path, &prev_rev, fs,
                             current_rev, cur_path, subpool));
 
       /* If there are no previous locations for this thing (meaning,
@@ -979,7 +979,7 @@ svn_repos_node_location_segments(svn_repos_t *repos,
           nls_history_baton.revision = SVN_INVALID_REVNUM;
           nls_history_baton.end_rev = end_rev;
           SVN_ERR(svn_repos_history2(fs, cur_path, nls_history_func,
-                                     &nls_history_baton, NULL, NULL, 
+                                     &nls_history_baton, NULL, NULL,
                                      current_rev, 0, TRUE, subpool));
           segment->range_start = nls_history_baton.revision;
           current_rev = SVN_INVALID_REVNUM;
@@ -990,14 +990,14 @@ svn_repos_node_location_segments(svn_repos_t *repos,
           svn_stringbuf_set(current_path, prev_path);
           current_rev = prev_rev;
         }
-      
+
       /* Report our segment, providing it passes authz muster. */
       if (authz_read_func)
         {
           svn_boolean_t readable;
           svn_fs_root_t *cur_rev_root;
-          
-          SVN_ERR(svn_fs_revision_root(&cur_rev_root, fs, 
+
+          SVN_ERR(svn_fs_revision_root(&cur_rev_root, fs,
                                        segment->range_end, subpool));
           SVN_ERR(authz_read_func(&readable, cur_rev_root, segment->path,
                                   authz_read_baton, subpool));
@@ -1006,7 +1006,7 @@ svn_repos_node_location_segments(svn_repos_t *repos,
         }
 
       /* Trasmit the segment (if its within the scope of our concern). */
-      SVN_ERR(maybe_crop_and_send_segment(segment, start_rev, end_rev, 
+      SVN_ERR(maybe_crop_and_send_segment(segment, start_rev, end_rev,
                                           receiver, receiver_baton, subpool));
 
       /* If we've set CURRENT_REV to SVN_INVALID_REVNUM, we're done
@@ -1024,7 +1024,7 @@ svn_repos_node_location_segments(svn_repos_t *repos,
           gap_segment->range_start = current_rev + 1;
           gap_segment->path = NULL;
           SVN_ERR(maybe_crop_and_send_segment(gap_segment, start_rev, end_rev,
-                                              receiver, receiver_baton, 
+                                              receiver, receiver_baton,
                                               subpool));
         }
     }

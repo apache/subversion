@@ -4787,7 +4787,7 @@ set_uuid(const char **msg,
   svn_fs_t *fs;
   const char *fixed_uuid = svn_uuid_generate(pool);
   const char *fetched_uuid;
-  
+
   *msg = "test svn_fs_set_uuid";
 
   if (msg_only)
@@ -4809,16 +4809,16 @@ set_uuid(const char **msg,
 
   /* Set the repository UUID to something new (and unknown). */
   SVN_ERR(svn_fs_set_uuid(fs, NULL, pool));
-  
+
   /* Make sure we *don't* get back what we previously set (after all,
      this stuff is supposed to be universally unique!). */
   SVN_ERR(svn_fs_get_uuid(fs, &fetched_uuid, pool));
   if (strcmp(fixed_uuid, fetched_uuid) == 0)
     return svn_error_createf
-      (SVN_ERR_TEST_FAILED, NULL, 
+      (SVN_ERR_TEST_FAILED, NULL,
        "expected something other than UUID '%s', but got that one",
        fixed_uuid);
-    
+
   return SVN_NO_ERROR;
 }
 

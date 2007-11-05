@@ -927,9 +927,9 @@ svn_fs_fs__dag_dup(dag_node_t *node,
   if (node->node_revision && !svn_fs_fs__dag_check_mutable(node))
     {
       new_node->node_revision = copy_node_revision(node->node_revision, pool);
-      new_node->node_revision->id = 
+      new_node->node_revision->id =
           svn_fs_fs__id_copy(node->node_revision->id, pool);
-      new_node->node_revision->is_fresh_txn_root = 
+      new_node->node_revision->is_fresh_txn_root =
           node->node_revision->is_fresh_txn_root;
     }
   return new_node;

@@ -248,7 +248,7 @@ switch_external(const char *path,
                     return err;
                 }
 
-              SVN_ERR(svn_client__switch_internal(NULL, path, url, 
+              SVN_ERR(svn_client__switch_internal(NULL, path, url,
                                                   peg_revision, revision,
                                                   svn_depth_infinity,
                                                   timestamp_sleep,
@@ -393,7 +393,7 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
             return svn_error_createf(SVN_ERR_BAD_URL, 0,
                                      _("Illegal repository root URL '%s'."),
                                      repos_root_url);
-          
+
           base_components = svn_path_decompose(repos_root_parsed_uri.path,
                                                pool);
           relative_components = svn_path_decompose(canonicalized_url + 2,

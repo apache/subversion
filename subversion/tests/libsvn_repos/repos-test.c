@@ -1732,9 +1732,9 @@ static const char *
 format_segment(svn_location_segment_t *segment,
                apr_pool_t *pool)
 {
-  return apr_psprintf(pool, "[r%ld-r%ld: /%s]", 
+  return apr_psprintf(pool, "[r%ld-r%ld: /%s]",
                       segment->range_start,
-                      segment->range_end, 
+                      segment->range_end,
                       segment->path ? segment->path : "(null)");
 }
 
@@ -1753,7 +1753,7 @@ nls_receiver(svn_location_segment_t *segment,
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "Got unexpected location segment: %s",
                              format_segment(segment, pool));
-    
+
   if (expected_segment->range_start != segment->range_start)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "Location segments differ\n"
@@ -1782,8 +1782,8 @@ check_location_segments(svn_repos_t *repos,
      validates against EXPECTED_SEGMENTS.  */
   b.count = 0;
   b.expected_segments = expected_segments;
-  SVN_ERR(svn_repos_node_location_segments(repos, path, peg_rev, 
-                                           start_rev, end_rev, nls_receiver, 
+  SVN_ERR(svn_repos_node_location_segments(repos, path, peg_rev,
+                                           start_rev, end_rev, nls_receiver,
                                            &b, NULL, NULL, pool));
 
   /* Make sure we saw all of our expected segments.  (If the
@@ -1884,8 +1884,8 @@ node_location_segments(const char **msg,
         { 0, 7, "" },
         { 0 }
       };
-    SVN_ERR(check_location_segments(repos, "", 
-                                    SVN_INVALID_REVNUM, 
+    SVN_ERR(check_location_segments(repos, "",
+                                    SVN_INVALID_REVNUM,
                                     SVN_INVALID_REVNUM,
                                     SVN_INVALID_REVNUM,
                                     expected_segments, pool));
@@ -1900,8 +1900,8 @@ node_location_segments(const char **msg,
         { 1, 2, "A/D" },
         { 0 }
       };
-    SVN_ERR(check_location_segments(repos, "A/D", 
-                                    SVN_INVALID_REVNUM, 
+    SVN_ERR(check_location_segments(repos, "A/D",
+                                    SVN_INVALID_REVNUM,
                                     SVN_INVALID_REVNUM,
                                     SVN_INVALID_REVNUM,
                                     expected_segments, pool));
@@ -1915,8 +1915,8 @@ node_location_segments(const char **msg,
         { 2, 2, "A/D" },
         { 0 }
       };
-    SVN_ERR(check_location_segments(repos, "A/D", 
-                                    SVN_INVALID_REVNUM, 
+    SVN_ERR(check_location_segments(repos, "A/D",
+                                    SVN_INVALID_REVNUM,
                                     5,
                                     2,
                                     expected_segments, pool));
@@ -1930,7 +1930,7 @@ node_location_segments(const char **msg,
         { 2, 2, "A/D" },
         { 0 }
       };
-    SVN_ERR(check_location_segments(repos, "A/D2", 
+    SVN_ERR(check_location_segments(repos, "A/D2",
                                     5,
                                     3,
                                     2,
@@ -1944,8 +1944,8 @@ node_location_segments(const char **msg,
         { 1, 6, "A/D" },
         { 0 }
       };
-    SVN_ERR(check_location_segments(repos, "A/D", 
-                                    6, 
+    SVN_ERR(check_location_segments(repos, "A/D",
+                                    6,
                                     6,
                                     SVN_INVALID_REVNUM,
                                     expected_segments, pool));
@@ -1962,8 +1962,8 @@ node_location_segments(const char **msg,
         { 1, 2, "A/D2/G" },
         { 0 }
       };
-    SVN_ERR(check_location_segments(repos, "A/D/G", 
-                                    SVN_INVALID_REVNUM, 
+    SVN_ERR(check_location_segments(repos, "A/D/G",
+                                    SVN_INVALID_REVNUM,
                                     SVN_INVALID_REVNUM,
                                     SVN_INVALID_REVNUM,
                                     expected_segments, pool));
@@ -1977,8 +1977,8 @@ node_location_segments(const char **msg,
         { 2, 2, "A/D2/G" },
         { 0 }
       };
-    SVN_ERR(check_location_segments(repos, "A/D/G", 
-                                    SVN_INVALID_REVNUM, 
+    SVN_ERR(check_location_segments(repos, "A/D/G",
+                                    SVN_INVALID_REVNUM,
                                     3,
                                     2,
                                     expected_segments, pool));

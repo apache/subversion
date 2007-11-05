@@ -62,7 +62,7 @@ END {
 
 Takes a reference to an array of authentication providers
 and returns an auth_baton.  If you use prompt providers
-you can not use this function, but need to use the 
+you can not use this function, but need to use the
 auth_open_helper.
 
 =item SVN::Core::auth_open_helper([auth provider array);
@@ -300,7 +300,7 @@ use SVN::Base qw(Core svn_pool_);
 
 =head2 svn_pool_t - SVN::Pool
 
-The perl bindings significantly simplify the usage of pools, while 
+The perl bindings significantly simplify the usage of pools, while
 still being manually adjustable.
 
 For functions requiring a pool as the last argument (which are, almost all
@@ -465,7 +465,7 @@ our @CARP_NOT = qw(SVN::Base SVN::Client SVN::Core SVN::Delta
 By default the perl bindings handle exceptions for you.  The default handler
 automatically croaks with an appropriate error message.  This is likely
 sufficient for simple scripts, but more complex usage may demand handling of
-errors.  
+errors.
 
 You can override the default exception handler by changing the
 $SVN::Error::handler variable.  This variable holds a reference to a perl sub
@@ -586,8 +586,8 @@ sub expanded_message {
 		}
 		return $error_message;
 }
-		
-		
+
+
 =item SVN::Error::is_error($value)
 
 Returns true if value is of type svn_error.  Returns false if value is
@@ -600,13 +600,13 @@ sub is_error {
 		 return (ref($_[$[]) eq '_p_svn_error_t');
 }
 
-=item SVN::Error::croak_on_error 
+=item SVN::Error::croak_on_error
 
 Default error handler.  It takes an svn_error_t and extracts the error messages
 from it and croaks with those messages.
 
 It can be used in two ways.  The first is detailed above as setting it as the
-automatic exception handler via setting $SVN::Error::handler. 
+automatic exception handler via setting $SVN::Error::handler.
 
 The second is if you have $SVN::Error::handler set to undef as a wrapper for
 calls you want to croak on when there is an error, but you don't want to write
@@ -623,10 +623,10 @@ sub croak_on_error {
 		unless (is_error($_[$[])) {
 			return @_;
 		}
-    my $svn_error = shift;		
-    
+    my $svn_error = shift;
+
 		my $error_message = $svn_error->expanded_message();
-		
+
 		$svn_error->clear();
 
 		croak($error_message);
@@ -644,10 +644,10 @@ sub confess_on_error {
 		unless (is_error($_[$[])) {
 				return @_;
 		}
-    my $svn_error = shift;		
-    
+    my $svn_error = shift;
+
 		my $error_message = $svn_error->expanded_message();
-		
+
 		$svn_error->clear();
 
 		confess($error_message);
@@ -681,7 +681,7 @@ use SVN::Base qw(Core svn_log_changed_path_t_);
 
 =item $lcp-E<gt>action()
 
-'A'dd, 'D'elete, 'R'eplace, 'M'odify 
+'A'dd, 'D'elete, 'R'eplace, 'M'odify
 
 =item $lcp-E<gt>copyfrom_path()
 
@@ -915,11 +915,11 @@ Certificate has expired.
 
 =item $SVN::Auth::SSL::CNMISMATCH
 
-Certificate's CN (hostname) does not match the remote hostname. 
+Certificate's CN (hostname) does not match the remote hostname.
 
 =item $SVN::Auth::SSL::UNKNOWNCA
 
-Certificate authority is unknown (i.e. not trusted). 
+Certificate authority is unknown (i.e. not trusted).
 
 =item $SVN::Auth::SSL::OTHER
 

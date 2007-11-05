@@ -131,7 +131,7 @@ svn_location_segment_t *
 svn_location_segment_dup(svn_location_segment_t *segment,
                          apr_pool_t *pool)
 {
-  svn_location_segment_t *new_segment = 
+  svn_location_segment_t *new_segment =
     apr_pcalloc(pool, sizeof(*new_segment));
   *new_segment = *segment;
   if (segment->path)
