@@ -776,9 +776,13 @@ capabilities_headers_iterator_callback(void *baton,
          seek for it directly.  This could be rewritten as an
          iteration with a switch-case inside, or whatever, if we
          ever need to detect other capabilities, though. */
-      
+
       if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_DEPTH, vals))
         apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_DEPTH,
+                     APR_HASH_KEY_STRING, capability_yes);
+      if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS,
+                                      vals))
+        apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
                      APR_HASH_KEY_STRING, capability_yes);
     }
 
@@ -800,6 +804,8 @@ capabilities_response_handler(serf_request_t *request,
 
   /* Start out assuming all capabilities are unsupported. */
   apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_DEPTH,
+               APR_HASH_KEY_STRING, capability_no);
+  apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
                APR_HASH_KEY_STRING, capability_no);
 
   /* Then see which ones we can discover. */

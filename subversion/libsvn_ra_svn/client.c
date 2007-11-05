@@ -2163,6 +2163,13 @@ static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
       else
         *has = FALSE;
     }
+  else if (strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0)
+    {
+      if (svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_LOG_REVPROPS))
+        *has = TRUE;
+      else
+        *has = FALSE;
+    }
   else  /* Don't know any other capabilities yet, so error. */
     {
         return svn_error_createf
