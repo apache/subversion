@@ -1907,7 +1907,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
                                                  ctx->cancel_baton,
                                                  iterpool));
                   SVN_ERR(svn_wc__entry_versioned(&entry, pair->src, adm_access,
-                                                 FALSE, iterpool));
+                                                  FALSE, iterpool));
                   SVN_ERR(svn_wc_adm_close(adm_access));
 
                   url = (entry->copied ? entry->copyfrom_url : entry->url);
