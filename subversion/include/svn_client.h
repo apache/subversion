@@ -1108,7 +1108,7 @@ svn_client_update2(apr_array_header_t **result_revs,
 /**
  * Similar to svn_client_update2() except that it accepts only a single
  * target in @a path, returns a single revision if @a result_rev is
- * not NULL, and @c ignore_externals is always set to false.
+ * not NULL, and @a ignore_externals is always set to false.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
