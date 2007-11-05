@@ -1919,11 +1919,20 @@ setup_copy(svn_commit_info_t **commit_info_p,
 
                   pair->src = apr_pstrdup(pool, url);
 
-                  if (!need_repos_peg_rev)
+                  if (!need_repos_peg_rev
+                      || pair->src_peg_revision.kind == svn_opt_revision_base)
                     {
                       /* Default the peg revision to that of the WC entry. */
                       pair->src_peg_revision.kind = svn_opt_revision_number;
                       pair->src_peg_revision.value.number =
+                        (entry->copied ? entry->copyfrom_rev : entry->revision);
+                    }
+
+                  if (pair->src_op_revision.kind == svn_opt_revision_base)
+                    {
+                      /* Use the entry's revision as the operational rev. */
+                      pair->src_op_revision.kind = svn_opt_revision_number;
+                      pair->src_op_revision.value.number =
                         (entry->copied ? entry->copyfrom_rev : entry->revision);
                     }
                 }
