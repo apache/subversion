@@ -38,6 +38,7 @@ module SvnTestUtil
     setup_svnserve if @need_svnserve
     setup_config
     setup_wc
+    SvnTestUtil.define_greek_constants unless SvnTestUtil.greek_constants_defined?
     add_authentication
     GC.stress = true if GC.respond_to?(:stress=) and $DEBUG
   end
@@ -192,6 +193,65 @@ realm = #{@realm}
     end
   end
 
+  GreekTree = [
+  #  relative path , contents(nil means directory)
+    ["iota"        , "This is the file 'iota'.\n"   ],
+    ["A"           , nil                            ],
+    ["A/mu"        , "This is the file 'mu'.\n"     ],
+    ["A/B"         , nil                            ],
+    ["A/B/lambda"  , "This is the file 'lambda'.\n" ],
+    ["A/B/E"       , nil                            ],
+    ["A/B/E/alpha" , "This is the file 'alpha'.\n"  ],
+    ["A/B/E/beta"  , "This is the file 'beta'.\n"   ],
+    ["A/B/F"       , nil                            ],
+    ["A/C"         , nil                            ],
+    ["A/D"         , nil                            ],
+    ["A/D/gamma"   , "This is the file 'gamma'.\n"  ],
+    ["A/D/G"       , nil                            ],
+    ["A/D/G/pi"    , "This is the file 'pi'.\n"     ],
+    ["A/D/G/rho"   , "This is the file 'rho'.\n"    ],
+    ["A/D/G/tau"   , "This is the file 'tau'.\n"    ],
+    ["A/D/H"       , nil                            ],
+    ["A/D/H/chi"   , "This is the file 'chi'.\n"    ],
+    ["A/D/H/psi"   , "This is the file 'psi'.\n"    ],
+    ["A/D/H/omega" , "This is the file 'omega'.\n"  ]]
+
+  def setup_greek_tree
+    GreekTree.each do |i|
+      e = File.expand_path(File.join(@tmp_path,i[0]))
+      if i[1]
+        File.open( e, 'w' ){|f| f.write(i[1])}
+      else
+        FileUtils.mkdir( e )
+      end
+    end
+
+    ctx = make_context('')
+    ctx.import(@tmp_path, @repos_uri)
+    ctx.update(@wc_path)
+  end
+
+  class << self
+    def greek_constants_defined?
+      @greek_constants_defined
+    end
+
+    def define_greek_constants
+      GreekTree.collect{|i| i[0]}.each do |i|
+        const_set( i.split('/').last.capitalize, i )
+      end
+      @greek_constants_defined = true
+    end
+  end
+
+  def wc_path_for(a)
+    File.join(@wc_path, a)
+  end
+
+  def uri_for(a)
+    "#{@repos_uri}/#{a}"
+  end
+
   module_function
   def windows?
     /cygwin|mingw|mswin32|bccwin32/.match(RUBY_PLATFORM)
@@ -281,4 +341,5 @@ exit 1
     extend SetupEnvironment
   end
 end
+
 
