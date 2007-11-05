@@ -980,6 +980,8 @@ parse_capabilities(ne_request *req,
   /* Start out assuming all capabilities are unsupported. */
   apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
                APR_HASH_KEY_STRING, capability_no);
+  apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
+               APR_HASH_KEY_STRING, capability_no);
 
   /* Then find out which ones are supported. */
   do {
@@ -1020,6 +1022,10 @@ parse_capabilities(ne_request *req,
 
         if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_DEPTH, vals))
           apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
+                       APR_HASH_KEY_STRING, capability_yes);
+        if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS,
+                                        vals))
+          apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
                        APR_HASH_KEY_STRING, capability_yes);
       }
   } while (ne_header_cursor);

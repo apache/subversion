@@ -1425,6 +1425,10 @@ svn_ra_local__has_capability(svn_ra_session_t *session,
     {
       *has = TRUE;
     }
+  else if (strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0)
+    {
+      *has = TRUE;
+    }
   else  /* Don't know any other capabilities yet, so error. */
     {
         return svn_error_createf

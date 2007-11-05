@@ -1536,6 +1536,13 @@ svn_error_t *svn_ra_has_capability(svn_ra_session_t *session,
  */
 #define SVN_RA_CAPABILITY_DEPTH "depth"
 
+/**
+ * The capability of retrieving arbitrary revprops in svn_ra_get_log2.
+ *
+ * @since New in 1.5.
+ */
+#define SVN_RA_CAPABILITY_LOG_REVPROPS "log-revprops"
+
 /*       *** PLEASE READ THIS IF YOU ADD A NEW CAPABILITY ***
  * RA layers generally fetch all capabilities when asked about any
  * capability, to save future round trips.  So if you add a new

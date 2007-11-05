@@ -2521,14 +2521,15 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
 
   /* Send greeting.  We don't support version 1 any more, so we can
    * send an empty mechlist. */
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwww)",
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwwww)",
                                         (apr_uint64_t) 2, (apr_uint64_t) 2,
                                         SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                         SVN_RA_SVN_CAP_SVNDIFF1,
                                         SVN_RA_SVN_CAP_ABSENT_ENTRIES,
                                         SVN_RA_SVN_CAP_COMMIT_REVPROPS,
                                         SVN_RA_SVN_CAP_MERGEINFO,
-                                        SVN_RA_SVN_CAP_DEPTH));
+                                        SVN_RA_SVN_CAP_DEPTH,
+                                        SVN_RA_SVN_CAP_LOG_REVPROPS));
 
   /* Read client response, which we assume to be in version 2 format:
    * version, capability list, and client URL; then we do an auth

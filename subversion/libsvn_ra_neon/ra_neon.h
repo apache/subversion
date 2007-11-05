@@ -707,7 +707,6 @@ enum {
   ELEM_checked_in,
   ELEM_collection,
   ELEM_comment,
-  ELEM_no_custom_revprops,
   ELEM_revprop,
   ELEM_creationdate,
   ELEM_creator_displayname,
