@@ -588,7 +588,7 @@ svn_client__repos_locations(const char **start_url,
     }
 
   /* ### We should be smarter here.  If the callers just asks for BASE and
-     WORKING revisions, we should already have the correct URL:s, so we
+     WORKING revisions, we should already have the correct URLs, so we
      don't need to do anything more here in that case. */
 
   /* Open a RA session to this URL if we don't have one already. */
