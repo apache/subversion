@@ -1368,7 +1368,7 @@ def revision_kinds_local_source(sbox):
   # Test the various revision-kind keywords, and none.
   sub_tests = [ ('file0', 2, rWC, None),
                 ('file1', 3, r3, 'HEAD'),
-                # ('file2', 2, r2, 'BASE'),
+                ('file2', 2, r2, 'BASE'),
                 # ('file3', 2, r2, 'COMMITTED'),
                 # ('file4', 1, r1, 'PREV'),
               ]
