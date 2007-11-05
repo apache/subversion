@@ -1396,6 +1396,36 @@ svn_ra_neon__request_dispatch(int *code_p,
   ne_xml_parser *error_parser;
   const ne_status *statstruct;
 
+  /*
+    ### TODO: 
+    ###
+    ### I think http://tools.ietf.org/html/rfc2774#section-3 probably
+    ### says how to define a new header with which the client can
+    ### express capabilities.  But I haven't finished reading it yet,
+    ### and in the meantime I'd like to get this code working, so I'm
+    ### just going with...
+    ###
+    ###    X-SVN-Capabilities: 
+    ###
+    ### ...for now, despite having no reason to believe the namespace
+    ### constraints for HTTP are anything like those of RFC 822 4.1,
+    ### where you just put "X-" on the front and then you're home free
+    ### (or at least you're only sharing namespace with all the other
+    ### bozos on the Internet).
+    ###
+    ### The header's value is a comma-separated list of capabilities;
+    ### if the header appears multiple times, its values are to be
+    ### concatenated in order as per RFC-2616, 14.43.
+    ###
+    ### NOTE: The ../libsvn_ra_serf code sets this header too, and has
+    ### shadow comments pointing back this one.  Whatever we do here,
+    ### we should do there as well.
+  */
+  ne_add_request_header(req->ne_req, "X-SVN-Capabilities",
+                        SVN_DAV_PROP_NS_DAV_SVN_DEPTH);
+  ne_add_request_header(req->ne_req, "X-SVN-Capabilities",
+                        SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO);
+
   /* add any extra headers passed in by caller. */
   if (extra_headers != NULL)
     {

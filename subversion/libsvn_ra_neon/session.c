@@ -980,6 +980,8 @@ parse_capabilities(ne_request *req,
   /* Start out assuming all capabilities are unsupported. */
   apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
                APR_HASH_KEY_STRING, capability_no);
+  apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+               APR_HASH_KEY_STRING, capability_no);
 
   /* Then find out which ones are supported. */
   do {
@@ -1013,14 +1015,23 @@ parse_capabilities(ne_request *req,
         apr_array_header_t *vals =
           svn_cstring_split(header_value, ",", TRUE, pool);
 
-        /* Right now the only capability we detect is depth, so just
-           seek for it directly.  This could be rewritten as an
-           iteration with a switch-case inside, or whatever, if we
-           ever need to detect other capabilities, though. */
+        /* Right now we only have a few capabilities to detect, so
+           just seek for them directly.  This could be written
+           slightly more efficiently, but that wouldn't be worth it
+           until we have many more capabilities. */
 
         if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_DEPTH, vals))
-          apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
-                       APR_HASH_KEY_STRING, capability_yes);
+          {
+            apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
+                         APR_HASH_KEY_STRING, capability_yes);
+          }
+
+        if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO,
+                                        vals))
+          {
+            apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+                         APR_HASH_KEY_STRING, capability_yes);
+          }
       }
   } while (ne_header_cursor);
 }

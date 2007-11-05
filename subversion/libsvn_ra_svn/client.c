@@ -572,6 +572,8 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
                                  SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                  SVN_RA_SVN_CAP_SVNDIFF1,
                                  SVN_RA_SVN_CAP_ABSENT_ENTRIES,
+                                 SVN_RA_SVN_CAP_DEPTH,
+                                 SVN_RA_SVN_CAP_MERGEINFO,
                                  url));
   SVN_ERR(handle_auth_request(sess, pool));
 
@@ -2163,7 +2165,14 @@ static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
       else
         *has = FALSE;
     }
-  else  /* Don't know any other capabilities yet, so error. */
+  else if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
+    {
+      if (svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_MERGEINFO))
+        *has = TRUE;
+      else
+        *has = FALSE;
+    }
+  else  /* Don't know any other capabilities, so error. */
     {
         return svn_error_createf
           (SVN_ERR_RA_UNKNOWN_CAPABILITY, NULL,

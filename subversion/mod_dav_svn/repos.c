@@ -40,6 +40,7 @@
 #include "svn_version.h"
 #include "svn_props.h"
 #include "mod_dav_svn.h"
+#include "svn_ra.h"  /* for SVN_RA_CAPABILITY_* */
 
 #include "dav_svn.h"
 
@@ -1228,6 +1229,7 @@ get_parentpath_resource(request_rec *r,
   repos->base_url = ap_construct_url(r->pool, "", r);
   repos->special_uri = dav_svn__get_special_uri(r);
   repos->username = r->user;
+  repos->capabilities = apr_hash_make(repos->pool);
 
   /* Make sure this type of resource always has a trailing slash; if
      not, redirect to a URI that does. */
@@ -1427,6 +1429,10 @@ negotiate_encoding_prefs(request_rec *r, int *svndiff_version)
 }
 
 
+/* The only two possible values for a capability. */
+static const char *capability_yes = "yes";
+static const char *capability_no = "no";
+
 static dav_error *
 get_resource(request_rec *r,
              const char *root_path,
@@ -1600,11 +1606,51 @@ get_resource(request_rec *r,
   /* Remember who is making this request */
   repos->username = r->user;
 
-  /* Remember if the requesting client is a Subversion client */
+  /* Allocate room for capabilities, but don't search for any until
+     we know that this is a Subversion client. */
+  repos->capabilities = apr_hash_make(repos->pool);
+
+  /* Remember if the requesting client is a Subversion client, and if
+     so, what its capabilities are. */
   {
-    const char *ua = apr_table_get(r->headers_in, "User-Agent");
-    if (ua && (ap_strstr_c(ua, "SVN/") == ua))
-      repos->is_svn_client = TRUE;
+    const char *val = apr_table_get(r->headers_in, "User-Agent");
+
+    if (val && (ap_strstr_c(val, "SVN/") == val))
+      {
+        repos->is_svn_client = TRUE;
+
+        /* Client capabilities are self-reported.  There is no
+           guarantee the client actually has the capabilities it says
+           it has, we just assume it is in the client's interests to
+           report accurately. */
+
+        /* Start out assuming no capabilities. */
+        apr_hash_set(repos->capabilities, SVN_RA_CAPABILITY_DEPTH,
+                     APR_HASH_KEY_STRING, capability_no);
+        apr_hash_set(repos->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+                     APR_HASH_KEY_STRING, capability_no);
+
+        /* Then see what we can find. */
+        val = apr_table_get(r->headers_in, "X-SVN-Capabilities");
+        if (val)
+          {
+            apr_array_header_t *vals
+              = svn_cstring_split(val, ",", TRUE, r->pool);
+
+            if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_DEPTH,
+                                            vals))
+              {
+                apr_hash_set(repos->capabilities, SVN_RA_CAPABILITY_DEPTH,
+                             APR_HASH_KEY_STRING, capability_yes);
+              }
+            if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO,
+                                            vals))
+              {
+                apr_hash_set(repos->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+                             APR_HASH_KEY_STRING, capability_yes);
+              }
+          }
+      }
   }
 
   /* Retrieve/cache open repository */

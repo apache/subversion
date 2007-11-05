@@ -275,6 +275,13 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
     {
       serf_bucket_headers_setn(hdrs_bkt, "Content-Type", content_type);
     }
+
+  /* ### See comment at similar place in ../libsvn_ra_neon/util.c. ### */
+  serf_bucket_headers_setn(hdrs_bkt, "X-SVN-Capabilities",
+                           SVN_DAV_PROP_NS_DAV_SVN_DEPTH);
+  serf_bucket_headers_setn(hdrs_bkt, "X-SVN-Capabilities",
+                           SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO);
+
   if (conn->session->auth_protocol)
     conn->session->auth_protocol->setup_request_func(conn, hdrs_bkt);
 

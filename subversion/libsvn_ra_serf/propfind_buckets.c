@@ -153,6 +153,13 @@ static void become_request(serf_bucket_t *bucket)
     }
   serf_bucket_headers_setn(hdrs_bkt, "Content-Type", "text/xml");
   serf_bucket_headers_setn(hdrs_bkt, "Depth", ctx->depth);
+
+  /* ### See comment at similar place in ../libsvn_ra_neon/util.c. ### */
+  serf_bucket_headers_setn(hdrs_bkt, "X-SVN-Capabilities",
+                           SVN_DAV_PROP_NS_DAV_SVN_DEPTH);
+  serf_bucket_headers_setn(hdrs_bkt, "X-SVN-Capabilities",
+                           SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO);
+
   if (ctx->label)
     {
       serf_bucket_headers_setn(hdrs_bkt, "Label", ctx->label);

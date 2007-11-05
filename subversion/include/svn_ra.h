@@ -1536,6 +1536,16 @@ svn_error_t *svn_ra_has_capability(svn_ra_session_t *session,
  */
 #define SVN_RA_CAPABILITY_DEPTH "depth"
 
+/**
+ * The capability of doing the right thing with merge-tracking
+ * information.  This capability should be reported bidirectionally,
+ * because some repositories may want to reject clients that do not
+ * self-report as knowing how to handle merge-tracking.
+ *
+ * @since New in 1.5.
+ */
+#define SVN_RA_CAPABILITY_MERGEINFO "mergeinfo"
+
 /*       *** PLEASE READ THIS IF YOU ADD A NEW CAPABILITY ***
  * RA layers generally fetch all capabilities when asked about any
  * capability, to save future round trips.  So if you add a new
