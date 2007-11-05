@@ -3423,7 +3423,7 @@ def update_copied_from_replaced_and_changed(sbox):
   # Modify fn2.
   fn2_final_contents = "I have new contents for the middle file."
   svntest.main.file_write(fn2_path, fn2_final_contents)
-  
+
   # Commit the changes, creating r3.
   expected_output = svntest.wc.State(wc_dir, {
     fn2_relpath : Item(verb='Sending'),
@@ -3740,7 +3740,7 @@ interactive-conflicts = true
                                         '-r1', wc_dir)
 
   # Modify iota differently and try to update *with the interactive
-  # resolver*.  ### The parser won't go so well with the output 
+  # resolver*.  ### The parser won't go so well with the output
   svntest.main.file_append(iota_path, "Local mods to r1 text.\n")
   svntest.actions.run_and_verify_update(wc_dir, None, None, None,
                                         "Can't read stdin: End of file found",

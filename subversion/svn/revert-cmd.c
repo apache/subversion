@@ -79,7 +79,7 @@ svn_cl__revert(apr_getopt_t *os,
                          FALSE, FALSE, pool);
 
   /* Revert is especially conservative, by default it is as
-     nonrecursive as possible. */ 
+     nonrecursive as possible. */
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_empty;
 

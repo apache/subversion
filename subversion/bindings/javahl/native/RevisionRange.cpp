@@ -81,7 +81,7 @@ const svn_opt_revision_range_t *RevisionRange::toRange(Pool &pool) const
   if (JNIUtil::isExceptionThrown())
     return NULL;
 
-  svn_opt_revision_range_t *range = 
+  svn_opt_revision_range_t *range =
     (svn_opt_revision_range_t *) apr_palloc(pool.pool(), sizeof(*range));
 
   range->start = *startRevision.revision();

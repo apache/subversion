@@ -155,7 +155,7 @@ svn_client__path_relative_to_root(const char **rel_path,
                                          FALSE, 0, NULL, NULL, pool));
           need_wc_cleanup = TRUE;
         }
-      if ((err = svn_wc__entry_versioned(&entry, path_or_url, adm_access, 
+      if ((err = svn_wc__entry_versioned(&entry, path_or_url, adm_access,
                                          FALSE, pool)))
         {
           goto cleanup;
@@ -207,9 +207,9 @@ svn_client__path_relative_to_root(const char **rel_path,
       if (! rel_url)
         err = svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
                                 _("URL '%s' is not a child of repository "
-                                  "root URL '%s'"), 
+                                  "root URL '%s'"),
                                 path_or_url, repos_root);
-      *rel_path = apr_pstrcat(pool, "/", 
+      *rel_path = apr_pstrcat(pool, "/",
                               svn_path_uri_decode(rel_url, pool), NULL);
     }
 
@@ -226,11 +226,11 @@ svn_client__path_relative_to_root(const char **rel_path,
 }
 
 svn_error_t *
-svn_client__get_repos_root(const char **repos_root, 
+svn_client__get_repos_root(const char **repos_root,
                            const char *path_or_url,
                            const svn_opt_revision_t *peg_revision,
                            svn_wc_adm_access_t *adm_access,
-                           svn_client_ctx_t *ctx, 
+                           svn_client_ctx_t *ctx,
                            apr_pool_t *pool)
 {
   svn_revnum_t rev;
@@ -252,7 +252,7 @@ svn_client__get_repos_root(const char **repos_root,
                                          FALSE, 0, NULL, NULL, pool));
           need_wc_cleanup = TRUE;
         }
-      if ((err = svn_wc__entry_versioned(&entry, path_or_url, adm_access, 
+      if ((err = svn_wc__entry_versioned(&entry, path_or_url, adm_access,
                                          FALSE, pool)))
         goto cleanup;
 
@@ -281,11 +281,11 @@ svn_client__get_repos_root(const char **repos_root,
                                                   ctx,
                                                   pool)))
         goto cleanup;
-      
+
       if ((err = svn_ra_get_repos_root(ra_session, repos_root, pool)))
         goto cleanup;
     }
-      
+
  cleanup:
   if (need_wc_cleanup)
     {

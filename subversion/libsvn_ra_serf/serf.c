@@ -885,7 +885,7 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
          _("attempt to fetch capability '%s' resulted in '%s'"),
          capability, cap_result);
     }
-  
+
   return SVN_NO_ERROR;
 }
 

@@ -168,7 +168,7 @@ svn_client__get_copy_source(const char *path_or_url,
     svn_revnum_t at_rev;
     const char *at_url;
     SVN_ERR(svn_client__ra_session_from_path(&ra_session, &at_rev, &at_url,
-                                             path_or_url, NULL, 
+                                             path_or_url, NULL,
                                              revision, revision,
                                              ctx, pool));
 

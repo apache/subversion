@@ -628,7 +628,7 @@ svn_client_blame4(const char *target,
 
   /* Get an RA plugin for this filesystem object. */
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &end_revnum,
-                                           &url, target, NULL, 
+                                           &url, target, NULL,
                                            peg_revision, end,
                                            ctx, pool));
 
@@ -962,7 +962,7 @@ struct log_message_baton {
 
    This is useful for tracking the various changes in location a
    particular resource has undergone when performing an RA->get_logs()
-   operation on that resource. 
+   operation on that resource.
 
    ### NOTE: This is a perfect duplicate of
    ### libsvn_ra/compat.c:prev_log_path(), and should someday go away

@@ -699,7 +699,7 @@ test_range_compact(const char **msg,
        be combined, then the expected range is rangelist[i][2] and
        rangelist[i][3] is {-1, -1, TRUE}.  If the ranges cancel each
        other out, then both rangelist[i][2] and rangelist[i][3] are
-       {-1, -1, TRUE}.       
+       {-1, -1, TRUE}.
            range1      +   range2      =   range3      ,   range4 */
     { /* Non-intersecting ranges */
       { { 2,  4, TRUE}, { 6, 13, TRUE}, { 2,  4, TRUE}, { 6, 13, TRUE} },
@@ -727,7 +727,7 @@ test_range_compact(const char **msg,
       { {37, 38, TRUE}, {33, 43, TRUE}, {33, 43, TRUE}, {-1, -1, TRUE} },
       { {38, 37, TRUE}, {33, 43, TRUE}, {33, 37, TRUE}, {38, 43, TRUE} },
       { {37, 38, TRUE}, {43, 33, TRUE}, {37, 33, TRUE}, {43, 38, TRUE} },
-      { {38, 37, TRUE}, {43, 33, TRUE}, {43, 33, TRUE}, {-1, -1, TRUE} }, 
+      { {38, 37, TRUE}, {43, 33, TRUE}, {43, 33, TRUE}, {-1, -1, TRUE} },
       /* Intersecting ranges share same start and end points */
       { { 4, 20, TRUE}, { 4, 20, TRUE}, { 4, 20, TRUE}, {-1, -1, TRUE} },
       { { 4, 20, TRUE}, {20,  4, TRUE}, {-1, -1, TRUE}, {-1, -1, TRUE} },
@@ -735,21 +735,21 @@ test_range_compact(const char **msg,
       { {20,  4, TRUE}, {20,  4, TRUE}, {20,  4, TRUE}, {-1, -1, TRUE} },
       /* Intersecting ranges share same start point */
       { { 7, 13, TRUE}, { 7, 19, TRUE}, { 7, 19, TRUE}, {-1, -1, TRUE} },
-      { { 7, 13, TRUE}, {19,  7, TRUE}, {19, 13, TRUE}, {-1, -1, TRUE} }, 
-      { {13,  7, TRUE}, {7,  19, TRUE}, {13, 19, TRUE}, {-1, -1, TRUE} }, 
+      { { 7, 13, TRUE}, {19,  7, TRUE}, {19, 13, TRUE}, {-1, -1, TRUE} },
+      { {13,  7, TRUE}, {7,  19, TRUE}, {13, 19, TRUE}, {-1, -1, TRUE} },
       { {13,  7, TRUE}, {19,  7, TRUE}, {19,  7, TRUE}, {-1, -1, TRUE} },
       { { 7, 19, TRUE}, { 7, 13, TRUE}, { 7, 19, TRUE}, {-1, -1, TRUE} },
-      { {19,  7, TRUE}, { 7, 13, TRUE}, {19, 13, TRUE}, {-1, -1, TRUE} }, 
-      { { 7, 19, TRUE}, {13,  7, TRUE}, {13, 19, TRUE}, {-1, -1, TRUE} }, 
+      { {19,  7, TRUE}, { 7, 13, TRUE}, {19, 13, TRUE}, {-1, -1, TRUE} },
+      { { 7, 19, TRUE}, {13,  7, TRUE}, {13, 19, TRUE}, {-1, -1, TRUE} },
       { {19,  7, TRUE}, {13,  7, TRUE}, {19,  7, TRUE}, {-1, -1, TRUE} },
       /* Intersecting ranges share same end point */
       { {12, 23, TRUE}, {18, 23, TRUE}, {12, 23, TRUE}, {-1, -1, TRUE} },
-      { {12, 23, TRUE}, {23, 18, TRUE}, {12, 18, TRUE}, {-1, -1, TRUE} }, 
-      { {23, 12, TRUE}, {18, 23, TRUE}, {18, 12, TRUE}, {-1, -1, TRUE} }, 
+      { {12, 23, TRUE}, {23, 18, TRUE}, {12, 18, TRUE}, {-1, -1, TRUE} },
+      { {23, 12, TRUE}, {18, 23, TRUE}, {18, 12, TRUE}, {-1, -1, TRUE} },
       { {23, 12, TRUE}, {23, 18, TRUE}, {23, 12, TRUE}, {-1, -1, TRUE} },
       { {18, 23, TRUE}, {12, 23, TRUE}, {12, 23, TRUE}, {-1, -1, TRUE} },
-      { {23, 18, TRUE}, {12, 23, TRUE}, {12, 18, TRUE}, {-1, -1, TRUE} }, 
-      { {18, 23, TRUE}, {23, 12, TRUE}, {18, 12, TRUE}, {-1, -1, TRUE} }, 
+      { {23, 18, TRUE}, {12, 23, TRUE}, {12, 18, TRUE}, {-1, -1, TRUE} },
+      { {18, 23, TRUE}, {23, 12, TRUE}, {18, 12, TRUE}, {-1, -1, TRUE} },
       { {23, 18, TRUE}, {23, 12, TRUE}, {23, 12, TRUE}, {-1, -1, TRUE} } };
   int i;
 

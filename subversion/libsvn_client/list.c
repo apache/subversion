@@ -134,7 +134,7 @@ svn_client_list2(const char *path_or_url,
 
   /* Get an RA plugin for this filesystem object. */
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &rev,
-                                           &url, path_or_url, NULL, 
+                                           &url, path_or_url, NULL,
                                            peg_revision,
                                            revision, ctx, pool));
 

@@ -129,7 +129,7 @@ svnlook_binary = os.path.abspath('../../svnlook/svnlook' + _exe)
 svnsync_binary = os.path.abspath('../../svnsync/svnsync' + _exe)
 svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
 
-# Global variable indicating if we want verbose output, that is, 
+# Global variable indicating if we want verbose output, that is,
 # details of what commands each test does as it does them.  This is
 # incompatible with quiet_mode.
 verbose_mode = False
@@ -317,7 +317,7 @@ def wait_on_pipe(waiter, stdout_lines, stderr_lines):
   if kid fails.  Returns kid's exit code."""
   if waiter is None:
     return
-  
+
   kid, command = waiter
 
   wait_code = kid.wait()
@@ -692,7 +692,7 @@ def write_restrictive_svnserve_conf(repo_dir, anon_access="none"):
 # Warning: because mod_dav_svn uses one shared authz file for all
 # repositories, you *cannot* use write_authz_file in any test that
 # might be run in parallel.
-# 
+#
 # write_authz_file can *only* be used in test suites which disable
 # parallel execution at the bottom like so
 #   if __name__ == '__main__':

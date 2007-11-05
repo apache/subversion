@@ -888,7 +888,7 @@ typedef struct svn_location_segment_t
      segment. */
   svn_revnum_t range_start;
   svn_revnum_t range_end;
-  
+
   /* The absolute (sans leading slash) path for this segment.  May be
      NULL to indicate gaps in an object's history.  */
   const char *path;

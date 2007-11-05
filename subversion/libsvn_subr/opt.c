@@ -146,7 +146,7 @@ svn_opt_subcommand_takes_option3(const svn_opt_subcommand_desc2_t *command,
   for (i = 0; i < SVN_OPT_MAX_OPTIONS; i++)
     if (command->valid_options[i] == option_code)
       return TRUE;
-  
+
   if (global_options)
     for (i = 0; global_options[i]; i++)
       if (global_options[i] == option_code)
@@ -380,7 +380,7 @@ svn_opt_print_generic_help2(const char *header,
   while (cmd_table[i].name)
     {
       if ((err = svn_cmdline_fputs("   ", stream, pool))
-          || (err = print_command_info2(cmd_table + i, opt_table, 
+          || (err = print_command_info2(cmd_table + i, opt_table,
                                         NULL, FALSE,
                                         pool, stream))
           || (err = svn_cmdline_fputs("\n", stream, pool)))
@@ -671,14 +671,14 @@ svn_opt_parse_revision2(apr_array_header_t **ranges_to_merge,
                         apr_pool_t *pool)
 {
   svn_opt_revision_range_t *range = apr_palloc(pool, sizeof(*range));
-  
+
   range->start.kind = svn_opt_revision_unspecified;
   range->end.kind = svn_opt_revision_unspecified;
 
   if (svn_opt_parse_revision(&(range->start), &(range->end),
                              arg, pool) == -1)
     return -1;
-  
+
   APR_ARRAY_PUSH(*ranges_to_merge, svn_opt_revision_range_t *) = range;
   return 0;
 }
@@ -1102,7 +1102,7 @@ svn_opt_print_help3(apr_getopt_t *os,
     for (i = 0; i < targets->nelts; i++)
       {
         svn_opt_subcommand_help3(APR_ARRAY_IDX(targets, i, const char *),
-                                 cmd_table, option_table, 
+                                 cmd_table, option_table,
                                  global_options, pool);
       }
   else if (print_version)   /* just --version */

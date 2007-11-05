@@ -107,7 +107,7 @@ typedef struct {
      keys and values must have at least that lifetime.  Most likely
      the keys and values are constants anyway (and sufficiently
      well-informed internal code may just compare against those
-     constants' addresses, therefore). */ 
+     constants' addresses, therefore). */
   apr_hash_t *capabilities;
 } svn_ra_neon__session_t;
 

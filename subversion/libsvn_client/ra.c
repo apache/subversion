@@ -512,7 +512,7 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
                                        start_revision, end_revision,
                                        gls_receiver, &gls_receiver_baton,
                                        pool));
-  qsort((*segments)->elts, (*segments)->nelts, 
+  qsort((*segments)->elts, (*segments)->nelts,
         (*segments)->elt_size, compare_segments);
   return SVN_NO_ERROR;
 }

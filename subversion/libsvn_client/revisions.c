@@ -61,7 +61,7 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
       else
         {
           if (! ra_session)
-            return svn_error_create(SVN_ERR_CLIENT_RA_ACCESS_REQUIRED, 
+            return svn_error_create(SVN_ERR_CLIENT_RA_ACCESS_REQUIRED,
                                     NULL, NULL);
           SVN_ERR(svn_ra_get_latest_revnum(ra_session, revnum, pool));
           if (youngest_rev)
@@ -79,7 +79,7 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
 
         /* Sanity check. */
         if (path == NULL)
-          return svn_error_create(SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED, 
+          return svn_error_create(SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED,
                                   NULL, NULL);
 
         SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path, FALSE,
@@ -131,8 +131,8 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
   /* Final check -- if our caller provided a youngest revision, and
   the number we wound up with is younger than that revision, we need
   to stick to our caller's idea of "youngest". */
-  if (youngest_rev 
-      && SVN_IS_VALID_REVNUM(*youngest_rev) 
+  if (youngest_rev
+      && SVN_IS_VALID_REVNUM(*youngest_rev)
       && SVN_IS_VALID_REVNUM(*revnum)
       && (*revnum > *youngest_rev))
     *revnum = *youngest_rev;

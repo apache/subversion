@@ -1142,7 +1142,7 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_CL_UNNECESSARY_LOG_MESSAGE,
              SVN_ERR_CL_CATEGORY_START + 9,
              "A log message was given where none was necessary")
-  
+
   SVN_ERRDEF(SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL,
              SVN_ERR_CL_CATEGORY_START + 10,
              "No external merge tool available")

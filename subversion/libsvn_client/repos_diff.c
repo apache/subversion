@@ -829,7 +829,7 @@ close_file(void *file_baton,
           notify->content_state = notify->prop_state = kas->state;
           notify->lock_state = svn_wc_notify_lock_state_inapplicable;
           (*eb->notify_func)(eb->notify_baton, notify, pool);
-          apr_hash_set(eb->deleted_paths, b->wcpath, 
+          apr_hash_set(eb->deleted_paths, b->wcpath,
                        APR_HASH_KEY_STRING, NULL);
         }
 

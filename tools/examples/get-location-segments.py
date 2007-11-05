@@ -21,7 +21,7 @@ def parse_args(args):
     peg_revision = core.SVN_INVALID_REVNUM
     url = path_pieces[0]
   url = core.svn_path_canonicalize(url)
-    
+
   # parse the revision range, if any
   if argc > 2:
     rev_pieces = args[1].split(':')
@@ -50,7 +50,7 @@ def parse_args(args):
 
   return url, peg_revision, start_revision, end_revision
 
-  
+
 def main():
   try:
     url, peg_revision, start_revision, end_revision = parse_args(sys.argv[1:])
@@ -80,7 +80,7 @@ ERROR: %s
     ]
   ctx.auth_baton = core.svn_auth_open(providers)
   ctx.config = core.svn_config_get_config(None)
-  
+
   ra_callbacks = ra.callbacks_t()
   ra_callbacks.auth_baton = ctx.auth_baton
   ra_session = ra.open(url, ra_callbacks, None, ctx.config)

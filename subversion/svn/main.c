@@ -1138,7 +1138,7 @@ main(int argc, const char *argv[])
                 -c N  -> -r N-1:N
                 -c -N -> -r N:N-1 */
           {
-            svn_opt_revision_range_t *range = apr_palloc(pool, sizeof(*range));            
+            svn_opt_revision_range_t *range = apr_palloc(pool, sizeof(*range));
           if (changeno > 0)
             {
                 range->start.value.number = changeno - 1;
@@ -1490,7 +1490,7 @@ main(int argc, const char *argv[])
       if (opt_id == 'h' || opt_id == '?')
         continue;
 
-      if (! svn_opt_subcommand_takes_option3(subcommand, opt_id, 
+      if (! svn_opt_subcommand_takes_option3(subcommand, opt_id,
                                              svn_cl__global_options))
         {
           const char *optstr;
