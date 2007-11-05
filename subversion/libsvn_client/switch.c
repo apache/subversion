@@ -127,13 +127,6 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
   URL = apr_pstrdup(pool, entry->url);
 
-  /* Get revnum set to something meaningful, so we can fetch the
-     switch editor. */
-  if (revision->kind == svn_opt_revision_number)
-    revnum = revision->value.number; /* do the trivial conversion manually */
-  else
-    revnum = SVN_INVALID_REVNUM; /* no matter, do real conversion later */
-
   /* Open an RA session to 'source' URL */
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum, &tmp_url,
                                            URL, adm_access, 
