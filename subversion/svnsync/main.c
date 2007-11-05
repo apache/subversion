@@ -1238,7 +1238,7 @@ replay_rev_finished(svn_revnum_t revision,
   filtered = filter_props(&filtered_count, rev_props, 
                           SVN_PROP_PREFIX, SVNSYNC_PROP_PREFIX, 
                           pool);
-  write_revprops(rb->to_session, revision, filtered, pool);
+  SVN_ERR(write_revprops(rb->to_session, revision, filtered, pool));
 
   svn_pool_clear(subpool);
 
