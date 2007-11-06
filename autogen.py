@@ -164,6 +164,11 @@ def run_cmd(cmd):
 # Build csvn/core/functions.py
 ########################################################################
 
+if not os.path.exists("ctypesgen"):
+    raise Exception(
+        "Cannot find ctypesgen. Please download the ctypesgen package by\n"
+        "following the instructions provided in README.")
+
 tempdir = mkdtemp()
 
 includes = ('%s/include/subversion-1/svn_*.h '
