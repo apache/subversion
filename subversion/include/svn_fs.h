@@ -792,7 +792,11 @@ svn_error_t *svn_fs_change_txn_prop(svn_fs_txn_t *txn,
 
 /** Change, add, and/or delete transaction property values in
  * transaction @a txn.  @a props is an array of <tt>svn_prop_t</tt>
- * elements.  Do any necessary temporary allocation in @a pool.
+ * elements.  This is equivalent to calling svn_fs_change_txp_prop
+ * multiple times with the @c name and @c value fields of each
+ * successive <tt>svn_prop_t</tt>, but may be more efficient.
+ * (Properties not mentioned are left alone.)  Do any necessary
+ * temporary allocation in @a pool.
  *
  * @since New in 1.5.
  */
