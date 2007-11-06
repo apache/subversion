@@ -91,7 +91,7 @@ extern "C" {
 #define SVN_REPOS__CONF_AUTHZ "authz"
 
 /* The Repository object, created by svn_repos_open() and
-   svn_repos_create(), allocated in POOL. */
+   svn_repos_create(). */
 struct svn_repos_t
 {
   /* A Subversion filesystem object. */
@@ -249,13 +249,6 @@ svn_repos__compare_files(svn_boolean_t *changed_p,
                          svn_fs_root_t *root2,
                          const char *path2,
                          apr_pool_t *pool);
-
-/* Change the transaction property values in transaction TXN using the
-   (key,value)-pairs in TXNPROP_TABLE. */
-svn_error_t *
-svn_repos__change_txn_props(svn_fs_txn_t *txn,
-                            apr_hash_t *txnprop_table,
-                            apr_pool_t *pool);
 
 /* Get the mergeinfo for PATH in REPOS as REVNUM and store it in MERGEINFO. */
 svn_error_t *

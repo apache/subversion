@@ -1666,6 +1666,15 @@ svn_error_t *svn_repos_fs_change_txn_prop(svn_fs_txn_t *txn,
                                           const svn_string_t *value,
                                           apr_pool_t *pool);
 
+/** Validating wrapper for svn_fs_change_txn_props() (which see for
+ * argument descriptions).
+ * 
+ * @since New in 1.5.
+ */
+svn_error_t *svn_repos_fs_change_txn_props(svn_fs_txn_t *txn,
+                                           apr_array_header_t *props,
+                                           apr_pool_t *pool);
+
 /** @} */
 
 /* ---------------------------------------------------------------*/

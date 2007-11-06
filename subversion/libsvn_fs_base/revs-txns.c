@@ -647,6 +647,29 @@ svn_fs_base__change_txn_prop(svn_fs_txn_t *txn,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_fs_base__change_txn_props(svn_fs_txn_t *txn,
+                              apr_array_header_t *props,
+                              apr_pool_t *pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  int i;
+
+  for (i = 0; i < props->nelts; i++)
+    {
+      svn_prop_t *prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_fs_base__change_txn_prop(txn, prop->name, 
+                                           prop->value, iterpool));
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Creating a transaction */
 
@@ -656,7 +679,8 @@ txn_vtable_t txn_vtable = {
   svn_fs_base__txn_prop,
   svn_fs_base__txn_proplist,
   svn_fs_base__change_txn_prop,
-  svn_fs_base__txn_root
+  svn_fs_base__txn_root,
+  svn_fs_base__change_txn_props
 };
 
 
