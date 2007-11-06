@@ -1103,7 +1103,8 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
                                apr_pool_t *pool);
 
 
-/* Call @a receiver and @a receiver_baton to report successive
+/**
+ * Call @a receiver and @a receiver_baton to report successive
  * location segments in revisions between @a start_rev and @a end_rev
  * (inclusive) for the line of history identified by the peg-object @a
  * path in @a peg_revision (and in @a repos).

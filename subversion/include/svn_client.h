@@ -1023,7 +1023,7 @@ svn_client_checkout(svn_revnum_t *result_rev,
 /** @} */
 
 /**
- * @defgroup Update
+ * @defgroup Update Bring a working copy up-to-date with a repository
  *
  * @{
  *
@@ -1122,7 +1122,7 @@ svn_client_update(svn_revnum_t *result_rev,
 /** @} */
 
 /**
- * @defgroup Switch
+ * @defgroup Switch Switch a working copy to another location.
  *
  * @{
  */
@@ -1202,7 +1202,7 @@ svn_client_switch(svn_revnum_t *result_rev,
 /** @} */
 
 /**
- * @defgroup Add
+ * @defgroup Add Begin versioning files/directories in a working copy.
  *
  * @{
  */
@@ -1298,7 +1298,7 @@ svn_client_add(const char *path,
 /** @} */
 
 /**
- * @defgroup Mkdir
+ * @defgroup Mkdir Create directories in a working copy or repository.
  *
  * @{
  */
@@ -1363,7 +1363,7 @@ svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
 /** @} */
 
 /**
- * @defgroup Delete
+ * @defgroup Delete Remove files/directories from a working copy or repository.
  *
  * @{
  */
@@ -1442,7 +1442,7 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
 /** @} */
 
 /**
- * @defgroup Import
+ * @defgroup Import Import files into the repository.
  *
  * @{
  */
@@ -1532,7 +1532,7 @@ svn_error_t *svn_client_import(svn_client_commit_info_t **commit_info_p,
 /** @} */
 
 /**
- * @defgroup Commit
+ * @defgroup Commit Commit local modifications to the repository.
  *
  * @{
  */
@@ -1643,7 +1643,8 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
 /** @} */
 
 /**
- * @defgroup Status
+ * @defgroup Status Report interesting information about paths in the \
+ *                  working copy.
  *
  * @{
  */
@@ -1736,7 +1737,7 @@ svn_client_status(svn_revnum_t *result_rev,
 /** @} */
 
 /**
- * @defgroup Log
+ * @defgroup Log View information about previous revisions of an object.
  *
  * @{
  */
@@ -1879,7 +1880,7 @@ svn_client_log(const apr_array_header_t *targets,
 /** @} */
 
 /**
- * @defgroup Blame
+ * @defgroup Blame Show modification information about lines in a file.
  *
  * @{
  */
@@ -1982,7 +1983,7 @@ svn_client_blame(const char *path_or_url,
 /** @} */
 
 /**
- * @defgroup Diff
+ * @defgroup Diff Generate differences between paths.
  *
  * @{
  */
@@ -2322,7 +2323,7 @@ svn_client_diff_summarize_peg(const char *path,
 /** @} */
 
 /**
- * @defgroup Merge
+ * @defgroup Merge Merge changes between branches.
  *
  * @{
  */
@@ -2580,7 +2581,7 @@ svn_client_mergeinfo_get_available(apr_array_header_t **rangelist,
 /** @} */
 
 /**
- * @defgroup Cleanup
+ * @defgroup Cleanup Cleanup an abnormally terminated working copy.
  *
  * @{
  */
@@ -2602,7 +2603,7 @@ svn_client_cleanup(const char *dir,
 /** @} */
 
 /**
- * @defgroup Relocate
+ * @defgroup Relocate Switch a working copy to a different repository.
  *
  * @{
  */
@@ -2631,7 +2632,7 @@ svn_client_relocate(const char *dir,
 /** @} */
 
 /**
- * @defgroup Revert
+ * @defgroup Revert Remove local changes in a repository.
  *
  * @{
  */
@@ -2666,7 +2667,7 @@ svn_client_revert2(const apr_array_header_t *paths,
                    apr_pool_t *pool);
 
 
-/*
+/**
  * Similar to svn_client_revert2(), but with @a depth set according to
  * @a recurse: if @a recurse is true, @a depth is @c svn_depth_infinity,
  * else if @a recurse is false, @a depth is @c svn_depth_empty.
@@ -2686,7 +2687,7 @@ svn_client_revert(const apr_array_header_t *paths,
 /** @} */
 
 /**
- * @defgroup Resolved
+ * @defgroup Resolved Mark conflicted paths as resolved.
  *
  * @{
  */
@@ -2738,7 +2739,7 @@ svn_client_resolved2(const char *path,
 /** @} */
 
 /**
- * @defgroup Copy
+ * @defgroup Copy Copy paths in the working copy and repository.
  *
  * @{
  */
@@ -2886,7 +2887,7 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
 /** @} */
 
 /**
- * @defgroup Move
+ * @defgroup Move Move paths in the working copy or repository.
  *
  * @{
  */
@@ -3384,7 +3385,7 @@ svn_client_revprop_list(apr_hash_t **props,
 
 
 /**
- * @defgroup Export
+ * @defgroup Export Export a tree from version control.
  *
  * @{
  */
@@ -3585,7 +3586,8 @@ svn_client_list2(const char *path_or_url,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
-/* Like svn_client_list2(), but with @a recurse instead of @a depth.
+/**
+ * Similar to svn_client_list2(), but with @a recurse instead of @a depth.
  * If @a recurse is true, pass @c svn_depth_files for @a depth; else
  * pass @c svn_depth_infinity.
  *
@@ -3665,7 +3667,7 @@ svn_client_ls(apr_hash_t **dirents,
 /** @} */
 
 /**
- * @defgroup Cat
+ * @defgroup Cat View the contents of a file in the repository.
  *
  * @{
  */
@@ -3898,7 +3900,7 @@ svn_client_unlock(const apr_array_header_t *targets,
 /** @} */
 
 /**
- * @defgroup Info
+ * @defgroup Info Show repository information about a working copy.
  *
  * @{
  */
@@ -4066,7 +4068,7 @@ svn_client_info2(const char *path_or_url,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
-/*
+/**
  * Similar to svn_client_info2() but with @a depth set according to
  * @a recurse: if @a recurse is true, @a depth is @c svn_depth_infinity,
  * else @c svn_depth_empty.
@@ -4181,6 +4183,8 @@ svn_client_open_ra_session(svn_ra_session_t **session,
 
 
 /** @} end group: Client session related functions */
+
+/** @} */
 
 #ifdef __cplusplus
 }
