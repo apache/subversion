@@ -1231,7 +1231,7 @@ svn_error_t *svn_fs_change_mergeinfo(svn_fs_root_t *root,
  * @a paths indicate the paths you are requesting information for
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
- * only inherited mergeinfo for @paths is retrieved.
+ * only inherited mergeinfo for @a paths is retrieved.
  *
  * Do any necessary temporary allocation in @a pool.
  *

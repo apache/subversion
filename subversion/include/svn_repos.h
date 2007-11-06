@@ -1297,7 +1297,7 @@ svn_repos_get_logs(svn_repos_t *repos,
  * mergeinfo visible or available.
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
- * only inherited mergeinfo for @paths is fetched.
+ * only inherited mergeinfo for @a paths is fetched.
  *
  * If @a revision is @c SVN_INVALID_REVNUM, it defaults to youngest.
  *
