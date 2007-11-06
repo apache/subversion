@@ -3815,7 +3815,7 @@ test_list = [ None,
                          server_sends_copyfrom_on_update),
               update_copied_from_replaced_and_changed,
               update_accept_conflicts,
-              XFail(eof_in_interactive_conflict_resolver),
+              eof_in_interactive_conflict_resolver,
              ]
 
 if __name__ == '__main__':
