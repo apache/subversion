@@ -190,7 +190,11 @@ struct dir_baton
   /* The current log file number. */
   int log_number;
 
-  /* The current log buffer. */
+  /* The current log buffer. The content of this accumulator may be
+     flushed and run at any time (in pool cleanup), so only append
+     complete sets of operations to it; you may need to build up a
+     buffer of operations and append it atomically with
+     svn_stringbuf_appendstr. */
   svn_stringbuf_t *log_accum;
 
   /* The depth of the directory in the wc (or inferred if added).  Not
@@ -1564,6 +1568,9 @@ close_directory(void *dir_baton,
      to deal with them. */
   if (regular_props->nelts || entry_props->nelts || wc_props->nelts)
     {
+      /* Make a temporary log accumulator for dirprop changes.*/
+      svn_stringbuf_t *dirprop_log = svn_stringbuf_create("", pool);
+
       if (regular_props->nelts)
         {
           /* If recording traversal info, then see if the
@@ -1626,16 +1633,20 @@ close_directory(void *dir_baton,
                                         regular_props, TRUE, FALSE,
                                         db->edit_baton->conflict_func,
                                         db->edit_baton->conflict_baton,
-                                        db->pool, &db->log_accum),
+                                        db->pool, &dirprop_log),
                     _("Couldn't do property merge"));
         }
 
-      SVN_ERR(accumulate_entry_props(db->log_accum, NULL,
+      SVN_ERR(accumulate_entry_props(dirprop_log, NULL,
                                      adm_access, db->path,
                                      entry_props, pool));
 
-      SVN_ERR(accumulate_wcprops(db->log_accum, adm_access,
+      SVN_ERR(accumulate_wcprops(dirprop_log, adm_access,
                                  db->path, wc_props, pool));
+
+      /* Add the dirprop loggy entries to the baton's log
+         accumulator. */
+      svn_stringbuf_appendstr(db->log_accum, dirprop_log);
     }
 
   /* Flush and run the log. */
@@ -2308,7 +2319,7 @@ merge_file(svn_wc_notify_state_t *content_state,
 {
   const char *parent_dir;
   struct edit_baton *eb = fb->edit_baton;
-  svn_stringbuf_t *log_accum = fb->dir_baton->log_accum;
+  svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
   svn_wc_adm_access_t *adm_access;
   svn_boolean_t is_locally_modified;
   svn_boolean_t is_replaced = FALSE;
@@ -2644,6 +2655,11 @@ merge_file(svn_wc_notify_state_t *content_state,
     }
   else
     *content_state = svn_wc_notify_state_unchanged;
+
+  /* Now that we've built up *all* of the loggy commands for this
+     file, add them to the directory's log accumulator in one fell
+     swoop. */
+  svn_stringbuf_appendstr(fb->dir_baton->log_accum, log_accum);
 
   return SVN_NO_ERROR;
 }
