@@ -311,24 +311,35 @@ svn_ra_local__reparent(svn_ra_session_t *session,
                        apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *baton = session->priv;
+  const char *relpath = "";
 
-  svn_stringbuf_set(baton->fs_path,
-                    svn_path_uri_decode(url + strlen(baton->repos_url),
-                                        pool));
+  /* If the new URL isn't the same as our repository root URL, then
+     let's ensure that it's some child of it. */
+  if (strcmp(url, baton->repos_url) != 0)
+    relpath = svn_path_is_child(baton->repos_url, url, pool);
+  if (! relpath)
+    return svn_error_createf
+      (SVN_ERR_RA_ILLEGAL_URL, NULL,
+       _("URL '%s' is not a child of the session's repository root "
+         "URL '%s'"), url, baton->repos_url);
+
+  /* Update our FS_PATH baton member to point to our new
+     relative-URL-turned-absolute-filesystem-path. */
+  relpath = apr_pstrcat(pool, "/", svn_path_uri_decode(relpath, pool), NULL);
+  svn_stringbuf_set(baton->fs_path, relpath);
 
   return SVN_NO_ERROR;
 }
+
 
 static svn_error_t *
 svn_ra_local__get_session_url(svn_ra_session_t *session,
                               const char **url,
                               apr_pool_t *pool)
 {
-  svn_ra_local__session_baton_t *baton = session->priv;
-  const char *fs_path = apr_pstrmemdup(pool, baton->fs_path->data,
-                                       baton->fs_path->len);
-  *url = svn_path_join(baton->repos_url,
-                       svn_path_uri_encode(fs_path + 1, pool),
+  svn_ra_local__session_baton_t *sbaton = session->priv;
+  *url = svn_path_join(sbaton->repos_url,
+                       svn_path_uri_encode(sbaton->fs_path->data + 1, pool),
                        pool);
   return SVN_NO_ERROR;
 }
