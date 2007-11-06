@@ -72,6 +72,17 @@ svn_prop_array_dup(const apr_array_header_t *array, apr_pool_t *pool);
 
 
 /**
+ * Given a hash (keys <tt>const char *</tt> and values <tt>const
+ * svn_string_t</tt>) of properties, returns an array of svn_prop_t
+ * items using @a pool.
+ *
+ * @since New in 1.5.
+ */
+apr_array_header_t *
+svn_prop_hash_to_array(apr_hash_t *hash, apr_pool_t *pool);
+
+
+/**
  * Subversion distinguishes among several kinds of properties,
  * particularly on the client-side.  There is no "unknown" kind; if
  * there's nothing special about a property name, the default category

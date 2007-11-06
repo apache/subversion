@@ -120,7 +120,8 @@ static txn_vtable_t txn_vtable = {
   svn_fs_fs__txn_prop,
   svn_fs_fs__txn_proplist,
   svn_fs_fs__change_txn_prop,
-  svn_fs_fs__txn_root
+  svn_fs_fs__txn_root,
+  svn_fs_fs__change_txn_props
 };
 
 /* Pathname helper functions */
@@ -3403,8 +3404,24 @@ svn_fs_fs__change_txn_prop(svn_fs_txn_t *txn,
                            const svn_string_t *value,
                            apr_pool_t *pool)
 {
+  apr_array_header_t *props = apr_array_make(pool, 1, sizeof(svn_prop_t));
+  svn_prop_t prop;
+  
+  prop.name = name;
+  prop.value = value;
+  APR_ARRAY_PUSH(props, svn_prop_t) = prop;
+  
+  return svn_fs_fs__change_txn_props(txn, props, pool);
+}
+
+svn_error_t *
+svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
+                            apr_array_header_t *props,
+                            apr_pool_t *pool)
+{
   apr_file_t *txn_prop_file;
   apr_hash_t *txn_prop = apr_hash_make(pool);
+  int i;
   svn_error_t *err;
 
   err = get_txn_proplist(txn_prop, txn->fs, txn->id, pool);
@@ -3417,7 +3434,12 @@ svn_fs_fs__change_txn_prop(svn_fs_txn_t *txn,
   else if (err)
     return err;
 
-  apr_hash_set(txn_prop, name, APR_HASH_KEY_STRING, value);
+  for (i = 0; i < props->nelts; i++)
+    {
+      svn_prop_t *prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
+
+      apr_hash_set(txn_prop, prop->name, APR_HASH_KEY_STRING, prop->value);
+    }
 
   /* Create a new version of the file and write out the new props. */
   /* Open the transaction properties file. */
@@ -4877,26 +4899,36 @@ commit_body(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_fs_fs__txn_proplist(&txnprops, cb->txn, pool));
   if (txnprops)
     {
+      apr_array_header_t *props = apr_array_make(pool, 3, sizeof(svn_prop_t));
+      svn_prop_t prop;
+      prop.value = NULL;
+
       if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_OOD,
                        APR_HASH_KEY_STRING))
-        SVN_ERR(svn_fs_fs__change_txn_prop
-                (cb->txn, SVN_FS__PROP_TXN_CHECK_OOD,
-                 NULL, pool));
+        {
+          prop.name = SVN_FS__PROP_TXN_CHECK_OOD;
+          APR_ARRAY_PUSH(props, svn_prop_t) = prop;
+        }
+      
       if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS,
                        APR_HASH_KEY_STRING))
-        SVN_ERR(svn_fs_fs__change_txn_prop
-                (cb->txn, SVN_FS__PROP_TXN_CHECK_LOCKS,
-                 NULL, pool));
+        {
+          prop.name = SVN_FS__PROP_TXN_CHECK_LOCKS;
+          APR_ARRAY_PUSH(props, svn_prop_t) = prop;
+        }          
+
       if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CONTAINS_MERGEINFO,
                        APR_HASH_KEY_STRING))
         {
           target_mergeinfo = apr_hash_make(pool);
           SVN_ERR(get_txn_mergeinfo(target_mergeinfo, cb->txn->fs, cb->txn->id,
                                     pool));
-          SVN_ERR(svn_fs_fs__change_txn_prop
-                  (cb->txn, SVN_FS__PROP_TXN_CONTAINS_MERGEINFO,
-                   NULL, pool));
+          prop.name = SVN_FS__PROP_TXN_CONTAINS_MERGEINFO;
+          APR_ARRAY_PUSH(props, svn_prop_t) = prop;
         }
+      
+      if (! apr_is_empty_array(props))
+        SVN_ERR(svn_fs_fs__change_txn_props(cb->txn, props, pool));
     }
 
   /* Create the shard for the rev and revprop file, if we're sharding and
@@ -5669,6 +5701,8 @@ svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p,
                      apr_pool_t *pool)
 {
   svn_string_t date;
+  svn_prop_t prop;
+  apr_array_header_t *props = apr_array_make(pool, 3, sizeof(svn_prop_t));
 
   SVN_ERR(svn_fs__check_fs(fs));
 
@@ -5681,20 +5715,26 @@ svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p,
      automatically overwritten with a revision datestamp. */
   date.data = svn_time_to_cstring(apr_time_now(), pool);
   date.len = strlen(date.data);
-  SVN_ERR(svn_fs_fs__change_txn_prop(*txn_p, SVN_PROP_REVISION_DATE,
-                                     &date, pool));
+
+  prop.name = SVN_PROP_REVISION_DATE;
+  prop.value = &date;
+  APR_ARRAY_PUSH(props, svn_prop_t) = prop;
 
   /* Set temporary txn props that represent the requested 'flags'
      behaviors. */
   if (flags & SVN_FS_TXN_CHECK_OOD)
-    SVN_ERR(svn_fs_fs__change_txn_prop
-            (*txn_p, SVN_FS__PROP_TXN_CHECK_OOD,
-             svn_string_create("true", pool), pool));
+    {
+      prop.name = SVN_FS__PROP_TXN_CHECK_OOD;
+      prop.value = svn_string_create("true", pool);
+      APR_ARRAY_PUSH(props, svn_prop_t) = prop;
+    }
 
   if (flags & SVN_FS_TXN_CHECK_LOCKS)
-    SVN_ERR(svn_fs_fs__change_txn_prop
-            (*txn_p, SVN_FS__PROP_TXN_CHECK_LOCKS,
-             svn_string_create("true", pool), pool));
+    {
+      prop.name = SVN_FS__PROP_TXN_CHECK_LOCKS;
+      prop.value = svn_string_create("true", pool);
+      APR_ARRAY_PUSH(props, svn_prop_t) = prop;
+    }
 
-  return SVN_NO_ERROR;
+  return svn_fs_fs__change_txn_props(*txn_p, props, pool);
 }

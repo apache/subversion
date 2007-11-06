@@ -188,7 +188,9 @@ open_root(void *edit_baton,
   else /* Even if we aren't the owner of the transaction, we might
           have been instructed to set some properties. */
     {
-      SVN_ERR(svn_repos__change_txn_props(eb->txn, eb->revprop_table, pool));
+      apr_array_header_t *props = svn_prop_hash_to_array(eb->revprop_table,
+                                                         pool);
+      SVN_ERR(svn_repos_fs_change_txn_props(eb->txn, props, pool));
     }
   SVN_ERR(svn_fs_txn_name(&(eb->txn_name), eb->txn, eb->pool));
   SVN_ERR(svn_fs_txn_root(&(eb->txn_root), eb->txn, eb->pool));
