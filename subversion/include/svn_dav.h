@@ -160,7 +160,7 @@ extern "C" {
 /* Presence of this in the DAV header response to an OPTIONS request
    indicates that the server knows how to handle merge-tracking information.
    ### And see above about appropriateness of properties namespace. ### */
-#define SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO SVN_DAV_PROP_NS_DAV "svn/merginfo"
+#define SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO SVN_DAV_PROP_NS_DAV "svn/mergeinfo"
 
 #define SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS SVN_DAV_PROP_NS_DAV \
         "svn/log-revprops"
