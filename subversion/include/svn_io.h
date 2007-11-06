@@ -809,7 +809,7 @@ svn_error_t *svn_io_remove_dir2(const char *path,
                                 apr_pool_t *pool);
 
 /** Similar to svn_io_remove_dir2(), but with @a ignore_enoent set to
- * @C FALSE.
+ * @c FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API
  */

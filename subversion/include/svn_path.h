@@ -366,7 +366,7 @@ apr_array_header_t *svn_path_decompose(const char *path,
                                        apr_pool_t *pool);
 
 /** Join an array of <tt>const char *</tt> components into a '/'
- * separated path, allocated in @pool.  The joined path is absolute if
+ * separated path, allocated in @a pool.  The joined path is absolute if
  * the first component is a lone dir separator.
  *
  * Calling svn_path_compose() on the output of svn_path_decompose()

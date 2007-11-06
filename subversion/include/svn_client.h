@@ -1127,7 +1127,7 @@ svn_client_update(svn_revnum_t *result_rev,
  * @{
  */
 
-/** Switch working tree @a path to @a url@peg_revision at @a revision,
+/** Switch working tree @a path to @a url\@peg_revision at @a revision,
  * authenticating with the authentication baton cached in @a ctx.  If
  * @a result_rev is not @c NULL, set @a *result_rev to the value of
  * the revision to which the working copy was actually switched.
@@ -2521,7 +2521,7 @@ svn_client_merge_peg(const char *source,
 
 /** Set @a suggestions to an ordered array of @c const char *
  * potential merge sources (expressed as full repository URLs) for @a
- * path_or_url at @a peg_revision.  @path_or_url is a working copy
+ * path_or_url at @a peg_revision.  @a path_or_url is a working copy
  * path or repository URL.  @a ctx is a context used for
  * authentication in the repository case.  Use @a pool for all
  * allocations.

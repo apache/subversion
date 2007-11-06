@@ -799,7 +799,7 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
  * info available.  Allocate the returned values in @a pool.
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
- * only inherited mergeinfo for @paths is retrieved.
+ * only inherited mergeinfo for @a paths is retrieved.
  *
  * If @a revision is @c SVN_INVALID_REVNUM, it defaults to youngest.
  *
