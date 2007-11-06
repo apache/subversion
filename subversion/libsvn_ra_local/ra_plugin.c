@@ -1421,15 +1421,13 @@ svn_ra_local__has_capability(svn_ra_session_t *session,
                              const char *capability,
                              apr_pool_t *pool)
 {
-  if (strcmp(capability, SVN_RA_CAPABILITY_DEPTH) == 0)
+  if (strcmp(capability, SVN_RA_CAPABILITY_DEPTH) == 0
+      || strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0
+      || strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0)
     {
       *has = TRUE;
     }
-  else if (strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0)
-    {
-      *has = TRUE;
-    }
-  else  /* Don't know any other capabilities yet, so error. */
+  else  /* Don't know any other capabilities, so error. */
     {
         return svn_error_createf
           (SVN_ERR_RA_UNKNOWN_CAPABILITY, NULL,

@@ -77,7 +77,7 @@ svn_repos_fs_begin_txn_for_commit2(svn_fs_txn_t **txn_p,
 
   /* Run start-commit hooks. */
   SVN_ERR(svn_repos__hooks_start_commit(repos, author ? author->data : NULL,
-                                        pool));
+                                        repos->capabilities, pool));
 
   /* Begin the transaction, ask for the fs to do on-the-fly lock checks. */
   SVN_ERR(svn_fs_begin_txn2(txn_p, repos->fs, rev,
