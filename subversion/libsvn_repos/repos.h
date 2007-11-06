@@ -91,7 +91,7 @@ extern "C" {
 #define SVN_REPOS__CONF_AUTHZ "authz"
 
 /* The Repository object, created by svn_repos_open() and
-   svn_repos_create(), allocated in POOL. */
+   svn_repos_create(). */
 struct svn_repos_t
 {
   /* A Subversion filesystem object. */
