@@ -337,7 +337,7 @@ module Svn
                      peg_rev=nil, depth=nil,
                      ignore_ancestry=false, force=false,
                      dry_run=false, options=nil, record_only=false)
-        peg_rev ||= uri?(src) ? 'HEAD' : 'WORKING'
+        peg_rev ||= URI(src).scheme ? 'HEAD' : 'WORKING'
         Client.merge_peg3(src, ranges_to_merge, peg_rev,
                           target_wcpath, depth, ignore_ancestry,
                           force, record_only, dry_run, options, self)
@@ -616,14 +616,6 @@ module Svn
         paths.collect do |path|
           path.chomp(File::SEPARATOR)
         end
-      end
-
-      def uri?(path)
-        uri = URI.parse(path)
-        # URI.parse is pretty liberal in what it will accept as a scheme,
-        # but if we get a scheme and a host we can be pretty sure it's a
-        # URI as far as subversion is concerned.
-        uri.scheme and uri.host
       end
 
       def depth_from_depth_or_recurse(depth_or_recurse)
