@@ -41,6 +41,7 @@
 #include "svn_props.h"
 #include "mod_dav_svn.h"
 #include "svn_ra.h"  /* for SVN_RA_CAPABILITY_* */
+#include "private/svn_repos_private.h"
 
 #include "dav_svn.h"
 
@@ -1629,6 +1630,8 @@ get_resource(request_rec *r,
                      APR_HASH_KEY_STRING, capability_no);
         apr_hash_set(repos->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
                      APR_HASH_KEY_STRING, capability_no);
+        apr_hash_set(repos->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
+                     APR_HASH_KEY_STRING, capability_no);
 
         /* Then see what we can find. */
         val = apr_table_get(r->headers_in, "X-SVN-Capabilities");
@@ -1647,6 +1650,13 @@ get_resource(request_rec *r,
                                             vals))
               {
                 apr_hash_set(repos->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+                             APR_HASH_KEY_STRING, capability_yes);
+              }
+            if (svn_cstring_match_glob_list
+                (SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS, vals))
+              {
+                apr_hash_set(repos->capabilities,
+                             SVN_RA_CAPABILITY_LOG_REVPROPS,
                              APR_HASH_KEY_STRING, capability_yes);
               }
           }
@@ -1675,6 +1685,12 @@ get_resource(request_rec *r,
       /* Cache the open repos for the next request on this connection */
       apr_pool_userdata_set(repos->repos, repos_key,
                             NULL, r->connection->pool);
+
+      /* Store the capabilities of the current connection, making sure
+         to use the same pool repos->repos itself was created in. */
+      svn_repos__set_capabilities
+        (repos->repos, svn_repos__capabilities_as_list(repos->capabilities,
+                                                       r->connection->pool));
     }
 
   /* cache the filesystem object */

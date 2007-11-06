@@ -791,8 +791,10 @@ capabilities_headers_iterator_callback(void *baton,
         }
       if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS,
                                       vals))
-        apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
-                     APR_HASH_KEY_STRING, capability_yes);
+        {
+          apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
+                       APR_HASH_KEY_STRING, capability_yes);
+        }
     }
 
   return 0;

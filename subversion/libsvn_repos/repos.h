@@ -117,6 +117,11 @@ struct svn_repos_t
 
   /* The FS backend in use within this repository. */
   const char *fs_type;
+
+  /* If non-null, a list of all the capabilities the client (on the
+     current connection) has self-reported.  Each element is a
+     'const char *', one of SVN_RA_CAPABILITY_*. */
+  apr_array_header_t *capabilities;
 };
 
 
@@ -125,10 +130,15 @@ struct svn_repos_t
 /* Run the start-commit hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
 
-   USER is the authenticated name of the user starting the commit.  */
+   USER is the authenticated name of the user starting the commit.  
+   CAPABILITIES is a list of 'const char *' capability names (using
+   SVN_RA_CAPABILITY_*) that the client has self-reported.  Note that
+   there is no guarantee the client is telling the truth: the hook
+   should not make security assumptions based on the capabilities. */
 svn_error_t *
 svn_repos__hooks_start_commit(svn_repos_t *repos,
                               const char *user,
+                              apr_array_header_t *capabilities,
                               apr_pool_t *pool);
 
 /* Run the pre-commit hook for REPOS.  Use POOL for any temporary

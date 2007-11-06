@@ -21,6 +21,7 @@
 #include <string.h>
 #include "svn_path.h"
 #include "svn_private_config.h"
+#include "private/svn_repos_private.h"
 
 
 svn_error_t *
@@ -132,6 +133,15 @@ svn_ra_local__split_URL(svn_repos_t **repos,
     return svn_error_createf
       (SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED, err,
        _("Unable to open repository '%s'"), URL);
+
+  /* Assert capabilities directly, since client == server. */
+  {
+    apr_array_header_t *caps = apr_array_make(pool, 3, sizeof(const char *));
+    APR_ARRAY_PUSH(caps, const char *) = SVN_RA_CAPABILITY_DEPTH;
+    APR_ARRAY_PUSH(caps, const char *) = SVN_RA_CAPABILITY_MERGEINFO;
+    APR_ARRAY_PUSH(caps, const char *) = SVN_RA_CAPABILITY_LOG_REVPROPS;
+    svn_repos__set_capabilities(*repos, caps);
+  }
 
   /* What remains of URL after being hacked at in the previous step is
      REPOS_URL.  FS_PATH is what we've hacked off in the process.

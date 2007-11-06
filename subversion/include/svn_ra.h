@@ -1515,8 +1515,11 @@ svn_error_t *svn_ra_replay(svn_ra_session_t *session,
 
 /**
  * Set @a *has to true if the server represented by @a session has
- * capability @a capability (one of the capabilities beginning with
+ * @a capability (one of the capabilities beginning with
  * @c "SVN_RA_CAPABILITY_"), else set @a *has to false.
+ *
+ * If @a capability isn't recognized, throw @c SVN_ERR_RA_UNKNOWN_CAPABILITY,
+ * with the effect on @a *has undefined.
  *
  * Use @a pool for all allocation.
  *

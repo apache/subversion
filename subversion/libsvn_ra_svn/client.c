@@ -568,12 +568,13 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   /* In protocol version 2, we send back our protocol version, our
    * capability list, and the URL, and subsequently there is an auth
    * request. */
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "n(www)c", (apr_uint64_t) 2,
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "n(wwwwww)c", (apr_uint64_t) 2,
                                  SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                  SVN_RA_SVN_CAP_SVNDIFF1,
                                  SVN_RA_SVN_CAP_ABSENT_ENTRIES,
                                  SVN_RA_SVN_CAP_DEPTH,
                                  SVN_RA_SVN_CAP_MERGEINFO,
+                                 SVN_RA_SVN_CAP_LOG_REVPROPS,
                                  url));
   SVN_ERR(handle_auth_request(sess, pool));
 
@@ -2158,26 +2159,25 @@ static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
 {
   svn_ra_svn__session_baton_t *sess = session->priv;
 
-  if (strcmp(capability, SVN_RA_CAPABILITY_DEPTH) == 0)
+  *has = FALSE;
+
+  if (strcmp(capability, SVN_RA_CAPABILITY_DEPTH) == 0
+      && svn_ra_svn_has_capability(sess->conn,
+                                   SVN_RA_SVN_CAP_DEPTH))
     {
-      if (svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_DEPTH))
-        *has = TRUE;
-      else
-        *has = FALSE;
+      *has = TRUE;
     }
-  else if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
+  else if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0
+           && svn_ra_svn_has_capability(sess->conn,
+                                        SVN_RA_SVN_CAP_MERGEINFO))
     {
-      if (svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_MERGEINFO))
-        *has = TRUE;
-      else
-        *has = FALSE;
+      *has = TRUE;
     }
-  else if (strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0)
+  else if (strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0
+           && svn_ra_svn_has_capability(sess->conn,
+                                        SVN_RA_SVN_CAP_LOG_REVPROPS))
     {
-      if (svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_LOG_REVPROPS))
-        *has = TRUE;
-      else
-        *has = FALSE;
+      *has = TRUE;
     }
   else  /* Don't know any other capabilities, so error. */
     {

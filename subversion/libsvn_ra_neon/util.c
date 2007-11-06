@@ -1425,6 +1425,8 @@ svn_ra_neon__request_dispatch(int *code_p,
                         SVN_DAV_PROP_NS_DAV_SVN_DEPTH);
   ne_add_request_header(req->ne_req, "X-SVN-Capabilities",
                         SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO);
+  ne_add_request_header(req->ne_req, "X-SVN-Capabilities",
+                        SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS);
 
   /* add any extra headers passed in by caller. */
   if (extra_headers != NULL)

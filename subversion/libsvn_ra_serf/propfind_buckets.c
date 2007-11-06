@@ -159,6 +159,8 @@ static void become_request(serf_bucket_t *bucket)
                            SVN_DAV_PROP_NS_DAV_SVN_DEPTH);
   serf_bucket_headers_setn(hdrs_bkt, "X-SVN-Capabilities",
                            SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO);
+  serf_bucket_headers_setn(hdrs_bkt, "X-SVN-Capabilities",
+                           SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS);
 
   if (ctx->label)
     {
