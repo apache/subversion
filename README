@@ -19,8 +19,20 @@ For example:
    $ svn co http://ctypesgen.googlecode.com/svn/trunk ctypesgen
 
 Once you have all of the above software installed, you can build the
-ctypes Python bindings by running "python autogen.py". If that works,
-then you can test the bindings by running the example.py script.
+ctypes Python bindings by running "python autogen.py".
+
+You can test the bindings by running test/run_all.py. The output of
+test/run_all.py should look something like this:
+
+   $ python test/run_all.py
+
+   ..........................
+   ----------------------------------------------------------------------
+   Ran 26 tests in 51.456s
+
+   OK
+
+You can also test the bindings by running the example.py script.
 
 The output of example.py should look something like this:
 
