@@ -434,14 +434,14 @@ checkout_dir(dir_context_t *dir)
 }
 
 
-/* Set *CHECKED_IN_URL to the appropriate DAV version url for 
+/* Set *CHECKED_IN_URL to the appropriate DAV version url for
  * RELPATH (relative to the root of SESSION).
  *
  * Try to find this version url in three ways:
- * First, if SESSION->callbacks->get_wc_prop() is defined, try to read the 
+ * First, if SESSION->callbacks->get_wc_prop() is defined, try to read the
  * version url from the working copy properties.
- * Second, if the version url of the parent directory PARENT_VSN_URL is 
- * defined, set *CHECKED_IN_URL to the concatenation of PARENT_VSN_URL with 
+ * Second, if the version url of the parent directory PARENT_VSN_URL is
+ * defined, set *CHECKED_IN_URL to the concatenation of PARENT_VSN_URL with
  * RELPATH.
  * Else, fetch the version url for the root of SESSION using CONN and
  * BASE_REVISION, and set *CHECKED_IN_URL to the concatenation of that
@@ -451,7 +451,7 @@ checkout_dir(dir_context_t *dir)
  */
 static svn_error_t *
 get_version_url(const char **checked_in_url,
-                svn_ra_serf__session_t *session, 
+                svn_ra_serf__session_t *session,
                 svn_ra_serf__connection_t *conn,
                 const char *relpath,
                 svn_revnum_t base_revision,
@@ -529,7 +529,7 @@ checkout_file(file_context_t *file)
 
   SVN_ERR(get_version_url(&(file->checkout->checkout_url),
                           file->commit->session, file->commit->conn,
-                          file->name, file->base_revision, 
+                          file->name, file->base_revision,
                           NULL, file->pool));
 
   handler->body_delegate = create_checkout_body;
@@ -1140,7 +1140,7 @@ open_root(void *edit_baton,
 
   SVN_ERR(get_version_url(&dir->checked_in_url,
                           dir->commit->session, dir->commit->conn,
-                          dir->name, dir->base_revision, 
+                          dir->name, dir->base_revision,
                           dir->commit->checked_in_url, dir->pool));
   ctx->checked_in_url = dir->checked_in_url;
 
@@ -1415,7 +1415,7 @@ open_directory(const char *path,
 
   SVN_ERR(get_version_url(&dir->checked_in_url,
                           dir->commit->session, dir->commit->conn,
-                          dir->name, dir->base_revision, 
+                          dir->name, dir->base_revision,
                           dir->commit->checked_in_url, dir->pool));
   *child_baton = dir;
 

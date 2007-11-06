@@ -325,7 +325,7 @@ static void ra_svn_get_reporter(svn_ra_svn__session_baton_t *sess_baton,
   if ((depth != svn_depth_files) && (depth != svn_depth_infinity)
       && ! svn_ra_svn_has_capability(sess_baton->conn, SVN_RA_SVN_CAP_DEPTH))
     {
-      svn_error_clear(svn_delta_depth_filter_editor(&filter_editor, 
+      svn_error_clear(svn_delta_depth_filter_editor(&filter_editor,
                                                     &filter_baton,
                                                     editor, edit_baton, depth,
                                                     *target ? TRUE : FALSE,
@@ -1537,7 +1537,7 @@ ra_svn_get_location_segments(svn_ra_session_t *session,
   apr_pool_t *subpool = svn_pool_create(pool);
 
   /* Transmit the parameters. */
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c(?r)(?r)(?r))", 
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c(?r)(?r)(?r))",
                                  "get-location-segments",
                                  path, peg_revision, start_rev, end_rev));
 
@@ -1561,7 +1561,7 @@ ra_svn_get_location_segments(svn_ra_session_t *session,
           segment = apr_pcalloc(subpool, sizeof(*segment));
           SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, subpool, "rr(?c)",
                                          &range_start, &range_end, &ret_path));
-          if (! (SVN_IS_VALID_REVNUM(range_start) 
+          if (! (SVN_IS_VALID_REVNUM(range_start)
                  && SVN_IS_VALID_REVNUM(range_end)))
             return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                     _("Expected valid revision range"));
@@ -2168,6 +2168,13 @@ static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
   else if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
     {
       if (svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_MERGEINFO))
+        *has = TRUE;
+      else
+        *has = FALSE;
+    }
+  else if (strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0)
+    {
+      if (svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_LOG_REVPROPS))
         *has = TRUE;
       else
         *has = FALSE;

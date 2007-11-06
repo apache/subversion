@@ -325,7 +325,7 @@ svn_ra_local__get_session_url(svn_ra_session_t *session,
                               apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *baton = session->priv;
-  const char *fs_path = apr_pstrmemdup(pool, baton->fs_path->data, 
+  const char *fs_path = apr_pstrmemdup(pool, baton->fs_path->data,
                                        baton->fs_path->len);
   *url = svn_path_join(baton->repos_url,
                        svn_path_uri_encode(fs_path + 1, pool),
@@ -1422,11 +1422,12 @@ svn_ra_local__has_capability(svn_ra_session_t *session,
                              apr_pool_t *pool)
 {
   if (strcmp(capability, SVN_RA_CAPABILITY_DEPTH) == 0
-      || strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
-    {
+      || strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0
+      || strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0)
+    {  
       *has = TRUE;
     }
-  else
+  else  /* Don't know any other capabilities yet, so error. */
     {
         return svn_error_createf
           (SVN_ERR_RA_UNKNOWN_CAPABILITY, NULL,

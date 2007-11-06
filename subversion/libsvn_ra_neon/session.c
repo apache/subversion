@@ -969,7 +969,7 @@ static const char *capability_no = "no";
 
 
 /* Store in RAS the capabilities discovered from REQ's headers.
-   Use POOL for temporary allocation only. */ 
+   Use POOL for temporary allocation only. */
 static void
 parse_capabilities(ne_request *req,
                    svn_ra_neon__session_t *ras,
@@ -981,6 +981,8 @@ parse_capabilities(ne_request *req,
   apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
                APR_HASH_KEY_STRING, capability_no);
   apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+               APR_HASH_KEY_STRING, capability_no);
+  apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
                APR_HASH_KEY_STRING, capability_no);
 
   /* Then find out which ones are supported. */
@@ -1025,11 +1027,16 @@ parse_capabilities(ne_request *req,
             apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
                          APR_HASH_KEY_STRING, capability_yes);
           }
-
         if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO,
                                         vals))
           {
             apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+                         APR_HASH_KEY_STRING, capability_yes);
+          }
+        if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS,
+                                        vals))
+          {
+            apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
                          APR_HASH_KEY_STRING, capability_yes);
           }
       }
@@ -1044,11 +1051,11 @@ discover_capabilities(svn_ra_neon__session_t *ras, apr_pool_t *pool)
 {
   int http_ret_code;
   svn_ra_neon__request_t *rar;
-  
+
   rar = svn_ra_neon__request_create(ras, "OPTIONS", ras->url->data, pool);
   SVN_ERR(svn_ra_neon__request_dispatch(&http_ret_code, rar,
                                         NULL, NULL, 200, 0, pool));
-  
+
   if (http_ret_code == 200)
     {
       parse_capabilities(rar->ne_req, ras, pool);
@@ -1109,7 +1116,7 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
          _("attempt to fetch capability '%s' resulted in '%s'"),
          capability, cap_result);
     }
-  
+
   return SVN_NO_ERROR;
 }
 

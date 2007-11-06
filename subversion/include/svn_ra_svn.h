@@ -48,6 +48,7 @@ extern "C" {
 #define SVN_RA_SVN_CAP_MERGEINFO "mergeinfo"
 /* maps to SVN_RA_CAPABILITY_DEPTH: */
 #define SVN_RA_SVN_CAP_DEPTH "depth"
+#define SVN_RA_SVN_CAP_LOG_REVPROPS "log-revprops" /* SVN_RA_CAPABILITY_LOG_REVPROPS */
 
 /** ra_svn passes @c svn_dirent_t fields over the wire as a list of
  * words, these are the values used to represent each field.

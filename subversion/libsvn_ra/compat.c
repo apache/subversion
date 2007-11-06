@@ -56,7 +56,7 @@ compare_revisions(const void *a, const void *b)
 
    This is useful for tracking the various changes in location a
    particular resource has undergone when performing an RA->get_logs()
-   operation on that resource.  
+   operation on that resource.
 
    ### NOTE: This is a perfect duplicate of
    ### libsvn_client/blame.c:prev_log_path(), which should someday go
@@ -250,7 +250,7 @@ log_receiver(void *baton,
         {
           apr_hash_set(lrb->locations,
                        apr_pmemdup(hash_pool, &next, sizeof(next)),
-                       sizeof(next), 
+                       sizeof(next),
                        apr_pstrdup(hash_pool, current_path));
           apr_array_pop(lrb->location_revisions);
         }
@@ -312,10 +312,10 @@ svn_ra__locations_from_log(svn_ra_session_t *session,
   /* Figure out the youngest and oldest revs (amongst the set of
      requested revisions + the peg revision) so we can avoid
      unnecessary log parsing. */
-  qsort(location_revisions->elts, location_revisions->nelts, 
+  qsort(location_revisions->elts, location_revisions->nelts,
         location_revisions->elt_size, compare_revisions);
   oldest_requested = APR_ARRAY_IDX(location_revisions, 0, svn_revnum_t);
-  youngest_requested = APR_ARRAY_IDX(location_revisions, 
+  youngest_requested = APR_ARRAY_IDX(location_revisions,
                                      location_revisions->nelts - 1,
                                      svn_revnum_t);
   youngest = peg_revision;
@@ -340,7 +340,7 @@ svn_ra__locations_from_log(svn_ra_session_t *session,
   targets = apr_array_make(pool, 1, sizeof(const char *));
   APR_ARRAY_PUSH(targets, const char *) = path;
   SVN_ERR(svn_ra_get_log2(session, targets, youngest, oldest, 0,
-                          TRUE, FALSE, FALSE, 
+                          TRUE, FALSE, FALSE,
                           apr_array_make(pool, 0, sizeof(const char *)),
                           log_receiver, &lrb, pool));
 
@@ -356,7 +356,7 @@ svn_ra__locations_from_log(svn_ra_session_t *session,
       int i;
       for (i = 0; i < location_revisions->nelts; i++)
         {
-          svn_revnum_t rev = APR_ARRAY_IDX(location_revisions, i, 
+          svn_revnum_t rev = APR_ARRAY_IDX(location_revisions, i,
                                            svn_revnum_t);
           if (! apr_hash_get(locations, &rev, sizeof(rev)))
             apr_hash_set(locations, apr_pmemdup(pool, &rev, sizeof(rev)),
@@ -415,7 +415,7 @@ struct gls_log_receiver_baton {
 /* Build a node location segment object from PATH, RANGE_START, and
    RANGE_END, and pass it off to RECEIVER/RECEIVER_BATON. */
 static svn_error_t *
-maybe_crop_and_send_segment(const char *path, 
+maybe_crop_and_send_segment(const char *path,
                             svn_revnum_t start_rev,
                             svn_revnum_t range_start,
                             svn_revnum_t range_end,
@@ -453,8 +453,8 @@ gls_log_receiver(void *baton,
   /* Figure out at which repository path our object of interest lived
      in the previous revision, and if its current location is the
      result of copy since then. */
-  SVN_ERR(prev_log_path(&prev_path, NULL, &copyfrom_rev, 
-                        log_entry->changed_paths, current_path, 
+  SVN_ERR(prev_log_path(&prev_path, NULL, &copyfrom_rev,
+                        log_entry->changed_paths, current_path,
                         lrb->kind, log_entry->revision, pool));
 
   /* If we've run off the end of the path's history, we need to report
@@ -462,9 +462,9 @@ gls_log_receiver(void *baton,
   if (! prev_path)
     {
       lrb->done = TRUE;
-      return maybe_crop_and_send_segment(current_path, lrb->start_rev, 
-                                         log_entry->revision, lrb->range_end, 
-                                         lrb->receiver, lrb->receiver_baton, 
+      return maybe_crop_and_send_segment(current_path, lrb->start_rev,
+                                         log_entry->revision, lrb->range_end,
+                                         lrb->receiver, lrb->receiver_baton,
                                          pool);
     }
 
@@ -473,9 +473,9 @@ gls_log_receiver(void *baton,
     {
       /* ...then report the segment between this revision and the
          last-reported revision. */
-      SVN_ERR(maybe_crop_and_send_segment(current_path, lrb->start_rev, 
+      SVN_ERR(maybe_crop_and_send_segment(current_path, lrb->start_rev,
                                           log_entry->revision, lrb->range_end,
-                                          lrb->receiver, lrb->receiver_baton, 
+                                          lrb->receiver, lrb->receiver_baton,
                                           pool));
       lrb->range_end = log_entry->revision - 1;
 
@@ -484,7 +484,7 @@ gls_log_receiver(void *baton,
         {
           SVN_ERR(maybe_crop_and_send_segment(NULL, lrb->start_rev,
                                               copyfrom_rev + 1, lrb->range_end,
-                                              lrb->receiver, 
+                                              lrb->receiver,
                                               lrb->receiver_baton, pool));
           lrb->range_end = copyfrom_rev;
         }
@@ -495,7 +495,7 @@ gls_log_receiver(void *baton,
 
   return SVN_NO_ERROR;
 }
-  
+
 
 svn_error_t *
 svn_ra__location_segments_from_log(svn_ra_session_t *session,
@@ -565,14 +565,14 @@ svn_ra__location_segments_from_log(svn_ra_session_t *session,
   targets = apr_array_make(pool, 1, sizeof(const char *));
   APR_ARRAY_PUSH(targets, const char *) = path;
   SVN_ERR(svn_ra_get_log2(session, targets, peg_revision, end_rev, 0,
-                          TRUE, FALSE, FALSE, 
+                          TRUE, FALSE, FALSE,
                           apr_array_make(pool, 0, sizeof(const char *)),
                           gls_log_receiver, &lrb, pool));
 
   /* If we didn't finish, we need to do so with a final segment send. */
   if (! lrb.done)
-    SVN_ERR(maybe_crop_and_send_segment(lrb.last_path, start_rev, 
-                                        end_rev, lrb.range_end, 
+    SVN_ERR(maybe_crop_and_send_segment(lrb.last_path, start_rev,
+                                        end_rev, lrb.range_end,
                                         receiver, receiver_baton, pool));
 
   return SVN_NO_ERROR;

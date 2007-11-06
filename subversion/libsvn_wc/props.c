@@ -1864,8 +1864,8 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
 
   /* If not provided, load the base & working property files into hashes */
   if (! base_props || ! working_props)
-    SVN_ERR(svn_wc__load_props(base_props ? NULL : &base_props, 
-                               working_props ? NULL : &working_props, 
+    SVN_ERR(svn_wc__load_props(base_props ? NULL : &base_props,
+                               working_props ? NULL : &working_props,
                                NULL, adm_access, path, pool));
   if (!server_baseprops)
     server_baseprops = base_props;

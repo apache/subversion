@@ -237,7 +237,7 @@ class Entry:
       if len(self.fields) - 1 >= field_index and self.fields[field_index]:
         lossy_fields.append(Entries.entry_fields[field_index])
     if lossy_fields:
-      raise LossyConversionException(lossy_fields, 
+      raise LossyConversionException(lossy_fields,
         "Lossy WC format conversion requested for entry '%s'\n"
         "Data for the following field(s) is unsupported by older versions "
         "of\nSubversion, and is likely to be subsequently discarded, and/or "

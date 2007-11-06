@@ -373,7 +373,7 @@ svn_client_info2(const char *path_or_url,
      return RA session to the possibly-renamed URL as it exists in REVISION.
      The ra_session returned will be anchored on this "final" URL. */
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &rev,
-                                           &url, path_or_url, NULL, 
+                                           &url, path_or_url, NULL,
                                            peg_revision,
                                            revision, ctx, pool));
 

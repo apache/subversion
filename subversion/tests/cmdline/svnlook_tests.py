@@ -424,7 +424,7 @@ def diff_ignore_whitespace(sbox):
   sbox.build()
   repo_dir = sbox.repo_dir
   wc_dir = sbox.wc_dir
- 
+
   # Make whitespace-only changes to mu
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   svntest.main.file_write(mu_path, "This  is   the    file     'mu'.\n", "wb")
@@ -475,7 +475,7 @@ def diff_ignore_eolstyle(sbox):
     crlf = '\r\n'
 
   mu_path = os.path.join(wc_dir, 'A', 'mu')
- 
+
   rev = 1
   # do the --ignore-eol-style test for each eol-style
   for eol, eolchar in zip(['CRLF', 'CR', 'native', 'LF'],
@@ -507,7 +507,7 @@ def diff_ignore_eolstyle(sbox):
         svntest.actions.run_and_verify_svn(None, None, [], 'diff',
                                            '-r', 'PREV', '-x',
                                            '--ignore-eol-style', mu_path)
-    
+
     output = run_svnlook('diff', '-r', str(rev + 1), '-x',
                          '--ignore-eol-style', repo_dir, '/A/mu')
     rev += 1

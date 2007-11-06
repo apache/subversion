@@ -68,7 +68,7 @@ svn_cl__merge(apr_getopt_t *os,
       first_range_start = APR_ARRAY_IDX(opt_state->revision_ranges, 0,
                                         svn_opt_revision_range_t *)->end;
       first_range_end = APR_ARRAY_IDX(opt_state->revision_ranges, 0,
-                                      svn_opt_revision_range_t *)->end;  
+                                      svn_opt_revision_range_t *)->end;
     }
   else
     {
@@ -215,7 +215,7 @@ svn_cl__merge(apr_getopt_t *os,
           working_rev.kind = svn_opt_revision_working;
 
           SVN_ERR(svn_client_suggest_merge_sources(&suggested_sources,
-                                                   targetpath, &working_rev, 
+                                                   targetpath, &working_rev,
                                                    ctx, pool));
           if (! suggested_sources->nelts)
             return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
@@ -225,7 +225,7 @@ svn_cl__merge(apr_getopt_t *os,
                                      svn_path_local_style(targetpath, pool));
           sourcepath1 = APR_ARRAY_IDX(suggested_sources, 0, const char *);
         }
-        
+
       err = svn_client_merge_peg3(sourcepath1,
                                   opt_state->revision_ranges,
                                   &peg_revision1,

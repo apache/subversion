@@ -156,6 +156,7 @@ extern "C" {
    ### but we should re-use the SVN_DAV_PROP_NS_DAV, right?  We could
    ### change the name of SVN_DAV_PROP_NS_DAV_SVN_DEPTH, though. */
 #define SVN_DAV_PROP_NS_DAV_SVN_DEPTH SVN_DAV_PROP_NS_DAV "svn/depth"
+#define SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS SVN_DAV_PROP_NS_DAV "svn/log-revprops"
 
 /* Presence of this in the DAV header response to an OPTIONS request
    indicates that the server knows how to handle merge-tracking information.

@@ -1827,14 +1827,14 @@ static svn_error_t *gls_receiver(svn_location_segment_t *segment,
 {
   svn_ra_svn_conn_t *conn = baton;
   return svn_ra_svn_write_tuple(conn, pool, "rr(?c)",
-                                segment->range_start, 
+                                segment->range_start,
                                 segment->range_end,
                                 segment->path);
 }
 
-static svn_error_t *get_location_segments(svn_ra_svn_conn_t *conn, 
+static svn_error_t *get_location_segments(svn_ra_svn_conn_t *conn,
                                           apr_pool_t *pool,
-                                          apr_array_header_t *params, 
+                                          apr_array_header_t *params,
                                           void *baton)
 {
   svn_error_t *err, *write_err;
@@ -1844,14 +1844,14 @@ static svn_error_t *get_location_segments(svn_ra_svn_conn_t *conn,
   const char *abs_path;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)(?r)(?r)", 
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)(?r)(?r)",
                                  &relative_path, &peg_revision,
                                  &start_rev, &end_rev));
   relative_path = svn_path_canonicalize(relative_path, pool);
 
   abs_path = svn_path_join(b->fs_path->data, relative_path, pool);
 
-  if (SVN_IS_VALID_REVNUM(start_rev) 
+  if (SVN_IS_VALID_REVNUM(start_rev)
       && SVN_IS_VALID_REVNUM(end_rev)
       && (end_rev > start_rev))
     return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
@@ -1873,8 +1873,8 @@ static svn_error_t *get_location_segments(svn_ra_svn_conn_t *conn,
   /* We store both err and write_err here, so the client will get
    * the "done" even if there was an error in fetching the results. */
 
-  err = svn_repos_node_location_segments(b->repos, abs_path, 
-                                         peg_revision, start_rev, end_rev, 
+  err = svn_repos_node_location_segments(b->repos, abs_path,
+                                         peg_revision, start_rev, end_rev,
                                          gls_receiver, (void *)conn,
                                          authz_check_access_cb_func(b), b,
                                          pool);
@@ -2521,14 +2521,15 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
 
   /* Send greeting.  We don't support version 1 any more, so we can
    * send an empty mechlist. */
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwww)",
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwwww)",
                                         (apr_uint64_t) 2, (apr_uint64_t) 2,
                                         SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                         SVN_RA_SVN_CAP_SVNDIFF1,
                                         SVN_RA_SVN_CAP_ABSENT_ENTRIES,
                                         SVN_RA_SVN_CAP_COMMIT_REVPROPS,
                                         SVN_RA_SVN_CAP_MERGEINFO,
-                                        SVN_RA_SVN_CAP_DEPTH));
+                                        SVN_RA_SVN_CAP_DEPTH,
+                                        SVN_RA_SVN_CAP_LOG_REVPROPS));
 
   /* Read client response, which we assume to be in version 2 format:
    * version, capability list, and client URL; then we do an auth

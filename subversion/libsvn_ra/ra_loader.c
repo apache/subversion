@@ -927,17 +927,17 @@ svn_error_t *svn_ra_get_locations(svn_ra_session_t *session,
                                   apr_pool_t *pool)
 {
   svn_error_t *err = session->vtable->get_locations(session, locations, path,
-                                                    peg_revision, 
+                                                    peg_revision,
                                                     location_revisions,
                                                     pool);
   if (err && (err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED))
     {
       svn_error_clear(err);
       err = SVN_NO_ERROR;
-      
+
       /* Do it the slow way, using get-logs, for older servers. */
-      SVN_ERR(svn_ra__locations_from_log(session, locations, path, 
-                                         peg_revision, location_revisions, 
+      SVN_ERR(svn_ra__locations_from_log(session, locations, path,
+                                         peg_revision, location_revisions,
                                          pool));
     }
   return err;
@@ -953,21 +953,21 @@ svn_ra_get_location_segments(svn_ra_session_t *session,
                              void *receiver_baton,
                              apr_pool_t *pool)
 {
-  svn_error_t *err = session->vtable->get_location_segments(session, 
-                                                            path, 
+  svn_error_t *err = session->vtable->get_location_segments(session,
+                                                            path,
                                                             peg_revision,
-                                                            start_rev, 
-                                                            end_rev, 
-                                                            receiver, 
+                                                            start_rev,
+                                                            end_rev,
+                                                            receiver,
                                                             receiver_baton,
                                                             pool);
   if (err && (err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED))
     {
       svn_error_clear(err);
       err = SVN_NO_ERROR;
-      
+
       /* Do it the slow way, using get-logs, for older servers. */
-      SVN_ERR(svn_ra__location_segments_from_log(session, path, 
+      SVN_ERR(svn_ra__location_segments_from_log(session, path,
                                                  peg_revision, start_rev,
                                                  end_rev, receiver,
                                                  receiver_baton, pool));

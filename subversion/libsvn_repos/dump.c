@@ -441,7 +441,7 @@ dump_node(struct edit_baton *eb,
               SVN_ERR(svn_fs_contents_changed(&must_dump_text,
                                               compare_root, compare_path,
                                               eb->fs_root, path, pool));
-              
+
               SVN_ERR(svn_fs_file_md5_checksum(md5_digest, compare_root,
                                                compare_path, pool));
               hex_digest = svn_md5_digest_to_cstring(md5_digest, pool);

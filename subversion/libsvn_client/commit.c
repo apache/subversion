@@ -1394,12 +1394,12 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
    * if it's a directory.  And, of course, later when we get adm
    * access batons for the commit, we'd ideally lock directories to
    * precisely the depth required and no deeper.
-   * 
+   *
    * But for now we don't do that.  Instead, we lock recursively from
    * base_dir, if depth indicates that we might need anything below
    * there (but note that above, we don't condense away targets that
    * need to be named explicitly when depth != svn_depth_infinity).
-   * 
+   *
    * Here's a case where this all matters:
    *
    *    $ svn st -q
@@ -1407,13 +1407,13 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
    *    M      iota
    *    $ svn ci -m "log msg" --depth=immediates . A/D/G
    *
-   * If we don't lock base_dir recursively, then it will get an error... 
-   * 
+   * If we don't lock base_dir recursively, then it will get an error...
+   *
    *    subversion/libsvn_wc/lock.c:570: (apr_err=155004)
    *    svn: Working copy '/blah/blah/blah/wc' locked
    *    svn: run 'svn cleanup' to remove locks \
    *         (type 'svn help cleanup' for details)
-   * 
+   *
    * ...because later (see dirs_to_lock_recursively and dirs_to_lock)
    * we'd call svn_wc_adm_open3() to get access objects for "" and
    * "A/D/G", but the request for "" would fail because base_dir_access
@@ -1522,7 +1522,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
               /* Notice how here we test infinity||immediates, but up
                  in the call to svn_path_condense_targets(), we only
                  tested depth==infinity.  That's because condensation
-                 and adm lock acquisition serve different purposes. */ 
+                 and adm lock acquisition serve different purposes. */
               if (depth == svn_depth_infinity || depth == svn_depth_immediates)
                 APR_ARRAY_PUSH(dirs_to_lock_recursive,
                                const char *) = apr_pstrdup(pool, target);

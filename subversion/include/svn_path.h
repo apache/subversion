@@ -28,7 +28,7 @@
  * them to be in canonical form as defined by the Subversion path
  * library itself.  The only functions which do *not* have such
  * expectations are:
- * 
+ *
  *    - @c svn_path_canonicalize()
  *    - @c svn_path_is_canonical()
  *    - @c svn_path_internal_style()
@@ -222,7 +222,7 @@ svn_boolean_t svn_dirent_is_root(const char *dirent, apr_size_t len);
 const char *svn_path_canonicalize(const char *path, apr_pool_t *pool);
 
 /** Return @c TRUE iff path is canonical.  Use @a pool for temporary
- * allocations. 
+ * allocations.
  *
  * @note The test for canonicalization is currently defined as
  * "looks exactly the same as @c svn_path_canonicalize() would make

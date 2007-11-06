@@ -841,7 +841,7 @@ svn_client_propget4(apr_hash_t **props,
     {
       svn_boolean_t pristine;
       int adm_lock_level = -1;
-      
+
       if (depth == svn_depth_empty || depth == svn_depth_files)
         adm_lock_level = 0;
 
@@ -1183,7 +1183,7 @@ svn_client_proplist3(const char *target,
 
       /* Get an RA session for this URL. */
       SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
-                                               &url, target, NULL, 
+                                               &url, target, NULL,
                                                peg_revision,
                                                revision, ctx, pool));
 

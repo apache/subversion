@@ -776,7 +776,7 @@ capabilities_headers_iterator_callback(void *baton,
          seek for them directly.  This could be written slightly more
          efficiently, but that wouldn't be worth it until we have many
          more capabilities. */
-      
+
       if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_DEPTH, vals))
         {
           apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_DEPTH,
@@ -789,6 +789,10 @@ capabilities_headers_iterator_callback(void *baton,
           apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
                        APR_HASH_KEY_STRING, capability_yes);
         }
+      if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS,
+                                      vals))
+        apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
+                     APR_HASH_KEY_STRING, capability_yes);
     }
 
   return 0;
@@ -811,6 +815,8 @@ capabilities_response_handler(serf_request_t *request,
   apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_DEPTH,
                APR_HASH_KEY_STRING, capability_no);
   apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+               APR_HASH_KEY_STRING, capability_no);
+  apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
                APR_HASH_KEY_STRING, capability_no);
 
   /* Then see which ones we can discover. */
@@ -890,7 +896,7 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
          _("attempt to fetch capability '%s' resulted in '%s'"),
          capability, cap_result);
     }
-  
+
   return SVN_NO_ERROR;
 }
 

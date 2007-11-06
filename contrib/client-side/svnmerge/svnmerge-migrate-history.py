@@ -152,7 +152,7 @@ class Migrator:
           (svn.core.SVN_PROP_MERGE_INFO, mergeinfo_prop_val)
       svn.fs.change_node_prop(root, path, svn.core.SVN_PROP_MERGE_INFO,
                               mergeinfo_prop_val)
-  
+
       # Remove old property values.
       if integrated_prop_val is not None:
         if self.verbose:

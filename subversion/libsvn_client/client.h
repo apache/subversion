@@ -35,10 +35,10 @@ extern "C" {
 
 
 /* Set *REVNUM to the revision number identified by REVISION.
-  
+
    If REVISION->kind is svn_opt_revision_number, just use
    REVISION->value.number, ignoring PATH and RA_SESSION.
-  
+
    Else if REVISION->kind is svn_opt_revision_committed,
    svn_opt_revision_previous, or svn_opt_revision_base, or
    svn_opt_revision_working, then the revision can be identified
@@ -46,16 +46,16 @@ extern "C" {
    PATH, so RA_SESSION is ignored.  If PATH is not under revision
    control, return SVN_ERR_UNVERSIONED_RESOURCE, or if PATH is null,
    return SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED.
-  
+
    Else if REVISION->kind is svn_opt_revision_date or
    svn_opt_revision_head, then RA_SESSION is used to retrieve the
    revision from the repository (using REVISION->value.date in the
    former case), and PATH is ignored.  If RA_SESSION is null,
    return SVN_ERR_CLIENT_RA_ACCESS_REQUIRED.
-  
+
    Else if REVISION->kind is svn_opt_revision_unspecified, set
    *REVNUM to SVN_INVALID_REVNUM.
-  
+
    If YOUNGEST_REV is non-NULL, it is an in/out parameter.  If
    *YOUNGEST_REV is valid, use it as the youngest revision in the
    repository (regardless of reality) -- don't bother to lookup the
@@ -66,9 +66,9 @@ extern "C" {
    serialized calls to this function with a basically static view of
    the repository, avoiding race conditions which could occur between
    multiple invocations with HEAD lookup requests.
-  
+
    Else return SVN_ERR_CLIENT_BAD_REVISION.
-  
+
    Use POOL for any temporary allocation.  */
 svn_error_t *
 svn_client__get_revision_number(svn_revnum_t *revnum,
@@ -184,9 +184,9 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
    that it is the same node in both PEG_REVISION and REVISION.  If it
    is not, then @c SVN_ERR_CLIENT_UNRELATED_RESOURCES is returned.
 
-   BASE_ACCESS is the working copy the ra_session corresponds to, should 
-   only be used if PATH_OR_URL is a url. 
-  
+   BASE_ACCESS is the working copy the ra_session corresponds to, should
+   only be used if PATH_OR_URL is a url.
+
    If PEG_REVISION's kind is svn_opt_revision_unspecified, it is
    interpreted as "head" for a URL or "working" for a working-copy path.
 
@@ -211,18 +211,18 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
 
 /* Set REPOS_ROOT to the URL which represents the root of the
    repository in with PATH_OR_URL (at PEG_REVISION) is versioned.  Use
-   the authentication baton cached in CTX as necessary.  
+   the authentication baton cached in CTX as necessary.
 
    ADM_ACCESS is a working copy administrative access baton associated
    with PATH_OR_URL (if PATH_OR_URL is a working copy path), or NULL.
 
    Use POOL for all allocations. */
 svn_error_t *
-svn_client__get_repos_root(const char **repos_root, 
+svn_client__get_repos_root(const char **repos_root,
                            const char *path_or_url,
                            const svn_opt_revision_t *peg_revision,
                            svn_wc_adm_access_t *adm_access,
-                           svn_client_ctx_t *ctx, 
+                           svn_client_ctx_t *ctx,
                            apr_pool_t *pool);
 
 /* Return the path of PATH_OR_URL relative to the repository root
@@ -517,7 +517,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool);
 
-/* Switch a working copy PATH to URL@PEG_REVISION at REVISION, and (if not 
+/* Switch a working copy PATH to URL@PEG_REVISION at REVISION, and (if not
    NULL) set RESULT_REV to the switch revision.  Only switch as deeply as DEPTH
    indicates.  If TIMESTAMP_SLEEP is NULL this function will sleep before
    returning to ensure timestamp integrity.  If TIMESTAMP_SLEEP is not
@@ -546,30 +546,30 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
 /* Create an editor for a pure repository comparison, i.e. comparing one
    repository version against the other.
-  
+
    TARGET is a working-copy path, the base of the hierarchy to be
    compared.  It corresponds to the URL opened in RA_SESSION below.
-  
+
    ADM_ACCESS is an access baton with a write lock for the anchor of
    TARGET.  It should lock the entire TARGET tree if RECURSE is TRUE.
    ADM_ACCESS may be NULL, in which case the DIFF_CMD callbacks will be
    passed a NULL access baton.
-  
+
    DIFF_CMD/DIFF_CMD_BATON represent the callback and callback argument that
    implement the file comparison function
-  
+
    DEPTH is the depth to recurse.
-  
+
    DRY_RUN is set if this is a dry-run merge. It is not relevant for diff.
-  
+
    RA_SESSION defines the additional RA session for requesting file
    contents.
-  
+
    REVISION is the start revision in the comparison.
-  
+
    If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
    file and directory operated on during the edit.
-  
+
    EDITOR/EDIT_BATON return the newly created editor and baton/  */
 svn_error_t *
 svn_client__get_diff_editor(const char *target,
@@ -596,12 +596,12 @@ svn_client__get_diff_editor(const char *target,
 /* Create an editor for a repository diff summary, i.e. comparing one
    repository version against the other and only providing information
    about the changed items without the text deltas.
-  
+
    TARGET is the target of the diff, relative to the root of the edit.
-  
+
    SUMMARIZE_FUNC is called with SUMMARIZE_BATON as parameter by the
    created svn_delta_editor_t for each changed item.
-  
+
    See svn_client__get_diff_editor() for a description of the other
    parameters.  */
 svn_error_t *

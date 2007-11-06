@@ -107,7 +107,7 @@ typedef struct {
      keys and values must have at least that lifetime.  Most likely
      the keys and values are constants anyway (and sufficiently
      well-informed internal code may just compare against those
-     constants' addresses, therefore). */ 
+     constants' addresses, therefore). */
   apr_hash_t *capabilities;
 } svn_ra_neon__session_t;
 
@@ -707,7 +707,6 @@ enum {
   ELEM_checked_in,
   ELEM_collection,
   ELEM_comment,
-  ELEM_no_custom_revprops,
   ELEM_revprop,
   ELEM_creationdate,
   ELEM_creator_displayname,

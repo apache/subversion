@@ -974,7 +974,7 @@ maybe_add_with_history(struct node_baton *nb,
                                  src_rev);
 
       SVN_ERR(svn_fs_revision_root(&copy_root, pb->fs, src_rev, pool));
-      
+
       if (nb->copy_source_checksum)
         {
           unsigned char md5_digest[APR_MD5_DIGESTSIZE];
@@ -990,7 +990,7 @@ maybe_add_with_history(struct node_baton *nb,
                  " to '%s' in rev based on r%ld:\n"
                  "   expected:  %s\n"
                  "     actual:  %s\n"),
-               nb->copyfrom_path, src_rev, 
+               nb->copyfrom_path, src_rev,
                nb->path, rb->rev,
                nb->copy_source_checksum, hex);
         }

@@ -168,7 +168,7 @@ svn_client__get_copy_source(const char *path_or_url,
     svn_revnum_t at_rev;
     const char *at_url;
     SVN_ERR(svn_client__ra_session_from_path(&ra_session, &at_rev, &at_url,
-                                             path_or_url, NULL, 
+                                             path_or_url, NULL,
                                              revision, revision,
                                              ctx, pool));
 
@@ -499,17 +499,17 @@ svn_client_log4(const apr_array_header_t *targets,
   {
     svn_revnum_t start_revnum, end_revnum, youngest_rev = SVN_INVALID_REVNUM;
     const char *path = APR_ARRAY_IDX(targets, 0, const char *);
-    svn_error_t *err;
+    svn_boolean_t has_log_revprops;
 
     SVN_ERR(svn_client__get_revision_number
             (&start_revnum, &youngest_rev, ra_session, start, path, pool));
     SVN_ERR(svn_client__get_revision_number
             (&end_revnum, &youngest_rev, ra_session, end, path, pool));
 
-    /* TODO(epg): Instead of assuming that NOT_IMPLEMENTED means
-     * revprop-filtering is not supported, introduce a new capability
-     * for the new svn_ra_has_capability feature. */
-    if ((err = svn_ra_get_log2(ra_session,
+    SVN_ERR(svn_ra_has_capability(ra_session, &has_log_revprops,
+                                  SVN_RA_CAPABILITY_LOG_REVPROPS, pool));
+    if (has_log_revprops)
+      return svn_ra_get_log2(ra_session,
                                condensed_targets,
                                start_revnum,
                                end_revnum,
@@ -520,8 +520,8 @@ svn_client_log4(const apr_array_header_t *targets,
                                revprops,
                                real_receiver,
                                real_receiver_baton,
-                               pool))
-        && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
+                            pool);
+    else
       {
         /* See above pre-1.5 notes. */
         pre_15_receiver_baton_t rb;
@@ -537,8 +537,7 @@ svn_client_log4(const apr_array_header_t *targets,
                                                  peg_revision,
                                                  &session_opt_rev,
                                                  ctx, pool));
-        svn_error_clear(err);
-        err = svn_ra_get_log2(ra_session,
+        return svn_ra_get_log2(ra_session,
                               condensed_targets,
                               start_revnum,
                               end_revnum,
@@ -551,7 +550,6 @@ svn_client_log4(const apr_array_header_t *targets,
                               &rb,
                               pool);
       }
-    return err;
   }
 }
 

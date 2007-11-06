@@ -1537,6 +1537,13 @@ svn_error_t *svn_ra_has_capability(svn_ra_session_t *session,
 #define SVN_RA_CAPABILITY_DEPTH "depth"
 
 /**
+ * The capability of retrieving arbitrary revprops in svn_ra_get_log2.
+ *
+ * @since New in 1.5.
+ */
+#define SVN_RA_CAPABILITY_LOG_REVPROPS "log-revprops"
+
+/**
  * The capability of doing the right thing with merge-tracking
  * information.  This capability should be reported bidirectionally,
  * because some repositories may want to reject clients that do not

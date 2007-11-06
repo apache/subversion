@@ -1396,7 +1396,7 @@ svn_ra_neon__get_locations(svn_ra_session_t *session,
 /* Elements used in a get-locations response */
 static const svn_ra_neon__xml_elm_t gls_report_elements[] =
 {
-  { SVN_XML_NAMESPACE, "get-location-segments-report", 
+  { SVN_XML_NAMESPACE, "get-location-segments-report",
     ELEM_get_location_segments_report, 0 },
   { SVN_XML_NAMESPACE, "location-segment", ELEM_location_segment, 0 },
   { NULL }
@@ -1441,13 +1441,13 @@ gls_start_element(int *elem, void *userdata, int parent_state,
 
       if (SVN_IS_VALID_REVNUM(range_start) && SVN_IS_VALID_REVNUM(range_end))
         {
-          svn_location_segment_t *segment = apr_pcalloc(baton->subpool, 
+          svn_location_segment_t *segment = apr_pcalloc(baton->subpool,
                                                         sizeof(*segment));
           segment->path = path;
           segment->range_start = range_start;
           segment->range_end = range_end;
-          SVN_ERR(baton->receiver(segment, 
-                                  baton->receiver_baton, 
+          SVN_ERR(baton->receiver(segment,
+                                  baton->receiver_baton,
                                   baton->subpool));
           svn_pool_clear(baton->subpool);
         }
@@ -1485,8 +1485,8 @@ svn_ra_neon__get_location_segments(svn_ra_session_t *session,
   /* Build the request body. */
   request_body = svn_stringbuf_create("", pool);
   svn_stringbuf_appendcstr(request_body,
-                           "<?xml version=\"1.0\" encoding=\"utf-8\"?>" 
-                           DEBUG_CR "<S:get-location-segments xmlns:S=\"" 
+                           "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+                           DEBUG_CR "<S:get-location-segments xmlns:S=\""
                            SVN_XML_NAMESPACE "\" xmlns:D=\"DAV:\">" DEBUG_CR);
 
   /* Tack on the path... */
@@ -1497,22 +1497,22 @@ svn_ra_neon__get_location_segments(svn_ra_session_t *session,
   /* ...and maybe a peg revision... */
   if (SVN_IS_VALID_REVNUM(peg_revision))
     svn_stringbuf_appendcstr
-      (request_body, apr_psprintf(pool, 
-                                  "<S:peg-revision>%ld</S:peg-revision>" 
+      (request_body, apr_psprintf(pool,
+                                  "<S:peg-revision>%ld</S:peg-revision>"
                                   DEBUG_CR, peg_revision));
 
   /* ...and maybe a start revision... */
   if (SVN_IS_VALID_REVNUM(start_rev))
     svn_stringbuf_appendcstr
-      (request_body, apr_psprintf(pool, 
-                                  "<S:start-revision>%ld</S:start-revision>" 
+      (request_body, apr_psprintf(pool,
+                                  "<S:start-revision>%ld</S:start-revision>"
                                   DEBUG_CR, start_rev));
 
   /* ...and maybe an end revision. */
   if (SVN_IS_VALID_REVNUM(end_rev))
     svn_stringbuf_appendcstr
-      (request_body, apr_psprintf(pool, 
-                                  "<S:end-revision>%ld</S:end-revision>" 
+      (request_body, apr_psprintf(pool,
+                                  "<S:end-revision>%ld</S:end-revision>"
                                   DEBUG_CR, end_rev));
 
   svn_stringbuf_appendcstr(request_body, "</S:get-location-segments>");
@@ -3217,12 +3217,12 @@ make_reporter(svn_ra_session_t *session,
       && (depth != svn_depth_infinity)
       && ! server_supports_depth)
     {
-      SVN_ERR(svn_delta_depth_filter_editor(&filter_editor, 
+      SVN_ERR(svn_delta_depth_filter_editor(&filter_editor,
                                             &filter_baton,
-                                            editor, 
+                                            editor,
                                             edit_baton,
-                                            depth, 
-                                            has_target, 
+                                            depth,
+                                            has_target,
                                             pool));
       editor = filter_editor;
       edit_baton = filter_baton;

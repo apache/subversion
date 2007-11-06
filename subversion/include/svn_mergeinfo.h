@@ -121,7 +121,7 @@ svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
  * Note: @a *rangelist and @a changes must be sorted as said by @c
  * svn_sort_compare_ranges().  @a *rangelist is guaranteed to remain
  * in sorted order.
- * 
+ *
  * @since New in 1.5.
  */
 svn_error_t *
