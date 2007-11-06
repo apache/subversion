@@ -42,6 +42,7 @@
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
 #include "svn_user.h"
+#include "private/svn_repos_private.h"
 
 #include "server.h"
 
@@ -2404,9 +2405,14 @@ repos_path_valid(const char *path)
 
 /* Look for the repository given by URL, using ROOT as the virtual
  * repository root.  If we find one, fill in the repos, fs, cfg,
- * repos_url, and fs_path fields of B. */
+ * repos_url, and fs_path fields of B, and set the capabilities of
+ * B->repos to CAPABILITIES (which must be at least as long-lived
+ * as POOL).
+ */
 static svn_error_t *find_repos(const char *url, const char *root,
-                               server_baton_t *b, apr_pool_t *pool)
+                               server_baton_t *b,
+                               apr_array_header_t *capabilities,
+                               apr_pool_t *pool)
 {
   const char *path, *full_path, *repos_root;
   svn_stringbuf_t *url_buf;
@@ -2442,6 +2448,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
 
   /* Open the repository and fill in b with the resulting information. */
   SVN_ERR(svn_repos_open(&b->repos, repos_root, pool));
+  svn_repos__set_capabilities(b->repos, capabilities);
   b->fs = svn_repos_fs(b->repos);
   b->fs_path = svn_stringbuf_create(full_path + strlen(repos_root),
                                     pool);
@@ -2506,7 +2513,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   svn_error_t *err, *io_err;
   apr_uint64_t ver;
   const char *uuid, *client_url;
-  apr_array_header_t *caplist;
+  apr_array_header_t *caplist, *cap_words;
   server_baton_t b;
 
   b.tunnel = params->tunnel;
@@ -2547,7 +2554,26 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   if (! svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_EDIT_PIPELINE))
     return SVN_NO_ERROR;
 
-  err = find_repos(client_url, params->root, &b, pool);
+  /* find_repos needs the capabilities as a list of words (eventually
+     they get handed to the start-commit hook).  While we could add a
+     new interface to re-retrieve them from conn and convert the
+     result to a list, it's simpler to just convert caplist by hand
+     here, since we already have it and turning 'svn_ra_svn_item_t's
+     into 'const char *'s is pretty easy. */
+  {
+    int i;
+    svn_ra_svn_item_t *item;
+
+    cap_words = apr_array_make(pool, caplist->nelts, sizeof(const char *));
+    for (i = 0; i < caplist->nelts; i++)
+      {
+        item = &APR_ARRAY_IDX(caplist, i, svn_ra_svn_item_t);
+        /* ra_svn_set_capabilities() already type-checked for us */
+        APR_ARRAY_PUSH(cap_words, const char *) = item->u.word;
+      }
+  }
+
+  err = find_repos(client_url, params->root, &b, cap_words, pool);
   if (!err)
     {
       SVN_ERR(auth_request(conn, pool, &b, READ_ACCESS, FALSE));
