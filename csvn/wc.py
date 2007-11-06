@@ -151,6 +151,11 @@ class WC(object):
         
         Keyword arguments:
         paths -- list of paths to be canonicalized"""
+
+        # If the user passed in a string, the user made a mistake.
+        # The user should be passing in a list of paths.
+        assert not isinstance(paths, str)
+
         canonicalized_paths = [self._build_path(path) for path in paths]
         return _types.Array(String, canonicalized_paths)
 
