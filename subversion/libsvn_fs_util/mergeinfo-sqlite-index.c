@@ -38,7 +38,7 @@
 /* This is a macro implementation of svn_fs_revision_root_revision(), which
    we cannot call from here, because it would create a circular dependency. */
 #define REV_ROOT_REV(root)       \
-  ((root)->is_txn_root? SVN_INVALID_REVNUM : (root)->rev)
+  ((root)->is_txn_root ? SVN_INVALID_REVNUM : (root)->rev)
 
 /* We want to cache that we saw no mergeinfo for a path as well,
    so we use a -1 converted to a pointer to represent this. */
