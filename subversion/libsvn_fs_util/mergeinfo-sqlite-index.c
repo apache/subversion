@@ -756,11 +756,12 @@ svn_fs_mergeinfo__get_mergeinfo(apr_hash_t **mergeinfo,
   sqlite3 *db;
   int i;
   svn_error_t *err;
-  svn_revnum_t rev = REV_ROOT_REV(root);
+  svn_revnum_t rev;
 
   /* We require a revision root. */
   if (root->is_txn_root)
     return svn_error_create(SVN_ERR_FS_NOT_REVISION_ROOT, NULL, NULL);
+  rev = REV_ROOT_REV(root);
 
   SVN_ERR(open_db(&db, root->fs->path, pool));
   err = get_mergeinfo(db, mergeinfo, rev, paths, inherit, pool);
@@ -800,10 +801,10 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
   sqlite3 *db;
   int i;
 
-  rev = REV_ROOT_REV(root);
   /* We require a revision root. */
   if (root->is_txn_root)
     return svn_error_create(SVN_ERR_FS_NOT_REVISION_ROOT, NULL, NULL);
+  rev = REV_ROOT_REV(root);
 
   SVN_ERR(open_db(&db, root->fs->path, pool));
   err = get_mergeinfo(db, mergeinfo, rev, paths, svn_mergeinfo_inherited,
