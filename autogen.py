@@ -20,6 +20,8 @@ def option_W(option, opt, value, parser):
 parser = OptionParser()
 parser.add_option("-a", "--apr-config", dest="apr_config",
                   help="The full path to your apr-1-config or apr-config script")
+parser.add_option("-u", "--apu-config", dest="apu_config",
+                  help="The full path to your apu-1-config or apu-config script")
 parser.add_option("-p", "--prefix", dest="prefix",
                   help="Specify the prefix where Subversion is installed (e.g. /usr, or /usr/local)")
 
@@ -76,6 +78,32 @@ def get_apr_config():
                         "the full path to your apr-1-config or apr-config script\n"
                         "using the --apr-config option.")
 
+    if options.apu_config:
+        apu_config_paths = (options.apu_config,)
+    elif apr_version[0] == "1":
+        apu_config_paths = ('%s/bin/apu-1-config' % apr_prefix,
+                            '%s/bin/apu-1-config' % prefix,
+                            'apu-1-config')
+    else:
+        apu_config_paths = ('%s/bin/apu-config' % apr_prefix,
+                            '%s/bin/apu-config' % prefix,
+                            'apu-config')
+
+    for apu_config in apu_config_paths:
+        fout = run_cmd("%s --includes" % apu_config)
+        if fout:
+            flags += fout.split()
+            fout = run_cmd("%s --ldflags --link-ld" % apu_config)
+            if fout:
+                ldflags += fout.split()
+            break
+    else:
+        print ferr
+        raise Exception("Cannot find apu-1-config or apu-config. Please specify\n"
+                        "the full path to your apu-1-config or apu-config script\n"
+                        "using the --apu-config option.")
+
+
     subversion_prefixes = [
         prefix,
         "/usr/local",
@@ -94,10 +122,6 @@ def get_apr_config():
         raise Exception("Cannot find svn_client.h. Please specify the prefix\n"
                         "to your Subversion installation using the --prefix\n"
                         "option.")
-
-    # TODO: Use apu-1-config, as above:
-    # ldflags.extend(run_cmd('apu-1-config --ldflags --link-ld').split())
-    ldflags.append("-laprutil-%s" % apr_version[0])
 
     # List the libraries in the order they should be loaded
     libraries = [ 
