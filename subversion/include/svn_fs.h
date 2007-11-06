@@ -789,6 +789,17 @@ svn_error_t *svn_fs_change_txn_prop(svn_fs_txn_t *txn,
                                     const svn_string_t *value,
                                     apr_pool_t *pool);
 
+
+/** Change, add, and/or delete transaction property values in
+ * transaction @a txn.  @a props is an array of <tt>svn_prop_t</tt>
+ * elements.  Do any necessary temporary allocation in @a pool.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_fs_change_txn_props(svn_fs_txn_t *txn,
+                                     apr_array_header_t *props,
+                                     apr_pool_t *pool);
+
 /** @} */
 
 
