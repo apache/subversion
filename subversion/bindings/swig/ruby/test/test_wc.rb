@@ -786,7 +786,7 @@ EOE
     assert_equal(0, ctx.up(@wc_path, 0))
     assert(!File.exists?(path2))
     Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
-      editor = access.update_editor(0, @wc_path)
+      editor = access.update_editor2(0, @wc_path)
       assert_equal(0, editor.target_revision)
 
       reporter = session.update2(rev2, @wc_path, editor)
@@ -828,7 +828,7 @@ EOE
     assert_equal(rev2, ctx.switch(@wc_path, dir2_uri))
     assert(File.exists?(File.join(@wc_path, file2)))
     Svn::Wc::AdmAccess.open_anchor(@wc_path) do |access, dir_access, target|
-      editor = dir_access.switch_editor(rev2, @wc_path, dir1_uri)
+      editor = dir_access.switch_editor2(rev2, @wc_path, dir1_uri)
       assert_equal(rev2, editor.target_revision)
 
       reporter = session.switch2(rev1, @wc_path, dir1_uri, editor)
