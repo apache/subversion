@@ -49,8 +49,8 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* ### TODO:  Multiple Targets
-
+/**
+   ### @todo  Multiple Targets
     - Up for debate:  an update on multiple targets is *not* atomic.
     Right now, svn_client_update only takes one path.  What's
     debatable is whether this should ever change.  On the one hand,
@@ -3690,7 +3690,7 @@ svn_client_ls(apr_hash_t **dirents,
  *
  * Perform all allocations from @a pool.
  *
- * ### TODO: Add an expansion/translation flag?
+ * ### @todo Add an expansion/translation flag?
  *
  * @since New in 1.2.
  */

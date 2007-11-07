@@ -2649,7 +2649,7 @@ svn_error_t *svn_wc_delete(const char *path,
  *       -  Schedule the directory itself for addition with copyfrom history.
  *       -  Mark all its children with a 'copied' flag
  *       -  Rewrite all the URLs to what they will be after a commit.
- *       -  ### TODO:  remove old wcprops too, see the '###'below
+ *       -  ### @todo Remove old wcprops too, see the '###' below.
  *
  *<pre> ### I think possibly the "switchover" functionality should be
  * ### broken out into a separate function, but its all intertwined in

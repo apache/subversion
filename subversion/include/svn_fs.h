@@ -1172,7 +1172,7 @@ svn_error_t *svn_fs_props_changed(svn_boolean_t *changed_p,
  *      a copy-under-a-copy scenario.  If X's revision-of-origin is
  *      the same as A's, then it was copied under A during the same
  *      transaction that created A.  (X's revision-of-origin cannot be
- *      greater than A's, if X has copy history.)  ### todo: See how
+ *      greater than A's, if X has copy history.)  @todo See how
  *      people like this, it can always be hidden behind the curtain
  *      if necessary.
  *
@@ -1491,7 +1491,7 @@ svn_error_t *svn_fs_file_md5_checksum(unsigned char digest[],
  * svn_fs_file_contents().  In that case, the result of reading from
  * @a *contents is undefined.
  *
- * ### kff todo: I am worried about lifetime issues with this pool vs
+ * ### @todo kff: I am worried about lifetime issues with this pool vs
  * the trail created farther down the call stack.  Trace this function
  * to investigate...
  */
