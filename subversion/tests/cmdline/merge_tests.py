@@ -6741,7 +6741,6 @@ def diff_repos_does_not_update_mergeinfo(sbox):
 
   # Create a second repository with the same greek tree
   repo_dir = sbox.repo_dir
-  repo_url = sbox.repo_url
   other_repo_dir, other_repo_url = sbox.add_repo_path("other")
   svntest.main.copy_repos(repo_dir, other_repo_dir, 6, 1)
 
@@ -6796,7 +6795,6 @@ def avoid_reflected_revs(sbox):
   wc_disk, wc_status = setup_branch(sbox, True, 1)
 
   # Some paths we'll care about
-  repo_url = sbox.repo_url
   A_path = os.path.join(wc_dir, 'A')
   A_COPY_path = os.path.join(wc_dir, 'A_COPY')
   tfile1_path = os.path.join(wc_dir, 'A', 'tfile1')
@@ -7400,15 +7398,14 @@ def merge_with_depth_files(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  repo_url = sbox.repo_url
 
   # Some paths we'll care about
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
   Acopy_path = os.path.join(wc_dir, 'A_copy')
   Acopy_mu_path = os.path.join(wc_dir, 'A_copy', 'mu')
-  A_url = repo_url + '/A'
-  Acopy_url = repo_url + '/A_copy'
+  A_url = sbox.repo_url + '/A'
+  Acopy_url = sbox.repo_url + '/A_copy'
 
   # Copy A_url to A_copy_url
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
@@ -7514,15 +7511,16 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
 
   ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2876. ##
 
-  # Create a WC and for some paths and URLs
+  # Create a WC
   sbox.build()
   wc_dir = sbox.wc_dir
-  repo_url = sbox.repo_url
+
+  # Some paths we'll care about
   Acopy_path = os.path.join(wc_dir, 'A_copy')
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
   Acopy_gamma_path = os.path.join(wc_dir, 'A_copy', 'D', 'gamma')
-  A_url = repo_url + '/A'
-  Acopy_url = repo_url + '/A_copy'
+  A_url = sbox.repo_url + '/A'
+  Acopy_url = sbox.repo_url + '/A_copy'
 
   # Contents to be added to 'gamma'
   new_content = "line1\nline2\nline3\nline4\nline5\n"
@@ -8078,9 +8076,8 @@ def merge_old_and_new_revs_from_renamed_dir(sbox):
   wc_disk, wc_status = setup_branch(sbox, True, 1)
 
   # Some paths we'll care about
-  repo_url = sbox.repo_url
-  A_url = repo_url + '/A'
-  A_MOVED_url = repo_url + '/A_MOVED'
+  A_url = sbox.repo_url + '/A'
+  A_MOVED_url = sbox.repo_url + '/A_MOVED'
   A_COPY_path = os.path.join(wc_dir, 'A_COPY')
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   A_MOVED_mu_path = os.path.join(wc_dir, 'A_MOVED', 'mu')
@@ -8247,10 +8244,9 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
   wc_dir = sbox.wc_dir
   A_path = os.path.join(wc_dir, 'A')
   mu_path = os.path.join(wc_dir, 'A', 'mu')
-  repo_url = sbox.repo_url
-  A_url = repo_url + '/A'
-  A_mu_url = repo_url + '/A/mu'
-  A_COPY_url = repo_url + '/A_COPY'
+  A_url = sbox.repo_url + '/A'
+  A_mu_url = sbox.repo_url + '/A/mu'
+  A_COPY_url = sbox.repo_url + '/A_COPY'
   A_COPY_path = os.path.join(wc_dir, 'A_COPY')
   A_COPY_mu_path = os.path.join(wc_dir, 'A_COPY', 'mu')
   thirty_line_dummy_text = 'line1\n'
@@ -8470,10 +8466,9 @@ def merge_old_and_new_revs_from_renamed_file(sbox):
   wc_dir = sbox.wc_dir
 
   # Some paths we'll care about
-  repo_url = sbox.repo_url
-  mu_url = repo_url + '/A/mu'
-  mu_MOVED_url = repo_url + '/A/mu_MOVED'
-  mu_COPY_url = repo_url + '/A/mu_COPY'
+  mu_url = sbox.repo_url + '/A/mu'
+  mu_MOVED_url = sbox.repo_url + '/A/mu_MOVED'
+  mu_COPY_url = sbox.repo_url + '/A/mu_COPY'
   mu_COPY_path = os.path.join(wc_dir, 'A', 'mu_COPY')
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   mu_MOVED_path = os.path.join(wc_dir, 'A', 'mu_MOVED')
@@ -8539,9 +8534,8 @@ def merge_with_auto_rev_range_detection(sbox):
   wc_dir = sbox.wc_dir
 
   # Some paths we'll care about
-  repo_url = sbox.repo_url
-  A_url = repo_url + '/A'
-  A_COPY_url = repo_url + '/A_COPY'
+  A_url = sbox.repo_url + '/A'
+  A_COPY_url = sbox.repo_url + '/A_COPY'
   B1_path = os.path.join(wc_dir, 'A', 'B1')
   B1_mu_path = os.path.join(wc_dir, 'A', 'B1', 'mu')
   A_COPY_path = os.path.join(wc_dir, 'A_COPY')
@@ -8666,8 +8660,7 @@ def mergeinfo_recording_in_skipped_merge(sbox):
   wc_disk, wc_status = setup_branch(sbox, True, 1)
 
   # Some paths we'll care about
-  repo_url = sbox.repo_url
-  A_url = repo_url + '/A'
+  A_url = sbox.repo_url + '/A'
   A_COPY_path = os.path.join(wc_dir, 'A_COPY')
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
@@ -8964,8 +8957,7 @@ def propchange_of_subdir_raises_conflict(sbox):
   wc_disk, wc_status = setup_branch(sbox, True, 1)
 
   # Some paths we'll care about
-  repo_url = sbox.repo_url
-  B_url = repo_url + '/A/B'
+  B_url = sbox.repo_url + '/A/B'
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
   A_COPY_B_path = os.path.join(wc_dir, 'A_COPY', 'B')
@@ -9166,8 +9158,7 @@ def merge_target_with_non_inheritable_mergeinfo(sbox):
   wc_disk, wc_status = setup_branch(sbox, True, 1)
 
   # Some paths we'll care about
-  repo_url = sbox.repo_url
-  B_url = repo_url + '/A/B'
+  B_url = sbox.repo_url + '/A/B'
   lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
   newfile_path = os.path.join(wc_dir, 'A', 'B', 'E', 'newfile')
   A_COPY_B_path = os.path.join(wc_dir, 'A_COPY', 'B')
