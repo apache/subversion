@@ -2405,8 +2405,8 @@ repos_path_valid(const char *path)
 
 /* Look for the repository given by URL, using ROOT as the virtual
  * repository root.  If we find one, fill in the repos, fs, cfg,
- * repos_url, and fs_path fields of B, and set the capabilities of
- * B->repos to CAPABILITIES (which must be at least as long-lived
+ * repos_url, and fs_path fields of B, and set B->repos's client
+ * capabilities to CAPABILITIES (which must be at least as long-lived
  * as POOL).
  */
 static svn_error_t *find_repos(const char *url, const char *root,
