@@ -2420,7 +2420,7 @@ svn_error_t *svn_wc_get_status_editor3(const svn_delta_editor_t **editor,
                                        apr_pool_t *pool);
 
 /**
- * Like svn_wc_get_status_editor3(), but with @ignore_patterns
+ * Like svn_wc_get_status_editor3(), but with @a ignore_patterns
  * provided from the corresponding value in @a config, and @a recurse
  * instead of @a depth.  If @a recurse is true, behave as if for @c
  * svn_depth_infinity; else if @a recurse is false, behave as if for
