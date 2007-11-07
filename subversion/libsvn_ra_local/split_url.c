@@ -136,10 +136,8 @@ svn_ra_local__split_URL(svn_repos_t **repos,
 
   /* Assert capabilities directly, since client == server. */
   {
-    apr_array_header_t *caps = apr_array_make(pool, 3, sizeof(const char *));
-    APR_ARRAY_PUSH(caps, const char *) = SVN_RA_CAPABILITY_DEPTH;
+    apr_array_header_t *caps = apr_array_make(pool, 1, sizeof(const char *));
     APR_ARRAY_PUSH(caps, const char *) = SVN_RA_CAPABILITY_MERGEINFO;
-    APR_ARRAY_PUSH(caps, const char *) = SVN_RA_CAPABILITY_LOG_REVPROPS;
     svn_repos__set_capabilities(*repos, caps);
   }
 

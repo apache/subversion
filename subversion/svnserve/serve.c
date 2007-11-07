@@ -33,6 +33,7 @@
 #include "svn_string.h"
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_ra.h"              /* for SVN_RA_CAPABILITY_* */
 #include "svn_ra_svn.h"
 #include "svn_repos.h"
 #include "svn_path.h"
@@ -2405,9 +2406,9 @@ repos_path_valid(const char *path)
 
 /* Look for the repository given by URL, using ROOT as the virtual
  * repository root.  If we find one, fill in the repos, fs, cfg,
- * repos_url, and fs_path fields of B, and set B->repos's client
- * capabilities to CAPABILITIES (which must be at least as long-lived
- * as POOL).
+ * repos_url, and fs_path fields of B.  Set B->repos's client
+ * capabilities to CAPABILITIES, which must be at least as long-lived
+ * as POOL, and whose elements are SVN_RA_CAPABILITY_*.
  */
 static svn_error_t *find_repos(const char *url, const char *root,
                                server_baton_t *b,
@@ -2559,17 +2560,24 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
      new interface to re-retrieve them from conn and convert the
      result to a list, it's simpler to just convert caplist by hand
      here, since we already have it and turning 'svn_ra_svn_item_t's
-     into 'const char *'s is pretty easy. */
+     into 'const char *'s is pretty easy. 
+
+     We only record capabilities we care about.  The client may report
+     more (because it doesn't know what the server cares about). */
   {
     int i;
     svn_ra_svn_item_t *item;
 
-    cap_words = apr_array_make(pool, caplist->nelts, sizeof(const char *));
+    cap_words = apr_array_make(pool, 1, sizeof(const char *));
     for (i = 0; i < caplist->nelts; i++)
       {
         item = &APR_ARRAY_IDX(caplist, i, svn_ra_svn_item_t);
         /* ra_svn_set_capabilities() already type-checked for us */
-        APR_ARRAY_PUSH(cap_words, const char *) = item->u.word;
+        if (strcmp(item->u.word, SVN_RA_SVN_CAP_MERGEINFO) == 0)
+          {
+            APR_ARRAY_PUSH(cap_words, const char *)
+              = SVN_RA_CAPABILITY_MERGEINFO;
+          }
       }
   }
 

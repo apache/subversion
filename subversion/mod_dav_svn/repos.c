@@ -1623,14 +1623,12 @@ get_resource(request_rec *r,
         /* Client capabilities are self-reported.  There is no
            guarantee the client actually has the capabilities it says
            it has, we just assume it is in the client's interests to
-           report accurately. */
+           report accurately.  Also, we only remember the capabilities
+           the server cares about (even though the client may send
+           more than that). */
 
         /* Start out assuming no capabilities. */
-        apr_hash_set(repos->capabilities, SVN_RA_CAPABILITY_DEPTH,
-                     APR_HASH_KEY_STRING, capability_no);
         apr_hash_set(repos->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
-                     APR_HASH_KEY_STRING, capability_no);
-        apr_hash_set(repos->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
                      APR_HASH_KEY_STRING, capability_no);
 
         /* Then see what we can find. */
@@ -1640,23 +1638,10 @@ get_resource(request_rec *r,
             apr_array_header_t *vals
               = svn_cstring_split(val, ",", TRUE, r->pool);
 
-            if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_DEPTH,
-                                            vals))
-              {
-                apr_hash_set(repos->capabilities, SVN_RA_CAPABILITY_DEPTH,
-                             APR_HASH_KEY_STRING, capability_yes);
-              }
             if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO,
                                             vals))
               {
                 apr_hash_set(repos->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
-                             APR_HASH_KEY_STRING, capability_yes);
-              }
-            if (svn_cstring_match_glob_list
-                (SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS, vals))
-              {
-                apr_hash_set(repos->capabilities,
-                             SVN_RA_CAPABILITY_LOG_REVPROPS,
                              APR_HASH_KEY_STRING, capability_yes);
               }
           }
