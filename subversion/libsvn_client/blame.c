@@ -609,7 +609,6 @@ svn_client_blame4(const char *target,
   apr_file_t *file;
   apr_pool_t *iterpool;
   svn_stream_t *stream;
-  svn_error_t *err;
 
   if (start->kind == svn_opt_revision_unspecified
       || end->kind == svn_opt_revision_unspecified)
