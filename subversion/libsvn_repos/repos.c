@@ -314,17 +314,12 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 "# clients will typically report at least the \""                            \
    SVN_RA_CAPABILITY_MERGEINFO "\" capability."                              NL
 "# If there are other capabilities, then the list is comma-separated,"       NL
-"# e.g.: \""                                                                 \
-   SVN_RA_CAPABILITY_LOG_REVPROPS ","                                        \
-   SVN_RA_CAPABILITY_MERGEINFO ","                                           \
-   SVN_RA_CAPABILITY_DEPTH                                                   \
-"\" (the order is undefined)."                                               NL
+"# e.g.: \"" SVN_RA_CAPABILITY_MERGEINFO ",some-other-capability\" "         \
+  "(the order is undefined)."                                                NL
 "#"                                                                          NL
 "# The list is self-reported by the client.  Therefore, you should not"      NL
 "# make security assumptions based on the capabilities list, nor should"     NL
 "# you assume that clients reliably report every capability they have."      NL
-"# However, stock Subversion 1.5 (and higher) clients will report"           NL
-"# at least the \"" SVN_RA_CAPABILITY_MERGEINFO "\" capability by default."  NL
 "#"                                                                          NL
 "# The working directory for this hook program's invocation is undefined,"   NL
 "# so the program should set one explicitly if it cares."                    NL
