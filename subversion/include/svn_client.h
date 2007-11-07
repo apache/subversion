@@ -16,7 +16,7 @@
  * @endcopyright
  *
  * @file svn_client.h
- * @brief Public interface for libsvn_client.
+ * @brief Subversion's client library
  */
 
 
