@@ -37,8 +37,15 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
                                 self.MERGEINFO_NBR_REV_RANGES)
     
   def test_rangelist_reverse(self):
-    ### TODO: Implement me!
-    pass
+    mergeinfo = core.svn_mergeinfo_parse(self.TEXT_MERGEINFO1)
+    rangelist = mergeinfo.get(self.MERGEINFO_SRC)
+    reversed = core.svn_rangelist_reverse(rangelist)
+    expected_ranges = ((42, 41), (27, 26), (9, 2))
+    for i in range(0, len(reversed)):
+      self.assertEquals(reversed[i].start, expected_ranges[i][0],
+                        "Unexpected range start: %d" % reversed[i].start)
+      self.assertEquals(reversed[i].end, expected_ranges[i][1],
+                        "Unexpected range end: %d" % reversed[i].end)
 
   def test_mergeinfo_sort(self):
     ### TODO: Implement me!
