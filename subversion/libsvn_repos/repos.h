@@ -120,7 +120,13 @@ struct svn_repos_t
 
   /* If non-null, a list of all the capabilities the client (on the
      current connection) has self-reported.  Each element is a
-     'const char *', one of SVN_RA_CAPABILITY_*. */
+     'const char *', one of SVN_RA_CAPABILITY_*.
+
+     Note: it is somewhat counterintuitive that we store the client's
+     capabilities, which are session-specific, on the repository
+     object.  You'd think the capabilities here would represent the
+     *repository's* capabilities, but no, they represent the
+     client's -- we just don't have any other place to persist them. */
   apr_array_header_t *capabilities;
 };
 
