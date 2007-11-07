@@ -533,22 +533,10 @@ svn_wc__ambient_depth_filter_editor(const svn_delta_editor_t **editor,
                                     const char *anchor,
                                     const char *target,
                                     svn_wc_adm_access_t *adm_access,
-                                    svn_depth_t requested_depth,
                                     apr_pool_t *pool)
 {
   svn_delta_editor_t *depth_filter_editor;
   struct edit_baton *eb;
-
-  /* Easy out: this only needs to filter at all if the caller has
-     no particular depth request in mind -- because if a depth was
-     explicitly requested, libsvn_delta/depth_filter_editor.c will
-     ensure that we never see editor calls we don't want anyway. */
-  if (requested_depth != svn_depth_unknown)
-    {
-      *editor = wrapped_editor;
-      *edit_baton = wrapped_edit_baton;
-      return SVN_NO_ERROR;
-    }
 
   depth_filter_editor = svn_delta_default_editor(pool);
   depth_filter_editor->set_target_revision = set_target_revision;
