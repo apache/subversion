@@ -7820,7 +7820,7 @@ def no_mergeinfo_from_no_op_merge(sbox):
 
   # Part 2: Test for issue #2976
   #
-  # Merge r3:8 A_COPY/D, A_COPY/D/H and A_COPY/D/G should
+  # Merge r3:8 A_COPY/D/H and A_COPY/D/G should
   # both retain mergeinfo for r9*
   short_D_COPY_path = shorten_path_kludge(D_COPY_path)
   expected_output = wc.State(short_D_COPY_path, {
