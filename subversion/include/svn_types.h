@@ -405,23 +405,25 @@ svn_dirent_t *svn_dirent_dup(const svn_dirent_t *dirent,
  * would take care of both internationalization issues and custom
  * keywords (e.g., $NetBSD$).  See
  *
- *<pre>    http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=8921
- *    =====
- *    From: "Jonathan M. Manning" <jmanning@alisa-jon.net>
- *    To: dev@subversion.tigris.org
- *    Date: Fri, 14 Dec 2001 11:56:54 -0500
- *    Message-ID: <87970000.1008349014@bdldevel.bl.bdx.com>
- *    Subject: Re: keywords</pre>
+ * @verbatim
+      http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=8921
+      =====
+      From: "Jonathan M. Manning" <jmanning@alisa-jon.net>
+      To: dev@subversion.tigris.org
+      Date: Fri, 14 Dec 2001 11:56:54 -0500
+      Message-ID: <87970000.1008349014@bdldevel.bl.bdx.com>
+      Subject: Re: keywords @endverbatim
  *
  * and Eric Gillespie's support of same:
  *
- *<pre>    http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=8757
- *    =====
- *    From: "Eric Gillespie, Jr." <epg@pretzelnet.org>
- *    To: dev@subversion.tigris.org
- *    Date: Wed, 12 Dec 2001 09:48:42 -0500
- *    Message-ID: <87k7vsebp1.fsf@vger.pretzelnet.org>
- *    Subject: Re: Customizable Keywords</pre>
+ * @verbatim
+      http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=8757
+      =====
+      From: "Eric Gillespie, Jr." <epg@pretzelnet.org>
+      To: dev@subversion.tigris.org
+      Date: Wed, 12 Dec 2001 09:48:42 -0500
+      Message-ID: <87k7vsebp1.fsf@vger.pretzelnet.org>
+      Subject: Re: Customizable Keywords @endverbatim
  *
  * However, it is considerably more complex than the scheme below.
  * For now we're going with simplicity, hopefully the more general
