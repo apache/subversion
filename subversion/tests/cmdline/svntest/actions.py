@@ -18,6 +18,7 @@
 import os, shutil, re, sys, errno
 import difflib, pprint
 import xml.parsers.expat
+from xml.dom.minidom import parseString
 
 import main, verify, tree, wc  # general svntest routines in this module.
 from svntest import Failure
@@ -883,6 +884,76 @@ def run_and_verify_unquiet_status(wc_dir_name, output_tree,
   else:
     tree.compare_trees (actual, output_tree)
 
+def run_and_verify_diff_summarize_xml(error_re_string = [],
+                                      expected_prefix = None,
+                                      expected_paths = [],
+                                      expected_items = [],
+                                      expected_props = [],
+                                      expected_kinds = [],
+                                      *args):
+  """Run 'diff --summarize --xml' with the arguments *ARGS, which should
+  contain all arguments beyond for your 'diff --summarize --xml' omitting
+  said arguments.  EXPECTED_PREFIX will store a "common" path prefix
+  expected to be at the beginning of each summarized path.  If
+  EXPECTED_PREFIX is None, the EXPECTED_PATHS will need to be exactly
+  as 'svn diff --summarize --xml' will output.  If ERROR_RE_STRING, the
+  command must exit with error, and the error message must match regular
+  expression ERROR_RE_STRING.
+
+  Else if ERROR_RE_STRING is None, the subcommand output will be parsed
+  into an XML document and will then be verified by comparing the parsed
+  output to the contents in the EXPECTED_PATHS, EXPECTED_ITEMS,
+  EXPECTED_PROPS and EXPECTED_KINDS. Returns on success, raises
+  on failure."""
+
+  output, errput = run_and_verify_svn(None, None, error_re_string, 'diff',
+                                      '--summarize', '--xml', *args)
+
+  # Return if errors are present since they were expected
+  if len(errput) > 0:
+    return
+
+  doc = parseString(''.join(output))
+  paths = doc.getElementsByTagName("path")
+  modified_paths = expected_paths
+  items = expected_items
+  kinds = expected_kinds
+  modified_props = expected_props
+
+  for path in paths:
+    modified_path = path.childNodes[0].data
+
+    if (expected_prefix is not None
+        and modified_path.find(expected_prefix) == 0):
+      modified_path = modified_path.replace(expected_prefix, '')[1:].strip()
+
+    # Workaround single-object diff
+    if len(modified_path) == 0:
+      modified_path = path.childNodes[0].data.split("/")[-1]
+
+    if modified_path not in modified_paths:
+      print "ERROR: %s not expected in the changed paths." % modified_path
+      raise Failure
+
+    index = modified_paths.index(modified_path)
+    expected_item = items[index]
+    expected_kind = kinds[index]
+    expected_props = modified_props[index]
+    actual_item = path.getAttribute('item')
+    actual_kind = path.getAttribute('kind')
+    actual_props = path.getAttribute('props')
+  
+    if expected_item != actual_item:
+      print "ERROR: expected:", expected_item, "actual:", actual_item
+      raise Failure
+
+    if expected_kind != actual_kind:
+      print "ERROR: expected:", expected_kind, "actual:", actual_kind
+      raise Failure
+
+    if expected_props != actual_props:
+      print "ERROR: expected:", expected_props, "actual:", actual_props
+      raise Failure
 
 def run_and_verify_diff_summarize(output_tree, error_re_string = None,
                                   singleton_handler_a = None,

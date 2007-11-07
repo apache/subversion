@@ -2844,6 +2844,106 @@ def diff_backward_repos_wc_copy(sbox):
   svntest.actions.run_and_verify_svn(None, diff_repos_wc, [],
                                      'diff', '-r' , '2')
 
+#----------------------------------------------------------------------
+
+def diff_summarize_xml(sbox):
+  "xml diff summarize"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # A content modification.
+  svntest.main.file_append(os.path.join(wc_dir, "A", "mu"), "New mu content")
+
+  # A prop modification.
+  svntest.main.run_svn(None,
+                       "propset", "prop", "val",
+                       os.path.join(wc_dir, 'iota'))
+
+  # Both content and prop mods.
+  tau_path = os.path.join(wc_dir, "A", "D", "G", "tau")
+  svntest.main.file_append(tau_path, "tautau")
+  svntest.main.run_svn(None,
+                       "propset", "prop", "val", tau_path)
+
+  # A file addition.
+  newfile_path = os.path.join(wc_dir, 'newfile')
+  svntest.main.file_append(newfile_path, 'newfile')
+  svntest.main.run_svn(None, 'add', newfile_path)
+
+  # A file deletion.
+  svntest.main.run_svn(None, "delete", os.path.join(wc_dir, 'A', 'B',
+                                                    'lambda'))
+
+  # A directory addition
+  svntest.main.run_svn(None, "mkdir", os.path.join(wc_dir, 'newdir'))
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu': Item(verb='Sending'),
+    'iota': Item(verb='Sending'),
+    'newfile': Item(verb='Adding'),
+    'A/D/G/tau': Item(verb='Sending'),
+    'A/B/lambda': Item(verb='Deleting'),
+    'newdir': Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'newfile': Item(status='  ', wc_rev=2),
+    'newdir': Item(status='  ', wc_rev=2),
+    })
+  expected_status.tweak("A/mu", "iota", "A/D/G/tau", "newfile", "newdir",
+                        wc_rev=2)
+  expected_status.remove("A/B/lambda")
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None,
+                                        wc_dir)
+
+  # 1) Test --xml without --summarize
+  svntest.actions.run_and_verify_svn(
+    None, None, ".*--xml' option only valid with '--summarize' option",
+    'diff', wc_dir, '--xml')
+
+  # 2) Test --xml on invalid revision
+  svntest.actions.run_and_verify_diff_summarize_xml(
+    ".*No such revision 5555555",
+    None, wc_dir, None, None, None, '-r0:5555555', wc_dir)
+
+  # 3) Test working copy summarize
+  svntest.actions.run_and_verify_diff_summarize_xml(
+    ".*Summarizing diff can only compare repository to repository",
+    None, wc_dir, None, None, wc_dir)
+
+  # 4) Test --summarize --xml on -c2
+  paths = ['iota',]
+  items = ['none',]
+  kinds = ['file',]
+  props = ['modified',]
+
+  svntest.actions.run_and_verify_diff_summarize_xml(
+    [], wc_dir, paths, items, props, kinds, '-c2',
+    os.path.join(wc_dir, 'iota'))
+
+  # 5) Test --summarize --xml on -r1:2
+  paths = ['A/mu', 'iota', 'A/D/G/tau', 'newfile', 'A/B/lambda',
+           'newdir',]
+  items = ['modified', 'none', 'modified', 'added', 'deleted', 'added',]
+  kinds = ['file','file','file','file','file', 'dir',]
+  props = ['none', 'modified', 'modified', 'none', 'none', 'none',]
+
+  svntest.actions.run_and_verify_diff_summarize_xml(
+    [], wc_dir, paths, items, props, kinds, '-r1:2', wc_dir)
+
+  # 6) Same as test #5 but ran against a URL instead of a WC path
+  paths = ['A/mu', 'iota', 'A/D/G/tau', 'newfile', 'A/B/lambda',
+           'newdir',]
+  items = ['modified', 'none', 'modified', 'added', 'deleted', 'added',]
+  kinds = ['file','file','file','file','file', 'dir',]
+  props = ['none', 'modified', 'modified', 'none', 'none', 'none',]
+
+  svntest.actions.run_and_verify_diff_summarize_xml(
+    [], sbox.repo_url, paths, items, props, kinds, '-r1:2', sbox.repo_url)
 
 ########################################################################
 #Run the tests
@@ -2895,6 +2995,7 @@ test_list = [ None,
               diff_with_depth,
               diff_ignore_eolstyle_empty_lines,
               diff_backward_repos_wc_copy,
+              diff_summarize_xml,
               ]
 
 if __name__ == '__main__':

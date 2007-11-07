@@ -404,7 +404,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {'r', 'c', svn_cl__old_cmd_opt, svn_cl__new_cmd_opt, 'N',
      svn_cl__depth_opt, svn_cl__diff_cmd_opt, 'x',
      svn_cl__no_diff_deleted, svn_cl__notice_ancestry_opt,
-     svn_cl__summarize, svn_cl__changelist_opt, svn_cl__force_opt} },
+     svn_cl__summarize, svn_cl__changelist_opt, svn_cl__force_opt,
+     svn_cl__xml_opt} },
 
   { "export", svn_cl__export, {0}, N_
     ("Create an unversioned copy of a tree.\n"
