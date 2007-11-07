@@ -264,7 +264,6 @@
    input mergeinfo hash
 */
 %apply apr_hash_t *MERGEINFO {
-   apr_hash_t *mergeinput,
    apr_hash_t *mergefrom,
    apr_hash_t *mergeto,
    apr_hash_t *mergein1,
