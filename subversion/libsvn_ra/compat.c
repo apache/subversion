@@ -27,6 +27,8 @@
 #include "svn_sorts.h"
 #include "svn_path.h"
 #include "svn_ra.h"
+#include "svn_io.h"
+#include "svn_compat.h"
 #include "ra_loader.h"
 #include "svn_private_config.h"
 
@@ -57,10 +59,6 @@ compare_revisions(const void *a, const void *b)
    This is useful for tracking the various changes in location a
    particular resource has undergone when performing an RA->get_logs()
    operation on that resource.
-
-   ### NOTE: This is a perfect duplicate of
-   ### libsvn_client/blame.c:prev_log_path(), which should someday go
-   ### away when the blame compat code is moved into this file, too.
 */
 static svn_error_t *
 prev_log_path(const char **prev_path_p,
@@ -576,4 +574,204 @@ svn_ra__location_segments_from_log(svn_ra_session_t *session,
                                         receiver, receiver_baton, pool));
 
   return SVN_NO_ERROR;
+}
+
+
+
+/*** Fallback implementation of svn_ra_get_file_revs(). ***/
+
+/* The metadata associated with a particular revision. */
+struct rev
+{
+  svn_revnum_t revision; /* the revision number */
+  const char *path;      /* the absolute repository path */
+  apr_hash_t *props;     /* the revprops for this revision */
+  struct rev *next;      /* the next revision */
+};
+
+/* File revs log message baton. */
+struct fr_log_message_baton {
+  const char *path;        /* The path to be processed */
+  struct rev *eldest;      /* The eldest revision processed */
+  char action;             /* The action associated with the eldest */
+  svn_revnum_t copyrev;    /* The revision the eldest was copied from */
+  apr_pool_t *pool;
+};
+
+/* Callback for log messages: implements svn_log_entry_receiver_t and
+   accumulates revision metadata into a chronologically ordered list stored in
+   the baton. */
+static svn_error_t *
+fr_log_message_receiver(void *baton,
+                        svn_log_entry_t *log_entry,
+                        apr_pool_t *pool)
+{
+  struct fr_log_message_baton *lmb = baton;
+  struct rev *rev;
+  apr_hash_index_t *hi;
+
+  rev = apr_palloc(lmb->pool, sizeof(*rev));
+  rev->revision = log_entry->revision;
+  rev->path = lmb->path;
+  rev->next = lmb->eldest;
+  lmb->eldest = rev;
+
+  /* Duplicate log_entry revprops into rev->props */
+  rev->props = apr_hash_make(lmb->pool);
+  for (hi = apr_hash_first(pool, log_entry->revprops); hi;
+       hi = apr_hash_next(hi))
+    {
+      svn_string_t *val;
+      const char *key;
+
+      apr_hash_this(hi, (const void **)&key, NULL, (void **)&val);
+      apr_hash_set(rev->props, apr_pstrdup(lmb->pool, key), APR_HASH_KEY_STRING,
+                   svn_string_dup(val, lmb->pool));
+    }
+
+  return prev_log_path(&lmb->path, &lmb->action,
+                       &lmb->copyrev, log_entry->changed_paths,
+                       lmb->path, svn_node_file, log_entry->revision,
+                       lmb->pool);
+}
+
+svn_error_t *
+svn_ra__file_revs_from_log(svn_ra_session_t *ra_session,
+                           const char *path,
+                           svn_revnum_t start,
+                           svn_revnum_t end,
+                           svn_file_rev_handler_t handler,
+                           void *handler_baton,
+                           apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+  const char *repos_url;
+  const char *session_url;
+  const char *tmp;
+  char *repos_abs_path;
+  apr_array_header_t *condensed_targets;
+  struct fr_log_message_baton lmb;
+  struct rev *rev;
+  apr_hash_t *last_props;
+  const char *last_path;
+  svn_stream_t *last_stream;
+  apr_pool_t *currpool, *lastpool;
+
+  SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_url, pool));
+  SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, pool));
+
+  /* Create the initial path, using the repos_url and session_url */
+  tmp = svn_path_is_child(repos_url, session_url, pool);
+  repos_abs_path = apr_palloc(pool, strlen(tmp) + 1);
+  repos_abs_path[0] = '/';
+  memcpy(repos_abs_path + 1, tmp, strlen(tmp));
+
+  /* Check to make sure we're dealing with a file. */
+  SVN_ERR(svn_ra_check_path(ra_session, "", end, &kind, pool));
+
+  if (kind == svn_node_dir)
+    return svn_error_createf(SVN_ERR_FS_NOT_FILE, NULL,
+                             _("'%s' is not a file"), repos_abs_path);
+
+  condensed_targets = apr_array_make(pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(condensed_targets, const char *) = "";
+
+  lmb.path = svn_path_uri_decode(repos_abs_path, pool);
+  lmb.eldest = NULL;
+  lmb.pool = pool;
+
+  /* Accumulate revision metadata by walking the revisions
+     backwards; this allows us to follow moves/copies
+     correctly. */
+  SVN_ERR(svn_ra_get_log2(ra_session,
+                          condensed_targets,
+                          end, start, 0, /* no limit */
+                          TRUE, FALSE, FALSE,
+                          NULL, fr_log_message_receiver, &lmb,
+                          pool));
+
+  /* Reparent the session while we go back through the history. */
+  SVN_ERR(svn_ra_reparent(ra_session, repos_url, pool));
+
+  currpool = svn_pool_create(pool);
+  lastpool = svn_pool_create(pool);
+
+  /* We want the first txdelta to be against the empty file. */
+  last_props = apr_hash_make(lastpool);
+  last_path = NULL;
+  last_stream = svn_stream_empty(lastpool);
+
+  /* Walk the revision list in chronological order, downloading each fulltext,
+     diffing it with its predecessor, and calling the file_revs handler for
+     each one.  Use two iteration pools rather than one, because the diff
+     routines need to look at a sliding window of revisions.  Two pools gives
+     us a ring buffer of sorts. */
+  for (rev = lmb.eldest; rev; rev = rev->next)
+    {
+      const char *temp_path;
+      const char *temp_dir;
+      apr_pool_t *tmppool;
+      apr_hash_t *props;
+      apr_file_t *file;
+      svn_stream_t *stream;
+      apr_array_header_t *prop_diffs;
+      svn_txdelta_stream_t *delta_stream;
+      svn_txdelta_window_handler_t delta_handler = NULL;
+      void *delta_baton = NULL;
+
+      apr_pool_clear(currpool);
+
+      /* Get the contents of the file from the repository, and put them in
+         a temporary local file. */
+      SVN_ERR(svn_io_temp_dir(&temp_dir, currpool));
+      SVN_ERR(svn_io_open_unique_file2
+              (&file, &temp_path,
+               svn_path_join(temp_dir, "tmp", currpool), ".tmp",
+               svn_io_file_del_on_pool_cleanup, currpool));
+      stream = svn_stream_from_aprfile(file, currpool);
+      SVN_ERR(svn_ra_get_file(ra_session, rev->path + 1, rev->revision,
+                              stream, NULL, &props, currpool));
+      SVN_ERR(svn_stream_close(stream));
+      SVN_ERR(svn_io_file_close(file, currpool));
+
+      /* Open up a stream to the local file. */
+      SVN_ERR(svn_io_file_open(&file, temp_path, APR_READ, APR_OS_DEFAULT,
+                               currpool));
+      stream = svn_stream_from_aprfile2(file, FALSE, currpool);
+
+      /* Calculate the property diff */
+      SVN_ERR(svn_prop_diffs(&prop_diffs, props, last_props, lastpool));
+
+      /* Call the file_rev handler */
+      SVN_ERR(handler(handler_baton, rev->path, rev->revision, rev->props,
+                      FALSE, /* merged revision */
+                      &delta_handler, &delta_baton, prop_diffs, lastpool));
+
+      /* Compute and send delta if client asked for it. */
+      if (delta_handler)
+        {
+          /* Get the content delta. */
+          svn_txdelta(&delta_stream, last_stream, stream, lastpool);
+
+          /* And send. */
+          SVN_ERR(svn_txdelta_send_txstream(delta_stream, delta_handler,
+                                            delta_baton, lastpool));
+        }
+
+      /* Switch the pools and data for the next iteration */
+      tmppool = currpool;
+      currpool = lastpool;
+      lastpool = tmppool;
+
+      svn_stream_close(last_stream);
+      last_stream = stream;
+      last_props = props;
+    }
+
+  svn_stream_close(last_stream);
+  svn_pool_destroy(currpool);
+  svn_pool_destroy(lastpool);
+
+  /* Reparent the session back to the original URL. */
+  return svn_ra_reparent(ra_session, session_url, pool);
 }

@@ -1001,9 +1001,20 @@ svn_error_t *svn_ra_get_file_revs2(svn_ra_session_t *session,
                                    void *handler_baton,
                                    apr_pool_t *pool)
 {
-  return session->vtable->get_file_revs(session, path, start, end,
-                                        include_merged_revisions, handler,
-                                        handler_baton, pool);
+
+  svn_error_t *err = session->vtable->get_file_revs(session, path, start, end,
+                                                    include_merged_revisions,
+                                                    handler, handler_baton,
+                                                    pool);
+  if (err && (err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED))
+    {
+      svn_error_clear(err);
+
+      /* Do it the slow way, using get-logs, for older servers. */
+      err = svn_ra__file_revs_from_log(session, path, start, end,
+                                       handler, handler_baton, pool);
+    }
+  return err;
 }
 
 svn_error_t *svn_ra_lock(svn_ra_session_t *session,
