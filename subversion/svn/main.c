@@ -1656,9 +1656,19 @@ main(int argc, const char *argv[])
     return svn_cmdline_handle_exit_error(err, pool, "svn: ");
   command_baton.ctx = ctx;
 
-  if ((err = svn_config_get_config(&(ctx->config),
-                                   opt_state.config_dir, pool)))
-    return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+  err = svn_config_get_config(&(ctx->config),
+                              opt_state.config_dir, pool);
+  if (err)
+    {
+      /* Fallback to default config if the config directory isn't readable. */
+      if (err->apr_err == APR_EACCES)
+        {
+          svn_handle_warning(stderr, err);
+          svn_error_clear(err);
+        }
+      else
+        return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+    }
 
   cfg = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
                      APR_HASH_KEY_STRING);
