@@ -113,7 +113,7 @@ extern "C" {
 
 /** The svn-specific object that is placed within a <D:error> response.
  *
- * @defgroup svn_dav_error svn_dav errors
+ * @defgroup svn_dav_error Errors in svn_dav
  * @{ */
 
 /** The error object's namespace */
@@ -128,7 +128,7 @@ extern "C" {
 /** General property (xml) namespaces that will be used by both ra_dav
  * and mod_dav_svn for marshalling properties.
  *
- * @defgroup svn_dav_property_xml_namespaces dav property namespaces
+ * @defgroup svn_dav_property_xml_namespaces DAV property namespaces
  * @{
  */
 

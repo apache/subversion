@@ -54,7 +54,7 @@ extern "C" {
 /** ra_svn passes @c svn_dirent_t fields over the wire as a list of
  * words, these are the values used to represent each field.
  *
- * @defgroup ra_svn_dirent_fields ra_svn dirent fields
+ * @defgroup ra_svn_dirent_fields Definitions of ra_svn dirent fields
  * @{
  */
 

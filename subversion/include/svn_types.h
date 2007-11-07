@@ -336,7 +336,7 @@ svn_depth_from_word(const char *word);
  * the data corresponding to the other fields can be avoided.  These values
  * can be used for that purpose.
  *
- * @defgroup svn_dirent_fields dirent fields
+ * @defgroup svn_dirent_fields Dirent fields
  * @{
  */
 
@@ -427,7 +427,7 @@ svn_dirent_t *svn_dirent_dup(const svn_dirent_t *dirent,
  * For now we're going with simplicity, hopefully the more general
  * solution can be done post-1.0.
  *
- * @defgroup svn_types_keywords keywords
+ * @defgroup svn_types_keywords Keyword definitions
  * @{
  */
 

@@ -33,6 +33,10 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/**
+ * @defgroup svn_props_support Properties management utilities
+ * @{
+ */
 
 
 
@@ -423,6 +427,8 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
                                     SVNSYNC_PROP_FROM_UUID, \
                                     SVNSYNC_PROP_LAST_MERGED_REV, \
                                     SVNSYNC_PROP_CURRENTLY_COPYING,
+
+/** @} */
 
 /** @} */
 

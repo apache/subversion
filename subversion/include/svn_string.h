@@ -76,6 +76,10 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/**
+ * @defgroup svn_string String handling
+ * @{
+ */
 
 
 
@@ -337,6 +341,8 @@ char *
 svn_cstring_join(apr_array_header_t *strings,
                  const char *separator,
                  apr_pool_t *pool);
+
+/** @} */
 
 /** @} */
 

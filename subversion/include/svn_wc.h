@@ -57,6 +57,11 @@ extern "C" {
  */
 const svn_version_t *svn_wc_version(void);
 
+/**
+ * @defgroup svn_wc  Working copy management
+ * @{
+ */
+
 /** Flags for use with svn_wc_translated_file2
  *
  * @defgroup translate_flags Translation flags
@@ -652,7 +657,7 @@ svn_wc_parse_externals_description(apr_hash_t **externals_p,
 /* Notification/callback handling. */
 
 /**
- * @defgroup svn_wc_notifications notification callback handling
+ * @defgroup svn_wc_notifications Notification callback handling
  * @{
  *
  * In many cases, the WC library will scan a working copy and make
@@ -2051,7 +2056,7 @@ svn_wc_maybe_set_repos_root(svn_wc_adm_access_t *adm_access,
 
 
 /**
- * @defgroup svn_wc_status working copy status.
+ * @defgroup svn_wc_status Working copy status.
  * @{
  *
  * We have two functions for getting working copy status: one function
@@ -4565,6 +4570,8 @@ svn_wc_set_changelist(const apr_array_header_t *paths,
                       svn_wc_notify_func2_t notify_func,
                       void *notify_baton,
                       apr_pool_t *pool);
+
+/** @} */
 
 
 #ifdef __cplusplus
