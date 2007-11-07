@@ -171,13 +171,6 @@ typedef struct
   apr_hash_t *dir_cache[NUM_DIR_CACHE_ENTRIES];
   apr_pool_t *dir_cache_pool[NUM_DIR_CACHE_ENTRIES];
 
-  /* A cache of revision root IDs, allocated in this subpool.  (IDs
-   * are so small that one pool per ID would be overkill;
-   * unfortunately, this means the only way we expire cache entries is
-   * by wiping the whole cache.) */
-  apr_hash_t *rev_root_id_cache;
-  apr_pool_t *rev_root_id_cache_pool;
-
   /* The format number of this FS. */
   int format;
   /* The maximum number of files to store per directory (for sharded
@@ -186,6 +179,20 @@ typedef struct
 
   /* The uuid of this FS. */
   const char *uuid;
+
+  /* Caches of immutable data.
+     
+     Both of these could be moved to fs_fs_shared_data_t to make them
+     last longer; on the other hand, this would require adding mutexes
+     for threaded builds.
+  */
+
+  /* A cache of revision root IDs, allocated in this subpool.  (IDs
+     are so small that one pool per ID would be overkill;
+     unfortunately, this means the only way we expire cache entries is
+     by wiping the whole cache.) */
+  apr_hash_t *rev_root_id_cache;
+  apr_pool_t *rev_root_id_cache_pool;
 
   /* DAG node cache for immutable nodes */
   dag_node_cache_t rev_node_list;
