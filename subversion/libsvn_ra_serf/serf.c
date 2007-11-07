@@ -44,6 +44,177 @@
 #include "ra_serf.h"
 
 
+/** Capabilities exchange. */
+
+/* The only two possible values for a capability. */
+static const char *capability_yes = "yes";
+static const char *capability_no = "no";
+
+/* Baton type for parsing capabilities out of "OPTIONS" response headers. */
+struct capabilities_response_baton
+{
+  /* This session's capabilities table. */
+  apr_hash_t *capabilities;
+
+  /* Signaler for svn_ra_serf__context_run_wait(). */
+  svn_boolean_t done;
+
+  /* For temporary work only. */
+  apr_pool_t *pool;
+};
+
+
+/* This implements serf_bucket_headers_do_callback_fn_t.
+ * BATON is a 'struct capabilities_response_baton *'.
+ */
+static int
+capabilities_headers_iterator_callback(void *baton,
+                                       const char *key,
+                                       const char *val)
+{
+  struct capabilities_response_baton *crb = baton;
+
+  if (strcasecmp(key, "dav") == 0)
+    {
+      /* Each header may contain multiple values, separated by commas, e.g.:
+           DAV: version-control,checkout,working-resource
+           DAV: merge,baseline,activity,version-controlled-collection
+           DAV: http://subversion.tigris.org/xmlns/dav/svn/depth */
+      apr_array_header_t *vals = svn_cstring_split(val, ",", TRUE, crb->pool);
+
+      /* Right now we only have a few capabilities to detect, so just
+         seek for them directly.  This could be written slightly more
+         efficiently, but that wouldn't be worth it until we have many
+         more capabilities. */
+
+      if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_DEPTH, vals))
+        {
+          apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_DEPTH,
+                       APR_HASH_KEY_STRING, capability_yes);
+        }
+
+      if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO,
+                                      vals))
+        {
+          apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+                       APR_HASH_KEY_STRING, capability_yes);
+        }
+      if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS,
+                                      vals))
+        {
+          apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
+                       APR_HASH_KEY_STRING, capability_yes);
+        }
+    }
+
+  return 0;
+}
+
+
+/* This implements serf_response_handler_t.
+ * HANDLER_BATON is a 'struct capabilities_response_baton *'.
+ */
+static apr_status_t
+capabilities_response_handler(serf_request_t *request,
+                              serf_bucket_t *response,
+                              void *handler_baton,
+                              apr_pool_t *pool)
+{
+  struct capabilities_response_baton *crb = handler_baton;
+  serf_bucket_t *hdrs = serf_bucket_response_get_headers(response);
+
+  /* Start out assuming all capabilities are unsupported. */
+  apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_DEPTH,
+               APR_HASH_KEY_STRING, capability_no);
+  apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+               APR_HASH_KEY_STRING, capability_no);
+  apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
+               APR_HASH_KEY_STRING, capability_no);
+
+  /* Then see which ones we can discover. */
+  serf_bucket_headers_do(hdrs, capabilities_headers_iterator_callback, crb);
+
+  /* Bunch of exit conditions to set before we go. */
+  crb->done = TRUE;
+  serf_request_set_handler(request, svn_ra_serf__handle_discard_body, NULL);
+  return APR_SUCCESS;
+}
+
+
+/* Fill SERF_SESS->capabilities with the server's capabilities.  Use
+   POOL only for temporary allocation. */
+static svn_error_t *
+discover_capabilities(svn_ra_serf__session_t *serf_sess, apr_pool_t *pool)
+{
+  svn_ra_serf__handler_t *handler;
+  struct capabilities_response_baton crb;
+
+  crb.pool = pool;
+  crb.done = FALSE;
+  crb.capabilities = serf_sess->capabilities;
+
+  handler = apr_pcalloc(pool, sizeof(*handler));
+  handler->method = "OPTIONS";
+  handler->path = serf_sess->repos_url_str;
+  handler->body_buckets = NULL;
+  handler->response_handler = capabilities_response_handler;
+  handler->response_baton = &crb;
+  handler->session = serf_sess;
+  handler->conn = serf_sess->conns[0];
+
+  svn_ra_serf__request_create(handler);
+  return svn_ra_serf__context_run_wait(&(crb.done), serf_sess, pool);
+}
+
+
+svn_error_t *
+svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
+                            svn_boolean_t *has,
+                            const char *capability,
+                            apr_pool_t *pool)
+{
+  svn_ra_serf__session_t *serf_sess = ra_session->priv;
+
+  const char *cap_result = apr_hash_get(serf_sess->capabilities,
+                                        capability,
+                                        APR_HASH_KEY_STRING);
+
+  /* If any capability is unknown, they're all unknown, so ask. */
+  if (cap_result == NULL)
+    discover_capabilities(serf_sess, pool);
+
+  /* Try again, now that we've fetched the capabilities. */
+  cap_result = apr_hash_get(serf_sess->capabilities,
+                            capability, APR_HASH_KEY_STRING);
+
+  if (cap_result == capability_yes)
+    {
+      *has = TRUE;
+    }
+  else if (cap_result == capability_no)
+    {
+      *has = FALSE;
+    }
+  else if (cap_result == NULL)
+    {
+      return svn_error_createf
+        (SVN_ERR_RA_UNKNOWN_CAPABILITY, NULL,
+         _("Don't know anything about capability '%s'"), capability);
+    }
+  else  /* "can't happen" */
+    {
+      /* Well, let's hope it's a string. */
+      return svn_error_createf
+        (SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+         _("attempt to fetch capability '%s' resulted in '%s'"),
+         capability, cap_result);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
 static const svn_version_t *
 ra_serf_version(void)
 {
@@ -729,174 +900,6 @@ svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
       return svn_error_create(APR_EGENERAL, NULL,
                               _("The UUID property was not found on the "
                                 "resource or any of its parents"));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-/* The only two possible values for a capability. */
-static const char *capability_yes = "yes";
-static const char *capability_no = "no";
-
-
-/* Baton type for parsing capabilities out of "OPTIONS" response headers. */
-struct capabilities_response_baton
-{
-  /* This session's capabilities table. */
-  apr_hash_t *capabilities;
-
-  /* Signaler for svn_ra_serf__context_run_wait(). */
-  svn_boolean_t done;
-
-  /* For temporary work only. */
-  apr_pool_t *pool;
-};
-
-
-/* This implements serf_bucket_headers_do_callback_fn_t.
- * BATON is a 'struct capabilities_response_baton *'.
- */
-static int
-capabilities_headers_iterator_callback(void *baton,
-                                       const char *key,
-                                       const char *val)
-{
-  struct capabilities_response_baton *crb = baton;
-
-  if (strcasecmp(key, "dav") == 0)
-    {
-      /* Each header may contain multiple values, separated by commas, e.g.:
-           DAV: version-control,checkout,working-resource
-           DAV: merge,baseline,activity,version-controlled-collection
-           DAV: http://subversion.tigris.org/xmlns/dav/svn/depth */
-      apr_array_header_t *vals = svn_cstring_split(val, ",", TRUE, crb->pool);
-
-      /* Right now we only have a few capabilities to detect, so just
-         seek for them directly.  This could be written slightly more
-         efficiently, but that wouldn't be worth it until we have many
-         more capabilities. */
-
-      if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_DEPTH, vals))
-        {
-          apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_DEPTH,
-                       APR_HASH_KEY_STRING, capability_yes);
-        }
-
-      if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO,
-                                      vals))
-        {
-          apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
-                       APR_HASH_KEY_STRING, capability_yes);
-        }
-      if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS,
-                                      vals))
-        {
-          apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
-                       APR_HASH_KEY_STRING, capability_yes);
-        }
-    }
-
-  return 0;
-}
-
-
-/* This implements serf_response_handler_t.
- * HANDLER_BATON is a 'struct capabilities_response_baton *'.
- */
-static apr_status_t
-capabilities_response_handler(serf_request_t *request,
-                              serf_bucket_t *response,
-                              void *handler_baton,
-                              apr_pool_t *pool)
-{
-  struct capabilities_response_baton *crb = handler_baton;
-  serf_bucket_t *hdrs = serf_bucket_response_get_headers(response);
-
-  /* Start out assuming all capabilities are unsupported. */
-  apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_DEPTH,
-               APR_HASH_KEY_STRING, capability_no);
-  apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
-               APR_HASH_KEY_STRING, capability_no);
-  apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
-               APR_HASH_KEY_STRING, capability_no);
-
-  /* Then see which ones we can discover. */
-  serf_bucket_headers_do(hdrs, capabilities_headers_iterator_callback, crb);
-
-  /* Bunch of exit conditions to set before we go. */
-  crb->done = TRUE;
-  serf_request_set_handler(request, svn_ra_serf__handle_discard_body, NULL);
-  return APR_SUCCESS;
-}
-
-/* Fill SERF_SESS->capabilities with the server's capabilities.  Use
-   POOL only for temporary allocation. */
-static svn_error_t *
-discover_capabilities(svn_ra_serf__session_t *serf_sess, apr_pool_t *pool)
-{
-  svn_ra_serf__handler_t *handler;
-  struct capabilities_response_baton crb;
-
-  crb.pool = pool;
-  crb.done = FALSE;
-  crb.capabilities = serf_sess->capabilities;
-
-  handler = apr_pcalloc(pool, sizeof(*handler));
-  handler->method = "OPTIONS";
-  handler->path = serf_sess->repos_url_str;
-  handler->body_buckets = NULL;
-  handler->response_handler = capabilities_response_handler;
-  handler->response_baton = &crb;
-  handler->session = serf_sess;
-  handler->conn = serf_sess->conns[0];
-
-  svn_ra_serf__request_create(handler);
-  return svn_ra_serf__context_run_wait(&(crb.done), serf_sess, pool);
-}
-
-
-svn_error_t *
-svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
-                            svn_boolean_t *has,
-                            const char *capability,
-                            apr_pool_t *pool)
-{
-  svn_ra_serf__session_t *serf_sess = ra_session->priv;
-
-  const char *cap_result = apr_hash_get(serf_sess->capabilities,
-                                        capability,
-                                        APR_HASH_KEY_STRING);
-
-  /* If any capability is unknown, they're all unknown, so ask. */
-  if (cap_result == NULL)
-    discover_capabilities(serf_sess, pool);
-
-  /* Try again, now that we've fetched the capabilities. */
-  cap_result = apr_hash_get(serf_sess->capabilities,
-                            capability, APR_HASH_KEY_STRING);
-
-  if (cap_result == capability_yes)
-    {
-      *has = TRUE;
-    }
-  else if (cap_result == capability_no)
-    {
-      *has = FALSE;
-    }
-  else if (cap_result == NULL)
-    {
-      return svn_error_createf
-        (SVN_ERR_RA_UNKNOWN_CAPABILITY, NULL,
-         _("Don't know anything about capability '%s'"), capability);
-    }
-  else  /* "can't happen" */
-    {
-      /* Well, let's hope it's a string. */
-      return svn_error_createf
-        (SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-         _("attempt to fetch capability '%s' resulted in '%s'"),
-         capability, cap_result);
     }
 
   return SVN_NO_ERROR;
