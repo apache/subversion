@@ -1394,8 +1394,8 @@ svn_error_t *svn_fs_delete(svn_fs_root_t *root,
  * The copy will remember its source; use svn_fs_copied_from() to
  * access this information.
  *
- * @a to_root must be the root of a transaction; @a from_path must be the
- * root of a revision.  (Requiring @a from_path to be the root of a
+ * @a to_root must be the root of a transaction; @a from_root must be the
+ * root of a revision.  (Requiring @a from_root to be the root of a
  * revision makes the implementation trivial: there is no detectable
  * difference (modulo node revision ID's) between copying @a from and
  * simply adding a reference to it.  So the operation takes place in
