@@ -1,7 +1,5 @@
 /**
  * @copyright
- * mod_dav_svn.h: public header for the DAV/SVN Apache module
- *
  * ====================================================================
  * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
