@@ -803,7 +803,7 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
       /* Well, let's hope it's a string. */
       return svn_error_createf
         (SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-         _("attempt to fetch capability '%s' resulted in '%s'"),
+         _("Attempt to fetch capability '%s' resulted in '%s'"),
          capability, cap_result);
     }
 
