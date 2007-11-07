@@ -1715,9 +1715,9 @@ svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
                         apr_pool_t *pool)
 {
   struct edit_baton *eb;
+  void *inner_baton;
   svn_delta_editor_t *tree_editor;
-  const svn_delta_editor_t *ambient_editor;
-  void *ambient_baton;
+  const svn_delta_editor_t *inner_editor;
 
   eb = make_editor_baton(anchor, target, callbacks, callback_baton,
                          depth, ignore_ancestry, use_text_base,
@@ -1738,20 +1738,23 @@ svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
   tree_editor->close_file = close_file;
   tree_editor->close_edit = close_edit;
 
-  SVN_ERR(svn_wc__ambient_depth_filter_editor(&ambient_editor,
-                                              &ambient_baton,
-                                              tree_editor,
-                                              eb,
-                                              svn_wc_adm_access_path(anchor),
-                                              target,
-                                              anchor,
-                                              depth,
-                                              pool));
+  inner_editor = tree_editor;
+  inner_baton = eb;
+
+  if (depth == svn_depth_unknown)
+    SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
+                                                &inner_baton,
+                                                inner_editor,
+                                                inner_baton,
+                                                svn_wc_adm_access_path(anchor),
+                                                target,
+                                                anchor,
+                                                pool));
 
   SVN_ERR(svn_delta_get_cancellation_editor(cancel_func,
                                             cancel_baton,
-                                            ambient_editor,
-                                            ambient_baton,
+                                            inner_editor,
+                                            inner_baton,
                                             editor,
                                             edit_baton,
                                             pool));

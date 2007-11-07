@@ -275,9 +275,11 @@ svn_wc__walker_default_error_handler(const char *path,
                                      apr_pool_t *pool);
 
 /* Set *EDITOR and *EDIT_BATON to an ambient-depth-based filtering
- * editor that wraps WRAPPED_EDITOR and WRAPPED_BATON.  Only required
- * if REQUESTED_DEPTH is svn_depth_unknown and the editor driver
- * doesn't understand depth.
+ * editor that wraps WRAPPED_EDITOR and WRAPPED_BATON.  This is only
+ * required for operations where the requested depth is @c
+ * svn_depth_unknown and the server's editor driver doesn't understand
+ * depth.  It is safe for *EDITOR and *EDIT_BATON to start as
+ * WRAPPED_EDITOR and WRAPPED_BATON.
  *
  * ANCHOR, TARGET, and ADM_ACCESS are as in svn_wc_get_update_editor3.
  *
@@ -285,10 +287,7 @@ svn_wc__walker_default_error_handler(const char *path,
  * @c svn_depth_infinity, @c svn_depth_empty, @c svn_depth_files,
  * @c svn_depth_immediates, or @c svn_depth_unknown.
  *
- * If filtering is deemed unncessary (REQUESTED_DEPTH is not
- * svn_depth_unknown), *EDITOR and *EDIT_BATON will be set to
- * WRAPPED_EDITOR and WRAPPED_BATON, respectively; otherwise,
- * they'll be set to new objects allocated from POOL.
+ * Allocations are done in POOL.
  */
 svn_error_t *
 svn_wc__ambient_depth_filter_editor(const svn_delta_editor_t **editor,
@@ -298,7 +297,6 @@ svn_wc__ambient_depth_filter_editor(const svn_delta_editor_t **editor,
                                     const char *anchor,
                                     const char *target,
                                     svn_wc_adm_access_t *adm_access,
-                                    svn_depth_t requested_depth,
                                     apr_pool_t *pool);
 
 #ifdef __cplusplus
