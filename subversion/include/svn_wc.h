@@ -16,7 +16,7 @@
  * @endcopyright
  *
  * @file svn_wc.h
- * @brief The Subversion Working Copy Library
+ * @brief Subversion's working copy library
  *
  * Requires:
  *            - A working copy
