@@ -20,18 +20,6 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
     self.inspect_mergeinfo_dict(mergeinfo, self.MERGEINFO_SRC,
                                 self.MERGEINFO_NBR_REV_RANGES)
 
-  def test_mergeinfo_merge(self):
-    """Test svn_mergeinfo_merge()"""
-    mergeinfo1 = core.svn_mergeinfo_parse(self.TEXT_MERGEINFO1)
-    mergeinfo2 = core.svn_mergeinfo_parse(self.TEXT_MERGEINFO2)
-    mergeinfo3 = core.svn_mergeinfo_merge(mergeinfo1, mergeinfo2)
-    self.inspect_mergeinfo_dict(mergeinfo3, self.MERGEINFO_SRC,
-                                self.MERGEINFO_NBR_REV_RANGES)
-    
-  def test_mergeinfo_sort(self):
-    ### TODO: Implement me!
-    pass
-
   def test_rangelist_merge(self):
     mergeinfo1 = core.svn_mergeinfo_parse(self.TEXT_MERGEINFO1)
     mergeinfo2 = core.svn_mergeinfo_parse(self.TEXT_MERGEINFO2)
@@ -40,7 +28,19 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
     rangelist3 = core.svn_rangelist_merge(rangelist1, rangelist2)
     self.inspect_rangelist_tuple(rangelist3, 3)
 
+  def test_mergeinfo_merge(self):
+    """Test svn_mergeinfo_merge()"""
+    mergeinfo1 = core.svn_mergeinfo_parse(self.TEXT_MERGEINFO1)
+    mergeinfo2 = core.svn_mergeinfo_parse(self.TEXT_MERGEINFO2)
+    mergeinfo3 = core.svn_mergeinfo_merge(mergeinfo1, mergeinfo2)
+    self.inspect_mergeinfo_dict(mergeinfo3, self.MERGEINFO_SRC,
+                                self.MERGEINFO_NBR_REV_RANGES)
+    
   def test_rangelist_reverse(self):
+    ### TODO: Implement me!
+    pass
+
+  def test_mergeinfo_sort(self):
     ### TODO: Implement me!
     pass
 
