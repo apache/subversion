@@ -1342,7 +1342,7 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
 
       /* Get the file's properties for this revision and compute the diffs. */
       SVN_ERR(svn_fs_node_proplist(&props, root, path_rev->path, iter_pool));
-      SVN_ERR(svn_prop_diffs(&prop_diffs, props, last_props, pool));
+      SVN_ERR(svn_prop_diffs(&prop_diffs, props, last_props, iter_pool));
 
       /* Check if the contents changed. */
       /* Special case: In the first revision, we always provide a delta. */
