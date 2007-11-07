@@ -140,11 +140,31 @@ capabilities_response_handler(serf_request_t *request,
   return APR_SUCCESS;
 }
 
+/* Set up headers announcing the client's capabilities.
+   BATON and POOL are ignored. */
+static apr_status_t
+set_up_capabilities_headers(serf_bucket_t *headers,
+                            void *baton,
+                            apr_pool_t *pool)
+{
+  /* ### See comment at similar place in ../libsvn_ra_neon/util.c. ### */
+  serf_bucket_headers_set(headers, "X-SVN-Capabilities",
+                          SVN_DAV_PROP_NS_DAV_SVN_DEPTH);
+  serf_bucket_headers_set(headers, "X-SVN-Capabilities",
+                          SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO);
+  serf_bucket_headers_set(headers, "X-SVN-Capabilities",
+                          SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS);
 
-/* Fill SERF_SESS->capabilities with the server's capabilities.  Use
-   POOL only for temporary allocation. */
+  return APR_SUCCESS;
+}
+
+
+/* Exchange capabilities with the server, by sending an OPTIONS
+   request announcing the client's capabilities, and by filling
+   SERF_SESS->capabilities with the server's capabilities as read
+   from the response headers.  Use POOL only for temporary allocation. */
 static svn_error_t *
-discover_capabilities(svn_ra_serf__session_t *serf_sess, apr_pool_t *pool)
+exchange_capabilities(svn_ra_serf__session_t *serf_sess, apr_pool_t *pool)
 {
   svn_ra_serf__handler_t *handler;
   struct capabilities_response_baton crb;
@@ -153,12 +173,14 @@ discover_capabilities(svn_ra_serf__session_t *serf_sess, apr_pool_t *pool)
   crb.done = FALSE;
   crb.capabilities = serf_sess->capabilities;
 
+  /* No obvious advantage to using svn_ra_serf__create_options_req() here. */
   handler = apr_pcalloc(pool, sizeof(*handler));
   handler->method = "OPTIONS";
   handler->path = serf_sess->repos_url_str;
   handler->body_buckets = NULL;
   handler->response_handler = capabilities_response_handler;
   handler->response_baton = &crb;
+  handler->header_delegate = set_up_capabilities_headers;
   handler->session = serf_sess;
   handler->conn = serf_sess->conns[0];
 
@@ -181,7 +203,7 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
 
   /* If any capability is unknown, they're all unknown, so ask. */
   if (cap_result == NULL)
-    discover_capabilities(serf_sess, pool);
+    SVN_ERR(exchange_capabilities(serf_sess, pool));
 
   /* Try again, now that we've fetched the capabilities. */
   cap_result = apr_hash_get(serf_sess->capabilities,
@@ -362,6 +384,8 @@ svn_ra_serf__open(svn_ra_session_t *session,
   serf_sess->num_conns = 1;
 
   session->priv = serf_sess;
+
+  SVN_ERR(exchange_capabilities(serf_sess, pool));
 
   return SVN_NO_ERROR;
 }

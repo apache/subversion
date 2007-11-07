@@ -699,15 +699,50 @@ parse_capabilities(ne_request *req,
 }
 
 
-/* Fill RAS->capabilities with the server's capabilities.  Use
-   POOL only for temporary allocation. */
+/* Exchange capabilities with the server, by sending an OPTIONS
+   request announcing the client's capabilities, and by filling
+   RAS->capabilities with the server's capabilities as read from the
+   response headers.  Use POOL only for temporary allocation. */
 static svn_error_t *
-discover_capabilities(svn_ra_neon__session_t *ras, apr_pool_t *pool)
+exchange_capabilities(svn_ra_neon__session_t *ras, apr_pool_t *pool)
 {
   int http_ret_code;
   svn_ra_neon__request_t *rar;
 
   rar = svn_ra_neon__request_create(ras, "OPTIONS", ras->url->data, pool);
+
+  /*
+    ### TODO: 
+    ###
+    ### I think http://tools.ietf.org/html/rfc2774#section-3 probably
+    ### says how to define a new header with which the client can
+    ### express capabilities.  But I haven't finished reading it yet,
+    ### and in the meantime I'd like to get this code working, so I'm
+    ### just going with...
+    ###
+    ###    X-SVN-Capabilities: 
+    ###
+    ### ...for now, despite having no reason to believe the namespace
+    ### constraints for HTTP are anything like those of RFC 822 4.1,
+    ### where you just put "X-" on the front and then you're home free
+    ### (or at least you're only sharing namespace with all the other
+    ### bozos on the Internet).
+    ###
+    ### The header's value is a comma-separated list of capabilities;
+    ### if the header appears multiple times, its values are to be
+    ### concatenated in order as per RFC-2616, 14.43.
+    ###
+    ### NOTE: The ../libsvn_ra_serf code sets this header too, and has
+    ### shadow comments pointing back this one.  Whatever we do here,
+    ### we should do there as well.
+  */
+  ne_add_request_header(rar->ne_req, "X-SVN-Capabilities",
+                        SVN_DAV_PROP_NS_DAV_SVN_DEPTH);
+  ne_add_request_header(rar->ne_req, "X-SVN-Capabilities",
+                        SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO);
+  ne_add_request_header(rar->ne_req, "X-SVN-Capabilities",
+                        SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS);
+
   SVN_ERR(svn_ra_neon__request_dispatch(&http_ret_code, rar,
                                         NULL, NULL, 200, 0, pool));
 
@@ -742,7 +777,7 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
 
   /* If any capability is unknown, they're all unknown, so ask. */
   if (cap_result == NULL)
-    discover_capabilities(ras, pool);
+    SVN_ERR(exchange_capabilities(ras, pool));
 
 
   /* Try again, now that we've fetched the capabilities. */
@@ -1027,6 +1062,8 @@ svn_ra_neon__open(svn_ra_session_t *session,
   ne_set_progress(sess, ra_neon_neonprogress, neonprogress_baton);
   ne_set_progress(sess2, ra_neon_neonprogress, neonprogress_baton);
   session->priv = ras;
+
+  SVN_ERR(exchange_capabilities(ras, pool));
 
   return SVN_NO_ERROR;
 }
