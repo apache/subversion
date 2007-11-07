@@ -340,7 +340,7 @@ const char *svn_repos_post_revprop_change_hook(svn_repos_t *repos,
                                                apr_pool_t *pool);
 
 
-/** @defgroup svn_repos_lock_hooks paths to lock hooks
+/** @defgroup svn_repos_lock_hooks Paths to lock hooks
  * @{
  * @since New in 1.2. */
 
@@ -1390,7 +1390,7 @@ svn_error_t *svn_repos_get_file_revs(svn_repos_t *repos,
 /* ---------------------------------------------------------------*/
 
 /**
- * @defgroup svn_repos_hook_wrappers Hook-sensitive wrappers for libsvn_fs
+ * @defgroup svn_repos_hook_wrappers Hook-sensitive wrappers for libsvn_fs \
  * routines.
  * @{
  */
@@ -1467,7 +1467,7 @@ svn_error_t *svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
                                                apr_pool_t *pool);
 
 
-/** @defgroup svn_repos_fs_locks repository lock wrappers
+/** @defgroup svn_repos_fs_locks Repository lock wrappers
  * @{
  * @since New in 1.2. */
 

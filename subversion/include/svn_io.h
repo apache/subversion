@@ -516,7 +516,7 @@ svn_error_t *svn_io_dir_file_copy(const char *src_path,
 
 /** Generic byte-streams
  *
- * @defgroup svn_io_byte_streams generic byte streams
+ * @defgroup svn_io_byte_streams Generic byte streams
  * @{
  */
 
@@ -1215,7 +1215,7 @@ svn_io_dir_read(apr_finfo_t *finfo,
 
 /** Version/format files.
  *
- * @defgroup svn_io_format_files version/format files
+ * @defgroup svn_io_format_files Version/format files
  * @{
  */
 

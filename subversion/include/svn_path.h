@@ -449,7 +449,7 @@ svn_error_t *svn_path_check_valid(const char *path, apr_pool_t *pool);
 
 /** URI/URL stuff
  *
- * @defgroup svn_path_uri_stuff URI/URL stuff
+ * @defgroup svn_path_uri_stuff URI/URL conversion
  * @{
  */
 
@@ -503,7 +503,7 @@ const char *svn_path_uri_autoescape(const char *uri,
 
 /** Charset conversion stuff
  *
- * @defgroup svn_path_charset_stuff Charset conversion stuff
+ * @defgroup svn_path_charset_stuff Charset conversion
  * @{
  */
 

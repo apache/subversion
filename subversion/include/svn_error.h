@@ -73,7 +73,7 @@ const char *svn_err_best_message(svn_error_t *err,
 
 /** SVN error creation and destruction.
  *
- * @defgroup svn_error_error_creation_destroy error creation and destruction
+ * @defgroup svn_error_error_creation_destroy Error creation and destruction
  * @{
  */
 

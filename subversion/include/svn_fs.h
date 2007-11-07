@@ -44,6 +44,10 @@ extern "C" {
  */
 const svn_version_t *svn_fs_version(void);
 
+/**
+ * @defgroup fs_handling Filesystem interaction subsystem
+ * @{
+ */
 
 /* Opening and creating filesystems.  */
 
@@ -279,7 +283,7 @@ svn_error_t *svn_fs_recover(const char *path,
  *
  * The following functions are specific to Berkeley DB filesystems.
  *
- * @defgroup svn_fs_bdb berkeley db filesystems
+ * @defgroup svn_fs_bdb Berkeley DB filesystems
  * @{
  */
 
@@ -340,7 +344,7 @@ svn_error_t *svn_fs_berkeley_logfiles(apr_array_header_t **logfiles,
  * generic counterparts (with the exception of recover, which only gained
  * a generic counterpart in 1.5).
  *
- * @defgroup svn_fs_bdb_deprecated berkeley db filesystem compatibility
+ * @defgroup svn_fs_bdb_deprecated Berkeley DB filesystem compatibility
  * @{
  */
 
@@ -386,7 +390,7 @@ svn_error_t *svn_fs_berkeley_recover(const char *path,
  * Whenever a filesystem function requires information, it can pull
  * things out of the context as needed.
  *
- * @defgroup svn_fs_access_ctx filesystem access contexts
+ * @defgroup svn_fs_access_ctx Filesystem access contexts
  * @{
  */
 
@@ -465,7 +469,7 @@ svn_error_t *svn_fs_access_add_lock_token(svn_fs_access_t *access_ctx,
  * the filesystem.  Instead, we just remove the reference to the node
  * from the directory.
  *
- * @defgroup svn_fs_nodes filesystem nodes
+ * @defgroup svn_fs_nodes Filesystem nodes
  * @{
  */
 
@@ -600,7 +604,7 @@ svn_string_t *svn_fs_unparse_id(const svn_fs_id_t *id,
  * microseconds since 00:00:00 January 1, 1970 UTC.  So it is
  * extremely unlikely that a transaction name will be reused.
  *
- * @defgroup svn_fs_txns filesystem transactions
+ * @defgroup svn_fs_txns Filesystem transactions
  * @{
  */
 
@@ -813,7 +817,7 @@ svn_error_t *svn_fs_change_txn_props(svn_fs_txn_t *txn,
  * revision or transaction in a filesystem.  To refer to particular
  * node, you provide a root, and a directory path relative that root.
  *
- * @defgroup svn_fs_roots filesystem roots
+ * @defgroup svn_fs_roots Filesystem roots
  * @{
  */
 
@@ -900,7 +904,7 @@ svn_revnum_t svn_fs_revision_root_revision(svn_fs_root_t *root);
  * A path consisting of the empty string, or a string containing only
  * slashes, refers to the root directory.
  *
- * @defgroup svn_fs_directories filesystem directories
+ * @defgroup svn_fs_directories Filesystem directories
  * @{
  */
 
@@ -1714,7 +1718,7 @@ svn_error_t *svn_fs_set_uuid(svn_fs_t *fs,
 
 
 
-/** @defgroup svn_fs_locks filesystem locks
+/** @defgroup svn_fs_locks Filesystem locks
  * @{
  * @since New in 1.2. */
 
@@ -1873,6 +1877,8 @@ svn_error_t *svn_fs_get_locks(svn_fs_t *fs,
  */
 svn_error_t *svn_fs_print_modules(svn_stringbuf_t *output,
                                   apr_pool_t *pool);
+
+/** @} */
 
 #ifdef __cplusplus
 }
