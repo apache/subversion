@@ -268,7 +268,32 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
               return SVN_NO_ERROR;
             }
 
-          SVN_ERR(launch_resolver(NULL, desc, b, pool));
+          err = svn_cl__merge_file_externally(desc->base_file,
+                                              desc->their_file,
+                                              desc->my_file,
+                                              desc->merged_file,
+                                              b->config,
+                                              pool);
+          if (err && err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL)
+            {
+              SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
+                                          err->message ? err->message :
+                                          _("No merge tool found,"
+                                            " leaving all conflicts.")));
+              svn_error_clear(err);
+              b->external_failed = TRUE;
+            }
+          else if (err && err->apr_err == SVN_ERR_EXTERNAL_PROGRAM)
+            {
+              SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
+                                          err->message ? err->message :
+                                          _("Error running merge tool"
+                                            " leaving all conflicts.")));
+              svn_error_clear(err);
+              b->external_failed = TRUE;
+            }
+          else if (err)
+            return err;
 
           (*result)->choice = svn_wc_conflict_choose_merged;
           return SVN_NO_ERROR;
