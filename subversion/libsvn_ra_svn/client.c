@@ -2161,29 +2161,17 @@ static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
 
   *has = FALSE;
 
-  if (strcmp(capability, SVN_RA_CAPABILITY_DEPTH) == 0
-      && svn_ra_svn_has_capability(sess->conn,
-                                   SVN_RA_SVN_CAP_DEPTH))
-    {
-      *has = TRUE;
-    }
-  else if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0
-           && svn_ra_svn_has_capability(sess->conn,
-                                        SVN_RA_SVN_CAP_MERGEINFO))
-    {
-      *has = TRUE;
-    }
-  else if (strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0
-           && svn_ra_svn_has_capability(sess->conn,
-                                        SVN_RA_SVN_CAP_LOG_REVPROPS))
-    {
-      *has = TRUE;
-    }
+  if (strcmp(capability, SVN_RA_CAPABILITY_DEPTH) == 0)
+    *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_DEPTH);
+  else if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
+    *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_MERGEINFO);
+  else if (strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0)
+    *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_LOG_REVPROPS);
   else  /* Don't know any other capabilities, so error. */
     {
-        return svn_error_createf
-          (SVN_ERR_RA_UNKNOWN_CAPABILITY, NULL,
-           _("Don't know anything about capability '%s'"), capability);
+      return svn_error_createf
+        (SVN_ERR_RA_UNKNOWN_CAPABILITY, NULL,
+         _("Don't know anything about capability '%s'"), capability);
     }
 
   return SVN_NO_ERROR;
