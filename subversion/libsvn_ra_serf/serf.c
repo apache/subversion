@@ -99,6 +99,7 @@ capabilities_headers_iterator_callback(void *baton,
           apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
                        APR_HASH_KEY_STRING, capability_yes);
         }
+
       if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS,
                                       vals))
         {
@@ -228,7 +229,7 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
       /* Well, let's hope it's a string. */
       return svn_error_createf
         (SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-         _("attempt to fetch capability '%s' resulted in '%s'"),
+         _("Attempt to fetch capability '%s' resulted in '%s'"),
          capability, cap_result);
     }
 
