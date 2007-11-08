@@ -86,9 +86,7 @@ get_implied_mergeinfo(svn_ra_session_t *ra_session,
                       apr_pool_t *pool)
 {
   const char *session_url, *url, *mergeinfo_path;
-  svn_revnum_t oldest_rev;
-  svn_merge_range_t *range;
-  apr_array_header_t *rangelist;
+  svn_opt_revision_t peg_revision;
 
   /* Translate PATH (which is relative to the session) to a full URL. */
   SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, pool));
@@ -98,23 +96,22 @@ get_implied_mergeinfo(svn_ra_session_t *ra_session,
   SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path, url, NULL,
                                             TRUE, ra_session, NULL, pool));
 
-  /* Fetch the oldest revision at which PATH@REV appears. */
-  SVN_ERR(svn_client__oldest_rev_at_path(&oldest_rev, ra_session, path,
-                                         rev, pool));
-  if (oldest_rev == SVN_INVALID_REVNUM)
-    return SVN_NO_ERROR;
- 
-  /* Create a single-item merge range, and associate it with our
-     MERGEINFO_PATH.  */
-  range = apr_palloc(pool, sizeof(*range));
-  range->start = oldest_rev - 1;
-  range->end = rev;
-  range->inheritable = TRUE;
-  rangelist = apr_array_make(pool, 1, sizeof(range));
-  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
-  *implied_mergeinfo = apr_hash_make(pool);
-  apr_hash_set(*implied_mergeinfo, mergeinfo_path, 
-               APR_HASH_KEY_STRING, rangelist);
+  /* If our final URL doesn't match our session's URL, temporary
+     reparent the session to our URL. */
+  if (strcmp(url, session_url) != 0)
+    SVN_ERR(svn_ra_reparent(ra_session, url, pool));
+
+  /* Fetch the implicit mergeinfo. */
+  peg_revision.kind = svn_opt_revision_number;
+  peg_revision.value.number = rev;
+  SVN_ERR(svn_client__get_implicit_mergeinfo(implied_mergeinfo, url,
+                                             &peg_revision, ra_session,
+                                             NULL, ctx, pool));
+
+  /* If we reparented RA_SESSION above, point it back where it was
+     when we were called. */
+  if (strcmp(url, session_url) != 0)
+    SVN_ERR(svn_ra_reparent(ra_session, session_url, pool));
 
   return SVN_NO_ERROR;
 }
