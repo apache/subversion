@@ -48,8 +48,18 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
                         "Unexpected range end: %d" % reversed[i].end)
 
   def test_mergeinfo_sort(self):
-    ### TODO: Implement me!
-    pass
+    mergeinfo = core.svn_mergeinfo_parse(self.TEXT_MERGEINFO1)
+
+    # Swap the order of a revision range to misorder the contents of a
+    # rangelist.
+    rangelist = mergeinfo.get(self.MERGEINFO_SRC)
+    rev_range = rangelist[0]
+    rangelist[0] = rangelist[1]
+    rangelist[1] = rev_range
+
+    mergeinfo = core.svn_mergeinfo_sort(mergeinfo)
+    self.inspect_mergeinfo_dict(mergeinfo, self.MERGEINFO_SRC,
+                                self.MERGEINFO_NBR_REV_RANGES)
 
   def inspect_mergeinfo_dict(self, mergeinfo, merge_source, nbr_rev_ranges):
     rangelist = mergeinfo.get(merge_source)
