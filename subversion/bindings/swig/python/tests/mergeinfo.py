@@ -50,8 +50,8 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
   def test_mergeinfo_sort(self):
     mergeinfo = core.svn_mergeinfo_parse(self.TEXT_MERGEINFO1)
 
-    # Swap the order of a revision range to misorder the contents of a
-    # rangelist.
+    # Swap the order of two revision ranges to misorder the contents
+    # of a rangelist.
     rangelist = mergeinfo.get(self.MERGEINFO_SRC)
     rev_range = rangelist[0]
     rangelist[0] = rangelist[1]
