@@ -843,7 +843,7 @@ typedef enum
   svn_rangelist_equal_inheritance,
 
   /* Inheritability of both ranges must be @c TRUE. */
-  svn_rangelist_only_inheritable,
+  svn_rangelist_only_inheritable
 } svn_merge_range_inheritance_t;
 
 /**
