@@ -60,16 +60,11 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
                  "Rangelist for '%s' not parsed" % self.MERGEINFO_SRC)
     self.assertEquals(len(rangelist), nbr_rev_ranges,
                       "Wrong number of revision ranges parsed")
-    if False:
-      print '-' * 8
-      print rangelist[0].start
-      print rangelist[0].end
-      print rangelist[0].inheritable
-      print '-' * 8
     self.assertEquals(rangelist[0].inheritable, True,
-                      "Unxpected revision range 'non-inheritable' flag")
-    self.assertEquals(rangelist[1].end, 27,
-                      "Unxpected revision range end")
+                      "Unexpected revision range 'non-inheritable' flag: %s" %
+                      rangelist[0].inheritable)
+    self.assertEquals(rangelist[1].start, 26,
+                      "Unexpected revision range end: %d" % rangelist[1].start)
     self.assertEquals(rangelist[2].inheritable, False,
                       "Missing revision range 'non-inheritable' flag")
 
