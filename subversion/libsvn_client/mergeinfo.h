@@ -127,6 +127,21 @@ svn_client__get_wc_or_repos_mergeinfo(apr_hash_t **target_mergeinfo,
                                       svn_client_ctx_t *ctx,
                                       apr_pool_t *pool);
 
+/* Set *MERGEINFO_P to a hash of mergeinfo constructed solely from the
+   natural history of PATH_OR_URL@PEG_REVISION.  RA_SESSION is an RA
+   session whose session URL maps to PATH_OR_URL's URL, or NULL.
+   ADM_ACCESS is a working copy administrative access baton which can
+   be used to fetch information about PATH_OR_URL (if PATH_OR_URL is a
+   working copy path), or NULL.  */
+svn_error_t *
+svn_client__get_implicit_mergeinfo(apr_hash_t **mergeinfo_p,
+                                   const char *path_or_url,
+                                   const svn_opt_revision_t *peg_revision,
+                                   svn_ra_session_t *ra_session,
+                                   svn_wc_adm_access_t *adm_access,
+                                   svn_client_ctx_t *ctx,
+                                   apr_pool_t *pool);
+
 /* Parse any mergeinfo from the WCPATH's ENTRY and store it in
    MERGEINFO.  If PRISTINE is true parse the pristine mergeinfo,
    working otherwise. If no record of any mergeinfo exists, set
