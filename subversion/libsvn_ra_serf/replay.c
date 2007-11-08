@@ -570,16 +570,16 @@ create_replay_body(void *baton,
   serf_bucket_aggregate_append(body_bkt, tmp);
 
   svn_ra_serf__add_tag_buckets(body_bkt,
-                               "S:revision", apr_ltoa(pool, ctx->revision),
+                               "S:revision", apr_ltoa(ctx->pool, ctx->revision),
                                alloc);
   svn_ra_serf__add_tag_buckets(body_bkt,
                                "S:low-water-mark",
-                               apr_ltoa(pool, ctx->low_water_mark),
+                               apr_ltoa(ctx->pool, ctx->low_water_mark),
                                alloc);
 
   svn_ra_serf__add_tag_buckets(body_bkt,
                                "S:send-deltas",
-                               apr_ltoa(pool, ctx->send_deltas),
+                               apr_ltoa(ctx->pool, ctx->send_deltas),
                                alloc);
 
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:replay-report>",
@@ -683,9 +683,10 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           svn_ra_serf__propfind_context_t *prop_ctx = NULL;
           svn_ra_serf__handler_t *handler;
           svn_ra_serf__xml_parser_t *parser_ctx;
+          apr_pool_t *ctx_pool = svn_pool_create(pool);
 
-          replay_ctx = apr_pcalloc(pool, sizeof(*replay_ctx));
-          replay_ctx->pool = pool;
+          replay_ctx = apr_pcalloc(ctx_pool, sizeof(*replay_ctx));
+          replay_ctx->pool = ctx_pool;
           replay_ctx->revstart_func = revstart_func;
           replay_ctx->revfinish_func = revfinish_func;
           replay_ctx->replay_baton = replay_baton;
@@ -693,18 +694,18 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           replay_ctx->revision = rev;
           replay_ctx->low_water_mark = low_water_mark;
           replay_ctx->send_deltas = send_deltas;
-
+          replay_ctx->done_item.data = replay_ctx;
           /* Request all properties of a certain revision. */
           replay_ctx->vcc_url = vcc_url;
-          replay_ctx->revs_props = apr_hash_make(pool);
+          replay_ctx->revs_props = apr_hash_make(replay_ctx->pool);
           SVN_ERR(svn_ra_serf__deliver_props(&prop_ctx, 
                                              replay_ctx->revs_props, session,
                                              session->conns[0], vcc_url,
                                              rev,  "0", all_props,
-                                             TRUE, NULL, pool));
+                                             TRUE, NULL, replay_ctx->pool));
 
           /* Send the replay report request. */
-          handler = apr_pcalloc(pool, sizeof(*handler));
+          handler = apr_pcalloc(replay_ctx->pool, sizeof(*handler));
 
           handler->method = "REPORT";
           handler->path = session->repos_url_str;
@@ -713,7 +714,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           handler->conn = session->conns[0];
           handler->session = session;
 
-          parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
+          parser_ctx = apr_pcalloc(replay_ctx->pool, sizeof(*parser_ctx));
 
           /* Setup the XML parser context.
              Because we have not one but a list of requests, the 'done' property
@@ -722,7 +723,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
              done_item to done_list, so by keeping track of the state of 
              done_list we know how many requests have been handled completely. 
           */
-          parser_ctx->pool = pool;
+          parser_ctx->pool = replay_ctx->pool;
           parser_ctx->user_data = replay_ctx;
           parser_ctx->start = start_replay;
           parser_ctx->end = end_replay;
@@ -754,11 +755,14 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
         }
 
       /* Substract the number of completely handled responses from our 
-         total nr. of open requests', so we'll know when to stop this loop. */
+         total nr. of open requests', so we'll know when to stop this loop.
+         Since the message is completely handled, we can destroy its pool. */
       done_list = done_reports;
       while (done_list)
         {
+          replay_context_t *ctx = (replay_context_t *)done_list->data;
           done_list = done_list->next;
+          svn_pool_destroy(ctx->pool);
           active_reports--;
         }
       done_reports = NULL;
