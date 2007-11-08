@@ -83,6 +83,7 @@ summarize_xml(const svn_client_diff_summarize_t *summary,
   /* Full path to the object being diffed.  This is created by taking the
    * baton, and appending the target's relative path. */
   const char *path = baton;
+  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
 
   /* Tack on the target path, so we can differentiate between different parts
    * of the output when we're given multiple targets. */
@@ -91,8 +92,6 @@ summarize_xml(const svn_client_diff_summarize_t *summary,
   /* Convert non-urls to local style, so that things like "" show up as "." */
   if (! svn_path_is_url(path))
     path = svn_path_local_style(path, pool);
-
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
 
   svn_xml_make_open_tag(&sb, pool, svn_xml_protect_pcdata, "path",
                         "kind", svn_cl__node_kind_str(summary->node_kind),
