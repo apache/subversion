@@ -908,7 +908,39 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
   for (i = 0; i < input_targets->nelts; i++)
     {
       const char *utf8_target = APR_ARRAY_IDX(input_targets, i, const char *);
+      const char *peg_start = NULL; /* pointer to the peg revision, if any */
       const char *target;      /* after all processing is finished */
+      int j;
+
+      /* Remove a peg revision, if any, in the target so that it can
+         be properly canonicalized, otherwise the canonicalization
+         does not treat a ".@BASE" as a "." with a BASE peg revision,
+         and it is not canonicalized to "@BASE".  If any peg revision
+         exists, it is appended to the final canonicalized path or
+         URL.  Do not use svn_opt_parse_path() because the resulting
+         peg revision is a structure that would have to be converted
+         back into a string.  Converting from a string date to the
+         apr_time_t field in the svn_opt_revision_value_t and back to
+         a string would not necessarily preserve the exact bytes of
+         the input date, so its easier just to keep it in string
+         form. */
+      for (j = (strlen(utf8_target) - 1); j >= 0; --j)
+        {
+          /* If we hit a path separator, stop looking.  This is OK
+              only because our revision specifiers can't contain
+              '/'. */
+          if (utf8_target[j] == '/')
+            break;
+          if (utf8_target[j] == '@')
+            {
+              peg_start = utf8_target + j;
+              break;
+            }
+        }
+      if (peg_start)
+        utf8_target = apr_pstrmemdup(pool,
+                                     utf8_target,
+                                     peg_start - utf8_target);
 
       /* URLs and wc-paths get treated differently. */
       if (svn_path_is_url(utf8_target))
@@ -980,6 +1012,11 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
               || 0 == strcmp(base_name, "_svn"))
             continue;
         }
+
+      /* Append the peg revision back to the canonicalized target if
+         there was a peg revision. */
+      if (peg_start)
+        target = apr_pstrcat(pool, target, peg_start, NULL);
 
       APR_ARRAY_PUSH(output_targets, const char *) = target;
     }
