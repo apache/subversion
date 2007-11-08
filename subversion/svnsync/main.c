@@ -438,13 +438,16 @@ filter_props(int *filtered_count, apr_hash_t *props,
  * All allocations will be done in a subpool of POOL.
  */
 static svn_error_t *
-write_revprops(svn_ra_session_t *session,
+write_revprops(int *filtered_count, 
+               svn_ra_session_t *session,
                svn_revnum_t rev,
                apr_hash_t *rev_props,
                apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_hash_index_t *hi;
+
+  *filtered_count = 0;
 
   for (hi = apr_hash_first(pool, rev_props); hi; hi = apr_hash_next(hi))
     {
@@ -453,10 +456,38 @@ write_revprops(svn_ra_session_t *session,
 
       svn_pool_clear(subpool);
       apr_hash_this(hi, &key, NULL, &val);
-      SVN_ERR(svn_ra_change_rev_prop(session, rev, key, val, subpool));
+
+      if (strncmp(key, SVNSYNC_PROP_PREFIX, 
+                  sizeof(SVNSYNC_PROP_PREFIX) - 1) != 0)
+        {
+          SVN_ERR(svn_ra_change_rev_prop(session, rev, key, val, subpool));
+        }
+      else
+        {
+          *filtered_count += 1;
+        }
     }
 
   svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+log_properties_copied(svn_boolean_t syncprops_found, 
+                      svn_revnum_t rev,
+                      apr_pool_t *pool)
+{
+  if (syncprops_found)
+    SVN_ERR(svn_cmdline_printf(pool,
+                               _("Copied properties for revision %ld "
+                                 "(%s* properties skipped).\n"),
+                               rev, SVNSYNC_PROP_PREFIX));
+  else
+    SVN_ERR(svn_cmdline_printf(pool,
+                               _("Copied properties for revision %ld.\n"),
+                               rev));
 
   return SVN_NO_ERROR;
 }
@@ -478,9 +509,8 @@ copy_revprops(svn_ra_session_t *from_session,
               apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
-  apr_hash_t *existing_props;
-  apr_hash_t *rev_props, *filtered;
-  int svnsync_prop_count = 0;
+  apr_hash_t *existing_props, *rev_props;
+  int filtered_count = 0;
 
   /* Get the list of revision properties on REV of TARGET. We're only interested
      in the property names, but we'll get the values 'for free'. */
@@ -491,11 +521,7 @@ copy_revprops(svn_ra_session_t *from_session,
   SVN_ERR(svn_ra_rev_proplist(from_session, rev, &rev_props, subpool));
 
   /* Copy all but the svn:svnsync properties. */
-  filtered = filter_props(&svnsync_prop_count, rev_props, 
-                          NULL, SVNSYNC_PROP_PREFIX, 
-                          subpool);
-
-  SVN_ERR(write_revprops(to_session, rev, filtered, pool));
+  SVN_ERR(write_revprops(&filtered_count, to_session, rev, rev_props, pool));
 
   /* Delete those properties that were in TARGET but not in SOURCE */
   if (sync)
@@ -503,18 +529,8 @@ copy_revprops(svn_ra_session_t *from_session,
                                        rev_props, existing_props, pool));
 
   if (! quiet)
-    {
-      if (svnsync_prop_count > 0)
-        SVN_ERR(svn_cmdline_printf(subpool,
-                                   _("Copied properties for revision %ld "
-                                     "(%s* properties skipped).\n"),
-                                   rev, SVNSYNC_PROP_PREFIX));
-      else
-        SVN_ERR(svn_cmdline_printf(subpool,
-                                   _("Copied properties for revision %ld.\n"),
-                                   rev));
-    }
-
+    SVN_ERR(log_properties_copied(filtered_count > 0, rev, pool));
+    
   svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
@@ -1236,9 +1252,10 @@ replay_rev_finished(svn_revnum_t revision,
   /* Ok, we're done with the data, now we just need to copy the remaining 
      'svn:' revprops (but not 'svn:sync:') and we're all set. */
   filtered = filter_props(&filtered_count, rev_props, 
-                          SVN_PROP_PREFIX, SVNSYNC_PROP_PREFIX, 
+                          SVN_PROP_PREFIX, NULL, 
                           pool);
-  SVN_ERR(write_revprops(rb->to_session, revision, filtered, pool));
+  SVN_ERR(write_revprops(&filtered_count, rb->to_session, revision, filtered, 
+                         pool));
 
   svn_pool_clear(subpool);
 
@@ -1263,6 +1280,11 @@ replay_rev_finished(svn_revnum_t revision,
   SVN_ERR(svn_ra_change_rev_prop(rb->to_session, 0,
                                  SVNSYNC_PROP_CURRENTLY_COPYING,
                                  NULL, subpool));
+
+  /* Notify the user that we copied revision properties. */
+
+  if (! rb->sb->quiet)
+    SVN_ERR(log_properties_copied(filtered_count > 0, revision, subpool));
 
   svn_pool_destroy(subpool);
 
