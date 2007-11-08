@@ -257,7 +257,7 @@ typedef enum
      in any files or subdirectories not already present; those
      subdirectories' this_dir entries will have depth-infinity.
      Equivalent to the pre-1.5 default update behavior. */
-  svn_depth_infinity   =  3,
+  svn_depth_infinity   =  3
 
 } svn_depth_t;
 

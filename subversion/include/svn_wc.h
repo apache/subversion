@@ -1052,7 +1052,7 @@ typedef enum svn_wc_conflict_reason_t
 typedef enum svn_wc_conflict_kind_t
 {
   svn_wc_conflict_kind_text,         /* textual conflict (on a file) */
-  svn_wc_conflict_kind_property,     /* property conflict (on a file or dir) */
+  svn_wc_conflict_kind_property      /* property conflict (on a file or dir) */
 
   /* ### Add future kinds here that represent "tree" conflicts. */
 
@@ -1137,7 +1137,7 @@ typedef enum svn_wc_conflict_choice_t
   svn_wc_conflict_choose_base,   /* user chooses the original version */
   svn_wc_conflict_choose_theirs, /* user chooses incoming version */
   svn_wc_conflict_choose_mine,   /* user chooses his/her own version */
-  svn_wc_conflict_choose_merged, /* user chooses the merged version */
+  svn_wc_conflict_choose_merged  /* user chooses the merged version */
 
 } svn_wc_conflict_choice_t;
 
