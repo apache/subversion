@@ -1,5 +1,5 @@
 /*
- * getlocationsegments.c :  entry point for get_location_segments 
+ * getlocationsegments.c :  entry point for get_location_segments
  *                          RA functions for ra_serf
  *
  * ====================================================================
@@ -67,7 +67,7 @@ start_gls(svn_ra_serf__xml_parser_t *parser,
     {
       gls_ctx->inside_report = TRUE;
     }
-  else if (gls_ctx->inside_report 
+  else if (gls_ctx->inside_report
            && strcmp(name.name, "location-segment") == 0)
     {
       const char *rev_str;
@@ -85,13 +85,13 @@ start_gls(svn_ra_serf__xml_parser_t *parser,
 
       if (SVN_IS_VALID_REVNUM(range_start) && SVN_IS_VALID_REVNUM(range_end))
         {
-          svn_location_segment_t *segment = apr_pcalloc(gls_ctx->subpool, 
+          svn_location_segment_t *segment = apr_pcalloc(gls_ctx->subpool,
                                                         sizeof(*segment));
           segment->path = path;
           segment->range_start = range_start;
           segment->range_end = range_end;
-          SVN_ERR(gls_ctx->receiver(segment, 
-                                    gls_ctx->receiver_baton, 
+          SVN_ERR(gls_ctx->receiver(segment,
+                                    gls_ctx->receiver_baton,
                                     gls_ctx->subpool));
           svn_pool_clear(gls_ctx->subpool);
         }
@@ -167,17 +167,17 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
                                session->bkt_alloc);
 
   svn_ra_serf__add_tag_buckets(buckets,
-                               "S:peg-revision", 
+                               "S:peg-revision",
                                apr_ltoa(pool, peg_revision),
                                session->bkt_alloc);
 
   svn_ra_serf__add_tag_buckets(buckets,
-                               "S:start-revision", 
+                               "S:start-revision",
                                apr_ltoa(pool, start_rev),
                                session->bkt_alloc);
 
   svn_ra_serf__add_tag_buckets(buckets,
-                               "S:end-revision", 
+                               "S:end-revision",
                                apr_ltoa(pool, end_rev),
                                session->bkt_alloc);
 
@@ -186,7 +186,7 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
                                       session->bkt_alloc);
   serf_bucket_aggregate_append(buckets, tmp);
 
-  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, 
+  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
                                          session, NULL, peg_revision, pool));
 
   req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);
@@ -219,13 +219,15 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   if (gls_ctx->error || parser_ctx->error)
     {
       svn_error_clear(err);
+      err = SVN_NO_ERROR;
       SVN_ERR(gls_ctx->error);
       SVN_ERR(parser_ctx->error);
     }
 
   svn_pool_destroy(gls_ctx->subpool);
 
-  SVN_ERR(err);
+  if (err && (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE))
+    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err, NULL);
 
-  return SVN_NO_ERROR;
+  return err;
 }

@@ -123,7 +123,7 @@ svn_ra_serf__conn_closed(serf_connection_t *conn,
   if (our_conn->session->auth_protocol)
     {
       our_conn->session->auth_protocol->init_conn_func(our_conn->session,
-                                                       our_conn, 
+                                                       our_conn,
                                                        our_conn->session->pool);
     }
 }
@@ -275,6 +275,7 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
     {
       serf_bucket_headers_setn(hdrs_bkt, "Content-Type", content_type);
     }
+
   if (conn->session->auth_protocol)
     conn->session->auth_protocol->setup_request_func(conn, hdrs_bkt);
 
@@ -983,9 +984,9 @@ handle_response(serf_request_t *request,
         }
       else
         {
-          status = svn_ra_serf__handle_discard_body(request, response, NULL, 
+          status = svn_ra_serf__handle_discard_body(request, response, NULL,
                                                     pool);
-          /* At this time we might not have received the whole response from 
+          /* At this time we might not have received the whole response from
              the server. If that's the case, don't setup a new request now
              but wait till we retry the request later. */
           if (! APR_STATUS_IS_EAGAIN(status))

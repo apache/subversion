@@ -69,8 +69,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   const svn_ra_reporter3_t *reporter;
   void *report_baton;
   const svn_wc_entry_t *entry;
-  const char *URL, *anchor, *target, *source_root;
-  const char *tmp_url;
+  const char *URL, *anchor, *target, *source_root, *switch_rev_url;
   svn_ra_session_t *ra_session;
   svn_revnum_t revnum;
   svn_node_kind_t switch_url_kind;
@@ -127,36 +126,31 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
   URL = apr_pstrdup(pool, entry->url);
 
-  /* Get revnum set to something meaningful, so we can fetch the
-     switch editor. */
-  if (revision->kind == svn_opt_revision_number)
-    revnum = revision->value.number; /* do the trivial conversion manually */
-  else
-    revnum = SVN_INVALID_REVNUM; /* no matter, do real conversion later */
-
   /* Open an RA session to 'source' URL */
-  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum, &tmp_url,
-                                           URL, adm_access, 
+  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum, 
+                                           &switch_rev_url,
+                                           switch_url, adm_access,
                                            peg_revision, revision,
                                            ctx, pool));
   SVN_ERR(svn_ra_get_repos_root(ra_session, &source_root, pool));
 
   /* Disallow a switch operation to change the repository root of the
      target. */
-  if (! svn_path_is_ancestor(source_root, switch_url))
+  if (! svn_path_is_ancestor(source_root, URL))
     return svn_error_createf
       (SVN_ERR_WC_INVALID_SWITCH, NULL,
        _("'%s'\n"
          "is not the same repository as\n"
-         "'%s'"), switch_url, source_root);
+         "'%s'"), URL, source_root);
 
   /* Check to make sure that the switch target actually exists. */
   SVN_ERR(svn_ra_reparent(ra_session, source_root, pool));
   SVN_ERR(svn_ra_check_path(ra_session,
-                            svn_path_uri_decode(svn_path_is_child(source_root, 
-                                                                  switch_url, 
-                                                                  pool),
-                                                pool),
+                            svn_path_uri_decode(
+                                  svn_path_is_child(source_root,
+                                                    switch_rev_url,
+                                                    pool), 
+                                  pool),
                             revnum,
                             &switch_url_kind,
                             pool));
@@ -164,7 +158,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   if (switch_url_kind == svn_node_none)
     return svn_error_createf
       (SVN_ERR_WC_INVALID_SWITCH, NULL,
-       _("Destination does not exist: '%s'"), switch_url);
+       _("Destination does not exist: '%s'"), switch_rev_url);
 
   SVN_ERR(svn_ra_reparent(ra_session, URL, pool));
 
@@ -172,7 +166,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later on. */
   SVN_ERR(svn_wc_get_switch_editor3(&revnum, adm_access, target,
-                                    switch_url, use_commit_times, depth,
+                                    switch_rev_url, use_commit_times, depth,
                                     allow_unver_obstructions,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
@@ -184,7 +178,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision. */
   SVN_ERR(svn_ra_do_switch2(ra_session, &reporter, &report_baton, revnum,
-                            target, depth, switch_url,
+                            target, depth, switch_rev_url,
                             switch_editor, switch_edit_baton, pool));
 
   SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
@@ -309,7 +303,7 @@ svn_client_switch(svn_revnum_t *result_rev,
 {
   svn_opt_revision_t peg_revision;
   peg_revision.kind = svn_opt_revision_unspecified;
-  return svn_client__switch_internal(result_rev, path, switch_url, 
+  return svn_client__switch_internal(result_rev, path, switch_url,
                                      &peg_revision, revision,
                                      SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                      NULL, FALSE, FALSE, ctx, pool);

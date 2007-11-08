@@ -63,32 +63,6 @@ svn_repos_fs_commit_txn(const char **conflict_p,
 
 /*** Transaction creation wrappers. ***/
 
-svn_error_t *
-svn_repos__change_txn_props(svn_fs_txn_t *txn,
-                            apr_hash_t *txnprop_table,
-                            apr_pool_t *pool)
-{
-  apr_pool_t *iterpool;
-  apr_hash_index_t *hi;
-  const void *key;
-  void *value;
-  const char *propname;
-  const svn_string_t *propval;
-
-  iterpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(pool, txnprop_table); hi; hi = apr_hash_next(hi))
-    {
-      svn_pool_clear(iterpool);
-      apr_hash_this(hi, &key, NULL, &value);
-      propname = key;
-      propval = value;
-      SVN_ERR(svn_repos_fs_change_txn_prop(txn, propname, propval, iterpool));
-    }
-  svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
-}
-
 
 svn_error_t *
 svn_repos_fs_begin_txn_for_commit2(svn_fs_txn_t **txn_p,
@@ -99,9 +73,11 @@ svn_repos_fs_begin_txn_for_commit2(svn_fs_txn_t **txn_p,
 {
   svn_string_t *author = apr_hash_get(revprop_table, SVN_PROP_REVISION_AUTHOR,
                                       APR_HASH_KEY_STRING);
+  apr_array_header_t *revprops;
+
   /* Run start-commit hooks. */
   SVN_ERR(svn_repos__hooks_start_commit(repos, author ? author->data : NULL,
-                                        pool));
+                                        repos->capabilities, pool));
 
   /* Begin the transaction, ask for the fs to do on-the-fly lock checks. */
   SVN_ERR(svn_fs_begin_txn2(txn_p, repos->fs, rev,
@@ -110,9 +86,8 @@ svn_repos_fs_begin_txn_for_commit2(svn_fs_txn_t **txn_p,
   /* We pass the revision properties to the filesystem by adding them
      as properties on the txn.  Later, when we commit the txn, these
      properties will be copied into the newly created revision. */
-  SVN_ERR(svn_repos__change_txn_props(*txn_p, revprop_table, pool));
-
-  return SVN_NO_ERROR;
+  revprops = svn_prop_hash_to_array(revprop_table, pool);
+  return svn_repos_fs_change_txn_props(*txn_p, revprops, pool);
 }
 
 
@@ -173,8 +148,7 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
 /* Validate that property NAME is valid for use in a Subversion
    repository. */
 static svn_error_t *
-validate_prop(const char *name,
-              apr_pool_t *pool)
+validate_prop(const char *name)
 {
   svn_prop_kind_t kind = svn_property_kind(NULL, name);
   if (kind != svn_prop_regular_kind)
@@ -195,8 +169,22 @@ svn_repos_fs_change_node_prop(svn_fs_root_t *root,
                               apr_pool_t *pool)
 {
   /* Validate the property, then call the wrapped function. */
-  SVN_ERR(validate_prop(name, pool));
+  SVN_ERR(validate_prop(name));
   return svn_fs_change_node_prop(root, path, name, value, pool);
+}
+
+
+svn_error_t *
+svn_repos_fs_change_txn_props(svn_fs_txn_t *txn,
+                              apr_array_header_t *txnprops,
+                              apr_pool_t *pool)
+{
+  int i;
+
+  for (i = 0; i < txnprops->nelts; i++)
+    SVN_ERR(validate_prop(APR_ARRAY_IDX(txnprops, i, svn_prop_t).name));
+
+  return svn_fs_change_txn_props(txn, txnprops, pool);
 }
 
 
@@ -206,9 +194,14 @@ svn_repos_fs_change_txn_prop(svn_fs_txn_t *txn,
                              const svn_string_t *value,
                              apr_pool_t *pool)
 {
-  /* Validate the property, then call the wrapped function. */
-  SVN_ERR(validate_prop(name, pool));
-  return svn_fs_change_txn_prop(txn, name, value, pool);
+  apr_array_header_t *props = apr_array_make(pool, 1, sizeof(svn_prop_t));
+  svn_prop_t prop;
+
+  prop.name = name;
+  prop.value = value;
+  APR_ARRAY_PUSH(props, svn_prop_t) = prop;
+
+  return svn_repos_fs_change_txn_props(txn, props, pool);
 }
 
 
@@ -234,7 +227,7 @@ svn_repos_fs_change_rev_prop3(svn_repos_t *repos,
 
   if (readability == svn_repos_revision_access_full)
     {
-      SVN_ERR(validate_prop(name, pool));
+      SVN_ERR(validate_prop(name));
       SVN_ERR(svn_fs_revision_prop(&old_value, repos->fs, rev, name, pool));
       if (! new_value)
         action = 'D';

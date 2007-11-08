@@ -35,7 +35,7 @@
 
 /*** Code. ***/
 
-static void 
+static void
 print_merge_ranges(apr_array_header_t *ranges, apr_pool_t *pool)
 {
   int i;
@@ -43,8 +43,9 @@ print_merge_ranges(apr_array_header_t *ranges, apr_pool_t *pool)
     {
       svn_merge_range_t *range = APR_ARRAY_IDX(ranges, i, svn_merge_range_t *);
       svn_cmdline_printf(pool, "r%ld:%ld%s", range->start, range->end,
-                         (i == (ranges->nelts - 1)) ? "\n" : ", ");
+                         (i == (ranges->nelts - 1)) ? "" : ", ");
     }
+  svn_cmdline_printf(pool, "\n");
 }
 
 
@@ -54,8 +55,8 @@ relative_path(const char *root_url,
               apr_pool_t *pool)
 {
   const char *relurl = svn_path_is_child(root_url, url, pool);
-  return relurl ? apr_pstrcat(pool, "/", 
-                              svn_path_uri_decode(relurl, pool), NULL) 
+  return relurl ? apr_pstrcat(pool, "/",
+                              svn_path_uri_decode(relurl, pool), NULL)
                 : "/";
 }
 
@@ -107,7 +108,7 @@ svn_cl__mergeinfo(apr_getopt_t *os,
       SVN_ERR(svn_client_mergeinfo_get_merged(&mergeinfo, truepath,
                                               &peg_revision, ctx, subpool));
 
-      svn_cmdline_printf(pool, _("Path: %s\n"), 
+      svn_cmdline_printf(pool, _("Path: %s\n"),
                          svn_path_local_style(truepath, pool));
       if (! mergeinfo)
         {
@@ -129,8 +130,8 @@ svn_cl__mergeinfo(apr_getopt_t *os,
           svn_pool_clear(iterpool);
           apr_hash_this(hi, &key, NULL, &val);
           merge_source = key;
-              
-          svn_cmdline_printf(iterpool, _("  Source path: %s\n"), 
+
+          svn_cmdline_printf(iterpool, _("  Source path: %s\n"),
                              relative_path(root_url, merge_source, pool));
           svn_cmdline_printf(iterpool, _("    Merged ranges: "));
           merge_ranges = val;
@@ -145,17 +146,17 @@ svn_cl__mergeinfo(apr_getopt_t *os,
              ### can't get any decent information about it out of the
              ### system.  It may just mean the system has to work
              ### harder to provide that information.
-          */ 
+          */
           svn_cmdline_printf(iterpool, _("    Eligible ranges: "));
-          err = svn_client_mergeinfo_get_available(&merge_ranges, 
-                                                   truepath, 
-                                                   &peg_revision, 
-                                                   merge_source, 
+          err = svn_client_mergeinfo_get_available(&merge_ranges,
+                                                   truepath,
+                                                   &peg_revision,
+                                                   merge_source,
                                                    ctx,
                                                    subpool);
           if (err)
             {
-              if ((err->apr_err == SVN_ERR_FS_NOT_FOUND) 
+              if ((err->apr_err == SVN_ERR_FS_NOT_FOUND)
                   || (err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND))
                 {
                   svn_error_clear(err);

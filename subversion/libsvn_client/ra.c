@@ -512,7 +512,7 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
                                        start_revision, end_revision,
                                        gls_receiver, &gls_receiver_baton,
                                        pool));
-  qsort((*segments)->elts, (*segments)->nelts, 
+  qsort((*segments)->elts, (*segments)->nelts,
         (*segments)->elt_size, compare_segments);
   return SVN_NO_ERROR;
 }
@@ -588,7 +588,7 @@ svn_client__repos_locations(const char **start_url,
     }
 
   /* ### We should be smarter here.  If the callers just asks for BASE and
-     WORKING revisions, we should already have the correct URL:s, so we
+     WORKING revisions, we should already have the correct URLs, so we
      don't need to do anything more here in that case. */
 
   /* Open a RA session to this URL if we don't have one already. */

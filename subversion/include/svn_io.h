@@ -516,7 +516,7 @@ svn_error_t *svn_io_dir_file_copy(const char *src_path,
 
 /** Generic byte-streams
  *
- * @defgroup svn_io_byte_streams generic byte streams
+ * @defgroup svn_io_byte_streams Generic byte streams
  * @{
  */
 
@@ -809,7 +809,7 @@ svn_error_t *svn_io_remove_dir2(const char *path,
                                 apr_pool_t *pool);
 
 /** Similar to svn_io_remove_dir2(), but with @a ignore_enoent set to
- * @C FALSE.
+ * @c FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API
  */
@@ -1215,7 +1215,7 @@ svn_io_dir_read(apr_finfo_t *finfo,
 
 /** Version/format files.
  *
- * @defgroup svn_io_format_files version/format files
+ * @defgroup svn_io_format_files Version/format files
  * @{
  */
 

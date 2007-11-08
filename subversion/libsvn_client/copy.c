@@ -240,7 +240,7 @@ propagate_mergeinfo_within_wc(svn_client__copy_pair_t *pair,
                   pool));
 
           return extend_wc_mergeinfo(pair->dst, entry, mergeinfo, dst_access,
-                                     ctx, pool);  
+                                     ctx, pool);
         }
     }
 
@@ -883,7 +883,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
       /* Pass NULL for the path, to ensure error if trying to get a
          revision based on the working copy. */
       SVN_ERR(svn_client__get_revision_number
-              (&pair->src_revnum, NULL, ra_session, &pair->src_op_revision, 
+              (&pair->src_revnum, NULL, ra_session, &pair->src_op_revision,
                NULL, pool));
 
       info->src_revnum = pair->src_revnum;
@@ -1559,7 +1559,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
                                                     svn_client__copy_pair_t *);
 
       SVN_ERR(svn_client__get_revision_number
-              (&pair->src_revnum, NULL, ra_session, &pair->src_op_revision, 
+              (&pair->src_revnum, NULL, ra_session, &pair->src_op_revision,
                NULL, pool));
     }
 
@@ -1907,7 +1907,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
                                                  ctx->cancel_baton,
                                                  iterpool));
                   SVN_ERR(svn_wc__entry_versioned(&entry, pair->src, adm_access,
-                                                 FALSE, iterpool));
+                                                  FALSE, iterpool));
                   SVN_ERR(svn_wc_adm_close(adm_access));
 
                   url = (entry->copied ? entry->copyfrom_url : entry->url);
@@ -1919,11 +1919,20 @@ setup_copy(svn_commit_info_t **commit_info_p,
 
                   pair->src = apr_pstrdup(pool, url);
 
-                  if (!need_repos_peg_rev)
+                  if (!need_repos_peg_rev
+                      || pair->src_peg_revision.kind == svn_opt_revision_base)
                     {
                       /* Default the peg revision to that of the WC entry. */
                       pair->src_peg_revision.kind = svn_opt_revision_number;
                       pair->src_peg_revision.value.number =
+                        (entry->copied ? entry->copyfrom_rev : entry->revision);
+                    }
+
+                  if (pair->src_op_revision.kind == svn_opt_revision_base)
+                    {
+                      /* Use the entry's revision as the operational rev. */
+                      pair->src_op_revision.kind = svn_opt_revision_number;
+                      pair->src_op_revision.value.number =
                         (entry->copied ? entry->copyfrom_rev : entry->revision);
                     }
                 }

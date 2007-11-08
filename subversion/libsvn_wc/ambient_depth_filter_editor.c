@@ -59,7 +59,7 @@
      filter out the unwanted calls -- or better yet, it will have to
      be wrapped in a filtering editor that does the job.
 
-     This is that filtering editor.  
+     This is that filtering editor.
 
      Most of the work is done at the moment of baton construction.
      When a file or dir is opened, we create its baton with the
@@ -156,7 +156,7 @@ make_dir_baton(struct dir_baton **d_p,
   /* We'll initialize this differently in add_directory and
      open_directory. */
   d->ambient_depth = svn_depth_unknown;
-  
+
   *d_p = d;
   return SVN_NO_ERROR;
 }
@@ -187,7 +187,7 @@ make_file_baton(struct file_baton **f_p,
          doesn't want to hear about the file at all. */
       const svn_wc_entry_t *entry;
 
-      SVN_ERR(svn_wc_entry(&entry, 
+      SVN_ERR(svn_wc_entry(&entry,
                            svn_path_join(pb->edit_baton->anchor, path, pool),
                            pb->edit_baton->adm_access, FALSE, pool));
       if (! entry)
@@ -230,7 +230,7 @@ open_root(void *edit_baton,
 
   SVN_ERR(make_dir_baton(&b, NULL, eb, NULL, pool));
   *root_baton = b;
-  
+
   if (b->ambient_depth == svn_depth_exclude)
     return SVN_NO_ERROR;
 
@@ -298,7 +298,7 @@ add_directory(const char *path,
 
   if (b->ambient_depth == svn_depth_exclude)
     return SVN_NO_ERROR;
-  
+
   /* It's not excluded, so what should we treat the ambient depth as
      being? */
   if (strcmp(eb->target, path) == 0)
@@ -372,14 +372,14 @@ add_file(const char *path,
 
   SVN_ERR(make_file_baton(&b, pb, path, pool));
   *child_baton = b;
- 
+
   if (b->ambiently_excluded)
     return SVN_NO_ERROR;
-  
+
   SVN_ERR(eb->wrapped_editor->add_file(path, pb->wrapped_baton,
                                        copyfrom_path, copyfrom_revision,
                                        pool, &b->wrapped_baton));
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -533,22 +533,10 @@ svn_wc__ambient_depth_filter_editor(const svn_delta_editor_t **editor,
                                     const char *anchor,
                                     const char *target,
                                     svn_wc_adm_access_t *adm_access,
-                                    svn_depth_t requested_depth,
                                     apr_pool_t *pool)
 {
   svn_delta_editor_t *depth_filter_editor;
   struct edit_baton *eb;
-
-  /* Easy out: this only needs to filter at all if the caller has
-     no particular depth request in mind -- because if a depth was
-     explicitly requested, libsvn_delta/depth_filter_editor.c will
-     ensure that we never see editor calls we don't want anyway. */
-  if (requested_depth != svn_depth_unknown)
-    {
-      *editor = wrapped_editor;
-      *edit_baton = wrapped_edit_baton;
-      return SVN_NO_ERROR;
-    }
 
   depth_filter_editor = svn_delta_default_editor(pool);
   depth_filter_editor->set_target_revision = set_target_revision;

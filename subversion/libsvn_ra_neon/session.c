@@ -616,6 +616,199 @@ ra_neon_neonprogress(void *baton, off_t progress, off_t total)
 }
 
 
+
+/** Capabilities exchange. */
+
+/* The only two possible values for a capability. */
+static const char *capability_yes = "yes";
+static const char *capability_no = "no";
+
+
+/* Store in RAS the capabilities discovered from REQ's headers.
+   Use POOL for temporary allocation only. */
+static void
+parse_capabilities(ne_request *req,
+                   svn_ra_neon__session_t *ras,
+                   apr_pool_t *pool)
+{
+  void *ne_header_cursor = NULL;
+
+  /* Start out assuming all capabilities are unsupported. */
+  apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
+               APR_HASH_KEY_STRING, capability_no);
+  apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+               APR_HASH_KEY_STRING, capability_no);
+  apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
+               APR_HASH_KEY_STRING, capability_no);
+
+  /* Then find out which ones are supported. */
+  do {
+    const char *header_name;
+    const char *header_value;
+    ne_header_cursor = ne_response_header_iterate(req,
+                                                  ne_header_cursor,
+                                                  &header_name,
+                                                  &header_value);
+    if (ne_header_cursor && strcasecmp(header_name, "dav") == 0)
+      {
+        /* By the time we get the headers, Neon has downcased them and
+           merged them together -- merged in the sense that if a
+           header "foo" appears multiple times, all the values will be
+           concatenated together, with spaces at the splice points.
+           For example, if the server sent:
+
+              DAV: version-control,checkout,working-resource
+              DAV: merge,baseline,activity,version-controlled-collection
+              DAV: http://subversion.tigris.org/xmlns/dav/svn/depth
+
+           Here we might see:
+
+              header_name  == "dav"
+              header_value == "1,2, version-control,checkout,working-resource, merge,baseline,activity,version-controlled-collection, http://subversion.tigris.org/xmlns/dav/svn/depth, <http://apache.org/dav/propset/fs/1>"
+
+           (Deliberately not line-wrapping that, so you can see what
+           we're about to parse.)
+        */
+
+        apr_array_header_t *vals =
+          svn_cstring_split(header_value, ",", TRUE, pool);
+
+        /* Right now we only have a few capabilities to detect, so
+           just seek for them directly.  This could be written
+           slightly more efficiently, but that wouldn't be worth it
+           until we have many more capabilities. */
+
+        if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_DEPTH, vals))
+          apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
+                       APR_HASH_KEY_STRING, capability_yes);
+
+        if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO,
+                                        vals))
+          apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+                       APR_HASH_KEY_STRING, capability_yes);
+
+        if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS,
+                                        vals))
+          apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
+                       APR_HASH_KEY_STRING, capability_yes);
+      }
+  } while (ne_header_cursor);
+}
+
+
+/* Exchange capabilities with the server, by sending an OPTIONS
+   request announcing the client's capabilities, and by filling
+   RAS->capabilities with the server's capabilities as read from the
+   response headers.  Use POOL only for temporary allocation. */
+static svn_error_t *
+exchange_capabilities(svn_ra_neon__session_t *ras, apr_pool_t *pool)
+{
+  int http_ret_code;
+  svn_ra_neon__request_t *rar;
+
+  rar = svn_ra_neon__request_create(ras, "OPTIONS", ras->url->data, pool);
+
+  /*
+    ### TODO: 
+    ###
+    ### I think http://tools.ietf.org/html/rfc2774#section-3 probably
+    ### says how to define a new header with which the client can
+    ### express capabilities.  But I haven't finished reading it yet,
+    ### and in the meantime I'd like to get this code working, so I'm
+    ### just going with...
+    ###
+    ###    X-SVN-Capabilities: 
+    ###
+    ### ...for now, despite having no reason to believe the namespace
+    ### constraints for HTTP are anything like those of RFC 822 4.1,
+    ### where you just put "X-" on the front and then you're home free
+    ### (or at least you're only sharing namespace with all the other
+    ### bozos on the Internet).
+    ###
+    ### The header's value is a comma-separated list of capabilities;
+    ### if the header appears multiple times, its values are to be
+    ### concatenated in order as per RFC-2616, 14.43.
+    ###
+    ### NOTE: The ../libsvn_ra_serf code sets this header too, and has
+    ### shadow comments pointing back this one.  Whatever we do here,
+    ### we should do there as well.
+  */
+  ne_add_request_header(rar->ne_req, "X-SVN-Capabilities",
+                        SVN_DAV_PROP_NS_DAV_SVN_DEPTH);
+  ne_add_request_header(rar->ne_req, "X-SVN-Capabilities",
+                        SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO);
+  ne_add_request_header(rar->ne_req, "X-SVN-Capabilities",
+                        SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS);
+
+  SVN_ERR(svn_ra_neon__request_dispatch(&http_ret_code, rar,
+                                        NULL, NULL, 200, 0, pool));
+
+  if (http_ret_code == 200)
+    {
+      parse_capabilities(rar->ne_req, ras, pool);
+    }
+  else
+    {
+      /* "can't happen", because svn_ra_neon__request_dispatch()
+         itself should have returned error if response code != 200. */
+      return svn_error_createf
+        (SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+         _("OPTIONS request (for capabilities) got HTTP response code %d"),
+         http_ret_code);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_ra_neon__has_capability(svn_ra_session_t *session,
+                            svn_boolean_t *has,
+                            const char *capability,
+                            apr_pool_t *pool)
+{
+  svn_ra_neon__session_t *ras = session->priv;
+  const char *cap_result = apr_hash_get(ras->capabilities,
+                                        capability,
+                                        APR_HASH_KEY_STRING);
+
+  /* If any capability is unknown, they're all unknown, so ask. */
+  if (cap_result == NULL)
+    SVN_ERR(exchange_capabilities(ras, pool));
+
+
+  /* Try again, now that we've fetched the capabilities. */
+  cap_result = apr_hash_get(ras->capabilities,
+                            capability, APR_HASH_KEY_STRING);
+
+  if (cap_result == capability_yes)
+    {
+      *has = TRUE;
+    }
+  else if (cap_result == capability_no)
+    {
+      *has = FALSE;
+    }
+  else if (cap_result == NULL)
+    {
+      return svn_error_createf
+        (SVN_ERR_RA_UNKNOWN_CAPABILITY, NULL,
+         _("Don't know anything about capability '%s'"), capability);
+    }
+  else  /* "can't happen" */
+    {
+      /* Well, let's hope it's a string. */
+      return svn_error_createf
+        (SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+         _("Attempt to fetch capability '%s' resulted in '%s'"),
+         capability, cap_result);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /* ### need an ne_session_dup to avoid the second gethostbyname
  * call and make this halfway sane. */
 
@@ -867,6 +1060,8 @@ svn_ra_neon__open(svn_ra_session_t *session,
   ne_set_progress(sess2, ra_neon_neonprogress, neonprogress_baton);
   session->priv = ras;
 
+  SVN_ERR(exchange_capabilities(ras, pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -959,146 +1154,6 @@ static svn_error_t *svn_ra_neon__do_get_uuid(svn_ra_session_t *session,
     }
 
   *uuid = ras->uuid;
-  return SVN_NO_ERROR;
-}
-
-
-/* The only two possible values for a capability. */
-static const char *capability_yes = "yes";
-static const char *capability_no = "no";
-
-
-/* Store in RAS the capabilities discovered from REQ's headers.
-   Use POOL for temporary allocation only. */ 
-static void
-parse_capabilities(ne_request *req,
-                   svn_ra_neon__session_t *ras,
-                   apr_pool_t *pool)
-{
-  void *ne_header_cursor = NULL;
-
-  /* Start out assuming all capabilities are unsupported. */
-  apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
-               APR_HASH_KEY_STRING, capability_no);
-
-  /* Then find out which ones are supported. */
-  do {
-    const char *header_name;
-    const char *header_value;
-    ne_header_cursor = ne_response_header_iterate(req,
-                                                  ne_header_cursor,
-                                                  &header_name,
-                                                  &header_value);
-    if (ne_header_cursor && strcasecmp(header_name, "dav") == 0)
-      {
-        /* By the time we get the headers, Neon has downcased them and
-           merged them together -- merged in the sense that if a
-           header "foo" appears multiple times, all the values will be
-           concatenated together, with spaces at the splice points.
-           For example, if the server sent:
-
-              DAV: version-control,checkout,working-resource
-              DAV: merge,baseline,activity,version-controlled-collection
-              DAV: http://subversion.tigris.org/xmlns/dav/svn/depth
-
-           Here we might see:
-
-              header_name  == "dav"
-              header_value == "1,2, version-control,checkout,working-resource, merge,baseline,activity,version-controlled-collection, http://subversion.tigris.org/xmlns/dav/svn/depth, <http://apache.org/dav/propset/fs/1>"
-
-           (Deliberately not line-wrapping that, so you can see what
-           we're about to parse.)
-        */
-
-        apr_array_header_t *vals =
-          svn_cstring_split(header_value, ",", TRUE, pool);
-
-        /* Right now the only capability we detect is depth, so just
-           seek for it directly.  This could be rewritten as an
-           iteration with a switch-case inside, or whatever, if we
-           ever need to detect other capabilities, though. */
-
-        if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_DEPTH, vals))
-          apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
-                       APR_HASH_KEY_STRING, capability_yes);
-      }
-  } while (ne_header_cursor);
-}
-
-
-/* Fill RAS->capabilities with the server's capabilities.  Use
-   POOL only for temporary allocation. */
-static svn_error_t *
-discover_capabilities(svn_ra_neon__session_t *ras, apr_pool_t *pool)
-{
-  int http_ret_code;
-  svn_ra_neon__request_t *rar;
-  
-  rar = svn_ra_neon__request_create(ras, "OPTIONS", ras->url->data, pool);
-  SVN_ERR(svn_ra_neon__request_dispatch(&http_ret_code, rar,
-                                        NULL, NULL, 200, 0, pool));
-  
-  if (http_ret_code == 200)
-    {
-      parse_capabilities(rar->ne_req, ras, pool);
-    }
-  else
-    {
-      /* "can't happen", because svn_ra_neon__request_dispatch()
-         itself should have returned error if response code != 200. */
-      return svn_error_createf
-        (SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-         _("OPTIONS request (for capabilities) got HTTP response code %d"),
-         http_ret_code);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_ra_neon__has_capability(svn_ra_session_t *session,
-                            svn_boolean_t *has,
-                            const char *capability,
-                            apr_pool_t *pool)
-{
-  svn_ra_neon__session_t *ras = session->priv;
-  const char *cap_result = apr_hash_get(ras->capabilities,
-                                        SVN_RA_CAPABILITY_DEPTH,
-                                        APR_HASH_KEY_STRING);
-
-  /* If any capability is unknown, they're all unknown, so ask. */
-  if (cap_result == NULL)
-    discover_capabilities(ras, pool);
-
-
-  /* Try again, now that we've fetched the capabilities. */
-  cap_result = apr_hash_get(ras->capabilities,
-                            SVN_RA_CAPABILITY_DEPTH, APR_HASH_KEY_STRING);
-
-  if (cap_result == capability_yes)
-    {
-      *has = TRUE;
-    }
-  else if (cap_result == capability_no)
-    {
-      *has = FALSE;
-    }
-  else if (cap_result == NULL)
-    {
-      return svn_error_createf
-        (SVN_ERR_RA_UNKNOWN_CAPABILITY, NULL,
-         _("Don't know anything about capability '%s'"), capability);
-    }
-  else  /* "can't happen" */
-    {
-      /* Well, let's hope it's a string. */
-      return svn_error_createf
-        (SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-         _("attempt to fetch capability '%s' resulted in '%s'"),
-         capability, cap_result);
-    }
-  
   return SVN_NO_ERROR;
 }
 

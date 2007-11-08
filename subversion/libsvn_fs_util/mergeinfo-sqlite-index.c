@@ -38,7 +38,7 @@
 /* This is a macro implementation of svn_fs_revision_root_revision(), which
    we cannot call from here, because it would create a circular dependency. */
 #define REV_ROOT_REV(root)       \
-  ((root)->is_txn_root? SVN_INVALID_REVNUM : (root)->rev)
+  ((root)->is_txn_root ? SVN_INVALID_REVNUM : (root)->rev)
 
 /* We want to cache that we saw no mergeinfo for a path as well,
    so we use a -1 converted to a pointer to represent this. */
@@ -534,10 +534,10 @@ append_component_to_paths(apr_hash_t **output,
 }
 
 /* A helper for svn_fs_mergeinfo__get_mergeinfo() that retrieves
-   mergeinfo recursively (when INCLUDE_PARENTS is TRUE) for a single
-   path.  Pass NULL for RESULT if you only want CACHE to be updated.
-   Otherwise, both RESULT and CACHE are updated with the appropriate
-   mergeinfo for PATH. */
+   mergeinfo recursively (when INHERIT is svn_mergeinfo_inherited or 
+   svn_mergeinfo_nearest_ancestor) for a single path.  Pass NULL for RESULT 
+   if you only want CACHE to be updated.  Otherwise, both RESULT and CACHE
+   are updated with the appropriate mergeinfo for PATH. */
 static svn_error_t *
 get_mergeinfo_for_path(sqlite3 *db,
                        const char *path,
@@ -726,20 +726,13 @@ get_mergeinfo_for_children(sqlite3 *db,
 static svn_error_t *
 get_mergeinfo(sqlite3 *db,
               apr_hash_t **mergeinfo,
-              svn_fs_root_t *root,
+              svn_revnum_t rev,
               const apr_array_header_t *paths,
               svn_mergeinfo_inheritance_t inherit,
               apr_pool_t *pool)
 {
   apr_hash_t *mergeinfo_cache = apr_hash_make(pool);
-  svn_revnum_t rev;
   int i;
-
-  /* We require a revision root. */
-  if (root->is_txn_root)
-    return svn_error_create(SVN_ERR_FS_NOT_REVISION_ROOT, NULL, NULL);
-
-  rev = REV_ROOT_REV(root);
 
   *mergeinfo = apr_hash_make(pool);
   for (i = 0; i < paths->nelts; i++)
@@ -763,9 +756,15 @@ svn_fs_mergeinfo__get_mergeinfo(apr_hash_t **mergeinfo,
   sqlite3 *db;
   int i;
   svn_error_t *err;
+  svn_revnum_t rev;
+
+  /* We require a revision root. */
+  if (root->is_txn_root)
+    return svn_error_create(SVN_ERR_FS_NOT_REVISION_ROOT, NULL, NULL);
+  rev = REV_ROOT_REV(root);
 
   SVN_ERR(open_db(&db, root->fs->path, pool));
-  err = get_mergeinfo(db, mergeinfo, root, paths, inherit, pool);
+  err = get_mergeinfo(db, mergeinfo, rev, paths, inherit, pool);
   SVN_ERR(close_db(db, err));
 
   for (i = 0; i < paths->nelts; i++)
@@ -802,12 +801,15 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
   sqlite3 *db;
   int i;
 
+  /* We require a revision root. */
+  if (root->is_txn_root)
+    return svn_error_create(SVN_ERR_FS_NOT_REVISION_ROOT, NULL, NULL);
+  rev = REV_ROOT_REV(root);
+
   SVN_ERR(open_db(&db, root->fs->path, pool));
-  err = get_mergeinfo(db, mergeinfo, root, paths, svn_mergeinfo_inherited,
+  err = get_mergeinfo(db, mergeinfo, rev, paths, svn_mergeinfo_inherited,
                       pool);
   MAYBE_CLEANUP;
-
-  rev = REV_ROOT_REV(root);
 
   for (i = 0; i < paths->nelts; i++)
     {

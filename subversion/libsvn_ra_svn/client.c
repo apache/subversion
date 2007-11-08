@@ -325,7 +325,7 @@ static void ra_svn_get_reporter(svn_ra_svn__session_baton_t *sess_baton,
   if ((depth != svn_depth_files) && (depth != svn_depth_infinity)
       && ! svn_ra_svn_has_capability(sess_baton->conn, SVN_RA_SVN_CAP_DEPTH))
     {
-      svn_error_clear(svn_delta_depth_filter_editor(&filter_editor, 
+      svn_error_clear(svn_delta_depth_filter_editor(&filter_editor,
                                                     &filter_baton,
                                                     editor, edit_baton, depth,
                                                     *target ? TRUE : FALSE,
@@ -568,10 +568,13 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   /* In protocol version 2, we send back our protocol version, our
    * capability list, and the URL, and subsequently there is an auth
    * request. */
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "n(www)c", (apr_uint64_t) 2,
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "n(wwwwww)c", (apr_uint64_t) 2,
                                  SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                  SVN_RA_SVN_CAP_SVNDIFF1,
                                  SVN_RA_SVN_CAP_ABSENT_ENTRIES,
+                                 SVN_RA_SVN_CAP_DEPTH,
+                                 SVN_RA_SVN_CAP_MERGEINFO,
+                                 SVN_RA_SVN_CAP_LOG_REVPROPS,
                                  url));
   SVN_ERR(handle_auth_request(sess, pool));
 
@@ -1294,7 +1297,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
       if (has_children_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
         has_children = FALSE;
       else
-        has_children = has_children_param;
+        has_children = (svn_boolean_t) has_children_param;
 
       /* Because the svn protocol won't let us send an invalid revnum, we have
          to recover that fact using the extra parameter. */
@@ -1535,7 +1538,7 @@ ra_svn_get_location_segments(svn_ra_session_t *session,
   apr_pool_t *subpool = svn_pool_create(pool);
 
   /* Transmit the parameters. */
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c(?r)(?r)(?r))", 
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c(?r)(?r)(?r))",
                                  "get-location-segments",
                                  path, peg_revision, start_rev, end_rev));
 
@@ -1559,7 +1562,7 @@ ra_svn_get_location_segments(svn_ra_session_t *session,
           segment = apr_pcalloc(subpool, sizeof(*segment));
           SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, subpool, "rr(?c)",
                                          &range_start, &range_end, &ret_path));
-          if (! (SVN_IS_VALID_REVNUM(range_start) 
+          if (! (SVN_IS_VALID_REVNUM(range_start)
                  && SVN_IS_VALID_REVNUM(range_end)))
             return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                     _("Expected valid revision range"));
@@ -1639,7 +1642,7 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
       if (merged_rev_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
         merged_rev = FALSE;
       else
-        merged_rev = merged_rev_param;
+        merged_rev = (svn_boolean_t) merged_rev_param;
 
       /* Get the first delta chunk so we know if there is a delta. */
       SVN_ERR(svn_ra_svn_read_item(sess_baton->conn, chunk_pool, &item));
@@ -2171,18 +2174,19 @@ static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
 {
   svn_ra_svn__session_baton_t *sess = session->priv;
 
+  *has = FALSE;
+
   if (strcmp(capability, SVN_RA_CAPABILITY_DEPTH) == 0)
+    *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_DEPTH);
+  else if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
+    *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_MERGEINFO);
+  else if (strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0)
+    *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_LOG_REVPROPS);
+  else  /* Don't know any other capabilities, so error. */
     {
-      if (svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_DEPTH))
-        *has = TRUE;
-      else
-        *has = FALSE;
-    }
-  else  /* Don't know any other capabilities yet, so error. */
-    {
-        return svn_error_createf
-          (SVN_ERR_RA_UNKNOWN_CAPABILITY, NULL,
-           _("Don't know anything about capability '%s'"), capability);
+      return svn_error_createf
+        (SVN_ERR_RA_UNKNOWN_CAPABILITY, NULL,
+         _("Don't know anything about capability '%s'"), capability);
     }
 
   return SVN_NO_ERROR;

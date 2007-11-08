@@ -15,12 +15,13 @@ following:
 1.) The format starts with the new version number of the dump format
     ("SVN-fs-dump-format-version: 3\n").
 
-2.) There are two new optional headers for node changes:
+2.) There are three new optional headers for node changes:
 
 [Text-delta: true|false]
 [Prop-delta: true|false]
+[Text-delta-base-md5: blob]
 
-    The default value for these headers is "false".  If the value is
+    The default value for the boolean headers is "false".  If the value is
     set to "true", then the text and property contents will be treated
     as deltas against the previous contents of the node (as determined
     by copy history for adds with history, or by the value in the
@@ -37,7 +38,10 @@ D <name length>
 just as a regular property is printed, but with the "K " changed to a
 "D " and with no value part.
 
-Text deltas are written out as a series of svndiff0 windows.
+Text deltas are written out as a series of svndiff0 windows.  If
+Text-delta-base-md5 is provided, it is the checksum of the base to
+which the text delta is applied; note that older versions (pre-1.5) of
+'svnadmin load' may ignore the checksum.
 
 ===== SVN DUMPFILE VERSION 2 FORMAT =====
 

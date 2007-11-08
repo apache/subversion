@@ -16,7 +16,7 @@
  * @endcopyright
  *
  * @file svn_wc.h
- * @brief The Subversion Working Copy Library
+ * @brief Subversion's working copy library
  *
  * Requires:
  *            - A working copy
@@ -56,6 +56,11 @@ extern "C" {
  * @since New in 1.1.
  */
 const svn_version_t *svn_wc_version(void);
+
+/**
+ * @defgroup svn_wc  Working copy management
+ * @{
+ */
 
 /** Flags for use with svn_wc_translated_file2
  *
@@ -652,7 +657,7 @@ svn_wc_parse_externals_description(apr_hash_t **externals_p,
 /* Notification/callback handling. */
 
 /**
- * @defgroup svn_wc_notifications notification callback handling
+ * @defgroup svn_wc_notifications Notification callback handling
  * @{
  *
  * In many cases, the WC library will scan a working copy and make
@@ -772,7 +777,7 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_merge_begin,
 
   /** Replace notification. */
-  svn_wc_notify_update_replace,
+  svn_wc_notify_update_replace
 
 } svn_wc_notify_action_t;
 
@@ -2051,7 +2056,7 @@ svn_wc_maybe_set_repos_root(svn_wc_adm_access_t *adm_access,
 
 
 /**
- * @defgroup svn_wc_status working copy status.
+ * @defgroup svn_wc_status Working copy status.
  * @{
  *
  * We have two functions for getting working copy status: one function
@@ -2419,8 +2424,8 @@ svn_error_t *svn_wc_get_status_editor3(const svn_delta_editor_t **editor,
                                        svn_wc_traversal_info_t *traversal_info,
                                        apr_pool_t *pool);
 
-/*
- * Like svn_wc_get_status_editor3(), but with @ignore_patterns
+/**
+ * Like svn_wc_get_status_editor3(), but with @a ignore_patterns
  * provided from the corresponding value in @a config, and @a recurse
  * instead of @a depth.  If @a recurse is true, behave as if for @c
  * svn_depth_infinity; else if @a recurse is false, behave as if for
@@ -2644,7 +2649,7 @@ svn_error_t *svn_wc_delete(const char *path,
  *       -  Schedule the directory itself for addition with copyfrom history.
  *       -  Mark all its children with a 'copied' flag
  *       -  Rewrite all the URLs to what they will be after a commit.
- *       -  ### TODO:  remove old wcprops too, see the '###'below
+ *       -  ### @todo Remove old wcprops too, see the '###' below.
  *
  *<pre> ### I think possibly the "switchover" functionality should be
  * ### broken out into a separate function, but its all intertwined in
@@ -3233,7 +3238,7 @@ svn_error_t *svn_wc_get_actual_target(const char *path,
  * directory, its file entries, and the presence or absence of
  * subdirectories (but do not descend into the subdirectories).
  * Else if it is @c svn_depth_files, update the uppermost directory
- * and its immediate file entries, but not subdirectories.  
+ * and its immediate file entries, but not subdirectories.
  * Else if it is @c svn_depth_empty, update exactly the uppermost
  * target, and don't touch its entries.
  *
@@ -4164,7 +4169,7 @@ svn_wc_relocate(const char *path,
  * If @a depth is @c svn_depth_empty, revert just @a path (if a
  * directory, then revert just the properties on that directory).
  * Else if @c svn_depth_files, revert @a path and any files
- * directly under @a path if it is directory.  Else if 
+ * directly under @a path if it is directory.  Else if
  * @c svn_depth_immediates, revert all of the preceding plus
  * properties on immediate subdirectories; else if @c svn_depth_infinity,
  * revert path and everything under it fully recursively.
@@ -4565,6 +4570,8 @@ svn_wc_set_changelist(const apr_array_header_t *paths,
                       svn_wc_notify_func2_t notify_func,
                       void *notify_baton,
                       apr_pool_t *pool);
+
+/** @} */
 
 
 #ifdef __cplusplus

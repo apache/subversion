@@ -60,12 +60,13 @@ svn_cl__copy(apr_getopt_t *os,
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
       svn_client_copy_source_t *source = apr_palloc(pool, sizeof(*source));
       const char *src;
-      svn_opt_revision_t peg_revision;
+      svn_opt_revision_t *peg_revision = apr_palloc(pool,
+                                                    sizeof(*peg_revision));
 
-      SVN_ERR(svn_opt_parse_path(&peg_revision, &src, target, pool));
+      SVN_ERR(svn_opt_parse_path(peg_revision, &src, target, pool));
       source->path = src;
       source->revision = &(opt_state->start_revision);
-      source->peg_revision = &peg_revision;
+      source->peg_revision = peg_revision;
 
       APR_ARRAY_PUSH(sources, svn_client_copy_source_t *) = source;
     }

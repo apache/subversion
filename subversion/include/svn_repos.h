@@ -340,7 +340,7 @@ const char *svn_repos_post_revprop_change_hook(svn_repos_t *repos,
                                                apr_pool_t *pool);
 
 
-/** @defgroup svn_repos_lock_hooks paths to lock hooks
+/** @defgroup svn_repos_lock_hooks Paths to lock hooks
  * @{
  * @since New in 1.2. */
 
@@ -1103,7 +1103,8 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
                                apr_pool_t *pool);
 
 
-/* Call @a receiver and @a receiver_baton to report successive
+/**
+ * Call @a receiver and @a receiver_baton to report successive
  * location segments in revisions between @a start_rev and @a end_rev
  * (inclusive) for the line of history identified by the peg-object @a
  * path in @a peg_revision (and in @a repos).
@@ -1117,7 +1118,7 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
  *
  * @a peg_revision may be @c SVN_INVALID_REVNUM to indicate "the HEAD
  * revision", and must evaluate to be at least as young as @a start_rev.
- * 
+ *
  * If optional @a authz_read_func is not @c NULL, then use it (and @a
  * authz_read_baton) to verify that the peg-object is readable.  If
  * not, return @c SVN_ERR_AUTHZ_UNREADABLE.  Also use the @a
@@ -1297,7 +1298,7 @@ svn_repos_get_logs(svn_repos_t *repos,
  * mergeinfo visible or available.
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
- * only inherited mergeinfo for @paths is fetched.
+ * only inherited mergeinfo for @a paths is fetched.
  *
  * If @a revision is @c SVN_INVALID_REVNUM, it defaults to youngest.
  *
@@ -1389,7 +1390,7 @@ svn_error_t *svn_repos_get_file_revs(svn_repos_t *repos,
 /* ---------------------------------------------------------------*/
 
 /**
- * @defgroup svn_repos_hook_wrappers Hook-sensitive wrappers for libsvn_fs
+ * @defgroup svn_repos_hook_wrappers Hook-sensitive wrappers for libsvn_fs \
  * routines.
  * @{
  */
@@ -1466,7 +1467,7 @@ svn_error_t *svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
                                                apr_pool_t *pool);
 
 
-/** @defgroup svn_repos_fs_locks repository lock wrappers
+/** @defgroup svn_repos_fs_locks Repository lock wrappers
  * @{
  * @since New in 1.2. */
 
@@ -1666,6 +1667,15 @@ svn_error_t *svn_repos_fs_change_txn_prop(svn_fs_txn_t *txn,
                                           const svn_string_t *value,
                                           apr_pool_t *pool);
 
+/** Validating wrapper for svn_fs_change_txn_props() (which see for
+ * argument descriptions).
+ * 
+ * @since New in 1.5.
+ */
+svn_error_t *svn_repos_fs_change_txn_props(svn_fs_txn_t *txn,
+                                           apr_array_header_t *props,
+                                           apr_pool_t *pool);
+
 /** @} */
 
 /* ---------------------------------------------------------------*/
@@ -1802,6 +1812,8 @@ svn_repos_node_t *svn_repos_node_from_baton(void *edit_baton);
 #define SVN_REPOS_DUMPFILE_PROP_DELTA                "Prop-delta"
 /* @since New in 1.1. */
 #define SVN_REPOS_DUMPFILE_TEXT_DELTA                "Text-delta"
+/* @since New in 1.5. */
+#define SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_CHECKSUM  "Text-delta-base-md5"
 
 /** The different "actions" attached to nodes in the dumpfile. */
 enum svn_node_action

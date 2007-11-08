@@ -383,7 +383,7 @@ svn_error_t *svn_config_ensure(const char *config_dir, apr_pool_t *pool);
 
 /** Accessing cached authentication data in the user config area.
  *
- * @defgroup cached_authentication_data cached authentication data.
+ * @defgroup cached_authentication_data Cached authentication data
  * @{
  */
 

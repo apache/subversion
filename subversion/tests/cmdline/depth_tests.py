@@ -236,7 +236,7 @@ def depth_empty_commit(sbox):
   # Bring iota into a depth-empty working copy, then commit a change to it.
   wc_empty, ign_a, ign_b, ign_c = set_up_depthy_working_copies(sbox,
                                                                empty=True)
- 
+
   # Form the working path of iota
   wc_empty_iota = os.path.join(wc_empty, 'iota')
 
@@ -319,7 +319,7 @@ def depth_empty_with_file(sbox):
                                         expected_status,
                                         None, None, None, None, None, False,
                                         '-r2', wc_empty)
-  
+
   # Update the depth-empty wc all the way, expecting to receive the deletion
   # of iota.
   expected_output = svntest.wc.State(\
@@ -480,7 +480,7 @@ def depth_immediates_bring_in_file(sbox):
                        'A/D/H/psi', 'A/D/H/omega', 'A/D/H', 'A/D')
   expected_status = svntest.actions.get_virginal_state(wc_imm, 1)
   expected_status.remove('A/C', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha',
-                       'A/B/E/beta', 'A/B/F', 'A/B', 'A/D/gamma', 'A/D/G', 
+                       'A/B/E/beta', 'A/B/F', 'A/B', 'A/D/gamma', 'A/D/G',
                        'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', 'A/D/H/chi',
                        'A/D/H/psi', 'A/D/H/omega', 'A/D/H', 'A/D')
   svntest.actions.run_and_verify_update(wc_imm,
@@ -1120,7 +1120,7 @@ def commit_depth_immediates(sbox):
   #    M      A/mu
   #    M      A/D/G/rho
   #    M      iota
-  # 
+  #
   # Then commit some of them using --depth=immediates:
   #
   #    svn ci -m "log msg" --depth=immediates wc_dir wc_dir/A/D/G/rho
@@ -1300,6 +1300,80 @@ def upgrade_from_above(sbox):
                                      "Repository.+|Revision.+|Node Kind.+|" \
                                      "Schedule.+|Last.+|\n", [], "info", wc)
 
+def status_in_depthy_wc(sbox):
+  "status -u at various depths in non-infinity wc"
+
+  wc_empty, ign_a, ign_b, wc = set_up_depthy_working_copies(sbox, empty=True,
+                                                            infinity=True)
+
+  iota_path = os.path.join(wc, 'iota')
+  A_path = os.path.join(wc, 'A')
+  mu_path = os.path.join(wc, 'A', 'mu')
+  gamma_path = os.path.join(wc, 'A', 'D', 'gamma')
+
+  # Make some changes in the depth-infinity wc, and commit them
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'foo-val', wc)
+  svntest.main.file_write(iota_path, "new text\n")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'bar', 'bar-val', A_path)
+  svntest.main.file_write(mu_path, "new text\n")
+  svntest.main.file_write(gamma_path, "new text\n")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'commit', '-m', '', wc)
+
+  status = [
+    "Status against revision:      2\n",
+    "       *        1   .\n",
+    "       *        1   iota\n",
+    "       *        1   A\n",
+    "       *        1   " + os.path.join('A', 'mu') + "\n",
+  ]
+
+  os.chdir(wc_empty)
+
+  expected_output = svntest.verify.UnorderedOutput(status[:2])
+  # The output should contain only the change on '.'.
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'st', '-u')
+
+  # Upgrade to depth-files.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up',
+                                     '--depth', 'files', '-r1')
+  # The output should contain only the changes on '.' and 'iota'.
+  expected_output = svntest.verify.UnorderedOutput(status[:3])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'st', '-u')
+  # Do a status -u at --depth empty.
+  expected_output = svntest.verify.UnorderedOutput(status[:2])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'st', '-u', '--depth', 'empty')
+
+  # Upgrade to depth-immediates.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up',
+                                     '--depth', 'immediates', '-r1')
+  # The output should contain the changes on '.', 'A' and 'iota'.
+  expected_output = svntest.verify.UnorderedOutput(status[:4])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                    'st', '-u')
+  # Do a status -u at --depth files.
+  expected_output = svntest.verify.UnorderedOutput(status[:3])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'st', '-u', '--depth', 'files')
+
+  # Upgrade A to depth-files.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up',
+                                     '--depth', 'files', '-r1', 'A')
+  # The output should contain everything but the change on
+  # gamma (which does not exist in this working copy).
+  expected_output = svntest.verify.UnorderedOutput(status)
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'st', '-u')
+  # Do a status -u at --depth immediates.
+  expected_output = svntest.verify.UnorderedOutput(status[:4])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                    'st', '-u', '--depth', 'immediates')
+
 #----------------------------------------------------------------------
 
 # list all tests here, starting with None:
@@ -1327,6 +1401,7 @@ test_list = [ None,
               depth_immediates_receive_new_dir,
               add_tree_with_depth_files,
               upgrade_from_above,
+              status_in_depthy_wc,
             ]
 
 if __name__ == "__main__":

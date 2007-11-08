@@ -2429,7 +2429,7 @@ make_update_reporter(svn_ra_session_t *ra_session,
       && (depth != svn_depth_infinity)
       && ! server_supports_depth)
     {
-      SVN_ERR(svn_delta_depth_filter_editor(&filter_editor, 
+      SVN_ERR(svn_delta_depth_filter_editor(&filter_editor,
                                             &filter_baton,
                                             update_editor,
                                             update_baton,

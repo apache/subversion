@@ -141,8 +141,8 @@ class GeneratorBase(gen_base.GeneratorBase):
     self._find_bdb()
 
   def _find_bdb(self):
-    "Find the Berkley DB library and version"
-    for ver in ("45", "44", "43", "42", "41", "40"):
+    "Find the Berkeley DB library and version"
+    for ver in ("46", "45", "44", "43", "42", "41", "40"):
       lib = "libdb" + ver
       path = os.path.join(self.bdb_path, "lib")
       if os.path.exists(os.path.join(path, lib + ".lib")):
@@ -762,6 +762,10 @@ class WinGeneratorBase(GeneratorBase):
     # check for neon 0.26.x or newer
     if self.neon_ver >= 26000:
       fakedefines.append("SVN_NEON_0_26=1")
+
+    # check for neon 0.27.x or newer
+    if self.neon_ver >= 27000:
+      fakedefines.append("SVN_NEON_0_27=1")
 
     if self.serf_lib:
       fakedefines.append("SVN_LIBSVN_CLIENT_LINKS_RA_SERF")

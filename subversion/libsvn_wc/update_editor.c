@@ -190,7 +190,11 @@ struct dir_baton
   /* The current log file number. */
   int log_number;
 
-  /* The current log buffer. */
+  /* The current log buffer. The content of this accumulator may be
+     flushed and run at any time (in pool cleanup), so only append
+     complete sets of operations to it; you may need to build up a
+     buffer of operations and append it atomically with
+     svn_stringbuf_appendstr. */
   svn_stringbuf_t *log_accum;
 
   /* The depth of the directory in the wc (or inferred if added).  Not
@@ -638,7 +642,7 @@ struct file_baton
   /* If this file was added with history, this is the path to a copy
      of the text base of the copyfrom file (in the temporary area). */
   const char *copied_text_base;
-  
+
   /* If this file was added with history, and the copyfrom had local
      mods, this is the path to a copy of the user's version with local
      mods (in the temporary area). */
@@ -651,7 +655,7 @@ struct file_baton
   /* If this file was added with history, this hash contains the working
      properties of the copied file. */
   apr_hash_t *copied_working_props;
-  
+
   /* Set if we've received an apply_textdelta for this file. */
   svn_boolean_t received_textdelta;
 
@@ -1564,6 +1568,9 @@ close_directory(void *dir_baton,
      to deal with them. */
   if (regular_props->nelts || entry_props->nelts || wc_props->nelts)
     {
+      /* Make a temporary log accumulator for dirprop changes.*/
+      svn_stringbuf_t *dirprop_log = svn_stringbuf_create("", pool);
+
       if (regular_props->nelts)
         {
           /* If recording traversal info, then see if the
@@ -1626,16 +1633,20 @@ close_directory(void *dir_baton,
                                         regular_props, TRUE, FALSE,
                                         db->edit_baton->conflict_func,
                                         db->edit_baton->conflict_baton,
-                                        db->pool, &db->log_accum),
+                                        db->pool, &dirprop_log),
                     _("Couldn't do property merge"));
         }
 
-      SVN_ERR(accumulate_entry_props(db->log_accum, NULL,
+      SVN_ERR(accumulate_entry_props(dirprop_log, NULL,
                                      adm_access, db->path,
                                      entry_props, pool));
 
-      SVN_ERR(accumulate_wcprops(db->log_accum, adm_access,
+      SVN_ERR(accumulate_wcprops(dirprop_log, adm_access,
                                  db->path, wc_props, pool));
+
+      /* Add the dirprop loggy entries to the baton's log
+         accumulator. */
+      svn_stringbuf_appendstr(db->log_accum, dirprop_log);
     }
 
   /* Flush and run the log. */
@@ -1969,12 +1980,12 @@ choose_base_paths(const char **checksum_p,
       *checksum_p = NULL;
       if (ent)
         *checksum_p = ent->checksum;
-    } 
+    }
   if (replaced_p)
     *replaced_p = replaced;
   if (use_revert_base_p)
     *use_revert_base_p = use_revert_base;
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -2152,7 +2163,7 @@ change_file_prop(void *file_baton,
    properties as well as entryprops and wcprops.  Update *PROP_STATE
    to reflect the result of the regular prop merge.  Make *LOCK_STATE
    reflect the possible removal of a lock token from FILE_PATH's
-   entryprops.  BASE_PROPS and WORKING_PROPS are hashes of the base and 
+   entryprops.  BASE_PROPS and WORKING_PROPS are hashes of the base and
    working props of the file; if NULL they are read from the wc.
 
    CONFICT_FUNC/BATON is a callback which allows the client to
@@ -2308,7 +2319,7 @@ merge_file(svn_wc_notify_state_t *content_state,
 {
   const char *parent_dir;
   struct edit_baton *eb = fb->edit_baton;
-  svn_stringbuf_t *log_accum = fb->dir_baton->log_accum;
+  svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
   svn_wc_adm_access_t *adm_access;
   svn_boolean_t is_locally_modified;
   svn_boolean_t is_replaced = FALSE;
@@ -2439,7 +2450,7 @@ merge_file(svn_wc_notify_state_t *content_state,
           SVN_ERR(svn_io_check_path(fb->path, &wfile_kind, pool));
           if (wfile_kind == svn_node_none && ! fb->added_with_history)
             {
-              /* working file is missing?! 
+              /* working file is missing?!
                  Just copy the new text-base to the file. */
               SVN_ERR(svn_wc__loggy_copy(&log_accum, NULL, adm_access,
                                          svn_wc__copy_translate,
@@ -2482,7 +2493,7 @@ merge_file(svn_wc_notify_state_t *content_state,
                                           entry->revision,
                                           *path_ext ? "." : "",
                                           *path_ext ? path_ext : "");
-                                          
+
               newrev_str = apr_psprintf(pool, ".r%ld%s%s",
                                         *eb->target_revision,
                                         *path_ext ? "." : "",
@@ -2645,6 +2656,11 @@ merge_file(svn_wc_notify_state_t *content_state,
   else
     *content_state = svn_wc_notify_state_unchanged;
 
+  /* Now that we've built up *all* of the loggy commands for this
+     file, add them to the directory's log accumulator in one fell
+     swoop. */
+  svn_stringbuf_appendstr(fb->dir_baton->log_accum, log_accum);
+
   return SVN_NO_ERROR;
 }
 
@@ -2669,7 +2685,7 @@ close_file(void *file_baton,
   /* Was this an add-with-history, with no apply_textdelta? */
   if (fb->added_with_history && ! fb->received_textdelta)
     {
-      assert(! fb->text_base_path && ! fb->new_text_base_path 
+      assert(! fb->text_base_path && ! fb->new_text_base_path
              && fb->copied_text_base);
 
       /* Set up the base paths like apply_textdelta does. */
@@ -2914,9 +2930,11 @@ locate_copyfrom(const char *copyfrom_path,
 }
 
 
+/* Given a set of properties PROPS_IN, find all regular properties
+   and return these in a new set, alloced on POOL. */
 static apr_hash_t *
-copy_non_entry_props(apr_hash_t *props_in,
-                     apr_pool_t *pool)
+copy_regular_props(apr_hash_t *props_in,
+                   apr_pool_t *pool)
 {
   apr_hash_t *props_out = apr_hash_make(pool);
   apr_hash_index_t *hi;
@@ -2931,9 +2949,8 @@ copy_non_entry_props(apr_hash_t *props_in,
       propname = key;
       propval = val;
 
-      if (svn_property_kind(NULL, propname) == svn_prop_entry_kind)
-        continue;
-      apr_hash_set(props_out, propname, APR_HASH_KEY_STRING, propval);
+      if (svn_property_kind(NULL, propname) == svn_prop_regular_kind)
+        apr_hash_set(props_out, propname, APR_HASH_KEY_STRING, propval);
     }
   return props_out;
 }
@@ -3036,10 +3053,11 @@ add_file_with_history(const char *path,
       working_props = base_props;
     }
 
-  /* Loop over whatever props we have in memory, and add any
-     non-entry-specific props to hashes in the baton. */
-  tfb->copied_base_props = copy_non_entry_props(base_props, pool);
-  tfb->copied_working_props = copy_non_entry_props(working_props, pool);
+  /* Loop over whatever props we have in memory, and add all
+     regular props to hashes in the baton. Skip entry and wc
+     properties, these are only valid for the original file. */
+  tfb->copied_base_props = copy_regular_props(base_props, pool);
+  tfb->copied_working_props = copy_regular_props(working_props, pool);
 
   if (src_path != NULL)
     {
@@ -3058,7 +3076,7 @@ add_file_with_history(const char *path,
                                           svn_io_file_del_none,
                                           pool));
 
-          SVN_ERR(svn_io_copy_file(src_path, tfb->copied_working_text, TRUE, 
+          SVN_ERR(svn_io_copy_file(src_path, tfb->copied_working_text, TRUE,
                                    pool));
         }
     }
@@ -3163,10 +3181,10 @@ make_editor(svn_revnum_t *target_revision,
             apr_pool_t *pool)
 {
   struct edit_baton *eb;
+  void *inner_baton;
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(subpool);
-  const svn_delta_editor_t *ambient_editor;
-  void *ambient_baton;
+  const svn_delta_editor_t *inner_editor;
   const svn_wc_entry_t *entry;
 
   /* Get the anchor entry, so we can fetch the repository root. */
@@ -3224,20 +3242,33 @@ make_editor(svn_revnum_t *target_revision,
   tree_editor->absent_file = absent_file;
   tree_editor->close_edit = close_edit;
 
-  SVN_ERR(svn_wc__ambient_depth_filter_editor(&ambient_editor,
-                                              &ambient_baton,
-                                              tree_editor,
-                                              eb,
-                                              anchor,
-                                              target,
-                                              adm_access,
-                                              depth,
-                                              pool));
+  /* Fiddle with the type system. */
+  inner_editor = tree_editor;
+  inner_baton = eb;
+
+  /* Easy out: we only need an ambient filter if the caller has no
+     particular depth request in mind -- because if a depth was
+     explicitly requested, libsvn_delta/depth_filter_editor.c will
+     ensure that we never see editor calls we don't want anyway. 
+  */
+  /* ### (This can also be skipped if the server understands depth;
+     ### consider letting the depth RA capability percolate down to
+     ### this level.) */
+
+  if (depth == svn_depth_unknown)
+    SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
+                                                &inner_baton,
+                                                inner_editor,
+                                                inner_baton,
+                                                anchor,
+                                                target,
+                                                adm_access,
+                                                pool));
 
   SVN_ERR(svn_delta_get_cancellation_editor(cancel_func,
                                             cancel_baton,
-                                            ambient_editor,
-                                            ambient_baton,
+                                            inner_editor,
+                                            inner_baton,
                                             editor,
                                             edit_baton,
                                             pool));

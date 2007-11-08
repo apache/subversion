@@ -76,6 +76,10 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/**
+ * @defgroup svn_string String handling
+ * @{
+ */
 
 
 
@@ -328,8 +332,8 @@ int svn_cstring_count_newlines(const char *msg);
 
 /**
  * Return a cstring which is the concatenation of @a strings (an array
- * of char *) each separated by @a separator.  The returned string is
- * allocated from @a pool.
+ * of char *) each followed by @a separator (that is, @a separator
+ * will also end the resulting string).  Allocate the result in @a pool.
  *
  * @since New in 1.2.
  */
@@ -337,6 +341,8 @@ char *
 svn_cstring_join(apr_array_header_t *strings,
                  const char *separator,
                  apr_pool_t *pool);
+
+/** @} */
 
 /** @} */
 

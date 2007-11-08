@@ -220,7 +220,7 @@ svn_opt_subcommand_takes_option(const svn_opt_subcommand_desc_t *command,
 /**
  * Print a generic (not command-specific) usage message to @a stream.
  *
- * (### todo: why is @a stream a stdio file instead of an svn stream?)
+ * ### @todo Why is @a stream a stdio file instead of an svn stream?
  *
  * If @a header is non-null, print @a header followed by a newline.  Then
  * loop over @a cmd_table printing the usage for each command (getting
@@ -273,8 +273,8 @@ svn_opt_format_option(const char **string,
  * Obtain option usage from @a options_table.  If not @c NULL, @a
  * global_options is a zero-terminated list of global options.  Use @a
  * pool for temporary allocation.  @a subcommand may be a canonical
- * command name or an alias.  (### todo: why does this only print to
- * @c stdout, whereas svn_opt_print_generic_help() gives us a choice?)
+ * command name or an alias.  ### @todo Why does this only print to
+ * @c stdout, whereas svn_opt_print_generic_help() gives us a choice?
  *
  * @since New in 1.5.
  */
@@ -627,7 +627,7 @@ svn_opt_print_help3(apr_getopt_t *os,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
- 
+
 svn_error_t *
 svn_opt_print_help2(apr_getopt_t *os,
                     const char *pgm_name,

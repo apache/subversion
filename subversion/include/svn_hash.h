@@ -40,12 +40,16 @@ extern "C" {
 /** The longest the "K <number>" line can be in one of our hashdump files. */
 #define SVN_KEYLINE_MAXLEN 100
 
+/**
+ * @defgroup svn_hash_support Hash table serialization support
+ * @{
+ */
 
 /*----------------------------------------------------*/
 
 /** Reading/writing hashtables to disk
  *
- * @defgroup svn_hash_read_write reading and writing hashtables to disk
+ * @defgroup svn_hash_read_write Reading and writing hashtables to disk
  * @{
  */
 
@@ -138,7 +142,7 @@ svn_error_t *svn_hash_write(apr_hash_t *hash,
 
 /** Taking the "diff" of two hash tables.
  *
- * @defgroup svn_hash_diff taking the diff of two hash tables.
+ * @defgroup svn_hash_diff Taking the diff of two hash tables.
  * @{
  */
 
@@ -201,6 +205,8 @@ svn_error_t *svn_hash_diff(apr_hash_t *hash_a,
  * @since New in 1.5.
  */
 svn_error_t *svn_hash__clear(apr_hash_t *hash);
+
+/** @} */
 
 /** @} */
 

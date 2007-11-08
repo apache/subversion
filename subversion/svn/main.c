@@ -404,7 +404,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {'r', 'c', svn_cl__old_cmd_opt, svn_cl__new_cmd_opt, 'N',
      svn_cl__depth_opt, svn_cl__diff_cmd_opt, 'x',
      svn_cl__no_diff_deleted, svn_cl__notice_ancestry_opt,
-     svn_cl__summarize, svn_cl__changelist_opt, svn_cl__force_opt} },
+     svn_cl__summarize, svn_cl__changelist_opt, svn_cl__force_opt,
+     svn_cl__xml_opt} },
 
   { "export", svn_cl__export, {0}, N_
     ("Create an unversioned copy of a tree.\n"
@@ -491,7 +492,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     { svn_cl__targets_opt, 'm', 'F', svn_cl__force_log_opt,
       svn_cl__encoding_opt, svn_cl__force_opt, svn_cl__changelist_opt },
     {{'F', N_("read lock comment from file ARG")},
-     {'m', N_("specify lock comment ARG")}} },
+     {'m', N_("specify lock comment ARG")},
+     {svn_cl__force_log_opt, N_("force validity of lock comment source")}} },
 
   { "log", svn_cl__log, {0}, N_
     ("Show the log messages for a set of revision(s) and/or file(s).\n"
@@ -529,7 +531,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     ("Apply the differences between two sources to a working copy path.\n"
      "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
      "       2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
-     "       3. merge [-c M | -r N:M] [SOURCE[@REV] [WCPATH]]\n"
+     "       3. merge [[-c M]... | [-r N:M]...] [SOURCE[@REV] [WCPATH]]\n"
      "\n"
      "  1. In the first form, the source URLs are specified at revisions\n"
      "     N and M.  These are the two sources to be compared.  The revisions\n"
@@ -548,6 +550,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     is assumed.  '-c M' is equivalent to '-r <M-1>:M', and '-c -M'\n"
      "     does the reverse: '-r M:<M-1>'.  If neither N nor M is specified,\n"
      "     they default to OLDEST_CONTIGUOUS_REV_OF_SOURCE_AT_URL and HEAD.\n"
+     "     Multiple '-c' and/or '-r' may be specified and mixing of forward\n"
+     "     and reverse ranges is allowed, however the ranges are compacted\n"
+     "     to their minimum representation before merging begins (which may\n"
+     "     result in a no-op).\n"
      "\n"
      "  WCPATH is the working copy path that will receive the changes.\n"
      "  If WCPATH is omitted, a default value of '.' is assumed, unless\n"
@@ -1137,7 +1143,7 @@ main(int argc, const char *argv[])
                 -c N  -> -r N-1:N
                 -c -N -> -r N:N-1 */
           {
-            svn_opt_revision_range_t *range = apr_palloc(pool, sizeof(*range));            
+            svn_opt_revision_range_t *range = apr_palloc(pool, sizeof(*range));
           if (changeno > 0)
             {
                 range->start.value.number = changeno - 1;
@@ -1489,7 +1495,7 @@ main(int argc, const char *argv[])
       if (opt_id == 'h' || opt_id == '?')
         continue;
 
-      if (! svn_opt_subcommand_takes_option3(subcommand, opt_id, 
+      if (! svn_opt_subcommand_takes_option3(subcommand, opt_id,
                                              svn_cl__global_options))
         {
           const char *optstr;
@@ -1550,7 +1556,8 @@ main(int argc, const char *argv[])
           || subcommand->cmd_func == svn_cl__import
           || subcommand->cmd_func == svn_cl__mkdir
           || subcommand->cmd_func == svn_cl__move
-          || subcommand->cmd_func == svn_cl__lock))
+          || subcommand->cmd_func == svn_cl__lock
+          || subcommand->cmd_func == svn_cl__propedit))
     {
       /* If the -F argument is a file that's under revision control,
          that's probably not what the user intended. */
@@ -1650,9 +1657,19 @@ main(int argc, const char *argv[])
     return svn_cmdline_handle_exit_error(err, pool, "svn: ");
   command_baton.ctx = ctx;
 
-  if ((err = svn_config_get_config(&(ctx->config),
-                                   opt_state.config_dir, pool)))
-    return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+  err = svn_config_get_config(&(ctx->config),
+                              opt_state.config_dir, pool);
+  if (err)
+    {
+      /* Fallback to default config if the config directory isn't readable. */
+      if (err->apr_err == APR_EACCES)
+        {
+          svn_handle_warning(stderr, err);
+          svn_error_clear(err);
+        }
+      else
+        return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+    }
 
   cfg = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
                      APR_HASH_KEY_STRING);

@@ -51,8 +51,7 @@
 */
 static svn_error_t *
 create_stdio_stream(svn_stream_t **stream,
-                    APR_DECLARE(apr_status_t) open_fn(apr_file_t **,
-                                                      apr_pool_t *),
+                    apr_status_t open_fn(apr_file_t **, apr_pool_t *),
                     apr_pool_t *pool)
 {
   apr_file_t *stdio_file;
@@ -247,14 +246,9 @@ new_revision_record(void **revision_baton,
   rb->rev_orig = SVN_STR_TO_REV(val);
 
   if (rb->pb->do_renumber_revs)
-    {
-      rb->rev_actual = rb->rev_orig - rb->pb->rev_drop_count;
-    }
+    rb->rev_actual = rb->rev_orig - rb->pb->rev_drop_count;
   else
-    {
-      rb->rev_actual = rb->rev_orig;
-    }
-
+    rb->rev_actual = rb->rev_orig;
 
   SVN_ERR(svn_stream_printf(header_stream, pool,
                             SVN_REPOS_DUMPFILE_REVISION_NUMBER ": %ld\n",
@@ -273,7 +267,6 @@ new_revision_record(void **revision_baton,
       SVN_ERR(svn_stream_printf(header_stream, pool, "%s: %s\n",
                                 (const char *)key,
                                 (const char *)val));
-
     }
 
   SVN_ERR(svn_stream_close(header_stream));

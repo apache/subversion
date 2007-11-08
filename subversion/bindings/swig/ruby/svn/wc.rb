@@ -296,7 +296,18 @@ module Svn
         Wc.is_wc_root(path, self)
       end
 
-      def update_editor(target_revision, target, use_commit_times=true,
+      def update_editor(target, use_commit_times=true, recurse=true,
+                        diff3_cmd=nil, notify_func=nil, cancel_func=nil,
+                        traversal_info=nil)
+        editor, editor_baton = Wc.get_update_editor2(target, self,
+                                                     use_commit_times, recurse,
+                                                     notify_func, cancel_func,
+                                                     diff3_cmd, traversal_info)
+        editor.baton = editor_baton
+        editor
+      end
+
+      def update_editor2(target_revision, target, use_commit_times=true,
                         depth=nil, allow_unver_obstruction=false, diff3_cmd=nil,
                         notify_func=nil, cancel_func=nil, traversal_info=nil,
                         preserved_exts=nil)
@@ -321,7 +332,19 @@ module Svn
         editor
       end
 
-      def switch_editor(target_revision, target, switch_url,
+      def switch_editor(target, switch_url, use_commit_times=true,
+                        recurse=true, diff3_cmd=nil, notify_func=nil,
+                        cancel_func=nil, traversal_info=nil)
+        editor, editor_baton = Wc.get_update_editor2(target, switch_url,
+                                                     self, use_commit_times,
+                                                     recurse, notify_func,
+                                                     cancel_func, diff3_cmd,
+                                                     traversal_info)
+        editor.baton = editor_baton
+        editor
+      end
+
+      def switch_editor2(target_revision, target, switch_url,
                         use_commit_times=true, depth=nil,
                         allow_unver_obstruction=false, diff3_cmd=nil,
                         notify_func=nil, cancel_func=nil, traversal_info=nil,

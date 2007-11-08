@@ -829,7 +829,7 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
  * info available.  Allocate the returned values in @a pool.
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
- * only inherited mergeinfo for @paths is retrieved.
+ * only inherited mergeinfo for @a paths is retrieved.
  *
  * If @a revision is @c SVN_INVALID_REVNUM, it defaults to youngest.
  *
@@ -1577,8 +1577,11 @@ svn_error_t *svn_ra_replay(svn_ra_session_t *session,
 
 /**
  * Set @a *has to true if the server represented by @a session has
- * capability @a capability (one of the capabilities beginning with
+ * @a capability (one of the capabilities beginning with
  * @c "SVN_RA_CAPABILITY_"), else set @a *has to false.
+ *
+ * If @a capability isn't recognized, throw @c SVN_ERR_RA_UNKNOWN_CAPABILITY,
+ * with the effect on @a *has undefined.
  *
  * Use @a pool for all allocation.
  *
@@ -1597,6 +1600,23 @@ svn_error_t *svn_ra_has_capability(svn_ra_session_t *session,
  * @since New in 1.5.
  */
 #define SVN_RA_CAPABILITY_DEPTH "depth"
+
+/**
+ * The capability of doing the right thing with merge-tracking
+ * information.  This capability should be reported bidirectionally,
+ * because some repositories may want to reject clients that do not
+ * self-report as knowing how to handle merge-tracking.
+ *
+ * @since New in 1.5.
+ */
+#define SVN_RA_CAPABILITY_MERGEINFO "mergeinfo"
+
+/**
+ * The capability of retrieving arbitrary revprops in svn_ra_get_log2.
+ *
+ * @since New in 1.5.
+ */
+#define SVN_RA_CAPABILITY_LOG_REVPROPS "log-revprops"
 
 /*       *** PLEASE READ THIS IF YOU ADD A NEW CAPABILITY ***
  * RA layers generally fetch all capabilities when asked about any

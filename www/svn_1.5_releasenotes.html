@@ -233,8 +233,7 @@ href="http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt"
 <div class="h3" id="relative-externals" title="relative-externals">
 <h3>Relative peg URLs in <tt>svn:externals</tt></h3>
 
-<p>
-  Two additions to the <tt>svn:externals</tt> feature
+<p>Two additions to the <tt>svn:externals</tt> feature</p>
   <ul>
     <li>
       <p>
@@ -245,30 +244,28 @@ href="http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt"
         not understand peg revisions.  A new format is introduced to
         allow peg revisions in URLs.
       </p>
-      <p>
-        So the old format of
+      <p>So the old format of</p>
         <pre>
           foo             http://example.com/repos/zig
           foo/bar -r 1234 http://example.com/repos/zag
         </pre>
-        does not support peg revisions.  In fact, these following
+        <p>does not support peg revisions.  In fact, these following
         externals will not work unless there are directories named
-        <tt>zig@HEAD</tt> and <tt>zag@HEAD</tt>:
+        <tt>zig@HEAD</tt> and <tt>zag@HEAD</tt>:</p>
         <pre>
           foo             http://example.com/repos/zig@HEAD
           foo/bar -r 1234 http://example.com/repos/zag@HEAD
         </pre>
-      </p>
       <p>
         The new format moves the URL first followed by the directory
-        the external is checked out or exported into
+        the external is checked out or exported into</p>
         <pre>
           http://example.com/repos/zig foo1
           -r 1234 http://example.com/repos/zag foo/bar1
           http://example.com/repos/zig@HEAD foo2
           -r 1234 http://example.com/repos/zag@HEAD foo/bar2
         </pre>
-        peg specifications are allowed but not necessary.
+        <p>peg specifications are allowed but not necessary.
       </p>
     </li>
     <li>
@@ -282,7 +279,7 @@ href="http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt"
         <tt>http://example.com/svn/repos-1</tt> and
         <tt>http://example.com/svn/repos-2</tt>.  We have a checkout
         of <tt>http://example.com/svn/repos-1/project1/trunk</tt> and
-        the <tt>svn:external</tt> property is set on <tt>trunk</tt>.
+        the <tt>svn:external</tt> property is set on <tt>trunk</tt>.</p>
         <ul>
           <li>
             <tt>../</tt>
@@ -360,7 +357,6 @@ href="http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt"
             <tt>http://example.com/svn/repos-1/project1/trunk</tt>.
           </li>
         </ul>
-      </p>
       <p>
         Relative URLs are supported in the old <tt>svn:externals</tt>
         format that do not support peg revisions.
@@ -372,7 +368,6 @@ href="http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt"
       </p>
     </li>
   </ul>
-</p>
 
 </div>  <!-- relative-externals -->
 
@@ -448,10 +443,10 @@ href="http://subversion.tigris.org/issues/show_bug.cgi?id=503">issue
 
 <p>Clients may now perform multiple local copy/move operations on a
 single object in a working copy:</p>
-<blockquote><code><pre>
+<blockquote><pre><code>
 svn mv path1 path2
 svn mv path2 path3
-</pre></code></blockquote>
+</code></pre></blockquote>
 
 </div>  <!-- multi-op-copy-move -->
 
@@ -464,9 +459,9 @@ This mirrors the behavior of standard command-line copy and move tools,
 such as <code>cp</code> and <code>mv</code>.  In practice, this means
 users can take advantage of shell globbing when doing a local copy
 or move:</p>
-<blockquote><code><pre>
+<blockquote><pre><code>
 svn cp *.c dir
-</pre></code></blockquote>
+</code></pre></blockquote>
 
 <p>Multiple source copy/move also works for all previously defined
 copy/move working copy and repository combinations.  This was

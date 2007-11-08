@@ -1060,7 +1060,19 @@ def switch_change_repos_root(sbox):
   other_A_url = other_repo_url +  "/A"
   A_wc_dir = os.path.join(wc_dir, "A")
 
-  # A switch that changes the repo root part of the URL shouldn't work.
+  # Test 1: A switch that changes to a non-existing repo shouldn't work.
+  expected_err = ".*Unable to open repository.*|.*Could not open.*|"\
+                 ".*No repository found.*"
+  svntest.actions.run_and_verify_svn(None, None,
+                                     expected_err,
+                                     'switch',
+                                     other_A_url, A_wc_dir)
+
+  # Test 2: A switch that changes the repo root part of the URL shouldn't work.
+  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
+  other_A_url = other_repo_url +  "/A"
+
+  svntest.main.create_repos(other_repo_dir)
   svntest.actions.run_and_verify_svn(None, None,
                                      ".*not the same repository.*",
                                      'switch',
@@ -1687,7 +1699,7 @@ def mergeinfo_switch_elision(sbox):
                                         expected_status,
                                         None, None, None, None, None, 1)
 
-#----------------------------------------------------------------------  
+#----------------------------------------------------------------------
 
 def switch_with_depth(sbox):
   "basic tests to verify switch along with depth"
@@ -1700,7 +1712,7 @@ def switch_with_depth(sbox):
   AD_url = repo_url + '/A/D'
   AB_url = repo_url + '/A/B'
   AB_path = os.path.join(wc_dir, 'A', 'B')
-  
+
   # Set up expected results of 'switch --depth=empty'
   expected_output = svntest.wc.State(wc_dir, {})
   expected_disk = svntest.main.greek_state.copy()
@@ -1801,7 +1813,7 @@ def switch_with_depth(sbox):
         'A/B/H'       : Item(status='  ', wc_rev=1)
         })
     expected_status.tweak('A/B', switched='S')
-    
+
     # Do 'switch --depth=immediates' and check the results in three ways.
     svntest.actions.run_and_verify_switch(wc_dir, AB_path, AD_url,
                                           expected_output,
@@ -1811,7 +1823,7 @@ def switch_with_depth(sbox):
                                           '--depth', 'immediates')
 
   sw_depth_imm()
-    
+
   # Set up expected results for reverting 'switch --depth=immediates'.
   # (Reverting with default [infinite] depth, so that the result is a
   # standard Greek Tree working copy again.)
@@ -1845,7 +1857,7 @@ def switch_with_depth(sbox):
     'A/B/lambda'  : Item(status='A '),
     'A/B/E'       : Item(status='A '),
     'A/B/E/alpha' : Item(status='A '),
-    'A/B/E/beta'  : Item(status='A '),    
+    'A/B/E/beta'  : Item(status='A '),
     'A/B/F'       : Item(status='A '),
     })
   expected_disk = svntest.main.greek_state.copy()
@@ -1859,7 +1871,7 @@ def switch_with_depth(sbox):
                                         None, None, None, None, 0,
                                         '--depth', 'infinity')
 
-#----------------------------------------------------------------------  
+#----------------------------------------------------------------------
 
 def switch_to_dir_with_peg_rev(sbox):
   "switch to dir@peg where dir doesn't exist in HEAD"
@@ -1994,6 +2006,74 @@ def switch_urls_with_spaces(sbox):
                                         expected_disk,
                                         expected_status)
 
+def switch_to_dir_with_peg_rev2(sbox):
+  "switch to old rev of now renamed branch"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  # prepare dir X in rev. 2
+  X_path = os.path.join(wc_dir, 'X')
+  svntest.main.run_svn(None, 'mkdir', X_path)
+  svntest.main.run_svn(None, 'ci',
+                       '-m', 'log message',
+                       wc_dir)
+
+  # make a change in ADG in rev. 3
+  tau_path = os.path.join(wc_dir, 'A', 'D', 'G', 'tau')
+  svntest.main.file_append(tau_path, "extra line\n")
+  svntest.main.run_svn(None, 'ci', '-m', 'log message', wc_dir)
+
+  # Rename ADG to ADY in rev 4
+  svntest.main.run_svn(None, 'up', wc_dir)
+  ADG_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  ADY_path = os.path.join(wc_dir, 'A', 'D', 'Y')
+  svntest.main.run_svn(None, 'mv', ADG_path, ADY_path)
+  svntest.main.run_svn(None, 'ci',
+                       '-m', 'log message',
+                       wc_dir)
+
+  # Test switch X to rev 2 of A/D/Y@HEAD
+  ADY_url = sbox.repo_url + '/A/D/Y'
+  expected_output = svntest.wc.State(wc_dir, {
+    'X/pi'   : Item(status='A '),
+    'X/rho'   : Item(status='A '),
+    'X/tau'   : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+      'X'         : Item(),
+      'X/pi'  : Item("This is the file 'pi'.\n"),
+      'X/rho' : Item("This is the file 'rho'.\n"),
+      'X/tau' : Item("This is the file 'tau'.\n"),
+      'A/D/Y'     : Item(),
+      'A/D/Y/pi'  : Item("This is the file 'pi'.\n"),
+      'A/D/Y/rho' : Item("This is the file 'rho'.\n"),
+      'A/D/Y/tau' : Item("This is the file 'tau'.\nextra line\n"),
+      })
+  expected_disk.remove('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.remove('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
+  expected_status.add({
+      'X'           : Item(status='  ', wc_rev=2, switched='S'),
+      'X/pi'        : Item(status='  ', wc_rev=2),
+      'X/rho'       : Item(status='  ', wc_rev=2),
+      'X/tau'       : Item(status='  ', wc_rev=2),
+      'A/D/Y'           : Item(status='  ', wc_rev=4),
+      'A/D/Y/pi'        : Item(status='  ', wc_rev=4),
+      'A/D/Y/rho'       : Item(status='  ', wc_rev=4),
+      'A/D/Y/tau'       : Item(status='  ', wc_rev=4),
+      })
+
+  svntest.actions.run_and_verify_switch(wc_dir, X_path, ADY_url + '@HEAD',
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status, None,
+                                        None, None, None, None, 0,
+                                        '-r', '2')
+
 ########################################################################
 # Run the tests
 
@@ -2026,6 +2106,7 @@ test_list = [ None,
               switch_with_depth,
               switch_to_dir_with_peg_rev,
               switch_urls_with_spaces,
+              switch_to_dir_with_peg_rev2,
              ]
 
 if __name__ == '__main__':

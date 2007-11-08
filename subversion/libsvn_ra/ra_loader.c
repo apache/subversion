@@ -927,18 +927,17 @@ svn_error_t *svn_ra_get_locations(svn_ra_session_t *session,
                                   apr_pool_t *pool)
 {
   svn_error_t *err = session->vtable->get_locations(session, locations, path,
-                                                    peg_revision, 
+                                                    peg_revision,
                                                     location_revisions,
                                                     pool);
   if (err && (err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED))
     {
       svn_error_clear(err);
-      err = SVN_NO_ERROR;
-      
+
       /* Do it the slow way, using get-logs, for older servers. */
-      SVN_ERR(svn_ra__locations_from_log(session, locations, path, 
-                                         peg_revision, location_revisions, 
-                                         pool));
+      err = svn_ra__locations_from_log(session, locations, path,
+                                       peg_revision, location_revisions,
+                                       pool);
     }
   return err;
 }
@@ -953,24 +952,23 @@ svn_ra_get_location_segments(svn_ra_session_t *session,
                              void *receiver_baton,
                              apr_pool_t *pool)
 {
-  svn_error_t *err = session->vtable->get_location_segments(session, 
-                                                            path, 
+  svn_error_t *err = session->vtable->get_location_segments(session,
+                                                            path,
                                                             peg_revision,
-                                                            start_rev, 
-                                                            end_rev, 
-                                                            receiver, 
+                                                            start_rev,
+                                                            end_rev,
+                                                            receiver,
                                                             receiver_baton,
                                                             pool);
   if (err && (err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED))
     {
       svn_error_clear(err);
-      err = SVN_NO_ERROR;
-      
+
       /* Do it the slow way, using get-logs, for older servers. */
-      SVN_ERR(svn_ra__location_segments_from_log(session, path, 
-                                                 peg_revision, start_rev,
-                                                 end_rev, receiver,
-                                                 receiver_baton, pool));
+      err = svn_ra__location_segments_from_log(session, path,
+                                               peg_revision, start_rev,
+                                               end_rev, receiver,
+                                               receiver_baton, pool);
     }
   return err;
 }
@@ -1003,9 +1001,20 @@ svn_error_t *svn_ra_get_file_revs2(svn_ra_session_t *session,
                                    void *handler_baton,
                                    apr_pool_t *pool)
 {
-  return session->vtable->get_file_revs(session, path, start, end,
-                                        include_merged_revisions, handler,
-                                        handler_baton, pool);
+
+  svn_error_t *err = session->vtable->get_file_revs(session, path, start, end,
+                                                    include_merged_revisions,
+                                                    handler, handler_baton,
+                                                    pool);
+  if (err && (err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED))
+    {
+      svn_error_clear(err);
+
+      /* Do it the slow way, using get-logs, for older servers. */
+      err = svn_ra__file_revs_from_log(session, path, start, end,
+                                       handler, handler_baton, pool);
+    }
+  return err;
 }
 
 svn_error_t *svn_ra_lock(svn_ra_session_t *session,

@@ -3423,7 +3423,7 @@ def update_copied_from_replaced_and_changed(sbox):
   # Modify fn2.
   fn2_final_contents = "I have new contents for the middle file."
   svntest.main.file_write(fn2_path, fn2_final_contents)
-  
+
   # Commit the changes, creating r3.
   expected_output = svntest.wc.State(wc_dir, {
     fn2_relpath : Item(verb='Sending'),
@@ -3687,6 +3687,84 @@ def update_accept_conflicts(sbox):
                                         svntest.tree.detect_conflict_files,
                                         extra_files)
 
+# Test for a wc corruption race condition (possibly introduced in
+# r23342) which is easy to trigger if interactive conflict resolution
+# dies in the middle of prompting.  Specifically, we run an update
+# with interactive-conflicts on but close stdin immediately, so the
+# prompt errors out; then the dir_baton pool cleanup handlers in the
+# WC update editor flush and run incomplete logs and lead to WC
+# corruption, detectable by another update command.
+
+def eof_in_interactive_conflict_resolver(sbox):
+  "eof in interactive resolution can't break wc"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Set up a custom config directory which *doesn't* turn off
+  # interactive resolution
+  config_contents = '''\
+[miscellany]
+interactive-conflicts = true
+'''
+  tmp_dir = os.path.abspath(svntest.main.temp_dir)
+  config_dir = os.path.join(tmp_dir, 'interactive-conflicts-config')
+  svntest.main.create_config_dir(config_dir, config_contents)
+
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  # Modify iota and commit for r2.
+  svntest.main.file_append(iota_path, "Appended text in r2.\n")
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota': Item(verb="Sending"),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # Go back to revision 1.
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(status='U '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None, 1,
+                                        '-r1', wc_dir)
+
+  # Modify iota differently and try to update *with the interactive
+  # resolver*.  ### The parser won't go so well with the output
+  svntest.main.file_append(iota_path, "Local mods to r1 text.\n")
+  svntest.actions.run_and_verify_update(wc_dir, None, None, None,
+                                        "Can't read stdin: End of file found",
+                                        None, None, None, None, 1,
+                                        wc_dir, '--config-dir', config_dir)
+
+  # Now update -r1 again.  Hopefully we don't get a checksum error!
+  expected_output = svntest.wc.State(wc_dir, {})
+  # note: it's possible that the correct disk here should be the
+  # merged file?
+  expected_disk.tweak('iota', contents=("This is the file 'iota'.\n"
+                                        "Local mods to r1 text.\n"))
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status='M ')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None, 1,
+                                        '-r1', wc_dir)
+
+
 
 #######################################################################
 # Run the tests
@@ -3737,6 +3815,7 @@ test_list = [ None,
                          server_sends_copyfrom_on_update),
               update_copied_from_replaced_and_changed,
               update_accept_conflicts,
+              eof_in_interactive_conflict_resolver,
              ]
 
 if __name__ == '__main__':

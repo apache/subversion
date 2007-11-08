@@ -76,8 +76,9 @@ verify_mergeinfo_parse(const char *input,
       /* Test ranges.  For now, assume only 1 range. */
       range = APR_ARRAY_IDX((apr_array_header_t *) ranges, 0,
                             svn_merge_range_t *);
-      if (range->start != first_range->start ||
-          range->end != first_range->end)
+      if (range->start != first_range->start
+          || range->end != first_range->end
+          || range->inheritable != first_range->inheritable)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_mergeinfo_parse (%s) failed to "
                                  "parse the correct range",
@@ -109,9 +110,9 @@ static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
 /* First ranges from the paths identified by mergeinfo_paths. */
 static svn_merge_range_t mergeinfo_ranges[NBR_MERGEINFO_VALS] =
   {
-    { 0, 1 },
-    { 0, 6 },
-    { 4, 5 }
+    { 0, 1, TRUE },
+    { 0, 6, TRUE },
+    { 4, 5, TRUE }
   };
 
 static svn_error_t *
@@ -309,11 +310,16 @@ verify_ranges_match(apr_array_header_t *actual_rangelist,
     {
       svn_merge_range_t *range = APR_ARRAY_IDX(actual_rangelist, i,
                                                svn_merge_range_t *);
-      if (range->start != expected_ranges[i].start ||
-          range->end != expected_ranges[i].end)
-        return fail(pool, "%s should report range %ld-%ld, but found %ld-%ld",
-                    func_verified, expected_ranges[i].start,
-                    expected_ranges[i].end, range->start, range->end);
+      if (range->start != expected_ranges[i].start
+          || range->end != expected_ranges[i].end
+          || range->inheritable != expected_ranges[i].inheritable)
+          return fail(pool, "%s should report range %ld-%ld%s, "
+                      "but found %ld-%ld%s",
+                      func_verified, expected_ranges[i].start,
+                      expected_ranges[i].end,
+                      expected_ranges[i].inheritable ? "*" : "",
+                      range->start, range->end,
+                      range->inheritable ? "*" : "");
     }
   return SVN_NO_ERROR;
 }
@@ -353,9 +359,9 @@ test_diff_mergeinfo(const char **msg,
 {
   apr_hash_t *deleted, *added, *from, *to;
   svn_merge_range_t expected_rangelist_deletions[NBR_RANGELIST_DELTAS] =
-    { {6, 7}, {8, 9}, {10, 11}, {32, 34} };
+    { {6, 7, TRUE}, {8, 9, TRUE}, {10, 11, TRUE}, {32, 34, TRUE} };
   svn_merge_range_t expected_rangelist_additions[NBR_RANGELIST_DELTAS] =
-    { {1, 2}, {4, 6}, {12, 16}, {29, 30} };
+    { {1, 2, TRUE}, {4, 6, TRUE}, {12, 16, TRUE}, {29, 30, TRUE} };
 
   *msg = "diff of mergeinfo";
   if (msg_only)
@@ -383,7 +389,8 @@ test_rangelist_reverse(const char **msg,
                        apr_pool_t *pool)
 {
   apr_array_header_t *rangelist;
-  svn_merge_range_t expected_rangelist[3] = { {10, 9}, {7, 4}, {3, 2} };
+  svn_merge_range_t expected_rangelist[3] =
+    { {10, 9, TRUE}, {7, 4, TRUE}, {3, 2, TRUE} };
 
   *msg = "reversal of rangelist";
   if (msg_only)
@@ -613,7 +620,7 @@ test_remove_mergeinfo(const char **msg,
 {
   apr_hash_t *output, *whiteboard, *eraser;
   svn_merge_range_t expected_rangelist_remainder[NBR_RANGELIST_DELTAS] =
-    { {6, 7}, {8, 9}, {10, 11}, {32, 34} };
+    { {6, 7, TRUE}, {8, 9, TRUE}, {10, 11, TRUE}, {32, 34, TRUE} };
 
   *msg = "remove of mergeinfo";
   if (msg_only)
@@ -699,7 +706,7 @@ test_range_compact(const char **msg,
        be combined, then the expected range is rangelist[i][2] and
        rangelist[i][3] is {-1, -1, TRUE}.  If the ranges cancel each
        other out, then both rangelist[i][2] and rangelist[i][3] are
-       {-1, -1, TRUE}.       
+       {-1, -1, TRUE}.
            range1      +   range2      =   range3      ,   range4 */
     { /* Non-intersecting ranges */
       { { 2,  4, TRUE}, { 6, 13, TRUE}, { 2,  4, TRUE}, { 6, 13, TRUE} },
@@ -727,7 +734,7 @@ test_range_compact(const char **msg,
       { {37, 38, TRUE}, {33, 43, TRUE}, {33, 43, TRUE}, {-1, -1, TRUE} },
       { {38, 37, TRUE}, {33, 43, TRUE}, {33, 37, TRUE}, {38, 43, TRUE} },
       { {37, 38, TRUE}, {43, 33, TRUE}, {37, 33, TRUE}, {43, 38, TRUE} },
-      { {38, 37, TRUE}, {43, 33, TRUE}, {43, 33, TRUE}, {-1, -1, TRUE} }, 
+      { {38, 37, TRUE}, {43, 33, TRUE}, {43, 33, TRUE}, {-1, -1, TRUE} },
       /* Intersecting ranges share same start and end points */
       { { 4, 20, TRUE}, { 4, 20, TRUE}, { 4, 20, TRUE}, {-1, -1, TRUE} },
       { { 4, 20, TRUE}, {20,  4, TRUE}, {-1, -1, TRUE}, {-1, -1, TRUE} },
@@ -735,21 +742,21 @@ test_range_compact(const char **msg,
       { {20,  4, TRUE}, {20,  4, TRUE}, {20,  4, TRUE}, {-1, -1, TRUE} },
       /* Intersecting ranges share same start point */
       { { 7, 13, TRUE}, { 7, 19, TRUE}, { 7, 19, TRUE}, {-1, -1, TRUE} },
-      { { 7, 13, TRUE}, {19,  7, TRUE}, {19, 13, TRUE}, {-1, -1, TRUE} }, 
-      { {13,  7, TRUE}, {7,  19, TRUE}, {13, 19, TRUE}, {-1, -1, TRUE} }, 
+      { { 7, 13, TRUE}, {19,  7, TRUE}, {19, 13, TRUE}, {-1, -1, TRUE} },
+      { {13,  7, TRUE}, {7,  19, TRUE}, {13, 19, TRUE}, {-1, -1, TRUE} },
       { {13,  7, TRUE}, {19,  7, TRUE}, {19,  7, TRUE}, {-1, -1, TRUE} },
       { { 7, 19, TRUE}, { 7, 13, TRUE}, { 7, 19, TRUE}, {-1, -1, TRUE} },
-      { {19,  7, TRUE}, { 7, 13, TRUE}, {19, 13, TRUE}, {-1, -1, TRUE} }, 
-      { { 7, 19, TRUE}, {13,  7, TRUE}, {13, 19, TRUE}, {-1, -1, TRUE} }, 
+      { {19,  7, TRUE}, { 7, 13, TRUE}, {19, 13, TRUE}, {-1, -1, TRUE} },
+      { { 7, 19, TRUE}, {13,  7, TRUE}, {13, 19, TRUE}, {-1, -1, TRUE} },
       { {19,  7, TRUE}, {13,  7, TRUE}, {19,  7, TRUE}, {-1, -1, TRUE} },
       /* Intersecting ranges share same end point */
       { {12, 23, TRUE}, {18, 23, TRUE}, {12, 23, TRUE}, {-1, -1, TRUE} },
-      { {12, 23, TRUE}, {23, 18, TRUE}, {12, 18, TRUE}, {-1, -1, TRUE} }, 
-      { {23, 12, TRUE}, {18, 23, TRUE}, {18, 12, TRUE}, {-1, -1, TRUE} }, 
+      { {12, 23, TRUE}, {23, 18, TRUE}, {12, 18, TRUE}, {-1, -1, TRUE} },
+      { {23, 12, TRUE}, {18, 23, TRUE}, {18, 12, TRUE}, {-1, -1, TRUE} },
       { {23, 12, TRUE}, {23, 18, TRUE}, {23, 12, TRUE}, {-1, -1, TRUE} },
       { {18, 23, TRUE}, {12, 23, TRUE}, {12, 23, TRUE}, {-1, -1, TRUE} },
-      { {23, 18, TRUE}, {12, 23, TRUE}, {12, 18, TRUE}, {-1, -1, TRUE} }, 
-      { {18, 23, TRUE}, {23, 12, TRUE}, {18, 12, TRUE}, {-1, -1, TRUE} }, 
+      { {23, 18, TRUE}, {12, 23, TRUE}, {12, 18, TRUE}, {-1, -1, TRUE} },
+      { {18, 23, TRUE}, {23, 12, TRUE}, {18, 12, TRUE}, {-1, -1, TRUE} },
       { {23, 18, TRUE}, {23, 12, TRUE}, {23, 12, TRUE}, {-1, -1, TRUE} } };
   int i;
 

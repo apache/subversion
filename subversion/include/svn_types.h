@@ -336,7 +336,7 @@ svn_depth_from_word(const char *word);
  * the data corresponding to the other fields can be avoided.  These values
  * can be used for that purpose.
  *
- * @defgroup svn_dirent_fields dirent fields
+ * @defgroup svn_dirent_fields Dirent fields
  * @{
  */
 
@@ -405,29 +405,31 @@ svn_dirent_t *svn_dirent_dup(const svn_dirent_t *dirent,
  * would take care of both internationalization issues and custom
  * keywords (e.g., $NetBSD$).  See
  *
- *<pre>    http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=8921
- *    =====
- *    From: "Jonathan M. Manning" <jmanning@alisa-jon.net>
- *    To: dev@subversion.tigris.org
- *    Date: Fri, 14 Dec 2001 11:56:54 -0500
- *    Message-ID: <87970000.1008349014@bdldevel.bl.bdx.com>
- *    Subject: Re: keywords</pre>
+ * @verbatim
+      http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=8921
+      =====
+      From: "Jonathan M. Manning" <jmanning@alisa-jon.net>
+      To: dev@subversion.tigris.org
+      Date: Fri, 14 Dec 2001 11:56:54 -0500
+      Message-ID: <87970000.1008349014@bdldevel.bl.bdx.com>
+      Subject: Re: keywords @endverbatim
  *
  * and Eric Gillespie's support of same:
  *
- *<pre>    http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=8757
- *    =====
- *    From: "Eric Gillespie, Jr." <epg@pretzelnet.org>
- *    To: dev@subversion.tigris.org
- *    Date: Wed, 12 Dec 2001 09:48:42 -0500
- *    Message-ID: <87k7vsebp1.fsf@vger.pretzelnet.org>
- *    Subject: Re: Customizable Keywords</pre>
+ * @verbatim
+      http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=8757
+      =====
+      From: "Eric Gillespie, Jr." <epg@pretzelnet.org>
+      To: dev@subversion.tigris.org
+      Date: Wed, 12 Dec 2001 09:48:42 -0500
+      Message-ID: <87k7vsebp1.fsf@vger.pretzelnet.org>
+      Subject: Re: Customizable Keywords @endverbatim
  *
  * However, it is considerably more complex than the scheme below.
  * For now we're going with simplicity, hopefully the more general
  * solution can be done post-1.0.
  *
- * @defgroup svn_types_keywords keywords
+ * @defgroup svn_types_keywords Keyword definitions
  * @{
  */
 
@@ -888,7 +890,7 @@ typedef struct svn_location_segment_t
      segment. */
   svn_revnum_t range_start;
   svn_revnum_t range_end;
-  
+
   /* The absolute (sans leading slash) path for this segment.  May be
      NULL to indicate gaps in an object's history.  */
   const char *path;

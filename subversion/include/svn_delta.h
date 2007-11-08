@@ -48,6 +48,11 @@ extern "C" {
  */
 const svn_version_t *svn_delta_version(void);
 
+/**
+ * @defgroup delta_support Delta generation and handling
+ *
+ * @{
+ */ 
 
 /**  Text deltas.
  *
@@ -74,7 +79,7 @@ const svn_version_t *svn_delta_version(void);
  *   When svn_txdelta_next_window() returns zero, we are done building
  *   the target string.
  *
- * @defgroup svn_delta_txt_delta text deltas
+ * @defgroup svn_delta_txt_delta Text deltas
  * @{
  */
 
@@ -512,7 +517,7 @@ svn_error_t *svn_txdelta_skip_svndiff_window(apr_file_t *file,
  * callback function describes a piece of the delta --- a file's
  * contents changing, something being renamed, etc.
  *
- * @defgroup svn_delta_tree_deltas tree deltas
+ * @defgroup svn_delta_tree_deltas Tree deltas
  * @{
  */
 
@@ -1010,7 +1015,7 @@ svn_delta_depth_filter_editor(const svn_delta_editor_t **editor,
 
 /** Path-based editor drives.
  *
- * @defgroup svn_delta_path_delta_drivers path-based delta drivers
+ * @defgroup svn_delta_path_delta_drivers Path-based delta drivers
  * @{
  */
 
@@ -1144,6 +1149,8 @@ svn_compat_wrap_file_rev_handler(svn_file_rev_handler_t *handler2,
                                  svn_file_rev_handler_old_t handler,
                                  void *handler_baton,
                                  apr_pool_t *pool);
+
+/** @} end group: delta_support */
 
 
 #ifdef __cplusplus

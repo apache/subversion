@@ -33,6 +33,10 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/**
+ * @defgroup svn_props_support Properties management utilities
+ * @{
+ */
 
 
 
@@ -69,6 +73,17 @@ svn_prop_t *svn_prop_dup(const svn_prop_t *prop, apr_pool_t *pool);
  */
 apr_array_header_t *
 svn_prop_array_dup(const apr_array_header_t *array, apr_pool_t *pool);
+
+
+/**
+ * Given a hash (keys <tt>const char *</tt> and values <tt>const
+ * svn_string_t</tt>) of properties, returns an array of svn_prop_t
+ * items using @a pool.
+ *
+ * @since New in 1.5.
+ */
+apr_array_header_t *
+svn_prop_hash_to_array(apr_hash_t *hash, apr_pool_t *pool);
 
 
 /**
@@ -161,11 +176,12 @@ svn_error_t *svn_categorize_props(const apr_array_header_t *proplist,
  * For note, here's a quick little table describing the logic of this
  * routine:
  *
- *<pre> basehash        localhash         event
- * --------        ---------         -----
- * value = foo     value = NULL      Deletion occurred.
- * value = foo     value = bar       Set occurred (modification)
- * value = NULL    value = baz       Set occurred (creation)</pre>
+ * @verbatim
+   basehash        localhash         event
+   --------        ---------         -----
+   value = foo     value = NULL      Deletion occurred.
+   value = foo     value = bar       Set occurred (modification)
+   value = NULL    value = baz       Set occurred (creation) @endverbatim
  */
 svn_error_t *svn_prop_diffs(apr_array_header_t **propdiffs,
                             apr_hash_t *target_props,
@@ -263,12 +279,13 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
  *
  * The format is a series of lines, such as:
  *
- *<pre>   localdir1           http://url.for.external.source/etc/
- *   localdir1/foo       http://url.for.external.source/foo
- *   localdir1/bar       http://blah.blah.blah/repositories/theirproj
- *   localdir1/bar/baz   http://blorg.blorg.blorg/basement/code
- *   localdir2           http://another.url/blah/blah/blah
- *   localdir3           http://and.so.on/and/so/forth</pre>
+ *@verbatim
+     localdir1           http://url.for.external.source/etc/
+     localdir1/foo       http://url.for.external.source/foo
+     localdir1/bar       http://blah.blah.blah/repositories/theirproj
+     localdir1/bar/baz   http://blorg.blorg.blorg/basement/code
+     localdir2           http://another.url/blah/blah/blah
+     localdir3           http://and.so.on/and/so/forth @endverbatim
  *
  * The subdir names on the left side are relative to the directory on
  * which this property is set.
@@ -280,8 +297,9 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
  * The format is a series of lines containing merge paths and revision
  * ranges, such as:
  *
- *<pre>   /trunk: 1-6,9,37-38
- *   /trunk/foo: 10</pre>
+ * @verbatim
+     /trunk: 1-6,9,37-38
+     /trunk/foo: 10 @endverbatim
  */
 #define SVN_PROP_MERGE_INFO SVN_PROP_PREFIX "mergeinfo"
 
@@ -299,8 +317,9 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
  * For example, WebDAV RA implementations might store a versioned-resource url as a WC
  * prop like this:
  *
- *<pre>    name = svn:wc:dav_url
- *    val  = http://www.lyra.org/repos/452348/e.289</pre>
+ * @verbatim
+      name = svn:wc:dav_url
+      val  = http://www.lyra.org/repos/452348/e.289 @endverbatim
  *
  * The client will try to protect WC props by warning users against
  * changing them.  The client will also send them back to the RA layer
@@ -412,6 +431,8 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
                                     SVNSYNC_PROP_FROM_UUID, \
                                     SVNSYNC_PROP_LAST_MERGED_REV, \
                                     SVNSYNC_PROP_CURRENTLY_COPYING,
+
+/** @} */
 
 /** @} */
 

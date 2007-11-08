@@ -82,10 +82,11 @@ class WCFormatConverter:
           print "Checking whether WC format can be converted"
         try:
           entries.assert_valid_format(format_nbr, self.verbosity)
-        except LossyConversionException:
+        except LossyConversionException, e:
           # In --force mode, ignore complaints about lossy conversion.
           if self.force:
-            print "WARNING: WC format conversion will be lossy"
+            print "WARNING: WC format conversion will be lossy. Dropping "\
+                  "field(s) %s " % ", ".join(e.lossy_fields)
           else:
             raise
 
@@ -236,11 +237,13 @@ class Entry:
       if len(self.fields) - 1 >= field_index and self.fields[field_index]:
         lossy_fields.append(Entries.entry_fields[field_index])
     if lossy_fields:
-      raise LossyConversionException(
+      raise LossyConversionException(lossy_fields,
         "Lossy WC format conversion requested for entry '%s'\n"
         "Data for the following field(s) is unsupported by older versions "
         "of\nSubversion, and is likely to be subsequently discarded, and/or "
-        "have\nunexpected side-effects: %s"
+        "have\nunexpected side-effects: %s\n\n"
+        "WC format conversion was cancelled, use the --force option to "
+        "override\nthe default behavior."
         % (self.get_name(), ", ".join(lossy_fields)))
 
   def get_name(self):
@@ -256,7 +259,11 @@ class Entry:
 
 class LossyConversionException(Exception):
   "Exception thrown when a lossy WC format conversion is requested."
-  pass
+  def __init__(self, lossy_fields, str):
+    self.lossy_fields = lossy_fields
+    self.str = str
+  def __str__(self):
+    return self.str
 
 def main():
   try:

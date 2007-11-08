@@ -17,9 +17,12 @@ module SvnTestUtil
         args = args.collect do |key, value|
           "#{key}= #{Svnserve.escape_value(value)}"
         end.join(" ")
-        if `sc #{command} #{SERVICE_NAME} #{args}`.match(/FAILED/)
+        result = `sc #{command} #{SERVICE_NAME} #{args}`
+        if result.match(/FAILED/)
           raise "Failed to #{command} #{SERVICE_NAME}: #{args}"
         end
+        /^\s*STATE\s*:\s\d+\s*(.*?)\s*$/ =~ result
+        $1
       end
 
       def grant_everyone_full_access(dir)
@@ -36,15 +39,29 @@ module SvnTestUtil
         end
       end
 
+      def service_stopped?
+        "STOPPED" == service_control("query") rescue true
+      end
+
       def setup_svnserve
         @svnserve_port = @svnserve_ports.first
         @repos_svnserve_uri = "svn://#{@svnserve_host}:#{@svnserve_port}"
         grant_everyone_full_access(@full_repos_path)
 
-        unless service_exists?
+        @@service_created ||= begin
+          @@service_created = true
+          service_control('stop') unless service_stopped?
+          service_control('delete') if service_exists?
+
           svnserve_dir = File.expand_path(File.join(@base_dir, "svnserve"))
           FileUtils.mkdir_p(svnserve_dir)
           at_exit do
+            service_control('stop') unless service_stopped?
+            service_control('delete') if service_exists?
+            FileUtils.rm_rf(svnserve_dir)
+          end
+          trap("INT") do
+            service_control('stop') unless service_stopped?
             service_control('delete') if service_exists?
             FileUtils.rm_rf(svnserve_dir)
           end
@@ -85,12 +102,12 @@ module SvnTestUtil
                            ["DisplayName", SERVICE_NAME],
                            ["type", "own"]])
         end
-        service_control('stop') rescue nil
         service_control('start')
+        true
       end
 
       def teardown_svnserve
-        service_control('stop') if service_exists?
+        service_control('stop') unless service_stopped?
       end
 
       def add_pre_revprop_change_hook

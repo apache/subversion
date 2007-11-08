@@ -1295,6 +1295,145 @@ class SvnClientTest < Test::Unit::TestCase
     assert_equal({name2 => value2}, dir_props)
   end
 
+  def recurse_and_depth_choices
+    [false, true, "unknown", "exclude", "empty", "files",
+     "immediates", "infinity"]
+  end
+
+  def test_file_prop
+    setup_greek_tree
+
+    log = "sample log"
+    ctx = make_context(log)
+
+    # when no props set, everything is empty
+    recurse_and_depth_choices.each do |rd|
+      assert_equal([],
+                   ctx.prop_list(@greek.path(:mu), nil, nil, rd),
+                   "prop_list with Depth '#{rd}'")
+    end
+
+    recurse_and_depth_choices.each do |rd|
+      assert_equal({},
+                   ctx.prop_get(rd.to_s, @greek.path(:mu), nil, nil, rd),
+                   "prop_get with Depth '#{rd}'")
+    end
+
+    # set some props
+    recurse_and_depth_choices.each do |rd|
+      ctx.prop_set(rd.to_s, rd.to_s, @greek.path(:mu), rd)
+    end
+    ctx.commit(@greek.path(:mu))
+
+    # get the props
+    recurse_and_depth_choices.each do |rd|
+      assert_equal({@greek.uri(:mu) => rd.to_s},
+                   ctx.prop_get(rd.to_s, @greek.path(:mu), nil, nil, rd),
+                   "prop_get with Depth '#{rd}'")
+    end
+
+    prop_hash = {}
+    recurse_and_depth_choices.each {|rd| prop_hash[rd.to_s] = rd.to_s}
+
+    # list the props
+    recurse_and_depth_choices.each do |rd|
+      props = ctx.prop_list(@greek.path(:mu), nil, nil, rd)
+      assert_equal([@greek.uri(:mu)],
+                   props.collect {|item| item.node_name},
+                   "prop_list (node_name) with Depth '#{rd}'")
+
+      props = ctx.plist(@greek.path(:mu), nil, nil, rd)
+      assert_equal([prop_hash],
+                   props.collect {|item| item.prop_hash},
+                   "prop_list (prop_hash) with Depth '#{rd}'")
+
+      recurse_and_depth_choices.each do |rd1|
+        props = ctx.plist(@greek.path(:mu), nil, nil, rd)
+        assert_equal([rd1.to_s],
+                     props.collect {|item| item[rd1.to_s]},
+                     "prop_list (#{rd1.to_s}]) with Depth '#{rd}'")
+      end
+    end
+
+  end
+
+  def test_dir_prop
+    setup_greek_tree
+
+    log = "sample log"
+    ctx = make_context(log)
+
+    # when no props set, everything is empty
+    recurse_and_depth_choices.each do |rd|
+      assert_equal([],
+                   ctx.prop_list(@greek.path(:b), nil, nil, rd),
+                   "prop_list with Depth '#{rd}'")
+    end
+
+    recurse_and_depth_choices.each do |rd|
+      assert_equal({},
+                   ctx.prop_get(rd.to_s, @greek.path(:b), nil, nil, rd),
+                   "prop_get with Depth '#{rd}'")
+    end
+
+    # set some props with various depths
+    recurse_and_depth_choices.each do |rd|
+      ctx.prop_set(rd.to_s, rd.to_s, @greek.path(:b), rd)
+    end
+    ctx.commit(@greek.path(:b))
+
+    expected_props = {
+      true => [:beta, :b, :lambda, :e, :f, :alpha],
+      false => [:b],
+      'unknown' => [:b],
+      'exclude' => [:b],
+      'empty' => [:b],
+      'files' => [:b, :lambda],
+      'immediates' => [:b, :lambda, :e, :f],
+      'infinity' => [:beta, :b, :lambda, :e, :f, :alpha],
+    }
+
+    paths = [:b, :e, :alpha, :beta, :f, :lambda]
+
+    # how are the props set?
+    recurse_and_depth_choices.each do |rd|
+      paths.each do |path|
+        if expected_props[rd].include?(path)
+          expected = {@greek.uri(path) => rd.to_s}
+        else
+          expected = {}
+        end
+        assert_equal(expected,
+                     ctx.prop_get(rd.to_s, @greek.path(path), nil, nil, false),
+                     "prop_get #{@greek.resolve(path)} with Depth '#{rd}'")
+      end
+    end
+
+    recurse_and_depth_choices.each do |rd_for_prop|
+      recurse_and_depth_choices.each do |rd_for_depth|
+        expected = {}
+        expected_paths = expected_props[rd_for_depth]
+        expected_paths &= expected_props[rd_for_prop]
+        expected_paths.each do |path|
+          expected[@greek.uri(path)] = rd_for_prop.to_s
+        end
+
+        assert_equal(expected,
+                     ctx.prop_get(rd_for_prop.to_s, @greek.path(:b),
+                                  nil, nil, rd_for_depth),
+                     "prop_get '#{rd_for_prop}' with Depth '#{rd_for_depth}'")
+
+      end
+    end
+
+    recurse_and_depth_choices.each do |rd|
+      props = ctx.prop_list(@greek.path(:b), nil, nil, rd)
+      assert_equal(expected_props[rd].collect {|path| @greek.uri(path)}.sort,
+                   props.collect {|item| item.node_name}.sort,
+                   "prop_list (node_name) with Depth '#{rd}'")
+    end
+  end
+
   def test_cat
     log = "sample log"
     src1 = "source1\n"

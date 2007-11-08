@@ -536,6 +536,7 @@ hook_symlink_error(const char *hook)
 svn_error_t *
 svn_repos__hooks_start_commit(svn_repos_t *repos,
                               const char *user,
+                              apr_array_header_t *capabilities,
                               apr_pool_t *pool)
 {
   const char *hook = svn_repos_start_commit_hook(repos, pool);
@@ -548,11 +549,15 @@ svn_repos__hooks_start_commit(svn_repos_t *repos,
   else if (hook)
     {
       const char *args[4];
+      char *capabilities_string = svn_cstring_join(capabilities, ",", pool);
+      /* Get rid of that annoying final comma. */
+      capabilities_string[strlen(capabilities_string) - 1] = '\0';
 
       args[0] = hook;
       args[1] = svn_path_local_style(svn_repos_path(repos, pool), pool);
       args[2] = user ? user : "";
-      args[3] = NULL;
+      args[3] = capabilities_string;
+      args[4] = NULL;
 
       SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_START_COMMIT, hook, args, NULL,
                            pool));

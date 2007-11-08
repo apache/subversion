@@ -548,14 +548,14 @@ typedef struct {
 
   /* initialize only */
   const char *from_url;
-  
+
   /* syncronize only */
   svn_revnum_t committed_rev;
 
   /* copy-revprops only */
   svn_revnum_t start_rev;
   svn_revnum_t end_rev;
-  
+
 } subcommand_baton_t;
 
 /* Return a subcommand baton allocated from POOL and populated with
@@ -593,8 +593,8 @@ make_subcommand_baton(opt_baton_t *opt_baton,
  * locked.  Implements `with_locked_func_t' interface.
  */
 static svn_error_t *
-do_initialize(svn_ra_session_t *to_session, 
-              void *b, 
+do_initialize(svn_ra_session_t *to_session,
+              void *b,
               apr_pool_t *pool)
 {
   svn_ra_session_t *from_session;
@@ -626,8 +626,8 @@ do_initialize(svn_ra_session_t *to_session,
 
   /* Now fill in our bookkeeping info in the dest repository. */
 
-  SVN_ERR(svn_ra_open2(&from_session, baton->from_url, 
-                       &(baton->source_callbacks), baton, 
+  SVN_ERR(svn_ra_open2(&from_session, baton->from_url,
+                       &(baton->source_callbacks), baton,
                        baton->config, pool));
 
   SVN_ERR(check_if_session_is_at_repos_root(from_session, baton->from_url,
@@ -648,7 +648,7 @@ do_initialize(svn_ra_session_t *to_session,
   /* Finally, copy all non-svnsync revprops from rev 0 of the source
      repos into the dest repos. */
 
-  SVN_ERR(copy_revprops(from_session, to_session, 0, FALSE, 
+  SVN_ERR(copy_revprops(from_session, to_session, 0, FALSE,
                         baton->quiet, pool));
 
   /* TODO: It would be nice if we could set the dest repos UUID to be
@@ -1500,7 +1500,7 @@ do_copy_revprops(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
   for (i = baton->start_rev; i != baton->end_rev + step; i = i + step)
     {
       SVN_ERR(check_cancel(NULL));
-      SVN_ERR(copy_revprops(from_session, to_session, i, FALSE, 
+      SVN_ERR(copy_revprops(from_session, to_session, i, FALSE,
                             baton->quiet, pool));
     }
 
@@ -1596,7 +1596,7 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
     return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                              _("Path '%s' is not a URL"), to_url);
 
-  baton = make_subcommand_baton(opt_baton, to_url, NULL, 
+  baton = make_subcommand_baton(opt_baton, to_url, NULL,
                                 start_rev, end_rev, pool);
   SVN_ERR(svn_ra_open2(&to_session, baton->to_url, &(baton->sync_callbacks),
                        baton, baton->config, pool));

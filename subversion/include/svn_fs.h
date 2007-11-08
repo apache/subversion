@@ -44,6 +44,10 @@ extern "C" {
  */
 const svn_version_t *svn_fs_version(void);
 
+/**
+ * @defgroup fs_handling Filesystem interaction subsystem
+ * @{
+ */
 
 /* Opening and creating filesystems.  */
 
@@ -279,7 +283,7 @@ svn_error_t *svn_fs_recover(const char *path,
  *
  * The following functions are specific to Berkeley DB filesystems.
  *
- * @defgroup svn_fs_bdb berkeley db filesystems
+ * @defgroup svn_fs_bdb Berkeley DB filesystems
  * @{
  */
 
@@ -340,7 +344,7 @@ svn_error_t *svn_fs_berkeley_logfiles(apr_array_header_t **logfiles,
  * generic counterparts (with the exception of recover, which only gained
  * a generic counterpart in 1.5).
  *
- * @defgroup svn_fs_bdb_deprecated berkeley db filesystem compatibility
+ * @defgroup svn_fs_bdb_deprecated Berkeley DB filesystem compatibility
  * @{
  */
 
@@ -386,7 +390,7 @@ svn_error_t *svn_fs_berkeley_recover(const char *path,
  * Whenever a filesystem function requires information, it can pull
  * things out of the context as needed.
  *
- * @defgroup svn_fs_access_ctx filesystem access contexts
+ * @defgroup svn_fs_access_ctx Filesystem access contexts
  * @{
  */
 
@@ -465,7 +469,7 @@ svn_error_t *svn_fs_access_add_lock_token(svn_fs_access_t *access_ctx,
  * the filesystem.  Instead, we just remove the reference to the node
  * from the directory.
  *
- * @defgroup svn_fs_nodes filesystem nodes
+ * @defgroup svn_fs_nodes Filesystem nodes
  * @{
  */
 
@@ -600,7 +604,7 @@ svn_string_t *svn_fs_unparse_id(const svn_fs_id_t *id,
  * microseconds since 00:00:00 January 1, 1970 UTC.  So it is
  * extremely unlikely that a transaction name will be reused.
  *
- * @defgroup svn_fs_txns filesystem transactions
+ * @defgroup svn_fs_txns Filesystem transactions
  * @{
  */
 
@@ -789,6 +793,21 @@ svn_error_t *svn_fs_change_txn_prop(svn_fs_txn_t *txn,
                                     const svn_string_t *value,
                                     apr_pool_t *pool);
 
+
+/** Change, add, and/or delete transaction property values in
+ * transaction @a txn.  @a props is an array of <tt>svn_prop_t</tt>
+ * elements.  This is equivalent to calling svn_fs_change_txp_prop
+ * multiple times with the @c name and @c value fields of each
+ * successive <tt>svn_prop_t</tt>, but may be more efficient.
+ * (Properties not mentioned are left alone.)  Do any necessary
+ * temporary allocation in @a pool.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_fs_change_txn_props(svn_fs_txn_t *txn,
+                                     apr_array_header_t *props,
+                                     apr_pool_t *pool);
+
 /** @} */
 
 
@@ -798,7 +817,7 @@ svn_error_t *svn_fs_change_txn_prop(svn_fs_txn_t *txn,
  * revision or transaction in a filesystem.  To refer to particular
  * node, you provide a root, and a directory path relative that root.
  *
- * @defgroup svn_fs_roots filesystem roots
+ * @defgroup svn_fs_roots Filesystem roots
  * @{
  */
 
@@ -885,7 +904,7 @@ svn_revnum_t svn_fs_revision_root_revision(svn_fs_root_t *root);
  * A path consisting of the empty string, or a string containing only
  * slashes, refers to the root directory.
  *
- * @defgroup svn_fs_directories filesystem directories
+ * @defgroup svn_fs_directories Filesystem directories
  * @{
  */
 
@@ -1153,7 +1172,7 @@ svn_error_t *svn_fs_props_changed(svn_boolean_t *changed_p,
  *      a copy-under-a-copy scenario.  If X's revision-of-origin is
  *      the same as A's, then it was copied under A during the same
  *      transaction that created A.  (X's revision-of-origin cannot be
- *      greater than A's, if X has copy history.)  ### todo: See how
+ *      greater than A's, if X has copy history.)  @todo See how
  *      people like this, it can always be hidden behind the curtain
  *      if necessary.
  *
@@ -1216,7 +1235,7 @@ svn_error_t *svn_fs_change_mergeinfo(svn_fs_root_t *root,
  * @a paths indicate the paths you are requesting information for
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
- * only inherited mergeinfo for @paths is retrieved.
+ * only inherited mergeinfo for @a paths is retrieved.
  *
  * Do any necessary temporary allocation in @a pool.
  *
@@ -1379,8 +1398,8 @@ svn_error_t *svn_fs_delete(svn_fs_root_t *root,
  * The copy will remember its source; use svn_fs_copied_from() to
  * access this information.
  *
- * @a to_root must be the root of a transaction; @a from_path must be the
- * root of a revision.  (Requiring @a from_path to be the root of a
+ * @a to_root must be the root of a transaction; @a from_root must be the
+ * root of a revision.  (Requiring @a from_root to be the root of a
  * revision makes the implementation trivial: there is no detectable
  * difference (modulo node revision ID's) between copying @a from and
  * simply adding a reference to it.  So the operation takes place in
@@ -1472,7 +1491,7 @@ svn_error_t *svn_fs_file_md5_checksum(unsigned char digest[],
  * svn_fs_file_contents().  In that case, the result of reading from
  * @a *contents is undefined.
  *
- * ### kff todo: I am worried about lifetime issues with this pool vs
+ * ### @todo kff: I am worried about lifetime issues with this pool vs
  * the trail created farther down the call stack.  Trace this function
  * to investigate...
  */
@@ -1699,7 +1718,7 @@ svn_error_t *svn_fs_set_uuid(svn_fs_t *fs,
 
 
 
-/** @defgroup svn_fs_locks filesystem locks
+/** @defgroup svn_fs_locks Filesystem locks
  * @{
  * @since New in 1.2. */
 
@@ -1858,6 +1877,8 @@ svn_error_t *svn_fs_get_locks(svn_fs_t *fs,
  */
 svn_error_t *svn_fs_print_modules(svn_stringbuf_t *output,
                                   apr_pool_t *pool);
+
+/** @} */
 
 #ifdef __cplusplus
 }

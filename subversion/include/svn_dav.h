@@ -113,7 +113,7 @@ extern "C" {
 
 /** The svn-specific object that is placed within a <D:error> response.
  *
- * @defgroup svn_dav_error svn_dav errors
+ * @defgroup svn_dav_error Errors in svn_dav
  * @{ */
 
 /** The error object's namespace */
@@ -128,7 +128,7 @@ extern "C" {
 /** General property (xml) namespaces that will be used by both ra_dav
  * and mod_dav_svn for marshalling properties.
  *
- * @defgroup svn_dav_property_xml_namespaces dav property namespaces
+ * @defgroup svn_dav_property_xml_namespaces DAV property namespaces
  * @{
  */
 
@@ -152,10 +152,18 @@ extern "C" {
 /* Presence of this in the DAV header response to an OPTIONS request
    indicates that the server supports @c svn_depth_t.
 
-   ### TODO: this doesn't really have anything to do with properties,
-   ### but we should re-use the SVN_DAV_PROP_NS_DAV, right?  We could
-   ### change the name of SVN_DAV_PROP_NS_DAV_SVN_DEPTH, though. */
+   ### @todo This doesn't really have anything to do with properties,
+       but we should re-use the SVN_DAV_PROP_NS_DAV, right?  We could
+       change the name of SVN_DAV_PROP_NS_DAV_SVN_DEPTH, though. */
 #define SVN_DAV_PROP_NS_DAV_SVN_DEPTH SVN_DAV_PROP_NS_DAV "svn/depth"
+
+/* Presence of this in the DAV header response to an OPTIONS request
+   indicates that the server knows how to handle merge-tracking information.
+   ### And see above about appropriateness of properties namespace. ### */
+#define SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO SVN_DAV_PROP_NS_DAV "svn/mergeinfo"
+
+#define SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS SVN_DAV_PROP_NS_DAV \
+        "svn/log-revprops"
 
 /** @} */
 

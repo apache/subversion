@@ -60,7 +60,7 @@ def expected_merge_output(rev_ranges, additional_lines=None):
      else:
        end_rev = None
      lines += [svntest.main.merge_notify_line(start_rev, end_rev, True)]
-  if isinstance(additional_lines, list): 
+  if isinstance(additional_lines, list):
     # Address "The Backslash Plague"
     #
     # If ADDITIONAL_LINES are present there are possibly paths in it with
@@ -6741,7 +6741,6 @@ def diff_repos_does_not_update_mergeinfo(sbox):
 
   # Create a second repository with the same greek tree
   repo_dir = sbox.repo_dir
-  repo_url = sbox.repo_url
   other_repo_dir, other_repo_url = sbox.add_repo_path("other")
   svntest.main.copy_repos(repo_dir, other_repo_dir, 6, 1)
 
@@ -6796,8 +6795,7 @@ def avoid_reflected_revs(sbox):
   wc_disk, wc_status = setup_branch(sbox, True, 1)
 
   # Some paths we'll care about
-  repo_url = sbox.repo_url
-  A_path = os.path.join(wc_dir, 'A')  
+  A_path = os.path.join(wc_dir, 'A')
   A_COPY_path = os.path.join(wc_dir, 'A_COPY')
   tfile1_path = os.path.join(wc_dir, 'A', 'tfile1')
   tfile2_path = os.path.join(wc_dir, 'A', 'tfile2')
@@ -6942,7 +6940,7 @@ def avoid_reflected_revs(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   expected_output = wc.State(wc_dir, {
     'A_COPY'        : Item(verb='Sending'),
-    'A_COPY/tfile1' : Item(verb='Adding'),    
+    'A_COPY/tfile1' : Item(verb='Adding'),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         None, None, None, None,
@@ -6957,7 +6955,7 @@ def avoid_reflected_revs(sbox):
     'A_COPY/bfile2' : Item(status='  ', wc_rev=8),
     'A_COPY'        : Item(status='  ', wc_rev=7),
     'A_COPY/tfile2' : Item(status='  ', wc_rev=6),
-    'A_COPY/tfile1' : Item(status='  ', wc_rev=7),    
+    'A_COPY/tfile1' : Item(status='  ', wc_rev=7),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         wc_status, None, None, None,
@@ -7400,15 +7398,14 @@ def merge_with_depth_files(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  repo_url = sbox.repo_url
 
   # Some paths we'll care about
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
   Acopy_path = os.path.join(wc_dir, 'A_copy')
   Acopy_mu_path = os.path.join(wc_dir, 'A_copy', 'mu')
-  A_url = repo_url + '/A'
-  Acopy_url = repo_url + '/A_copy'
+  A_url = sbox.repo_url + '/A'
+  Acopy_url = sbox.repo_url + '/A_copy'
 
   # Copy A_url to A_copy_url
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
@@ -7514,15 +7511,16 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
 
   ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2876. ##
 
-  # Create a WC and for some paths and URLs
+  # Create a WC
   sbox.build()
   wc_dir = sbox.wc_dir
-  repo_url = sbox.repo_url
+
+  # Some paths we'll care about
   Acopy_path = os.path.join(wc_dir, 'A_copy')
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
   Acopy_gamma_path = os.path.join(wc_dir, 'A_copy', 'D', 'gamma')
-  A_url = repo_url + '/A'
-  Acopy_url = repo_url + '/A_copy'
+  A_url = sbox.repo_url + '/A'
+  Acopy_url = sbox.repo_url + '/A_copy'
 
   # Contents to be added to 'gamma'
   new_content = "line1\nline2\nline3\nline4\nline5\n"
@@ -7755,7 +7753,7 @@ def no_mergeinfo_from_no_op_merge(sbox):
   wc_status.tweak('A_COPY/D/G', 'A_COPY/D/G/rho', wc_rev=8)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
                                         None, None, None, None, None, wc_dir)
-  
+
   # Merge r5:9 --depth immediates to A_COPY/D
   short_D_COPY_path = shorten_path_kludge(D_COPY_path)
   expected_output = wc.State(short_D_COPY_path, {
@@ -7822,7 +7820,7 @@ def no_mergeinfo_from_no_op_merge(sbox):
 
   # Part 2: Test for issue #2976
   #
-  # Merge r3:8 A_COPY/D, A_COPY/D/H and A_COPY/D/G should
+  # Merge r3:8 A_COPY/D/H and A_COPY/D/G should
   # both retain mergeinfo for r9*
   short_D_COPY_path = shorten_path_kludge(D_COPY_path)
   expected_output = wc.State(short_D_COPY_path, {
@@ -8078,9 +8076,8 @@ def merge_old_and_new_revs_from_renamed_dir(sbox):
   wc_disk, wc_status = setup_branch(sbox, True, 1)
 
   # Some paths we'll care about
-  repo_url = sbox.repo_url
-  A_url = repo_url + '/A'
-  A_MOVED_url = repo_url + '/A_MOVED'
+  A_url = sbox.repo_url + '/A'
+  A_MOVED_url = sbox.repo_url + '/A_MOVED'
   A_COPY_path = os.path.join(wc_dir, 'A_COPY')
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   A_MOVED_mu_path = os.path.join(wc_dir, 'A_MOVED', 'mu')
@@ -8160,10 +8157,12 @@ def merge_old_and_new_revs_from_renamed_dir(sbox):
   saved_cwd = os.getcwd()
   os.chdir(svntest.main.work_dir)
 
-  # Merge /A_MOVED to /A_COPY
+  # Merge /A_MOVED to /A_COPY - this happens in multiple passes
+  # because /A_MOVED has renames in its history between the boundaries
+  # of the requested merge range.
   expected_output = wc.State(short_A_COPY, {
     ''   : Item(status=' G'),
-    'mu' : Item(status='U '),
+    'mu' : Item(status='G '), # mu gets touched twice
     })
   expected_status = wc.State(short_A_COPY, {
     ''         : Item(status=' M', wc_rev=4),
@@ -8187,7 +8186,7 @@ def merge_old_and_new_revs_from_renamed_dir(sbox):
     'D/H/psi'  : Item(status='  ', wc_rev=4),
     })
   expected_disk = wc.State('', {
-    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A:1-3'}),
+    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A:1-3\n/A_MOVED:4-5\n'}),
     'mu'       : Item("This is 'mu' in A_MOVED.\n"),
     'C'        : Item(),
     'D'        : Item(),
@@ -8208,13 +8207,17 @@ def merge_old_and_new_revs_from_renamed_dir(sbox):
     'D/H/psi'  : Item("This is the file 'psi'.\n"),
     })
   expected_skip = wc.State(short_A_COPY, {})
+
+  ### Disabling dry_run mode because currently it can't handle the way
+  ### 'mu' gets textually modified in multiple passes.
   svntest.actions.run_and_verify_merge(short_A_COPY, '2', '5',
                                        A_MOVED_url,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None, None, 1)
+                                       None, None, None, None, None,
+                                       True, False)
   os.chdir(saved_cwd)
 
 def merge_with_child_having_different_rev_ranges_to_merge(sbox):
@@ -8222,7 +8225,7 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
   #Modify A/mu to 30 lines with a content 'line1'...'line30' commit it at r2.
   #Create a branch A_COPY from A, commit it at r3.
   #Modify A/mu line number 7 to 'LINE7' modify and commit at r4.
-  #Modify A/mu line number 17 to 'LINE17' modify, set prop 'prop1' on 'A' 
+  #Modify A/mu line number 17 to 'LINE17' modify, set prop 'prop1' on 'A'
   #with a value 'val1' and commit at r5.
   #Modify A/mu line number 27 to 'LINE27' modify and commit at r6.
   #Merge r5 to 'A/mu' as a single file merge explicitly to 'A_COPY/mu'.
@@ -8241,10 +8244,9 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
   wc_dir = sbox.wc_dir
   A_path = os.path.join(wc_dir, 'A')
   mu_path = os.path.join(wc_dir, 'A', 'mu')
-  repo_url = sbox.repo_url
-  A_url = repo_url + '/A'
-  A_mu_url = repo_url + '/A/mu'
-  A_COPY_url = repo_url + '/A_COPY'
+  A_url = sbox.repo_url + '/A'
+  A_mu_url = sbox.repo_url + '/A/mu'
+  A_COPY_url = sbox.repo_url + '/A_COPY'
   A_COPY_path = os.path.join(wc_dir, 'A_COPY')
   A_COPY_mu_path = os.path.join(wc_dir, 'A_COPY', 'mu')
   thirty_line_dummy_text = 'line1\n'
@@ -8293,7 +8295,7 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
   tweaked_17th_line = tweaked_7th_line.replace('line17', 'LINE 17')
   svntest.main.file_write(mu_path, tweaked_17th_line)
   svntest.main.run_svn(None, 'propset', 'prop1', 'val1', A_path)
-  expected_output = wc.State(wc_dir, 
+  expected_output = wc.State(wc_dir,
                              {
                               'A'    : Item(verb='Sending'),
                               'A/mu' : Item(verb='Sending')
@@ -8431,7 +8433,7 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
                                      'merge', '-r5:4',
                                      A_mu_url,
                                      A_COPY_mu_path)
-  tweaked_17th_line_1 = tweaked_27th_line.replace('LINE 17', 
+  tweaked_17th_line_1 = tweaked_27th_line.replace('LINE 17',
                                                   'some other line17')
   tweaked_17th_line_2 = thirty_line_dummy_text.replace('line17',
                                                        'some other line17')
@@ -8464,10 +8466,9 @@ def merge_old_and_new_revs_from_renamed_file(sbox):
   wc_dir = sbox.wc_dir
 
   # Some paths we'll care about
-  repo_url = sbox.repo_url
-  mu_url = repo_url + '/A/mu'
-  mu_MOVED_url = repo_url + '/A/mu_MOVED'
-  mu_COPY_url = repo_url + '/A/mu_COPY'
+  mu_url = sbox.repo_url + '/A/mu'
+  mu_MOVED_url = sbox.repo_url + '/A/mu_MOVED'
+  mu_COPY_url = sbox.repo_url + '/A/mu_COPY'
   mu_COPY_path = os.path.join(wc_dir, 'A', 'mu_COPY')
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   mu_MOVED_path = os.path.join(wc_dir, 'A', 'mu_MOVED')
@@ -8507,13 +8508,19 @@ def merge_old_and_new_revs_from_renamed_file(sbox):
                                         expected_status, None, None, None,
                                         None, None, wc_dir)
 
-  # Merge A/mu_MOVED to A/mu_COPY
-  svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(None, 'UG   '+
-                                                           mu_COPY_path +
-                                                           '\n'),
+  # Merge A/mu_MOVED to A/mu_COPY - this happens in multiple passes
+  # because A/mu_MOVED has renames in its history between the
+  # boundaries of the requested merge range.
+  expected_output = expected_merge_output([[2,3],[4,5]],
+                                          ['U    %s\n' % (mu_COPY_path),
+                                           'GG   %s\n' % (mu_COPY_path)])
+  svntest.actions.run_and_verify_svn(None, expected_output,
                                      [], 'merge', '-r', '1:5',
                                      mu_MOVED_url,
+                                     mu_COPY_path)
+  svntest.actions.run_and_verify_svn(None, ['/A/mu:1-3\n',
+                                            '/A/mu_MOVED:4-5\n'],
+                                     [], 'propget', SVN_PROP_MERGE_INFO,
                                      mu_COPY_path)
 
 
@@ -8527,9 +8534,8 @@ def merge_with_auto_rev_range_detection(sbox):
   wc_dir = sbox.wc_dir
 
   # Some paths we'll care about
-  repo_url = sbox.repo_url
-  A_url = repo_url + '/A'
-  A_COPY_url = repo_url + '/A_COPY'
+  A_url = sbox.repo_url + '/A'
+  A_COPY_url = sbox.repo_url + '/A_COPY'
   B1_path = os.path.join(wc_dir, 'A', 'B1')
   B1_mu_path = os.path.join(wc_dir, 'A', 'B1', 'mu')
   A_COPY_path = os.path.join(wc_dir, 'A_COPY')
@@ -8654,8 +8660,7 @@ def mergeinfo_recording_in_skipped_merge(sbox):
   wc_disk, wc_status = setup_branch(sbox, True, 1)
 
   # Some paths we'll care about
-  repo_url = sbox.repo_url
-  A_url = repo_url + '/A'
+  A_url = sbox.repo_url + '/A'
   A_COPY_path = os.path.join(wc_dir, 'A_COPY')
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
@@ -8781,7 +8786,7 @@ def cherry_picking(sbox):
   expected_output = svntest.wc.State(wc_dir, {'A/D/G': Item(verb='Sending'),})
   wc_status.tweak('A/D/G', wc_rev=7)
   wc_disk.tweak('A/D/G', props={'prop:name' : 'propval'})
-  
+
   svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
                                         None, None, None, None, None, wc_dir)
   svntest.actions.run_and_verify_svn(None,
@@ -8943,7 +8948,7 @@ def cherry_picking(sbox):
 
 def propchange_of_subdir_raises_conflict(sbox):
   "merge of propchange on subdir raises conflict"
-  
+
   ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2969. ##
 
   # Create a WC with a single branch
@@ -8952,8 +8957,7 @@ def propchange_of_subdir_raises_conflict(sbox):
   wc_disk, wc_status = setup_branch(sbox, True, 1)
 
   # Some paths we'll care about
-  repo_url = sbox.repo_url
-  B_url = repo_url + '/A/B'
+  B_url = sbox.repo_url + '/A/B'
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
   A_COPY_B_path = os.path.join(wc_dir, 'A_COPY', 'B')
@@ -9066,7 +9070,7 @@ def reverse_merge_prop_add_on_child(sbox):
   expected_output = svntest.wc.State(wc_dir, {'A/D/G': Item(verb='Sending'),})
   wc_status.tweak('A/D/G', wc_rev=3)
   wc_disk.tweak('A/D/G', props={'prop:name' : 'propval'})
-  
+
   svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
                                         None, None, None, None, None, wc_dir)
 
@@ -9145,7 +9149,7 @@ def reverse_merge_prop_add_on_child(sbox):
 
 def merge_target_with_non_inheritable_mergeinfo(sbox):
   "merge target with non inheritable mergeinfo"
-  
+
   ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2970. ##
 
   # Create a WC with a single branch
@@ -9154,8 +9158,7 @@ def merge_target_with_non_inheritable_mergeinfo(sbox):
   wc_disk, wc_status = setup_branch(sbox, True, 1)
 
   # Some paths we'll care about
-  repo_url = sbox.repo_url
-  B_url = repo_url + '/A/B'
+  B_url = sbox.repo_url + '/A/B'
   lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
   newfile_path = os.path.join(wc_dir, 'A', 'B', 'E', 'newfile')
   A_COPY_B_path = os.path.join(wc_dir, 'A_COPY', 'B')

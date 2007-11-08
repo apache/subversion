@@ -42,7 +42,7 @@ typedef struct svn_ra_local__session_baton_t
 
   /* The URL of the session, split into two components. */
   const char *repos_url;
-  svn_stringbuf_t *fs_path;  /* URI-decoded. */
+  svn_stringbuf_t *fs_path;  /* URI-decoded, always with a leading slash. */
 
   /* A repository object. */
   svn_repos_t *repos;

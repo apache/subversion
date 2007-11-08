@@ -28,7 +28,7 @@
  * them to be in canonical form as defined by the Subversion path
  * library itself.  The only functions which do *not* have such
  * expectations are:
- * 
+ *
  *    - @c svn_path_canonicalize()
  *    - @c svn_path_is_canonical()
  *    - @c svn_path_internal_style()
@@ -222,7 +222,7 @@ svn_boolean_t svn_dirent_is_root(const char *dirent, apr_size_t len);
 const char *svn_path_canonicalize(const char *path, apr_pool_t *pool);
 
 /** Return @c TRUE iff path is canonical.  Use @a pool for temporary
- * allocations. 
+ * allocations.
  *
  * @note The test for canonicalization is currently defined as
  * "looks exactly the same as @c svn_path_canonicalize() would make
@@ -366,7 +366,7 @@ apr_array_header_t *svn_path_decompose(const char *path,
                                        apr_pool_t *pool);
 
 /** Join an array of <tt>const char *</tt> components into a '/'
- * separated path, allocated in @pool.  The joined path is absolute if
+ * separated path, allocated in @a pool.  The joined path is absolute if
  * the first component is a lone dir separator.
  *
  * Calling svn_path_compose() on the output of svn_path_decompose()
@@ -449,7 +449,7 @@ svn_error_t *svn_path_check_valid(const char *path, apr_pool_t *pool);
 
 /** URI/URL stuff
  *
- * @defgroup svn_path_uri_stuff URI/URL stuff
+ * @defgroup svn_path_uri_stuff URI/URL conversion
  * @{
  */
 
@@ -503,7 +503,7 @@ const char *svn_path_uri_autoescape(const char *uri,
 
 /** Charset conversion stuff
  *
- * @defgroup svn_path_charset_stuff Charset conversion stuff
+ * @defgroup svn_path_charset_stuff Charset conversion
  * @{
  */
 

@@ -344,6 +344,37 @@ svn_ra__location_segments_from_log(svn_ra_session_t *session,
                                    void *receiver_baton,
                                    apr_pool_t *pool);
 
+/**
+ * Retrieve a subset of the interesting revisions of a file PATH
+ * as seen in revision END (see svn_fs_history_prev() for a
+ * definition of "interesting revisions").  Invoke HANDLER with
+ * @a handler_baton as its first argument for each such revision.
+ * @a session is an open RA session.  Use POOL for all allocations.
+ *
+ * If there is an interesting revision of the file that is less than or
+ * equal to START, the iteration will begin at that revision.
+ * Else, the iteration will begin at the first revision of the file in
+ * the repository, which has to be less than or equal to END.  Note
+ * that if the function succeeds, HANDLER will have been called at
+ * least once.
+ *
+ * In a series of calls to HANDLER, the file contents for the first
+ * interesting revision will be provided as a text delta against the
+ * empty file.  In the following calls, the delta will be against the
+ * fulltext contents for the previous call.
+ *
+ * NOTE: This function uses the RA get_log interfaces to do its work,
+ * as a fallback mechanism for servers which don't support the native
+ * get_location_segments API.
+ */
+svn_error_t *
+svn_ra__file_revs_from_log(svn_ra_session_t *session,
+                           const char *path,
+                           svn_revnum_t start,
+                           svn_revnum_t end,
+                           svn_file_rev_handler_t handler,
+                           void *handler_baton,
+                           apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

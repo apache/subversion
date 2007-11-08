@@ -114,6 +114,16 @@ typedef struct {
   /* is the client a Subversion client? */
   svn_boolean_t is_svn_client;
 
+  /* The client's capabilities.  Maps SVN_RA_CAPABILITY_* keys to
+     "yes" or "no" values.  If a capability is not yet discovered, it
+     is absent from the table.  The table itself is allocated in this
+     structure's 'pool' field, and the keys and values must have at
+     least that lifetime.  Most likely the keys and values are
+     constants anyway (and sufficiently well-informed internal code
+     may therefore compare against those constants' addresses).  If
+     'is_svn_client' is false, then 'capabilities' should be empty. */
+  apr_hash_t *capabilities;
+
   /* The path to the activities db */
   const char *activities_db;
 

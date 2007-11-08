@@ -632,6 +632,13 @@ svn_fs_change_txn_prop(svn_fs_txn_t *txn, const char *name,
   return txn->vtable->change_prop(txn, name, value, pool);
 }
 
+svn_error_t *
+svn_fs_change_txn_props(svn_fs_txn_t *txn, apr_array_header_t *props, 
+                        apr_pool_t *pool)
+{
+  return txn->vtable->change_props(txn, props, pool);
+}
+
 
 /* --- Root functions --- */
 

@@ -33,6 +33,7 @@
 #include "svn_string.h"
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_ra.h"              /* for SVN_RA_CAPABILITY_* */
 #include "svn_ra_svn.h"
 #include "svn_repos.h"
 #include "svn_path.h"
@@ -42,6 +43,7 @@
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
 #include "svn_user.h"
+#include "private/svn_repos_private.h"
 
 #include "server.h"
 
@@ -1827,14 +1829,14 @@ static svn_error_t *gls_receiver(svn_location_segment_t *segment,
 {
   svn_ra_svn_conn_t *conn = baton;
   return svn_ra_svn_write_tuple(conn, pool, "rr(?c)",
-                                segment->range_start, 
+                                segment->range_start,
                                 segment->range_end,
                                 segment->path);
 }
 
-static svn_error_t *get_location_segments(svn_ra_svn_conn_t *conn, 
+static svn_error_t *get_location_segments(svn_ra_svn_conn_t *conn,
                                           apr_pool_t *pool,
-                                          apr_array_header_t *params, 
+                                          apr_array_header_t *params,
                                           void *baton)
 {
   svn_error_t *err, *write_err;
@@ -1844,14 +1846,14 @@ static svn_error_t *get_location_segments(svn_ra_svn_conn_t *conn,
   const char *abs_path;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)(?r)(?r)", 
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)(?r)(?r)",
                                  &relative_path, &peg_revision,
                                  &start_rev, &end_rev));
   relative_path = svn_path_canonicalize(relative_path, pool);
 
   abs_path = svn_path_join(b->fs_path->data, relative_path, pool);
 
-  if (SVN_IS_VALID_REVNUM(start_rev) 
+  if (SVN_IS_VALID_REVNUM(start_rev)
       && SVN_IS_VALID_REVNUM(end_rev)
       && (end_rev > start_rev))
     return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
@@ -1873,8 +1875,8 @@ static svn_error_t *get_location_segments(svn_ra_svn_conn_t *conn,
   /* We store both err and write_err here, so the client will get
    * the "done" even if there was an error in fetching the results. */
 
-  err = svn_repos_node_location_segments(b->repos, abs_path, 
-                                         start_rev, start_rev, end_rev, 
+  err = svn_repos_node_location_segments(b->repos, abs_path,
+                                         peg_revision, start_rev, end_rev,
                                          gls_receiver, (void *)conn,
                                          authz_check_access_cb_func(b), b,
                                          pool);
@@ -2404,9 +2406,14 @@ repos_path_valid(const char *path)
 
 /* Look for the repository given by URL, using ROOT as the virtual
  * repository root.  If we find one, fill in the repos, fs, cfg,
- * repos_url, and fs_path fields of B. */
+ * repos_url, and fs_path fields of B.  Set B->repos's client
+ * capabilities to CAPABILITIES, which must be at least as long-lived
+ * as POOL, and whose elements are SVN_RA_CAPABILITY_*.
+ */
 static svn_error_t *find_repos(const char *url, const char *root,
-                               server_baton_t *b, apr_pool_t *pool)
+                               server_baton_t *b,
+                               apr_array_header_t *capabilities,
+                               apr_pool_t *pool)
 {
   const char *path, *full_path, *repos_root;
   svn_stringbuf_t *url_buf;
@@ -2442,6 +2449,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
 
   /* Open the repository and fill in b with the resulting information. */
   SVN_ERR(svn_repos_open(&b->repos, repos_root, pool));
+  svn_repos__set_capabilities(b->repos, capabilities);
   b->fs = svn_repos_fs(b->repos);
   b->fs_path = svn_stringbuf_create(full_path + strlen(repos_root),
                                     pool);
@@ -2506,7 +2514,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   svn_error_t *err, *io_err;
   apr_uint64_t ver;
   const char *uuid, *client_url;
-  apr_array_header_t *caplist;
+  apr_array_header_t *caplist, *cap_words;
   server_baton_t b;
 
   b.tunnel = params->tunnel;
@@ -2521,14 +2529,15 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
 
   /* Send greeting.  We don't support version 1 any more, so we can
    * send an empty mechlist. */
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwww)",
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwwww)",
                                         (apr_uint64_t) 2, (apr_uint64_t) 2,
                                         SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                         SVN_RA_SVN_CAP_SVNDIFF1,
                                         SVN_RA_SVN_CAP_ABSENT_ENTRIES,
                                         SVN_RA_SVN_CAP_COMMIT_REVPROPS,
                                         SVN_RA_SVN_CAP_MERGEINFO,
-                                        SVN_RA_SVN_CAP_DEPTH));
+                                        SVN_RA_SVN_CAP_DEPTH,
+                                        SVN_RA_SVN_CAP_LOG_REVPROPS));
 
   /* Read client response, which we assume to be in version 2 format:
    * version, capability list, and client URL; then we do an auth
@@ -2546,7 +2555,33 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   if (! svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_EDIT_PIPELINE))
     return SVN_NO_ERROR;
 
-  err = find_repos(client_url, params->root, &b, pool);
+  /* find_repos needs the capabilities as a list of words (eventually
+     they get handed to the start-commit hook).  While we could add a
+     new interface to re-retrieve them from conn and convert the
+     result to a list, it's simpler to just convert caplist by hand
+     here, since we already have it and turning 'svn_ra_svn_item_t's
+     into 'const char *'s is pretty easy. 
+
+     We only record capabilities we care about.  The client may report
+     more (because it doesn't know what the server cares about). */
+  {
+    int i;
+    svn_ra_svn_item_t *item;
+
+    cap_words = apr_array_make(pool, 1, sizeof(const char *));
+    for (i = 0; i < caplist->nelts; i++)
+      {
+        item = &APR_ARRAY_IDX(caplist, i, svn_ra_svn_item_t);
+        /* ra_svn_set_capabilities() already type-checked for us */
+        if (strcmp(item->u.word, SVN_RA_SVN_CAP_MERGEINFO) == 0)
+          {
+            APR_ARRAY_PUSH(cap_words, const char *)
+              = SVN_RA_CAPABILITY_MERGEINFO;
+          }
+      }
+  }
+
+  err = find_repos(client_url, params->root, &b, cap_words, pool);
   if (!err)
     {
       SVN_ERR(auth_request(conn, pool, &b, READ_ACCESS, FALSE));

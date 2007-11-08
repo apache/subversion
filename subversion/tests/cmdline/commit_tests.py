@@ -2470,7 +2470,7 @@ def no_such_changelist(sbox):
                                      None, ".*Unknown changelist 'not-found'",
                                      "commit", "--changelist=not-found",
                                      "-m", "msg", wc_dir)
-                                        
+
 def commit_out_of_date_file(sbox):
   "try to commit a file that is out-of-date"
 
@@ -2501,6 +2501,42 @@ def commit_out_of_date_file(sbox):
   svntest.actions.run_and_verify_svn(None, None, expected_err,
                                      'commit', '-m', 'log message',
                                      wc_backup)
+
+def start_commit_detect_capabilities(sbox):
+  "start-commit hook sees client capabilities"  # Issue #2991
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repos_dir = sbox.repo_dir
+
+  # Create a start-commit hook that detects the "mergeinfo" capability.
+  hook_text = "import sys\n"                                 + \
+              "fp = open(sys.argv[1] + '/hooks.log', 'w')\n" + \
+              "caps = sys.argv[3].split(',')\n"              + \
+              "if 'mergeinfo' in caps:\n"                    + \
+              "  fp.write('yes')\n"                          + \
+              "else:\n"                                      + \
+              "  fp.write('no')\n"                           + \
+              "fp.close()\n"
+
+  start_commit_hook = svntest.main.get_start_commit_hook_path(repos_dir)
+  svntest.main.create_python_hook_script(start_commit_hook, hook_text)
+
+  # Commit something.
+  iota_path = os.path.join(wc_dir, "iota")
+  svntest.main.file_append(iota_path, "More stuff in iota")
+  svntest.actions.run_and_verify_svn(None, [], [], 'ci', '--quiet',
+                                     '-m', 'log msg', wc_dir)
+
+  # Check that "mergeinfo" was detected.
+  log_path = os.path.join(repos_dir, "hooks.log")
+  if os.path.exists(log_path):
+    data = open(log_path).read()
+    os.unlink(log_path)
+  else:
+    raise svntest.actions.SVNUnexpectedOutput("'%s' not found") % log_path
+  if data != 'yes':
+    raise svntest.Failure
+
 
 ########################################################################
 # Run the tests
@@ -2563,6 +2599,7 @@ test_list = [ None,
               changelist_near_conflict,
               no_such_changelist,
               commit_out_of_date_file,
+              start_commit_detect_capabilities,
              ]
 
 if __name__ == '__main__':

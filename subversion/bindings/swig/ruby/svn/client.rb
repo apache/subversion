@@ -188,10 +188,10 @@ module Svn
         Client.resolved(path, recurse, self)
       end
 
-      def propset(name, value, target, recurse=true, force=false,
+      def propset(name, value, target, depth_or_recurse=nil, force=false,
                   base_revision_for_url=nil)
         base_revision_for_url ||= Svn::Core::INVALID_REVNUM
-        depth = recurse ? Svn::Core::DEPTH_INFINITY : Svn::Core::DEPTH_EMPTY
+        depth = depth_from_depth_or_recurse(depth_or_recurse)
         Client.propset3(name, value, target, depth, force,
                         base_revision_for_url, self)
       end
@@ -208,10 +208,10 @@ module Svn
 
       # Returns a value of a property, with +name+ attached to +target+,
       # as a Hash such as <tt>{uri1 => value1, uri2 => value2, ...}</tt>.
-      def propget(name, target, rev=nil, peg_rev=nil, recurse=true)
+      def propget(name, target, rev=nil, peg_rev=nil, depth_or_recurse=nil)
         rev ||= "HEAD"
         peg_rev ||= rev
-        depth = recurse ? Svn::Core::DEPTH_INFINITY : Svn::Core::DEPTH_EMPTY
+        depth = depth_from_depth_or_recurse(depth_or_recurse)
         Client.propget4(name, target, peg_rev, rev, depth, self).first
       end
       alias prop_get propget
@@ -223,10 +223,11 @@ module Svn
       # Returns list of properties attached to +target+ as an Array of
       # Svn::Client::PropListItem.
       # Paths and URIs are available as +target+.
-      def proplist(target, rev=nil, peg_rev=nil, depth=nil, &block)
+      def proplist(target, rev=nil, peg_rev=nil, depth_or_recurse=nil, &block)
         rev ||= "HEAD"
         peg_rev ||= rev
         items = []
+        depth = depth_from_depth_or_recurse(depth_or_recurse)
         receiver = Proc.new do |path, prop_hash|
           items << PropListItem.new(path, prop_hash)
           block.call(path, prop_hash) if block
@@ -336,7 +337,7 @@ module Svn
                      peg_rev=nil, depth=nil,
                      ignore_ancestry=false, force=false,
                      dry_run=false, options=nil, record_only=false)
-        peg_rev ||= uri?(src) ? 'HEAD' : 'WORKING'
+        peg_rev ||= URI(src).scheme ? 'HEAD' : 'WORKING'
         Client.merge_peg3(src, ranges_to_merge, peg_rev,
                           target_wcpath, depth, ignore_ancestry,
                           force, record_only, dry_run, options, self)
@@ -617,12 +618,12 @@ module Svn
         end
       end
 
-      def uri?(path)
-        uri = URI.parse(path)
-        # URI.parse is pretty liberal in what it will accept as a scheme,
-        # but if we get a scheme and a host we can be pretty sure it's a
-        # URI as far as subversion is concerned.
-        uri.scheme and uri.host
+      def depth_from_depth_or_recurse(depth_or_recurse)
+        depth = case depth_or_recurse
+          when true, nil: Svn::Core::DEPTH_INFINITY
+          when false: Svn::Core::DEPTH_EMPTY
+          else depth_or_recurse
+        end
       end
     end
 

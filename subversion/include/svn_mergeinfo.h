@@ -121,7 +121,7 @@ svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
  * Note: @a *rangelist and @a changes must be sorted as said by @c
  * svn_sort_compare_ranges().  @a *rangelist is guaranteed to remain
  * in sorted order.
- * 
+ *
  * @since New in 1.5.
  */
 svn_error_t *
@@ -202,7 +202,7 @@ svn_rangelist_to_revs(apr_array_header_t **revs,
 
 /** Return a deep copy of @c svn_merge_range_t *'s in @a rangelist excluding
  * all non-inheritable @c svn_merge_range_t.  If @a start and @a end are valid
- * revisions and @start is less than or equal to @end, then exclude only the
+ * revisions and @a start is less than or equal to @a end, then exclude only the
  * non-inheritable revision ranges that intersect inclusively with the range
  * defined by @a start and @a end.  If @a rangelist contains no elements, return
  * an empty array.  Allocate the copy in @a pool.
@@ -247,7 +247,7 @@ svn_range_compact(svn_merge_range_t **range_1,
 /** Return a deep copy of @a mergeinfo, a mapping from paths to
  * @c apr_array_header_t *'s of @c svn_merge_range_t *, excluding all
  * non-inheritable @c svn_merge_range_t.  If @a start and @a end are valid
- * revisions and @start is less than or equal to @end, then exclude only the
+ * revisions and @a start is less than or equal to @a end, then exclude only the
  * non-inheritable revisions that intersect inclusively with the range
  * defined by @a start and @a end.  If @a path is not NULL remove
  * non-inheritable ranges only for @a path.  If @a mergeinfo is an empty hash,
@@ -263,24 +263,24 @@ svn_mergeinfo_inheritable(apr_hash_t **inheritable_mergeinfo,
                           svn_revnum_t end,
                           apr_pool_t *pool);
 
-/** Take a hash of mergeinfo in @a mergeinput, and convert it back to
+/** Take a hash of mergeinfo in @a mergeinfo, and convert it back to
  * a text format mergeinfo in @a output.  If @a input contains no
  * elements, return the empty string.
  *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_mergeinfo_to_stringbuf(svn_stringbuf_t **output, apr_hash_t *mergeinput,
+svn_mergeinfo_to_stringbuf(svn_stringbuf_t **output, apr_hash_t *mergeinfo,
                            apr_pool_t *pool);
 
-/** Take a hash of mergeinfo in @a mergeinput, and sort the rangelists
- * associated with each key.
+/** Take a hash of mergeinfo in @a mergeinfo, and sort the rangelists
+ * associated with each key (in place).
  * Note: This does not sort the hash, only the range lists in the
  * hash.
  * @since New in 1.5
  */
 svn_error_t *
-svn_mergeinfo_sort(apr_hash_t *mergeinput, apr_pool_t *pool);
+svn_mergeinfo_sort(apr_hash_t *mergeinfo, apr_pool_t *pool);
 
 /** Return a deep copy of @a mergeinfo, allocated in @a pool.
  *
