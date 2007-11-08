@@ -20,6 +20,7 @@ http://svn.collab.net/repos/svn/tags/1.4.6
 
   - Client and Server:
     * fixed: "No newline at end of file" message translated (issue #2906)
+    * use compressed delta encoding for "svn blame" in svnserve (r26115)
     * translation updates for Simplified Chinese
 
  Developer-visible changes:
