@@ -125,9 +125,9 @@ class Migrator:
                                           svn.core.SVN_PROP_MERGE_INFO)
     integrated_prop_val = svn.fs.node_prop(root, path, "svnmerge-integrated")
     if self.verbose:
-      print "Discoverd pre-existing Subversion mergeinfo of '%s'" % \
+      print "Discovered pre-existing Subversion mergeinfo of '%s'" % \
         mergeinfo_prop_val
-      print "Discoverd svnmerge.py mergeinfo of '%s'" % integrated_prop_val
+      print "Discovered svnmerge.py mergeinfo of '%s'" % integrated_prop_val
     mergeinfo_prop_val = self.add_to_mergeinfo(integrated_prop_val,
                                                mergeinfo_prop_val)
     ### LATER: We handle svnmerge-blocked by converting it into
@@ -135,8 +135,8 @@ class Migrator:
     ### Subversion's core.
     blocked_prop_val = svn.fs.node_prop(root, path, "svnmerge-blocked")
     if self.verbose:
-      print "Discoverd svnmerge.py blocked revisions of '%s'" % \
-        integrated_prop_val
+      print "Discovered svnmerge.py blocked revisions of '%s'" % \
+        blocked_prop_val
     mergeinfo_prop_val = self.add_to_mergeinfo(blocked_prop_val,
                                                mergeinfo_prop_val)
 
@@ -183,11 +183,8 @@ class Migrator:
       if mergeinfo_prop_val:
         mergeinfo = svn.core.svn_mergeinfo_parse(mergeinfo_prop_val)
         to_migrate = svn.core.svn_mergeinfo_parse(svnmerge_prop_val)
-        ### FIXME: The SWIG bindings may not be giving us an API that
-        ### both accepts two mergeinfos and returns the merged result.
-        mergeinfo = svn.core.svn_mergeinfo_merge(mergeinfo, to_migrate, True)
-        mergeinfo_prop_val = \
-          svn.core.svn_megeinfo_mergeinfo_to_stringbuf(mergeinfo).data
+        mergeinfo = svn.core.svn_mergeinfo_merge(mergeinfo, to_migrate)
+        mergeinfo_prop_val = svn.core.svn_mergeinfo_to_stringbuf(mergeinfo)
       else:
         mergeinfo_prop_val = svnmerge_prop_val
 
