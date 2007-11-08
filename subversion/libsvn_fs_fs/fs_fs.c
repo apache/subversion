@@ -367,7 +367,7 @@ free_shared_txn(svn_fs_t *fs, const char *txn_id)
 static svn_error_t *
 with_txnlist_lock(svn_fs_t *fs,
                   svn_error_t *(*body)(svn_fs_t *fs,
-                                       void *baton,
+                                       const void *baton,
                                        apr_pool_t *pool),
                   void *baton,
                   apr_pool_t *pool)
@@ -404,9 +404,9 @@ struct unlock_proto_rev_baton
 
 /* Callback used in the implementation of unlock_proto_rev(). */
 static svn_error_t *
-unlock_proto_rev_body(svn_fs_t *fs, void *baton, apr_pool_t *pool)
+unlock_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
 {
-  struct unlock_proto_rev_baton *b = baton;
+  const struct unlock_proto_rev_baton *b = baton;
   const char *txn_id = b->txn_id;
   apr_file_t *lockfile = b->lockcookie;
   fs_fs_shared_txn_data_t *txn = get_shared_txn(fs, txn_id, FALSE);
@@ -480,9 +480,9 @@ struct get_writable_proto_rev_baton
 
 /* Callback used in the implementation of get_writable_proto_rev(). */
 static svn_error_t *
-get_writable_proto_rev_body(svn_fs_t *fs, void *baton, apr_pool_t *pool)
+get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
 {
-  struct get_writable_proto_rev_baton *b = baton;
+  const struct get_writable_proto_rev_baton *b = baton;
   apr_file_t **file = b->file;
   void **lockcookie = b->lockcookie;
   const char *txn_id = b->txn_id;
@@ -601,7 +601,7 @@ get_writable_proto_rev(apr_file_t **file,
 
 /* Callback used in the implementation of purge_shared_txn(). */
 static svn_error_t *
-purge_shared_txn_body(svn_fs_t *fs, void *baton, apr_pool_t *pool)
+purge_shared_txn_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
 {
   const char *txn_id = *(const char **)baton;
 
