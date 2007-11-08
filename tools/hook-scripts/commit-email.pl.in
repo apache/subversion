@@ -623,7 +623,8 @@ foreach my $project (@project_settings_list)
       }
     elsif (defined $smtp_server and @email_addresses)
       {
-        my $smtp = Net::SMTP->new($smtp_server);
+        my $smtp = Net::SMTP->new($smtp_server)
+          or die "$0: error opening SMTP session to `$smtp_server': $!\n";
         handle_smtp_error($smtp, $smtp->mail($mail_from));
         handle_smtp_error($smtp, $smtp->recipient(@email_addresses));
         handle_smtp_error($smtp, $smtp->data());
