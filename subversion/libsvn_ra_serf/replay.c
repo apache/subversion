@@ -641,11 +641,31 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
 
 /* The maximum number of outstanding requests at any time. When this number is
  * reached, ra_serf will stop sending requests until responses on the previous
- * requests are received and handled. 
- * The current number of 5 is chosen based on a very small test setup, this 
- * could use some more samples.
+ * requests are received and handled.
+ *
+ * Some observations about serf which lead us to the current value.
+ * ----------------------------------------------------------------
+ * We aim to keep serf's outgoing queue filled with enough requests so the 
+ * network bandwidth and server capacity is used optimally. Originally we used
+ * 5 as the max. number of outstanding requests, but this turned out to be too
+ * low. 
+ * Serf doesn't exit out of the serf_context_run loop as long as it has 
+ * data to send or receive. With small responses (revs of a few kB), serf 
+ * doesn't come out of this loop at all. So with MAX_OUTSTANDING_REQUESTS set
+ * to a low number, there's a big chance that serf handles those requests
+ * completely in its internal loop, and only then gives us a chance to create
+ * new requests. This results in hiccups, slowing down the whole process.
+ *
+ * With a larger MAX_OUTSTANDING_REQUESTS, like 100 or more, there's more chance
+ * that serf can come out of its internal loop so we can replenish the outgoing
+ * request queue.
+ * There's no real disadvantage of using a large number here, besides the memory
+ * used to store the message, parser and handler objects (approx. 250 bytes). 
+ * 
+ * In my test setup peak performance was reached at max. 30-35 requests. So I
+ * added a small margin and choose 50.
  */
-#define MAX_OUTSTANDING_REQUESTS 5
+#define MAX_OUTSTANDING_REQUESTS 50
 
 svn_error_t *
 svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
@@ -674,10 +694,8 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
       svn_ra_serf__list_t *done_reports = NULL;
       replay_context_t *replay_ctx;
 
-      /* Send pending requests, if any.
-         Limit the number of outstanding requests to 5. There's no added value 
-         of increasing this number in terms of performance gain, and it will 
-         increase our memory footprint. */
+      /* Send pending requests, if any. Limit the number of outstanding 
+         requests to MAX_OUTSTANDING_REQUESTS. */
       if (rev <= end_revision  && active_reports < MAX_OUTSTANDING_REQUESTS)
         {
           svn_ra_serf__propfind_context_t *prop_ctx = NULL;
