@@ -172,6 +172,8 @@ svn_cl__diff(apr_getopt_t *os,
 
   if (opt_state->xml)
     {
+      svn_stringbuf_t *sb;
+
       /* Check that the --summarize is passed as well. */
       if (!opt_state->summarize)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
@@ -180,7 +182,7 @@ svn_cl__diff(apr_getopt_t *os,
 
       SVN_ERR(svn_cl__xml_print_header("diff", pool));
 
-      svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+      sb = svn_stringbuf_create("", pool);
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "paths", NULL);
       SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
     }
