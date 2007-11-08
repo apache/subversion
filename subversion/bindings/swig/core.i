@@ -268,6 +268,7 @@
    apr_hash_t *mergeto,
    apr_hash_t *mergein1,
    apr_hash_t *mergein2,
+   apr_hash_t *mergeinfo,
    apr_hash_t *eraser,
    apr_hash_t *whiteboard,
    apr_hash_t *changes
