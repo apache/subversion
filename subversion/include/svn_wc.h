@@ -777,7 +777,7 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_merge_begin,
 
   /** Replace notification. */
-  svn_wc_notify_update_replace,
+  svn_wc_notify_update_replace
 
 } svn_wc_notify_action_t;
 
