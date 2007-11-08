@@ -155,10 +155,3 @@ Approved changes:
     Branch: TBD
     Votes:
       +1: dionisos, dlr, hwright
-
-  * r26115
-    Enable compression (svndiff1 deltas) for ra_svn's get-file-revs command.
-    Justification:
-      Makes blame take longer than it should over ra_svn.
-    Votes:
-      +1: malcolm, glasser, hwright

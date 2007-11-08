@@ -1630,7 +1630,10 @@ static svn_error_t *file_rev_handler(void *baton, const char *path,
       svn_stream_set_write(stream, svndiff_handler);
       svn_stream_set_close(stream, svndiff_close_handler);
 
-      svn_txdelta_to_svndiff(stream, pool, d_handler, d_baton);
+      if (svn_ra_svn_has_capability(frb->conn, SVN_RA_SVN_CAP_SVNDIFF1))
+        svn_txdelta_to_svndiff2(d_handler, d_baton, stream, 1, pool);
+      else
+        svn_txdelta_to_svndiff2(d_handler, d_baton, stream, 0, pool);
     }
   else
     SVN_ERR(svn_ra_svn_write_cstring(frb->conn, pool, ""));
