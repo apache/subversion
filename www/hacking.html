@@ -1040,7 +1040,7 @@ typedef struct svn_error
 
 </li>
 
-<li><p>If you are the *original* creator of an error, you would do
+<li><p>If you are the <em>original</em> creator of an error, you would do
        something like this:</p>
 
     <pre>
@@ -1060,7 +1060,7 @@ return svn_error_create(SVN_ERR_FOO, NULL,
     conversion to UTF-8 before inclusion in the message string.</p>
 </li>
 
-<li><p>If you *receive* an error, you have three choices:</p>
+<li><p>If you <em>receive</em> an error, you have three choices:</p>
 
     <ol>
     <li><p>Handle the error yourself.  Use either your own code, or
@@ -1071,7 +1071,7 @@ return svn_error_create(SVN_ERR_FOO, NULL,
         <p>When your routine receives an error which it intends to
            ignore or handle itself, be sure to clean it up using
            svn_error_clear(). Any time such an error is not cleared
-           constitutes a *memory leak*.</p>
+           constitutes a <em>memory leak</em>.</p>
     </li>
 
     <li><p>Throw the error upwards, unmodified:</p>
@@ -1883,7 +1883,7 @@ patch is saved to that new issue.</p>
 <p>The Patch Manager needs a basic technical understanding of
 Subversion, and the ability to skim a thread and get a rough
 understanding of whether consensus has been reached, and if so, of
-what kind.  It does *not* require actual Subversion development
+what kind.  It does <em>not</em> require actual Subversion development
 experience or commit access.  Expertise in using one's mail reading
 software is optional, but recommended :-).</p>
 
@@ -2444,7 +2444,7 @@ convention; any unqualified triplet indicates a stable release:</p>
 </pre>
 
 <p>The order of releases is semi-nonlinear&nbsp;&mdash;&nbsp;a 1.0.3
-*might* come out after a 1.1.0.  But it's only "semi"-nonlinear
+<em>might</em> come out after a 1.1.0.  But it's only "semi"-nonlinear
 because eventually we declare a patch line defunct and tell people to
 upgrade to the next minor release, so over the long run the numbering
 is basically linear.</p>
