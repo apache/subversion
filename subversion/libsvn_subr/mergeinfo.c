@@ -1217,6 +1217,5 @@ svn_merge_range_dup(svn_merge_range_t *range, apr_pool_t *pool)
 {
   svn_merge_range_t *new_range = apr_palloc(pool, sizeof(*new_range));
   memcpy(new_range, range, sizeof(*new_range));
-  new_range->inheritable = range->inheritable;
   return new_range;
 }
