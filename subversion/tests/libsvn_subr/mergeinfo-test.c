@@ -48,8 +48,8 @@ fail(apr_pool_t *pool, const char *fmt, ...)
    contains only one path -> ranges mapping, and that EXPECTED_RANGES points
    to the first range in an array whose size is greater than or equal to
    the number of ranges in INPUTS path -> ranges mapping but less than
-   MAX_NBR_RANGES.  If fewer than MAX_NBR_RANGES ranges are present the
-   trailing expected_ranges should be {0, 0, 0,}. */
+   MAX_NBR_RANGES.  If fewer than MAX_NBR_RANGES ranges are present, then the
+   trailing expected_ranges should be have their end revision set to 0. */
 static svn_error_t *
 verify_mergeinfo_parse(const char *input,
                        const char *expected_path,
@@ -96,9 +96,7 @@ verify_mergeinfo_parse(const char *input,
 
       /* Were we expecting any more ranges? */
       if (j < MAX_NBR_RANGES - 1
-          && !(expected_ranges[j].start
-               == expected_ranges[j].start
-               == expected_ranges[j].inheritable == 0))
+          && !expected_ranges[j].end == 0)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_mergeinfo_parse (%s) failed to "
                                  "produce the expected number of ranges",
