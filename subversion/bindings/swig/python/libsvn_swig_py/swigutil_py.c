@@ -861,10 +861,7 @@ apr_array_header_t *svn_swig_py_rangelist_to_array(PyObject *list,
           Py_DECREF(list);
           return NULL;
         }
-      newrange = apr_pcalloc(pool, sizeof(svn_merge_range_t));
-      newrange->start = range->start;
-      newrange->end = range->end;
-      newrange->inheritable = range->inheritable;
+      newrange = svn_merge_range_dup(range, pool);
 
       APR_ARRAY_IDX(temp, targlen, svn_merge_range_t *) = newrange;
       Py_DECREF(o);
