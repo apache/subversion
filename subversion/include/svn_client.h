@@ -2454,7 +2454,7 @@ svn_client_merge(const char *source1,
  * @a ranges_to_merge is an array of <tt>svn_opt_revision_range_t *</tt>
  * ranges.  These ranges may describe additive and/or subtractive merge
  * ranges, they may overlap fully or partially, and/or they may partially
- * or fully negate each other.
+ * or fully negate each other.  This rangelist is not required to be sorted.
  *
  * All other options are handled identically to svn_client_merge3().
  *
