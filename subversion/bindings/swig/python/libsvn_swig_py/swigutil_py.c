@@ -864,6 +864,7 @@ apr_array_header_t *svn_swig_py_rangelist_to_array(PyObject *list,
       newrange = apr_pcalloc(pool, sizeof(svn_merge_range_t));
       newrange->start = range->start;
       newrange->end = range->end;
+      newrange->inheritable = range->inheritable;
 
       APR_ARRAY_IDX(temp, targlen, svn_merge_range_t *) = newrange;
       Py_DECREF(o);
@@ -1229,7 +1230,6 @@ PyObject *svn_swig_py_array_to_list(const apr_array_header_t *array)
     return NULL;
 }
 
-/* Formerly used by pre-1.0 APIs. Now unused
 PyObject *svn_swig_py_revarray_to_list(const apr_array_header_t *array)
 {
     PyObject *list = PyList_New(array->nelts);
@@ -1249,7 +1249,6 @@ PyObject *svn_swig_py_revarray_to_list(const apr_array_header_t *array)
     Py_DECREF(list);
     return NULL;
 }
-*/
 
 static PyObject *
 commit_item_array_to_list(const apr_array_header_t *array)
