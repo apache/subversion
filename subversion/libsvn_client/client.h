@@ -226,16 +226,25 @@ svn_client__get_repos_root(const char **repos_root,
                            apr_pool_t *pool);
 
 /* Return the path of PATH_OR_URL relative to the repository root
-   (REPOS_ROOT) in REL_PATH (URI-decoded).
+   (REPOS_ROOT) in REL_PATH (URI-decoded).  If INCLUDE_LEADING_SLASH
+   is set, the returned result will have a leading slash; otherwise,
+   it will not.
 
    The remaining parameters are used to procure the repository root.
    Either REPOS_ROOT or RA_SESSION -- but not both -- may be NULL.
    REPOS_ROOT or ADM_ACCESS (which may also be NULL) should be passed
-   when available as an optimization (in that order of preference). */
+   when available as an optimization (in that order of preference). 
+
+   CAUTION:  While having a leading slash on a so-called relative path
+   might work out well for functionality that interacts with
+   mergeinfo, it results in a relative path that cannot be naively
+   svn_path_join()'d with a repository root URL to provide a full URL.
+*/
 svn_error_t *
 svn_client__path_relative_to_root(const char **rel_path,
                                   const char *path_or_url,
                                   const char *repos_root,
+                                  svn_boolean_t include_leading_slash,
                                   svn_ra_session_t *ra_session,
                                   svn_wc_adm_access_t *adm_access,
                                   apr_pool_t *pool);

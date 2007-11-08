@@ -173,8 +173,8 @@ svn_client__get_copy_source(const char *path_or_url,
                                              ctx, pool));
 
     SVN_ERR(svn_client__path_relative_to_root(&copyfrom_info.target_path,
-                                              path_or_url, NULL, ra_session,
-                                              NULL, pool));
+                                              path_or_url, NULL, TRUE,
+                                              ra_session, NULL, pool));
   }
 
   APR_ARRAY_PUSH(targets, const char *) = path_or_url;

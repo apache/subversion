@@ -134,8 +134,8 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
 
       /* Find src path relative to the repository root. */
       SVN_ERR(svn_client__path_relative_to_root(&src_path, src_path_or_url,
-                                                NULL, ra_session, adm_access,
-                                                pool));
+                                                NULL, TRUE, ra_session, 
+                                                adm_access, pool));
 
       /* Obtain any implied and/or existing (explicit) mergeinfo. */
       SVN_ERR(get_implied_mergeinfo(ra_session, target_mergeinfo,
@@ -215,11 +215,11 @@ propagate_mergeinfo_within_wc(svn_client__copy_pair_t *pair,
                                                        "", src_access, NULL,
                                                        TRUE, TRUE, ctx, pool));
           pair->src_revnum = entry->revision;
-          /* ### If this API worked right, we could pass entry->repos for its
-             ### REPOS_ROOT parameter as an optimization. */
+
           SVN_ERR(svn_client__path_relative_to_root(&pair->src_rel, pair->src,
-                                                    NULL, ra_session,
-                                                    src_access, pool));
+                                                    entry->repos, TRUE,
+                                                    ra_session, src_access, 
+                                                    pool));
 
           /* ASSUMPTION: Non-numeric operative and peg revisions --
              other than working or unspecified -- won't be encountered
@@ -237,7 +237,7 @@ propagate_mergeinfo_within_wc(svn_client__copy_pair_t *pair,
 
              Now, add the implied mergeinfo to the destination. */
           SVN_ERR(svn_wc__entry_versioned(&entry, pair->dst, dst_access, FALSE,
-                  pool));
+                                          pool));
 
           return extend_wc_mergeinfo(pair->dst, entry, mergeinfo, dst_access,
                                      ctx, pool);
@@ -1162,8 +1162,8 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
 
       svn_pool_clear(iterpool);
       SVN_ERR(svn_client__path_relative_to_root(&pair->src_rel, pair->src,
-                                                NULL, ra_session, adm_access,
-                                                pool));
+                                                NULL, TRUE, ra_session, 
+                                                adm_access, pool));
       SVN_ERR(svn_wc_entry(&entry, pair->src, adm_access, FALSE, iterpool));
       pair->src_revnum = entry->revision;
 

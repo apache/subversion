@@ -840,7 +840,8 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
                                               peg_revision, "", pool));
       SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
       SVN_ERR(svn_client__path_relative_to_root(&repos_rel_path, path_or_url,
-                                                repos_root, NULL, NULL, pool));
+                                                repos_root, TRUE, NULL, 
+                                                NULL, pool));
       SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, mergeinfo,
                                               repos_rel_path, rev,
                                               svn_mergeinfo_inherited, pool));
