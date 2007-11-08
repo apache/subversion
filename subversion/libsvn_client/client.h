@@ -640,9 +640,6 @@ typedef struct
     /* The source path or url. */
     const char *src;
 
-    /* The source path relative to the repository root */
-    const char *src_rel;
-
     /* The absolute path of the source. */
     const char *src_abs;
 
@@ -668,9 +665,6 @@ typedef struct
 
     /* The destination path or url */
     const char *dst;
-
-    /* The destination path relative to the repository root */
-    const char *dst_rel;
 
     /* The destination's parent path */
     const char *dst_parent;
