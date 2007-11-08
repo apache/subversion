@@ -134,6 +134,7 @@ svn_error_t *
 svn_client__path_relative_to_root(const char **rel_path,
                                   const char *path_or_url,
                                   const char *repos_root,
+                                  svn_boolean_t include_leading_slash,
                                   svn_ra_session_t *ra_session,
                                   svn_wc_adm_access_t *adm_access,
                                   apr_pool_t *pool)
@@ -186,16 +187,10 @@ svn_client__path_relative_to_root(const char **rel_path,
         goto cleanup;
     }
 
-  /* ### FIXME: It's very uncharacteristic of our APIs to return paths
-     ### that have leading slashes, and results in paths that cannot
-     ### be svn_path_join'd with base URLs without indexing past that
-     ### slash.
-  */
-
   /* Check if PATH_OR_URL *is* the repository root URL.  */
   if (strcmp(repos_root, path_or_url) == 0)
     {
-      *rel_path = "/";
+      *rel_path = include_leading_slash ? "/" : "";
     }
   else
     {
@@ -209,8 +204,9 @@ svn_client__path_relative_to_root(const char **rel_path,
                                 _("URL '%s' is not a child of repository "
                                   "root URL '%s'"),
                                 path_or_url, repos_root);
-      *rel_path = apr_pstrcat(pool, "/",
-                              svn_path_uri_decode(rel_url, pool), NULL);
+      rel_url = svn_path_uri_decode(rel_url, pool);
+      *rel_path = include_leading_slash 
+                    ? apr_pstrcat(pool, "/", rel_url, NULL) : rel_url;
     }
 
  cleanup:
