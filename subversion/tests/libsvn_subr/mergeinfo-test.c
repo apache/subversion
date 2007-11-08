@@ -70,11 +70,13 @@ verify_mergeinfo_parse(const char *input,
        hi = apr_hash_next(hi))
     {
       const void *path;
+      void *val;
       apr_array_header_t *ranges;
       svn_merge_range_t *range;
       int j;
 
-      apr_hash_this(hi, &path, NULL, &ranges);
+      apr_hash_this(hi, &path, NULL, &val);
+      ranges = val;
       if (strcmp((const char *) path, expected_path) != 0)
         return fail(pool, "svn_mergeinfo_parse (%s) failed to parse the "
                     "correct path (%s)", input, expected_path);
@@ -122,7 +124,7 @@ static const char * const mergeinfo_vals[NBR_MERGEINFO_VALS] =
     /* ### Should svn_mergeinfo_parse() handle unordered
        ### but otherwise valid input strings like this?
        ### Currently this fails.
-    /* "/trunk: 7-9,5,10,14,13,11" */
+       "/trunk: 7-9,5,10,14,13,11" */
   };
 /* Paths corresponding to mergeinfo_vals. */
 static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
