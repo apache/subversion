@@ -51,8 +51,7 @@
 */
 static svn_error_t *
 create_stdio_stream(svn_stream_t **stream,
-                    APR_DECLARE(apr_status_t) open_fn(apr_file_t **,
-                                                      apr_pool_t *),
+                    apr_status_t open_fn(apr_file_t **, apr_pool_t *),
                     apr_pool_t *pool)
 {
   apr_file_t *stdio_file;
