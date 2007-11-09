@@ -243,7 +243,7 @@ typedef struct svn_txdelta_stream_t svn_txdelta_stream_t;
 
 /** A typedef for a function that will set @a *window to the next
  * window from a @c svn_txdelta_stream_t object.  If there are no more
- * delta windows, null will be used.  The returned window, if any,
+ * delta windows, NULL will be used.  The returned window, if any,
  * will be allocated in @a pool.  @a baton is the baton specified
  * when the stream was created.
  *
@@ -256,7 +256,7 @@ typedef svn_error_t *
 
 /** A typedef for a function that will return the md5 checksum of the
  * fulltext deltified by a @c svn_txdelta_stream_t object.  Will
- * return null if the final null window hasn't yet been returned by
+ * return NULL if the final null window hasn't yet been returned by
  * the stream.  The returned value will be allocated in the same pool
  * as the stream.  @a baton is the baton specified when the stream was
  * created.
@@ -342,7 +342,7 @@ svn_error_t *svn_txdelta_send_string(const svn_string_t *string,
  * This is effectively a 'copy' operation, resulting in delta windows that
  * make the target equivalent to the stream.
  *
- * If @a digest is non-null, populate it with the md5 checksum for the
+ * If @a digest is non-NULL, populate it with the md5 checksum for the
  * fulltext that was deltified (@a digest must be at least
  * @c APR_MD5_DIGESTSIZE bytes long).
  *
@@ -372,11 +372,11 @@ svn_error_t *svn_txdelta_send_txstream(svn_txdelta_stream_t *txstream,
  * @a *handler_baton is set to the value to pass as the @a baton argument to
  * @a *handler.
  *
- * If @a result_digest is non-null, it points to APR_MD5_DIGESTSIZE bytes
+ * If @a result_digest is non-NULL, it points to APR_MD5_DIGESTSIZE bytes
  * of storage, and the final call to @a handler populates it with the
  * MD5 digest of the resulting fulltext.
  *
- * If @a error_info is non-null, it is inserted parenthetically into
+ * If @a error_info is non-NULL, it is inserted parenthetically into
  * the error string for any error returned by svn_txdelta_apply() or
  * @a *handler.  (It is normally used to provide path information,
  * since there's nothing else in the delta application's context to
@@ -855,13 +855,13 @@ typedef struct svn_delta_editor_t
    * argument to @a *handler.
    *
    * @a base_checksum is the hex MD5 digest for the base text against
-   * which the delta is being applied; it is ignored if null, and may
-   * be ignored even if not null.  If it is not ignored, it must match
+   * which the delta is being applied; it is ignored if NULL, and may
+   * be ignored even if not NULL.  If it is not ignored, it must match
    * the checksum of the base text against which svndiff data is being
    * applied; if it does not, @c apply_textdelta or the @a *handler call
    * which detects the mismatch will return the error
    * SVN_ERR_CHECKSUM_MISMATCH (if there is no base text, there may
-   * still be an error if @a base_checksum is neither null nor the hex
+   * still be an error if @a base_checksum is neither NULL nor the hex
    * MD5 checksum of the empty string).
    */
   svn_error_t *(*apply_textdelta)(void *file_baton,
@@ -892,7 +892,7 @@ typedef struct svn_delta_editor_t
    *
    * @a text_checksum is the hex MD5 digest for the fulltext that
    * resulted from a delta application, see @c apply_textdelta.  The
-   * checksum is ignored if null.  If not null, it is compared to the
+   * checksum is ignored if NULL.  If not null, it is compared to the
    * checksum of the new fulltext, and the error
    * SVN_ERR_CHECKSUM_MISMATCH is returned if they do not match.  If
    * there is no new fulltext, @a text_checksum is ignored.

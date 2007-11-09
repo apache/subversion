@@ -63,7 +63,7 @@ typedef struct svn_sort__item_t {
  * greater than, equal to, or less than the key of @a b as determined
  * by comparing them with svn_path_compare_paths().
  *
- * The key strings must be null-terminated, even though klen does not
+ * The key strings must be NULL-terminated, even though klen does not
  * include the terminator.
  *
  * This is useful for converting a hash into a sorted

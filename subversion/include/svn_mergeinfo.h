@@ -224,17 +224,17 @@ svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
  *
  * If either @ *range_1 or @ *range_2 is NULL, either range contains
  * invalid svn_revnum_t's, or the two ranges do not intersect, then do
- * nothing and return false.
+ * nothing and return FALSE.
  *
  * If the two ranges can be reduced to one range, set @ *range_1 to represent
- * that range, set @ *range_2 to NULL, and return true.
+ * that range, set @ *range_2 to NULL, and return TRUE.
  *
  * If the two ranges cancel each other out set both @ *range_1 and
- * @ *range_2 to NULL and return true.
+ * @ *range_2 to NULL and return TRUE.
  *
  * If the two ranges intersect but cannot be represented by one range (because
  * one range is additive and the other subtractive) then modify @ *range_1 and
- * @ *range_2 to remove the intersecting ranges and return true.
+ * @ *range_2 to remove the intersecting ranges and return TRUE.
  *
  * The inheritability of @ *range_1 or @ *range_2 is not taken into account.
  *

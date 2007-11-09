@@ -382,7 +382,7 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
  * happen, for instance, when the revision represents a commit to a
  * foreign version control system, or possibly when two Subversion
  * repositories are combined. This property can be used to record the
- * true, original date of the commit.
+ * TRUE, original date of the commit.
  */
 #define SVN_PROP_REVISION_ORIG_DATE  SVN_PROP_PREFIX "original-date"
 
