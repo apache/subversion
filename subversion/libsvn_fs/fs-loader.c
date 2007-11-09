@@ -755,6 +755,13 @@ svn_fs_node_created_rev(svn_revnum_t *revision, svn_fs_root_t *root,
 }
 
 svn_error_t *
+svn_fs_node_origin_rev(svn_revnum_t *revision, svn_fs_root_t *root,
+                       const char *path, apr_pool_t *pool)
+{
+  return root->vtable->node_origin_rev(revision, root, path, pool);
+}
+
+svn_error_t *
 svn_fs_node_created_path(const char **created_path, svn_fs_root_t *root,
                          const char *path, apr_pool_t *pool)
 {

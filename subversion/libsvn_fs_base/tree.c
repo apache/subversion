@@ -2620,6 +2620,158 @@ svn_fs_base__deltify(svn_fs_t *fs,
 
 
 
+/*** Finding the Origin of a Line of History ***/
+
+/* Set *PREV_PATH and *PREV_REV to the path and revision which
+   represent the location at which PATH in FS was located immediately
+   prior to REVISION iff there was a copy operation (to PATH or one of
+   its parent directories) between that previous location and
+   PATH@REVISION.
+
+   If there was no such copy operation in that portion of PATH's
+   history, set *PREV_PATH to NULL and *PREV_REV to SVN_INVALID_REVNUM.
+
+   WARNING:  Do *not* call this from inside a trail. */
+static svn_error_t *
+prev_location(const char **prev_path,
+              svn_revnum_t *prev_rev,
+              svn_fs_t *fs,
+              svn_fs_root_t *root,
+              const char *path,
+              apr_pool_t *pool)
+{
+  const char *copy_path, *copy_src_path, *remainder = "";
+  svn_fs_root_t *copy_root;
+  svn_revnum_t copy_src_rev;
+
+  /* Ask about the most recent copy which affected PATH@REVISION.  If
+     there was no such copy, we're done.  */
+  SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, root, path, pool));
+  if (! copy_root)
+    {
+      *prev_rev = SVN_INVALID_REVNUM;
+      *prev_path = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  /* Ultimately, it's not the path of the closest copy's source that
+     we care about -- it's our own path's location in the copy source
+     revision.  So we'll tack the relative path that expresses the
+     difference between the copy destination and our path in the copy
+     revision onto the copy source path to determine this information.
+
+     In other words, if our path is "/branches/my-branch/foo/bar", and
+     we know that the closest relevant copy was a copy of "/trunk" to
+     "/branches/my-branch", then that relative path under the copy
+     destination is "/foo/bar".  Tacking that onto the copy source
+     path tells us that our path was located at "/trunk/foo/bar"
+     before the copy.
+  */
+  SVN_ERR(svn_fs_copied_from(&copy_src_rev, &copy_src_path,
+                             copy_root, copy_path, pool));
+  if (! strcmp(copy_path, path) == 0)
+    remainder = svn_path_is_child(copy_path, path, pool);
+  *prev_path = svn_path_join(copy_src_path, remainder, pool);
+  *prev_rev = copy_src_rev;
+  return SVN_NO_ERROR;
+}
+
+
+struct id_created_rev_args {
+  svn_revnum_t revision;
+  const svn_fs_id_t *id;
+  const char *path;
+};
+
+
+static svn_error_t *
+txn_body_id_created_rev(void *baton, trail_t *trail)
+{
+  struct id_created_rev_args *args = baton;
+  dag_node_t *node;
+
+  SVN_ERR(svn_fs_base__dag_get_node(&node, trail->fs, args->id, 
+                                    trail, trail->pool));
+  SVN_ERR(svn_fs_base__dag_get_revision(&(args->revision), node, 
+                                        trail, trail->pool));
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+base_node_origin_rev(svn_revnum_t *revision,
+                     svn_fs_root_t *root,
+                     const char *path,
+                     apr_pool_t *pool)
+{
+  svn_fs_t *fs = svn_fs_root_fs(root);
+  svn_fs_root_t *curroot = root;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_stringbuf_t *lastpath = 
+    svn_stringbuf_create(svn_fs__canonicalize_abspath(path, pool), pool);
+  svn_revnum_t lastrev = SVN_INVALID_REVNUM;
+  const svn_fs_id_t *pred_id;
+  struct id_created_rev_args icr_args;
+  svn_boolean_t found_copies = FALSE;
+
+  /* Walk the closest-copy chain back to the first copy in our history.
+
+     NOTE: We merely *assume* that this is faster than walking the
+     predecessor chain, because we *assume* that copies of parent
+     directories happen less often than modifications to a given item. */
+  while (1)
+    {
+      svn_revnum_t currev;
+      const char *curpath = lastpath->data;
+
+      /* Find the previous location of this object using the
+         closest-copy shortcut. */
+      SVN_ERR(prev_location(&curpath, &currev, fs, curroot, curpath, subpool));
+      if (! curpath)
+        break;
+
+      /* Update our LASTPATH and LASTREV variables (which survive SUBPOOL). */
+      found_copies = TRUE;
+      svn_stringbuf_set(lastpath, curpath);
+      lastrev = currev;
+
+      /* Update our CURROOT from our calculated LASTREV. */
+      svn_pool_clear(subpool);
+      SVN_ERR(svn_fs_revision_root(&curroot, fs, lastrev, subpool));
+    }
+
+  /* If we found copies, repoint our CURROOT to the oldest copy source
+     location.  Otherwise, leave it still pointing at ROOT. */
+  if (SVN_IS_VALID_REVNUM(lastrev))
+    SVN_ERR(svn_fs_revision_root(&curroot, fs, lastrev, pool));
+
+  /* Walk the predecessor links back to origin. */
+  SVN_ERR(svn_fs_node_id(&pred_id, curroot, lastpath->data, pool));
+  while (1)
+    {
+      struct txn_pred_id_args args;
+      svn_pool_clear(subpool);
+      args.id = pred_id;
+      args.pool = subpool;
+      SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_pred_id, &args, subpool));
+      if (! args.pred_id)
+        break;
+      pred_id = args.pred_id;
+    }
+  
+  /* When we get here, PRED_ID should be the node-revision-id of first
+     node-revision in our chain.  Let's get the  */
+  icr_args.id = pred_id;
+  SVN_ERR(svn_fs_base__retry_txn
+          (root->fs, txn_body_id_created_rev, &icr_args, pool));
+  *revision = icr_args.revision;
+
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
+}
+
+
+
 /* Modifying directories */
 
 
@@ -4331,6 +4483,7 @@ static root_vtable_t root_vtable = {
   base_node_history,
   base_node_id,
   base_node_created_rev,
+  base_node_origin_rev,
   base_node_created_path,
   base_delete_node,
   base_copied_from,
