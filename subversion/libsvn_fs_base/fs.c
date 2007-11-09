@@ -55,6 +55,7 @@
 #include "bdb/uuids-table.h"
 #include "bdb/locks-table.h"
 #include "bdb/lock-tokens-table.h"
+#include "bdb/node-origins-table.h"
 
 #include "../libsvn_fs/fs-loader.h"
 #include "private/svn_fs_mergeinfo.h"
@@ -180,6 +181,7 @@ cleanup_fs(svn_fs_t *fs)
   SVN_ERR(cleanup_fs_db(fs, &bfd->uuids, "uuids"));
   SVN_ERR(cleanup_fs_db(fs, &bfd->locks, "locks"));
   SVN_ERR(cleanup_fs_db(fs, &bfd->lock_tokens, "lock-tokens"));
+  SVN_ERR(cleanup_fs_db(fs, &bfd->node_origins, "node-origins"));
 
   /* Finally, close the environment.  */
   bfd->bdb = 0;
@@ -617,6 +619,13 @@ open_databases(svn_fs_t *fs, svn_boolean_t create,
                    svn_fs_bdb__open_lock_tokens_table(&bfd->lock_tokens,
                                                       bfd->bdb->env,
                                                       create)));
+
+  SVN_ERR(BDB_WRAP(fs, (create
+                        ? "creating 'node-origins' table"
+                        : "opening 'node-origins' table"),
+                   svn_fs_bdb__open_node_origins_table(&bfd->node_origins,
+                                                       bfd->bdb->env,
+                                                       create)));
 
   return SVN_NO_ERROR;
 }
@@ -1085,6 +1094,8 @@ base_hotcopy(const char *src_path,
                               "locks", pagesize, pool));
   SVN_ERR(copy_db_file_safely(src_path, dest_path,
                               "lock-tokens", pagesize, pool));
+  SVN_ERR(copy_db_file_safely(src_path, dest_path,
+                              "node-origins", pagesize, pool));
 
   {
     apr_array_header_t *logfiles;
