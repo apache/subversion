@@ -1074,6 +1074,20 @@ svn_error_t *svn_fs_node_created_rev(svn_revnum_t *revision,
                                      const char *path,
                                      apr_pool_t *pool);
 
+/** Set @a *revision to the revision in which the line of history
+ * represented by @a path under @a root originated.  Use @a pool for
+ * any temporary allocations.  If @a root is a transaction root, @a
+ * *revision will be set to @c SVN_INVALID_REVNUM for any nodes newly
+ * added in that transaction (brand new files or directories created
+ * using @c svn_fs_make_dir or @c svn_fs_make_file).
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_fs_node_origin_rev(svn_revnum_t *revision,
+                                    svn_fs_root_t *root,
+                                    const char *path,
+                                    apr_pool_t *pool);
+
 /** Set @a *created_path to the path at which @a path under @a root was
  * created.  Use @a pool for all allocations.  Callers may use this
  * function in conjunction with svn_fs_node_created_rev() to perform a
