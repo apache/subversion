@@ -4508,7 +4508,6 @@ base_node_origin_rev(svn_revnum_t *revision,
   struct get_set_node_origin_args args;
   const svn_fs_id_t *id, *origin_id;
   struct id_created_rev_args icr_args;
-  svn_boolean_t found_copies = FALSE;
 
   SVN_ERR(base_node_id(&id, root, path, pool));
   args.node_id = svn_fs_base__id_node_id(id);
@@ -4545,8 +4544,14 @@ base_node_origin_rev(svn_revnum_t *revision,
           svn_revnum_t currev;
           const char *curpath = lastpath->data;
           
-          /* Find the previous location of this object using the
-             closest-copy shortcut. */
+          /* Get a root pointing to LASTREV.  (The first time around,
+             LASTREV is invalid, but that's cool because CURROOT is
+             already initialized.)  */
+          if (SVN_IS_VALID_REVNUM(lastrev))
+            SVN_ERR(svn_fs_base__revision_root(&curroot, fs, 
+                                               lastrev, subpool));
+
+          /* Find the previous location using the closest-copy shortcut. */
           SVN_ERR(prev_location(&curpath, &currev, fs, curroot, 
                                 curpath, subpool));
           if (! curpath)
@@ -4554,20 +4559,9 @@ base_node_origin_rev(svn_revnum_t *revision,
 
           /* Update our LASTPATH and LASTREV variables (which survive 
              SUBPOOL). */
-          found_copies = TRUE;
           svn_stringbuf_set(lastpath, curpath);
-          lastrev = currev;
-
-          /* Update our CURROOT from our calculated LASTREV. */
-          svn_pool_clear(subpool);
-          SVN_ERR(svn_fs_base__revision_root(&curroot, fs, lastrev, subpool));
         }
 
-      /* If we found copies, repoint our CURROOT to the oldest copy source
-         location.  Otherwise, leave it still pointing at ROOT. */
-      if (SVN_IS_VALID_REVNUM(lastrev))
-        SVN_ERR(svn_fs_base__revision_root(&curroot, fs, lastrev, pool));
-      
       /* Walk the predecessor links back to origin. */
       SVN_ERR(base_node_id(&pred_id, curroot, lastpath->data, pool));
       while (1)
