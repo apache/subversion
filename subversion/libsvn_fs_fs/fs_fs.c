@@ -498,7 +498,7 @@ svn_fs_fs__with_write_lock(svn_fs_t *fs,
 
 /* Run BODY (with BATON and POOL) while the transaction-current file
    of FS is locked. */
-svn_error_t *
+static svn_error_t *
 with_txn_current_lock(svn_fs_t *fs,
                       svn_error_t *(*body)(void *baton,
                                            apr_pool_t *pool),
