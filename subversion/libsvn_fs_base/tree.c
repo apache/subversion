@@ -56,6 +56,7 @@
 #include "bdb/nodes-table.h"
 #include "bdb/changes-table.h"
 #include "bdb/copies-table.h"
+#include "bdb/node-origins-table.h"
 #include "../libsvn_fs/fs-loader.h"
 #include "private/svn_fs_mergeinfo.h"
 #include "private/svn_fs_util.h"
@@ -4474,6 +4475,28 @@ txn_body_id_created_rev(void *baton, trail_t *trail)
 }
 
 
+struct get_set_node_origin_args {
+  const svn_fs_id_t *origin_id;
+  const char *node_id;
+};
+
+
+static svn_error_t *
+txn_body_get_node_origin(void *baton, trail_t *trail)
+{
+  struct get_set_node_origin_args *args = baton;
+  return svn_fs_bdb__get_node_origin(&(args->origin_id), trail->fs, 
+                                     args->node_id, trail, trail->pool);
+}
+
+static svn_error_t *
+txn_body_set_node_origin(void *baton, trail_t *trail)
+{
+  struct get_set_node_origin_args *args = baton;
+  return svn_fs_bdb__set_node_origin(trail->fs, args->node_id, 
+                                     args->origin_id, trail, trail->pool);
+}
+
 static svn_error_t *
 base_node_origin_rev(svn_revnum_t *revision,
                      svn_fs_root_t *root,
@@ -4481,71 +4504,105 @@ base_node_origin_rev(svn_revnum_t *revision,
                      apr_pool_t *pool)
 {
   svn_fs_t *fs = svn_fs_root_fs(root);
-  svn_fs_root_t *curroot = root;
-  apr_pool_t *subpool = svn_pool_create(pool);
-  svn_stringbuf_t *lastpath = 
-    svn_stringbuf_create(svn_fs__canonicalize_abspath(path, pool), pool);
-  svn_revnum_t lastrev = SVN_INVALID_REVNUM;
-  const svn_fs_id_t *pred_id;
+  svn_error_t *err;
+  struct get_set_node_origin_args args;
+  const svn_fs_id_t *id, *origin_id;
   struct id_created_rev_args icr_args;
   svn_boolean_t found_copies = FALSE;
 
-  /* Walk the closest-copy chain back to the first copy in our history.
+  SVN_ERR(base_node_id(&id, root, path, pool));
+  args.node_id = svn_fs_base__id_node_id(id);
+  err = svn_fs_base__retry_txn(root->fs, txn_body_get_node_origin, 
+                               &args, pool);
 
-     NOTE: We merely *assume* that this is faster than walking the
-     predecessor chain, because we *assume* that copies of parent
-     directories happen less often than modifications to a given item. */
-  while (1)
+  /* If we got a value for the origin node-revision-ID, that's great.
+     If we didn't, that's sad but non-fatal -- we'll just figure it
+     out the hard way, then record it so we don't have suffer again
+     the next time. */
+  if (! err)
     {
-      svn_revnum_t currev;
-      const char *curpath = lastpath->data;
+      origin_id = args.origin_id;
+    }
+  else if (err->apr_err == SVN_ERR_FS_NO_SUCH_NODE_ORIGIN)
+    {
+      svn_fs_root_t *curroot = root;
+      apr_pool_t *subpool = svn_pool_create(pool);
+      svn_stringbuf_t *lastpath = 
+        svn_stringbuf_create(svn_fs__canonicalize_abspath(path, pool), pool);
+      svn_revnum_t lastrev = SVN_INVALID_REVNUM;
+      const svn_fs_id_t *pred_id;
+      
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
 
-      /* Find the previous location of this object using the
-         closest-copy shortcut. */
-      SVN_ERR(prev_location(&curpath, &currev, fs, curroot, curpath, subpool));
-      if (! curpath)
-        break;
+      /* Walk the closest-copy chain back to the first copy in our history.
+         
+         NOTE: We merely *assume* that this is faster than walking the
+         predecessor chain, because we *assume* that copies of parent
+         directories happen less often than modifications to a given item. */
+      while (1)
+        {
+          svn_revnum_t currev;
+          const char *curpath = lastpath->data;
+          
+          /* Find the previous location of this object using the
+             closest-copy shortcut. */
+          SVN_ERR(prev_location(&curpath, &currev, fs, curroot, 
+                                curpath, subpool));
+          if (! curpath)
+            break;
 
-      /* Update our LASTPATH and LASTREV variables (which survive SUBPOOL). */
-      found_copies = TRUE;
-      svn_stringbuf_set(lastpath, curpath);
-      lastrev = currev;
+          /* Update our LASTPATH and LASTREV variables (which survive 
+             SUBPOOL). */
+          found_copies = TRUE;
+          svn_stringbuf_set(lastpath, curpath);
+          lastrev = currev;
 
-      /* Update our CURROOT from our calculated LASTREV. */
-      svn_pool_clear(subpool);
-      SVN_ERR(svn_fs_base__revision_root(&curroot, fs, lastrev, subpool));
+          /* Update our CURROOT from our calculated LASTREV. */
+          svn_pool_clear(subpool);
+          SVN_ERR(svn_fs_base__revision_root(&curroot, fs, lastrev, subpool));
+        }
+
+      /* If we found copies, repoint our CURROOT to the oldest copy source
+         location.  Otherwise, leave it still pointing at ROOT. */
+      if (SVN_IS_VALID_REVNUM(lastrev))
+        SVN_ERR(svn_fs_base__revision_root(&curroot, fs, lastrev, pool));
+      
+      /* Walk the predecessor links back to origin. */
+      SVN_ERR(base_node_id(&pred_id, curroot, lastpath->data, pool));
+      while (1)
+        {
+          struct txn_pred_id_args pid_args;
+          svn_pool_clear(subpool);
+          pid_args.id = pred_id;
+          pid_args.pool = subpool;
+          SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_pred_id, 
+                                         &pid_args, subpool));
+          if (! pid_args.pred_id)
+            break;
+          pred_id = pid_args.pred_id;
+        }
+      
+      /* Okay.  PRED_ID should hold our origin ID now.  Let's remember
+         this value from now on, shall we?  */
+      args.origin_id = origin_id = svn_fs_base__id_copy(pred_id, pool);
+      SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_set_node_origin, 
+                                      &args, subpool));
+      svn_pool_destroy(subpool);
+    }
+  else
+    {
+      return err;
     }
 
-  /* If we found copies, repoint our CURROOT to the oldest copy source
-     location.  Otherwise, leave it still pointing at ROOT. */
-  if (SVN_IS_VALID_REVNUM(lastrev))
-    SVN_ERR(svn_fs_base__revision_root(&curroot, fs, lastrev, pool));
-
-  /* Walk the predecessor links back to origin. */
-  SVN_ERR(base_node_id(&pred_id, curroot, lastpath->data, pool));
-  while (1)
-    {
-      struct txn_pred_id_args args;
-      svn_pool_clear(subpool);
-      args.id = pred_id;
-      args.pool = subpool;
-      SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_pred_id, &args, subpool));
-      if (! args.pred_id)
-        break;
-      pred_id = args.pred_id;
-    }
-  
-  /* When we get here, PRED_ID should be the node-revision-id of first
-     node-revision in our chain.  Let's get the  */
-  icr_args.id = pred_id;
-  SVN_ERR(svn_fs_base__retry_txn
-          (root->fs, txn_body_id_created_rev, &icr_args, pool));
+  /* Okay.  We have an origin node-revision-ID.  Let's get a created
+     revision from it. */
+  icr_args.id = origin_id;
+  SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_id_created_rev, 
+                                 &icr_args, pool));
   *revision = icr_args.revision;
-
-  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
-
 
 
 /* Creating root objects.  */
