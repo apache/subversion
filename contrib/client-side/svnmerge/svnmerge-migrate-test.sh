@@ -34,10 +34,11 @@ svn ci -m 'Mix in Subversion 1.5 merge tracking info on branch B.'
 cd -
 
 # Run the migration script, passing on any arguments.
-$SCRIPT_DIR/svnmerge-migrate-history.py "$@" || exit 1
+$SCRIPT_DIR/svnmerge-migrate-history.py $TMP_DIR/repos -v /branches
 
 # Report the results.
-echo 'New WC mergeinfo:'
+EXPECTED_MERGEINFO='/trunk:1,4-7'
 svn up wc
-svn pl -vR wc | grep '/trunk:1,4-7' && echo 'PASS' || \
-  (echo 'FAIL: Unexpected mergeinfo:' && svn pl -vR wc) >&2 && exit 1
+svn pl -vR wc | grep $EXPECTED_MERGEINFO && echo 'PASS' || \
+  (echo 'FAIL: Unexpected mergeinfo:' && svn pl -vR wc && \
+   echo "Expected (regex): $EXPECTED_MERGEINFO") >&2 && exit 1
