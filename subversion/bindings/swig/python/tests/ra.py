@@ -219,17 +219,23 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
 
     fs_revnum = fs.youngest_rev(self.fs)
 
-    reporter, reporter_baton = ra.do_diff2(self.ra_ctx, fs_revnum, REPOS_URL + "/trunk/README.txt", 0, 0, 1, REPOS_URL + "/trunk/README.txt", e_ptr, e_baton)
-
-    reporter.set_path(reporter_baton, "", fs_revnum, True, None)
-
-    reporter.finish_report(reporter_baton)
-
+    sess_url = ra.get_session_url(self.ra_ctx)
+    try:
+        ra.reparent(self.ra_ctx, REPOS_URL+"/trunk")
+        reporter, reporter_baton = ra.do_diff2(self.ra_ctx, fs_revnum,
+                                               "README.txt", 0, 0, 1,
+                                               REPOS_URL+"/trunk/README.txt",
+                                               e_ptr, e_baton)
+        reporter.set_path(reporter_baton, "", 0, True, None)
+        reporter.finish_report(reporter_baton)
+    finally:
+        ra.reparent(self.ra_ctx, sess_url)
+      
     self.assertEqual("A test.\n", editor.textdeltas[0].new_data)
     self.assertEqual(1, len(editor.textdeltas))
 
   def test_get_locations(self):
-    locations = ra.get_locations(self.ra_ctx, "/trunk/README.txt", 2, range(1,5))
+    locations = ra.get_locations(self.ra_ctx, "trunk/README.txt", 2, range(1,5))
     self.assertEqual(locations, {
         2: '/trunk/README.txt',
         3: '/trunk/README.txt',
@@ -263,7 +269,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     # properly. svn.ra.lock() currently fails because it is not possible
     # to retrieve the username from the auth_baton yet.
     self.assertRaises(core.SubversionException,
-      lambda: ra.lock(self.ra_ctx, {"/": 0}, "sleutel", False, callback))
+      lambda: ra.lock(self.ra_ctx, {"": 0}, "sleutel", False, callback))
 
   def test_get_log2(self):
     # Get an interesting commmit.
