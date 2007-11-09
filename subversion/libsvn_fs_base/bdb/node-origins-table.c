@@ -85,8 +85,23 @@ svn_error_t *svn_fs_bdb__set_node_origin(svn_fs_t *fs,
 {
   base_fs_data_t *bfd = fs->fsap_data;
   DBT key, value;
+  int db_err;
 
+  /* Create a key from our NODE_ID. */
   svn_fs_base__str_to_dbt(&key, node_id);
+
+  /* Ensure that we aren't about to overwrite an existing record. */
+  svn_fs_base__trail_debug(trail, "node-origins", "get");
+  db_err = bfd->node_origins->get(bfd->node_origins, trail->db_txn,
+                                  &key, svn_fs_base__result_dbt(&value), 0);
+  svn_fs_base__track_dbt(&value, pool);
+  if (db_err != DB_NOTFOUND)
+    return svn_error_createf
+      (SVN_ERR_FS_ALREADY_EXISTS, NULL,
+       _("Node origin for '%s' already exists in filesystem '%s'"),
+       node_id, fs->path);
+
+  /* Create a value from our ORIGIN_ID, and add this record to the table. */
   svn_fs_base__id_to_dbt(&value, origin_id, pool);
   svn_fs_base__trail_debug(trail, "node-origins", "put");
   SVN_ERR(BDB_WRAP(fs, _("storing node-origins record"),
