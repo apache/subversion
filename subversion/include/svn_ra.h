@@ -71,7 +71,7 @@ typedef svn_error_t *(*svn_ra_get_wc_prop_func_t)(void *baton,
  * working copy properties during update-like operations.  See the
  * comments for @c svn_ra_get_wc_prop_func_t for @a baton, @a path, and
  * @a name. The @a value is the value that will be stored for the property;
- * a null @a value means the property will be deleted.
+ * a NULL @a value means the property will be deleted.
  */
 typedef svn_error_t *(*svn_ra_set_wc_prop_func_t)(void *baton,
                                                   const char *path,
@@ -151,8 +151,8 @@ typedef svn_error_t *(*svn_ra_file_rev_handler_t)
  * @a do_lock is TRUE when locking @a path, and FALSE
  * otherwise.
  *
- * @a lock is a lock for @a path or null if @a do_lock is false or @a ra_err is
- * non-null.
+ * @a lock is a lock for @a path or NULL if @a do_lock is FALSE or @a ra_err is
+ * non-NULL.
  *
  * @a ra_err is NULL unless the ra layer encounters a locking related
  * error which it passes back for notification purposes.  The caller
@@ -836,7 +836,7 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
  *
  * Update the target only as deeply as @a depth indicates.
  *
- * If @a send_copyfrom_args is true, then ask the server to send
+ * If @a send_copyfrom_args is TRUE, then ask the server to send
  * copyfrom arguments to add_file() and add_directory() when possible.
  * (Note: this means that any subsequent txdeltas coming from the
  * server are presumed to apply against the copied file!)
@@ -872,7 +872,7 @@ svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
 
 /**
  * Similar to svn_ra_do_update2(), but taking @c svn_ra_reporter2_t
- * instead of @c svn_ra_reporter3_t.  If @a recurse is true, pass
+ * instead of @c svn_ra_reporter3_t.  If @a recurse is TRUE, pass
  * @c svn_depth_infinity for @a depth, else pass @c svn_depth_files.
  *
  * @deprecated Provided for compatibility with the 1.4 API.
@@ -945,7 +945,7 @@ svn_error_t *svn_ra_do_switch2(svn_ra_session_t *session,
  * Similar to svn_ra_do_switch2(), but taking @c svn_ra_reporter2_t
  * instead of @c svn_ra_reporter3_t, and therefore only able to report
  * @c svn_depth_infinity for depths.  The switch itself is performed
- * according to @a recurse: if true, then use @c svn_depth_infinity
+ * according to @a recurse: if TRUE, then use @c svn_depth_infinity
  * for @a depth, else use @c svn_depth_files.
  *
  * @deprecated Provided for compatibility with the 1.4 API.
@@ -1014,7 +1014,7 @@ svn_error_t *svn_ra_do_status2(svn_ra_session_t *session,
  * Similar to svn_ra_do_status2(), but taking @c svn_ra_reporter2_t
  * instead of @c svn_ra_reporter3_t, and therefore only able to report
  * @c svn_depth_infinity for depths.  The status operation itself is
- * performed according to @a recurse: if true, then @a depth is
+ * performed according to @a recurse: if TRUE, then @a depth is
  * @c svn_depth_infinity, else it is @c svn_depth_immediates.
  *
  * @deprecated Provided for compatibility with the 1.4 API.
@@ -1103,7 +1103,7 @@ svn_error_t *svn_ra_do_diff3(svn_ra_session_t *session,
  * Similar to svn_ra_do_diff3(), but taking @c svn_ra_reporter2_t
  * instead of @c svn_ra_reporter3_t, and therefore only able to report
  * @c svn_depth_infinity for depths.  Perform the diff according to
- * @a recurse: if true, then @a depth is @c svn_depth_infinity, else
+ * @a recurse: if TRUE, then @a depth is @c svn_depth_infinity, else
  * it is @c svn_depth_files.
  *
  * @deprecated Provided for compatibility with the 1.4 API.
@@ -1147,7 +1147,7 @@ svn_error_t *svn_ra_do_diff(svn_ra_session_t *session,
  *
  * If @a start or @a end is @c SVN_INVALID_REVNUM, it defaults to youngest.
  *
- * If @a paths is non-null and has one or more elements, then only show
+ * If @a paths is non-NULL and has one or more elements, then only show
  * revisions in which at least one of @a paths was changed (i.e., if
  * file, text or props changed; if dir, props changed or an entry
  * was added or deleted).  Each path is an <tt>const char *</tt>, relative
@@ -1159,7 +1159,7 @@ svn_error_t *svn_ra_do_diff(svn_ra_session_t *session,
  * If @a discover_changed_paths, then each call to receiver passes a
  * <tt>const apr_hash_t *</tt> for the receiver's @a changed_paths argument;
  * the hash's keys are all the paths committed in that revision.
- * Otherwise, each call to receiver passes null for @a changed_paths.
+ * Otherwise, each call to receiver passes NULL for @a changed_paths.
  *
  * If @a strict_node_history is set, copy history will not be traversed
  * (if any exists) when harvesting the revision logs for each path.
@@ -1397,7 +1397,7 @@ svn_error_t *svn_ra_get_file_revs(svn_ra_session_t *session,
  * which describes the lock, or it is NULL.
  *
  * If any path is already locked by a different user, then call @a
- * lock_func/@a lock_baton with an error.  If @a steal_lock is true,
+ * lock_func/@a lock_baton with an error.  If @a steal_lock is TRUE,
  * then "steal" the existing lock(s) anyway, even if the RA username
  * does not match the current lock's owner.  Delete any lock on the
  * path, and unconditionally create a new lock.
@@ -1436,7 +1436,7 @@ svn_error_t *svn_ra_lock(svn_ra_session_t *session,
  *
  * If @a token points to a lock, but the RA username doesn't match the
  * lock's owner, call @a lock_func/@a lock_baton with an error.  If @a
- * break_lock is true, however, instead allow the lock to be "broken"
+ * break_lock is TRUE, however, instead allow the lock to be "broken"
  * by the RA user.
  *
  * After successfully unlocking a path, @a lock_func is called with
@@ -1500,7 +1500,7 @@ svn_error_t *svn_ra_get_locks(svn_ra_session_t *session,
  * version.
  *
  * If @a send_deltas is @c TRUE, the actual text and property changes in
- * the revision will be sent, otherwise dummy text deltas and null property
+ * the revision will be sent, otherwise dummy text deltas and NULL property
  * changes will be sent instead.
  *
  * @a pool is used for all allocation.
@@ -1516,9 +1516,9 @@ svn_error_t *svn_ra_replay(svn_ra_session_t *session,
                            apr_pool_t *pool);
 
 /**
- * Set @a *has to true if the server represented by @a session has
+ * Set @a *has to TRUE if the server represented by @a session has
  * @a capability (one of the capabilities beginning with
- * @c "SVN_RA_CAPABILITY_"), else set @a *has to false.
+ * @c "SVN_RA_CAPABILITY_"), else set @a *has to FALSE.
  *
  * If @a capability isn't recognized, throw @c SVN_ERR_RA_UNKNOWN_CAPABILITY,
  * with the effect on @a *has undefined.
