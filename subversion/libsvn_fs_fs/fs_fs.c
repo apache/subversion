@@ -974,7 +974,8 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
  * For obvious reasons, this does not work *across hosts*.  No one
  * knows about the opened file; not the server, and not the deleting
  * client.  So the file vanishes, and the reader gets stale NFS file
- * handle.  We have this problem with revprops files and current.
+ * handle.  We have this problem with revprops files, current, and
+ * transaction-current.
  *
  * Wrap opens and reads of such files with SVN_RETRY_ESTALE and closes
  * with SVN_IGNORE_ESTALE.  Call these macros within a loop of
