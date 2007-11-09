@@ -1749,7 +1749,7 @@ nls_receiver(svn_location_segment_t *segment,
 
   /* expected_segments->range_end can't be 0, so if we see that, it's
      our end-of-the-list sentry. */
-  if (! b->expected_segments->range_end)
+  if (! expected_segment->range_end)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "Got unexpected location segment: %s",
                              format_segment(segment, pool));
