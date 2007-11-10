@@ -188,6 +188,7 @@ apr_array_header_t *svn_swig_py_rangelist_to_array(PyObject *list,
 
 /* helper function to convert an array of 'svn_revnum_t' to a Python list
    of int objects */
+SVN_SWIG_SWIGUTIL_EXPORT
 PyObject *svn_swig_py_revarray_to_list(const apr_array_header_t *revs);
 
 /* helper function to convert a Python dictionary mapping strings to
