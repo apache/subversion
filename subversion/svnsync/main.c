@@ -378,33 +378,28 @@ remove_props_not_in_source(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+/* Filter callback function.
+ * Takes a property name KEY, and is expected to return TRUE if the property
+ * should be filtered out (ie. not be copied to the target list), or FALSE if 
+ * not. 
+ */
+typedef int (*filter_func_t)(const char *key);
 
-/* Make a new set of properties, by copying those properties in PROPS:
- *  - not matching the EXCLUDE pattern if provided AND
- *  - matching the INCLUDE pattern if provided.
- *
- * Note: EXCLUDE has priority over over INCLUDE.
- * Note2: If both INCLUDE as EXCLUDE are NULL, the original PROPS will be 
- *        returned.
+/* Make a new set of properties, by copying those properties in PROPS for which
+ * the filter FILTER returns FALSE.
+ * 
  * The number of filtered properties will be stored in FILTERED_COUNT.
  *
  * The returned set of properties is allocated from POOL.
  */
 static apr_hash_t *
 filter_props(int *filtered_count, apr_hash_t *props, 
-             const char *include, const char *exclude, 
+             filter_func_t filter, 
              apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   apr_hash_t *filtered = apr_hash_make(pool);
-  int ex_len = 0, in_len = 0;
   *filtered_count = 0;
-
-  if (exclude == NULL && include == NULL)
-    return props;
-
-  ex_len = exclude ? strlen(exclude) : 0;
-  in_len = include ? strlen(include) : 0;
 
   for (hi = apr_hash_first(pool, props); hi ; hi = apr_hash_next(hi))
     {
@@ -417,8 +412,7 @@ filter_props(int *filtered_count, apr_hash_t *props,
       /* Copy all properties:
           - not matching the exclude pattern if provided OR
           - matching the include pattern if provided */
-      if ( !(exclude && (strncmp(key, exclude, ex_len) == 0)) &&
-           (!include || (include && strncmp(key, include, in_len)) == 0) )
+      if (!filter || filter(key) == FALSE)
         {
           apr_hash_set(filtered, key, APR_HASH_KEY_STRING, val);
         }
@@ -1154,6 +1148,27 @@ make_replay_baton(svn_ra_session_t *from_session, svn_ra_session_t *to_session,
   return rb;
 }
 
+/* Filter out all properties that don't start with 'svn:' */
+static int filter_include_svn(const char* key)
+{
+  if (strncmp(key, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX)) == 0)
+    return FALSE;
+  return TRUE;
+}
+
+/* Filter out svn:date and svn:author properties. */
+static int filter_exclude_date_author(const char* key)
+{
+  if (strncmp(key, SVN_PROP_REVISION_AUTHOR, 
+              sizeof(SVN_PROP_REVISION_AUTHOR)) == 0)
+    return TRUE;
+  else if (strncmp(key, SVN_PROP_REVISION_DATE, 
+                   sizeof(SVN_PROP_REVISION_DATE)) == 0)
+    return TRUE;
+
+  return FALSE;
+}
+
 /* Callback function for svn_ra_replay_range, invoked when starting to parse
  * a replay report.
  */
@@ -1192,9 +1207,11 @@ replay_rev_started(svn_revnum_t revision,
 
   /* The actual copy is just a replay hooked up to a commit.
      Include all the revision properties from the source repositories, except
-     those starting with 'svn:', those are not guaranteed to get through
-     the editor anyway. */
-  filtered = filter_props(&filtered_count, rev_props, NULL, SVN_PROP_PREFIX, 
+     svn:author and svn:date, those are not guaranteed to get through the
+     editor anyway. 
+   */
+  filtered = filter_props(&filtered_count, rev_props,
+                          filter_exclude_date_author,
                           pool);
   SVN_ERR(svn_ra_get_commit_editor3(rb->to_session, &commit_editor,
                                     &commit_baton,
@@ -1252,7 +1269,7 @@ replay_rev_finished(svn_revnum_t revision,
   /* Ok, we're done with the data, now we just need to copy the remaining 
      'svn:' revprops (but not 'svn:sync:') and we're all set. */
   filtered = filter_props(&filtered_count, rev_props, 
-                          SVN_PROP_PREFIX, NULL, 
+                          filter_include_svn, 
                           pool);
   SVN_ERR(write_revprops(&filtered_count, rb->to_session, revision, filtered, 
                          pool));
