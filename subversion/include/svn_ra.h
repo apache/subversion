@@ -184,29 +184,48 @@ typedef void (*svn_ra_progress_notify_func_t)(apr_off_t progress,
                                               apr_pool_t *pool);
 
 /**
- * TODO: finish comment!
+ * Callback function type for replay_range actions.
+ * 
+ * This callback function should provide replay_range with an editor which 
+ * will be driven with the received replay reports from the master repository.
  *
- * Callback function type replay actions.
+ * @a revision is the target revision number of the received replay report.
+ * 
+ * @a editor and @a edit_baton should provided by the callback implementation.
+ *
+ * @a replay_baton is the baton as originally passed to replay_range.
+ *
+ * @a revprops contains key/value pairs for each revision properties for this
+ * revision.
  *
  * @since New in 1.5.
  */
 typedef svn_error_t *(*svn_ra_replay_revstart_callback_t)
-  (svn_revnum_t current,
+  (svn_revnum_t revision,
    void *replay_baton,
    const svn_delta_editor_t **editor,
    void **edit_baton,
    apr_hash_t *rev_props,
    apr_pool_t *pool);
 
-  /**
- * TODO: finish comment!
+/**
+ * Callback function type for replay_range actions.
+ * 
+ * This callback function should close the editor.
+ * 
+ * @a revision is the target revision number of the received replay report.
+ * 
+ * @a editor and @a edit_baton should provided by the callback implementation.
  *
- * Callback function type replay actions.
+ * @a replay_baton is the baton as originally passed to replay_range.
+ *
+ * @a revprops contains key/value pairs for each revision properties for this
+ * revision.
  *
  * @since New in 1.5.
  */
 typedef svn_error_t *(*svn_ra_replay_revfinish_callback_t)
-  (svn_revnum_t current,
+  (svn_revnum_t revision,
    void *replay_baton,
    const svn_delta_editor_t *editor,
    void *edit_baton,
