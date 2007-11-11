@@ -44,6 +44,16 @@ class State:
 
     self.desc.update(more_desc)
 
+  def add_state(self, parent, state):
+    "Import state items from a State object, reparent the items to PARENT."
+    assert isinstance(state, State)
+
+    if parent and parent[-1] != '/':
+      parent += '/'
+    for path, item in state.desc.items():
+      path = parent + path
+      self.desc[path] = item
+
   def remove(self, *paths):
     "Remove a path from the state (the path must exist)."
     for path in paths:
