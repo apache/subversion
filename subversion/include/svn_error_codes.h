@@ -632,7 +632,7 @@ SVN_ERROR_START
 
   /** @since New in 1.5. */
   SVN_ERRDEF(SVN_ERR_FS_NO_SUCH_NODE_ORIGIN,
-             SVN_ERR_FS_CATEGORY_START + 46,
+             SVN_ERR_FS_CATEGORY_START + 47,
              "Filesystem has no such node origin record")
 
   /* repos errors */
