@@ -23,8 +23,11 @@
 #include "svn_pools.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_types.h"
+#include "svn_opt.h"
 #include "svn_props.h"
 #include "svn_path.h"
+#include "svn_wc.h"
 #include "svn_client.h"
 
 #include "private/svn_wc_private.h"
