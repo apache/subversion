@@ -1673,7 +1673,7 @@ get_resource(request_rec *r,
 
       /* Store the capabilities of the current connection, making sure
          to use the same pool repos->repos itself was created in. */
-      svn_repos__set_capabilities
+      svn_repos__set_client_capabilities
         (repos->repos, svn_repos__capabilities_as_list(repos->capabilities,
                                                        r->connection->pool));
     }

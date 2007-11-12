@@ -138,7 +138,7 @@ svn_ra_local__split_URL(svn_repos_t **repos,
   {
     apr_array_header_t *caps = apr_array_make(pool, 1, sizeof(const char *));
     APR_ARRAY_PUSH(caps, const char *) = SVN_RA_CAPABILITY_MERGEINFO;
-    svn_repos__set_capabilities(*repos, caps);
+    svn_repos__set_client_capabilities(*repos, caps);
   }
 
   /* What remains of URL after being hacked at in the previous step is

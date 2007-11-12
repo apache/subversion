@@ -36,8 +36,8 @@ svn_repos__capabilities_as_list(apr_hash_t *capabilities, apr_pool_t *pool);
  * which must be allocated in memory at least as long-lived as @a repos.
  */
 void
-svn_repos__set_capabilities(svn_repos_t *repos,
-                            apr_array_header_t *capabilities);
+svn_repos__set_client_capabilities(svn_repos_t *repos,
+                                   apr_array_header_t *capabilities);
 
 #ifdef __cplusplus
 }

@@ -1716,9 +1716,9 @@ svn_repos__capabilities_as_list(apr_hash_t *capabilities, apr_pool_t *pool)
 }
 
 void
-svn_repos__set_capabilities(svn_repos_t *repos,
-                            apr_array_header_t *capabilities)
+svn_repos__set_client_capabilities(svn_repos_t *repos,
+                                   apr_array_header_t *capabilities)
 {
-  repos->capabilities = capabilities;
+  repos->client_capabilities = capabilities;
 }
 
