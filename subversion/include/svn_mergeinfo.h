@@ -83,6 +83,7 @@ extern "C" {
  * contain overlapping revisionlistelements.  Single revisions that can be
  * represented by a revisionrange are allowed (e.g. '5,6,7,8,9-12' or '5-12'
  * are both acceptable).
+ */
 
 /* Suffix for SVN_PROP_MERGE_INFO revision ranges indicating a given
    range is non-inheritable. */
