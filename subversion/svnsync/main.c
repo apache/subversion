@@ -383,7 +383,7 @@ remove_props_not_in_source(svn_ra_session_t *session,
  * should be filtered out (ie. not be copied to the target list), or FALSE if 
  * not. 
  */
-typedef int (*filter_func_t)(const char *key);
+typedef svn_boolean_t (*filter_func_t)(const char *key);
 
 /* Make a new set of properties, by copying those properties in PROPS for which
  * the filter FILTER returns FALSE.
@@ -1149,7 +1149,7 @@ make_replay_baton(svn_ra_session_t *from_session, svn_ra_session_t *to_session,
 }
 
 /* Filter out svn:date and svn:author properties. */
-static int filter_exclude_date_author_sync(const char* key)
+static svn_boolean_t filter_exclude_date_author_sync(const char* key)
 {
   if (strncmp(key, SVN_PROP_REVISION_AUTHOR, 
               sizeof(SVN_PROP_REVISION_AUTHOR) - 1) == 0)
@@ -1165,7 +1165,7 @@ static int filter_exclude_date_author_sync(const char* key)
 }
 
 /* Filter out all properties except svn:date and svn:author */
-static int filter_include_date_author_sync(const char* key)
+static svn_boolean_t filter_include_date_author_sync(const char* key)
 {
   return ! filter_exclude_date_author_sync(key);
 }
