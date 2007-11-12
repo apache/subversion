@@ -152,7 +152,7 @@ def import_ignores(sbox):
   match = cm.search (lastline)
   if not match:
     ### we should raise a less generic error here. which?
-    raise svntest.actions.SVNUnexpectedOutput
+    raise svntest.verify.SVNUnexpectedOutput
 
   # remove (uncontrolled) local dir
   svntest.main.safe_rmtree(dir_path)

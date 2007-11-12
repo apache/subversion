@@ -1448,7 +1448,7 @@ def basic_add_ignores(sbox):
   for line in output:
     # If we see foo.o in the add output, fail the test.
     if re.match(r'^A\s+.*foo.o$', line):
-      raise svntest.actions.SVNUnexpectedOutput
+      raise svntest.verify.SVNUnexpectedOutput
 
   # Else never matched the unwanted output, so the test passed.
 
@@ -1500,7 +1500,7 @@ def basic_add_no_ignores(sbox):
   for line in output:
     # If we don't see ignores in the add output, fail the test.
     if not re.match(r'^A\s+.*(foo.(o|rej|lo|c)|dir)$', line):
-      raise svntest.actions.SVNUnexpectedOutput
+      raise svntest.verify.SVNUnexpectedOutput
 
 #----------------------------------------------------------------------
 def basic_add_parents(sbox):
