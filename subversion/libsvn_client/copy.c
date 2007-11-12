@@ -41,10 +41,11 @@
 #include "private/svn_wc_private.h"
 #include "private/svn_mergeinfo_private.h"
 
-
-/*** Code. ***/
 
-/*
+/* 
+ * OUR BASIC APPROACH TO COPIES
+ * ============================
+ *
  * for each source/destination pair
  *   if (not exist src_path)
  *     return ERR_BAD_SRC error
@@ -57,6 +58,10 @@
  *   if (this is a move)
  *     delete src_path
  */
+
+
+
+/*** Code. ***/
 
 static svn_error_t *
 path_relative_to_session(const char **rel_path,
@@ -74,47 +79,6 @@ path_relative_to_session(const char **rel_path,
   return SVN_NO_ERROR;
 }
 
-/* Set *IMPLIED_MERGEINFO to the implicit/implied mergeinfo associated
-   with PATH@REV (where PATH is relative to RA_SESSION's session
-   URL).  */
-static svn_error_t *
-get_implied_mergeinfo(svn_ra_session_t *ra_session,
-                      apr_hash_t **implied_mergeinfo,
-                      const char *path,
-                      svn_revnum_t rev,
-                      svn_client_ctx_t *ctx,
-                      apr_pool_t *pool)
-{
-  const char *session_url, *url, *mergeinfo_path;
-  svn_opt_revision_t peg_revision;
-
-  /* Translate PATH (which is relative to the session) to a full URL. */
-  SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, pool));
-  url = svn_path_join(session_url, (*path == '/') ? path + 1 : path, pool);
-
-  /* Calculate a mergeinfo-compliant absolute FS path. */
-  SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path, url, NULL,
-                                            TRUE, ra_session, NULL, pool));
-
-  /* If our final URL doesn't match our session's URL, temporary
-     reparent the session to our URL. */
-  if (strcmp(url, session_url) != 0)
-    SVN_ERR(svn_ra_reparent(ra_session, url, pool));
-
-  /* Fetch the implicit mergeinfo. */
-  peg_revision.kind = svn_opt_revision_number;
-  peg_revision.value.number = rev;
-  SVN_ERR(svn_client__get_implicit_mergeinfo(implied_mergeinfo, url,
-                                             &peg_revision, ra_session,
-                                             NULL, ctx, pool));
-
-  /* If we reparented RA_SESSION above, point it back where it was
-     when we were called. */
-  if (strcmp(url, session_url) != 0)
-    SVN_ERR(svn_ra_reparent(ra_session, session_url, pool));
-
-  return SVN_NO_ERROR;
-}
 
 /* Obtain the implied mergeinfo and the existing mergeinfo of the
    source path, combine them and return the result in
@@ -129,10 +93,10 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *pool)
 {
-  apr_hash_t *src_mergeinfo = NULL;
   const svn_wc_entry_t *entry = NULL;
   svn_boolean_t locally_added = FALSE;
   const char *src_url;
+  apr_hash_t *src_mergeinfo = NULL;
 
   /* If we have a schedule-add WC path (which was not copied from
      elsewhere), it doesn't have any repository mergeinfo, so don't
@@ -157,36 +121,20 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
 
   if (! locally_added)
     {
-      const char *mergeinfo_path, *rel_path;
+      const char *mergeinfo_path;
 
-      /* Find src path relative to the repository root. */
+      /* Fetch any existing (explicit) mergeinfo. */
       SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path, src_url,
                                                 entry ? entry->repos : NULL, 
                                                 TRUE, ra_session, 
                                                 adm_access, pool));
-
-      /* Obtain any implied mergeinfo... */
-      SVN_ERR(path_relative_to_session(&rel_path, ra_session, src_url, pool));
-      SVN_ERR(get_implied_mergeinfo(ra_session, target_mergeinfo,
-                                    rel_path, src_revnum, ctx, pool));
-
-      /* ... and any existing (explicit) mergeinfo. */
       SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &src_mergeinfo,
                                               mergeinfo_path, src_revnum,
                                               svn_mergeinfo_inherited, pool));
 
-      /* Combine and return all mergeinfo. */
-      if (src_mergeinfo)
-        {
-          SVN_ERR(svn_mergeinfo_merge(target_mergeinfo, src_mergeinfo,
-                                      svn_rangelist_equal_inheritance, pool));
-        }
-    }
-  else
-    {
-      *target_mergeinfo = apr_hash_make(pool);
     }
 
+  *target_mergeinfo = src_mergeinfo ? src_mergeinfo : apr_hash_make(pool);
   return SVN_NO_ERROR;
 }
 
@@ -610,10 +558,7 @@ typedef struct
   svn_revnum_t src_revnum;
   svn_boolean_t resurrection;
   svn_boolean_t dir_add;
-
-  /* The complete mergeinfo for the source of the copy (both implied
-     and explicit). */
-  svn_string_t *mergeinfo;
+  svn_string_t *mergeinfo;  /* the new mergeinfo for the target */
 } path_driver_info_t;
 
 
