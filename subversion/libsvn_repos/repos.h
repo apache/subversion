@@ -127,7 +127,7 @@ struct svn_repos_t
      object.  You'd think the capabilities here would represent the
      *repository's* capabilities, but no, they represent the
      client's -- we just don't have any other place to persist them. */
-  apr_array_header_t *capabilities;
+  apr_array_header_t *client_capabilities;
 };
 
 
