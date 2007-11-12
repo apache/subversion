@@ -344,11 +344,6 @@ svn_client__get_wc_or_repos_mergeinfo(apr_hash_t **target_mergeinfo,
 
   repos_rel_path = url + strlen(entry->repos);
 
-  /* ### TODO: To handle sub-tree mergeinfo, the list will need to
-     ### include the those child paths which have mergeinfo which
-     ### differs from that of TARGET_WCPATH, and if those paths are
-     ### directories, their children as well. */
-
   if (repos_only)
     *target_mergeinfo = NULL;
   else
