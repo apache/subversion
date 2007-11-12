@@ -138,6 +138,8 @@ to FSFS or from FSFS to BDB?</a></li>
 <li>
   <a href="#sorry-no-globbing">How can I use wildcards or globbing to move many files at once?</a>
 </li>
+<li><a href="#vendor-branch">How can I maintain a modified version  (a
+    "vendor branch") of third-party software using Subversion?</a></li>
 </ul>
 
 <h4>Troubleshooting:</h4>
@@ -2192,6 +2194,26 @@ or later), that appears to solve this problem for you.
 Rumor has it that with release 1.5, Subversion will in fact allow you
 to "cp" and "mv" multiple files at once.
 </p>
+</div>
+
+<div class="h3" id="vendor-branch" title="vendor-branch">
+<h3>How can I maintain a modified version (a "vendor branch") of
+third-party software using Subversion?</h3>
+
+<p>People frequently want to use Subversion to track their local
+changes to third-party code, even across upgrades from the
+third-party&nbsp;&mdash;&nbsp;that is, they want to maintain their own
+divergent branch, while still incorporating new releases from the
+upstream source.  This is commonly called a <em>vendor branch</em>
+(the term long predates Subversion), and the techniques for
+maintaining one in Subversion are <a
+href="http://svnbook.red-bean.com/en/1.4/svn-book.html#svn.advanced.vendorbr"
+>described here</a>.</p>
+
+<p>See also Jon Stevens' excellent step-by-step explanation at <a
+href="http://lookfirst.com/2007/11/subversion-vendor-branches-howto.html"
+>Subversion Vendor Branches Howto</a>.</p>
+
 </div>
 
 </div>
