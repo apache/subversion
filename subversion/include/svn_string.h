@@ -334,6 +334,7 @@ int svn_cstring_count_newlines(const char *msg);
  * Return a cstring which is the concatenation of @a strings (an array
  * of char *) each followed by @a separator (that is, @a separator
  * will also end the resulting string).  Allocate the result in @a pool.
+ * If @a strings is empty, then return the empty string.
  *
  * @since New in 1.2.
  */
