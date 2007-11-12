@@ -51,6 +51,13 @@ Change the format of a Subversion working copy to that of SVN_VERSION.
 """ % (progname, progname)
   sys.exit(error_msg and 1 or 0)
 
+def get_adm_dir():
+  """Return the name of Subversion's administrative directory,
+  adjusted for the SVN_ASP_DOT_NET_HACK environment variable.  See
+  <http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt>
+  for details."""
+  return os.environ.has_key("SVN_ASP_DOT_NET_HACK") and "_svn" or ".svn"
+
 class WCFormatConverter:
   "Performs WC format conversions."
   root_path = None
@@ -63,13 +70,13 @@ class WCFormatConverter:
     mode, and unconvertable WC data is encountered."""
 
     # Avoid iterating in unversioned directories.
-    if not ".svn" in paths and not "_svn" in paths:
+    if not get_adm_dir() in paths:
       paths = []
       return
 
     for path in paths:
       # Process the entries file for this versioned directory.
-      if path in (".svn", "_svn"):
+      if path == get_adm_dir():
         if self.verbosity:
           print "Processing directory '%s'" % dirname
         entries = Entries(os.path.join(dirname, path, "entries"))
