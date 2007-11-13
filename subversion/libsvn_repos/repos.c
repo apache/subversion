@@ -29,7 +29,6 @@
 #include "svn_ra.h"  /* for SVN_RA_CAPABILITY_* */
 #include "svn_repos.h"
 #include "svn_private_config.h" /* for SVN_TEMPLATE_ROOT_DIR */
-#include "private/svn_repos_private.h"
 
 #include "repos.h"
 
@@ -1696,29 +1695,11 @@ svn_repos_stat(svn_dirent_t **dirent,
   return SVN_NO_ERROR;
 }
 
-apr_array_header_t *
-svn_repos__capabilities_as_list(apr_hash_t *capabilities, apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-  apr_array_header_t *list = apr_array_make(pool, apr_hash_count(capabilities),
-                                            sizeof(char *));
-
-  for (hi = apr_hash_first(pool, capabilities); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      void *val;
-      apr_hash_this(hi, &key, NULL, &val);
-      if (strcmp((const char *) val, "yes") == 0)
-        APR_ARRAY_PUSH(list, const char *) = key;
-    }
-
-  return list;
-}
-
-void
-svn_repos__set_client_capabilities(svn_repos_t *repos,
-                                   apr_array_header_t *capabilities)
+svn_error_t *
+svn_repos_remember_client_capabilities(svn_repos_t *repos,
+                                       apr_array_header_t *capabilities)
 {
   repos->client_capabilities = capabilities;
+  return SVN_NO_ERROR;
 }
 
