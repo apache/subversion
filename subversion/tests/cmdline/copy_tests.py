@@ -485,7 +485,7 @@ def resurrect_deleted_dir(sbox):
                                         None, None,
                                         wc_dir)
 
-  # Use 'svn cp -r 1 URL URL' to resurrect the deleted directory, where
+  # Use 'svn cp URL@1 URL' to resurrect the deleted directory, where
   # the two URLs are identical.  This used to trigger a failure.
   url = sbox.repo_url + '/A/D/G'
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
