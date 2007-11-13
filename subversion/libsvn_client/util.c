@@ -160,19 +160,13 @@ svn_client__path_relative_to_root(const char **rel_path,
         }
       if ((err = svn_wc__entry_versioned(&entry, path_or_url, adm_access,
                                          FALSE, pool)))
-        {
-          goto cleanup;
-        }
+        goto cleanup;
 
-      /* Specifically, we need the entry's URL. */
-      if (! entry->url)
-        {
-          err = svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                                  _("Entry '%s' has no URL"),
-                                  svn_path_local_style(path_or_url, pool));
-          goto cleanup;
-        }
-      path_or_url = entry->url;
+      err = svn_client__entry_location(&path_or_url, NULL, path_or_url,
+                                       svn_opt_revision_unspecified, entry,
+                                       pool);
+      if (err)
+        goto cleanup;
 
       /* If we weren't provided a REPOS_ROOT, we'll try to read one
          from the entry.  The entry might not hold a URL, but that's
