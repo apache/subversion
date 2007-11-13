@@ -1214,6 +1214,13 @@ replay_rev_started(svn_revnum_t revision,
   filtered = filter_props(&filtered_count, rev_props,
                           filter_exclude_date_author_sync,
                           pool);
+  /* svn_ra_get_commit_editor3 requires the log message to be set. It's possible
+     that we didn't receive 'svn:log' here, so we have to set it to at least
+     the empty string. If there's a svn:log property on this revision, we will 
+     write the actual value in the replay_rev_finished callback. */
+  apr_hash_set(filtered, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING, 
+               svn_string_create("", pool));
+
   SVN_ERR(svn_ra_get_commit_editor3(rb->to_session, &commit_editor,
                                     &commit_baton,
                                     filtered,
