@@ -133,9 +133,9 @@ get_vsn_options(apr_pool_t *p, apr_text_header *phdr)
                   "version-control,checkout,working-resource");
   apr_text_append(p, phdr,
                   "merge,baseline,activity,version-controlled-collection");
-  apr_text_append(p, phdr, SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO);
-  apr_text_append(p, phdr, SVN_DAV_PROP_NS_DAV_SVN_DEPTH);
-  apr_text_append(p, phdr, SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS);
+  apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_MERGEINFO);
+  apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_DEPTH);
+  apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
   /* ### fork-control? */
 }
 
