@@ -1656,7 +1656,7 @@ get_resource(request_rec *r,
                      APR_HASH_KEY_STRING, capability_no);
 
         /* Then see what we can find. */
-        val = apr_table_get(r->headers_in, "X-SVN-Capabilities");
+        val = apr_table_get(r->headers_in, "DAV");
         if (val)
           {
             apr_array_header_t *vals
