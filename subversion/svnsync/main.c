@@ -1149,7 +1149,7 @@ make_replay_baton(svn_ra_session_t *from_session, svn_ra_session_t *to_session,
 }
 
 /* Filter out svn:date and svn:author properties. */
-static svn_boolean_t filter_exclude_date_author_sync(const char* key)
+static svn_boolean_t filter_exclude_date_author_sync(const char *key)
 {
   if (strncmp(key, SVN_PROP_REVISION_AUTHOR, 
               sizeof(SVN_PROP_REVISION_AUTHOR) - 1) == 0)
@@ -1165,7 +1165,7 @@ static svn_boolean_t filter_exclude_date_author_sync(const char* key)
 }
 
 /* Filter out all properties except svn:date and svn:author */
-static svn_boolean_t filter_include_date_author_sync(const char* key)
+static svn_boolean_t filter_include_date_author_sync(const char *key)
 {
   return ! filter_exclude_date_author_sync(key);
 }
