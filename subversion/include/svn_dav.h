@@ -149,16 +149,17 @@ extern "C" {
  */
 #define SVN_DAV_PROP_NS_DAV "http://subversion.tigris.org/xmlns/dav/"
 
-/* Presence of this in the DAV header response to an OPTIONS request
-   indicates that the server supports @c svn_depth_t.
+/* Presence of this in a DAV header in an OPTIONS request or response
+   indicates that the transmitter supports @c svn_depth_t.
 
    ### @todo This doesn't really have anything to do with properties,
        but we should re-use the SVN_DAV_PROP_NS_DAV, right?  We could
        change the name of SVN_DAV_PROP_NS_DAV_SVN_DEPTH, though. */
 #define SVN_DAV_PROP_NS_DAV_SVN_DEPTH SVN_DAV_PROP_NS_DAV "svn/depth"
 
-/* Presence of this in the DAV header response to an OPTIONS request
-   indicates that the server knows how to handle merge-tracking information.
+/* Presence of this in a DAV header in an OPTIONS request or response
+   indicates that the transmitter knows how to handle merge-tracking
+   information.
    ### And see above about appropriateness of properties namespace. ### */
 #define SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO SVN_DAV_PROP_NS_DAV "svn/mergeinfo"
 
