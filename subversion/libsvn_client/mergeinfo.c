@@ -405,6 +405,8 @@ svn_error_t *
 svn_client__get_implicit_mergeinfo(apr_hash_t **mergeinfo_p,
                                    const char *path_or_url,
                                    const svn_opt_revision_t *peg_revision,
+                                   svn_revnum_t range_youngest,
+                                   svn_revnum_t range_oldest,
                                    svn_ra_session_t *ra_session,
                                    svn_wc_adm_access_t *adm_access,
                                    svn_client_ctx_t *ctx,
@@ -478,9 +480,13 @@ svn_client__get_implicit_mergeinfo(apr_hash_t **mergeinfo_p,
                                             peg_revision, NULL, pool));
 
   /* Fetch the location segments for our URL@PEG_REVNUM. */
-  SVN_ERR(svn_client__repos_location_segments(&segments, session, "",
-                                              peg_revnum, peg_revnum, 0,
-                                              ctx, pool));
+  if (! SVN_IS_VALID_REVNUM(range_youngest))
+    range_youngest = peg_revnum;
+  if (! SVN_IS_VALID_REVNUM(range_oldest))
+    range_oldest = 0;
+  SVN_ERR(svn_client__repos_location_segments(&segments, session, "", 
+                                              peg_revnum, range_youngest, 
+                                              range_oldest, ctx, pool));
 
   /* Translate location segments into merge sources and ranges. */
   for (i = 0; i < segments->nelts; i++)
