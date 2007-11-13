@@ -148,12 +148,11 @@ set_up_capabilities_headers(serf_bucket_t *headers,
                             void *baton,
                             apr_pool_t *pool)
 {
-  /* ### See comment at similar place in ../libsvn_ra_neon/session.c. ### */
-  serf_bucket_headers_set(headers, "X-SVN-Capabilities",
+  serf_bucket_headers_set(headers, "DAV",
                           SVN_DAV_PROP_NS_DAV_SVN_DEPTH);
-  serf_bucket_headers_set(headers, "X-SVN-Capabilities",
+  serf_bucket_headers_set(headers, "DAV",
                           SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO);
-  serf_bucket_headers_set(headers, "X-SVN-Capabilities",
+  serf_bucket_headers_set(headers, "DAV",
                           SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS);
 
   return APR_SUCCESS;
