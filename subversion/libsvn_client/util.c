@@ -120,8 +120,7 @@ svn_client_proplist_item_t *
 svn_client_proplist_item_dup(const svn_client_proplist_item_t *item,
                              apr_pool_t * pool)
 {
-  svn_client_proplist_item_t *new_item
-    = apr_pcalloc(pool, sizeof(*new_item));
+  svn_client_proplist_item_t *new_item = apr_pcalloc(pool, sizeof(*new_item));
 
   if (item->node_name)
     new_item->node_name = svn_stringbuf_dup(item->node_name, pool);
