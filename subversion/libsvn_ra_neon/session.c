@@ -678,17 +678,15 @@ parse_capabilities(ne_request *req,
            slightly more efficiently, but that wouldn't be worth it
            until we have many more capabilities. */
 
-        if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_DEPTH, vals))
+        if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_DEPTH, vals))
           apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
                        APR_HASH_KEY_STRING, capability_yes);
 
-        if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO,
-                                        vals))
+        if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
           apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
                        APR_HASH_KEY_STRING, capability_yes);
 
-        if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS,
-                                        vals))
+        if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
           apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
                        APR_HASH_KEY_STRING, capability_yes);
       }
@@ -708,12 +706,9 @@ exchange_capabilities(svn_ra_neon__session_t *ras, apr_pool_t *pool)
 
   rar = svn_ra_neon__request_create(ras, "OPTIONS", ras->url->data, pool);
 
-  ne_add_request_header(rar->ne_req, "DAV",
-                        SVN_DAV_PROP_NS_DAV_SVN_DEPTH);
-  ne_add_request_header(rar->ne_req, "DAV",
-                        SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO);
-  ne_add_request_header(rar->ne_req, "DAV",
-                        SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS);
+  ne_add_request_header(rar->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
+  ne_add_request_header(rar->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
+  ne_add_request_header(rar->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
 
   SVN_ERR(svn_ra_neon__request_dispatch(&http_ret_code, rar,
                                         NULL, NULL, 200, 0, pool));
