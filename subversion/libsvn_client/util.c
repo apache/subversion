@@ -248,7 +248,12 @@ svn_client__get_repos_root(const char **repos_root,
                                          FALSE, pool)))
         goto cleanup;
 
-      path_or_url = entry->url;
+      err = svn_client__entry_location(&path_or_url, NULL, path_or_url,
+                                       svn_opt_revision_unspecified, entry,
+                                       pool);
+      if (err)
+        goto cleanup;
+
       *repos_root = entry->repos;
     }
   else
