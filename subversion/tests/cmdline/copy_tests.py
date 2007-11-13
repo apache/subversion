@@ -899,7 +899,7 @@ def wc_to_repos(sbox):
     'A/D/H2/chi'   : Item(status='  ', wc_rev=4),
     'A/D/H2/omega' : Item(status='  ', wc_rev=4),
     'A/D/H2/psi'   : Item(status='  ', wc_rev=4),
-    'A/D/H2/beta'  : Item(status=' M', wc_rev=4), # mergeinfo elided away
+    'A/D/H2/beta'  : Item(status='  ', wc_rev=4),
     })
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
