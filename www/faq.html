@@ -2210,9 +2210,19 @@ maintaining one in Subversion are <a
 href="http://svnbook.red-bean.com/en/1.4/svn-book.html#svn.advanced.vendorbr"
 >described here</a>.</p>
 
-<p>See also Jon Stevens' excellent step-by-step explanation at <a
+<p>If the vendor code is hosted in a remote Subversion repository,
+then you can use <a href="http://piston.rubyforge.org/">Piston</a> to
+manage your copy of the vendor's code.</p>
+
+<p>As a last resort, if using <tt>svn_load_dirs.pl</tt> is taking too
+much time or you're looking for the lazy solution, see also Jon
+Stevens' step-by-step explanation at <a
 href="http://lookfirst.com/2007/11/subversion-vendor-branches-howto.html"
->Subversion Vendor Branches Howto</a>.</p>
+>Subversion Vendor Branches Howto</a>.  This solution does not make
+use of the space saving features in the Subversion backend when you
+copy new code over old code; in this solution, each import of a vendor
+code gets an entire new copy and there is no space savings for
+identical files.</p>
 
 </div>
 
