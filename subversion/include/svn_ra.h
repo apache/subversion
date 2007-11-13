@@ -1559,10 +1559,15 @@ svn_error_t *svn_ra_has_capability(svn_ra_session_t *session,
 #define SVN_RA_CAPABILITY_LOG_REVPROPS "log-revprops"
 
 /*       *** PLEASE READ THIS IF YOU ADD A NEW CAPABILITY ***
+ *
  * RA layers generally fetch all capabilities when asked about any
  * capability, to save future round trips.  So if you add a new
  * capability here, make sure to update the RA layers to remember
  * it after any capabilities query.
+ *
+ * Also note that capability strings should not include colons,
+ * because we pass a list of client capabilities to the start-commit
+ * hook as a single, colon-separated string.
  */
 
 /**
