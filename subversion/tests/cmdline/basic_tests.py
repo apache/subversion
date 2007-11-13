@@ -2162,7 +2162,7 @@ def automatic_conflict_resolution(sbox):
 def info_nonexisting_file(sbox):
   "get info on a file not in the repo"
 
-  sbox.build()
+  sbox.build(create_wc = False)
   idonotexist_url = sbox.repo_url + '/IdoNotExist'
   output, errput = svntest.main.run_svn(1, 'info', idonotexist_url)
 
