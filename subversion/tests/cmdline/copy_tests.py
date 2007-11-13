@@ -1479,7 +1479,7 @@ def repos_to_wc_1634(sbox):
 def double_uri_escaping_1814(sbox):
   "check for double URI escaping in svn ls -R"
 
-  sbox.build()
+  sbox.build(create_wc = False)
 
   base_url = sbox.repo_url + '/base'
 
