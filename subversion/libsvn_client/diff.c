@@ -183,10 +183,10 @@ display_prop_diffs(const apr_array_header_t *propchanges,
 
   for (i = 0; i < propchanges->nelts; i++)
     {
-      const svn_prop_t *propchange
-        = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
-
+      const char *header_fmt;
       const svn_string_t *original_value;
+      const svn_prop_t *propchange = 
+        &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
 
       if (original_props)
         original_value = apr_hash_get(original_props,
@@ -201,7 +201,13 @@ display_prop_diffs(const apr_array_header_t *propchanges,
               && svn_string_compare(original_value, propchange->value)))
         continue;
 
-      SVN_ERR(file_printf_from_utf8(file, encoding, _("Name: %s%s"),
+      if (! original_value)
+        header_fmt = _("Added: %s%s");
+      else if (! propchange->value)
+        header_fmt = _("Deleted: %s%s");
+      else
+        header_fmt = _("Modified: %s%s");
+      SVN_ERR(file_printf_from_utf8(file, encoding, header_fmt,
                                     propchange->name, APR_EOL_STR));
 
       if (strcmp(propchange->name, SVN_PROP_MERGE_INFO) == 0)
