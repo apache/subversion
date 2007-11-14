@@ -89,10 +89,12 @@ if sys.platform == 'win32':
   windows = True
   file_scheme_prefix = 'file:///'
   _exe = '.exe'
+  _bat = '.bat'
 else:
   windows = False
   file_scheme_prefix = 'file://'
   _exe = ''
+  _bat = ''
 
 try:
   from popen2 import Popen3
@@ -1141,6 +1143,8 @@ def usage():
   print " --enable-sasl   Whether to enable SASL authentication"
   print " --parallel      Run the tests in parallel"
   print " --bin           Use the svn binaries installed in this path"
+  print " --use-jsvn      Use the jsvn (SVNKit based) binaries. Can be\n" \
+        "                 combined with --bin to point to a specific path"
   print " --help          This information"
 
 
@@ -1178,11 +1182,14 @@ def run_tests(test_list, serial_only = False):
 
   parallel = 0
   svn_bin = None
+  use_jsvn = False
+
   try:
     opts, args = my_getopt(sys.argv[1:], 'vqhpc',
                            ['url=', 'fs-type=', 'verbose', 'quiet', 'cleanup',
                             'list', 'enable-sasl', 'help', 'parallel',
-                            'bin=', 'http-library=', 'server-minor-version='])
+                            'bin=', 'http-library=', 'server-minor-version=', 
+                            'use-jsvn'])
   except getopt.GetoptError, e:
     print "ERROR: %s\n" % e
     usage()
@@ -1246,6 +1253,9 @@ def run_tests(test_list, serial_only = False):
         print "ERROR: test harness only supports server minor version 4 or 5"
         sys.exit(1)
 
+    elif opt == '--use-jsvn':
+      use_jsvn = True
+
   if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
     test_area_url = test_area_url[:-1]
 
@@ -1258,12 +1268,22 @@ def run_tests(test_list, serial_only = False):
   if windows:
     pristine_url = pristine_url.replace('\\', '/')
 
-  if not svn_bin is None:
-    svn_binary = os.path.join(svn_bin, 'svn' + _exe)
-    svnadmin_binary = os.path.join(svn_bin, 'svnadmin' + _exe)
-    svnlook_binary = os.path.join(svn_bin, 'svnlook' + _exe)
-    svnsync_binary = os.path.join(svn_bin, 'svnsync' + _exe)
-    svnversion_binary = os.path.join(svn_bin, 'svnversion' + _exe)
+  if use_jsvn:
+    if svn_bin is None: 
+      svn_bin = ''
+    svn_binary = os.path.join(svn_bin, 'jsvn' + _bat)
+    svnadmin_binary = os.path.join(svn_bin, 'jsvnadmin' + _bat)
+    svnlook_binary = os.path.join(svn_bin, 'jsvnlook' + _bat)
+    svnsync_binary = os.path.join(svn_bin, 'jsvnsync' + _bat)
+    svnversion_binary = os.path.join(svn_bin, 'jsvnversion' + _bat)
+    use_jsvn = False
+  else:
+    if svn_bin:
+      svn_binary = os.path.join(svn_bin, 'svn' + _exe)
+      svnadmin_binary = os.path.join(svn_bin, 'svnadmin' + _exe)
+      svnlook_binary = os.path.join(svn_bin, 'svnlook' + _exe)
+      svnsync_binary = os.path.join(svn_bin, 'svnsync' + _exe)
+      svnversion_binary = os.path.join(svn_bin, 'svnversion' + _exe)
 
   command_line_parsed = True
 

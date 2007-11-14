@@ -33,6 +33,7 @@
 #include "svn_pools.h"
 #include "svn_sorts.h"
 #include "svn_props.h"
+#include "svn_mergeinfo.h"
 
 
 /*** Code. ***/
@@ -151,6 +152,7 @@ struct parse_baton_t
   svn_boolean_t drop_empty_revs;
   svn_boolean_t do_renumber_revs;
   svn_boolean_t preserve_revprops;
+  svn_boolean_t skip_missing_merge_sources;
   apr_array_header_t *prefixes;
 
   /* Input and output streams. */
@@ -627,6 +629,64 @@ output_node(struct node_baton_t *nb)
 }
 
 
+/* Renumber revisions for valid merge sources in mergeinfo. */
+static svn_error_t *
+renumber_merge_source_rev_range(const char **mergeinfo_val,
+                                const char *mergeinfo_orig,
+                                struct revision_baton_t *rb,
+                                apr_pool_t *pool)
+{
+  apr_hash_t *modified_mergeinfo, *mergeinfo;
+  apr_hash_index_t *hi;
+  svn_stringbuf_t *merge_val;
+  const void *merge_source;
+  void *rangelist;
+
+  SVN_ERR(svn_mergeinfo_parse(&mergeinfo, mergeinfo_orig, pool));
+  modified_mergeinfo = apr_hash_make(pool);
+  for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
+    {
+      int i;
+      apr_hash_this(hi, &merge_source, NULL, &rangelist);
+
+      /* Look whether the merge_source is a part of the included prefix. */
+      if (!ary_prefix_match(rb->pb->prefixes, merge_source))
+        {
+          if (rb->pb->skip_missing_merge_sources)
+            continue;
+          else
+            return svn_error_createf(SVN_ERR_INCOMPLETE_DATA, 0,
+                                     _("Missing merge source path '%s', try "
+                                       "with --skip-missing-merge-sources"),
+                                     (const char *)merge_source);
+        }
+
+      /* Renumber mergeinfo rangelist. */
+      for (i = 0; i < ((apr_array_header_t *)rangelist)->nelts; i++)
+        {
+          struct revmap_t *revmap_start;
+          struct revmap_t *revmap_end;
+          svn_merge_range_t *range;
+
+          range = APR_ARRAY_IDX((apr_array_header_t *)rangelist, i,
+                                svn_merge_range_t *);
+          revmap_start = apr_hash_get(rb->pb->renumber_history, &range->start,
+                                      sizeof(svn_revnum_t));
+          revmap_end = apr_hash_get(rb->pb->renumber_history, &range->end,
+                                    sizeof(svn_revnum_t));
+          range->start = revmap_start->rev;
+          range->end = revmap_end->rev;
+        }
+      apr_hash_set(modified_mergeinfo, (const char*)merge_source,
+                   APR_HASH_KEY_STRING, rangelist);
+    }
+  svn_mergeinfo_to_stringbuf(&merge_val, modified_mergeinfo, pool);
+  *mergeinfo_val = merge_val->data;
+
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t *
 set_revision_property(void *revision_baton,
                       const char *name,
@@ -648,6 +708,7 @@ set_node_property(void *node_baton,
                   const svn_string_t *value)
 {
   struct node_baton_t *nb = node_baton;
+  struct revision_baton_t *rb = nb->rb;
 
   if (nb->do_skip)
     return SVN_NO_ERROR;
@@ -656,6 +717,18 @@ set_node_property(void *node_baton,
     return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                             _("Delta property block detected - "
                               "not supported by svndumpfilter"));
+
+  if (strcmp(name, SVN_PROP_MERGE_INFO) == 0)
+    {
+      apr_pool_t *subpool = svn_pool_create(apr_hash_pool_get(rb->props));
+      const char *mergeinfo_val;
+
+      /* Renumber revisions for valid merge sources in mergeinfo. */
+      SVN_ERR(renumber_merge_source_rev_range(&mergeinfo_val, value->data, rb,
+                                              subpool));
+      value = svn_string_create(mergeinfo_val, apr_hash_pool_get(rb->props));
+      svn_pool_destroy(subpool);
+    }
 
   write_prop_to_stringbuf(&(nb->props), name, value);
 
@@ -760,6 +833,7 @@ enum
     svndumpfilter__drop_empty_revs = SVN_OPT_FIRST_LONGOPT_ID,
     svndumpfilter__renumber_revs,
     svndumpfilter__preserve_revprops,
+    svndumpfilter__skip_missing_merge_sources,
     svndumpfilter__quiet,
     svndumpfilter__version
   };
@@ -784,6 +858,9 @@ static const apr_getopt_option_t options_table[] =
      N_("Remove revisions emptied by filtering.")},
     {"renumber-revs",      svndumpfilter__renumber_revs, 0,
      N_("Renumber revisions left after filtering.") },
+    {"skip-missing-merge-sources",
+     svndumpfilter__skip_missing_merge_sources, 0,
+     N_("Skip missing merge sources.") },
     {"preserve-revprops",  svndumpfilter__preserve_revprops, 0,
      N_("Don't filter revision properties.") },
     {NULL}
@@ -799,12 +876,14 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      N_("Filter out nodes with given prefixes from dumpstream.\n"
         "usage: svndumpfilter exclude PATH_PREFIX...\n"),
      {svndumpfilter__drop_empty_revs, svndumpfilter__renumber_revs,
+      svndumpfilter__skip_missing_merge_sources,
       svndumpfilter__preserve_revprops, svndumpfilter__quiet} },
 
     {"include", subcommand_include, {0},
      N_("Filter out nodes without given prefixes from dumpstream.\n"
         "usage: svndumpfilter include PATH_PREFIX...\n"),
      {svndumpfilter__drop_empty_revs, svndumpfilter__renumber_revs,
+      svndumpfilter__skip_missing_merge_sources,
       svndumpfilter__preserve_revprops, svndumpfilter__quiet} },
 
     {"help", subcommand_help, {"?", "h"},
@@ -827,6 +906,8 @@ struct svndumpfilter_opt_state
   svn_boolean_t help;                    /* --help or -?        */
   svn_boolean_t renumber_revs;           /* --renumber-revs     */
   svn_boolean_t preserve_revprops;       /* --preserve-revprops */
+  svn_boolean_t skip_missing_merge_sources;
+                                         /* --skip-missing-merge-sources */
   apr_array_header_t *prefixes;          /* mainargs.           */
 };
 
@@ -853,6 +934,7 @@ parse_baton_initialize(struct parse_baton_t **pb,
   baton->preserve_revprops = opt_state->preserve_revprops;
   baton->quiet = opt_state->quiet;
   baton->prefixes = opt_state->prefixes;
+  baton->skip_missing_merge_sources = opt_state->skip_missing_merge_sources;
   baton->rev_drop_count = 0; /* used to shift revnums while filtering */
   baton->dropped_nodes = apr_hash_make(pool);
   baton->renumber_history = apr_hash_make(pool);
@@ -1161,6 +1243,9 @@ main(int argc, const char *argv[])
           break;
         case svndumpfilter__preserve_revprops:
           opt_state.preserve_revprops = TRUE;
+          break;
+        case svndumpfilter__skip_missing_merge_sources:
+          opt_state.skip_missing_merge_sources = TRUE;
           break;
         default:
           {

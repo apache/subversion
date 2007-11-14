@@ -2101,7 +2101,7 @@ get_full_mergeinfo(apr_hash_t **recorded_mergeinfo,
                 svn_sort_compare_ranges);
         }
       *full_mergeinfo = svn_mergeinfo_dup(*recorded_mergeinfo, pool);
-      SVN_ERR(svn_mergeinfo_merge(full_mergeinfo, implicit_mergeinfo,
+      SVN_ERR(svn_mergeinfo_merge(*full_mergeinfo, implicit_mergeinfo,
                                   svn_rangelist_ignore_inheritance, pool));
     }
   else
@@ -2459,7 +2459,7 @@ mark_mergeinfo_as_inheritable_for_a_range(
                                         FALSE, pool));
           if (!is_equal)
             {
-              SVN_ERR(svn_mergeinfo_merge(&merges, inheritable_merges,
+              SVN_ERR(svn_mergeinfo_merge(merges, inheritable_merges,
                                           svn_rangelist_equal_inheritance,
                                           pool));
               SVN_ERR(svn_client__record_wc_mergeinfo(target_wcpath, merges,

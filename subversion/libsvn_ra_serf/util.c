@@ -692,12 +692,6 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
 
       ctx->status = sl.code;
       ctx->reason = sl.reason;
-
-      status = svn_ra_serf__is_conn_closing(response);
-      if (status == SERF_ERROR_CLOSING)
-        {
-          serf_connection_reset(serf_request_get_conn(request));
-        }
     }
 
   return status;

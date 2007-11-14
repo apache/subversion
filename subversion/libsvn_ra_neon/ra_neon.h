@@ -1011,6 +1011,19 @@ svn_ra_neon__replay(svn_ra_session_t *session,
                     apr_pool_t *pool);
 
 /*
+ * Implements the replay_range RA layer function. */
+svn_error_t *
+svn_ra_neon__replay_range(svn_ra_session_t *session,
+                          svn_revnum_t start_revision,
+                          svn_revnum_t end_revision,
+                          svn_revnum_t low_water_mark,
+                          svn_boolean_t send_deltas,
+                          svn_ra_replay_revstart_callback_t revstart_func,
+                          svn_ra_replay_revfinish_callback_t revfinish_func,
+                          void *replay_baton,
+                          apr_pool_t *pool);
+
+/*
  * Implements the has_capability RA layer function. */
 svn_error_t *
 svn_ra_neon__has_capability(svn_ra_session_t *session,

@@ -1441,9 +1441,9 @@ static const char *capability_no = "no";
 static apr_array_header_t *
 capabilities_as_list(apr_hash_t *capabilities, apr_pool_t *pool)
 {
-  apr_hash_index_t *hi;
   apr_array_header_t *list = apr_array_make(pool, apr_hash_count(capabilities),
                                             sizeof(char *));
+  apr_hash_index_t *hi;
 
   for (hi = apr_hash_first(pool, capabilities); hi; hi = apr_hash_next(hi))
     {

@@ -1023,7 +1023,7 @@ svn_swig_mergeinfo_merge(apr_hash_t **mergeinfo_inout,
                          svn_merge_range_inheritance_t consider_inheritance,
                          apr_pool_t *pool)
 {
-  return svn_mergeinfo_merge(mergeinfo_inout, changes, consider_inheritance,
+  return svn_mergeinfo_merge(*mergeinfo_inout, changes, consider_inheritance,
                              pool);
 }
 

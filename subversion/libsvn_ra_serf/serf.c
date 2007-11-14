@@ -958,7 +958,8 @@ static const svn_ra__vtable_t serf_vtable = {
   svn_ra_serf__get_lock,
   svn_ra_serf__get_locks,
   svn_ra_serf__replay,
-  svn_ra_serf__has_capability
+  svn_ra_serf__has_capability,
+  svn_ra_serf__replay_range,
 };
 
 svn_error_t *
