@@ -90,36 +90,6 @@ svn_client__record_wc_mergeinfo(const char *wcpath,
                           adm_access, TRUE /* skip checks */, pool);
 }
 
-void
-svn_client__derive_mergeinfo_location(const char **url,
-                                      svn_revnum_t *rev,
-                                      const svn_wc_entry_t *entry)
-{
-  /* ### FIXME: dionisos sez: "We can have schedule 'normal' files
-     ### with a copied parameter of TRUE and a revision number of
-     ### INVALID_REVNUM.  Copied directories cause this behaviour on
-     ### their children.  It's an implementation shortcut to model
-     ### wc-side copies." */
-  switch (entry->schedule)
-    {
-    case svn_wc_schedule_add:
-    case svn_wc_schedule_replace:
-      /* If we have any history, consider its mergeinfo. */
-      if (entry->copyfrom_url)
-        {
-          *url = entry->copyfrom_url;
-          *rev = entry->copyfrom_rev;
-          break;
-        }
-
-    default:
-      /* Consider the mergeinfo for the WC target. */
-      *url = entry->url;
-      *rev = entry->revision;
-      break;
-    }
-}
-
 /*-----------------------------------------------------------------------*/
 
 /*** Retrieving mergeinfo. ***/
@@ -335,19 +305,10 @@ svn_client__get_wc_or_repos_mergeinfo(apr_hash_t **target_mergeinfo,
      parent if TARGET_WCPATH is missing.  These limited entries do not have
      a URL and without that we cannot get accurate mergeinfo for
      TARGET_WCPATH. */
-  if (entry->url == NULL)
-    return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                             _("Entry '%s' has no URL"),
-                             svn_path_local_style(target_wcpath, pool));
-
-  svn_client__derive_mergeinfo_location(&url, &target_rev, entry);
+  SVN_ERR(svn_client__entry_location(&url, &target_rev, target_wcpath,
+                                     svn_opt_revision_working, entry, pool));
 
   repos_rel_path = url + strlen(entry->repos);
-
-  /* ### TODO: To handle sub-tree mergeinfo, the list will need to
-     ### include the those child paths which have mergeinfo which
-     ### differs from that of TARGET_WCPATH, and if those paths are
-     ### directories, their children as well. */
 
   if (repos_only)
     *target_mergeinfo = NULL;
@@ -414,10 +375,10 @@ svn_client__get_implicit_mergeinfo(apr_hash_t **mergeinfo_p,
 {
   apr_array_header_t *segments;
   svn_revnum_t peg_revnum = SVN_INVALID_REVNUM;
-  svn_ra_session_t *session = ra_session;
   const char *url;
   apr_hash_t *mergeinfo = apr_hash_make(pool);
   apr_pool_t *sesspool = NULL;  /* only used for an RA session we open */
+  svn_ra_session_t *session = ra_session;
   int i;
 
   /* If PATH_OR_URL is a local path (not a URL), we need to transform
@@ -425,59 +386,17 @@ svn_client__get_implicit_mergeinfo(apr_hash_t **mergeinfo_p,
      revision.  Note that if the local item is scheduled for addition
      as a copy of something else, we'll use its copyfrom data to query
      its history.  */
-  if (! svn_path_is_url(path_or_url))
-    {
-      const svn_wc_entry_t *entry;
+  SVN_ERR(svn_client__derive_location(&url, &peg_revnum, path_or_url,
+                                      peg_revision, session, adm_access,
+                                      ctx, pool));
 
-      ra_session = NULL;
-      if (adm_access)
-        {
-          SVN_ERR(svn_wc_entry(&entry, path_or_url, adm_access, FALSE, pool));
-        }
-      else
-        {
-          SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path_or_url,
-                                         FALSE, 0, ctx->cancel_func,
-                                         ctx->cancel_baton, pool));
-          SVN_ERR(svn_wc_entry(&entry, path_or_url, adm_access, FALSE, pool));
-          SVN_ERR(svn_wc_adm_close(adm_access));
-        }
-
-      if (entry->copyfrom_url 
-          && peg_revision->kind == svn_opt_revision_working)
-        {
-          url = entry->copyfrom_url;
-          peg_revnum = entry->copyfrom_rev;
-        }
-      else if (entry->url)
-        {
-          url = entry->url;
-        }
-      else
-        {
-          return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                                   _("'%s' has no URL"),
-                                   svn_path_local_style(path_or_url, pool));
-        }
-    }
-  else
-    {
-      url = path_or_url;
-    }
-
-  /* If we have no RA session yet, open one. */
-  if (! session)
+  if (session == NULL)
     {
       sesspool = svn_pool_create(pool);
-      SVN_ERR(svn_client__open_ra_session_internal(&session, url,
-                                                   NULL, NULL, NULL, FALSE,
-                                                   TRUE, ctx, sesspool));
+      SVN_ERR(svn_client__open_ra_session_internal(&session, url, NULL, NULL,
+                                                   NULL, FALSE, TRUE, ctx,
+                                                   sesspool));
     }
-
-  /* If we haven't resolved for ourselves a numeric peg revision, do so. */
-  if (! SVN_IS_VALID_REVNUM(peg_revnum))
-    SVN_ERR(svn_client__get_revision_number(&peg_revnum, NULL, session, 
-                                            peg_revision, NULL, pool));
 
   /* Fetch the location segments for our URL@PEG_REVNUM. */
   if (! SVN_IS_VALID_REVNUM(range_youngest))

@@ -2511,7 +2511,7 @@ def start_commit_detect_capabilities(sbox):
   # Create a start-commit hook that detects the "mergeinfo" capability.
   hook_text = "import sys\n"                                 + \
               "fp = open(sys.argv[1] + '/hooks.log', 'w')\n" + \
-              "caps = sys.argv[3].split(',')\n"              + \
+              "caps = sys.argv[3].split(':')\n"              + \
               "if 'mergeinfo' in caps:\n"                    + \
               "  fp.write('yes')\n"                          + \
               "else:\n"                                      + \

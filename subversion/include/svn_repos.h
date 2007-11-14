@@ -2313,6 +2313,33 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
                                 apr_pool_t *pool);
 
 
+
+/** Capabilities **/
+
+/**
+ * Store in @a repos the client-reported capabilities @a capabilities,
+ * which must be allocated in memory at least as long-lived as @a repos.
+ *
+ * The elements of @a capabilities are 'const char *', a subset of
+ * the constants beginning with @c SVN_RA_CAPABILITY_.
+ * @a capabilities is not copied, so changing it later will affect
+ * what is remembered by @a repos.
+ *
+ * @note The capabilities are passed along to the start-commit hook;
+ * see that hook's template for details.
+ *
+ * @note As of Subversion 1.5, there are no error conditions defined,
+ * so this always returns SVN_NO_ERROR.  In future releases it may
+ * return error, however, so callers should check.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_repos_remember_client_capabilities(svn_repos_t *repos,
+                                       apr_array_header_t *capabilities);
+
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

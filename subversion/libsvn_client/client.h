@@ -24,6 +24,7 @@
 #include <apr_pools.h>
 
 #include "svn_types.h"
+#include "svn_opt.h"
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_ra.h"
@@ -34,6 +35,34 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+
+/* Set *URL and *PEG_REVNUM (the latter is ignored if NULL) to the
+   repository URL of PATH_OR_URL.  If PATH_OR_URL is a WC path and
+   PEG_REVISION->kind is svn_opt_revision_working, use the
+   corresponding entry's copyfrom info.  RA_SESSION and ADM_ACCESS may
+   be NULL, regardless of whether PATH_OR_URL is a URL.  Use CTX for
+   cancellation (ignored if NULL), and POOL for all allocations. */
+svn_error_t *
+svn_client__derive_location(const char **url,
+                            svn_revnum_t *peg_revnum,
+                            const char *path_or_url,
+                            const svn_opt_revision_t *peg_revision,
+                            const svn_ra_session_t *ra_session,
+                            svn_wc_adm_access_t *adm_access,
+                            svn_client_ctx_t *ctx,
+                            apr_pool_t *pool);
+
+/* Get the repository URL and revision number for WC entry ENTRY,
+   which is sometimes the entry's copyfrom info rather than its actual
+   URL and revision. */
+svn_error_t *
+svn_client__entry_location(const char **url,
+                           svn_revnum_t *revnum,
+                           const char *path_or_url,
+                           enum svn_opt_revision_kind peg_rev_kind,
+                           const svn_wc_entry_t *entry,
+                           apr_pool_t *pool);
+
 /* Set *REVNUM to the revision number identified by REVISION.
 
    If REVISION->kind is svn_opt_revision_number, just use

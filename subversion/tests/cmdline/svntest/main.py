@@ -1121,7 +1121,8 @@ def _internal_run_tests(test_list, testnums, parallel):
 
 def usage():
   prog_name = os.path.basename(sys.argv[0])
-  print "%s [--url] [--fs-type] [--verbose|--quiet] \\" % prog_name
+  print "%s [--url] [--fs-type] [--verbose|--quiet] [--parallel] \\" % \
+        prog_name
   print "%s [--enable-sasl] [--cleanup] [--bin] [<test> ...]" \
       % (" " * len(prog_name))
   print "%s " % (" " * len(prog_name))

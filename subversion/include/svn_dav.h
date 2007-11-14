@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -149,21 +149,29 @@ extern "C" {
  */
 #define SVN_DAV_PROP_NS_DAV "http://subversion.tigris.org/xmlns/dav/"
 
-/* Presence of this in the DAV header response to an OPTIONS request
-   indicates that the server supports @c svn_depth_t.
+
+/**
+ * @name Custom (extension) values for the DAV header.
+ * Note that although these share the SVN_DAV_PROP_NS_DAV namespace
+ * prefix, they are not properties; they are header values.
+ *
+ * @{ **/
 
-   ### @todo This doesn't really have anything to do with properties,
-       but we should re-use the SVN_DAV_PROP_NS_DAV, right?  We could
-       change the name of SVN_DAV_PROP_NS_DAV_SVN_DEPTH, though. */
-#define SVN_DAV_PROP_NS_DAV_SVN_DEPTH SVN_DAV_PROP_NS_DAV "svn/depth"
+/** Presence of this in a DAV header in an OPTIONS request or response
+ * indicates that the transmitter supports @c svn_depth_t. */
+#define SVN_DAV_NS_DAV_SVN_DEPTH SVN_DAV_PROP_NS_DAV "svn/depth"
 
-/* Presence of this in the DAV header response to an OPTIONS request
-   indicates that the server knows how to handle merge-tracking information.
-   ### And see above about appropriateness of properties namespace. ### */
-#define SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO SVN_DAV_PROP_NS_DAV "svn/mergeinfo"
+/** Presence of this in a DAV header in an OPTIONS request or response
+ * indicates that the transmitter knows how to handle merge-tracking
+ * information. */
+#define SVN_DAV_NS_DAV_SVN_MERGEINFO SVN_DAV_PROP_NS_DAV "svn/mergeinfo"
 
-#define SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS SVN_DAV_PROP_NS_DAV \
-        "svn/log-revprops"
+/** Presence of this in a DAV header in an OPTIONS response indicates
+ * that the transmitter (in this case, the server) knows how to send
+ * custom revprops in log responses. */
+#define SVN_DAV_NS_DAV_SVN_LOG_REVPROPS SVN_DAV_PROP_NS_DAV "svn/log-revprops"
+
+/** @} */
 
 /** @} */
 

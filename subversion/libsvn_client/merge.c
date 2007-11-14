@@ -1996,7 +1996,10 @@ get_full_mergeinfo(apr_hash_t **recorded_mergeinfo,
                                                 ra_session, target_wcpath,
                                                 adm_access, ctx, pool));
  
-  svn_client__derive_mergeinfo_location(&url, &target_rev, entry);
+  peg_revision.kind = svn_opt_revision_working;
+  SVN_ERR(svn_client__derive_location(&url, &target_rev, target_wcpath,
+                                      &peg_revision, ra_session, adm_access,
+                                      ctx, pool));
   if (target_rev <= end)
     {
       /* We're asking about a range outside our natural history

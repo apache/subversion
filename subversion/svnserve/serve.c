@@ -43,7 +43,6 @@
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
 #include "svn_user.h"
-#include "private/svn_repos_private.h"
 
 #include "server.h"
 
@@ -2449,7 +2448,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
 
   /* Open the repository and fill in b with the resulting information. */
   SVN_ERR(svn_repos_open(&b->repos, repos_root, pool));
-  svn_repos__set_capabilities(b->repos, capabilities);
+  SVN_ERR(svn_repos_remember_client_capabilities(b->repos, capabilities));
   b->fs = svn_repos_fs(b->repos);
   b->fs_path = svn_stringbuf_create(full_path + strlen(repos_root),
                                     pool);

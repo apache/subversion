@@ -87,21 +87,19 @@ capabilities_headers_iterator_callback(void *baton,
          efficiently, but that wouldn't be worth it until we have many
          more capabilities. */
 
-      if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_DEPTH, vals))
+      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_DEPTH, vals))
         {
           apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_DEPTH,
                        APR_HASH_KEY_STRING, capability_yes);
         }
 
-      if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO,
-                                      vals))
+      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
         {
           apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
                        APR_HASH_KEY_STRING, capability_yes);
         }
 
-      if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS,
-                                      vals))
+      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
         {
           apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
                        APR_HASH_KEY_STRING, capability_yes);
@@ -148,13 +146,9 @@ set_up_capabilities_headers(serf_bucket_t *headers,
                             void *baton,
                             apr_pool_t *pool)
 {
-  /* ### See comment at similar place in ../libsvn_ra_neon/session.c. ### */
-  serf_bucket_headers_set(headers, "X-SVN-Capabilities",
-                          SVN_DAV_PROP_NS_DAV_SVN_DEPTH);
-  serf_bucket_headers_set(headers, "X-SVN-Capabilities",
-                          SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO);
-  serf_bucket_headers_set(headers, "X-SVN-Capabilities",
-                          SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS);
+  serf_bucket_headers_set(headers, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
+  serf_bucket_headers_set(headers, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
+  serf_bucket_headers_set(headers, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
 
   return APR_SUCCESS;
 }

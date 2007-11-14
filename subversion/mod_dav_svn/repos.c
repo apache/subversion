@@ -41,7 +41,6 @@
 #include "svn_props.h"
 #include "mod_dav_svn.h"
 #include "svn_ra.h"  /* for SVN_RA_CAPABILITY_* */
-#include "private/svn_repos_private.h"
 
 #include "dav_svn.h"
 
@@ -1434,6 +1433,31 @@ negotiate_encoding_prefs(request_rec *r, int *svndiff_version)
 static const char *capability_yes = "yes";
 static const char *capability_no = "no";
 
+/* Convert CAPABILITIES, a hash table mapping 'const char *' keys to
+ * "yes" or "no" values, to a list of all keys whose value is "yes".
+ * Return the list, allocated in POOL, and use POOL for all temporary
+ * allocation.
+ */
+static apr_array_header_t *
+capabilities_as_list(apr_hash_t *capabilities, apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  apr_array_header_t *list = apr_array_make(pool, apr_hash_count(capabilities),
+                                            sizeof(char *));
+
+  for (hi = apr_hash_first(pool, capabilities); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      apr_hash_this(hi, &key, NULL, &val);
+      if (strcmp((const char *) val, "yes") == 0)
+        APR_ARRAY_PUSH(list, const char *) = key;
+    }
+
+  return list;
+}
+
+
 static dav_error *
 get_resource(request_rec *r,
              const char *root_path,
@@ -1632,13 +1656,13 @@ get_resource(request_rec *r,
                      APR_HASH_KEY_STRING, capability_no);
 
         /* Then see what we can find. */
-        val = apr_table_get(r->headers_in, "X-SVN-Capabilities");
+        val = apr_table_get(r->headers_in, "DAV");
         if (val)
           {
             apr_array_header_t *vals
               = svn_cstring_split(val, ",", TRUE, r->pool);
 
-            if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO,
+            if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_MERGEINFO,
                                             vals))
               {
                 apr_hash_set(repos->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
@@ -1673,9 +1697,16 @@ get_resource(request_rec *r,
 
       /* Store the capabilities of the current connection, making sure
          to use the same pool repos->repos itself was created in. */
-      svn_repos__set_capabilities
-        (repos->repos, svn_repos__capabilities_as_list(repos->capabilities,
-                                                       r->connection->pool));
+      serr = svn_repos_remember_client_capabilities
+        (repos->repos, capabilities_as_list(repos->capabilities,
+                                            r->connection->pool));
+      if (serr != NULL)
+        {
+          return dav_svn__sanitize_error(serr,
+                                         "Error storing client capabilities "
+                                         "in repos object",
+                                         HTTP_INTERNAL_SERVER_ERROR, r);
+        }
     }
 
   /* cache the filesystem object */

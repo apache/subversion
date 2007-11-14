@@ -230,13 +230,5 @@ svn_client__elide_mergeinfo_for_tree(apr_hash_t *children_with_mergeinfo,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool);
 
-/* Get the repository URL and revision number for which to request
-   mergeinfo for a WC entry, which sometimes needs to be the entry's
-   copyfrom info rather than its actual URL and revision. */
-void
-svn_client__derive_mergeinfo_location(const char **url,
-                                      svn_revnum_t *rev,
-                                      const svn_wc_entry_t *entry);
-
 
 #endif /* SVN_LIBSVN_CLIENT_MERGEINFO_H */

@@ -29,7 +29,6 @@
 #include "svn_ra.h"  /* for SVN_RA_CAPABILITY_* */
 #include "svn_repos.h"
 #include "svn_private_config.h" /* for SVN_TEMPLATE_ROOT_DIR */
-#include "private/svn_repos_private.h"
 
 #include "repos.h"
 
@@ -307,14 +306,14 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 "#"                                                                          NL
 "#   [1] REPOS-PATH   (the path to this repository)"                         NL
 "#   [2] USER         (the authenticated user attempting to commit)"         NL
-"#   [3] CAPABILITIES (a comma-separated list of capabilities reported"      NL
+"#   [3] CAPABILITIES (a colon-separated list of capabilities reported"      NL
 "#                     by the client; see note below)"                       NL
 "#"                                                                          NL
 "# Note: The CAPABILITIES parameter is new in Subversion 1.5, and 1.5"       NL
 "# clients will typically report at least the \""                            \
    SVN_RA_CAPABILITY_MERGEINFO "\" capability."                              NL
 "# If there are other capabilities, then the list is comma-separated,"       NL
-"# e.g.: \"" SVN_RA_CAPABILITY_MERGEINFO ",some-other-capability\" "         \
+"# e.g.: \"" SVN_RA_CAPABILITY_MERGEINFO ":some-other-capability\" "         \
   "(the order is undefined)."                                                NL
 "#"                                                                          NL
 "# The list is self-reported by the client.  Therefore, you should not"      NL
@@ -1696,29 +1695,11 @@ svn_repos_stat(svn_dirent_t **dirent,
   return SVN_NO_ERROR;
 }
 
-apr_array_header_t *
-svn_repos__capabilities_as_list(apr_hash_t *capabilities, apr_pool_t *pool)
+svn_error_t *
+svn_repos_remember_client_capabilities(svn_repos_t *repos,
+                                       apr_array_header_t *capabilities)
 {
-  apr_hash_index_t *hi;
-  apr_array_header_t *list = apr_array_make(pool, apr_hash_count(capabilities),
-                                            sizeof(char *));
-
-  for (hi = apr_hash_first(pool, capabilities); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      void *val;
-      apr_hash_this(hi, &key, NULL, &val);
-      if (strcmp((const char *) val, "yes") == 0)
-        APR_ARRAY_PUSH(list, const char *) = key;
-    }
-
-  return list;
-}
-
-void
-svn_repos__set_capabilities(svn_repos_t *repos,
-                            apr_array_header_t *capabilities)
-{
-  repos->capabilities = capabilities;
+  repos->client_capabilities = capabilities;
+  return SVN_NO_ERROR;
 }
 
