@@ -617,11 +617,13 @@ def diff_only_property_change(sbox):
     "\n",
     "Property changes on: iota\n",
     "___________________________________________________________________\n",
-    "Name: svn:eol-style\n",
+    "Added: svn:eol-style\n",
     "   + native\n",
     "\n" ]
 
   expected_reverse_output = list(expected_output)
+  expected_reverse_output[3] = expected_reverse_output[3].replace("Added",
+                                                                  "Deleted")
   expected_reverse_output[4] = "   - native\n"
 
 
@@ -1837,18 +1839,22 @@ def diff_property_changes_to_base(sbox):
     "\n",
     "Property changes on: A\n",
     "___________________________________________________________________\n",
-    "Name: dirprop\n",
+    "Added: dirprop\n",
     "   + r2value\n",
     "\n",
     "\n",
     "Property changes on: iota\n",
     "___________________________________________________________________\n",
-    "Name: fileprop\n",
+    "Added: fileprop\n",
     "   + r2value\n",
     "\n" ]
 
   expected_output_r2_r1 = list(expected_output_r1_r2)
+  expected_output_r2_r1[3] = expected_output_r2_r1[3].replace("Added",
+                                                              "Deleted")
   expected_output_r2_r1[4] = "   - r2value\n"
+  expected_output_r2_r1[9] = expected_output_r2_r1[9].replace("Added",
+                                                              "Deleted")
   expected_output_r2_r1[10] = "   - r2value\n"
 
 
@@ -2084,19 +2090,19 @@ def diff_prop_change_local_propmod(sbox):
     "\n",
     "Property changes on: A\n",
     "___________________________________________________________________\n",
-    "Name: dirprop\n",
+    "Modified: dirprop\n",
     "   - r2value\n",
     "   + workingvalue\n",
-    "Name: newdirprop\n",
+    "Added: newdirprop\n",
     "   + newworkingvalue\n",
     "\n",
     "\n",
     "Property changes on: iota\n",
     "___________________________________________________________________\n",
-    "Name: fileprop\n",
+    "Modified: fileprop\n",
     "   - r2value\n",
     "   + workingvalue\n",
-    "Name: newfileprop\n",
+    "Added: newfileprop\n",
     "   + newworkingvalue\n",
     "\n" ]
 
@@ -2168,13 +2174,13 @@ def diff_repos_wc_add_with_props(sbox):
     "\n",
     "Property changes on: foo\n",
     "___________________________________________________________________\n",
-    "Name: propname\n",
+    "Added: propname\n",
     "   + propvalue\n",
     "\n",
     "\n",
     "Property changes on: X\n",
     "___________________________________________________________________\n",
-    "Name: propname\n",
+    "Added: propname\n",
     "   + propvalue\n",
     "\n",
     "Index: X/bar\n",
@@ -2186,7 +2192,7 @@ def diff_repos_wc_add_with_props(sbox):
     "\n",
     "Property changes on: " + os.path.join('X', 'bar') + "\n",
     "___________________________________________________________________\n",
-    "Name: propname\n",
+    "Added: propname\n",
     "   + propvalue\n",
     "\n" ]
   # The output from the BASE->repos diff is the same content, but in a
@@ -2632,25 +2638,25 @@ def diff_with_depth(sbox):
     "\n",
     "Property changes on: .\n",
     "___________________________________________________________________\n",
-    "Name: foo1\n",
+    "Added: foo1\n",
     "   + bar1\n",
     "\n",
     "\n",
     "Property changes on: iota\n",
     "___________________________________________________________________\n",
-    "Name: foo2\n",
+    "Added: foo2\n",
     "   + bar2\n",
     "\n",
     "\n",
     "Property changes on: A\n",
     "___________________________________________________________________\n",
-    "Name: foo3\n",
+    "Added: foo3\n",
     "   + bar3\n",
     "\n",
     "\n",
     "Property changes on: " + os.path.join('A', 'B') + "\n",
     "___________________________________________________________________\n",
-    "Name: foo4\n",
+    "Added: foo4\n",
     "   + bar4\n",
     "\n" ]
 
@@ -2702,14 +2708,14 @@ def diff_with_depth(sbox):
     "\n",
     "Property changes on: .\n",
     "___________________________________________________________________\n",
-    "Name: foo1\n",
+    "Modified: foo1\n",
     "   - bar1\n",
     "   + baz1\n",
     "\n",
     "\n",
     "Property changes on: iota\n",
     "___________________________________________________________________\n",
-    "Name: foo2\n",
+    "Modified: foo2\n",
     "   - bar2\n",
     "   + baz2\n",
     "\n",
@@ -2723,14 +2729,14 @@ def diff_with_depth(sbox):
     "+new text\n",
     "Property changes on: A\n",
     "___________________________________________________________________\n",
-    "Name: foo3\n",
+    "Modified: foo3\n",
     "   - bar3\n",
     "   + baz3\n",
     "\n",
     "\n",
     "Property changes on: " + os.path.join('A', 'B') + "\n",
     "___________________________________________________________________\n",
-    "Name: foo4\n",
+    "Modified: foo4\n",
     "   - bar4\n",
     "   + baz4\n",
     "\n",
