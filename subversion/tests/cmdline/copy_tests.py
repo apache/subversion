@@ -31,22 +31,6 @@ XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
 
-######################################################################
-# Utilities
-#
-
-def get_repos_rev(sbox):
-  wc_dir = sbox.wc_dir;
-
-  out, err = svntest.actions.run_and_verify_svn("Getting Repository Revision",
-                                                None, [], "up", wc_dir)
-
-  mo=re.match("(?:At|Updated to) revision (\\d+)\\.", out[-1])
-  if mo:
-    return int(mo.group(1))
-  else:
-    raise svntest.Failure
-
 #
 #----------------------------------------------------------------------
 # Helper for wc_copy_replacement and repos_to_wc_copy_replacement
@@ -485,7 +469,7 @@ def resurrect_deleted_dir(sbox):
                                         None, None,
                                         wc_dir)
 
-  # Use 'svn cp -r 1 URL URL' to resurrect the deleted directory, where
+  # Use 'svn cp URL@1 URL' to resurrect the deleted directory, where
   # the two URLs are identical.  This used to trigger a failure.
   url = sbox.repo_url + '/A/D/G'
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
@@ -1479,24 +1463,25 @@ def repos_to_wc_1634(sbox):
 def double_uri_escaping_1814(sbox):
   "check for double URI escaping in svn ls -R"
 
-  sbox.build()
+  sbox.build(create_wc = False)
 
   base_url = sbox.repo_url + '/base'
 
+  # rev. 2
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'mkdir', '-m', 'mybase',
                                      base_url)
 
   orig_url = base_url + '/foo%20bar'
 
+  # rev. 3
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'mkdir', '-m', 'r1',
                                      orig_url)
+  orig_rev = 3
 
-  orig_rev = get_repos_rev(sbox);
-
+  # rev. 4
   new_url = base_url + '/foo_bar'
-
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'mv', '-m', 'r2',
                                      orig_url, new_url)

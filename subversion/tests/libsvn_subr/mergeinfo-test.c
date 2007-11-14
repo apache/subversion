@@ -41,14 +41,19 @@ fail(apr_pool_t *pool, const char *fmt, ...)
   return svn_error_create(SVN_ERR_TEST_FAILED, 0, msg);
 }
 
+#define MAX_NBR_RANGES 3
+
 /* Verify that INPUT is parsed properly, and returns an error if
    parsing fails, or incorret parsing is detected.  Assumes that INPUT
-   contains only one path -> ranges mapping, and that FIRST_RANGE is
-   the first range in the set. */
+   contains only one path -> ranges mapping, and that EXPECTED_RANGES points
+   to the first range in an array whose size is greater than or equal to
+   the number of ranges in INPUTS path -> ranges mapping but less than
+   MAX_NBR_RANGES.  If fewer than MAX_NBR_RANGES ranges are present, then the
+   trailing expected_ranges should be have their end revision set to 0. */
 static svn_error_t *
 verify_mergeinfo_parse(const char *input,
                        const char *expected_path,
-                       const svn_merge_range_t *first_range,
+                       const svn_merge_range_t *expected_ranges,
                        apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -65,24 +70,37 @@ verify_mergeinfo_parse(const char *input,
        hi = apr_hash_next(hi))
     {
       const void *path;
-      void *ranges;
+      void *val;
+      apr_array_header_t *ranges;
       svn_merge_range_t *range;
+      int j;
 
-      apr_hash_this(hi, &path, NULL, &ranges);
+      apr_hash_this(hi, &path, NULL, &val);
+      ranges = val;
       if (strcmp((const char *) path, expected_path) != 0)
         return fail(pool, "svn_mergeinfo_parse (%s) failed to parse the "
                     "correct path (%s)", input, expected_path);
 
-      /* Test ranges.  For now, assume only 1 range. */
-      range = APR_ARRAY_IDX((apr_array_header_t *) ranges, 0,
-                            svn_merge_range_t *);
-      if (range->start != first_range->start
-          || range->end != first_range->end
-          || range->inheritable != first_range->inheritable)
+      /* Test each parsed range. */
+      for (j = 0; j < ranges->nelts; j++)
+        {
+          range = APR_ARRAY_IDX(ranges, j, svn_merge_range_t *);
+          if (range->start != expected_ranges[j].start
+              || range->end != expected_ranges[j].end
+              || range->inheritable != expected_ranges[j].inheritable)
+            return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                     "svn_mergeinfo_parse (%s) failed to "
+                                     "parse the correct range",
+                                     input);
+        }
+
+      /* Were we expecting any more ranges? */
+      if (j < MAX_NBR_RANGES - 1
+          && !expected_ranges[j].end == 0)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_mergeinfo_parse (%s) failed to "
-                                 "parse the correct range",
-                                 input);
+                                 "produce the expected number of ranges",
+                                  input);
     }
   return SVN_NO_ERROR;
 }
@@ -92,27 +110,37 @@ verify_mergeinfo_parse(const char *input,
    -> merge ranges. */
 static apr_hash_t *info1, *info2;
 
-#define NBR_MERGEINFO_VALS 3
+#define NBR_MERGEINFO_VALS 5
 /* Valid mergeinfo values. */
 static const char * const mergeinfo_vals[NBR_MERGEINFO_VALS] =
   {
     "/trunk:1",
     "/trunk/foo:1-6",
-    "/trunk: 5,7-9,10,11,13,14"
+    "/trunk: 5,7-9,10,11,13,14",
+    "/trunk: 3-10,11*,13,14",
+    "/branch: 1,2-18*,33*"
+    /* ### Should svn_mergeinfo_parse() handle unordered
+       ### but otherwise valid input strings like this?
+       ### Currently this fails.
+       "/trunk: 7-9,5,10,14,13,11" */
   };
 /* Paths corresponding to mergeinfo_vals. */
 static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
   {
     "/trunk",
     "/trunk/foo",
-    "/trunk"
+    "/trunk",
+    "/trunk",
+    "/branch"
   };
 /* First ranges from the paths identified by mergeinfo_paths. */
-static svn_merge_range_t mergeinfo_ranges[NBR_MERGEINFO_VALS] =
+static svn_merge_range_t mergeinfo_ranges[NBR_MERGEINFO_VALS][MAX_NBR_RANGES] =
   {
-    { 0, 1, TRUE },
-    { 0, 6, TRUE },
-    { 4, 5, TRUE }
+    { {0, 1,  TRUE} },
+    { {0, 6,  TRUE} },
+    { {4, 5,  TRUE}, { 6, 11, TRUE }, {12, 14, TRUE } },
+    { {2, 10, TRUE}, {10, 11, FALSE}, {12, 14, TRUE } },
+    { {0, 1,  TRUE}, { 1, 18, FALSE}, {32, 33, FALSE} }
   };
 
 static svn_error_t *
@@ -130,7 +158,7 @@ test_parse_single_line_mergeinfo(const char **msg,
 
   for (i = 0; i < NBR_MERGEINFO_VALS; i++)
     SVN_ERR(verify_mergeinfo_parse(mergeinfo_vals[i], mergeinfo_paths[i],
-                                   &mergeinfo_ranges[i], pool));
+                                   mergeinfo_ranges[i], pool));
 
   return SVN_NO_ERROR;
 }
@@ -502,7 +530,7 @@ test_merge_mergeinfo(const char **msg,
   SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo1, pool));
   SVN_ERR(svn_mergeinfo_parse(&info2, mergeinfo2, pool));
 
-  SVN_ERR(svn_mergeinfo_merge(&info1, info2, svn_rangelist_ignore_inheritance,
+  SVN_ERR(svn_mergeinfo_merge(info1, info2, svn_rangelist_ignore_inheritance,
                               pool));
 
   if (apr_hash_count(info1) != 2)

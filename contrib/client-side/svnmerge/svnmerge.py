@@ -298,7 +298,7 @@ def launchsvn(s, show=False, pretend=False, **kwargs):
         password = " --password=" + password
     else:
         password = ""
-    cmd = opts["svn"] + " --non-interactive " + username + password + " " + s
+    cmd = opts["svn"] + " --non-interactive" + username + password + " " + s
     if show or opts["verbose"] >= 2:
         print cmd
     if pretend:

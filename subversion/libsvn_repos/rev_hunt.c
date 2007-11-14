@@ -835,34 +835,6 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
 }
 
 
-struct nls_history_baton_t
-{
-  svn_revnum_t revision;
-  svn_revnum_t end_rev;
-};
-
-/* This implements the `svn_repos_history_func_t' interface, and is
-   used by svn_repos_node_location_segments() to determine, for a path
-   and revision which has no prior affecting copies, the revision in
-   which the path was created.  It's baton is a pointer to an
-   svn_revnum_t, which is clobbered by each successive REVISION. */
-static svn_error_t *
-nls_history_func(void *baton,
-                 const char *path,
-                 svn_revnum_t revision,
-                 apr_pool_t *pool)
-{
-  struct nls_history_baton_t *b = baton;
-  b->revision = revision;
-  if (revision < b->end_rev)
-    {
-      b->revision = b->end_rev;
-      return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
-    }
-  return SVN_NO_ERROR;
-}
-
-
 /* Transmit SEGMENT through RECEIVER/RECEIVER_BATON iff a portion of
    its revision range fits between END_REV and START_REV, possibly
    cropping the range so that it fits *entirely* in that range. */
@@ -975,13 +947,12 @@ svn_repos_node_location_segments(svn_repos_t *repos,
          range. */
       if (! prev_path)
         {
-          struct nls_history_baton_t nls_history_baton;
-          nls_history_baton.revision = SVN_INVALID_REVNUM;
-          nls_history_baton.end_rev = end_rev;
-          SVN_ERR(svn_repos_history2(fs, cur_path, nls_history_func,
-                                     &nls_history_baton, NULL, NULL,
-                                     current_rev, 0, TRUE, subpool));
-          segment->range_start = nls_history_baton.revision;
+          svn_fs_root_t *revroot;
+          SVN_ERR(svn_fs_revision_root(&revroot, fs, current_rev, subpool));
+          SVN_ERR(svn_fs_node_origin_rev(&(segment->range_start), revroot,
+                                         cur_path, subpool));
+          if (segment->range_start < end_rev)
+            segment->range_start = end_rev;
           current_rev = SVN_INVALID_REVNUM;
         }
       else
@@ -1066,7 +1037,7 @@ get_merged_path_revisions(apr_array_header_t *path_revisions,
                                         old_path_rev->revnum - 1, subpool));
   SVN_ERR(svn_mergeinfo_diff(&deleted, &changed, prev_mergeinfo, curr_mergeinfo,
                              svn_rangelist_ignore_inheritance, subpool));
-  SVN_ERR(svn_mergeinfo_merge(&changed, deleted,
+  SVN_ERR(svn_mergeinfo_merge(changed, deleted,
                               svn_rangelist_equal_inheritance, subpool));
   if (apr_hash_count(changed) == 0)
     {

@@ -34,6 +34,57 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/** Overview of the @c SVN_PROP_MERGE_INFO property.
+ *
+ * Merge history is stored in the @c SVN_PROP_MERGE_INFO property of files
+ * and directories.  The @c SVN_PROP_MERGE_INFO property on a path stores the
+ * complete list of changes merged to that path, either directly or via the
+ * path's parent, grand-parent, etc..
+ *
+ * Every path in a tree may have @c SVN_PROP_MERGE_INFO set, but if the
+ * @c SVN_PROP_MERGE_INFO for a path is equivalent to the
+ * @c SVN_PROP_MERGE_INFO for its parent, then the @c SVN_PROP_MERGE_INFO on
+ * the path will 'elide' (be removed) from the path as a post step to any
+ * merge, switch, or update.  If a path's parent does not have any
+ * @c SVN_PROP_MERGE_INFO set, the path's mergeinfo can elide to its nearest
+ * grand-parent, great-grand-parent, etc. that has equivalent
+ * @c SVN_PROP_MERGE_INFO set on it.  
+ *
+ * If a path has no @c SVN_PROP_MERGE_INFO of its own, it inherits mergeinfo
+ * from its nearest parent that has @c SVN_PROP_MERGE_INFO set.  The
+ * exception to this is @c SVN_PROP_MERGE_INFO with non-ineritable revision
+ * ranges.  These non-inheritable ranges apply only to the path which they
+ * are set on.
+ *
+ * The value of the @c SVN_PROP_MERGE_INFO property is a string consisting of
+ * a path, a colon, and comma separated revision list, containing one or more
+ * revision or revision ranges. Revision range start and end points are
+ * separated by "-".  Revisions and revision ranges may have the optional
+ * @c SVN_MERGEINFO_NONINHERITABLE_STR suffix to signify a non-inheritable
+ * revision/revision range.
+ *
+ * @c SVN_PROP_MERGE_INFO Value Grammar:
+ *
+ *   Token             Definition
+ *   -----             ----------
+ *   revisionrange     REVISION "-" REVISION
+ *   revisioneelement  (revisionrange | REVISION)"*"?
+ *   rangelist         revisioneelement (COMMA revisioneelement)*
+ *   revisionline      PATHNAME COLON rangelist
+ *   top               revisionline (NEWLINE revisionline)*
+ *
+ * The PATHNAME is the source of a merge and the rangelist the revision(s)
+ * merged to the path @c SVN_PROP_MERGE_INFO is set on directly or indirectly
+ * via inheritance.  PATHNAME must always exist at the specified rangelist
+ * and thus multiple revisionlines are required to account for renames of
+ * the source pathname.
+ *
+ * Rangelists must be sorted from lowest to highest revision and cannot
+ * contain overlapping revisionlistelements.  Single revisions that can be
+ * represented by a revisionrange are allowed (e.g. '5,6,7,8,9-12' or '5-12'
+ * are both acceptable).
+ */
+
 /* Suffix for SVN_PROP_MERGE_INFO revision ranges indicating a given
    range is non-inheritable. */
 #define SVN_MERGEINFO_NONINHERITABLE_STR "*"
@@ -70,19 +121,19 @@ svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
                    apr_pool_t *pool);
 
 /** Merge hash of mergeinfo, @a changes, into existing hash @a
- * *mergeinfo.  @a consider_inheritance determines how to account for
+ * mergeinfo.  @a consider_inheritance determines how to account for
  * the inheritability of the rangelists in @a changes and @a *mergeinfo
  * when merging.
  *
- * Note: @a *mergeinfo and @a changes must have rangelists that are
+ * Note: @a mergeinfo and @a changes must have rangelists that are
  * sorted as said by @c svn_sort_compare_ranges().  After the merge @a
- * *mergeinfo will have rangelists that are guaranteed to be in sorted
+ * mergeinfo will have rangelists that are guaranteed to be in sorted
  * order.
  *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_mergeinfo_merge(apr_hash_t **mergeinfo, apr_hash_t *changes,
+svn_mergeinfo_merge(apr_hash_t *mergeinfo, apr_hash_t *changes,
                     svn_merge_range_inheritance_t consider_inheritance,
                     apr_pool_t *pool);
 
@@ -224,17 +275,17 @@ svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
  *
  * If either @ *range_1 or @ *range_2 is NULL, either range contains
  * invalid svn_revnum_t's, or the two ranges do not intersect, then do
- * nothing and return false.
+ * nothing and return FALSE.
  *
  * If the two ranges can be reduced to one range, set @ *range_1 to represent
- * that range, set @ *range_2 to NULL, and return true.
+ * that range, set @ *range_2 to NULL, and return TRUE.
  *
  * If the two ranges cancel each other out set both @ *range_1 and
- * @ *range_2 to NULL and return true.
+ * @ *range_2 to NULL and return TRUE.
  *
  * If the two ranges intersect but cannot be represented by one range (because
  * one range is additive and the other subtractive) then modify @ *range_1 and
- * @ *range_2 to remove the intersecting ranges and return true.
+ * @ *range_2 to remove the intersecting ranges and return TRUE.
  *
  * The inheritability of @ *range_1 or @ *range_2 is not taken into account.
  *

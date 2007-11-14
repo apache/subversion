@@ -24,6 +24,7 @@
 #include <apr_pools.h>
 
 #include "svn_types.h"
+#include "svn_opt.h"
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_ra.h"
@@ -34,6 +35,34 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+
+/* Set *URL and *PEG_REVNUM (the latter is ignored if NULL) to the
+   repository URL of PATH_OR_URL.  If PATH_OR_URL is a WC path and
+   PEG_REVISION->kind is svn_opt_revision_working, use the
+   corresponding entry's copyfrom info.  RA_SESSION and ADM_ACCESS may
+   be NULL, regardless of whether PATH_OR_URL is a URL.  Use CTX for
+   cancellation (ignored if NULL), and POOL for all allocations. */
+svn_error_t *
+svn_client__derive_location(const char **url,
+                            svn_revnum_t *peg_revnum,
+                            const char *path_or_url,
+                            const svn_opt_revision_t *peg_revision,
+                            const svn_ra_session_t *ra_session,
+                            svn_wc_adm_access_t *adm_access,
+                            svn_client_ctx_t *ctx,
+                            apr_pool_t *pool);
+
+/* Get the repository URL and revision number for WC entry ENTRY,
+   which is sometimes the entry's copyfrom info rather than its actual
+   URL and revision. */
+svn_error_t *
+svn_client__entry_location(const char **url,
+                           svn_revnum_t *revnum,
+                           const char *path_or_url,
+                           enum svn_opt_revision_kind peg_rev_kind,
+                           const svn_wc_entry_t *entry,
+                           apr_pool_t *pool);
+
 /* Set *REVNUM to the revision number identified by REVISION.
 
    If REVISION->kind is svn_opt_revision_number, just use
@@ -226,16 +255,25 @@ svn_client__get_repos_root(const char **repos_root,
                            apr_pool_t *pool);
 
 /* Return the path of PATH_OR_URL relative to the repository root
-   (REPOS_ROOT) in REL_PATH (URI-decoded).
+   (REPOS_ROOT) in REL_PATH (URI-decoded).  If INCLUDE_LEADING_SLASH
+   is set, the returned result will have a leading slash; otherwise,
+   it will not.
 
    The remaining parameters are used to procure the repository root.
    Either REPOS_ROOT or RA_SESSION -- but not both -- may be NULL.
    REPOS_ROOT or ADM_ACCESS (which may also be NULL) should be passed
-   when available as an optimization (in that order of preference). */
+   when available as an optimization (in that order of preference). 
+
+   CAUTION:  While having a leading slash on a so-called relative path
+   might work out well for functionality that interacts with
+   mergeinfo, it results in a relative path that cannot be naively
+   svn_path_join()'d with a repository root URL to provide a full URL.
+*/
 svn_error_t *
 svn_client__path_relative_to_root(const char **rel_path,
                                   const char *path_or_url,
                                   const char *repos_root,
+                                  svn_boolean_t include_leading_slash,
                                   svn_ra_session_t *ra_session,
                                   svn_wc_adm_access_t *adm_access,
                                   apr_pool_t *pool);
@@ -631,9 +669,6 @@ typedef struct
     /* The source path or url. */
     const char *src;
 
-    /* The source path relative to the repository root */
-    const char *src_rel;
-
     /* The absolute path of the source. */
     const char *src_abs;
 
@@ -659,9 +694,6 @@ typedef struct
 
     /* The destination path or url */
     const char *dst;
-
-    /* The destination path relative to the repository root */
-    const char *dst_rel;
 
     /* The destination's parent path */
     const char *dst_parent;

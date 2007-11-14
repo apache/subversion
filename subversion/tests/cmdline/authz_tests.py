@@ -126,9 +126,9 @@ def broken_authz_file(sbox):
                                   sbox.repo_url + "/A",
                                   "-m", "a log message");
   if out:
-    raise svntest.actions.SVNUnexpectedStdout(out)
+    raise svntest.verify.SVNUnexpectedStdout(out)
   if not err:
-    raise svntest.actions.SVNUnexpectedStderr("Missing stderr")
+    raise svntest.verify.SVNUnexpectedStderr("Missing stderr")
 
 # test whether read access is correctly granted and denied
 def authz_read_access(sbox):

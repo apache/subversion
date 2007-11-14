@@ -66,7 +66,7 @@ typedef struct svn_io_dirent_t {
   /** The kind of this entry. */
   svn_node_kind_t kind;
   /** If @c kind is @c svn_node_file, whether this entry is a special file;
-   * else false.
+   * else FALSE.
    *
    * @see svn_io_check_special_path().
    */
@@ -219,7 +219,7 @@ svn_error_t *svn_io_temp_dir(const char **dir,
 
 /** Copy @a src to @a dst atomically, in a "byte-for-byte" manner.
  * Overwrite @a dst if it exists, else create it.  Both @a src and @a dst
- * are utf8-encoded filenames.  If @a copy_perms is true, set @a dst's
+ * are utf8-encoded filenames.  If @a copy_perms is TRUE, set @a dst's
  * permissions to match those of @a src.
  */
 svn_error_t *svn_io_copy_file(const char *src,
@@ -246,7 +246,7 @@ svn_error_t *svn_io_copy_link(const char *src,
  * when any files are copied.  @a src, @a dst_parent, and @a dst_basename are
  * all utf8-encoded.
  *
- * If @a cancel_func is non-null, invoke it with @a cancel_baton at
+ * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at
  * various points during the operation.  If it returns any error
  * (typically @c SVN_ERR_CANCELLED), return that error immediately.
  */
@@ -592,10 +592,10 @@ svn_stream_t *svn_stream_disown(svn_stream_t *stream, apr_pool_t *pool);
 /** Create a stream from an APR file.  For convenience, if @a file is
  * @c NULL, an empty stream created by svn_stream_empty() is returned.
  *
- * This function should normally be called with @a disown set to false,
+ * This function should normally be called with @a disown set to FALSE,
  * in which case closing the stream will also close the underlying file.
  *
- * If @a disown is true, the stream will disown the underlying file,
+ * If @a disown is TRUE, the stream will disown the underlying file,
  * meaning that svn_stream_close() will not close the file.
  *
  * @since New in 1.4.
@@ -650,7 +650,7 @@ svn_stream_t *svn_stream_compressed(svn_stream_t *stream,
  * Both @a read_digest and @a write_digest
  * can be @c NULL, in which case the respective checksum isn't calculated.
  *
- * If @a read_all is true, make sure that all data available on @a
+ * If @a read_all is TRUE, make sure that all data available on @a
  * stream is read (and checksummed) when the stream is closed.
  *
  * Read and write operations can be mixed without interfering.
@@ -882,14 +882,14 @@ svn_error_t *svn_io_dir_walk(const char *dirname,
 /**
  * Start @a cmd with @a args, using utf8-encoded @a path as working
  * directory.  Connect @a cmd's stdin, stdout, and stderr to @a infile,
- * @a outfile, and @a errfile, except where they are null.  Return the
+ * @a outfile, and @a errfile, except where they are NULL.  Return the
  * process handle for the invoked program in @a *cmd_proc.
  *
  * @a args is a list of utf8-encoded <tt>const char *</tt> arguments,
  * terminated by @c NULL.  @a args[0] is the name of the program, though it
  * need not be the same as @a cmd.
  *
- * If @a inherit is true, the invoked program inherits its environment from
+ * If @a inherit is TRUE, the invoked program inherits its environment from
  * the caller and @a cmd, if not absolute, is searched for in PATH.
  * Otherwise, the invoked program runs with an empty environment and @a cmd
  * must be an absolute path.
@@ -914,11 +914,11 @@ svn_error_t *svn_io_start_cmd(apr_proc_t *cmd_proc,
  * Wait for the process @a *cmd_proc to complete and optionally retrieve
  * its exit code.  @a cmd is used only in error messages.
  *
- * If @a exitcode is not null, @a *exitcode will contain the exit code
- * of the process upon return, and if @a exitwhy is not null, @a
+ * If @a exitcode is not NULL, @a *exitcode will contain the exit code
+ * of the process upon return, and if @a exitwhy is not NULL, @a
  * *exitwhy will indicate why the process terminated.  If @a exitwhy is
- * null, and the exit reason is not @c APR_PROC_CHECK_EXIT(), or if
- * @a exitcode is null and the exit code is non-zero, then an
+ * NULL, and the exit reason is not @c APR_PROC_CHECK_EXIT(), or if
+ * @a exitcode is NULL and the exit code is non-zero, then an
  * @c SVN_ERR_EXTERNAL_PROGRAM error will be returned.
  *
  * @since New in 1.3.
@@ -951,14 +951,14 @@ svn_error_t *svn_io_run_cmd(const char *path,
  * Diff runs in utf8-encoded @a dir, and its exit status is stored in
  * @a exitcode, if it is not @c NULL.
  *
- * If @a label1 and/or @a label2 are not null they will be passed to the diff
+ * If @a label1 and/or @a label2 are not NULL they will be passed to the diff
  * process as the arguments of "-L" options.  @a label1 and @a label2 are also
  * in utf8, and will be converted to native charset along with the other args.
  *
  * @a from is the first file passed to diff, and @a to is the second.  The
  * stdout of diff will be sent to @a outfile, and the stderr to @a errfile.
  *
- * @a diff_cmd must be non-null.
+ * @a diff_cmd must be non-NULL.
  *
  * Do all allocation in @a pool.
  */
@@ -1004,7 +1004,7 @@ svn_error_t *svn_io_run_diff(const char *dir,
  * `diff3' was successful, 1 means some conflicts were found, and 2
  * means trouble.")
  *
- * @a diff3_cmd must be non-null.
+ * @a diff3_cmd must be non-NULL.
  *
  * Do all allocation in @a pool.
  *

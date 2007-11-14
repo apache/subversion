@@ -52,14 +52,14 @@ void svn_error__locate(const char *file, long line);
 
 
 /** Put an English description of @a statcode into @a buf and return @a buf,
- * null-terminated. @a statcode is either an svn error or apr error.
+ * NULL-terminated. @a statcode is either an svn error or apr error.
  */
 char *svn_strerror(apr_status_t statcode, char *buf, apr_size_t bufsize);
 
 
 /** If @a err has a custom error message, return that, otherwise
  * store the generic error string associated with @a err->apr_err into
- * @a buf (terminating with null) and return @a buf.
+ * @a buf (terminating with NULL) and return @a buf.
  *
  * @since New in 1.4.
  *

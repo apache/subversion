@@ -222,9 +222,9 @@ svn_opt_subcommand_takes_option(const svn_opt_subcommand_desc_t *command,
  *
  * ### @todo Why is @a stream a stdio file instead of an svn stream?
  *
- * If @a header is non-null, print @a header followed by a newline.  Then
+ * If @a header is non-NULL, print @a header followed by a newline.  Then
  * loop over @a cmd_table printing the usage for each command (getting
- * option usages from @a opt_table).  Then if @a footer is non-null, print
+ * option usages from @a opt_table).  Then if @a footer is non-NULL, print
  * @a footer followed by a newline.
  *
  * Use @a pool for temporary allocation.
@@ -588,9 +588,9 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
  * NULL, @a global_options is a zero-terminated array of options taken
  * by all subcommands.
  *
- * Else, if @a print_version is true, then print version info, in
- * brief form if @a quiet is also true; if @a quiet is false, then if
- * @a version_footer is non-null, print it following the version
+ * Else, if @a print_version is TRUE, then print version info, in
+ * brief form if @a quiet is also TRUE; if @a quiet is FALSE, then if
+ * @a version_footer is non-NULL, print it following the version
  * information.
  *
  * Else, if @a os is not @c NULL and does not contain arguments, print

@@ -145,6 +145,18 @@ svn_fs_fs__path_current(svn_fs_t *fs, apr_pool_t *pool)
 }
 
 static const char *
+path_txn_current(svn_fs_t *fs, apr_pool_t *pool)
+{
+  return svn_path_join(fs->path, PATH_TXN_CURRENT, pool);
+}
+
+static const char *
+path_txn_current_lock(svn_fs_t *fs, apr_pool_t *pool)
+{
+  return svn_path_join(fs->path, PATH_TXN_CURRENT_LOCK, pool);
+}
+
+static const char *
 path_lock(svn_fs_t *fs, apr_pool_t *pool)
 {
   return svn_path_join(fs->path, PATH_LOCK_FILE, pool);
@@ -392,6 +404,119 @@ with_txnlist_lock(svn_fs_t *fs,
 #endif
 
   return err;
+}
+
+
+/* Get a lock on empty file LOCK_FILENAME, creating it in POOL. */
+static svn_error_t *
+get_lock_on_filesystem(const char *lock_filename,
+               apr_pool_t *pool)
+{
+  svn_error_t *err = svn_io_file_lock2(lock_filename, TRUE, FALSE, pool);
+
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      /* No lock file?  No big deal; these are just empty files
+         anyway.  Create it and try again. */
+      svn_error_clear(err);
+      err = NULL;
+
+      SVN_ERR(svn_io_file_create(lock_filename, "", pool));
+      SVN_ERR(svn_io_file_lock2(lock_filename, TRUE, FALSE, pool));
+    }
+
+  return err;
+}
+
+/* Obtain a write lock on the file LOCK_FILENAME (protecting with
+   LOCK_MUTEX if APR is threaded) in a subpool of POOL, call BODY with
+   BATON and that subpool, destroy the subpool (releasing the write
+   lock) and return what BODY returned. */
+static svn_error_t *
+with_some_lock(svn_error_t *(*body)(void *baton,
+                                    apr_pool_t *pool),
+               void *baton,
+               const char *lock_filename,
+#if APR_HAS_THREADS
+               apr_thread_mutex_t *lock_mutex,
+#endif
+               apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_error_t *err;
+
+#if APR_HAS_THREADS
+  apr_status_t status;
+
+  /* POSIX fcntl locks are per-process, so we need to serialize locks
+     within the process. */
+  status = apr_thread_mutex_lock(lock_mutex);
+  if (status)
+    return svn_error_wrap_apr(status, 
+                              _("Can't grab FSFS mutex for '%s'"),
+                              lock_filename);
+#endif
+
+  err = get_lock_on_filesystem(lock_filename, subpool);
+
+  if (!err)
+    err = body(baton, subpool);
+
+  svn_pool_destroy(subpool);
+
+#if APR_HAS_THREADS
+  status = apr_thread_mutex_unlock(lock_mutex);
+  if (status && !err)
+    return svn_error_wrap_apr(status,
+                              _("Can't ungrab FSFS mutex for '%s'"),
+                              lock_filename);
+#endif
+
+  return err;
+}
+
+svn_error_t *
+svn_fs_fs__with_write_lock(svn_fs_t *fs,
+                           svn_error_t *(*body)(void *baton,
+                                                apr_pool_t *pool),
+                           void *baton,
+                           apr_pool_t *pool)
+{
+#if APR_HAS_THREADS
+  fs_fs_data_t *ffd = fs->fsap_data;
+  fs_fs_shared_data_t *ffsd = ffd->shared;
+  apr_thread_mutex_t *mutex = ffsd->fs_write_lock;
+#endif
+
+  return with_some_lock(body, baton,
+                        path_lock(fs, pool),
+#if APR_HAS_THREADS
+                        mutex,
+#endif
+                        pool);
+}
+
+/* Run BODY (with BATON and POOL) while the transaction-current file
+   of FS is locked. */
+static svn_error_t *
+with_txn_current_lock(svn_fs_t *fs,
+                      svn_error_t *(*body)(void *baton,
+                                           apr_pool_t *pool),
+                      void *baton,
+                      apr_pool_t *pool)
+{
+#if APR_HAS_THREADS
+  fs_fs_data_t *ffd = fs->fsap_data;
+  fs_fs_shared_data_t *ffsd = ffd->shared;
+  apr_thread_mutex_t *mutex = ffsd->txn_current_lock;
+#endif
+
+  return with_some_lock(body, baton,
+                        path_txn_current_lock(fs, pool),
+#if APR_HAS_THREADS
+                        mutex,
+#endif
+                        pool);
 }
 
 /* A structure used by unlock_proto_rev() and unlock_proto_rev_body(),
@@ -849,7 +974,8 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
  * For obvious reasons, this does not work *across hosts*.  No one
  * knows about the opened file; not the server, and not the deleting
  * client.  So the file vanishes, and the reader gets stale NFS file
- * handle.  We have this problem with revprops files and current.
+ * handle.  We have this problem with revprops files, current, and
+ * transaction-current.
  *
  * Wrap opens and reads of such files with SVN_RETRY_ESTALE and closes
  * with SVN_IGNORE_ESTALE.  Call these macros within a loop of
@@ -3183,9 +3309,7 @@ static svn_error_t *
 get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
 {
   struct get_and_increment_txn_key_baton *cb = baton;
-  const char *txn_current_filename = svn_path_join(cb->fs->path,
-                                                   PATH_TXN_CURRENT,
-                                                   pool);
+  const char *txn_current_filename = path_txn_current(cb->fs, pool);
   apr_file_t *txn_current_file;
   const char *tmp_filename;
   char next_txn_id[MAX_KEY_SIZE+3];
@@ -3262,10 +3386,10 @@ create_txn_dir(const char **id_p, svn_fs_t *fs, svn_revnum_t rev,
      number the transaction is based off into the transaction id. */
   cb.pool = pool;
   cb.fs = fs;
-  SVN_ERR(svn_fs_fs__with_write_lock(fs,
-                                     get_and_increment_txn_key_body,
-                                     &cb,
-                                     pool));
+  SVN_ERR(with_txn_current_lock(fs,
+                                get_and_increment_txn_key_body,
+                                &cb,
+                                pool));
   *id_p = apr_psprintf(pool, "%ld-%s", rev, cb.txn_id);
 
   txn_dir = svn_path_join_many(pool,
@@ -4679,67 +4803,6 @@ write_final_current(svn_fs_t *fs,
   return write_current(fs, rev, new_node_id, new_copy_id, pool);
 }
 
-/* Get a write lock in FS, creating it in POOL. */
-static svn_error_t *
-get_write_lock(svn_fs_t *fs,
-               apr_pool_t *pool)
-{
-  const char *lock_filename;
-  svn_node_kind_t kind;
-
-  lock_filename = path_lock(fs, pool);
-
-  /* svn 1.1.1 and earlier deferred lock file creation to the first
-     commit.  So in case the repository was created by an earlier
-     version of svn, check the lock file here. */
-  SVN_ERR(svn_io_check_path(lock_filename, &kind, pool));
-  if ((kind == svn_node_unknown) || (kind == svn_node_none))
-    SVN_ERR(svn_io_file_create(lock_filename, "", pool));
-
-  SVN_ERR(svn_io_file_lock2(lock_filename, TRUE, FALSE, pool));
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_fs_fs__with_write_lock(svn_fs_t *fs,
-                           svn_error_t *(*body)(void *baton,
-                                                apr_pool_t *pool),
-                           void *baton,
-                           apr_pool_t *pool)
-{
-  apr_pool_t *subpool = svn_pool_create(pool);
-  svn_error_t *err;
-
-#if APR_HAS_THREADS
-  fs_fs_data_t *ffd = fs->fsap_data;
-  fs_fs_shared_data_t *ffsd = ffd->shared;
-  apr_status_t status;
-
-  /* POSIX fcntl locks are per-process, so we need to serialize locks
-     within the process. */
-  status = apr_thread_mutex_lock(ffsd->fs_write_lock);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't grab FSFS repository mutex"));
-#endif
-
-  err = get_write_lock(fs, subpool);
-
-  if (!err)
-    err = body(baton, subpool);
-
-  svn_pool_destroy(subpool);
-
-#if APR_HAS_THREADS
-  status = apr_thread_mutex_unlock(ffsd->fs_write_lock);
-  if (status && !err)
-    return svn_error_wrap_apr(status,
-                              _("Can't ungrab FSFS repository mutex"));
-#endif
-
-  return err;
-}
-
 /* Verify that the user registed with FS has all the locks necessary to
    permit all the changes associate with TXN_NAME.
    The FS write lock is assumed to be held by the caller. */
@@ -5114,8 +5177,12 @@ svn_fs_fs__create(svn_fs_t *fs,
   /* Create the transaction-current file if the repository supports
      the transaction sequence file. */
   if (format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
-    SVN_ERR(svn_io_file_create(svn_path_join(path, PATH_TXN_CURRENT, pool),
-                               "0\n", pool));
+    {
+      SVN_ERR(svn_io_file_create(path_txn_current(fs, pool),
+                                 "0\n", pool));
+      SVN_ERR(svn_io_file_create(path_txn_current_lock(fs, pool),
+                                 "", pool));
+    }
 
   /* This filesystem is ready.  Stamp it with a format number. */
   SVN_ERR(write_format(path_format(fs, pool),

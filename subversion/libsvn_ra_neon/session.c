@@ -678,17 +678,15 @@ parse_capabilities(ne_request *req,
            slightly more efficiently, but that wouldn't be worth it
            until we have many more capabilities. */
 
-        if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_DEPTH, vals))
+        if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_DEPTH, vals))
           apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
                        APR_HASH_KEY_STRING, capability_yes);
 
-        if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO,
-                                        vals))
+        if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
           apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
                        APR_HASH_KEY_STRING, capability_yes);
 
-        if (svn_cstring_match_glob_list(SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS,
-                                        vals))
+        if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
           apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
                        APR_HASH_KEY_STRING, capability_yes);
       }
@@ -708,37 +706,9 @@ exchange_capabilities(svn_ra_neon__session_t *ras, apr_pool_t *pool)
 
   rar = svn_ra_neon__request_create(ras, "OPTIONS", ras->url->data, pool);
 
-  /*
-    ### TODO: 
-    ###
-    ### I think http://tools.ietf.org/html/rfc2774#section-3 probably
-    ### says how to define a new header with which the client can
-    ### express capabilities.  But I haven't finished reading it yet,
-    ### and in the meantime I'd like to get this code working, so I'm
-    ### just going with...
-    ###
-    ###    X-SVN-Capabilities: 
-    ###
-    ### ...for now, despite having no reason to believe the namespace
-    ### constraints for HTTP are anything like those of RFC 822 4.1,
-    ### where you just put "X-" on the front and then you're home free
-    ### (or at least you're only sharing namespace with all the other
-    ### bozos on the Internet).
-    ###
-    ### The header's value is a comma-separated list of capabilities;
-    ### if the header appears multiple times, its values are to be
-    ### concatenated in order as per RFC-2616, 14.43.
-    ###
-    ### NOTE: The ../libsvn_ra_serf code sets this header too, and has
-    ### shadow comments pointing back this one.  Whatever we do here,
-    ### we should do there as well.
-  */
-  ne_add_request_header(rar->ne_req, "X-SVN-Capabilities",
-                        SVN_DAV_PROP_NS_DAV_SVN_DEPTH);
-  ne_add_request_header(rar->ne_req, "X-SVN-Capabilities",
-                        SVN_DAV_PROP_NS_DAV_SVN_MERGEINFO);
-  ne_add_request_header(rar->ne_req, "X-SVN-Capabilities",
-                        SVN_DAV_PROP_NS_DAV_SVN_LOG_REVPROPS);
+  ne_add_request_header(rar->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
+  ne_add_request_header(rar->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
+  ne_add_request_header(rar->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
 
   SVN_ERR(svn_ra_neon__request_dispatch(&http_ret_code, rar,
                                         NULL, NULL, 200, 0, pool));

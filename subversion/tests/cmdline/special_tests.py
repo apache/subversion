@@ -524,7 +524,7 @@ def diff_symlink_to_dir(sbox):
     "\n",
     "Property changes on: svn-test-work/working_copies/special_tests-10/link\n",
     "___________________________________________________________________\n",
-    "Name: svn:special\n",
+    "Added: svn:special\n",
     "   + *\n",
     "\n" ]
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',

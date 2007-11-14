@@ -659,7 +659,7 @@ static svn_error_t *
 get_mergeinfo_for_children(sqlite3 *db,
                            const char *path,
                            svn_revnum_t rev,
-                           apr_hash_t **path_mergeinfo,
+                           apr_hash_t *path_mergeinfo,
                            svn_fs_mergeinfo_filter_func_t filter_func,
                            void *filter_func_baton,
                            apr_pool_t *pool)
@@ -835,7 +835,7 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
             }
         }
 
-      err = get_mergeinfo_for_children(db, path, rev, &path_mergeinfo,
+      err = get_mergeinfo_for_children(db, path, rev, path_mergeinfo,
                                        filter_func, filter_func_baton, pool);
       MAYBE_CLEANUP;
 

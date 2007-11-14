@@ -132,7 +132,7 @@ typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
 /**
  * Return, in @a *adm_access, a pointer to a new access baton for the working
  * copy administrative area associated with the directory @a path.  If
- * @a write_lock is true the baton will include a write lock, otherwise the
+ * @a write_lock is TRUE the baton will include a write lock, otherwise the
  * baton can only be used for read access.  If @a path refers to a directory
  * that is already write locked then the error @c SVN_ERR_WC_LOCKED will be
  * returned.  The error @c SVN_ERR_WC_NOT_DIRECTORY will be returned if
@@ -1052,7 +1052,7 @@ typedef enum svn_wc_conflict_reason_t
 typedef enum svn_wc_conflict_kind_t
 {
   svn_wc_conflict_kind_text,         /* textual conflict (on a file) */
-  svn_wc_conflict_kind_property,     /* property conflict (on a file or dir) */
+  svn_wc_conflict_kind_property      /* property conflict (on a file or dir) */
 
   /* ### Add future kinds here that represent "tree" conflicts. */
 
@@ -1137,7 +1137,7 @@ typedef enum svn_wc_conflict_choice_t
   svn_wc_conflict_choose_base,   /* user chooses the original version */
   svn_wc_conflict_choose_theirs, /* user chooses incoming version */
   svn_wc_conflict_choose_mine,   /* user chooses his/her own version */
-  svn_wc_conflict_choose_merged, /* user chooses the merged version */
+  svn_wc_conflict_choose_merged  /* user chooses the merged version */
 
 } svn_wc_conflict_choice_t;
 
@@ -1756,7 +1756,7 @@ typedef struct svn_wc_entry_t
 
 
 /** Set @a *entry to an entry for @a path, allocated in the access baton
- * pool.  If @a show_hidden is true, return the entry even if it's in
+ * pool.  If @a show_hidden is TRUE, return the entry even if it's in
  * 'deleted' or 'absent' state.  If @a path is not under revision
  * control, or if entry is hidden, not scheduled for re-addition,
  * and @a show_hidden is @c FALSE, then set @a *entry to @c NULL.
@@ -1795,7 +1795,7 @@ svn_error_t *svn_wc_entry(const svn_wc_entry_t **entry,
  *
  * Entries that are in a 'deleted' or 'absent' state (and not
  * scheduled for re-addition) are not returned in the hash, unless
- * @a show_hidden is true.
+ * @a show_hidden is TRUE.
  *
  * @par Important:
  * The @a entries hash is the entries cache in @a adm_access
@@ -1909,7 +1909,7 @@ typedef struct svn_wc_entry_callbacks_t
  *
  * Like our other entries interfaces, entries that are in a 'deleted'
  * or 'absent' state (and not scheduled for re-addition) are not
- * discovered, unless @a show_hidden is true.
+ * discovered, unless @a show_hidden is TRUE.
  *
  * When a new directory is entered, @c SVN_WC_ENTRY_THIS_DIR will always
  * be returned first.
@@ -2372,8 +2372,8 @@ typedef void (*svn_wc_status_func_t)(void *baton,
  *
  * Assuming the target is a directory, then:
  *
- *   - If @a get_all is false, then only locally-modified entries will be
- *     returned.  If true, then all entries will be returned.
+ *   - If @a get_all is FALSE, then only locally-modified entries will be
+ *     returned.  If TRUE, then all entries will be returned.
  *
  *   - If @a depth is @c svn_depth_empty, a status structure will
  *     be returned for the target only; if @c svn_depth_files, for the
@@ -2427,8 +2427,8 @@ svn_error_t *svn_wc_get_status_editor3(const svn_delta_editor_t **editor,
 /**
  * Like svn_wc_get_status_editor3(), but with @a ignore_patterns
  * provided from the corresponding value in @a config, and @a recurse
- * instead of @a depth.  If @a recurse is true, behave as if for @c
- * svn_depth_infinity; else if @a recurse is false, behave as if for
+ * instead of @a depth.  If @a recurse is TRUE, behave as if for @c
+ * svn_depth_infinity; else if @a recurse is FALSE, behave as if for
  * @c svn_depth_immediates.
  *
  * @since New in 1.2.
@@ -2579,7 +2579,7 @@ svn_error_t *svn_wc_delete3(const char *path,
                             apr_pool_t *pool);
 
 /**
- * Similar to svn_wc_delete3(), but with @a keep_local always set to false.
+ * Similar to svn_wc_delete3(), but with @a keep_local always set to FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -2633,7 +2633,7 @@ svn_error_t *svn_wc_delete(const char *path,
  * ### responsible for "switching" a working copy directory over to a
  * ### new copyfrom ancestry and scheduling it for addition.  Here is
  * ### the old doc string from Ben, lightly edited to bring it
- * ### up-to-date, explaining the true, secret life of this function:</pre>
+ * ### up-to-date, explaining the TRUE, secret life of this function:</pre>
  *
  * Given a @a path within a working copy of type KIND, follow this algorithm:
  *
@@ -2759,11 +2759,11 @@ svn_error_t *svn_wc_add_repos_file(const char *dst_path,
  * *all* the administrative areas anywhere in the tree below @a adm_access.
  *
  * Normally, only administrative data is removed.  However, if
- * @a destroy_wf is true, then all working file(s) and dirs are deleted
+ * @a destroy_wf is TRUE, then all working file(s) and dirs are deleted
  * from disk as well.  When called with @a destroy_wf, any locally
  * modified files will *not* be deleted, and the special error
  * @c SVN_ERR_WC_LEFT_LOCAL_MOD might be returned.  (Callers only need to
- * check for this special return value if @a destroy_wf is true.)
+ * check for this special return value if @a destroy_wf is TRUE.)
  *
  * If @a instant_error is TRUE, then return @c
  * SVN_ERR_WC_LEFT_LOCAL_MOD the instant a locally modified file is
@@ -2790,8 +2790,8 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
 
 /**
  * Assuming @a path is under version control and in a state of conflict,
- * then take @a path *out* of this state.  If @a resolve_text is true then
- * any text conflict is resolved, if @a resolve_props is true then any
+ * then take @a path *out* of this state.  If @a resolve_text is TRUE then
+ * any text conflict is resolved, if @a resolve_props is TRUE then any
  * property conflicts are resolved.
  *
  * If @a depth is @c svn_depth_empty, act only on @a path; if
@@ -2847,7 +2847,7 @@ svn_error_t *svn_wc_resolved_conflict3(const char *path,
 /**
  * Similar to svn_wc_resolved_conflict3(), but without automatic conflict
  * resolution support, and with @a depth set according to @a recurse:
- * if @a recurse is true, @a depth is @c svn_depth_infinity, else it is
+ * if @a recurse is TRUE, @a depth is @c svn_depth_infinity, else it is
  * @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -2971,7 +2971,7 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
  * the checksum for the new text base.  Else, calculate the checksum
  * if needed.
  *
- * If @a recurse is true and @a path is a directory, then bump every
+ * If @a recurse is TRUE and @a path is a directory, then bump every
  * versioned object at or under @a path.  This is usually done for
  * copied trees.
  *
@@ -3075,12 +3075,12 @@ svn_error_t *svn_wc_process_committed(const char *path,
  * sending back all the items the client might need to upgrade a
  * working copy from a shallower depth to a deeper one.
  *
- * If @a restore_files is true, then unexpectedly missing working files
+ * If @a restore_files is TRUE, then unexpectedly missing working files
  * will be restored from the administrative directory's cache. For each
  * file restored, the @a notify_func function will be called with the
  * @a notify_baton and the path of the restored file. @a notify_func may
  * be @c NULL if this notification is not required.  If @a
- * use_commit_times is true, then set restored files' timestamps to
+ * use_commit_times is TRUE, then set restored files' timestamps to
  * their last-commit-times.
  *
  * If @a traversal_info is non-NULL, then record pre-update traversal
@@ -3230,7 +3230,7 @@ svn_error_t *svn_wc_get_actual_target(const char *path,
  * have their working timestamp set to the last-committed-time.  If
  * FALSE, the working files will be touched with the 'now' time.
  *
- * If @a allow_unver_obstructions is true, then allow unversioned
+ * If @a allow_unver_obstructions is TRUE, then allow unversioned
  * obstructions when adding a path.
  *
  * If @a depth is @c svn_depth_infinity, update fully recursively.
@@ -3273,11 +3273,11 @@ svn_error_t *svn_wc_get_update_editor3(svn_revnum_t *target_revision,
 
 /**
  * Similar to svn_wc_get_update_editor3() but with the @a
- * allow_unver_obstructions parameter always set to false, @a
+ * allow_unver_obstructions parameter always set to FALSE, @a
  * conflict_func and baton set to NULL, @a fetch_func and baton set to
  * NULL, @a preserved_exts set to NULL, and @a depth set according to
- * @a recurse: if @a recurse is true, pass @c svn_depth_infinity, if
- * false, pass @c svn_depth_files.
+ * @a recurse: if @a recurse is TRUE, pass @c svn_depth_infinity, if
+ * FALSE, pass @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -3370,7 +3370,7 @@ svn_error_t *svn_wc_get_update_editor(svn_revnum_t *target_revision,
  *
  * @a depth behaves as for svn_wc_get_update_editor3().
  *
- * If @a allow_unver_obstructions is true, then allow unversioned
+ * If @a allow_unver_obstructions is TRUE, then allow unversioned
  * obstructions when adding a path.
  *
  * @since New in 1.5.
@@ -3397,10 +3397,10 @@ svn_error_t *svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
 
 /**
  * Similar to svn_wc_get_switch_editor3() but with the
- * @a allow_unver_obstructions parameter always set to false,
+ * @a allow_unver_obstructions parameter always set to FALSE,
  * @a preserved_exts set to NULL, @a conflict_func and baton set to NULL,
- * and @a depth set according to @a recurse: if @a recurse is true, pass @c
- * svn_depth_infinity, if false, pass @c svn_depth_files.
+ * and @a depth set according to @a recurse: if @a recurse is TRUE, pass @c
+ * svn_depth_infinity, if FALSE, pass @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -3491,8 +3491,8 @@ svn_error_t *svn_wc_prop_get(const svn_string_t **value,
  * NULL, remove property @a name from @a path.  @a adm_access is an
  * access baton with a write lock for @a path.
  *
- * If @a skip_checks is true, do no validity checking.  But if @a
- * skip_checks is false, and @a name is not a valid property for @a
+ * If @a skip_checks is TRUE, do no validity checking.  But if @a
+ * skip_checks is FALSE, and @a name is not a valid property for @a
  * path, return an error, either @c SVN_ERR_ILLEGAL_TARGET (if the
  * property is not appropriate for @a path), or @c
  * SVN_ERR_BAD_MIME_TYPE (if @a name is "svn:mime-type", but @a value
@@ -3500,7 +3500,7 @@ svn_error_t *svn_wc_prop_get(const svn_string_t **value,
  *
  * @a name may be a wc property or a regular property; but if it is an
  * entry property, return the error @c SVN_ERR_BAD_PROP_KIND, even if
- * @a skip_checks is true.
+ * @a skip_checks is TRUE.
  *
  * Use @a pool for temporary allocation.
  *
@@ -3515,7 +3515,7 @@ svn_error_t *svn_wc_prop_set2(const char *name,
 
 
 /**
- * Like svn_wc_prop_set2(), but with @a skip_checks always false.
+ * Like svn_wc_prop_set2(), but with @a skip_checks always FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
@@ -3526,7 +3526,7 @@ svn_error_t *svn_wc_prop_set(const char *name,
                              apr_pool_t *pool);
 
 
-/** Return true iff @a name is a 'normal' property name.  'Normal' is
+/** Return TRUE iff @a name is a 'normal' property name.  'Normal' is
  * defined as a user-visible and user-tweakable property that shows up
  * when you fetch a proplist.
  *
@@ -3543,10 +3543,10 @@ svn_boolean_t svn_wc_is_normal_prop(const char *name);
 
 
 
-/** Return true iff @a name is a 'wc' property name. */
+/** Return TRUE iff @a name is a 'wc' property name. */
 svn_boolean_t svn_wc_is_wc_prop(const char *name);
 
-/** Return true iff @a name is a 'entry' property name. */
+/** Return TRUE iff @a name is a 'entry' property name. */
 svn_boolean_t svn_wc_is_entry_prop(const char *name);
 
 /** Callback type used by @c svn_wc_canonicalize_svn_prop.
@@ -3573,7 +3573,7 @@ typedef svn_error_t *(*svn_wc_canonicalize_svn_prop_get_file_t)
  * If the property is not appropriate for a node of kind @a kind, or
  * is otherwise invalid, throw an error.  Otherwise, set @a *propval_p
  * to a canonicalized version of the property value.  If @a
- * skip_some_checks is true, only some validity checks are taken.
+ * skip_some_checks is TRUE, only some validity checks are taken.
  *
  * Some validity checks require access to the contents and MIME type
  * of the target if it is a file; they will call @a prop_getter with @a
@@ -3623,11 +3623,11 @@ svn_error_t *svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * @a ignore_ancestry is @c FALSE, then any discontinuous node ancestry will
  * result in the diff given as a full delete followed by an add.
  *
- * If @a use_text_base is true, then compare the repository against
+ * If @a use_text_base is TRUE, then compare the repository against
  * the working copy's text-base files, rather than the working files.
  *
  * Normally, the difference from repository->working_copy is shown.
- * If @a reverse_order is true, then show working_copy->repository diffs.
+ * If @a reverse_order is TRUE, then show working_copy->repository diffs.
  *
  * If @a cancel_func is non-NULL, it will be used along with @a cancel_baton
  * to periodically check if the client has canceled the operation.
@@ -3649,8 +3649,8 @@ svn_error_t *svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
                                      apr_pool_t *pool);
 /**
  * Similar to svn_wc_get_diff_editor4(), but with @a depth set to
- * @c svn_depth_infinity if @a recurse is true, or @a svn_depth_files
- * if @a recurse is false.
+ * @c svn_depth_infinity if @a recurse is TRUE, or @a svn_depth_files
+ * if @a recurse is FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
 
@@ -3746,8 +3746,8 @@ svn_error_t *svn_wc_diff4(svn_wc_adm_access_t *anchor,
 
 /**
  * Similar to svn_wc_diff4(), but with @a depth set to
- * @c svn_depth_infinity if @a recurse is true, or @a svn_depth_files
- * if @a recurse is false.
+ * @c svn_depth_infinity if @a recurse is TRUE, or @a svn_depth_files
+ * if @a recurse is FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
@@ -4079,7 +4079,7 @@ svn_wc_cleanup(const char *path,
  * @a baton is a closure object; it should be provided by the
  * implementation, and passed by the caller.
  *
- * If @a root is true, then the implementation should make sure that @a url
+ * If @a root is TRUE, then the implementation should make sure that @a url
  * is the repository root.  Else, it can be an URL inside the repository.
  * @a pool may be used for temporary allocations.
  *
@@ -4114,7 +4114,7 @@ typedef svn_error_t *(*svn_wc_relocation_validator_t)(void *baton,
 
 /** Change repository references at @a path that begin with @a from
  * to begin with @a to instead.  Perform necessary allocations in @a pool.
- * If @a recurse is true, do so.  @a validator (and its baton,
+ * If @a recurse is TRUE, do so.  @a validator (and its baton,
  * @a validator_baton), will be called for each newly generated URL.
  *
  * @a adm_access is an access baton for the directory containing
@@ -4205,10 +4205,10 @@ svn_wc_revert3(const char *path,
 
 /**
  * Similar to svn_wc_revert3(), but with @a depth set according to
- * @a recursive: if @a recursive is true, @a depth is
- * @c svn_depth_infinity; if false, @a depth is @c svn_depth_empty.
+ * @a recursive: if @a recursive is TRUE, @a depth is
+ * @c svn_depth_infinity; if FALSE, @a depth is @c svn_depth_empty.
  *
- * @note Most APIs map @a recurse==false to @a depth==svn_depth_files;
+ * @note Most APIs map @a recurse==FALSE to @a depth==svn_depth_files;
  * revert is deliberately different.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
@@ -4449,7 +4449,7 @@ svn_error_t *svn_wc_get_ignores(apr_array_header_t **patterns,
                                 svn_wc_adm_access_t *adm_access,
                                 apr_pool_t *pool);
 
-/** Return true iff @a str matches any of the elements of @a list, a
+/** Return TRUE iff @a str matches any of the elements of @a list, a
  * list of zero or more ignore patterns.
  *
  * @since New in 1.5.
@@ -4501,7 +4501,7 @@ svn_wc_revision_status_t;
  *
  * Set @a (*result_p)->min_rev and @a (*result_p)->max_rev respectively to the
  * lowest and highest revision numbers in the working copy.  If @a committed
- * is true, summarize the last-changed revisions, else the base revisions.
+ * is TRUE, summarize the last-changed revisions, else the base revisions.
  *
  * Set @a (*result_p)->switched to indicate whether any item in the WC is
  * switched relative to its parent.  If @a trail_url is non-NULL, use it to

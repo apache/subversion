@@ -789,7 +789,7 @@ EOE
       editor = access.update_editor2(0, @wc_path)
       assert_equal(0, editor.target_revision)
 
-      reporter = session.update2(rev2, @wc_path, editor)
+      reporter = session.update2(rev2, "", editor)
       access.crawl_revisions(@wc_path, reporter)
       assert_equal(rev2, editor.target_revision)
     end
@@ -831,7 +831,7 @@ EOE
       editor = dir_access.switch_editor2(rev2, @wc_path, dir1_uri)
       assert_equal(rev2, editor.target_revision)
 
-      reporter = session.switch2(rev1, @wc_path, dir1_uri, editor)
+      reporter = session.switch2(rev1, dir1, dir1_uri, editor)
       dir_access.crawl_revisions(@wc_path, reporter)
       assert_equal(rev1, editor.target_revision)
     end

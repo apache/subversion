@@ -38,15 +38,16 @@ extern "C" {
    native filesystem directories and revision files. */
 
 /* Names of special files in the fs_fs filesystem. */
-#define PATH_FORMAT        "format"        /* Contains format number */
-#define PATH_UUID          "uuid"          /* Contains UUID */
-#define PATH_CURRENT       "current"       /* Youngest revision */
-#define PATH_LOCK_FILE     "write-lock"    /* Revision lock file */
-#define PATH_REVS_DIR      "revs"          /* Directory of revisions */
-#define PATH_REVPROPS_DIR  "revprops"      /* Directory of revprops */
-#define PATH_TXNS_DIR      "transactions"  /* Directory of transactions */
-#define PATH_TXN_CURRENT   "transaction-current" /* File with next txn key */
-#define PATH_LOCKS_DIR     "locks"         /* Directory of locks */
+#define PATH_FORMAT           "format"           /* Contains format number */
+#define PATH_UUID             "uuid"             /* Contains UUID */
+#define PATH_CURRENT          "current"          /* Youngest revision */
+#define PATH_LOCK_FILE        "write-lock"       /* Revision lock file */
+#define PATH_REVS_DIR         "revs"             /* Directory of revisions */
+#define PATH_REVPROPS_DIR     "revprops"         /* Directory of revprops */
+#define PATH_TXNS_DIR         "transactions"     /* Directory of transactions */
+#define PATH_TXN_CURRENT      "transaction-current" /* File with next txn key */
+#define PATH_TXN_CURRENT_LOCK "txn-current-lock" /* Lock for txn-current */
+#define PATH_LOCKS_DIR         "locks"           /* Directory of locks */
 
 /* Names of special files and file extensions for transactions */
 #define PATH_CHANGES       "changes"       /* Records changes made so far */
@@ -138,6 +139,10 @@ typedef struct
   /* A lock for intra-process synchronization when grabbing the
      repository write lock. */
   apr_thread_mutex_t *fs_write_lock;
+
+  /* A lock for intra-process synchronization when locking the
+     transaction-current file. */
+  apr_thread_mutex_t *txn_current_lock;
 #endif
 
   /* The common pool, under which this object is allocated, subpools

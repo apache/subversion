@@ -962,7 +962,10 @@ svn_fs_base__dag_remove_node(svn_fs_t *fs,
                                                txn_id, trail, pool));
 
   /* Delete the node revision itself. */
-  SVN_ERR(svn_fs_base__delete_node_revision(fs, id, trail, pool));
+  SVN_ERR(svn_fs_base__delete_node_revision(fs, id, 
+                                            noderev->predecessor_id 
+                                              ? FALSE : TRUE,
+                                            trail, pool));
 
   return SVN_NO_ERROR;
 }

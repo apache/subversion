@@ -895,7 +895,7 @@ def run_and_verify_diff_summarize_xml(error_re_string = [],
   contain all arguments beyond for your 'diff --summarize --xml' omitting
   said arguments.  EXPECTED_PREFIX will store a "common" path prefix
   expected to be at the beginning of each summarized path.  If
-  EXPECTED_PREFIX is None, the EXPECTED_PATHS will need to be exactly
+  EXPECTED_PREFIX is None, then EXPECTED_PATHS will need to be exactly
   as 'svn diff --summarize --xml' will output.  If ERROR_RE_STRING, the
   command must exit with error, and the error message must match regular
   expression ERROR_RE_STRING.
@@ -915,10 +915,8 @@ def run_and_verify_diff_summarize_xml(error_re_string = [],
 
   doc = parseString(''.join(output))
   paths = doc.getElementsByTagName("path")
-  modified_paths = expected_paths
   items = expected_items
   kinds = expected_kinds
-  modified_props = expected_props
 
   for path in paths:
     modified_path = path.childNodes[0].data
@@ -929,19 +927,23 @@ def run_and_verify_diff_summarize_xml(error_re_string = [],
 
     # Workaround single-object diff
     if len(modified_path) == 0:
-      modified_path = path.childNodes[0].data.split("/")[-1]
+      modified_path = path.childNodes[0].data.split(os.sep)[-1]
 
-    if modified_path not in modified_paths:
+    # From here on, we use '/' as path separator.
+    if os.sep != "/":
+      modified_path = modified_path.replace(os.sep, "/")
+
+    if modified_path not in expected_paths:
       print "ERROR: %s not expected in the changed paths." % modified_path
       raise Failure
 
-    index = modified_paths.index(modified_path)
+    index = expected_paths.index(modified_path)
     expected_item = items[index]
     expected_kind = kinds[index]
-    expected_props = modified_props[index]
+    expected_prop = expected_props[index]
     actual_item = path.getAttribute('item')
     actual_kind = path.getAttribute('kind')
-    actual_props = path.getAttribute('props')
+    actual_prop = path.getAttribute('props')
   
     if expected_item != actual_item:
       print "ERROR: expected:", expected_item, "actual:", actual_item
@@ -951,8 +953,8 @@ def run_and_verify_diff_summarize_xml(error_re_string = [],
       print "ERROR: expected:", expected_kind, "actual:", actual_kind
       raise Failure
 
-    if expected_props != actual_props:
-      print "ERROR: expected:", expected_props, "actual:", actual_props
+    if expected_prop != actual_prop:
+      print "ERROR: expected:", expected_prop, "actual:", actual_prop
       raise Failure
 
 def run_and_verify_diff_summarize(output_tree, error_re_string = None,

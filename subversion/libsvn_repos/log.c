@@ -753,7 +753,7 @@ get_combined_mergeinfo(apr_hash_t **mergeinfo,
       apr_hash_t *path_mergeinfo;
 
       apr_hash_this(hi, NULL, NULL, (void *)&path_mergeinfo);
-      SVN_ERR(svn_mergeinfo_merge(mergeinfo, path_mergeinfo,
+      SVN_ERR(svn_mergeinfo_merge(*mergeinfo, path_mergeinfo,
                                   svn_rangelist_equal_inheritance, pool));
     }
 
@@ -816,7 +816,7 @@ get_merged_rev_mergeinfo(apr_hash_t **mergeinfo,
   SVN_ERR(svn_mergeinfo_diff(&deleted, &changed, prev_mergeinfo,
                              curr_mergeinfo, svn_rangelist_ignore_inheritance,
                              subpool));
-  SVN_ERR(svn_mergeinfo_merge(&changed, deleted,
+  SVN_ERR(svn_mergeinfo_merge(changed, deleted,
                               svn_rangelist_equal_inheritance, subpool));
 
   *mergeinfo = svn_mergeinfo_dup(changed, pool);

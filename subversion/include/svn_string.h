@@ -49,16 +49,16 @@
  *
  *      Note that an @c svn_string(buf)_t may contain binary data,
  *      which means that strlen(s->data) does not have to equal @c
- *      s->len. The null terminator is provided to make it easier to
+ *      s->len. The NULL terminator is provided to make it easier to
  *      pass @c s->data to C string interfaces.
  *
  *
- *   2. Non-null input:
+ *   2. Non-NULL input:
  *
- *      All the functions assume their input data is non-null,
+ *      All the functions assume their input data is non-NULL,
  *      unless otherwise documented, and may seg fault if passed
- *      null.  The input data may *contain* null bytes, of course, just
- *      the data pointer itself must not be null.
+ *      NULL.  The input data may *contain* null bytes, of course, just
+ *      the data pointer itself must not be NULL.
  */
 
 
@@ -117,12 +117,12 @@ typedef struct svn_stringbuf_t
  * @{
  */
 
-/** Create a new bytestring containing a C string (null-terminated). */
+/** Create a new bytestring containing a C string (NULL-terminated). */
 svn_string_t *svn_string_create(const char *cstring,
                                 apr_pool_t *pool);
 
 /** Create a new bytestring containing a generic string of bytes
- * (NOT null-terminated) */
+ * (NOT NULL-terminated) */
 svn_string_t *svn_string_ncreate(const char *bytes,
                                  apr_size_t size,
                                  apr_pool_t *pool);
@@ -131,7 +131,7 @@ svn_string_t *svn_string_ncreate(const char *bytes,
 svn_string_t *svn_string_create_from_buf(const svn_stringbuf_t *strbuf,
                                          apr_pool_t *pool);
 
-/** Create a new bytestring by formatting @a cstring (null-terminated)
+/** Create a new bytestring by formatting @a cstring (NULL-terminated)
  * from varargs, which are as appropriate for apr_psprintf().
  */
 svn_string_t *svn_string_createf(apr_pool_t *pool,
@@ -139,7 +139,7 @@ svn_string_t *svn_string_createf(apr_pool_t *pool,
                                  ...)
   __attribute__((format(printf, 2, 3)));
 
-/** Create a new bytestring by formatting @a cstring (null-terminated)
+/** Create a new bytestring by formatting @a cstring (NULL-terminated)
  * from a @c va_list (see svn_stringbuf_createf()).
  */
 svn_string_t *svn_string_createv(apr_pool_t *pool,
@@ -147,7 +147,7 @@ svn_string_t *svn_string_createv(apr_pool_t *pool,
                                  va_list ap)
   __attribute__((format(printf, 2, 0)));
 
-/** Return true if a bytestring is empty (has length zero). */
+/** Return TRUE if a bytestring is empty (has length zero). */
 svn_boolean_t svn_string_isempty(const svn_string_t *str);
 
 /** Return a duplicate of @a original_string. */
@@ -177,11 +177,11 @@ apr_size_t svn_string_find_char_backward(const svn_string_t *str, char ch);
  * @{
  */
 
-/** Create a new bytestring containing a C string (null-terminated). */
+/** Create a new bytestring containing a C string (NULL-terminated). */
 svn_stringbuf_t *svn_stringbuf_create(const char *cstring,
                                       apr_pool_t *pool);
 /** Create a new bytestring containing a generic string of bytes
- * (NON-null-terminated)
+ * (NON-NULL-terminated)
  */
 svn_stringbuf_t *svn_stringbuf_ncreate(const char *bytes,
                                        apr_size_t size,
@@ -191,7 +191,7 @@ svn_stringbuf_t *svn_stringbuf_ncreate(const char *bytes,
 svn_stringbuf_t *svn_stringbuf_create_from_string(const svn_string_t *str,
                                                   apr_pool_t *pool);
 
-/** Create a new bytestring by formatting @a cstring (null-terminated)
+/** Create a new bytestring by formatting @a cstring (NULL-terminated)
  * from varargs, which are as appropriate for apr_psprintf().
  */
 svn_stringbuf_t *svn_stringbuf_createf(apr_pool_t *pool,
@@ -199,7 +199,7 @@ svn_stringbuf_t *svn_stringbuf_createf(apr_pool_t *pool,
                                        ...)
   __attribute__((format(printf, 2, 3)));
 
-/** Create a new bytestring by formatting @a cstring (null-terminated)
+/** Create a new bytestring by formatting @a cstring (NULL-terminated)
  * from a @c va_list (see svn_stringbuf_createf()).
  */
 svn_stringbuf_t *svn_stringbuf_createv(apr_pool_t *pool,
@@ -210,7 +210,7 @@ svn_stringbuf_t *svn_stringbuf_createv(apr_pool_t *pool,
 /** Make sure that the string @a str has at least @a minimum_size bytes of
  * space available in the memory block.
  *
- * (@a minimum_size should include space for the terminating null character.)
+ * (@a minimum_size should include space for the terminating NULL character.)
  */
 void svn_stringbuf_ensure(svn_stringbuf_t *str,
                           apr_size_t minimum_size);
@@ -297,7 +297,7 @@ svn_boolean_t svn_string_compare_stringbuf(const svn_string_t *str1,
  * (thus, it is possible that the returned array will have length
  * zero).
  *
- * If @a chop_whitespace is true, then remove leading and trailing
+ * If @a chop_whitespace is TRUE, then remove leading and trailing
  * whitespace from the returned strings.
  */
 apr_array_header_t *svn_cstring_split(const char *input,
@@ -334,6 +334,7 @@ int svn_cstring_count_newlines(const char *msg);
  * Return a cstring which is the concatenation of @a strings (an array
  * of char *) each followed by @a separator (that is, @a separator
  * will also end the resulting string).  Allocate the result in @a pool.
+ * If @a strings is empty, then return the empty string.
  *
  * @since New in 1.2.
  */

@@ -127,10 +127,10 @@ typedef struct svn_auth_provider_t
    *
    * Store @a credentials for future use.  @a provider_baton is
    * general context for the vtable, and @a parameters contains any
-   * run-time data the provider may need.  Set @a *saved to true if
-   * the save happened, or false if not.  The provider is not required
+   * run-time data the provider may need.  Set @a *saved to TRUE if
+   * the save happened, or FALSE if not.  The provider is not required
    * to save; if it refuses or is unable to save for non-fatal
-   * reasons, return false.  If the provider never saves data, then
+   * reasons, return FALSE.  If the provider never saves data, then
    * this function pointer should simply be NULL. @a realmstring comes
    * from the svn_auth_first_credentials() call.
    */
@@ -334,12 +334,12 @@ typedef struct svn_auth_cred_ssl_server_trust_t
 /** Set @a *cred by prompting the user, allocating @a *cred in @a pool.
  * @a baton is an implementation-specific closure.
  *
- * If @a realm is non-null, maybe use it in the prompt string.
+ * If @a realm is non-NULL, maybe use it in the prompt string.
  *
- * If @a username is non-null, then the user might be prompted only
+ * If @a username is non-NULL, then the user might be prompted only
  * for a password, but @a *cred would still be filled with both
  * username and password.  For example, a typical usage would be to
- * pass @a username on the first call, but then leave it null for
+ * pass @a username on the first call, but then leave it NULL for
  * subsequent calls, on the theory that if credentials failed, it's
  * as likely to be due to incorrect username as incorrect password.
  *
@@ -361,7 +361,7 @@ typedef svn_error_t *(*svn_auth_simple_prompt_func_t)
 /** Set @a *cred by prompting the user, allocating @a *cred in @a pool.
  * @a baton is an implementation-specific closure.
  *
- * If @a realm is non-null, maybe use it in the prompt string.
+ * If @a realm is non-NULL, maybe use it in the prompt string.
  *
  * If @a may_save is FALSE, the auth system does not allow the credentials
  * to be saved (to disk). A prompt function shall not ask the user if the

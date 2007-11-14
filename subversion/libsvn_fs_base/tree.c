@@ -56,6 +56,7 @@
 #include "bdb/nodes-table.h"
 #include "bdb/changes-table.h"
 #include "bdb/copies-table.h"
+#include "bdb/node-origins-table.h"
 #include "../libsvn_fs/fs-loader.h"
 #include "private/svn_fs_mergeinfo.h"
 #include "private/svn_fs_util.h"
@@ -4321,6 +4322,282 @@ assemble_history(svn_fs_t *fs,
 }
 
 
+svn_error_t *
+svn_fs_base__get_path_kind(svn_node_kind_t *kind,
+                           const char *path,
+                           trail_t *trail,
+                           apr_pool_t *pool)
+{
+  svn_revnum_t head_rev;
+  svn_fs_root_t *root;
+  dag_node_t *root_dir, *path_node;
+  svn_error_t *err;
+
+  /* Get HEAD revision, */
+  SVN_ERR(svn_fs_bdb__youngest_rev(&head_rev, trail->fs, trail, pool));
+
+  /* Then convert it into a root_t, */
+  SVN_ERR(svn_fs_base__dag_revision_root(&root_dir, trail->fs, head_rev,
+                                         trail, pool));
+  root = make_revision_root(trail->fs, head_rev, root_dir, pool);
+
+  /* And get the dag_node for path in the root_t. */
+  err = get_dag(&path_node, root, path, trail, pool);
+  if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND))
+    {
+      svn_error_clear(err);
+      *kind = svn_node_none;
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return err;
+
+  *kind = svn_fs_base__dag_node_kind(path_node);
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_base__get_path_created_rev(svn_revnum_t *rev,
+                                  const char *path,
+                                  trail_t *trail,
+                                  apr_pool_t *pool)
+{
+  svn_revnum_t head_rev, created_rev;
+  svn_fs_root_t *root;
+  dag_node_t *root_dir, *path_node;
+  svn_error_t *err;
+
+  /* Get HEAD revision, */
+  SVN_ERR(svn_fs_bdb__youngest_rev(&head_rev, trail->fs, trail, pool));
+
+  /* Then convert it into a root_t, */
+  SVN_ERR(svn_fs_base__dag_revision_root(&root_dir, trail->fs, head_rev,
+                                         trail, pool));
+  root = make_revision_root(trail->fs, head_rev, root_dir, pool);
+
+  /* And get the dag_node for path in the root_t. */
+  err = get_dag(&path_node, root, path, trail, pool);
+  if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND))
+    {
+      svn_error_clear(err);
+      *rev = SVN_INVALID_REVNUM;
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return err;
+
+  /* Find the created_rev of the dag_node. */
+  SVN_ERR(svn_fs_base__dag_get_revision(&created_rev, path_node,
+                                        trail, pool));
+
+  *rev = created_rev;
+  return SVN_NO_ERROR;
+}
+
+
+
+/*** Finding the Origin of a Line of History ***/
+
+/* Set *PREV_PATH and *PREV_REV to the path and revision which
+   represent the location at which PATH in FS was located immediately
+   prior to REVISION iff there was a copy operation (to PATH or one of
+   its parent directories) between that previous location and
+   PATH@REVISION.
+
+   If there was no such copy operation in that portion of PATH's
+   history, set *PREV_PATH to NULL and *PREV_REV to SVN_INVALID_REVNUM.
+
+   WARNING:  Do *not* call this from inside a trail. */
+static svn_error_t *
+prev_location(const char **prev_path,
+              svn_revnum_t *prev_rev,
+              svn_fs_t *fs,
+              svn_fs_root_t *root,
+              const char *path,
+              apr_pool_t *pool)
+{
+  const char *copy_path, *copy_src_path, *remainder = "";
+  svn_fs_root_t *copy_root;
+  svn_revnum_t copy_src_rev;
+
+  /* Ask about the most recent copy which affected PATH@REVISION.  If
+     there was no such copy, we're done.  */
+  SVN_ERR(base_closest_copy(&copy_root, &copy_path, root, path, pool));
+  if (! copy_root)
+    {
+      *prev_rev = SVN_INVALID_REVNUM;
+      *prev_path = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  /* Ultimately, it's not the path of the closest copy's source that
+     we care about -- it's our own path's location in the copy source
+     revision.  So we'll tack the relative path that expresses the
+     difference between the copy destination and our path in the copy
+     revision onto the copy source path to determine this information.
+
+     In other words, if our path is "/branches/my-branch/foo/bar", and
+     we know that the closest relevant copy was a copy of "/trunk" to
+     "/branches/my-branch", then that relative path under the copy
+     destination is "/foo/bar".  Tacking that onto the copy source
+     path tells us that our path was located at "/trunk/foo/bar"
+     before the copy.
+  */
+  SVN_ERR(base_copied_from(&copy_src_rev, &copy_src_path,
+                           copy_root, copy_path, pool));
+  if (! strcmp(copy_path, path) == 0)
+    remainder = svn_path_is_child(copy_path, path, pool);
+  *prev_path = svn_path_join(copy_src_path, remainder, pool);
+  *prev_rev = copy_src_rev;
+  return SVN_NO_ERROR;
+}
+
+
+struct id_created_rev_args {
+  svn_revnum_t revision;
+  const svn_fs_id_t *id;
+  const char *path;
+};
+
+
+static svn_error_t *
+txn_body_id_created_rev(void *baton, trail_t *trail)
+{
+  struct id_created_rev_args *args = baton;
+  dag_node_t *node;
+
+  SVN_ERR(svn_fs_base__dag_get_node(&node, trail->fs, args->id, 
+                                    trail, trail->pool));
+  SVN_ERR(svn_fs_base__dag_get_revision(&(args->revision), node, 
+                                        trail, trail->pool));
+  return SVN_NO_ERROR;
+}
+
+
+struct get_set_node_origin_args {
+  const svn_fs_id_t *origin_id;
+  const char *node_id;
+};
+
+
+static svn_error_t *
+txn_body_get_node_origin(void *baton, trail_t *trail)
+{
+  struct get_set_node_origin_args *args = baton;
+  return svn_fs_bdb__get_node_origin(&(args->origin_id), trail->fs, 
+                                     args->node_id, trail, trail->pool);
+}
+
+static svn_error_t *
+txn_body_set_node_origin(void *baton, trail_t *trail)
+{
+  struct get_set_node_origin_args *args = baton;
+  return svn_fs_bdb__set_node_origin(trail->fs, args->node_id, 
+                                     args->origin_id, trail, trail->pool);
+}
+
+static svn_error_t *
+base_node_origin_rev(svn_revnum_t *revision,
+                     svn_fs_root_t *root,
+                     const char *path,
+                     apr_pool_t *pool)
+{
+  svn_fs_t *fs = svn_fs_root_fs(root);
+  svn_error_t *err;
+  struct get_set_node_origin_args args;
+  const svn_fs_id_t *id, *origin_id;
+  struct id_created_rev_args icr_args;
+
+  SVN_ERR(base_node_id(&id, root, path, pool));
+  args.node_id = svn_fs_base__id_node_id(id);
+  err = svn_fs_base__retry_txn(root->fs, txn_body_get_node_origin, 
+                               &args, pool);
+
+  /* If we got a value for the origin node-revision-ID, that's great.
+     If we didn't, that's sad but non-fatal -- we'll just figure it
+     out the hard way, then record it so we don't have suffer again
+     the next time. */
+  if (! err)
+    {
+      origin_id = args.origin_id;
+    }
+  else if (err->apr_err == SVN_ERR_FS_NO_SUCH_NODE_ORIGIN)
+    {
+      svn_fs_root_t *curroot = root;
+      apr_pool_t *subpool = svn_pool_create(pool);
+      svn_stringbuf_t *lastpath = 
+        svn_stringbuf_create(svn_fs__canonicalize_abspath(path, pool), pool);
+      svn_revnum_t lastrev = SVN_INVALID_REVNUM;
+      const svn_fs_id_t *pred_id;
+      
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+
+      /* Walk the closest-copy chain back to the first copy in our history.
+         
+         NOTE: We merely *assume* that this is faster than walking the
+         predecessor chain, because we *assume* that copies of parent
+         directories happen less often than modifications to a given item. */
+      while (1)
+        {
+          svn_revnum_t currev;
+          const char *curpath = lastpath->data;
+          
+          /* Get a root pointing to LASTREV.  (The first time around,
+             LASTREV is invalid, but that's cool because CURROOT is
+             already initialized.)  */
+          if (SVN_IS_VALID_REVNUM(lastrev))
+            SVN_ERR(svn_fs_base__revision_root(&curroot, fs, 
+                                               lastrev, subpool));
+
+          /* Find the previous location using the closest-copy shortcut. */
+          SVN_ERR(prev_location(&curpath, &currev, fs, curroot, 
+                                curpath, subpool));
+          if (! curpath)
+            break;
+
+          /* Update our LASTPATH and LASTREV variables (which survive 
+             SUBPOOL). */
+          svn_stringbuf_set(lastpath, curpath);
+        }
+
+      /* Walk the predecessor links back to origin. */
+      SVN_ERR(base_node_id(&pred_id, curroot, lastpath->data, pool));
+      while (1)
+        {
+          struct txn_pred_id_args pid_args;
+          svn_pool_clear(subpool);
+          pid_args.id = pred_id;
+          pid_args.pool = subpool;
+          SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_pred_id, 
+                                         &pid_args, subpool));
+          if (! pid_args.pred_id)
+            break;
+          pred_id = pid_args.pred_id;
+        }
+      
+      /* Okay.  PRED_ID should hold our origin ID now.  Let's remember
+         this value from now on, shall we?  */
+      args.origin_id = origin_id = svn_fs_base__id_copy(pred_id, pool);
+      SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_set_node_origin, 
+                                      &args, subpool));
+      svn_pool_destroy(subpool);
+    }
+  else
+    {
+      return err;
+    }
+
+  /* Okay.  We have an origin node-revision-ID.  Let's get a created
+     revision from it. */
+  icr_args.id = origin_id;
+  SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_id_created_rev, 
+                                 &icr_args, pool));
+  *revision = icr_args.revision;
+  return SVN_NO_ERROR;
+}
+
 
 /* Creating root objects.  */
 
@@ -4331,6 +4608,7 @@ static root_vtable_t root_vtable = {
   base_node_history,
   base_node_id,
   base_node_created_rev,
+  base_node_origin_rev,
   base_node_created_path,
   base_delete_node,
   base_copied_from,
@@ -4418,78 +4696,4 @@ make_txn_root(svn_fs_t *fs,
   root->rev = base_rev;
 
   return root;
-}
-
-
-svn_error_t *
-svn_fs_base__get_path_kind(svn_node_kind_t *kind,
-                           const char *path,
-                           trail_t *trail,
-                           apr_pool_t *pool)
-{
-  svn_revnum_t head_rev;
-  svn_fs_root_t *root;
-  dag_node_t *root_dir, *path_node;
-  svn_error_t *err;
-
-  /* Get HEAD revision, */
-  SVN_ERR(svn_fs_bdb__youngest_rev(&head_rev, trail->fs, trail, pool));
-
-  /* Then convert it into a root_t, */
-  SVN_ERR(svn_fs_base__dag_revision_root(&root_dir, trail->fs, head_rev,
-                                         trail, pool));
-  root = make_revision_root(trail->fs, head_rev, root_dir, pool);
-
-  /* And get the dag_node for path in the root_t. */
-  err = get_dag(&path_node, root, path, trail, pool);
-  if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND))
-    {
-      svn_error_clear(err);
-      *kind = svn_node_none;
-      return SVN_NO_ERROR;
-    }
-  else if (err)
-    return err;
-
-  *kind = svn_fs_base__dag_node_kind(path_node);
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs_base__get_path_created_rev(svn_revnum_t *rev,
-                                  const char *path,
-                                  trail_t *trail,
-                                  apr_pool_t *pool)
-{
-  svn_revnum_t head_rev, created_rev;
-  svn_fs_root_t *root;
-  dag_node_t *root_dir, *path_node;
-  svn_error_t *err;
-
-  /* Get HEAD revision, */
-  SVN_ERR(svn_fs_bdb__youngest_rev(&head_rev, trail->fs, trail, pool));
-
-  /* Then convert it into a root_t, */
-  SVN_ERR(svn_fs_base__dag_revision_root(&root_dir, trail->fs, head_rev,
-                                         trail, pool));
-  root = make_revision_root(trail->fs, head_rev, root_dir, pool);
-
-  /* And get the dag_node for path in the root_t. */
-  err = get_dag(&path_node, root, path, trail, pool);
-  if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND))
-    {
-      svn_error_clear(err);
-      *rev = SVN_INVALID_REVNUM;
-      return SVN_NO_ERROR;
-    }
-  else if (err)
-    return err;
-
-  /* Find the created_rev of the dag_node. */
-  SVN_ERR(svn_fs_base__dag_get_revision(&created_rev, path_node,
-                                        trail, pool));
-
-  *rev = created_rev;
-  return SVN_NO_ERROR;
 }

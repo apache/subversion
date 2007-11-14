@@ -854,7 +854,7 @@ fp.close()"""
   if os.path.exists(logfilename):
     fp = open(logfilename)
   else:
-    raise svntest.actions.SVNUnexpectedOutput("hook logfile %s not found")\
+    raise svntest.verify.SVNUnexpectedOutput("hook logfile %s not found")\
                                              % logfilename
 
   actual_data = fp.readlines()
@@ -2511,7 +2511,7 @@ def start_commit_detect_capabilities(sbox):
   # Create a start-commit hook that detects the "mergeinfo" capability.
   hook_text = "import sys\n"                                 + \
               "fp = open(sys.argv[1] + '/hooks.log', 'w')\n" + \
-              "caps = sys.argv[3].split(',')\n"              + \
+              "caps = sys.argv[3].split(':')\n"              + \
               "if 'mergeinfo' in caps:\n"                    + \
               "  fp.write('yes')\n"                          + \
               "else:\n"                                      + \
@@ -2533,7 +2533,7 @@ def start_commit_detect_capabilities(sbox):
     data = open(log_path).read()
     os.unlink(log_path)
   else:
-    raise svntest.actions.SVNUnexpectedOutput("'%s' not found") % log_path
+    raise svntest.verify.SVNUnexpectedOutput("'%s' not found") % log_path
   if data != 'yes':
     raise svntest.Failure
 

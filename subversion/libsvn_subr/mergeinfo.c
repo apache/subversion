@@ -797,14 +797,14 @@ svn_mergeinfo__equals(svn_boolean_t *is_equal,
 }
 
 svn_error_t *
-svn_mergeinfo_merge(apr_hash_t **mergeinfo, apr_hash_t *changes,
+svn_mergeinfo_merge(apr_hash_t *mergeinfo, apr_hash_t *changes,
                     svn_merge_range_inheritance_t consider_inheritance,
                     apr_pool_t *pool)
 {
   apr_array_header_t *sorted1, *sorted2;
   int i, j;
 
-  sorted1 = svn_sort__hash(*mergeinfo, svn_sort_compare_items_as_paths, pool);
+  sorted1 = svn_sort__hash(mergeinfo, svn_sort_compare_items_as_paths, pool);
   sorted2 = svn_sort__hash(changes, svn_sort_compare_items_as_paths, pool);
 
   i = 0;
@@ -828,7 +828,7 @@ svn_mergeinfo_merge(apr_hash_t **mergeinfo, apr_hash_t *changes,
           SVN_ERR(svn_rangelist_merge(&rl1, rl2,
                                       consider_inheritance,
                                       pool));
-          apr_hash_set(*mergeinfo, elt1.key, elt1.klen, rl1);
+          apr_hash_set(mergeinfo, elt1.key, elt1.klen, rl1);
           i++;
           j++;
         }
@@ -838,7 +838,7 @@ svn_mergeinfo_merge(apr_hash_t **mergeinfo, apr_hash_t *changes,
         }
       else
         {
-          apr_hash_set(*mergeinfo, elt2.key, elt2.klen, elt2.value);
+          apr_hash_set(mergeinfo, elt2.key, elt2.klen, elt2.value);
           j++;
         }
     }
@@ -847,7 +847,7 @@ svn_mergeinfo_merge(apr_hash_t **mergeinfo, apr_hash_t *changes,
   for (; j < sorted2->nelts; j++)
     {
       svn_sort__item_t elt = APR_ARRAY_IDX(sorted2, j, svn_sort__item_t);
-      apr_hash_set(*mergeinfo, elt.key, elt.klen, elt.value);
+      apr_hash_set(mergeinfo, elt.key, elt.klen, elt.value);
     }
 
   return SVN_NO_ERROR;
@@ -1217,6 +1217,5 @@ svn_merge_range_dup(svn_merge_range_t *range, apr_pool_t *pool)
 {
   svn_merge_range_t *new_range = apr_palloc(pool, sizeof(*new_range));
   memcpy(new_range, range, sizeof(*new_range));
-  new_range->inheritable = range->inheritable;
   return new_range;
 }

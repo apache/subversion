@@ -138,6 +138,8 @@ to FSFS or from FSFS to BDB?</a></li>
 <li>
   <a href="#sorry-no-globbing">How can I use wildcards or globbing to move many files at once?</a>
 </li>
+<li><a href="#vendor-branch">How can I maintain a modified version  (a
+    "vendor branch") of third-party software using Subversion?</a></li>
 </ul>
 
 <h4>Troubleshooting:</h4>
@@ -2194,6 +2196,36 @@ to "cp" and "mv" multiple files at once.
 </p>
 </div>
 
+<div class="h3" id="vendor-branch" title="vendor-branch">
+<h3>How can I maintain a modified version (a "vendor branch") of
+third-party software using Subversion?</h3>
+
+<p>People frequently want to use Subversion to track their local
+changes to third-party code, even across upgrades from the
+third-party&nbsp;&mdash;&nbsp;that is, they want to maintain their own
+divergent branch, while still incorporating new releases from the
+upstream source.  This is commonly called a <em>vendor branch</em>
+(the term long predates Subversion), and the techniques for
+maintaining one in Subversion are <a
+href="http://svnbook.red-bean.com/en/1.4/svn-book.html#svn.advanced.vendorbr"
+>described here</a>.</p>
+
+<p>If the vendor code is hosted in a remote Subversion repository,
+then you can use <a href="http://piston.rubyforge.org/">Piston</a> to
+manage your copy of the vendor's code.</p>
+
+<p>As a last resort, if using <tt>svn_load_dirs.pl</tt> is taking too
+much time or you're looking for the lazy solution, see also Jon
+Stevens' step-by-step explanation at <a
+href="http://lookfirst.com/2007/11/subversion-vendor-branches-howto.html"
+>Subversion Vendor Branches Howto</a>.  This solution does not make
+use of the space saving features in the Subversion backend when you
+copy new code over old code; in this solution, each import of a vendor
+code gets an entire new copy and there is no space savings for
+identical files.</p>
+
+</div>
+
 </div>
 
 <div class="h2" id="troubleshooting" title="troubleshooting">
@@ -3031,7 +3063,7 @@ following these steps:</p>
             </li>
             <li>
               Invoke the script with an empty environment by using the
-              the "env" program.  Here's an
+              "env" program.  Here's an
               example for the post-commit hook:
 <blockquote><pre>
                   $ env - ./post-commit /var/lib/svn-repos 1234
@@ -3112,7 +3144,7 @@ Build" Subversion book</a>, under
 in the .cvspass file.  It may look like the passwords in .cvspass are
 encrypted, but in fact they're only lightly scrambled with an
 algorithm that's the moral equivalent to rot13.  They can be cracked
-instantly.  The only utility of the the scrambling is to prevent users
+instantly.  The only utility of the scrambling is to prevent users
 (like root) from accidentally seeing the password.  Nobody's cared
 enough to do this for Subversion yet; if you're interested, send
 patches to the dev@ list.</p>

@@ -2074,6 +2074,56 @@ def switch_to_dir_with_peg_rev2(sbox):
                                         None, None, None, None, 0,
                                         '-r', '2')
 
+def switch_to_root(sbox):
+  "switch a folder to the root of its repository"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  ADG_path = os.path.join(wc_dir, 'A', 'D', 'G')
+
+  # Test switch /A/D/G to /
+  AD_url = sbox.repo_url + '/A/D'
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/pi'          : Item(status='D '),
+    'A/D/G/rho'         : Item(status='D '),
+    'A/D/G/tau'         : Item(status='D '),
+    'A/D/G/A'           : Item(status='A '),
+    'A/D/G/A/B'         : Item(status='A '),
+    'A/D/G/A/B/lambda'  : Item(status='A '),
+    'A/D/G/A/B/E'       : Item(status='A '),
+    'A/D/G/A/B/E/alpha' : Item(status='A '),
+    'A/D/G/A/B/E/beta'  : Item(status='A '),
+    'A/D/G/A/B/F'       : Item(status='A '),
+    'A/D/G/A/mu'        : Item(status='A '),
+    'A/D/G/A/C'         : Item(status='A '),
+    'A/D/G/A/D'         : Item(status='A '),
+    'A/D/G/A/D/gamma'   : Item(status='A '),
+    'A/D/G/A/D/G'       : Item(status='A '),
+    'A/D/G/A/D/G/pi'    : Item(status='A '),
+    'A/D/G/A/D/G/rho'   : Item(status='A '),
+    'A/D/G/A/D/G/tau'   : Item(status='A '),
+    'A/D/G/A/D/H'       : Item(status='A '),
+    'A/D/G/A/D/H/chi'   : Item(status='A '),
+    'A/D/G/A/D/H/omega' : Item(status='A '),
+    'A/D/G/A/D/H/psi'   : Item(status='A '),
+    'A/D/G/iota'        : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
+  expected_disk.add_state('A/D/G', svntest.main.greek_state.copy())
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
+  expected_status.add_state('A/D/G', 
+                            svntest.actions.get_virginal_state(wc_dir, 1))
+  expected_status.tweak('A/D/G', switched = 'S')
+  svntest.actions.run_and_verify_switch(wc_dir, ADG_path, sbox.repo_url,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
 ########################################################################
 # Run the tests
 
@@ -2107,6 +2157,7 @@ test_list = [ None,
               switch_to_dir_with_peg_rev,
               switch_urls_with_spaces,
               switch_to_dir_with_peg_rev2,
+              switch_to_root,
              ]
 
 if __name__ == '__main__':

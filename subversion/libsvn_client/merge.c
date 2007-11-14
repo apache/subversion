@@ -1050,10 +1050,10 @@ filter_reflected_revisions(apr_array_header_t **requested_rangelist,
   const char *min_rel_path, *max_rel_path;
 
   SVN_ERR(svn_client__path_relative_to_root(&min_rel_path, min_url,
-                                            source_root_url, ra_session,
+                                            source_root_url, TRUE, ra_session,
                                             NULL, pool));
   SVN_ERR(svn_client__path_relative_to_root(&max_rel_path, max_url,
-                                            source_root_url, ra_session,
+                                            source_root_url, TRUE, ra_session,
                                             NULL, pool));
 
   /* Find any mergeinfo for TARGET_URL added to the line of history
@@ -1073,8 +1073,8 @@ filter_reflected_revisions(apr_array_header_t **requested_rangelist,
     {
       const char *mergeinfo_path;
       SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path, target_url,
-                                                source_root_url, ra_session,
-                                                NULL, pool));
+                                                source_root_url, TRUE,
+                                                ra_session, NULL, pool));
       src_rangelist_for_tgt = apr_hash_get(added_mergeinfo, mergeinfo_path,
                                            APR_HASH_KEY_STRING);
     }
@@ -1829,8 +1829,8 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
       /* ...and of those ranges, determine which ones actually still
          need merging. */
       SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path, primary_url,
-                                                source_root_url, ra_session,
-                                                NULL, pool));
+                                                source_root_url, TRUE,
+                                                ra_session, NULL, pool));
       SVN_ERR(filter_merged_revisions(remaining_ranges, mergeinfo_path,
                                       target_mergeinfo, requested_rangelist,
                                       (revision1 > revision2), entry, pool));
@@ -2238,7 +2238,7 @@ record_mergeinfo_for_record_only_merge(const char *url,
                                                 pool));
   /* Reparent ra_session back to URL. */
   SVN_ERR(svn_ra_reparent(merge_b->ra_session1, url, pool));
-  SVN_ERR(svn_client__path_relative_to_root(&rel_path, url, NULL,
+  SVN_ERR(svn_client__path_relative_to_root(&rel_path, url, NULL, TRUE,
                                             merge_b->ra_session1,
                                             adm_access, pool));
   rangelist = apr_array_make(pool, 1, sizeof(range));
@@ -2311,7 +2311,7 @@ mark_mergeinfo_as_inheritable_for_a_range(
                                         FALSE, pool));
           if (!is_equal)
             {
-              SVN_ERR(svn_mergeinfo_merge(&merges, inheritable_merges,
+              SVN_ERR(svn_mergeinfo_merge(merges, inheritable_merges,
                                           svn_rangelist_equal_inheritance,
                                           pool));
               SVN_ERR(svn_client__record_wc_mergeinfo(target_wcpath, merges,
@@ -2760,7 +2760,7 @@ do_single_file_merge(const char *url1,
       SVN_ERR(svn_ra_get_repos_root(merge_b->ra_session1,
                                     &source_root_url, pool));
       SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path, primary_url,
-                                                source_root_url, NULL,
+                                                source_root_url, TRUE, NULL,
                                                 NULL, pool));
       SVN_ERR(calculate_remaining_ranges(&remaining_ranges, source_root_url,
                                          url1, revision1, url2, revision2,
@@ -3590,7 +3590,7 @@ discover_and_merge_children(const char *url1,
     apr_array_make(pool, 0, sizeof(svn_client__merge_path_t *));
   SVN_ERR(svn_ra_get_repos_root(ra_session, &source_root_url, pool));
   SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path, primary_url,
-                                            source_root_url, NULL,
+                                            source_root_url, TRUE, NULL,
                                             NULL, pool));
   SVN_ERR(get_mergeinfo_paths(children_with_mergeinfo, merge_b,
                               mergeinfo_path, parent_entry, adm_access,

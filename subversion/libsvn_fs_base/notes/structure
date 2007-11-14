@@ -991,6 +991,10 @@ Lock tokens:
                (the value is just a lock-token, which is a uuid)
 
 
+Node origins:
+
+                NODE-ID ::= NODE-REV-ID ;
+
         
 Lexical elements
 ----------------
