@@ -121,19 +121,19 @@ svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
                    apr_pool_t *pool);
 
 /** Merge hash of mergeinfo, @a changes, into existing hash @a
- * *mergeinfo.  @a consider_inheritance determines how to account for
+ * mergeinfo.  @a consider_inheritance determines how to account for
  * the inheritability of the rangelists in @a changes and @a *mergeinfo
  * when merging.
  *
- * Note: @a *mergeinfo and @a changes must have rangelists that are
+ * Note: @a mergeinfo and @a changes must have rangelists that are
  * sorted as said by @c svn_sort_compare_ranges().  After the merge @a
- * *mergeinfo will have rangelists that are guaranteed to be in sorted
+ * mergeinfo will have rangelists that are guaranteed to be in sorted
  * order.
  *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_mergeinfo_merge(apr_hash_t **mergeinfo, apr_hash_t *changes,
+svn_mergeinfo_merge(apr_hash_t *mergeinfo, apr_hash_t *changes,
                     svn_merge_range_inheritance_t consider_inheritance,
                     apr_pool_t *pool);
 

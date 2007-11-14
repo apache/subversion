@@ -530,7 +530,7 @@ test_merge_mergeinfo(const char **msg,
   SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo1, pool));
   SVN_ERR(svn_mergeinfo_parse(&info2, mergeinfo2, pool));
 
-  SVN_ERR(svn_mergeinfo_merge(&info1, info2, svn_rangelist_ignore_inheritance,
+  SVN_ERR(svn_mergeinfo_merge(info1, info2, svn_rangelist_ignore_inheritance,
                               pool));
 
   if (apr_hash_count(info1) != 2)
