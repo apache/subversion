@@ -1538,10 +1538,15 @@ svn_error_t *svn_ra_get_locks(svn_ra_session_t *session,
 
 
 /**
- * TODO: update comment (include start/end revision & callbacks)
+ * Replay the changes from a range of revisions between @a start_revision 
+ * and @a end_revision.
  *
- * Replay the changes from @a revision through @a editor and @a edit_baton.
- *
+ * When receiving information for one revision, a callback @a revstart_func is
+ * called; this callback will provide an editor and baton through which the
+ * revision will be replayed.
+ * When replaying the revision is finished, callback @a fevfinish_func will be 
+ * called so the editor can be closed.
+ * 
  * Changes will be limited to those that occur under @a session's URL, and
  * the server will assume that the client has no knowledge of revisions
  * prior to @a low_water_mark.  These two limiting factors define the portion
