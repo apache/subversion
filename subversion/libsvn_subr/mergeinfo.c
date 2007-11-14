@@ -66,6 +66,30 @@ combine_ranges(svn_merge_range_t **output, svn_merge_range_t *in1,
   return FALSE;
 }
 
+/* Try to combine MRANGE with *LASTRANGE.  If *LASTRANGE is NULL or
+   the attempt at combining otherwise failed, set *LASTRANGE to MRANGE
+   (or a copy thereof, if DUP_MRANGE is set) and push it into REVLIST.
+
+   CONSIDER_INHERITANCE is passed through to combine_ranges(), which
+   see for explanation.  */
+static APR_INLINE void
+combine_with_lastrange(svn_merge_range_t **lastrange,
+                       svn_merge_range_t *mrange, svn_boolean_t dup_mrange,
+                       apr_array_header_t *revlist,
+                       svn_boolean_t consider_inheritance,
+                       apr_pool_t *pool)
+{
+  svn_merge_range_t *pushed_mrange = mrange;
+  if (!(*lastrange) || !combine_ranges(lastrange, *lastrange, mrange,
+                                       consider_inheritance))
+    {
+      if (dup_mrange)
+        pushed_mrange = svn_merge_range_dup(mrange, pool);
+      APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = pushed_mrange;
+      *lastrange = pushed_mrange;
+    }
+}
+
 /* pathname -> PATHNAME */
 static svn_error_t *
 parse_pathname(const char **input, const char *end,
@@ -83,29 +107,6 @@ parse_pathname(const char **input, const char *end,
   *input = curr;
 
   return SVN_NO_ERROR;
-}
-
-/*push to revlist and set lastrange, if could not combine mrange
-  with *lastrange or *lastrange is NULL.  CONSIDER_INHERITANCE determines
-  how to account for the inheritability of MRANGE and *LASTRANGE when trying
-  to combine ranges - see combine_ranges().
-*/
-static APR_INLINE void
-combine_with_lastrange(svn_merge_range_t** lastrange,
-                       svn_merge_range_t *mrange, svn_boolean_t dup_mrange,
-                       apr_array_header_t *revlist,
-                       svn_boolean_t consider_inheritance,
-                       apr_pool_t *pool)
-{
-  svn_merge_range_t *pushed_mrange = mrange;
-  if (!(*lastrange) || !combine_ranges(lastrange, *lastrange, mrange,
-                                       consider_inheritance))
-    {
-      if (dup_mrange)
-        pushed_mrange = svn_merge_range_dup(mrange, pool);
-      APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = pushed_mrange;
-      *lastrange = pushed_mrange;
-    }
 }
 
 /* revisionlist -> (revisionelement)(COMMA revisionelement)*
