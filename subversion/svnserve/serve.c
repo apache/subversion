@@ -2283,22 +2283,17 @@ static svn_error_t *get_locks(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
-
-static svn_error_t *replay(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                           apr_array_header_t *params, void *baton)
+static svn_error_t *replay_one_revision(svn_ra_svn_conn_t *conn,
+                                        server_baton_t *b,
+                                        svn_revnum_t rev,
+                                        svn_revnum_t low_water_mark, 
+                                        svn_boolean_t send_deltas,
+                                        apr_pool_t *pool)
 {
   const svn_delta_editor_t *editor;
-  svn_revnum_t rev, low_water_mark;
-  svn_boolean_t send_deltas;
-  server_baton_t *b = baton;
-  svn_fs_root_t *root;
   void *edit_baton;
+  svn_fs_root_t *root;
   svn_error_t *err;
-
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "rrb", &rev, &low_water_mark,
-                                 &send_deltas));
-
-  SVN_ERR(trivial_auth_request(conn, pool, b));
 
   svn_ra_svn_get_editor(&editor, &edit_baton, conn, pool, NULL, NULL);
 
@@ -2313,7 +2308,64 @@ static svn_error_t *replay(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     svn_error_clear(editor->abort_edit(edit_baton, pool));
   SVN_CMD_ERR(err);
 
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "finish-replay", ""));
+  return svn_ra_svn_write_cmd(conn, pool, "finish-replay", "");
+}
+
+static svn_error_t *replay(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                           apr_array_header_t *params, void *baton)
+{
+  svn_revnum_t rev, low_water_mark;
+  svn_boolean_t send_deltas;
+  server_baton_t *b = baton;
+
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "rrb", &rev, &low_water_mark,
+                                 &send_deltas));
+
+  SVN_ERR(trivial_auth_request(conn, pool, b));
+
+  SVN_ERR(replay_one_revision(conn, b, rev, low_water_mark,
+                              send_deltas, pool));
+
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *replay_range(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                                 apr_array_header_t *params, void *baton)
+{
+  svn_revnum_t start_rev, end_rev, rev, low_water_mark;
+  svn_boolean_t send_deltas;
+  server_baton_t *b = baton;
+  apr_pool_t *iterpool;
+
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "rrrb", &start_rev,
+                                 &end_rev, &low_water_mark,
+                                 &send_deltas));
+
+  SVN_ERR(trivial_auth_request(conn, pool, b));
+
+  iterpool = svn_pool_create(pool);
+  for (rev = start_rev; rev <= end_rev; rev++)
+    {
+      apr_hash_t *props;
+
+      svn_pool_clear(iterpool);
+
+      SVN_CMD_ERR(svn_repos_fs_revision_proplist(&props, b->repos, rev,
+                                                 authz_check_access_cb_func(b),
+                                                 b,
+                                                 iterpool));
+      SVN_ERR(svn_ra_svn_start_list(conn, iterpool));
+      SVN_ERR(svn_ra_svn_write_proplist(conn, iterpool, props));
+      SVN_ERR(svn_ra_svn_end_list(conn, iterpool));
+
+      SVN_ERR(replay_one_revision(conn, b, rev, low_water_mark,
+                                  send_deltas, iterpool));
+
+    }
+  svn_pool_destroy(iterpool);
+
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
 
   return SVN_NO_ERROR;
@@ -2348,6 +2400,7 @@ static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "get-lock",        get_lock },
   { "get-locks",       get_locks },
   { "replay",          replay },
+  { "replay-range",    replay_range },
   { NULL }
 };
 

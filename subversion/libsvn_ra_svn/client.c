@@ -2152,6 +2152,66 @@ static svn_error_t *ra_svn_replay(svn_ra_session_t *session,
 }
 
 
+static svn_error_t *
+ra_svn_replay_range(svn_ra_session_t *session,
+                    svn_revnum_t start_revision,
+                    svn_revnum_t end_revision,
+                    svn_revnum_t low_water_mark,
+                    svn_boolean_t send_deltas,
+                    svn_ra_replay_revstart_callback_t revstart_func,
+                    svn_ra_replay_revfinish_callback_t revfinish_func,
+                    void *replay_baton,
+                    apr_pool_t *pool)
+{
+  svn_ra_svn__session_baton_t *sess = session->priv;
+  apr_pool_t *iterpool;
+  svn_revnum_t rev;
+  
+  SVN_ERR(svn_ra_svn_write_cmd(sess->conn, pool, "replay-range", "rrrb",
+                               start_revision, end_revision,
+                               low_water_mark, send_deltas));
+
+  SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, pool),
+                                 _("Server doesn't support the replay-range "
+                                   "command")));
+
+  iterpool = svn_pool_create(pool);
+  for (rev = start_revision; rev <= end_revision; rev++)
+    {
+      const svn_delta_editor_t *editor;
+      void *edit_baton;
+      apr_hash_t *rev_props;
+      svn_ra_svn_item_t *item;
+      
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_ra_svn_read_item(sess->conn, iterpool, &item));
+      if (item->kind != SVN_RA_SVN_LIST)
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                _("Revision properties not a list"));
+
+      SVN_ERR(svn_ra_svn_parse_proplist(item->u.list, iterpool, &rev_props));
+
+      SVN_ERR(revstart_func(rev, replay_baton,
+                            &editor, &edit_baton,
+                            rev_props,
+                            iterpool));
+      SVN_ERR(svn_ra_svn_drive_editor2(sess->conn, iterpool,
+                                       editor, edit_baton,
+                                       NULL, TRUE));
+      SVN_ERR(revfinish_func(rev, replay_baton,
+                             editor, edit_baton,
+                             rev_props,
+                             iterpool));
+    }
+  svn_pool_destroy(iterpool);
+
+  SVN_ERR(svn_ra_svn_read_cmd_response(sess->conn, pool, ""));
+
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
                                           svn_boolean_t *has,
                                           const char *capability,
@@ -2211,7 +2271,8 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_get_lock,
   ra_svn_get_locks,
   ra_svn_replay,
-  ra_svn_has_capability
+  ra_svn_has_capability,
+  ra_svn_replay_range,
 };
 
 svn_error_t *
