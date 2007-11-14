@@ -131,6 +131,38 @@ svn_client_proplist_item_dup(const svn_client_proplist_item_t *item,
   return new_item;
 }
 
+/* Return WC_PATH's URL and repository root in *URL and REPOS_ROOT,
+   respectively.  Set *NEED_WC_CLEANUP if *ADM_ACCESS needed to be
+   acquired. */
+static svn_error_t *
+wc_path_to_repos_urls(const char **url, const char **repos_root,
+                      svn_boolean_t *need_wc_cleanup,
+                      svn_wc_adm_access_t **adm_access, const char *wc_path,
+                      apr_pool_t *pool)
+{
+  const svn_wc_entry_t *entry;
+
+  if (! *adm_access)
+    {
+      SVN_ERR(svn_wc_adm_probe_open3(adm_access, NULL, wc_path,
+                                     FALSE, 0, NULL, NULL, pool));
+      *need_wc_cleanup = TRUE;
+    }
+  SVN_ERR(svn_wc__entry_versioned(&entry, wc_path, *adm_access, FALSE, pool));
+
+  SVN_ERR(svn_client__entry_location(url, NULL, wc_path,
+                                     svn_opt_revision_unspecified, entry,
+                                     pool));
+
+  /* If we weren't provided a REPOS_ROOT, we'll try to read one from
+     the entry.  The entry might not hold a URL -- in that case, we'll
+     need a fallback plan. */
+  if (*repos_root == NULL)
+    *repos_root = entry->repos;
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_client__path_relative_to_root(const char **rel_path,
@@ -149,30 +181,13 @@ svn_client__path_relative_to_root(const char **rel_path,
   /* If we have a WC path... */
   if (! svn_path_is_url(path_or_url))
     {
-      const svn_wc_entry_t *entry;
-
-      /* ...fetch its entry. */
-      if (! adm_access)
-        {
-          SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path_or_url,
-                                         FALSE, 0, NULL, NULL, pool));
-          need_wc_cleanup = TRUE;
-        }
-      if ((err = svn_wc__entry_versioned(&entry, path_or_url, adm_access,
-                                         FALSE, pool)))
-        goto cleanup;
-
-      err = svn_client__entry_location(&path_or_url, NULL, path_or_url,
-                                       svn_opt_revision_unspecified, entry,
-                                       pool);
+      /* ...fetch its entry, and attempt to get both its full URL and
+         repository root URL.  If we can't get REPOS_ROOT from the WC
+         entry, we'll get it from the RA layer.*/
+      err = wc_path_to_repos_urls(&path_or_url, &repos_root, &need_wc_cleanup,
+                                  &adm_access, path_or_url, pool);
       if (err)
         goto cleanup;
-
-      /* If we weren't provided a REPOS_ROOT, we'll try to read one
-         from the entry.  The entry might not hold a URL, but that's
-         okay -- we've got a fallback plan.  */
-      if (! repos_root)
-        repos_root = entry->repos;
     }
 
   /* If we weren't provided a REPOS_ROOT, or couldn't find one in the
@@ -237,24 +252,11 @@ svn_client__get_repos_root(const char **repos_root,
       && (peg_revision->kind == svn_opt_revision_working
           || peg_revision->kind == svn_opt_revision_base))
     {
-      const svn_wc_entry_t *entry;
-      if (! adm_access)
-        {
-          SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path_or_url,
-                                         FALSE, 0, NULL, NULL, pool));
-          need_wc_cleanup = TRUE;
-        }
-      if ((err = svn_wc__entry_versioned(&entry, path_or_url, adm_access,
-                                         FALSE, pool)))
-        goto cleanup;
-
-      err = svn_client__entry_location(&path_or_url, NULL, path_or_url,
-                                       svn_opt_revision_unspecified, entry,
-                                       pool);
+      *repos_root = NULL;
+      err = wc_path_to_repos_urls(&path_or_url, repos_root, &need_wc_cleanup,
+                                  &adm_access, path_or_url, pool);
       if (err)
         goto cleanup;
-
-      *repos_root = entry->repos;
     }
   else
     {
