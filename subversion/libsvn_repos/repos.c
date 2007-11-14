@@ -312,7 +312,7 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 "# Note: The CAPABILITIES parameter is new in Subversion 1.5, and 1.5"       NL
 "# clients will typically report at least the \""                            \
    SVN_RA_CAPABILITY_MERGEINFO "\" capability."                              NL
-"# If there are other capabilities, then the list is comma-separated,"       NL
+"# If there are other capabilities, then the list is colon-separated,"       NL
 "# e.g.: \"" SVN_RA_CAPABILITY_MERGEINFO ":some-other-capability\" "         \
   "(the order is undefined)."                                                NL
 "#"                                                                          NL
