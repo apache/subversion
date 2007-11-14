@@ -551,7 +551,7 @@ svn_repos__hooks_start_commit(svn_repos_t *repos,
       const char *args[4];
       char *capabilities_string = svn_cstring_join(capabilities, ":", pool);
 
-      /* Get rid of that annoying final comma. */
+      /* Get rid of that annoying final colon. */
       if (capabilities_string[0])
         capabilities_string[strlen(capabilities_string) - 1] = '\0';
 
