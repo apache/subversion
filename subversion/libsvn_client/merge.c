@@ -2311,7 +2311,7 @@ mark_mergeinfo_as_inheritable_for_a_range(
                                         FALSE, pool));
           if (!is_equal)
             {
-              SVN_ERR(svn_mergeinfo_merge(&merges, inheritable_merges,
+              SVN_ERR(svn_mergeinfo_merge(merges, inheritable_merges,
                                           svn_rangelist_equal_inheritance,
                                           pool));
               SVN_ERR(svn_client__record_wc_mergeinfo(target_wcpath, merges,
