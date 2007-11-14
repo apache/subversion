@@ -1093,56 +1093,6 @@ filter_reflected_revisions(apr_array_header_t **requested_rangelist,
   return SVN_NO_ERROR;
 }
 
-/* Callback for qsort() calls which need to sort svn_merge_range_t *.
-   Wraps svn_sort_compare_ranges() but first "normalizes" all ranges
-   so range->end > range->start. */
-static int
-compare_merge_ranges(const void *a,
-                     const void *b)
-{
-  /* ### Are all these pointer gymnastics necessary?
-     ### There's gotta be a simpler way... */
-  svn_merge_range_t *s1 = *((svn_merge_range_t * const *) a);
-  svn_merge_range_t *s2 = *((svn_merge_range_t * const *) b);
-
-  /* Convert the svn_merge_range_t to svn_merge_range_t and leverage our
-     existing comparison function. */
-  svn_merge_range_t r1 = { MIN(s1->start, s1->end),
-                           MAX(s1->start, s1->end),
-                           TRUE};
-  svn_merge_range_t r2 = { MIN(s2->start, s2->end),
-                           MAX(s2->start, s2->end),
-                           TRUE};
-  svn_merge_range_t *r1p = &r1;
-  svn_merge_range_t *r2p = &r2;
-  return svn_sort_compare_ranges(&r1p, &r2p);
-}
-
-/* Another qsort() callback.  Wraps compare_merge_ranges(), but only
-   for ranges that share a common "direction", e.g. additive or
-   subtractive ranges.  If both ranges are subtractive, the range with
-   the lowest (highest absolute) range value is consider the lesser.
-   If the direction is not the same, then consider additive merges to
-   always be less than subtractive merges. */
-static int
-compare_merge_ranges2(const void *a,
-                      const void *b)
-{
-  svn_merge_range_t *s1 = *((svn_merge_range_t * const *) a);
-  svn_merge_range_t *s2 = *((svn_merge_range_t * const *) b);
-  svn_boolean_t s1_reversed = s1->start > s1->end;
-  svn_boolean_t s2_reversed = s2->start > s2->end;
-
-  if (s1_reversed && s2_reversed)
-    return -(compare_merge_ranges(a, b));
-  else if (s1_reversed)
-    return 1;
-  else if (s2_reversed)
-    return -1;
-  else
-    return compare_merge_ranges(a, b);
-}
-
 /* Calculate a rangelist of svn_merge_range_t *'s -- for use by
    do_merge()'s application of the editor to the WC -- by subtracting
    revisions which have already been merged from MERGEINFO_PATH into
@@ -2696,7 +2646,35 @@ compact_add_sub_ranges(apr_array_header_t **compacted_sources,
   *compacted_sources = merge_ranges;
 }
 
-/* SOURCES is array of svn_merge_range_t *sorted per compare_merge_ranges(). */
+/* Callback for qsort() calls which need to sort svn_merge_range_t *.
+   Wraps svn_sort_compare_ranges() but first "normalizes" all ranges
+   so range->end > range->start. */
+static int
+compare_ranges_as_additive(const void *a,
+                           const void *b)
+{
+  /* ### Are all these pointer gymnastics necessary?
+     ### There's gotta be a simpler way... */
+  svn_merge_range_t *s1 = *((svn_merge_range_t * const *) a);
+  svn_merge_range_t *s2 = *((svn_merge_range_t * const *) b);
+
+  /* Convert the svn_merge_range_t to svn_merge_range_t and leverage our
+     existing comparison function. */
+  svn_merge_range_t r1 = { MIN(s1->start, s1->end),
+                           MAX(s1->start, s1->end),
+                           TRUE};
+  svn_merge_range_t r2 = { MIN(s2->start, s2->end),
+                           MAX(s2->start, s2->end),
+                           TRUE};
+  svn_merge_range_t *r1p = &r1;
+  svn_merge_range_t *r2p = &r2;
+  return svn_sort_compare_ranges(&r1p, &r2p);
+}
+
+
+/* Set *COMPACTED_SOURCES_P to an array of merge ranges created by
+   compacting the ranges in MERGE_RANGES, and sorted per
+   svn_sort_compare_ranges(). */
 static svn_error_t *
 compact_merge_ranges(apr_array_header_t **compacted_sources_p,
                      apr_array_header_t *merge_ranges,
@@ -2709,6 +2687,8 @@ compact_merge_ranges(apr_array_header_t **compacted_sources_p,
   apr_array_header_t *compacted_sources;
   int i;
 
+  /* Split our MERGE_RANGES up into those which are additive, and
+     those which are subtractive.  */
   for (i = 0; i < merge_ranges->nelts; i++)
     {
       svn_merge_range_t *range =
@@ -2720,26 +2700,39 @@ compact_merge_ranges(apr_array_header_t **compacted_sources_p,
         APR_ARRAY_PUSH(additive_sources, svn_merge_range_t *) = range;
     }
 
+  /* Sort and remove redundancies from the additive ones. */
   qsort(additive_sources->elts, additive_sources->nelts,
-        additive_sources->elt_size, compare_merge_ranges);
+        additive_sources->elt_size, svn_sort_compare_ranges);
   remove_redundant_ranges(&additive_sources);
+
+  /* Sort and remove redundancies from the subtractive ones.  (We sort
+     these as if they were additive, which is the opposite direction
+     of how svn_sort_compare_ranges() would have them.)  */
   qsort(subtractive_sources->elts, subtractive_sources->nelts,
-        subtractive_sources->elt_size, compare_merge_ranges);
+        subtractive_sources->elt_size, compare_ranges_as_additive);
   remove_redundant_ranges(&subtractive_sources);
 
+  /* Append the subtractive ranges to the list of additive ones.
+     (These will still be in oldest-to-youngest order.)  */
   for (i = 0; i < subtractive_sources->nelts; i++)
     {
       svn_merge_range_t *range =
-        svn_merge_range_dup(APR_ARRAY_IDX(subtractive_sources, i,
-                                          svn_merge_range_t *), pool);
-      APR_ARRAY_PUSH(additive_sources, svn_merge_range_t *) = range;
+        APR_ARRAY_IDX(subtractive_sources, i, svn_merge_range_t *);
+      APR_ARRAY_PUSH(additive_sources, svn_merge_range_t *) = 
+        svn_merge_range_dup(range, pool);
     }
 
+  /* Now, sort the whole lot of them as if they were additive, and
+     then compact that list.  */
   qsort(additive_sources->elts, additive_sources->nelts,
-        additive_sources->elt_size, compare_merge_ranges);
+        additive_sources->elt_size, compare_ranges_as_additive);
   compact_add_sub_ranges(&compacted_sources, additive_sources, pool);
+
+  /* Finally, we ensure that the final product is sorted as
+     svn_sort_compare_ranges() would have us sort them.  */
   qsort(compacted_sources->elts, compacted_sources->nelts,
-        compacted_sources->elt_size, compare_merge_ranges2);
+        compacted_sources->elt_size, svn_sort_compare_ranges);
+
   *compacted_sources_p = compacted_sources;
   return SVN_NO_ERROR;
 }

@@ -115,7 +115,12 @@ int svn_sort_compare_paths(const void *a, const void *b);
 /**
  * Compare two @c svn_merge_range_t *'s, returning an integer greater
  * than, equal to, or less than 0 if the first range is greater than,
- * equal to, or less than, the second range.
+ * equal to, or less than, the second range.  When used with qsort(),
+ * this will result in an array of ranges sorted such that all additive
+ * ranges precede any subtractive ranges, all additive ranges and
+ * sorted in increasing revision coverage order, and all subtractive
+ * ranges are sorted in decreasing revision coverage order.
+ *
  * @since New in 1.5
  */
 int svn_sort_compare_ranges(const void *a, const void *b);
