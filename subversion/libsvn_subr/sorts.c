@@ -111,42 +111,20 @@ svn_sort_compare_paths(const void *a, const void *b)
 }
 
 
-/* Callback for qsort() calls which need to sort svn_merge_range_t *.
-   Wraps svn_sort_compare_ranges() but first "normalizes" all ranges
-   so range->end > range->start. */
-static int
-compare_merge_ranges(svn_merge_range_t *a,
-                     svn_merge_range_t *b)
-{
-  svn_revnum_t a_min = MIN(a->start, a->end);
-  svn_revnum_t a_max = MAX(a->start, a->end);
-  svn_revnum_t b_min = MIN(b->start, b->end);
-  svn_revnum_t b_max = MAX(b->start, b->end);
-
-  assert((a->start > a->end) == (b->start > b->end));
-  if ((a_min == b_min) && (a_max == b_max))
-    return 0;
-  if (a_min = b_min)
-    return a_max < b_max ? -1 : 1;
-  return a_min < b_min ? -1 : 1;
-}
-
 int
 svn_sort_compare_ranges(const void *a, const void *b)
 {
   const svn_merge_range_t *item1 = *((const svn_merge_range_t * const *) a);
   const svn_merge_range_t *item2 = *((const svn_merge_range_t * const *) b);
-  svn_boolean_t item1_reversed = item1->start > item1->end;
-  svn_boolean_t item2_reversed = item2->start > item2->end;
 
-  if (item1_reversed && item2_reversed)
-    return -(compare_merge_ranges(item1, item2));
-  else if (item1_reversed)
-    return 1;
-  else if (item2_reversed)
-    return -1;
-  else
-    return compare_merge_ranges(item1, item2);
+  if (item1->start == item2->start
+      && item1->end == item2->end)
+    return 0;
+
+  if (item1->start == item2->start)
+    return item1->end < item2->end ? -1 : 1;
+
+  return item1->start < item2->start ? -1 : 1;
 }
 
 apr_array_header_t *

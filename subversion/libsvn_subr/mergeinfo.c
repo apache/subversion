@@ -47,41 +47,18 @@ combine_ranges(svn_merge_range_t **output, svn_merge_range_t *in1,
                svn_merge_range_t *in2,
                svn_boolean_t consider_inheritance)
 {
-  /* If the ranges are in opposite directions, they can't be
-     combined. */
-  /* ### FIXME: A no-op range technically can be combined with
-     ### anything, can't it? */
-  if ((in1->start <= in1->end) != (in2->start <= in2->end))
-    return FALSE;
-
-  /* If the inheritance considerations and levels don't gel, they
-     can't be combined. */
-  if (! (consider_inheritance == svn_rangelist_ignore_inheritance
-         || (consider_inheritance == svn_rangelist_equal_inheritance
-             && ((in1->inheritable ? TRUE : FALSE)
-                 == (in2->inheritable ? TRUE : FALSE)))
-         || (consider_inheritance == svn_rangelist_only_inheritable
-             && in1->inheritable && in1->inheritable)))
-    return FALSE;
-
-  if (in1->start <= in1->end)
+  if (in1->start <= in2->end && in2->start <= in1->end)
     {
-      if (in1->start <= in2->end && in2->start <= in1->end)
+      if (consider_inheritance == svn_rangelist_ignore_inheritance
+          || (consider_inheritance == svn_rangelist_equal_inheritance
+              && ((in1->inheritable ? TRUE : FALSE)
+                  == (in2->inheritable ? TRUE : FALSE)))
+          || (consider_inheritance == svn_rangelist_only_inheritable
+              && in1->inheritable && in1->inheritable))
         {
           (*output)->start = MIN(in1->start, in2->start);
           (*output)->end = MAX(in1->end, in2->end);
           (*output)->inheritable =
-            (in1->inheritable && in2->inheritable) ? TRUE : FALSE;
-          return TRUE;
-        }
-    }
-  else
-    {
-      if (in1->end <= in2->start && in2->end <= in1->start)
-        {
-          (*output)->start = MAX(in1->start, in2->start);
-          (*output)->end = MIN(in1->end, in2->end);
-          (*output)->inheritable = 
             (in1->inheritable && in2->inheritable) ? TRUE : FALSE;
           return TRUE;
         }
@@ -102,12 +79,14 @@ combine_with_lastrange(svn_merge_range_t **lastrange,
                        svn_boolean_t consider_inheritance,
                        apr_pool_t *pool)
 {
-  if (! (*lastrange
-         && combine_ranges(lastrange, *lastrange, mrange, 
-                           consider_inheritance)))
+  svn_merge_range_t *pushed_mrange = mrange;
+  if (!(*lastrange) || !combine_ranges(lastrange, *lastrange, mrange,
+                                       consider_inheritance))
     {
-      *lastrange = dup_mrange ? svn_merge_range_dup(mrange, pool) : mrange;
-      APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = *lastrange;
+      if (dup_mrange)
+        pushed_mrange = svn_merge_range_dup(mrange, pool);
+      APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = pushed_mrange;
+      *lastrange = pushed_mrange;
     }
 }
 
@@ -157,13 +136,6 @@ parse_revlist(const char **input, const char *end,
       /* Parse individual revisions or revision ranges. */
       svn_merge_range_t *mrange = apr_pcalloc(pool, sizeof(*mrange));
       svn_revnum_t firstrev;
-      svn_boolean_t negate = FALSE;
-
-      if (*curr == '-')
-        {
-          curr++;
-          negate = TRUE;
-        }
 
       SVN_ERR(svn_revnum_parse(&firstrev, curr, &curr));
       if (*curr != '-' && *curr != '\n' && *curr != ',' && *curr != '*'
@@ -171,36 +143,17 @@ parse_revlist(const char **input, const char *end,
         return svn_error_createf(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
                                  _("Invalid character '%c' found in revision "
                                    "list"), *curr);
+      mrange->start = firstrev - 1;
+      mrange->end = firstrev;
       mrange->inheritable = TRUE;
-      if (negate)
-        {
-          if (*curr == '-')
-            return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
-                                    _("Only single-revision negations are "
-                                      "permitted"));
-          mrange->start = firstrev;
-          mrange->end = firstrev - 1;
-        }
-      else
-        {
-          svn_revnum_t secondrev = firstrev;
 
-          if (*curr == '-')
-            {
-              curr++;
-              SVN_ERR(svn_revnum_parse(&secondrev, curr, &curr));
-            }
+      if (*curr == '-')
+        {
+          svn_revnum_t secondrev;
 
-          if (firstrev <= secondrev)
-            {
-              mrange->start = firstrev - 1;
-              mrange->end = secondrev;
-            }
-          else
-            {
-              mrange->start = firstrev;
-              mrange->end = secondrev - 1;
-            }
+          curr++;
+          SVN_ERR(svn_revnum_parse(&secondrev, curr, &curr));
+          mrange->end = secondrev;
         }
 
       if (*curr == '\n' || curr == end)
@@ -313,7 +266,7 @@ svn_mergeinfo_parse(apr_hash_t **mergeinfo,
 }
 
 
-/* Merge revision list CHANGES into *RANGELIST, doing some trivial
+/* Merge revision list RANGELIST into *MERGEINFO, doing some trivial
    attempts to combine ranges as we go. */
 svn_error_t *
 svn_rangelist_merge(apr_array_header_t **rangelist,
@@ -913,23 +866,17 @@ svn_mergeinfo_remove(apr_hash_t **mergeinfo, apr_hash_t *eraser,
 
 /* Convert a single svn_merge_range_t * back into an svn_stringbuf_t *.  */
 static svn_error_t *
-range_to_stringbuf(svn_stringbuf_t **result,
-                   svn_merge_range_t *range,
-                   apr_pool_t *pool)
+range_to_stringbuf(svn_stringbuf_t **result, svn_merge_range_t *range,
+                       apr_pool_t *pool)
 {
-  const char *flag = 
-    range->inheritable ? "" : SVN_MERGEINFO_NONINHERITABLE_STR;
-
   if (range->start == range->end - 1)
-    *result = svn_stringbuf_createf(pool, "%ld%s", range->end, flag);
-  else if (range->start - 1 == range->end)
-    *result = svn_stringbuf_createf(pool, "-%ld%s", range->start, flag);
-  else if (range->start > range->end)
-    *result = svn_stringbuf_createf(pool, "%ld-%ld%s", 
-                                    range->start, range->end + 1, flag);
+    *result = svn_stringbuf_createf(pool, "%ld%s", range->end,
+                                    range->inheritable
+                                    ? "" : SVN_MERGEINFO_NONINHERITABLE_STR);
   else
-    *result = svn_stringbuf_createf(pool, "%ld-%ld%s", 
-                                    range->start + 1, range->end, flag);
+    *result = svn_stringbuf_createf(pool, "%ld-%ld%s", range->start + 1,
+                                    range->end, range->inheritable
+                                    ? "" : SVN_MERGEINFO_NONINHERITABLE_STR);
   return SVN_NO_ERROR;
 }
 
