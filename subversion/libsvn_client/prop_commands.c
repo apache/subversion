@@ -575,11 +575,12 @@ propget_walk_cb(const char *path,
 
   SVN_ERR(pristine_or_working_propval(&propval, wb->propname, path,
                                       wb->base_access, wb->pristine,
-                                      apr_hash_pool_get(wb->props)));
+                                      pool));
 
   if (propval)
     {
       path = apr_pstrdup(apr_hash_pool_get(wb->props), path);
+      propval = svn_string_dup(propval, apr_hash_pool_get(wb->props));
       apr_hash_set(wb->props, path, APR_HASH_KEY_STRING, propval);
     }
 
