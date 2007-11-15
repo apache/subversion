@@ -845,6 +845,8 @@ svn_client_propget4(apr_hash_t **props,
 
       if (depth == svn_depth_empty || depth == svn_depth_files)
         adm_lock_level = 0;
+      else if (depth == svn_depth_immediates)
+        adm_lock_level = 1;
 
       SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target,
                                      FALSE, adm_lock_level,
