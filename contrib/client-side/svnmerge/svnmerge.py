@@ -479,7 +479,7 @@ class VersionedProperty:
                 self._changed_values.append(new_value)
                 self.revs.append(rev)
                 self.values.append(new_value)
-                new_value = old_value
+                old_value = new_value
 
         # Indicate that we know nothing about the value of the property
         # after the range of the log.
