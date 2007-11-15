@@ -1322,7 +1322,9 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                   (run-hooks 'svn-log-edit-done-hook)
                   (setq svn-status-files-to-commit nil
                         svn-status-recursive-commit nil)
-                  (message "svn: Committed revision %s." svn-status-commit-rev-number))
+                  (if (null svn-status-commit-rev-number)
+                      (message "No revision to commit.")
+                    (message "svn: Committed revision %s." svn-status-commit-rev-number)))
                  ((eq svn-process-cmd 'update)
                   (svn-status-show-process-output 'update t)
                   (setq svn-status-update-list (svn-status-parse-update-output))
@@ -5084,12 +5086,16 @@ Commands:
         (setq full-file-name (svn-match-string-no-properties 1))))
     (when (string= checkout-prefix-path "")
       (setq checkout-prefix-path "/"))
-    (setq file-name
-          (if (eq (string-match (regexp-quote (substring checkout-prefix-path 1)) full-file-name) 0)
-              (substring full-file-name (- (length checkout-prefix-path) (if (string= checkout-prefix-path "/") 1 0)))
-            full-file-name))
-    ;; (message "svn-log-file-name-at-point %s prefix: '%s', full-file-name: %s" file-name checkout-prefix-path full-file-name)
-    file-name))
+    (if (null full-file-name)
+        (progn
+          (message "No file at point")
+          nil)
+      (setq file-name
+            (if (eq (string-match (regexp-quote (substring checkout-prefix-path 1)) full-file-name) 0)
+                (substring full-file-name (- (length checkout-prefix-path) (if (string= checkout-prefix-path "/") 1 0)))
+              full-file-name))
+      ;; (message "svn-log-file-name-at-point %s prefix: '%s', full-file-name: %s" file-name checkout-prefix-path full-file-name)
+      file-name)))
 
 (defun svn-log-find-file-at-point ()
   (interactive)
@@ -5284,8 +5290,8 @@ Currently is the output from the svn update command known."
 
 (unless (assq 'svn-blame-mode minor-mode-alist)
   (setq minor-mode-alist
-	(cons (list 'svn-blame-mode " SvnBlame")
-          minor-mode-alist)))
+        (cons (list 'svn-blame-mode " SvnBlame")
+              minor-mode-alist)))
 
 (defvar svn-blame-mode-map () "Keymap used in `svn-blame-mode' buffers.")
 (put 'svn-blame-mode-map 'risky-local-variable t) ;for Emacs 20.7
@@ -5313,7 +5319,7 @@ Currently is the output from the svn update command known."
 
 (or (assq 'svn-blame-mode minor-mode-map-alist)
     (setq minor-mode-map-alist
-	  (cons (cons 'svn-blame-mode svn-blame-mode-map) minor-mode-map-alist)))
+          (cons (cons 'svn-blame-mode svn-blame-mode-map) minor-mode-map-alist)))
 
 (make-variable-buffer-local 'svn-blame-mode)
 
