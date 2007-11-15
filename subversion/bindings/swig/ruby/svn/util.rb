@@ -112,12 +112,18 @@ EOC
       end
     end
 
-    def validate_options(valid_options, passed_options)
-      unknown_keys = passed_options.keys - valid_options.keys
+    def validate_options(options, optional_keys, required_keys=[])
+      unknown_keys = options.keys - (optional_keys + required_keys)
       unless unknown_keys.empty?
         raise(ArgumentError, "Unknown key(s): #{unknown_keys.join(", ")}")
       end
-      valid_options.merge(passed_options)
+      missing_keys = []
+      required_keys.each do |key|
+        missing_keys << key if options[key].nil?
+      end
+      unless missing_keys.empty?
+        raise(ArgumentError, "Missing key(s): #{missing_keys.join(", ")}")
+      end
     end
   end
 end
