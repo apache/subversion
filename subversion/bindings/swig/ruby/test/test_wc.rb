@@ -795,6 +795,49 @@ EOE
     end
   end
 
+  def test_update_editor_options
+    log = "sample log"
+    file1 = "hello.txt"
+    file2 = "hello2.txt"
+    src = "Hello"
+    dir = "dir"
+    dir_path = File.join(@wc_path, dir)
+    path1 = File.join(dir_path, file1)
+    path2 = File.join(dir_path, file2)
+
+    ctx = make_context(log)
+    config = {}
+    callbacks = Svn::Ra::Callbacks.new(ctx.auth_baton)
+    session = Svn::Ra::Session.open(@repos_uri)
+
+    FileUtils.mkdir(dir_path)
+    File.open(path1, "w") {|f| f.print(src)}
+    ctx.add(dir_path)
+    rev1 = ctx.commit(@wc_path).revision
+
+    File.open(path1, "w") {|f| f.print(src * 2)}
+    File.open(path2, "w") {|f| f.print(src)}
+    ctx.add(path2)
+    rev2 = ctx.commit(@wc_path).revision
+
+    assert(File.exists?(path2))
+    assert_equal(0, ctx.up(@wc_path, 0))
+    assert(!File.exists?(path2))
+    notification_count = 0
+    Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
+      assert_raises(ArgumentError) do
+        access.update_editor2(0, @wc_path, :notify_fun=>lambda{|n| p notification_count+=1})
+      end
+      editor = access.update_editor2(0, @wc_path, :notify_func=>lambda{|n| notification_count+=1})
+      assert_equal(0, editor.target_revision)
+
+      reporter = session.update2(rev2, "", editor)
+      access.crawl_revisions(@wc_path, reporter)
+      assert_equal(rev2, editor.target_revision)
+    end
+    assert_equal(4, notification_count, "wrong number of notifications")
+  end
+
   def test_switch_editor
     log = "sample log"
     file1 = "hello.txt"
