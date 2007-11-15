@@ -120,6 +120,16 @@ ary_prefix_match(apr_array_header_t *pfxlist, const char *path)
 }
 
 
+/* Check whether we need to skip this PATH based on its presence in
+   the PREFIXES list, and the DO_EXCLUDE option. */
+static APR_INLINE svn_boolean_t
+skip_path(const char *path, apr_array_header_t *prefixes,
+          svn_boolean_t do_exclude)
+{
+  return (ary_prefix_match(prefixes, path) ? do_exclude : !do_exclude);
+}
+
+
 
 /* Note: the input stream parser calls us with events.
    Output of the filtered dump occurs for the most part streamily with the
@@ -456,8 +466,7 @@ new_node_record(void **node_baton,
     copyfrom_path = svn_path_join("/", copyfrom_path, pool);
 
   /* Shame, shame, shame ... this is NXOR. */
-  nb->do_skip = (ary_prefix_match(pb->prefixes, node_path)
-                 ? pb->do_exclude : (! pb->do_exclude));
+  nb->do_skip = skip_path(node_path, pb->prefixes, pb->do_exclude);
 
   /* If we're skipping the node, take note of path, discarding the
      rest.  */
@@ -476,8 +485,7 @@ new_node_record(void **node_baton,
 
       /* Test if this node was copied from dropped source. */
       if (copyfrom_path &&
-          (ary_prefix_match(pb->prefixes, copyfrom_path)
-           ? pb->do_exclude : (! pb->do_exclude)))
+          skip_path(copyfrom_path, pb->prefixes, pb->do_exclude))
         {
           /* This node was copied from dropped source.
              We have a problem, since we did not want to drop this node too.
@@ -650,7 +658,7 @@ renumber_merge_source_rev_range(const char **mergeinfo_val,
       apr_hash_this(hi, &merge_source, NULL, &rangelist);
 
       /* Look whether the merge_source is a part of the included prefix. */
-      if (!ary_prefix_match(rb->pb->prefixes, merge_source))
+      if (skip_path(merge_source, rb->pb->prefixes, rb->pb->do_exclude))
         {
           if (rb->pb->skip_missing_merge_sources)
             continue;
