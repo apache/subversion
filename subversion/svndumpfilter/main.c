@@ -126,6 +126,7 @@ static APR_INLINE svn_boolean_t
 skip_path(const char *path, apr_array_header_t *prefixes,
           svn_boolean_t do_exclude)
 {
+  /* NXOR */
   return (ary_prefix_match(prefixes, path) ? do_exclude : !do_exclude);
 }
 
@@ -465,7 +466,6 @@ new_node_record(void **node_baton,
   if (copyfrom_path)
     copyfrom_path = svn_path_join("/", copyfrom_path, pool);
 
-  /* Shame, shame, shame ... this is NXOR. */
   nb->do_skip = skip_path(node_path, pb->prefixes, pb->do_exclude);
 
   /* If we're skipping the node, take note of path, discarding the
