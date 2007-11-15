@@ -31,6 +31,7 @@
 #include "svn_mergeinfo.h"
 
 #include "private/svn_dep_compat.h"
+#include "private/svn_fs_sqlite.h"
 #include "private/svn_fs_mergeinfo.h"
 #include "../libsvn_fs/fs-loader.h"
 #include "svn_private_config.h"
@@ -169,7 +170,7 @@ open_db(sqlite3 **db, const char *repos_path, apr_pool_t *pool)
 {
   svn_error_t *err;
   const char *db_path = svn_path_join(repos_path,
-                                      SVN_FS_MERGEINFO__DB_NAME, pool);
+                                      SVN_FS__SQLITE_DB_NAME, pool);
   SQLITE_ERR(sqlite3_open(db_path, db), *db);
   /* Retry until timeout when database is busy. */
   SQLITE_ERR(sqlite3_busy_timeout(*db, BUSY_TIMEOUT), *db);
@@ -206,7 +207,7 @@ close_db(sqlite3 *db, svn_error_t *err)
 /* Create an sqlite DB for our mergeinfo index under PATH.  Use POOL
    for temporary allocations. */
 svn_error_t *
-svn_fs_mergeinfo__create_index(const char *path, apr_pool_t *pool)
+svn_fs__sqlite_create_index(const char *path, apr_pool_t *pool)
 {
   sqlite3 *db;
   /* Opening the database will create it + schema if it's not already there. */

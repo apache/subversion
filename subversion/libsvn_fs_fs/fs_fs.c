@@ -48,6 +48,7 @@
 #include "fs_fs.h"
 #include "id.h"
 
+#include "private/svn_fs_sqlite.h"
 #include "private/svn_fs_mergeinfo.h"
 #include "private/svn_fs_util.h"
 #include "../libsvn_fs/fs-loader.h"
@@ -1103,7 +1104,7 @@ svn_fs_fs__hotcopy(const char *src_path,
   SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_UUID, pool));
 
   /* Copy the merge tracking info. */
-  SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, SVN_FS_MERGEINFO__DB_NAME,
+  SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, SVN_FS__SQLITE_DB_NAME,
                                pool));
 
   /* Find the youngest revision from this current file. */
@@ -5189,7 +5190,7 @@ svn_fs_fs__create(svn_fs_t *fs,
                        ffd->format, ffd->max_files_per_dir, pool));
 
   /* ### this should be before the format file */
-  SVN_ERR(svn_fs_mergeinfo__create_index(path, pool));
+  SVN_ERR(svn_fs__sqlite_create_index(path, pool));
   return SVN_NO_ERROR;
 }
 
