@@ -90,16 +90,29 @@ svn_error_t *svn_fs_bdb__set_node_origin(svn_fs_t *fs,
   /* Create a key from our NODE_ID. */
   svn_fs_base__str_to_dbt(&key, node_id);
 
-  /* Ensure that we aren't about to overwrite an existing record. */
+  /* Check to see if we already have a mapping for NODE_ID.  If so,
+     and the value is the same one we were about to write.  That's
+     cool -- just do nothing.  If, however, the value is *different*,
+     that's a red flag!  */
   svn_fs_base__trail_debug(trail, "node-origins", "get");
   db_err = bfd->node_origins->get(bfd->node_origins, trail->db_txn,
                                   &key, svn_fs_base__result_dbt(&value), 0);
   svn_fs_base__track_dbt(&value, pool);
   if (db_err != DB_NOTFOUND)
-    return svn_error_createf
-      (SVN_ERR_FS_ALREADY_EXISTS, NULL,
-       _("Node origin for '%s' already exists in filesystem '%s'"),
-       node_id, fs->path);
+    {
+      const svn_string_t *origin_id_str = svn_fs_unparse_id(origin_id, pool);
+      const svn_string_t *old_origin_id_str =
+        svn_string_ncreate(value.data, value.size, pool);
+
+      if (! svn_string_compare(origin_id_str, old_origin_id_str))
+        return svn_error_createf
+          (SVN_ERR_FS_CORRUPT, NULL,
+           _("Node origin for '%s' exists in filesystem '%s' with a different "
+             "value (%s) than what we were about to store (%s)"),
+           node_id, fs->path, old_origin_id_str->data, origin_id_str->data);
+      else
+        return SVN_NO_ERROR;
+    }
 
   /* Create a value from our ORIGIN_ID, and add this record to the table. */
   svn_fs_base__id_to_dbt(&value, origin_id, pool);
