@@ -742,7 +742,7 @@ def simple_property_merges(sbox):
     'E/beta'   : Item(status=' U'),
     })
   expected_disk = wc.State('', {
-    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1-2,4'}),
+    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/B:4'}),
     'E'        : Item(),
     'E/alpha'  : Item("This is the file 'alpha'.\n"),
     'E/beta'   : Item("This is the file 'beta'.\n"),
@@ -775,8 +775,8 @@ def simple_property_merges(sbox):
                                      'revert', '--recursive', wc_dir)
   svntest.actions.run_and_verify_status(wc_dir, pristine_status)
 
-  # Merge B 2:1 into B2
-  expected_disk.tweak('', props={SVN_PROP_MERGE_INFO : '/A/B:1'})
+  # Merge B 2:1 into B2 (B2's mergeinfo should get elided away)
+  expected_disk.remove('')
   expected_disk.tweak('E', 'E/alpha', 'E/beta', props={})
   svntest.actions.run_and_verify_merge(B2_path, '2', '1', B_url,
                                        expected_output,
@@ -787,7 +787,7 @@ def simple_property_merges(sbox):
 
   # Merge B 3:4 into B2 now causes a conflict
   expected_disk.add({
-    '' : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1,4'}),
+    '' : Item(props={SVN_PROP_MERGE_INFO : '/A/B:4'}),
     'E/dir_conflicts.prej'
     : Item("Trying to change property 'foo' from 'foo_val' to 'mod_foo',\n"
            + "but it has been locally deleted.\n"),
@@ -973,7 +973,7 @@ def merge_tree_deleted_in_target(sbox):
     'lambda'  : Item(status='U '),
     })
   expected_disk = wc.State('', {
-    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1,3'}),
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:3'}),
     'F'       : Item(),
     'lambda'  : Item("This is the file 'lambda'.\nchange lambda.\n"),
     })
@@ -3102,7 +3102,7 @@ def safe_property_merge(sbox):
     })
 
   expected_disk = wc.State('', {
-    ''         : Item(props={SVN_PROP_MERGE_INFO : "/A/B:1-2,4"}),
+    ''         : Item(props={SVN_PROP_MERGE_INFO : "/A/B:4"}),
     'E'        : Item(),
     'E/alpha'  : Item("This is the file 'alpha'.\n"),
     'E/beta'   : Item("This is the file 'beta'.\n"),
@@ -3229,7 +3229,7 @@ def property_merge_from_branch(sbox):
     })
 
   expected_disk = wc.State('', {
-    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1-2,4'}),
+    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/B:4'}),
     'E'        : Item(),
     'E/alpha'  : Item("This is the file 'alpha'.\n"),
     'E/beta'   : Item("This is the file 'beta'.\n"),
@@ -4204,12 +4204,11 @@ def avoid_repeated_merge_using_inherited_merge_info(sbox):
     'F'          : Item(status='  ', wc_rev=4),
     })
   expected_disk = wc.State('', {
-    ''           : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1-3,5'}),
-    'F/E'        : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:1'}),
+    ''           : Item(props={SVN_PROP_MERGE_INFO : '/A/B:5'}),
+    'F/E'        : Item(props={SVN_PROP_MERGE_INFO : ''}),
     'F/E/alpha'  : Item(new_content_for_alpha),
     'F/E/beta'   : Item("This is the file 'beta'.\n"),
-    'F/E1'       : Item(props={SVN_PROP_MERGE_INFO :
-                               '/A/B/E:1\n/A/B/F/E:2\n'}),
+    'F/E1'       : Item(props={SVN_PROP_MERGE_INFO : ''}),
     'F/E1/alpha' : Item("This is the file 'alpha'.\n"),
     'F/E1/beta'  : Item("This is the file 'beta'.\n"),
     'F'          : Item(),
@@ -4263,7 +4262,7 @@ def avoid_repeated_merge_using_inherited_merge_info(sbox):
     'beta'  : Item(status='  ', wc_rev=6),
     })
   expected_disk = wc.State('', {
-    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:1'}),
+    ''        : Item(props={SVN_PROP_MERGE_INFO : ''}),
     'alpha'   : Item(new_content_for_alpha),
     'beta'    : Item("This is the file 'beta'.\n"),
     })
@@ -4315,8 +4314,8 @@ def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
                                         None, None, None, None, wc_dir)
 
 
-  for path_and_mergeinfo in (('E', '/A/B/E:1\n/A/B/F/E:5\n'),
-                             ('E1', '/A/B/E:1\n/A/B/F/E:2,5\n')):
+  for path_and_mergeinfo in (('E', '/A/B/F/E:5'),
+                             ('E1', '/A/B/F/E:5')):
     path_name = os.path.join(copy_of_B_path, 'F', path_and_mergeinfo[0])
     # Search for the comment entitled "The Merge Kluge" elsewhere in
     # this file, to understand why we shorten and chdir() below.
@@ -4405,14 +4404,12 @@ def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
     'F'          : Item(status='  ', wc_rev=8)
     })
   expected_disk = wc.State('', {
-    ''           : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1-3,5-8'}),
-    'F/E'        : Item(props={SVN_PROP_MERGE_INFO :
-                               '/A/B/E:1\n/A/B/F/E:5-8\n'}),
+    ''           : Item(props={SVN_PROP_MERGE_INFO : '/A/B:5-8'}),
+    'F/E'        : Item(props={}),  # elision!
     'F/E/alpha'  : Item(new_content_for_alpha),
     'F/E/beta'   : Item("This is the file 'beta'.\n"),
     'F'          : Item(),
-    'F/E1'       : Item(props={SVN_PROP_MERGE_INFO :
-                               '/A/B/E:1\n/A/B/F/E:2,5\n'}),
+    'F/E1'       : Item(props={SVN_PROP_MERGE_INFO : '/A/B/F/E:5'}),
     'F/E1/alpha' : Item(new_content_for_alpha1),
     'F/E1/beta'  : Item("This is the file 'beta'.\n"),
     'lambda'     : Item("This is the file 'lambda'.\n")
@@ -4579,7 +4576,7 @@ def obey_reporter_api_semantics_while_doing_subtree_merges(sbox):
     'umlaut'  : Item(status='A ', copied='+', wc_rev='-'),
     })
 
-  merged_rangelist = "1,3-%d" % rev_to_merge_to_copy_of_D
+  merged_rangelist = "3-%d" % rev_to_merge_to_copy_of_D
 
 
   expected_disk = wc.State('', {
@@ -4667,12 +4664,8 @@ def setup_branch(sbox, branch_only = False, nbr_of_branches = 1):
       dest_name + "/D/H/omega" : Item(status='  ', wc_rev=rev),
       dest_name + "/D/H/psi"   : Item(status='  ', wc_rev=rev),
       dest_name                : Item(status='  ', wc_rev=rev)})
-    if rev < 3:
-      copy_mergeinfo = '/A:1'
-    else:
-      copy_mergeinfo  = '/A:1-' + str(rev - 1)
     expected_disk.add({
-      dest_name : Item(props={SVN_PROP_MERGE_INFO : copy_mergeinfo}),
+      dest_name : Item(props={SVN_PROP_MERGE_INFO : ''}),
       dest_name + '/B'         : Item(),
       dest_name + '/B/lambda'  : Item("This is the file 'lambda'.\n"),
       dest_name + '/B/E'       : Item(),
@@ -4815,7 +4808,7 @@ def mergeinfo_inheritance(sbox):
   # We test issue #2733 here (with a directory as the merge target).
   # r1 should be inherited from 'A_COPY'.
   expected_disk = wc.State('', {
-    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/D:1,4'}),
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/D:4'}),
     'G'       : Item(),
     'G/pi'    : Item("This is the file 'pi'.\n"),
     'G/rho'   : Item("New content"),
@@ -4884,7 +4877,7 @@ def mergeinfo_inheritance(sbox):
     'F'       : Item(status='  ', wc_rev=2),
     })
   expected_disk = wc.State('', {
-    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1,5'}),
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:5'}),
     'E'       : Item(),
     'E/alpha' : Item("This is the file 'alpha'.\n"),
     'E/beta'  : Item("New content"),
@@ -4958,8 +4951,8 @@ def mergeinfo_inheritance(sbox):
     'D/H/omega' : Item(status='  ', wc_rev=2),
     })
   expected_disk = wc.State('', {
-    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A:1,3'}),
-    'B'         : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1,3,5'}),
+    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A:3'}),
+    'B'         : Item(props={SVN_PROP_MERGE_INFO : '/A/B:3,5'}),
     'mu'        : Item("This is the file 'mu'.\n"),
     'B/E'       : Item(),
     'B/E/alpha' : Item("This is the file 'alpha'.\n"),
@@ -4967,7 +4960,7 @@ def mergeinfo_inheritance(sbox):
     'B/lambda'  : Item("This is the file 'lambda'.\n"),
     'B/F'       : Item(),
     'C'         : Item(),
-    'D'         : Item(props={SVN_PROP_MERGE_INFO : '/A/D:1,3-4'}),
+    'D'         : Item(props={SVN_PROP_MERGE_INFO : '/A/D:3-4'}),
     'D/G'       : Item(),
     'D/G/pi'    : Item("This is the file 'pi'.\n"),
     'D/G/rho'   : Item("New content"),
@@ -5011,7 +5004,7 @@ def mergeinfo_inheritance(sbox):
 
   # Check that mergeinfo was properly set on A_COPY/D/H/omega
   svntest.actions.run_and_verify_svn(None,
-                                     ["/A/D/H/omega:1,3-4,6\n"],
+                                     ["/A/D/H/omega:3-4,6\n"],
                                      [],
                                      'propget', SVN_PROP_MERGE_INFO,
                                      omega_COPY_path)
@@ -5071,7 +5064,7 @@ def mergeinfo_inheritance(sbox):
     'beta'  : Item(status='M ', wc_rev=7),
     })
   expected_disk = wc.State('', {
-    ''      : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:1,3'}),
+    ''      : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:3'}),
     'alpha' : Item("This is the file 'alpha'.\n"),
     'beta'  : Item("This is the file 'beta'.\n"),
     })
@@ -5131,7 +5124,7 @@ def mergeinfo_elision(sbox):
     })
   svntest.actions.run_and_verify_status(beta_COPY_path, expected_status)
 
-  svntest.actions.run_and_verify_svn(None, ["/A/B/E/beta:1,5\n"], [],
+  svntest.actions.run_and_verify_svn(None, ["/A/B/E/beta:5\n"], [],
                                      'propget', SVN_PROP_MERGE_INFO,
                                      beta_COPY_path)
 
@@ -5161,7 +5154,7 @@ def mergeinfo_elision(sbox):
     'tau' : Item(status='  ', wc_rev=2),
     })
   expected_disk = wc.State('', {
-    ''    : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:1,4'}),
+    ''    : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:4'}),
     'pi'  : Item("This is the file 'pi'.\n"),
     'rho' : Item("New content"),
     'tau' : Item("This is the file 'tau'.\n"),
@@ -5181,7 +5174,7 @@ def mergeinfo_elision(sbox):
   os.chdir(saved_cwd)
 
   # Merge r3:6 into A_COPY.  This would result in identical mergeinfo
-  # (r1,4-6) on A_COPY and two of it's descendents, A_COPY/D/G and
+  # (r4-6) on A_COPY and two of it's descendents, A_COPY/D/G and
   # A_COPY/B/E/beta, so the mergeinfo on the latter two should elide
   # to A_COPY.  In the case of A_COPY/D/G this means its wholly uncommitted
   # mergeinfo is removed leaving no prop mods.  In the case of
@@ -5213,7 +5206,7 @@ def mergeinfo_elision(sbox):
     'D/H/omega' : Item(status='M ', wc_rev=2),
     })
   expected_disk = wc.State('', {
-    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A:1,4-6'}),
+    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A:4-6'}),
     'B'         : Item(),
     'mu'        : Item("This is the file 'mu'.\n"),
     'B/E'       : Item(),
@@ -5269,7 +5262,7 @@ def mergeinfo_elision(sbox):
     })
   svntest.actions.run_and_verify_status(beta_COPY_path, expected_status)
 
-  svntest.actions.run_and_verify_svn(None, ["/A/B/E/beta:1,4,6\n"], [],
+  svntest.actions.run_and_verify_svn(None, ["/A/B/E/beta:4,6\n"], [],
                                      'propget', SVN_PROP_MERGE_INFO,
                                      beta_COPY_path)
 
@@ -5335,7 +5328,7 @@ def mergeinfo_inheritance_and_discontinuous_ranges(sbox):
   expected_status.tweak("A_COPY", status=' M')
   expected_status.tweak("A_COPY/D/G/rho", status='M ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
-  svntest.actions.run_and_verify_svn(None, ["/A:1,4\n"], [],
+  svntest.actions.run_and_verify_svn(None, ["/A:4\n"], [],
                                      'propget', SVN_PROP_MERGE_INFO,
                                      A_COPY_path)
 
@@ -5344,9 +5337,9 @@ def mergeinfo_inheritance_and_discontinuous_ranges(sbox):
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
   #
-  # A_COPY/D should inherit the mergeinfo '/A:1,4' from A_COPY
+  # A_COPY/D should inherit the mergeinfo '/A:4' from A_COPY
   # combine it with the discontinous merges performed directly on
-  # it (A/D/ 2:3 and A/D 4:6) resulting in '/A/D:1,3-6'.
+  # it (A/D/ 2:3 and A/D 4:6) resulting in '/A/D:3-6'.
   short_D_COPY_path = shorten_path_kludge(D_COPY_path)
   expected_output = wc.State(short_D_COPY_path, {
     'H/psi'   : Item(status='U '),
@@ -5365,7 +5358,7 @@ def mergeinfo_inheritance_and_discontinuous_ranges(sbox):
     'gamma'   : Item(status='  ', wc_rev=2),
     })
   expected_disk = wc.State('', {
-    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/D:1,3-6'}),
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/D:3-6'}),
     'G'       : Item(),
     'G/pi'    : Item("This is the file 'pi'.\n"),
     'G/rho'   : Item("New content"),
@@ -5438,7 +5431,7 @@ def merge_to_target_with_copied_children(sbox):
   expected_disk.add({
     'A_COPY/D/G/rho_copy' : Item("This is the file 'rho'.\n",
                                  props={SVN_PROP_MERGE_INFO :
-                                        '/A/D/G/rho:1\n/A_COPY/D/G/rho:2-6\n'})
+                                        '/A_COPY/D/G/rho:2-6'})
     })
   expected_status.tweak(wc_rev=7)
   expected_status.add({'A_COPY/D/G/rho_copy' : Item(status='  ', wc_rev=7)})
@@ -5464,12 +5457,11 @@ def merge_to_target_with_copied_children(sbox):
     'tau'      : Item(status='  ', wc_rev=7),
     })
   expected_disk = wc.State('', {
-    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:1,4'}),
+    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:4'}),
     'pi'       : Item("This is the file 'pi'.\n"),
     'rho'      : Item("New content"),
     'rho_copy' : Item("This is the file 'rho'.\n",
-                      props={SVN_PROP_MERGE_INFO :
-                             '/A/D/G/rho:1\n/A_COPY/D/G/rho:2-6\n'}),
+                      props={SVN_PROP_MERGE_INFO : '/A_COPY/D/G/rho:2-6'}),
     'tau'      : Item("This is the file 'tau'.\n"),
     })
   expected_skip = wc.State(short_G_COPY_path, { })
@@ -5538,8 +5530,7 @@ def merge_to_switched_path(sbox):
   # Switch A_COPY/D/G to A/D/G.
   wc_disk.add({
     "A"  : Item(),
-    "A/D/G_COPY"     : Item(props={SVN_PROP_MERGE_INFO :
-                                   '/A/D/G:1-6'}),
+    "A/D/G_COPY"     : Item(props={SVN_PROP_MERGE_INFO : ''}),
     "A/D/G_COPY/pi"  : Item("This is the file 'pi'.\n"),
     "A/D/G_COPY/rho" : Item("New *and* improved rho content"),
     "A/D/G_COPY/tau" : Item("This is the file 'tau'.\n"),
@@ -8352,7 +8343,7 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
     'D/H/psi'  : Item(status='  ', wc_rev=4),
     })
   expected_disk = wc.State('', {
-    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A:1-2,4-6',
+    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A:4-6',
                              'prop1' : 'val1'}),
     'mu'       : Item(tweaked_27th_line),
     'C'        : Item(),
@@ -8407,7 +8398,7 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
                                        expected_skip,
                                        None, None, None, None, None, 1)
   os.chdir(saved_cwd)
-  expected_disk.tweak('', props={SVN_PROP_MERGE_INFO : '/A:1-2,4-6',
+  expected_disk.tweak('', props={SVN_PROP_MERGE_INFO : '/A:4-6',
                                  'prop1' : 'val1'})
   expected_disk.tweak('mu', contents=tweaked_27th_line)
   expected_output = wc.State(short_A_COPY, {
@@ -9288,13 +9279,21 @@ def self_reverse_merge(sbox):
                                        expected_status, expected_skip,
                                        None, None, None, None, None, 1, 1)
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
+
+  # update to HEAD so that the to-be-undone revision is found in the
+  # implicit mergeinfo (the natural history) of the target.
+  svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
+
   # record dummy self mergeinfo to test the fact that self-reversal should work
   # irrespective of mergeinfo.
   svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-c', '1',
                                      '--record-only', sbox.repo_url, wc_dir)
+
   # Bad svntest.main.greek_state does not have '', so adding it explicitly.
   expected_disk.add({'' : Item(props={SVN_PROP_MERGE_INFO : '/:1'})})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('', status = ' M')
+  expected_status.tweak('A/mu', status = 'M ')
   svntest.actions.run_and_verify_merge(wc_dir, '2', '1', sbox.repo_url,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
