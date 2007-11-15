@@ -267,27 +267,30 @@ svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
                           svn_revnum_t end,
                           apr_pool_t *pool);
 
-/** Remove redundancies between @ *range_1 and @ *range_2.  @ *range_1 and/or
- * @ *range_2 may be additive or subtractive ranges.  The ranges should be
- * sorted such that the minimum of @ *range_1->start and @ *range_1->end is
- * less than or equal to the minimum of @ *range_2->start and
- * @ *range_2->end.
+/** Remove redundancies between @a *range_1 and @a *range_2.  @a
+ * *range_1 and/or @a *range_2 may be additive or subtractive ranges.
+ * The ranges should be sorted such that the minimum of @c
+ * *range_1->start and @c *range_1->end is less than or equal to the
+ * minimum of @c *range_2->start and @c *range_2->end.
  *
- * If either @ *range_1 or @ *range_2 is NULL, either range contains
+ * If either @a *range_1 or @a *range_2 is NULL, either range contains
  * invalid svn_revnum_t's, or the two ranges do not intersect, then do
- * nothing and return FALSE.
+ * nothing and return @c FALSE.
  *
- * If the two ranges can be reduced to one range, set @ *range_1 to represent
- * that range, set @ *range_2 to NULL, and return TRUE.
+ * If the two ranges can be reduced to one range, set @a *range_1 to
+ * represent that range, set @a *range_2 to @c NULL, and return @c
+ * TRUE.
  *
- * If the two ranges cancel each other out set both @ *range_1 and
- * @ *range_2 to NULL and return TRUE.
+ * If the two ranges cancel each other out set both @a *range_1 and @a
+ * *range_2 to @c NULL and return @c TRUE.
  *
- * If the two ranges intersect but cannot be represented by one range (because
- * one range is additive and the other subtractive) then modify @ *range_1 and
- * @ *range_2 to remove the intersecting ranges and return TRUE.
+ * If the two ranges intersect but cannot be represented by one range
+ * (because one range is additive and the other subtractive) then
+ * modify @a *range_1 and @a *range_2 to remove the intersecting
+ * ranges and return @c TRUE.
  *
- * The inheritability of @ *range_1 or @ *range_2 is not taken into account.
+ * The inheritability of @a *range_1 or @a *range_2 is not taken into
+ * account.
  *
  * @since New in 1.5.
  */
@@ -326,7 +329,7 @@ svn_mergeinfo_to_stringbuf(svn_stringbuf_t **output, apr_hash_t *mergeinfo,
 
 /** Take a hash of mergeinfo in @a mergeinfo, and sort the rangelists
  * associated with each key (in place).
- * Note: This does not sort the hash, only the range lists in the
+ * Note: This does not sort the hash, only the rangelists in the
  * hash.
  * @since New in 1.5
  */
