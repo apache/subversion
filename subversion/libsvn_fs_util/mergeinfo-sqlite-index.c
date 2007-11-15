@@ -36,6 +36,8 @@
 #include "../libsvn_fs/fs-loader.h"
 #include "svn_private_config.h"
 
+#include "sqlite-util.h"
+
 /* This is a macro implementation of svn_fs_revision_root_revision(), which
    we cannot call from here, because it would create a circular dependency. */
 #define REV_ROOT_REV(root)       \
@@ -45,151 +47,11 @@
    so we use a -1 converted to a pointer to represent this. */
 #define NEGATIVE_CACHE_RESULT ((void *)(-1))
 
-/* SQLITE->SVN quick error wrap, much like SVN_ERR. */
-#define SQLITE_ERR(x, db) do                                    \
-{                                                               \
-  if ((x) != SQLITE_OK)                                         \
-    return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,      \
-                            sqlite3_errmsg((db)));              \
-} while (0)
-
 /* A flow-control helper macro for sending processing to the 'cleanup'
   label when the local variable 'err' is not SVN_NO_ERROR. */
 #define MAYBE_CLEANUP if (err) goto cleanup
 
-#ifdef SQLITE3_DEBUG
-/* An sqlite query execution callback. */
-static void
-sqlite_tracer(void *data, const char *sql)
-{
-  /*  sqlite3 *db = data; */
-  fprintf(stderr, "SQLITE SQL is \"%s\"\n", sql);
-}
-#endif
 
-/* Execute SQL on the sqlite database DB, and raise an SVN error if the
-   result is not okay.  */
-
-static svn_error_t *
-util_sqlite_exec(sqlite3 *db, const char *sql,
-                 sqlite3_callback callback,
-                 void *callbackdata)
-{
-  char *err_msg;
-  svn_error_t *err;
-  if (sqlite3_exec(db, sql, NULL, NULL, &err_msg) != SQLITE_OK)
-    {
-      err = svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL, err_msg);
-      sqlite3_free(err_msg);
-      return err;
-    }
-  return SVN_NO_ERROR;
-}
-
-/* Time (in milliseconds) to wait for sqlite locks before giving up. */
-#define BUSY_TIMEOUT 10000
-
-/* The version number of the schema used to store the mergeinfo index. */
-#define MERGE_INFO_INDEX_SCHEMA_FORMAT 1
-
-/* Return SVN_ERR_FS_GENERAL if the schema doesn't exist,
-   SVN_ERR_FS_UNSUPPORTED_FORMAT if the schema format is invalid, or
-   SVN_ERR_FS_SQLITE_ERROR if an sqlite error occurs during
-   validation.  Return SVN_NO_ERROR if everything is okay. */
-static svn_error_t *
-check_format(sqlite3 *db)
-{
-  svn_error_t *err = SVN_NO_ERROR;
-  sqlite3_stmt *stmt;
-
-  SQLITE_ERR(sqlite3_prepare(db, "PRAGMA user_version;", -1, &stmt, NULL), db);
-  if (sqlite3_step(stmt) == SQLITE_ROW)
-    {
-      /* Validate that the schema exists as expected and that the
-         schema and repository versions match. */
-      int schema_format = sqlite3_column_int(stmt, 0);
-      if (schema_format == MERGE_INFO_INDEX_SCHEMA_FORMAT)
-        {
-          err = SVN_NO_ERROR;
-        }
-      else if (schema_format == 0)
-        {
-          /* This is likely a freshly-created database in which the
-             merge tracking schema doesn't yet exist. */
-          err = svn_error_create(SVN_ERR_FS_GENERAL, NULL,
-                                 _("Merge Tracking schema format not set"));
-        }
-      else if (schema_format > MERGE_INFO_INDEX_SCHEMA_FORMAT)
-        {
-          err = svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
-                                  _("Merge Tracking schema format %d "
-                                    "not recognized"), schema_format);
-        }
-      /* else, we may one day want to perform a schema migration. */
-
-      SQLITE_ERR(sqlite3_finalize(stmt), db);
-    }
-  else
-    {
-      err = svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
-                             sqlite3_errmsg(db));
-    }
-  return err;
-}
-
-const char SVN_MTD_CREATE_SQL[] = "PRAGMA auto_vacuum = 1;"
-  APR_EOL_STR
-  "CREATE TABLE mergeinfo (revision INTEGER NOT NULL, mergedfrom TEXT NOT "
-  "NULL, mergedto TEXT NOT NULL, mergedrevstart INTEGER NOT NULL, "
-  "mergedrevend INTEGER NOT NULL, inheritable INTEGER NOT NULL);"
-  APR_EOL_STR
-  "CREATE INDEX mi_mergedfrom_idx ON mergeinfo (mergedfrom);"
-  APR_EOL_STR
-  "CREATE INDEX mi_mergedto_idx ON mergeinfo (mergedto);"
-  APR_EOL_STR
-  "CREATE INDEX mi_revision_idx ON mergeinfo (revision);"
-  APR_EOL_STR
-  "CREATE TABLE mergeinfo_changed (revision INTEGER NOT NULL, path TEXT "
-  "NOT NULL);"
-  APR_EOL_STR
-  "CREATE UNIQUE INDEX mi_c_revpath_idx ON mergeinfo_changed (revision, path);"
-  APR_EOL_STR
-  "CREATE INDEX mi_c_path_idx ON mergeinfo_changed (path);"
-  APR_EOL_STR
-  "CREATE INDEX mi_c_revision_idx ON mergeinfo_changed (revision);"
-  APR_EOL_STR
-  "PRAGMA user_version = " APR_STRINGIFY(MERGE_INFO_INDEX_SCHEMA_FORMAT) ";"
-  APR_EOL_STR;
-
-/* Open a connection in *DB to the mergeinfo database under
-   REPOS_PATH.  Validate the merge tracking schema, creating it if it
-   doesn't yet exist.  This provides a migration path for pre-1.5
-   repositories. */
-static svn_error_t *
-open_db(sqlite3 **db, const char *repos_path, apr_pool_t *pool)
-{
-  svn_error_t *err;
-  const char *db_path = svn_path_join(repos_path,
-                                      SVN_FS__SQLITE_DB_NAME, pool);
-  SQLITE_ERR(sqlite3_open(db_path, db), *db);
-  /* Retry until timeout when database is busy. */
-  SQLITE_ERR(sqlite3_busy_timeout(*db, BUSY_TIMEOUT), *db);
-#ifdef SQLITE3_DEBUG
-  sqlite3_trace(*db, sqlite_tracer, *db);
-#endif
-
-  /* Validate the schema. */
-  err = check_format(*db);
-  if (err && err->apr_err == SVN_ERR_FS_GENERAL)
-    {
-      /* Assume that we've just created an empty mergeinfo index by
-         way of sqlite3_open() (likely from accessing a pre-1.5
-         repository), and need to create the merge tracking schema. */
-      svn_error_clear(err);
-      err = util_sqlite_exec(*db, SVN_MTD_CREATE_SQL, NULL, NULL);
-    }
-  return err;
-}
 
 /* Close DB, returning any ERR which may've necessitated an early connection
    closure, or -- if none -- the error from the closure itself. */
@@ -377,7 +239,7 @@ svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
   const char *deletestring;
 
   SVN_ERR(open_db(&db, txn->fs->path, pool));
-  err = util_sqlite_exec(db, "BEGIN TRANSACTION;", NULL, NULL);
+  err = svn_fs__sqlite_exec(db, "BEGIN TRANSACTION;");
   MAYBE_CLEANUP;
 
   /* Cleanup the leftovers of any previous, failed transactions
@@ -386,12 +248,12 @@ svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
                               "DELETE FROM mergeinfo_changed WHERE "
                               "revision = %ld;",
                               new_rev);
-  err = util_sqlite_exec(db, deletestring, NULL, NULL);
+  err = svn_fs__sqlite_exec(db, deletestring);
   MAYBE_CLEANUP;
   deletestring = apr_psprintf(pool,
                               "DELETE FROM mergeinfo WHERE revision = %ld;",
                               new_rev);
-  err = util_sqlite_exec(db, deletestring, NULL, NULL);
+  err = svn_fs__sqlite_exec(db, deletestring);
   MAYBE_CLEANUP;
 
   /* Record any mergeinfo from the current transaction. */
@@ -406,7 +268,7 @@ svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
    * On the other hand, if we commit the transaction and end up failing
    * the current file, we just end up with inaccessible data in the
    * database, not a real problem.  */
-  err = util_sqlite_exec(db, "COMMIT TRANSACTION;", NULL, NULL);
+  err = svn_fs__sqlite_exec(db, "COMMIT TRANSACTION;");
   MAYBE_CLEANUP;
 
  cleanup:
