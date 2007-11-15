@@ -1523,6 +1523,40 @@ class SvnClientTest < Test::Unit::TestCase
     assert_equal(@repos_uri, top_info.url)
   end
 
+  def test_info_with_depth
+    setup_greek_tree
+
+    log = "sample log"
+    ctx = make_context(log)
+
+    recurse_and_depth_choices.each do |rd|
+      ctx.info(@greek.path(:mu),nil,nil,rd) do |path, info|
+        assert_equal @greek.uri(:mu), info.URL
+      end
+    end
+
+    expected_info_by_depth = {
+      true => [:beta, :b, :lambda, :e, :f, :alpha],
+      false => [:b],
+      'unknown' => [:b],
+      'exclude' => [:b],
+      'empty' => [:b],
+      'files' => [:b, :lambda],
+      'immediates' => [:b, :lambda, :e, :f],
+      'infinity' => [:beta, :b, :lambda, :e, :f, :alpha],
+    }
+
+    recurse_and_depth_choices.each do |rd|
+      urls = []
+      ctx.info(@greek.path(:b),nil,nil,rd) do |path, info|
+        urls << info.URL
+      end
+      assert_equal expected_info_by_depth[rd].map{|s| @greek.uri(s)}.sort,
+                   urls.sort,
+                   "depth '#{rd}"
+    end
+  end
+
   def test_url_from_path
     log = "sample log"
     ctx = make_context(log)
