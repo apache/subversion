@@ -77,7 +77,7 @@ combine_ranges(svn_merge_range_t **output, svn_merge_range_t *in1,
     }
   else
     {
-      if (in1->start > in2->end && in2->start > in1->end)
+      if (in1->end <= in2->start && in2->end <= in1->start)
         {
           (*output)->start = MAX(in1->start, in2->start);
           (*output)->end = MIN(in1->end, in2->end);
