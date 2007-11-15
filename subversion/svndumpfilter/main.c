@@ -487,7 +487,7 @@ new_node_record(void **node_baton,
       if (copyfrom_path &&
           skip_path(copyfrom_path, pb->prefixes, pb->do_exclude))
         {
-          /* This node was copied from dropped source.
+          /* This node was copied from a dropped source.
              We have a problem, since we did not want to drop this node too.
 
              However, there is one special case we'll handle.  If the node is
