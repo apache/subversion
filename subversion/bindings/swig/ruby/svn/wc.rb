@@ -307,8 +307,13 @@ module Svn
         editor
       end
 
-      def update_editor2(target_revision, target, options={})
-        defaults = {
+      REQUIRED_UPDATE_EDITOR_KEYS = [:target_revision, :target]
+      OPTIONAL_UPDATE_EDITOR_KEYS = [:use_commit_times, :depth,
+                                     :allow_unver_obstruction, :diff3_cmd,
+                                     :notify_func, :cancel_func,
+                                     :traversal_info, :preserved_exts]
+      def update_editor2(options={})
+        default_options = {
           :use_commit_times => true,
           :depth => nil,
           :allow_unver_obstruction => false,
@@ -316,28 +321,33 @@ module Svn
           :notify_func => nil,
           :cancel_func => nil,
           :traversal_info => _traversal_info,
-          :preserved_exts => [] }
-        actuals = Util.validate_options(defaults, options)
+          :preserved_exts => []
+        }
+        options = default_options.merge(options)
+        Util.validate_options(options,
+                              OPTIONAL_UPDATE_EDITOR_KEYS,
+                              REQUIRED_UPDATE_EDITOR_KEYS)
 
         # TODO(rb support fetch_fun): implement support for the fetch_func
         # callback.
-        actuals[:fetch_func] = nil
+        options[:fetch_func] = nil
 
         # TODO(rb support conflict_fun): implement support for the
         # conflict_func callback.
-        actuals[:conflict_func] = nil
+        options[:conflict_func] = nil
 
-        results = Wc.get_update_editor3(target_revision, self, target,
-                                        actuals[:use_commit_times],
-                                        actuals[:depth],
-                                        actuals[:allow_unver_obstruction],
-                                        actuals[:notify_func],
-                                        actuals[:cancel_func],
-                                        actuals[:conflict_func],
-                                        actuals[:fetch_func],
-                                        actuals[:diff3_cmd],
-                                        actuals[:preserved_exts],
-                                        actuals[:traversal_info])
+        results = Wc.get_update_editor3(options[:target_revision], self,
+                                        options[:target],
+                                        options[:use_commit_times],
+                                        options[:depth],
+                                        options[:allow_unver_obstruction],
+                                        options[:notify_func],
+                                        options[:cancel_func],
+                                        options[:conflict_func],
+                                        options[:fetch_func],
+                                        options[:diff3_cmd],
+                                        options[:preserved_exts],
+                                        options[:traversal_info])
         target_revision_address, editor, editor_baton = results
         editor.__send__(:target_revision_address=, target_revision_address)
         editor.baton = editor_baton
@@ -356,8 +366,13 @@ module Svn
         editor
       end
 
-      def switch_editor2(target_revision, target, switch_url, options={})
-        defaults = {
+      REQUIRED_SWITCH_EDITOR_KEYS = [:target_revision, :target, :switch_url]
+      OPTIONAL_SWITCH_EDITOR_KEYS = [:use_commit_times, :depth,
+                                     :allow_unver_obstruction, :diff3_cmd,
+                                     :notify_func, :cancel_func,
+                                     :traversal_info, :preserved_exts]
+      def switch_editor2(options={})
+        default_options = {
           :use_commit_times => true,
           :depth => nil,
           :allow_unver_obstruction => false,
@@ -365,24 +380,29 @@ module Svn
           :notify_func => nil,
           :cancel_func => nil,
           :traversal_info => _traversal_info,
-          :preserved_exts => [] }
-        actuals = Util.validate_options(defaults, options)
+          :preserved_exts => []
+        }
+        options = default_options.merge(options)
+        Util.validate_options(options,
+                              OPTIONAL_SWITCH_EDITOR_KEYS,
+                              REQUIRED_SWITCH_EDITOR_KEYS)
 
         # TODO(rb support conflict_fun): implement support for the
         # conflict_func callback.
-        actuals[:conflict_func]=nil
+        options[:conflict_func]=nil
 
-        results = Wc.get_switch_editor3(target_revision, self, target,
-                                        switch_url,
-                                        actuals[:use_commit_times],
-                                        actuals[:depth],
-                                        actuals[:allow_unver_obstruction],
-                                        actuals[:notify_func],
-                                        actuals[:cancel_func],
-                                        actuals[:conflict_func],
-                                        actuals[:diff3_cmd],
-                                        actuals[:preserved_exts],
-                                        actuals[:traversal_info])
+        results = Wc.get_switch_editor3(options[:target_revision], self,
+                                        options[:target],
+                                        options[:switch_url],
+                                        options[:use_commit_times],
+                                        options[:depth],
+                                        options[:allow_unver_obstruction],
+                                        options[:notify_func],
+                                        options[:cancel_func],
+                                        options[:conflict_func],
+                                        options[:diff3_cmd],
+                                        options[:preserved_exts],
+                                        options[:traversal_info])
         target_revision_address, editor, editor_baton = results
         editor.__send__(:target_revision_address=, target_revision_address)
         editor.baton = editor_baton
