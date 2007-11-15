@@ -111,5 +111,13 @@ EOC
         GetText.bindtextdomain(locale_directory_win)
       end
     end
+
+    def validate_options(valid_options, passed_options)
+      unknown_keys = passed_options.keys - valid_options.keys
+      unless unknown_keys.empty?
+        raise(ArgumentError, "Unknown key(s): #{unknown_keys.join(", ")}")
+      end
+      valid_options.merge(passed_options)
+    end
   end
 end
