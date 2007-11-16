@@ -2931,7 +2931,6 @@ fs_node_origin_rev(svn_revnum_t *revision,
   svn_fs_t *fs = svn_fs_root_fs(root);
   const svn_fs_id_t *given_noderev_id, *cached_origin_id;
   const char *node_id;
-  svn_error_t *err;
 
   path = svn_fs__canonicalize_abspath(path, pool);
 
@@ -2939,19 +2938,23 @@ fs_node_origin_rev(svn_revnum_t *revision,
   SVN_ERR(fs_node_id(&given_noderev_id, root, path, pool));
   node_id = svn_fs_fs__id_node_id(given_noderev_id);
 
-  err = svn_fs__get_node_origin(&cached_origin_id,
-                                fs,
-                                node_id,
-                                pool);
-
-  if (err && err->apr_err != SVN_ERR_FS_NO_SUCH_NODE_ORIGIN)
-    return err;
-  else if (! err)
+  if (node_id[0] != '_')
     {
-      *revision = svn_fs_fs__id_rev(cached_origin_id);
-      return SVN_NO_ERROR;
+      svn_error_t *err = svn_fs__get_node_origin(&cached_origin_id,
+                                                 fs,
+                                                 node_id,
+                                                 pool);
+
+      if (err && err->apr_err != SVN_ERR_FS_NO_SUCH_NODE_ORIGIN)
+        return err;
+      else if (! err)
+        {
+          *revision = svn_fs_fs__id_rev(cached_origin_id);
+          return SVN_NO_ERROR;
+        }
+      svn_error_clear(err);
     }
-  else
+
     {
       /* Ah well, it's not in the cache.  Let's actually calculate it,
          then. */
@@ -2962,9 +2965,6 @@ fs_node_origin_rev(svn_revnum_t *revision,
       svn_revnum_t lastrev = SVN_INVALID_REVNUM;
       dag_node_t *node;
       const svn_fs_id_t *pred_id;
-
-      svn_error_clear(err);
-      
 
       /* Walk the closest-copy chain back to the first copy in our history.
          
@@ -3013,8 +3013,9 @@ fs_node_origin_rev(svn_revnum_t *revision,
 
       /* Wow, I don't want to have to do all that again.  Let's cache
          the result. */
-      SVN_ERR(svn_fs__set_node_origin(fs, node_id, svn_fs_fs__dag_get_id(node),
-                                      pool));
+      if (node_id[0] != '_')
+        SVN_ERR(svn_fs__set_node_origin(fs, node_id, 
+                                        svn_fs_fs__dag_get_id(node), pool));
 
       svn_pool_destroy(subpool);
       svn_pool_destroy(predidpool);
