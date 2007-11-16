@@ -2472,8 +2472,7 @@ public class BasicTests extends SVNTests
                                  expectedDiffOutput, diffOutput);
 
         // Test svn diff with a relative path and trailing slash.
-        wcPath = fileToSVNPath(new File(thisTest.getWCPath() + "/"),
-                               false);
+        wcPath = fileToSVNPath(new File(thisTest.getWCPath() + "/"), false);
 
         client.diff(iotaPath, Revision.BASE, iotaPath, Revision.WORKING,
                     wcPath, diffOutput.getPath(), Depth.infinity, true, true,
