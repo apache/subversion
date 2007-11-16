@@ -130,14 +130,22 @@ combine_with_lastrange(svn_merge_range_t** lastrange,
 {
   svn_merge_range_t *pushed_mrange_1 = NULL;
   svn_merge_range_t *pushed_mrange_2 = NULL;
+  svn_boolean_t ranges_intersect = FALSE;
+  svn_boolean_t ranges_have_same_inheritance = FALSE;
+  
+  if (*lastrange)
+    {
+      if ((*lastrange)->start <= mrange->end
+          && mrange->start <= (*lastrange)->end)
+        ranges_intersect = TRUE;
+      if ((*lastrange)->inheritable == mrange->inheritable)
+        ranges_have_same_inheritance = TRUE;
+    }
 
   if (!(*lastrange)
-      || !((*lastrange)->start <= mrange->end
-           && mrange->start <= (*lastrange)->end)
-      || ((*lastrange)->start <= mrange->end
-          && mrange->start <= (*lastrange)->end)
-      && consider_inheritance
-      && !((*lastrange)->inheritable == mrange->inheritable))
+      || (!ranges_intersect || (!ranges_have_same_inheritance
+                                && consider_inheritance)))
+
     {
       /* No *LASTRANGE
            or
@@ -155,8 +163,7 @@ combine_with_lastrange(svn_merge_range_t** lastrange,
     }
   else /* MRANGE and *LASTRANGE intersect */
     {
-      if (((*lastrange)->inheritable ? TRUE: FALSE)
-            == (mrange->inheritable ? TRUE : FALSE))
+      if (ranges_have_same_inheritance)
         {
           /* Intersecting ranges have the same inheritability
              so just combine them. */
