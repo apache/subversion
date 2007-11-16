@@ -158,7 +158,7 @@ check_scheme_match(svn_wc_adm_access_t *adm_access, const char *url)
 /*** Callbacks for 'svn merge', invoked by the repos-diff editor. ***/
 
 
-struct merge_cmd_baton {
+typedef struct merge_cmd_baton_t {
   svn_boolean_t force;
   svn_boolean_t record_only;          /* Whether to only record mergeinfo. */
   svn_boolean_t dry_run;
@@ -214,12 +214,12 @@ struct merge_cmd_baton {
   svn_boolean_t target_has_dummy_merge_range;
 
   apr_pool_t *pool;
-};
+} merge_cmd_baton_t;
 
 apr_hash_t *
 svn_client__dry_run_deletions(void *merge_cmd_baton)
 {
-  struct merge_cmd_baton *merge_b = merge_cmd_baton;
+  merge_cmd_baton_t *merge_b = merge_cmd_baton;
   return merge_b->dry_run_deletions;
 }
 
@@ -228,7 +228,7 @@ svn_client__dry_run_deletions(void *merge_cmd_baton)
    weren't in dry_run mode (issue #2584).  Assumes that WCPATH is
    still versioned (e.g. has an associated entry). */
 static APR_INLINE svn_boolean_t
-dry_run_deleted_p(struct merge_cmd_baton *merge_b, const char *wcpath)
+dry_run_deleted_p(merge_cmd_baton_t *merge_b, const char *wcpath)
 {
   return (merge_b->dry_run &&
           apr_hash_get(merge_b->dry_run_deletions, wcpath,
@@ -238,7 +238,7 @@ dry_run_deleted_p(struct merge_cmd_baton *merge_b, const char *wcpath)
 /* Return whether any WC path was put in conflict by the merge
    operation corresponding to MERGE_B. */
 static APR_INLINE svn_boolean_t
-is_path_conflicted_by_merge(struct merge_cmd_baton *merge_b)
+is_path_conflicted_by_merge(merge_cmd_baton_t *merge_b)
 {
   return (merge_b->conflicted_paths &&
           apr_hash_count(merge_b->conflicted_paths) > 0);
@@ -255,7 +255,7 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
                     void *baton)
 {
   apr_array_header_t *props;
-  struct merge_cmd_baton *merge_b = baton;
+  merge_cmd_baton_t *merge_b = baton;
   svn_client_ctx_t *ctx = merge_b->ctx;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_error_t *err;
@@ -371,7 +371,7 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
                    apr_hash_t *original_props,
                    void *baton)
 {
-  struct merge_cmd_baton *merge_b = baton;
+  merge_cmd_baton_t *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_boolean_t merge_required = TRUE;
   enum svn_wc_merge_outcome_t merge_outcome;
@@ -534,7 +534,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
                  apr_hash_t *original_props,
                  void *baton)
 {
-  struct merge_cmd_baton *merge_b = baton;
+  merge_cmd_baton_t *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_node_kind_t kind;
   const char *copyfrom_url;
@@ -695,7 +695,7 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
                    apr_hash_t *original_props,
                    void *baton)
 {
-  struct merge_cmd_baton *merge_b = baton;
+  merge_cmd_baton_t *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_node_kind_t kind;
   svn_wc_adm_access_t *parent_access;
@@ -763,7 +763,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
                 svn_revnum_t rev,
                 void *baton)
 {
-  struct merge_cmd_baton *merge_b = baton;
+  merge_cmd_baton_t *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_node_kind_t kind;
   const svn_wc_entry_t *entry;
@@ -923,7 +923,7 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
                   const char *path,
                   void *baton)
 {
-  struct merge_cmd_baton *merge_b = baton;
+  merge_cmd_baton_t *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_node_kind_t kind;
   svn_wc_adm_access_t *parent_access;
@@ -1249,7 +1249,7 @@ typedef struct
   int cur_ancestor_index;
 
   /* We use this to make a decision on merge begin line notifications. */
-  struct merge_cmd_baton *merge_b;
+  merge_cmd_baton_t *merge_b;
 
   /* Pool used in notification_receiver() to avoid the iteration
      sub-pool which is passed in, then subsequently destroyed. */
@@ -1398,7 +1398,7 @@ determine_merges_performed(apr_hash_t **merges, const char *target_wcpath,
                            svn_depth_t depth,
                            svn_wc_adm_access_t *adm_access,
                            notification_receiver_baton_t *notify_b,
-                           struct merge_cmd_baton *merge_b,
+                           merge_cmd_baton_t *merge_b,
                            apr_pool_t *pool)
 {
   apr_array_header_t *rangelist;
@@ -1869,7 +1869,7 @@ drive_merge_report_editor(const char *target_wcpath,
                           notification_receiver_baton_t *notify_b,
                           svn_wc_adm_access_t *adm_access,
                           const svn_wc_diff_callbacks2_t *callbacks,
-                          struct merge_cmd_baton *merge_b,
+                          merge_cmd_baton_t *merge_b,
                           apr_pool_t *pool)
 {
   const svn_ra_reporter3_t *reporter;
@@ -1981,7 +1981,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                           svn_ra_session_t *ra_session,
                           const char *parent_merge_src_canon_path,
                           svn_wc_adm_access_t *adm_access,
-                          struct merge_cmd_baton *merge_b)
+                          merge_cmd_baton_t *merge_b)
 {
   apr_pool_t *iterpool, *persistent_pool;
   int merge_target_len = strlen(merge_b->target);
@@ -2216,7 +2216,7 @@ record_mergeinfo_for_record_only_merge(const char *url,
                                        svn_merge_range_t *range,
                                        const svn_wc_entry_t *entry,
                                        svn_wc_adm_access_t *adm_access,
-                                       struct merge_cmd_baton *merge_b,
+                                       merge_cmd_baton_t *merge_b,
                                        apr_pool_t *pool)
 {
   apr_array_header_t *rangelist;
@@ -2267,7 +2267,7 @@ mark_mergeinfo_as_inheritable_for_a_range(
                                    const char *rel_path,
                                    const char *target_wcpath,
                                    svn_wc_adm_access_t *adm_access,
-                                   struct merge_cmd_baton *merge_b,
+                                   merge_cmd_baton_t *merge_b,
                                    apr_array_header_t *children_with_mergeinfo,
                                    int target_index, apr_pool_t *pool)
 {
@@ -2331,7 +2331,7 @@ static svn_error_t *
 record_mergeinfo_on_merged_children(svn_depth_t depth,
                                     svn_wc_adm_access_t *adm_access,
                                     notification_receiver_baton_t *notify_b,
-                                    struct merge_cmd_baton *merge_b,
+                                    merge_cmd_baton_t *merge_b,
                                     apr_pool_t *pool)
 {
   if ((depth != svn_depth_infinity) && notify_b->merged_paths)
@@ -2408,7 +2408,7 @@ do_merge(const char *url1,
          svn_boolean_t ignore_ancestry,
          const svn_wc_diff_callbacks2_t *callbacks,
          notification_receiver_baton_t *notify_b,
-         struct merge_cmd_baton *merge_b,
+         merge_cmd_baton_t *merge_b,
          apr_array_header_t *children_with_mergeinfo,
          apr_pool_t *pool)
 {
@@ -2655,7 +2655,7 @@ do_single_file_merge(const char *url1,
                      const char *target_wcpath,
                      svn_wc_adm_access_t *adm_access,
                      notification_receiver_baton_t *notify_b,
-                     struct merge_cmd_baton *merge_b,
+                     merge_cmd_baton_t *merge_b,
                      svn_boolean_t ignore_ancestry,
                      apr_pool_t *pool)
 {
@@ -3238,7 +3238,7 @@ compare_merge_path_t_as_paths(const void *a,
 static svn_error_t *
 insert_parent_and_sibs_of_sw_absent_del_entry(
                                    apr_array_header_t *children_with_mergeinfo,
-                                   struct merge_cmd_baton *merge_cmd_baton,
+                                   merge_cmd_baton_t *merge_cmd_baton,
                                    int *curr_index,
                                    svn_client__merge_path_t *child,
                                    svn_wc_adm_access_t *adm_access,
@@ -3344,7 +3344,7 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
    Cascade MERGE_SRC_CANON_PATH. */
 static svn_error_t *
 get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
-                    struct merge_cmd_baton *merge_cmd_baton,
+                    merge_cmd_baton_t *merge_cmd_baton,
                     const char* merge_src_canon_path,
                     const svn_wc_entry_t *entry,
                     svn_wc_adm_access_t *adm_access,
@@ -3560,7 +3560,7 @@ discover_and_merge_children(const char *url1,
                             svn_wc_adm_access_t *adm_access,
                             svn_depth_t depth,
                             notification_receiver_baton_t *notify_b,
-                            struct merge_cmd_baton *merge_b,
+                            merge_cmd_baton_t *merge_b,
                             apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
@@ -3798,7 +3798,7 @@ discover_and_merge_children(const char *url1,
    different repository from the merge target (ENTRY), to avoid later
    erroneously setting mergeinfo on the target. */
 static APR_INLINE svn_error_t *
-from_same_repos(struct merge_cmd_baton *merge_b, const svn_wc_entry_t *entry,
+from_same_repos(merge_cmd_baton_t *merge_b, const svn_wc_entry_t *entry,
                 svn_client_ctx_t *ctx, apr_pool_t *pool)
 {
   const char *src_root;
@@ -4123,7 +4123,7 @@ svn_client_merge3(const char *source1,
 {
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
-  struct merge_cmd_baton merge_cmd_baton;
+  merge_cmd_baton_t merge_cmd_baton;
   const char *URL1, *URL2;
   svn_config_t *cfg;
   const char *wc_repos_root;
@@ -4356,7 +4356,7 @@ svn_client_merge_peg3(const char *source,
 {
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
-  struct merge_cmd_baton merge_cmd_baton;
+  merge_cmd_baton_t merge_cmd_baton;
   const char *URL;
   apr_array_header_t *revision_ranges = (apr_array_header_t *)ranges_to_merge;
   apr_array_header_t *merge_sources;
