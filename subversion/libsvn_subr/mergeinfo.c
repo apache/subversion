@@ -457,12 +457,12 @@ parse_revlist(const char **input, const char *end,
           if (firstrev > secondrev)
             return svn_error_createf(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
                                      _("Unable to parse reversed revision "
-                                       "range '%i-%i'"),
+                                       "range '%ld-%ld'"),
                                        firstrev, secondrev);
           else if (firstrev == secondrev)
             return svn_error_createf(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
                                      _("Unable to parse revision range "
-                                       "'%i-%i' with same start and end "
+                                       "'%ld-%ld' with same start and end "
                                        "revisions"), firstrev, secondrev);
           mrange->end = secondrev;
         }
