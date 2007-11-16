@@ -137,7 +137,7 @@ combine_with_lastrange(svn_merge_range_t** lastrange,
       || ((*lastrange)->start <= mrange->end
           && mrange->start <= (*lastrange)->end)
       && consider_inheritance
-      && !(*lastrange)->inheritable != !(mrange->inheritable))
+      && !((*lastrange)->inheritable == mrange->inheritable))
     {
       /* No *LASTRANGE
            or
