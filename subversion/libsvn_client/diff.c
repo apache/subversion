@@ -118,7 +118,7 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
 
   SVN_ERR(svn_mergeinfo_diff(&deleted, &added, old_mergeinfo_hash,
                              new_mergeinfo_hash,
-                             svn_rangelist_equal_inheritance, pool));
+                             TRUE, pool));
 
   for (hi = apr_hash_first(pool, deleted);
        hi; hi = apr_hash_next(hi))

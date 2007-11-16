@@ -182,7 +182,7 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
       if (src_mergeinfo)
         {
           SVN_ERR(svn_mergeinfo_merge(*target_mergeinfo, src_mergeinfo,
-                                      svn_rangelist_equal_inheritance, pool));
+                                      pool));
         }
     }
   else
@@ -209,8 +209,7 @@ extend_wc_mergeinfo(const char *target_wcpath, const svn_wc_entry_t *entry,
 
   /* Combine the provided mergeinfo with any mergeinfo from the WC. */
   if (wc_mergeinfo)
-    SVN_ERR(svn_mergeinfo_merge(wc_mergeinfo, mergeinfo,
-                                svn_rangelist_equal_inheritance, pool));
+    SVN_ERR(svn_mergeinfo_merge(wc_mergeinfo, mergeinfo, pool));
   else
     wc_mergeinfo = mergeinfo;
 
@@ -1336,8 +1335,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                                           pair->src, FALSE, adm_access, ctx,
                                           pool));
       if (wc_mergeinfo)
-        SVN_ERR(svn_mergeinfo_merge(mergeinfo, wc_mergeinfo,
-                                    svn_rangelist_equal_inheritance, pool));
+        SVN_ERR(svn_mergeinfo_merge(mergeinfo, wc_mergeinfo, pool));
       SVN_ERR(svn_mergeinfo__to_string((svn_string_t **)
                                        &mergeinfo_prop->value,
                                        mergeinfo, pool));

@@ -1067,7 +1067,7 @@ filter_reflected_revisions(apr_array_header_t **requested_rangelist,
 
   SVN_ERR(svn_mergeinfo_diff(&deleted_mergeinfo, &added_mergeinfo,
                              start_mergeinfo, end_mergeinfo,
-                             svn_rangelist_equal_inheritance, pool));
+                             FALSE, pool));
 
   if (added_mergeinfo)
     {
@@ -1089,7 +1089,7 @@ filter_reflected_revisions(apr_array_header_t **requested_rangelist,
   if (src_rangelist_for_tgt)
     SVN_ERR(svn_rangelist_remove(requested_rangelist, src_rangelist_for_tgt,
                                  *requested_rangelist,
-                                 svn_rangelist_equal_inheritance, pool));
+                                 FALSE, pool));
   return SVN_NO_ERROR;
 }
 
@@ -1203,7 +1203,7 @@ filter_merged_revisions(apr_array_header_t **remaining_ranges,
           /* Return only those revs not already represented by this WC. */
           SVN_ERR(svn_rangelist_remove(remaining_ranges, target_rangelist,
                                        requested_merge,
-                                       svn_rangelist_ignore_inheritance,
+                                       FALSE, 
                                        pool));
         }
     }
@@ -1558,13 +1558,12 @@ update_wc_mergeinfo(const char *target_wcpath, const svn_wc_entry_t *entry,
           ranges = svn_rangelist_dup(ranges, subpool);
           SVN_ERR(svn_rangelist_reverse(ranges, subpool));
           SVN_ERR(svn_rangelist_remove(&rangelist, ranges, rangelist,
-                                       svn_rangelist_ignore_inheritance,
+                                       FALSE,
                                        subpool));
         }
       else
         {
           SVN_ERR(svn_rangelist_merge(&rangelist, ranges,
-                                      svn_rangelist_equal_inheritance,
                                       subpool));
         }
       /* Update the mergeinfo by adjusting the path's rangelist. */
@@ -2311,9 +2310,7 @@ mark_mergeinfo_as_inheritable_for_a_range(
                                         FALSE, pool));
           if (!is_equal)
             {
-              SVN_ERR(svn_mergeinfo_merge(merges, inheritable_merges,
-                                          svn_rangelist_equal_inheritance,
-                                          pool));
+              SVN_ERR(svn_mergeinfo_merge(merges, inheritable_merges, pool));
               SVN_ERR(svn_client__record_wc_mergeinfo(target_wcpath, merges,
                                                       adm_access, pool));
             }
