@@ -728,8 +728,8 @@ module Svn
         end
       end
 
-      def merge(changes, consider_inheritance=nil)
-        self.class.new(Core.swig_mergeinfo_merge(self, changes, consider_inheritance))
+      def merge(changes)
+        self.class.new(Core.swig_mergeinfo_merge(self, changes))
       end
 
       def remove(eraser)
@@ -762,8 +762,8 @@ module Svn
         end
       end
 
-      def merge(changes, consider_inheritance=nil)
-        self.class.new(*Core.swig_rangelist_merge(self, changes, consider_inheritance))
+      def merge(changes)
+        self.class.new(*Core.swig_rangelist_merge(self, changes))
       end
 
       def remove(eraser, consider_inheritance=nil)
