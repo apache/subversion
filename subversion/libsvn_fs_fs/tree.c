@@ -2929,17 +2929,19 @@ fs_node_origin_rev(svn_revnum_t *revision,
                    apr_pool_t *pool)
 {
   svn_fs_t *fs = svn_fs_root_fs(root);
-  const svn_fs_id_t *node_id, *cached_origin_id;
+  const svn_fs_id_t *given_noderev_id, *cached_origin_id;
+  const char *node_id;
   svn_error_t *err;
 
   path = svn_fs__canonicalize_abspath(path, pool);
 
   /* Check the cache first. */
-  SVN_ERR(fs_node_id(&node_id, root, path, pool));
+  SVN_ERR(fs_node_id(&given_noderev_id, root, path, pool));
+  node_id = svn_fs_fs__id_node_id(given_noderev_id);
 
   err = svn_fs__get_node_origin(&cached_origin_id,
                                 fs,
-                                svn_fs_fs__id_node_id(node_id),
+                                node_id,
                                 pool);
 
   if (err && err->apr_err != SVN_ERR_FS_NO_SUCH_NODE_ORIGIN)
@@ -3008,6 +3010,11 @@ fs_node_origin_rev(svn_revnum_t *revision,
       /* When we get here, NODE should be the first node-revision in our
          chain. */
       SVN_ERR(svn_fs_fs__dag_get_revision(revision, node, pool));
+
+      /* Wow, I don't want to have to do all that again.  Let's cache
+         the result. */
+      SVN_ERR(svn_fs__set_node_origin(fs, node_id, svn_fs_fs__dag_get_id(node),
+                                      pool));
 
       svn_pool_destroy(subpool);
       svn_pool_destroy(predidpool);

@@ -42,6 +42,14 @@ svn_fs__set_node_origins(svn_fs_t *fs,
                          apr_hash_t *node_origins,
                          apr_pool_t *pool);
 
+/* Shorthand for calling svn_fs__set_node_origins with just one pair.
+ */
+svn_error_t *
+svn_fs__set_node_origin(svn_fs_t *fs,
+                        const char *node_id,
+                        const svn_fs_id_t *node_rev_id,
+                        apr_pool_t *pool);
+
 /* Set *ORIGIN_ID to the node revision ID from which the history of
    all nodes in FS whose "Node ID" is NODE_ID springs, as determined
    by a look in the index.  Use POOL for allocations.
