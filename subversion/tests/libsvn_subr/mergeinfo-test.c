@@ -119,10 +119,6 @@ static const char * const mergeinfo_vals[NBR_MERGEINFO_VALS] =
     "/trunk: 5,7-9,10,11,13,14",
     "/trunk: 3-10,11*,13,14",
     "/branch: 1,2-18*,33*"
-    /* ### Should svn_mergeinfo_parse() handle unordered
-       ### but otherwise valid input strings like this?
-       ### Currently this fails.
-       "/trunk: 7-9,5,10,14,13,11" */
   };
 /* Paths corresponding to mergeinfo_vals. */
 static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
