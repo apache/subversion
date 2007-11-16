@@ -465,7 +465,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
       fi
       enable_debugging=yes
       if test "$GCC" = "yes"; then
-        CFLAGS="$CFLAGS -std=c89 -Wpointer-arith -Wwrite-strings -Wshadow"
+        CFLAGS="$CFLAGS -Wpointer-arith -Wwrite-strings -Wshadow"
         CXXFLAGS="$CXXFLAGS -Wpointer-arith -Wwrite-strings -Wshadow"
       fi
     fi
