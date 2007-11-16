@@ -2951,6 +2951,18 @@ def diff_summarize_xml(sbox):
   svntest.actions.run_and_verify_diff_summarize_xml(
     [], sbox.repo_url, paths, items, props, kinds, '-r1:2', sbox.repo_url)
 
+def diff_file_depth_empty(sbox):
+  "svn diff --depth=empty FILE_WITH_LOCAL_MODS"
+  # The bug was that no diff output would be generated.  Check that some is.
+  sbox.build()
+  iota_path = os.path.join(sbox.wc_dir, 'iota')
+  svntest.main.file_append(iota_path, "new text in iota")
+  out, err = svntest.main.run_svn(None, 'diff', '--depth', 'empty', iota_path)
+  if err:
+    raise svntest.Failure
+  if len(out) < 4:
+    raise svntest.Failure
+
 ########################################################################
 #Run the tests
 
@@ -3002,6 +3014,7 @@ test_list = [ None,
               diff_ignore_eolstyle_empty_lines,
               diff_backward_repos_wc_copy,
               diff_summarize_xml,
+              diff_file_depth_empty,
               ]
 
 if __name__ == '__main__':
