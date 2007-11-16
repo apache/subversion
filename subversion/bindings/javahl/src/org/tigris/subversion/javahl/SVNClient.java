@@ -803,7 +803,7 @@ public class SVNClient implements SVNClientInterface
                      boolean force)
             throws ClientException
     {
-        diff(target1, revision1, target2, revision2, outFileName,
+        diff(target1, revision1, target2, revision2, null, outFileName,
              Depth.unknownOrFiles(recurse), ignoreAncestry, noDiffDeleted,
              force);
     }
@@ -812,7 +812,8 @@ public class SVNClient implements SVNClientInterface
      * @since 1.5
      */
     public native void diff(String target1, Revision revision1, String target2,
-                            Revision revision2, String outFileName, int depth,
+                            Revision revision2, String relativeToDir,
+                            String outFileName, int depth,
                             boolean ignoreAncestry, boolean noDiffDeleted,
                             boolean force)
             throws ClientException;
@@ -830,9 +831,9 @@ public class SVNClient implements SVNClientInterface
                      boolean force)
             throws ClientException
     {
-        diff(target, pegRevision, startRevision, endRevision, outFileName,
-             Depth.unknownOrFiles(recurse), ignoreAncestry, noDiffDeleted,
-             force);
+        diff(target, pegRevision, startRevision, endRevision, null,
+             outFileName, Depth.unknownOrFiles(recurse), ignoreAncestry,
+             noDiffDeleted, force);
     }
 
     /**
@@ -840,9 +841,9 @@ public class SVNClient implements SVNClientInterface
      */
     public native void diff(String target, Revision pegRevision,
                             Revision startRevision, Revision endRevision,
-                            String outFileName, int depth,
-                            boolean ignoreAncestry, boolean noDiffDeleted,
-                            boolean force)
+                            String relativeToDir, String outFileName,
+                            int depth, boolean ignoreAncestry,
+                            boolean noDiffDeleted, boolean force)
             throws ClientException;
 
     /**
