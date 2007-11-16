@@ -829,24 +829,6 @@ typedef struct svn_merge_range_t
 } svn_merge_range_t;
 
 /**
- * The three ways to consider the inheritable member when
- * comparing @c svn_merge_range_t.
- *
- * @since New in 1.5.
- */
-typedef enum
-{
-  /* Don't take inheritability into consideration. */
-  svn_rangelist_ignore_inheritance,
-
-  /* Inheritability of both ranges must be the same. */
-  svn_rangelist_equal_inheritance,
-
-  /* Inheritability of both ranges must be @c TRUE. */
-  svn_rangelist_only_inheritable
-} svn_merge_range_inheritance_t;
-
-/**
  * Return a copy of @a range, allocated in @a pool.
  *
  * @since New in 1.5.

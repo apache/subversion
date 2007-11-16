@@ -708,9 +708,7 @@ get_mergeinfo_for_children(sqlite3 *db,
                                 db_mergeinfo, pool));
 
           if (!omit)
-            SVN_ERR(svn_mergeinfo_merge(path_mergeinfo, db_mergeinfo,
-                                        svn_rangelist_equal_inheritance,
-                                        pool));
+            SVN_ERR(svn_mergeinfo_merge(path_mergeinfo, db_mergeinfo, pool));
         }
 
       sqlite_result = sqlite3_step(stmt);
