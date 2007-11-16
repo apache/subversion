@@ -160,12 +160,14 @@ check_scheme_match(svn_wc_adm_access_t *adm_access, const char *url)
 
 typedef struct merge_cmd_baton_t {
   svn_boolean_t force;
-  svn_boolean_t record_only;          /* Whether to only record mergeinfo. */
   svn_boolean_t dry_run;
+  svn_boolean_t record_only;          /* Whether to only record mergeinfo. */
   svn_boolean_t same_repos;           /* Whether the merge source repository
                                          is the same repository as the
                                          target.  Defaults to FALSE if DRY_RUN
                                          is TRUE.*/
+  svn_boolean_t ignore_ancestry;      /* Are we ignoring ancestry (and by
+                                         extension, mergeinfo)? */
   svn_boolean_t target_missing_child; /* Whether working copy target of the
                                          merge is missing any immediate
                                          children. */
@@ -1865,7 +1867,6 @@ drive_merge_report_editor(const char *target_wcpath,
                           apr_array_header_t *children_with_mergeinfo,
                           svn_boolean_t is_rollback,
                           svn_depth_t depth,
-                          svn_boolean_t ignore_ancestry,
                           notification_receiver_baton_t *notify_b,
                           svn_wc_adm_access_t *adm_access,
                           const svn_wc_diff_callbacks2_t *callbacks,
@@ -1912,7 +1913,8 @@ drive_merge_report_editor(const char *target_wcpath,
 
   SVN_ERR(svn_ra_do_diff3(merge_b->ra_session1,
                           &reporter, &report_baton, revision2,
-                          "", depth, ignore_ancestry, TRUE,  /* text_deltas */
+                          "", depth, merge_b->ignore_ancestry, 
+                          TRUE,  /* text_deltas */
                           url2, diff_editor, diff_edit_baton, pool));
 
 
@@ -2405,7 +2407,6 @@ do_merge(const char *url1,
          const char *target_wcpath,
          svn_wc_adm_access_t *adm_access,
          svn_depth_t depth,
-         svn_boolean_t ignore_ancestry,
          const svn_wc_diff_callbacks2_t *callbacks,
          notification_receiver_baton_t *notify_b,
          merge_cmd_baton_t *merge_b,
@@ -2419,9 +2420,8 @@ do_merge(const char *url1,
 
   SVN_ERR(drive_merge_report_editor(target_wcpath,
                                     url1, revision1, url2, revision2,
-                                    children_with_mergeinfo,
-                                    is_rollback, depth,
-                                    ignore_ancestry, notify_b, adm_access,
+                                    children_with_mergeinfo, is_rollback, 
+                                    depth, notify_b, adm_access,
                                     callbacks, merge_b, pool));
 
   /* Sleep to ensure timestamp integrity. */
@@ -2656,7 +2656,6 @@ do_single_file_merge(const char *url1,
                      svn_wc_adm_access_t *adm_access,
                      notification_receiver_baton_t *notify_b,
                      merge_cmd_baton_t *merge_b,
-                     svn_boolean_t ignore_ancestry,
                      apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
@@ -2691,7 +2690,7 @@ do_single_file_merge(const char *url1,
   /* If we are not ignoring ancestry, then we need to check the
      relationship between the two sides of our merge.  Otherwise, just
      accept our input as-is. */
-  if (! ignore_ancestry)
+  if (! merge_b->ignore_ancestry)
     {
       const char *location_url;
       svn_opt_revision_t *location_rev;
@@ -3644,7 +3643,7 @@ discover_and_merge_children(const char *url1,
                              end_rev, pool);
       notify_b->cur_ancestor_index = -1;
       SVN_ERR(do_merge(url1, start_rev, url2, end_rev, is_rollback,
-                       merge_b->target, adm_access, depth, FALSE,
+                       merge_b->target, adm_access, depth,
                        &merge_callbacks, notify_b, merge_b,
                        children_with_mergeinfo, iterpool));
       remove_first_range_from_remaining_ranges(children_with_mergeinfo, pool);
@@ -4175,8 +4174,9 @@ svn_client_merge3(const char *source1,
     depth = entry->depth;
 
   merge_cmd_baton.force = force;
-  merge_cmd_baton.record_only = record_only;
   merge_cmd_baton.dry_run = dry_run;
+  merge_cmd_baton.record_only = record_only;
+  merge_cmd_baton.ignore_ancestry = ignore_ancestry;
   merge_cmd_baton.target_missing_child = FALSE;
   merge_cmd_baton.merge_options = merge_options;
   merge_cmd_baton.target = target_wcpath;
@@ -4250,7 +4250,6 @@ svn_client_merge3(const char *source1,
                                    adm_access,
                                    &notify_b,
                                    &merge_cmd_baton,
-                                   ignore_ancestry,
                                    pool));
     }
   /* Otherwise, this must be a directory merge.  Do the fancy
@@ -4281,7 +4280,6 @@ svn_client_merge3(const char *source1,
                            target_wcpath,
                            adm_access,
                            depth,
-                           ignore_ancestry,
                            &merge_callbacks,
                            &notify_b,
                            &merge_cmd_baton,
@@ -4422,8 +4420,9 @@ svn_client_merge_peg3(const char *source,
                                   ranges_to_merge, ra_session, ctx, pool));
 
   merge_cmd_baton.force = force;
-  merge_cmd_baton.record_only = record_only;
   merge_cmd_baton.dry_run = dry_run;
+  merge_cmd_baton.record_only = record_only;
+  merge_cmd_baton.ignore_ancestry = ignore_ancestry;
   merge_cmd_baton.ctx = ctx;
   merge_cmd_baton.target_missing_child = FALSE;
   merge_cmd_baton.target = target_wcpath;
@@ -4508,7 +4507,6 @@ svn_client_merge_peg3(const char *source,
                                        adm_access,
                                        &notify_b,
                                        &merge_cmd_baton,
-                                       ignore_ancestry,
                                        subpool));
         }
 
