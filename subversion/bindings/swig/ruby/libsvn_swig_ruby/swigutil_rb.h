@@ -79,10 +79,6 @@ SVN_RB_SWIG_SWIGUTIL_EXPORT
 svn_depth_t svn_swig_rb_to_depth(VALUE value);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
-svn_merge_range_inheritance_t
-svn_swig_rb_to_merge_range_inheritance(VALUE value);
-
-SVN_RB_SWIG_SWIGUTIL_EXPORT
 svn_mergeinfo_inheritance_t svn_swig_rb_to_mergeinfo_inheritance(VALUE value);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
