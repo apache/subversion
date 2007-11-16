@@ -649,6 +649,7 @@ adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
                  struct revision_baton_t *rb, apr_pool_t *pool)
 {
   apr_hash_t *mergeinfo;
+  apr_hash_t *final_mergeinfo = apr_hash_make(pool);
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
 
@@ -702,27 +703,16 @@ adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
                   (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                    _("No valid revision range 'end' in filtered stream"));
 
-              if (range->start != revmap_start->rev
-                  || range->end != revmap_end->rev)
-                /* Revisions will be renumbered -- initial_val is dirty. */
-                initial_val = NULL;
-
               range->start = revmap_start->rev;
               range->end = revmap_end->rev;
             }
-          /* ### Compact the rangelist? */
+          apr_hash_set(final_mergeinfo, merge_source,
+                       APR_HASH_KEY_STRING, rangelist);
         }
     }
 
-  if (initial_val)
-    {
-      *final_val = (svn_string_t *) initial_val;
-    }
-  else
-    {
-      SVN_ERR(svn_mergeinfo_sort(mergeinfo, subpool));
-      SVN_ERR(svn_mergeinfo__to_string(final_val, mergeinfo, pool));
-    }
+  SVN_ERR(svn_mergeinfo_sort(final_mergeinfo, subpool));
+  SVN_ERR(svn_mergeinfo__to_string(final_val, final_mergeinfo, pool));
   svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
