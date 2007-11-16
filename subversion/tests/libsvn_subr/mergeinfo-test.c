@@ -801,10 +801,12 @@ test_remove_rangelist(const char **msg,
 
           /* Collect all the errors rather than returning on the first. */
           if (child_err)
-            if (err)
-              svn_error_compose(err, child_err);
-            else
-              err = child_err;
+            {
+              if (err)
+                svn_error_compose(err, child_err);
+              else
+                err = child_err;
+            }
         }
     }
   return err;
@@ -1158,10 +1160,12 @@ test_rangelist_merge(const char **msg,
 
       /* Collect all the errors rather than returning on the first. */
       if (child_err)
-        if (err)
-          svn_error_compose(err, child_err);
-        else
-          err = child_err;
+        {
+          if (err)
+            svn_error_compose(err, child_err);
+          else
+            err = child_err;
+        }
     }
   return err;
 }
@@ -1379,10 +1383,12 @@ test_rangelist_diff(const char **msg,
 
       /* Collect all the errors rather than returning on the first. */
       if (child_err)
-        if (err)
-          svn_error_compose(err, child_err);
-        else
-          err = child_err;
+        {
+          if (err)
+            svn_error_compose(err, child_err);
+          else
+            err = child_err;
+        }
     }
   return err;
 }
