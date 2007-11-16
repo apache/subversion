@@ -3547,7 +3547,9 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
    NOTE: For merge tracking to work appropriately, all the changes
    that the caller is using this function to merge must have occurred
    on a single line of history that had no "changes of address"
-   (renames) between REVISION1 and REVISION2.
+   (renames) between REVISION1 and REVISION2.  (For this reason, we
+   don't need to pass IGNORE_ANCESTRY to this function -- that flag
+   only matters when our merge sources aren't related.)
 */
 static svn_error_t *
 discover_and_merge_children(const char *url1,
@@ -3557,7 +3559,6 @@ discover_and_merge_children(const char *url1,
                             const svn_wc_entry_t *parent_entry,
                             svn_wc_adm_access_t *adm_access,
                             svn_depth_t depth,
-                            svn_boolean_t ignore_ancestry,
                             notification_receiver_baton_t *notify_b,
                             struct merge_cmd_baton *merge_b,
                             apr_pool_t *pool)
@@ -3643,7 +3644,7 @@ discover_and_merge_children(const char *url1,
                              end_rev, pool);
       notify_b->cur_ancestor_index = -1;
       SVN_ERR(do_merge(url1, start_rev, url2, end_rev, is_rollback,
-                       merge_b->target, adm_access, depth, ignore_ancestry,
+                       merge_b->target, adm_access, depth, FALSE,
                        &merge_callbacks, notify_b, merge_b,
                        children_with_mergeinfo, iterpool));
       remove_first_range_from_remaining_ranges(children_with_mergeinfo, pool);
@@ -4266,7 +4267,6 @@ svn_client_merge3(const char *source1,
                                               entry,
                                               adm_access,
                                               depth,
-                                              ignore_ancestry,
                                               &notify_b,
                                               &merge_cmd_baton,
                                               pool));
@@ -4524,7 +4524,6 @@ svn_client_merge_peg3(const char *source,
                                               entry,
                                               adm_access,
                                               depth,
-                                              ignore_ancestry,
                                               &notify_b,
                                               &merge_cmd_baton,
                                               subpool));
