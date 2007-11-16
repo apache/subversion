@@ -575,11 +575,12 @@ propget_walk_cb(const char *path,
 
   SVN_ERR(pristine_or_working_propval(&propval, wb->propname, path,
                                       wb->base_access, wb->pristine,
-                                      apr_hash_pool_get(wb->props)));
+                                      pool));
 
   if (propval)
     {
       path = apr_pstrdup(apr_hash_pool_get(wb->props), path);
+      propval = svn_string_dup(propval, apr_hash_pool_get(wb->props));
       apr_hash_set(wb->props, path, APR_HASH_KEY_STRING, propval);
     }
 
@@ -844,6 +845,8 @@ svn_client_propget4(apr_hash_t **props,
 
       if (depth == svn_depth_empty || depth == svn_depth_files)
         adm_lock_level = 0;
+      else if (depth == svn_depth_immediates)
+        adm_lock_level = 1;
 
       SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target,
                                      FALSE, adm_lock_level,

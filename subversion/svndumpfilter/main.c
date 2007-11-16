@@ -24,6 +24,7 @@
 #include "svn_private_config.h"
 #include "svn_cmdline.h"
 #include "svn_error.h"
+#include "svn_string.h"
 #include "svn_opt.h"
 #include "svn_utf.h"
 #include "svn_path.h"
@@ -34,6 +35,8 @@
 #include "svn_sorts.h"
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
+
+#include "private/svn_mergeinfo_private.h"
 
 
 /*** Code. ***/
@@ -117,6 +120,17 @@ ary_prefix_match(apr_array_header_t *pfxlist, const char *path)
     }
 
   return FALSE;
+}
+
+
+/* Check whether we need to skip this PATH based on its presence in
+   the PREFIXES list, and the DO_EXCLUDE option. */
+static APR_INLINE svn_boolean_t
+skip_path(const char *path, apr_array_header_t *prefixes,
+          svn_boolean_t do_exclude)
+{
+  /* NXOR */
+  return (ary_prefix_match(prefixes, path) ? do_exclude : !do_exclude);
 }
 
 
@@ -455,9 +469,7 @@ new_node_record(void **node_baton,
   if (copyfrom_path)
     copyfrom_path = svn_path_join("/", copyfrom_path, pool);
 
-  /* Shame, shame, shame ... this is NXOR. */
-  nb->do_skip = (ary_prefix_match(pb->prefixes, node_path)
-                 ? pb->do_exclude : (! pb->do_exclude));
+  nb->do_skip = skip_path(node_path, pb->prefixes, pb->do_exclude);
 
   /* If we're skipping the node, take note of path, discarding the
      rest.  */
@@ -476,10 +488,9 @@ new_node_record(void **node_baton,
 
       /* Test if this node was copied from dropped source. */
       if (copyfrom_path &&
-          (ary_prefix_match(pb->prefixes, copyfrom_path)
-           ? pb->do_exclude : (! pb->do_exclude)))
+          skip_path(copyfrom_path, pb->prefixes, pb->do_exclude))
         {
-          /* This node was copied from dropped source.
+          /* This node was copied from a dropped source.
              We have a problem, since we did not want to drop this node too.
 
              However, there is one special case we'll handle.  If the node is
@@ -629,59 +640,90 @@ output_node(struct node_baton_t *nb)
 }
 
 
-/* Renumber revisions for valid merge sources in mergeinfo. */
+/* Examine the mergeinfo in INITIAL_VAL, omitting missing merge
+   sources or renumbering revisions in rangelists as appropriate, and
+   return the (possibly new) mergeinfo in *FINAL_VAL (allocated from
+   POOL). */
 static svn_error_t *
-renumber_merge_source_rev_range(const char **mergeinfo_val,
-                                const char *mergeinfo_orig,
-                                struct revision_baton_t *rb,
-                                apr_pool_t *pool)
+adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
+                 struct revision_baton_t *rb, apr_pool_t *pool)
 {
-  apr_hash_t *modified_mergeinfo, *mergeinfo;
+  apr_hash_t *mergeinfo;
   apr_hash_index_t *hi;
-  svn_stringbuf_t *merge_val;
-  const void *merge_source;
-  void *rangelist;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
-  SVN_ERR(svn_mergeinfo_parse(&mergeinfo, mergeinfo_orig, pool));
-  modified_mergeinfo = apr_hash_make(pool);
+  SVN_ERR(svn_mergeinfo_parse(&mergeinfo, initial_val->data, subpool));
   for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
     {
+      const char *merge_source;
+      apr_array_header_t *rangelist;
+      struct parse_baton_t *pb = rb->pb;
       int i;
-      apr_hash_this(hi, &merge_source, NULL, &rangelist);
+      const void *key;
+      void *val;
 
-      /* Look whether the merge_source is a part of the included prefix. */
-      if (!ary_prefix_match(rb->pb->prefixes, merge_source))
+      apr_hash_this(hi, &key, NULL, &val);
+      merge_source = (const char *) key;
+      rangelist = (apr_array_header_t *) val;
+
+      /* Determine whether the merge_source is a part of the prefix. */
+      if (skip_path(merge_source, pb->prefixes, pb->do_exclude))
         {
-          if (rb->pb->skip_missing_merge_sources)
+          if (pb->skip_missing_merge_sources)
             continue;
           else
             return svn_error_createf(SVN_ERR_INCOMPLETE_DATA, 0,
-                                     _("Missing merge source path '%s', try "
+                                     _("Missing merge source path '%s'; try "
                                        "with --skip-missing-merge-sources"),
-                                     (const char *)merge_source);
+                                     merge_source);
         }
 
-      /* Renumber mergeinfo rangelist. */
-      for (i = 0; i < ((apr_array_header_t *)rangelist)->nelts; i++)
+      /* Possibly renumber revisions in merge source's rangelist. */
+      if (pb->do_renumber_revs)
         {
-          struct revmap_t *revmap_start;
-          struct revmap_t *revmap_end;
-          svn_merge_range_t *range;
+          for (i = 0; i < rangelist->nelts; i++)
+            {
+              struct revmap_t *revmap_start;
+              struct revmap_t *revmap_end;
+              svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
+                                                       svn_merge_range_t *);
 
-          range = APR_ARRAY_IDX((apr_array_header_t *)rangelist, i,
-                                svn_merge_range_t *);
-          revmap_start = apr_hash_get(rb->pb->renumber_history, &range->start,
-                                      sizeof(svn_revnum_t));
-          revmap_end = apr_hash_get(rb->pb->renumber_history, &range->end,
-                                    sizeof(svn_revnum_t));
-          range->start = revmap_start->rev;
-          range->end = revmap_end->rev;
+              revmap_start = apr_hash_get(pb->renumber_history,
+                                          &range->start, sizeof(svn_revnum_t));
+              if (! (revmap_start && SVN_IS_VALID_REVNUM(revmap_start->rev)))
+                return svn_error_createf
+                  (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                   _("No valid revision range 'start' in filtered stream"));
+
+              revmap_end = apr_hash_get(pb->renumber_history,
+                                        &range->end, sizeof(svn_revnum_t));
+              if (! (revmap_end && SVN_IS_VALID_REVNUM(revmap_end->rev)))
+                return svn_error_createf
+                  (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                   _("No valid revision range 'end' in filtered stream"));
+
+              if (range->start != revmap_start->rev
+                  || range->end != revmap_end->rev)
+                /* Revisions will be renumbered -- initial_val is dirty. */
+                initial_val = NULL;
+
+              range->start = revmap_start->rev;
+              range->end = revmap_end->rev;
+            }
+          /* ### Compact the rangelist? */
         }
-      apr_hash_set(modified_mergeinfo, (const char*)merge_source,
-                   APR_HASH_KEY_STRING, rangelist);
     }
-  svn_mergeinfo_to_stringbuf(&merge_val, modified_mergeinfo, pool);
-  *mergeinfo_val = merge_val->data;
+
+  if (initial_val)
+    {
+      *final_val = (svn_string_t *) initial_val;
+    }
+  else
+    {
+      SVN_ERR(svn_mergeinfo_sort(mergeinfo, subpool));
+      SVN_ERR(svn_mergeinfo__to_string(final_val, mergeinfo, pool));
+    }
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
@@ -720,14 +762,10 @@ set_node_property(void *node_baton,
 
   if (strcmp(name, SVN_PROP_MERGE_INFO) == 0)
     {
-      apr_pool_t *subpool = svn_pool_create(apr_hash_pool_get(rb->props));
-      const char *mergeinfo_val;
-
-      /* Renumber revisions for valid merge sources in mergeinfo. */
-      SVN_ERR(renumber_merge_source_rev_range(&mergeinfo_val, value->data, rb,
-                                              subpool));
-      value = svn_string_create(mergeinfo_val, apr_hash_pool_get(rb->props));
-      svn_pool_destroy(subpool);
+      svn_string_t *filtered_mergeinfo;  /* Avoid compiler warning. */ 
+      apr_pool_t *pool = apr_hash_pool_get(rb->props);
+      SVN_ERR(adjust_mergeinfo(&filtered_mergeinfo, value, rb, pool));
+      value = filtered_mergeinfo;
     }
 
   write_prop_to_stringbuf(&(nb->props), name, value);
