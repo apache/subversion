@@ -71,7 +71,7 @@ class WCFormatConverter:
 
     # Avoid iterating in unversioned directories.
     if not get_adm_dir() in paths:
-      paths = []
+      paths[:] = []
       return
 
     for path in paths:
