@@ -170,7 +170,7 @@ class Entries:
     except ValueError:
       format_nbr = -1
     if not format_nbr in LATEST_FORMATS.values():
-      raise NotImplementedError("Unrecognized WC format detected")
+      raise UnrecognizedWCFormatException(format_nbr, self.path)
 
     # Parse file into individual entries, to later inspect for
     # non-convertable data.
@@ -264,7 +264,12 @@ class Entry:
       rep += "[%s] %s\n" % (Entries.entry_fields[i], self.fields[i])
     return rep
 
-class LossyConversionException(Exception):
+
+class LocalException(Exception):
+  """Root of local exception class hierarchy."""
+  pass
+
+class LossyConversionException(LocalException):
   "Exception thrown when a lossy WC format conversion is requested."
   def __init__(self, lossy_fields, str):
     self.lossy_fields = lossy_fields
@@ -272,9 +277,18 @@ class LossyConversionException(Exception):
   def __str__(self):
     return self.str
 
+class UnrecognizedWCFormatException(LocalException):
+  def __init__(self, format, path):
+    self.format = format
+    self.path = path
+  def __str__(self):
+    return "Unrecognized WC format %d in '%s'" % (self.format, self.path)
+
+
 def main():
   try:
-    opts, args = my_getopt(sys.argv[1:], "vh?", ["force", "verbose", "help"])
+    opts, args = my_getopt(sys.argv[1:], "vh?",
+                           ["debug", "force", "verbose", "help"])
   except:
     usage_and_exit("Unable to process arguments/options")
 
@@ -288,6 +302,7 @@ def main():
     usage_and_exit()
 
   # Process options.
+  debug = False
   for opt, value in opts:
     if opt in ("--help", "-h", "-?"):
       usage_and_exit()
@@ -295,6 +310,8 @@ def main():
       converter.force = True
     elif opt in ("--verbose", "-v"):
       converter.verbosity += 1
+    elif opt == "--debug":
+      debug = True
     else:
       usage_and_exit("Unknown option '%s'" % opt)
 
@@ -305,9 +322,9 @@ def main():
 
   try:
     converter.change_wc_format(new_format_nbr)
-  except NotImplementedError, e:
-    usage_and_exit(str(e))
-  except LossyConversionException, e:
+  except LocalException, e:
+    if debug:
+      raise
     print >> sys.stderr, str(e)
     sys.exit(1)
 
