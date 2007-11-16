@@ -38,6 +38,17 @@ extern "C" {
 svn_error_t *
 svn_fs__sqlite_exec(sqlite3 *db, const char *sql);
 
+/* Open a connection in *DB to the index database under REPOS_PATH.
+   Validate the merge schema, creating it if it doesn't yet exist.
+   This provides a migration path for pre-1.5 repositories. */
+svn_error_t *
+svn_fs__sqlite_open(sqlite3 **db, const char *repos_path, apr_pool_t *pool);
+
+
+/* Close DB, returning any ERR which may've necessitated an early connection
+   closure, or -- if none -- the error from the closure itself. */
+svn_error_t *
+svn_fs__sqlite_close(sqlite3 *db, svn_error_t *err);
 
 #ifdef __cplusplus
 }

@@ -29,10 +29,13 @@
 #include "svn_fs.h"
 #include "svn_path.h"
 #include "svn_mergeinfo.h"
+#include "svn_pools.h"
 
 #include "private/svn_fs_sqlite.h"
 #include "../libsvn_fs/fs-loader.h"
 #include "svn_private_config.h"
+
+#include "sqlite-util.h"
 
 #ifdef SQLITE3_DEBUG
 /* An sqlite query execution callback. */
@@ -95,82 +98,107 @@ static const char *schema_create_sql[] = {
 };
 
 static const int latest_schema_format =
-  sizeof(db_create_sql)/sizeof(db_create_sql[0]) - 1;
+  sizeof(schema_create_sql)/sizeof(schema_create_sql[0]) - 1;
 
-  "PRAGMA user_version = " APR_STRINGIFY(MERGE_INFO_INDEX_SCHEMA_FORMAT) ";"
 
-/* Return SVN_ERR_FS_GENERAL if the schema format is old or nonexistent,
-   SVN_ERR_FS_UNSUPPORTED_FORMAT if the schema format is too new, or
+static svn_error_t *
+upgrade_format(sqlite3 *db, int current_format, apr_pool_t *pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  while (current_format < latest_schema_format)
+    {
+      const char *pragma_cmd;
+
+      svn_pool_clear(iterpool);
+
+      /* Go to the next format */
+      current_format++;
+
+      /* Run the upgrade SQL */
+      SVN_ERR(svn_fs__sqlite_exec(db, schema_create_sql[current_format]));
+
+      /* Update the user version pragma */
+      pragma_cmd = apr_psprintf(iterpool,
+                                "PRAGMA user_version = %d;",
+                                current_format);
+      SVN_ERR(svn_fs__sqlite_exec(db, pragma_cmd));
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Check the schema format of the database, upgrading it if necessary.
+   Return SVN_ERR_FS_UNSUPPORTED_FORMAT if the schema format is too new, or
    SVN_ERR_FS_SQLITE_ERROR if an sqlite error occurs during
    validation.  Return SVN_NO_ERROR if everything is okay. */
 static svn_error_t *
-check_format(sqlite3 *db)
+check_format(sqlite3 *db, apr_pool_t *pool)
 {
-  svn_error_t *err = SVN_NO_ERROR;
   sqlite3_stmt *stmt;
 
-  SQLITE_ERR(sqlite3_prepare(db, "PRAGMA user_version;", -1, &stmt, NULL), db);
+  SVN_FS__SQLITE_ERR(sqlite3_prepare(db, "PRAGMA user_version;", -1, &stmt, 
+                                     NULL), db);
   if (sqlite3_step(stmt) == SQLITE_ROW)
     {
       /* Validate that the schema exists as expected and that the
          schema and repository versions match. */
       int schema_format = sqlite3_column_int(stmt, 0);
-      if (schema_format == latest_schema_format)
-        {
-          err = SVN_NO_ERROR;
-        }
-      else if (schema_format < latest_schema_format)
-        {
-          /* This is likely a freshly-created database in which the
-             merge tracking schema doesn't yet exist. */
-          err = svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
-                                  _("Index schema format '%d' needs to be "
-                                    "upgraded to current '%d'"),
-                                  schema_format, latest_schema_format);
-        }
-      else 
-        {
-          err = svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
-                                  _("Index schema format %d not "
-                                    "recognized"), schema_format);
-        }
 
-      SQLITE_ERR(sqlite3_finalize(stmt), db);
+      SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
+
+      if (schema_format == latest_schema_format)
+        return SVN_NO_ERROR;
+      else if (schema_format < latest_schema_format)
+        return upgrade_format(db, schema_format, pool);
+      else 
+        return svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
+                                 _("Index schema format %d not "
+                                   "recognized"), schema_format);
     }
   else
-    {
-      err = svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
-                             sqlite3_errmsg(db));
-    }
-  return err;
+    return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
+                            sqlite3_errmsg(db));
 }
 
-/* Open a connection in *DB to the mergeinfo database under
-   REPOS_PATH.  Validate the merge tracking schema, creating it if it
-   doesn't yet exist.  This provides a migration path for pre-1.5
-   repositories. */
-static svn_error_t *
-open_db(sqlite3 **db, const char *repos_path, apr_pool_t *pool)
+svn_error_t *
+svn_fs__sqlite_open(sqlite3 **db, const char *repos_path, apr_pool_t *pool)
 {
-  svn_error_t *err;
   const char *db_path = svn_path_join(repos_path,
                                       SVN_FS__SQLITE_DB_NAME, pool);
-  SQLITE_ERR(sqlite3_open(db_path, db), *db);
+  SVN_FS__SQLITE_ERR(sqlite3_open(db_path, db), *db);
   /* Retry until timeout when database is busy. */
-  SQLITE_ERR(sqlite3_busy_timeout(*db, BUSY_TIMEOUT), *db);
+  SVN_FS__SQLITE_ERR(sqlite3_busy_timeout(*db, BUSY_TIMEOUT), *db);
 #ifdef SQLITE3_DEBUG
   sqlite3_trace(*db, sqlite_tracer, *db);
 #endif
 
-  /* Validate the schema. */
-  err = check_format(*db);
-  if (err && err->apr_err == SVN_ERR_FS_GENERAL)
-    {
-      /* Assume that we've just created an empty mergeinfo index by
-         way of sqlite3_open() (likely from accessing a pre-1.5
-         repository), and need to create the merge tracking schema. */
-      svn_error_clear(err);
-      err = svn_fs__sqlite_exec(*db, SVN_MTD_CREATE_SQL);
-    }
-  return err;
+  /* Validate the schema, upgrading if necessary. */
+  return check_format(*db, pool);
+}
+
+svn_error_t *
+svn_fs__sqlite_close(sqlite3 *db, svn_error_t *err)
+{
+  int result = sqlite3_close(db);
+  /* If there's a pre-existing error, return it. */
+  /* ### If the connection close also fails, say something about it as well? */
+  SVN_ERR(err);
+  SVN_FS__SQLITE_ERR(result, db);
+  return SVN_NO_ERROR;
+}
+
+
+/* Create an sqlite DB for our mergeinfo index under PATH.  Use POOL
+   for temporary allocations. */
+svn_error_t *
+svn_fs__sqlite_create_index(const char *path, apr_pool_t *pool)
+{
+  sqlite3 *db;
+  /* Opening the database will create it + schema if it's not already there. */
+  SVN_ERR(svn_fs__sqlite_open(&db, path, pool));
+  return svn_fs__sqlite_close(db, SVN_NO_ERROR);
 }
