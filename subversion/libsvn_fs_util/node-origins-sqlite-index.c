@@ -41,14 +41,75 @@
   label when the local variable 'err' is not SVN_NO_ERROR. */
 #define MAYBE_CLEANUP if (err) goto cleanup
 
+static svn_error_t *
+set_origin(sqlite3 *db,
+           const char *node_id,
+           const svn_string_t *node_rev_id,
+           apr_pool_t *pool)
+{
+  sqlite3_stmt *stmt;
+
+
+  SVN_FS__SQLITE_ERR(sqlite3_prepare
+                     (db,
+                      "INSERT INTO node_origins (node_id, "
+                      "node_rev_id) VALUES (?, ?);",
+                      -1, &stmt, NULL), db);
+  SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 1, node_id, -1,
+                                       SQLITE_TRANSIENT), db);
+  SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 2, node_rev_id->data, -1,
+                                       SQLITE_TRANSIENT), db);
+
+  if (sqlite3_step(stmt) != SQLITE_DONE)
+    return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
+                            sqlite3_errmsg(db));
+
+  SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_fs__set_node_origins(svn_fs_t *fs,
                          apr_hash_t *node_origins,
                          apr_pool_t *pool)
 {
-  /* XXXdsg Implement! */
-  return SVN_NO_ERROR;
+  sqlite3 *db;
+  apr_hash_index_t *hi;
+  svn_error_t *err;
+
+  SVN_ERR(svn_fs__sqlite_open(&db, fs->path, pool));
+  err = svn_fs__sqlite_exec(db, "BEGIN TRANSACTION;");
+  MAYBE_CLEANUP;
+
+  /* XXXdsg Check for conflicts! */
+  
+  for (hi = apr_hash_first(pool, node_origins);
+       hi != NULL;
+       hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      const char *node_id;
+      const svn_fs_id_t *node_rev_id;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      node_id = key;
+      node_rev_id = val;
+
+      /* XXXdsg pool management */
+
+      err = set_origin(db, node_id,
+                       svn_fs_unparse_id(node_rev_id, pool), pool);
+      MAYBE_CLEANUP;
+    }
+
+  err = svn_fs__sqlite_exec(db, "COMMIT TRANSACTION;");
+  MAYBE_CLEANUP;
+
+ cleanup:
+  return svn_fs__sqlite_close(db, err);
 }
 
 svn_error_t *
