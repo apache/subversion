@@ -880,9 +880,9 @@ void SVNClient::propertyRemove(const char *path, const char *name,
 
 void SVNClient::diff(const char *target1, Revision &revision1,
                      const char *target2, Revision &revision2,
-                     Revision *pegRevision, const char *outfileName,
-                     svn_depth_t depth, bool ignoreAncestry,
-                     bool noDiffDelete, bool force)
+                     Revision *pegRevision, const char *relativeToDir,
+                     const char *outfileName, svn_depth_t depth,
+                     bool ignoreAncestry, bool noDiffDelete, bool force)
 {
     svn_error_t *err;
     Pool requestPool;
@@ -923,6 +923,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                    pegRevision->revision(),
                                    revision1.revision(),
                                    revision2.revision(),
+                                   relativeToDir,
                                    depth,
                                    ignoreAncestry,
                                    noDiffDelete,
@@ -951,6 +952,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                revision1.revision(),
                                path2.c_str(),
                                revision2.revision(),
+                               relativeToDir,
                                depth,
                                ignoreAncestry,
                                noDiffDelete,
@@ -977,20 +979,23 @@ cleanup:
 
 void SVNClient::diff(const char *target1, Revision &revision1,
                      const char *target2, Revision &revision2,
-                     const char *outfileName, svn_depth_t depth,
-                     bool ignoreAncestry, bool noDiffDelete, bool force)
+                     const char *relativeToDir, const char *outfileName,
+                     svn_depth_t depth, bool ignoreAncestry,
+                     bool noDiffDelete, bool force)
 {
-    diff(target1, revision1, target2, revision2, NULL, outfileName, depth,
-         ignoreAncestry, noDiffDelete, force);
+    diff(target1, revision1, target2, revision2, NULL, relativeToDir,
+         outfileName, depth, ignoreAncestry, noDiffDelete, force);
 }
 
 void SVNClient::diff(const char *target, Revision &pegRevision,
                      Revision &startRevision, Revision &endRevision,
-                     const char *outfileName, svn_depth_t depth,
-                     bool ignoreAncestry, bool noDiffDelete, bool force)
+                     const char *relativeToDir, const char *outfileName,
+                     svn_depth_t depth, bool ignoreAncestry,
+                     bool noDiffDelete, bool force)
 {
-    diff(target, startRevision, NULL, endRevision, &pegRevision, outfileName,
-         depth, ignoreAncestry, noDiffDelete, force);
+    diff(target, startRevision, NULL, endRevision, &pegRevision,
+         relativeToDir, outfileName, depth, ignoreAncestry, noDiffDelete,
+         force);
 }
 
 void

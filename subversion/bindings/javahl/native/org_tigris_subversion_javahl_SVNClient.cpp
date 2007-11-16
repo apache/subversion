@@ -1106,11 +1106,11 @@ Java_org_tigris_subversion_javahl_SVNClient_getAvailableMerges
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2IZZZ
+Java_org_tigris_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2Ljava_lang_String_2IZZZ
 (JNIEnv *env, jobject jthis, jstring jtarget1, jobject jrevision1,
- jstring jtarget2, jobject jrevision2, jstring joutfileName,
- jint jdepth, jboolean jignoreAncestry, jboolean jnoDiffDeleted,
- jboolean jforce)
+ jstring jtarget2, jobject jrevision2, jstring jrelativeToDir,
+ jstring joutfileName, jint jdepth, jboolean jignoreAncestry,
+ jboolean jnoDiffDeleted, jboolean jforce)
 {
   JNIEntry(SVNClient, diff);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1135,22 +1135,26 @@ Java_org_tigris_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_tigris
   if (JNIUtil::isExceptionThrown())
     return;
 
+  JNIStringHolder relativeToDir(jrelativeToDir);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
   JNIStringHolder outfileName(joutfileName);
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->diff(target1, revision1, target2, revision2, outfileName,
+  cl->diff(target1, revision1, target2, revision2, relativeToDir, outfileName,
            (svn_depth_t)jdepth,
            jignoreAncestry ? true:false,
            jnoDiffDeleted ? true:false, jforce ? true:false);
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2IZZZ
+Java_org_tigris_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2Ljava_lang_String_2IZZZ
 (JNIEnv *env, jobject jthis, jstring jtarget, jobject jpegRevision,
- jobject jstartRevision, jobject jendRevision, jstring joutfileName,
- jint jdepth, jboolean jignoreAncestry, jboolean jnoDiffDeleted,
- jboolean jforce)
+ jobject jstartRevision, jobject jendRevision, jstring jrelativeToDir,
+ jstring joutfileName, jint jdepth, jboolean jignoreAncestry,
+ jboolean jnoDiffDeleted, jboolean jforce)
 {
   JNIEntry(SVNClient, diff);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1179,8 +1183,12 @@ Java_org_tigris_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_tigris
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->diff(target, pegRevision, startRevision, endRevision, outfileName,
-           (svn_depth_t)jdepth,
+  JNIStringHolder relativeToDir(jrelativeToDir);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  cl->diff(target, pegRevision, startRevision, endRevision, relativeToDir,
+           outfileName, (svn_depth_t) jdepth,
            jignoreAncestry ? true:false,
            jnoDiffDeleted ? true:false, jforce ? true:false);
 }

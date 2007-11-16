@@ -183,6 +183,10 @@ SVN_ERROR_START
              SVN_ERR_BAD_CATEGORY_START + 6,
              "Version file format not correct")
 
+  SVN_ERRDEF(SVN_ERR_BAD_RELATIVE_PATH,
+             SVN_ERR_BAD_CATEGORY_START + 7,
+             "Path is not an immediate child of the specified directory")
+
   /* xml errors */
 
   SVN_ERRDEF(SVN_ERR_XML_ATTRIB_NOT_FOUND,
