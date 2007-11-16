@@ -2979,6 +2979,7 @@ fs_node_origin_rev(svn_revnum_t *revision,
   SVN_ERR(svn_fs_fs__dag_get_revision(revision, node, pool));
 
   svn_pool_destroy(subpool);
+  svn_pool_destroy(predidpool);
   return SVN_NO_ERROR;
 }
 
