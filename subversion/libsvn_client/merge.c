@@ -1158,15 +1158,16 @@ filter_merged_revisions(apr_array_header_t **remaining_ranges,
                         const svn_wc_entry_t *entry,
                         apr_pool_t *pool)
 {
+  apr_array_header_t *target_rangelist = NULL;
+  apr_hash_t *mergeinfo;
+
   if (is_rollback)
     {
-      apr_array_header_t *target_rangelist;
-      apr_hash_t *full_mergeinfo = svn_mergeinfo_dup(implicit_mergeinfo, pool);
-
+      mergeinfo = svn_mergeinfo_dup(implicit_mergeinfo, pool);
       if (target_mergeinfo)
-        SVN_ERR(svn_mergeinfo_merge(full_mergeinfo, target_mergeinfo,
+        SVN_ERR(svn_mergeinfo_merge(mergeinfo, target_mergeinfo,
                                     svn_rangelist_ignore_inheritance, pool));
-      target_rangelist = apr_hash_get(full_mergeinfo, 
+      target_rangelist = apr_hash_get(mergeinfo, 
                                       mergeinfo_path, APR_HASH_KEY_STRING);
       if (target_rangelist)
         {
@@ -1190,14 +1191,40 @@ filter_merged_revisions(apr_array_header_t **remaining_ranges,
     }
   else
     {
-      apr_array_header_t *target_rangelist;
-
       *remaining_ranges = requested_merge;
 
-      /* Remove revs already represented by this WC (if any). */
+/* ### TODO:  Which evil shall we choose?
+   ###
+   ### If we allow all forward-merges not already found in recorded
+   ### mergeinfo, we destroy the ability to, say, merge the whole of a
+   ### branch to the trunk while automatically ignoring the revisions
+   ### common to both.  That's bad.
+   ###
+   ### If we allow only forward-merges not found in either recorded
+   ### mergeinfo or implicit mergeinfo (natural history), then the
+   ### previous scenario works great, but we can't reverse-merge a
+   ### previous change made to our line of history and then remake it
+   ### (because the reverse-merge will leave no mergeinfo trace, and
+   ### the remake-it attempt will still find the original change in
+   ### natural mergeinfo.  But you know, that we happen to use 'merge'
+   ### for revision undoing is somewhat unnatural anyway, so I'm
+   ### finding myself having little interest in caring too much about
+   ### this.  That said, if we had a way of storing reverse merge
+   ### ranges, we'd be in good shape either way.
+*/
+#ifdef SVN_MERGE__ALLOW_ALL_FORWARD_MERGES_FROM_SELF
       if (target_mergeinfo)
         target_rangelist = apr_hash_get(target_mergeinfo, 
                                         mergeinfo_path, APR_HASH_KEY_STRING);
+#else
+      mergeinfo = svn_mergeinfo_dup(implicit_mergeinfo, pool);
+      if (target_mergeinfo)
+        SVN_ERR(svn_mergeinfo_merge(mergeinfo, target_mergeinfo,
+                                    svn_rangelist_ignore_inheritance, pool));
+      target_rangelist = apr_hash_get(mergeinfo, 
+                                      mergeinfo_path, APR_HASH_KEY_STRING);
+#endif
+
       if (target_rangelist)
         SVN_ERR(svn_rangelist_remove(remaining_ranges, target_rangelist,
                                      requested_merge, 
