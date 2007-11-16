@@ -67,7 +67,7 @@ extern "C" {
  *
  *   Token             Definition
  *   -----             ----------
- *   revisionrange     REVISION "-" REVISION
+ *   revisionrange     REVISION1 "-" REVISION2
  *   revisioneelement  (revisionrange | REVISION)"*"?
  *   rangelist         revisioneelement (COMMA revisioneelement)*
  *   revisionline      PATHNAME COLON rangelist
@@ -80,9 +80,10 @@ extern "C" {
  * the source pathname.
  *
  * Rangelists must be sorted from lowest to highest revision and cannot
- * contain overlapping revisionlistelements.  Single revisions that can be
- * represented by a revisionrange are allowed (e.g. '5,6,7,8,9-12' or '5-12'
- * are both acceptable).
+ * contain overlapping revisionlistelements.  REVISION1 must be less than
+ * REVISION2.  Consecutive single revisions that can be represented by a
+ * revisionrange are allowed (e.g. '5,6,7,8,9-12' or '5-12' are both
+ * acceptable).
  */
 
 /* Suffix for SVN_PROP_MERGE_INFO revision ranges indicating a given
