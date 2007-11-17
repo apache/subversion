@@ -42,16 +42,12 @@
 #define MAYBE_CLEANUP if (err) goto cleanup
 
 static svn_error_t *
-set_origin(sqlite3 *db,
-           const char *node_id,
-           const svn_string_t *node_rev_id,
-           apr_pool_t *pool)
+get_origin(const char **node_rev_id,
+           sqlite3 *db,
+           const char *node_id)
 {
   sqlite3_stmt *stmt;
   int sqlite_result;
-
-  /* First figure out if it's already there.  (Don't worry, we're in a
-     transaction.) */
 
   SVN_FS__SQLITE_ERR(sqlite3_prepare
                      (db,
@@ -65,10 +61,29 @@ set_origin(sqlite3 *db,
     return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
                             sqlite3_errmsg(db));
   else if (sqlite_result == SQLITE_ROW)
-    {
-      const char *old_node_rev_id = (const char *) sqlite3_column_text(stmt, 0);
-      SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
+    *node_rev_id = (const char *) sqlite3_column_text(stmt, 0);
+  else
+    *node_rev_id = NULL;
 
+  SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+set_origin(sqlite3 *db,
+           const char *node_id,
+           const svn_string_t *node_rev_id,
+           apr_pool_t *pool)
+{
+  sqlite3_stmt *stmt;
+  const char *old_node_rev_id;
+
+  /* First figure out if it's already there.  (Don't worry, we're in a
+     transaction.) */
+  SVN_ERR(get_origin(&old_node_rev_id, db, node_id));  
+  if (old_node_rev_id != NULL)
+    {
       if (!strcmp(node_rev_id->data, old_node_rev_id))
         return SVN_NO_ERROR;
       else
@@ -78,9 +93,6 @@ set_origin(sqlite3 *db,
              "value (%s) than what we were about to store (%s)"),
            node_id, old_node_rev_id, node_rev_id->data);
     }
-
-  SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
-
 
   SVN_FS__SQLITE_ERR(sqlite3_prepare
                      (db,
