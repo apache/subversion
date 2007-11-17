@@ -115,8 +115,6 @@ svn_fs__set_node_origins(svn_fs_t *fs,
   err = svn_fs__sqlite_exec(db, "BEGIN TRANSACTION;");
   MAYBE_CLEANUP;
 
-  /* XXXdsg Check for conflicts! */
-  
   for (hi = apr_hash_first(pool, node_origins);
        hi != NULL;
        hi = apr_hash_next(hi))
