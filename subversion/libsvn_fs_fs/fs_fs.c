@@ -50,6 +50,7 @@
 
 #include "private/svn_fs_sqlite.h"
 #include "private/svn_fs_mergeinfo.h"
+#include "private/svn_fs_node_origins.h"
 #include "private/svn_fs_util.h"
 #include "../libsvn_fs/fs-loader.h"
 
@@ -4491,6 +4492,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                 const svn_fs_id_t *id,
                 const char *start_node_id,
                 const char *start_copy_id,
+                apr_hash_t *node_origins,
                 apr_pool_t *pool)
 {
   node_revision_t *noderev;
@@ -4499,6 +4501,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   char my_copy_id[MAX_KEY_SIZE + 2];
   const svn_fs_id_t *new_id;
   const char *node_id, *copy_id;
+  svn_boolean_t node_id_is_new = FALSE;
 
   *new_id_p = NULL;
 
@@ -4528,7 +4531,8 @@ write_final_rev(const svn_fs_id_t **new_id_p,
           apr_hash_this(hi, NULL, NULL, &val);
           dirent = val;
           SVN_ERR(write_final_rev(&new_id, file, rev, fs, dirent->id,
-                                  start_node_id, start_copy_id, subpool));
+                                  start_node_id, start_copy_id, 
+                                  node_origins, subpool));
           if (new_id && (svn_fs_fs__id_rev(new_id) == rev))
             dirent->id = svn_fs_fs__id_copy(new_id, pool);
         }
@@ -4582,7 +4586,10 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
   node_id = svn_fs_fs__id_node_id(noderev->id);
   if (*node_id == '_')
-    svn_fs_fs__add_keys(start_node_id, node_id + 1, my_node_id);
+    {
+      node_id_is_new = TRUE;
+      svn_fs_fs__add_keys(start_node_id, node_id + 1, my_node_id);
+    }
   else
     strcpy(my_node_id, node_id);
 
@@ -4599,6 +4606,15 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                                     pool);
 
   noderev->id = new_id;
+
+  if (node_id_is_new)
+    {
+      apr_pool_t *hash_pool = apr_hash_pool_get(node_origins);
+      const char *key = apr_pstrdup(hash_pool, my_node_id);
+      const svn_fs_id_t *val = svn_fs_fs__id_copy(new_id, hash_pool);
+
+      apr_hash_set(node_origins, key, APR_HASH_KEY_STRING, val);
+    }
 
   /* Write out our new node-revision. */
   SVN_ERR(write_noderev_txn(file, noderev, pool));
@@ -4888,6 +4904,7 @@ struct commit_baton {
   svn_revnum_t *new_rev_p;
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
+  apr_hash_t *node_origins;
 };
 
 /* The work-horse for svn_fs_fs__commit, called with the FS write lock.
@@ -4940,7 +4957,8 @@ commit_body(void *baton, apr_pool_t *pool)
   /* Write out all the node-revisions and directory contents. */
   root_id = svn_fs_fs__id_txn_create("0", "0", cb->txn->id, pool);
   SVN_ERR(write_final_rev(&new_root_id, proto_file, new_rev, cb->fs, root_id,
-                          start_node_id, start_copy_id, pool));
+                          start_node_id, start_copy_id, cb->node_origins, 
+                          pool));
 
   /* Write the changed-path information. */
   SVN_ERR(write_final_changed_path_info(&changed_path_offset, proto_file,
@@ -5064,11 +5082,20 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
                   apr_pool_t *pool)
 {
   struct commit_baton cb;
+  apr_hash_t *node_origins = apr_hash_make(pool);
 
   cb.new_rev_p = new_rev_p;
   cb.fs = fs;
   cb.txn = txn;
-  return svn_fs_fs__with_write_lock(fs, commit_body, &cb, pool);
+  cb.node_origins = node_origins;
+  SVN_ERR(svn_fs_fs__with_write_lock(fs, commit_body, &cb, pool));
+  
+  /* Now that we're no longer locked, we can update the node-origins
+     cache without blocking writers. */
+  if (apr_hash_count(node_origins) > 0)
+    SVN_ERR(svn_fs__set_node_origins(fs, node_origins, pool));
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
