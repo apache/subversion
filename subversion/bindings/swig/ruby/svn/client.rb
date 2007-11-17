@@ -282,9 +282,9 @@ module Svn
                out_file, err_file, depth=nil,
                ignore_ancestry=false,
                no_diff_deleted=false, force=false,
-               header_encoding=nil)
+               header_encoding=nil, relative_to_dir=nil)
         header_encoding ||= Core::LOCALE_CHARSET
-        Client.diff4(options, path1, rev1, path2, rev2,
+        Client.diff4(options, path1, rev1, path2, rev2, relative_to_dir,
                      depth, ignore_ancestry,
                      no_diff_deleted, force, header_encoding,
                      out_file, err_file, self)
@@ -294,10 +294,10 @@ module Svn
                    out_file, err_file, peg_rev=nil,
                    depth=nil, ignore_ancestry=false,
                    no_diff_deleted=false, force=false,
-                   header_encoding=nil)
+                   header_encoding=nil, relative_to_dir=nil)
         header_encoding ||= Core::LOCALE_CHARSET
         Client.diff_peg4(options, path, peg_rev, start_rev, end_rev,
-                         depth, ignore_ancestry,
+                         relative_to_dir, depth, ignore_ancestry,
                          no_diff_deleted, force, header_encoding,
                          out_file, err_file, self)
       end
