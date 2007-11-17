@@ -130,9 +130,10 @@ module Svn
       end
       alias ci commit
 
-      def status(path, rev=nil, depth=nil, get_all=false,
+      def status(path, rev=nil, depth_or_recurse=nil, get_all=false,
                  update=true, no_ignore=false,
                  ignore_externals=false, &status_func)
+        depth = Core::Depth.infinity_or_immediates_from_recurse(depth_or_recurse)
         Client.status3(path, rev, status_func,
                        depth, get_all, update, no_ignore,
                        ignore_externals, self)
