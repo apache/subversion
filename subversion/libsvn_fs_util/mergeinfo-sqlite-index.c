@@ -32,9 +32,12 @@
 #include "svn_pools.h"
 
 #include "private/svn_dep_compat.h"
+#include "private/svn_fs_sqlite.h"
 #include "private/svn_fs_mergeinfo.h"
 #include "../libsvn_fs/fs-loader.h"
 #include "svn_private_config.h"
+
+#include "sqlite-util.h"
 
 /* This is a macro implementation of svn_fs_revision_root_revision(), which
    we cannot call from here, because it would create a circular dependency. */
@@ -45,175 +48,10 @@
    so we use a -1 converted to a pointer to represent this. */
 #define NEGATIVE_CACHE_RESULT ((void *)(-1))
 
-/* SQLITE->SVN quick error wrap, much like SVN_ERR. */
-#define SQLITE_ERR(x, db) do                                    \
-{                                                               \
-  if ((x) != SQLITE_OK)                                         \
-    return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,      \
-                            sqlite3_errmsg((db)));              \
-} while (0)
-
 /* A flow-control helper macro for sending processing to the 'cleanup'
   label when the local variable 'err' is not SVN_NO_ERROR. */
 #define MAYBE_CLEANUP if (err) goto cleanup
 
-#ifdef SQLITE3_DEBUG
-/* An sqlite query execution callback. */
-static void
-sqlite_tracer(void *data, const char *sql)
-{
-  /*  sqlite3 *db = data; */
-  fprintf(stderr, "SQLITE SQL is \"%s\"\n", sql);
-}
-#endif
-
-/* Execute SQL on the sqlite database DB, and raise an SVN error if the
-   result is not okay.  */
-
-static svn_error_t *
-util_sqlite_exec(sqlite3 *db, const char *sql,
-                 sqlite3_callback callback,
-                 void *callbackdata)
-{
-  char *err_msg;
-  svn_error_t *err;
-  if (sqlite3_exec(db, sql, NULL, NULL, &err_msg) != SQLITE_OK)
-    {
-      err = svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL, err_msg);
-      sqlite3_free(err_msg);
-      return err;
-    }
-  return SVN_NO_ERROR;
-}
-
-/* Time (in milliseconds) to wait for sqlite locks before giving up. */
-#define BUSY_TIMEOUT 10000
-
-/* The version number of the schema used to store the mergeinfo index. */
-#define MERGE_INFO_INDEX_SCHEMA_FORMAT 1
-
-/* Return SVN_ERR_FS_GENERAL if the schema doesn't exist,
-   SVN_ERR_FS_UNSUPPORTED_FORMAT if the schema format is invalid, or
-   SVN_ERR_FS_SQLITE_ERROR if an sqlite error occurs during
-   validation.  Return SVN_NO_ERROR if everything is okay. */
-static svn_error_t *
-check_format(sqlite3 *db)
-{
-  svn_error_t *err = SVN_NO_ERROR;
-  sqlite3_stmt *stmt;
-
-  SQLITE_ERR(sqlite3_prepare(db, "PRAGMA user_version;", -1, &stmt, NULL), db);
-  if (sqlite3_step(stmt) == SQLITE_ROW)
-    {
-      /* Validate that the schema exists as expected and that the
-         schema and repository versions match. */
-      int schema_format = sqlite3_column_int(stmt, 0);
-      if (schema_format == MERGE_INFO_INDEX_SCHEMA_FORMAT)
-        {
-          err = SVN_NO_ERROR;
-        }
-      else if (schema_format == 0)
-        {
-          /* This is likely a freshly-created database in which the
-             merge tracking schema doesn't yet exist. */
-          err = svn_error_create(SVN_ERR_FS_GENERAL, NULL,
-                                 _("Merge Tracking schema format not set"));
-        }
-      else if (schema_format > MERGE_INFO_INDEX_SCHEMA_FORMAT)
-        {
-          err = svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
-                                  _("Merge Tracking schema format %d "
-                                    "not recognized"), schema_format);
-        }
-      /* else, we may one day want to perform a schema migration. */
-
-      SQLITE_ERR(sqlite3_finalize(stmt), db);
-    }
-  else
-    {
-      err = svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
-                             sqlite3_errmsg(db));
-    }
-  return err;
-}
-
-const char SVN_MTD_CREATE_SQL[] = "PRAGMA auto_vacuum = 1;"
-  APR_EOL_STR
-  "CREATE TABLE mergeinfo (revision INTEGER NOT NULL, mergedfrom TEXT NOT "
-  "NULL, mergedto TEXT NOT NULL, mergedrevstart INTEGER NOT NULL, "
-  "mergedrevend INTEGER NOT NULL, inheritable INTEGER NOT NULL);"
-  APR_EOL_STR
-  "CREATE INDEX mi_mergedfrom_idx ON mergeinfo (mergedfrom);"
-  APR_EOL_STR
-  "CREATE INDEX mi_mergedto_idx ON mergeinfo (mergedto);"
-  APR_EOL_STR
-  "CREATE INDEX mi_revision_idx ON mergeinfo (revision);"
-  APR_EOL_STR
-  "CREATE TABLE mergeinfo_changed (revision INTEGER NOT NULL, path TEXT "
-  "NOT NULL);"
-  APR_EOL_STR
-  "CREATE UNIQUE INDEX mi_c_revpath_idx ON mergeinfo_changed (revision, path);"
-  APR_EOL_STR
-  "CREATE INDEX mi_c_path_idx ON mergeinfo_changed (path);"
-  APR_EOL_STR
-  "CREATE INDEX mi_c_revision_idx ON mergeinfo_changed (revision);"
-  APR_EOL_STR
-  "PRAGMA user_version = " APR_STRINGIFY(MERGE_INFO_INDEX_SCHEMA_FORMAT) ";"
-  APR_EOL_STR;
-
-/* Open a connection in *DB to the mergeinfo database under
-   REPOS_PATH.  Validate the merge tracking schema, creating it if it
-   doesn't yet exist.  This provides a migration path for pre-1.5
-   repositories. */
-static svn_error_t *
-open_db(sqlite3 **db, const char *repos_path, apr_pool_t *pool)
-{
-  svn_error_t *err;
-  const char *db_path = svn_path_join(repos_path,
-                                      SVN_FS_MERGEINFO__DB_NAME, pool);
-  SQLITE_ERR(sqlite3_open(db_path, db), *db);
-  /* Retry until timeout when database is busy. */
-  SQLITE_ERR(sqlite3_busy_timeout(*db, BUSY_TIMEOUT), *db);
-#ifdef SQLITE3_DEBUG
-  sqlite3_trace(*db, sqlite_tracer, *db);
-#endif
-
-  /* Validate the schema. */
-  err = check_format(*db);
-  if (err && err->apr_err == SVN_ERR_FS_GENERAL)
-    {
-      /* Assume that we've just created an empty mergeinfo index by
-         way of sqlite3_open() (likely from accessing a pre-1.5
-         repository), and need to create the merge tracking schema. */
-      svn_error_clear(err);
-      err = util_sqlite_exec(*db, SVN_MTD_CREATE_SQL, NULL, NULL);
-    }
-  return err;
-}
-
-/* Close DB, returning any ERR which may've necessitated an early connection
-   closure, or -- if none -- the error from the closure itself. */
-static svn_error_t *
-close_db(sqlite3 *db, svn_error_t *err)
-{
-  int result = sqlite3_close(db);
-  /* If there's a pre-existing error, return it. */
-  /* ### If the connection close also fails, say something about it as well? */
-  SVN_ERR(err);
-  SQLITE_ERR(result, db);
-  return SVN_NO_ERROR;
-}
-
-/* Create an sqlite DB for our mergeinfo index under PATH.  Use POOL
-   for temporary allocations. */
-svn_error_t *
-svn_fs_mergeinfo__create_index(const char *path, apr_pool_t *pool)
-{
-  sqlite3 *db;
-  /* Opening the database will create it + schema if it's not already there. */
-  SVN_ERR(open_db(&db, path, pool));
-  return close_db(db, SVN_NO_ERROR);
-}
 
 static svn_error_t *
 get_mergeinfo_for_path(sqlite3 *db,
@@ -279,17 +117,19 @@ index_path_mergeinfo(svn_revnum_t new_rev,
       if (from && rangelist)
         {
           int i;
-          SQLITE_ERR(sqlite3_prepare
-                     (db,
-                      "INSERT INTO mergeinfo (revision, mergedfrom, "
-                      "mergedto, mergedrevstart, mergedrevend, inheritable) "
-                      "VALUES (?, ?, ?, ?, ?, ?);",
-                      -1, &stmt, NULL), db);
-          SQLITE_ERR(sqlite3_bind_int64(stmt, 1, new_rev), db);
-          SQLITE_ERR(sqlite3_bind_text(stmt, 2, from, -1, SQLITE_TRANSIENT),
-                     db);
-          SQLITE_ERR(sqlite3_bind_text(stmt, 3, path, -1, SQLITE_TRANSIENT),
-                     db);
+          SVN_FS__SQLITE_ERR(sqlite3_prepare
+                             (db,
+                              "INSERT INTO mergeinfo (revision, mergedfrom, "
+                              "mergedto, mergedrevstart, mergedrevend, "
+                              "inheritable) VALUES (?, ?, ?, ?, ?, ?);",
+                              -1, &stmt, NULL), db);
+          SVN_FS__SQLITE_ERR(sqlite3_bind_int64(stmt, 1, new_rev), db);
+          SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 2, from, -1, 
+                                               SQLITE_TRANSIENT),
+                             db);
+          SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 3, path, -1, 
+                                               SQLITE_TRANSIENT),
+                             db);
 
           if (remove_mergeinfo)
             {
@@ -308,34 +148,35 @@ index_path_mergeinfo(svn_revnum_t new_rev,
             {
               const svn_merge_range_t *range =
                 APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
-              SQLITE_ERR(sqlite3_bind_int64(stmt, 4, range->start),
-                         db);
-              SQLITE_ERR(sqlite3_bind_int64(stmt, 5, range->end),
-                         db);
-              SQLITE_ERR(sqlite3_bind_int64(stmt, 6, range->inheritable), db);
+              SVN_FS__SQLITE_ERR(sqlite3_bind_int64(stmt, 4, range->start),
+                                 db);
+              SVN_FS__SQLITE_ERR(sqlite3_bind_int64(stmt, 5, range->end),
+                                 db);
+              SVN_FS__SQLITE_ERR(sqlite3_bind_int64(stmt, 6, 
+                                                    range->inheritable), db);
               if (sqlite3_step(stmt) != SQLITE_DONE)
                 return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
                                         sqlite3_errmsg(db));
 
-              SQLITE_ERR(sqlite3_reset(stmt), db);
+              SVN_FS__SQLITE_ERR(sqlite3_reset(stmt), db);
             }
-          SQLITE_ERR(sqlite3_finalize(stmt), db);
+          SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
         }
     }
-  SQLITE_ERR(sqlite3_prepare(db,
+  SVN_FS__SQLITE_ERR(sqlite3_prepare(db,
                              "INSERT INTO mergeinfo_changed (revision, path) "
                              "VALUES (?, ?);", -1, &stmt, NULL),
-             db);
-  SQLITE_ERR(sqlite3_bind_int64(stmt, 1, new_rev), db);
+                     db);
+  SVN_FS__SQLITE_ERR(sqlite3_bind_int64(stmt, 1, new_rev), db);
 
-  SQLITE_ERR(sqlite3_bind_text(stmt, 2, path, -1, SQLITE_TRANSIENT),
-             db);
+  SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 2, path, -1, SQLITE_TRANSIENT),
+                     db);
 
   if (sqlite3_step(stmt) != SQLITE_DONE)
     return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
                             sqlite3_errmsg(db));
 
-  SQLITE_ERR(sqlite3_finalize(stmt), db);
+  SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
 
   return SVN_NO_ERROR;
 }
@@ -378,8 +219,8 @@ svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
   const char *deletestring;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  SVN_ERR(open_db(&db, txn->fs->path, subpool));
-  err = util_sqlite_exec(db, "BEGIN TRANSACTION;", NULL, NULL);
+  SVN_ERR(svn_fs__sqlite_open(&db, txn->fs->path, subpool));
+  err = svn_fs__sqlite_exec(db, "BEGIN TRANSACTION;");
   MAYBE_CLEANUP;
 
   /* Cleanup the leftovers of any previous, failed transactions
@@ -388,12 +229,12 @@ svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
                               "DELETE FROM mergeinfo_changed WHERE "
                               "revision = %ld;",
                               new_rev);
-  err = util_sqlite_exec(db, deletestring, NULL, NULL);
+  err = svn_fs__sqlite_exec(db, deletestring);
   MAYBE_CLEANUP;
   deletestring = apr_psprintf(subpool,
                               "DELETE FROM mergeinfo WHERE revision = %ld;",
                               new_rev);
-  err = util_sqlite_exec(db, deletestring, NULL, NULL);
+  err = svn_fs__sqlite_exec(db, deletestring);
   MAYBE_CLEANUP;
 
   /* Record any mergeinfo from the current transaction. */
@@ -408,11 +249,11 @@ svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
    * On the other hand, if we commit the transaction and end up failing
    * the current file, we just end up with inaccessible data in the
    * database, not a real problem.  */
-  err = util_sqlite_exec(db, "COMMIT TRANSACTION;", NULL, NULL);
+  err = svn_fs__sqlite_exec(db, "COMMIT TRANSACTION;");
   MAYBE_CLEANUP;
 
  cleanup:
-  err = close_db(db, err);
+  err = svn_fs__sqlite_close(db, err);
   svn_pool_destroy(subpool);
   return err;
 }
@@ -430,14 +271,14 @@ parse_mergeinfo_from_db(sqlite3 *db,
   sqlite3_stmt *stmt;
   int sqlite_result;
 
-  SQLITE_ERR(sqlite3_prepare(db,
-                             "SELECT mergedfrom, mergedrevstart, "
-                             "mergedrevend, inheritable FROM mergeinfo "
-                             "WHERE mergedto = ? AND revision = ? "
-                             "ORDER BY mergedfrom, mergedrevstart;",
-                             -1, &stmt, NULL), db);
-  SQLITE_ERR(sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT), db);
-  SQLITE_ERR(sqlite3_bind_int64(stmt, 2, lastmerged_rev), db);
+  SVN_FS__SQLITE_ERR(sqlite3_prepare(db,
+                                     "SELECT mergedfrom, mergedrevstart, "
+                                     "mergedrevend, inheritable FROM mergeinfo "
+                                     "WHERE mergedto = ? AND revision = ? "
+                                     "ORDER BY mergedfrom, mergedrevstart;",
+                                     -1, &stmt, NULL), db);
+  SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT), db);
+  SVN_FS__SQLITE_ERR(sqlite3_bind_int64(stmt, 2, lastmerged_rev), db);
   sqlite_result = sqlite3_step(stmt);
 
   /* It is possible the mergeinfo changed because of a delete, and
@@ -506,7 +347,7 @@ parse_mergeinfo_from_db(sqlite3 *db,
       return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
                               sqlite3_errmsg(db));
     }
-  SQLITE_ERR(sqlite3_finalize(stmt), db);
+  SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
 
   return SVN_NO_ERROR;
 }
@@ -574,20 +415,22 @@ get_mergeinfo_for_path(sqlite3 *db,
 
       /* See if we have a mergeinfo_changed record for this path. If not,
          then it can't have mergeinfo.  */
-      SQLITE_ERR(sqlite3_prepare(db,
-                                 "SELECT MAX(revision) FROM mergeinfo_changed "
-                                 "WHERE path = ? AND revision <= ?;",
-                                 -1, &stmt, NULL), db);
+      SVN_FS__SQLITE_ERR(sqlite3_prepare(db,
+                                         "SELECT MAX(revision) FROM "
+                                         "mergeinfo_changed WHERE path = ? AND "
+                                         "revision <= ?;",
+                                         -1, &stmt, NULL), db);
 
-      SQLITE_ERR(sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT), db);
-      SQLITE_ERR(sqlite3_bind_int64(stmt, 2, rev), db);
+      SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT),
+                         db);
+      SVN_FS__SQLITE_ERR(sqlite3_bind_int64(stmt, 2, rev), db);
       sqlite_result = sqlite3_step(stmt);
       if (sqlite_result != SQLITE_ROW)
         return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
                                 sqlite3_errmsg(db));
 
       lastmerged_rev = (svn_revnum_t) sqlite3_column_int64(stmt, 0);
-      SQLITE_ERR(sqlite3_finalize(stmt), db);
+      SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
 
       /* If we've got mergeinfo data, transform it from the db into a
          mergeinfo hash */
@@ -678,17 +521,18 @@ get_mergeinfo_for_children(sqlite3 *db,
   char *like_path;
 
   /* Get all paths under us. */
-  SQLITE_ERR(sqlite3_prepare(db,
-                             "SELECT MAX(revision), path "
-                             "FROM mergeinfo_changed "
-                             "WHERE path LIKE ? AND revision <= ? "
-                             "GROUP BY path;",
-                             -1, &stmt, NULL), db);
+  SVN_FS__SQLITE_ERR(sqlite3_prepare(db,
+                                     "SELECT MAX(revision), path "
+                                     "FROM mergeinfo_changed "
+                                     "WHERE path LIKE ? AND revision <= ? "
+                                     "GROUP BY path;",
+                                     -1, &stmt, NULL), db);
 
   like_path = apr_psprintf(subpool, "%s/%%", path);
 
-  SQLITE_ERR(sqlite3_bind_text(stmt, 1, like_path, -1, SQLITE_TRANSIENT), db);
-  SQLITE_ERR(sqlite3_bind_int64(stmt, 2, rev), db);
+  SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 1, like_path, -1, 
+                                       SQLITE_TRANSIENT), db);
+  SVN_FS__SQLITE_ERR(sqlite3_bind_int64(stmt, 2, rev), db);
 
   sqlite_result = sqlite3_step(stmt);
   while (sqlite_result != SQLITE_DONE)
@@ -725,7 +569,7 @@ get_mergeinfo_for_children(sqlite3 *db,
       sqlite_result = sqlite3_step(stmt);
     }
 
-  SQLITE_ERR(sqlite3_finalize(stmt), db);
+  SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
   svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
@@ -780,9 +624,9 @@ svn_fs_mergeinfo__get_mergeinfo(apr_hash_t **mergeinfo,
   subpool = svn_pool_create(pool);
 
   /* Retrieve a path -> mergeinfo hash mapping. */
-  SVN_ERR(open_db(&db, root->fs->path, subpool));
+  SVN_ERR(svn_fs__sqlite_open(&db, root->fs->path, subpool));
   err = get_mergeinfo(db, mergeinfo, rev, paths, inherit, pool);
-  SVN_ERR(close_db(db, err));
+  SVN_ERR(svn_fs__sqlite_close(db, err));
 
   /* Convert each mergeinfo hash value into a textual representation. */
   for (i = 0; i < paths->nelts; i++)
@@ -826,7 +670,7 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
     return svn_error_create(SVN_ERR_FS_NOT_REVISION_ROOT, NULL, NULL);
   rev = REV_ROOT_REV(root);
 
-  SVN_ERR(open_db(&db, root->fs->path, pool));
+  SVN_ERR(svn_fs__sqlite_open(&db, root->fs->path, pool));
   err = get_mergeinfo(db, mergeinfo, rev, paths, svn_mergeinfo_inherited,
                       pool);
   MAYBE_CLEANUP;
@@ -863,5 +707,5 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
     }
 
  cleanup:
-  return close_db(db, err);
+  return svn_fs__sqlite_close(db, err);
 }
