@@ -409,7 +409,7 @@ svn_ra_serf__reparent(svn_ra_session_t *ra_session,
     }
 
   session->repos_url.path = new_url.path;
-  session->repos_url_str = apr_pstrdup(pool, url);
+  session->repos_url_str = apr_pstrdup(session->pool, url);
 
   return SVN_NO_ERROR;
 }
