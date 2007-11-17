@@ -4937,7 +4937,7 @@ node_origin_rev(const char **msg,
   {
     struct path_rev_t pathrevs[6] = { { "A/D",             1 },
                                       { "A/D/floop",       3 },
-                                      { "bloop"           -1 },
+                                      { "bloop",          -1 },
                                       { "A/D/blarp",      -1 },
                                       { "iota",            1 },
                                       { "A/B/E/alfalfa",   5 } };
