@@ -376,20 +376,21 @@ svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
   svn_error_t *err;
   sqlite3 *db;
   const char *deletestring;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
-  SVN_ERR(open_db(&db, txn->fs->path, pool));
+  SVN_ERR(open_db(&db, txn->fs->path, subpool));
   err = util_sqlite_exec(db, "BEGIN TRANSACTION;", NULL, NULL);
   MAYBE_CLEANUP;
 
   /* Cleanup the leftovers of any previous, failed transactions
    * involving NEW_REV. */
-  deletestring = apr_psprintf(pool,
+  deletestring = apr_psprintf(subpool,
                               "DELETE FROM mergeinfo_changed WHERE "
                               "revision = %ld;",
                               new_rev);
   err = util_sqlite_exec(db, deletestring, NULL, NULL);
   MAYBE_CLEANUP;
-  deletestring = apr_psprintf(pool,
+  deletestring = apr_psprintf(subpool,
                               "DELETE FROM mergeinfo WHERE revision = %ld;",
                               new_rev);
   err = util_sqlite_exec(db, deletestring, NULL, NULL);
@@ -398,7 +399,7 @@ svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
   /* Record any mergeinfo from the current transaction. */
   if (mergeinfo_for_paths)
     {
-      err = index_txn_mergeinfo(db, new_rev, mergeinfo_for_paths, pool);
+      err = index_txn_mergeinfo(db, new_rev, mergeinfo_for_paths, subpool);
       MAYBE_CLEANUP;
     }
 
@@ -411,7 +412,9 @@ svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
   MAYBE_CLEANUP;
 
  cleanup:
-  return close_db(db, err);
+  err = close_db(db, err);
+  svn_pool_destroy(subpool);
+  return err;
 }
 
 /* Helper for get_mergeinfo_for_path() that retrieves mergeinfo for
