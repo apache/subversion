@@ -1020,11 +1020,9 @@ svn_swig_rb_auth_get_username_prompt_provider(
 static svn_error_t *
 svn_swig_mergeinfo_merge(apr_hash_t **mergeinfo_inout,
                          apr_hash_t *changes,
-                         svn_merge_range_inheritance_t consider_inheritance,
                          apr_pool_t *pool)
 {
-  return svn_mergeinfo_merge(*mergeinfo_inout, changes, consider_inheritance,
-                             pool);
+  return svn_mergeinfo_merge(*mergeinfo_inout, changes, pool);
 }
 
 static svn_error_t *
@@ -1036,11 +1034,9 @@ svn_swig_mergeinfo_sort(apr_hash_t **mergeinfo_inout, apr_pool_t *pool)
 static svn_error_t *
 svn_swig_rangelist_merge(apr_array_header_t **rangelist_inout,
                          apr_array_header_t *changes,
-                         svn_merge_range_inheritance_t consider_inheritance,
                          apr_pool_t *pool)
 {
-  return svn_rangelist_merge(rangelist_inout, changes, consider_inheritance,
-                             pool);
+  return svn_rangelist_merge(rangelist_inout, changes, pool);
 }
 
 static svn_error_t *

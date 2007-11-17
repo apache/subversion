@@ -29,6 +29,7 @@
 #include "svn_fs.h"
 #include "svn_path.h"
 #include "svn_mergeinfo.h"
+#include "svn_pools.h"
 
 #include "private/svn_dep_compat.h"
 #include "private/svn_fs_sqlite.h"
@@ -137,6 +138,7 @@ index_path_mergeinfo(svn_revnum_t new_rev,
 #if APR_VERSION_AT_LEAST(1, 3, 0)
               apr_array_clear(rangelist);
 #else
+              /* Use of an iterpool would be overkill here. */
               rangelist = apr_array_make(pool, 1, sizeof(&no_mergeinfo));
 #endif
               APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = &no_mergeinfo;
@@ -215,20 +217,21 @@ svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
   svn_error_t *err;
   sqlite3 *db;
   const char *deletestring;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
-  SVN_ERR(svn_fs__sqlite_open(&db, txn->fs->path, pool));
+  SVN_ERR(svn_fs__sqlite_open(&db, txn->fs->path, subpool));
   err = svn_fs__sqlite_exec(db, "BEGIN TRANSACTION;");
   MAYBE_CLEANUP;
 
   /* Cleanup the leftovers of any previous, failed transactions
    * involving NEW_REV. */
-  deletestring = apr_psprintf(pool,
+  deletestring = apr_psprintf(subpool,
                               "DELETE FROM mergeinfo_changed WHERE "
                               "revision = %ld;",
                               new_rev);
   err = svn_fs__sqlite_exec(db, deletestring);
   MAYBE_CLEANUP;
-  deletestring = apr_psprintf(pool,
+  deletestring = apr_psprintf(subpool,
                               "DELETE FROM mergeinfo WHERE revision = %ld;",
                               new_rev);
   err = svn_fs__sqlite_exec(db, deletestring);
@@ -237,7 +240,7 @@ svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
   /* Record any mergeinfo from the current transaction. */
   if (mergeinfo_for_paths)
     {
-      err = index_txn_mergeinfo(db, new_rev, mergeinfo_for_paths, pool);
+      err = index_txn_mergeinfo(db, new_rev, mergeinfo_for_paths, subpool);
       MAYBE_CLEANUP;
     }
 
@@ -250,7 +253,9 @@ svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
   MAYBE_CLEANUP;
 
  cleanup:
-  return svn_fs__sqlite_close(db, err);
+  err = svn_fs__sqlite_close(db, err);
+  svn_pool_destroy(subpool);
+  return err;
 }
 
 /* Helper for get_mergeinfo_for_path() that retrieves mergeinfo for
@@ -348,9 +353,9 @@ parse_mergeinfo_from_db(sqlite3 *db,
 }
 
 
-/* Helper for get_mergeinfo_for_path() that will append
-   PATH_TO_APPEND to each path that exists in the mergeinfo hash
-   INPUT, and return a new mergeinfo hash in *OUTPUT.  */
+/* Helper for get_mergeinfo_for_path() that will append PATH_TO_APPEND
+   to each path that exists in the mergeinfo hash INPUT, and return a
+   new mergeinfo hash in *OUTPUT.  Perform all allocations in POOL. */
 static svn_error_t *
 append_component_to_paths(apr_hash_t **output,
                           apr_hash_t *input,
@@ -367,7 +372,8 @@ append_component_to_paths(apr_hash_t **output,
       char *newpath;
 
       apr_hash_this(hi, &key, NULL, &val);
-      newpath = svn_path_join((const char *) key, path_to_append, pool);
+      newpath = svn_path_join((const char *) key, path_to_append,
+                              apr_hash_pool_get(*output));
       apr_hash_set(*output, newpath, APR_HASH_KEY_STRING, val);
     }
 
@@ -494,10 +500,12 @@ get_mergeinfo_for_path(sqlite3 *db,
 }
 
 
-/* Get the mergeinfo for all of the children of PATH in REV.  Return the
-   results in PATH_MERGEINFO.  PATH_MERGEINFO should already be created
-   prior to calling this function, but it's value may change as additional
-   mergeinfos are added to it.  */
+/* Get the mergeinfo for all of the children of PATH in REV.  Return
+   the results in PATH_MERGEINFO.  PATH_MERGEINFO should already be
+   created prior to calling this function, but it's value may change
+   as additional mergeinfos are added to it.  Returned values are
+   allocated in POOL, while temporary values are allocated in a
+   sub-pool. */
 static svn_error_t *
 get_mergeinfo_for_children(sqlite3 *db,
                            const char *path,
@@ -509,6 +517,7 @@ get_mergeinfo_for_children(sqlite3 *db,
 {
   sqlite3_stmt *stmt;
   int sqlite_result;
+  apr_pool_t *subpool = svn_pool_create(pool);
   char *like_path;
 
   /* Get all paths under us. */
@@ -519,7 +528,7 @@ get_mergeinfo_for_children(sqlite3 *db,
                                      "GROUP BY path;",
                                      -1, &stmt, NULL), db);
 
-  like_path = apr_psprintf(pool, "%s/%%", path);
+  like_path = apr_psprintf(subpool, "%s/%%", path);
 
   SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 1, like_path, -1, 
                                        SQLITE_TRANSIENT), db);
@@ -530,6 +539,8 @@ get_mergeinfo_for_children(sqlite3 *db,
     {
       svn_revnum_t lastmerged_rev;
       const char *merged_path;
+
+      svn_pool_clear(subpool);
 
       if (sqlite_result == SQLITE_ERROR)
         return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
@@ -545,28 +556,27 @@ get_mergeinfo_for_children(sqlite3 *db,
           svn_boolean_t omit = FALSE;
 
           SVN_ERR(parse_mergeinfo_from_db(db, merged_path, lastmerged_rev,
-                                          &db_mergeinfo, pool));
+                                          &db_mergeinfo, subpool));
 
           if (filter_func)
             SVN_ERR(filter_func(filter_func_baton, &omit, merged_path,
-                                db_mergeinfo, pool));
+                                db_mergeinfo, subpool));
 
           if (!omit)
-            SVN_ERR(svn_mergeinfo_merge(path_mergeinfo, db_mergeinfo,
-                                        svn_rangelist_equal_inheritance,
-                                        pool));
+            SVN_ERR(svn_mergeinfo_merge(path_mergeinfo, db_mergeinfo, pool));
         }
 
       sqlite_result = sqlite3_step(stmt);
     }
 
   SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
 
 /* Get the mergeinfo for a set of paths, returned as a hash of mergeinfo
-   hashs keyed by each path. */
+   hashs keyed by each path.  Perform all allocations in POOL. */
 static svn_error_t *
 get_mergeinfo(sqlite3 *db,
               apr_hash_t **mergeinfo,
@@ -583,13 +593,16 @@ get_mergeinfo(sqlite3 *db,
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
       SVN_ERR(get_mergeinfo_for_path(db, path, rev, *mergeinfo,
-                                     mergeinfo_cache, inherit, pool));
+                                     mergeinfo_cache, inherit,
+                                     apr_hash_pool_get(*mergeinfo)));
     }
 
   return SVN_NO_ERROR;
 }
 
-/* Get the mergeinfo for a set of paths.  */
+/* Get the mergeinfo for a set of paths.  Returned values are
+   allocated in POOL, while temporary values are allocated in a
+   sub-pool. */
 svn_error_t *
 svn_fs_mergeinfo__get_mergeinfo(apr_hash_t **mergeinfo,
                                 svn_fs_root_t *root,
@@ -601,33 +614,40 @@ svn_fs_mergeinfo__get_mergeinfo(apr_hash_t **mergeinfo,
   int i;
   svn_error_t *err;
   svn_revnum_t rev;
+  apr_pool_t *subpool;
 
   /* We require a revision root. */
   if (root->is_txn_root)
     return svn_error_create(SVN_ERR_FS_NOT_REVISION_ROOT, NULL, NULL);
   rev = REV_ROOT_REV(root);
 
-  SVN_ERR(svn_fs__sqlite_open(&db, root->fs->path, pool));
+  subpool = svn_pool_create(pool);
+
+  /* Retrieve a path -> mergeinfo hash mapping. */
+  SVN_ERR(svn_fs__sqlite_open(&db, root->fs->path, subpool));
   err = get_mergeinfo(db, mergeinfo, rev, paths, inherit, pool);
   SVN_ERR(svn_fs__sqlite_close(db, err));
 
+  /* Convert each mergeinfo hash value into a textual representation. */
   for (i = 0; i < paths->nelts; i++)
     {
       svn_stringbuf_t *mergeinfo_buf;
       apr_hash_t *path_mergeinfo;
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
 
+      apr_pool_clear(subpool);
+
       path_mergeinfo = apr_hash_get(*mergeinfo, path, APR_HASH_KEY_STRING);
       if (path_mergeinfo)
         {
-          SVN_ERR(svn_mergeinfo_sort(path_mergeinfo, pool));
+          SVN_ERR(svn_mergeinfo_sort(path_mergeinfo, subpool));
           SVN_ERR(svn_mergeinfo_to_stringbuf(&mergeinfo_buf, path_mergeinfo,
-                                             pool));
+                                             apr_hash_pool_get(*mergeinfo)));
           apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING,
                        mergeinfo_buf->data);
         }
     }
-
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }

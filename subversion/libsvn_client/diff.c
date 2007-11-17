@@ -118,7 +118,7 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
 
   SVN_ERR(svn_mergeinfo_diff(&deleted, &added, old_mergeinfo_hash,
                              new_mergeinfo_hash,
-                             svn_rangelist_equal_inheritance, pool));
+                             TRUE, pool));
 
   for (hi = apr_hash_first(pool, deleted);
        hi; hi = apr_hash_next(hi))
@@ -159,6 +159,11 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
   return SVN_NO_ERROR;
 }
 
+#define MAKE_ERR_BAD_RELATIVE_PATH(path, relative_to_dir) \
+        svn_error_createf(SVN_ERR_BAD_RELATIVE_PATH, NULL, \
+                          _("Path '%s' must be an immediate child of " \
+                            "the directory '%s'"), path, relative_to_dir)
+
 /* A helper func that writes out verbal descriptions of property diffs
    to FILE.   Of course, the apr_file_t will probably be the 'outfile'
    passed to svn_client_diff4, which is probably stdout. */
@@ -168,9 +173,21 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                    const char *path,
                    const char *encoding,
                    apr_file_t *file,
+                   const char *relative_to_dir,
                    apr_pool_t *pool)
 {
   int i;
+
+  if (relative_to_dir)
+    {
+      /* Possibly adjust the path shown in the output (see issue #2723). */
+      const char *child_path = svn_path_is_child(relative_to_dir, path, pool);
+
+      if (child_path)
+        path = child_path;
+      else
+        return MAKE_ERR_BAD_RELATIVE_PATH(path, relative_to_dir);
+    }
 
   SVN_ERR(file_printf_from_utf8(file, encoding,
                                 _("%sProperty changes on: %s%s"),
@@ -312,6 +329,9 @@ struct diff_cmd_baton {
      unconditionally, even if the diffs are empty. */
   svn_boolean_t force_empty;
 
+  /* The directory that diff target paths should be considered as
+     relative to for output generation (see issue #2723). */
+  const char *relative_to_dir;
 };
 
 
@@ -352,7 +372,9 @@ diff_props_changed(svn_wc_adm_access_t *adm_access,
   if (props->nelts > 0)
     SVN_ERR(display_prop_diffs(props, original_props, path,
                                diff_cmd_baton->header_encoding,
-                               diff_cmd_baton->outfile, subpool));
+                               diff_cmd_baton->outfile,
+                               diff_cmd_baton->relative_to_dir,
+                               subpool));
 
   if (state)
     *state = svn_wc_notify_state_unknown;
@@ -381,6 +403,7 @@ diff_content_changed(const char *path,
   int nargs, exitcode;
   apr_pool_t *subpool = svn_pool_create(diff_cmd_baton->pool);
   svn_stream_t *os;
+  const char *rel_to_dir = diff_cmd_baton->relative_to_dir;
   apr_file_t *errfile = diff_cmd_baton->errfile;
   const char *label1, *label2;
   svn_boolean_t mt1_binary = FALSE, mt2_binary = FALSE;
@@ -450,6 +473,31 @@ diff_content_changed(const char *path,
     path2 = apr_psprintf(subpool, "%s\t(...%s)", path, path2);
   else
     path2 = apr_psprintf(subpool, "%s\t(.../%s)", path, path2);
+
+  if (diff_cmd_baton->relative_to_dir)
+    {
+      /* Possibly adjust the paths shown in the output (see issue #2723). */
+      const char *child_path = svn_path_is_child(rel_to_dir, path, subpool);
+
+      if (child_path)
+        path = child_path;
+      else
+        return MAKE_ERR_BAD_RELATIVE_PATH(path, rel_to_dir);
+
+      child_path = svn_path_is_child(rel_to_dir, path1, subpool);
+
+      if (child_path)
+        path1 = child_path;
+      else
+        return MAKE_ERR_BAD_RELATIVE_PATH(path1, rel_to_dir);
+
+      child_path = svn_path_is_child(rel_to_dir, path2, subpool);
+
+      if (child_path)
+        path2 = child_path;
+      else
+        return MAKE_ERR_BAD_RELATIVE_PATH(path2, rel_to_dir);
+    }
 
   label1 = diff_label(path1, rev1, subpool);
   label2 = diff_label(path2, rev2, subpool);
@@ -545,11 +593,10 @@ diff_content_changed(const char *path,
                   (os, diff_cmd_baton->header_encoding, subpool,
                    "Index: %s" APR_EOL_STR "%s" APR_EOL_STR,
                    path, equal_string));
-
           /* Output the actual diff */
-          SVN_ERR(svn_diff_file_output_unified2
+          SVN_ERR(svn_diff_file_output_unified3
                   (os, diff, tmpfile1, tmpfile2, label1, label2,
-                   diff_cmd_baton->header_encoding, subpool));
+                   diff_cmd_baton->header_encoding, rel_to_dir, subpool));
         }
     }
 
@@ -1489,6 +1536,7 @@ svn_client_diff4(const apr_array_header_t *options,
                  const svn_opt_revision_t *revision1,
                  const char *path2,
                  const svn_opt_revision_t *revision2,
+                 const char *relative_to_dir,
                  svn_depth_t depth,
                  svn_boolean_t ignore_ancestry,
                  svn_boolean_t no_diff_deleted,
@@ -1542,6 +1590,7 @@ svn_client_diff4(const apr_array_header_t *options,
   diff_cmd_baton.config = ctx->config;
   diff_cmd_baton.force_empty = FALSE;
   diff_cmd_baton.force_binary = ignore_content_type;
+  diff_cmd_baton.relative_to_dir = relative_to_dir;
 
   return do_diff(&diff_params, &diff_callbacks, &diff_cmd_baton, ctx, pool);
 }
@@ -1563,7 +1612,8 @@ svn_client_diff3(const apr_array_header_t *options,
                  apr_pool_t *pool)
 {
   return svn_client_diff4(options, path1, revision1, path2,
-                          revision2, SVN_DEPTH_INFINITY_OR_FILES(recurse),
+                          revision2, NULL,
+                          SVN_DEPTH_INFINITY_OR_FILES(recurse),
                           ignore_ancestry, no_diff_deleted,
                           ignore_content_type, header_encoding,
                           outfile, errfile, ctx, pool);
@@ -1615,6 +1665,7 @@ svn_client_diff_peg4(const apr_array_header_t *options,
                      const svn_opt_revision_t *peg_revision,
                      const svn_opt_revision_t *start_revision,
                      const svn_opt_revision_t *end_revision,
+                     const char *relative_to_dir,
                      svn_depth_t depth,
                      svn_boolean_t ignore_ancestry,
                      svn_boolean_t no_diff_deleted,
@@ -1664,6 +1715,7 @@ svn_client_diff_peg4(const apr_array_header_t *options,
   diff_cmd_baton.config = ctx->config;
   diff_cmd_baton.force_empty = FALSE;
   diff_cmd_baton.force_binary = ignore_content_type;
+  diff_cmd_baton.relative_to_dir = relative_to_dir;
 
   return do_diff(&diff_params, &diff_callbacks, &diff_cmd_baton, ctx, pool);
 }
@@ -1689,6 +1741,7 @@ svn_client_diff_peg3(const apr_array_header_t *options,
                               peg_revision,
                               start_revision,
                               end_revision,
+                              NULL,
                               SVN_DEPTH_INFINITY_OR_FILES(recurse),
                               ignore_ancestry,
                               no_diff_deleted,

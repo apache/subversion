@@ -67,7 +67,7 @@ extern "C" {
  *
  *   Token             Definition
  *   -----             ----------
- *   revisionrange     REVISION "-" REVISION
+ *   revisionrange     REVISION1 "-" REVISION2
  *   revisioneelement  (revisionrange | REVISION)"*"?
  *   rangelist         revisioneelement (COMMA revisioneelement)*
  *   revisionline      PATHNAME COLON rangelist
@@ -80,9 +80,10 @@ extern "C" {
  * the source pathname.
  *
  * Rangelists must be sorted from lowest to highest revision and cannot
- * contain overlapping revisionlistelements.  Single revisions that can be
- * represented by a revisionrange are allowed (e.g. '5,6,7,8,9-12' or '5-12'
- * are both acceptable).
+ * contain overlapping revisionlistelements.  REVISION1 must be less than
+ * REVISION2.  Consecutive single revisions that can be represented by a
+ * revisionrange are allowed (e.g. '5,6,7,8,9-12' or '5-12' are both
+ * acceptable).
  */
 
 /* Suffix for SVN_PROP_MERGE_INFO revision ranges indicating a given
@@ -93,6 +94,11 @@ extern "C" {
  * paths to @c apr_array_header_t *'s of @c svn_merge_range_t *
  * elements.  If no mergeinfo is available, return an empty hash
  * (never @c NULL).  Perform temporary allocations in @a pool.
+ *
+ * If @a input is not a grammatically correct @c SVN_PROP_MERGE_INFO
+ * property, contains overlapping or unordered revision ranges, or revision
+ * ranges with a start revision greater than or equal to its end revision,
+ * then return @c SVN_ERR_MERGE_INFO_PARSE_ERROR.
  *
  * Note: @a *mergeinfo will contain rangelists that are guaranteed to
  * be sorted (ordered by smallest revision ranges to largest).
@@ -108,22 +114,39 @@ svn_mergeinfo_parse(apr_hash_t **mergeinfo, const char *input,
  * added (neither output argument will ever be @c NULL), stored as the
  * usual mapping of paths to lists of @c svn_merge_range_t *'s.
  *
- * @a consider_inheritance determines how to account for the inheritability
- * of the rangelists in @a mergefrom and @a mergeto when calculating the
- * diff.
+ * @a consider_inheritance determines how the rangelists in the two
+ * hashes are compared for equality.  If @a consider_inheritance is FALSE,
+ * then the start and end revisions of the @c svn_merge_range_t's being
+ * compared are the only factors considered when determining equality.
+ * 
+ *  e.g. '/trunk: 1,3-4*,5' == '/trunk: 1,3-5'
+ *
+ * If @a consider_inheritance is TRUE, then the inheritability of the
+ * @c svn_merge_range_t's is also considered and must be the same for two
+ * otherwise identical ranges to be judged equal.
+ *
+ *  e.g. '/trunk: 1,3-4*,5' != '/trunk: 1,3-5'
+ *       '/trunk: 1,3-4*,5' == '/trunk: 1,3-4*,5'
+ *       '/trunk: 1,3-4,5'  == '/trunk: 1,3-4,5'
  *
  * @since New in 1.5.
  */
 svn_error_t *
 svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
                    apr_hash_t *mergefrom, apr_hash_t *mergeto,
-                   svn_merge_range_inheritance_t consider_inheritance,
+                   svn_boolean_t consider_inheritance,
                    apr_pool_t *pool);
 
 /** Merge hash of mergeinfo, @a changes, into existing hash @a
- * mergeinfo.  @a consider_inheritance determines how to account for
- * the inheritability of the rangelists in @a changes and @a *mergeinfo
- * when merging.
+ * mergeinfo.
+ *
+ * When intersecting rangelists for a path are merged, the inheritability of
+ * the resulting svn_merge_range_t depends on the inheritability of the
+ * operands.  If two non-inheritable ranges are merged the result is always
+ * non-inheritable, in all other cases the resulting range is inheritable.
+ *
+ *  e.g. '/A: 1,3-4'  merged with '/A: 1,3,4*,5' --> '/A: 1,3-5'
+ *       '/A: 1,3-4*' merged with '/A: 1,3,4*,5' --> '/A: 1,3,4*,5'
  *
  * Note: @a mergeinfo and @a changes must have rangelists that are
  * sorted as said by @c svn_sort_compare_ranges().  After the merge @a
@@ -134,7 +157,6 @@ svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
  */
 svn_error_t *
 svn_mergeinfo_merge(apr_hash_t *mergeinfo, apr_hash_t *changes,
-                    svn_merge_range_inheritance_t consider_inheritance,
                     apr_pool_t *pool);
 
 /** Removes @a eraser (the subtrahend) from @a whiteboard (the
@@ -152,22 +174,24 @@ svn_mergeinfo_remove(apr_hash_t **mergeinfo, apr_hash_t *eraser,
  * output argument will ever be @c NULL).
  *
  * @a consider_inheritance determines how to account for the inheritability
- * of @a to and @a from when calculating the diff.
+ * of the two rangelist's ranges when calculating the diff,
+ * @see svn_mergeinfo_diff().
  *
  * @since New in 1.5.
  */
 svn_error_t *
 svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
                    apr_array_header_t *from, apr_array_header_t *to,
-                   svn_merge_range_inheritance_t consider_inheritance,
+                   svn_boolean_t consider_inheritance,
                    apr_pool_t *pool);
 
 /** Merge two rangelists consisting of @c svn_merge_range_t *
  * elements, @a *rangelist and @a changes, placing the results in
  * @a *rangelist.
  *
- * @a consider_inheritance determines how to account for the inheritability
- * of @a changes and @a *rangelist when merging.
+ * When intersecting rangelists are merged, the inheritability of
+ * the resulting svn_merge_range_t depends on the inheritability of the
+ * operands, @see svn_mergeinfo_merge().
  *
  * Note: @a *rangelist and @a changes must be sorted as said by @c
  * svn_sort_compare_ranges().  @a *rangelist is guaranteed to remain
@@ -178,7 +202,6 @@ svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
 svn_error_t *
 svn_rangelist_merge(apr_array_header_t **rangelist,
                     apr_array_header_t *changes,
-                    svn_merge_range_inheritance_t consider_inheritance,
                     apr_pool_t *pool);
 
 /** Removes @a eraser (the subtrahend) from @a whiteboard (the
@@ -188,15 +211,16 @@ svn_rangelist_merge(apr_array_header_t **rangelist,
  * svn_sort_compare_ranges().  @a output is guaranteed to be in sorted
  * order.
  *
- * @a consider_inheritance determines how to account for the inheritability
- * of @a whiteboard and @a *eraser when removing ranges.
+ * @a consider_inheritance determines how to account for the
+ * @c svn_merge_range_t inheritable field when comparing @a whiteboard's
+ * and @a *eraser's rangelists for equality.  @See svn_mergeinfo_diff().
  *
  * @since New in 1.5.
  */
 svn_error_t *
 svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
                      apr_array_header_t *whiteboard,
-                     svn_merge_range_inheritance_t consider_inheritance,
+                     svn_boolean_t consider_inheritance,
                      apr_pool_t *pool);
 
 /** Find the intersection of two rangelists consisting of @c
@@ -267,27 +291,30 @@ svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
                           svn_revnum_t end,
                           apr_pool_t *pool);
 
-/** Remove redundancies between @ *range_1 and @ *range_2.  @ *range_1 and/or
- * @ *range_2 may be additive or subtractive ranges.  The ranges should be
- * sorted such that the minimum of @ *range_1->start and @ *range_1->end is
- * less than or equal to the minimum of @ *range_2->start and
- * @ *range_2->end.
+/** Remove redundancies between @a *range_1 and @a *range_2.  @a
+ * *range_1 and/or @a *range_2 may be additive or subtractive ranges.
+ * The ranges should be sorted such that the minimum of @c
+ * *range_1->start and @c *range_1->end is less than or equal to the
+ * minimum of @c *range_2->start and @c *range_2->end.
  *
- * If either @ *range_1 or @ *range_2 is NULL, either range contains
+ * If either @a *range_1 or @a *range_2 is NULL, either range contains
  * invalid svn_revnum_t's, or the two ranges do not intersect, then do
- * nothing and return FALSE.
+ * nothing and return @c FALSE.
  *
- * If the two ranges can be reduced to one range, set @ *range_1 to represent
- * that range, set @ *range_2 to NULL, and return TRUE.
+ * If the two ranges can be reduced to one range, set @a *range_1 to
+ * represent that range, set @a *range_2 to @c NULL, and return @c
+ * TRUE.
  *
- * If the two ranges cancel each other out set both @ *range_1 and
- * @ *range_2 to NULL and return TRUE.
+ * If the two ranges cancel each other out set both @a *range_1 and @a
+ * *range_2 to @c NULL and return @c TRUE.
  *
- * If the two ranges intersect but cannot be represented by one range (because
- * one range is additive and the other subtractive) then modify @ *range_1 and
- * @ *range_2 to remove the intersecting ranges and return TRUE.
+ * If the two ranges intersect but cannot be represented by one range
+ * (because one range is additive and the other subtractive) then
+ * modify @a *range_1 and @a *range_2 to remove the intersecting
+ * ranges and return @c TRUE.
  *
- * The inheritability of @ *range_1 or @ *range_2 is not taken into account.
+ * The inheritability of @a *range_1 or @a *range_2 is not taken into
+ * account.
  *
  * @since New in 1.5.
  */
@@ -326,7 +353,7 @@ svn_mergeinfo_to_stringbuf(svn_stringbuf_t **output, apr_hash_t *mergeinfo,
 
 /** Take a hash of mergeinfo in @a mergeinfo, and sort the rangelists
  * associated with each key (in place).
- * Note: This does not sort the hash, only the range lists in the
+ * Note: This does not sort the hash, only the rangelists in the
  * hash.
  * @since New in 1.5
  */

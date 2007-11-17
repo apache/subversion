@@ -666,7 +666,7 @@ static svn_error_t *ra_svn_reparent(svn_ra_session_t *ra_session,
   if (! err)
     {
       SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
-      sess->url = apr_pstrdup(pool, url);
+      sess->url = apr_pstrdup(sess->pool, url);
       return SVN_NO_ERROR;
     }
   else if (err->apr_err != SVN_ERR_RA_SVN_UNKNOWN_CMD)

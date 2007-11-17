@@ -19,7 +19,10 @@ package org.tigris.subversion.javahl;
 
 import org.tigris.subversion.javahl.*;
 
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -2405,6 +2408,8 @@ public class BasicTests extends SVNTests
         final String NL = System.getProperty("line.separator");
         final String sepLine =
             "===================================================================" + NL;
+        final String underSepLine =
+            "___________________________________________________________________" + NL;
         final String expectedDiffBody =
             "@@ -1 +1 @@" + NL +
             "-This is the file 'iota'." + NL +
@@ -2450,6 +2455,78 @@ public class BasicTests extends SVNTests
                                  "", diffOutput);
 
         diffOutput.delete();
+
+        // Test svn diff with a relative path.
+        String wcPath = fileToSVNPath(new File(thisTest.getWCPath()),
+                                        false);
+
+        expectedDiffOutput = "Index: iota" + NL + sepLine +
+            "--- iota\t(revision 1)" + NL +
+            "+++ iota\t(working copy)" + NL +
+            expectedDiffBody;
+        client.diff(iotaPath, Revision.BASE, iotaPath, Revision.WORKING,
+                    wcPath, diffOutput.getPath(), Depth.infinity, true, true,
+                    false);
+        assertFileContentsEquals("Unexpected diff output in file '" +
+                                 diffOutput.getPath() + '\'',
+                                 expectedDiffOutput, diffOutput);
+
+        // Test svn diff with a relative path and trailing slash.
+        wcPath = fileToSVNPath(new File(thisTest.getWCPath() + "/"), false);
+
+        client.diff(iotaPath, Revision.BASE, iotaPath, Revision.WORKING,
+                    wcPath, diffOutput.getPath(), Depth.infinity, true, true,
+                    false);
+        assertFileContentsEquals("Unexpected diff output in file '" +
+                                 diffOutput.getPath() + '\'',
+                                 expectedDiffOutput, diffOutput);
+
+        // Test relativeToDir fails with urls. */
+        try
+        {
+            client.diff(thisTest.getUrl() + "/iota", Revision.HEAD,
+                        thisTest.getUrl() + "/A/mu", Revision.HEAD,
+                        thisTest.getUrl(), diffOutput.getPath(),
+                        Depth.infinity, true, true, false);
+
+            fail("This test should fail becaus the relativeToDir parameter " +
+                 "does not work with URLs");
+        }
+        catch (Exception ignored)
+        {
+        }
+
+        /* Testing the expected failure when relativeToDir is not a parent
+           path of the target. */
+        try
+        {
+            client.diff(iotaPath, Revision.BASE, iotaPath, Revision.WORKING,
+                        "/non/existent/path", diffOutput.getPath(),
+                        Depth.infinity, true, true, false);
+
+            fail("This test should fail because iotaPath is not a child of " +
+                 "the relativeToDir parameter");
+        }
+        catch (Exception ignored)
+        {
+        }
+
+        // Test diff with a relative path on a directory with prop
+        // changes.
+        String aPath = fileToSVNPath(new File(thisTest.getWCPath() + "/A"),
+                                     false);
+
+        expectedDiffOutput = NL + "Property changes on: A" + NL +
+            underSepLine +
+            "Added: testprop" + NL +
+            "   + Test property value." + NL + NL;
+
+        client.propertySet(aPath, "testprop", "Test property value.", false);
+        client.diff(aPath, Revision.BASE, aPath, Revision.WORKING, wcPath,
+                    diffOutput.getPath(), Depth.infinity, true, true, false);
+        assertFileContentsEquals("Unexpected diff output in file '" +
+                                 diffOutput.getPath() + '\'',
+                                 expectedDiffOutput, diffOutput);
     }
 
     private void assertFileContentsEquals(String msg, String expected,

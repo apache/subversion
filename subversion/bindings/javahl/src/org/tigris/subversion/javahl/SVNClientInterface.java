@@ -1046,6 +1046,7 @@ public interface SVNClientInterface
      * @param revision1     first revision
      * @param target2       second path or url
      * @param revision2     second revision
+     * @param relativeToDir index path is relative to this path
      * @param outFileName   file name where difference are written
      * @param depth         how deep to traverse into subdirectories
      * @param ignoreAncestry ignore if files are not related
@@ -1055,8 +1056,9 @@ public interface SVNClientInterface
      * @since 1.5
      */
     void diff(String target1, Revision revision1, String target2,
-              Revision revision2, String outFileName, int depth,
-              boolean ignoreAncestry, boolean noDiffDeleted, boolean force)
+              Revision revision2, String relativeToDir, String outFileName,
+              int depth, boolean ignoreAncestry, boolean noDiffDeleted,
+              boolean force)
             throws ClientException;
 
     /**
@@ -1087,6 +1089,7 @@ public interface SVNClientInterface
      * @param pegRevision   revision tointerpret target
      * @param startRevision first Revision to compare
      * @param endRevision   second Revision to compare
+     * @param relativeToDir index path is relative to this path
      * @param outFileName   file name where difference are written
      * @param depth         how deep to traverse into subdirectories
      * @param ignoreAncestry ignore if files are not related
@@ -1096,8 +1099,9 @@ public interface SVNClientInterface
      * @since 1.5
      */
     void diff(String target, Revision pegRevision, Revision startRevision,
-              Revision endRevision, String outFileName, int depth,
-              boolean ignoreAncestry, boolean noDiffDeleted, boolean force)
+              Revision endRevision, String relativeToDir, String outFileName,
+              int depth, boolean ignoreAncestry, boolean noDiffDeleted,
+              boolean force)
             throws ClientException;
 
     /**

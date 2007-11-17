@@ -870,25 +870,6 @@ svn_swig_rb_to_depth(VALUE value)
   }
 }
 
-svn_merge_range_inheritance_t
-svn_swig_rb_to_merge_range_inheritance(VALUE value)
-{
-  if (NIL_P(value)) {
-    return svn_rangelist_ignore_inheritance;
-  } else if (RTEST(rb_obj_is_kind_of(value, rb_cString)) ||
-             RTEST(rb_obj_is_kind_of(value, rb_cSymbol))) {
-    return NUM2INT(resolve_constant(rb_svn_core(), "RANGELIST_", value));
-  } else if (RTEST(rb_obj_is_kind_of(value, rb_cInteger))) {
-    return NUM2INT(value);
-  } else {
-    rb_raise(rb_eArgError,
-       "'%s' must be RANGELIST_STRING (e.g. \"ignore_inheritance\" or"
-       " :ignore_inheritance) "
-       "or Svn::Core::RANGELIST_*",
-       r2c_inspect(value));
-  }
-}
-
 svn_mergeinfo_inheritance_t
 svn_swig_rb_to_mergeinfo_inheritance(VALUE value)
 {
