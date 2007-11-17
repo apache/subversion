@@ -52,12 +52,14 @@ svn_fs__set_node_origin(svn_fs_t *fs,
 
 /* Set *ORIGIN_ID to the node revision ID from which the history of
    all nodes in FS whose "Node ID" is NODE_ID springs, as determined
-   by a look in the index.  Use POOL for allocations.
+   by a look in the index.  ORIGIN_ID needs to be parsed in an
+   FS-backend-specific way.  Use POOL for allocations.
 
-   If there is no entry for NODE_ID in the cache, return
+   If there is no entry for NODE_ID in the cache, return NULL 
+   in *ORIGIN_ID.
    SVN_ERR_FS_NO_SUCH_NODE_ORIGIN. */
 svn_error_t *
-svn_fs__get_node_origin(const svn_fs_id_t **origin_id,
+svn_fs__get_node_origin(const char **origin_id,
                         svn_fs_t *fs,
                         const char *node_id,
                         apr_pool_t *pool);

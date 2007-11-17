@@ -168,13 +168,17 @@ svn_fs__set_node_origin(svn_fs_t *fs,
 }
 
 svn_error_t *
-svn_fs__get_node_origin(const svn_fs_id_t **origin_id,
+svn_fs__get_node_origin(const char **origin_id,
                         svn_fs_t *fs,
                         const char *node_id,
                         apr_pool_t *pool)
 {
-  /* XXXdsg Implement! */
-  return svn_error_createf(SVN_ERR_FS_NO_SUCH_NODE_ORIGIN, NULL,
-                           _("No cached node origin for node id '%s' in "
-                             "filesystem '%s'"), node_id, fs->path);
+  sqlite3 *db;
+  svn_error_t *err;
+
+  SVN_ERR(svn_fs__sqlite_open(&db, fs->path, pool));
+
+  err = get_origin(origin_id, db, node_id);
+
+  return svn_fs__sqlite_close(db, err);
 }

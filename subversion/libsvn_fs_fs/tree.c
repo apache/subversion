@@ -2929,7 +2929,7 @@ fs_node_origin_rev(svn_revnum_t *revision,
                    apr_pool_t *pool)
 {
   svn_fs_t *fs = svn_fs_root_fs(root);
-  const svn_fs_id_t *given_noderev_id, *cached_origin_id;
+  const svn_fs_id_t *given_noderev_id;
   const char *node_id;
 
   path = svn_fs__canonicalize_abspath(path, pool);
@@ -2940,19 +2940,19 @@ fs_node_origin_rev(svn_revnum_t *revision,
 
   if (node_id[0] != '_')
     {
-      svn_error_t *err = svn_fs__get_node_origin(&cached_origin_id,
-                                                 fs,
-                                                 node_id,
-                                                 pool);
-
-      if (err && err->apr_err != SVN_ERR_FS_NO_SUCH_NODE_ORIGIN)
-        return err;
-      else if (! err)
+      const char *cached_origin_id_str;
+      SVN_ERR(svn_fs__get_node_origin(&cached_origin_id_str,
+                                      fs,
+                                      node_id,
+                                      pool));
+      if (cached_origin_id_str != NULL)
         {
-          *revision = svn_fs_fs__id_rev(cached_origin_id);
+          *revision = 
+            svn_fs_fs__id_rev(svn_fs_fs__id_parse(cached_origin_id_str,
+                                                  strlen(cached_origin_id_str),
+                                                  pool));
           return SVN_NO_ERROR;
         }
-      svn_error_clear(err);
     }
 
     {
