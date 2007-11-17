@@ -191,7 +191,7 @@ module Svn
       def propset(name, value, target, depth_or_recurse=nil, force=false,
                   base_revision_for_url=nil)
         base_revision_for_url ||= Svn::Core::INVALID_REVNUM
-        depth = depth_from_depth_or_recurse(depth_or_recurse)
+        depth = Core::Depth.infinity_or_empty_from_recurse(depth_or_recurse)
         Client.propset3(name, value, target, depth, force,
                         base_revision_for_url, self)
       end
@@ -211,7 +211,7 @@ module Svn
       def propget(name, target, rev=nil, peg_rev=nil, depth_or_recurse=nil)
         rev ||= "HEAD"
         peg_rev ||= rev
-        depth = depth_from_depth_or_recurse(depth_or_recurse)
+        depth = Core::Depth.infinity_or_empty_from_recurse(depth_or_recurse)
         Client.propget4(name, target, peg_rev, rev, depth, self).first
       end
       alias prop_get propget
@@ -227,7 +227,7 @@ module Svn
         rev ||= "HEAD"
         peg_rev ||= rev
         items = []
-        depth = depth_from_depth_or_recurse(depth_or_recurse)
+        depth = Core::Depth.infinity_or_empty_from_recurse(depth_or_recurse)
         receiver = Proc.new do |path, prop_hash|
           items << PropListItem.new(path, prop_hash)
           block.call(path, prop_hash) if block
@@ -368,7 +368,7 @@ module Svn
 
       def info(path_or_uri, rev=nil, peg_rev=nil, depth_or_recurse=false)
         rev ||= URI(path_or_uri).scheme ? "HEAD" : "BASE"
-        depth = depth_from_depth_or_recurse(depth_or_recurse)
+        depth = Core::Depth.infinity_or_empty_from_recurse(depth_or_recurse)
         peg_rev ||= rev
         receiver = Proc.new do |path, info|
           yield(path, info)
@@ -616,14 +616,6 @@ module Svn
         paths = [paths] unless paths.is_a?(Array)
         paths.collect do |path|
           path.chomp(File::SEPARATOR)
-        end
-      end
-
-      def depth_from_depth_or_recurse(depth_or_recurse)
-        depth = case depth_or_recurse
-          when true, nil: Svn::Core::DEPTH_INFINITY
-          when false: Svn::Core::DEPTH_EMPTY
-          else depth_or_recurse
         end
       end
     end

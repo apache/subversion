@@ -638,6 +638,14 @@ module Svn
       def to_string(depth)
         Core.depth_to_word(depth)
       end
+
+      def infinity_or_empty_from_recurse(depth_or_recurse)
+        depth = case depth_or_recurse
+          when true  : DEPTH_INFINITY
+          when false : DEPTH_EMPTY
+          else depth_or_recurse
+        end
+      end
     end
 
     module MimeType
