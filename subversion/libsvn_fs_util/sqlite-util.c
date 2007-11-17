@@ -95,6 +95,8 @@ static const char *schema_create_sql[] = {
   "CREATE TABLE node_origins (node_id TEXT NOT NULL, node_rev_id TEXT NOT "
   "NULL);"
   APR_EOL_STR
+  "CREATE UNIQUE INDEX no_ni_idx ON node_origins (node_id);"
+  APR_EOL_STR
 };
 
 static const int latest_schema_format =

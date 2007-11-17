@@ -48,6 +48,38 @@ set_origin(sqlite3 *db,
            apr_pool_t *pool)
 {
   sqlite3_stmt *stmt;
+  int sqlite_result;
+
+  /* First figure out if it's already there.  (Don't worry, we're in a
+     transaction.) */
+
+  SVN_FS__SQLITE_ERR(sqlite3_prepare
+                     (db,
+                      "SELECT node_rev_id FROM node_origins "
+                      "WHERE node_id = ?",
+                      -1, &stmt, NULL), db);
+  SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 1, node_id, -1,
+                                       SQLITE_TRANSIENT), db);
+  sqlite_result = sqlite3_step(stmt);
+  if (sqlite_result != SQLITE_DONE && sqlite_result != SQLITE_ROW)
+    return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
+                            sqlite3_errmsg(db));
+  else if (sqlite_result == SQLITE_ROW)
+    {
+      const char *old_node_rev_id = (const char *) sqlite3_column_text(stmt, 0);
+      SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
+
+      if (!strcmp(node_rev_id->data, old_node_rev_id))
+        return SVN_NO_ERROR;
+      else
+        return svn_error_createf
+          (SVN_ERR_FS_CORRUPT, NULL,
+           _("Node origin for '%s' exists with a different "
+             "value (%s) than what we were about to store (%s)"),
+           node_id, old_node_rev_id, node_rev_id->data);
+    }
+
+  SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
 
 
   SVN_FS__SQLITE_ERR(sqlite3_prepare
