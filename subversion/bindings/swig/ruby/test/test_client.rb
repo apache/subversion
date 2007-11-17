@@ -1296,8 +1296,7 @@ class SvnClientTest < Test::Unit::TestCase
   end
 
   def recurse_and_depth_choices
-    [false, true, "unknown", "exclude", "empty", "files",
-     "immediates", "infinity"]
+    [false, true, 'empty', 'files', 'immediates', 'infinity']
   end
 
   def test_file_prop
@@ -1385,8 +1384,6 @@ class SvnClientTest < Test::Unit::TestCase
     expected_props = {
       true => [:beta, :b, :lambda, :e, :f, :alpha],
       false => [:b],
-      'unknown' => [:b],
-      'exclude' => [:b],
       'empty' => [:b],
       'files' => [:b, :lambda],
       'immediates' => [:b, :lambda, :e, :f],
@@ -1538,8 +1535,6 @@ class SvnClientTest < Test::Unit::TestCase
     expected_info_by_depth = {
       true => [:beta, :b, :lambda, :e, :f, :alpha],
       false => [:b],
-      'unknown' => [:b],
-      'exclude' => [:b],
       'empty' => [:b],
       'files' => [:b, :lambda],
       'immediates' => [:b, :lambda, :e, :f],
