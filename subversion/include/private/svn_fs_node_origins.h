@@ -1,5 +1,5 @@
 /*
- * svn_fs_node_origin.h: Declarations for APIs of libsvn_fs_util to
+ * svn_fs_node_origins.h: Declarations for APIs of libsvn_fs_util to
  * be consumed by only fs_* libs; access to the node origin index.
  *
  * ====================================================================
@@ -17,8 +17,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_FS_NODE_ORIGIN_H
-#define SVN_FS_NODE_ORIGIN_H
+#ifndef SVN_FS_NODE_ORIGINS_H
+#define SVN_FS_NODE_ORIGINS_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -66,4 +66,4 @@ svn_fs__get_node_origin(const svn_fs_id_t **origin_id,
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_FS_NODE_ORIGIN_H */
+#endif /* SVN_FS_NODE_ORIGINS_H */
