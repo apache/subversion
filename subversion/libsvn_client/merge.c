@@ -2600,11 +2600,7 @@ single_file_merge_notify(void *notify_baton, const char *target_wcpath,
 
 
 /* The single-file, simplified version of do_directory_merge(), which see for
-   parameter descriptions.
-
-   See `MERGEINFO MERGE SOURCE NORMALIZATION' for more requirements
-   around the values of URL1, REVISION1, URL2, and REVISION2.
-*/
+   parameter descriptions.  */
 static svn_error_t *
 do_file_merge(const char *url1,
               svn_revnum_t revision1,
@@ -3482,15 +3478,10 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
    URL2, and PARENT_ENTRY all represent directories -- for the single
    file case, the caller should use do_file_merge().
 
-   URL1@REVISION1 must be a historical ancestor of URL2@REVISION2, or
-   vice-versa.  See `MERGEINFO MERGE SOURCE NORMALIZATION' for more
-   requirements around the values of URL1, REVISION1, URL2, and
-   REVISION2.
-
-   This is a wrapper around do_directory_merge() which handles the complexities
-   inherent to situations where a given directory's children may have
-   intersecting merges (because they meet one or more of the criteria
-   described in get_mergeinfo_paths()).
+   If MERGE_B->sources_related is set, then URL1@REVISION1 must be a
+   historical ancestor of URL2@REVISION2, or vice-versa (see
+   `MERGEINFO MERGE SOURCE NORMALIZATION' for more requirements around
+   the values of URL1, REVISION1, URL2, and REVISION2 in this case).
 
    Handle DEPTH as documented for svn_client_merge3().
 
@@ -3505,12 +3496,10 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
    MERGE_B->TARGET), in that case TARGET_INDEX is the array index for
    TARGET_WCPATH, otherwise it should be set to a negative value.
 
-   NOTE: For merge tracking to work appropriately, all the changes
-   that the caller is using this function to merge must have occurred
-   on a single line of history that had no "changes of address"
-   (renames) between REVISION1 and REVISION2.  (For this reason, we
-   don't need to pass IGNORE_ANCESTRY to this function -- that flag
-   only matters when our merge sources aren't related.)
+   NOTE: This is a wrapper around drive_merge_report_editor() which
+   handles the complexities inherent to situations where a given
+   directory's children may have intersecting merges (because they
+   meet one or more of the criteria described in get_mergeinfo_paths()).
 */
 static svn_error_t *
 do_directory_merge(const char *url1,
