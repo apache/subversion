@@ -28,6 +28,7 @@
 
 #include "svn_fs.h"
 #include "svn_path.h"
+#include "svn_pools.h"
 
 #include "private/svn_fs_sqlite.h"
 #include "private/svn_fs_node_origins.h"
@@ -73,8 +74,7 @@ get_origin(const char **node_rev_id,
 static svn_error_t *
 set_origin(sqlite3 *db,
            const char *node_id,
-           const svn_string_t *node_rev_id,
-           apr_pool_t *pool)
+           const svn_string_t *node_rev_id)
 {
   sqlite3_stmt *stmt;
   const char *old_node_rev_id;
@@ -122,12 +122,14 @@ svn_fs__set_node_origins(svn_fs_t *fs,
   sqlite3 *db;
   apr_hash_index_t *hi;
   svn_error_t *err;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(subpool);
 
-  SVN_ERR(svn_fs__sqlite_open(&db, fs->path, pool));
+  SVN_ERR(svn_fs__sqlite_open(&db, fs->path, subpool));
   err = svn_fs__sqlite_exec(db, "BEGIN TRANSACTION;");
   MAYBE_CLEANUP;
 
-  for (hi = apr_hash_first(pool, node_origins);
+  for (hi = apr_hash_first(subpool, node_origins);
        hi != NULL;
        hi = apr_hash_next(hi))
     {
@@ -136,14 +138,14 @@ svn_fs__set_node_origins(svn_fs_t *fs,
       const char *node_id;
       const svn_fs_id_t *node_rev_id;
 
+      svn_pool_clear(iterpool);
+
       apr_hash_this(hi, &key, NULL, &val);
       node_id = key;
       node_rev_id = val;
 
-      /* XXXdsg pool management */
-
       err = set_origin(db, node_id,
-                       svn_fs_unparse_id(node_rev_id, pool), pool);
+                       svn_fs_unparse_id(node_rev_id, iterpool));
       MAYBE_CLEANUP;
     }
 
@@ -151,7 +153,10 @@ svn_fs__set_node_origins(svn_fs_t *fs,
   MAYBE_CLEANUP;
 
  cleanup:
-  return svn_fs__sqlite_close(db, err);
+  err = svn_fs__sqlite_close(db, err);
+  svn_pool_destroy(iterpool);
+  svn_pool_destroy(subpool);
+  return err;
 }
 
 svn_error_t *
