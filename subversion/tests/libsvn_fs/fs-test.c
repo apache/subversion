@@ -26,8 +26,6 @@
 #include "svn_fs.h"
 #include "svn_md5.h"
 #include "svn_mergeinfo.h"
-#include "sqlite3.h"
-#include "../../libsvn_fs_util/sqlite-util.h"
 
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
@@ -4828,8 +4826,7 @@ static svn_error_t *
 node_origin_rev(const char **msg,
                 svn_boolean_t msg_only,
                 svn_test_opts_t *opts,
-                apr_pool_t *pool,
-                svn_boolean_t read_only)
+                apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_fs_t *fs;
@@ -4837,23 +4834,18 @@ node_origin_rev(const char **msg,
   svn_fs_root_t *txn_root, *root;
   svn_revnum_t youngest_rev = 0;
   int i;
-  const char *repo_name = read_only 
-    ? "test-repo-node-origin-rev-ro"
-    : "test-repo-node-origin-rev-rw";
 
   struct path_rev_t {
     const char *path;
     svn_revnum_t rev;
   };
 
-  *msg = read_only
-    ? "test svn_fs_node_origin_rev (sqlite readonly)"
-    : "test svn_fs_node_origin_rev";
+  *msg = "test svn_fs_node_origin_rev";
   if (msg_only)
     return SVN_NO_ERROR;
 
   /* Create the repository. */
-  SVN_ERR(svn_test__create_fs(&fs, repo_name,
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-node-origin-rev", 
                               opts->fs_type, pool));
 
   /* Revision 1: Create the Greek tree.  */
@@ -4915,21 +4907,6 @@ node_origin_rev(const char **msg,
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
   svn_pool_clear(subpool);
 
-  /* If testing in read-only, set the SQLite index to read-only.  This
-     is somewhat abstraction-breaking (eg, assumes that none of the
-     commits need to modify mergeinfo), but it works for now. */
-  if (read_only)
-    {
-      sqlite3 *db;
-      svn_error_t *err;
-      SVN_ERR(svn_fs__sqlite_open(&db, repo_name, pool));
-      err = svn_fs__sqlite_exec(db, "DELETE from node_origins;");
-      SVN_ERR(svn_fs__sqlite_close(db, err));
-      SVN_ERR(svn_io_set_file_read_only(apr_pstrcat(pool, repo_name, 
-                                                    "/indexes.sqlite", NULL),
-                                        TRUE, pool));
-    }
-
   /* Now test some origin revisions. */
   {
     struct path_rev_t pathrevs[4] = { { "A/D",             1 },
@@ -4984,27 +4961,6 @@ node_origin_rev(const char **msg,
   return SVN_NO_ERROR;
 }
 
-
-static svn_error_t *
-node_origin_rev_ro(const char **msg,
-                   svn_boolean_t msg_only,
-                   svn_test_opts_t *opts,
-                   apr_pool_t *pool)
-{
-  return node_origin_rev(msg, msg_only, opts, pool, TRUE);
-}
-
-static svn_error_t *
-node_origin_rev_rw(const char **msg,
-                   svn_boolean_t msg_only,
-                   svn_test_opts_t *opts,
-                   apr_pool_t *pool)
-{
-  return node_origin_rev(msg, msg_only, opts, pool, FALSE);
-}
-
-
-
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -5047,7 +5003,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(root_revisions),
     SVN_TEST_PASS(unordered_txn_dirprops),
     SVN_TEST_PASS(set_uuid),
-    SVN_TEST_PASS(node_origin_rev_ro),
-    SVN_TEST_PASS(node_origin_rev_rw),
+    SVN_TEST_PASS(node_origin_rev),
     SVN_TEST_NULL
   };
