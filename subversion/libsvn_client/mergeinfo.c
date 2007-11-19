@@ -614,7 +614,7 @@ elide_mergeinfo(apr_hash_t *parent_mergeinfo,
       SVN_ERR(svn_mergeinfo__equals(&equal_mergeinfo,
                                     parent_nonempty_mergeinfo,
                                     child_mergeinfo,
-                                    svn_rangelist_only_inheritable,
+                                    TRUE,
                                     subpool));
       if (equal_mergeinfo)
         elision_type = elision_type_full;
@@ -632,7 +632,7 @@ elide_mergeinfo(apr_hash_t *parent_mergeinfo,
         is equivalent to PARENT_MERGEINFO. */
       SVN_ERR(svn_mergeinfo__equals(&equal_mergeinfo,
                                     child_nonempty_mergeinfo,
-                                    mergeinfo, svn_rangelist_only_inheritable,
+                                    mergeinfo, TRUE,
                                     subpool));
       if (equal_mergeinfo)
         elision_type = elision_type_full;
@@ -999,7 +999,7 @@ svn_client_mergeinfo_get_available(apr_array_header_t **rangelist,
   else
     SVN_ERR(svn_rangelist_remove(rangelist, already_merged_ranges,
                                  full_range_list,
-                                 svn_rangelist_equal_inheritance, pool));
+                                 FALSE, pool));
 
   return SVN_NO_ERROR;
 }

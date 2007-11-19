@@ -415,6 +415,41 @@ class SvnClientTest < Test::Unit::TestCase
                  infos.collect{|path, status| path}.sort)
   end
 
+  def test_status_with_depth
+    setup_greek_tree
+
+    log = "sample log"
+    ctx = make_context(log)
+
+    # make everything out-of-date
+    ctx.prop_set('propname', 'propvalue', @greek.path(:b), :infinity)
+
+    recurse_and_depth_choices.each do |rd|
+      ctx.status(@greek.path(:mu), nil, rd) do |path, status|
+        assert_equal @greek.uri(:mu), status.url
+      end
+    end
+
+    expected_statuses_by_depth = {
+      true => [:beta, :b, :lambda, :e, :f, :alpha],
+      false => [:b, :lambda, :e, :f],
+      'empty' => [:b],
+      'files' => [:b, :lambda],
+      'immediates' => [:b, :lambda, :e, :f],
+      'infinity' => [:beta, :b, :lambda, :e, :f, :alpha],
+    }
+
+    recurse_and_depth_choices.each do |rd|
+      urls = []
+      ctx.status(@greek.path(:b), nil, rd) do |path, status|
+        urls << status.url
+      end
+      assert_equal(expected_statuses_by_depth[rd].map{|s| @greek.uri(s)}.sort,
+                   urls.sort,
+                   "depth '#{rd}")
+    end
+  end
+
   def test_checkout
     log = "sample log"
     file = "hello.txt"
@@ -1296,8 +1331,7 @@ class SvnClientTest < Test::Unit::TestCase
   end
 
   def recurse_and_depth_choices
-    [false, true, "unknown", "exclude", "empty", "files",
-     "immediates", "infinity"]
+    [false, true, 'empty', 'files', 'immediates', 'infinity']
   end
 
   def test_file_prop
@@ -1385,8 +1419,6 @@ class SvnClientTest < Test::Unit::TestCase
     expected_props = {
       true => [:beta, :b, :lambda, :e, :f, :alpha],
       false => [:b],
-      'unknown' => [:b],
-      'exclude' => [:b],
       'empty' => [:b],
       'files' => [:b, :lambda],
       'immediates' => [:b, :lambda, :e, :f],
@@ -1538,8 +1570,6 @@ class SvnClientTest < Test::Unit::TestCase
     expected_info_by_depth = {
       true => [:beta, :b, :lambda, :e, :f, :alpha],
       false => [:b],
-      'unknown' => [:b],
-      'exclude' => [:b],
       'empty' => [:b],
       'files' => [:b, :lambda],
       'immediates' => [:b, :lambda, :e, :f],

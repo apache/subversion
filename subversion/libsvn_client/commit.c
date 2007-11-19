@@ -1279,7 +1279,7 @@ lock_dirs_for_commit(void *baton, void *this_item, apr_pool_t *pool)
   return svn_wc_adm_open3(&adm_access, btn->base_dir_access,
                           *(const char **)this_item,
                           TRUE, /* Write lock */
-                          btn->levels_to_lock,   /* Levels to lock */
+                          btn->levels_to_lock,
                           btn->ctx->cancel_func,
                           btn->ctx->cancel_baton,
                           pool);

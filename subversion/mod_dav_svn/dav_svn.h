@@ -510,6 +510,7 @@ static const dav_report_elem dav_svn__reports_list[] = {
   { SVN_XML_NAMESPACE, "log-report" },
   { SVN_XML_NAMESPACE, "dated-rev-report" },
   { SVN_XML_NAMESPACE, "get-locations" },
+  { SVN_XML_NAMESPACE, "get-location-segments" },
   { SVN_XML_NAMESPACE, "file-revs-report" },
   { SVN_XML_NAMESPACE, "get-locks-report" },
   { SVN_XML_NAMESPACE, "replay-report" },

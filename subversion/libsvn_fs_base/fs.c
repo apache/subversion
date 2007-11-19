@@ -58,6 +58,7 @@
 #include "bdb/node-origins-table.h"
 
 #include "../libsvn_fs/fs-loader.h"
+#include "private/svn_fs_sqlite.h"
 #include "private/svn_fs_mergeinfo.h"
 #include "private/svn_fs_util.h"
 
@@ -655,7 +656,7 @@ base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
     (svn_path_join(fs->path, FORMAT_FILE, pool), format, pool);
   if (svn_err) goto error;
 
-  SVN_ERR(svn_fs_mergeinfo__create_index(path, pool));
+  SVN_ERR(svn_fs__sqlite_create_index(path, pool));
   return base_serialized_init(fs, common_pool, pool);
 
 error:
@@ -1063,7 +1064,7 @@ base_hotcopy(const char *src_path,
   SVN_ERR(svn_io_dir_file_copy(src_path, dest_path, "DB_CONFIG", pool));
 
   /* Copy the merge tracking info. */
-  SVN_ERR(svn_io_dir_file_copy(src_path, dest_path, SVN_FS_MERGEINFO__DB_NAME,
+  SVN_ERR(svn_io_dir_file_copy(src_path, dest_path, SVN_FS__SQLITE_DB_NAME,
                                pool));
 
   /* In order to copy the database files safely and atomically, we

@@ -130,9 +130,10 @@ module Svn
       end
       alias ci commit
 
-      def status(path, rev=nil, depth=nil, get_all=false,
+      def status(path, rev=nil, depth_or_recurse=nil, get_all=false,
                  update=true, no_ignore=false,
                  ignore_externals=false, &status_func)
+        depth = Core::Depth.infinity_or_immediates_from_recurse(depth_or_recurse)
         Client.status3(path, rev, status_func,
                        depth, get_all, update, no_ignore,
                        ignore_externals, self)
@@ -191,7 +192,7 @@ module Svn
       def propset(name, value, target, depth_or_recurse=nil, force=false,
                   base_revision_for_url=nil)
         base_revision_for_url ||= Svn::Core::INVALID_REVNUM
-        depth = depth_from_depth_or_recurse(depth_or_recurse)
+        depth = Core::Depth.infinity_or_empty_from_recurse(depth_or_recurse)
         Client.propset3(name, value, target, depth, force,
                         base_revision_for_url, self)
       end
@@ -211,7 +212,7 @@ module Svn
       def propget(name, target, rev=nil, peg_rev=nil, depth_or_recurse=nil)
         rev ||= "HEAD"
         peg_rev ||= rev
-        depth = depth_from_depth_or_recurse(depth_or_recurse)
+        depth = Core::Depth.infinity_or_empty_from_recurse(depth_or_recurse)
         Client.propget4(name, target, peg_rev, rev, depth, self).first
       end
       alias prop_get propget
@@ -227,7 +228,7 @@ module Svn
         rev ||= "HEAD"
         peg_rev ||= rev
         items = []
-        depth = depth_from_depth_or_recurse(depth_or_recurse)
+        depth = Core::Depth.infinity_or_empty_from_recurse(depth_or_recurse)
         receiver = Proc.new do |path, prop_hash|
           items << PropListItem.new(path, prop_hash)
           block.call(path, prop_hash) if block
@@ -282,9 +283,9 @@ module Svn
                out_file, err_file, depth=nil,
                ignore_ancestry=false,
                no_diff_deleted=false, force=false,
-               header_encoding=nil)
+               header_encoding=nil, relative_to_dir=nil)
         header_encoding ||= Core::LOCALE_CHARSET
-        Client.diff4(options, path1, rev1, path2, rev2,
+        Client.diff4(options, path1, rev1, path2, rev2, relative_to_dir,
                      depth, ignore_ancestry,
                      no_diff_deleted, force, header_encoding,
                      out_file, err_file, self)
@@ -294,10 +295,10 @@ module Svn
                    out_file, err_file, peg_rev=nil,
                    depth=nil, ignore_ancestry=false,
                    no_diff_deleted=false, force=false,
-                   header_encoding=nil)
+                   header_encoding=nil, relative_to_dir=nil)
         header_encoding ||= Core::LOCALE_CHARSET
         Client.diff_peg4(options, path, peg_rev, start_rev, end_rev,
-                         depth, ignore_ancestry,
+                         relative_to_dir, depth, ignore_ancestry,
                          no_diff_deleted, force, header_encoding,
                          out_file, err_file, self)
       end
@@ -368,7 +369,7 @@ module Svn
 
       def info(path_or_uri, rev=nil, peg_rev=nil, depth_or_recurse=false)
         rev ||= URI(path_or_uri).scheme ? "HEAD" : "BASE"
-        depth = depth_from_depth_or_recurse(depth_or_recurse)
+        depth = Core::Depth.infinity_or_empty_from_recurse(depth_or_recurse)
         peg_rev ||= rev
         receiver = Proc.new do |path, info|
           yield(path, info)
@@ -616,14 +617,6 @@ module Svn
         paths = [paths] unless paths.is_a?(Array)
         paths.collect do |path|
           path.chomp(File::SEPARATOR)
-        end
-      end
-
-      def depth_from_depth_or_recurse(depth_or_recurse)
-        depth = case depth_or_recurse
-          when true, nil: Svn::Core::DEPTH_INFINITY
-          when false: Svn::Core::DEPTH_EMPTY
-          else depth_or_recurse
         end
       end
     end

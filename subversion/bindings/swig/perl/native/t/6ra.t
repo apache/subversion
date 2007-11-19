@@ -52,7 +52,7 @@ is($ra->get_repos_root, $uri, 'get_repos_root');
 
 # get_dir
 {
-    my ($dirents, $revnum, $props) = $ra->get_dir('/trunk',
+    my ($dirents, $revnum, $props) = $ra->get_dir('trunk',
                                                   $SVN::Core::INVALID_REVNUM);
     isa_ok($dirents, 'HASH', 'get_dir: dirents');
     is(scalar(keys %$dirents), 2, 'get_dir: num dirents');
@@ -106,16 +106,16 @@ SKIP: {
 }
 
 # Information about nodes in the filesystem.
-is($ra->check_path('/trunk', 1), $SVN::Node::dir, 'check_path');
+is($ra->check_path('trunk', 1), $SVN::Node::dir, 'check_path');
 {
-    my $dirent = $ra->stat('/trunk', 1);
+    my $dirent = $ra->stat('trunk', 1);
     isa_ok($dirent, '_p_svn_dirent_t', 'stat dir: dirent object');
     is($dirent->kind, $SVN::Node::dir, 'stat dir: kind');
     is($dirent->size, 0, 'stat dir: size');
     is($dirent->created_rev, 1, 'stat dir: created_rev');
     ok($dirent->has_props, 'stat dir: has_props');
 
-    $dirent = $ra->stat('/trunk/fileb', 1);
+    $dirent = $ra->stat('trunk/fileb', 1);
     is($dirent->kind, $SVN::Node::file, 'stat file: kind');
     ok(!$dirent->has_props, 'stat file: has_props');
 }

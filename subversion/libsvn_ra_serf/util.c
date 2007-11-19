@@ -345,6 +345,7 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
   return SVN_NO_ERROR;
 }
 
+#if ! SERF_VERSION_AT_LEAST(0, 1, 3)
 apr_status_t
 svn_ra_serf__is_conn_closing(serf_bucket_t *response)
 {
@@ -360,6 +361,7 @@ svn_ra_serf__is_conn_closing(serf_bucket_t *response)
 
   return APR_EOF;
 }
+#endif
 
 /*
  * Expat callback invoked on a start element tag for an error response.
@@ -880,6 +882,7 @@ svn_ra_serf__handle_server_error(serf_request_t *request,
   status = svn_ra_serf__handle_discard_body(request, response,
                                             &server_err, pool);
 
+#if ! SERF_VERSION_AT_LEAST(0, 1, 3)
   if (APR_STATUS_IS_EOF(status))
     {
       status = svn_ra_serf__is_conn_closing(response);
@@ -888,6 +891,7 @@ svn_ra_serf__handle_server_error(serf_request_t *request,
           serf_connection_reset(serf_request_get_conn(request));
         }
     }
+#endif
 
   return server_err.error;
 }
@@ -1015,10 +1019,12 @@ handle_response(serf_request_t *request,
                                      pool);
     }
 
+#if ! SERF_VERSION_AT_LEAST(0, 1, 3)
   if (APR_STATUS_IS_EOF(status))
     {
       status = svn_ra_serf__is_conn_closing(response);
     }
+#endif
 
   return status;
 }

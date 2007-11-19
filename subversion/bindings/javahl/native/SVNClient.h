@@ -164,12 +164,14 @@ class SVNClient :public SVNBase
                       Revision &revision, Revision &pegRevision);
   void diff(const char *target1, Revision &revision1,
             const char *target2, Revision &revision2,
-            const char *outfileName, svn_depth_t depth, bool ignoreAncestry,
-            bool noDiffDelete, bool force);
+            const char *relativeToDir, const char *outfileName,
+            svn_depth_t depth, bool ignoreAncestry, bool noDiffDelete,
+            bool force);
   void diff(const char *target, Revision &pegevision,
             Revision &startRevision, Revision &endRevision,
-            const char *outfileName, svn_depth_t depth, bool ignoreAncestry,
-            bool noDiffDelete, bool force);
+            const char *relativeToDir, const char *outfileName,
+            svn_depth_t depth, bool ignoreAncestry, bool noDiffDelete,
+            bool force);
   void diffSummarize(const char *target1, Revision &revision1,
                      const char *target2, Revision &revision2,
                      svn_depth_t depth, bool ignoreAncestry,
@@ -203,7 +205,7 @@ class SVNClient :public SVNBase
    */
   void diff(const char *target1, Revision &revision1,
             const char *target2, Revision &revision2,
-            Revision *pegRevision,
+            Revision *pegRevision, const char *relativeToDir,
             const char *outfileName, svn_depth_t depth, bool ignoreAncestry,
             bool noDiffDelete, bool force);
 

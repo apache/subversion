@@ -689,7 +689,7 @@ directory_elements_diff(struct dir_baton *dir_baton)
         }
     }
 
-  if (dir_baton->depth == svn_depth_empty)
+  if (dir_baton->depth == svn_depth_empty && !in_anchor_not_target)
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, dir_baton->pool));

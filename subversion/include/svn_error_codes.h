@@ -183,6 +183,10 @@ SVN_ERROR_START
              SVN_ERR_BAD_CATEGORY_START + 6,
              "Version file format not correct")
 
+  SVN_ERRDEF(SVN_ERR_BAD_RELATIVE_PATH,
+             SVN_ERR_BAD_CATEGORY_START + 7,
+             "Path is not an immediate child of the specified directory")
+
   /* xml errors */
 
   SVN_ERRDEF(SVN_ERR_XML_ATTRIB_NOT_FOUND,
@@ -634,6 +638,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_FS_NO_SUCH_NODE_ORIGIN,
              SVN_ERR_FS_CATEGORY_START + 47,
              "Filesystem has no such node origin record")
+
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_FS_SQLITE_READONLY,
+             SVN_ERR_FS_CATEGORY_START + 48,
+             "Attempted to write to readonly SQLite db")
 
   /* repos errors */
 
