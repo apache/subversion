@@ -104,7 +104,7 @@ set_origin(sqlite3 *db,
   SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 2, node_rev_id->data, -1,
                                        SQLITE_TRANSIENT), db);
 
-  SVN_FS__SQLITE_STEP_DONE(stmt);
+  SVN_ERR(svn_fs__sqlite_step_done(stmt));
 
   SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
 

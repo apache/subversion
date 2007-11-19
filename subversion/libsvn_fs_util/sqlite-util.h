@@ -39,21 +39,10 @@ extern "C" {
                             NULL, sqlite3_errmsg((db)));                 \
 } while (0)
 
-/* Steps the given statement, raising an SVN error if it doesn't
-   return SQLITE_DONE. */
-#define SVN_FS__SQLITE_STEP_DONE(stmt) do                                   \
-{                                                                           \
-  sqlite3_stmt *stmt__temp = (stmt);                                        \
-  int sqlite_err__temp = sqlite3_step(stmt__temp);                          \
-  if (sqlite_err__temp != SQLITE_DONE)                                      \
-  {                                                                         \
-    sqlite3 *sqlite_db__temp = sqlite3_db_handle(stmt__temp);               \
-    sqlite3_finalize(stmt__temp);                                           \
-    return svn_error_create(SVN_FS__SQLITE_ERROR_CODE(sqlite_err__temp),    \
-                            NULL,                                           \
-                            sqlite3_errmsg(sqlite_db__temp));               \
-  }                                                                         \
-} while (0)
+/* Steps the given statement; raises an SVN error (and finalizes the
+   statement) if it doesn't return SQLITE_DONE. */
+svn_error_t *
+svn_fs__sqlite_step_done(sqlite3_stmt *stmt);
 
 /* Execute SQL on the sqlite database DB, and raise an SVN error if the
    result is not okay.  */
