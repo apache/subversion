@@ -154,7 +154,7 @@ index_path_mergeinfo(svn_revnum_t new_rev,
                                  db);
               SVN_FS__SQLITE_ERR(sqlite3_bind_int64(stmt, 6, 
                                                     range->inheritable), db);
-              SVN_FS__SQLITE_STEP_DONE(stmt);
+              SVN_ERR(svn_fs__sqlite_step_done(stmt));
 
               SVN_FS__SQLITE_ERR(sqlite3_reset(stmt), db);
             }
@@ -170,7 +170,7 @@ index_path_mergeinfo(svn_revnum_t new_rev,
   SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 2, path, -1, SQLITE_TRANSIENT),
                      db);
 
-  SVN_FS__SQLITE_STEP_DONE(stmt);
+  SVN_ERR(svn_fs__sqlite_step_done(stmt));
 
   SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
 
