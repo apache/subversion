@@ -581,7 +581,7 @@ static svn_error_t *ra_svn_handle_close_dir(svn_ra_svn_conn_t *conn,
   /* Close the directory and destroy the baton. */
   SVN_CMD_ERR(ds->editor->close_directory(entry->baton, pool));
   apr_hash_set(ds->tokens, token, APR_HASH_KEY_STRING, NULL);
-  apr_pool_destroy(entry->pool);
+  svn_pool_destroy(entry->pool);
   return SVN_NO_ERROR;
 }
 
@@ -705,7 +705,7 @@ static svn_error_t *ra_svn_handle_textdelta_end(svn_ra_svn_conn_t *conn,
                             _("Apply-textdelta not active"));
   SVN_CMD_ERR(svn_stream_close(entry->dstream));
   entry->dstream = NULL;
-  apr_pool_destroy(entry->pool);
+  svn_pool_destroy(entry->pool);
   return SVN_NO_ERROR;
 }
 
@@ -743,7 +743,7 @@ static svn_error_t *ra_svn_handle_close_file(svn_ra_svn_conn_t *conn,
   SVN_CMD_ERR(ds->editor->close_file(entry->baton, text_checksum, pool));
   apr_hash_set(ds->tokens, token, APR_HASH_KEY_STRING, NULL);
   if (--ds->file_refs == 0)
-    apr_pool_clear(ds->file_pool);
+    svn_pool_clear(ds->file_pool);
   return SVN_NO_ERROR;
 }
 
@@ -876,7 +876,7 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
 
   while (!state.done)
     {
-      apr_pool_clear(subpool);
+      svn_pool_clear(subpool);
       SVN_ERR(svn_ra_svn_read_tuple(conn, subpool, "wl", &cmd, &params));
       for (i = 0; ra_svn_edit_cmds[i].cmd; i++)
         {
@@ -916,12 +916,12 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
   /* Read and discard editing commands until the edit is complete. */
   while (!state.done)
     {
-      apr_pool_clear(subpool);
+      svn_pool_clear(subpool);
       SVN_ERR(svn_ra_svn_read_tuple(conn, subpool, "wl", &cmd, &params));
       state.done = (strcmp(cmd, "abort-edit") == 0);
     }
 
-  apr_pool_destroy(subpool);
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 

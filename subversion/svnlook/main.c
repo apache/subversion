@@ -1033,7 +1033,7 @@ print_diff_tree(svn_fs_root_t *root,
                               svn_path_join(base_path, node->name, subpool),
                               c, tmpdir, subpool));
     }
-  apr_pool_destroy(subpool);
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }

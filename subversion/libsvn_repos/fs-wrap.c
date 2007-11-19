@@ -590,7 +590,7 @@ svn_repos_fs_get_mergeinfo(apr_hash_t **mergeinfo,
             }
         }
 
-      apr_pool_destroy(subpool);
+      svn_pool_destroy(subpool);
     }
 
   /* We consciously do not perform authz checks on the paths returned

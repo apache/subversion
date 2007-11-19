@@ -3918,7 +3918,7 @@ verify_path_revs(svn_fs_root_t *root,
            args[i].path, rev, args[i].rev);
     }
 
-  apr_pool_destroy(subpool);
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 

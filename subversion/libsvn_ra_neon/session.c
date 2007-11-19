@@ -231,7 +231,7 @@ server_ssl_callback(void *userdata,
   svn_auth_set_parameter(ras->callbacks->auth_baton,
                          SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO, NULL);
 
-  apr_pool_destroy(pool);
+  svn_pool_destroy(pool);
   return ! server_creds;
 }
 
@@ -281,7 +281,7 @@ client_ssl_decrypt_cert(svn_ra_neon__session_t *ras,
             }
         }
     }
-  apr_pool_destroy(pool);
+  svn_pool_destroy(pool);
 
   return ok;
 }
@@ -345,7 +345,7 @@ client_ssl_callback(void *userdata, ne_session *sess,
         }
     }
 
-  apr_pool_destroy(pool);
+  svn_pool_destroy(pool);
 }
 
 /* Set *PROXY_HOST, *PROXY_PORT, *PROXY_USERNAME, *PROXY_PASSWORD,
