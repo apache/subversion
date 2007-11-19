@@ -125,15 +125,11 @@ svn_client__update_internal(svn_revnum_t *result_rev,
      ### without calling adm_open.  We could expend an extra call,
      ### with levels_to_lock=0, to get the real depth (but only if we
      ### need to) and then make the real call... but it's not worth
-     ### the complexity right now.  Locking the entire tree when we
-     ### didn't need to is a performance hit, but (except for access
-     ### contention) not a correctness problem. */
-
-  if (depth == svn_depth_empty
-      || depth == svn_depth_files)
-    levels_to_lock = 0;
-  else
-    levels_to_lock = -1;
+     ### the complexity right now.  If the requested depth tells us to
+     ### lock the entire tree when we don't actually need to, that's a
+     ### performance hit, but (except for access contention) it is not
+     ### a correctness problem. */
+  levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
 
   /* Sanity check.  Without this, the update is meaningless. */
   assert(path);

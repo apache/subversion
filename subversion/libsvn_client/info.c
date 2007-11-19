@@ -254,10 +254,7 @@ crawl_entries(const char *wcpath,
   const svn_wc_entry_t *entry;
   svn_info_t *info;
   struct found_entry_baton fe_baton;
-  int adm_lock_level = -1;
-
-  if (depth == svn_depth_empty || depth == svn_depth_files)
-    adm_lock_level = 0;
+  int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
 
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, wcpath, FALSE,
                                  adm_lock_level,

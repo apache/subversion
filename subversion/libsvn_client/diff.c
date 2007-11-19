@@ -1081,22 +1081,6 @@ unsupported_diff_error(svn_error_t *child_err)
 }
 
 
-/* For a given DEPTH, return the value that should be passed as the
-   depth parameter to svn_wc_adm_open() and friends. */
-static int levels_to_lock_from_depth(svn_depth_t depth)
-{
-  int levels_to_lock;
-
-  if (depth == svn_depth_immediates)
-    levels_to_lock = 1;
-  else if (depth == svn_depth_empty || depth == svn_depth_files)
-    levels_to_lock = 0;
-  else
-    levels_to_lock = -1;
-  return levels_to_lock;
-}
-
-
 /* Perform a diff between two working-copy paths.
 
    PATH1 and PATH2 are both working copy paths.  REVISION1 and
@@ -1118,7 +1102,7 @@ diff_wc_wc(const apr_array_header_t *options,
 {
   svn_wc_adm_access_t *adm_access, *target_access;
   const char *target;
-  int levels_to_lock = levels_to_lock_from_depth(depth);
+  int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
 
   /* Assert that we have valid input. */
   assert(! svn_path_is_url(path1));
@@ -1258,7 +1242,7 @@ diff_repos_wc(const apr_array_header_t *options,
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
   svn_boolean_t rev2_is_base = (revision2->kind == svn_opt_revision_base);
-  int levels_to_lock = levels_to_lock_from_depth(depth);
+  int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
   svn_boolean_t server_supports_depth;
 
   /* Assert that we have valid input. */
