@@ -826,12 +826,14 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "switch", svn_cl__switch, {"sw"}, N_
     ("Update the working copy to a different URL.\n"
-     "usage: 1. switch URL [PATH]\n"
+     "usage: 1. switch URL[@PEGREV] [PATH]\n"
      "       2. switch --relocate FROM TO [PATH...]\n"
      "\n"
      "  1. Update the working copy to mirror a new URL within the repository.\n"
      "     This behaviour is similar to 'svn update', and is the way to\n"
      "     move a working copy to a branch or tag within the same repository.\n"
+     "     If specified, PEGREV determines in which revision the target is first\n"
+     "     looked up.\n"
      "\n"
      "  2. Rewrite working copy URL metadata to reflect a syntactic change only.\n"
      "     This is used when repository's root URL changes (such as a scheme\n"
