@@ -1318,14 +1318,14 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
       if (!(notify_b->is_single_file_merge) && is_operative_notification)
         {
           int new_nearest_ancestor_index =
-                      find_nearest_ancestor(notify_b->children_with_mergeinfo,
-                                            notify->path);
+            find_nearest_ancestor(notify_b->children_with_mergeinfo,
+                                  notify->path);
           if (new_nearest_ancestor_index != notify_b->cur_ancestor_index)
             {
               svn_client__merge_path_t *child =
-                              APR_ARRAY_IDX(notify_b->children_with_mergeinfo,
-                                            new_nearest_ancestor_index,
-                                            svn_client__merge_path_t *);
+                APR_ARRAY_IDX(notify_b->children_with_mergeinfo,
+                              new_nearest_ancestor_index,
+                              svn_client__merge_path_t *);
               notify_b->cur_ancestor_index = new_nearest_ancestor_index;
               if (!child->absent && child->remaining_ranges->nelts > 0
                   && !(new_nearest_ancestor_index == 0
@@ -1333,12 +1333,11 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
                 {
                   svn_wc_notify_t *notify_merge_begin;
                   notify_merge_begin =
-                               svn_wc_create_notify(child->path,
-                                                    svn_wc_notify_merge_begin,
-                                                    pool);
+                    svn_wc_create_notify(child->path,
+                                         svn_wc_notify_merge_begin, pool);
                   notify_merge_begin->merge_range =
-                                   APR_ARRAY_IDX(child->remaining_ranges, 0,
-                                                 svn_merge_range_t *);
+                    APR_ARRAY_IDX(child->remaining_ranges, 0,
+                                  svn_merge_range_t *);
                   if (notify_b->wrapped_func)
                     (*notify_b->wrapped_func)(notify_b->wrapped_baton,
                                               notify_merge_begin, pool);
