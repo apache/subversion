@@ -1412,8 +1412,10 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
 
     case ELEM_target_revision:
       att = svn_xml_get_attr_value("rev", atts);
-      /* ### verify we got it. punt on error. */
-
+      if (att == NULL)
+        return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                 _("Missing rev attr in target-revision"
+                                   " element"));
       SVN_ERR((*rb->editor->set_target_revision)(rb->edit_baton,
                                                  SVN_STR_TO_REV(att),
                                                  rb->pool));
@@ -1421,7 +1423,10 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
 
     case ELEM_absent_directory:
       name = svn_xml_get_attr_value("name", atts);
-      /* ### verify we got it. punt on error. */
+      if (name == NULL)
+        return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                 _("Missing name attr in absent-directory"
+                                   " element"));
 
       parent_dir = &TOP_DIR(rb);
       pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, parent_dir->pool);
@@ -1434,8 +1439,10 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
 
     case ELEM_absent_file:
       name = svn_xml_get_attr_value("name", atts);
-      /* ### verify we got it. punt on error. */
-
+      if (name == NULL)
+        return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                 _("Missing name attr in absent-file"
+                                   " element"));
       parent_dir = &TOP_DIR(rb);
       pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, parent_dir->pool);
       svn_path_add_component(pathbuf, name);
@@ -1447,14 +1454,19 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
 
     case ELEM_resource:
       att = svn_xml_get_attr_value("path", atts);
-      /* ### verify we got it. punt on error. */
+      if (att == NULL)
+        return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                 _("Missing path attr in resource element"));
       svn_stringbuf_set(rb->current_wcprop_path, att);
       rb->in_resource = TRUE;
       break;
 
     case ELEM_open_directory:
       att = svn_xml_get_attr_value("rev", atts);
-      /* ### verify we got it. punt on error. */
+      if (att == NULL)
+        return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                 _("Missing rev attr in open-directory"
+                                   " element"));
       base = SVN_STR_TO_REV(att);
 
       if (DIR_DEPTH(rb) == 0)
@@ -1482,7 +1494,10 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
       else
         {
           name = svn_xml_get_attr_value("name", atts);
-          /* ### verify we got it. punt on error. */
+          if (name == NULL)
+            return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                     _("Missing name attr in open-directory"
+                                       " element"));
           svn_stringbuf_set(rb->namestr, name);
 
           parent_dir = &TOP_DIR(rb);
@@ -1506,7 +1521,10 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
 
     case ELEM_add_directory:
       name = svn_xml_get_attr_value("name", atts);
-      /* ### verify we got it. punt on error. */
+      if (name == NULL)
+        return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                 _("Missing name attr in add-directory"
+                                   " element"));
       svn_stringbuf_set(rb->namestr, name);
 
       att = svn_xml_get_attr_value("copyfrom-path", atts);
@@ -1516,7 +1534,10 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
           svn_stringbuf_set(cpath, att);
 
           att = svn_xml_get_attr_value("copyfrom-rev", atts);
-          /* ### verify we got it. punt on error. */
+          if (att == NULL)
+            return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                     _("Missing copyfrom-rev attr in"
+                                       " add-directory element"));
           crev = SVN_STR_TO_REV(att);
         }
 
@@ -1590,11 +1611,17 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
 
     case ELEM_open_file:
       att = svn_xml_get_attr_value("rev", atts);
-      /* ### verify we got it. punt on error. */
+      if (att == NULL)
+        return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                 _("Missing rev attr in open-file"
+                                   " element"));
       base = SVN_STR_TO_REV(att);
 
       name = svn_xml_get_attr_value("name", atts);
-      /* ### verify we got it. punt on error. */
+      if (name == NULL)
+        return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                 _("Missing name attr in open-file"
+                                   " element"));
       svn_stringbuf_set(rb->namestr, name);
 
       parent_dir = &TOP_DIR(rb);
@@ -1617,7 +1644,10 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
 
     case ELEM_add_file:
       name = svn_xml_get_attr_value("name", atts);
-      /* ### verify we got it. punt on error. */
+      if (name == NULL)
+        return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                 _("Missing name attr in add-file"
+                                   " element"));
       svn_stringbuf_set(rb->namestr, name);
 
       att = svn_xml_get_attr_value("copyfrom-path", atts);
@@ -1627,7 +1657,10 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
           svn_stringbuf_set(cpath, att);
 
           att = svn_xml_get_attr_value("copyfrom-rev", atts);
-          /* ### verify we got it. punt on error. */
+          if (att == NULL)
+            return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                     _("Missing copyfrom-rev attr in add-file"
+                                       " element"));
           crev = SVN_STR_TO_REV(att);
         }
 
@@ -1679,7 +1712,9 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
       {
         const char *encoding = svn_xml_get_attr_value("encoding", atts);
         name = svn_xml_get_attr_value("name", atts);
-        /* ### verify we got it. punt on error. */
+        if (name == NULL)
+          return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                   _("Missing name attr in set-prop element"));
         svn_stringbuf_set(rb->namestr, name);
         if (encoding)
           svn_stringbuf_set(rb->encoding, encoding);
@@ -1691,7 +1726,9 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
 
     case ELEM_remove_prop:
       name = svn_xml_get_attr_value("name", atts);
-      /* ### verify we got it. punt on error. */
+      if (name == NULL)
+        return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                 _("Missing name attr in remove-prop element"));
       svn_stringbuf_set(rb->namestr, name);
 
       /* Removing a prop.  */
@@ -1763,7 +1800,10 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
 
     case ELEM_delete_entry:
       name = svn_xml_get_attr_value("name", atts);
-      /* ### verify we got it. punt on error. */
+      if (name == NULL)
+        return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                 _("Missing name attr in delete-entry"
+                                   " element"));
       svn_stringbuf_set(rb->namestr, name);
 
       parent_dir = &TOP_DIR(rb);
