@@ -308,10 +308,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
 {
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *node;
-  int adm_lock_level = -1;
-
-  if (depth == svn_depth_empty || depth == svn_depth_files)
-    adm_lock_level = 0;
+  int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
 
   /* Since Subversion controls the "svn:" property namespace, we
      don't honor the 'skip_checks' flag here.  Unusual property
@@ -841,12 +838,7 @@ svn_client_propget4(apr_hash_t **props,
   else  /* working copy path */
     {
       svn_boolean_t pristine;
-      int adm_lock_level = -1;
-
-      if (depth == svn_depth_empty || depth == svn_depth_files)
-        adm_lock_level = 0;
-      else if (depth == svn_depth_immediates)
-        adm_lock_level = 1;
+      int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
 
       SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target,
                                      FALSE, adm_lock_level,
@@ -1201,15 +1193,7 @@ svn_client_proplist3(const char *target,
   else  /* working copy path */
     {
       svn_boolean_t pristine;
-      /* Initialize the administrative area lock depth to -1 for the
-         svn_depth_infinity case, and override it below for the other
-         depths. */
-      int levels_to_lock = -1;
-
-      if (depth == svn_depth_empty || depth == svn_depth_files)
-        levels_to_lock = 0;
-      else if (depth == svn_depth_immediates)
-        levels_to_lock = 1;
+      int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
 
       SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target,
                                      FALSE, levels_to_lock,
