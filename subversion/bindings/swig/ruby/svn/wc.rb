@@ -307,9 +307,10 @@ module Svn
         editor
       end
 
-      UPDATE_EDITOR2_REQUIRED_ARGUMENTS_KEYS = [:target_revision, :target]
+      UPDATE_EDITOR2_REQUIRED_ARGUMENTS_KEYS = [:target]
       def update_editor2(arguments={})
         optional_arguments_defaults = {
+            :target_revision => nil,
             :use_commit_times => true,
             :depth => nil,
             :allow_unver_obstruction => false,
@@ -363,9 +364,10 @@ module Svn
         editor
       end
 
-      SWITCH_EDITOR2_REQUIRED_ARGUMENTS_KEYS = [:target_revision, :target, :switch_url]
+      SWITCH_EDITOR2_REQUIRED_ARGUMENTS_KEYS = [:target, :switch_url]
       def switch_editor2(arguments={})
         optional_arguments_defaults = {
+          :target_revision => nil,
           :use_commit_times => true,
           :depth => nil,
           :allow_unver_obstruction => false,
