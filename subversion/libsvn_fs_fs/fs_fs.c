@@ -412,7 +412,7 @@ with_txnlist_lock(svn_fs_t *fs,
 /* Get a lock on empty file LOCK_FILENAME, creating it in POOL. */
 static svn_error_t *
 get_lock_on_filesystem(const char *lock_filename,
-               apr_pool_t *pool)
+                       apr_pool_t *pool)
 {
   svn_error_t *err = svn_io_file_lock2(lock_filename, TRUE, FALSE, pool);
 
