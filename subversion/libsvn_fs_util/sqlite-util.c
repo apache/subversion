@@ -52,9 +52,11 @@ svn_fs__sqlite_exec(sqlite3 *db, const char *sql)
 {
   char *err_msg;
   svn_error_t *err;
-  if (sqlite3_exec(db, sql, NULL, NULL, &err_msg) != SQLITE_OK)
+  int sqlite_err = sqlite3_exec(db, sql, NULL, NULL, &err_msg);
+  if (sqlite_err != SQLITE_OK)
     {
-      err = svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL, err_msg);
+      err = svn_error_create(SVN_FS__SQLITE_ERROR_CODE(sqlite_err), NULL, 
+                             err_msg);
       sqlite3_free(err_msg);
       return err;
     }
@@ -141,10 +143,13 @@ static svn_error_t *
 check_format(sqlite3 *db, apr_pool_t *pool)
 {
   sqlite3_stmt *stmt;
+  int sqlite_result;
 
-  SVN_FS__SQLITE_ERR(sqlite3_prepare(db, "PRAGMA user_version;", -1, &stmt, 
-                                     NULL), db);
-  if (sqlite3_step(stmt) == SQLITE_ROW)
+  SVN_FS__SQLITE_ERR(sqlite3_prepare_v2(db, "PRAGMA user_version;", -1, &stmt, 
+                                        NULL), db);
+  sqlite_result = sqlite3_step(stmt);
+
+  if (sqlite_result == SQLITE_ROW)
     {
       /* Validate that the schema exists as expected and that the
          schema and repository versions match. */
@@ -162,7 +167,7 @@ check_format(sqlite3 *db, apr_pool_t *pool)
                                    "recognized"), schema_format);
     }
   else
-    return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
+    return svn_error_create(SVN_FS__SQLITE_ERROR_CODE(sqlite_result), NULL,
                             sqlite3_errmsg(db));
 }
 

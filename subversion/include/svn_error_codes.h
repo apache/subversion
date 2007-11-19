@@ -639,6 +639,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 47,
              "Filesystem has no such node origin record")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_FS_SQLITE_READONLY,
+             SVN_ERR_FS_CATEGORY_START + 48,
+             "Attempted to write to readonly SQLite db")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,
