@@ -151,7 +151,21 @@ svn_fs__set_node_origins(svn_fs_t *fs,
   MAYBE_CLEANUP;
 
  cleanup:
+  /* It's just an "optional" cache, so it's OK if the database is
+     readonly. */
+  /* ### Instead of checking twice here, maybe add an IGNORE_READONLY
+     ### argument to svn_fs__sqlite_close? */
+  if (err && err->apr_err == SVN_ERR_FS_SQLITE_READONLY)
+    {
+      svn_error_clear(err);
+      err = NULL;
+    }
   err = svn_fs__sqlite_close(db, err);
+  if (err && err->apr_err == SVN_ERR_FS_SQLITE_READONLY)
+    {
+      svn_error_clear(err);
+      err = NULL;
+    }
   svn_pool_destroy(iterpool);
   svn_pool_destroy(subpool);
   return err;

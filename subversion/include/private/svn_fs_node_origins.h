@@ -36,6 +36,10 @@ extern "C" {
    const svn_fs_id_t * node-rev-ids.  Returns an error if any cache
    entry exists with a different value; pre-existing entries with the
    same value are ignored.  Use POOL for any temporary allocations.
+
+   Because this is just an "optional" cache, this function does not
+   return an error if the underlying storage is readonly; it still
+   returns an error for other error conditions.
  */
 svn_error_t *
 svn_fs__set_node_origins(svn_fs_t *fs,

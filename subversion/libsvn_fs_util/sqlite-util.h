@@ -46,9 +46,13 @@ extern "C" {
   sqlite3_stmt *stmt__temp = (stmt);                                        \
   int sqlite_err__temp = sqlite3_step(stmt__temp);                          \
   if (sqlite_err__temp != SQLITE_DONE)                                      \
+  {                                                                         \
+    sqlite3 *sqlite_db__temp = sqlite3_db_handle(stmt__temp);               \
+    sqlite3_finalize(stmt__temp);                                           \
     return svn_error_create(SVN_FS__SQLITE_ERROR_CODE(sqlite_err__temp),    \
                             NULL,                                           \
-                            sqlite3_errmsg(sqlite3_db_handle(stmt__temp))); \
+                            sqlite3_errmsg(sqlite_db__temp));               \
+  }                                                                         \
 } while (0)
 
 /* Execute SQL on the sqlite database DB, and raise an SVN error if the
