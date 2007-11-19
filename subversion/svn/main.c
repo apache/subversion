@@ -1121,6 +1121,8 @@ main(int argc, const char *argv[])
         {
           char *end;
           svn_revnum_t changeno;
+          svn_opt_revision_range_t *range;
+
           if (opt_state.old_target)
             {
               err = svn_error_create
@@ -1142,11 +1144,11 @@ main(int argc, const char *argv[])
                                      _("There is no change 0"));
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
+
           /* Figure out the range:
                 -c N  -> -r N-1:N
                 -c -N -> -r N:N-1 */
-          {
-            svn_opt_revision_range_t *range = apr_palloc(pool, sizeof(*range));
+          range = apr_palloc(pool, sizeof(*range));
           if (changeno > 0)
             {
                 range->start.value.number = changeno - 1;
@@ -1159,11 +1161,10 @@ main(int argc, const char *argv[])
                 range->end.value.number = changeno - 1;
             }
           used_change_arg = TRUE;
-            range->start.kind = svn_opt_revision_number;
-            range->end.kind = svn_opt_revision_number;
-            APR_ARRAY_PUSH(opt_state.revision_ranges,
-                           svn_opt_revision_range_t *) = range;
-        }
+          range->start.kind = svn_opt_revision_number;
+          range->end.kind = svn_opt_revision_number;
+          APR_ARRAY_PUSH(opt_state.revision_ranges,
+                         svn_opt_revision_range_t *) = range;
         }
         break;
       case 'r':
