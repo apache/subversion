@@ -141,6 +141,10 @@ typedef struct svn_cl__opt_state_t
      end_revision remains `svn_opt_revision_unspecified'. */
   svn_opt_revision_t start_revision, end_revision;
 
+  /* Flag which is only set if start_revision and end_revision were
+     set using '-c'. */
+  svn_boolean_t used_change_arg;
+
   /* This array of svn_opt_revision_range_t *'s get set as a result
      of *multiple* revisions or dates being specified.  Otherwise similar
      to start_revision and end_revision.

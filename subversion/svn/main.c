@@ -521,11 +521,12 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn log foo.c\n"
      "    svn log http://www.example.com/repo/project/foo.c\n"
      "    svn log http://www.example.com/repo/project foo.c bar.c\n"),
-    {'r', 'q', 'v', 'g', svn_cl__targets_opt,
+    {'r', 'q', 'v', 'g', 'c', svn_cl__targets_opt,
      svn_cl__stop_on_copy_opt, svn_cl__incremental_opt,
      svn_cl__xml_opt, 'l', svn_cl__changelist_opt,
      svn_cl__with_all_revprops_opt, svn_cl__with_revprop_opt},
-    {{svn_cl__with_revprop_opt, N_("retrieve revision property ARG")}} },
+    {{svn_cl__with_revprop_opt, N_("retrieve revision property ARG")},
+     {'c', N_("the change made by ARG")}} },
 
   { "merge", svn_cl__merge, {0}, N_
     ("Apply the differences between two sources to a working copy path.\n"
@@ -1009,7 +1010,6 @@ main(int argc, const char *argv[])
   svn_cl__cmd_baton_t command_baton;
   svn_auth_baton_t *ab;
   svn_config_t *cfg;
-  svn_boolean_t used_change_arg = FALSE;
   svn_boolean_t descend = TRUE;
   svn_boolean_t interactive_conflicts = FALSE;
 
@@ -1160,7 +1160,7 @@ main(int argc, const char *argv[])
                 range->start.value.number = changeno;
                 range->end.value.number = changeno - 1;
             }
-          used_change_arg = TRUE;
+          opt_state.used_change_arg = TRUE;
           range->start.kind = svn_opt_revision_number;
           range->end.kind = svn_opt_revision_number;
           APR_ARRAY_PUSH(opt_state.revision_ranges,
@@ -1330,7 +1330,7 @@ main(int argc, const char *argv[])
         opt_state.editor_cmd = apr_pstrdup(pool, opt_arg);
         break;
       case svn_cl__old_cmd_opt:
-        if (used_change_arg)
+        if (opt_state.used_change_arg)
           {
             err = svn_error_create
               (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
