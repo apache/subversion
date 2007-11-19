@@ -1151,14 +1151,14 @@ main(int argc, const char *argv[])
           range = apr_palloc(pool, sizeof(*range));
           if (changeno > 0)
             {
-                range->start.value.number = changeno - 1;
-                range->end.value.number = changeno;
+              range->start.value.number = changeno - 1;
+              range->end.value.number = changeno;
             }
           else
             {
               changeno = -changeno;
-                range->start.value.number = changeno;
-                range->end.value.number = changeno - 1;
+              range->start.value.number = changeno;
+              range->end.value.number = changeno - 1;
             }
           opt_state.used_change_arg = TRUE;
           range->start.kind = svn_opt_revision_number;
