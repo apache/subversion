@@ -296,13 +296,27 @@ module Svn
         Wc.is_wc_root(path, self)
       end
 
-      def update_editor(target, use_commit_times=true, recurse=true,
-                        diff3_cmd=nil, notify_func=nil, cancel_func=nil,
-                        traversal_info=nil)
-        editor, editor_baton = Wc.get_update_editor2(target, self,
-                                                     use_commit_times, recurse,
-                                                     notify_func, cancel_func,
-                                                     diff3_cmd, traversal_info)
+      def update_editor(target_revision, target, use_commit_times=true,
+                        depth=nil, allow_unver_obstruction=false, diff3_cmd=nil,
+                        notify_func=nil, cancel_func=nil, traversal_info=nil,
+                        preserved_exts=nil)
+        preserved_exts ||= []
+        traversal_info ||= _traversal_info
+
+        # TODO(rb support fetch_fun): implement support for the fetch_func
+        # callback.
+        fetch_func = nil
+        # TODO(rb support conflict_fun): implement support for the
+        # conflict_func callback.
+        conflict_func=nil
+        results = Wc.get_update_editor3(target_revision, self, target,
+                                        use_commit_times, depth,
+                                        allow_unver_obstruction,
+                                        notify_func, cancel_func, conflict_func,
+                                        fetch_func, diff3_cmd,
+                                        preserved_exts, traversal_info)
+        target_revision_address, editor, editor_baton = results
+        editor.__send__(:target_revision_address=, target_revision_address)
         editor.baton = editor_baton
         editor
       end
@@ -352,14 +366,25 @@ module Svn
         editor
       end
 
-      def switch_editor(target, switch_url, use_commit_times=true,
-                        recurse=true, diff3_cmd=nil, notify_func=nil,
-                        cancel_func=nil, traversal_info=nil)
-        editor, editor_baton = Wc.get_update_editor2(target, switch_url,
-                                                     self, use_commit_times,
-                                                     recurse, notify_func,
-                                                     cancel_func, diff3_cmd,
-                                                     traversal_info)
+      def switch_editor(target_revision, target, switch_url,
+                        use_commit_times=true, depth=nil,
+                        allow_unver_obstruction=false, diff3_cmd=nil,
+                        notify_func=nil, cancel_func=nil, traversal_info=nil,
+                        preserved_exts=nil)
+        preserved_exts ||= []
+        traversal_info ||= _traversal_info
+        # TODO(rb support conflict_fun): implement support for the
+        # conflict_func callback.
+        conflict_func=nil
+        results = Wc.get_switch_editor3(target_revision, self, target,
+                                        switch_url, use_commit_times, depth,
+                                        allow_unver_obstruction,
+                                        notify_func, cancel_func,
+                                        conflict_func,
+                                        diff3_cmd, preserved_exts,
+                                        traversal_info)
+        target_revision_address, editor, editor_baton = results
+        editor.__send__(:target_revision_address=, target_revision_address)
         editor.baton = editor_baton
         editor
       end
