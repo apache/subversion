@@ -4051,7 +4051,7 @@ do_merge(apr_array_header_t *merge_sources,
   /* Sanity check: we can do a record-only merge (which is a
      merge-tracking thing) if the sources aren't related, because we
      don't do merge-tracking if the sources aren't related.  */
-  if (record_only && (! merge_cmd_baton.sources_related))
+  if (record_only && (! sources_related))
     return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
                             _("Use of two URLs is not compatible with "
                               "mergeinfo modification"));
