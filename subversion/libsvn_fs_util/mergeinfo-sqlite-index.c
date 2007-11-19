@@ -470,7 +470,7 @@ get_mergeinfo_for_path(sqlite3 *db,
       /* The repository and the mergeinfo index internally refer to
          the root path as "" rather than "/". */
       if (strcmp(parentpath->data, "/") == 0)
-        parentpath->data = (char *) "";
+        svn_stringbuf_set(parentpath, "");
 
       SVN_ERR(get_mergeinfo_for_path(db, parentpath->data, rev,
                                      NULL, cache, svn_mergeinfo_inherited,
