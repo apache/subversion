@@ -658,7 +658,7 @@ svn_fs_txn_root(svn_fs_root_t **root_p, svn_fs_txn_t *txn, apr_pool_t *pool)
 void
 svn_fs_close_root(svn_fs_root_t *root)
 {
-  apr_pool_destroy(root->pool);
+  svn_pool_destroy(root->pool);
 }
 
 svn_fs_t *

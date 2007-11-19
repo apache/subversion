@@ -575,7 +575,7 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
       void *val;
       svn_error_t *err;
 
-      apr_pool_clear(subpool);
+      svn_pool_clear(subpool);
 
       lock_ctx = apr_pcalloc(subpool, sizeof(*lock_ctx));
 
@@ -683,7 +683,7 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
       void *val;
       struct unlock_context_t unlock_ctx;
 
-      apr_pool_clear(subpool);
+      svn_pool_clear(subpool);
 
       ctx = apr_pcalloc(subpool, sizeof(*ctx));
 

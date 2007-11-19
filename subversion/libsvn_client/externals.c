@@ -951,7 +951,7 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
     }
 
   /* Destroy SUBPOOL and (implicitly) ITERPOOL. */
-  apr_pool_destroy(subpool);
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }

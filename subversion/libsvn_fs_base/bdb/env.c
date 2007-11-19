@@ -496,7 +496,7 @@ bdb_close(bdb_env_t *bdb)
   /* Free the environment descriptor. The pool cleanup will do this unless
      the cache has already been destroyed. */
   if (bdb->pool)
-    apr_pool_destroy(bdb->pool);
+    svn_pool_destroy(bdb->pool);
   else
     free(bdb);
   return err;

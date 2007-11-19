@@ -722,7 +722,7 @@ svn_ra__file_revs_from_log(svn_ra_session_t *ra_session,
       svn_txdelta_window_handler_t delta_handler = NULL;
       void *delta_baton = NULL;
 
-      apr_pool_clear(currpool);
+      svn_pool_clear(currpool);
 
       /* Get the contents of the file from the repository, and put them in
          a temporary local file. */

@@ -3724,7 +3724,7 @@ do_file_merge(const char *url1,
             }
         }
     }
-  apr_pool_destroy(subpool);
+  svn_pool_destroy(subpool);
 
   /* Sleep to ensure timestamp integrity. */
   svn_sleep_for_timestamps();
