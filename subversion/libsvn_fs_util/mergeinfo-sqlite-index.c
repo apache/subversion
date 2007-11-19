@@ -402,14 +402,18 @@ get_mergeinfo_for_path(sqlite3 *db,
 
   if (inherit == svn_mergeinfo_nearest_ancestor)
     {
+      /* Looking for (possibly inherited) mergeinfo from PATH ancestors. */
       lastmerged_rev = 0;
     }
   else
     {
+      /* Lookup the mergeinfo for PATH, starting with the cache, the
+         moving on to the SQLite index.. */
       path_mergeinfo = apr_hash_get(cache, path, APR_HASH_KEY_STRING);
-      if (path_mergeinfo != NULL)
+      if (path_mergeinfo)
         {
-          if (path_mergeinfo != NEGATIVE_CACHE_RESULT && result)
+          /* We already had a mergeinfo lookup attempt cached. */
+          if (result && path_mergeinfo != NEGATIVE_CACHE_RESULT)
             apr_hash_set(result, path, APR_HASH_KEY_STRING, path_mergeinfo);
           return SVN_NO_ERROR;
         }
@@ -434,7 +438,7 @@ get_mergeinfo_for_path(sqlite3 *db,
       SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
 
       /* If we've got mergeinfo data, transform it from the db into a
-         mergeinfo hash */
+         mergeinfo hash.  Either way, cache whether we found mergeinfo. */
       if (lastmerged_rev > 0)
         {
           SVN_ERR(parse_mergeinfo_from_db(db, path, lastmerged_rev,
