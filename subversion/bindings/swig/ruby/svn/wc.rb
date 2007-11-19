@@ -296,7 +296,7 @@ module Svn
         Wc.is_wc_root(path, self)
       end
 
-      def update_editor(target_revision, target, use_commit_times=true,
+      def update_editor(target, target_revision=nil, use_commit_times=true,
                         depth=nil, allow_unver_obstruction=false, diff3_cmd=nil,
                         notify_func=nil, cancel_func=nil, traversal_info=nil,
                         preserved_exts=nil)
@@ -366,7 +366,7 @@ module Svn
         editor
       end
 
-      def switch_editor(target_revision, target, switch_url,
+      def switch_editor(target, switch_url, target_revision=nil,
                         use_commit_times=true, depth=nil,
                         allow_unver_obstruction=false, diff3_cmd=nil,
                         notify_func=nil, cancel_func=nil, traversal_info=nil,
