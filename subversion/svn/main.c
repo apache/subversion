@@ -1132,7 +1132,8 @@ main(int argc, const char *argv[])
           if (end == opt_arg || *end != '\0')
             {
               err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                     _("Non-numeric change argument given to -c"));
+                                     _("Non-numeric change argument "
+                                       "given to -c"));
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
           if (changeno == 0)
