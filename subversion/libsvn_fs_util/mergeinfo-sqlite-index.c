@@ -259,8 +259,9 @@ svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
 }
 
 /* Helper for get_mergeinfo_for_path() that retrieves mergeinfo for
-   PATH at the revision LASTMERGED_REV, returning it in the merge
-   info hash *RESULT (with rangelist elements in ascending order). */
+   PATH at the revision LASTMERGED_REV, returning it in the merge info
+   hash *RESULT (with rangelist elements in ascending order).  Perform
+   all allocations in POOL. */
 static svn_error_t *
 parse_mergeinfo_from_db(sqlite3 *db,
                         const char *path,
