@@ -26,6 +26,8 @@
 #include "svn_fs.h"
 #include "svn_md5.h"
 #include "svn_mergeinfo.h"
+#include "sqlite3.h"
+#include "../../libsvn_fs_util/sqlite-util.h"
 
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
@@ -4854,14 +4856,6 @@ node_origin_rev(const char **msg,
   SVN_ERR(svn_test__create_fs(&fs, repo_name,
                               opts->fs_type, pool));
 
-  /* If testing in read-only, set the SQLite index to read-only.  This
-     is somewhat abstraction-breaking (eg, assumes that none of the
-     commits need to modify mergeinfo), but it works for now. */
-  if (read_only)
-    SVN_ERR(svn_io_set_file_read_only(apr_pstrcat(pool, repo_name, 
-                                                  "/indexes.sqlite", NULL),
-                                      TRUE, pool));
-
   /* Revision 1: Create the Greek tree.  */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
@@ -4920,6 +4914,21 @@ node_origin_rev(const char **msg,
   SVN_ERR(svn_test__set_file_contents(txn_root, "A/D/floop", "7", subpool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
   svn_pool_clear(subpool);
+
+  /* If testing in read-only, set the SQLite index to read-only.  This
+     is somewhat abstraction-breaking (eg, assumes that none of the
+     commits need to modify mergeinfo), but it works for now. */
+  if (read_only)
+    {
+      sqlite3 *db;
+      svn_error_t *err;
+      SVN_ERR(svn_fs__sqlite_open(&db, repo_name, pool));
+      err = svn_fs__sqlite_exec(db, "DELETE from node_origins;");
+      SVN_ERR(svn_fs__sqlite_close(db, err));
+      SVN_ERR(svn_io_set_file_read_only(apr_pstrcat(pool, repo_name, 
+                                                    "/indexes.sqlite", NULL),
+                                        TRUE, pool));
+    }
 
   /* Now test some origin revisions. */
   {
@@ -5038,7 +5047,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(root_revisions),
     SVN_TEST_PASS(unordered_txn_dirprops),
     SVN_TEST_PASS(set_uuid),
-    SVN_TEST_XFAIL(node_origin_rev_ro),
+    SVN_TEST_PASS(node_origin_rev_ro),
     SVN_TEST_PASS(node_origin_rev_rw),
     SVN_TEST_NULL
   };
