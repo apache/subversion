@@ -51,7 +51,8 @@ svn_fs__sqlite_exec(sqlite3 *db, const char *sql);
 
 /* Open a connection in *DB to the index database under REPOS_PATH.
    Validate the merge schema, creating it if it doesn't yet exist.
-   This provides a migration path for pre-1.5 repositories. */
+   This provides a migration path for pre-1.5 repositories.  Perform
+   temporary allocations in POOL. */
 svn_error_t *
 svn_fs__sqlite_open(sqlite3 **db, const char *repos_path, apr_pool_t *pool);
 
