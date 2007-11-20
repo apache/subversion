@@ -1294,9 +1294,10 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
                                         None, None, None, None,
                                         wc_dir)
 
-  # Make the "other" working copy
+  # Make the "other" working copy, at r1
   other_wc = sbox.add_wc_path('other')
   svntest.actions.duplicate_dir(wc_dir, other_wc)
+  svntest.main.run_svn(None, 'up', '-r', 1, other_wc)
 
   # Try the merge without an explicit target; it should succeed.
   # Can't use run_and_verify_merge cuz it expects a directory argument.
@@ -1304,17 +1305,43 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
 
   os.chdir(os.path.join(other_wc, 'A'))
 
+  # merge using filename for sourcepath
+  # Cannot use run_and_verify_merge with a file target
+  if arg_flav == 'r':
+    svntest.actions.run_and_verify_svn(None,
+                                       expected_merge_output([[2]],
+                                                             'U    mu\n'),
+                                       [],
+                                       'merge', '-r', '1:2', 'mu')
+  elif arg_flav == 'c':
+    svntest.actions.run_and_verify_svn(None,
+                                       expected_merge_output([[2]],
+                                                             'U    mu\n'),
+                                       [],
+                                       'merge', '-c', '2', 'mu')
+
+  elif arg_flav == '*':
+    svntest.actions.run_and_verify_svn(None,
+                                       expected_merge_output([[2]],
+                                                             'U    mu\n'),
+                                       [],
+                                       'merge', 'mu')
+
+  # sanity-check resulting file
+  if (svntest.tree.get_text('mu') != orig_mu_text + added_mu_text):
+    raise svntest.Failure("Unexpected text in 'mu'")
+
   # merge using URL for sourcepath
   if arg_flav == 'r':
     svntest.actions.run_and_verify_svn(None,
                                        expected_merge_output([[-2]],
-                                                             'U    mu\n'),
+                                                             'G    mu\n'),
                                        [],
                                        'merge', '-r', '2:1', mu_url)
   elif arg_flav == 'c':
     svntest.actions.run_and_verify_svn(None,
                                        expected_merge_output([[-2]],
-                                                             'U    mu\n'),
+                                                             'G    mu\n'),
                                        [],
                                        'merge', '-c', '-2', mu_url)
   elif arg_flav == '*':
@@ -1323,7 +1350,7 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
     # r2 to enable continuation of the test case.
     svntest.actions.run_and_verify_svn(None,
                                        expected_merge_output([[-2]],
-                                                             'U    mu\n'),
+                                                             'G    mu\n'),
                                        [],
                                        'merge', '-c', '-2', mu_url)
 
@@ -1333,31 +1360,6 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
                           (svntest.tree.get_text('mu'), orig_mu_text))
 
 
-  # merge using filename for sourcepath
-  # Cannot use run_and_verify_merge with a file target
-  if arg_flav == 'r':
-    svntest.actions.run_and_verify_svn(None,
-                                       expected_merge_output([[2]],
-                                                             'G    mu\n'),
-                                       [],
-                                       'merge', '-r', '1:2', 'mu')
-  elif arg_flav == 'c':
-    svntest.actions.run_and_verify_svn(None,
-                                       expected_merge_output([[2]],
-                                                             'G    mu\n'),
-                                       [],
-                                       'merge', '-c', '2', 'mu')
-
-  elif arg_flav == '*':
-    svntest.actions.run_and_verify_svn(None,
-                                       expected_merge_output([[2]],
-                                                             'G    mu\n'),
-                                       [],
-                                       'merge', 'mu')
-
-  # sanity-check resulting file
-  if (svntest.tree.get_text('mu') != orig_mu_text + added_mu_text):
-    raise svntest.Failure("Unexpected text in 'mu'")
 
 def merge_with_implicit_target_using_r(sbox):
   "merging a file w/no explicit target path using -r"
@@ -2590,11 +2592,13 @@ def merge_prop_change_to_deleted_target(sbox):
 
   # Try merging the original propset, which applies to a target that
   # no longer exists.  The bug would only reproduce when run from
-  # inside the wc, so we cd in there.
+  # inside the wc, so we cd in there.  We have to use
+  # --ignore-ancestry here because our merge logic will otherwise
+  # prevent a merge of changes we already have.
   os.chdir(wc_dir)
   svntest.actions.run_and_verify_svn("Merge errored unexpectedly",
-                                     svntest.verify.AnyOutput, [],
-                                     'merge', '-r1:2', '.')
+                                     svntest.verify.AnyOutput, [], 'merge',
+                                     '-r1:2', '--ignore-ancestry', '.')
 
 
 def setup_dir_replace(sbox):
@@ -3333,6 +3337,9 @@ def property_merge_undo_redo(sbox):
 
   expected_skip = wc.State('', { })
 
+  # Re-merge r1.  We have to use --ignore-ancestry here.  Otherwise
+  # the merge logic will claim we already have this change (because it
+  # was unable to record the previous undoing merge).
   svntest.actions.run_and_verify_merge(wc_dir, '1', '2',
                                        sbox.repo_url,
                                        expected_output,
@@ -3343,7 +3350,8 @@ def property_merge_undo_redo(sbox):
                                        None, None, # no A singleton handler
                                        None, None, # no B singleton handler
                                        1, # check props
-                                       0) # dry_run
+                                       0, # dry_run
+                                       '--ignore-ancestry')
 
 
 
@@ -5731,13 +5739,13 @@ def merge_to_path_with_switched_children(sbox):
     'chi'   : Item(status=' M', wc_rev=8),
     })
   expected_disk = wc.State('', {
-    ''      : Item(props={SVN_PROP_MERGE_INFO : '/A/D/H:1,8*'}),
+    ''      : Item(props={SVN_PROP_MERGE_INFO : '/A/D/H:8*'}),
     'psi'   : Item("This is the file 'psi'.\n",
-                   props={SVN_PROP_MERGE_INFO : '/A/D/H/psi:1-2,8'}),
+                   props={SVN_PROP_MERGE_INFO : '/A/D/H/psi:8'}),
     'omega' : Item("New content",
-                   props={SVN_PROP_MERGE_INFO : '/A/D/H/omega:1,8'}),
+                   props={SVN_PROP_MERGE_INFO : '/A/D/H/omega:8'}),
     'chi'   : Item("This is the file 'chi'.\n",
-                   props={SVN_PROP_MERGE_INFO : '/A/D/H/chi:1,8'}),
+                   props={SVN_PROP_MERGE_INFO : '/A/D/H/chi:8'}),
     })
   expected_skip = wc.State(short_H_COPY_path, { })
   saved_cwd = os.getcwd()
@@ -5785,23 +5793,23 @@ def merge_to_path_with_switched_children(sbox):
     'gamma'   : Item(status=' M', wc_rev=8),
     })
   expected_disk_D = wc.State('', {
-    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/D:1,6*'}),
-    'H'       : Item(props={SVN_PROP_MERGE_INFO : '/A/D/H:1,6*,8*'}),
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/D:6*'}),
+    'H'       : Item(props={SVN_PROP_MERGE_INFO : '/A/D/H:6*,8*'}),
     'H/chi'   : Item("This is the file 'chi'.\n",
-                     props={SVN_PROP_MERGE_INFO : '/A/D/H/chi:1,6,8'}),
+                     props={SVN_PROP_MERGE_INFO : '/A/D/H/chi:6,8'}),
     'H/omega' : Item("New content",
-                     props={SVN_PROP_MERGE_INFO : '/A/D/H/omega:1,6,8'}),
+                     props={SVN_PROP_MERGE_INFO : '/A/D/H/omega:6,8'}),
     'H/psi'   : Item("This is the file 'psi'.\n",
-                     props={SVN_PROP_MERGE_INFO : '/A/D/H/psi:1-2,6,8'}),
-    'G'       : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:1-2,6*'}),
+                     props={SVN_PROP_MERGE_INFO : '/A/D/H/psi:6,8'}),
+    'G'       : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:6*'}),
     'G/pi'    : Item("This is the file 'pi'.\n",
-                     props={SVN_PROP_MERGE_INFO : '/A/D/G/pi:1-2,6'}),
+                     props={SVN_PROP_MERGE_INFO : '/A/D/G/pi:6'}),
     'G/rho'   : Item("New content",
-                     props={SVN_PROP_MERGE_INFO : '/A/D/G/rho:1-3,6'}),
+                     props={SVN_PROP_MERGE_INFO : '/A/D/G/rho:6'}),
     'G/tau'   : Item("This is the file 'tau'.\n",
-                     props={SVN_PROP_MERGE_INFO : '/A/D/G/tau:1-2,6'}),
+                     props={SVN_PROP_MERGE_INFO : '/A/D/G/tau:6'}),
     'gamma'   : Item("This is the file 'gamma'.\n",
-                     props={SVN_PROP_MERGE_INFO : '/A/D/gamma:1,6'}),
+                     props={SVN_PROP_MERGE_INFO : '/A/D/gamma:6'}),
     })
   expected_skip_D = wc.State(short_D_COPY_path, { })
   os.chdir(svntest.main.work_dir)
@@ -5822,23 +5830,23 @@ def merge_to_path_with_switched_children(sbox):
   # The same is true of A_COPY/D/gamma and A_COPY/D.
   expected_output = wc.State(short_D_COPY_path, {
     'H/psi' : Item(status='U ')})
-  expected_disk_D.tweak('', props={SVN_PROP_MERGE_INFO : '/A/D:1,5-6*'})
-  expected_disk_D.tweak('G', props={SVN_PROP_MERGE_INFO : '/A/D/G:1-2,5-6*'})
+  expected_disk_D.tweak('', props={SVN_PROP_MERGE_INFO : '/A/D:5-6*'})
+  expected_disk_D.tweak('G', props={SVN_PROP_MERGE_INFO : '/A/D/G:5-6*'})
   expected_disk_D.tweak('G/pi',
-                        props={SVN_PROP_MERGE_INFO : '/A/D/G/pi:1-2,5-6'})
+                        props={SVN_PROP_MERGE_INFO : '/A/D/G/pi:5-6'})
   expected_disk_D.tweak('G/rho',
-                        props={SVN_PROP_MERGE_INFO : '/A/D/G/rho:1-3,5-6'})
+                        props={SVN_PROP_MERGE_INFO : '/A/D/G/rho:5-6'})
   expected_disk_D.tweak('G/tau',
-                        props={SVN_PROP_MERGE_INFO : '/A/D/G/tau:1-2,5-6'})
-  expected_disk_D.tweak('H', props={SVN_PROP_MERGE_INFO : '/A/D/H:1,5-6*,8*'})
+                        props={SVN_PROP_MERGE_INFO : '/A/D/G/tau:5-6'})
+  expected_disk_D.tweak('H', props={SVN_PROP_MERGE_INFO : '/A/D/H:5-6*,8*'})
   expected_disk_D.tweak('gamma',
-                        props={SVN_PROP_MERGE_INFO : '/A/D/gamma:1,5-6'})
+                        props={SVN_PROP_MERGE_INFO : '/A/D/gamma:5-6'})
   expected_disk_D.tweak('H/chi',
-                        props={SVN_PROP_MERGE_INFO :'/A/D/H/chi:1,5-6,8'})
+                        props={SVN_PROP_MERGE_INFO :'/A/D/H/chi:5-6,8'})
   expected_disk_D.tweak('H/psi', contents="New content",
-                        props={SVN_PROP_MERGE_INFO :'/A/D/H/psi:1-2,5-6,8'})
+                        props={SVN_PROP_MERGE_INFO :'/A/D/H/psi:5-6,8'})
   expected_disk_D.tweak('H/omega',
-                        props={SVN_PROP_MERGE_INFO :'/A/D/H/omega:1,5-6,8'})
+                        props={SVN_PROP_MERGE_INFO :'/A/D/H/omega:5-6,8'})
   expected_status_D.tweak('H/psi', status='MM')
   svntest.actions.run_and_verify_merge(short_D_COPY_path, '4', '5',
                                        sbox.repo_url + '/A/D',
@@ -5878,7 +5886,7 @@ def merge_to_path_with_switched_children(sbox):
     'D/H/omega' : Item(status='MM', wc_rev=8),
     })
   expected_disk = wc.State('', {
-    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A:1,5-8'}),
+    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A:5-8'}),
     'B'         : Item(),
     'mu'        : Item("This is the file 'mu'.\n"),
     'B/E'       : Item(),
@@ -5887,23 +5895,23 @@ def merge_to_path_with_switched_children(sbox):
     'B/lambda'  : Item("This is the file 'lambda'.\n"),
     'B/F'       : Item(),
     'C'         : Item(),
-    'D'         : Item(props={SVN_PROP_MERGE_INFO : '/A/D:1,5-8*'}),
-    'D/G'       : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:1-2,5-8*'}),
+    'D'         : Item(props={SVN_PROP_MERGE_INFO : '/A/D:5-8*'}),
+    'D/G'       : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:5-8*'}),
     'D/G/pi'    : Item("This is the file 'pi'.\n",
-                       props={SVN_PROP_MERGE_INFO : '/A/D/G/pi:1-2,5-8'}),
+                       props={SVN_PROP_MERGE_INFO : '/A/D/G/pi:5-8'}),
     'D/G/rho'   : Item("New content",
-                       props={SVN_PROP_MERGE_INFO : '/A/D/G/rho:1-3,5-8'}),
+                       props={SVN_PROP_MERGE_INFO : '/A/D/G/rho:5-8'}),
     'D/G/tau'   : Item("This is the file 'tau'.\n",
-                       props={SVN_PROP_MERGE_INFO : '/A/D/G/tau:1-2,5-8'}),
+                       props={SVN_PROP_MERGE_INFO : '/A/D/G/tau:5-8'}),
     'D/gamma'   : Item("This is the file 'gamma'.\n",
-                       props={SVN_PROP_MERGE_INFO : '/A/D/gamma:1,5-8'}),
-    'D/H'       : Item(props={SVN_PROP_MERGE_INFO : '/A/D/H:1,5-8*'}),
+                       props={SVN_PROP_MERGE_INFO : '/A/D/gamma:5-8'}),
+    'D/H'       : Item(props={SVN_PROP_MERGE_INFO : '/A/D/H:5-8*'}),
     'D/H/chi'   : Item("This is the file 'chi'.\n",
-                       props={SVN_PROP_MERGE_INFO : '/A/D/H/chi:1,5-8'}),
+                       props={SVN_PROP_MERGE_INFO : '/A/D/H/chi:5-8'}),
     'D/H/psi'   : Item("New content",
-                       props={SVN_PROP_MERGE_INFO : '/A/D/H/psi:1-2,5-8'}),
+                       props={SVN_PROP_MERGE_INFO : '/A/D/H/psi:5-8'}),
     'D/H/omega' : Item("New content",
-                       props={SVN_PROP_MERGE_INFO : '/A/D/H/omega:1,5-8'}),
+                       props={SVN_PROP_MERGE_INFO : '/A/D/H/omega:5-8'}),
     })
   expected_skip = wc.State(short_A_COPY_path, { })
   os.chdir(svntest.main.work_dir)
@@ -5943,31 +5951,31 @@ def merge_to_path_with_switched_children(sbox):
     'A_COPY/D/H/psi' : Item(status='UU')})
   wc_status.tweak("A_COPY/D/H/psi", switched=None, wc_rev=9)
   wc_disk.tweak("A_COPY",
-                props={SVN_PROP_MERGE_INFO : '/A:1,5-8'})
+                props={SVN_PROP_MERGE_INFO : '/A:5-8'})
   wc_disk.tweak("A_COPY/B/E/beta",
                 contents="New content")
   wc_disk.tweak("A_COPY/D",
-                props={SVN_PROP_MERGE_INFO : '/A/D:1,5-8*'})
+                props={SVN_PROP_MERGE_INFO : '/A/D:5-8*'})
   wc_disk.tweak("A_COPY/D/gamma",
-                props={SVN_PROP_MERGE_INFO : '/A/D/gamma:1,5-8'})
+                props={SVN_PROP_MERGE_INFO : '/A/D/gamma:5-8'})
   wc_disk.tweak("A_COPY/D/G",
-                props={SVN_PROP_MERGE_INFO : '/A/D/G:1-2,5-8*'})
+                props={SVN_PROP_MERGE_INFO : '/A/D/G:5-8*'})
   wc_disk.tweak("A_COPY/D/G/pi",
-                props={SVN_PROP_MERGE_INFO : '/A/D/G/pi:1-2,5-8'})
+                props={SVN_PROP_MERGE_INFO : '/A/D/G/pi:5-8'})
   wc_disk.tweak("A_COPY/D/G/rho",
                 contents="New content",
-                props={SVN_PROP_MERGE_INFO : '/A/D/G/rho:1-3,5-8'})
+                props={SVN_PROP_MERGE_INFO : '/A/D/G/rho:5-8'})
   wc_disk.tweak("A_COPY/D/G/tau",
-                props={SVN_PROP_MERGE_INFO : '/A/D/G/tau:1-2,5-8'})
+                props={SVN_PROP_MERGE_INFO : '/A/D/G/tau:5-8'})
   wc_disk.tweak("A_COPY/D/H",
-                props={SVN_PROP_MERGE_INFO : '/A/D/H:1,5-8*'})
+                props={SVN_PROP_MERGE_INFO : '/A/D/H:5-8*'})
   wc_disk.tweak("A_COPY/D/H/chi",
-                props={SVN_PROP_MERGE_INFO : '/A/D/H/chi:1,5-8'})
+                props={SVN_PROP_MERGE_INFO : '/A/D/H/chi:5-8'})
   wc_disk.tweak("A_COPY/D/H/omega",
                 contents="New content",
-                props={SVN_PROP_MERGE_INFO : '/A/D/H/omega:1,5-8'})
+                props={SVN_PROP_MERGE_INFO : '/A/D/H/omega:5-8'})
   wc_disk.tweak("A_COPY_2",
-                props={SVN_PROP_MERGE_INFO : '/A:1-2'})
+                props={SVN_PROP_MERGE_INFO : ''})
   svntest.actions.run_and_verify_switch(sbox.wc_dir, A_COPY_psi_path,
                                         sbox.repo_url + "/A_COPY/D/H/psi",
                                         expected_output, wc_disk, wc_status,
@@ -5997,7 +6005,7 @@ def merge_to_path_with_switched_children(sbox):
     'chi'   : Item(status=' M', wc_rev=9),
     })
   expected_disk = wc.State('', {
-    ''      : Item(props={SVN_PROP_MERGE_INFO : '/A/D/H:1,5-8'}),
+    ''      : Item(props={SVN_PROP_MERGE_INFO : '/A/D/H:5-8'}),
     'psi'   : Item("New content"),
     'omega' : Item("New content"),
     'chi'   : Item("This is the file 'chi'.\n"),
@@ -6044,19 +6052,19 @@ def merge_to_path_with_switched_children(sbox):
                           switched=None)
   expected_status_D.tweak('G', switched='S', status=' M', wc_rev=9)
   expected_status_D.tweak('G/tau', 'G/pi', 'G/rho', status=' M', wc_rev=9)
-  expected_disk_D.tweak('', props={SVN_PROP_MERGE_INFO : '/A/D:1,5-8*,10*',
+  expected_disk_D.tweak('', props={SVN_PROP_MERGE_INFO : '/A/D:5-8*,10*',
                                    "prop:name" : "propval"})
   expected_disk_D.tweak('G',
-                        props={SVN_PROP_MERGE_INFO : '/A/D/G:1-2,5-8*,10*'})
+                        props={SVN_PROP_MERGE_INFO : '/A/D/G:5-8*,10*'})
   expected_disk_D.tweak('G/pi',
-                        props={SVN_PROP_MERGE_INFO : '/A/D/G/pi:1-2,5-8,10'})
+                        props={SVN_PROP_MERGE_INFO : '/A/D/G/pi:5-8,10'})
   expected_disk_D.tweak('G/rho',
-                        props={SVN_PROP_MERGE_INFO : '/A/D/G/rho:1-3,5-8,10'})
+                        props={SVN_PROP_MERGE_INFO : '/A/D/G/rho:5-8,10'})
   expected_disk_D.tweak('G/tau',
-                        props={SVN_PROP_MERGE_INFO : '/A/D/G/tau:1-2,5-8,10'})
-  expected_disk_D.tweak('H', props={SVN_PROP_MERGE_INFO : '/A/D/H:1,5-8,10'})
+                        props={SVN_PROP_MERGE_INFO : '/A/D/G/tau:5-8,10'})
+  expected_disk_D.tweak('H', props={SVN_PROP_MERGE_INFO : '/A/D/H:5-8,10'})
   expected_disk_D.tweak('gamma',
-                        props={SVN_PROP_MERGE_INFO : '/A/D/gamma:1,5-8,10'})
+                        props={SVN_PROP_MERGE_INFO : '/A/D/gamma:5-8,10'})
   expected_disk_D.tweak('H/chi', 'H/omega', props={})
   expected_disk_D.tweak('H/psi', contents="New content", props={})
   os.chdir(svntest.main.work_dir)
@@ -9336,7 +9344,7 @@ def ignore_ancestry_and_mergeinfo(sbox):
     'lambda' : Item(status='U '),
     })
   expected_disk = wc.State('', {
-    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1-3'}),
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:2-3'}),
     'lambda'  : Item(contents="This is the file 'lambda' modified.\n"),
     'F'       : Item(props={}),
     'E'       : Item(props={}),
