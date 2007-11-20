@@ -6993,7 +6993,7 @@ def avoid_reflected_revs(sbox):
     'D/H/psi'   : Item(status='  ', wc_rev=6),
     })
   expected_disk = wc.State('', {
-    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A_COPY:3-5,8'}),
+    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A_COPY:3-8'}),
     'bfile2'    : Item(bfile2_content),
     'bfile1'    : Item(bfile1_content),
     'tfile2'    : Item(tfile2_content),
