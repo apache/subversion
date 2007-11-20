@@ -39,7 +39,7 @@ static const char SVN_FILE_LINE_UNDEFINED[] = "svn:<undefined>";
 
 
 /* Pool allocation handler which just aborts, since we aren't generally
-   prepared to deal with out-of-memory rerors.
+   prepared to deal with out-of-memory errors.
  */
 static int
 abort_on_pool_failure(int retcode)
