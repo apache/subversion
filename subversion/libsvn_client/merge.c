@@ -2284,60 +2284,65 @@ drive_merge_report_editor(const char *target_wcpath,
   return SVN_NO_ERROR;
 }
 
-/* Gets the smallest end_rev from all the ranges from
-   remaining_ranges[0].  If all childs have empty remaining_ranges
-   returns SVN_INVALID_REVNUM. */
+/* Return the most inclusive range start revision across all the
+   remaining ranges in CHILDREN_WITH_MERGEINFO.  If there are no
+   remaining ranges, return SVN_INVALID_REVNUM.  Skip no-op ranges
+   on the target (they are probably dummies). */
 static svn_revnum_t
-get_nearest_end_rev(apr_array_header_t *children_with_mergeinfo)
+get_most_inclusive_start_rev(apr_array_header_t *children_with_mergeinfo,
+                             svn_boolean_t is_rollback)
 {
   int i;
-  svn_revnum_t nearest_end_rev = SVN_INVALID_REVNUM;
+  svn_revnum_t start_rev = SVN_INVALID_REVNUM;
+
   for (i = 0; i < children_with_mergeinfo->nelts; i++)
     {
       svn_client__merge_path_t *child =
-                                  APR_ARRAY_IDX(children_with_mergeinfo, i,
-                                                svn_client__merge_path_t *);
-      if (!child || child->absent)
+        APR_ARRAY_IDX(children_with_mergeinfo, i, svn_client__merge_path_t *);
+      svn_merge_range_t *range;
+
+      if ((! child) || child->absent)
         continue;
-      if (child->remaining_ranges->nelts > 0)
-        {
-          svn_merge_range_t *range = APR_ARRAY_IDX(child->remaining_ranges, 0,
-                                                   svn_merge_range_t *);
-          if (nearest_end_rev == SVN_INVALID_REVNUM)
-            nearest_end_rev = range->end;
-          else if (range->end < nearest_end_rev)
-            nearest_end_rev = range->end;
-        }
+      if (! child->remaining_ranges->nelts)
+        continue;
+      range = APR_ARRAY_IDX(child->remaining_ranges, 0, svn_merge_range_t *);
+      if ((i == 0) && (range->start == range->end))
+        continue;
+      if ((start_rev == SVN_INVALID_REVNUM)
+          || (is_rollback && (range->start > start_rev))
+          || ((! is_rollback) && (range->start < start_rev)))
+        start_rev = range->start;
     }
-  return nearest_end_rev;
+  return start_rev;
 }
 
-/* Gets the biggest end_rev from all the ranges from
-   remaining_ranges[0].  If all childs have empty remaining_ranges
-   returns SVN_INVALID_REVNUM. */
+/* Return the most inclusive range end revision across all the
+   remaining ranges in CHILDREN_WITH_MERGEINFO.  If there are no
+   remaining ranges, return SVN_INVALID_REVNUM. */
 static svn_revnum_t
-get_farthest_end_rev(apr_array_header_t *children_with_mergeinfo)
+get_most_inclusive_end_rev(apr_array_header_t *children_with_mergeinfo,
+                           svn_boolean_t is_rollback)
 {
   int i;
-  svn_revnum_t farthest_end_rev = SVN_INVALID_REVNUM;
+  svn_revnum_t end_rev = SVN_INVALID_REVNUM;
+
   for (i = 0; i < children_with_mergeinfo->nelts; i++)
     {
       svn_client__merge_path_t *child =
-                                  APR_ARRAY_IDX(children_with_mergeinfo, i,
-                                                svn_client__merge_path_t *);
+        APR_ARRAY_IDX(children_with_mergeinfo, i, svn_client__merge_path_t *);
       if (!child || child->absent)
         continue;
       if (child->remaining_ranges->nelts > 0)
         {
           svn_merge_range_t *range = APR_ARRAY_IDX(child->remaining_ranges, 0,
                                                    svn_merge_range_t *);
-          if (farthest_end_rev == SVN_INVALID_REVNUM)
-            farthest_end_rev = range->end;
-          else if (range->end > farthest_end_rev)
-            farthest_end_rev = range->end;
+          if ((end_rev == SVN_INVALID_REVNUM)
+              || (is_rollback && (range->end < end_rev))
+              || ((! is_rollback) && (range->end > end_rev)))
+            end_rev = range->end;
         }
     }
-  return farthest_end_rev;
+  return end_rev;
 }
 
 /* If first item in each child of CHILDREN_WITH_MERGEINFO's
@@ -3947,7 +3952,7 @@ do_directory_merge(const char *url1,
   int i;
   svn_merge_range_t range;
   svn_ra_session_t *ra_session;
-  svn_revnum_t start_rev, end_rev;
+  svn_boolean_t inheritable;
   apr_pool_t *iterpool;
   const char *target_wcpath = svn_wc_adm_access_path(adm_access);
   svn_client__merge_path_t *target_merge_path;
@@ -4022,13 +4027,9 @@ do_directory_merge(const char *url1,
   target_merge_path = APR_ARRAY_IDX(children_with_mergeinfo, 0,
                                     svn_client__merge_path_t *);
   merge_b->target_missing_child = target_merge_path->missing_child;
-
-  /* Build a range for our directory. */
-  range.start = revision1;
-  range.end = revision2;
-  range.inheritable = ((! merge_b->target_missing_child)
-                       && ((depth == svn_depth_infinity)
-                           || (depth == svn_depth_immediates)));
+  inheritable = ((! merge_b->target_missing_child)
+                 && ((depth == svn_depth_infinity)
+                     || (depth == svn_depth_immediates)));
 
   /* If we are honoring mergeinfo, then for each item in
      CHILDREN_WITH_MERGEINFO, we need to calculate what needs to be
@@ -4037,25 +4038,34 @@ do_directory_merge(const char *url1,
   SVN_ERR(populate_remaining_ranges(children_with_mergeinfo, 
                                     source_root_url,
                                     url1, revision1, url2, revision2,
-                                    range.inheritable, honor_mergeinfo,
+                                    inheritable, honor_mergeinfo,
                                     ra_session, mergeinfo_path,
                                     adm_access, merge_b));
 
   if (honor_mergeinfo)
     {
+      svn_revnum_t start_rev, end_rev;
+
       /* From the remaining ranges of each item in
-         CHILDREN_WITH_MERGEINFO, pick the smallest end_rev (or
-         biggest, in the rollback case). */
-      start_rev = revision1;
-      if (is_rollback)
-        end_rev = get_farthest_end_rev(children_with_mergeinfo);
-      else
-        end_rev = get_nearest_end_rev(children_with_mergeinfo);
+         CHILDREN_WITH_MERGEINFO, pick the most inclusive start and
+         end revisions. */
+      start_rev = get_most_inclusive_start_rev(children_with_mergeinfo,
+                                               is_rollback);
+      if (start_rev == SVN_INVALID_REVNUM)
+        start_rev = revision1;
+
+      end_rev = get_most_inclusive_end_rev(children_with_mergeinfo,
+                                           is_rollback);
+
+      /* Build a range which describes our most inclusive merge. */
+      range.start = start_rev;
+      range.end = revision2;
+      range.inheritable = inheritable;
 
       /* While END_REV is valid, do the following:
 
          1. slice each remaining ranges around this 'end_rev'.
-         2. starting with START_REV = REVISION1, call
+         2. starting with START_REV, call
             drive_merge_report_editor() on MERGE_B->target for 
             start_rev:end_rev.
          3. remove the first item from each remaining range.
@@ -4082,11 +4092,8 @@ do_directory_merge(const char *url1,
 
           remove_first_range_from_remaining_ranges(children_with_mergeinfo, 
                                                    pool);
-          next_end_rev = get_nearest_end_rev(children_with_mergeinfo);
-          if (is_rollback)
-            next_end_rev = get_farthest_end_rev(children_with_mergeinfo);
-          else
-            next_end_rev = get_nearest_end_rev(children_with_mergeinfo);
+          next_end_rev = get_most_inclusive_end_rev(children_with_mergeinfo,
+                                                    is_rollback);
           if ((next_end_rev != SVN_INVALID_REVNUM)
               && is_path_conflicted_by_merge(merge_b))
             {
@@ -4105,6 +4112,11 @@ do_directory_merge(const char *url1,
     }
   else
     {
+      /* Build a range which describes our most inclusive merge. */
+      range.start = revision1;
+      range.end = revision2;
+      range.inheritable = inheritable;
+
       SVN_ERR(drive_merge_report_editor(merge_b->target,
                                         url1, revision1, url2, revision2,
                                         NULL, is_rollback, 
