@@ -1375,9 +1375,9 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
             }
           SVN_ERR(receiver(receiver_baton, log_entry, subpool));
         }
-      apr_pool_clear(subpool);
+      svn_pool_clear(subpool);
     }
-  apr_pool_destroy(subpool);
+  svn_pool_destroy(subpool);
 
   /* Read the response. */
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));

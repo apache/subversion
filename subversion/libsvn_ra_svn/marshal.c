@@ -155,7 +155,7 @@ static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           if (!subpool)
             subpool = svn_pool_create(pool);
           else
-            apr_pool_clear(subpool);
+            svn_pool_clear(subpool);
           SVN_ERR(conn->block_handler(conn, subpool, conn->block_baton));
         }
       data += count;
@@ -172,7 +172,7 @@ static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
 
   if (subpool)
-    apr_pool_destroy(subpool);
+    svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -892,7 +892,7 @@ svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
 
   while (1)
     {
-      apr_pool_clear(subpool);
+      svn_pool_clear(subpool);
       SVN_ERR(svn_ra_svn_read_tuple(conn, subpool, "wl", &cmdname, &params));
       for (i = 0; commands[i].cmdname; i++)
         {
@@ -921,7 +921,7 @@ svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
       if (commands[i].terminate)
         break;
     }
-  apr_pool_destroy(subpool);
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 

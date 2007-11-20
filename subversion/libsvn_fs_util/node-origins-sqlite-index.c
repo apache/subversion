@@ -45,7 +45,8 @@
 static svn_error_t *
 get_origin(const char **node_rev_id,
            sqlite3 *db,
-           const char *node_id)
+           const char *node_id,
+           apr_pool_t *pool)
 {
   sqlite3_stmt *stmt;
   int sqlite_result;
@@ -62,7 +63,8 @@ get_origin(const char **node_rev_id,
     return svn_error_create(SVN_FS__SQLITE_ERROR_CODE(sqlite_result), NULL,
                             sqlite3_errmsg(db));
   else if (sqlite_result == SQLITE_ROW)
-    *node_rev_id = (const char *) sqlite3_column_text(stmt, 0);
+    *node_rev_id = apr_pstrdup(pool,
+                               (const char *) sqlite3_column_text(stmt, 0));
   else
     *node_rev_id = NULL;
 
@@ -74,14 +76,15 @@ get_origin(const char **node_rev_id,
 static svn_error_t *
 set_origin(sqlite3 *db,
            const char *node_id,
-           const svn_string_t *node_rev_id)
+           const svn_string_t *node_rev_id,
+           apr_pool_t *pool)
 {
   sqlite3_stmt *stmt;
   const char *old_node_rev_id;
 
   /* First figure out if it's already there.  (Don't worry, we're in a
      transaction.) */
-  SVN_ERR(get_origin(&old_node_rev_id, db, node_id));  
+  SVN_ERR(get_origin(&old_node_rev_id, db, node_id, pool));
   if (old_node_rev_id != NULL)
     {
       if (!strcmp(node_rev_id->data, old_node_rev_id))
@@ -143,7 +146,8 @@ svn_fs__set_node_origins(svn_fs_t *fs,
       node_rev_id = val;
 
       err = set_origin(db, node_id,
-                       svn_fs_unparse_id(node_rev_id, iterpool));
+                       svn_fs_unparse_id(node_rev_id, iterpool),
+                       iterpool);
       MAYBE_CLEANUP;
     }
 
@@ -195,7 +199,7 @@ svn_fs__get_node_origin(const char **origin_id,
 
   SVN_ERR(svn_fs__sqlite_open(&db, fs->path, pool));
 
-  err = get_origin(origin_id, db, node_id);
+  err = get_origin(origin_id, db, node_id, pool);
 
   return svn_fs__sqlite_close(db, err);
 }

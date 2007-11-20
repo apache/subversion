@@ -563,8 +563,8 @@ close_dir(report_dir_t *dir)
         }
     }
 
-  apr_pool_destroy(dir->dir_baton_pool);
-  apr_pool_destroy(dir->pool);
+  svn_pool_destroy(dir->dir_baton_pool);
+  svn_pool_destroy(dir->pool);
 
   return SVN_NO_ERROR;
 }
@@ -914,8 +914,8 @@ handle_fetch(serf_request_t *request,
           *fetch_ctx->done_list = &fetch_ctx->done_item;
 
           /* We're done with our pools. */
-          apr_pool_destroy(info->editor_pool);
-          apr_pool_destroy(info->pool);
+          svn_pool_destroy(info->editor_pool);
+          svn_pool_destroy(info->pool);
 
           return status;
         }
@@ -1075,8 +1075,8 @@ handle_propchange_only(report_info_t *info)
                                                info->editor_pool));
 
   /* We're done with our pools. */
-  apr_pool_destroy(info->editor_pool);
-  apr_pool_destroy(info->pool);
+  svn_pool_destroy(info->editor_pool);
+  svn_pool_destroy(info->pool);
 
   info->dir->ref_count--;
 
@@ -1416,7 +1416,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
                                                      info->dir->dir_baton,
                                                      tmppool));
 
-      apr_pool_destroy(tmppool);
+      svn_pool_destroy(tmppool);
     }
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "absent-directory") == 0)

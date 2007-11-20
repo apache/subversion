@@ -722,7 +722,7 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
         = APR_ARRAY_IDX(queue->queue,
                         i, committed_queue_item_t *);
 
-      apr_pool_clear(iterpool);
+      svn_pool_clear(iterpool);
 
       if (have_recursive_parent(&have_any_recursive,
                                 queue->queue,
@@ -761,7 +761,7 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
       void *val;
       affected_adm_t *this_adm;
 
-      apr_pool_clear(iterpool);
+      svn_pool_clear(iterpool);
 
       apr_hash_this(hi, NULL, NULL, &val);
       this_adm = val;
@@ -771,7 +771,7 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
 
   queue->queue->nelts = 0;
 
-  apr_pool_destroy(iterpool);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }

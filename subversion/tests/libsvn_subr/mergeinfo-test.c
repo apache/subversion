@@ -187,7 +187,7 @@ test_mergeinfo_dup(const char **msg,
      the pool with which the original mergeinfo was created. */
   SVN_ERR(svn_mergeinfo_parse(&orig_mergeinfo, single_mergeinfo, subpool));
   copied_mergeinfo = svn_mergeinfo_dup(orig_mergeinfo, pool);
-  apr_pool_destroy(subpool);
+  svn_pool_destroy(subpool);
   if (apr_hash_count(copied_mergeinfo) != 1)
     return fail(pool, "Copied mergeinfo should contain one merge source");
   rangelist = apr_hash_get(copied_mergeinfo, "/trunk", APR_HASH_KEY_STRING);

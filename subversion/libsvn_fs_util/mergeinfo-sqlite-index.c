@@ -637,7 +637,7 @@ svn_fs_mergeinfo__get_mergeinfo(apr_hash_t **mergeinfo,
       apr_hash_t *path_mergeinfo;
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
 
-      apr_pool_clear(subpool);
+      svn_pool_clear(subpool);
 
       path_mergeinfo = apr_hash_get(*mergeinfo, path, APR_HASH_KEY_STRING);
       if (path_mergeinfo)

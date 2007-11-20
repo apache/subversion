@@ -738,7 +738,7 @@ svn_client_blame4(const char *target,
           svn_boolean_t eof;
           svn_stringbuf_t *sb;
 
-          apr_pool_clear(iterpool);
+          svn_pool_clear(iterpool);
           SVN_ERR(svn_stream_readline(stream, &sb, "\n", &eof, iterpool));
           if (ctx->cancel_func)
             SVN_ERR(ctx->cancel_func(ctx->cancel_baton));

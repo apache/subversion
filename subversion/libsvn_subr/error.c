@@ -26,6 +26,7 @@
 
 #include "svn_cmdline.h"
 #include "svn_error.h"
+#include "svn_pools.h"
 
 #ifdef SVN_DEBUG
 /* file_line for the non-debug case. */
@@ -227,7 +228,7 @@ svn_error_compose(svn_error_t *chain, svn_error_t *new_err)
 #endif
 
   /* Destroy the new error chain. */
-  apr_pool_destroy(oldpool);
+  svn_pool_destroy(oldpool);
 }
 
 svn_error_t *
@@ -290,7 +291,7 @@ svn_error_clear(svn_error_t *err)
         err = err->child;
       apr_pool_cleanup_kill(err->pool, err, err_abort);
 #endif
-      apr_pool_destroy(err->pool);
+      svn_pool_destroy(err->pool);
     }
 }
 
@@ -411,7 +412,7 @@ svn_handle_error2(svn_error_t *err,
       err = err->child;
     }
 
-  apr_pool_destroy(subpool);
+  svn_pool_destroy(subpool);
 
   fflush(stream);
   if (fatal)

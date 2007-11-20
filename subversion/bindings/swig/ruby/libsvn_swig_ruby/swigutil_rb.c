@@ -330,12 +330,12 @@ svn_swig_rb_converter_to_locale_encoding(VALUE self, VALUE str)
   pool = svn_pool_create(NULL);
   err = svn_utf_cstring_from_utf8(&dest, StringValueCStr(str), pool);
   if (err) {
-    apr_pool_destroy(pool);
+    svn_pool_destroy(pool);
     svn_swig_rb_handle_svn_error(err);
   }
 
   result = rb_str_new2(dest);
-  apr_pool_destroy(pool);
+  svn_pool_destroy(pool);
   return result;
 }
 

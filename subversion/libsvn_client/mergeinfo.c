@@ -849,7 +849,7 @@ svn_client__elide_mergeinfo_for_tree(apr_hash_t *children_with_mergeinfo,
       const char *child_wcpath;
       svn_sort__item_t *item = &APR_ARRAY_IDX(sorted_children, i,
                                               svn_sort__item_t);
-      apr_pool_clear(iterpool);
+      svn_pool_clear(iterpool);
       child_wcpath = item->key;
       SVN_ERR(svn_wc__entry_versioned(&child_entry, child_wcpath, adm_access,
                                       FALSE, iterpool));
@@ -857,7 +857,7 @@ svn_client__elide_mergeinfo_for_tree(apr_hash_t *children_with_mergeinfo,
                                           adm_access, ctx, iterpool));
     }
 
-  apr_pool_destroy(iterpool);
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 

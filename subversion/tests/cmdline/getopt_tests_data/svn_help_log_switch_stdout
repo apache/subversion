@@ -37,6 +37,7 @@ Valid options:
   -v [--verbose]           : print extra information
   -g [--use-merge-history] : use/display additional information from merge
                              history
+  -c [--change] ARG        : the change made by ARG
   --targets ARG            : pass contents of file ARG as additional args
   --stop-on-copy           : do not cross copies while traversing history
   --incremental            : give output suitable for concatenation
@@ -52,12 +53,14 @@ Valid options:
   --config-dir ARG         : read user configuration files from directory ARG
 
 switch (sw): Update the working copy to a different URL.
-usage: 1. switch URL [PATH]
+usage: 1. switch URL[@PEGREV] [PATH]
        2. switch --relocate FROM TO [PATH...]
 
   1. Update the working copy to mirror a new URL within the repository.
      This behaviour is similar to 'svn update', and is the way to
      move a working copy to a branch or tag within the same repository.
+     If specified, PEGREV determines in which revision the target is first
+     looked up.
 
   2. Rewrite working copy URL metadata to reflect a syntactic change only.
      This is used when repository's root URL changes (such as a scheme

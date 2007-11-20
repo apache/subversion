@@ -521,11 +521,12 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn log foo.c\n"
      "    svn log http://www.example.com/repo/project/foo.c\n"
      "    svn log http://www.example.com/repo/project foo.c bar.c\n"),
-    {'r', 'q', 'v', 'g', svn_cl__targets_opt,
+    {'r', 'q', 'v', 'g', 'c', svn_cl__targets_opt,
      svn_cl__stop_on_copy_opt, svn_cl__incremental_opt,
      svn_cl__xml_opt, 'l', svn_cl__changelist_opt,
      svn_cl__with_all_revprops_opt, svn_cl__with_revprop_opt},
-    {{svn_cl__with_revprop_opt, N_("retrieve revision property ARG")}} },
+    {{svn_cl__with_revprop_opt, N_("retrieve revision property ARG")},
+     {'c', N_("the change made by ARG")}} },
 
   { "merge", svn_cl__merge, {0}, N_
     ("Apply the differences between two sources to a working copy path.\n"
@@ -826,12 +827,14 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "switch", svn_cl__switch, {"sw"}, N_
     ("Update the working copy to a different URL.\n"
-     "usage: 1. switch URL [PATH]\n"
+     "usage: 1. switch URL[@PEGREV] [PATH]\n"
      "       2. switch --relocate FROM TO [PATH...]\n"
      "\n"
      "  1. Update the working copy to mirror a new URL within the repository.\n"
      "     This behaviour is similar to 'svn update', and is the way to\n"
      "     move a working copy to a branch or tag within the same repository.\n"
+     "     If specified, PEGREV determines in which revision the target is first\n"
+     "     looked up.\n"
      "\n"
      "  2. Rewrite working copy URL metadata to reflect a syntactic change only.\n"
      "     This is used when repository's root URL changes (such as a scheme\n"
@@ -1007,7 +1010,6 @@ main(int argc, const char *argv[])
   svn_cl__cmd_baton_t command_baton;
   svn_auth_baton_t *ab;
   svn_config_t *cfg;
-  svn_boolean_t used_change_arg = FALSE;
   svn_boolean_t descend = TRUE;
   svn_boolean_t interactive_conflicts = FALSE;
 
@@ -1119,6 +1121,8 @@ main(int argc, const char *argv[])
         {
           char *end;
           svn_revnum_t changeno;
+          svn_opt_revision_range_t *range;
+
           if (opt_state.old_target)
             {
               err = svn_error_create
@@ -1130,7 +1134,8 @@ main(int argc, const char *argv[])
           if (end == opt_arg || *end != '\0')
             {
               err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                     _("Non-numeric change argument given to -c"));
+                                     _("Non-numeric change argument "
+                                       "given to -c"));
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
           if (changeno == 0)
@@ -1139,28 +1144,27 @@ main(int argc, const char *argv[])
                                      _("There is no change 0"));
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
+
           /* Figure out the range:
                 -c N  -> -r N-1:N
                 -c -N -> -r N:N-1 */
-          {
-            svn_opt_revision_range_t *range = apr_palloc(pool, sizeof(*range));
+          range = apr_palloc(pool, sizeof(*range));
           if (changeno > 0)
             {
-                range->start.value.number = changeno - 1;
-                range->end.value.number = changeno;
+              range->start.value.number = changeno - 1;
+              range->end.value.number = changeno;
             }
           else
             {
               changeno = -changeno;
-                range->start.value.number = changeno;
-                range->end.value.number = changeno - 1;
+              range->start.value.number = changeno;
+              range->end.value.number = changeno - 1;
             }
-          used_change_arg = TRUE;
-            range->start.kind = svn_opt_revision_number;
-            range->end.kind = svn_opt_revision_number;
-            APR_ARRAY_PUSH(opt_state.revision_ranges,
-                           svn_opt_revision_range_t *) = range;
-        }
+          opt_state.used_change_arg = TRUE;
+          range->start.kind = svn_opt_revision_number;
+          range->end.kind = svn_opt_revision_number;
+          APR_ARRAY_PUSH(opt_state.revision_ranges,
+                         svn_opt_revision_range_t *) = range;
         }
         break;
       case 'r':
@@ -1326,7 +1330,7 @@ main(int argc, const char *argv[])
         opt_state.editor_cmd = apr_pstrdup(pool, opt_arg);
         break;
       case svn_cl__old_cmd_opt:
-        if (used_change_arg)
+        if (opt_state.used_change_arg)
           {
             err = svn_error_create
               (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
