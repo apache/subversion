@@ -7145,7 +7145,7 @@ def update_loses_mergeinfo(sbox):
 
 # Tests part of issue# 2829, marked as XFail until that issue is fixed.
 def merge_loses_mergeinfo(sbox):
-  "merge does not merge mergeinfo"
+  "merge should merge mergeinfo"
 
   """
   When a working copy has no mergeinfo(due to local full revert of all merges),
