@@ -1615,7 +1615,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
       SVN_ERR(get_full_mergeinfo(&(child->pre_merge_mergeinfo), 
                                  &implicit_mergeinfo, child_entry,
                                  &(child->indirect_mergeinfo),
-                                 FALSE, NULL, child->path,
+                                 svn_mergeinfo_inherited, NULL, child->path,
                                  MAX(revision1, revision2),
                                  MIN(revision1, revision2),
                                  adm_access, merge_b->ctx, pool));
