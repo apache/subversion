@@ -237,9 +237,6 @@ typedef enum
   /* Depth undetermined or ignored. */
   svn_depth_unknown    = -2,
 
-  /* Exclude (i.e., don't descend into) directory D. */
-  svn_depth_exclude    = -1,
-
   /* Just the named directory D, no entries.  Updates will not pull in
      any files or subdirectories not already present. */
   svn_depth_empty      =  0,

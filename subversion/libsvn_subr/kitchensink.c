@@ -73,8 +73,6 @@ svn_depth_to_word(svn_depth_t depth)
 {
   switch (depth)
     {
-    case svn_depth_exclude:
-      return "exclude";
     case svn_depth_unknown:
       return "unknown";
     case svn_depth_empty:
@@ -94,8 +92,6 @@ svn_depth_to_word(svn_depth_t depth)
 svn_depth_t
 svn_depth_from_word(const char *word)
 {
-  if (strcmp(word, "exclude") == 0)
-    return svn_depth_exclude;
   if (strcmp(word, "unknown") == 0)
     return svn_depth_unknown;
   if (strcmp(word, "empty") == 0)
