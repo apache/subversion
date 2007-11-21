@@ -69,9 +69,9 @@
      baton's depth, but rather use it to choose the correct depth for
      this child.  The usual depth demotion rules apply, with the
      additional stipulation that as soon as we find a subtree is not
-     present at all, due to being omitted for depth reasons, we put
-     ambient_depth=exclude in its baton, which signals that all
-     descendant batons should get ambient_depth=exclude automatically.
+     present at all, due to being omitted for depth reasons, we set the
+     ambiently_excluded flag in its baton, which signals that
+     all descendent batons should be ignored.
      (In fact, we may just re-use the parent baton, since none of the
      other fields will be used anyway.)
 
@@ -99,6 +99,7 @@ struct file_baton
 
 struct dir_baton
 {
+  svn_boolean_t ambiently_excluded;
   svn_depth_t ambient_depth;
   struct edit_baton *edit_baton;
   const char *path;
@@ -117,10 +118,10 @@ make_dir_baton(struct dir_baton **d_p,
   if (pb && (! path))
     abort();
 
-  if (pb && pb->ambient_depth == svn_depth_exclude)
+  if (pb && pb->ambiently_excluded)
     {
       /* Just re-use the parent baton, since the only field that
-         matters is depth==svn_depth_exclude. */
+         matters is ambiently_excluded. */
       *d_p = pb;
       return SVN_NO_ERROR;
     }
@@ -140,13 +141,13 @@ make_dir_baton(struct dir_baton **d_p,
          depth==empty or depth==files.  So if the parent doesn't
          already have an entry for the new dir, then the parent
          doesn't want the new dir at all, thus we should initialize
-         it at svn_depth_exclude. */
+         it with ambiently_excluded=TRUE. */
       const svn_wc_entry_t *entry;
 
       SVN_ERR(svn_wc_entry(&entry, d->path, eb->adm_access, FALSE, pool));
       if (! entry)
         {
-          d->ambient_depth = svn_depth_exclude;
+          d->ambiently_excluded = TRUE;
           *d_p = d;
           return SVN_NO_ERROR;
         }
@@ -172,7 +173,7 @@ make_file_baton(struct file_baton **f_p,
   if (! path)
     abort();
 
-  if (pb->ambient_depth == svn_depth_exclude)
+  if (pb->ambiently_excluded)
     {
       f->ambiently_excluded = TRUE;
       *f_p = f;
@@ -231,7 +232,7 @@ open_root(void *edit_baton,
   SVN_ERR(make_dir_baton(&b, NULL, eb, NULL, pool));
   *root_baton = b;
 
-  if (b->ambient_depth == svn_depth_exclude)
+  if (b->ambiently_excluded)
     return SVN_NO_ERROR;
 
   if (! *eb->target)
@@ -259,7 +260,7 @@ delete_entry(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
 
-  if (pb->ambient_depth == svn_depth_exclude)
+  if (pb->ambiently_excluded)
     return SVN_NO_ERROR;
 
   if (pb->ambient_depth < svn_depth_immediates)
@@ -296,7 +297,7 @@ add_directory(const char *path,
   SVN_ERR(make_dir_baton(&b, path, eb, pb, pool));
   *child_baton = b;
 
-  if (b->ambient_depth == svn_depth_exclude)
+  if (b->ambiently_excluded)
     return SVN_NO_ERROR;
 
   /* It's not excluded, so what should we treat the ambient depth as
@@ -342,7 +343,7 @@ open_directory(const char *path,
   SVN_ERR(make_dir_baton(&b, path, eb, pb, pool));
   *child_baton = b;
 
-  if (b->ambient_depth == svn_depth_exclude)
+  if (b->ambiently_excluded)
     return SVN_NO_ERROR;
 
   SVN_ERR(eb->wrapped_editor->open_directory(path, pb->wrapped_baton,
@@ -451,7 +452,7 @@ absent_file(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
 
-  if (pb->ambient_depth == svn_depth_exclude)
+  if (pb->ambiently_excluded)
     return SVN_NO_ERROR;
 
   return eb->wrapped_editor->absent_file(path, pb->wrapped_baton, pool);
@@ -464,7 +465,7 @@ close_directory(void *dir_baton,
   struct dir_baton *db = dir_baton;
   struct edit_baton *eb = db->edit_baton;
 
-  if (db->ambient_depth == svn_depth_exclude)
+  if (db->ambiently_excluded)
     return SVN_NO_ERROR;
 
   return eb->wrapped_editor->close_directory(db->wrapped_baton, pool);
@@ -479,7 +480,7 @@ absent_directory(const char *path,
   struct edit_baton *eb = pb->edit_baton;
 
   /* Don't report absent items in filtered directories. */
-  if (pb->ambient_depth == svn_depth_exclude)
+  if (pb->ambiently_excluded)
     return SVN_NO_ERROR;
 
   return eb->wrapped_editor->absent_directory(path, pb->wrapped_baton, pool);
@@ -510,7 +511,7 @@ change_dir_prop(void *dir_baton,
   struct dir_baton *db = dir_baton;
   struct edit_baton *eb = db->edit_baton;
 
-  if (db->ambient_depth == svn_depth_exclude)
+  if (db->ambiently_excluded)
     return SVN_NO_ERROR;
 
   return eb->wrapped_editor->change_dir_prop(db->wrapped_baton,
