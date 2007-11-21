@@ -324,12 +324,12 @@ class SvnClientTest < Test::Unit::TestCase
     dir2_path = File.join(dir1_path, dir2)
 
     ctx = make_context(log)
-    assert_nil(ctx.commit(@wc_path))
+    assert_equal(Svn::Core::INVALID_REVNUM,ctx.commit(@wc_path).revision)
     ctx.mkdir(dir1_path)
     assert_equal(0, youngest_rev)
     assert_equal(1, ctx.commit(@wc_path).revision)
     ctx.mkdir(dir2_path)
-    assert_nil(ctx.commit(@wc_path, false))
+    assert_equal(Svn::Core::INVALID_REVNUM,ctx.commit(@wc_path, false).revision)
     assert_equal(2, ctx.ci(@wc_path).revision)
   end
 
