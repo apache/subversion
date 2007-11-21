@@ -2337,8 +2337,8 @@ get_most_inclusive_end_rev(apr_array_header_t *children_with_mergeinfo,
           svn_merge_range_t *range = APR_ARRAY_IDX(child->remaining_ranges, 0,
                                                    svn_merge_range_t *);
           if ((end_rev == SVN_INVALID_REVNUM)
-              || (is_rollback && (range->end < end_rev))
-              || ((! is_rollback) && (range->end > end_rev)))
+              || (is_rollback && (range->end > end_rev))
+              || ((! is_rollback) && (range->end < end_rev)))
             end_rev = range->end;
         }
     }
