@@ -233,6 +233,7 @@
 */
 %apply apr_array_header_t *RANGELIST {
   apr_array_header_t *rangeinput,
+  const apr_array_header_t *rangelist,
   apr_array_header_t *from,
   apr_array_header_t *to,
   apr_array_header_t *changes,
