@@ -44,6 +44,12 @@ extern "C" {
 svn_error_t *
 svn_fs__sqlite_step_done(sqlite3_stmt *stmt);
 
+/* Finalizes the given statement and raises an SVN error based on the
+   returned error code.  Call this when a call to sqlite3_step on the
+   statement returns an unexpected value. */
+svn_error_t *
+svn_fs__sqlite_stmt_error(sqlite3_stmt *stmt);
+
 /* Execute SQL on the sqlite database DB, and raise an SVN error if the
    result is not okay.  */
 svn_error_t *
