@@ -1219,11 +1219,6 @@ write_path_info(report_baton_t *b, const char *path, const char *lpath,
 {
   const char *lrep, *rrep, *drep, *ltrep, *rep;
 
-  if (depth == svn_depth_unknown)
-    return svn_error_createf(SVN_ERR_REPOS_BAD_ARGS, NULL,
-                             _("Unsupported report depth '%s'"),
-                             svn_depth_to_word(depth));
-
   /* Munge the path to be anchor-relative, so that we can use edit paths
      as report paths. */
   path = svn_path_join(b->s_operand, path, pool);
@@ -1239,8 +1234,12 @@ write_path_info(report_baton_t *b, const char *path, const char *lpath,
     drep = "+1:";
   else if (depth == svn_depth_immediates)
     drep = "+2:";
-  else           /* svn_depth_infinity */
+  else if (depth == svn_depth_infinity)
     drep = "-";
+  else
+    return svn_error_createf(SVN_ERR_REPOS_BAD_ARGS, NULL,
+                             _("Unsupported report depth '%s'"),
+                             svn_depth_to_word(depth));
 
   ltrep = lock_token ? apr_psprintf(pool, "+%" APR_SIZE_T_FMT ":%s",
                                     strlen(lock_token), lock_token) : "-";
