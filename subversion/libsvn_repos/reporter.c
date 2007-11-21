@@ -205,7 +205,7 @@ read_path_info(path_info_t **pi, apr_file_t *temp, apr_pool_t *pool)
   SVN_ERR(svn_io_file_getc(&c, temp, pool));
   if (c == '+')
     {
-      /* Could just read directly into &(*pi)->rev, but that would be
+      /* Could just read directly into &(*pi)->depth, but that would be
          bad form and perhaps also vulnerable to weird type promotion
          failures. */
       apr_uint64_t num;
