@@ -299,8 +299,8 @@ I.    INTRODUCTION
 
                http://www.sqlite.org/sqlite-3.5.2.tar.gz
 
-         SQLite must be built in thread-safe mode (with
-         -DSQLITE_THREADSAFE=1).  If building SQLite yourself, you
+         SQLite must be built in thread-safe mode (with 'configure
+         --enable-threadsafe').  If building SQLite yourself, you
          have the option of unpacking the archive into the top of the
          Subversion source tree and renaming the resulting directory
          within the Subversion source code from ./sqlite-3.5.2/ to
