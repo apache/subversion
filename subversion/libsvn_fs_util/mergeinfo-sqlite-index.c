@@ -21,6 +21,7 @@
 #include <ctype.h>
 #include <assert.h>
 
+#include <apr.h>
 #include <apr_general.h>
 #include <apr_pools.h>
 
@@ -89,12 +90,21 @@ index_path_mergeinfo(svn_revnum_t new_rev,
          to "none", if there previously was no mergeinfo).  Find all
          previous mergeinfo, and (further below) insert dummy records
          representing "no mergeinfo" for all its previous merge
-         sources of PATH. */
-      apr_hash_t *cache = apr_hash_make(pool);
+         sources of PATH.
+
+         Even though POOL is for temporary allocations, invocation of
+         get_mergeinfo_for_path() necessitates its own sub-pool. */
+      apr_pool_t *subpool = svn_pool_create(pool);
+      apr_hash_t *cache = apr_hash_make(subpool);
       remove_mergeinfo = TRUE;
       SVN_ERR(get_mergeinfo_for_path(db, path, new_rev, mergeinfo, cache,
-                                     svn_mergeinfo_inherited, pool));
+                                     svn_mergeinfo_inherited, subpool));
       mergeinfo = apr_hash_get(mergeinfo, path, APR_HASH_KEY_STRING);
+      if (mergeinfo)
+        mergeinfo = svn_mergeinfo_dup(mergeinfo, pool);
+
+      svn_pool_destroy(subpool);
+
       if (mergeinfo == NULL)
         /* There was previously no mergeinfo, inherited or explicit,
            for PATH. */
@@ -379,10 +389,16 @@ append_component_to_paths(apr_hash_t **output,
 }
 
 /* A helper for svn_fs_mergeinfo__get_mergeinfo() that retrieves
-   mergeinfo recursively (when INHERIT is svn_mergeinfo_inherited or 
-   svn_mergeinfo_nearest_ancestor) for a single path.  Pass NULL for RESULT 
-   if you only want CACHE to be updated.  Otherwise, both RESULT and CACHE
-   are updated with the appropriate mergeinfo for PATH. */
+   mergeinfo on PATH at REV from DB by taking care of elided mergeinfo
+   if INHERIT is svn_mergeinfo_inherited or svn_mergeinfo_nearest_ancestor.
+   Pass NULL for RESULT if you only want CACHE to be 
+   updated.  Otherwise, both RESULT and CACHE are updated with the appropriate
+   mergeinfo for PATH.
+
+   Perform all allocation in POOL.  Due to the nature of APR pools,
+   and the recursion in this function, invoke this function using a
+   sub-pool.  To preserve RESULT, use mergeinfo_hash_dup() before
+   clearing or destroying POOL. */
 static svn_error_t *
 get_mergeinfo_for_path(sqlite3 *db,
                        const char *path,
@@ -577,28 +593,53 @@ get_mergeinfo_for_children(sqlite3 *db,
   return SVN_NO_ERROR;
 }
 
-/* Get the mergeinfo for a set of paths, returned as a hash of mergeinfo
-   hashs keyed by each path.  Perform all allocations in POOL. */
+/* Return a deep copy of MERGEINFO_HASH (allocated in POOL), which is
+   a hash of paths -> mergeinfo hashes. */
+static apr_hash_t *
+mergeinfo_hash_dup(apr_hash_t *mergeinfo_hash, apr_pool_t *pool)
+{
+  apr_hash_t *new_hash = apr_hash_make(pool);
+  apr_hash_index_t *hi;
+  for (hi = apr_hash_first(NULL, mergeinfo_hash); hi; hi = apr_hash_next(hi))
+    {
+      const void *path;
+      apr_ssize_t klen;
+      void *mergeinfo;
+
+      apr_hash_this(hi, &path, &klen, &mergeinfo);
+      apr_hash_set(new_hash, path, klen,
+                   svn_mergeinfo_dup((apr_hash_t *) mergeinfo,
+                                     apr_hash_pool_get(new_hash)));
+    }
+  return new_hash;
+}
+
+/* Get the mergeinfo for a set of paths, returned in *MERGEINFO_HASH
+   as a hash of mergeinfo hashes keyed by each path.  Returned values
+   are allocated in POOL, while temporary values are allocated in a
+   sub-pool. */
 static svn_error_t *
 get_mergeinfo(sqlite3 *db,
-              apr_hash_t **mergeinfo,
+              apr_hash_t **mergeinfo_hash,
               svn_revnum_t rev,
               const apr_array_header_t *paths,
               svn_mergeinfo_inheritance_t inherit,
               apr_pool_t *pool)
 {
-  apr_hash_t *mergeinfo_cache = apr_hash_make(pool);
+  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_hash_t *result_hash = apr_hash_make(subpool);
+  apr_hash_t *cache_hash = apr_hash_make(subpool);
   int i;
 
-  *mergeinfo = apr_hash_make(pool);
   for (i = 0; i < paths->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      SVN_ERR(get_mergeinfo_for_path(db, path, rev, *mergeinfo,
-                                     mergeinfo_cache, inherit,
-                                     apr_hash_pool_get(*mergeinfo)));
+      SVN_ERR(get_mergeinfo_for_path(db, path, rev, result_hash, cache_hash,
+                                     inherit, apr_hash_pool_get(result_hash)));
     }
 
+  *mergeinfo_hash = mergeinfo_hash_dup(result_hash, pool);
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 

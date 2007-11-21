@@ -122,7 +122,7 @@ svn_cl__commit(apr_getopt_t *os,
         }
     }
   SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err));
-  if (commit_info && ! opt_state->quiet)
+  if (! err && ! opt_state->quiet)
     SVN_ERR(svn_cl__print_commit_info(commit_info, pool));
 
   return SVN_NO_ERROR;

@@ -3105,8 +3105,9 @@ svn_wc_crawl_revisions3(const char *path,
 
 /**
  * Similar to svn_wc_crawl_revisions3, but taking svn_ra_reporter2_t
- * instead of svn_ra_reporter3_t, and therefore only able to report
- * @c svn_depth_infinity for depths.
+ * instead of svn_ra_reporter3_t, and therefore only able to report @c
+ * svn_depth_infinity for depths; and taking @a recurse instead of @a
+ * depth; and with @a depth_compatibility_trick always false.
  *
  * @deprecated Provided for compatibility with the 1.4 API.
  */

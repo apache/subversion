@@ -6991,7 +6991,7 @@ def avoid_reflected_revs(sbox):
     'D/H/psi'   : Item(status='  ', wc_rev=6),
     })
   expected_disk = wc.State('', {
-    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A_COPY:3-5,8'}),
+    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A_COPY:3-8'}),
     'bfile2'    : Item(bfile2_content),
     'bfile1'    : Item(bfile1_content),
     'tfile2'    : Item(tfile2_content),
@@ -7143,7 +7143,7 @@ def update_loses_mergeinfo(sbox):
 
 # Tests part of issue# 2829, marked as XFail until that issue is fixed.
 def merge_loses_mergeinfo(sbox):
-  "merge does not merge mergeinfo"
+  "merge should merge mergeinfo"
 
   """
   When a working copy has no mergeinfo(due to local full revert of all merges),

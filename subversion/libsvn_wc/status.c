@@ -124,6 +124,10 @@ struct dir_baton
      even to file children. */
   svn_depth_t depth;
 
+  /* Is this directory filtered out due to depth?  (Note that if this
+     is TRUE, the depth field is undefined.) */
+  svn_boolean_t excluded;
+
   /* 'svn status' shouldn't print status lines for things that are
      added;  we're only interest in asking if objects that the user
      *already* has are up-to-date or not.  Thus if this flag is set,
@@ -1246,10 +1250,12 @@ make_dir_baton(void **dir_baton,
 
   if (pb)
     {
-      if (pb->depth == svn_depth_immediates)
+      if (pb->excluded)
+        d->excluded = TRUE;
+      else if (pb->depth == svn_depth_immediates)
         d->depth = svn_depth_empty;
       else if (pb->depth == svn_depth_files || pb->depth == svn_depth_empty)
-        d->depth = svn_depth_exclude;
+        d->excluded = TRUE;
       else if (pb->depth == svn_depth_unknown)
         /* This is only tentative, it can be overridden from d's entry
            later. */
@@ -1280,6 +1286,7 @@ make_dir_baton(void **dir_baton,
       && (status_in_parent->text_status != svn_wc_status_external)
       && (status_in_parent->text_status != svn_wc_status_ignored)
       && (status_in_parent->entry->kind == svn_node_dir)
+      && (! d->excluded)
       && (d->depth == svn_depth_unknown
           || d->depth == svn_depth_infinity
           || d->depth == svn_depth_files
@@ -1744,7 +1751,7 @@ close_directory(void *dir_baton,
 
   /* Handle this directory's statuses, and then note in the parent
      that this has been done. */
-  if (pb && db->depth != svn_depth_exclude)
+  if (pb && ! db->excluded)
     {
       svn_boolean_t was_deleted = FALSE;
 

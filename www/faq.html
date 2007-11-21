@@ -2728,6 +2728,20 @@ will cause the HTTP data to be shown.</p>
 trace&mdash;see the <tt>http-compression</tt> parameter in the <tt>servers</tt>
 configuration file.</p>
 
+<p>Another alternative is to set up a logging proxy between the
+ Subversion client and server.  A simple way to do this is to use
+ the <tt>socat</tt> program.  For example, to log communication with
+ an svnserve instance, run the following command:</p>
+
+<p><tt>socat -v  TCP4-LISTEN:9630,reuseaddr,fork
+    TCP4:localhost:svn</tt></p>
+
+<p>Then run your svn commands using an URL base
+  of <tt>svn://127.0.0.1:9630/</tt>; <tt>socat</tt> will forward the
+  traffic from port 9630 to the normal svnserve port (3690), and will
+  print all traffic in both directions to standard error, prefixing it
+  with &lt; and &gt; signs to show the direction of the traffic.</p>
+
 </div>
 
 

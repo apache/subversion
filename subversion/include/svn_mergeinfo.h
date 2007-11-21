@@ -245,15 +245,15 @@ svn_rangelist_intersect(apr_array_header_t **output,
 svn_error_t *
 svn_rangelist_reverse(apr_array_header_t *rangelist, apr_pool_t *pool);
 
-/** Take an array of svn_merge_range_t *'s in @a input, and convert it
- * back to a text format rangelist in @a output.  If @a input contains
- * no elements, return the empty string.
+/** Take an array of svn_merge_range_t *'s in @a rangelist, and convert it
+ * back to a text format rangelist in @a output.  If @a rangelist contains
+ * no elements, sets @a output with empty string.
  *
  * @since New in 1.5.
  */
 svn_error_t *
 svn_rangelist_to_stringbuf(svn_stringbuf_t **output,
-                           apr_array_header_t *rangeinput,
+                           const apr_array_header_t *rangelist,
                            apr_pool_t *pool);
 
 /** Take an array of svn_merge_range_t *'s in @a rangelist, and return the
