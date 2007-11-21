@@ -48,6 +48,16 @@ sqlite_tracer(void *data, const char *sql)
 #endif
 
 svn_error_t *
+svn_fs__sqlite_stmt_error(sqlite3_stmt *stmt)
+{
+  sqlite3 *db = sqlite3_db_handle(stmt);
+  int result = sqlite3_finalize(stmt);
+  return svn_error_create(SVN_FS__SQLITE_ERROR_CODE(result),
+                          NULL,
+                          sqlite3_errmsg(db));
+}
+
+svn_error_t *
 svn_fs__sqlite_exec(sqlite3 *db, const char *sql)
 {
   char *err_msg;
@@ -68,13 +78,8 @@ svn_fs__sqlite_step_done(sqlite3_stmt *stmt)
 {
   int sqlite_result = sqlite3_step(stmt);
   if (sqlite_result != SQLITE_DONE)
-    {
-      sqlite3 *db = sqlite3_db_handle(stmt);
-      sqlite3_finalize(stmt);
-      return svn_error_create(SVN_FS__SQLITE_ERROR_CODE(sqlite_result),
-                              NULL,
-                              sqlite3_errmsg(db));
-    }
+    return svn_fs__sqlite_stmt_error(stmt);
+
   return SVN_NO_ERROR;
 }
 
@@ -159,8 +164,8 @@ check_format(sqlite3 *db, apr_pool_t *pool)
   sqlite3_stmt *stmt;
   int sqlite_result;
 
-  SVN_FS__SQLITE_ERR(sqlite3_prepare_v2(db, "PRAGMA user_version;", -1, &stmt, 
-                                        NULL), db);
+  SVN_FS__SQLITE_ERR(sqlite3_prepare(db, "PRAGMA user_version;", -1, &stmt, 
+                                     NULL), db);
   sqlite_result = sqlite3_step(stmt);
 
   if (sqlite_result == SQLITE_ROW)
@@ -181,8 +186,7 @@ check_format(sqlite3 *db, apr_pool_t *pool)
                                    "recognized"), schema_format);
     }
   else
-    return svn_error_create(SVN_FS__SQLITE_ERROR_CODE(sqlite_result), NULL,
-                            sqlite3_errmsg(db));
+    return svn_fs__sqlite_stmt_error(stmt);
 }
 
 svn_error_t *
