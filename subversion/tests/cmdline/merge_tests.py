@@ -8389,13 +8389,14 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
                                      A_COPY_mu_path)
 
   expected_output = wc.State(short_A_COPY, {
-    ''   : Item(status=' G'),
-    'mu' : Item(status='G '),
+    ''   : Item(status=' G'), # merged removal of prop1 property
+    'mu' : Item(status='G '), # merged reversion of text changes
     })
 
-  expected_status.tweak('mu', status='  ')
   expected_status.tweak('', status=' M') # elision removes svn:mergeinfo
+  expected_status.tweak('mu', status='  ')
   expected_disk.tweak('', props={})
+  expected_disk.remove('')
   expected_disk.tweak('mu', contents=thirty_line_dummy_text)
   os.chdir(svntest.main.work_dir)
   svntest.actions.run_and_verify_merge(short_A_COPY, '6', '3',
@@ -8406,12 +8407,13 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
                                        expected_skip,
                                        None, None, None, None, None, 1)
   os.chdir(saved_cwd)
-  expected_disk.tweak('', props={SVN_PROP_MERGE_INFO : '/A:4-6',
-                                 'prop1' : 'val1'})
+
+  expected_disk.add({'' : Item(props={SVN_PROP_MERGE_INFO : '/A:4-6',
+                                      'prop1' : 'val1'})})
   expected_disk.tweak('mu', contents=tweaked_27th_line)
   expected_output = wc.State(short_A_COPY, {
-    ''   : Item(status=' U'),
-    'mu' : Item(status='U '),
+    ''   : Item(status=' U'), # new mergeinfo and prop1 property
+    'mu' : Item(status='U '), # text changes
     })
   expected_status.tweak('', status=' M')
   expected_status.tweak('mu', status='M ')
@@ -8441,9 +8443,9 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
     ''   : Item(status=' G'),
     'mu' : Item(status='G '),
     })
-  expected_status.tweak('', status='  ')
+  expected_status.tweak('', status=' M') # elision removes svn:mergeinfo
   expected_status.tweak('mu', status='M ')
-  expected_disk.tweak('', props={})
+  expected_disk.remove('')
   expected_disk.tweak('mu', contents=tweaked_17th_line_2)
   os.chdir(svntest.main.work_dir)
   svntest.actions.run_and_verify_merge(short_A_COPY, '6', '3',
