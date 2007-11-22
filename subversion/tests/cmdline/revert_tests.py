@@ -33,14 +33,12 @@ Item = svntest.wc.StateItem
 ######################################################################
 # Helpers
 
-def revert_replacement_with_props(sbox, wc_copy,
-                                  contact_repos_for_merge_info = 0):
+def revert_replacement_with_props(sbox, wc_copy):
   """Helper implementing the core of
   revert_{repos,wc}_to_wc_replace_with_props().
 
   Uses a working copy (when wc_copy == True) or a URL (when wc_copy ==
-  False) source to copy from.  CONTACT_REPOS_FOR_MERGE_INFO is only
-  relevant when WC_COPY is true."""
+  False) source to copy from."""
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -102,12 +100,8 @@ def revert_replacement_with_props(sbox, wc_copy,
   else:
     pi_src = sbox.repo_url + '/A/D/G/pi'
 
-  if contact_repos_for_merge_info:
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'cp', '-g', pi_src, rho_path)
-  else:
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'cp', pi_src, rho_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', pi_src, rho_path)
 
   # Verify both content and props have been copied
   props = { 'phony-prop' : '*',
@@ -469,7 +463,6 @@ def revert_wc_to_wc_replace_with_props(sbox):
   "revert svn cp PATH PATH replace file with props"
 
   revert_replacement_with_props(sbox, 1)
-  revert_replacement_with_props(sbox, 1, 1)
 
 def revert_repos_to_wc_replace_with_props(sbox):
   "revert svn cp URL PATH replace file with props"

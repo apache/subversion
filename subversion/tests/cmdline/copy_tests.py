@@ -78,12 +78,11 @@ or a url (when false) copy source is used."""
 
 # Helper for wc_copy_replace_with_props and
 # repos_to_wc_copy_replace_with_props
-def copy_replace_with_props(sbox, wc_copy, contact_repos_for_merge_info = 0):
+def copy_replace_with_props(sbox, wc_copy):
   """Tests for 'R'eplace functionanity for files with props.
 
-Depending on the value of wc_copy either a working copy (when true) or
-a url (when false) copy source is used.  CONTACT_REPOS_FOR_MERGE_INFO
-is only relevant when WC_COPY is true."""
+  Depending on the value of wc_copy either a working copy (when true) or
+  a url (when false) copy source is used."""
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -144,12 +143,8 @@ is only relevant when WC_COPY is true."""
   else:
     pi_src = sbox.repo_url + '/A/D/G/pi'
 
-  if contact_repos_for_merge_info:
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'cp', '-g', pi_src, rho_path)
-  else:
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'cp', pi_src, rho_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', pi_src, rho_path)
 
   # Verify both content and props have been copied
   expected_disk.tweak('A/D/G/rho',
@@ -1778,8 +1773,8 @@ def wc_copy_replacement(sbox):
 def wc_copy_replace_with_props(sbox):
   "svn cp PATH PATH replace file with props"
 
-  copy_replace_with_props(sbox, 1, 0)
-  copy_replace_with_props(sbox, 1, 1)
+  copy_replace_with_props(sbox, 1)
+
 
 def repos_to_wc_copy_replacement(sbox):
   "svn cp URL PATH replace file"
@@ -3253,7 +3248,7 @@ def copy_peg_rev_local_files(sbox):
 
   # Play a shell game with some WC files, then commit the changes back
   # to the repository (making r2).
-  svntest.actions.run_and_verify_svn(None, None, [], 'mv', '-g',
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
                                      psi_path, new_iota_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
                                      iota_path, psi_path)
@@ -3315,7 +3310,7 @@ def copy_peg_rev_local_dirs(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'mv', '-g',
+                                     'mv',
                                      E_path, I_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci',
@@ -3323,7 +3318,7 @@ def copy_peg_rev_local_dirs(sbox):
                                      wc_dir)
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'mv', '-g',
+                                     'mv',
                                      G_path, E_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci',
@@ -3331,7 +3326,7 @@ def copy_peg_rev_local_dirs(sbox):
                                      wc_dir)
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'mv', '-g',
+                                     'mv',
                                      I_path, G_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci',

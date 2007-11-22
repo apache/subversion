@@ -4104,7 +4104,7 @@ def create_deep_trees(wc_dir):
 
   # Deepen the directory structure we're working with by moving E to
   # underneath F and committing, creating revision 2.
-  svntest.main.run_svn(None, 'mv', '-g', A_B_E_path, A_B_F_path)
+  svntest.main.run_svn(None, 'mv', A_B_E_path, A_B_F_path)
 
   # A/B/F/E now has empty mergeinfo
   
@@ -4123,7 +4123,7 @@ def create_deep_trees(wc_dir):
                                         expected_status, None,
                                         None, None, None, None, wc_dir)
 
-  svntest.main.run_svn(None, 'cp', '-g', A_B_F_E_path, A_B_F_E1_path)
+  svntest.main.run_svn(None, 'cp', A_B_F_E_path, A_B_F_E1_path)
 
   # A/B/F/E1 now has empty mergeinfo
 
@@ -4145,7 +4145,7 @@ def create_deep_trees(wc_dir):
 
   # Copy B and commit, creating revision 4.
   copy_of_B_path = os.path.join(A_path, 'copy-of-B')
-  svntest.main.run_svn(None, "cp", "-g", A_B_path, copy_of_B_path)
+  svntest.main.run_svn(None, "cp", A_B_path, copy_of_B_path)
 
   # A/copy-of-B, A/copy-of-B/F/E, and A/copy-of-B/F/E1 now have empty mergeinfo
 
@@ -4575,7 +4575,7 @@ def obey_reporter_api_semantics_while_doing_subtree_merges(sbox):
   A_D_path = os.path.join(wc_dir, 'A', 'D')
   copy_of_A_D_path = os.path.join(wc_dir, 'A', 'copy-of-D')
 
-  svntest.main.run_svn(None, "cp", "-g", A_D_path, copy_of_A_D_path)
+  svntest.main.run_svn(None, "cp", A_D_path, copy_of_A_D_path)
 
   expected_output = svntest.wc.State(wc_dir, {
     'A/copy-of-D' : Item(verb='Adding'),
