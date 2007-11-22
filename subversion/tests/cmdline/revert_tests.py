@@ -110,11 +110,8 @@ def revert_replacement_with_props(sbox, wc_copy,
                                        'cp', pi_src, rho_path)
 
   # Verify both content and props have been copied
-  props = { 'phony-prop' : '*' }
-  if not wc_copy or contact_repos_for_merge_info:
-    props['svn:mergeinfo'] = '/A/D/G/pi:1-2'
-  else:
-    props['svn:mergeinfo'] = ''
+  props = { 'phony-prop' : '*',
+            'svn:mergeinfo' : '' }
 
   expected_disk.tweak('A/D/G/rho',
                       contents="This is the file 'pi'.\n",
@@ -671,16 +668,19 @@ def revert_replaced_with_history_file_1(sbox):
                                         None, None, None, None, None,
                                         wc_dir)
 
+  # update the working copy
+  svntest.main.run_svn(None, 'up', wc_dir)
+  
   # now revert back to the state in r1
   expected_output = svntest.wc.State(wc_dir, {
     'A/mu': Item(status='R '),
     'iota': Item(status='A ')
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/mu', status='R ', copied='+', wc_rev='-')
   expected_status.tweak('iota', status='A ', copied='+', wc_rev='-')
   expected_skip = wc.State(wc_dir, { })
-  expected_disk   = svntest.main.greek_state.copy()
+  expected_disk = svntest.main.greek_state.copy()
   svntest.actions.run_and_verify_merge(wc_dir, '2', '1',
                                        sbox.repo_url,
                                        expected_output,
@@ -689,7 +689,7 @@ def revert_replaced_with_history_file_1(sbox):
                                        expected_skip)
 
   # and commit in r3
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/mu', status='  ', wc_rev=3)
   expected_status.tweak('iota', status='  ', wc_rev=3)
   expected_output = svntest.wc.State(wc_dir, {
@@ -782,6 +782,9 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
                                         None, None, None, None, None,
                                         wc_dir)
 
+  # update the working copy
+  svntest.main.run_svn(None, 'up', wc_dir)
+
   # now rollback to r1, thereby reinstating the old 'G'
   ### Eventually, expected output for 'A/D/G' should be 'R '
   ### (replaced) instead of 'A ' (added).  See issue #571 for details.
@@ -793,7 +796,7 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
     'A/D/G/pi': Item(status='A '),
     'A/D/G/tau': Item(status='A '),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak('A/D/G', status='R ', copied='+', wc_rev='-')
   expected_status.tweak('A/D/G/rho', status='A ', copied='+', wc_rev='-')
   expected_status.tweak('A/D/G/pi',  status='A ', copied='+', wc_rev='-')
