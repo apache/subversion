@@ -856,6 +856,8 @@ def wc_to_repos(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], '-m', 'fumble file',
                                      'copy', beta_path, H2_url)
 
+  # update the working copy.  post-update mereinfo elision will remove
+  # A/D/H2/beta's mergeinfo, leaving a local mod.
   expected_output = svntest.wc.State(wc_dir, {
     'A/B/E/beta2'  : Item(status='A '),
     'A/D/H2'       : Item(status='A '),
@@ -883,7 +885,7 @@ def wc_to_repos(sbox):
     'A/D/H2/chi'   : Item(status='  ', wc_rev=4),
     'A/D/H2/omega' : Item(status='  ', wc_rev=4),
     'A/D/H2/psi'   : Item(status='  ', wc_rev=4),
-    'A/D/H2/beta'  : Item(status='  ', wc_rev=4),
+    'A/D/H2/beta'  : Item(status=' M', wc_rev=4),
     })
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,

@@ -4105,6 +4105,9 @@ def create_deep_trees(wc_dir):
   # Deepen the directory structure we're working with by moving E to
   # underneath F and committing, creating revision 2.
   svntest.main.run_svn(None, 'mv', '-g', A_B_E_path, A_B_F_path)
+
+  # A/B/F/E now has empty mergeinfo
+  
   expected_output = wc.State(wc_dir, {
     'A/B/E'   : Item(verb='Deleting'),
     'A/B/F/E' : Item(verb='Adding')
@@ -4121,6 +4124,9 @@ def create_deep_trees(wc_dir):
                                         None, None, None, None, wc_dir)
 
   svntest.main.run_svn(None, 'cp', '-g', A_B_F_E_path, A_B_F_E1_path)
+
+  # A/B/F/E1 now has empty mergeinfo
+
   expected_output = wc.State(wc_dir, {
     'A/B/F/E1' : Item(verb='Adding')
     })
@@ -4141,6 +4147,8 @@ def create_deep_trees(wc_dir):
   copy_of_B_path = os.path.join(A_path, 'copy-of-B')
   svntest.main.run_svn(None, "cp", "-g", A_B_path, copy_of_B_path)
 
+  # A/copy-of-B, A/copy-of-B/F/E, and A/copy-of-B/F/E1 now have empty mergeinfo
+
   expected_output = svntest.wc.State(wc_dir, {
     'A/copy-of-B' : Item(verb='Adding'),
     })
@@ -4159,9 +4167,56 @@ def create_deep_trees(wc_dir):
                                         expected_status, None,
                                         None, None, None, None, wc_dir)
 
+  # pre-update, empty mergeinfo can be found on:
+  #
+  #    /A/B/F/E
+  #    /A/B/F/E1
+  #    /A/copy-of-B
+  #    /A/copy-of-B/F/E
+  #    /A/copy-of-B/F/E1
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
+  expected_disk.add({
+    'A/B/F/E'        : Item(props={SVN_PROP_MERGE_INFO : ''}),
+    'A/B/F/E/alpha'  : Item(contents="This is the file 'alpha'.\n"),
+    'A/B/F/E/beta'   : Item(contents="This is the file 'beta'.\n"),
+    'A/B/F/E1'       : Item(props={SVN_PROP_MERGE_INFO : ''}),
+    'A/B/F/E1/alpha' : Item(contents="This is the file 'alpha'.\n"),
+    'A/B/F/E1/beta'  : Item(contents="This is the file 'beta'.\n"),
+    'A/copy-of-B'            : Item(props={SVN_PROP_MERGE_INFO : ''}),
+    'A/copy-of-B/F'          : Item(props={}),
+    'A/copy-of-B/F/E'        : Item(props={SVN_PROP_MERGE_INFO : ''}),
+    'A/copy-of-B/F/E/alpha'  : Item(contents="This is the file 'alpha'.\n"),
+    'A/copy-of-B/F/E/beta'   : Item(contents="This is the file 'beta'.\n"),
+    'A/copy-of-B/F/E1'       : Item(props={SVN_PROP_MERGE_INFO : ''}),
+    'A/copy-of-B/F/E1/alpha' : Item(contents="This is the file 'alpha'.\n"),
+    'A/copy-of-B/F/E1/beta'  : Item(contents="This is the file 'beta'.\n"),
+    'A/copy-of-B/lambda'     : Item(contents="This is the file 'lambda'.\n"),
+    })
+  svntest.actions.verify_disk(wc_dir, expected_disk,
+                              None, None, None, None, 1)
+
   # Bring the entire WC up to date with rev 4.
   svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
+
+  # post-update mergeinfo elision leaves empty mergeinfo on just:
+  #
+  #    /A/B/F/E
+  #    /A/B/F/E1
+  #    /A/copy-of-B
+  #
+  # and property removals on:
+  #
+  #    /A/copy-of-B/F/E
+  #    /A/copy-of-B/F/E1
+
+  expected_disk.tweak('A/copy-of-B/F/E', 'A/copy-of-B/F/E1', props={})
+  svntest.actions.verify_disk(wc_dir, expected_disk,
+                              None, None, None, None, 1)
+  
   expected_status.tweak(wc_rev=4)
+  expected_disk.tweak('A/copy-of-B/F/E', 'A/copy-of-B/F/E1', status=' M')
   return expected_status
 
 def avoid_repeated_merge_using_inherited_merge_info(sbox):
@@ -4177,17 +4232,23 @@ def avoid_repeated_merge_using_inherited_merge_info(sbox):
   copy_of_B_path = os.path.join(A_path, 'copy-of-B')
 
   # Create a deeper directory structure.
+  # A/copy-of-B, A/B/F/E, and A/B/F/E1 have empty mergeinfo.
+  # A/copy-of-B/F/E, and A/copy-of-B/F/E1 have mods removing
+  # post-update-elided mergeinfo.
   expected_status = create_deep_trees(wc_dir)
 
-  # Edit alpha and commit it, creating revision 5.
+  # Edit alpha and commit it, creating revision 5.  (The commit
+  # includes the pending mergeinfo removals.)
   alpha_path = os.path.join(A_B_F_path, 'E', 'alpha')
   new_content_for_alpha = 'new content to alpha\n'
   svntest.main.file_write(alpha_path, new_content_for_alpha)
-
   expected_output = svntest.wc.State(wc_dir, {
-    'A/B/F/E/alpha' : Item(verb='Sending'),
+    'A/copy-of-B/F/E'  : Item(verb='Sending'),
+    'A/copy-of-B/F/E1' : Item(verb='Sending'),
+    'A/B/F/E/alpha'    : Item(verb='Sending'),
     })
-  expected_status.tweak('A/B/F/E/alpha', wc_rev=5)
+  expected_status.tweak('A/B/F/E/alpha', 'A/copy-of-B/F/E',
+                        'A/copy-of-B/F/E1', wc_rev=5)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None,
                                         None, None, None, None, wc_dir)
@@ -4196,27 +4257,30 @@ def avoid_repeated_merge_using_inherited_merge_info(sbox):
   # this file, to understand why we shorten and chdir() below.
   short_copy_of_B_path = shorten_path_kludge(copy_of_B_path)
 
+  # Bring the entire WC up to date with rev 5.
+  svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
+
   # Merge changes from rev 5 of B (to alpha) into copy_of_B.
   expected_output = wc.State(short_copy_of_B_path, {
     'F/E/alpha'   : Item(status='U '),
     })
   expected_status = wc.State(short_copy_of_B_path, {
-    ''           : Item(status=' M', wc_rev=4),
-    'F/E'        : Item(status='  ', wc_rev=4),
-    'F/E/alpha'  : Item(status='M ', wc_rev=4),
-    'F/E/beta'   : Item(status='  ', wc_rev=4),
-    'F/E1'       : Item(status='  ', wc_rev=4),
-    'F/E1/alpha' : Item(status='  ', wc_rev=4),
-    'F/E1/beta'  : Item(status='  ', wc_rev=4),
-    'lambda'     : Item(status='  ', wc_rev=4),
-    'F'          : Item(status='  ', wc_rev=4),
+    ''           : Item(status=' M', wc_rev=5),
+    'F/E'        : Item(status='  ', wc_rev=5),
+    'F/E/alpha'  : Item(status='M ', wc_rev=5),
+    'F/E/beta'   : Item(status='  ', wc_rev=5),
+    'F/E1'       : Item(status='  ', wc_rev=5),
+    'F/E1/alpha' : Item(status='  ', wc_rev=5),
+    'F/E1/beta'  : Item(status='  ', wc_rev=5),
+    'lambda'     : Item(status='  ', wc_rev=5),
+    'F'          : Item(status='  ', wc_rev=5),
     })
   expected_disk = wc.State('', {
     ''           : Item(props={SVN_PROP_MERGE_INFO : '/A/B:5'}),
-    'F/E'        : Item(props={SVN_PROP_MERGE_INFO : ''}),
+    'F/E'        : Item(props={}),
     'F/E/alpha'  : Item(new_content_for_alpha),
     'F/E/beta'   : Item("This is the file 'beta'.\n"),
-    'F/E1'       : Item(props={SVN_PROP_MERGE_INFO : ''}),
+    'F/E1'       : Item(props={}),
     'F/E1/alpha' : Item("This is the file 'alpha'.\n"),
     'F/E1/beta'  : Item("This is the file 'beta'.\n"),
     'F'          : Item(),
@@ -4270,7 +4334,6 @@ def avoid_repeated_merge_using_inherited_merge_info(sbox):
     'beta'  : Item(status='  ', wc_rev=6),
     })
   expected_disk = wc.State('', {
-    ''        : Item(props={SVN_PROP_MERGE_INFO : ''}),
     'alpha'   : Item(new_content_for_alpha),
     'beta'    : Item("This is the file 'beta'.\n"),
     })
@@ -4306,21 +4369,26 @@ def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
   copy_of_B_path = os.path.join(A_path, 'copy-of-B')
 
   # Create a deeper directory structure.
+  # A/copy-of-B, A/B/F/E, and A/B/F/E1 have empty mergeinfo.
+  # A/copy-of-B/F/E, and A/copy-of-B/F/E1 have mods removing
+  # post-update-elided mergeinfo.
   expected_status = create_deep_trees(wc_dir)
 
-  # Edit alpha and commit it, creating revision 5.
-  alpha_path = os.path.join(A_B_F_E_path, 'alpha')
+  # Edit alpha and commit it, creating revision 5.  (The commit
+  # includes the pending mergeinfo removals.)
+  alpha_path = os.path.join(A_B_F_path, 'E', 'alpha')
   new_content_for_alpha1 = 'new content to alpha\n'
   svntest.main.file_write(alpha_path, new_content_for_alpha1)
-
   expected_output = svntest.wc.State(wc_dir, {
-    'A/B/F/E/alpha' : Item(verb='Sending'),
+    'A/copy-of-B/F/E'  : Item(verb='Sending'),
+    'A/copy-of-B/F/E1' : Item(verb='Sending'),
+    'A/B/F/E/alpha'    : Item(verb='Sending'),
     })
-  expected_status.tweak('A/B/F/E/alpha', wc_rev=5)
+  expected_status.tweak('A/B/F/E/alpha', 'A/copy-of-B/F/E',
+                        'A/copy-of-B/F/E1', wc_rev=5)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None,
                                         None, None, None, None, wc_dir)
-
 
   for path_and_mergeinfo in (('E', '/A/B/F/E:5'),
                              ('E1', '/A/B/F/E:5')):
@@ -4334,7 +4402,7 @@ def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
       'alpha'   : Item(status='U '),
       })
     expected_status = wc.State(short_path_name, {
-      ''      : Item(status=' M', wc_rev=4),
+      ''      : Item(status=' M', wc_rev=5),
       'alpha' : Item(status='M ', wc_rev=4),
       'beta'  : Item(status='  ', wc_rev=4),
       })
@@ -5433,15 +5501,15 @@ def merge_to_target_with_copied_children(sbox):
                                      sbox.repo_url + '/A_COPY/D/G/rho_copy',
                                      '-m', 'copy')
 
-  # Update WC.
+  # Update WC.  A_COPY/D/G/rho_copy's mergeinfo gets elided away
+  # post-update, leaving a local mod.
   expected_output = wc.State(wc_dir,
                              {'A_COPY/D/G/rho_copy' : Item(status='A ')})
   expected_disk.add({
-    'A_COPY/D/G/rho_copy' : Item("This is the file 'rho'.\n",
-                                 props={SVN_PROP_MERGE_INFO : ''})
+    'A_COPY/D/G/rho_copy' : Item("This is the file 'rho'.\n", props={})
     })
   expected_status.tweak(wc_rev=7)
-  expected_status.add({'A_COPY/D/G/rho_copy' : Item(status='  ', wc_rev=7)})
+  expected_status.add({'A_COPY/D/G/rho_copy' : Item(status=' M', wc_rev=7)})
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
@@ -5460,15 +5528,14 @@ def merge_to_target_with_copied_children(sbox):
     ''         : Item(status=' M', wc_rev=7),
     'pi'       : Item(status='  ', wc_rev=7),
     'rho'      : Item(status='M ', wc_rev=7),
-    'rho_copy' : Item(status='  ', wc_rev=7),
+    'rho_copy' : Item(status=' M', wc_rev=7),
     'tau'      : Item(status='  ', wc_rev=7),
     })
   expected_disk = wc.State('', {
     ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:4'}),
     'pi'       : Item("This is the file 'pi'.\n"),
     'rho'      : Item("New content"),
-    'rho_copy' : Item("This is the file 'rho'.\n",
-                      props={SVN_PROP_MERGE_INFO : ''}),
+    'rho_copy' : Item("This is the file 'rho'.\n", props={}),
     'tau'      : Item("This is the file 'tau'.\n"),
     })
   expected_skip = wc.State(short_G_COPY_path, { })

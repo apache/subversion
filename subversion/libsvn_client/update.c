@@ -110,9 +110,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   svn_ra_session_t *ra_session;
   svn_wc_adm_access_t *dir_access;
   svn_wc_adm_access_t *path_adm_access;
-#ifdef POST_UPDATE_MERGEINFO_ELISION
   apr_hash_t *children_with_mergeinfo;
-#endif
   const char *preserved_exts_str;
   apr_array_header_t *preserved_exts;
   struct ff_baton *ffb;
@@ -281,12 +279,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                                pool));
     }
 
-/* ### CMPILATO TODO: I'm turning off this post-update elision logic
-   ### because it causes update to actually create local mods.
-   ### Besides feeling just plain wrong, it's killing my ability to
-   ### update our test suite's expected behavior. */
-#ifdef POST_UPDATE_MERGEINFO_ELISION
-    /* Check if any mergeinfo on PATH or any its children elides as a
+  /* Check if any mergeinfo on PATH or any its children elides as a
      result of the update. */
   children_with_mergeinfo = apr_hash_make(pool);
   err = svn_client__get_prop_from_wc(children_with_mergeinfo,
@@ -313,7 +306,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
       SVN_ERR(svn_client__elide_mergeinfo_for_tree(children_with_mergeinfo,
                                                    adm_access, ctx, pool));
     }
-#endif
 
   SVN_ERR(svn_wc_adm_close(levels_to_lock ? path_adm_access : adm_access));
 
