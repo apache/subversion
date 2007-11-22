@@ -103,15 +103,15 @@ static const char *schema_create_sql[] = {
   APR_EOL_STR
   "CREATE INDEX mi_revision_idx ON mergeinfo (revision);"
   APR_EOL_STR
-  "CREATE TABLE mergeinfo_changed (revision INTEGER NOT NULL, path TEXT "
-  "NOT NULL);"
+  "CREATE TABLE mergeinfo_changed (revision INTEGER NOT NULL, mergedfrom TEXT "
+  "NOT NULL, mergedto TEXT NOT NULL, mergedrevstart INTEGER NOT NULL, "
+  "mergedrevend INTEGER NOT NULL, inheritable INTEGER NOT NULL);"
   APR_EOL_STR
-  "CREATE UNIQUE INDEX mi_c_revpath_idx ON mergeinfo_changed (revision, path);"
+  "CREATE UNIQUE INDEX "
+  "mi_c_merge_source_target_revstart_end_commit_rev_idx "
+  "ON mergeinfo_changed (mergedfrom, mergedto, mergedrevstart, "
+  "mergedrevend, inheritable, revision);"
   APR_EOL_STR
-  "CREATE INDEX mi_c_path_idx ON mergeinfo_changed (path);"
-  APR_EOL_STR
-  "CREATE INDEX mi_c_revision_idx ON mergeinfo_changed (revision);"
-  APR_EOL_STR,
 
   /* USER_VERSION 2 */
   "CREATE TABLE node_origins (node_id TEXT NOT NULL, node_rev_id TEXT NOT "

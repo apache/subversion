@@ -832,6 +832,29 @@ svn_fs_get_mergeinfo(apr_hash_t **minfohash,
 }
 
 svn_error_t *
+svn_fs_get_commit_revs_for_merge_ranges(
+                                    apr_array_header_t **commit_rev_range_list,
+                                    svn_fs_root_t *root,
+                                    const char* merge_target,
+                                    const char* merge_source,
+                                    svn_revnum_t min_commit_rev,
+                                    svn_revnum_t max_commit_rev,
+                                    const apr_array_header_t *merge_rangelist,
+                                    svn_mergeinfo_inheritance_t inherit,
+                                    apr_pool_t *pool)
+{
+  return root->vtable->get_commit_revs_for_merge_ranges(commit_rev_range_list,
+                                                        root,
+                                                        merge_target,
+                                                        merge_source,
+                                                        min_commit_rev,
+                                                        max_commit_rev,
+                                                        merge_rangelist,
+                                                        inherit,
+                                                        pool);
+}
+
+svn_error_t *
 svn_fs_get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
                               svn_fs_root_t *root,
                               const apr_array_header_t *paths,

@@ -863,6 +863,35 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
                                   svn_mergeinfo_inheritance_t inherit,
                                   apr_pool_t *pool);
 
+/** Retrieve @a commit_rev_rangelist for a @a merge_rangelist from a given
+ * @a merge_source to a @a merge_target
+ * where each commit_rev in @a commit_rev_rangelist > @a min_commit_rev and
+ * <= @a max_commit_rev.
+ *
+ * @a commit_rev_rangelist will never be @c NULL, but may be empty.
+ *
+ * @a session indicates the ra_session of the repository root.
+ *
+ * @a inherit indicates whether explicit, explicit or inherited, or
+ * only inherited mergeinfo for @a paths is retrieved.
+ *
+ * Do any necessary temporary allocation in @a pool.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_ra_get_commit_revs_for_merge_ranges(
+                                     svn_ra_session_t *session,
+                                     apr_array_header_t **commit_rev_rangelist,
+                                     const char* merge_target,
+                                     const char* merge_source,
+                                     svn_revnum_t min_commit_rev,
+                                     svn_revnum_t max_commit_rev,
+                                     const apr_array_header_t *merge_rangelist,
+                                     svn_mergeinfo_inheritance_t inherit,
+                                     apr_pool_t *pool);
+
+
 /**
  * Ask the RA layer to update a working copy.
  *

@@ -1513,6 +1513,62 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *get_commit_revs_for_merge_ranges(svn_ra_svn_conn_t *conn,
+                                                    apr_pool_t *pool,
+                                                    apr_array_header_t *params,
+                                                    void *baton)
+{
+  server_baton_t *b = baton;
+  apr_array_header_t *commit_rev_range_list;
+  const char *inherit_word;
+  svn_revnum_t max_commit_rev = SVN_INVALID_REVNUM;
+  svn_revnum_t min_commit_rev = SVN_INVALID_REVNUM;
+  const char* merge_target = NULL;
+  const char* merge_source = NULL;
+  const char *merge_ranges_string = NULL;
+  apr_array_header_t *merge_rangelist;
+  svn_mergeinfo_inheritance_t inherit;
+  apr_hash_t *mergeinfo = apr_hash_make(pool);
+  svn_stringbuf_t *commit_rev_mergeinfo;
+
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccrrcw", &merge_target,
+                                 &merge_source, &min_commit_rev,
+                                 &max_commit_rev, &merge_ranges_string,
+                                 &inherit_word));
+  inherit = svn_inheritance_from_word(inherit_word);
+
+  /* Canonicalize the paths. */
+  merge_target = svn_path_canonicalize(merge_target, pool);
+  merge_source = svn_path_canonicalize(merge_source, pool);
+  {
+    /* We lack svn_rangelist_parse, so creating a dummy mergeinfo 
+       and parse with the help of svn_mergeinfo_parse. */
+    apr_hash_t *dummy_mergeinfo;
+    char *dummy_mergeinfo_str = apr_pstrcat(pool, merge_source, ":",
+                                            merge_ranges_string, NULL);
+    SVN_ERR(svn_mergeinfo_parse(&dummy_mergeinfo, dummy_mergeinfo_str, pool));
+    merge_rangelist = apr_hash_get(dummy_mergeinfo, merge_source,
+                                   APR_HASH_KEY_STRING);
+  }
+
+  SVN_ERR(trivial_auth_request(conn, pool, b));
+  SVN_CMD_ERR(svn_repos_get_commit_revs_for_merge_ranges(
+                                                &commit_rev_range_list,
+                                                b->repos, merge_target,
+                                                merge_source,
+                                                min_commit_rev,
+                                                max_commit_rev,
+                                                merge_rangelist,
+                                                inherit,
+                                                authz_check_access_cb_func(b),
+                                                b, pool));
+  apr_hash_set(mergeinfo, merge_source, APR_HASH_KEY_STRING,
+               commit_rev_range_list);
+  SVN_ERR(svn_mergeinfo_to_stringbuf(&commit_rev_mergeinfo, mergeinfo, pool));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c)", "success",
+                                 commit_rev_mergeinfo->data));
+  return SVN_NO_ERROR;
+}
 /* Send a log entry to the client. */
 static svn_error_t *log_receiver(void *baton,
                                  svn_log_entry_t *log_entry,
@@ -2401,6 +2457,7 @@ static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "get-locks",       get_locks },
   { "replay",          replay },
   { "replay-range",    replay_range },
+  { "commit-revs-for-merge-ranges",    get_commit_revs_for_merge_ranges},
   { NULL }
 };
 

@@ -4634,7 +4634,8 @@ static root_vtable_t root_vtable = {
   base_merge,
   base_change_mergeinfo,
   svn_fs_mergeinfo__get_mergeinfo,
-  svn_fs_mergeinfo__get_mergeinfo_for_tree
+  svn_fs_mergeinfo__get_mergeinfo_for_tree,
+  svn_fs_mergeinfo__get_commit_revs_for_merge_ranges
 };
 
 

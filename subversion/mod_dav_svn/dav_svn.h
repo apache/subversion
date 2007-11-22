@@ -553,6 +553,10 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
                               const apr_xml_doc *doc,
                               ap_filter_t *output);
 dav_error *
+dav_svn__get_commit_revs_for_merge_ranges_report(const dav_resource *resource,
+                                                 const apr_xml_doc *doc,
+                                                 ap_filter_t *output);
+dav_error *
 dav_svn__get_locks_report(const dav_resource *resource,
                           const apr_xml_doc *doc,
                           ap_filter_t *output);

@@ -666,6 +666,24 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
                                         revision, inherit, pool);
 }
 
+svn_error_t *svn_ra_get_commit_revs_for_merge_ranges(
+                                     svn_ra_session_t *session,
+                                     apr_array_header_t **commit_rev_rangelist,
+                                     const char* merge_target,
+                                     const char* merge_source,
+                                     svn_revnum_t min_commit_rev,
+                                     svn_revnum_t max_commit_rev,
+                                     const apr_array_header_t *merge_rangelist,
+                                     svn_mergeinfo_inheritance_t inherit,
+                                     apr_pool_t *pool)
+{
+  return session->vtable->get_commit_revs_for_merge_ranges(session,
+                                            commit_rev_rangelist, merge_target,
+                                            merge_source, min_commit_rev,
+                                            max_commit_rev, merge_rangelist,
+                                            inherit, pool);
+}
+
 svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
                                const svn_ra_reporter3_t **reporter,
                                void **report_baton,

@@ -1227,7 +1227,7 @@ filter_reflected_revisions(apr_array_header_t **requested_rangelist,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *pool)
 {
-  apr_array_header_t *src_rangelist_for_tgt = NULL;
+  apr_array_header_t *reflected_rangelist_for_tgt = NULL;
   apr_hash_t *added_mergeinfo, *deleted_mergeinfo,
     *start_mergeinfo, *end_mergeinfo;
   svn_merge_range_t *range = apr_pcalloc(pool, sizeof(*range));
@@ -1260,11 +1260,20 @@ filter_reflected_revisions(apr_array_header_t **requested_rangelist,
   if (added_mergeinfo)
     {
       const char *mergeinfo_path;
+      apr_array_header_t *src_rangelist_for_tgt = NULL;
       SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path, target_url,
                                                 source_root_url, TRUE,
                                                 ra_session, NULL, pool));
       src_rangelist_for_tgt = apr_hash_get(added_mergeinfo, mergeinfo_path,
                                            APR_HASH_KEY_STRING);
+      if (src_rangelist_for_tgt && src_rangelist_for_tgt->nelts)
+        SVN_ERR(svn_ra_get_commit_revs_for_merge_ranges(ra_session,
+                                                  &reflected_rangelist_for_tgt,
+                                                  max_rel_path, mergeinfo_path,
+                                                  min_rev, max_rev,
+                                                  src_rangelist_for_tgt,
+                                                  svn_mergeinfo_inherited,
+                                                  pool));
     }
 
   /* Create a single-item list of ranges with our one requested range
@@ -1274,10 +1283,10 @@ filter_reflected_revisions(apr_array_header_t **requested_rangelist,
   range->end = revision2;
   range->inheritable = inheritable;
   APR_ARRAY_PUSH(*requested_rangelist, svn_merge_range_t *) = range;
-  if (src_rangelist_for_tgt)
-    SVN_ERR(svn_rangelist_remove(requested_rangelist, src_rangelist_for_tgt,
-                                 *requested_rangelist,
-                                 FALSE, pool));
+  if (reflected_rangelist_for_tgt)
+    SVN_ERR(svn_rangelist_remove(requested_rangelist,
+                                 reflected_rangelist_for_tgt,
+                                 *requested_rangelist, FALSE, pool));
   return SVN_NO_ERROR;
 }
 

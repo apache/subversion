@@ -52,6 +52,8 @@ struct mergeinfo_baton
 static const svn_ra_neon__xml_elm_t mergeinfo_report_elements[] =
   {
     { SVN_XML_NAMESPACE, SVN_DAV__MERGEINFO_REPORT, ELEM_mergeinfo_report, 0 },
+    { SVN_XML_NAMESPACE, SVN_DAV__COMMIT_REVS_FOR_MERGE_RANGES_REPORT,
+      ELEM_mergeinfo_report, 0 },
     { SVN_XML_NAMESPACE, "mergeinfo-item", ELEM_mergeinfo_item, 0 },
     { SVN_XML_NAMESPACE, "mergeinfo-path", ELEM_mergeinfo_path,
       SVN_RA_NEON__XML_CDATA },
@@ -245,6 +247,124 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
 
   if (mb.err == SVN_NO_ERROR)
     *mergeinfo = mb.result;
+
+  return mb.err;
+}
+
+/* Request a commit-revs-for-merge-ranges-report from the URL attached to
+   SESSION, and fill in the commit_rev_rangelist array with the results.*/
+svn_error_t *
+svn_ra_neon__get_commit_revs_for_merge_ranges(
+                                     svn_ra_session_t *session,
+                                     apr_array_header_t **commit_rev_rangelist,
+                                     const char* merge_target,
+                                     const char* merge_source,
+                                     svn_revnum_t min_commit_rev,
+                                     svn_revnum_t max_commit_rev,
+                                     const apr_array_header_t *merge_rangelist,
+                                     svn_mergeinfo_inheritance_t inherit,
+                                     apr_pool_t *pool)
+{
+  svn_error_t *err;
+  int status_code;
+  svn_ra_neon__session_t *ras = session->priv;
+  svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
+  struct mergeinfo_baton mb;
+  svn_string_t bc_url, bc_relative;
+  svn_stringbuf_t *merge_rangelist_str;
+  const char *final_bc_url;
+
+  static const char minfo_report_head[] =
+    "<S:" SVN_DAV__COMMIT_REVS_FOR_MERGE_RANGES_REPORT
+     " xmlns:S=\"" SVN_XML_NAMESPACE "\">"
+    DEBUG_CR;
+
+  static const char minfo_report_tail[] =
+    "</S:" SVN_DAV__COMMIT_REVS_FOR_MERGE_RANGES_REPORT ">" DEBUG_CR;
+
+  /* Construct the request body. */
+  svn_stringbuf_appendcstr(request_body, minfo_report_head);
+  svn_stringbuf_appendcstr(request_body, "<S:merge-target>");
+  svn_stringbuf_appendcstr(request_body,
+                           apr_xml_quote_string(pool, merge_target, 0));
+  svn_stringbuf_appendcstr(request_body, "</S:merge-target>");
+  svn_stringbuf_appendcstr(request_body, "<S:merge-source>");
+  svn_stringbuf_appendcstr(request_body,
+                           apr_xml_quote_string(pool, merge_source, 0));
+  svn_stringbuf_appendcstr(request_body, "</S:merge-source>");
+  svn_stringbuf_appendcstr(request_body,
+                           apr_psprintf(pool,
+                                        "<S:min-commit-revision>%ld"
+                                        "</S:min-commit-revision>",
+                                        min_commit_rev));
+  svn_stringbuf_appendcstr(request_body,
+                           apr_psprintf(pool,
+                                        "<S:max-commit-revision>%ld"
+                                        "</S:max-commit-revision>",
+                                        max_commit_rev));
+  SVN_ERR(svn_rangelist_to_stringbuf(&merge_rangelist_str, merge_rangelist,
+                                     pool));
+  svn_stringbuf_appendcstr(request_body, "<S:merge-ranges>");
+  svn_stringbuf_appendcstr(request_body, merge_rangelist_str->data);
+  svn_stringbuf_appendcstr(request_body, "</S:merge-ranges>");
+  svn_stringbuf_appendcstr(request_body,
+                           apr_psprintf(pool,
+                                        "<S:inherit>%s"
+                                        "</S:inherit>",
+                                        svn_inheritance_to_word(inherit)));
+
+  svn_stringbuf_appendcstr(request_body, minfo_report_tail);
+
+  mb.pool = pool;
+  mb.curr_path = NULL;
+  mb.curr_info = svn_stringbuf_create("", pool);
+  mb.result = apr_hash_make(pool);
+  mb.err = SVN_NO_ERROR;
+
+  /* ras's URL may not exist in HEAD, and thus it's not safe to send
+     it as the main argument to the REPORT request; it might cause
+     dav_get_resource() to choke on the server.  So instead, we pass a
+     baseline-collection URL, which we get from END. */
+  SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
+                                         ras, ras->url->data, max_commit_rev,
+                                         pool));
+  final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
+                                            pool);
+
+  err = svn_ra_neon__parsed_request(ras,
+                                    "REPORT",
+                                    final_bc_url,
+                                    request_body->data,
+                                    NULL, NULL,
+                                    start_element,
+                                    cdata_handler,
+                                    end_element,
+                                    &mb,
+                                    NULL,
+                                    &status_code,
+                                    FALSE,
+                                    pool);
+  /* If the server responds with HTTP_NOT_IMPLEMENTED, assume its
+     mod_dav_svn is too old to understand the "mergeinfo-report" REPORT.
+
+     ### It would be less expensive if we knew the server's
+     ### capabilities *before* sending our REPORT. */
+  if (status_code == 501)
+    {
+      *commit_rev_rangelist = apr_array_make(pool, 0,
+                                             sizeof(svn_merge_range_t *));
+      svn_error_clear(err);
+    }
+  else if (err)
+    return err;
+  else if (mb.err == SVN_NO_ERROR)
+    {
+      apr_hash_t *target_mergeinfo = apr_hash_get(mb.result, merge_target,
+                                                  APR_HASH_KEY_STRING);
+      if (target_mergeinfo)
+        *commit_rev_rangelist = apr_hash_get(target_mergeinfo, merge_source,
+                                             APR_HASH_KEY_STRING);
+    }
 
   return mb.err;
 }
