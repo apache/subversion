@@ -385,17 +385,27 @@ append_component_to_paths(apr_hash_t **output,
   return SVN_NO_ERROR;
 }
 
-/* A helper for svn_fs_mergeinfo__get_mergeinfo() that retrieves
-   mergeinfo on PATH at REV from DB by taking care of elided mergeinfo
-   if INHERIT is svn_mergeinfo_inherited or svn_mergeinfo_nearest_ancestor.
-   Pass NULL for RESULT if you only want CACHE to be 
-   updated.  Otherwise, both RESULT and CACHE are updated with the appropriate
-   mergeinfo for PATH.
 
-   Perform all allocation in POOL.  Due to the nature of APR pools,
+/* Helper for svn_fs_mergeinfo__get_mergeinfo().
+
+   Update CACHE (and RESULT iff RESULT is non-null) with mergeinfo for
+   PATH at REV, retrieved from DB.
+
+   If INHERIT is svn_mergeinfo_explicit, then retrieve only explicit
+   mergeinfo on PATH.  Else if it is svn_mergeinfo_nearest_ancestor,
+   then retrieve the mergeinfo for PATH's parent, recursively.  Else
+   if it is svn_mergeinfo_inherited, then:
+
+      - If PATH had any explicit merges committed on or before REV,
+        retrieve the explicit mergeinfo for PATH;
+
+      - Else, retrieve mergeinfo for PATH's parent, recursively.
+
+   Perform all allocations in POOL.  Due to the nature of APR pools,
    and the recursion in this function, invoke this function using a
    sub-pool.  To preserve RESULT, use mergeinfo_hash_dup() before
-   clearing or destroying POOL. */
+   clearing or destroying POOL.
+*/
 static svn_error_t *
 get_mergeinfo_for_path(sqlite3 *db,
                        const char *path,
@@ -417,8 +427,8 @@ get_mergeinfo_for_path(sqlite3 *db,
     }
   else
     {
-      /* Lookup the mergeinfo for PATH, starting with the cache, the
-         moving on to the SQLite index.. */
+      /* Look up the explicit mergeinfo for PATH, starting with the
+         cache, then moving on to the SQLite index. */
       path_mergeinfo = apr_hash_get(cache, path, APR_HASH_KEY_STRING);
       if (path_mergeinfo)
         {
