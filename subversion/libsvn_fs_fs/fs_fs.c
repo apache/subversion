@@ -2135,7 +2135,8 @@ svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
   hid = DIR_CACHE_ENTRIES_MASK(svn_fs_fs__id_rev(noderev->id));
 
   /* If we have this directory cached, return it. */
-  if (ffd->dir_cache_id[hid] && svn_fs_fs__id_eq(ffd->dir_cache_id[hid],
+  if (! svn_fs_fs__id_txn_id(noderev->id) &&
+      ffd->dir_cache_id[hid] && svn_fs_fs__id_eq(ffd->dir_cache_id[hid],
                                                  noderev->id))
     {
       *entries_p = ffd->dir_cache[hid];

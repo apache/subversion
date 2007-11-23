@@ -142,19 +142,3 @@ Approved changes:
      an irrelevant helper function)
     Votes:
       +1: glasser, dlr, hwright
-
-  * r27256
-    Stop using FSFS's directory cache for mutable (transaction) nodes,
-    because there's no check that the node hasn't been changed by
-    another FS object.
-    Justification:
-      * User-reported problem: if a pre-commit hook tries to modify a
-        part of the repository under a different top-level directory
-        from any changes in the txn, they won't commit.
-      * I suspect that this is the cause of an FSFS corruption
-        observed during performance testing by Dan Christian.
-      * Fixes a serious user-reported corruption problem with
-        commits over mod_dav_svn:
-         http://svn.haxx.se/dev/archive-2007-11/0964.shtml
-    Votes:
-      +1: glasser, hwright, dionisos
