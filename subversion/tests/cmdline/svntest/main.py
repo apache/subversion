@@ -130,6 +130,8 @@ svnadmin_binary = os.path.abspath('../../svnadmin/svnadmin' + _exe)
 svnlook_binary = os.path.abspath('../../svnlook/svnlook' + _exe)
 svnsync_binary = os.path.abspath('../../svnsync/svnsync' + _exe)
 svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
+svndumpfilter_binary = os.path.abspath('../../svndumpfilter/svndumpfilter' + \
+                                       _exe)
 
 # Global variable indicating if we want verbose output, that is,
 # details of what commands each test does as it does them.  This is
