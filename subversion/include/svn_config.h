@@ -200,6 +200,8 @@ void svn_config_get(svn_config_t *cfg, const char **valuep,
  * @a value.
  *
  * This function invalidates all value expansions in @a cfg.
+ *
+ * To remove an option, pass NULL for the @c value.
  */
 void svn_config_set(svn_config_t *cfg,
                     const char *section, const char *option,
