@@ -178,18 +178,10 @@ remove_revert_file(svn_stringbuf_t **logtags,
                    apr_pool_t * pool)
 {
   const char * revert_file;
-  const svn_wc_entry_t *entry;
   svn_node_kind_t kind;
 
-  SVN_ERR(svn_wc_entry(&entry, base_name, adm_access, FALSE, pool));
-
-  /*### Maybe assert (entry); calling remove_revert_file
-    for an unversioned file is bogus */
-  if (! entry)
-    return SVN_NO_ERROR;
-
   if (is_prop)
-    SVN_ERR(svn_wc__prop_revert_path(&revert_file, base_name, entry->kind,
+    SVN_ERR(svn_wc__prop_revert_path(&revert_file, base_name, svn_node_file,
                                      FALSE, pool));
   else
     revert_file = svn_wc__text_revert_path(base_name, FALSE, pool);

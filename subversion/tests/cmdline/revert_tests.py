@@ -631,6 +631,77 @@ def revert_propdel__file(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], "revert",
                                      iota_path)
 
+def revert_replaced_with_history_file(sbox):
+  "revert a file that was replaced by a copied file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(wc_dir, 'iota')
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  # Remember the original text of 'mu'
+  text_r1, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                    'cat', mu_path)
+  # delete mu and replace it with a copy of iota
+  svntest.main.run_svn(None, 'rm', mu_path)
+  svntest.main.run_svn(None, 'mv', iota_path, mu_path)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='  ', wc_rev=2)
+  expected_status.remove('iota')
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota': Item(verb='Deleting'),
+    'A/mu': Item(verb='Replacing'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  # now revert back to the state in r1
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu': Item(status='A '),
+    'iota': Item(status='A ')
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='R ', copied='+', wc_rev='-')
+  expected_status.tweak('iota', status='A ', copied='+', wc_rev='-')
+  expected_skip = wc.State(wc_dir, { })
+  expected_disk   = svntest.main.greek_state.copy()
+  svntest.actions.run_and_verify_merge(wc_dir, '2', '1',
+                                       sbox.repo_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip)
+
+  # and commit in r3
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='  ', wc_rev=3)
+  expected_status.tweak('iota', status='  ', wc_rev=3)
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota': Item(verb='Adding'),
+    'A/mu': Item(verb='Replacing'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  # Verify the content of 'mu'
+  svntest.actions.run_and_verify_svn(None, text_r1, [], 'cat', mu_path)
+
+  # situation: no local modifications, mu has its original content again.
+
+  # revert 'mu' locally, shouldn't change a thing.
+  svntest.actions.run_and_verify_svn(None, [], [], "revert",
+                                     mu_path)
+
+  # Verify the content of 'mu'
+  svntest.actions.run_and_verify_svn(None, text_r1, [], 'cat', mu_path)
+
 
 #----------------------------------------------------------------------
 # Test for issue #2804.
@@ -761,6 +832,7 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
     if not line in expected_output:
       raise svntest.Failure("Expected output '%s'" % expected_output)
 
+
 ########################################################################
 # Run the tests
 
@@ -783,6 +855,7 @@ test_list = [ None,
               revert_propdel__file,
               status_of_missing_dir_after_revert,
               status_of_missing_dir_after_revert_replaced_with_history_dir,
+              revert_replaced_with_history_file,
              ]
 
 if __name__ == '__main__':
