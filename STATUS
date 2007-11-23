@@ -129,11 +129,3 @@ Approved changes:
     Branch: TBD
     Votes:
       +1: dionisos, dlr, hwright
-
-  * r24926, r24939 
-    Fix issue 2698: Merging replaced file does not update text-base version
-    Justification:
-      Small fix, non intrusive.
-    Votes: 
-      +1: lgo, glasser, dionisos
-      +0: giovannibajo (can't review on the patch, but interested in the fix)
