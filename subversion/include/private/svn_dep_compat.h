@@ -20,8 +20,8 @@
  * @since New in 1.5.0.
  */
 
-#ifndef SVN_COMPAT_H
-#define SVN_COMPAT_H
+#ifndef SVN_DEP_COMPAT_H
+#define SVN_DEP_COMPAT_H
 
 #include <apr_version.h>
 
@@ -73,4 +73,4 @@ extern "C" {
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_COMPAT_H */
+#endif /* SVN_DEP_COMPAT_H */
