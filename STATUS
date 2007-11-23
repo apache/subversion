@@ -130,15 +130,3 @@ Approved changes:
     Votes:
       +1: dionisos, dlr, hwright
 
-  * r21406-21407, r21540
-    Fix issue #2608: Can set directory props on the root of an FSFS
-    filesystem from an out-of-date repository.
-    Justification:
-      Minor data loss bug.  Has been in trunk for a year (so probably
-      safe).  Now reported by a user
-      (http://svn.haxx.se/dev/archive-2007-09/0441.shtml).  Has unit
-      and end-to-end tests.
-    Branch: 1.4.x-issue-2608 (resolving a trivial conflict and removing
-     an irrelevant helper function)
-    Votes:
-      +1: glasser, dlr, hwright

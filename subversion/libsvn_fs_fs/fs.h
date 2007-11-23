@@ -236,6 +236,9 @@ typedef struct
   /* path at which this node first came into existence.  */
   const char *created_path;
 
+  /* is this the unmodified root of a transaction? */
+  svn_boolean_t is_fresh_txn_root;
+
 } node_revision_t;
 
 

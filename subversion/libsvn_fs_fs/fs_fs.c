@@ -83,6 +83,7 @@
 #define HEADER_PRED        "pred"
 #define HEADER_COPYFROM    "copyfrom"
 #define HEADER_COPYROOT    "copyroot"
+#define HEADER_FRESHTXNRT  "is-fresh-txn-root"
 
 /* Kinds that a change can be. */
 #define ACTION_MODIFY      "modify"
@@ -1134,6 +1135,10 @@ svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
       noderev->copyfrom_path = apr_pstrdup(pool, last_str);
     }
 
+  /* Get whether this is a fresh txn root. */
+  value = apr_hash_get(headers, HEADER_FRESHTXNRT, APR_HASH_KEY_STRING);
+  noderev->is_fresh_txn_root = (value != NULL);
+
   *noderev_p = noderev;
   
   return SVN_NO_ERROR;
@@ -1213,6 +1218,9 @@ write_noderev_txn(apr_file_t *file,
                               noderev->copyroot_rev,
                               noderev->copyroot_path));
 
+  if (noderev->is_fresh_txn_root)
+    SVN_ERR(svn_stream_printf(outfile, pool, HEADER_FRESHTXNRT ": y\n"));
+
   SVN_ERR(svn_stream_printf(outfile, pool, "\n"));
 
   return SVN_NO_ERROR;
@@ -1222,10 +1230,13 @@ svn_error_t *
 svn_fs_fs__put_node_revision(svn_fs_t *fs,
                              const svn_fs_id_t *id,
                              node_revision_t *noderev,
+                             svn_boolean_t fresh_txn_root,
                              apr_pool_t *pool)
 {
   apr_file_t *noderev_file;
   const char *txn_id = svn_fs_fs__id_txn_id(id);
+
+  noderev->is_fresh_txn_root = fresh_txn_root;
 
   if (! txn_id)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -2769,7 +2780,8 @@ svn_fs_fs__paths_changed(apr_hash_t **changed_paths_p,
 }
 
 /* Copy a revision node-rev SRC into the current transaction TXN_ID in
-   the filesystem FS.  Allocations are from POOL.  */
+   the filesystem FS.  This is only used to create the root of a transaction.
+   Allocations are from POOL.  */
 static svn_error_t *
 create_new_txn_noderev_from_rev(svn_fs_t *fs,
                                 const char *txn_id,
@@ -2796,7 +2808,7 @@ create_new_txn_noderev_from_rev(svn_fs_t *fs,
   copy_id = svn_fs_fs__id_copy_id(noderev->id);
   noderev->id = svn_fs_fs__id_txn_create(node_id, copy_id, txn_id, pool);
 
-  SVN_ERR(svn_fs_fs__put_node_revision(fs, noderev->id, noderev, pool));
+  SVN_ERR(svn_fs_fs__put_node_revision(fs, noderev->id, noderev, TRUE, pool));
 
   return SVN_NO_ERROR;
 }
@@ -3082,7 +3094,7 @@ svn_fs_fs__create_node(const svn_fs_id_t **id_p,
 
   noderev->id = id;
 
-  SVN_ERR(svn_fs_fs__put_node_revision(fs, noderev->id, noderev, pool));
+  SVN_ERR(svn_fs_fs__put_node_revision(fs, noderev->id, noderev, FALSE, pool));
 
   *id_p = id;
 
@@ -3201,7 +3213,7 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
       rep->txn_id = txn_id;
       parent_noderev->data_rep = rep;
       SVN_ERR(svn_fs_fs__put_node_revision(fs, parent_noderev->id,
-                                           parent_noderev, pool));
+                                           parent_noderev, FALSE, pool));
     }
   else
     {
@@ -3565,7 +3577,7 @@ rep_write_contents_close(void *baton)
   b->noderev->data_rep = rep;
 
   /* Write out the new node-rev information. */
-  SVN_ERR(svn_fs_fs__put_node_revision(b->fs, b->noderev->id, b->noderev,
+  SVN_ERR(svn_fs_fs__put_node_revision(b->fs, b->noderev->id, b->noderev, FALSE,
                                        b->pool));
 
   SVN_ERR(svn_io_file_close(b->file, b->pool));
@@ -3639,7 +3651,7 @@ svn_fs_fs__create_successor(const svn_fs_id_t **new_id_p,
       new_noderev->copyroot_rev = svn_fs_fs__id_rev(new_noderev->id);
     }
 
-  SVN_ERR(svn_fs_fs__put_node_revision(fs, new_noderev->id, new_noderev,
+  SVN_ERR(svn_fs_fs__put_node_revision(fs, new_noderev->id, new_noderev, FALSE,
                                        pool));
 
   *new_id_p = id;
@@ -3670,7 +3682,7 @@ svn_fs_fs__set_proplist(svn_fs_t *fs,
     {
       noderev->prop_rep = apr_pcalloc(pool, sizeof(*noderev->prop_rep));
       noderev->prop_rep->txn_id = svn_fs_fs__id_txn_id(noderev->id);
-      SVN_ERR(svn_fs_fs__put_node_revision(fs, noderev->id, noderev, pool));
+      SVN_ERR(svn_fs_fs__put_node_revision(fs, noderev->id, noderev, FALSE, pool));
     }
   
   return SVN_NO_ERROR;
@@ -3909,7 +3921,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   /* Write out our new node-revision. */
   SVN_ERR(write_noderev_txn(file, noderev, pool));
 
-  SVN_ERR(svn_fs_fs__put_node_revision(fs, id, noderev, pool));
+  SVN_ERR(svn_fs_fs__put_node_revision(fs, id, noderev, FALSE, pool));
 
   /* Return our ID that references the revision file. */
   *new_id_p = noderev->id;

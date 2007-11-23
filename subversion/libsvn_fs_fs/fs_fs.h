@@ -40,10 +40,12 @@ svn_error_t *svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
                                           apr_pool_t *pool);
 
 /* Store NODEREV as the node-revision for the node whose id is ID in
-   FS.  Do any necessary temporary allocation in POOL. */
+   FS, after setting its is_fresh_txn_root to FRESH_TXN_ROOT.  Do any
+   necessary temporary allocation in POOL. */
 svn_error_t *svn_fs_fs__put_node_revision(svn_fs_t *fs,
                                           const svn_fs_id_t *id,
                                           node_revision_t *noderev,
+                                          svn_boolean_t fresh_txn_root,
                                           apr_pool_t *pool);
 
 /* Set *YOUNGEST to the youngest revision in filesystem FS.  Do any
