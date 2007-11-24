@@ -299,12 +299,13 @@ I.    INTRODUCTION
 
                http://www.sqlite.org/sqlite-3.5.2.tar.gz
 
-         You can build and install sqlite however you wish.  However,
-         you also have the option of unpacking the archive into the
-         top of the Subversion source tree and renaming the resulting
-         directory within the Subversion source code) from
-         ./sqlite-3.5.2/ to ./sqlite/.  Subversion will then build
-         and install it for you.
+         SQLite must be built in thread-safe mode (with 'configure
+         --enable-threadsafe').  If building SQLite yourself, you
+         have the option of unpacking the archive into the top of the
+         Subversion source tree and renaming the resulting directory
+         within the Subversion source code from ./sqlite-3.5.2/ to
+         ./sqlite/.  Subversion will then build and install it for
+         you.
 
 
       4.  autoconf 2.58 or newer (Unix only)

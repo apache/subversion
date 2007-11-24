@@ -160,6 +160,9 @@ struct svn_ra_serf__session_t {
      well-informed internal code may just compare against those
      constants' addresses, therefore). */
   apr_hash_t *capabilities;
+
+  /* Are we using a proxy? */
+  int using_proxy;
 };
 
 /*

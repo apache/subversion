@@ -39,6 +39,7 @@
 #include "svn_time.h"
 
 #include "private/svn_dav_protocol.h"
+#include "private/svn_dep_compat.h"
 #include "svn_private_config.h"
 
 #include "ra_serf.h"
@@ -267,6 +268,10 @@ load_config(svn_ra_serf__session_t *session,
 {
   svn_config_t *config;
   const char *server_group;
+#if SERF_VERSION_AT_LEAST(0, 1, 3)
+  const char *proxy_host = NULL, *port_str = NULL;
+  unsigned int proxy_port;
+#endif
 
   config = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_SERVERS,
                         APR_HASH_KEY_STRING);
@@ -277,6 +282,14 @@ load_config(svn_ra_serf__session_t *session,
 
   svn_auth_set_parameter(session->wc_callbacks->auth_baton,
                          SVN_AUTH_PARAM_CONFIG, config);
+
+#if SERF_VERSION_AT_LEAST(0, 1, 3)
+  /* Load the global proxy server settings, if set. */
+  svn_config_get(config, &proxy_host, SVN_CONFIG_SECTION_GLOBAL,
+                 SVN_CONFIG_OPTION_HTTP_PROXY_HOST, NULL);
+  svn_config_get(config, &port_str, SVN_CONFIG_SECTION_GLOBAL,
+                 SVN_CONFIG_OPTION_HTTP_PROXY_PORT, NULL);
+#endif
 
   server_group = svn_config_find_group(config,
                                        session->repos_url.hostname,
@@ -290,7 +303,53 @@ load_config(svn_ra_serf__session_t *session,
                                   session->using_compression));
       svn_auth_set_parameter(session->wc_callbacks->auth_baton,
                              SVN_AUTH_PARAM_SERVER_GROUP, server_group);
+
+#if SERF_VERSION_AT_LEAST(0, 1, 3)
+      /* Load the group proxy server settings, overriding global settings. */
+      svn_config_get(config, &proxy_host, server_group,
+                     SVN_CONFIG_OPTION_HTTP_PROXY_HOST, NULL);
+      svn_config_get(config, &port_str, server_group,
+                     SVN_CONFIG_OPTION_HTTP_PROXY_PORT, NULL);
+#endif
     }
+
+#if SERF_VERSION_AT_LEAST(0, 1, 3)
+  /* Convert the proxy port value, if any. */
+  if (port_str)
+    {
+      char *endstr;
+      const long int port = strtol(port_str, &endstr, 10);
+
+      if (*endstr)
+        return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                _("Invalid URL: illegal character in proxy "
+                                  "port number"));
+      if (port < 0)
+        return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                _("Invalid URL: negative proxy port number"));
+      if (port > 65535)
+        return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                _("Invalid URL: proxy port number greater "
+                                  "than maximum TCP port number 65535"));
+      proxy_port = port;
+    }
+  else
+    proxy_port = 80;
+
+  if (proxy_host) 
+    {
+      apr_sockaddr_t *proxy_addr;
+      apr_status_t status;
+
+      status = apr_sockaddr_info_get(&proxy_addr, proxy_host, 
+                                     APR_INET, proxy_port, 0,
+                                     session->pool);
+      session->using_proxy = TRUE;
+      serf_config_proxy(session->context, proxy_addr);
+    }
+  else
+    session->using_proxy = FALSE;
+#endif
 
   return SVN_NO_ERROR;
 }

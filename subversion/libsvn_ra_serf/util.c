@@ -298,6 +298,17 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
         }
     }
 
+  /* Set up Proxy settings */
+#if SERF_VERSION_AT_LEAST(0,1,3)
+  if (conn->session->using_proxy)
+    {
+      char *root = apr_uri_unparse(conn->session->pool,
+                                   &conn->session->repos_url, 
+                                   APR_URI_UNP_OMITPATHINFO);
+      serf_bucket_request_set_root(*req_bkt, root);
+    }
+#endif
+
   if (ret_hdrs_bkt)
     {
       *ret_hdrs_bkt = hdrs_bkt;
