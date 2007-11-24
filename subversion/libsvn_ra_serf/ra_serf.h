@@ -93,6 +93,12 @@ typedef struct {
   serf_sspi_context_t *sspi_context;
 #endif
 
+  /* Current authorization header used for the proxy server; may be NULL */
+  const char *proxy_auth_header;
+
+  /* Current authorization value used for the proxy server; may be NULL */
+  char *proxy_auth_value;
+
 } svn_ra_serf__connection_t;
 
 /*
@@ -163,6 +169,15 @@ struct svn_ra_serf__session_t {
 
   /* Are we using a proxy? */
   int using_proxy;
+
+  /* Proxy Authentication related properties */
+  const char *proxy_auth_header;
+  char *proxy_auth_value;
+  const svn_ra_serf__auth_protocol_t *proxy_auth_protocol;
+
+  const char *proxy_username;
+  const char *proxy_password;
+  int proxy_auth_attempts;
 };
 
 /*
@@ -1215,6 +1230,11 @@ typedef svn_error_t *
  * svn_ra_serf__auth_protocol_t: vtable for an authn protocol provider.
  */
 struct svn_ra_serf__auth_protocol_t {
+  /* The http status code that's handled by this authentication protocol.
+     Normal values are 401 for server authentication and 407 for proxy
+     authentication */
+  int code;
+
   /* The name of this authentication protocol. This should be a case
      sensitive match of the string sent in the HTTP authentication header. */
   const char *auth_name;
@@ -1235,7 +1255,8 @@ struct svn_ra_serf__auth_protocol_t {
  * authn implementation and forward the call to its authn handler.
  */
 svn_error_t *
-svn_ra_serf__handle_auth(svn_ra_serf__session_t *session,
+svn_ra_serf__handle_auth(int code,
+                         svn_ra_serf__session_t *session,
                          svn_ra_serf__connection_t *conn,
                          serf_request_t *request,
                          serf_bucket_t *response,

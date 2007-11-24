@@ -168,9 +168,15 @@ static void become_request(serf_bucket_t *bucket)
     {
       serf_bucket_headers_setn(hdrs_bkt, "Label", ctx->label);
     }
+
+  /* Setup server authorization headers */
   if (ctx->conn->session->auth_protocol)
-    ctx->conn->session->auth_protocol->setup_request_func(ctx->conn,
-                                                          hdrs_bkt);
+    ctx->conn->session->auth_protocol->setup_request_func(ctx->conn, hdrs_bkt);
+
+  /* Setup proxy authorization headers */
+  if (ctx->conn->session->proxy_auth_protocol)
+    ctx->conn->session->proxy_auth_protocol->setup_request_func(ctx->conn, 
+                                                                hdrs_bkt);
 
   serf_bucket_mem_free(bucket->allocator, ctx);
 }
