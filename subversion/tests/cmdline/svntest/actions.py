@@ -456,30 +456,52 @@ def verify_update(actual_output, wc_dir_name,
   """Verify update of WC_DIR_NAME.
 
   The subcommand output (found in ACTUAL_OUTPUT) will be verified
-  against OUTPUT_TREE, and the working copy itself will be verified
-  against DISK_TREE.  If optional STATUS_TREE is given, then
-  'svn status' output will be compared.  (This is a good way to check
-  that revision numbers were bumped.)  SINGLETON_HANDLER_A and
-  SINGLETON_HANDLER_B will be passed to tree.compare_trees - see that
-  function's doc string for more details.  If CHECK_PROPS is set, then
-  disk comparison will examine props.  Returns if successful, raises
-  on failure."""
+  against OUTPUT_TREE (if provided), the working copy itself will be
+  verified against DISK_TREE (if provided), and the working copy's
+  'svn status' output will be verified against STATUS_TREE (if
+  provided).  (This is a good way to check that revision numbers were
+  bumped.)  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed
+  to tree.compare_trees - see that function's doc string for more
+  details.  If CHECK_PROPS is set, then disk comparison will examine
+  props.  Returns if successful, raises on failure."""
 
   # Verify actual output against expected output.
-  tree.compare_trees (actual_output, output_tree)
+  if output_tree:
+    tree.compare_trees (actual_output, output_tree)
 
-  # Create a tree by scanning the working copy
-  actual_disk = tree.build_tree_from_wc (wc_dir_name, check_props)
-
-  # Verify expected disk against actual disk.
-  tree.compare_trees (actual_disk, disk_tree,
-                      singleton_handler_a, a_baton,
-                      singleton_handler_b, b_baton)
+  # Create a tree by scanning the working copy, and verify it
+  if disk_tree:
+    actual_disk = tree.build_tree_from_wc (wc_dir_name, check_props)
+    tree.compare_trees (actual_disk, disk_tree,
+                        singleton_handler_a, a_baton,
+                        singleton_handler_b, b_baton)
 
   # Verify via 'status' command too, if possible.
   if status_tree:
     run_and_verify_status(wc_dir_name, status_tree)
 
+
+def verify_disk(wc_dir_name,
+                disk_tree,
+                singleton_handler_a = None,
+                a_baton = None,
+                singleton_handler_b = None,
+                b_baton = None,
+                check_props = False):
+
+  """Verify WC_DIR_NAME against DISK_TREE.  SINGLETON_HANDLER_A,
+  A_BATON, SINGLETON_HANDLER_B, and B_BATON will be passed to
+  tree.compare_trees, which see for details.  If CHECK_PROPS is set,
+  the comparison will examin props.  Returns if successful, raises on
+  failure."""
+  if isinstance(disk_tree, wc.State):
+    disk_tree = disk_tree.old_tree()
+  verify_update (None, wc_dir_name, None, disk_tree, None,
+                 singleton_handler_a, a_baton,
+                 singleton_handler_b, b_baton,
+                 check_props)
+                 
+  
 
 def run_and_verify_update(wc_dir_name,
                           output_tree, disk_tree, status_tree,

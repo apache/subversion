@@ -279,7 +279,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                                pool));
     }
 
-    /* Check if any mergeinfo on PATH or any its children elides as a
+  /* Check if any mergeinfo on PATH or any its children elides as a
      result of the update. */
   children_with_mergeinfo = apr_hash_make(pool);
   err = svn_client__get_prop_from_wc(children_with_mergeinfo,

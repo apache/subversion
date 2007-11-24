@@ -1534,7 +1534,7 @@ def mergeinfo_switch_elision(sbox):
     'F'       : Item(status='  ', wc_rev=2),
     })
   expected_merge_disk = svntest.wc.State('', {
-    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1,3-4'}),
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:3-4'}),
     'lambda'  : Item("This is the file 'lambda'.\n"),
     'E'       : Item(),
     'E/alpha' : Item("New content"),
@@ -1584,7 +1584,7 @@ def mergeinfo_switch_elision(sbox):
     'beta'  : Item(status='M ', wc_rev=2),
     })
   expected_merge_disk = svntest.wc.State('', {
-    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:1,3-4'}),
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:3-4'}),
     'alpha' : Item("New content"),
     'beta'  : Item("New content"),
     })
@@ -1619,13 +1619,13 @@ def mergeinfo_switch_elision(sbox):
   expected_disk.tweak("A/B/E/alpha", contents="New content")
   expected_disk.tweak("A/B/E/beta", contents="New content")
   expected_disk.add({
-    "A/B_COPY_1"         : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1,3-4'}),
+    "A/B_COPY_1"         : Item(props={SVN_PROP_MERGE_INFO : '/A/B:3-4'}),
     "A/B_COPY_1/E"       : Item(),
     "A/B_COPY_1/F"       : Item(),
     "A/B_COPY_1/lambda"  : Item("This is the file 'lambda'.\n"),
     "A/B_COPY_1/E/alpha" : Item("New content"),
     "A/B_COPY_1/E/beta"  : Item("New content"),
-    "A/B_COPY_2"         : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1,3-4'}),
+    "A/B_COPY_2"         : Item(props={SVN_PROP_MERGE_INFO : '/A/B:3-4'}),
     "A/B_COPY_2/E"       : Item(),
     "A/B_COPY_2/F"       : Item(),
     "A/B_COPY_2/lambda"  : Item("This is the file 'lambda'.\n"),
@@ -1683,7 +1683,7 @@ def mergeinfo_switch_elision(sbox):
                                      ["property '" + SVN_PROP_MERGE_INFO +
                                       "' set on '" + lambda_path + "'" +
                                       "\n"], [], 'ps', SVN_PROP_MERGE_INFO,
-                                     '/A/B/lambda:1,3-4', lambda_path)
+                                     '/A/B/lambda:3-4', lambda_path)
 
   expected_output = svntest.wc.State(sbox.wc_dir, {
     "A/B_COPY_1/lambda" : Item(status='U '),

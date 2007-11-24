@@ -2886,7 +2886,7 @@ def mergeinfo_update_elision(sbox):
     'F'       : Item(status='  ', wc_rev=2),
     })
   expected_merge_disk = wc.State('', {
-    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1,3-5'}),
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:3-5'}),
     'lambda'  : Item("New content"),
     'E'       : Item(),
     'E/alpha' : Item("New content"),
@@ -2931,7 +2931,7 @@ def mergeinfo_update_elision(sbox):
   expected_status.tweak(wc_rev=5)
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
-    'A/B_COPY'         : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1'}),
+    'A/B_COPY'         : Item(props={SVN_PROP_MERGE_INFO : ''}),
     'A/B_COPY/lambda'  : Item("This is the file 'lambda'.\n"),
     'A/B_COPY/E'       : Item(),
     'A/B_COPY/E/alpha' : Item("This is the file 'alpha'.\n"),
@@ -2981,11 +2981,11 @@ def mergeinfo_update_elision(sbox):
   svntest.actions.run_and_verify_status(alpha_COPY_path,
                                         expected_alpha_status)
 
-  svntest.actions.run_and_verify_svn(None, ["/A/B/E/alpha:1,3-5\n"], [],
+  svntest.actions.run_and_verify_svn(None, ["/A/B/E/alpha:3-5\n"], [],
                                      'propget', SVN_PROP_MERGE_INFO,
                                      alpha_COPY_path)
 
-  # Update WC.  The local mergeinfo (r1,3-5) on A/B_COPY/E/alpha is
+  # Update WC.  The local mergeinfo (r3-5) on A/B_COPY/E/alpha is
   # identical to that on added to A/B_COPY by the update, so should
   # elide to the latter, leaving no mereginfo on alpha.
   expected_output = wc.State(wc_dir, {
@@ -2994,7 +2994,7 @@ def mergeinfo_update_elision(sbox):
     'A/B_COPY/E/beta'  : Item(status='U '),
     'A/B_COPY'         : Item(status=' U'),
     })
-  expected_disk.tweak('A/B_COPY', props={SVN_PROP_MERGE_INFO : '/A/B:1,3-5'})
+  expected_disk.tweak('A/B_COPY', props={SVN_PROP_MERGE_INFO : '/A/B:3-5'})
   expected_disk.tweak('A/B_COPY/lambda', contents="New content")
   expected_disk.tweak('A/B_COPY/E/beta', contents="New content")
   expected_disk.tweak('A/B_COPY/E/alpha', contents="New content")
@@ -3026,7 +3026,7 @@ def mergeinfo_update_elision(sbox):
     'beta'  : Item(status='  ', wc_rev=6),
     })
   expected_merge_disk = wc.State('', {
-    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:1,3-5,7'}),
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:3-5,7'}),
     'alpha' : Item("More new content"),
     'beta'  : Item("New content"),
     })
@@ -3065,7 +3065,7 @@ def mergeinfo_update_elision(sbox):
   expected_status.tweak('A/B_COPY/E/alpha', wc_rev=7)
   expected_status.tweak('A/B_COPY/E/beta', wc_rev=7)
   expected_disk.tweak('A/B_COPY',
-                      props={SVN_PROP_MERGE_INFO : '/A/B:1,3-5'})
+                      props={SVN_PROP_MERGE_INFO : '/A/B:3-5'})
   expected_disk.tweak('A/B/E/alpha', contents="More new content")
   expected_disk.tweak('A/B_COPY/E/alpha', contents="New content")
 
@@ -3091,7 +3091,7 @@ def mergeinfo_update_elision(sbox):
     'F'       : Item(status='  ', wc_rev=6),
     })
   expected_merge_disk = wc.State('', {
-    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1,3-5,7'}),
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:3-5,7'}),
     'lambda'  : Item("New content"),
     'E'       : Item(),
     'E/alpha' : Item("More new content"),
@@ -3114,7 +3114,7 @@ def mergeinfo_update_elision(sbox):
 
   os.chdir(saved_cwd)
 
-  # Update just A/B_COPY/E.  The mergeinfo (r1,3-5,7) reset on
+  # Update just A/B_COPY/E.  The mergeinfo (r3-5,7) reset on
   # A/B_COPY/E by the udpate is identical to the local info on
   # A/B_COPY, so should elide, leaving no mereginfo on E.
   #expected_output = svntest.wc.State(wc_dir, { })
@@ -3127,7 +3127,7 @@ def mergeinfo_update_elision(sbox):
   expected_status.tweak('A/B_COPY/E/alpha', wc_rev=8)
   expected_status.tweak('A/B_COPY/E/beta', wc_rev=8)
   expected_disk.tweak('A/B_COPY',
-                      props={SVN_PROP_MERGE_INFO : '/A/B:1,3-5,7'})
+                      props={SVN_PROP_MERGE_INFO : '/A/B:3-5,7'})
   expected_disk.tweak('A/B_COPY/E', props={})
   expected_disk.tweak('A/B_COPY/E/alpha', contents="More new content")
   svntest.actions.run_and_verify_update(wc_dir,

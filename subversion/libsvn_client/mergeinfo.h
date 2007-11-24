@@ -132,11 +132,15 @@ svn_client__get_wc_or_repos_mergeinfo(apr_hash_t **target_mergeinfo,
    session whose session URL maps to PATH_OR_URL's URL, or NULL.
    ADM_ACCESS is a working copy administrative access baton which can
    be used to fetch information about PATH_OR_URL (if PATH_OR_URL is a
-   working copy path), or NULL.  */
+   working copy path), or NULL.  If RANGE_YOUNGEST and RANGE_OLDEST
+   are valid, use them to bound the revision ranges of returned
+   mergeinfo.  */
 svn_error_t *
 svn_client__get_implicit_mergeinfo(apr_hash_t **mergeinfo_p,
                                    const char *path_or_url,
                                    const svn_opt_revision_t *peg_revision,
+                                   svn_revnum_t range_youngest,
+                                   svn_revnum_t range_oldest,
                                    svn_ra_session_t *ra_session,
                                    svn_wc_adm_access_t *adm_access,
                                    svn_client_ctx_t *ctx,

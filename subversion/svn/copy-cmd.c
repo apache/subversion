@@ -133,8 +133,7 @@ svn_cl__copy(apr_getopt_t *os,
   ctx->revprop_table = opt_state->revprop_table;
 
   err = svn_client_copy4(&commit_info, sources, dst_path, TRUE,
-                         opt_state->parents, opt_state->use_merge_history,
-                         ctx, pool);
+                         opt_state->parents, ctx, pool);
 
   if (ctx->log_msg_func3)
     SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err));
