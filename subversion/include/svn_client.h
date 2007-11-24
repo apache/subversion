@@ -2821,10 +2821,6 @@ typedef struct svn_client_copy_source_t
  * If @a make_parents is TRUE, create any non-existent parent directories
  * also.
  *
- * If @a with_merge_history is ignored for all but WC -> WC copy
- * operations, and indicates whether implied and explicit mergeinfo
- * from @a sources is propagated to @a dst_path.
- *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton combo
  * that this function can use to query for a commit log message when one is
  * needed.
@@ -2841,15 +2837,13 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
                  const char *dst_path,
                  svn_boolean_t copy_as_child,
                  svn_boolean_t make_parents,
-                 svn_boolean_t with_merge_history,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
 /**
  * Similar to svn_client_copy4(), with only one @a src_path, @a
- * copy_as_child set to @c FALSE, @a make_parents set to @c FALSE, and
- * @a with_merge_history set to @c FALSE.  Also, use @a src_revision
- * as both the operational and peg revision.
+ * copy_as_child set to @c FALSE, and @a make_parents set to @c FALSE.
+ * Also, use @a src_revision as both the operational and peg revision.
  *
  * @since New in 1.4.
  *
@@ -2963,10 +2957,6 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  * If @a make_parents is TRUE, create any non-existent parent directories
  * also.
  *
- * If @a with_merge_history is ignored for all but WC -> WC move
- * operations, and indicates whether implied and explicit mergeinfo
- * from @a sources is propagated to @a dst_path.
- *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton combo that
  * this function can use to query for a commit log message when one is needed.
  *
@@ -2986,14 +2976,12 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
                  svn_boolean_t force,
                  svn_boolean_t move_as_child,
                  svn_boolean_t make_parents,
-                 svn_boolean_t with_merge_history,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
 /**
  * Similar to svn_client_move5(), with only one @a src_path, @a
- * move_as_child set to @c FALSE, @a make_parents set to @c FALSE, and
- * @a with_merge_history seto to @c FALSE.
+ * move_as_child set to @c FALSE, and @a make_parents set to @c FALSE.
  *
  * @since New in 1.4.
  *
