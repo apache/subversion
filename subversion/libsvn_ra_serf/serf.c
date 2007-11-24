@@ -289,6 +289,10 @@ load_config(svn_ra_serf__session_t *session,
                  SVN_CONFIG_OPTION_HTTP_PROXY_HOST, NULL);
   svn_config_get(config, &port_str, SVN_CONFIG_SECTION_GLOBAL,
                  SVN_CONFIG_OPTION_HTTP_PROXY_PORT, NULL);
+  svn_config_get(config, &session->proxy_username, SVN_CONFIG_SECTION_GLOBAL,
+                 SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME, NULL);
+  svn_config_get(config, &session->proxy_password, SVN_CONFIG_SECTION_GLOBAL,
+                 SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, NULL);
 #endif
 
   server_group = svn_config_find_group(config,
@@ -310,6 +314,10 @@ load_config(svn_ra_serf__session_t *session,
                      SVN_CONFIG_OPTION_HTTP_PROXY_HOST, NULL);
       svn_config_get(config, &port_str, server_group,
                      SVN_CONFIG_OPTION_HTTP_PROXY_PORT, NULL);
+      svn_config_get(config, &session->proxy_username, server_group,
+                     SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME, NULL);
+      svn_config_get(config, &session->proxy_password, server_group,
+                     SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, NULL);
 #endif
     }
 
