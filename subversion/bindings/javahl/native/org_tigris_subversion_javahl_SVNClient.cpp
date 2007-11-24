@@ -546,8 +546,7 @@ Java_org_tigris_subversion_javahl_SVNClient_commit
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_copy
 (JNIEnv *env, jobject jthis, jobjectArray jcopySources, jstring jdestPath,
- jstring jmessage, jboolean jcopyAsChild, jboolean jmakeParents,
- jboolean jwithMergeHistory)
+ jstring jmessage, jboolean jcopyAsChild, jboolean jmakeParents)
 {
   JNIEntry(SVNClient, copy);
 
@@ -568,14 +567,14 @@ Java_org_tigris_subversion_javahl_SVNClient_copy
     return;
 
   cl->copy(copySources, destPath, message, jcopyAsChild ? true : false,
-           jmakeParents ? true : false, jwithMergeHistory ? true : false);
+           jmakeParents ? true : false);
 }
 
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_move
 (JNIEnv *env, jobject jthis, jobjectArray jsrcPaths, jstring jdestPath,
  jstring jmessage, jboolean jforce, jboolean jmoveAsChild,
- jboolean jmakeParents, jboolean jwithMergeHistory)
+ jboolean jmakeParents)
 {
   JNIEntry(SVNClient, move);
 
@@ -595,8 +594,7 @@ Java_org_tigris_subversion_javahl_SVNClient_move
   if (JNIUtil::isExceptionThrown())
     return;
   cl->move(srcPaths, destPath, message, jforce ? true : false,
-           jmoveAsChild ? true : false, jmakeParents ? true : false,
-           jwithMergeHistory ? true : false);
+           jmoveAsChild ? true : false, jmakeParents ? true : false);
 }
 
 JNIEXPORT void JNICALL

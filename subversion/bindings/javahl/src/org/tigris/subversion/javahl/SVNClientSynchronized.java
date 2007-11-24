@@ -654,20 +654,19 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @since 1.5
      */
     public void copy(CopySource[] sources, String destPath, String message,
-                     boolean copyAsChild, boolean makeParents,
-                     boolean withMergeHistory)
+                     boolean copyAsChild, boolean makeParents)
         throws ClientException
     {
         synchronized (clazz)
         {
             worker.copy(sources, destPath, message, copyAsChild,
-                        makeParents, withMergeHistory);
+                        makeParents);
         }
     }
 
     /**
      * @deprecated Use {@link #copy(CopySource[], String, String, boolean,
-     *                              boolean, boolean)} instead.
+     *                              boolean)} instead.
      * @since 1.0
      */
     public void copy(String srcPath, String destPath, String message,
@@ -684,19 +683,19 @@ public class SVNClientSynchronized implements SVNClientInterface
      */
     public void move(String[] srcPaths, String destPath, String message,
                      boolean force, boolean moveAsChild,
-                     boolean makeParents, boolean withMergeHistory)
+                     boolean makeParents)
         throws ClientException
     {
         synchronized (clazz)
         {
             worker.move(srcPaths, destPath, message, force, moveAsChild,
-                        makeParents, withMergeHistory);
+                        makeParents);
         }
     }
 
     /**
      * @deprecated Use {@link #move(String[], String, String, boolean, boolean,
-     *                              boolean, boolean)} instead.
+     *                              boolean)} instead.
      * @since 1.2
      */
     public void move(String srcPath, String destPath, String message,
@@ -711,7 +710,7 @@ public class SVNClientSynchronized implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #move(String[], String, String, boolean, boolean,
-     *                              boolean, boolean)} instead.
+     *                              boolean)} instead.
      * @since 1.0
      */
     public void move(String srcPath, String destPath, String message,
