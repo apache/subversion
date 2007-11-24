@@ -884,9 +884,6 @@ void SVNClient::diff(const char *target1, Revision &revision1,
 {
     svn_error_t *err;
     Pool requestPool;
-    const char *c_relToDir = relativeToDir ?
-      svn_path_canonicalize(relativeToDir, requestPool.pool()) :
-      relativeToDir;
 
     SVN_JNI_NULL_PTR_EX(target1, "target", );
     // target2 is ignored when pegRevision is provided.
@@ -924,7 +921,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                    pegRevision->revision(),
                                    revision1.revision(),
                                    revision2.revision(),
-                                   c_relToDir,
+                                   relativeToDir,
                                    depth,
                                    ignoreAncestry,
                                    noDiffDelete,
@@ -953,7 +950,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                revision1.revision(),
                                path2.c_str(),
                                revision2.revision(),
-                               c_relToDir,
+                               relativeToDir,
                                depth,
                                ignoreAncestry,
                                noDiffDelete,
