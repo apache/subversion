@@ -510,12 +510,12 @@ public class SVNClient implements SVNClientInterface
      */
     public native void copy(CopySource[] sources, String destPath,
                             String message, boolean copyAsChild,
-                            boolean makeParents, boolean withMergeHistory)
+                            boolean makeParents)
             throws ClientException;
 
     /**
      * @deprecated Use {@link #copy(CopySource[], String, String, boolean,
-     *                              boolean, boolean)} instead.
+     *                              boolean)} instead.
      * @since 1.0
      */
     public void copy(String srcPath, String destPath, String message,
@@ -524,7 +524,7 @@ public class SVNClient implements SVNClientInterface
     {
         copy(new CopySource[] { new CopySource(srcPath, revision,
                                                Revision.HEAD) },
-             destPath, message, true, false, false);
+             destPath, message, true, false);
     }
 
     /**
@@ -532,33 +532,31 @@ public class SVNClient implements SVNClientInterface
      */
     public native void move(String[] srcPaths, String destPath, String message,
                             boolean force, boolean moveAsChild,
-                            boolean makeParents, boolean withMergeHistory)
+                            boolean makeParents)
             throws ClientException;
 
     /**
      * @deprecated Use {@link #move(String[], String, String, boolean, boolean,
-     *                              boolean, boolean)} instead.
+     *                              boolean)} instead.
      * @since 1.2
      */
     public void move(String srcPath, String destPath, String message,
                      Revision ignored, boolean force)
             throws ClientException
     {
-        move(new String[] { srcPath }, destPath, message, force, true, false,
-             false);
+        move(new String[] { srcPath }, destPath, message, force, true, false);
     }
 
     /**
      * @deprecated Use {@link #move(String[], String, String, boolean, boolean,
-     *                              boolean, boolean)} instead.
+     *                              boolean)} instead.
      * @since 1.0
      */
     public void move(String srcPath, String destPath, String message,
                      boolean force)
             throws ClientException
     {
-        move(new String[] { srcPath }, destPath, message, force, true, false,
-             false);
+        move(new String[] { srcPath }, destPath, message, force, true, false);
     }
 
     /**
