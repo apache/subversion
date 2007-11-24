@@ -344,8 +344,11 @@ load_config(svn_ra_serf__session_t *session,
       status = apr_sockaddr_info_get(&proxy_addr, proxy_host, 
                                      APR_INET, proxy_port, 0,
                                      session->pool);
+      session->using_proxy = TRUE;
       serf_config_proxy(session->context, proxy_addr);
     }
+  else
+    session->using_proxy = FALSE;
 #endif
 
   return SVN_NO_ERROR;
