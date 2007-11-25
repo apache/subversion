@@ -429,8 +429,7 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
     svn_commit_info_t *commit_info;
     SVN_JNI_ERR(svn_client_copy4(&commit_info, srcs, destinationPath.c_str(),
                                  copyAsChild, makeParents, ctx,
-                                 requestPool.pool()),
-                );
+                                 requestPool.pool()), );
 }
 
 void SVNClient::move(Targets &srcPaths, const char *destPath,
