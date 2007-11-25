@@ -148,6 +148,9 @@ init_sspi_connection(svn_ra_serf__session_t *session,
   encode_auth_header("NTLM", &conn->auth_value, tmp, tmp_len, pool);
   conn->auth_header = "Authorization";
 
+  /* Make serf send the initial requests one by one */
+  serf_set_max_outstanding_requests(conn->conn, 1);
+
   return SVN_NO_ERROR;
 }
 
@@ -184,6 +187,11 @@ handle_sspi_auth(svn_ra_serf__session_t *session,
   encode_auth_header(session->auth_protocol->auth_name, &conn->auth_value, 
                      tmp, tmp_len, pool);
   conn->auth_header = "Authorization";
+
+  /* If the handshake is finished tell serf it can send as much requests as it
+     likes. */
+  if (conn->sspi_context->state == sspi_auth_completed)
+    serf_set_max_outstanding_requests(conn->conn, 0);
 
   return SVN_NO_ERROR;
 }
