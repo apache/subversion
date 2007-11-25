@@ -1110,24 +1110,32 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
     {
       /* Possibly adjust the "original" and "modified" paths shown in
          the output (see issue #2723). */
-      const char *child_path = svn_path_is_child(relative_to_dir,
-                                                 original_path, pool);
-      if (child_path)
-        original_path = child_path;
-      else
-        return svn_error_createf(SVN_ERR_BAD_RELATIVE_PATH, NULL,
-                                 _("Path '%s' must be an immediate child of "
-                                   "the directory '%s'"),
-                                 original_path, relative_to_dir);
+      const char *child_path;
 
-      child_path = svn_path_is_child(relative_to_dir, modified_path, pool);
-      if (child_path)
-        modified_path = child_path;
-      else
-        return svn_error_createf(SVN_ERR_BAD_RELATIVE_PATH, NULL,
-                                 _("Path '%s' must be an immediate child of "
-                                   "the directory '%s'"),
-                                 modified_path, relative_to_dir);
+      if (! original_header)
+        {
+          child_path = svn_path_is_child(relative_to_dir,
+                                         original_path, pool);
+          if (child_path)
+            original_path = child_path;
+          else
+            return svn_error_createf(SVN_ERR_BAD_RELATIVE_PATH, NULL,
+                                     _("Path '%s' must be an immediate child of "
+                                       "the directory '%s'"),
+                                     original_path, relative_to_dir);
+        }
+
+      if (! modified_header)
+        {
+          child_path = svn_path_is_child(relative_to_dir, modified_path, pool);
+          if (child_path)
+            modified_path = child_path;
+          else
+            return svn_error_createf(SVN_ERR_BAD_RELATIVE_PATH, NULL,
+                                     _("Path '%s' must be an immediate child of "
+                                       "the directory '%s'"),
+                                     modified_path, relative_to_dir);
+        }
     }
 
       for (i = 0; i < 2; i++)
