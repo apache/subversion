@@ -18,7 +18,7 @@
 #ifndef SVN_LIBSVN_RA_SERF_WIN32_AUTH_SSPI_H
 #define SVN_LIBSVN_RA_SERF_WIN32_AUTH_SSPI_H
 
-#ifdef WIN32
+#ifdef SVN_RA_SERF_SSPI_ENABLED
 
 #ifndef __SSPI_H__
 #define SECURITY_WIN32
@@ -79,6 +79,6 @@ svn_error_t *
 sspi_get_credentials(char *token, apr_size_t token_len, const char **buf, 
                      apr_size_t *buf_len, serf_sspi_context_t *sspi_ctx);
 
-#endif /* WIN32 */
+#endif /* SVN_RA_SERF_SSPI_ENABLED */
 
 #endif /* SVN_LIBSVN_RA_SERF_WIN32_AUTH_SSPI_H */

@@ -16,8 +16,6 @@
  * ====================================================================
  */
 
-#ifdef WIN32
-
 /* TODO: 
    - remove NTLM dependency so we can reuse SSPI for Kerberos later. */
 
@@ -62,7 +60,10 @@
 
 #include "svn_error.h"
 
+#include "ra_serf.h"
 #include "win32_auth_sspi.h"
+
+#ifdef SVN_RA_SERF_SSPI_ENABLED
 
 /*** Global variables ***/
 HANDLE security_dll = INVALID_HANDLE_VALUE;
@@ -296,4 +297,4 @@ sspi_get_credentials(char *token, apr_size_t token_len, const char **buf,
   return SVN_NO_ERROR;
 }
 
-#endif /* WIN32 */
+#endif /* SVN_RA_SERF_SSPI_ENABLED */

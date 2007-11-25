@@ -21,10 +21,7 @@
 #include <apr_base64.h>
 
 #include "ra_serf.h"
-
-#ifdef WIN32
 #include "win32_auth_sspi.h"
-#endif /* WIN32 */
 
 /*** Forward declarations. ***/
 
@@ -80,7 +77,7 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
     handle_proxy_basic_auth,
     setup_request_proxy_basic_auth,
   },
-#ifdef WIN32
+#ifdef SVN_RA_SERF_SSPI_ENABLED
     401,
     "NTLM",
     init_sspi_connection,
