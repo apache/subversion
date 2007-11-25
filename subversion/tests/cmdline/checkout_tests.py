@@ -316,8 +316,6 @@ def import_and_checkout(sbox):
   expected_output = svntest.wc.State(sbox.wc_dir, {})
 
   svntest.actions.run_and_verify_svn(None, None, [], 'import',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      '-m', 'import', import_from_dir,
                                      other_repo_url)
 
@@ -406,8 +404,6 @@ def checkout_peg_rev(sbox):
   svntest.main.file_append(mu_path, 'appended mu text')
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m', 'changed file mu', wc_dir)
 
   # now checkout the repo@1 in another folder, this should create our initial
@@ -446,8 +442,6 @@ def checkout_peg_rev_date(sbox):
   svntest.main.file_append(mu_path, 'appended mu text')
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m', 'changed file mu', wc_dir)
 
   # now checkout the repo@current_time in another folder, this should create our

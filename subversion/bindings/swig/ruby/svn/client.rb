@@ -130,9 +130,10 @@ module Svn
       end
       alias ci commit
 
-      def status(path, rev=nil, depth=nil, get_all=false,
+      def status(path, rev=nil, depth_or_recurse=nil, get_all=false,
                  update=true, no_ignore=false,
                  ignore_externals=false, &status_func)
+        depth = Core::Depth.infinity_or_immediates_from_recurse(depth_or_recurse)
         Client.status3(path, rev, status_func,
                        depth, get_all, update, no_ignore,
                        ignore_externals, self)
@@ -188,10 +189,10 @@ module Svn
         Client.resolved(path, recurse, self)
       end
 
-      def propset(name, value, target, recurse=true, force=false,
+      def propset(name, value, target, depth_or_recurse=nil, force=false,
                   base_revision_for_url=nil)
         base_revision_for_url ||= Svn::Core::INVALID_REVNUM
-        depth = recurse ? Svn::Core::DEPTH_INFINITY : Svn::Core::DEPTH_EMPTY
+        depth = Core::Depth.infinity_or_empty_from_recurse(depth_or_recurse)
         Client.propset3(name, value, target, depth, force,
                         base_revision_for_url, self)
       end
@@ -208,10 +209,10 @@ module Svn
 
       # Returns a value of a property, with +name+ attached to +target+,
       # as a Hash such as <tt>{uri1 => value1, uri2 => value2, ...}</tt>.
-      def propget(name, target, rev=nil, peg_rev=nil, recurse=true)
+      def propget(name, target, rev=nil, peg_rev=nil, depth_or_recurse=nil)
         rev ||= "HEAD"
         peg_rev ||= rev
-        depth = recurse ? Svn::Core::DEPTH_INFINITY : Svn::Core::DEPTH_EMPTY
+        depth = Core::Depth.infinity_or_empty_from_recurse(depth_or_recurse)
         Client.propget4(name, target, peg_rev, rev, depth, self).first
       end
       alias prop_get propget
@@ -223,10 +224,11 @@ module Svn
       # Returns list of properties attached to +target+ as an Array of
       # Svn::Client::PropListItem.
       # Paths and URIs are available as +target+.
-      def proplist(target, rev=nil, peg_rev=nil, depth=nil, &block)
+      def proplist(target, rev=nil, peg_rev=nil, depth_or_recurse=nil, &block)
         rev ||= "HEAD"
         peg_rev ||= rev
         items = []
+        depth = Core::Depth.infinity_or_empty_from_recurse(depth_or_recurse)
         receiver = Proc.new do |path, prop_hash|
           items << PropListItem.new(path, prop_hash)
           block.call(path, prop_hash) if block
@@ -281,9 +283,9 @@ module Svn
                out_file, err_file, depth=nil,
                ignore_ancestry=false,
                no_diff_deleted=false, force=false,
-               header_encoding=nil)
+               header_encoding=nil, relative_to_dir=nil)
         header_encoding ||= Core::LOCALE_CHARSET
-        Client.diff4(options, path1, rev1, path2, rev2,
+        Client.diff4(options, path1, rev1, path2, rev2, relative_to_dir,
                      depth, ignore_ancestry,
                      no_diff_deleted, force, header_encoding,
                      out_file, err_file, self)
@@ -293,10 +295,10 @@ module Svn
                    out_file, err_file, peg_rev=nil,
                    depth=nil, ignore_ancestry=false,
                    no_diff_deleted=false, force=false,
-                   header_encoding=nil)
+                   header_encoding=nil, relative_to_dir=nil)
         header_encoding ||= Core::LOCALE_CHARSET
         Client.diff_peg4(options, path, peg_rev, start_rev, end_rev,
-                         depth, ignore_ancestry,
+                         relative_to_dir, depth, ignore_ancestry,
                          no_diff_deleted, force, header_encoding,
                          out_file, err_file, self)
       end
@@ -328,12 +330,16 @@ module Svn
       end
 
 
-      def merge_peg(src, rev1, rev2, target_wcpath,
-                    peg_rev=nil, depth=nil,
-                    ignore_ancestry=false, force=false,
-                    dry_run=false, options=nil, record_only=false)
-        peg_rev ||= uri?(src) ? 'HEAD' : 'WORKING'
-        Client.merge_peg3(src, rev1, rev2, peg_rev,
+      def merge_peg(src, rev1, rev2, *rest)
+        merge_peg2(src, [[rev1, rev2]], *rest)
+      end
+
+      def merge_peg2(src, ranges_to_merge, target_wcpath,
+                     peg_rev=nil, depth=nil,
+                     ignore_ancestry=false, force=false,
+                     dry_run=false, options=nil, record_only=false)
+        peg_rev ||= URI(src).scheme ? 'HEAD' : 'WORKING'
+        Client.merge_peg3(src, ranges_to_merge, peg_rev,
                           target_wcpath, depth, ignore_ancestry,
                           force, record_only, dry_run, options, self)
       end
@@ -361,13 +367,14 @@ module Svn
         Client.unlock(targets, break_lock, self)
       end
 
-      def info(path_or_uri, rev=nil, peg_rev=nil, recurse=false)
+      def info(path_or_uri, rev=nil, peg_rev=nil, depth_or_recurse=false)
         rev ||= URI(path_or_uri).scheme ? "HEAD" : "BASE"
+        depth = Core::Depth.infinity_or_empty_from_recurse(depth_or_recurse)
         peg_rev ||= rev
         receiver = Proc.new do |path, info|
           yield(path, info)
         end
-        Client.info(path_or_uri, rev, peg_rev, receiver, recurse, self)
+        Client.info2(path_or_uri, rev, peg_rev, receiver, depth, self)
       end
 
       # Returns URL for +path+ as a String.
@@ -532,8 +539,8 @@ module Svn
                     fetch_locks, block, self)
       end
 
-      def switch(path, uri, rev=nil, depth=nil, ignore_externals=false, allow_unver_obstruction=false)
-        Client.switch2(path, uri, rev, depth, ignore_externals, allow_unver_obstruction, self)
+      def switch(path, uri, peg_rev=nil, rev=nil, depth=nil, ignore_externals=false, allow_unver_obstruction=false)
+        Client.switch2(path, uri, peg_rev, rev, depth, ignore_externals, allow_unver_obstruction, self)
       end
 
       def set_log_msg_func(callback=Proc.new)
@@ -611,14 +618,6 @@ module Svn
         paths.collect do |path|
           path.chomp(File::SEPARATOR)
         end
-      end
-
-      def uri?(path)
-        uri = URI.parse(path)
-        # URI.parse is pretty liberal in what it will accept as a scheme,
-        # but if we get a scheme and a host we can be pretty sure it's a
-        # URI as far as subversion is concerned.
-        uri.scheme and uri.host
       end
     end
 

@@ -238,6 +238,10 @@ of the `svn-log-edit-buffer-name' buffer."
   "*Insert the filelist to commit in the *svn-log* buffer"
   :type 'boolean
   :group 'psvn)
+(defcustom svn-log-edit-show-diff-for-commit nil
+  "*Show the diff being committed when you run `svn-status-commit.'."
+  :type 'boolean
+  :group 'psvn)
 (defcustom svn-log-edit-use-log-edit-mode
   (and (condition-case nil (require 'log-edit) (error nil)) t)
   "*Use log-edit-mode as base for svn-log-edit-mode
@@ -909,6 +913,10 @@ Use this instead of `alist', for XEmacs 21.4 compatibility."
                                          ,value-type)))))
     widget))
 
+;; process launch functions
+(defvar svn-call-process-function (if (fboundp 'process-file) 'process-file 'call-process))
+(defvar svn-start-process-function (if (fboundp 'start-file-process) 'start-file-process 'start-process))
+
 
 ;;; keymaps
 
@@ -1101,7 +1109,9 @@ If there is no .svn directory, examine if there is CVS and run
   (let* ((in-status-buffer (eq major-mode 'svn-status-mode))
          (hist (if in-status-buffer (cdr svn-status-directory-history) svn-status-directory-history))
          (dir (funcall svn-status-completing-read-function "svn-status on directory: " hist))
-         (svn-buffer-available (with-current-buffer (get-buffer svn-status-buffer-name) (string= default-directory dir))))
+         (svn-status-buffer (get-buffer svn-status-buffer-name))
+         (svn-buffer-available (and svn-status-buffer
+                                    (with-current-buffer svn-status-buffer-name (string= default-directory dir)))))
     (if (file-directory-p dir)
         (if svn-buffer-available
             (svn-status-switch-to-status-buffer)
@@ -1206,7 +1216,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                     ;; run on a TTY without $DISPLAY, this will fail; in
                     ;; such cases, the user should start ssh-agent and
                     ;; then run ssh-add explicitly.
-                    (setq svn-proc (apply 'start-process "svn" proc-buf svn-exe arglist)))
+                    (setq svn-proc (apply svn-start-process-function "svn" proc-buf svn-exe arglist)))
                   (when svn-status-svn-process-coding-system
                     (set-process-coding-system svn-proc svn-status-svn-process-coding-system
                                                svn-status-svn-process-coding-system))
@@ -1217,7 +1227,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
               (let ((process-environment (svn-process-environment)))
                 ;; `call-process' ignores `process-connection-type' and
                 ;; never opens a pseudoterminal.
-                (apply 'call-process svn-exe nil proc-buf nil arglist))
+                (apply svn-call-process-function svn-exe nil proc-buf nil arglist))
               (setq svn-status-last-output-buffer-name svn-process-buffer-name)
               (run-hooks 'svn-post-process-svn-output-hook)
               (setq svn-status-mode-line-process-status "")
@@ -1312,7 +1322,9 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                   (run-hooks 'svn-log-edit-done-hook)
                   (setq svn-status-files-to-commit nil
                         svn-status-recursive-commit nil)
-                  (message "svn: Committed revision %s." svn-status-commit-rev-number))
+                  (if (null svn-status-commit-rev-number)
+                      (message "No revision to commit.")
+                    (message "svn: Committed revision %s." svn-status-commit-rev-number)))
                  ((eq svn-process-cmd 'update)
                   (svn-status-show-process-output 'update t)
                   (setq svn-status-update-list (svn-status-parse-update-output))
@@ -3833,6 +3845,7 @@ user can enter a new file name, or an existing directory: this is used as the ar
          ((eq original-filemarks ??) ;original is unversioned: use fallback
           (if (yes-or-no-p (format "%s is unversioned.  Use `%s -i -- %s %s'? "
                                    original-name fallback original-name dest))
+              ;; TODO: consider svn-call-process-function here also...
               (progn (call-process fallback nil (get-buffer-create svn-process-buffer-name) nil
                                    "-i" "--" original-name dest)
                      (setq moved t))
@@ -3963,7 +3976,9 @@ If no files have been marked, commit recursively the file at point."
     (svn-log-edit-show-files-to-commit)
     (svn-status-pop-to-commit-buffer)
     (when svn-log-edit-insert-files-to-commit
-      (svn-log-edit-insert-files-to-commit))))
+      (svn-log-edit-insert-files-to-commit))
+    (when svn-log-edit-show-diff-for-commit
+      (svn-log-edit-svn-diff nil))))
 
 (defun svn-status-pop-to-commit-buffer ()
   "Pop to the svn commit buffer.
@@ -5071,12 +5086,16 @@ Commands:
         (setq full-file-name (svn-match-string-no-properties 1))))
     (when (string= checkout-prefix-path "")
       (setq checkout-prefix-path "/"))
-    (setq file-name
-          (if (eq (string-match (regexp-quote (substring checkout-prefix-path 1)) full-file-name) 0)
-              (substring full-file-name (- (length checkout-prefix-path) (if (string= checkout-prefix-path "/") 1 0)))
-            full-file-name))
-    ;; (message "svn-log-file-name-at-point %s prefix: '%s', full-file-name: %s" file-name checkout-prefix-path full-file-name)
-    file-name))
+    (if (null full-file-name)
+        (progn
+          (message "No file at point")
+          nil)
+      (setq file-name
+            (if (eq (string-match (regexp-quote (substring checkout-prefix-path 1)) full-file-name) 0)
+                (substring full-file-name (- (length checkout-prefix-path) (if (string= checkout-prefix-path "/") 1 0)))
+              full-file-name))
+      ;; (message "svn-log-file-name-at-point %s prefix: '%s', full-file-name: %s" file-name checkout-prefix-path full-file-name)
+      file-name)))
 
 (defun svn-log-find-file-at-point ()
   (interactive)
@@ -5271,8 +5290,8 @@ Currently is the output from the svn update command known."
 
 (unless (assq 'svn-blame-mode minor-mode-alist)
   (setq minor-mode-alist
-	(cons (list 'svn-blame-mode " SvnBlame")
-          minor-mode-alist)))
+        (cons (list 'svn-blame-mode " SvnBlame")
+              minor-mode-alist)))
 
 (defvar svn-blame-mode-map () "Keymap used in `svn-blame-mode' buffers.")
 (put 'svn-blame-mode-map 'risky-local-variable t) ;for Emacs 20.7
@@ -5300,7 +5319,7 @@ Currently is the output from the svn update command known."
 
 (or (assq 'svn-blame-mode minor-mode-map-alist)
     (setq minor-mode-map-alist
-	  (cons (cons 'svn-blame-mode svn-blame-mode-map) minor-mode-map-alist)))
+          (cons (cons 'svn-blame-mode svn-blame-mode-map) minor-mode-map-alist)))
 
 (make-variable-buffer-local 'svn-blame-mode)
 

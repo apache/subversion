@@ -68,6 +68,7 @@
 #define path_brkdb_dll         (path_svn + "bin")
 #define path_svnpath           "tools\svnpath"
 #define path_iconv             (path_svn + "iconv")
+#define path_sqlite            (path_svn + "bin")
 #define path_ssl               (path_svn + "bin")
 ; Licenses
 #define path_licenses          (path_svn + "licenses")

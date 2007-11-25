@@ -763,6 +763,7 @@ DECLARE_SWIG_CONSTRUCTOR(lock, svn_lock_dup)
 DECLARE_SWIG_CONSTRUCTOR(auth_ssl_server_cert_info,
     svn_auth_ssl_server_cert_info_dup)
 DECLARE_SWIG_CONSTRUCTOR(info, svn_info_dup)
+DECLARE_SWIG_CONSTRUCTOR(location_segment, svn_location_segment_dup)
 DECLARE_SWIG_CONSTRUCTOR(commit_info, svn_commit_info_dup)
 DECLARE_SWIG_CONSTRUCTOR(wc_notify, svn_wc_dup_notify)
 
@@ -860,9 +861,7 @@ apr_array_header_t *svn_swig_py_rangelist_to_array(PyObject *list,
           Py_DECREF(list);
           return NULL;
         }
-      newrange = apr_pcalloc(pool, sizeof(svn_merge_range_t));
-      newrange->start = range->start;
-      newrange->end = range->end;
+      newrange = svn_merge_range_dup(range, pool);
 
       APR_ARRAY_IDX(temp, targlen, svn_merge_range_t *) = newrange;
       Py_DECREF(o);
@@ -1228,7 +1227,6 @@ PyObject *svn_swig_py_array_to_list(const apr_array_header_t *array)
     return NULL;
 }
 
-/* Formerly used by pre-1.0 APIs. Now unused
 PyObject *svn_swig_py_revarray_to_list(const apr_array_header_t *array)
 {
     PyObject *list = PyList_New(array->nelts);
@@ -1248,7 +1246,6 @@ PyObject *svn_swig_py_revarray_to_list(const apr_array_header_t *array)
     Py_DECREF(list);
     return NULL;
 }
-*/
 
 static PyObject *
 commit_item_array_to_list(const apr_array_header_t *array)
@@ -2477,6 +2474,39 @@ svn_error_t *svn_swig_py_info_receiver_func(void *baton,
   if ((result = PyObject_CallFunction(receiver,
                                       (char *)"sO&O&",
                                       path, make_ob_info, info,
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      if (result != Py_None)
+        err = callback_bad_return_error("Not None");
+      Py_DECREF(result);
+    }
+
+  svn_swig_py_release_py_lock();
+
+  return err;
+}
+
+svn_error_t *
+svn_swig_py_location_segment_receiver_func(svn_location_segment_t *segment,
+                                           void *baton,
+                                           apr_pool_t *pool)
+{
+  PyObject *receiver = baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if ((receiver == NULL) || (receiver == Py_None))
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallFunction(receiver,
+                                      (char *)"O&O&",
+                                      make_ob_location_segment, segment,
                                       make_ob_pool, pool)) == NULL)
     {
       err = callback_exception_error();

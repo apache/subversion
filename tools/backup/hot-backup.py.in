@@ -52,8 +52,8 @@ svnlook = r"@SVN_BINDIR@/svnlook"
 # Path to svnadmin utility
 svnadmin = r"@SVN_BINDIR@/svnadmin"
 
-# Number of backups to keep around (0 for "keep them all")
-num_backups = 64
+# Default number of backups to keep around (0 for "keep them all")
+num_backups = int(os.environ.get("SVN_HOTBACKUP_BACKUPS_NUMBER", 64))
 
 # Archive types/extensions
 archive_map = {
@@ -111,13 +111,16 @@ Options:
                        bz2 : Creates a bzip2 compressed tar file.
                        gz  : Creates a gzip compressed tar file.
                        zip : Creates a compressed zip file.
+  --num-backups=N    Number of prior backups to keep around (0 to keep all).
   --help      -h     Print this help message and exit.
 
 """ % (scriptname,))
 
 
 try:
-  opts, args = getopt.gnu_getopt(sys.argv[1:], "h?", ["archive-type=", "help"])
+  opts, args = getopt.gnu_getopt(sys.argv[1:], "h?", ["archive-type=",
+                                                      "num-backups=",
+                                                      "help"])
 except getopt.GetoptError, e:
   print >> sys.stderr, "ERROR: %s\n" % e
   usage(sys.stderr)
@@ -128,6 +131,8 @@ archive_type = None
 for o, a in opts:
   if o == "--archive-type":
     archive_type = a
+  elif o == "--num-backups":
+    num_backups = int(a)
   elif o in ("-h", "--help", "-?"):
     usage()
     sys.exit()

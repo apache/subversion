@@ -55,8 +55,10 @@
 #include "bdb/uuids-table.h"
 #include "bdb/locks-table.h"
 #include "bdb/lock-tokens-table.h"
+#include "bdb/node-origins-table.h"
 
 #include "../libsvn_fs/fs-loader.h"
+#include "private/svn_fs_sqlite.h"
 #include "private/svn_fs_mergeinfo.h"
 #include "private/svn_fs_util.h"
 
@@ -180,6 +182,7 @@ cleanup_fs(svn_fs_t *fs)
   SVN_ERR(cleanup_fs_db(fs, &bfd->uuids, "uuids"));
   SVN_ERR(cleanup_fs_db(fs, &bfd->locks, "locks"));
   SVN_ERR(cleanup_fs_db(fs, &bfd->lock_tokens, "lock-tokens"));
+  SVN_ERR(cleanup_fs_db(fs, &bfd->node_origins, "node-origins"));
 
   /* Finally, close the environment.  */
   bfd->bdb = 0;
@@ -618,6 +621,13 @@ open_databases(svn_fs_t *fs, svn_boolean_t create,
                                                       bfd->bdb->env,
                                                       create)));
 
+  SVN_ERR(BDB_WRAP(fs, (create
+                        ? "creating 'node-origins' table"
+                        : "opening 'node-origins' table"),
+                   svn_fs_bdb__open_node_origins_table(&bfd->node_origins,
+                                                       bfd->bdb->env,
+                                                       create)));
+
   return SVN_NO_ERROR;
 }
 
@@ -646,7 +656,7 @@ base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
     (svn_path_join(fs->path, FORMAT_FILE, pool), format, pool);
   if (svn_err) goto error;
 
-  SVN_ERR(svn_fs_mergeinfo__create_index(path, pool));
+  SVN_ERR(svn_fs__sqlite_create_index(path, pool));
   return base_serialized_init(fs, common_pool, pool);
 
 error:
@@ -938,23 +948,33 @@ get_db_pagesize(u_int32_t *pagesize,
 
 /* Copy FILENAME from SRC_DIR to DST_DIR in byte increments of size
    CHUNKSIZE.  The read/write buffer of size CHUNKSIZE will be
-   allocated in POOL. */
+   allocated in POOL.  If ALLOW_MISSING is set, we won't make a fuss
+   if FILENAME isn't found in SRC_DIR; otherwise, we will.  */
 static svn_error_t *
 copy_db_file_safely(const char *src_dir,
                     const char *dst_dir,
                     const char *filename,
                     u_int32_t chunksize,
+                    svn_boolean_t allow_missing,
                     apr_pool_t *pool)
 {
   apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
   const char *file_src_path = svn_path_join(src_dir, filename, pool);
   const char *file_dst_path = svn_path_join(dst_dir, filename, pool);
+  svn_error_t *err;
   char *buf;
 
-  /* Open source file. */
-  SVN_ERR(svn_io_file_open(&s, file_src_path,
-                           (APR_READ | APR_LARGEFILE | APR_BINARY),
-                           APR_OS_DEFAULT, pool));
+  /* Open source file.  If it's missing and that's allowed, there's
+     nothing more to do here. */
+  err = svn_io_file_open(&s, file_src_path,
+                         (APR_READ | APR_LARGEFILE | APR_BINARY),
+                         APR_OS_DEFAULT, pool);
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err) && allow_missing)
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR(err);
 
   /* Open destination file. */
   SVN_ERR(svn_io_file_open(&d, file_dst_path, (APR_WRITE | APR_CREATE |
@@ -1044,7 +1064,7 @@ base_hotcopy(const char *src_path,
   SVN_ERR(svn_io_dir_file_copy(src_path, dest_path, "DB_CONFIG", pool));
 
   /* Copy the merge tracking info. */
-  SVN_ERR(svn_io_dir_file_copy(src_path, dest_path, SVN_FS_MERGEINFO__DB_NAME,
+  SVN_ERR(svn_io_dir_file_copy(src_path, dest_path, SVN_FS__SQLITE_DB_NAME,
                                pool));
 
   /* In order to copy the database files safely and atomically, we
@@ -1066,25 +1086,27 @@ base_hotcopy(const char *src_path,
 
   /* Copy the databases.  */
   SVN_ERR(copy_db_file_safely(src_path, dest_path,
-                              "nodes", pagesize, pool));
+                              "nodes", pagesize, FALSE, pool));
   SVN_ERR(copy_db_file_safely(src_path, dest_path,
-                              "transactions", pagesize, pool));
+                              "transactions", pagesize, FALSE, pool));
   SVN_ERR(copy_db_file_safely(src_path, dest_path,
-                              "revisions", pagesize, pool));
+                              "revisions", pagesize, FALSE, pool));
   SVN_ERR(copy_db_file_safely(src_path, dest_path,
-                              "copies", pagesize, pool));
+                              "copies", pagesize, FALSE, pool));
   SVN_ERR(copy_db_file_safely(src_path, dest_path,
-                              "changes", pagesize, pool));
+                              "changes", pagesize, FALSE, pool));
   SVN_ERR(copy_db_file_safely(src_path, dest_path,
-                              "representations", pagesize, pool));
+                              "representations", pagesize, FALSE, pool));
   SVN_ERR(copy_db_file_safely(src_path, dest_path,
-                              "strings", pagesize, pool));
+                              "strings", pagesize, FALSE, pool));
   SVN_ERR(copy_db_file_safely(src_path, dest_path,
-                              "uuids", pagesize, pool));
+                              "uuids", pagesize, TRUE, pool));
   SVN_ERR(copy_db_file_safely(src_path, dest_path,
-                              "locks", pagesize, pool));
+                              "locks", pagesize, TRUE, pool));
   SVN_ERR(copy_db_file_safely(src_path, dest_path,
-                              "lock-tokens", pagesize, pool));
+                              "lock-tokens", pagesize, TRUE, pool));
+  SVN_ERR(copy_db_file_safely(src_path, dest_path,
+                              "node-origins", pagesize, TRUE, pool));
 
   {
     apr_array_header_t *logfiles;
@@ -1111,9 +1133,9 @@ base_hotcopy(const char *src_path,
               return
                 svn_error_quick_wrap
                 (err,
-                 _("Error copying logfile;  the DB_LOG_AUTOREMOVE feature \n"
-                   "may be interfering with the hotcopy algorithm.  If \n"
-                   "the problem persists, try deactivating this feature \n"
+                 _("Error copying logfile;  the DB_LOG_AUTOREMOVE feature\n"
+                   "may be interfering with the hotcopy algorithm.  If\n"
+                   "the problem persists, try deactivating this feature\n"
                    "in DB_CONFIG"));
             else
               return err;
@@ -1130,9 +1152,9 @@ base_hotcopy(const char *src_path,
         return
           svn_error_quick_wrap
           (err,
-           _("Error running catastrophic recovery on hotcopy;  the \n"
-             "DB_LOG_AUTOREMOVE feature may be interfering with the \n"
-             "hotcopy algorithm.  If the problem persists, try deactivating \n"
+           _("Error running catastrophic recovery on hotcopy;  the\n"
+             "DB_LOG_AUTOREMOVE feature may be interfering with the\n"
+             "hotcopy algorithm.  If the problem persists, try deactivating\n"
              "this feature in DB_CONFIG"));
       else
         return err;

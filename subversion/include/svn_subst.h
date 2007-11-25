@@ -61,10 +61,10 @@ typedef enum svn_subst_eol_style
  *
  *    - @c NULL for @c svn_subst_eol_style_none, or
  *
- *    - a null-terminated C string containing the native eol marker
+ *    - a NULL-terminated C string containing the native eol marker
  *      for this platform, for @c svn_subst_eol_style_native, or
  *
- *    - a null-terminated C string containing the eol marker indicated
+ *    - a NULL-terminated C string containing the eol marker indicated
  *      by the property value, for @c svn_subst_eol_style_fixed.
  *
  * If @a *style is NULL, it is ignored.
@@ -75,7 +75,7 @@ svn_subst_eol_style_from_value(svn_subst_eol_style_t *style,
                                const char *value);
 
 /** Indicates whether the working copy and normalized versions of a file
- * with the given the parameters differ.  If @a force_eol_check is true,
+ * with the given the parameters differ.  If @a force_eol_check is TRUE,
  * the routine also accounts for all translations required due to repairing
  * fixed eol styles.
  *
@@ -209,8 +209,8 @@ svn_subst_keywords_differ(const svn_subst_keywords_t *a,
  * Note that a translation request is *required*:  one of @a eol_str or
  * @a keywords must be non-@c NULL.
  *
- * Recommendation: if @a expand is false, then you don't care about the
- * keyword values, so use empty strings as non-null signifiers when you
+ * Recommendation: if @a expand is FALSE, then you don't care about the
+ * keyword values, so use empty strings as non-NULL signifiers when you
  * build the keywords hash.
  *
  * Notes:

@@ -37,47 +37,9 @@ public interface ConflictResolverCallback extends EventListener
      *
      * @param descrip A description of the conflict.
      * @return The result of any conflict resolution, from the {@link
-     * #Result} enum.
+     * ConflictResult} enum.
      * @throws SubversionException If an error occurs.
-     * @see ConflictResolverCallback.Result
      */
-    public int resolve(ConflictDescriptor descrip)
+    public ConflictResult resolve(ConflictDescriptor descrip)
         throws SubversionException;
-
-    /**
-     * Poor man's enum for <code>svn_wc_conflict_result_t</code>.
-     */
-    public final class Result
-    {
-        /**
-         * User did nothing; conflict remains.
-         */
-        public static final int conflicted = 0;
-
-        /**
-         * User has resolved the conflict.
-         */
-        public static final int resolved = 1;
-
-        /**
-         * User chooses the base file.
-         */
-        public static final int choose_base = 2;
-
-        /**
-         * User chooses the repository file.
-         */
-        public static final int choose_theirs = 3;
-
-        /**
-         * User chooses own version of file.
-         */
-        public static final int choose_mine = 4;
-
-        /**
-         * User chooses the merged-file (which she may have manually
-         * edited).
-         */
-        public static final int choose_merged = 5;
-    }
 }

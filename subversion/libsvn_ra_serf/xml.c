@@ -197,7 +197,7 @@ svn_ra_serf__xml_push_state(svn_ra_serf__xml_parser_t *parser,
       new_state = parser->free_state;
       parser->free_state = parser->free_state->prev;
 
-      apr_pool_clear(new_state->pool);
+      svn_pool_clear(new_state->pool);
     }
 
   if (parser->state)

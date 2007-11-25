@@ -106,6 +106,28 @@ svn_prop_array_dup(const apr_array_header_t *array, apr_pool_t *pool)
   return new_array;
 }
 
+apr_array_header_t *
+svn_prop_hash_to_array(apr_hash_t *hash, apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  apr_array_header_t *array = apr_array_make(pool, apr_hash_count(hash), 
+                                             sizeof(svn_prop_t));
+
+  for (hi = apr_hash_first(pool, hash); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      svn_prop_t prop;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      prop.name = key;
+      prop.value = val;
+      APR_ARRAY_PUSH(array, svn_prop_t) = prop;
+    }
+
+  return array;
+}
+
 svn_dirent_t *
 svn_dirent_dup(const svn_dirent_t *dirent,
                apr_pool_t *pool)
@@ -125,4 +147,16 @@ svn_log_entry_create(apr_pool_t *pool)
   svn_log_entry_t *log_entry = apr_pcalloc(pool, sizeof(*log_entry));
 
   return log_entry;
+}
+
+svn_location_segment_t *
+svn_location_segment_dup(svn_location_segment_t *segment,
+                         apr_pool_t *pool)
+{
+  svn_location_segment_t *new_segment =
+    apr_pcalloc(pool, sizeof(*new_segment));
+  *new_segment = *segment;
+  if (segment->path)
+    new_segment->path = apr_pstrdup(pool, segment->path);
+  return new_segment;
 }

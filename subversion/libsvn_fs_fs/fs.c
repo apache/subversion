@@ -27,6 +27,7 @@
 #include "svn_fs.h"
 #include "svn_delta.h"
 #include "svn_version.h"
+#include "svn_pools.h"
 #include "fs.h"
 #include "err.h"
 #include "fs_fs.h"
@@ -109,6 +110,13 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
       if (status)
         return svn_error_wrap_apr(status,
                                   _("Can't create FSFS txn list mutex"));
+
+      /* ... not to mention locking the transaction-current file. */
+      status = apr_thread_mutex_create(&ffsd->txn_current_lock,
+                                       APR_THREAD_MUTEX_DEFAULT, common_pool);
+      if (status)
+        return svn_error_wrap_apr(status,
+                                  _("Can't create FSFS txn-current mutex"));
 #endif
 
       key = apr_pstrdup(common_pool, key);
@@ -162,6 +170,22 @@ static fs_vtable_t fs_vtable = {
 
 /* Creating a new filesystem. */
 
+/* Set up vtable and fsap_data fields in FS. */
+static void
+initialize_fs_struct(svn_fs_t *fs)
+{
+  fs_fs_data_t *ffd = apr_pcalloc(fs->pool, sizeof(*ffd));
+  fs->vtable = &fs_vtable;
+  fs->fsap_data = ffd;
+
+  ffd->rev_root_id_cache_pool = svn_pool_create(fs->pool);
+  ffd->rev_root_id_cache = apr_hash_make(ffd->rev_root_id_cache_pool);
+
+  ffd->rev_node_cache = apr_hash_make(fs->pool);
+  ffd->rev_node_list.prev = &ffd->rev_node_list;
+  ffd->rev_node_list.next = &ffd->rev_node_list;
+}
+
 /* This implements the fs_library_vtable_t.create() API.  Create a new
    fsfs-backed Subversion filesystem at path PATH and link it into
    *FS.  Perform temporary allocations in POOL, and fs-global allocations
@@ -170,13 +194,9 @@ static svn_error_t *
 fs_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
           apr_pool_t *common_pool)
 {
-  fs_fs_data_t *ffd;
-
   SVN_ERR(check_already_open(fs));
 
-  ffd = apr_pcalloc(fs->pool, sizeof(*ffd));
-  fs->vtable = &fs_vtable;
-  fs->fsap_data = ffd;
+  initialize_fs_struct(fs);
 
   SVN_ERR(svn_fs_fs__create(fs, path, pool));
   return fs_serialized_init(fs, common_pool, pool);
@@ -194,11 +214,7 @@ static svn_error_t *
 fs_open(svn_fs_t *fs, const char *path, apr_pool_t *pool,
         apr_pool_t *common_pool)
 {
-  fs_fs_data_t *ffd;
-
-  ffd = apr_pcalloc(fs->pool, sizeof(*ffd));
-  fs->vtable = &fs_vtable;
-  fs->fsap_data = ffd;
+  initialize_fs_struct(fs);
 
   SVN_ERR(svn_fs_fs__open(fs, path, pool));
   return fs_serialized_init(fs, common_pool, pool);

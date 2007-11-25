@@ -340,7 +340,7 @@ const char *svn_repos_post_revprop_change_hook(svn_repos_t *repos,
                                                apr_pool_t *pool);
 
 
-/** @defgroup svn_repos_lock_hooks paths to lock hooks
+/** @defgroup svn_repos_lock_hooks Paths to lock hooks
  * @{
  * @since New in 1.2. */
 
@@ -454,8 +454,8 @@ svn_repos_begin_report2(void **report_baton,
  * The same as svn_repos_begin_report2(), but taking a boolean
  * @a recurse flag, and sending FALSE for @a send_copyfrom_args.
  *
- * If @a recurse is true, the editor driver will drive the editor with
- * a depth of @c svn_depth_infinity; if false, then with a depth of
+ * If @a recurse is TRUE, the editor driver will drive the editor with
+ * a depth of @c svn_depth_infinity; if FALSE, then with a depth of
  * @c svn_depth_files.
  *
  * @note @a username is ignored, and has been removed in a revised
@@ -499,7 +499,7 @@ svn_repos_begin_report(void **report_baton,
  * A depth of @c svn_depth_unknown is not allowed, and results in an
  * error.
  *
- * If @a start_empty is true and @a path is a directory, then require the
+ * If @a start_empty is TRUE and @a path is a directory, then require the
  * caller to explicitly provide all the children of @a path - do not assume
  * that the tree also contains all the children of @a path at @a revision.
  * This is for 'low confidence' client reporting.
@@ -555,7 +555,7 @@ svn_error_t *svn_repos_set_path(void *report_baton,
  * creation of the @a report_baton, @a link_path is an absolute filesystem
  * path!
  *
- * If @a start_empty is true and @a path is a directory, then require the
+ * If @a start_empty is TRUE and @a path is a directory, then require the
  * caller to explicitly provide all the children of @a path - do not assume
  * that the tree also contains all the children of @a link_path at
  * @a revision.  This is for 'low confidence' client reporting.
@@ -661,7 +661,7 @@ svn_error_t *svn_repos_abort_report(void *report_baton,
  * will be called with the @a tgt_root's revision number, else it will
  * not be called at all.
  *
- * If @a authz_read_func is non-null, invoke it before any call to
+ * If @a authz_read_func is non-NULL, invoke it before any call to
  *
  *    @a editor->open_root
  *    @a editor->add_directory
@@ -719,8 +719,8 @@ svn_repos_dir_delta2(svn_fs_root_t *src_root,
                      apr_pool_t *pool);
 
 /**
- * Similar to svn_repos_dir_delta2(), but if @a recurse is true, pass
- * @c svn_depth_infinity for @a depth, and if @a recurse is false,
+ * Similar to svn_repos_dir_delta2(), but if @a recurse is TRUE, pass
+ * @c svn_depth_infinity for @a depth, and if @a recurse is FALSE,
  * pass @c svn_depth_files for @a depth.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -755,13 +755,13 @@ svn_repos_dir_delta(svn_fs_root_t *src_root,
  * entirety, not as simple copies or deltas against a previous version.
  *
  * The @a editor passed to this function should be aware of the fact
- * that, if @a send_deltas is false, calls to its change_dir_prop(),
+ * that, if @a send_deltas is FALSE, calls to its change_dir_prop(),
  * change_file_prop(), and apply_textdelta() functions will not
  * contain meaningful data, and merely serve as indications that
  * properties or textual contents were changed.
  *
  * If @a send_deltas is @c TRUE, the text and property deltas for changes
- * will be sent, otherwise null text deltas and empty prop changes will be
+ * will be sent, otherwise NULL text deltas and empty prop changes will be
  * used.
  *
  * If @a authz_read_func is non-NULL, it will be used to determine if the
@@ -1102,6 +1102,48 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
                                void *authz_read_baton,
                                apr_pool_t *pool);
 
+
+/**
+ * Call @a receiver and @a receiver_baton to report successive
+ * location segments in revisions between @a start_rev and @a end_rev
+ * (inclusive) for the line of history identified by the peg-object @a
+ * path in @a peg_revision (and in @a repos).
+ *
+ * @a end_rev may be @c SVN_INVALID_REVNUM to indicate that you want
+ * to trace the history of the object to its origin.
+ *
+ * @a start_rev may be @c SVN_INVALID_REVNUM to indicate "the HEAD
+ * revision".  Otherwise, @a start_rev must be younger than @a end_rev
+ * (unless @a end_rev is @c SVN_INVALID_REVNUM).
+ *
+ * @a peg_revision may be @c SVN_INVALID_REVNUM to indicate "the HEAD
+ * revision", and must evaluate to be at least as young as @a start_rev.
+ *
+ * If optional @a authz_read_func is not @c NULL, then use it (and @a
+ * authz_read_baton) to verify that the peg-object is readable.  If
+ * not, return @c SVN_ERR_AUTHZ_UNREADABLE.  Also use the @a
+ * authz_read_func to check that every path reported in a location
+ * segment is readable.  If an unreadable path is encountered, report
+ * a final (possibly truncated) location segment (if any), stop
+ * tracing history, and return @c SVN_NO_ERROR.
+ *
+ * @a pool is used for all allocations.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_repos_node_location_segments(svn_repos_t *repos,
+                                 const char *path,
+                                 svn_revnum_t peg_revision,
+                                 svn_revnum_t start_rev,
+                                 svn_revnum_t end_rev,
+                                 svn_location_segment_receiver_t receiver,
+                                 void *receiver_baton,
+                                 svn_repos_authz_func_t authz_read_func,
+                                 void *authz_read_baton,
+                                 apr_pool_t *pool);
+
+
 /* ### other queries we can do someday --
 
      * fetch the last revision created by <user>
@@ -1125,7 +1167,7 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
  *
  * If @a start or @a end is @c SVN_INVALID_REVNUM, it defaults to youngest.
  *
- * If @a paths is non-null and has one or more elements, then only show
+ * If @a paths is non-NULL and has one or more elements, then only show
  * revisions in which at least one of @a paths was changed (i.e., if
  * file, text or props changed; if dir, props or entries changed or any node
  * changed below it).  Each path is a <tt>const char *</tt> representing
@@ -1137,7 +1179,7 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
  * If @a discover_changed_paths, then each call to @a receiver passes a
  * hash mapping paths committed in that revision to information about them
  * as the receiver's @a changed_paths argument.
- * Otherwise, each call to @a receiver passes null for @a changed_paths.
+ * Otherwise, each call to @a receiver passes NULL for @a changed_paths.
  *
  * If @a strict_node_history is set, copy history (if any exists) will
  * not be traversed while harvesting revision logs for each path.
@@ -1256,7 +1298,7 @@ svn_repos_get_logs(svn_repos_t *repos,
  * mergeinfo visible or available.
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
- * only inherited mergeinfo for @paths is fetched.
+ * only inherited mergeinfo for @a paths is fetched.
  *
  * If @a revision is @c SVN_INVALID_REVNUM, it defaults to youngest.
  *
@@ -1348,7 +1390,7 @@ svn_error_t *svn_repos_get_file_revs(svn_repos_t *repos,
 /* ---------------------------------------------------------------*/
 
 /**
- * @defgroup svn_repos_hook_wrappers Hook-sensitive wrappers for libsvn_fs
+ * @defgroup svn_repos_hook_wrappers Hook-sensitive wrappers for libsvn_fs \
  * routines.
  * @{
  */
@@ -1425,7 +1467,7 @@ svn_error_t *svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
                                                apr_pool_t *pool);
 
 
-/** @defgroup svn_repos_fs_locks repository lock wrappers
+/** @defgroup svn_repos_fs_locks Repository lock wrappers
  * @{
  * @since New in 1.2. */
 
@@ -1494,7 +1536,7 @@ svn_error_t *svn_repos_fs_get_locks(apr_hash_t **locks,
  * @a rev is the revision whose property to change, @a name is the
  * name of the property, and @a new_value is the new value of the
  * property.   @a author is the authenticated username of the person
- * changing the property value, or null if not available.
+ * changing the property value, or NULL if not available.
  *
  * If @a authz_read_func is non-NULL, then use it (with @a
  * authz_read_baton) to validate the changed-paths associated with @a
@@ -1624,6 +1666,15 @@ svn_error_t *svn_repos_fs_change_txn_prop(svn_fs_txn_t *txn,
                                           const char *name,
                                           const svn_string_t *value,
                                           apr_pool_t *pool);
+
+/** Validating wrapper for svn_fs_change_txn_props() (which see for
+ * argument descriptions).
+ * 
+ * @since New in 1.5.
+ */
+svn_error_t *svn_repos_fs_change_txn_props(svn_fs_txn_t *txn,
+                                           apr_array_header_t *props,
+                                           apr_pool_t *pool);
 
 /** @} */
 
@@ -1761,6 +1812,8 @@ svn_repos_node_t *svn_repos_node_from_baton(void *edit_baton);
 #define SVN_REPOS_DUMPFILE_PROP_DELTA                "Prop-delta"
 /* @since New in 1.1. */
 #define SVN_REPOS_DUMPFILE_TEXT_DELTA                "Text-delta"
+/* @since New in 1.5. */
+#define SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_CHECKSUM  "Text-delta-base-md5"
 
 /** The different "actions" attached to nodes in the dumpfile. */
 enum svn_node_action
@@ -1857,7 +1910,7 @@ svn_error_t *svn_repos_dump_fs(svn_repos_t *repos,
  * If the dumpstream contains no UUID, then @a uuid_action is
  * ignored and the repository UUID is not touched.
  *
- * If @a parent_dir is not null, then the parser will reparent all the
+ * If @a parent_dir is not NULL, then the parser will reparent all the
  * loaded nodes, from root to @a parent_dir.  The directory @a parent_dir
  * must be an existing directory in the repository.
  *
@@ -2039,7 +2092,7 @@ svn_repos_parse_dumpstream2(svn_stream_t *stream,
  * 'copyfrom' history to exist in the repository when it encounters
  * nodes that are added-with-history.
  *
- * If @a parent_dir is not null, then the parser will reparent all the
+ * If @a parent_dir is not NULL, then the parser will reparent all the
  * loaded nodes, from root to @a parent_dir.  The directory @a parent_dir
  * must be an existing directory in the repository.
  *
@@ -2258,6 +2311,33 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
                                 svn_repos_authz_func_t authz_read_func,
                                 void *authz_read_baton,
                                 apr_pool_t *pool);
+
+
+
+/** Capabilities **/
+
+/**
+ * Store in @a repos the client-reported capabilities @a capabilities,
+ * which must be allocated in memory at least as long-lived as @a repos.
+ *
+ * The elements of @a capabilities are 'const char *', a subset of
+ * the constants beginning with @c SVN_RA_CAPABILITY_.
+ * @a capabilities is not copied, so changing it later will affect
+ * what is remembered by @a repos.
+ *
+ * @note The capabilities are passed along to the start-commit hook;
+ * see that hook's template for details.
+ *
+ * @note As of Subversion 1.5, there are no error conditions defined,
+ * so this always returns SVN_NO_ERROR.  In future releases it may
+ * return error, however, so callers should check.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_repos_remember_client_capabilities(svn_repos_t *repos,
+                                       apr_array_header_t *capabilities);
+
 
 
 #ifdef __cplusplus

@@ -44,16 +44,28 @@ def usage_and_exit(error_msg=None):
   stream = error_msg and sys.stderr or sys.stdout
   if error_msg:
     print >> stream, "ERROR: %s\n" % error_msg
-  print >> stream, """usage: %s WC_PATH SVN_VERSION [--verbose] [--force]
+  print >> stream, """\
+usage: %s WC_PATH SVN_VERSION [--verbose] [--force] [--skip-unknown-format]
        %s --help
 
 Change the format of a Subversion working copy to that of SVN_VERSION.
+
+  --skip-unknown-format    : skip directories with unknown working copy
+                             format and continue the update
 """ % (progname, progname)
   sys.exit(error_msg and 1 or 0)
+
+def get_adm_dir():
+  """Return the name of Subversion's administrative directory,
+  adjusted for the SVN_ASP_DOT_NET_HACK environment variable.  See
+  <http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt>
+  for details."""
+  return os.environ.has_key("SVN_ASP_DOT_NET_HACK") and "_svn" or ".svn"
 
 class WCFormatConverter:
   "Performs WC format conversions."
   root_path = None
+  error_on_unrecognized = True
   force = False
   verbosity = 0
 
@@ -61,25 +73,37 @@ class WCFormatConverter:
     """Attempt to write the WC format FORMAT_NBR to the entries file
     for DIRNAME.  Throws LossyConversionException when not in --force
     mode, and unconvertable WC data is encountered."""
+
+    # Avoid iterating in unversioned directories.
+    if not get_adm_dir() in paths:
+      del paths[:]
+      return
+
     for path in paths:
       # Process the entries file for this versioned directory.
-      if path in (".svn", "_svn"):
+      if path == get_adm_dir():
         if self.verbosity:
           print "Processing directory '%s'" % dirname
         entries = Entries(os.path.join(dirname, path, "entries"))
 
         if self.verbosity:
           print "Parsing file '%s'" % entries.path
-        entries.parse(self.verbosity)
+        try:
+          entries.parse(self.verbosity)
+        except UnrecognizedWCFormatException, e:
+          if self.error_on_unrecognized:
+            raise
+          print >>sys.stderr, "%s, skipping" % (e,)
 
         if self.verbosity:
           print "Checking whether WC format can be converted"
         try:
           entries.assert_valid_format(format_nbr, self.verbosity)
-        except LossyConversionException:
+        except LossyConversionException, e:
           # In --force mode, ignore complaints about lossy conversion.
           if self.force:
-            print "WARNING: WC format conversion will be lossy"
+            print "WARNING: WC format conversion will be lossy. Dropping "\
+                  "field(s) %s " % ", ".join(e.lossy_fields)
           else:
             raise
 
@@ -156,7 +180,7 @@ class Entries:
     except ValueError:
       format_nbr = -1
     if not format_nbr in LATEST_FORMATS.values():
-      raise NotImplementedError("Unrecognized WC format detected")
+      raise UnrecognizedWCFormatException(format_nbr, self.path)
 
     # Parse file into individual entries, to later inspect for
     # non-convertable data.
@@ -230,11 +254,13 @@ class Entry:
       if len(self.fields) - 1 >= field_index and self.fields[field_index]:
         lossy_fields.append(Entries.entry_fields[field_index])
     if lossy_fields:
-      raise LossyConversionException(
+      raise LossyConversionException(lossy_fields,
         "Lossy WC format conversion requested for entry '%s'\n"
-        "Data for the following field(s) is unsupported by later versions "
+        "Data for the following field(s) is unsupported by older versions "
         "of\nSubversion, and is likely to be subsequently discarded, and/or "
-        "have\nunexpected side-effects: %s"
+        "have\nunexpected side-effects: %s\n\n"
+        "WC format conversion was cancelled, use the --force option to "
+        "override\nthe default behavior."
         % (self.get_name(), ", ".join(lossy_fields)))
 
   def get_name(self):
@@ -248,13 +274,32 @@ class Entry:
       rep += "[%s] %s\n" % (Entries.entry_fields[i], self.fields[i])
     return rep
 
-class LossyConversionException(Exception):
-  "Exception thrown when a lossy WC format conversion is requested."
+
+class LocalException(Exception):
+  """Root of local exception class hierarchy."""
   pass
+
+class LossyConversionException(LocalException):
+  "Exception thrown when a lossy WC format conversion is requested."
+  def __init__(self, lossy_fields, str):
+    self.lossy_fields = lossy_fields
+    self.str = str
+  def __str__(self):
+    return self.str
+
+class UnrecognizedWCFormatException(LocalException):
+  def __init__(self, format, path):
+    self.format = format
+    self.path = path
+  def __str__(self):
+    return "Unrecognized WC format %d in '%s'" % (self.format, self.path)
+
 
 def main():
   try:
-    opts, args = my_getopt(sys.argv[1:], "vh?", ["force", "verbose", "help"])
+    opts, args = my_getopt(sys.argv[1:], "vh?",
+                           ["debug", "force", "skip-unknown-format",
+                            "verbose", "help"])
   except:
     usage_and_exit("Unable to process arguments/options")
 
@@ -268,13 +313,18 @@ def main():
     usage_and_exit()
 
   # Process options.
+  debug = False
   for opt, value in opts:
     if opt in ("--help", "-h", "-?"):
       usage_and_exit()
     elif opt == "--force":
       converter.force = True
+    elif opt == "--skip-unknown-format":
+      converter.error_on_unrecognized = False
     elif opt in ("--verbose", "-v"):
       converter.verbosity += 1
+    elif opt == "--debug":
+      debug = True
     else:
       usage_and_exit("Unknown option '%s'" % opt)
 
@@ -285,9 +335,9 @@ def main():
 
   try:
     converter.change_wc_format(new_format_nbr)
-  except NotImplementedError, e:
-    usage_and_exit(str(e))
-  except LossyConversionException, e:
+  except LocalException, e:
+    if debug:
+      raise
     print >> sys.stderr, str(e)
     sys.exit(1)
 

@@ -181,24 +181,18 @@ def cat_avoids_false_identities(sbox):
   svntest.main.file_append(iota_path, "YOU SHOULD NOT SEE THIS\n")
   svntest.main.run_svn(None, 'add', iota_path)
   svntest.main.run_svn(None, 'ci', '-m', 'log msg',
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        wc_dir)
   svntest.main.run_svn(None, 'up', wc_dir)
 
   # r3
   svntest.main.run_svn(None, 'del', iota_path)
   svntest.main.run_svn(None, 'ci', '-m', 'log msg',
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        wc_dir)
   svntest.main.run_svn(None, 'up', wc_dir)
 
   # r4
   svntest.main.run_svn(None, 'cp', iota_url + '@1', wc_dir)
   svntest.main.run_svn(None, 'ci', '-m', 'log msg',
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        wc_dir)
   svntest.main.run_svn(None, 'up', wc_dir)
 

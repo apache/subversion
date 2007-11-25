@@ -386,7 +386,16 @@
 }
 #endif
 
-/* svn_client_update2 */
+/* svn_client_update3/svn_client_update2 */
+#ifdef SWIGPYTHON
+%typemap(argout) apr_array_header_t **result_revs {
+  %append_output(svn_swig_py_revarray_to_list(*$1));
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
+}
+#endif
+
 #ifdef SWIGRUBY
 %typemap(argout) apr_array_header_t **result_revs {
   %append_output(svn_swig_rb_apr_array_to_array_svn_rev(*$1));
@@ -591,6 +600,15 @@
 #endif
 
 /* -----------------------------------------------------------------------
+   Input of apr_array_header_t * <svn_opt_revision_range_t *>
+*/
+#ifdef SWIGRUBY
+%typemap(in) apr_array_header_t *REVISION_RANGE_LIST {
+  $1 = svn_swig_rb_array_to_apr_array_revision_range($input, _global_pool);
+}
+#endif
+
+/* -----------------------------------------------------------------------
    Input of
    apr_hash_t * <const char *, apr_array_header_t * <svn_merge_range_t *>>
 */
@@ -614,7 +632,7 @@
    apr_hash_t * <const char *, apr_array_header_t * <svn_merge_range_t *>>
 */
 #ifdef SWIGPYTHON
-%typemap(argout) apr_hash_t **MERGEHASH
+%typemap(argout) apr_hash_t **MERGEINFO
 {
   %append_output
     (svn_swig_py_mergeinfo_to_dict(*$1, $descriptor(svn_merge_range_t *),
@@ -624,21 +642,32 @@
     SWIG_fail;
   }
 }
+
+%typemap(in) apr_hash_t **MERGEINFO_INOUT ($*1_ltype temp)
+{
+  $1 = &temp;
+  *$1 = svn_swig_py_mergeinfo_from_dict($input, _global_pool);
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
+}
 #endif
 
 #ifdef SWIGRUBY
-%typemap(argout) apr_hash_t **MERGEHASH
+%typemap(argout) apr_hash_t **MERGEINFO
 {
   %append_output(svn_swig_rb_apr_hash_to_hash_merge_range(*$1));
 }
 
-%typemap(in) apr_hash_t **MERGEHASH_INOUT ($*1_ltype temp)
+%typemap(in) apr_hash_t **MERGEINFO_INOUT ($*1_ltype temp)
 {
   $1 = &temp;
   *$1 = svn_swig_rb_hash_to_apr_hash_merge_range($input, _global_pool);
 }
+#endif
 
-%typemap(argout) apr_hash_t **MERGEHASH_INOUT = apr_hash_t **MERGEHASH;
+#if defined(SWIGPYTHON) || defined(SWIGRUBY)
+%typemap(argout) apr_hash_t **MERGEINFO_INOUT = apr_hash_t **MERGEINFO;
 #endif
 
 /* -----------------------------------------------------------------------
@@ -648,7 +677,7 @@
                                array_header_t * <svn_merge_range_t *>>>
 */
 #ifdef SWIGRUBY
-%typemap(argout) apr_hash_t **HASH_OF_MERGE_INFO_HASH
+%typemap(argout) apr_hash_t **MERGEINFO_HASH
 {
   %append_output(svn_swig_rb_apr_hash_to_hash_merge_range_hash(*$1));
 }
@@ -662,12 +691,21 @@
   %append_output
     (svn_swig_py_rangelist_to_list(*$1, $descriptor(svn_merge_range_t *),
                                    _global_py_pool));
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
+}
 
+%typemap(in) apr_array_header_t **RANGELIST_INOUT ($*1_ltype temp)
+{
+  $1 = &temp;
+  *$1 = svn_swig_py_rangelist_to_array($input, _global_pool);
   if (PyErr_Occurred()) {
     SWIG_fail;
   }
 }
 #endif
+
 #ifdef SWIGRUBY
 %typemap(argout) apr_array_header_t **RANGELIST {
   %append_output(svn_swig_rb_apr_array_to_array_merge_range(*$1));
@@ -678,8 +716,9 @@
   $1 = &temp;
   *$1 = svn_swig_rb_array_to_apr_array_merge_range($input, _global_pool);
 }
+#endif
 
+#if defined(SWIGPYTHON) || defined(SWIGRUBY)
 %typemap(argout) apr_array_header_t **RANGELIST_INOUT =
    apr_array_header_t **RANGELIST;
 #endif
-

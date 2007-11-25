@@ -9,6 +9,8 @@ class Time
   end
 end
 
+require 'greek_tree'
+
 module SvnTestUtil
   def setup_default_variables
     test_dir = Pathname.new(File.dirname(__FILE__))
@@ -27,6 +29,7 @@ module SvnTestUtil
     @full_wc_path = File.expand_path(@wc_path)
     @tmp_path = File.join(@base_dir, "tmp")
     @config_path = File.join(@base_dir, "config")
+    @greek = Greek.new(@tmp_path, @wc_path, @repos_uri)
   end
 
   def setup_basic(need_svnserve=false)
@@ -192,6 +195,10 @@ realm = #{@realm}
     end
   end
 
+  def setup_greek_tree
+    @greek.setup(make_context("setup greek tree"))
+  end
+
   module_function
   def windows?
     /cygwin|mingw|mswin32|bccwin32/.match(RUBY_PLATFORM)
@@ -201,6 +208,9 @@ realm = #{@realm}
     def setup_svnserve
       @svnserve_port = nil
       @repos_svnserve_uri = nil
+
+      # Look through the list of potential ports until we're able to
+      # successfully start svnserve on a free one.
       @svnserve_ports.each do |port|
         @svnserve_pid = fork {
           STDERR.close
@@ -211,8 +221,12 @@ realm = #{@realm}
         }
         pid, status = Process.waitpid2(@svnserve_pid, Process::WNOHANG)
         if status and status.exited?
-          STDERR.puts "port #{port} couldn't be used for svnserve"
+          if $DEBUG
+            STDERR.puts "port #{port} couldn't be used for svnserve"
+          end
         else
+          # svnserve started successfully.  Note port number and cease
+          # startup attempts.
           @svnserve_port = port
           @repos_svnserve_uri =
             "svn://#{@svnserve_host}:#{@svnserve_port}#{@full_repos_path}"
@@ -274,4 +288,3 @@ exit 1
     extend SetupEnvironment
   end
 end
-

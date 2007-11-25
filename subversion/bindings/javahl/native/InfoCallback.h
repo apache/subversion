@@ -19,12 +19,9 @@
  * @brief Interface of the class InfoCallback
  */
 
-#if !defined(_INFOCALLBACK_H__INCLUDED_)
-#define _INFOCALLBACK_H__INCLUDED_
+#ifndef INFOCALLBACK_H
+#define INFOCALLBACK_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
 #include <jni.h>
 #include "svn_client.h"
 
@@ -61,5 +58,4 @@ class InfoCallback
                           apr_pool_t *pool);
 };
 
-// !defined(_INFOCALLBACK_H__INCLUDED_)
-#endif
+#endif  // INFOCALLBACK_H

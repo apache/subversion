@@ -604,7 +604,7 @@ def build_tree_from_checkout(lines, include_skipped=1):
   "Return a tree derived by parsing the output LINES from 'co' or 'up'."
 
   root = SVNTreeNode(root_node_name)
-  rm1 = re.compile ('^([MAGCUDE_ ][MAGCUDE_ ])([B ])\s+(.+)')
+  rm1 = re.compile ('^([RMAGCUDE_ ][MAGCUDE_ ])([B ])\s+(.+)')
   if include_skipped:
     rm2 = re.compile ('^(Restored|Skipped)\s+\'(.+)\'')
   else:

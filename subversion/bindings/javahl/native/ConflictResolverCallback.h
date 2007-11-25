@@ -19,12 +19,9 @@
  * @brief Interface of the class ConflictResolverCallback
  */
 
-#ifndef CONFLICT_RESOLVER_CALLBACK_H
-#define CONFLICT_RESOLVER_CALLBACK_H
+#ifndef CONFLICTRESOLVERCALLBACK_H
+#define CONFLICTRESOLVERCALLBACK_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
 #include <jni.h>
 #include "svn_error.h"
 #include "svn_wc.h"
@@ -67,7 +64,7 @@ class ConflictResolverCallback
    * Implementation of the svn_wc_conflict_resolver_func_t API.
    */
   static svn_error_t *
-  resolveConflict(svn_wc_conflict_result_t *result,
+  resolveConflict(svn_wc_conflict_result_t **result,
                   const svn_wc_conflict_description_t *desc,
                   void *baton,
                   apr_pool_t *pool);
@@ -78,16 +75,23 @@ class ConflictResolverCallback
    * logic for the implementation of the svn_wc_conflict_resolver_func_t
    * API.
    */
-  svn_error_t * resolve(svn_wc_conflict_result_t *result,
+  svn_error_t * resolve(svn_wc_conflict_result_t **result,
                         const svn_wc_conflict_description_t *desc,
                         apr_pool_t *pool);
 
  private:
   /**
    * Convert the Java conflict resolution @a result into the
+   * appropriate C representation.
+   */
+  static svn_wc_conflict_result_t * javaResultToC(jobject result,
+                                                  apr_pool_t *pool);
+
+  /**
+   * Convert the Java conflict resolution @a choice into the
    * appropriate C enum value.
    */
-  static svn_wc_conflict_result_t javaResultToC(jint result);
+  static svn_wc_conflict_choice_t javaChoiceToC(jint choice);
 };
 
-#endif  // CONFLICT_RESOLVER_CALLBACK_H
+#endif  // CONFLICTRESOLVERCALLBACK_H

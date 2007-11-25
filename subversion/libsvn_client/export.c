@@ -335,7 +335,7 @@ copy_versioned_files(const char *from,
 
               SVN_ERR(svn_wc_parse_externals_description3(&ext_items, from,
                                                           prop_val->data,
-                                                          TRUE, pool));
+                                                          FALSE, pool));
               for (i = 0; i < ext_items->nelts; ++i)
                 {
                   svn_wc_external_item2_t *ext_item;
@@ -808,11 +808,16 @@ svn_client_export4(svn_revnum_t *result_rev,
       svn_ra_session_t *ra_session;
       svn_node_kind_t kind;
       struct edit_baton *eb = apr_pcalloc(pool, sizeof(*eb));
+      const char *repos_root_url;
 
       /* Get the RA connection. */
       SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
-                                               &url, from, peg_revision,
+                                               &url, from, NULL,
+                                               peg_revision,
                                                revision, ctx, pool));
+
+      /* Get the repository root. */
+      SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root_url, pool));
 
       eb->root_path = to;
       eb->root_url = url;
@@ -928,7 +933,8 @@ svn_client_export4(svn_revnum_t *result_rev,
                      ctx->notify_baton2, pool));
 
           if (! ignore_externals && depth == svn_depth_infinity)
-            SVN_ERR(svn_client__fetch_externals(eb->externals, depth, TRUE,
+            SVN_ERR(svn_client__fetch_externals(eb->externals, from, to,
+                                                repos_root_url, depth, TRUE,
                                                 &use_sleep, ctx, pool));
         }
       else if (kind == svn_node_none)

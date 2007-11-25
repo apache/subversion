@@ -47,9 +47,9 @@ svn_fs_bdb__open_strings_table(DB **strings_p,
      multiple records. Note: this must occur before ->open().  */
   BDB_ERR(strings->set_flags(strings, DB_DUP));
 
-  BDB_ERR(strings->open(SVN_BDB_OPEN_PARAMS(strings, NULL),
-                        "strings", 0, DB_BTREE,
-                        open_flags, 0666));
+  BDB_ERR((strings->open)(SVN_BDB_OPEN_PARAMS(strings, NULL),
+                          "strings", 0, DB_BTREE,
+                          open_flags, 0666));
 
   if (create)
     {

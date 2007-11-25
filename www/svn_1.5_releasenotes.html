@@ -30,17 +30,16 @@ describes what is planned for the release.</p>
 <ul>
   <li>Merge Tracking</li>
   <li>Sparse checkouts</li>
+  <li>Copy/move-related improvements</li>
   <li>Interactive conflict resolution</li>
   <li>WebDAV transparent write-through proxy</li>
   <li>Cyrus SASL support for ra_svn and <tt>svnserve</tt></li>
-  <li>Copy/move improvements: peg revisions, 'svn mv file1 file2; svn
-    mv file2 file3', 'svn cp *.c dir'</li>
   <li>Cancellation improvements</li>
   <li>Changelist support</li>
+  <li>Relative and peg URLs in <tt>svn:externals</tt></li>
   <li>FSFS sharding</li>
   <li>Command-line client improvements</li>
-  <li>JavaHL bindings improvements</li>
-  <li>Many improved APIs</li>
+  <li>API changes, improvements and language bindings</li>
   <li>Easier to try out experimental <tt>ra_serf</tt> DAV access module</li>
   <li>More than XXX new bug fixes</li>
 </ul>
@@ -69,23 +68,47 @@ by earlier versions.  To upgrade an existing installation, just
 install the newest libraries and binaries on top of the older
 ones.</p>
 
+<p>XXX: Note new FS node-origins index (which lazily populates while
+responding to queries), and new svn-populate-node-origins-index tool.</p>
+
 <p>Subversion 1.5 maintains API/ABI compatibility with earlier
 releases, by only adding new functions.  A program written to the 1.0,
 1.1, 1.2 or 1.3 API can both compile and run using 1.5 libraries.
 However, a program written for 1.5 cannot necessarily compile or run
-against older libraries.</p>
+against older libraries.  However, see the <a href="#apis">API</a>
+section on some clarifications on existing APIs.</p>
 
-<div class="h3" id="repos-format-change" title="repos-format-change">
-<h3>Repository Format Changes</h3>
+<div class="h3" id="wc-and-repos-format-change" title="wc-format-change">
+<h3>Working Copy and Repository Format Changes</h3>
 
-<p>Due to certain improvements and bugfixes made to the FS library,
-the version number of the repository format has been incremented. This
-means that pre-1.5 Subversion tools that normally access a repository
-directly (e.g. <tt>svnserve</tt>, <tt>mod_dav_svn</tt>,
-<tt>svnadmin</tt>) will <em>not</em> be able to read a repository
-originally created by Subversion 1.5.</p>
+<p>Due to certain improvements and bugfixes made to the working copy
+library, the version number of the working copy format has been
+incremented. This means that Subversion clients earlier than 1.5 will
+<em>not</em> be able to work with working copies produced by Subversion
+1.5.  Similarly, the repository format has changed as well, meaning
+that pre-1.5 Subversion tools that normally access a repository
+directly (e.g. <tt>svnserve</tt>, <tt>mod_dav_svn</tt>, <tt>svnadmin</tt>)
+won't be able to read a repository originally created by Subversion
+1.5.</p>
 
-</div>  <!-- repos-format-change -->
+<p><strong>WARNING:</strong> if a Subversion 1.5 client encounters a pre-1.5
+working copy, it will <em>automatically</em> upgrade the working copy
+format as soon as it touches it, making it unreadable by older
+Subversion clients.  If you are using several versions of Subversion
+on your machine, you need to be careful about which version you use in
+which working copy, to avoid accidentally upgrading the working copy
+format.  This "auto upgrade" feature, however, does <em>not</em> occur
+with the new repository format.</p>
+
+<p>If you do accidentally upgrade a 1.4 (only) working copy, you can
+use <a
+href="http://svn.collab.net/repos/svn/trunk/tools/client-side/change-svn-wc-format.py"
+>this script</a> to downgrade it back 1.4.  See <a
+href="http://subversion.tigris.org/faq.html#working-copy-format-change"
+>the FAQ</a> for details, and run the script with the
+<code>--help</code> option for usage instructions.</p>
+
+</div>  <!-- wc-format-change -->
 
 <div class="h3" id="output-changes" title="output-changes">
 <h3>Command Line Output Changes</h3>
@@ -136,10 +159,10 @@ href="http://svn.collab.net/repos/svn/trunk/notes/sparse-directories.txt"
 line client, and a corresponding callback function in the client
 library.  GUI clients can use the callback function to hook in a
 graphical conflict resolution program to the
-<code>update</code>/<code>switch</code>/<code>merge</code> commands.
-Example command line output:</p>
+<code>update</code>/<code>switch</code>/<code>merge</code>
+sub-commands.  Example command line output:</p>
 <pre>
-    svn up
+    $ svn up
     U    contrib/client-side/svnmerge/svnmerge_test.py
     Conflict discovered in 'contrib/client-side/svnmerge/svnmerge.py'.
     Select: (p)ostpone, (d)iff, (e)dit, (h)elp : h
@@ -210,6 +233,147 @@ href="http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt"
 
 </div>  <!-- changelist-support -->
 
+<div class="h3" id="relative-externals" title="relative-externals">
+<h3>Relative peg URLs in <tt>svn:externals</tt></h3>
+
+<p>Two additions to the <tt>svn:externals</tt> feature</p>
+  <ul>
+    <li>
+      <p>
+        The URLs may include peg specifications.  Because the
+        directory a URL refers to with and without a peg revision uses
+        a different lookup and result in different contents, the
+        current format from older versions of Subversion continues to
+        not understand peg revisions.  A new format is introduced to
+        allow peg revisions in URLs.
+      </p>
+      <p>So the old format of</p>
+        <pre>
+          foo             http://example.com/repos/zig
+          foo/bar -r 1234 http://example.com/repos/zag
+        </pre>
+        <p>does not support peg revisions.  In fact, these following
+        externals will not work unless there are directories named
+        <tt>zig@HEAD</tt> and <tt>zag@HEAD</tt>:</p>
+        <pre>
+          foo             http://example.com/repos/zig@HEAD
+          foo/bar -r 1234 http://example.com/repos/zag@HEAD
+        </pre>
+      <p>
+        The new format moves the URL first followed by the directory
+        the external is checked out or exported into</p>
+        <pre>
+          http://example.com/repos/zig foo1
+          -r 1234 http://example.com/repos/zag foo/bar1
+          http://example.com/repos/zig@HEAD foo2
+          -r 1234 http://example.com/repos/zag@HEAD foo/bar2
+        </pre>
+        <p>peg specifications are allowed but not necessary.
+      </p>
+    </li>
+    <li>
+      <p>
+        Up to Subversion 1.4, the URLs in an <tt>svn:externals</tt>
+        specification must be absolute.  Now they can be relative.
+        Four different relative externals are supported.
+      </p>
+      <p>
+        For the following example, assume we have two repositories at
+        <tt>http://example.com/svn/repos-1</tt> and
+        <tt>http://example.com/svn/repos-2</tt>.  We have a checkout
+        of <tt>http://example.com/svn/repos-1/project1/trunk</tt> and
+        the <tt>svn:external</tt> property is set on <tt>trunk</tt>.</p>
+        <ul>
+          <li>
+            <tt>../</tt>
+            <br/>
+            Relative to the directory with the <tt>svn:external</tt>
+            property.  These URLs always begin with the string
+            <tt>../</tt>.
+            <pre>
+              ../../project2/trunk common/project2/trunk
+            </pre>
+            This will extract
+            <tt>http://example.com/svn/repos-1/project2/trunk</tt>
+            into <tt>common/project2/trunk</tt>.  The URL is relative
+            to the directory with the <tt>svn:external</tt>, not the
+            directory where the external is written to disk.
+          </li>
+          <li>
+            <tt>^/</tt>
+            <br/>
+            Relative to the repository root.
+            <pre>
+              ^/project2/trunk common/project2/trunk
+            </pre>
+            This will extract
+            <tt>http://example.com/svn/repos-1/project2/trunk</tt>
+            into <tt>common/project2/trunk</tt>.
+            <br/>
+
+            You can also refer to other repositories easily using
+            repository root relative URLs:
+            <pre>
+              ^/../repos-2/foo/trunk common/foo/trunk
+            </pre>
+            This will extract
+            <tt>http://example.com/svn/repos-2/foo/trunk</tt> into
+            <tt>common/foo/trunk</tt>
+          </li>
+          <li>
+            <tt>//</tt>
+            <br/>
+            Relative to the scheme.  This copies the scheme of the
+            checkout or export URL into the URL in the
+            <tt>svn:external</tt>.  It is useful when the same
+            hostname must the accessed with different scheme's
+            depending upon network location; i.e. clients in the
+            intranet use <tt>http://</tt> while external clients use
+            <tt>svn+ssh://</tt>.
+            <pre>
+              //example.com/svn/repos-1/project2/trunk common/project2/trunk
+            </pre>
+            This will extract
+            <tt>http://example.com/svn/repos-1/project2/trunk</tt>
+            into <tt>common/project2/trunk</tt>.  If the working copy
+            was checked out from
+            <tt>svn+ssh://example.com/svn/repos-1/project1/trunk</tt>
+            then this URL would be
+            <tt>http://example.com/svn/repos-1/project1/trunk</tt>.
+          </li>
+          <li>
+            <tt>/</tt>
+            <br/>
+
+            Server root relative URLs.  This copies the scheme and
+            hostname from the checkout or export URL into the
+            <tt>svn:external</tt> URL.
+            <pre>
+              /svn/repos-1/project2/trunk common/project2/trunk
+            </pre>
+            This will extract
+            <tt>http://example.com/svn/repos-1/project2/trunk</tt>
+            into <tt>common/project2/trunk</tt>.  If the working copy
+            was checked out from
+            <tt>svn+ssh://example.com/svn/repos-1/project1/trunk</tt>
+            then this URL would be
+            <tt>http://example.com/svn/repos-1/project1/trunk</tt>.
+          </li>
+        </ul>
+      <p>
+        Relative URLs are supported in the old <tt>svn:externals</tt>
+        format that do not support peg revisions.
+      </p>
+      <p>
+        When Subversion sees an <tt>svn:externals</tt> without an
+        absolute URL it takes the first argument as a relative URL and
+        the second as the target directory.
+      </p>
+    </li>
+  </ul>
+
+</div>  <!-- relative-externals -->
+
 <div class="h3" id="fsfs-sharding" title="fsfs-sharding">
 <h3>FSFS sharding</h3>
 
@@ -233,9 +397,81 @@ href="http://www.farside.org.uk/200704/tree_structured_fsfs">here</a>.
 <h2>Enhancements and Bugfixes</h2>
 
 <div class="h3" id="copy-move-improvements" title="copy-move-improvements">
-<h3>Copy/move improvements</h3>
+<h3>Copy/move-related improvements (<em>client and server</em>)</h3>
 
-<p>XXX</p>
+<p>The abilities and behavior of <code>copy</code> and
+<code>move</code> operations has improved significantly.</p>
+
+
+<div class="h4" id="leverage-copyfrom" title="leverage-copyfrom">
+<h4>Improved copy-handling during updates (<em>client and server</em>)</h4>
+
+<p>A common problem in older versions of Subversion was the way in
+which <code>svn update</code> handled incoming copies and moves.</p>
+
+<p>For example, suppose Harry runs <code>svn move foo bar; svn
+commit</code>, and meanwhile Sally makes local changes to 'foo', and
+then runs <code>svn update</code>.  In earlier versions of Subversion,
+the server would send down a completely new file 'bar', and remove the
+file 'foo' (or rather, make it unversioned, since it has uncommitted
+changes.)  From Sally's point of view, her changes seem to be lost;
+the newly added 'bar' file has the older content.  In Subversion 1.5,
+the client and server both attempt to be smarter about this.  The
+server doesn't send a whole new file during the update, but rather
+instructions to copy something that may likely already exists in the
+working copy.  So Sally's 'foo' file is copied to 'bar' (with local
+edits intact!).</p>
+
+<p>In theory, this is the best-case scenario.  There are a few
+caveats: this "proper copying" of existing working-copy resources only
+works on files, not (yet) on directories.  Also, if an incoming
+move-operation deletes 'foo' before it attempts to copy it to 'bar',
+then the copy will fail, and the client reverts to the old behavior of
+fetching a pristine copy of the file from the repository.  We hope to
+address this in svn 1.6.  For details on the this issue see <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=503">issue
+#503</a>.</p>
+
+</div> <!-- leverage-copyfrom -->
+
+<div class="h4" id="copy-peg-revs" title="copy-peg-revs">
+<h4>Peg revisions (<em>client</em>)</h4>
+
+<p>Copy operations now accept sources with peg revisions.</p>
+
+</div>  <!-- copy-peg-revs -->
+
+<div class="h4" id="multi-op-copy-move" title="multi-op-copy-move">
+<h4>Multiple working copy copy/move operations (<em>client</em>)</h4>
+
+<p>Clients may now perform multiple local copy/move operations on a
+single object in a working copy:</p>
+<blockquote><pre><code>
+svn mv path1 path2
+svn mv path2 path3
+</code></pre></blockquote>
+
+</div>  <!-- multi-op-copy-move -->
+
+<div class="h4" id="multi-src-copy" title="multi-src-copy">
+<h4>Improved handling multiple copy/move sources (<em>client</em>)</h4>
+
+<p>Clients now accept multiple sources for copy and move operations, with 
+the ability to copy/move each of the sources to the specified directory.
+This mirrors the behavior of standard command-line copy and move tools,
+such as <code>cp</code> and <code>mv</code>.  In practice, this means
+users can take advantage of shell globbing when doing a local copy
+or move:</p>
+<blockquote><pre><code>
+svn cp *.c dir
+</code></pre></blockquote>
+
+<p>Multiple source copy/move also works for all previously defined
+copy/move working copy and repository combinations.  This was
+<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=747">issue
+#747</a>.</p>
+
+</div>  <!-- multi-src-copy -->
 
 </div>  <!-- copy-move-improvements -->
 
@@ -243,7 +479,11 @@ href="http://www.farside.org.uk/200704/tree_structured_fsfs">here</a>.
      title="cancellation-improvements">
 <h3>Cancellation improvements (<em>client</em>)</h3>
 
-<p>XXX</p>
+<p>Clients operations are now significantly more responsive to
+cancellation (e.g. via <tt>control-c</tt>).  In pre-1.5 releases,
+after directing an operation to stop, one sometimes had to wait for
+some time (e.g. while I/O occurred) before the operation would
+actually stop.</p>
 
 </div>  <!-- cancellation-improvements -->
 
@@ -286,22 +526,62 @@ href="http://www.farside.org.uk/200704/tree_structured_fsfs">here</a>.
     been added to the <code>delete</code> sub-command.</li>
 </ul>
 
+<p>XXX: More...</p>
+
 </div>  <!-- cmdline -->
 
-<div class="h3" id="javahl-improvements" title="javahl-improvements">
-<h3>Javahl bindings improvements</h3>
-
-<p>XXX: Should this go into the APIs section?</p>
-
-</div>  <!-- javahl-improvements -->
-
 <div class="h3" id="apis" title="apis">
-<h3>API improvements (<em>client and server</em>)</h3>
+<h3>API changes, improvements and language bindings
+    (<em>client and server</em>)</h3>
 
 <p>If you develop a 3rd-party client application that uses Subversion
-  APIs, you may want to take notice of some new APIs:</p>
+  APIs, you may want to take notice of the following changes and new
+  APIs:</p>
 
 <ul>
+  <li><tt>svn_opt_parse_path()</tt> changes
+    <ul>
+      <li>
+        Since Subversion 1.3, if a path or URL ends in an empty
+        revision suffix '@', then the returned revision type would be
+        different than an unprotected path or URL:
+        <ul>
+          <li>
+            <tt>some/path/to/foo</tt> returns
+            <tt>svn_opt_revision_unspecified</tt>
+          </li>
+          <li>
+            <tt>some/path/to/foo<b>@</b></tt> returns
+            <tt>svn_opt_revision_base</tt>
+          </li>
+          <li>
+            <tt>http://example.com/some/path/to/foo</tt> returns
+            <tt>svn_opt_revision_unspecified</tt>
+          </li>
+          <li>
+            <tt>http://example.com/some/path/to/foo@</tt> returns
+            <tt>svn_opt_revision_head</tt>
+          </li>
+        </ul>
+        Subversion 1.5 fixes this inconsistency, all the above paths
+        and URLs return <tt>svn_opt_revision_unspecified</tt>.
+      </li>
+      <li>
+        Since Subversion 1.2, <tt>svn_opt_parse_path</tt> would always
+        canonicalize the returned path or URL with
+        <tt>svn_path_canonicalize</tt>, even though this is not
+        documented in <tt>subversion/include/svn_opt.h</tt>.  For the
+        relative externals support, uncanonicalized paths need to be
+        returned, otherwise scheme relative URLs,
+        i.e. <tt>//example.com/some/path</tt> would be canonicalized
+        to server root relative URLs <tt>/example.com/some/path</tt>.
+        Users of this function now must ensure that they canonicalize
+        the result of this function if they pass it to any other
+        Subversion functions that expect a canonicalized path or URL.
+      </li>
+    </ul>
+  </li>
+
   <li>XXX: Enumerate specific new API additions (e.g. merge info
     retrieval?)</li>
 
@@ -309,6 +589,8 @@ href="http://www.farside.org.uk/200704/tree_structured_fsfs">here</a>.
     improvements</a> section have been added.</li>
 
   <li>Many APIs have been revised to newer versions.</li>
+
+  <li>Language bindings expanded and improved</li>
 </ul>
 
 </div>  <!-- apis -->

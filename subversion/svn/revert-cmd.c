@@ -44,7 +44,7 @@ svn_cl__revert(apr_getopt_t *os,
   apr_array_header_t *changelist_targets = NULL, *combined_targets = NULL;
   svn_error_t *err;
 
-  /* Before allowing svn_opt_args_to_target_array() to canonicalize
+  /* Before allowing svn_opt_args_to_target_array2() to canonicalize
      all the targets, we need to build a list of targets made of both
      ones the user typed, as well as any specified by --changelist.  */
   if (opt_state->changelist)
@@ -79,7 +79,7 @@ svn_cl__revert(apr_getopt_t *os,
                          FALSE, FALSE, pool);
 
   /* Revert is especially conservative, by default it is as
-     nonrecursive as possible. */ 
+     nonrecursive as possible. */
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_empty;
 

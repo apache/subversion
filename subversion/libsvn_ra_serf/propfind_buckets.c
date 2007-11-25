@@ -22,6 +22,7 @@
 
 #include <apr_pools.h>
 #include <apr_strings.h>
+#include <apr_uri.h>
 
 #include <serf.h>
 #include <serf_bucket_util.h>
@@ -142,6 +143,15 @@ static void become_request(serf_bucket_t *bucket)
   body_bkt = create_propfind_body(bucket);
 
   serf_bucket_request_become(bucket, "PROPFIND", ctx->path, body_bkt);
+#if SERF_VERSION_AT_LEAST(0,1,3)
+  if (ctx->conn->session->using_proxy)
+    {
+      char *url = apr_uri_unparse(ctx->conn->session->pool,
+                                  &ctx->conn->session->repos_url, 
+                                  APR_URI_UNP_OMITPATHINFO);
+      serf_bucket_request_set_root(bucket, url);
+    }
+#endif
 
   hdrs_bkt = serf_bucket_request_get_headers(bucket);
 
@@ -153,12 +163,19 @@ static void become_request(serf_bucket_t *bucket)
     }
   serf_bucket_headers_setn(hdrs_bkt, "Content-Type", "text/xml");
   serf_bucket_headers_setn(hdrs_bkt, "Depth", ctx->depth);
+
   if (ctx->label)
     {
       serf_bucket_headers_setn(hdrs_bkt, "Label", ctx->label);
     }
+
+  /* Setup server authorization headers */
   if (ctx->conn->session->auth_protocol)
-    ctx->conn->session->auth_protocol->setup_request_func(ctx->conn, 
+    ctx->conn->session->auth_protocol->setup_request_func(ctx->conn, hdrs_bkt);
+
+  /* Setup proxy authorization headers */
+  if (ctx->conn->session->proxy_auth_protocol)
+    ctx->conn->session->proxy_auth_protocol->setup_request_func(ctx->conn, 
                                                           hdrs_bkt);
 
   serf_bucket_mem_free(bucket->allocator, ctx);

@@ -882,3 +882,63 @@ svn_ra_serf__set_bare_props(void *baton,
   return set_bare_props(set_hash_props, baton,
                         ns, ns_len, name, name_len, val, pool);
 }
+
+
+svn_error_t *
+svn_ra_serf__get_baseline_info(const char **bc_url,
+                               const char **bc_relative,
+                               svn_ra_serf__session_t *session,
+                               const char *url,
+                               svn_revnum_t revision,
+                               apr_pool_t *pool)
+{
+  const char *vcc_url, *relative_url, *basecoll_url, *baseline_url;
+  apr_hash_t *props = apr_hash_make(pool);
+
+  /* No URL?  No sweat.  We'll use the session URL. */
+  if (! url)
+    url = session->repos_url.path;
+
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &relative_url,
+                                     session, session->conns[0], url, pool));
+
+  if (revision != SVN_INVALID_REVNUM)
+    {
+      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                          vcc_url, revision, "0",
+                                          baseline_props, pool));
+      basecoll_url = svn_ra_serf__get_ver_prop(props, vcc_url, revision,
+                                               "DAV:", "baseline-collection");
+    }
+  else
+    {
+      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                          vcc_url, revision, "0",
+                                          checked_in_props, pool));
+      baseline_url = svn_ra_serf__get_ver_prop(props, vcc_url, revision,
+                                               "DAV:", "checked-in");
+      if (!baseline_url)
+        {
+          return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                                  _("The OPTIONS response did not include the "
+                                    "requested checked-in value"));
+        }
+
+      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                          baseline_url, revision, "0",
+                                          baseline_props, pool));
+      basecoll_url = svn_ra_serf__get_ver_prop(props, baseline_url, revision,
+                                               "DAV:", "baseline-collection");
+    }
+
+  if (!basecoll_url)
+    {
+      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                              _("The OPTIONS response did not include the "
+                                "requested baseline-collection value"));
+    }
+  *bc_url = basecoll_url;
+  *bc_relative = relative_url;
+  return SVN_NO_ERROR;
+}
+

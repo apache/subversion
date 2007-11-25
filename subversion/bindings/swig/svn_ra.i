@@ -1,6 +1,6 @@
 /*
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -75,6 +75,10 @@
                   (svn_ra_reporter2_t *)&swig_py_ra_reporter2,
                   ,
                   )
+%callback_typemap(svn_location_segment_receiver_t receiver, void *receiver_baton,
+                  svn_swig_py_location_segment_receiver_func,
+                  ,
+                  )
 #endif
 
 #ifdef SWIGRUBY
@@ -99,7 +103,7 @@
 #endif
 
 #ifdef SWIGRUBY
-%apply apr_hash_t **HASH_OF_MERGE_INFO_HASH {
+%apply apr_hash_t **MERGEINFO_HASH {
   apr_hash_t **mergeoutput
 };
 #endif

@@ -53,8 +53,8 @@ const char *svn_md5_digest_to_cstring(const unsigned char digest[],
 
 
 /** Compare digests @a d1 and @a d2, each @c APR_MD5_DIGESTSIZE bytes long.
- * If neither is all zeros, and they do not match, then return false;
- * else return true.
+ * If neither is all zeros, and they do not match, then return FALSE;
+ * else return TRUE.
  */
 svn_boolean_t svn_md5_digests_match(const unsigned char d1[],
                                     const unsigned char d2[]);

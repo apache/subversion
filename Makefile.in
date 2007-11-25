@@ -509,6 +509,7 @@ doc-api:
 doc-javahl:
 	$(JAVADOC) -d $(top_srcdir)/doc/javadoc \
 	  -sourcepath $(top_srcdir)/subversion/bindings/javahl/src \
+	  -link http://java.sun.com/javase/6/docs/api/ \
 	  org.tigris.subversion.javahl
 
 # Build all types of a certain doc.

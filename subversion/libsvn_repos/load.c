@@ -26,6 +26,8 @@
 #include "svn_props.h"
 #include "repos.h"
 #include "svn_private_config.h"
+#include "svn_mergeinfo.h"
+#include "svn_md5.h"
 
 #include <apr_lib.h>
 
@@ -69,7 +71,9 @@ struct node_baton
   const char *path;
   svn_node_kind_t kind;
   enum svn_node_action action;
-  const char *md5_checksum;     /* null, if not available */
+  const char *base_checksum;        /* null, if not available */
+  const char *result_checksum;      /* null, if not available */
+  const char *copy_source_checksum; /* null, if not available */
 
   svn_revnum_t copyfrom_rev;
   const char *copyfrom_path;
@@ -229,6 +233,33 @@ read_key_or_val(char **pbuf,
     return stream_malformed();
 
   *pbuf = buf;
+  return SVN_NO_ERROR;
+}
+
+/* Prepend the mergeinfo source paths in MERGEINFO_ORIG with PARENT_DIR, and
+   return it in *MERGEINFO_VAL. */
+static svn_error_t *
+prefix_mergeinfo_paths(const char **mergeinfo_val, const char *mergeinfo_orig,
+                       const char *parent_dir, apr_pool_t *pool)
+{
+  apr_hash_t *prefixed_mergeinfo, *mergeinfo;
+  apr_hash_index_t *hi;
+  svn_stringbuf_t *merge_val;
+  const char *path;
+  const void *merge_source;
+  void *rangelist;
+
+  SVN_ERR(svn_mergeinfo_parse(&mergeinfo, mergeinfo_orig, pool));
+  prefixed_mergeinfo = apr_hash_make(pool);
+  for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
+    {
+      apr_hash_this(hi, &merge_source, NULL, &rangelist);
+      path = svn_path_join(parent_dir, (const char*)merge_source+1, pool);
+      apr_hash_set(prefixed_mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
+    }
+  svn_mergeinfo_to_stringbuf(&merge_val, prefixed_mergeinfo, pool);
+  *mergeinfo_val = merge_val->data;
+
   return SVN_NO_ERROR;
 }
 
@@ -826,7 +857,19 @@ make_node_baton(apr_hash_t *headers,
   if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_TEXT_CONTENT_CHECKSUM,
                           APR_HASH_KEY_STRING)))
     {
-      nb->md5_checksum = apr_pstrdup(pool, val);
+      nb->result_checksum = apr_pstrdup(pool, val);
+    }
+
+  if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_CHECKSUM,
+                          APR_HASH_KEY_STRING)))
+    {
+      nb->base_checksum = apr_pstrdup(pool, val);
+    }
+
+  if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_TEXT_COPY_SOURCE_CHECKSUM,
+                          APR_HASH_KEY_STRING)))
+    {
+      nb->copy_source_checksum = apr_pstrdup(pool, val);
     }
 
   /* What's cool about this dump format is that the parser just
@@ -931,6 +974,27 @@ maybe_add_with_history(struct node_baton *nb,
                                  src_rev);
 
       SVN_ERR(svn_fs_revision_root(&copy_root, pb->fs, src_rev, pool));
+
+      if (nb->copy_source_checksum)
+        {
+          unsigned char md5_digest[APR_MD5_DIGESTSIZE];
+          const char *hex;
+          SVN_ERR(svn_fs_file_md5_checksum(md5_digest, copy_root,
+                                           nb->copyfrom_path, pool));
+          hex = svn_md5_digest_to_cstring(md5_digest, pool);
+          if (hex && (strcmp(nb->copy_source_checksum, hex) != 0))
+            return svn_error_createf
+              (SVN_ERR_CHECKSUM_MISMATCH,
+               NULL,
+               _("Copy source checksum mismatch on copy from '%s'@%ld\n"
+                 " to '%s' in rev based on r%ld:\n"
+                 "   expected:  %s\n"
+                 "     actual:  %s\n"),
+               nb->copyfrom_path, src_rev,
+               nb->path, rb->rev,
+               nb->copy_source_checksum, hex);
+        }
+
       SVN_ERR(svn_fs_copy(copy_root, nb->copyfrom_path,
                           rb->txn_root, nb->path, pool));
 
@@ -1068,6 +1132,17 @@ set_node_property(void *baton,
 {
   struct node_baton *nb = baton;
   struct revision_baton *rb = nb->rb;
+  const char *parent_dir = rb->pb->parent_dir;
+
+  if (parent_dir && strcmp(name, SVN_PROP_MERGE_INFO) == 0)
+    {
+      /* Prefix the merge source paths with PARENT_DIR. */
+      /* ASSUMPTION: All source paths are included in the dump stream. */
+      const char *mergeinfo_val;
+      SVN_ERR(prefix_mergeinfo_paths(&mergeinfo_val, value->data,
+                                     parent_dir, nb->pool));
+      value = svn_string_create(mergeinfo_val, nb->pool);
+    }
 
   SVN_ERR(svn_fs_change_node_prop(rb->txn_root, nb->path,
                                   name, value, nb->pool));
@@ -1126,7 +1201,7 @@ apply_textdelta(svn_txdelta_window_handler_t *handler,
 
   return svn_fs_apply_textdelta(handler, handler_baton,
                                 rb->txn_root, nb->path,
-                                NULL, nb->md5_checksum,
+                                nb->base_checksum, nb->result_checksum,
                                 nb->pool);
 }
 
@@ -1140,7 +1215,7 @@ set_fulltext(svn_stream_t **stream,
 
   return svn_fs_apply_text(stream,
                            rb->txn_root, nb->path,
-                           nb->md5_checksum,
+                           nb->result_checksum,
                            nb->pool);
 }
 

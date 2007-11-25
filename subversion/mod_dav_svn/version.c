@@ -133,7 +133,9 @@ get_vsn_options(apr_pool_t *p, apr_text_header *phdr)
                   "version-control,checkout,working-resource");
   apr_text_append(p, phdr,
                   "merge,baseline,activity,version-controlled-collection");
-
+  apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_MERGEINFO);
+  apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_DEPTH);
+  apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
   /* ### fork-control? */
 }
 
@@ -536,7 +538,7 @@ dav_svn__checkout(dav_resource *resource,
          the version resource URL, we're in a bit of a quandry, and
          one of a few things could be true.
 
-         - The client is trying to modify an old (out of date)
+         - The client is trying to modify an old (out-of-date)
            revision of the resource.  This is, of course,
            unacceptable!
 
@@ -562,13 +564,15 @@ dav_svn__checkout(dav_resource *resource,
 
       if (SVN_IS_VALID_REVNUM( txn_created_rev ))
         {
-          int errorful = 0;
-
           if (resource->info->root.rev < txn_created_rev)
             {
               /* The item being modified is older than the one in the
                  transaction.  The client is out of date.  */
-              errorful = 1;
+              return dav_svn__new_error_tag
+                (resource->pool, HTTP_CONFLICT, SVN_ERR_FS_CONFLICT,
+                 "resource out of date; try updating",
+                 SVN_DAV_ERROR_NAMESPACE,
+                 SVN_DAV_ERROR_TAG);
             }
           else if (resource->info->root.rev > txn_created_rev)
             {
@@ -607,35 +611,12 @@ dav_svn__checkout(dav_resource *resource,
                 }
               if (svn_fs_compare_ids(url_noderev_id, txn_noderev_id) != 0)
                 {
-                  errorful = 1;
+                  return dav_svn__new_error_tag
+                    (resource->pool, HTTP_CONFLICT, SVN_ERR_FS_CONFLICT,
+                     "version resource newer than txn (restart the commit)",
+                     SVN_DAV_ERROR_NAMESPACE,
+                     SVN_DAV_ERROR_TAG);
                 }
-            }
-          if (errorful)
-            {
-#if 1
-              return dav_svn__new_error_tag
-                (resource->pool, HTTP_CONFLICT, SVN_ERR_FS_CONFLICT,
-                 "The version resource does not correspond to the resource "
-                 "within the transaction.  Either the requested version "
-                 "resource is out of date (needs to be updated), or the "
-                 "requested version resource is newer than the transaction "
-                 "root (restart the commit).",
-                 SVN_DAV_ERROR_NAMESPACE,
-                 SVN_DAV_ERROR_TAG);
-
-#else
-              /* ### some debugging code */
-              const char *msg;
-
-              msg = apr_psprintf(resource->pool,
-                                 "created-rev mismatch: r=%ld, t=%ld",
-                                 resource->info->root.rev, txn_created_rev);
-
-              return dav_svn__new_error_tag(resource->pool, HTTP_CONFLICT,
-                                            SVN_ERR_FS_CONFLICT, msg,
-                                            SVN_DAV_ERROR_NAMESPACE,
-                                            SVN_DAV_ERROR_TAG);
-#endif
             }
         }
     }
@@ -966,6 +947,10 @@ deliver_report(request_rec *r,
       else if (strcmp(doc->root->name, "get-locations") == 0)
         {
           return dav_svn__get_locations_report(resource, doc, output);
+        }
+      else if (strcmp(doc->root->name, "get-location-segments") == 0)
+        {
+          return dav_svn__get_location_segments_report(resource, doc, output);
         }
       else if (strcmp(doc->root->name, "file-revs-report") == 0)
         {

@@ -26,6 +26,7 @@
 #include "svn_utf.h"
 #include "svn_time.h"
 #include "svn_fs.h"
+#include "svn_ra.h"  /* for SVN_RA_CAPABILITY_* */
 #include "svn_repos.h"
 #include "svn_private_config.h" /* for SVN_TEMPLATE_ROOT_DIR */
 
@@ -305,9 +306,22 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
 "#"                                                                          NL
 "#   [1] REPOS-PATH   (the path to this repository)"                         NL
 "#   [2] USER         (the authenticated user attempting to commit)"         NL
+"#   [3] CAPABILITIES (a colon-separated list of capabilities reported"      NL
+"#                     by the client; see note below)"                       NL
 "#"                                                                          NL
-"# The default working directory for the invocation is undefined, so"        NL
-"# the program should set one explicitly if it cares."                       NL
+"# Note: The CAPABILITIES parameter is new in Subversion 1.5, and 1.5"       NL
+"# clients will typically report at least the \""                            \
+   SVN_RA_CAPABILITY_MERGEINFO "\" capability."                              NL
+"# If there are other capabilities, then the list is colon-separated,"       NL
+"# e.g.: \"" SVN_RA_CAPABILITY_MERGEINFO ":some-other-capability\" "         \
+  "(the order is undefined)."                                                NL
+"#"                                                                          NL
+"# The list is self-reported by the client.  Therefore, you should not"      NL
+"# make security assumptions based on the capabilities list, nor should"     NL
+"# you assume that clients reliably report every capability they have."      NL
+"#"                                                                          NL
+"# The working directory for this hook program's invocation is undefined,"   NL
+"# so the program should set one explicitly if it cares."                    NL
 "#"                                                                          NL
 "# If the hook program exits with success, the commit continues; but"        NL
 "# if it exits with failure (non-zero), the commit is stopped before"        NL
@@ -644,6 +658,7 @@ PREWRITTEN_HOOKS_TEXT
 "if [ \"$LOCK_OWNER\" = \"\" ]; then"                                        NL
 "  exit 0"                                                                   NL
 "fi"                                                                         NL
+""                                                                           NL
 "# If the person unlocking matches the lock's owner, return success:"        NL
 "if [ \"$LOCK_OWNER\" = \"$USER\" ]; then"                                   NL
 "  exit 0"                                                                   NL
@@ -1679,3 +1694,12 @@ svn_repos_stat(svn_dirent_t **dirent,
   *dirent = ent;
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_repos_remember_client_capabilities(svn_repos_t *repos,
+                                       apr_array_header_t *capabilities)
+{
+  repos->client_capabilities = capabilities;
+  return SVN_NO_ERROR;
+}
+

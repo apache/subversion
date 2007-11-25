@@ -19,12 +19,8 @@
  * @brief Interface of the class CommitMessage
  */
 
-#if !defined(AFX_COMMITMESSAGE_H__9AD3F0B0_9DBB_4701_9EE7_3BE0AEB51EDB__INCLUDED_)
-#define AFX_COMMITMESSAGE_H__9AD3F0B0_9DBB_4701_9EE7_3BE0AEB51EDB__INCLUDED_
-
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
+#ifndef COMMITMESSAGE_H
+#define COMMITMESSAGE_H
 
 #include <jni.h>
 struct apr_array_header_t;
@@ -68,5 +64,4 @@ class CommitMessage
   CommitMessage(jobject jcommitMessage);
 };
 
-// !defined(AFX_COMMITMESSAGE_H__9AD3F0B0_9DBB_4701_9EE7_3BE0AEB51EDB__INCLUDED_)
-#endif
+#endif  // COMMITMESSAGE_H

@@ -45,10 +45,13 @@ typedef struct svn_client__merge_path_t
                                         ranges. */
   svn_boolean_t absent;              /* PATH is absent from the WC, probably
                                         due to authz restrictions. */
+  const svn_string_t *propval;       /* Working mergeinfo for PATH at start
+                                        of merge.  May be NULL. */
   apr_array_header_t *remaining_ranges; /* Per path remaining ranges list. */
   apr_hash_t *pre_merge_mergeinfo;      /* mergeinfo on a path prior to a
                                            merge.*/
   svn_boolean_t indirect_mergeinfo;
+  svn_boolean_t scheduled_for_deletion; /* PATH is scheduled for deletion. */
 } svn_client__merge_path_t;
 
 
@@ -123,6 +126,25 @@ svn_client__get_wc_or_repos_mergeinfo(apr_hash_t **target_mergeinfo,
                                       svn_wc_adm_access_t *adm_access,
                                       svn_client_ctx_t *ctx,
                                       apr_pool_t *pool);
+
+/* Set *MERGEINFO_P to a hash of mergeinfo constructed solely from the
+   natural history of PATH_OR_URL@PEG_REVISION.  RA_SESSION is an RA
+   session whose session URL maps to PATH_OR_URL's URL, or NULL.
+   ADM_ACCESS is a working copy administrative access baton which can
+   be used to fetch information about PATH_OR_URL (if PATH_OR_URL is a
+   working copy path), or NULL.  If RANGE_YOUNGEST and RANGE_OLDEST
+   are valid, use them to bound the revision ranges of returned
+   mergeinfo.  */
+svn_error_t *
+svn_client__get_implicit_mergeinfo(apr_hash_t **mergeinfo_p,
+                                   const char *path_or_url,
+                                   const svn_opt_revision_t *peg_revision,
+                                   svn_revnum_t range_youngest,
+                                   svn_revnum_t range_oldest,
+                                   svn_ra_session_t *ra_session,
+                                   svn_wc_adm_access_t *adm_access,
+                                   svn_client_ctx_t *ctx,
+                                   apr_pool_t *pool);
 
 /* Parse any mergeinfo from the WCPATH's ENTRY and store it in
    MERGEINFO.  If PRISTINE is true parse the pristine mergeinfo,
@@ -207,14 +229,6 @@ svn_client__elide_mergeinfo_for_tree(apr_hash_t *children_with_mergeinfo,
                                      svn_wc_adm_access_t *adm_access,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool);
-
-/* Get the repository URL and revision number for which to request
-   mergeinfo for a WC entry, which sometimes needs to be the entry's
-   copyfrom info rather than its actual URL and revision. */
-void
-svn_client__derive_mergeinfo_location(const char **url,
-                                      svn_revnum_t *rev,
-                                      const svn_wc_entry_t *entry);
 
 
 #endif /* SVN_LIBSVN_CLIENT_MERGEINFO_H */

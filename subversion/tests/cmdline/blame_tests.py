@@ -21,10 +21,11 @@ import os, sys
 
 # Our testing module
 import svntest
-
+from svntest.main import server_has_mergeinfo
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
@@ -90,8 +91,6 @@ def blame_space_in_name(sbox):
   svntest.main.file_append(file_path, "Hello\n")
   svntest.main.run_svn(None, 'add', file_path)
   svntest.main.run_svn(None, 'ci',
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        '-m', '', file_path)
 
   svntest.main.run_svn(None, 'blame', file_path)
@@ -106,8 +105,6 @@ def blame_binary(sbox):
   iota = os.path.join(wc_dir, 'iota')
   svntest.main.file_append(iota, "New contents for iota\n")
   svntest.main.run_svn(None, 'ci',
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        '-m', '', iota)
 
   # Then do it again, but this time we set the mimetype to binary.
@@ -115,8 +112,6 @@ def blame_binary(sbox):
   svntest.main.file_append(iota, "More new contents for iota\n")
   svntest.main.run_svn(None, 'propset', 'svn:mime-type', 'image/jpeg', iota)
   svntest.main.run_svn(None, 'ci',
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        '-m', '', iota)
 
   # Once more, but now let's remove that mimetype.
@@ -124,8 +119,6 @@ def blame_binary(sbox):
   svntest.main.file_append(iota, "Still more new contents for iota\n")
   svntest.main.run_svn(None, 'propdel', 'svn:mime-type', iota)
   svntest.main.run_svn(None, 'ci',
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        '-m', '', iota)
 
   output, errput = svntest.main.run_svn(2, 'blame', iota)
@@ -551,7 +544,7 @@ def blame_file_not_in_head(sbox):
 
   # Check that a correct error message is printed when blaming a target that
   # doesn't exist (in HEAD).
-  expected_err = ".*notexisting' (is not a file in.*|path not found)"
+  expected_err = ".*notexisting' (is not a file.*|path not found)"
   svntest.actions.run_and_verify_svn(None, [], expected_err,
                                      'blame', notexisting_url)
 
@@ -571,8 +564,10 @@ test_list = [ None,
               blame_eol_styles,
               blame_ignore_whitespace,
               blame_ignore_eolstyle,
-              blame_merge_info,
-              blame_merge_out_of_range,
+              SkipUnless(blame_merge_info,
+                         server_has_mergeinfo),
+              SkipUnless(blame_merge_out_of_range,
+                         server_has_mergeinfo),
               blame_peg_rev_file_not_in_head,
               blame_file_not_in_head,
              ]

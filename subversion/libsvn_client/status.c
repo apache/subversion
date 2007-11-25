@@ -254,11 +254,6 @@ svn_client_status3(svn_revnum_t *result_rev,
 
   anchor = svn_wc_adm_access_path(anchor_access);
 
-  /* For local status default depth = svn_depth_infinity, any directories that
-     are not on disk will be ignored anyway. */
-  if (depth == svn_depth_unknown)
-    depth = svn_depth_infinity;
-
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
   SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
@@ -277,6 +272,7 @@ svn_client_status3(svn_revnum_t *result_rev,
       svn_ra_session_t *ra_session;
       const char *URL;
       svn_node_kind_t kind;
+      svn_boolean_t server_supports_depth;
 
       /* Get full URL from the ANCHOR. */
       if (! entry)
@@ -328,7 +324,7 @@ svn_client_status3(svn_revnum_t *result_rev,
             {
               /* Get a revision number for our status operation. */
               SVN_ERR(svn_client__get_revision_number
-                      (&revnum, ra_session, revision, target, pool));
+                      (&revnum, NULL, ra_session, revision, target, pool));
             }
 
           /* Do the deed.  Let the RA layer drive the status editor. */
@@ -343,14 +339,17 @@ svn_client_status3(svn_revnum_t *result_rev,
           rb.ctx = ctx;
           rb.pool = pool;
 
+          SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
+                                        SVN_RA_CAPABILITY_DEPTH, pool));
+
           /* Drive the reporter structure, describing the revisions
              within PATH.  When we call reporter->finish_report,
              EDITOR will be driven to describe differences between our
              working copy and HEAD. */
           SVN_ERR(svn_wc_crawl_revisions3(path, target_access,
                                           &lock_fetch_reporter, &rb, FALSE,
-                                          depth, FALSE, NULL, NULL, NULL,
-                                          pool));
+                                          depth, (! server_supports_depth),
+                                          FALSE, NULL, NULL, NULL, pool));
         }
     }
   else
@@ -382,12 +381,13 @@ svn_client_status3(svn_revnum_t *result_rev,
      svn_wc_status_unversioned, otherwise we'll just remove the status
      item altogether.
 
-     We only descend into an external if depth==svn_depth_infinity.
-     However, there are conceivable behaviors that would involve
-     descending under other circumstances; thus, we pass depth anyway,
-     so the code will DTRT if we change the conditional in the future.
+     We only descend into an external if depth is svn_depth_infinity or
+     svn_depth_unknown.  However, there are conceivable behaviors that
+     would involve descending under other circumstances; thus, we pass
+     depth anyway, so the code will DTRT if we change the conditional
+     in the future.
   */
-  if ((depth == svn_depth_infinity) && (! ignore_externals))
+  if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
     SVN_ERR(svn_client__do_external_status(traversal_info, status_func,
                                            status_baton, depth, get_all,
                                            update, no_ignore, ctx, pool));

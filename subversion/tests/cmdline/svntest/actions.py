@@ -18,6 +18,7 @@
 import os, shutil, re, sys, errno
 import difflib, pprint
 import xml.parsers.expat
+from xml.dom.minidom import parseString
 
 import main, verify, tree, wc  # general svntest routines in this module.
 from svntest import Failure
@@ -54,8 +55,6 @@ def setup_pristine_repository():
     ### todo: svn should not be prompting for auth info when using
     ### repositories with no auth/auth requirements
     output, errput = main.run_svn(None, 'import',
-                                  '--username', main.wc_author,
-                                  '--password', main.wc_passwd,
                                   '-m', 'Log message for revision 1.',
                                   main.greek_dump_dir, main.pristine_url)
 
@@ -247,8 +246,6 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
   ### todo: svn should not be prompting for auth info when using
   ### repositories with no auth/auth requirements
   output, errput = main.run_svn (None, 'co',
-                                 '--username', main.wc_author,
-                                 '--password', main.wc_passwd,
                                  URL, wc_dir_name, *args)
   actual = tree.build_tree_from_checkout (output)
 
@@ -287,8 +284,6 @@ def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
   ### todo: svn should not be prompting for auth info when using
   ### repositories with no auth/auth requirements
   output, errput = main.run_svn (None, 'export',
-                                 '--username', main.wc_author,
-                                 '--password', main.wc_passwd,
                                  URL, export_dir_name, *args)
   actual = tree.build_tree_from_checkout (output)
 
@@ -461,30 +456,52 @@ def verify_update(actual_output, wc_dir_name,
   """Verify update of WC_DIR_NAME.
 
   The subcommand output (found in ACTUAL_OUTPUT) will be verified
-  against OUTPUT_TREE, and the working copy itself will be verified
-  against DISK_TREE.  If optional STATUS_TREE is given, then
-  'svn status' output will be compared.  (This is a good way to check
-  that revision numbers were bumped.)  SINGLETON_HANDLER_A and
-  SINGLETON_HANDLER_B will be passed to tree.compare_trees - see that
-  function's doc string for more details.  If CHECK_PROPS is set, then
-  disk comparison will examine props.  Returns if successful, raises
-  on failure."""
+  against OUTPUT_TREE (if provided), the working copy itself will be
+  verified against DISK_TREE (if provided), and the working copy's
+  'svn status' output will be verified against STATUS_TREE (if
+  provided).  (This is a good way to check that revision numbers were
+  bumped.)  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed
+  to tree.compare_trees - see that function's doc string for more
+  details.  If CHECK_PROPS is set, then disk comparison will examine
+  props.  Returns if successful, raises on failure."""
 
   # Verify actual output against expected output.
-  tree.compare_trees (actual_output, output_tree)
+  if output_tree:
+    tree.compare_trees (actual_output, output_tree)
 
-  # Create a tree by scanning the working copy
-  actual_disk = tree.build_tree_from_wc (wc_dir_name, check_props)
-
-  # Verify expected disk against actual disk.
-  tree.compare_trees (actual_disk, disk_tree,
-                      singleton_handler_a, a_baton,
-                      singleton_handler_b, b_baton)
+  # Create a tree by scanning the working copy, and verify it
+  if disk_tree:
+    actual_disk = tree.build_tree_from_wc (wc_dir_name, check_props)
+    tree.compare_trees (actual_disk, disk_tree,
+                        singleton_handler_a, a_baton,
+                        singleton_handler_b, b_baton)
 
   # Verify via 'status' command too, if possible.
   if status_tree:
     run_and_verify_status(wc_dir_name, status_tree)
 
+
+def verify_disk(wc_dir_name,
+                disk_tree,
+                singleton_handler_a = None,
+                a_baton = None,
+                singleton_handler_b = None,
+                b_baton = None,
+                check_props = False):
+
+  """Verify WC_DIR_NAME against DISK_TREE.  SINGLETON_HANDLER_A,
+  A_BATON, SINGLETON_HANDLER_B, and B_BATON will be passed to
+  tree.compare_trees, which see for details.  If CHECK_PROPS is set,
+  the comparison will examin props.  Returns if successful, raises on
+  failure."""
+  if isinstance(disk_tree, wc.State):
+    disk_tree = disk_tree.old_tree()
+  verify_update (None, wc_dir_name, None, disk_tree, None,
+                 singleton_handler_a, a_baton,
+                 singleton_handler_b, b_baton,
+                 check_props)
+                 
+  
 
 def run_and_verify_update(wc_dir_name,
                           output_tree, disk_tree, status_tree,
@@ -725,8 +742,6 @@ def run_and_verify_switch(wc_dir_name,
 
   # Update and make a tree of the output.
   output, errput = main.run_svn (error_re_string, 'switch',
-                                 '--username', main.wc_author,
-                                 '--password', main.wc_passwd,
                                  switch_url, wc_target, *args)
 
   if error_re_string:
@@ -777,8 +792,6 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
 
   # Commit.
   output, errput = main.run_svn(error_re_string, 'ci',
-                                '--username', main.wc_author,
-                                '--password', main.wc_passwd,
                                 '-m', 'log msg',
                                 *args)
 
@@ -851,8 +864,6 @@ def run_and_verify_status(wc_dir_name, output_tree,
     output_tree = output_tree.old_tree()
 
   output, errput = main.run_svn (None, 'status', '-v', '-u', '-q',
-                                 '--username', main.wc_author,
-                                 '--password', main.wc_passwd,
                                  wc_dir_name)
 
   actual = tree.build_tree_from_status (output)
@@ -895,6 +906,78 @@ def run_and_verify_unquiet_status(wc_dir_name, output_tree,
   else:
     tree.compare_trees (actual, output_tree)
 
+def run_and_verify_diff_summarize_xml(error_re_string = [],
+                                      expected_prefix = None,
+                                      expected_paths = [],
+                                      expected_items = [],
+                                      expected_props = [],
+                                      expected_kinds = [],
+                                      *args):
+  """Run 'diff --summarize --xml' with the arguments *ARGS, which should
+  contain all arguments beyond for your 'diff --summarize --xml' omitting
+  said arguments.  EXPECTED_PREFIX will store a "common" path prefix
+  expected to be at the beginning of each summarized path.  If
+  EXPECTED_PREFIX is None, then EXPECTED_PATHS will need to be exactly
+  as 'svn diff --summarize --xml' will output.  If ERROR_RE_STRING, the
+  command must exit with error, and the error message must match regular
+  expression ERROR_RE_STRING.
+
+  Else if ERROR_RE_STRING is None, the subcommand output will be parsed
+  into an XML document and will then be verified by comparing the parsed
+  output to the contents in the EXPECTED_PATHS, EXPECTED_ITEMS,
+  EXPECTED_PROPS and EXPECTED_KINDS. Returns on success, raises
+  on failure."""
+
+  output, errput = run_and_verify_svn(None, None, error_re_string, 'diff',
+                                      '--summarize', '--xml', *args)
+
+  # Return if errors are present since they were expected
+  if len(errput) > 0:
+    return
+
+  doc = parseString(''.join(output))
+  paths = doc.getElementsByTagName("path")
+  items = expected_items
+  kinds = expected_kinds
+
+  for path in paths:
+    modified_path = path.childNodes[0].data
+
+    if (expected_prefix is not None
+        and modified_path.find(expected_prefix) == 0):
+      modified_path = modified_path.replace(expected_prefix, '')[1:].strip()
+
+    # Workaround single-object diff
+    if len(modified_path) == 0:
+      modified_path = path.childNodes[0].data.split(os.sep)[-1]
+
+    # From here on, we use '/' as path separator.
+    if os.sep != "/":
+      modified_path = modified_path.replace(os.sep, "/")
+
+    if modified_path not in expected_paths:
+      print "ERROR: %s not expected in the changed paths." % modified_path
+      raise Failure
+
+    index = expected_paths.index(modified_path)
+    expected_item = items[index]
+    expected_kind = kinds[index]
+    expected_prop = expected_props[index]
+    actual_item = path.getAttribute('item')
+    actual_kind = path.getAttribute('kind')
+    actual_prop = path.getAttribute('props')
+  
+    if expected_item != actual_item:
+      print "ERROR: expected:", expected_item, "actual:", actual_item
+      raise Failure
+
+    if expected_kind != actual_kind:
+      print "ERROR: expected:", expected_kind, "actual:", actual_kind
+      raise Failure
+
+    if expected_prop != actual_prop:
+      print "ERROR: expected:", expected_prop, "actual:", actual_prop
+      raise Failure
 
 def run_and_verify_diff_summarize(output_tree, error_re_string = None,
                                   singleton_handler_a = None,
@@ -916,8 +999,6 @@ def run_and_verify_diff_summarize(output_tree, error_re_string = None,
     output_tree = output_tree.old_tree()
 
   output, errput = main.run_svn (None, 'diff', '--summarize',
-                                 '--username', main.wc_author,
-                                 '--password', main.wc_passwd,
                                  *args)
 
   if error_re_string:
@@ -938,7 +1019,7 @@ def run_and_verify_diff_summarize(output_tree, error_re_string = None,
     verify.display_trees(None, 'DIFF OUTPUT TREE', output_tree, actual)
     raise
 
-def run_and_validate_lock(path, username, password):
+def run_and_validate_lock(path, username):
   """`svn lock' the given path and validate the contents of the lock.
      Use the given username. This is important because locks are
      user specific."""
@@ -948,7 +1029,6 @@ def run_and_validate_lock(path, username, password):
   # lock the path
   run_and_verify_svn(None, ".*locked by user", [], 'lock',
                      '--username', username,
-                     '--password', password,
                      '-m', comment, path)
 
   # Run info and check that we get the lock fields.
@@ -1150,8 +1230,6 @@ def inject_conflict_into_wc(sbox, state_path, file_path,
 
   # Backdate the file.
   output, errput = main.run_svn(None, "up", "-r", str(prev_rev),
-                                "--username", main.wc_author,
-                                "--password", main.wc_passwd,
                                  file_path)
   if expected_status:
     expected_status.tweak(state_path, wc_rev=prev_rev)
@@ -1171,8 +1249,6 @@ def inject_conflict_into_wc(sbox, state_path, file_path,
                                       conflicting_contents, contents,
                                       merged_rev)
   output, errput = main.run_svn(None, "up", "-r", str(merged_rev),
-                                "--username", main.wc_author,
-                                "--password", main.wc_passwd,
                                 sbox.repo_url + "/" + state_path, file_path)
   if expected_status:
     expected_status.tweak(state_path, wc_rev=merged_rev)

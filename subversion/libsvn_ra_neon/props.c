@@ -968,9 +968,10 @@ svn_error_t *svn_ra_neon__get_baseline_info(svn_boolean_t *is_dir,
           /* ### better error reporting... */
 
           /* ### need an SVN_ERR here */
-          return svn_error_create(APR_EGENERAL, NULL,
-                                  _("'DAV:" SVN_DAV__VERSION_NAME "' was not "
-                                    "present on the baseline resource"));
+          return svn_error_createf(APR_EGENERAL, NULL,
+                                   _("'%s' was not present on the baseline "
+                                     "resource"),
+                                   "DAV:" SVN_DAV__VERSION_NAME);
         }
       *latest_rev = SVN_STR_TO_REV(vsn_name->data);
     }

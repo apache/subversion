@@ -19,12 +19,8 @@
  * @brief Interface of the class Pool
  */
 
-#if !defined(AFX_POOL_H__4755FB06_B88C_451D_A0EE_91F5A547C30B__INCLUDED_)
-#define AFX_POOL_H__4755FB06_B88C_451D_A0EE_91F5A547C30B__INCLUDED_
-
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
+#ifndef POOL_H
+#define POOL_H
 
 #include "svn_pools.h"
 
@@ -75,5 +71,4 @@ void Pool::clear() const
 }
 
 
-// !defined(AFX_POOL_H__4755FB06_B88C_451D_A0EE_91F5A547C30B__INCLUDED_)
-#endif
+#endif // POOL_H

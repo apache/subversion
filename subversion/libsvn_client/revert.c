@@ -29,6 +29,7 @@
 #include "svn_time.h"
 #include "svn_config.h"
 #include "client.h"
+#include "private/svn_wc_private.h"
 
 
 
@@ -58,10 +59,7 @@ revert(const char *path,
   svn_wc_adm_access_t *adm_access, *target_access;
   const char *target;
   svn_error_t *err;
-  int adm_lock_level = -1;
-
-  if (depth == svn_depth_empty || depth == svn_depth_files)
-    adm_lock_level = 0;
+  int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
 
   SVN_ERR(svn_wc_adm_open_anchor(&adm_access, &target_access, &target, path,
                                  TRUE, adm_lock_level,

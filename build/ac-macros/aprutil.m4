@@ -112,8 +112,9 @@ AC_DEFUN(SVN_DOWNLOAD_APRUTIL,
   echo "    http://svn.apache.org/repos/asf/apr/apr-util/branches/0.9.x \\"
   echo "    apr-util"
   echo ""
-  echo "Run that right here in the top level of the Subversion tree,"
-  echo "then run configure again."
+  echo "Run that right here in the top level of the Subversion tree."
+  echo "Afterwards, run apr-util/buildconf in that subdirectory and"
+  echo "then run configure again here."
   echo ""
   AC_MSG_ERROR([no suitable APRUTIL found])
 ])

@@ -467,7 +467,7 @@ svn_cl__log(apr_getopt_t *os,
                                   " XML mode"));
     }
 
-  /* Before allowing svn_opt_args_to_target_array() to canonicalize
+  /* Before allowing svn_opt_args_to_target_array2() to canonicalize
      all the targets, we need to build a list of targets made of both
      ones the user typed, as well as any specified by --changelist.  */
   if (opt_state->changelist)
@@ -498,6 +498,16 @@ svn_cl__log(apr_getopt_t *os,
   svn_opt_push_implicit_dot_target(targets, pool);
 
   target = APR_ARRAY_IDX(targets, 0, const char *);
+
+  /* Determine if they really want a two-revision range. */
+  if (opt_state->used_change_arg)
+    {
+      if (opt_state->start_revision.value.number < 
+          opt_state->end_revision.value.number)
+        opt_state->start_revision = opt_state->end_revision;
+      else
+        opt_state->end_revision = opt_state->start_revision;
+    }
 
   /* Strip peg revision if targets contains an URI. */
   SVN_ERR(svn_opt_parse_path(&peg_revision, &true_path, target, pool));

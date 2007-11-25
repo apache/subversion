@@ -138,6 +138,8 @@ to FSFS or from FSFS to BDB?</a></li>
 <li>
   <a href="#sorry-no-globbing">How can I use wildcards or globbing to move many files at once?</a>
 </li>
+<li><a href="#vendor-branch">How can I maintain a modified version  (a
+    "vendor branch") of third-party software using Subversion?</a></li>
 </ul>
 
 <h4>Troubleshooting:</h4>
@@ -248,6 +250,9 @@ a <tt>file:</tt> URL?</a></li>
     system cannot find the path specified" and suggesting that my
     working copy might be corrupt.  But I can update with TortoiseSVN
     just fine.  What's going on?</a></li>
+<li><a href="#working-copy-format-change">I got an error saying "This
+    client is too old to work with working copy '...' ".  How can I
+    fix it without upgrading Subversion?</a></li>
 </ul>
 
 <h4>Developer questions:</h4>
@@ -2191,6 +2196,36 @@ to "cp" and "mv" multiple files at once.
 </p>
 </div>
 
+<div class="h3" id="vendor-branch" title="vendor-branch">
+<h3>How can I maintain a modified version (a "vendor branch") of
+third-party software using Subversion?</h3>
+
+<p>People frequently want to use Subversion to track their local
+changes to third-party code, even across upgrades from the
+third-party&nbsp;&mdash;&nbsp;that is, they want to maintain their own
+divergent branch, while still incorporating new releases from the
+upstream source.  This is commonly called a <em>vendor branch</em>
+(the term long predates Subversion), and the techniques for
+maintaining one in Subversion are <a
+href="http://svnbook.red-bean.com/en/1.4/svn-book.html#svn.advanced.vendorbr"
+>described here</a>.</p>
+
+<p>If the vendor code is hosted in a remote Subversion repository,
+then you can use <a href="http://piston.rubyforge.org/">Piston</a> to
+manage your copy of the vendor's code.</p>
+
+<p>As a last resort, if using <tt>svn_load_dirs.pl</tt> is taking too
+much time or you're looking for the lazy solution, see also Jon
+Stevens' step-by-step explanation at <a
+href="http://lookfirst.com/2007/11/subversion-vendor-branches-howto.html"
+>Subversion Vendor Branches Howto</a>.  This solution does not make
+use of the space saving features in the Subversion backend when you
+copy new code over old code; in this solution, each import of a vendor
+code gets an entire new copy and there is no space savings for
+identical files.</p>
+
+</div>
+
 </div>
 
 <div class="h2" id="troubleshooting" title="troubleshooting">
@@ -2693,6 +2728,20 @@ will cause the HTTP data to be shown.</p>
 trace&mdash;see the <tt>http-compression</tt> parameter in the <tt>servers</tt>
 configuration file.</p>
 
+<p>Another alternative is to set up a logging proxy between the
+ Subversion client and server.  A simple way to do this is to use
+ the <tt>socat</tt> program.  For example, to log communication with
+ an svnserve instance, run the following command:</p>
+
+<p><tt>socat -v  TCP4-LISTEN:9630,reuseaddr,fork
+    TCP4:localhost:svn</tt></p>
+
+<p>Then run your svn commands using an URL base
+  of <tt>svn://127.0.0.1:9630/</tt>; <tt>socat</tt> will forward the
+  traffic from port 9630 to the normal svnserve port (3690), and will
+  print all traffic in both directions to standard error, prefixing it
+  with &lt; and &gt; signs to show the direction of the traffic.</p>
+
 </div>
 
 
@@ -3028,7 +3077,7 @@ following these steps:</p>
             </li>
             <li>
               Invoke the script with an empty environment by using the
-              the "env" program.  Here's an
+              "env" program.  Here's an
               example for the post-commit hook:
 <blockquote><pre>
                   $ env - ./post-commit /var/lib/svn-repos 1234
@@ -3109,7 +3158,7 @@ Build" Subversion book</a>, under
 in the .cvspass file.  It may look like the passwords in .cvspass are
 encrypted, but in fact they're only lightly scrambled with an
 algorithm that's the moral equivalent to rot13.  They can be cracked
-instantly.  The only utility of the the scrambling is to prevent users
+instantly.  The only utility of the scrambling is to prevent users
 (like root) from accidentally seeing the password.  Nobody's cared
 enough to do this for Subversion yet; if you're interested, send
 patches to the dev@ list.</p>
@@ -3647,6 +3696,51 @@ complexities.  (In other words, it's a hard problem not high on our
 priority list.)</p>
 
 </div>
+
+<div class="h3"
+     id="working-copy-format-change" title="working-copy-format-change">
+<h3>I got an error saying "This client is too old to work with working
+    copy '...' ".  How can I fix it without upgrading Subversion?</h3>
+
+<p>Sometimes the working copy metadata format changes incompatibly
+between minor releases.  For example, say you have a working copy
+created with Subversion 1.4.4, but one day you decide to try out
+Subversion 1.5.0.  Afterwards, you attempt to switch back to 1.4.4,
+but it doesn't work&nbsp;&mdash;&nbsp;it just gives the above
+error.</p>
+
+<p>This is because 1.5.0 upgraded your working copy format to support
+some new features (in this case, changelists, the keep-local flag, and
+variable-depth directories).  Although 1.4.4 doesn't know anything
+about these new features, it can at least recognize that the working
+copy format has been upgraded to something higher than it can
+handle.</p>
+
+<p>1.5.0 upgraded the working copy for a good reason: it realizes that
+1.4.4 does not know about these new features, and that if 1.4.4 were
+to meddle with the working copy metadata now, important information
+might be lost, possibly causing corruption (see <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=2961" >issue
+#2961</a>, for example).</p>
+
+<p>But this automatic upgrade behavior can be annoying, if you just
+want to try out a new release of Subversion without installing it
+permanently.  For this reason, we distribute a script that can
+downgrade working copies when doing so is safe:</p>
+
+<blockquote>
+<p><a
+href="http://svn.collab.net/repos/svn/trunk/tools/client-side/change-svn-wc-format.py"
+>http://svn.collab.net/repos/svn/trunk/tools/client-side/change-svn-wc-format.py</a></p>
+</blockquote>
+
+<p>Run that script with the "<tt>--help</tt>" option to see how to use
+it.  As future versions of Subversion are released, we will try to
+keep this FAQ entry up-to-date with potential downgrade scenarios and
+their implications.</p>
+
+</div>
+
 </div>
 
 

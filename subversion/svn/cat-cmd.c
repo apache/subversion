@@ -65,9 +65,9 @@ svn_cl__cat(apr_getopt_t *os,
       SVN_ERR(svn_opt_parse_path(&peg_revision, &truepath, target,
                                  subpool));
 
-      SVN_ERR(svn_cl__try( svn_client_cat2(out, truepath, &peg_revision,
-                                           &(opt_state->start_revision),
-                                           ctx, subpool),
+      SVN_ERR(svn_cl__try(svn_client_cat2(out, truepath, &peg_revision,
+                                          &(opt_state->start_revision),
+                                          ctx, subpool),
                            NULL, opt_state->quiet,
                            SVN_ERR_UNVERSIONED_RESOURCE,
                            SVN_ERR_ENTRY_NOT_FOUND,

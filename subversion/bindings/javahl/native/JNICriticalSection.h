@@ -19,12 +19,9 @@
  * @brief Interface of the class JNICriticalSection
  */
 
-#if !defined(AFX_JNICRITICALSECTION_H__601F33CC_3378_4B09_9917_6242857EF2B7__INCLUDED_)
-#define AFX_JNICRITICALSECTION_H__601F33CC_3378_4B09_9917_6242857EF2B7__INCLUDED_
+#ifndef JNICRITICALSECTION_H
+#define JNICRITICALSECTION_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
 class JNIMutex;
 
 /**
@@ -46,5 +43,4 @@ class JNICriticalSection
   JNIMutex *m_mutex;
 };
 
-// !defined(AFX_JNICRITICALSECTION_H__601F33CC_3378_4B09_9917_6242857EF2B7__INCLUDED_)
-#endif
+#endif  // JNICRITICALSECTION_H

@@ -24,6 +24,7 @@ import copy    # for deepcopy()
 import time    # for time()
 import traceback # for print_exc()
 import threading
+import Queue
 
 import getopt
 try:
@@ -88,17 +89,18 @@ if sys.platform == 'win32':
   windows = True
   file_scheme_prefix = 'file:///'
   _exe = '.exe'
+  _bat = '.bat'
 else:
   windows = False
   file_scheme_prefix = 'file://'
   _exe = ''
+  _bat = ''
 
-# os.wait() specifics
 try:
-  from os import wait
-  platform_with_os_wait = True
+  from popen2 import Popen3
+  platform_with_popen3_class = True
 except ImportError:
-  platform_with_os_wait = False
+  platform_with_popen3_class = False
 
 # The location of our mock svneditor script.
 if sys.platform == 'win32':
@@ -128,8 +130,10 @@ svnadmin_binary = os.path.abspath('../../svnadmin/svnadmin' + _exe)
 svnlook_binary = os.path.abspath('../../svnlook/svnlook' + _exe)
 svnsync_binary = os.path.abspath('../../svnsync/svnsync' + _exe)
 svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
+svndumpfilter_binary = os.path.abspath('../../svndumpfilter/svndumpfilter' + \
+                                       _exe)
 
-# Global variable indicating if we want verbose output, that is, 
+# Global variable indicating if we want verbose output, that is,
 # details of what commands each test does as it does them.  This is
 # incompatible with quiet_mode.
 verbose_mode = False
@@ -299,12 +303,52 @@ def _quote_arg(arg):
       arg = arg.replace('$', '\$')
     return '"%s"' % (arg,)
 
+def open_pipe(command, mode):
+  """Opens a popen3 pipe to COMMAND in MODE.
+
+  Returns (infile, outfile, errfile, waiter); waiter
+  should be passed to wait_on_pipe."""
+  if platform_with_popen3_class:
+    kid = Popen3(command, True)
+    return kid.tochild, kid.fromchild, kid.childerr, (kid, command)
+  else:
+    inf, outf, errf = os.popen3(command, mode)
+    return inf, outf, errf, None
+
+def wait_on_pipe(waiter, stdout_lines, stderr_lines):
+  """Waits for KID (opened with open_pipe) to finish, dying
+  if it does.  Uses STDOUT_LINES and STDERR_LINES for error message
+  if kid fails.  Returns kid's exit code."""
+  if waiter is None:
+    return
+
+  kid, command = waiter
+
+  wait_code = kid.wait()
+
+  if os.WIFSIGNALED(wait_code):
+    exit_signal = os.WTERMSIG(wait_code)
+    if stdout_lines is not None:
+      sys.stdout.write("".join(stdout_lines))
+    if stderr_lines is not None:
+      sys.stderr.write("".join(stderr_lines))
+    if verbose_mode:
+      # show the whole path to make it easier to start a debugger
+      sys.stderr.write("CMD: %s terminated by signal %d\n"
+                       % (command, exit_signal))
+    raise SVNProcessTerminatedBySignal
+  else:
+    exit_code = os.WEXITSTATUS(wait_code)
+    if exit_code and verbose_mode:
+      sys.stderr.write("CMD: %s exited with %d\n" % (command, exit_code))
+    return exit_code
+
 # Run any binary, supplying input text, logging the command line
 def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
   args = ' '.join(map(_quote_arg, varargs))
 
   # Log the command line
-  if verbose_mode:
+  if verbose_mode and not command.endswith('.py'):
     print 'CMD:', os.path.basename(command) + ' ' + args,
 
   if binary_mode:
@@ -312,7 +356,7 @@ def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
   else:
     mode = 't'
 
-  infile, outfile, errfile = os.popen3(command + ' ' + args, mode)
+  infile, outfile, errfile, kid = open_pipe(command + ' ' + args, mode)
 
   if stdin_lines:
     map(infile.write, stdin_lines)
@@ -325,24 +369,7 @@ def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
   outfile.close()
   errfile.close()
 
-  exit_code = 0
-
-  if platform_with_os_wait:
-    pid, wait_code = os.wait()
-
-    if os.WIFSIGNALED(wait_code):
-      exit_signal = os.WTERMSIG(wait_code)
-      sys.stdout.write("".join(stdout_lines))
-      sys.stderr.write("".join(stderr_lines))
-      if verbose_mode:
-        # show the whole path to make it easier to start a debugger
-        sys.stderr.write("CMD: %s terminated by signal %d\n"
-                         % (command, exit_signal))
-      raise SVNProcessTerminatedBySignal
-    else:
-      exit_code = os.WEXITSTATUS(wait_code)
-      if exit_code and verbose_mode:
-        sys.stderr.write("CMD: %s exited with %d\n" % (command, exit_code))
+  exit_code = wait_on_pipe(kid, stdout_lines, stderr_lines)
 
   return exit_code, stdout_lines, stderr_lines
 
@@ -413,13 +440,23 @@ def _with_config_dir(args):
   else:
     return args + ('--config-dir', default_config_dir)
 
+def _with_auth(args):
+  assert '--password' not in args
+  args = args + ('--password', wc_passwd,
+                 '--no-auth-cache' )
+  if '--username' in args:
+    return args
+  else:
+    return args + ('--username', wc_author )
+
 # For running subversion and returning the output
 def run_svn(error_expected, *varargs):
   """Run svn with VARARGS; return stdout, stderr as lists of lines.
   If ERROR_EXPECTED is None, any stderr also will be printed.  If
   you're just checking that something does/doesn't come out of
   stdout/stderr, you might want to use actions.run_and_verify_svn()."""
-  return run_command(svn_binary, error_expected, 0, *(_with_config_dir(varargs)))
+  return run_command(svn_binary, error_expected, 0,
+                     *(_with_auth(_with_config_dir(varargs))))
 
 # For running svnadmin.  Ignores the output.
 def run_svnadmin(*varargs):
@@ -563,8 +600,11 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
     print 'CMD:', os.path.basename(svnadmin_binary) + dump_args, \
           '|', os.path.basename(svnadmin_binary) + load_args,
   start = time.time()
-  dump_in, dump_out, dump_err = os.popen3(svnadmin_binary + dump_args, 'b')
-  load_in, load_out, load_err = os.popen3(svnadmin_binary + load_args, 'b')
+
+  dump_in, dump_out, dump_err, dump_kid = \
+           open_pipe(svnadmin_binary + dump_args, 'b')
+  load_in, load_out, load_err, load_kid = \
+           open_pipe(svnadmin_binary + load_args, 'b')
   stop = time.time()
   if verbose_mode:
     print '<TIME = %.6f>' % (stop - start)
@@ -583,6 +623,9 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   dump_err.close()
   load_out.close()
   load_err.close()
+  # Wait on the pipes; ignore return code.
+  wait_on_pipe(dump_kid, None, dump_lines)
+  wait_on_pipe(load_kid, load_lines, None)
 
   dump_re = re.compile(r'^\* Dumped revision (\d+)\.\r?$')
   expect_revision = 0
@@ -650,6 +693,14 @@ def write_restrictive_svnserve_conf(repo_dir, anon_access="none"):
     fp.write("password-db = passwd\n")
   fp.close()
 
+# Warning: because mod_dav_svn uses one shared authz file for all
+# repositories, you *cannot* use write_authz_file in any test that
+# might be run in parallel.
+#
+# write_authz_file can *only* be used in test suites which disable
+# parallel execution at the bottom like so
+#   if __name__ == '__main__':
+#     svntest.main.run_tests(test_list, serial_only = True)
 def write_authz_file(sbox, rules, sections=None):
   """Write an authz file to SBOX, appropriate for the RA method used,
 with authorizations rules RULES mapping paths to strings containing
@@ -738,6 +789,14 @@ def server_has_mergeinfo():
   return server_minor_version >= 5
 
 def server_has_revprop_commit():
+  _check_command_line_parsed()
+  return server_minor_version >= 5
+
+def server_sends_copyfrom_on_update():
+  _check_command_line_parsed()
+  return server_minor_version >= 5
+
+def server_authz_has_aliases():
   _check_command_line_parsed()
   return server_minor_version >= 5
 
@@ -846,23 +905,29 @@ def _cleanup_test_path(path, retrying=None):
       print "WARNING: cleanup failed, will try again later"
     _deferred_test_paths.append(path)
 
-class SpawnTest(threading.Thread):
-  """Encapsulate a single test case, run it in a separate child process.
-  Instead of waiting till the process is finished, add this class to a
-  list of active tests for follow up in the parent process."""
-  def __init__(self, index, tests = None):
+class TestSpawningThread(threading.Thread):
+  """A thread that runs test cases in their own processes.
+  Receives test numbers to run from the queue, and saves results into
+  the results field."""
+  def __init__(self, queue):
     threading.Thread.__init__(self)
-    self.index = index
-    self.tests = tests
-    self.result = None
-    self.stdout_lines = None
-    self.stderr_lines = None
+    self.queue = queue
+    self.results = []
 
   def run(self):
+    while True:
+      try:
+        next_index = self.queue.get_nowait()
+      except Queue.Empty:
+        return
+
+      self.run_one(next_index)
+
+  def run_one(self, index):
     command = sys.argv[0]
 
     args = []
-    args.append(str(self.index))
+    args.append(str(index))
     args.append('-c')
     # add some startup arguments from this process
     if fs_type:
@@ -875,15 +940,19 @@ class SpawnTest(threading.Thread):
       args.append('--cleanup')
     if enable_sasl:
       args.append('--enable-sasl')
+    if http_library:
+      args.append('--http-library=' + http_library)
+    if server_minor_version:
+      args.append('--server-minor-version=' + str(server_minor_version))
 
-    self.result, self.stdout_lines, self.stderr_lines =\
-                                         spawn_process(command, 1, None, *args)
+    result, stdout_lines, stderr_lines = spawn_process(command, 1, None, *args)
     # don't trust the exitcode, will not be correct on Windows
     if filter(lambda x: x.startswith('FAIL: ') or x.startswith('XPASS: '),
-              self.stdout_lines):
-      self.result = 1
-    self.tests.append(self)
+              stdout_lines):
+      result = 1
+    self.results.append((index, result, stdout_lines, stderr_lines))
     sys.stdout.write('.')
+    sys.stdout.flush()
 
 class TestRunner:
   """Encapsulate a single test case (predicate), including logic for
@@ -1019,34 +1088,35 @@ def _internal_run_tests(test_list, testnums, parallel):
       if run_one_test(testnum, test_list) == 1:
           exit_code = 1
   else:
-    for testnum in testnums:
-      # wait till there's a free spot.
-      while tests_started - len(finished_tests) > parallel:
-        time.sleep(0.2)
-      run_one_test(testnum, test_list, parallel, finished_tests)
-      tests_started += 1
+    number_queue = Queue.Queue()
+    for num in testnums:
+      number_queue.put(num)
 
-    # wait for all tests to finish
-    while len(finished_tests) < len(testnums):
-      time.sleep(0.2)
+    threads = [ TestSpawningThread(number_queue) for i in range(parallel) ]
+    for t in threads:
+      t.start()
 
-    # Sort test results list by test nr.
-    deco = [(test.index, test) for test in finished_tests]
-    deco.sort()
-    finished_tests = [test for (ti, test) in deco]
+    for t in threads:
+      t.join()
+
+    # list of (index, result, stdout, stderr)
+    results = []
+    for t in threads:
+      results += t.results
+    results.sort()
 
     # terminate the line of dots
     print
 
     # all tests are finished, find out the result and print the logs.
-    for test in finished_tests:
-      if test.stdout_lines:
-        for line in test.stdout_lines:
+    for (index, result, stdout_lines, stderr_lines) in results:
+      if stdout_lines:
+        for line in stdout_lines:
           sys.stdout.write(line)
-      if test.stderr_lines:
-        for line in test.stderr_lines:
+      if stderr_lines:
+        for line in stderr_lines:
           sys.stdout.write(line)
-      if test.result == 1:
+      if result == 1:
         exit_code = 1
 
   _cleanup_deferred_test_paths()
@@ -1055,7 +1125,8 @@ def _internal_run_tests(test_list, testnums, parallel):
 
 def usage():
   prog_name = os.path.basename(sys.argv[0])
-  print "%s [--url] [--fs-type] [--verbose|--quiet] \\" % prog_name
+  print "%s [--url] [--fs-type] [--verbose|--quiet] [--parallel] \\" % \
+        prog_name
   print "%s [--enable-sasl] [--cleanup] [--bin] [<test> ...]" \
       % (" " * len(prog_name))
   print "%s " % (" " * len(prog_name))
@@ -1074,6 +1145,8 @@ def usage():
   print " --enable-sasl   Whether to enable SASL authentication"
   print " --parallel      Run the tests in parallel"
   print " --bin           Use the svn binaries installed in this path"
+  print " --use-jsvn      Use the jsvn (SVNKit based) binaries. Can be\n" \
+        "                 combined with --bin to point to a specific path"
   print " --help          This information"
 
 
@@ -1111,11 +1184,14 @@ def run_tests(test_list, serial_only = False):
 
   parallel = 0
   svn_bin = None
+  use_jsvn = False
+
   try:
     opts, args = my_getopt(sys.argv[1:], 'vqhpc',
                            ['url=', 'fs-type=', 'verbose', 'quiet', 'cleanup',
                             'list', 'enable-sasl', 'help', 'parallel',
-                            'bin=', 'http-library=', 'server-minor-version='])
+                            'bin=', 'http-library=', 'server-minor-version=', 
+                            'use-jsvn'])
   except getopt.GetoptError, e:
     print "ERROR: %s\n" % e
     usage()
@@ -1179,6 +1255,9 @@ def run_tests(test_list, serial_only = False):
         print "ERROR: test harness only supports server minor version 4 or 5"
         sys.exit(1)
 
+    elif opt == '--use-jsvn':
+      use_jsvn = True
+
   if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
     test_area_url = test_area_url[:-1]
 
@@ -1191,12 +1270,22 @@ def run_tests(test_list, serial_only = False):
   if windows:
     pristine_url = pristine_url.replace('\\', '/')
 
-  if not svn_bin is None:
-    svn_binary = os.path.join(svn_bin, 'svn' + _exe)
-    svnadmin_binary = os.path.join(svn_bin, 'svnadmin' + _exe)
-    svnlook_binary = os.path.join(svn_bin, 'svnlook' + _exe)
-    svnsync_binary = os.path.join(svn_bin, 'svnsync' + _exe)
-    svnversion_binary = os.path.join(svn_bin, 'svnversion' + _exe)
+  if use_jsvn:
+    if svn_bin is None: 
+      svn_bin = ''
+    svn_binary = os.path.join(svn_bin, 'jsvn' + _bat)
+    svnadmin_binary = os.path.join(svn_bin, 'jsvnadmin' + _bat)
+    svnlook_binary = os.path.join(svn_bin, 'jsvnlook' + _bat)
+    svnsync_binary = os.path.join(svn_bin, 'jsvnsync' + _bat)
+    svnversion_binary = os.path.join(svn_bin, 'jsvnversion' + _bat)
+    use_jsvn = False
+  else:
+    if svn_bin:
+      svn_binary = os.path.join(svn_bin, 'svn' + _exe)
+      svnadmin_binary = os.path.join(svn_bin, 'svnadmin' + _exe)
+      svnlook_binary = os.path.join(svn_bin, 'svnlook' + _exe)
+      svnsync_binary = os.path.join(svn_bin, 'svnsync' + _exe)
+      svnversion_binary = os.path.join(svn_bin, 'svnversion' + _exe)
 
   command_line_parsed = True
 

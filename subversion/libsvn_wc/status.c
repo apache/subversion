@@ -124,6 +124,10 @@ struct dir_baton
      even to file children. */
   svn_depth_t depth;
 
+  /* Is this directory filtered out due to depth?  (Note that if this
+     is TRUE, the depth field is undefined.) */
+  svn_boolean_t excluded;
+
   /* 'svn status' shouldn't print status lines for things that are
      added;  we're only interest in asking if objects that the user
      *already* has are up-to-date or not.  Thus if this flag is set,
@@ -149,7 +153,7 @@ struct dir_baton
   /* The URI to this item in the repository. */
   const char *url;
 
-  /* Out of date info corresponding to ood_* fields in svn_wc_status2_t. */
+  /* out-of-date info corresponding to ood_* fields in svn_wc_status2_t. */
   svn_revnum_t ood_last_cmt_rev;
   apr_time_t ood_last_cmt_date;
   svn_node_kind_t ood_kind;
@@ -191,7 +195,7 @@ struct file_baton
   /* The URI to this item in the repository. */
   const char *url;
 
-  /* Out of date info corresponding to ood_* fields in svn_wc_status2_t. */
+  /* out-of-date info corresponding to ood_* fields in svn_wc_status2_t. */
   svn_revnum_t ood_last_cmt_rev;
   apr_time_t ood_last_cmt_date;
   svn_node_kind_t ood_kind;
@@ -814,6 +818,9 @@ get_dir_status(struct edit_baton *eb,
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
+  if (depth == svn_depth_unknown)
+    depth = svn_depth_infinity;
+
   /* Load entries file for the directory into the requested pool. */
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, subpool));
 
@@ -857,7 +864,7 @@ get_dir_status(struct edit_baton *eb,
           /* Now, parse the thing, and copy the parsed results into
              our "global" externals hash. */
           SVN_ERR(svn_wc_parse_externals_description3(&ext_items, path,
-                                                      prop_val->data, TRUE,
+                                                      prop_val->data, FALSE,
                                                       pool));
           for (i = 0; ext_items && i < ext_items->nelts; i++)
             {
@@ -1030,8 +1037,8 @@ hash_stash(void *baton,
 
    If IS_DIR_BATON is true, THIS_DIR_BATON is a *dir_baton cotaining the out
    of date (ood) information we want to set in BATON.  This is necessary
-   because this function tweaks the status of out of date directories
-   (BATON == THIS_DIR_BATON) and out of date directories' parents
+   because this function tweaks the status of out-of-date directories
+   (BATON == THIS_DIR_BATON) and out-of-date directories' parents
    (BATON == THIS_DIR_BATON->parent_baton).  In the latter case THIS_DIR_BATON
    contains the ood info we want to bubble up to ancestor directories so these
    accurately reflect the fact they have an ood descendent.
@@ -1112,7 +1119,7 @@ tweak_statushash(void *baton,
   if (repos_prop_status)
     statstruct->repos_prop_status = repos_prop_status;
 
-  /* Copy out of date info. */
+  /* Copy out-of-date info. */
   if (is_dir_baton)
     {
       struct dir_baton *b = this_dir_baton;
@@ -1243,10 +1250,12 @@ make_dir_baton(void **dir_baton,
 
   if (pb)
     {
-      if (pb->depth == svn_depth_immediates)
+      if (pb->excluded)
+        d->excluded = TRUE;
+      else if (pb->depth == svn_depth_immediates)
         d->depth = svn_depth_empty;
       else if (pb->depth == svn_depth_files || pb->depth == svn_depth_empty)
-        d->depth = svn_depth_exclude;
+        d->excluded = TRUE;
       else if (pb->depth == svn_depth_unknown)
         /* This is only tentative, it can be overridden from d's entry
            later. */
@@ -1277,6 +1286,7 @@ make_dir_baton(void **dir_baton,
       && (status_in_parent->text_status != svn_wc_status_external)
       && (status_in_parent->text_status != svn_wc_status_ignored)
       && (status_in_parent->entry->kind == svn_node_dir)
+      && (! d->excluded)
       && (d->depth == svn_depth_unknown
           || d->depth == svn_depth_infinity
           || d->depth == svn_depth_files
@@ -1741,7 +1751,7 @@ close_directory(void *dir_baton,
 
   /* Handle this directory's statuses, and then note in the parent
      that this has been done. */
-  if (pb && db->depth != svn_depth_exclude)
+  if (pb && ! db->excluded)
     {
       svn_boolean_t was_deleted = FALSE;
 

@@ -1,6 +1,6 @@
 /*
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -233,6 +233,7 @@
 */
 %apply apr_array_header_t *RANGELIST {
   apr_array_header_t *rangeinput,
+  const apr_array_header_t *rangelist,
   apr_array_header_t *from,
   apr_array_header_t *to,
   apr_array_header_t *changes,
@@ -246,6 +247,8 @@
    output rangelist
 */
 %apply apr_array_header_t **RANGELIST {
+  apr_array_header_t **rangelist,
+  apr_array_header_t **inheritable_rangelist,
   apr_array_header_t **deleted,
   apr_array_header_t **added,
   apr_array_header_t **output
@@ -259,18 +262,35 @@
 }
 
 /* -----------------------------------------------------------------------
-   input mergeinfo hash to svn_mergeinfo_to_stringbuf
+   input mergeinfo hash
 */
 %apply apr_hash_t *MERGEINFO {
-   apr_hash_t *mergeinput,
    apr_hash_t *mergefrom,
    apr_hash_t *mergeto,
    apr_hash_t *mergein1,
    apr_hash_t *mergein2,
+   apr_hash_t *mergeinfo,
    apr_hash_t *eraser,
    apr_hash_t *whiteboard,
    apr_hash_t *changes
 }
+
+/* -----------------------------------------------------------------------
+   output mergeinfo
+*/
+
+#if defined(SWIGPYTHON) || defined(SWIGRUBY)
+%apply apr_hash_t **MERGEINFO_INOUT {
+    apr_hash_t **mergeinfo_inout
+}
+
+%apply apr_hash_t **MERGEINFO {
+    apr_hash_t **mergeinfo,
+    apr_hash_t **inheritable_mergeinfo,
+    apr_hash_t **deleted,
+    apr_hash_t **added
+}
+#endif
 
 /* -----------------------------------------------------------------------
    handle the default value of svn_config_get().and the
@@ -450,27 +470,6 @@
 
 #ifndef SWIGRUBY
 %ignore svn_auth_get_parameter;
-#endif
-
-/* -----------------------------------------------------------------------
-   svn_mergeinfo_parse()
-*/
-
-%apply apr_hash_t **MERGEHASH {
-    apr_hash_t **mergehash,
-    apr_hash_t **deleted,
-    apr_hash_t **added,
-    apr_hash_t **mergeoutput
-}
-
-/* -----------------------------------------------------------------------
-   svn_mergeinfo_merge()
-*/
-
-#ifdef SWIGRUBY
-%apply apr_hash_t **MERGEHASH_INOUT {
-    apr_hash_t **mergeinfo_inout
-}
 #endif
 
 /* -----------------------------------------------------------------------
@@ -669,16 +668,20 @@ PyObject *svn_swig_py_exception_type(void);
 #endif
 
 
-/* ----------------------------------------------------------------------- */
+/* -----------------------------------------------------------------------
+   These APIs take an "inout" parameter that necessitates more careful
+   definition.
+*/
+%ignore svn_mergeinfo_merge;
+%ignore svn_mergeinfo_sort;
+%ignore svn_rangelist_merge;
+%ignore svn_rangelist_reverse;
+
 #ifdef SWIGRUBY
 %ignore svn_auth_open;
 %ignore svn_diff_file_options_create;
 %ignore svn_create_commit_info;
 %ignore svn_commit_info_dup;
-%ignore svn_mergeinfo_merge;
-%ignore svn_mergeinfo_sort;
-%ignore svn_rangelist_merge;
-%ignore svn_rangelist_reverse;
 
 %ignore svn_opt_args_to_target_array2;
 %ignore svn_opt_parse_num_args;
@@ -944,39 +947,6 @@ svn_locale_charset(void)
   return PTR2NUM(APR_LOCALE_CHARSET);
 }
 
-static svn_error_t *
-svn_swig_rb_mergeinfo_merge(apr_hash_t **mergeinfo_inout,
-                            apr_hash_t *changes,
-                            svn_merge_range_inheritance_t consider_inheritance,
-                            apr_pool_t *pool)
-{
-  return svn_mergeinfo_merge(mergeinfo_inout, changes, consider_inheritance,
-                             pool);
-}
-
-static svn_error_t *
-svn_swig_rb_mergeinfo_sort(apr_hash_t **mergeinfo_inout, apr_pool_t *pool)
-{
-  return svn_mergeinfo_sort(*mergeinfo_inout, pool);
-}
-
-static svn_error_t *
-svn_swig_rb_rangelist_merge(apr_array_header_t **rangelist_inout,
-                            apr_array_header_t *changes,
-                            svn_merge_range_inheritance_t consider_inheritance,
-                            apr_pool_t *pool)
-{
-  return svn_rangelist_merge(rangelist_inout, changes, consider_inheritance,
-                             pool);
-}
-
-static svn_error_t *
-svn_swig_rb_rangelist_reverse(apr_array_header_t **rangelist_inout,
-                              apr_pool_t *pool)
-{
-  return svn_rangelist_reverse(*rangelist_inout, pool);
-}
-
 /* prompt providers return baton for protecting GC */
 static VALUE
 svn_swig_rb_auth_get_simple_prompt_provider(
@@ -1042,6 +1012,39 @@ svn_swig_rb_auth_get_username_prompt_provider(
   svn_auth_get_username_prompt_provider(provider, prompt_func, prompt_baton,
                                         retry_limit, pool);
   return rb_ary_new3(1, (VALUE)prompt_baton);
+}
+%}
+#endif
+
+#if defined(SWIGPYTHON) || defined(SWIGRUBY)
+%inline %{
+static svn_error_t *
+svn_swig_mergeinfo_merge(apr_hash_t **mergeinfo_inout,
+                         apr_hash_t *changes,
+                         apr_pool_t *pool)
+{
+  return svn_mergeinfo_merge(*mergeinfo_inout, changes, pool);
+}
+
+static svn_error_t *
+svn_swig_mergeinfo_sort(apr_hash_t **mergeinfo_inout, apr_pool_t *pool)
+{
+  return svn_mergeinfo_sort(*mergeinfo_inout, pool);
+}
+
+static svn_error_t *
+svn_swig_rangelist_merge(apr_array_header_t **rangelist_inout,
+                         apr_array_header_t *changes,
+                         apr_pool_t *pool)
+{
+  return svn_rangelist_merge(rangelist_inout, changes, pool);
+}
+
+static svn_error_t *
+svn_swig_rangelist_reverse(apr_array_header_t **rangelist_inout,
+                           apr_pool_t *pool)
+{
+  return svn_rangelist_reverse(*rangelist_inout, pool);
 }
 %}
 #endif

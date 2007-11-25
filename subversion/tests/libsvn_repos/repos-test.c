@@ -842,7 +842,7 @@ node_locations2(const char **msg,
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
   svn_pool_clear(subpool);
 
-  /* Revision 2: Move /foo to /bar, and add /bar/baz  */
+  /* Revision 2: Copy /foo to /bar, and add /bar/baz  */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_fs_revision_root(&root, fs, youngest_rev, subpool));
@@ -1721,6 +1721,273 @@ commit_continue_txn(const char **msg,
 }
 
 
+struct nls_receiver_baton
+{
+  int count;
+  svn_location_segment_t *expected_segments;
+};
+
+
+static const char *
+format_segment(svn_location_segment_t *segment,
+               apr_pool_t *pool)
+{
+  return apr_psprintf(pool, "[r%ld-r%ld: /%s]",
+                      segment->range_start,
+                      segment->range_end,
+                      segment->path ? segment->path : "(null)");
+}
+
+
+static svn_error_t *
+nls_receiver(svn_location_segment_t *segment,
+             void *baton,
+             apr_pool_t *pool)
+{
+  struct nls_receiver_baton *b = baton;
+  svn_location_segment_t *expected_segment = b->expected_segments + b->count;
+
+  /* expected_segments->range_end can't be 0, so if we see that, it's
+     our end-of-the-list sentry. */
+  if (! expected_segment->range_end)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "Got unexpected location segment: %s",
+                             format_segment(segment, pool));
+
+  if (expected_segment->range_start != segment->range_start)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "Location segments differ\n"
+                             "   Expected location segment: %s\n"
+                             "     Actual location segment: %s",
+                             format_segment(expected_segment, pool),
+                             format_segment(segment, pool));
+  b->count++;
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+check_location_segments(svn_repos_t *repos,
+                        const char *path,
+                        svn_revnum_t peg_rev,
+                        svn_revnum_t start_rev,
+                        svn_revnum_t end_rev,
+                        svn_location_segment_t *expected_segments,
+                        apr_pool_t *pool)
+{
+  struct nls_receiver_baton b;
+  svn_location_segment_t *segment;
+
+  /* Run svn_repos_node_location_segments() with a receiver that
+     validates against EXPECTED_SEGMENTS.  */
+  b.count = 0;
+  b.expected_segments = expected_segments;
+  SVN_ERR(svn_repos_node_location_segments(repos, path, peg_rev,
+                                           start_rev, end_rev, nls_receiver,
+                                           &b, NULL, NULL, pool));
+
+  /* Make sure we saw all of our expected segments.  (If the
+     'range_end' member of our expected_segments is 0, it's our
+     end-of-the-list sentry.  Otherwise, it's some segment we expect
+     to see.)  If not, raise an error.  */
+  segment = expected_segments + b.count;
+  if (segment->range_end)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "Failed to get expected location segment: %s",
+                             format_segment(segment, pool));
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+node_location_segments(const char **msg,
+                       svn_boolean_t msg_only,
+                       svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *root;
+  svn_revnum_t youngest_rev = 0;
+
+  *msg = "test svn_repos_node_location_segments";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Create the repository. */
+  SVN_ERR(svn_test__create_repos(&repos, "test-repo-node-location-segments",
+                                 opts->fs_type, pool));
+  fs = svn_repos_fs(repos);
+
+  /* Revision 1: Create the Greek tree.  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
+  svn_pool_clear(subpool);
+
+  /* Revision 2: Modify A/D/H/chi and A/B/E/alpha.  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/D/H/chi", "2", subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/B/E/alpha", "2", subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
+  svn_pool_clear(subpool);
+
+  /* Revision 3: Copy A/D to A/D2.  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_copy(root, "A/D", txn_root, "A/D2", subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
+  svn_pool_clear(subpool);
+
+  /* Revision 4: Modify A/D/H/chi and A/D2/H/chi.  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/D/H/chi", "4", subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/D2/H/chi", "4", subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
+  svn_pool_clear(subpool);
+
+  /* Revision 5: Delete A/D2/G.  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_delete(txn_root, "A/D2/G", subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
+  svn_pool_clear(subpool);
+
+  /* Revision 6: Restore A/D2/G (from version 4).  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, 4, subpool));
+  SVN_ERR(svn_fs_copy(root, "A/D2/G", txn_root, "A/D2/G", subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
+  svn_pool_clear(subpool);
+
+  /* Revision 7: Move A/D2 to A/D (replacing it).  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_delete(txn_root, "A/D", subpool));
+  SVN_ERR(svn_fs_copy(root, "A/D2", txn_root, "A/D", subpool));
+  SVN_ERR(svn_fs_delete(txn_root, "A/D2", subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
+  svn_pool_clear(subpool);
+
+  /* Check locations for /@HEAD. */
+  {
+    svn_location_segment_t expected_segments[] =
+      {
+        { 0, 7, "" },
+        { 0 }
+      };
+    SVN_ERR(check_location_segments(repos, "",
+                                    SVN_INVALID_REVNUM,
+                                    SVN_INVALID_REVNUM,
+                                    SVN_INVALID_REVNUM,
+                                    expected_segments, pool));
+  }
+
+  /* Check locations for A/D@HEAD. */
+  {
+    svn_location_segment_t expected_segments[] =
+      {
+        { 7, 7, "A/D" },
+        { 3, 6, "A/D2" },
+        { 1, 2, "A/D" },
+        { 0 }
+      };
+    SVN_ERR(check_location_segments(repos, "A/D",
+                                    SVN_INVALID_REVNUM,
+                                    SVN_INVALID_REVNUM,
+                                    SVN_INVALID_REVNUM,
+                                    expected_segments, pool));
+  }
+
+  /* Check a subset of the locations for A/D@HEAD. */
+  {
+    svn_location_segment_t expected_segments[] =
+      {
+        { 3, 5, "A/D2" },
+        { 2, 2, "A/D" },
+        { 0 }
+      };
+    SVN_ERR(check_location_segments(repos, "A/D",
+                                    SVN_INVALID_REVNUM,
+                                    5,
+                                    2,
+                                    expected_segments, pool));
+  }
+
+  /* Check a subset of locations for A/D2@5. */
+  {
+    svn_location_segment_t expected_segments[] =
+      {
+        { 3, 3, "A/D2" },
+        { 2, 2, "A/D" },
+        { 0 }
+      };
+    SVN_ERR(check_location_segments(repos, "A/D2",
+                                    5,
+                                    3,
+                                    2,
+                                    expected_segments, pool));
+  }
+
+  /* Check locations for A/D@6. */
+  {
+    svn_location_segment_t expected_segments[] =
+      {
+        { 1, 6, "A/D" },
+        { 0 }
+      };
+    SVN_ERR(check_location_segments(repos, "A/D",
+                                    6,
+                                    6,
+                                    SVN_INVALID_REVNUM,
+                                    expected_segments, pool));
+  }
+
+  /* Check locations for A/D/G@HEAD. */
+  {
+    svn_location_segment_t expected_segments[] =
+      {
+        { 7, 7, "A/D/G" },
+        { 6, 6, "A/D2/G" },
+        { 5, 5, NULL },
+        { 3, 4, "A/D2/G" },
+        { 1, 2, "A/D2/G" },
+        { 0 }
+      };
+    SVN_ERR(check_location_segments(repos, "A/D/G",
+                                    SVN_INVALID_REVNUM,
+                                    SVN_INVALID_REVNUM,
+                                    SVN_INVALID_REVNUM,
+                                    expected_segments, pool));
+  }
+
+  /* Check a subset of the locations for A/D/G@HEAD. */
+  {
+    svn_location_segment_t expected_segments[] =
+      {
+        { 3, 3, "A/D2/G" },
+        { 2, 2, "A/D2/G" },
+        { 0 }
+      };
+    SVN_ERR(check_location_segments(repos, "A/D/G",
+                                    SVN_INVALID_REVNUM,
+                                    3,
+                                    2,
+                                    expected_segments, pool));
+  }
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /* The test table.  */
 
@@ -1736,5 +2003,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(authz),
     SVN_TEST_PASS(commit_editor_authz),
     SVN_TEST_PASS(commit_continue_txn),
+    SVN_TEST_PASS(node_location_segments),
     SVN_TEST_NULL
   };

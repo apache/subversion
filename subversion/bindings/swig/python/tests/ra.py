@@ -30,7 +30,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     # Test getting the properties of a file
     fs_revnum = fs.youngest_rev(self.fs)
     rev, properties = ra.get_file(self.ra_ctx, "trunk/README2.txt",
-                                  core.svn_invalid_revnum, None)
+                                  core.SVN_INVALID_REVNUM, None)
     self.assertEqual(rev, fs_revnum)
     self.assertEqual(properties["svn:mime-type"], "text/plain")
 
@@ -120,7 +120,9 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     to_add = ['test_delta_driver_commit', 'test_delta_driver_commit2']
     to_dir_prop = ['trunk/dir1/dir3', 'test_delta_driver_commit2.d']
     to_file_prop = ['trunk/README2.txt', 'test_delta_driver_commit2']
-    all_paths = set(to_delete + to_mkdir + to_add + to_dir_prop + to_file_prop)
+    all_paths = {}
+    for i in to_delete + to_mkdir + to_add + to_dir_prop + to_file_prop:
+      all_paths[i] = True
     # base revision for the commit
     revision = fs.youngest_rev(self.fs)
 
@@ -159,7 +161,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
         if file_baton is not None:
           editor.close_file(file_baton, None, pool)
         return dir_baton
-      delta.path_driver(editor, edit_baton, -1, list(all_paths), driver_cb)
+      delta.path_driver(editor, edit_baton, -1, all_paths.keys(), driver_cb)
       editor.close_edit(edit_baton)
     except:
       try:
@@ -217,17 +219,23 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
 
     fs_revnum = fs.youngest_rev(self.fs)
 
-    reporter, reporter_baton = ra.do_diff2(self.ra_ctx, fs_revnum, REPOS_URL + "/trunk/README.txt", 0, 0, 1, REPOS_URL + "/trunk/README.txt", e_ptr, e_baton)
-
-    reporter.set_path(reporter_baton, "", fs_revnum, True, None)
-
-    reporter.finish_report(reporter_baton)
-
+    sess_url = ra.get_session_url(self.ra_ctx)
+    try:
+        ra.reparent(self.ra_ctx, REPOS_URL+"/trunk")
+        reporter, reporter_baton = ra.do_diff2(self.ra_ctx, fs_revnum,
+                                               "README.txt", 0, 0, 1,
+                                               REPOS_URL+"/trunk/README.txt",
+                                               e_ptr, e_baton)
+        reporter.set_path(reporter_baton, "", 0, True, None)
+        reporter.finish_report(reporter_baton)
+    finally:
+        ra.reparent(self.ra_ctx, sess_url)
+      
     self.assertEqual("A test.\n", editor.textdeltas[0].new_data)
     self.assertEqual(1, len(editor.textdeltas))
 
   def test_get_locations(self):
-    locations = ra.get_locations(self.ra_ctx, "/trunk/README.txt", 2, range(1,5))
+    locations = ra.get_locations(self.ra_ctx, "trunk/README.txt", 2, range(1,5))
     self.assertEqual(locations, {
         2: '/trunk/README.txt',
         3: '/trunk/README.txt',
@@ -261,7 +269,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     # properly. svn.ra.lock() currently fails because it is not possible
     # to retrieve the username from the auth_baton yet.
     self.assertRaises(core.SubversionException,
-      lambda: ra.lock(self.ra_ctx, {"/": 0}, "sleutel", False, callback))
+      lambda: ra.lock(self.ra_ctx, {"": 0}, "sleutel", False, callback))
 
   def test_get_log2(self):
     # Get an interesting commmit.

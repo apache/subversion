@@ -308,10 +308,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
 {
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *node;
-  int adm_lock_level = -1;
-
-  if (depth == svn_depth_empty || depth == svn_depth_files)
-    adm_lock_level = 0;
+  int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
 
   /* Since Subversion controls the "svn:" property namespace, we
      don't honor the 'skip_checks' flag here.  Unusual property
@@ -470,7 +467,7 @@ svn_client_revprop_set(const char *propname,
   /* Resolve the revision into something real, and return that to the
      caller as well. */
   SVN_ERR(svn_client__get_revision_number
-          (set_rev, ra_session, revision, NULL, pool));
+          (set_rev, NULL, ra_session, revision, NULL, pool));
 
   /* The actual RA call. */
   SVN_ERR(svn_ra_change_rev_prop(ra_session, *set_rev, propname, propval,
@@ -575,11 +572,12 @@ propget_walk_cb(const char *path,
 
   SVN_ERR(pristine_or_working_propval(&propval, wb->propname, path,
                                       wb->base_access, wb->pristine,
-                                      apr_hash_pool_get(wb->props)));
+                                      pool));
 
   if (propval)
     {
       path = apr_pstrdup(apr_hash_pool_get(wb->props), path);
+      propval = svn_string_dup(propval, apr_hash_pool_get(wb->props));
       apr_hash_set(wb->props, path, APR_HASH_KEY_STRING, propval);
     }
 
@@ -827,7 +825,8 @@ svn_client_propget4(apr_hash_t **props,
 
       /* Get an RA plugin for this filesystem object. */
       SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
-                                               &url, target, peg_revision,
+                                               &url, target, NULL,
+                                               peg_revision,
                                                revision, ctx, pool));
 
       SVN_ERR(svn_ra_check_path(ra_session, "", revnum, &kind, pool));
@@ -839,10 +838,7 @@ svn_client_propget4(apr_hash_t **props,
   else  /* working copy path */
     {
       svn_boolean_t pristine;
-      int adm_lock_level = -1;
-      
-      if (depth == svn_depth_empty || depth == svn_depth_files)
-        adm_lock_level = 0;
+      int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
 
       SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target,
                                      FALSE, adm_lock_level,
@@ -851,7 +847,7 @@ svn_client_propget4(apr_hash_t **props,
       SVN_ERR(svn_wc__entry_versioned(&node, target, adm_access, FALSE, pool));
 
       SVN_ERR(svn_client__get_revision_number
-              (&revnum, NULL, revision, target, pool));
+              (&revnum, NULL, NULL, revision, target, pool));
 
       /* If FALSE, we must want the working revision. */
       pristine = (revision->kind == svn_opt_revision_committed
@@ -940,7 +936,7 @@ svn_client_revprop_get(const char *propname,
   /* Resolve the revision into something real, and return that to the
      caller as well. */
   SVN_ERR(svn_client__get_revision_number
-          (set_rev, ra_session, revision, NULL, pool));
+          (set_rev, NULL, ra_session, revision, NULL, pool));
 
   /* The actual RA call. */
   SVN_ERR(svn_ra_rev_prop(ra_session, *set_rev, propname, propval, pool));
@@ -1182,7 +1178,8 @@ svn_client_proplist3(const char *target,
 
       /* Get an RA session for this URL. */
       SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
-                                               &url, target, peg_revision,
+                                               &url, target, NULL,
+                                               peg_revision,
                                                revision, ctx, pool));
 
       SVN_ERR(svn_ra_check_path(ra_session, "", revnum, &kind, pool));
@@ -1196,15 +1193,7 @@ svn_client_proplist3(const char *target,
   else  /* working copy path */
     {
       svn_boolean_t pristine;
-      /* Initialize the administrative area lock depth to -1 for the
-         svn_depth_infinity case, and override it below for the other
-         depths. */
-      int levels_to_lock = -1;
-
-      if (depth == svn_depth_empty || depth == svn_depth_files)
-        levels_to_lock = 0;
-      else if (depth == svn_depth_immediates)
-        levels_to_lock = 1;
+      int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
 
       SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target,
                                      FALSE, levels_to_lock,
@@ -1213,7 +1202,7 @@ svn_client_proplist3(const char *target,
       SVN_ERR(svn_wc__entry_versioned(&node, target, adm_access, FALSE, pool));
 
       SVN_ERR(svn_client__get_revision_number
-              (&revnum, NULL, revision, target, pool));
+              (&revnum, NULL, NULL, revision, target, pool));
 
       if ((revision->kind == svn_opt_revision_committed)
           || (revision->kind == svn_opt_revision_base))
@@ -1393,7 +1382,7 @@ svn_client_revprop_list(apr_hash_t **props,
   /* Resolve the revision into something real, and return that to the
      caller as well. */
   SVN_ERR(svn_client__get_revision_number
-          (set_rev, ra_session, revision, NULL, pool));
+          (set_rev, NULL, ra_session, revision, NULL, pool));
 
   /* The actual RA call. */
   SVN_ERR(svn_ra_rev_proplist(ra_session, *set_rev, &proplist, pool));

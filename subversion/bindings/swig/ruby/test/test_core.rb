@@ -534,7 +534,7 @@ EOD
   end
 
   def test_depth_conversion
-    %w(unknown exclude empty files immediates infinity).each do |depth|
+    %w(unknown empty files immediates infinity).each do |depth|
       depth_value = Svn::Core.const_get("DEPTH_#{depth.upcase}")
       assert_equal(depth_value, Svn::Core::Depth.from_string(depth))
       assert_equal(depth, Svn::Core::Depth.to_string(depth_value))

@@ -45,21 +45,25 @@ svn_error_t *svn_wc__has_props(svn_boolean_t *has_props,
                                const char *path,
                                svn_wc_adm_access_t *adm_access,
                                apr_pool_t *pool);
+
 /* Given ADM_ACCESS/PATH and an array of PROPCHANGES based on
    SERVER_BASEPROPS, merge the changes into the working copy.
-   Necessary log entries will be appended to ENTRY_ACCUM.
+   Append all necessary log entries to ENTRY_ACCUM.
 
-   If SERVER_BASEPROPS is NULL than base props will be used as
-   PROPCHANGES base.
+   If BASE_PROPS or WORKING_PROPS is NULL, use the props from the
+   working copy.
 
-   If BASE_MERGE is FALSE only the working properties will be changed,
-   if it is TRUE both the base and working properties will be changed.
+   If SERVER_BASEPROPS is NULL then use base props as PROPCHANGES
+   base.
 
-   If conflicts are found when merging, they are placed into a
-   temporary .prej file within SVN. Log entries are then written to
-   move this file into PATH, or to append the conflicts to the file's
-   already-existing .prej file in ADM_ACCESS. Base properties are modifed
-   unconditionally, if BASE_MERGE is TRUE, they do not generate conficts.
+   If BASE_MERGE is FALSE then only change working properties;
+   if TRUE, change both the base and working properties.
+
+   If conflicts are found when merging, place them into a temporary
+   .prej file within SVN, and write log commands to move this file
+   into PATH, or append the conflicts to the file's already-existing
+   .prej file in ADM_ACCESS.  Modify base properties unconditionally,
+   if BASE_MERGE is TRUE, they do not generate conficts.
 
    If STATE is non-null, set *STATE to the state of the local properties
    after the merge.  */
@@ -67,9 +71,13 @@ svn_error_t *svn_wc__merge_props(svn_wc_notify_state_t *state,
                                  svn_wc_adm_access_t *adm_access,
                                  const char *path,
                                  apr_hash_t *server_baseprops,
+                                 apr_hash_t *base_props,
+                                 apr_hash_t *working_props,
                                  const apr_array_header_t *propchanges,
                                  svn_boolean_t base_merge,
                                  svn_boolean_t dry_run,
+                                 svn_wc_conflict_resolver_func_t conflict_func,
+                                 void *conflict_baton,
                                  apr_pool_t *pool,
                                  svn_stringbuf_t **entry_accum);
 
@@ -212,4 +220,3 @@ svn_wc__load_props(apr_hash_t **base_props_p,
 #endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_WC_PROPS_H */
-

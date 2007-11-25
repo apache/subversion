@@ -568,6 +568,25 @@ test_two_way_unified(const char **msg,
                        "-Bb\r\n"
                        " Cc\r\n",
                        diff_opts, pool));
+
+
+  SVN_ERR(two_way_diff("foo5d", "bar5d",
+                       "Aa\r\n"
+					   "\r\n"
+                       "Bb\r\n"
+					   "\r\n"
+                       "Cc\r\n"
+					   "\r\n",
+
+                       "Aa\n"
+					   "\n"
+                       "Bb\n"
+					   "\n"
+                       "Cc\n"
+					   "\n",
+
+					   "",
+                       diff_opts, pool));
   diff_opts->ignore_eol_style = FALSE;
 
   SVN_ERR(two_way_diff("foo6", "bar6",

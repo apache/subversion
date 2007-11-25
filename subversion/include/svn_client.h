@@ -16,7 +16,7 @@
  * @endcopyright
  *
  * @file svn_client.h
- * @brief Public interface for libsvn_client.
+ * @brief Subversion's client library
  */
 
 
@@ -49,8 +49,8 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* ### TODO:  Multiple Targets
-
+/**
+   ### @todo  Multiple Targets
     - Up for debate:  an update on multiple targets is *not* atomic.
     Right now, svn_client_update only takes one path.  What's
     debatable is whether this should ever change.  On the one hand,
@@ -952,16 +952,16 @@ svn_client_create_context(svn_client_ctx_t **ctx,
  * If @a ignore_externals is set, don't process externals definitions
  * as part of this operation.
  *
- * If @a ctx->notify_func2 is non-null, invoke @a ctx->notify_func2 with
+ * If @a ctx->notify_func2 is non-NULL, invoke @a ctx->notify_func2 with
  * @a ctx->notify_baton2 as the checkout progresses.
  *
- * If @a allow_unver_obstructions is true then the checkout tolerates
+ * If @a allow_unver_obstructions is TRUE then the checkout tolerates
  * existing unversioned items that obstruct added paths from @a URL.  Only
  * obstructions of the same type (file or dir) as the added item are
  * tolerated.  The text of obstructing files is left as-is, effectively
  * treating it as a user modification after the checkout.  Working
  * properties of obstructing items are set equal to the base properties.
- * If @a allow_unver_obstructions is false then the checkout will abort
+ * If @a allow_unver_obstructions is FALSE then the checkout will abort
  * if there are any unversioned obstructing items.
  *
  * If @a URL refers to a file rather than a directory, return the
@@ -987,9 +987,9 @@ svn_client_checkout3(svn_revnum_t *result_rev,
 
 /**
  * Similar to svn_client_checkout3() but with @a allow_unver_obstructions
- * always set to false, and @a depth set according to @a recurse: if
- * @a recurse is true, @a depth is @c svn_depth_infinity, if @a recurse
- * is false, @a depth is @c svn_depth_files.
+ * always set to FALSE, and @a depth set according to @a recurse: if
+ * @a recurse is TRUE, @a depth is @c svn_depth_infinity, if @a recurse
+ * is FALSE, @a depth is @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -1008,7 +1008,7 @@ svn_client_checkout2(svn_revnum_t *result_rev,
 /**
  * Similar to svn_client_checkout2(), but with @a peg_revision
  * always set to @c svn_opt_revision_unspecified and
- * @a ignore_externals always set to false.
+ * @a ignore_externals always set to FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
@@ -1023,7 +1023,7 @@ svn_client_checkout(svn_revnum_t *result_rev,
 /** @} */
 
 /**
- * @defgroup Update
+ * @defgroup Update Bring a working copy up-to-date with a repository
  *
  * @{
  *
@@ -1060,18 +1060,18 @@ svn_client_checkout(svn_revnum_t *result_rev,
  * If @a depth is @c svn_depth_unknown, take the working depth from
  * @a paths and then behave as described above.
  *
- * If @a allow_unver_obstructions is true then the update tolerates
+ * If @a allow_unver_obstructions is TRUE then the update tolerates
  * existing unversioned items that obstruct added paths from @a URL.  Only
  * obstructions of the same type (file or dir) as the added item are
  * tolerated.  The text of obstructing files is left as-is, effectively
  * treating it as a user modification after the update.  Working
  * properties of obstructing items are set equal to the base properties.
- * If @a allow_unver_obstructions is false then the update will abort
+ * If @a allow_unver_obstructions is FALSE then the update will abort
  * if there are any unversioned obstructing items.
  *
- * If @a ctx->notify_func2 is non-null, invoke @a ctx->notify_func2 with
+ * If @a ctx->notify_func2 is non-NULL, invoke @a ctx->notify_func2 with
  * @a ctx->notify_baton2 for each item handled by the update, and also for
- * files restored from text-base.  If @a ctx->cancel_func is non-null, invoke
+ * files restored from text-base.  If @a ctx->cancel_func is non-NULL, invoke
  * it passing @a ctx->cancel_baton at various places during the update.
  *
  * Use @a pool for any temporary allocation.
@@ -1090,9 +1090,9 @@ svn_client_update3(apr_array_header_t **result_revs,
 
 /**
  * Similar to svn_client_update3() but with @a allow_unver_obstructions
- * always set to false, and @a depth set according to @a recurse:
- * if @a recurse is true, set @a depth to @c svn_depth_infinity, if
- * @a recurse is false, set @a depth to @c svn_depth_files.
+ * always set to FALSE, and @a depth set according to @a recurse:
+ * if @a recurse is TRUE, set @a depth to @c svn_depth_infinity, if
+ * @a recurse is FALSE, set @a depth to @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -1108,7 +1108,7 @@ svn_client_update2(apr_array_header_t **result_revs,
 /**
  * Similar to svn_client_update2() except that it accepts only a single
  * target in @a path, returns a single revision if @a result_rev is
- * not NULL, and @c ignore_externals is always set to false.
+ * not NULL, and @a ignore_externals is always set to FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
@@ -1122,12 +1122,12 @@ svn_client_update(svn_revnum_t *result_rev,
 /** @} */
 
 /**
- * @defgroup Switch
+ * @defgroup Switch Switch a working copy to another location.
  *
  * @{
  */
 
-/** Switch working tree @a path to @a url at @a revision,
+/** Switch working tree @a path to @a url\@peg_revision at @a revision,
  * authenticating with the authentication baton cached in @a ctx.  If
  * @a result_rev is not @c NULL, set @a *result_rev to the value of
  * the revision to which the working copy was actually switched.
@@ -1151,16 +1151,16 @@ svn_client_update(svn_revnum_t *result_rev,
  * If @a ignore_externals is set, don't process externals definitions
  * as part of this operation.
  *
- * If @a allow_unver_obstructions is true then the switch tolerates
+ * If @a allow_unver_obstructions is TRUE then the switch tolerates
  * existing unversioned items that obstruct added paths from @a URL.  Only
  * obstructions of the same type (file or dir) as the added item are
  * tolerated.  The text of obstructing files is left as-is, effectively
  * treating it as a user modification after the switch.  Working
  * properties of obstructing items are set equal to the base properties.
- * If @a allow_unver_obstructions is false then the switch will abort
+ * If @a allow_unver_obstructions is FALSE then the switch will abort
  * if there are any unversioned obstructing items.
  *
- * If @a ctx->notify_func2 is non-null, invoke it with @a ctx->notify_baton2
+ * If @a ctx->notify_func2 is non-NULL, invoke it with @a ctx->notify_baton2
  * on paths affected by the switch.  Also invoke it for files may be restored
  * from the text-base because they were removed from the working copy.
  *
@@ -1172,6 +1172,7 @@ svn_error_t *
 svn_client_switch2(svn_revnum_t *result_rev,
                    const char *path,
                    const char *url,
+                   const svn_opt_revision_t *peg_revision,
                    const svn_opt_revision_t *revision,
                    svn_depth_t depth,
                    svn_boolean_t ignore_externals,
@@ -1182,9 +1183,9 @@ svn_client_switch2(svn_revnum_t *result_rev,
 
 /**
  * Similar to svn_client_switch2() but with @a allow_unver_obstructions
- * and @a ignore_externals always set to false, and @a depth set according
- * to @a recurse: if @a recurse is true, set @a depth to
- * @c svn_depth_infinity, if @a recurse is false, set @a depth to
+ * and @a ignore_externals always set to FALSE, and @a depth set according
+ * to @a recurse: if @a recurse is TRUE, set @a depth to
+ * @c svn_depth_infinity, if @a recurse is FALSE, set @a depth to
  * @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -1201,7 +1202,7 @@ svn_client_switch(svn_revnum_t *result_rev,
 /** @} */
 
 /**
- * @defgroup Add
+ * @defgroup Add Begin versioning files/directories in a working copy.
  *
  * @{
  */
@@ -1217,7 +1218,7 @@ svn_client_switch(svn_revnum_t *result_rev,
  * @a path and everything under it fully recursively.
  *
  * @a path's parent must be under revision control already (unless
- * @a add_parents is true), but @a path is not.  If @a recursive is
+ * @a add_parents is TRUE), but @a path is not.  If @a recursive is
  * set, then assuming @a path is a directory, all of its contents will
  * be scheduled for addition as well.
  *
@@ -1228,14 +1229,14 @@ svn_client_switch(svn_revnum_t *result_rev,
  * effect of scheduling for addition unversioned files and directories
  * scattered deep within a versioned tree.
  *
- * If @a ctx->notify_func2 is non-null, then for each added item, call
+ * If @a ctx->notify_func2 is non-NULL, then for each added item, call
  * @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of the
  * added item.
  *
- * If @a no_ignore is false, don't add files or directories that match
+ * If @a no_ignore is FALSE, don't add files or directories that match
  * ignore patterns.
  *
- * If @a add_parents is true, recurse up @a path's directory and look for
+ * If @a add_parents is TRUE, recurse up @a path's directory and look for
  * a versioned directory.  If found, add all intermediate paths between it
  * and @a path.  If not found, return @c SVN_ERR_CLIENT_NO_VERSIONED_PARENTS.
  *
@@ -1257,8 +1258,8 @@ svn_client_add4(const char *path,
 
 /**
  * Similar to svn_client_add4(), but with @a add_parents always set to
- * false and @a depth set according to @a recursive: if true, then
- * @a depth is @c svn_depth_infinity, if false, then @c svn_depth_files.
+ * FALSE and @a depth set according to @a recursive: if TRUE, then
+ * @a depth is @c svn_depth_infinity, if FALSE, then @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
@@ -1272,7 +1273,7 @@ svn_client_add3(const char *path,
 
 /**
  * Similar to svn_client_add3(), but with @a no_ignore always set to
- * false.
+ * FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
@@ -1284,7 +1285,7 @@ svn_client_add2(const char *path,
                 apr_pool_t *pool);
 
 /**
- * Similar to svn_client_add2(), but with @a force always set to false.
+ * Similar to svn_client_add2(), but with @a force always set to FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
@@ -1297,7 +1298,7 @@ svn_client_add(const char *path,
 /** @} */
 
 /**
- * @defgroup Mkdir
+ * @defgroup Mkdir Create directories in a working copy or repository.
  *
  * @{
  */
@@ -1320,7 +1321,7 @@ svn_client_add(const char *path,
  * combo that this function can use to query for a commit log message
  * when one is needed.
  *
- * If @a ctx->notify_func2 is non-null, when the directory has been created
+ * If @a ctx->notify_func2 is non-NULL, when the directory has been created
  * (successfully) in the working copy, call @a ctx->notify_func2 with
  * @a ctx->notify_baton2 and the path of the new directory.  Note that this is
  * only called for items added to the working copy.
@@ -1362,7 +1363,7 @@ svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
 /** @} */
 
 /**
- * @defgroup Delete
+ * @defgroup Delete Remove files/directories from a working copy or repository.
  *
  * @{
  */
@@ -1388,7 +1389,7 @@ svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
  * modified and/or unversioned items. If @a force is set such items
  * will be deleted.
  *
- * If the paths are working copy paths and @a keep_local is true then
+ * If the paths are working copy paths and @a keep_local is TRUE then
  * the paths will not be removed from the working copy, only scheduled
  * for removal from the repository.  Once the scheduled deletion is
  * committed, they will appear as unversioned paths in the working copy.
@@ -1397,7 +1398,7 @@ svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
  * combo that this function can use to query for a commit log message
  * when one is needed.
  *
- * If @a ctx->notify_func2 is non-null, then for each item deleted, call
+ * If @a ctx->notify_func2 is non-NULL, then for each item deleted, call
  * @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of the deleted
  * item.
  *
@@ -1413,7 +1414,7 @@ svn_client_delete3(svn_commit_info_t **commit_info_p,
 
 /**
  * Similar to svn_client_delete3(), but with @a keep_local always set
- * to false.
+ * to FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -1441,7 +1442,7 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
 /** @} */
 
 /**
- * @defgroup Import
+ * @defgroup Import Import files into the repository.
  *
  * @{
  */
@@ -1462,7 +1463,7 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  * receiving the import.  The basename of @a url is the filename in the
  * repository.  In this case if @a url already exists, return error.
  *
- * If @a ctx->notify_func2 is non-null, then call @a ctx->notify_func2 with
+ * If @a ctx->notify_func2 is non-NULL, then call @a ctx->notify_func2 with
  * @a ctx->notify_baton2 as the import progresses, with any of the following
  * actions: @c svn_wc_notify_commit_added,
  * @c svn_wc_notify_commit_postfix_txdelta.
@@ -1500,7 +1501,7 @@ svn_error_t *svn_client_import3(svn_commit_info_t **commit_info_p,
 /**
  * Similar to svn_client_import3(), but with @a ignore_unknown_node_types
  * always set to @c FALSE, and @a depth set according to @a nonrecursive:
- * if true, then @a depth is @c svn_depth_files, else @c svn_depth_infinity.
+ * if TRUE, then @a depth is @c svn_depth_files, else @c svn_depth_infinity.
  *
  * @since New in 1.3.
  *
@@ -1516,7 +1517,7 @@ svn_error_t *svn_client_import2(svn_commit_info_t **commit_info_p,
 
 /**
  * Similar to svn_client_import2(), but with @a no_ignore always set
- * to false and using the @c svn_client_commit_info_t type for
+ * to FALSE and using the @c svn_client_commit_info_t type for
  * @a commit_info_p.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
@@ -1531,7 +1532,7 @@ svn_error_t *svn_client_import(svn_client_commit_info_t **commit_info_p,
 /** @} */
 
 /**
- * @defgroup Commit
+ * @defgroup Commit Commit local modifications to the repository.
  *
  * @{
  */
@@ -1547,7 +1548,7 @@ svn_error_t *svn_client_import(svn_client_commit_info_t **commit_info_p,
  * that.  If @a targets has zero elements, then do nothing and return
  * immediately without error.
  *
- * If @a ctx->notify_func2 is non-null, then call @a ctx->notify_func2 with
+ * If @a ctx->notify_func2 is non-NULL, then call @a ctx->notify_func2 with
  * @a ctx->notify_baton2 as the commit progresses, with any of the following
  * actions: @c svn_wc_notify_commit_modified, @c svn_wc_notify_commit_added,
  * @c svn_wc_notify_commit_deleted, @c svn_wc_notify_commit_replaced,
@@ -1564,7 +1565,7 @@ svn_error_t *svn_client_import(svn_client_commit_info_t **commit_info_p,
  * as for @c svn_depth_files, and for subdirectories of any named
  * directory target commit as though for @c svn_depth_empty.
  *
- * Unlock paths in the repository, unless @a keep_locks is true.
+ * Unlock paths in the repository, unless @a keep_locks is TRUE.
  *
  * If @a changelist_name is non-NULL, then use it as a restrictive filter
  * on items that are committed;  that is, don't commit anything unless
@@ -1594,7 +1595,9 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
 /**
  * Similar to svn_client_commit4(), but always with NULL for
- * @a changelist_name and false for @a keep_changelist.
+ * @a changelist_name, FALSE for @a keep_changelist, and @a depth
+ * set according to @a recurse: if @a recurse is TRUE, use
+ * @c svn_depth_infinity, else @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  *
@@ -1626,7 +1629,7 @@ svn_client_commit2(svn_client_commit_info_t **commit_info_p,
 
 /**
  * Similar to svn_client_commit2(), but with @a keep_locks set to
- * true and @a nonrecursive instead of @a recurse.
+ * TRUE and @a nonrecursive instead of @a recurse.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
@@ -1640,7 +1643,8 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
 /** @} */
 
 /**
- * @defgroup Status
+ * @defgroup Status Report interesting information about paths in the \
+ *                  working copy.
  *
  * @{
  */
@@ -1653,7 +1657,7 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
  *
  *    - If @a get_all is set, retrieve all entries; otherwise,
  *      retrieve only "interesting" entries (local mods and/or
- *      out-of-date).
+ *      out of date).
  *
  *    - If @a update is set, contact the repository and augment the
  *      status structures with information about out-of-dateness (with
@@ -1687,8 +1691,8 @@ svn_client_status3(svn_revnum_t *result_rev,
 
 /**
  * Like svn_client_status3(), except with @a recurse instead of @a depth.
- * If @a recurse is true, behave as if for @c svn_depth_infinity; else
- * if @a recurse is false, behave as if for @c svn_depth_immediates.
+ * If @a recurse is TRUE, behave as if for @c svn_depth_infinity; else
+ * if @a recurse is FALSE, behave as if for @c svn_depth_immediates.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -1710,7 +1714,7 @@ svn_client_status2(svn_revnum_t *result_rev,
 
 /**
  * Similar to svn_client_status2(), but with @a ignore_externals
- * always set to false, taking the @c svn_wc_status_func_t type
+ * always set to FALSE, taking the @c svn_wc_status_func_t type
  * instead of the @c svn_wc_status_func2_t type for @a status_func,
  * and requiring @a *revision to be non-const even though it is
  * treated as constant.
@@ -1733,7 +1737,7 @@ svn_client_status(svn_revnum_t *result_rev,
 /** @} */
 
 /**
- * @defgroup Log
+ * @defgroup Log View information about previous revisions of an object.
  *
  * @{
  */
@@ -1778,7 +1782,7 @@ svn_client_status(svn_revnum_t *result_rev,
  * SVN_ERR_FS_NO_SUCH_REVISION error when invoked against an empty repository
  * (i.e. one not containing a revision 1).
  *
- * If @a ctx->notify_func2 is non-null, then call @a ctx->notify_func2/baton2
+ * If @a ctx->notify_func2 is non-NULL, then call @a ctx->notify_func2/baton2
  * with a 'skip' signal on any unversioned targets.
  *
  * @since New in 1.5.
@@ -1876,7 +1880,7 @@ svn_client_log(const apr_array_header_t *targets,
 /** @} */
 
 /**
- * @defgroup Blame
+ * @defgroup Blame Show modification information about lines in a file.
  *
  * @{
  */
@@ -1895,7 +1899,7 @@ svn_client_log(const apr_array_header_t *targets,
  * svn_opt_revision_working, return the error @c
  * SVN_ERR_UNSUPPORTED_FEATURE.  If any of the revisions of @a
  * path_or_url have a binary mime-type, return the error @c
- * SVN_ERR_CLIENT_IS_BINARY_FILE, unless @a ignore_mime_type is true,
+ * SVN_ERR_CLIENT_IS_BINARY_FILE, unless @a ignore_mime_type is TRUE,
  * in which case blame information will be generated regardless of the
  * MIME types of the revisions.
  *
@@ -1945,7 +1949,7 @@ svn_client_blame3(const char *path_or_url,
 /**
  * Similar to svn_client_blame3(), but with @a diff_options set to
  * default options as returned by svn_diff_file_options_parse() and
- * @a ignore_mime_type set to false.
+ * @a ignore_mime_type set to FALSE.
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  *
@@ -1979,7 +1983,7 @@ svn_client_blame(const char *path_or_url,
 /** @} */
 
 /**
- * @defgroup Diff
+ * @defgroup Diff Generate differences between paths.
  *
  * @{
  */
@@ -1989,6 +1993,14 @@ svn_client_blame(const char *path_or_url,
  * @a path1/@a revision1 and @a path2/@a revision2.  Print the output
  * of the diff to @a outfile, and any errors to @a errfile.  @a path1
  * and @a path2 can be either working-copy paths or URLs.
+ *
+ * If @a relative_to_dir is not @c NULL, the @a original_path and
+ * @a modified_path will have the @a relative_to_dir stripped from the
+ * front of the respective paths.  If @a relative_to_dir is @c NULL,
+ * paths will be handled the pre-1.5 way.  If @a relative_to_dir is not
+ * @c NULL but @a relative_to_dir is not a parent path of the target,
+ * an error is returned. Finally, if @a relative_to_dir is a URL, an
+ * error will be returned.
  *
  * If either @a revision1 or @a revision2 has an `unspecified' or
  * unrecognized `kind', return @c SVN_ERR_CLIENT_BAD_REVISION.
@@ -2009,16 +2021,16 @@ svn_client_blame(const char *path_or_url,
  * Use @a ignore_ancestry to control whether or not items being
  * diffed will be checked for relatedness first.  Unrelated items
  * are typically transmitted to the editor as a deletion of one thing
- * and the addition of another, but if this flag is true, unrelated
+ * and the addition of another, but if this flag is TRUE, unrelated
  * items will be diffed as if they were related.
  *
- * If @a no_diff_deleted is true, then no diff output will be
+ * If @a no_diff_deleted is TRUE, then no diff output will be
  * generated on deleted files.
  *
  * Generated headers are encoded using @a header_encoding.
  *
  * Diff output will not be generated for binary files, unless @a
- * ignore_content_type is true, in which case diffs will be shown
+ * ignore_content_type is TRUE, in which case diffs will be shown
  * regardless of the content types.
  *
  * @a diff_options (an array of <tt>const char *</tt>) is used to pass
@@ -2031,6 +2043,9 @@ svn_client_blame(const char *path_or_url,
  * @note @a header_encoding doesn't affect headers generated by external
  * diff programs.
  *
+ * @note @a relative_to_dir doesn't affect the path index generated by
+ * external diff programs.
+ *
  * @since New in 1.5.
  */
 svn_error_t *svn_client_diff4(const apr_array_header_t *diff_options,
@@ -2038,6 +2053,7 @@ svn_error_t *svn_client_diff4(const apr_array_header_t *diff_options,
                               const svn_opt_revision_t *revision1,
                               const char *path2,
                               const svn_opt_revision_t *revision2,
+                              const char *relative_to_dir,
                               svn_depth_t depth,
                               svn_boolean_t ignore_ancestry,
                               svn_boolean_t no_diff_deleted,
@@ -2051,8 +2067,8 @@ svn_error_t *svn_client_diff4(const apr_array_header_t *diff_options,
 
 /**
  * Similar to svn_client_diff4(), but with @a depth set according to
- * @a recurse: if @a recurse is true, set @a depth to @c
- * svn_depth_infinity, if @a recurse is false, set @a depth to @c
+ * @a recurse: if @a recurse is TRUE, set @a depth to @c
+ * svn_depth_infinity, if @a recurse is FALSE, set @a depth to @c
  * svn_depth_empty.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -2099,7 +2115,7 @@ svn_error_t *svn_client_diff2(const apr_array_header_t *diff_options,
 
 /**
  * Similar to svn_client_diff2(), but with @a ignore_content_type
- * always set to false.
+ * always set to FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
@@ -2135,6 +2151,7 @@ svn_error_t *svn_client_diff_peg4(const apr_array_header_t *diff_options,
                                   const svn_opt_revision_t *peg_revision,
                                   const svn_opt_revision_t *start_revision,
                                   const svn_opt_revision_t *end_revision,
+                                  const char *relative_to_dir,
                                   svn_depth_t depth,
                                   svn_boolean_t ignore_ancestry,
                                   svn_boolean_t no_diff_deleted,
@@ -2147,8 +2164,8 @@ svn_error_t *svn_client_diff_peg4(const apr_array_header_t *diff_options,
 
 /**
  * Similar to svn_client_diff_peg4(), but with @a depth set according
- * to @a recurse: if @a recurse is true, set @a depth to
- * @c svn_depth_infinity, if @a recurse is false, set @a depth to
+ * to @a recurse: if @a recurse is TRUE, set @a depth to
+ * @c svn_depth_infinity, if @a recurse is FALSE, set @a depth to
  * @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -2194,7 +2211,7 @@ svn_error_t *svn_client_diff_peg2(const apr_array_header_t *diff_options,
 
 /**
  * Similar to svn_client_diff_peg2(), but with @a ignore_content_type
- * always set to false.
+ * always set to FALSE.
  *
  * @since New in 1.1.
  * @deprecated Provided for backward compatibility with the 1.1 API.
@@ -2242,8 +2259,8 @@ svn_client_diff_summarize2(const char *path1,
 
 /**
  * Similar to svn_client_diff_summarize2(), but with @a depth set
- * according to @a recurse: if @a recurse is true, set @a depth to
- * @c svn_depth_infinity, if @a recurse is false, set @a depth to
+ * according to @a recurse: if @a recurse is TRUE, set @a depth to
+ * @c svn_depth_infinity, if @a recurse is FALSE, set @a depth to
  * @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -2296,8 +2313,8 @@ svn_client_diff_summarize_peg2(const char *path,
 
 /**
  * Similar to svn_client_diff_summarize_peg2(), but with @a depth set
- * according to @a recurse: if @a recurse is true, set @a depth to
- * @c svn_depth_infinity, if @a recurse is false, set @a depth to
+ * according to @a recurse: if @a recurse is TRUE, set @a depth to
+ * @c svn_depth_infinity, if @a recurse is FALSE, set @a depth to
  * @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -2319,7 +2336,7 @@ svn_client_diff_summarize_peg(const char *path,
 /** @} */
 
 /**
- * @defgroup Merge
+ * @defgroup Merge Merge changes between branches.
  *
  * @{
  */
@@ -2354,28 +2371,28 @@ svn_client_diff_summarize_peg(const char *path,
  * Use @a ignore_ancestry to control whether or not items being
  * diffed will be checked for relatedness first.  Unrelated items
  * are typically transmitted to the editor as a deletion of one thing
- * and the addition of another, but if this flag is true, unrelated
+ * and the addition of another, but if this flag is TRUE, unrelated
  * items will be diffed as if they were related.
  *
  * If @a force is not set and the merge involves deleting locally modified or
  * unversioned items the operation will fail.  If @a force is set such items
  * will be deleted.
  *
- * @a merge_options (an array of <tt>const char *</tt>), if non-null,
+ * @a merge_options (an array of <tt>const char *</tt>), if non-NULL,
  * is used to pass additional command line arguments to the merge
  * processes (internal or external).  @see
  * svn_diff_file_options_parse().
  *
- * If @a ctx->notify_func2 is non-null, then call @a ctx->notify_func2 with @a
+ * If @a ctx->notify_func2 is non-NULL, then call @a ctx->notify_func2 with @a
  * ctx->notify_baton2 once for each merged target, passing the target's local
  * path.
  *
- * If @a record_only is true, the merge isn't actually performed, but
+ * If @a record_only is TRUE, the merge isn't actually performed, but
  * the mergeinfo for the revisions which would've been merged is
  * recorded in the working copy (and must be subsequently committed
  * back to the repository).
  *
- * If @a dry_run is true, the merge is carried out, and full notification
+ * If @a dry_run is TRUE, the merge is carried out, and full notification
  * feedback is provided, but the working copy is not modified.
  *
  * The authentication baton cached in @a ctx is used to communicate with the
@@ -2401,8 +2418,8 @@ svn_client_merge3(const char *source1,
 /**
  * Similar to svn_client_merge3(), but with @a record_only set to @c
  * FALSE, and @a depth set according to @a recurse: if @a recurse is
- * true, set @a depth to @c svn_depth_infinity, if @a recurse is
- * false, set @a depth to @c svn_depth_files.
+ * TRUE, set @a depth to @c svn_depth_infinity, if @a recurse is
+ * FALSE, set @a depth to @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  *
@@ -2444,8 +2461,13 @@ svn_client_merge(const char *source1,
 
 /**
  * Merge the changes between the filesystem object @a source in peg
- * revision @a peg_revision, as it changed between @a revision1 and @a
- * revision2.
+ * revision @a peg_revision, as it changed between the ranges described
+ * in @a ranges_to_merge.
+ *
+ * @a ranges_to_merge is an array of <tt>svn_opt_revision_range_t *</tt>
+ * ranges.  These ranges may describe additive and/or subtractive merge
+ * ranges, they may overlap fully or partially, and/or they may partially
+ * or fully negate each other.  This rangelist is not required to be sorted.
  *
  * All other options are handled identically to svn_client_merge3().
  *
@@ -2453,8 +2475,7 @@ svn_client_merge(const char *source1,
  */
 svn_error_t *
 svn_client_merge_peg3(const char *source,
-                      const svn_opt_revision_t *revision1,
-                      const svn_opt_revision_t *revision2,
+                      const apr_array_header_t *ranges_to_merge,
                       const svn_opt_revision_t *peg_revision,
                       const char *target_wcpath,
                       svn_depth_t depth,
@@ -2469,8 +2490,8 @@ svn_client_merge_peg3(const char *source,
 /**
  * Similar to svn_client_merge_peg3(), but with @a record_only set to
  * @c FALSE, and @a depth set according to @a recurse: if @a recurse
- * is true, set @a depth to @c svn_depth_infinity, if @a recurse is
- * false, set @a depth to @c svn_depth_files.
+ * is TRUE, set @a depth to @c svn_depth_infinity, if @a recurse is
+ * FALSE, set @a depth to @c svn_depth_files.
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  *
@@ -2514,7 +2535,7 @@ svn_client_merge_peg(const char *source,
 
 /** Set @a suggestions to an ordered array of @c const char *
  * potential merge sources (expressed as full repository URLs) for @a
- * path_or_url at @a peg_revision.  @path_or_url is a working copy
+ * path_or_url at @a peg_revision.  @a path_or_url is a working copy
  * path or repository URL.  @a ctx is a context used for
  * authentication in the repository case.  Use @a pool for all
  * allocations.
@@ -2550,7 +2571,7 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
 
 
 /**
- * Set @a *merge_ranges to a list of <tt>svn_merge_range_t *</tt>
+ * Set @a *rangelist to a list of <tt>svn_merge_range_t *</tt>
  * items representing ranges of revisions which have not yet been
  * merged from @a merge_source_url into @a path_or_url as of @a
  * peg_revision, or @c NULL if all candidate revisions of @a
@@ -2561,7 +2582,7 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_mergeinfo_get_available(apr_array_header_t **merge_ranges,
+svn_client_mergeinfo_get_available(apr_array_header_t **rangelist,
                                    const char *path_or_url,
                                    const svn_opt_revision_t *peg_revision,
                                    const char *merge_source_url,
@@ -2573,7 +2594,7 @@ svn_client_mergeinfo_get_available(apr_array_header_t **merge_ranges,
 /** @} */
 
 /**
- * @defgroup Cleanup
+ * @defgroup Cleanup Cleanup an abnormally terminated working copy.
  *
  * @{
  */
@@ -2581,7 +2602,7 @@ svn_client_mergeinfo_get_available(apr_array_header_t **merge_ranges,
 /** Recursively cleanup a working copy directory @a dir, finishing any
  * incomplete operations, removing lockfiles, etc.
  *
- * If @a ctx->cancel_func is non-null, invoke it with @a
+ * If @a ctx->cancel_func is non-NULL, invoke it with @a
  * ctx->cancel_baton at various points during the operation.  If it
  * returns an error (typically SVN_ERR_CANCELLED), return that error
  * immediately.
@@ -2595,7 +2616,7 @@ svn_client_cleanup(const char *dir,
 /** @} */
 
 /**
- * @defgroup Relocate
+ * @defgroup Relocate Switch a working copy to a different repository.
  *
  * @{
  */
@@ -2603,7 +2624,7 @@ svn_client_cleanup(const char *dir,
 /**
  * Modify a working copy directory @a dir, changing any
  * repository URLs that begin with @a from to begin with @a to instead,
- * recursing into subdirectories if @a recurse is true.
+ * recursing into subdirectories if @a recurse is TRUE.
  *
  * @param dir Working copy directory
  * @param from Original URL
@@ -2624,7 +2645,7 @@ svn_client_relocate(const char *dir,
 /** @} */
 
 /**
- * @defgroup Revert
+ * @defgroup Revert Remove local changes in a repository.
  *
  * @{
  */
@@ -2637,12 +2658,12 @@ svn_client_relocate(const char *dir,
  *
  * If @a depth is @c svn_depth_empty, revert just the properties on
  * the directory; else if @c svn_depth_files, revert the properties
- * and any files immediately under the directory; else if 
+ * and any files immediately under the directory; else if
  * @c svn_depth_immediates, revert all of the preceding plus
  * properties on immediate subdirectories; else if @c svn_depth_infinity,
  * revert path and everything under it fully recursively.
  *
- * If @a ctx->notify_func2 is non-null, then for each item reverted,
+ * If @a ctx->notify_func2 is non-NULL, then for each item reverted,
  * call @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of
  * the reverted item.
  *
@@ -2659,12 +2680,12 @@ svn_client_revert2(const apr_array_header_t *paths,
                    apr_pool_t *pool);
 
 
-/*
+/**
  * Similar to svn_client_revert2(), but with @a depth set according to
- * @a recurse: if @a recurse is true, @a depth is @c svn_depth_infinity,
- * else if @a recurse is false, @a depth is @c svn_depth_empty.
+ * @a recurse: if @a recurse is TRUE, @a depth is @c svn_depth_infinity,
+ * else if @a recurse is FALSE, @a depth is @c svn_depth_empty.
  *
- * @note Most APIs map @a recurse==false to @a depth==svn_depth_files;
+ * @note Most APIs map @a recurse==FALSE to @a depth==svn_depth_files;
  * revert is deliberately different.
  *
  * @deprecated Provided for backwards compatibility with the 1.0 API.
@@ -2679,7 +2700,7 @@ svn_client_revert(const apr_array_header_t *paths,
 /** @} */
 
 /**
- * @defgroup Resolved
+ * @defgroup Resolved Mark conflicted paths as resolved.
  *
  * @{
  */
@@ -2707,15 +2728,15 @@ svn_client_resolved(const char *path,
  * if any); if @c svn_depth_infinity, resolve @a path and every
  * conflicted file or directory anywhere beneath it.
  *
- * If @a conflict_result is svn_wc_conflict_result_choose_base, resolve the
+ * If @a conflict_choice is svn_wc_conflict_choose_base, resolve the
  * conflict with the old file contents; if
- * svn_wc_conflict_result_choose_user, use the original working contents;
- * if svn_wc_conflict_result_choose_theirs, the new contents; and if
- * svn_wc_conflict_result_choose_merged, don't change the contents at all,
+ * svn_wc_conflict_choose_mine, use the original working contents;
+ * if svn_wc_conflict_choose_theirs, the new contents; and if
+ * svn_wc_conflict_choose_merged, don't change the contents at all,
  * just remove the conflict status (i.e. pre-1.5 behavior).
  *
  * If @a path is not in a state of conflict to begin with, do nothing.
- * If @a path's conflict state is removed and @a ctx->notify_func2 is non-null,
+ * If @a path's conflict state is removed and @a ctx->notify_func2 is non-NULL,
  * call @a ctx->notify_func2 with @a ctx->notify_baton2 and @a path.
  *
  * @since New in 1.5.
@@ -2723,7 +2744,7 @@ svn_client_resolved(const char *path,
 svn_error_t *
 svn_client_resolved2(const char *path,
                      svn_depth_t depth,
-                     svn_wc_conflict_result_t conflict_result,
+                     svn_wc_conflict_choice_t conflict_choice,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 
@@ -2731,7 +2752,7 @@ svn_client_resolved2(const char *path,
 /** @} */
 
 /**
- * @defgroup Copy
+ * @defgroup Copy Copy paths in the working copy and repository.
  *
  * @{
  */
@@ -2760,7 +2781,7 @@ typedef struct svn_client_copy_source_t
  * and @a sources will be copied as children of @a dst_path.
  *
  * @a sources must be an array of elements of type
- * <tt>svn_client_copy_item_t *</tt>.
+ * <tt>svn_client_copy_source_t *</tt>.
  *
  * Each @a src in @a sources must be files or directories under version control,
  * or URLs of a versioned item in the repository.  If @a sources has multiple
@@ -2800,15 +2821,11 @@ typedef struct svn_client_copy_source_t
  * If @a make_parents is TRUE, create any non-existent parent directories
  * also.
  *
- * If @a with_merge_history is ignored for all but WC -> WC copy
- * operations, and indicates whether implied and explicit mergeinfo
- * from @a sources is propagated to @a dst_path.
- *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton combo
  * that this function can use to query for a commit log message when one is
  * needed.
  *
- * If @a ctx->notify_func2 is non-null, invoke it with @a ctx->notify_baton2
+ * If @a ctx->notify_func2 is non-NULL, invoke it with @a ctx->notify_baton2
  * for each item added at the new location, passing the new, relative path of
  * the added item.
  *
@@ -2820,15 +2837,13 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
                  const char *dst_path,
                  svn_boolean_t copy_as_child,
                  svn_boolean_t make_parents,
-                 svn_boolean_t with_merge_history,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
 /**
  * Similar to svn_client_copy4(), with only one @a src_path, @a
- * copy_as_child set to @c FALSE, @a make_parents set to @c FALSE, and
- * @a with_merge_history set to @c FALSE.  Also, use @a src_revision
- * as both the operational and peg revision.
+ * copy_as_child set to @c FALSE, and @a make_parents set to @c FALSE.
+ * Also, use @a src_revision as both the operational and peg revision.
  *
  * @since New in 1.4.
  *
@@ -2879,7 +2894,7 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
 /** @} */
 
 /**
- * @defgroup Move
+ * @defgroup Move Move paths in the working copy or repository.
  *
  * @{
  */
@@ -2942,14 +2957,10 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  * If @a make_parents is TRUE, create any non-existent parent directories
  * also.
  *
- * If @a with_merge_history is ignored for all but WC -> WC move
- * operations, and indicates whether implied and explicit mergeinfo
- * from @a sources is propagated to @a dst_path.
- *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton combo that
  * this function can use to query for a commit log message when one is needed.
  *
- * If @a ctx->notify_func2 is non-null, then for each item moved, call
+ * If @a ctx->notify_func2 is non-NULL, then for each item moved, call
  * @a ctx->notify_func2 with the @a ctx->notify_baton2 twice, once to indicate
  * the deletion of the moved thing, and once to indicate the addition of
  * the new location of the thing.
@@ -2965,14 +2976,12 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
                  svn_boolean_t force,
                  svn_boolean_t move_as_child,
                  svn_boolean_t make_parents,
-                 svn_boolean_t with_merge_history,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
 /**
  * Similar to svn_client_move5(), with only one @a src_path, @a
- * move_as_child set to @c FALSE, @a make_parents set to @c FALSE, and
- * @a with_merge_history seto to @c FALSE.
+ * move_as_child set to @c FALSE, and @a make_parents set to @c FALSE.
  *
  * @since New in 1.4.
  *
@@ -3079,14 +3088,14 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
  * @c SVN_PROP_PREFIX), then the caller is responsible for ensuring that
  * the value is UTF8-encoded and uses LF line-endings.
  *
- * If @a skip_checks is true, do no validity checking.  But if @a
- * skip_checks is false, and @a propname is not a valid property for @a
+ * If @a skip_checks is TRUE, do no validity checking.  But if @a
+ * skip_checks is FALSE, and @a propname is not a valid property for @a
  * target, return an error, either @c SVN_ERR_ILLEGAL_TARGET (if the
  * property is not appropriate for @a target), or @c
  * SVN_ERR_BAD_MIME_TYPE (if @a propname is "svn:mime-type", but @a
  * propval is not a valid mime-type).
  *
- * If @a ctx->cancel_func is non-null, invoke it passing @a
+ * If @a ctx->cancel_func is non-NULL, invoke it passing @a
  * ctx->cancel_baton at various places during the operation.
  *
  * Use @a pool for all memory allocation.
@@ -3107,7 +3116,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
 /**
  * Like svn_client_propset3(), but with @a base_revision_for_url
  * always @c SVN_INVALID_REVNUM; @a commit_info_p always NULL; and
- * @a depth set according to @a recurse: if @a recurse is true,
+ * @a depth set according to @a recurse: if @a recurse is TRUE,
  * @a depth is @c svn_depth_infinity, else @c svn_depth_empty.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -3122,7 +3131,7 @@ svn_client_propset2(const char *propname,
                     apr_pool_t *pool);
 
 /**
- * Like svn_client_propset2(), but with @a skip_checks always false and a
+ * Like svn_client_propset2(), but with @a skip_checks always FALSE and a
  * newly created @a ctx.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
@@ -3140,7 +3149,7 @@ svn_client_propset(const char *propname,
  * rev affected in @a *set_rev.  A @a propval of @c NULL will delete the
  * property.
  *
- * If @a force is true, allow newlines in the author property.
+ * If @a force is TRUE, allow newlines in the author property.
  *
  * If @a propname is an svn-controlled property (i.e. prefixed with
  * @c SVN_PROP_PREFIX), then the caller is responsible for ensuring that
@@ -3212,7 +3221,7 @@ svn_client_propget4(apr_hash_t **props,
 
 /**
  * Similar to svn_client_propget4(), but with @a depth set according
- * to @a recurse: if @a recurse is true, then @a depth is
+ * to @a recurse: if @a recurse is TRUE, then @a depth is
  * @c svn_depth_infinity, else @c svn_depth_empty.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -3377,7 +3386,7 @@ svn_client_revprop_list(apr_hash_t **props,
 
 
 /**
- * @defgroup Export
+ * @defgroup Export Export a tree from version control.
  *
  * @{
  */
@@ -3410,7 +3419,7 @@ svn_client_revprop_list(apr_hash_t **props,
  *
  * @a ctx is a context used for authentication in the repository case.
  *
- * @a overwrite if true will cause the export to overwrite files or directories.
+ * @a overwrite if TRUE will cause the export to overwrite files or directories.
  *
  * If @a ignore_externals is set, don't process externals definitions
  * as part of this operation.
@@ -3427,11 +3436,11 @@ svn_client_revprop_list(apr_hash_t **props,
  * its immediate file children (if any) only.  If @a depth is @c
  * svn_depth_empty, then export exactly @a from and none of its children.
  *
- * If @a recurse is true, export recursively.  Otherwise, export
+ * If @a recurse is TRUE, export recursively.  Otherwise, export
  * just the directory represented by @a from and its immediate
  * non-directory children, but none of its child directories (if any).
- * Also, if @a recurse is false, the export will behave as if
- * @a ignore_externals is true.
+ * Also, if @a recurse is FALSE, the export will behave as if
+ * @a ignore_externals is TRUE.
  *
  * All allocations are done in @a pool.
  *
@@ -3453,8 +3462,8 @@ svn_client_export4(svn_revnum_t *result_rev,
 
 /**
  * Similar to svn_client_export4(), but with @a depth set according to
- * @a recurse: if @a recurse is true, set @a depth to
- * @c svn_depth_infinity, if @a recurse is false, set @a depth to
+ * @a recurse: if @a recurse is TRUE, set @a depth to
+ * @c svn_depth_infinity, if @a recurse is FALSE, set @a depth to
  * @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -3478,8 +3487,8 @@ svn_client_export3(svn_revnum_t *result_rev,
 /**
  * Similar to svn_client_export3(), but with @a peg_revision
  * always set to @c svn_opt_revision_unspecified, @a overwrite set to
- * the value of @a force, @a ignore_externals always false, and
- * @a recurse always true.
+ * the value of @a force, @a ignore_externals always FALSE, and
+ * @a recurse always TRUE.
  *
  * @since New in 1.1.
  * @deprecated Provided for backward compatibility with the 1.1 API.
@@ -3546,7 +3555,7 @@ typedef svn_error_t *(*svn_client_list_func_t)(void *baton,
  * its children.  If @a path_or_url is non-existent, return
  * @c SVN_ERR_FS_NOT_FOUND.
  *
- * If @a fetch_locks is true, include locks when reporting directory entries.
+ * If @a fetch_locks is TRUE, include locks when reporting directory entries.
  *
  * Use @a pool for temporary allocations.
  *
@@ -3578,8 +3587,9 @@ svn_client_list2(const char *path_or_url,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
-/* Like svn_client_list2(), but with @a recurse instead of @a depth.
- * If @a recurse is true, pass @c svn_depth_files for @a depth; else
+/**
+ * Similar to svn_client_list2(), but with @a recurse instead of @a depth.
+ * If @a recurse is TRUE, pass @c svn_depth_files for @a depth; else
  * pass @c svn_depth_infinity.
  *
  * @since New in 1.4.
@@ -3658,7 +3668,7 @@ svn_client_ls(apr_hash_t **dirents,
 /** @} */
 
 /**
- * @defgroup Cat
+ * @defgroup Cat View the contents of a file in the repository.
  *
  * @{
  */
@@ -3681,7 +3691,7 @@ svn_client_ls(apr_hash_t **dirents,
  *
  * Perform all allocations from @a pool.
  *
- * ### TODO: Add an expansion/translation flag?
+ * ### @todo Add an expansion/translation flag?
  *
  * @since New in 1.2.
  */
@@ -3769,7 +3779,7 @@ svn_client_remove_from_changelist(const apr_array_header_t *paths,
  * belongs to @a changelist_name.  Return the list of paths in @a
  * *paths.  If no matching paths are found, return an empty array.
  *
- * If @a ctx->cancel_func is non-null, invoke it passing @a ctx->cancel_baton
+ * If @a ctx->cancel_func is non-NULL, invoke it passing @a ctx->cancel_baton
  * during the recursive walk.
  *
  * @since New in 1.5.
@@ -3800,7 +3810,7 @@ typedef svn_error_t *(*svn_changelist_receiver_t)
  * belongs to @a changelist_name.  Call @a callback_func (with @a
  * callback_baton) each time a changelist member is found.
  *
- * If @a ctx->cancel_func is non-null, invoke it passing @a ctx->cancel_baton
+ * If @a ctx->cancel_func is non-NULL, invoke it passing @a ctx->cancel_baton
  * during the recursive walk.
  *
  * @since New in 1.5.
@@ -3829,15 +3839,15 @@ svn_client_get_changelist_streamy(svn_changelist_receiver_t callback_func,
  * @a targets must be in the same repository.
  *
  * If a target is already locked in the repository, no lock will be
- * acquired unless @a steal_lock is true, in which case the locks are
- * stolen.  @a comment, if non-null, is an xml-escapable description
+ * acquired unless @a steal_lock is TRUE, in which case the locks are
+ * stolen.  @a comment, if non-NULL, is an xml-escapable description
  * stored with each lock in the repository.  Each acquired lock will
  * be stored in the working copy if the targets are WC paths.
  *
  * For each target @a ctx->notify_func2/notify_baton2 will be used to indicate
  * whether it was locked.  An action of @c svn_wc_notify_state_locked
  * means that the path was locked.  If the path was not locked because
- * it was out-of-date or there was already a lock in the repository,
+ * it was out of date or there was already a lock in the repository,
  * the notification function will be called with @c
  * svn_wc_notify_failed_lock, and the error passed in the notification
  * structure.
@@ -3858,16 +3868,16 @@ svn_client_lock(const apr_array_header_t *targets,
  * <tt>const char *</tt> paths - either all working copy paths or all URLs.
  * All @a targets must be in the same repository.
  *
- * If the targets are WC paths, and @a break_lock is false, the working
+ * If the targets are WC paths, and @a break_lock is FALSE, the working
  * copy must contain a locks for each target.
  * If this is not the case, or the working copy lock doesn't match the
  * lock token in the repository, an error will be signaled.
  *
  * If the targets are URLs, the locks may be broken even if @a break_lock
- * is false, but only if the lock owner is the same as the
+ * is FALSE, but only if the lock owner is the same as the
  * authenticated user.
  *
- * If @a break_lock is true, the locks will be broken in the
+ * If @a break_lock is TRUE, the locks will be broken in the
  * repository.  In both cases, the locks, if any, will be removed from
  * the working copy if the targets are WC paths.
  *
@@ -3891,7 +3901,7 @@ svn_client_unlock(const apr_array_header_t *targets,
 /** @} */
 
 /**
- * @defgroup Info
+ * @defgroup Info Show repository information about a working copy.
  *
  * @{
  */
@@ -4059,9 +4069,9 @@ svn_client_info2(const char *path_or_url,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
-/*
+/**
  * Similar to svn_client_info2() but with @a depth set according to
- * @a recurse: if @a recurse is true, @a depth is @c svn_depth_infinity,
+ * @a recurse: if @a recurse is TRUE, @a depth is @c svn_depth_infinity,
  * else @c svn_depth_empty.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
@@ -4097,7 +4107,7 @@ svn_client_info(const char *path_or_url,
  *
  * If @a path_or_url is a versioned item, set @a *url to @a
  * path_or_url's entry URL.  If @a path_or_url is unversioned (has
- * no entry), set @a *url to null.
+ * no entry), set @a *url to NULL.
  */
 svn_error_t *
 svn_client_url_from_path(const char **url,
@@ -4174,6 +4184,8 @@ svn_client_open_ra_session(svn_ra_session_t **session,
 
 
 /** @} end group: Client session related functions */
+
+/** @} */
 
 #ifdef __cplusplus
 }

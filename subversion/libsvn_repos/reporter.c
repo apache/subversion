@@ -205,7 +205,7 @@ read_path_info(path_info_t **pi, apr_file_t *temp, apr_pool_t *pool)
   SVN_ERR(svn_io_file_getc(&c, temp, pool));
   if (c == '+')
     {
-      /* Could just read directly into &(*pi)->rev, but that would be
+      /* Could just read directly into &(*pi)->depth, but that would be
          bad form and perhaps also vulnerable to weird type promotion
          failures. */
       apr_uint64_t num;
@@ -638,7 +638,12 @@ add_file_smartly(report_baton_t *b,
   if (b->send_copyfrom_args)
     {
       /* Find the destination of the nearest 'copy event' which may have
-         caused o_path@t_root to exist.  */
+         caused o_path@t_root to exist. svn_fs_closest_copy only returns paths
+         starting with '/', so make sure o_path always starts with a '/'
+         too. */
+      if (*o_path != '/')
+        o_path = apr_pstrcat(pool, "/", o_path, NULL);
+
       SVN_ERR(svn_fs_closest_copy(&closest_copy_root, &closest_copy_path,
                                   b->t_root, o_path, pool));
       if (closest_copy_root != NULL)
@@ -646,7 +651,7 @@ add_file_smartly(report_baton_t *b,
           /* If the destination of the copy event is the same path as
              o_path, then we've found something interesting that should
              have 'copyfrom' history. */
-          if (strcmp(closest_copy_path + 1, o_path) == 0)
+          if (strcmp(closest_copy_path, o_path) == 0)
             {
               SVN_ERR(svn_fs_copied_from(copyfrom_rev, copyfrom_path,
                                          closest_copy_root, closest_copy_path,
@@ -1015,7 +1020,7 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                   /* There is no corresponding target entry, so delete. */
                   e_fullpath = svn_path_join(e_path, s_entry->name, subpool);
                   SVN_ERR(svn_repos_deleted_rev(svn_fs_root_fs(b->t_root),
-                                               svn_path_join(t_path,
+                                                svn_path_join(t_path,
                                                               s_entry->name,
                                                               subpool),
                                                 s_rev, b->t_rev,
@@ -1214,11 +1219,6 @@ write_path_info(report_baton_t *b, const char *path, const char *lpath,
 {
   const char *lrep, *rrep, *drep, *ltrep, *rep;
 
-  if (depth == svn_depth_unknown)
-    return svn_error_createf(SVN_ERR_REPOS_BAD_ARGS, NULL,
-                             _("Unsupported report depth '%s'"),
-                             svn_depth_to_word(depth));
-
   /* Munge the path to be anchor-relative, so that we can use edit paths
      as report paths. */
   path = svn_path_join(b->s_operand, path, pool);
@@ -1234,8 +1234,12 @@ write_path_info(report_baton_t *b, const char *path, const char *lpath,
     drep = "+1:";
   else if (depth == svn_depth_immediates)
     drep = "+2:";
-  else           /* svn_depth_infinity */
+  else if (depth == svn_depth_infinity)
     drep = "-";
+  else
+    return svn_error_createf(SVN_ERR_REPOS_BAD_ARGS, NULL,
+                             _("Unsupported report depth '%s'"),
+                             svn_depth_to_word(depth));
 
   ltrep = lock_token ? apr_psprintf(pool, "+%" APR_SIZE_T_FMT ":%s",
                                     strlen(lock_token), lock_token) : "-";

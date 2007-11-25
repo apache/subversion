@@ -44,8 +44,8 @@ capabilities (history sensitive merging, etc.).  The design is based
 on Dan Berlin's <a
 href="http://svn.haxx.se/dev/archive-2006-04/0916.shtml">proposal</a>
 <small>(Message-Id:
-&lt;1146242044.23718.1.camel@dberlin0-corp.corp.google.com&gt;), and
-subsequent edits</small>.</p>
+&lt;1146242044.23718.1.camel@dberlin0-corp.corp.google.com&gt;)</small>
+and subsequent edits.</p>
 
 <div class="h3">
 <h3>Goals</h3>
@@ -653,8 +653,8 @@ in that revision.  For the 'blame' case, we may also need to include some type
 of line number parameter, the handling of which is going to get ugly, since our
 FS isn't based on a weave.</p>
 
-<p>Existing functions of interest are <code>svn_repos_fs_get_merge_info()</code>
-and <code>svn_fs_merge_info__get_merge_info()</code>.</p>
+<p>Existing functions of interest are <code>svn_repos_fs_get_mergeinfo()</code>
+and <code>svn_fs_merge_info__get_mergeinfo()</code>.</p>
 
 <div class="h4" id="audit-log">
 <h4><code>svn log</code> Implementation</h4>

@@ -283,9 +283,13 @@ split_url_host(const char **msg,
 /* Helper function.  Creates a repository in the current working
    directory named REPOS_PATH, then assembes a URL that points to that
    FS, plus additional cruft (IN_REPOS_PATH) that theoretically refers to a
-   versioned resource in that repository  Finally, it runs this URL
+   versioned resource in that repository.  Finally, it runs this URL
    through svn_ra_local__split_URL to verify that it accurately
-   separates the filesystem path and the repository path cruft. */
+   separates the filesystem path and the repository path cruft. 
+
+   If IN_REPOS_PATH is NULL, we'll split the root URL and verify our
+   parts that way (noting that that in-repos-path that results should
+   be "/").  */
 static svn_error_t *
 check_split_url(const char *repos_path,
                 const char *in_repos_path,
@@ -299,19 +303,30 @@ check_split_url(const char *repos_path,
   SVN_ERR(svn_test__create_repos(&repos, repos_path, fs_type, pool));
 
   SVN_ERR(current_directory_url(&root_url, repos_path, pool));
-  url = apr_pstrcat(pool, root_url, in_repos_path, NULL);
+  if (in_repos_path)
+    url = apr_pstrcat(pool, root_url, in_repos_path, NULL);
+  else
+    url = root_url;
 
   /* Run this URL through our splitter... */
   SVN_ERR(svn_ra_local__split_URL(&repos, &repos_part, &in_repos_part,
                                   url, pool));
-  if ((strcmp(repos_part, root_url))
-      || (strcmp(in_repos_part, in_repos_path)))
-    return svn_error_createf
-      (SVN_ERR_TEST_FAILED, NULL,
-       "svn_ra_local__split_URL failed to properly split the URL\n%s\n%s\n%s\n%s",
-       repos_part, root_url, in_repos_part, in_repos_path);
 
-  return SVN_NO_ERROR;
+  /* We better see the REPOS_PART looking just like our ROOT_URL.  And
+     we better see in the IN_REPOS_PART either exactly the same as the
+     IN_REPOS_PATH provided us, or "/" if we weren't provided an
+     IN_REPOS_PATH.  */
+  if ((strcmp(repos_part, root_url) == 0)
+      && ((in_repos_path && (strcmp(in_repos_part, in_repos_path) == 0))
+          || ((! in_repos_path) && (strcmp(in_repos_part, "/") == 0))))
+    return SVN_NO_ERROR;
+
+  return svn_error_createf
+    (SVN_ERR_TEST_FAILED, NULL,
+     "svn_ra_local__split_URL failed to properly split the URL\n"
+     "%s\n%s\n%s\n%s",
+     repos_part, root_url, in_repos_part, 
+     in_repos_path ? in_repos_path : "(null)");
 }
 
 
@@ -335,6 +350,10 @@ split_url_test(const char **msg,
                           pool));
   SVN_ERR(check_split_url("test-repo-split-fs2",
                           "/alpha/beta/gamma/delta/epsilon/zeta/eta/theta",
+                          opts->fs_type,
+                          pool));
+  SVN_ERR(check_split_url("test-repo-split-fs3",
+                          NULL,
                           opts->fs_type,
                           pool));
 

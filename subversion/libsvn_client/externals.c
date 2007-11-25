@@ -2,7 +2,7 @@
  * externals.c:  handle the svn:externals property
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -23,6 +23,7 @@
 /*** Includes. ***/
 
 #include <assert.h>
+#include <apr_uri.h>
 #include "svn_wc.h"
 #include "svn_pools.h"
 #include "svn_client.h"
@@ -44,6 +45,12 @@ struct handle_external_item_change_baton
 
   /* The directory that has this externals property. */
   const char *parent_dir;
+
+  /* The URL for the directory that has this externals property. */
+  const char *parent_dir_url;
+
+  /* The URL for the repository root. */
+  const char *repos_root_url;
 
   /* Passed through to svn_client_* functions. */
   svn_client_ctx_t *ctx;
@@ -203,8 +210,8 @@ switch_external(const char *path,
               SVN_ERR(svn_client__update_internal(NULL, path, revision,
                                                   svn_depth_unknown,
                                                   FALSE, FALSE,
-                                                  timestamp_sleep, ctx,
-                                                  subpool));
+                                                  timestamp_sleep, TRUE,
+                                                  ctx, subpool));
               svn_pool_destroy(subpool);
               return SVN_NO_ERROR;
             }
@@ -241,7 +248,8 @@ switch_external(const char *path,
                     return err;
                 }
 
-              SVN_ERR(svn_client__switch_internal(NULL, path, url, revision,
+              SVN_ERR(svn_client__switch_internal(NULL, path, url,
+                                                  peg_revision, revision,
                                                   svn_depth_infinity,
                                                   timestamp_sleep,
                                                   FALSE, FALSE, ctx, subpool));
@@ -284,6 +292,184 @@ switch_external(const char *path,
   return SVN_NO_ERROR;
 }
 
+/* Return the scheme of @a uri in @a scheme allocated from @a pool.
+   If @a uri does not appear to be a valid URI, then @a scheme will
+   not be updated.  */
+static svn_error_t *
+uri_scheme(const char **scheme, const char *uri, apr_pool_t *pool)
+{
+  apr_size_t i;
+
+  for (i = 0; uri[i] && uri[i] != ':'; ++i)
+    if (uri[i] == '/')
+      goto error;
+
+  if (i > 0 && uri[i] == ':' && uri[i+1] == '/' && uri[i+2] == '/')
+    {
+      *scheme = apr_pstrmemdup(pool, uri, i);
+      return SVN_NO_ERROR;
+    }
+
+error:
+  return svn_error_createf(SVN_ERR_BAD_URL, 0,
+                           _("URL '%s' does not begin with a scheme"),
+                           uri);
+}
+
+/* If the URL for @a item is relative, then using the repository root
+   URL @a repos_root_url and the parent directory URL @parent_dir_url,
+   resolve it into an absolute URL and save it in @a item.
+
+   Regardless if the URL is absolute or not, if there are no errors,
+   the URL in @a item will be canonicalized.
+
+   The following relative URL formats are supported:
+
+     ../    relative to the parent directory of the external
+     ^/     relative to the repository root
+     //     relative to the scheme
+     /      relative to the server's hostname
+
+   The ../ and ^/ relative URLs may use .. to remove path elements up
+   to the server root.
+
+   The external URL should not be canonicalized otherwise the scheme
+   relative URL '//host/some/path' would have been canonicalized to
+   '/host/some/path' and we would not be able to match on the leading
+   '//'. */
+static svn_error_t *
+resolve_relative_external_url(svn_wc_external_item2_t *item,
+                              const char *repos_root_url,
+                              const char *parent_dir_url,
+                              apr_pool_t *pool)
+{
+  const char *uncanonicalized_url = item->url;
+  const char *canonicalized_url;
+  apr_uri_t parent_dir_parsed_uri;
+  apr_status_t status;
+
+  canonicalized_url = svn_path_canonicalize(uncanonicalized_url, pool);
+
+  /* If the URL is already absolute, there is nothing to do. */
+  if (svn_path_is_url(canonicalized_url))
+    {
+      item->url = canonicalized_url;
+      return SVN_NO_ERROR;
+    }
+
+  /* Parse the parent directory URL into its parts. */
+  status = apr_uri_parse(pool, parent_dir_url, &parent_dir_parsed_uri);
+  if (status)
+    return svn_error_createf(SVN_ERR_BAD_URL, 0,
+                             _("Illegal parent directory URL '%s'."),
+                             parent_dir_url);
+
+  /* Handle URLs relative to the current directory or to the
+     repository root.  The backpaths may only remove path elements,
+     not the hostname.  This allows an external to refer to another
+     repository in the same server relative to the location of this
+     repository, say using SVNParentPath. */
+  if ((0 == strncmp("../", uncanonicalized_url, 3)) ||
+      (0 == strncmp("^/", uncanonicalized_url, 2)))
+    {
+      apr_array_header_t *base_components;
+      apr_array_header_t *relative_components;
+      int i;
+
+      /* Decompose either the parent directory's URL path or the
+         repository root's URL path into components.  */
+      if (0 == strncmp("../", uncanonicalized_url, 3))
+        {
+          base_components = svn_path_decompose(parent_dir_parsed_uri.path,
+                                               pool);
+          relative_components = svn_path_decompose(canonicalized_url, pool);
+        }
+      else
+        {
+          apr_uri_t repos_root_parsed_uri;
+
+          status = apr_uri_parse(pool, repos_root_url, &repos_root_parsed_uri);
+          if (status)
+            return svn_error_createf(SVN_ERR_BAD_URL, 0,
+                                     _("Illegal repository root URL '%s'."),
+                                     repos_root_url);
+
+          base_components = svn_path_decompose(repos_root_parsed_uri.path,
+                                               pool);
+          relative_components = svn_path_decompose(canonicalized_url + 2,
+                                                   pool);
+        }
+
+      for (i = 0; i < relative_components->nelts; ++i)
+        {
+          const char *component = APR_ARRAY_IDX(relative_components,
+                                                i,
+                                                const char *);
+          if (0 == strcmp("..", component))
+            {
+              /* Constructing the final absolute URL together with
+                 apr_uri_unparse() requires that the path be absolute,
+                 so only pop a component if the component being popped
+                 is not the component for the root directory. */
+              if (base_components->nelts > 1)
+                apr_array_pop(base_components);
+            }
+          else
+            APR_ARRAY_PUSH(base_components, const char *) = component;
+        }
+
+      parent_dir_parsed_uri.path = (char *)svn_path_compose(base_components,
+                                                            pool);
+      parent_dir_parsed_uri.query = NULL;
+      parent_dir_parsed_uri.fragment = NULL;
+
+      item->url = apr_uri_unparse(pool, &parent_dir_parsed_uri, 0);
+
+      return SVN_NO_ERROR;
+    }
+
+  /* The remaining URLs are relative to the either the scheme or
+     server root and can only refer to locations inside that scope, so
+     backpaths are not allowed. */
+  if (svn_path_is_backpath_present(canonicalized_url + 2))
+    return svn_error_createf(SVN_ERR_BAD_URL, 0,
+                             _("The external relative URL '%s' cannot have "
+                               "backpaths, i.e. '..'."),
+                             uncanonicalized_url);
+
+  /* Relative to the scheme. */
+  if (0 == strncmp("//", uncanonicalized_url, 2))
+    {
+      const char *scheme;
+
+      SVN_ERR(uri_scheme(&scheme, repos_root_url, pool));
+      item->url = svn_path_canonicalize(apr_pstrcat(pool,
+                                                    scheme,
+                                                    ":",
+                                                    uncanonicalized_url,
+                                                    NULL),
+                                        pool);
+      return SVN_NO_ERROR;
+    }
+
+  /* Relative to the server root. */
+  if (uncanonicalized_url[0] == '/')
+    {
+      parent_dir_parsed_uri.path = (char *)canonicalized_url;
+      parent_dir_parsed_uri.query = NULL;
+      parent_dir_parsed_uri.fragment = NULL;
+
+      item->url = apr_uri_unparse(pool, &parent_dir_parsed_uri, 0);
+
+      return SVN_NO_ERROR;
+    }
+
+  return svn_error_createf(SVN_ERR_BAD_URL, 0,
+                           _("Unrecognized format for the relative external "
+                             "URL '%s'."),
+                           uncanonicalized_url);
+}
+
 /* This implements the 'svn_hash_diff_func_t' interface.
    BATON is of type 'struct handle_external_item_change_baton *'.  */
 static svn_error_t *
@@ -301,12 +487,22 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
      attempting to retrieve the hash values anyway.  */
 
   if ((ib->old_desc) && (! ib->is_export))
-    old_item = apr_hash_get(ib->old_desc, key, klen);
+    {
+      old_item = apr_hash_get(ib->old_desc, key, klen);
+      if (old_item)
+        SVN_ERR(resolve_relative_external_url(old_item, ib->repos_root_url,
+                                              ib->parent_dir_url, ib->pool));
+    }
   else
     old_item = NULL;
 
   if (ib->new_desc)
-    new_item = apr_hash_get(ib->new_desc, key, klen);
+    {
+      new_item = apr_hash_get(ib->new_desc, key, klen);
+      if (new_item)
+        SVN_ERR(resolve_relative_external_url(new_item, ib->repos_root_url,
+                                              ib->parent_dir_url, ib->pool));
+    }
   else
     new_item = NULL;
 
@@ -448,8 +644,15 @@ struct handle_externals_desc_change_baton
      depths available (e.g., svn export). */
   apr_hash_t *ambient_depths;
 
+  /* These two map a URL to a path where the URL is either checked out
+     to or exported to.  The to_path must be a substring of the
+     external item parent directory path. */
+  const char *from_url;
+  const char *to_path;
+
   /* Passed through to handle_external_item_change_baton. */
   svn_client_ctx_t *ctx;
+  const char *repos_root_url;
   svn_boolean_t update_unchanged;
   svn_boolean_t *timestamp_sleep;
   svn_boolean_t is_export;
@@ -471,6 +674,7 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   const char *old_desc_text, *new_desc_text;
   apr_array_header_t *old_desc, *new_desc;
   apr_hash_t *old_desc_hash, *new_desc_hash;
+  apr_size_t len;
   int i;
   svn_wc_external_item2_t *item;
   const char *ambient_depth_w;
@@ -505,13 +709,13 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
 
   if ((old_desc_text = apr_hash_get(cb->externals_old, key, klen)))
     SVN_ERR(svn_wc_parse_externals_description3(&old_desc, key, old_desc_text,
-                                                TRUE, cb->pool));
+                                                FALSE, cb->pool));
   else
     old_desc = NULL;
 
   if ((new_desc_text = apr_hash_get(cb->externals_new, key, klen)))
     SVN_ERR(svn_wc_parse_externals_description3(&new_desc, key, new_desc_text,
-                                                TRUE, cb->pool));
+                                                FALSE, cb->pool));
   else
     new_desc = NULL;
 
@@ -539,11 +743,26 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   ib.old_desc          = old_desc_hash;
   ib.new_desc          = new_desc_hash;
   ib.parent_dir        = (const char *) key;
+  ib.repos_root_url    = cb->repos_root_url;
   ib.ctx               = cb->ctx;
   ib.update_unchanged  = cb->update_unchanged;
   ib.is_export         = cb->is_export;
   ib.timestamp_sleep   = cb->timestamp_sleep;
   ib.pool              = svn_pool_create(cb->pool);
+
+  /* Get the URL of the parent directory by appending a portion of
+     parent_dir to from_url.  from_url is the URL for to_path and
+     to_path is a substring of parent_dir, so append any characters in
+     parent_dir past strlen(to_path) to from_url, making sure to move
+     past a '/' in parent_dir, otherwise svn_path_join() will use the
+     absolute path in parent_dir instead of joining from_url with the
+     parent_dir substring. */
+  len = strlen(cb->to_path);
+  if (ib.parent_dir[len] == '/')
+    ++len;
+  ib.parent_dir_url = svn_path_join(cb->from_url,
+                                    ib.parent_dir + len,
+                                    cb->pool);
 
   /* We must use a custom version of svn_hash_diff so that the diff
      entries are processed in the order they were originally specified
@@ -581,6 +800,9 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
 
 svn_error_t *
 svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
+                             const char *from_url,
+                             const char *to_path,
+                             const char *repos_root_url,
                              svn_depth_t requested_depth,
                              svn_boolean_t update_unchanged,
                              svn_boolean_t *timestamp_sleep,
@@ -597,6 +819,9 @@ svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
   cb.externals_old     = externals_old;
   cb.requested_depth   = requested_depth;
   cb.ambient_depths    = ambient_depths;
+  cb.from_url          = from_url;
+  cb.to_path           = to_path;
+  cb.repos_root_url    = repos_root_url;
   cb.ctx               = ctx;
   cb.update_unchanged  = update_unchanged;
   cb.timestamp_sleep   = timestamp_sleep;
@@ -612,6 +837,9 @@ svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
 
 svn_error_t *
 svn_client__fetch_externals(apr_hash_t *externals,
+                            const char *from_url,
+                            const char *to_path,
+                            const char *repos_root_url,
                             svn_depth_t requested_depth,
                             svn_boolean_t is_export,
                             svn_boolean_t *timestamp_sleep,
@@ -625,6 +853,9 @@ svn_client__fetch_externals(apr_hash_t *externals,
   cb.requested_depth   = requested_depth;
   cb.ambient_depths    = NULL;
   cb.ctx               = ctx;
+  cb.from_url          = from_url;
+  cb.to_path           = to_path;
+  cb.repos_root_url    = repos_root_url;
   cb.update_unchanged  = TRUE;
   cb.timestamp_sleep   = timestamp_sleep;
   cb.is_export         = is_export;
@@ -680,7 +911,7 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
       /* Parse the svn:externals property value.  This results in a
          hash mapping subdirectories to externals structures. */
       SVN_ERR(svn_wc_parse_externals_description3(&exts, path, propval,
-                                                  TRUE, subpool));
+                                                  FALSE, subpool));
 
       /* Make a sub-pool of SUBPOOL. */
       iterpool = svn_pool_create(subpool);
@@ -720,7 +951,7 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
     }
 
   /* Destroy SUBPOOL and (implicitly) ITERPOOL. */
-  apr_pool_destroy(subpool);
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }

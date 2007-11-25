@@ -21,7 +21,8 @@ import sys, os
 
 # Our testing module
 import svntest
-
+from svntest.verify import SVNUnexpectedStdout, SVNUnexpectedStderr
+from svntest.verify import SVNExpectedStderr
 from svntest.main import write_restrictive_svnserve_conf
 
 # (abbreviation)
@@ -52,17 +53,17 @@ def run_sync(url, expected_error=None):
     "--password", svntest.main.wc_passwd)
   if errput:
     if expected_error is None:
-      raise svntest.actions.SVNUnexpectedStderr(errput)
+      raise SVNUnexpectedStderr(errput)
     else:
       expected_error = svntest.verify.RegexOutput(expected_error,
                                                   match_all=False)
       svntest.verify.compare_and_display_lines(None, "STDERR",
                                                expected_error, errput)
   elif expected_error is not None:
-    raise svntest.actions.SVNExpectedStderr()
+    raise SVNExpectedStderr
   if not output and not expected_error:
     # should be: ['Committed revision 1.\n', 'Committed revision 2.\n']
-    raise svntest.actions.SVNUnexpectedStdout("Missing stdout")
+    raise SVNUnexpectedStdout("Missing stdout")
 
 def run_init(dst_url, src_url):
   "Initialize the mirror repository from the master"
@@ -71,9 +72,9 @@ def run_init(dst_url, src_url):
     "--username", svntest.main.wc_author,
     "--password", svntest.main.wc_passwd)
   if errput:
-    raise svntest.actions.SVNUnexpectedStderr(errput)
+    raise SVNUnexpectedStderr(errput)
   if output != ['Copied properties for revision 0.\n']:
-    raise svntest.actions.SVNUnexpectedStdout(output)
+    raise SVNUnexpectedStdout(output)
 
 
 def run_test(sbox, dump_file_name):
@@ -105,7 +106,7 @@ def run_test(sbox, dump_file_name):
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
-
+  return
   run_sync(dest_sbox.repo_url)
 
   # Remove some SVNSync-specific housekeeping properties from the
@@ -113,8 +114,7 @@ def run_test(sbox, dump_file_name):
   for prop_name in ("svn:sync-from-url", "svn:sync-from-uuid",
                     "svn:sync-last-merged-rev"):
     svntest.actions.run_and_verify_svn(
-      None, None, [], "propdel", "--username", svntest.main.wc_author,
-      "--password", svntest.main.wc_passwd, "--revprop", "-r", "0",
+      None, None, [], "propdel", "--revprop", "-r", "0",
       prop_name, dest_sbox.repo_url)
 
   # Create a dump file from the mirror repository.
@@ -231,10 +231,6 @@ def detect_meddling(sbox):
                                      None,
                                      [],
                                      'up',
-                                     '--username',
-                                     svntest.main.wc_author,
-                                     '--password',
-                                     svntest.main.wc_passwd,
                                      dest_sbox.wc_dir)
 
   # Commit some change to the destination, which should be detected by svnsync
@@ -245,10 +241,6 @@ def detect_meddling(sbox):
                                      [],
                                      'ci',
                                      '-m', 'msg',
-                                     '--username',
-                                     svntest.main.wc_author,
-                                     '--password',
-                                     svntest.main.wc_passwd,
                                      dest_sbox.wc_dir)
 
   run_sync(dest_sbox.repo_url,
@@ -288,8 +280,6 @@ def basic_authz(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      [], svntest.verify.AnyOutput,
                                      'cat',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      lambda_url)
 
 #----------------------------------------------------------------------
@@ -323,8 +313,6 @@ def copy_from_unreadable_dir(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      None,
                                      [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'ci',
                                      sbox.wc_dir + '/A/B',
                                      '-m', 'log_msg')
@@ -333,13 +321,9 @@ def copy_from_unreadable_dir(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      None,
                                      [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'cp',
                                      B_url,
                                      P_url,
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      '-m', 'Copy B to P')
 
   write_restrictive_svnserve_conf(sbox.repo_dir)
@@ -391,14 +375,12 @@ def copy_from_unreadable_dir(sbox):
 
   out, err = svntest.main.run_svn(None,
                                   'log',
-                                  '--username', svntest.main.wc_author,
-                                  '--password', svntest.main.wc_passwd,
                                   '-r', '3',
                                   '-v',
                                   dest_sbox.repo_url)
 
   if err:
-    raise svntest.actions.SVNUnexpectedStderr(err)
+    raise SVNUnexpectedStderr(err)
 
   svntest.verify.compare_and_display_lines(None,
                                            'LOG',
@@ -408,8 +390,6 @@ def copy_from_unreadable_dir(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      ['bar\n'],
                                      [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'pget',
                                      'foo',
                                      dest_sbox.repo_url + '/A/P/lambda')
@@ -417,8 +397,6 @@ def copy_from_unreadable_dir(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      ['zot\n'],
                                      [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'pget',
                                      'baz',
                                      dest_sbox.repo_url + '/A/P')
@@ -467,8 +445,6 @@ def copy_with_mod_from_unreadable_dir(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      None,
                                      [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'ci',
                                      sbox.wc_dir,
                                      '-m', 'log_msg')
@@ -524,14 +500,12 @@ def copy_with_mod_from_unreadable_dir(sbox):
 
   out, err = svntest.main.run_svn(None,
                                   'log',
-                                  '--username', svntest.main.wc_author,
-                                  '--password', svntest.main.wc_passwd,
                                   '-r', '2',
                                   '-v',
                                   dest_sbox.repo_url)
 
   if err:
-    raise svntest.actions.SVNUnexpectedStderr(err)
+    raise SVNUnexpectedStderr(err)
 
   svntest.verify.compare_and_display_lines(None,
                                            'LOG',
@@ -573,8 +547,6 @@ def copy_with_mod_from_unreadable_dir_and_copy(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      None,
                                      [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'ci',
                                      sbox.wc_dir,
                                      '-m', 'log_msg')
@@ -630,14 +602,12 @@ def copy_with_mod_from_unreadable_dir_and_copy(sbox):
 
   out, err = svntest.main.run_svn(None,
                                   'log',
-                                  '--username', svntest.main.wc_author,
-                                  '--password', svntest.main.wc_passwd,
                                   '-r', '2',
                                   '-v',
                                   dest_sbox.repo_url)
 
   if err:
-    raise svntest.actions.SVNUnexpectedStderr(err)
+    raise SVNUnexpectedStderr(err)
 
   svntest.verify.compare_and_display_lines(None,
                                            'LOG',

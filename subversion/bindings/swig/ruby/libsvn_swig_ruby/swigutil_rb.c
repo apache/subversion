@@ -330,12 +330,12 @@ svn_swig_rb_converter_to_locale_encoding(VALUE self, VALUE str)
   pool = svn_pool_create(NULL);
   err = svn_utf_cstring_from_utf8(&dest, StringValueCStr(str), pool);
   if (err) {
-    apr_pool_destroy(pool);
+    svn_pool_destroy(pool);
     svn_swig_rb_handle_svn_error(err);
   }
 
   result = rb_str_new2(dest);
-  apr_pool_destroy(pool);
+  svn_pool_destroy(pool);
   return result;
 }
 
@@ -870,25 +870,6 @@ svn_swig_rb_to_depth(VALUE value)
   }
 }
 
-svn_merge_range_inheritance_t
-svn_swig_rb_to_merge_range_inheritance(VALUE value)
-{
-  if (NIL_P(value)) {
-    return svn_rangelist_ignore_inheritance;
-  } else if (RTEST(rb_obj_is_kind_of(value, rb_cString)) ||
-             RTEST(rb_obj_is_kind_of(value, rb_cSymbol))) {
-    return NUM2INT(resolve_constant(rb_svn_core(), "RANGELIST_", value));
-  } else if (RTEST(rb_obj_is_kind_of(value, rb_cInteger))) {
-    return NUM2INT(value);
-  } else {
-    rb_raise(rb_eArgError,
-       "'%s' must be RANGELIST_STRING (e.g. \"ignore_inheritance\" or"
-       " :ignore_inheritance) "
-       "or Svn::Core::RANGELIST_*",
-       r2c_inspect(value));
-  }
-}
-
 svn_mergeinfo_inheritance_t
 svn_swig_rb_to_mergeinfo_inheritance(VALUE value)
 {
@@ -1285,6 +1266,37 @@ svn_swig_rb_prop_apr_array_to_hash_prop(const apr_array_header_t *apr_ary)
   }
 
   return hash;
+}
+
+apr_array_header_t *
+svn_swig_rb_array_to_apr_array_revision_range(VALUE array, apr_pool_t *pool)
+{
+  int i, len;
+  apr_array_header_t *apr_ary;
+
+  Check_Type(array, T_ARRAY);
+  len = RARRAY(array)->len;
+  apr_ary = apr_array_make(pool, len, sizeof(svn_opt_revision_range_t *));
+  apr_ary->nelts = len;
+  for (i = 0; i < len; i++) {
+    VALUE value;
+    svn_opt_revision_range_t *range;
+
+    value = rb_ary_entry(array, i);
+    if (RTEST(rb_obj_is_kind_of(value, rb_cArray))) {
+      if (RARRAY(value)->len != 2)
+        rb_raise(rb_eArgError,
+                 "revision range should be [start, end]: %s",
+                 r2c_inspect(value));
+      range = apr_palloc(pool, sizeof(*range));
+      svn_swig_rb_set_revision(&range->start, rb_ary_entry(value, 0));
+      svn_swig_rb_set_revision(&range->end, rb_ary_entry(value, 1));
+    } else {
+      range = r2c_swig_type(value, (void *)"svn_opt_revision_range_t *", pool);
+    }
+    APR_ARRAY_IDX(apr_ary, i, svn_opt_revision_range_t *) = range;
+  }
+  return apr_ary;
 }
 
 
@@ -2184,36 +2196,6 @@ svn_swig_rb_notify_func2(void *baton,
 
   if (!NIL_P(proc))
     invoke_callback((VALUE)(&cbb), rb_pool);
-}
-
-svn_error_t *
-svn_swig_rb_conflict_resolver_func(svn_wc_conflict_result_t *result,
-                                   const svn_wc_conflict_description_t *description,
-                                   void *baton,
-                                   apr_pool_t *pool)
-{
-  svn_error_t *err = SVN_NO_ERROR;
-  VALUE proc, rb_pool, rb_result;
-
-  *result = svn_wc_conflict_result_conflicted;
-
-  svn_swig_rb_from_baton((VALUE)baton, &proc, &rb_pool);
-
-  if (!NIL_P(proc)) {
-    callback_baton_t cbb;
-    void *converted_result;
-
-    cbb.receiver = proc;
-    cbb.message = id_call;
-    cbb.args = rb_ary_new3(1,
-             c2r_swig_type((void *)description,
-                           (void *)"const svn_wc_conflict_description_t *"));
-    rb_result = invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
-    converted_result = result;
-    r2c_swig_type2(rb_result, "svn_wc_conflict_result_t *", &converted_result);
-  }
-
-  return err;
 }
 
 svn_error_t *

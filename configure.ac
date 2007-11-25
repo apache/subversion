@@ -70,7 +70,7 @@ SVN_LIB_APRUTIL($APU_VER_REGEXES)
 # Either a space-separated list of allowable Neon versions, or "any" to
 # mean allow anything.
 NEON_ALLOWED_LIST="0.25.0 0.25.1 0.25.2 0.25.3 0.25.4 0.25.5 0.26.0 0.26.1 0.26.2 0.26.3 0.26.4 0.27.2"
-NEON_RECOMMENDED_VER=0.25.5
+NEON_RECOMMENDED_VER=0.27.2
 NEON_URL="http://www.webdav.org/neon/neon-${NEON_RECOMMENDED_VER}.tar.gz"
 dnl You can skip the neon version check only if you know what you are doing 
 AC_ARG_ENABLE(neon-version-check,
@@ -89,7 +89,7 @@ SVN_LIB_SERF
 
 dnl Search for SQLite
 SQLITE_ALLOWED_LIST="3.*"
-SQLITE_RECOMMENDED_VER="3.4.2"
+SQLITE_RECOMMENDED_VER="3.5.2"
 SQLITE_URL="http://www.sqlite.org/sqlite-${SQLITE_RECOMMENDED_VER}.tar.gz"
 SVN_LIB_SQLITE($SQLITE_ALLOWED_LIST, $SQLITE_RECOMMENDED_VER, $SQLITE_URL)
 
@@ -465,7 +465,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
       fi
       enable_debugging=yes
       if test "$GCC" = "yes"; then
-        CFLAGS="$CFLAGS -std=c89 -Wpointer-arith -Wwrite-strings -Wshadow"
+        CFLAGS="$CFLAGS -Wpointer-arith -Wwrite-strings -Wshadow"
         CXXFLAGS="$CXXFLAGS -Wpointer-arith -Wwrite-strings -Wshadow"
       fi
     fi

@@ -6,7 +6,7 @@
 #
 ######################################################################
 #
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2003-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -35,8 +35,8 @@ def _unprefix_names(symbol_dict, from_prefix, to_prefix = ''):
 Pool = _libsvncore.svn_pool_create
 
 # Setup consistent names for revnum constants
-svn_ignored_revnum = SWIG_SVN_IGNORED_REVNUM
-svn_invalid_revnum = SWIG_SVN_INVALID_REVNUM
+SVN_IGNORED_REVNUM = SWIG_SVN_IGNORED_REVNUM
+SVN_INVALID_REVNUM = SWIG_SVN_INVALID_REVNUM
 
 def svn_path_compare_paths(path1, path2):
   path1_len = len (path1);
@@ -74,6 +74,17 @@ def svn_path_compare_paths(path1, path2):
   # determine order
   return cmp(char1, char2)
 
+def svn_mergeinfo_merge(mergeinfo, changes):
+  return _libsvncore.svn_swig_mergeinfo_merge(mergeinfo, changes)
+
+def svn_mergeinfo_sort(mergeinfo):
+  return _libsvncore.svn_swig_mergeinfo_sort(mergeinfo)
+
+def svn_rangelist_merge(rangelist, changes):
+  return _libsvncore.svn_swig_rangelist_merge(rangelist, changes)
+
+def svn_rangelist_reverse(rangelist):
+  return _libsvncore.svn_swig_rangelist_reverse(rangelist)
 
 class Stream:
   """A file-object-like wrapper for Subversion svn_stream_t objects."""

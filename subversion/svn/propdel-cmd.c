@@ -57,7 +57,7 @@ svn_cl__propdel(apr_getopt_t *os,
      properties, and it may even be useful to allow, in case invalid
      properties sneaked through somehow. */
 
-  /* Before allowing svn_opt_args_to_target_array() to canonicalize
+  /* Before allowing svn_opt_args_to_target_array2() to canonicalize
      all the targets, we need to build a list of targets made of both
      ones the user typed, as well as any specified by --changelist.  */
   if (opt_state->changelist)

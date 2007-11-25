@@ -141,6 +141,17 @@ typedef struct svn_cl__opt_state_t
      end_revision remains `svn_opt_revision_unspecified'. */
   svn_opt_revision_t start_revision, end_revision;
 
+  /* Flag which is only set if start_revision and end_revision were
+     set using '-c'. */
+  svn_boolean_t used_change_arg;
+
+  /* This array of svn_opt_revision_range_t *'s get set as a result
+     of *multiple* revisions or dates being specified.  Otherwise similar
+     to start_revision and end_revision.
+
+     NOTE: This is currently used only by merge subcommand. */
+  apr_array_header_t *revision_ranges;
+
   /* Max number of log messages to get back from svn_client_log2. */
   int limit;
 
@@ -252,6 +263,9 @@ svn_opt_subcommand_t
 extern const svn_opt_subcommand_desc2_t svn_cl__cmd_table[];
 
 /* See definition in main.c for documentation. */
+extern const int svn_cl__global_options[];
+
+/* See definition in main.c for documentation. */
 extern const apr_getopt_option_t svn_cl__options[];
 
 
@@ -304,19 +318,11 @@ svn_cl__conflict_baton_make(svn_cl__accept_t accept_which,
                             svn_cmdline_prompt_baton_t *pb,
                             apr_pool_t *pool);
 
-/* A mindless implementation of svn_wc_conflict_resolver_func_t that
- * does absolutely nothing to resolve conflicts. */
-svn_error_t *
-svn_cl__ignore_conflicts(svn_wc_conflict_result_t *result,
-                         const svn_wc_conflict_description_t *description,
-                         void *baton,
-                         apr_pool_t *pool);
-
 /* A conflict-resolution callback which prompts the user to choose
    one of the 3 fulltexts, edit the merged file on the spot, or just
    skip the conflict (to be resolved later). */
 svn_error_t *
-svn_cl__conflict_handler(svn_wc_conflict_result_t *result,
+svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                          const svn_wc_conflict_description_t *desc,
                          void *baton,
                          apr_pool_t *pool);
@@ -326,7 +332,9 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t *result,
 /*** Command-line output functions -- printing to the user. ***/
 
 /* Print out commit information found in COMMIT_INFO to the console.
- * POOL is used for temporay allocations. */
+ * POOL is used for temporay allocations. 
+ * COMMIT_INFO should not be NULL. 
+ */
 svn_error_t *svn_cl__print_commit_info(svn_commit_info_t *commit_info,
                                        apr_pool_t *pool);
 

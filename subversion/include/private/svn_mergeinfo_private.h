@@ -37,8 +37,21 @@ svn_mergeinfo__to_string(svn_string_t **output, apr_hash_t *mergeinput,
                          apr_pool_t *pool);
 
 /** Return whether @a info1 and @a info2 are equal in @a *is_equal.
- * @a consider_inheritance determines how to account for the inheritability
- * of the rangelists in @a info1 and @a info2 when calculating equality.
+ *
+ * @a consider_inheritance determines how the rangelists in the two
+ * hashes are compared for equality.  If @a consider_inheritance is FALSE,
+ * then the start and end revisions of the @c svn_merge_range_t's being
+ * compared are the only factors considered when determining equality.
+ * 
+ *  e.g. '/trunk: 1,3-4*,5' == '/trunk: 1,3-5'
+ *
+ * If @a consider_inheritance is TRUE, then the inheritability of the
+ * @c svn_merge_range_t's is also considered and must be the same for two
+ * otherwise identical ranges to be judged equal.
+ *
+ *  e.g. '/trunk: 1,3-4*,5' != '/trunk: 1,3-5'
+ *       '/trunk: 1,3-4*,5' == '/trunk: 1,3-4*,5'
+ *       '/trunk: 1,3-4,5'  == '/trunk: 1,3-4,5'
  *
  * Use @a pool for temporary allocations.
  *
@@ -48,7 +61,7 @@ svn_error_t *
 svn_mergeinfo__equals(svn_boolean_t *is_equal,
                       apr_hash_t *info1,
                       apr_hash_t *info2,
-                      svn_merge_range_inheritance_t consider_inheritance,
+                      svn_boolean_t consider_inheritance,
                       apr_pool_t *pool);
 
 #ifdef __cplusplus

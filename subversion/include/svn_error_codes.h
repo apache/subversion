@@ -185,6 +185,10 @@ SVN_ERROR_START
              SVN_ERR_BAD_CATEGORY_START + 6,
              "Version file format not correct")
 
+  SVN_ERRDEF(SVN_ERR_BAD_RELATIVE_PATH,
+             SVN_ERR_BAD_CATEGORY_START + 7,
+             "Path is not an immediate child of the specified directory")
+
   /* xml errors */
 
   SVN_ERRDEF(SVN_ERR_XML_ATTRIB_NOT_FOUND,
@@ -413,7 +417,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF(SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND,
              SVN_ERR_WC_CATEGORY_START + 28,
-             "Failed to locate 'copyfrom' path in working copy.")
+             "Failed to locate 'copyfrom' path in working copy")
 
   /** @since New in 1.5. */
   SVN_ERRDEF(SVN_ERR_WC_CHANGELIST_MOVE,
@@ -632,6 +636,16 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 46,
              "SQLite error")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_FS_NO_SUCH_NODE_ORIGIN,
+             SVN_ERR_FS_CATEGORY_START + 47,
+             "Filesystem has no such node origin record")
+
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_FS_SQLITE_READONLY,
+             SVN_ERR_FS_CATEGORY_START + 48,
+             "Attempted to write to readonly SQLite db")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,
@@ -702,7 +716,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF(SVN_ERR_RA_OUT_OF_DATE,
              SVN_ERR_RA_CATEGORY_START + 4,
-             "Item is out-of-date")
+             "Item is out of date")
 
   SVN_ERRDEF(SVN_ERR_RA_NO_REPOS_UUID,
              SVN_ERR_RA_CATEGORY_START + 5,
@@ -717,6 +731,10 @@ SVN_ERROR_START
              SVN_ERR_RA_CATEGORY_START + 7,
              "Path is not locked")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_RA_UNKNOWN_CAPABILITY,
+             SVN_ERR_RA_CATEGORY_START + 8,
+             "Inquiry about unknown capability")
 
   /* ra_dav errors */
 
@@ -1145,7 +1163,7 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_CL_UNNECESSARY_LOG_MESSAGE,
              SVN_ERR_CL_CATEGORY_START + 9,
              "A log message was given where none was necessary")
-  
+
   SVN_ERRDEF(SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL,
              SVN_ERR_CL_CATEGORY_START + 10,
              "No external merge tool available")
