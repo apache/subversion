@@ -101,9 +101,9 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
  * [PROTOCOL] [BASE64 AUTH DATA]
  */
 void
-encode_auth_header(const char * protocol, char **header,
-                   const char * data, apr_size_t data_len,
-                   apr_pool_t *pool)
+svn_ra_serf__encode_auth_header(const char * protocol, char **header,
+                                const char * data, apr_size_t data_len,
+                                apr_pool_t *pool)
 {
   apr_size_t encoded_len, proto_len;
   char * ptr;
@@ -280,8 +280,8 @@ handle_basic_auth(svn_ra_serf__session_t *session,
                     simple_creds->username, ":", simple_creds->password, NULL);
   tmp_len = strlen(tmp);
 
-  encode_auth_header(session->auth_protocol->auth_name, &session->auth_value,
-                     tmp, tmp_len, pool);
+  svn_ra_serf__encode_auth_header(session->auth_protocol->auth_name,
+                                  &session->auth_value, tmp, tmp_len, pool);
   session->auth_header = "Authorization";
 
   /* FIXME Come up with a cleaner way of changing the connection auth. */
@@ -345,9 +345,9 @@ handle_proxy_basic_auth(svn_ra_serf__session_t *session,
                 "Proxy authentication failed");
     }
 
-  encode_auth_header(session->proxy_auth_protocol->auth_name, 
-                     &session->proxy_auth_value,
-                     tmp, tmp_len, pool);
+  svn_ra_serf__encode_auth_header(session->proxy_auth_protocol->auth_name, 
+                                  &session->proxy_auth_value,
+                                  tmp, tmp_len, pool);
   session->proxy_auth_header = "Proxy-Authorization";
 
   /* FIXME Come up with a cleaner way of changing the connection auth. */

@@ -1275,7 +1275,10 @@ svn_ra_serf__handle_auth(int code,
  * [PROTOCOL] [BASE64 AUTH DATA]
  */
 void
-encode_auth_header(const char * protocol, char **header, const char * data, 
-                   apr_size_t data_len, apr_pool_t *pool);
+svn_ra_serf__encode_auth_header(const char * protocol,
+                                char **header,
+                                const char * data,
+                                apr_size_t data_len,
+                                apr_pool_t *pool);
 
 #endif /* SVN_LIBSVN_RA_SERF_RA_SERF_H */
