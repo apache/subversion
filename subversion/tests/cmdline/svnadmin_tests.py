@@ -18,6 +18,7 @@
 
 # General modules
 import os
+import sys
 
 # Our testing module
 import svntest
@@ -76,10 +77,11 @@ def get_txns(repo_dir):
   return txns
 
 def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
-                               revs, dump):
+                               revs, dump, *varargs):
   """Load the array of lines passed in 'dump' into the
   current tests' repository and verify the repository content
-  using the array of wc.States passed in revs"""
+  using the array of wc.States passed in revs. VARARGS are optional
+  arguments passed to the 'load' command"""
 
   if type(dump) is type(""):
     dump = [ dump ]
@@ -87,7 +89,7 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
   output, errput = \
           svntest.main.run_command_stdin(
     svntest.main.svnadmin_binary, expected_stderr, 1, dump,
-    'load', '--quiet', sbox.repo_dir)
+    'load', '--quiet', sbox.repo_dir, *varargs)
 
   if expected_stdout:
     if expected_stdout == svntest.verify.AnyOutput:
@@ -200,7 +202,7 @@ def extra_headers(sbox):
   dumpfile[3:3] = \
        [ "X-Comment-Header: Ignored header normally not in dump stream\n" ]
 
-  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile)
+  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile, None)
 
 #----------------------------------------------------------------------
 # Ensure loading continues after skipping a bit of unknown extra content.
@@ -218,7 +220,7 @@ def extra_blockcontent(sbox):
   # Insert the extra content after "PROPS-END\n"
   dumpfile[11] = dumpfile[11][:-2] + "extra text\n\n\n"
 
-  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile)
+  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile, None)
 
 #----------------------------------------------------------------------
 def inconsistent_headers(sbox):
@@ -231,7 +233,7 @@ def inconsistent_headers(sbox):
   dumpfile[-2] = "Content-length: 30\n\n"
 
   load_and_verify_dumpstream(sbox, [], svntest.verify.AnyOutput,
-                             dumpfile_revisions, dumpfile)
+                             dumpfile_revisions, dumpfile, None)
 
 #----------------------------------------------------------------------
 # Test for issue #2729: Datestamp-less revisions in dump streams do
@@ -250,7 +252,7 @@ def empty_date(sbox):
          "K 7\nsvn:log\nV 0\n\nK 10\nsvn:author\nV 4\nerik\nPROPS-END\n\n\n"
          ]
 
-  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile)
+  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile, None)
 
   # Verify that the revision still lacks the svn:date property.
   svntest.actions.run_and_verify_svn(None, [], [], "propget",
@@ -453,6 +455,43 @@ def recover_fsfs(sbox):
     "Contents of db/current is unexpected.",
     'db/current', expected_current_contents, actual_current_contents)
 
+#----------------------------------------------------------------------
+
+def load_with_parent_dir(sbox):
+  "'svnadmin load --parent-dir' reparents mergeinfo"
+
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2983. ##
+  test_create(sbox)
+
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svnadmin_tests_data',
+                                   'mergeinfo_included.dump')
+  dumpfile = svntest.main.file_read(dumpfile_location)
+
+  # Create 'sample' dir in sbox.repo_url
+  svntest.actions.run_and_verify_svn(None,
+                                     ['\n', 'Committed revision 1.\n'],
+                                     [], "mkdir", sbox.repo_url + "/sample",
+                                     "-m", "Create sample dir")
+
+  # Load the dump stream
+  load_and_verify_dumpstream(sbox,[],[], None, dumpfile, '--parent-dir',
+                             '/sample')
+
+  # Verify the svn:mergeinfo properties for '--parent-dir'
+  svntest.actions.run_and_verify_svn(None,
+                                     [sbox.repo_url +
+                                      "/sample/branch - /sample/trunk:4-6\n"],
+                                     [], 'propget', 'svn:mergeinfo', '-R',
+                                     sbox.repo_url + '/sample/branch')
+  svntest.actions.run_and_verify_svn(None,
+                                     [sbox.repo_url +
+                                      "/sample/branch1 - " +
+                                      "/sample/branch:5-8\n"],
+                                     [], 'propget', 'svn:mergeinfo', '-R',
+                                     sbox.repo_url + '/sample/branch1')
+
+
 ########################################################################
 # Run the tests
 
@@ -471,6 +510,7 @@ test_list = [ None,
               setrevprop,
               verify_windows_paths_in_repos,
               SkipUnless(recover_fsfs, svntest.main.is_fs_type_fsfs),
+              load_with_parent_dir,
              ]
 
 if __name__ == '__main__':
