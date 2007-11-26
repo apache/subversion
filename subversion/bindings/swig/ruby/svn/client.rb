@@ -284,6 +284,7 @@ module Svn
                no_diff_deleted=false, force=false,
                header_encoding=nil, relative_to_dir=nil)
         header_encoding ||= Core::LOCALE_CHARSET
+        relative_to_dir &&= Core.path_canonicalize(relative_to_dir)
         Client.diff4(options, path1, rev1, path2, rev2, relative_to_dir,
                      depth, ignore_ancestry,
                      no_diff_deleted, force, header_encoding,
@@ -296,6 +297,7 @@ module Svn
                    no_diff_deleted=false, force=false,
                    header_encoding=nil, relative_to_dir=nil)
         header_encoding ||= Core::LOCALE_CHARSET
+        relative_to_dir &&= Core.path_canonicalize(relative_to_dir)
         Client.diff_peg4(options, path, peg_rev, start_rev, end_rev,
                          relative_to_dir, depth, ignore_ancestry,
                          no_diff_deleted, force, header_encoding,
