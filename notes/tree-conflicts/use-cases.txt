@@ -161,7 +161,7 @@ Diagram of Desired Behaviour
                \                     |update    |commit    |commit
                 \                    v          |(fails)   |
     wcB          -- Foo.c' ------------+Bar.c' ------------------------>
-             (edit)                    -Foo.c            ^
+             (edit)                    -Foo.c'           ^
                                                          |
                                                       resolved
 
@@ -229,4 +229,223 @@ Diagram of Desired Behavior
              (move) -Foo.c             Bar.c        ^
                                                     |
                                                  resolved
+
+
+==========
+USE CASE 4
+==========
+
+Description
+
+   A file modification is merged onto the source of a file move.
+
+Current Behavior
+
+   Developer A modifies Foo.c and commits it to the repository.
+
+   Developer B moves Foo.c to Bar.c and commits it to the repository.
+   
+   Developer merges A's new revision into his working copy. The merge
+   will apply A's modification to Foo.c to the Foo.c in B's working
+   copy.
+
+Problems With Current Behavior
+
+   First problem:
+   
+   A's modification of Foo.c will not be merged to B's line of
+   development because the merge skips the absent file.
+   
+   Second problem:
+   
+   B is not explicitly warned about reverting A's modification of Foo.c,
+   except for a "skipped" warning in the output of the merge command,
+   which might not be noticed.
+
+Diagram of current behavior
+
+
+            (edit)
+    urlA        -- Foo.c' ------------------>
+               /   (r50)              |
+              /                       |
+    -- Foo.c -                        |merge -c50
+              \                       |(Foo.c skipped)
+               \                      |
+    urlB        -- +Bar.c ------------|----------------->
+            (move) -Foo.c \           |         ^
+                           \          |         |commit
+                            \         v         |(no-op)
+    wcB                      -- Bar.c -- Bar.c ------ -->
+
+
+Desired behavior
+
+   When user B merges, A's modifications to Foo.c should be merged into
+   Bar.c. Signal a text conflict if necessary.
+   
+   A tree conflict should be signalled to inform B of the new changes
+   to Bar.c, so that B can review the modified Bar.c before committing it.
+
+Diagram of desired behaviour
+
+
+            (edit)
+    urlA        -- Foo.c' ------------------>
+               /   (r50)               |
+              /                        |
+    -- Foo.c -                         |merge -c50
+              \                        |(tree conflict)
+               \                       |
+    urlB        -- +Bar.c -------------|-------------------- Bar.c' -->
+            (move) -Foo.c  \           |          ^        ^
+                            \          |          |commit  |commit
+                             \         v          |(fails) |
+    wcB                       -- Bar.c -- Bar.c' --------------->
+                                                         ^
+                                                         |
+                                                      resolved
+
+
+==========
+USE CASE 5
+==========
+
+Description
+
+   A file move is merged onto a modification of the move-source.
+
+   This is essentially the same as Use Case 4, with the difference that
+   this time, B does the edit and A does the move.
+
+Current Behavior
+
+   Developer A  moves Foo.c to Bar.c and commits it to the repository.
+
+   Developer B modifies Foo.cand commits it to the repository.
+   
+   Developer merges A's new revision into his working copy.  The merge
+   will add Bar.c (with the same content as the original Foo.c) and
+   will delete B's Foo.c.
+
+Problems With Current Behavior
+
+   First problem:
+   
+   B's has modified Foo.c in the past.  This modification will be lost
+   unless B reviews the history of Foo.c and Bar.c at both URLs and
+   corrects the problem (e.g., via 'svn copy').
+
+Diagram of current behavior
+
+
+            (move)
+    urlA        -- +Bar.c ------------------->
+               /   -Foo.c              |
+              /    (r50)               |
+    -- Foo.c -                         |merge -c50
+              \                        |
+               \                       |
+    urlB        -- Foo.c' -------------|------------ Bar.c --->
+            (edit)        \            |          ^
+                           \           |          |commit
+                            \          v          |
+    wcB                      -- Foo.c' -- +Bar.c ------>
+                                          -Foo.c'
+
+
+Desired behavior
+
+   In B's working copy, the update should add Bar.c and merge the local
+   modifications to Foo.c into Bar.c. Signal a text conflict if necessary.
+   
+   Foo.c should be deleted from B's working copy.
+   
+   A tree conflict should be signaled to inform B that Foo.c has been
+   renamed to Bar.c
+
+Diagram of desired behaviour
+
+
+            (move)
+    urlA        -- +Bar.c ------------------->
+               /   -Foo.c              |
+              /    (r50)               |
+    -- Foo.c -                         |merge -c50
+              \                        |(tree conflict)
+               \                       |
+    urlB        -- Foo.c' -------------|-------------------- Bar.c'-->
+            (edit)        \            |          ^        ^
+                           \           |          |commit  |commit
+                            \          v          |(fails) |
+    wcB                      -- Foo.c' -- Bar.c' --------------->
+                                         -Foo.c'         ^
+                                                         |
+                                                      resolved
+
+
+==========
+USE CASE 6
+==========
+
+Description
+
+   A file move is merged onto a conflicting file move.
+
+Current Behavior
+
+   Developer A moves Foo.c to Bar.c and commits it to the repository.
+
+   Developer B moves Foo.c to Bix.c and commits it to the repository.
+   
+   Developer merges A's new revision into his working copy.  The merge
+   will add Bar.c with history in B's working copy.
+
+Problems With Current Behavior
+
+   After B's next commit, the content of the original Foo.c will exist
+   twice in the source tree under two different paths (Bar.c and
+   Bix.c).  This may not have been intended.
+
+Diagram of current behavior
+
+
+            (edit)
+    urlA        -- +Bar.c ------------------>
+               /   -Foo.c             |
+              /    (r50)              |
+    -- Foo.c -                        |merge -c50
+              \                       |
+               \                      |
+    urlB        -- +Bix.c ------------|---------------- Bix.c --->
+            (move) -Foo.c \           |         ^       Bar.c
+                           \          |         |commit
+                            \         v         |
+    wcB                      -- Bix.c -- Bix.c ---------->
+                                        +Bar.c
+
+
+Desired behavior
+
+   A tree conflict should be signaled to inform B of the conflicting
+   rename operation.  B can delete either file or commit both.
+
+Diagram of desired behaviour
+
+
+            (edit)
+    urlA        -- +Bar.c ----------------->
+               /   -Foo.c             |
+              /    (r50)              |
+    -- Foo.c -                        |merge -c50
+              \                       |(tree conflict)
+               \                      |
+    urlB        -- +Bix.c ------------|------------------------- Bar.c -->
+            (move) -Foo.c \           |         ^        ^       (or Bix.c,
+                           \          |         |commit  |commit  or both)
+                            \         v         |(fails) |
+    wcB                      -- Bix.c -- Bix.c -------------->
+                                        +Bar.c          ^
+                                                        |
+                                                     resolved
 
