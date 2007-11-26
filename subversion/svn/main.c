@@ -1251,7 +1251,8 @@ main(int argc, const char *argv[])
                                _("Error converting depth "
                                  "from locale to UTF8")), pool, "svn: ");
         opt_state.depth = svn_depth_from_word(utf8_opt_arg);
-        if (opt_state.depth == svn_depth_unknown)
+        if (opt_state.depth == svn_depth_unknown
+            || opt_state.depth == svn_depth_exclude)
           {
             return svn_cmdline_handle_exit_error
               (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
