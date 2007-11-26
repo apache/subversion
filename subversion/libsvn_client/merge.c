@@ -2147,6 +2147,23 @@ remove_absent_children(const char *target_wcpath,
     }
 }
 
+/* Set *HONOR_MERGEINFO and *RECORD_MERGEINFO (if non-NULL)
+   appropriately for MERGE_B. */
+static void
+mergeinfo_behavior(svn_boolean_t *honor_mergeinfo,
+                   svn_boolean_t *record_mergeinfo,
+                   merge_cmd_baton_t *merge_b)
+{
+  if (honor_mergeinfo)
+    *honor_mergeinfo = (merge_b->sources_related
+                        && merge_b->same_repos
+                        && (! merge_b->ignore_ancestry));
+  if (record_mergeinfo)
+    *record_mergeinfo = (merge_b->sources_related
+                         && merge_b->same_repos
+                         && (! merge_b->dry_run));
+}
+
 /* Sets up the diff editor report and drives it by properly negating
    subtree that could have a conflicting merge history.
 
@@ -2175,9 +2192,9 @@ drive_merge_report_editor(const char *target_wcpath,
   void *diff_edit_baton;
   void *report_baton;
   svn_revnum_t default_start;
-  svn_boolean_t honor_mergeinfo = (merge_b->sources_related 
-                                   && merge_b->same_repos
-                                   && (! merge_b->ignore_ancestry));
+  svn_boolean_t honor_mergeinfo;
+
+  mergeinfo_behavior(&honor_mergeinfo, NULL, merge_b);
 
   /* Establish first RA session to URL1. */
   SVN_ERR(svn_client__open_ra_session_internal(&merge_b->ra_session1, url1,
@@ -3662,12 +3679,9 @@ do_file_merge(const char *url1,
   apr_pool_t *subpool;
   svn_boolean_t is_rollback = (revision1 > revision2);
   const char *primary_url = is_rollback ? url1 : url2;
-  svn_boolean_t honor_mergeinfo = (merge_b->sources_related 
-                                   && merge_b->same_repos
-                                   && (! merge_b->ignore_ancestry));
-  svn_boolean_t record_mergeinfo = (merge_b->sources_related
-                                    && merge_b->same_repos
-                                    && (! merge_b->dry_run));
+  svn_boolean_t honor_mergeinfo, record_mergeinfo;
+
+  mergeinfo_behavior(&honor_mergeinfo, &record_mergeinfo, merge_b);
 
   /* Note that this is a single-file merge. */
   notify_b->is_single_file_merge = TRUE;
@@ -3959,12 +3973,9 @@ do_directory_merge(const char *url1,
   svn_boolean_t is_rollback = (revision1 > revision2);
   const char *primary_url = is_rollback ? url1 : url2;
   const char *source_root_url, *mergeinfo_path;
-  svn_boolean_t honor_mergeinfo = (merge_b->sources_related 
-                                   && merge_b->same_repos
-                                   && (! merge_b->ignore_ancestry));
-  svn_boolean_t record_mergeinfo = (merge_b->sources_related
-                                    && merge_b->same_repos
-                                    && (! merge_b->dry_run));
+  svn_boolean_t honor_mergeinfo, record_mergeinfo;
+
+  mergeinfo_behavior(&honor_mergeinfo, &record_mergeinfo, merge_b);
 
   /* Initialize CHILDREN_WITH_MERGEINFO. */
   children_with_mergeinfo =
