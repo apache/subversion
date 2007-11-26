@@ -1777,6 +1777,32 @@ class SvnClientTest < Test::Unit::TestCase
     end
   end
 
+  def test_list_with_depth
+    setup_greek_tree
+
+    log = "sample log"
+    ctx = make_context(log)
+
+    expected_lists_by_depth = {
+      true => [:beta, :b, :lambda, :e, :f, :alpha],
+      false => [:b, :lambda, :e, :f],
+      'empty' => [:b],
+      'files' => [:b, :lambda],
+      'immediates' => [:b, :lambda, :e, :f],
+      'infinity' => [:beta, :b, :lambda, :e, :f, :alpha],
+    }
+
+    recurse_and_depth_choices.each do |rd|
+      paths = []
+      ctx.list(@greek.path(:b), 'head' ,nil, rd) do |path, dirent, lock, abs_path|
+        paths << (path.empty? ? abs_path : File.join(abs_path, path))
+      end
+      assert_equal(expected_lists_by_depth[rd].map{|s| "/#{@greek.resolve(s)}"}.sort,
+                   paths.sort,
+                   "depth '#{rd}")
+    end
+  end
+
   def test_switch
     log = "sample log"
     trunk_src = "trunk source\n"

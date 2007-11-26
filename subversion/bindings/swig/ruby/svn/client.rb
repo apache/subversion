@@ -532,11 +532,12 @@ module Svn
       # +path+ is a relative path from the +path_or_uri+.
       # +dirent+ is an instance of Svn::Core::Dirent.
       # +abs_path+ is an absolute path for +path_or_uri+ in the repository.
-      def list(path_or_uri, rev, peg_rev=nil, recurse=false,
+      def list(path_or_uri, rev, peg_rev=nil, depth_or_recurse=Core::DEPTH_IMMEDIATES,
                dirent_fields=nil, fetch_locks=true,
                &block) # :yields: path, dirent, lock, abs_path
+        depth = Core::Depth.infinity_or_immediates_from_recurse(depth_or_recurse)
         dirent_fields ||= Core::DIRENT_ALL
-        Client.list(path_or_uri, peg_rev, rev, recurse, dirent_fields,
+        Client.list2(path_or_uri, peg_rev, rev, depth, dirent_fields,
                     fetch_locks, block, self)
       end
 
