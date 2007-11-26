@@ -26,6 +26,7 @@
 
 #include <serf.h>
 #include <serf_bucket_util.h>
+#include <private/svn_dep_compat.h>
 
 #include "ra_serf.h"
 
