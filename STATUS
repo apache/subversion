@@ -30,7 +30,7 @@ Candidate changes:
       Tests should pass.
     Branch: 1.4.x-passing-dav-tests
     Votes:
-      +1: glasser
+      +1: glasser, dlr
 
   * r22355
     Put repository and WC uuids in the correct order in a "svn switch
