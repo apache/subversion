@@ -1294,6 +1294,10 @@ svn_repos_link_path3(void *baton, const char *path, const char *link_path,
                      svn_boolean_t start_empty,
                      const char *lock_token, apr_pool_t *pool)
 {
+  if (depth == svn_depth_exclude)
+    return svn_error_create(SVN_ERR_REPOS_BAD_ARGS, NULL,
+                            _("Depth 'exclude' not supported for link"));
+
   return write_path_info(baton, path, link_path, rev, depth,
                          start_empty, lock_token, pool);
 }
@@ -1368,6 +1372,10 @@ svn_repos_begin_report2(void **report_baton,
 {
   report_baton_t *b;
   const char *tempdir;
+
+  if (depth == svn_depth_exclude)
+    return svn_error_create(SVN_ERR_REPOS_BAD_ARGS, NULL,
+                            _("Request depth 'exclude' not supported"));
 
   /* Build a reporter baton.  Copy strings in case the caller doesn't
      keep track of them. */
