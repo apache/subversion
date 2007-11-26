@@ -489,8 +489,9 @@ svn_repos_begin_report(void **report_baton,
  * @a path is relative to the anchor/target used in the creation of the
  * @a report_baton.
  *
- * @a revision may be SVN_INVALID_REVNUM if (for example) @a path represents
- * a locally-added path with no revision number.
+ * @a revision may be SVN_INVALID_REVNUM if (for example) @a path
+ * represents a locally-added path with no revision number, or @a
+ * depth is @c svn_depth_exclude.
  *
  * The first call of this in a given report usually passes an empty
  * @a path; this is used to set up the correct root revision for the editor

@@ -51,7 +51,8 @@
          <revnum>:            Revnum of set_path or link_path
        +/-                    '+' indicates depth other than svn_depth_infinity
        If previous is +:
-         <depth>:             "0","1","2" => svn_depth_{empty,files,immediates}
+         <depth>:             "0","1","2","3" =>
+                                 svn_depth_{exclude,empty,files,immediates}
        +/-                    '+' indicates start_empty field set
        +/-                    '+' indicates presence of lock_token field.
        If previous is +:
@@ -213,18 +214,21 @@ read_path_info(path_info_t **pi, apr_file_t *temp, apr_pool_t *pool)
       switch (num)
         {
         case 0:
-          (*pi)->depth = svn_depth_empty;
+          (*pi)->depth = svn_depth_exclude;
           break;
         case 1:
-          (*pi)->depth = svn_depth_files;
+          (*pi)->depth = svn_depth_empty;
           break;
         case 2:
+          (*pi)->depth = svn_depth_files;
+          break;
+        case 3:
           (*pi)->depth = svn_depth_immediates;
           break;
 
           /* Note that we do not tolerate explicit representation of
-             svn_depth_infinity as "3" here, because that's the
-             default and should never be sent. */
+             svn_depth_infinity as "4" here, because that's just not
+             how write_path_info writes it. */
         default:
           return svn_error_createf(SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
                                    _("Invalid depth (%s) for path '%s'"),
@@ -948,7 +952,10 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
           if (!name)
             break;
 
-          if (info && !SVN_IS_VALID_REVNUM(info->rev))
+          /* Invalid revnum means either delete or excluded subpath. */
+          if (info 
+              && !SVN_IS_VALID_REVNUM(info->rev)
+              && info->depth != svn_depth_exclude)
             {
               /* We want to perform deletes before non-replacement adds,
                  for graceful handling of case-only renames on
@@ -967,13 +974,18 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
           s_entry = s_entries ?
             apr_hash_get(s_entries, name, APR_HASH_KEY_STRING) : NULL;
 
-          /* The only special case here is when requested_depth is files
-             but the reported path is a directory.  This is technically
-             a client error, but we handle it anyway, by skipping the
-             entry. */
-          if (requested_depth != svn_depth_files
-              || ((! t_entry || t_entry->kind != svn_node_dir)
-                  && (! s_entry || s_entry->kind != svn_node_dir)))
+          /* The only special cases here are
+
+             - When requested_depth is files but the reported path is
+             a directory.  This is technically a client error, but we
+             handle it anyway, by skipping the entry.
+
+             - When the reported depth is svn_depth_exclude.
+          */
+          if ((! info || info->depth != svn_depth_exclude)
+              && (requested_depth != svn_depth_files
+                  || ((! t_entry || t_entry->kind != svn_node_dir)
+                      && (! s_entry || s_entry->kind != svn_node_dir))))
             SVN_ERR(update_entry(b, s_rev, s_fullpath, s_entry, t_fullpath,
                                  t_entry, dir_baton, e_fullpath, info,
                                  info ? info->depth
@@ -1228,12 +1240,14 @@ write_path_info(report_baton_t *b, const char *path, const char *lpath,
   rrep = (SVN_IS_VALID_REVNUM(rev)) ?
     apr_psprintf(pool, "+%ld:", rev) : "-";
 
-  if (depth == svn_depth_empty)
+  if (depth == svn_depth_exclude)
     drep = "+0:";
-  else if (depth == svn_depth_files)
+  else if (depth == svn_depth_empty)
     drep = "+1:";
-  else if (depth == svn_depth_immediates)
+  else if (depth == svn_depth_files)
     drep = "+2:";
+  else if (depth == svn_depth_immediates)
+    drep = "+3:";
   else if (depth == svn_depth_infinity)
     drep = "-";
   else
