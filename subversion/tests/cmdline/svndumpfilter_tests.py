@@ -73,7 +73,7 @@ def reflect_dropped_renumbered_revs(sbox):
                                           "--skip-missing-merge-sources",
                                           "--drop-empty-revs",
                                           "--renumber-revs", "--quiet")
-  load_and_verify_dumpstream(sbox,[],[], None, filtered_out)
+  load_and_verify_dumpstream(sbox,[],[], None, filtered_out, None)
 
   # Verify the svn:mergeinfo properties
   svntest.actions.run_and_verify_svn(None,
@@ -92,7 +92,7 @@ def reflect_dropped_renumbered_revs(sbox):
                                           "--skip-missing-merge-sources",
                                           "--drop-empty-revs",
                                           "--renumber-revs", "--quiet")
-  load_and_verify_dumpstream(sbox,[],[], None, filtered_out)
+  load_and_verify_dumpstream(sbox,[],[], None, filtered_out, None)
 
   # Verify the svn:mergeinfo properties
   svntest.actions.run_and_verify_svn(None,
