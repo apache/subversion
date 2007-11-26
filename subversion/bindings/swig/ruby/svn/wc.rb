@@ -300,25 +300,16 @@ module Svn
                         depth=nil, allow_unver_obstruction=false, diff3_cmd=nil,
                         notify_func=nil, cancel_func=nil, traversal_info=nil,
                         preserved_exts=nil)
-        preserved_exts ||= []
-        traversal_info ||= _traversal_info
-
-        # TODO(rb support fetch_fun): implement support for the fetch_func
-        # callback.
-        fetch_func = nil
-        # TODO(rb support conflict_fun): implement support for the
-        # conflict_func callback.
-        conflict_func=nil
-        results = Wc.get_update_editor3(target_revision, self, target,
-                                        use_commit_times, depth,
-                                        allow_unver_obstruction,
-                                        notify_func, cancel_func, conflict_func,
-                                        fetch_func, diff3_cmd,
-                                        preserved_exts, traversal_info)
-        target_revision_address, editor, editor_baton = results
-        editor.__send__(:target_revision_address=, target_revision_address)
-        editor.baton = editor_baton
-        editor
+        update_editor2(:target => target,
+                       :target_revision => target_revision,
+                       :use_commit_times => use_commit_times,
+                       :depth => depth,
+                       :allow_unver_obstruction => allow_unver_obstruction,
+                       :diff3_cmd => diff3_cmd,
+                       :notify_func => notify_func,
+                       :cancel_func => cancel_func,
+                       :traversal_info => traversal_info,
+                       :preserved_exts => preserved_exts )
       end
 
       UPDATE_EDITOR2_REQUIRED_ARGUMENTS_KEYS = [:target]
@@ -371,23 +362,18 @@ module Svn
                         allow_unver_obstruction=false, diff3_cmd=nil,
                         notify_func=nil, cancel_func=nil, traversal_info=nil,
                         preserved_exts=nil)
-        preserved_exts ||= []
-        traversal_info ||= _traversal_info
-        # TODO(rb support conflict_fun): implement support for the
-        # conflict_func callback.
-        conflict_func=nil
-        results = Wc.get_switch_editor3(target_revision, self, target,
-                                        switch_url, use_commit_times, depth,
-                                        allow_unver_obstruction,
-                                        notify_func, cancel_func,
-                                        conflict_func,
-                                        diff3_cmd, preserved_exts,
-                                        traversal_info)
-        target_revision_address, editor, editor_baton = results
-        editor.__send__(:target_revision_address=, target_revision_address)
-        editor.baton = editor_baton
-        editor
-      end
+        switch_editor2(:target => target,
+                       :switch_url => switch_url,
+                       :target_revision => target_revision,
+                       :use_commit_times => use_commit_times,
+                       :depth => depth,
+                       :allow_unver_obstruction => allow_unver_obstruction,
+                       :diff3_cmd => diff3_cmd,
+                       :notify_func => notify_func,
+                       :cancel_func => cancel_func,
+                       :traversal_info => traversal_info,
+                       :preserved_exts => preserved_exts )
+       end
 
       SWITCH_EDITOR2_REQUIRED_ARGUMENTS_KEYS = [:target, :switch_url]
       def switch_editor2(arguments={})
