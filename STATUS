@@ -137,5 +137,8 @@ Approved changes:
     Justification:
       WC library bug fix.
     Branch: TBD
+    Notes:
+      glasser tried to merge this but it really conflicts.  Can one of
+      the people who voted for it merge it?
     Votes:
       +1: dionisos, dlr, hwright
