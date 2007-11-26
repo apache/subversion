@@ -44,11 +44,17 @@
                    APR_STRINGIFY(SERF_MINOR_VERSION) "." \
                    APR_STRINGIFY(SERF_PATCH_VERSION)
 
+#ifdef WIN32
+#if SERF_VERSION_AT_LEAST(0, 1, 3)
+#define SVN_RA_SERF_SSPI_ENABLED
+#endif
+#endif /* WIN32 */
+
 
 /* Forward declarations. */
 typedef struct svn_ra_serf__session_t svn_ra_serf__session_t;
 typedef struct svn_ra_serf__auth_protocol_t svn_ra_serf__auth_protocol_t;
-#ifdef WIN32
+#ifdef SVN_RA_SERF_SSPI_ENABLED
 typedef struct serf_sspi_context_t serf_sspi_context_t;
 #endif
 
@@ -88,7 +94,7 @@ typedef struct {
 
   svn_ra_serf__session_t *session;
 
-#ifdef WIN32
+#ifdef SVN_RA_SERF_SSPI_ENABLED
   /* Optional SSPI context for this connection. */
   serf_sspi_context_t *sspi_context;
 #endif
@@ -1228,6 +1234,7 @@ typedef svn_error_t *
 
 /**
  * svn_ra_serf__auth_protocol_t: vtable for an authn protocol provider.
+ * 
  */
 struct svn_ra_serf__auth_protocol_t {
   /* The http status code that's handled by this authentication protocol.
@@ -1261,5 +1268,14 @@ svn_ra_serf__handle_auth(int code,
                          serf_request_t *request,
                          serf_bucket_t *response,
                          apr_pool_t *pool);
+
+/**
+ * encode_auth_header: base64 encodes the authentication data and builds an 
+ * authentication header in this format:
+ * [PROTOCOL] [BASE64 AUTH DATA]
+ */
+void
+encode_auth_header(const char * protocol, char **header, const char * data, 
+                   apr_size_t data_len, apr_pool_t *pool);
 
 #endif /* SVN_LIBSVN_RA_SERF_RA_SERF_H */

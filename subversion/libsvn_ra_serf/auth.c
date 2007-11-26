@@ -21,6 +21,7 @@
 #include <apr_base64.h>
 
 #include "ra_serf.h"
+#include "win32_auth_sspi.h"
 
 /*** Forward declarations. ***/
 
@@ -76,6 +77,14 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
     handle_proxy_basic_auth,
     setup_request_proxy_basic_auth,
   },
+#ifdef SVN_RA_SERF_SSPI_ENABLED
+    401,
+    "NTLM",
+    init_sspi_connection,
+    handle_sspi_auth,
+    setup_request_sspi_auth,
+#endif /* WIN32 */
+
   /* ADD NEW AUTHENTICATION IMPLEMENTATIONS HERE (as they're written) */
 
   /* sentinel */
@@ -89,7 +98,7 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
  * header in this format:
  * [PROTOCOL] [BASE64 AUTH DATA]
  */
-static void
+void
 encode_auth_header(const char * protocol, char **header,
                    const char * data, apr_size_t data_len,
                    apr_pool_t *pool)
