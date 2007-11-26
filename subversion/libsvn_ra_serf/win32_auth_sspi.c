@@ -53,7 +53,9 @@
  */
 
 /*** Includes ***/
+#ifdef WIN32
 #include <windows.h>
+#endif
 #include <string.h>
 
 #include <apr_base64.h>
