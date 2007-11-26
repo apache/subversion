@@ -140,6 +140,8 @@ extern "C" {
                                          + (20 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_DIFF_CATEGORY_START     (APR_OS_START_USERERR \
                                          + (21 * SVN_ERR_CATEGORY_SIZE))
+#define SVN_ERR_RA_SERF_CATEGORY_START  (APR_OS_START_USERERR \
+                                         + (22 * SVN_ERR_CATEGORY_SIZE))
 
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 
@@ -831,6 +833,11 @@ SVN_ERROR_START
              SVN_ERR_RA_SVN_CATEGORY_START + 7,
              "Cannot negotiate authentication mechanism")
 
+  /* libsvn_ra_serf errors */
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_RA_SERF_SSPI_INITIALISATION_FAILED,
+             SVN_ERR_RA_SERF_CATEGORY_START + 0,
+             "Client/server version mismatch")
 
   /* libsvn_auth errors */
 
