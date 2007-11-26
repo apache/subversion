@@ -241,7 +241,7 @@ module Svn
       alias pl proplist
 
       def copy(src_paths, dst_path, rev_or_copy_as_child=nil,
-               make_parents=nil, with_merge_history=nil)
+               make_parents=nil)
         if src_paths.is_a?(Array)
           copy_as_child = rev_or_copy_as_child
           if copy_as_child.nil?
@@ -261,17 +261,16 @@ module Svn
           end
           src_paths = [src_paths]
         end
-        Client.copy4(src_paths, dst_path, copy_as_child, make_parents,
-                     with_merge_history, self)
+        Client.copy4(src_paths, dst_path, copy_as_child, make_parents, self)
       end
       alias cp copy
 
       def move(src_paths, dst_path, force=false, move_as_child=nil,
-               make_parents=nil, with_merge_history=nil)
+               make_parents=nil)
         src_paths = [src_paths] unless src_paths.is_a?(Array)
         move_as_child = src_paths.size == 1 ? false : true if move_as_child.nil?
         Client.move5(src_paths, dst_path, force, move_as_child, make_parents,
-                     with_merge_history, self)
+                     self)
       end
       alias mv move
 
