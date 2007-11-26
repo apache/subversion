@@ -23,6 +23,16 @@ Status of 1.4.6:
 
 Candidate changes:
 
+  * 1.4.x-passing-dav-tests
+    Liberalize an error message regexp in a test so that it passes
+    against all three DAV layers.
+    Justification:
+      Tests should pass.
+    Branch: 1.4.x-passing-dav-tests
+    Votes:
+      +1: glasser
+    
+
   * r22355
     Put repository and WC uuids in the correct order in a "svn switch --relocate"
     error message.
