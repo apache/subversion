@@ -1,9 +1,6 @@
 We are very close to creating the 1.5.x branch.  This file lists the
 tasks we want to complete before then.
 
-  * Fix tests that have been failing over DAV since
-    mergeinfoless-copies branch was merged.  [cmpilato]
-
   * Update 'svn mergeinfo' to deal with the mergeinfoless-copies
     changes.  [cmpilato, estimate: 8 hours]
 
