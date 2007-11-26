@@ -2,7 +2,7 @@ We are very close to creating the 1.5.x branch.  This file lists the
 tasks we want to complete before then.
 
   * Fix tests that have been failing over DAV since
-    mergeinfoless-copies branch was merged.  [cmpilato?]
+    mergeinfoless-copies branch was merged.  [cmpilato]
 
   * Update 'svn mergeinfo' to deal with the mergeinfoless-copies
     changes.  [cmpilato, estimate: 8 hours]
@@ -27,3 +27,6 @@ tasks we want to complete before then.
 
   * Split the sqlite databases into mergeinfo.sqlite and
     node-origins.sqlite.  [glasser, 1 hour]
+
+  * Fix the svn_ra_get_mergeinfo() API so that the 'paths' provided are treated
+    as relative to the session URL (just like every other RA API).
