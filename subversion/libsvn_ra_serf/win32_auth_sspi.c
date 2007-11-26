@@ -147,7 +147,8 @@ init_sspi_connection(svn_ra_serf__session_t *session,
   /* Setup the initial request to the server with an SSPI header */
   SVN_ERR(sspi_get_credentials(NULL, 0, &tmp, &tmp_len,
                                conn->sspi_context));
-  encode_auth_header("NTLM", &conn->auth_value, tmp, tmp_len, pool);
+  svn_ra_serf__encode_auth_header("NTLM", &conn->auth_value, tmp, tmp_len,
+                                  pool);
   conn->auth_header = "Authorization";
 
   /* Make serf send the initial requests one by one */
@@ -186,8 +187,8 @@ handle_sspi_auth(svn_ra_serf__session_t *session,
   SVN_ERR(sspi_get_credentials(token, token_len, &tmp, &tmp_len,
                                conn->sspi_context));
 
-  encode_auth_header(session->auth_protocol->auth_name, &conn->auth_value, 
-                     tmp, tmp_len, pool);
+  svn_ra_serf__encode_auth_header(session->auth_protocol->auth_name,
+                                  &conn->auth_value, tmp, tmp_len, pool);
   conn->auth_header = "Authorization";
 
   /* If the handshake is finished tell serf it can send as much requests as it
