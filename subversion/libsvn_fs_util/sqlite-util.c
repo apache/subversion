@@ -93,8 +93,6 @@ static const char *schema_create_sql[] = {
   /* USER_VERSION 1 */
   "PRAGMA auto_vacuum = 1;"
   APR_EOL_STR
-  "PRAGMA case_sensitive_like=on;"
-  APR_EOL_STR
   "CREATE TABLE mergeinfo (revision INTEGER NOT NULL, mergedfrom TEXT NOT "
   "NULL, mergedto TEXT NOT NULL, mergedrevstart INTEGER NOT NULL, "
   "mergedrevend INTEGER NOT NULL, inheritable INTEGER NOT NULL);"
@@ -238,6 +236,8 @@ svn_fs__sqlite_open(sqlite3 **db, const char *repos_path, apr_pool_t *pool)
 #ifdef SQLITE3_DEBUG
   sqlite3_trace(*db, sqlite_tracer, *db);
 #endif
+
+  SVN_ERR(svn_fs__sqlite_exec(db, "PRAGMA case_sensitive_like=on;"));
 
   /* Validate the schema, upgrading if necessary. */
   return check_format(*db, pool);
