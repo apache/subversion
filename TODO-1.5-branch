@@ -4,6 +4,10 @@ tasks we want to complete before then.
   * Update 'svn mergeinfo' to deal with the mergeinfoless-copies
     changes.  [cmpilato, estimate: 8 hours]
 
+  * Make 'svn mergeinfo' error out when talking to a pre-1.5 repository.
+    This will allow API consumers to use the API without taking a big
+    performance hit for nothing.  We can catch the error and fallback.
+
   * Examine, and possibly update, 'svn log/blame -g' to deal with the
     mergeinfoless-copies changes.  This includes updating the tests and the
     basic-merge.dump repository.  (This could be pushed to after we branch, but
