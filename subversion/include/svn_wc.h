@@ -1581,9 +1581,7 @@ typedef enum svn_wc_schedule_t
  */
 typedef struct svn_wc_entry_t
 {
-  /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup()
-     and alloc_entry() in libsvn_wc/entries.c, to see if you need to
-     extend one or both of them as well. */
+  /* IMPORTANT: If you extend this structure, add new fields to the end. */
 
   /* General Attributes */
 
@@ -1745,9 +1743,16 @@ typedef struct svn_wc_entry_t
    * @since New in 1.5. */
   svn_depth_t depth;
 
-  /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup()
-     and alloc_entry() in libsvn_wc/entries.c, to see if you need to
-     extend one or both of them as well. */
+  /* IMPORTANT: If you extend this structure, check the following functions in
+   * subversion/libsvn_wc/entries.c, to see if you need to extend them as well.
+   *
+   * svn_wc_entry_dup()
+   * alloc_entry()
+   * read_entry()
+   * write_entry()
+   * fold_entry()
+   *
+   */
 } svn_wc_entry_t;
 
 
