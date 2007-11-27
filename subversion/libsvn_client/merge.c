@@ -171,7 +171,7 @@ typedef struct merge_cmd_baton_t {
                                          is the same repository as the
                                          target.  Defaults to FALSE if DRY_RUN
                                          is TRUE.*/
-  svn_boolean_t mergeinfo_capable;    /* Whether the merge source repository
+  svn_boolean_t mergeinfo_capable;    /* Whether the merge source server
                                          is capable of Merge Tracking. */
   svn_boolean_t ignore_ancestry;      /* Are we ignoring ancestry (and by
                                          extension, mergeinfo)?  FALSE if
