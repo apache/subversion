@@ -76,7 +76,8 @@ get_mergeinfo_for_path(sqlite3 *db,
 
 /* Represents "no mergeinfo". */
 static svn_merge_range_t no_mergeinfo = { SVN_INVALID_REVNUM,
-                                          SVN_INVALID_REVNUM };
+                                          SVN_INVALID_REVNUM,
+                                          TRUE };
 
 /* Insert the necessary indexing data into the DB for all the merges
    on PATH as of NEW_REV, which is provided (unparsed) in
