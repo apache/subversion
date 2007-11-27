@@ -1207,6 +1207,7 @@ dav_svn__update_report(const dav_resource *resource,
           {
             const char *path;
             svn_revnum_t rev = SVN_INVALID_REVNUM;
+            svn_boolean_t saw_rev = FALSE;
             const char *linkpath = NULL;
             const char *locktoken = NULL;
             svn_boolean_t start_empty = FALSE;
@@ -1219,7 +1220,10 @@ dav_svn__update_report(const dav_resource *resource,
             while (this_attr)
               {
                 if (! strcmp(this_attr->name, "rev"))
-                  rev = SVN_STR_TO_REV(this_attr->value);
+                  {
+                    rev = SVN_STR_TO_REV(this_attr->value);
+                    saw_rev = TRUE;
+                  }
                 else if (! strcmp(this_attr->name, "depth"))
                   depth = svn_depth_from_word(this_attr->value);
                 else if (! strcmp(this_attr->name, "linkpath"))
@@ -1233,7 +1237,7 @@ dav_svn__update_report(const dav_resource *resource,
               }
 
             /* we require the `rev' attribute for this to make sense */
-            if (! SVN_IS_VALID_REVNUM(rev))
+            if (! saw_rev)
               {
                 serr = svn_error_create(SVN_ERR_XML_ATTRIB_NOT_FOUND,
                                         NULL, "Missing XML attribute: rev");
