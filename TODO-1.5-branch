@@ -4,6 +4,11 @@ tasks we want to complete before then.
   * Update 'svn mergeinfo' to deal with the mergeinfoless-copies
     changes.  [cmpilato, estimate: 8 hours]
 
+  * Examine, and possibly update, 'svn log/blame -g' to deal with the
+    mergeinfoless-copies changes.  This includes updating the tests and the
+    basic-merge.dump repository.  (This could be pushed to after we branch, but
+    should happen before 1.5 releases.)
+
   * Improving the default revisions chosen for a revision-less merge.
     [cmpilato, estimate: 4 hours]
 
