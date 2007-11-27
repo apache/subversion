@@ -125,11 +125,3 @@ Veto-blocked changes:
      -1: djames (see http://svn.haxx.se/dev/archive-2007-05/0058.shtml)
 
 Approved changes:
-
-  * r22355
-    Put repository and WC uuids in the correct order in a "svn switch
-    --relocate" error message.
-    Justification:
-      Confusing error messages are Bad.
-    Votes:
-      +1: glasser, hwright, dlr
