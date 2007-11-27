@@ -237,7 +237,7 @@ svn_fs__sqlite_open(sqlite3 **db, const char *repos_path, apr_pool_t *pool)
   sqlite3_trace(*db, sqlite_tracer, *db);
 #endif
 
-  SVN_ERR(svn_fs__sqlite_exec(db, "PRAGMA case_sensitive_like=on;"));
+  SVN_ERR(svn_fs__sqlite_exec(*db, "PRAGMA case_sensitive_like=on;"));
 
   /* Validate the schema, upgrading if necessary. */
   return check_format(*db, pool);
