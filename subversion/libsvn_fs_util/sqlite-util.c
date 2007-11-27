@@ -84,6 +84,18 @@ svn_fs__sqlite_step_done(sqlite3_stmt *stmt)
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs__sqlite_step(svn_boolean_t *got_row, sqlite3_stmt *stmt)
+{
+  int sqlite_result = sqlite3_step(stmt);
+  if (sqlite_result != SQLITE_DONE && sqlite_result != SQLITE_ROW)
+    return svn_fs__sqlite_stmt_error(stmt);
+
+  *got_row = (sqlite_result == SQLITE_ROW);
+
+  return SVN_NO_ERROR;
+}
+
 /* Time (in milliseconds) to wait for sqlite locks before giving up. */
 #define BUSY_TIMEOUT 10000
 

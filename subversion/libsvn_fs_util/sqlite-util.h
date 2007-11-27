@@ -44,6 +44,13 @@ extern "C" {
 svn_error_t *
 svn_fs__sqlite_step_done(sqlite3_stmt *stmt);
 
+/* Steps the given statement; raises an SVN error (and finalizes the
+   statement) if it doesn't return SQLITE_DONE or SQLITE_ROW.  Sets 
+   *GOT_ROW to true iff it got SQLITE_ROW.
+*/
+svn_error_t *
+svn_fs__sqlite_step(svn_boolean_t *got_row, sqlite3_stmt *stmt);
+
 /* Finalizes the given statement and raises an SVN error based on the
    returned error code.  Call this when a call to sqlite3_step on the
    statement returns an unexpected value. */

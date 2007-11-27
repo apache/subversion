@@ -224,6 +224,71 @@ index_txn_mergeinfo(sqlite3 *db,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+table_has_any_rows_with_rev(svn_boolean_t *has_any,
+                            sqlite3 *db,
+                            const char *table,
+                            svn_revnum_t rev,
+                            apr_pool_t *pool)
+{
+  /* Note that we can't use the bind API for table names.  (And if
+     we're sprintfing once, we might as well plug in the revision
+     while we're at it; it's safe.) */
+  const char *selection = apr_psprintf(pool,
+                                       "SELECT 1 from %s WHERE "
+                                       "revision = %ld;",
+                                       table, rev);
+  sqlite3_stmt *stmt;
+
+  SVN_FS__SQLITE_ERR(sqlite3_prepare(db, selection, -1, &stmt, NULL), db);
+  SVN_ERR(svn_fs__sqlite_step(has_any, stmt));
+  SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
+  
+  return SVN_NO_ERROR;
+}
+
+/* Remove any mergeinfo already stored at NEW_REV from DB.  (This will
+   exist if a previous transaction failed between sqlite
+   commit-transaction and svn commit-transaction time, say.)  If
+   AVOID_NOOP_DELETE is true, only run the delete commands if there's
+   definitely data there to delete.
+ */
+static svn_error_t *
+clean_tables(sqlite3 *db, 
+             svn_revnum_t new_rev,
+             svn_boolean_t avoid_noop_delete,
+             apr_pool_t *pool)
+{
+  const char *deletestring;
+
+  if (avoid_noop_delete)
+    {
+      svn_boolean_t has_any;
+      SVN_ERR(table_has_any_rows_with_rev(&has_any, db, "mergeinfo",
+                                          new_rev, pool));
+
+      if (! has_any)
+        SVN_ERR(table_has_any_rows_with_rev(&has_any, db, "mergeinfo_changed",
+                                            new_rev, pool));
+
+      if (! has_any)
+        return SVN_NO_ERROR;
+    }
+
+  deletestring = apr_psprintf(pool,
+                              "DELETE FROM mergeinfo_changed WHERE "
+                              "revision = %ld;",
+                              new_rev);
+  SVN_ERR(svn_fs__sqlite_exec(db, deletestring));
+
+  deletestring = apr_psprintf(pool,
+                              "DELETE FROM mergeinfo WHERE revision = %ld;",
+                              new_rev);
+  SVN_ERR(svn_fs__sqlite_exec(db, deletestring));
+  
+  return SVN_NO_ERROR;
+}
+
 /* Clean the mergeinfo index for any previous failed commit with the
    revision number as NEW_REV, and if the current transaction contains
    mergeinfo, record it. */
@@ -234,25 +299,18 @@ svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
 {
   svn_error_t *err;
   sqlite3 *db;
-  const char *deletestring;
   apr_pool_t *subpool = svn_pool_create(pool);
 
   SVN_ERR(svn_fs__sqlite_open(&db, txn->fs->path, subpool));
   err = svn_fs__sqlite_exec(db, "BEGIN TRANSACTION;");
   MAYBE_CLEANUP;
 
-  /* Cleanup the leftovers of any previous, failed transactions
-   * involving NEW_REV. */
-  deletestring = apr_psprintf(subpool,
-                              "DELETE FROM mergeinfo_changed WHERE "
-                              "revision = %ld;",
-                              new_rev);
-  err = svn_fs__sqlite_exec(db, deletestring);
-  MAYBE_CLEANUP;
-  deletestring = apr_psprintf(subpool,
-                              "DELETE FROM mergeinfo WHERE revision = %ld;",
-                              new_rev);
-  err = svn_fs__sqlite_exec(db, deletestring);
+  /* Clean up old data.  (If we're going to write to the DB anyway,
+     there's no reason to do extra checks to avoid no-op DELETEs.) */
+  err = clean_tables(db, 
+                     new_rev, 
+                     mergeinfo_for_paths == NULL, 
+                     subpool);
   MAYBE_CLEANUP;
 
   /* Record any mergeinfo from the current transaction. */
