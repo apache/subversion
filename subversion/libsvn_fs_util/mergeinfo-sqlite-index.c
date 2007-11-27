@@ -40,6 +40,17 @@
 
 #include "sqlite-util.h"
 
+/*
+ * A general warning about the mergeinfo tables:
+ *
+ * The sqlite transaction is committed (immediately) before the actual
+ * FS transaction is committed.  Thus, any query against any mergeinfo
+ * table MUST contain a guard on the revision column guaranteeing that
+ * the returned rows have a revision value no greater than some
+ * known-committed revision number!
+ */
+
+
 /* This is a macro implementation of svn_fs_revision_root_revision(), which
    we cannot call from here, because it would create a circular dependency. */
 #define REV_ROOT_REV(root)       \
