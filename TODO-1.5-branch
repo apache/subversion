@@ -33,4 +33,5 @@ tasks we want to complete before then.
     breakage.  [glasser, 1 hour]
 
   * Fix the svn_ra_get_mergeinfo() API so that the 'paths' provided are treated
-    as relative to the session URL (just like every other RA API).  [cmpilato]
+    as relative to the session URL (just like every other RA API).  
+    [cmpilato, see 'fix-ra-mergeinfo-api' branch]
