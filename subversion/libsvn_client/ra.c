@@ -458,6 +458,23 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
 
 
 svn_error_t *
+svn_client__path_relative_to_session(const char **rel_path,
+                                     svn_ra_session_t *ra_session,
+                                     const char *url, 
+                                     apr_pool_t *pool)
+{
+  const char *session_url;
+  SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, pool));
+  if (strcmp(session_url, url) == 0)
+    *rel_path = "";
+  else
+    *rel_path = svn_path_uri_decode(svn_path_is_child(session_url, url, pool), 
+                                    pool);
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_client__ensure_ra_session_url(const char **old_session_url,
                                   svn_ra_session_t *ra_session,
                                   const char *session_url,

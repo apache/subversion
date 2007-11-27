@@ -662,6 +662,12 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
                                   svn_mergeinfo_inheritance_t inherit,
                                   apr_pool_t *pool)
 {
+  int i;
+  for (i = 0; i < paths->nelts; i++)
+    {
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+      assert(*path != '/');
+    }
   return session->vtable->get_mergeinfo(session, mergeinfo, paths,
                                         revision, inherit, pool);
 }
