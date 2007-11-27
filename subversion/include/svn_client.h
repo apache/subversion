@@ -1997,7 +1997,7 @@ svn_client_blame(const char *path_or_url,
  * If @a relative_to_dir is not @c NULL, the @a original_path and
  * @a modified_path will have the @a relative_to_dir stripped from the
  * front of the respective paths.  If @a relative_to_dir is @c NULL,
- * paths will be handled the pre-1.5 way.  If @a relative_to_dir is not
+ * paths will not be modified.  If @a relative_to_dir is not
  * @c NULL but @a relative_to_dir is not a parent path of the target,
  * an error is returned. Finally, if @a relative_to_dir is a URL, an
  * error will be returned.
