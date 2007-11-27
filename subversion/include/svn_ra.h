@@ -840,14 +840,14 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
                             apr_pool_t *pool);
 
 /**
- * Fetch the mergeinfo for @a paths (which are either absolute or
- * relative-to-the-repository-root filesystem paths) at @a rev, and
- * save it to @a mergeoutput.  @a mergeoutput is a mapping of
- * <tt>const char *</tt> target paths (from @a paths) to hashes
- * mapping merged-from paths (<tt>const char *</tt>) to revision range lists
- * (<tt>apr_array_header_t *</tt> with <tt>svn_merge_range_t *</tt> elements),
- * or @c NULL if there is no merge info available.  Allocate the
- * returned values in @a pool.
+ * Set @a *mergeoutput to a hash mapping <tt>const char *</tt> target
+ * paths (taken from @a paths) to mergeinfo hashes (which themselves
+ * map <tt>const char *</tt> merged-from paths to 
+ * <tt>apr_array_header_t *</tt> revision range lists of
+ * <tt>svn_merge_range_t *</tt> elements).  If no merge info is
+ * available, set @a *mergeoutput to @c NULL.  The requested mergeinfo
+ * hashes are for @a paths (which are relative to @a session's URL) in
+ * @a revision.  Allocate the returned values in @a pool.
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a paths is retrieved.

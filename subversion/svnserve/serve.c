@@ -1479,12 +1479,16 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   for (i = 0; i < paths->nelts; i++)
      {
         svn_ra_svn_item_t *item = &APR_ARRAY_IDX(paths, i, svn_ra_svn_item_t);
+        const char *full_path;
 
         if (item->kind != SVN_RA_SVN_STRING)
           return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                   _("Path is not a string"));
-        APR_ARRAY_PUSH(canonical_paths, const char *) =
-          svn_path_canonicalize(item->u.string->data, pool);
+        full_path = svn_path_join(b->fs_path->data,
+                                  svn_path_canonicalize(item->u.string->data,
+                                                        pool),
+                                  pool);
+        APR_ARRAY_PUSH(canonical_paths, const char *) = full_path;
      }
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
@@ -1502,7 +1506,7 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
         {
           apr_hash_this(hi, &key, NULL, &value);
-          path = key;
+          path = (const char *)key + b->fs_path->len + 1;
           info = value;
           SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "(cc)", path, info));
         }

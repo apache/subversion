@@ -83,8 +83,8 @@ svn_client__get_wc_mergeinfo(apr_hash_t **mergeinfo,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
-/* Obtain any mergeinfo for the session-relative path REL_PATH from
-   the repository, and set it in *TARGET_MERGEINFO.
+/* Obtain any mergeinfo for the root-relative repository filesystem path
+   REL_PATH from the repository, and set it in *TARGET_MERGEINFO.
 
    INHERIT indicates whether explicit, explicit or inherited, or only
    inherited mergeinfo for REL_PATH is obtained.

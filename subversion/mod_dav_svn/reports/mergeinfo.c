@@ -101,8 +101,7 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
   arb.repos = resource->info->repos;
 
   /* Build mergeinfo brigade */
-  bb = apr_brigade_create(resource->pool,  output->c->bucket_alloc);
-
+  bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
 
   serr = svn_repos_fs_get_mergeinfo(&mergeinfo, repos->repos, paths, rev,
                                     inherit, dav_svn__authz_read_func(&arb),
@@ -145,7 +144,7 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
             "</S:" SVN_DAV__MERGEINFO_ITEM ">";
 
           apr_hash_this(hi, &key, NULL, &value);
-          path = key;
+          path = (const char *)key + strlen(resource->info->repos_path) + 1;
           info = value;
           serr = dav_svn__send_xml(bb, output, itemformat,
                                    apr_xml_quote_string(resource->pool,
