@@ -4,9 +4,6 @@ tasks we want to complete before then.
   * Update 'svn mergeinfo' to deal with the mergeinfoless-copies
     changes.  [cmpilato, estimate: 8 hours]
 
-  * Turning off mergeinfo calculations during 'svn merge' against pre-1.5
-    servers.  [dlr, estimate: 4 hours]
-
   * Improving the default revisions chosen for a revision-less merge.
     [cmpilato, estimate: 4 hours]
 

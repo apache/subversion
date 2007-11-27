@@ -43,6 +43,7 @@
 #include "svn_props.h"
 #include "svn_time.h"
 #include "svn_sorts.h"
+#include "svn_ra.h"
 #include "client.h"
 #include "mergeinfo.h"
 #include <assert.h>
@@ -170,6 +171,8 @@ typedef struct merge_cmd_baton_t {
                                          is the same repository as the
                                          target.  Defaults to FALSE if DRY_RUN
                                          is TRUE.*/
+  svn_boolean_t *mergeinfo_capable;   /* Whether the merge source repository
+                                         is capable of Merge Tracking. */
   svn_boolean_t ignore_ancestry;      /* Are we ignoring ancestry (and by
                                          extension, mergeinfo)?  FALSE if
                                          SOURCES_RELATED is FALSE. */
@@ -2149,17 +2152,20 @@ remove_absent_children(const char *target_wcpath,
 
 /* Set *HONOR_MERGEINFO and *RECORD_MERGEINFO (if non-NULL)
    appropriately for MERGE_B. */
-static void
+static APR_INLINE void
 mergeinfo_behavior(svn_boolean_t *honor_mergeinfo,
                    svn_boolean_t *record_mergeinfo,
                    merge_cmd_baton_t *merge_b)
 {
   if (honor_mergeinfo)
-    *honor_mergeinfo = (merge_b->sources_related
+    *honor_mergeinfo = (*merge_b->mergeinfo_capable
+                        && merge_b->sources_related
                         && merge_b->same_repos
                         && (! merge_b->ignore_ancestry));
+
   if (record_mergeinfo)
-    *record_mergeinfo = (merge_b->sources_related
+    *record_mergeinfo = (*merge_b->mergeinfo_capable
+                         && merge_b->sources_related
                          && merge_b->same_repos
                          && (! merge_b->dry_run));
 }
@@ -4299,6 +4305,7 @@ do_merge(apr_array_header_t *merge_sources,
   svn_config_t *cfg;
   const char *diff3_cmd;
   int i;
+  svn_boolean_t mergeinfo_capable = FALSE;
 
   /* If this is a dry-run record-only merge, there's nothing to do. */
   if (record_only && dry_run)
@@ -4330,6 +4337,7 @@ do_merge(apr_array_header_t *merge_sources,
   merge_cmd_baton.record_only = record_only;
   merge_cmd_baton.ignore_ancestry = ignore_ancestry;
   merge_cmd_baton.same_repos = same_repos;
+  merge_cmd_baton.mergeinfo_capable = NULL;
   merge_cmd_baton.sources_related = sources_related;
   merge_cmd_baton.ctx = ctx;
   merge_cmd_baton.target_missing_child = FALSE;
@@ -4393,6 +4401,15 @@ do_merge(apr_array_header_t *merge_sources,
       merge_cmd_baton.override_set = FALSE;
       merge_cmd_baton.ra_session1 = ra_session1;
       merge_cmd_baton.ra_session2 = ra_session2;
+
+      /* Populate the portions of the merge context baton that require
+         an RA session to set, but shouldn't be reset for each iteration. */
+      if (merge_cmd_baton.mergeinfo_capable == NULL)
+        {
+          merge_cmd_baton.mergeinfo_capable = &mergeinfo_capable;
+          SVN_ERR(svn_ra_has_capability(ra_session1, &mergeinfo_capable,
+                                        SVN_RA_CAPABILITY_MERGEINFO, pool));
+        }
 
       /* If this is a record-only merge and our sources are from the
          same repository as our target, just do the record and move on. */
