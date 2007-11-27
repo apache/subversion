@@ -108,9 +108,9 @@ index_path_mergeinfo(svn_revnum_t new_rev,
       apr_pool_t *subpool = svn_pool_create(pool);
       apr_hash_t *cache = apr_hash_make(subpool);
       remove_mergeinfo = TRUE;
-      SVN_ERR(get_mergeinfo_for_path(db, path, new_rev - 1, mergeinfo, cache,
+      SVN_ERR(get_mergeinfo_for_path(db, path, new_rev - 1, NULL, cache,
                                      svn_mergeinfo_inherited, subpool));
-      mergeinfo = apr_hash_get(mergeinfo, path, APR_HASH_KEY_STRING);
+      mergeinfo = apr_hash_get(cache, path, APR_HASH_KEY_STRING);
       if (mergeinfo)
         mergeinfo = svn_mergeinfo_dup(mergeinfo, pool);
 
