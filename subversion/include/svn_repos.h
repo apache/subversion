@@ -702,6 +702,15 @@ svn_error_t *svn_repos_abort_report(void *report_baton,
  * This function's maximum memory consumption is at most roughly
  * proportional to the greatest depth of the tree under @a tgt_root, not
  * the total size of the delta.
+ *
+ * ### svn_repos_dir_delta2 is mostly superceded by the reporter
+ * ### functionality (svn_repos_begin_report2 and friends).
+ * ### svn_repos_dir_delta2 does allow the roots to be transaction
+ * ### roots rather than just revision roots, and it has the
+ * ### entry_props flag.  Almost all of Subversion's own code uses the
+ * ### reporter instead; there are some stray references to the
+ * ### svn_repos_dir_delta[2] in comments which should probably
+ * ### actually refer to the reporter.
  */
 svn_error_t *
 svn_repos_dir_delta2(svn_fs_root_t *src_root,
