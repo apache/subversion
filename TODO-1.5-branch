@@ -31,6 +31,3 @@ tasks we want to complete before then.
   * Split the sqlite databases into mergeinfo.sqlite and
     node-origins.sqlite.  Notify mailing list(s) of compatibility
     breakage.  [glasser, 1 hour]
-
-  * Fix the svn_ra_get_mergeinfo() API so that the 'paths' provided are treated
-    as relative to the session URL (just like every other RA API).  [cmpilato]
