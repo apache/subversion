@@ -93,6 +93,8 @@ static const char *schema_create_sql[] = {
   /* USER_VERSION 1 */
   "PRAGMA auto_vacuum = 1;"
   APR_EOL_STR
+  "PRAGMA case_sensitive_like=on;"
+  APR_EOL_STR
   "CREATE TABLE mergeinfo (revision INTEGER NOT NULL, mergedfrom TEXT NOT "
   "NULL, mergedto TEXT NOT NULL, mergedrevstart INTEGER NOT NULL, "
   "mergedrevend INTEGER NOT NULL, inheritable INTEGER NOT NULL);"
