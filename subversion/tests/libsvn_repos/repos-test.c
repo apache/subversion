@@ -2003,6 +2003,7 @@ reporter_depth_exclude(const char **msg,
   svn_revnum_t youngest_rev;
   const svn_delta_editor_t *editor;
   void *edit_baton, *report_baton;
+  svn_error_t *err;
   
   *msg = "test reporter and svn_depth_exclude";
 
@@ -2127,6 +2128,49 @@ reporter_depth_exclude(const char **msg,
   }
 
   /* Clean up after ourselves. */
+  svn_error_clear(svn_fs_abort_txn(txn, subpool));
+
+  /* Expect an error on an illegal report for r1 to r2.  The illegal
+     sequence is that we exclude A/D, then set_path() below A/D. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 1, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(dir_delta_get_editor(&editor, &edit_baton, fs,
+                               txn_root, "", subpool));
+
+  SVN_ERR(svn_repos_begin_report2(&report_baton, 2, repos, "/", "", NULL,
+                                  TRUE, svn_depth_infinity, FALSE, FALSE,
+                                  editor, edit_baton, NULL, NULL, subpool));
+  SVN_ERR(svn_repos_set_path3(report_baton, "", 1,
+                              svn_depth_infinity,
+                              FALSE, NULL, subpool));
+  SVN_ERR(svn_repos_set_path3(report_baton, "iota", SVN_INVALID_REVNUM,
+                              svn_depth_exclude,
+                              FALSE, NULL, subpool));
+  SVN_ERR(svn_repos_set_path3(report_baton, "A/D", SVN_INVALID_REVNUM,
+                              svn_depth_exclude,
+                              FALSE, NULL, subpool));
+  /* This is the illegal call, since A/D was excluded above.  This
+     call itself will not error, but finish_report() will. */
+  SVN_ERR(svn_repos_set_path3(report_baton, "A/D/G/pi",
+                              SVN_INVALID_REVNUM,
+                              svn_depth_infinity,
+                              FALSE, NULL, subpool));
+  err = svn_repos_finish_report(report_baton, subpool);
+  if (! err)
+    {
+      return svn_error_createf
+        (SVN_ERR_TEST_FAILED, NULL,
+         "Illegal report of \"A/D/G/pi\" did not error as expected");
+    }
+  else if (err->apr_err != SVN_ERR_FS_NOT_FOUND)
+    {
+      return svn_error_createf
+        (SVN_ERR_TEST_FAILED, err,
+         "Illegal report of \"A/D/G/pi\" got wrong kind of error:");
+    }
+
+  /* Clean up after ourselves. */
+  svn_error_clear(err);
   svn_error_clear(svn_fs_abort_txn(txn, subpool));
 
   svn_pool_destroy(subpool);
