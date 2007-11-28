@@ -78,6 +78,15 @@ svn_fs__sqlite_open(sqlite3 **db, const char *repos_path, apr_pool_t *pool);
 svn_error_t *
 svn_fs__sqlite_prepare(sqlite3_stmt **stmt, sqlite3 *db, const char *text);
 
+/* Error-handling wrapper around sqlite3_bind_int64. */
+svn_error_t *
+svn_fs__sqlite_bind_int64(sqlite3_stmt *stmt, int slot, sqlite_int64 val);
+
+/* Error-handling wrapper around sqlite3_bind_text. VAL cannot contain
+   zero bytes; we always pass SQLITE_TRANSIENT. */
+svn_error_t *
+svn_fs__sqlite_bind_text(sqlite3_stmt *stmt, int slot, const char *val);
+
 /* Close DB, returning any ERR which may've necessitated an early connection
    closure, or -- if none -- the error from the closure itself. */
 svn_error_t *

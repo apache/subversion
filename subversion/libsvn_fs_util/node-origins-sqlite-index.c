@@ -54,8 +54,7 @@ get_origin(const char **node_rev_id,
   SVN_ERR(svn_fs__sqlite_prepare(&stmt, db,
                                  "SELECT node_rev_id FROM node_origins "
                                  "WHERE node_id = ?"));
-  SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 1, node_id, -1,
-                                       SQLITE_TRANSIENT), db);
+  SVN_ERR(svn_fs__sqlite_bind_text(stmt, 1, node_id));
   SVN_ERR(svn_fs__sqlite_step(&got_row, stmt));
   
   *node_rev_id = got_row 
@@ -94,10 +93,8 @@ set_origin(sqlite3 *db,
   SVN_ERR(svn_fs__sqlite_prepare(&stmt, db,
                                  "INSERT INTO node_origins (node_id, "
                                  "node_rev_id) VALUES (?, ?);"));
-  SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 1, node_id, -1,
-                                       SQLITE_TRANSIENT), db);
-  SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 2, node_rev_id->data, -1,
-                                       SQLITE_TRANSIENT), db);
+  SVN_ERR(svn_fs__sqlite_bind_text(stmt, 1, node_id));
+  SVN_ERR(svn_fs__sqlite_bind_text(stmt, 2, node_rev_id->data));
 
   SVN_ERR(svn_fs__sqlite_step_done(stmt));
 
