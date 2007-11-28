@@ -144,13 +144,9 @@ index_path_mergeinfo(svn_revnum_t new_rev,
                                          "mergedfrom, mergedto, mergedrevstart, "
                                          "mergedrevend, inheritable) VALUES (?, "
                                          "?, ?, ?, ?, ?);"));
-          SVN_FS__SQLITE_ERR(sqlite3_bind_int64(stmt, 1, new_rev), db);
-          SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 2, from, -1, 
-                                               SQLITE_TRANSIENT),
-                             db);
-          SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 3, path, -1, 
-                                               SQLITE_TRANSIENT),
-                             db);
+          SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 1, new_rev));
+          SVN_ERR(svn_fs__sqlite_bind_text(stmt, 2, from));
+          SVN_ERR(svn_fs__sqlite_bind_text(stmt, 3, path));
 
           if (remove_mergeinfo)
             {
@@ -169,12 +165,9 @@ index_path_mergeinfo(svn_revnum_t new_rev,
             {
               const svn_merge_range_t *range =
                 APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
-              SVN_FS__SQLITE_ERR(sqlite3_bind_int64(stmt, 4, range->start),
-                                 db);
-              SVN_FS__SQLITE_ERR(sqlite3_bind_int64(stmt, 5, range->end),
-                                 db);
-              SVN_FS__SQLITE_ERR(sqlite3_bind_int64(stmt, 6, 
-                                                    range->inheritable), db);
+              SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 4, range->start));
+              SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 5, range->end));
+              SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 6, range->inheritable));
               SVN_ERR(svn_fs__sqlite_step_done(stmt));
 
               SVN_FS__SQLITE_ERR(sqlite3_reset(stmt), db);
@@ -186,10 +179,8 @@ index_path_mergeinfo(svn_revnum_t new_rev,
   SVN_ERR(svn_fs__sqlite_prepare(&stmt, db,
                                  "INSERT INTO mergeinfo_changed (revision, "
                                  "path) VALUES (?, ?);"));
-  SVN_FS__SQLITE_ERR(sqlite3_bind_int64(stmt, 1, new_rev), db);
-
-  SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 2, path, -1, SQLITE_TRANSIENT),
-                     db);
+  SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 1, new_rev));
+  SVN_ERR(svn_fs__sqlite_bind_text(stmt, 2, path));
 
   SVN_ERR(svn_fs__sqlite_step_done(stmt));
 
@@ -352,9 +343,8 @@ parse_mergeinfo_from_db(sqlite3 *db,
                                  "mergedrevend, inheritable FROM mergeinfo "
                                  "WHERE mergedto = ? AND revision = ? "
                                  "ORDER BY mergedfrom, mergedrevstart;"));
-  SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT), 
-                     db);
-  SVN_FS__SQLITE_ERR(sqlite3_bind_int64(stmt, 2, lastmerged_rev), db);
+  SVN_ERR(svn_fs__sqlite_bind_text(stmt, 1, path));
+  SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 2, lastmerged_rev));
   SVN_ERR(svn_fs__sqlite_step(&got_row, stmt));
 
   /* It is possible the mergeinfo changed because of a delete, and
@@ -501,9 +491,8 @@ get_mergeinfo_for_path(sqlite3 *db,
                                      "mergeinfo_changed WHERE path = ? AND "
                                      "revision <= ?;"));
 
-      SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT),
-                         db);
-      SVN_FS__SQLITE_ERR(sqlite3_bind_int64(stmt, 2, rev), db);
+      SVN_ERR(svn_fs__sqlite_bind_text(stmt, 1, path));
+      SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 2, rev));
       SVN_ERR(svn_fs__sqlite_step_row(stmt));
 
       lastmerged_rev = (svn_revnum_t) sqlite3_column_int64(stmt, 0);
@@ -606,9 +595,8 @@ get_mergeinfo_for_children(sqlite3 *db,
 
   like_path = apr_psprintf(subpool, "%s/%%", path);
 
-  SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 1, like_path, -1, 
-                                       SQLITE_TRANSIENT), db);
-  SVN_FS__SQLITE_ERR(sqlite3_bind_int64(stmt, 2, rev), db);
+  SVN_ERR(svn_fs__sqlite_bind_text(stmt, 1, like_path));
+  SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 2, rev));
 
   SVN_ERR(svn_fs__sqlite_step(&got_row, stmt));
   while (got_row)
