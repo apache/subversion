@@ -299,7 +299,7 @@ svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
      there's no reason to do extra checks to avoid no-op DELETEs.) */
   err = clean_tables(db, 
                      new_rev, 
-                     mergeinfo_for_paths == NULL, 
+                     (mergeinfo_for_paths == NULL),
                      subpool);
   MAYBE_CLEANUP;
 
