@@ -1509,7 +1509,7 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
         {
           apr_hash_this(hi, &key, NULL, &value);
-          path = (const char *)key + b->fs_path->len + 1;
+          path = (const char *)key + b->fs_path->len;
           info = value;
           SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "(cc)", path, info));
         }

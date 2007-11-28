@@ -688,8 +688,8 @@ svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
           apr_hash_t *for_path;
 
           apr_hash_this(hi, &key, &klen, &value);
-          path = (const char *)key + sess->fs_path->len + 1;
-          path_len = klen - sess->fs_path->len - 1;
+          path = (const char *)key + sess->fs_path->len;
+          path_len = klen - sess->fs_path->len;
           info = value;
           SVN_ERR(svn_mergeinfo_parse(&for_path, info, pool));
           apr_hash_set(*mergeinfo, path, path_len, for_path);

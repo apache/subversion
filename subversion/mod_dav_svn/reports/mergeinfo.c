@@ -144,7 +144,7 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
             "</S:" SVN_DAV__MERGEINFO_ITEM ">";
 
           apr_hash_this(hi, &key, NULL, &value);
-          path = (const char *)key + strlen(resource->info->repos_path) + 1;
+          path = (const char *)key + strlen(resource->info->repos_path);
           info = value;
           serr = dav_svn__send_xml(bb, output, itemformat,
                                    apr_xml_quote_string(resource->pool,
