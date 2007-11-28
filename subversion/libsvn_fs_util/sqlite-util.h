@@ -25,20 +25,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* Convert SQLite error codes to SVN */
-#define SVN_FS__SQLITE_ERROR_CODE(x) ((x) == SQLITE_READONLY ? \
-                                    SVN_ERR_FS_SQLITE_READONLY \
-                                  : SVN_ERR_FS_SQLITE_ERROR )
-
-/* SQLITE->SVN quick error wrap, much like SVN_ERR. */
-#define SVN_FS__SQLITE_ERR(x, db) do                                     \
-{                                                                        \
-  int sqlite_err__temp = (x);                                            \
-  if (sqlite_err__temp != SQLITE_OK)                                     \
-    return svn_error_create(SVN_FS__SQLITE_ERROR_CODE(sqlite_err__temp), \
-                            NULL, sqlite3_errmsg((db)));                 \
-} while (0)
-
 /* Steps the given statement; raises an SVN error (and finalizes the
    statement) if it doesn't return SQLITE_DONE. */
 svn_error_t *
@@ -55,12 +41,6 @@ svn_fs__sqlite_step_row(sqlite3_stmt *stmt);
 */
 svn_error_t *
 svn_fs__sqlite_step(svn_boolean_t *got_row, sqlite3_stmt *stmt);
-
-/* Finalizes the given statement and raises an SVN error based on the
-   returned error code.  Call this when a call to sqlite3_step on the
-   statement returns an unexpected value. */
-svn_error_t *
-svn_fs__sqlite_stmt_error(sqlite3_stmt *stmt);
 
 /* Execute SQL on the sqlite database DB, and raise an SVN error if the
    result is not okay.  */
