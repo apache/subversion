@@ -51,7 +51,7 @@
          <revnum>:            Revnum of set_path or link_path
        +/-                    '+' indicates depth other than svn_depth_infinity
        If previous is +:
-         <depth>:             "0","1","2","3" =>
+         <depth>:             "X","E","F","M" =>
                                  svn_depth_{exclude,empty,files,immediates}
        +/-                    '+' indicates start_empty field set
        +/-                    '+' indicates presence of lock_token field.
@@ -181,6 +181,42 @@ read_rev(svn_revnum_t *rev, apr_file_t *temp, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Read a single character to set *DEPTH (having already read '+')
+   from TEMP.  PATH is the path to which the depth applies, and is
+   used for error reporting only. */
+static svn_error_t *
+read_depth(svn_depth_t *depth, apr_file_t *temp, const char *path,
+           apr_pool_t *pool)
+{
+  char c;
+
+  SVN_ERR(svn_io_file_getc(&c, temp, pool));
+  switch (c)
+    {
+    case 'X':
+      *depth = svn_depth_exclude;
+      break;
+    case 'E':
+      *depth = svn_depth_empty;
+      break;
+    case 'F':
+      *depth = svn_depth_files;
+      break;
+    case 'M':
+      *depth = svn_depth_immediates;
+      break;
+
+      /* Note that we do not tolerate explicit representation of
+         svn_depth_infinity here, because that's not how
+         write_path_info() writes it. */
+    default:
+      return svn_error_createf(SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
+                               _("Invalid depth (%c) for path '%s'"), c, path);
+    }
+  
+  return SVN_NO_ERROR;
+}
+
 /* Read a report operation *PI out of TEMP.  Set *PI to NULL if we
    have reached the end of the report. */
 static svn_error_t *
@@ -205,41 +241,9 @@ read_path_info(path_info_t **pi, apr_file_t *temp, apr_pool_t *pool)
   SVN_ERR(read_rev(&(*pi)->rev, temp, pool));
   SVN_ERR(svn_io_file_getc(&c, temp, pool));
   if (c == '+')
-    {
-      /* Could just read directly into &(*pi)->depth, but that would be
-         bad form and perhaps also vulnerable to weird type promotion
-         failures. */
-      apr_uint64_t num;
-      SVN_ERR(read_number(&num, temp, pool));
-      switch (num)
-        {
-        case 0:
-          (*pi)->depth = svn_depth_exclude;
-          break;
-        case 1:
-          (*pi)->depth = svn_depth_empty;
-          break;
-        case 2:
-          (*pi)->depth = svn_depth_files;
-          break;
-        case 3:
-          (*pi)->depth = svn_depth_immediates;
-          break;
-
-          /* Note that we do not tolerate explicit representation of
-             svn_depth_infinity as "4" here, because that's just not
-             how write_path_info writes it. */
-        default:
-          return svn_error_createf(SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
-                                   _("Invalid depth (%s) for path '%s'"),
-                                   apr_psprintf(pool, "%" APR_UINT64_T_FMT,
-                                                num), (*pi)->path);
-        }
-    }
+    SVN_ERR(read_depth(&((*pi)->depth), temp, (*pi)->path, pool));
   else
-    {
-      (*pi)->depth = svn_depth_infinity;
-    }
+    (*pi)->depth = svn_depth_infinity;
   SVN_ERR(svn_io_file_getc(&c, temp, pool));
   (*pi)->start_empty = (c == '+');
   SVN_ERR(svn_io_file_getc(&c, temp, pool));
@@ -1242,13 +1246,13 @@ write_path_info(report_baton_t *b, const char *path, const char *lpath,
     apr_psprintf(pool, "+%ld:", rev) : "-";
 
   if (depth == svn_depth_exclude)
-    drep = "+0:";
+    drep = "+X";
   else if (depth == svn_depth_empty)
-    drep = "+1:";
+    drep = "+E";
   else if (depth == svn_depth_files)
-    drep = "+2:";
+    drep = "+F";
   else if (depth == svn_depth_immediates)
-    drep = "+3:";
+    drep = "+M";
   else if (depth == svn_depth_infinity)
     drep = "-";
   else
