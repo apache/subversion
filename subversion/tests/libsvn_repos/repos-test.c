@@ -2149,8 +2149,15 @@ reporter_depth_exclude(const char **msg,
   SVN_ERR(svn_repos_set_path3(report_baton, "A/D", SVN_INVALID_REVNUM,
                               svn_depth_exclude,
                               FALSE, NULL, subpool));
-  /* This is the illegal call, since A/D was excluded above.  This
-     call itself will not error, but finish_report() will. */
+
+  /* This is the illegal call, since A/D was excluded above; the call
+     itself will not error, but finish_report() will.  As of r28098,
+     this delayed error behavior is not actually promised by the
+     reporter API, which merely warns callers not to touch a path
+     underneath a previously excluded path without defining what will
+     happen if they do.  However, it's still useful to test for the
+     error, since the reporter code is sensitive and we'd certainly
+     want to know about it if the behavior were to change. */
   SVN_ERR(svn_repos_set_path3(report_baton, "A/D/G/pi",
                               SVN_INVALID_REVNUM,
                               svn_depth_infinity,
