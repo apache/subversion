@@ -74,6 +74,13 @@ svn_fs__sqlite_exec(sqlite3 *db, const char *sql)
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs__sqlite_prepare(sqlite3_stmt **stmt, sqlite3 *db, const char *text)
+{
+  SVN_FS__SQLITE_ERR(sqlite3_prepare(db, text, -1, stmt, NULL), db);
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 step_with_expectation(sqlite3_stmt* stmt, 
                       svn_boolean_t expecting_row)
@@ -193,8 +200,7 @@ check_format(sqlite3 *db, apr_pool_t *pool)
   sqlite3_stmt *stmt;
   int schema_format;
   
-  SVN_FS__SQLITE_ERR(sqlite3_prepare(db, "PRAGMA user_version;", -1, &stmt, 
-                                     NULL), db);
+  SVN_ERR(svn_fs__sqlite_prepare(&stmt, db, "PRAGMA user_version;"));
   SVN_ERR(svn_fs__sqlite_step_row(stmt));
 
   /* Validate that the schema exists as expected and that the

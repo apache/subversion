@@ -139,12 +139,11 @@ index_path_mergeinfo(svn_revnum_t new_rev,
       if (from && rangelist)
         {
           int i;
-          SVN_FS__SQLITE_ERR(sqlite3_prepare
-                             (db,
-                              "INSERT INTO mergeinfo (revision, mergedfrom, "
-                              "mergedto, mergedrevstart, mergedrevend, "
-                              "inheritable) VALUES (?, ?, ?, ?, ?, ?);",
-                              -1, &stmt, NULL), db);
+          SVN_ERR(svn_fs__sqlite_prepare(&stmt, db,
+                                         "INSERT INTO mergeinfo (revision, "
+                                         "mergedfrom, mergedto, mergedrevstart, "
+                                         "mergedrevend, inheritable) VALUES (?, "
+                                         "?, ?, ?, ?, ?);"));
           SVN_FS__SQLITE_ERR(sqlite3_bind_int64(stmt, 1, new_rev), db);
           SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 2, from, -1, 
                                                SQLITE_TRANSIENT),
@@ -183,10 +182,10 @@ index_path_mergeinfo(svn_revnum_t new_rev,
           SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
         }
     }
-  SVN_FS__SQLITE_ERR(sqlite3_prepare(db,
-                             "INSERT INTO mergeinfo_changed (revision, path) "
-                             "VALUES (?, ?);", -1, &stmt, NULL),
-                     db);
+
+  SVN_ERR(svn_fs__sqlite_prepare(&stmt, db,
+                                 "INSERT INTO mergeinfo_changed (revision, "
+                                 "path) VALUES (?, ?);"));
   SVN_FS__SQLITE_ERR(sqlite3_bind_int64(stmt, 1, new_rev), db);
 
   SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 2, path, -1, SQLITE_TRANSIENT),
@@ -240,7 +239,7 @@ table_has_any_rows_with_rev(svn_boolean_t *has_any,
                                        table, rev);
   sqlite3_stmt *stmt;
 
-  SVN_FS__SQLITE_ERR(sqlite3_prepare(db, selection, -1, &stmt, NULL), db);
+  SVN_ERR(svn_fs__sqlite_prepare(&stmt, db, selection));
   SVN_ERR(svn_fs__sqlite_step(has_any, stmt));
   SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
   
@@ -348,12 +347,11 @@ parse_mergeinfo_from_db(sqlite3 *db,
   sqlite3_stmt *stmt;
   svn_boolean_t got_row;
 
-  SVN_FS__SQLITE_ERR(sqlite3_prepare(db,
-                                     "SELECT mergedfrom, mergedrevstart, "
-                                     "mergedrevend, inheritable FROM mergeinfo "
-                                     "WHERE mergedto = ? AND revision = ? "
-                                     "ORDER BY mergedfrom, mergedrevstart;",
-                                     -1, &stmt, NULL), db);
+  SVN_ERR(svn_fs__sqlite_prepare(&stmt, db,
+                                 "SELECT mergedfrom, mergedrevstart, "
+                                 "mergedrevend, inheritable FROM mergeinfo "
+                                 "WHERE mergedto = ? AND revision = ? "
+                                 "ORDER BY mergedfrom, mergedrevstart;"));
   SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT), 
                      db);
   SVN_FS__SQLITE_ERR(sqlite3_bind_int64(stmt, 2, lastmerged_rev), db);
@@ -498,11 +496,10 @@ get_mergeinfo_for_path(sqlite3 *db,
 
       /* See if we have a mergeinfo_changed record for this path. If not,
          then it can't have mergeinfo.  */
-      SVN_FS__SQLITE_ERR(sqlite3_prepare(db,
-                                         "SELECT MAX(revision) FROM "
-                                         "mergeinfo_changed WHERE path = ? AND "
-                                         "revision <= ?;",
-                                         -1, &stmt, NULL), db);
+      SVN_ERR(svn_fs__sqlite_prepare(&stmt, db,
+                                     "SELECT MAX(revision) FROM "
+                                     "mergeinfo_changed WHERE path = ? AND "
+                                     "revision <= ?;"));
 
       SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT),
                          db);
@@ -601,12 +598,11 @@ get_mergeinfo_for_children(sqlite3 *db,
   svn_boolean_t got_row;
 
   /* Get all paths under us. */
-  SVN_FS__SQLITE_ERR(sqlite3_prepare(db,
-                                     "SELECT MAX(revision), path "
-                                     "FROM mergeinfo_changed "
-                                     "WHERE path LIKE ? AND revision <= ? "
-                                     "GROUP BY path;",
-                                     -1, &stmt, NULL), db);
+  SVN_ERR(svn_fs__sqlite_prepare(&stmt, db,
+                                 "SELECT MAX(revision), path "
+                                 "FROM mergeinfo_changed "
+                                 "WHERE path LIKE ? AND revision <= ? "
+                                 "GROUP BY path;"));
 
   like_path = apr_psprintf(subpool, "%s/%%", path);
 
