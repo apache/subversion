@@ -952,7 +952,8 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
           if (!name)
             break;
 
-          /* Invalid revnum means either delete or excluded subpath. */
+          /* Invalid revnum means we should delete, unless this is
+             just an excluded subpath. */
           if (info 
               && !SVN_IS_VALID_REVNUM(info->rev)
               && info->depth != svn_depth_exclude)
