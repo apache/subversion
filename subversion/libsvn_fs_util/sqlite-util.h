@@ -45,6 +45,11 @@ svn_error_t *
 svn_fs__sqlite_step_done(sqlite3_stmt *stmt);
 
 /* Steps the given statement; raises an SVN error (and finalizes the
+   statement) if it doesn't return SQLITE_ROW. */
+svn_error_t *
+svn_fs__sqlite_step_row(sqlite3_stmt *stmt);
+
+/* Steps the given statement; raises an SVN error (and finalizes the
    statement) if it doesn't return SQLITE_DONE or SQLITE_ROW.  Sets 
    *GOT_ROW to true iff it got SQLITE_ROW.
 */

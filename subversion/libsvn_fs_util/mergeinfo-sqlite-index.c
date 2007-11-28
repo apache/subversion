@@ -346,7 +346,7 @@ parse_mergeinfo_from_db(sqlite3 *db,
                         apr_pool_t *pool)
 {
   sqlite3_stmt *stmt;
-  int sqlite_result;
+  svn_boolean_t got_row;
 
   SVN_FS__SQLITE_ERR(sqlite3_prepare(db,
                                      "SELECT mergedfrom, mergedrevstart, "
@@ -357,18 +357,13 @@ parse_mergeinfo_from_db(sqlite3 *db,
   SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT), 
                      db);
   SVN_FS__SQLITE_ERR(sqlite3_bind_int64(stmt, 2, lastmerged_rev), db);
-  sqlite_result = sqlite3_step(stmt);
+  SVN_ERR(svn_fs__sqlite_step(&got_row, stmt));
 
   /* It is possible the mergeinfo changed because of a delete, and
-     that the mergeinfo is now gone. If this is the case, we want
-     to do nothing but fallthrough into the count == 0 case */
-  if (sqlite_result == SQLITE_DONE)
-    {
-      *result = NULL;
-      SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
-      return SVN_NO_ERROR;
-    }
-  else if (sqlite_result == SQLITE_ROW)
+     that the mergeinfo is now gone. */
+  if (! got_row)
+    *result = NULL;
+  else
     {
       apr_array_header_t *pathranges;
       const char *mergedfrom;
@@ -380,7 +375,7 @@ parse_mergeinfo_from_db(sqlite3 *db,
       *result = apr_hash_make(pool);
       pathranges = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
 
-      do
+      while (got_row)
         {
           mergedfrom = (char *) sqlite3_column_text(stmt, 0);
           startrev = (svn_revnum_t) sqlite3_column_int64(stmt, 1);
@@ -410,21 +405,15 @@ parse_mergeinfo_from_db(sqlite3 *db,
               APR_ARRAY_PUSH(pathranges, svn_merge_range_t *) = range;
             }
 
-          sqlite_result = sqlite3_step(stmt);
+          SVN_ERR(svn_fs__sqlite_step(&got_row, stmt));
           lastmergedfrom = mergedfrom;
         }
-      while (sqlite_result == SQLITE_ROW);
 
       apr_hash_set(*result, mergedfrom, APR_HASH_KEY_STRING, pathranges);
-
-      if (sqlite_result != SQLITE_DONE)
-        return svn_fs__sqlite_stmt_error(stmt);
-      
-      SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
-      return SVN_NO_ERROR;
     }
-  else
-    return svn_fs__sqlite_stmt_error(stmt);
+
+  SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
+  return SVN_NO_ERROR;
 }
 
 
@@ -487,7 +476,6 @@ get_mergeinfo_for_path(sqlite3 *db,
 {
   apr_hash_t *path_mergeinfo;
   sqlite3_stmt *stmt;
-  int sqlite_result;
   svn_revnum_t lastmerged_rev;
 
   if (inherit == svn_mergeinfo_nearest_ancestor)
@@ -519,9 +507,7 @@ get_mergeinfo_for_path(sqlite3 *db,
       SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT),
                          db);
       SVN_FS__SQLITE_ERR(sqlite3_bind_int64(stmt, 2, rev), db);
-      sqlite_result = sqlite3_step(stmt);
-      if (sqlite_result != SQLITE_ROW)
-        return svn_fs__sqlite_stmt_error(stmt);
+      SVN_ERR(svn_fs__sqlite_step_row(stmt));
 
       lastmerged_rev = (svn_revnum_t) sqlite3_column_int64(stmt, 0);
       SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
@@ -610,9 +596,9 @@ get_mergeinfo_for_children(sqlite3 *db,
                            apr_pool_t *pool)
 {
   sqlite3_stmt *stmt;
-  int sqlite_result;
   apr_pool_t *subpool = svn_pool_create(pool);
   char *like_path;
+  svn_boolean_t got_row;
 
   /* Get all paths under us. */
   SVN_FS__SQLITE_ERR(sqlite3_prepare(db,
@@ -628,8 +614,8 @@ get_mergeinfo_for_children(sqlite3 *db,
                                        SQLITE_TRANSIENT), db);
   SVN_FS__SQLITE_ERR(sqlite3_bind_int64(stmt, 2, rev), db);
 
-  sqlite_result = sqlite3_step(stmt);
-  while (sqlite_result == SQLITE_ROW)
+  SVN_ERR(svn_fs__sqlite_step(&got_row, stmt));
+  while (got_row)
     {
       svn_revnum_t lastmerged_rev;
       const char *merged_path;
@@ -656,11 +642,8 @@ get_mergeinfo_for_children(sqlite3 *db,
             SVN_ERR(svn_mergeinfo_merge(path_mergeinfo, db_mergeinfo, pool));
         }
 
-      sqlite_result = sqlite3_step(stmt);
+      SVN_ERR(svn_fs__sqlite_step(&got_row, stmt));
     }
-
-  if (sqlite_result != SQLITE_DONE)
-    return svn_fs__sqlite_stmt_error(stmt);
 
   SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
   svn_pool_destroy(subpool);
