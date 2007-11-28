@@ -238,7 +238,13 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
 
-
+/* Set *REL_PATH to a relative path which, when URI-encoded and joined
+   with RA_SESSION's session url, will result in a string that matches URL. */
+svn_error_t *
+svn_client__path_relative_to_session(const char **rel_path,
+                                     svn_ra_session_t *ra_session,
+                                     const char *url, 
+                                     apr_pool_t *pool);
 
 /* Ensure that RA_SESSION's session URL matches SESSION_URL,
    reparenting that session if necessary.  If reparenting occurs,

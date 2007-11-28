@@ -1241,10 +1241,10 @@ filter_reflected_revisions(apr_array_header_t **requested_rangelist,
   const char *min_rel_path, *max_rel_path;
 
   SVN_ERR(svn_client__path_relative_to_root(&min_rel_path, min_url,
-                                            source_root_url, TRUE, ra_session,
+                                            source_root_url, FALSE, ra_session,
                                             NULL, pool));
   SVN_ERR(svn_client__path_relative_to_root(&max_rel_path, max_url,
-                                            source_root_url, TRUE, ra_session,
+                                            source_root_url, FALSE, ra_session,
                                             NULL, pool));
 
   /* Find any mergeinfo for TARGET_URL added to the line of history
