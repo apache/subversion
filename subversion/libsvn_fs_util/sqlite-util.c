@@ -48,15 +48,20 @@ sqlite_tracer(void *data, const char *sql)
 }
 #endif
 
-svn_error_t *
-svn_fs__sqlite_stmt_error(sqlite3_stmt *stmt)
-{
-  sqlite3 *db = sqlite3_db_handle(stmt);
-  int result = sqlite3_finalize(stmt);
-  return svn_error_create(SVN_FS__SQLITE_ERROR_CODE(result),
-                          NULL,
-                          sqlite3_errmsg(db));
-}
+/* Convert SQLite error codes to SVN */
+#define SQLITE_ERROR_CODE(x) ((x) == SQLITE_READONLY ?     \
+                                SVN_ERR_FS_SQLITE_READONLY \
+                              : SVN_ERR_FS_SQLITE_ERROR )
+
+/* SQLITE->SVN quick error wrap, much like SVN_ERR. */
+#define SQLITE_ERR(x, db) do                                     \
+{                                                                \
+  int sqlite_err__temp = (x);                                    \
+  if (sqlite_err__temp != SQLITE_OK)                             \
+    return svn_error_create(SQLITE_ERROR_CODE(sqlite_err__temp), \
+                            NULL, sqlite3_errmsg((db)));         \
+} while (0)
+
 
 svn_error_t *
 svn_fs__sqlite_exec(sqlite3 *db, const char *sql)
@@ -66,7 +71,7 @@ svn_fs__sqlite_exec(sqlite3 *db, const char *sql)
   int sqlite_err = sqlite3_exec(db, sql, NULL, NULL, &err_msg);
   if (sqlite_err != SQLITE_OK)
     {
-      err = svn_error_create(SVN_FS__SQLITE_ERROR_CODE(sqlite_err), NULL, 
+      err = svn_error_create(SQLITE_ERROR_CODE(sqlite_err), NULL, 
                              err_msg);
       sqlite3_free(err_msg);
       return err;
@@ -77,7 +82,7 @@ svn_fs__sqlite_exec(sqlite3 *db, const char *sql)
 svn_error_t *
 svn_fs__sqlite_prepare(sqlite3_stmt **stmt, sqlite3 *db, const char *text)
 {
-  SVN_FS__SQLITE_ERR(sqlite3_prepare(db, text, -1, stmt, NULL), db);
+  SQLITE_ERR(sqlite3_prepare(db, text, -1, stmt, NULL), db);
   return SVN_NO_ERROR;
 }
 
@@ -90,7 +95,10 @@ step_with_expectation(sqlite3_stmt* stmt,
   if ((got_row && !expecting_row)
       ||
       (!got_row && expecting_row))
-    return svn_fs__sqlite_stmt_error(stmt);
+    return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
+                            expecting_row
+                            ? _("Expected database row missing")
+                            : _("Extra database row found"));
 
   return SVN_NO_ERROR;
 }
@@ -112,7 +120,12 @@ svn_fs__sqlite_step(svn_boolean_t *got_row, sqlite3_stmt *stmt)
 {
   int sqlite_result = sqlite3_step(stmt);
   if (sqlite_result != SQLITE_DONE && sqlite_result != SQLITE_ROW)
-    return svn_fs__sqlite_stmt_error(stmt);
+    {
+      /* Extract the real error value with finalize. */
+      SVN_ERR(svn_fs__sqlite_finalize(stmt));
+      /* This really should have thrown an error! */
+      abort();
+    }
 
   *got_row = (sqlite_result == SQLITE_ROW);
 
@@ -125,7 +138,7 @@ svn_fs__sqlite_bind_int64(sqlite3_stmt *stmt,
                           sqlite_int64 val)
 {
   sqlite3 *db = sqlite3_db_handle(stmt);
-  SVN_FS__SQLITE_ERR(sqlite3_bind_int64(stmt, slot, val), db);
+  SQLITE_ERR(sqlite3_bind_int64(stmt, slot, val), db);
   return SVN_NO_ERROR;
 }
 
@@ -135,8 +148,7 @@ svn_fs__sqlite_bind_text(sqlite3_stmt *stmt,
                          const char *val)
 {
   sqlite3 *db = sqlite3_db_handle(stmt);
-  SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, slot, val, -1, SQLITE_TRANSIENT), 
-                     db);
+  SQLITE_ERR(sqlite3_bind_text(stmt, slot, val, -1, SQLITE_TRANSIENT), db);
   return SVN_NO_ERROR;
 }
 
@@ -144,7 +156,7 @@ svn_error_t *
 svn_fs__sqlite_finalize(sqlite3_stmt *stmt)
 {
   sqlite3 *db = sqlite3_db_handle(stmt);
-  SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
+  SQLITE_ERR(sqlite3_finalize(stmt), db);
   return SVN_NO_ERROR;
 }
 
@@ -152,7 +164,7 @@ svn_error_t *
 svn_fs__sqlite_reset(sqlite3_stmt *stmt)
 {
   sqlite3 *db = sqlite3_db_handle(stmt);
-  SVN_FS__SQLITE_ERR(sqlite3_reset(stmt), db);
+  SQLITE_ERR(sqlite3_reset(stmt), db);
   return SVN_NO_ERROR;
 }
 
@@ -247,7 +259,7 @@ check_format(sqlite3 *db, apr_pool_t *pool)
      schema and repository versions match. */
   schema_format = sqlite3_column_int(stmt, 0);
 
-  SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
+  SQLITE_ERR(sqlite3_finalize(stmt), db);
 
   if (schema_format == latest_schema_format)
     return SVN_NO_ERROR;
@@ -299,9 +311,9 @@ svn_fs__sqlite_open(sqlite3 **db, const char *repos_path, apr_pool_t *pool)
   db_path = svn_path_join(repos_path, SVN_FS__SQLITE_DB_NAME, pool);
 
   /* Open the database. */
-  SVN_FS__SQLITE_ERR(sqlite3_open(db_path, db), *db);
+  SQLITE_ERR(sqlite3_open(db_path, db), *db);
   /* Retry until timeout when database is busy. */
-  SVN_FS__SQLITE_ERR(sqlite3_busy_timeout(*db, BUSY_TIMEOUT), *db);
+  SQLITE_ERR(sqlite3_busy_timeout(*db, BUSY_TIMEOUT), *db);
 #ifdef SQLITE3_DEBUG
   sqlite3_trace(*db, sqlite_tracer, *db);
 #endif
@@ -319,7 +331,7 @@ svn_fs__sqlite_close(sqlite3 *db, svn_error_t *err)
   /* If there's a pre-existing error, return it. */
   /* ### If the connection close also fails, say something about it as well? */
   SVN_ERR(err);
-  SVN_FS__SQLITE_ERR(result, db);
+  SQLITE_ERR(result, db);
   return SVN_NO_ERROR;
 }
 
