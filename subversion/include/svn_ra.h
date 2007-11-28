@@ -262,6 +262,13 @@ typedef struct svn_ra_reporter3_t
   /** Describe a working copy @a path as being at a particular
    * @a revision and having depth @a depth.
    *
+   * @a revision may be SVN_INVALID_REVNUM if (for example) @a path
+   * represents a locally-added path with no revision number, or @a
+   * depth is @c svn_depth_exclude.  
+   *
+   * @a path may not be underneath a path on which set_path() was
+   * previously called with @c svn_depth_exclude in this report.
+   *
    * If @a start_empty is set and @a path is a directory, the
    * implementor should assume the directory has no entries or props.
    *
@@ -282,6 +289,9 @@ typedef struct svn_ra_reporter3_t
 
   /** Describing a working copy @a path as missing.
    *
+   * @a path may not be underneath a path on which set_path() was
+   * previously called with @c svn_depth_exclude in this report.
+   *
    * All temporary allocations are done in @a pool.
    */
   svn_error_t *(*delete_path)(void *report_baton,
@@ -293,6 +303,9 @@ typedef struct svn_ra_reporter3_t
    * @a path in the repository (relative to the URL specified when
    * opening the RA layer), but is instead a reflection of a different
    * repository @a url at @a revision, and has depth @a depth.
+   *
+   * @a path may not be underneath a path on which set_path() was
+   * previously called with @c svn_depth_exclude in this report.
    *
    * If @a start_empty is set and @a path is a directory,
    * the implementor should assume the directory has no entries or props.
