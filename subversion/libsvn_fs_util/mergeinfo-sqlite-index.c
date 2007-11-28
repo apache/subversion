@@ -805,9 +805,10 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
 }
 
 /* Helper function for 'get_commit_revs_for_merge_ranges', to identify the
-   correct PARENT_WITH_MERGEINFO where the mergeinfo of 'MERGE_TARGET' 
+   correct PARENT_WITH_MERGEINFO where the mergeinfo of 'MERGE_TARGET'
    has been elided to. DB is used to retrieve this data within the 
-   commits 'min_commit_rev(exclusive):max_commit_rev(inclusive)'.
+   commits 'MIN_COMMIT_REV(exclusive):MAX_COMMIT_REV(inclusive)'.
+   Perform all allocations in POOL.
 */
 static svn_error_t *
 get_parent_target_path_having_mergeinfo(const char** parent_with_mergeinfo,
