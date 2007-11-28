@@ -804,12 +804,12 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
   return svn_fs__sqlite_close(db, err);
 }
 
-/* Helper function for 'get_commit_revs_for_merge_ranges', to identify the
-   correct PARENT_WITH_MERGEINFO where the mergeinfo of 'MERGE_TARGET'
-   has been elided to. DB is used to retrieve this data within the 
-   commits 'MIN_COMMIT_REV(exclusive):MAX_COMMIT_REV(inclusive)'.
-   Perform all allocations in POOL.
-*/
+/* Helper function for 'get_commit_revs_for_merge_ranges'.
+
+   Set *PARENT_WITH_MERGEINFO to the path where the mergeinfo of
+   MERGE_TARGET elides to.  Retrieve the data from DB, within the
+   commit range MIN_COMMIT_REV(exclusive):MAX_COMMIT_REV(inclusive).
+   Perform all allocations in POOL. */
 static svn_error_t *
 get_parent_target_path_having_mergeinfo(const char** parent_with_mergeinfo,
                                         sqlite3 *db,
