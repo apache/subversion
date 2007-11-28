@@ -786,8 +786,7 @@ EOE
     assert_equal(0, ctx.up(@wc_path, 0))
     assert(!File.exists?(path2))
     Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
-      editor = access.update_editor2(:target_revision => 0,
-                                     :target => @wc_path)
+      editor = access.update_editor(@wc_path, 0)
       assert_equal(0, editor.target_revision)
 
       reporter = session.update2(rev2, "", editor)
@@ -832,9 +831,8 @@ EOE
                               :target => @wc_path,
                               :notify_fun => notify_func)
       end
-      editor = access.update_editor2(:target_revision => 0,
-                                     :target => @wc_path,
-                                     :notify_func => notify_func)
+      editor = access.update_editor(@wc_path, 0, true, nil, false, nil,
+                                    notify_func)
       assert_equal(0, editor.target_revision)
 
       reporter = session.update2(rev2, "", editor)
@@ -877,9 +875,7 @@ EOE
     assert_equal(rev2, ctx.switch(@wc_path, dir2_uri))
     assert(File.exists?(File.join(@wc_path, file2)))
     Svn::Wc::AdmAccess.open_anchor(@wc_path) do |access, dir_access, target|
-      editor = dir_access.switch_editor2(:target_revision => rev2,
-                                         :target => @wc_path,
-                                         :switch_url => dir1_uri)
+      editor = dir_access.switch_editor(@wc_path, dir1_uri, rev2)
       assert_equal(rev2, editor.target_revision)
 
       reporter = session.switch2(rev1, dir1, dir1_uri, editor)
