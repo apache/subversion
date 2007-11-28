@@ -121,8 +121,14 @@ svn_error_t *load_configs(svn_config_t **cfg,
   return SVN_NO_ERROR;
 }
 
-/* Verify that URL is inside REPOS_URL and get its fs path. Assume that
-   REPOS_URL and URL are already URI-decoded. */
+/* Set *FS_PATH to the portion of URL that is the path within the
+   repository, if URL is inside REPOS_URL (if URL is not inside
+   REPOS_URL, then error, with the effect on *FS_PATH undefined).
+
+   If the resultant fs path would be the empty string (i.e., URL and
+   REPOS_URL are the same), then set *FS_PATH to "/".
+
+   Assume that REPOS_URL and URL are already URI-decoded. */
 static svn_error_t *get_fs_path(const char *repos_url, const char *url,
                                 const char **fs_path)
 {
