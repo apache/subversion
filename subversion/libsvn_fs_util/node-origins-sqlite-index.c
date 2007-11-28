@@ -49,7 +49,7 @@ get_origin(const char **node_rev_id,
            apr_pool_t *pool)
 {
   sqlite3_stmt *stmt;
-  int sqlite_result;
+  svn_boolean_t got_row;
 
   SVN_FS__SQLITE_ERR(sqlite3_prepare
                      (db,
@@ -58,14 +58,11 @@ get_origin(const char **node_rev_id,
                       -1, &stmt, NULL), db);
   SVN_FS__SQLITE_ERR(sqlite3_bind_text(stmt, 1, node_id, -1,
                                        SQLITE_TRANSIENT), db);
-  sqlite_result = sqlite3_step(stmt);
-  if (sqlite_result != SQLITE_DONE && sqlite_result != SQLITE_ROW)
-    return svn_fs__sqlite_stmt_error(stmt);
-  else if (sqlite_result == SQLITE_ROW)
-    *node_rev_id = apr_pstrdup(pool,
-                               (const char *) sqlite3_column_text(stmt, 0));
-  else
-    *node_rev_id = NULL;
+  SVN_ERR(svn_fs__sqlite_step(&got_row, stmt));
+  
+  *node_rev_id = got_row 
+    ? apr_pstrdup(pool, (const char *) sqlite3_column_text(stmt, 0))
+    : NULL;
 
   SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
 
