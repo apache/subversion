@@ -9624,7 +9624,7 @@ test_list = [ None,
               XFail(merge_target_with_non_inheritable_mergeinfo),
               self_reverse_merge,
               ignore_ancestry_and_mergeinfo,
-            XFail(merge_from_renamed_branch_fails_while_avoiding_repeat_merge),
+              merge_from_renamed_branch_fails_while_avoiding_repeat_merge,
              ]
 
 if __name__ == '__main__':

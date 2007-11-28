@@ -4098,13 +4098,40 @@ do_directory_merge(const char *url1,
           slice_remaining_ranges(children_with_mergeinfo, is_rollback,
                                  end_rev, pool);
           notify_b->cur_ancestor_index = -1;
-          SVN_ERR(drive_merge_report_editor(merge_b->target,
-                                            url1, start_rev, url2, end_rev,
-                                            children_with_mergeinfo, 
-                                            is_rollback, 
-                                            depth, notify_b, adm_access, 
-                                            &merge_callbacks, merge_b, 
-                                            iterpool));
+          {
+            /* url1 and url2 only correspond to revision1 and revision2 
+               respectively only. When we are operating over some other revs,
+               we need to correspondingly deduce their names.
+            */
+            const char* new_url1 = url1;
+            const char* new_url2 = url2;
+            if (strcmp(url1, url2) != 0)
+              {
+                svn_opt_revision_t *dummy_opt_revision1, *dummy_opt_revision2;
+                svn_opt_revision_t peg_rev, rev1_opt, rev2_opt;
+                peg_rev.value.number = revision2;
+                peg_rev.kind = svn_opt_revision_number;
+                rev1_opt.value.number = start_rev;
+                rev1_opt.kind = svn_opt_revision_number;
+                rev2_opt.value.number = end_rev;
+                rev2_opt.kind = svn_opt_revision_number;
+                SVN_ERR(svn_client__repos_locations(&new_url1,
+                                                    &dummy_opt_revision1,
+                                                    &new_url2,
+                                                    &dummy_opt_revision2,
+                                                    NULL, merge_b->url,
+                                                    &peg_rev, &rev1_opt,
+                                                    &rev2_opt, merge_b->ctx,
+                                                    iterpool));
+              }
+            SVN_ERR(drive_merge_report_editor(merge_b->target,
+                                              new_url1, start_rev, new_url2, 
+                                              end_rev, children_with_mergeinfo,
+                                              is_rollback,
+                                              depth, notify_b, adm_access,
+                                              &merge_callbacks, merge_b,
+                                              iterpool));
+          }
 
           remove_first_range_from_remaining_ranges(children_with_mergeinfo, 
                                                    pool);
