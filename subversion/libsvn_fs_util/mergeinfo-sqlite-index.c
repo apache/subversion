@@ -170,9 +170,9 @@ index_path_mergeinfo(svn_revnum_t new_rev,
               SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 6, range->inheritable));
               SVN_ERR(svn_fs__sqlite_step_done(stmt));
 
-              SVN_FS__SQLITE_ERR(sqlite3_reset(stmt), db);
+              SVN_ERR(svn_fs__sqlite_reset(stmt));
             }
-          SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
+          SVN_ERR(svn_fs__sqlite_finalize(stmt));
         }
     }
 
@@ -184,7 +184,7 @@ index_path_mergeinfo(svn_revnum_t new_rev,
 
   SVN_ERR(svn_fs__sqlite_step_done(stmt));
 
-  SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
+  SVN_ERR(svn_fs__sqlite_finalize(stmt));
 
   return SVN_NO_ERROR;
 }
@@ -232,7 +232,7 @@ table_has_any_rows_with_rev(svn_boolean_t *has_any,
 
   SVN_ERR(svn_fs__sqlite_prepare(&stmt, db, selection));
   SVN_ERR(svn_fs__sqlite_step(has_any, stmt));
-  SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
+  SVN_ERR(svn_fs__sqlite_finalize(stmt));
   
   return SVN_NO_ERROR;
 }
@@ -400,7 +400,7 @@ parse_mergeinfo_from_db(sqlite3 *db,
       apr_hash_set(*result, mergedfrom, APR_HASH_KEY_STRING, pathranges);
     }
 
-  SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
+  SVN_ERR(svn_fs__sqlite_finalize(stmt));
   return SVN_NO_ERROR;
 }
 
@@ -496,7 +496,7 @@ get_mergeinfo_for_path(sqlite3 *db,
       SVN_ERR(svn_fs__sqlite_step_row(stmt));
 
       lastmerged_rev = (svn_revnum_t) sqlite3_column_int64(stmt, 0);
-      SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
+      SVN_ERR(svn_fs__sqlite_finalize(stmt));
 
       /* If we've got mergeinfo data, transform it from the db into a
          mergeinfo hash.  Either way, cache whether we found mergeinfo. */
@@ -629,7 +629,7 @@ get_mergeinfo_for_children(sqlite3 *db,
       SVN_ERR(svn_fs__sqlite_step(&got_row, stmt));
     }
 
-  SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
+  SVN_ERR(svn_fs__sqlite_finalize(stmt));
   svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;

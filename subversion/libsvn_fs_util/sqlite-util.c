@@ -140,6 +140,25 @@ svn_fs__sqlite_bind_text(sqlite3_stmt *stmt,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs__sqlite_finalize(sqlite3_stmt *stmt)
+{
+  sqlite3 *db = sqlite3_db_handle(stmt);
+  SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs__sqlite_reset(sqlite3_stmt *stmt)
+{
+  sqlite3 *db = sqlite3_db_handle(stmt);
+  SVN_FS__SQLITE_ERR(sqlite3_reset(stmt), db);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs__sqlite_reset(sqlite3_stmt *stmt);
+
 /* Time (in milliseconds) to wait for sqlite locks before giving up. */
 #define BUSY_TIMEOUT 10000
 
