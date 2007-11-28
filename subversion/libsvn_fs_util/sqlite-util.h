@@ -74,6 +74,9 @@ svn_fs__sqlite_exec(sqlite3 *db, const char *sql);
 svn_error_t *
 svn_fs__sqlite_open(sqlite3 **db, const char *repos_path, apr_pool_t *pool);
 
+/* Prepares TEXT as a statement in DB, returning a statement in *STMT. */
+svn_error_t *
+svn_fs__sqlite_prepare(sqlite3_stmt **stmt, sqlite3 *db, const char *text);
 
 /* Close DB, returning any ERR which may've necessitated an early connection
    closure, or -- if none -- the error from the closure itself. */
