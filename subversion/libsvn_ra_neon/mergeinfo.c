@@ -54,10 +54,10 @@ static const svn_ra_neon__xml_elm_t mergeinfo_report_elements[] =
     { SVN_XML_NAMESPACE, SVN_DAV__MERGEINFO_REPORT, ELEM_mergeinfo_report, 0 },
     { SVN_XML_NAMESPACE, SVN_DAV__COMMIT_REVS_FOR_MERGE_RANGES_REPORT,
       ELEM_mergeinfo_report, 0 },
-    { SVN_XML_NAMESPACE, "mergeinfo-item", ELEM_mergeinfo_item, 0 },
-    { SVN_XML_NAMESPACE, "mergeinfo-path", ELEM_mergeinfo_path,
+    { SVN_XML_NAMESPACE, SVN_DAV__MERGEINFO_ITEM, ELEM_mergeinfo_item, 0 },
+    { SVN_XML_NAMESPACE, SVN_DAV__MERGEINFO_PATH, ELEM_mergeinfo_path,
       SVN_RA_NEON__XML_CDATA },
-    { SVN_XML_NAMESPACE, "mergeinfo-info", ELEM_mergeinfo_info,
+    { SVN_XML_NAMESPACE, SVN_DAV__MERGEINFO_INFO, ELEM_mergeinfo_info,
       SVN_RA_NEON__XML_CDATA },
     { NULL }
   };
