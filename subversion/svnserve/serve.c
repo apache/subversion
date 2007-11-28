@@ -134,6 +134,9 @@ static svn_error_t *get_fs_path(const char *repos_url, const char *url,
                              "'%s' is not the same repository as '%s'",
                              url, repos_url);
   *fs_path = url + len;
+  if (! **fs_path)
+    *fs_path = "/";
+
   return SVN_NO_ERROR;
 }
 
@@ -2471,7 +2474,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
                                apr_array_header_t *capabilities,
                                apr_pool_t *pool)
 {
-  const char *path, *full_path, *repos_root;
+  const char *path, *full_path, *repos_root, *fs_path;
   svn_stringbuf_t *url_buf;
 
   /* Skip past the scheme and authority part. */
@@ -2507,8 +2510,8 @@ static svn_error_t *find_repos(const char *url, const char *root,
   SVN_ERR(svn_repos_open(&b->repos, repos_root, pool));
   SVN_ERR(svn_repos_remember_client_capabilities(b->repos, capabilities));
   b->fs = svn_repos_fs(b->repos);
-  b->fs_path = svn_stringbuf_create(full_path + strlen(repos_root),
-                                    pool);
+  fs_path = full_path + strlen(repos_root);
+  b->fs_path = svn_stringbuf_create(*fs_path ? fs_path : "/", pool);
   url_buf = svn_stringbuf_create(url, pool);
   svn_path_remove_components(url_buf,
                              svn_path_component_count(b->fs_path->data));
