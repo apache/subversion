@@ -9447,6 +9447,98 @@ def ignore_ancestry_and_mergeinfo(sbox):
   
   os.chdir(saved_cwd)
 
+def merge_from_renamed_branch_fails_while_avoiding_repeat_merge(sbox):
+  "merge from renamed branch"
+  #Copy A/C to A/COPY_C results in r2.
+  #Rename A/COPY_C to A/RENAMED_C results in r3.
+  #Add A/RENAMED_C/file1 and commit, results in r4.
+  #Change A/RENAMED_C/file1 and commit, results in r5.
+  #Merge r4 from A/RENAMED_C to A/C
+  #Merge r2:5 from A/RENAMED_C to A/C <-- This fails tracked via #3032.
+
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3032. ##
+
+  # Create a WC with a single branch
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  # Some paths we'll care about
+  A_C_url = sbox.repo_url + '/A/C'
+  A_COPY_C_url = sbox.repo_url + '/A/COPY_C'
+  A_RENAMED_C_url = sbox.repo_url + '/A/RENAMED_C'
+  A_C_path = os.path.join(wc_dir, 'A', 'C')
+  A_RENAMED_C_path = os.path.join(wc_dir, 'A', 'RENAMED_C')
+  A_RENAMED_C_file1_path = os.path.join(wc_dir, 'A', 'RENAMED_C', 'file1')
+
+  svntest.main.run_svn(None, 'cp', A_C_url, A_COPY_C_url, '-m', 'copy...')
+  svntest.main.run_svn(None, 'mv', A_COPY_C_url, A_RENAMED_C_url, '-m',
+                       'rename...')
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  svntest.main.file_write(A_RENAMED_C_file1_path, "This is the file1.\n")
+  svntest.main.run_svn(None, 'add', A_RENAMED_C_file1_path)
+  expected_output = wc.State(A_RENAMED_C_path, {
+    'file1'    : Item(verb='Adding'),
+    })
+  expected_status = wc.State(A_RENAMED_C_path, {
+    ''        : Item(status='  ', wc_rev=3),
+    'file1'   : Item(status='  ', wc_rev=4),
+    })
+  svntest.actions.run_and_verify_commit(A_RENAMED_C_path, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, A_RENAMED_C_path)
+  svntest.main.file_write(A_RENAMED_C_file1_path,
+                          "This is the file1 modified.\n")
+  expected_output = wc.State(A_RENAMED_C_path, {
+    'file1'    : Item(verb='Sending'),
+    })
+  expected_status.tweak('file1', wc_rev=5)
+  svntest.actions.run_and_verify_commit(A_RENAMED_C_path, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, A_RENAMED_C_path)
+
+  short_A_C = shorten_path_kludge(A_C_path)
+  expected_skip = wc.State(short_A_C, {})
+  expected_output = wc.State(short_A_C, {
+    'file1'    : Item(status='A '),
+    })
+  expected_disk = wc.State('', {
+    ''       : Item(props={SVN_PROP_MERGE_INFO : '/A/RENAMED_C:4'}),
+    'file1'  : Item("This is the file1.\n"),
+    })
+  expected_status = wc.State(short_A_C, {
+    ''        : Item(status=' M', wc_rev=3),
+    'file1'   : Item(status='A ', wc_rev='-', copied='+'),
+    })
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_A_C, 3, 4,
+                                       A_RENAMED_C_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None, 1, 1)
+
+  expected_output = wc.State(short_A_C, {
+    'file1'    : Item(status='U '),
+    })
+  expected_disk = wc.State('', {
+    ''       : Item(props={SVN_PROP_MERGE_INFO : '/A/RENAMED_C:3-5'}),
+    'file1'  : Item("This is the file1 modified.\n"),
+    })
+  expected_status = wc.State(short_A_C, {
+    ''        : Item(status=' M', wc_rev=3),
+    'file1'   : Item(status='A ', wc_rev='-', copied='+'),
+    })
+  svntest.actions.run_and_verify_merge(short_A_C, 2, 5,
+                                       A_RENAMED_C_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None, 1, 1)
+  os.chdir(saved_cwd)
+
 ########################################################################
 # Run the tests
 
@@ -9532,6 +9624,7 @@ test_list = [ None,
               XFail(merge_target_with_non_inheritable_mergeinfo),
               self_reverse_merge,
               ignore_ancestry_and_mergeinfo,
+            XFail(merge_from_renamed_branch_fails_while_avoiding_repeat_merge),
              ]
 
 if __name__ == '__main__':
