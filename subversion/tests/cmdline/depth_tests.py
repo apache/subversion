@@ -53,14 +53,12 @@ def set_up_depthy_working_copies(sbox, empty=False, files=False,
     wc = sbox.wc_dir
   else:
     sbox.build(create_wc = False)
-    if os.path.exists(sbox.wc_dir):
-      svntest.main.safe_rmtree(sbox.wc_dir)
+    sbox.add_test_path(sbox.wc_dir, True)
 
   wc_empty = None
   if empty:
     wc_empty = sbox.wc_dir + '-depth-empty'
-    if os.path.exists(wc_empty):
-      svntest.main.safe_rmtree(wc_empty)
+    sbox.add_test_path(wc_empty, True)
     svntest.actions.run_and_verify_svn(
       "Unexpected error from co --depth=empty",
       svntest.verify.AnyOutput, [],
@@ -69,8 +67,7 @@ def set_up_depthy_working_copies(sbox, empty=False, files=False,
   wc_files = None
   if files:
     wc_files = sbox.wc_dir + '-depth-files'
-    if os.path.exists(wc1):
-      svntest.main.safe_rmtree(wc1)
+    sbox.add_test_path(wc_files, True)
     svntest.actions.run_and_verify_svn(
       "Unexpected error from co --depth=files",
       svntest.verify.AnyOutput, [],
@@ -79,8 +76,7 @@ def set_up_depthy_working_copies(sbox, empty=False, files=False,
   wc_immediates = None
   if immediates:
     wc_immediates = sbox.wc_dir + '-depth-immediates'
-    if os.path.exists(wc_immediates):
-      svntest.main.safe_rmtree(wc_immediates)
+    sbox.add_test_path(wc_immediates, True)
     svntest.actions.run_and_verify_svn(
       "Unexpected error from co --depth=immediates",
       svntest.verify.AnyOutput, [],
