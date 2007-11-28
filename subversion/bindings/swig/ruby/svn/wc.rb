@@ -296,8 +296,8 @@ module Svn
         Wc.is_wc_root(path, self)
       end
 
-      def update_editor(target, target_revision=nil, use_commit_times=true,
-                        depth=nil, allow_unver_obstruction=false, diff3_cmd=nil,
+      def update_editor(target, target_revision=nil, use_commit_times=nil,
+                        depth=nil, allow_unver_obstruction=nil, diff3_cmd=nil,
                         notify_func=nil, cancel_func=nil, traversal_info=nil,
                         preserved_exts=nil)
         update_editor2(:target => target,
@@ -314,6 +314,7 @@ module Svn
 
       UPDATE_EDITOR2_REQUIRED_ARGUMENTS_KEYS = [:target]
       def update_editor2(arguments={})
+        arguments = arguments.reject {|k, v| v.nil?}
         optional_arguments_defaults = {
             :target_revision => nil,
             :use_commit_times => true,
@@ -358,8 +359,8 @@ module Svn
       end
 
       def switch_editor(target, switch_url, target_revision=nil,
-                        use_commit_times=true, depth=nil,
-                        allow_unver_obstruction=false, diff3_cmd=nil,
+                        use_commit_times=nil, depth=nil,
+                        allow_unver_obstruction=nil, diff3_cmd=nil,
                         notify_func=nil, cancel_func=nil, traversal_info=nil,
                         preserved_exts=nil)
         switch_editor2(:target => target,
@@ -377,6 +378,7 @@ module Svn
 
       SWITCH_EDITOR2_REQUIRED_ARGUMENTS_KEYS = [:target, :switch_url]
       def switch_editor2(arguments={})
+        arguments = arguments.reject {|k, v| v.nil?}
         optional_arguments_defaults = {
           :target_revision => nil,
           :use_commit_times => true,
