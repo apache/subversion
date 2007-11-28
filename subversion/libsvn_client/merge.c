@@ -1513,9 +1513,9 @@ get_full_mergeinfo(apr_hash_t **recorded_mergeinfo,
   /* Fetch the implicit mergeinfo. */
   peg_revision.kind = svn_opt_revision_number;
   peg_revision.value.number = target_rev;
-  SVN_ERR(svn_client__get_implicit_mergeinfo(implicit_mergeinfo, url,
-                                             &peg_revision, start, end, 
-                                             ra_session, NULL, ctx, pool));
+  SVN_ERR(svn_client__get_history_as_mergeinfo(implicit_mergeinfo, url,
+                                               &peg_revision, start, end, 
+                                               ra_session, NULL, ctx, pool));
 
   /* If we created an RA_SESSION above, destroy it.  Otherwise, if
      reparented an existing session, point it back where it was when
