@@ -61,7 +61,7 @@ get_origin(const char **node_rev_id,
     ? apr_pstrdup(pool, (const char *) sqlite3_column_text(stmt, 0))
     : NULL;
 
-  SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
+  SVN_ERR(svn_fs__sqlite_finalize(stmt));
 
   return SVN_NO_ERROR;
 }
@@ -98,7 +98,7 @@ set_origin(sqlite3 *db,
 
   SVN_ERR(svn_fs__sqlite_step_done(stmt));
 
-  SVN_FS__SQLITE_ERR(sqlite3_finalize(stmt), db);
+  SVN_ERR(svn_fs__sqlite_finalize(stmt));
 
   return SVN_NO_ERROR;
 }

@@ -87,6 +87,14 @@ svn_fs__sqlite_bind_int64(sqlite3_stmt *stmt, int slot, sqlite_int64 val);
 svn_error_t *
 svn_fs__sqlite_bind_text(sqlite3_stmt *stmt, int slot, const char *val);
 
+/* Error-handling wrapper around sqlite3_finalize. */
+svn_error_t *
+svn_fs__sqlite_finalize(sqlite3_stmt *stmt);
+
+/* Error-handling wrapper around sqlite3_reset. */
+svn_error_t *
+svn_fs__sqlite_reset(sqlite3_stmt *stmt);
+
 /* Close DB, returning any ERR which may've necessitated an early connection
    closure, or -- if none -- the error from the closure itself. */
 svn_error_t *
