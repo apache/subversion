@@ -63,23 +63,6 @@
 
 /*** Code. ***/
 
-static svn_error_t *
-path_relative_to_session(const char **rel_path,
-                         svn_ra_session_t *ra_session,
-                         const char *full_url, 
-                         apr_pool_t *pool)
-{
-  const char *session_url;
-  SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, pool));
-  if (strcmp(session_url, full_url) == 0)
-    *rel_path = "";
-  else
-    *rel_path = svn_path_uri_decode(svn_path_is_child(session_url, 
-                                                      full_url, pool), pool);
-  return SVN_NO_ERROR;
-}
-
-
 /* Obtain the implied mergeinfo and the existing mergeinfo of the
    source path, combine them and return the result in
    *TARGET_MERGEINFO.  ADM_ACCESS may be NULL, if SRC_PATH_OR_URL is an
@@ -125,22 +108,15 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
   if (! locally_added)
     {
       const char *mergeinfo_path;
-      const char *old_session_url;
 
-      /* Fetch any existing (explicit) mergeinfo.  We'll point our RA
-         session to the root of the repository for this request.  */
+      /* Fetch any existing (explicit) mergeinfo. */
       SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path, src_url,
                                                 entry ? entry->repos : NULL, 
-                                                TRUE, ra_session, 
+                                                FALSE, ra_session,
                                                 adm_access, pool));
-      SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url, ra_session,
-                                                entry ? entry->repos : NULL, 
-                                                pool));
       SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &src_mergeinfo,
                                               mergeinfo_path, src_revnum,
                                               svn_mergeinfo_inherited, pool));
-      if (old_session_url)
-        SVN_ERR(svn_ra_reparent(ra_session, old_session_url, pool));
     }
 
   *target_mergeinfo = src_mergeinfo ? src_mergeinfo : apr_hash_make(pool);
@@ -1427,7 +1403,8 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
                                        svn_io_file_del_none, pool));
 
       fstream = svn_stream_from_aprfile2(fp, FALSE, pool);
-      SVN_ERR(path_relative_to_session(&src_rel, ra_session, pair->src, pool));
+      SVN_ERR(svn_client__path_relative_to_session(&src_rel, ra_session, 
+                                                   pair->src, pool));
       SVN_ERR(svn_ra_get_file(ra_session, src_rel, src_revnum, fstream,
                               &real_rev, &new_props, pool));
       SVN_ERR(svn_stream_close(fstream));
@@ -1546,8 +1523,8 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
       svn_pool_clear(iterpool);
 
       /* Next, make sure that the path exists in the repository. */
-      SVN_ERR(path_relative_to_session(&src_rel, ra_session, 
-                                       pair->src, iterpool));
+      SVN_ERR(svn_client__path_relative_to_session(&src_rel, ra_session, 
+                                                   pair->src, iterpool));
       SVN_ERR(svn_ra_check_path(ra_session, src_rel, pair->src_revnum,
                                 &pair->src_kind, pool));
       if (pair->src_kind == svn_node_none)
