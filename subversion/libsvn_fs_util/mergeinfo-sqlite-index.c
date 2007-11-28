@@ -273,9 +273,6 @@ index_txn_mergeinfo(sqlite3 *db,
   return SVN_NO_ERROR;
 }
 
-/* Clean the mergeinfo index for any previous failed commit with the
-   revision number as NEW_REV, and if the current transaction contains
-   mergeinfo, record it. */
 svn_error_t *
 svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
                                apr_hash_t *mergeinfo_for_paths,
@@ -700,9 +697,6 @@ get_mergeinfo(sqlite3 *db,
   return SVN_NO_ERROR;
 }
 
-/* Get the mergeinfo for a set of paths.  Returned values are
-   allocated in POOL, while temporary values are allocated in a
-   sub-pool. */
 svn_error_t *
 svn_fs_mergeinfo__get_mergeinfo(apr_hash_t **mergeinfo,
                                 svn_fs_root_t *root,
@@ -977,13 +971,6 @@ get_commit_revs_for_merge_ranges(apr_array_header_t **commit_rev_rangelist,
   return SVN_NO_ERROR;
 }
 
-/* Retrieves the commit revisions for each merge range from MERGE_RANGELIST,
-   for the merge from MERGE_SOURCE to MERGE_TARGET within the time 
-   > MIN_COMMIT_REV and <=MAX_COMMIT_REV.
-   INHERIT decides whether to get the commit rev from parent paths or not.
-   Commit revisions identified are populated in *COMMIT_REV_RANGELIST as each
-   in its own single rev *svn_merge_range_t.
-*/
 svn_error_t *
 svn_fs_mergeinfo__get_commit_revs_for_merge_ranges(
                                      apr_array_header_t **commit_rev_rangelist,
