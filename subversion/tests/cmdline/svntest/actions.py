@@ -716,7 +716,7 @@ def run_and_verify_mergeinfo(error_re_string = None,
   is encountered."""
 
   if len(expected_source_paths) != len(expected_eligible_revs):
-    raise Failure('Number of "Source paths" and "Eligible paths" must match')
+    raise Failure('Number of "Source paths" and "Eligible revs" must match')
 
   mergeinfo_command = ["mergeinfo"]
   mergeinfo_command.extend(args)
