@@ -878,19 +878,22 @@ svn_client__elide_mergeinfo_for_tree(apr_hash_t *children_with_mergeinfo,
 }
 
 
-
-/*** Public APIs ***/
-
-svn_error_t *
-svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
-                                const char *path_or_url,
-                                const svn_opt_revision_t *peg_revision,
-                                svn_client_ctx_t *ctx,
-                                apr_pool_t *pool)
+/* Set *MERGEINFO to a hash mapping const char * root-relative source
+   paths to an apr_array_header_t * list of svn_merge_range_t *
+   revision ranges representing merge sources and corresponding
+   revision ranges which have been merged into PATH_OR_URL as of
+   PEG_REVISION, or NULL if there is no mergeinfo.  Set *REPOS_ROOT to
+   the root URL of the repository associated with PATH_OR_URL (and to
+   which the paths in *MERGEINFO are relative).  Use POOL for all
+   necessary allocations.  */
+static svn_error_t *
+get_mergeinfo(apr_hash_t **mergeinfo,
+              const char **repos_root,
+              const char *path_or_url,
+              const svn_opt_revision_t *peg_revision,
+              svn_client_ctx_t *ctx,
+              apr_pool_t *pool)
 {
-  const char *repos_root;
-  apr_hash_t *full_path_mergeinfo;
-
   if (svn_path_is_url(path_or_url))
     {
       svn_ra_session_t *ra_session;
@@ -902,9 +905,9 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
                                                    TRUE, ctx, pool));
       SVN_ERR(svn_client__get_revision_number(&rev, NULL, ra_session,
                                               peg_revision, "", pool));
-      SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
+      SVN_ERR(svn_ra_get_repos_root(ra_session, repos_root, pool));
       SVN_ERR(svn_client__path_relative_to_root(&repos_rel_path, path_or_url,
-                                                repos_root, FALSE, NULL, 
+                                                *repos_root, FALSE, NULL, 
                                                 NULL, pool));
       SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, mergeinfo,
                                               repos_rel_path, rev,
@@ -921,7 +924,7 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
                                      pool));
       SVN_ERR(svn_wc__entry_versioned(&entry, path_or_url, adm_access, FALSE,
                                       pool));
-      SVN_ERR(svn_client__get_repos_root(&repos_root, path_or_url,
+      SVN_ERR(svn_client__get_repos_root(repos_root, path_or_url,
                                          peg_revision, adm_access, ctx, pool));
       SVN_ERR(svn_client__get_wc_or_repos_mergeinfo(mergeinfo, entry,
                                                     &indirect, FALSE,
@@ -930,13 +933,30 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
                                                     adm_access, ctx, pool));
       SVN_ERR(svn_wc_adm_close(adm_access));
     }
+  return SVN_NO_ERROR;
+}
 
+
+/*** Public APIs ***/
+
+svn_error_t *
+svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
+                                const char *path_or_url,
+                                const svn_opt_revision_t *peg_revision,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *pool)
+{
+  const char *repos_root;
+  apr_hash_t *full_path_mergeinfo;
+  
+  SVN_ERR(get_mergeinfo(mergeinfo, &repos_root, path_or_url, 
+                        peg_revision, ctx, pool));
+
+  /* Copy the MERGEINFO hash items into another hash, but change
+     the relative paths into full URLs. */
   if (*mergeinfo)
     {
       apr_hash_index_t *hi;
-
-      /* Copy the MERGEINFO hash items into another hash, but change
-         the relative paths into full URLs. */
 
       full_path_mergeinfo = apr_hash_make(pool);
       for (hi = apr_hash_first(pool, *mergeinfo); hi; hi = apr_hash_next(hi))
@@ -967,56 +987,63 @@ svn_client_mergeinfo_get_available(apr_array_header_t **rangelist,
                                    svn_client_ctx_t *ctx,
                                    apr_pool_t *pool)
 {
-  apr_hash_t *mergeinfo;
-  apr_array_header_t *already_merged_ranges = NULL, *full_range_list;
-  svn_opt_revision_t head_revision;
-  svn_merge_range_t *full_range = apr_pcalloc(pool, sizeof(*full_range));
+  apr_hash_t *mergeinfo, *history, *source_history, *available;
+  apr_hash_index_t *hi;
   svn_ra_session_t *ra_session;
+  int num_ranges = 0;
+  const char *repos_root;
+  apr_pool_t *sesspool = svn_pool_create(pool);
+  svn_opt_revision_t head_revision;
+  head_revision.kind = svn_opt_revision_head;
 
-  /* Step 1: See what merges we *do* have for MERGE_SOURCE.  If none,
-     that's okay. */
-  SVN_ERR(svn_client_mergeinfo_get_merged(&mergeinfo, path_or_url,
-                                          peg_revision, ctx, pool));
-  if (mergeinfo)
-    already_merged_ranges = apr_hash_get(mergeinfo, merge_source_url,
-                                         APR_HASH_KEY_STRING);
-
-  /* Step 2: See what revision ranges exist for MERGE_SOURCE.  This
-     means a history crawl. */
+  /* Step 1: See what merge sources can be derived from the history of
+     MERGE_SOURCE_URL.  */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, merge_source_url,
                                                NULL, NULL, NULL, FALSE,
-                                               TRUE, ctx, pool));
-  head_revision.kind = svn_opt_revision_head;
-  SVN_ERR(svn_client__get_revision_number(&(full_range->end), NULL, ra_session,
-                                          &head_revision, "", pool));
-
-  /* ### FIXME: What if MERGE_SOURCE_URL no longer exists in HEAD?
-     ### What if it exists, but is a different resource than was
-     ### previously merged?  What about chunks of MERGE_SOURCE_URL's
-     ### history that are shared with PATH_OR_URL?  These are all
-     ### unpleasantries.
-  */
-  SVN_ERR(svn_client__oldest_rev_at_path(&(full_range->start), ra_session,
-                                         "", full_range->end, pool));
-  full_range->inheritable = TRUE;
-  full_range_list = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
-  APR_ARRAY_PUSH(full_range_list, svn_merge_range_t *) = full_range;
-
-  /* Step 3: Calculate the difference (by removing the already merged
-     ranges from the full set).  If there are no already-merged
-     ranges, then the full range is deemed eligible.
-
-     ### TODO: At no point did we say check to see if MERGE_SOURCE_URL
-     ### was a sane merge source to ask about.  If there were previous
-     ### merges from there, fine, but if not ...
-  */
-  if (! already_merged_ranges)
-    *rangelist = full_range_list;
+                                               TRUE, ctx, sesspool));
+  SVN_ERR(svn_client__get_history_as_mergeinfo(&source_history, 
+                                               merge_source_url,
+                                               &head_revision, 
+                                               SVN_INVALID_REVNUM,
+                                               SVN_INVALID_REVNUM,
+                                               ra_session, NULL, ctx, pool));
+  svn_pool_destroy(sesspool);
+  
+  /* Step 2: Across the set of possible merges, see what's already
+     been merged into PATH_OR_URL@PEG_REVISION (or what's already part
+     of the history it shares with that of MERGE_SOURCE_URL.  */
+  SVN_ERR(get_mergeinfo(&mergeinfo, &repos_root, path_or_url, 
+                        peg_revision, ctx, pool));
+  SVN_ERR(svn_client__get_history_as_mergeinfo(&history, 
+                                               path_or_url,
+                                               peg_revision,
+                                               SVN_INVALID_REVNUM,
+                                               SVN_INVALID_REVNUM,
+                                               NULL, NULL, ctx, pool));
+  if (! mergeinfo)
+    mergeinfo = history;
   else
-    SVN_ERR(svn_rangelist_remove(rangelist, already_merged_ranges,
-                                 full_range_list,
-                                 FALSE, pool));
+    svn_mergeinfo_merge(mergeinfo, history, pool);
 
+  /* Now, we want to remove from the possible mergeinfo
+     (SOURCE_HISTORY) the merges already present in our PATH_OR_URL. */
+  SVN_ERR(svn_mergeinfo_remove(&available, mergeinfo, source_history, pool));
+
+  /* Finally, we want to provide a simple, single revision range list
+     to our caller.  Now, interestingly, if MERGE_SOURCE_URL has been
+     renamed over time, there's good chance that set of available
+     merges have different paths assigned to them.  Fortunately, we
+     know that we can't have any two paths in AVAILABLE with
+     overlapping revisions (because the original SOURCE_HISTORY also
+     had this property).  So we'll just collapse into one rangelist
+     all the rangelists across all the paths in AVAILABLE. */
+  *rangelist = apr_array_make(pool, num_ranges, sizeof(svn_merge_range_t *));
+  for (hi = apr_hash_first(pool, available); hi; hi = apr_hash_next(hi))
+    {
+      void *val;
+      apr_hash_this(hi, NULL, NULL, &val);
+      SVN_ERR(svn_rangelist_merge(rangelist, val, pool));
+    }
   return SVN_NO_ERROR;
 }
 
