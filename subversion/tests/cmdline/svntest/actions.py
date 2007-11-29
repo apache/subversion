@@ -20,7 +20,7 @@ import difflib, pprint
 import xml.parsers.expat
 from xml.dom.minidom import parseString
 
-import main, verify, tree, wc  # general svntest routines in this module.
+import main, verify, tree, wc, parsers
 from svntest import Failure
 
 def no_sleep_for_timestamps():
@@ -703,6 +703,40 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
                  singleton_handler_a, a_baton,
                  singleton_handler_b, b_baton,
                  check_props)
+
+
+def run_and_verify_mergeinfo(error_re_string = None,
+                             expected_paths = [],
+                             expected_source_paths = [],
+                             expected_eligible_revs = [],
+                             *args):
+  """Run 'svn mergeinfo ARGS', and compare the result against
+  EXPECTED_PATHS, and for each path, EXPECTED_SOURCE_PATHS and
+  EXPECTED_ELIGIBLE_REVS.  Raise an exception if an unexpected output
+  is encountered."""
+
+  if len(expected_source_paths) != len(expected_eligible_revs):
+    raise Failure('Number of "Source paths" and "Eligible paths" must match')
+
+  mergeinfo_command = ["mergeinfo"]
+  mergeinfo_command.extend(args)
+  out, err = main.run_svn(error_re_string, *mergeinfo_command)
+
+  if error_re_string:
+    if not error_re_string.startswith(".*"):
+      error_re_string = ".*(" + error_re_string + ")"
+    expected_err = verify.RegexOutput(error_re_string, match_all=False)
+    verify.verify_outputs(None, None, err, None, expected_err)
+
+  parser = parsers.MergeinfoReportParser()
+  parser.parse(out)
+
+  for path in expected_paths:
+    for i in range(0, len(expected_source_paths)):
+      if parser.source_paths[i] != expected_source_paths[i]:
+        raise Exception("Unexpected source path")
+      if parser.eligible_revs[i] != expected_eligible_revs[i]:
+        raise Exception("Unexpected eligible revisions")
 
 
 def run_and_verify_switch(wc_dir_name,
