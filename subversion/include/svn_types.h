@@ -237,6 +237,17 @@ typedef enum
   /* Depth undetermined or ignored. */
   svn_depth_unknown    = -2,
 
+  /* Exclude (i.e., don't descend into) directory D. */
+  /* NOTE: In Subversion 1.5, svn_depth_exclude is *not* supported
+     anywhere in the client-side (libsvn_wc/libsvn_client/etc) code;
+     it is only supported as an argument to set_path functions in the
+     ra and repos reporters.  (This will enable future versions of
+     Subversion to run updates, etc, against 1.5 servers with proper
+     svn_depth_exclude behavior, once we get a chance to implement
+     client-side support for svn_depth_exclude.)
+  */
+  svn_depth_exclude    = -1,
+
   /* Just the named directory D, no entries.  Updates will not pull in
      any files or subdirectories not already present. */
   svn_depth_empty      =  0,

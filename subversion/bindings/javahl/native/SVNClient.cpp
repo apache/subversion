@@ -407,8 +407,7 @@ jlong SVNClient::commit(Targets &targets, const char *message,
 }
 
 void SVNClient::copy(CopySources &copySources, const char *destPath,
-                     const char *message, bool copyAsChild, bool makeParents,
-                     bool withMergeHistory)
+                     const char *message, bool copyAsChild, bool makeParents)
 {
     Pool requestPool;
 
@@ -429,14 +428,13 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
 
     svn_commit_info_t *commit_info;
     SVN_JNI_ERR(svn_client_copy4(&commit_info, srcs, destinationPath.c_str(),
-                                 copyAsChild, makeParents, withMergeHistory,
-                                 ctx, requestPool.pool()),
-                );
+                                 copyAsChild, makeParents, ctx,
+                                 requestPool.pool()), );
 }
 
 void SVNClient::move(Targets &srcPaths, const char *destPath,
                      const char *message, bool force, bool moveAsChild,
-                     bool makeParents, bool withMergeHistory)
+                     bool makeParents)
 {
     Pool requestPool;
 
@@ -453,8 +451,7 @@ void SVNClient::move(Targets &srcPaths, const char *destPath,
     svn_commit_info_t *commit_info;
     SVN_JNI_ERR(svn_client_move5(&commit_info, (apr_array_header_t *) srcs,
                                  destinationPath.c_str(), force, moveAsChild,
-                                 makeParents, withMergeHistory, ctx,
-                                 requestPool.pool()), );
+                                 makeParents, ctx, requestPool.pool()), );
 }
 
 void SVNClient::mkdir(Targets &targets, const char *message, bool makeParents)
@@ -886,6 +883,9 @@ void SVNClient::diff(const char *target1, Revision &revision1,
 {
     svn_error_t *err;
     Pool requestPool;
+    const char *c_relToDir = relativeToDir ?
+      svn_path_canonicalize(relativeToDir, requestPool.pool()) :
+      relativeToDir;
 
     SVN_JNI_NULL_PTR_EX(target1, "target", );
     // target2 is ignored when pegRevision is provided.
@@ -923,7 +923,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                    pegRevision->revision(),
                                    revision1.revision(),
                                    revision2.revision(),
-                                   relativeToDir,
+                                   c_relToDir,
                                    depth,
                                    ignoreAncestry,
                                    noDiffDelete,
@@ -952,7 +952,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                revision1.revision(),
                                path2.c_str(),
                                revision2.revision(),
-                               relativeToDir,
+                               c_relToDir,
                                depth,
                                ignoreAncestry,
                                noDiffDelete,

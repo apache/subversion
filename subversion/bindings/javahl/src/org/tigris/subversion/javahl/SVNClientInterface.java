@@ -618,14 +618,11 @@ public interface SVNClientInterface
      * @param copyAsChild Whether to copy <code>srcPaths</code> as
      * children of <code>destPath</code>.
      * @param makeParents Whether to create intermediate parents
-     * @param withMergeHistory Whether to propagate merge history from
-     * <code>srcPaths</code> to <code>destPath</code>.
      * @throws ClientException If the copy operation fails.
      * @since 1.5
      */
     void copy(CopySource[] sources, String destPath, String message,
-              boolean copyAsChild, boolean makeParents,
-              boolean withMergeHistory)
+              boolean copyAsChild, boolean makeParents)
         throws ClientException;
 
     /**
@@ -638,7 +635,7 @@ public interface SVNClientInterface
      * @param revision  source revision
      * @throws ClientException
      * @deprecated Use {@link #copy(CopySource[], String, String, boolean,
-     *                              boolean, boolean)} instead.
+     *                              boolean)} instead.
      */
     void copy(String srcPath, String destPath, String message,
               Revision revision) throws ClientException;
@@ -655,19 +652,16 @@ public interface SVNClientInterface
      * @param moveAsChild Whether to move <code>srcPaths</code> as
      * children of <code>destPath</code>.
      * @param makeParents Whether to create intermediate parents.
-     * @param withMergeHistory Whether to propagate merge history from
-     * <code>srcPaths</code> to <code>destPath</code>.
      * @throws ClientException If the move operation fails.
      * @since 1.5
      */
     void move(String[] srcPaths, String destPath, String message,
-              boolean force, boolean moveAsChild, boolean makeParents,
-              boolean withMergeHistory)
+              boolean force, boolean moveAsChild, boolean makeParents)
         throws ClientException;
 
     /**
      * @deprecated Use {@link #move(String[], String, String, boolean, boolean,
-     *                              boolean, boolean)} instead.
+     *                              boolean)} instead.
      * @since 1.2
      */
     void move(String srcPath, String destPath, String message,
@@ -684,7 +678,7 @@ public interface SVNClientInterface
      * @param force     even with local modifications.
      * @throws ClientException
      * @deprecated Use {@link #move(String[], String, String, boolean, boolean,
-     *                              boolean, boolean)} instead.
+     *                              boolean)} instead.
      * @since 1.2
      */
     void move(String srcPath, String destPath, String message,

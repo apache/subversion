@@ -21,6 +21,7 @@
 #include <apr_base64.h>
 
 #include "ra_serf.h"
+#include "win32_auth_sspi.h"
 
 /*** Forward declarations. ***/
 
@@ -42,19 +43,54 @@ static svn_error_t *
 setup_request_basic_auth(svn_ra_serf__connection_t *conn,
                          serf_bucket_t *hdrs_bkt);
 
+static svn_error_t *
+handle_proxy_basic_auth(svn_ra_serf__session_t *session,
+                        svn_ra_serf__connection_t *conn,
+                        serf_request_t *request,
+                        serf_bucket_t *response,
+                        char *auth_hdr,
+                        char *auth_attr,
+                        apr_pool_t *pool);
+
+static svn_error_t *
+init_proxy_basic_connection(svn_ra_serf__session_t *session,
+                            svn_ra_serf__connection_t *conn,
+                            apr_pool_t *pool);
+
+static svn_error_t *
+setup_request_proxy_basic_auth(svn_ra_serf__connection_t *conn,
+                               serf_bucket_t *hdrs_bkt);
+
 /*** Global variables. ***/
 static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
   {
+    401,
     "Basic",
     init_basic_connection,
     handle_basic_auth,
     setup_request_basic_auth,
   },
+  {
+    407,
+    "Basic",
+    init_proxy_basic_connection,
+    handle_proxy_basic_auth,
+    setup_request_proxy_basic_auth,
+  },
+#ifdef SVN_RA_SERF_SSPI_ENABLED
+  {
+    401,
+    "NTLM",
+    init_sspi_connection,
+    handle_sspi_auth,
+    setup_request_sspi_auth,
+  },
+#endif /* SVN_RA_SERF_SSPI_ENABLED */
 
   /* ADD NEW AUTHENTICATION IMPLEMENTATIONS HERE (as they're written) */
 
   /* sentinel */
-  { NULL }
+  { 0 }
 };
 
 /*** Code. ***/
@@ -64,10 +100,10 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
  * header in this format:
  * [PROTOCOL] [BASE64 AUTH DATA]
  */
-static void
-encode_auth_header(const char * protocol, char **header,
-                   const char * data, apr_size_t data_len,
-                   apr_pool_t *pool)
+void
+svn_ra_serf__encode_auth_header(const char * protocol, char **header,
+                                const char * data, apr_size_t data_len,
+                                apr_pool_t *pool)
 {
   apr_size_t encoded_len, proto_len;
   char * ptr;
@@ -87,7 +123,8 @@ encode_auth_header(const char * protocol, char **header,
 
 
 svn_error_t *
-svn_ra_serf__handle_auth(svn_ra_serf__session_t *session,
+svn_ra_serf__handle_auth(int code,
+                         svn_ra_serf__session_t *session,
                          svn_ra_serf__connection_t *conn,
                          serf_request_t *request,
                          serf_bucket_t *response,
@@ -98,7 +135,10 @@ svn_ra_serf__handle_auth(svn_ra_serf__session_t *session,
   char *auth_name, *auth_attr, *auth_hdr;
 
   hdrs = serf_bucket_response_get_headers(response);
-  auth_hdr = (char*)serf_bucket_headers_get(hdrs, "WWW-Authenticate");
+  if (code == 401)
+    auth_hdr = (char*)serf_bucket_headers_get(hdrs, "WWW-Authenticate");
+  else if (code == 407)
+    auth_hdr = (char*)serf_bucket_headers_get(hdrs, "Proxy-Authenticate");
 
   if (!auth_hdr)
     {
@@ -115,17 +155,24 @@ svn_ra_serf__handle_auth(svn_ra_serf__session_t *session,
   /* Find the matching authentication handler.
      Note that we don't reuse the auth protocol stored in the session,
      as that may have changed. (ex. fallback from ntlm to basic.) */
-  for (prot = serf_auth_protocols; prot->auth_name != NULL; ++prot)
+  for (prot = serf_auth_protocols; prot->code != 0; ++prot)
     {
-      if (strcmp(auth_name, prot->auth_name) == 0)
+      if (code == prot->code && strcmp(auth_name, prot->auth_name) == 0)
         {
           svn_serf__auth_handler_func_t handler = prot->handle_func;
           /* If this is the first time we use this protocol in this session,
              make sure to initialize the authentication part of the session
              first. */
-          if (session->auth_protocol != prot)
-            SVN_ERR(prot->init_conn_func(session, conn, session->pool));
-          session->auth_protocol = prot;
+          if (code == 401 && session->auth_protocol != prot)
+            {
+              SVN_ERR(prot->init_conn_func(session, conn, session->pool));
+              session->auth_protocol = prot;
+            }
+         else if (code == 407 && session->proxy_auth_protocol != prot)
+            {
+              SVN_ERR(prot->init_conn_func(session, conn, session->pool));
+              session->proxy_auth_protocol = prot;
+            }
           SVN_ERR(handler(session, conn, request, response,
                           auth_hdr, auth_attr, session->pool));
           break;
@@ -233,8 +280,8 @@ handle_basic_auth(svn_ra_serf__session_t *session,
                     simple_creds->username, ":", simple_creds->password, NULL);
   tmp_len = strlen(tmp);
 
-  encode_auth_header(session->auth_protocol->auth_name, &session->auth_value,
-                     tmp, tmp_len, pool);
+  svn_ra_serf__encode_auth_header(session->auth_protocol->auth_name,
+                                  &session->auth_value, tmp, tmp_len, pool);
   session->auth_header = "Authorization";
 
   /* FIXME Come up with a cleaner way of changing the connection auth. */
@@ -266,6 +313,73 @@ setup_request_basic_auth(svn_ra_serf__connection_t *conn,
   if (conn->auth_header && conn->auth_value)
     {
       serf_bucket_headers_setn(hdrs_bkt, conn->auth_header, conn->auth_value);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+handle_proxy_basic_auth(svn_ra_serf__session_t *session,
+                        svn_ra_serf__connection_t *conn,
+                        serf_request_t *request,
+                        serf_bucket_t *response,
+                        char *auth_hdr,
+                        char *auth_attr,
+                        apr_pool_t *pool)
+{
+  const char *tmp;
+  apr_size_t tmp_len;
+  int i;
+
+  tmp = apr_pstrcat(session->pool,
+                    session->proxy_username, ":", 
+                    session->proxy_password, NULL);
+  tmp_len = strlen(tmp);
+
+  session->proxy_auth_attempts++;
+
+  if (session->proxy_auth_attempts > 1)
+    {
+      /* No more credentials. */
+      return svn_error_create(SVN_ERR_AUTHN_FAILED, NULL,
+                "Proxy authentication failed");
+    }
+
+  svn_ra_serf__encode_auth_header(session->proxy_auth_protocol->auth_name, 
+                                  &session->proxy_auth_value,
+                                  tmp, tmp_len, pool);
+  session->proxy_auth_header = "Proxy-Authorization";
+
+  /* FIXME Come up with a cleaner way of changing the connection auth. */
+  for (i = 0; i < session->num_conns; i++)
+    {
+      session->conns[i]->proxy_auth_header = session->proxy_auth_header;
+      session->conns[i]->proxy_auth_value = session->proxy_auth_value;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+init_proxy_basic_connection(svn_ra_serf__session_t *session,
+                            svn_ra_serf__connection_t *conn,
+                            apr_pool_t *pool)
+{
+  conn->proxy_auth_header = session->proxy_auth_header;
+  conn->proxy_auth_value = session->proxy_auth_value;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+setup_request_proxy_basic_auth(svn_ra_serf__connection_t *conn,
+                               serf_bucket_t *hdrs_bkt)
+{
+  /* Take the default authentication header for this connection, if any. */
+  if (conn->proxy_auth_header && conn->proxy_auth_value)
+    {
+      serf_bucket_headers_setn(hdrs_bkt, conn->proxy_auth_header, 
+                               conn->proxy_auth_value);
     }
 
   return SVN_NO_ERROR;

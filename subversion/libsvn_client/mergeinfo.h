@@ -83,8 +83,8 @@ svn_client__get_wc_mergeinfo(apr_hash_t **mergeinfo,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
-/* Obtain any mergeinfo for the session-relative path REL_PATH from
-   the repository, and set it in *TARGET_MERGEINFO.
+/* Obtain any mergeinfo for the root-relative repository filesystem path
+   REL_PATH from the repository, and set it in *TARGET_MERGEINFO.
 
    INHERIT indicates whether explicit, explicit or inherited, or only
    inherited mergeinfo for REL_PATH is obtained.
@@ -132,15 +132,19 @@ svn_client__get_wc_or_repos_mergeinfo(apr_hash_t **target_mergeinfo,
    session whose session URL maps to PATH_OR_URL's URL, or NULL.
    ADM_ACCESS is a working copy administrative access baton which can
    be used to fetch information about PATH_OR_URL (if PATH_OR_URL is a
-   working copy path), or NULL.  */
+   working copy path), or NULL.  If RANGE_YOUNGEST and RANGE_OLDEST
+   are valid, use them to bound the revision ranges of returned
+   mergeinfo.  */
 svn_error_t *
-svn_client__get_implicit_mergeinfo(apr_hash_t **mergeinfo_p,
-                                   const char *path_or_url,
-                                   const svn_opt_revision_t *peg_revision,
-                                   svn_ra_session_t *ra_session,
-                                   svn_wc_adm_access_t *adm_access,
-                                   svn_client_ctx_t *ctx,
-                                   apr_pool_t *pool);
+svn_client__get_history_as_mergeinfo(apr_hash_t **mergeinfo_p,
+                                     const char *path_or_url,
+                                     const svn_opt_revision_t *peg_revision,
+                                     svn_revnum_t range_youngest,
+                                     svn_revnum_t range_oldest,
+                                     svn_ra_session_t *ra_session,
+                                     svn_wc_adm_access_t *adm_access,
+                                     svn_client_ctx_t *ctx,
+                                     apr_pool_t *pool);
 
 /* Parse any mergeinfo from the WCPATH's ENTRY and store it in
    MERGEINFO.  If PRISTINE is true parse the pristine mergeinfo,

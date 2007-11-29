@@ -121,8 +121,14 @@ svn_error_t *load_configs(svn_config_t **cfg,
   return SVN_NO_ERROR;
 }
 
-/* Verify that URL is inside REPOS_URL and get its fs path. Assume that
-   REPOS_URL and URL are already URI-decoded. */
+/* Set *FS_PATH to the portion of URL that is the path within the
+   repository, if URL is inside REPOS_URL (if URL is not inside
+   REPOS_URL, then error, with the effect on *FS_PATH undefined).
+
+   If the resultant fs path would be the empty string (i.e., URL and
+   REPOS_URL are the same), then set *FS_PATH to "/".
+
+   Assume that REPOS_URL and URL are already URI-decoded. */
 static svn_error_t *get_fs_path(const char *repos_url, const char *url,
                                 const char **fs_path)
 {
@@ -134,6 +140,9 @@ static svn_error_t *get_fs_path(const char *repos_url, const char *url,
                              "'%s' is not the same repository as '%s'",
                              url, repos_url);
   *fs_path = url + len;
+  if (! **fs_path)
+    *fs_path = "/";
+
   return SVN_NO_ERROR;
 }
 
@@ -1479,12 +1488,16 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   for (i = 0; i < paths->nelts; i++)
      {
         svn_ra_svn_item_t *item = &APR_ARRAY_IDX(paths, i, svn_ra_svn_item_t);
+        const char *full_path;
 
         if (item->kind != SVN_RA_SVN_STRING)
           return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                   _("Path is not a string"));
-        APR_ARRAY_PUSH(canonical_paths, const char *) =
-          svn_path_canonicalize(item->u.string->data, pool);
+        full_path = svn_path_join(b->fs_path->data,
+                                  svn_path_canonicalize(item->u.string->data,
+                                                        pool),
+                                  pool);
+        APR_ARRAY_PUSH(canonical_paths, const char *) = full_path;
      }
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
@@ -1502,7 +1515,7 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
         {
           apr_hash_this(hi, &key, NULL, &value);
-          path = key;
+          path = (const char *)key + b->fs_path->len;
           info = value;
           SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "(cc)", path, info));
         }
@@ -2524,7 +2537,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
                                apr_array_header_t *capabilities,
                                apr_pool_t *pool)
 {
-  const char *path, *full_path, *repos_root;
+  const char *path, *full_path, *repos_root, *fs_path;
   svn_stringbuf_t *url_buf;
 
   /* Skip past the scheme and authority part. */
@@ -2560,8 +2573,8 @@ static svn_error_t *find_repos(const char *url, const char *root,
   SVN_ERR(svn_repos_open(&b->repos, repos_root, pool));
   SVN_ERR(svn_repos_remember_client_capabilities(b->repos, capabilities));
   b->fs = svn_repos_fs(b->repos);
-  b->fs_path = svn_stringbuf_create(full_path + strlen(repos_root),
-                                    pool);
+  fs_path = full_path + strlen(repos_root);
+  b->fs_path = svn_stringbuf_create(*fs_path ? fs_path : "/", pool);
   url_buf = svn_stringbuf_create(url, pool);
   svn_path_remove_components(url_buf,
                              svn_path_component_count(b->fs_path->data));

@@ -276,8 +276,13 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
       serf_bucket_headers_setn(hdrs_bkt, "Content-Type", content_type);
     }
 
+  /* Setup server authorization headers */
   if (conn->session->auth_protocol)
     conn->session->auth_protocol->setup_request_func(conn, hdrs_bkt);
+
+  /* Setup proxy authorization headers */
+  if (conn->session->proxy_auth_protocol)
+    conn->session->proxy_auth_protocol->setup_request_func(conn, hdrs_bkt);
 
   /* Set up SSL if we need to */
   if (conn->using_ssl)
@@ -297,6 +302,17 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
 #endif
         }
     }
+
+  /* Set up Proxy settings */
+#if SERF_VERSION_AT_LEAST(0,1,3)
+  if (conn->session->using_proxy)
+    {
+      char *root = apr_uri_unparse(conn->session->pool,
+                                   &conn->session->repos_url, 
+                                   APR_URI_UNP_OMITPATHINFO);
+      serf_bucket_request_set_root(*req_bkt, root);
+    }
+#endif
 
   if (ret_hdrs_bkt)
     {
@@ -973,12 +989,12 @@ handle_response(serf_request_t *request,
 
   ctx->conn->last_status_code = sl.code;
 
-  if (sl.code == 401)
+  if (sl.code == 401 || sl.code == 407)
     {
-      /* 401 Authorization required */
+      /* 401 Authorization or 407 Proxy-Authentication required */
       svn_error_t *err;
 
-      err = svn_ra_serf__handle_auth(ctx->session, ctx->conn,
+      err = svn_ra_serf__handle_auth(sl.code, ctx->session, ctx->conn,
                                      request, response, pool);
       if (err)
         {

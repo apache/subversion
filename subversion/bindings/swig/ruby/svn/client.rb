@@ -241,7 +241,7 @@ module Svn
       alias pl proplist
 
       def copy(src_paths, dst_path, rev_or_copy_as_child=nil,
-               make_parents=nil, with_merge_history=nil)
+               make_parents=nil)
         if src_paths.is_a?(Array)
           copy_as_child = rev_or_copy_as_child
           if copy_as_child.nil?
@@ -261,17 +261,16 @@ module Svn
           end
           src_paths = [src_paths]
         end
-        Client.copy4(src_paths, dst_path, copy_as_child, make_parents,
-                     with_merge_history, self)
+        Client.copy4(src_paths, dst_path, copy_as_child, make_parents, self)
       end
       alias cp copy
 
       def move(src_paths, dst_path, force=false, move_as_child=nil,
-               make_parents=nil, with_merge_history=nil)
+               make_parents=nil)
         src_paths = [src_paths] unless src_paths.is_a?(Array)
         move_as_child = src_paths.size == 1 ? false : true if move_as_child.nil?
         Client.move5(src_paths, dst_path, force, move_as_child, make_parents,
-                     with_merge_history, self)
+                     self)
       end
       alias mv move
 
@@ -285,6 +284,7 @@ module Svn
                no_diff_deleted=false, force=false,
                header_encoding=nil, relative_to_dir=nil)
         header_encoding ||= Core::LOCALE_CHARSET
+        relative_to_dir &&= Core.path_canonicalize(relative_to_dir)
         Client.diff4(options, path1, rev1, path2, rev2, relative_to_dir,
                      depth, ignore_ancestry,
                      no_diff_deleted, force, header_encoding,
@@ -297,6 +297,7 @@ module Svn
                    no_diff_deleted=false, force=false,
                    header_encoding=nil, relative_to_dir=nil)
         header_encoding ||= Core::LOCALE_CHARSET
+        relative_to_dir &&= Core.path_canonicalize(relative_to_dir)
         Client.diff_peg4(options, path, peg_rev, start_rev, end_rev,
                          relative_to_dir, depth, ignore_ancestry,
                          no_diff_deleted, force, header_encoding,
@@ -531,11 +532,12 @@ module Svn
       # +path+ is a relative path from the +path_or_uri+.
       # +dirent+ is an instance of Svn::Core::Dirent.
       # +abs_path+ is an absolute path for +path_or_uri+ in the repository.
-      def list(path_or_uri, rev, peg_rev=nil, recurse=false,
+      def list(path_or_uri, rev, peg_rev=nil, depth_or_recurse=Core::DEPTH_IMMEDIATES,
                dirent_fields=nil, fetch_locks=true,
                &block) # :yields: path, dirent, lock, abs_path
+        depth = Core::Depth.infinity_or_immediates_from_recurse(depth_or_recurse)
         dirent_fields ||= Core::DIRENT_ALL
-        Client.list(path_or_uri, peg_rev, rev, recurse, dirent_fields,
+        Client.list2(path_or_uri, peg_rev, rev, depth, dirent_fields,
                     fetch_locks, block, self)
       end
 

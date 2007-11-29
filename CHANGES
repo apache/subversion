@@ -12,11 +12,15 @@ http://svn.collab.net/repos/svn/tags/1.4.6
     * fixed: 'svn info -R $REPO_ROOT' w/ pre-1.2 svnserve broken (r26264)
     * fixed: svnsync ignores '--config-dir' (r27056)
     * datestamps can be localized (r26156)
+    * fixed: text base not updated when merging a replaced file (issue #2698)
+    * fixed: inverted 'switch --relocate' error message (r22355)
 
   - Server:
     * fixed: authz granted if calculation inconclusion (r23815)
     * fixed: svndumpfilter crashes on Windows (r23494)
     * fixed: wrong pointer type used for memset (r27263)
+    * fixed: invalid fsfs directory cache (r27256)
+    * fixed: cannot set directory props on fsfs filesystem root (issue #2608)
 
   - Client and Server:
     * fixed: "No newline at end of file" message translated (issue #2906)

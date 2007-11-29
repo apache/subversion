@@ -33,10 +33,8 @@
 #include "svn_pools.h"
 #include "svn_io.h"
 #include "client.h"
-#include "mergeinfo.h"
 
 #include "svn_private_config.h"
-#include "private/svn_mergeinfo_private.h"
 #include "private/svn_wc_private.h"
 
 
@@ -109,8 +107,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   const char *diff3_cmd;
   svn_ra_session_t *ra_session;
   svn_wc_adm_access_t *dir_access;
-  svn_wc_adm_access_t *path_adm_access;
-  apr_hash_t *children_with_mergeinfo;
   const char *preserved_exts_str;
   apr_array_header_t *preserved_exts;
   struct ff_baton *ffb;
@@ -263,51 +259,8 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 
   if (sleep_here)
     svn_sleep_for_timestamps();
-
-  if (levels_to_lock)
-    {
-      SVN_ERR(svn_wc_adm_probe_retrieve(&path_adm_access, adm_access, path,
-                                        pool));
-    }
-  else
-    {
-      /* A depth other than infinity means we need to open a new
-         access to lock PATH's children for possible elision. */
-      SVN_ERR(svn_wc_adm_close(adm_access));
-      SVN_ERR(svn_wc_adm_open3(&path_adm_access, NULL, path, TRUE, -1,
-                               ctx->cancel_func, ctx->cancel_baton,
-                               pool));
-    }
-
-    /* Check if any mergeinfo on PATH or any its children elides as a
-     result of the update. */
-  children_with_mergeinfo = apr_hash_make(pool);
-  err = svn_client__get_prop_from_wc(children_with_mergeinfo,
-                                     SVN_PROP_MERGE_INFO, path, FALSE,
-                                     entry, path_adm_access,
-                                     depth, ctx, pool);
-  if (err)
-    {
-      svn_error_t *root_err = svn_error_root_cause(err);
-      switch (root_err->apr_err)
-        {
-        case SVN_ERR_WC_PATH_NOT_FOUND:
-        case SVN_ERR_UNVERSIONED_RESOURCE:
-          svn_error_clear(err);
-          err = SVN_NO_ERROR;
-          break;
-
-        default:
-          return err;
-        }
-    }
-  else
-    {
-      SVN_ERR(svn_client__elide_mergeinfo_for_tree(children_with_mergeinfo,
-                                                   adm_access, ctx, pool));
-    }
-
-  SVN_ERR(svn_wc_adm_close(levels_to_lock ? path_adm_access : adm_access));
+  
+  SVN_ERR(svn_wc_adm_close(adm_access));
 
   /* Let everyone know we're finished here. */
   if (ctx->notify_func2)

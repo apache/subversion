@@ -238,6 +238,29 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
 
+/* Set *REL_PATH to a relative path which, when URI-encoded and joined
+   with RA_SESSION's session url, will result in a string that matches URL. */
+svn_error_t *
+svn_client__path_relative_to_session(const char **rel_path,
+                                     svn_ra_session_t *ra_session,
+                                     const char *url, 
+                                     apr_pool_t *pool);
+
+/* Ensure that RA_SESSION's session URL matches SESSION_URL,
+   reparenting that session if necessary.  If reparenting occurs,
+   store the previous session URL in *OLD_SESSION_URL (so that if the
+   reparenting is meant to be temporary, the caller can reparent the
+   session back to where it was); otherwise set *OLD_SESSION_URL to
+   NULL.
+ 
+   If SESSION_URL is NULL, treat this as a magic value meaning "point
+   the RA session to the root of the repository".  */
+svn_error_t *
+svn_client__ensure_ra_session_url(const char **old_session_url,
+                                  svn_ra_session_t *ra_session,
+                                  const char *session_url,
+                                  apr_pool_t *pool);
+
 /* Set REPOS_ROOT to the URL which represents the root of the
    repository in with PATH_OR_URL (at PEG_REVISION) is versioned.  Use
    the authentication baton cached in CTX as necessary.

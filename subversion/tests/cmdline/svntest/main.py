@@ -130,6 +130,8 @@ svnadmin_binary = os.path.abspath('../../svnadmin/svnadmin' + _exe)
 svnlook_binary = os.path.abspath('../../svnlook/svnlook' + _exe)
 svnsync_binary = os.path.abspath('../../svnsync/svnsync' + _exe)
 svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
+svndumpfilter_binary = os.path.abspath('../../svndumpfilter/svndumpfilter' + \
+                                       _exe)
 
 # Global variable indicating if we want verbose output, that is,
 # details of what commands each test does as it does them.  This is
@@ -230,6 +232,41 @@ greek_state = wc.State('', {
 
 ######################################################################
 # Utilities shared by the tests
+def wrap_ex(func):
+  "Wrap a function, catch, print and ignore exceptions"
+  def w(*args, **kwds):
+    try:
+      return func(*args, **kwds)
+    except Failure, ex:
+      if ex.__class__ != Failure or ex.args:
+        ex_args = str(ex)
+        if ex_args:
+          print 'EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args)
+        else:
+          print 'EXCEPTION:', ex.__class__.__name__
+  return w
+
+def setup_design_mode():
+  "Wraps functions in module actions"
+  l = [ 'run_and_verify_svn',
+        'run_and_verify_svnversion',
+        'run_and_verify_load',
+        'run_and_verify_dump',
+        'run_and_verify_checkout',
+        'run_and_verify_export',
+        'run_and_verify_update',
+        'run_and_verify_merge',
+        'run_and_verify_merge2',
+        'run_and_verify_switch',
+        'run_and_verify_commit',
+        'run_and_verify_unquiet_status',
+        'run_and_verify_status',
+        'run_and_verify_diff_summarize',
+        'run_and_verify_diff_summarize_xml',
+        'run_and_validate_lock']
+  
+  for func in l:
+    setattr(actions, func, wrap_ex(getattr(actions, func)))
 
 def get_admin_name():
   "Return name of SVN administrative subdirectory."
@@ -1145,6 +1182,10 @@ def usage():
   print " --bin           Use the svn binaries installed in this path"
   print " --use-jsvn      Use the jsvn (SVNKit based) binaries. Can be\n" \
         "                 combined with --bin to point to a specific path"
+  print " --design        Test design mode: provides more detailed test\n" \
+        "                 output and ignores all exceptions in the \n"  \
+        "                 run_and_verify* functions. This option is only \n" \
+        "                 useful during test development!"
   print " --help          This information"
 
 
@@ -1189,7 +1230,7 @@ def run_tests(test_list, serial_only = False):
                            ['url=', 'fs-type=', 'verbose', 'quiet', 'cleanup',
                             'list', 'enable-sasl', 'help', 'parallel',
                             'bin=', 'http-library=', 'server-minor-version=', 
-                            'use-jsvn'])
+                            'use-jsvn', 'design'])
   except getopt.GetoptError, e:
     print "ERROR: %s\n" % e
     usage()
@@ -1255,6 +1296,9 @@ def run_tests(test_list, serial_only = False):
 
     elif opt == '--use-jsvn':
       use_jsvn = True
+
+    elif opt == '--design':
+      setup_design_mode()
 
   if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
     test_area_url = test_area_url[:-1]

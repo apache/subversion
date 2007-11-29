@@ -792,7 +792,7 @@ public class BasicTests extends SVNTests
         }
         client.copy(sources,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    null, true, false, false);
+                    null, true, false);
 
         // Commit the changes, and check the state of the WC.
         assertEquals("Unexpected WC revision number after commit",
@@ -839,7 +839,7 @@ public class BasicTests extends SVNTests
         }
         client.move(srcPaths,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    null, false, true, false, false);
+                    null, false, true, false);
 
         // Commit the changes, and check the state of the WC.
         assertEquals("Unexpected WC revision number after commit",
@@ -2100,38 +2100,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * Test the basic functionality of {@link
-     * org.tigris.subversion.javahl.SVNClientInterface#getMergeInfo(}).
-     * @throws Throwable
-     * @since 1.5
-     */
-    public void testMergeInfoRetrieval() throws Throwable
-    {
-        OneTest thisTest = setupAndPerformMerge();
-
-        // Test retrieval of inerhited mergeinfo from a WC path.
-        String targetPath =
-            new File(thisTest.getWCPath(), "branches/A/mu").getPath();
-        final String mergeSrc = thisTest.getUrl() + "/A/mu";
-        acquireMergeInfoAndAssertEquals("0-2", "2-3", targetPath, mergeSrc);
-
-        // TODO: Test retrieval of uncommitted, inerhited mergeinfo
-        // from a WC path.
-
-        // Commit the result of the merge in preparation for testing
-        // retrieval of merge info from the repository.
-        assertEquals("Unexpected rev number from commit",
-                     Revision.SVN_INVALID_REVNUM,
-                     client.commit(new String[] { thisTest.getWCPath() },
-                                   "log msg", true));
-
-        // Test retrieval of inherited mergeinfo from the repository.
-        targetPath = thisTest.getUrl() + "/branches/A/mu";
-        acquireMergeInfoAndAssertEquals("0-2", "2-3", targetPath, mergeSrc);
-    }
-
-    /**
-     * Helper method for {@link #testMergeInfoRetrieval()}.  Assumes
+     * Helper method for testing mergeinfo retrieval.  Assumes
      * that <code>targetPath</code> has both merge history and
      * available merges.
      * @param expectedMergedRevs The expected revision ranges from the
@@ -2273,6 +2242,24 @@ public class BasicTests extends SVNTests
         assertEquals("wrong revision number from commit",
                      client.commit(new String[] { thisTest.getWCPath() },
                                    "log msg", true), 5);
+
+        // Merge and commit some more changes (r6).
+        appendText(thisTest, "A/mu", "xxxr6", 6);
+        appendText(thisTest, "A/D/G/rho", "yyyr6", 6);
+        assertEquals("wrong revision number from commit",
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "log msg", true),
+                     6);
+
+        // Test retrieval of mergeinfo from a WC path.
+        String targetPath =
+            new File(thisTest.getWCPath(), "branches/A/mu").getPath();
+        final String mergeSrc = thisTest.getUrl() + "/A/mu";
+        acquireMergeInfoAndAssertEquals("2-4", "4-6", targetPath, mergeSrc);
+
+        // Test retrieval of mergeinfo from the repository.
+        targetPath = thisTest.getUrl() + "/branches/A/mu";
+        acquireMergeInfoAndAssertEquals("2-4", "4-6", targetPath, mergeSrc);
     }
 
     /**

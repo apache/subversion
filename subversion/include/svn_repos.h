@@ -489,8 +489,12 @@ svn_repos_begin_report(void **report_baton,
  * @a path is relative to the anchor/target used in the creation of the
  * @a report_baton.
  *
- * @a revision may be SVN_INVALID_REVNUM if (for example) @a path represents
- * a locally-added path with no revision number.
+ * @a revision may be SVN_INVALID_REVNUM if (for example) @a path
+ * represents a locally-added path with no revision number, or @a
+ * depth is @c svn_depth_exclude.  
+ *
+ * @a path may not be underneath a path on which svn_repos_set_path3()
+ * was previously called with @c svn_depth_exclude in this report.
  *
  * The first call of this in a given report usually passes an empty
  * @a path; this is used to set up the correct root revision for the editor
@@ -551,6 +555,9 @@ svn_error_t *svn_repos_set_path(void *report_baton,
  * A depth of @c svn_depth_unknown is not allowed, and results in an
  * error.
  *
+ * @a path may not be underneath a path on which svn_repos_set_path3()
+ * was previously called with @c svn_depth_exclude in this report.
+ *
  * Note that while @a path is relative to the anchor/target used in the
  * creation of the @a report_baton, @a link_path is an absolute filesystem
  * path!
@@ -604,6 +611,9 @@ svn_error_t *svn_repos_link_path(void *report_baton,
 
 /** Given a @a report_baton constructed by svn_repos_begin_report2(),
  * record the non-existence of @a path in the current tree.
+ *
+ * @a path may not be underneath a path on which svn_repos_set_path3()
+ * was previously called with @c svn_depth_exclude in this report.
  *
  * (This allows the reporter's driver to describe missing pieces of a
  * working copy, so that 'svn up' can recreate them.)
@@ -701,6 +711,15 @@ svn_error_t *svn_repos_abort_report(void *report_baton,
  * This function's maximum memory consumption is at most roughly
  * proportional to the greatest depth of the tree under @a tgt_root, not
  * the total size of the delta.
+ *
+ * ### svn_repos_dir_delta2 is mostly superceded by the reporter
+ * ### functionality (svn_repos_begin_report2 and friends).
+ * ### svn_repos_dir_delta2 does allow the roots to be transaction
+ * ### roots rather than just revision roots, and it has the
+ * ### entry_props flag.  Almost all of Subversion's own code uses the
+ * ### reporter instead; there are some stray references to the
+ * ### svn_repos_dir_delta[2] in comments which should probably
+ * ### actually refer to the reporter.
  */
 svn_error_t *
 svn_repos_dir_delta2(svn_fs_root_t *src_root,

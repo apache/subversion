@@ -262,6 +262,13 @@ typedef struct svn_ra_reporter3_t
   /** Describe a working copy @a path as being at a particular
    * @a revision and having depth @a depth.
    *
+   * @a revision may be SVN_INVALID_REVNUM if (for example) @a path
+   * represents a locally-added path with no revision number, or @a
+   * depth is @c svn_depth_exclude.  
+   *
+   * @a path may not be underneath a path on which set_path() was
+   * previously called with @c svn_depth_exclude in this report.
+   *
    * If @a start_empty is set and @a path is a directory, the
    * implementor should assume the directory has no entries or props.
    *
@@ -282,6 +289,9 @@ typedef struct svn_ra_reporter3_t
 
   /** Describing a working copy @a path as missing.
    *
+   * @a path may not be underneath a path on which set_path() was
+   * previously called with @c svn_depth_exclude in this report.
+   *
    * All temporary allocations are done in @a pool.
    */
   svn_error_t *(*delete_path)(void *report_baton,
@@ -293,6 +303,9 @@ typedef struct svn_ra_reporter3_t
    * @a path in the repository (relative to the URL specified when
    * opening the RA layer), but is instead a reflection of a different
    * repository @a url at @a revision, and has depth @a depth.
+   *
+   * @a path may not be underneath a path on which set_path() was
+   * previously called with @c svn_depth_exclude in this report.
    *
    * If @a start_empty is set and @a path is a directory,
    * the implementor should assume the directory has no entries or props.
@@ -840,14 +853,14 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
                             apr_pool_t *pool);
 
 /**
- * Fetch the mergeinfo for @a paths (which are either absolute or
- * relative-to-the-repository-root filesystem paths) at @a rev, and
- * save it to @a mergeoutput.  @a mergeoutput is a mapping of
- * <tt>const char *</tt> target paths (from @a paths) to hashes
- * mapping merged-from paths (<tt>const char *</tt>) to revision range lists
- * (<tt>apr_array_header_t *</tt> with <tt>svn_merge_range_t *</tt> elements),
- * or @c NULL if there is no merge info available.  Allocate the
- * returned values in @a pool.
+ * Set @a *mergeoutput to a hash mapping <tt>const char *</tt> target
+ * paths (taken from @a paths) to mergeinfo hashes (which themselves
+ * map <tt>const char *</tt> merged-from paths to 
+ * <tt>apr_array_header_t *</tt> revision range lists of
+ * <tt>svn_merge_range_t *</tt> elements).  If no merge info is
+ * available, set @a *mergeoutput to @c NULL.  The requested mergeinfo
+ * hashes are for @a paths (which are relative to @a session's URL) in
+ * @a revision.  Allocate the returned values in @a pool.
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a paths is retrieved.

@@ -358,7 +358,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    URL -> WC:   check out URL into WC, schedule for addition\n"
      "    URL -> URL:  complete server-side copy;  used to branch & tag\n"
      "  All the SRCs must be of the same type.\n"),
-    {'r', 'q', svn_cl__parents_opt, 'g', SVN_CL__LOG_MSG_OPTIONS} },
+    {'r', 'q', svn_cl__parents_opt, SVN_CL__LOG_MSG_OPTIONS} },
 
   { "delete", svn_cl__delete, {"del", "remove", "rm"}, N_
     ("Remove files and directories from version control.\n"
@@ -601,7 +601,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    WC  -> WC:   move and schedule for addition (with history)\n"
      "    URL -> URL:  complete server-side rename.\n"
      "  All the SRCs must be of the same type.\n"),
-    {'r', 'q', svn_cl__force_opt, svn_cl__parents_opt, 'g',
+    {'r', 'q', svn_cl__force_opt, svn_cl__parents_opt,
      SVN_CL__LOG_MSG_OPTIONS} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
@@ -1251,7 +1251,8 @@ main(int argc, const char *argv[])
                                _("Error converting depth "
                                  "from locale to UTF8")), pool, "svn: ");
         opt_state.depth = svn_depth_from_word(utf8_opt_arg);
-        if (opt_state.depth == svn_depth_unknown)
+        if (opt_state.depth == svn_depth_unknown
+            || opt_state.depth == svn_depth_exclude)
           {
             return svn_cmdline_handle_exit_error
               (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,

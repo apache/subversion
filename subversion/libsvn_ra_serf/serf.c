@@ -39,6 +39,7 @@
 #include "svn_time.h"
 
 #include "private/svn_dav_protocol.h"
+#include "private/svn_dep_compat.h"
 #include "svn_private_config.h"
 
 #include "ra_serf.h"
@@ -288,6 +289,10 @@ load_config(svn_ra_serf__session_t *session,
                  SVN_CONFIG_OPTION_HTTP_PROXY_HOST, NULL);
   svn_config_get(config, &port_str, SVN_CONFIG_SECTION_GLOBAL,
                  SVN_CONFIG_OPTION_HTTP_PROXY_PORT, NULL);
+  svn_config_get(config, &session->proxy_username, SVN_CONFIG_SECTION_GLOBAL,
+                 SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME, NULL);
+  svn_config_get(config, &session->proxy_password, SVN_CONFIG_SECTION_GLOBAL,
+                 SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, NULL);
 #endif
 
   server_group = svn_config_find_group(config,
@@ -309,6 +314,10 @@ load_config(svn_ra_serf__session_t *session,
                      SVN_CONFIG_OPTION_HTTP_PROXY_HOST, NULL);
       svn_config_get(config, &port_str, server_group,
                      SVN_CONFIG_OPTION_HTTP_PROXY_PORT, NULL);
+      svn_config_get(config, &session->proxy_username, server_group,
+                     SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME, NULL);
+      svn_config_get(config, &session->proxy_password, server_group,
+                     SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, NULL);
 #endif
     }
 
@@ -343,8 +352,11 @@ load_config(svn_ra_serf__session_t *session,
       status = apr_sockaddr_info_get(&proxy_addr, proxy_host, 
                                      APR_INET, proxy_port, 0,
                                      session->pool);
+      session->using_proxy = TRUE;
       serf_config_proxy(session->context, proxy_addr);
     }
+  else
+    session->using_proxy = FALSE;
 #endif
 
   return SVN_NO_ERROR;

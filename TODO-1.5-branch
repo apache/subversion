@@ -1,0 +1,29 @@
+We are very close to creating the 1.5.x branch.  This file lists the
+tasks we want to complete before then.  Tasks which are not branch-blockers
+should be placed in the issue tracker and given the 1.5 milestone.
+
+  * Update 'svn mergeinfo' to deal with the mergeinfoless-copies
+    changes.  [cmpilato, estimate: 8 hours]
+
+  * Make 'svn mergeinfo' error out when talking to a pre-1.5 repository.
+    This will allow API consumers to use the API without taking a big
+    performance hit for nothing.  We can catch the error and fallback.  [dlr]
+
+  * Improving the default revisions chosen for a revision-less merge.
+    [cmpilato, estimate: 4 hours]
+
+  * Changing the default path for a source-less copy to be "myself", which
+    is the only value with is both consistent and reasonably explainable
+    to the average user. [cmpilato, estimate: 1 hour]
+
+  * Improving the svn_client_merge() API to actually do source-relatedness
+    checks instead of just assuming the sources aren't related.  (And if
+    they *are* related, I'll probably just have it call
+    svn_client_merge_peg3() under the hood.)  [cmpilato, estimate: 6 hours]
+
+  * Finish Issue #2897 (reflective merges) and merge the issue-2897
+    branch to trunk.  [kameshj]
+
+  * Split the sqlite databases into mergeinfo.sqlite and
+    node-origins.sqlite.  Notify mailing list(s) of compatibility
+    breakage.  [glasser, 1 hour]

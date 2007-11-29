@@ -1078,6 +1078,7 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
   SVN_ERR(handle_auth_request(sess_baton, pool));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "(?l)", &mergeinfo_tuple));
 
+  *mergeinfo = NULL;
   if (mergeinfo_tuple != NULL && mergeinfo_tuple->nelts > 0)
     {
       *mergeinfo = apr_hash_make(pool);
@@ -1093,8 +1094,6 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
           apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, for_path);
         }
     }
-  else
-    *mergeinfo = NULL;
 
   return SVN_NO_ERROR;
 }

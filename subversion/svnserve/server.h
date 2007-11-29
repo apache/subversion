@@ -38,7 +38,7 @@ typedef struct server_baton_t {
   const char *authz_repos_name; /* The name of the repository */
   const char *realm;       /* Authentication realm */
   const char *repos_url;   /* URL to base of repository */
-  svn_stringbuf_t *fs_path;/* Decoded base path inside repository */
+  svn_stringbuf_t *fs_path;/* Decoded base in-repos path (w/ leading slash) */
   const char *user;
   svn_boolean_t tunnel;    /* Tunneled through login agent */
   const char *tunnel_user; /* Allow EXTERNAL to authenticate as this */

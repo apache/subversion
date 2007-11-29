@@ -681,17 +681,17 @@ upd_change_xxx_prop(void *baton,
 #define NSLEN (sizeof(SVN_PROP_ENTRY_PREFIX) - 1)
       if (! strncmp(name, SVN_PROP_ENTRY_PREFIX, NSLEN))
         {
-          if (! strcmp(name, SVN_PROP_ENTRY_COMMITTED_REV))
+          if (strcmp(name, SVN_PROP_ENTRY_COMMITTED_REV) == 0)
             {
               b->committed_rev = value ?
                 apr_pstrdup(b->pool, value->data) : NULL;
             }
-          else if (! strcmp(name, SVN_PROP_ENTRY_COMMITTED_DATE))
+          else if (strcmp(name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0)
             {
               b->committed_date = value ?
                 apr_pstrdup(b->pool, value->data) : NULL;
             }
-          else if (! strcmp(name, SVN_PROP_ENTRY_LAST_AUTHOR))
+          else if (strcmp(name, SVN_PROP_ENTRY_LAST_AUTHOR) == 0)
             {
               b->last_author = value ?
                 apr_pstrdup(b->pool, value->data) : NULL;
@@ -1207,6 +1207,7 @@ dav_svn__update_report(const dav_resource *resource,
           {
             const char *path;
             svn_revnum_t rev = SVN_INVALID_REVNUM;
+            svn_boolean_t saw_rev = FALSE;
             const char *linkpath = NULL;
             const char *locktoken = NULL;
             svn_boolean_t start_empty = FALSE;
@@ -1218,22 +1219,25 @@ dav_svn__update_report(const dav_resource *resource,
 
             while (this_attr)
               {
-                if (! strcmp(this_attr->name, "rev"))
-                  rev = SVN_STR_TO_REV(this_attr->value);
-                else if (! strcmp(this_attr->name, "depth"))
+                if (strcmp(this_attr->name, "rev") == 0)
+                  {
+                    rev = SVN_STR_TO_REV(this_attr->value);
+                    saw_rev = TRUE;
+                  }
+                else if (strcmp(this_attr->name, "depth") == 0)
                   depth = svn_depth_from_word(this_attr->value);
-                else if (! strcmp(this_attr->name, "linkpath"))
+                else if (strcmp(this_attr->name, "linkpath") == 0)
                   linkpath = this_attr->value;
-                else if (! strcmp(this_attr->name, "start-empty"))
+                else if (strcmp(this_attr->name, "start-empty") == 0)
                   start_empty = entry_is_empty = TRUE;
-                else if (! strcmp(this_attr->name, "lock-token"))
+                else if (strcmp(this_attr->name, "lock-token") == 0)
                   locktoken = this_attr->value;
 
                 this_attr = this_attr->next;
               }
 
             /* we require the `rev' attribute for this to make sense */
-            if (! SVN_IS_VALID_REVNUM(rev))
+            if (! saw_rev)
               {
                 serr = svn_error_create(SVN_ERR_XML_ATTRIB_NOT_FOUND,
                                         NULL, "Missing XML attribute: rev");

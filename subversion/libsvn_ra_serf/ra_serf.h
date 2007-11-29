@@ -44,11 +44,17 @@
                    APR_STRINGIFY(SERF_MINOR_VERSION) "." \
                    APR_STRINGIFY(SERF_PATCH_VERSION)
 
+#ifdef WIN32
+#if SERF_VERSION_AT_LEAST(0, 1, 3)
+#define SVN_RA_SERF_SSPI_ENABLED
+#endif
+#endif /* WIN32 */
+
 
 /* Forward declarations. */
 typedef struct svn_ra_serf__session_t svn_ra_serf__session_t;
 typedef struct svn_ra_serf__auth_protocol_t svn_ra_serf__auth_protocol_t;
-#ifdef WIN32
+#ifdef SVN_RA_SERF_SSPI_ENABLED
 typedef struct serf_sspi_context_t serf_sspi_context_t;
 #endif
 
@@ -88,10 +94,16 @@ typedef struct {
 
   svn_ra_serf__session_t *session;
 
-#ifdef WIN32
+#ifdef SVN_RA_SERF_SSPI_ENABLED
   /* Optional SSPI context for this connection. */
   serf_sspi_context_t *sspi_context;
 #endif
+
+  /* Current authorization header used for the proxy server; may be NULL */
+  const char *proxy_auth_header;
+
+  /* Current authorization value used for the proxy server; may be NULL */
+  char *proxy_auth_value;
 
 } svn_ra_serf__connection_t;
 
@@ -160,6 +172,18 @@ struct svn_ra_serf__session_t {
      well-informed internal code may just compare against those
      constants' addresses, therefore). */
   apr_hash_t *capabilities;
+
+  /* Are we using a proxy? */
+  int using_proxy;
+
+  /* Proxy Authentication related properties */
+  const char *proxy_auth_header;
+  char *proxy_auth_value;
+  const svn_ra_serf__auth_protocol_t *proxy_auth_protocol;
+
+  const char *proxy_username;
+  const char *proxy_password;
+  int proxy_auth_attempts;
 };
 
 /*
@@ -1221,8 +1245,14 @@ typedef svn_error_t *
 
 /**
  * svn_ra_serf__auth_protocol_t: vtable for an authn protocol provider.
+ * 
  */
 struct svn_ra_serf__auth_protocol_t {
+  /* The http status code that's handled by this authentication protocol.
+     Normal values are 401 for server authentication and 407 for proxy
+     authentication */
+  int code;
+
   /* The name of this authentication protocol. This should be a case
      sensitive match of the string sent in the HTTP authentication header. */
   const char *auth_name;
@@ -1243,10 +1273,23 @@ struct svn_ra_serf__auth_protocol_t {
  * authn implementation and forward the call to its authn handler.
  */
 svn_error_t *
-svn_ra_serf__handle_auth(svn_ra_serf__session_t *session,
+svn_ra_serf__handle_auth(int code,
+                         svn_ra_serf__session_t *session,
                          svn_ra_serf__connection_t *conn,
                          serf_request_t *request,
                          serf_bucket_t *response,
                          apr_pool_t *pool);
+
+/**
+ * encode_auth_header: base64 encodes the authentication data and builds an 
+ * authentication header in this format:
+ * [PROTOCOL] [BASE64 AUTH DATA]
+ */
+void
+svn_ra_serf__encode_auth_header(const char * protocol,
+                                char **header,
+                                const char * data,
+                                apr_size_t data_len,
+                                apr_pool_t *pool);
 
 #endif /* SVN_LIBSVN_RA_SERF_RA_SERF_H */

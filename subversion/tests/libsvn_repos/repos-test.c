@@ -1988,6 +1988,204 @@ node_location_segments(const char **msg,
 }
 
 
+/* Test that the reporter doesn't send deltas under excluded paths. */
+static svn_error_t *
+reporter_depth_exclude(const char **msg,
+                       svn_boolean_t msg_only,
+                       svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_revnum_t youngest_rev;
+  const svn_delta_editor_t *editor;
+  void *edit_baton, *report_baton;
+  svn_error_t *err;
+  
+  *msg = "test reporter and svn_depth_exclude";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_test__create_repos(&repos, "test-repo-reporter-depth-exclude",
+                                 opts->fs_type, pool));
+  fs = svn_repos_fs(repos);
+
+  /* Prepare a txn to receive the greek tree. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
+  svn_pool_clear(subpool);
+
+  /* Revision 2: make a bunch of changes */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  {
+    static svn_test__txn_script_command_t script_entries[] = {
+      { 'e', "iota",      "Changed file 'iota'.\n" },
+      { 'e', "A/D/G/pi",  "Changed file 'pi'.\n" },
+      { 'e', "A/mu",      "Changed file 'mu'.\n" },
+      { 'a', "A/D/foo",    "New file 'foo'.\n" },
+      { 'a', "A/B/bar",    "New file 'bar'.\n" },
+      { 'd', "A/D/H",      NULL },
+      { 'd', "A/B/E/beta", NULL }
+    };
+    SVN_ERR(svn_test__txn_script_exec(txn_root,
+                                      script_entries,
+                                      sizeof(script_entries)/
+                                       sizeof(script_entries[0]),
+                                      subpool));
+  }
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
+  svn_pool_clear(subpool);
+
+  /* Confirm the contents of r2. */
+  {
+    svn_fs_root_t *revision_root;
+    static svn_test__tree_entry_t entries[] = {
+      { "iota",        "Changed file 'iota'.\n" },
+      { "A",           0 },
+      { "A/mu",        "Changed file 'mu'.\n" },
+      { "A/B",         0 },
+      { "A/B/bar",     "New file 'bar'.\n" },
+      { "A/B/lambda",  "This is the file 'lambda'.\n" },
+      { "A/B/E",       0 },
+      { "A/B/E/alpha", "This is the file 'alpha'.\n" },
+      { "A/B/F",       0 },
+      { "A/C",         0 },
+      { "A/D",         0 },
+      { "A/D/foo",     "New file 'foo'.\n" },
+      { "A/D/gamma",   "This is the file 'gamma'.\n" },
+      { "A/D/G",       0 },
+      { "A/D/G/pi",    "Changed file 'pi'.\n" },
+      { "A/D/G/rho",   "This is the file 'rho'.\n" },
+      { "A/D/G/tau",   "This is the file 'tau'.\n" },
+    };
+    SVN_ERR(svn_fs_revision_root(&revision_root, fs,
+                                 youngest_rev, subpool));
+    SVN_ERR(svn_test__validate_tree(revision_root,
+                                    entries,
+                                    sizeof(entries)/sizeof(entries[0]),
+                                    subpool));
+  }
+
+  /* Run an update from r1 to r2, excluding iota and everything under
+     A/D.  Record the editor commands in a temporary txn. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 1, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(dir_delta_get_editor(&editor, &edit_baton, fs,
+                               txn_root, "", subpool));
+
+  SVN_ERR(svn_repos_begin_report2(&report_baton, 2, repos, "/", "", NULL,
+                                  TRUE, svn_depth_infinity, FALSE, FALSE,
+                                  editor, edit_baton, NULL, NULL, subpool));
+  SVN_ERR(svn_repos_set_path3(report_baton, "", 1,
+                              svn_depth_infinity,
+                              FALSE, NULL, subpool));
+  SVN_ERR(svn_repos_set_path3(report_baton, "iota", SVN_INVALID_REVNUM,
+                              svn_depth_exclude,
+                              FALSE, NULL, subpool));
+  SVN_ERR(svn_repos_set_path3(report_baton, "A/D", SVN_INVALID_REVNUM,
+                              svn_depth_exclude,
+                              FALSE, NULL, subpool));
+  SVN_ERR(svn_repos_finish_report(report_baton, subpool));
+
+  /* Confirm the contents of the txn. */
+  /* This should have iota and A/D from r1, and everything else from
+     r2. */
+  {
+    static svn_test__tree_entry_t entries[] = {
+      { "iota",        "This is the file 'iota'.\n" },
+      { "A",           0 },
+      { "A/mu",        "Changed file 'mu'.\n" },
+      { "A/B",         0 },
+      { "A/B/bar",     "New file 'bar'.\n" },
+      { "A/B/lambda",  "This is the file 'lambda'.\n" },
+      { "A/B/E",       0 },
+      { "A/B/E/alpha", "This is the file 'alpha'.\n" },
+      { "A/B/F",       0 },
+      { "A/C",         0 },
+      { "A/D",         0 },
+      { "A/D/gamma",   "This is the file 'gamma'.\n" },
+      { "A/D/G",       0 },
+      { "A/D/G/pi",    "This is the file 'pi'.\n" },
+      { "A/D/G/rho",   "This is the file 'rho'.\n" },
+      { "A/D/G/tau",   "This is the file 'tau'.\n" },
+      { "A/D/H",       0 },
+      { "A/D/H/chi",   "This is the file 'chi'.\n" },
+      { "A/D/H/psi",   "This is the file 'psi'.\n" },
+      { "A/D/H/omega", "This is the file 'omega'.\n" }
+    };
+    SVN_ERR(svn_test__validate_tree(txn_root,
+                                    entries,
+                                    sizeof(entries)/sizeof(entries[0]),
+                                    subpool));
+    svn_pool_clear(subpool);
+  }
+
+  /* Clean up after ourselves. */
+  svn_error_clear(svn_fs_abort_txn(txn, subpool));
+
+  /* Expect an error on an illegal report for r1 to r2.  The illegal
+     sequence is that we exclude A/D, then set_path() below A/D. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 1, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(dir_delta_get_editor(&editor, &edit_baton, fs,
+                               txn_root, "", subpool));
+
+  SVN_ERR(svn_repos_begin_report2(&report_baton, 2, repos, "/", "", NULL,
+                                  TRUE, svn_depth_infinity, FALSE, FALSE,
+                                  editor, edit_baton, NULL, NULL, subpool));
+  SVN_ERR(svn_repos_set_path3(report_baton, "", 1,
+                              svn_depth_infinity,
+                              FALSE, NULL, subpool));
+  SVN_ERR(svn_repos_set_path3(report_baton, "iota", SVN_INVALID_REVNUM,
+                              svn_depth_exclude,
+                              FALSE, NULL, subpool));
+  SVN_ERR(svn_repos_set_path3(report_baton, "A/D", SVN_INVALID_REVNUM,
+                              svn_depth_exclude,
+                              FALSE, NULL, subpool));
+
+  /* This is the illegal call, since A/D was excluded above; the call
+     itself will not error, but finish_report() will.  As of r28098,
+     this delayed error behavior is not actually promised by the
+     reporter API, which merely warns callers not to touch a path
+     underneath a previously excluded path without defining what will
+     happen if they do.  However, it's still useful to test for the
+     error, since the reporter code is sensitive and we'd certainly
+     want to know about it if the behavior were to change. */
+  SVN_ERR(svn_repos_set_path3(report_baton, "A/D/G/pi",
+                              SVN_INVALID_REVNUM,
+                              svn_depth_infinity,
+                              FALSE, NULL, subpool));
+  err = svn_repos_finish_report(report_baton, subpool);
+  if (! err)
+    {
+      return svn_error_createf
+        (SVN_ERR_TEST_FAILED, NULL,
+         "Illegal report of \"A/D/G/pi\" did not error as expected");
+    }
+  else if (err->apr_err != SVN_ERR_FS_NOT_FOUND)
+    {
+      return svn_error_createf
+        (SVN_ERR_TEST_FAILED, err,
+         "Illegal report of \"A/D/G/pi\" got wrong kind of error:");
+    }
+
+  /* Clean up after ourselves. */
+  svn_error_clear(err);
+  svn_error_clear(svn_fs_abort_txn(txn, subpool));
+
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /* The test table.  */
 
@@ -2004,5 +2202,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(commit_editor_authz),
     SVN_TEST_PASS(commit_continue_txn),
     SVN_TEST_PASS(node_location_segments),
+    SVN_TEST_PASS(reporter_depth_exclude),
     SVN_TEST_NULL
   };

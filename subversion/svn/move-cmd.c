@@ -84,8 +84,7 @@ svn_cl__move(apr_getopt_t *os,
   ctx->revprop_table = opt_state->revprop_table;
 
   err = svn_client_move5(&commit_info, targets, dst_path, opt_state->force,
-                         TRUE, opt_state->parents,
-                         opt_state->use_merge_history, ctx, pool);
+                         TRUE, opt_state->parents, ctx, pool);
 
   if (err)
     err = svn_cl__may_need_force(err);

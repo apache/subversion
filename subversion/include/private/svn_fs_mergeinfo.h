@@ -67,12 +67,13 @@ svn_fs_mergeinfo__get_mergeinfo(apr_hash_t **mergeinfo,
    mergeinfo also includes elided mergeinfo for each one of PATHS.  This
    function conforms to the get_mergeinfo_for_tree() interface.  */
 svn_error_t *
-svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
-                                         svn_fs_root_t *root,
-                                         const apr_array_header_t *paths,
-                                         svn_fs_mergeinfo_filter_func_t filter_func,
-                                         void *filter_func_baton,
-                                         apr_pool_t *pool);
+svn_fs_mergeinfo__get_mergeinfo_for_tree(
+  apr_hash_t **mergeinfo,
+  svn_fs_root_t *root,
+  const apr_array_header_t *paths,
+  svn_fs_mergeinfo_filter_func_t filter_func,
+  void *filter_func_baton,
+  apr_pool_t *pool);
 
 /** Retrieve @a commit_rev_rangelist for a @a merge_rangelist from a given
  * @a merge_source to a @a merge_target
