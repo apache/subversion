@@ -2779,7 +2779,7 @@ get_mergeinfo_walk_cb(const char *path,
      from the WC, and/or are first level sub directories relative to merge
      target if depth is immediates. */
   if (path_is_merge_target
-      ||has_mergeinfo_from_merge_src
+      || has_mergeinfo_from_merge_src
       || entry->schedule == svn_wc_schedule_delete
       || switched
       || entry->depth == svn_depth_empty
