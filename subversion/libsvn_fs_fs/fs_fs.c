@@ -248,6 +248,13 @@ path_txn_mergeinfo(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 }
 
 static const char *
+path_txn_mergeinfo_legacy(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
+{
+  return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_TXN_MERGEINFO_LEGACY,
+                       pool);
+}
+
+static const char *
 path_txn_next_ids(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_NEXT_IDS, pool);
@@ -3594,7 +3601,7 @@ get_txn_mergeinfo(apr_hash_t *minfo,
 
   /* Open the transaction mergeinfo file. */
   SVN_ERR(svn_io_file_open(&txn_minfo_file,
-                           path_txn_mergeinfo(fs, txn_id, pool),
+                           path_txn_mergeinfo_legacy(fs, txn_id, pool),
                            APR_READ | APR_BUFFERED,
                            APR_OS_DEFAULT, pool));
 
@@ -3631,7 +3638,7 @@ svn_fs_fs__change_txn_mergeinfo(svn_fs_txn_t *txn,
   /* Create a new version of the file and write out the new minfos. */
   /* Open the transaction minfoerties file. */
   SVN_ERR(svn_io_file_open(&txn_minfo_file,
-                           path_txn_mergeinfo(txn->fs, txn->id, pool),
+                           path_txn_mergeinfo_legacy(txn->fs, txn->id, pool),
                            APR_WRITE | APR_CREATE | APR_TRUNCATE
                            | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
