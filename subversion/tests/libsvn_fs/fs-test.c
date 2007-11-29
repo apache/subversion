@@ -4556,78 +4556,6 @@ closest_copy_test(const char **msg,
   return SVN_NO_ERROR;
 }
 
-/* Test getting mergeinfo */
-static svn_error_t *
-get_mergeinfo(const char **msg,
-              svn_boolean_t msg_only,
-              svn_test_opts_t *opts,
-              apr_pool_t *pool)
-{
-  svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root, *revision_root;
-  svn_revnum_t before_rev, after_rev;
-  apr_hash_t *result;
-  apr_array_header_t *paths;
-  apr_hash_t *mergeinfo;
-  const char *conflict;
-
-  *msg = "get mergeinfo";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-
-  /* Prepare a filesystem. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-get-mergeinfo",
-                              opts->fs_type, pool));
-
-  /* Save the current youngest revision. */
-  SVN_ERR(svn_fs_youngest_rev(&before_rev, fs, pool));
-
-  /* Prepare a txn to receive the greek tree. */
-  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-
-  /* Paranoidly check that the current youngest rev is unchanged. */
-  SVN_ERR(svn_fs_youngest_rev(&after_rev, fs, pool));
-  if (after_rev != before_rev)
-    return svn_error_create
-      (SVN_ERR_FS_GENERAL, NULL,
-       "youngest revision changed unexpectedly");
-
-  /* Create the greek tree. */
-  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
-
-  SVN_ERR(svn_mergeinfo_parse(&mergeinfo, "/A/E: 1-5", pool));
-  SVN_ERR(svn_fs_change_mergeinfo(txn_root, "/A/B", mergeinfo, pool));
-
-  /* Commit it. */
-  SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, pool));
-
-  /* Make sure it's a different revision than before. */
-  if (after_rev == before_rev)
-    return svn_error_create
-      (SVN_ERR_FS_GENERAL, NULL,
-       "youngest revision failed to change");
-
-  /* Get root of the revision */
-  SVN_ERR(svn_fs_revision_root(&revision_root, fs, after_rev, pool));
-
-  /* Check the tree. */
-  SVN_ERR(svn_test__check_greek_tree(revision_root, pool));
-
-  paths = apr_array_make(pool, 1, sizeof (const char *));
-  APR_ARRAY_PUSH(paths, const char *) = "/A/E";
-  SVN_ERR(svn_fs_get_mergeinfo(&result, revision_root, paths,
-                               svn_mergeinfo_inherited, pool));
-  paths = apr_array_make(pool, 1, sizeof (const char *));
-  APR_ARRAY_PUSH(paths, const char *) = "/A/B/E";
-  SVN_ERR(svn_fs_get_mergeinfo(&result, revision_root, paths,
-                               svn_mergeinfo_inherited, pool));
-  return SVN_NO_ERROR;
-}
-
 static svn_error_t *
 root_revisions(const char **msg,
                svn_boolean_t msg_only,
@@ -4999,7 +4927,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(branch_test),
     SVN_TEST_PASS(verify_checksum),
     SVN_TEST_PASS(closest_copy_test),
-    SVN_TEST_PASS(get_mergeinfo),
     SVN_TEST_PASS(root_revisions),
     SVN_TEST_PASS(unordered_txn_dirprops),
     SVN_TEST_PASS(set_uuid),

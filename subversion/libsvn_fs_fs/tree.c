@@ -1020,31 +1020,6 @@ fs_node_proplist(apr_hash_t **table_p,
 }
 
 
-/* Change the mergeinfo for a given path.  */
-static svn_error_t *
-fs_change_mergeinfo(svn_fs_root_t *root,
-                    const char *path,
-                    apr_hash_t *mergeinfo,
-                    apr_pool_t *pool)
-{
-  const char *txn_id;
-  svn_string_t *mergeinfo_str;
-  svn_fs_txn_t *txn;
-
-  if (! root->is_txn_root)
-    return SVN_FS__NOT_TXN(root);
-  txn_id = root->txn;
-  SVN_ERR(root->fs->vtable->open_txn(&txn, root->fs, txn_id, pool));
-  SVN_ERR(svn_mergeinfo__to_string(&mergeinfo_str, mergeinfo, pool));
-  SVN_ERR(svn_fs_fs__change_txn_mergeinfo(txn, path, mergeinfo_str, pool));
-
-  SVN_ERR(svn_fs_fs__change_txn_prop(txn,
-                                     SVN_FS__PROP_TXN_CONTAINS_MERGEINFO,
-                                     svn_string_create("true", pool),
-                                     pool));
-  return SVN_NO_ERROR;
-}
-
 static svn_error_t *
 increment_mergeinfo_up_tree(parent_path_t *pp,
                             int increment,
@@ -3656,7 +3631,6 @@ static root_vtable_t root_vtable = {
   fs_contents_changed,
   fs_get_file_delta_stream,
   fs_merge,
-  fs_change_mergeinfo,
   fs_get_mergeinfo,
   fs_get_mergeinfo_for_tree
 };
