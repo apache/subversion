@@ -1,5 +1,6 @@
 We are very close to creating the 1.5.x branch.  This file lists the
-tasks we want to complete before then.
+tasks we want to complete before then.  Tasks which are not branch-blockers
+should be placed in the issue tracker and given the 1.5 milestone.
 
   * Update 'svn mergeinfo' to deal with the mergeinfoless-copies
     changes.  [cmpilato, estimate: 8 hours]
@@ -7,11 +8,6 @@ tasks we want to complete before then.
   * Make 'svn mergeinfo' error out when talking to a pre-1.5 repository.
     This will allow API consumers to use the API without taking a big
     performance hit for nothing.  We can catch the error and fallback.  [dlr]
-
-  * Examine, and possibly update, 'svn log/blame -g' to deal with the
-    mergeinfoless-copies changes.  This includes updating the tests and the
-    basic-merge.dump repository.  (This could be pushed to after we branch, but
-    should happen before 1.5 releases.)
 
   * Improving the default revisions chosen for a revision-less merge.
     [cmpilato, estimate: 4 hours]
