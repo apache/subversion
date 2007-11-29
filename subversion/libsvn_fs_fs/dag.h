@@ -108,6 +108,12 @@ svn_error_t *svn_fs_fs__dag_get_predecessor_count(int *count,
                                                   dag_node_t *node,
                                                   apr_pool_t *pool);
 
+/* Set *COUNT to the number of node under NODE (inclusive) with
+   svn:mergeinfo properties, allocating from POOL.  */
+svn_error_t *svn_fs_fs__dag_get_mergeinfo_count(int *count,
+                                                dag_node_t *node,
+                                                apr_pool_t *pool);
+
 
 /* Return non-zero IFF NODE is currently mutable. */
 svn_boolean_t svn_fs_fs__dag_check_mutable(dag_node_t *node);
@@ -131,6 +137,13 @@ svn_error_t *svn_fs_fs__dag_get_proplist(apr_hash_t **proplist_p,
 svn_error_t *svn_fs_fs__dag_set_proplist(dag_node_t *node,
                                          apr_hash_t *proplist,
                                          apr_pool_t *pool);
+
+/* Increment the mergeinfo_count field on NODE (and all its ancestors)
+   by INCREMENT.  The node being changed (and its ancestors) must be
+   mutable.  */
+svn_error_t *svn_fs_fs__dag_increment_mergeinfo_count(dag_node_t *node,
+                                                      int increment,
+                                                      apr_pool_t *pool);
 
 
 

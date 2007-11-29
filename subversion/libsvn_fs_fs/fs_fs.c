@@ -83,6 +83,7 @@
 #define HEADER_COPYFROM    "copyfrom"
 #define HEADER_COPYROOT    "copyroot"
 #define HEADER_FRESHTXNRT  "is-fresh-txn-root"
+#define HEADER_MERGEINFO   "mergeinfo"
 
 /* Kinds that a change can be. */
 #define ACTION_MODIFY      "modify"
@@ -1567,6 +1568,10 @@ svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
   value = apr_hash_get(headers, HEADER_FRESHTXNRT, APR_HASH_KEY_STRING);
   noderev->is_fresh_txn_root = (value != NULL);
 
+  /* Get the mergeinfo count. */
+  value = apr_hash_get(headers, HEADER_MERGEINFO, APR_HASH_KEY_STRING);
+  noderev->mergeinfo_count = (value == NULL) ? 0 : atoi(value);
+
   *noderev_p = noderev;
 
   return SVN_NO_ERROR;
@@ -1648,6 +1653,10 @@ write_noderev_txn(apr_file_t *file,
 
   if (noderev->is_fresh_txn_root)
     SVN_ERR(svn_stream_printf(outfile, pool, HEADER_FRESHTXNRT ": y\n"));
+
+  if (noderev->mergeinfo_count > 0)
+    SVN_ERR(svn_stream_printf(outfile, pool, HEADER_MERGEINFO ": %d\n",
+                              noderev->mergeinfo_count));
 
   SVN_ERR(svn_stream_printf(outfile, pool, "\n"));
 

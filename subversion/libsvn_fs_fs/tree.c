@@ -1045,6 +1045,19 @@ fs_change_mergeinfo(svn_fs_root_t *root,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+increment_mergeinfo_up_tree(parent_path_t *pp,
+                            int increment,
+                            apr_pool_t *pool)
+{
+  for (; pp; pp = pp->parent)
+    SVN_ERR(svn_fs_fs__dag_increment_mergeinfo_count(pp->node,
+                                                     increment,
+                                                     pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Change, add, or delete a node's property value.  The affected node
    is PATH under ROOT, the property value to modify is NAME, and VALUE
    points to either a string value to set the new contents to, or NULL
@@ -1086,26 +1099,16 @@ fs_change_node_prop(svn_fs_root_t *root,
 
   if (strcmp (name, SVN_PROP_MERGE_INFO) == 0)
     {
-      /* fs_change_mergeinfo will reconvert the mergeinfo to a string,
-         which is a waste in our case because we already have it as a
-         string.  To avoid this, we just call change_txn_mergeinfo
-         directly.  */
-      svn_fs_txn_t *txn;
+      int increment = 0;
+      if (value && !apr_hash_get(proplist, SVN_PROP_MERGE_INFO, 
+                                  APR_HASH_KEY_STRING))
+        increment = 1;
+      else if (!value && apr_hash_get(proplist, SVN_PROP_MERGE_INFO,
+                                      APR_HASH_KEY_STRING))
+        increment = -1;
 
-      /* At least for single file merges, nodes which are direct
-         children of the root are received without a leading slash
-         (e.g. "/file.txt" is received as "file.txt"), so must be made
-         absolute. */
-      const char *canon_path = svn_fs__canonicalize_abspath(path, pool);
-
-      SVN_ERR(root->fs->vtable->open_txn(&txn, root->fs, txn_id, pool));
-
-      SVN_ERR(svn_fs_fs__change_txn_mergeinfo(txn, canon_path, value, pool));
-
-      SVN_ERR(svn_fs_fs__change_txn_prop(txn,
-                                         SVN_FS__PROP_TXN_CONTAINS_MERGEINFO,
-                                         svn_string_create("true", pool),
-                                         pool));
+      if (increment != 0)
+        SVN_ERR(increment_mergeinfo_up_tree(parent_path, increment, pool));
     }
 
   /* Set the property. */
@@ -1235,6 +1238,7 @@ merge(svn_stringbuf_t *conflict_p,
       dag_node_t *source,
       dag_node_t *ancestor,
       const char *txn_id,
+      int *mergeinfo_increment_out,
       apr_pool_t *pool)
 {
   const svn_fs_id_t *source_id, *target_id, *ancestor_id;
@@ -1243,6 +1247,7 @@ merge(svn_stringbuf_t *conflict_p,
   svn_fs_t *fs;
   apr_pool_t *iterpool;
   int pred_count;
+  int mergeinfo_increment = 0;
 
   /* Make sure everyone comes from the same filesystem. */
   fs = svn_fs_fs__dag_get_fs(ancestor);
@@ -1423,8 +1428,25 @@ merge(svn_stringbuf_t *conflict_p,
          process, but the transaction did not touch this entry. */
       else if (t_entry && svn_fs_fs__id_eq(a_entry->id, t_entry->id))
         {
+          dag_node_t *t_ent_node;
+          int mergeinfo_start;
+          SVN_ERR(svn_fs_fs__dag_get_node(&t_ent_node, fs,
+                                          t_entry->id, iterpool));
+          SVN_ERR(svn_fs_fs__dag_get_mergeinfo_count(&mergeinfo_start,
+                                                     t_ent_node,
+                                                     iterpool));
+          mergeinfo_increment -= mergeinfo_start;
+
           if (s_entry)
             {
+              dag_node_t *s_ent_node;
+              int mergeinfo_end;
+              SVN_ERR(svn_fs_fs__dag_get_node(&s_ent_node, fs,
+                                              s_entry->id, iterpool));
+              SVN_ERR(svn_fs_fs__dag_get_mergeinfo_count(&mergeinfo_end,
+                                                         s_ent_node,
+                                                         iterpool));
+              mergeinfo_increment += mergeinfo_end;
               SVN_ERR(svn_fs_fs__dag_set_entry(target, key,
                                                s_entry->id,
                                                s_entry->kind,
@@ -1444,6 +1466,7 @@ merge(svn_stringbuf_t *conflict_p,
         {
           dag_node_t *s_ent_node, *t_ent_node, *a_ent_node;
           const char *new_tpath;
+          int sub_mergeinfo_increment;
 
           /* If SOURCE-ENTRY and TARGET-ENTRY are both null, that's a
              double delete; flag a conflict. */
@@ -1489,7 +1512,10 @@ merge(svn_stringbuf_t *conflict_p,
           new_tpath = svn_path_join(target_path, t_entry->name, iterpool);
           SVN_ERR(merge(conflict_p, new_tpath,
                         t_ent_node, s_ent_node, a_ent_node,
-                        txn_id, iterpool));
+                        txn_id,
+                        &sub_mergeinfo_increment,
+                        iterpool));
+          mergeinfo_increment += sub_mergeinfo_increment;
         }
 
       /* We've taken care of any possible implications E could have.
@@ -1509,6 +1535,8 @@ merge(svn_stringbuf_t *conflict_p,
       const void *key;
       void *val;
       apr_ssize_t klen;
+      dag_node_t *s_ent_node;
+      int mergeinfo_s;
 
       svn_pool_clear(iterpool);
 
@@ -1523,6 +1551,12 @@ merge(svn_stringbuf_t *conflict_p,
                                           t_entry->name,
                                           iterpool));
 
+      SVN_ERR(svn_fs_fs__dag_get_node(&s_ent_node, fs,
+                                      s_entry->id, iterpool));
+      SVN_ERR(svn_fs_fs__dag_get_mergeinfo_count(&mergeinfo_s,
+                                                 s_ent_node,
+                                                 iterpool));
+      mergeinfo_increment += mergeinfo_s;
       SVN_ERR(svn_fs_fs__dag_set_entry
               (target, s_entry->name, s_entry->id, s_entry->kind,
                txn_id, iterpool));
@@ -1532,6 +1566,11 @@ merge(svn_stringbuf_t *conflict_p,
   SVN_ERR(svn_fs_fs__dag_get_predecessor_count(&pred_count, source, pool));
   SVN_ERR(update_ancestry(fs, source_id, target_id, target_path,
                           pred_count, pool));
+  SVN_ERR(svn_fs_fs__dag_increment_mergeinfo_count(target, mergeinfo_increment,
+                                                   pool));
+
+  if (mergeinfo_increment_out)
+    *mergeinfo_increment_out = mergeinfo_increment;
 
   return SVN_NO_ERROR;
 }
@@ -1580,7 +1619,7 @@ merge_changes(dag_node_t *ancestor_node,
     }
   else
     SVN_ERR(merge(conflict, "/", txn_root_node,
-                  source_node, ancestor_node, txn_id, pool));
+                  source_node, ancestor_node, txn_id, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1873,6 +1912,7 @@ fs_delete_node(svn_fs_root_t *root,
 {
   parent_path_t *parent_path;
   const char *txn_id = root->txn;
+  int mergeinfo_count;
 
   if (! root->is_txn_root)
     return SVN_FS__NOT_TXN(root);
@@ -1892,12 +1932,21 @@ fs_delete_node(svn_fs_root_t *root,
 
   /* Make the parent directory mutable, and do the deletion.  */
   SVN_ERR(make_path_mutable(root, parent_path->parent, path, pool));
+  SVN_ERR(svn_fs_fs__dag_get_mergeinfo_count(&mergeinfo_count,
+                                             parent_path->node,
+                                             pool));
   SVN_ERR(svn_fs_fs__dag_delete(parent_path->parent->node,
                                 parent_path->entry,
                                 txn_id, pool));
 
   /* Remove this node and any children from the path cache. */
   dag_node_cache_invalidate(root, parent_path_path(parent_path, pool));
+
+  /* Update mergeinfo counts for parents */
+  if (mergeinfo_count > 0)
+    SVN_ERR(increment_mergeinfo_up_tree(parent_path->parent,
+                                        -mergeinfo_count,
+                                        pool));
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path,
@@ -1991,13 +2040,26 @@ copy_helper(svn_fs_root_t *from_root,
       svn_fs_path_change_kind_t kind;
       dag_node_t *new_node;
       const char *from_canonpath;
+      int mergeinfo_start;
+      int mergeinfo_end;
 
       /* If TO_PATH already existed prior to the copy, note that this
          operation is a replacement, not an addition. */
       if (to_parent_path->node)
-        kind = svn_fs_path_change_replace;
+        {
+          kind = svn_fs_path_change_replace;
+          SVN_ERR(svn_fs_fs__dag_get_mergeinfo_count(&mergeinfo_start,
+                                                     to_parent_path->node,
+                                                     pool));
+        }
       else
-        kind = svn_fs_path_change_add;
+        {
+          kind = svn_fs_path_change_add;
+          mergeinfo_start = 0;
+        }
+
+      SVN_ERR(svn_fs_fs__dag_get_mergeinfo_count(&mergeinfo_end,
+                                                 from_node, pool));
 
       /* Make sure the target node's parents are mutable.  */
       SVN_ERR(make_path_mutable(to_root, to_parent_path->parent,
@@ -2017,6 +2079,11 @@ copy_helper(svn_fs_root_t *from_root,
       if (kind == svn_fs_path_change_replace)
         dag_node_cache_invalidate(to_root, parent_path_path(to_parent_path,
                                                             pool));
+
+      if (mergeinfo_start != mergeinfo_end)
+        SVN_ERR(increment_mergeinfo_up_tree(to_parent_path->parent,
+                                            mergeinfo_end - mergeinfo_start,
+                                            pool));
 
       /* Make a record of this modification in the changes table. */
       SVN_ERR(get_dag(&new_node, to_root, to_path, pool));

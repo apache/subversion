@@ -270,6 +270,8 @@ defined:
   cpath     FS pathname node was created at
   copyfrom  "<rev> <path>" of copyfrom data
   copyroot  "<rev> <created-path>" of the root of this copy
+  mergeinfo The number of nodes under (and including) this node
+             which have non-empty svn:mergeinfo.
 
 The predecessor of a node-rev crosses both soft and true copies;
 together with the count field, it allows efficient determination of

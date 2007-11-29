@@ -304,6 +304,12 @@ typedef struct
   /* is this the unmodified root of a transaction? */
   svn_boolean_t is_fresh_txn_root;
 
+  /* Number of nodes with svn:mergeinfo properties that are
+     descendents of this node (including it itself) */
+  /* XXXdsg worry about overflow; probably use key-gen.h things
+     instead. */
+  int mergeinfo_count;
+
 } node_revision_t;
 
 
