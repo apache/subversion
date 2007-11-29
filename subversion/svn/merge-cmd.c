@@ -208,24 +208,7 @@ svn_cl__merge(apr_getopt_t *os,
   if (using_rev_range_syntax)
     {
       if (! sourcepath1)
-        {
-          /* If a merge source was not specified, try to derive it. */
-          apr_array_header_t *suggested_sources;
-          svn_opt_revision_t working_rev;
-          working_rev.kind = svn_opt_revision_working;
-
-          SVN_ERR(svn_client_suggest_merge_sources(&suggested_sources,
-                                                   targetpath, &working_rev,
-                                                   ctx, pool));
-          if (! suggested_sources->nelts)
-            return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                     _("Unable to determine merge source for "
-                                       "'%s' -- please provide an explicit "
-                                       "source"),
-                                     svn_path_local_style(targetpath, pool));
-          sourcepath1 = APR_ARRAY_IDX(suggested_sources, 0, const char *);
-        }
-
+        sourcepath1 = targetpath;
       err = svn_client_merge_peg3(sourcepath1,
                                   opt_state->revision_ranges,
                                   &peg_revision1,
