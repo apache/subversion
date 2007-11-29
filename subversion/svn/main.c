@@ -998,7 +998,7 @@ main(int argc, const char *argv[])
   apr_pool_t *pool;
   int opt_id;
   apr_getopt_t *os;
-  svn_cl__opt_state_t opt_state = { { 0 } };
+  svn_cl__opt_state_t opt_state = { 0, { 0 } };
   svn_client_ctx_t *ctx;
   apr_array_header_t *received_opts;
   int i;
@@ -1531,17 +1531,11 @@ main(int argc, const char *argv[])
                                    "or both -c and -r"));
           return svn_cmdline_handle_exit_error(err, pool, "svn: ");
         }
-      else if (opt_state.revision_ranges->nelts == 1)
-        {
-          opt_state.start_revision =
-            APR_ARRAY_IDX(opt_state.revision_ranges, 0,
-                          svn_opt_revision_range_t *)->start;
-          opt_state.end_revision =
-            APR_ARRAY_IDX(opt_state.revision_ranges, 0,
-                          svn_opt_revision_range_t *)->end;
-        }
     }
-  else if (opt_state.revision_ranges->nelts == 0)
+  
+  /* Ensure that 'revision_ranges' has at least one item, and that
+     'start_revision' and 'end_revision' match that item. */
+  if (opt_state.revision_ranges->nelts == 0)
     {
       svn_opt_revision_range_t *range = apr_palloc(pool, sizeof(*range));
       range->start.kind = svn_opt_revision_unspecified;
@@ -1549,8 +1543,12 @@ main(int argc, const char *argv[])
       APR_ARRAY_PUSH(opt_state.revision_ranges,
                      svn_opt_revision_range_t *) = range;
     }
+  opt_state.start_revision = APR_ARRAY_IDX(opt_state.revision_ranges, 0,
+                                           svn_opt_revision_range_t *)->start;
+  opt_state.end_revision = APR_ARRAY_IDX(opt_state.revision_ranges, 0,
+                                         svn_opt_revision_range_t *)->end;
 
-  /* if we're running a command that could result in a commit, verify
+  /* If we're running a command that could result in a commit, verify
      that any log message we were given on the command line makes
      sense (unless we've also been instructed not to care). */
   if ((! opt_state.force_log)
