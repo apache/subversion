@@ -144,9 +144,8 @@ svn_error_t *svn_fs_fs__dag_set_proplist(dag_node_t *node,
                                          apr_hash_t *proplist,
                                          apr_pool_t *pool);
 
-/* Increment the mergeinfo_count field on NODE (and all its ancestors)
-   by INCREMENT.  The node being changed (and its ancestors) must be
-   mutable.  */
+/* Increment the mergeinfo_count field on NODE by INCREMENT.  The node
+   being changed must be mutable.  */
 svn_error_t *svn_fs_fs__dag_increment_mergeinfo_count(dag_node_t *node,
                                                       int increment,
                                                       apr_pool_t *pool);
