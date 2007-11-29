@@ -310,6 +310,9 @@ typedef struct
      instead. */
   int mergeinfo_count;
 
+  /* Does this node itself have svn:mergeinfo? */
+  svn_boolean_t has_mergeinfo;
+
 } node_revision_t;
 
 

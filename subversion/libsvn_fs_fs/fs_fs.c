@@ -83,7 +83,8 @@
 #define HEADER_COPYFROM    "copyfrom"
 #define HEADER_COPYROOT    "copyroot"
 #define HEADER_FRESHTXNRT  "is-fresh-txn-root"
-#define HEADER_MERGEINFO   "mergeinfo"
+#define HEADER_MINFO_HERE  "minfo-here"
+#define HEADER_MINFO_CNT   "minfo-cnt"
 
 /* Kinds that a change can be. */
 #define ACTION_MODIFY      "modify"
@@ -1569,8 +1570,12 @@ svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
   noderev->is_fresh_txn_root = (value != NULL);
 
   /* Get the mergeinfo count. */
-  value = apr_hash_get(headers, HEADER_MERGEINFO, APR_HASH_KEY_STRING);
+  value = apr_hash_get(headers, HEADER_MINFO_CNT, APR_HASH_KEY_STRING);
   noderev->mergeinfo_count = (value == NULL) ? 0 : atoi(value);
+
+  /* Get whether *this* node has mergeinfo. */
+  value = apr_hash_get(headers, HEADER_MINFO_HERE, APR_HASH_KEY_STRING);
+  noderev->has_mergeinfo = (value != NULL);
 
   *noderev_p = noderev;
 
@@ -1655,8 +1660,11 @@ write_noderev_txn(apr_file_t *file,
     SVN_ERR(svn_stream_printf(outfile, pool, HEADER_FRESHTXNRT ": y\n"));
 
   if (noderev->mergeinfo_count > 0)
-    SVN_ERR(svn_stream_printf(outfile, pool, HEADER_MERGEINFO ": %d\n",
+    SVN_ERR(svn_stream_printf(outfile, pool, HEADER_MINFO_CNT ": %d\n",
                               noderev->mergeinfo_count));
+
+  if (noderev->has_mergeinfo)
+    SVN_ERR(svn_stream_printf(outfile, pool, HEADER_MINFO_HERE ": y\n"));
 
   SVN_ERR(svn_stream_printf(outfile, pool, "\n"));
 

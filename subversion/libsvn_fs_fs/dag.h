@@ -114,6 +114,12 @@ svn_error_t *svn_fs_fs__dag_get_mergeinfo_count(int *count,
                                                 dag_node_t *node,
                                                 apr_pool_t *pool);
 
+/* Set *HAS_MERGEINFO to a flag indicating whether or not NODE itself
+   has svn:mergeinfo set on it. */
+svn_error_t *
+svn_fs_fs__dag_has_mergeinfo(svn_boolean_t *has_mergeinfo,
+                             dag_node_t *node,
+                             apr_pool_t *pool);
 
 /* Return non-zero IFF NODE is currently mutable. */
 svn_boolean_t svn_fs_fs__dag_check_mutable(dag_node_t *node);
@@ -144,6 +150,12 @@ svn_error_t *svn_fs_fs__dag_set_proplist(dag_node_t *node,
 svn_error_t *svn_fs_fs__dag_increment_mergeinfo_count(dag_node_t *node,
                                                       int increment,
                                                       apr_pool_t *pool);
+
+/* Set the has-mergeinfo flag on NODE to HAS_MERGEINFO.  The node
+   being changed must be mutable.  */
+svn_error_t *svn_fs_fs__dag_set_has_mergeinfo(dag_node_t *node,
+                                              svn_boolean_t has_mergeinfo,
+                                              apr_pool_t *pool);
 
 
 

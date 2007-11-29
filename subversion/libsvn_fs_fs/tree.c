@@ -1100,15 +1100,21 @@ fs_change_node_prop(svn_fs_root_t *root,
   if (strcmp (name, SVN_PROP_MERGE_INFO) == 0)
     {
       int increment = 0;
-      if (value && !apr_hash_get(proplist, SVN_PROP_MERGE_INFO, 
-                                  APR_HASH_KEY_STRING))
+      svn_boolean_t had_mergeinfo;
+      SVN_ERR(svn_fs_fs__dag_has_mergeinfo(&had_mergeinfo, parent_path->node,
+                                           pool));
+
+      if (value && !had_mergeinfo)
         increment = 1;
-      else if (!value && apr_hash_get(proplist, SVN_PROP_MERGE_INFO,
-                                      APR_HASH_KEY_STRING))
+      else if (!value && had_mergeinfo)
         increment = -1;
 
       if (increment != 0)
-        SVN_ERR(increment_mergeinfo_up_tree(parent_path, increment, pool));
+        {
+          SVN_ERR(increment_mergeinfo_up_tree(parent_path, increment, pool));
+          SVN_ERR(svn_fs_fs__dag_set_has_mergeinfo(parent_path->node,
+                                                   (value != NULL), pool));
+        }
     }
 
   /* Set the property. */
