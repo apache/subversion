@@ -1452,9 +1452,7 @@ svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
       svn_stream_t *stream = svn_stream_from_stringbuf(buf, pool);
       apr_hash_t *mergeinfo = apr_hash_make(pool);
       SVN_ERR(svn_hash_read2(mergeinfo, stream, NULL, pool));
-      /* XXXdsg: update fs_base for new interface! */
-      SVN_ERR(svn_fs_mergeinfo__update_index(txn, *new_rev, mergeinfo, NULL,
-                                             pool));
+      SVN_ERR(svn_fs_mergeinfo__update_index(txn, *new_rev, mergeinfo, pool));
       SVN_ERR(svn_fs_base__set_txn_prop
               (fs, txn_id, SVN_FS__PROP_TXN_MERGEINFO, NULL, trail, pool));
     }

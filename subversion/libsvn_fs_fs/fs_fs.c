@@ -248,13 +248,6 @@ path_txn_mergeinfo(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 }
 
 static const char *
-path_txn_mergeinfo_legacy(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
-{
-  return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_TXN_MERGEINFO_LEGACY,
-                       pool);
-}
-
-static const char *
 path_txn_next_ids(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_NEXT_IDS, pool);
@@ -3592,34 +3585,12 @@ svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
    Perform temporary allocations in POOL. */
 
 static svn_error_t *
-get_txn_mergeinfo(apr_hash_t *minfo_legacy,
-                  apr_hash_t *minfo,
+get_txn_mergeinfo(apr_hash_t *minfo,
                   svn_fs_t *fs,
                   const char *txn_id,
                   apr_pool_t *pool)
 {
   apr_file_t *txn_minfo_file;
-
-  /* XXXdsg <legacy> */
-  /* Open the transaction mergeinfo file. */
-  svn_error_t * err = svn_io_file_open(&txn_minfo_file,
-                           path_txn_mergeinfo_legacy(fs, txn_id, pool),
-                           APR_READ | APR_BUFFERED,
-                           APR_OS_DEFAULT, pool);
-  if (err && (APR_STATUS_IS_ENOENT(err->apr_err))) /* doesn't exist yet */
-    svn_error_clear(err);
-  else if (err)
-    return err;
-  else 
-    {
-      /* Read in the hash. */
-      SVN_ERR(svn_hash_read2(minfo_legacy,
-                             svn_stream_from_aprfile(txn_minfo_file, pool),
-                             SVN_HASH_TERMINATOR, pool));
-      
-      SVN_ERR(svn_io_file_close(txn_minfo_file, pool));
-    }
-  /* XXXdsg </legacy> */
 
   /* Open the transaction mergeinfo file. */
   SVN_ERR(svn_io_file_open(&txn_minfo_file,
@@ -3627,7 +3598,7 @@ get_txn_mergeinfo(apr_hash_t *minfo_legacy,
                            APR_READ | APR_BUFFERED,
                            APR_OS_DEFAULT, pool));
 
-  /* Read in the hash. */
+  /* Read in the property list. */
   SVN_ERR(svn_hash_read2(minfo,
                          svn_stream_from_aprfile(txn_minfo_file, pool),
                          SVN_HASH_TERMINATOR, pool));
@@ -3647,45 +3618,18 @@ svn_fs_fs__change_txn_mergeinfo(svn_fs_txn_t *txn,
 {
   apr_file_t *txn_minfo_file;
   apr_hash_t *txn_minfo = apr_hash_make(pool);
-  apr_hash_t *txn_minfo_legacy = apr_hash_make(pool);
   svn_error_t *err;
-  static const svn_string_t exists =
-    {
-      SVN_FS_MERGEINFO__EXISTS,
-      sizeof(SVN_FS_MERGEINFO__EXISTS) - 1
-    };
-  static const svn_string_t deleted =
-    {
-      SVN_FS_MERGEINFO__DELETED,
-      sizeof(SVN_FS_MERGEINFO__DELETED) - 1
-    };
 
-  err = get_txn_mergeinfo(txn_minfo_legacy, txn_minfo, txn->fs, txn->id, pool);
-  /* XXXdsg <legacy> */
+  err = get_txn_mergeinfo(txn_minfo, txn->fs, txn->id, pool);
   if (err && (APR_STATUS_IS_ENOENT(err->apr_err))) /* doesn't exist yet */
     svn_error_clear(err);
   else if (err)
     return err;
 
-  apr_hash_set(txn_minfo_legacy, name, APR_HASH_KEY_STRING, value);
+  apr_hash_set(txn_minfo, name, APR_HASH_KEY_STRING, value);
 
   /* Create a new version of the file and write out the new minfos. */
   /* Open the transaction minfoerties file. */
-  SVN_ERR(svn_io_file_open(&txn_minfo_file,
-                           path_txn_mergeinfo_legacy(txn->fs, txn->id, pool),
-                           APR_WRITE | APR_CREATE | APR_TRUNCATE
-                           | APR_BUFFERED, APR_OS_DEFAULT, pool));
-
-  SVN_ERR(svn_hash_write(txn_minfo_legacy, txn_minfo_file, pool));
-
-  SVN_ERR(svn_io_file_close(txn_minfo_file, pool));
-  /* XXXdsg </legacy> */
-
-  apr_hash_set(txn_minfo, name, APR_HASH_KEY_STRING,
-               (value ? &exists : &deleted));
-
-  /* Create a new version of the file and write the hash out. */
-  /* XXXdsg use incremental hash read/write! */
   SVN_ERR(svn_io_file_open(&txn_minfo_file,
                            path_txn_mergeinfo(txn->fs, txn->id, pool),
                            APR_WRITE | APR_CREATE | APR_TRUNCATE
@@ -3694,7 +3638,6 @@ svn_fs_fs__change_txn_mergeinfo(svn_fs_txn_t *txn,
   SVN_ERR(svn_hash_write(txn_minfo, txn_minfo_file, pool));
 
   SVN_ERR(svn_io_file_close(txn_minfo_file, pool));
-
 
   return SVN_NO_ERROR;
 }
@@ -4984,7 +4927,6 @@ commit_body(void *baton, apr_pool_t *pool)
   apr_hash_t *txnprops;
   svn_string_t date;
   apr_hash_t *target_mergeinfo = NULL;
-  apr_hash_t *target_mergeinfo_legacy = NULL;
 
   /* Get the current youngest revision. */
   SVN_ERR(svn_fs_fs__youngest_rev(&old_rev, cb->fs, pool));
@@ -5061,10 +5003,7 @@ commit_body(void *baton, apr_pool_t *pool)
                        APR_HASH_KEY_STRING))
         {
           target_mergeinfo = apr_hash_make(pool);
-          target_mergeinfo_legacy = apr_hash_make(pool);
-          SVN_ERR(get_txn_mergeinfo(target_mergeinfo_legacy,
-                                    target_mergeinfo,
-                                    cb->txn->fs, cb->txn->id,
+          SVN_ERR(get_txn_mergeinfo(target_mergeinfo, cb->txn->fs, cb->txn->id,
                                     pool));
           prop.name = SVN_FS__PROP_TXN_CONTAINS_MERGEINFO;
           APR_ARRAY_PUSH(props, svn_prop_t) = prop;
@@ -5121,8 +5060,7 @@ commit_body(void *baton, apr_pool_t *pool)
                                      old_rev_filename, pool));
 
   /* Update the merge tracking information index. */
-  SVN_ERR(svn_fs_mergeinfo__update_index(cb->txn, new_rev, target_mergeinfo_legacy,
-                                         target_mergeinfo,
+  SVN_ERR(svn_fs_mergeinfo__update_index(cb->txn, new_rev, target_mergeinfo,
                                          pool));
 
   /* Update the 'current' file. */

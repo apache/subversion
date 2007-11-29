@@ -56,7 +56,6 @@ extern "C" {
 #define PATH_REV           "rev"           /* Proto rev file */
 #define PATH_REV_LOCK      "rev-lock"      /* Proto rev (write) lock file */
 #define PATH_TXN_MERGEINFO "mergeinfo"     /* Transaction mergeinfo props */
-#define PATH_TXN_MERGEINFO_LEGACY "mergeinfo-legacy"     /* Transaction mergeinfo props */
 #define PATH_PREFIX_NODE   "node."         /* Prefix for node filename */
 #define PATH_EXT_TXN       ".txn"          /* Extension of txn dir */
 #define PATH_EXT_CHILDREN  ".children"     /* Extension for dir contents */
