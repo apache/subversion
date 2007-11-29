@@ -9663,7 +9663,7 @@ def merge_source_normalization_and_subtree_merges(sbox):
     })
   expected_disk = wc.State('', {
     ''        : Item(props={SVN_PROP_MERGE_INFO : '/A_MOVED/D:8'}),
-    'G'       : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:4\n/A_MOVED/D/G:8'}),
+    'G'       : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:4\n/A_MOVED/D/G:8\n'}),
     'G/pi'    : Item("This is the file 'pi'.\n"),
     'G/rho'   : Item("New content"),
     'G/tau'   : Item("New content"),
