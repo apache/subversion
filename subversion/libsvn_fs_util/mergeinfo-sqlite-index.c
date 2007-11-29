@@ -83,7 +83,7 @@ static svn_merge_range_t no_mergeinfo = { SVN_INVALID_REVNUM,
    MERGEINFO_STR.  OLD_ROOT should be a revision root for rev NEW_REV-1.  
    Use POOL for temporary allocations.*/
 static svn_error_t *
-index_path_mergeinfo(svn_revnum_t new_rev,
+index_path_mergeinfo_legacy(svn_revnum_t new_rev,
                      sqlite3 *db,
                      const char *path,
                      svn_string_t *mergeinfo_str,
@@ -198,7 +198,7 @@ index_path_mergeinfo(svn_revnum_t new_rev,
 /* Index the mergeinfo for each path in MERGEINFO_FOR_PATHS (a
    mapping of const char * -> to svn_string_t *). */
 static svn_error_t *
-index_txn_mergeinfo(sqlite3 *db,
+index_txn_mergeinfo_legacy(sqlite3 *db,
                     svn_revnum_t new_rev,
                     apr_hash_t *mergeinfo_for_paths,
                     svn_fs_t *fs,
@@ -217,7 +217,7 @@ index_txn_mergeinfo(sqlite3 *db,
       void *mergeinfo;
 
       apr_hash_this(hi, &path, NULL, &mergeinfo);
-      SVN_ERR(index_path_mergeinfo(new_rev, db, (const char *) path,
+      SVN_ERR(index_path_mergeinfo_legacy(new_rev, db, (const char *) path,
                                    (svn_string_t *) mergeinfo, old_root, pool));
     }
   return SVN_NO_ERROR;
@@ -316,8 +316,8 @@ svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
   /* Record any mergeinfo from the current transaction. */
   if (mergeinfo_for_paths)
     {
-      err = index_txn_mergeinfo(db, new_rev, mergeinfo_for_paths, txn->fs, 
-                                subpool);
+      err = index_txn_mergeinfo_legacy(db, new_rev, mergeinfo_for_paths, txn->fs, 
+                                       subpool);
       MAYBE_CLEANUP;
     }
 
