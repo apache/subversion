@@ -963,14 +963,13 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
         {
           const void *key;
           void *val;
-          const char *rel_url;
+          const char *source_url;
 
           apr_hash_this(hi, &key, NULL, &val);
-          rel_url = svn_path_uri_encode(key, pool);
-          apr_hash_set(full_path_mergeinfo,
-                       apr_pstrcat(pool, repos_root, rel_url, NULL),
-                       APR_HASH_KEY_STRING,
-                       val);
+          source_url = svn_path_uri_encode(key, pool);
+          source_url = svn_path_join(repos_root, source_url + 1, pool);
+          apr_hash_set(full_path_mergeinfo, source_url, 
+                       APR_HASH_KEY_STRING, val);
         }
       *mergeinfo = full_path_mergeinfo;
     }
