@@ -3607,6 +3607,25 @@ fs_get_mergeinfo(apr_hash_t **mergeinfo,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+fs_get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
+                          svn_fs_root_t *root,
+                          const apr_array_header_t *paths,
+                          svn_fs_mergeinfo_filter_func_t filter_func,
+                          void *filter_func_baton,
+                          apr_pool_t *pool)
+{
+  /* We require a revision root. */
+  if (root->is_txn_root)
+    return svn_error_create(SVN_ERR_FS_NOT_REVISION_ROOT, NULL, NULL);
+
+  SVN_ERR(get_mergeinfo_hashes_for_paths(root, mergeinfo, paths,
+                                         svn_mergeinfo_inherited, pool));
+
+  /* XXXdsg: what about kids? */
+  return SVN_NO_ERROR;
+}
+
 
 /* The vtable associated with root objects. */
 static root_vtable_t root_vtable = {
@@ -3639,7 +3658,7 @@ static root_vtable_t root_vtable = {
   fs_merge,
   fs_change_mergeinfo,
   fs_get_mergeinfo,
-  svn_fs_mergeinfo__get_mergeinfo_for_tree
+  fs_get_mergeinfo_for_tree
 };
 
 /* Construct a new root object in FS, allocated from POOL.  */
