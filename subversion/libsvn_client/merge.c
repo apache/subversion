@@ -2709,6 +2709,8 @@ get_mergeinfo_walk_cb(const char *path,
   apr_hash_t *mergehash;
   svn_boolean_t switched = FALSE;
   svn_boolean_t has_mergeinfo_from_merge_src = FALSE;
+  svn_boolean_t path_is_merge_target =
+    !svn_path_compare_paths(path, wb->merge_target_path);
   const char *parent_path = svn_path_dirname(path, pool);
 
   /* We're going to receive dirents twice;  we want to ignore the
@@ -2733,7 +2735,10 @@ get_mergeinfo_walk_cb(const char *path,
     {
       SVN_ERR(svn_wc_prop_get(&propval, SVN_PROP_MERGE_INFO, path,
                               wb->base_access, pool));
-      if (propval)
+      /* We always include the merge target regardless of its mergeinfo.
+         So we don't need to check that PATH's mergeinfo corresponds to
+         the merge source. */
+      if (propval && !path_is_merge_target)
         {
           const char* path_relative_to_merge_target;
           int merge_target_len;
@@ -2773,7 +2778,8 @@ get_mergeinfo_walk_cb(const char *path,
      children due to a sparse checkout, are scheduled for deletion are absent
      from the WC, and/or are first level sub directories relative to merge
      target if depth is immediates. */
-  if (has_mergeinfo_from_merge_src
+  if (path_is_merge_target
+      ||has_mergeinfo_from_merge_src
       || entry->schedule == svn_wc_schedule_delete
       || switched
       || entry->depth == svn_depth_empty
@@ -3107,7 +3113,6 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                     apr_pool_t *pool)
 {
   int i;
-  svn_client__merge_path_t *target_item;
   apr_pool_t *iterpool;
   static const svn_wc_entry_callbacks2_t walk_callbacks =
     { get_mergeinfo_walk_cb, get_mergeinfo_error_handler };
@@ -3115,8 +3120,9 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
     { adm_access, children_with_mergeinfo,
       merge_src_canon_path, merge_cmd_baton->target, depth};
 
-  /* Cover cases 1), 2), and 6) by walking the WC to get all paths which have
-     mergeinfo and/or are switched or are absent from disk. */
+  /* Cover cases 1), 2), 6), and 8) by walking the WC to get all paths which
+     have mergeinfo and/or are switched or are absent from disk or is the
+     target of the merge. */
   if (entry->kind == svn_node_file)
     SVN_ERR(walk_callbacks.found_entry(merge_cmd_baton->target, entry, &wb,
                                        pool));
@@ -3241,30 +3247,6 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
         children_with_mergeinfo, merge_cmd_baton, &i, child,
         adm_access, iterpool));
     } /* i < children_with_mergeinfo->nelts */
-
-  /* Case 8 Make sure MERGE_CMD_BATON->TARGET is present in
-     *CHILDREN_WITH_MERGEINFO. */
-  target_item = NULL;
-  if (children_with_mergeinfo->nelts)
-    {
-      svn_client__merge_path_t *possible_target_item =
-        APR_ARRAY_IDX(children_with_mergeinfo, 0, svn_client__merge_path_t *);
-      if (strcmp(possible_target_item->path, merge_cmd_baton->target) == 0)
-        target_item = possible_target_item;
-    }
-  if (!target_item)
-    {
-      target_item = apr_pcalloc(children_with_mergeinfo->pool,
-                                sizeof(*target_item));
-      target_item->path = apr_pstrdup(children_with_mergeinfo->pool,
-                                      merge_cmd_baton->target);
-      target_item->missing_child = (entry->depth == svn_depth_empty
-                                    || entry->depth == svn_depth_files)
-                                    ? TRUE : FALSE;
-      if (target_item->missing_child)
-        target_item->has_noninheritable = TRUE;
-      insert_child_to_merge(children_with_mergeinfo, target_item, 0);
-    }
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
