@@ -294,6 +294,7 @@ clean_tables(sqlite3 *db,
 svn_error_t *
 svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
                                apr_hash_t *mergeinfo_for_paths,
+                               apr_hash_t *mergeinfo_for_paths_dsg,
                                apr_pool_t *pool)
 {
   svn_error_t *err;

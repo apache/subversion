@@ -31,6 +31,9 @@ extern "C" {
    change these three functions.
  */
 
+/* XXXdsg document */
+#define SVN_FS_MERGEINFO__EXISTS "+"
+#define SVN_FS_MERGEINFO__DELETED "-"
 
 /* Update the mergeinfo index according to the changes made in
    transaction TXN for revision NEW_REV.  MERGEINFO_FOR_PATHS is the
@@ -45,6 +48,7 @@ svn_error_t *
 svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn,
                                svn_revnum_t new_rev,
                                apr_hash_t *mergeinfo_for_paths,
+                               apr_hash_t *mergeinfo_for_paths_dsg,
                                apr_pool_t *pool);
 
 /* Get the mergeinfo for the set of PATHS (an array of
