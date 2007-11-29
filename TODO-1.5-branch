@@ -6,9 +6,6 @@ should be placed in the issue tracker and given the 1.5 milestone.
     This will allow API consumers to use the API without taking a big
     performance hit for nothing.  We can catch the error and fallback.  [dlr]
 
-  * Improving the default revisions chosen for a revision-less merge.
-    [cmpilato, estimate: 4 hours]
-
   * Improving the svn_client_merge() API to actually do source-relatedness
     checks instead of just assuming the sources aren't related.  (And if
     they *are* related, I'll probably just have it call
