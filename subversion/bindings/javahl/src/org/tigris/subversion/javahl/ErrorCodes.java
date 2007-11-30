@@ -18,6 +18,7 @@ public class ErrorCodes
     public static final int badMimeType = 125004;
     public static final int badPropertyValue = 125005;
     public static final int badVersionFileFormat = 125006;
+    public static final int badRelativePath = 125007;
     public static final int xmlAttribNotFound = 130000;
     public static final int xmlMissingAncestry = 130001;
     public static final int xmlUnknownEncoding = 130002;
@@ -117,6 +118,8 @@ public class ErrorCodes
     public static final int fsRepBeingWritten = 160044;
     public static final int fsTxnNameTooLong = 160045;
     public static final int fsSqliteError = 160046;
+    public static final int fsNoSuchNodeOrigin = 160047;
+    public static final int fsSqliteReadonly = 160048;
     public static final int reposLocked = 165000;
     public static final int reposHookFailure = 165001;
     public static final int reposBadArgs = 165002;
@@ -233,4 +236,5 @@ public class ErrorCodes
     public static final int authzInvalidConfig = 220003;
     public static final int authzUnwritable = 220004;
     public static final int diffDatasourceModified = 225000;
+    public static final int raSerfSspiInitialisationFailed = 230000;
 }
