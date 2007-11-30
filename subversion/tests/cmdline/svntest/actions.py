@@ -706,17 +706,12 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
 
 
 def run_and_verify_mergeinfo(error_re_string = None,
-                             expected_paths = [],
-                             expected_source_paths = [],
-                             expected_eligible_revs = [],
+                             expected_output = {},
                              *args):
   """Run 'svn mergeinfo ARGS', and compare the result against
-  EXPECTED_PATHS, and for each path, EXPECTED_SOURCE_PATHS and
-  EXPECTED_ELIGIBLE_REVS.  Raise an exception if an unexpected output
-  is encountered."""
-
-  if len(expected_source_paths) != len(expected_eligible_revs):
-    raise Failure('Number of "Source paths" and "Eligible revs" must match')
+  EXPECTED_OUTPUT, a dict of dict of tuples:
+    { path : { source path : (merged ranges, eligible ranges) } }
+  Raise an exception if an unexpected output is encountered."""
 
   mergeinfo_command = ["mergeinfo"]
   mergeinfo_command.extend(args)
@@ -727,16 +722,36 @@ def run_and_verify_mergeinfo(error_re_string = None,
       error_re_string = ".*(" + error_re_string + ")"
     expected_err = verify.RegexOutput(error_re_string, match_all=False)
     verify.verify_outputs(None, None, err, None, expected_err)
+    return
 
   parser = parsers.MergeinfoReportParser()
   parser.parse(out)
 
-  for path in expected_paths:
-    for i in range(0, len(expected_source_paths)):
-      if parser.source_paths[i] != expected_source_paths[i]:
-        raise Exception("Unexpected source path")
-      if parser.eligible_revs[i] != expected_eligible_revs[i]:
-        raise Exception("Unexpected eligible revisions")
+  if len(expected_output.keys()) != len(parser.report.keys()):
+    raise verify.SVNUnexpectedStdout("Unexpected number of target paths")
+
+  for actual_path in parser.report.keys():
+    actual_src_paths = parser.report[actual_path]
+    expected_src_paths = expected_output[actual_path]
+
+    if len(actual_src_paths.keys()) != len(expected_src_paths.keys()):
+      raise verify.SVNUnexpectedStdout("Unexpected number of source paths "
+                                       "for target path '%s'" % actual_path)
+
+    for src_path in actual_src_paths.keys():
+      (actual_merged, actual_eligible) = actual_src_paths[src_path]
+      (expected_merged, expected_eligible) = expected_src_paths[src_path]
+      
+      if actual_merged != expected_merged:
+        raise Exception("Unexpected merged ranges for target path '%s' and "
+                        "source path '%s': Expected '%s', got '%s'" %
+                        (actual_path, src_path, expected_merged,
+                         actual_merged))
+      if actual_eligible != expected_eligible:
+        raise Exception("Unexpected eligible ranges for target path '%s' and "
+                        "source path '%s': Expected '%s', got '%s'" %
+                        (actual_path, src_path, expected_merged,
+                         actual_merged))
 
 
 def run_and_verify_switch(wc_dir_name,

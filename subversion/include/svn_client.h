@@ -2563,6 +2563,10 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
  *
  * Use @a pool for all necessary allocations.
  *
+ * If the server doesn't support retrieval of mergeinfo (which will
+ * never happen for file:// URLs), return an @c
+ * SVN_ERR_UNSUPPORTED_FEATURE error.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
@@ -2581,6 +2585,10 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
  * merge_source have already been merged.
  *
  * Use @a pool for all necessary allocations.
+ *
+ * If the server doesn't support retrieval of mergeinfo (which will
+ * never happen for file:// URLs), return an @c
+ * SVN_ERR_UNSUPPORTED_FEATURE error.
  *
  * @since New in 1.5.
  */

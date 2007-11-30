@@ -281,23 +281,8 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
       return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL,
                                _("'%s' path not found"), handler->path);
     }
-
-  /* If the server responds with HTTP_NOT_IMPLEMENTED (which ra_serf
-     translates into a Subversion error), assume its mod_dav_svn is
-     too old to understand the mergeinfo-report REPORT.
-
-     ### It would be less expensive if we knew the server's
-     ### capabilities *before* sending our REPORT. */
-  if (err)
-    {
-      if (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
-        {
-          *mergeinfo = NULL;
-          svn_error_clear(err);
-        }
-      else
-        return err;
-    }
+  else
+    SVN_ERR(err);
 
   if (mergeinfo_ctx->done)
     *mergeinfo = mergeinfo_ctx->result;

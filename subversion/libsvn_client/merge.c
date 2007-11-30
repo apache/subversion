@@ -1251,10 +1251,12 @@ filter_reflected_revisions(apr_array_header_t **requested_rangelist,
      between URL1@REVISION1 and URL2@REVISION2. */
   SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &start_mergeinfo,
                                           min_rel_path, min_rev,
-                                          svn_mergeinfo_inherited, pool));
+                                          svn_mergeinfo_inherited, TRUE,
+                                          pool));
   SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &end_mergeinfo,
                                           max_rel_path, max_rev,
-                                          svn_mergeinfo_inherited, pool));
+                                          svn_mergeinfo_inherited, TRUE,
+                                          pool));
 
   SVN_ERR(svn_mergeinfo_diff(&deleted_mergeinfo, &added_mergeinfo,
                              start_mergeinfo, end_mergeinfo,

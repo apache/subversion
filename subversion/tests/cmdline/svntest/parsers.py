@@ -20,40 +20,69 @@
 class MergeinfoReportParser:
   "A parser for the output of the 'svn mergeinfo' sub-command."
 
+  # Parse output of the form:
+  #
+  # Path: .
+  #  Source path: /branches/sqlite-node-origins
+  #    Merged ranges: r27840:27889
+  #    Eligible ranges: (source no longer available in HEAD)
+  #  Source path: /branches/mergeinfoless-copies
+  #    Merged ranges: r27770:28001
+  #    Eligible ranges: (source no longer available in HEAD)
+
   STATE_INITIAL = 0
   STATE_PATH = 1
   STATE_SOURCE_PATH = 2
-  STATE_ELIGIBLE_REVS = 3
+  STATE_MERGED_RANGES = 3
+  STATE_ELIGIBLE_RANGES = 4
 
   STATE_TRANSITIONS = {
     STATE_INITIAL : (STATE_PATH,),
     STATE_PATH : (STATE_SOURCE_PATH,),
-    STATE_SOURCE_PATH : (STATE_ELIGIBLE_REVS,),
-    STATE_ELIGIBLE_REVS : (STATE_PATH, STATE_SOURCE_PATH),
+    STATE_SOURCE_PATH : (STATE_MERGED_RANGES,),
+    STATE_MERGED_RANGES : (STATE_ELIGIBLE_RANGES,),
+    STATE_ELIGIBLE_RANGES : (STATE_PATH, STATE_SOURCE_PATH),
     }
 
   STATE_TOKENS = {
     STATE_PATH : "Path: ",
     STATE_SOURCE_PATH : "Source path: ",
-    STATE_ELIGIBLE_REVS : "Eligible revisions: ",
+    STATE_MERGED_RANGES : "Merged ranges: ",
+    STATE_ELIGIBLE_RANGES : "Eligible ranges: ",
     }
 
   def __init__(self):
     self.state = self.STATE_INITIAL
-    self.paths = []
-    self.source_paths = []
-    self.eligible_revs = []
-    self.state_to_storage = {
-      self.STATE_PATH : self.paths,
-      self.STATE_SOURCE_PATH : self.source_paths,
-      self.STATE_ELIGIBLE_REVS : self.eligible_revs,
+    # { path : { source path : (merged ranges, eligible ranges) } }
+    self.report = {}
+    self.cur_target_path = None
+    self.cur_source_path = None
+    self.parser_callbacks = {
+      self.STATE_PATH : self.parsed_target_path,
+      self.STATE_SOURCE_PATH : self.parsed_source_path,
+      self.STATE_MERGED_RANGES : self.parsed_merged_ranges,
+      self.STATE_ELIGIBLE_RANGES : self.parsed_eligible_ranges,
       }
+
+  def parsed_target_path(self, value):
+    self.cur_target_path = value
+    self.report[value] = {}
+
+  def parsed_source_path(self, value):
+    self.cur_source_path = value
+    self.report[self.cur_target_path][value] = [None, None]
+
+  def parsed_merged_ranges(self, value):
+    self.report[self.cur_target_path][self.cur_source_path][0] = value
+
+  def parsed_eligible_ranges(self, value):
+    self.report[self.cur_target_path][self.cur_source_path][1] = value
 
   def parse(self, lines):
     for line in lines:
       parsed = self.parse_next(line)
       if parsed:
-        self.state_to_storage[self.state].append(parsed)
+        self.parser_callbacks[self.state](parsed)
 
   def parse_next(self, line):
       line = line.strip()

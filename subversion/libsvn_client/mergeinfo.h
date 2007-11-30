@@ -89,14 +89,16 @@ svn_client__get_wc_mergeinfo(apr_hash_t **mergeinfo,
    INHERIT indicates whether explicit, explicit or inherited, or only
    inherited mergeinfo for REL_PATH is obtained.
 
-   If there is no mergeinfo available for REL_PATH, set
-   *TARGET_MERGEINFO to NULL. */
+   If there is no mergeinfo available for REL_PATH, or if the server
+   doesn't support a mergeinfo capability and SQUELCH_INCAPABLE is
+   TRUE, set *TARGET_MERGEINFO to NULL. */
 svn_error_t *
 svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
                                 apr_hash_t **target_mergeinfo,
                                 const char *rel_path,
                                 svn_revnum_t rev,
                                 svn_mergeinfo_inheritance_t inherit,
+                                svn_boolean_t squelch_incapable,
                                 apr_pool_t *pool);
 
 /* Retrieve the direct mergeinfo for the TARGET_WCPATH from the WC's
