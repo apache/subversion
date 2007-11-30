@@ -279,7 +279,7 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
     {
       svn_error_clear(err);
       return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL,
-                               "'%s' path not found", handler->path);
+                               _("'%s' path not found"), handler->path);
     }
 
   /* If the server responds with HTTP_NOT_IMPLEMENTED (which ra_serf
