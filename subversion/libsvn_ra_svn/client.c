@@ -1060,12 +1060,6 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
   const char *path, *to_parse;
   apr_hash_t *for_path;
 
-  if (!svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_MERGEINFO))
-    {
-      *mergeinfo = NULL;
-      return SVN_NO_ERROR;
-    }
-
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "get-mergeinfo"));
   for (i = 0; i < paths->nelts; i++)
     {

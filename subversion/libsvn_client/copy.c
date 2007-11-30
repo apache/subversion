@@ -116,7 +116,8 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
                                                 adm_access, pool));
       SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &src_mergeinfo,
                                               mergeinfo_path, src_revnum,
-                                              svn_mergeinfo_inherited, pool));
+                                              svn_mergeinfo_inherited, TRUE,
+                                              pool));
     }
 
   *target_mergeinfo = src_mergeinfo ? src_mergeinfo : apr_hash_make(pool);
