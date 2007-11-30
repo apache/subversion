@@ -27,6 +27,7 @@
 #include "svn_cmdline.h"
 #include "svn_path.h"
 #include "svn_error.h"
+#include "svn_error_codes.h"
 #include "svn_types.h"
 #include "cl.h"
 
@@ -110,7 +111,7 @@ svn_cl__mergeinfo(apr_getopt_t *os,
 
       svn_cmdline_printf(pool, _("Path: %s\n"),
                          svn_path_local_style(truepath, pool));
-      if (! mergeinfo)
+      if (mergeinfo == NULL)
         {
           svn_cmdline_printf(pool, "\n");
           continue;
@@ -140,12 +141,13 @@ svn_cl__mergeinfo(apr_getopt_t *os,
           /* Now fetch the available merges for this source. */
 
           /* ### FIXME: There's no reason why this API should fail to
-             ### answer the question, short of something being quite
-             ### wrong with the question.  Certainly, that the merge
-             ### source URL can't be found in HEAD shouldn't mean we
-             ### can't get any decent information about it out of the
-             ### system.  It may just mean the system has to work
-             ### harder to provide that information.
+             ### answer the question (when asked of a 1.5+ server),
+             ### short of something being quite wrong with the
+             ### question.  Certainly, that the merge source URL can't
+             ### be found in HEAD shouldn't mean we can't get any
+             ### decent information about it out of the system.  It
+             ### may just mean the system has to work harder to
+             ### provide that information.
           */
           svn_cmdline_printf(iterpool, _("    Eligible ranges: "));
           err = svn_client_mergeinfo_get_available(&merge_ranges,
@@ -165,6 +167,7 @@ svn_cl__mergeinfo(apr_getopt_t *os,
                 }
               else
                 {
+                  svn_cmdline_printf(subpool, "\n");
                   return err;
                 }
             }
