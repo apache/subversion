@@ -1536,8 +1536,10 @@ static svn_error_t *get_commit_revs_for_merge_ranges(svn_ra_svn_conn_t *conn,
   const char *inherit_word;
   svn_revnum_t max_commit_rev = SVN_INVALID_REVNUM;
   svn_revnum_t min_commit_rev = SVN_INVALID_REVNUM;
-  const char* merge_target = NULL;
-  const char* merge_source = NULL;
+  const char *merge_target = NULL;
+  const char *merge_source = NULL;
+  const char *merge_target_abs_path = NULL;
+  const char *merge_source_abs_path = NULL;
   const char *merge_ranges_string = NULL;
   apr_array_header_t *merge_rangelist;
   svn_mergeinfo_inheritance_t inherit;
@@ -1548,11 +1550,13 @@ static svn_error_t *get_commit_revs_for_merge_ranges(svn_ra_svn_conn_t *conn,
                                  &merge_source, &min_commit_rev,
                                  &max_commit_rev, &merge_ranges_string,
                                  &inherit_word));
-  inherit = svn_inheritance_from_word(inherit_word);
-
   /* Canonicalize the paths. */
   merge_target = svn_path_canonicalize(merge_target, pool);
   merge_source = svn_path_canonicalize(merge_source, pool);
+  merge_target_abs_path = svn_path_join(b->fs_path->data, merge_target, pool);
+  merge_source_abs_path = svn_path_join(b->fs_path->data, merge_source, pool);
+  inherit = svn_inheritance_from_word(inherit_word);
+
   {
     /* We lack svn_rangelist_parse, so creating a dummy mergeinfo 
        and parse with the help of svn_mergeinfo_parse. */
@@ -1567,14 +1571,19 @@ static svn_error_t *get_commit_revs_for_merge_ranges(svn_ra_svn_conn_t *conn,
   SVN_ERR(trivial_auth_request(conn, pool, b));
   SVN_CMD_ERR(svn_repos_get_commit_revs_for_merge_ranges(
                                                 &commit_rev_range_list,
-                                                b->repos, merge_target,
-                                                merge_source,
+                                                b->repos, 
+                                                merge_target_abs_path,
+                                                merge_source_abs_path,
                                                 min_commit_rev,
                                                 max_commit_rev,
                                                 merge_rangelist,
                                                 inherit,
                                                 authz_check_access_cb_func(b),
                                                 b, pool));
+  /* When we hand back the stuff to client we should give back the 
+   * mergeinfo hash with path being relative to ra_session.
+   * ### TODO If at all svn_rangelist_parse exists we can remove this kludge.
+   */
   apr_hash_set(mergeinfo, merge_source, APR_HASH_KEY_STRING,
                commit_rev_range_list);
   SVN_ERR(svn_mergeinfo_to_stringbuf(&commit_rev_mergeinfo, mergeinfo, pool));

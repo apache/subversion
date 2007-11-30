@@ -1270,9 +1270,15 @@ filter_reflected_revisions(apr_array_header_t **requested_rangelist,
       src_rangelist_for_tgt = apr_hash_get(added_mergeinfo, mergeinfo_path,
                                            APR_HASH_KEY_STRING);
       if (src_rangelist_for_tgt && src_rangelist_for_tgt->nelts)
+        /* mergeinfo_path has leading '/' (See 
+           svn_client__path_relative_to_root is called with 
+           include_leading_slash being TRUE), for ra calls we need to give 
+           paths relative to ra_session url. So pass mergeinfo_path+1 for 
+           merge_source for 'svn_ra_get_commit_revs_for_merge_ranges' call */
         SVN_ERR(svn_ra_get_commit_revs_for_merge_ranges(ra_session,
                                                   &reflected_rangelist_for_tgt,
-                                                  max_rel_path, mergeinfo_path,
+                                                  max_rel_path, 
+                                                  mergeinfo_path + 1,
                                                   min_rev, max_rev,
                                                   src_rangelist_for_tgt,
                                                   svn_mergeinfo_inherited,

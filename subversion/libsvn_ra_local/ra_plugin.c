@@ -712,9 +712,14 @@ svn_ra_local__get_commit_revs_for_merge_ranges(
                                     apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
+  const char *merge_target_abs_path = svn_path_join(sess->fs_path->data,
+                                                    merge_target, pool);
+  const char *merge_source_abs_path = svn_path_join(sess->fs_path->data,
+                                                    merge_source, pool);
   SVN_ERR(svn_repos_get_commit_revs_for_merge_ranges(commit_rev_range_list,
-                                                     sess->repos, merge_target,
-                                                     merge_source,
+                                                     sess->repos,
+                                                     merge_target_abs_path,
+                                                     merge_source_abs_path,
                                                      min_commit_rev,
                                                      max_commit_rev,
                                                      merge_rangelist,

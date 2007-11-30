@@ -683,6 +683,8 @@ svn_error_t *svn_ra_get_commit_revs_for_merge_ranges(
                                      svn_mergeinfo_inheritance_t inherit,
                                      apr_pool_t *pool)
 {
+  assert(*merge_target != '/');
+  assert(*merge_source != '/');
   return session->vtable->get_commit_revs_for_merge_ranges(session,
                                             commit_rev_rangelist, merge_target,
                                             merge_source, min_commit_rev,

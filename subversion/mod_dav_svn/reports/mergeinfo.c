@@ -216,9 +216,10 @@ dav_svn__get_commit_revs_for_merge_ranges_report(const dav_resource *resource,
   /* These get determined from the request document. */
   svn_revnum_t max_commit_rev = SVN_INVALID_REVNUM;
   svn_revnum_t min_commit_rev = SVN_INVALID_REVNUM;
-  const char* merge_target = NULL;
-  const char* merge_source = NULL;
+  const char *merge_target = NULL;
+  const char *merge_source = NULL;
   const char *merge_ranges_string = NULL;
+  const char *merge_target_relative_to_repos_path;
   apr_array_header_t *merge_rangelist;
   /* By default look for explicit mergeinfo only. */
   svn_mergeinfo_inheritance_t inherit = svn_mergeinfo_explicit;
@@ -350,9 +351,8 @@ dav_svn__get_commit_revs_for_merge_ranges_report(const dav_resource *resource,
                                   resource->pool);
       goto cleanup;
     }
-
-  apr_hash_set(mergeinfo, merge_source, APR_HASH_KEY_STRING, 
-               commit_rev_range_list);
+  apr_hash_set(mergeinfo, merge_source + strlen(resource->info->repos_path), 
+               APR_HASH_KEY_STRING, commit_rev_range_list);
   serr = svn_mergeinfo_to_stringbuf(&commit_rev_mergeinfo, mergeinfo,
                                     resource->pool);
   /* ### Same error-handling code appears elsewhere.  -Karl */
@@ -363,9 +363,11 @@ dav_svn__get_commit_revs_for_merge_ranges_report(const dav_resource *resource,
       goto cleanup;
     }
 
+  merge_target_relative_to_repos_path = merge_target 
+                                          + strlen(resource->info->repos_path);
   serr = dav_svn__send_xml(bb, output, itemformat,
                            apr_xml_quote_string(resource->pool,
-                                                merge_target, 0),
+                                       merge_target_relative_to_repos_path, 0),
                            apr_xml_quote_string(resource->pool,
                                                 commit_rev_mergeinfo->data,
                                                 0));
