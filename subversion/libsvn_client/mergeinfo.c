@@ -23,10 +23,13 @@
 #include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_string.h"
+#include "svn_opt.h"
 #include "svn_error.h"
+#include "svn_error_codes.h"
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
 #include "svn_sorts.h"
+#include "svn_ra.h"
 #include "svn_client.h"
 
 #include "private/svn_mergeinfo_private.h"
