@@ -89,13 +89,14 @@ static svn_merge_range_t no_mergeinfo = { SVN_INVALID_REVNUM,
                                           TRUE };
 
 /* Insert the necessary indexing data into the DB for all the merges
-   on PATH as of NEW_REV, which is provided in CURR_MERGEINFO.
-   ORIG_MERGEINFO corresponds to pre-commit mergeinfo.
-   ADDED_MERGEINFO corresponds to fresh merges in this commit.
-   'mergeinfo' table is populated with CURR_MERGEINFO.
-   'mergeinfo_table' table is populated with ADDED_MERGEINFO.
-   Use POOL for temporary allocations.*/
+   on PATH as of NEW_REV, which are provided in CURR_MERGEINFO.
+   ORIG_MERGEINFO contains the pre-commit mergeinfo.
+   ADDED_MERGEINFO contains the fresh merges in this commit.
 
+   Populate the 'mergeinfo' with CURR_MERGEINFO, and populate the
+   'mergeinfo_changed' table with ADDED_MERGEINFO.
+
+   Use POOL for temporary allocations. */
 static svn_error_t *
 index_path_mergeinfo(svn_revnum_t new_rev,
                      sqlite3 *db,
@@ -851,9 +852,9 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
    commit range MIN_COMMIT_REV(exclusive):MAX_COMMIT_REV(inclusive).
    Perform all allocations in POOL. */
 static svn_error_t *
-get_parent_target_path_having_mergeinfo(const char** parent_with_mergeinfo,
+get_parent_target_path_having_mergeinfo(const char **parent_with_mergeinfo,
                                         sqlite3 *db,
-                                        const char* merge_target,
+                                        const char *merge_target,
                                         svn_revnum_t min_commit_rev,
                                         svn_revnum_t max_commit_rev,
                                         apr_pool_t *pool)
@@ -879,7 +880,7 @@ get_parent_target_path_having_mergeinfo(const char** parent_with_mergeinfo,
     {
       apr_pool_t *subpool = svn_pool_create(pool);
       const char *parent_path = svn_path_dirname(merge_target, subpool);
-      while (strcmp(parent_path, "/"))
+      while (strcmp(parent_path, "/") != 0)
         {
           SVN_ERR(svn_fs__sqlite_bind_text(stmt, 1, parent_path));
           SVN_ERR(svn_fs__sqlite_step(&got_row, stmt));
@@ -908,19 +909,34 @@ get_parent_target_path_having_mergeinfo(const char** parent_with_mergeinfo,
 }
 
 /* Helper function for 'svn_fs_mergeinfo__get_commit_revs_for_merge_ranges'.
-   Retrieves the commit revisions for each merge range from MERGE_RANGELIST,
-   for the merge from MERGE_SOURCE to MERGE_TARGET within the time 
-   > MIN_COMMIT_REV and <=MAX_COMMIT_REV.
-   INHERIT decides whether to get the commit rev from parent paths or not.
-   It uses DB for retrieving this data. Commit revisions identified are 
-   populated in *COMMIT_REV_RANGELIST as each in its own 
-   single rev *svn_merge_range_t.
+
+   Set *COMMIT_REV_RANGELIST to a list of revisions (sorted in
+   increasing order and represented as described below) comprising all
+   the commit revisions of all the merge ranges in MERGE_RANGELIST,
+   for the merge from MERGE_SOURCE to MERGE_TARGET.  Only include
+   revisions that are > MIN_COMMIT_REV and <= MAX_COMMIT_REV.
+
+   Retrieve the necessary records from DB; allocate the results in POOL.
+
+   ### Why are we returning an array of 'svn_merge_range_t' objects
+   ### below, instead of just 'svn_revnum_t's?  Isn't representing
+   ### single revisions exactly what 'svn_revnum_t' is for?  -Karl
+
+   Represent each revision in *COMMIT_REV_RANGELIST as an
+   'svn_merge_range_t *' object where obj->start == obj->end - 1.
+
+   If INHERIT is svn_mergeinfo_inherited or svn_mergeinfo_nearest_ancestor,
+   use the parents of MERGE_SOURCE and MERGE_TARGET instead.
+
+   If there are no elements in MERGE_RANGELIST, return success, with
+   the effect on *COMMIT_REV_RANGELIST undefined.  If asked for a
+   range for which DB has no record, raise SVN_ERR_FS_SQLITE_ERROR.
 */
 static svn_error_t *
 get_commit_revs_for_merge_ranges(apr_array_header_t **commit_rev_rangelist,
                                  sqlite3 *db,
-                                 const char* merge_target,
-                                 const char* merge_source,
+                                 const char *merge_target,
+                                 const char *merge_source,
                                  svn_revnum_t min_commit_rev,
                                  svn_revnum_t max_commit_rev,
                                  const apr_array_header_t *merge_rangelist,
@@ -928,28 +944,27 @@ get_commit_revs_for_merge_ranges(apr_array_header_t **commit_rev_rangelist,
                                  apr_pool_t *pool)
 {
   sqlite3_stmt *stmt;
-  int sqlite_result;
   int i;
-  const char *parent_with_mergeinfo = merge_target;
-  const char *parent_merge_source = merge_source;
+  const char *real_mergeinfo_target = merge_target;
+  const char *real_merge_source = merge_source;
 
   /* early return */
   if (!merge_rangelist || !merge_rangelist->nelts)
     return SVN_NO_ERROR;
   if (inherit == svn_mergeinfo_inherited
       || inherit == svn_mergeinfo_nearest_ancestor)
-    SVN_ERR(get_parent_target_path_having_mergeinfo(&parent_with_mergeinfo,
+    SVN_ERR(get_parent_target_path_having_mergeinfo(&real_mergeinfo_target,
                                                     db, merge_target,
                                                     min_commit_rev,
                                                     max_commit_rev, pool));
-  if (strcmp(parent_with_mergeinfo, merge_target))
+  if (strcmp(real_mergeinfo_target, merge_target) != 0)
     {
       int parent_merge_src_end;
-      const char *target_base_name = merge_target
-                                               + strlen(parent_with_mergeinfo);
+      const char *target_base_name =
+        merge_target + strlen(real_mergeinfo_target);
       parent_merge_src_end = strlen(merge_source) - strlen(target_base_name);
-      parent_merge_source = apr_pstrndup(pool, merge_source,
-                                         parent_merge_src_end);
+      real_merge_source = apr_pstrndup(pool, merge_source,
+                                       parent_merge_src_end);
     }
   *commit_rev_rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
   SVN_ERR(svn_fs__sqlite_prepare(&stmt, db,
@@ -957,8 +972,8 @@ get_commit_revs_for_merge_ranges(apr_array_header_t **commit_rev_rangelist,
                                  "WHERE mergedfrom = ? AND mergedto = ? "
                                  "AND mergedrevstart = ? AND mergedrevend = ? "
                                  "AND inheritable = ? AND revision <= ?;"));
-  SVN_ERR(svn_fs__sqlite_bind_text(stmt, 1, parent_merge_source));
-  SVN_ERR(svn_fs__sqlite_bind_text(stmt, 2, parent_with_mergeinfo));
+  SVN_ERR(svn_fs__sqlite_bind_text(stmt, 1, real_merge_source));
+  SVN_ERR(svn_fs__sqlite_bind_text(stmt, 2, real_mergeinfo_target));
   SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 6, max_commit_rev));
   for (i = 0; i < merge_rangelist->nelts; i++)
     {

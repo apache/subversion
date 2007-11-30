@@ -1097,6 +1097,7 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
 
   return SVN_NO_ERROR;
 }
+
 static svn_error_t *
 ra_svn_get_commit_revs_for_merge_ranges(
                                      svn_ra_session_t *session,

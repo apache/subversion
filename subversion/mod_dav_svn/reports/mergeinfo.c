@@ -233,6 +233,7 @@ dav_svn__get_commit_revs_for_merge_ranges_report(const dav_resource *resource,
         "<S:" SVN_DAV__MERGEINFO_INFO ">%s</S:" SVN_DAV__MERGEINFO_INFO ">"
         DEBUG_CR
         "</S:" SVN_DAV__MERGEINFO_ITEM ">";
+
   /* Sanity check. */
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
@@ -251,16 +252,20 @@ dav_svn__get_commit_revs_for_merge_ranges_report(const dav_resource *resource,
         continue;
 
       if (strcmp(child->name, SVN_DAV__MAX_COMMIT_REVISION) == 0)
+        /* ### Check for boundary cases, errors?  -Karl */
         max_commit_rev = SVN_STR_TO_REV(dav_xml_get_cdata(child, 
                                                           resource->pool, 1));
       else if (strcmp(child->name, SVN_DAV__MIN_COMMIT_REVISION) == 0)
+        /* ### Check for boundary cases, errors?  -Karl */
         min_commit_rev = SVN_STR_TO_REV(dav_xml_get_cdata(child, 
                                                           resource->pool, 1));
       else if (strcmp(child->name, SVN_DAV__INHERIT) == 0)
+        /* ### Check for boundary cases, errors?  -Karl */
         inherit = svn_inheritance_from_word(
                               dav_xml_get_cdata(child, resource->pool, 1));
       else if (strcmp(child->name, SVN_DAV__MERGE_SOURCE) == 0)
         {
+          /* ### Big code duplication between this case and next. -Karl */
           const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
           if ((derr = dav_svn__test_canonical(rel_path, resource->pool)))
             return derr;
@@ -269,6 +274,7 @@ dav_svn__get_commit_revs_for_merge_ranges_report(const dav_resource *resource,
         }
       else if (strcmp(child->name, SVN_DAV__MERGE_TARGET) == 0)
         {
+          /* ### Big code duplication between this case and prev. -Karl */
           const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
           if ((derr = dav_svn__test_canonical(rel_path, resource->pool)))
             return derr;
@@ -276,18 +282,25 @@ dav_svn__get_commit_revs_for_merge_ranges_report(const dav_resource *resource,
                                        resource->pool);
         }
       else if (strcmp(child->name, SVN_DAV__MERGE_RANGES) == 0)
+        /* ### Check for boundary cases, errors?  -Karl */
         merge_ranges_string = dav_xml_get_cdata(child, resource->pool, 0);
 
       /* else unknown element; skip it */
     }
   {
-    /* We lack svn_rangelist_parse, so creating a dummy mergeinfo 
-       and parse with the help of svn_mergeinfo_parse. */
+    /* We lack svn_rangelist_parse(), so create a dummy mergeinfo 
+       and parse it with the help of svn_mergeinfo_parse().
+
+       ### Might be better to write svn_rangelist_parse()?  Could
+       ### other places use it too?  -Karl */
     apr_hash_t *dummy_mergeinfo;
     char *dummy_mergeinfo_str = apr_pstrcat(resource->pool, merge_source, ":",
                                             merge_ranges_string, NULL);
     serr = svn_mergeinfo_parse(&dummy_mergeinfo, dummy_mergeinfo_str,
                                resource->pool);
+    /* ### This error-handling code is repeated all over the place.
+       ### It would be nice to abstract it out; in fact, I think there
+       ### may already be an abstraction ready and waiting...  -Karl */
     if (serr)
       {
         derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, NULL,
@@ -317,6 +330,7 @@ dav_svn__get_commit_revs_for_merge_ranges_report(const dav_resource *resource,
                                                 dav_svn__authz_read_func(&arb),
                                                 &arb,
                                                 resource->pool);
+  /* ### Same error-handling code appears elsewhere.  -Karl */
   if (serr)
     {
       derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
@@ -329,6 +343,7 @@ dav_svn__get_commit_revs_for_merge_ranges_report(const dav_resource *resource,
                            "<S:" SVN_DAV__COMMIT_REVS_FOR_MERGE_RANGES_REPORT " "
                            "xmlns:S=\"" SVN_XML_NAMESPACE "\" "
                            "xmlns:D=\"DAV:\">" DEBUG_CR);
+  /* ### Same error-handling code appears elsewhere.  -Karl */
   if (serr)
     {
       derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
@@ -340,6 +355,7 @@ dav_svn__get_commit_revs_for_merge_ranges_report(const dav_resource *resource,
                commit_rev_range_list);
   serr = svn_mergeinfo_to_stringbuf(&commit_rev_mergeinfo, mergeinfo,
                                     resource->pool);
+  /* ### Same error-handling code appears elsewhere.  -Karl */
   if (serr)
     {
       derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, NULL,
@@ -353,6 +369,7 @@ dav_svn__get_commit_revs_for_merge_ranges_report(const dav_resource *resource,
                            apr_xml_quote_string(resource->pool,
                                                 commit_rev_mergeinfo->data,
                                                 0));
+  /* ### Same error-handling code appears elsewhere.  -Karl */
   if (serr)
     {
       derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -361,11 +378,12 @@ dav_svn__get_commit_revs_for_merge_ranges_report(const dav_resource *resource,
       goto cleanup;
     }
 
-  if ((serr = dav_svn__send_xml(
-                        bb, output,
-                        "</S:" SVN_DAV__COMMIT_REVS_FOR_MERGE_RANGES_REPORT ">"
-                        DEBUG_CR)))
+  serr = dav_svn__send_xml(bb, output, "</S:"
+                           SVN_DAV__COMMIT_REVS_FOR_MERGE_RANGES_REPORT
+                           ">" DEBUG_CR);
+  if (serr)
     {
+      /* ### Same error-handling code appears elsewhere.  -Karl */
       derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                   "Error ending REPORT response.",
                                   resource->pool);

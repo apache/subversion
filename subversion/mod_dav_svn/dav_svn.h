@@ -515,7 +515,8 @@ static const dav_report_elem dav_svn__reports_list[] = {
   { SVN_XML_NAMESPACE, "get-locks-report" },
   { SVN_XML_NAMESPACE, "replay-report" },
   { SVN_XML_NAMESPACE, SVN_DAV__MERGEINFO_REPORT },
-  { NULL, NULL },
+  { SVN_XML_NAMESPACE, SVN_DAV__COMMIT_REVS_FOR_MERGE_RANGES_REPORT },
+  { NULL, NULL }
 };
 
 
@@ -548,10 +549,19 @@ dav_error *
 dav_svn__replay_report(const dav_resource *resource,
                        const apr_xml_doc *doc,
                        ap_filter_t *output);
+
+/* ### Yes, I know nothing else in here has a doc string, but that's
+ * ### because we were lax when this file was first written, years
+ * ### ago.  Anything new should have a doc string, as per usual (and
+ * ### it would be nice if eventually we documented the old stuff
+ * ### too).  -Karl
+ */
 dav_error *
 dav_svn__get_mergeinfo_report(const dav_resource *resource,
                               const apr_xml_doc *doc,
                               ap_filter_t *output);
+
+/* Ditto. */
 dav_error *
 dav_svn__get_commit_revs_for_merge_ranges_report(const dav_resource *resource,
                                                  const apr_xml_doc *doc,

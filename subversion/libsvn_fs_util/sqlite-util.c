@@ -174,15 +174,18 @@ svn_fs__sqlite_reset(sqlite3_stmt *stmt);
 /* Time (in milliseconds) to wait for sqlite locks before giving up. */
 #define BUSY_TIMEOUT 10000
 
+#define MERGINFO_TABLE_SCHEMA                                           \
+  "CREATE TABLE mergeinfo (revision INTEGER NOT NULL, mergedfrom TEXT " \
+  "NOT NULL, mergedto TEXT NOT NULL, mergedrevstart INTEGER NOT NULL, " \
+  "mergedrevend INTEGER NOT NULL, inheritable INTEGER NOT NULL);"
+
 static const char *schema_create_sql[] = {
   NULL, /* An empty database is format 0 */
 
   /* USER_VERSION 1 */
   "PRAGMA auto_vacuum = 1;"
   APR_EOL_STR
-  "CREATE TABLE mergeinfo (revision INTEGER NOT NULL, mergedfrom TEXT NOT "
-  "NULL, mergedto TEXT NOT NULL, mergedrevstart INTEGER NOT NULL, "
-  "mergedrevend INTEGER NOT NULL, inheritable INTEGER NOT NULL);"
+  MERGINFO_TABLE_SCHEMA
   APR_EOL_STR
   "CREATE INDEX mi_mergedfrom_idx ON mergeinfo (mergedfrom);"
   APR_EOL_STR
@@ -190,9 +193,7 @@ static const char *schema_create_sql[] = {
   APR_EOL_STR
   "CREATE INDEX mi_revision_idx ON mergeinfo (revision);"
   APR_EOL_STR
-  "CREATE TABLE mergeinfo_changed (revision INTEGER NOT NULL, mergedfrom TEXT "
-  "NOT NULL, mergedto TEXT NOT NULL, mergedrevstart INTEGER NOT NULL, "
-  "mergedrevend INTEGER NOT NULL, inheritable INTEGER NOT NULL);"
+  MERGINFO_TABLE_SCHEMA
   APR_EOL_STR
   "CREATE UNIQUE INDEX "
   "mi_c_merge_source_target_revstart_end_commit_rev_idx "

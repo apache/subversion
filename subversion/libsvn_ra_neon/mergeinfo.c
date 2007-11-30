@@ -151,8 +151,6 @@ cdata_handler(void *baton, int state, const char *cdata, size_t len)
   return SVN_NO_ERROR;
 }
 
-/* Request a mergeinfo-report from the URL attached to SESSION,
-   and fill in the MERGEINFO hash with the results.  */
 svn_error_t *
 svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
                            apr_hash_t **mergeinfo,
@@ -251,8 +249,6 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
   return mb.err;
 }
 
-/* Request a commit-revs-for-merge-ranges-report from the URL attached to
-   SESSION, and fill in the commit_rev_rangelist array with the results.*/
 svn_error_t *
 svn_ra_neon__get_commit_revs_for_merge_ranges(
                                      svn_ra_session_t *session,
@@ -348,7 +344,9 @@ svn_ra_neon__get_commit_revs_for_merge_ranges(
      mod_dav_svn is too old to understand the "mergeinfo-report" REPORT.
 
      ### It would be less expensive if we knew the server's
-     ### capabilities *before* sending our REPORT. */
+     ### capabilities *before* sending our REPORT.
+
+     ### We can do that, with svn_ra_has_capability()...  -Karl */
   if (status_code == 501)
     {
       *commit_rev_rangelist = apr_array_make(pool, 0,

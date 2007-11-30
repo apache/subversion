@@ -79,7 +79,7 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(
  * @a merge_source to a @a merge_target
  * where each commit_rev in @a commit_rev_rangelist > @a min_commit_rev and
  * <= @a max_commit_rev.
-
+ *
  * @a commit_rev_list will never be @c NULL, but may be empty.
  *
  * @a root indicates the revision root to use when looking up paths.

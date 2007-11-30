@@ -49,7 +49,7 @@ typedef enum {
    CDATA from the mergeinfo items as we get them from the server.  */
 
 typedef struct {
-/* Needed by both mergeinfo reports. */
+  /* Needed by both mergeinfo reports. */
   apr_pool_t *pool;
   svn_stringbuf_t *curr_path;
   svn_stringbuf_t *curr_info;
@@ -57,11 +57,11 @@ typedef struct {
   svn_boolean_t done;
   svn_mergeinfo_inheritance_t inherit;
 
-/* Needed by only mergeinfo-report. */
+  /* Needed by only mergeinfo-report. */
   const apr_array_header_t *paths;
   svn_revnum_t revision;
   
-/* Needed by only commit-revs-for-merge-ranges-report. */
+  /* Needed by only commit-revs-for-merge-ranges-report. */
   const char *merge_target;
   const char *merge_source;
   svn_revnum_t min_commit_rev;
@@ -279,8 +279,6 @@ create_mergeinfo_body(void *baton, serf_bucket_alloc_t *alloc,
   return body_bkt;
 }
 
-/* Request a mergeinfo-report from the URL attached to SESSION,
-   and fill in the MERGEINFO hash with the results.  */
 svn_error_t *
 svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                            apr_hash_t **mergeinfo,
@@ -372,8 +370,6 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
-/* Request a commit-revs-for-merge-ranges-report from the URL attached to
-   SESSION, and fill in the commit_rev_rangelist array with the results.*/
 svn_error_t *
 svn_ra_serf__get_commit_revs_for_merge_ranges(
                                      svn_ra_session_t *ra_session,
@@ -455,7 +451,9 @@ svn_ra_serf__get_commit_revs_for_merge_ranges(
      too old to understand the mergeinfo-report REPORT.
 
      ### It would be less expensive if we knew the server's
-     ### capabilities *before* sending our REPORT. */
+     ### capabilities *before* sending our REPORT.
+
+     ### We can do that, with svn_ra_has_capability()...  -Karl */
   if (err)
     {
       if (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
