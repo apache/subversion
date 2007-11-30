@@ -1,0 +1,28 @@
+* Fix the infinite loop in the 'get_parent_target_path_having_mergeinfo',
+  Before /trunk synch up via r28152, this function used to get
+  merge_source as '/A_COPY' after r28152 it gets 'A_COPY', We need to figure 
+  out why so and fix accordingly.
+
+* Current code to get commit_revs in 
+  subversion/libsvn_fs_util/mergeinfo-sqlite-index.c could fail for the 
+  following case,
+  - merge rX from /trunk to /fb and commit it in rY.
+  - merge rX+1 from /trunk to /fb and commit it in rY+1.
+  - Now /fb will have a mergeinfo of 
+   """
+    /trunk:rX-X+1
+   """
+  - When we merge /fb to /trunk working copy we will have the merge_rangelist
+    to get the commit revs to be 'rX-X+1', This can not get any details as
+    the commits revs are recorded in two different commit revs and our
+    SELECT query need to be tweaked.
+
+* Write a testcase for the above sceneario.
+
+* Author a testcase to show the problem with 'filtering a reflective merge rev'
+  altogether.
+
+* Implement the non-reflective merge editor to grok the local mods from
+  a commit which has 'merge + conflict resolution + some other changes'.
+
+* Expose svn_rangelist_parse and consume it from svnserve and mod_dav_svn.
