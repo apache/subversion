@@ -1,8 +1,3 @@
-* Fix the infinite loop in the 'get_parent_target_path_having_mergeinfo',
-  Before /trunk synch up via r28152, this function used to get
-  merge_source as '/A_COPY' after r28152 it gets 'A_COPY', We need to figure 
-  out why so and fix accordingly.
-
 * Current code to get commit_revs in 
   subversion/libsvn_fs_util/mergeinfo-sqlite-index.c could fail for the 
   following case,
