@@ -3488,7 +3488,7 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
   SVN_ERR(compact_merge_ranges(&merge_range_ts, merge_range_ts, pool));
 
   /* No compacted ranges to merge?  No problem. */
-  if (! merge_range_ts->nelts)
+  if (merge_range_ts->nelts == 0)
     return SVN_NO_ERROR;
 
   /* Find the extremes of the revisions across our set of ranges. */
@@ -4548,7 +4548,7 @@ svn_client_merge_peg3(const char *source,
   svn_ra_session_t *ra_session;
 
   /* No ranges to merge?  No problem. */
-  if (! ranges_to_merge->nelts)
+  if (ranges_to_merge->nelts == 0)
     return SVN_NO_ERROR;
 
   /* Open an admistrative session with the working copy. */
