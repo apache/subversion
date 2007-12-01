@@ -159,7 +159,6 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
                            svn_mergeinfo_inheritance_t inherit,
                            apr_pool_t *pool)
 {
-  svn_error_t *err;
   int i, status_code;
   svn_ra_neon__session_t *ras = session->priv;
   svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
