@@ -3615,43 +3615,25 @@ do_file_merge(const char *url1,
   SVN_ERR(svn_wc__entry_versioned(&entry, target_wcpath, adm_access, FALSE,
                                   pool));
 
-  /* If we are not ignoring ancestry, then we need to check the
-     relationship between the two sides of our merge.  Otherwise, just
-     accept our input as-is. */
-  if (! merge_b->ignore_ancestry)
+  /* If we are not ignoring ancestry and we don't already know that
+     our sources share direct ancestry, then we need to check the
+     relationship between the two sides of our merge.  If the two
+     sides share any common ancestor, we'll do text-n-props merge;
+     otherwise, we'll be doing a delete and an add.  */
+  if (! (merge_b->ignore_ancestry && merge_b->sources_related))
     {
-      const char *location_url;
-      svn_opt_revision_t *location_rev;
-      svn_opt_revision_t unspecified_revision, rev1_opt, rev2_opt;
-      unspecified_revision.kind = svn_opt_revision_unspecified;
-      rev1_opt.value.number = revision1;
-      rev1_opt.kind = svn_opt_revision_number;
-      rev2_opt.value.number = revision2;
-      rev2_opt.kind = svn_opt_revision_number;
-
-      /* Try to locate the left side of the merge location by tracing the
-         history of right side.  We do this only do verify that one of
-         these locations is an ancestor of the other. */
-      err = svn_client__repos_locations(&location_url, &location_rev,
-                                        NULL, NULL,
-                                        NULL,
-                                        url2,
-                                        &rev2_opt,
-                                        &rev1_opt,
-                                        &unspecified_revision,
-                                        ctx, pool);
-
-      /* If the two sides don't have an ancestral relationship, that's
-         okay.  But because we are preserving ancestry, we have to
-         treat a merge across those locations as a deletion of the one
-         and addition of the other. */
-      if (err && err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES)
-        {
-          is_replace = TRUE;
-          svn_error_clear(err);
-          err = SVN_NO_ERROR;
-        }
-      SVN_ERR(err);
+      const char *yc_path;
+      svn_revnum_t yc_rev;
+      svn_opt_revision_t opt_rev1, opt_rev2;
+      opt_rev1.kind = opt_rev2.kind = svn_opt_revision_number;
+      opt_rev1.value.number = revision1;
+      opt_rev2.value.number = revision2;
+      SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_path, &yc_rev,
+                                                       url1, &opt_rev1,
+                                                       url2, &opt_rev2,
+                                                       ctx, pool));
+      if (! (yc_path && SVN_IS_VALID_REVNUM(yc_rev)))
+        is_replace = TRUE;
     }
 
   range.start = revision1;
