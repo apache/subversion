@@ -24,6 +24,7 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_error_codes.h"
+#include "svn_path.h"
 #include "svn_ra.h"
 
 #include "svn_private_config.h"
