@@ -37,10 +37,10 @@
 /* The current state of our XML parsing. */
 typedef enum {
   NONE = 0,
-  MERGE_INFO_REPORT,
-  MERGE_INFO_ITEM,
-  MERGE_INFO_PATH,
-  MERGE_INFO_INFO
+  MERGEINFO_REPORT,
+  MERGEINFO_ITEM,
+  MERGEINFO_PATH,
+  MERGEINFO_INFO
 } mergeinfo_state_e;
 
 /* Baton for accumulating mergeinfo.  RESULT stores the final
@@ -71,24 +71,24 @@ start_element(svn_ra_serf__xml_parser_t *parser,
   state = parser->state->current_state;
   if (state == NONE && strcmp(name.name, SVN_DAV__MERGEINFO_REPORT) == 0)
     {
-      svn_ra_serf__xml_push_state(parser, MERGE_INFO_REPORT);
+      svn_ra_serf__xml_push_state(parser, MERGEINFO_REPORT);
     }
-  else if (state == MERGE_INFO_REPORT &&
+  else if (state == MERGEINFO_REPORT &&
            strcmp(name.name, SVN_DAV__MERGEINFO_ITEM) == 0)
     {
-      svn_ra_serf__xml_push_state(parser, MERGE_INFO_ITEM);
+      svn_ra_serf__xml_push_state(parser, MERGEINFO_ITEM);
       svn_stringbuf_setempty(mergeinfo_ctx->curr_path);
       svn_stringbuf_setempty(mergeinfo_ctx->curr_info);
     }
-  else if (state == MERGE_INFO_ITEM &&
+  else if (state == MERGEINFO_ITEM &&
            strcmp(name.name, SVN_DAV__MERGEINFO_PATH) == 0)
     {
-      svn_ra_serf__xml_push_state(parser, MERGE_INFO_PATH);
+      svn_ra_serf__xml_push_state(parser, MERGEINFO_PATH);
     }
-  else if (state == MERGE_INFO_ITEM &&
+  else if (state == MERGEINFO_ITEM &&
            strcmp(name.name, SVN_DAV__MERGEINFO_INFO) == 0)
     {
-      svn_ra_serf__xml_push_state(parser, MERGE_INFO_INFO);
+      svn_ra_serf__xml_push_state(parser, MERGEINFO_INFO);
     }
   return SVN_NO_ERROR;
 }
@@ -102,12 +102,12 @@ end_element(svn_ra_serf__xml_parser_t *parser, void *userData,
 
   state = parser->state->current_state;
 
-  if (state == MERGE_INFO_REPORT &&
+  if (state == MERGEINFO_REPORT &&
       strcmp(name.name, SVN_DAV__MERGEINFO_REPORT) == 0)
     {
       svn_ra_serf__xml_pop_state(parser);
     }
-  else if (state == MERGE_INFO_ITEM
+  else if (state == MERGEINFO_ITEM
            && strcmp(name.name, SVN_DAV__MERGEINFO_ITEM) == 0)
     {
       if (mergeinfo_ctx->curr_info->len && mergeinfo_ctx->curr_path->len)
@@ -124,12 +124,12 @@ end_element(svn_ra_serf__xml_parser_t *parser, void *userData,
         }
       svn_ra_serf__xml_pop_state(parser);
     }
-  else if (state == MERGE_INFO_PATH
+  else if (state == MERGEINFO_PATH
            && strcmp(name.name, SVN_DAV__MERGEINFO_PATH) == 0)
     {
       svn_ra_serf__xml_pop_state(parser);
     }
-  else if (state == MERGE_INFO_INFO
+  else if (state == MERGEINFO_INFO
            && strcmp(name.name, SVN_DAV__MERGEINFO_INFO) == 0)
     {
       svn_ra_serf__xml_pop_state(parser);
@@ -148,12 +148,12 @@ cdata_handler(svn_ra_serf__xml_parser_t *parser, void *userData,
   state = parser->state->current_state;
   switch (state)
     {
-    case MERGE_INFO_PATH:
+    case MERGEINFO_PATH:
       if (mergeinfo_ctx->curr_path)
         svn_stringbuf_appendbytes(mergeinfo_ctx->curr_path, data, len);
       break;
 
-    case MERGE_INFO_INFO:
+    case MERGEINFO_INFO:
       if (mergeinfo_ctx->curr_info)
         svn_stringbuf_appendbytes(mergeinfo_ctx->curr_info, data, len);
       break;
