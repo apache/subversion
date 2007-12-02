@@ -262,6 +262,29 @@ svn_fs_fs__dag_has_mergeinfo(svn_boolean_t *has_mergeinfo,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_fs__dag_has_descendents_with_mergeinfo(svn_boolean_t *do_they,
+                                              dag_node_t *node,
+                                              apr_pool_t *pool)
+{
+  node_revision_t *noderev;
+
+  if (node->kind != svn_node_dir)
+    {
+      *do_they = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(get_node_revision(&noderev, node, pool));
+  if (noderev->mergeinfo_count > 1)
+    *do_they = TRUE;
+  else if (noderev->mergeinfo_count == 1 && !noderev->has_mergeinfo)
+    *do_they = TRUE;
+  else
+    *do_they = FALSE;
+  return SVN_NO_ERROR;
+}
+
 
 /*** Directory node functions ***/
 

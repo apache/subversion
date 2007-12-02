@@ -3385,36 +3385,12 @@ get_mergeinfo_hash_for_path(apr_hash_t **mergeinfo_hash,
   parent_path_t *parent_path, *nearest_ancestor;
   apr_hash_t *proplist;
   svn_string_t *mergeinfo_string;
-  svn_error_t *err;
 
   *mergeinfo_hash = NULL;
 
   path = svn_fs__canonicalize_abspath(path, pool);
   
-  err = open_path(&parent_path, rev_root, path, 0, NULL, pool);
-  if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
-    {
-      /* XXXdsg: 
-         
-         I believe this behavior is incorrect: this API really
-         should error if it is asked about paths that don't exist!
-         However, there is definitely code that expects this to be
-         silently ignored.  Specifically, see
-         libsvn_repos/log.c(get_merged_rev_mergeinfo), which
-         indirectly does a mergeinfo lookup on "rev - 1".  I think
-         that this should error, and the log code should have to
-         handle that error; the only reason I'm not making that
-         change is that I'm not sure what the behavior should be
-         if there are multiple paths in the array and some of them
-         do exist in the previous rev and others don't.
-         
-         Note that this is still a behavior change from the sqlite
-         version, which still applied inheritance to non-existing
-         paths.
-      */
-      svn_error_clear(err);
-      return SVN_NO_ERROR;
-    }
+  SVN_ERR(open_path(&parent_path, rev_root, path, 0, NULL, pool));
 
   if (inherit == svn_mergeinfo_nearest_ancestor && ! parent_path->parent)
     return SVN_NO_ERROR;
@@ -3581,6 +3557,166 @@ fs_get_mergeinfo(apr_hash_t **mergeinfo,
   return SVN_NO_ERROR;
 }
 
+/* DIR_DAG is a directory DAG node which has mergeinfo in its
+   descendents.  This function iterates over its children.  For each
+   child with immediate mergeinfo, it adds their mergeinfo to
+   MERGEINFO_HASH (which is not NULL).  For each child with
+   descendents with mergeinfo, it recurses.  It uses the filter func
+   to prune.
+ */
+static svn_error_t *
+crawl_directory_dag_for_mergeinfo(apr_hash_t *mergeinfo_hash,
+                                  svn_fs_root_t *root,
+                                  const char *this_path,
+                                  dag_node_t *dir_dag,
+                                  svn_fs_mergeinfo_filter_func_t filter_func,
+                                  void *filter_func_baton,
+                                  apr_pool_t *pool)
+{
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+
+  /* XXXdsg go swimming */
+  SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, dir_dag, pool));
+  entries = svn_fs_fs__copy_dir_entries(entries, pool);
+
+  for (hi = apr_hash_first(pool, entries);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      void *val;
+      svn_fs_dirent_t *dirent;
+      const char *kid_path;
+      dag_node_t *kid_dag;
+      svn_boolean_t has_mergeinfo, go_down;
+
+      apr_hash_this(hi, NULL, NULL, &val);
+      dirent = val;
+      kid_path = svn_path_join(this_path, dirent->name, pool);
+      SVN_ERR(get_dag(&kid_dag, root, kid_path, pool));
+
+      SVN_ERR(svn_fs_fs__dag_has_mergeinfo(&has_mergeinfo, kid_dag, pool));
+      SVN_ERR(svn_fs_fs__dag_has_descendents_with_mergeinfo(&go_down, kid_dag,
+                                                            pool));
+
+      if (has_mergeinfo)
+        {
+          /* Merge in this particular node's mergeinfo, if the
+             filterer lets us. */
+          apr_hash_t *proplist, *kid_mergeinfo_hash;
+          svn_string_t *mergeinfo_string;
+          svn_boolean_t skip = FALSE;
+
+          SVN_ERR(svn_fs_fs__dag_get_proplist(&proplist, kid_dag, pool));
+          mergeinfo_string = apr_hash_get(proplist, SVN_PROP_MERGE_INFO, 
+                                          APR_HASH_KEY_STRING);
+          if (!mergeinfo_string)
+            {
+              svn_string_t *idstr = svn_fs_fs__id_unparse(dirent->id, pool);
+              return svn_error_createf
+                (SVN_ERR_FS_CORRUPT, NULL,
+                 _("Node-revision #'%s' claims to have mergeinfo but doesn't"),
+                 idstr->data);
+            }
+          
+          SVN_ERR(svn_mergeinfo_parse(&kid_mergeinfo_hash,
+                                      mergeinfo_string->data,
+                                      pool));
+          if (filter_func)
+            SVN_ERR(filter_func(filter_func_baton, &skip,
+                                kid_path, kid_mergeinfo_hash, pool));
+
+          if (!skip)
+            SVN_ERR(svn_mergeinfo_merge(mergeinfo_hash,
+                                        kid_mergeinfo_hash, pool));
+        }
+      
+      if (go_down)
+        SVN_ERR(crawl_directory_dag_for_mergeinfo(mergeinfo_hash,
+                                                  root,
+                                                  kid_path,
+                                                  kid_dag,
+                                                  filter_func,
+                                                  filter_func_baton,
+                                                  pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Finds all the "tree" mergeinfo for PATH in ROOT, using the given
+   filter function.  This is the mergeinfo for PATH itself (calculated
+   with inheritance) combined with all the mergeinfo for all of PATH's
+   descendents (calculated without inheritance).  Returns it in
+   *PATH_MERGEINFO_HASH_FOR_TREE; if there ends up being no mergeinfo
+   at all, this is NULL.
+ */
+static svn_error_t *
+get_mergeinfo_hash_for_tree(apr_hash_t **path_mergeinfo_hash_for_tree,
+                            svn_fs_root_t *root,
+                            const char *path,
+                            svn_fs_mergeinfo_filter_func_t filter_func,
+                            void *filter_func_baton,
+                            apr_pool_t *pool)
+{
+  apr_hash_t *this_path_mergeinfo_hash;
+  dag_node_t *this_dag;
+  svn_boolean_t go_down;
+
+  path = svn_fs__canonicalize_abspath(path, pool);
+
+  /* First, let's get the mergeinfo for PATH itself, using
+     inheritance. */
+  /* XXXdsg go swimming */
+  SVN_ERR(get_mergeinfo_hash_for_path(&this_path_mergeinfo_hash,
+                                      root, path, svn_mergeinfo_inherited,
+                                      pool, pool));
+
+  /* For convenience, we'll make this an empty hash instead of NULL
+     over the course of this function, but finally return NULL at the
+     end if it stays empty. */
+  if (!this_path_mergeinfo_hash)
+    this_path_mergeinfo_hash = apr_hash_make(pool);
+
+  /* Should we be looking here at all? */
+  if (filter_func)
+    {
+      svn_boolean_t skip;
+      SVN_ERR(filter_func(filter_func_baton, &skip, path, 
+                          this_path_mergeinfo_hash, pool));
+      if (skip)
+        {
+          *path_mergeinfo_hash_for_tree = NULL;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  SVN_ERR(get_dag(&this_dag, root, path, pool));
+  SVN_ERR(svn_fs_fs__dag_has_descendents_with_mergeinfo(&go_down, this_dag,
+                                                        pool));
+  if (go_down)
+    {
+      /* Now crawl the tree under PATH, pruning based on mergeinfo_count,
+         and add in mergeinfo (ignoring inheritance) for everything below,
+         as long as filter_func says it's OK.
+      */
+      SVN_ERR(crawl_directory_dag_for_mergeinfo(this_path_mergeinfo_hash,
+                                                root,
+                                                path,
+                                                this_dag,
+                                                filter_func,
+                                                filter_func_baton,
+                                                pool));
+    }
+
+  if (apr_hash_count(this_path_mergeinfo_hash) > 0)
+    *path_mergeinfo_hash_for_tree = this_path_mergeinfo_hash;
+  else
+    *path_mergeinfo_hash_for_tree = NULL;
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_fs_get_mergeinfo_for_tree. */
 svn_error_t *
 fs_get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
                           svn_fs_root_t *root,
@@ -3589,14 +3725,28 @@ fs_get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
                           void *filter_func_baton,
                           apr_pool_t *pool)
 {
+  apr_hash_t *result_hash = apr_hash_make(pool);
+  int i;
+
   /* We require a revision root. */
   if (root->is_txn_root)
     return svn_error_create(SVN_ERR_FS_NOT_REVISION_ROOT, NULL, NULL);
 
-  SVN_ERR(get_mergeinfo_hashes_for_paths(root, mergeinfo, paths,
-                                         svn_mergeinfo_inherited, pool));
+  for (i = 0; i < paths->nelts; i++)
+    {
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+      apr_hash_t *path_mergeinfo_hash_for_tree;
+      /* XXXdsg go swimming */
 
-  /* XXXdsg: what about kids? */
+      SVN_ERR(get_mergeinfo_hash_for_tree(&path_mergeinfo_hash_for_tree,
+                                          root, path, filter_func,
+                                          filter_func_baton, pool));
+      if (path_mergeinfo_hash_for_tree)
+        apr_hash_set(result_hash, path, APR_HASH_KEY_STRING,
+                     path_mergeinfo_hash_for_tree);
+    }
+
+  *mergeinfo = result_hash;
   return SVN_NO_ERROR;
 }
 
