@@ -857,7 +857,7 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
  * paths (taken from @a paths) to mergeinfo hashes (which themselves
  * map <tt>const char *</tt> merged-from paths to 
  * <tt>apr_array_header_t *</tt> revision range lists of
- * <tt>svn_merge_range_t *</tt> elements).  If no merge info is
+ * <tt>svn_merge_range_t *</tt> elements).  If no mergeinfo is
  * available, set @a *mergeoutput to @c NULL.  The requested mergeinfo
  * hashes are for @a paths (which are relative to @a session's URL) in
  * @a revision.  Allocate the returned values in @a pool.
