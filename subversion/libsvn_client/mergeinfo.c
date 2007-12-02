@@ -232,13 +232,13 @@ svn_client__get_wc_mergeinfo(apr_hash_t **mergeinfo,
 
   if (svn_path_is_empty(walk_path))
     {
-      /* Merge info is explicit. */
+      /* Mergeinfo is explicit. */
       *inherited = FALSE;
       *mergeinfo = wc_mergeinfo;
     }
   else
     {
-      /* Merge info may be inherited. */
+      /* Mergeinfo may be inherited. */
       if (wc_mergeinfo)
         {
           *inherited = (wc_mergeinfo && apr_hash_count(wc_mergeinfo) > 0);

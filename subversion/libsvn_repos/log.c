@@ -662,7 +662,7 @@ svn_repos__is_branching_copy(svn_boolean_t *is_branching,
 
 /* Filter function to be used with svn_fs_get_mergeinfo_for_tree().
    This should return FALSE if PATH is a copy which is considered a
-   "branch"; that is, a copied path which has merge info identical to
+   "branch"; that is, a copied path which has mergeinfo identical to
    what would be expected for a copy from source to destination
    without any modification.
 

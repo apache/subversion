@@ -1,5 +1,5 @@
 /*
- * mergeinfo.c:  Merge info parsing and handling
+ * mergeinfo.c:  Mergeinfo parsing and handling
  *
  * ====================================================================
  * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
