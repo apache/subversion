@@ -1059,7 +1059,7 @@ fs_change_node_prop(svn_fs_root_t *root,
   if (! proplist)
     proplist = apr_hash_make(pool);
 
-  if (strcmp (name, SVN_PROP_MERGE_INFO) == 0)
+  if (strcmp (name, SVN_PROP_MERGEINFO) == 0)
     {
       /* fs_change_mergeinfo will reconvert the mergeinfo to a string,
          which is a waste in our case because we already have it as a

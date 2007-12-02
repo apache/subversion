@@ -56,7 +56,7 @@ svn_client__parse_mergeinfo(apr_hash_t **mergeinfo,
   /* ### Use svn_wc_prop_get() would actually be sufficient for now.
      ### DannyB thinks that later we'll need behavior more like
      ### svn_client__get_prop_from_wc(). */
-  SVN_ERR(svn_client__get_prop_from_wc(props, SVN_PROP_MERGE_INFO,
+  SVN_ERR(svn_client__get_prop_from_wc(props, SVN_PROP_MERGEINFO,
                                        wcpath, pristine, entry, adm_access,
                                        svn_depth_empty, ctx, pool));
   propval = apr_hash_get(props, wcpath, APR_HASH_KEY_STRING);
@@ -91,7 +91,7 @@ svn_client__record_wc_mergeinfo(const char *wcpath,
   /* Record the new mergeinfo in the WC. */
   /* ### Later, we'll want behavior more analogous to
      ### svn_client__get_prop_from_wc(). */
-  return svn_wc_prop_set2(SVN_PROP_MERGE_INFO, mergeinfo_str, wcpath,
+  return svn_wc_prop_set2(SVN_PROP_MERGEINFO, mergeinfo_str, wcpath,
                           adm_access, TRUE /* skip checks */, pool);
 }
 
@@ -353,12 +353,12 @@ svn_client__get_wc_or_repos_mergeinfo(apr_hash_t **target_mergeinfo,
         {
           apr_hash_t *props = apr_hash_make(pool);
 
-          /* Get the pristine SVN_PROP_MERGE_INFO.
+          /* Get the pristine SVN_PROP_MERGEINFO.
              If it exists, then it should have been deleted by the local
              merges. So don't get the mergeinfo from the repository. Just
              assume the mergeinfo to be NULL.
           */
-          SVN_ERR(svn_client__get_prop_from_wc(props, SVN_PROP_MERGE_INFO,
+          SVN_ERR(svn_client__get_prop_from_wc(props, SVN_PROP_MERGEINFO,
                                                target_wcpath, TRUE, entry,
                                                adm_access, svn_depth_empty,
                                                ctx, pool));
@@ -674,7 +674,7 @@ elide_mergeinfo(apr_hash_t *parent_mergeinfo,
     switch (elision_type)
       {
       case elision_type_full:
-        SVN_ERR(svn_wc_prop_set2(SVN_PROP_MERGE_INFO, NULL, path, adm_access,
+        SVN_ERR(svn_wc_prop_set2(SVN_PROP_MERGEINFO, NULL, path, adm_access,
                                  TRUE, subpool));
         break;
       case elision_type_partial:

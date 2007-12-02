@@ -1502,7 +1502,7 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
         {
           /* The WC difference doesn't match the new value.
            We only merge mergeinfo;  other props conflict */
-          if (strcmp(propname, SVN_PROP_MERGE_INFO) == 0)
+          if (strcmp(propname, SVN_PROP_MERGEINFO) == 0)
             {
               SVN_ERR(combine_mergeinfo_props(&new_val, working_val,
                                               new_val, pool));
@@ -1691,7 +1691,7 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
             set_prop_merge_state(state, svn_wc_notify_state_merged);
           else
             {
-              if (strcmp(propname, SVN_PROP_MERGE_INFO) == 0)
+              if (strcmp(propname, SVN_PROP_MERGEINFO) == 0)
                 {
                   /* We have base, WC, and new values.  Discover
                      deltas between base <-> WC, and base <->
@@ -1757,7 +1757,7 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
   else if (! working_val) /* means !working_val && !base_val due
                              to conditions above: no prop at all */
     {
-      if (strcmp(propname, SVN_PROP_MERGE_INFO) == 0)
+      if (strcmp(propname, SVN_PROP_MERGEINFO) == 0)
         {
           /* Discover any mergeinfo additions in the
              incoming value relative to the base, and
@@ -1795,7 +1795,7 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
 
       else
         {
-          if (strcmp(propname, SVN_PROP_MERGE_INFO) == 0)
+          if (strcmp(propname, SVN_PROP_MERGEINFO) == 0)
             {
               /* We have base, WC, and new values.  Discover
                  deltas between base <-> WC, and base <->

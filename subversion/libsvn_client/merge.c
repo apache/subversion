@@ -2735,7 +2735,7 @@ get_mergeinfo_walk_cb(const char *path,
     }
   else
     {
-      SVN_ERR(svn_wc_prop_get(&propval, SVN_PROP_MERGE_INFO, path,
+      SVN_ERR(svn_wc_prop_get(&propval, SVN_PROP_MERGEINFO, path,
                               wb->base_access, pool));
       /* We always include the merge target regardless of its mergeinfo.
          So we don't need to check that PATH's mergeinfo corresponds to
@@ -4100,7 +4100,7 @@ do_directory_merge(const char *url1,
                     APR_ARRAY_IDX(children_with_mergeinfo,
                                   i, svn_client__merge_path_t *);
                   if (child)
-                    SVN_ERR(svn_wc_prop_set2(SVN_PROP_MERGE_INFO,
+                    SVN_ERR(svn_wc_prop_set2(SVN_PROP_MERGEINFO,
                                              child->propval, child->path,
                                              adm_access, TRUE, iterpool));
                 }
