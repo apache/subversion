@@ -112,6 +112,8 @@ index_path_mergeinfo(svn_revnum_t new_rev,
       SVN_ERR(get_mergeinfo_for_path(db, path, new_rev - 1, NULL, cache,
                                      svn_mergeinfo_inherited, subpool));
       mergeinfo = apr_hash_get(cache, path, APR_HASH_KEY_STRING);
+      if (mergeinfo == NEGATIVE_CACHE_RESULT)
+        mergeinfo = NULL;
       if (mergeinfo)
         mergeinfo = svn_mergeinfo_dup(mergeinfo, pool);
 
