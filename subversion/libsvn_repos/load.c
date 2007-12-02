@@ -1134,7 +1134,7 @@ set_node_property(void *baton,
   struct revision_baton *rb = nb->rb;
   const char *parent_dir = rb->pb->parent_dir;
 
-  if (parent_dir && strcmp(name, SVN_PROP_MERGE_INFO) == 0)
+  if (parent_dir && strcmp(name, SVN_PROP_MERGEINFO) == 0)
     {
       /* Prefix the merge source paths with PARENT_DIR. */
       /* ASSUMPTION: All source paths are included in the dump stream. */
