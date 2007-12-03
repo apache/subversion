@@ -857,7 +857,7 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
  * paths (taken from @a paths) to mergeinfo hashes (which themselves
  * map <tt>const char *</tt> merged-from paths to 
  * <tt>apr_array_header_t *</tt> revision range lists of
- * <tt>svn_merge_range_t *</tt> elements).  If no merge info is
+ * <tt>svn_merge_range_t *</tt> elements).  If no mergeinfo is
  * available, set @a *mergeoutput to @c NULL.  The requested mergeinfo
  * hashes are for @a paths (which are relative to @a session's URL) in
  * @a revision.  Allocate the returned values in @a pool.
@@ -866,6 +866,10 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
  * only inherited mergeinfo for @a paths is retrieved.
  *
  * If @a revision is @c SVN_INVALID_REVNUM, it defaults to youngest.
+ *
+ * If the server doesn't support retrieval of mergeinfo (which will
+ * never happen for file:// URLs), return an @c
+ * SVN_ERR_UNSUPPORTED_FEATURE error.
  *
  * @since New in 1.5.
  */

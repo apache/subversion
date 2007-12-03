@@ -1222,22 +1222,6 @@ svn_error_t *svn_fs_closest_copy(svn_fs_root_t **root_p,
                                  const char *path,
                                  apr_pool_t *pool);
 
-/** Change a node's mergeinfo
- *
- * - @a root and @a path indicate the node whose property should change.
- *   @a root must be the root of a transaction, not the root of a
- *   revision.
- * - @a mergeinhash is the new value of the mergeinfo for PATH, or NULL if
- *   the mergeinfo for that path should be removed altogether.
- *
- * Do any necessary temporary allocation in @a pool.
- *
- * @since New in 1.5.
- */
-svn_error_t *svn_fs_change_mergeinfo(svn_fs_root_t *root,
-                                     const char *path,
-                                     apr_hash_t *mergeinhash,
-                                     apr_pool_t *pool);
 
 /** Retrieve mergeinfo for multiple nodes.
  *

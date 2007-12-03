@@ -19,6 +19,7 @@
 
 
 #define APR_WANT_STRFUNC
+#include <apr.h>
 #include <apr_want.h>
 
 #include <serf.h>
