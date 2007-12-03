@@ -55,7 +55,6 @@ extern "C" {
 #define PATH_NEXT_IDS      "next-ids"      /* Next temporary ID assignments */
 #define PATH_REV           "rev"           /* Proto rev file */
 #define PATH_REV_LOCK      "rev-lock"      /* Proto rev (write) lock file */
-#define PATH_TXN_MERGEINFO "mergeinfo"     /* Transaction mergeinfo props */
 #define PATH_PREFIX_NODE   "node."         /* Prefix for node filename */
 #define PATH_EXT_TXN       ".txn"          /* Extension of txn dir */
 #define PATH_EXT_CHILDREN  ".children"     /* Extension for dir contents */
@@ -303,6 +302,15 @@ typedef struct
 
   /* is this the unmodified root of a transaction? */
   svn_boolean_t is_fresh_txn_root;
+
+  /* Number of nodes with svn:mergeinfo properties that are
+     descendents of this node (including it itself) */
+  /* XXXdsg worry about overflow; probably use key-gen.h things
+     instead. */
+  int mergeinfo_count;
+
+  /* Does this node itself have svn:mergeinfo? */
+  svn_boolean_t has_mergeinfo;
 
 } node_revision_t;
 

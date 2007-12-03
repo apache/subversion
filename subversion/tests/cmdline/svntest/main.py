@@ -1186,8 +1186,6 @@ def usage():
         "                 output and ignores all exceptions in the \n"  \
         "                 run_and_verify* functions. This option is only \n" \
         "                 useful during test development!"
-  print " --server-minor-version  Set the minor version for the server.\n" \
-        "                 Supports version 4 or 5."
   print " --help          This information"
 
 

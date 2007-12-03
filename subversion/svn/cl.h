@@ -136,21 +136,21 @@ svn_cl__accept_from_word(const char *word);
    commands. */
 typedef struct svn_cl__opt_state_t
 {
-  /* An array of svn_opt_revision_range_t *'s representing revisions
-     ranges indicated on the command-line via the -r and -c options.
-     For each range in the list, if only one revision was provided
-     (-rN), its 'end' member remains `svn_opt_revision_unspecified'.
+  /* These get set as a result of revisions or dates being specified.
+     When only one revision is given, it's start_revision, and
+     end_revision remains `svn_opt_revision_unspecified'. */
+  svn_opt_revision_t start_revision, end_revision;
+
+  /* Flag which is only set if start_revision and end_revision were
+     set using '-c'. */
+  svn_boolean_t used_change_arg;
+
+  /* This array of svn_opt_revision_range_t *'s get set as a result
+     of *multiple* revisions or dates being specified.  Otherwise similar
+     to start_revision and end_revision.
 
      NOTE: This is currently used only by merge subcommand. */
   apr_array_header_t *revision_ranges;
-
-  /* These are simply a copy of the range start and end values present
-     in the first item of the revision_ranges list. */
-  svn_opt_revision_t start_revision;
-  svn_opt_revision_t end_revision;
-
-  /* Flag which is only set if the '-c' option was used. */
-  svn_boolean_t used_change_arg;
 
   /* Max number of log messages to get back from svn_client_log2. */
   int limit;

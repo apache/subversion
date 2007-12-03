@@ -20,7 +20,7 @@ http://svn.collab.net/repos/svn/tags/1.4.6
     * fixed: svndumpfilter crashes on Windows (r23494)
     * fixed: wrong pointer type used for memset (r27263)
     * fixed: invalid fsfs directory cache (r27256)
-    * fixed: dir props on fsfs filesystem root never conflict (issue #2608)
+    * fixed: cannot set directory props on fsfs filesystem root (issue #2608)
 
   - Client and Server:
     * fixed: "No newline at end of file" message translated (issue #2906)

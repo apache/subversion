@@ -116,8 +116,7 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
                                                 adm_access, pool));
       SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &src_mergeinfo,
                                               mergeinfo_path, src_revnum,
-                                              svn_mergeinfo_inherited, TRUE,
-                                              pool));
+                                              svn_mergeinfo_inherited, pool));
     }
 
   *target_mergeinfo = src_mergeinfo ? src_mergeinfo : apr_hash_make(pool);
@@ -630,7 +629,7 @@ path_driver_cb_func(void **dir_baton,
                                              pool, &file_baton));
           if (path_info->mergeinfo)
             SVN_ERR(cb_baton->editor->change_file_prop(file_baton,
-                                                       SVN_PROP_MERGEINFO,
+                                                       SVN_PROP_MERGE_INFO,
                                                        path_info->mergeinfo,
                                                        pool));
           SVN_ERR(cb_baton->editor->close_file(file_baton, NULL, pool));
@@ -643,7 +642,7 @@ path_driver_cb_func(void **dir_baton,
                                                   pool, dir_baton));
           if (path_info->mergeinfo)
             SVN_ERR(cb_baton->editor->change_dir_prop(*dir_baton,
-                                                      SVN_PROP_MERGEINFO,
+                                                      SVN_PROP_MERGE_INFO,
                                                       path_info->mergeinfo,
                                                       pool));
         }
@@ -1247,7 +1246,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                                                    sizeof(svn_prop_t *));
       mergeinfo_prop = apr_palloc(item->outgoing_prop_changes->pool,
                                   sizeof(svn_prop_t));
-      mergeinfo_prop->name = SVN_PROP_MERGEINFO;
+      mergeinfo_prop->name = SVN_PROP_MERGE_INFO;
       SVN_ERR(calculate_target_mergeinfo(ra_session, &mergeinfo, adm_access, 
                                          pair->src, pair->src_revnum, 
                                          ctx, pool));

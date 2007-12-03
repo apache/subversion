@@ -37,7 +37,7 @@ repository) is:
   revprops/           Subdirectory containing rev-props
     <shard>/          Shard directory, if sharding is in use (see below)
       <revnum>        File containing rev-props for <revnum>
-  indexes.sqlite      SQLite database containing index for svn:mergeinfo props
+  indexes.sqlite      SQLite database containing lazy caches
   transactions/       Subdirectory containing transactions
     <txnid>.txn/      Directory containing transaction <txnid>
   transaction-current File containing the next transaction key
@@ -113,8 +113,7 @@ Format 2: (understood by Subversion 1.4+)
 Format 3: (understood by Subversion 1.5+)
   Delta representations in revision files may contain either svndiff0
   or svndiff1 data.  The 'layout' format option is permitted.  The SQLite
-  index is present, and should be updated whenever the svn:mergeinfo property
-  is set on a node.  To prevent transaction name reuse, transaction names
+  index is present.  To prevent transaction name reuse, transaction names
   should be generated using the transaction sequence number stored in the
   transaction-current file.
 
@@ -270,6 +269,9 @@ defined:
   cpath     FS pathname node was created at
   copyfrom  "<rev> <path>" of copyfrom data
   copyroot  "<rev> <created-path>" of the root of this copy
+  minfo-cnt The number of nodes under (and including) this node
+             which have svn:mergeinfo.
+  minfo-here Exists if if this node itself has svn:mergeinfo.
 
 The predecessor of a node-rev crosses both soft and true copies;
 together with the count field, it allows efficient determination of
@@ -314,7 +316,6 @@ A transaction directory has the following layout:
   rev                        Prototype rev file with new text reps
   rev-lock                   Lockfile for writing to the above
   props                      Transaction props
-  mergeinfo                  Transaction mergeinfo props, if any
   next-ids                   Next temporary node-ID and copy-ID
   changes                    Changed-path information so far
   node.<nid>.<cid>           New node-rev data for node
@@ -327,10 +328,9 @@ writing to the file at a given time, the "rev-lock" file is locked for
 the duration of each write.
 
 The three kinds of props files are all in hash dump format.  The
-"props" file will always be present.  The "mergeinfo" file may be
-absent if no svn:mergeinfo properties have been changed on any node in
-the transaction.  The "node.<nid>.<cid>.props" file will only be
-present if the node-rev properties have been changed.
+"props" file will always be present.  The "node.<nid>.<cid>.props"
+file will only be present if the node-rev properties have been
+changed.
 
 The "next-ids" file contains a single line "<next-temp-node-id>
 <next-temp-copy-id>\n" giving the next temporary node-ID and copy-ID

@@ -1,5 +1,5 @@
 /*
- * mergeinfo.c:  Mergeinfo parsing and handling
+ * mergeinfo.c:  Merge info parsing and handling
  *
  * ====================================================================
  * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
@@ -354,7 +354,7 @@ range_to_stringbuf(svn_stringbuf_t **result, svn_merge_range_t *range,
 
     2) Unordered revision ranges
 
-  Returns an SVN_ERR_MERGEINFO_PARSE_ERROR error if any of these rules
+  Returns an SVN_ERR_MERGE_INFO_PARSE_ERROR error if any of these rules
   are violated.  The restriction on revision ranges with a start revision
   greater than or equal to its end revision is handled in parse_revlist().
 
@@ -385,7 +385,7 @@ combine_with_adjacent_lastrange(svn_merge_range_t **lastrange,
              ranges, but not overlapping ranges. */
           if (mrange->start < (*lastrange)->end)
             {
-              return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
+              return svn_error_createf(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
                                        _("Parsing of overlapping revision "
                                          "ranges '%s' and '%s' is not "
                                          "supported"), r1->data, r2->data);
@@ -401,7 +401,7 @@ combine_with_adjacent_lastrange(svn_merge_range_t **lastrange,
         {
           SVN_ERR(range_to_stringbuf(&r1, *lastrange, pool));
           SVN_ERR(range_to_stringbuf(&r2, mrange, pool));
-          return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
+          return svn_error_createf(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
                                    _("Unable to parse unordered revision "
                                      "ranges '%s' and '%s'"),
                                      r1->data, r2->data);
@@ -448,7 +448,7 @@ parse_revlist(const char **input, const char *end,
       SVN_ERR(svn_revnum_parse(&firstrev, curr, &curr));
       if (*curr != '-' && *curr != '\n' && *curr != ',' && *curr != '*'
           && curr != end)
-        return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
+        return svn_error_createf(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
                                  _("Invalid character '%c' found in revision "
                                    "list"), *curr);
       mrange->start = firstrev - 1;
@@ -462,12 +462,12 @@ parse_revlist(const char **input, const char *end,
           curr++;
           SVN_ERR(svn_revnum_parse(&secondrev, curr, &curr));
           if (firstrev > secondrev)
-            return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
+            return svn_error_createf(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
                                      _("Unable to parse reversed revision "
                                        "range '%ld-%ld'"),
                                        firstrev, secondrev);
           else if (firstrev == secondrev)
-            return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
+            return svn_error_createf(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
                                      _("Unable to parse revision range "
                                        "'%ld-%ld' with same start and end "
                                        "revisions"), firstrev, secondrev);
@@ -507,21 +507,21 @@ parse_revlist(const char **input, const char *end,
             }
           else
             {
-              return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
+              return svn_error_createf(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
                                        _("Invalid character '%c' found in "
                                          "range list"), *curr);
             }
         }
       else
         {
-          return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
+          return svn_error_createf(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
                                    _("Invalid character '%c' found in "
                                      "range list"), *curr);
         }
 
     }
   if (*curr != '\n')
-    return svn_error_create(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
+    return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
                             _("Range list parsing ended before hitting "
                               "newline"));
   *input = curr;
@@ -540,7 +540,7 @@ parse_revision_line(const char **input, const char *end, apr_hash_t *hash,
   SVN_ERR(parse_pathname(input, end, &pathname, pool));
 
   if (*(*input) != ':')
-    return svn_error_create(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
+    return svn_error_create(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
                             _("Pathname not terminated by ':'"));
 
   *input = *input + 1;
@@ -548,7 +548,7 @@ parse_revision_line(const char **input, const char *end, apr_hash_t *hash,
   SVN_ERR(parse_revlist(input, end, revlist, pool));
 
   if (*input != end && *(*input) != '\n')
-    return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
+    return svn_error_createf(SVN_ERR_MERGE_INFO_PARSE_ERROR, NULL,
                              _("Could not find end of line in range list line "
                                "in '%s'"), *input);
 

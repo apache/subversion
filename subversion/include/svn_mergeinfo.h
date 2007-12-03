@@ -34,36 +34,36 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/** Overview of the @c SVN_PROP_MERGEINFO property.
+/** Overview of the @c SVN_PROP_MERGE_INFO property.
  *
- * Merge history is stored in the @c SVN_PROP_MERGEINFO property of files
- * and directories.  The @c SVN_PROP_MERGEINFO property on a path stores the
+ * Merge history is stored in the @c SVN_PROP_MERGE_INFO property of files
+ * and directories.  The @c SVN_PROP_MERGE_INFO property on a path stores the
  * complete list of changes merged to that path, either directly or via the
  * path's parent, grand-parent, etc..
  *
- * Every path in a tree may have @c SVN_PROP_MERGEINFO set, but if the
- * @c SVN_PROP_MERGEINFO for a path is equivalent to the
- * @c SVN_PROP_MERGEINFO for its parent, then the @c SVN_PROP_MERGEINFO on
+ * Every path in a tree may have @c SVN_PROP_MERGE_INFO set, but if the
+ * @c SVN_PROP_MERGE_INFO for a path is equivalent to the
+ * @c SVN_PROP_MERGE_INFO for its parent, then the @c SVN_PROP_MERGE_INFO on
  * the path will 'elide' (be removed) from the path as a post step to any
  * merge, switch, or update.  If a path's parent does not have any
- * @c SVN_PROP_MERGEINFO set, the path's mergeinfo can elide to its nearest
+ * @c SVN_PROP_MERGE_INFO set, the path's mergeinfo can elide to its nearest
  * grand-parent, great-grand-parent, etc. that has equivalent
- * @c SVN_PROP_MERGEINFO set on it.  
+ * @c SVN_PROP_MERGE_INFO set on it.  
  *
- * If a path has no @c SVN_PROP_MERGEINFO of its own, it inherits mergeinfo
- * from its nearest parent that has @c SVN_PROP_MERGEINFO set.  The
- * exception to this is @c SVN_PROP_MERGEINFO with non-ineritable revision
+ * If a path has no @c SVN_PROP_MERGE_INFO of its own, it inherits mergeinfo
+ * from its nearest parent that has @c SVN_PROP_MERGE_INFO set.  The
+ * exception to this is @c SVN_PROP_MERGE_INFO with non-ineritable revision
  * ranges.  These non-inheritable ranges apply only to the path which they
  * are set on.
  *
- * The value of the @c SVN_PROP_MERGEINFO property is a string consisting of
+ * The value of the @c SVN_PROP_MERGE_INFO property is a string consisting of
  * a path, a colon, and comma separated revision list, containing one or more
  * revision or revision ranges. Revision range start and end points are
  * separated by "-".  Revisions and revision ranges may have the optional
  * @c SVN_MERGEINFO_NONINHERITABLE_STR suffix to signify a non-inheritable
  * revision/revision range.
  *
- * @c SVN_PROP_MERGEINFO Value Grammar:
+ * @c SVN_PROP_MERGE_INFO Value Grammar:
  *
  *   Token             Definition
  *   -----             ----------
@@ -74,7 +74,7 @@ extern "C" {
  *   top               revisionline (NEWLINE revisionline)*
  *
  * The PATHNAME is the source of a merge and the rangelist the revision(s)
- * merged to the path @c SVN_PROP_MERGEINFO is set on directly or indirectly
+ * merged to the path @c SVN_PROP_MERGE_INFO is set on directly or indirectly
  * via inheritance.  PATHNAME must always exist at the specified rangelist
  * and thus multiple revisionlines are required to account for renames of
  * the source pathname.
@@ -86,7 +86,7 @@ extern "C" {
  * acceptable).
  */
 
-/* Suffix for SVN_PROP_MERGEINFO revision ranges indicating a given
+/* Suffix for SVN_PROP_MERGE_INFO revision ranges indicating a given
    range is non-inheritable. */
 #define SVN_MERGEINFO_NONINHERITABLE_STR "*"
 
@@ -95,10 +95,10 @@ extern "C" {
  * elements.  If no mergeinfo is available, return an empty hash
  * (never @c NULL).  Perform temporary allocations in @a pool.
  *
- * If @a input is not a grammatically correct @c SVN_PROP_MERGEINFO
+ * If @a input is not a grammatically correct @c SVN_PROP_MERGE_INFO
  * property, contains overlapping or unordered revision ranges, or revision
  * ranges with a start revision greater than or equal to its end revision,
- * then return @c SVN_ERR_MERGEINFO_PARSE_ERROR.
+ * then return @c SVN_ERR_MERGE_INFO_PARSE_ERROR.
  *
  * Note: @a *mergeinfo will contain rangelists that are guaranteed to
  * be sorted (ordered by smallest revision ranges to largest).

@@ -1099,9 +1099,9 @@ SVN_ERROR_START
              "Incompatible library version")
 
   /** @since New in 1.5. */
-  SVN_ERRDEF(SVN_ERR_MERGEINFO_PARSE_ERROR,
+  SVN_ERRDEF(SVN_ERR_MERGE_INFO_PARSE_ERROR,
              SVN_ERR_MISC_CATEGORY_START + 20,
-             "Mergeinfo parse error")
+             "Merge info parse error")
 
   /** @since New in 1.5. */
   SVN_ERRDEF(SVN_ERR_CEASE_INVOCATION,

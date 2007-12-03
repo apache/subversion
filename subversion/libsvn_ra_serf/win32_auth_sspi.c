@@ -54,11 +54,6 @@
 
 /*** Includes ***/
 #ifdef WIN32
-#ifdef APR_HAVE_IPV6
-#include "winsock2.h"
-#include "Ws2tcpip.h"
-#include "Wspiapi.h"
-#endif
 #include <windows.h>
 #endif
 #include <string.h>
@@ -157,7 +152,7 @@ init_sspi_connection(svn_ra_serf__session_t *session,
   conn->auth_header = "Authorization";
 
   /* Make serf send the initial requests one by one */
-  serf_connection_set_max_outstanding_requests(conn->conn, 1);
+  serf_set_max_outstanding_requests(conn->conn, 1);
 
   return SVN_NO_ERROR;
 }
@@ -199,7 +194,7 @@ handle_sspi_auth(svn_ra_serf__session_t *session,
   /* If the handshake is finished tell serf it can send as much requests as it
      likes. */
   if (conn->sspi_context->state == sspi_auth_completed)
-    serf_connection_set_max_outstanding_requests(conn->conn, 0);
+    serf_set_max_outstanding_requests(conn->conn, 0);
 
   return SVN_NO_ERROR;
 }
