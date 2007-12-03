@@ -22,6 +22,7 @@ import sys, re, os, stat
 # Our testing module
 import svntest
 
+from svntest.main import SVN_PROP_MERGE_INFO
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -665,7 +666,55 @@ def inappropriate_props(sbox):
                                      'svn:eol-style', 'CR',
                                      path)
 
+# Prevent setting of svn:mergeinfo prop values that are...
+  path = os.path.join(wc_dir, 'A', 'D')
 
+# ...grammatically incorrect
+  svntest.actions.run_and_verify_svn('illegal grammar', None,
+                                     ["svn: Pathname not terminated by ':'\n"],
+                                     'propset', SVN_PROP_MERGE_INFO, '/trunk',
+                                     path)
+  svntest.actions.run_and_verify_svn('illegal grammar', None,
+                                     ["svn: Invalid revision number found "
+                                      "parsing 'one'\n"],
+                                     'propset', SVN_PROP_MERGE_INFO,
+                                     '/trunk:one', path)
+  
+# ...contain overlapping revision ranges
+  svntest.actions.run_and_verify_svn('overlapping ranges', None,
+                                     ["svn: Parsing of overlapping revision "
+                                      "ranges '9-20' and '18-22' is not "
+                                      "supported\n"],
+                                     'propset', SVN_PROP_MERGE_INFO,
+                                     '/branch:5-7,9-20,18-22', path)
+
+  svntest.actions.run_and_verify_svn('overlapping ranges', None,
+                                     ["svn: Parsing of overlapping revision "
+                                      "ranges '3' and '3' is not supported\n"],
+                                     'propset', SVN_PROP_MERGE_INFO,
+                                     '/branch:3,3', path)
+
+# ...contain unordered revision ranges
+  svntest.actions.run_and_verify_svn('unordered ranges', None,
+                                     ["svn: Unable to parse unordered "
+                                      "revision ranges '5' and '2-3'\n"],
+                                     'propset', SVN_PROP_MERGE_INFO,
+                                     '/featureX:5,2-3,9', path)
+  
+# ...contain revision ranges with start revisions greater than or
+#    equal to end revisions.
+  svntest.actions.run_and_verify_svn('range start >= range end', None,
+                                     ["svn: Unable to parse reversed "
+                                      "revision range '20-5'\n"],
+                                     'propset', SVN_PROP_MERGE_INFO,
+                                     '/featureX:4,20-5', path)
+
+# ...contain paths mapped to empty revision ranges
+  svntest.actions.run_and_verify_svn('empty ranges', None,
+                                     ["svn: Mergeinfo for '/trunk' maps to "
+                                      "an empty revision range\n"],
+                                     'propset', SVN_PROP_MERGE_INFO,
+                                     '/trunk:', path)
 
 #----------------------------------------------------------------------
 
