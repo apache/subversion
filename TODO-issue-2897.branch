@@ -14,9 +14,6 @@
 
 * Write a testcase for the above sceneario.
 
-* Author a testcase to show the problem with 'filtering a reflective merge rev'
-  altogether.
-
 * Implement the non-reflective merge editor to grok the local mods from
   a commit which has 'merge + conflict resolution + some other changes'.
 
