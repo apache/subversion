@@ -49,6 +49,7 @@
 #include "id.h"
 
 #include "private/svn_fs_sqlite.h"
+#include "private/svn_fs_mergeinfo.h"
 #include "private/svn_fs_node_origins.h"
 #include "private/svn_fs_util.h"
 #include "../libsvn_fs/fs-loader.h"
@@ -239,6 +240,13 @@ static const char *
 path_txn_props(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_TXN_PROPS, pool);
+}
+
+static const char *
+path_txn_mergeinfo(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
+{
+  return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_TXN_MERGEINFO,
+                       pool);
 }
 
 static const char *
@@ -3590,6 +3598,66 @@ svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
   return SVN_NO_ERROR;
 }
 
+/* Store the mergeinfo list for transaction TXN_ID in MINFO.
+   Perform temporary allocations in POOL. */
+
+static svn_error_t *
+get_txn_mergeinfo(apr_hash_t *minfo,
+                  svn_fs_t *fs,
+                  const char *txn_id,
+                  apr_pool_t *pool)
+{
+  apr_file_t *txn_minfo_file;
+
+  /* Open the transaction mergeinfo file. */
+  SVN_ERR(svn_io_file_open(&txn_minfo_file,
+                           path_txn_mergeinfo(fs, txn_id, pool),
+                           APR_READ | APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+
+  /* Read in the property list. */
+  SVN_ERR(svn_hash_read2(minfo,
+                         svn_stream_from_aprfile(txn_minfo_file, pool),
+                         SVN_HASH_TERMINATOR, pool));
+
+  SVN_ERR(svn_io_file_close(txn_minfo_file, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Change mergeinfo for path NAME in TXN to VALUE.  */
+
+svn_error_t *
+svn_fs_fs__change_txn_mergeinfo(svn_fs_txn_t *txn,
+                                const char *name,
+                                const svn_string_t *value,
+                                apr_pool_t *pool)
+{
+  apr_file_t *txn_minfo_file;
+  apr_hash_t *txn_minfo = apr_hash_make(pool);
+  svn_error_t *err;
+
+  err = get_txn_mergeinfo(txn_minfo, txn->fs, txn->id, pool);
+  if (err && (APR_STATUS_IS_ENOENT(err->apr_err))) /* doesn't exist yet */
+    svn_error_clear(err);
+  else if (err)
+    return err;
+
+  apr_hash_set(txn_minfo, name, APR_HASH_KEY_STRING, value);
+
+  /* Create a new version of the file and write out the new minfos. */
+  /* Open the transaction minfoerties file. */
+  SVN_ERR(svn_io_file_open(&txn_minfo_file,
+                           path_txn_mergeinfo(txn->fs, txn->id, pool),
+                           APR_WRITE | APR_CREATE | APR_TRUNCATE
+                           | APR_BUFFERED, APR_OS_DEFAULT, pool));
+
+  SVN_ERR(svn_hash_write(txn_minfo, txn_minfo_file, pool));
+
+  SVN_ERR(svn_io_file_close(txn_minfo_file, pool));
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_fs_fs__get_txn(transaction_t **txn_p,
@@ -4875,6 +4943,7 @@ commit_body(void *baton, apr_pool_t *pool)
   char *buf;
   apr_hash_t *txnprops;
   svn_string_t date;
+  apr_hash_t *target_mergeinfo = NULL;
 
   /* Get the current youngest revision. */
   SVN_ERR(svn_fs_fs__youngest_rev(&old_rev, cb->fs, pool));
@@ -4946,6 +5015,16 @@ commit_body(void *baton, apr_pool_t *pool)
           prop.name = SVN_FS__PROP_TXN_CHECK_LOCKS;
           APR_ARRAY_PUSH(props, svn_prop_t) = prop;
         }          
+
+      if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CONTAINS_MERGEINFO,
+                       APR_HASH_KEY_STRING))
+        {
+          target_mergeinfo = apr_hash_make(pool);
+          SVN_ERR(get_txn_mergeinfo(target_mergeinfo, cb->txn->fs, cb->txn->id,
+                                    pool));
+          prop.name = SVN_FS__PROP_TXN_CONTAINS_MERGEINFO;
+          APR_ARRAY_PUSH(props, svn_prop_t) = prop;
+        }
       
       if (! apr_is_empty_array(props))
         SVN_ERR(svn_fs_fs__change_txn_props(cb->txn, props, pool));
@@ -4996,6 +5075,10 @@ commit_body(void *baton, apr_pool_t *pool)
   final_revprop = path_revprops(cb->fs, new_rev, pool);
   SVN_ERR(svn_fs_fs__move_into_place(revprop_filename, final_revprop,
                                      old_rev_filename, pool));
+
+  /* Update the merge tracking information index. */
+  SVN_ERR(svn_fs_mergeinfo__update_index(cb->txn, new_rev, target_mergeinfo,
+                                         pool));
 
   /* Update the 'current' file. */
   SVN_ERR(write_final_current(cb->fs, cb->txn->id, new_rev, start_node_id,

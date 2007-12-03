@@ -49,6 +49,7 @@
 #include "fs_fs.h"
 #include "id.h"
 
+#include "private/svn_fs_mergeinfo.h"
 #include "private/svn_fs_node_origins.h"
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_fs_util.h"
