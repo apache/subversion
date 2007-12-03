@@ -116,11 +116,3 @@ Veto-blocked changes:
      -1: djames (see http://svn.haxx.se/dev/archive-2007-05/0058.shtml)
 
 Approved changes:
-
-  * r26077
-    Alow Subversion to be built against Neon 0.26.4 (by default).
-    Justification:
-      There's no reason to complicate building by requiring that
-      --disable-neon-version-check be passed to configure.
-    Votes:
-      +1: dlr, hwright, lgo
