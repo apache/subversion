@@ -262,7 +262,7 @@ svn_client__get_wc_mergeinfo(apr_hash_t **mergeinfo,
     {
       SVN_ERR(svn_mergeinfo_inheritable(mergeinfo, *mergeinfo, NULL,
               SVN_INVALID_REVNUM, SVN_INVALID_REVNUM, pool));
-      svn_mergeinfo_remove_empty_rangelists(*mergeinfo, pool);
+      svn_mergeinfo__remove_empty_rangelists(*mergeinfo, pool);
     }
   return SVN_NO_ERROR;
 }
