@@ -195,8 +195,8 @@ svn_client__record_wc_mergeinfo(const char *wcpath,
    revision ranges and none of these paths exist in TARGET_WCPATH's nearest
    ancestor, then elision occurs.
 
-   If TARGET_WCPATH's mergeinfo consists only of paths mapped to empty
-   revision ranges and TARGET_WCPATH has no working copy or repository
+   If TARGET_WCPATH's mergeinfo is empty or consists only of paths mapped to
+   empty revision ranges and TARGET_WCPATH has no working copy or repository
    ancestor with mergeinfo (WC_ELISION_LIMIT_PATH must be NULL to ensure the
    repository is checked), then elision occurs.
  */
