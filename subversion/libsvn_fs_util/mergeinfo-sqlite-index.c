@@ -903,8 +903,8 @@ get_parent_target_path_having_mergeinfo(const char **parent_with_mergeinfo,
     return SVN_NO_ERROR;
   else
     return svn_error_createf(SVN_ERR_FS_SQLITE_ERROR, NULL,
-                             _("No mergeinfo for '%s' between revisions \
-                               %ld:%ld"),
+                             _("No mergeinfo for '%s' in revision range "
+                               "%ld:%ld"),
                              merge_target, min_commit_rev, max_commit_rev);
 }
 
