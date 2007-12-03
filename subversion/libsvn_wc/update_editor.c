@@ -224,7 +224,7 @@ struct bump_dir_info
   /* the path of the directory to bump */
   const char *path;
 
-  /* Set if this directory is skipped due to prop conflicts.
+  /* Set if this directory is skipped due to prop or tree conflicts.
      This does NOT mean that children are skipped. */
   svn_boolean_t skipped;
 };
@@ -1107,13 +1107,45 @@ do_entry_deletion(struct edit_baton *eb,
   const svn_wc_entry_t *entry;
   const char *full_path = svn_path_join(eb->anchor, path, pool);
   svn_stringbuf_t *log_item = svn_stringbuf_create("", pool);
+  svn_boolean_t modified;
 
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                               parent_path, pool));
 
-  SVN_ERR(svn_wc__loggy_delete_entry(&log_item, adm_access, full_path, pool));
-
   SVN_ERR(svn_wc__entry_versioned(&entry, full_path, adm_access, FALSE, pool));
+
+  /* If we are about to delete a path that has local mods,
+   * mark the containing directory as tree conflicted.
+   * This is tree conflict use case 2 as described in the
+   * paper attached to issue #2282
+   */
+  if (entry->kind == svn_node_file)
+    {
+      SVN_ERR(svn_wc_text_modified_p(&modified, full_path, FALSE, adm_access,
+                                     pool));
+      if (modified)
+        {
+          /* The path is a tree conflict victim.
+           * Create a suitable tree conflict descriptor and call
+           * svn_wc__add_tree_conflict_data()
+           */
+        }
+    } 
+
+  /* If we are about to delete a path that has been scheduled
+   * for deletion, mark the containing directory as tree conflicted.
+   * This _could_ be tree conflict use case 3 as described in the
+   * paper attached to issue #2282
+   */
+  if (entry->schedule == svn_wc_schedule_delete)
+    {
+      /* The path is a tree conflict victim.
+       * Create a suitable tree conflict descriptor and call
+       * svn_wc__add_tree_conflict_data()
+       */
+    }
+
+  SVN_ERR(svn_wc__loggy_delete_entry(&log_item, adm_access, full_path, pool));
 
   /* If the thing being deleted is the *target* of this update, then
      we need to recreate a 'deleted' entry, so that parent can give
@@ -1453,21 +1485,22 @@ open_directory(const char *path,
 
   SVN_ERR(check_path_under_root(pb->path, db->name, pool));
 
-  /* Skip this directory if it has property conflicts. */
+  /* Skip this directory if it has property or tree conflicts. */
   SVN_ERR(svn_wc_entry(&entry, db->path, eb->adm_access, FALSE, pool));
   if (entry)
     {
       /* Text conflicts can't happen for a directory, but we need to supply
-         both flags. */
+         all flags. */
       svn_boolean_t text_conflicted;
       svn_boolean_t prop_conflicted;
+      svn_boolean_t tree_conflicted;
 
       db->ambient_depth = entry->depth;
 
-      SVN_ERR(svn_wc_conflicted_p(&text_conflicted, &prop_conflicted,
-                                  db->path, entry, pool));
+      SVN_ERR(svn_wc_conflicted_p2(&text_conflicted, &prop_conflicted,
+                                   &tree_conflicted, db->path, entry, pool));
       assert(! text_conflicted);
-      if (prop_conflicted)
+      if (prop_conflicted || tree_conflicted)
         {
           db->bump_info->skipped = TRUE;
           apr_hash_set(eb->skipped_paths, apr_pstrdup(eb->pool, db->path),
@@ -1908,6 +1941,17 @@ open_file(const char *path,
                                "is not a versioned resource"),
                              fb->name,
                              svn_path_local_style(pb->path, pool));
+
+  /* If the file is scheduled for deletion, we have a tree conflict.
+   * This is use case 1 described in the paper attached to issue #2282
+   */
+  if (entry->schedule == svn_wc_schedule_delete)
+    {
+      /* The file is a tree conflict victim.
+       * Create a suitable tree conflict descriptor and call
+       * svn_wc__add_tree_conflict_data()
+       */
+    }
 
   /* If the file is in conflict, don't mess with it. */
   SVN_ERR(svn_wc_conflicted_p(&text_conflicted, &prop_conflicted,

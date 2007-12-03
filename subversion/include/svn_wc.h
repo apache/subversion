@@ -1052,11 +1052,23 @@ typedef enum svn_wc_conflict_reason_t
 typedef enum svn_wc_conflict_kind_t
 {
   svn_wc_conflict_kind_text,         /* textual conflict (on a file) */
-  svn_wc_conflict_kind_property      /* property conflict (on a file or dir) */
-
-  /* ### Add future kinds here that represent "tree" conflicts. */
+  svn_wc_conflict_kind_property,     /* property conflict (on a file or dir) */
+  svn_wc_conflict_kind_tree          /* tree conflict (on a dir) */
 
 } svn_wc_conflict_kind_t;
+
+
+/** The user operation that exposed a conflict.
+ *
+ * @since New in 1.6.
+ */
+typedef enum svn_wc_operation_t
+{
+  svn_wc_operation_update,
+  svn_wc_operation_switch,
+  svn_wc_operation_merge,
+
+} svn_wc_operation_t;
 
 
 /** A struct that describes a conflict that has occurred in the
@@ -1116,6 +1128,22 @@ typedef struct svn_wc_conflict_description_t
   const char *their_file;    /* their version of the file */
   const char *my_file;       /* my locally-edited version of the file */
   const char *merged_file;   /* merged version; may contain conflict markers */
+
+  /* The operation that exposed the conflict.
+   * Used only for tree conflicts.
+   *
+   * @since New in 1.6.
+   */
+  svn_wc_operation_t operation;
+
+  /* The path to the victim of a tree conflict.
+   *
+   * See the notes at the top of subversion/libsvn_wc/treeconflicts.h
+   * for the definition of a tree conflict victim.
+   *
+   * @since New in 1.6.
+   */
+  const char *victim_path;
 
 } svn_wc_conflict_description_t;
 
@@ -1743,6 +1771,20 @@ typedef struct svn_wc_entry_t
    * @since New in 1.5. */
   svn_depth_t depth;
 
+  /** Serialized data for all of the tree conflicts detected in this_dir.
+   * If no tree_conflict description exists in this_dir, the data in this
+   * field is ignored.
+   *
+   * @since New in 1.6. */
+  const char *tree_conflict_data;
+
+  /** Path to a file describing tree conflicts in this_dir.
+   * The file contains localized human-readable descriptions
+   * of all tree conflicts in this_dir.
+   *
+   * @since New in 1.6. */
+  const char *tree_conflict_desc;
+
   /* IMPORTANT: If you extend this structure, check the following functions in
    * subversion/libsvn_wc/entries.c, to see if you need to extend them as well.
    *
@@ -1836,10 +1878,27 @@ svn_wc_entry_t *svn_wc_entry_dup(const svn_wc_entry_t *entry,
 
 /** Given a @a dir_path under version control, decide if one of its
  * entries (@a entry) is in state of conflict; return the answers in
- * @a text_conflicted_p and @a prop_conflicted_p.
+ * @a text_conflicted_p, @a prop_conflicted_p and @a tree_conflicted_p.
  *
- * (If the entry mentions that a .rej or .prej exist, but they are
- * both removed, assume the conflict has been resolved by the user.)
+ * Only files can be text conflicted.
+ * Only directories can be tree conflicted.
+ * Property conflicts apply to both.
+ *
+ * If the entry mentions that a text conflict file, property conflicts
+ * file, or a tree conflict description file exist, but they are all
+ * removed, assume the conflict has been resolved by the user.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
+                                  svn_boolean_t *prop_conflicted_p,
+                                  svn_boolean_t *tree_conflicted_p,
+                                  const char *dir_path,
+                                  const svn_wc_entry_t *entry,
+                                  apr_pool_t *pool);
+
+/** Like svn_wc_conflicted_p2, but without the capability to
+ * detect tree conflicts.
  */
 svn_error_t *svn_wc_conflicted_p(svn_boolean_t *text_conflicted_p,
                                  svn_boolean_t *prop_conflicted_p,
