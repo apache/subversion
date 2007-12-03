@@ -101,18 +101,3 @@ Veto-blocked changes:
      -1: djames (see http://svn.haxx.se/dev/archive-2007-05/0058.shtml)
 
 Approved changes:
-
-  * r25833, and bits of r21596.
-    Fix administrative property file handling for prop changes to a
-    file which is subsequently copied/moved over another
-    schedule-delete file, where the original doesn't have any props
-    (e.g. 'svn mv a b; svn ps name val b; svn mv b a' is a
-    1.5-specific way to trigger this problem).
-    Justification:
-      WC library bug fix.
-    Branch: 1.4.x-r25833
-    Notes:
-      glasser tried to merge this but it really conflicts.  Can one of
-      the people who voted for it merge it?
-    Votes:
-      +1: hwright, dlr, dionisos
