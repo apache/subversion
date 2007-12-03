@@ -65,7 +65,7 @@ Candidate changes:
       limited to OSX, so the trunk code to prevent it on Windows is not
       needed.
     Votes:
-      +1: djh
+      +1: djh, lgo
 
   * r26077
     Alow Subversion to be built against Neon 0.26.4 (by default).
