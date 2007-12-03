@@ -498,6 +498,14 @@ read_entry(svn_wc_entry_t **new_entry,
   }
   MAYBE_DONE;
 
+  /* Tree conflict data. */
+  SVN_ERR(read_str(&entry->tree_conflict_data, buf, end, pool));
+  MAYBE_DONE;
+
+  /* Tree conflict description. */
+  SVN_ERR(read_str(&entry->tree_conflict_desc, buf, end, pool));
+  MAYBE_DONE;
+
  done:
   *new_entry = entry;
   return SVN_NO_ERROR;
@@ -1664,6 +1672,12 @@ write_entry(svn_stringbuf_t *buf,
       write_val(buf, val, strlen(val));
     }
 
+  /* Tree conflict data. */
+  write_str(buf, entry->tree_conflict_data, pool);
+
+  /* Tree conflict description. */
+  write_str(buf, entry->tree_conflict_desc, pool);
+
   /* Remove redundant separators at the end of the entry. */
   while (buf->len > 1 && buf->data[buf->len - 2] == '\n')
     buf->len--;
@@ -2270,6 +2284,18 @@ fold_entry(apr_hash_t *entries,
   /* Note that we don't bother to fold entry->depth, because it is
      only meaningful on the this-dir entry anyway. */
 
+  /* Tree conflict data. */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA)
+    cur_entry->tree_conflict_data = entry->tree_conflict_data
+      ? apr_pstrdup(pool, entry->tree_conflict_data)
+                              : NULL;
+
+  /* Tree conflict description. */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DESC)
+    cur_entry->tree_conflict_desc = entry->tree_conflict_desc
+      ? apr_pstrdup(pool, entry->tree_conflict_desc)
+                              : NULL;
+
   /* Absorb defaults from the parent dir, if any, unless this is a
      subdir entry. */
   if (cur_entry->kind != svn_node_dir)
@@ -2675,6 +2701,12 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry, apr_pool_t *pool)
     dupentry->cachable_props = apr_pstrdup(pool, entry->cachable_props);
   if (entry->present_props)
     dupentry->present_props = apr_pstrdup(pool, entry->present_props);
+  if (entry->tree_conflict_data)
+    dupentry->tree_conflict_data = apr_pstrdup(pool,
+                                               entry->tree_conflict_data);
+  if (entry->tree_conflict_desc)
+    dupentry->tree_conflict_desc = apr_pstrdup(pool,
+                                               entry->tree_conflict_desc);
   return dupentry;
 }
 
