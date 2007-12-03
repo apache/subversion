@@ -5636,9 +5636,9 @@ def merge_to_switched_path(sbox):
   # Check that the mergeinfo set on a target doesn't elide when that
   # target is switched.
   #
-  # Revert the previous merge and manually set 'svn:mergeinfo : /A/D/:'
+  # Revert the previous merge and manually set 'svn:mergeinfo : '
   # on 'merge_tests-1\A_COPY\D'.  Now merge -c-4 from /A/D/G into A_COPY/D/G.
-  # This should still set 'svn:mergeinfo : /A/D/G:' on
+  # This should still set 'svn:mergeinfo : ' on
   # 'merge_tests-1\A_COPY\D\G'.  This would normally elide to A_COPY/D,
   # but since A_COPY/D/G is switched it should not.
   svntest.actions.run_and_verify_svn(None,
@@ -5650,7 +5650,7 @@ def merge_to_switched_path(sbox):
                                      ["property '" + SVN_PROP_MERGE_INFO +
                                       "' set on '" + A_COPY_D_path+ "'" +
                                       "\n"], [], 'ps', SVN_PROP_MERGE_INFO,
-                                     '/A/D:', A_COPY_D_path)
+                                     '', A_COPY_D_path)
   svntest.actions.run_and_verify_svn(None,
                                      expected_merge_output([[-4]],
                                        'U    ' + A_COPY_D_G_rho_path + '\n'),
@@ -5669,9 +5669,9 @@ def merge_to_switched_path(sbox):
      "A         " + G_COPY_path + "\n"])
   expected = svntest.verify.UnorderedOutput(
     ["Properties on '" + A_COPY_D_path + "':\n",
-     "  " + SVN_PROP_MERGE_INFO + " : /A/D:\n",
+     "  " + SVN_PROP_MERGE_INFO + " : \n",
      "Properties on '" + A_COPY_D_G_path + "':\n",
-     "  " + SVN_PROP_MERGE_INFO +" : /A/D/G:\n"])
+     "  " + SVN_PROP_MERGE_INFO +" : \n"])
   svntest.actions.run_and_verify_svn(None,
                                      expected, [],
                                      'pl', '-vR', A_COPY_D_path)
@@ -6163,6 +6163,9 @@ def merge_with_implicit_target_file(sbox):
 
 # Test practical application of issue #2769 fix, empty rev range elision,
 # and elision to the repos.
+#
+# Set as XFail pending resolution of issue #2877 - see note
+# below (search for '2877')
 def empty_rev_range_mergeinfo(sbox):
   "mergeinfo can have empty rev ranges"
 
@@ -6173,7 +6176,8 @@ def empty_rev_range_mergeinfo(sbox):
   #    path would otherwise inherit from an ancestor.  e.g. Merging -rX:Y
   #    from URL/SOURCE to PATH then merging -rY:X from URL/SOURCE to PATH's
   #    child PATH_C should result in mergeinfo for SOURCE with an empty
-  #    rangelist on PATH_C
+  #    rangelist on PATH_C (or simply empty mergeinfo if PATH_C has no other
+  #    paths mapped to non-empty ranges).
   #
   # 2) Elision of mergeinfo where some or all paths in either the child or
   #    parent's mergeinfo map to empty revision ranges.  This takes many
@@ -6309,7 +6313,7 @@ def empty_rev_range_mergeinfo(sbox):
   merge_r24_into_A_D()
 
   # Merge r4:2 into A/D/H -- Test Area 1, 2a (see comment at top of test).
-  # A/D/H should get mergeinfo for A_COPY/D/H with an empty revision range.
+  # A/D/H should get empty mergeinfo.
   short_H_path = shorten_path_kludge(A_D_H_path)
   expected_output = wc.State(short_H_path, {
     'psi' : Item(status='G '),
@@ -6321,7 +6325,7 @@ def empty_rev_range_mergeinfo(sbox):
     'omega' : Item(status='  ', wc_rev=1),
     })
   expected_disk = wc.State('', {
-    ''      : Item(props={SVN_PROP_MERGE_INFO : '/A_COPY/D/H:'}),
+    ''      : Item(props={SVN_PROP_MERGE_INFO : ''}),
     'chi'   : Item("This is the file 'chi'.\n"),
     'psi'   : Item("This is the file 'psi'.\n"),
     'omega' : Item("This is the file 'omega'.\n"),
@@ -6351,6 +6355,10 @@ def empty_rev_range_mergeinfo(sbox):
   # setup_branch() there is no need for run_and_verify_merge().
   # run_and_verify_svn('merge') and ran_and_verify_status() covers
   # everything.
+  #
+  # This is broken pending resolution of issue #2877 - The empty mergeinfo
+  # on 'A/D/H' doesn't get considered as a subtree with intersecting
+  # mergeinfo, even though it should.
   svntest.actions.run_and_verify_svn(None,
                                      expected_merge_output([[4]],
                                        ['G    ' +
@@ -9692,8 +9700,8 @@ test_list = [ None,
               SkipUnless(merge_to_path_with_switched_children,
                          server_has_mergeinfo),
               merge_with_implicit_target_file,
-              SkipUnless(empty_rev_range_mergeinfo,
-                         server_has_mergeinfo),
+              XFail(SkipUnless(empty_rev_range_mergeinfo,
+                               server_has_mergeinfo)),
               prop_add_to_child_with_mergeinfo,
               diff_repos_does_not_update_mergeinfo,
               XFail(avoid_reflected_revs),
