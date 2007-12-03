@@ -3558,20 +3558,26 @@ fs_get_mergeinfo(apr_hash_t **mergeinfo,
   return SVN_NO_ERROR;
 }
 
+/* An action for crawl_directory_dag_for_mergeinfo. */
+typedef svn_error_t *(*crawler_action_t)
+  (void *baton,
+   const char *path,
+   apr_hash_t *path_mergeinfo,
+   apr_pool_t *pool);
+
 /* DIR_DAG is a directory DAG node which has mergeinfo in its
    descendents.  This function iterates over its children.  For each
-   child with immediate mergeinfo, it adds their mergeinfo to
-   MERGEINFO_HASH (which is not NULL).  For each child with
-   descendents with mergeinfo, it recurses.  It uses the filter func
-   to prune.
+   child with immediate mergeinfo, it calls ACTION on it with
+   appropriate arguments.  For each child with descendents with
+   mergeinfo, it recurses.  Note that it does *not* call the action on
+   the path for DIR_DAG itself.
  */
 static svn_error_t *
-crawl_directory_dag_for_mergeinfo(apr_hash_t *mergeinfo_hash,
-                                  svn_fs_root_t *root,
+crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
                                   const char *this_path,
                                   dag_node_t *dir_dag,
-                                  svn_fs_mergeinfo_filter_func_t filter_func,
-                                  void *filter_func_baton,
+                                  crawler_action_t action,
+                                  void *action_baton,
                                   apr_pool_t *pool)
 {
   apr_hash_t *entries;
@@ -3606,7 +3612,6 @@ crawl_directory_dag_for_mergeinfo(apr_hash_t *mergeinfo_hash,
              filterer lets us. */
           apr_hash_t *proplist, *kid_mergeinfo_hash;
           svn_string_t *mergeinfo_string;
-          svn_boolean_t skip = FALSE;
 
           SVN_ERR(svn_fs_fs__dag_get_proplist(&proplist, kid_dag, pool));
           mergeinfo_string = apr_hash_get(proplist, SVN_PROP_MERGE_INFO, 
@@ -3623,24 +3628,49 @@ crawl_directory_dag_for_mergeinfo(apr_hash_t *mergeinfo_hash,
           SVN_ERR(svn_mergeinfo_parse(&kid_mergeinfo_hash,
                                       mergeinfo_string->data,
                                       pool));
-          if (filter_func)
-            SVN_ERR(filter_func(filter_func_baton, &skip,
-                                kid_path, kid_mergeinfo_hash, pool));
-
-          if (!skip)
-            SVN_ERR(svn_mergeinfo_merge(mergeinfo_hash,
-                                        kid_mergeinfo_hash, pool));
+          SVN_ERR(action(action_baton,
+                         kid_path,
+                         kid_mergeinfo_hash,
+                         pool));
         }
       
       if (go_down)
-        SVN_ERR(crawl_directory_dag_for_mergeinfo(mergeinfo_hash,
-                                                  root,
+        SVN_ERR(crawl_directory_dag_for_mergeinfo(root,
                                                   kid_path,
                                                   kid_dag,
-                                                  filter_func,
-                                                  filter_func_baton,
+                                                  action,
+                                                  action_baton,
                                                   pool));
     }
+
+  return SVN_NO_ERROR;
+}
+
+/* Baton for filter_and_collect_mergeinfo. */
+struct facm_baton {
+  apr_hash_t *combined_mergeinfo_hash;
+  svn_fs_mergeinfo_filter_func_t filter_func;
+  void *filter_func_baton;
+};
+
+/* Implements crawler_action_t; used by
+   get_mergeinfo_hash_for_tree. */
+static svn_error_t *
+filter_and_collect_mergeinfo(void *baton,
+                             const char *path,
+                             apr_hash_t *path_mergeinfo_hash,
+                             apr_pool_t *pool)
+{
+  struct facm_baton *b = baton;
+  svn_boolean_t skip = FALSE;
+
+  if (b->filter_func)
+    SVN_ERR(b->filter_func(b->filter_func_baton, &skip,
+                           path, path_mergeinfo_hash, pool));
+
+  if (!skip)
+    SVN_ERR(svn_mergeinfo_merge(b->combined_mergeinfo_hash,
+                                path_mergeinfo_hash, pool));
 
   return SVN_NO_ERROR;
 }
@@ -3701,12 +3731,15 @@ get_mergeinfo_hash_for_tree(apr_hash_t **path_mergeinfo_hash_for_tree,
          and add in mergeinfo (ignoring inheritance) for everything below,
          as long as filter_func says it's OK.
       */
-      SVN_ERR(crawl_directory_dag_for_mergeinfo(this_path_mergeinfo_hash,
-                                                root,
+      struct facm_baton b;
+      b.combined_mergeinfo_hash = this_path_mergeinfo_hash;
+      b.filter_func = filter_func;
+      b.filter_func_baton = filter_func_baton;
+      SVN_ERR(crawl_directory_dag_for_mergeinfo(root,
                                                 path,
                                                 this_dag,
-                                                filter_func,
-                                                filter_func_baton,
+                                                filter_and_collect_mergeinfo,
+                                                &b,
                                                 pool));
     }
 
