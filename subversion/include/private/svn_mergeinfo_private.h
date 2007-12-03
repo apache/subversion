@@ -64,6 +64,19 @@ svn_mergeinfo__equals(svn_boolean_t *is_equal,
                       svn_boolean_t consider_inheritance,
                       apr_pool_t *pool);
 
+/** Examine @a mergeinfo, a mapping from paths to @c apr_array_header_t *'s
+ * of @c svn_merge_range_t *, removing all paths from the hash which map to
+ * empty rangelists.  @a pool is used only to allocate the apr_hash_index_t
+ * iterator.  Returns TRUE if any paths were removed and FALSE if none were
+ * removed or @a mergeinfo is NULL.
+ *
+ * @since New in 1.5.
+ */
+svn_boolean_t
+svn_mergeinfo__remove_empty_rangelists(apr_hash_t *mergeinfo,
+                                       apr_pool_t *pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
