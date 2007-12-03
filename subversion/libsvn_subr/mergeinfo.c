@@ -1375,6 +1375,36 @@ svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
   return SVN_NO_ERROR;
 }
 
+svn_boolean_t
+svn_mergeinfo_remove_empty_rangelists(apr_hash_t *mergeinfo,
+                                      apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  svn_boolean_t removed_some_ranges = FALSE;
+
+  if (mergeinfo)
+    {
+      for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
+        {
+          const void *key;
+          void *value;
+          const char *path;
+          apr_array_header_t *rangelist;
+          
+          apr_hash_this(hi, &key, NULL, &value);
+          path = key;
+          rangelist = value;
+          
+          if (rangelist->nelts == 0)
+            {
+              apr_hash_set(mergeinfo, path, APR_HASH_KEY_STRING, NULL);
+              removed_some_ranges = TRUE;
+            }
+        }
+    }
+  return removed_some_ranges;
+}
+
 apr_array_header_t *
 svn_rangelist_dup(apr_array_header_t *rangelist, apr_pool_t *pool)
 {

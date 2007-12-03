@@ -159,7 +159,7 @@ def mergeinfo_and_skipped_paths(sbox):
     'D/gamma'   : Item("This is the file 'gamma'.\n"),
     'D'         : Item(),
     'B/lambda'  : Item("This is the file 'lambda'.\n"),
-    'B/E'       : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:'}),
+    'B/E'       : Item(props={SVN_PROP_MERGE_INFO : ''}),
     'B/E/alpha' : Item("This is the file 'alpha'.\n"),
     'B/E/beta'  : Item("This is the file 'beta'.\n"),
     'B/F'       : Item(),
@@ -188,7 +188,7 @@ def mergeinfo_and_skipped_paths(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      ["Properties on '" + omega_path + "':\n",
                                       '  ' + SVN_PROP_MERGE_INFO + ' : ' +
-                                      '/A/D/H/omega:\n'],
+                                      '\n'],
                                      [], 'pl', '-vR', omega_path)
 
   # Merge r4:8 into the restricted WC's A_COPY_2.
@@ -235,7 +235,7 @@ def mergeinfo_and_skipped_paths(sbox):
                        props={SVN_PROP_MERGE_INFO : '/A/D/gamma:5-8'}),
     'D'         : Item(props={SVN_PROP_MERGE_INFO : '/A/D:5-8*'}),
     'B/lambda'  : Item("This is the file 'lambda'.\n"),
-    'B/E'       : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:'}),
+    'B/E'       : Item(props={SVN_PROP_MERGE_INFO : ''}),
     'B/E/alpha' : Item("This is the file 'alpha'.\n"),
     'B/E/beta'  : Item("This is the file 'beta'.\n"),
     'B/F'       : Item(),
