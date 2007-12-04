@@ -2671,17 +2671,17 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
             {
               const void *key;
               void *value;
-              const char *path;
+              const char *merge_src;
               apr_array_header_t *rangelist;
               
               apr_hash_this(hi, &key, NULL, &value);
-              path = key;
+              merge_src = key;
               rangelist = value;
 
               if (rangelist->nelts == 0)
                 return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
                                          _("Mergeinfo for '%s' maps to an "
-                                           "empty revision range"), path);
+                                           "empty revision range"), merge_src);
             }
         }
     }
