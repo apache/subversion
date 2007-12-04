@@ -1389,8 +1389,8 @@ svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
 }
 
 svn_boolean_t
-svn_mergeinfo_remove_empty_rangelists(apr_hash_t *mergeinfo,
-                                      apr_pool_t *pool)
+svn_mergeinfo__remove_empty_rangelists(apr_hash_t *mergeinfo,
+                                       apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   svn_boolean_t removed_some_ranges = FALSE;

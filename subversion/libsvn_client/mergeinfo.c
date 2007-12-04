@@ -256,11 +256,14 @@ svn_client__get_wc_mergeinfo(apr_hash_t **mergeinfo,
   if (walked_path)
     *walked_path = walk_path;
 
-  /* Remove non-inheritable mergeinfo if WCPATH's mergeinfo is
-     not explicit. */
+  /* Remove non-inheritable mergeinfo and paths mapped to empty ranges
+     which may occur if WCPATH's mergeinfo is not explicit. */
   if (*inherited)
-    SVN_ERR(svn_mergeinfo_inheritable(mergeinfo, *mergeinfo, NULL,
-            SVN_INVALID_REVNUM, SVN_INVALID_REVNUM, pool));
+    {
+      SVN_ERR(svn_mergeinfo_inheritable(mergeinfo, *mergeinfo, NULL,
+              SVN_INVALID_REVNUM, SVN_INVALID_REVNUM, pool));
+      svn_mergeinfo__remove_empty_rangelists(*mergeinfo, pool);
+    }
   return SVN_NO_ERROR;
 }
 

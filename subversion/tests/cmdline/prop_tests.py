@@ -22,6 +22,7 @@ import sys, re, os, stat
 # Our testing module
 import svntest
 
+from svntest.main import SVN_PROP_MERGE_INFO
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -575,15 +576,13 @@ def inappropriate_props(sbox):
 
   svntest.actions.run_and_verify_svn('Illegal target', None,
                                      svntest.verify.AnyOutput, 'propset',
-                                     'svn:date',
-				     'Tue Jan 19 04:14:07 2038',
-				     iota_path)
+                                     'svn:date', 'Tue Jan 19 04:14:07 2038',
+                                     iota_path)
 
   svntest.actions.run_and_verify_svn('Illegal target', None,
                                      svntest.verify.AnyOutput, 'propset',
                                      'svn:original-date',
-				     'Thu Jan  1 01:00:00 1970',
-				     iota_path)
+                                     'Thu Jan  1 01:00:00 1970', iota_path)
 
   # Status unchanged
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -595,8 +594,8 @@ def inappropriate_props(sbox):
   expected_status.tweak('A/B/E/alpha', 'A/B/E/beta', status=' M')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-# Issue #920. Don't allow setting of svn:eol-style on binary files or files
-# with inconsistent eol types.
+  # Issue #920. Don't allow setting of svn:eol-style on binary files or files
+  # with inconsistent eol types.
 
   path = os.path.join(wc_dir, 'binary')
   svntest.main.file_append(path, "binary")
@@ -637,8 +636,8 @@ def inappropriate_props(sbox):
                                      'propset', 'svn:eol-style',
                                      'CR', path)
 
-# Issue #2065. Do allow setting of svn:eol-style on binary files or files
-# with inconsistent eol types if --force is passed.
+  # Issue #2065. Do allow setting of svn:eol-style on binary files or files
+  # with inconsistent eol types if --force is passed.
 
   path = os.path.join(wc_dir, 'binary')
   svntest.main.file_append(path, "binary")
@@ -665,7 +664,55 @@ def inappropriate_props(sbox):
                                      'svn:eol-style', 'CR',
                                      path)
 
+  # Prevent setting of svn:mergeinfo prop values that are...
+  path = os.path.join(wc_dir, 'A', 'D')
 
+  # ...grammatically incorrect
+  svntest.actions.run_and_verify_svn('illegal grammar', None,
+                                     ["svn: Pathname not terminated by ':'\n"],
+                                     'propset', SVN_PROP_MERGE_INFO, '/trunk',
+                                     path)
+  svntest.actions.run_and_verify_svn('illegal grammar', None,
+                                     ["svn: Invalid revision number found "
+                                      "parsing 'one'\n"],
+                                     'propset', SVN_PROP_MERGE_INFO,
+                                     '/trunk:one', path)
+
+  # ...contain overlapping revision ranges
+  svntest.actions.run_and_verify_svn('overlapping ranges', None,
+                                     ["svn: Parsing of overlapping revision "
+                                      "ranges '9-20' and '18-22' is not "
+                                      "supported\n"],
+                                     'propset', SVN_PROP_MERGE_INFO,
+                                     '/branch:5-7,9-20,18-22', path)
+
+  svntest.actions.run_and_verify_svn('overlapping ranges', None,
+                                     ["svn: Parsing of overlapping revision "
+                                      "ranges '3' and '3' is not supported\n"],
+                                     'propset', SVN_PROP_MERGE_INFO,
+                                     '/branch:3,3', path)
+
+  # ...contain unordered revision ranges
+  svntest.actions.run_and_verify_svn('unordered ranges', None,
+                                     ["svn: Unable to parse unordered "
+                                      "revision ranges '5' and '2-3'\n"],
+                                     'propset', SVN_PROP_MERGE_INFO,
+                                     '/featureX:5,2-3,9', path)
+
+  # ...contain revision ranges with start revisions greater than or
+  #    equal to end revisions.
+  svntest.actions.run_and_verify_svn('range start >= range end', None,
+                                     ["svn: Unable to parse reversed "
+                                      "revision range '20-5'\n"],
+                                     'propset', SVN_PROP_MERGE_INFO,
+                                     '/featureX:4,20-5', path)
+
+  # ...contain paths mapped to empty revision ranges
+  svntest.actions.run_and_verify_svn('empty ranges', None,
+                                     ["svn: Mergeinfo for '/trunk' maps to "
+                                      "an empty revision range\n"],
+                                     'propset', SVN_PROP_MERGE_INFO,
+                                     '/trunk:', path)
 
 #----------------------------------------------------------------------
 

@@ -28,7 +28,7 @@
 #include "svn_ra.h"
 
 #include "svn_private_config.h"
-
+#include "private/svn_ra_private.h"
 
 /* Return an error with code SVN_ERR_UNSUPPORTED_FEATURE, and an error
    message referencing PATH_OR_URL, if the "server" pointed to be

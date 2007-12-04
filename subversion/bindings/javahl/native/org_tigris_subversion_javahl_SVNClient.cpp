@@ -1228,7 +1228,7 @@ Java_org_tigris_subversion_javahl_SVNClient_diffSummarize__Ljava_lang_String_2Lo
 
   cl->diffSummarize(target1, revision1, target2, revision2,
                     (svn_depth_t)jdepth,
-                    (bool) jignoreAncestry, receiver);
+                    jignoreAncestry ? true: false, receiver);
 }
 
 JNIEXPORT void JNICALL
@@ -1263,7 +1263,7 @@ Java_org_tigris_subversion_javahl_SVNClient_diffSummarize__Ljava_lang_String_2Lo
 
   cl->diffSummarize(target, pegRevision, startRevision, endRevision,
                     (svn_depth_t)jdepth,
-                    (bool) jignoreAncestry, receiver);
+                    jignoreAncestry ? true : false, receiver);
 }
 
 JNIEXPORT jbyteArray JNICALL

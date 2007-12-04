@@ -1,6 +1,6 @@
 import unittest, os, setup_path, StringIO
 from svn import core, repos, fs, delta
-from libsvn.core import SubversionException
+from svn.core import SubversionException
 
 from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
   REPOS_PATH

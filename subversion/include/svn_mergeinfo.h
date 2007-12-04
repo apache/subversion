@@ -359,18 +359,6 @@ svn_mergeinfo_inheritable(apr_hash_t **inheritable_mergeinfo,
                           svn_revnum_t end,
                           apr_pool_t *pool);
 
-/** Examine @a mergeinfo, a mapping from paths to @c apr_array_header_t *'s
- * of @c svn_merge_range_t *, removing all paths from the hash which map to
- * empty rangelists.  @a pool is used only to allocate the apr_hash_index_t
- * iterator.  Returns TRUE if any paths were removed and FALSE if none were
- * removed or @a mergeinfo is NULL.
- *
- * @since New in 1.5.
- */
-svn_boolean_t
-svn_mergeinfo_remove_empty_rangelists(apr_hash_t *mergeinfo,
-                                      apr_pool_t *pool);
-
 /** Take a hash of mergeinfo in @a mergeinfo, and convert it back to
  * a text format mergeinfo in @a output.  If @a input contains no
  * elements, return the empty string.

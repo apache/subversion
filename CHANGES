@@ -14,6 +14,7 @@ http://svn.collab.net/repos/svn/tags/1.4.6
     * datestamps can be localized (r26156)
     * fixed: text base not updated when merging a replaced file (issue #2698)
     * fixed: inverted 'switch --relocate' error message (r22355)
+    * support neon 0.26.4 (r26077)
 
   - Server:
     * fixed: authz granted if calculation inconclusion (r23815)

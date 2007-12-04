@@ -2089,7 +2089,7 @@ update_wc_mergeinfo(const char *target_wcpath, const svn_wc_entry_t *entry,
       if (is_rollback && apr_hash_count(mergeinfo) == 0)
         mergeinfo = NULL;
 
-      svn_mergeinfo_remove_empty_rangelists(mergeinfo, pool);
+      svn_mergeinfo__remove_empty_rangelists(mergeinfo, pool);
 
       err = svn_client__record_wc_mergeinfo(path, mergeinfo,
                                             adm_access, subpool);
