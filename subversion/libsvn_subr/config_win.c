@@ -23,9 +23,7 @@
 #ifdef WIN32
 #define WIN32_LEAN_AND_MEAN
 #ifdef APR_HAVE_IPV6
-#include "winsock2.h"
-#include "Ws2tcpip.h"
-#include "Wspiapi.h"
+#include <winsock2.h>
 #endif
 #include <windows.h>
 #include <shlobj.h>

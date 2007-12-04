@@ -609,6 +609,10 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 %typemap(in,parse="z") const char *config_dir "";
 #endif
 
+#ifdef SWIGPYTHON
+PyObject *svn_swig_py_exception_type(void);
+#endif
+
 /* -----------------------------------------------------------------------
   thunk the various authentication prompt functions.
   PERL NOTE: store the inputed SV in _global_callback for use in the
@@ -734,6 +738,14 @@ void svn_swig_py_clear_application_pool();
    but I do not know of any useful way to signal an error to Python
    from within a module initialization function. */
 svn_swig_py_initialize();
+
+/* This is a hack.  I dunno if we can count on SWIG calling the module "m" */
+PyModule_AddObject(m, "SubversionException",
+                   svn_swig_py_register_exception());
+%}
+
+%pythoncode %{
+SubversionException = _core.SubversionException
 %}
 
 /* Proxy classes for APR classes */

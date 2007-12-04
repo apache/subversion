@@ -542,28 +542,24 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     copy paths define the sources to be compared.  The revisions must\n"
      "     be specified.\n"
      "\n"
-     "  3. In the third form, SOURCE can be either a URL or a working copy\n"
-     "     path (in which case its corresponding URL is used).  If not\n"
-     "     specified, SOURCE will be the same as WCPATH.  SOURCE in revision\n"
-     "     REV is compared as it existed between revisions N and M for each\n"
-     "     revision range provided.  If REV is not specified, HEAD is\n"
-     "     assumed.  '-c M' is equivalent to '-r <M-1>:M', and '-c -M' does\n"
-     "     the reverse: '-r M:<M-1>'.  If no revision ranges are specified,\n"
-     "     the default range of 1:HEAD is used.  Multiple '-c' and/or '-r'\n"
-     "     instances may be specified, and mixing of forward and reverse\n"
-     "     ranges is allowed -- the ranges are internally compacted to their\n"
-     "     minimum representation before merging begins (which may result in\n"
-     "     no-op).\n"
+     "  3. In the third form, SOURCE can be a URL, or working copy item\n"
+     "     in which case the corresponding URL is used.  If not specified,\n"
+     "     the copy source URL of SOURCE is used.  If the WCPATH cannot be\n"
+     "     determined automatically, an error is displayed asking for an\n"
+     "     explicit SOURCE.  This URL in revision REV is compared as it\n"
+     "     existed between revisions N and M.  If REV is not specified, HEAD\n"
+     "     is assumed.  '-c M' is equivalent to '-r <M-1>:M', and '-c -M'\n"
+     "     does the reverse: '-r M:<M-1>'.  If neither N nor M is specified,\n"
+     "     they default to OLDEST_CONTIGUOUS_REV_OF_SOURCE_AT_URL and HEAD.\n"
+     "     Multiple '-c' and/or '-r' may be specified and mixing of forward\n"
+     "     and reverse ranges is allowed, however the ranges are compacted\n"
+     "     to their minimum representation before merging begins (which may\n"
+     "     result in a no-op).\n"
      "\n"
      "  WCPATH is the working copy path that will receive the changes.\n"
      "  If WCPATH is omitted, a default value of '.' is assumed, unless\n"
      "  the sources have identical basenames that match a file within '.':\n"
-     "  in which case, the differences will be applied to that file.\n"
-     "\n"
-     "  NOTE:  Subversion will only internally track metadata about the\n"
-     "  merge operation if the two sources are ancestrally related -- if the\n"
-     "  first source is an ancestor of the second, or vice-versa.  This is\n"
-     "  guaranteed to be the case when using the third form listed above.\n"),
+     "  in which case, the differences will be applied to that file.\n"),
     {'r', 'c', 'N', svn_cl__depth_opt, 'q', svn_cl__force_opt,
      svn_cl__dry_run_opt, svn_cl__merge_cmd_opt,
      svn_cl__record_only_opt, 'x', svn_cl__ignore_ancestry_opt,
@@ -1003,7 +999,7 @@ main(int argc, const char *argv[])
   apr_pool_t *pool;
   int opt_id;
   apr_getopt_t *os;
-  svn_cl__opt_state_t opt_state = { 0, { 0 } };
+  svn_cl__opt_state_t opt_state = { { 0 } };
   svn_client_ctx_t *ctx;
   apr_array_header_t *received_opts;
   int i;
@@ -1536,11 +1532,17 @@ main(int argc, const char *argv[])
                                    "or both -c and -r"));
           return svn_cmdline_handle_exit_error(err, pool, "svn: ");
         }
+      else if (opt_state.revision_ranges->nelts == 1)
+        {
+          opt_state.start_revision =
+            APR_ARRAY_IDX(opt_state.revision_ranges, 0,
+                          svn_opt_revision_range_t *)->start;
+          opt_state.end_revision =
+            APR_ARRAY_IDX(opt_state.revision_ranges, 0,
+                          svn_opt_revision_range_t *)->end;
+        }
     }
-  
-  /* Ensure that 'revision_ranges' has at least one item, and that
-     'start_revision' and 'end_revision' match that item. */
-  if (opt_state.revision_ranges->nelts == 0)
+  else if (opt_state.revision_ranges->nelts == 0)
     {
       svn_opt_revision_range_t *range = apr_palloc(pool, sizeof(*range));
       range->start.kind = svn_opt_revision_unspecified;
@@ -1548,12 +1550,8 @@ main(int argc, const char *argv[])
       APR_ARRAY_PUSH(opt_state.revision_ranges,
                      svn_opt_revision_range_t *) = range;
     }
-  opt_state.start_revision = APR_ARRAY_IDX(opt_state.revision_ranges, 0,
-                                           svn_opt_revision_range_t *)->start;
-  opt_state.end_revision = APR_ARRAY_IDX(opt_state.revision_ranges, 0,
-                                         svn_opt_revision_range_t *)->end;
 
-  /* If we're running a command that could result in a commit, verify
+  /* if we're running a command that could result in a commit, verify
      that any log message we were given on the command line makes
      sense (unless we've also been instructed not to care). */
   if ((! opt_state.force_log)

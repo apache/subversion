@@ -89,7 +89,7 @@ Revision::Revision(jobject jthis, bool headIfUnspecified,
                   return;
               }
             jlong jNumber = env->GetLongField(jthis, fidNum);
-            m_revision.value.number = (svn_revnum_t) jNumber;
+            m_revision.value.number = jNumber;
           }
           break;
         case org_tigris_subversion_javahl_RevisionKind_date:

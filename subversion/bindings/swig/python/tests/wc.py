@@ -1,7 +1,7 @@
 import unittest, os, tempfile, shutil, types, setup_path, binascii
 from svn import core, repos, wc, client
 from svn import delta, ra
-from svn.core import SubversionException
+from libsvn.core import SubversionException
 
 from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
   REPOS_PATH, REPOS_URL

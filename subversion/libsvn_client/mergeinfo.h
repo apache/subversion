@@ -89,16 +89,14 @@ svn_client__get_wc_mergeinfo(apr_hash_t **mergeinfo,
    INHERIT indicates whether explicit, explicit or inherited, or only
    inherited mergeinfo for REL_PATH is obtained.
 
-   If there is no mergeinfo available for REL_PATH, or if the server
-   doesn't support a mergeinfo capability and SQUELCH_INCAPABLE is
-   TRUE, set *TARGET_MERGEINFO to NULL. */
+   If there is no mergeinfo available for REL_PATH, set
+   *TARGET_MERGEINFO to NULL. */
 svn_error_t *
 svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
                                 apr_hash_t **target_mergeinfo,
                                 const char *rel_path,
                                 svn_revnum_t rev,
                                 svn_mergeinfo_inheritance_t inherit,
-                                svn_boolean_t squelch_incapable,
                                 apr_pool_t *pool);
 
 /* Retrieve the direct mergeinfo for the TARGET_WCPATH from the WC's
@@ -162,7 +160,7 @@ svn_client__parse_mergeinfo(apr_hash_t **mergeinfo,
                             apr_pool_t *pool);
 
 /* Write MERGEINFO into the WC for WCPATH.  If MERGEINFO is NULL,
-   remove any SVN_PROP_MERGEINFO for WCPATH.  If MERGEINFO is empty,
+   remove any SVN_PROP_MERGE_INFO for WCPATH.  If MERGEINFO is empty,
    record an empty property value (e.g. ""). */
 svn_error_t *
 svn_client__record_wc_mergeinfo(const char *wcpath,
@@ -195,8 +193,8 @@ svn_client__record_wc_mergeinfo(const char *wcpath,
    revision ranges and none of these paths exist in TARGET_WCPATH's nearest
    ancestor, then elision occurs.
 
-   If TARGET_WCPATH's mergeinfo is empty or consists only of paths mapped to
-   empty revision ranges and TARGET_WCPATH has no working copy or repository
+   If TARGET_WCPATH's mergeinfo consists only of paths mapped to empty
+   revision ranges and TARGET_WCPATH has no working copy or repository
    ancestor with mergeinfo (WC_ELISION_LIMIT_PATH must be NULL to ensure the
    repository is checked), then elision occurs.
  */

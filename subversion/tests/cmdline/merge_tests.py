@@ -5358,7 +5358,6 @@ def mergeinfo_inheritance_and_discontinuous_ranges(sbox):
   wc_dir = sbox.wc_dir
 
   # Some paths we'll care about
-  A_url = sbox.repo_url + '/A'
   A_COPY_path      = os.path.join(wc_dir, "A_COPY")
   D_COPY_path      = os.path.join(wc_dir, "A_COPY", "D")
   A_COPY_rho_path  = os.path.join(wc_dir, "A_COPY", "D", "G", "rho")
@@ -5369,10 +5368,12 @@ def mergeinfo_inheritance_and_discontinuous_ranges(sbox):
   saved_cwd = os.getcwd()
 
   os.chdir(A_COPY_path)
+  # Use run_and_verify_svn rather than run_and_verify_merge so we
+  # can test the implied merge source functionality.
   svntest.actions.run_and_verify_svn(None,
                                      expected_merge_output([[4]], 'U    ' +
                                        os.path.join("D", "G", "rho") + '\n'),
-                                     [], 'merge', '-c4', A_url)
+                                     [], 'merge', '-c4')
   os.chdir(saved_cwd)
 
   # Check the results of the merge.
@@ -5636,9 +5637,9 @@ def merge_to_switched_path(sbox):
   # Check that the mergeinfo set on a target doesn't elide when that
   # target is switched.
   #
-  # Revert the previous merge and manually set 'svn:mergeinfo : '
+  # Revert the previous merge and manually set 'svn:mergeinfo : /A/D/:'
   # on 'merge_tests-1\A_COPY\D'.  Now merge -c-4 from /A/D/G into A_COPY/D/G.
-  # This should still set 'svn:mergeinfo : ' on
+  # This should still set 'svn:mergeinfo : /A/D/G:' on
   # 'merge_tests-1\A_COPY\D\G'.  This would normally elide to A_COPY/D,
   # but since A_COPY/D/G is switched it should not.
   svntest.actions.run_and_verify_svn(None,
@@ -5650,7 +5651,7 @@ def merge_to_switched_path(sbox):
                                      ["property '" + SVN_PROP_MERGE_INFO +
                                       "' set on '" + A_COPY_D_path+ "'" +
                                       "\n"], [], 'ps', SVN_PROP_MERGE_INFO,
-                                     '', A_COPY_D_path)
+                                     '/A/D:', A_COPY_D_path)
   svntest.actions.run_and_verify_svn(None,
                                      expected_merge_output([[-4]],
                                        'U    ' + A_COPY_D_G_rho_path + '\n'),
@@ -5669,9 +5670,9 @@ def merge_to_switched_path(sbox):
      "A         " + G_COPY_path + "\n"])
   expected = svntest.verify.UnorderedOutput(
     ["Properties on '" + A_COPY_D_path + "':\n",
-     "  " + SVN_PROP_MERGE_INFO + " : \n",
+     "  " + SVN_PROP_MERGE_INFO + " : /A/D:\n",
      "Properties on '" + A_COPY_D_G_path + "':\n",
-     "  " + SVN_PROP_MERGE_INFO +" : \n"])
+     "  " + SVN_PROP_MERGE_INFO +" : /A/D/G:\n"])
   svntest.actions.run_and_verify_svn(None,
                                      expected, [],
                                      'pl', '-vR', A_COPY_D_path)
@@ -6163,9 +6164,6 @@ def merge_with_implicit_target_file(sbox):
 
 # Test practical application of issue #2769 fix, empty rev range elision,
 # and elision to the repos.
-#
-# Set as XFail pending resolution of issue #2877 - see note
-# below (search for '2877')
 def empty_rev_range_mergeinfo(sbox):
   "mergeinfo can have empty rev ranges"
 
@@ -6176,8 +6174,7 @@ def empty_rev_range_mergeinfo(sbox):
   #    path would otherwise inherit from an ancestor.  e.g. Merging -rX:Y
   #    from URL/SOURCE to PATH then merging -rY:X from URL/SOURCE to PATH's
   #    child PATH_C should result in mergeinfo for SOURCE with an empty
-  #    rangelist on PATH_C (or simply empty mergeinfo if PATH_C has no other
-  #    paths mapped to non-empty ranges).
+  #    rangelist on PATH_C
   #
   # 2) Elision of mergeinfo where some or all paths in either the child or
   #    parent's mergeinfo map to empty revision ranges.  This takes many
@@ -6313,7 +6310,7 @@ def empty_rev_range_mergeinfo(sbox):
   merge_r24_into_A_D()
 
   # Merge r4:2 into A/D/H -- Test Area 1, 2a (see comment at top of test).
-  # A/D/H should get empty mergeinfo.
+  # A/D/H should get mergeinfo for A_COPY/D/H with an empty revision range.
   short_H_path = shorten_path_kludge(A_D_H_path)
   expected_output = wc.State(short_H_path, {
     'psi' : Item(status='G '),
@@ -6325,7 +6322,7 @@ def empty_rev_range_mergeinfo(sbox):
     'omega' : Item(status='  ', wc_rev=1),
     })
   expected_disk = wc.State('', {
-    ''      : Item(props={SVN_PROP_MERGE_INFO : ''}),
+    ''      : Item(props={SVN_PROP_MERGE_INFO : '/A_COPY/D/H:'}),
     'chi'   : Item("This is the file 'chi'.\n"),
     'psi'   : Item("This is the file 'psi'.\n"),
     'omega' : Item("This is the file 'omega'.\n"),
@@ -6355,10 +6352,6 @@ def empty_rev_range_mergeinfo(sbox):
   # setup_branch() there is no need for run_and_verify_merge().
   # run_and_verify_svn('merge') and ran_and_verify_status() covers
   # everything.
-  #
-  # This is broken pending resolution of issue #2877 - The empty mergeinfo
-  # on 'A/D/H' doesn't get considered as a subtree with intersecting
-  # mergeinfo, even though it should.
   svntest.actions.run_and_verify_svn(None,
                                      expected_merge_output([[4]],
                                        ['G    ' +
@@ -6646,6 +6639,59 @@ def empty_rev_range_mergeinfo(sbox):
                                       '  ' + SVN_PROP_MERGE_INFO + ' : ' +
                                       '/A_COPY/D/H/omega:3\n'], [],
                                      'pl', '-vR', other_omega_path)
+
+def detect_copy_src_for_target_with_multiple_ancestors(sbox):
+  "detect copy src for target with multiple ancestors"
+
+  # This tests that copy source detection is correct in the case where
+  # many ancestors of a target exist in the same commit as a copy of target.
+
+  # Copy A/B as A/copy-of-B
+  # Copy A/C as A/copy-of-B/C
+  # Commit results in r2.
+  # From A/copy-of-B/C do merge. This merge should implicitly detect the
+  # merge source to be A/C.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  A_path = os.path.join(wc_dir, 'A')
+  A_B_path = os.path.join(A_path, 'B')
+  A_C_path = os.path.join(A_path, 'C')
+  A_copy_of_B_path = os.path.join(A_path, 'copy-of-B')
+  A_copy_of_B_C_path = os.path.join(A_copy_of_B_path, 'C')
+  svntest.main.run_svn(None, 'cp', A_B_path, A_copy_of_B_path)
+  svntest.main.run_svn(None, 'cp', A_C_path, A_copy_of_B_path)
+  expected_output = wc.State(wc_dir, {
+    'A/copy-of-B'   : Item(verb='Adding'),
+    'A/copy-of-B/C' : Item(verb='Adding')
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/copy-of-B'            : Item(status='  ', wc_rev=2),
+    'A/copy-of-B/lambda'     : Item(status='  ', wc_rev=2),
+    'A/copy-of-B/E'          : Item(status='  ', wc_rev=2),
+    'A/copy-of-B/E/alpha'    : Item(status='  ', wc_rev=2),
+    'A/copy-of-B/E/beta'     : Item(status='  ', wc_rev=2),
+    'A/copy-of-B/F'          : Item(status='  ', wc_rev=2),
+    'A/copy-of-B/C'          : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+  saved_cwd = os.getcwd()
+  os.chdir(A_copy_of_B_C_path)
+  # Use --record-only to force the setting of mergeinfo since this is
+  # a no-op merge.
+  svntest.actions.run_and_verify_svn(None, [],
+                                     [], 'merge', '--record-only')
+  os.chdir(saved_cwd)
+
+  expected_status.tweak('A/copy-of-B/C',  status=' M')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.actions.run_and_verify_svn(None, ["/A/C:2\n"], [],
+                                     'propget', SVN_PROP_MERGE_INFO,
+                                     A_copy_of_B_C_path)
 
 def prop_add_to_child_with_mergeinfo(sbox):
   "merge adding prop to child of merge target works"
@@ -9617,7 +9663,7 @@ def merge_source_normalization_and_subtree_merges(sbox):
     })
   expected_disk = wc.State('', {
     ''        : Item(props={SVN_PROP_MERGE_INFO : '/A_MOVED/D:8'}),
-    'G'       : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:4\n/A_MOVED/D/G:8\n'}),
+    'G'       : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:4\n/A_MOVED/D/G:8'}),
     'G/pi'    : Item("This is the file 'pi'.\n"),
     'G/rho'   : Item("New content"),
     'G/tau'   : Item("New content"),
@@ -9700,8 +9746,9 @@ test_list = [ None,
               SkipUnless(merge_to_path_with_switched_children,
                          server_has_mergeinfo),
               merge_with_implicit_target_file,
-              XFail(SkipUnless(empty_rev_range_mergeinfo,
-                               server_has_mergeinfo)),
+              SkipUnless(empty_rev_range_mergeinfo,
+                         server_has_mergeinfo),
+              detect_copy_src_for_target_with_multiple_ancestors,
               prop_add_to_child_with_mergeinfo,
               diff_repos_does_not_update_mergeinfo,
               XFail(avoid_reflected_revs),

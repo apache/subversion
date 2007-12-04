@@ -126,9 +126,6 @@ class GeneratorBase(gen_base.GeneratorBase):
         elif val == '2005' or re.match('9(\.\d+)?', val):
           self.vsnet_version = '9.00'
           self.vsnet_proj_ver = '8.00'
-        elif val == '2008' or re.match('10(\.\d+)?', val):
-          self.vsnet_version = '10.00'
-          self.vsnet_proj_ver = '9.00'
         else:
           self.vsnet_version = val
 
@@ -185,11 +182,9 @@ class WinGeneratorBase(GeneratorBase):
         sys.stderr.write('Generating for VS.NET 2003\n')
       elif self.vsnet_version == '9.00':
         sys.stderr.write('Generating for VS.NET 2005\n')
-      elif self.vsnet_version == '10.00':
-        sys.stderr.write('Generating for VS.NET 2008\n')
       else:
         sys.stderr.write('WARNING: Unknown VS.NET version "%s",'
-                         ' assuming "%s"\n' % (self.vsnet_version, '7.00'))
+                         ' assumimg "%s"\n' % (self.vsnet_version, '7.00'))
         self.vsnet_version = '7.00'
         self.vsnet_proj_ver = '7.00'
 

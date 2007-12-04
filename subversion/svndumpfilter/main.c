@@ -750,7 +750,7 @@ set_node_property(void *node_baton,
                             _("Delta property block detected - "
                               "not supported by svndumpfilter"));
 
-  if (strcmp(name, SVN_PROP_MERGEINFO) == 0)
+  if (strcmp(name, SVN_PROP_MERGE_INFO) == 0)
     {
       svn_string_t *filtered_mergeinfo;  /* Avoid compiler warning. */ 
       apr_pool_t *pool = apr_hash_pool_get(rb->props);

@@ -83,6 +83,8 @@
 #define HEADER_COPYFROM    "copyfrom"
 #define HEADER_COPYROOT    "copyroot"
 #define HEADER_FRESHTXNRT  "is-fresh-txn-root"
+#define HEADER_MINFO_HERE  "minfo-here"
+#define HEADER_MINFO_CNT   "minfo-cnt"
 
 /* Kinds that a change can be. */
 #define ACTION_MODIFY      "modify"
@@ -134,7 +136,7 @@ path_format(svn_fs_t *fs, apr_pool_t *pool)
   return svn_path_join(fs->path, PATH_FORMAT, pool);
 }
 
-static APR_INLINE const char *
+static const char *
 path_uuid(svn_fs_t *fs, apr_pool_t *pool)
 {
   return svn_path_join(fs->path, PATH_UUID, pool);
@@ -146,19 +148,19 @@ svn_fs_fs__path_current(svn_fs_t *fs, apr_pool_t *pool)
   return svn_path_join(fs->path, PATH_CURRENT, pool);
 }
 
-static APR_INLINE const char *
+static const char *
 path_txn_current(svn_fs_t *fs, apr_pool_t *pool)
 {
   return svn_path_join(fs->path, PATH_TXN_CURRENT, pool);
 }
 
-static APR_INLINE const char *
+static const char *
 path_txn_current_lock(svn_fs_t *fs, apr_pool_t *pool)
 {
   return svn_path_join(fs->path, PATH_TXN_CURRENT_LOCK, pool);
 }
 
-static APR_INLINE const char *
+static const char *
 path_lock(svn_fs_t *fs, apr_pool_t *pool)
 {
   return svn_path_join(fs->path, PATH_LOCK_FILE, pool);
@@ -220,7 +222,7 @@ path_revprops(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
                             apr_psprintf(pool, "%ld", rev), NULL);
 }
 
-static APR_INLINE const char *
+static const char *
 path_txn_dir(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join_many(pool, fs->path, PATH_TXNS_DIR,
@@ -228,38 +230,38 @@ path_txn_dir(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
                             NULL);
 }
 
-static APR_INLINE const char *
+static const char *
 path_txn_changes(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_CHANGES, pool);
 }
 
-static APR_INLINE const char *
+static const char *
 path_txn_props(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_TXN_PROPS, pool);
 }
 
-static APR_INLINE const char *
+static const char *
 path_txn_mergeinfo(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_TXN_MERGEINFO,
                        pool);
 }
 
-static APR_INLINE const char *
+static const char *
 path_txn_next_ids(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_NEXT_IDS, pool);
 }
 
-static APR_INLINE const char *
+static const char *
 path_txn_proto_rev(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_REV, pool);
 }
 
-static APR_INLINE const char *
+static const char *
 path_txn_proto_rev_lock(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_REV_LOCK, pool);
@@ -277,14 +279,14 @@ path_txn_node_rev(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
   return svn_path_join(path_txn_dir(fs, txn_id, pool), name, pool);
 }
 
-static APR_INLINE const char *
+static const char *
 path_txn_node_props(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
 {
   return apr_pstrcat(pool, path_txn_node_rev(fs, id, pool), PATH_EXT_PROPS,
                      NULL);
 }
 
-static APR_INLINE const char *
+static const char *
 path_txn_node_children(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
 {
   return apr_pstrcat(pool, path_txn_node_rev(fs, id, pool),
@@ -1567,6 +1569,14 @@ svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
   value = apr_hash_get(headers, HEADER_FRESHTXNRT, APR_HASH_KEY_STRING);
   noderev->is_fresh_txn_root = (value != NULL);
 
+  /* Get the mergeinfo count. */
+  value = apr_hash_get(headers, HEADER_MINFO_CNT, APR_HASH_KEY_STRING);
+  noderev->mergeinfo_count = (value == NULL) ? 0 : atoi(value);
+
+  /* Get whether *this* node has mergeinfo. */
+  value = apr_hash_get(headers, HEADER_MINFO_HERE, APR_HASH_KEY_STRING);
+  noderev->has_mergeinfo = (value != NULL);
+
   *noderev_p = noderev;
 
   return SVN_NO_ERROR;
@@ -1648,6 +1658,13 @@ write_noderev_txn(apr_file_t *file,
 
   if (noderev->is_fresh_txn_root)
     SVN_ERR(svn_stream_printf(outfile, pool, HEADER_FRESHTXNRT ": y\n"));
+
+  if (noderev->mergeinfo_count > 0)
+    SVN_ERR(svn_stream_printf(outfile, pool, HEADER_MINFO_CNT ": %d\n",
+                              noderev->mergeinfo_count));
+
+  if (noderev->has_mergeinfo)
+    SVN_ERR(svn_stream_printf(outfile, pool, HEADER_MINFO_HERE ": y\n"));
 
   SVN_ERR(svn_stream_printf(outfile, pool, "\n"));
 
@@ -3581,32 +3598,45 @@ svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
   return SVN_NO_ERROR;
 }
 
-/* Store the mergeinfo list for transaction TXN_ID in MINFO.
-   Perform temporary allocations in POOL. */
+/* Store the mergeinfo list for transaction TXN_ID into new hash
+   *MINFO.  Perform allocation of *MINFO and temporary allocations in
+   *POOL. Sets *MINFO to NULL if no mergeinfo has changed. */
 
 static svn_error_t *
-get_txn_mergeinfo(apr_hash_t *minfo,
+get_txn_mergeinfo(apr_hash_t **minfo,
                   svn_fs_t *fs,
                   const char *txn_id,
                   apr_pool_t *pool)
 {
   apr_file_t *txn_minfo_file;
+  apr_hash_t *result;
 
   /* Open the transaction mergeinfo file. */
-  SVN_ERR(svn_io_file_open(&txn_minfo_file,
-                           path_txn_mergeinfo(fs, txn_id, pool),
-                           APR_READ | APR_BUFFERED,
-                           APR_OS_DEFAULT, pool));
+  svn_error_t *err = svn_io_file_open(&txn_minfo_file,
+                                      path_txn_mergeinfo(fs, txn_id, pool),
+                                      APR_READ | APR_BUFFERED,
+                                      APR_OS_DEFAULT, pool);
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      svn_error_clear(err);
+      *minfo = NULL;
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR(err);
 
+  result = apr_hash_make(pool);
   /* Read in the property list. */
-  SVN_ERR(svn_hash_read2(minfo,
+  SVN_ERR(svn_hash_read2(result,
                          svn_stream_from_aprfile(txn_minfo_file, pool),
                          SVN_HASH_TERMINATOR, pool));
 
   SVN_ERR(svn_io_file_close(txn_minfo_file, pool));
 
+  *minfo = result;
+
   return SVN_NO_ERROR;
 }
+
 
 /* Change mergeinfo for path NAME in TXN to VALUE.  */
 
@@ -3617,14 +3647,11 @@ svn_fs_fs__change_txn_mergeinfo(svn_fs_txn_t *txn,
                                 apr_pool_t *pool)
 {
   apr_file_t *txn_minfo_file;
-  apr_hash_t *txn_minfo = apr_hash_make(pool);
-  svn_error_t *err;
+  apr_hash_t *txn_minfo;
 
-  err = get_txn_mergeinfo(txn_minfo, txn->fs, txn->id, pool);
-  if (err && (APR_STATUS_IS_ENOENT(err->apr_err))) /* doesn't exist yet */
-    svn_error_clear(err);
-  else if (err)
-    return err;
+  SVN_ERR(get_txn_mergeinfo(&txn_minfo, txn->fs, txn->id, pool));
+  if (txn_minfo == NULL) /* doesn't exist yet */
+    txn_minfo = apr_hash_make(pool);
 
   apr_hash_set(txn_minfo, name, APR_HASH_KEY_STRING, value);
 
@@ -4926,7 +4953,7 @@ commit_body(void *baton, apr_pool_t *pool)
   char *buf;
   apr_hash_t *txnprops;
   svn_string_t date;
-  apr_hash_t *target_mergeinfo = NULL;
+  apr_hash_t *target_mergeinfo;
 
   /* Get the current youngest revision. */
   SVN_ERR(svn_fs_fs__youngest_rev(&old_rev, cb->fs, pool));
@@ -4998,20 +5025,12 @@ commit_body(void *baton, apr_pool_t *pool)
           prop.name = SVN_FS__PROP_TXN_CHECK_LOCKS;
           APR_ARRAY_PUSH(props, svn_prop_t) = prop;
         }          
-
-      if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CONTAINS_MERGEINFO,
-                       APR_HASH_KEY_STRING))
-        {
-          target_mergeinfo = apr_hash_make(pool);
-          SVN_ERR(get_txn_mergeinfo(target_mergeinfo, cb->txn->fs, cb->txn->id,
-                                    pool));
-          prop.name = SVN_FS__PROP_TXN_CONTAINS_MERGEINFO;
-          APR_ARRAY_PUSH(props, svn_prop_t) = prop;
-        }
       
       if (! apr_is_empty_array(props))
         SVN_ERR(svn_fs_fs__change_txn_props(cb->txn, props, pool));
     }
+  
+  SVN_ERR(get_txn_mergeinfo(&target_mergeinfo, cb->txn->fs, cb->txn->id, pool));
 
   /* Create the shard for the rev and revprop file, if we're sharding and
      this is the first revision of a new shard.  We don't care if this

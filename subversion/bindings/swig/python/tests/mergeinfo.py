@@ -1,7 +1,7 @@
 import unittest, os
 
 from svn import core
-from svn.core import SubversionException
+from libsvn.core import SubversionException
 
 class SubversionMergeinfoTestCase(unittest.TestCase):
   """Test cases for the basic SWIG Subversion core"""

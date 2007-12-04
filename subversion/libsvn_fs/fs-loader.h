@@ -346,12 +346,6 @@ typedef struct id_vtable_t
 #define SVN_FS__PROP_TXN_CHECK_LOCKS           SVN_PROP_PREFIX "check-locks"
 #define SVN_FS__PROP_TXN_CHECK_OOD             SVN_PROP_PREFIX "check-ood"
 
-/* This transaction property determines whether the txn has mergeinfo
-   properties set in it, and thus will need some info inserted about
-   uid->rev mapping in the mergeinfo table  */
-#define SVN_FS__PROP_TXN_CONTAINS_MERGEINFO    SVN_PROP_PREFIX "contains-mergeinfo"
-
-
 struct svn_fs_t
 {
   /* The pool in which this fs object is allocated */

@@ -2464,13 +2464,10 @@ svn_client_merge(const char *source1,
  * revision @a peg_revision, as it changed between the ranges described
  * in @a ranges_to_merge.
  *
- * @a ranges_to_merge is an array of <tt>svn_opt_revision_range_t
- * *</tt> ranges.  These ranges may describe additive and/or
- * subtractive merge ranges, they may overlap fully or partially,
- * and/or they may partially or fully negate each other.  This
- * rangelist is not required to be sorted.  If any revision in the
- * list of provided ranges has an `unspecified' or unrecognized
- * `kind', return @c SVN_ERR_CLIENT_BAD_REVISION.
+ * @a ranges_to_merge is an array of <tt>svn_opt_revision_range_t *</tt>
+ * ranges.  These ranges may describe additive and/or subtractive merge
+ * ranges, they may overlap fully or partially, and/or they may partially
+ * or fully negate each other.  This rangelist is not required to be sorted.
  *
  * All other options are handled identically to svn_client_merge3().
  *
@@ -2563,10 +2560,6 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
  *
  * Use @a pool for all necessary allocations.
  *
- * If the server doesn't support retrieval of mergeinfo (which will
- * never happen for file:// URLs), return an @c
- * SVN_ERR_UNSUPPORTED_FEATURE error.
- *
  * @since New in 1.5.
  */
 svn_error_t *
@@ -2585,10 +2578,6 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
  * merge_source have already been merged.
  *
  * Use @a pool for all necessary allocations.
- *
- * If the server doesn't support retrieval of mergeinfo (which will
- * never happen for file:// URLs), return an @c
- * SVN_ERR_UNSUPPORTED_FEATURE error.
  *
  * @since New in 1.5.
  */

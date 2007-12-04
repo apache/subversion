@@ -110,6 +110,14 @@ void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum);
 
 /*** Functions to expose a custom SubversionException ***/
 
+/* register a new subversion exception class */
+SVN_SWIG_SWIGUTIL_EXPORT
+PyObject *svn_swig_py_register_exception(void);
+
+/* get the object which represents the subversion exception class */
+SVN_SWIG_SWIGUTIL_EXPORT
+PyObject *svn_swig_py_exception_type(void);
+
 /* raise a subversion exception, created from a normal subversion
    error.  consume the error.  */
 SVN_SWIG_SWIGUTIL_EXPORT

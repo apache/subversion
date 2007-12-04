@@ -16,7 +16,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 #
 # Author: Archie Cobbs <archie at awarix dot com>
 # Rewritten in Python by: Giovanni Bajo <rasky at develer dot com>
@@ -40,8 +40,8 @@
 # Differences from svnmerge.sh:
 # - More portable: tested as working in FreeBSD and OS/2.
 # - Add double-verbose mode, which shows every svn command executed (-v -v).
-# - "svnmerge avail" now only shows commits in source, not also commits in
-#   other parts of the repository.
+# - "svnmerge avail" now only shows commits in source, not also commits in other
+#   parts of the repository.
 # - Add "svnmerge block" to flag some revisions as blocked, so that
 #   they will not show up anymore in the available list.  Added also
 #   the complementary "svnmerge unblock".

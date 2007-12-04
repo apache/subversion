@@ -29,9 +29,7 @@
 #include "svn_client.h"
 #include "svn_path.h"
 #include "svn_props.h"
-#include "svn_mergeinfo.h"
 #include "client.h"
-#include "mergeinfo.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
@@ -709,74 +707,5 @@ svn_client__repos_locations(const char **start_url,
                                                             pool), pool);
 
   svn_pool_destroy(subpool);
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_client__get_youngest_common_ancestor(const char **ancestor_path,
-                                         svn_revnum_t *ancestor_revision,
-                                         const char *path_or_url1,
-                                         const svn_opt_revision_t *revision1,
-                                         const char *path_or_url2,
-                                         const svn_opt_revision_t *revision2,
-                                         svn_client_ctx_t *ctx,
-                                         apr_pool_t *pool)
-{
-  apr_hash_t *history1, *history2;
-  apr_hash_index_t *hi;
-  svn_revnum_t yc_revision = SVN_INVALID_REVNUM;
-  const char *yc_path = NULL;
-
-  /* We're going to cheat and use history-as-mergeinfo because it
-     saves us a bunch of annoying custom data comparisons and such. */
-  SVN_ERR(svn_client__get_history_as_mergeinfo(&history1, path_or_url1,
-                                               revision1, 
-                                               SVN_INVALID_REVNUM, 
-                                               SVN_INVALID_REVNUM,
-                                               NULL, NULL, ctx, pool));
-  SVN_ERR(svn_client__get_history_as_mergeinfo(&history2, path_or_url2,
-                                               revision2, 
-                                               SVN_INVALID_REVNUM, 
-                                               SVN_INVALID_REVNUM,
-                                               NULL, NULL, ctx, pool));
-
-  /* Loop through the first location's history, check for overlapping
-     paths and ranges in the second location's history, and
-     remembering the youngest matching location. */
-  for (hi = apr_hash_first(NULL, history1); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      apr_ssize_t klen;
-      void *val;
-      const char *path;
-      apr_array_header_t *ranges1, *ranges2, *common;
-
-      apr_hash_this(hi, &key, &klen, &val);
-      path = key;
-      ranges1 = val;
-
-      ranges2 = apr_hash_get(history2, key, klen);
-      if (ranges2)
-        {
-          /* We have a path match.  Now, did our two histories share
-             any revisions at that path? */
-          SVN_ERR(svn_rangelist_intersect(&common, ranges1, ranges2, pool));
-          if (common->nelts)
-            {
-              svn_merge_range_t *yc_range =
-                APR_ARRAY_IDX(common, common->nelts - 1, svn_merge_range_t *);
-              if ((! SVN_IS_VALID_REVNUM(yc_revision))
-                  || (yc_range->end > yc_revision))
-                {
-                  yc_revision = yc_range->end;
-                  yc_path = path;
-                }
-            }
-        }
-    }
-
-  *ancestor_path = yc_path;
-  *ancestor_revision = yc_revision;
   return SVN_NO_ERROR;
 }

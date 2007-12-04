@@ -37,10 +37,10 @@
 /* The current state of our XML parsing. */
 typedef enum {
   NONE = 0,
-  MERGEINFO_REPORT,
-  MERGEINFO_ITEM,
-  MERGEINFO_PATH,
-  MERGEINFO_INFO
+  MERGE_INFO_REPORT,
+  MERGE_INFO_ITEM,
+  MERGE_INFO_PATH,
+  MERGE_INFO_INFO
 } mergeinfo_state_e;
 
 /* Baton for accumulating mergeinfo.  RESULT stores the final
@@ -71,24 +71,24 @@ start_element(svn_ra_serf__xml_parser_t *parser,
   state = parser->state->current_state;
   if (state == NONE && strcmp(name.name, SVN_DAV__MERGEINFO_REPORT) == 0)
     {
-      svn_ra_serf__xml_push_state(parser, MERGEINFO_REPORT);
+      svn_ra_serf__xml_push_state(parser, MERGE_INFO_REPORT);
     }
-  else if (state == MERGEINFO_REPORT &&
+  else if (state == MERGE_INFO_REPORT &&
            strcmp(name.name, SVN_DAV__MERGEINFO_ITEM) == 0)
     {
-      svn_ra_serf__xml_push_state(parser, MERGEINFO_ITEM);
+      svn_ra_serf__xml_push_state(parser, MERGE_INFO_ITEM);
       svn_stringbuf_setempty(mergeinfo_ctx->curr_path);
       svn_stringbuf_setempty(mergeinfo_ctx->curr_info);
     }
-  else if (state == MERGEINFO_ITEM &&
+  else if (state == MERGE_INFO_ITEM &&
            strcmp(name.name, SVN_DAV__MERGEINFO_PATH) == 0)
     {
-      svn_ra_serf__xml_push_state(parser, MERGEINFO_PATH);
+      svn_ra_serf__xml_push_state(parser, MERGE_INFO_PATH);
     }
-  else if (state == MERGEINFO_ITEM &&
+  else if (state == MERGE_INFO_ITEM &&
            strcmp(name.name, SVN_DAV__MERGEINFO_INFO) == 0)
     {
-      svn_ra_serf__xml_push_state(parser, MERGEINFO_INFO);
+      svn_ra_serf__xml_push_state(parser, MERGE_INFO_INFO);
     }
   return SVN_NO_ERROR;
 }
@@ -102,12 +102,12 @@ end_element(svn_ra_serf__xml_parser_t *parser, void *userData,
 
   state = parser->state->current_state;
 
-  if (state == MERGEINFO_REPORT &&
+  if (state == MERGE_INFO_REPORT &&
       strcmp(name.name, SVN_DAV__MERGEINFO_REPORT) == 0)
     {
       svn_ra_serf__xml_pop_state(parser);
     }
-  else if (state == MERGEINFO_ITEM
+  else if (state == MERGE_INFO_ITEM
            && strcmp(name.name, SVN_DAV__MERGEINFO_ITEM) == 0)
     {
       if (mergeinfo_ctx->curr_info->len && mergeinfo_ctx->curr_path->len)
@@ -124,12 +124,12 @@ end_element(svn_ra_serf__xml_parser_t *parser, void *userData,
         }
       svn_ra_serf__xml_pop_state(parser);
     }
-  else if (state == MERGEINFO_PATH
+  else if (state == MERGE_INFO_PATH
            && strcmp(name.name, SVN_DAV__MERGEINFO_PATH) == 0)
     {
       svn_ra_serf__xml_pop_state(parser);
     }
-  else if (state == MERGEINFO_INFO
+  else if (state == MERGE_INFO_INFO
            && strcmp(name.name, SVN_DAV__MERGEINFO_INFO) == 0)
     {
       svn_ra_serf__xml_pop_state(parser);
@@ -148,12 +148,12 @@ cdata_handler(svn_ra_serf__xml_parser_t *parser, void *userData,
   state = parser->state->current_state;
   switch (state)
     {
-    case MERGEINFO_PATH:
+    case MERGE_INFO_PATH:
       if (mergeinfo_ctx->curr_path)
         svn_stringbuf_appendbytes(mergeinfo_ctx->curr_path, data, len);
       break;
 
-    case MERGEINFO_INFO:
+    case MERGE_INFO_INFO:
       if (mergeinfo_ctx->curr_info)
         svn_stringbuf_appendbytes(mergeinfo_ctx->curr_info, data, len);
       break;
@@ -279,10 +279,26 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
     {
       svn_error_clear(err);
       return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL,
-                               _("'%s' path not found"), handler->path);
+                               "'%s' path not found",
+                               handler->path);
     }
-  else
-    SVN_ERR(err);
+
+  /* If the server responds with HTTP_NOT_IMPLEMENTED (which ra_serf
+     translates into a Subversion error), assume its mod_dav_svn is
+     too old to understand the mergeinfo-report REPORT.
+
+     ### It would be less expensive if we knew the server's
+     ### capabilities *before* sending our REPORT. */
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
+        {
+          *mergeinfo = NULL;
+          svn_error_clear(err);
+        }
+      else
+        return err;
+    }
 
   if (mergeinfo_ctx->done)
     *mergeinfo = mergeinfo_ctx->result;

@@ -1,7 +1,7 @@
 import unittest, os, weakref, tempfile, types, setup_path
 
 from svn import core, repos, fs, delta, client, wc
-from svn.core import SubversionException
+from libsvn.core import SubversionException
 
 from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
   REPOS_PATH, REPOS_URL

@@ -31,9 +31,11 @@
 #include "svn_config.h"
 #include "svn_pools.h"
 #include "client.h"
+#include "mergeinfo.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_mergeinfo_private.h"
 
 
 /*** Code. ***/
@@ -193,6 +195,34 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
     err = svn_client__handle_externals(traversal_info, path, switch_url,
                                        source_root, depth, FALSE, use_sleep,
                                        ctx, pool);
+
+  if (!err)
+    {
+      /* Check if any mergeinfo on PATH or any its children elides as a
+         result of the switch. */
+      apr_hash_t *children_with_mergeinfo = apr_hash_make(pool);
+      svn_wc_adm_access_t *path_adm_access;
+      SVN_ERR(svn_wc_adm_probe_retrieve(&path_adm_access, adm_access, path,
+                                        pool));
+      err = svn_client__get_prop_from_wc(children_with_mergeinfo,
+                                         SVN_PROP_MERGE_INFO, path, FALSE,
+                                         entry, path_adm_access,
+                                         depth, ctx, pool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)
+            {
+              svn_error_clear(err);
+              err = SVN_NO_ERROR;
+            }
+          /* Any other error is not returned until after we sleep. */
+        }
+      else
+        {
+          SVN_ERR(svn_client__elide_mergeinfo_for_tree(children_with_mergeinfo,
+                                                       adm_access, ctx, pool));
+        }
+    }
 
   /* Sleep to ensure timestamp integrity (we do this regardless of
      errors in the actual switch operation(s)). */
