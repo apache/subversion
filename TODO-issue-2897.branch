@@ -16,5 +16,3 @@
 
 * Implement the non-reflective merge editor to grok the local mods from
   a commit which has 'merge + conflict resolution + some other changes'.
-
-* Expose svn_rangelist_parse and consume it from svnserve and mod_dav_svn.
