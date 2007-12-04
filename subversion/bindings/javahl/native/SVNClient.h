@@ -92,11 +92,12 @@ class SVNClient :public SVNBase
   jobjectArray suggestMergeSources(const char *path, Revision &pegRevision);
   void merge(const char *path1, Revision &revision1, const char *path2,
              Revision &revision2, const char *localPath, bool force,
-             svn_depth_t depth, bool ignoreAncestry, bool dryRun);
+             svn_depth_t depth, bool ignoreAncestry, bool dryRun,
+             bool recordOnly);
   void merge(const char *path, Revision &pegRevision,
              std::vector<RevisionRange> &rangesToMerge,
              const char *localPath, bool force, svn_depth_t depth,
-             bool ignoreAncestry, bool dryRun);
+             bool ignoreAncestry, bool dryRun, bool recordOnly);
   void doImport(const char *path, const char *url, const char *message,
                 svn_depth_t depth, bool noIgnore, bool ignoreUnknownNodeTypes);
   jlong doSwitch(const char *path, const char *url, Revision &revision,
