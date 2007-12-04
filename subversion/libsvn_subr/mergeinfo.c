@@ -583,6 +583,19 @@ svn_mergeinfo_parse(apr_hash_t **mergeinfo,
   return parse_top(&input, input + strlen(input), *mergeinfo, pool);
 }
 
+/* Parse rangelist. */
+svn_error_t *
+svn_rangelist_parse(apr_array_header_t **rangelist,
+                    const char *input,
+                    apr_pool_t *pool)
+{
+  *rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
+  SVN_ERR(parse_revlist(&input, input + strlen(input), *rangelist, pool));
+  qsort((*rangelist)->elts, (*rangelist)->nelts, (*rangelist)->elt_size,
+        svn_sort_compare_ranges);
+  return SVN_NO_ERROR;
+}
+
 
 /* Merge revision list RANGELIST into *MERGEINFO, doing some trivial
    attempts to combine ranges as we go. */

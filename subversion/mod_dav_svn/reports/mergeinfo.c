@@ -288,30 +288,18 @@ dav_svn__get_commit_revs_for_merge_ranges_report(const dav_resource *resource,
 
       /* else unknown element; skip it */
     }
-  {
-    /* We lack svn_rangelist_parse(), so create a dummy mergeinfo 
-       and parse it with the help of svn_mergeinfo_parse().
 
-       ### Might be better to write svn_rangelist_parse()?  Could
-       ### other places use it too?  -Karl */
-    apr_hash_t *dummy_mergeinfo;
-    char *dummy_mergeinfo_str = apr_pstrcat(resource->pool, merge_source, ":",
-                                            merge_ranges_string, NULL);
-    serr = svn_mergeinfo_parse(&dummy_mergeinfo, dummy_mergeinfo_str,
-                               resource->pool);
-    /* ### This error-handling code is repeated all over the place.
-       ### It would be nice to abstract it out; in fact, I think there
-       ### may already be an abstraction ready and waiting...  -Karl */
-    if (serr)
-      {
-        derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, NULL,
-                                    resource->pool);
-        goto cleanup;
-      }
-    merge_rangelist = apr_hash_get(dummy_mergeinfo, merge_source,
-                                   APR_HASH_KEY_STRING);
-  }
-
+  serr = svn_rangelist_parse(&merge_rangelist, merge_ranges_string,
+                             resource->pool);
+  /* ### This error-handling code is repeated all over the place.
+     ### It would be nice to abstract it out; in fact, I think there
+     ### may already be an abstraction ready and waiting...  -Karl */
+  if (serr)
+    {
+      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, NULL,
+                                  resource->pool);
+      goto cleanup;
+    }
 
   /* Build authz read baton */
   arb.r = resource->info->r;

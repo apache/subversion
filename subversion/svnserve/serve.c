@@ -1557,16 +1557,7 @@ static svn_error_t *get_commit_revs_for_merge_ranges(svn_ra_svn_conn_t *conn,
   merge_source_abs_path = svn_path_join(b->fs_path->data, merge_source, pool);
   inherit = svn_inheritance_from_word(inherit_word);
 
-  {
-    /* We lack svn_rangelist_parse, so creating a dummy mergeinfo 
-       and parse with the help of svn_mergeinfo_parse. */
-    apr_hash_t *dummy_mergeinfo;
-    char *dummy_mergeinfo_str = apr_pstrcat(pool, merge_source, ":",
-                                            merge_ranges_string, NULL);
-    SVN_ERR(svn_mergeinfo_parse(&dummy_mergeinfo, dummy_mergeinfo_str, pool));
-    merge_rangelist = apr_hash_get(dummy_mergeinfo, merge_source,
-                                   APR_HASH_KEY_STRING);
-  }
+  SVN_ERR(svn_rangelist_parse(&merge_rangelist, merge_ranges_string, pool));
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
   SVN_CMD_ERR(svn_repos_get_commit_revs_for_merge_ranges(
