@@ -765,6 +765,7 @@ test_remove_rangelist(const char **msg,
                               2, { {4, 8, TRUE }, {9, 100, TRUE }}}
     };
 
+  *msg = "remove rangelists";
   err = child_err = SVN_NO_ERROR;
   for (j = 0; j < 2; j++)
     {
