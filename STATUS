@@ -64,7 +64,6 @@ Candidate changes:
     Branch: 1.4.x-r22853
     Votes:
       +1: hwright
-      -1: jerenkrantz (This is an unnecessary change to backport.)
 
 Veto-blocked changes:
 
@@ -87,7 +86,6 @@ Veto-blocked changes:
       originally committed in 2007, possibly hold until 1.4.4?
     Votes:
       +1: malcolm, dlr, hwright
-      -1: jerenkrantz (This is an unnecessary change to backport.)
 
  * r24497, r24504
    Make Perl-based txdelta_window_handler actually usable by editors
