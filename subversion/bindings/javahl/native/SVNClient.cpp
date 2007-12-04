@@ -623,7 +623,7 @@ SVNClient::suggestMergeSources(const char *path, Revision &pegRevision)
 void SVNClient::merge(const char *path1, Revision &revision1,
                       const char *path2, Revision &revision2,
                       const char *localPath, bool force, svn_depth_t depth,
-                      bool ignoreAncestry, bool dryRun)
+                      bool ignoreAncestry, bool dryRun, bool recordOnly)
 {
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path1, "path1", );
@@ -646,14 +646,14 @@ void SVNClient::merge(const char *path1, Revision &revision1,
                                   srcPath2.c_str(), revision2.revision(),
                                   intLocalPath.c_str(),
                                   depth,
-                                  ignoreAncestry, force, FALSE, dryRun, NULL,
-                                  ctx, requestPool.pool()), );
+                                  ignoreAncestry, force, recordOnly, dryRun,
+                                  NULL, ctx, requestPool.pool()), );
 }
 
 void SVNClient::merge(const char *path, Revision &pegRevision,
                       std::vector<RevisionRange> &rangesToMerge,
                       const char *localPath, bool force, svn_depth_t depth,
-                      bool ignoreAncestry, bool dryRun)
+                      bool ignoreAncestry, bool dryRun, bool recordOnly)
 {
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -686,8 +686,9 @@ void SVNClient::merge(const char *path, Revision &pegRevision,
                                       pegRevision.revision(),
                                       intLocalPath.c_str(),
                                       depth,
-                                      ignoreAncestry, force, FALSE, dryRun,
-                                      NULL, ctx, requestPool.pool()), );
+                                      ignoreAncestry, force, recordOnly,
+                                      dryRun, NULL, ctx,
+                                      requestPool.pool()), );
 }
 
 jobject

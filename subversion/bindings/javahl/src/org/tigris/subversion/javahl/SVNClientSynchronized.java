@@ -943,13 +943,13 @@ public class SVNClientSynchronized implements SVNClientInterface
      */
     public void merge(String path1, Revision revision1, String path2,
                       Revision revision2, String localPath, boolean force,
-                      int depth, boolean ignoreAncestry, boolean dryRun)
-            throws ClientException
+                      int depth, boolean ignoreAncestry, boolean dryRun,
+                      boolean recordOnly) throws ClientException
     {
         synchronized (clazz)
         {
             worker.merge(path1, revision1, path2, revision2, localPath, force,
-                         depth, ignoreAncestry, dryRun);
+                         depth, ignoreAncestry, dryRun, recordOnly);
         }
     }
 
@@ -977,12 +977,13 @@ public class SVNClientSynchronized implements SVNClientInterface
     public void merge(String path, Revision pegRevision,
                       RevisionRange[] revisions, String localPath,
                       boolean force, int depth, boolean ignoreAncestry,
-                      boolean dryRun) throws ClientException
+                      boolean dryRun, boolean recordOnly) 
+            throws ClientException
     {
         synchronized(clazz)
         {
             worker.merge(path, pegRevision, revisions, localPath, force,
-                         depth, ignoreAncestry, dryRun);
+                         depth, ignoreAncestry, dryRun, recordOnly);
         }
     }
 

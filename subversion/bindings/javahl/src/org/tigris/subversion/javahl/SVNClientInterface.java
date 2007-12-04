@@ -918,12 +918,13 @@ public interface SVNClientInterface
      * @param depth          how deep to traverse into subdirectories
      * @param ignoreAncestry ignore if files are not related
      * @param dryRun         do not change anything
+     * @param recordOnly     record mergeinfo but do not run merge
      * @throws ClientException
      * @since 1.5
      */
     void merge(String path1, Revision revision1, String path2,
                Revision revision2, String localPath, boolean force, int depth,
-               boolean ignoreAncestry, boolean dryRun)
+               boolean ignoreAncestry, boolean dryRun, boolean recordOnly)
             throws ClientException;
 
     /**
@@ -958,12 +959,14 @@ public interface SVNClientInterface
      * @param depth         how deep to traverse into subdirectories
      * @param ignoreAncestry ignore if files are not related
      * @param dryRun        do not change anything
+     * @param recordOnly    record mergeinfo but do not run merge
      * @throws ClientException
      * @since 1.5
      */
     void merge(String path, Revision pegRevision, RevisionRange[] revisions,
                String localPath, boolean force, int depth,
-               boolean ignoreAncestry, boolean dryRun) throws ClientException;
+               boolean ignoreAncestry, boolean dryRun, boolean recordOnly)
+             throws ClientException;
 
     /**
      * Get merge info for <code>path</code> at <code>pegRevision</code>.
