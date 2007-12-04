@@ -420,10 +420,14 @@ combine_with_adjacent_lastrange(svn_merge_range_t **lastrange,
    revisionlist -> (revisionelement)(COMMA revisionelement)*
    revisionrange -> REVISION "-" REVISION("*")
    revisionelement -> revisionrange | REVISION("*")
+
+   PATHNAME is the path this revisionlist is mapped to.  It is
+   used only for producing a more descriptive error message.
 */
 static svn_error_t *
 parse_revlist(const char **input, const char *end,
-              apr_array_header_t *revlist, apr_pool_t *pool)
+              apr_array_header_t *revlist, const char *pathname,
+              apr_pool_t *pool)
 {
   const char *curr = *input;
   svn_merge_range_t *lastrange = NULL;
@@ -436,7 +440,9 @@ parse_revlist(const char **input, const char *end,
     {
       /* Empty range list. */
       *input = curr;
-      return SVN_NO_ERROR;
+      return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
+                               _("Mergeinfo for '%s' maps to an "
+                                 "empty revision range"), pathname);
     }
 
   while (curr < end && *curr != '\n')
@@ -545,7 +551,7 @@ parse_revision_line(const char **input, const char *end, apr_hash_t *hash,
 
   *input = *input + 1;
 
-  SVN_ERR(parse_revlist(input, end, revlist, pool));
+  SVN_ERR(parse_revlist(input, end, revlist, pathname->data, pool));
 
   if (*input != end && *(*input) != '\n')
     return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
