@@ -331,7 +331,7 @@ void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum)
 
 void svn_swig_py_svn_exception(svn_error_t *error_chain)
 {
-  PyObject *args_list, *apr_err_ob, *message_ob, *file_ob, *line_ob;
+  PyObject *args_list, *args, *apr_err_ob, *message_ob, *file_ob, *line_ob;
   PyObject *svn_module, *exc_class, *exc_ob;
   svn_error_t *err;
 
@@ -339,7 +339,7 @@ void svn_swig_py_svn_exception(svn_error_t *error_chain)
     return;
 
   /* Start with no references. */
-  args_list = apr_err_ob = message_ob = file_ob = line_ob = NULL;
+  args_list = args = apr_err_ob = message_ob = file_ob = line_ob = NULL;
   svn_module = exc_class = exc_ob = NULL;
 
   if ((args_list = PyList_New(0)) == NULL)
@@ -347,7 +347,6 @@ void svn_swig_py_svn_exception(svn_error_t *error_chain)
 
   for (err = error_chain; err; err = err->child)
     {
-      PyObject *args;
       int i;
 
       if ((args = PyTuple_New(4)) == NULL)
@@ -392,6 +391,8 @@ void svn_swig_py_svn_exception(svn_error_t *error_chain)
         goto finished;
       /* The list takes its own reference, so release ours. */
       Py_DECREF(args);
+      /* Let's not decref in 'finished:' after the final iteration. */
+      args = NULL;
     }
   svn_error_clear(error_chain);
 
@@ -411,6 +412,7 @@ void svn_swig_py_svn_exception(svn_error_t *error_chain)
  finished:
   /* Release any references. */
   Py_XDECREF(args_list);
+  Py_XDECREF(args);
   Py_XDECREF(apr_err_ob);
   Py_XDECREF(message_ob);
   Py_XDECREF(file_ob);
