@@ -329,69 +329,95 @@ void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum)
 
 /*** Custom SubversionException stuffs. ***/
 
-/* Global SubversionException class object. */
-static PyObject *SubversionException = NULL;
-
-
-PyObject *svn_swig_py_exception_type(void)
+void svn_swig_py_svn_exception(svn_error_t *error_chain)
 {
-  Py_INCREF(SubversionException);
-  return SubversionException;
-}
+  PyObject *args_list, *apr_err_ob, *message_ob, *file_ob, *line_ob;
+  PyObject *svn_module, *exc_class, *exc_ob;
+  svn_error_t *err;
 
-PyObject *svn_swig_py_register_exception(void)
-{
-  /* If we haven't created our exception class, do so. */
-  if (SubversionException == NULL)
-    {
-      SubversionException = PyErr_NewException
-        ((char *)"libsvn._core.SubversionException", NULL, NULL);
-    }
-
-  /* Regardless, return the exception class. */
-  return svn_swig_py_exception_type();
-}
-
-void svn_swig_py_svn_exception(svn_error_t *err)
-{
-  PyObject *exc_ob, *apr_err_ob;
-
-  if (err == NULL)
+  if (error_chain == NULL)
     return;
 
-  /* Make an integer for the error code. */
-  apr_err_ob = PyInt_FromLong(err->apr_err);
-  if (apr_err_ob == NULL)
-    return;
+  /* Start with no references. */
+  args_list = apr_err_ob = message_ob = file_ob = line_ob = NULL;
+  svn_module = exc_class = exc_ob = NULL;
 
-  /* Instantiate a SubversionException object. */
-  exc_ob = PyObject_CallFunction(SubversionException, (char *)"sO",
-                                 err->message, apr_err_ob);
-  if (exc_ob == NULL)
+  if ((args_list = PyList_New(0)) == NULL)
+    goto finished;
+
+  for (err = error_chain; err; err = err->child)
     {
-      Py_DECREF(apr_err_ob);
-      return;
+      PyObject *args;
+      int i;
+
+      if ((args = PyTuple_New(4)) == NULL)
+        goto finished;
+
+      /* Convert the fields of the svn_error_t to Python objects. */
+      if ((apr_err_ob = PyInt_FromLong(err->apr_err)) == NULL)
+        goto finished;
+      if (err->message == NULL)
+        {
+          Py_INCREF(Py_None);
+          message_ob = Py_None;
+        }
+      else if ((message_ob = PyString_FromString(err->message)) == NULL)
+        goto finished;
+      if (err->file == NULL)
+        {
+          Py_INCREF(Py_None);
+          file_ob = Py_None;
+        }
+      else if ((file_ob = PyString_FromString(err->file)) == NULL)
+        goto finished;
+      if ((line_ob = PyInt_FromLong(err->line)) == NULL)
+        goto finished;
+
+      /* Store the objects in the tuple. */
+      i = 0;
+#define append(item)                                            \
+      if (PyTuple_SetItem(args, i++, item) == 0)                \
+        /* tuple stole our reference, so don't DECREF */        \
+        item = NULL;                                            \
+      else                                                      \
+        goto finished;
+      append(apr_err_ob);
+      append(message_ob);
+      append(file_ob);
+      append(line_ob);
+#undef append
+
+      /* Append the tuple to the args list. */
+      if (PyList_Append(args_list, args) == -1)
+        goto finished;
+      /* The list takes its own reference, so release ours. */
+      Py_DECREF(args);
     }
+  svn_error_clear(error_chain);
 
-  /* Set the "apr_err" attribute of the exception to our error code. */
-  if (PyObject_SetAttrString(exc_ob, (char *)"apr_err", apr_err_ob) == -1)
-    {
-      Py_DECREF(apr_err_ob);
-      Py_DECREF(exc_ob);
-      return;
-    }
+  /* Create the exception object chain. */
+  if ((svn_module = PyImport_ImportModule((char *)"svn.core")) == NULL)
+    goto finished;
+  if ((exc_class = PyObject_GetAttrString(svn_module,
+                                       (char *)"SubversionException")) == NULL)
+    goto finished;
+  if ((exc_ob = PyObject_CallMethod(exc_class, (char *)"_new_from_err_list",
+                                    (char *)"O", args_list)) == NULL)
+    goto finished;
 
-  /* Finished with the apr_err object. */
-  Py_DECREF(apr_err_ob);
+  /* Raise the exception. */
+  PyErr_SetObject(exc_class, exc_ob);
 
-  /* Set the error state to our exception object. */
-  PyErr_SetObject(SubversionException, exc_ob);
-
-  /* Finished with the exc_ob object. */
-  Py_DECREF(exc_ob);
-
-  /* Consume the Subversion error. */
-  svn_error_clear(err);
+ finished:
+  /* Release any references. */
+  Py_XDECREF(args_list);
+  Py_XDECREF(apr_err_ob);
+  Py_XDECREF(message_ob);
+  Py_XDECREF(file_ob);
+  Py_XDECREF(line_ob);
+  Py_XDECREF(svn_module);
+  Py_XDECREF(exc_class);
+  Py_XDECREF(exc_ob);
 }
 
 

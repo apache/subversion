@@ -20,6 +20,51 @@ from libsvn.core import *
 import libsvn.core as _libsvncore
 import atexit as _atexit
 
+class SubversionException(Exception):
+  def __init__(self, apr_err, message=None, child=None, file=None, line=None):
+    """Initialize a new Subversion exception object.
+
+    Arguments:
+    apr_err     -- integer error code (apr_status_t)
+    message     -- optional user-visible error message
+    child       -- optional SubversionException to wrap
+    file        -- optional source file name where the error originated
+    line        -- optional line number of the source file
+
+    file and line are for C, not Python; they are redundant to the
+    traceback information for exceptions raised in Python.
+    """
+    # Pass only message and apr_err (and in this order) so .args will
+    # be (message, apr_err) just as in svn 1.4 and older.
+    Exception.__init__(self, message, apr_err)
+    self.apr_err = apr_err
+    self.message = message
+    self.child = child
+    self.file = file
+    self.line = line
+
+  def _new_from_err_list(cls, errors):
+    """Return new Subversion exception object from list of svn_error_t data.
+
+    This alternative constructor is for turning a chain of svn_error_t
+    objects in C into a chain of SubversionException objects in Python.
+    errors is a list of (apr_err, message, file, line) tuples, in order
+    from outer-most child to inner-most.
+
+    Use svn_swig_py_svn_exception rather than calling this directly.
+
+    Note: this modifies the errors list provided by the caller by
+    reversing it.
+    """
+    child = None
+    errors.reverse()
+    for (apr_err, message, file, line) in errors:
+      child = cls(apr_err, message, child, file, line)
+    return child
+  # Don't use @classmethod, we support 2.2.
+  _new_from_err_list = classmethod(_new_from_err_list)
+
+
 def _cleanup_application_pool():
   """Cleanup the application pool before exiting"""
   if application_pool and application_pool.valid():
