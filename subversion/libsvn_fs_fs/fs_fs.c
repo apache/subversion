@@ -136,7 +136,7 @@ path_format(svn_fs_t *fs, apr_pool_t *pool)
   return svn_path_join(fs->path, PATH_FORMAT, pool);
 }
 
-static const char *
+static APR_INLINE const char *
 path_uuid(svn_fs_t *fs, apr_pool_t *pool)
 {
   return svn_path_join(fs->path, PATH_UUID, pool);
@@ -148,19 +148,19 @@ svn_fs_fs__path_current(svn_fs_t *fs, apr_pool_t *pool)
   return svn_path_join(fs->path, PATH_CURRENT, pool);
 }
 
-static const char *
+static APR_INLINE const char *
 path_txn_current(svn_fs_t *fs, apr_pool_t *pool)
 {
   return svn_path_join(fs->path, PATH_TXN_CURRENT, pool);
 }
 
-static const char *
+static APR_INLINE const char *
 path_txn_current_lock(svn_fs_t *fs, apr_pool_t *pool)
 {
   return svn_path_join(fs->path, PATH_TXN_CURRENT_LOCK, pool);
 }
 
-static const char *
+static APR_INLINE const char *
 path_lock(svn_fs_t *fs, apr_pool_t *pool)
 {
   return svn_path_join(fs->path, PATH_LOCK_FILE, pool);
@@ -222,7 +222,7 @@ path_revprops(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
                             apr_psprintf(pool, "%ld", rev), NULL);
 }
 
-static const char *
+static APR_INLINE const char *
 path_txn_dir(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join_many(pool, fs->path, PATH_TXNS_DIR,
@@ -230,38 +230,38 @@ path_txn_dir(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
                             NULL);
 }
 
-static const char *
+static APR_INLINE const char *
 path_txn_changes(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_CHANGES, pool);
 }
 
-static const char *
+static APR_INLINE const char *
 path_txn_props(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_TXN_PROPS, pool);
 }
 
-static const char *
+static APR_INLINE const char *
 path_txn_mergeinfo(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_TXN_MERGEINFO,
                        pool);
 }
 
-static const char *
+static APR_INLINE const char *
 path_txn_next_ids(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_NEXT_IDS, pool);
 }
 
-static const char *
+static APR_INLINE const char *
 path_txn_proto_rev(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_REV, pool);
 }
 
-static const char *
+static APR_INLINE const char *
 path_txn_proto_rev_lock(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_REV_LOCK, pool);
@@ -279,14 +279,14 @@ path_txn_node_rev(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
   return svn_path_join(path_txn_dir(fs, txn_id, pool), name, pool);
 }
 
-static const char *
+static APR_INLINE const char *
 path_txn_node_props(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
 {
   return apr_pstrcat(pool, path_txn_node_rev(fs, id, pool), PATH_EXT_PROPS,
                      NULL);
 }
 
-static const char *
+static APR_INLINE const char *
 path_txn_node_children(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
 {
   return apr_pstrcat(pool, path_txn_node_rev(fs, id, pool),

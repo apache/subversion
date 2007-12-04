@@ -1,4 +1,4 @@
-/* merge-info-sqlite-index.c
+/* mergeinfo-sqlite-index.c
  *
  * ====================================================================
  * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
@@ -335,7 +335,7 @@ svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
 }
 
 /* Helper for get_mergeinfo_for_path() that retrieves mergeinfo for
-   PATH at the revision LASTMERGED_REV, returning it in the merge info
+   PATH at the revision LASTMERGED_REV, returning it in the mergeinfo
    hash *RESULT (with rangelist elements in ascending order).  Perform
    all allocations in POOL. */
 static svn_error_t *
@@ -495,7 +495,7 @@ get_mergeinfo_for_path(svn_fs_root_t *rev_root,
       err = svn_fs_node_prop(&my_mergeinfo_string,
                              rev_root,
                              path,
-                             SVN_PROP_MERGE_INFO,
+                             SVN_PROP_MERGEINFO,
                              pool);
       if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
         {

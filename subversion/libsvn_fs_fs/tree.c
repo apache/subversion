@@ -1072,7 +1072,7 @@ fs_change_node_prop(svn_fs_root_t *root,
   if (! proplist)
     proplist = apr_hash_make(pool);
 
-  if (strcmp (name, SVN_PROP_MERGE_INFO) == 0)
+  if (strcmp (name, SVN_PROP_MERGEINFO) == 0)
     {
       int increment = 0;
       svn_boolean_t had_mergeinfo;
@@ -3422,7 +3422,7 @@ get_mergeinfo_hash_for_path(apr_hash_t **mergeinfo_hash,
     }
 
   SVN_ERR(svn_fs_fs__dag_get_proplist(&proplist, nearest_ancestor->node, pool));
-  mergeinfo_string = apr_hash_get(proplist, SVN_PROP_MERGE_INFO, 
+  mergeinfo_string = apr_hash_get(proplist, SVN_PROP_MERGEINFO,
                                   APR_HASH_KEY_STRING);
   if (!mergeinfo_string)
     return svn_error_createf
@@ -3614,7 +3614,7 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
           svn_string_t *mergeinfo_string;
 
           SVN_ERR(svn_fs_fs__dag_get_proplist(&proplist, kid_dag, pool));
-          mergeinfo_string = apr_hash_get(proplist, SVN_PROP_MERGE_INFO, 
+          mergeinfo_string = apr_hash_get(proplist, SVN_PROP_MERGEINFO,
                                           APR_HASH_KEY_STRING);
           if (!mergeinfo_string)
             {
@@ -3751,7 +3751,7 @@ get_mergeinfo_hash_for_tree(apr_hash_t **path_mergeinfo_hash_for_tree,
 }
 
 /* Implements svn_fs_get_mergeinfo_for_tree. */
-svn_error_t *
+static svn_error_t *
 fs_get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
                           svn_fs_root_t *root,
                           const apr_array_header_t *paths,

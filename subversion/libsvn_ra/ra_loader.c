@@ -34,6 +34,7 @@
 #include "svn_version.h"
 #include "svn_types.h"
 #include "svn_error.h"
+#include "svn_error_codes.h"
 #include "svn_pools.h"
 #include "svn_delta.h"
 #include "svn_ra.h"
@@ -42,6 +43,8 @@
 #include "svn_dso.h"
 #include "svn_config.h"
 #include "ra_loader.h"
+
+#include "private/svn_ra_private.h"
 #include "svn_private_config.h"
 
 
@@ -662,12 +665,24 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
                                   svn_mergeinfo_inheritance_t inherit,
                                   apr_pool_t *pool)
 {
+  svn_error_t *err;
   int i;
+
+  /* Validate path format. */
   for (i = 0; i < paths->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
       assert(*path != '/');
     }
+
+  /* Check server Merge Tracking capability. */
+  err = svn_ra__assert_mergeinfo_capable_server(session, NULL, pool);
+  if (err)
+    {
+      *mergeinfo = NULL;
+      return err;
+    }
+
   return session->vtable->get_mergeinfo(session, mergeinfo, paths,
                                         revision, inherit, pool);
 }

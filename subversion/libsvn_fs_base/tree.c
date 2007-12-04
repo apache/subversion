@@ -1253,7 +1253,7 @@ txn_body_change_node_prop(void *baton,
   if (! proplist)
     proplist = apr_hash_make(trail->pool);
 
-  if (strcmp(args->name, SVN_PROP_MERGE_INFO) == 0)
+  if (strcmp(args->name, SVN_PROP_MERGEINFO) == 0)
     SVN_ERR(change_txn_mergeinfo(args, trail));
 
   /* Set the property. */

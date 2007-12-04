@@ -301,7 +301,7 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
      /trunk: 1-6,9,37-38
      /trunk/foo: 10 @endverbatim
  */
-#define SVN_PROP_MERGE_INFO SVN_PROP_PREFIX "mergeinfo"
+#define SVN_PROP_MERGEINFO SVN_PROP_PREFIX "mergeinfo"
 
 /** @} */
 

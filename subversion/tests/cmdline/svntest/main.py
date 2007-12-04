@@ -246,7 +246,7 @@ def wrap_ex(func):
           print 'EXCEPTION:', ex.__class__.__name__
   return w
 
-def setup_design_mode():
+def setup_development_mode():
   "Wraps functions in module actions"
   l = [ 'run_and_verify_svn',
         'run_and_verify_svnversion',
@@ -1182,10 +1182,12 @@ def usage():
   print " --bin           Use the svn binaries installed in this path"
   print " --use-jsvn      Use the jsvn (SVNKit based) binaries. Can be\n" \
         "                 combined with --bin to point to a specific path"
-  print " --design        Test design mode: provides more detailed test\n" \
+  print " --development   Test development mode: provides more detailed test\n"\
         "                 output and ignores all exceptions in the \n"  \
         "                 run_and_verify* functions. This option is only \n" \
         "                 useful during test development!"
+  print " --server-minor-version  Set the minor version for the server.\n" \
+        "                 Supports version 4 or 5."
   print " --help          This information"
 
 
@@ -1230,7 +1232,7 @@ def run_tests(test_list, serial_only = False):
                            ['url=', 'fs-type=', 'verbose', 'quiet', 'cleanup',
                             'list', 'enable-sasl', 'help', 'parallel',
                             'bin=', 'http-library=', 'server-minor-version=', 
-                            'use-jsvn', 'design'])
+                            'use-jsvn', 'development'])
   except getopt.GetoptError, e:
     print "ERROR: %s\n" % e
     usage()
@@ -1297,8 +1299,8 @@ def run_tests(test_list, serial_only = False):
     elif opt == '--use-jsvn':
       use_jsvn = True
 
-    elif opt == '--design':
-      setup_design_mode()
+    elif opt == '--development':
+      setup_development_mode()
 
   if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
     test_area_url = test_area_url[:-1]

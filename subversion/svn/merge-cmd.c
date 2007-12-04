@@ -48,10 +48,12 @@ svn_cl__merge(apr_getopt_t *os,
   svn_error_t *err;
   svn_opt_revision_t first_range_start, first_range_end, peg_revision1,
     peg_revision2;
-  apr_array_header_t *options;
+  apr_array_header_t *options, *ranges_to_merge = opt_state->revision_ranges;
 
   SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
                                         opt_state->targets, pool));
+
+  /* Parse at least one, and possible two, sources. */
   if (targets->nelts >= 1)
     {
       SVN_ERR(svn_opt_parse_path(&peg_revision1, &sourcepath1,
@@ -61,19 +63,6 @@ svn_cl__merge(apr_getopt_t *os,
         SVN_ERR(svn_opt_parse_path(&peg_revision2, &sourcepath2,
                                    APR_ARRAY_IDX(targets, 1, const char *),
                                    pool));
-    }
-
-  if (opt_state->revision_ranges->nelts > 0)
-    {
-      first_range_start = APR_ARRAY_IDX(opt_state->revision_ranges, 0,
-                                        svn_opt_revision_range_t *)->end;
-      first_range_end = APR_ARRAY_IDX(opt_state->revision_ranges, 0,
-                                      svn_opt_revision_range_t *)->end;
-    }
-  else
-    {
-      first_range_start.kind = first_range_end.kind =
-        svn_opt_revision_unspecified;
     }
 
   /* If an (optional) source, or a source plus WC path is provided,
@@ -88,7 +77,20 @@ svn_cl__merge(apr_getopt_t *os,
         using_rev_range_syntax = TRUE;
     }
 
-  /* If revision_ranges has at least one range at this point, then
+  if (opt_state->revision_ranges->nelts > 0)
+    {
+      first_range_start = APR_ARRAY_IDX(opt_state->revision_ranges, 0,
+                                        svn_opt_revision_range_t *)->start;
+      first_range_end = APR_ARRAY_IDX(opt_state->revision_ranges, 0,
+                                      svn_opt_revision_range_t *)->end;
+    }
+  else
+    {
+      first_range_start.kind = first_range_end.kind =
+        svn_opt_revision_unspecified;
+    }
+
+  /* If revision_ranges has at least one real range at this point, then
      we know the user must have used the '-r' and/or '-c' switch(es). */
   if (first_range_start.kind != svn_opt_revision_unspecified)
     {
@@ -207,27 +209,25 @@ svn_cl__merge(apr_getopt_t *os,
 
   if (using_rev_range_syntax)
     {
+      /* If we don't have a source, use the target as the source. */
       if (! sourcepath1)
+        sourcepath1 = targetpath;
+
+      /* If we don't have at least one valid revision range, pick a
+         good one that spans the entire set of revisions on our
+         source. */
+      if ((first_range_start.kind == svn_opt_revision_unspecified)
+          && (first_range_end.kind == svn_opt_revision_unspecified))
         {
-          /* If a merge source was not specified, try to derive it. */
-          apr_array_header_t *suggested_sources;
-          svn_opt_revision_t working_rev;
-          working_rev.kind = svn_opt_revision_working;
-
-          SVN_ERR(svn_client_suggest_merge_sources(&suggested_sources,
-                                                   targetpath, &working_rev,
-                                                   ctx, pool));
-          if (! suggested_sources->nelts)
-            return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                     _("Unable to determine merge source for "
-                                       "'%s' -- please provide an explicit "
-                                       "source"),
-                                     svn_path_local_style(targetpath, pool));
-          sourcepath1 = APR_ARRAY_IDX(suggested_sources, 0, const char *);
+          svn_opt_revision_range_t *range = apr_pcalloc(pool, sizeof(*range));
+          ranges_to_merge = apr_array_make(pool, 1, sizeof(range));
+          range->start.kind = svn_opt_revision_number;
+          range->start.value.number = 1;
+          range->end.kind = svn_opt_revision_head;
+          APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = range;
         }
-
       err = svn_client_merge_peg3(sourcepath1,
-                                  opt_state->revision_ranges,
+                                  ranges_to_merge,
                                   &peg_revision1,
                                   targetpath,
                                   opt_state->depth,

@@ -1416,13 +1416,13 @@ def switch_scheduled_add(sbox):
 #----------------------------------------------------------------------
 
 def mergeinfo_switch_elision(sbox):
-  "mergeinfo elides to closest ancestor w/ same info"
+  "mergeinfo does not elide post switch"
 
-  # When a switch would add mergeinfo on a node which is identical to
-  # the *local*  mergeinfo on one of the node's descendents, then the
-  # mergeinfo on the descendent node is "elided" in favor of the ancestor's
-  # mergeinfo.
-
+  # When a switch adds mergeinfo on a path which is identical to
+  # the mergeinfo on one of the path's subtrees, the subtree's mergeinfo
+  # should *not* elide!  If it did this could result in the switch of a
+  # pristine tree producing local mods.
+  #
   # Search for the comment entitled "The Merge Kluge" in merge_tests.py
   # to understand why we shorten, and subsequently chdir() after calling
   # this function.
@@ -1518,8 +1518,6 @@ def mergeinfo_switch_elision(sbox):
                                         None, None, wc_dir)
 
   # Merge r2:4 into A/B_COPY_1
-  # Search for the comment entitled "The Merge Kluge" in merge_tests.py,
-  # to understand why we shorten and chdir() below.
   short_B_COPY_1_path = shorten_path_kludge(B_COPY_1_path)
   expected_output = svntest.wc.State(short_B_COPY_1_path, {
     'E/alpha' : Item(status='U '),
@@ -1606,7 +1604,7 @@ def mergeinfo_switch_elision(sbox):
 
   # Switch A/B_COPY_2 to URL of A/B_COPY_1.  The local mergeinfo for r1,3-4
   # on A/B_COPY_2/E is identical to the mergeinfo added to A/B_COPY_2 as a
-  # result of the switch, so the former should be elided to the latter.
+  # result of the switch, but we leave the former in place.
 
   # Setup expected results of switch.
   expected_output = svntest.wc.State(sbox.wc_dir, {
@@ -1626,7 +1624,7 @@ def mergeinfo_switch_elision(sbox):
     "A/B_COPY_1/E/alpha" : Item("New content"),
     "A/B_COPY_1/E/beta"  : Item("New content"),
     "A/B_COPY_2"         : Item(props={SVN_PROP_MERGE_INFO : '/A/B:3-4'}),
-    "A/B_COPY_2/E"       : Item(),
+    "A/B_COPY_2/E"       : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:3-4'}),
     "A/B_COPY_2/F"       : Item(),
     "A/B_COPY_2/lambda"  : Item("This is the file 'lambda'.\n"),
     "A/B_COPY_2/E/alpha" : Item("New content"),
@@ -1643,7 +1641,7 @@ def mergeinfo_switch_elision(sbox):
     "A/B_COPY_1/E/alpha" : Item(status='  ', wc_rev=5),
     "A/B_COPY_1/E/beta"  : Item(status='  ', wc_rev=5),
     "A/B_COPY_2"         : Item(status='  ', wc_rev=5, switched='S'),
-    "A/B_COPY_2/E"       : Item(status='  ', wc_rev=5),
+    "A/B_COPY_2/E"       : Item(status=' M', wc_rev=5),
     "A/B_COPY_2/F"       : Item(status='  ', wc_rev=5),
     "A/B_COPY_2/lambda"  : Item(status='  ', wc_rev=5),
     "A/B_COPY_2/E/alpha" : Item(status='  ', wc_rev=5),
@@ -1658,13 +1656,13 @@ def mergeinfo_switch_elision(sbox):
                                         expected_status,
                                         None, None, None, None, None, 1)
 
-  # Now check that a switch which reverses and earlier switch and leaves
-  # a path in an unswitched state does elide its mergeinfo.
+  # Now check a switch which reverses and earlier switch and leaves
+  # a path in an unswitched state.
   #
   # Switch A/B_COPY_1/lambda to iota.  Use propset to give A/B_COPY/lambda
   # the mergeinfo '/A/B/lambda:1,3-4'.  Then switch A/B_COPY_1/lambda back
-  # to A/B_COPY_1/lambda.  The local mergeinfo for r1,3-4 should elide this
-  # time to A/B_COPY_1.
+  # to A/B_COPY_1/lambda.  The local mergeinfo for r1,3-4 should remain on
+  # A/B_COPY_1/lambda.
   expected_output = svntest.wc.State(sbox.wc_dir, {
     "A/B_COPY_1/lambda" : Item(status='U '),
     })
@@ -1689,8 +1687,9 @@ def mergeinfo_switch_elision(sbox):
     "A/B_COPY_1/lambda" : Item(status='U '),
     })
   expected_disk.tweak("A/B_COPY_1/lambda",
-                      contents="This is the file 'lambda'.\n")
-  expected_status.tweak("A/B_COPY_1/lambda", switched=None)
+                      contents="This is the file 'lambda'.\n",
+                      props={SVN_PROP_MERGE_INFO : '/A/B/lambda:3-4'})
+  expected_status.tweak("A/B_COPY_1/lambda", switched=None, status=' M')
   svntest.actions.run_and_verify_switch(sbox.wc_dir,
                                         lambda_path,
                                         sbox.repo_url + "/A/B_COPY_1/lambda",

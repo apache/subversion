@@ -172,7 +172,7 @@ def _usage_exit():
   print "           only build static libraries"
   print
   print "  --vsnet-version=VER"
-  print "           generate for VS.NET version VER (2002, 2003, or 2005)"
+  print "           generate for VS.NET version VER (2002, 2003, 2005 or 2008)"
   print "           [only valid in combination with '-t vcproj']"
   sys.exit(0)
 

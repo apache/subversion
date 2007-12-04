@@ -1,29 +1,24 @@
 We are very close to creating the 1.5.x branch.  This file lists the
-tasks we want to complete before then.
+tasks we want to complete before then.  Tasks which are not branch-blockers
+should be placed in the issue tracker and given the 1.5 milestone.
 
-  * Update 'svn mergeinfo' to deal with the mergeinfoless-copies
-    changes.  [cmpilato, estimate: 8 hours]
+  * Either:
 
-  * Make 'svn mergeinfo' error out when talking to a pre-1.5 repository.
-    This will allow API consumers to use the API without taking a big
-    performance hit for nothing.  We can catch the error and fallback.  [dlr]
+       Improve the svn_client_merge() API to actually do
+       source-relatedness checks instead of just assuming the sources
+       aren't related.  And if they *are* related, normalize the
+       sources and run do_merge() like svn_client_merge_peg3() does.
+       (See issue #3036 and attached patches.)
 
-  * Examine, and possibly update, 'svn log/blame -g' to deal with the
-    mergeinfoless-copies changes.  This includes updating the tests and the
-    basic-merge.dump repository.  (This could be pushed to after we branch, but
-    should happen before 1.5 releases.)
+    or:
 
-  * Improving the default revisions chosen for a revision-less merge.
-    [cmpilato, estimate: 4 hours]
+       Document that you cannot get merge tracking functionality from
+       svn_client_merge3(), and have it *always* pass FALSE for the
+       'sources_related' argument of do_merge().
 
-  * Changing the default path for a source-less copy to be "myself", which
-    is the only value with is both consistent and reasonably explainable
-    to the average user. [cmpilato, estimate: 1 hour]
-
-  * Improving the svn_client_merge() API to actually do source-relatedness
-    checks instead of just assuming the sources aren't related.  (And if
-    they *are* related, I'll probably just have it call
-    svn_client_merge_peg3() under the hood.)  [cmpilato, estimate: 6 hours]
+  * Come up with a heroic plan to save the sqlite database in time for
+    1.5, or remove it, remove "svn log -g", and not attempt Issue
+    #2897 for 1.5.  Issue #3037.
 
   * Finish Issue #2897 (reflective merges) and merge the issue-2897
     branch to trunk.  [kameshj]

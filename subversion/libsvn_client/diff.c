@@ -227,7 +227,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
       SVN_ERR(file_printf_from_utf8(file, encoding, header_fmt,
                                     propchange->name, APR_EOL_STR));
 
-      if (strcmp(propchange->name, SVN_PROP_MERGE_INFO) == 0)
+      if (strcmp(propchange->name, SVN_PROP_MERGEINFO) == 0)
         {
           const char *orig = original_value ? original_value->data : NULL;
           const char *val = propchange->value ? propchange->value->data : NULL;

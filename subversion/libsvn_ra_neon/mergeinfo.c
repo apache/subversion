@@ -159,7 +159,6 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
                            svn_mergeinfo_inheritance_t inherit,
                            apr_pool_t *pool)
 {
-  svn_error_t *err;
   int i, status_code;
   svn_ra_neon__session_t *ras = session->priv;
   svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
@@ -217,31 +216,19 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
   final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
                                             pool);
 
-  err = svn_ra_neon__parsed_request(ras,
-                                    "REPORT",
-                                    final_bc_url,
-                                    request_body->data,
-                                    NULL, NULL,
-                                    start_element,
-                                    cdata_handler,
-                                    end_element,
-                                    &mb,
-                                    NULL,
-                                    &status_code,
-                                    FALSE,
-                                    pool);
-  /* If the server responds with HTTP_NOT_IMPLEMENTED, assume its
-     mod_dav_svn is too old to understand the "mergeinfo-report" REPORT.
-
-     ### It would be less expensive if we knew the server's
-     ### capabilities *before* sending our REPORT. */
-  if (status_code == 501)
-    {
-      *mergeinfo = NULL;
-      svn_error_clear(err);
-    }
-  else if (err)
-    return err;
+  SVN_ERR(svn_ra_neon__parsed_request(ras,
+                                      "REPORT",
+                                      final_bc_url,
+                                      request_body->data,
+                                      NULL, NULL,
+                                      start_element,
+                                      cdata_handler,
+                                      end_element,
+                                      &mb,
+                                      NULL,
+                                      &status_code,
+                                      FALSE,
+                                      pool));
 
   if (mb.err == SVN_NO_ERROR)
     *mergeinfo = mb.result;

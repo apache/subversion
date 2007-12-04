@@ -246,7 +246,7 @@ test_parse_combine_rangeinfo(const char **msg,
 }
 
 
-#define NBR_BROKEN_MERGEINFO_VALS 32
+#define NBR_BROKEN_MERGEINFO_VALS 34
 /* Invalid mergeinfo values. */
 static const char * const broken_mergeinfo_vals[NBR_BROKEN_MERGEINFO_VALS] =
   {
@@ -288,6 +288,9 @@ static const char * const broken_mergeinfo_vals[NBR_BROKEN_MERGEINFO_VALS] =
     "/trunk:22-22*",
     "/trunk:3,7-12,20-20,25",
     "/trunk:3,7,20-20*,25-30",
+    /* path mapped to range with no revisions */
+    "/trunk:",
+    "/trunk:2-9\n/branch:"
   };
 
 static svn_error_t *
@@ -753,15 +756,16 @@ test_remove_rangelist(const char **msg,
                                     2, { {0,  1, TRUE }, {8, 11, TRUE }}},
       {"/A: 1,9-17*", "/A: 12-20*", 2, { {0,  1, TRUE }, {8, 11, FALSE}},
                                     2, { {0,  1, TRUE }, {8, 11, FALSE}}},
-      /* Empty ranges */
-      {"/A:",  "/A:",             0, { {0, 0, FALSE}},
-                                  0, { {0, 0, FALSE}}},
-      {"/A:",  "/A: 5-8,10-100",  0, { {0, 0, FALSE}},
-                                  0, { {0, 0, FALSE}}},
-      {"/A: 5-8,10-100",  "/A:",  2, { {4, 8, TRUE }, {9, 100, TRUE }},
-                                  2, { {4, 8, TRUE }, {9, 100, TRUE }}}
+      /* Empty mergeinfo (i.e. empty rangelist) */
+      {"",  "",               0, { {0, 0, FALSE}},
+                              0, { {0, 0, FALSE}}},
+      {"",  "/A: 5-8,10-100", 0, { {0, 0, FALSE}},
+                              0, { {0, 0, FALSE}}},
+      {"/A: 5-8,10-100",  "", 2, { {4, 8, TRUE }, {9, 100, TRUE }},
+                              2, { {4, 8, TRUE }, {9, 100, TRUE }}}
     };
 
+  *msg = "remove rangelists";
   err = child_err = SVN_NO_ERROR;
   for (j = 0; j < 2; j++)
     {
@@ -774,6 +778,12 @@ test_remove_rangelist(const char **msg,
           SVN_ERR(svn_mergeinfo_parse(&info2, (test_data[i]).whiteboard, pool));
           eraser = apr_hash_get(info1, "/A", APR_HASH_KEY_STRING);
           whiteboard = apr_hash_get(info2, "/A", APR_HASH_KEY_STRING);
+
+          /* Represent empty mergeinfo with an empty rangelist. */
+          if (eraser == NULL)
+            eraser = apr_array_make(pool, 0, sizeof(*eraser));
+          if (whiteboard == NULL)
+            whiteboard = apr_array_make(pool, 0, sizeof(*whiteboard));
 
           /* First pass try removal considering inheritance, on the
              second pass ignore it. */
@@ -1297,32 +1307,32 @@ test_rangelist_diff(const char **msg,
        2, { { 4,  5, FALSE }, { 6,  8, FALSE } } },
 
       /* Empty range diffs */
-      {"/A: 3-9",  "/A:",
+      {"/A: 3-9",  "",
        0, { { 0, 0, FALSE } },
        1, { { 2, 9, TRUE  } },
        0, { { 0, 0, FALSE } },
        1, { { 2, 9, TRUE  } } },
 
-      {"/A: 3-9*",  "/A:",
+      {"/A: 3-9*",  "",
        0, { { 0, 0, FALSE } },
        1, { { 2, 9, FALSE } },
        0, { { 0, 0, FALSE } },
        1, { { 2, 9, FALSE } } },
 
-      {"/A:",  "/A: 3-9",
+      {"",  "/A: 3-9",
        1, { { 2, 9, TRUE  } },
        0, { { 0, 0, FALSE } },
        1, { { 2, 9, TRUE  } },
        0, { { 0, 0, FALSE } } },
 
-      {"/A:",  "/A: 3-9*",
+      {"",  "/A: 3-9*",
        1, { { 2, 9, FALSE } },
        0, { { 0, 0, FALSE } },
        1, { { 2, 9, FALSE } },
        0, { { 0, 0, FALSE } } },
 
        /* Empty range no diff */
-      {"/A:",  "/A:",
+      {"",  "",
        0, { { 0, 0, FALSE } },
        0, { { 0, 0, FALSE } },
        0, { { 0, 0, FALSE } },
@@ -1340,6 +1350,12 @@ test_rangelist_diff(const char **msg,
       SVN_ERR(svn_mergeinfo_parse(&info2, (test_data[i]).from, pool));
       to = apr_hash_get(info1, "/A", APR_HASH_KEY_STRING);
       from = apr_hash_get(info2, "/A", APR_HASH_KEY_STRING);
+
+      /* Represent empty mergeinfo with an empty rangelist. */
+      if (to == NULL)
+        to = apr_array_make(pool, 0, sizeof(*to));
+      if (from == NULL)
+        from = apr_array_make(pool, 0, sizeof(*from));
 
       /* First diff the ranges while considering
          differences in inheritance. */

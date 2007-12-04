@@ -254,7 +254,8 @@ get_xlate_handle_node(xlate_handle_node_t **ret,
 
   /* Try to create a handle. */
 #if defined( WIN32)
-  apr_err = svn_subr__win32_xlate_open(&handle, topage, frompage, pool);
+  apr_err = svn_subr__win32_xlate_open((win32_xlate_t **)&handle, topage,
+                                       frompage, pool);
 #elif defined(AS400)
   apr_err = apr_xlate_open(&handle, (int)topage, (int)frompage, pool);
 #else
@@ -460,8 +461,9 @@ convert_to_stringbuf(xlate_handle_node_t *node,
 #ifdef WIN32
   apr_status_t apr_err;
 
-  apr_err = svn_subr__win32_xlate_to_stringbuf(node->handle, src_data,
-                                               src_length, dest, pool);
+  apr_err = svn_subr__win32_xlate_to_stringbuf((win32_xlate_t *) node->handle,
+                                               src_data, src_length,
+                                               dest, pool);
 #else
   apr_size_t buflen = src_length * 2;
   apr_status_t apr_err;
