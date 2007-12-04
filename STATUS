@@ -54,6 +54,18 @@ Candidate changes:
     Votes:
       +1: vgeorgescu
 
+  * r22853
+    Bump copyright dates to 2007.
+    Justification:
+      It's still 2007.
+    Notes: The r19808 group below used to include r22853, in addition to some
+      license reorganization.  The latter is the reason behind jerenkrantz's
+      veto; this item just updates the copyright year.
+    Branch: 1.4.x-r22853
+    Votes:
+      +1: hwright
+      -1: jerenkrantz (This is an unnecessary change to backport.)
+
 Veto-blocked changes:
 
   * r21531, r21848, r21934
@@ -67,7 +79,7 @@ Veto-blocked changes:
       +1: dlr, djh, jerenkrantz
       -1: cmpilato (new features showing up in patch releases?  nuh-uh.)
 
-  * r19808-19810, r22853
+  * r19808-19810
     Synchronise license text and then bump copyright dates to 2007.
     Justification:
       It's 2007.
