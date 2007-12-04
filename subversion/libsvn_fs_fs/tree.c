@@ -3513,6 +3513,7 @@ fs_get_mergeinfo(apr_hash_t **mergeinfo,
                  svn_fs_root_t *root,
                  const apr_array_header_t *paths,
                  svn_mergeinfo_inheritance_t inherit,
+                 svn_boolean_t include_descendents, /* XXXdsg: implement */
                  apr_pool_t *pool)
 {
   int i;

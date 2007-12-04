@@ -157,6 +157,7 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
                            const apr_array_header_t *paths,
                            svn_revnum_t revision,
                            svn_mergeinfo_inheritance_t inherit,
+                           svn_boolean_t include_descendents, /*XXXdsg implement*/
                            apr_pool_t *pool)
 {
   int i, status_code;

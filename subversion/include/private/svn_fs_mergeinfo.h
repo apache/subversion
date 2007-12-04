@@ -56,10 +56,11 @@ svn_fs_mergeinfo__update_index(svn_fs_txn_t *txn,
    store does not exist or doesn't use the 'mergeinfo' schema.  */
 svn_error_t *
 svn_fs_mergeinfo__get_mergeinfo(apr_hash_t **mergeinfo,
-                                 svn_fs_root_t *root,
-                                 const apr_array_header_t *paths,
-                                 svn_mergeinfo_inheritance_t inherit,
-                                 apr_pool_t *pool);
+                                svn_fs_root_t *root,
+                                const apr_array_header_t *paths,
+                                svn_mergeinfo_inheritance_t inherit,
+                                svn_boolean_t include_descendents,
+                                apr_pool_t *pool);
 
 /* Get the combined mergeinfo for the tree under each one of PATHS
    (an array of absolute-in-the-fs paths) under ROOT, and return it

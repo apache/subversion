@@ -582,7 +582,7 @@ svn_repos__get_path_mergeinfo(apr_hash_t **mergeinfo,
 
   SVN_ERR(svn_fs_revision_root(&root, fs, revnum, subpool));
   SVN_ERR(svn_fs_get_mergeinfo(&tmp_mergeinfo, root, paths,
-                               svn_mergeinfo_inherited, subpool));
+                               svn_mergeinfo_inherited, FALSE, subpool));
 
   mergeinfo_str = apr_hash_get(tmp_mergeinfo, path, APR_HASH_KEY_STRING);
   if (mergeinfo_str != NULL)

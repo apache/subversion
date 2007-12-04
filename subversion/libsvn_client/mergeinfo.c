@@ -290,7 +290,7 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
   
   /* Fetch the mergeinfo. */
   err = svn_ra_get_mergeinfo(ra_session, &repos_mergeinfo, rel_paths, rev,
-                             inherit, pool);
+                             inherit, FALSE, pool);
   if (err)
     {
       if (squelch_incapable && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)

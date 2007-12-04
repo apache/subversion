@@ -104,7 +104,8 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
   bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
 
   serr = svn_repos_fs_get_mergeinfo(&mergeinfo, repos->repos, paths, rev,
-                                    inherit, dav_svn__authz_read_func(&arb),
+                                    inherit, FALSE, /* XXXdsg get from client */
+                                    dav_svn__authz_read_func(&arb),
                                     &arb, resource->pool);
   if (serr)
     {

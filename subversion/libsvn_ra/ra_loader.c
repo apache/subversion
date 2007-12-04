@@ -663,6 +663,7 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
                                   const apr_array_header_t *paths,
                                   svn_revnum_t revision,
                                   svn_mergeinfo_inheritance_t inherit,
+                                  svn_boolean_t include_descendents,
                                   apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -684,7 +685,8 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
     }
 
   return session->vtable->get_mergeinfo(session, mergeinfo, paths,
-                                        revision, inherit, pool);
+                                        revision, inherit,
+                                        include_descendents, pool);
 }
 
 svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
