@@ -1354,10 +1354,10 @@ def action_merge(branch_dir, branch_props):
         f = open(opts["commit-file"], "w")
         if record_only:
             print >>f, 'Recorded merge of revisions %s via %s from ' % \
-                  (revs | phantom_revs, NAME)
+                  (revs, NAME)
         else:
             print >>f, 'Merged revisions %s via %s from ' % \
-                  (revs | phantom_revs, NAME)
+                  (revs, NAME)
         print >>f, '%s' % opts["source-url"]
         if opts["commit-verbose"]:
             print >>f
