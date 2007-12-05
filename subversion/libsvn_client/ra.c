@@ -770,7 +770,7 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
                   || (yc_range->end > yc_revision))
                 {
                   yc_revision = yc_range->end;
-                  yc_path = path;
+                  yc_path = path + 1;
                 }
             }
         }
