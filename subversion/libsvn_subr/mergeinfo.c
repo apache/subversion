@@ -585,9 +585,9 @@ svn_mergeinfo_parse(apr_hash_t **mergeinfo,
 
 /* Parse rangelist. */
 svn_error_t *
-svn_rangelist_parse(apr_array_header_t **rangelist,
-                    const char *input,
-                    apr_pool_t *pool)
+svn_rangelist__parse(apr_array_header_t **rangelist,
+                     const char *input,
+                     apr_pool_t *pool)
 {
   *rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
   SVN_ERR(parse_revlist(&input, input + strlen(input), *rangelist, pool));

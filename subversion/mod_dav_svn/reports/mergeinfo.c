@@ -32,6 +32,7 @@
 #include "svn_dav.h"
 #include "svn_mergeinfo.h"
 #include "private/svn_dav_protocol.h"
+#include "private/svn_mergeinfo_private.h"
 
 #include "../dav_svn.h"
 
@@ -289,8 +290,8 @@ dav_svn__get_commit_revs_for_merge_ranges_report(const dav_resource *resource,
       /* else unknown element; skip it */
     }
 
-  serr = svn_rangelist_parse(&merge_rangelist, merge_ranges_string,
-                             resource->pool);
+  serr = svn_rangelist__parse(&merge_rangelist, merge_ranges_string,
+                              resource->pool);
   /* ### This error-handling code is repeated all over the place.
      ### It would be nice to abstract it out; in fact, I think there
      ### may already be an abstraction ready and waiting...  -Karl */

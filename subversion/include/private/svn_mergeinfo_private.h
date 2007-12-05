@@ -68,6 +68,30 @@ svn_mergeinfo__remove_empty_rangelists(apr_hash_t *mergeinfo,
                                        apr_pool_t *pool);
 
 
+/** Parse the rangelist from @a input into @a *rangelist
+ * of @c svn_merge_range_t* elements. If no rangelist is available,
+ * return an empty list (never @c NULL).  Perform temporary allocations
+ * in @a pool.
+ *
+ * Grammar of rangelist.
+ * Token             Definition
+ * -----             ----------
+ * revisionrange     REVISION1 "-" REVISION2
+ * revisioneelement  (revisionrange | REVISION)"*"?
+ * rangelist         revisioneelement (COMMA revisioneelement)*
+ *
+ * If @a input is not a grammatically correct 'rangelist' token
+ * described above then return @c SVN_ERR_MERGEINFO_PARSE_ERROR.
+ *
+ * Note: @a *rangelist is guaranteed to be sorted (ordered by smallest
+ * revision ranges to largest).
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_rangelist__parse(apr_array_header_t **rangelist,
+                     const char *input,
+                     apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

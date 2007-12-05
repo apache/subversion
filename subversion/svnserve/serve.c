@@ -43,6 +43,7 @@
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
 #include "svn_user.h"
+#include "private/svn_mergeinfo_private.h"
 
 #include "server.h"
 
@@ -1557,7 +1558,7 @@ static svn_error_t *get_commit_revs_for_merge_ranges(svn_ra_svn_conn_t *conn,
   merge_source_abs_path = svn_path_join(b->fs_path->data, merge_source, pool);
   inherit = svn_inheritance_from_word(inherit_word);
 
-  SVN_ERR(svn_rangelist_parse(&merge_rangelist, merge_ranges_string, pool));
+  SVN_ERR(svn_rangelist__parse(&merge_rangelist, merge_ranges_string, pool));
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
   SVN_CMD_ERR(svn_repos_get_commit_revs_for_merge_ranges(

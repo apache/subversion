@@ -108,24 +108,6 @@ svn_error_t *
 svn_mergeinfo_parse(apr_hash_t **mergeinfo, const char *input,
                     apr_pool_t *pool);
 
-/** Parse the rangelist from @a input into @a *rangelist 
- * of @c svn_merge_range_t* elements. If no rangelist is available,
- * return an empty list (never @c NULL).  Perform temporary allocations 
- * in @a pool.
- *
- * If @a input is not a grammatically correct 'rangelist' token
- * described in @c SVN_PROP_MERGEINFO section above then return
- * @c SVN_ERR_MERGEINFO_PARSE_ERROR.
- *
- * Note: @a *rangelist is guaranteed to be sorted (ordered by smallest
- * revision ranges to largest).
- * @since New in 1.5.
- */
-svn_error_t *
-svn_rangelist_parse(apr_array_header_t **rangelist,
-                    const char *input,
-                    apr_pool_t *pool);
-
 /** Calculate the delta between two hashes of mergeinfo (with
  * rangelists sorted in ascending order), @a mergefrom and @a mergeto
  * (which may be @c NULL), and place the result in @a deleted and @a
