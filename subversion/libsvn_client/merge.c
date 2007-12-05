@@ -4554,13 +4554,11 @@ svn_client_merge(const char *source1,
 }
 
 
-/*
- * If TARGET_WCPATH reflects a single-revision, svn_depth_infinity,
- * pristine, unswitched working copy -- in other words, it must
- * reflect subtree found in a single revision -- set *REV to that
- * single revision number.  Else, raise
- * SVN_ERR_CLIENT_NOT_READY_TO_MERGE.
- */
+/* If TARGET_WCPATH reflects a single-revision, svn_depth_infinity,
+   pristine, unswitched working copy -- in other words, it must
+   reflect subtree found in a single revision -- set *REV to that
+   single (BASE) revision number.  Else, raise
+   SVN_ERR_CLIENT_NOT_READY_TO_MERGE. */
 static svn_error_t *
 ensure_wc_reflects_repository_subtree(svn_revnum_t *rev,
                                       const char *target_wcpath,
@@ -4568,6 +4566,8 @@ ensure_wc_reflects_repository_subtree(svn_revnum_t *rev,
                                       apr_pool_t *pool)
 {
   svn_wc_revision_status_t *wc_stat;
+
+  /* Get a WC summary with min/max revisions set to the BASE revision. */
   SVN_ERR(svn_wc_revision_status(&wc_stat, target_wcpath, NULL, FALSE, 
                                  ctx->cancel_func, ctx->cancel_baton, pool));
 
