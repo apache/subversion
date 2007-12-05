@@ -4611,29 +4611,32 @@ svn_client_merge_peg3(const char *source,
       apr_array_header_t *new_merge_source
         = apr_array_make(pool, 1, sizeof(merge_source_t *));
       merge_source_t *youngest_source;
-      const char *path_in_repos;
-      apr_array_header_t *path_in_repos_as_array
+      const char *source_repos_rel_path;
+      apr_array_header_t *source_repos_rel_path_as_array
         = apr_array_make(pool, 1, sizeof(const char *));
       apr_hash_t *mergeinfo_by_path;
       apr_array_header_t *segments;
-      apr_pool_t *iterpool = svn_pool_create(pool);
       apr_hash_index_t *hi;
       const char *target_url;
       const char *yc_ancestor_path;
       svn_revnum_t yc_ancestor_revision;
       svn_opt_revision_t source_revision, target_revision;
+      svn_boolean_t mergeinfo_equal;
+      apr_hash_t *target_mergeinfo, *source_mergeinfo;
 
       SVN_ERR(ensure_wc_reflects_repository_subtree(&rev, target_wcpath, pool));
 
       /* Note: merge_sources->nelts must be > 0 by now, else somebody
          didn't do their job. */
 
-      SVN_ERR(svn_client__path_relative_to_root(&path_in_repos, URL, NULL,
-                                                TRUE, ra_session, NULL, pool));
-      APR_ARRAY_PUSH(path_in_repos_as_array, const char *) = path_in_repos;
+      SVN_ERR(svn_client__path_relative_to_root(&source_repos_rel_path, URL,
+                                                NULL, TRUE, ra_session, NULL,
+                                                pool));
+      APR_ARRAY_PUSH(source_repos_rel_path_as_array, const char *)
+        = source_repos_rel_path;
 
       SVN_ERR(svn_ra_get_mergeinfo(ra_session, &mergeinfo_by_path, 
-                                   path_in_repos_as_array, rev,
+                                   source_repos_rel_path_as_array, rev,
                                    svn_mergeinfo_inherited, TRUE, pool));
 
       SVN_ERR(svn_client_url_from_path(&target_url, target_wcpath, pool));
@@ -4648,27 +4651,49 @@ svn_client_merge_peg3(const char *source,
       SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_ancestor_path,
                                                        &yc_ancestor_revision,
                                                        URL,
-                                                       source_revision,
+                                                       &source_revision,
                                                        target_url,
-                                                       target_revision,
+                                                       &target_revision,
                                                        ctx, pool));
 
       SVN_ERR(svn_client__repos_location_segments(&segments, ra_session,
                                                   target_wcpath, rev,
                                                   rev, yc_ancestor_revision,
                                                   ctx, pool));
-          
-      for (hi = apr_hash_first(NULL, mergeinfo_by_path); hi;
-           hi = apr_hash_next(hi))
-        {
-          svn_pool_clear(iterpool);
 
-          const void *key;
-          const void *val;
-          
-          
+      source_mergeinfo = apr_hash_get(mergeinfo_by_path, source_repos_rel_path,
+                                      APR_HASH_KEY_STRING);
+      target_mergeinfo = apr_hash_make(pool);
+      for (i = 0; i < segments->nelts; i++)
+        {
+          svn_location_segment_t *seg = APR_ARRAY_IDX(segments, i,
+                                                      svn_location_segment_t *);
+          svn_merge_range_t *range = apr_palloc(pool, sizeof(*range));
+          range->start = seg->range_start;
+          range->end = seg->range_end;
+          range->inheritable = TRUE;
+          apr_hash_set(target_mergeinfo, apr_pstrcat(pool, "/", seg->path, NULL),
+                       APR_HASH_KEY_STRING, range);
         }
-      svn_pool_destroy(iterpool);
+      SVN_ERR(svn_mergeinfo_diff(&mergeinfo_equal, source_mergeinfo,
+                                 target_mergeinfo, FALSE, pool));
+
+      if (! mergeinfo_equal)
+        {
+          apr_pool_t *iterpool = svn_pool_create(pool);
+
+          for (hi = apr_hash_first(NULL, mergeinfo_by_path); hi;
+               hi = apr_hash_next(hi))
+            {
+              const void *key;
+              void *val;
+
+              /* Ignore source_repos_rel_path, since we already checked it. */
+
+              svn_pool_clear(iterpool);
+            }
+          svn_pool_destroy(iterpool);
+        }
 
       if (svn_client__(rev))
         return svn_error_createf
