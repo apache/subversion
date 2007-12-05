@@ -4567,42 +4567,42 @@ ensure_wc_reflects_repository_subtree(svn_revnum_t *rev,
                                       svn_client_ctx_t *ctx,
                                       apr_pool_t *pool)
 {
-  svn_wc_revision_status_t *revstat;
-  SVN_ERR(svn_wc_revision_status(&revstat, target_wcpath, NULL, FALSE, 
+  svn_wc_revision_status_t *wc_stat;
+  SVN_ERR(svn_wc_revision_status(&wc_stat, target_wcpath, NULL, FALSE, 
                                  ctx->cancel_func, ctx->cancel_baton, pool));
 
   /* XXXdsg bikeshedding: These shouldn't say "Cannot merge", but
      rather "Cannot full-tree-auto-merge", but we need a name for
      that.  Or just make the error say "Working copy has a switched
      subtree". */
-  if (revstat->switched)
+  if (wc_stat->switched)
     return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                             "Cannot merge into a working copy with a switched "
                             "subtree");
 
   /* XXXdsg: Extend the status infrastructure to find non-infinite
      depths */
-/*   if (revstat->finite) */
+/*   if (wc_stat->finite) */
 /*     return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL, */
 /*                             "Cannot merge into a working copy that is not at " */
 /*                             "infinite depth"); */
 
-  if (revstat->modified)
+  if (wc_stat->modified)
     return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                             "Cannot merge into a working copy with local "
                             "modifications");
 
-  if (revstat->min_rev == SVN_INVALID_REVNUM
-      || revstat->max_rev == SVN_INVALID_REVNUM)
+  if (wc_stat->min_rev == SVN_INVALID_REVNUM
+      || wc_stat->max_rev == SVN_INVALID_REVNUM)
     return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                             "Cannot determine revision of working copy");
 
-  if (revstat->min_rev != revstat->max_rev)
+  if (wc_stat->min_rev != wc_stat->max_rev)
     return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                             "Cannot merge into mixed-revision working copy; "
                             "try updating first");
 
-  *rev = revstat->min_rev;
+  *rev = wc_stat->min_rev;
   return SVN_NO_ERROR;
 }
 
