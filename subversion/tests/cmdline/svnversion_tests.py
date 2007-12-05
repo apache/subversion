@@ -119,6 +119,26 @@ def svnversion_test(sbox):
                                             repo_url,
                                             None, svntest.verify.AnyOutput)
 
+  # Perform a sparse checkout of under the existing WC, and confirm that
+  # svnversion detects it as a "partial" WC.
+  A_path = os.path.join(wc_dir, "A")
+  A_A_path = os.path.join(A_path, "SPARSE_A")
+  expected_output = wc.State(A_path, {
+    "SPARSE_A"    : Item(),
+    "SPARSE_A/mu" : Item(status='A '),
+    })
+  expected_disk = wc.State("", {
+    "mu" : Item(expected_disk.desc['A/mu'].contents),
+    })
+  svntest.actions.run_and_verify_checkout(repo_url + "/A", A_A_path,
+                                          expected_output, expected_disk,
+                                          None, None, None, None,
+                                          "--depth=files")
+
+  # Partial (sparse) checkout
+  svntest.actions.run_and_verify_svnversion("Sparse checkout", A_A_path,
+                                            repo_url, [ "2S\n" ], [])
+
 
 #----------------------------------------------------------------------
 
