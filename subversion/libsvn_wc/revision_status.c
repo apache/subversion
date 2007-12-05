@@ -63,7 +63,7 @@ analyze_status(void *baton,
   sb->result->modified |= (status->text_status != svn_wc_status_normal);
   sb->result->modified |= (status->prop_status != svn_wc_status_normal
                            && status->prop_status != svn_wc_status_none);
-  sb->result->sparse_checkout |= (status->entry->depth == svn_depth_infinity);
+  sb->result->sparse_checkout |= (status->entry->depth != svn_depth_infinity);
 
   if (sb->wc_path
       && (! sb->wc_url)
