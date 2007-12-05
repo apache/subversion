@@ -3563,6 +3563,24 @@ get_mergeinfo_hash_for_path(apr_hash_t **mergeinfo_hash,
     }
 }
 
+
+/* Implements crawler_action_t; used by add_descendent_mergeinfo.
+   The baton is the RESULT_HASH from add_descendent_mergeinfo. */
+static svn_error_t *
+add_descendent_mergeinfo_action(void *baton,
+                                const char *path,
+                                apr_hash_t *path_mergeinfo_hash,
+                                apr_pool_t *pool)
+{
+  apr_hash_t *result_hash = baton;
+
+  apr_hash_set(result_hash, path, APR_HASH_KEY_STRING,
+               path_mergeinfo_hash);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Adds mergeinfo for each descendent of PATH (but not PATH itself)
    under ROOT to RESULT_HASH (a hash of mergeinfo hashes).  Returned
    values are allocated in RESULT_POOL; temporary values in
@@ -3574,7 +3592,21 @@ add_descendent_mergeinfo(apr_hash_t *result_hash,
                          apr_pool_t *pool,
                          apr_pool_t *result_pool)
 {
-  /* XXXdsg implement */
+  /* XXXdsg swimming */
+  dag_node_t *this_dag;
+  svn_boolean_t go_down;
+
+  SVN_ERR(get_dag(&this_dag, root, path, pool));
+  SVN_ERR(svn_fs_fs__dag_has_descendents_with_mergeinfo(&go_down,
+                                                        this_dag,
+                                                        pool));
+  if (go_down)
+    SVN_ERR(crawl_directory_dag_for_mergeinfo(root,
+                                              path,
+                                              this_dag,
+                                              add_descendent_mergeinfo_action,
+                                              result_hash,
+                                              result_pool));
   return SVN_NO_ERROR;
 }
 
