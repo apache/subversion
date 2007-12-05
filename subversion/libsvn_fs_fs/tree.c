@@ -3342,6 +3342,98 @@ assemble_history(svn_fs_t *fs,
   return history;
 }
 
+
+/* mergeinfo queries */
+
+/* An action for crawl_directory_dag_for_mergeinfo. */
+typedef svn_error_t *(*crawler_action_t)
+  (void *baton,
+   const char *path,
+   apr_hash_t *path_mergeinfo,
+   apr_pool_t *pool);
+
+/* DIR_DAG is a directory DAG node which has mergeinfo in its
+   descendents.  This function iterates over its children.  For each
+   child with immediate mergeinfo, it calls ACTION on it with
+   appropriate arguments.  For each child with descendents with
+   mergeinfo, it recurses.  Note that it does *not* call the action on
+   the path for DIR_DAG itself.
+ */
+static svn_error_t *
+crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
+                                  const char *this_path,
+                                  dag_node_t *dir_dag,
+                                  crawler_action_t action,
+                                  void *action_baton,
+                                  apr_pool_t *pool)
+{
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+
+  /* XXXdsg go swimming */
+  SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, dir_dag, pool));
+  entries = svn_fs_fs__copy_dir_entries(entries, pool);
+
+  for (hi = apr_hash_first(pool, entries);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      void *val;
+      svn_fs_dirent_t *dirent;
+      const char *kid_path;
+      dag_node_t *kid_dag;
+      svn_boolean_t has_mergeinfo, go_down;
+
+      apr_hash_this(hi, NULL, NULL, &val);
+      dirent = val;
+      kid_path = svn_path_join(this_path, dirent->name, pool);
+      SVN_ERR(get_dag(&kid_dag, root, kid_path, pool));
+
+      SVN_ERR(svn_fs_fs__dag_has_mergeinfo(&has_mergeinfo, kid_dag, pool));
+      SVN_ERR(svn_fs_fs__dag_has_descendents_with_mergeinfo(&go_down, kid_dag,
+                                                            pool));
+
+      if (has_mergeinfo)
+        {
+          /* Merge in this particular node's mergeinfo, if the
+             filterer lets us. */
+          apr_hash_t *proplist, *kid_mergeinfo_hash;
+          svn_string_t *mergeinfo_string;
+
+          SVN_ERR(svn_fs_fs__dag_get_proplist(&proplist, kid_dag, pool));
+          mergeinfo_string = apr_hash_get(proplist, SVN_PROP_MERGEINFO,
+                                          APR_HASH_KEY_STRING);
+          if (!mergeinfo_string)
+            {
+              svn_string_t *idstr = svn_fs_fs__id_unparse(dirent->id, pool);
+              return svn_error_createf
+                (SVN_ERR_FS_CORRUPT, NULL,
+                 _("Node-revision #'%s' claims to have mergeinfo but doesn't"),
+                 idstr->data);
+            }
+          
+          SVN_ERR(svn_mergeinfo_parse(&kid_mergeinfo_hash,
+                                      mergeinfo_string->data,
+                                      pool));
+          SVN_ERR(action(action_baton,
+                         kid_path,
+                         kid_mergeinfo_hash,
+                         pool));
+        }
+      
+      if (go_down)
+        SVN_ERR(crawl_directory_dag_for_mergeinfo(root,
+                                                  kid_path,
+                                                  kid_dag,
+                                                  action,
+                                                  action_baton,
+                                                  pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Helper for get_mergeinfo_for_path() that will append PATH_PIECE
    (which may contain slashes) to each path that exists in the
    mergeinfo hash INPUT, and return a new mergeinfo hash in *OUTPUT.
@@ -3575,94 +3667,6 @@ fs_get_mergeinfo(apr_hash_t **mergeinfo,
     }
   svn_pool_destroy(iterpool);
   svn_pool_destroy(subpool);
-
-  return SVN_NO_ERROR;
-}
-
-/* An action for crawl_directory_dag_for_mergeinfo. */
-typedef svn_error_t *(*crawler_action_t)
-  (void *baton,
-   const char *path,
-   apr_hash_t *path_mergeinfo,
-   apr_pool_t *pool);
-
-/* DIR_DAG is a directory DAG node which has mergeinfo in its
-   descendents.  This function iterates over its children.  For each
-   child with immediate mergeinfo, it calls ACTION on it with
-   appropriate arguments.  For each child with descendents with
-   mergeinfo, it recurses.  Note that it does *not* call the action on
-   the path for DIR_DAG itself.
- */
-static svn_error_t *
-crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
-                                  const char *this_path,
-                                  dag_node_t *dir_dag,
-                                  crawler_action_t action,
-                                  void *action_baton,
-                                  apr_pool_t *pool)
-{
-  apr_hash_t *entries;
-  apr_hash_index_t *hi;
-
-  /* XXXdsg go swimming */
-  SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, dir_dag, pool));
-  entries = svn_fs_fs__copy_dir_entries(entries, pool);
-
-  for (hi = apr_hash_first(pool, entries);
-       hi;
-       hi = apr_hash_next(hi))
-    {
-      void *val;
-      svn_fs_dirent_t *dirent;
-      const char *kid_path;
-      dag_node_t *kid_dag;
-      svn_boolean_t has_mergeinfo, go_down;
-
-      apr_hash_this(hi, NULL, NULL, &val);
-      dirent = val;
-      kid_path = svn_path_join(this_path, dirent->name, pool);
-      SVN_ERR(get_dag(&kid_dag, root, kid_path, pool));
-
-      SVN_ERR(svn_fs_fs__dag_has_mergeinfo(&has_mergeinfo, kid_dag, pool));
-      SVN_ERR(svn_fs_fs__dag_has_descendents_with_mergeinfo(&go_down, kid_dag,
-                                                            pool));
-
-      if (has_mergeinfo)
-        {
-          /* Merge in this particular node's mergeinfo, if the
-             filterer lets us. */
-          apr_hash_t *proplist, *kid_mergeinfo_hash;
-          svn_string_t *mergeinfo_string;
-
-          SVN_ERR(svn_fs_fs__dag_get_proplist(&proplist, kid_dag, pool));
-          mergeinfo_string = apr_hash_get(proplist, SVN_PROP_MERGEINFO,
-                                          APR_HASH_KEY_STRING);
-          if (!mergeinfo_string)
-            {
-              svn_string_t *idstr = svn_fs_fs__id_unparse(dirent->id, pool);
-              return svn_error_createf
-                (SVN_ERR_FS_CORRUPT, NULL,
-                 _("Node-revision #'%s' claims to have mergeinfo but doesn't"),
-                 idstr->data);
-            }
-          
-          SVN_ERR(svn_mergeinfo_parse(&kid_mergeinfo_hash,
-                                      mergeinfo_string->data,
-                                      pool));
-          SVN_ERR(action(action_baton,
-                         kid_path,
-                         kid_mergeinfo_hash,
-                         pool));
-        }
-      
-      if (go_down)
-        SVN_ERR(crawl_directory_dag_for_mergeinfo(root,
-                                                  kid_path,
-                                                  kid_dag,
-                                                  action,
-                                                  action_baton,
-                                                  pool));
-    }
 
   return SVN_NO_ERROR;
 }
