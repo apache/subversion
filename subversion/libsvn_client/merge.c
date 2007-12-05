@@ -4402,6 +4402,8 @@ svn_client_merge3(const char *source1,
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
   const char *URL1, *URL2;
+  svn_revnum_t rev1, rev2;
+  svn_boolean_t related = FALSE;
   const char *wc_repos_root, *source_repos_root;
   svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
   svn_ra_session_t *ra_session1, *ra_session2;
@@ -4464,20 +4466,110 @@ svn_client_merge3(const char *source1,
                                                FALSE, FALSE, ctx, pool));
   SVN_ERR(svn_ra_get_repos_root(ra_session1, &source_repos_root, pool));
 
-  /* Build a single-item merge_source_t array. */
-  merge_sources = apr_array_make(pool, 1, sizeof(merge_source_t *));
-  merge_source = apr_pcalloc(pool, sizeof(*merge_source));
-  merge_source->url1 = URL1;
-  merge_source->url2 = URL2;
-  SVN_ERR(svn_client__get_revision_number(&(merge_source->rev1), &youngest_rev,
+  /* Resolve revisions to real numbers. */
+  SVN_ERR(svn_client__get_revision_number(&rev1, &youngest_rev,
                                           ra_session1, revision1, NULL, pool));
-  SVN_ERR(svn_client__get_revision_number(&(merge_source->rev2), &youngest_rev,
+  SVN_ERR(svn_client__get_revision_number(&rev2, &youngest_rev,
                                           ra_session2, revision2, NULL, pool));
-  APR_ARRAY_PUSH(merge_sources, merge_source_t *) = merge_source;
+
+  /* Unless we're ignoring ancestry, see if the two sources are
+     ancestrally related.  If they are, we'll setup a call to
+     svn_client_merge_peg3(), which can more appropriately handle this
+     input. */
+  if (! ignore_ancestry)
+    {
+      svn_error_t *err;
+      const char *location_url;
+      svn_opt_revision_t *location_rev;
+      const svn_opt_revision_t *peg_revision, *check_revision;
+      const char *source, *check_source;
+      svn_ra_session_t *ra_session;
+      svn_opt_revision_t unspec;
+      unspec.kind = svn_opt_revision_unspecified;
+
+      /* Construct a revision range. */
+      if (rev1 < rev2)
+        {
+          source = source2;
+          check_source = source1;
+          ra_session = ra_session2;
+          peg_revision = revision2;
+          check_revision = revision1;
+        }
+      else
+        {
+          source = source1;
+          check_source = source2; 
+          ra_session = ra_session1;
+          peg_revision = revision1;
+          check_revision = revision2;
+        }
+
+      /* Try to locate the older side of the merge location by tracing the
+         history of older side.  We do this only do verify that one of
+         these locations is an ancestor of the other. */
+      err = svn_client__repos_locations(&location_url, &location_rev,
+                                        NULL, NULL, ra_session, source,
+                                        peg_revision, check_revision,
+                                        &unspec, ctx, pool);
+      if (err && err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES)
+        {
+          svn_error_clear(err);
+          err = SVN_NO_ERROR;
+        }
+      SVN_ERR(err);
+      if (strcmp(check_source, location_url) == 0)
+        related = TRUE;
+    }
+
+  /* If our sources are related, normalize our source input into solid
+     merge sources.  Otherwise, don't bother -- just build a single-item
+     merge sources list. */
+  if (related)
+    {
+      svn_opt_revision_range_t *range = apr_pcalloc(pool, sizeof(*range));
+      apr_array_header_t *ranges = apr_array_make(pool, 1, sizeof(range));
+      const char *source_url;
+      svn_ra_session_t *ra_session;
+      svn_opt_revision_t peg_revision;
+
+      /* Construct a revision range. */
+      if (rev1 < rev2)
+        {
+          source_url = URL2;
+          ra_session = ra_session2;
+          range->start = *revision1;
+          range->end = *revision2;
+        }
+      else
+        {
+          source_url = URL1;
+          ra_session = ra_session1;
+          range->start = *revision2;
+          range->end = *revision1;
+        }
+      peg_revision = range->end;
+      APR_ARRAY_PUSH(ranges, svn_opt_revision_range_t *) = range;
+
+      /* Normalize our merge sources. */
+      SVN_ERR(normalize_merge_sources(&merge_sources, source_url, source_url,
+                                      source_repos_root, &peg_revision, 
+                                      ranges, ra_session, ctx, pool));
+    }
+  else
+    {
+      /* Build a single-item merge_source_t array. */
+      merge_sources = apr_array_make(pool, 1, sizeof(merge_source_t *));
+      merge_source = apr_pcalloc(pool, sizeof(*merge_source));
+      merge_source->url1 = URL1;
+      merge_source->url2 = URL2;
+      merge_source->rev1 = rev1;
+      merge_source->rev2 = rev2;
+      APR_ARRAY_PUSH(merge_sources, merge_source_t *) = merge_source;
+    }
 
   /* Do the merge! */
-  SVN_ERR(do_merge(merge_sources, target_wcpath, entry, adm_access,
-                   (strcmp(URL1, URL2) == 0), 
+  SVN_ERR(do_merge(merge_sources, target_wcpath, entry, adm_access, related, 
                    (strcmp(wc_repos_root, source_repos_root) == 0),
                    ignore_ancestry, force, dry_run, record_only, depth,
                    merge_options, ctx, pool));
