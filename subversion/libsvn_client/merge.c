@@ -4627,7 +4627,7 @@ svn_client_merge_whole_branch(const char *source,
   svn_opt_revision_t working_rev;
   svn_ra_session_t *ra_session;
   svn_revnum_t rev;
-  const char *source_repos_rel_path;
+  const char *source_repos_rel_path, *target_repos_rel_path;
   apr_array_header_t *source_repos_rel_path_as_array
     = apr_array_make(pool, 1, sizeof(const char *));
   apr_hash_t *mergeinfo_by_path;
@@ -4675,6 +4675,9 @@ svn_client_merge_whole_branch(const char *source,
   SVN_ERR(svn_client__path_relative_to_root(&source_repos_rel_path, URL,
                                             NULL, FALSE, ra_session, NULL,
                                             pool));
+  SVN_ERR(svn_client__path_relative_to_root(&target_repos_rel_path, 
+                                            target_wcpath, wc_repos_root,
+                                            FALSE, ra_session, NULL, pool));
   APR_ARRAY_PUSH(source_repos_rel_path_as_array, const char *)
     = source_repos_rel_path;
 
@@ -4721,7 +4724,7 @@ svn_client_merge_whole_branch(const char *source,
                                                    ctx, pool));
 
   SVN_ERR(svn_client__repos_location_segments(&segments, ra_session,
-                                              target_wcpath, rev,
+                                              target_repos_rel_path, rev,
                                               rev, yc_ancestor_revision,
                                               ctx, pool));
 
