@@ -226,6 +226,17 @@ svn_cl__merge(apr_getopt_t *os,
           range->end.kind = svn_opt_revision_head;
           APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = range;
         }
+
+#if 1
+      err = svn_client_merge_whole_branch(sourcepath1,
+                                          &peg_revision1,
+                                          targetpath,
+                                          opt_state->ignore_ancestry,
+                                          opt_state->force,
+                                          opt_state->record_only,
+                                          opt_state->dry_run,
+                                          options, ctx, pool);
+#else /* --cherry-pick */
       err = svn_client_merge_peg3(sourcepath1,
                                   ranges_to_merge,
                                   &peg_revision1,
@@ -238,6 +249,7 @@ svn_cl__merge(apr_getopt_t *os,
                                   options,
                                   ctx,
                                   pool);
+#endif /* 0/1 */
     }
   else
     {

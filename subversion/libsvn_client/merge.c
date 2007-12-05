@@ -4632,7 +4632,6 @@ svn_client_merge_whole_branch(const char *source,
     = apr_array_make(pool, 1, sizeof(const char *));
   apr_hash_t *mergeinfo_by_path;
   apr_array_header_t *segments;
-  apr_hash_index_t *hi;
   const char *target_url;
   const char *yc_ancestor_path;
   svn_revnum_t yc_ancestor_revision;
@@ -4664,8 +4663,8 @@ svn_client_merge_whole_branch(const char *source,
                                      &working_rev, adm_access, ctx, pool));
 
   /* Open an RA session to our source URL, and determine its root URL. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session,
-                                               URL, NULL, NULL, NULL,
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, wc_repos_root,
+                                               NULL, NULL, NULL,
                                                FALSE, FALSE, ctx, pool));
   SVN_ERR(svn_ra_get_repos_root(ra_session, &source_repos_root, pool));
   /* XXXdsg: should we require source_repos_root equals wc_repos_root? */
@@ -4674,7 +4673,7 @@ svn_client_merge_whole_branch(const char *source,
                                                 pool));
 
   SVN_ERR(svn_client__path_relative_to_root(&source_repos_rel_path, URL,
-                                            NULL, TRUE, ra_session, NULL,
+                                            NULL, FALSE, ra_session, NULL,
                                             pool));
   APR_ARRAY_PUSH(source_repos_rel_path_as_array, const char *)
     = source_repos_rel_path;
@@ -4703,7 +4702,8 @@ svn_client_merge_whole_branch(const char *source,
       svn_pool_destroy(iterpool);
 #endif    /* ...but for now... */
       return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                               _(""));
+                               _("'%s' not ready for merge to '%s'"),
+                               URL, target_wcpath);
     }
 
   SVN_ERR(svn_client_url_from_path(&target_url, target_wcpath, pool));
@@ -4733,16 +4733,39 @@ svn_client_merge_whole_branch(const char *source,
       svn_location_segment_t *seg = APR_ARRAY_IDX(segments, i,
                                                   svn_location_segment_t *);
       svn_merge_range_t *range = apr_palloc(pool, sizeof(*range));
+      const char *slash_path = apr_pstrcat(pool, "/", seg->path, NULL);
+      apr_array_header_t *ranges = apr_hash_get(target_mergeinfo, slash_path,
+                                                APR_HASH_KEY_STRING);
       range->start = seg->range_start;
       range->end = seg->range_end;
       range->inheritable = TRUE;
-      apr_hash_set(target_mergeinfo, apr_pstrcat(pool, "/", seg->path, NULL),
-                   APR_HASH_KEY_STRING, range);
+
+      if (ranges == NULL)
+        {
+          ranges = apr_array_make(pool, 1, sizeof(range));
+          apr_hash_set(target_mergeinfo, slash_path,
+                       APR_HASH_KEY_STRING, ranges);
+        }
+      
+      APR_ARRAY_PUSH(ranges, svn_merge_range_t *) = range;
     }
   /* ### TODO: Consider CONSIDER_INHERITANCE parameter... */
   SVN_ERR(svn_mergeinfo_diff(&deleted_mergeinfo, &added_mergeinfo,
                              target_mergeinfo, source_mergeinfo, FALSE,
                              pool));
+
+  {
+    svn_string_t *debug_output;
+    SVN_ERR(svn_mergeinfo__to_string(&debug_output, target_mergeinfo, pool));
+    printf("KFF target_mergeinfo:\n%s\n\n", debug_output->data);
+    SVN_ERR(svn_mergeinfo__to_string(&debug_output, source_mergeinfo, pool));
+    printf("KFF source_mergeinfo:\n%s\n\n", debug_output->data);
+    SVN_ERR(svn_mergeinfo__to_string(&debug_output, deleted_mergeinfo, pool));
+    printf("KFF deleted_mergeinfo:\n%s\n\n", debug_output->data);
+    SVN_ERR(svn_mergeinfo__to_string(&debug_output, added_mergeinfo, pool));
+    printf("KFF added_mergeinfo:\n%s\n\n", debug_output->data);
+    fflush(stdout);
+  }
 
   if (apr_hash_count(deleted_mergeinfo) != 0)
     return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
