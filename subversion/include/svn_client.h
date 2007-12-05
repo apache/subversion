@@ -2472,6 +2472,13 @@ svn_client_merge(const char *source1,
  * list of provided ranges has an `unspecified' or unrecognized
  * `kind', return @c SVN_ERR_CLIENT_BAD_REVISION.
  *
+ * If @a ranges_to_merge is empty, perform a whole branch merge
+ * of @a source.  That is, merge every eligible revision from
+ * @a source into @a target_wc_path iff @a source is completely
+ * up-to-date with respect to @a target_wc_path (which must be a
+ * single-revision, svn_depth_infinity, pristine, unswitched working
+ * copy -- in other words, it must reflect a single revision tree).
+ *
  * All other options are handled identically to svn_client_merge3().
  *
  * @since New in 1.5.
