@@ -4611,6 +4611,9 @@ svn_client_merge_peg3(const char *source,
       apr_array_header_t *new_merge_source
         = apr_array_make(pool, 1, sizeof(merge_source_t *));
       merge_source_t *youngest_source;
+      const char *path_in_repos;
+      apr_array_header_t *path_in_repos_as_array
+        = apr_array_make(pool, 1, sizeof(const char *));
       apr_hash_t *mergeinfo_by_path;
       apr_array_header_t *segments;
       apr_pool_t *iterpool = svn_pool_create(pool);
@@ -4625,7 +4628,12 @@ svn_client_merge_peg3(const char *source,
       /* Note: merge_sources->nelts must be > 0 by now, else somebody
          didn't do their job. */
 
-      SVN_ERR(svn_ra_get_mergeinfo(ra_session, &mergeinfo_by_path, URL, rev,
+      SVN_ERR(svn_client__path_relative_to_root(&path_in_repos, URL, NULL,
+                                                TRUE, ra_session, NULL, pool));
+      APR_ARRAY_PUSH(path_in_repos_as_array, const char *) = path_in_repos;
+
+      SVN_ERR(svn_ra_get_mergeinfo(ra_session, &mergeinfo_by_path, 
+                                   path_in_repos_as_array, rev,
                                    svn_mergeinfo_inherited, TRUE, pool));
 
       SVN_ERR(svn_client_url_from_path(&target_url, target_wcpath, pool));
