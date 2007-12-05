@@ -4536,16 +4536,18 @@ svn_client_merge(const char *source1,
  * If TARGET_WCPATH reflects a single-revision, svn_depth_infinity,
  * pristine, unswitched working copy -- in other words, it must
  * reflect subtree found in a single revision -- set *REV to that
- * single revision number.  Else, set *REV to SVN_INVALID_REVNUM.
+ * single revision number.  Else, raise
+ * SVN_ERR_CLIENT_NOT_READY_TO_MERGE.
  */
 static svn_error_t *
-wc_reflects_repository_subtree(svn_revnum_t *rev,
-                               const char *target_wcpath,
-                               apr_pool_t *pool)
+ensure_wc_reflects_repository_subtree(svn_revnum_t *rev,
+                                      const char *target_wcpath,
+                                      apr_pool_t *pool)
 {
   /* ### TODO: uh, implement this, by extending svn_wc_revision_status
      ### to detect depth situation too. */
-  return SVN_NO_ERROR;
+  return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
+                          "ensure_wc_reflects_repository_subtree unfinished");
 }
 
 
@@ -4618,13 +4620,7 @@ svn_client_merge_peg3(const char *source,
       svn_revnum_t yc_ancestor_revision;
       svn_opt_revision_t source_revision, target_revision;
 
-      SVN_ERR(wc_reflects_repository_subtree(&rev, target_wcpath, pool));
-
-      if (! SVN_IS_VALID_REVNUM(rev))
-        return svn_error_createf
-          (SVN_ERR_WHATEVER, NULL,
-           _("'%s' is not a single-revision, pristine, unswitched, "
-             "depth-infinity tree"), target_wcpath);
+      SVN_ERR(ensure_wc_reflects_repository_subtree(&rev, target_wcpath, pool));
 
       /* Note: merge_sources->nelts must be > 0 by now, else somebody
          didn't do their job. */

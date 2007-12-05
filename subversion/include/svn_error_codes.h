@@ -1015,6 +1015,11 @@ SVN_ERROR_START
              SVN_ERR_CLIENT_CATEGORY_START + 15,
              "No versioned parent directories")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_CLIENT_NOT_READY_TO_MERGE,
+             SVN_ERR_CLIENT_CATEGORY_START + 16,
+             "Working copy and branch not ready for whole-branch merge.")
+
   /* misc errors */
 
   SVN_ERRDEF(SVN_ERR_BASE,
