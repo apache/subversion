@@ -174,7 +174,7 @@ read_rev(svn_revnum_t *rev, apr_file_t *temp, apr_pool_t *pool)
   if (c == '+')
     {
       SVN_ERR(read_number(&num, temp, pool));
-      *rev = num;
+      *rev = (svn_revnum_t) num;
     }
   else
     *rev = SVN_INVALID_REVNUM;
