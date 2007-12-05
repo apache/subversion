@@ -456,17 +456,19 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
       SVN_ERR(svn_wc_text_modified_p(&has_local_mods, mine, FALSE,
                                      adm_access, subpool));
 
-      /* Special case:  if a binary file isn't locally modified, and is
+      /* Special case:  if a binary file's working file is
          exactly identical to the 'left' side of the merge, then don't
          allow svn_wc_merge to produce a conflict.  Instead, just
-         overwrite the working file with the 'right' side of the merge.
+         overwrite the working file with the 'right' side of the
+         merge.  Why'd we check for local mods above?  Because we want
+         to do a different notification depending on whether or not
+         the file was locally modified.
 
          Alternately, if the 'left' side of the merge doesn't exist in
          the repository, and the 'right' side of the merge is
          identical to the WC, pretend we did the merge (a no-op). */
-      if ((! has_local_mods)
-          && ((mimetype1 && svn_mime_type_is_binary(mimetype1))
-              || (mimetype2 && svn_mime_type_is_binary(mimetype2))))
+      if ((mimetype1 && svn_mime_type_is_binary(mimetype1))
+          || (mimetype2 && svn_mime_type_is_binary(mimetype2)))
         {
           /* For adds, the 'left' side of the merge doesn't exist. */
           svn_boolean_t older_revision_exists =
@@ -3596,7 +3598,7 @@ do_file_merge(const char *url1,
   apr_hash_t *target_mergeinfo;
   const svn_wc_entry_t *entry;
   int i;
-  svn_boolean_t indirect = FALSE, is_replace = FALSE;
+  svn_boolean_t indirect = FALSE;
   apr_pool_t *subpool;
   svn_boolean_t is_rollback = (revision1 > revision2);
   const char *primary_url = is_rollback ? url1 : url2;
@@ -3616,27 +3618,6 @@ do_file_merge(const char *url1,
 
   SVN_ERR(svn_wc__entry_versioned(&entry, target_wcpath, adm_access, FALSE,
                                   pool));
-
-  /* If we are not ignoring ancestry and we don't already know that
-     our sources share direct ancestry, then we need to check the
-     relationship between the two sides of our merge.  If the two
-     sides share any common ancestor, we'll do text-n-props merge;
-     otherwise, we'll be doing a delete and an add.  */
-  if (! (merge_b->ignore_ancestry && merge_b->sources_related))
-    {
-      const char *yc_path;
-      svn_revnum_t yc_rev;
-      svn_opt_revision_t opt_rev1, opt_rev2;
-      opt_rev1.kind = opt_rev2.kind = svn_opt_revision_number;
-      opt_rev1.value.number = revision1;
-      opt_rev2.value.number = revision2;
-      SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_path, &yc_rev,
-                                                       url1, &opt_rev1,
-                                                       url2, &opt_rev2,
-                                                       ctx, pool));
-      if (! (yc_path && SVN_IS_VALID_REVNUM(yc_rev)))
-        is_replace = TRUE;
-    }
 
   range.start = revision1;
   range.end = revision2;
@@ -3718,7 +3699,12 @@ do_file_merge(const char *url1,
       /* Deduce property diffs. */
       SVN_ERR(svn_prop_diffs(&propchanges, props2, props1, subpool));
 
-      if (is_replace)
+      /* If we aren't ignoring ancestry, then we've already done
+         ancestry relatedness checks.  If we are ignoring ancestry, or
+         our sources are known to be related, then we can do
+         text-n-props merge; otherwise, we have to do a delete-n-add
+         merge.  */
+      if (! (merge_b->ignore_ancestry || merge_b->sources_related))
         {
           /* Delete... */
           SVN_ERR(merge_file_deleted(adm_access,
@@ -4569,6 +4555,7 @@ svn_client_merge3(const char *source1,
                                           ranges, ra_session2, ctx, pool));
 
           apr_array_cat(merge_sources, more_sources);
+          /* ### Do we want to set ignore_ancestry = FALSE here? */
         }
     }
   else

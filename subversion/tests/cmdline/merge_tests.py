@@ -2322,13 +2322,14 @@ def merge_binary_with_common_ancestry(sbox):
   theta_J_url = sbox.repo_url + '/J/theta'
   theta_L_url = sbox.repo_url + '/L/theta'
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output(None,
-                                                           'U    theta\n'),
+                                     expected_merge_output([[3,6],[7]],
+                                                           ['U    theta\n',
+                                                            'G    theta\n']),
                                      [],
                                      'merge', theta_J_url, theta_L_url)
   os.chdir(saved_cwd)
 
-  expected_status.tweak('K/theta', status='M ')
+  expected_status.tweak('K/theta', status='MM')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
