@@ -4592,8 +4592,8 @@ ensure_wc_reflects_repository_subtree(svn_revnum_t *rev,
                             "Cannot merge into a working copy with local "
                             "modifications");
 
-  if (wc_stat->min_rev == SVN_INVALID_REVNUM
-      || wc_stat->max_rev == SVN_INVALID_REVNUM)
+  if (! (SVN_IS_VALID_REVNUM(wc_stat->min_rev)
+         && SVN_IS_VALID_REVNUM(wc_stat->max_rev)))
     return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                             "Cannot determine revision of working copy");
 
