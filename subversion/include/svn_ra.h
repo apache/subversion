@@ -862,6 +862,9 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
  * hashes are for @a paths (which are relative to @a session's URL) in
  * @a revision.
  *
+ * @a inherit indicates whether explicit, explicit or inherited, or
+ * only inherited mergeinfo for @a paths is retrieved.
+ *
  * If @a include_descendents is TRUE, then additionally return the
  * mergeinfo for any descendent of any element of @a paths which has
  * the @c SVN_PROP_MERGEINFO property explicitly set on it.  (Note
@@ -870,9 +873,6 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
  * mergeinfo via inheritance are not included in @a *mergeoutput.)
  *
  * Allocate the returned values in @a pool.
- *
- * @a inherit indicates whether explicit, explicit or inherited, or
- * only inherited mergeinfo for @a paths is retrieved.
  *
  * If @a revision is @c SVN_INVALID_REVNUM, it defaults to youngest.
  *
