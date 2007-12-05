@@ -4577,8 +4577,8 @@ ensure_wc_reflects_repository_subtree(svn_revnum_t *rev,
      subtree". */
   if (wc_stat->switched)
     return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                            "Cannot merge into a working copy with a switched "
-                            "subtree");
+                            _("Cannot merge into a working copy with a  "
+                              "switched subtree"));
 
   if (wc_stat->sparse_checkout)
     return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
@@ -4587,18 +4587,18 @@ ensure_wc_reflects_repository_subtree(svn_revnum_t *rev,
 
   if (wc_stat->modified)
     return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                            "Cannot merge into a working copy with local "
-                            "modifications");
+                            _("Cannot merge into a working copy with local "
+                              "modifications"));
 
   if (! (SVN_IS_VALID_REVNUM(wc_stat->min_rev)
          && SVN_IS_VALID_REVNUM(wc_stat->max_rev)))
     return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                            "Cannot determine revision of working copy");
+                            _("Cannot determine revision of working copy"));
 
   if (wc_stat->min_rev != wc_stat->max_rev)
     return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                            "Cannot merge into mixed-revision working copy; "
-                            "try updating first");
+                            _("Cannot merge into mixed-revision working copy; "
+                              "try updating first"));
 
   *rev = wc_stat->min_rev;
   return SVN_NO_ERROR;
