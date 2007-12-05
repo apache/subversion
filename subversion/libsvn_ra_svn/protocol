@@ -312,7 +312,7 @@ second place for auth-request point as noted below.
   commit-revs-for-merge-ranges
     params:   ( merge_target:string merge_source:string min_commit_rev:number
                 max_commit_rev:number merge_rangelist:string inherit:word )
-    response: ( merge-info:string )
+    response: ( commit-rev-rangelist:string )
     New in svn 1.5.
 
   update

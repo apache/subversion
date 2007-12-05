@@ -43,6 +43,7 @@
 #include "svn_md5.h"
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
+#include "private/svn_mergeinfo_private.h"
 
 #include "ra_svn.h"
 
@@ -1106,9 +1107,8 @@ ra_svn_get_commit_revs_for_merge_ranges(
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
-  apr_hash_t *mergeinfo;
   svn_stringbuf_t *merge_rangelist_str;
-  char *mergeinfo_str;
+  char *commit_rev_rangelist_str;
   SVN_ERR(svn_rangelist_to_stringbuf(&merge_rangelist_str, merge_rangelist,
                                      pool));
 
@@ -1126,11 +1126,11 @@ ra_svn_get_commit_revs_for_merge_ranges(
                                  svn_inheritance_to_word(inherit)));
 
   SVN_ERR(handle_auth_request(sess_baton, pool));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "c", &mergeinfo_str));
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "c",
+                                       &commit_rev_rangelist_str));
 
-  SVN_ERR(svn_mergeinfo_parse(&mergeinfo, mergeinfo_str, pool));
-  *commit_rev_rangelist = apr_hash_get(mergeinfo, merge_source,
-                                       APR_HASH_KEY_STRING);
+  SVN_ERR(svn_rangelist__parse(commit_rev_rangelist,
+                               commit_rev_rangelist_str, pool));
   return SVN_NO_ERROR;
 }
 

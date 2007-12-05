@@ -1544,8 +1544,7 @@ static svn_error_t *get_commit_revs_for_merge_ranges(svn_ra_svn_conn_t *conn,
   const char *merge_ranges_string = NULL;
   apr_array_header_t *merge_rangelist;
   svn_mergeinfo_inheritance_t inherit;
-  apr_hash_t *mergeinfo = apr_hash_make(pool);
-  svn_stringbuf_t *commit_rev_mergeinfo;
+  svn_stringbuf_t *commit_rev_rangelist_str;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccrrcw", &merge_target,
                                  &merge_source, &min_commit_rev,
@@ -1572,15 +1571,10 @@ static svn_error_t *get_commit_revs_for_merge_ranges(svn_ra_svn_conn_t *conn,
                                                 inherit,
                                                 authz_check_access_cb_func(b),
                                                 b, pool));
-  /* When we hand back the stuff to client we should give back the 
-   * mergeinfo hash with path being relative to ra_session.
-   * ### TODO If at all svn_rangelist_parse exists we can remove this kludge.
-   */
-  apr_hash_set(mergeinfo, merge_source, APR_HASH_KEY_STRING,
-               commit_rev_range_list);
-  SVN_ERR(svn_mergeinfo_to_stringbuf(&commit_rev_mergeinfo, mergeinfo, pool));
+  SVN_ERR(svn_rangelist_to_stringbuf(&commit_rev_rangelist_str,
+                                     commit_rev_range_list, pool));
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c)", "success",
-                                 commit_rev_mergeinfo->data));
+                                 commit_rev_rangelist_str->data));
   return SVN_NO_ERROR;
 }
 /* Send a log entry to the client. */
