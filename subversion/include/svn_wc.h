@@ -4482,8 +4482,9 @@ svn_error_t *svn_wc_remove_lock(const char *path,
                                 apr_pool_t *pool);
 
 
-/** A structure to report the mix of revisions found within a working copy,
- * and whether any parts are switched or locally modified.
+/** A structure to report a summary of a working copy, including the
+ * mix of revisions found within it, whether any parts are switched or
+ * locally modified, and whether it is a sparse checkout.
  *
  * @note Fields may be added to the end of this structure in future
  * versions.  Therefore, to preserve binary compatibility, users
@@ -4498,6 +4499,11 @@ typedef struct svn_wc_revision_status_t
 
   svn_boolean_t switched; /**< Is anything switched? */
   svn_boolean_t modified; /**< Is anything modified? */
+
+  /** Whether any WC paths are at a depth other than @c svn_depth_infinity.
+   * @since New in 1.5.
+   */
+  svn_boolean_t sparse_checkout;
 }
 svn_wc_revision_status_t;
 
