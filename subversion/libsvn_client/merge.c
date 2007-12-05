@@ -95,6 +95,28 @@
  * pairs at a time.
  */
 
+/* WHICH SVN_CLIENT_MERGE* API DO I WANT?
+ *
+ * libsvn_client has three public merge APIs; they are all wrappers
+ * around the do_merge engine.  Which one to use depends on the number
+ * of URLs passed as arguments and whether or not specific merge
+ * ranges (-c/-r) are specified.
+ *
+ *                 1 URL                        2 URLs
+ *     +--------------------------------+---------------------+
+ *  -c |       mergeinfo-driven         |                     |
+ *  or |        cherrypicking           |    unsupported      |
+ *  -r |    (svn_client_merge_peg)      |                     |
+ *     +--------------------------------+---------------------+
+ *  no |      mergeinfo-driven          |  mergeinfo-oblivious|
+ *  -c |        whole-branch            |    diff-and-apply   |
+ *  or |       heuristic merge          |  (svn_client_merge) |
+ *  -r |(svn_client_merge_whole_branch) |                     |
+ *     +--------------------------------+---------------------+
+ *
+ *
+ */
+
 
 /*-----------------------------------------------------------------------*/
 
@@ -4586,6 +4608,163 @@ ensure_wc_reflects_repository_subtree(svn_revnum_t *rev,
 
 
 svn_error_t *
+svn_client_merge_whole_branch(const char *source,
+                              const svn_opt_revision_t *peg_revision,
+                              const char *target_wcpath,
+                              svn_boolean_t ignore_ancestry, /*XXXdsg ?*/
+                              svn_boolean_t force,
+                              svn_boolean_t record_only, /*XXXdsg ?*/
+                              svn_boolean_t dry_run,
+                              const apr_array_header_t *merge_options,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *pool)
+{
+  svn_wc_adm_access_t *adm_access;
+  const svn_wc_entry_t *entry;
+  const char *URL;
+  apr_array_header_t *new_merge_sources;
+  const char *wc_repos_root, *source_repos_root;
+  svn_opt_revision_t working_rev;
+  svn_ra_session_t *ra_session;
+  svn_revnum_t rev;
+  const char *source_repos_rel_path;
+  apr_array_header_t *source_repos_rel_path_as_array
+    = apr_array_make(pool, 1, sizeof(const char *));
+  apr_hash_t *mergeinfo_by_path;
+  apr_array_header_t *segments;
+  apr_hash_index_t *hi;
+  const char *target_url;
+  const char *yc_ancestor_path;
+  svn_revnum_t yc_ancestor_revision;
+  svn_opt_revision_t source_revision, target_revision;
+  apr_hash_t *target_mergeinfo, *source_mergeinfo;
+  apr_hash_t *deleted_mergeinfo, *added_mergeinfo;
+
+
+  /* Open an admistrative session with the working copy. */
+  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target_wcpath,
+                                 (! dry_run), -1, ctx->cancel_func,
+                                 ctx->cancel_baton, pool));
+
+  /* Fetch the target's entry. */
+  SVN_ERR(svn_wc__entry_versioned(&entry, target_wcpath, adm_access,
+                                  FALSE, pool));
+
+  /* Make sure we're dealing with a real URL. */
+  SVN_ERR(svn_client_url_from_path(&URL, source, pool));
+  if (! URL)
+    return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
+                             _("'%s' has no URL"),
+                             svn_path_local_style(source, pool));
+
+  /* Determine the working copy target's repository root URL. */
+  working_rev.kind = svn_opt_revision_working;
+  SVN_ERR(svn_client__get_repos_root(&wc_repos_root, target_wcpath,
+                                     &working_rev, adm_access, ctx, pool));
+
+  /* Open an RA session to our source URL, and determine its root URL. */
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session,
+                                               URL, NULL, NULL, NULL,
+                                               FALSE, FALSE, ctx, pool));
+  SVN_ERR(svn_ra_get_repos_root(ra_session, &source_repos_root, pool));
+  /* XXXdsg: should we require source_repos_root equals wc_repos_root? */
+
+  SVN_ERR(ensure_wc_reflects_repository_subtree(&rev, target_wcpath, ctx,
+                                                pool));
+
+  SVN_ERR(svn_client__path_relative_to_root(&source_repos_rel_path, URL,
+                                            NULL, TRUE, ra_session, NULL,
+                                            pool));
+  APR_ARRAY_PUSH(source_repos_rel_path_as_array, const char *)
+    = source_repos_rel_path;
+
+  SVN_ERR(svn_ra_get_mergeinfo(ra_session, &mergeinfo_by_path,
+                               source_repos_rel_path_as_array, rev,
+                               svn_mergeinfo_inherited, TRUE, pool));
+
+  /* XXXdsg: actually the 0 case (no mergeinfo at all on the branch)
+     might need to be handled... */
+  if (apr_hash_count(mergeinfo_by_path) != 1)
+    {
+#ifdef 0  /* ### TODO: Loop over child paths... */
+      apr_pool_t *iterpool = svn_pool_create(pool);
+
+      for (hi = apr_hash_first(NULL, mergeinfo_by_path); hi;
+           hi = apr_hash_next(hi))
+        {
+          const void *key;
+          void *val;
+
+          /* Ignore source_repos_rel_path, since we already checked it. */
+
+          svn_pool_clear(iterpool);
+        }
+      svn_pool_destroy(iterpool);
+#endif    /* ...but for now... */
+      return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
+                               _(""));
+    }
+
+  SVN_ERR(svn_client_url_from_path(&target_url, target_wcpath, pool));
+
+  source_revision.kind = svn_opt_revision_number;
+  source_revision.value = youngest_source->rev2;
+  target_revision.kind = svn_opt_revision_number;
+  target_revision.value = rev;
+  SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_ancestor_path,
+                                                   &yc_ancestor_revision,
+                                                   URL,
+                                                   &source_revision,
+                                                   target_url,
+                                                   &target_revision,
+                                                   ctx, pool));
+
+  SVN_ERR(svn_client__repos_location_segments(&segments, ra_session,
+                                              target_wcpath, rev,
+                                              rev, yc_ancestor_revision,
+                                              ctx, pool));
+
+  source_mergeinfo = apr_hash_get(mergeinfo_by_path, source_repos_rel_path,
+                                  APR_HASH_KEY_STRING);
+  target_mergeinfo = apr_hash_make(pool);
+  for (i = 0; i < segments->nelts; i++)
+    {
+      svn_location_segment_t *seg = APR_ARRAY_IDX(segments, i,
+                                                  svn_location_segment_t *);
+      svn_merge_range_t *range = apr_palloc(pool, sizeof(*range));
+      range->start = seg->range_start;
+      range->end = seg->range_end;
+      range->inheritable = TRUE;
+      apr_hash_set(target_mergeinfo, apr_pstrcat(pool, "/", seg->path, NULL),
+                   APR_HASH_KEY_STRING, range);
+    }
+  /* ### TODO: Consider CONSIDER_INHERITANCE parameter... */
+  SVN_ERR(svn_mergeinfo_diff(&deleted_mergeinfo, &added_mergeinfo,
+                             target_mergeinfo, source_mergeinfo, FALSE,
+                             pool));
+
+  if (apr_hash_count(deleted_mergeinfo) != 0)
+    return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
+                            "not all the revs are there bla bla"); /*XXXdsg*/
+  /* Perform a whole-branch merge with a single editor drive. */
+  new_merge_sources = apr_array_make(pool, 1, sizeof(merge_source_t *));
+  /* XXXdsg: actually make and push a merge source */
+
+  /* Do the real merge! */
+  SVN_ERR(do_merge(new_merge_sources, target_wcpath, entry, adm_access,
+                   TRUE, (strcmp(wc_repos_root, source_repos_root) == 0),
+                   ignore_ancestry, force, dry_run, record_only,
+                   svn_depth_immediate, merge_options, ctx, pool));
+
+  /* Shutdown the administrative session. */
+  SVN_ERR(svn_wc_adm_close(adm_access));
+
+  return SVN_NO_ERROR;
+}
+
+
+
+svn_error_t *
 svn_client_merge_peg3(const char *source,
                       const apr_array_header_t *ranges_to_merge,
                       const svn_opt_revision_t *peg_revision,
@@ -4607,13 +4786,17 @@ svn_client_merge_peg3(const char *source,
   svn_opt_revision_t working_rev;
   svn_ra_session_t *ra_session;
 
+  /* No ranges to merge?  No problem. */
+  if (ranges_to_merge->nelts == 0)
+    return SVN_NO_ERROR;
+
   /* Open an admistrative session with the working copy. */
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target_wcpath,
                                  (! dry_run), -1, ctx->cancel_func,
                                  ctx->cancel_baton, pool));
 
   /* Fetch the target's entry. */
-  SVN_ERR(svn_wc__entry_versioned(&entry, target_wcpath, adm_access, 
+  SVN_ERR(svn_wc__entry_versioned(&entry, target_wcpath, adm_access,
                                   FALSE, pool));
 
   /* Make sure we're dealing with a real URL. */
@@ -4635,117 +4818,9 @@ svn_client_merge_peg3(const char *source,
   SVN_ERR(svn_ra_get_repos_root(ra_session, &source_repos_root, pool));
 
   /* Normalize our merge sources. */
-  SVN_ERR(normalize_merge_sources(&merge_sources, source, URL, 
-                                  source_repos_root, peg_revision, 
+  SVN_ERR(normalize_merge_sources(&merge_sources, source, URL,
+                                  source_repos_root, peg_revision,
                                   ranges_to_merge, ra_session, ctx, pool));
-
-  if (ranges_to_merge->nelts == 0)
-    {
-      svn_revnum_t rev;
-      merge_source_t *youngest_source;
-      const char *source_repos_rel_path;
-      apr_array_header_t *source_repos_rel_path_as_array
-        = apr_array_make(pool, 1, sizeof(const char *));
-      apr_hash_t *mergeinfo_by_path;
-      apr_array_header_t *segments;
-      apr_hash_index_t *hi;
-      const char *target_url;
-      const char *yc_ancestor_path;
-      svn_revnum_t yc_ancestor_revision;
-      svn_opt_revision_t source_revision, target_revision;
-      apr_hash_t *target_mergeinfo, *source_mergeinfo;
-      apr_hash_t *deleted_mergeinfo, *added_mergeinfo;
-
-      SVN_ERR(ensure_wc_reflects_repository_subtree(&rev, target_wcpath, ctx,
-                                                    pool));
-
-      /* Note: merge_sources->nelts must be > 0 by now, else somebody
-         didn't do their job. */
-
-      SVN_ERR(svn_client__path_relative_to_root(&source_repos_rel_path, URL,
-                                                NULL, TRUE, ra_session, NULL,
-                                                pool));
-      APR_ARRAY_PUSH(source_repos_rel_path_as_array, const char *)
-        = source_repos_rel_path;
-
-      SVN_ERR(svn_ra_get_mergeinfo(ra_session, &mergeinfo_by_path, 
-                                   source_repos_rel_path_as_array, rev,
-                                   svn_mergeinfo_inherited, TRUE, pool));
-
-      if (apr_hash_count(mergeinfo_by_path) != 1)
-        {
-#ifdef 0  /* ### TODO: Loop over child paths... */
-          apr_pool_t *iterpool = svn_pool_create(pool);
-
-          for (hi = apr_hash_first(NULL, mergeinfo_by_path); hi;
-               hi = apr_hash_next(hi))
-            {
-              const void *key;
-              void *val;
-
-              /* Ignore source_repos_rel_path, since we already checked it. */
-
-              svn_pool_clear(iterpool);
-            }
-          svn_pool_destroy(iterpool);
-#endif    /* ...but for now... */
-          return svn_error_createf(SVN_ERR_WHATEVER, NULL, _(""));
-        }
-
-      SVN_ERR(svn_client_url_from_path(&target_url, target_wcpath, pool));
-
-      youngest_source = APR_ARRAY_IDX(merge_sources, merge_sources->nelts - 1,
-                                      merge_source_t *);
-
-      source_revision.kind = svn_opt_revision_number;
-      source_revision.value = youngest_source->rev2;
-      target_revision.kind = svn_opt_revision_number;
-      target_revision.value = rev;
-      SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_ancestor_path,
-                                                       &yc_ancestor_revision,
-                                                       URL,
-                                                       &source_revision,
-                                                       target_url,
-                                                       &target_revision,
-                                                       ctx, pool));
-
-      SVN_ERR(svn_client__repos_location_segments(&segments, ra_session,
-                                                  target_wcpath, rev,
-                                                  rev, yc_ancestor_revision,
-                                                  ctx, pool));
-
-      source_mergeinfo = apr_hash_get(mergeinfo_by_path, source_repos_rel_path,
-                                      APR_HASH_KEY_STRING);
-      target_mergeinfo = apr_hash_make(pool);
-      for (i = 0; i < segments->nelts; i++)
-        {
-          svn_location_segment_t *seg = APR_ARRAY_IDX(segments, i,
-                                                      svn_location_segment_t *);
-          svn_merge_range_t *range = apr_palloc(pool, sizeof(*range));
-          range->start = seg->range_start;
-          range->end = seg->range_end;
-          range->inheritable = TRUE;
-          apr_hash_set(target_mergeinfo, apr_pstrcat(pool, "/", seg->path, NULL),
-                       APR_HASH_KEY_STRING, range);
-        }
-      /* ### TODO: Consider CONSIDER_INHERITANCE parameter... */
-      SVN_ERR(svn_mergeinfo_diff(&deleted_mergeinfo, &added_mergeinfo,
-                                 target_mergeinfo, source_mergeinfo, FALSE,
-                                 pool));
-
-      if (apr_hash_count(deleted_mergeinfo) == 0)
-        {
-          /* Perform a whole-branch merge with a single editor drive. */
-          apr_array_header_t *new_merge_source
-            = apr_array_make(pool, 1, sizeof(merge_source_t *));
-          APR_ARRAY_PUSH(new_merge_source, merge_source_t *)
-            =  APR_ARRAY_IDX(merge_sources, merge_sources->nelts - 1,
-                             merge_source_t *);
-          merge_sources = new_merge_source;
-        }
-
-      /* Otherwise, merge all eligible revisions, cherry-picking style. */
-    }
 
   /* Do the real merge! */
   SVN_ERR(do_merge(merge_sources, target_wcpath, entry, adm_access,

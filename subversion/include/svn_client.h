@@ -2459,6 +2459,33 @@ svn_client_merge(const char *source1,
                  apr_pool_t *pool);
 
 
+
+/**
+ * Perform a whole branch merge of @a source into @target_wc_path.  @a
+ * target_wc_path must be a single-revision, svn_depth_infinity,
+ * pristine, unswitched working copy -- in other words, it must
+ * reflect a single revision tree, the "target".  The mergeinfo on @a
+ * source must reflect that all of the target has been merged into it.
+ * Then this behaves like a merge with svn_client_merge3 from the
+ * target's URL to the source.
+ *
+ * All other options are handled identically to svn_client_merge3().
+ * The depth of the merge is always infinite.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_merge_whole_branch(const char *source,
+                              const svn_opt_revision_t *peg_revision,
+                              const char *target_wcpath,
+                              svn_boolean_t ignore_ancestry, /*XXXdsg ?*/
+                              svn_boolean_t force,
+                              svn_boolean_t record_only, /*XXXdsg ?*/
+                              svn_boolean_t dry_run,
+                              const apr_array_header_t *merge_options,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *pool);
+
 /**
  * Merge the changes between the filesystem object @a source in peg
  * revision @a peg_revision, as it changed between the ranges described
@@ -2471,14 +2498,6 @@ svn_client_merge(const char *source1,
  * rangelist is not required to be sorted.  If any revision in the
  * list of provided ranges has an `unspecified' or unrecognized
  * `kind', return @c SVN_ERR_CLIENT_BAD_REVISION.
- *
- * If @a ranges_to_merge is empty, perform a whole branch merge of @a
- * source.  @a target_wc_path must be a single-revision,
- * svn_depth_infinity, pristine, unswitched working copy -- in other
- * words, it must reflect a single revision tree, the "target".  The
- * mergeinfo on @a source must reflect that all of the target has been
- * merged into it.  Then this behaves like a merge with
- * svn_client_merge3 from the target URL to the source.
  *
  * All other options are handled identically to svn_client_merge3().
  *
