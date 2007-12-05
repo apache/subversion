@@ -4580,12 +4580,10 @@ ensure_wc_reflects_repository_subtree(svn_revnum_t *rev,
                             "Cannot merge into a working copy with a switched "
                             "subtree");
 
-  /* XXXdsg: Extend the status infrastructure to find non-infinite
-     depths */
-/*   if (wc_stat->finite) */
-/*     return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL, */
-/*                             "Cannot merge into a working copy that is not at " */
-/*                             "infinite depth"); */
+  if (wc_stat->sparse_checkout)
+    return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
+                            _("Cannot merge into a working copy that is not "
+                              "entirely at infinite depth"));
 
   if (wc_stat->modified)
     return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
