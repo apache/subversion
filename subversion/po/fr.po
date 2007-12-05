@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.5\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-12-01 09:38+0100\n"
-"PO-Revision-Date: 2007-12-01 09:55+0100\n"
+"POT-Creation-Date: 2007-12-05 20:37+0100\n"
+"PO-Revision-Date: 2007-12-05 20:40+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: French <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -965,8 +965,8 @@ msgid "Incompatible library version"
 msgstr "Version de librairie incompatible"
 
 #: ../include/svn_error_codes.h:1104
-msgid "Merge info parse error"
-msgstr "Merge info : erreur de syntaxe"
+msgid "Mergeinfo parse error"
+msgstr "Mergeinfo : erreur de syntaxe"
 
 #: ../include/svn_error_codes.h:1109
 msgid "Cease invocation of this API"
@@ -1389,8 +1389,8 @@ msgstr "%s\t(copie de travail)"
 msgid "Cannot display: file marked as a binary type.%s"
 msgstr "Impossible d'afficher : fichier considéré comme binaire.%s"
 
-#: ../libsvn_client/diff.c:881 ../libsvn_client/merge.c:3464
-#: ../libsvn_client/merge.c:4414
+#: ../libsvn_client/diff.c:881 ../libsvn_client/merge.c:3466
+#: ../libsvn_client/merge.c:4416
 msgid "Not all required revisions are specified"
 msgstr "Toutes les révisions requises ne sont pas précisées"
 
@@ -1506,8 +1506,8 @@ msgstr ""
 "Aucun parent commun trouvé, impossible de travailler avec des arguments "
 "disjoints"
 
-#: ../libsvn_client/locking_commands.c:261 ../libsvn_client/merge.c:4431
-#: ../libsvn_client/merge.c:4437 ../libsvn_client/merge.c:4567
+#: ../libsvn_client/locking_commands.c:261 ../libsvn_client/merge.c:4433
+#: ../libsvn_client/merge.c:4439 ../libsvn_client/merge.c:4569
 #: ../libsvn_client/ra.c:378 ../libsvn_client/ra.c:415
 #: ../libsvn_client/ra.c:616
 #, c-format
@@ -1528,7 +1528,7 @@ msgstr "'%s' n'est pas verrouillé dans cette copie de travail"
 msgid "'%s' is not locked"
 msgstr "'%s' n'est pas verrouillé"
 
-#: ../libsvn_client/locking_commands.c:407 ../libsvn_fs/fs-loader.c:1021
+#: ../libsvn_client/locking_commands.c:407 ../libsvn_fs/fs-loader.c:1013
 #: ../libsvn_ra/ra_loader.c:1098
 msgid "Lock comment contains illegal characters"
 msgstr "Le commentaire du verrou (lock) contient des caractères incorrects"
@@ -1583,7 +1583,7 @@ msgstr ".fusion-gauche.r%ld"
 msgid ".merge-right.r%ld"
 msgstr ".fusion-droit.r%ld"
 
-#: ../libsvn_client/merge.c:2112
+#: ../libsvn_client/merge.c:2114
 #, c-format
 msgid ""
 "One or more conflicts were produced while merging r%ld:%ld into\n"
@@ -1596,7 +1596,7 @@ msgstr ""
 "résoudre tous les conflits et ré-exécuter la fusion (merge) pour \n"
 "appliquer les révisions non-fusionnées restantes"
 
-#: ../libsvn_client/merge.c:4244
+#: ../libsvn_client/merge.c:4246
 msgid "Use of two URLs is not compatible with mergeinfo modification"
 msgstr ""
 "L'utilisation de deux URLs n'est pas compatible avec la modification des "
@@ -1847,7 +1847,7 @@ msgstr "Type de stockage de dépôt inconnu : '%s'"
 msgid "Can't allocate FS mutex"
 msgstr "Impossible d'allouer l'exclusivité (mutex) du FS"
 
-#: ../libsvn_fs/fs-loader.c:1027
+#: ../libsvn_fs/fs-loader.c:1019
 msgid "Negative expiration date passed to svn_fs_lock"
 msgstr "Date d'expiration négative passée à svn_fs_lock"
 
@@ -2409,56 +2409,56 @@ msgstr "Transaction interrompue, mais échec du nettoyage (cleanup)"
 msgid "Failure opening '%s'"
 msgstr "Échec à l'ouverture de '%s'"
 
-#: ../libsvn_fs_base/tree.c:1379 ../libsvn_fs_fs/tree.c:1146
+#: ../libsvn_fs_base/tree.c:1338 ../libsvn_fs_fs/tree.c:1121
 msgid "Cannot compare property value between two different filesystems"
 msgstr ""
 "Impossible de comparer des propriétés entre deux systèmes de fichiers "
 "différents"
 
-#: ../libsvn_fs_base/tree.c:1706
+#: ../libsvn_fs_base/tree.c:1665
 msgid "Corrupt DB: faulty predecessor count"
 msgstr "Base de données corrompue : nombre de prédécesseurs incorrect"
 
-#: ../libsvn_fs_base/tree.c:1761 ../libsvn_fs_fs/tree.c:1182
+#: ../libsvn_fs_base/tree.c:1720 ../libsvn_fs_fs/tree.c:1157
 #, c-format
 msgid "Unexpected immutable node at '%s'"
 msgstr "Nœud non-modifiable inattendu à '%s'"
 
-#: ../libsvn_fs_base/tree.c:1782 ../libsvn_fs_fs/tree.c:1205
+#: ../libsvn_fs_base/tree.c:1741 ../libsvn_fs_fs/tree.c:1180
 #, c-format
 msgid "Conflict at '%s'"
 msgstr "Conflit sur '%s'"
 
-#: ../libsvn_fs_base/tree.c:1832 ../libsvn_fs_base/tree.c:2544
-#: ../libsvn_fs_fs/tree.c:1254 ../libsvn_fs_fs/tree.c:1746
+#: ../libsvn_fs_base/tree.c:1791 ../libsvn_fs_base/tree.c:2503
+#: ../libsvn_fs_fs/tree.c:1229 ../libsvn_fs_fs/tree.c:1721
 msgid "Bad merge; ancestor, source, and target not all in same fs"
 msgstr ""
 "Mauvaise fusion (merge) ; parent, source et cible pas tous dans le même FS"
 
-#: ../libsvn_fs_base/tree.c:1848 ../libsvn_fs_fs/tree.c:1270
+#: ../libsvn_fs_base/tree.c:1807 ../libsvn_fs_fs/tree.c:1245
 #, c-format
 msgid "Bad merge; target '%s' has id '%s', same as ancestor"
 msgstr "Mauvaise fusion (merge) ; la cible '%s' a l'id '%s', comme le parent"
 
-#: ../libsvn_fs_base/tree.c:2351
+#: ../libsvn_fs_base/tree.c:2310
 #, c-format
 msgid "Transaction '%s' out-of-date with respect to revision '%s'"
 msgstr "Transaction '%s' obsolète par rapport à la révision '%s'"
 
-#: ../libsvn_fs_base/tree.c:2727 ../libsvn_fs_fs/tree.c:1885
+#: ../libsvn_fs_base/tree.c:2686 ../libsvn_fs_fs/tree.c:1860
 msgid "The root directory cannot be deleted"
 msgstr "Le répertoire racine ne peut être effacé"
 
-#: ../libsvn_fs_base/tree.c:2908 ../libsvn_fs_fs/tree.c:1957
+#: ../libsvn_fs_base/tree.c:2867 ../libsvn_fs_fs/tree.c:1932
 #, c-format
 msgid "Cannot copy between two different filesystems ('%s' and '%s')"
 msgstr "Impossible de copier d'un système de fichiers à l'autre ('%s' et '%s')"
 
-#: ../libsvn_fs_base/tree.c:2917 ../libsvn_fs_fs/tree.c:1963
+#: ../libsvn_fs_base/tree.c:2876 ../libsvn_fs_fs/tree.c:1938
 msgid "Copy from mutable tree not currently supported"
 msgstr "Copie à partir d'un arbre modifiable non supportée"
 
-#: ../libsvn_fs_base/tree.c:3412 ../libsvn_fs_fs/tree.c:2390
+#: ../libsvn_fs_base/tree.c:3371 ../libsvn_fs_fs/tree.c:2365
 #, c-format
 msgid ""
 "Base checksum mismatch on '%s':\n"
@@ -2469,14 +2469,14 @@ msgstr ""
 "   attendu :  %s\n"
 "    obtenu :  %s\n"
 
-#: ../libsvn_fs_base/tree.c:3667 ../libsvn_fs_fs/tree.c:2626
+#: ../libsvn_fs_base/tree.c:3626 ../libsvn_fs_fs/tree.c:2601
 msgid "Cannot compare file contents between two different filesystems"
 msgstr ""
 "Impossible de comparer le contenu de fichiers dans des système de fichiers "
 "différents"
 
-#: ../libsvn_fs_base/tree.c:3676 ../libsvn_fs_base/tree.c:3681
-#: ../libsvn_fs_fs/tree.c:2635 ../libsvn_fs_fs/tree.c:2640
+#: ../libsvn_fs_base/tree.c:3635 ../libsvn_fs_base/tree.c:3640
+#: ../libsvn_fs_fs/tree.c:2610 ../libsvn_fs_fs/tree.c:2615
 #: ../libsvn_ra/compat.c:677
 #, c-format
 msgid "'%s' is not a file"
@@ -2907,10 +2907,11 @@ msgstr "  - gère le schéma d'URL '%s'\n"
 msgid "Unrecognized URL scheme '%s'"
 msgstr "Schéma d'URL non reconnu '%s'"
 
-#: ../libsvn_ra/util.c:59
+#: ../libsvn_ra/util.c:60
 #, c-format
 msgid "Retrieval of mergeinfo unsupported by '%s'"
-msgstr "Récupération des 'mergeinfo' (informations de fusions) non supportée par '%s'"
+msgstr ""
+"Récupération des 'mergeinfo' (informations de fusions) non supportée par '%s'"
 
 #. ----------------------------------------------------------------
 #. ** The RA vtable routines **
@@ -3480,7 +3481,7 @@ msgid "%s request failed on '%s'"
 msgstr "Échec de la requête %s sur '%s'"
 
 #: ../libsvn_ra_serf/blame.c:464 ../libsvn_ra_serf/serf.c:512
-#: ../libsvn_ra_serf/update.c:2166 ../libsvn_ra_serf/util.c:1193
+#: ../libsvn_ra_serf/update.c:2166 ../libsvn_ra_serf/util.c:1194
 msgid ""
 "The OPTIONS response did not include the requested version-controlled-"
 "configuration value"
@@ -3619,11 +3620,11 @@ msgstr "Version %d du chargeur RA (accès dépôt) non supportée pour ra_serf"
 msgid "Error retrieving REPORT (%d)"
 msgstr "Erreur à la récupération du REPORT (%d)"
 
-#: ../libsvn_ra_serf/util.c:978
+#: ../libsvn_ra_serf/util.c:979
 msgid "Premature EOF seen from server"
 msgstr "Fin de fichier (EOF) prématurée rencontrée sur le serveur"
 
-#: ../libsvn_ra_serf/util.c:1028
+#: ../libsvn_ra_serf/util.c:1029
 msgid "Unspecified error message"
 msgstr "Message d'erreur non spécifié"
 
@@ -3723,8 +3724,8 @@ msgid "Dirlist element not a list"
 msgstr "L'élément 'dirlist' n'est pas une liste"
 
 #: ../libsvn_ra_svn/client.c:1084
-msgid "Merge info element is not a list"
-msgstr "L'élément d'information de fusion n'est pas une liste"
+msgid "Mergeinfo element is not a list"
+msgstr "L'élément Mergeinfo n'est pas une liste"
 
 #: ../libsvn_ra_svn/client.c:1275
 msgid "Log entry not a list"
@@ -4913,17 +4914,22 @@ msgid "Unable to parse unordered revision ranges '%s' and '%s'"
 msgstr ""
 "Impossible d'analyser les intervalles de révision non ordonnés '%s' et '%s'"
 
-#: ../libsvn_subr/mergeinfo.c:452
+#: ../libsvn_subr/mergeinfo.c:444
+#, c-format
+msgid "Mergeinfo for '%s' maps to an empty revision range"
+msgstr "Merginfo pour '%s' correspond à un intervalle de révision vide"
+
+#: ../libsvn_subr/mergeinfo.c:458
 #, c-format
 msgid "Invalid character '%c' found in revision list"
 msgstr "Caractère invalide '%c' dans une liste de révisions"
 
-#: ../libsvn_subr/mergeinfo.c:466
+#: ../libsvn_subr/mergeinfo.c:472
 #, c-format
 msgid "Unable to parse reversed revision range '%ld-%ld'"
 msgstr "Impossible d'analyser l'intervalle de révision inversé '%ld-%ld'"
 
-#: ../libsvn_subr/mergeinfo.c:471
+#: ../libsvn_subr/mergeinfo.c:477
 #, c-format
 msgid ""
 "Unable to parse revision range '%ld-%ld' with same start and end revisions"
@@ -4931,22 +4937,22 @@ msgstr ""
 "Impossible d'analyser l'étendue de révision '%ld-%ld' avec des révisions "
 "début et fin identiques"
 
-#: ../libsvn_subr/mergeinfo.c:511 ../libsvn_subr/mergeinfo.c:518
+#: ../libsvn_subr/mergeinfo.c:517 ../libsvn_subr/mergeinfo.c:524
 #, c-format
 msgid "Invalid character '%c' found in range list"
 msgstr "Caractère invalide '%c' dans une liste d'étendues de révisions"
 
-#: ../libsvn_subr/mergeinfo.c:525
+#: ../libsvn_subr/mergeinfo.c:531
 msgid "Range list parsing ended before hitting newline"
 msgstr ""
 "L'analyse syntaxique de la liste d'étendues de révisions a fini avant la fin "
 "de ligne"
 
-#: ../libsvn_subr/mergeinfo.c:544
+#: ../libsvn_subr/mergeinfo.c:550
 msgid "Pathname not terminated by ':'"
 msgstr "Chemin non terminé par ':'"
 
-#: ../libsvn_subr/mergeinfo.c:552
+#: ../libsvn_subr/mergeinfo.c:558
 #, c-format
 msgid "Could not find end of line in range list line in '%s'"
 msgstr "Impossible de trouver la fin de ligne dans la ligne de révision '%s'"
@@ -5152,57 +5158,57 @@ msgstr ""
 "Impossible de verrouiller l'exclusivité (mutex) sur la conversion de "
 "caractères"
 
-#: ../libsvn_subr/utf.c:213 ../libsvn_subr/utf.c:322
+#: ../libsvn_subr/utf.c:213 ../libsvn_subr/utf.c:323
 msgid "Can't unlock charset translation mutex"
 msgstr ""
 "Impossible de déverrouiller l'exclusivité (mutex) sur la conversion de "
 "caractères"
 
-#: ../libsvn_subr/utf.c:274
+#: ../libsvn_subr/utf.c:275
 #, c-format
 msgid "Can't create a character converter from native encoding to '%s'"
 msgstr ""
 "Impossible de créer un convertisseur de caractères de l'encodage natif vers "
 "'%s'"
 
-#: ../libsvn_subr/utf.c:278
+#: ../libsvn_subr/utf.c:279
 #, c-format
 msgid "Can't create a character converter from '%s' to native encoding"
 msgstr ""
 "Impossible de créer un convertisseur de caractères de '%s' vers l'encodage "
 "natif"
 
-#: ../libsvn_subr/utf.c:282
+#: ../libsvn_subr/utf.c:283
 #, c-format
 msgid "Can't create a character converter from '%s' to '%s'"
 msgstr "Impossible de créer un convertisseur de caractères de '%s' vers '%s'"
 
-#: ../libsvn_subr/utf.c:288
+#: ../libsvn_subr/utf.c:289
 #, c-format
 msgid "Can't create a character converter from '%i' to '%i'"
 msgstr "Impossible de créer un convertisseur de caractères de '%i' vers '%i'"
 
-#: ../libsvn_subr/utf.c:522
+#: ../libsvn_subr/utf.c:524
 #, c-format
 msgid "Can't convert string from native encoding to '%s':"
 msgstr "Impossible de convertir la chaîne de l'encodage natif vers '%s':"
 
-#: ../libsvn_subr/utf.c:526
+#: ../libsvn_subr/utf.c:528
 #, c-format
 msgid "Can't convert string from '%s' to native encoding:"
 msgstr "Impossible de convertir la chaîne de '%s' vers l'encodage natif:"
 
-#: ../libsvn_subr/utf.c:530
+#: ../libsvn_subr/utf.c:532
 #, c-format
 msgid "Can't convert string from '%s' to '%s':"
 msgstr "Impossible de convertir la chaîne de '%s' à '%s' :"
 
-#: ../libsvn_subr/utf.c:536
+#: ../libsvn_subr/utf.c:538
 #, c-format
 msgid "Can't convert string from CCSID '%i' to CCSID '%i'"
 msgstr "Impossible de convertir la chaîne de CCSID '%i' à CCSID '%i' :"
 
-#: ../libsvn_subr/utf.c:581
+#: ../libsvn_subr/utf.c:583
 #, c-format
 msgid ""
 "Safe data '%s' was followed by non-ASCII byte %d: unable to convert to/from "
@@ -5211,14 +5217,14 @@ msgstr ""
 "Les données sûres '%s' sont suivies de l'octet non ASCII %d: conversion de/"
 "vers UTF-8 impossible"
 
-#: ../libsvn_subr/utf.c:589
+#: ../libsvn_subr/utf.c:591
 #, c-format
 msgid ""
 "Non-ASCII character (code %d) detected, and unable to convert to/from UTF-8"
 msgstr ""
 "Caractère non ASCII détecté (code %d), conversion de/vers UTF-8 impossible"
 
-#: ../libsvn_subr/utf.c:631
+#: ../libsvn_subr/utf.c:633
 #, c-format
 msgid ""
 "Valid UTF-8 data\n"
@@ -5977,12 +5983,12 @@ msgstr "'%s' n'est ni un fichier ni un répertoire"
 msgid "File '%s' has binary mime type property"
 msgstr "Le fichier '%s' a un type mime binaire"
 
-#: ../libsvn_wc/props.c:3194 ../libsvn_wc/props.c:3261
+#: ../libsvn_wc/props.c:3199 ../libsvn_wc/props.c:3266
 #, c-format
 msgid "Error parsing %s property on '%s': '%s'"
 msgstr "Erreur d'analyse de la propriété %s sur '%s' : '%s'"
 
-#: ../libsvn_wc/props.c:3311
+#: ../libsvn_wc/props.c:3316
 #, c-format
 msgid ""
 "Invalid %s property on '%s': target '%s' is an absolute path or involves '..'"
@@ -7553,14 +7559,14 @@ msgstr ""
 "     de travail (auquel cas l'URL correspondante est utilisée). \n"
 "     Si non spécifiée, SOURCE sera identique à CHEMIN.\n"
 "     La SOURCE à la révision REV est comparée telle qu'elle existait entre\n"
-"     les révisions N et M pour chaque intervale de révision fourni.\n"
+"     les révisions N et M pour chaque intervalle de révision fourni.\n"
 "     Si REV n'est pas précisée, HEAD est utilisée. '-c M' est équivalent\n"
-"     à '-r <M-1>:M' et '-c -M' à l'inverse, '-r M:<M-1>'. Si aucun intervale\n"
-"     de révision n'est précisé, 1:HEAD est utilisé. Des intervales multiples\n"
+"     à '-r <M-1>:M' et '-c -M' à l'inverse, '-r M:<M-1>'. Si aucun intervalle\n"
+"     de révision n'est précisé, 1:HEAD est utilisé. Des intervalles multiples\n"
 "     avec '-c' et/ou '-r' peuvent être utilisé, et il est possible de mélanger\n"
-"     des intervales avant et arrière -- les intervales sont en interne compacté\n"
-"     en une représentation minimale avant d'être fusionnés, ce qui peut \n"
-"     résulter en une opération vide.\n"
+"     des intervalles avant et arrière -- les intervalles sont en interne \n"
+"     compacté en une représentation minimale avant d'être fusionnés, \n"
+"     ce qui peut résulter en une opération vide.\n"
 "\n"
 "  CHEMIN est l'élément à modifier dans la copie de travail. S'il est omis,\n"
 "  '.' est utilisé, sauf si les noms des sources ont un dernier composant\n"
@@ -10479,4 +10485,3 @@ msgstr "exporté%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' non versionné et non exporté\n"
-
