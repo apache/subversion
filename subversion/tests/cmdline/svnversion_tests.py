@@ -137,7 +137,7 @@ def svnversion_test(sbox):
 
   # Partial (sparse) checkout
   svntest.actions.run_and_verify_svnversion("Sparse checkout", A_A_path,
-                                            repo_url, [ "2S\n" ], [])
+                                            repo_url, [ "2SP\n" ], [])
 
 
 #----------------------------------------------------------------------
