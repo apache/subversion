@@ -4568,8 +4568,8 @@ ensure_wc_reflects_repository_subtree(svn_revnum_t *rev,
                                       apr_pool_t *pool)
 {
   svn_wc_revision_status_t *revstat;
-  SVN_ERR(&revstat, target_wcpath, NULL, FALSE, 
-          ctx->cancel_func, ctx->cancel_baton, pool);
+  SVN_ERR(svn_wc_revision_status(&revstat, target_wcpath, NULL, FALSE, 
+                                 ctx->cancel_func, ctx->cancel_baton, pool));
 
   /* XXXdsg bikeshedding: These shouldn't say "Cannot merge", but
      rather "Cannot full-tree-auto-merge", but we need a name for
@@ -4637,6 +4637,7 @@ svn_client_merge_whole_branch(const char *source,
   const char *yc_ancestor_path;
   svn_revnum_t yc_ancestor_revision;
   svn_opt_revision_t source_revision, target_revision;
+  int i;
   apr_hash_t *target_mergeinfo, *source_mergeinfo;
   apr_hash_t *deleted_mergeinfo, *added_mergeinfo;
 
@@ -4686,7 +4687,7 @@ svn_client_merge_whole_branch(const char *source,
      might need to be handled... */
   if (apr_hash_count(mergeinfo_by_path) != 1)
     {
-#ifdef 0  /* ### TODO: Loop over child paths... */
+#if 0  /* ### TODO: Loop over child paths... */
       apr_pool_t *iterpool = svn_pool_create(pool);
 
       for (hi = apr_hash_first(NULL, mergeinfo_by_path); hi;
@@ -4708,9 +4709,9 @@ svn_client_merge_whole_branch(const char *source,
   SVN_ERR(svn_client_url_from_path(&target_url, target_wcpath, pool));
 
   source_revision.kind = svn_opt_revision_number;
-  source_revision.value = youngest_source->rev2;
+  source_revision.value.number = rev;  /* XXXdlr: Optimize with older rev? */
   target_revision.kind = svn_opt_revision_number;
-  target_revision.value = rev;
+  target_revision.value.number = rev;
   SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_ancestor_path,
                                                    &yc_ancestor_revision,
                                                    URL,
@@ -4754,7 +4755,7 @@ svn_client_merge_whole_branch(const char *source,
   SVN_ERR(do_merge(new_merge_sources, target_wcpath, entry, adm_access,
                    TRUE, (strcmp(wc_repos_root, source_repos_root) == 0),
                    ignore_ancestry, force, dry_run, record_only,
-                   svn_depth_immediate, merge_options, ctx, pool));
+                   svn_depth_infinity, merge_options, ctx, pool));
 
   /* Shutdown the administrative session. */
   SVN_ERR(svn_wc_adm_close(adm_access));
