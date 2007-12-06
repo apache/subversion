@@ -624,9 +624,6 @@ do_initialize(svn_ra_session_t *to_session,
                        &(baton->source_callbacks), baton,
                        baton->config, pool));
 
-  SVN_ERR(check_if_session_is_at_repos_root(from_session, baton->from_url,
-                                            pool));
-
   SVN_ERR(svn_ra_change_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_URL,
                                  svn_string_create(baton->from_url, pool),
                                  pool));
@@ -1111,8 +1108,6 @@ open_source_session(svn_ra_session_t **from_session,
   /* Open the session to copy the revision data. */
   SVN_ERR(svn_ra_open2(from_session, from_url->data, callbacks, baton,
                        config, pool));
-  SVN_ERR(check_if_session_is_at_repos_root(*from_session, from_url->data,
-                                            pool));
 
   /* Ok, now sanity check the UUID of the source repository, it
      wouldn't be a good thing to sync from a different repository. */
