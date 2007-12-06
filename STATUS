@@ -54,17 +54,6 @@ Candidate changes:
     Votes:
       +1: vgeorgescu
 
-  * r22853
-    Bump copyright dates to 2007.
-    Justification:
-      It's still 2007.
-    Notes: The r19808 group below used to include r22853, in addition to some
-      license reorganization.  The latter is the reason behind jerenkrantz's
-      veto; this item just updates the copyright year.
-    Branch: 1.4.x-r22853
-    Votes:
-      +1: hwright
-
 Veto-blocked changes:
 
   * r21531, r21848, r21934
@@ -78,15 +67,6 @@ Veto-blocked changes:
       +1: dlr, djh, jerenkrantz
       -1: cmpilato (new features showing up in patch releases?  nuh-uh.)
 
-  * r19808-19810
-    Synchronise license text and then bump copyright dates to 2007.
-    Justification:
-      It's 2007.
-    Notes: We might want to wait until we actually merge something we
-      originally committed in 2007, possibly hold until 1.4.4?
-    Votes:
-      +1: malcolm, dlr, hwright
-
  * r24497, r24504
    Make Perl-based txdelta_window_handler actually usable by editors
    and related functions.
@@ -98,3 +78,13 @@ Veto-blocked changes:
      -1: djames (see http://svn.haxx.se/dev/archive-2007-05/0058.shtml)
 
 Approved changes:
+
+  * r19808-19810, r22853
+    Synchronise license text and then bump copyright dates to 2007.
+    Justification:
+      It's 2007.
+    Notes: We might want to wait until we actually merge something we
+      originally committed in 2007, possibly hold until 1.4.4?
+    Votes:
+      +1: malcolm, dlr, hwright
+
