@@ -4554,14 +4554,12 @@ svn_client_merge(const char *source1,
 }
 
 
-/* If TARGET_WCPATH reflects a single-revision, svn_depth_infinity,
-   pristine, unswitched working copy -- in other words, it must
-   reflect subtree found in a single revision -- set *REV to that
-   single (BASE) revision number.  Else, raise
+/* If TARGET_WCPATH does not reflect a single-revision,
+   svn_depth_infinity, pristine, unswitched working copy -- in other
+   words, a subtree found in a single revision -- raise
    SVN_ERR_CLIENT_NOT_READY_TO_MERGE. */
 static svn_error_t *
-ensure_wc_reflects_repository_subtree(svn_revnum_t *rev,
-                                      const char *target_wcpath,
+ensure_wc_reflects_repository_subtree(const char *target_wcpath,
                                       svn_client_ctx_t *ctx,
                                       apr_pool_t *pool)
 {
@@ -4600,7 +4598,6 @@ ensure_wc_reflects_repository_subtree(svn_revnum_t *rev,
                             _("Cannot merge into mixed-revision working copy; "
                               "try updating first"));
 
-  *rev = wc_stat->min_rev;
   return SVN_NO_ERROR;
 }
 
@@ -4622,9 +4619,8 @@ svn_client_merge_whole_branch(const char *source,
   const char *URL;
   apr_array_header_t *new_merge_sources;
   const char *wc_repos_root, *source_repos_root;
-  svn_opt_revision_t working_rev;
+  svn_opt_revision_t working_revision;
   svn_ra_session_t *ra_session;
-  svn_revnum_t rev;
   const char *source_repos_rel_path, *target_repos_rel_path;
   apr_array_header_t *source_repos_rel_path_as_array
     = apr_array_make(pool, 1, sizeof(const char *));
@@ -4632,7 +4628,7 @@ svn_client_merge_whole_branch(const char *source,
   apr_array_header_t *segments;
   const char *target_url;
   const char *yc_ancestor_path;
-  svn_revnum_t yc_ancestor_revision;
+  svn_revnum_t rev, yc_ancestor_rev;
   svn_opt_revision_t source_revision, target_revision;
   int i;
   apr_hash_t *target_mergeinfo, *source_mergeinfo;
@@ -4656,9 +4652,9 @@ svn_client_merge_whole_branch(const char *source,
                              svn_path_local_style(source, pool));
 
   /* Determine the working copy target's repository root URL. */
-  working_rev.kind = svn_opt_revision_working;
+  working_revision.kind = svn_opt_revision_working;
   SVN_ERR(svn_client__get_repos_root(&wc_repos_root, target_wcpath,
-                                     &working_rev, adm_access, ctx, pool));
+                                     &working_revision, adm_access, ctx, pool));
 
   /* Open an RA session to our source URL, and determine its root URL. */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, wc_repos_root,
@@ -4667,8 +4663,12 @@ svn_client_merge_whole_branch(const char *source,
   SVN_ERR(svn_ra_get_repos_root(ra_session, &source_repos_root, pool));
   /* XXXdsg: should we require source_repos_root equals wc_repos_root? */
 
-  SVN_ERR(ensure_wc_reflects_repository_subtree(&rev, target_wcpath, ctx,
-                                                pool));
+  SVN_ERR(ensure_wc_reflects_repository_subtree(target_wcpath, ctx, pool));
+
+  /* As the WC tree is "pure", we'll use its "last committed
+     revision", since that's what the repository sub-tree is required
+     to be up to date with (with regard to the WC). */
+  rev = entry->cmt_rev;
 
   SVN_ERR(svn_client__path_relative_to_root(&source_repos_rel_path, URL,
                                             NULL, FALSE, ra_session, NULL,
@@ -4683,9 +4683,13 @@ svn_client_merge_whole_branch(const char *source,
                                source_repos_rel_path_as_array, rev,
                                svn_mergeinfo_inherited, TRUE, pool));
 
-  /* XXXdsg: actually the 0 case (no mergeinfo at all on the branch)
-     might need to be handled... */
-  if (apr_hash_count(mergeinfo_by_path) != 1)
+  if (mergeinfo_by_path == NULL)
+    {
+      /* ### FIXME: Handle no/inaccessible mergeinfo on the merge
+         ### source by performing an alternate style of merge. */
+      abort();
+    }
+  else if (apr_hash_count(mergeinfo_by_path) != 1)
     {
 #if 0  /* ### TODO: Loop over child paths... */
       apr_pool_t *iterpool = svn_pool_create(pool);
@@ -4714,7 +4718,7 @@ svn_client_merge_whole_branch(const char *source,
   target_revision.kind = svn_opt_revision_number;
   target_revision.value.number = rev;
   SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_ancestor_path,
-                                                   &yc_ancestor_revision,
+                                                   &yc_ancestor_rev,
                                                    URL,
                                                    &source_revision,
                                                    target_url,
@@ -4723,7 +4727,7 @@ svn_client_merge_whole_branch(const char *source,
 
   SVN_ERR(svn_client__repos_location_segments(&segments, ra_session,
                                               target_repos_rel_path, rev,
-                                              rev, yc_ancestor_revision,
+                                              rev, yc_ancestor_rev,
                                               ctx, pool));
 
   source_mergeinfo = apr_hash_get(mergeinfo_by_path, source_repos_rel_path,
