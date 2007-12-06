@@ -1110,7 +1110,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
       is_operative_notification = TRUE;
     }
 
-  /* If our merge sources are related... */
+  /* If our merge sources are ancestors of one another... */
   if (notify_b->merge_b->sources_related)
     {
       notify_b->nbr_notifications++;
@@ -1172,9 +1172,10 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
                        APR_HASH_KEY_STRING, skipped_path);
         }
     }
-    /* Otherwise, our merge sources aren't related. */
+  /* Otherwise, our merge sources aren't ancestors of one another. */
   else if (!(notify_b->is_single_file_merge)
-           && notify_b->nbr_operative_notifications == 1)
+           && notify_b->nbr_operative_notifications == 1
+           && is_operative_notification)
     {
       svn_wc_notify_t *notify_merge_begin;
       notify_merge_begin = svn_wc_create_notify(notify_b->merge_b->target,
