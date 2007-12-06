@@ -65,6 +65,9 @@ typedef enum {
     NEED_PROP_NAME,
 } report_state_e;
 
+/* Forward-declare our report context. */
+typedef struct report_context_t report_context_t;
+
 /*
  * This structure represents the information for a directory.
  */
@@ -77,6 +80,9 @@ typedef struct report_dir_t
   struct report_dir_t *parent_dir;
 
   apr_pool_t *pool;
+
+  /* Pointer back to our original report context. */
+  report_context_t *report_context;
 
   /* Our name sans any parents. */
   const char *base_name;
@@ -260,7 +266,7 @@ typedef struct report_fetch_t {
 /*
  * The master structure for a REPORT request and response.
  */
-typedef struct {
+struct report_context_t {
   apr_pool_t *pool;
 
   svn_ra_serf__session_t *sess;
@@ -317,7 +323,7 @@ typedef struct {
   /* Are we done parsing the REPORT response? */
   svn_boolean_t done;
 
-} report_context_t;
+};
 
 
 /** Report state management helper **/
@@ -363,6 +369,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
       /* Point to the update_editor */
       new_info->dir->update_editor = ctx->update_editor;
       new_info->dir->update_baton = ctx->update_baton;
+      new_info->dir->report_context = ctx;
 
       if (info)
         {
@@ -481,6 +488,15 @@ open_dir(report_dir_t *dir)
   if (dir->base_name[0] == '\0')
     {
       apr_pool_create(&dir->dir_baton_pool, dir->pool);
+
+      if (dir->report_context->destination &&
+          dir->report_context->sess->wc_callbacks->invalidate_wc_props)
+        {
+          SVN_ERR(dir->report_context->sess->wc_callbacks->invalidate_wc_props(
+                      dir->report_context->sess->wc_callback_baton,
+                      dir->report_context->update_target,
+                      SVN_RA_SERF__WC_CHECKED_IN_URL, dir->pool));
+        }
 
       SVN_ERR(dir->update_editor->open_root(dir->update_baton, dir->base_rev,
                                             dir->dir_baton_pool,
