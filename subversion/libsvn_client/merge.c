@@ -1640,7 +1640,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
 
   /* Take advantage of the depth first ordering,
      i.e first(0th) item is target.*/
-  if (children_with_mergeinfo->nelts)
+  if (children_with_mergeinfo->nelts > 1)
     {
       svn_client__merge_path_t *child =
         APR_ARRAY_IDX(children_with_mergeinfo, 0, svn_client__merge_path_t *);
@@ -4555,7 +4555,7 @@ svn_client_merge3(const char *source1,
                                           ranges, ra_session2, ctx, pool));
 
           apr_array_cat(merge_sources, more_sources);
-          /* ### Do we want to set ignore_ancestry = FALSE here? */
+          ignore_ancestry = TRUE; /* Scenic route -- don't honor mergeinfo */
         }
     }
   else

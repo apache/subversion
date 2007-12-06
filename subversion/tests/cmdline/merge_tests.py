@@ -1600,7 +1600,7 @@ def three_way_merge_add_of_existing_binary_file(sbox):
   # And after the merge, the status should not report any differences.
 
   expected_output = wc.State(short_wc, {
-    "A"       : Item(status=" G"),
+    "A" : Item(status=" G"),
     "A/theta" : Item(status="A "),
     })
 
@@ -1608,6 +1608,7 @@ def three_way_merge_add_of_existing_binary_file(sbox):
   # need a sub-tree of it rather than straight copy.
   expected_disk = svntest.main.greek_state.subtree("A")
   expected_disk.add({
+    "" : Item(props={SVN_PROP_MERGE_INFO : '/A:2-3'}),
     "theta" : Item(theta_contents,
                    props={"svn:mime-type" : "application/octet-stream"}),
     })
@@ -1615,6 +1616,7 @@ def three_way_merge_add_of_existing_binary_file(sbox):
   expected_status.add({
     "A/theta" : Item(status="  ", wc_rev=3),
     })
+  expected_status.tweak("A", status=" M")
   expected_status.remove("")  # top-level of the WC
   expected_status.remove("iota")
   expected_skip = wc.State("", { })
@@ -2322,8 +2324,9 @@ def merge_binary_with_common_ancestry(sbox):
   theta_J_url = sbox.repo_url + '/J/theta'
   theta_L_url = sbox.repo_url + '/L/theta'
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output([[3,6],[7]],
+                                     expected_merge_output([[7,3],[3,6],[7]],
                                                            ['U    theta\n',
+                                                            'U    theta\n',
                                                             'G    theta\n']),
                                      [],
                                      'merge', theta_J_url, theta_L_url)
