@@ -4616,8 +4616,8 @@ svn_client_merge_whole_branch(const char *source,
 {
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
-  const char *URL;
-  apr_array_header_t *new_merge_sources;
+  apr_array_header_t *merge_sources;
+  merge_source_t merge_source;
   const char *wc_repos_root, *source_repos_root;
   svn_opt_revision_t working_revision;
   svn_ra_session_t *ra_session;
@@ -4626,9 +4626,9 @@ svn_client_merge_whole_branch(const char *source,
     = apr_array_make(pool, 1, sizeof(const char *));
   apr_hash_t *mergeinfo_by_path;
   apr_array_header_t *segments;
-  const char *target_url;
+  apr_array_header_t *rangelist;
   const char *yc_ancestor_path;
-  svn_revnum_t rev, yc_ancestor_rev;
+  svn_revnum_t yc_ancestor_rev;
   svn_opt_revision_t source_revision, target_revision;
   int i;
   apr_hash_t *target_mergeinfo, *source_mergeinfo;
@@ -4645,8 +4645,8 @@ svn_client_merge_whole_branch(const char *source,
                                   FALSE, pool));
 
   /* Make sure we're dealing with a real URL. */
-  SVN_ERR(svn_client_url_from_path(&URL, source, pool));
-  if (! URL)
+  SVN_ERR(svn_client_url_from_path(&merge_source.url2, source, pool));
+  if (! merge_source.url2)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("'%s' has no URL"),
                              svn_path_local_style(source, pool));
@@ -4665,14 +4665,15 @@ svn_client_merge_whole_branch(const char *source,
 
   SVN_ERR(ensure_wc_reflects_repository_subtree(target_wcpath, ctx, pool));
 
-  /* As the WC tree is "pure", we'll use its "last committed
-     revision", since that's what the repository sub-tree is required
-     to be up to date with (with regard to the WC). */
-  rev = entry->cmt_rev;
+  /* As the WC tree is "pure", use its "last committed revision" as
+     the default revision for the left side of our merge, since that's
+     what the repository sub-tree is required to be up to date with
+     (with regard to the WC). */
+  merge_source.rev1 = entry->cmt_rev;
 
-  SVN_ERR(svn_client__path_relative_to_root(&source_repos_rel_path, URL,
-                                            NULL, FALSE, ra_session, NULL,
-                                            pool));
+  SVN_ERR(svn_client__path_relative_to_root(&source_repos_rel_path,
+                                            merge_source.url2, NULL, FALSE,
+                                            ra_session, NULL, pool));
   SVN_ERR(svn_client__path_relative_to_root(&target_repos_rel_path, 
                                             target_wcpath, wc_repos_root,
                                             FALSE, ra_session, NULL, pool));
@@ -4680,7 +4681,7 @@ svn_client_merge_whole_branch(const char *source,
     = source_repos_rel_path;
 
   SVN_ERR(svn_ra_get_mergeinfo(ra_session, &mergeinfo_by_path,
-                               source_repos_rel_path_as_array, rev,
+                               source_repos_rel_path_as_array, entry->cmt_rev,
                                svn_mergeinfo_inherited, TRUE, pool));
 
   if (mergeinfo_by_path == NULL)
@@ -4708,30 +4709,49 @@ svn_client_merge_whole_branch(const char *source,
 #endif    /* ...but for now... */
       return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                                _("'%s' not ready for merge to '%s'"),
-                               URL, target_wcpath);
+                               merge_source.url2, target_wcpath);
     }
 
-  SVN_ERR(svn_client_url_from_path(&target_url, target_wcpath, pool));
+  source_mergeinfo = apr_hash_get(mergeinfo_by_path, source_repos_rel_path,
+                                  APR_HASH_KEY_STRING);
+
+  SVN_ERR(svn_client_url_from_path(&merge_source.url1, target_wcpath, pool));
+
+  /* Calculate the most recent revision merged into source from target
+     to determine what revision the merge source is up to date with
+     (with respect to the merge target). */
+  /* ### Handle renamed merge targets. */
+  rangelist =
+    apr_hash_get(source_mergeinfo, target_repos_rel_path, APR_HASH_KEY_STRING);
+  if (! apr_is_empty_array(rangelist))
+    {
+      svn_merge_range_t *last_range =
+        APR_ARRAY_IDX(rangelist, rangelist->nelts - 1, svn_merge_range_t *);
+      merge_source.rev1 = last_range->end;
+    }
+
+  SVN_ERR(svn_client__get_revision_number(&merge_source.rev2, NULL,
+                                          ra_session, peg_revision,
+                                          source_repos_rel_path, pool));
 
   source_revision.kind = svn_opt_revision_number;
-  source_revision.value.number = rev;  /* XXXdlr: Optimize with older rev? */
+  source_revision.value.number = merge_source.rev2;
   target_revision.kind = svn_opt_revision_number;
-  target_revision.value.number = rev;
+  target_revision.value.number = merge_source.rev1;
   SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_ancestor_path,
                                                    &yc_ancestor_rev,
-                                                   URL,
+                                                   merge_source.url2,
                                                    &source_revision,
-                                                   target_url,
+                                                   merge_source.url1,
                                                    &target_revision,
                                                    ctx, pool));
 
   SVN_ERR(svn_client__repos_location_segments(&segments, ra_session,
-                                              target_repos_rel_path, rev,
-                                              rev, yc_ancestor_rev,
-                                              ctx, pool));
+                                              target_repos_rel_path,
+                                              merge_source.rev1,
+                                              merge_source.rev1,
+                                              yc_ancestor_rev, ctx, pool));
 
-  source_mergeinfo = apr_hash_get(mergeinfo_by_path, source_repos_rel_path,
-                                  APR_HASH_KEY_STRING);
   target_mergeinfo = apr_hash_make(pool);
   for (i = 0; i < segments->nelts; i++)
     {
@@ -4775,12 +4795,15 @@ svn_client_merge_whole_branch(const char *source,
   if (apr_hash_count(deleted_mergeinfo) != 0)
     return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                             "not all the revs are there bla bla"); /*XXXdsg*/
+
   /* Perform a whole-branch merge with a single editor drive. */
-  new_merge_sources = apr_array_make(pool, 1, sizeof(merge_source_t *));
-  /* XXXdsg: actually make and push a merge source */
+  merge_sources = apr_array_make(pool, 1, sizeof(merge_source_t *));
+  /* Left side: trunk@youngest-trunk-rev-merged-to-branch-at-specified-peg-rev */
+  /* Right side: branch@specified-peg-revision */
+  APR_ARRAY_PUSH(merge_sources, merge_source_t *) = &merge_source;
 
   /* Do the real merge! */
-  SVN_ERR(do_merge(new_merge_sources, target_wcpath, entry, adm_access,
+  SVN_ERR(do_merge(merge_sources, target_wcpath, entry, adm_access,
                    TRUE, (strcmp(wc_repos_root, source_repos_root) == 0),
                    ignore_ancestry, force, dry_run, record_only,
                    svn_depth_infinity, merge_options, ctx, pool));
