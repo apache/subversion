@@ -568,7 +568,7 @@ svn_diff_file_options_parse(svn_diff_file_options_t *options,
   const char **argv = apr_palloc(pool, sizeof(char*) * (args->nelts + 2));
 
   argv[0] = "";
-  memcpy(argv + 1, args->elts, sizeof(char*) * args->nelts);
+  memcpy((void *) (argv + 1), args->elts, sizeof(char*) * args->nelts);
   argv[args->nelts + 1] = NULL;
 
   apr_getopt_init(&os, pool, args->nelts + 1, argv);

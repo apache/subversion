@@ -100,7 +100,7 @@ typedef svn_error_t *(*svn_ra_push_wc_prop_func_t)(void *baton,
                                                    apr_pool_t *pool);
 
 /** This is a function type which allows the RA layer to invalidate
- * (i.e., remove) wcprops.  See the documentation for
+ * (i.e., remove) wcprops recursively.  See the documentation for
  * @c svn_ra_get_wc_prop_func_t for @a baton, @a path, and @a name.
  *
  * Unlike @c svn_ra_push_wc_prop_func_t, this has immediate effect.  If

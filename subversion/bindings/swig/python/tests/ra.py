@@ -241,6 +241,10 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
         3: '/trunk/README.txt',
         4: '/trunk/README.txt'})
 
+  def test_has_capability(self):
+      self.assertEqual(True, ra.has_capability(self.ra_ctx, 
+                             ra.SVN_RA_CAPABILITY_DEPTH))
+
   def test_get_file_revs(self):
     def rev_handler(path, rev, rev_props, prop_diffs, pool):
         self.assert_(rev == 2 or rev == 3)
