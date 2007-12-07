@@ -108,14 +108,17 @@ typedef svn_error_t *(*svn_ra_svn_command_handler)(svn_ra_svn_conn_t *conn,
                                                    void *baton);
 
 /** Command table, used by svn_ra_svn_handle_commands().
- *
- * If @c terminate is set, command-handling will cease after command is
- * processed.
  */
 typedef struct svn_ra_svn_cmd_entry_t
 {
+  /** Name of the command */
   const char *cmdname;
+
+  /** Handler for the command */
   svn_ra_svn_command_handler handler;
+
+  /** Termination flag.  If set, command-handling will cease after
+   * command is processed. */
   svn_boolean_t terminate;
 } svn_ra_svn_cmd_entry_t;
 

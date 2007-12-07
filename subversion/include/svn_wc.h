@@ -575,10 +575,13 @@ svn_wc_external_item2_dup(const svn_wc_external_item2_t *item,
  */
 typedef struct svn_wc_external_item_t
 {
+  /** Same as @c svn_wc_external_item2_t.target_dir */
   const char *target_dir;
 
+  /** Same as @c svn_wc_external_item2_t.url */
   const char *url;
 
+  /** Same as @c svn_wc_external_item2_t.revision */
   svn_opt_revision_t revision;
 
 } svn_wc_external_item_t;
@@ -1070,8 +1073,10 @@ typedef enum svn_wc_conflict_kind_t
  */
 typedef struct svn_wc_conflict_description_t
 {
-  /** The path that is being operated on and its node type */
+  /** The path that is being operated on */
   const char *path;
+
+  /** The node type of the path being operated on */
   svn_node_kind_t node_kind;
 
   /** What sort of conflict are we describing? */
@@ -1084,6 +1089,8 @@ typedef struct svn_wc_conflict_description_t
    *   - Whether svn thinks the object is a binary file.
    *   - If available (non-NULL), the svn:mime-type property of the path */
   svn_boolean_t is_binary;
+
+  /** mime-type of the object */
   const char *mime_type;
 
   /** If not NULL, an open working copy access baton to either the
@@ -1091,10 +1098,10 @@ typedef struct svn_wc_conflict_description_t
    *  directory (if @c path is a file.) */
   svn_wc_adm_access_t *access;
 
-  /* The action being attempted on @c path. */
+  /** The action being attempted on @c path. */
   svn_wc_conflict_action_t action;
 
-  /* The reason for the conflict. */
+  /** The reason for the conflict. */
   svn_wc_conflict_reason_t reason;
 
   /** If this is text-conflict and involves the merging of two files
@@ -1113,9 +1120,15 @@ typedef struct svn_wc_conflict_description_t
    * always be merged.)
    */
   const char *base_file;     /* common ancestor of the two files being merged */
-  const char *their_file;    /* their version of the file */
-  const char *my_file;       /* my locally-edited version of the file */
-  const char *merged_file;   /* merged version; may contain conflict markers */
+
+  /** their version of the file */
+  const char *their_file;
+
+  /** my locally-edited version of the file */
+  const char *my_file;
+
+  /** merged version; may contain conflict markers */
+  const char *merged_file;
 
 } svn_wc_conflict_description_t;
 
@@ -1154,14 +1167,14 @@ typedef enum svn_wc_conflict_choice_t
  */
 typedef struct svn_wc_conflict_result_t
 {
-  /* A choice to either delay the conflict resolution or select a
-     particular file to resolve the conflict. */
+  /** A choice to either delay the conflict resolution or select a
+      particular file to resolve the conflict. */
   svn_wc_conflict_choice_t choice;
 
-  /* If not NULL, this is a path to a file which contains the client's
-     (or more likely, the user's) merging of the three values in
-     conflict.  libsvn_wc accepts this file if (and only if) @c choice
-     is set to @c svn_wc_conflict_choose_merged.*/
+  /** If not NULL, this is a path to a file which contains the client's
+      (or more likely, the user's) merging of the three values in
+      conflict.  libsvn_wc accepts this file if (and only if) @c choice
+      is set to @c svn_wc_conflict_choose_merged.*/
   const char *merged_file;
 
 } svn_wc_conflict_result_t;
