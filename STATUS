@@ -85,5 +85,6 @@ Approved changes:
       User reported problem, small fix, includes test.
       http://tortoisesvn.tigris.org/servlets/ReadMsg?list=users&msgNo=8535
       http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=133402
+    Branch: 1.4.x-r28331
     Votes:
       +1: dlr, dionisos, hwright
