@@ -552,6 +552,11 @@ def inappropriate_props(sbox):
                                      'svn:externals',
                                      'foo http://host.com/repos', iota_path)
 
+  svntest.actions.run_and_verify_svn('Invalid svn:eol-style', None,
+                                     svntest.SVNAnyOutput, 'propset',
+                                     'svn:eol-style', 'invalid value',
+                                     os.path.join(A_path, 'mu'))
+
   svntest.actions.run_and_verify_svn('Illegal target', None,
                                      svntest.SVNAnyOutput, 'propset',
                                      'svn:author', 'socrates', iota_path)
