@@ -2747,27 +2747,28 @@ get_mergeinfo_walk_cb(const char *path,
          the merge source. */
       if (propval && !path_is_merge_target)
         {
-          const char* path_relative_to_merge_target;
-          int merge_target_len;
           svn_stringbuf_t *merge_src_child_path =
             svn_stringbuf_create(wb->merge_src_canon_path, pool);
 
-          /* Note: Merge target is an empty string for '' and explicit '.'.
-             Such relative merge targets makes path entries to be relative
-             to current directory and hence for merge src '/trunk'
-             "path of value 'subdir'" can cause merge_src_child_path to
-             '/trunksubdir' instead of '/trunk/subdir'.
-             For such merge targets insert '/' between merge_src_canon_path
-             and path_relative_to_merge_target. */
-          merge_target_len = strlen(wb->merge_target_path);
-          /* Need to append '/' only for subtrees. */
-          if (!merge_target_len && strcmp(path, wb->merge_target_path) != 0)
-            svn_stringbuf_appendbytes(merge_src_child_path, "/", 1);
-          path_relative_to_merge_target = path + merge_target_len;
-          svn_stringbuf_appendbytes(merge_src_child_path,
-                                    path_relative_to_merge_target,
-                                    strlen(path_relative_to_merge_target));
+          /* When the merge target is '' or '.' WB->MERGE_TARGET_PATH is
+             an empty string and PATH will always be relative.  In this case
+             we can safely combine WB->MERGE_SRC_CANON_PATH and PATH with
+             svn_path_add_compent() which will supply the missing '/' separator.
 
+             Otherwise WB->MERGE_TARGET_PATH is relative or absolute and
+             we remove the common root component between WB->MERGE_TARGET_PATH
+             and PATH from PATH before combining it with
+             WB->MERGE_SRC_CANON_PATH.  The +1 is required because if we are
+             here that means WB->MERGE_TARGET_PATH is a proper ancestor of
+             PATH and we must skip the path separator -- svn_path_add_compent()
+             will add missing separators, but won't remove existing ones -- to
+             avoid a merge_src_child_path with "//" in it. */
+          if (strlen(wb->merge_target_path))
+            svn_path_add_component(merge_src_child_path,
+                                   path + strlen(wb->merge_target_path) + 1);
+          else
+            svn_path_add_component(merge_src_child_path,
+                                   path);
           SVN_ERR(svn_mergeinfo_parse(&mergehash, propval->data, pool));
           if (apr_hash_get(mergehash, merge_src_child_path->data,
                            APR_HASH_KEY_STRING))
