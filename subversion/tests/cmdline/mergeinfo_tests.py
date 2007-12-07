@@ -110,7 +110,7 @@ def explicit_mergeinfo_source(sbox):
 test_list = [ None,
               no_mergeinfo,
               mergeinfo,
-              XFail(explicit_mergeinfo_source),
+              explicit_mergeinfo_source,
              ]
 
 if __name__ == '__main__':
