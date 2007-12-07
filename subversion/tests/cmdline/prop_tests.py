@@ -553,6 +553,11 @@ def inappropriate_props(sbox):
                                      svntest.verify.AnyOutput, 'propset',
                                      'svn:eol-style', 'native', A_path)
 
+  svntest.actions.run_and_verify_svn('Invalid svn:eol-style', None,
+                                     svntest.verify.AnyOutput, 'propset',
+                                     'svn:eol-style', 'invalid value',
+                                     os.path.join(A_path, 'mu'))
+
   svntest.actions.run_and_verify_svn('Illegal target', None,
                                      svntest.verify.AnyOutput, 'propset',
                                      'svn:mime-type', 'image/png', A_path)
