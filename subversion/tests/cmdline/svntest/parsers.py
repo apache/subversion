@@ -23,12 +23,12 @@ class MergeinfoReportParser:
   # Parse output of the form:
   #
   # Path: .
-  #  Source path: /branches/sqlite-node-origins
-  #    Merged ranges: r27840:27889
-  #    Eligible ranges: (source no longer available in HEAD)
-  #  Source path: /branches/mergeinfoless-copies
-  #    Merged ranges: r27770:28001
-  #    Eligible ranges: (source no longer available in HEAD)
+  #   Source path: /branches/sqlite-node-origins
+  #     Merged ranges: r27840:27889
+  #     Eligible ranges: (source no longer available in HEAD)
+  #   Source path: /branches/mergeinfoless-copies
+  #     Merged ranges: r27770:28001
+  #     Eligible ranges: (source no longer available in HEAD)
 
   STATE_INITIAL = 0
   STATE_PATH = 1
