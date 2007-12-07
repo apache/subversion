@@ -87,7 +87,8 @@ typedef enum {
   svn_cl__with_revprop_opt,
   svn_cl__with_all_revprops_opt,
   svn_cl__parents_opt,
-  svn_cl__accept_opt
+  svn_cl__accept_opt,
+  svn_cl__from_source_opt
 } svn_cl__longopt_t;
 
 
@@ -211,8 +212,8 @@ typedef struct svn_cl__opt_state_t
   apr_hash_t *revprop_table;     /* table of revision properties to get/set */
   svn_boolean_t parents;         /* create intermediate directories */
   svn_boolean_t use_merge_history; /* use/display extra merge information */
-  svn_cl__accept_t accept_which;     /* how to handle conflicts */
-
+  svn_cl__accept_t accept_which; /* how to handle conflicts */
+  const char *from_source;       /* merge source to query (svn mergeinfo) */
 } svn_cl__opt_state_t;
 
 

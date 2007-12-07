@@ -1144,13 +1144,16 @@ make_replay_baton(svn_ra_session_t *from_session, svn_ra_session_t *to_session,
 }
 
 /* Filter out svn:date and svn:author properties. */
-static svn_boolean_t filter_exclude_date_author_sync(const char *key)
+static svn_boolean_t filter_exclude_date_author_log_sync(const char *key)
 {
   if (strncmp(key, SVN_PROP_REVISION_AUTHOR, 
               sizeof(SVN_PROP_REVISION_AUTHOR) - 1) == 0)
     return TRUE;
   else if (strncmp(key, SVN_PROP_REVISION_DATE, 
                    sizeof(SVN_PROP_REVISION_DATE) - 1) == 0)
+    return TRUE;
+  else if (strncmp(key, SVN_PROP_REVISION_LOG, 
+                   sizeof(SVN_PROP_REVISION_LOG) - 1) == 0)
     return TRUE;
   else if (strncmp(key, SVNSYNC_PROP_PREFIX,
                    sizeof(SVNSYNC_PROP_PREFIX) - 1) == 0)
@@ -1160,9 +1163,9 @@ static svn_boolean_t filter_exclude_date_author_sync(const char *key)
 }
 
 /* Filter out all properties except svn:date and svn:author */
-static svn_boolean_t filter_include_date_author_sync(const char *key)
+static svn_boolean_t filter_include_date_author_log_sync(const char *key)
 {
-  return ! filter_exclude_date_author_sync(key);
+  return ! filter_exclude_date_author_log_sync(key);
 }
 
 /* Callback function for svn_ra_replay_range, invoked when starting to parse
@@ -1207,7 +1210,7 @@ replay_rev_started(svn_revnum_t revision,
      editor anyway. 
    */
   filtered = filter_props(&filtered_count, rev_props,
-                          filter_exclude_date_author_sync,
+                          filter_exclude_date_author_log_sync,
                           pool);
   /* svn_ra_get_commit_editor3 requires the log message to be set. It's possible
      that we didn't receive 'svn:log' here, so we have to set it to at least
@@ -1272,7 +1275,7 @@ replay_rev_finished(svn_revnum_t revision,
   /* Ok, we're done with the data, now we just need to copy the remaining 
      'svn:date' and 'svn:author' revprops and we're all set. */
   filtered = filter_props(&filtered_count, rev_props, 
-                          filter_include_date_author_sync, 
+                          filter_include_date_author_log_sync, 
                           pool);
   SVN_ERR(write_revprops(&filtered_count, rb->to_session, revision, filtered, 
                          pool));

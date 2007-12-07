@@ -29,6 +29,7 @@ XFail = svntest.testcase.XFail
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 
+from svntest.main import SVN_PROP_MERGE_INFO
 from svntest.main import server_has_mergeinfo
 
 def adjust_error_for_server_version(expected_err):
@@ -67,6 +68,39 @@ def mergeinfo(sbox):
                                            {wc_dir : {"/" : ("r0:1", None)}},
                                            wc_dir)
 
+def explicit_mergeinfo_source(sbox):
+  "'mergeinfo' with source selection"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
+  H2_path = os.path.join(wc_dir, 'A', 'D', 'H2')
+  B_url = sbox.repo_url + '/A/B'
+  G_url = sbox.repo_url + '/A/D/G'
+  H2_url = sbox.repo_url + '/A/D/H2'
+  
+  # Make a copy, and dummy up some mergeinfo.
+  mergeinfo = '/A/B:1\n/A/D/G:1\n'
+  svntest.main.run_svn(None, "pset", SVN_PROP_MERGE_INFO, mergeinfo, H_path)
+  svntest.main.run_svn(None, "cp", H_path, H2_path)
+  svntest.main.run_svn(None, "ci", "-m", "r2", wc_dir)
+
+  # Check using --from-source on each of our recorded merge sources.
+  svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
+                                           {H_path : {'/A/B' : ("r0:1",
+                                                                "r1:2")}},
+                                           H_path, '--from-source', B_url)
+  svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
+                                           {H_path : {'/A/D/G' : ("r0:1",
+                                                                  "r1:2")}},
+                                           H_path, '--from-source', G_url)
+
+  # Now check on a source we haven't "merged" from.
+  svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
+                                           {H_path : {'/A/D/H2' : (None,
+                                                                   "r1:2")}},
+                                           H_path, '--from-source', H2_url)
+  
 
 ########################################################################
 # Run the tests
@@ -76,6 +110,7 @@ def mergeinfo(sbox):
 test_list = [ None,
               no_mergeinfo,
               mergeinfo,
+              explicit_mergeinfo_source,
              ]
 
 if __name__ == '__main__':

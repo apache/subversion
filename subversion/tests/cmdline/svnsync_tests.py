@@ -106,7 +106,7 @@ def run_test(sbox, dump_file_name):
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
-  return
+
   run_sync(dest_sbox.repo_url)
 
   # Remove some SVNSync-specific housekeeping properties from the

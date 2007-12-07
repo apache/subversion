@@ -360,7 +360,10 @@ enum svn_opt_revision_kind {
  */
 typedef union svn_opt_revision_value_t
 {
+  /** The revision number */
   svn_revnum_t number;
+
+  /** the date of the revision */
   apr_time_t date;
 } svn_opt_revision_value_t;
 
@@ -374,7 +377,10 @@ typedef struct svn_opt_revision_t
 /** A revision range, specified in one of @c svn_opt_revision_kind ways. */
 typedef struct svn_opt_revision_range_t
 {
+  /** The first revision in the range */
   svn_opt_revision_t start;
+
+  /** The last revision in the range */
   svn_opt_revision_t end;
 } svn_opt_revision_range_t;
 
