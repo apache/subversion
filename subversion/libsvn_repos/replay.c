@@ -712,6 +712,8 @@ svn_repos_replay2(svn_fs_root_t *root,
             }
           /* ...unless this was an Add of one of the parent directories of 
              base_path. */
+          /* TODO: we also need to handle Delete's and PropMods on base 
+             directories */
           if (is_within_base_path(base_path, path, keylen) &&
               change && change->change_kind == svn_fs_path_change_add)
             {
