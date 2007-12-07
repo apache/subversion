@@ -45,10 +45,10 @@ class MergeinfoReportParser:
     }
 
   STATE_TOKENS = {
-    STATE_PATH : "Path: ",
-    STATE_SOURCE_PATH : "Source path: ",
-    STATE_MERGED_RANGES : "Merged ranges: ",
-    STATE_ELIGIBLE_RANGES : "Eligible ranges: ",
+    STATE_PATH : "Path:",
+    STATE_SOURCE_PATH : "Source path:",
+    STATE_MERGED_RANGES : "Merged ranges:",
+    STATE_ELIGIBLE_RANGES : "Eligible ranges:",
     }
 
   def __init__(self):
@@ -91,5 +91,5 @@ class MergeinfoReportParser:
         if not line.startswith(token):
           continue
         self.state = trans
-        return line[len(token):]
+        return line[len(token)+1:]
       return None
