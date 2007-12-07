@@ -1526,8 +1526,16 @@ svn_wc_prop_set2(const char *name,
                                               pool));
       if (!skip_checks && (strcmp(name, SVN_PROP_EOL_STYLE) == 0))
         {
+          svn_subst_eol_style_t eol_style;
+          const char *ignored_eol;
           new_value = svn_stringbuf_create_from_string(value, pool);
           svn_stringbuf_strip_whitespace(new_value);
+          svn_subst_eol_style_from_value(&eol_style, &ignored_eol,
+                                         new_value->data);
+          if (eol_style == svn_subst_eol_style_unknown)
+            return svn_error_createf(SVN_ERR_IO_UNKNOWN_EOL, NULL,
+                                     _("Unrecognized line ending style for '%s'"),
+                                     svn_path_local_style(path, pool));
           SVN_ERR(validate_eol_prop_against_file(path, adm_access, pool));
         }
       else if (!skip_checks && (strcmp(name, SVN_PROP_MIME_TYPE) == 0))
