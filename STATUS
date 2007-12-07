@@ -54,6 +54,15 @@ Candidate changes:
     Votes:
       +1: vgeorgescu, sussman
 
+  * r28331
+    Disallow setting of svn:eol-style to unrecognized values.
+    Justification:
+      User reported problem, small fix, includes test.
+      http://tortoisesvn.tigris.org/servlets/ReadMsg?list=users&msgNo=8535
+      http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=133402
+    Votes:
+      +1: dlr
+
 Veto-blocked changes:
 
   * r21531, r21848, r21934
