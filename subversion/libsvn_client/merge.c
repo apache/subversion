@@ -960,17 +960,14 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
     {
     case svn_node_dir:
       {
-        merge_delete_notify_baton_t mdb;
-
-        mdb.ctx = merge_b->ctx;
-        mdb.path_skip = path;
-
         svn_path_split(path, &parent_path, NULL, subpool);
         SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
                                     subpool));
+        /* Passing NULL for the notify_func and notify_baton because
+           repos_diff.c:delete_entry() will do it for us. */
         err = svn_client__wc_delete(path, parent_access, merge_b->force,
                                     merge_b->dry_run, FALSE,
-                                    merge_delete_notify_func, &mdb,
+                                    NULL, NULL,
                                     merge_b->ctx, subpool);
         if (err && state)
           {

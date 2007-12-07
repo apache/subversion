@@ -628,8 +628,6 @@ def delete_file_and_dir(sbox):
 
   expected_output = wc.State(B2_path, {
     'E'       : Item(status='D '),
-    'E/alpha' : Item(status='D '),
-    'E/beta'  : Item(status='D '),
     'lambda'  : Item(status='D '),
     })
   expected_disk.remove('E/alpha', 'E/beta', 'lambda')
@@ -2767,11 +2765,9 @@ def merge_dir_replace(sbox):
   # Merge replacement of foo onto C
   expected_output = wc.State(C_path, {
     'foo' : Item(status='R '),
-    'foo/new file 2' : Item(status='D '),
     'foo/file foo'   : Item(status='A '),
     'foo/bar'        : Item(status='A '),
     'foo/bar/new file 3' : Item(status='A '),
-    'foo/new file'   : Item(status='D '),
     })
   expected_disk = wc.State('', {
     ''    : Item(props={SVN_PROP_MERGE_INFO : '/A/B/F:2-5'}),
@@ -2802,7 +2798,7 @@ def merge_dir_replace(sbox):
   # Commit merge of foo onto C
   expected_output = svntest.wc.State(wc_dir, {
     'A/C'                    : Item(verb='Sending'),
-    'A/C/foo'    : Item(verb='Replacing'),
+    'A/C/foo'                : Item(verb='Replacing'),
     'A/C/foo/file foo'       : Item(verb='Adding'),
     'A/C/foo/bar'            : Item(verb='Adding'),
     'A/C/foo/bar/new file 3' : Item(verb='Adding'),
