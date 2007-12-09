@@ -642,6 +642,11 @@ def only_trunk(sbox):
   run_test(sbox, "svnsync-trunk-add.dump", "/trunk", 
            "svnsync-trunk-add.expected.dump")
 
+def only_trunk_A_with_changes(sbox):
+  "test syncing subdirectories"
+  run_test(sbox, "svnsync-trunk-A-changes.dump", "/trunk/A", 
+           "svnsync-trunk-A-changes.expected.dump")
+
 ########################################################################
 # Run the tests
 
@@ -670,6 +675,7 @@ test_list = [ None,
               url_encoding,
               no_author,
               only_trunk,
+              only_trunk_A_with_changes,
              ]
 
 if __name__ == '__main__':
