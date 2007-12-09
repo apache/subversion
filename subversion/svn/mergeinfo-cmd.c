@@ -169,10 +169,7 @@ svn_cl__mergeinfo(apr_getopt_t *os,
       svn_cmdline_printf(pool, _("Path: %s\n"),
                          svn_path_local_style(truepath, pool));
       if (mergeinfo == NULL)
-        {
-          svn_cmdline_printf(pool, "\n");
-          continue;
-        }
+        mergeinfo = apr_hash_make(pool);
 
       SVN_ERR(svn_client_root_url_from_path(&root_url, truepath, ctx, pool));
 
@@ -189,7 +186,7 @@ svn_cl__mergeinfo(apr_getopt_t *os,
                                             &peg_revision, root_url, 
                                             ctx, subpool));
         }
-      else
+      else if (apr_hash_count(mergeinfo))
         {
           apr_pool_t *iterpool = svn_pool_create(subpool);
           for (hi = apr_hash_first(NULL, mergeinfo); 
