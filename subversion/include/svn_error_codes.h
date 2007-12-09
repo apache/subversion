@@ -736,6 +736,10 @@ SVN_ERROR_START
              SVN_ERR_RA_CATEGORY_START + 8,
              "Inquiry about unknown capability")
 
+  SVN_ERRDEF(SVN_ERR_RA_PARTIAL_REPLAY_NOT_SUPPORTED,
+             SVN_ERR_RA_CATEGORY_START + 9,
+             "Server does not support partial replay")
+
   /* ra_dav errors */
 
   SVN_ERRDEF(SVN_ERR_RA_DAV_SOCK_INIT,
