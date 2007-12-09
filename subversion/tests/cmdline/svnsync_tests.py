@@ -626,6 +626,9 @@ def no_author(sbox):
   "test copying revs with no svn:author revprops"
   run_test(sbox, "no-author.dump")
 
+def copy_revprops(sbox):
+  "test copying revprops other than svn:*"
+  run_test(sbox, "revprops.dump")
 
 ########################################################################
 # Run the tests
@@ -654,6 +657,7 @@ test_list = [ None,
                    svntest.main.is_ra_type_file),
               url_encoding,
               no_author,
+              copy_revprops,
              ]
 
 if __name__ == '__main__':
