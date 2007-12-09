@@ -7,14 +7,12 @@
     SccLocalPath=""
     Keyword="MakeFileProj">
     <Platforms>
-        <Platform
-            Name="Win32"/>
-		<Platform
-			Name="x64"/>
-    </Platforms>
+[for platforms]		<Platform
+			Name="[platforms]"/>
+[end]	</Platforms>
     <Configurations>
-        <Configuration
-            Name="Debug|Win32"
+[for platforms]        <Configuration
+            Name="Debug|[platforms]"
             OutputDirectory="Debug"
             IntermediateDirectory="Debug"
             ConfigurationType="0"
@@ -28,7 +26,7 @@
                 Output="$(OutDir)\serf.lib"/>
         </Configuration>
         <Configuration
-            Name="Release|Win32"
+            Name="Release|[platforms]"
             OutputDirectory="Release"
             IntermediateDirectory="Release"
             ConfigurationType="0"
@@ -41,35 +39,7 @@
                 CleanCommandLine="nmake /s /nologo /f serf.mak CLEAN APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
                 Output="$(OutDir)\serf.lib"/>
         </Configuration>
-		<Configuration
-            Name="Debug|x64"
-            OutputDirectory="Debug"
-            IntermediateDirectory="Debug"
-            ConfigurationType="0"
-            UseOfMFC="0"
-            ATLMinimizesCRunTimeLibraryUsage="FALSE">
-			<Tool
-                Name="VCNMakeTool"
-                BuildCommandLine="nmake /s /nologo /f serf.mak ALL DEBUG_BUILD=1 APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
-                ReBuildCommandLine="nmake /s /nologo /f serf.mak CLEAN ALL DEBUG_BUILD=1 APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
-                CleanCommandLine="nmake /s /nologo /f serf.mak CLEAN DEBUG_BUILD=1 APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path]  [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
-                Output="$(OutDir)\serf.lib"/>
-		</Configuration>
-		<Configuration
-            Name="Release|x64"
-            OutputDirectory="Release"
-            IntermediateDirectory="Release"
-            ConfigurationType="0"
-            UseOfMFC="0"
-            ATLMinimizesCRunTimeLibraryUsage="FALSE">
-			<Tool
-                Name="VCNMakeTool"
-                BuildCommandLine="nmake /s /nologo /f serf.mak ALL APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
-                ReBuildCommandLine="nmake /s /nologo /f serf.mak CLEAN ALL APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path]  [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
-                CleanCommandLine="nmake /s /nologo /f serf.mak CLEAN APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
-                Output="$(OutDir)\serf.lib"/>
-		</Configuration>
-    </Configurations>
+[end]    </Configurations>
     <Files>
         <Filter
             Name="Source Files"
