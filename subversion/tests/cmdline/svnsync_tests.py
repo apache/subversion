@@ -77,8 +77,9 @@ def run_init(dst_url, src_url):
     raise SVNUnexpectedStdout(output)
 
 
-def run_test(sbox, dump_file_name):
-  "Load a dump file, sync repositories, and compare contents."
+def run_test(sbox, dump_file_name, subdir = None, exp_dump_file_name = None):
+  """Load a dump file, sync repositories, and compare contents with the original
+or another dump file."""
 
   # Create the empty master repository.
   build_repos(sbox)
@@ -105,7 +106,10 @@ def run_test(sbox, dump_file_name):
   # Create the revprop-change hook for this test
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
-  run_init(dest_sbox.repo_url, sbox.repo_url)
+  repo_url = sbox.repo_url
+  if subdir:
+    repo_url = repo_url + subdir
+  run_init(dest_sbox.repo_url, repo_url)
 
   run_sync(dest_sbox.repo_url)
 
@@ -120,10 +124,17 @@ def run_test(sbox, dump_file_name):
   # Create a dump file from the mirror repository.
   dest_dump = svntest.actions.run_and_verify_dump(dest_sbox.repo_dir)
 
-  # Compare the original dump file (used to create the master
-  # repository) with the dump produced by the mirror repository.
+  # Compare the dump produced by the mirror repository with either the original 
+  # dump file (used to create the master repository) or another specified dump
+  # file.
+  if exp_dump_file_name:
+    exp_master_dumpfile_contents = file(os.path.join(svnsync_tests_dir,
+                                        exp_dump_file_name)).readlines()
+  else:
+    exp_master_dumpfile_contents = master_dumpfile_contents
+
   svntest.verify.compare_and_display_lines(
-    "Dump files", "DUMP", master_dumpfile_contents, dest_dump)
+    "Dump files", "DUMP", exp_master_dumpfile_contents, dest_dump)
 
 
 ######################################################################
@@ -626,6 +637,10 @@ def no_author(sbox):
   "test copying revs with no svn:author revprops"
   run_test(sbox, "no-author.dump")
 
+def only_trunk(sbox):
+  "test syncing subdirectories"
+  run_test(sbox, "svnsync-trunk-add.dump", "/trunk", 
+           "svnsync-trunk-add.expected.dump")
 
 ########################################################################
 # Run the tests
@@ -654,6 +669,7 @@ test_list = [ None,
                    svntest.main.is_ra_type_file),
               url_encoding,
               no_author,
+              only_trunk,
              ]
 
 if __name__ == '__main__':
