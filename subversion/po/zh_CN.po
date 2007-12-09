@@ -35,8 +35,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.4.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-11-08 09:46+0800\n"
-"PO-Revision-Date: 2007-08-24 22:46+0800\n"
+"POT-Creation-Date: 2007-12-09 22:21+0800\n"
+"PO-Revision-Date: 2007-12-09 22:20+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -915,7 +915,7 @@ msgstr "“%s” 是未知类型或不可纳入版本控制"
 msgid "New entry name required when importing a file"
 msgstr "导入文件时，需要一个新的条目名称"
 
-#: ../libsvn_client/commit.c:545 ../libsvn_wc/adm_ops.c:731
+#: ../libsvn_client/commit.c:545 ../libsvn_wc/adm_ops.c:723
 #: ../libsvn_wc/questions.c:91
 #, c-format
 msgid "'%s' does not exist"
@@ -1007,8 +1007,8 @@ msgstr "提交项目 “%s” 有复制标记，但是没有源地址(copyfrom U
 #: ../libsvn_client/ra.c:181 ../libsvn_client/revisions.c:89
 #: ../libsvn_client/status.c:256 ../libsvn_client/switch.c:106
 #: ../libsvn_wc/adm_crawler.c:471 ../libsvn_wc/adm_crawler.c:764
-#: ../libsvn_wc/adm_ops.c:1065 ../libsvn_wc/adm_ops.c:2403
-#: ../libsvn_wc/adm_ops.c:2429 ../libsvn_wc/adm_ops.c:2465
+#: ../libsvn_wc/adm_ops.c:1057 ../libsvn_wc/adm_ops.c:2395
+#: ../libsvn_wc/adm_ops.c:2421 ../libsvn_wc/adm_ops.c:2457
 #: ../libsvn_wc/copy.c:349 ../libsvn_wc/copy.c:430 ../libsvn_wc/copy.c:437
 #: ../libsvn_wc/diff.c:1787 ../libsvn_wc/entries.c:2225
 #: ../libsvn_wc/entries.c:2780 ../libsvn_wc/props.c:479
@@ -1542,15 +1542,15 @@ msgstr "正在创建修改"
 msgid "deleting changes"
 msgstr "正在删除修改"
 
-#: ../libsvn_fs_base/bdb/changes-table.c:145 ../libsvn_fs_fs/fs_fs.c:2366
+#: ../libsvn_fs_base/bdb/changes-table.c:145 ../libsvn_fs_fs/fs_fs.c:2378
 msgid "Missing required node revision ID"
 msgstr "缺少必须的节点版本 ID"
 
-#: ../libsvn_fs_base/bdb/changes-table.c:156 ../libsvn_fs_fs/fs_fs.c:2376
+#: ../libsvn_fs_base/bdb/changes-table.c:156 ../libsvn_fs_fs/fs_fs.c:2388
 msgid "Invalid change ordering: new node revision ID without delete"
 msgstr "无效的改变顺序: 有新的节点版本 ID 而没删除"
 
-#: ../libsvn_fs_base/bdb/changes-table.c:166 ../libsvn_fs_fs/fs_fs.c:2387
+#: ../libsvn_fs_base/bdb/changes-table.c:166 ../libsvn_fs_fs/fs_fs.c:2399
 msgid "Invalid change ordering: non-add change on deleted path"
 msgstr "无效的改变顺序: 对删除路径进行非增加的改变"
 
@@ -1686,17 +1686,17 @@ msgid "Corrupt DB: initial revision number is not '0' in filesystem '%s'"
 msgstr "损坏的数据库: 初始的版本号在文件系统“%s”中不是“0”"
 
 #: ../libsvn_fs_base/dag.c:304 ../libsvn_fs_base/dag.c:481
-#: ../libsvn_fs_fs/dag.c:316
+#: ../libsvn_fs_fs/dag.c:333
 msgid "Attempted to create entry in non-directory parent"
 msgstr "试图在非目录的父节点创建条目"
 
-#: ../libsvn_fs_base/dag.c:475 ../libsvn_fs_fs/dag.c:310
+#: ../libsvn_fs_base/dag.c:475 ../libsvn_fs_fs/dag.c:327
 #, c-format
 msgid "Attempted to create a node with an illegal name '%s'"
 msgstr "试图用非法的名字“%s”创建节点"
 
 #: ../libsvn_fs_base/dag.c:487 ../libsvn_fs_base/dag.c:721
-#: ../libsvn_fs_fs/dag.c:322
+#: ../libsvn_fs_fs/dag.c:339
 #, c-format
 msgid "Attempted to clone child of non-mutable node"
 msgstr "试图克隆非可变节点的子节点"
@@ -1706,11 +1706,11 @@ msgstr "试图克隆非可变节点的子节点"
 msgid "Attempted to create entry that already exists"
 msgstr "试图创建已经存在的条目"
 
-#: ../libsvn_fs_base/dag.c:545 ../libsvn_fs_fs/dag.c:384
+#: ../libsvn_fs_base/dag.c:545 ../libsvn_fs_fs/dag.c:401
 msgid "Attempted to set entry in non-directory node"
 msgstr "试图在非目录节点中设置条目"
 
-#: ../libsvn_fs_base/dag.c:551 ../libsvn_fs_fs/dag.c:390
+#: ../libsvn_fs_base/dag.c:551 ../libsvn_fs_fs/dag.c:407
 msgid "Attempted to set entry in immutable node"
 msgstr "试图在不变节点设置条目"
 
@@ -1923,7 +1923,7 @@ msgstr "创建文件系统“%s”的BDB环境句柄时出错: \n"
 msgid "Berkeley DB error for filesystem '%s' while opening environment:\n"
 msgstr "打开文件系统“%s”的BDB环境句柄时出错: \n"
 
-#: ../libsvn_fs_base/fs.c:672 ../libsvn_fs_fs/fs_fs.c:626
+#: ../libsvn_fs_base/fs.c:672 ../libsvn_fs_fs/fs_fs.c:627
 #, c-format
 msgid "Expected FS format '%d'; found format '%d'"
 msgstr "期望文件系统格式“%d”；发现格式“%d”"
@@ -2161,11 +2161,11 @@ msgstr "不能在两个不同的文件系统间比较文件内容"
 msgid "'%s' is not a file"
 msgstr "“%s”不是一个文件"
 
-#: ../libsvn_fs_fs/dag.c:366
+#: ../libsvn_fs_fs/dag.c:383
 msgid "Can't get entries of non-directory"
 msgstr "不能获取非目录的条目"
 
-#: ../libsvn_fs_fs/dag.c:913
+#: ../libsvn_fs_fs/dag.c:930
 #, c-format
 msgid ""
 "Checksum mismatch, file '%s':\n"
@@ -2210,134 +2210,134 @@ msgstr "模块与文本文件(FSFS)版本库一起工作。"
 msgid "Unsupported FS loader version (%d) for fsfs"
 msgstr "不支持的FSFS之FS加载器版本 (%d)"
 
-#: ../libsvn_fs_fs/fs_fs.c:335
+#: ../libsvn_fs_fs/fs_fs.c:336
 #, c-format
 msgid "Can't grab FSFS txn list mutex"
 msgstr "不能获取文件系统事务列表互斥体"
 
-#: ../libsvn_fs_fs/fs_fs.c:343
+#: ../libsvn_fs_fs/fs_fs.c:344
 #, c-format
 msgid "Can't ungrab FSFS txn list mutex"
 msgstr "不能释放文件系统事务列表互斥体"
 
-#: ../libsvn_fs_fs/fs_fs.c:369
+#: ../libsvn_fs_fs/fs_fs.c:370
 #, c-format
 msgid "Can't unlock unknown transaction '%s'"
 msgstr "不能解锁未知事务“%s”"
 
-#: ../libsvn_fs_fs/fs_fs.c:373
+#: ../libsvn_fs_fs/fs_fs.c:374
 #, c-format
 msgid "Can't unlock nonlocked transaction '%s'"
 msgstr "不能解锁未锁事务“%s”"
 
-#: ../libsvn_fs_fs/fs_fs.c:380
+#: ../libsvn_fs_fs/fs_fs.c:381
 #, c-format
 msgid "Can't unlock prototype revision lockfile for transaction '%s'"
 msgstr "不能为事务“%s”解锁原型版本锁文件"
 
-#: ../libsvn_fs_fs/fs_fs.c:386
+#: ../libsvn_fs_fs/fs_fs.c:387
 #, c-format
 msgid "Can't close prototype revision lockfile for transaction '%s'"
 msgstr "不能为事务“%s”关闭原型版本锁文件"
 
-#: ../libsvn_fs_fs/fs_fs.c:448
+#: ../libsvn_fs_fs/fs_fs.c:449
 #, c-format
 msgid "Cannot write to the prototype revision file of transaction '%s' because a previous representation is currently being written by this process"
 msgstr "因为当前进程正在写入以前版本，所以不能为事务 '%s' 写入原型版本文件。"
 
-#: ../libsvn_fs_fs/fs_fs.c:484
+#: ../libsvn_fs_fs/fs_fs.c:485
 #, c-format
 msgid "Cannot write to the prototype revision file of transaction '%s' because a previous representation is currently being written by another process"
 msgstr "因为其它进程正在写入以前版本，所以不能为事务 '%s' 写入原型版本文件。"
 
-#: ../libsvn_fs_fs/fs_fs.c:491 ../libsvn_subr/io.c:1532
+#: ../libsvn_fs_fs/fs_fs.c:492 ../libsvn_subr/io.c:1549
 #, c-format
 msgid "Can't get exclusive lock on file '%s'"
 msgstr "不能获取文件“%s”的排它锁"
 
-#: ../libsvn_fs_fs/fs_fs.c:816 ../libsvn_fs_fs/fs_fs.c:830
+#: ../libsvn_fs_fs/fs_fs.c:817 ../libsvn_fs_fs/fs_fs.c:831
 msgid "Found malformed header in revision file"
 msgstr "在版本文件中找到非法文件头"
 
-#: ../libsvn_fs_fs/fs_fs.c:932 ../libsvn_fs_fs/fs_fs.c:946
-#: ../libsvn_fs_fs/fs_fs.c:953 ../libsvn_fs_fs/fs_fs.c:960
-#: ../libsvn_fs_fs/fs_fs.c:968 ../libsvn_fs_fs/fs_fs.c:976
+#: ../libsvn_fs_fs/fs_fs.c:933 ../libsvn_fs_fs/fs_fs.c:947
+#: ../libsvn_fs_fs/fs_fs.c:954 ../libsvn_fs_fs/fs_fs.c:961
+#: ../libsvn_fs_fs/fs_fs.c:969 ../libsvn_fs_fs/fs_fs.c:977
 msgid "Malformed text rep offset line in node-rev"
 msgstr "node-rev 中有非法的文本版本偏移行"
 
-#: ../libsvn_fs_fs/fs_fs.c:1045
+#: ../libsvn_fs_fs/fs_fs.c:1046
 msgid "Missing kind field in node-rev"
 msgstr "node-rev 中没有 kind"
 
-#: ../libsvn_fs_fs/fs_fs.c:1076
+#: ../libsvn_fs_fs/fs_fs.c:1077
 msgid "Missing cpath in node-rev"
 msgstr "node-rev 中没有 cpath"
 
-#: ../libsvn_fs_fs/fs_fs.c:1103 ../libsvn_fs_fs/fs_fs.c:1109
+#: ../libsvn_fs_fs/fs_fs.c:1104 ../libsvn_fs_fs/fs_fs.c:1110
 msgid "Malformed copyroot line in node-rev"
 msgstr "node-rev 中的 copyroot 行非法"
 
-#: ../libsvn_fs_fs/fs_fs.c:1127 ../libsvn_fs_fs/fs_fs.c:1133
+#: ../libsvn_fs_fs/fs_fs.c:1128 ../libsvn_fs_fs/fs_fs.c:1134
 msgid "Malformed copyfrom line in node-rev"
 msgstr "node-rev 中的 copyfrom 行非法"
 
-#: ../libsvn_fs_fs/fs_fs.c:1232 ../libsvn_fs_fs/fs_fs.c:3592
+#: ../libsvn_fs_fs/fs_fs.c:1243 ../libsvn_fs_fs/fs_fs.c:3605
 msgid "Attempted to write to non-transaction"
 msgstr "试图写至非事务"
 
-#: ../libsvn_fs_fs/fs_fs.c:1316
+#: ../libsvn_fs_fs/fs_fs.c:1327
 msgid "Malformed representation header"
 msgstr "非法的修订版头"
 
-#: ../libsvn_fs_fs/fs_fs.c:1340
+#: ../libsvn_fs_fs/fs_fs.c:1351
 msgid "Missing node-id in node-rev"
 msgstr "node-rev 中没有 node-id"
 
-#: ../libsvn_fs_fs/fs_fs.c:1346
+#: ../libsvn_fs_fs/fs_fs.c:1357
 msgid "Corrupt node-id in node-rev"
 msgstr "node-rev 中的 node-id 损坏"
 
-#: ../libsvn_fs_fs/fs_fs.c:1391
+#: ../libsvn_fs_fs/fs_fs.c:1402
 #, c-format
 msgid "Revision file lacks trailing newline"
 msgstr "版本文件缺少结尾换行"
 
-#: ../libsvn_fs_fs/fs_fs.c:1403
+#: ../libsvn_fs_fs/fs_fs.c:1414
 #, c-format
 msgid "Final line in revision file longer than 64 characters"
 msgstr "版本文件的最后一行大于 64 个字符"
 
-#: ../libsvn_fs_fs/fs_fs.c:1418
+#: ../libsvn_fs_fs/fs_fs.c:1429
 msgid "Final line in revision file missing space"
 msgstr "版本文件的最后一行缺少空白字符"
 
-#: ../libsvn_fs_fs/fs_fs.c:1447 ../libsvn_fs_fs/fs_fs.c:1505
+#: ../libsvn_fs_fs/fs_fs.c:1458 ../libsvn_fs_fs/fs_fs.c:1516
 #: ../libsvn_repos/log.c:514 ../libsvn_repos/log.c:518
 #, c-format
 msgid "No such revision %ld"
 msgstr "没有版本 %ld"
 
-#: ../libsvn_fs_fs/fs_fs.c:1565
+#: ../libsvn_fs_fs/fs_fs.c:1576
 msgid "Malformed svndiff data in representation"
 msgstr "修订版的svndiff 数据非法"
 
-#: ../libsvn_fs_fs/fs_fs.c:1708 ../libsvn_fs_fs/fs_fs.c:1721
+#: ../libsvn_fs_fs/fs_fs.c:1719 ../libsvn_fs_fs/fs_fs.c:1732
 msgid "Reading one svndiff window read beyond the end of the representation"
 msgstr "读svndiff窗口时超出了结尾"
 
-#: ../libsvn_fs_fs/fs_fs.c:1857
+#: ../libsvn_fs_fs/fs_fs.c:1868
 msgid "svndiff data requested non-existent source"
 msgstr "svndiff 数据请求不存在的来源"
 
-#: ../libsvn_fs_fs/fs_fs.c:1863
+#: ../libsvn_fs_fs/fs_fs.c:1874
 msgid "svndiff requested position beyond end of stream"
 msgstr "svndiff 请求的位置超出了流的结尾"
 
-#: ../libsvn_fs_fs/fs_fs.c:1886 ../libsvn_fs_fs/fs_fs.c:1903
+#: ../libsvn_fs_fs/fs_fs.c:1897 ../libsvn_fs_fs/fs_fs.c:1914
 msgid "svndiff window length is corrupt"
 msgstr "svndiff 的窗体长度已损坏"
 
-#: ../libsvn_fs_fs/fs_fs.c:1951
+#: ../libsvn_fs_fs/fs_fs.c:1962
 #, c-format
 msgid ""
 "Checksum mismatch while reading representation:\n"
@@ -2348,85 +2348,85 @@ msgstr ""
 "       期望:  %s\n"
 "       实际:  %s\n"
 
-#: ../libsvn_fs_fs/fs_fs.c:2174 ../libsvn_fs_fs/fs_fs.c:2187
-#: ../libsvn_fs_fs/fs_fs.c:2193
+#: ../libsvn_fs_fs/fs_fs.c:2186 ../libsvn_fs_fs/fs_fs.c:2199
+#: ../libsvn_fs_fs/fs_fs.c:2205
 msgid "Directory entry corrupt"
 msgstr "目录条目损坏"
 
-#: ../libsvn_fs_fs/fs_fs.c:2529 ../libsvn_fs_fs/fs_fs.c:2537
-#: ../libsvn_fs_fs/fs_fs.c:2569 ../libsvn_fs_fs/fs_fs.c:2589
-#: ../libsvn_fs_fs/fs_fs.c:2623 ../libsvn_fs_fs/fs_fs.c:2628
+#: ../libsvn_fs_fs/fs_fs.c:2541 ../libsvn_fs_fs/fs_fs.c:2549
+#: ../libsvn_fs_fs/fs_fs.c:2581 ../libsvn_fs_fs/fs_fs.c:2601
+#: ../libsvn_fs_fs/fs_fs.c:2635 ../libsvn_fs_fs/fs_fs.c:2640
 msgid "Invalid changes line in rev-file"
 msgstr "rev-file 中有非法修改行"
 
-#: ../libsvn_fs_fs/fs_fs.c:2562
+#: ../libsvn_fs_fs/fs_fs.c:2574
 msgid "Invalid change kind in rev file"
 msgstr "rev 文件中有无效的改变种类"
 
-#: ../libsvn_fs_fs/fs_fs.c:2582
+#: ../libsvn_fs_fs/fs_fs.c:2594
 msgid "Invalid text-mod flag in rev-file"
 msgstr "rev-file 中有无效的 text-mod 标志"
 
-#: ../libsvn_fs_fs/fs_fs.c:2602
+#: ../libsvn_fs_fs/fs_fs.c:2614
 msgid "Invalid prop-mod flag in rev-file"
 msgstr "rev-file 中有无效的 prop-mod 标志"
 
-#: ../libsvn_fs_fs/fs_fs.c:2785
+#: ../libsvn_fs_fs/fs_fs.c:2798
 msgid "Copying from transactions not allowed"
 msgstr "不允许从事务复制"
 
-#: ../libsvn_fs_fs/fs_fs.c:2841
+#: ../libsvn_fs_fs/fs_fs.c:2854
 #, c-format
 msgid "Unable to create transaction directory in '%s' for revision %ld"
 msgstr "无法在“%s”中为版本 %ld 创建事务目录"
 
-#: ../libsvn_fs_fs/fs_fs.c:3024 ../libsvn_fs_fs/fs_fs.c:3031
+#: ../libsvn_fs_fs/fs_fs.c:3037 ../libsvn_fs_fs/fs_fs.c:3044
 msgid "next-id file corrupt"
 msgstr "next-id 文件损坏"
 
-#: ../libsvn_fs_fs/fs_fs.c:3118
+#: ../libsvn_fs_fs/fs_fs.c:3131
 msgid "Transaction cleanup failed"
 msgstr "事务清理失败"
 
-#: ../libsvn_fs_fs/fs_fs.c:3286
+#: ../libsvn_fs_fs/fs_fs.c:3299
 msgid "Invalid change type"
 msgstr "无效的修改类型"
 
-#: ../libsvn_fs_fs/fs_fs.c:3611
+#: ../libsvn_fs_fs/fs_fs.c:3624
 msgid "Can't set text contents of a directory"
 msgstr "无法设定目录的文本内容"
 
-#: ../libsvn_fs_fs/fs_fs.c:3701 ../libsvn_fs_fs/fs_fs.c:3706
-#: ../libsvn_fs_fs/fs_fs.c:3713
+#: ../libsvn_fs_fs/fs_fs.c:3714 ../libsvn_fs_fs/fs_fs.c:3719
+#: ../libsvn_fs_fs/fs_fs.c:3726
 msgid "Corrupt current file"
 msgstr "当前文件损坏"
 
-#: ../libsvn_fs_fs/fs_fs.c:4003 ../libsvn_subr/io.c:2680 ../svn/util.c:236
+#: ../libsvn_fs_fs/fs_fs.c:4016 ../libsvn_subr/io.c:2697 ../svn/util.c:236
 #: ../svn/util.c:260
 #, c-format
 msgid "Can't stat '%s'"
 msgstr "不能取得“%s”的状态"
 
-#: ../libsvn_fs_fs/fs_fs.c:4007
+#: ../libsvn_fs_fs/fs_fs.c:4020
 #, c-format
 msgid "Can't chmod '%s'"
 msgstr "无法修改“%s”的存取权限"
 
-#: ../libsvn_fs_fs/fs_fs.c:4147
+#: ../libsvn_fs_fs/fs_fs.c:4160
 #, c-format
 msgid "Can't grab FSFS repository mutex"
 msgstr "不能获取FSFS版本库互斥体"
 
-#: ../libsvn_fs_fs/fs_fs.c:4161
+#: ../libsvn_fs_fs/fs_fs.c:4174
 #, c-format
 msgid "Can't ungrab FSFS repository mutex"
 msgstr "不能释放FSFS版本库互斥体"
 
-#: ../libsvn_fs_fs/fs_fs.c:4279
+#: ../libsvn_fs_fs/fs_fs.c:4292
 msgid "Transaction out of date"
 msgstr "事务过时"
 
-#: ../libsvn_fs_fs/fs_fs.c:4579
+#: ../libsvn_fs_fs/fs_fs.c:4592
 msgid "No such transaction"
 msgstr "无此事务"
 
@@ -3717,237 +3717,237 @@ msgstr "无法重新编码 APR 的错误信息"
 msgid "%swarning: %s\n"
 msgstr "%s 警告: %s\n"
 
-#: ../libsvn_subr/io.c:123
+#: ../libsvn_subr/io.c:130
 #, c-format
 msgid "Can't check path '%s'"
 msgstr "无法检查路径“%s”"
 
-#: ../libsvn_subr/io.c:377 ../libsvn_subr/io.c:508
+#: ../libsvn_subr/io.c:391 ../libsvn_subr/io.c:522
 #, c-format
 msgid "Can't open '%s'"
 msgstr "不能打开“%s”"
 
-#: ../libsvn_subr/io.c:399 ../libsvn_subr/io.c:521
+#: ../libsvn_subr/io.c:413 ../libsvn_subr/io.c:535
 #, c-format
 msgid "Unable to make name for '%s'"
 msgstr "不能为“%s”产生名字"
 
-#: ../libsvn_subr/io.c:525 ../libsvn_subr/io.c:579 ../libsvn_subr/io.c:607
+#: ../libsvn_subr/io.c:539 ../libsvn_subr/io.c:593 ../libsvn_subr/io.c:621
 msgid "Symbolic links are not supported on this platform"
 msgstr "此平台不支持符号链接"
 
-#: ../libsvn_subr/io.c:558
+#: ../libsvn_subr/io.c:572
 #, c-format
 msgid "Can't read contents of link"
 msgstr "不能读取链接的内容"
 
-#: ../libsvn_subr/io.c:620
+#: ../libsvn_subr/io.c:634
 #, c-format
 msgid "Can't find a temporary directory"
 msgstr "无法找到临时目录"
 
-#: ../libsvn_subr/io.c:753
+#: ../libsvn_subr/io.c:768
 #, c-format
 msgid "Can't copy '%s' to '%s'"
 msgstr "不能复制“%s”到“%s”"
 
-#: ../libsvn_subr/io.c:787
+#: ../libsvn_subr/io.c:802
 #, c-format
 msgid "Can't set permissions on '%s'"
 msgstr "不能在“%s”设置权限"
 
-#: ../libsvn_subr/io.c:809
+#: ../libsvn_subr/io.c:824
 #, c-format
 msgid "Can't append '%s' to '%s'"
 msgstr "不能附加“%s”到“%s”"
 
-#: ../libsvn_subr/io.c:843
+#: ../libsvn_subr/io.c:858
 #, c-format
 msgid "Source '%s' is not a directory"
 msgstr "源“%s”不是目录"
 
-#: ../libsvn_subr/io.c:849
+#: ../libsvn_subr/io.c:864
 #, c-format
 msgid "Destination '%s' is not a directory"
 msgstr "目的“%s”不是目录"
 
-#: ../libsvn_subr/io.c:855
+#: ../libsvn_subr/io.c:870
 #, c-format
 msgid "Destination '%s' already exists"
 msgstr "目的“%s”已存在"
 
-#: ../libsvn_subr/io.c:924 ../libsvn_subr/io.c:1817 ../libsvn_subr/io.c:1868
-#: ../libsvn_subr/io.c:1931
+#: ../libsvn_subr/io.c:939 ../libsvn_subr/io.c:1834 ../libsvn_subr/io.c:1885
+#: ../libsvn_subr/io.c:1948
 #, c-format
 msgid "Can't read directory '%s'"
 msgstr "无法读取目录“%s”"
 
-#: ../libsvn_subr/io.c:929 ../libsvn_subr/io.c:1822 ../libsvn_subr/io.c:1873
-#: ../libsvn_subr/io.c:1936 ../libsvn_subr/io.c:3004
+#: ../libsvn_subr/io.c:944 ../libsvn_subr/io.c:1839 ../libsvn_subr/io.c:1890
+#: ../libsvn_subr/io.c:1953 ../libsvn_subr/io.c:3019
 #, c-format
 msgid "Error closing directory '%s'"
 msgstr "关闭目录“%s”出错"
 
-#: ../libsvn_subr/io.c:955
+#: ../libsvn_subr/io.c:972
 #, c-format
 msgid "Can't make directory '%s'"
 msgstr "无法创建目录“%s”"
 
-#: ../libsvn_subr/io.c:1042
+#: ../libsvn_subr/io.c:1059
 #, c-format
 msgid "Can't set access time of '%s'"
 msgstr "不能设置“%s”的存取时间"
 
-#: ../libsvn_subr/io.c:1182
+#: ../libsvn_subr/io.c:1199
 #, c-format
 msgid "Can't get default file perms for file at '%s' (file stat error)"
 msgstr "不能获取“%s”文件的缺省权限(文件 stat 错误)"
 
-#: ../libsvn_subr/io.c:1193
+#: ../libsvn_subr/io.c:1210
 #, c-format
 msgid "Can't open file at '%s'"
 msgstr "不能打开文件“%s”"
 
-#: ../libsvn_subr/io.c:1197
+#: ../libsvn_subr/io.c:1214
 #, c-format
 msgid "Can't get file perms for file at '%s' (file stat error)"
 msgstr "不能获取“%s”文件的权限(文件 stat 错误)"
 
-#: ../libsvn_subr/io.c:1236 ../libsvn_subr/io.c:1331
+#: ../libsvn_subr/io.c:1253 ../libsvn_subr/io.c:1348
 #, c-format
 msgid "Can't change perms of file '%s'"
 msgstr "不能改变文件“%s”的权限"
 
-#: ../libsvn_subr/io.c:1371
+#: ../libsvn_subr/io.c:1388
 #, c-format
 msgid "Can't set file '%s' read-only"
 msgstr "无法设置文件“%s”只读"
 
-#: ../libsvn_subr/io.c:1403
+#: ../libsvn_subr/io.c:1420
 #, c-format
 msgid "Can't set file '%s' read-write"
 msgstr "无法设置文件“%s”可读写"
 
-#: ../libsvn_subr/io.c:1447
+#: ../libsvn_subr/io.c:1464
 #, c-format
 msgid "Error getting UID of process"
 msgstr "获取进程用户ID（UID）时出错"
 
-#: ../libsvn_subr/io.c:1528
+#: ../libsvn_subr/io.c:1545
 #, c-format
 msgid "Can't get shared lock on file '%s'"
 msgstr "不能获取文件“%s”的共享锁"
 
-#: ../libsvn_subr/io.c:1563
+#: ../libsvn_subr/io.c:1580
 #, c-format
 msgid "Can't flush file '%s'"
 msgstr "不能刷新文件“%s”"
 
-#: ../libsvn_subr/io.c:1564
+#: ../libsvn_subr/io.c:1581
 #, c-format
 msgid "Can't flush stream"
 msgstr "不能刷新流"
 
-#: ../libsvn_subr/io.c:1576 ../libsvn_subr/io.c:1593
+#: ../libsvn_subr/io.c:1593 ../libsvn_subr/io.c:1610
 #, c-format
 msgid "Can't flush file to disk"
 msgstr "不能刷新文件到磁盘"
 
-#: ../libsvn_subr/io.c:1614
+#: ../libsvn_subr/io.c:1631
 msgid "Reading from stdin is currently broken, so disabled"
 msgstr "目前不能从标准输入设备读取，因此禁止"
 
-#: ../libsvn_subr/io.c:1635
+#: ../libsvn_subr/io.c:1652
 #, c-format
 msgid "Can't get file name"
 msgstr "无法获取文件名"
 
-#: ../libsvn_subr/io.c:1703
+#: ../libsvn_subr/io.c:1720
 #, c-format
 msgid "Can't remove file '%s'"
 msgstr "不能移动文件“%s”"
 
-#: ../libsvn_subr/io.c:1732
+#: ../libsvn_subr/io.c:1749
 #, c-format
 msgid "Can't rewind directory '%s'"
 msgstr "无法重绕目录“%s”"
 
-#: ../libsvn_subr/io.c:1767 ../libsvn_subr/io.c:2855 ../libsvn_subr/io.c:2941
+#: ../libsvn_subr/io.c:1784 ../libsvn_subr/io.c:2870 ../libsvn_subr/io.c:2956
 #, c-format
 msgid "Can't open directory '%s'"
 msgstr "无法打开目录“%s”"
 
-#: ../libsvn_subr/io.c:1806 ../libsvn_subr/io.c:1828
+#: ../libsvn_subr/io.c:1823 ../libsvn_subr/io.c:1845
 #, c-format
 msgid "Can't remove '%s'"
 msgstr "无法删除“%s”"
 
-#: ../libsvn_subr/io.c:2000
+#: ../libsvn_subr/io.c:2017
 #, c-format
 msgid "Can't create process '%s' attributes"
 msgstr "无法创建进程“%s”的属性"
 
-#: ../libsvn_subr/io.c:2006
+#: ../libsvn_subr/io.c:2023
 #, c-format
 msgid "Can't set process '%s' cmdtype"
 msgstr "无法设置进程“%s”的命令类型"
 
-#: ../libsvn_subr/io.c:2018
+#: ../libsvn_subr/io.c:2035
 #, c-format
 msgid "Can't set process '%s' directory"
 msgstr "无法设定进程“%s”的目录"
 
-#: ../libsvn_subr/io.c:2031
+#: ../libsvn_subr/io.c:2048
 #, c-format
 msgid "Can't set process '%s' child input"
 msgstr "无法设置“%s”的子进程输入文件"
 
-#: ../libsvn_subr/io.c:2038
+#: ../libsvn_subr/io.c:2055
 #, c-format
 msgid "Can't set process '%s' child outfile"
 msgstr "无法设置“%s”的子进程输出文件"
 
-#: ../libsvn_subr/io.c:2045
+#: ../libsvn_subr/io.c:2062
 #, c-format
 msgid "Can't set process '%s' child errfile"
 msgstr "无法设置“%s”的子进程错误输出文件"
 
-#: ../libsvn_subr/io.c:2052
+#: ../libsvn_subr/io.c:2069
 #, c-format
 msgid "Can't set process '%s' child errfile for error handler"
 msgstr "无法为错误处理函数设置“%s”的子进程错误输出文件"
 
-#: ../libsvn_subr/io.c:2058
+#: ../libsvn_subr/io.c:2075
 #, c-format
 msgid "Can't set process '%s' error handler"
 msgstr "无法设置进程“%s”的错误处理函数"
 
-#: ../libsvn_subr/io.c:2081
+#: ../libsvn_subr/io.c:2098
 #, c-format
 msgid "Can't start process '%s'"
 msgstr "不能取得进程“%s”状态"
 
-#: ../libsvn_subr/io.c:2105
+#: ../libsvn_subr/io.c:2122
 #, c-format
 msgid "Error waiting for process '%s'"
 msgstr "等待进程“%s”出错"
 
-#: ../libsvn_subr/io.c:2113
+#: ../libsvn_subr/io.c:2130
 #, c-format
 msgid "Process '%s' failed (exitwhy %d)"
 msgstr "进程“%s”失败(返回 %d)"
 
-#: ../libsvn_subr/io.c:2120
+#: ../libsvn_subr/io.c:2137
 #, c-format
 msgid "Process '%s' returned error exitcode %d"
 msgstr "进程“%s”返回错误退出码 %d"
 
-#: ../libsvn_subr/io.c:2231
+#: ../libsvn_subr/io.c:2248
 #, c-format
 msgid "'%s' returned %d"
 msgstr "“%s” 返回 %d"
 
-#: ../libsvn_subr/io.c:2354
+#: ../libsvn_subr/io.c:2371
 #, c-format
 msgid ""
 "Error running '%s':  exitcode was %d, args were:\n"
@@ -3962,126 +3962,121 @@ msgstr ""
 "%s\n"
 "%s"
 
-#: ../libsvn_subr/io.c:2407
+#: ../libsvn_subr/io.c:2424
 #, c-format
 msgid "Can't detect MIME type of non-file '%s'"
 msgstr "不能检测非文件的“%s”之MIME类型"
 
-#: ../libsvn_subr/io.c:2474
+#: ../libsvn_subr/io.c:2491
 #, c-format
 msgid "Can't open file '%s'"
 msgstr "不能打开文件“%s”"
 
-#: ../libsvn_subr/io.c:2510
+#: ../libsvn_subr/io.c:2527
 #, c-format
 msgid "Can't close file '%s'"
 msgstr "无法关闭文件“%s”"
 
-#: ../libsvn_subr/io.c:2511
+#: ../libsvn_subr/io.c:2528
 #, c-format
 msgid "Can't close stream"
 msgstr "无法关闭流"
 
-#: ../libsvn_subr/io.c:2521 ../libsvn_subr/io.c:2545 ../libsvn_subr/io.c:2558
+#: ../libsvn_subr/io.c:2538 ../libsvn_subr/io.c:2562 ../libsvn_subr/io.c:2575
 #, c-format
 msgid "Can't read file '%s'"
 msgstr "不能读取文件“%s”"
 
-#: ../libsvn_subr/io.c:2522 ../libsvn_subr/io.c:2546 ../libsvn_subr/io.c:2559
+#: ../libsvn_subr/io.c:2539 ../libsvn_subr/io.c:2563 ../libsvn_subr/io.c:2576
 #, c-format
 msgid "Can't read stream"
 msgstr "无法读取流"
 
-#: ../libsvn_subr/io.c:2533
+#: ../libsvn_subr/io.c:2550
 #, c-format
 msgid "Can't get attribute information from file '%s'"
 msgstr "无法从文件“%s”获取属性信息"
 
-#: ../libsvn_subr/io.c:2534
+#: ../libsvn_subr/io.c:2551
 #, c-format
 msgid "Can't get attribute information from stream"
 msgstr "无法从流获取属性信息"
 
-#: ../libsvn_subr/io.c:2570
+#: ../libsvn_subr/io.c:2587
 #, c-format
 msgid "Can't set position pointer in file '%s'"
 msgstr "无法在文件“%s”设置定位指针"
 
-#: ../libsvn_subr/io.c:2571
+#: ../libsvn_subr/io.c:2588
 #, c-format
 msgid "Can't set position pointer in stream"
 msgstr "无法在流中设置定位指针"
 
-#: ../libsvn_subr/io.c:2582 ../libsvn_subr/io.c:2616
+#: ../libsvn_subr/io.c:2599 ../libsvn_subr/io.c:2633
 #, c-format
 msgid "Can't write to file '%s'"
 msgstr "无法写入文件“%s”"
 
-#: ../libsvn_subr/io.c:2583 ../libsvn_subr/io.c:2617
+#: ../libsvn_subr/io.c:2600 ../libsvn_subr/io.c:2634
 #, c-format
 msgid "Can't write to stream"
 msgstr "无法写入流"
 
-#: ../libsvn_subr/io.c:2657
+#: ../libsvn_subr/io.c:2674
 #, c-format
 msgid "Can't read length line in file '%s'"
 msgstr "不能从文件“%s”读取长度行"
 
-#: ../libsvn_subr/io.c:2661
+#: ../libsvn_subr/io.c:2678
 msgid "Can't read length line in stream"
 msgstr "无法从数据流读取长度行"
 
-#: ../libsvn_subr/io.c:2708
+#: ../libsvn_subr/io.c:2725
 #, c-format
 msgid "Can't move '%s' to '%s'"
 msgstr "不能移动“%s”到“%s”"
 
-#: ../libsvn_subr/io.c:2786
+#: ../libsvn_subr/io.c:2804
 #, c-format
 msgid "Can't create directory '%s'"
 msgstr "无法创建目录“%s”"
 
-#: ../libsvn_subr/io.c:2797 ../libsvn_wc/copy.c:204
+#: ../libsvn_subr/io.c:2815 ../libsvn_wc/copy.c:204
 #, c-format
 msgid "Can't hide directory '%s'"
 msgstr "无法隐藏目录“%s”"
 
-#: ../libsvn_subr/io.c:2809
-#, c-format
-msgid "Can't stat directory '%s'"
-msgstr "无法获取目录“%s”的状态"
-
-#: ../libsvn_subr/io.c:2873
+#: ../libsvn_subr/io.c:2888
 #, c-format
 msgid "Can't remove directory '%s'"
 msgstr "无法删除目录“%s”"
 
-#: ../libsvn_subr/io.c:2891
+#: ../libsvn_subr/io.c:2906
 #, c-format
 msgid "Can't read directory"
 msgstr "无法读取目录"
 
-#: ../libsvn_subr/io.c:2960
+#: ../libsvn_subr/io.c:2975
 #, c-format
 msgid "Can't read directory entry in '%s'"
 msgstr "无法在“%s”读取目录内容"
 
-#: ../libsvn_subr/io.c:3085
+#: ../libsvn_subr/io.c:3100
 #, c-format
 msgid "Can't check directory '%s'"
 msgstr "无法检查目录“%s”"
 
-#: ../libsvn_subr/io.c:3107
+#: ../libsvn_subr/io.c:3122
 #, c-format
 msgid "Version %d is not non-negative"
 msgstr "版本 %d 是负数"
 
-#: ../libsvn_subr/io.c:3157
+#: ../libsvn_subr/io.c:3172
 #, c-format
 msgid "Reading '%s'"
 msgstr "正在读取“%s”"
 
-#: ../libsvn_subr/io.c:3173
+#: ../libsvn_subr/io.c:3188
 #, c-format
 msgid "First line of '%s' contains non-digit"
 msgstr "“%s”的第一行包含了非数字"
@@ -4154,7 +4149,7 @@ msgstr ""
 
 #: ../libsvn_subr/opt.c:977
 msgid ""
-"Copyright (C) 2000-2006 CollabNet.\n"
+"Copyright (C) 2000-2007 CollabNet.\n"
 "Subversion is open source software, see http://subversion.tigris.org/\n"
 "This product includes software developed by CollabNet (http://www.Collab.Net/).\n"
 "\n"
@@ -4444,76 +4439,76 @@ msgstr "版本 %ld 不匹配现有版本 %ld 于 “%s”"
 msgid "URL '%s' doesn't match existing URL '%s' in '%s'"
 msgstr "URL “%s” 不匹配现有 URL “%s” 于 “%s”"
 
-#: ../libsvn_wc/adm_ops.c:258
+#: ../libsvn_wc/adm_ops.c:250
 #, c-format
 msgid "Unrecognized node kind: '%s'"
 msgstr "无法识别的节点种类: “%s”"
 
-#: ../libsvn_wc/adm_ops.c:1103
+#: ../libsvn_wc/adm_ops.c:1095
 #, c-format
 msgid "'%s' not found"
 msgstr "找不到“%s”"
 
-#: ../libsvn_wc/adm_ops.c:1107
+#: ../libsvn_wc/adm_ops.c:1099
 #, c-format
 msgid "Unsupported node kind for path '%s'"
 msgstr "路径“%s”有不支持的节点种类"
 
-#: ../libsvn_wc/adm_ops.c:1137
+#: ../libsvn_wc/adm_ops.c:1129
 #, c-format
 msgid "'%s' is already under version control"
 msgstr "“%s”已纳入版本控制"
 
-#: ../libsvn_wc/adm_ops.c:1149
+#: ../libsvn_wc/adm_ops.c:1141
 #, c-format
 msgid "Can't replace '%s' with a node of a differing type; the deletion must be committed and the parent updated before adding '%s'"
 msgstr "无法以不同类型的节点来替换“%s”；在增加“%s”前必须提交删除操作并更新父目录"
 
-#: ../libsvn_wc/adm_ops.c:1166
+#: ../libsvn_wc/adm_ops.c:1158
 #, c-format
 msgid "Can't find parent directory's entry while trying to add '%s'"
 msgstr "增加“%s”时无法找到父目录入口"
 
-#: ../libsvn_wc/adm_ops.c:1171
+#: ../libsvn_wc/adm_ops.c:1163
 #, c-format
 msgid "Can't add '%s' to a parent directory scheduled for deletion"
 msgstr "增加“%s”到调度删除的目录中"
 
-#: ../libsvn_wc/adm_ops.c:1187
+#: ../libsvn_wc/adm_ops.c:1179
 #, c-format
 msgid "The URL '%s' has a different repository root than its parent"
 msgstr "URL“%s”与其父目录的版本库根目录不相同"
 
-#: ../libsvn_wc/adm_ops.c:1535
+#: ../libsvn_wc/adm_ops.c:1527
 #, c-format
 msgid "Error restoring text for '%s'"
 msgstr "还原“%s”文本出错"
 
-#: ../libsvn_wc/adm_ops.c:1666
+#: ../libsvn_wc/adm_ops.c:1658
 #, c-format
 msgid "Cannot revert: '%s' is not under version control"
 msgstr "无法恢复: “%s”未纳入版本控制"
 
-#: ../libsvn_wc/adm_ops.c:1694
+#: ../libsvn_wc/adm_ops.c:1686
 #, c-format
 msgid "Cannot revert '%s': unsupported entry node kind"
 msgstr "无法恢复“%s”: 不支持的节点种类"
 
-#: ../libsvn_wc/adm_ops.c:1705
+#: ../libsvn_wc/adm_ops.c:1697
 #, c-format
 msgid "Cannot revert '%s': unsupported node kind in working copy"
 msgstr "无法恢复“%s”: 工作副本中有不支持的节点种类"
 
-#: ../libsvn_wc/adm_ops.c:1752
+#: ../libsvn_wc/adm_ops.c:1744
 msgid "Cannot revert addition of current directory; please try again from the parent directory"
 msgstr "无法恢复增加的当前目录；请从父目录重试"
 
-#: ../libsvn_wc/adm_ops.c:1774
+#: ../libsvn_wc/adm_ops.c:1766
 #, c-format
 msgid "Unknown or unexpected kind for path '%s'"
 msgstr "路径“%s”的种类未知或意外"
 
-#: ../libsvn_wc/adm_ops.c:1968
+#: ../libsvn_wc/adm_ops.c:1960
 #, c-format
 msgid "File '%s' has local modifications"
 msgstr "文件“%s”有本地修改"
@@ -4947,7 +4942,7 @@ msgid "Missing end of line in wcprops file for '%s'"
 msgstr "wcprops文件“%s”丢失了行结束符"
 
 #: ../libsvn_wc/props.c:1064 ../libsvn_wc/props.c:1100
-#: ../libsvn_wc/props.c:1370 ../libsvn_wc/props.c:1626
+#: ../libsvn_wc/props.c:1370 ../libsvn_wc/props.c:1634
 msgid "Failed to load properties from disk"
 msgstr "无法从磁盘装载属性"
 
@@ -4981,12 +4976,17 @@ msgstr "“%s”不是文件或目录"
 msgid "File '%s' has binary mime type property"
 msgstr "文件“%s”有二进制的 mime 类型属性"
 
-#: ../libsvn_wc/props.c:2101
+#: ../libsvn_wc/props.c:1537
+#, c-format
+msgid "Unrecognized line ending style for '%s'"
+msgstr "“%s”包含无法识别的行结束样式"
+
+#: ../libsvn_wc/props.c:2109
 #, c-format
 msgid "Error parsing %s property on '%s': '%s'"
 msgstr "解析 %s 属性于“%s”出错: “%s”"
 
-#: ../libsvn_wc/props.c:2114
+#: ../libsvn_wc/props.c:2122
 #, c-format
 msgid "Invalid %s property on '%s': target involves '.' or '..' or is an absolute path"
 msgstr "无效属性 %s 于“%s”: 目标包含“.”或“..”或是绝对路径"
