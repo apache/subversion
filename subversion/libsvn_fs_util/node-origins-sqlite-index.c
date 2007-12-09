@@ -48,17 +48,17 @@ get_origin(const char **node_rev_id,
            const char *node_id,
            apr_pool_t *pool)
 {
-  sqlite3_stmt *stmt;
+  svn_fs__sqlite_stmt_t *stmt;
   svn_boolean_t got_row;
 
   SVN_ERR(svn_fs__sqlite_prepare(&stmt, db,
                                  "SELECT node_rev_id FROM node_origins "
-                                 "WHERE node_id = ?"));
+                                 "WHERE node_id = ?", pool));
   SVN_ERR(svn_fs__sqlite_bind_text(stmt, 1, node_id));
   SVN_ERR(svn_fs__sqlite_step(&got_row, stmt));
   
   *node_rev_id = got_row 
-    ? apr_pstrdup(pool, (const char *) sqlite3_column_text(stmt, 0))
+    ? apr_pstrdup(pool, svn_fs__sqlite_column_text(stmt, 0))
     : NULL;
 
   SVN_ERR(svn_fs__sqlite_finalize(stmt));
@@ -72,7 +72,7 @@ set_origin(sqlite3 *db,
            const svn_string_t *node_rev_id,
            apr_pool_t *pool)
 {
-  sqlite3_stmt *stmt;
+  svn_fs__sqlite_stmt_t *stmt;
   const char *old_node_rev_id;
 
   /* First figure out if it's already there.  (Don't worry, we're in a
@@ -92,7 +92,7 @@ set_origin(sqlite3 *db,
 
   SVN_ERR(svn_fs__sqlite_prepare(&stmt, db,
                                  "INSERT INTO node_origins (node_id, "
-                                 "node_rev_id) VALUES (?, ?);"));
+                                 "node_rev_id) VALUES (?, ?);", pool));
   SVN_ERR(svn_fs__sqlite_bind_text(stmt, 1, node_id));
   SVN_ERR(svn_fs__sqlite_bind_text(stmt, 2, node_rev_id->data));
 
