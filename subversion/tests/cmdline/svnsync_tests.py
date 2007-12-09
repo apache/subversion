@@ -639,8 +639,8 @@ def no_author(sbox):
 
 def only_trunk(sbox):
   "test syncing subdirectories"
-  run_test(sbox, "svnsync-trunk-add.dump", "/trunk", 
-           "svnsync-trunk-add.expected.dump")
+  run_test(sbox, "svnsync-trunk-only.dump", "/trunk", 
+           "svnsync-trunk-only.expected.dump")
 
 def only_trunk_A_with_changes(sbox):
   "test syncing subdirectories"
