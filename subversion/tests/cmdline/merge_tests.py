@@ -628,8 +628,6 @@ def delete_file_and_dir(sbox):
 
   expected_output = wc.State(B2_path, {
     'E'       : Item(status='D '),
-    'E/alpha' : Item(status='D '),
-    'E/beta'  : Item(status='D '),
     'lambda'  : Item(status='D '),
     })
   expected_disk.remove('E/alpha', 'E/beta', 'lambda')
@@ -1600,7 +1598,7 @@ def three_way_merge_add_of_existing_binary_file(sbox):
   # And after the merge, the status should not report any differences.
 
   expected_output = wc.State(short_wc, {
-    "A"       : Item(status=" G"),
+    "A" : Item(status=" G"),
     "A/theta" : Item(status="A "),
     })
 
@@ -1608,6 +1606,7 @@ def three_way_merge_add_of_existing_binary_file(sbox):
   # need a sub-tree of it rather than straight copy.
   expected_disk = svntest.main.greek_state.subtree("A")
   expected_disk.add({
+    "" : Item(props={SVN_PROP_MERGE_INFO : '/A:2-3'}),
     "theta" : Item(theta_contents,
                    props={"svn:mime-type" : "application/octet-stream"}),
     })
@@ -1615,6 +1614,7 @@ def three_way_merge_add_of_existing_binary_file(sbox):
   expected_status.add({
     "A/theta" : Item(status="  ", wc_rev=3),
     })
+  expected_status.tweak("A", status=" M")
   expected_status.remove("")  # top-level of the WC
   expected_status.remove("iota")
   expected_skip = wc.State("", { })
@@ -2328,7 +2328,7 @@ def merge_binary_with_common_ancestry(sbox):
                                      'merge', theta_J_url, theta_L_url)
   os.chdir(saved_cwd)
 
-  expected_status.tweak('K/theta', status='M ')
+  expected_status.tweak('K/theta', status='MM')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
@@ -2765,11 +2765,9 @@ def merge_dir_replace(sbox):
   # Merge replacement of foo onto C
   expected_output = wc.State(C_path, {
     'foo' : Item(status='R '),
-    'foo/new file 2' : Item(status='D '),
     'foo/file foo'   : Item(status='A '),
     'foo/bar'        : Item(status='A '),
     'foo/bar/new file 3' : Item(status='A '),
-    'foo/new file'   : Item(status='D '),
     })
   expected_disk = wc.State('', {
     ''    : Item(props={SVN_PROP_MERGE_INFO : '/A/B/F:2-5'}),
@@ -2800,7 +2798,7 @@ def merge_dir_replace(sbox):
   # Commit merge of foo onto C
   expected_output = svntest.wc.State(wc_dir, {
     'A/C'                    : Item(verb='Sending'),
-    'A/C/foo'    : Item(verb='Replacing'),
+    'A/C/foo'                : Item(verb='Replacing'),
     'A/C/foo/file foo'       : Item(verb='Adding'),
     'A/C/foo/bar'            : Item(verb='Adding'),
     'A/C/foo/bar/new file 3' : Item(verb='Adding'),
@@ -7271,7 +7269,7 @@ def single_file_replace_style_merge_capability(sbox):
 
   # Merge the file mu alone to rev1
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output([[-2]],
+                                     expected_merge_output(None,
                                        ['D    ' + mu_path + '\n',
                                         'A    ' + mu_path + '\n']),
                                      [],

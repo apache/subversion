@@ -98,7 +98,8 @@ extern "C" {
  * If @a input is not a grammatically correct @c SVN_PROP_MERGEINFO
  * property, contains overlapping or unordered revision ranges, or revision
  * ranges with a start revision greater than or equal to its end revision,
- * then return @c SVN_ERR_MERGEINFO_PARSE_ERROR.
+ * or contains paths mapped to empty revision ranges, then return
+ * @c SVN_ERR_MERGEINFO_PARSE_ERROR.
  *
  * Note: @a *mergeinfo will contain rangelists that are guaranteed to
  * be sorted (ordered by smallest revision ranges to largest).

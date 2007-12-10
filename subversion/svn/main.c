@@ -210,7 +210,7 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("use/display additional information from merge\n"
                        "                             "
                        "history")},
-  {"accept", svn_cl__accept_opt, 1,
+  {"accept",        svn_cl__accept_opt, 1,
                     N_("specify automatic conflict resolution action\n"
                        "                            "
                        "('" SVN_CL__ACCEPT_POSTPONE "',"
@@ -220,6 +220,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        " '" SVN_CL__ACCEPT_EDIT "',"
                        "\n                            "
                        " '" SVN_CL__ACCEPT_LAUNCH "')")},
+  {"from-source",   svn_cl__from_source_opt, 1,
+                    N_("query a particular merge source URL\n")},
   {0,               0, 0, 0},
 };
 
@@ -572,7 +574,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
   { "mergeinfo", svn_cl__mergeinfo, {0}, N_
     ("Query merge-related information.\n"
      "usage: mergeinfo [TARGET[@REV]...]\n"),
-    {'r'} },
+    {'r', svn_cl__from_source_opt} },
 
   { "mkdir", svn_cl__mkdir, {0}, N_
     ("Create a new directory under version control.\n"
@@ -1413,6 +1415,10 @@ main(int argc, const char *argv[])
             (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                _("'%s' is not a valid accept value"), opt_arg),
              pool, "svn: ");
+        break;
+      case svn_cl__from_source_opt:
+        err = svn_utf_cstring_to_utf8(&path_utf8, opt_arg, pool);
+        opt_state.from_source = svn_path_canonicalize(path_utf8, pool);
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away

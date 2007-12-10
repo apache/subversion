@@ -721,7 +721,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         merge(path1, revision1, path2, revision2, localPath, force,
-              Depth.infinityOrFiles(recurse), ignoreAncestry, dryRun);
+              Depth.infinityOrFiles(recurse), ignoreAncestry, dryRun, false);
     }
 
     /**
@@ -730,7 +730,8 @@ public class SVNClient implements SVNClientInterface
     public native void merge(String path1, Revision revision1, String path2,
                              Revision revision2, String localPath,
                              boolean force, int depth,
-                             boolean ignoreAncestry, boolean dryRun)
+                             boolean ignoreAncestry, boolean dryRun,
+                             boolean recordOnly)
             throws ClientException;
 
     /**
@@ -748,7 +749,7 @@ public class SVNClient implements SVNClientInterface
         ranges[0] = new RevisionRange(revision1, revision2);
 
         merge(path, pegRevision, ranges, localPath, force,
-              Depth.infinityOrFiles(recurse), ignoreAncestry, dryRun);
+              Depth.infinityOrFiles(recurse), ignoreAncestry, dryRun, false);
     }
 
     /**
@@ -757,7 +758,7 @@ public class SVNClient implements SVNClientInterface
     public native void merge(String path, Revision pegRevision,
                              RevisionRange[] revisions, String localPath,
                              boolean force, int depth, boolean ignoreAncestry,
-                             boolean dryRun)
+                             boolean dryRun, boolean recordOnly)
             throws ClientException;
 
     /**
