@@ -1142,14 +1142,14 @@ typedef struct svn_wc_conflict_description_t
   /** merged version; may contain conflict markers */
   const char *merged_file;
 
-  /* The operation that exposed the conflict.
+  /** The operation that exposed the conflict.
    * Used only for tree conflicts.
    *
    * @since New in 1.6.
    */
   svn_wc_operation_t operation;
 
-  /* The path to the victim of a tree conflict.
+  /** The path to the victim of a tree conflict.
    *
    * See the notes at the top of subversion/libsvn_wc/treeconflicts.h
    * for the definition of a tree conflict victim.
@@ -1785,18 +1785,18 @@ typedef struct svn_wc_entry_t
   svn_depth_t depth;
 
   /** Serialized data for all of the tree conflicts detected in this_dir.
-   * If no tree_conflict description exists in this_dir, the data in this
+   * If no tree_conflict_report file exists in this_dir, the data in this
    * field is ignored.
    *
    * @since New in 1.6. */
   const char *tree_conflict_data;
 
-  /** Path to a file describing tree conflicts in this_dir.
-   * The file contains localized human-readable descriptions
-   * of all tree conflicts in this_dir.
+  /** Path to a report of the tree conflicts in this_dir.
+   * The report is a text file containing localized human-readable
+   * descriptions of all tree conflicts in this_dir.
    *
    * @since New in 1.6. */
-  const char *tree_conflict_desc;
+  const char *tree_conflict_report;
 
   /* IMPORTANT: If you extend this structure, check the following functions in
    * subversion/libsvn_wc/entries.c, to see if you need to extend them as well.
@@ -1898,7 +1898,7 @@ svn_wc_entry_t *svn_wc_entry_dup(const svn_wc_entry_t *entry,
  * Property conflicts apply to both.
  *
  * If the entry mentions that a text conflict file, property conflicts
- * file, or a tree conflict description file exist, but they are all
+ * file, or a tree conflict report file exist, but they are all
  * removed, assume the conflict has been resolved by the user.
  *
  * @since New in 1.6.

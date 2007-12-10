@@ -1,5 +1,5 @@
 /*
- * treeconflicts.h: declarations related to tree conflicts
+ * tree_conflicts.h: declarations related to tree conflicts
  *
  * ====================================================================
  * Copyright (c) 2007 CollabNet.  All rights reserved.
@@ -16,8 +16,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_WC_TREECONFLICTS_H
-#define SVN_LIBSVN_WC_TREECONFLICTS_H
+#ifndef SVN_LIBSVN_WC_TREE_CONFLICTS_H
+#define SVN_LIBSVN_WC_TREE_CONFLICTS_H
 
 #include "wc.h"
 
@@ -58,7 +58,7 @@
  * the following character:
  */
 
-#define SVN_WC__TREECONFLICT_DESC_FIELD_SEPARATOR ':'
+#define SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR ':'
 
 /*
  * The fields are:
@@ -71,9 +71,10 @@
  * svn_wc_conflict_description_t. If there is a colon in the
  * victim_path, it should be escaped with a backslash.
  * A literal backslash in victim_path must also be escaped with a backslash.
+ * None of these fields is null-terminated!
  *
- * WARNING:  The escaping conventions mentioned in
- * subversion/libsvn_wc/README also apply,
+ * The escaping conventions mentioned in subversion/libsvn_wc/README also
+ * apply, but are transparent to the tree conflicts code.
  *
  * The node_kind of the victim (corresponding to the node_kind field in
  * svn_wc_conflict_description_t) will be useful for tree conflict use cases
@@ -89,28 +90,55 @@
  *
  * The enum fields have the following mappings to character strings:
  *
+ *  node_kind:
+ */
+
+#define SVN_WC__NODE_FILE "file"
+#define SVN_WC__NODE_DIR "dir"
+
+/*
  *  operation:
- *    svn_wc_operation_update -> "update"
- *    svn_wc_operation_merge -> "merge"
- *
+ */
+
+#define SVN_WC__OPERATION_UPDATE "update"
+#define SVN_WC__OPERATION_SWITCH "switch"
+#define SVN_WC__OPERATION_MERGE "merge"
+
+/*
  *  action:
- *    svn_wc_conflict_action_edit -> "edited"
- *    svn_wc_conflict_action_delete -> "deleted"
- *
+ */
+
+#define SVN_WC__CONFLICT_ACTION_EDITED "edited"
+#define SVN_WC__CONFLICT_ACTION_DELETED "deleted"
+
+/*
  *  reason:
- *    svn_wc_conflict_reason_edited -> "edited"
- *    svn_wc_conflict_reason_deleted -> "deleted"
- *
+ */
+
+#define SVN_WC__CONFLICT_REASON_EDITED "edited"
+#define SVN_WC__CONFLICT_REASON_DELETED "deleted"
+#define SVN_WC__CONFLICT_REASON_MISSING "missing"
+
+/*
  * Multiple tree conflict descriptions can be present in one entry.
  * They are separated by the following character:
  */
 
-#define SVN_WC__TREECONFLICT_DESC_SEPARATOR '|'
+#define SVN_WC__TREE_CONFLICT_DESC_SEPARATOR '|'
 
 /*
  * Example entry with two tree conflicts:
  *
  *   foo.c:file:update:deleted:edited|bar.h:file:update:edited:deleted
+ *
+ * If the separator characters are needed in the victim_path field,
+ * escape them with the following character:
+ */
+
+#define SVN_WC__TREE_CONFLICT_ESCAPE_CHAR '\\'
+
+/*
+ * The escape character can itself be escaped.
  *
  * From the information in the tree conflict entry, we can generate
  * a human readable description of tree conflicts in a user-visible
@@ -128,23 +156,24 @@
  *
  */
 
-/* Add tree conflict data to the directory entry belonging to ADM_ACCESS.
- * The caller has to pass a description of the tree conflict that
- * occured in CONFLICT. Do all allocations in POOL.
+/* Add a tree conflict to the directory entry belonging to ADM_ACCESS.
+ * A command to rewrite the entry field will be append to the log
+ * accumulator.  Pass a description of the new tree conflict in CONFLICT.
+ * Do all allocations in POOL.
  */
 svn_error_t *
-svn_wc__add_tree_conflict_data(svn_wc_conflict_description_t *conflict,
+svn_wc__add_tree_conflict_data(svn_stringbuf_t *log_accum,
+                               svn_wc_conflict_description_t *conflict,
                                svn_wc_adm_access_t *adm_access,
                                apr_pool_t *pool);
 
-/* Write to a new temporary file the human readable descriptions
- * of all the tree conflicts of the directory belonging to ADM_ACCESS.
- * Loggy move the temporary file onto the user-visible tree conflict
- * description file in the directory belonging to ADM_ACCESS.
+/* Write a user-visible, localized report file in the directory belonging
+ * to ADM_ACCESS.  Use a log accumulator string buffer for loggy operations.
  * Do all allocations in POOL.*/
 svn_error_t *
-svn_wc__write_tree_conflict_descs(svn_wc_adm_access_t *adm_access,
-                                  apr_pool_t *pool);
+svn_wc__write_tree_conflict_report(svn_stringbuf_t *log_accum,
+                                   svn_wc_adm_access_t *adm_access,
+                                   apr_pool_t *pool);
 
 /* Set TREE_CONFLICT_VICTIM to TRUE if path is already a recorded
  * tree conflict victim in the directory corresponding to ADM_ACCESS.
@@ -162,4 +191,48 @@ svn_wc__tree_conflict_resolved(const char* victim_path,
                                svn_wc_adm_access_t *adm_access,
                                apr_pool_t *pool);
 
-#endif /* SVN_LIBSVN_WC_TREECONFLICTS_H */
+/*
+ * Read tree conflict descriptions from DIR_ENTRY.
+ * Append pointers to newly allocated svn_wc_conflict_description_t
+ * objects to the array pointed to by CONFLICTS.
+ * If there are no tree conflicts rooted at DIR_ENTRY, set *RESULT to NULL.
+ * Do all allocations in POOL.
+ *
+ * This function is used in a unit test in tests/libsvn_wc.
+ */
+svn_error_t *
+svn_wc__read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
+                                       const svn_wc_entry_t *dir_entry,
+                                       apr_pool_t *pool);
+
+/*
+ * Write tree conflicts (svn_wc_conflict_description_t)
+ * in CONFLICTS to DIR_ENTRY.
+ *
+ * This function is used in a unit test in tests/libsvn_wc.
+ */
+svn_error_t *
+svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
+                                      svn_wc_entry_t *dir_entry,
+                                      apr_pool_t *pool);
+
+/*
+ * Append to DESCRIPTIONS a human readable description of a tree CONFLICT.
+ *
+ * This function is used in a unit test in tests/libsvn_wc.
+ */
+svn_error_t *
+svn_wc__append_tree_conflict_desc(svn_stringbuf_t *descriptions,
+                                  svn_wc_conflict_description_t *conflict,
+                                  apr_pool_t *pool);
+
+/*
+ * Search in CONFLICTS for a conflict with the given victim_path.
+ *
+ * This function is used in a unit test in tests/libsvn_wc.
+ */
+svn_boolean_t
+svn_wc__tree_conflict_exists(apr_array_header_t *conflicts,
+                             const char *victim_path);
+
+#endif /* SVN_LIBSVN_WC_TREE_CONFLICTS_H */
