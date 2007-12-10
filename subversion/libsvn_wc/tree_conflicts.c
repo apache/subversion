@@ -16,7 +16,7 @@
  * ====================================================================
  */
 
-#include "treeconflicts.h"
+#include "tree_conflicts.h"
 #include "svn_path.h"
 #include "svn_private_config.h"
 
