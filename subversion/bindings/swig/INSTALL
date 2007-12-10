@@ -5,7 +5,7 @@ STATUS OF THE SWIG BINDINGS
 * Python
 
   The Python bindings are fairly well developed, although there are some
-  missing parts, most notably, there is no useful wrapping of the svn_ra APIs.
+  missing parts.
 
   (N.B. As discussed below, they will not compile in Debug mode on Windows.)
 
