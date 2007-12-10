@@ -4489,11 +4489,23 @@ svn_client_merge3(const char *source1,
                                                        ctx, pool));
     }
 
-  /* If we have a youngest common ancestor, we might be doing a pair of
-     merges.  Given a requested merge of the differences between A and
-     B, and a common ancestor of C, we'll first merge the removal of
-     changes between C and A, then merge the addition of changes
-     between C and B.  */
+  /* Check for a youngest common ancestor.  If we have one, we'll be
+     doing merge tracking.
+
+     So, given a requested merge of the differences between A and
+     B, and a common ancestor of C, we will find ourselves in one of
+     four positions, and four different approaches:
+ 
+        A == B == C   there's nothing to merge
+
+        A == C != B   we merge the changes between A (or C) and B
+
+        B == C != A   we merge the changes between B (or C) and A
+
+        A != B != C   we merge the changes between A and B without
+                      merge recording, then record-only two merges:
+                      from A to C, and from C to B
+  */
   if (yc_path && SVN_IS_VALID_REVNUM(yc_rev))
     {
       apr_array_header_t *ranges;
@@ -4501,7 +4513,7 @@ svn_client_merge3(const char *source1,
       svn_opt_revision_t peg_revision;
       peg_revision.kind = svn_opt_revision_number;
 
-      /* Not that our merge sources are related. */
+      /* Note that our merge sources are related. */
       related = TRUE;
       
       /* Make YC_PATH into a full URL. */
