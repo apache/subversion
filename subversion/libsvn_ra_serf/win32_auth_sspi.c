@@ -55,9 +55,9 @@
 /*** Includes ***/
 #ifdef WIN32
 #ifdef APR_HAVE_IPV6
-#include "winsock2.h"
-#include "Ws2tcpip.h"
-#include "Wspiapi.h"
+#include <winsock2.h>
+#include <Ws2tcpip.h>
+#include <Wspiapi.h>
 #endif
 #include <windows.h>
 #endif

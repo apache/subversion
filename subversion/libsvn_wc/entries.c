@@ -119,7 +119,7 @@ read_escaped(char *result, char **buf, const char *end)
   if ((val = apr_strtoi64(digits, NULL, 16)) == 0)
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
                             _("Invalid escaped character"));
-  *result = val;
+  *result = (char) val;
   return SVN_NO_ERROR;
 }
 

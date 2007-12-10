@@ -23,12 +23,12 @@ class MergeinfoReportParser:
   # Parse output of the form:
   #
   # Path: .
-  #  Source path: /branches/sqlite-node-origins
-  #    Merged ranges: r27840:27889
-  #    Eligible ranges: (source no longer available in HEAD)
-  #  Source path: /branches/mergeinfoless-copies
-  #    Merged ranges: r27770:28001
-  #    Eligible ranges: (source no longer available in HEAD)
+  #   Source path: /branches/sqlite-node-origins
+  #     Merged ranges: r27840:27889
+  #     Eligible ranges: (source no longer available in HEAD)
+  #   Source path: /branches/mergeinfoless-copies
+  #     Merged ranges: r27770:28001
+  #     Eligible ranges: (source no longer available in HEAD)
 
   STATE_INITIAL = 0
   STATE_PATH = 1
@@ -45,10 +45,10 @@ class MergeinfoReportParser:
     }
 
   STATE_TOKENS = {
-    STATE_PATH : "Path: ",
-    STATE_SOURCE_PATH : "Source path: ",
-    STATE_MERGED_RANGES : "Merged ranges: ",
-    STATE_ELIGIBLE_RANGES : "Eligible ranges: ",
+    STATE_PATH : "Path:",
+    STATE_SOURCE_PATH : "Source path:",
+    STATE_MERGED_RANGES : "Merged ranges:",
+    STATE_ELIGIBLE_RANGES : "Eligible ranges:",
     }
 
   def __init__(self):
@@ -91,5 +91,5 @@ class MergeinfoReportParser:
         if not line.startswith(token):
           continue
         self.state = trans
-        return line[len(token):]
+        return line[len(token)+1:]
       return None

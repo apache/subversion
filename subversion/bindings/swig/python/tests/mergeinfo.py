@@ -1,10 +1,10 @@
 import unittest, os
 
 from svn import core
-from libsvn.core import SubversionException
+from svn.core import SubversionException
 
 class SubversionMergeinfoTestCase(unittest.TestCase):
-  """Test cases for the basic SWIG Subversion core"""
+  """Test cases for mergeinfo"""
 
   # Some textual mergeinfo.
   TEXT_MERGEINFO1 = "/trunk:3-9,27,42*"
