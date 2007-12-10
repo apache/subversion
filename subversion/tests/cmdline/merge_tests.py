@@ -9491,9 +9491,8 @@ def merge_from_renamed_branch_fails_while_avoiding_repeat_merge(sbox):
                                        None, None, None, None, None, 1, 1)
   os.chdir(saved_cwd)
 
-# Test for issue #2877: 'do subtree merge only if subtree has
-# a explicit mergeinfo set and has a merge source as that of
-# current merge source'
+# Test for part of issue #2877: 'do subtree merge only if subtree has
+# explicit mergeinfo set and exists in the merge source'
 #
 # Marked as XFail until latest concerns with reopened
 # issue #2877 are addressed.
@@ -9563,7 +9562,8 @@ def merge_source_normalization_and_subtree_merges(sbox):
   #
   # A_MOVED/D/G doesn't exist at r3:4, it's still A/D/G,
   # so the merge source normalization logic should set
-  # mergeinfo of '/A/D/G:4' on A_COPY/D/G, *not* 'A_MOVED/D/G:4'.
+  # mergeinfo of '/A/D/G:4' on A_COPY/D/G, *not* 'A_MOVED/D/G:4',
+  # see issue #2953.
   short_G_COPY_path = shorten_path_kludge(G_COPY_path)
   expected_output = wc.State(short_G_COPY_path, {
     'rho' : Item(status='U ')
@@ -9596,7 +9596,8 @@ def merge_source_normalization_and_subtree_merges(sbox):
   # Merge -c8 URL/A_MOVED/D A_COPY/D.
   #
   # The merge target A_COPY/D and the subtree at A_COPY/D/G
-  # should both have their mergeinfo updated with r8.
+  # should both have their mergeinfo updated with r8
+  # from A_MOVED_D, see reopened issue #2877.
   short_D_COPY_path = shorten_path_kludge(D_COPY_path)
   expected_output = wc.State(short_D_COPY_path, {
     'G/tau' : Item(status='U '),
