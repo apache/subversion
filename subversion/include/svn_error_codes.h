@@ -738,7 +738,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF(SVN_ERR_RA_PARTIAL_REPLAY_NOT_SUPPORTED,
              SVN_ERR_RA_CATEGORY_START + 9,
-             "Server does not support partial replay")
+             "Server can only replay from the root of a repository")
 
   /* ra_dav errors */
 
