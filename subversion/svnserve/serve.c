@@ -1527,13 +1527,14 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *get_commit_revs_for_merge_ranges(svn_ra_svn_conn_t *conn,
-                                                    apr_pool_t *pool,
-                                                    apr_array_header_t *params,
-                                                    void *baton)
+static svn_error_t *
+get_commit_and_merge_ranges(svn_ra_svn_conn_t *conn,
+                            apr_pool_t *pool,
+                            apr_array_header_t *params,
+                            void *baton)
 {
   server_baton_t *b = baton;
-  apr_array_header_t *commit_rev_range_list;
+  apr_array_header_t *commit_rangelist;
   const char *inherit_word;
   svn_revnum_t max_commit_rev = SVN_INVALID_REVNUM;
   svn_revnum_t min_commit_rev = SVN_INVALID_REVNUM;
@@ -1541,15 +1542,13 @@ static svn_error_t *get_commit_revs_for_merge_ranges(svn_ra_svn_conn_t *conn,
   const char *merge_source = NULL;
   const char *merge_target_abs_path = NULL;
   const char *merge_source_abs_path = NULL;
-  const char *merge_ranges_string = NULL;
   apr_array_header_t *merge_rangelist;
   svn_mergeinfo_inheritance_t inherit;
-  svn_stringbuf_t *commit_rev_rangelist_str;
+  svn_stringbuf_t *commit_rangelist_str, *merge_rangelist_str;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccrrcw", &merge_target,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccrrw", &merge_target,
                                  &merge_source, &min_commit_rev,
-                                 &max_commit_rev, &merge_ranges_string,
-                                 &inherit_word));
+                                 &max_commit_rev, &inherit_word));
   /* Canonicalize the paths. */
   merge_target = svn_path_canonicalize(merge_target, pool);
   merge_source = svn_path_canonicalize(merge_source, pool);
@@ -1557,24 +1556,25 @@ static svn_error_t *get_commit_revs_for_merge_ranges(svn_ra_svn_conn_t *conn,
   merge_source_abs_path = svn_path_join(b->fs_path->data, merge_source, pool);
   inherit = svn_inheritance_from_word(inherit_word);
 
-  SVN_ERR(svn_rangelist__parse(&merge_rangelist, merge_ranges_string, pool));
-
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  SVN_CMD_ERR(svn_repos_get_commit_revs_for_merge_ranges(
-                                                &commit_rev_range_list,
+  SVN_CMD_ERR(svn_repos_get_commit_and_merge_ranges(
+                                                &merge_rangelist,
+                                                &commit_rangelist,
                                                 b->repos, 
                                                 merge_target_abs_path,
                                                 merge_source_abs_path,
                                                 min_commit_rev,
                                                 max_commit_rev,
-                                                merge_rangelist,
                                                 inherit,
                                                 authz_check_access_cb_func(b),
                                                 b, pool));
-  SVN_ERR(svn_rangelist_to_stringbuf(&commit_rev_rangelist_str,
-                                     commit_rev_range_list, pool));
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c)", "success",
-                                 commit_rev_rangelist_str->data));
+  SVN_ERR(svn_rangelist_to_stringbuf(&commit_rangelist_str,
+                                     commit_rangelist, pool));
+  SVN_ERR(svn_rangelist_to_stringbuf(&merge_rangelist_str,
+                                     merge_rangelist, pool));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(cc)", "success",
+                                 merge_rangelist_str->data,
+                                 commit_rangelist_str->data));
   return SVN_NO_ERROR;
 }
 /* Send a log entry to the client. */
@@ -2465,7 +2465,7 @@ static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "get-locks",       get_locks },
   { "replay",          replay },
   { "replay-range",    replay_range },
-  { "commit-revs-for-merge-ranges",    get_commit_revs_for_merge_ranges},
+  { "get-commit-and-merge-ranges",    get_commit_and_merge_ranges},
   { NULL }
 };
 

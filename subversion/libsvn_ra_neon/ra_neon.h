@@ -262,16 +262,16 @@ svn_error_t * svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
                                          svn_mergeinfo_inheritance_t inherit,
                                          apr_pool_t *pool);
 
-svn_error_t * svn_ra_neon__get_commit_revs_for_merge_ranges(
-                                     svn_ra_session_t *session,
-                                     apr_array_header_t **commit_rev_rangelist,
-                                     const char* merge_target,
-                                     const char* merge_source,
-                                     svn_revnum_t min_commit_rev,
-                                     svn_revnum_t max_commit_rev,
-                                     const apr_array_header_t *merge_rangelist,
-                                     svn_mergeinfo_inheritance_t inherit,
-                                     apr_pool_t *pool);
+svn_error_t * 
+svn_ra_neon__get_commit_and_merge_ranges(svn_ra_session_t *session,
+                                         apr_array_header_t **merge_rangelist,
+                                         apr_array_header_t **commit_rangelist,
+                                         const char* merge_target,
+                                         const char* merge_source,
+                                         svn_revnum_t min_commit_rev,
+                                         svn_revnum_t max_commit_rev,
+                                         svn_mergeinfo_inheritance_t inherit,
+                                         apr_pool_t *pool);
 
 svn_error_t * svn_ra_neon__do_update(svn_ra_session_t *session,
                                      const svn_ra_reporter3_t **reporter,
@@ -801,7 +801,10 @@ enum {
   ELEM_mergeinfo_path,
   ELEM_mergeinfo_info,
   ELEM_has_children,
-  ELEM_merged_revision
+  ELEM_merged_revision,
+  ELEM_commit_and_merge_ranges_report,
+  ELEM_merge_ranges,
+  ELEM_commit_ranges
 };
 
 /* ### docco */

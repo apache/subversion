@@ -1245,12 +1245,16 @@ svn_error_t *svn_fs_get_mergeinfo(apr_hash_t **minfohash,
                                   svn_mergeinfo_inheritance_t inherit,
                                   apr_pool_t *pool);
 
-/** Retrieve @a commit_rev_rangelist for a @a merge_rangelist from a given
- * @a merge_source to a @a merge_target 
- * where each commit_rev in @a commit_rev_rangelist > @a min_commit_rev and 
+/** Retrieve @a commit_rangelist and a @a merge_rangelist from a given
+ * @a merge_source to a @a merge_target
+ * where each commit_rev in @a commit_rangelist > @a min_commit_rev and 
  * <= @a max_commit_rev.
  *
- * @a commit_rev_rangelist will never be @c NULL, but may be empty.
+ * @a commit_rangelist and @a merge_rangelist will never be @c NULL, 
+ * but may be empty.
+ *
+ * @a commit_rangelist and @a merge_rangelist are having
+ * one-one corresponding and hence they are equal in size.
  *
  * @a root indicates the revision root to use when looking up paths.
  *
@@ -1262,16 +1266,15 @@ svn_error_t *svn_fs_get_mergeinfo(apr_hash_t **minfohash,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_fs_get_commit_revs_for_merge_ranges(
-                                     apr_array_header_t **commit_rev_rangelist,
-                                     svn_fs_root_t *root,
-                                     const char* merge_target,
-                                     const char* merge_source,
-                                     svn_revnum_t min_commit_rev,
-                                     svn_revnum_t max_commit_rev,
-                                     const apr_array_header_t *merge_rangelist,
-                                     svn_mergeinfo_inheritance_t inherit,
-                                     apr_pool_t *pool);
+svn_fs_get_commit_and_merge_ranges(apr_array_header_t **merge_rangelist,
+                                   apr_array_header_t **commit_rangelist,
+                                   svn_fs_root_t *root,
+                                   const char* merge_target,
+                                   const char* merge_source,
+                                   svn_revnum_t min_commit_rev,
+                                   svn_revnum_t max_commit_rev,
+                                   svn_mergeinfo_inheritance_t inherit,
+                                   apr_pool_t *pool);
 
 /**
  * Optionally filter paths which are discoved to have mergeinfo.

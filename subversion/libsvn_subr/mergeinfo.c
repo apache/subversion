@@ -420,10 +420,12 @@ combine_with_adjacent_lastrange(svn_merge_range_t **lastrange,
    revisionlist -> (revisionelement)(COMMA revisionelement)*
    revisionrange -> REVISION "-" REVISION("*")
    revisionelement -> revisionrange | REVISION("*")
+   If DO_COMPACT is TRUE it compacts the overlapping range elements.
 */
 static svn_error_t *
 parse_revlist(const char **input, const char *end,
-              apr_array_header_t *revlist, apr_pool_t *pool)
+              apr_array_header_t *revlist, svn_boolean_t do_compact,
+              apr_pool_t *pool)
 {
   const char *curr = *input;
   svn_merge_range_t *lastrange = NULL;
@@ -476,15 +478,21 @@ parse_revlist(const char **input, const char *end,
 
       if (*curr == '\n' || curr == end)
         {
-          SVN_ERR(combine_with_adjacent_lastrange(&lastrange, mrange, FALSE,
-                                                  revlist, pool));
+          if (do_compact)
+            SVN_ERR(combine_with_adjacent_lastrange(&lastrange, mrange, FALSE,
+                                                    revlist, pool));
+          else
+            APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = mrange;
           *input = curr;
           return SVN_NO_ERROR;
         }
       else if (*curr == ',')
         {
-          SVN_ERR(combine_with_adjacent_lastrange(&lastrange, mrange, FALSE,
-                                                  revlist, pool));
+          if (do_compact)
+            SVN_ERR(combine_with_adjacent_lastrange(&lastrange, mrange, FALSE,
+                                                    revlist, pool));
+          else
+            APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = mrange;
           curr++;
         }
       else if (*curr == '*')
@@ -493,8 +501,11 @@ parse_revlist(const char **input, const char *end,
           curr++;
           if (*curr == ',' || *curr == '\n' || curr == end)
             {
-              SVN_ERR(combine_with_adjacent_lastrange(&lastrange, mrange,
-                                                      FALSE, revlist, pool));
+              if (do_compact)
+                SVN_ERR(combine_with_adjacent_lastrange(&lastrange, mrange,
+                                                        FALSE, revlist, pool));
+              else
+                APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = mrange;
               if (*curr == ',')
                 {
                   curr++;
@@ -545,7 +556,7 @@ parse_revision_line(const char **input, const char *end, apr_hash_t *hash,
 
   *input = *input + 1;
 
-  SVN_ERR(parse_revlist(input, end, revlist, pool));
+  SVN_ERR(parse_revlist(input, end, revlist, TRUE, pool));
 
   if (*input != end && *(*input) != '\n')
     return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
@@ -583,16 +594,19 @@ svn_mergeinfo_parse(apr_hash_t **mergeinfo,
   return parse_top(&input, input + strlen(input), *mergeinfo, pool);
 }
 
-/* Parse rangelist. */
 svn_error_t *
 svn_rangelist__parse(apr_array_header_t **rangelist,
                      const char *input,
+                     svn_boolean_t do_sort,
+                     svn_boolean_t do_compact,
                      apr_pool_t *pool)
 {
   *rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
-  SVN_ERR(parse_revlist(&input, input + strlen(input), *rangelist, pool));
-  qsort((*rangelist)->elts, (*rangelist)->nelts, (*rangelist)->elt_size,
-        svn_sort_compare_ranges);
+  SVN_ERR(parse_revlist(&input, input + strlen(input), *rangelist,
+                        do_compact, pool));
+  if (do_sort)
+    qsort((*rangelist)->elts, (*rangelist)->nelts, (*rangelist)->elt_size,
+          svn_sort_compare_ranges);
   return SVN_NO_ERROR;
 }
 

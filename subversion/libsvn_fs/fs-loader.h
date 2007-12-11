@@ -318,14 +318,14 @@ typedef struct root_vtable_t
                                          svn_fs_mergeinfo_filter_func_t filter_func,
                                          void *filter_func_baton,
                                          apr_pool_t *pool);
-  svn_error_t *(*get_commit_revs_for_merge_ranges)(
-                                    apr_array_header_t **commit_rev_range_list,
+  svn_error_t *(*get_commit_and_merge_ranges)(
+                                    apr_array_header_t **merge_rangelist,
+                                    apr_array_header_t **commit_rangelist,
                                     svn_fs_root_t *root,
                                     const char* merge_target,
                                     const char* merge_source,
                                     svn_revnum_t max_commit_rev,
                                     svn_revnum_t min_commit_rev,
-                                    const apr_array_header_t *merge_rangelist,
                                     svn_mergeinfo_inheritance_t inherit,
                                     apr_pool_t *pool);
 } root_vtable_t;

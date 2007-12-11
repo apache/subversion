@@ -1188,16 +1188,16 @@ svn_error_t * svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                                          svn_mergeinfo_inheritance_t inherit,
                                          apr_pool_t *pool);
 
-svn_error_t * svn_ra_serf__get_commit_revs_for_merge_ranges(
-                                     svn_ra_session_t *session,
-                                     apr_array_header_t **commit_rev_rangelist,
-                                     const char* merge_target,
-                                     const char* merge_source,
-                                     svn_revnum_t min_commit_rev,
-                                     svn_revnum_t max_commit_rev,
-                                     const apr_array_header_t *merge_rangelist,
-                                     svn_mergeinfo_inheritance_t inherit,
-                                     apr_pool_t *pool);
+svn_error_t * 
+svn_ra_serf__get_commit_and_merge_ranges(svn_ra_session_t *session,
+                                         apr_array_header_t **merge_rangelist,
+                                         apr_array_header_t **commit_rangelist,
+                                         const char* merge_target,
+                                         const char* merge_source,
+                                         svn_revnum_t min_commit_rev,
+                                         svn_revnum_t max_commit_rev,
+                                         svn_mergeinfo_inheritance_t inherit,
+                                         apr_pool_t *pool);
 
 /* Implements the has_capability RA layer function. */
 svn_error_t *

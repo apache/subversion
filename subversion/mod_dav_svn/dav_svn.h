@@ -515,7 +515,7 @@ static const dav_report_elem dav_svn__reports_list[] = {
   { SVN_XML_NAMESPACE, "get-locks-report" },
   { SVN_XML_NAMESPACE, "replay-report" },
   { SVN_XML_NAMESPACE, SVN_DAV__MERGEINFO_REPORT },
-  { SVN_XML_NAMESPACE, SVN_DAV__COMMIT_REVS_FOR_MERGE_RANGES_REPORT },
+  { SVN_XML_NAMESPACE, SVN_DAV__COMMIT_AND_MERGE_RANGES_REPORT},
   { NULL, NULL }
 };
 
@@ -563,9 +563,9 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
 
 /* Ditto. */
 dav_error *
-dav_svn__get_commit_revs_for_merge_ranges_report(const dav_resource *resource,
-                                                 const apr_xml_doc *doc,
-                                                 ap_filter_t *output);
+dav_svn__get_commit_and_merge_ranges_report(const dav_resource *resource,
+                                            const apr_xml_doc *doc,
+                                            ap_filter_t *output);
 dav_error *
 dav_svn__get_locks_report(const dav_resource *resource,
                           const apr_xml_doc *doc,

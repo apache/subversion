@@ -607,18 +607,18 @@ svn_repos_fs_get_mergeinfo(apr_hash_t **mergeinfo,
 }
 
 svn_error_t *
-svn_repos_get_commit_revs_for_merge_ranges(
-                                    apr_array_header_t **commit_rev_range_list,
-                                    svn_repos_t *repos,
-                                    const char* merge_target,
-                                    const char* merge_source,
-                                    svn_revnum_t min_commit_rev,
-                                    svn_revnum_t max_commit_rev,
-                                    const apr_array_header_t *merge_rangelist,
-                                    svn_mergeinfo_inheritance_t inherit,
-                                    svn_repos_authz_func_t authz_read_func,
-                                    void *authz_read_baton,
-                                    apr_pool_t *pool)
+svn_repos_get_commit_and_merge_ranges(
+                                     apr_array_header_t **merge_rangelist,
+                                     apr_array_header_t **commit_rangelist,
+                                     svn_repos_t *repos,
+                                     const char* merge_target,
+                                     const char* merge_source,
+                                     svn_revnum_t min_commit_rev,
+                                     svn_revnum_t max_commit_rev,
+                                     svn_mergeinfo_inheritance_t inherit,
+                                     svn_repos_authz_func_t authz_read_func,
+                                     void *authz_read_baton,
+                                     apr_pool_t *pool)
 {
   svn_fs_root_t *root;
   SVN_ERR(svn_fs_revision_root(&root, repos->fs, max_commit_rev, pool));
@@ -633,12 +633,11 @@ svn_repos_get_commit_revs_for_merge_ranges(
            _("Read denied:  not authorized to read mergeinfo on %s"),
            merge_target);
     }
-  SVN_ERR(svn_fs_get_commit_revs_for_merge_ranges(commit_rev_range_list,
-                                                  root, merge_target,
-                                                  merge_source, min_commit_rev,
-                                                  max_commit_rev,
-                                                  merge_rangelist, inherit,
-                                                  pool));
+  SVN_ERR(svn_fs_get_commit_and_merge_ranges(merge_rangelist,
+                                             commit_rangelist,
+                                             root, merge_target,
+                                             merge_source, min_commit_rev,
+                                             max_commit_rev, inherit, pool));
   return SVN_NO_ERROR;
 }
 

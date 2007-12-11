@@ -1169,7 +1169,7 @@ static const svn_ra__vtable_t neon_vtable = {
   svn_ra_neon__replay,
   svn_ra_neon__has_capability,
   svn_ra_neon__replay_range,
-  svn_ra_neon__get_commit_revs_for_merge_ranges
+  svn_ra_neon__get_commit_and_merge_ranges
 };
 
 svn_error_t *

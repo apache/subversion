@@ -845,10 +845,11 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
   return svn_fs__sqlite_close(db, err);
 }
 
-/* Helper function for 'get_commit_revs_for_merge_ranges'.
+/* Helper function for 'get_commit_and_merge_ranges'.
 
    Set *PARENT_WITH_MERGEINFO to the path where the mergeinfo of
-   MERGE_TARGET elides to.  Retrieve the data from DB, within the
+   MERGE_TARGET elides to, if there exists no mergeinfo in any of the parent
+   it sets it to NULL.  Retrieve the data from DB, within the
    commit range MIN_COMMIT_REV(exclusive):MAX_COMMIT_REV(inclusive).
    Perform all allocations in POOL. */
 static svn_error_t *
@@ -861,7 +862,7 @@ get_parent_target_path_having_mergeinfo(const char **parent_with_mergeinfo,
 {
   sqlite3_stmt *stmt;
   svn_boolean_t got_row;
-  svn_boolean_t has_mergeinfo = FALSE;
+  *parent_with_mergeinfo = NULL;
   SVN_ERR(svn_fs__sqlite_prepare(&stmt, db,
                                  "SELECT revision FROM mergeinfo_changed WHERE"
                                  " mergedto = ? AND"
@@ -874,7 +875,6 @@ get_parent_target_path_having_mergeinfo(const char **parent_with_mergeinfo,
   if (got_row)
     {
       *parent_with_mergeinfo = apr_pstrdup(pool, merge_target);
-      has_mergeinfo = TRUE;
     }
   else
     {
@@ -888,7 +888,6 @@ get_parent_target_path_having_mergeinfo(const char **parent_with_mergeinfo,
           if (got_row)
             {
               *parent_with_mergeinfo = apr_pstrdup(pool, parent_path);
-              has_mergeinfo = TRUE;
               break;
             }
           else
@@ -899,16 +898,10 @@ get_parent_target_path_having_mergeinfo(const char **parent_with_mergeinfo,
 
   SVN_ERR(svn_fs__sqlite_finalize(stmt));
 
-  if (has_mergeinfo)
-    return SVN_NO_ERROR;
-  else
-    return svn_error_createf(SVN_ERR_FS_SQLITE_ERROR, NULL,
-                             _("No mergeinfo for '%s' in revision range "
-                               "%ld:%ld"),
-                             merge_target, min_commit_rev, max_commit_rev);
+  return SVN_NO_ERROR;
 }
 
-/* Helper function for 'svn_fs_mergeinfo__get_commit_revs_for_merge_ranges'.
+/* Helper function for 'svn_fs_mergeinfo__get_commit_and_merge_ranges'.
 
    Set *COMMIT_REV_RANGELIST to a list of revisions (sorted in
    increasing order and represented as described below) comprising all
@@ -933,30 +926,34 @@ get_parent_target_path_having_mergeinfo(const char **parent_with_mergeinfo,
    range for which DB has no record, raise SVN_ERR_FS_SQLITE_ERROR.
 */
 static svn_error_t *
-get_commit_revs_for_merge_ranges(apr_array_header_t **commit_rev_rangelist,
-                                 sqlite3 *db,
-                                 const char *merge_target,
-                                 const char *merge_source,
-                                 svn_revnum_t min_commit_rev,
-                                 svn_revnum_t max_commit_rev,
-                                 const apr_array_header_t *merge_rangelist,
-                                 svn_mergeinfo_inheritance_t inherit,
-                                 apr_pool_t *pool)
+get_commit_and_merge_ranges(apr_array_header_t **merge_rangelist,
+                            apr_array_header_t **commit_rangelist,
+                            sqlite3 *db,
+                            const char *merge_target,
+                            const char *merge_source,
+                            svn_revnum_t min_commit_rev,
+                            svn_revnum_t max_commit_rev,
+                            svn_mergeinfo_inheritance_t inherit,
+                            apr_pool_t *pool)
 {
   sqlite3_stmt *stmt;
   int i;
+  svn_boolean_t got_row;
   const char *real_mergeinfo_target = merge_target;
   const char *real_merge_source = merge_source;
 
-  /* early return */
-  if (!merge_rangelist || !merge_rangelist->nelts)
-    return SVN_NO_ERROR;
   if (inherit == svn_mergeinfo_inherited
       || inherit == svn_mergeinfo_nearest_ancestor)
     SVN_ERR(get_parent_target_path_having_mergeinfo(&real_mergeinfo_target,
                                                     db, merge_target,
                                                     min_commit_rev,
                                                     max_commit_rev, pool));
+  *commit_rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
+  *merge_rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
+
+  if (!real_mergeinfo_target)
+    return SVN_NO_ERROR;
+
   if (strcmp(real_mergeinfo_target, merge_target) != 0)
     {
       int parent_merge_src_end;
@@ -966,57 +963,55 @@ get_commit_revs_for_merge_ranges(apr_array_header_t **commit_rev_rangelist,
       real_merge_source = apr_pstrndup(pool, merge_source,
                                        parent_merge_src_end);
     }
-  *commit_rev_rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
   SVN_ERR(svn_fs__sqlite_prepare(&stmt, db,
-                                 "SELECT MAX(revision) FROM mergeinfo_changed "
+                                 "SELECT revision, mergedrevstart, "
+                                 "mergedrevend, inheritable "
+                                 "FROM mergeinfo_changed "
                                  "WHERE mergedfrom = ? AND mergedto = ? "
-                                 "AND mergedrevstart = ? AND mergedrevend = ? "
-                                 "AND inheritable = ? AND revision <= ?;"));
+                                 "AND revision between ? AND ? " 
+                                 "ORDER BY revision ASC ;"));
   SVN_ERR(svn_fs__sqlite_bind_text(stmt, 1, real_merge_source));
   SVN_ERR(svn_fs__sqlite_bind_text(stmt, 2, real_mergeinfo_target));
-  SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 6, max_commit_rev));
-  for (i = 0; i < merge_rangelist->nelts; i++)
+  SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 3, min_commit_rev + 1));
+  SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 4, max_commit_rev));
+  SVN_ERR(svn_fs__sqlite_step(&got_row, stmt));
+  while (got_row)
     {
-      svn_boolean_t got_row;
-      const svn_merge_range_t *range = APR_ARRAY_IDX(merge_rangelist, i,
-                                                     svn_merge_range_t *);
       svn_merge_range_t *commit_rev_range;
-      svn_revnum_t commit_rev;
-      SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 3, range->start));
-      SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 4, range->end));
-      SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 5, range->inheritable));
-      SVN_ERR(svn_fs__sqlite_step(&got_row, stmt));
+      svn_merge_range_t *merge_range;
+      svn_revnum_t commit_rev, start_rev, end_rev;
+      int inheritable;
 
-      if (!got_row)
-        return svn_error_createf(SVN_ERR_FS_SQLITE_ERROR, NULL,
-                                 _("No commit rev for merge %ld:%ld from %s"
-                                   " on %s within %ld"), range->start,
-                                 range->end,
-                                 merge_source, merge_target, max_commit_rev);
       commit_rev_range = apr_pcalloc(pool, sizeof(*commit_rev_range));
+      merge_range = apr_pcalloc(pool, sizeof(*merge_range));
       commit_rev = (svn_revnum_t) sqlite3_column_int64(stmt, 0);
+      start_rev = (svn_revnum_t) sqlite3_column_int64(stmt, 1);
+      end_rev = (svn_revnum_t) sqlite3_column_int64(stmt, 2);
+      inheritable = sqlite3_column_int64(stmt, 3);
       commit_rev_range->start = commit_rev - 1;
       commit_rev_range->end = commit_rev;
       commit_rev_range->inheritable = TRUE;
-      APR_ARRAY_PUSH(*commit_rev_rangelist,
+      merge_range->start = start_rev - 1;
+      merge_range->end = end_rev;
+      merge_range->inheritable = inheritable;
+      APR_ARRAY_PUSH(*commit_rangelist,
                      svn_merge_range_t *) = commit_rev_range;
-      SVN_ERR(svn_fs__sqlite_reset(stmt));
+      APR_ARRAY_PUSH(*merge_rangelist, svn_merge_range_t *) = merge_range;
+      SVN_ERR(svn_fs__sqlite_step(&got_row, stmt));
     }
   SVN_ERR(svn_fs__sqlite_finalize(stmt));
-  qsort((*commit_rev_rangelist)->elts, (*commit_rev_rangelist)->nelts, 
-        (*commit_rev_rangelist)->elt_size, svn_sort_compare_ranges);
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_fs_mergeinfo__get_commit_revs_for_merge_ranges(
-                                     apr_array_header_t **commit_rev_rangelist,
+svn_fs_mergeinfo__get_commit_and_merge_ranges(
+                                     apr_array_header_t **merge_rangelist,
+                                     apr_array_header_t **commit_rangelist,
                                      svn_fs_root_t *root,
                                      const char* merge_target,
                                      const char* merge_source,
                                      svn_revnum_t min_commit_rev,
                                      svn_revnum_t max_commit_rev,
-                                     const apr_array_header_t *merge_rangelist,
                                      svn_mergeinfo_inheritance_t inherit,
                                      apr_pool_t *pool)
 {
@@ -1028,10 +1023,10 @@ svn_fs_mergeinfo__get_commit_revs_for_merge_ranges(
     return svn_error_create(SVN_ERR_FS_NOT_REVISION_ROOT, NULL, NULL);
 
   SVN_ERR(svn_fs__sqlite_open(&db, root->fs->path, pool));
-  err = get_commit_revs_for_merge_ranges(commit_rev_rangelist, db,
-                                         merge_target, merge_source,
-                                         min_commit_rev, max_commit_rev,
-                                         merge_rangelist, inherit, pool);
+  err = get_commit_and_merge_ranges(merge_rangelist, commit_rangelist,
+                                    db, merge_target, merge_source,
+                                    min_commit_rev, max_commit_rev,
+                                    inherit, pool);
   SVN_ERR(svn_fs__sqlite_close(db, err));
   return SVN_NO_ERROR;
 }

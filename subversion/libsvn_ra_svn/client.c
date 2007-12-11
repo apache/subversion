@@ -1094,43 +1094,42 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
 }
 
 static svn_error_t *
-ra_svn_get_commit_revs_for_merge_ranges(
-                                     svn_ra_session_t *session,
-                                     apr_array_header_t **commit_rev_rangelist,
-                                     const char* merge_target,
-                                     const char* merge_source,
-                                     svn_revnum_t min_commit_rev,
-                                     svn_revnum_t max_commit_rev,
-                                     const apr_array_header_t *merge_rangelist,
-                                     svn_mergeinfo_inheritance_t inherit,
-                                     apr_pool_t *pool)
+ra_svn_get_commit_and_merge_ranges(svn_ra_session_t *session,
+                                   apr_array_header_t **merge_rangelist,
+                                   apr_array_header_t **commit_rev_rangelist,
+                                   const char* merge_target,
+                                   const char* merge_source,
+                                   svn_revnum_t min_commit_rev,
+                                   svn_revnum_t max_commit_rev,
+                                   svn_mergeinfo_inheritance_t inherit,
+                                   apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
-  svn_stringbuf_t *merge_rangelist_str;
-  char *commit_rev_rangelist_str;
-  SVN_ERR(svn_rangelist_to_stringbuf(&merge_rangelist_str, merge_rangelist,
-                                     pool));
+  char *commit_rev_rangelist_str, *merge_rangelist_str;
 
   if (!svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_MERGEINFO))
     {
       *commit_rev_rangelist = apr_array_make(pool, 0,
                                              sizeof(svn_merge_range_t *));
+      *merge_rangelist = apr_array_make(pool, 0,
+                                        sizeof(svn_merge_range_t *));
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(ccrrcw)",
-                                 "commit-revs-for-merge-ranges",
-                                 merge_target, merge_source, min_commit_rev,
-                                 max_commit_rev, merge_rangelist_str->data,
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(ccrrw)",
+                                 "get-commit-and-merge-ranges", merge_target,
+                                 merge_source, min_commit_rev, max_commit_rev,
                                  svn_inheritance_to_word(inherit)));
 
   SVN_ERR(handle_auth_request(sess_baton, pool));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "c",
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "cc", &merge_rangelist_str,
                                        &commit_rev_rangelist_str));
 
   SVN_ERR(svn_rangelist__parse(commit_rev_rangelist,
-                               commit_rev_rangelist_str, pool));
+                               commit_rev_rangelist_str, FALSE, FALSE, pool));
+  SVN_ERR(svn_rangelist__parse(merge_rangelist,
+                               merge_rangelist_str, FALSE, FALSE, pool));
   return SVN_NO_ERROR;
 }
 
@@ -2308,7 +2307,7 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_replay,
   ra_svn_has_capability,
   ra_svn_replay_range,
-  ra_svn_get_commit_revs_for_merge_ranges
+  ra_svn_get_commit_and_merge_ranges
 };
 
 svn_error_t *

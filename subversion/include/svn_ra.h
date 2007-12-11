@@ -880,12 +880,16 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
                                   svn_mergeinfo_inheritance_t inherit,
                                   apr_pool_t *pool);
 
-/** Retrieve @a commit_rev_rangelist for a @a merge_rangelist from a given
+/** Retrieve @a commit_rangelist and a @a merge_rangelist from a given
  * @a merge_source to a @a merge_target
- * where each commit_rev in @a commit_rev_rangelist > @a min_commit_rev and
+ * where each commit_rev in @a commit_rangelist > @a min_commit_rev and
  * <= @a max_commit_rev.
+ * 
+ * @a commit_rangelist and @a merge_rangelist will never be @c NULL,
+ * but may be empty.
  *
- * @a commit_rev_rangelist will never be @c NULL, but may be empty.
+ * @a commit_rangelist and @a merge_rangelist are having 
+ * one-one corresponding and hence they are equal in size.
  *
  * @a session indicates the ra_session of the repository root.
  *
@@ -897,16 +901,15 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_ra_get_commit_revs_for_merge_ranges(
-                                     svn_ra_session_t *session,
-                                     apr_array_header_t **commit_rev_rangelist,
-                                     const char* merge_target,
-                                     const char* merge_source,
-                                     svn_revnum_t min_commit_rev,
-                                     svn_revnum_t max_commit_rev,
-                                     const apr_array_header_t *merge_rangelist,
-                                     svn_mergeinfo_inheritance_t inherit,
-                                     apr_pool_t *pool);
+svn_ra_get_commit_and_merge_ranges(svn_ra_session_t *session,
+                                   apr_array_header_t **merge_rangelist,
+                                   apr_array_header_t **commit_rangelist,
+                                   const char* merge_target,
+                                   const char* merge_source,
+                                   svn_revnum_t min_commit_rev,
+                                   svn_revnum_t max_commit_rev,
+                                   svn_mergeinfo_inheritance_t inherit,
+                                   apr_pool_t *pool);
 
 
 /**

@@ -28,8 +28,8 @@ extern "C" {
 /** Names for the custom HTTP REPORTs understood by mod_dav_svn, sans
     namespace. */
 #define SVN_DAV__MERGEINFO_REPORT "mergeinfo-report"
-#define SVN_DAV__COMMIT_REVS_FOR_MERGE_RANGES_REPORT \
-                     "commit-revs-for-merge-ranges-report"
+#define SVN_DAV__COMMIT_AND_MERGE_RANGES_REPORT \
+                     "commit-and-merge-ranges-report"
 
 /** Names for XML child elements of the custom HTTP REPORTs understood
     by mod_dav_svn, sans namespace. */
@@ -45,6 +45,7 @@ extern "C" {
 #define SVN_DAV__MERGE_SOURCE "merge-source"
 #define SVN_DAV__MERGE_TARGET "merge-target"
 #define SVN_DAV__MERGE_RANGES "merge-ranges"
+#define SVN_DAV__COMMIT_RANGES "commit-ranges"
 #define SVN_DAV__VERSION_NAME "version-name"
 
 #ifdef __cplusplus

@@ -4593,7 +4593,7 @@ static root_vtable_t root_vtable = {
   base_merge,
   svn_fs_mergeinfo__get_mergeinfo,
   svn_fs_mergeinfo__get_mergeinfo_for_tree,
-  svn_fs_mergeinfo__get_commit_revs_for_merge_ranges
+  svn_fs_mergeinfo__get_commit_and_merge_ranges
 };
 
 

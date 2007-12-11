@@ -84,12 +84,15 @@ svn_mergeinfo__remove_empty_rangelists(apr_hash_t *mergeinfo,
  * described above then return @c SVN_ERR_MERGEINFO_PARSE_ERROR.
  *
  * Note: @a *rangelist is guaranteed to be sorted (ordered by smallest
- * revision ranges to largest).
+ * revision ranges to largest) if @a do_sort is TRUE.
+ * If @a do_compact is TRUE overlapping range elements will be compacted.
  * @since New in 1.5.
  */
 svn_error_t *
 svn_rangelist__parse(apr_array_header_t **rangelist,
                      const char *input,
+                     svn_boolean_t do_sort,
+                     svn_boolean_t do_compact,
                      apr_pool_t *pool);
 
 #ifdef __cplusplus

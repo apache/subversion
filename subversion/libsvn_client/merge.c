@@ -1230,63 +1230,30 @@ filter_reflected_revisions(apr_array_header_t **requested_rangelist,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *pool)
 {
-  apr_array_header_t *reflected_rangelist_for_tgt = NULL;
-  apr_hash_t *added_mergeinfo, *deleted_mergeinfo,
-    *start_mergeinfo, *end_mergeinfo;
+  apr_array_header_t *reflective_rangelist = NULL;
+  apr_array_header_t *merge_rangelist = NULL;
   svn_merge_range_t *range = apr_pcalloc(pool, sizeof(*range));
   svn_revnum_t min_rev = MIN(revision1, revision2);
   svn_revnum_t max_rev = MAX(revision1, revision2);
-  const char *min_url = (revision1 < revision2) ? url1 : url2;
   const char *max_url = (revision1 < revision2) ? url2 : url1;
-  const char *min_rel_path, *max_rel_path;
+  const char *max_rel_path;
+  const char *mergeinfo_path;
 
-  SVN_ERR(svn_client__path_relative_to_root(&min_rel_path, min_url,
-                                            source_root_url, FALSE, ra_session,
-                                            NULL, pool));
   SVN_ERR(svn_client__path_relative_to_root(&max_rel_path, max_url,
                                             source_root_url, FALSE, ra_session,
                                             NULL, pool));
+  SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path, target_url,
+                                            source_root_url, FALSE,
+                                            ra_session, NULL, pool));
 
-  /* Find any mergeinfo for TARGET_URL added to the line of history
-     between URL1@REVISION1 and URL2@REVISION2. */
-  SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &start_mergeinfo,
-                                          min_rel_path, min_rev,
-                                          svn_mergeinfo_inherited, TRUE,
-                                          pool));
-  SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &end_mergeinfo,
-                                          max_rel_path, max_rev,
-                                          svn_mergeinfo_inherited, TRUE,
-                                          pool));
-
-  SVN_ERR(svn_mergeinfo_diff(&deleted_mergeinfo, &added_mergeinfo,
-                             start_mergeinfo, end_mergeinfo,
-                             FALSE, pool));
-
-  if (added_mergeinfo)
-    {
-      const char *mergeinfo_path;
-      apr_array_header_t *src_rangelist_for_tgt = NULL;
-      SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path, target_url,
-                                                source_root_url, TRUE,
-                                                ra_session, NULL, pool));
-      src_rangelist_for_tgt = apr_hash_get(added_mergeinfo, mergeinfo_path,
-                                           APR_HASH_KEY_STRING);
-      if (src_rangelist_for_tgt && src_rangelist_for_tgt->nelts)
-        /* mergeinfo_path has leading '/' (See 
-           svn_client__path_relative_to_root is called with 
-           include_leading_slash being TRUE), for ra calls we need to give 
-           paths relative to ra_session url. So pass mergeinfo_path+1 for 
-           merge_source for 'svn_ra_get_commit_revs_for_merge_ranges' call */
-        SVN_ERR(svn_ra_get_commit_revs_for_merge_ranges(ra_session,
-                                                  &reflected_rangelist_for_tgt,
-                                                  max_rel_path, 
-                                                  mergeinfo_path + 1,
-                                                  min_rev, max_rev,
-                                                  src_rangelist_for_tgt,
-                                                  svn_mergeinfo_inherited,
-                                                  pool));
-    }
-
+  SVN_ERR(svn_ra_get_commit_and_merge_ranges(ra_session,
+                                             &merge_rangelist,
+                                             &reflective_rangelist,
+                                             max_rel_path,
+                                             mergeinfo_path,
+                                             min_rev, max_rev,
+                                             svn_mergeinfo_inherited,
+                                             pool));
   /* Create a single-item list of ranges with our one requested range
      in it, and then remove overlapping revision ranges from that range. */
   *requested_rangelist = apr_array_make(pool, 1, sizeof(range));
@@ -1294,10 +1261,18 @@ filter_reflected_revisions(apr_array_header_t **requested_rangelist,
   range->end = revision2;
   range->inheritable = inheritable;
   APR_ARRAY_PUSH(*requested_rangelist, svn_merge_range_t *) = range;
-  if (reflected_rangelist_for_tgt)
-    SVN_ERR(svn_rangelist_remove(requested_rangelist,
-                                 reflected_rangelist_for_tgt,
-                                 *requested_rangelist, FALSE, pool));
+  if (reflective_rangelist)
+    {
+      /* svn_rangelist_remove needs ranges in order. 
+         svn_ra_get_commit_and_merge_ranges and other backend calls can not do 
+         this sorting as 1-1 correspondence should be maintained. So sort here.
+      */
+      qsort(reflective_rangelist->elts, reflective_rangelist->nelts,
+            reflective_rangelist->elt_size, svn_sort_compare_ranges);
+      SVN_ERR(svn_rangelist_remove(requested_rangelist,
+                                   reflective_rangelist,
+                                   *requested_rangelist, FALSE, pool));
+    }
   return SVN_NO_ERROR;
 }
 
