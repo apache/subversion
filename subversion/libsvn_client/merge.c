@@ -4865,34 +4865,16 @@ svn_client_merge_whole_branch(const char *source,
                                                    &target_revision,
                                                    ctx, pool));
 
-  SVN_ERR(svn_client__repos_location_segments(&segments, ra_session,
-                                              target_repos_rel_path,
-                                              merge_source.rev1,
-                                              merge_source.rev1,
-                                              yc_ancestor_rev, ctx, pool));
+  /* Temporarily reparent the RA session as required by
+     svn_client__get_history_as_mergeinfo() (it must match the URL). */
+  SVN_ERR(svn_ra_reparent(ra_session, entry->url, pool));
+  SVN_ERR(svn_client__get_history_as_mergeinfo(&target_mergeinfo, entry->url,
+                                               &target_revision,
+                                               merge_source.rev1,
+                                               yc_ancestor_rev, NULL,
+                                               adm_access, ctx, pool));
+  SVN_ERR(svn_ra_reparent(ra_session, entry->repos, pool));
 
-  target_mergeinfo = apr_hash_make(pool);
-  for (i = 0; i < segments->nelts; i++)
-    {
-      svn_location_segment_t *seg = APR_ARRAY_IDX(segments, i,
-                                                  svn_location_segment_t *);
-      svn_merge_range_t *range = apr_palloc(pool, sizeof(*range));
-      const char *slash_path = apr_pstrcat(pool, "/", seg->path, NULL);
-      apr_array_header_t *ranges = apr_hash_get(target_mergeinfo, slash_path,
-                                                APR_HASH_KEY_STRING);
-      range->start = seg->range_start;
-      range->end = seg->range_end;
-      range->inheritable = TRUE;
-
-      if (ranges == NULL)
-        {
-          ranges = apr_array_make(pool, 1, sizeof(range));
-          apr_hash_set(target_mergeinfo, slash_path,
-                       APR_HASH_KEY_STRING, ranges);
-        }
-      
-      APR_ARRAY_PUSH(ranges, svn_merge_range_t *) = range;
-    }
   /* ### TODO: Consider CONSIDER_INHERITANCE parameter... */
   SVN_ERR(svn_mergeinfo_diff(&deleted_mergeinfo, &added_mergeinfo,
                              target_mergeinfo, source_mergeinfo, FALSE,
@@ -4912,8 +4894,10 @@ svn_client_merge_whole_branch(const char *source,
   }
 
   if (apr_hash_count(deleted_mergeinfo) != 0)
-    return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                            "not all the revs are there bla bla"); /*XXXdsg*/
+    return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
+                             _("Not all the necessary mergeinfo exists on '%s' "
+                               "for '%s'"), merge_source.url2,
+                             svn_path_local_style(target_wcpath, pool));
 
   /* Perform a whole-branch merge with a single editor drive. */
   merge_sources = apr_array_make(pool, 1, sizeof(merge_source_t *));
