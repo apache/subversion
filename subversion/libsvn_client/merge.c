@@ -4731,8 +4731,57 @@ ensure_all_missing_ranges_are_phantoms(svn_ra_session_t *ra_session,
                                        apr_hash_t *history_as_mergeinfo,
                                        apr_pool_t *pool)
 {
-  return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                          _("Haven't implemented phantom check yet!"));
+  apr_hash_index *hi;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  for (hi = apr_hash_first(pool, history_as_mergeinfo); hi;
+       hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *value;
+      const char *path;
+      apr_array_header_t *rangelist;
+      int i;
+
+      apr_hash_this(hi, &key, NULL, &value);
+      path = key;
+      rangelist = value;
+
+      /* mergeinfo hashes contain paths that start with slashes;
+         ra APIs take paths without slashes. */
+      assert(*path);
+      path++;
+
+      for (i = 0; i < rangelist->nelts; i++)
+        {
+          svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i, 
+                                                   svn_merge_range_t *);
+          svn_dirent_t *dirent;
+
+          svn_pool_clear(iterpool);
+
+          SVN_ERR(svn_ra_stat(ra_session,
+                              path,
+                              range->end,
+                              &dirent,
+                              iterpool));
+
+          if (dirent->created_rev >= range->start)
+            /* XXXdsg: This message might not be optimal (for example,
+               should we include the whole URL or just the path?
+               should we be more clear that this particular revision
+               might not be the only problem?)
+            */
+            return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
+                                     _("Revision %ld not yet merged from "
+                                       "'%s'"), 
+                                     dirent->created_rev,
+                                     path);
+        }
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
 }
 
 
