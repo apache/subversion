@@ -778,10 +778,10 @@ Java_org_tigris_subversion_javahl_SVNClient_suggestMergeSources
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2ZIZZ
+Java_org_tigris_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2ZIZZZ
 (JNIEnv *env, jobject jthis, jstring jpath1, jobject jrevision1,
  jstring jpath2, jobject jrevision2, jstring jlocalPath, jboolean jforce,
- jint jdepth, jboolean jignoreAncestry, jboolean jdryRun)
+ jint jdepth, jboolean jignoreAncestry, jboolean jdryRun, jboolean jrecordOnly)
 {
   JNIEntry(SVNClient, merge);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -812,14 +812,15 @@ Java_org_tigris_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_tigri
 
   cl->merge(path1, revision1, path2, revision2, localPath,
             jforce ? true:false, (svn_depth_t)jdepth,
-            jignoreAncestry ? true:false, jdryRun ? true:false);
+            jignoreAncestry ? true:false, jdryRun ? true:false,
+            jrecordOnly ? true:false);
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2_3Lorg_tigris_subversion_javahl_RevisionRange_2Ljava_lang_String_2ZIZZ
+Java_org_tigris_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2_3Lorg_tigris_subversion_javahl_RevisionRange_2Ljava_lang_String_2ZIZZZ
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
  jobjectArray jranges, jstring jlocalPath, jboolean jforce,
- jint jdepth, jboolean jignoreAncestry, jboolean jdryRun)
+ jint jdepth, jboolean jignoreAncestry, jboolean jdryRun, jboolean jrecordOnly)
 {
   JNIEntry(SVNClient, merge);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -867,7 +868,8 @@ Java_org_tigris_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_tigri
 
   cl->merge(path, pegRevision, revisionRanges, localPath,
             jforce ? true:false, (svn_depth_t)jdepth,
-            jignoreAncestry ? true:false, jdryRun ? true:false);
+            jignoreAncestry ? true:false, jdryRun ? true:false,
+            jrecordOnly ? true:false);
 }
 
 JNIEXPORT void JNICALL

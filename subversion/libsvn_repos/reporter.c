@@ -157,6 +157,18 @@ read_string(const char **str, apr_file_t *temp, apr_pool_t *pool)
   char *buf;
 
   SVN_ERR(read_number(&len, temp, pool));
+
+  /* Len can never be less than zero.  But could len be so large that
+     len + 1 wraps around and we end up passing 0 to apr_palloc(),
+     thus getting a pointer to no storage?  Probably not (16 exabyte
+     string, anyone?) but let's be future-proof anyway. */
+  if (len + 1 < len)
+    {
+      return svn_error_createf(SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
+                               _("Invalid length (%" APR_UINT64_T_FMT ") "
+                                 "when about to read a string"), len);
+    }
+
   buf = apr_palloc(pool, len + 1);
   SVN_ERR(svn_io_file_read_full(temp, buf, len, NULL, pool));
   buf[len] = 0;
@@ -174,7 +186,7 @@ read_rev(svn_revnum_t *rev, apr_file_t *temp, apr_pool_t *pool)
   if (c == '+')
     {
       SVN_ERR(read_number(&num, temp, pool));
-      *rev = num;
+      *rev = (svn_revnum_t) num;
     }
   else
     *rev = SVN_INVALID_REVNUM;

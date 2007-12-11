@@ -406,7 +406,7 @@ static svn_error_t *find_tunnel_agent(const char *tunnel,
   for (n = 0; cmd_argv[n] != NULL; n++)
     ;
   *argv = apr_palloc(pool, (n + 4) * sizeof(char *));
-  memcpy(*argv, cmd_argv, n * sizeof(char *));
+  memcpy((void *) *argv, cmd_argv, n * sizeof(char *));
   (*argv)[n++] = svn_path_uri_decode(hostinfo, pool);
   (*argv)[n++] = "svnserve";
   (*argv)[n++] = "-t";

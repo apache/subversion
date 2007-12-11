@@ -750,8 +750,8 @@ def run_and_verify_mergeinfo(error_re_string = None,
       if actual_eligible != expected_eligible:
         raise Exception("Unexpected eligible ranges for target path '%s' and "
                         "source path '%s': Expected '%s', got '%s'" %
-                        (actual_path, src_path, expected_merged,
-                         actual_merged))
+                        (actual_path, src_path, expected_eligible,
+                         actual_eligible))
 
 
 def run_and_verify_switch(wc_dir_name,

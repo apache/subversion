@@ -48,6 +48,12 @@ sqlite_tracer(void *data, const char *sql)
 }
 #endif
 
+struct svn_fs__sqlite_stmt_t
+{
+  sqlite3_stmt *s3stmt;
+  sqlite3 *db;
+};
+
 /* Convert SQLite error codes to SVN */
 #define SQLITE_ERROR_CODE(x) ((x) == SQLITE_READONLY ?     \
                                 SVN_ERR_FS_SQLITE_READONLY \
@@ -80,14 +86,18 @@ svn_fs__sqlite_exec(sqlite3 *db, const char *sql)
 }
 
 svn_error_t *
-svn_fs__sqlite_prepare(sqlite3_stmt **stmt, sqlite3 *db, const char *text)
+svn_fs__sqlite_prepare(svn_fs__sqlite_stmt_t **stmt, sqlite3 *db,
+                       const char *text, apr_pool_t *pool)
 {
-  SQLITE_ERR(sqlite3_prepare(db, text, -1, stmt, NULL), db);
+  svn_fs__sqlite_stmt_t *s = apr_palloc(pool, sizeof(*s));
+  s->db = db;
+  SQLITE_ERR(sqlite3_prepare(db, text, -1, &(s->s3stmt), NULL), db);
+  *stmt = s;
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
-step_with_expectation(sqlite3_stmt* stmt, 
+step_with_expectation(svn_fs__sqlite_stmt_t* stmt, 
                       svn_boolean_t expecting_row)
 {
   svn_boolean_t got_row;
@@ -104,21 +114,21 @@ step_with_expectation(sqlite3_stmt* stmt,
 }
 
 svn_error_t *
-svn_fs__sqlite_step_done(sqlite3_stmt *stmt)
+svn_fs__sqlite_step_done(svn_fs__sqlite_stmt_t *stmt)
 {
   return step_with_expectation(stmt, FALSE);
 }
 
 svn_error_t *
-svn_fs__sqlite_step_row(sqlite3_stmt *stmt)
+svn_fs__sqlite_step_row(svn_fs__sqlite_stmt_t *stmt)
 {
   return step_with_expectation(stmt, TRUE);
 }
 
 svn_error_t *
-svn_fs__sqlite_step(svn_boolean_t *got_row, sqlite3_stmt *stmt)
+svn_fs__sqlite_step(svn_boolean_t *got_row, svn_fs__sqlite_stmt_t *stmt)
 {
-  int sqlite_result = sqlite3_step(stmt);
+  int sqlite_result = sqlite3_step(stmt->s3stmt);
   if (sqlite_result != SQLITE_DONE && sqlite_result != SQLITE_ROW)
     {
       /* Extract the real error value with finalize. */
@@ -133,43 +143,62 @@ svn_fs__sqlite_step(svn_boolean_t *got_row, sqlite3_stmt *stmt)
 }
 
 svn_error_t *
-svn_fs__sqlite_bind_int64(sqlite3_stmt *stmt,
+svn_fs__sqlite_bind_int64(svn_fs__sqlite_stmt_t *stmt,
                           int slot,
                           sqlite_int64 val)
 {
-  sqlite3 *db = sqlite3_db_handle(stmt);
-  SQLITE_ERR(sqlite3_bind_int64(stmt, slot, val), db);
+  SQLITE_ERR(sqlite3_bind_int64(stmt->s3stmt, slot, val), stmt->db);
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_fs__sqlite_bind_text(sqlite3_stmt *stmt,
+svn_fs__sqlite_bind_text(svn_fs__sqlite_stmt_t *stmt,
                          int slot,
                          const char *val)
 {
-  sqlite3 *db = sqlite3_db_handle(stmt);
-  SQLITE_ERR(sqlite3_bind_text(stmt, slot, val, -1, SQLITE_TRANSIENT), db);
+  SQLITE_ERR(sqlite3_bind_text(stmt->s3stmt, slot, val, -1, SQLITE_TRANSIENT), 
+             stmt->db);
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs__sqlite_finalize(sqlite3_stmt *stmt)
+const char *
+svn_fs__sqlite_column_text(svn_fs__sqlite_stmt_t *stmt, int column)
 {
-  sqlite3 *db = sqlite3_db_handle(stmt);
-  SQLITE_ERR(sqlite3_finalize(stmt), db);
-  return SVN_NO_ERROR;
+  return (const char *) sqlite3_column_text(stmt->s3stmt, column);
 }
 
-svn_error_t *
-svn_fs__sqlite_reset(sqlite3_stmt *stmt)
+svn_revnum_t
+svn_fs__sqlite_column_revnum(svn_fs__sqlite_stmt_t *stmt, int column)
 {
-  sqlite3 *db = sqlite3_db_handle(stmt);
-  SQLITE_ERR(sqlite3_reset(stmt), db);
+  return (svn_revnum_t) sqlite3_column_int64(stmt->s3stmt, column);
+}
+
+svn_boolean_t
+svn_fs__sqlite_column_boolean(svn_fs__sqlite_stmt_t *stmt, int column)
+{
+  return (sqlite3_column_int64(stmt->s3stmt, column) == 0
+          ? FALSE : TRUE);
+}
+
+int
+svn_fs__sqlite_column_int(svn_fs__sqlite_stmt_t *stmt, int column)
+{
+  return sqlite3_column_int(stmt->s3stmt, column);
+}
+
+svn_error_t *
+svn_fs__sqlite_finalize(svn_fs__sqlite_stmt_t *stmt)
+{
+  SQLITE_ERR(sqlite3_finalize(stmt->s3stmt), stmt->db);
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_fs__sqlite_reset(sqlite3_stmt *stmt);
+svn_fs__sqlite_reset(svn_fs__sqlite_stmt_t *stmt)
+{
+  SQLITE_ERR(sqlite3_reset(stmt->s3stmt), stmt->db);
+  return SVN_NO_ERROR;
+}
 
 /* Time (in milliseconds) to wait for sqlite locks before giving up. */
 #define BUSY_TIMEOUT 10000
@@ -250,17 +279,17 @@ upgrade_format(sqlite3 *db, int current_format, apr_pool_t *pool)
 static svn_error_t *
 check_format(sqlite3 *db, apr_pool_t *pool)
 {
-  sqlite3_stmt *stmt;
+  svn_fs__sqlite_stmt_t *stmt;
   int schema_format;
   
-  SVN_ERR(svn_fs__sqlite_prepare(&stmt, db, "PRAGMA user_version;"));
+  SVN_ERR(svn_fs__sqlite_prepare(&stmt, db, "PRAGMA user_version;", pool));
   SVN_ERR(svn_fs__sqlite_step_row(stmt));
 
   /* Validate that the schema exists as expected and that the
      schema and repository versions match. */
-  schema_format = sqlite3_column_int(stmt, 0);
+  schema_format = svn_fs__sqlite_column_int(stmt, 0);
 
-  SQLITE_ERR(sqlite3_finalize(stmt), db);
+  SVN_ERR(svn_fs__sqlite_finalize(stmt));
 
   if (schema_format == latest_schema_format)
     return SVN_NO_ERROR;

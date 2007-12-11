@@ -2599,8 +2599,15 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
 
   if (!skip_some_checks && (strcmp(propname, SVN_PROP_EOL_STYLE) == 0))
     {
+      svn_subst_eol_style_t eol_style;
+      const char *ignored_eol;
       new_value = svn_stringbuf_create_from_string(propval, pool);
       svn_stringbuf_strip_whitespace(new_value);
+      svn_subst_eol_style_from_value(&eol_style, &ignored_eol, new_value->data);
+      if (eol_style == svn_subst_eol_style_unknown)
+        return svn_error_createf(SVN_ERR_IO_UNKNOWN_EOL, NULL,
+                                 _("Unrecognized line ending style for '%s'"),
+                                 svn_path_local_style(path, pool));
       SVN_ERR(validate_eol_prop_against_file(path, getter, getter_baton,
                                              pool));
     }
@@ -2649,41 +2656,6 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
     {
       apr_hash_t *mergeinfo;
       SVN_ERR(svn_mergeinfo_parse(&mergeinfo, propval->data, pool));
-      /* ### TODO: svn_mergeinfo_parse() conveniently performs almost all
-         the checks we require for valid svn:mergeinfo...except one, it
-         allows path's mapped to empty revision ranges.  In addressing this
-         issue, http://subversion.tigris.org/issues/show_bug.cgi?id=3029, we
-         want to disallow this practice.  But if we move enforcement of this
-         to svn_mergeinfo_parse() then anyone who has has mergeinfo created
-         by a pre-release version of 1.5 which has paths mapped to empty
-         ranges is in for a world of hurt.  Why?  Can't they simply tweak
-         their mergeinfo to follow the newly enforced rules?  Sure, they
-         could, *if* they could see their mergeinfo...which they won't be
-         able to, since svn pl/pg will call svn_mergeinfo_parse() resulting
-         in an error. 
-
-         For now we will do the check here. */
-      if (mergeinfo)
-        {
-          apr_hash_index_t *hi;
-          for (hi = apr_hash_first(pool, mergeinfo); hi;
-               hi = apr_hash_next(hi))
-            {
-              const void *key;
-              void *value;
-              const char *merge_src;
-              apr_array_header_t *rangelist;
-              
-              apr_hash_this(hi, &key, NULL, &value);
-              merge_src = key;
-              rangelist = value;
-
-              if (rangelist->nelts == 0)
-                return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
-                                         _("Mergeinfo for '%s' maps to an "
-                                           "empty revision range"), merge_src);
-            }
-        }
     }
 
   if (new_value)

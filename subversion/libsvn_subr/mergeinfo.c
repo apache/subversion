@@ -421,11 +421,14 @@ combine_with_adjacent_lastrange(svn_merge_range_t **lastrange,
    revisionrange -> REVISION "-" REVISION("*")
    revisionelement -> revisionrange | REVISION("*")
    If DO_COMPACT is TRUE it compacts the overlapping range elements.
+
+   PATHNAME is the path this revisionlist is mapped to.  It is
+   used only for producing a more descriptive error message.
 */
 static svn_error_t *
 parse_revlist(const char **input, const char *end,
-              apr_array_header_t *revlist, svn_boolean_t do_compact,
-              apr_pool_t *pool)
+              apr_array_header_t *revlist, const char *pathname,
+              svn_boolean_t do_compact, apr_pool_t *pool)
 {
   const char *curr = *input;
   svn_merge_range_t *lastrange = NULL;
@@ -438,7 +441,9 @@ parse_revlist(const char **input, const char *end,
     {
       /* Empty range list. */
       *input = curr;
-      return SVN_NO_ERROR;
+      return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
+                               _("Mergeinfo for '%s' maps to an "
+                                 "empty revision range"), pathname);
     }
 
   while (curr < end && *curr != '\n')
@@ -556,7 +561,7 @@ parse_revision_line(const char **input, const char *end, apr_hash_t *hash,
 
   *input = *input + 1;
 
-  SVN_ERR(parse_revlist(input, end, revlist, TRUE, pool));
+  SVN_ERR(parse_revlist(input, end, revlist, pathname->data, TRUE, pool));
 
   if (*input != end && *(*input) != '\n')
     return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
@@ -602,7 +607,7 @@ svn_rangelist__parse(apr_array_header_t **rangelist,
                      apr_pool_t *pool)
 {
   *rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
-  SVN_ERR(parse_revlist(&input, input + strlen(input), *rangelist,
+  SVN_ERR(parse_revlist(&input, input + strlen(input), *rangelist, "",
                         do_compact, pool));
   if (do_sort)
     qsort((*rangelist)->elts, (*rangelist)->nelts, (*rangelist)->elt_size,

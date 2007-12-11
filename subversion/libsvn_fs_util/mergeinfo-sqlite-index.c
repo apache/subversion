@@ -107,7 +107,7 @@ index_path_mergeinfo(svn_revnum_t new_rev,
                      apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  sqlite3_stmt *stmt;
+  svn_fs__sqlite_stmt_t *stmt;
   svn_boolean_t remove_mergeinfo = FALSE;
 
   if (apr_hash_count(curr_mergeinfo) == 0)
@@ -146,7 +146,7 @@ index_path_mergeinfo(svn_revnum_t new_rev,
                                          "INSERT INTO mergeinfo (revision, "
                                          "mergedfrom, mergedto, mergedrevstart, "
                                          "mergedrevend, inheritable) VALUES (?, "
-                                         "?, ?, ?, ?, ?);"));
+                                         "?, ?, ?, ?, ?);", pool));
 
           SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 1, new_rev));
           SVN_ERR(svn_fs__sqlite_bind_text(stmt, 2, from));
@@ -195,10 +195,11 @@ index_path_mergeinfo(svn_revnum_t new_rev,
         {
           int i;
           SVN_ERR(svn_fs__sqlite_prepare(&stmt, db,
-                                    "INSERT INTO mergeinfo_changed (revision, "
-                                    "mergedfrom, mergedto, mergedrevstart, "
-                                    "mergedrevend, inheritable) "
-                                    "VALUES (?, ?, ?, ?, ?, ?);"));
+                                         "INSERT INTO mergeinfo_changed "
+                                         "(revision, mergedfrom, mergedto, "
+                                         "mergedrevstart, mergedrevend, "
+                                         "inheritable) VALUES "
+                                         "(?, ?, ?, ?, ?, ?);", pool));
 
           SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 1, new_rev));
           SVN_ERR(svn_fs__sqlite_bind_text(stmt, 2, mergedfrom));
@@ -233,9 +234,9 @@ table_has_any_rows_with_rev(svn_boolean_t *has_any,
                                        "SELECT 1 from %s WHERE "
                                        "revision = %ld;",
                                        table, rev);
-  sqlite3_stmt *stmt;
+  svn_fs__sqlite_stmt_t *stmt;
 
-  SVN_ERR(svn_fs__sqlite_prepare(&stmt, db, selection));
+  SVN_ERR(svn_fs__sqlite_prepare(&stmt, db, selection, pool));
   SVN_ERR(svn_fs__sqlite_step(has_any, stmt));
   SVN_ERR(svn_fs__sqlite_finalize(stmt));
 
@@ -389,14 +390,15 @@ parse_mergeinfo_from_db(sqlite3 *db,
                         apr_hash_t **result,
                         apr_pool_t *pool)
 {
-  sqlite3_stmt *stmt;
+  svn_fs__sqlite_stmt_t *stmt;
   svn_boolean_t got_row;
 
   SVN_ERR(svn_fs__sqlite_prepare(&stmt, db,
                                  "SELECT mergedfrom, mergedrevstart, "
                                  "mergedrevend, inheritable FROM mergeinfo "
                                  "WHERE mergedto = ? AND revision = ? "
-                                 "ORDER BY mergedfrom, mergedrevstart;"));
+                                 "ORDER BY mergedfrom, mergedrevstart;",
+                                 pool));
   SVN_ERR(svn_fs__sqlite_bind_text(stmt, 1, path));
   SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 2, lastmerged_rev));
   SVN_ERR(svn_fs__sqlite_step(&got_row, stmt));
@@ -419,10 +421,10 @@ parse_mergeinfo_from_db(sqlite3 *db,
 
       while (got_row)
         {
-          mergedfrom = (char *) sqlite3_column_text(stmt, 0);
-          startrev = (svn_revnum_t) sqlite3_column_int64(stmt, 1);
-          endrev = (svn_revnum_t) sqlite3_column_int64(stmt, 2);
-          inheritable = sqlite3_column_int64(stmt, 3) == 0 ? FALSE : TRUE;
+          mergedfrom = svn_fs__sqlite_column_text(stmt, 0);
+          startrev = svn_fs__sqlite_column_revnum(stmt, 1);
+          endrev = svn_fs__sqlite_column_revnum(stmt, 2);
+          inheritable = svn_fs__sqlite_column_boolean(stmt, 3);
 
           mergedfrom = apr_pstrdup(pool, mergedfrom);
           if (lastmergedfrom && strcmp(mergedfrom, lastmergedfrom) != 0)
@@ -517,7 +519,7 @@ get_mergeinfo_for_path(sqlite3 *db,
                        apr_pool_t *pool)
 {
   apr_hash_t *path_mergeinfo;
-  sqlite3_stmt *stmt;
+  svn_fs__sqlite_stmt_t *stmt;
   svn_revnum_t lastmerged_rev;
 
   if (inherit == svn_mergeinfo_nearest_ancestor)
@@ -543,13 +545,13 @@ get_mergeinfo_for_path(sqlite3 *db,
       SVN_ERR(svn_fs__sqlite_prepare(&stmt, db,
                                      "SELECT MAX(revision) FROM "
                                      "mergeinfo_changed WHERE "
-                                     "mergedto = ? AND revision <= ?;"));
+                                     "mergedto = ? AND revision <= ?;", pool));
 
       SVN_ERR(svn_fs__sqlite_bind_text(stmt, 1, path));
       SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 2, rev));
       SVN_ERR(svn_fs__sqlite_step_row(stmt));
 
-      lastmerged_rev = (svn_revnum_t) sqlite3_column_int64(stmt, 0);
+      lastmerged_rev = svn_fs__sqlite_column_revnum(stmt, 0);
       SVN_ERR(svn_fs__sqlite_finalize(stmt));
 
       /* If we've got mergeinfo data, transform it from the db into a
@@ -635,7 +637,7 @@ get_mergeinfo_for_children(sqlite3 *db,
                            void *filter_func_baton,
                            apr_pool_t *pool)
 {
-  sqlite3_stmt *stmt;
+  svn_fs__sqlite_stmt_t *stmt;
   apr_pool_t *subpool = svn_pool_create(pool);
   char *like_path;
   svn_boolean_t got_row;
@@ -645,7 +647,7 @@ get_mergeinfo_for_children(sqlite3 *db,
                                             "FROM mergeinfo_changed "
                                             "WHERE mergedto LIKE ? "
                                             "AND revision <= ? "
-                                            "GROUP BY mergedto;"));
+                                            "GROUP BY mergedto;", pool));
   like_path = apr_psprintf(subpool, "%s/%%", path);
 
   SVN_ERR(svn_fs__sqlite_bind_text(stmt, 1, like_path));
@@ -659,8 +661,8 @@ get_mergeinfo_for_children(sqlite3 *db,
 
       svn_pool_clear(subpool);
 
-      lastmerged_rev = (svn_revnum_t) sqlite3_column_int64(stmt, 0);
-      merged_path = (const char *) sqlite3_column_text(stmt, 1);
+      lastmerged_rev = svn_fs__sqlite_column_revnum(stmt, 0);
+      merged_path = svn_fs__sqlite_column_text(stmt, 1);
 
       /* If we've got a merged revision, go get the mergeinfo from the db */
       if (lastmerged_rev > 0)
@@ -860,13 +862,13 @@ get_parent_target_path_having_mergeinfo(const char **parent_with_mergeinfo,
                                         svn_revnum_t max_commit_rev,
                                         apr_pool_t *pool)
 {
-  sqlite3_stmt *stmt;
+  svn_fs__sqlite_stmt_t *stmt;
   svn_boolean_t got_row;
   *parent_with_mergeinfo = NULL;
   SVN_ERR(svn_fs__sqlite_prepare(&stmt, db,
                                  "SELECT revision FROM mergeinfo_changed WHERE"
                                  " mergedto = ? AND"
-                                 " revision between ? AND ?;"));
+                                 " revision between ? AND ?;", pool));
   SVN_ERR(svn_fs__sqlite_bind_text(stmt, 1, merge_target));
   SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 2, min_commit_rev+1));
   SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 3, max_commit_rev));
@@ -936,7 +938,7 @@ get_commit_and_merge_ranges(apr_array_header_t **merge_rangelist,
                             svn_mergeinfo_inheritance_t inherit,
                             apr_pool_t *pool)
 {
-  sqlite3_stmt *stmt;
+  svn_fs__sqlite_stmt_t *stmt;
   int i;
   svn_boolean_t got_row;
   const char *real_mergeinfo_target = merge_target;
@@ -969,7 +971,7 @@ get_commit_and_merge_ranges(apr_array_header_t **merge_rangelist,
                                  "FROM mergeinfo_changed "
                                  "WHERE mergedfrom = ? AND mergedto = ? "
                                  "AND revision between ? AND ? " 
-                                 "ORDER BY revision ASC ;"));
+                                 "ORDER BY revision ASC ;", pool));
   SVN_ERR(svn_fs__sqlite_bind_text(stmt, 1, real_merge_source));
   SVN_ERR(svn_fs__sqlite_bind_text(stmt, 2, real_mergeinfo_target));
   SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 3, min_commit_rev + 1));
@@ -984,10 +986,10 @@ get_commit_and_merge_ranges(apr_array_header_t **merge_rangelist,
 
       commit_rev_range = apr_pcalloc(pool, sizeof(*commit_rev_range));
       merge_range = apr_pcalloc(pool, sizeof(*merge_range));
-      commit_rev = (svn_revnum_t) sqlite3_column_int64(stmt, 0);
-      start_rev = (svn_revnum_t) sqlite3_column_int64(stmt, 1);
-      end_rev = (svn_revnum_t) sqlite3_column_int64(stmt, 2);
-      inheritable = sqlite3_column_int64(stmt, 3);
+      commit_rev = svn_fs__sqlite_column_revnum(stmt, 0);
+      start_rev = svn_fs__sqlite_column_revnum(stmt, 1);
+      end_rev = svn_fs__sqlite_column_revnum(stmt, 2);
+      inheritable = svn_fs__sqlite_column_boolean(stmt, 3);
       commit_rev_range->start = commit_rev - 1;
       commit_rev_range->end = commit_rev;
       commit_rev_range->inheritable = TRUE;

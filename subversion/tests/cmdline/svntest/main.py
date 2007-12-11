@@ -856,6 +856,7 @@ class Sandbox:
     self.repo_dir = os.path.join(general_repo_dir, self.name)
     self.repo_url = test_area_url + '/' + self.repo_dir
 
+    ### TODO: Move this into to the build() method
     # For dav tests we need a single authz file which must be present,
     # so we recreate it each time a sandbox is created with some default
     # contents.
@@ -876,16 +877,23 @@ class Sandbox:
       self.repo_url = self.repo_url.replace('\\', '/')
     self.test_paths = [self.wc_dir, self.repo_dir]
 
-  def clone_dependent(self):
+  def clone_dependent(self, copy_wc=False):
     """A convenience method for creating a near-duplicate of this
     sandbox, useful when working with multiple repositories in the
-    same unit test.  Any necessary cleanup operations are triggered
-    by cleanup of the original sandbox."""
+    same unit test.  If COPY_WC is true, make an exact copy of this
+    sandbox's working copy at the new sandbox's working copy
+    directory.  Any necessary cleanup operations are triggered by
+    cleanup of the original sandbox."""
+
     if not self.dependents:
       self.dependents = []
-    self.dependents.append(copy.deepcopy(self))
-    self.dependents[-1]._set_name("%s-%d" % (self.name, len(self.dependents)))
-    return self.dependents[-1]
+    clone = copy.deepcopy(self)
+    self.dependents.append(clone)
+    clone._set_name("%s-%d" % (self.name, len(self.dependents)))
+    if copy_wc:
+      self.add_test_path(clone.wc_dir)
+      shutil.copytree(self.wc_dir, clone.wc_dir, symlinks=True)
+    return clone
 
   def build(self, name = None, create_wc = True):
     if name != None:
@@ -893,7 +901,7 @@ class Sandbox:
     if actions.make_repo_and_wc(self, create_wc):
       raise Failure("Could not build repository and sandbox '%s'" % self.name)
 
-  def add_test_path(self, path, remove=1):
+  def add_test_path(self, path, remove=True):
     self.test_paths.append(path)
     if remove:
       safe_rmtree(path)

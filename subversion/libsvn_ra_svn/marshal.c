@@ -678,7 +678,7 @@ static svn_error_t *vparse_tuple(apr_array_header_t *items, apr_pool_t *pool,
       if (**fmt == 'n' && elt->kind == SVN_RA_SVN_NUMBER)
         *va_arg(*ap, apr_uint64_t *) = elt->u.number;
       else if (**fmt == 'r' && elt->kind == SVN_RA_SVN_NUMBER)
-        *va_arg(*ap, svn_revnum_t *) = elt->u.number;
+        *va_arg(*ap, svn_revnum_t *) = (svn_revnum_t) elt->u.number;
       else if (**fmt == 's' && elt->kind == SVN_RA_SVN_STRING)
         *va_arg(*ap, svn_string_t **) = elt->u.string;
       else if (**fmt == 'c' && elt->kind == SVN_RA_SVN_STRING)

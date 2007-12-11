@@ -2288,7 +2288,7 @@ public class BasicTests extends SVNTests
         Revision unspec = new Revision(RevisionKind.unspecified);
         client.merge(modUrl, Revision.HEAD,
                      new RevisionRange[] { new RevisionRange(unspec, unspec) },
-                     branchPath, true, Depth.infinity, false, false);
+                     branchPath, true, Depth.infinity, false, false, false);
 
         // commit the changes so that we can verify merge
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
@@ -2342,10 +2342,64 @@ public class BasicTests extends SVNTests
         ranges[0] = new RevisionRange(new Revision.Number(1),
                                       new Revision.Number(2));
         client.merge(thisTest.getUrl(), Revision.HEAD, ranges,
-                     thisTest.getWCPath(), false, Depth.infinity, false, false);
+                     thisTest.getWCPath(), false, Depth.infinity, false,
+                     false, false);
 
         assertFileContentsEquals("Unexpected conflict resolution",
                                  expectedContents, mu);
+    }
+
+    /**
+     * Test merge --record-only
+     * @throws Throwable
+     * @since 1.5
+     */
+    public void testRecordOnlyMerge() throws Throwable
+    {
+        OneTest thisTest = setupAndPerformMerge();
+
+        // Verify that there are now potential merge sources.
+        String[] suggestedSrcs =
+            client.suggestMergeSources(thisTest.getWCPath() + "/branches/A",
+                                       Revision.WORKING);
+        assertNotNull(suggestedSrcs);
+        assertEquals(1, suggestedSrcs.length);
+
+        // Test that getMergeInfo() returns null.
+        assertNull(client.getMergeInfo(new File(thisTest.getWCPath(), "A")
+                                       .toString(), Revision.HEAD));
+
+        // Merge and commit some changes (r4).
+        appendText(thisTest, "A/mu", "xxx", 4);
+        appendText(thisTest, "A/D/G/rho", "yyy", 4);
+        assertEquals("wrong revision number from commit",
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "log msg", true),
+                     4);
+
+        // --record-only merge changes in A to branches/A
+        String branchPath = thisTest.getWCPath() + "/branches/A";
+        String modUrl = thisTest.getUrl() + "/A";
+
+        RevisionRange[] ranges = new RevisionRange[1];
+        ranges[0] = new RevisionRange(new Revision.Number(2),
+                                      new Revision.Number(4));
+        client.merge(modUrl, Revision.HEAD, ranges,
+                     branchPath, true, Depth.infinity, false, false, true);
+
+        // commit the changes so that we can verify merge
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "branches/A", NodeKind.dir,
+                              CommitItemStateFlags.PropMods);
+        assertEquals("wrong revision number from commit",
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "log msg", true), 5);
+
+        // Test retrieval of mergeinfo from a WC path.
+        String targetPath =
+            new File(thisTest.getWCPath(), "branches/A/mu").getPath();
+        final String mergeSrc = thisTest.getUrl() + "/A/mu";
+        acquireMergeInfoAndAssertEquals("2-4", "4-5", targetPath, mergeSrc);
     }
 
     /**
@@ -2474,6 +2528,19 @@ public class BasicTests extends SVNTests
 
         client.propertySet(aPath, "testprop", "Test property value.", false);
         client.diff(aPath, Revision.BASE, aPath, Revision.WORKING, wcPath,
+                    diffOutput.getPath(), Depth.infinity, true, true, false);
+        assertFileContentsEquals("Unexpected diff output in file '" +
+                                 diffOutput.getPath() + '\'',
+                                 expectedDiffOutput, diffOutput);
+
+        // Test diff where relativeToDir and path are the same.
+        expectedDiffOutput = NL + "Property changes on: ." + NL +
+            underSepLine +
+            "Added: testprop" + NL +
+            "   + Test property value." + NL + NL;
+
+        client.propertySet(aPath, "testprop", "Test property value.", false);
+        client.diff(aPath, Revision.BASE, aPath, Revision.WORKING, aPath,
                     diffOutput.getPath(), Depth.infinity, true, true, false);
         assertFileContentsEquals("Unexpected diff output in file '" +
                                  diffOutput.getPath() + '\'',

@@ -2,7 +2,7 @@
  * lock.c:  routines for locking working copy subdirectories.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -24,6 +24,7 @@
 #include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_sorts.h"
+#include "svn_types.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -1616,4 +1617,54 @@ svn_wc__adm_missing(svn_wc_adm_access_t *adm_access,
     return TRUE;
 
   return FALSE;
+}
+
+
+/* Extend the scope of the svn_adm_access_t * passed in as WALK_BATON
+   for its entire WC tree.  An implementation of
+   svn_wc_entry_callbacks2_t's found_entry() API. */
+static svn_error_t *
+extend_lock_found_entry(const char *path,
+                        const svn_wc_entry_t *entry,
+                        void *walk_baton,
+                        apr_pool_t *pool)
+{
+  /* If PATH is a directory, and it's not already locked, lock it all
+     the way down to its leaf nodes. */
+  if (entry->kind == svn_node_dir &&
+      strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) != 0)
+    {
+      svn_wc_adm_access_t *anchor_access = walk_baton, *adm_access;
+      svn_boolean_t write_lock =
+        (anchor_access->type == svn_wc__adm_access_write_lock);
+      svn_error_t *err = svn_wc_adm_probe_try3(&adm_access, anchor_access, path,
+                                               write_lock, -1, NULL, NULL, pool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_WC_LOCKED)
+            /* Good!  The directory is *already* locked... */
+            svn_error_clear(err);
+          else
+            return err;
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
+
+/* WC entry walker callbacks for svn_wc__adm_extend_lock_to_tree(). */
+static svn_wc_entry_callbacks2_t extend_lock_walker =
+  {
+    extend_lock_found_entry,
+    svn_wc__walker_default_error_handler
+  };
+
+
+svn_error_t *
+svn_wc__adm_extend_lock_to_tree(svn_wc_adm_access_t *adm_access,
+                                apr_pool_t *pool)
+{
+  return svn_wc_walk_entries3(adm_access->path, adm_access,
+                              &extend_lock_walker, adm_access,
+                              svn_depth_infinity, FALSE, NULL, NULL, pool);
 }

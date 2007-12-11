@@ -1372,6 +1372,75 @@ def status_in_depthy_wc(sbox):
 
 #----------------------------------------------------------------------
 
+# Issue #3039.
+def depthy_update_above_dir_to_be_deleted(sbox):
+  "'update -N' above a WC path deleted in repos HEAD"
+  sbox.build()
+
+  sbox_for_depth = {
+    "files" : sbox,
+    "immediates" : sbox.clone_dependent(copy_wc=True),
+    "empty" : sbox.clone_dependent(copy_wc=True),
+    }
+
+  output, err = \
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       "delete", "-m", "Delete A.",
+                                       sbox.repo_url + "/A")
+
+  def empty_output(wc_dir):
+    return svntest.wc.State(wc_dir, { })
+
+  def output_with_A(wc_dir):
+    expected_output = empty_output(wc_dir)
+    expected_output.add({
+      "A" : Item(status="D "),
+      })
+    return expected_output
+
+  initial_disk = svntest.main.greek_state.copy()
+  disk_with_only_iota = svntest.wc.State("", {
+    "iota" : Item("This is the file 'iota'.\n"),
+    })
+
+  def status_with_dot(wc_dir):
+    expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+    expected_status.tweak("", wc_rev=2)
+    return expected_status
+
+  def status_with_iota(wc_dir):
+    expected_status = status_with_dot(wc_dir)
+    expected_status.tweak("iota", wc_rev=2)
+    return expected_status
+
+  def status_with_only_iota(wc_dir):
+    return svntest.wc.State(wc_dir, {
+      ""     : Item(status="  ", wc_rev=2),
+      "iota" : Item(status="  ", wc_rev=2),
+      })
+
+  expected_trees_for_depth = {
+    "files"      : (empty_output, initial_disk, status_with_iota),
+    "immediates" : (output_with_A, disk_with_only_iota, status_with_only_iota),
+    "empty"      : (empty_output, initial_disk, status_with_dot),
+    }
+    
+  for depth in sbox_for_depth.keys():
+    wc_dir = sbox_for_depth[depth].wc_dir
+    (expected_output_func, expected_disk, expected_status_func) = \
+      expected_trees_for_depth[depth]
+    #print depth
+    svntest.actions.run_and_verify_update(wc_dir,
+                                          expected_output_func(wc_dir),
+                                          expected_disk,
+                                          expected_status_func(wc_dir),
+                                          None, None, None, None, None,
+                                          False,
+                                          "--depth=%s" % depth, wc_dir)
+
+
+#----------------------------------------------------------------------
+
 # list all tests here, starting with None:
 test_list = [ None,
               depth_empty_checkout,
@@ -1398,6 +1467,7 @@ test_list = [ None,
               add_tree_with_depth_files,
               upgrade_from_above,
               status_in_depthy_wc,
+              depthy_update_above_dir_to_be_deleted,
             ]
 
 if __name__ == "__main__":
