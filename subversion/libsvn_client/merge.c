@@ -888,47 +888,6 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* Struct used for as the baton for calling merge_delete_notify_func(). */
-typedef struct merge_delete_notify_baton_t
-{
-  svn_client_ctx_t *ctx;
-
-  /* path to skip */
-  const char *path_skip;
-} merge_delete_notify_baton_t;
-
-/* Notify callback function that wraps the normal callback
-   function to remove a notification that will be sent twice
-   and set the proper action. */
-static void
-merge_delete_notify_func(void *baton,
-                         const svn_wc_notify_t *notify,
-                         apr_pool_t *pool)
-{
-  merge_delete_notify_baton_t *mdb = baton;
-  svn_wc_notify_t *new_notify;
-
-  /* Skip the notification for the path we called svn_client__wc_delete() with,
-     because it will be outputed by repos_diff.c:delete_item */
-  if (strcmp(notify->path, mdb->path_skip) == 0)
-    return;
-
-  /* svn_client__wc_delete() is written primarily for scheduling operations not
-     update operations.  Since merges are update operations we need to alter
-     the delete notification to show as an update not a schedule so alter
-     the action. */
-  if (notify->action == svn_wc_notify_delete)
-    {
-      /* We need to copy it since notify is const. */
-      new_notify = svn_wc_dup_notify(notify, pool);
-      new_notify->action = svn_wc_notify_update_delete;
-      notify = new_notify;
-    }
-
-  if (mdb->ctx->notify_func2)
-    (*mdb->ctx->notify_func2)(mdb->ctx->notify_baton2, notify, pool);
-}
-
 /* A svn_wc_diff_callbacks2_t function. */
 static svn_error_t *
 merge_dir_deleted(svn_wc_adm_access_t *adm_access,
