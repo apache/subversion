@@ -44,7 +44,7 @@ svn_cl__merge(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   const char *sourcepath1 = NULL, *sourcepath2 = NULL, *targetpath = "";
-  svn_boolean_t using_rev_range_syntax = FALSE;
+  svn_boolean_t two_sources_specified = TRUE;
   svn_error_t *err;
   svn_opt_revision_t first_range_start, first_range_end, peg_revision1,
     peg_revision2;
@@ -65,16 +65,16 @@ svn_cl__merge(apr_getopt_t *os,
                                    pool));
     }
 
-  /* If an (optional) source, or a source plus WC path is provided,
-     the revision range syntax is in use. */
+  /* If nothing (ie, "."), a single source, or a source URL plus WC path is
+     provided, then we don't have two distinct sources. */
   if (targets->nelts <= 1)
     {
-      using_rev_range_syntax = TRUE;
+      two_sources_specified = FALSE;
     }
   else if (targets->nelts == 2)
     {
       if (svn_path_is_url(sourcepath1) && !svn_path_is_url(sourcepath2))
-        using_rev_range_syntax = TRUE;
+        two_sources_specified = FALSE;
     }
 
   if (opt_state->revision_ranges->nelts > 0)
@@ -91,7 +91,8 @@ svn_cl__merge(apr_getopt_t *os,
     }
 
   /* If revision_ranges has at least one real range at this point, then
-     we know the user must have used the '-r' and/or '-c' switch(es). */
+     we know the user must have used the '-r' and/or '-c' switch(es). 
+     This means we're *not* doing two distinct sources. */
   if (first_range_start.kind != svn_opt_revision_unspecified)
     {
       /* A revision *range* is required. */
@@ -99,10 +100,10 @@ svn_cl__merge(apr_getopt_t *os,
         return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0,
                                 _("Second revision required"));
 
-      using_rev_range_syntax = TRUE;
+      two_sources_specified = FALSE;
     }
 
-  if (using_rev_range_syntax)
+  if (! two_sources_specified) /* TODO: Switch order of if */
     {
       if (targets->nelts > 2)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
@@ -115,7 +116,8 @@ svn_cl__merge(apr_getopt_t *os,
         }
       else
         {
-          /* targets->nelts is 1 or 2 here. */
+          /* targets->nelts is 1 ("svn merge SOURCE") or 2 ("svn merge
+             SOURCE WCPATH") here. */
           sourcepath2 = sourcepath1;
 
           if (peg_revision1.kind == svn_opt_revision_unspecified)
@@ -213,7 +215,7 @@ svn_cl__merge(apr_getopt_t *os,
   else
     options = NULL;
 
-  if (using_rev_range_syntax)
+  if (! two_sources_specified) /* TODO: Switch order of if */
     {
       /* If we don't have a source, use the target as the source. */
       if (! sourcepath1)
@@ -233,29 +235,28 @@ svn_cl__merge(apr_getopt_t *os,
           APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = range;
         }
 
-#if 1
-      err = svn_client_merge_whole_branch(sourcepath1,
-                                          &peg_revision1,
-                                          targetpath,
-                                          opt_state->ignore_ancestry,
-                                          opt_state->force,
-                                          opt_state->record_only,
-                                          opt_state->dry_run,
-                                          options, ctx, pool);
-#else /* --cherry-pick */
-      err = svn_client_merge_peg3(sourcepath1,
-                                  ranges_to_merge,
-                                  &peg_revision1,
-                                  targetpath,
-                                  opt_state->depth,
-                                  opt_state->ignore_ancestry,
-                                  opt_state->force,
-                                  opt_state->record_only,
-                                  opt_state->dry_run,
-                                  options,
-                                  ctx,
-                                  pool);
-#endif /* 0/1 */
+      if (opt_state->reintegrate)
+        err = svn_client_merge_whole_branch(sourcepath1,
+                                            &peg_revision1,
+                                            targetpath,
+                                            opt_state->ignore_ancestry,
+                                            opt_state->force,
+                                            opt_state->record_only,
+                                            opt_state->dry_run,
+                                            options, ctx, pool);
+      else
+        err = svn_client_merge_peg3(sourcepath1,
+                                    ranges_to_merge,
+                                    &peg_revision1,
+                                    targetpath,
+                                    opt_state->depth,
+                                    opt_state->ignore_ancestry,
+                                    opt_state->force,
+                                    opt_state->record_only,
+                                    opt_state->dry_run,
+                                    options,
+                                    ctx,
+                                    pool);
     }
   else
     {
