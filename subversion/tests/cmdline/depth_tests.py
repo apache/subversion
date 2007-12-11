@@ -1467,7 +1467,7 @@ test_list = [ None,
               add_tree_with_depth_files,
               upgrade_from_above,
               status_in_depthy_wc,
-              XFail(depthy_update_above_dir_to_be_deleted),
+              depthy_update_above_dir_to_be_deleted,
             ]
 
 if __name__ == "__main__":

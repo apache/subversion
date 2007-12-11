@@ -977,6 +977,9 @@ log_do_delete_entry(struct log_runner *loggy, const char *name)
         }
       else
         {
+          /* Deleting full_path requires that any children it has are
+             also locked (issue #3039). */
+          SVN_ERR(svn_wc__adm_extend_lock_to_tree(adm_access, loggy->pool));
           err = svn_wc_remove_from_revision_control(adm_access,
                                                     SVN_WC_ENTRY_THIS_DIR,
                                                     TRUE, /* destroy */
