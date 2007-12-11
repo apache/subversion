@@ -241,7 +241,7 @@ svn_client__get_wc_mergeinfo(apr_hash_t **mergeinfo,
       /* Mergeinfo may be inherited. */
       if (wc_mergeinfo)
         {
-          *inherited = (wc_mergeinfo && apr_hash_count(wc_mergeinfo) > 0);
+          *inherited = (wc_mergeinfo != NULL);
           *mergeinfo = apr_hash_make(pool);
           adjust_mergeinfo_source_paths(*mergeinfo, walk_path, wc_mergeinfo,
                                         pool);

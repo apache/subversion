@@ -185,6 +185,8 @@ display_prop_diffs(const apr_array_header_t *propchanges,
 
       if (child_path)
         path = child_path;
+      else if (!svn_path_compare_paths(relative_to_dir, path))
+        path = ".";
       else
         return MAKE_ERR_BAD_RELATIVE_PATH(path, relative_to_dir);
     }
@@ -481,6 +483,8 @@ diff_content_changed(const char *path,
 
       if (child_path)
         path = child_path;
+      else if (!svn_path_compare_paths(rel_to_dir, path))
+        path = ".";
       else
         return MAKE_ERR_BAD_RELATIVE_PATH(path, rel_to_dir);
 
@@ -488,6 +492,8 @@ diff_content_changed(const char *path,
 
       if (child_path)
         path1 = child_path;
+      else if (!svn_path_compare_paths(rel_to_dir, path1))
+        path1 = ".";
       else
         return MAKE_ERR_BAD_RELATIVE_PATH(path1, rel_to_dir);
 
@@ -495,6 +501,8 @@ diff_content_changed(const char *path,
 
       if (child_path)
         path2 = child_path;
+      else if (!svn_path_compare_paths(rel_to_dir, path2))
+        path2 = ".";
       else
         return MAKE_ERR_BAD_RELATIVE_PATH(path2, rel_to_dir);
     }

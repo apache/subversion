@@ -910,47 +910,6 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* Struct used for as the baton for calling merge_delete_notify_func(). */
-typedef struct merge_delete_notify_baton_t
-{
-  svn_client_ctx_t *ctx;
-
-  /* path to skip */
-  const char *path_skip;
-} merge_delete_notify_baton_t;
-
-/* Notify callback function that wraps the normal callback
-   function to remove a notification that will be sent twice
-   and set the proper action. */
-static void
-merge_delete_notify_func(void *baton,
-                         const svn_wc_notify_t *notify,
-                         apr_pool_t *pool)
-{
-  merge_delete_notify_baton_t *mdb = baton;
-  svn_wc_notify_t *new_notify;
-
-  /* Skip the notification for the path we called svn_client__wc_delete() with,
-     because it will be outputed by repos_diff.c:delete_item */
-  if (strcmp(notify->path, mdb->path_skip) == 0)
-    return;
-
-  /* svn_client__wc_delete() is written primarily for scheduling operations not
-     update operations.  Since merges are update operations we need to alter
-     the delete notification to show as an update not a schedule so alter
-     the action. */
-  if (notify->action == svn_wc_notify_delete)
-    {
-      /* We need to copy it since notify is const. */
-      new_notify = svn_wc_dup_notify(notify, pool);
-      new_notify->action = svn_wc_notify_update_delete;
-      notify = new_notify;
-    }
-
-  if (mdb->ctx->notify_func2)
-    (*mdb->ctx->notify_func2)(mdb->ctx->notify_baton2, notify, pool);
-}
-
 /* A svn_wc_diff_callbacks2_t function. */
 static svn_error_t *
 merge_dir_deleted(svn_wc_adm_access_t *adm_access,
@@ -982,17 +941,14 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
     {
     case svn_node_dir:
       {
-        merge_delete_notify_baton_t mdb;
-
-        mdb.ctx = merge_b->ctx;
-        mdb.path_skip = path;
-
         svn_path_split(path, &parent_path, NULL, subpool);
         SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
                                     subpool));
+        /* Passing NULL for the notify_func and notify_baton because
+           repos_diff.c:delete_entry() will do it for us. */
         err = svn_client__wc_delete(path, parent_access, merge_b->force,
                                     merge_b->dry_run, FALSE,
-                                    merge_delete_notify_func, &mdb,
+                                    NULL, NULL,
                                     merge_b->ctx, subpool);
         if (err && state)
           {
@@ -2769,27 +2725,28 @@ get_mergeinfo_walk_cb(const char *path,
          the merge source. */
       if (propval && !path_is_merge_target)
         {
-          const char* path_relative_to_merge_target;
-          int merge_target_len;
           svn_stringbuf_t *merge_src_child_path =
             svn_stringbuf_create(wb->merge_src_canon_path, pool);
 
-          /* Note: Merge target is an empty string for '' and explicit '.'.
-             Such relative merge targets makes path entries to be relative
-             to current directory and hence for merge src '/trunk'
-             "path of value 'subdir'" can cause merge_src_child_path to
-             '/trunksubdir' instead of '/trunk/subdir'.
-             For such merge targets insert '/' between merge_src_canon_path
-             and path_relative_to_merge_target. */
-          merge_target_len = strlen(wb->merge_target_path);
-          /* Need to append '/' only for subtrees. */
-          if (!merge_target_len && strcmp(path, wb->merge_target_path) != 0)
-            svn_stringbuf_appendbytes(merge_src_child_path, "/", 1);
-          path_relative_to_merge_target = path + merge_target_len;
-          svn_stringbuf_appendbytes(merge_src_child_path,
-                                    path_relative_to_merge_target,
-                                    strlen(path_relative_to_merge_target));
+          /* When the merge target is '' or '.' WB->MERGE_TARGET_PATH is
+             an empty string and PATH will always be relative.  In this case
+             we can safely combine WB->MERGE_SRC_CANON_PATH and PATH with
+             svn_path_add_compent() which will supply the missing '/' separator.
 
+             Otherwise WB->MERGE_TARGET_PATH is relative or absolute and
+             we remove the common root component between WB->MERGE_TARGET_PATH
+             and PATH from PATH before combining it with
+             WB->MERGE_SRC_CANON_PATH.  The +1 is required because if we are
+             here that means WB->MERGE_TARGET_PATH is a proper ancestor of
+             PATH and we must skip the path separator -- svn_path_add_compent()
+             will add missing separators, but won't remove existing ones -- to
+             avoid a merge_src_child_path with "//" in it. */
+          if (strlen(wb->merge_target_path))
+            svn_path_add_component(merge_src_child_path,
+                                   path + strlen(wb->merge_target_path) + 1);
+          else
+            svn_path_add_component(merge_src_child_path,
+                                   path);
           SVN_ERR(svn_mergeinfo_parse(&mergehash, propval->data, pool));
           if (apr_hash_get(mergehash, merge_src_child_path->data,
                            APR_HASH_KEY_STRING))
@@ -4518,11 +4475,23 @@ svn_client_merge3(const char *source1,
                                                        ctx, pool));
     }
 
-  /* If we have a youngest common ancestor, we might be doing a pair of
-     merges.  Given a requested merge of the differences between A and
-     B, and a common ancestor of C, we'll first merge the removal of
-     changes between C and A, then merge the addition of changes
-     between C and B.  */
+  /* Check for a youngest common ancestor.  If we have one, we'll be
+     doing merge tracking.
+
+     So, given a requested merge of the differences between A and
+     B, and a common ancestor of C, we will find ourselves in one of
+     four positions, and four different approaches:
+ 
+        A == B == C   there's nothing to merge
+
+        A == C != B   we merge the changes between A (or C) and B
+
+        B == C != A   we merge the changes between B (or C) and A
+
+        A != B != C   we merge the changes between A and B without
+                      merge recording, then record-only two merges:
+                      from A to C, and from C to B
+  */
   if (yc_path && SVN_IS_VALID_REVNUM(yc_rev))
     {
       apr_array_header_t *ranges;
@@ -4530,7 +4499,7 @@ svn_client_merge3(const char *source1,
       svn_opt_revision_t peg_revision;
       peg_revision.kind = svn_opt_revision_number;
 
-      /* Not that our merge sources are related. */
+      /* Note that our merge sources are related. */
       related = TRUE;
       
       /* Make YC_PATH into a full URL. */

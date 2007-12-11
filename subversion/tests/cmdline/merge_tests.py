@@ -628,8 +628,6 @@ def delete_file_and_dir(sbox):
 
   expected_output = wc.State(B2_path, {
     'E'       : Item(status='D '),
-    'E/alpha' : Item(status='D '),
-    'E/beta'  : Item(status='D '),
     'lambda'  : Item(status='D '),
     })
   expected_disk.remove('E/alpha', 'E/beta', 'lambda')
@@ -2767,11 +2765,9 @@ def merge_dir_replace(sbox):
   # Merge replacement of foo onto C
   expected_output = wc.State(C_path, {
     'foo' : Item(status='R '),
-    'foo/new file 2' : Item(status='D '),
     'foo/file foo'   : Item(status='A '),
     'foo/bar'        : Item(status='A '),
     'foo/bar/new file 3' : Item(status='A '),
-    'foo/new file'   : Item(status='D '),
     })
   expected_disk = wc.State('', {
     ''    : Item(props={SVN_PROP_MERGE_INFO : '/A/B/F:2-5'}),
@@ -2802,7 +2798,7 @@ def merge_dir_replace(sbox):
   # Commit merge of foo onto C
   expected_output = svntest.wc.State(wc_dir, {
     'A/C'                    : Item(verb='Sending'),
-    'A/C/foo'    : Item(verb='Replacing'),
+    'A/C/foo'                : Item(verb='Replacing'),
     'A/C/foo/file foo'       : Item(verb='Adding'),
     'A/C/foo/bar'            : Item(verb='Adding'),
     'A/C/foo/bar/new file 3' : Item(verb='Adding'),
@@ -4209,6 +4205,8 @@ def create_deep_trees(wc_dir):
   expected_disk.tweak('A/copy-of-B/F/E', 'A/copy-of-B/F/E1', status=' M')
   return expected_status
 
+# Marked as XFail until latest concerns with reopened
+# issue #2877 are addressed.
 def avoid_repeated_merge_using_inherited_merge_info(sbox):
   "use inherited mergeinfo to avoid repeated merge"
 
@@ -4244,15 +4242,18 @@ def avoid_repeated_merge_using_inherited_merge_info(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
 
   # Merge changes from rev 5 of B (to alpha) into copy_of_B.
+  # A_COPY/copy_of_B/F/E and A_COPY/copy_of_B/F/E1 both exist in the merge
+  # source at r5, so their empty mergeinfo should be updted with r5, which
+  # then should elide to A_COPY/copy_of_B leaving no mergeinfo on either.
   expected_output = wc.State(short_copy_of_B_path, {
     'F/E/alpha'   : Item(status='U '),
     })
   expected_status = wc.State(short_copy_of_B_path, {
     ''           : Item(status=' M', wc_rev=5),
-    'F/E'        : Item(status='  ', wc_rev=5),
+    'F/E'        : Item(status=' M', wc_rev=5),
     'F/E/alpha'  : Item(status='M ', wc_rev=5),
     'F/E/beta'   : Item(status='  ', wc_rev=5),
-    'F/E1'       : Item(status='  ', wc_rev=5),
+    'F/E1'       : Item(status=' M', wc_rev=5),
     'F/E1/alpha' : Item(status='  ', wc_rev=5),
     'F/E1/beta'  : Item(status='  ', wc_rev=5),
     'lambda'     : Item(status='  ', wc_rev=5),
@@ -4260,10 +4261,10 @@ def avoid_repeated_merge_using_inherited_merge_info(sbox):
     })
   expected_disk = wc.State('', {
     ''           : Item(props={SVN_PROP_MERGE_INFO : '/A/B:5'}),
-    'F/E'        : Item(props={SVN_PROP_MERGE_INFO : ''}),
+    'F/E'        : Item(),
     'F/E/alpha'  : Item(new_content_for_alpha),
     'F/E/beta'   : Item("This is the file 'beta'.\n"),
-    'F/E1'       : Item(props={SVN_PROP_MERGE_INFO : ''}),
+    'F/E1'       : Item(),
     'F/E1/alpha' : Item("This is the file 'alpha'.\n"),
     'F/E1/beta'  : Item("This is the file 'beta'.\n"),
     'F'          : Item(),
@@ -4290,7 +4291,9 @@ def avoid_repeated_merge_using_inherited_merge_info(sbox):
   # Commit the result of the merge, creating revision 6.
   expected_output = svntest.wc.State(copy_of_B_path, {
     ''          : Item(verb='Sending'),
+    'F/E'       : Item(verb='Sending'),
     'F/E/alpha' : Item(verb='Sending'),
+    'F/E1'      : Item(verb='Sending'),
     })
   svntest.actions.run_and_verify_commit(short_copy_of_B_path, expected_output,
                                         None, None,
@@ -4310,31 +4313,20 @@ def avoid_repeated_merge_using_inherited_merge_info(sbox):
   # Attempt to re-merge changes to alpha from rev 4.  Use the merge
   # info inherited from the grandparent (copy-of-B) of our merge
   # target (/A/copy-of-B/F/E) to avoid a repeated merge.
-  expected_output = wc.State(copy_of_B_F_E_path, { })
   expected_status = wc.State(short_copy_of_B_F_E_path, {
     ''      : Item(status='  ', wc_rev=6),
     'alpha' : Item(status='  ', wc_rev=6),
     'beta'  : Item(status='  ', wc_rev=6),
     })
-  expected_disk = wc.State('', {
-    ''        : Item(props={SVN_PROP_MERGE_INFO : ''}),
-    'alpha'   : Item(new_content_for_alpha),
-    'beta'    : Item("This is the file 'beta'.\n"),
-    })
-  expected_skip = wc.State(short_copy_of_B_F_E_path, { })
   os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_copy_of_B_F_E_path, '4', '5',
-                                       sbox.repo_url + '/A/B/F/E',
-                                       expected_output,
-                                       expected_disk,
-                                       expected_status,
-                                       expected_skip,
-                                       None,
-                                       None,
-                                       None,
-                                       None,
-                                       None, 1)
+  svntest.actions.run_and_verify_svn(None, [], [], 'merge', '-r4:5',
+                                    sbox.repo_url + '/A/B/F/E',
+                                     short_copy_of_B_F_E_path)
+  svntest.actions.run_and_verify_status(short_copy_of_B_F_E_path, expected_status)
+  os.chdir(saved_cwd)
 
+# Marked as XFail until latest concerns with reopened
+# issue #2877 are addressed.
 def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
   "use subtree's mergeinfo to avoid repeated merge"
   # Create deep trees A/B/F/E and A/B/F/E1 and copy A/B to A/copy-of-B
@@ -4440,7 +4432,10 @@ def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
   # understand.
   svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
 
-  # Merge changes from rev 4:8 of A/B into A/copy_of_B.
+  # Merge changes from rev 4:8 of A/B into A/copy_of_B.  A/copy_of_B/F/E1
+  # has explicit mergeinfo and exists at r4 in the merge source, so it
+  # should be treated as a subtree with intersecting mergeinfo and its
+  # mergeinfo updated.
   expected_output = wc.State(short_copy_of_B_path, {
     'F/E/alpha' : Item(status='U ')
     })
@@ -4451,7 +4446,7 @@ def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
     'F/E'        : Item(status=' M', wc_rev=8),
     'F/E/alpha'  : Item(status='M ', wc_rev=8),
     'F/E/beta'   : Item(status='  ', wc_rev=8),
-    'F/E1'       : Item(status='  ', wc_rev=8),
+    'F/E1'       : Item(status=' M', wc_rev=8),
     'F/E1/alpha' : Item(status='  ', wc_rev=8),
     'F/E1/beta'  : Item(status='  ', wc_rev=8),
     'lambda'     : Item(status='  ', wc_rev=8),
@@ -4463,7 +4458,8 @@ def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
     'F/E/alpha'  : Item(new_content_for_alpha),
     'F/E/beta'   : Item("This is the file 'beta'.\n"),
     'F'          : Item(),
-    'F/E1'       : Item(props={SVN_PROP_MERGE_INFO : '/A/B/F/E:5'}),
+    'F/E1'       : Item(props={SVN_PROP_MERGE_INFO :
+                               '/A/B/F/E:5\n/A/B/F/E1:5-8\n'}),
     'F/E1/alpha' : Item(new_content_for_alpha1),
     'F/E1/beta'  : Item("This is the file 'beta'.\n"),
     'lambda'     : Item("This is the file 'lambda'.\n")
@@ -9495,9 +9491,8 @@ def merge_from_renamed_branch_fails_while_avoiding_repeat_merge(sbox):
                                        None, None, None, None, None, 1, 1)
   os.chdir(saved_cwd)
 
-# Test for issue #2877: 'do subtree merge only if subtree has
-# a explicit mergeinfo set and has a merge source as that of
-# current merge source'
+# Test for part of issue #2877: 'do subtree merge only if subtree has
+# explicit mergeinfo set and exists in the merge source'
 #
 # Marked as XFail until latest concerns with reopened
 # issue #2877 are addressed.
@@ -9567,7 +9562,8 @@ def merge_source_normalization_and_subtree_merges(sbox):
   #
   # A_MOVED/D/G doesn't exist at r3:4, it's still A/D/G,
   # so the merge source normalization logic should set
-  # mergeinfo of '/A/D/G:4' on A_COPY/D/G, *not* 'A_MOVED/D/G:4'.
+  # mergeinfo of '/A/D/G:4' on A_COPY/D/G, *not* 'A_MOVED/D/G:4',
+  # see issue #2953.
   short_G_COPY_path = shorten_path_kludge(G_COPY_path)
   expected_output = wc.State(short_G_COPY_path, {
     'rho' : Item(status='U ')
@@ -9600,7 +9596,8 @@ def merge_source_normalization_and_subtree_merges(sbox):
   # Merge -c8 URL/A_MOVED/D A_COPY/D.
   #
   # The merge target A_COPY/D and the subtree at A_COPY/D/G
-  # should both have their mergeinfo updated with r8.
+  # should both have their mergeinfo updated with r8
+  # from A_MOVED_D, see reopened issue #2877.
   short_D_COPY_path = shorten_path_kludge(D_COPY_path)
   expected_output = wc.State(short_D_COPY_path, {
     'G/tau' : Item(status='U '),
@@ -9689,8 +9686,8 @@ test_list = [ None,
               merge_add_over_versioned_file_conflicts,
               merge_conflict_markers_matching_eol,
               merge_eolstyle_handling,
-              avoid_repeated_merge_using_inherited_merge_info,
-              avoid_repeated_merge_on_subtree_with_merge_info,
+              XFail(avoid_repeated_merge_using_inherited_merge_info),
+              XFail(avoid_repeated_merge_on_subtree_with_merge_info),
               obey_reporter_api_semantics_while_doing_subtree_merges,
               SkipUnless(mergeinfo_inheritance,
                          server_has_mergeinfo),
