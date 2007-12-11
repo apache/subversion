@@ -4778,7 +4778,9 @@ svn_client_merge_whole_branch(const char *source,
                                                NULL, NULL, NULL,
                                                FALSE, FALSE, ctx, pool));
   SVN_ERR(svn_ra_get_repos_root(ra_session, &source_repos_root, pool));
-  /* XXXdsg: should we require source_repos_root equals wc_repos_root? */
+  /* ### FIXME: Require that source_repos_root equals wc_repos_root,
+     ### since mergeinfo doesn't come into play for cross-repository
+     ### merging. */
 
   SVN_ERR(ensure_wc_reflects_repository_subtree(target_wcpath, ctx, pool));
 
@@ -4797,8 +4799,12 @@ svn_client_merge_whole_branch(const char *source,
   APR_ARRAY_PUSH(source_repos_rel_path_as_array, const char *)
     = source_repos_rel_path;
 
+  SVN_ERR(svn_client__get_revision_number(&merge_source.rev2, NULL,
+                                          ra_session, peg_revision,
+                                          source_repos_rel_path, pool));
+
   SVN_ERR(svn_ra_get_mergeinfo(ra_session, &mergeinfo_by_path,
-                               source_repos_rel_path_as_array, entry->cmt_rev,
+                               source_repos_rel_path_as_array, merge_source.rev2,
                                svn_mergeinfo_inherited, TRUE, pool));
 
   if (mergeinfo_by_path == NULL)
@@ -4846,10 +4852,6 @@ svn_client_merge_whole_branch(const char *source,
         APR_ARRAY_IDX(rangelist, rangelist->nelts - 1, svn_merge_range_t *);
       merge_source.rev1 = last_range->end;
     }
-
-  SVN_ERR(svn_client__get_revision_number(&merge_source.rev2, NULL,
-                                          ra_session, peg_revision,
-                                          source_repos_rel_path, pool));
 
   source_revision.kind = svn_opt_revision_number;
   source_revision.value.number = merge_source.rev2;
