@@ -129,8 +129,8 @@ svn_cl__merge(apr_getopt_t *os,
               targetpath = APR_ARRAY_IDX(targets, 1, const char *);
               if (svn_path_is_url(targetpath))
                 return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                        "Cannot specifify a revision range "
-                                        "with two URLs");
+                                        _("Cannot specifify a revision range "
+                                          "with two URLs"));
             }
         }
     }
