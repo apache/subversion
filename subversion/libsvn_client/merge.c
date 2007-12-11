@@ -4731,7 +4731,7 @@ ensure_all_missing_ranges_are_phantoms(svn_ra_session_t *ra_session,
                                        apr_hash_t *history_as_mergeinfo,
                                        apr_pool_t *pool)
 {
-  apr_hash_index *hi;
+  apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
   for (hi = apr_hash_first(pool, history_as_mergeinfo); hi;
@@ -4766,17 +4766,25 @@ ensure_all_missing_ranges_are_phantoms(svn_ra_session_t *ra_session,
                               &dirent,
                               iterpool));
 
-          if (dirent->created_rev >= range->start)
-            /* XXXdsg: This message might not be optimal (for example,
-               should we include the whole URL or just the path?
-               should we be more clear that this particular revision
-               might not be the only problem?)
-            */
-            return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                                     _("Revision %ld not yet merged from "
-                                       "'%s'"), 
-                                     dirent->created_rev,
-                                     path);
+          if (((range->start < range->end)
+               && (dirent->created_rev > range->start))
+              ||
+              ((range->start > range->end)
+               && (dirent->created_rev <= range->start)))
+              /* Technically, range->start can never == range->end.
+                 Fall-through is not a permanent answer to that, however. */
+            {
+              /* XXXdsg: This message might not be optimal (for example,
+                 should we include the whole URL or just the path?
+                 should we be more clear that this particular revision
+                 might not be the only problem?)
+              */
+              return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
+                                       _("Revision %ld not yet merged from "
+                                         "'%s'"), 
+                                       dirent->created_rev,
+                                       path);
+            }
         }
     }
 
@@ -4808,12 +4816,10 @@ svn_client_merge_whole_branch(const char *source,
   apr_array_header_t *source_repos_rel_path_as_array
     = apr_array_make(pool, 1, sizeof(const char *));
   apr_hash_t *mergeinfo_by_path;
-  apr_array_header_t *segments;
   apr_array_header_t *rangelist;
   const char *yc_ancestor_path;
   svn_revnum_t yc_ancestor_rev;
   svn_opt_revision_t source_revision, target_revision;
-  int i;
   apr_hash_t *target_mergeinfo, *source_mergeinfo;
   apr_hash_t *deleted_mergeinfo, *added_mergeinfo;
 
@@ -4850,11 +4856,11 @@ svn_client_merge_whole_branch(const char *source,
 
   SVN_ERR(ensure_wc_reflects_repository_subtree(target_wcpath, ctx, pool));
 
-  /* As the WC tree is "pure", use its "last committed revision" as
+  /* As the WC tree is "pure", use its last-updated-to revision as
      the default revision for the left side of our merge, since that's
      what the repository sub-tree is required to be up to date with
      (with regard to the WC). */
-  merge_source.rev1 = entry->cmt_rev;
+  merge_source.rev1 = entry->revision;
 
   SVN_ERR(svn_client__path_relative_to_root(&source_repos_rel_path,
                                             merge_source.url2, NULL, FALSE,
@@ -4933,12 +4939,16 @@ svn_client_merge_whole_branch(const char *source,
 
   /* Temporarily reparent the RA session as required by
      svn_client__get_history_as_mergeinfo() (it must match the URL). */
+  printf("KFF merge_source.rev1: %ld\n", merge_source.rev1);
+  printf("KFF yc_ancestor_rev: %ld\n", yc_ancestor_rev);
+  printf("KFF\n");
+
   SVN_ERR(svn_ra_reparent(ra_session, entry->url, pool));
   SVN_ERR(svn_client__get_history_as_mergeinfo(&target_mergeinfo, entry->url,
-                                               &target_revision,
+                                               &target_revision, 
                                                merge_source.rev1,
-                                               yc_ancestor_rev, NULL,
-                                               adm_access, ctx, pool));
+                                               yc_ancestor_rev + 1,
+                                               NULL, adm_access, ctx, pool));
   SVN_ERR(svn_ra_reparent(ra_session, entry->repos, pool));
 
   /* ### TODO: Consider CONSIDER_INHERITANCE parameter... */
@@ -4959,11 +4969,8 @@ svn_client_merge_whole_branch(const char *source,
     fflush(stdout);
   }
 
-  if (apr_hash_count(deleted_mergeinfo) != 0)
-    return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                             _("Not all the necessary mergeinfo exists on '%s' "
-                               "for '%s'"), merge_source.url2,
-                             svn_path_local_style(target_wcpath, pool));
+  SVN_ERR(ensure_all_missing_ranges_are_phantoms(ra_session, deleted_mergeinfo,
+                                                 pool));
 
   /* Perform a whole-branch merge with a single editor drive. */
   merge_sources = apr_array_make(pool, 1, sizeof(merge_source_t *));
