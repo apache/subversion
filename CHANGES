@@ -1,5 +1,5 @@
 Version 1.4.6
-(?? ??? 2007, from /branches/1.4.x)
+(14 Dec 2007, from /branches/1.4.x)
 http://svn.collab.net/repos/svn/tags/1.4.6
 
  User-visible changes:
@@ -20,7 +20,7 @@ http://svn.collab.net/repos/svn/tags/1.4.6
     * support neon 0.26.4 (r26077)
 
   - Server:
-    * fixed: authz granted if calculation inconclusion (r23815)
+    * fixed: authz granted if calculation inconclusive (r23815)
     * fixed: svndumpfilter crashes on Windows (r23494)
     * fixed: wrong pointer type used for memset (r27263)
     * fixed: invalid fsfs directory cache can corrupt repository (r27256)
