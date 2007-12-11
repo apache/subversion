@@ -774,6 +774,7 @@ def simple_property_merges(sbox):
   svntest.actions.run_and_verify_status(wc_dir, pristine_status)
 
   # Merge B 2:1 into B2 (B2's mergeinfo should get elided away)
+  expected_status.tweak('', status='  ')
   expected_disk.remove('')
   expected_disk.tweak('E', 'E/alpha', 'E/beta', props={})
   svntest.actions.run_and_verify_merge(B2_path, '2', '1', B_url,
@@ -1598,7 +1599,6 @@ def three_way_merge_add_of_existing_binary_file(sbox):
   # And after the merge, the status should not report any differences.
 
   expected_output = wc.State(short_wc, {
-    "A" : Item(status=" G"),
     "A/theta" : Item(status="A "),
     })
 
@@ -1702,7 +1702,7 @@ def merge_in_new_file_and_diff(sbox):
     "\n",
     "Property changes on: " + branch_path + "\n",
     "___________________________________________________________________\n",
-    "Modified: " + SVN_PROP_MERGE_INFO + "\n",
+    "Added: " + SVN_PROP_MERGE_INFO + "\n",
     "   Merged /A/B/E:r2-3\n",
     "\n", ]
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
@@ -4715,7 +4715,7 @@ def setup_branch(sbox, branch_only = False, nbr_of_branches = 1):
       dest_name + "/D/H/psi"   : Item(status='  ', wc_rev=rev),
       dest_name                : Item(status='  ', wc_rev=rev)})
     expected_disk.add({
-      dest_name : Item(props={SVN_PROP_MERGE_INFO : ''}),
+      dest_name                : Item(),
       dest_name + '/B'         : Item(),
       dest_name + '/B/lambda'  : Item("This is the file 'lambda'.\n"),
       dest_name + '/B/E'       : Item(),
@@ -5478,8 +5478,7 @@ def merge_to_target_with_copied_children(sbox):
   expected_output = wc.State(wc_dir,
                              {'A_COPY/D/G/rho_copy' : Item(status='A ')})
   expected_disk.add({
-    'A_COPY/D/G/rho_copy' : Item("This is the file 'rho'.\n",
-                                 props={SVN_PROP_MERGE_INFO : ''})
+    'A_COPY/D/G/rho_copy' : Item("This is the file 'rho'.\n", props={})
     })
   expected_status.tweak(wc_rev=7)
   expected_status.add({'A_COPY/D/G/rho_copy' : Item(status='  ', wc_rev=7)})
@@ -5508,8 +5507,7 @@ def merge_to_target_with_copied_children(sbox):
     ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:4'}),
     'pi'       : Item("This is the file 'pi'.\n"),
     'rho'      : Item("New content"),
-    'rho_copy' : Item("This is the file 'rho'.\n",
-                      props={SVN_PROP_MERGE_INFO : ''}),
+    'rho_copy' : Item("This is the file 'rho'.\n", props={}),
     'tau'      : Item("This is the file 'tau'.\n"),
     })
   expected_skip = wc.State(short_G_COPY_path, { })
@@ -5578,7 +5576,7 @@ def merge_to_switched_path(sbox):
   # Switch A_COPY/D/G to A/D/G.
   wc_disk.add({
     "A"  : Item(),
-    "A/D/G_COPY"     : Item(props={SVN_PROP_MERGE_INFO : ''}),
+    "A/D/G_COPY"     : Item(),
     "A/D/G_COPY/pi"  : Item("This is the file 'pi'.\n"),
     "A/D/G_COPY/rho" : Item("New *and* improved rho content"),
     "A/D/G_COPY/tau" : Item("This is the file 'tau'.\n"),
@@ -6015,8 +6013,7 @@ def merge_to_path_with_switched_children(sbox):
   wc_disk.tweak("A_COPY/D/H/omega",
                 contents="New content",
                 props={SVN_PROP_MERGE_INFO : '/A/D/H/omega:5-8'})
-  wc_disk.tweak("A_COPY_2",
-                props={SVN_PROP_MERGE_INFO : ''})
+  wc_disk.tweak("A_COPY_2", props={})
   svntest.actions.run_and_verify_switch(sbox.wc_dir, A_COPY_psi_path,
                                         sbox.repo_url + "/A_COPY/D/H/psi",
                                         expected_output, wc_disk, wc_status,
@@ -7912,7 +7909,6 @@ def merge_to_sparse_directories(sbox):
     'mu' : Item(status='A '),
     'C'  : Item(status='A '),
     'D'  : Item(status='A '),
-    ''   : Item(status=' U'),
     })
   expected_disk = wc.State('', {
     'B'  : Item(),
@@ -7940,7 +7936,6 @@ def merge_to_sparse_directories(sbox):
   expected_output = wc.State(short_immediates_dir, {
     'D'  : Item(status=' U'),
     'mu' : Item(status='U '),
-    ''   : Item(status=' U'),
     })
   expected_status = wc.State(short_immediates_dir, {
     ''          : Item(status=' M', wc_rev=9),
@@ -7976,7 +7971,6 @@ def merge_to_sparse_directories(sbox):
   files_dir = sbox.add_wc_path('files')
   expected_output = wc.State(files_dir, {
     'mu' : Item(status='A '),
-    ''   : Item(status=' U'),
     })
   expected_disk = wc.State('', {
     'mu' : Item("This is the file 'mu'.\n"),
@@ -7995,7 +7989,6 @@ def merge_to_sparse_directories(sbox):
   short_files_dir = shorten_path_kludge(files_dir)
   expected_output = wc.State(short_files_dir, {
     'mu' : Item(status='U '),
-    ''   : Item(status=' U'),
     })
   expected_status = wc.State(short_files_dir, {
     ''          : Item(status=' M', wc_rev=9),
@@ -8022,9 +8015,7 @@ def merge_to_sparse_directories(sbox):
 
   # Do an --empty checkout of A_COPY
   empty_dir = sbox.add_wc_path('empty')
-  expected_output = wc.State(empty_dir, {
-    ''   : Item(status=' U'),
-    })
+  expected_output = wc.State(empty_dir)
   expected_disk = wc.State('', {})
   svntest.actions.run_and_verify_checkout(sbox.repo_url + "/A_COPY",
                                           empty_dir,
@@ -8036,9 +8027,7 @@ def merge_to_sparse_directories(sbox):
   # The root of the files WC should get non-inheritable r4:9 and also get
   # the one change that affects it directly (the prop add from r9).
   short_empty_dir = shorten_path_kludge(empty_dir)
-  expected_output = wc.State(short_empty_dir, {
-    ''   : Item(status=' U'),
-    })
+  expected_output = wc.State(short_empty_dir)
   expected_status = wc.State(short_empty_dir, {
     ''          : Item(status=' M', wc_rev=9),
     })
