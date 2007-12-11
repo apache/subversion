@@ -222,6 +222,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        " '" SVN_CL__ACCEPT_LAUNCH "')")},
   {"from-source",   svn_cl__from_source_opt, 1,
                     N_("query a particular merge source URL\n")},
+  {"reintegrate",   svn_cl__reintegrate_opt, 0,
+                    N_("lump-merge all of source URL's unmerged changes")},
   {0,               0, 0, 0},
 };
 
@@ -569,7 +571,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {'r', 'c', 'N', svn_cl__depth_opt, 'q', svn_cl__force_opt,
      svn_cl__dry_run_opt, svn_cl__merge_cmd_opt,
      svn_cl__record_only_opt, 'x', svn_cl__ignore_ancestry_opt,
-     svn_cl__accept_opt} },
+     svn_cl__accept_opt, svn_cl__reintegrate_opt} },
 
   { "mergeinfo", svn_cl__mergeinfo, {0}, N_
     ("Query merge-related information.\n"
@@ -1419,6 +1421,9 @@ main(int argc, const char *argv[])
       case svn_cl__from_source_opt:
         err = svn_utf_cstring_to_utf8(&path_utf8, opt_arg, pool);
         opt_state.from_source = svn_path_canonicalize(path_utf8, pool);
+        break;
+      case svn_cl__reintegrate_opt:
+        opt_state.reintegrate = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
