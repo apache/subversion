@@ -211,10 +211,13 @@ svn_client__path_relative_to_root(const char **rel_path,
          a PATH_OR_URL of something not in that repository).  */
       const char *rel_url = svn_path_is_child(repos_root, path_or_url, pool);
       if (! rel_url)
-        err = svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
-                                _("URL '%s' is not a child of repository "
-                                  "root URL '%s'"),
-                                path_or_url, repos_root);
+        {
+          err = svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
+                                  _("URL '%s' is not a child of repository "
+                                    "root URL '%s'"),
+                                  path_or_url, repos_root);
+          goto cleanup;
+        }
       rel_url = svn_path_uri_decode(rel_url, pool);
       *rel_path = include_leading_slash 
                     ? apr_pstrcat(pool, "/", rel_url, NULL) : rel_url;
