@@ -4718,6 +4718,23 @@ ensure_wc_reflects_repository_subtree(const char *target_wcpath,
   return SVN_NO_ERROR;
 }
 
+/* Given a "mergeinfo" hash HISTORY_AS_MERGEINFO representing revision
+   ranges from a merge target that are not represented in the merge
+   source, check (using RA_SESSION, which is pointed at the repository
+   root) that all of the ranges in the hash are "phantoms": that is,
+   their corresponding path did not change in any of their revisions.
+   Raises SVN_ERR_CLIENT_NOT_READY_TO_MERGE if any are not phantoms.
+   Temporary allocations in POOL.
+ */
+static svn_error_t *
+ensure_all_missing_ranges_are_phantoms(svn_ra_session_t *ra_session,
+                                       apr_hash_t *history_as_mergeinfo,
+                                       apr_pool_t *pool)
+{
+  return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
+                          _("Haven't implemented phantom check yet!"));
+}
+
 
 svn_error_t *
 svn_client_merge_whole_branch(const char *source,
