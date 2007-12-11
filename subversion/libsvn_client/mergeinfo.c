@@ -488,72 +488,6 @@ svn_client__get_history_as_mergeinfo(apr_hash_t **mergeinfo_p,
 
 /*** Eliding mergeinfo. ***/
 
-/* Helper for elide_mergeinfo().
-
-   Find all paths in CHILD_MERGEINFO which map to empty revision ranges
-   and copy these from CHILD_MERGEINFO to *EMPTY_RANGE_MERGEINFO iff
-   PARENT_MERGEINFO is NULL or does not have mergeinfo for the path in
-   question.
-
-   All mergeinfo in CHILD_MERGEINFO not copied to *EMPTY_RANGE_MERGEINFO
-   is copied to *NONEMPTY_RANGE_MERGEINFO.
-
-   *EMPTY_RANGE_MERGEINFO and *NONEMPTY_RANGE_MERGEINFO are set to empty
-   hashes if nothing is copied into them.
-
-   All copied hashes are deep copies allocated in POOL. */
-static svn_error_t *
-get_empty_rangelists_unique_to_child(apr_hash_t **empty_range_mergeinfo,
-                                     apr_hash_t **nonempty_range_mergeinfo,
-                                     apr_hash_t *child_mergeinfo,
-                                     apr_hash_t *parent_mergeinfo,
-                                     apr_pool_t *pool)
-{
-  *empty_range_mergeinfo = apr_hash_make(pool);
-  *nonempty_range_mergeinfo = apr_hash_make(pool);
-
-  if (child_mergeinfo)
-    {
-      apr_hash_index_t *hi;
-      void *child_val;
-      const void *child_key;
-      apr_array_header_t *child_range;
-      const char *child_path;
-
-      /* Iterate through CHILD_MERGEINFO looking for mergeinfo with empty
-         revision ranges. */
-      for (hi = apr_hash_first(pool, child_mergeinfo); hi;
-           hi = apr_hash_next(hi))
-        {
-          apr_hash_this(hi, &child_key, NULL, &child_val);
-          child_path = child_key;
-          child_range = child_val;
-
-          /* Copy paths with empty revision ranges which don't exist in
-             PARENT_MERGEINFO from CHILD_MERGEINFO to *EMPTY_RANGE_MERGEINFO.
-             Copy everything else to *NONEMPTY_RANGE_MERGEINFO. */
-          if (child_range->nelts == 0
-              && (parent_mergeinfo == NULL
-                  || apr_hash_get(parent_mergeinfo, child_path,
-                                  APR_HASH_KEY_STRING) == NULL))
-            {
-              apr_hash_set(*empty_range_mergeinfo,
-                           apr_pstrdup(pool, child_path),
-                           APR_HASH_KEY_STRING,
-                           svn_rangelist_dup(child_range, pool));
-            }
-          else
-            {
-              apr_hash_set(*nonempty_range_mergeinfo,
-                           apr_pstrdup(pool, child_path),
-                           APR_HASH_KEY_STRING,
-                           svn_rangelist_dup(child_range, pool));
-            }
-        }
-    }
-  return SVN_NO_ERROR;
-}
-
 /* Helper for svn_client__elide_mergeinfo() and svn_client__elide_children().
 
    Given a working copy PATH, its mergeinfo hash CHILD_MERGEINFO, and the
@@ -582,133 +516,59 @@ elide_mergeinfo(apr_hash_t *parent_mergeinfo,
                 svn_wc_adm_access_t *adm_access,
                 apr_pool_t *pool)
 {
-  apr_pool_t *subpool;
-  apr_hash_t *mergeinfo, *child_empty_mergeinfo, *child_nonempty_mergeinfo;
-  svn_boolean_t equal_mergeinfo;
-
-  /* A tri-state value describing the various types of elision possible for
-     svn:mergeinfo set on a WC path. */
-  enum wc_elision_type
-  {
-    elision_type_none,    /* No elision occurs. */
-    elision_type_partial, /* Paths that exist only in CHILD_MERGEINFO and
-                             map to empty revision ranges elide. */
-    elision_type_full     /* All mergeinfo in CHILD_MERGEINFO elides. */
-  } elision_type = elision_type_none;
+  apr_pool_t *subpool = NULL;
+  svn_boolean_t elides;
 
   /* Easy out: No child mergeinfo to elide. */
   if (child_mergeinfo == NULL)
-    return SVN_NO_ERROR;
-
-  subpool = svn_pool_create(pool);
-
-  /* Another easy out: If a child has empty mergeinfo but isn't overriding
-     any parent's mergeinfo then it fully elides. */
-  if (!parent_mergeinfo && apr_hash_count(child_mergeinfo) == 0)
     {
-      elision_type = elision_type_full;
+      elides = FALSE;
+    }
+  else if (apr_hash_count(child_mergeinfo) == 0)
+    {
+      /* Empty mergeinfo elides to empty mergeinfo or to "nothing",
+         i.e. it isn't overriding any parent. Otherwise it doesn't
+         elide. */
+      if (!parent_mergeinfo || apr_hash_count(parent_mergeinfo) == 0)
+        elides = TRUE;
+      else
+        elides = FALSE;
+    }
+  else if (!parent_mergeinfo || apr_hash_count(parent_mergeinfo) == 0)
+    {
+      /* Non-empty mergeinfo never elides to empty mergeinfo
+         or no mergeinfo. */
+      elides = FALSE;
     }
   else
     {
-      if (path_suffix && parent_mergeinfo)
-        {
-          apr_hash_index_t *hi;
-          void *val;
-          const void *key;
-          const char *new_path;
-          apr_array_header_t *rangelist;
+      /* Both CHILD_MERGEINFO and PARENT_MERGEINFO are non-NULL and
+         non-empty. */
+      apr_hash_t *path_tweaked_parent_mergeinfo;
+      subpool = svn_pool_create(pool);
 
-          mergeinfo = apr_hash_make(subpool);
-
-          for (hi = apr_hash_first(subpool, parent_mergeinfo); hi;
-               hi = apr_hash_next(hi))
-            {
-              apr_hash_this(hi, &key, NULL, &val);
-              new_path = svn_path_join((const char *) key, path_suffix,
-                                       subpool);
-              rangelist = val;
-              apr_hash_set(mergeinfo, new_path, APR_HASH_KEY_STRING,
-                           rangelist);
-            }
-        }
+      path_tweaked_parent_mergeinfo = apr_hash_make(subpool);
+      
+      /* If we need to adjust the paths in PARENT_MERGEINFO do it now. */
+      if (path_suffix)
+        adjust_mergeinfo_source_paths(path_tweaked_parent_mergeinfo,
+                                      path_suffix, child_mergeinfo,
+                                      subpool);
       else
-        {
-          mergeinfo = parent_mergeinfo;
-        }
+        path_tweaked_parent_mergeinfo = parent_mergeinfo;
 
-     /* Separate any mergeinfo with empty rev ranges for paths that exist only
-        in CHILD_MERGEINFO and store these in CHILD_EMPTY_MERGEINFO. */
-      SVN_ERR(get_empty_rangelists_unique_to_child(&child_empty_mergeinfo,
-                                                   &child_nonempty_mergeinfo,
-                                                   child_mergeinfo, mergeinfo,
-                                                   subpool));
+      SVN_ERR(svn_mergeinfo__equals(&elides,
+                                    path_tweaked_parent_mergeinfo,
+                                    child_mergeinfo, TRUE, subpool));
+    }
 
-      /* If *all* paths in CHILD_MERGEINFO map to empty revision ranges and
-         none of these paths exist in PARENT_MERGEINFO full elision occurs;
-         if only *some* of the paths in CHILD_MERGEINFO meet this criteria we
-         know, at a minimum, partial elision will occur. */
-      if (apr_hash_count(child_empty_mergeinfo) > 0)
-        elision_type = apr_hash_count(child_nonempty_mergeinfo) == 0
-                       ? elision_type_full : elision_type_partial;
+  if (elides)
+    SVN_ERR(svn_wc_prop_set2(SVN_PROP_MERGEINFO, NULL, path, adm_access,
+                             TRUE, pool));
 
-      if (elision_type == elision_type_none && mergeinfo)
-        {
-          apr_hash_t *parent_empty_mergeinfo, *parent_nonempty_mergeinfo;
+  if (subpool)
+    svn_pool_destroy(subpool);
 
-          /* Full elision also occurs if MERGEINFO and TARGET_MERGEINFO are
-             equal except for paths unique to MERGEINFO that map to empty
-             revision ranges.
-
-             Separate any mergeinfo with empty rev ranges for paths that exist
-             only in MERGEINFO and store these in PARENT_EMPTY_MERGEINFO and
-             compare that with CHILD_MERGEINFO. */
-          SVN_ERR(get_empty_rangelists_unique_to_child(
-            &parent_empty_mergeinfo, &parent_nonempty_mergeinfo, mergeinfo,
-            child_mergeinfo, subpool));
-          SVN_ERR(svn_mergeinfo__equals(&equal_mergeinfo,
-                                        parent_nonempty_mergeinfo,
-                                        child_mergeinfo,
-                                        TRUE,
-                                        subpool));
-          if (equal_mergeinfo)
-            elision_type = elision_type_full;
-        }
-
-      if (elision_type != elision_type_full && mergeinfo)
-        {
-          /* If no determination of elision status has been made yet or we
-            know only that partial elision occurs, compare
-            CHILD_NONEMPTY_MERGEINFO with the PATH_SUFFIX tweaked version of
-            PARENT_MERGEINFO for equality.
-
-            If we determined that at least partial elision occurs, full
-            elision may still yet occur if CHILD_NONEMPTY_MERGEINFO, which no
-            longer contains any paths unique to it that map to empty revision
-            ranges, is equivalent to PARENT_MERGEINFO. */
-          SVN_ERR(svn_mergeinfo__equals(&equal_mergeinfo,
-                                        child_nonempty_mergeinfo,
-                                        mergeinfo, TRUE,
-                                        subpool));
-          if (equal_mergeinfo)
-            elision_type = elision_type_full;
-        }
-      }
-    switch (elision_type)
-      {
-      case elision_type_full:
-        SVN_ERR(svn_wc_prop_set2(SVN_PROP_MERGEINFO, NULL, path, adm_access,
-                                 TRUE, subpool));
-        break;
-      case elision_type_partial:
-        SVN_ERR(svn_client__record_wc_mergeinfo(path,
-                                                child_nonempty_mergeinfo,
-                                                adm_access, subpool));
-        break;
-      default:
-        break; /* Leave mergeinfo on PATH as-is. */
-      }
-
-  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
