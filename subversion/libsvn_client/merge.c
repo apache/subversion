@@ -2136,6 +2136,8 @@ mergeinfo_behavior(svn_boolean_t *honor_mergeinfo,
 /* Sets up the diff editor report and drives it by properly negating
    subtree that could have a conflicting merge history.
 
+   MERGE_B->ra_session1 reflects URL1; MERGE_B->ra_session2 reflects URL2.
+
    If MERGE_B->sources_ancestral is set, then URL1@REVISION1 must be a
    historical ancestor of URL2@REVISION2, or vice-versa (see
    `MERGEINFO MERGE SOURCE NORMALIZATION' for more requirements around
@@ -2162,13 +2164,9 @@ drive_merge_report_editor(const char *target_wcpath,
   void *report_baton;
   svn_revnum_t default_start;
   svn_boolean_t honor_mergeinfo;
+  const char *old_sess2_url;
 
   mergeinfo_behavior(&honor_mergeinfo, NULL, merge_b);
-
-  /* Establish first RA session to URL1. */
-  SVN_ERR(svn_client__open_ra_session_internal(&merge_b->ra_session1, url1,
-                                               NULL, NULL, NULL, FALSE, TRUE,
-                                               merge_b->ctx, pool));
 
   /* Calculate the default starting revision. */
   default_start = revision1;
@@ -2193,15 +2191,13 @@ drive_merge_report_editor(const char *target_wcpath,
         }
     }
 
-  /* Open a second session used to request individual file
-     contents. Although a session can be used for multiple requests, it
-     appears that they must be sequential. Since the first request, for
-     the diff, is still being processed the first session cannot be
-     reused. This applies to ra_neon, ra_local does not appears to have
-     this limitation. */
-  SVN_ERR(svn_client__open_ra_session_internal(&merge_b->ra_session2, url1,
-                                               NULL, NULL, NULL, FALSE, TRUE,
-                                               merge_b->ctx, pool));
+  /* Temporarily point our second RA session to URL1, too.  We use
+     this to request individual file contents. */
+  SVN_ERR(svn_client__ensure_ra_session_url(&old_sess2_url, 
+                                            merge_b->ra_session2, url1, pool));
+  
+  /* Get the diff editor and a reporter with which to, ultimately,
+     drive it. */
   SVN_ERR(svn_client__get_diff_editor(target_wcpath, adm_access, callbacks,
                                       merge_b, depth, merge_b->dry_run,
                                       merge_b->ra_session2, default_start,
@@ -2210,16 +2206,15 @@ drive_merge_report_editor(const char *target_wcpath,
                                       merge_b->ctx->cancel_baton,
                                       &diff_editor, &diff_edit_baton,
                                       pool));
-
   SVN_ERR(svn_ra_do_diff3(merge_b->ra_session1,
                           &reporter, &report_baton, revision2,
                           "", depth, merge_b->ignore_ancestry, 
                           TRUE,  /* text_deltas */
                           url2, diff_editor, diff_edit_baton, pool));
 
+  /* Drive the reporter. */
   SVN_ERR(reporter->set_path(report_baton, "", default_start, depth,
                              FALSE, NULL, pool));
-
   if (honor_mergeinfo && children_with_mergeinfo)
     {
       /* Describe children with mergeinfo overlapping this merge
@@ -2261,8 +2256,11 @@ drive_merge_report_editor(const char *target_wcpath,
             }
         }
     }
-  
   SVN_ERR(reporter->finish_report(report_baton, pool));
+
+  /* Point the merge baton's second session back where it was. */
+  if (old_sess2_url)
+    SVN_ERR(svn_ra_reparent(merge_b->ra_session2, old_sess2_url, pool));
 
   /* Sleep to ensure timestamp integrity. */
   svn_sleep_for_timestamps();
@@ -2439,7 +2437,7 @@ record_mergeinfo_for_record_only_merge(const char *url,
   svn_boolean_t indirect;
   apr_hash_t *merges = apr_hash_make(pool);
   svn_boolean_t is_rollback = (range->start > range->end);
-
+  
   /* Temporarily reparent ra_session to WC target URL. */
   SVN_ERR(svn_ra_reparent(merge_b->ra_session1, entry->url, pool));
   SVN_ERR(svn_client__get_wc_or_repos_mergeinfo(&target_mergeinfo, entry,
@@ -3944,6 +3942,8 @@ do_directory_merge(const char *url1,
         {
           svn_revnum_t next_end_rev;
           const char *real_url1 = url1, *real_url2 = url2;
+          const char *old_sess1_url = NULL, *old_sess2_url = NULL;
+
           svn_pool_clear(iterpool);
 
           /* Use persistent pool while playing with remaining_ranges. */
@@ -3974,9 +3974,19 @@ do_directory_merge(const char *url1,
           if (! same_urls)
             {
               if (is_rollback && (end_rev != revision2))
-                real_url2 = url1;
+                {
+                  real_url2 = url1;
+                  SVN_ERR(svn_client__ensure_ra_session_url
+                          (&old_sess2_url, merge_b->ra_session2,
+                           real_url2, iterpool));
+                }
               if ((! is_rollback) && (start_rev != revision1))
-                real_url1 = url2;
+                {
+                  real_url1 = url2;
+                  SVN_ERR(svn_client__ensure_ra_session_url
+                          (&old_sess1_url, merge_b->ra_session1,
+                           real_url1, iterpool));
+                }
             }
           SVN_ERR(drive_merge_report_editor(merge_b->target,
                                             real_url1, start_rev, real_url2, 
@@ -3985,7 +3995,14 @@ do_directory_merge(const char *url1,
                                             depth, notify_b, adm_access,
                                             &merge_callbacks, merge_b,
                                             iterpool));
+          if (old_sess1_url)
+            SVN_ERR(svn_ra_reparent(merge_b->ra_session1, 
+                                    old_sess1_url, iterpool));
+          if (old_sess2_url)
+            SVN_ERR(svn_ra_reparent(merge_b->ra_session2, 
+                                    old_sess2_url, iterpool));
 
+          /* Prepare for the next iteration (if any). */
           remove_first_range_from_remaining_ranges(children_with_mergeinfo, 
                                                    pool);
           next_end_rev = get_youngest_end_rev(children_with_mergeinfo, 
@@ -4270,10 +4287,10 @@ do_merge(apr_array_header_t *merge_sources,
       /* Establish RA sessions to our URLs. */
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session1, url1,
                                                    NULL, NULL, NULL, 
-                                                   FALSE, TRUE, ctx, pool));
+                                                   FALSE, TRUE, ctx, subpool));
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session2, url2,
                                                    NULL, NULL, NULL, 
-                                                   FALSE, TRUE, ctx, pool));
+                                                   FALSE, TRUE, ctx, subpool));
 
       /* Populate the portions of the merge context baton that need to
          be reset for each merge source iteration. */
@@ -4295,7 +4312,7 @@ do_merge(apr_array_header_t *merge_sources,
         {
           SVN_ERR(svn_ra_has_capability(ra_session1,
                                         &merge_cmd_baton.mergeinfo_capable,
-                                        SVN_RA_CAPABILITY_MERGEINFO, pool));
+                                        SVN_RA_CAPABILITY_MERGEINFO, subpool));
           checked_mergeinfo_capability = TRUE;
         }
 
@@ -4337,6 +4354,7 @@ do_merge(apr_array_header_t *merge_sources,
                                             adm_access, ctx, subpool));
     }
 
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -4373,6 +4391,7 @@ svn_client_merge3(const char *source1,
   svn_opt_revision_t working_rev;
   const char *yc_path = NULL;
   svn_revnum_t yc_rev = SVN_INVALID_REVNUM;
+  apr_pool_t *sesspool;
 
   /* Sanity check our input -- we require specified revisions. */
   if ((revision1->kind == svn_opt_revision_unspecified)
@@ -4418,22 +4437,25 @@ svn_client_merge3(const char *source1,
   SVN_ERR(svn_client__get_repos_root(&wc_repos_root, target_wcpath,
                                      &working_rev, adm_access, ctx, pool));
 
-  /* Open some RA sessions to our merge source sides, and get the root
-     URL from one of them (the other doesn't matter -- if it ain't the
-     same, other stuff would fall over later). */
+  /* Open some RA sessions to our merge source sides. */
+  sesspool = svn_pool_create(pool);
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session1,
                                                URL1, NULL, NULL, NULL,
-                                               FALSE, FALSE, ctx, pool));
+                                               FALSE, TRUE, ctx, sesspool));
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session2,
                                                URL2, NULL, NULL, NULL,
-                                               FALSE, FALSE, ctx, pool));
-  SVN_ERR(svn_ra_get_repos_root(ra_session1, &source_repos_root, pool));
+                                               FALSE, TRUE, ctx, sesspool));
 
   /* Resolve revisions to real numbers. */
-  SVN_ERR(svn_client__get_revision_number(&rev1, &youngest_rev,
-                                          ra_session1, revision1, NULL, pool));
-  SVN_ERR(svn_client__get_revision_number(&rev2, &youngest_rev,
-                                          ra_session2, revision2, NULL, pool));
+  SVN_ERR(svn_client__get_revision_number(&rev1, &youngest_rev, ra_session1, 
+                                          revision1, NULL, sesspool));
+  SVN_ERR(svn_client__get_revision_number(&rev2, &youngest_rev, ra_session2, 
+                                          revision2, NULL, sesspool));
+
+  /* Get the repository root URL from one of our sessions (the other
+     doesn't matter -- if it ain't the same, other stuff would fall
+     over later). */
+  SVN_ERR(svn_ra_get_repos_root(ra_session1, &source_repos_root, pool));
 
   /* Unless we're ignoring ancestry, see if the two sources are related.  */
   if (! ignore_ancestry)
@@ -4543,6 +4565,9 @@ svn_client_merge3(const char *source1,
                                           source_repos_root, &peg_revision, 
                                           ranges, ra_session2, ctx, pool));
 
+          /* Close our temporary RA sessions. */
+          svn_pool_destroy(sesspool);
+
           /* If this isn't a record-only merge, we'll first do a stupid
              point-to-point merge... */
           if (! record_only)
@@ -4577,6 +4602,7 @@ svn_client_merge3(const char *source1,
                            (strcmp(wc_repos_root, source_repos_root) == 0),
                            ignore_ancestry, force, dry_run, 
                            TRUE, depth, merge_options, ctx, pool));
+
           SVN_ERR(svn_wc_adm_close(adm_access));
           return SVN_NO_ERROR;
         }
@@ -4592,6 +4618,9 @@ svn_client_merge3(const char *source1,
       merge_source->rev2 = rev2;
       APR_ARRAY_PUSH(merge_sources, merge_source_t *) = merge_source;
     }
+
+  /* Close our temporary RA sessions. */
+  svn_pool_destroy(sesspool);
 
   SVN_ERR(do_merge(merge_sources, target_wcpath, entry, adm_access, 
                    ancestral, related,
@@ -4665,6 +4694,7 @@ svn_client_merge_peg3(const char *source,
   const char *wc_repos_root, *source_repos_root;
   svn_opt_revision_t working_rev;
   svn_ra_session_t *ra_session;
+  apr_pool_t *sesspool;
 
   /* No ranges to merge?  No problem. */
   if (ranges_to_merge->nelts == 0)
@@ -4692,15 +4722,19 @@ svn_client_merge_peg3(const char *source,
                                      &working_rev, adm_access, ctx, pool));
 
   /* Open an RA session to our source URL, and determine its root URL. */
+  sesspool = svn_pool_create(pool);
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session,
                                                URL, NULL, NULL, NULL,
-                                               FALSE, FALSE, ctx, pool));
+                                               FALSE, TRUE, ctx, sesspool));
   SVN_ERR(svn_ra_get_repos_root(ra_session, &source_repos_root, pool));
 
   /* Normalize our merge sources. */
   SVN_ERR(normalize_merge_sources(&merge_sources, source, URL, 
                                   source_repos_root, peg_revision, 
                                   ranges_to_merge, ra_session, ctx, pool));
+
+  /* We're done with our little RA session. */
+  svn_pool_destroy(sesspool);
 
   /* Do the real merge!  (We say with confidence that our merge
      sources are both ancestral and related.) */
