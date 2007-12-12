@@ -4934,6 +4934,14 @@ svn_client_merge_whole_branch(const char *source,
                                                    merge_source.url1,
                                                    &target_revision,
                                                    ctx, pool));
+  
+  if (!(yc_ancestor_path && SVN_IS_VALID_REVNUM(yc_ancestor_rev)))
+    return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
+                             _("'%s@%ld' is unrelated to '%s@%ld'"),
+                             merge_source.url1,
+                             merge_source.rev1,
+                             merge_source.url2,
+                             merge_source.rev2);
 
   /* Temporarily reparent the RA session as required by
      svn_client__get_history_as_mergeinfo() (it must match the URL). */
