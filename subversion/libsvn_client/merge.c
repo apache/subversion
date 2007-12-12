@@ -4367,6 +4367,107 @@ do_merge(apr_array_header_t *merge_sources,
   return SVN_NO_ERROR;
 }
 
+/* Perform a two-URL merge between URLs which are related, but neither
+   is a direct ancestor of the other.  This first does a real two-URL
+   merge (unless this is record-only), followed by record-only merges
+   to represent the changed mergeinfo.
+
+   The merge is between URL1@REV1 (in RA_SESSION1) and URL2@REV2 (in
+   RA_SESSION2); YC_REV is their youngest common ancestor.
+   SOURCE_REPOS_ROOT and WC_REPOS_ROOT are the repository roots of the
+   source URL and the target working copy.  ENTRY is the wc entry for
+   TARGET_WCPATH.  Other arguments are as in all of the public merge
+   APIs.
+ */
+static svn_error_t *
+merge_cousins_and_supplement_mergeinfo(const char *target_wcpath,
+                                       const svn_wc_entry_t *entry,
+                                       svn_wc_adm_access_t *adm_access,
+                                       const char *URL1,
+                                       svn_revnum_t rev1,
+                                       svn_ra_session_t *ra_session1,
+                                       const char *URL2,
+                                       svn_revnum_t rev2,
+                                       svn_ra_session_t *ra_session2,
+                                       svn_revnum_t yc_rev,
+                                       const char *source_repos_root,
+                                       const char *wc_repos_root,
+                                       svn_depth_t depth,
+                                       svn_boolean_t ignore_ancestry,
+                                       svn_boolean_t force,
+                                       svn_boolean_t record_only,
+                                       svn_boolean_t dry_run,
+                                       const apr_array_header_t *merge_options,
+                                       svn_client_ctx_t *ctx,
+                                       apr_pool_t *pool)
+{
+  svn_opt_revision_range_t *range;
+  apr_array_header_t *remove_sources, *add_sources, *ranges;
+  svn_opt_revision_t peg_revision;
+  
+  peg_revision.kind = svn_opt_revision_number;
+
+  range = apr_pcalloc(pool, sizeof(*range));
+  range->start.kind = svn_opt_revision_number;
+  range->start.value.number = rev1;
+  range->end.kind = svn_opt_revision_number;
+  range->end.value.number = yc_rev;
+  ranges = apr_array_make(pool, 2, sizeof(svn_opt_revision_range_t *));
+  APR_ARRAY_PUSH(ranges, svn_opt_revision_range_t *) = range;
+  peg_revision.value.number = rev1;
+  SVN_ERR(normalize_merge_sources(&remove_sources, URL1, URL1,
+                                  source_repos_root, &peg_revision, 
+                                  ranges, ra_session1, ctx, pool));
+
+  range = apr_pcalloc(pool, sizeof(*range));
+  range->start.kind = svn_opt_revision_number;
+  range->start.value.number = yc_rev;
+  range->end.kind = svn_opt_revision_number;
+  range->end.value.number = rev2;
+  ranges = apr_array_make(pool, 2, sizeof(svn_opt_revision_range_t *));
+  APR_ARRAY_PUSH(ranges, svn_opt_revision_range_t *) = range;
+  peg_revision.value.number = rev2;
+  SVN_ERR(normalize_merge_sources(&add_sources, URL2, URL2,
+                                  source_repos_root, &peg_revision, 
+                                  ranges, ra_session2, ctx, pool));
+
+  /* If this isn't a record-only merge, we'll first do a stupid
+     point-to-point merge... */
+  if (! record_only)
+    {
+      merge_source_t *faux_source;
+      apr_array_header_t *faux_sources = 
+        apr_array_make(pool, 1, sizeof(merge_source_t *));
+      faux_source = apr_pcalloc(pool, sizeof(*faux_source));
+      faux_source->url1 = URL1;
+      faux_source->url2 = URL2;
+      faux_source->rev1 = rev1;
+      faux_source->rev2 = rev2;
+      APR_ARRAY_PUSH(faux_sources, merge_source_t *) = faux_source;
+      SVN_ERR(do_merge(faux_sources, target_wcpath, entry, adm_access, 
+                       FALSE, TRUE,
+                       (strcmp(wc_repos_root, source_repos_root) == 0),
+                       ignore_ancestry, force, dry_run, 
+                       FALSE, depth, merge_options, ctx, pool));
+    }
+  /* ... and now we do a pair of record-only merges using the real
+     sources we've calculated.  (We know that each tong in our
+     fork of our merge source history tree has an ancestral
+     relationship with the common ancestral, so we force
+     ancestral=TRUE here.) */
+  SVN_ERR(do_merge(add_sources, target_wcpath, entry, 
+                   adm_access, TRUE, TRUE,
+                   (strcmp(wc_repos_root, source_repos_root) == 0),
+                   ignore_ancestry, force, dry_run, 
+                   TRUE, depth, merge_options, ctx, pool));
+  SVN_ERR(do_merge(remove_sources, target_wcpath, entry, 
+                   adm_access, TRUE, TRUE,
+                   (strcmp(wc_repos_root, source_repos_root) == 0),
+                   ignore_ancestry, force, dry_run, 
+                   TRUE, depth, merge_options, ctx, pool));
+
+  return SVN_NO_ERROR;
+}
 
 /*-----------------------------------------------------------------------*/
 
@@ -4544,66 +4645,20 @@ svn_client_merge3(const char *source1,
          side, and merge the right. */
       else
         {
-          apr_array_header_t *remove_sources, *add_sources;
-
-          range = apr_pcalloc(pool, sizeof(*range));
-          range->start.kind = svn_opt_revision_number;
-          range->start.value.number = rev1;
-          range->end.kind = svn_opt_revision_number;
-          range->end.value.number = yc_rev;
-          ranges = apr_array_make(pool, 2, sizeof(svn_opt_revision_range_t *));
-          APR_ARRAY_PUSH(ranges, svn_opt_revision_range_t *) = range;
-          peg_revision.value.number = rev1;
-          SVN_ERR(normalize_merge_sources(&remove_sources, URL1, URL1,
-                                          source_repos_root, &peg_revision, 
-                                          ranges, ra_session1, ctx, pool));
-
-          range = apr_pcalloc(pool, sizeof(*range));
-          range->start.kind = svn_opt_revision_number;
-          range->start.value.number = yc_rev;
-          range->end.kind = svn_opt_revision_number;
-          range->end.value.number = rev2;
-          ranges = apr_array_make(pool, 2, sizeof(svn_opt_revision_range_t *));
-          APR_ARRAY_PUSH(ranges, svn_opt_revision_range_t *) = range;
-          peg_revision.value.number = rev2;
-          SVN_ERR(normalize_merge_sources(&add_sources, URL2, URL2,
-                                          source_repos_root, &peg_revision, 
-                                          ranges, ra_session2, ctx, pool));
-
-          /* If this isn't a record-only merge, we'll first do a stupid
-             point-to-point merge... */
-          if (! record_only)
-            {
-              merge_source_t *faux_source;
-              apr_array_header_t *faux_sources = 
-                apr_array_make(pool, 1, sizeof(merge_source_t *));
-              faux_source = apr_pcalloc(pool, sizeof(*faux_source));
-              faux_source->url1 = URL1;
-              faux_source->url2 = URL2;
-              faux_source->rev1 = rev1;
-              faux_source->rev2 = rev2;
-              APR_ARRAY_PUSH(faux_sources, merge_source_t *) = faux_source;
-              SVN_ERR(do_merge(faux_sources, target_wcpath, entry, adm_access, 
-                               ancestral, related,
-                               (strcmp(wc_repos_root, source_repos_root) == 0),
-                               ignore_ancestry, force, dry_run, 
-                               record_only, depth, merge_options, ctx, pool));
-            }
-          /* ... and now we do a pair of record-only merges using the real
-             sources we've calculated.  (We know that each tong in our
-             fork of our merge source history tree has an ancestral
-             relationship with the common ancestral, so we force
-             ancestral=TRUE here.) */
-          SVN_ERR(do_merge(add_sources, target_wcpath, entry, 
-                           adm_access, TRUE, related,
-                           (strcmp(wc_repos_root, source_repos_root) == 0),
-                           ignore_ancestry, force, dry_run, 
-                           TRUE, depth, merge_options, ctx, pool));
-          SVN_ERR(do_merge(remove_sources, target_wcpath, entry, 
-                           adm_access, TRUE, related,
-                           (strcmp(wc_repos_root, source_repos_root) == 0),
-                           ignore_ancestry, force, dry_run, 
-                           TRUE, depth, merge_options, ctx, pool));
+          SVN_ERR(merge_cousins_and_supplement_mergeinfo(target_wcpath, entry,
+                                                         adm_access,
+                                                         URL1, rev1,
+                                                         ra_session1, 
+                                                         URL2, rev2,
+                                                         ra_session2,
+                                                         yc_rev,
+                                                         source_repos_root,
+                                                         wc_repos_root,
+                                                         depth,
+                                                         ignore_ancestry, force,
+                                                         record_only, dry_run,
+                                                         merge_options, ctx,
+                                                         pool));
           SVN_ERR(svn_wc_adm_close(adm_access));
           return SVN_NO_ERROR;
         }
