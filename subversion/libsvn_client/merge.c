@@ -4978,7 +4978,7 @@ svn_client_merge_whole_branch(const char *source,
 
   /* Do the real merge! */
   SVN_ERR(do_merge(merge_sources, target_wcpath, entry, adm_access,
-                   TRUE, TRUE, (strcmp(wc_repos_root, source_repos_root) == 0),
+                   FALSE, TRUE, (strcmp(wc_repos_root, source_repos_root) == 0),
                    ignore_ancestry, force, dry_run, record_only,
                    svn_depth_infinity, merge_options, ctx, pool));
 
