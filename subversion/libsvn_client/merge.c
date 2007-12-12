@@ -4994,8 +4994,8 @@ svn_client_merge_reintegrate(const char *source,
   
   if (!(yc_ancestor_path && SVN_IS_VALID_REVNUM(yc_ancestor_rev)))
     return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                             _("'%s@%ld' is unrelated to '%s@%ld'"),
-                             url1, rev1, url2, rev2);
+                             _("'%s@%ld' must be ancestrally related to "
+                               "'%s@%ld'"), url1, rev1, url2, rev2);
 
   /* Temporarily reparent the RA session as required by
      svn_client__get_history_as_mergeinfo() (it must match the URL). */
