@@ -23,6 +23,11 @@ Status of 1.4.6:
 
 Candidate changes:
 
+  * r28431
+    'svnadmin rmlocks' should throw an error if no path to unlock provided
+    Votes:
+      +1: kfogel
+
   * r21989, r22884, r23347-23349, r23357, r23359, r23363, r23364, r23384,
     r23385, r23387, r23395, r23763, r23764, r23794, r23795, r23799, r23807
     Bring mucc and mucc-test.py up to date with respect to trunk,
