@@ -1540,3 +1540,16 @@ svn_merge_range_dup(svn_merge_range_t *range, apr_pool_t *pool)
   memcpy(new_range, range, sizeof(*new_range));
   return new_range;
 }
+
+svn_boolean_t
+svn_merge_range_contains_rev(svn_merge_range_t *range, svn_revnum_t rev)
+{
+  assert(SVN_IS_VALID_REVNUM(range->start));
+  assert(SVN_IS_VALID_REVNUM(range->end));
+  assert(range->start != range->end);
+
+  if (range->start < range->end)
+    return rev > range->start && rev <= range->end;
+  else
+    return rev > range->end && rev <= range->start;
+}

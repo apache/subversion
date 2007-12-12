@@ -4758,6 +4758,10 @@ ensure_all_missing_ranges_are_phantoms(svn_ra_session_t *ra_session,
                                                    svn_merge_range_t *);
           svn_dirent_t *dirent;
 
+          /* This function should not receive any "rollback"
+             ranges. */
+          assert(range->start < range->end);
+
           svn_pool_clear(iterpool);
 
           SVN_ERR(svn_ra_stat(ra_session,
@@ -4766,13 +4770,7 @@ ensure_all_missing_ranges_are_phantoms(svn_ra_session_t *ra_session,
                               &dirent,
                               iterpool));
 
-          if (((range->start < range->end)
-               && (dirent->created_rev > range->start))
-              ||
-              ((range->start > range->end)
-               && (dirent->created_rev <= range->start)))
-              /* Technically, range->start can never == range->end.
-                 Fall-through is not a permanent answer to that, however. */
+          if (svn_merge_range_contains_rev(range, dirent->created_rev))
             {
               /* XXXdsg: This message might not be optimal (for example,
                  should we include the whole URL or just the path?
