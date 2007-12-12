@@ -891,6 +891,10 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
  * @a commit_rangelist and @a merge_rangelist are having 
  * one-one corresponding and hence they are equal in size.
  *
+ * @a commit_rangelist is sorted in ascending order.
+ *
+ * @a merge_rangelist is not sorted.
+ *
  * @a session indicates the ra_session of the repository root.
  *
  * @a inherit indicates whether explicit, explicit or inherited, or

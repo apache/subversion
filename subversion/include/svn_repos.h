@@ -1351,6 +1351,10 @@ svn_repos_fs_get_mergeinfo(apr_hash_t **mergeoutput,
  * @a commit_rangelist and @a merge_rangelist are having
  * one-one corresponding and hence they are equal in size.
  *
+ * @a commit_rangelist is sorted in ascending order.
+ *
+ * @a merge_rangelist is not sorted.
+ *
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a merge_target is retrieved.
  *

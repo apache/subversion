@@ -1221,17 +1221,9 @@ filter_reflected_revisions(apr_array_header_t **requested_rangelist,
   range->inheritable = inheritable;
   APR_ARRAY_PUSH(*requested_rangelist, svn_merge_range_t *) = range;
   if (reflective_rangelist)
-    {
-      /* svn_rangelist_remove needs ranges in order. 
-         svn_ra_get_commit_and_merge_ranges and other backend calls can not do 
-         this sorting as 1-1 correspondence should be maintained. So sort here.
-      */
-      qsort(reflective_rangelist->elts, reflective_rangelist->nelts,
-            reflective_rangelist->elt_size, svn_sort_compare_ranges);
-      SVN_ERR(svn_rangelist_remove(requested_rangelist,
-                                   reflective_rangelist,
-                                   *requested_rangelist, FALSE, pool));
-    }
+    SVN_ERR(svn_rangelist_remove(requested_rangelist,
+                                 reflective_rangelist,
+                                 *requested_rangelist, FALSE, pool));
   return SVN_NO_ERROR;
 }
 

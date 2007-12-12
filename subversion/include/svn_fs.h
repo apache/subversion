@@ -1256,6 +1256,10 @@ svn_error_t *svn_fs_get_mergeinfo(apr_hash_t **minfohash,
  * @a commit_rangelist and @a merge_rangelist are having
  * one-one corresponding and hence they are equal in size.
  *
+ * @a commit_rangelist is sorted in ascending order.
+ *
+ * @a merge_rangelist is not sorted.
+ *
  * @a root indicates the revision root to use when looking up paths.
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
