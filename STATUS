@@ -54,11 +54,6 @@ Candidate changes:
     Votes:
       +1: vgeorgescu, sussman
 
-  * r28431
-    'svnadmin rmlocks' should throw an error if no path to unlock provided
-    Votes:
-      +1: kfogel, cmpilato
-
 Veto-blocked changes:
 
   * r21531, r21848, r21934
@@ -84,3 +79,7 @@ Veto-blocked changes:
 
 Approved changes:
 
+  * r28431
+    'svnadmin rmlocks' should throw an error if no path to unlock provided
+    Votes:
+      +1: kfogel, cmpilato, dlr
