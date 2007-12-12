@@ -17,6 +17,7 @@ http://svn.collab.net/repos/svn/tags/1.4.6
     * fixed: sporadic file and directory removal failing on Windows (r25520)
     * fixed: property file handling for schedule-delete files (r25833)
     * fixed: don't allow invalid svn:eol-style values (r28331)
+    * fixed: 'svnadmin rmlocks' should error when no path provided (r28431)
     * support neon 0.26.4 (r26077)
 
   - Server:
