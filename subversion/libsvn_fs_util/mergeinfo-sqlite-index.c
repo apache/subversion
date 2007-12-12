@@ -905,11 +905,12 @@ get_parent_target_path_having_mergeinfo(const char **parent_with_mergeinfo,
 
 /* Helper function for 'svn_fs_mergeinfo__get_commit_and_merge_ranges'.
 
-   Set *COMMIT_REV_RANGELIST to a list of revisions (sorted in
+   Set *COMMIT_RANGELIST to a list of revisions (sorted in
    increasing order and represented as described below) comprising all
-   the commit revisions of all the merge ranges in MERGE_RANGELIST,
-   for the merge from MERGE_SOURCE to MERGE_TARGET.  Only include
-   revisions that are > MIN_COMMIT_REV and <= MAX_COMMIT_REV.
+   the commit revisions of all the merges that occured from
+   MERGE_SOURCE to MERGE_TARGET within revisions MIN_COMMIT_REV(exclusive) and
+   MAX_COMMIT_REV. Corresponding merge ranges of each individual commit
+   is set in *MERGE_RANGELIST.
 
    Retrieve the necessary records from DB; allocate the results in POOL.
 
@@ -917,15 +918,11 @@ get_parent_target_path_having_mergeinfo(const char **parent_with_mergeinfo,
    ### below, instead of just 'svn_revnum_t's?  Isn't representing
    ### single revisions exactly what 'svn_revnum_t' is for?  -Karl
 
-   Represent each revision in *COMMIT_REV_RANGELIST as an
+   Represent each revision in *COMMIT_RANGELIST as an
    'svn_merge_range_t *' object where obj->start == obj->end - 1.
 
    If INHERIT is svn_mergeinfo_inherited or svn_mergeinfo_nearest_ancestor,
    use the parents of MERGE_SOURCE and MERGE_TARGET instead.
-
-   If there are no elements in MERGE_RANGELIST, return success, with
-   the effect on *COMMIT_REV_RANGELIST undefined.  If asked for a
-   range for which DB has no record, raise SVN_ERR_FS_SQLITE_ERROR.
 */
 static svn_error_t *
 get_commit_and_merge_ranges(apr_array_header_t **merge_rangelist,
