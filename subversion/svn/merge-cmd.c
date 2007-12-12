@@ -236,14 +236,14 @@ svn_cl__merge(apr_getopt_t *os,
         }
 
       if (opt_state->reintegrate)
-        err = svn_client_merge_whole_branch(sourcepath1,
-                                            &peg_revision1,
-                                            targetpath,
-                                            opt_state->ignore_ancestry,
-                                            opt_state->force,
-                                            opt_state->record_only,
-                                            opt_state->dry_run,
-                                            options, ctx, pool);
+        err = svn_client_merge_reintegrate(sourcepath1,
+                                           &peg_revision1,
+                                           targetpath,
+                                           opt_state->ignore_ancestry,
+                                           opt_state->force,
+                                           opt_state->record_only,
+                                           opt_state->dry_run,
+                                           options, ctx, pool);
       else
         err = svn_client_merge_peg3(sourcepath1,
                                     ranges_to_merge,

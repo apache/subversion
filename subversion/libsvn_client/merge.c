@@ -111,7 +111,7 @@
  *  no |      mergeinfo-driven          |  mergeinfo-oblivious|
  *  -c |        whole-branch            |    diff-and-apply   |
  *  or |       heuristic merge          |  (svn_client_merge) |
- *  -r |(svn_client_merge_whole_branch) |                     |
+ *  -r | (svn_client_merge_reintegrate) |                     |
  *     +--------------------------------+---------------------+
  *
  *
@@ -4851,7 +4851,7 @@ ensure_all_missing_ranges_are_phantoms(svn_ra_session_t *ra_session,
 
 
 svn_error_t *
-svn_client_merge_whole_branch(const char *source,
+svn_client_merge_reintegrate(const char *source,
                               const svn_opt_revision_t *peg_revision,
                               const char *target_wcpath,
                               svn_boolean_t ignore_ancestry, /*XXXdsg ?*/
