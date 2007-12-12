@@ -1,2 +1,4 @@
+* Fix 'get-commit-and-merge-ranges' API to give commit rev grouped 
+  *merge_ranges* list.
 * Implement the non-reflective merge editor to grok the local mods from
   a commit which has 'merge + conflict resolution + some other changes'.
