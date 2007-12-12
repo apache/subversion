@@ -1545,9 +1545,9 @@ get_commit_and_merge_ranges(svn_ra_svn_conn_t *conn,
   const char *merge_source = NULL;
   const char *merge_target_abs_path = NULL;
   const char *merge_source_abs_path = NULL;
-  apr_array_header_t *merge_rangelist;
+  apr_array_header_t *merge_ranges_list;
   svn_mergeinfo_inheritance_t inherit;
-  svn_stringbuf_t *commit_rangelist_str, *merge_rangelist_str;
+  svn_stringbuf_t *commit_rangelist_str, *merge_ranges_list_str;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccrrw", &merge_target,
                                  &merge_source, &min_commit_rev,
@@ -1560,23 +1560,22 @@ get_commit_and_merge_ranges(svn_ra_svn_conn_t *conn,
   inherit = svn_inheritance_from_word(inherit_word);
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  SVN_CMD_ERR(svn_repos_get_commit_and_merge_ranges(
-                                                &merge_rangelist,
-                                                &commit_rangelist,
-                                                b->repos, 
-                                                merge_target_abs_path,
-                                                merge_source_abs_path,
-                                                min_commit_rev,
-                                                max_commit_rev,
-                                                inherit,
-                                                authz_check_access_cb_func(b),
-                                                b, pool));
+  SVN_CMD_ERR(svn_repos_get_commit_and_merge_ranges(&merge_ranges_list,
+                                                    &commit_rangelist,
+                                                    b->repos, 
+                                                    merge_target_abs_path,
+                                                    merge_source_abs_path,
+                                                    min_commit_rev,
+                                                    max_commit_rev,
+                                                    inherit,
+                                                    authz_check_access_cb_func(b),
+                                                    b, pool));
   SVN_ERR(svn_rangelist_to_stringbuf(&commit_rangelist_str,
                                      commit_rangelist, pool));
-  SVN_ERR(svn_rangelist_to_stringbuf(&merge_rangelist_str,
-                                     merge_rangelist, pool));
+  SVN_ERR(svn_rangelist_to_stringbuf(&merge_ranges_list_str,
+                                     merge_ranges_list, pool));
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(cc)", "success",
-                                 merge_rangelist_str->data,
+                                 merge_ranges_list_str->data,
                                  commit_rangelist_str->data));
   return SVN_NO_ERROR;
 }

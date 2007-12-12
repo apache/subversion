@@ -880,20 +880,20 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
                                   svn_mergeinfo_inheritance_t inherit,
                                   apr_pool_t *pool);
 
-/** Retrieve @a commit_rangelist and a @a merge_rangelist from a given
+/** Retrieve @a commit_rangelist and a @a merge_ranges_list from a given
  * @a merge_source to a @a merge_target
  * where each commit_rev in @a commit_rangelist > @a min_commit_rev and
  * <= @a max_commit_rev.
  * 
- * @a commit_rangelist and @a merge_rangelist will never be @c NULL,
+ * @a commit_rangelist and @a merge_ranges_list will never be @c NULL,
  * but may be empty.
  *
- * @a commit_rangelist and @a merge_rangelist are having 
+ * @a commit_rangelist and @a merge_ranges_list are having 
  * one-one corresponding and hence they are equal in size.
  *
  * @a commit_rangelist is sorted in ascending order.
  *
- * @a merge_rangelist is not sorted.
+ * @a merge_ranges_list is not sorted.
  *
  * @a session indicates the ra_session of the repository root.
  *
@@ -906,7 +906,7 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
  */
 svn_error_t *
 svn_ra_get_commit_and_merge_ranges(svn_ra_session_t *session,
-                                   apr_array_header_t **merge_rangelist,
+                                   apr_array_header_t **merge_ranges_list,
                                    apr_array_header_t **commit_rangelist,
                                    const char* merge_target,
                                    const char* merge_source,

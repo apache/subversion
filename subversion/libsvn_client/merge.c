@@ -1190,7 +1190,7 @@ filter_reflected_revisions(apr_array_header_t **requested_rangelist,
                            apr_pool_t *pool)
 {
   apr_array_header_t *reflective_rangelist = NULL;
-  apr_array_header_t *merge_rangelist = NULL;
+  apr_array_header_t *merge_ranges_list = NULL;
   svn_merge_range_t *range = apr_pcalloc(pool, sizeof(*range));
   svn_revnum_t min_rev = MIN(revision1, revision2);
   svn_revnum_t max_rev = MAX(revision1, revision2);
@@ -1206,7 +1206,7 @@ filter_reflected_revisions(apr_array_header_t **requested_rangelist,
                                             ra_session, NULL, pool));
 
   SVN_ERR(svn_ra_get_commit_and_merge_ranges(ra_session,
-                                             &merge_rangelist,
+                                             &merge_ranges_list,
                                              &reflective_rangelist,
                                              max_rel_path,
                                              mergeinfo_path,

@@ -1095,7 +1095,7 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
 
 static svn_error_t *
 ra_svn_get_commit_and_merge_ranges(svn_ra_session_t *session,
-                                   apr_array_header_t **merge_rangelist,
+                                   apr_array_header_t **merge_ranges_list,
                                    apr_array_header_t **commit_rev_rangelist,
                                    const char* merge_target,
                                    const char* merge_source,
@@ -1106,14 +1106,14 @@ ra_svn_get_commit_and_merge_ranges(svn_ra_session_t *session,
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
-  char *commit_rev_rangelist_str, *merge_rangelist_str;
+  char *commit_rev_rangelist_str, *merge_ranges_list_str;
 
   if (!svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_MERGEINFO))
     {
       *commit_rev_rangelist = apr_array_make(pool, 0,
                                              sizeof(svn_merge_range_t *));
-      *merge_rangelist = apr_array_make(pool, 0,
-                                        sizeof(svn_merge_range_t *));
+      *merge_ranges_list = apr_array_make(pool, 0,
+                                          sizeof(svn_merge_range_t *));
       return SVN_NO_ERROR;
     }
 
@@ -1123,13 +1123,14 @@ ra_svn_get_commit_and_merge_ranges(svn_ra_session_t *session,
                                  svn_inheritance_to_word(inherit)));
 
   SVN_ERR(handle_auth_request(sess_baton, pool));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "cc", &merge_rangelist_str,
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "cc", 
+                                       &merge_ranges_list_str,
                                        &commit_rev_rangelist_str));
 
   SVN_ERR(svn_rangelist__parse(commit_rev_rangelist,
                                commit_rev_rangelist_str, FALSE, FALSE, pool));
-  SVN_ERR(svn_rangelist__parse(merge_rangelist,
-                               merge_rangelist_str, FALSE, FALSE, pool));
+  SVN_ERR(svn_rangelist__parse(merge_ranges_list,
+                               merge_ranges_list_str, FALSE, FALSE, pool));
   return SVN_NO_ERROR;
 }
 

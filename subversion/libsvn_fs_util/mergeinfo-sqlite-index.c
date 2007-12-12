@@ -910,7 +910,7 @@ get_parent_target_path_having_mergeinfo(const char **parent_with_mergeinfo,
    the commit revisions of all the merges that occured from
    MERGE_SOURCE to MERGE_TARGET within revisions MIN_COMMIT_REV(exclusive) and
    MAX_COMMIT_REV. Corresponding merge ranges of each individual commit
-   is set in *MERGE_RANGELIST.
+   is set in *MERGE_RANGES_LIST.
 
    Retrieve the necessary records from DB; allocate the results in POOL.
 
@@ -925,7 +925,7 @@ get_parent_target_path_having_mergeinfo(const char **parent_with_mergeinfo,
    use the parents of MERGE_SOURCE and MERGE_TARGET instead.
 */
 static svn_error_t *
-get_commit_and_merge_ranges(apr_array_header_t **merge_rangelist,
+get_commit_and_merge_ranges(apr_array_header_t **merge_ranges_list,
                             apr_array_header_t **commit_rangelist,
                             sqlite3 *db,
                             const char *merge_target,
@@ -948,7 +948,7 @@ get_commit_and_merge_ranges(apr_array_header_t **merge_rangelist,
                                                     min_commit_rev,
                                                     max_commit_rev, pool));
   *commit_rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
-  *merge_rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
+  *merge_ranges_list = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
 
   if (!real_mergeinfo_target)
     return SVN_NO_ERROR;
@@ -995,7 +995,7 @@ get_commit_and_merge_ranges(apr_array_header_t **merge_rangelist,
       merge_range->inheritable = inheritable;
       APR_ARRAY_PUSH(*commit_rangelist,
                      svn_merge_range_t *) = commit_rev_range;
-      APR_ARRAY_PUSH(*merge_rangelist, svn_merge_range_t *) = merge_range;
+      APR_ARRAY_PUSH(*merge_ranges_list, svn_merge_range_t *) = merge_range;
       SVN_ERR(svn_fs__sqlite_step(&got_row, stmt));
     }
   SVN_ERR(svn_fs__sqlite_finalize(stmt));
@@ -1004,7 +1004,7 @@ get_commit_and_merge_ranges(apr_array_header_t **merge_rangelist,
 
 svn_error_t *
 svn_fs_mergeinfo__get_commit_and_merge_ranges(
-                                     apr_array_header_t **merge_rangelist,
+                                     apr_array_header_t **merge_ranges_list,
                                      apr_array_header_t **commit_rangelist,
                                      svn_fs_root_t *root,
                                      const char* merge_target,
@@ -1022,7 +1022,7 @@ svn_fs_mergeinfo__get_commit_and_merge_ranges(
     return svn_error_create(SVN_ERR_FS_NOT_REVISION_ROOT, NULL, NULL);
 
   SVN_ERR(svn_fs__sqlite_open(&db, root->fs->path, pool));
-  err = get_commit_and_merge_ranges(merge_rangelist, commit_rangelist,
+  err = get_commit_and_merge_ranges(merge_ranges_list, commit_rangelist,
                                     db, merge_target, merge_source,
                                     min_commit_rev, max_commit_rev,
                                     inherit, pool);

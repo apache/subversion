@@ -1340,20 +1340,20 @@ svn_repos_fs_get_mergeinfo(apr_hash_t **mergeoutput,
                            void *authz_read_baton,
                            apr_pool_t *pool);
 
-/** Retrieve @a commit_rangelist and @a merge_rangelist from a given
+/** Retrieve @a commit_rangelist and @a merge_ranges_list from a given
  * @a merge_source to a @a merge_target
  * where each commit_rev in @a commit_rangelist > @a min_commit_rev and
  * <= @a max_commit_rev.
  *
- * @a commit_rangelist @a merge_rangelist will never be @c NULL,
+ * @a commit_rangelist @a merge_ranges_list will never be @c NULL,
  * but may be empty.
  *
- * @a commit_rangelist and @a merge_rangelist are having
+ * @a commit_rangelist and @a merge_ranges_list are having
  * one-one corresponding and hence they are equal in size.
  *
  * @a commit_rangelist is sorted in ascending order.
  *
- * @a merge_rangelist is not sorted.
+ * @a merge_ranges_list is not sorted.
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a merge_target is retrieved.
@@ -1367,7 +1367,7 @@ svn_repos_fs_get_mergeinfo(apr_hash_t **mergeoutput,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_repos_get_commit_and_merge_ranges(apr_array_header_t **merge_rangelist,
+svn_repos_get_commit_and_merge_ranges(apr_array_header_t **merge_ranges_list,
                                       apr_array_header_t **commit_rangelist,
                                       svn_repos_t *repos,
                                       const char* merge_target,

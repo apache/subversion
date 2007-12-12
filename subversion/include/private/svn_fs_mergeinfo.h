@@ -75,20 +75,20 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(
   void *filter_func_baton,
   apr_pool_t *pool);
 
-/** Retrieve @a commit_rangelist and a @a merge_rangelist from a given
+/** Retrieve @a commit_rangelist and a @a merge_ranges_list from a given
  * @a merge_source to a @a merge_target
  * where each commit_rev in @a commit_rangelist > @a min_commit_rev and
  * <= @a max_commit_rev.
  *
- * @a commit_rangelist and @a merge_rangelist will never be @c NULL,
+ * @a commit_rangelist and @a merge_ranges_list will never be @c NULL,
  * but may be empty.
  *
- * @a commit_rangelist and @a merge_rangelist are having
+ * @a commit_rangelist and @a merge_ranges_list are having
  * one-one corresponding and hence they are equal in size.
  *
  * @a commit_rangelist is sorted in ascending order.
  *
- * @a merge_rangelist is not sorted.
+ * @a merge_ranges_list is not sorted.
  *
  * @a root indicates the revision root to use when looking up paths.
  *
@@ -99,7 +99,7 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(
  */
 svn_error_t *
 svn_fs_mergeinfo__get_commit_and_merge_ranges(
-                                     apr_array_header_t **merge_rangelist,
+                                     apr_array_header_t **merge_ranges_list,
                                      apr_array_header_t **commit_rangelist,
                                      svn_fs_root_t *root,
                                      const char* merge_target,

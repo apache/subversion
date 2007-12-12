@@ -43,7 +43,7 @@
 struct mergeinfo_baton
 {
   apr_pool_t *pool;
-  apr_array_header_t **merge_rangelist;
+  apr_array_header_t **merge_ranges_list;
   apr_array_header_t **commit_rangelist;
   svn_error_t *err;
 };
@@ -112,7 +112,7 @@ cdata_handler(void *baton, int state, const char *cdata, size_t len)
   switch (state)
     {
     case ELEM_merge_ranges:
-      mb->err = svn_rangelist__parse(mb->merge_rangelist, cdata_local,
+      mb->err = svn_rangelist__parse(mb->merge_ranges_list, cdata_local,
                                      FALSE, FALSE, mb->pool);
       break;
 
@@ -131,14 +131,14 @@ cdata_handler(void *baton, int state, const char *cdata, size_t len)
 
 svn_error_t *
 svn_ra_neon__get_commit_and_merge_ranges(svn_ra_session_t *session,
-                                         apr_array_header_t **merge_rangelist,
-                                         apr_array_header_t **commit_rangelist,
-                                         const char* merge_target,
-                                         const char* merge_source,
-                                         svn_revnum_t min_commit_rev,
-                                         svn_revnum_t max_commit_rev,
-                                         svn_mergeinfo_inheritance_t inherit,
-                                         apr_pool_t *pool)
+                                        apr_array_header_t **merge_ranges_list,
+                                        apr_array_header_t **commit_rangelist,
+                                        const char* merge_target,
+                                        const char* merge_source,
+                                        svn_revnum_t min_commit_rev,
+                                        svn_revnum_t max_commit_rev,
+                                        svn_mergeinfo_inheritance_t inherit,
+                                        apr_pool_t *pool)
 {
   svn_error_t *err;
   int status_code;
@@ -185,7 +185,7 @@ svn_ra_neon__get_commit_and_merge_ranges(svn_ra_session_t *session,
   svn_stringbuf_appendcstr(request_body, minfo_report_tail);
 
   mb.pool = pool;
-  mb.merge_rangelist = merge_rangelist;
+  mb.merge_ranges_list = merge_ranges_list;
   mb.commit_rangelist = commit_rangelist;
   mb.err = SVN_NO_ERROR;
 
@@ -222,7 +222,7 @@ svn_ra_neon__get_commit_and_merge_ranges(svn_ra_session_t *session,
   if (status_code == 501)
     {
       *commit_rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
-      *merge_rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
+      *merge_ranges_list = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
       svn_error_clear(err);
     }
   else if (err)

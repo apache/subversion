@@ -824,7 +824,7 @@ svn_fs_get_mergeinfo(apr_hash_t **minfohash,
 }
 
 svn_error_t *
-svn_fs_get_commit_and_merge_ranges(apr_array_header_t **merge_rangelist,
+svn_fs_get_commit_and_merge_ranges(apr_array_header_t **merge_ranges_list,
                                    apr_array_header_t **commit_rangelist,
                                    svn_fs_root_t *root,
                                    const char* merge_target,
@@ -834,7 +834,7 @@ svn_fs_get_commit_and_merge_ranges(apr_array_header_t **merge_rangelist,
                                    svn_mergeinfo_inheritance_t inherit,
                                    apr_pool_t *pool)
 {
-  return root->vtable->get_commit_and_merge_ranges(merge_rangelist,
+  return root->vtable->get_commit_and_merge_ranges(merge_ranges_list,
                                                    commit_rangelist,
                                                    root, merge_target,
                                                    merge_source,

@@ -319,7 +319,7 @@ typedef struct root_vtable_t
                                          void *filter_func_baton,
                                          apr_pool_t *pool);
   svn_error_t *(*get_commit_and_merge_ranges)(
-                                    apr_array_header_t **merge_rangelist,
+                                    apr_array_header_t **merge_ranges_list,
                                     apr_array_header_t **commit_rangelist,
                                     svn_fs_root_t *root,
                                     const char* merge_target,

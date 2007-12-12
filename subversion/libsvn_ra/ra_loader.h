@@ -248,8 +248,8 @@ typedef struct svn_ra__vtable_t {
                   apr_pool_t *pool);
   svn_error_t *
   (*get_commit_and_merge_ranges)(svn_ra_session_t *session,
-                                 apr_array_header_t **merge_rangelist,
-                                 apr_array_header_t **commit_rev_range_list,
+                                 apr_array_header_t **merge_ranges_list,
+                                 apr_array_header_t **commit_rangelist,
                                  const char* merge_target,
                                  const char* merge_source,
                                  svn_revnum_t min_commit_rev,

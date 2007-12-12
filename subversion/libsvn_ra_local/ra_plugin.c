@@ -701,23 +701,23 @@ svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
 
 static svn_error_t *
 svn_ra_local__get_commit_and_merge_ranges(
-                                    svn_ra_session_t *session,
-                                    apr_array_header_t **merge_rangelist,
-                                    apr_array_header_t **commit_rev_range_list,
-                                    const char* merge_target,
-                                    const char* merge_source,
-                                    svn_revnum_t min_commit_rev,
-                                    svn_revnum_t max_commit_rev,
-                                    svn_mergeinfo_inheritance_t inherit,
-                                    apr_pool_t *pool)
+                                         svn_ra_session_t *session,
+                                         apr_array_header_t **merge_ranges_list,
+                                         apr_array_header_t **commit_rangelist,
+                                         const char* merge_target,
+                                         const char* merge_source,
+                                         svn_revnum_t min_commit_rev,
+                                         svn_revnum_t max_commit_rev,
+                                         svn_mergeinfo_inheritance_t inherit,
+                                         apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
   const char *merge_target_abs_path = svn_path_join(sess->fs_path->data,
                                                     merge_target, pool);
   const char *merge_source_abs_path = svn_path_join(sess->fs_path->data,
                                                     merge_source, pool);
-  SVN_ERR(svn_repos_get_commit_and_merge_ranges(merge_rangelist,
-                                                commit_rev_range_list,
+  SVN_ERR(svn_repos_get_commit_and_merge_ranges(merge_ranges_list,
+                                                commit_rangelist,
                                                 sess->repos,
                                                 merge_target_abs_path,
                                                 merge_source_abs_path,

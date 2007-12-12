@@ -264,14 +264,14 @@ svn_error_t * svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
 
 svn_error_t * 
 svn_ra_neon__get_commit_and_merge_ranges(svn_ra_session_t *session,
-                                         apr_array_header_t **merge_rangelist,
-                                         apr_array_header_t **commit_rangelist,
-                                         const char* merge_target,
-                                         const char* merge_source,
-                                         svn_revnum_t min_commit_rev,
-                                         svn_revnum_t max_commit_rev,
-                                         svn_mergeinfo_inheritance_t inherit,
-                                         apr_pool_t *pool);
+                                        apr_array_header_t **merge_ranges_list,
+                                        apr_array_header_t **commit_rangelist,
+                                        const char* merge_target,
+                                        const char* merge_source,
+                                        svn_revnum_t min_commit_rev,
+                                        svn_revnum_t max_commit_rev,
+                                        svn_mergeinfo_inheritance_t inherit,
+                                        apr_pool_t *pool);
 
 svn_error_t * svn_ra_neon__do_update(svn_ra_session_t *session,
                                      const svn_ra_reporter3_t **reporter,

@@ -219,8 +219,8 @@ dav_svn__get_commit_and_merge_ranges_report(const dav_resource *resource,
   svn_revnum_t min_commit_rev = SVN_INVALID_REVNUM;
   const char *merge_target = NULL;
   const char *merge_source = NULL;
-  apr_array_header_t *merge_rangelist;
-  svn_stringbuf_t *merge_rangelist_string, *commit_rangelist_string;
+  apr_array_header_t *merge_ranges_list;
+  svn_stringbuf_t *merge_ranges_list_string, *commit_rangelist_string;
   /* By default look for explicit mergeinfo only. */
   svn_mergeinfo_inheritance_t inherit = svn_mergeinfo_explicit;
   const dav_svn_repos *repos = resource->info->repos;
@@ -286,7 +286,7 @@ dav_svn__get_commit_and_merge_ranges_report(const dav_resource *resource,
   /* Build mergeinfo brigade */
   bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
 
-  serr = svn_repos_get_commit_and_merge_ranges(&merge_rangelist,
+  serr = svn_repos_get_commit_and_merge_ranges(&merge_ranges_list,
                                                &commit_rangelist,
                                                repos->repos, merge_target,
                                                merge_source,
@@ -304,7 +304,8 @@ dav_svn__get_commit_and_merge_ranges_report(const dav_resource *resource,
       goto cleanup;
     }
 
-  serr = svn_rangelist_to_stringbuf(&merge_rangelist_string, merge_rangelist,
+  serr = svn_rangelist_to_stringbuf(&merge_ranges_list_string, 
+                                    merge_ranges_list,
                                     resource->pool);
 
   /* ### Same error-handling code appears elsewhere.  -Karl */
@@ -343,7 +344,7 @@ dav_svn__get_commit_and_merge_ranges_report(const dav_resource *resource,
   serr = dav_svn__send_xml(bb, output,
                            "<S:" SVN_DAV__MERGE_RANGES ">%s</S:"
                            SVN_DAV__MERGE_RANGES ">" DEBUG_CR,
-                           merge_rangelist_string->data);
+                           merge_ranges_list_string->data);
   /* ### Same error-handling code appears elsewhere.  -Karl */
   if (serr)
     {
