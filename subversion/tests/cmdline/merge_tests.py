@@ -4205,8 +4205,6 @@ def create_deep_trees(wc_dir):
   expected_disk.tweak('A/copy-of-B/F/E', 'A/copy-of-B/F/E1', status=' M')
   return expected_status
 
-# Marked as XFail until latest concerns with reopened
-# issue #2877 are addressed.
 def avoid_repeated_merge_using_inherited_merge_info(sbox):
   "use inherited mergeinfo to avoid repeated merge"
 
@@ -4325,8 +4323,6 @@ def avoid_repeated_merge_using_inherited_merge_info(sbox):
   svntest.actions.run_and_verify_status(short_copy_of_B_F_E_path, expected_status)
   os.chdir(saved_cwd)
 
-# Marked as XFail until latest concerns with reopened
-# issue #2877 are addressed.
 def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
   "use subtree's mergeinfo to avoid repeated merge"
   # Create deep trees A/B/F/E and A/B/F/E1 and copy A/B to A/copy-of-B
@@ -6161,9 +6157,6 @@ def merge_with_implicit_target_file(sbox):
 
 # Test practical application of issue #2769 fix, empty rev range elision,
 # and elision to the repos.
-#
-# Set as XFail pending resolution of issue #2877 - see note
-# below (search for '2877')
 def empty_mergeinfo(sbox):
   "mergeinfo can explicitly be empty"
 
@@ -6295,10 +6288,6 @@ def empty_mergeinfo(sbox):
   # state as after the call to setup_branch() at the start of the test, with
   # one exception: The empty mergeinfo that was on A_COPY as a result of the
   # copy setting up that branch is now gone, leaving a local mod.
-  #
-  # This test currently fails due to the reopened issue #2877.  The subtree
-  # with empty mergeinfo rooted at A_COPY/D/H is not considered as a subtree
-  # with intersecting mergeinfo and as a result isn't checked for elision.
   wc_status.tweak('A_COPY', status=' M')
   short_rho_COPY_path = shorten_path_kludge(rho_COPY_path)
   expected_output = expected_merge_output(
@@ -9161,9 +9150,6 @@ def merge_from_renamed_branch_fails_while_avoiding_repeat_merge(sbox):
 
 # Test for part of issue #2877: 'do subtree merge only if subtree has
 # explicit mergeinfo set and exists in the merge source'
-#
-# Marked as XFail until latest concerns with reopened
-# issue #2877 are addressed.
 def merge_source_normalization_and_subtree_merges(sbox):
   "normalized mergeinfo is recorded on subtrees"
 
@@ -9354,8 +9340,8 @@ test_list = [ None,
               merge_add_over_versioned_file_conflicts,
               merge_conflict_markers_matching_eol,
               merge_eolstyle_handling,
-              XFail(avoid_repeated_merge_using_inherited_merge_info),
-              XFail(avoid_repeated_merge_on_subtree_with_merge_info),
+              avoid_repeated_merge_using_inherited_merge_info,
+              avoid_repeated_merge_on_subtree_with_merge_info,
               obey_reporter_api_semantics_while_doing_subtree_merges,
               SkipUnless(mergeinfo_inheritance,
                          server_has_mergeinfo),
@@ -9367,8 +9353,8 @@ test_list = [ None,
               SkipUnless(merge_to_path_with_switched_children,
                          server_has_mergeinfo),
               merge_with_implicit_target_file,
-              XFail(SkipUnless(empty_mergeinfo,
-                               server_has_mergeinfo)),
+              SkipUnless(empty_mergeinfo,
+                         server_has_mergeinfo),
               prop_add_to_child_with_mergeinfo,
               diff_repos_does_not_update_mergeinfo,
               XFail(avoid_reflected_revs),
@@ -9392,7 +9378,7 @@ test_list = [ None,
               self_reverse_merge,
               ignore_ancestry_and_mergeinfo,
               merge_from_renamed_branch_fails_while_avoiding_repeat_merge,
-              XFail(merge_source_normalization_and_subtree_merges),
+              merge_source_normalization_and_subtree_merges,
              ]
 
 if __name__ == '__main__':
