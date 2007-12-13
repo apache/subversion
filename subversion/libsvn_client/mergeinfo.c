@@ -399,49 +399,12 @@ svn_client__get_wc_or_repos_mergeinfo(apr_hash_t **target_mergeinfo,
 
 
 svn_error_t *
-svn_client__get_history_as_mergeinfo(apr_hash_t **mergeinfo_p,
-                                     const char *path_or_url,
-                                     const svn_opt_revision_t *peg_revision,
-                                     svn_revnum_t range_youngest,
-                                     svn_revnum_t range_oldest,
-                                     svn_ra_session_t *ra_session,
-                                     svn_wc_adm_access_t *adm_access,
-                                     svn_client_ctx_t *ctx,
-                                     apr_pool_t *pool)
+svn_client__mergeinfo_from_segments(apr_hash_t **mergeinfo_p,
+                                    apr_array_header_t *segments,
+                                    apr_pool_t *pool)
 {
-  apr_array_header_t *segments;
-  svn_revnum_t peg_revnum = SVN_INVALID_REVNUM;
-  const char *url;
   apr_hash_t *mergeinfo = apr_hash_make(pool);
-  apr_pool_t *sesspool = NULL;  /* only used for an RA session we open */
-  svn_ra_session_t *session = ra_session;
   int i;
-
-  /* If PATH_OR_URL is a local path (not a URL), we need to transform
-     it into a URL, open an RA session for it, and resolve the peg
-     revision.  Note that if the local item is scheduled for addition
-     as a copy of something else, we'll use its copyfrom data to query
-     its history.  */
-  SVN_ERR(svn_client__derive_location(&url, &peg_revnum, path_or_url,
-                                      peg_revision, session, adm_access,
-                                      ctx, pool));
-
-  if (session == NULL)
-    {
-      sesspool = svn_pool_create(pool);
-      SVN_ERR(svn_client__open_ra_session_internal(&session, url, NULL, NULL,
-                                                   NULL, FALSE, TRUE, ctx,
-                                                   sesspool));
-    }
-
-  /* Fetch the location segments for our URL@PEG_REVNUM. */
-  if (! SVN_IS_VALID_REVNUM(range_youngest))
-    range_youngest = peg_revnum;
-  if (! SVN_IS_VALID_REVNUM(range_oldest))
-    range_oldest = 0;
-  SVN_ERR(svn_client__repos_location_segments(&segments, session, "", 
-                                              peg_revnum, range_youngest, 
-                                              range_oldest, ctx, pool));
 
   /* Translate location segments into merge sources and ranges. */
   for (i = 0; i < segments->nelts; i++)
@@ -475,11 +438,59 @@ svn_client__get_history_as_mergeinfo(apr_hash_t **mergeinfo_p,
       apr_hash_set(mergeinfo, source_path, APR_HASH_KEY_STRING, path_ranges);
     }
 
+  *mergeinfo_p = mergeinfo;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__get_history_as_mergeinfo(apr_hash_t **mergeinfo_p,
+                                     const char *path_or_url,
+                                     const svn_opt_revision_t *peg_revision,
+                                     svn_revnum_t range_youngest,
+                                     svn_revnum_t range_oldest,
+                                     svn_ra_session_t *ra_session,
+                                     svn_wc_adm_access_t *adm_access,
+                                     svn_client_ctx_t *ctx,
+                                     apr_pool_t *pool)
+{
+  apr_array_header_t *segments;
+  svn_revnum_t peg_revnum = SVN_INVALID_REVNUM;
+  const char *url;
+  apr_pool_t *sesspool = NULL;  /* only used for an RA session we open */
+  svn_ra_session_t *session = ra_session;
+
+  /* If PATH_OR_URL is a local path (not a URL), we need to transform
+     it into a URL, open an RA session for it, and resolve the peg
+     revision.  Note that if the local item is scheduled for addition
+     as a copy of something else, we'll use its copyfrom data to query
+     its history.  */
+  SVN_ERR(svn_client__derive_location(&url, &peg_revnum, path_or_url,
+                                      peg_revision, session, adm_access,
+                                      ctx, pool));
+
+  if (session == NULL)
+    {
+      sesspool = svn_pool_create(pool);
+      SVN_ERR(svn_client__open_ra_session_internal(&session, url, NULL, NULL,
+                                                   NULL, FALSE, TRUE, ctx,
+                                                   sesspool));
+    }
+
+  /* Fetch the location segments for our URL@PEG_REVNUM. */
+  if (! SVN_IS_VALID_REVNUM(range_youngest))
+    range_youngest = peg_revnum;
+  if (! SVN_IS_VALID_REVNUM(range_oldest))
+    range_oldest = 0;
+  SVN_ERR(svn_client__repos_location_segments(&segments, session, "", 
+                                              peg_revnum, range_youngest, 
+                                              range_oldest, ctx, pool));
+
+  SVN_ERR(svn_client__mergeinfo_from_segments(mergeinfo_p, segments, pool));
+
   /* If we opened an RA session, ensure its closure. */
   if (sesspool)
     svn_pool_destroy(sesspool);
 
-  *mergeinfo_p = mergeinfo;
   return SVN_NO_ERROR;
 }
 
