@@ -1,0 +1,32 @@
+Task list for the "reintegrate" branch.
+
+Merge-back-to-trunk blockers
+============================
+
+* Correct the "is there any real mergeinfo?" check.
+
+* Propagate the new include_decendents boolean to the DAV RA layers.
+
+* Port FSFS mergeinfo index changes to BDB backend.
+
+* Add black box tests for 'merge --reintegrate'.
+
+* Deal with renamed merge target, when the mergeinfo is up-to-date, but
+  under an unexpected name
+
+
+Remaining work (which can be done post-merge)
+=============================================
+
+* Fix UI constraints for 'merge --reintegrate', which is "incompatible"
+  with --ignore-ancestry and --record-only
+
+* Add C test for svn_mergeinfo_intersect().
+
+* Examine "TODO(reint)", including (but not limited to):
+
+  * Error messages
+
+  * "Is this the same line?" direct ancestor check
+
+  * authz check
