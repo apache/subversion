@@ -1503,6 +1503,9 @@ main(int argc, const char *argv[])
         }
     }
 
+  /* ### TODO(reint): when reintegrate is set, ignore_ancestry should
+     ### not be passed, because it is ignored. */
+
   /* Check that the subcommand wasn't passed any inappropriate options. */
   for (i = 0; i < received_opts->nelts; i++)
     {

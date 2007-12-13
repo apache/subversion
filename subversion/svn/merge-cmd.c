@@ -239,9 +239,7 @@ svn_cl__merge(apr_getopt_t *os,
         err = svn_client_merge_reintegrate(sourcepath1,
                                            &peg_revision1,
                                            targetpath,
-                                           opt_state->ignore_ancestry,
                                            opt_state->force,
-                                           opt_state->record_only,
                                            opt_state->dry_run,
                                            options, ctx, pool);
       else

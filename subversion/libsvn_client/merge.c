@@ -4918,8 +4918,8 @@ ensure_wc_reflects_repository_subtree(const char *target_wcpath,
   SVN_ERR(svn_wc_revision_status(&wc_stat, target_wcpath, NULL, FALSE, 
                                  ctx->cancel_func, ctx->cancel_baton, pool));
 
-  /* XXXdsg bikeshedding: These shouldn't say "Cannot merge", but
-     rather "Cannot full-tree-auto-merge", but we need a name for
+  /* ### TODO(reint): bikeshedding: These shouldn't say "Cannot merge",
+     but rather "Cannot full-tree-auto-merge", but we need a name for
      that.  Or just make the error say "Working copy has a switched
      subtree". */
   if (wc_stat->switched)
@@ -5004,8 +5004,8 @@ ensure_all_missing_ranges_are_phantoms(svn_ra_session_t *ra_session,
 
           if (svn_merge_range_contains_rev(range, dirent->created_rev))
             {
-              /* XXXdsg: This message might not be optimal (for example,
-                 should we include the whole URL or just the path?
+              /* ### TODO(reint): This message might not be optimal (for
+                 example, should we include the whole URL or just the path?
                  should we be more clear that this particular revision
                  might not be the only problem?)
               */
@@ -5027,9 +5027,7 @@ svn_error_t *
 svn_client_merge_reintegrate(const char *source,
                              const svn_opt_revision_t *peg_revision,
                              const char *target_wcpath,
-                             svn_boolean_t ignore_ancestry, /*XXXdsg ?*/
                              svn_boolean_t force,
-                             svn_boolean_t record_only, /*XXXdsg ?*/
                              svn_boolean_t dry_run,
                              const apr_array_header_t *merge_options,
                              svn_client_ctx_t *ctx,
@@ -5080,7 +5078,7 @@ svn_client_merge_reintegrate(const char *source,
                                                NULL, NULL, NULL,
                                                FALSE, FALSE, ctx, pool));
   SVN_ERR(svn_ra_get_repos_root(ra_session, &source_repos_root, pool));
-  /* ### FIXME: Require that source_repos_root equals wc_repos_root,
+  /* ### TODO(reint): Require that source_repos_root equals wc_repos_root,
      ### since mergeinfo doesn't come into play for cross-repository
      ### merging. */
 
@@ -5111,13 +5109,15 @@ svn_client_merge_reintegrate(const char *source,
 
   if (mergeinfo_by_path == NULL)
     {
-      /* ### FIXME: Handle no/inaccessible mergeinfo on the merge
-         ### source by performing an alternate style of merge. */
+      /* No/inaccessible mergeinfo on the merge source. */
+      /* ### TODO(reint): Perform an alternate style of merge? */
       abort();
     }
+  /* ### TODO(reint): Correct check to handle more than the naive,
+     ### simplest possible case. */
   else if (apr_hash_count(mergeinfo_by_path) != 1)
     {
-#if 0  /* ### TODO: Loop over child paths... */
+#if 0  /* ### TODO(reint): Loop over child paths... */
       apr_pool_t *iterpool = svn_pool_create(pool);
 
       for (hi = apr_hash_first(NULL, mergeinfo_by_path); hi;
@@ -5145,7 +5145,7 @@ svn_client_merge_reintegrate(const char *source,
   /* Calculate the most recent revision merged into source from target
      to determine what revision the merge source is up to date with
      (with respect to the merge target). */
-  /* ### Handle renamed merge targets. */
+  /* ### TODO(reint): Handle renamed merge targets. */
   rangelist =
     apr_hash_get(source_mergeinfo, target_repos_rel_path, APR_HASH_KEY_STRING);
   if (! apr_is_empty_array(rangelist))
@@ -5184,7 +5184,7 @@ svn_client_merge_reintegrate(const char *source,
                                                NULL, adm_access, ctx, pool));
   SVN_ERR(svn_ra_reparent(ra_session, entry->repos, pool));
 
-  /* ### TODO: Consider CONSIDER_INHERITANCE parameter... */
+  /* ### TODO(reint): Consider CONSIDER_INHERITANCE parameter... */
   SVN_ERR(svn_mergeinfo_diff(&deleted_mergeinfo, &added_mergeinfo,
                              target_mergeinfo, source_mergeinfo, FALSE,
                              pool));
@@ -5209,7 +5209,10 @@ svn_client_merge_reintegrate(const char *source,
    * Right side: branch@specified-peg-revision */
 
   /* Do the real merge! */
-  /* XXXdsg make sure that these aren't ancestrally related! */
+  /* ### TODO(reint): Make sure that one isn't the same line ancestor
+     ### of the other (what's erroneously referred to as "ancestrally
+     ### related" in this source file).  We can merge to trunk without
+     ### implementing this. */
   SVN_ERR(merge_cousins_and_supplement_mergeinfo(target_wcpath, entry, 
                                                  adm_access, ra_session,
                                                  url1, rev1, url2, rev2,
@@ -5217,8 +5220,8 @@ svn_client_merge_reintegrate(const char *source,
                                                  source_repos_root,
                                                  wc_repos_root,
                                                  svn_depth_infinity, 
-                                                 ignore_ancestry,
-                                                 force, record_only, dry_run,
+                                                 FALSE,
+                                                 force, FALSE, dry_run,
                                                  merge_options, ctx, pool));
 
   /* Shutdown the administrative session. */

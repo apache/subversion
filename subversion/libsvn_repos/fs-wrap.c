@@ -598,7 +598,7 @@ svn_repos_fs_get_mergeinfo(apr_hash_t **mergeinfo,
      in *MERGEINFO, avoiding massive authz overhead which would allow
      us to protect the name of where a change was merged from, but not
      the change itself. */
-  /* XXXdsg: ... but how about descendent merged-to paths? */
+  /* ### TODO(reint): ... but how about descendent merged-to paths? */
   if (readable_paths->nelts > 0)
     SVN_ERR(svn_fs_get_mergeinfo(mergeinfo, root, readable_paths, inherit,
                                  include_descendents, pool));

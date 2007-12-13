@@ -3370,7 +3370,7 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
   apr_hash_t *entries;
   apr_hash_index_t *hi;
 
-  /* XXXdsg go swimming */
+  /* ### TODO(reint): Examine pool usage. */
   SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, dir_dag, pool));
   entries = svn_fs_fs__copy_dir_entries(entries, pool);
 
@@ -3496,7 +3496,7 @@ get_mergeinfo_hash_for_path(apr_hash_t **mergeinfo_hash,
   while (TRUE)
     {
       svn_boolean_t has_mergeinfo;
-      /* XXXdsg pool usage */
+      /* ### TODO(reint): Examine pool usage. */
       SVN_ERR(svn_fs_fs__dag_has_mergeinfo(&has_mergeinfo, 
                                            nearest_ancestor->node, pool));
       if (has_mergeinfo)
@@ -3592,7 +3592,7 @@ add_descendent_mergeinfo(apr_hash_t *result_hash,
                          apr_pool_t *pool,
                          apr_pool_t *result_pool)
 {
-  /* XXXdsg swimming */
+  /* ### TODO(reint): Examine pool usage. */
   dag_node_t *this_dag;
   svn_boolean_t go_down;
 
@@ -3755,7 +3755,7 @@ get_mergeinfo_hash_for_tree(apr_hash_t **path_mergeinfo_hash_for_tree,
 
   /* First, let's get the mergeinfo for PATH itself, using
      inheritance. */
-  /* XXXdsg go swimming */
+  /* ### TODO(reint): Examine pool usage. */
   SVN_ERR(get_mergeinfo_hash_for_path(&this_path_mergeinfo_hash,
                                       root, path, svn_mergeinfo_inherited,
                                       pool, pool));
@@ -3827,7 +3827,7 @@ fs_get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
       apr_hash_t *path_mergeinfo_hash_for_tree;
-      /* XXXdsg go swimming */
+      /* ### TODO(reint): Examine pool usage. */
 
       SVN_ERR(get_mergeinfo_hash_for_tree(&path_mergeinfo_hash_for_tree,
                                           root, path, filter_func,
