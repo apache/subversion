@@ -224,6 +224,24 @@ svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
                      svn_boolean_t consider_inheritance,
                      apr_pool_t *pool);
 
+/** Find the intersection of two mergeinfo hashes (consisting of @c
+ * const char * paths mapped to @c apr_array_header_t *'s of @c
+ * svn_merge_range_t * elements), @a mergeinfo1 and @a mergeinfo2, and
+ * place the result in @a mergeinfo, which is (deeply) allocated in @a
+ * pool.
+ *
+ * Note: The rangelists of @a mergeinfo1 and @a mergeinfo2 must be
+ * sorted as said by @c svn_sort_compare_ranges(). @a output is
+ * guaranteed to be in sorted order.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_mergeinfo_intersect(apr_hash_t **mergeinfo,
+                        apr_hash_t *mergeinfo1,
+                        apr_hash_t *mergeinfo2,
+                        apr_pool_t *pool);
+
 /** Find the intersection of two rangelists consisting of @c
  * svn_merge_range_t * elements, @a rangelist1 and @a rangelist2, and
  * place the result in @a output.
