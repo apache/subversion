@@ -7590,6 +7590,7 @@ def merge_to_sparse_directories(sbox):
   expected_output = wc.State(short_immediates_dir, {
     'D'  : Item(status=' U'),
     'mu' : Item(status='U '),
+    ''   : Item(status=' U'),
     })
   expected_status = wc.State(short_immediates_dir, {
     ''          : Item(status=' M', wc_rev=9),
@@ -7643,6 +7644,7 @@ def merge_to_sparse_directories(sbox):
   short_files_dir = shorten_path_kludge(files_dir)
   expected_output = wc.State(short_files_dir, {
     'mu' : Item(status='U '),
+    ''   : Item(status=' U'),
     })
   expected_status = wc.State(short_files_dir, {
     ''          : Item(status=' M', wc_rev=9),
@@ -7669,7 +7671,7 @@ def merge_to_sparse_directories(sbox):
 
   # Do an --empty checkout of A_COPY
   empty_dir = sbox.add_wc_path('empty')
-  expected_output = wc.State(empty_dir)
+  expected_output = wc.State(empty_dir, {})
   expected_disk = wc.State('', {})
   svntest.actions.run_and_verify_checkout(sbox.repo_url + "/A_COPY",
                                           empty_dir,
@@ -7681,7 +7683,9 @@ def merge_to_sparse_directories(sbox):
   # The root of the files WC should get non-inheritable r4:9 and also get
   # the one change that affects it directly (the prop add from r9).
   short_empty_dir = shorten_path_kludge(empty_dir)
-  expected_output = wc.State(short_empty_dir)
+  expected_output = wc.State(short_empty_dir, {
+    ''   : Item(status=' U'),
+    })
   expected_status = wc.State(short_empty_dir, {
     ''          : Item(status=' M', wc_rev=9),
     })
@@ -8031,7 +8035,7 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
     'mu' : Item(status='G '), # merged reversion of text changes
     })
 
-  expected_status.tweak('', status=' M') # elision removes svn:mergeinfo
+  expected_status.tweak('', status='  ')
   expected_status.tweak('mu', status='  ')
   expected_disk.tweak('', props={})
   expected_disk.remove('')
@@ -8081,7 +8085,7 @@ def merge_with_child_having_different_rev_ranges_to_merge(sbox):
     ''   : Item(status=' G'),
     'mu' : Item(status='G '),
     })
-  expected_status.tweak('', status=' M') # elision removes svn:mergeinfo
+  expected_status.tweak('', status='  ')
   expected_status.tweak('mu', status='M ')
   expected_disk.remove('')
   expected_disk.tweak('mu', contents=tweaked_17th_line_2)
@@ -8515,8 +8519,8 @@ def cherry_picking(sbox):
                                      sbox.repo_url + '/A',
                                      short_A_COPY_path)
   os.chdir(saved_cwd)
-  expected_status = wc.State(A_COPY_path,  # A_COPY's mergeinfo elides away
-                             {''          : Item(status=' M', wc_rev=6),
+  expected_status = wc.State(A_COPY_path,
+                             {''          : Item(status='  ', wc_rev=6),
                               'B'         : Item(status='  ', wc_rev=6),
                               'B/lambda'  : Item(status='  ', wc_rev=6),
                               'B/E'       : Item(status='  ', wc_rev=6),
