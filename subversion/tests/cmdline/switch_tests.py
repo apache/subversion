@@ -617,7 +617,6 @@ def delete_subdir(sbox):
                                      'rm', '-m', 'delete subdir', A2_B_F_url)
 
   expected_output = svntest.wc.State(wc_dir, {
-    'A'     : Item(status=' U'),
     'A/B/F' : Item(status='D '),
     })
   expected_disk = svntest.main.greek_state.copy()
@@ -981,8 +980,8 @@ def relocate_beyond_repos_root(sbox):
 def refresh_read_only_attribute(sbox):
   "refresh the WC file system read-only attribute "
 
-  # This test will fail when run as root. Since that's normal behavior, just skip
-  # the test.
+  # This test will fail when run as root. Since that's normal
+  # behavior, just skip the test.
   if os.name == 'posix':
     if os.geteuid() == 0:
       raise svntest.Skip
@@ -1023,7 +1022,6 @@ def refresh_read_only_attribute(sbox):
   # Switch to the branch with the WC state from before the propset of
   # svn:needs-lock.
   expected_output = svntest.wc.State(wc_dir, {
-    'A'    : Item(status=' U'),
     'A/mu' : Item(status=' U'),
     })
   expected_disk = svntest.main.greek_state.copy()
