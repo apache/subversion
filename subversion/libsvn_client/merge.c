@@ -5023,6 +5023,63 @@ ensure_all_missing_ranges_are_phantoms(svn_ra_session_t *ra_session,
 }
 
 
+static svn_error_t *
+calculate_left_hand_side(const char **url_left,
+                         svn_revnum_t *rev_left,
+                         apr_hash_t *mergeinfo_by_path,
+                         const char *target_repos_rel_path,
+                         svn_revnum_t target_rev,
+                         const char *source_repos_rel_path,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *pool)
+{
+  apr_array_header_t *segments; /* array of (svn_location_segment_t *) */
+  svn_boolean_t have_mergeinfo_for_source = FALSE, 
+    have_mergeinfo_for_descendents = FALSE;
+
+  /* 1: Get the history (segments) for the target */
+  SVN_ERR(svn_client__repos_location_segments(&segments,
+                                              ra_session,
+                                              target_repos_rel_path,
+                                              target_rev, target_rev, 
+                                              SVN_INVALID_REVNUM,
+                                              ctx, pool));
+
+  /* 2: Filter mergeinfo_by_path so that all of the ranges come from
+     the target's history */
+  SVN_ERR(remove_irrelevant_ranges(&mergeinfo_by_path,
+                                   mergeinfo_by_path,
+                                   segments,
+                                   pool));
+
+  /* 3: Elide! */
+  SVN_ERR(there_must_be_an_elision_function(mergeinfo_by_path));
+
+  /* 4: N-part conditional */
+  /* TODO(reint): make sure we look things up with keys that start
+     with slash */
+  if (apr_hash_get(mergeinfo_by_path, source_repos_rel_path, 
+                   APR_HASH_KEY_STRING))
+    have_mergeinfo_for_source = TRUE;
+  if (apr_hash_count(mergeinfo_by_path) > 1 || 
+      (! have_mergeinfo_for_source && apr_hash_count(mergeinfo_by_path) == 1))
+    have_mergeinfo_for_descendents = TRUE;
+
+  if (! have_mergeinfo_for_source)
+    /* TODO(reint): error? */ ;
+  else if (! have_mergeinfo_for_descendents)
+    /* TODO(reint): easy case */ ;
+  else
+    /* TODO(reint): error, but maybe that's too conservative */ ;
+
+  /* 5: Find the "last" segment and return its URL and the last rev in
+        it */
+  /* TODO(reint): do it. */
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_client_merge_reintegrate(const char *source,
                              const svn_opt_revision_t *peg_revision,
@@ -5107,53 +5164,13 @@ svn_client_merge_reintegrate(const char *source,
                                source_repos_rel_path_as_array, rev2,
                                svn_mergeinfo_inherited, TRUE, pool));
 
-  if (mergeinfo_by_path == NULL)
-    {
-      /* No/inaccessible mergeinfo on the merge source. */
-      /* ### TODO(reint): Perform an alternate style of merge? */
-      abort();
-    }
-  /* ### TODO(reint): Correct check to handle more than the naive,
-     ### simplest possible case. */
-  else if (apr_hash_count(mergeinfo_by_path) != 1)
-    {
-#if 0  /* ### TODO(reint): Loop over child paths... */
-      apr_pool_t *iterpool = svn_pool_create(pool);
-
-      for (hi = apr_hash_first(NULL, mergeinfo_by_path); hi;
-           hi = apr_hash_next(hi))
-        {
-          const void *key;
-          void *val;
-
-          /* Ignore source_repos_rel_path, since we already checked it. */
-
-          svn_pool_clear(iterpool);
-        }
-      svn_pool_destroy(iterpool);
-#endif    /* ...but for now... */
-      return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                               _("'%s' not ready for merge to '%s'"),
-                               url2, target_wcpath);
-    }
-
-  source_mergeinfo = apr_hash_get(mergeinfo_by_path, source_repos_rel_path,
-                                  APR_HASH_KEY_STRING);
-
-  SVN_ERR(svn_client_url_from_path(&url1, target_wcpath, pool));
-
-  /* Calculate the most recent revision merged into source from target
-     to determine what revision the merge source is up to date with
-     (with respect to the merge target). */
-  /* ### TODO(reint): Handle renamed merge targets. */
-  rangelist =
-    apr_hash_get(source_mergeinfo, target_repos_rel_path, APR_HASH_KEY_STRING);
-  if (! apr_is_empty_array(rangelist))
-    {
-      svn_merge_range_t *last_range =
-        APR_ARRAY_IDX(rangelist, rangelist->nelts - 1, svn_merge_range_t *);
-      rev1 = last_range->end;
-    }
+  SVN_ERR(calculate_left_hand_side(&url1, &rev1,
+                                   mergeinfo_by_path,
+                                   target_repos_rel_path,
+                                   rev1,
+                                   source_repos_rel_path,
+                                   ctx,
+                                   pool));
 
   source_revision.kind = svn_opt_revision_number;
   source_revision.value.number = rev2;
