@@ -6282,10 +6282,7 @@ def empty_mergeinfo(sbox):
   # latter elides to the former.  And then the empty mergeinfo on A_COPY,
   # which has no parent with explicit mergeinfo to override (in either the WC
   # or the repos) itself elides.  This leaves the WC in the same unmodified
-  # state as after the call to setup_branch() at the start of the test, with
-  # one exception: The empty mergeinfo that was on A_COPY as a result of the
-  # copy setting up that branch is now gone, leaving a local mod.
-  wc_status.tweak('A_COPY', status=' M')
+  # state as after the call to setup_branch().
   short_rho_COPY_path = shorten_path_kludge(rho_COPY_path)
   expected_output = expected_merge_output(
     [[4,3]], 'G    ' + short_rho_COPY_path + '\n')
@@ -6297,7 +6294,7 @@ def empty_mergeinfo(sbox):
   svntest.actions.run_and_verify_status(wc_dir, wc_status)
   # Check that A_COPY's mergeinfo is gone.
   svntest.actions.run_and_verify_svn(None, [], [], 'pg', 'svn:mergeinfo',
-                                    A_COPY_path)
+                                     A_COPY_path)
   
 def prop_add_to_child_with_mergeinfo(sbox):
   "merge adding prop to child of merge target works"
@@ -7801,7 +7798,6 @@ def merge_old_and_new_revs_from_renamed_dir(sbox):
   # because /A_MOVED has renames in its history between the boundaries
   # of the requested merge range.
   expected_output = wc.State(short_A_COPY, {
-    ''   : Item(status=' G'),
     'mu' : Item(status='G '), # mu gets touched twice
     })
   expected_status = wc.State(short_A_COPY, {
@@ -8156,7 +8152,7 @@ def merge_old_and_new_revs_from_renamed_file(sbox):
   # boundaries of the requested merge range.
   expected_output = expected_merge_output([[2,3],[4,5]],
                                           ['U    %s\n' % (mu_COPY_path),
-                                           'GG   %s\n' % (mu_COPY_path)])
+                                           'G    %s\n' % (mu_COPY_path)])
   svntest.actions.run_and_verify_svn(None, expected_output,
                                      [], 'merge', '-r', '1:5',
                                      mu_MOVED_url,
