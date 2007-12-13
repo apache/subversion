@@ -5023,6 +5023,55 @@ ensure_all_missing_ranges_are_phantoms(svn_ra_session_t *ra_session,
 }
 
 
+/* Return a new hash in *MERGEINFO_BY_PATH_P equal to
+   MERGEINFO_BY_PATH, but containing only source ranges from the
+   segments in SEGMENTS (whose elements are of type
+   svn_location_segment_t *).  The keys of *MERGEINFO_BY_PATH_P and
+   MERGEINFO_BY_PATH will be 'const char *' paths, and the values are
+   mergeinfo hashes.  The returned values are (deeply) allocated in
+   POOL. */
+static svn_error_t *
+remove_irrelevant_ranges(apr_hash_t **mergeinfo_by_path_p,
+                         apr_hash_t *mergeinfo_by_path,
+                         apr_array_header_t *segments,
+                         apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  apr_hash_t *new_by_path = apr_hash_make(pool);
+  apr_hash_t *history_as_mergeinfo;
+
+  SVN_ERR(svn_client__mergeinfo_from_segments(&history_as_mergeinfo,
+                                              segments,
+                                              pool));
+
+  for (hi = apr_hash_first(pool, mergeinfo_by_path);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      const char *path;
+      apr_hash_t *mergeinfo_hash, *filtered_mergeinfo_hash;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      path = key;
+      mergeinfo_hash = val;
+
+      SVN_ERR(svn_mergeinfo_intersect(&filtered_mergeinfo_hash,
+                                      mergeinfo_hash,
+                                      history_as_mergeinfo,
+                                      pool));
+      if (filtered_mergeinfo_hash 
+          && apr_hash_count(filtered_mergeinfo_hash) > 0)
+        apr_hash_set(new_by_path, path, APR_HASH_KEY_STRING, 
+                     filtered_mergeinfo_hash);
+    }
+
+  *mergeinfo_by_path_p = new_by_path;
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t *
 calculate_left_hand_side(const char **url_left,
                          svn_revnum_t *rev_left,
