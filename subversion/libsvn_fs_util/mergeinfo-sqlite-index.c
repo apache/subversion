@@ -1007,7 +1007,7 @@ get_commit_and_merge_ranges(apr_array_header_t **merge_ranges_list,
           merge_rangelist = apr_array_make(pool, 0, 
                                            sizeof(svn_merge_range_t *));
         }
-      merge_range->start = start_rev - 1;
+      merge_range->start = start_rev;
       merge_range->end = end_rev;
       merge_range->inheritable = inheritable;
       APR_ARRAY_PUSH(merge_rangelist, svn_merge_range_t *) = merge_range;
