@@ -43,8 +43,8 @@
 struct mergeinfo_baton
 {
   apr_pool_t *pool;
-  apr_array_header_t **merge_ranges_list;
-  apr_array_header_t **commit_rangelist;
+  apr_array_header_t *merge_ranges_list;
+  apr_array_header_t *commit_rangelist;
   svn_error_t *err;
 };
 
@@ -52,9 +52,10 @@ static const svn_ra_neon__xml_elm_t commit_and_merge_ranges_report_elements[] =
   {
     { SVN_XML_NAMESPACE, SVN_DAV__COMMIT_AND_MERGE_RANGES_REPORT,
       ELEM_commit_and_merge_ranges_report, 0 },
+    { SVN_XML_NAMESPACE, SVN_DAV__COMMIT_MERGE_INFO, ELEM_commit_mergeinfo, 0},
     { SVN_XML_NAMESPACE, SVN_DAV__MERGE_RANGES, ELEM_merge_ranges,
       SVN_RA_NEON__XML_CDATA},
-    { SVN_XML_NAMESPACE, SVN_DAV__COMMIT_RANGES, ELEM_commit_ranges, 
+    { SVN_XML_NAMESPACE, SVN_DAV__COMMIT_REV, ELEM_commit_rev,
       SVN_RA_NEON__XML_CDATA},
     { NULL }
   };
@@ -107,18 +108,28 @@ cdata_handler(void *baton, int state, const char *cdata, size_t len)
 {
   struct mergeinfo_baton *mb = baton;
   apr_size_t nlen = len;
+  char *endstr;
+  svn_revnum_t commit_rev;
   const char *cdata_local = apr_pstrndup(mb->pool, cdata, nlen);
+  svn_merge_range_t *range;
+  apr_array_header_t *merge_rangelist;
 
   switch (state)
     {
     case ELEM_merge_ranges:
-      mb->err = svn_rangelist__parse(mb->merge_ranges_list, cdata_local,
-                                     FALSE, FALSE, mb->pool);
+      SVN_ERR(svn_rangelist__parse(&merge_rangelist, cdata_local,
+                                   FALSE, FALSE, mb->pool));
+      APR_ARRAY_PUSH(mb->merge_ranges_list, 
+                     apr_array_header_t *) = merge_rangelist;
       break;
 
-    case ELEM_commit_ranges:
-      mb->err = svn_rangelist__parse(mb->commit_rangelist, cdata_local,
-                                     FALSE, FALSE, mb->pool);
+    case ELEM_commit_rev:
+      commit_rev = strtol(cdata_local, &endstr, 10);
+      range = apr_pcalloc(mb->pool, sizeof(*range));
+      range->start = commit_rev - 1;
+      range->end = commit_rev;
+      range->inheritable = TRUE;
+      APR_ARRAY_PUSH(mb->commit_rangelist, svn_merge_range_t *) = range;
       break;
 
     default:
@@ -184,9 +195,12 @@ svn_ra_neon__get_commit_and_merge_ranges(svn_ra_session_t *session,
 
   svn_stringbuf_appendcstr(request_body, minfo_report_tail);
 
+  *commit_rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
+  *merge_ranges_list = apr_array_make(pool, 0, sizeof(apr_array_header_t *));
+
   mb.pool = pool;
-  mb.merge_ranges_list = merge_ranges_list;
-  mb.commit_rangelist = commit_rangelist;
+  mb.merge_ranges_list = *merge_ranges_list;
+  mb.commit_rangelist = *commit_rangelist;
   mb.err = SVN_NO_ERROR;
 
   /* ras's URL may not exist in HEAD, and thus it's not safe to send

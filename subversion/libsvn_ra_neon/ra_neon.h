@@ -804,7 +804,8 @@ enum {
   ELEM_merged_revision,
   ELEM_commit_and_merge_ranges_report,
   ELEM_merge_ranges,
-  ELEM_commit_ranges
+  ELEM_commit_rev,
+  ELEM_commit_mergeinfo
 };
 
 /* ### docco */

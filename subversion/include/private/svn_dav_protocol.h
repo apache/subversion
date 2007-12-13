@@ -44,8 +44,9 @@ extern "C" {
 #define SVN_DAV__MIN_COMMIT_REVISION "min-commit-revision"
 #define SVN_DAV__MERGE_SOURCE "merge-source"
 #define SVN_DAV__MERGE_TARGET "merge-target"
+#define SVN_DAV__COMMIT_MERGE_INFO "commit-merge-info"
 #define SVN_DAV__MERGE_RANGES "merge-ranges"
-#define SVN_DAV__COMMIT_RANGES "commit-ranges"
+#define SVN_DAV__COMMIT_REV "commit-rev"
 #define SVN_DAV__VERSION_NAME "version-name"
 
 #ifdef __cplusplus

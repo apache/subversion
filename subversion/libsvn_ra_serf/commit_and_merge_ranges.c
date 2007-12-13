@@ -40,7 +40,8 @@
 typedef enum {
   NONE = 0,
   MERGEINFO_REPORT,
-  COMMIT_RANGES,
+  COMMIT_MERGE_INFO,
+  COMMIT_REV,
   MERGE_RANGES,
 } mergeinfo_state_e;
 
@@ -55,8 +56,8 @@ typedef struct {
   const char *merge_source;
   svn_revnum_t min_commit_rev;
   svn_revnum_t max_commit_rev;
-  apr_array_header_t **merge_ranges_list;
-  apr_array_header_t **commit_rangelist;
+  apr_array_header_t *merge_ranges_list;
+  apr_array_header_t *commit_rangelist;
 } mergeinfo_context_t;
 
 static svn_error_t *
@@ -75,14 +76,19 @@ start_element(svn_ra_serf__xml_parser_t *parser,
       svn_ra_serf__xml_push_state(parser, MERGEINFO_REPORT);
     }
   else if (state == MERGEINFO_REPORT &&
+           strcmp(name.name, SVN_DAV__COMMIT_MERGE_INFO) == 0)
+    {
+      svn_ra_serf__xml_push_state(parser, COMMIT_MERGE_INFO);
+    }
+  else if (state == COMMIT_MERGE_INFO &&
            strcmp(name.name, SVN_DAV__MERGE_RANGES) == 0)
     {
       svn_ra_serf__xml_push_state(parser, MERGE_RANGES);
     }
-  else if (state == MERGEINFO_REPORT &&
-           strcmp(name.name, SVN_DAV__COMMIT_RANGES) == 0)
+  else if (state == COMMIT_MERGE_INFO &&
+           strcmp(name.name, SVN_DAV__COMMIT_REV) == 0)
     {
-      svn_ra_serf__xml_push_state(parser, COMMIT_RANGES);
+      svn_ra_serf__xml_push_state(parser, COMMIT_REV);
     }
   return SVN_NO_ERROR;
 }
@@ -102,21 +108,30 @@ cdata_handler(svn_ra_serf__xml_parser_t *parser, void *userData,
 {
   mergeinfo_context_t *mergeinfo_ctx = userData;
   mergeinfo_state_e state;
+  char *endstr;
+  svn_revnum_t commit_rev;
+  svn_merge_range_t *range;
+  apr_array_header_t *merge_rangelist;
   const char *cdata_local = apr_pstrndup(mergeinfo_ctx->pool, data, len);
 
   state = parser->state->current_state;
   switch (state)
     {
     case MERGE_RANGES:
-      SVN_ERR(svn_rangelist__parse(mergeinfo_ctx->merge_ranges_list, 
-                                   cdata_local, FALSE, FALSE,
-                                   mergeinfo_ctx->pool));
+      SVN_ERR(svn_rangelist__parse(&merge_rangelist, cdata_local,
+                                   FALSE, FALSE, mergeinfo_ctx->pool));
+      APR_ARRAY_PUSH(mergeinfo_ctx->merge_ranges_list,
+                     apr_array_header_t *) = merge_rangelist;
       break;
 
-    case COMMIT_RANGES:
-      SVN_ERR(svn_rangelist__parse(mergeinfo_ctx->commit_rangelist,
-                                   cdata_local, FALSE, FALSE, 
-                                   mergeinfo_ctx->pool));
+    case COMMIT_REV:
+      commit_rev = strtol(cdata_local, &endstr, 10);
+      range = apr_pcalloc(mergeinfo_ctx->pool, sizeof(*range));
+      range->start = commit_rev - 1;
+      range->end = commit_rev;
+      range->inheritable = TRUE;
+      APR_ARRAY_PUSH(mergeinfo_ctx->commit_rangelist,
+                     svn_merge_range_t *) = range;
       break;
 
     default:
@@ -209,8 +224,12 @@ svn_ra_serf__get_commit_and_merge_ranges(svn_ra_session_t *ra_session,
   mergeinfo_ctx->min_commit_rev = min_commit_rev;
   mergeinfo_ctx->max_commit_rev = max_commit_rev;
   mergeinfo_ctx->inherit = inherit;
-  mergeinfo_ctx->merge_ranges_list = merge_ranges_list;
-  mergeinfo_ctx->commit_rangelist = commit_rangelist;
+
+  *commit_rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
+  *merge_ranges_list = apr_array_make(pool, 0, sizeof(apr_array_header_t *));
+
+  mergeinfo_ctx->merge_ranges_list = *merge_ranges_list;
+  mergeinfo_ctx->commit_rangelist = *commit_rangelist;
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 

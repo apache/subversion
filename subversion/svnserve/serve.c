@@ -1537,7 +1537,6 @@ get_commit_and_merge_ranges(svn_ra_svn_conn_t *conn,
                             void *baton)
 {
   server_baton_t *b = baton;
-  apr_array_header_t *commit_rangelist;
   const char *inherit_word;
   svn_revnum_t max_commit_rev = SVN_INVALID_REVNUM;
   svn_revnum_t min_commit_rev = SVN_INVALID_REVNUM;
@@ -1545,9 +1544,10 @@ get_commit_and_merge_ranges(svn_ra_svn_conn_t *conn,
   const char *merge_source = NULL;
   const char *merge_target_abs_path = NULL;
   const char *merge_source_abs_path = NULL;
+  apr_array_header_t *commit_rangelist;
   apr_array_header_t *merge_ranges_list;
   svn_mergeinfo_inheritance_t inherit;
-  svn_stringbuf_t *commit_rangelist_str, *merge_ranges_list_str;
+  int i;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccrrw", &merge_target,
                                  &merge_source, &min_commit_rev,
@@ -1570,13 +1570,22 @@ get_commit_and_merge_ranges(svn_ra_svn_conn_t *conn,
                                                     inherit,
                                                     authz_check_access_cb_func(b),
                                                     b, pool));
-  SVN_ERR(svn_rangelist_to_stringbuf(&commit_rangelist_str,
-                                     commit_rangelist, pool));
-  SVN_ERR(svn_rangelist_to_stringbuf(&merge_ranges_list_str,
-                                     merge_ranges_list, pool));
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(cc)", "success",
-                                 merge_ranges_list_str->data,
-                                 commit_rangelist_str->data));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "success"));
+  for (i = 0; i < merge_ranges_list->nelts; i++)
+    {
+      svn_stringbuf_t *merge_rangelist_string;
+      apr_array_header_t *merge_rangelist =
+                    APR_ARRAY_IDX(merge_ranges_list, i, apr_array_header_t *);
+      svn_merge_range_t *commit_range =
+                      APR_ARRAY_IDX(commit_rangelist, i, svn_merge_range_t *);
+
+      SVN_ERR(svn_rangelist_to_stringbuf(&merge_rangelist_string,
+                                         merge_rangelist, pool));
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cr",
+                                     merge_rangelist_string->data,
+                                     commit_range->end));
+    }
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
   return SVN_NO_ERROR;
 }
 /* Send a log entry to the client. */

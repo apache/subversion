@@ -1256,6 +1256,10 @@ svn_error_t *svn_fs_get_mergeinfo(apr_hash_t **minfohash,
  * @a commit_rangelist and @a merge_ranges_list are having
  * one-one corresponding and hence they are equal in size.
  *
+ * @a commit_rangelist has elements of type 'svn_merge_range_t *'.
+ * @a merge_ranges_list has elements of type 'apr_array_header_t *' which
+ * contains 'svn_merge_range_t *'.
+ *
  * @a commit_rangelist is sorted in ascending order.
  *
  * @a merge_ranges_list is not sorted.

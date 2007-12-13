@@ -912,6 +912,10 @@ get_parent_target_path_having_mergeinfo(const char **parent_with_mergeinfo,
    MAX_COMMIT_REV. Corresponding merge ranges of each individual commit
    is set in *MERGE_RANGES_LIST.
 
+   *COMMIT_RANGELIST has elements of type 'svn_merge_range_t *'.
+   *MERGE_RANGES_LIST has elements of type 'apr_array_header_t *' which 
+   contains 'svn_merge_range_t *'.
+
    Retrieve the necessary records from DB; allocate the results in POOL.
 
    ### Why are we returning an array of 'svn_merge_range_t' objects
@@ -940,6 +944,8 @@ get_commit_and_merge_ranges(apr_array_header_t **merge_ranges_list,
   svn_boolean_t got_row;
   const char *real_mergeinfo_target = merge_target;
   const char *real_merge_source = merge_source;
+  apr_array_header_t *merge_rangelist;
+  svn_revnum_t last_commit_rev = SVN_INVALID_REVNUM;
 
   if (inherit == svn_mergeinfo_inherited
       || inherit == svn_mergeinfo_nearest_ancestor)
@@ -948,7 +954,8 @@ get_commit_and_merge_ranges(apr_array_header_t **merge_ranges_list,
                                                     min_commit_rev,
                                                     max_commit_rev, pool));
   *commit_rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
-  *merge_ranges_list = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
+  *merge_ranges_list = apr_array_make(pool, 0, sizeof(apr_array_header_t *));
+  merge_rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
 
   if (!real_mergeinfo_target)
     return SVN_NO_ERROR;
@@ -976,27 +983,50 @@ get_commit_and_merge_ranges(apr_array_header_t **merge_ranges_list,
   SVN_ERR(svn_fs__sqlite_step(&got_row, stmt));
   while (got_row)
     {
-      svn_merge_range_t *commit_rev_range;
       svn_merge_range_t *merge_range;
       svn_revnum_t commit_rev, start_rev, end_rev;
       int inheritable;
 
-      commit_rev_range = apr_pcalloc(pool, sizeof(*commit_rev_range));
       merge_range = apr_pcalloc(pool, sizeof(*merge_range));
       commit_rev = svn_fs__sqlite_column_revnum(stmt, 0);
       start_rev = svn_fs__sqlite_column_revnum(stmt, 1);
       end_rev = svn_fs__sqlite_column_revnum(stmt, 2);
       inheritable = svn_fs__sqlite_column_boolean(stmt, 3);
-      commit_rev_range->start = commit_rev - 1;
-      commit_rev_range->end = commit_rev;
-      commit_rev_range->inheritable = TRUE;
+      if ((last_commit_rev != commit_rev)
+          && (last_commit_rev != SVN_INVALID_REVNUM))
+        {
+          svn_merge_range_t *commit_rev_range;
+          commit_rev_range = apr_pcalloc(pool, sizeof(*commit_rev_range));
+          commit_rev_range->start = last_commit_rev - 1;
+          commit_rev_range->end = last_commit_rev;
+          commit_rev_range->inheritable = TRUE;
+          APR_ARRAY_PUSH(*commit_rangelist,
+                         svn_merge_range_t *) = commit_rev_range;
+          APR_ARRAY_PUSH(*merge_ranges_list,
+                         apr_array_header_t *) = merge_rangelist;
+          merge_rangelist = apr_array_make(pool, 0, 
+                                           sizeof(svn_merge_range_t *));
+        }
       merge_range->start = start_rev - 1;
       merge_range->end = end_rev;
       merge_range->inheritable = inheritable;
+      APR_ARRAY_PUSH(merge_rangelist, svn_merge_range_t *) = merge_range;
+      last_commit_rev = commit_rev;
+      SVN_ERR(svn_fs__sqlite_step(&got_row, stmt));
+    }
+
+  /* Add the last commit rev and merge_ranges_list .*/
+  if (last_commit_rev != SVN_INVALID_REVNUM)
+    {
+      svn_merge_range_t *commit_rev_range;
+      commit_rev_range = apr_pcalloc(pool, sizeof(*commit_rev_range));
+      commit_rev_range->start = last_commit_rev - 1;
+      commit_rev_range->end = last_commit_rev;
+      commit_rev_range->inheritable = TRUE;
       APR_ARRAY_PUSH(*commit_rangelist,
                      svn_merge_range_t *) = commit_rev_range;
-      APR_ARRAY_PUSH(*merge_ranges_list, svn_merge_range_t *) = merge_range;
-      SVN_ERR(svn_fs__sqlite_step(&got_row, stmt));
+      APR_ARRAY_PUSH(*merge_ranges_list,
+                     apr_array_header_t *) = merge_rangelist;
     }
   SVN_ERR(svn_fs__sqlite_finalize(stmt));
   return SVN_NO_ERROR;

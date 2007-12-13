@@ -220,7 +220,6 @@ dav_svn__get_commit_and_merge_ranges_report(const dav_resource *resource,
   const char *merge_target = NULL;
   const char *merge_source = NULL;
   apr_array_header_t *merge_ranges_list;
-  svn_stringbuf_t *merge_ranges_list_string, *commit_rangelist_string;
   /* By default look for explicit mergeinfo only. */
   svn_mergeinfo_inheritance_t inherit = svn_mergeinfo_explicit;
   const dav_svn_repos *repos = resource->info->repos;
@@ -228,6 +227,7 @@ dav_svn__get_commit_and_merge_ranges_report(const dav_resource *resource,
   svn_stringbuf_t *commit_rev_mergeinfo;
   apr_bucket_brigade *bb;
   dav_svn__authz_read_baton arb;
+  int i;
 
   /* Sanity check. */
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
@@ -304,30 +304,6 @@ dav_svn__get_commit_and_merge_ranges_report(const dav_resource *resource,
       goto cleanup;
     }
 
-  serr = svn_rangelist_to_stringbuf(&merge_ranges_list_string, 
-                                    merge_ranges_list,
-                                    resource->pool);
-
-  /* ### Same error-handling code appears elsewhere.  -Karl */
-  if (serr)
-    {
-      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
-                                  resource->pool);
-      goto cleanup;
-    }
-
-  serr = svn_rangelist_to_stringbuf(&commit_rangelist_string, commit_rangelist,
-                                    resource->pool);
-
-  /* ### Same error-handling code appears elsewhere.  -Karl */
-  if (serr)
-    {
-      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
-                                  resource->pool);
-      goto cleanup;
-    }
-
-
   serr = dav_svn__send_xml(bb, output,
                            DAV_XML_HEADER DEBUG_CR
                            "<S:" SVN_DAV__COMMIT_AND_MERGE_RANGES_REPORT " "
@@ -341,29 +317,66 @@ dav_svn__get_commit_and_merge_ranges_report(const dav_resource *resource,
       goto cleanup;
     }
 
-  serr = dav_svn__send_xml(bb, output,
-                           "<S:" SVN_DAV__MERGE_RANGES ">%s</S:"
-                           SVN_DAV__MERGE_RANGES ">" DEBUG_CR,
-                           merge_ranges_list_string->data);
-  /* ### Same error-handling code appears elsewhere.  -Karl */
-  if (serr)
+  for (i = 0; i < merge_ranges_list->nelts; i++)
     {
-      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
-                                  resource->pool);
-      goto cleanup;
-    }
+      svn_stringbuf_t *merge_rangelist_string;
+      apr_array_header_t *merge_rangelist =
+                   APR_ARRAY_IDX(merge_ranges_list, i, apr_array_header_t *);
+      svn_merge_range_t *commit_range =
+                   APR_ARRAY_IDX(commit_rangelist, i, svn_merge_range_t *);
 
+      serr = svn_rangelist_to_stringbuf(&merge_rangelist_string,
+                                        merge_rangelist,
+                                        resource->pool);
+      /* ### Same error-handling code appears elsewhere.  -Karl */
+      if (serr)
+        {
+          derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
+                                      resource->pool);
+          goto cleanup;
+        }
+      serr = dav_svn__send_xml(bb, output,
+                               "<S:" SVN_DAV__COMMIT_MERGE_INFO ">" DEBUG_CR);
+      /* ### Same error-handling code appears elsewhere.  -Karl */
+      if (serr)
+        {
+          derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
+                                      resource->pool);
+          goto cleanup;
+        }
 
-  serr = dav_svn__send_xml(bb, output,
-                           "<S:" SVN_DAV__COMMIT_RANGES ">%s</S:"
-                           SVN_DAV__COMMIT_RANGES ">" DEBUG_CR,
-                           commit_rangelist_string->data);
-  /* ### Same error-handling code appears elsewhere.  -Karl */
-  if (serr)
-    {
-      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
-                                  resource->pool);
-      goto cleanup;
+      serr = dav_svn__send_xml(bb, output,
+                               "<S:" SVN_DAV__COMMIT_REV ">%d</S:"
+                               SVN_DAV__COMMIT_REV ">" DEBUG_CR,
+                               commit_range->end);
+      /* ### Same error-handling code appears elsewhere.  -Karl */
+      if (serr)
+        {
+          derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
+                                      resource->pool);
+          goto cleanup;
+        }
+
+      serr = dav_svn__send_xml(bb, output,
+                               "<S:" SVN_DAV__MERGE_RANGES ">%s</S:"
+                               SVN_DAV__MERGE_RANGES ">" DEBUG_CR,
+                               merge_rangelist_string->data);
+      /* ### Same error-handling code appears elsewhere.  -Karl */
+      if (serr)
+        {
+          derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
+                                      resource->pool);
+          goto cleanup;
+        }
+      serr = dav_svn__send_xml(bb, output,
+                               "</S:" SVN_DAV__COMMIT_MERGE_INFO ">" DEBUG_CR);
+      /* ### Same error-handling code appears elsewhere.  -Karl */
+      if (serr)
+        {
+          derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
+                                      resource->pool);
+          goto cleanup;
+        }
     }
 
   serr = dav_svn__send_xml(bb, output, "</S:"
