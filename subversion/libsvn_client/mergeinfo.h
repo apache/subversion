@@ -150,9 +150,7 @@ svn_client__get_history_as_mergeinfo(apr_hash_t **mergeinfo_p,
 
 /* Translates an array SEGMENTS (of svn_location_t *), like the one
    returned from svn_client__repos_location_segments, into a mergeinfo
-   hash *MERGEINFO_P, allocated in POOL.
- */
-
+   hash *MERGEINFO_P, allocated in POOL. */
 svn_error_t *
 svn_client__mergeinfo_from_segments(apr_hash_t **mergeinfo_p,
                                     apr_array_header_t *segments,
