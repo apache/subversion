@@ -1191,7 +1191,12 @@ subcommand_rmlocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* Parse out any options. */
   SVN_ERR(svn_opt_parse_all_args(&args, os, pool));
 
-  /* All the rest of the arguments are lock names. */
+  /* Our usage requires at least one FS path. */
+  if (args->nelts == 0)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, 
+                            _("No paths to unlock provided"));
+
+  /* All the rest of the arguments are paths from which to remove locks. */
   for (i = 0; i < args->nelts; i++)
     {
       const char *lock_path = APR_ARRAY_IDX(args, i, const char *);
