@@ -5469,6 +5469,7 @@ def merge_to_target_with_copied_children(sbox):
   # Some paths we'll care about
   D_COPY_path = os.path.join(wc_dir, "A_COPY", "D")
   G_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "G")
+  rho_COPY_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "G", "rho_copy")
 
   # URL to URL copy A_COPY/D/G/rho to A_COPY/D/G/rho_copy
   svntest.actions.run_and_verify_svn(None, None, [], 'copy',
@@ -5491,9 +5492,21 @@ def merge_to_target_with_copied_children(sbox):
                                         None, None, None,
                                         None, None, 1)
 
-  # Merge r4 into A_COPY/D/G.
+  # Merge r4 into A_COPY/D/G/rho_copy.
+  #
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
+  os.chdir(svntest.main.work_dir)
+  short_rho_COPY_COPY_path = shorten_path_kludge(rho_COPY_COPY_path)
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_merge_output([[4]],
+                                       'U    ' + short_rho_COPY_COPY_path +
+                                       '\n'),
+                                     [], 'merge', '-c4',
+                                     sbox.repo_url + '/A/D/G/rho',
+                                     short_rho_COPY_COPY_path)
+
+  # Merge r3:5 into A_COPY/D/G.
   short_G_COPY_path = shorten_path_kludge(G_COPY_path)
   expected_output = wc.State(short_G_COPY_path, {
     'rho' : Item(status='U ')
@@ -5502,20 +5515,19 @@ def merge_to_target_with_copied_children(sbox):
     ''         : Item(status=' M', wc_rev=7),
     'pi'       : Item(status='  ', wc_rev=7),
     'rho'      : Item(status='M ', wc_rev=7),
-    'rho_copy' : Item(status='  ', wc_rev=7),
+    'rho_copy' : Item(status='MM', wc_rev=7),
     'tau'      : Item(status='  ', wc_rev=7),
     })
   expected_disk = wc.State('', {
-    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:4'}),
+    ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:4-5'}),
     'pi'       : Item("This is the file 'pi'.\n"),
     'rho'      : Item("New content"),
-    'rho_copy' : Item("This is the file 'rho'.\n", props={}),
+    'rho_copy' : Item("New content",
+                      props={SVN_PROP_MERGE_INFO : '/A/D/G/rho:4'}),
     'tau'      : Item("This is the file 'tau'.\n"),
     })
   expected_skip = wc.State(short_G_COPY_path, { })
-
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_G_COPY_path, '3', '4',
+  svntest.actions.run_and_verify_merge(short_G_COPY_path, '3', '5',
                                        sbox.repo_url + \
                                        '/A/D/G',
                                        expected_output,
