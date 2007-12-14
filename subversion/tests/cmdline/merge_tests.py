@@ -2362,7 +2362,8 @@ def merge_funny_chars_on_path(sbox):
       target_dir = os.path.join(wc_dir, 'A', 'B', 'E', target[1])
       os.mkdir(target_dir)
       if target[2]:
-        target_path = os.path.join(wc_dir, 'A', 'B', 'E', '%s' % target[1], target[2])
+        target_path = os.path.join(wc_dir, 'A', 'B', 'E', '%s' % target[1],
+                                   target[2])
         svntest.main.file_append(target_path, "%s/%s" % (target[1], target[2]))
       svntest.actions.run_and_verify_svn(None, None, [], 'add', target_dir)
     elif target[0] == 'f':
@@ -2378,7 +2379,8 @@ def merge_funny_chars_on_path(sbox):
       target_dir = os.path.join(wc_dir, 'A', 'B', 'E', target[1])
       svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', target_dir)
       if target[2]:
-        target_path = os.path.join(wc_dir, 'A', 'B', 'E', '%s' % target[1], target[2])
+        target_path = os.path.join(wc_dir, 'A', 'B', 'E', '%s' % target[1],
+                                   target[2])
         svntest.main.file_append(target_path, "%s/%s" % (target[1], target[2]))
         svntest.actions.run_and_verify_svn(None, None, [], 'add', target_path)
 
@@ -2793,7 +2795,8 @@ def merge_dir_replace(sbox):
                                        expected_skip,
                                        None, None, None, None, None,
                                        1,
-                                       0) # don't do a dry-run the output differs
+                                       0) # don't do a dry-run
+                                          # the output differs
 
   # Commit merge of foo onto C
   expected_output = svntest.wc.State(wc_dir, {
@@ -2903,7 +2906,8 @@ def merge_dir_and_file_replace(sbox):
                                        expected_skip,
                                        None, None, None, None, None,
                                        1,
-                                       0) # don't do a dry-run the output differs
+                                       0) # don't do a dry-run
+                                          # the output differs
 
   # Commit merge of foo onto C
   expected_output = svntest.wc.State(wc_dir, {
@@ -4320,7 +4324,8 @@ def avoid_repeated_merge_using_inherited_merge_info(sbox):
   svntest.actions.run_and_verify_svn(None, [], [], 'merge', '-r4:5',
                                     sbox.repo_url + '/A/B/F/E',
                                      short_copy_of_B_F_E_path)
-  svntest.actions.run_and_verify_status(short_copy_of_B_F_E_path, expected_status)
+  svntest.actions.run_and_verify_status(short_copy_of_B_F_E_path,
+                                        expected_status)
   os.chdir(saved_cwd)
 
 def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
@@ -4590,7 +4595,8 @@ def obey_reporter_api_semantics_while_doing_subtree_merges(sbox):
   copy_of_A_D_wc_rev = cur_rev
   svntest.actions.run_and_verify_svn(None,
                                      ['\n',
-                                      'Committed revision ' + str(cur_rev+1) + '.\n'],
+                                      'Committed revision ' + str(cur_rev+1) +
+                                      '.\n'],
                                      [],
                                      'mkdir', sbox.repo_url + '/A/D/umlaut',
                                      '-m', "log msg")
@@ -9032,7 +9038,8 @@ def ignore_ancestry_and_mergeinfo(sbox):
   expected_output = wc.State(short_A_COPY_B, {
     'lambda' : Item(status='U '),
     })
-  expected_disk.tweak('lambda', contents="This is the file 'lambda' modified.\n")
+  expected_disk.tweak('lambda',
+                      contents="This is the file 'lambda' modified.\n")
   expected_status.tweak('lambda', status='M ')
   svntest.actions.run_and_verify_merge(short_A_COPY_B, 1, 3,
                                        A_B_url,
@@ -9259,7 +9266,8 @@ def merge_source_normalization_and_subtree_merges(sbox):
     })
   expected_disk = wc.State('', {
     ''        : Item(props={SVN_PROP_MERGE_INFO : '/A_MOVED/D:8'}),
-    'G'       : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:4\n/A_MOVED/D/G:8\n'}),
+    'G'       : Item(props={SVN_PROP_MERGE_INFO :
+                            '/A/D/G:4\n/A_MOVED/D/G:8\n'}),
     'G/pi'    : Item("This is the file 'pi'.\n"),
     'G/rho'   : Item("New content"),
     'G/tau'   : Item("New content"),
