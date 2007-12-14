@@ -10037,7 +10037,7 @@ def merge_non_reflective_text_change(sbox):
   # Merge r5:6 from /A/B/E_COPY to /A/B/E ie., feature branch back to trunk
   expected_output = wc.State(short_ABE, {
     ''         : Item(status=' U'),
-    'alpha'    : Item(status='U '),
+    'alpha'    : Item(status='G '),
     })
   expected_status = wc.State(short_ABE, {
     ''         : Item(status=' M', wc_rev=5),
@@ -10057,7 +10057,8 @@ def merge_non_reflective_text_change(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None, None, 1)
+                                       None, None, None, None, None, 1,
+                                       dry_run = False)
   os.chdir(saved_cwd)
 
 ########################################################################
