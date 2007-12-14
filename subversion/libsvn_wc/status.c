@@ -1041,7 +1041,7 @@ hash_stash(void *baton,
    (BATON == THIS_DIR_BATON) and out-of-date directories' parents
    (BATON == THIS_DIR_BATON->parent_baton).  In the latter case THIS_DIR_BATON
    contains the ood info we want to bubble up to ancestor directories so these
-   accurately reflect the fact they have an ood descendent.
+   accurately reflect the fact they have an ood descendant.
 
    Merge REPOS_TEXT_STATUS and REPOS_PROP_STATUS into the status structure's
    "network" fields.
@@ -1693,7 +1693,7 @@ close_directory(void *dir_baton,
   svn_wc_status2_t *dir_status = NULL;
 
   /* If nothing has changed and directory has no out of
-     date descendents, return. */
+     date descendants, return. */
   if (db->added || db->prop_changed || db->text_changed
       || db->ood_last_cmt_rev != SVN_INVALID_REVNUM)
     {
