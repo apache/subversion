@@ -5,7 +5,10 @@ Merge-back-to-trunk blockers
 
 * Correct the "is there any real mergeinfo?" check. (glasser)
 
-* Port FSFS mergeinfo index changes to BDB backend. (glasser/cmpilato?)
+* Port FSFS mergeinfo index changes to BDB backend. (cmpilato?)
+  See
+    http://svn.haxx.se/dev/archive-2007-12/0463.shtml
+  for details.
 
 * Add black box tests for 'merge --reintegrate'. (kfogel)
 
