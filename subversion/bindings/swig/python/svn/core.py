@@ -70,7 +70,7 @@ class SubversionException(Exception):
     child = None
     errors.reverse()
     for (apr_err, message, file, line) in errors:
-      child = cls(apr_err, message, child, file, line)
+      child = cls(message, apr_err, child, file, line)
     return child
   # Don't use @classmethod, we support 2.2.
   _new_from_err_list = classmethod(_new_from_err_list)
