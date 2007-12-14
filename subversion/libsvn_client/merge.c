@@ -2779,7 +2779,7 @@ get_mergeinfo_walk_cb(const char *path,
               /* Does PATH exist in the merge source? */
               err = svn_client__repos_locations(&start_url, &start_revision,
                                                 &end_url, &end_revision,
-                                                NULL, mergeinfo_url,
+                                                wb->ra_session, mergeinfo_url,
                                                 &peg_rev, &rev1_opt, &rev2_opt,
                                                 wb->ctx, pool);
               if (err)
