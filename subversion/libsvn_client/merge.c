@@ -2784,7 +2784,16 @@ get_mergeinfo_walk_cb(const char *path,
                                                 wb->ctx, pool);
               if (err)
                 {
-                  if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+                  /* We might see any of these errors depending on the RA
+                     access method, but they all mean that PATH doesn't exist
+                     in the merge source.
+                     
+                     ### TODO: Make svn_client__repos_locations() more
+                     ###       consistent in the error it returns(?)
+                     */
+                  if (err->apr_err == SVN_ERR_FS_NOT_FOUND
+                      || err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND
+                      || err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES)
                     svn_error_clear(err);
                   else
                     return err;
