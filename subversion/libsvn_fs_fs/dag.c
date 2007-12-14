@@ -239,7 +239,7 @@ svn_fs_fs__dag_get_predecessor_count(int *count,
 }
 
 svn_error_t *
-svn_fs_fs__dag_get_mergeinfo_count(int *count,
+svn_fs_fs__dag_get_mergeinfo_count(apr_uint64_t *count,
                                    dag_node_t *node,
                                    apr_pool_t *pool)
 {
@@ -500,7 +500,7 @@ svn_fs_fs__dag_set_proplist(dag_node_t *node,
 
 svn_error_t *
 svn_fs_fs__dag_increment_mergeinfo_count(dag_node_t *node,
-                                         int increment,
+                                         apr_uint64_t increment,
                                          apr_pool_t *pool)
 {
   node_revision_t *noderev;
@@ -527,8 +527,8 @@ svn_fs_fs__dag_increment_mergeinfo_count(dag_node_t *node,
       svn_string_t *idstr = svn_fs_fs__id_unparse(node->id, pool);
       return svn_error_createf
         (SVN_ERR_FS_CORRUPT, NULL,
-         "Can't increment mergeinfo count on node-revision %s to negative "
-         "value %d",
+         _("Can't increment mergeinfo count on node-revision %s to negative "
+           "value %llu"),
          idstr->data, noderev->mergeinfo_count);
     }
   if (noderev->mergeinfo_count > 1 && noderev->kind == svn_node_file)
@@ -536,8 +536,8 @@ svn_fs_fs__dag_increment_mergeinfo_count(dag_node_t *node,
       svn_string_t *idstr = svn_fs_fs__id_unparse(node->id, pool);
       return svn_error_createf
         (SVN_ERR_FS_CORRUPT, NULL,
-         "Can't increment mergeinfo count on *file* node-revision %s to %d "
-         "(> 1)",
+         _("Can't increment mergeinfo count on *file* node-revision %s to "
+           "%llu (> 1)"),
          idstr->data, noderev->mergeinfo_count);
     }
 

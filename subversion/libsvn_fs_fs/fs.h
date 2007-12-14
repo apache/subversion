@@ -306,9 +306,7 @@ typedef struct
 
   /* Number of nodes with svn:mergeinfo properties that are
      descendents of this node (including it itself) */
-  /* ### TODO(reint): worry about overflow; probably use key-gen.h things
-     instead (use apr_uint64_t here, perhaps)? */
-  int mergeinfo_count;
+  apr_uint64_t mergeinfo_count;
 
   /* Does this node itself have svn:mergeinfo? */
   svn_boolean_t has_mergeinfo;
