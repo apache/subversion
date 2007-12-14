@@ -854,21 +854,23 @@ svn_merge_range_dup(svn_merge_range_t *range, apr_pool_t *pool);
  */
 typedef enum
 {
-  /* Explicit mergeinfo only */
+  /** Explicit mergeinfo only. */
   svn_mergeinfo_explicit,
 
-  /* Explicit mergeinfo, or if that doesn't exist, the inherited mergeinfo
-     from a target's nearest ancestor */
+  /** Explicit mergeinfo, or if that doesn't exist, the inherited
+      mergeinfo from a target's nearest (path-wise, not history-wise)
+      ancestor. */ 
   svn_mergeinfo_inherited,
 
-  /* Mergeinfo on target's nearest ancestor, regardless of whether target
-     has explict mergeinfo */
+  /** Mergeinfo on target's nearest (path-wise, not history-wise)
+      ancestor, regardless of whether target has explict mergeinfo. */
   svn_mergeinfo_nearest_ancestor
 } svn_mergeinfo_inheritance_t;
 
 
 
-/* Node location segment reporting. */
+/** @defgroup node_location_seg_reporting Node location segment reporting.
+ *  @{ */
 
 /**
  * A representation of a segment of a object's version history with an
@@ -911,6 +913,8 @@ typedef svn_error_t *(*svn_location_segment_receiver_t)
 svn_location_segment_t *
 svn_location_segment_dup(svn_location_segment_t *segment,
                          apr_pool_t *pool);
+
+/** @} */
 
 
 /** Return a constant string expressing @a inherit as an English word,

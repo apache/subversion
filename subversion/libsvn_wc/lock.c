@@ -1315,7 +1315,7 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
 /* Does the work of closing the access baton ADM_ACCESS.  Any physical
    locks are removed from the working copy if PRESERVE_LOCK is FALSE, or
    are left if PRESERVE_LOCK is TRUE.  Any associated access batons that
-   are direct descendents will also be closed.
+   are direct descendants will also be closed.
 
    ### FIXME: If the set has a "hole", say it contains locks for the
    ### directories A, A/B, A/B/C/X but not A/B/C then closing A/B will not
