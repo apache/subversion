@@ -5,8 +5,6 @@ Merge-back-to-trunk blockers
 
 * Correct the "is there any real mergeinfo?" check. (glasser)
 
-* Propagate the new include_decendents boolean to the DAV RA layers. (kfogel)
-
 * Port FSFS mergeinfo index changes to BDB backend. (glasser/cmpilato?)
 
 * Add black box tests for 'merge --reintegrate'. (kfogel)

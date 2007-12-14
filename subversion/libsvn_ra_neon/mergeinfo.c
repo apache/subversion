@@ -157,7 +157,7 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
                            const apr_array_header_t *paths,
                            svn_revnum_t revision,
                            svn_mergeinfo_inheritance_t inherit,
-                           svn_boolean_t include_descendents, /*### TODO(reint): implement*/
+                           svn_boolean_t include_descendants,
                            apr_pool_t *pool)
 {
   int i, status_code;
@@ -185,6 +185,16 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
                                         "<S:inherit>%s"
                                         "</S:inherit>",
                                         svn_inheritance_to_word(inherit)));
+
+  if (include_descendants)
+    {
+      /* Send it only if true; server will default to "no". */
+      svn_stringbuf_appendcstr(request_body,
+                               apr_pstrdup(pool,
+                                           "<S:include-descendants>yes"
+                                           "</S:include-descendants>"));
+    }
+
   if (paths)
     {
       for (i = 0; i < paths->nelts; i++)

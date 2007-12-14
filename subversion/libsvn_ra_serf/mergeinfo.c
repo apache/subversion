@@ -57,6 +57,7 @@ typedef struct {
   const apr_array_header_t *paths;
   svn_revnum_t revision;
   svn_mergeinfo_inheritance_t inherit;
+  svn_boolean_t include_descendants;
 } mergeinfo_context_t;
 
 static svn_error_t *
@@ -191,6 +192,13 @@ create_mergeinfo_body(void *baton,
   svn_ra_serf__add_tag_buckets(body_bkt, "S:" SVN_DAV__INHERIT,
                                svn_inheritance_to_word(mergeinfo_ctx->inherit),
                                alloc);
+  if (mergeinfo_ctx->include_descendants)
+    {
+      svn_ra_serf__add_tag_buckets(body_bkt, "S:"
+                                   SVN_DAV__INCLUDE_DESCENDANTS,
+                                   "yes", alloc);
+    }
+
   if (mergeinfo_ctx->paths)
     {
       for (i = 0; i < mergeinfo_ctx->paths->nelts; i++)
@@ -221,7 +229,7 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                            const apr_array_header_t *paths,
                            svn_revnum_t revision,
                            svn_mergeinfo_inheritance_t inherit,
-                           svn_boolean_t include_descendents, /*### TODO(reint): implement*/
+                           svn_boolean_t include_descendants,
                            apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -248,6 +256,7 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
   mergeinfo_ctx->paths = paths;
   mergeinfo_ctx->revision = revision;
   mergeinfo_ctx->inherit = inherit;
+  mergeinfo_ctx->include_descendants = include_descendants;
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
