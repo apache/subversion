@@ -71,7 +71,7 @@
      additional stipulation that as soon as we find a subtree is not
      present at all, due to being omitted for depth reasons, we set the
      ambiently_excluded flag in its baton, which signals that
-     all descendent batons should be ignored.
+     all descendant batons should be ignored.
      (In fact, we may just re-use the parent baton, since none of the
      other fields will be used anyway.)
 
