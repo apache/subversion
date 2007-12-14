@@ -244,15 +244,15 @@ svn_mergeinfo_intersect(apr_hash_t **mergeinfo,
 
 /** Find the intersection of two rangelists consisting of @c
  * svn_merge_range_t * elements, @a rangelist1 and @a rangelist2, and
- * place the result in @a output.
+ * place the result in @a *rangelist (which is never @c NULL).
  *
  * Note: @a rangelist1 and @a rangelist2 must be sorted as said by @c
- * svn_sort_compare_ranges(). @a output is guaranteed to be in sorted
+ * svn_sort_compare_ranges(). @a *rangelist is guaranteed to be in sorted
  * order.
  * @since New in 1.5.
  */
 svn_error_t *
-svn_rangelist_intersect(apr_array_header_t **output,
+svn_rangelist_intersect(apr_array_header_t **rangelist,
                         apr_array_header_t *rangelist1,
                         apr_array_header_t *rangelist2,
                         apr_pool_t *pool);

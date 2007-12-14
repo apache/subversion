@@ -2106,7 +2106,7 @@ make_merge_conflict_error(const char *target_wcpath,
    which have mergeinfo set on them or meet one of the other criteria
    defined in get_mergeinfo_paths().  Remove any paths absent from disk
    or scheduled for deletion from CHILDREN_WITH_MERGEINFO which are equal to
-   or are descendents of TARGET_WCPATH by setting those children to NULL.
+   or are descendants of TARGET_WCPATH by setting those children to NULL.
    Also remove the path from the NOTIFY_B->SKIPPED_PATHS hash. */
 static void
 remove_absent_children(const char *target_wcpath,

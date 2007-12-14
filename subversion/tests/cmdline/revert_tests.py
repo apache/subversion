@@ -104,8 +104,11 @@ def revert_replacement_with_props(sbox, wc_copy):
                                      'cp', pi_src, rho_path)
 
   # Verify both content and props have been copied
-  props = { 'phony-prop' : '*',
-            'svn:mergeinfo' : '' }
+  if wc_copy:
+    props = { 'phony-prop' : '*',
+              'svn:mergeinfo' : '' }
+  else:
+    props = { 'phony-prop' : '*' }
 
   expected_disk.tweak('A/D/G/rho',
                       contents="This is the file 'pi'.\n",

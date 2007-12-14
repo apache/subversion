@@ -2931,7 +2931,7 @@ def mergeinfo_update_elision(sbox):
   expected_status.tweak(wc_rev=5)
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
-    'A/B_COPY'         : Item(props={SVN_PROP_MERGE_INFO : ''}),
+    'A/B_COPY'         : Item(),
     'A/B_COPY/lambda'  : Item("This is the file 'lambda'.\n"),
     'A/B_COPY/E'       : Item(),
     'A/B_COPY/E/alpha' : Item("This is the file 'alpha'.\n"),
