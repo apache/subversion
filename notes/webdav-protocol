@@ -343,11 +343,16 @@ Note: <S:inherit> is a representation of the svn_mergeinfo_inheritance_t
       'nearest-ancestor'.  The default value is 'explicit' if <S:inherit>
       is not present or has any other value than those three. 
 
+      <S:include-descendants> represents the 'include_descendants'
+      boolean argument to svn_ra_get_mergeinfo().  It can be 'yes' or
+      'no'; the default value is 'no' (mapping to FALSE).
+
 Request:
 
   <S:mergeinfo-report xmlns:S="svn:">
     <S:revision>1</S:revision>
     <S:inherit>inherited</S:inherit>
+    <S:include-descendants>yes</S:include-descendants>
     <S:path>/A/B/E/alpha</S:path>
   </S:mergeinfo-report>
 
