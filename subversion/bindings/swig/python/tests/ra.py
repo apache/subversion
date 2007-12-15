@@ -344,6 +344,16 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
 
     reporter.finish_report(reporter_baton)
 
+  def test_namestring(self):
+    orig = ra.get_client_namestring()
+    try:
+      self.assertEqual(orig, 'SVN')
+      ra.set_client_namestring('namestring_test')
+      self.assertEqual(ra.get_client_namestring(), 'namestring_test')
+    finally:
+      # Put it back the way we found it.
+      ra.set_client_namestring(orig)
+
 def suite():
     return unittest.makeSuite(SubversionRepositoryAccessTestCase, 'test')
 

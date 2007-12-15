@@ -49,6 +49,13 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
   serf_bucket_t *bucket;
   svn_ra_serf__connection_t *conn = baton;
 
+  conn->useragent = apr_pstrcat(pool,
+                                "SVN/",
+                                SVN_VERSION,
+                                "/",
+                                svn_ra_get_client_namestring(),
+                                NULL);
+
   bucket = serf_bucket_socket_create(sock, conn->bkt_alloc);
   if (conn->using_ssl)
     {
@@ -271,7 +278,7 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
 
   hdrs_bkt = serf_bucket_request_get_headers(*req_bkt);
   serf_bucket_headers_setn(hdrs_bkt, "Host", conn->hostinfo);
-  serf_bucket_headers_setn(hdrs_bkt, "User-Agent", USER_AGENT);
+  serf_bucket_headers_setn(hdrs_bkt, "User-Agent", conn->useragent);
   if (content_type)
     {
       serf_bucket_headers_setn(hdrs_bkt, "Content-Type", content_type);
