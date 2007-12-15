@@ -528,7 +528,7 @@ svn_fs_fs__dag_increment_mergeinfo_count(dag_node_t *node,
       return svn_error_createf
         (SVN_ERR_FS_CORRUPT, NULL,
          _("Can't increment mergeinfo count on node-revision %s to negative "
-           "value %llu"),
+           "value %" APR_INT64_T_FMT),
          idstr->data, noderev->mergeinfo_count);
     }
   if (noderev->mergeinfo_count > 1 && noderev->kind == svn_node_file)
@@ -537,7 +537,7 @@ svn_fs_fs__dag_increment_mergeinfo_count(dag_node_t *node,
       return svn_error_createf
         (SVN_ERR_FS_CORRUPT, NULL,
          _("Can't increment mergeinfo count on *file* node-revision %s to "
-           "%llu (> 1)"),
+           "%" APR_INT64_T_FMT " (> 1)"),
          idstr->data, noderev->mergeinfo_count);
     }
 
