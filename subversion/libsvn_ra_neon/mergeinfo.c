@@ -190,9 +190,8 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
     {
       /* Send it only if true; server will default to "no". */
       svn_stringbuf_appendcstr(request_body,
-                               apr_pstrdup(pool,
-                                           "<S:include-descendants>yes"
-                                           "</S:include-descendants>"));
+                               "<S:include-descendants>yes"
+                               "</S:include-descendants>");
     }
 
   if (paths)
