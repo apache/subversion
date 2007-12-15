@@ -1660,8 +1660,7 @@ write_noderev_txn(apr_file_t *file,
     SVN_ERR(svn_stream_printf(outfile, pool, HEADER_FRESHTXNRT ": y\n"));
 
   if (noderev->mergeinfo_count > 0)
-    SVN_ERR(svn_stream_printf(outfile, pool, HEADER_MINFO_CNT ": " 
-                              APR_UINT64_T_FMT "\n",
+    SVN_ERR(svn_stream_printf(outfile, pool, HEADER_MINFO_CNT ": %lld\n", 
                               noderev->mergeinfo_count));
 
   if (noderev->has_mergeinfo)

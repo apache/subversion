@@ -110,7 +110,7 @@ svn_error_t *svn_fs_fs__dag_get_predecessor_count(int *count,
 
 /* Set *COUNT to the number of node under NODE (inclusive) with
    svn:mergeinfo properties, allocating from POOL.  */
-svn_error_t *svn_fs_fs__dag_get_mergeinfo_count(apr_uint64_t *count,
+svn_error_t *svn_fs_fs__dag_get_mergeinfo_count(apr_int64_t *count,
                                                 dag_node_t *node,
                                                 apr_pool_t *pool);
 
@@ -155,7 +155,7 @@ svn_error_t *svn_fs_fs__dag_set_proplist(dag_node_t *node,
 /* Increment the mergeinfo_count field on NODE by INCREMENT.  The node
    being changed must be mutable.  */
 svn_error_t *svn_fs_fs__dag_increment_mergeinfo_count(dag_node_t *node,
-                                                      apr_uint64_t increment,
+                                                      apr_int64_t increment,
                                                       apr_pool_t *pool);
 
 /* Set the has-mergeinfo flag on NODE to HAS_MERGEINFO.  The node

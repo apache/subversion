@@ -1022,7 +1022,7 @@ fs_node_proplist(apr_hash_t **table_p,
 
 static svn_error_t *
 increment_mergeinfo_up_tree(parent_path_t *pp,
-                            apr_uint64_t increment,
+                            apr_int64_t increment,
                             apr_pool_t *pool)
 {
   for (; pp; pp = pp->parent)
@@ -1074,7 +1074,7 @@ fs_change_node_prop(svn_fs_root_t *root,
 
   if (strcmp (name, SVN_PROP_MERGEINFO) == 0)
     {
-      apr_uint64_t increment = 0;
+      apr_int64_t increment = 0;
       svn_boolean_t had_mergeinfo;
       SVN_ERR(svn_fs_fs__dag_has_mergeinfo(&had_mergeinfo, parent_path->node,
                                            pool));
@@ -1219,7 +1219,7 @@ merge(svn_stringbuf_t *conflict_p,
       dag_node_t *source,
       dag_node_t *ancestor,
       const char *txn_id,
-      apr_uint64_t *mergeinfo_increment_out,
+      apr_int64_t *mergeinfo_increment_out,
       apr_pool_t *pool)
 {
   const svn_fs_id_t *source_id, *target_id, *ancestor_id;
@@ -1228,7 +1228,7 @@ merge(svn_stringbuf_t *conflict_p,
   svn_fs_t *fs;
   apr_pool_t *iterpool;
   int pred_count;
-  apr_uint64_t mergeinfo_increment = 0;
+  apr_int64_t mergeinfo_increment = 0;
 
   /* Make sure everyone comes from the same filesystem. */
   fs = svn_fs_fs__dag_get_fs(ancestor);
@@ -1410,7 +1410,7 @@ merge(svn_stringbuf_t *conflict_p,
       else if (t_entry && svn_fs_fs__id_eq(a_entry->id, t_entry->id))
         {
           dag_node_t *t_ent_node;
-          apr_uint64_t mergeinfo_start;
+          apr_int64_t mergeinfo_start;
           SVN_ERR(svn_fs_fs__dag_get_node(&t_ent_node, fs,
                                           t_entry->id, iterpool));
           SVN_ERR(svn_fs_fs__dag_get_mergeinfo_count(&mergeinfo_start,
@@ -1421,7 +1421,7 @@ merge(svn_stringbuf_t *conflict_p,
           if (s_entry)
             {
               dag_node_t *s_ent_node;
-              apr_uint64_t mergeinfo_end;
+              apr_int64_t mergeinfo_end;
               SVN_ERR(svn_fs_fs__dag_get_node(&s_ent_node, fs,
                                               s_entry->id, iterpool));
               SVN_ERR(svn_fs_fs__dag_get_mergeinfo_count(&mergeinfo_end,
@@ -1447,7 +1447,7 @@ merge(svn_stringbuf_t *conflict_p,
         {
           dag_node_t *s_ent_node, *t_ent_node, *a_ent_node;
           const char *new_tpath;
-          apr_uint64_t sub_mergeinfo_increment;
+          apr_int64_t sub_mergeinfo_increment;
 
           /* If SOURCE-ENTRY and TARGET-ENTRY are both null, that's a
              double delete; flag a conflict. */
@@ -1517,7 +1517,7 @@ merge(svn_stringbuf_t *conflict_p,
       void *val;
       apr_ssize_t klen;
       dag_node_t *s_ent_node;
-      apr_uint64_t mergeinfo_s;
+      apr_int64_t mergeinfo_s;
 
       svn_pool_clear(iterpool);
 
@@ -1893,7 +1893,7 @@ fs_delete_node(svn_fs_root_t *root,
 {
   parent_path_t *parent_path;
   const char *txn_id = root->txn;
-  apr_uint64_t mergeinfo_count;
+  apr_int64_t mergeinfo_count;
 
   if (! root->is_txn_root)
     return SVN_FS__NOT_TXN(root);
@@ -2021,8 +2021,8 @@ copy_helper(svn_fs_root_t *from_root,
       svn_fs_path_change_kind_t kind;
       dag_node_t *new_node;
       const char *from_canonpath;
-      apr_uint64_t mergeinfo_start;
-      apr_uint64_t mergeinfo_end;
+      apr_int64_t mergeinfo_start;
+      apr_int64_t mergeinfo_end;
 
       /* If TO_PATH already existed prior to the copy, note that this
          operation is a replacement, not an addition. */
