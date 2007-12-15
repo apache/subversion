@@ -31,5 +31,3 @@ Remaining work (which can be done post-merge)
   * "Is this the same line?" direct ancestor check (glasser)
 
   * authz check (glasser)
-
-* Scrutinize pool usage in FSFS changes. (glasser)

@@ -3350,7 +3350,8 @@ typedef svn_error_t *(*crawler_action_t)
   (void *baton,
    const char *path,
    apr_hash_t *path_mergeinfo,
-   apr_pool_t *pool);
+   apr_pool_t *temp_pool,
+   apr_pool_t *result_pool);
 
 /* DIR_DAG is a directory DAG node which has mergeinfo in its
    descendents.  This function iterates over its children.  For each
@@ -3358,6 +3359,10 @@ typedef svn_error_t *(*crawler_action_t)
    appropriate arguments.  For each child with descendents with
    mergeinfo, it recurses.  Note that it does *not* call the action on
    the path for DIR_DAG itself.
+
+   POOL is used for temporary allocations, including the mergeinfo
+   hashes passed to actions; ACTION_POOL is passed to the action,
+   which should copy the mergeinfo hash if it wants to keep it.
  */
 static svn_error_t *
 crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
@@ -3365,12 +3370,13 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
                                   dag_node_t *dir_dag,
                                   crawler_action_t action,
                                   void *action_baton,
-                                  apr_pool_t *pool)
+                                  apr_pool_t *pool,
+                                  apr_pool_t *action_pool)
 {
   apr_hash_t *entries;
   apr_hash_index_t *hi;
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
-  /* ### TODO(reint): Examine pool usage. */
   SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, dir_dag, pool));
   entries = svn_fs_fs__copy_dir_entries(entries, pool);
 
@@ -3384,14 +3390,16 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
       dag_node_t *kid_dag;
       svn_boolean_t has_mergeinfo, go_down;
 
+      svn_pool_clear(iterpool);
+
       apr_hash_this(hi, NULL, NULL, &val);
       dirent = val;
-      kid_path = svn_path_join(this_path, dirent->name, pool);
-      SVN_ERR(get_dag(&kid_dag, root, kid_path, pool));
+      kid_path = svn_path_join(this_path, dirent->name, iterpool);
+      SVN_ERR(get_dag(&kid_dag, root, kid_path, iterpool));
 
-      SVN_ERR(svn_fs_fs__dag_has_mergeinfo(&has_mergeinfo, kid_dag, pool));
+      SVN_ERR(svn_fs_fs__dag_has_mergeinfo(&has_mergeinfo, kid_dag, iterpool));
       SVN_ERR(svn_fs_fs__dag_has_descendents_with_mergeinfo(&go_down, kid_dag,
-                                                            pool));
+                                                            iterpool));
 
       if (has_mergeinfo)
         {
@@ -3400,12 +3408,12 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
           apr_hash_t *proplist, *kid_mergeinfo_hash;
           svn_string_t *mergeinfo_string;
 
-          SVN_ERR(svn_fs_fs__dag_get_proplist(&proplist, kid_dag, pool));
+          SVN_ERR(svn_fs_fs__dag_get_proplist(&proplist, kid_dag, iterpool));
           mergeinfo_string = apr_hash_get(proplist, SVN_PROP_MERGEINFO,
                                           APR_HASH_KEY_STRING);
           if (!mergeinfo_string)
             {
-              svn_string_t *idstr = svn_fs_fs__id_unparse(dirent->id, pool);
+              svn_string_t *idstr = svn_fs_fs__id_unparse(dirent->id, iterpool);
               return svn_error_createf
                 (SVN_ERR_FS_CORRUPT, NULL,
                  _("Node-revision #'%s' claims to have mergeinfo but doesn't"),
@@ -3414,11 +3422,12 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
           
           SVN_ERR(svn_mergeinfo_parse(&kid_mergeinfo_hash,
                                       mergeinfo_string->data,
-                                      pool));
+                                      iterpool));
           SVN_ERR(action(action_baton,
                          kid_path,
                          kid_mergeinfo_hash,
-                         pool));
+                         iterpool,
+                         action_pool));
         }
       
       if (go_down)
@@ -3427,14 +3436,16 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
                                                   kid_dag,
                                                   action,
                                                   action_baton,
-                                                  pool));
+                                                  iterpool,
+                                                  action_pool));
     }
 
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
 
-/* Helper for get_mergeinfo_for_path() that will append PATH_PIECE
+/* Helper for get_mergeinfo_hash_for_path() that will append PATH_PIECE
    (which may contain slashes) to each path that exists in the
    mergeinfo hash INPUT, and return a new mergeinfo hash in *OUTPUT.
    Deep copies the values.  Perform all allocations in POOL. */
@@ -3478,6 +3489,7 @@ get_mergeinfo_hash_for_path(apr_hash_t **mergeinfo_hash,
   parent_path_t *parent_path, *nearest_ancestor;
   apr_hash_t *proplist;
   svn_string_t *mergeinfo_string;
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   *mergeinfo_hash = NULL;
 
@@ -3496,22 +3508,31 @@ get_mergeinfo_hash_for_path(apr_hash_t **mergeinfo_hash,
   while (TRUE)
     {
       svn_boolean_t has_mergeinfo;
-      /* ### TODO(reint): Examine pool usage. */
+
+      svn_pool_clear(iterpool);
+
       SVN_ERR(svn_fs_fs__dag_has_mergeinfo(&has_mergeinfo, 
-                                           nearest_ancestor->node, pool));
+                                           nearest_ancestor->node, iterpool));
       if (has_mergeinfo)
         break;
 
       /* No need to loop if we're looking for explicit mergeinfo. */
       if (inherit == svn_mergeinfo_explicit)
-        return SVN_NO_ERROR;
+        {
+          svn_pool_destroy(iterpool);
+          return SVN_NO_ERROR;
+        }
       
       nearest_ancestor = nearest_ancestor->parent;
 
       /* Run out?  There's no mergeinfo. */
       if (!nearest_ancestor)
-        return SVN_NO_ERROR;
+        {
+          svn_pool_destroy(iterpool);
+          return SVN_NO_ERROR;
+        }
     }
+  svn_pool_destroy(iterpool);
 
   SVN_ERR(svn_fs_fs__dag_get_proplist(&proplist, nearest_ancestor->node, pool));
   mergeinfo_string = apr_hash_get(proplist, SVN_PROP_MERGEINFO,
@@ -3570,12 +3591,13 @@ static svn_error_t *
 add_descendent_mergeinfo_action(void *baton,
                                 const char *path,
                                 apr_hash_t *path_mergeinfo_hash,
-                                apr_pool_t *pool)
+                                apr_pool_t *temp_pool,
+                                apr_pool_t *result_pool)
 {
   apr_hash_t *result_hash = baton;
 
   apr_hash_set(result_hash, path, APR_HASH_KEY_STRING,
-               path_mergeinfo_hash);
+               svn_mergeinfo_dup(path_mergeinfo_hash, result_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3584,7 +3606,7 @@ add_descendent_mergeinfo_action(void *baton,
 /* Adds mergeinfo for each descendent of PATH (but not PATH itself)
    under ROOT to RESULT_HASH (a hash of mergeinfo hashes).  Returned
    values are allocated in RESULT_POOL; temporary values in
-   ITERPOOL. */
+   POOL. */
 static svn_error_t *
 add_descendent_mergeinfo(apr_hash_t *result_hash,
                          svn_fs_root_t *root,
@@ -3592,7 +3614,6 @@ add_descendent_mergeinfo(apr_hash_t *result_hash,
                          apr_pool_t *pool,
                          apr_pool_t *result_pool)
 {
-  /* ### TODO(reint): Examine pool usage. */
   dag_node_t *this_dag;
   svn_boolean_t go_down;
 
@@ -3606,6 +3627,7 @@ add_descendent_mergeinfo(apr_hash_t *result_hash,
                                               this_dag,
                                               add_descendent_mergeinfo_action,
                                               result_hash,
+                                              pool,
                                               result_pool));
   return SVN_NO_ERROR;
 }
@@ -3716,18 +3738,19 @@ static svn_error_t *
 filter_and_collect_mergeinfo(void *baton,
                              const char *path,
                              apr_hash_t *path_mergeinfo_hash,
-                             apr_pool_t *pool)
+                             apr_pool_t *temp_pool,
+                             apr_pool_t *result_pool)
 {
   struct facm_baton *b = baton;
   svn_boolean_t skip = FALSE;
 
   if (b->filter_func)
     SVN_ERR(b->filter_func(b->filter_func_baton, &skip,
-                           path, path_mergeinfo_hash, pool));
+                           path, path_mergeinfo_hash, temp_pool));
 
   if (!skip)
     SVN_ERR(svn_mergeinfo_merge(b->combined_mergeinfo_hash,
-                                path_mergeinfo_hash, pool));
+                                path_mergeinfo_hash, result_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3737,7 +3760,8 @@ filter_and_collect_mergeinfo(void *baton,
    with inheritance) combined with all the mergeinfo for all of PATH's
    descendents (calculated without inheritance).  Returns it in
    *PATH_MERGEINFO_HASH_FOR_TREE; if there ends up being no mergeinfo
-   at all, this is NULL.
+   at all, this is NULL.  RESULT_POOL is used for the returned hash;
+   TEMP_POOL for everything else.
  */
 static svn_error_t *
 get_mergeinfo_hash_for_tree(apr_hash_t **path_mergeinfo_hash_for_tree,
@@ -3745,33 +3769,33 @@ get_mergeinfo_hash_for_tree(apr_hash_t **path_mergeinfo_hash_for_tree,
                             const char *path,
                             svn_fs_mergeinfo_filter_func_t filter_func,
                             void *filter_func_baton,
-                            apr_pool_t *pool)
+                            apr_pool_t *temp_pool,
+                            apr_pool_t *result_pool)
 {
   apr_hash_t *this_path_mergeinfo_hash;
   dag_node_t *this_dag;
   svn_boolean_t go_down;
 
-  path = svn_fs__canonicalize_abspath(path, pool);
+  path = svn_fs__canonicalize_abspath(path, temp_pool);
 
   /* First, let's get the mergeinfo for PATH itself, using
      inheritance. */
-  /* ### TODO(reint): Examine pool usage. */
   SVN_ERR(get_mergeinfo_hash_for_path(&this_path_mergeinfo_hash,
                                       root, path, svn_mergeinfo_inherited,
-                                      pool, pool));
+                                      temp_pool, result_pool));
 
   /* For convenience, we'll make this an empty hash instead of NULL
      over the course of this function, but finally return NULL at the
      end if it stays empty. */
   if (!this_path_mergeinfo_hash)
-    this_path_mergeinfo_hash = apr_hash_make(pool);
+    this_path_mergeinfo_hash = apr_hash_make(result_pool);
 
   /* Should we be looking here at all? */
   if (filter_func)
     {
       svn_boolean_t skip;
       SVN_ERR(filter_func(filter_func_baton, &skip, path, 
-                          this_path_mergeinfo_hash, pool));
+                          this_path_mergeinfo_hash, temp_pool));
       if (skip)
         {
           *path_mergeinfo_hash_for_tree = NULL;
@@ -3779,9 +3803,9 @@ get_mergeinfo_hash_for_tree(apr_hash_t **path_mergeinfo_hash_for_tree,
         }
     }
 
-  SVN_ERR(get_dag(&this_dag, root, path, pool));
+  SVN_ERR(get_dag(&this_dag, root, path, temp_pool));
   SVN_ERR(svn_fs_fs__dag_has_descendents_with_mergeinfo(&go_down, this_dag,
-                                                        pool));
+                                                        temp_pool));
   if (go_down)
     {
       /* Now crawl the tree under PATH, pruning based on mergeinfo_count,
@@ -3797,7 +3821,8 @@ get_mergeinfo_hash_for_tree(apr_hash_t **path_mergeinfo_hash_for_tree,
                                                 this_dag,
                                                 filter_and_collect_mergeinfo,
                                                 &b,
-                                                pool));
+                                                temp_pool,
+                                                result_pool));
     }
 
   if (apr_hash_count(this_path_mergeinfo_hash) > 0)
@@ -3817,6 +3842,7 @@ fs_get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
                           apr_pool_t *pool)
 {
   apr_hash_t *result_hash = apr_hash_make(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
   int i;
 
   /* We require a revision root. */
@@ -3827,15 +3853,18 @@ fs_get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
       apr_hash_t *path_mergeinfo_hash_for_tree;
-      /* ### TODO(reint): Examine pool usage. */
+
+      svn_pool_clear(iterpool);
 
       SVN_ERR(get_mergeinfo_hash_for_tree(&path_mergeinfo_hash_for_tree,
                                           root, path, filter_func,
-                                          filter_func_baton, pool));
+                                          filter_func_baton, iterpool,
+                                          pool));
       if (path_mergeinfo_hash_for_tree)
         apr_hash_set(result_hash, path, APR_HASH_KEY_STRING,
                      path_mergeinfo_hash_for_tree);
     }
+  svn_pool_destroy(iterpool);
 
   *mergeinfo = result_hash;
   return SVN_NO_ERROR;
