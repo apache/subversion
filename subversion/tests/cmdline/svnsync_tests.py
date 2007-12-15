@@ -637,13 +637,17 @@ def no_author(sbox):
   "test copying revs with no svn:author revprops"
   run_test(sbox, "no-author.dump")
 
+def copy_revprops(sbox):
+  "test copying revprops other than svn:*"
+  run_test(sbox, "revprops.dump")
+
 def only_trunk(sbox):
   "test syncing subdirectories"
   run_test(sbox, "svnsync-trunk-only.dump", "/trunk", 
            "svnsync-trunk-only.expected.dump")
 
 def only_trunk_A_with_changes(sbox):
-  "test syncing subdirectories"
+  "test syncing subdirectories with changes on root"
   run_test(sbox, "svnsync-trunk-A-changes.dump", "/trunk/A", 
            "svnsync-trunk-A-changes.expected.dump")
 
@@ -674,6 +678,7 @@ test_list = [ None,
                    svntest.main.is_ra_type_file),
               url_encoding,
               no_author,
+              copy_revprops,
               only_trunk,
               only_trunk_A_with_changes,
              ]

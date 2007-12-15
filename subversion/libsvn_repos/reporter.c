@@ -157,6 +157,18 @@ read_string(const char **str, apr_file_t *temp, apr_pool_t *pool)
   char *buf;
 
   SVN_ERR(read_number(&len, temp, pool));
+
+  /* Len can never be less than zero.  But could len be so large that
+     len + 1 wraps around and we end up passing 0 to apr_palloc(),
+     thus getting a pointer to no storage?  Probably not (16 exabyte
+     string, anyone?) but let's be future-proof anyway. */
+  if (len + 1 < len)
+    {
+      return svn_error_createf(SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
+                               _("Invalid length (%" APR_UINT64_T_FMT ") "
+                                 "when about to read a string"), len);
+    }
+
   buf = apr_palloc(pool, len + 1);
   SVN_ERR(svn_io_file_read_full(temp, buf, len, NULL, pool));
   buf[len] = 0;
@@ -263,13 +275,13 @@ relevant(path_info_t *pi, const char *prefix, apr_size_t plen)
           (!*prefix || pi->path[plen] == '/'));
 }
 
-/* Fetch the next pathinfo from B->tempfile for a descendent of
+/* Fetch the next pathinfo from B->tempfile for a descendant of
    PREFIX.  If the next pathinfo is for an immediate child of PREFIX,
    set *ENTRY to the path component of the report information and
    *INFO to the path information for that entry.  If the next pathinfo
-   is for a grandchild or other more remote descendent of PREFIX, set
-   *ENTRY to the immediate child corresponding to that descendent and
-   set *INFO to NULL.  If the next pathinfo is not for a descendent of
+   is for a grandchild or other more remote descendant of PREFIX, set
+   *ENTRY to the immediate child corresponding to that descendant and
+   set *INFO to NULL.  If the next pathinfo is not for a descendant of
    PREFIX, or if we reach the end of the report, set both *ENTRY and
    *INFO to NULL.
 

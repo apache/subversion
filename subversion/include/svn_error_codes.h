@@ -841,7 +841,7 @@ SVN_ERROR_START
   /** @since New in 1.5. */
   SVN_ERRDEF(SVN_ERR_RA_SERF_SSPI_INITIALISATION_FAILED,
              SVN_ERR_RA_SERF_CATEGORY_START + 0,
-             "Client/server version mismatch")
+             "Initialization of SSPI library failed")
 
   /* libsvn_auth errors */
 

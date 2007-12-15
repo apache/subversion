@@ -21,12 +21,13 @@ import libsvn.core as _libsvncore
 import atexit as _atexit
 
 class SubversionException(Exception):
-  def __init__(self, apr_err, message=None, child=None, file=None, line=None):
+  def __init__(self, message=None, apr_err=None, child=None,
+               file=None, line=None):
     """Initialize a new Subversion exception object.
 
     Arguments:
-    apr_err     -- integer error code (apr_status_t)
     message     -- optional user-visible error message
+    apr_err     -- optional integer error code (apr_status_t)
     child       -- optional SubversionException to wrap
     file        -- optional source file name where the error originated
     line        -- optional line number of the source file
@@ -34,9 +35,19 @@ class SubversionException(Exception):
     file and line are for C, not Python; they are redundant to the
     traceback information for exceptions raised in Python.
     """
-    # Pass only message and apr_err (and in this order) so .args will
-    # be (message, apr_err) just as in svn 1.4 and older.
-    Exception.__init__(self, message, apr_err)
+    # Be compatible with pre-1.5 .args behavior:
+    args = []
+    if message is None:
+      # SubversionException().args => ()
+      pass
+    else:
+      # SubversionException('message').args => ('message',)
+      args.append(message)
+      if apr_err is not None:
+        # SubversionException('message', 123) => ('message', 123)
+        args.append(apr_err)
+    Exception.__init__(self, *args)
+
     self.apr_err = apr_err
     self.message = message
     self.child = child
@@ -59,7 +70,7 @@ class SubversionException(Exception):
     child = None
     errors.reverse()
     for (apr_err, message, file, line) in errors:
-      child = cls(apr_err, message, child, file, line)
+      child = cls(message, apr_err, child, file, line)
     return child
   # Don't use @classmethod, we support 2.2.
   _new_from_err_list = classmethod(_new_from_err_list)
