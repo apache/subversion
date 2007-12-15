@@ -595,7 +595,7 @@ do_initialize(svn_ra_session_t *to_session,
   subcommand_baton_t *baton = b;
   svn_string_t *from_url;
   svn_revnum_t latest;
-  const char *uuid;
+  const char *uuid, *root_url;
 
   /* First, sanity check to see that we're copying into a brand new repos. */
 
@@ -623,9 +623,24 @@ do_initialize(svn_ra_session_t *to_session,
   SVN_ERR(svn_ra_open2(&from_session, baton->from_url,
                        &(baton->source_callbacks), baton,
                        baton->config, pool));
+  SVN_ERR(svn_ra_get_repos_root(from_session, &root_url, pool));
 
-  SVN_ERR(check_if_session_is_at_repos_root(from_session, baton->from_url,
-                                            pool));
+  /* If we're doing a partial replay, we have to check first if the server 
+     supports this. */
+  if (strcmp(root_url, baton->from_url) < 0)
+    {
+      svn_boolean_t server_supports_partial_replay;
+      svn_error_t *err = svn_ra_has_capability(from_session,
+                                               &server_supports_partial_replay,
+                                               SVN_RA_CAPABILITY_PARTIAL_REPLAY,
+                                               pool);
+      if (err && err->apr_err == SVN_ERR_RA_UNKNOWN_CAPABILITY)
+        {
+          svn_error_clear(err);
+          return svn_error_create(SVN_ERR_RA_PARTIAL_REPLAY_NOT_SUPPORTED, NULL, 
+                                  NULL);
+        }
+    }
 
   SVN_ERR(svn_ra_change_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_URL,
                                  svn_string_create(baton->from_url, pool),
@@ -1111,8 +1126,6 @@ open_source_session(svn_ra_session_t **from_session,
   /* Open the session to copy the revision data. */
   SVN_ERR(svn_ra_open2(from_session, from_url->data, callbacks, baton,
                        config, pool));
-  SVN_ERR(check_if_session_is_at_repos_root(*from_session, from_url->data,
-                                            pool));
 
   /* Ok, now sanity check the UUID of the source repository, it
      wouldn't be a good thing to sync from a different repository. */
