@@ -5072,6 +5072,9 @@ remove_irrelevant_ranges(apr_hash_t **mergeinfo_by_path_p,
 }
 
 
+/* TODO(reint): Document.
+
+   RA_SESSION must be opened at the repository root. */
 static svn_error_t *
 calculate_left_hand_side(const char **url_left,
                          svn_revnum_t *rev_left,
@@ -5079,6 +5082,7 @@ calculate_left_hand_side(const char **url_left,
                          const char *target_repos_rel_path,
                          svn_revnum_t target_rev,
                          const char *source_repos_rel_path,
+                         svn_ra_session_t *ra_session,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *pool)
 {
@@ -5102,7 +5106,7 @@ calculate_left_hand_side(const char **url_left,
                                    pool));
 
   /* 3: Elide! */
-  SVN_ERR(there_must_be_an_elision_function(mergeinfo_by_path));
+/*   SVN_ERR(there_must_be_an_elision_function(mergeinfo_by_path)); */
 
   /* 4: N-part conditional */
   /* TODO(reint): make sure we look things up with keys that start
@@ -5148,7 +5152,6 @@ svn_client_merge_reintegrate(const char *source,
   apr_array_header_t *source_repos_rel_path_as_array
     = apr_array_make(pool, 1, sizeof(const char *));
   apr_hash_t *mergeinfo_by_path;
-  apr_array_header_t *rangelist;
   const char *yc_ancestor_path;
   svn_revnum_t yc_ancestor_rev;
   const char *url1, *url2;
@@ -5218,6 +5221,7 @@ svn_client_merge_reintegrate(const char *source,
                                    target_repos_rel_path,
                                    rev1,
                                    source_repos_rel_path,
+                                   ra_session,
                                    ctx,
                                    pool));
 
