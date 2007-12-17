@@ -122,13 +122,13 @@ check_hook_result(const char *name, const char *cmd, apr_proc_t *cmd_proc,
       const char *action;
       if (strcmp(name, "start-commit") == 0
           || strcmp(name, "pre-commit") == 0)
-        action = "commit";
+        action = _("Commit");
       else if (strcmp(name, "pre-revprop-change") == 0)
-        action = "revprop change";
+        action = _("Revprop change");
       else if (strcmp(name, "pre-lock") == 0)
-        action = "lock";
+        action = _("Lock");
       else if (strcmp(name, "pre-unlock") == 0)
-        action = "unlock";
+        action = _("Unlock");
       else
         action = NULL;
       if (action == NULL)
