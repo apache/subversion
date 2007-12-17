@@ -1280,11 +1280,13 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
       else if (! mergeinfo)
         mergeinfo = wc_mergeinfo;
       if (mergeinfo)
-        SVN_ERR(svn_mergeinfo__to_string((svn_string_t **)
-                                         &mergeinfo_prop->value,
-                                         mergeinfo, pool));
-      APR_ARRAY_PUSH(item->outgoing_prop_changes, svn_prop_t *) =
-        mergeinfo_prop;
+        {
+          SVN_ERR(svn_mergeinfo__to_string((svn_string_t **)
+                                           &mergeinfo_prop->value,
+                                           mergeinfo, pool));
+          APR_ARRAY_PUSH(item->outgoing_prop_changes, svn_prop_t *) =
+            mergeinfo_prop;
+        }
     }
 
   /* Sort and condense our COMMIT_ITEMS. */
