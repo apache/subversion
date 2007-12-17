@@ -9912,8 +9912,8 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
                                        None, 1, dry_run = False)
   os.chdir(saved_cwd)
 
-def merge_non_reflective_text_change(sbox):
-  "merge non-reflective text change"
+def merge_non_reflective_text_and_prop_change(sbox):
+  "merge non-reflective text and prop change"
 
   ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2897. ##
 
@@ -9931,6 +9931,10 @@ def merge_non_reflective_text_change(sbox):
 
   # We'll consider A/B/E as the trunk
   # Modify alpha contents
+
+  # Set first property on alpha
+  svntest.main.run_svn(None, 'propset', 'prop1', 'val1', alpha_path)
+
   svntest.main.file_write(alpha_path, file_content)
   expected_output = wc.State(wc_dir, {'A/B/E/alpha' : Item(verb='Sending')})
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -10031,7 +10035,8 @@ def merge_non_reflective_text_change(sbox):
   expected_disk = wc.State('', {
     ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:3-5'}),
     'beta'     : Item("This is the file 'beta'.\n"),
-    'alpha'    : Item("fbline1 \ntline2 \nline3 \nline4 \nline5 \n"),
+    'alpha'    : Item(props={'prop1' : 'val1'},
+                      contents="fbline1 \ntline2 \nline3 \nline4 \nline5 \n"),
     })
   expected_skip = wc.State(short_ABE_COPY, {})
 
@@ -10060,7 +10065,8 @@ def merge_non_reflective_text_change(sbox):
   expected_disk = wc.State('', {
     ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:3-5,7'}),
     'beta'     : Item("This is the file 'beta'.\n"),
-    'alpha'    : Item("fbline1 \ntline2 \nline3 \ntline4 \nline5 \n"),
+    'alpha'    : Item(props={'prop1' : 'val1'},
+                      contents="fbline1 \ntline2 \nline3 \ntline4 \nline5 \n"),
     })
   expected_skip = wc.State(short_ABE_COPY, {})
 
@@ -10075,6 +10081,9 @@ def merge_non_reflective_text_change(sbox):
 
   # Do a local modification to alpha in feature branch
   svntest.main.file_substitute(alpha_fb_path, "line5 ", "adhoc fbline5 ")
+
+  # Set second property on alpha
+  svntest.main.run_svn(None, 'propset', 'prop2', 'val2', alpha_fb_path)
 
   # Commit the merged changes along with the local modifications ie., r8
   expected_output = wc.State(wc_dir, {
@@ -10099,18 +10108,20 @@ def merge_non_reflective_text_change(sbox):
   # Merge /A/B/E_COPY to /A/B/E ie., feature branch back to trunk
   expected_output = wc.State(short_ABE, {
     ''         : Item(status=' G'),
-    'alpha'    : Item(status='G '),
+    'alpha'    : Item(status='GU'),
     })
   expected_status = wc.State(short_ABE, {
     ''         : Item(status=' M', wc_rev=7),
-    'alpha'    : Item(status='M ', wc_rev=7),
+    'alpha'    : Item(status='MM', wc_rev=7),
     'beta'     : Item(status='  ', wc_rev=7),
     })
   expected_disk = wc.State('', {
     ''         : Item(props={
                      SVN_PROP_MERGE_INFO : '/A/B/E:3-5,7\n/A/B/E_COPY:3-8\n'}),
     'beta'     : Item("This is the file 'beta'.\n"),
-    'alpha'    : Item("fbline1 \ntline2 \ntline3 \ntline4 \nadhoc fbline5 \n"),
+    'alpha'    : Item(props={'prop1' : 'val1', 'prop2' : 'val2'},
+                      contents=\
+                      "fbline1 \ntline2 \ntline3 \ntline4 \nadhoc fbline5 \n"),
     })
   expected_skip = wc.State(short_ABE, {})
 
@@ -10211,7 +10222,7 @@ test_list = [ None,
               merge_from_renamed_branch_fails_while_avoiding_repeat_merge,
               XFail(merge_source_normalization_and_subtree_merges),
               XFail(merge_non_reflective_changes_from_reflective_rev),
-              XFail(merge_non_reflective_text_change),
+              XFail(merge_non_reflective_text_and_prop_change),
              ]
 
 if __name__ == '__main__':
