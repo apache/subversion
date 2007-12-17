@@ -2532,6 +2532,19 @@ public class BasicTests extends SVNTests
         assertFileContentsEquals("Unexpected diff output in file '" +
                                  diffOutput.getPath() + '\'',
                                  expectedDiffOutput, diffOutput);
+
+        // Test diff where relativeToDir and path are the same.
+        expectedDiffOutput = NL + "Property changes on: ." + NL +
+            underSepLine +
+            "Added: testprop" + NL +
+            "   + Test property value." + NL + NL;
+
+        client.propertySet(aPath, "testprop", "Test property value.", false);
+        client.diff(aPath, Revision.BASE, aPath, Revision.WORKING, aPath,
+                    diffOutput.getPath(), Depth.infinity, true, true, false);
+        assertFileContentsEquals("Unexpected diff output in file '" +
+                                 diffOutput.getPath() + '\'',
+                                 expectedDiffOutput, diffOutput);
         
         
         /*

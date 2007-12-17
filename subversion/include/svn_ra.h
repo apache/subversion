@@ -1661,6 +1661,13 @@ svn_error_t *svn_ra_has_capability(svn_ra_session_t *session,
  */
 #define SVN_RA_CAPABILITY_LOG_REVPROPS "log-revprops"
 
+/**
+ * The capability of replaying a directory in the repository (partial replay).
+ *
+ * @since New in 1.5.
+ */
+#define SVN_RA_CAPABILITY_PARTIAL_REPLAY "partial-replay"
+
 /*       *** PLEASE READ THIS IF YOU ADD A NEW CAPABILITY ***
  *
  * RA layers generally fetch all capabilities when asked about any

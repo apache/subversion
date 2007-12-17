@@ -27,6 +27,10 @@
 
 import xml.parsers.expat  # you may need to install this package
 
+### The entries file parser in tools/client-side/change-svn-wc-format.py
+### handles the WC format for Subversion 1.4 and 1.5, which is no
+### longer in XML.
+
 class svn_entry:
   "An object that represents an entry from an 'entries' file."
 

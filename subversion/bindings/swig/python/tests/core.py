@@ -11,6 +11,10 @@ class SubversionCoreTestCase(unittest.TestCase):
                      ('error message',))
     self.assertEqual(svn.core.SubversionException('error message', 1).args,
                      ('error message', 1))
+    self.assertEqual(svn.core.SubversionException('error message', 1).apr_err,
+                     1)
+    self.assertEqual(svn.core.SubversionException('error message', 1).message,
+                     'error message')
 
   def test_mime_type_is_binary(self):
     self.assertEqual(0, svn.core.svn_mime_type_is_binary("text/plain"))

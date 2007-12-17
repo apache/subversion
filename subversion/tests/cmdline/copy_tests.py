@@ -147,10 +147,15 @@ def copy_replace_with_props(sbox, wc_copy):
                                      'cp', pi_src, rho_path)
 
   # Verify both content and props have been copied
+  if wc_copy:
+    props = { SVN_PROP_MERGE_INFO : '',
+              'phony-prop' : '*'}
+  else:
+    props = { 'phony-prop' : '*'}
+    
   expected_disk.tweak('A/D/G/rho',
                       contents="This is the file 'pi'.\n",
-                      props={ 'phony-prop' : '*',
-                              SVN_PROP_MERGE_INFO : '' })
+                      props=props)
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
   svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
 
@@ -1014,8 +1019,8 @@ def repos_to_wc(sbox):
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
 
-  # Validate that the merge info of the copy destination has been initialized.
-  svntest.actions.run_and_verify_svn(None, ['\n'], [],
+  # Validate the merge info of the copy destination (we expect none)
+  svntest.actions.run_and_verify_svn(None, [], [],
                                      'propget', SVN_PROP_MERGE_INFO,
                                      os.path.join(D_dir, 'B'))
 
@@ -2712,9 +2717,8 @@ def copy_added_paths_to_URL(sbox):
                                      'cp', '-m', '',
                                      upsilon_path, upsilon_copy_URL)
 
-  # Validate that the merge info of the copy destination matches the
-  # implied merge info from the copy source.
-  svntest.actions.run_and_verify_svn(None, ['\n'], [],
+  # Validate the merge info of the copy destination (we expect none).
+  svntest.actions.run_and_verify_svn(None, [], [],
                                      'propget',
                                      SVN_PROP_MERGE_INFO, upsilon_copy_URL)
 
@@ -3275,9 +3279,9 @@ def copy_peg_rev_local_files(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/D/H/psi', contents=iota_text)
   expected_disk.add({
-    'iota'      : Item(contents=psi_text, props={ SVN_PROP_MERGE_INFO : '' }),
-    'A/D/H/psi' : Item(contents=iota_text, props={ SVN_PROP_MERGE_INFO : '' }),
-    'sigma'     : Item(contents=psi_text, props={ SVN_PROP_MERGE_INFO : '' }),
+    'iota'      : Item(contents=psi_text, props={SVN_PROP_MERGE_INFO : ''}),
+    'A/D/H/psi' : Item(contents=iota_text, props={SVN_PROP_MERGE_INFO : ''}),
+    'sigma'     : Item(contents=psi_text, props={}),
     })
 
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 3)
@@ -3351,13 +3355,13 @@ def copy_peg_rev_local_dirs(sbox):
   expected_disk.remove('A/D/G/rho')
   expected_disk.remove('A/D/G/tau')
   expected_disk.add({
-    'A/B/E'       : Item(props={ SVN_PROP_MERGE_INFO : '' }),
+    'A/B/E'       : Item(props={SVN_PROP_MERGE_INFO : ''}),
     'A/B/E/pi'    : Item(contents="This is the file 'pi'.\n"),
     'A/B/E/rho'   : Item(contents="This is the file 'rho'.\n"),
     'A/B/E/tau'   : Item(contents="This is the file 'tau'.\n"),
-    'A/D/G'       : Item(props={ SVN_PROP_MERGE_INFO : '' }),
+    'A/D/G'       : Item(props={SVN_PROP_MERGE_INFO : ''}),
     'A/D/G/beta'  : Item(contents="This is the file 'beta'.\n"),
-    'A/J'         : Item(props={ SVN_PROP_MERGE_INFO : '' }),
+    'A/J'         : Item(props={}),
     'A/J/alpha'   : Item(contents="This is the file 'alpha'.\n"),
     'A/J/beta'  : Item(contents="This is the file 'beta'.\n"),
     })
@@ -3404,8 +3408,8 @@ def copy_peg_rev_url(sbox):
                                      iota_url + '@HEAD', '-r', '1',
                                      sigma_url, '-m', 'rev 3')
 
-  # Validate that copy destination has initialized mergeinfo.
-  svntest.actions.run_and_verify_svn(None, ['\n'], [],
+  # Validate the copy destination's mergeinfo (we expect none).
+  svntest.actions.run_and_verify_svn(None, [], [],
                                      'propget', SVN_PROP_MERGE_INFO, sigma_url)
 
   # Update to HEAD and verify disk contents
@@ -3691,9 +3695,6 @@ def URI_encoded_repos_to_wc(sbox):
        "A    " + os.path.join(wc_dir, dest_name, "D", "H", "psi") + "\n",
        "Checked out revision " + str(rev - 1) + ".\n",
        "A         " + os.path.join(wc_dir, dest_name) + "\n"]
-    if rev == 3:
-      lines.append(" U   " + os.path.join(wc_dir, dest_name) + "\n")
-
     expected = svntest.verify.UnorderedOutput(lines)
     expected_status.add({
       dest_name + "/B"         : Item(status='  ', wc_rev=rev),
@@ -3716,7 +3717,7 @@ def URI_encoded_repos_to_wc(sbox):
       dest_name + "/D/H/psi"   : Item(status='  ', wc_rev=rev),
       dest_name                : Item(status='  ', wc_rev=rev)})
     expected_disk.add({
-      dest_name : Item(props={SVN_PROP_MERGE_INFO : ''}),
+      dest_name                : Item(props={}),
       dest_name + '/B'         : Item(),
       dest_name + '/B/lambda'  : Item("This is the file 'lambda'.\n"),
       dest_name + '/B/E'       : Item(),
