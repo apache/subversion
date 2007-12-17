@@ -189,6 +189,10 @@ SVN_ERROR_START
              SVN_ERR_BAD_CATEGORY_START + 7,
              "Path is not an immediate child of the specified directory")
 
+  SVN_ERRDEF(SVN_ERR_BAD_UUID,
+             SVN_ERR_BAD_CATEGORY_START + 8,
+             "Bogus UUID")
+
   /* xml errors */
 
   SVN_ERRDEF(SVN_ERR_XML_ATTRIB_NOT_FOUND,

@@ -196,6 +196,7 @@ static svn_opt_subcommand_t
   subcommand_rmtxns,
   subcommand_setlog,
   subcommand_setrevprop,
+  subcommand_setuuid,
   subcommand_verify;
 
 enum
@@ -424,6 +425,13 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     "overwrite the previous value of the property.\n"),
    {'r', svnadmin__use_pre_revprop_change_hook,
     svnadmin__use_post_revprop_change_hook} },
+
+  {"setuuid", subcommand_setuuid, {0}, N_
+   ("usage: svnadmin setuuid REPOS_PATH [NEW_UUID]\n\n"
+    "Reset the repository UUID for the repository located at REPOS_PATH.  If\n"
+    "NEW_UUID is provided, use that as the new repository UUID; otherwise,\n"
+    "generate a brand new UUID for the repository.\n"),
+   {0} },
 
   {"verify", subcommand_verify, {0}, N_
    ("usage: svnadmin verify REPOS_PATH\n\n"
@@ -1036,6 +1044,29 @@ subcommand_setrevprop(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   return set_revprop(APR_ARRAY_IDX(args, 0, const char *),
                      APR_ARRAY_IDX(args, 1, const char *),
                      opt_state, pool);
+}
+
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_setuuid(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+  apr_array_header_t *args;
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  const char *uuid = NULL;
+
+  SVN_ERR(svn_opt_parse_all_args(&args, os, pool));
+
+  if (args->nelts > 1)
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL, NULL);
+  if (args->nelts == 1)
+    uuid = APR_ARRAY_IDX(args, 0, const char *);
+
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  fs = svn_repos_fs(repos);
+  return svn_fs_set_uuid(fs, uuid, pool);
 }
 
 
