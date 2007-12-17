@@ -31,6 +31,10 @@ except:
   True = 1
   False = 0
 
+### The entries file parser in subversion/tests/cmdline/svntest/entry.py
+### handles the XML-based WC entries file format used by Subversion
+### 1.3 and lower.  It could be rolled into this script.
+
 LATEST_FORMATS = { "1.4" : 8,
                    "1.5" : 9 }
 

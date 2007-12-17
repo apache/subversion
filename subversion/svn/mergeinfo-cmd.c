@@ -186,7 +186,7 @@ svn_cl__mergeinfo(apr_getopt_t *os,
                                             &peg_revision, root_url, 
                                             ctx, subpool));
         }
-      else if (apr_hash_count(mergeinfo))
+      else if (apr_hash_count(mergeinfo) > 0)
         {
           apr_pool_t *iterpool = svn_pool_create(subpool);
           for (hi = apr_hash_first(NULL, mergeinfo); 

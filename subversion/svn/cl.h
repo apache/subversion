@@ -41,57 +41,6 @@ extern "C" {
 
 /*** Option processing ***/
 
-/* Add an identifier here for long options that don't have a short
-   option. Options that have both long and short options should just
-   use the short option letter as identifier.  */
-typedef enum {
-  svn_cl__ancestor_path_opt = SVN_OPT_FIRST_LONGOPT_ID,
-  svn_cl__auth_password_opt,
-  svn_cl__auth_username_opt,
-  svn_cl__autoprops_opt,
-  svn_cl__changelist_opt,
-  svn_cl__config_dir_opt,
-  svn_cl__diff_cmd_opt,
-  svn_cl__dry_run_opt,
-  svn_cl__editor_cmd_opt,
-  svn_cl__encoding_opt,
-  svn_cl__force_log_opt,
-  svn_cl__force_opt,
-  svn_cl__keep_changelist_opt,
-  svn_cl__ignore_ancestry_opt,
-  svn_cl__ignore_externals_opt,
-  svn_cl__incremental_opt,
-  svn_cl__merge_cmd_opt,
-  svn_cl__native_eol_opt,
-  svn_cl__new_cmd_opt,
-  svn_cl__no_auth_cache_opt,
-  svn_cl__no_autoprops_opt,
-  svn_cl__no_diff_deleted,
-  svn_cl__no_ignore_opt,
-  svn_cl__no_unlock_opt,
-  svn_cl__non_interactive_opt,
-  svn_cl__notice_ancestry_opt,
-  svn_cl__old_cmd_opt,
-  svn_cl__record_only_opt,
-  svn_cl__relocate_opt,
-  svn_cl__remove_opt,
-  svn_cl__revprop_opt,
-  svn_cl__stop_on_copy_opt,
-  svn_cl__strict_opt,
-  svn_cl__summarize,
-  svn_cl__targets_opt,
-  svn_cl__depth_opt,
-  svn_cl__version_opt,
-  svn_cl__xml_opt,
-  svn_cl__keep_local_opt,
-  svn_cl__with_revprop_opt,
-  svn_cl__with_all_revprops_opt,
-  svn_cl__parents_opt,
-  svn_cl__accept_opt,
-  svn_cl__from_source_opt
-} svn_cl__longopt_t;
-
-
 /* --accept actions */
 typedef enum
 {

@@ -4745,6 +4745,8 @@ svn_fs_fs__move_into_place(const char *old_filename,
       SVN_ERR(svn_io_file_flush_to_disk(file, pool));
       SVN_ERR(svn_io_file_close(file, pool));
     }
+  if (err)
+    return err;
 
 #ifdef __linux__
   {
@@ -4764,7 +4766,7 @@ svn_fs_fs__move_into_place(const char *old_filename,
   }
 #endif
 
-  return err;
+  return SVN_NO_ERROR;
 }
 
 /* Atomically update the current file to hold the specifed REV, NEXT_NODE_ID,

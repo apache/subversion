@@ -189,6 +189,10 @@ SVN_ERROR_START
              SVN_ERR_BAD_CATEGORY_START + 7,
              "Path is not an immediate child of the specified directory")
 
+  SVN_ERRDEF(SVN_ERR_BAD_UUID,
+             SVN_ERR_BAD_CATEGORY_START + 8,
+             "Bogus UUID")
+
   /* xml errors */
 
   SVN_ERRDEF(SVN_ERR_XML_ATTRIB_NOT_FOUND,
@@ -735,6 +739,10 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_RA_UNKNOWN_CAPABILITY,
              SVN_ERR_RA_CATEGORY_START + 8,
              "Inquiry about unknown capability")
+
+  SVN_ERRDEF(SVN_ERR_RA_PARTIAL_REPLAY_NOT_SUPPORTED,
+             SVN_ERR_RA_CATEGORY_START + 9,
+             "Server can only replay from the root of a repository")
 
   /* ra_dav errors */
 
