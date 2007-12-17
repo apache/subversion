@@ -41,27 +41,6 @@ extern "C" {
 /* Misc. declarations */
 
 /**
- * Use @a name for the client string for http headers.
- *
- * @note This function changes global (per-process) state and must be
- * called in a single-threaded context during the initialization of a
- * Subversion client.
- *
- * @since New in 1.5.
- */
-svn_error_t *
-svn_ra_set_client_namestring(const char *name);
-
-/**
- * returns the svn client name string used in http headers
- *
- * @since New in 1.5.
- */
-const char *
-svn_ra_get_client_namestring(void);
-
-
-/**
  * Get libsvn_ra version information.
  *
  * @since New in 1.1.
