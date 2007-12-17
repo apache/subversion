@@ -1921,13 +1921,13 @@ def hook_failure_message(hookname):
     return "'%s' hook failed with error output:\n" % hookname
   else:
     if hookname in ["start-commit", "pre-commit"]:
-      action = "commit"
+      action = "Commit"
     elif hookname == "pre-revprop-change":
-      action = "revprop change"
+      action = "Revprop change"
     elif hookname == "pre-lock":
-      action = "lock"
+      action = "Lock"
     elif hookname == "pre-unlock":
-      action = "unlock"
+      action = "Unlock"
     else:
       action = None
     if action is None:
