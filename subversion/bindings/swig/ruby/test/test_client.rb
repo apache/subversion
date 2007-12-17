@@ -757,7 +757,7 @@ class SvnClientTest < Test::Unit::TestCase
     rev2 = commit_info.revision
 
     diffs = []
-    ctx.diff_summarize(path, rev1, path, rev2) do |diff|
+    ctx.diff_summarize(@wc_path, rev1, @wc_path, rev2) do |diff|
       diffs << diff
     end
     assert_equal([file], diffs.collect {|d| d.path})
@@ -783,7 +783,6 @@ class SvnClientTest < Test::Unit::TestCase
     before_path = File.join(@wc_path, before_file)
     after_path = File.join(@wc_path, after_file)
     moved_path = File.join(@wc_path, moved_file)
-    after_uri = "#{@repos_uri}/#{after_file}"
 
     File.open(before_path, "w") {|f| f.print(before)}
 
@@ -809,7 +808,7 @@ class SvnClientTest < Test::Unit::TestCase
     rev5 = commit_info.revision
 
     diffs = []
-    ctx.diff_summarize_peg(after_uri, rev3, rev4, rev3) do |diff|
+    ctx.diff_summarize_peg(@repos_uri, rev3, rev4, rev3) do |diff|
       diffs << diff
     end
     assert_equal([after_file], diffs.collect {|d| d.path})

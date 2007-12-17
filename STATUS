@@ -78,11 +78,3 @@ Veto-blocked changes:
      -1: djames (see http://svn.haxx.se/dev/archive-2007-05/0058.shtml)
 
 Approved changes:
-
-  * r26071
-    Fix Ruby tests broken by the backport in r26532.
-    Justification:
-      Tests should pass.
-    Votes:
-      +1: glasser
-      +0: hwright
