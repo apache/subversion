@@ -950,6 +950,8 @@ elide_mergeinfo_catalog_cb(void **dir_baton,
 {
   struct elide_mergeinfo_catalog_cb_baton *cb = callback_baton;
   struct elide_mergeinfo_catalog_dir_baton *pb = parent_baton;
+  const char *path_suffix;
+  svn_boolean_t elides;
 
   if (!pb)
     {
@@ -967,8 +969,26 @@ elide_mergeinfo_catalog_cb(void **dir_baton,
   /* Otherwise, we'll just act like everything is a file. */
   *dir_baton = NULL;
 
-  /* TODO(reint): Check elision between pb->inherited_mergeinfo_path
-     and path.  Append to cb->elidable_paths if so. */
+  /* Is there even any inherited mergeinfo to elide? */
+  if (!pb->inherited_mergeinfo_path)
+    return SVN_NO_ERROR;
+
+  path_suffix = svn_path_is_child(pb->inherited_mergeinfo_path,
+                                  path, NULL);
+  assert(path_suffix != NULL);
+
+  SVN_ERR(should_elide_mergeinfo(&elides,
+                                 apr_hash_get(cb->mergeinfo_catalog,
+                                              pb->inherited_mergeinfo_path,
+                                              APR_HASH_KEY_STRING),
+                                 apr_hash_get(cb->mergeinfo_catalog,
+                                              path,
+                                              APR_HASH_KEY_STRING),
+                                 path_suffix,
+                                 pool));
+
+  if (elides)
+    APR_ARRAY_PUSH(cb->elidable_paths, const char *) = path;
 
   return SVN_NO_ERROR;
 }
