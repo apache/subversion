@@ -1356,7 +1356,6 @@ log_do_committed(struct log_runner *loggy,
   entry->has_prop_mods = FALSE;
   entry->working_size = finfo.size;
   entry->tree_conflict_data = NULL;
-  entry->tree_conflict_report = NULL;
   if ((err = svn_wc__entry_modify(loggy->adm_access, name, entry,
                                   (SVN_WC__ENTRY_MODIFY_REVISION
                                    | SVN_WC__ENTRY_MODIFY_SCHEDULE
@@ -2235,10 +2234,6 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA,
                  SVN_WC__ENTRY_ATTR_TREE_CONFLICT_DATA,
                  entry->tree_conflict_data ? entry->tree_conflict_data : "");
-
-  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_REPORT,
-                 SVN_WC__ENTRY_ATTR_TREE_CONFLICT_REPORT,
-                 entry->tree_conflict_report ? entry->tree_conflict_report : "");
 
 #undef ADD_ENTRY_ATTR
 

@@ -19,7 +19,6 @@
 #include "tree_conflicts.h"
 #include "log.h"
 #include "entries.h"
-#include "svn_path.h"
 #include "svn_types.h"
 #include "svn_private_config.h"
 
@@ -112,36 +111,30 @@ select_our_phrase(svn_wc_conflict_description_t *conflict,
     }
 }
 
-/*
- * This function could be static, but we need to link to it
- * in a unit test in tests/libsvn_wc/, so it isn't.
- */
 svn_error_t *
-svn_wc__append_tree_conflict_desc(svn_stringbuf_t *descriptions,
-                                  svn_wc_conflict_description_t *conflict,
-                                  apr_pool_t *pool)
+svn_wc_append_human_readable_tree_conflict_description(
+                                       svn_stringbuf_t *descriptions,
+                                       svn_wc_conflict_description_t *conflict,
+                                       apr_pool_t *pool)
 {
-  svn_stringbuf_t *tmp;
-  const char *phrase;
+  const char *their_phrase, *our_phrase;
+  svn_stringbuf_t *their_phrase_with_victim, *our_phrase_with_victim;
   struct tree_conflict_phrases *phrases = new_tree_conflict_phrases(pool);
 
-  tmp = svn_stringbuf_createf(pool, "Tree conflict: %s\n",
-                                 conflict->victim_path);
-  svn_stringbuf_appendstr(descriptions, tmp);
-
-  phrase = select_their_phrase(conflict, phrases);
-  if (phrase == NULL)
+  their_phrase = select_their_phrase(conflict, phrases);
+  our_phrase = select_our_phrase(conflict, phrases);
+  if (! our_phrase || ! their_phrase)
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
                             _("Invalid tree conflict data"));
-  tmp = svn_stringbuf_createf(pool, phrase, conflict->victim_path);
-  svn_stringbuf_appendstr(descriptions, tmp);
 
-  phrase = select_our_phrase(conflict, phrases);
-  if (phrase == NULL)
-    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                            _("Invalid tree conflict data"));
-  tmp = svn_stringbuf_createf(pool, phrase, conflict->victim_path);
-  svn_stringbuf_appendstr(descriptions, tmp);
+  /* Substitute the '%s' format in the phrases with the victim path. */
+  their_phrase_with_victim = svn_stringbuf_createf(pool, their_phrase,
+                                                   conflict->victim_path);
+  our_phrase_with_victim = svn_stringbuf_createf(pool, our_phrase,
+                                                 conflict->victim_path);
+
+  svn_stringbuf_appendstr(descriptions, their_phrase_with_victim);
+  svn_stringbuf_appendstr(descriptions, our_phrase_with_victim);
 
   return SVN_NO_ERROR;
 }
@@ -400,12 +393,8 @@ read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
   return SVN_NO_ERROR;
 }
 
-/*
- * This function could be static, but we need to link to it
- * in a unit test in tests/libsvn_wc/, so it isn't.
- */
 svn_error_t *
-svn_wc__read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
+svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
                                        const svn_wc_entry_t *dir_entry,
                                        apr_pool_t *pool)
 {
@@ -606,7 +595,7 @@ svn_wc__add_tree_conflict_data(svn_stringbuf_t *log_accum,
   /* Get a list of existing tree conflicts. */
   conflicts = apr_array_make(pool, 0,
                              sizeof(svn_wc_conflict_description_t *));
-  SVN_ERR(svn_wc__read_tree_conflicts_from_entry(conflicts, entry, pool));
+  SVN_ERR(svn_wc_read_tree_conflicts_from_entry(conflicts, entry, pool));
 
   /* If CONFLICTS has a tree conflict with the same victim_path as the
    * new conflict, then the working copy has been corrupted.
@@ -650,45 +639,14 @@ svn_wc__is_tree_conflict_victim(svn_boolean_t *tree_conflict_victim,
 }
 
 svn_error_t *
-svn_wc__write_tree_conflict_report(svn_stringbuf_t *log_accum,
-                                   svn_wc_adm_access_t *adm_access,
-                                   apr_pool_t *pool)
-{
-  /* Important: We want this function to be idempotent. */
-
-  /* Retrieve node path from adm_access. */
-
-  /* Check whether node is a directory. If not, throw an error. */
-
-  /* Get tree conflict descriptions from the dir entry. */
-
-  /* Write conflict descriptions obtained from
-   * svn_wc__create_tree_conflict_desc()
-   * to a new temp reject file.
-   */
-
-  /* Loggy move the temp file to the user-visible reject file path. */
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_wc__tree_conflict_resolved(const char* victim_path,
                                svn_wc_adm_access_t *adm_access,
                                apr_pool_t *pool)
 {
-  /* Retrieve node path from adm_access. */
+  /* Make sure the node is a directory.
+   * Otherwise we should not have been called. */
 
-  /* Check whether node is a directory. If not, throw an error. */
-
-  /* Get tree conflict descriptions from the dir entry. */
-
-  /* Remove the tree conflict description for victim. */
-
-  /* If the victim list is now empty, loggy remove the reject file. */
-  /* Else call svn_wc__write_tree_conflict_descs(). */
+  /* In the dir entry, remove the tree conflict data for this victim. */
 
   return SVN_NO_ERROR;
 }
-
-
