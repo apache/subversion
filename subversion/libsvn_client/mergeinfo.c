@@ -500,40 +500,34 @@ svn_client__get_history_as_mergeinfo(apr_hash_t **mergeinfo_p,
 
 /*** Eliding mergeinfo. ***/
 
-/* Helper for svn_client__elide_mergeinfo() and svn_client__elide_children().
-
-   Given a working copy PATH, its mergeinfo hash CHILD_MERGEINFO, and the
-   mergeinfo of PATH's nearest ancestor PARENT_MERGEINFO, compare
+/* Given the mergeinfo (CHILD_MERGEINFO) for a path, and the
+   mergeinfo of its nearest ancestor with mergeinfo (PARENT_MERGEINFO), compare
    CHILD_MERGEINFO to PARENT_MERGEINFO to see if the former elides to
    the latter, following the elision rules described in
-   svn_client__elide_mergeinfo()'s docstring -- Note: This function
-   assumes that PARENT_MERGEINFO is definitive; i.e. if it is NULL then
-   the caller not only walked the entire WC looking for inherited mergeinfo,
-   but queried the repository if none was found in the WC.  This is rather
-   important since this function elides empty mergeinfo (or mergeinfo
-   containing only paths mapped to empty ranges) if PARENT_MERGEINFO is NULL,
-   and we don't want to do that unless we are *certain* that the empty
-   mergeinfo on PATH isn't overriding anything.
-   
-   If elision (full or partial) does occur, then update PATH's mergeinfo
-   appropriately.  If CHILD_MERGEINFO is NULL, do nothing.
+   svn_client__elide_mergeinfo()'s docstring.  Set *ELIDES to whether
+   or not CHILD_MERGEINFO is redundant.
 
+   Note: This function assumes that PARENT_MERGEINFO is definitive;
+   i.e. if it is NULL then the caller not only walked the entire WC
+   looking for inherited mergeinfo, but queried the repository if none
+   was found in the WC.  This is rather important since this function
+   says empty mergeinfo mergeinfo should be elided if PARENT_MERGEINFO
+   is NULL, and we don't want to do that unless we are *certain* that
+   the empty mergeinfo on PATH isn't overriding anything.
+   
    If PATH_SUFFIX and PARENT_MERGEINFO are not NULL append PATH_SUFFIX to each
    path in PARENT_MERGEINFO before performing the comparison. */
 static svn_error_t *
-elide_mergeinfo(apr_hash_t *parent_mergeinfo,
-                apr_hash_t *child_mergeinfo,
-                const char *path,
-                const char *path_suffix,
-                svn_wc_adm_access_t *adm_access,
-                apr_pool_t *pool)
+should_elide_mergeinfo(svn_boolean_t *elides,
+                       apr_hash_t *parent_mergeinfo,
+                       apr_hash_t *child_mergeinfo,
+                       const char *path_suffix,
+                       apr_pool_t *pool)
 {
-  svn_boolean_t elides;
-
   /* Easy out: No child mergeinfo to elide. */
   if (child_mergeinfo == NULL)
     {
-      elides = FALSE;
+      *elides = FALSE;
     }
   else if (apr_hash_count(child_mergeinfo) == 0)
     {
@@ -541,15 +535,15 @@ elide_mergeinfo(apr_hash_t *parent_mergeinfo,
          i.e. it isn't overriding any parent. Otherwise it doesn't
          elide. */
       if (!parent_mergeinfo || apr_hash_count(parent_mergeinfo) == 0)
-        elides = TRUE;
+        *elides = TRUE;
       else
-        elides = FALSE;
+        *elides = FALSE;
     }
   else if (!parent_mergeinfo || apr_hash_count(parent_mergeinfo) == 0)
     {
       /* Non-empty mergeinfo never elides to empty mergeinfo
          or no mergeinfo. */
-      elides = FALSE;
+      *elides = FALSE;
     }
   else
     {
@@ -568,11 +562,39 @@ elide_mergeinfo(apr_hash_t *parent_mergeinfo,
       else
         path_tweaked_parent_mergeinfo = parent_mergeinfo;
 
-      SVN_ERR(svn_mergeinfo__equals(&elides,
+      SVN_ERR(svn_mergeinfo__equals(elides,
                                     path_tweaked_parent_mergeinfo,
                                     child_mergeinfo, TRUE, subpool));
       svn_pool_destroy(subpool);
     }
+
+  return SVN_NO_ERROR;
+}
+
+/* Helper for svn_client__elide_mergeinfo() and svn_client__elide_children().
+
+   Given a working copy PATH, its mergeinfo hash CHILD_MERGEINFO, and
+   the mergeinfo of PATH's nearest ancestor PARENT_MERGEINFO, use
+   should_elide_mergeinfo() to decide whether or not CHILD_MERGEINFO elides to 
+   PARENT_MERGEINFO; PATH_SUFFIX means the same as in that function.
+   
+   If elision does occur, then update the mergeinfo for PATH (which is
+   the child) in the working copy via ADM_ACCESS appropriately.
+
+   If CHILD_MERGEINFO is NULL, do nothing.
+*/
+static svn_error_t *
+elide_mergeinfo(apr_hash_t *parent_mergeinfo,
+                apr_hash_t *child_mergeinfo,
+                const char *path,
+                const char *path_suffix,
+                svn_wc_adm_access_t *adm_access,
+                apr_pool_t *pool)
+{
+  svn_boolean_t elides;
+  SVN_ERR(should_elide_mergeinfo(&elides,
+                                 parent_mergeinfo, child_mergeinfo,
+                                 path_suffix, pool));
 
   if (elides)
     SVN_ERR(svn_wc_prop_set2(SVN_PROP_MERGEINFO, NULL, path, adm_access,
