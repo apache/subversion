@@ -19,12 +19,8 @@
  * @brief Interface of the class SVNBase
  */
 
-#if !defined(AFX_SVNBASE_H__ABF82C7E_0C50_40EA_8C88_2DFDF20B3A47__INCLUDED_)
-#define AFX_SVNBASE_H__ABF82C7E_0C50_40EA_8C88_2DFDF20B3A47__INCLUDED_
-
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
+#ifndef SVNBASE_H
+#define SVNBASE_H
 
 #include <jni.h>
 
@@ -91,5 +87,4 @@ class SVNBase
                                  JNIEnv *env);
 };
 
-// !defined(AFX_SVNBASE_H__ABF82C7E_0C50_40EA_8C88_2DFDF20B3A47__INCLUDED_)
-#endif
+#endif // SVNBASE_H

@@ -23,8 +23,11 @@
 #include "svn_pools.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_types.h"
+#include "svn_opt.h"
 #include "svn_props.h"
 #include "svn_path.h"
+#include "svn_wc.h"
 #include "svn_client.h"
 
 #include "private/svn_wc_private.h"
@@ -117,8 +120,7 @@ svn_client_proplist_item_t *
 svn_client_proplist_item_dup(const svn_client_proplist_item_t *item,
                              apr_pool_t * pool)
 {
-  svn_client_proplist_item_t *new_item
-    = apr_pcalloc(pool, sizeof(*new_item));
+  svn_client_proplist_item_t *new_item = apr_pcalloc(pool, sizeof(*new_item));
 
   if (item->node_name)
     new_item->node_name = svn_stringbuf_dup(item->node_name, pool);
@@ -129,11 +131,44 @@ svn_client_proplist_item_dup(const svn_client_proplist_item_t *item,
   return new_item;
 }
 
+/* Return WC_PATH's URL and repository root in *URL and REPOS_ROOT,
+   respectively.  Set *NEED_WC_CLEANUP if *ADM_ACCESS needed to be
+   acquired. */
+static svn_error_t *
+wc_path_to_repos_urls(const char **url, const char **repos_root,
+                      svn_boolean_t *need_wc_cleanup,
+                      svn_wc_adm_access_t **adm_access, const char *wc_path,
+                      apr_pool_t *pool)
+{
+  const svn_wc_entry_t *entry;
+
+  if (! *adm_access)
+    {
+      SVN_ERR(svn_wc_adm_probe_open3(adm_access, NULL, wc_path,
+                                     FALSE, 0, NULL, NULL, pool));
+      *need_wc_cleanup = TRUE;
+    }
+  SVN_ERR(svn_wc__entry_versioned(&entry, wc_path, *adm_access, FALSE, pool));
+
+  SVN_ERR(svn_client__entry_location(url, NULL, wc_path,
+                                     svn_opt_revision_unspecified, entry,
+                                     pool));
+
+  /* If we weren't provided a REPOS_ROOT, we'll try to read one from
+     the entry.  The entry might not hold a URL -- in that case, we'll
+     need a fallback plan. */
+  if (*repos_root == NULL)
+    *repos_root = entry->repos;
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_client__path_relative_to_root(const char **rel_path,
                                   const char *path_or_url,
                                   const char *repos_root,
+                                  svn_boolean_t include_leading_slash,
                                   svn_ra_session_t *ra_session,
                                   svn_wc_adm_access_t *adm_access,
                                   apr_pool_t *pool)
@@ -146,36 +181,13 @@ svn_client__path_relative_to_root(const char **rel_path,
   /* If we have a WC path... */
   if (! svn_path_is_url(path_or_url))
     {
-      const svn_wc_entry_t *entry;
-
-      /* ...fetch its entry. */
-      if (! adm_access)
-        {
-          SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path_or_url,
-                                         FALSE, 0, NULL, NULL, pool));
-          need_wc_cleanup = TRUE;
-        }
-      if ((err = svn_wc__entry_versioned(&entry, path_or_url, adm_access, 
-                                         FALSE, pool)))
-        {
-          goto cleanup;
-        }
-
-      /* Specifically, we need the entry's URL. */
-      if (! entry->url)
-        {
-          err = svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                                  _("Entry '%s' has no URL"),
-                                  svn_path_local_style(path_or_url, pool));
-          goto cleanup;
-        }
-      path_or_url = entry->url;
-
-      /* If we weren't provided a REPOS_ROOT, we'll try to read one
-         from the entry.  The entry might not hold a URL, but that's
-         okay -- we've got a fallback plan.  */
-      if (! repos_root)
-        repos_root = entry->repos;
+      /* ...fetch its entry, and attempt to get both its full URL and
+         repository root URL.  If we can't get REPOS_ROOT from the WC
+         entry, we'll get it from the RA layer.*/
+      err = wc_path_to_repos_urls(&path_or_url, &repos_root, &need_wc_cleanup,
+                                  &adm_access, path_or_url, pool);
+      if (err)
+        goto cleanup;
     }
 
   /* If we weren't provided a REPOS_ROOT, or couldn't find one in the
@@ -186,16 +198,10 @@ svn_client__path_relative_to_root(const char **rel_path,
         goto cleanup;
     }
 
-  /* ### FIXME: It's very uncharacteristic of our APIs to return paths
-     ### that have leading slashes, and results in paths that cannot
-     ### be svn_path_join'd with base URLs without indexing past that
-     ### slash.
-  */
-
   /* Check if PATH_OR_URL *is* the repository root URL.  */
   if (strcmp(repos_root, path_or_url) == 0)
     {
-      *rel_path = "/";
+      *rel_path = include_leading_slash ? "/" : "";
     }
   else
     {
@@ -205,12 +211,16 @@ svn_client__path_relative_to_root(const char **rel_path,
          a PATH_OR_URL of something not in that repository).  */
       const char *rel_url = svn_path_is_child(repos_root, path_or_url, pool);
       if (! rel_url)
-        err = svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
-                                _("URL '%s' is not a child of repository "
-                                  "root URL '%s'"), 
-                                path_or_url, repos_root);
-      *rel_path = apr_pstrcat(pool, "/", 
-                              svn_path_uri_decode(rel_url, pool), NULL);
+        {
+          err = svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
+                                  _("URL '%s' is not a child of repository "
+                                    "root URL '%s'"),
+                                  path_or_url, repos_root);
+          goto cleanup;
+        }
+      rel_url = svn_path_uri_decode(rel_url, pool);
+      *rel_path = include_leading_slash 
+                    ? apr_pstrcat(pool, "/", rel_url, NULL) : rel_url;
     }
 
  cleanup:
@@ -226,11 +236,11 @@ svn_client__path_relative_to_root(const char **rel_path,
 }
 
 svn_error_t *
-svn_client__get_repos_root(const char **repos_root, 
+svn_client__get_repos_root(const char **repos_root,
                            const char *path_or_url,
                            const svn_opt_revision_t *peg_revision,
                            svn_wc_adm_access_t *adm_access,
-                           svn_client_ctx_t *ctx, 
+                           svn_client_ctx_t *ctx,
                            apr_pool_t *pool)
 {
   svn_revnum_t rev;
@@ -245,19 +255,11 @@ svn_client__get_repos_root(const char **repos_root,
       && (peg_revision->kind == svn_opt_revision_working
           || peg_revision->kind == svn_opt_revision_base))
     {
-      const svn_wc_entry_t *entry;
-      if (! adm_access)
-        {
-          SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path_or_url,
-                                         FALSE, 0, NULL, NULL, pool));
-          need_wc_cleanup = TRUE;
-        }
-      if ((err = svn_wc__entry_versioned(&entry, path_or_url, adm_access, 
-                                         FALSE, pool)))
+      *repos_root = NULL;
+      err = wc_path_to_repos_urls(&path_or_url, repos_root, &need_wc_cleanup,
+                                  &adm_access, path_or_url, pool);
+      if (err)
         goto cleanup;
-
-      path_or_url = entry->url;
-      *repos_root = entry->repos;
     }
   else
     {
@@ -275,16 +277,17 @@ svn_client__get_repos_root(const char **repos_root,
                                                   &rev,
                                                   &target_url,
                                                   path_or_url,
+                                                  NULL,
                                                   peg_revision,
                                                   peg_revision,
                                                   ctx,
                                                   pool)))
         goto cleanup;
-      
+
       if ((err = svn_ra_get_repos_root(ra_session, repos_root, pool)))
         goto cleanup;
     }
-      
+
  cleanup:
   if (need_wc_cleanup)
     {

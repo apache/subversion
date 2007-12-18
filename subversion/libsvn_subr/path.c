@@ -79,7 +79,7 @@ svn_path_local_style(const char *path, apr_pool_t *pool)
   /* If PATH is a URL, the "local style" is the same as the input. */
   if (svn_path_is_url(path))
     return apr_pstrdup(pool, path);
-                      
+
   if ('/' != SVN_PATH_LOCAL_SEPARATOR)
     {
       char *p = apr_pstrdup(pool, path);

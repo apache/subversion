@@ -134,13 +134,14 @@ svn_client_list2(const char *path_or_url,
 
   /* Get an RA plugin for this filesystem object. */
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &rev,
-                                           &url, path_or_url, peg_revision,
+                                           &url, path_or_url, NULL,
+                                           peg_revision,
                                            revision, ctx, pool));
 
   SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
 
   SVN_ERR(svn_client__path_relative_to_root(&fs_path, url, repos_root,
-                                            ra_session, NULL, pool));
+                                            TRUE, ra_session, NULL, pool));
 
   err = svn_ra_stat(ra_session, "", rev, &dirent, pool);
 

@@ -87,7 +87,6 @@ typedef struct {
      the merge response, we make their URLs relative to this URL, thus giving
      us a path for use in the commit callbacks. */
   const char *base_href;
-  apr_size_t base_len;
 
   svn_revnum_t rev;        /* the new/target revision number for this commit */
 
@@ -255,7 +254,7 @@ static svn_error_t * handle_resource(merge_ctx_t *mc,
     }
 
   /* a collection or regular resource */
-  if (mc->href->len < mc->base_len)
+  if (! svn_path_is_ancestor(mc->base_href, mc->href->data))
     {
       /* ### need something better than APR_EGENERAL */
       return svn_error_createf(APR_EGENERAL, NULL,
@@ -265,10 +264,9 @@ static svn_error_t * handle_resource(merge_ctx_t *mc,
     }
 
   /* given HREF of the form: BASE "/" RELATIVE, extract the relative portion */
-  if (mc->base_len == mc->href->len)
+  relative = svn_path_is_child(mc->base_href, mc->href->data, NULL);
+  if (! relative) /* the paths are equal */
     relative = "";
-  else
-    relative = mc->href->data + mc->base_len + 1;
 
   /* bump the resource */
   relative = svn_path_uri_decode(relative, pool);
@@ -703,7 +701,6 @@ svn_error_t * svn_ra_neon__merge_activity(svn_revnum_t *new_rev,
   mc.pool = pool;
   mc.scratchpool = svn_pool_create(pool);
   mc.base_href = repos_url;
-  mc.base_len = strlen(repos_url);
   mc.rev = SVN_INVALID_REVNUM;
 
   mc.valid_targets = valid_targets;

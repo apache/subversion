@@ -36,9 +36,10 @@ describes what is planned for the release.</p>
   <li>Cyrus SASL support for ra_svn and <tt>svnserve</tt></li>
   <li>Cancellation improvements</li>
   <li>Changelist support</li>
+  <li>Relative and peg URLs in <tt>svn:externals</tt></li>
   <li>FSFS sharding</li>
   <li>Command-line client improvements</li>
-  <li>Improved APIs and language bindings</li>
+  <li>API changes, improvements and language bindings</li>
   <li>Easier to try out experimental <tt>ra_serf</tt> DAV access module</li>
   <li>More than XXX new bug fixes</li>
 </ul>
@@ -67,11 +68,15 @@ by earlier versions.  To upgrade an existing installation, just
 install the newest libraries and binaries on top of the older
 ones.</p>
 
+<p>XXX: Note new FS node-origins index (which lazily populates while
+responding to queries), and new svn-populate-node-origins-index tool.</p>
+
 <p>Subversion 1.5 maintains API/ABI compatibility with earlier
 releases, by only adding new functions.  A program written to the 1.0,
 1.1, 1.2 or 1.3 API can both compile and run using 1.5 libraries.
 However, a program written for 1.5 cannot necessarily compile or run
-against older libraries.</p>
+against older libraries.  However, see the <a href="#apis">API</a>
+section on some clarifications on existing APIs.</p>
 
 <div class="h3" id="wc-and-repos-format-change" title="wc-format-change">
 <h3>Working Copy and Repository Format Changes</h3>
@@ -228,6 +233,147 @@ href="http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt"
 
 </div>  <!-- changelist-support -->
 
+<div class="h3" id="relative-externals" title="relative-externals">
+<h3>Relative peg URLs in <tt>svn:externals</tt></h3>
+
+<p>Two additions to the <tt>svn:externals</tt> feature</p>
+  <ul>
+    <li>
+      <p>
+        The URLs may include peg specifications.  Because the
+        directory a URL refers to with and without a peg revision uses
+        a different lookup and result in different contents, the
+        current format from older versions of Subversion continues to
+        not understand peg revisions.  A new format is introduced to
+        allow peg revisions in URLs.
+      </p>
+      <p>So the old format of</p>
+        <pre>
+          foo             http://example.com/repos/zig
+          foo/bar -r 1234 http://example.com/repos/zag
+        </pre>
+        <p>does not support peg revisions.  In fact, these following
+        externals will not work unless there are directories named
+        <tt>zig@HEAD</tt> and <tt>zag@HEAD</tt>:</p>
+        <pre>
+          foo             http://example.com/repos/zig@HEAD
+          foo/bar -r 1234 http://example.com/repos/zag@HEAD
+        </pre>
+      <p>
+        The new format moves the URL first followed by the directory
+        the external is checked out or exported into</p>
+        <pre>
+          http://example.com/repos/zig foo1
+          -r 1234 http://example.com/repos/zag foo/bar1
+          http://example.com/repos/zig@HEAD foo2
+          -r 1234 http://example.com/repos/zag@HEAD foo/bar2
+        </pre>
+        <p>peg specifications are allowed but not necessary.
+      </p>
+    </li>
+    <li>
+      <p>
+        Up to Subversion 1.4, the URLs in an <tt>svn:externals</tt>
+        specification must be absolute.  Now they can be relative.
+        Four different relative externals are supported.
+      </p>
+      <p>
+        For the following example, assume we have two repositories at
+        <tt>http://example.com/svn/repos-1</tt> and
+        <tt>http://example.com/svn/repos-2</tt>.  We have a checkout
+        of <tt>http://example.com/svn/repos-1/project1/trunk</tt> and
+        the <tt>svn:external</tt> property is set on <tt>trunk</tt>.</p>
+        <ul>
+          <li>
+            <tt>../</tt>
+            <br/>
+            Relative to the directory with the <tt>svn:external</tt>
+            property.  These URLs always begin with the string
+            <tt>../</tt>.
+            <pre>
+              ../../project2/trunk common/project2/trunk
+            </pre>
+            This will extract
+            <tt>http://example.com/svn/repos-1/project2/trunk</tt>
+            into <tt>common/project2/trunk</tt>.  The URL is relative
+            to the directory with the <tt>svn:external</tt>, not the
+            directory where the external is written to disk.
+          </li>
+          <li>
+            <tt>^/</tt>
+            <br/>
+            Relative to the repository root.
+            <pre>
+              ^/project2/trunk common/project2/trunk
+            </pre>
+            This will extract
+            <tt>http://example.com/svn/repos-1/project2/trunk</tt>
+            into <tt>common/project2/trunk</tt>.
+            <br/>
+
+            You can also refer to other repositories easily using
+            repository root relative URLs:
+            <pre>
+              ^/../repos-2/foo/trunk common/foo/trunk
+            </pre>
+            This will extract
+            <tt>http://example.com/svn/repos-2/foo/trunk</tt> into
+            <tt>common/foo/trunk</tt>
+          </li>
+          <li>
+            <tt>//</tt>
+            <br/>
+            Relative to the scheme.  This copies the scheme of the
+            checkout or export URL into the URL in the
+            <tt>svn:external</tt>.  It is useful when the same
+            hostname must the accessed with different scheme's
+            depending upon network location; i.e. clients in the
+            intranet use <tt>http://</tt> while external clients use
+            <tt>svn+ssh://</tt>.
+            <pre>
+              //example.com/svn/repos-1/project2/trunk common/project2/trunk
+            </pre>
+            This will extract
+            <tt>http://example.com/svn/repos-1/project2/trunk</tt>
+            into <tt>common/project2/trunk</tt>.  If the working copy
+            was checked out from
+            <tt>svn+ssh://example.com/svn/repos-1/project1/trunk</tt>
+            then this URL would be
+            <tt>http://example.com/svn/repos-1/project1/trunk</tt>.
+          </li>
+          <li>
+            <tt>/</tt>
+            <br/>
+
+            Server root relative URLs.  This copies the scheme and
+            hostname from the checkout or export URL into the
+            <tt>svn:external</tt> URL.
+            <pre>
+              /svn/repos-1/project2/trunk common/project2/trunk
+            </pre>
+            This will extract
+            <tt>http://example.com/svn/repos-1/project2/trunk</tt>
+            into <tt>common/project2/trunk</tt>.  If the working copy
+            was checked out from
+            <tt>svn+ssh://example.com/svn/repos-1/project1/trunk</tt>
+            then this URL would be
+            <tt>http://example.com/svn/repos-1/project1/trunk</tt>.
+          </li>
+        </ul>
+      <p>
+        Relative URLs are supported in the old <tt>svn:externals</tt>
+        format that do not support peg revisions.
+      </p>
+      <p>
+        When Subversion sees an <tt>svn:externals</tt> without an
+        absolute URL it takes the first argument as a relative URL and
+        the second as the target directory.
+      </p>
+    </li>
+  </ul>
+
+</div>  <!-- relative-externals -->
+
 <div class="h3" id="fsfs-sharding" title="fsfs-sharding">
 <h3>FSFS sharding</h3>
 
@@ -300,10 +446,10 @@ href="http://subversion.tigris.org/issues/show_bug.cgi?id=503">issue
 
 <p>Clients may now perform multiple local copy/move operations on a
 single object in a working copy:</p>
-<blockquote><code><pre>
+<blockquote><pre><code>
 svn mv path1 path2
 svn mv path2 path3
-</pre></code></blockquote>
+</code></pre></blockquote>
 
 </div>  <!-- multi-op-copy-move -->
 
@@ -316,9 +462,9 @@ This mirrors the behavior of standard command-line copy and move tools,
 such as <code>cp</code> and <code>mv</code>.  In practice, this means
 users can take advantage of shell globbing when doing a local copy
 or move:</p>
-<blockquote><code><pre>
+<blockquote><pre><code>
 svn cp *.c dir
-</pre></code></blockquote>
+</code></pre></blockquote>
 
 <p>Multiple source copy/move also works for all previously defined
 copy/move working copy and repository combinations.  This was
@@ -385,12 +531,57 @@ actually stop.</p>
 </div>  <!-- cmdline -->
 
 <div class="h3" id="apis" title="apis">
-<h3>API improvements (<em>client and server</em>)</h3>
+<h3>API changes, improvements and language bindings
+    (<em>client and server</em>)</h3>
 
 <p>If you develop a 3rd-party client application that uses Subversion
-  APIs, you may want to take notice of some new APIs:</p>
+  APIs, you may want to take notice of the following changes and new
+  APIs:</p>
 
 <ul>
+  <li><tt>svn_opt_parse_path()</tt> changes
+    <ul>
+      <li>
+        Since Subversion 1.3, if a path or URL ends in an empty
+        revision suffix '@', then the returned revision type would be
+        different than an unprotected path or URL:
+        <ul>
+          <li>
+            <tt>some/path/to/foo</tt> returns
+            <tt>svn_opt_revision_unspecified</tt>
+          </li>
+          <li>
+            <tt>some/path/to/foo<b>@</b></tt> returns
+            <tt>svn_opt_revision_base</tt>
+          </li>
+          <li>
+            <tt>http://example.com/some/path/to/foo</tt> returns
+            <tt>svn_opt_revision_unspecified</tt>
+          </li>
+          <li>
+            <tt>http://example.com/some/path/to/foo@</tt> returns
+            <tt>svn_opt_revision_head</tt>
+          </li>
+        </ul>
+        Subversion 1.5 fixes this inconsistency, all the above paths
+        and URLs return <tt>svn_opt_revision_unspecified</tt>.
+      </li>
+      <li>
+        Since Subversion 1.2, <tt>svn_opt_parse_path</tt> would always
+        canonicalize the returned path or URL with
+        <tt>svn_path_canonicalize</tt>, even though this is not
+        documented in <tt>subversion/include/svn_opt.h</tt>.  For the
+        relative externals support, uncanonicalized paths need to be
+        returned, otherwise scheme relative URLs,
+        i.e. <tt>//example.com/some/path</tt> would be canonicalized
+        to server root relative URLs <tt>/example.com/some/path</tt>.
+        Users of this function now must ensure that they canonicalize
+        the result of this function if they pass it to any other
+        Subversion functions that expect a canonicalized path or URL.
+      </li>
+    </ul>
+  </li>
+
   <li>XXX: Enumerate specific new API additions (e.g. merge info
     retrieval?)</li>
 

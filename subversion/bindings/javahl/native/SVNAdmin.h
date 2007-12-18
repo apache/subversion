@@ -19,14 +19,11 @@
  * @brief Interface of the class SVNAdmin
  */
 
-#if !defined(AFX_SVNADMIN_H__9AD95B26_47BF_4430_8217_20B87ACCE87B__INCLUDED_)
-#define AFX_SVNADMIN_H__9AD95B26_47BF_4430_8217_20B87ACCE87B__INCLUDED_
-
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
+#ifndef SVNADMIN_H
+#define SVNADMIN_H
 
 #include <jni.h>
+#include "svn_repos.h"
 #include "SVNBase.h"
 #include "Revision.h"
 #include "Outputer.h"
@@ -66,7 +63,11 @@ class SVNAdmin : public SVNBase
   void dispose(jobject jthis);
   static SVNAdmin *getCppObject(jobject jthis);
 
+ private:
+  static svn_error_t *getRevnum(svn_revnum_t *revnum,
+                                const svn_opt_revision_t *revision,
+                                svn_revnum_t youngest, svn_repos_t *repos,
+                                apr_pool_t *pool);
 };
 
-// !defined(AFX_SVNADMIN_H__9AD95B26_47BF_4430_8217_20B87ACCE87B__INCLUDED_)
-#endif
+#endif // SVNADMIN_H

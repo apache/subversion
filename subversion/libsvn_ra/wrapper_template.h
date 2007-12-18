@@ -75,8 +75,8 @@ static svn_error_t *compat_open(void **session_baton,
   callbacks2->progress_func = NULL;
   callbacks2->progress_baton = NULL;
 
-  SVN_ERR(VTBL.open(sess, repos_URL, callbacks2, callback_baton,
-                    config, pool));
+  SVN_ERR(VTBL.open_session(sess, repos_URL, callbacks2, callback_baton,
+                            config, pool));
   *session_baton = sess;
   return SVN_NO_ERROR;
 }

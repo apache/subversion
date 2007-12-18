@@ -20,6 +20,9 @@
 #ifdef SVN_USE_WIN32_CRASHHANDLER
 
 /*** Includes. ***/
+#ifdef APR_HAVE_IPV6
+#include <winsock2.h>
+#endif
 #include <windows.h>
 #include <dbghelp.h>
 #include <stdio.h>
@@ -541,7 +544,7 @@ write_stacktrace(CONTEXT *context, FILE *log_file)
   while (1)
     {
       if (! StackWalk64_(machine, proc, GetCurrentThread(),
-                         &stack_frame, context, NULL, 
+                         &stack_frame, context, NULL,
                          SymFunctionTableAccess64_, SymGetModuleBase64_, NULL))
         {
           break;
@@ -678,7 +681,7 @@ load_dbghelp_dll()
       if (! (MiniDumpWriteDump_ &&
              SymInitialize_ && SymSetOptions_  && SymGetOptions_ &&
              SymCleanup_    && SymGetTypeInfo_ && SymGetLineFromAddr64_ &&
-             SymEnumSymbols_ && SymSetContext_ && SymFromAddr_ && 
+             SymEnumSymbols_ && SymSetContext_ && SymFromAddr_ &&
              SymGetModuleBase64_ && StackWalk64_ &&
              SymFunctionTableAccess64_))
         goto cleanup;

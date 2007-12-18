@@ -51,6 +51,7 @@ typedef struct svn_client__merge_path_t
   apr_hash_t *pre_merge_mergeinfo;      /* mergeinfo on a path prior to a
                                            merge.*/
   svn_boolean_t indirect_mergeinfo;
+  svn_boolean_t scheduled_for_deletion; /* PATH is scheduled for deletion. */
 } svn_client__merge_path_t;
 
 
@@ -82,20 +83,22 @@ svn_client__get_wc_mergeinfo(apr_hash_t **mergeinfo,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
-/* Obtain any mergeinfo for the session-relative path REL_PATH from
-   the repository, and set it in *TARGET_MERGEINFO.
+/* Obtain any mergeinfo for the root-relative repository filesystem path
+   REL_PATH from the repository, and set it in *TARGET_MERGEINFO.
 
    INHERIT indicates whether explicit, explicit or inherited, or only
    inherited mergeinfo for REL_PATH is obtained.
 
-   If there is no mergeinfo available for REL_PATH, set
-   *TARGET_MERGEINFO to NULL. */
+   If there is no mergeinfo available for REL_PATH, or if the server
+   doesn't support a mergeinfo capability and SQUELCH_INCAPABLE is
+   TRUE, set *TARGET_MERGEINFO to NULL. */
 svn_error_t *
 svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
                                 apr_hash_t **target_mergeinfo,
                                 const char *rel_path,
                                 svn_revnum_t rev,
                                 svn_mergeinfo_inheritance_t inherit,
+                                svn_boolean_t squelch_incapable,
                                 apr_pool_t *pool);
 
 /* Retrieve the direct mergeinfo for the TARGET_WCPATH from the WC's
@@ -126,6 +129,25 @@ svn_client__get_wc_or_repos_mergeinfo(apr_hash_t **target_mergeinfo,
                                       svn_client_ctx_t *ctx,
                                       apr_pool_t *pool);
 
+/* Set *MERGEINFO_P to a hash of mergeinfo constructed solely from the
+   natural history of PATH_OR_URL@PEG_REVISION.  RA_SESSION is an RA
+   session whose session URL maps to PATH_OR_URL's URL, or NULL.
+   ADM_ACCESS is a working copy administrative access baton which can
+   be used to fetch information about PATH_OR_URL (if PATH_OR_URL is a
+   working copy path), or NULL.  If RANGE_YOUNGEST and RANGE_OLDEST
+   are valid, use them to bound the revision ranges of returned
+   mergeinfo.  */
+svn_error_t *
+svn_client__get_history_as_mergeinfo(apr_hash_t **mergeinfo_p,
+                                     const char *path_or_url,
+                                     const svn_opt_revision_t *peg_revision,
+                                     svn_revnum_t range_youngest,
+                                     svn_revnum_t range_oldest,
+                                     svn_ra_session_t *ra_session,
+                                     svn_wc_adm_access_t *adm_access,
+                                     svn_client_ctx_t *ctx,
+                                     apr_pool_t *pool);
+
 /* Parse any mergeinfo from the WCPATH's ENTRY and store it in
    MERGEINFO.  If PRISTINE is true parse the pristine mergeinfo,
    working otherwise. If no record of any mergeinfo exists, set
@@ -140,7 +162,7 @@ svn_client__parse_mergeinfo(apr_hash_t **mergeinfo,
                             apr_pool_t *pool);
 
 /* Write MERGEINFO into the WC for WCPATH.  If MERGEINFO is NULL,
-   remove any SVN_PROP_MERGE_INFO for WCPATH.  If MERGEINFO is empty,
+   remove any SVN_PROP_MERGEINFO for WCPATH.  If MERGEINFO is empty,
    record an empty property value (e.g. ""). */
 svn_error_t *
 svn_client__record_wc_mergeinfo(const char *wcpath,
@@ -157,27 +179,25 @@ svn_client__record_wc_mergeinfo(const char *wcpath,
    TARGET_PATH and WC_ELISION_LIMIT_PATH, if it exists, must both be absolute
    or relative to the working directory.
 
-   If TARGET_WCPATH's mergeinfo and its nearest ancestor's mergeinfo
-   differ by paths existing only in TARGET_PATH's mergeinfo that map to
-   empty revision ranges, then the mergeinfo between the two is considered
-   equivalent and elision occurs.  If the mergeinfo between the two still
-   differs then partial elision occurs: only the paths mapped to empty
-   revision ranges in TARGET_WCPATH's mergeinfo elide.
+   Elision occurs if:
 
-   If TARGET_WCPATH's mergeinfo and its nearest ancestor's mergeinfo
-   differ by paths existing only in the ancestor's mergeinfo that map to
-   empty revision ranges, then the mergeinfo between the two is considered
-   equivalent and elision occurs.
+     A) WCPATH has empty mergeinfo and no parent path with explicit mergeinfo
+        can be found in either the WC or the repository (WC_ELISION_LIMIT_PATH
+        must be NULL for this to occur).
 
-   If TARGET_WCPATH's mergeinfo consists only of paths mapped to empty
-   revision ranges and none of these paths exist in TARGET_WCPATH's nearest
-   ancestor, then elision occurs.
+     B) WCPATH has empty mergeinfo and its nearest parent also has empty
+        mergeinfo.
 
-   If TARGET_WCPATH's mergeinfo consists only of paths mapped to empty
-   revision ranges and TARGET_WCPATH has no working copy or repository
-   ancestor with mergeinfo (WC_ELISION_LIMIT_PATH must be NULL to ensure the
-   repository is checked), then elision occurs.
- */
+     C) WCPATH has the same mergeinfo as its nearest parent when that parent's
+        mergeinfo is adjusted for the path difference between the two, e.g.:
+
+                                WCPATH's                          Parent's
+                    WCPATH's    Nearest    Parent's   Path        Adjusted
+        WCPATH      mergeinfo   parent     Mergeinfo  Difference  Mergeinfo
+        -------     ---------   ---------  ---------  ----------  ---------
+        A_COPY/D/H  '/A/D/H:3'  A_COPY     '/A:3'     'D/H'       '/A/D/H:3'
+
+   If Elision occurs remove the svn:mergeinfo property from TARGET_WCPATH. */
 svn_error_t *
 svn_client__elide_mergeinfo(const char *target_wcpath,
                             const char *wc_elision_limit_path,
@@ -209,14 +229,6 @@ svn_client__elide_mergeinfo_for_tree(apr_hash_t *children_with_mergeinfo,
                                      svn_wc_adm_access_t *adm_access,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool);
-
-/* Get the repository URL and revision number for which to request
-   mergeinfo for a WC entry, which sometimes needs to be the entry's
-   copyfrom info rather than its actual URL and revision. */
-void
-svn_client__derive_mergeinfo_location(const char **url,
-                                      svn_revnum_t *rev,
-                                      const svn_wc_entry_t *entry);
 
 
 #endif /* SVN_LIBSVN_CLIENT_MERGEINFO_H */

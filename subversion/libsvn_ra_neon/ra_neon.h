@@ -107,7 +107,7 @@ typedef struct {
      keys and values must have at least that lifetime.  Most likely
      the keys and values are constants anyway (and sufficiently
      well-informed internal code may just compare against those
-     constants' addresses, therefore). */ 
+     constants' addresses, therefore). */
   apr_hash_t *capabilities;
 } svn_ra_neon__session_t;
 
@@ -707,7 +707,6 @@ enum {
   ELEM_checked_in,
   ELEM_collection,
   ELEM_comment,
-  ELEM_no_custom_revprops,
   ELEM_revprop,
   ELEM_creationdate,
   ELEM_creator_displayname,
@@ -956,6 +955,7 @@ svn_ra_neon__get_locations(svn_ra_session_t *session,
 svn_error_t *
 svn_ra_neon__get_location_segments(svn_ra_session_t *session,
                                    const char *path,
+                                   svn_revnum_t peg_revision,
                                    svn_revnum_t start_rev,
                                    svn_revnum_t end_rev,
                                    svn_location_segment_receiver_t receiver,
@@ -1009,6 +1009,19 @@ svn_ra_neon__replay(svn_ra_session_t *session,
                     const svn_delta_editor_t *editor,
                     void *edit_baton,
                     apr_pool_t *pool);
+
+/*
+ * Implements the replay_range RA layer function. */
+svn_error_t *
+svn_ra_neon__replay_range(svn_ra_session_t *session,
+                          svn_revnum_t start_revision,
+                          svn_revnum_t end_revision,
+                          svn_revnum_t low_water_mark,
+                          svn_boolean_t send_deltas,
+                          svn_ra_replay_revstart_callback_t revstart_func,
+                          svn_ra_replay_revfinish_callback_t revfinish_func,
+                          void *replay_baton,
+                          apr_pool_t *pool);
 
 /*
  * Implements the has_capability RA layer function. */

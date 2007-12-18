@@ -22,6 +22,7 @@
 #include "SVNAdmin.h"
 #include "SVNClient.h"
 #include "JNIUtil.h"
+#include "svn_error_codes.h"
 #include "svn_repos.h"
 #include "svn_config.h"
 #include "svn_props.h"
@@ -416,6 +417,36 @@ void SVNAdmin::setRevProp(const char *path, Revision &revision,
   SVN_JNI_ERR(err, );
 }
 
+/* Set *REVNUM to the revision specified by REVISION (or to
+   SVN_INVALID_REVNUM if that has the type 'unspecified'),
+   possibly making use of the YOUNGEST revision number in REPOS. */
+svn_error_t *
+SVNAdmin::getRevnum(svn_revnum_t *revnum, const svn_opt_revision_t *revision,
+                    svn_revnum_t youngest, svn_repos_t *repos,
+                    apr_pool_t *pool)
+{
+  if (revision->kind == svn_opt_revision_number)
+    *revnum = revision->value.number;
+  else if (revision->kind == svn_opt_revision_head)
+    *revnum = youngest;
+  else if (revision->kind == svn_opt_revision_date)
+    SVN_ERR(svn_repos_dated_revision
+            (revnum, repos, revision->value.date, pool));
+  else if (revision->kind == svn_opt_revision_unspecified)
+    *revnum = SVN_INVALID_REVNUM;
+  else
+    return svn_error_create
+      (SVN_ERR_INCORRECT_PARAMS, NULL, _("Invalid revision specifier"));
+
+  if (*revnum > youngest)
+    return svn_error_createf
+      (SVN_ERR_INCORRECT_PARAMS, NULL,
+       _("Revisions must not be greater than the youngest revision (%ld)"),
+       youngest);
+
+  return SVN_NO_ERROR;
+}
+
 void SVNAdmin::verify(const char *path, Outputer &messageOut,
                       Revision &revisionStart, Revision &revisionEnd)
 {
@@ -423,6 +454,7 @@ void SVNAdmin::verify(const char *path, Outputer &messageOut,
   SVN_JNI_NULL_PTR_EX(path, "path", );
   path = svn_path_internal_style(path, requestPool.pool());
   svn_repos_t *repos;
+  svn_revnum_t lower = SVN_INVALID_REVNUM, upper = SVN_INVALID_REVNUM;
   svn_revnum_t youngest;
 
   /* This whole process is basically just a dump of the repository
@@ -430,9 +462,34 @@ void SVNAdmin::verify(const char *path, Outputer &messageOut,
   SVN_JNI_ERR(svn_repos_open(&repos, path, requestPool.pool()), );
   SVN_JNI_ERR(svn_fs_youngest_rev(&youngest, svn_repos_fs (repos),
                                   requestPool.pool()), );
+
+  /* Find the revision numbers at which to start and end. */
+  SVN_JNI_ERR(getRevnum(&lower, revisionStart.revision(),
+                        youngest, repos, requestPool.pool()), );
+  SVN_JNI_ERR(getRevnum(&upper, revisionEnd.revision(),
+                        youngest, repos, requestPool.pool()), );
+
+  // Fill in implied revisions if necessary.
+  if (lower == SVN_INVALID_REVNUM)
+    {
+      lower = 0;
+      upper = youngest;
+    }
+  else if (upper == SVN_INVALID_REVNUM)
+    {
+      upper = lower;
+    }
+
+  if (lower > upper)
+    SVN_JNI_ERR(svn_error_create
+      (SVN_ERR_INCORRECT_PARAMS, NULL,
+       _("Start revision cannot be higher than end revision")), );
+
   SVN_JNI_ERR(svn_repos_dump_fs2(repos, NULL,
                                  messageOut.getStream(requestPool),
-                                 0, youngest, FALSE, TRUE, NULL, NULL,
+                                 lower, upper, FALSE /* incremental */,
+                                 TRUE /* use deltas */,
+                                 NULL, NULL /* cancel callback/baton */,
                                  requestPool.pool()), );
 }
 

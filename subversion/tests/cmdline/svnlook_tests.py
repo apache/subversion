@@ -239,16 +239,10 @@ def test_print_property_diffs(sbox):
 
   # commit the change
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m', 'log msg', iota_path)
 
   # Grab the diff
   expected_output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                            '--username',
-                                                            svntest.main.wc_author,
-                                                            '--password',
-                                                            svntest.main.wc_passwd,
                                                             'diff',
                                                             '-r', 'PREV',
                                                             iota_path)
@@ -413,19 +407,116 @@ def limit_history(sbox):
   sbox.build(create_wc=False)
   repo_url = sbox.repo_url
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'mv', '-m', 'log msg',
                                      repo_url + "/iota", repo_url + "/iota2")
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'mv', '-m', 'log msg',
                                      repo_url + "/A/mu", repo_url + "/iota")
   history = run_svnlook("history", "--limit=1", sbox.repo_dir)
   # Ignore the two lines of header, and verify expected number of items.
   if len(history[2:]) != 1:
     raise svntest.Failure("Output not limited to expected number of items")
+
+#----------------------------------------------------------------------
+def diff_ignore_whitespace(sbox):
+  "test 'svnlook diff -x -b' and 'svnlook diff -x -w'"
+
+  sbox.build()
+  repo_dir = sbox.repo_dir
+  wc_dir = sbox.wc_dir
+
+  # Make whitespace-only changes to mu
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  svntest.main.file_write(mu_path, "This  is   the    file     'mu'.\n", "wb")
+
+  # Created expected output tree for 'svn ci'
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    })
+
+  # Create expected status tree; all local revisions should be at 1,
+  # but mu should be at revision 2.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', wc_rev=2)
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+  # Check the output of 'svnlook diff -x --ignore-space-change' on mu.
+  # It should not print anything.
+  output = run_svnlook('diff', '-r2', '-x', '--ignore-space-change',
+                       repo_dir, '/A/mu')
+  if output != []:
+    raise svntest.Failure
+
+  # Check the output of 'svnlook diff -x --ignore-all-space' on mu.
+  # It should not print anything.
+  output = run_svnlook('diff', '-r2', '-x', '--ignore-all-space',
+                       repo_dir, '/A/mu')
+  if output != []:
+    raise svntest.Failure
+
+#----------------------------------------------------------------------
+def diff_ignore_eolstyle(sbox):
+  "test 'svnlook diff -x --ignore-eol-style'"
+
+  sbox.build()
+  repo_dir = sbox.repo_dir
+  wc_dir = sbox.wc_dir
+
+  if os.name == 'nt':
+    crlf = '\n'
+  else:
+    crlf = '\r\n'
+
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  rev = 1
+  # do the --ignore-eol-style test for each eol-style
+  for eol, eolchar in zip(['CRLF', 'CR', 'native', 'LF'],
+                          [crlf, '\015', '\n', '\012']):
+    # rewrite file mu and set the eol-style property.
+    svntest.main.file_write(mu_path, "This is the file 'mu'." + eolchar, 'wb')
+    svntest.main.run_svn(None, 'propset', 'svn:eol-style', eol, mu_path)
+
+    # Created expected output tree for 'svn ci'
+    expected_output = svntest.wc.State(wc_dir, {
+      'A/mu' : Item(verb='Sending'),
+      })
+
+    # Create expected status tree; all local revisions should be at
+    # revision 1, but mu should be at revision rev + 1.
+    expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+    expected_status.tweak('A/mu', wc_rev=rev + 1)
+
+    svntest.actions.run_and_verify_commit(wc_dir,
+                                          expected_output,
+                                          expected_status,
+                                          None,
+                                          None, None,
+                                          None, None,
+                                          wc_dir)
+
+    # Grab the diff
+    expected_output, err = \
+        svntest.actions.run_and_verify_svn(None, None, [], 'diff',
+                                           '-r', 'PREV', '-x',
+                                           '--ignore-eol-style', mu_path)
+
+    output = run_svnlook('diff', '-r', str(rev + 1), '-x',
+                         '--ignore-eol-style', repo_dir, '/A/mu')
+    rev += 1
+
+    # replace wcdir/A/mu with A/mu in expected_output
+    for i in xrange(len(expected_output)):
+      expected_output[i] = expected_output[i].replace(mu_path, 'A/mu')
+
+    svntest.verify.compare_and_display_lines('', '', expected_output, output)
 
 
 ########################################################################
@@ -441,6 +532,8 @@ test_list = [ None,
               changed_copy_info,
               tree_non_recursive,
               limit_history,
+              diff_ignore_whitespace,
+              diff_ignore_eolstyle,
              ]
 
 if __name__ == '__main__':

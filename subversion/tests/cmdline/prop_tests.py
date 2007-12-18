@@ -22,6 +22,7 @@ import sys, re, os, stat
 # Our testing module
 import svntest
 
+from svntest.main import SVN_PROP_MERGE_INFO
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -279,8 +280,6 @@ def remove_props(sbox):
 
   # Commit the file
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'ci', '-m', 'logmsg', iota_path)
 
   # Now, remove the property
@@ -318,8 +317,6 @@ def update_conflict_props(sbox):
 
   # Commit the file and directory
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'ci', '-m', 'logmsg', wc_dir)
 
   # Update to rev 1
@@ -357,7 +354,7 @@ def update_conflict_props(sbox):
 
   if len(extra_files) != 0:
     print "didn't get expected conflict files"
-    raise svntest.actions.SVNUnexpectedOutput
+    raise svntest.verify.SVNUnexpectedOutput
 
   # Resolve the conflicts
   svntest.main.run_svn(None, 'resolved', mu_path)
@@ -383,23 +380,17 @@ def commit_conflict_dirprops(sbox):
 
   # Commit the file and directory
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'ci', '-m', 'r2', wc_dir)
 
   # Update to rev 1
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'up', '-r', '1', wc_dir)
 
   # Add conflicting properties
   svntest.main.run_svn(None, 'propset', 'foo', 'eek', wc_dir)
 
   svntest.actions.run_and_verify_commit(wc_dir, None, None,
-                                        "(Your file or directory '.*' is " \
-                                        "probably out-of-date)|" \
-                                        "(Out of date: '' in transaction)",
+                                        "out[- ]of[- ]date",
                                         None, None, None, None,
                                         wc_dir)
 
@@ -427,8 +418,6 @@ def commit_replacement_props(sbox):
   # Commit (### someday use run_and_verify_commit for better coverage)
   svntest.actions.run_and_verify_svn("Error in property commit",
                                      None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m', 'logmsg', wc_dir)
 
   # Schedule both files for deletion
@@ -485,8 +474,6 @@ def revert_replacement_props(sbox):
 
   # Commit rev 2. (### someday use run_and_verify_commit for better coverage)
   svntest.actions.run_and_verify_svn("Error in property commit", None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m', 'logmsg', wc_dir)
 
   # Schedule both files for deletion
@@ -566,6 +553,11 @@ def inappropriate_props(sbox):
                                      svntest.verify.AnyOutput, 'propset',
                                      'svn:eol-style', 'native', A_path)
 
+  svntest.actions.run_and_verify_svn('Invalid svn:eol-style', None,
+                                     svntest.verify.AnyOutput, 'propset',
+                                     'svn:eol-style', 'invalid value',
+                                     os.path.join(A_path, 'mu'))
+
   svntest.actions.run_and_verify_svn('Illegal target', None,
                                      svntest.verify.AnyOutput, 'propset',
                                      'svn:mime-type', 'image/png', A_path)
@@ -589,15 +581,13 @@ def inappropriate_props(sbox):
 
   svntest.actions.run_and_verify_svn('Illegal target', None,
                                      svntest.verify.AnyOutput, 'propset',
-                                     'svn:date',
-				     'Tue Jan 19 04:14:07 2038',
-				     iota_path)
+                                     'svn:date', 'Tue Jan 19 04:14:07 2038',
+                                     iota_path)
 
   svntest.actions.run_and_verify_svn('Illegal target', None,
                                      svntest.verify.AnyOutput, 'propset',
                                      'svn:original-date',
-				     'Thu Jan  1 01:00:00 1970',
-				     iota_path)
+                                     'Thu Jan  1 01:00:00 1970', iota_path)
 
   # Status unchanged
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -609,8 +599,8 @@ def inappropriate_props(sbox):
   expected_status.tweak('A/B/E/alpha', 'A/B/E/beta', status=' M')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-# Issue #920. Don't allow setting of svn:eol-style on binary files or files
-# with inconsistent eol types.
+  # Issue #920. Don't allow setting of svn:eol-style on binary files or files
+  # with inconsistent eol types.
 
   path = os.path.join(wc_dir, 'binary')
   svntest.main.file_append(path, "binary")
@@ -651,8 +641,8 @@ def inappropriate_props(sbox):
                                      'propset', 'svn:eol-style',
                                      'CR', path)
 
-# Issue #2065. Do allow setting of svn:eol-style on binary files or files
-# with inconsistent eol types if --force is passed.
+  # Issue #2065. Do allow setting of svn:eol-style on binary files or files
+  # with inconsistent eol types if --force is passed.
 
   path = os.path.join(wc_dir, 'binary')
   svntest.main.file_append(path, "binary")
@@ -679,7 +669,55 @@ def inappropriate_props(sbox):
                                      'svn:eol-style', 'CR',
                                      path)
 
+  # Prevent setting of svn:mergeinfo prop values that are...
+  path = os.path.join(wc_dir, 'A', 'D')
 
+  # ...grammatically incorrect
+  svntest.actions.run_and_verify_svn('illegal grammar', None,
+                                     "svn: Pathname not terminated by ':'\n",
+                                     'propset', SVN_PROP_MERGE_INFO, '/trunk',
+                                     path)
+  svntest.actions.run_and_verify_svn('illegal grammar', None,
+                                     "svn: Invalid revision number found "
+                                      "parsing 'one'\n",
+                                     'propset', SVN_PROP_MERGE_INFO,
+                                     '/trunk:one', path)
+
+  # ...contain overlapping revision ranges
+  svntest.actions.run_and_verify_svn('overlapping ranges', None,
+                                     "svn: Parsing of overlapping revision "
+                                      "ranges '9-20' and '18-22' is not "
+                                      "supported\n",
+                                     'propset', SVN_PROP_MERGE_INFO,
+                                     '/branch:5-7,9-20,18-22', path)
+
+  svntest.actions.run_and_verify_svn('overlapping ranges', None,
+                                     "svn: Parsing of overlapping revision "
+                                      "ranges '3' and '3' is not supported\n",
+                                     'propset', SVN_PROP_MERGE_INFO,
+                                     '/branch:3,3', path)
+
+  # ...contain unordered revision ranges
+  svntest.actions.run_and_verify_svn('unordered ranges', None,
+                                     "svn: Unable to parse unordered "
+                                      "revision ranges '5' and '2-3'\n",
+                                     'propset', SVN_PROP_MERGE_INFO,
+                                     '/featureX:5,2-3,9', path)
+
+  # ...contain revision ranges with start revisions greater than or
+  #    equal to end revisions.
+  svntest.actions.run_and_verify_svn('range start >= range end', None,
+                                     "svn: Unable to parse reversed "
+                                      "revision range '20-5'\n",
+                                     'propset', SVN_PROP_MERGE_INFO,
+                                     '/featureX:4,20-5', path)
+
+  # ...contain paths mapped to empty revision ranges
+  svntest.actions.run_and_verify_svn('empty ranges', None,
+                                     "svn: Mergeinfo for '/trunk' maps to "
+                                      "an empty revision range\n",
+                                     'propset', SVN_PROP_MERGE_INFO,
+                                     '/trunk:', path)
 
 #----------------------------------------------------------------------
 
@@ -720,8 +758,6 @@ def copy_inherits_special_props(sbox):
 
   # Commit the file
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'ci', '-m', 'create file and set svn:mime-type',
                        wc_dir)
 
@@ -738,7 +774,7 @@ def copy_inherits_special_props(sbox):
     print "svn pg svn:mime-type output does not match expected."
     print "Expected standard output: ", expected_stdout, "\n"
     print "Actual standard output: ", actual_stdout, "\n"
-    raise svntest.actions.SVNUnexpectedOutput
+    raise svntest.verify.SVNUnexpectedOutput
 
   # Check the svn:executable value.
   # The value of the svn:executable property is now always forced to '*'
@@ -752,7 +788,7 @@ def copy_inherits_special_props(sbox):
       print "svn pg svn:executable output does not match expected."
       print "Expected standard output: ", expected_stdout, "\n"
       print "Actual standard output: ", actual_stdout, "\n"
-      raise svntest.actions.SVNUnexpectedOutput
+      raise svntest.verify.SVNUnexpectedOutput
 
 #----------------------------------------------------------------------
 
@@ -763,8 +799,6 @@ def revprop_change(sbox):
 
   # First test the error when no revprop-change hook exists.
   svntest.actions.run_and_verify_svn(None, None, '.*pre-revprop-change',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'propset', '--revprop', '-r', '0',
                                      'cash-sound', 'cha-ching!', sbox.wc_dir)
 
@@ -772,8 +806,6 @@ def revprop_change(sbox):
   message = 'revprop_change test'
   svntest.actions.disable_revprop_changes(sbox.repo_dir, message)
   svntest.actions.run_and_verify_svn(None, None, '.*' + message,
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'propset', '--revprop', '-r', '0',
                                      'cash-sound', 'cha-ching!', sbox.wc_dir)
 
@@ -781,28 +813,18 @@ def revprop_change(sbox):
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'propset', '--revprop', '-r', '0',
                                      'cash-sound', 'cha-ching!', sbox.wc_dir)
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'propget', '--revprop', '-r', '0',
                                      'cash-sound', sbox.wc_dir)
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'propdel', '--revprop', '-r', '0',
                                      'cash-sound', sbox.wc_dir)
 
   actual_stdout, actual_stderr = svntest.main.run_svn(None,
-                                                      '--username',
-                                                      svntest.main.wc_author,
-                                                      '--password',
-                                                      svntest.main.wc_passwd,
                                                       'pg', '--revprop',
                                                       '-r', '0',
                                                       'cash-sound',
@@ -1064,8 +1086,6 @@ def recursive_base_wc_ops(sbox):
   svntest.main.run_svn(None, 'propset', 'p', 'old-del', fp_del)
   svntest.main.run_svn(None, 'propset', 'p', 'old-keep',fp_keep)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'commit', '-m', '', wc_dir)
   svntest.main.file_append(fp_add, 'blah')
   svntest.main.run_svn(None, 'add', fp_add)
@@ -1132,8 +1152,6 @@ def url_props_ops(sbox):
 
   # Commit
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'ci', '-m', 'logmsg', sbox.wc_dir)
 
   # Add a few more properties
@@ -1142,46 +1160,32 @@ def url_props_ops(sbox):
 
   # Commit again
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'ci', '-m', 'logmsg', sbox.wc_dir)
 
   # Test propget
   svntest.actions.run_and_verify_svn(None, [ propval1 + '\n' ], [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'propget', prop1, iota_url)
   svntest.actions.run_and_verify_svn(None, [ propval1 + '\n' ], [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'propget', prop1, A_url)
 
   # Test normal proplist
   output, errput = svntest.main.run_svn(None,
-                                        '--username', svntest.main.wc_author,
-                                        '--password', svntest.main.wc_passwd,
                                         'proplist', iota_url)
   verify_output([ prop1, prop2, 'Properties on ' ],
                 output, errput)
 
   output, errput = svntest.main.run_svn(None,
-                                        '--username', svntest.main.wc_author,
-                                        '--password', svntest.main.wc_passwd,
                                         'proplist', A_url)
   verify_output([ prop1, prop2, 'Properties on ' ],
                 output, errput)
 
   # Test verbose proplist
   output, errput = svntest.main.run_svn(None,
-                                        '--username', svntest.main.wc_author,
-                                        '--password', svntest.main.wc_passwd,
                                         'proplist', '-v', iota_url)
   verify_output([ prop1 + ' : ' + propval1, prop2 + ' : ' + propval2,
                   'Properties on ' ], output, errput)
 
   output, errput = svntest.main.run_svn(None,
-                                        '--username', svntest.main.wc_author,
-                                        '--password', svntest.main.wc_passwd,
                                         'proplist', '-v', A_url)
   verify_output([ prop1 + ' : ' + propval1, prop2 + ' : ' + propval2,
                   'Properties on ' ], output, errput)
@@ -1190,20 +1194,12 @@ def url_props_ops(sbox):
   svntest.main.use_editor('foo_to_bar')
   propval1 = propval1.replace('foo', 'bar')
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'propedit', prop1, '-m', 'editlog', iota_url)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'propedit', prop1, '-m', 'editlog', A_url)
   svntest.actions.run_and_verify_svn(None, [ propval1 + '\n' ], [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'propget', prop1, iota_url)
   svntest.actions.run_and_verify_svn(None, [ propval1 + '\n' ], [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'propget', prop1, A_url)
 
   # Edit without actually changing the property
@@ -1212,8 +1208,6 @@ def url_props_ops(sbox):
                                      "No changes to property '%s' on '.*'"
                                        % prop1,
                                      [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'propedit', prop1, '-m', 'nocommit',
                                      iota_url)
 
@@ -1317,8 +1311,6 @@ def props_on_replaced_file(sbox):
   svntest.main.run_svn(None, 'propset', 'red', 'rojo', iota_path)
   svntest.main.run_svn(None, 'propset', 'blue', 'lagoon', iota_path)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'ci', '-m', 'log message', wc_dir)
 
   # replace iota_path
@@ -1361,8 +1353,6 @@ def depthy_wc_proplist(sbox):
 
   # Commit.
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'ci', '-m', 'log message', wc_dir)
 
   # Test depth-empty proplist.
@@ -1410,8 +1400,6 @@ def depthy_url_proplist(sbox):
 
   # Test depth-empty proplist.
   output, errput = svntest.main.run_svn(None,
-                                        '--username', svntest.main.wc_author,
-                                        '--password', svntest.main.wc_passwd,
                                         'proplist', '--depth', 'empty',
                                         '-v', repo_url)
   verify_output([ 'prop1', 'Properties on ' ],
@@ -1419,8 +1407,6 @@ def depthy_url_proplist(sbox):
 
   # Test depth-files proplist.
   output, errput = svntest.main.run_svn(None,
-                                        '--username', svntest.main.wc_author,
-                                        '--password', svntest.main.wc_passwd,
                                         'proplist', '--depth', 'files',
                                         '-v', repo_url)
   verify_output([ 'prop1', 'prop2', 'Properties on ', 'Properties on ' ],
@@ -1428,8 +1414,6 @@ def depthy_url_proplist(sbox):
 
   # Test depth-immediates proplist.
   output, errput = svntest.main.run_svn(None,
-                                        '--username', svntest.main.wc_author,
-                                        '--password', svntest.main.wc_passwd,
                                         'proplist', '--depth',
                                         'immediates', '-v', repo_url)
   verify_output([ 'prop1', 'prop2', 'prop3' ] + ['Properties on '] * 3,
@@ -1437,8 +1421,6 @@ def depthy_url_proplist(sbox):
 
   # Test depth-infinity proplist.
   output, errput = svntest.main.run_svn(None,
-                                        '--username', svntest.main.wc_author,
-                                        '--password', svntest.main.wc_passwd,
                                         'proplist', '--depth',
                                         'infinity', '-v', repo_url)
   verify_output([ 'prop1', 'prop2', 'prop3', 'prop4' ] + ['Properties on '] * 4,
@@ -1471,15 +1453,11 @@ def invalid_propnames(sbox):
                                      'propset', propname, propval)
 
   svntest.actions.run_and_verify_svn(None, None, expected_stderr,
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'commit', '--with-revprop',
                                      '='.join([propname, propval]))
   # Now swap them: --with-revprop should accept propname as a property
   # value; no concept of validity there.
   svntest.actions.run_and_verify_svn(None, [], [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'commit', '--with-revprop',
                                      '='.join([propval, propname]))
 

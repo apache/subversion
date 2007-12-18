@@ -19,6 +19,7 @@
 
 
 #define APR_WANT_STRFUNC
+#include <apr.h>
 #include <apr_want.h>
 
 #include <serf.h>
@@ -123,7 +124,7 @@ svn_ra_serf__conn_closed(serf_connection_t *conn,
   if (our_conn->session->auth_protocol)
     {
       our_conn->session->auth_protocol->init_conn_func(our_conn->session,
-                                                       our_conn, 
+                                                       our_conn,
                                                        our_conn->session->pool);
     }
 }
@@ -275,8 +276,14 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
     {
       serf_bucket_headers_setn(hdrs_bkt, "Content-Type", content_type);
     }
+
+  /* Setup server authorization headers */
   if (conn->session->auth_protocol)
     conn->session->auth_protocol->setup_request_func(conn, hdrs_bkt);
+
+  /* Setup proxy authorization headers */
+  if (conn->session->proxy_auth_protocol)
+    conn->session->proxy_auth_protocol->setup_request_func(conn, hdrs_bkt);
 
   /* Set up SSL if we need to */
   if (conn->using_ssl)
@@ -296,6 +303,17 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
 #endif
         }
     }
+
+  /* Set up Proxy settings */
+#if SERF_VERSION_AT_LEAST(0,1,3)
+  if (conn->session->using_proxy)
+    {
+      char *root = apr_uri_unparse(conn->session->pool,
+                                   &conn->session->repos_url, 
+                                   APR_URI_UNP_OMITPATHINFO);
+      serf_bucket_request_set_root(*req_bkt, root);
+    }
+#endif
 
   if (ret_hdrs_bkt)
     {
@@ -344,6 +362,7 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
   return SVN_NO_ERROR;
 }
 
+#if ! SERF_VERSION_AT_LEAST(0, 1, 3)
 apr_status_t
 svn_ra_serf__is_conn_closing(serf_bucket_t *response)
 {
@@ -359,6 +378,7 @@ svn_ra_serf__is_conn_closing(serf_bucket_t *response)
 
   return APR_EOF;
 }
+#endif
 
 /*
  * Expat callback invoked on a start element tag for an error response.
@@ -691,12 +711,6 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
 
       ctx->status = sl.code;
       ctx->reason = sl.reason;
-
-      status = svn_ra_serf__is_conn_closing(response);
-      if (status == SERF_ERROR_CLOSING)
-        {
-          serf_connection_reset(serf_request_get_conn(request));
-        }
     }
 
   return status;
@@ -885,6 +899,7 @@ svn_ra_serf__handle_server_error(serf_request_t *request,
   status = svn_ra_serf__handle_discard_body(request, response,
                                             &server_err, pool);
 
+#if ! SERF_VERSION_AT_LEAST(0, 1, 3)
   if (APR_STATUS_IS_EOF(status))
     {
       status = svn_ra_serf__is_conn_closing(response);
@@ -893,6 +908,7 @@ svn_ra_serf__handle_server_error(serf_request_t *request,
           serf_connection_reset(serf_request_get_conn(request));
         }
     }
+#endif
 
   return server_err.error;
 }
@@ -974,12 +990,12 @@ handle_response(serf_request_t *request,
 
   ctx->conn->last_status_code = sl.code;
 
-  if (sl.code == 401)
+  if (sl.code == 401 || sl.code == 407)
     {
-      /* 401 Authorization required */
+      /* 401 Authorization or 407 Proxy-Authentication required */
       svn_error_t *err;
 
-      err = svn_ra_serf__handle_auth(ctx->session, ctx->conn,
+      err = svn_ra_serf__handle_auth(sl.code, ctx->session, ctx->conn,
                                      request, response, pool);
       if (err)
         {
@@ -989,9 +1005,9 @@ handle_response(serf_request_t *request,
         }
       else
         {
-          status = svn_ra_serf__handle_discard_body(request, response, NULL, 
+          status = svn_ra_serf__handle_discard_body(request, response, NULL,
                                                     pool);
-          /* At this time we might not have received the whole response from 
+          /* At this time we might not have received the whole response from
              the server. If that's the case, don't setup a new request now
              but wait till we retry the request later. */
           if (! APR_STATUS_IS_EAGAIN(status))
@@ -1020,10 +1036,12 @@ handle_response(serf_request_t *request,
                                      pool);
     }
 
+#if ! SERF_VERSION_AT_LEAST(0, 1, 3)
   if (APR_STATUS_IS_EOF(status))
     {
       status = svn_ra_serf__is_conn_closing(response);
     }
+#endif
 
   return status;
 }
@@ -1175,7 +1193,7 @@ svn_ra_serf__discover_root(const char **vcc_url,
       return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                               _("The OPTIONS response did not include the "
                                 "requested version-controlled-configuration "
-                                "value."));
+                                "value"));
     }
 
   /* Store our VCC in our cache. */

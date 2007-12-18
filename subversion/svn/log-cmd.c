@@ -499,6 +499,16 @@ svn_cl__log(apr_getopt_t *os,
 
   target = APR_ARRAY_IDX(targets, 0, const char *);
 
+  /* Determine if they really want a two-revision range. */
+  if (opt_state->used_change_arg)
+    {
+      if (opt_state->start_revision.value.number < 
+          opt_state->end_revision.value.number)
+        opt_state->start_revision = opt_state->end_revision;
+      else
+        opt_state->end_revision = opt_state->start_revision;
+    }
+
   /* Strip peg revision if targets contains an URI. */
   SVN_ERR(svn_opt_parse_path(&peg_revision, &true_path, target, pool));
   APR_ARRAY_IDX(targets, 0, const char *) = true_path;

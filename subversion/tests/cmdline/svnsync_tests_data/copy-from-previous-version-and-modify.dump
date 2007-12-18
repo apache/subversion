@@ -141,6 +141,7 @@ Node-kind: file
 Node-action: add
 Node-copyfrom-rev: 2
 Node-copyfrom-path: trunk/file.txt
+Text-copy-source-md5: 9f089b639127e2f5a79c4eda189678d6
 Text-content-length: 28
 Text-content-md5: 7b4d0f5ac875af39d2ee3a67798f5754
 Content-length: 28

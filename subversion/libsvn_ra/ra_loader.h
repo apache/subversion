@@ -48,12 +48,12 @@ typedef struct svn_ra__vtable_t {
 
   /* All fields in SESSION, except priv, have been initialized by the
      time this is called.  SESSION->priv may be set by this function. */
-  svn_error_t *(*open)(svn_ra_session_t *session,
-                       const char *repos_URL,
-                       const svn_ra_callbacks2_t *callbacks,
-                       void *callback_baton,
-                       apr_hash_t *config,
-                       apr_pool_t *pool);
+  svn_error_t *(*open_session)(svn_ra_session_t *session,
+                               const char *repos_URL,
+                               const svn_ra_callbacks2_t *callbacks,
+                               void *callback_baton,
+                               apr_hash_t *config,
+                               apr_pool_t *pool);
   /* URL is guaranteed to have what get_repos_root() returns as a prefix. */
   svn_error_t *(*reparent)(svn_ra_session_t *session,
                            const char *url,
@@ -190,6 +190,7 @@ typedef struct svn_ra__vtable_t {
                                 apr_pool_t *pool);
   svn_error_t *(*get_location_segments)(svn_ra_session_t *session,
                                         const char *path,
+                                        svn_revnum_t peg_revision,
                                         svn_revnum_t start_rev,
                                         svn_revnum_t end_rev,
                                         svn_location_segment_receiver_t rcvr,
@@ -235,6 +236,16 @@ typedef struct svn_ra__vtable_t {
                                  svn_boolean_t *has,
                                  const char *capability,
                                  apr_pool_t *pool);
+  svn_error_t *
+  (*replay_range)(svn_ra_session_t *session,
+                  svn_revnum_t start_revision,
+                  svn_revnum_t end_revision,
+                  svn_revnum_t low_water_mark,
+                  svn_boolean_t text_deltas,
+                  svn_ra_replay_revstart_callback_t revstart_func,
+                  svn_ra_replay_revfinish_callback_t revfinish_func,
+                  void *replay_baton,
+                  apr_pool_t *pool);
 } svn_ra__vtable_t;
 
 /* The RA session object. */
@@ -326,12 +337,44 @@ svn_ra__locations_from_log(svn_ra_session_t *session,
 svn_error_t *
 svn_ra__location_segments_from_log(svn_ra_session_t *session,
                                    const char *path,
+                                   svn_revnum_t peg_revision,
                                    svn_revnum_t start_rev,
                                    svn_revnum_t end_rev,
                                    svn_location_segment_receiver_t receiver,
                                    void *receiver_baton,
                                    apr_pool_t *pool);
 
+/**
+ * Retrieve a subset of the interesting revisions of a file PATH
+ * as seen in revision END (see svn_fs_history_prev() for a
+ * definition of "interesting revisions").  Invoke HANDLER with
+ * @a handler_baton as its first argument for each such revision.
+ * @a session is an open RA session.  Use POOL for all allocations.
+ *
+ * If there is an interesting revision of the file that is less than or
+ * equal to START, the iteration will begin at that revision.
+ * Else, the iteration will begin at the first revision of the file in
+ * the repository, which has to be less than or equal to END.  Note
+ * that if the function succeeds, HANDLER will have been called at
+ * least once.
+ *
+ * In a series of calls to HANDLER, the file contents for the first
+ * interesting revision will be provided as a text delta against the
+ * empty file.  In the following calls, the delta will be against the
+ * fulltext contents for the previous call.
+ *
+ * NOTE: This function uses the RA get_log interfaces to do its work,
+ * as a fallback mechanism for servers which don't support the native
+ * get_location_segments API.
+ */
+svn_error_t *
+svn_ra__file_revs_from_log(svn_ra_session_t *session,
+                           const char *path,
+                           svn_revnum_t start,
+                           svn_revnum_t end,
+                           svn_file_rev_handler_t handler,
+                           void *handler_baton,
+                           apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

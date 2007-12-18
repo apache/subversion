@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 # Copyright (c) 2006, 2007 by John Szakmeister <john at szakmeister dot net>
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
@@ -24,22 +24,22 @@ import re
 class FsfsVerifyException(Exception):
   pass
 
-  
+
 class PotentiallyFixableException(FsfsVerifyException):
   '''Represents a class of problems that we may be able to fix.'''
 
   def __init__(self, message, offset):
     FsfsVerifyException.__init__(self, message)
     self.offset = offset
-    
-  
+
+
 class InvalidInstruction(PotentiallyFixableException):
   pass
-  
-  
+
+
 class InvalidCompressedStream(PotentiallyFixableException):
   pass
-  
+
 
 class InvalidRepHeader(PotentiallyFixableException):
   pass
@@ -74,25 +74,25 @@ LOG_MASK = LOG_SVNDIFF
 
 def log(type, indent, format, *args):
   if type & LOG_MASK:
-    indentStr = ' ' * indent 
+    indentStr = ' ' * indent
     str = format % args
     str = '\n'.join([indentStr + x for x in str.split('\n')])
     print str
-    
+
 
 class ByteStream(object):
   def __init__(self, fileobj):
     self._f = fileobj
-    
+
   def readByte(self):
     return ord(self._f.read(1))
-    
+
   def tell(self):
     return self._f.tell()
-    
+
   def advance(self, numBytes):
     self._f.seek(numBytes, 1)
-    
+
   def clone(self):
     if hasattr(self._f, 'clone'):
       newFileObj = self._f.clone()
@@ -106,48 +106,48 @@ class ByteStream(object):
       newFileObj = open(self._f.name, 'rb')
       newFileObj.seek(self._f.tell())
     return ByteStream(newFileObj)
-    
+
   # The following let ByteStream behave as a file within the
   # context of this script.
-  
+
   def read(self, *args, **kwargs):
     return self._f.read(*args, **kwargs)
-    
+
   def seek(self, *args, **kwargs):
     return self._f.seek(*args, **kwargs)
-    
+
 
 class ZlibByteStream(ByteStream):
   def __init__(self, fileobj, length):
     self._f = fileobj
-    
+
     # Store the number of bytes consumed thus far so we can compute an offset
     self._numBytesConsumed = 0
-    
+
     self._startingOffset = self._f.tell()
-    
+
     import zlib, binascii
     self._z = zlib.decompressobj(15)
 
     self._buffer = self._z.decompress(self._f.read(length))
     self._origBufferLength = len(self._buffer)
-    
+
   def readByte(self):
     if not self._buffer:
       raise NoMoreData, "Unexpected end of data stream!"
-      
+
     byte = self._buffer[0]
     self._buffer = self._buffer[1:]
-    
+
     return ord(byte)
-    
+
   def tell(self):
     return self._origBufferLength - len(self._buffer)
-    
+
   def advance(self, numBytes):
     while numBytes:
       self.readByte()
-    
+
   def clone(self):
     if hasattr(self._f, 'clone'):
       newFileObj = self._f.clone()
@@ -155,13 +155,13 @@ class ZlibByteStream(ByteStream):
       newFileObj = open(self._f.name, 'rb')
       newFileObj.seek(self._f.tell())
     return ByteStream(newFileObj)
-    
+
   # The following let ByteStream behave as a file within the
   # context of this script.
-  
+
   def read(self, *args, **kwargs):
     raise
-    
+
   def seek(self, *args, **kwargs):
     raise
 
@@ -169,7 +169,7 @@ class ZlibByteStream(ByteStream):
 def getVarint(byteStream):
   '''Grabs a variable sized int from a bitstream (meaning this function
   doesn't seek).'''
-  
+
   i = long(0)
   while True:
     byte = byteStream.readByte()
@@ -178,7 +178,7 @@ def getVarint(byteStream):
       break
   return i
 
-  
+
 INSTR_COPY_SOURCE = 'copy-source'
 INSTR_COPY_TARGET = 'copy-target'
 INSTR_COPY_DATA = 'copy-data'
@@ -187,40 +187,40 @@ INSTR_COPY_DATA = 'copy-data'
 class SvndiffInstruction(object):
   def __init__(self, byteStream):
     self.instrOffset = byteStream.tell()
-    
+
     byte = byteStream.readByte()
-    
+
     instruction = (byte >> 6) & 3
     length = byte & 0x3F
-    
+
     if instruction == 3:
       raise InvalidInstruction(
         "Invalid instruction found at offset %d (%02X)" % (self.instrOffset,
                                                            byte),
         self.instrOffset)
-                               
+
     if instruction == 0:
       self.type = INSTR_COPY_SOURCE
     elif instruction == 1:
       self.type = INSTR_COPY_TARGET
     else:
       self.type = INSTR_COPY_DATA
-      
+
     if length == 0:
       # Length is coded as a varint following the current byte
       length = getVarint(byteStream)
-      
-    
+
+
     self.length = length
-    
+
     if (self.type == INSTR_COPY_SOURCE) or (self.type == INSTR_COPY_TARGET):
       self.offset = getVarint(byteStream)
-    
+
     if self.type == INSTR_COPY_SOURCE:
       self.sourceOffset = self.offset
     else:
       self.sourceOffset = 0
-    
+
     if self.type == INSTR_COPY_TARGET:
       self.targetOffset = self.offset
     else:
@@ -233,19 +233,19 @@ class SvndiffInstruction(object):
       self.sourceLength = self.length
     else:
       self.sourceLength = 0
-      
+
     if self.type == INSTR_COPY_TARGET:
       self.targetLength = self.length
     else:
       self.targetLength = 0
-      
+
     if self.type == INSTR_COPY_DATA:
       self.dataLength = self.length
     else:
       self.dataLength = 0
-      
+
     self.instrLength = byteStream.tell() - self.instrOffset
-      
+
   def __repr__(self):
     return '<SvndiffInstruction %s so:%d sl:%d to: %d tl:%d dl:%d (%d, %d)>' % (
       self.type, self.sourceOffset, self.sourceLength, self.targetOffset,
@@ -257,7 +257,7 @@ class Window(object):
     if svndiffVersion not in [0, 1]:
       raise InvalidSvndiffVersion, \
         "Invalid svndiff version %d" % svndiffVersion
-    
+
     # Record the initial offset of the window
     self.windowOffset = byteStream.tell()
 
@@ -270,11 +270,11 @@ class Window(object):
       self.windowHeaderLength = byteStream.tell() - self.windowOffset
       self.windowLength = \
         self.windowHeaderLength + self.instrLength + self.dataLength
-    
+
       # Store the byte stream, and clone it for use as a data stream.
       self.instrByteStream = byteStream
       self.dataByteStream = byteStream.clone()
-    
+
       # Advance the data stream past the instructions to the start of the data.
       self.dataByteStream.advance(self.instrLength)
     except:
@@ -296,17 +296,17 @@ class Window(object):
     self.isDataCompressed = False
     self.compressedInstrLength = self.instrLength
     self.compressedDataLength = self.dataLength
-    
+
     if svndiffVersion == 1:
       try:
         offset = self.instrByteStream.tell()
         encodedInstrLength = getVarint(self.instrByteStream)
         instrIntSize = self.instrByteStream.tell() - offset
-      
+
         offset = self.dataByteStream.tell()
         encodedDataLength = getVarint(self.dataByteStream)
         dataIntSize = self.dataByteStream.tell() - offset
-      
+
         self.instrLength = encodedInstrLength
         self.dataLength = encodedDataLength
       except:
@@ -335,7 +335,7 @@ class Window(object):
           offset)
         new_e.windowOffset = self.windowOffset
         raise new_e
-        
+
       try:
         offset = self.dataByteStream.tell()
         if self.compressedDataLength - dataIntSize != self.dataLength:
@@ -350,13 +350,13 @@ class Window(object):
           offset)
         new_e.windowOffset = self.windowOffset
         raise new_e
-      
+
   def verify(self):
     expectedInstrLength = self.instrLength
     expectedDataLength = self.dataLength
     expectedTargetLength = self.targetLength
     expectedSourceLength = self.sourceLength
-    
+
     computedInstrLength = 0
     computedDataLength = 0
     computedTargetLength = 0
@@ -368,7 +368,7 @@ class Window(object):
         self.windowOffset)
       e.windowOffset = self.windowOffset
       raise e
-    
+
     while computedInstrLength < expectedInstrLength:
       try:
         instr = SvndiffInstruction(self.instrByteStream)
@@ -376,9 +376,9 @@ class Window(object):
         e.window = self
         e.windowOffset = self.windowOffset
         raise
-        
+
       log(LOG_INSTRUCTIONS, 4, repr(instr))
-      
+
       computedInstrLength += instr.instrLength
       computedDataLength += instr.dataLength
       computedSourceLength += instr.sourceLength
@@ -400,7 +400,7 @@ class Window(object):
         self.windowOffset)
       e.windowOffset = self.windowOffset
       raise e
-      
+
     if computedTargetLength != expectedTargetLength:
       e = InvalidWindow(
         "The number of target bytes consumed (%d) doesn't match the expected number (%d)" % \
@@ -408,7 +408,7 @@ class Window(object):
         self.windowOffset)
       e.windowOffset = self.windowOffset
       raise e
-    
+
     # It appears that the source length specified in the window, isn't exactly
     # equal to what gets consumed.  I suspect that's because the algorithm is using different
     # offsets within the window, and one offset/length pair will reach the end of the window.
@@ -422,7 +422,7 @@ class Window(object):
     #    self.windowOffset)
     #  e.windowOffset = self.windowOffset
     #  raise e
-      
+
     # Advance past the data.  We do this using seek because we might have
     # read a few bytes from the stream if it potentially had compressed data
     self.origInstrStream.seek(self.windowOffset + self.windowLength)
@@ -433,7 +433,7 @@ class Window(object):
                                   self.compressedDataLength)
     else:
       str = ''
-    
+
     return "<Window wo:%d so:%d sl:%d tl:%d %sil:%d dl:%d whl:%d wl:%d>" % (
       self.windowOffset, self.sourceOffset, self.sourceLength,
       self.targetLength, str, self.instrLength, self.dataLength,
@@ -444,7 +444,7 @@ class Svndiff(object):
   def __init__(self, fileobj, length):
     self._f = fileobj
     self.startingOffset = self._f.tell()
-    
+
     header = self._f.read(4)
     if len(header) != 4:
       raise EOFError, \
@@ -454,16 +454,16 @@ class Svndiff(object):
     if header[0:3] != 'SVN':
       raise InvalidSvndiffHeader, "Invalid svndiff header at offset %d" % \
       (self.startingOffset)
-    
+
     self.version = ord(header[3])
     if self.version not in [0, 1]:
       raise InvalidSvndiffVersion, "Invalid svndiff version %d" % self.version
 
     self._length = length - 4
-    
+
   def verify(self):
     self._f.seek(self.startingOffset+4)
-    
+
     bs = ByteStream(self._f)
 
     log(LOG_SVNDIFF, 2, "<Svndiff so: %d ver: %d>", self.startingOffset,
@@ -485,9 +485,9 @@ def getDirHash(f):
   l = f.readline()
   if l != 'PLAIN\n':
     raise ValueError, "Expected a PLAIN representation (%d)" % f.tell()
-    
+
   hash = {}
-  
+
   while True:
     field = f.readline()[:-1]
     if field == 'END':
@@ -495,18 +495,18 @@ def getDirHash(f):
     assert(field[0] == 'K')
     length = int(field.split(' ')[1])
     field = f.readline()[:length]
-    
+
     value = f.readline()[:-1]
     assert(value[0] == 'V')
     length = int(value.split(' ')[1])
     value = f.readline()[:length]
-    
+
     (type, txn) = value.split(' ')
     hash[field] = [NodeType(type), NodeId(txn)]
 
   return hash
-  
-  
+
+
 
 class Rep(object):
   def __init__(self, type, rev, offset, length, size, digest,
@@ -546,7 +546,7 @@ class Rep(object):
     if self.rev != currentRev:
       print >>sys.stderr, "Skipping text rep since it isn't present in the current rev"
       return
-      
+
     f.seek(self.offset)
     header = f.read(5)
     if header != self.contentType:
@@ -569,7 +569,7 @@ class Rep(object):
         e.rep = self
         e.noderev = self.noderev
         raise
-        
+
       if digest:
         assert(digest == self.digest)
     else:
@@ -590,14 +590,14 @@ class Rep(object):
 
 
 class TextRep(Rep):
-  def __init__(self, rev, offset, length, size, digest, 
+  def __init__(self, rev, offset, length, size, digest,
                contentType, currentRev, noderev):
     super(TextRep,self).__init__('text', rev, offset, length, size,
                                  digest, contentType, currentRev, noderev)
 
-    
+
 class PropRep(Rep):
-  def __init__(self, rev, offset, length, size, digest, 
+  def __init__(self, rev, offset, length, size, digest,
                contentType, currentRev, noderev):
     super(PropRep,self).__init__('prop', rev, offset, length, size,
                                  digest, contentType, currentRev, noderev)
@@ -682,7 +682,7 @@ class NodeRev(object):
           contentType = f.read(5)
           f.seek(savedOffset)
 
-        self.text = TextRep(rev, offset, length, size, digest, 
+        self.text = TextRep(rev, offset, length, size, digest,
                             contentType, currentRev, self)
       elif field == 'props':
         (rev, offset, length, size, digest) = value.split(' ')
@@ -783,16 +783,16 @@ def getRootAndChangedPaths(revFile):
       offset = revFile.tell()
       break
     offset = offset - 1
-  
+
   (rootNode, changedPaths) = map(int, revFile.readline().split(' '))
-  
+
   return (rootNode, changedPaths)
 
 
 def dumpChangedPaths(changedPaths):
   print "Changed Path Information:"
-  for (path, 
-       (id, action, textMod, propMod, 
+  for (path,
+       (id, action, textMod, propMod,
         copyfromRev, copyfromPath)) in changedPaths:
     print " %s:" % path
     print "  action: %s" % action
@@ -967,7 +967,7 @@ def fixStream(e, revFile):
     srcLength += len(l)
     m = endrep_re.match(l)
     if m:
-      break 
+      break
 
   if not m:
     raise "Couldn't find end of rep!"
@@ -1029,7 +1029,7 @@ def handleError(error, withTraceback=False):
 
 if __name__ == '__main__':
   from optparse import OptionParser
-  
+
   parser = OptionParser("usage: %prog [-w | -i | -r | -n] REV-FILE")
   parser.add_option("-c", "--changed-paths",
                     action="store_true", dest="dumpChanged",
@@ -1058,18 +1058,18 @@ if __name__ == '__main__':
                     action="store_true", dest="showTraceback",
                     help="Show error tracebacks (mainly used for debugging).",
                     default=False)
-                    
+
   (options, args) = parser.parse_args()
-  
+
   if len(args) != 1:
     print >>sys.stderr, "Please specify exactly one rev file."
     parser.print_help()
     sys.exit(1)
-  
+
   checkOptions(options)
-  
+
   filename = args[0]
-  
+
   if options.dumpInstructions:
     options.dumpWindows = True
     LOG_MASK |= LOG_INSTRUCTIONS
@@ -1081,16 +1081,16 @@ if __name__ == '__main__':
     revFile = open(filename, 'r+b')
   else:
     revFile = open(filename, 'rb')
-    
+
   (root, changed) = getRootAndChangedPaths(revFile)
-  
+
   if options.dumpChanged:
     revFile.seek(changed)
     changedPaths = ChangedPaths(revFile)
-    
+
     dumpChangedPaths(changedPaths)
     sys.exit(0)
-  
+
   try:
     import re
     match = re.match('([0-9]+)', os.path.basename(filename))

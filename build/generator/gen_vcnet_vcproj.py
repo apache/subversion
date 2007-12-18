@@ -216,7 +216,7 @@ class Generator(gen_win.WinGeneratorBase):
       'guids' : guidvals,
       }
 
-    if self.vsnet_version == '9.00':
+    if self.vsnet_version == '10.00' or self.vsnet_version == '9.00':
       self.write_with_template('subversion_vcnet.sln', 'vc2005_sln.ezt', data)
     else:
       self.write_with_template('subversion_vcnet.sln', 'vcnet_sln.ezt', data)

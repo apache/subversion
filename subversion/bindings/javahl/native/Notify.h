@@ -19,12 +19,9 @@
  * @brief Interface of the class Notify
  */
 
-#if !defined(AFX_NOTIFY_H__10E278E8_EA8C_4BD1_AF10_4DB1C0608F65__INCLUDED_)
-#define AFX_NOTIFY_H__10E278E8_EA8C_4BD1_AF10_4DB1C0608F65__INCLUDED_
+#ifndef NOTIFY_H
+#define NOTIFY_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
 #include <jni.h>
 #include "svn_wc.h"
 
@@ -85,5 +82,4 @@ class Notify
                 svn_revnum_t revision);
 };
 
-// !defined(AFX_NOTIFY_H__10E278E8_EA8C_4BD1_AF10_4DB1C0608F65__INCLUDED_)
-#endif
+#endif  // NOTIFY_H

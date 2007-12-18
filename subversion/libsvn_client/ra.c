@@ -29,7 +29,9 @@
 #include "svn_client.h"
 #include "svn_path.h"
 #include "svn_props.h"
+#include "svn_mergeinfo.h"
 #include "client.h"
+#include "mergeinfo.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
@@ -384,6 +386,173 @@ svn_client_uuid_from_path(const char **uuid,
 }
 
 
+
+
+
+svn_error_t *
+svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
+                                 svn_revnum_t *rev_p,
+                                 const char **url_p,
+                                 const char *path_or_url,
+                                 svn_wc_adm_access_t *base_access,
+                                 const svn_opt_revision_t *peg_revision_p,
+                                 const svn_opt_revision_t *revision,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *pool)
+{
+  svn_ra_session_t *ra_session;
+  const char *initial_url, *url, *base_dir = NULL;
+  svn_opt_revision_t *good_rev;
+  svn_opt_revision_t peg_revision, start_rev;
+  svn_opt_revision_t dead_end_rev;
+  svn_opt_revision_t *ignored_rev, *new_rev;
+  svn_revnum_t rev;
+  const char *ignored_url;
+
+  SVN_ERR(svn_client_url_from_path(&initial_url, path_or_url, pool));
+  if (! initial_url)
+    return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
+                             _("'%s' has no URL"), path_or_url);
+
+  start_rev = *revision;
+  peg_revision = *peg_revision_p;
+  SVN_ERR(svn_opt_resolve_revisions(&peg_revision, &start_rev,
+                                    svn_path_is_url(path_or_url),
+                                    TRUE,
+                                    pool));
+
+  if (base_access)
+    base_dir = svn_wc_adm_access_path(base_access);
+
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, initial_url,
+                                               base_dir, base_access, NULL,
+                                               base_access ? TRUE : FALSE,
+                                               FALSE, ctx, pool));
+
+  dead_end_rev.kind = svn_opt_revision_unspecified;
+
+  /* Run the history function to get the object's (possibly
+     different) url in REVISION. */
+  SVN_ERR(svn_client__repos_locations(&url, &new_rev,
+                                      &ignored_url, &ignored_rev,
+                                      ra_session,
+                                      path_or_url, &peg_revision,
+                                      /* search range: */
+                                      &start_rev, &dead_end_rev,
+                                      ctx, pool));
+  good_rev = (svn_opt_revision_t *)new_rev;
+
+  /* Make the session point to the real URL. */
+  SVN_ERR(svn_ra_reparent(ra_session, url, pool));
+
+  /* Resolve good_rev into a real revnum. */
+  if (good_rev->kind == svn_opt_revision_unspecified)
+    good_rev->kind = svn_opt_revision_head;
+  SVN_ERR(svn_client__get_revision_number(&rev, NULL, ra_session,
+                                          good_rev, url, pool));
+
+  *ra_session_p = ra_session;
+  *rev_p = rev;
+  *url_p = url;
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_client__path_relative_to_session(const char **rel_path,
+                                     svn_ra_session_t *ra_session,
+                                     const char *url, 
+                                     apr_pool_t *pool)
+{
+  const char *session_url;
+  SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, pool));
+  if (strcmp(session_url, url) == 0)
+    *rel_path = "";
+  else
+    *rel_path = svn_path_uri_decode(svn_path_is_child(session_url, url, pool), 
+                                    pool);
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_client__ensure_ra_session_url(const char **old_session_url,
+                                  svn_ra_session_t *ra_session,
+                                  const char *session_url,
+                                  apr_pool_t *pool)
+{
+  *old_session_url = NULL;
+  SVN_ERR(svn_ra_get_session_url(ra_session, old_session_url, pool));
+  if (! session_url)
+    SVN_ERR(svn_ra_get_repos_root(ra_session, &session_url, pool));
+  if (strcmp(*old_session_url, session_url) != 0)
+    SVN_ERR(svn_ra_reparent(ra_session, session_url, pool));
+  return SVN_NO_ERROR;
+}
+
+
+
+/*** Repository Locations ***/
+
+struct gls_receiver_baton_t
+{
+  apr_array_header_t *segments;
+  svn_client_ctx_t *ctx;
+  apr_pool_t *pool;
+};
+
+static svn_error_t *
+gls_receiver(svn_location_segment_t *segment,
+             void *baton,
+             apr_pool_t *pool)
+{
+  struct gls_receiver_baton_t *b = baton;
+  APR_ARRAY_PUSH(b->segments, svn_location_segment_t *) =
+    svn_location_segment_dup(segment, b->pool);
+  if (b->ctx->cancel_func)
+    SVN_ERR((b->ctx->cancel_func)(b->ctx->cancel_baton));
+  return SVN_NO_ERROR;
+}
+
+/* A qsort-compatible function which sorts svn_location_segment_t's
+   based on their revision range covering, resulting in ascending
+   (oldest-to-youngest) ordering. */
+static int
+compare_segments(const void *a, const void *b)
+{
+  const svn_location_segment_t *a_seg = a;
+  const svn_location_segment_t *b_seg = b;
+  if (a_seg->range_start == b_seg->range_start)
+    return 0;
+  return (a_seg->range_start < b_seg->range_start) ? 1 : -1;
+}
+
+svn_error_t *
+svn_client__repos_location_segments(apr_array_header_t **segments,
+                                    svn_ra_session_t *ra_session,
+                                    const char *path,
+                                    svn_revnum_t peg_revision,
+                                    svn_revnum_t start_revision,
+                                    svn_revnum_t end_revision,
+                                    svn_client_ctx_t *ctx,
+                                    apr_pool_t *pool)
+{
+  struct gls_receiver_baton_t gls_receiver_baton;
+  *segments = apr_array_make(pool, 8, sizeof(svn_location_segment_t *));
+  gls_receiver_baton.segments = *segments;
+  gls_receiver_baton.ctx = ctx;
+  gls_receiver_baton.pool = pool;
+  SVN_ERR(svn_ra_get_location_segments(ra_session, path, peg_revision,
+                                       start_revision, end_revision,
+                                       gls_receiver, &gls_receiver_baton,
+                                       pool));
+  qsort((*segments)->elts, (*segments)->nelts,
+        (*segments)->elt_size, compare_segments);
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_client__repos_locations(const char **start_url,
                             svn_opt_revision_t **start_revision,
@@ -403,6 +572,7 @@ svn_client__repos_locations(const char **start_url,
   const char *end_path = NULL;
   svn_revnum_t peg_revnum = SVN_INVALID_REVNUM;
   svn_revnum_t start_revnum, end_revnum;
+  svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
   apr_array_header_t *revs;
   apr_hash_t *rev_locs;
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -453,7 +623,7 @@ svn_client__repos_locations(const char **start_url,
     }
 
   /* ### We should be smarter here.  If the callers just asks for BASE and
-     WORKING revisions, we should already have the correct URL:s, so we
+     WORKING revisions, we should already have the correct URLs, so we
      don't need to do anything more here in that case. */
 
   /* Open a RA session to this URL if we don't have one already. */
@@ -464,16 +634,16 @@ svn_client__repos_locations(const char **start_url,
 
   /* Resolve the opt_revision_ts. */
   if (peg_revnum == SVN_INVALID_REVNUM)
-    SVN_ERR(svn_client__get_revision_number(&peg_revnum,
+    SVN_ERR(svn_client__get_revision_number(&peg_revnum, &youngest_rev,
                                             ra_session, revision, path,
                                             pool));
 
-  SVN_ERR(svn_client__get_revision_number(&start_revnum,
+  SVN_ERR(svn_client__get_revision_number(&start_revnum, &youngest_rev,
                                           ra_session, start, path, pool));
   if (end->kind == svn_opt_revision_unspecified)
     end_revnum = start_revnum;
   else
-    SVN_ERR(svn_client__get_revision_number(&end_revnum,
+    SVN_ERR(svn_client__get_revision_number(&end_revnum, &youngest_rev,
                                             ra_session, end, path, pool));
 
   /* Set the output revision variables. */
@@ -542,68 +712,71 @@ svn_client__repos_locations(const char **start_url,
   return SVN_NO_ERROR;
 }
 
-
 
 svn_error_t *
-svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
-                                 svn_revnum_t *rev_p,
-                                 const char **url_p,
-                                 const char *path_or_url,
-                                 const svn_opt_revision_t *peg_revision_p,
-                                 const svn_opt_revision_t *revision,
-                                 svn_client_ctx_t *ctx,
-                                 apr_pool_t *pool)
+svn_client__get_youngest_common_ancestor(const char **ancestor_path,
+                                         svn_revnum_t *ancestor_revision,
+                                         const char *path_or_url1,
+                                         const svn_opt_revision_t *revision1,
+                                         const char *path_or_url2,
+                                         const svn_opt_revision_t *revision2,
+                                         svn_client_ctx_t *ctx,
+                                         apr_pool_t *pool)
 {
-  svn_ra_session_t *ra_session;
-  const char *initial_url, *url;
-  const svn_opt_revision_t *good_rev;
-  svn_opt_revision_t peg_revision, start_rev;
-  svn_opt_revision_t dead_end_rev;
-  svn_opt_revision_t *ignored_rev, *new_rev;
-  svn_revnum_t rev;
-  const char *ignored_url;
+  apr_hash_t *history1, *history2;
+  apr_hash_index_t *hi;
+  svn_revnum_t yc_revision = SVN_INVALID_REVNUM;
+  const char *yc_path = NULL;
 
-  SVN_ERR(svn_client_url_from_path(&initial_url, path_or_url, pool));
-  if (! initial_url)
-    return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                             _("'%s' has no URL"), path_or_url);
+  /* We're going to cheat and use history-as-mergeinfo because it
+     saves us a bunch of annoying custom data comparisons and such. */
+  SVN_ERR(svn_client__get_history_as_mergeinfo(&history1, path_or_url1,
+                                               revision1, 
+                                               SVN_INVALID_REVNUM, 
+                                               SVN_INVALID_REVNUM,
+                                               NULL, NULL, ctx, pool));
+  SVN_ERR(svn_client__get_history_as_mergeinfo(&history2, path_or_url2,
+                                               revision2, 
+                                               SVN_INVALID_REVNUM, 
+                                               SVN_INVALID_REVNUM,
+                                               NULL, NULL, ctx, pool));
 
-  start_rev = *revision;
-  peg_revision = *peg_revision_p;
-  SVN_ERR(svn_opt_resolve_revisions(&peg_revision, &start_rev,
-                                    svn_path_is_url(path_or_url),
-                                    TRUE,
-                                    pool));
+  /* Loop through the first location's history, check for overlapping
+     paths and ranges in the second location's history, and
+     remembering the youngest matching location. */
+  for (hi = apr_hash_first(NULL, history1); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      apr_ssize_t klen;
+      void *val;
+      const char *path;
+      apr_array_header_t *ranges1, *ranges2, *common;
 
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, initial_url,
-                                               NULL, NULL, NULL,
-                                               FALSE, FALSE, ctx, pool));
+      apr_hash_this(hi, &key, &klen, &val);
+      path = key;
+      ranges1 = val;
 
-  dead_end_rev.kind = svn_opt_revision_unspecified;
+      ranges2 = apr_hash_get(history2, key, klen);
+      if (ranges2)
+        {
+          /* We have a path match.  Now, did our two histories share
+             any revisions at that path? */
+          SVN_ERR(svn_rangelist_intersect(&common, ranges1, ranges2, pool));
+          if (common->nelts)
+            {
+              svn_merge_range_t *yc_range =
+                APR_ARRAY_IDX(common, common->nelts - 1, svn_merge_range_t *);
+              if ((! SVN_IS_VALID_REVNUM(yc_revision))
+                  || (yc_range->end > yc_revision))
+                {
+                  yc_revision = yc_range->end;
+                  yc_path = path + 1;
+                }
+            }
+        }
+    }
 
-  /* Run the history function to get the object's (possibly
-     different) url in REVISION. */
-  SVN_ERR(svn_client__repos_locations(&url, &new_rev,
-                                      &ignored_url, &ignored_rev,
-                                      ra_session,
-                                      path_or_url, &peg_revision,
-                                      /* search range: */
-                                      &start_rev, &dead_end_rev,
-                                      ctx, pool));
-  good_rev = new_rev;
-
-  /* Make the session point to the real URL. */
-  SVN_ERR(svn_ra_reparent(ra_session, url, pool));
-
-  /* Resolve good_rev into a real revnum. */
-  SVN_ERR(svn_client__get_revision_number(&rev, ra_session,
-                                          good_rev, url, pool));
-  if (! SVN_IS_VALID_REVNUM(rev))
-    SVN_ERR(svn_ra_get_latest_revnum(ra_session, &rev, pool));
-
-  *ra_session_p = ra_session;
-  *rev_p = rev;
-  *url_p = url;
-
+  *ancestor_path = yc_path;
+  *ancestor_revision = yc_revision;
   return SVN_NO_ERROR;
 }

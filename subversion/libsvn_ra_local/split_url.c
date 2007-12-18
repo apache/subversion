@@ -133,6 +133,13 @@ svn_ra_local__split_URL(svn_repos_t **repos,
       (SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED, err,
        _("Unable to open repository '%s'"), URL);
 
+  /* Assert capabilities directly, since client == server. */
+  {
+    apr_array_header_t *caps = apr_array_make(pool, 1, sizeof(const char *));
+    APR_ARRAY_PUSH(caps, const char *) = SVN_RA_CAPABILITY_MERGEINFO;
+    SVN_ERR(svn_repos_remember_client_capabilities(*repos, caps));
+  }
+
   /* What remains of URL after being hacked at in the previous step is
      REPOS_URL.  FS_PATH is what we've hacked off in the process.
      Note that path is not encoded and what we gave to svn_root_find_root_path
@@ -144,6 +151,10 @@ svn_ra_local__split_URL(svn_repos_t **repos,
     + (strlen(repos_root)
        - (hostname ? strlen(hostname) + 2 : 0));
 
+  /* Ensure that *FS_PATH has its leading slash. */
+  if (**fs_path != '/')
+    *fs_path = apr_pstrcat(pool, "/", *fs_path, NULL);
+  
   /* Remove the path components in *fs_path from the original URL, to get
      the URL to the repository root. */
   urlbuf = svn_stringbuf_create(URL, pool);

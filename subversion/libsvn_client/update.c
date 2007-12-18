@@ -33,10 +33,8 @@
 #include "svn_pools.h"
 #include "svn_io.h"
 #include "client.h"
-#include "mergeinfo.h"
 
 #include "svn_private_config.h"
-#include "private/svn_mergeinfo_private.h"
 #include "private/svn_wc_private.h"
 
 
@@ -70,7 +68,7 @@ file_fetcher(void *baton,
   if (! ffb->session)
     SVN_ERR(svn_client__open_ra_session_internal(&(ffb->session),
                                                  ffb->repos_root,
-                                                 NULL, NULL, NULL, 
+                                                 NULL, NULL, NULL,
                                                  FALSE, TRUE,
                                                  ffb->ctx, ffb->pool));
   SVN_ERR(svn_ra_get_file(ffb->session, path, revision, stream,
@@ -109,8 +107,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   const char *diff3_cmd;
   svn_ra_session_t *ra_session;
   svn_wc_adm_access_t *dir_access;
-  svn_wc_adm_access_t *path_adm_access;
-  apr_hash_t *children_with_mergeinfo;
   const char *preserved_exts_str;
   apr_array_header_t *preserved_exts;
   struct ff_baton *ffb;
@@ -125,15 +121,11 @@ svn_client__update_internal(svn_revnum_t *result_rev,
      ### without calling adm_open.  We could expend an extra call,
      ### with levels_to_lock=0, to get the real depth (but only if we
      ### need to) and then make the real call... but it's not worth
-     ### the complexity right now.  Locking the entire tree when we
-     ### didn't need to is a performance hit, but (except for access
-     ### contention) not a correctness problem. */
-
-  if (depth == svn_depth_empty
-      || depth == svn_depth_files)
-    levels_to_lock = 0;
-  else
-    levels_to_lock = -1;
+     ### the complexity right now.  If the requested depth tells us to
+     ### lock the entire tree when we don't actually need to, that's a
+     ### performance hit, but (except for access contention) it is not
+     ### a correctness problem. */
+  levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
 
   /* Sanity check.  Without this, the update is meaningless. */
   assert(path);
@@ -190,7 +182,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   /* ### todo: shouldn't svn_client__get_revision_number be able
      to take a URL as easily as a local path?  */
   SVN_ERR(svn_client__get_revision_number
-          (&revnum, ra_session, revision, path, pool));
+          (&revnum, NULL, ra_session, revision, path, pool));
 
   /* Take the chance to set the repository root on the target.
      Why do we bother doing this for old working copies?
@@ -267,51 +259,8 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 
   if (sleep_here)
     svn_sleep_for_timestamps();
-
-  if (levels_to_lock)
-    {
-      SVN_ERR(svn_wc_adm_probe_retrieve(&path_adm_access, adm_access, path,
-                                        pool));
-    }
-  else
-    {
-      /* A depth other than infinity means we need to open a new
-         access to lock PATH's children for possible elision. */
-      SVN_ERR(svn_wc_adm_close(adm_access));
-      SVN_ERR(svn_wc_adm_open3(&path_adm_access, NULL, path, TRUE, -1,
-                               ctx->cancel_func, ctx->cancel_baton,
-                               pool));
-    }
-
-    /* Check if any mergeinfo on PATH or any its children elides as a
-     result of the update. */
-  children_with_mergeinfo = apr_hash_make(pool);
-  err = svn_client__get_prop_from_wc(children_with_mergeinfo,
-                                     SVN_PROP_MERGE_INFO, path, FALSE,
-                                     entry, path_adm_access,
-                                     depth, ctx, pool);
-  if (err)
-    {
-      svn_error_t *root_err = svn_error_root_cause(err);
-      switch (root_err->apr_err)
-        {
-        case SVN_ERR_WC_PATH_NOT_FOUND:
-        case SVN_ERR_UNVERSIONED_RESOURCE:
-          svn_error_clear(err);
-          err = SVN_NO_ERROR;
-          break;
-
-        default:
-          return err;
-        }
-    }
-  else
-    {
-      SVN_ERR(svn_client__elide_mergeinfo_for_tree(children_with_mergeinfo,
-                                                   adm_access, ctx, pool));
-    }
-
-  SVN_ERR(svn_wc_adm_close(levels_to_lock ? path_adm_access : adm_access));
+  
+  SVN_ERR(svn_wc_adm_close(adm_access));
 
   /* Let everyone know we're finished here. */
   if (ctx->notify_func2)

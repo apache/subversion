@@ -44,7 +44,7 @@ Here are problems/features that are NOT in our list of goals:
   * Server management of changesets
 
     Subversion prides itself on being disconnected;  that's why it
-    scales so well.  A changeset is an epheremal thing created by a
+    scales so well.  A changeset is an ephemeral thing created by a
     single user in a single working copy, whose only purpose is to
     make it easier to manipulate a change-in-progress.  It's not a
     "named revision", or a long-lived object in the repository.
@@ -77,7 +77,7 @@ Here are problems/features that are NOT in our list of goals:
     working copy".  My feeling is that trying to create a UI to
     manipulate individual diff-hunks within a file is a HUGE can of
     worms, probably best suited for a GUI.  While I wouldn't rule it
-    out as a future *enchancement* to a changelist feature, it's
+    out as a future *enhancement* to a changelist feature, it's
     certainly not worth the initial effort in the first draft of
     changelist management.  Overlapping changelists do occasionally
     happen, but they're rare enough that's it's not worth spending 90%
@@ -368,7 +368,7 @@ $ svn log member1 member2 member3 ...
 (i.e. it prints the union of all revisions).
 
 Note that this feature would be an improvement over perforce, which
-allows mulitple targets on the commandline, but no changelist
+allows multiple targets on the commandline, but no changelist
 shorthand for them.
 
 

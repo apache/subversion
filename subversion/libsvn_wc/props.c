@@ -1010,7 +1010,7 @@ diff_mergeinfo_props(apr_hash_t **deleted, apr_hash_t **added,
       SVN_ERR(svn_mergeinfo_parse(&from, from_prop_val->data, pool));
       SVN_ERR(svn_mergeinfo_parse(&to, to_prop_val->data, pool));
       SVN_ERR(svn_mergeinfo_diff(deleted, added, from, to,
-                                 svn_rangelist_ignore_inheritance, pool));
+                                 FALSE, pool));
     }
   return SVN_NO_ERROR;
 }
@@ -1028,8 +1028,7 @@ combine_mergeinfo_props(const svn_string_t **output,
   apr_hash_t *mergeinfo1, *mergeinfo2;
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo1, prop_val1->data, pool));
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo2, prop_val2->data, pool));
-  SVN_ERR(svn_mergeinfo_merge(&mergeinfo1, mergeinfo2,
-                              svn_rangelist_equal_inheritance, pool));
+  SVN_ERR(svn_mergeinfo_merge(mergeinfo1, mergeinfo2, pool));
   SVN_ERR(svn_mergeinfo__to_string((svn_string_t **) output,
                                    mergeinfo1, pool));
   return SVN_NO_ERROR;
@@ -1052,15 +1051,13 @@ combine_forked_mergeinfo_props(const svn_string_t **output,
                                working_prop_val, pool));
   SVN_ERR(diff_mergeinfo_props(&r_deleted, &r_added, from_prop_val,
                                to_prop_val, pool));
-  SVN_ERR(svn_mergeinfo_merge(&l_deleted, r_deleted,
-                              svn_rangelist_equal_inheritance, pool));
-  SVN_ERR(svn_mergeinfo_merge(&l_added, r_added,
-                              svn_rangelist_equal_inheritance, pool));
+  SVN_ERR(svn_mergeinfo_merge(l_deleted, r_deleted, pool));
+  SVN_ERR(svn_mergeinfo_merge(l_added, r_added, pool));
 
   /* Apply the combined deltas to the base. */
   SVN_ERR(svn_mergeinfo_parse(&from_mergeinfo, from_prop_val->data, pool));
-  SVN_ERR(svn_mergeinfo_merge(&from_mergeinfo, l_added,
-                              svn_rangelist_equal_inheritance, pool));
+  SVN_ERR(svn_mergeinfo_merge(from_mergeinfo, l_added, pool));
+
   SVN_ERR(svn_mergeinfo_remove(&from_mergeinfo, l_deleted,
                                from_mergeinfo, pool));
 
@@ -1121,7 +1118,7 @@ svn_wc_merge_props2(svn_wc_notify_state_t *state,
 
   /* Note that while this routine does the "real" work, it's only
      prepping tempfiles and writing log commands.  */
-  SVN_ERR(svn_wc__merge_props(state, adm_access, path, baseprops,
+  SVN_ERR(svn_wc__merge_props(state, adm_access, path, baseprops, NULL, NULL,
                               propchanges, base_merge, dry_run,
                               conflict_func, conflict_baton, pool, &log_accum));
 
@@ -1270,62 +1267,99 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
       cdesc->their_file = new_path;
     }
 
-  /* What happens if 'base' and 'old' don't match up?  In an ideal
-     situation, they would.  But if they don't, this is a classic
-     example of a patch 'hunk' failing to apply due to a lack of
-     context.  For example: imagine that the user is busy changing the
-     propval from "cat" to "dog", but the incoming propchange wants to
-     change the value from "red" to "green".  Total context mismatch.
-     There's no way to represent this sort of conflict using
-     "base"/"mine"/"theirs" files, so we don't bother to call the
-     interactive callback at all... we just mark the conflict and let
-     the .prej file explain the failed hunk. */
-  if (base_val && old_val)
+  if (!base_val && !old_val)
     {
+      /* If base and old are both NULL, then that's fine, we just let
+         base_file stay NULL as-is.  Both agents are attempting to add a
+         new property.  */
+    }
+
+  else if ((base_val && !old_val)
+           || (!base_val && old_val))
+    {
+      /* If only one of base and old are defined, then we've got a
+         situation where one agent is attempting to add the property
+         for the first time, and the other agent is changing a
+         property it thinks already exists.  In this case, we return
+         whichever older-value happens to be defined, so that the
+         conflict-callback can still attempt a 3-way merge. */
+
+      const svn_string_t *the_val = base_val ? base_val : old_val;
+      SVN_ERR(svn_io_open_unique_file2(&base_file, &base_path,
+                                       path, ".tmp",
+                                       svn_io_file_del_on_pool_cleanup,
+                                       filepool));
+      SVN_ERR(svn_io_file_write_full(base_file,
+                                     the_val->data,
+                                     the_val->len, NULL, filepool));
+      SVN_ERR(svn_io_file_close(base_file, filepool));
+      cdesc->base_file = base_path;
+    }
+
+  else  /* base and old are both non-NULL */
+    {
+      const svn_string_t *the_val;
+
       if (! svn_string_compare(base_val, old_val))
         {
-          *conflict_remains = TRUE;
-          return SVN_NO_ERROR;
+          /* What happens if 'base' and 'old' don't match up?  In an
+             ideal situation, they would.  But if they don't, this is
+             a classic example of a patch 'hunk' failing to apply due
+             to a lack of context.  For example: imagine that the user
+             is busy changing the property from a value of "cat" to
+             "dog", but the incoming propchange wants to change the
+             same property value from "red" to "green".  Total context
+             mismatch.
+
+             HOWEVER: we can still pass one of the two base values as
+             'base_file' to the callback anyway.  It's still useful to
+             present the working and new values to the user to
+             compare. */
+
+          if (working_val && svn_string_compare(base_val, working_val))
+            the_val = old_val;
+          else
+            the_val = base_val;
         }
       else
         {
-          /* If 'base' and 'old' are identical, then we're in really
-             good shape.  Not only can we create a base_file to give
-             to the calback, we can attempt to give it a merged_file too. */
-          SVN_ERR(svn_io_open_unique_file2(&base_file, &base_path,
+          the_val = base_val;
+        }
+
+      SVN_ERR(svn_io_open_unique_file2(&base_file, &base_path,
+                                       path, ".tmp",
+                                       svn_io_file_del_on_pool_cleanup,
+                                       filepool));
+      SVN_ERR(svn_io_file_write_full(base_file, the_val->data,
+                                     the_val->len, NULL, filepool));
+      SVN_ERR(svn_io_file_close(base_file, filepool));
+      cdesc->base_file = base_path;
+
+      if (working_val && new_val)
+        {
+          svn_stream_t *mergestream;
+          svn_diff_t *diff;
+          svn_diff_file_options_t *options =
+            svn_diff_file_options_create(filepool);
+
+          SVN_ERR(svn_io_open_unique_file2(&merged_file, &merged_path,
                                            path, ".tmp",
                                            svn_io_file_del_on_pool_cleanup,
                                            filepool));
-          SVN_ERR(svn_io_file_write_full(base_file, base_val->data,
-                                         base_val->len, NULL, filepool));
-          SVN_ERR(svn_io_file_close(base_file, filepool));
-          cdesc->base_file = base_path;
+          mergestream = svn_stream_from_aprfile2(merged_file, FALSE,
+                                                 filepool);
+          SVN_ERR(svn_diff_mem_string_diff3(&diff, the_val, working_val,
+                                            new_val, options, filepool));
+          SVN_ERR(svn_diff_mem_string_output_merge
+                  (mergestream, diff, the_val, working_val, new_val,
+                   NULL, NULL, NULL, NULL, FALSE, FALSE, filepool));
+          svn_stream_close(mergestream);
 
-          if (working_val && new_val)
-            {
-              svn_stream_t *mergestream;
-              svn_diff_t *diff;
-              svn_diff_file_options_t *options =
-                  svn_diff_file_options_create(filepool);
-
-              SVN_ERR(svn_io_open_unique_file2(&merged_file, &merged_path,
-                                               path, ".tmp",
-                                               svn_io_file_del_on_pool_cleanup,
-                                               filepool));
-              mergestream = svn_stream_from_aprfile2(merged_file, FALSE,
-                                                     filepool);
-              SVN_ERR(svn_diff_mem_string_diff3(&diff, base_val, working_val,
-                                                new_val, options, filepool));
-              SVN_ERR(svn_diff_mem_string_output_merge
-                      (mergestream, diff, base_val, working_val, new_val,
-                       NULL, NULL, NULL, NULL, FALSE, FALSE, filepool));
-              svn_stream_close(mergestream);
-
-              cdesc->merged_file = merged_path;
-            }
+          cdesc->merged_file = merged_path;
         }
     }
 
+  /* Build the rest of the description object: */
   cdesc->path = path;
   cdesc->node_kind = is_dir ? svn_node_dir : svn_node_file;
   cdesc->kind = svn_wc_conflict_kind_property;
@@ -1353,7 +1387,7 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
   else
     cdesc->reason = svn_wc_conflict_reason_edited;
 
-  /* Invoke the callback. */
+  /* Invoke the interactive conflict callback. */
   SVN_ERR(conflict_func(&result, cdesc, conflict_baton, pool));
   if (result == NULL)
     {
@@ -1468,7 +1502,7 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
         {
           /* The WC difference doesn't match the new value.
            We only merge mergeinfo;  other props conflict */
-          if (strcmp(propname, SVN_PROP_MERGE_INFO) == 0)
+          if (strcmp(propname, SVN_PROP_MERGEINFO) == 0)
             {
               SVN_ERR(combine_mergeinfo_props(&new_val, working_val,
                                               new_val, pool));
@@ -1657,7 +1691,7 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
             set_prop_merge_state(state, svn_wc_notify_state_merged);
           else
             {
-              if (strcmp(propname, SVN_PROP_MERGE_INFO) == 0)
+              if (strcmp(propname, SVN_PROP_MERGEINFO) == 0)
                 {
                   /* We have base, WC, and new values.  Discover
                      deltas between base <-> WC, and base <->
@@ -1723,7 +1757,7 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
   else if (! working_val) /* means !working_val && !base_val due
                              to conditions above: no prop at all */
     {
-      if (strcmp(propname, SVN_PROP_MERGE_INFO) == 0)
+      if (strcmp(propname, SVN_PROP_MERGEINFO) == 0)
         {
           /* Discover any mergeinfo additions in the
              incoming value relative to the base, and
@@ -1761,7 +1795,7 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
 
       else
         {
-          if (strcmp(propname, SVN_PROP_MERGE_INFO) == 0)
+          if (strcmp(propname, SVN_PROP_MERGEINFO) == 0)
             {
               /* We have base, WC, and new values.  Discover
                  deltas between base <-> WC, and base <->
@@ -1803,6 +1837,8 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                     svn_wc_adm_access_t *adm_access,
                     const char *path,
                     apr_hash_t *server_baseprops,
+                    apr_hash_t *base_props,
+                    apr_hash_t *working_props,
                     const apr_array_header_t *propchanges,
                     svn_boolean_t base_merge,
                     svn_boolean_t dry_run,
@@ -1814,9 +1850,6 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
   int i;
   svn_boolean_t is_dir;
 
-  apr_hash_t *working_props;   /* all `working' properties */
-  apr_hash_t *base_props;    /* all `pristine' properties */
-
   const char *reject_path = NULL;
   apr_file_t *reject_tmp_fp = NULL;       /* the temporary conflicts file */
   const char *reject_tmp_path = NULL;
@@ -1826,9 +1859,11 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
   else
     is_dir = FALSE;
 
-  /* Load the base & working property files into hashes */
-  SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL,
-                             adm_access, path, pool));
+  /* If not provided, load the base & working property files into hashes */
+  if (! base_props || ! working_props)
+    SVN_ERR(svn_wc__load_props(base_props ? NULL : &base_props,
+                               working_props ? NULL : &working_props,
+                               NULL, adm_access, path, pool));
   if (!server_baseprops)
     server_baseprops = base_props;
 
@@ -2564,8 +2599,15 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
 
   if (!skip_some_checks && (strcmp(propname, SVN_PROP_EOL_STYLE) == 0))
     {
+      svn_subst_eol_style_t eol_style;
+      const char *ignored_eol;
       new_value = svn_stringbuf_create_from_string(propval, pool);
       svn_stringbuf_strip_whitespace(new_value);
+      svn_subst_eol_style_from_value(&eol_style, &ignored_eol, new_value->data);
+      if (eol_style == svn_subst_eol_style_unknown)
+        return svn_error_createf(SVN_ERR_IO_UNKNOWN_EOL, NULL,
+                                 _("Unrecognized line ending style for '%s'"),
+                                 svn_path_local_style(path, pool));
       SVN_ERR(validate_eol_prop_against_file(path, getter, getter_baton,
                                              pool));
     }
@@ -2609,6 +2651,11 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
         || strcmp(propname, SVN_PROP_NEEDS_LOCK) == 0)
     {
       new_value = svn_stringbuf_create_from_string(&boolean_value, pool);
+    }
+  else if (strcmp(propname, SVN_PROP_MERGEINFO) == 0)
+    {
+      apr_hash_t *mergeinfo;
+      SVN_ERR(svn_mergeinfo_parse(&mergeinfo, propval->data, pool));
     }
 
   if (new_value)

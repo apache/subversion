@@ -111,5 +111,19 @@ EOC
         GetText.bindtextdomain(locale_directory_win)
       end
     end
+
+    def validate_options(options, optional_keys, required_keys=[])
+      unknown_keys = options.keys - (optional_keys + required_keys)
+      unless unknown_keys.empty?
+        raise(ArgumentError, "Unknown key(s): #{unknown_keys.join(", ")}")
+      end
+      missing_keys = []
+      required_keys.each do |key|
+        missing_keys << key if options[key].nil?
+      end
+      unless missing_keys.empty?
+        raise(ArgumentError, "Missing key(s): #{missing_keys.join(", ")}")
+      end
+    end
   end
 end

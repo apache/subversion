@@ -44,7 +44,6 @@ except AttributeError:
 import os
 import sys
 
-import libsvn._core
 import svn.client
 import svn.core
 
@@ -96,7 +95,7 @@ def check_url_for_export(ctx, url, revision, client_ctx):
                                       revision,
                                       0,
                                       client_ctx)
-        except libsvn._core.SubversionException:
+        except svn.core.SubversionException:
             if ctx.verbose:
                 print "Listing of '%s' failed, assuming URL is top of repos" \
                       % parent_url

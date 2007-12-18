@@ -177,7 +177,7 @@ msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-10-17 08:53+0900\n"
-"PO-Revision-Date: 2007-10-18 04:13+0900\n"
+"PO-Revision-Date: 2007-10-28 01:23+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1647,7 +1647,8 @@ msgstr "ローカルにない対象 '%s' への再帰的な属性の設定はサ
 #: libsvn_client/prop_commands.c:365
 #, c-format
 msgid "Setting property '%s' on non-local target '%s' is not supported"
-msgstr "属性 '%s' をローカルにない対象 '%s' に設定することはサポートされていません"
+msgstr ""
+"属性 '%s' をローカルにない対象 '%s' に設定することはサポートされていません"
 
 #: libsvn_client/prop_commands.c:458
 msgid "Value will not be set unless forced"
@@ -2575,17 +2576,18 @@ msgstr "ファイル '%s' に対して排他的なロックを取得できませ
 #: libsvn_fs_fs/fs_fs.c:650
 #, c-format
 msgid "Format file '%s' contains an unexpected non-digit"
-msgstr "format ファイル '%s' に予期しない数字以外が含まれています"
+msgstr "format ファイル '%s' に予想外の非数字が含まれています"
 
 #: libsvn_fs_fs/fs_fs.c:698
 #, c-format
 msgid "Can't read first line of format file '%s'"
-msgstr "format ファイル '%s' の最初の行を読めません"
+msgstr "format ファイル '%s' の 1 行目を読めません"
 
 #: libsvn_fs_fs/fs_fs.c:742
 #, c-format
 msgid "'%s' contains invalid filesystem format option '%s'"
-msgstr "'%s' は無効なファイルシステムオプション '%s'を含んでいます"
+msgstr ""
+"'%s' に含まれている '%s' は、ファイルシステム形式のオプションとして不正です"
 
 #: libsvn_fs_fs/fs_fs.c:803
 #, c-format
@@ -2834,11 +2836,11 @@ msgstr ""
 #: libsvn_ra_serf/serf.c:218
 #, c-format
 msgid "Illegal repository URL '%s'"
-msgstr "Subversion リポジトリの URL '%s' が不正です"
+msgstr "リポジトリの URL '%s' が不正です"
 
 #: libsvn_ra/ra_loader.c:417
 msgid "Invalid config: unknown HTTP library"
-msgstr "不正な設定です: 未知の HTTP ライブラリ"
+msgstr "不正な設定です: 未知の HTTP ライブラリです"
 
 #: libsvn_ra/ra_loader.c:454
 #, c-format
@@ -2874,7 +2876,7 @@ msgstr "URL に対し ra_local セッションを開始できません"
 #: libsvn_ra_serf/serf.c:872 libsvn_ra_svn/client.c:2169
 #, c-format
 msgid "Don't know anything about capability '%s'"
-msgstr "機能 '%s' に関して何もわかりません"
+msgstr "機能 '%s' についての情報がありません"
 
 #: libsvn_ra_local/ra_plugin.c:1509
 #, c-format
@@ -2927,7 +2929,7 @@ msgstr "CHECKOUT レスポンスに 'Location:' ヘッダが含まれていま�
 #: libsvn_ra_serf/commit.c:1651 libsvn_ra_serf/update.c:2107
 #, c-format
 msgid "Unable to parse URL '%s'"
-msgstr "URL '%s' を解析できません"
+msgstr "URL '%s' をパースできません"
 
 #: libsvn_ra_neon/commit.c:1027 libsvn_ra_serf/commit.c:1501
 #, c-format
@@ -2985,7 +2987,7 @@ msgstr "'get-locations' REPORT は実装されていません"
 #: libsvn_ra_neon/fetch.c:1457 libsvn_ra_serf/getlocationsegments.c:101
 #: libsvn_ra_svn/client.c:1564
 msgid "Expected valid revision range"
-msgstr "正しいリビジョン番号を期待しました"
+msgstr "正しいリビジョン範囲を期待しました"
 
 #: libsvn_ra_neon/fetch.c:1536
 msgid "'get-location-segments' REPORT not implemented"
@@ -3066,13 +3068,13 @@ msgstr "ロックの情報を取得できませんでした"
 #: libsvn_ra_neon/log.c:169 libsvn_ra_serf/log.c:210
 #, c-format
 msgid "Missing name attr in revprop element"
-msgstr "リビジョンプロパティ要素に name 属性がありません"
+msgstr "revprop 要素に name 属性がありません"
 
 #: libsvn_ra_neon/log.c:299 libsvn_ra_serf/log.c:299
 #: libsvn_ra_svn/client.c:1290
 msgid "Server does not support custom revprops via log"
 msgstr ""
-"サーバは svn log 経由でのカスタムリビジョンプロパティをサポートしていません"
+"log 経由でのカスタムリビジョン属性の取得がサーバでサポートされていません"
 
 #: libsvn_ra_neon/merge.c:219
 #, c-format
@@ -3115,8 +3117,8 @@ msgid ""
 "The OPTIONS response did not include the requested activity-collection-set; "
 "this often means that the URL is not WebDAV-enabled"
 msgstr ""
-"OPTIONS レスポンスは、リクエストされた activity-collection-set を含んでいませ"
-"ん。このことはしばしば、URL が WebDAV 使用可能でないことを意味します"
+"OPTIONS レスポンスに、リクエストした activity-collection-set が含まれていませ"
+"ん。これは大抵、その URL で WebDAV が使用可能でないという意味です"
 
 #: libsvn_ra_neon/props.c:598
 #, c-format
@@ -3154,6 +3156,7 @@ msgstr "relative-path 属性はリソースには存在しません"
 msgid "'DAV:baseline-collection' was not present on the baseline resource"
 msgstr "'DAV:baseline-collection' はベースラインのリソースには存在しません"
 
+# FIXME: Original message should be fixed.
 #: libsvn_ra_neon/props.c:972
 msgid "'DAV:"
 msgstr "'DAV:"
@@ -3224,7 +3227,7 @@ msgstr "不正な設定です: 未知の HTTP 認証形式です: '%s'"
 #: libsvn_ra_neon/session.c:578
 msgid "Module for accessing a repository via WebDAV protocol using Neon."
 msgstr ""
-"Neonを利用して WebDAV (DeltaV) プロトコルでリポジトリにアクセスするモジュー"
+"Neon を利用して WebDAV (DeltaV) プロトコルでリポジトリにアクセスするモジュー"
 "ル。"
 
 #: libsvn_ra_neon/session.c:633 libsvn_ra_serf/locks.c:539
@@ -3256,12 +3259,13 @@ msgstr "サーバをバージョン 0.19 以降にアップグレードしてく
 #, c-format
 msgid "OPTIONS request (for capabilities) got HTTP response code %d"
 msgstr ""
-"OPTIONS リクエスト(機能問い合わせ) はHTTP リスポンスコード %d を返しました"
+"OPTIONS リクエスト (機能問い合わせ) に対して HTTP レスポンスコード %d が返さ"
+"れました"
 
 #: libsvn_ra_neon/session.c:1098 libsvn_ra_serf/serf.c:879
 #, c-format
 msgid "attempt to fetch capability '%s' resulted in '%s'"
-msgstr "機能 '%s' を取得しようとしましたが、 '%s'という結果になりました"
+msgstr "機能 '%s' を取得しようとしましたが、返ってきたのは '%s' でした"
 
 #: libsvn_ra_neon/session.c:1168
 #, c-format
@@ -3280,7 +3284,7 @@ msgstr "仕様に準拠していない HTTP ステータス行がレスポンス
 #: libsvn_ra_neon/util.c:248
 #, c-format
 msgid "Error setting property '%s': "
-msgstr "属性 %s を 設定する際にエラーが発生しました: "
+msgstr "属性 %s を設定中にエラーが発生しました: "
 
 # * Arguments are (1) method and (2) url.
 #: libsvn_ra_neon/util.c:532
@@ -3356,22 +3360,23 @@ msgid ""
 "The OPTIONS response did not include the requested version-controlled-"
 "configuration value."
 msgstr ""
-"OPTIONS レスポンスは、リクエストされた version-controlled-configuration 値を"
-"含んでいません。"
+"OPTIONS レスポンスに、リクエストした version-controlled-configuration の値が"
+"含まれていません。"
 
 #: libsvn_ra_serf/blame.c:475
 msgid ""
 "The OPTIONS response did not include the requested baseline-relative-path "
 "value."
 msgstr ""
-"OPTIONS レスポンスは、リクエストされた baseline-relative-path 値を含んでいま"
-"せん。"
+"OPTIONS レスポンスに、リクエストした baseline-relative-path の値が含まれてい"
+"ません。"
 
 #: libsvn_ra_serf/blame.c:495 libsvn_ra_serf/commit.c:1057
 #: libsvn_ra_serf/property.c:923 libsvn_ra_serf/serf.c:271
 #: libsvn_ra_serf/update.c:1103 libsvn_ra_serf/update.c:1647
 msgid "The OPTIONS response did not include the requested checked-in value."
-msgstr "OPTIONS レスポンスは、リクエストされた checked-in 値を含んでいません。"
+msgstr ""
+"OPTIONS レスポンスに、リクエストした checked-in の値が含まれていません。"
 
 #: libsvn_ra_serf/blame.c:522 libsvn_ra_serf/commit.c:1283
 #: libsvn_ra_serf/commit.c:1671 libsvn_ra_serf/getlocations.c:257
@@ -3380,7 +3385,7 @@ msgstr "OPTIONS レスポンスは、リクエストされた checked-in 値を�
 msgid ""
 "The OPTIONS response did not include the requested baseline-collection value."
 msgstr ""
-"OPTIONS レスポンスは、リクエストされた baseline-collection 値を含んでいませ"
+"OPTIONS レスポンスに、リクエストした baseline-collection の値が含まれていませ"
 "ん。"
 
 #: libsvn_ra_serf/commit.c:382 libsvn_ra_serf/commit.c:443
@@ -3399,8 +3404,8 @@ msgid ""
 "The OPTIONS response did not include the requested activity-collection-set "
 "value."
 msgstr ""
-"OPTIONS レスポンスは、リクエストされた activity-collection-set 値を含んでいま"
-"せん。"
+"OPTIONS レスポンスに、リクエストした activity-collection-set の値が含まれてい"
+"ません。"
 
 #: libsvn_ra_serf/commit.c:1029
 #, c-format
@@ -3487,12 +3492,12 @@ msgstr "ホスト名を検索できませんでした: %s"
 #: libsvn_ra_serf/serf.c:288
 msgid "The OPTIONS response did not include the requested version-name value."
 msgstr ""
-"OPTIONS レスポンスは、リクエストされた version-name 値を含んでいません。"
+"OPTIONS レスポンスに、リクエストした version-name の値が含まれていません。"
 
 #: libsvn_ra_serf/serf.c:452
 msgid "The OPTIONS response did not include the requested resourcetype value."
 msgstr ""
-"OPTIONS レスポンスは、リクエストされた resourcetype 値を含んでいません。"
+"OPTIONS レスポンスに、リクエストした resourcetype 値が含まれていません。"
 
 #: libsvn_ra_serf/serf.c:943
 #, c-format
@@ -3506,7 +3511,7 @@ msgstr "absent-directory 要素に name 属性がありません"
 
 #: libsvn_ra_serf/update.c:1456
 msgid "Missing name attr in absent-file element"
-msgstr "open-file 要素に name 属性がありません"
+msgstr "absent-file 要素に name 属性がありません"
 
 #: libsvn_ra_serf/update.c:2237
 #, c-format
@@ -3584,11 +3589,12 @@ msgstr "バージョン %d 以上をサーバが必要としています"
 #: libsvn_ra_svn/client.c:558
 #, c-format
 msgid "Server only supports versions up to %d"
-msgstr "サーバは、バージョン %d までをサポートしています"
+msgstr "サーバでサポートされているのはバージョン %d までのみです"
 
+# TRANSLATION-FIXME: Translation for "edit pipelining" must be checked.
 #: libsvn_ra_svn/client.c:566
 msgid "Server does not support edit pipelining"
-msgstr "サーバは、エディットパイプラインをサポートしていません"
+msgstr "編集のパイプライン化がサーバでサポートされていません"
 
 #: libsvn_ra_svn/client.c:592
 msgid "Impossibly long repository root from server"
@@ -3642,11 +3648,11 @@ msgstr "location エントリがリストではありません"
 
 #: libsvn_ra_svn/client.c:1543
 msgid "'get-location-segments' not implemented"
-msgstr "'get-location-segments' REPORT は実装されていません"
+msgstr "'get-location-segments' は実装されていません"
 
 #: libsvn_ra_svn/client.c:1555
 msgid "Location segment entry not a list"
-msgstr "location セグメントはリストではありません"
+msgstr "location segment エントリがリストではありません"
 
 #: libsvn_ra_svn/client.c:1617
 msgid "'get-file-revs' not implemented"
@@ -3654,7 +3660,7 @@ msgstr "'get-file-revs' は実装されていません"
 
 #: libsvn_ra_svn/client.c:1630
 msgid "Revision entry not a list"
-msgstr "revision エントリはリストではありません"
+msgstr "revision エントリがリストではありません"
 
 # ? text delta chunk
 #: libsvn_ra_svn/client.c:1647 libsvn_ra_svn/client.c:1672
@@ -4175,7 +4181,7 @@ msgstr "対象がないのにトップレベルの報告が 2 つあります"
 #: libsvn_repos/reporter.c:1224
 #, c-format
 msgid "Unsupported report depth '%s'"
-msgstr "サポートされていない report depth '%s' です"
+msgstr "報告された深さ '%s' はサポートされていません"
 
 #: libsvn_repos/repos.c:178
 #, c-format
@@ -4737,26 +4743,26 @@ msgstr "'%s' の 1 行目に数字以外が含まれています"
 #: libsvn_subr/kitchensink.c:40
 #, c-format
 msgid "Invalid revision number found parsing '%s'"
-msgstr "'%s' をパースする際に不正なリビジョン番号が見つかりました"
+msgstr "'%s' をパース中に不正なリビジョン番号が見つかりました"
 
 #: libsvn_subr/kitchensink.c:52
 #, c-format
 msgid "Negative revision number found parsing '%s'"
-msgstr "'%s' をパースする際に負のリビジョン番号が見つかりました"
+msgstr "'%s' をパース中に負のリビジョン番号が見つかりました"
 
 #: libsvn_subr/mergeinfo.c:143
 #, c-format
 msgid "Invalid character '%c' found in revision list"
-msgstr "リビジョンリストの中に不正な文字 '%c' が見つかりました"
+msgstr "リビジョンリストに不正な文字 '%c' が見つかりました"
 
 #: libsvn_subr/mergeinfo.c:192 libsvn_subr/mergeinfo.c:199
 #, c-format
 msgid "Invalid character '%c' found in range list"
-msgstr "range list の中に不正な文字 '%c'が見つかりました"
+msgstr "リビジョン範囲リストに不正な文字 '%c'が見つかりました"
 
 #: libsvn_subr/mergeinfo.c:206
 msgid "Range list parsing ended before hitting newline"
-msgstr "改行を見つける前に range list のパースが終了しました"
+msgstr "改行文字に達する前にリビジョン範囲リストのパースが終了しました"
 
 #: libsvn_subr/mergeinfo.c:225
 msgid "Pathname not terminated by ':'"
@@ -4765,7 +4771,7 @@ msgstr "パス名の末端に ':' がついていません"
 #: libsvn_subr/mergeinfo.c:233
 #, c-format
 msgid "Could not find end of line in range list line in '%s'"
-msgstr "'%s' のrange list行に行末文字が見つかりませんでした"
+msgstr "'%s' のリビジョン範囲リスト行に行末文字が見つかりませんでした"
 
 #: libsvn_subr/nls.c:79
 #, c-format
@@ -4960,6 +4966,7 @@ msgstr "'%s' のパスフレーズ: "
 msgid "File '%s' has inconsistent newlines"
 msgstr "ファイル '%s' は改行文字が一貫していません"
 
+# TRANSLATION-FIXME: If APR supported reordering of format indicators...
 #. Human explanatory part, generated by apr_strftime as "Sat, 01 Jan 2000"
 #: libsvn_subr/time.c:81
 msgid " (%a, %d %b %Y)"
@@ -5174,7 +5181,7 @@ msgstr "'%s' のテキストを元に戻す際にエラーが発生しました"
 
 #: libsvn_wc/adm_ops.c:1980
 msgid "Cannot revert."
-msgstr "変換できません"
+msgstr "元に戻せません。"
 
 #: libsvn_wc/adm_ops.c:2007
 #, c-format
@@ -5206,12 +5213,12 @@ msgstr "ファイル '%s' にはローカルでの変更が加えられていま
 
 #: libsvn_wc/adm_ops.c:2597
 msgid "Invalid 'conflict_result' argument"
-msgstr "不正な 'conflict_result' 引数です"
+msgstr "'conflict_result' の引数が不正です"
 
 #: libsvn_wc/adm_ops.c:2937
 #, c-format
 msgid "'%s' is a directory, and thus cannot be a member of a changelist."
-msgstr "'%s' はディレクトリです。そのため変更リストには登録できません。"
+msgstr "'%s' はディレクトリです。そのため変更リストに含めることはできません。"
 
 #: libsvn_wc/adm_ops.c:2959
 #, c-format
@@ -5221,7 +5228,7 @@ msgstr "パス '%s' は変更リスト '%s' に属していません。"
 #: libsvn_wc/adm_ops.c:2981
 #, c-format
 msgid "Removing '%s' from changelist '%s'."
-msgstr "'%s' を削除しています (変更リスト '%s')"
+msgstr "'%s' を変更リスト '%s' から削除しています。"
 
 #: libsvn_wc/copy.c:197
 #, c-format
@@ -5278,10 +5285,11 @@ msgstr "エスケープされた文字が不正です"
 msgid "Unexpected end of entry"
 msgstr "エントリが突然途切れました"
 
+# TRANSLATION-FIXME: What does "non-canonical" mean?
 #: libsvn_wc/entries.c:192
 #, c-format
 msgid "Entry contains non-canonical path '%s'"
-msgstr "正規化されていないパス '%s' を含んでいます"
+msgstr "標準的でないパス '%s' を含んでいます"
 
 #: libsvn_wc/entries.c:244
 #, c-format
@@ -5661,8 +5669,8 @@ msgid ""
 "Trying to add new property '%s' with value '%s',\n"
 "but property already exists with value '%s'."
 msgstr ""
-"新しい属性 '%s' に値 '%s' を与えて追加しようとしています。\n"
-"しかし属性には値 '%s' が既についています。"
+"新しい属性 '%s' に値 '%s' を設定して追加しようとしています。\n"
+"しかしその属性は値を '%s' と設定されて既に存在しています。"
 
 #: libsvn_wc/props.c:1308
 #, c-format
@@ -5671,7 +5679,7 @@ msgid ""
 "but it has been locally deleted."
 msgstr ""
 "新しい属性 '%s' に値 '%s' を与えて追加しようとしています。\n"
-"しかし属性はすでに削除されています。"
+"しかしその属性はローカルで既に削除されています。"
 
 #: libsvn_wc/props.c:1375
 #, c-format
@@ -5679,8 +5687,8 @@ msgid ""
 "Trying to delete property '%s' with value '%s'\n"
 "but it has been modified from '%s' to '%s'."
 msgstr ""
-"属性 '%s' を削除しようとしています。(値 '%s' が設定されています)\n"
-"しかし値が '%s' から '%s' に変更されています。"
+"属性 '%s' (値は '%s') を削除しようとしています。\n"
+"しかしその属性の値は '%s' から '%s' に変更されています。"
 
 #: libsvn_wc/props.c:1396
 #, c-format
@@ -5688,8 +5696,8 @@ msgid ""
 "Trying to delete property '%s' with value '%s'\n"
 "but the local value is '%s'."
 msgstr ""
-"属性 '%s' を削除しようとしています。(値 '%s' が設定されています)\n"
-"しかし属性には値 '%s' が既についています。"
+"属性 '%s' (値は '%s') を削除しようとしています。\n"
+"しかしその属性のローカルでの値は '%s' となっています。"
 
 #: libsvn_wc/props.c:1477
 #, c-format
@@ -5697,8 +5705,8 @@ msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
 "but property has been locally changed from '%s' to '%s'."
 msgstr ""
-"属性 '%s' を '%s' から '%s' に変更しようとしています。\n"
-"しかし属性には'%s' から '%s' に変更されています。"
+"属性 '%s' の値を '%s' から '%s' に変更しようとしています。\n"
+"しかしその属性の値はローカルで '%s' から '%s' に変更されています。"
 
 #: libsvn_wc/props.c:1485
 #, c-format
@@ -5706,8 +5714,8 @@ msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
 "but property has been locally added with value '%s'"
 msgstr ""
-"属性 '%s' を '%s' から '%s' に変更しようとしています。\n"
-"しかし属性には値 '%s' が追加されています。"
+"属性 '%s' の値を '%s' から '%s' に変更しようとしています。\n"
+"しかしその属性は値を '%s' と設定されてローカルで追加されています。"
 
 #: libsvn_wc/props.c:1505
 #, c-format
@@ -5715,8 +5723,8 @@ msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
 "but it has been locally deleted."
 msgstr ""
-"属性 '%s' を '%s' から '%s' に変更しようとしています。\n"
-"しかしその属性は削除されています。"
+"属性 '%s' の値を '%s' から '%s' に変更しようとしています。\n"
+"しかしその属性はローカルで既に削除されています。"
 
 #: libsvn_wc/props.c:1538
 #, c-format
@@ -5724,7 +5732,7 @@ msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
 "but the property does not exist."
 msgstr ""
-"属性 '%s' を '%s' から '%s' に変更しようとしています。\n"
+"属性 '%s' の値を '%s' から '%s' に変更しようとしています。\n"
 "しかしその属性は存在しません。"
 
 #: libsvn_wc/props.c:1575
@@ -5733,8 +5741,8 @@ msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
 "but property already exists with value '%s'."
 msgstr ""
-"属性 '%s' を '%s' から '%s' に変更しようとしています。\n"
-"しかし属性には値 '%s' が既についています。"
+"属性 '%s' の値を '%s' から '%s' に変更しようとしています。\n"
+"しかしその属性は値を '%s' と設定されて既に存在しています。"
 
 #: libsvn_wc/props.c:1875 libsvn_wc/props.c:1903 libsvn_wc/props.c:2048
 #: libsvn_wc/props.c:2263
@@ -5781,8 +5789,8 @@ msgstr "属性 %s を '%s' においてパースする際にエラーが発生�
 msgid ""
 "Invalid %s property on '%s': target '%s' is an absolute path or involves '..'"
 msgstr ""
-"不正な属性 %s が '%s' にあります: 対象 '%s' は 絶対パスまたは'..' を含んでい"
-"ます"
+"不正な属性 %s が '%s' に設定されています: 対象 '%s' が絶対パスであるか、また"
+"は '..' を含んでいます"
 
 #: libsvn_wc/questions.c:122
 #, c-format
@@ -5801,11 +5809,11 @@ msgid ""
 "See http://subversion.tigris.org/faq.html#working-copy-format-change\n"
 "for details."
 msgstr ""
-"クライアントが古すぎて、作業コピー '%s' を扱うことができません。新しい\n"
-"バージョンのSubversion を取得する必要があります。あるいは作業コピーを\n"
-"ダウングレードする必要があります。\n"
-"詳細は http://subversion.tigris.org/faq.html#working-copy-format-change\n"
-" を見てください。"
+"クライアントが古すぎて、作業コピー '%s' を扱うことができません。\n"
+"もっと新しい Subversion クライアントをインストールするか、作業コピーをダウン"
+"グレードする必要があります。\n"
+"詳しくは http://subversion.tigris.org/faq.html#working-copy-format-change を"
+"参照してください。"
 
 #: libsvn_wc/questions.c:344
 #, c-format
@@ -5895,7 +5903,7 @@ msgstr ""
 
 #: libsvn_wc/update_editor.c:1949
 msgid "Bad copyfrom arguments received."
-msgstr "不正な copyfrom 引数を受け取りました"
+msgstr "受け取った copyfrom の引数が不正です。"
 
 #: libsvn_wc/update_editor.c:1990
 #, c-format
@@ -5934,15 +5942,17 @@ msgstr "'%s' のチェックサムが一致しませんでした。記録: '%s',
 
 #: libsvn_wc/update_editor.c:2864
 msgid "Destination directory of add-with-history is missing a URL."
-msgstr "add-with-history のコピー先 / 移動先ディレクトリには URL がありません"
+msgstr ""
+"add-with-history のコピー先 (もしくは移動先) のディレクトリに URL がありませ"
+"ん。"
 
 #: libsvn_wc/update_editor.c:2879
 msgid "Destination URLs are broken."
-msgstr "コピー先 (もしくは移動先) URL は壊れています"
+msgstr "コピー先 (もしくは移動先) の URL が壊れています。"
 
 #: libsvn_wc/update_editor.c:3081
 msgid "No fetch_func supplied to update_editor."
-msgstr "fetch_func は update_editor に与えられていません"
+msgstr "fetch_func が update_editor に与えられていません。"
 
 #: libsvn_wc/update_editor.c:3719
 #, c-format
@@ -5966,7 +5976,7 @@ msgstr "ディレクトリを作れません"
 #: libsvn_wc/util.c:281
 #, c-format
 msgid "Cannot find a URL for '%s'"
-msgstr "'%s' に対する URL が見つかりません"
+msgstr "'%s' の URL が見つかりません"
 
 #: svn/blame-cmd.c:247 svn/list-cmd.c:233
 msgid "'verbose' option invalid in XML mode"
@@ -5993,7 +6003,7 @@ msgid ""
 "Discovered a conflict.\n"
 "\n"
 msgstr ""
-"競合を発見しました。\n"
+"競合が見つかりました。\n"
 "\n"
 
 #: svn/conflict-callbacks.c:146
@@ -6003,36 +6013,36 @@ msgstr "エディタが見つかりません。すべての競合をそのまま
 #: svn/conflict-callbacks.c:155
 msgid "Error running editor, leaving all conflicts."
 msgstr ""
-"実行中のエディタでエラーが発生しました。すべての競合をそのままにします。"
+"エディタの実行中にエラーが発生しました。すべての競合をそのままにします。"
 
 #: svn/conflict-callbacks.c:187 svn/conflict-callbacks.c:337
 msgid "No merge tool found.\n"
-msgstr "マージツールが見つかりません\n"
+msgstr "マージツールが見つかりません。\n"
 
 #: svn/conflict-callbacks.c:195 svn/conflict-callbacks.c:344
 msgid "Error running merge tool."
-msgstr "マージツールの実行中にエラーが発生しました"
+msgstr "マージツールの実行中にエラーが発生しました。"
 
 #: svn/conflict-callbacks.c:222
 #, c-format
 msgid "Conflict discovered in '%s'.\n"
-msgstr "競合が見つかりました: %s\n"
+msgstr "'%s' で競合が見つかりました。\n"
 
 #: svn/conflict-callbacks.c:228
 msgid "Select: (p)ostpone"
-msgstr "選択; 延期(p)"
+msgstr "選択: 延期 (p)"
 
 #: svn/conflict-callbacks.c:230
 msgid ", (d)iff, (e)dit"
-msgstr ", 差分(d), 編集(e)"
+msgstr ", 差分 (d), 編集 (e)"
 
 #: svn/conflict-callbacks.c:233
 msgid ", (r)esolved"
-msgstr ", 解決(r)"
+msgstr ", 解決版 (r)"
 
 #: svn/conflict-callbacks.c:235
 msgid ", (h)elp for more options : "
-msgstr "オプションのヘルプ (h) : "
+msgstr ", ヘルプでその他のオプションを表示 (h) : "
 
 #: svn/conflict-callbacks.c:242
 #, c-format
@@ -6047,14 +6057,14 @@ msgid ""
 "  (h)elp     - show this list\n"
 "\n"
 msgstr ""
-"  延期(p) - 後で競合を解決するように印をつける\n"
-"  差分(d) - マージされたファイルのすべての変更を比較する\n"
-"  編集(e) - エディタでマージされたファイルを編集する\n"
-"  解決(r) - マージされたバージョンのファイルを受け入れる\n"
-"  自分(m) - 自分のファイルを受け入れる\n"
-"  リポジトリ(t) - リポジトリの最新を受け入れる\n"
-"  起動(l) - 競合を解決するためにサードパーティのツールを使用する\n"
-"  ヘルプ(h) - このヘルプを表示する\n"
+"  延期 (p)     - 競合を後で解決する予定であるという印をつけます\n"
+"  差分 (d)     - マージによってファイルに加えられた変更をすべて表示します\n"
+"  編集 (e)     - マージされたファイルをエディタで編集します\n"
+"  解決版 (r)   - マージされたバージョンのファイルを採用します\n"
+"  自分の版 (m) - 自分のバージョンのファイルを採用します\n"
+"  他人の版 (t) - リポジトリに含まれている他人のバージョンを採用します\n"
+"  起動 (l)     - 競合を解決するためにサードパーティ製のツールを使用します\n"
+"  ヘルプ (h)   - この選択肢一覧を表示します\n"
 
 #: svn/conflict-callbacks.c:290 svn/conflict-callbacks.c:320
 #: svn/conflict-callbacks.c:354 svn/conflict-callbacks.c:368
@@ -6063,16 +6073,16 @@ msgid ""
 "Invalid option.\n"
 "\n"
 msgstr ""
-"不正なオプション\n"
+"オプションが不正です。\n"
 "\n"
 
 #: svn/conflict-callbacks.c:303
 msgid "No editor found."
-msgstr "エディタが見つかりません"
+msgstr "エディタが見つかりません。"
 
 #: svn/conflict-callbacks.c:310
 msgid "Error running editor."
-msgstr "エディタの実行中にエラーが発生しました"
+msgstr "エディタの実行中にエラーが発生しました。"
 
 #: svn/conflict-callbacks.c:398
 #, c-format
@@ -6080,12 +6090,12 @@ msgid ""
 "Conflict discovered when trying to add '%s'.\n"
 "An object of the same name already exists.\n"
 msgstr ""
-"'%s' を追加中に競合を見つけました。\n"
+"'%s' を追加しようとしましたが競合が見つかりました。\n"
 "同名のオブジェクトが既に存在します。\n"
 
 #: svn/conflict-callbacks.c:401
 msgid "Select: (p)ostpone, (m)ine, (t)heirs, (h)elp :"
-msgstr "選択: 延期(p), 自分(m), 最新(t), ヘルプ(h) :"
+msgstr "選択: 延期 (p), 自分の版 (m), 他人の版 (t), ヘルプ (h) :"
 
 #: svn/conflict-callbacks.c:412
 #, c-format
@@ -6096,10 +6106,11 @@ msgid ""
 "  (h)elp     - show this list\n"
 "\n"
 msgstr ""
-"  延期(p)   - 後で衝突を解決する\n"
-"  自分(m)   - 既に存在する項目を承認する\n"
-"  最新(t)   - リポジトリの項目を承認する\n"
-"  ヘルプ(h) - このヘルプを表示する\n"
+"  延期 (p)     - 後で衝突を解決します\n"
+"  自分の版 (m) - 既に存在する項目を採用します\n"
+"  他人の版 (t) - リポジトリから入ってくる項目を採用します\n"
+"  ヘルプ (h)   - この選択肢一覧を表示します\n"
+"\n"
 
 #: svn/copy-cmd.c:124 svn/delete-cmd.c:64 svn/mkdir-cmd.c:65 svn/move-cmd.c:76
 #: svn/propedit-cmd.c:202
@@ -6445,7 +6456,7 @@ msgstr " (%s:%ld より)"
 #: svn/log-cmd.c:247
 #, c-format
 msgid "Result of a merge from:"
-msgstr "マージ結果:"
+msgstr "以下のリビジョンのマージ結果:"
 
 #: svn/log-cmd.c:462
 msgid "'with-all-revprops' option only valid in XML mode"
@@ -6468,7 +6479,8 @@ msgstr "URL の後の引数で指定できるのは相対パスだけです"
 #, c-format
 msgid "cannot assign with 'with-revprop' option (drop the '=')"
 msgstr ""
-"'with-revprop' オプションで割り当てることはできません ('=' を削ってください)"
+"'with-revprop' オプションを用いた値の設定はできません ('=' を取り除いてくださ"
+"い)"
 
 # * Description for 'svn --force'.
 # * 29 half-size characters are displayed on the left.

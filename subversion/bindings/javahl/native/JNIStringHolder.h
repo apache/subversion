@@ -19,12 +19,8 @@
  * @brief Interface of the class JNIStringHolder
  */
 
-#if !defined(AFX_JNISTRINGHOLDER_H__66F98D96_0371_471D_9E5C_EE5D45954C75__INCLUDED_)
-#define AFX_JNISTRINGHOLDER_H__66F98D96_0371_471D_9E5C_EE5D45954C75__INCLUDED_
-
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
+#ifndef JNISTRINGHOLDER_H
+#define JNISTRINGHOLDER_H
 
 #include <jni.h>
 #include <apr_pools.h>
@@ -43,4 +39,4 @@ class JNIStringHolder
   jstring m_jtext;
 };
 
-#endif // !defined(AFX_JNISTRINGHOLDER_H__66F98D96_0371_471D_9E5C_EE5D45954C75__INCLUDED_)
+#endif  // JNISTRINGHOLDER_H

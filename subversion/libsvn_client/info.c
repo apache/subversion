@@ -254,10 +254,7 @@ crawl_entries(const char *wcpath,
   const svn_wc_entry_t *entry;
   svn_info_t *info;
   struct found_entry_baton fe_baton;
-  int adm_lock_level = -1;
-
-  if (depth == svn_depth_empty || depth == svn_depth_files)
-    adm_lock_level = 0;
+  int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
 
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, wcpath, FALSE,
                                  adm_lock_level,
@@ -373,7 +370,8 @@ svn_client_info2(const char *path_or_url,
      return RA session to the possibly-renamed URL as it exists in REVISION.
      The ra_session returned will be anchored on this "final" URL. */
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &rev,
-                                           &url, path_or_url, peg_revision,
+                                           &url, path_or_url, NULL,
+                                           peg_revision,
                                            revision, ctx, pool));
 
   SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root_URL, pool));

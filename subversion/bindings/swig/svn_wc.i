@@ -197,7 +197,11 @@
 %typemap(in) svn_revnum_t *target_revision
 {
   $1 = apr_palloc(_global_pool, sizeof(svn_revnum_t));
-  *$1 = NUM2LONG($input);
+  if (NIL_P($input)) {
+    *$1 = SVN_INVALID_REVNUM;
+  } else {
+    *$1 = NUM2LONG($input);
+  }
 }
 
 %typemap(argout) svn_revnum_t *target_revision

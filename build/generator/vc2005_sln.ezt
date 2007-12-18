@@ -1,5 +1,5 @@
 Microsoft Visual Studio Solution File, Format Version [version]
-# Visual Studio 2005
+# Visual Studio [is version "10.00"]2008[else]2005[end]
 [for targets]Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "[targets.name]", "[targets.path]", "[targets.guid]"
 	ProjectSection(ProjectDependencies) = postProject
 [for targets.depends]		[targets.depends.guid] = [targets.depends.guid]

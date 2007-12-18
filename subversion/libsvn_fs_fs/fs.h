@@ -38,15 +38,16 @@ extern "C" {
    native filesystem directories and revision files. */
 
 /* Names of special files in the fs_fs filesystem. */
-#define PATH_FORMAT        "format"        /* Contains format number */
-#define PATH_UUID          "uuid"          /* Contains UUID */
-#define PATH_CURRENT       "current"       /* Youngest revision */
-#define PATH_LOCK_FILE     "write-lock"    /* Revision lock file */
-#define PATH_REVS_DIR      "revs"          /* Directory of revisions */
-#define PATH_REVPROPS_DIR  "revprops"      /* Directory of revprops */
-#define PATH_TXNS_DIR      "transactions"  /* Directory of transactions */
-#define PATH_TXN_CURRENT   "transaction-current" /* File with next txn key */
-#define PATH_LOCKS_DIR     "locks"         /* Directory of locks */
+#define PATH_FORMAT           "format"           /* Contains format number */
+#define PATH_UUID             "uuid"             /* Contains UUID */
+#define PATH_CURRENT          "current"          /* Youngest revision */
+#define PATH_LOCK_FILE        "write-lock"       /* Revision lock file */
+#define PATH_REVS_DIR         "revs"             /* Directory of revisions */
+#define PATH_REVPROPS_DIR     "revprops"         /* Directory of revprops */
+#define PATH_TXNS_DIR         "transactions"     /* Directory of transactions */
+#define PATH_TXN_CURRENT      "transaction-current" /* File with next txn key */
+#define PATH_TXN_CURRENT_LOCK "txn-current-lock" /* Lock for txn-current */
+#define PATH_LOCKS_DIR         "locks"           /* Directory of locks */
 
 /* Names of special files and file extensions for transactions */
 #define PATH_CHANGES       "changes"       /* Records changes made so far */
@@ -138,6 +139,10 @@ typedef struct
   /* A lock for intra-process synchronization when grabbing the
      repository write lock. */
   apr_thread_mutex_t *fs_write_lock;
+
+  /* A lock for intra-process synchronization when locking the
+     transaction-current file. */
+  apr_thread_mutex_t *txn_current_lock;
 #endif
 
   /* The common pool, under which this object is allocated, subpools
@@ -171,13 +176,6 @@ typedef struct
   apr_hash_t *dir_cache[NUM_DIR_CACHE_ENTRIES];
   apr_pool_t *dir_cache_pool[NUM_DIR_CACHE_ENTRIES];
 
-  /* A cache of revision root IDs, allocated in this subpool.  (IDs
-   * are so small that one pool per ID would be overkill;
-   * unfortunately, this means the only way we expire cache entries is
-   * by wiping the whole cache.) */
-  apr_hash_t *rev_root_id_cache;
-  apr_pool_t *rev_root_id_cache_pool;
-
   /* The format number of this FS. */
   int format;
   /* The maximum number of files to store per directory (for sharded
@@ -186,6 +184,20 @@ typedef struct
 
   /* The uuid of this FS. */
   const char *uuid;
+
+  /* Caches of immutable data.
+     
+     Both of these could be moved to fs_fs_shared_data_t to make them
+     last longer; on the other hand, this would require adding mutexes
+     for threaded builds.
+  */
+
+  /* A cache of revision root IDs, allocated in this subpool.  (IDs
+     are so small that one pool per ID would be overkill;
+     unfortunately, this means the only way we expire cache entries is
+     by wiping the whole cache.) */
+  apr_hash_t *rev_root_id_cache;
+  apr_pool_t *rev_root_id_cache_pool;
 
   /* DAG node cache for immutable nodes */
   dag_node_cache_t rev_node_list;

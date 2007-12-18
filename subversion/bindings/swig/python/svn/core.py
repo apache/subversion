@@ -6,7 +6,7 @@
 #
 ######################################################################
 #
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2003-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -19,6 +19,62 @@
 from libsvn.core import *
 import libsvn.core as _libsvncore
 import atexit as _atexit
+
+class SubversionException(Exception):
+  def __init__(self, message=None, apr_err=None, child=None,
+               file=None, line=None):
+    """Initialize a new Subversion exception object.
+
+    Arguments:
+    message     -- optional user-visible error message
+    apr_err     -- optional integer error code (apr_status_t)
+    child       -- optional SubversionException to wrap
+    file        -- optional source file name where the error originated
+    line        -- optional line number of the source file
+
+    file and line are for C, not Python; they are redundant to the
+    traceback information for exceptions raised in Python.
+    """
+    # Be compatible with pre-1.5 .args behavior:
+    args = []
+    if message is None:
+      # SubversionException().args => ()
+      pass
+    else:
+      # SubversionException('message').args => ('message',)
+      args.append(message)
+      if apr_err is not None:
+        # SubversionException('message', 123) => ('message', 123)
+        args.append(apr_err)
+    Exception.__init__(self, *args)
+
+    self.apr_err = apr_err
+    self.message = message
+    self.child = child
+    self.file = file
+    self.line = line
+
+  def _new_from_err_list(cls, errors):
+    """Return new Subversion exception object from list of svn_error_t data.
+
+    This alternative constructor is for turning a chain of svn_error_t
+    objects in C into a chain of SubversionException objects in Python.
+    errors is a list of (apr_err, message, file, line) tuples, in order
+    from outer-most child to inner-most.
+
+    Use svn_swig_py_svn_exception rather than calling this directly.
+
+    Note: this modifies the errors list provided by the caller by
+    reversing it.
+    """
+    child = None
+    errors.reverse()
+    for (apr_err, message, file, line) in errors:
+      child = cls(message, apr_err, child, file, line)
+    return child
+  # Don't use @classmethod, we support 2.2.
+  _new_from_err_list = classmethod(_new_from_err_list)
+
 
 def _cleanup_application_pool():
   """Cleanup the application pool before exiting"""
@@ -35,8 +91,8 @@ def _unprefix_names(symbol_dict, from_prefix, to_prefix = ''):
 Pool = _libsvncore.svn_pool_create
 
 # Setup consistent names for revnum constants
-svn_ignored_revnum = SWIG_SVN_IGNORED_REVNUM
-svn_invalid_revnum = SWIG_SVN_INVALID_REVNUM
+SVN_IGNORED_REVNUM = SWIG_SVN_IGNORED_REVNUM
+SVN_INVALID_REVNUM = SWIG_SVN_INVALID_REVNUM
 
 def svn_path_compare_paths(path1, path2):
   path1_len = len (path1);
@@ -74,6 +130,17 @@ def svn_path_compare_paths(path1, path2):
   # determine order
   return cmp(char1, char2)
 
+def svn_mergeinfo_merge(mergeinfo, changes):
+  return _libsvncore.svn_swig_mergeinfo_merge(mergeinfo, changes)
+
+def svn_mergeinfo_sort(mergeinfo):
+  return _libsvncore.svn_swig_mergeinfo_sort(mergeinfo)
+
+def svn_rangelist_merge(rangelist, changes):
+  return _libsvncore.svn_swig_rangelist_merge(rangelist, changes)
+
+def svn_rangelist_reverse(rangelist):
+  return _libsvncore.svn_swig_rangelist_reverse(rangelist)
 
 class Stream:
   """A file-object-like wrapper for Subversion svn_stream_t objects."""

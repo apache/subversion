@@ -83,6 +83,9 @@ Source: {#= path_intl_dll}\intl3_svn.dll; DestDir: {app}\bin; Flags: ignoreversi
 Source: {#= path_msvcr70_dll}\msvcr70.dll; DestDir: {app}\bin
 #endif
 
+;SQLite
+Source: {#= path_sqlite}\sqlite3.dll; DestDir: {app}\bin; Flags: ignoreversion
+
 ;SSL
 Source: {#= path_ssl}\libeay32.dll; DestDir: {app}\bin; Flags: ignoreversion
 Source: {#= path_ssl}\ssleay32.dll; DestDir: {app}\bin; Flags: ignoreversion

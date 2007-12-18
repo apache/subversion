@@ -31,6 +31,7 @@
 #include "../include/org_tigris_subversion_javahl_StatusKind.h"
 #include "../include/org_tigris_subversion_javahl_Revision.h"
 #include "../include/org_tigris_subversion_javahl_ScheduleKind.h"
+#include "../include/org_tigris_subversion_javahl_ConflictDescriptor_Kind.h"
 #include "../include/org_tigris_subversion_javahl_ConflictDescriptor_Action.h"
 #include "../include/org_tigris_subversion_javahl_ConflictDescriptor_Reason.h"
 
@@ -371,6 +372,19 @@ jint EnumMapper::mapStatusKind(svn_wc_status_kind svnKind)
 
     case svn_wc_status_incomplete:
       return org_tigris_subversion_javahl_StatusKind_incomplete;
+    }
+}
+
+jint EnumMapper::mapConflictKind(svn_wc_conflict_kind_t kind)
+{
+  switch (kind)
+    {
+    case svn_wc_conflict_kind_text:
+    default:
+      return org_tigris_subversion_javahl_ConflictDescriptor_Kind_text;
+
+    case svn_wc_conflict_kind_property:
+      return org_tigris_subversion_javahl_ConflictDescriptor_Kind_property;
     }
 }
 

@@ -89,10 +89,12 @@ if sys.platform == 'win32':
   windows = True
   file_scheme_prefix = 'file:///'
   _exe = '.exe'
+  _bat = '.bat'
 else:
   windows = False
   file_scheme_prefix = 'file://'
   _exe = ''
+  _bat = ''
 
 try:
   from popen2 import Popen3
@@ -128,8 +130,10 @@ svnadmin_binary = os.path.abspath('../../svnadmin/svnadmin' + _exe)
 svnlook_binary = os.path.abspath('../../svnlook/svnlook' + _exe)
 svnsync_binary = os.path.abspath('../../svnsync/svnsync' + _exe)
 svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
+svndumpfilter_binary = os.path.abspath('../../svndumpfilter/svndumpfilter' + \
+                                       _exe)
 
-# Global variable indicating if we want verbose output, that is, 
+# Global variable indicating if we want verbose output, that is,
 # details of what commands each test does as it does them.  This is
 # incompatible with quiet_mode.
 verbose_mode = False
@@ -228,6 +232,41 @@ greek_state = wc.State('', {
 
 ######################################################################
 # Utilities shared by the tests
+def wrap_ex(func):
+  "Wrap a function, catch, print and ignore exceptions"
+  def w(*args, **kwds):
+    try:
+      return func(*args, **kwds)
+    except Failure, ex:
+      if ex.__class__ != Failure or ex.args:
+        ex_args = str(ex)
+        if ex_args:
+          print 'EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args)
+        else:
+          print 'EXCEPTION:', ex.__class__.__name__
+  return w
+
+def setup_development_mode():
+  "Wraps functions in module actions"
+  l = [ 'run_and_verify_svn',
+        'run_and_verify_svnversion',
+        'run_and_verify_load',
+        'run_and_verify_dump',
+        'run_and_verify_checkout',
+        'run_and_verify_export',
+        'run_and_verify_update',
+        'run_and_verify_merge',
+        'run_and_verify_merge2',
+        'run_and_verify_switch',
+        'run_and_verify_commit',
+        'run_and_verify_unquiet_status',
+        'run_and_verify_status',
+        'run_and_verify_diff_summarize',
+        'run_and_verify_diff_summarize_xml',
+        'run_and_validate_lock']
+  
+  for func in l:
+    setattr(actions, func, wrap_ex(getattr(actions, func)))
 
 def get_admin_name():
   "Return name of SVN administrative subdirectory."
@@ -311,20 +350,23 @@ def open_pipe(command, mode):
     inf, outf, errf = os.popen3(command, mode)
     return inf, outf, errf, None
 
-def wait_on_pipe(waiter):
+def wait_on_pipe(waiter, stdout_lines, stderr_lines):
   """Waits for KID (opened with open_pipe) to finish, dying
-  if it does.  Returns kid's exit code."""
+  if it does.  Uses STDOUT_LINES and STDERR_LINES for error message
+  if kid fails.  Returns kid's exit code."""
   if waiter is None:
     return
-  
+
   kid, command = waiter
 
   wait_code = kid.wait()
 
   if os.WIFSIGNALED(wait_code):
     exit_signal = os.WTERMSIG(wait_code)
-    sys.stdout.write("".join(stdout_lines))
-    sys.stderr.write("".join(stderr_lines))
+    if stdout_lines is not None:
+      sys.stdout.write("".join(stdout_lines))
+    if stderr_lines is not None:
+      sys.stderr.write("".join(stderr_lines))
     if verbose_mode:
       # show the whole path to make it easier to start a debugger
       sys.stderr.write("CMD: %s terminated by signal %d\n"
@@ -362,7 +404,7 @@ def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
   outfile.close()
   errfile.close()
 
-  exit_code = wait_on_pipe(kid)
+  exit_code = wait_on_pipe(kid, stdout_lines, stderr_lines)
 
   return exit_code, stdout_lines, stderr_lines
 
@@ -433,13 +475,23 @@ def _with_config_dir(args):
   else:
     return args + ('--config-dir', default_config_dir)
 
+def _with_auth(args):
+  assert '--password' not in args
+  args = args + ('--password', wc_passwd,
+                 '--no-auth-cache' )
+  if '--username' in args:
+    return args
+  else:
+    return args + ('--username', wc_author )
+
 # For running subversion and returning the output
 def run_svn(error_expected, *varargs):
   """Run svn with VARARGS; return stdout, stderr as lists of lines.
   If ERROR_EXPECTED is None, any stderr also will be printed.  If
   you're just checking that something does/doesn't come out of
   stdout/stderr, you might want to use actions.run_and_verify_svn()."""
-  return run_command(svn_binary, error_expected, 0, *(_with_config_dir(varargs)))
+  return run_command(svn_binary, error_expected, 0,
+                     *(_with_auth(_with_config_dir(varargs))))
 
 # For running svnadmin.  Ignores the output.
 def run_svnadmin(*varargs):
@@ -607,8 +659,8 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   load_out.close()
   load_err.close()
   # Wait on the pipes; ignore return code.
-  wait_on_pipe(dump_kid)
-  wait_on_pipe(load_kid)
+  wait_on_pipe(dump_kid, None, dump_lines)
+  wait_on_pipe(load_kid, load_lines, None)
 
   dump_re = re.compile(r'^\* Dumped revision (\d+)\.\r?$')
   expect_revision = 0
@@ -676,6 +728,14 @@ def write_restrictive_svnserve_conf(repo_dir, anon_access="none"):
     fp.write("password-db = passwd\n")
   fp.close()
 
+# Warning: because mod_dav_svn uses one shared authz file for all
+# repositories, you *cannot* use write_authz_file in any test that
+# might be run in parallel.
+#
+# write_authz_file can *only* be used in test suites which disable
+# parallel execution at the bottom like so
+#   if __name__ == '__main__':
+#     svntest.main.run_tests(test_list, serial_only = True)
 def write_authz_file(sbox, rules, sections=None):
   """Write an authz file to SBOX, appropriate for the RA method used,
 with authorizations rules RULES mapping paths to strings containing
@@ -796,6 +856,7 @@ class Sandbox:
     self.repo_dir = os.path.join(general_repo_dir, self.name)
     self.repo_url = test_area_url + '/' + self.repo_dir
 
+    ### TODO: Move this into to the build() method
     # For dav tests we need a single authz file which must be present,
     # so we recreate it each time a sandbox is created with some default
     # contents.
@@ -816,16 +877,23 @@ class Sandbox:
       self.repo_url = self.repo_url.replace('\\', '/')
     self.test_paths = [self.wc_dir, self.repo_dir]
 
-  def clone_dependent(self):
+  def clone_dependent(self, copy_wc=False):
     """A convenience method for creating a near-duplicate of this
     sandbox, useful when working with multiple repositories in the
-    same unit test.  Any necessary cleanup operations are triggered
-    by cleanup of the original sandbox."""
+    same unit test.  If COPY_WC is true, make an exact copy of this
+    sandbox's working copy at the new sandbox's working copy
+    directory.  Any necessary cleanup operations are triggered by
+    cleanup of the original sandbox."""
+
     if not self.dependents:
       self.dependents = []
-    self.dependents.append(copy.deepcopy(self))
-    self.dependents[-1]._set_name("%s-%d" % (self.name, len(self.dependents)))
-    return self.dependents[-1]
+    clone = copy.deepcopy(self)
+    self.dependents.append(clone)
+    clone._set_name("%s-%d" % (self.name, len(self.dependents)))
+    if copy_wc:
+      self.add_test_path(clone.wc_dir)
+      shutil.copytree(self.wc_dir, clone.wc_dir, symlinks=True)
+    return clone
 
   def build(self, name = None, create_wc = True):
     if name != None:
@@ -833,7 +901,7 @@ class Sandbox:
     if actions.make_repo_and_wc(self, create_wc):
       raise Failure("Could not build repository and sandbox '%s'" % self.name)
 
-  def add_test_path(self, path, remove=1):
+  def add_test_path(self, path, remove=True):
     self.test_paths.append(path)
     if remove:
       safe_rmtree(path)
@@ -915,6 +983,10 @@ class TestSpawningThread(threading.Thread):
       args.append('--cleanup')
     if enable_sasl:
       args.append('--enable-sasl')
+    if http_library:
+      args.append('--http-library=' + http_library)
+    if server_minor_version:
+      args.append('--server-minor-version=' + str(server_minor_version))
 
     result, stdout_lines, stderr_lines = spawn_process(command, 1, None, *args)
     # don't trust the exitcode, will not be correct on Windows
@@ -1096,7 +1168,8 @@ def _internal_run_tests(test_list, testnums, parallel):
 
 def usage():
   prog_name = os.path.basename(sys.argv[0])
-  print "%s [--url] [--fs-type] [--verbose|--quiet] \\" % prog_name
+  print "%s [--url] [--fs-type] [--verbose|--quiet] [--parallel] \\" % \
+        prog_name
   print "%s [--enable-sasl] [--cleanup] [--bin] [<test> ...]" \
       % (" " * len(prog_name))
   print "%s " % (" " * len(prog_name))
@@ -1115,6 +1188,14 @@ def usage():
   print " --enable-sasl   Whether to enable SASL authentication"
   print " --parallel      Run the tests in parallel"
   print " --bin           Use the svn binaries installed in this path"
+  print " --use-jsvn      Use the jsvn (SVNKit based) binaries. Can be\n" \
+        "                 combined with --bin to point to a specific path"
+  print " --development   Test development mode: provides more detailed test\n"\
+        "                 output and ignores all exceptions in the \n"  \
+        "                 run_and_verify* functions. This option is only \n" \
+        "                 useful during test development!"
+  print " --server-minor-version  Set the minor version for the server.\n" \
+        "                 Supports version 4 or 5."
   print " --help          This information"
 
 
@@ -1152,11 +1233,14 @@ def run_tests(test_list, serial_only = False):
 
   parallel = 0
   svn_bin = None
+  use_jsvn = False
+
   try:
     opts, args = my_getopt(sys.argv[1:], 'vqhpc',
                            ['url=', 'fs-type=', 'verbose', 'quiet', 'cleanup',
                             'list', 'enable-sasl', 'help', 'parallel',
-                            'bin=', 'http-library=', 'server-minor-version='])
+                            'bin=', 'http-library=', 'server-minor-version=', 
+                            'use-jsvn', 'development'])
   except getopt.GetoptError, e:
     print "ERROR: %s\n" % e
     usage()
@@ -1220,6 +1304,12 @@ def run_tests(test_list, serial_only = False):
         print "ERROR: test harness only supports server minor version 4 or 5"
         sys.exit(1)
 
+    elif opt == '--use-jsvn':
+      use_jsvn = True
+
+    elif opt == '--development':
+      setup_development_mode()
+
   if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
     test_area_url = test_area_url[:-1]
 
@@ -1232,12 +1322,22 @@ def run_tests(test_list, serial_only = False):
   if windows:
     pristine_url = pristine_url.replace('\\', '/')
 
-  if not svn_bin is None:
-    svn_binary = os.path.join(svn_bin, 'svn' + _exe)
-    svnadmin_binary = os.path.join(svn_bin, 'svnadmin' + _exe)
-    svnlook_binary = os.path.join(svn_bin, 'svnlook' + _exe)
-    svnsync_binary = os.path.join(svn_bin, 'svnsync' + _exe)
-    svnversion_binary = os.path.join(svn_bin, 'svnversion' + _exe)
+  if use_jsvn:
+    if svn_bin is None: 
+      svn_bin = ''
+    svn_binary = os.path.join(svn_bin, 'jsvn' + _bat)
+    svnadmin_binary = os.path.join(svn_bin, 'jsvnadmin' + _bat)
+    svnlook_binary = os.path.join(svn_bin, 'jsvnlook' + _bat)
+    svnsync_binary = os.path.join(svn_bin, 'jsvnsync' + _bat)
+    svnversion_binary = os.path.join(svn_bin, 'jsvnversion' + _bat)
+    use_jsvn = False
+  else:
+    if svn_bin:
+      svn_binary = os.path.join(svn_bin, 'svn' + _exe)
+      svnadmin_binary = os.path.join(svn_bin, 'svnadmin' + _exe)
+      svnlook_binary = os.path.join(svn_bin, 'svnlook' + _exe)
+      svnsync_binary = os.path.join(svn_bin, 'svnsync' + _exe)
+      svnversion_binary = os.path.join(svn_bin, 'svnversion' + _exe)
 
   command_line_parsed = True
 

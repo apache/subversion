@@ -285,11 +285,13 @@ analogous to CVS/ subdirs.  See the separate sections below for more details.
 
 'all-wcprops/':
    Some properties are never seen or set by the user, and are never
-   stored in the repository filesystem.  They are created by the
-   networking layer (DAV right now) and need to be secretly saved and
-   retrieved, much like a web browser stores "cookies".  Special wc
-   library routines allow the networking layer to get and set these
-   properties.  
+   stored in the repository filesystem.  They are created and used
+   exclusively by the networking layer (DAV right now) and need to
+   be secretly saved and retrieved, much like a web browser stores
+   "cookies".  Special wc library routines allow the networking layer
+   to get and set these properties. By design, working copy metadata
+   used by libsvn_wc itself should always be stored in the entries file,
+   never in wcprops.
 
    Note that because these properties aren't being versioned, we don't
    bother to keep pristine forms of them in a 'base' area.

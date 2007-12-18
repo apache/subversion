@@ -122,15 +122,18 @@ ConflictResolverCallback::resolve(svn_wc_conflict_result_t **result,
 
   if (ctor == 0)
     {
-      ctor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;IZ"
-                              "Ljava/lang/String;IILjava/lang/String;"
+      ctor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;II"
+                              "Ljava/lang/String;ZLjava/lang/String;II"
                               "Ljava/lang/String;Ljava/lang/String;"
-                              "Ljava/lang/String;)V");
+                              "Ljava/lang/String;Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown() || ctor == 0)
         return SVN_NO_ERROR;
     }
 
   jstring jpath = JNIUtil::makeJString(desc->path);
+  if (JNIUtil::isJavaExceptionThrown())
+    return SVN_NO_ERROR;
+  jstring jpropertyName = JNIUtil::makeJString(desc->property_name);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
   jstring jmimeType = JNIUtil::makeJString(desc->mime_type);
@@ -151,7 +154,9 @@ ConflictResolverCallback::resolve(svn_wc_conflict_result_t **result,
 
   // Instantiate the conflict descriptor.
   jobject jdesc = env->NewObject(clazz, ctor, jpath,
+                                 EnumMapper::mapConflictKind(desc->kind),
                                  EnumMapper::mapNodeKind(desc->node_kind),
+                                 jpropertyName,
                                  (jboolean) desc->is_binary, jmimeType,
                                  EnumMapper::mapConflictAction(desc->action),
                                  EnumMapper::mapConflictReason(desc->reason),
@@ -179,6 +184,9 @@ ConflictResolverCallback::resolve(svn_wc_conflict_result_t **result,
     return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL, NULL);
 
   env->DeleteLocalRef(jpath);
+  if (JNIUtil::isJavaExceptionThrown())
+    return SVN_NO_ERROR;
+  env->DeleteLocalRef(jpropertyName);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
   env->DeleteLocalRef(jmimeType);

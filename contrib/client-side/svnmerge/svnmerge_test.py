@@ -856,15 +856,15 @@ class TestCase_TestRepo(TestCase_SvnMerge):
     def testTrimmedAvailMerge(self):
         """Check that both avail and merge do not search for phantom revs too hard."""
         self.svnmerge("init")
-        self.svnmerge("avail -vv -r8-9", match=r"svn log.*-r8:9")
-        self.svnmerge("merge -F -vv -r8-9", match=r"svn log.*-r8:9")
+        self.svnmerge("avail -vv -r8-9", match=r"svn --non-interactive log.*-r8:9")
+        self.svnmerge("merge -F -vv -r8-9", match=r"svn --non-interactive log.*-r8:9")
         self.svnmerge("avail -vv -r2", nonmatch=r"svn log")
         self.svnmerge("integrated", match=r"^3-6,8-9$")
 
     def testMergeRecordOnly(self):
         """Check that flagging revisions as manually merged works."""
         self.svnmerge("init")
-        self.svnmerge("avail -vv -r9", match=r"svn log.*-r9:9")
+        self.svnmerge("avail -vv -r9", match=r"svn --non-interactive log.*-r9:9")
         self.svnmerge("merge --record-only -F -vv -r9",
                       nonmatch=r"svn merge -r 8:9")
         self.svnmerge("avail -r9", match=r"\A$")
@@ -910,7 +910,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # since that point should still be available to merge from
         # trunk to test-branch:
         self.svnmerge("avail -vv --bidirectional", match=r"\n9-10,16$")
-        self.svnmerge("merge -vv --bidirectional", match=r"svn merge --force -r 15:16")
+        self.svnmerge("merge -vv --bidirectional", match=r"svn --non-interactive merge --force -r 15:16")
         p = self.getproperty()
         self.assertEqual("/trunk:1-16", p)
         self.svnmerge("integrated", match=r"^3-16$")
@@ -936,7 +936,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # Now check reflected revision is excluded with --bidirectional flag.
         self.svnmerge("avail -vv --bidirectional", match=r"\n18$")
 
-        self.svnmerge("merge -vv --bidirectional", match=r"svn merge --force -r 17:18")
+        self.svnmerge("merge -vv --bidirectional", match=r"svn --non-interactive merge --force -r 17:18")
         p = self.getproperty()
         self.assertEqual("/branches/test-branch:1-18", p)
 

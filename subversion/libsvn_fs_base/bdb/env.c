@@ -496,7 +496,7 @@ bdb_close(bdb_env_t *bdb)
   /* Free the environment descriptor. The pool cleanup will do this unless
      the cache has already been destroyed. */
   if (bdb->pool)
-    apr_pool_destroy(bdb->pool);
+    svn_pool_destroy(bdb->pool);
   else
     free(bdb);
   return err;
@@ -563,7 +563,7 @@ bdb_open(bdb_env_t *bdb, u_int32_t flags, int mode)
   flags |= DB_THREAD;
 #endif
   SVN_ERR(convert_bdb_error
-          (bdb, bdb->env->open(bdb->env, bdb->path_bdb, flags, mode)));
+          (bdb, (bdb->env->open)(bdb->env, bdb->path_bdb, flags, mode)));
 
 #if SVN_BDB_AUTO_COMMIT
   /* Assert the BDB_AUTO_COMMIT flag on the opened environment. This

@@ -722,7 +722,7 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
         = APR_ARRAY_IDX(queue->queue,
                         i, committed_queue_item_t *);
 
-      apr_pool_clear(iterpool);
+      svn_pool_clear(iterpool);
 
       if (have_recursive_parent(&have_any_recursive,
                                 queue->queue,
@@ -761,7 +761,7 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
       void *val;
       affected_adm_t *this_adm;
 
-      apr_pool_clear(iterpool);
+      svn_pool_clear(iterpool);
 
       apr_hash_this(hi, NULL, NULL, &val);
       this_adm = val;
@@ -771,7 +771,7 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
 
   queue->queue->nelts = 0;
 
-  apr_pool_destroy(iterpool);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -1977,7 +1977,7 @@ svn_wc_revert3(const char *path,
 
   /* Safeguard 1:  is this a versioned resource? */
   SVN_ERR_W(svn_wc__entry_versioned(&entry, path, dir_access, FALSE, pool),
-            _("Cannot revert."));
+            _("Cannot revert"));
 
   /* Safeguard 1.5: is this a missing versioned directory? */
   if (entry->kind == svn_node_dir)
@@ -2935,7 +2935,7 @@ svn_wc_set_changelist(const apr_array_header_t *paths,
               svn_error_t *unversioned_err =
                   svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
                                     _("'%s' is a directory, and thus cannot"
-                                      " be a member of a changelist."),
+                                      " be a member of a changelist"),
                                     path);
               notify = svn_wc_create_notify(path,
                                             svn_wc_notify_changelist_failed,
