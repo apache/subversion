@@ -601,13 +601,11 @@ svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
         *prop_conflicted_p = TRUE;
     }
 
-  /* Check for tree conflicts, too. */
-  if (entry->tree_conflict_report)
+  /* If this_dir, check for tree conflicts. */
+  if ((strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
+      && entry->tree_conflict_data)
     {
-      path = svn_path_join(dir_path, entry->tree_conflict_report, subpool);
-      SVN_ERR(svn_io_check_path(path, &kind, subpool));
-      if (kind == svn_node_file)
-        *tree_conflicted_p = TRUE;
+      *tree_conflicted_p = TRUE;
     }
 
   svn_pool_destroy(subpool);

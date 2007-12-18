@@ -502,10 +502,6 @@ read_entry(svn_wc_entry_t **new_entry,
   SVN_ERR(read_str(&entry->tree_conflict_data, buf, end, pool));
   MAYBE_DONE;
 
-  /* Tree conflict report. */
-  SVN_ERR(read_str(&entry->tree_conflict_report, buf, end, pool));
-  MAYBE_DONE;
-
  done:
   *new_entry = entry;
   return SVN_NO_ERROR;
@@ -660,6 +656,17 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
         entry->conflict_wrk =
           *(entry->conflict_wrk)
           ? apr_pstrdup(pool, entry->conflict_wrk) : NULL;
+      }
+
+    if ((entry->tree_conflict_data
+         = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_TREE_CONFLICT_DATA,
+                        APR_HASH_KEY_STRING)))
+      {
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA;
+        /* Normalize "" (used by the log runner) to NULL */
+        entry->tree_conflict_data =
+          *(entry->tree_conflict_data)
+          ? apr_pstrdup(pool, entry->tree_conflict_data) : NULL;
       }
   }
 
@@ -1675,9 +1682,6 @@ write_entry(svn_stringbuf_t *buf,
   /* Tree conflict data. */
   write_str(buf, entry->tree_conflict_data, pool);
 
-  /* Tree conflict report. */
-  write_str(buf, entry->tree_conflict_report, pool);
-
   /* Remove redundant separators at the end of the entry. */
   while (buf->len > 1 && buf->data[buf->len - 2] == '\n')
     buf->len--;
@@ -2290,12 +2294,6 @@ fold_entry(apr_hash_t *entries,
       ? apr_pstrdup(pool, entry->tree_conflict_data)
                               : NULL;
 
-  /* Tree conflict report. */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_REPORT)
-    cur_entry->tree_conflict_report = entry->tree_conflict_report
-      ? apr_pstrdup(pool, entry->tree_conflict_report)
-                              : NULL;
-
   /* Absorb defaults from the parent dir, if any, unless this is a
      subdir entry. */
   if (cur_entry->kind != svn_node_dir)
@@ -2704,9 +2702,6 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry, apr_pool_t *pool)
   if (entry->tree_conflict_data)
     dupentry->tree_conflict_data = apr_pstrdup(pool,
                                                entry->tree_conflict_data);
-  if (entry->tree_conflict_report)
-    dupentry->tree_conflict_report = apr_pstrdup(pool,
-                                               entry->tree_conflict_report);
   return dupentry;
 }
 

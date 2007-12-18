@@ -167,14 +167,6 @@ svn_wc__add_tree_conflict_data(svn_stringbuf_t *log_accum,
                                svn_wc_adm_access_t *adm_access,
                                apr_pool_t *pool);
 
-/* Write a user-visible, localized report file in the directory belonging
- * to ADM_ACCESS.  Use a log accumulator string buffer for loggy operations.
- * Do all allocations in POOL.*/
-svn_error_t *
-svn_wc__write_tree_conflict_report(svn_stringbuf_t *log_accum,
-                                   svn_wc_adm_access_t *adm_access,
-                                   apr_pool_t *pool);
-
 /* Set TREE_CONFLICT_VICTIM to TRUE if path is already a recorded
  * tree conflict victim in the directory corresponding to ADM_ACCESS.
  * Do all allocations in POOL. */
@@ -192,20 +184,6 @@ svn_wc__tree_conflict_resolved(const char* victim_path,
                                apr_pool_t *pool);
 
 /*
- * Read tree conflict descriptions from DIR_ENTRY.
- * Append pointers to newly allocated svn_wc_conflict_description_t
- * objects to the array pointed to by CONFLICTS.
- * If there are no tree conflicts rooted at DIR_ENTRY, set *RESULT to NULL.
- * Do all allocations in POOL.
- *
- * This function is used in a unit test in tests/libsvn_wc.
- */
-svn_error_t *
-svn_wc__read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
-                                       const svn_wc_entry_t *dir_entry,
-                                       apr_pool_t *pool);
-
-/*
  * Write tree conflicts (svn_wc_conflict_description_t)
  * in CONFLICTS to DIR_ENTRY.
  *
@@ -215,16 +193,6 @@ svn_error_t *
 svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
                                       svn_wc_entry_t *dir_entry,
                                       apr_pool_t *pool);
-
-/*
- * Append to DESCRIPTIONS a human readable description of a tree CONFLICT.
- *
- * This function is used in a unit test in tests/libsvn_wc.
- */
-svn_error_t *
-svn_wc__append_tree_conflict_desc(svn_stringbuf_t *descriptions,
-                                  svn_wc_conflict_description_t *conflict,
-                                  apr_pool_t *pool);
 
 /*
  * Search in CONFLICTS for a conflict with the given victim_path.

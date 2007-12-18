@@ -1791,13 +1791,6 @@ typedef struct svn_wc_entry_t
    * @since New in 1.6. */
   const char *tree_conflict_data;
 
-  /** Path to a report of the tree conflicts in this_dir.
-   * The report is a text file containing localized human-readable
-   * descriptions of all tree conflicts in this_dir.
-   *
-   * @since New in 1.6. */
-  const char *tree_conflict_report;
-
   /* IMPORTANT: If you extend this structure, check the following functions in
    * subversion/libsvn_wc/entries.c, to see if you need to extend them as well.
    *
@@ -4657,6 +4650,26 @@ svn_wc_set_changelist(const apr_array_header_t *paths,
 
 /** @} */
 
+/**
+ * Read tree conflict descriptions from @a dir_entry.
+ * Append pointers to newly allocated svn_wc_conflict_description_t
+ * objects to the array pointed to by @a conflicts.
+ * Do all allocations in @a pool.
+ */
+svn_error_t *
+svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
+                                      const svn_wc_entry_t *dir_entry,
+                                      apr_pool_t *pool);
+
+/**
+ * Append to @a descriptions a possibly localized human readable
+ * description of a tree conflict described by @a conflict.
+ */
+svn_error_t *
+svn_wc_append_human_readable_tree_conflict_description(
+                                       svn_stringbuf_t *descriptions,
+                                       svn_wc_conflict_description_t *conflict,
+                                       apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
