@@ -5074,7 +5074,7 @@ remove_irrelevant_ranges(apr_hash_t **mergeinfo_by_path_p,
 /* TODO(reint): Document. */
 struct elide_mergeinfo_catalog_dir_baton {
   const char *inherited_mergeinfo_path;
-  const char *last_child_seen_with_mergeinfo;
+  apr_hash_t *mergeinfo_catalog;
 };
 
 /* The root doesn't have mergeinfo (unless it is actually one of the
@@ -5088,6 +5088,7 @@ elide_mergeinfo_catalog_open_root(void *eb,
 {
   struct elide_mergeinfo_catalog_dir_baton *b = apr_pcalloc(dir_pool, 
                                                             sizeof(*b));
+  b->mergeinfo_catalog = eb;
   *root_baton = b;
   return SVN_NO_ERROR;
 }
@@ -5105,9 +5106,9 @@ elide_mergeinfo_catalog_open_directory(const char *path,
   struct elide_mergeinfo_catalog_dir_baton *b, *pb = parent_baton;
   
   b = apr_pcalloc(dir_pool, sizeof(*b));
+  b->mergeinfo_catalog = pb->mergeinfo_catalog;
 
-  if (pb->last_child_seen_with_mergeinfo &&
-      strcmp(path, pb->last_child_seen_with_mergeinfo) == 0)
+  if (apr_hash_get(b->mergeinfo_catalog, path, APR_HASH_KEY_STRING))
     b->inherited_mergeinfo_path = path;
   else
     b->inherited_mergeinfo_path = pb->inherited_mergeinfo_path;
@@ -5115,6 +5116,12 @@ elide_mergeinfo_catalog_open_directory(const char *path,
   *child_baton = b;
   return SVN_NO_ERROR;
 }
+
+/* TODO(reint): Document. */
+struct elide_mergeinfo_catalog_cb_baton {
+  apr_array_header_t *elidable_paths;
+  apr_hash_t *mergeinfo_catalog;
+};
 
 /* Implements svn_delta_path_driver_cb_func_t. */
 static svn_error_t *
@@ -5124,7 +5131,7 @@ elide_mergeinfo_catalog_cb(void **dir_baton,
                            const char *path,
                            apr_pool_t *pool)
 {
-  apr_array_header_t *elidable_paths = callback_baton;
+  struct elide_mergeinfo_catalog_cb_baton *cb = callback_baton;
   struct elide_mergeinfo_catalog_dir_baton *pb = parent_baton;
 
   if (!pb)
@@ -5135,6 +5142,7 @@ elide_mergeinfo_catalog_cb(void **dir_baton,
       struct elide_mergeinfo_catalog_dir_baton *b = apr_pcalloc(pool, 
                                                                 sizeof(*b));
       b->inherited_mergeinfo_path = path;
+      b->mergeinfo_catalog = cb->mergeinfo_catalog;
       *dir_baton = b;
       return SVN_NO_ERROR;
     }
@@ -5142,10 +5150,8 @@ elide_mergeinfo_catalog_cb(void **dir_baton,
   /* Otherwise, we'll just act like everything is a file. */
   *dir_baton = NULL;
 
-  pb->last_child_seen_with_mergeinfo = path;
-  
   /* TODO(reint): Check elision between pb->inherited_mergeinfo_path
-     and path.  Append to elidable_paths if so. */
+     and path.  Append to cb->elidable_paths if so. */
 
   return SVN_NO_ERROR;
 }
@@ -5160,6 +5166,8 @@ elide_mergeinfo_catalog(apr_hash_t *mergeinfo_catalog,
   apr_array_header_t *elidable_paths = apr_array_make(pool, 1, 
                                                       sizeof(const char *));
   svn_delta_editor_t *editor = svn_delta_default_editor(pool);
+  struct elide_mergeinfo_catalog_cb_baton cb = {elidable_paths, 
+                                                mergeinfo_catalog};
   int i;
 
   editor->open_root = elide_mergeinfo_catalog_open_root;
@@ -5168,11 +5176,11 @@ elide_mergeinfo_catalog(apr_hash_t *mergeinfo_catalog,
   /* Walk over the paths, and build up a list of elidable ones. */
   SVN_ERR(svn_hash_keys(&paths, mergeinfo_catalog, pool));
   SVN_ERR(svn_delta_path_driver(editor,
-                                NULL,
+                                mergeinfo_catalog, /* as edit_baton */
                                 SVN_INVALID_REVNUM,
                                 paths,
                                 elide_mergeinfo_catalog_cb,
-                                elidable_paths,
+                                &cb,
                                 pool));
 
   /* Now remove the elidable paths from the catalog. */
