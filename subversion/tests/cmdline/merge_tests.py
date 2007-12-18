@@ -9641,7 +9641,7 @@ def merge_source_normalization_and_subtree_merges(sbox):
 
 def merge_non_reflective_changes_from_reflective_rev(sbox):
   "allow non-reflective changes from reflective rev"
-  #Add file A/C/tfile0.txt and commit, results in r2.
+  #Add file A/C/adhoc.txt, A/C/tfile0.txt and commit, results in r2.
   #Copy A/C to A/FB1 results in r3.
   #Copy A/C to A/FB2 results in r4.
   #Add A/C/tfile1.txt and commit, results in r5.
@@ -9652,12 +9652,13 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
   #Add A/C/tfile3.txt and commit, results in r10.
   #Merge r10 from A/C to A/FB1 and commit results in r11.
   #Merge r4:6 from A/C to A/FB2 and commit results in r12.
-  #Merge A/FB2 to A/FB1 and commit results in r13.
+  #(Merge A/FB2 to A/FB1) + delete A/FB1/adhoc.txt and commit results in r13.
   #Add A/FB1/bfile3.txt and commit, results in r14.
   #Merge r3:14 from A/FB1 to A/C. Here r11,r12, r13 are reflective of '/A/C'.
   #Merge should extract changes that are not from merge of
   #'/A/C'(non-reflective-of-/A/C) and merge.
-  #i.e This should extract '/A/FB1/bfile2.txt from /A/FB1 of r13.
+  #i.e This should extract '+/A/FB1/bfile2.txt and '-/A/FB1/adhoc.txt' from
+  #/A/FB1 of r13.
 
   # Create a WC with a single branch
   sbox.build()
