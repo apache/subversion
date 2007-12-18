@@ -9668,23 +9668,29 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
   A_FB2_url = sbox.repo_url + '/A/FB2'
   A_C_path = os.path.join(wc_dir, 'A', 'C')
   A_C_tfile0_path = os.path.join(A_C_path, 'tfile0.txt')
+  A_C_adhoc_file_path = os.path.join(A_C_path, 'adhoc.txt')
   A_C_tfile1_path = os.path.join(A_C_path, 'tfile1.txt')
   A_C_tfile2_path = os.path.join(A_C_path, 'tfile2.txt')
   A_C_tfile3_path = os.path.join(A_C_path, 'tfile3.txt')
   A_FB1_path = os.path.join(wc_dir, 'A', 'FB1')
   A_FB1_bfile1_path = os.path.join(A_FB1_path, 'bfile1.txt')
   A_FB1_bfile3_path = os.path.join(A_FB1_path, 'bfile3.txt')
+  A_FB1_adhoc_path = os.path.join(A_FB1_path, 'adhoc.txt')
   A_FB2_path = os.path.join(wc_dir, 'A', 'FB2')
   A_FB2_bfile2_path = os.path.join(A_FB2_path, 'bfile2.txt')
 
   svntest.main.file_write(A_C_tfile0_path, "This is the tfile0.\n")
+  svntest.main.file_write(A_C_adhoc_file_path, "This is the adhoc file.\n")
   svntest.main.run_svn(None, 'add', A_C_tfile0_path)
+  svntest.main.run_svn(None, 'add', A_C_adhoc_file_path)
   expected_output = wc.State(A_C_path, {
     'tfile0.txt'    : Item(verb='Adding'),
+    'adhoc.txt'    : Item(verb='Adding'),
     })
   expected_status = wc.State(A_C_path, {
     ''        : Item(status='  ', wc_rev=1),
     'tfile0.txt'   : Item(status='  ', wc_rev=2),
+    'adhoc.txt'    : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_commit(A_C_path, expected_output,
                                         expected_status, None, None, None,
@@ -9701,6 +9707,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     })
   expected_status = wc.State(A_C_path, {
     ''        : Item(status='  ', wc_rev=4),
+    'adhoc.txt'    : Item(status='  ', wc_rev=4),
     'tfile0.txt'   : Item(status='  ', wc_rev=4),
     'tfile1.txt'   : Item(status='  ', wc_rev=5),
     })
@@ -9714,6 +9721,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     })
   expected_status = wc.State(A_C_path, {
     ''        : Item(status='  ', wc_rev=5),
+    'adhoc.txt'    : Item(status='  ', wc_rev=5),
     'tfile1.txt'   : Item(status='  ', wc_rev=5),
     })
   svntest.actions.run_and_verify_commit(A_C_path, expected_output,
@@ -9727,6 +9735,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     })
   expected_status = wc.State(A_FB1_path, {
     ''        : Item(status='  ', wc_rev=6),
+    'adhoc.txt'    : Item(status='  ', wc_rev=6),
     'tfile0.txt'   : Item(status='  ', wc_rev=6),
     'bfile1.txt'   : Item(status='  ', wc_rev=7),
     })
@@ -9741,6 +9750,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     })
   expected_status = wc.State(A_C_path, {
     ''        : Item(status='  ', wc_rev=7),
+    'adhoc.txt'    : Item(status='  ', wc_rev=7),
     'tfile1.txt'   : Item(status='  ', wc_rev=7),
     'tfile2.txt'   : Item(status='  ', wc_rev=8),
     })
@@ -9755,6 +9765,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     })
   expected_status = wc.State(A_FB2_path, {
     ''        : Item(status='  ', wc_rev=8),
+    'adhoc.txt'    : Item(status='  ', wc_rev=8),
     'tfile0.txt'   : Item(status='  ', wc_rev=8),
     'bfile2.txt'   : Item(status='  ', wc_rev=9),
     })
@@ -9769,6 +9780,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     })
   expected_status = wc.State(A_C_path, {
     ''        : Item(status='  ', wc_rev=9),
+    'adhoc.txt'    : Item(status='  ', wc_rev=9),
     'tfile1.txt'   : Item(status='  ', wc_rev=9),
     'tfile2.txt'   : Item(status='  ', wc_rev=9),
     'tfile3.txt'   : Item(status='  ', wc_rev=10),
@@ -9785,12 +9797,14 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
   expected_disk = wc.State('', {
     ''       : Item(props={SVN_PROP_MERGE_INFO : '/A/C:10'}),
     'bfile1.txt'  : Item("This is the bfile1.\n"),
+    'adhoc.txt'   : Item("This is the adhoc file.\n"),
     'tfile0.txt'  : Item("This is the tfile0.\n"),
     'tfile3.txt'  : Item("This is the tfile3.\n"),
     })
   expected_status = wc.State(short_A_FB1, {
     ''        : Item(status=' M', wc_rev=10),
     'bfile1.txt'   : Item(status='  ', wc_rev=10),
+    'adhoc.txt'    : Item(status='  ', wc_rev=10),
     'tfile0.txt'   : Item(status='  ', wc_rev=10),
     'tfile3.txt'   : Item(status='A ', wc_rev='-', copied='+'),
     })
@@ -9809,6 +9823,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
   expected_status = wc.State(A_FB1_path, {
     ''        : Item(status='  ', wc_rev=11),
     'bfile1.txt'   : Item(status='  ', wc_rev=10),
+    'adhoc.txt'    : Item(status='  ', wc_rev=10),
     'tfile0.txt'   : Item(status='  ', wc_rev=10),
     'tfile3.txt'   : Item(status='  ', wc_rev=11),
     })
@@ -9826,12 +9841,14 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
   expected_disk = wc.State('', {
     ''       : Item(props={SVN_PROP_MERGE_INFO : '/A/C:5-6'}),
     'bfile2.txt'  : Item("This is the bfile2.\n"),
+    'adhoc.txt'   : Item("This is the adhoc file.\n"),
     'tfile1.txt'  : Item("This is the tfile1.\n"),
     })
   expected_status = wc.State(short_A_FB2, {
     ''        : Item(status=' M', wc_rev=11),
     'bfile2.txt'   : Item(status='  ', wc_rev=11),
     'tfile0.txt'   : Item(status='D ', wc_rev=11),
+    'adhoc.txt'    : Item(status='  ', wc_rev=11),
     'tfile1.txt'   : Item(status='A ', wc_rev='-', copied='+'),
     })
   svntest.actions.run_and_verify_merge(short_A_FB2, 4, 6,
@@ -9847,6 +9864,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     })
   expected_status = wc.State(A_FB2_path, {
     ''        : Item(status='  ', wc_rev=12),
+    'adhoc.txt'    : Item(status='  ', wc_rev=11),
     'bfile2.txt'   : Item(status='  ', wc_rev=11),
     'tfile1.txt'   : Item(status='  ', wc_rev=12),
     })
@@ -9865,6 +9883,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     ''      : Item(props={SVN_PROP_MERGE_INFO : '/A/C:5-6,10\n/A/FB2:4-12\n'}),
     'bfile1.txt'  : Item("This is the bfile1.\n"),
     'bfile2.txt'  : Item("This is the bfile2.\n"),
+    'adhoc.txt'   : Item("This is the adhoc file.\n"),
     'tfile1.txt'  : Item("This is the tfile1.\n"),
     'tfile3.txt'  : Item("This is the tfile3.\n"),
     })
@@ -9872,6 +9891,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     ''        : Item(status=' M', wc_rev=12),
     'bfile2.txt'   : Item(status='A ', wc_rev='-', copied='+'),
     'bfile1.txt'   : Item(status='  ', wc_rev=12),
+    'adhoc.txt'    : Item(status='  ', wc_rev=12),
     'tfile0.txt'   : Item(status='D ', wc_rev=12),
     'tfile1.txt'   : Item(status='A ', wc_rev='-', copied='+'),
     'tfile3.txt'   : Item(status='  ', wc_rev=12),
@@ -9883,8 +9903,13 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
                                        expected_skip, None, None, None, None,
                                        None, 1, 1)
   os.chdir(saved_cwd)
+
+  #Do adhoc delete and commit along with reflective merge.
+  svntest.main.run_svn(None, 'rm', A_FB1_adhoc_path)
+
   expected_output = wc.State(A_FB1_path, {
     ''    : Item(verb='Sending'),
+    'adhoc.txt'     : Item(verb='Deleting'),
     'tfile0.txt'    : Item(verb='Deleting'),
     'tfile1.txt'    : Item(verb='Adding'),
     'bfile2.txt'    : Item(verb='Adding'),
@@ -9921,6 +9946,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
   expected_skip = wc.State(short_A_C, {})
   expected_output = wc.State(short_A_C, {
     ''              : Item(status=' G'),
+    'adhoc.txt'     : Item(status='D '),
     'bfile1.txt'    : Item(status='A '),
     'bfile2.txt'    : Item(status='A '),
     'bfile3.txt'    : Item(status='A '),
@@ -9940,6 +9966,7 @@ def merge_non_reflective_changes_from_reflective_rev(sbox):
     'bfile1.txt'   : Item(status='A ', wc_rev='-', copied='+'),
     'bfile2.txt'   : Item(status='A ', wc_rev='-', copied='+'),
     'bfile3.txt'   : Item(status='A ', wc_rev='-', copied='+'),
+    'adhoc.txt'    : Item(status='D ', wc_rev=14),
     'tfile1.txt'   : Item(status='  ', wc_rev=14),
     'tfile2.txt'   : Item(status='  ', wc_rev=14),
     'tfile3.txt'   : Item(status='  ', wc_rev=14),
