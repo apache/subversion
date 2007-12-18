@@ -31,6 +31,7 @@
 #include "svn_sorts.h"
 #include "svn_ra.h"
 #include "svn_client.h"
+#include "svn_hash.h"
 
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_wc_private.h"
@@ -865,6 +866,129 @@ get_mergeinfo(apr_hash_t **mergeinfo,
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
+
+/*** In-memory mergeinfo elision ***/
+
+/* TODO(reint): Document. */
+struct elide_mergeinfo_catalog_dir_baton {
+  const char *inherited_mergeinfo_path;
+  apr_hash_t *mergeinfo_catalog;
+};
+
+/* The root doesn't have mergeinfo (unless it is actually one of the
+   paths passed to svn_delta_path_driver, in which case the callback
+   is called directly instead of this). */
+static svn_error_t *
+elide_mergeinfo_catalog_open_root(void *eb,
+                                  svn_revnum_t base_revision,
+                                  apr_pool_t *dir_pool,
+                                  void **root_baton)
+{
+  struct elide_mergeinfo_catalog_dir_baton *b = apr_pcalloc(dir_pool, 
+                                                            sizeof(*b));
+  b->mergeinfo_catalog = eb;
+  *root_baton = b;
+  return SVN_NO_ERROR;
+}
+
+/* Make a directory baton for PATH.  It should have the same
+   inherited_mergeinfo_path as its parent... unless we just called
+   elide_mergeinfo_catalog_cb on its parent with its path. */
+static svn_error_t *
+elide_mergeinfo_catalog_open_directory(const char *path,
+                                       void *parent_baton,
+                                       svn_revnum_t base_revision,
+                                       apr_pool_t *dir_pool,
+                                       void **child_baton)
+{
+  struct elide_mergeinfo_catalog_dir_baton *b, *pb = parent_baton;
+  
+  b = apr_pcalloc(dir_pool, sizeof(*b));
+  b->mergeinfo_catalog = pb->mergeinfo_catalog;
+
+  if (apr_hash_get(b->mergeinfo_catalog, path, APR_HASH_KEY_STRING))
+    b->inherited_mergeinfo_path = path;
+  else
+    b->inherited_mergeinfo_path = pb->inherited_mergeinfo_path;
+  
+  *child_baton = b;
+  return SVN_NO_ERROR;
+}
+
+/* TODO(reint): Document. */
+struct elide_mergeinfo_catalog_cb_baton {
+  apr_array_header_t *elidable_paths;
+  apr_hash_t *mergeinfo_catalog;
+};
+
+/* Implements svn_delta_path_driver_cb_func_t. */
+static svn_error_t *
+elide_mergeinfo_catalog_cb(void **dir_baton,
+                           void *parent_baton,
+                           void *callback_baton,
+                           const char *path,
+                           apr_pool_t *pool)
+{
+  struct elide_mergeinfo_catalog_cb_baton *cb = callback_baton;
+  struct elide_mergeinfo_catalog_dir_baton *pb = parent_baton;
+
+  if (!pb)
+    {
+      /* This means there's actually mergeinfo on the root.  Now, we
+         know that it itself can't be elided, but we do have to set up
+         a dir baton in this case. */
+      struct elide_mergeinfo_catalog_dir_baton *b = apr_pcalloc(pool, 
+                                                                sizeof(*b));
+      b->inherited_mergeinfo_path = path;
+      b->mergeinfo_catalog = cb->mergeinfo_catalog;
+      *dir_baton = b;
+      return SVN_NO_ERROR;
+    }
+
+  /* Otherwise, we'll just act like everything is a file. */
+  *dir_baton = NULL;
+
+  /* TODO(reint): Check elision between pb->inherited_mergeinfo_path
+     and path.  Append to cb->elidable_paths if so. */
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__elide_mergeinfo_catalog(apr_hash_t *mergeinfo_catalog,
+                                    apr_pool_t *pool)
+{
+  apr_array_header_t *paths;
+  apr_array_header_t *elidable_paths = apr_array_make(pool, 1, 
+                                                      sizeof(const char *));
+  svn_delta_editor_t *editor = svn_delta_default_editor(pool);
+  struct elide_mergeinfo_catalog_cb_baton cb = {elidable_paths, 
+                                                mergeinfo_catalog};
+  int i;
+
+  editor->open_root = elide_mergeinfo_catalog_open_root;
+  editor->open_directory = elide_mergeinfo_catalog_open_directory;
+
+  /* Walk over the paths, and build up a list of elidable ones. */
+  SVN_ERR(svn_hash_keys(&paths, mergeinfo_catalog, pool));
+  SVN_ERR(svn_delta_path_driver(editor,
+                                mergeinfo_catalog, /* as edit_baton */
+                                SVN_INVALID_REVNUM,
+                                paths,
+                                elide_mergeinfo_catalog_cb,
+                                &cb,
+                                pool));
+
+  /* Now remove the elidable paths from the catalog. */
+  for (i = 0; i < elidable_paths->nelts; i++)
+    {
+      const char *path = APR_ARRAY_IDX(elidable_paths, i, const char *);
+      apr_hash_set(mergeinfo_catalog, path, APR_HASH_KEY_STRING, NULL);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /*** Public APIs ***/
