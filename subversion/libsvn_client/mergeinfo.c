@@ -528,7 +528,6 @@ elide_mergeinfo(apr_hash_t *parent_mergeinfo,
                 svn_wc_adm_access_t *adm_access,
                 apr_pool_t *pool)
 {
-  apr_pool_t *subpool = NULL;
   svn_boolean_t elides;
 
   /* Easy out: No child mergeinfo to elide. */
@@ -557,7 +556,7 @@ elide_mergeinfo(apr_hash_t *parent_mergeinfo,
       /* Both CHILD_MERGEINFO and PARENT_MERGEINFO are non-NULL and
          non-empty. */
       apr_hash_t *path_tweaked_parent_mergeinfo;
-      subpool = svn_pool_create(pool);
+      apr_pool_t *subpool = svn_pool_create(pool);
 
       path_tweaked_parent_mergeinfo = apr_hash_make(subpool);
       
@@ -572,14 +571,12 @@ elide_mergeinfo(apr_hash_t *parent_mergeinfo,
       SVN_ERR(svn_mergeinfo__equals(&elides,
                                     path_tweaked_parent_mergeinfo,
                                     child_mergeinfo, TRUE, subpool));
+      svn_pool_destroy(subpool);
     }
 
   if (elides)
     SVN_ERR(svn_wc_prop_set2(SVN_PROP_MERGEINFO, NULL, path, adm_access,
                              TRUE, pool));
-
-  if (subpool)
-    svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
