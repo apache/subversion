@@ -339,7 +339,7 @@ remove_expansions(svn_config_t *cfg)
     return;
 
   for_each_option(cfg, NULL, cfg->x_pool, rmex_callback);
-  apr_pool_clear(cfg->x_pool);
+  svn_pool_clear(cfg->x_pool);
   cfg->x_values = FALSE;
 }
 

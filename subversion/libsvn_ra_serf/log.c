@@ -93,11 +93,9 @@ typedef struct {
   void *receiver_baton;
 
   /* pre-1.5 compatibility */
-  svn_boolean_t seen_revprop_element;
   svn_boolean_t want_author;
   svn_boolean_t want_date;
   svn_boolean_t want_message;
-  svn_boolean_t want_custom_revprops;
 } log_context_t;
 
 
@@ -196,13 +194,8 @@ start_log(svn_ra_serf__xml_parser_t *parser,
         {
           push_state(parser, log_ctx, COMMENT);
         }
-      else if (strcmp(name.name, "no-custom-revprops") == 0)
-        {
-          log_ctx->seen_revprop_element = TRUE;
-        }
       else if (strcmp(name.name, "revprop") == 0)
         {
-          log_ctx->seen_revprop_element = TRUE;
           info = push_state(parser, log_ctx, REVPROP);
           info->revprop_name = svn_xml_get_attr_value("name", attrs);
           if (info->revprop_name == NULL)
@@ -292,13 +285,6 @@ end_log(svn_ra_serf__xml_parser_t *parser,
   else if (state == ITEM &&
            strcmp(name.name, "log-item") == 0)
     {
-      if (log_ctx->want_custom_revprops && !log_ctx->seen_revprop_element)
-        {
-          /* Caller asked for custom revprops, but server is too old. */
-          return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
-                                  _("Server does not support custom revprops"
-                                    " via log"));
-        }
       /* Give the info to the reporter */
       SVN_ERR(log_ctx->receiver(log_ctx->receiver_baton,
                                 info->log_entry,
@@ -443,6 +429,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
   serf_bucket_t *buckets, *tmp;
+  svn_boolean_t want_custom_revprops;
   svn_revnum_t peg_rev;
   const char *relative_url, *basecoll_url, *req_url;
   svn_error_t *err;
@@ -507,6 +494,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
                                    session->bkt_alloc);
     }
 
+  want_custom_revprops = FALSE;
   if (revprops)
     {
       int i;
@@ -523,7 +511,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
           else if (strcmp(name, SVN_PROP_REVISION_LOG) == 0)
             log_ctx->want_message = TRUE;
           else
-            log_ctx->want_custom_revprops = TRUE;
+            want_custom_revprops = TRUE;
         }
     }
   else
@@ -532,7 +520,18 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
                                    "S:all-revprops", NULL,
                                    session->bkt_alloc);
       log_ctx->want_author = log_ctx->want_date = log_ctx->want_message = TRUE;
-      log_ctx->want_custom_revprops = TRUE;
+      want_custom_revprops = TRUE;
+    }
+
+  if (want_custom_revprops)
+    {
+      svn_boolean_t has_log_revprops;
+      SVN_ERR(svn_ra_has_capability(ra_session, &has_log_revprops,
+                                    SVN_RA_CAPABILITY_LOG_REVPROPS, pool));
+      if (!has_log_revprops)
+        return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
+                                _("Server does not support custom revprops"
+                                  " via log"));
     }
 
   if (paths)
@@ -557,7 +556,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
    */
   peg_rev = (start > end) ? start : end;
 
-  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, 
+  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
                                          session, NULL, peg_rev, pool));
 
   req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);

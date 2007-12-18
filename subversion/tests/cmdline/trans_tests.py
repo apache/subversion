@@ -513,8 +513,6 @@ def eol_change_is_text_mod(sbox):
   # commit the file
   svntest.actions.run_and_verify_svn(None, None, [], 'add', foo_path)
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m', 'log msg',
                                      foo_path)
 
@@ -530,8 +528,6 @@ def eol_change_is_text_mod(sbox):
                      "Transmitting file data .\n",
                      "Committed revision 3.\n"]
   svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m', 'log msg', foo_path)
 
   # check 2: do the files have the right contents now?
@@ -571,15 +567,11 @@ def keyword_expanded_on_checkout(sbox):
   keywords_on(url_path)
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m', 'log msg', wc_dir)
 
   other_wc_dir = sbox.add_wc_path('other')
   other_url_path = os.path.join(other_wc_dir, 'Z', 'url')
   svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      sbox.repo_url,
                                      other_wc_dir)
 
@@ -624,14 +616,10 @@ def cat_keyword_expansion(sbox):
   key_author = "x" * 244
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'propset', '--revprop', '-r2',
                                      'svn:author', full_author,
                                      sbox.wc_dir)
   svntest.actions.run_and_verify_svn(None, [ full_author ], [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'propget', '--revprop', '-r2',
                                      'svn:author', '--strict',
                                      sbox.wc_dir)
@@ -655,8 +643,6 @@ def cat_keyword_expansion(sbox):
                                      [ "This is the file 'mu'.\n",
                                        "$Rev: 2 $\n",
                                        "$Author: " + key_author + " $"], [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'cat', '-r', 'HEAD', mu_path)
 
 
@@ -732,8 +718,6 @@ def propset_commit_checkout_nocrash(sbox):
   mu_other_path = os.path.join(other_wc_dir, 'A', 'mu')
 
   svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      sbox.repo_url,
                                      other_wc_dir)
 

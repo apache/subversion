@@ -96,8 +96,7 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
 
   # initialize parameters
   if cmd == 'import':
-    parameters = ['import', '--username', svntest.main.wc_author,
-                            '--password', svntest.main.wc_passwd, '-m', 'bla']
+    parameters = ['import', '-m', 'bla']
     files_dir = tmp_dir
   else:
     parameters = ['add']

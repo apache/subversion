@@ -35,7 +35,6 @@ class SvnRaTest < Test::Unit::TestCase
     file = "sample.txt"
     src = "sample source"
     path = File.join(@wc_path, file)
-    path_in_repos = "/#{file}"
     ctx = make_context(log)
     config = {}
     path_props = {"my-prop" => "value"}
@@ -51,7 +50,7 @@ class SvnRaTest < Test::Unit::TestCase
     rev1 = info.revision
 
     assert_equal(info.revision, session.dated_revision(info.date))
-    content, props = session.file(path_in_repos, info.revision)
+    content, props = session.file(file, info.revision)
     assert_equal(src, content)
     assert_equal([
                    Svn::Core::PROP_ENTRY_COMMITTED_DATE,
@@ -60,8 +59,7 @@ class SvnRaTest < Test::Unit::TestCase
                    Svn::Core::PROP_ENTRY_COMMITTED_REV,
                  ].sort,
                  props.keys.sort)
-
-    entries, props = session.dir("/", info.revision)
+    entries, props = session.dir("", info.revision)
     assert_equal([file], entries.keys)
     assert(entries[file].file?)
     assert_equal([
@@ -72,9 +70,9 @@ class SvnRaTest < Test::Unit::TestCase
                  ].sort,
                  props.keys.sort)
 
-    entries, props = session.dir("/", info.revision, Svn::Core::DIRENT_KIND)
+    entries, props = session.dir("", info.revision, Svn::Core::DIRENT_KIND)
     assert_equal(Svn::Core::NODE_FILE, entries[file].kind)
-    entries, props = session.dir("/", info.revision, 0)
+    entries, props = session.dir("", info.revision, 0)
     assert_equal(Svn::Core::NODE_NONE, entries[file].kind)
 
     ctx = make_context(log2)
@@ -114,8 +112,8 @@ class SvnRaTest < Test::Unit::TestCase
       infos << [rev, _path, hashed_prop_diffs]
     end
     assert_equal([
-                   [rev1, path_in_repos, {}],
-                   [rev2, path_in_repos, path_props],
+                   [rev1, "/#{file}", {}],
+                   [rev2, "/#{file}", path_props],
                  ],
                  infos)
 
@@ -124,21 +122,21 @@ class SvnRaTest < Test::Unit::TestCase
       infos << [rev, _path, prop_diffs]
     end
     assert_equal([
-                   [rev1, path_in_repos, {}],
-                   [rev2, path_in_repos, path_props],
+                   [rev1, "/#{file}", {}],
+                   [rev2, "/#{file}", path_props],
                  ],
                  infos)
 
-    assert_equal({}, session.get_locks("/"))
+    assert_equal({}, session.get_locks(""))
     locks = []
-    session.lock({path_in_repos => rev2}) do |_path, do_lock, lock, ra_err|
+    session.lock({file => rev2}) do |_path, do_lock, lock, ra_err|
       locks << [_path, do_lock, lock, ra_err]
     end
-    assert_equal([path_in_repos],
+    assert_equal([file],
                  locks.collect{|_path, *rest| _path}.sort)
-    lock = locks.assoc(path_in_repos)[2]
-    assert_equal([path_in_repos],
-                 session.get_locks("/").collect{|_path, *rest| _path})
+    lock = locks.assoc(file)[2]
+    assert_equal(["/#{file}"],
+                 session.get_locks("").collect{|_path, *rest| _path})
     assert_equal(lock.token, session.get_lock(file).token)
     assert_equal([lock.token],
                  session.get_locks(file).values.collect{|l| l.token})
@@ -228,11 +226,11 @@ class SvnRaTest < Test::Unit::TestCase
     ctx.up(@wc_path)
 
     editor, editor_baton = session.commit_editor(log) {}
-    reporter = session.update(rev2, "/", editor, editor_baton)
+    reporter = session.update(rev2, "", editor, editor_baton)
     reporter.abort_report
 
     editor, editor_baton = session.commit_editor(log) {}
-    reporter = session.update2(rev2, "/", editor)
+    reporter = session.update2(rev2, "", editor)
     reporter.abort_report
   end
 

@@ -195,7 +195,8 @@ svn_client_cat2(svn_stream_t *out,
 
   /* Get an RA plugin for this filesystem object. */
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &rev,
-                                           &url, path_or_url, peg_revision,
+                                           &url, path_or_url, NULL,
+                                           peg_revision,
                                            revision, ctx, pool));
 
   /* Make sure the object isn't a directory. */

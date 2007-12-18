@@ -194,9 +194,10 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
             }
         }
 
-      /* If we know the version resource URL of the parent, use that as a base
-         to calculate the version resource URL of RSRC. */
-      if (parent && parent->vsn_url)
+      /* If we know the version resource URL of the parent and it is
+         the same revision as RSRC, use that as a base to calculate
+         the version resource URL of RSRC. */
+      if (parent && parent->vsn_url && parent->revision == rsrc->revision)
         {
           rsrc->vsn_url = svn_path_url_add_component(parent->vsn_url,
                                                      rsrc->name,
@@ -434,7 +435,10 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
                                         pool));
 
   if (allow_404 && *code == 404 && request->err)
-    svn_error_clear(request->err);
+    {
+      svn_error_clear(request->err);
+      request->err = SVN_NO_ERROR;
+    }
 
   *locn = svn_ra_neon__request_get_location(request, pool);
   svn_ra_neon__request_destroy(request);
@@ -478,10 +482,14 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
   /* special-case when conflicts occur */
   if (err)
     {
+      /* ### TODO: it's a shame we don't have the full path from the
+         ### root of the drive here, nor the type of the resource.
+         ### Because we lack this information, the error message is
+         ### overly generic.  See issue #2740. */
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
         return svn_error_createf
           (err->apr_err, err,
-           _("Your file or directory '%s' is probably out-of-date"),
+           _("File or directory '%s' is out of date; try updating"),
            svn_path_local_style(rsrc->local_path, pool));
       return err;
     }
@@ -560,7 +568,7 @@ propchange.  Therefore:
 2. when ra_neon's commit editor receives a directory propchange, it
    *is* able to get the VR cache (because the dir is a "committable"),
    and thus it does a CHECKOUT of the older directory.  And mod_dav_svn
-   will scream if the VR is out-of-date, which is exactly what we want in
+   will scream if the VR is out of date, which is exactly what we want in
    the directory propchange scenario.
 
 The only potential badness here is the case of committing a directory

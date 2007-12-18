@@ -19,12 +19,9 @@
  * @brief Interface of the class LogMessageCallback
  */
 
-#if !defined(AFX_LOG_MESSAGECALLBACK_H__3BBF3F0F_C80C_45C9_8AC3_E1AF07E5B810__INCLUDED_)
-#define AFX_LOG_MESSAGECALLBACK_H__3BBF3F0F_C80C_45C9_8AC3_E1AF07E5B810__INCLUDED_
+#ifndef LOGMESSAGECALLBACK_H
+#define LOGMESSAGECALLBACK_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
 #include <jni.h>
 #include "svn_client.h"
 
@@ -51,5 +48,4 @@ class LogMessageCallback
   jobject m_callback;
 };
 
-// !defined(AFX_LOG_MESSAGECALLBACK_H__3BBF3F0F_C80C_45C9_8AC3_E1AF07E5B810__INCLUDED_)
-#endif
+#endif  // LOGMESSAGECALLBACK_H

@@ -156,8 +156,6 @@ def export_keyword_translation(sbox):
   svntest.main.run_svn(None, 'ps', 'svn:keywords',
                        'LastChangedRevision', mu_path)
   svntest.main.run_svn(None, 'ci',
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        '-m', 'Added keyword to mu', mu_path)
 
   expected_disk = svntest.main.greek_state.copy()
@@ -189,8 +187,6 @@ def export_eol_translation(sbox):
   svntest.main.run_svn(None, 'ps', 'svn:eol-style',
                        'CR', mu_path)
   svntest.main.run_svn(None, 'ci',
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        '-m', 'Added eol-style prop to mu', mu_path)
 
   expected_disk = svntest.main.greek_state.copy()
@@ -301,8 +297,6 @@ def export_native_eol_option(sbox):
   svntest.main.run_svn(None, 'ps', 'svn:eol-style',
                        'native', mu_path)
   svntest.main.run_svn(None, 'ci',
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        '-m', 'Added eol-style prop to mu', mu_path)
 
   expected_disk = svntest.main.greek_state.copy()

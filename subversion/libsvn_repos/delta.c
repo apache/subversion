@@ -238,6 +238,10 @@ svn_repos_dir_delta2(svn_fs_root_t *src_root,
     return svn_error_create(SVN_ERR_FS_PATH_SYNTAX, 0,
                             _("Invalid target path"));
 
+  if (depth == svn_depth_exclude)
+    return svn_error_create(SVN_ERR_REPOS_BAD_ARGS, NULL,
+                            _("Delta depth 'exclude' not supported"));
+
   /* Calculate the fs path implicitly used for editor->open_root, so
      we can do an authz check on that path first. */
   if (*src_entry)

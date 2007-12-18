@@ -63,6 +63,7 @@ analyze_status(void *baton,
   sb->result->modified |= (status->text_status != svn_wc_status_normal);
   sb->result->modified |= (status->prop_status != svn_wc_status_normal
                            && status->prop_status != svn_wc_status_none);
+  sb->result->sparse_checkout |= (status->entry->depth != svn_depth_infinity);
 
   if (sb->wc_path
       && (! sb->wc_url)
@@ -94,6 +95,7 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
   result->max_rev  = SVN_INVALID_REVNUM;
   result->switched = FALSE;
   result->modified = FALSE;
+  result->sparse_checkout = FALSE;
 
   /* initialize walking baton */
   sb.result = result;

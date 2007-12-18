@@ -37,6 +37,13 @@
 # manual DAV protocol interoperation testing. HTTPD must be started by
 # specifying configuration file on the command line:
 #   httpd -f subversion/tests/cmdline/<httpd-...>/cfg
+#
+# If you want to run this against an *installed* HTTPD (for example, to test
+# one version's client against another version's server) specify both APXS
+# *and* MODULE_PATH for the other server:
+#
+#   APXS=/opt/svn/1.4.x/bin/apxs MODULE_PATH=/opt/svn/1.4.x/modules \ 
+#     subversion/tests/cmdline/davautocheck.sh
 
 SCRIPTDIR=$(dirname $0)
 SCRIPT=$(basename $0)
@@ -127,11 +134,18 @@ else
   fail "Run this script from the root of Subversion's build tree!"
 fi
 
-MOD_DAV_SVN="$ABS_BUILDDIR/subversion/mod_dav_svn/.libs/mod_dav_svn.so"
-MOD_AUTHZ_SVN="$ABS_BUILDDIR/subversion/mod_authz_svn/.libs/mod_authz_svn.so"
+if [ ${MODULE_PATH:+set} ]; then
+    MOD_DAV_SVN="$MODULE_PATH/mod_dav_svn.so"
+    MOD_AUTHZ_SVN="$MODULE_PATH/mod_authz_svn.so"
+else
+    MOD_DAV_SVN="$ABS_BUILDDIR/subversion/mod_dav_svn/.libs/mod_dav_svn.so"
+    MOD_AUTHZ_SVN="$ABS_BUILDDIR/subversion/mod_authz_svn/.libs/mod_authz_svn.so"
+fi
 
 [ -r "$MOD_DAV_SVN" ] \
   || fail "dav_svn_module not found, please use '--enable-shared --enable-dso --with-apxs' with your 'configure' script"
+[ -r "$MOD_AUTHZ_SVN" ] \
+  || fail "authz_svn_module not found, please use '--enable-shared --enable-dso --with-apxs' with your 'configure' script"
 
 export LD_LIBRARY_PATH="$ABS_BUILDDIR/subversion/libsvn_ra_neon/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_local/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_svn/.libs"
 
@@ -331,7 +345,7 @@ else
   pushd "$ABS_BUILDDIR/subversion/tests/cmdline/" >/dev/null
   TEST="$1"
   shift
-  time "$SCRIPTDIR/${TEST}_tests.py" "--url=$BASE_URL" $*
+  time "$SCRIPTDIR/${TEST}_tests.py" "--url=$BASE_URL" "$@"
   r=$?
   popd >/dev/null
 fi

@@ -57,6 +57,12 @@ if [ ! -f $ltfile ]; then
 fi
 
 echo "Copying libtool helper: $ltfile"
+# An ancient helper might already be present from previous builds,
+# and it might be write-protected (e.g. mode 444, seen on FreeBSD).
+# This would cause cp to fail and print an error message, but leave
+# behind a potentially outdated libtool helper.  So, remove before
+# copying:
+rm -f build/libtool.m4
 cp $ltfile build/libtool.m4
 
 # Create the file detailing all of the build outputs for SVN.

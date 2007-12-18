@@ -85,7 +85,7 @@ void svn_xml_escape_cdata_string(svn_stringbuf_t **outstr,
                                  apr_pool_t *pool);
 
 /** Same as svn_xml_escape_cdata_stringbuf(), but @a string is a
- * null-terminated C string.
+ * NULL-terminated C string.
  */
 void svn_xml_escape_cdata_cstring(svn_stringbuf_t **outstr,
                                   const char *string,
@@ -110,7 +110,7 @@ void svn_xml_escape_attr_string(svn_stringbuf_t **outstr,
                                 apr_pool_t *pool);
 
 /** Same as svn_xml_escape_attr_stringbuf(), but @a string is a
- * null-terminated C string.
+ * NULL-terminated C string.
  */
 void svn_xml_escape_attr_cstring(svn_stringbuf_t **outstr,
                                  const char *string,
@@ -230,7 +230,7 @@ apr_hash_t *svn_xml_ap_to_hash(va_list ap, apr_pool_t *pool);
  *
  * The hash's keys and values are <tt>char *</tt>'s.
  *
- * @a atts may be null, in which case you just get an empty hash back
+ * @a atts may be NULL, in which case you just get an empty hash back
  * (this makes life more convenient for some callers).
  */
 apr_hash_t *svn_xml_make_att_hash(const char **atts, apr_pool_t *pool);
@@ -272,7 +272,7 @@ void svn_xml_make_header(svn_stringbuf_t **str, apr_pool_t *pool);
  * If @a str is @c NULL, allocate @a *str in @a pool; else append the new
  * tag to @a *str, allocating in @a str's pool
  *
- * Take the tag's attributes from varargs, a null-terminated list of
+ * Take the tag's attributes from varargs, a NULL-terminated list of
  * alternating <tt>char *</tt> key and <tt>char *</tt> val.  Do xml-escaping
  * on each val.
  *

@@ -41,58 +41,6 @@ extern "C" {
 
 /*** Option processing ***/
 
-/* Add an identifier here for long options that don't have a short
-   option. Options that have both long and short options should just
-   use the short option letter as identifier.  */
-typedef enum {
-  svn_cl__ancestor_path_opt = SVN_OPT_FIRST_LONGOPT_ID,
-  svn_cl__auth_password_opt,
-  svn_cl__auth_username_opt,
-  svn_cl__autoprops_opt,
-  svn_cl__changelist_opt,
-  svn_cl__config_dir_opt,
-  svn_cl__diff_cmd_opt,
-  svn_cl__dry_run_opt,
-  svn_cl__editor_cmd_opt,
-  svn_cl__encoding_opt,
-  svn_cl__force_log_opt,
-  svn_cl__force_opt,
-  svn_cl__keep_changelist_opt,
-  svn_cl__ignore_ancestry_opt,
-  svn_cl__ignore_externals_opt,
-  svn_cl__incremental_opt,
-  svn_cl__merge_cmd_opt,
-  svn_cl__native_eol_opt,
-  svn_cl__new_cmd_opt,
-  svn_cl__no_auth_cache_opt,
-  svn_cl__no_autoprops_opt,
-  svn_cl__no_diff_deleted_opt,
-  svn_cl__no_ignore_opt,
-  svn_cl__no_unlock_opt,
-  svn_cl__non_interactive_opt,
-  svn_cl__notice_ancestry_opt,
-  svn_cl__old_cmd_opt,
-  svn_cl__record_only_opt,
-  svn_cl__relocate_opt,
-  svn_cl__remove_opt,
-  svn_cl__revprop_opt,
-  svn_cl__stop_on_copy_opt,
-  svn_cl__strict_opt,
-  svn_cl__summarize,
-  svn_cl__targets_opt,
-  svn_cl__depth_opt,
-  svn_cl__version_opt,
-  svn_cl__xml_opt,
-  svn_cl__keep_local_opt,
-  svn_cl__with_revprop_opt,
-  svn_cl__with_all_revprops_opt,
-  svn_cl__parents_opt,
-  svn_cl__accept_opt,
-  svn_cl__svnpatch_format_opt,
-  svn_cl__patch_cmd_opt
-} svn_cl__longopt_t;
-
-
 /* --accept actions */
 typedef enum
 {
@@ -138,16 +86,21 @@ svn_cl__accept_from_word(const char *word);
    commands. */
 typedef struct svn_cl__opt_state_t
 {
-  /* These get set as a result of revisions or dates being specified.
-     When only one revision is given, it's start_revision, and
-     end_revision remains `svn_opt_revision_unspecified'. */
-  svn_opt_revision_t start_revision, end_revision;
+  /* An array of svn_opt_revision_range_t *'s representing revisions
+     ranges indicated on the command-line via the -r and -c options.
+     For each range in the list, if only one revision was provided
+     (-rN), its 'end' member remains `svn_opt_revision_unspecified'.
 
-  /* This array of svn_opt_revision_range_t *'s get set as a result
-     of *multiple* revisions or dates being specified.  Otherwise similar
-     to start_revision and end_revision.  Used only by merge subcommand
-     at present. */
-  apr_array_header_t *ranges_to_merge;
+     NOTE: This is currently used only by merge subcommand. */
+  apr_array_header_t *revision_ranges;
+
+  /* These are simply a copy of the range start and end values present
+     in the first item of the revision_ranges list. */
+  svn_opt_revision_t start_revision;
+  svn_opt_revision_t end_revision;
+
+  /* Flag which is only set if the '-c' option was used. */
+  svn_boolean_t used_change_arg;
 
   /* Max number of log messages to get back from svn_client_log2. */
   int limit;
@@ -210,8 +163,8 @@ typedef struct svn_cl__opt_state_t
   apr_hash_t *revprop_table;     /* table of revision properties to get/set */
   svn_boolean_t parents;         /* create intermediate directories */
   svn_boolean_t use_merge_history; /* use/display extra merge information */
-  svn_cl__accept_t accept_which;     /* how to handle conflicts */
-
+  svn_cl__accept_t accept_which; /* how to handle conflicts */
+  const char *from_source;       /* merge source to query (svn mergeinfo) */
 } svn_cl__opt_state_t;
 
 
@@ -261,6 +214,9 @@ svn_opt_subcommand_t
 
 /* See definition in main.c for documentation. */
 extern const svn_opt_subcommand_desc2_t svn_cl__cmd_table[];
+
+/* See definition in main.c for documentation. */
+extern const int svn_cl__global_options[];
 
 /* See definition in main.c for documentation. */
 extern const apr_getopt_option_t svn_cl__options[];
@@ -329,7 +285,9 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
 /*** Command-line output functions -- printing to the user. ***/
 
 /* Print out commit information found in COMMIT_INFO to the console.
- * POOL is used for temporay allocations. */
+ * POOL is used for temporay allocations. 
+ * COMMIT_INFO should not be NULL. 
+ */
 svn_error_t *svn_cl__print_commit_info(svn_commit_info_t *commit_info,
                                        apr_pool_t *pool);
 

@@ -3918,7 +3918,7 @@ verify_path_revs(svn_fs_root_t *root,
            args[i].path, rev, args[i].rev);
     }
 
-  apr_pool_destroy(subpool);
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -4556,78 +4556,6 @@ closest_copy_test(const char **msg,
   return SVN_NO_ERROR;
 }
 
-/* Test getting mergeinfo */
-static svn_error_t *
-get_mergeinfo(const char **msg,
-              svn_boolean_t msg_only,
-              svn_test_opts_t *opts,
-              apr_pool_t *pool)
-{
-  svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root, *revision_root;
-  svn_revnum_t before_rev, after_rev;
-  apr_hash_t *result;
-  apr_array_header_t *paths;
-  apr_hash_t *mergeinfo;
-  const char *conflict;
-
-  *msg = "get mergeinfo";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-
-  /* Prepare a filesystem. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-get-mergeinfo",
-                              opts->fs_type, pool));
-
-  /* Save the current youngest revision. */
-  SVN_ERR(svn_fs_youngest_rev(&before_rev, fs, pool));
-
-  /* Prepare a txn to receive the greek tree. */
-  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-
-  /* Paranoidly check that the current youngest rev is unchanged. */
-  SVN_ERR(svn_fs_youngest_rev(&after_rev, fs, pool));
-  if (after_rev != before_rev)
-    return svn_error_create
-      (SVN_ERR_FS_GENERAL, NULL,
-       "youngest revision changed unexpectedly");
-
-  /* Create the greek tree. */
-  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
-
-  SVN_ERR(svn_mergeinfo_parse(&mergeinfo, "/A/E: 1-5", pool));
-  SVN_ERR(svn_fs_change_mergeinfo(txn_root, "/A/B", mergeinfo, pool));
-
-  /* Commit it. */
-  SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, pool));
-
-  /* Make sure it's a different revision than before. */
-  if (after_rev == before_rev)
-    return svn_error_create
-      (SVN_ERR_FS_GENERAL, NULL,
-       "youngest revision failed to change");
-
-  /* Get root of the revision */
-  SVN_ERR(svn_fs_revision_root(&revision_root, fs, after_rev, pool));
-
-  /* Check the tree. */
-  SVN_ERR(svn_test__check_greek_tree(revision_root, pool));
-
-  paths = apr_array_make(pool, 1, sizeof (const char *));
-  APR_ARRAY_PUSH(paths, const char *) = "/A/E";
-  SVN_ERR(svn_fs_get_mergeinfo(&result, revision_root, paths,
-                               svn_mergeinfo_inherited, pool));
-  paths = apr_array_make(pool, 1, sizeof (const char *));
-  APR_ARRAY_PUSH(paths, const char *) = "/A/B/E";
-  SVN_ERR(svn_fs_get_mergeinfo(&result, revision_root, paths,
-                               svn_mergeinfo_inherited, pool));
-  return SVN_NO_ERROR;
-}
-
 static svn_error_t *
 root_revisions(const char **msg,
                svn_boolean_t msg_only,
@@ -4787,7 +4715,7 @@ set_uuid(const char **msg,
   svn_fs_t *fs;
   const char *fixed_uuid = svn_uuid_generate(pool);
   const char *fetched_uuid;
-  
+
   *msg = "test svn_fs_set_uuid";
 
   if (msg_only)
@@ -4809,19 +4737,157 @@ set_uuid(const char **msg,
 
   /* Set the repository UUID to something new (and unknown). */
   SVN_ERR(svn_fs_set_uuid(fs, NULL, pool));
-  
+
   /* Make sure we *don't* get back what we previously set (after all,
      this stuff is supposed to be universally unique!). */
   SVN_ERR(svn_fs_get_uuid(fs, &fetched_uuid, pool));
   if (strcmp(fixed_uuid, fetched_uuid) == 0)
     return svn_error_createf
-      (SVN_ERR_TEST_FAILED, NULL, 
+      (SVN_ERR_TEST_FAILED, NULL,
        "expected something other than UUID '%s', but got that one",
        fixed_uuid);
-    
+
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+node_origin_rev(const char **msg,
+                svn_boolean_t msg_only,
+                svn_test_opts_t *opts,
+                apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *root;
+  svn_revnum_t youngest_rev = 0;
+  int i;
+
+  struct path_rev_t {
+    const char *path;
+    svn_revnum_t rev;
+  };
+
+  *msg = "test svn_fs_node_origin_rev";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Create the repository. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-node-origin-rev", 
+                              opts->fs_type, pool));
+
+  /* Revision 1: Create the Greek tree.  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, subpool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
+  svn_pool_clear(subpool);
+
+  /* Revision 2: Modify A/D/H/chi and A/B/E/alpha.  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/D/H/chi", "2", subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/B/E/alpha", "2", subpool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
+  svn_pool_clear(subpool);
+
+  /* Revision 3: Copy A/D to A/D2, and create A/D2/floop new.  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_copy(root, "A/D", txn_root, "A/D2", subpool));
+  SVN_ERR(svn_fs_make_file(txn_root, "A/D2/floop", subpool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
+  svn_pool_clear(subpool);
+
+  /* Revision 4: Modify A/D/H/chi and A/D2/H/chi.  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/D/H/chi", "4", subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/D2/H/chi", "4", subpool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
+  svn_pool_clear(subpool);
+
+  /* Revision 5: Delete A/D2/G, add A/B/E/alfalfa.  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_delete(txn_root, "A/D2/G", subpool));
+  SVN_ERR(svn_fs_make_file(txn_root, "A/B/E/alfalfa", subpool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
+  svn_pool_clear(subpool);
+
+  /* Revision 6: Restore A/D2/G (from version 4).  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, 4, subpool));
+  SVN_ERR(svn_fs_copy(root, "A/D2/G", txn_root, "A/D2/G", subpool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
+  svn_pool_clear(subpool);
+
+  /* Revision 7: Move A/D2 to A/D (replacing it), and tweak A/D/floop.  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_delete(txn_root, "A/D", subpool));
+  SVN_ERR(svn_fs_copy(root, "A/D2", txn_root, "A/D", subpool));
+  SVN_ERR(svn_fs_delete(txn_root, "A/D2", subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/D/floop", "7", subpool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
+  svn_pool_clear(subpool);
+
+  /* Now test some origin revisions. */
+  {
+    struct path_rev_t pathrevs[4] = { { "A/D",             1 },
+                                      { "A/D/floop",       3 },
+                                      { "iota",            1 },
+                                      { "A/B/E/alfalfa",   5 } };
+
+    SVN_ERR(svn_fs_revision_root(&root, fs, youngest_rev, pool));
+    for (i = 0; i < (sizeof(pathrevs) / sizeof(struct path_rev_t)); i++)
+      {
+        struct path_rev_t path_rev = pathrevs[i];
+        svn_revnum_t revision;
+        SVN_ERR(svn_fs_node_origin_rev(&revision, root, path_rev.path, pool));
+        if (path_rev.rev != revision)
+          return svn_error_createf
+            (SVN_ERR_TEST_FAILED, NULL,
+             "expected origin revision of '%ld' for '%s'; got '%ld'",
+             path_rev.rev, path_rev.path, revision);
+      }
+  }
+
+  /* Also, we'll check a couple of queries into a transaction root. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_make_file(txn_root, "bloop", subpool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "A/D/blarp", subpool));
+
+  {
+    struct path_rev_t pathrevs[6] = { { "A/D",             1 },
+                                      { "A/D/floop",       3 },
+                                      { "bloop",          -1 },
+                                      { "A/D/blarp",      -1 },
+                                      { "iota",            1 },
+                                      { "A/B/E/alfalfa",   5 } };
+
+    root = txn_root;
+    for (i = 0; i < (sizeof(pathrevs) / sizeof(struct path_rev_t)); i++)
+      {
+        struct path_rev_t path_rev = pathrevs[i];
+        svn_revnum_t revision;
+        SVN_ERR(svn_fs_node_origin_rev(&revision, root, path_rev.path, pool));
+        if (! SVN_IS_VALID_REVNUM(revision))
+          revision = -1;
+        if (path_rev.rev != revision)
+          return svn_error_createf
+            (SVN_ERR_TEST_FAILED, NULL,
+             "expected origin revision of '%ld' for '%s'; got '%ld'",
+             path_rev.rev, path_rev.path, revision);
+      }
+  }
+
+  return SVN_NO_ERROR;
+}
 
 /* ------------------------------------------------------------------------ */
 
@@ -4861,9 +4927,9 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(branch_test),
     SVN_TEST_PASS(verify_checksum),
     SVN_TEST_PASS(closest_copy_test),
-    SVN_TEST_PASS(get_mergeinfo),
     SVN_TEST_PASS(root_revisions),
     SVN_TEST_PASS(unordered_txn_dirprops),
     SVN_TEST_PASS(set_uuid),
+    SVN_TEST_PASS(node_origin_rev),
     SVN_TEST_NULL
   };

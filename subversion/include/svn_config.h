@@ -135,8 +135,8 @@ typedef struct svn_config_t svn_config_t;
   SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_1 " " \
   SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_2
 
-#define SVN_CONFIG_TRUE  "true"
-#define SVN_CONFIG_FALSE "false"
+#define SVN_CONFIG_TRUE  "TRUE"
+#define SVN_CONFIG_FALSE "FALSE"
 
 
 /** Read configuration information from the standard sources and merge it
@@ -201,6 +201,8 @@ void svn_config_get(svn_config_t *cfg, const char **valuep,
  * @a value.
  *
  * This function invalidates all value expansions in @a cfg.
+ *
+ * To remove an option, pass NULL for the @c value.
  */
 void svn_config_set(svn_config_t *cfg,
                     const char *section, const char *option,
@@ -209,7 +211,7 @@ void svn_config_set(svn_config_t *cfg,
 /** Like svn_config_get(), but for boolean values.
  *
  * Parses the option as a boolean value. The recognized representations
- * are 'true'/'false', 'yes'/'no', 'on'/'off', '1'/'0'; case does not
+ * are 'TRUE'/'FALSE', 'yes'/'no', 'on'/'off', '1'/'0'; case does not
  * matter. Returns an error if the option doesn't contain a known string.
  */
 svn_error_t *svn_config_get_bool(svn_config_t *cfg, svn_boolean_t *valuep,
@@ -218,7 +220,7 @@ svn_error_t *svn_config_get_bool(svn_config_t *cfg, svn_boolean_t *valuep,
 
 /** Like svn_config_set(), but for boolean values.
  *
- * Sets the option to 'true'/'false', depending on @a value.
+ * Sets the option to 'TRUE'/'FALSE', depending on @a value.
  */
 void svn_config_set_bool(svn_config_t *cfg,
                          const char *section, const char *option,
@@ -384,7 +386,7 @@ svn_error_t *svn_config_ensure(const char *config_dir, apr_pool_t *pool);
 
 /** Accessing cached authentication data in the user config area.
  *
- * @defgroup cached_authentication_data cached authentication data.
+ * @defgroup cached_authentication_data Cached authentication data
  * @{
  */
 

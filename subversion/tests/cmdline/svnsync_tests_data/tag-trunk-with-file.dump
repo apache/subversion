@@ -118,5 +118,6 @@ Node-kind: file
 Node-action: add
 Node-copyfrom-rev: 2
 Node-copyfrom-path: trunk/foo.txt
+Text-copy-source-md5: 0bebeeefa6853d064099b54a81a627e8
 
 

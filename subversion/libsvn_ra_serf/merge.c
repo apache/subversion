@@ -95,7 +95,6 @@ struct svn_ra_serf__merge_context_t
   apr_size_t activity_url_len;
 
   const char *merge_url;
-  apr_size_t merge_url_len;
 
   int status;
 
@@ -291,19 +290,22 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
         {
           const char *href, *checked_in;
           svn_string_t checked_in_str;
-          apr_size_t href_len;
 
           href = apr_hash_get(info->props, "href", APR_HASH_KEY_STRING);
           checked_in = apr_hash_get(info->props, "checked-in",
                                     APR_HASH_KEY_STRING);
 
-          href_len = strlen(href);
-          if (href_len == ctx->merge_url_len)
-              href = "";
-          else if (href_len > ctx->merge_url_len)
-              href += ctx->merge_url_len + 1;
-          else
-             abort();
+          if (! svn_path_is_ancestor(ctx->merge_url, href))
+            {
+              /* ### need something better than APR_EGENERAL */
+              return svn_error_createf(APR_EGENERAL, NULL,
+                                       _("A MERGE response for '%s' is not a child "
+                                         "of the destination ('%s')"),
+                                       href, ctx->merge_url);
+            }
+          href = svn_path_is_child(ctx->merge_url, href, NULL);
+          if (! href) /* the paths are equal */
+            href = "";
 
           checked_in_str.data = checked_in;
           checked_in_str.len = strlen(checked_in);
@@ -534,7 +536,6 @@ svn_ra_serf__merge_create_req(svn_ra_serf__merge_context_t **ret_ctx,
   merge_ctx->commit_info = svn_create_commit_info(pool);
 
   merge_ctx->merge_url = session->repos_url.path;
-  merge_ctx->merge_url_len = strlen(merge_ctx->merge_url);
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 

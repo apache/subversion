@@ -91,7 +91,7 @@ extern "C" {
 #define SVN_REPOS__CONF_AUTHZ "authz"
 
 /* The Repository object, created by svn_repos_open() and
-   svn_repos_create(), allocated in POOL. */
+   svn_repos_create(). */
 struct svn_repos_t
 {
   /* A Subversion filesystem object. */
@@ -117,6 +117,17 @@ struct svn_repos_t
 
   /* The FS backend in use within this repository. */
   const char *fs_type;
+
+  /* If non-null, a list of all the capabilities the client (on the
+     current connection) has self-reported.  Each element is a
+     'const char *', one of SVN_RA_CAPABILITY_*.
+
+     Note: it is somewhat counterintuitive that we store the client's
+     capabilities, which are session-specific, on the repository
+     object.  You'd think the capabilities here would represent the
+     *repository's* capabilities, but no, they represent the
+     client's -- we just don't have any other place to persist them. */
+  apr_array_header_t *client_capabilities;
 };
 
 
@@ -125,10 +136,15 @@ struct svn_repos_t
 /* Run the start-commit hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
 
-   USER is the authenticated name of the user starting the commit.  */
+   USER is the authenticated name of the user starting the commit.  
+   CAPABILITIES is a list of 'const char *' capability names (using
+   SVN_RA_CAPABILITY_*) that the client has self-reported.  Note that
+   there is no guarantee the client is telling the truth: the hook
+   should not make security assumptions based on the capabilities. */
 svn_error_t *
 svn_repos__hooks_start_commit(svn_repos_t *repos,
                               const char *user,
+                              apr_array_header_t *capabilities,
                               apr_pool_t *pool);
 
 /* Run the pre-commit hook for REPOS.  Use POOL for any temporary
@@ -249,13 +265,6 @@ svn_repos__compare_files(svn_boolean_t *changed_p,
                          svn_fs_root_t *root2,
                          const char *path2,
                          apr_pool_t *pool);
-
-/* Change the transaction property values in transaction TXN using the
-   (key,value)-pairs in TXNPROP_TABLE. */
-svn_error_t *
-svn_repos__change_txn_props(svn_fs_txn_t *txn,
-                            apr_hash_t *txnprop_table,
-                            apr_pool_t *pool);
 
 /* Get the mergeinfo for PATH in REPOS as REVNUM and store it in MERGEINFO. */
 svn_error_t *

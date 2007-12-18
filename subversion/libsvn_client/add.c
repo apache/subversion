@@ -386,7 +386,7 @@ add_dir_recursive(const char *dirname,
           svn_depth_t depth_below_here = depth;
           if (depth == svn_depth_immediates)
             depth_below_here = svn_depth_empty;
-          
+
           SVN_ERR(add_dir_recursive(fullpath, dir_access, depth_below_here,
                                     force, no_ignore, ctx, subpool));
         }

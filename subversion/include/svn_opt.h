@@ -180,10 +180,23 @@ svn_opt_get_option_from_code(int code,
 
 
 /**
- * Return @c TRUE iff subcommand @a command supports option @a option_code,
- * else return @c FALSE.
+ * Return @c TRUE iff subcommand @a command supports option @a
+ * option_code, else return @c FALSE.  If @a global_options is
+ * non-NULL, it is a zero-terminated array, and all subcommands take
+ * the options listed in it.
  *
- * @since New in 1.4.
+ * @since New in 1.5.
+ */
+svn_boolean_t
+svn_opt_subcommand_takes_option3(const svn_opt_subcommand_desc2_t *command,
+                                 int option_code,
+                                 const int *global_options);
+
+/**
+ * Same as svn_opt_subcommand_takes_option3(), but with @c NULL for @a
+ * global_options.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_boolean_t
 svn_opt_subcommand_takes_option2(const svn_opt_subcommand_desc2_t *command,
@@ -207,11 +220,11 @@ svn_opt_subcommand_takes_option(const svn_opt_subcommand_desc_t *command,
 /**
  * Print a generic (not command-specific) usage message to @a stream.
  *
- * (### todo: why is @a stream a stdio file instead of an svn stream?)
+ * ### @todo Why is @a stream a stdio file instead of an svn stream?
  *
- * If @a header is non-null, print @a header followed by a newline.  Then
+ * If @a header is non-NULL, print @a header followed by a newline.  Then
  * loop over @a cmd_table printing the usage for each command (getting
- * option usages from @a opt_table).  Then if @a footer is non-null, print
+ * option usages from @a opt_table).  Then if @a footer is non-NULL, print
  * @a footer followed by a newline.
  *
  * Use @a pool for temporary allocation.
@@ -257,12 +270,26 @@ svn_opt_format_option(const char **string,
 
 /**
  * Get @a subcommand's usage from @a table, and print it to @c stdout.
- * Obtain option usage from @a options_table.  Use @a pool for temporary
- * allocation.  @a subcommand may be a canonical command name or an
- * alias.  (### todo: why does this only print to @c stdout, whereas
- * svn_opt_print_generic_help() gives us a choice?)
+ * Obtain option usage from @a options_table.  If not @c NULL, @a
+ * global_options is a zero-terminated list of global options.  Use @a
+ * pool for temporary allocation.  @a subcommand may be a canonical
+ * command name or an alias.  ### @todo Why does this only print to
+ * @c stdout, whereas svn_opt_print_generic_help() gives us a choice?
  *
- * @since New in 1.4.
+ * @since New in 1.5.
+ */
+void
+svn_opt_subcommand_help3(const char *subcommand,
+                         const svn_opt_subcommand_desc2_t *table,
+                         const apr_getopt_option_t *options_table,
+                         const int *global_options,
+                         apr_pool_t *pool);
+
+/**
+ * Same as svn_opt_subcommand_help3(), but with @a global_options
+ * always NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 void
 svn_opt_subcommand_help2(const char *subcommand,
@@ -333,7 +360,10 @@ enum svn_opt_revision_kind {
  */
 typedef union svn_opt_revision_value_t
 {
+  /** The revision number */
   svn_revnum_t number;
+
+  /** the date of the revision */
   apr_time_t date;
 } svn_opt_revision_value_t;
 
@@ -347,7 +377,10 @@ typedef struct svn_opt_revision_t
 /** A revision range, specified in one of @c svn_opt_revision_kind ways. */
 typedef struct svn_opt_revision_range_t
 {
+  /** The first revision in the range */
   svn_opt_revision_t start;
+
+  /** The last revision in the range */
   svn_opt_revision_t end;
 } svn_opt_revision_range_t;
 
@@ -555,13 +588,15 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
  *   * version info
  *   * simple usage complaint: "Type '@a pgm_name help' for usage."
  *
- * If @a os is not @c NULL and it contains arguments, then try printing
- * help for them as though they are subcommands, using @a cmd_table
- * and @a option_table for option information.
+ * If @a os is not @c NULL and it contains arguments, then try
+ * printing help for them as though they are subcommands, using @a
+ * cmd_table and @a option_table for option information.  If not @c
+ * NULL, @a global_options is a zero-terminated array of options taken
+ * by all subcommands.
  *
- * Else, if @a print_version is true, then print version info, in
- * brief form if @a quiet is also true; if @a quiet is false, then if
- * @a version_footer is non-null, print it following the version
+ * Else, if @a print_version is TRUE, then print version info, in
+ * brief form if @a quiet is also TRUE; if @a quiet is FALSE, then if
+ * @a version_footer is non-NULL, print it following the version
  * information.
  *
  * Else, if @a os is not @c NULL and does not contain arguments, print
@@ -577,8 +612,28 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
  * --version flag *and* subcommand arguments on a help command line.
  * The logic for handling such a situation should be in one place.
  *
- * @since New in 1.4.
+ * @since New in 1.5.
  */
+svn_error_t *
+svn_opt_print_help3(apr_getopt_t *os,
+                    const char *pgm_name,
+                    svn_boolean_t print_version,
+                    svn_boolean_t quiet,
+                    const char *version_footer,
+                    const char *header,
+                    const svn_opt_subcommand_desc2_t *cmd_table,
+                    const apr_getopt_option_t *option_table,
+                    const int *global_options,
+                    const char *footer,
+                    apr_pool_t *pool);
+
+/**
+ * Same as svn_opt_print_help3(), but with @a global_options always @c
+ * NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
+ */
+
 svn_error_t *
 svn_opt_print_help2(apr_getopt_t *os,
                     const char *pgm_name,

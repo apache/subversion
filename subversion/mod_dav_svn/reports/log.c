@@ -81,9 +81,6 @@ log_receiver(void *baton,
              apr_pool_t *pool)
 {
   struct log_receiver_baton *lrb = baton;
-  /* If the client requested any custom revprops, note that we'll need
-     to send a <no-custom-revprops/> element; see below. */
-  svn_boolean_t no_custom_revprops = lrb->requested_custom_revprops;
 
   SVN_ERR(maybe_send_header(lrb));
 
@@ -132,7 +129,6 @@ log_receiver(void *baton,
                                                                   pool), 0)));
           else
             {
-              no_custom_revprops = FALSE;
               SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                                         "<S:revprop name=\"%s\">"
                                         "%s</S:revprop>"
@@ -143,12 +139,6 @@ log_receiver(void *baton,
             }
         }
     }
-  if (no_custom_revprops)
-    /* If we didn't send any revprops, ack the request, so the client can
-       distinguish the absence of custom revprops from an older server that
-       didn't send them. */
-    SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
-                              "<S:no-custom-revprops/>" DEBUG_CR));
 
   if (log_entry->has_children)
     {

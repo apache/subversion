@@ -65,6 +65,9 @@ typedef enum {
     NEED_PROP_NAME,
 } report_state_e;
 
+/* Forward-declare our report context. */
+typedef struct report_context_t report_context_t;
+
 /*
  * This structure represents the information for a directory.
  */
@@ -77,6 +80,9 @@ typedef struct report_dir_t
   struct report_dir_t *parent_dir;
 
   apr_pool_t *pool;
+
+  /* Pointer back to our original report context. */
+  report_context_t *report_context;
 
   /* Our name sans any parents. */
   const char *base_name;
@@ -260,7 +266,7 @@ typedef struct report_fetch_t {
 /*
  * The master structure for a REPORT request and response.
  */
-typedef struct {
+struct report_context_t {
   apr_pool_t *pool;
 
   svn_ra_serf__session_t *sess;
@@ -317,7 +323,7 @@ typedef struct {
   /* Are we done parsing the REPORT response? */
   svn_boolean_t done;
 
-} report_context_t;
+};
 
 
 /** Report state management helper **/
@@ -363,6 +369,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
       /* Point to the update_editor */
       new_info->dir->update_editor = ctx->update_editor;
       new_info->dir->update_baton = ctx->update_baton;
+      new_info->dir->report_context = ctx;
 
       if (info)
         {
@@ -482,6 +489,15 @@ open_dir(report_dir_t *dir)
     {
       apr_pool_create(&dir->dir_baton_pool, dir->pool);
 
+      if (dir->report_context->destination &&
+          dir->report_context->sess->wc_callbacks->invalidate_wc_props)
+        {
+          SVN_ERR(dir->report_context->sess->wc_callbacks->invalidate_wc_props(
+                      dir->report_context->sess->wc_callback_baton,
+                      dir->report_context->update_target,
+                      SVN_RA_SERF__WC_CHECKED_IN_URL, dir->pool));
+        }
+
       SVN_ERR(dir->update_editor->open_root(dir->update_baton, dir->base_rev,
                                             dir->dir_baton_pool,
                                             &dir->dir_baton));
@@ -563,8 +579,8 @@ close_dir(report_dir_t *dir)
         }
     }
 
-  apr_pool_destroy(dir->dir_baton_pool);
-  apr_pool_destroy(dir->pool);
+  svn_pool_destroy(dir->dir_baton_pool);
+  svn_pool_destroy(dir->pool);
 
   return SVN_NO_ERROR;
 }
@@ -914,8 +930,8 @@ handle_fetch(serf_request_t *request,
           *fetch_ctx->done_list = &fetch_ctx->done_item;
 
           /* We're done with our pools. */
-          apr_pool_destroy(info->editor_pool);
-          apr_pool_destroy(info->pool);
+          svn_pool_destroy(info->editor_pool);
+          svn_pool_destroy(info->pool);
 
           return status;
         }
@@ -1075,8 +1091,8 @@ handle_propchange_only(report_info_t *info)
                                                info->editor_pool));
 
   /* We're done with our pools. */
-  apr_pool_destroy(info->editor_pool);
-  apr_pool_destroy(info->pool);
+  svn_pool_destroy(info->editor_pool);
+  svn_pool_destroy(info->pool);
 
   info->dir->ref_count--;
 
@@ -1101,7 +1117,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
     {
       return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                         _("The OPTIONS response did not include the "
-                          "requested checked-in value."));
+                          "requested checked-in value"));
     }
 
   /* If needed, create the PROPFIND to retrieve the file's properties. */
@@ -1416,7 +1432,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
                                                      info->dir->dir_baton,
                                                      tmppool));
 
-      apr_pool_destroy(tmppool);
+      svn_pool_destroy(tmppool);
     }
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "absent-directory") == 0)
@@ -1645,7 +1661,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
         {
           return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                                   _("The OPTIONS response did not include the "
-                                    "requested checked-in value."));
+                                    "requested checked-in value"));
         }
 
       info->dir->url = checked_in_url;
@@ -2165,7 +2181,7 @@ finish_report(void *report_baton,
       return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                               _("The OPTIONS response did not include the "
                                 "requested version-controlled-configuration "
-                                "value."));
+                                "value"));
     }
 
   /* create and deliver request */
@@ -2206,10 +2222,6 @@ finish_report(void *report_baton,
       sess->conns[i]->last_status_code = -1;
       sess->conns[i]->ssl_context = NULL;
       sess->conns[i]->session = sess;
-      /* Authentication protocol specific initalization. */
-      if (sess->auth_protocol)
-        sess->auth_protocol->init_conn_func(sess, sess->conns[i], pool);
-
       sess->conns[i]->conn = serf_connection_create(sess->context,
                                                     sess->conns[i]->address,
                                                     svn_ra_serf__conn_setup,
@@ -2218,6 +2230,10 @@ finish_report(void *report_baton,
                                                     sess->conns[i],
                                                     sess->pool);
       sess->num_conns++;
+
+      /* Authentication protocol specific initalization. */
+      if (sess->auth_protocol)
+        sess->auth_protocol->init_conn_func(sess, sess->conns[i], pool);
     }
 
   sess->cur_conn = 1;
@@ -2429,7 +2445,7 @@ make_update_reporter(svn_ra_session_t *ra_session,
       && (depth != svn_depth_infinity)
       && ! server_supports_depth)
     {
-      SVN_ERR(svn_delta_depth_filter_editor(&filter_editor, 
+      SVN_ERR(svn_delta_depth_filter_editor(&filter_editor,
                                             &filter_baton,
                                             update_editor,
                                             update_baton,

@@ -114,7 +114,7 @@ svn_nls_init(void)
             bindtextdomain(PACKAGE_NAME, internal_path);
           }
       }
-    apr_pool_destroy(pool);
+    svn_pool_destroy(pool);
   }
 #else
   bindtextdomain(PACKAGE_NAME, SVN_LOCALE_DIR);

@@ -65,8 +65,6 @@ def import_executable(sbox):
   url = sbox.repo_url
   output, errput =   svntest.actions.run_and_verify_svn(
     None, None, [], 'import',
-    '--username', svntest.main.wc_author,
-    '--password', svntest.main.wc_passwd,
     '-m', 'Log message for new import', xt_path, url)
 
   lastline = output.pop().strip()
@@ -146,8 +144,6 @@ def import_ignores(sbox):
 
   output, errput = svntest.actions.run_and_verify_svn(
     None, None, [], 'import',
-    '--username', svntest.main.wc_author,
-    '--password', svntest.main.wc_passwd,
     '-m', 'Log message for new import',
     dir_path, url)
 
@@ -156,7 +152,7 @@ def import_ignores(sbox):
   match = cm.search (lastline)
   if not match:
     ### we should raise a less generic error here. which?
-    raise svntest.actions.SVNUnexpectedOutput
+    raise svntest.verify.SVNUnexpectedOutput
 
   # remove (uncontrolled) local dir
   svntest.main.safe_rmtree(dir_path)
@@ -215,8 +211,6 @@ def import_no_ignores(sbox):
 
   output, errput = svntest.actions.run_and_verify_svn(
     None, None, [], 'import',
-    '--username', svntest.main.wc_author,
-    '--password', svntest.main.wc_passwd,
     '-m', 'Log message for new import', '--no-ignore',
     dir_path, url)
 
@@ -278,8 +272,6 @@ def import_avoid_empty_revision(sbox):
 
   url = sbox.repo_url
   svntest.actions.run_and_verify_svn(None, None, [], 'import',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      '-m', 'Log message for new import',
                                      empty_dir, url)
 
@@ -288,8 +280,6 @@ def import_avoid_empty_revision(sbox):
   # Verify that an empty revision has not been created
   svntest.actions.run_and_verify_svn(None, [ "At revision 1.\n"],
                                      [], "update",
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      empty_dir)
 #----------------------------------------------------------------------
 
@@ -322,8 +312,6 @@ enable-auto-props = yes
   svntest.main.file_write(imp_file_path, "This is file test.dsp.\n")
 
   svntest.actions.run_and_verify_svn(None, None, [], 'import',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      '-m', 'Log message for new import',
                                      imp_dir_path,
                                      sbox.repo_url,

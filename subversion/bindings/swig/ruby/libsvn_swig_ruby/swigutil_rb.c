@@ -330,12 +330,12 @@ svn_swig_rb_converter_to_locale_encoding(VALUE self, VALUE str)
   pool = svn_pool_create(NULL);
   err = svn_utf_cstring_from_utf8(&dest, StringValueCStr(str), pool);
   if (err) {
-    apr_pool_destroy(pool);
+    svn_pool_destroy(pool);
     svn_swig_rb_handle_svn_error(err);
   }
 
   result = rb_str_new2(dest);
-  apr_pool_destroy(pool);
+  svn_pool_destroy(pool);
   return result;
 }
 
@@ -867,25 +867,6 @@ svn_swig_rb_to_depth(VALUE value)
              "'%s' must be DEPTH_STRING (e.g. \"infinity\" or :infinity) "
              "or Svn::Core::DEPTH_*",
              r2c_inspect(value));
-  }
-}
-
-svn_merge_range_inheritance_t
-svn_swig_rb_to_merge_range_inheritance(VALUE value)
-{
-  if (NIL_P(value)) {
-    return svn_rangelist_ignore_inheritance;
-  } else if (RTEST(rb_obj_is_kind_of(value, rb_cString)) ||
-             RTEST(rb_obj_is_kind_of(value, rb_cSymbol))) {
-    return NUM2INT(resolve_constant(rb_svn_core(), "RANGELIST_", value));
-  } else if (RTEST(rb_obj_is_kind_of(value, rb_cInteger))) {
-    return NUM2INT(value);
-  } else {
-    rb_raise(rb_eArgError,
-       "'%s' must be RANGELIST_STRING (e.g. \"ignore_inheritance\" or"
-       " :ignore_inheritance) "
-       "or Svn::Core::RANGELIST_*",
-       r2c_inspect(value));
   }
 }
 

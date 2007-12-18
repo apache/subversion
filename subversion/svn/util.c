@@ -57,20 +57,17 @@ svn_error_t *
 svn_cl__print_commit_info(svn_commit_info_t *commit_info,
                           apr_pool_t *pool)
 {
-  if (commit_info)
-    {
-      if (SVN_IS_VALID_REVNUM(commit_info->revision))
-        SVN_ERR(svn_cmdline_printf(pool, _("\nCommitted revision %ld.\n"),
-                                   commit_info->revision));
+  if (SVN_IS_VALID_REVNUM(commit_info->revision))
+    SVN_ERR(svn_cmdline_printf(pool, _("\nCommitted revision %ld.\n"),
+                               commit_info->revision));
 
-      /* Writing to stdout, as there maybe systems that consider the
-       * presence of stderr as an indication of commit failure.
-       * OTOH, this is only of informational nature to the user as
-       * the commit has succeeded. */
-      if (commit_info->post_commit_err)
-        SVN_ERR(svn_cmdline_printf(pool, _("\nWarning: %s\n"),
-                                   commit_info->post_commit_err));
-    }
+  /* Writing to stdout, as there maybe systems that consider the
+   * presence of stderr as an indication of commit failure.
+   * OTOH, this is only of informational nature to the user as
+   * the commit has succeeded. */
+  if (commit_info->post_commit_err)
+    SVN_ERR(svn_cmdline_printf(pool, _("\nWarning: %s\n"),
+                               commit_info->post_commit_err));
 
   return SVN_NO_ERROR;
 }

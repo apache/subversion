@@ -193,6 +193,8 @@ Directory Contents
           /actions.py:      Main API for driving subversion client and
                             using trees to verify results. 
 
+          /verify.py:       Verifies output from Subversion.
+
           /entry.py:        Parse an `entries' file (### not used yet)
 
 

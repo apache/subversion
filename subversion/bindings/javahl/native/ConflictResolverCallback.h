@@ -19,12 +19,9 @@
  * @brief Interface of the class ConflictResolverCallback
  */
 
-#ifndef CONFLICT_RESOLVER_CALLBACK_H
-#define CONFLICT_RESOLVER_CALLBACK_H
+#ifndef CONFLICTRESOLVERCALLBACK_H
+#define CONFLICTRESOLVERCALLBACK_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
 #include <jni.h>
 #include "svn_error.h"
 #include "svn_wc.h"
@@ -97,4 +94,4 @@ class ConflictResolverCallback
   static svn_wc_conflict_choice_t javaChoiceToC(jint choice);
 };
 
-#endif  // CONFLICT_RESOLVER_CALLBACK_H
+#endif  // CONFLICTRESOLVERCALLBACK_H

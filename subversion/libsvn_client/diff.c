@@ -119,7 +119,7 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
 
   SVN_ERR(svn_mergeinfo_diff(&deleted, &added, old_mergeinfo_hash,
                              new_mergeinfo_hash,
-                             svn_rangelist_equal_inheritance, pool));
+                             TRUE, pool));
 
   for (hi = apr_hash_first(pool, deleted);
        hi; hi = apr_hash_next(hi))
@@ -160,6 +160,11 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
   return SVN_NO_ERROR;
 }
 
+#define MAKE_ERR_BAD_RELATIVE_PATH(path, relative_to_dir) \
+        svn_error_createf(SVN_ERR_BAD_RELATIVE_PATH, NULL, \
+                          _("Path '%s' must be an immediate child of " \
+                            "the directory '%s'"), path, relative_to_dir)
+
 /* A helper func that writes out verbal descriptions of property diffs
    to FILE.   Of course, the apr_file_t will probably be the 'outfile'
    passed to svn_client_diff4, which is probably stdout. */
@@ -169,9 +174,23 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                    const char *path,
                    const char *encoding,
                    apr_file_t *file,
+                   const char *relative_to_dir,
                    apr_pool_t *pool)
 {
   int i;
+
+  if (relative_to_dir)
+    {
+      /* Possibly adjust the path shown in the output (see issue #2723). */
+      const char *child_path = svn_path_is_child(relative_to_dir, path, pool);
+
+      if (child_path)
+        path = child_path;
+      else if (!svn_path_compare_paths(relative_to_dir, path))
+        path = ".";
+      else
+        return MAKE_ERR_BAD_RELATIVE_PATH(path, relative_to_dir);
+    }
 
   SVN_ERR(file_printf_from_utf8(file, encoding,
                                 _("%sProperty changes on: %s%s"),
@@ -184,10 +203,10 @@ display_prop_diffs(const apr_array_header_t *propchanges,
 
   for (i = 0; i < propchanges->nelts; i++)
     {
-      const svn_prop_t *propchange
-        = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
-
+      const char *header_fmt;
       const svn_string_t *original_value;
+      const svn_prop_t *propchange = 
+        &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
 
       if (original_props)
         original_value = apr_hash_get(original_props,
@@ -202,10 +221,16 @@ display_prop_diffs(const apr_array_header_t *propchanges,
               && svn_string_compare(original_value, propchange->value)))
         continue;
 
-      SVN_ERR(file_printf_from_utf8(file, encoding, _("Name: %s%s"),
+      if (! original_value)
+        header_fmt = _("Added: %s%s");
+      else if (! propchange->value)
+        header_fmt = _("Deleted: %s%s");
+      else
+        header_fmt = _("Modified: %s%s");
+      SVN_ERR(file_printf_from_utf8(file, encoding, header_fmt,
                                     propchange->name, APR_EOL_STR));
 
-      if (strcmp(propchange->name, SVN_PROP_MERGE_INFO) == 0)
+      if (strcmp(propchange->name, SVN_PROP_MERGEINFO) == 0)
         {
           const char *orig = original_value ? original_value->data : NULL;
           const char *val = propchange->value ? propchange->value->data : NULL;
@@ -309,6 +334,10 @@ struct diff_cmd_baton {
 
   /* The svnpatch temporary storage area. */
   apr_file_t *svnpatch_file;
+
+  /* The directory that diff target paths should be considered as
+     relative to for output generation (see issue #2723). */
+  const char *relative_to_dir;
 };
 
 
@@ -410,6 +439,7 @@ diff_props_changed(svn_wc_adm_access_t *adm_access,
     SVN_ERR(display_prop_diffs(props, original_props, path,
                                diff_cmd_baton->header_encoding,
                                diff_cmd_baton->outfile,
+                               diff_cmd_baton->relative_to_dir,
                                subpool));
 
   if (state)
@@ -439,6 +469,7 @@ diff_content_changed(const char *path,
   int nargs, exitcode;
   apr_pool_t *subpool = svn_pool_create(diff_cmd_baton->pool);
   svn_stream_t *os;
+  const char *rel_to_dir = diff_cmd_baton->relative_to_dir;
   apr_file_t *errfile = diff_cmd_baton->errfile;
   const char *label1, *label2;
   svn_boolean_t mt1_binary = FALSE, mt2_binary = FALSE;
@@ -508,6 +539,37 @@ diff_content_changed(const char *path,
     path2 = apr_psprintf(subpool, "%s\t(...%s)", path, path2);
   else
     path2 = apr_psprintf(subpool, "%s\t(.../%s)", path, path2);
+
+  if (diff_cmd_baton->relative_to_dir)
+    {
+      /* Possibly adjust the paths shown in the output (see issue #2723). */
+      const char *child_path = svn_path_is_child(rel_to_dir, path, subpool);
+
+      if (child_path)
+        path = child_path;
+      else if (!svn_path_compare_paths(rel_to_dir, path))
+        path = ".";
+      else
+        return MAKE_ERR_BAD_RELATIVE_PATH(path, rel_to_dir);
+
+      child_path = svn_path_is_child(rel_to_dir, path1, subpool);
+
+      if (child_path)
+        path1 = child_path;
+      else if (!svn_path_compare_paths(rel_to_dir, path1))
+        path1 = ".";
+      else
+        return MAKE_ERR_BAD_RELATIVE_PATH(path1, rel_to_dir);
+
+      child_path = svn_path_is_child(rel_to_dir, path2, subpool);
+
+      if (child_path)
+        path2 = child_path;
+      else if (!svn_path_compare_paths(rel_to_dir, path2))
+        path2 = ".";
+      else
+        return MAKE_ERR_BAD_RELATIVE_PATH(path2, rel_to_dir);
+    }
 
   label1 = diff_label(path1, rev1, subpool);
   label2 = diff_label(path2, rev2, subpool);
@@ -603,11 +665,10 @@ diff_content_changed(const char *path,
                   (os, diff_cmd_baton->header_encoding, subpool,
                    "Index: %s" APR_EOL_STR "%s" APR_EOL_STR,
                    path, equal_string));
-
           /* Output the actual diff */
-          SVN_ERR(svn_diff_file_output_unified2
+          SVN_ERR(svn_diff_file_output_unified3
                   (os, diff, tmpfile1, tmpfile2, label1, label2,
-                   diff_cmd_baton->header_encoding, subpool));
+                   diff_cmd_baton->header_encoding, rel_to_dir, subpool));
         }
     }
 
@@ -1010,7 +1071,7 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
 
   /* Resolve revision and get path kind for the second target. */
   SVN_ERR(svn_client__get_revision_number
-          (&drr->rev2, ra_session, params->revision2,
+          (&drr->rev2, NULL, ra_session, params->revision2,
            (params->path2 == drr->url2) ? NULL : params->path2, pool));
   SVN_ERR(svn_ra_check_path(ra_session, "", drr->rev2, &kind2, pool));
   if (kind2 == svn_node_none)
@@ -1022,7 +1083,7 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
   /* Do the same for the first target. */
   SVN_ERR(svn_ra_reparent(ra_session, drr->url1, pool));
   SVN_ERR(svn_client__get_revision_number
-          (&drr->rev1, ra_session, params->revision1,
+          (&drr->rev1, NULL, ra_session, params->revision1,
            (params->path1 == drr->url1) ? NULL : params->path1, pool));
   SVN_ERR(svn_ra_check_path(ra_session, "", drr->rev1, &kind1, pool));
   if (kind1 == svn_node_none)
@@ -1092,22 +1153,6 @@ unsupported_diff_error(svn_error_t *child_err)
 }
 
 
-/* For a given DEPTH, return the value that should be passed as the
-   depth parameter to svn_wc_adm_open() and friends. */
-static int levels_to_lock_from_depth(svn_depth_t depth)
-{
-  int levels_to_lock;
-
-  if (depth == svn_depth_immediates)
-    levels_to_lock = 1;
-  else if (depth == svn_depth_empty || depth == svn_depth_files)
-    levels_to_lock = 0;
-  else
-    levels_to_lock = -1;
-  return levels_to_lock;
-}
-
-
 /* Perform a diff between two working-copy paths.
 
    PATH1 and PATH2 are both working copy paths.  REVISION1 and
@@ -1129,7 +1174,7 @@ diff_wc_wc(const apr_array_header_t *options,
 {
   svn_wc_adm_access_t *adm_access, *target_access;
   const char *target;
-  int levels_to_lock = levels_to_lock_from_depth(depth);
+  int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
 
   /* Assert that we have valid input. */
   assert(! svn_path_is_url(path1));
@@ -1153,7 +1198,7 @@ diff_wc_wc(const apr_array_header_t *options,
 
   /* Resolve named revisions to real numbers. */
   SVN_ERR(svn_client__get_revision_number
-          (&callback_baton->revnum1, NULL, revision1, path1, pool));
+          (&callback_baton->revnum1, NULL, NULL, revision1, path1, pool));
   callback_baton->revnum2 = SVN_INVALID_REVNUM;  /* WC */
 
   SVN_ERR(svn_wc_diff4(adm_access, target, callbacks, callback_baton,
@@ -1271,7 +1316,7 @@ diff_repos_wc(const apr_array_header_t *options,
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
   svn_boolean_t rev2_is_base = (revision2->kind == svn_opt_revision_base);
-  int levels_to_lock = levels_to_lock_from_depth(depth);
+  int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
   svn_boolean_t server_supports_depth;
 
   /* Assert that we have valid input. */
@@ -1341,7 +1386,7 @@ diff_repos_wc(const apr_array_header_t *options,
 
   /* Tell the RA layer we want a delta to change our txn to URL1 */
   SVN_ERR(svn_client__get_revision_number
-          (&rev, ra_session, revision1,
+          (&rev, NULL, ra_session, revision1,
            (path1 == url1) ? NULL : path1, pool));
 
   if (!reverse)
@@ -1553,6 +1598,7 @@ svn_client_diff4(const apr_array_header_t *options,
                  const svn_opt_revision_t *revision1,
                  const char *path2,
                  const svn_opt_revision_t *revision2,
+                 const char *relative_to_dir,
                  svn_depth_t depth,
                  svn_boolean_t ignore_ancestry,
                  svn_boolean_t no_diff_deleted,
@@ -1610,6 +1656,7 @@ svn_client_diff4(const apr_array_header_t *options,
   diff_cmd_baton.force_empty = FALSE;
   diff_cmd_baton.force_binary = ignore_content_type;
   diff_cmd_baton.svnpatch_file = NULL;
+  diff_cmd_baton.relative_to_dir = relative_to_dir;
 
   if (svnpatch_format)
     {
@@ -1640,7 +1687,8 @@ svn_client_diff3(const apr_array_header_t *options,
                  apr_pool_t *pool)
 {
   return svn_client_diff4(options, path1, revision1, path2,
-                          revision2, SVN_DEPTH_INFINITY_OR_FILES(recurse),
+                          revision2, NULL,
+                          SVN_DEPTH_INFINITY_OR_FILES(recurse),
                           ignore_ancestry, no_diff_deleted,
                           ignore_content_type, FALSE, header_encoding,
                           outfile, errfile, ctx, pool);
@@ -1692,6 +1740,7 @@ svn_client_diff_peg4(const apr_array_header_t *options,
                      const svn_opt_revision_t *peg_revision,
                      const svn_opt_revision_t *start_revision,
                      const svn_opt_revision_t *end_revision,
+                     const char *relative_to_dir,
                      svn_depth_t depth,
                      svn_boolean_t ignore_ancestry,
                      svn_boolean_t no_diff_deleted,
@@ -1745,6 +1794,7 @@ svn_client_diff_peg4(const apr_array_header_t *options,
   diff_cmd_baton.force_empty = FALSE;
   diff_cmd_baton.force_binary = ignore_content_type;
   diff_cmd_baton.svnpatch_file = NULL;
+  diff_cmd_baton.relative_to_dir = relative_to_dir;
 
   if (svnpatch_format)
     {
@@ -1779,6 +1829,7 @@ svn_client_diff_peg3(const apr_array_header_t *options,
                               peg_revision,
                               start_revision,
                               end_revision,
+                              NULL,
                               SVN_DEPTH_INFINITY_OR_FILES(recurse),
                               ignore_ancestry,
                               no_diff_deleted,

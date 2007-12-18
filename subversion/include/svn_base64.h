@@ -78,6 +78,8 @@ svn_stringbuf_t *svn_base64_from_md5(unsigned char digest[],
                                      apr_pool_t *pool);
 
 
+/** @} end group: Base64 encoding/decoding functions */
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

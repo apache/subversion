@@ -395,6 +395,7 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   const char *lopped_path, *remaining_path;
   const char *vcc_url, *relative_url, *baseline_url, *basecoll_url, *req_url;
   int status_code;
+  svn_error_t *err;
 
   blame_ctx = apr_pcalloc(pool, sizeof(*blame_ctx));
   blame_ctx->pool = pool;
@@ -462,7 +463,7 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
       return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                               _("The OPTIONS response did not include the "
                                 "requested version-controlled-configuration "
-                                "value."));
+                                "value"));
     }
 
   /* Send the request to the baseline URL */
@@ -473,7 +474,7 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
     {
       return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                               _("The OPTIONS response did not include the "
-                                "requested baseline-relative-path value."));
+                                "requested baseline-relative-path value"));
     }
   relative_url = svn_path_join(relative_url,
                                svn_path_uri_decode(lopped_path, pool),
@@ -493,7 +494,7 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
         {
           return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                                   _("The OPTIONS response did not include the "
-                                    "requested checked-in value."));
+                                    "requested checked-in value"));
         }
 
       SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
@@ -520,7 +521,7 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
     {
       return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                               _("The OPTIONS response did not include the "
-                                "requested baseline-collection value."));
+                                "requested baseline-collection value"));
     }
 
   req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);
@@ -549,7 +550,14 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
 
   svn_ra_serf__request_create(handler);
 
-  SVN_ERR(svn_ra_serf__context_run_wait(&blame_ctx->done, session, pool));
+  err = svn_ra_serf__context_run_wait(&blame_ctx->done, session, pool);
+
+  if (parser_ctx->error)
+    {
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+      SVN_ERR(parser_ctx->error);
+    }
 
   if (status_code == 404)
     {
@@ -557,5 +565,5 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
                                "'%s' path not found",
                                handler->path);
     }
-  return SVN_NO_ERROR;
+  return err;
 }
