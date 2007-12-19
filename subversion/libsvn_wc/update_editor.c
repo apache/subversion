@@ -1611,6 +1611,9 @@ close_directory(void *dir_baton,
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   apr_array_header_t *entry_props, *wc_props, *regular_props;
   svn_wc_adm_access_t *adm_access;
+  const svn_wc_entry_t *entry;
+  svn_boolean_t tree_conflicted;
+  svn_boolean_t text_conflicted, prop_conflicted; /* Dummies (never read). */
 
   SVN_ERR(svn_categorize_props(db->propchanges, &entry_props, &wc_props,
                                &regular_props, pool));
@@ -1713,6 +1716,11 @@ close_directory(void *dir_baton,
      maybe_bump_dir_info() for more information.  */
   SVN_ERR(maybe_bump_dir_info(db->edit_baton, db->bump_info, db->pool));
 
+  /* Check for tree conflicts in this directory. */
+  SVN_ERR(svn_wc_entry(&entry, db->path, adm_access, TRUE, db->pool));
+  SVN_ERR(svn_wc_conflicted_p2(&text_conflicted, &prop_conflicted, 
+                               &tree_conflicted, db->path, entry, db->pool));
+
   /* Notify of any prop changes on this directory -- but do nothing
      if it's an added or skipped directory, because notification has already
      happened in that case - unless the add was obstructed by a dir
@@ -1729,6 +1737,9 @@ close_directory(void *dir_baton,
                                pool);
       notify->kind = svn_node_dir;
       notify->prop_state = prop_state;
+      notify->tree_state = tree_conflicted
+          ? svn_wc_notify_state_conflicted
+          : svn_wc_notify_state_unknown;
     (*db->edit_baton->notify_func)(db->edit_baton->notify_baton,
                                    notify, pool);
     }

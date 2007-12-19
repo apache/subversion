@@ -176,6 +176,12 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
     case svn_wc_notify_update_update:
       {
+        /* For the parent dir of conflicted paths, we "hijack" the unused
+         * text-conflict flag */
+        if ((n->kind == svn_node_dir)
+               && (n->tree_state == svn_wc_notify_state_conflicted))
+          statchar_buf[0] = 'C';
+
         /* If this is an inoperative dir change, do no notification.
            An inoperative dir change is when a directory gets closed
            without any props having been changed. */
@@ -206,14 +212,14 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
             if (statchar_buf[0] != ' ' || statchar_buf[1] != ' ')
               nb->received_some_change = TRUE;
+          }
 
-            if (statchar_buf[0] != ' ' || statchar_buf[1] != ' '
-                || statchar_buf[2] != ' ')
-              {
-                if ((err = svn_cmdline_printf(pool, "%s %s\n",
-                                              statchar_buf, path_local)))
-                  goto print_error;
-              }
+        if (statchar_buf[0] != ' ' || statchar_buf[1] != ' '
+            || statchar_buf[2] != ' ')
+          {
+            if ((err = svn_cmdline_printf(pool, "%s %s\n",
+                                          statchar_buf, path_local)))
+              goto print_error;
           }
       }
       break;

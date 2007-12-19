@@ -832,8 +832,8 @@ typedef enum svn_wc_notify_lock_state_t {
 /**
  * Structure used in the @c svn_wc_notify_func2_t function.
  *
- * @c kind, @c content_state, @c prop_state and @c lock_state are from
- * after @c action, not before.
+ * @c kind, @c content_state, @c prop_state, @c tree_state and 
+ * @c lock_state are from after @c action, not before.
  *
  * @note If @c action is @c svn_wc_notify_update, then @c path has
  * already been installed, so it is legitimate for an implementation of
@@ -891,6 +891,11 @@ typedef struct svn_wc_notify_t {
       left and right sides of the merge are from the same URL.  In all
       other cases, it is @c NULL.  */
   svn_merge_range_t *merge_range;
+  /** The type of notification that is occurring about tree conflicts. 
+   *
+   * @since New in 1.6.
+   */
+  svn_wc_notify_state_t tree_state;
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
      and svn_wc_dup_notify. */
