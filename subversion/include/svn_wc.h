@@ -4665,6 +4665,8 @@ svn_wc_set_changelist(const apr_array_header_t *paths,
  * Append pointers to newly allocated svn_wc_conflict_description_t
  * objects to the array pointed to by @a conflicts.
  * Do all allocations in @a pool.
+ *
+ * @since New in 1.6.
  */
 svn_error_t *
 svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
@@ -4674,6 +4676,8 @@ svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
 /**
  * Append to @a descriptions a possibly localized human readable
  * description of a tree conflict described by @a conflict.
+ *
+ * @since New in 1.6.
  */
 svn_error_t *
 svn_wc_append_human_readable_tree_conflict_description(
