@@ -215,7 +215,7 @@ svn_fs_base__lock(svn_lock_t **lock,
 {
   struct lock_args args;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   args.lock_p = lock;
   args.path = svn_fs__canonicalize_abspath(path, pool);
@@ -304,7 +304,7 @@ svn_fs_base__unlock(svn_fs_t *fs,
 {
   struct unlock_args args;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   args.path = svn_fs__canonicalize_abspath(path, pool);
   args.token = token;
@@ -378,7 +378,7 @@ svn_fs_base__get_lock(svn_lock_t **lock,
 {
   struct lock_token_get_args args;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   args.path = svn_fs__canonicalize_abspath(path, pool);
   args.lock_p = lock;
@@ -413,7 +413,7 @@ svn_fs_base__get_locks(svn_fs_t *fs,
 {
   struct locks_get_args args;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
   args.path = svn_fs__canonicalize_abspath(path, pool);
   args.get_locks_func = get_locks_func;
   args.get_locks_baton = get_locks_baton;

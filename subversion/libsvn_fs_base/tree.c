@@ -366,7 +366,7 @@ svn_fs_base__revision_root(svn_fs_root_t **root_p,
   struct revision_root_args args;
   svn_fs_root_t *root;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   args.root_p = &root;
   args.rev = rev;
@@ -1794,7 +1794,7 @@ merge(svn_stringbuf_t *conflict_p,
     }
 
   /* We have the same fs, now check it. */
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   source_id   = svn_fs_base__dag_get_id(source);
   target_id   = svn_fs_base__dag_get_id(target);
