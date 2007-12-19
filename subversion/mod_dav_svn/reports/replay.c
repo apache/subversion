@@ -495,7 +495,7 @@ dav_svn__replay_report(const dav_resource *resource,
     else
       action = apr_psprintf(resource->info->r->pool, "replay r%ld", rev);
 
-    apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION", action);
+    dav_svn__operational_log(resource->info, action);
   }
 
   ap_fflush(output, bb);

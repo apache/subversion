@@ -425,8 +425,7 @@ dav_svn__log_report(const dav_resource *resource,
                         include_merged_revisions ? "-merge-sensitive" : "",
                         comma_separated_paths->data, start, end,
                         comma_separated_revprops->data);
-  apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION", action);
-
+  dav_svn__operational_log(resource->info, action);
 
   /* Flush the contents of the brigade (returning an error only if we
      don't already have one). */
