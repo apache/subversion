@@ -533,8 +533,7 @@ I.    INTRODUCTION
       under Unix as described in section II.B and III.D, install
       Python 2.2 or higher on your system. The majority of the test
       suite is written in Python, as is part of Subversion's build
-      system.  Note that compiling under Windows requires Python 2.2
-      or newer.
+      system.
 
 
       12. Perl 5.8 or newer (Windows only)  (OPTIONAL)
