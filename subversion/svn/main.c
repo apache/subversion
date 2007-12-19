@@ -255,6 +255,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        " '" SVN_CL__ACCEPT_LAUNCH "')")},
   {"from-source",   opt_from_source, 1,
                     N_("query a particular merge source URL\n")},
+  {"show-tree-conflicts", 't', 0,
+                    N_("show tree conflicts in directories, if any.\n")},
   {0,               0, 0, 0},
 };
 
@@ -838,7 +840,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "                 965       687 joe          wc/zig.c\n"
      "    Status against revision:   981\n"),
     { 'u', 'v', 'N', opt_depth, 'q', opt_no_ignore, opt_incremental, opt_xml,
-      opt_ignore_externals, opt_changelist} },
+      opt_ignore_externals, opt_changelist, 't'} },
 
   { "switch", svn_cl__switch, {"sw"}, N_
     ("Update the working copy to a different URL.\n"
@@ -1425,6 +1427,12 @@ main(int argc, const char *argv[])
       case opt_from_source:
         err = svn_utf_cstring_to_utf8(&path_utf8, opt_arg, pool);
         opt_state.from_source = svn_path_canonicalize(path_utf8, pool);
+        break;
+      case 't':
+        opt_state.show_tree_conflicts = TRUE;
+        /* '-t' implies '-v', otherwise svn_wc_client3() won't return
+           the entries we need. This hack isn't user-visible. */
+        opt_state.verbose = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
