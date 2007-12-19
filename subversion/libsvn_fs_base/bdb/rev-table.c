@@ -165,7 +165,7 @@ svn_fs_bdb__youngest_rev(svn_revnum_t *youngest_p,
   DBT key, value;
   db_recno_t recno;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   /* Create a database cursor.  */
   svn_fs_base__trail_debug(trail, "revisions", "cursor");

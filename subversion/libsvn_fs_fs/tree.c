@@ -327,7 +327,7 @@ svn_fs_fs__revision_root(svn_fs_root_t **root_p,
 {
   dag_node_t *root_dir;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   SVN_ERR(svn_fs_fs__dag_revision_root(&root_dir, fs, rev, pool));
 
@@ -1232,7 +1232,7 @@ merge(svn_stringbuf_t *conflict_p,
     }
 
   /* We have the same fs, now check it. */
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   source_id   = svn_fs_fs__dag_get_id(source);
   target_id   = svn_fs_fs__dag_get_id(target);
