@@ -1318,18 +1318,18 @@ dav_svn__update_report(const dav_resource *resource,
         /* diff/merge don't ask for inline text-deltas. */
         if (!uc.send_all && strcmp(spath, dst_path) == 0)
           action = apr_psprintf(resource->pool,
-                                "diff-or-merge %s r%ld:%ld",
+                                "diff-or-merge %s r%ld:%ld depth-%s",
                                 svn_path_uri_encode(spath, resource->pool),
                                 from_revnum,
-                                revnum);
+                                revnum, svn_depth_to_word(requested_depth));
         else
           action = apr_psprintf(resource->pool,
-                                "%s %s@%ld %s@%ld",
+                                "%s %s@%ld %s@%ld depth-%s",
                                 (uc.send_all ? "switch" : "diff-or-merge"),
                                 svn_path_uri_encode(spath, resource->pool),
                                 from_revnum,
                                 svn_path_uri_encode(dst_path, resource->pool),
-                                revnum);
+                                revnum, svn_depth_to_word(requested_depth));
       }
 
     /* Otherwise, it must be checkout, export, update, or status -u. */
