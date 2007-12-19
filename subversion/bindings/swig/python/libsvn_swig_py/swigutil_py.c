@@ -2109,7 +2109,7 @@ svn_error_t *svn_swig_py_delta_path_driver_cb_func(void **dir_baton,
   result = PyObject_CallFunction(function, (char *)"OsO&",
                                  svn_swig_NewPointerObjString(parent_baton,
                                                               "void *",
-                                                          application_py_pool),
+                                                              application_py_pool),
                                  path, make_ob_pool, pool);
   if (result == NULL)
     {
@@ -2121,7 +2121,7 @@ svn_error_t *svn_swig_py_delta_path_driver_cb_func(void **dir_baton,
     }
   else
     {
-      if (svn_swig_ConvertPtr(result, dir_baton, svn_swig_TypeQuery("void *")) == -1)
+      if (svn_swig_ConvertPtrString(result, dir_baton, "void *") == -1)
         {
           err = type_conversion_error("void *");
         }
