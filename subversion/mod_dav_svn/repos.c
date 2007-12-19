@@ -3463,7 +3463,7 @@ do_walk(walker_ctx_t *ctx, int depth)
      DAV client.  */
   apr_table_set(ctx->info.r->subprocess_env, "SVN-ACTION",
                 apr_psprintf(params->pool,
-                             "list-dir '%s' r%ld",
+                             "list-dir %s r%ld",
                              svn_path_uri_encode(ctx->info.repos_path,
                                                  params->pool),
                              ctx->info.root.rev));
