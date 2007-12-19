@@ -133,6 +133,7 @@ get_vsn_options(apr_pool_t *p, apr_text_header *phdr)
                   "version-control,checkout,working-resource");
   apr_text_append(p, phdr,
                   "merge,baseline,activity,version-controlled-collection");
+  /* Send SVN_RA_CAPABILITY_* capabilities. */
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_MERGEINFO);
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_DEPTH);
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
