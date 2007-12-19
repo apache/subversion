@@ -491,6 +491,45 @@ def load_with_parent_dir(sbox):
                                      [], 'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url + '/sample/branch1')
 
+#----------------------------------------------------------------------
+
+def set_uuid(sbox):
+  "test 'svnadmin setuuid'"
+
+  sbox.build(create_wc=False)
+
+  # Squirrel away the original repository UUID.
+  output, errput = svntest.main.run_svnlook('uuid', sbox.repo_dir)
+  if errput:
+    raise SVNUnexpectedStderr
+  orig_uuid = output[0].rstrip()
+
+  # Try setting a new, bogus UUID.
+  svntest.actions.run_and_verify_svnadmin(None, None, '^.*Malformed UUID.*$',
+                                          'setuuid', sbox.repo_dir, 'abcdef')
+
+  # Try generating a brand new UUID.
+  svntest.actions.run_and_verify_svnadmin(None, [], None,
+                                          'setuuid', sbox.repo_dir)
+  output, errput = svntest.main.run_svnlook('uuid', sbox.repo_dir)
+  if errput:
+    raise SVNUnexpectedStderr
+  new_uuid = output[0].rstrip()
+  if new_uuid == orig_uuid:
+    print "Error: new UUID matches the original one"
+    raise svntest.Failure
+
+  # Now, try setting the UUID back to the original value.
+  svntest.actions.run_and_verify_svnadmin(None, [], None,
+                                          'setuuid', sbox.repo_dir, orig_uuid)
+  output, errput = svntest.main.run_svnlook('uuid', sbox.repo_dir)
+  if errput:
+    raise SVNUnexpectedStderr
+  new_uuid = output[0].rstrip()
+  if new_uuid != orig_uuid:
+    print "Error: new UUID doesn't match the original one"
+    raise svntest.Failure
+  
 
 ########################################################################
 # Run the tests
@@ -511,6 +550,7 @@ test_list = [ None,
               verify_windows_paths_in_repos,
               SkipUnless(recover_fsfs, svntest.main.is_fs_type_fsfs),
               load_with_parent_dir,
+              set_uuid,
              ]
 
 if __name__ == '__main__':

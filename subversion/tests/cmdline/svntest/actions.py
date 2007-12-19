@@ -117,6 +117,24 @@ def guarantee_greek_repository(path):
   main.chmod_tree(path, 0666, 0666)
 
 
+def run_and_verify_svnlook(message, expected_stdout,
+                           expected_stderr, *varargs):
+  "Run svnlook command and check its output"
+  out, err = main.run_svnlook(*varargs)
+  verify.verify_outputs("Unexpected output", out, err,
+                        expected_stdout, expected_stderr)
+  return out, err
+
+
+def run_and_verify_svnadmin(message, expected_stdout,
+                            expected_stderr, *varargs):
+  "Run svnadmin command and check its output"
+  out, err = main.run_svnadmin(*varargs)
+  verify.verify_outputs("Unexpected output", out, err,
+                        expected_stdout, expected_stderr)
+  return out, err
+
+
 def run_and_verify_svnversion(message, wc_dir, repo_url,
                               expected_stdout, expected_stderr):
   "Run svnversion command and check its output"
@@ -441,7 +459,9 @@ def run_and_verify_log_xml(message=None, expected_paths=None,
   if not parse:
     return
 
-  for (index, entry) in enumerate(LogParser().parse(stdout)):
+  entries = LogParser().parse(stdout)
+  for index in xrange(len(entries)):
+    entry = entries[index]
     if expected_revprops != None:
       entry.assert_revprops(expected_revprops[index])
     if expected_paths != None:

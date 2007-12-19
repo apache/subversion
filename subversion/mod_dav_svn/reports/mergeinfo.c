@@ -179,18 +179,17 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
   if (paths->nelts == 0)
     action = "get-mergeinfo";
   else if (paths->nelts == 1)
-    action = apr_psprintf(resource->pool, "get-mergeinfo '%s'",
+    action = apr_psprintf(resource->pool, "get-mergeinfo %s",
                           svn_path_uri_encode(APR_ARRAY_IDX
                                               (paths, 0, const char *),
                                               resource->pool));
   else
-    action = apr_psprintf(resource->pool, "get-mergeinfo-partial '%s'",
+    action = apr_psprintf(resource->pool, "get-mergeinfo-partial %s",
                           svn_path_uri_encode(APR_ARRAY_IDX
                                               (paths, 0, const char *),
                                               resource->pool));
 
-  apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION", action);
-
+  dav_svn__operational_log(resource->info, action);
 
   /* Flush the contents of the brigade (returning an error only if we
      don't already have one). */

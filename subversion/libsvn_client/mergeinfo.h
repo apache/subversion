@@ -189,27 +189,25 @@ svn_client__record_wc_mergeinfo(const char *wcpath,
    TARGET_PATH and WC_ELISION_LIMIT_PATH, if it exists, must both be absolute
    or relative to the working directory.
 
-   If TARGET_WCPATH's mergeinfo and its nearest ancestor's mergeinfo
-   differ by paths existing only in TARGET_PATH's mergeinfo that map to
-   empty revision ranges, then the mergeinfo between the two is considered
-   equivalent and elision occurs.  If the mergeinfo between the two still
-   differs then partial elision occurs: only the paths mapped to empty
-   revision ranges in TARGET_WCPATH's mergeinfo elide.
+   Elision occurs if:
 
-   If TARGET_WCPATH's mergeinfo and its nearest ancestor's mergeinfo
-   differ by paths existing only in the ancestor's mergeinfo that map to
-   empty revision ranges, then the mergeinfo between the two is considered
-   equivalent and elision occurs.
+     A) WCPATH has empty mergeinfo and no parent path with explicit mergeinfo
+        can be found in either the WC or the repository (WC_ELISION_LIMIT_PATH
+        must be NULL for this to occur).
 
-   If TARGET_WCPATH's mergeinfo consists only of paths mapped to empty
-   revision ranges and none of these paths exist in TARGET_WCPATH's nearest
-   ancestor, then elision occurs.
+     B) WCPATH has empty mergeinfo and its nearest parent also has empty
+        mergeinfo.
 
-   If TARGET_WCPATH's mergeinfo is empty or consists only of paths mapped to
-   empty revision ranges and TARGET_WCPATH has no working copy or repository
-   ancestor with mergeinfo (WC_ELISION_LIMIT_PATH must be NULL to ensure the
-   repository is checked), then elision occurs.
- */
+     C) WCPATH has the same mergeinfo as its nearest parent when that parent's
+        mergeinfo is adjusted for the path difference between the two, e.g.:
+
+                                WCPATH's                          Parent's
+                    WCPATH's    Nearest    Parent's   Path        Adjusted
+        WCPATH      mergeinfo   parent     Mergeinfo  Difference  Mergeinfo
+        -------     ---------   ---------  ---------  ----------  ---------
+        A_COPY/D/H  '/A/D/H:3'  A_COPY     '/A:3'     'D/H'       '/A/D/H:3'
+
+   If Elision occurs remove the svn:mergeinfo property from TARGET_WCPATH. */
 svn_error_t *
 svn_client__elide_mergeinfo(const char *target_wcpath,
                             const char *wc_elision_limit_path,

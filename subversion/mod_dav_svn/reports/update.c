@@ -1318,13 +1318,13 @@ dav_svn__update_report(const dav_resource *resource,
         /* diff/merge don't ask for inline text-deltas. */
         if (!uc.send_all && strcmp(spath, dst_path) == 0)
           action = apr_psprintf(resource->pool,
-                                "diff-or-merge '%s' r%ld:%ld",
+                                "diff-or-merge %s r%ld:%ld",
                                 svn_path_uri_encode(spath, resource->pool),
                                 from_revnum,
                                 revnum);
         else
           action = apr_psprintf(resource->pool,
-                                "%s '%s@%ld' '%s@%ld'",
+                                "%s %s@%ld %s@%ld",
                                 (uc.send_all ? "switch" : "diff-or-merge"),
                                 svn_path_uri_encode(spath, resource->pool),
                                 from_revnum,
@@ -1339,7 +1339,7 @@ dav_svn__update_report(const dav_resource *resource,
            reports it (and it alone) to the server as being empty. */
         if (entry_counter == 1 && entry_is_empty)
           action = apr_psprintf(resource->pool,
-                                "checkout-or-export '%s' r%ld depth-%s",
+                                "checkout-or-export %s r%ld depth-%s",
                                 svn_path_uri_encode(spath, resource->pool),
                                 revnum,
                                 svn_depth_to_word(requested_depth));
@@ -1347,14 +1347,14 @@ dav_svn__update_report(const dav_resource *resource,
           {
             if (text_deltas)
               action = apr_psprintf(resource->pool,
-                                    "update '%s' r%ld depth-%s",
+                                    "update %s r%ld depth-%s",
                                     svn_path_uri_encode(spath,
                                                         resource->pool),
                                     revnum,
                                     svn_depth_to_word(requested_depth));
             else
               action = apr_psprintf(resource->pool,
-                                    "remote-status '%s' r%ld depth-%s",
+                                    "remote-status %s r%ld depth-%s",
                                     svn_path_uri_encode(spath,
                                                         resource->pool),
                                     revnum,
@@ -1362,7 +1362,7 @@ dav_svn__update_report(const dav_resource *resource,
           }
       }
 
-    apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION", action);
+    dav_svn__operational_log(resource->info, action);
   }
 
   /* this will complete the report, and then drive our editor to generate

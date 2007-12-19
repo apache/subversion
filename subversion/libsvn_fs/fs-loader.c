@@ -21,6 +21,7 @@
 #include <apr.h>
 #include <apr_hash.h>
 #include <apr_thread_mutex.h>
+#include <apr_uuid.h>
 
 #include "svn_types.h"
 #include "svn_dso.h"
@@ -1014,6 +1015,18 @@ svn_fs_get_uuid(svn_fs_t *fs, const char **uuid, apr_pool_t *pool)
 svn_error_t *
 svn_fs_set_uuid(svn_fs_t *fs, const char *uuid, apr_pool_t *pool)
 {
+  if (! uuid)
+    {
+      uuid = svn_uuid_generate(pool);
+    }
+  else
+    {
+      apr_uuid_t parsed_uuid;
+      apr_status_t apr_err = apr_uuid_parse(&parsed_uuid, uuid);
+      if (apr_err)
+        return svn_error_createf(SVN_ERR_BAD_UUID, NULL,
+                                 _("Malformed UUID '%s'"), uuid);
+    }
   return fs->vtable->set_uuid(fs, uuid, pool);
 }
 

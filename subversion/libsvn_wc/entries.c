@@ -491,10 +491,10 @@ read_entry(svn_wc_entry_t **new_entry,
   {
     const char *result;
     SVN_ERR(read_val(&result, buf, end));
-    if (result[0] == '\0')
-      entry->depth = svn_depth_infinity;
-    else
+    if (result)
       entry->depth = svn_depth_from_word(result);
+    else
+      entry->depth = svn_depth_infinity;
   }
   MAYBE_DONE;
 
