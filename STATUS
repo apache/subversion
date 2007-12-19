@@ -74,14 +74,4 @@ Veto-blocked changes:
       +1: dlr, djh, jerenkrantz
       -1: cmpilato (new features showing up in patch releases?  nuh-uh.)
 
- * r24497, r24504
-   Make Perl-based txdelta_window_handler actually usable by editors
-   and related functions.
-   Justification:
-     Binding completeness.
-   Votes:
-     +1: clkao
-     +0: glasser (I don't grok SWIG, but having this available in Perl is good)
-     -1: djames (see http://svn.haxx.se/dev/archive-2007-05/0058.shtml)
-
 Approved changes:
