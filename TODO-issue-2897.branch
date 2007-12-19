@@ -1,6 +1,3 @@
-* Implement the non-reflective merge editor to grok the local mods from
-  a commit which has 'merge + conflict resolution + some other changes'.
-
 * Fix the finding mergeinfo from a parent logic for 
 'get-commit-and-merge-ranges' API, which is terribly broken as of now.
 
