@@ -163,6 +163,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t use_merge_history; /* use/display extra merge information */
   svn_cl__accept_t accept_which; /* how to handle conflicts */
   const char *from_source;       /* merge source to query (svn mergeinfo) */
+  svn_boolean_t show_tree_conflicts; /* display tree conflict information */
 } svn_cl__opt_state_t;
 
 
@@ -299,13 +300,19 @@ svn_error_t *svn_cl__print_commit_info(svn_commit_info_t *commit_info,
    unversioned items found in the working copy.
 
    When DETAILED is set, and REPOS_LOCKS is set, treat missing repository locks
-   as broken WC locks. */
+   as broken WC locks.
+
+   If SHOW_TREE_CONFLICTS is set, print localized human-readable
+   descriptions of tree conflicts for tree-conflicted directories.
+   
+   */
 svn_error_t *svn_cl__print_status(const char *path,
                                   svn_wc_status2_t *status,
                                   svn_boolean_t detailed,
                                   svn_boolean_t show_last_committed,
                                   svn_boolean_t skip_unrecognized,
                                   svn_boolean_t repos_locks,
+                                  svn_boolean_t show_tree_conflicts,
                                   apr_pool_t *pool);
 
 

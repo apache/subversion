@@ -3830,7 +3830,7 @@ def tree_conflicts_in_updated_files(sbox):
     'tiger'   : Item("This is the file 'tau'.\n"),
     })
   expected_status = wc.State(G2, {
-    ''        : Item(status='  ', wc_rev=2),
+    ''        : Item(status='C ', wc_rev=2),
     'pi'      : Item(status='D ', wc_rev=2),
     'pig'     : Item(status='A ', wc_rev='-', copied='+'),
     'rhino'   : Item(status='  ', wc_rev=2),

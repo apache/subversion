@@ -2293,6 +2293,11 @@ typedef struct svn_wc_status2_t
 
   /** @} */
 
+  /** The entry's tree-conflict status.
+   * @since New in 1.6
+   */
+  enum svn_wc_status_kind tree_status;
+
   /* NOTE! Please update svn_wc_dup_status2() when adding new fields here. */
 } svn_wc_status2_t;
 
