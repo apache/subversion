@@ -51,6 +51,7 @@
 #include "lock.h"
 #include "props.h"
 #include "translate.h"
+#include "tree_conflicts.h"
 
 #include "private/svn_wc_private.h"
 
@@ -1108,6 +1109,7 @@ do_entry_deletion(struct edit_baton *eb,
   const char *full_path = svn_path_join(eb->anchor, path, pool);
   svn_stringbuf_t *log_item = svn_stringbuf_create("", pool);
   svn_boolean_t modified;
+  svn_wc_conflict_description_t *conflict;
 
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                               parent_path, pool));
@@ -1125,24 +1127,43 @@ do_entry_deletion(struct edit_baton *eb,
                                      pool));
       if (modified)
         {
-          /* The path is a tree conflict victim.
-           * Create a suitable tree conflict descriptor and call
-           * svn_wc__add_tree_conflict_data()
-           */
+          /* The entry is a tree conflict victim. */
+          conflict = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
+          conflict->victim_path = entry->name;
+          conflict->node_kind = svn_node_file;
+          conflict->operation = svn_wc_operation_update;
+          conflict->action = svn_wc_conflict_action_delete;
+          conflict->reason = svn_wc_conflict_reason_edited;
+
+          SVN_ERR(svn_wc__add_tree_conflict_data(log_item, conflict, 
+                                                 adm_access, pool));
+
         }
-    } 
+    }
 
   /* If we are about to delete a path that has been scheduled
    * for deletion, mark the containing directory as tree conflicted.
    * This _could_ be tree conflict use case 3 as described in the
    * paper attached to issue #2282
+   *
+   * TODO: Make this test smarter! Flagging every delete by the update
+   * as a tree conflict raises way too many false positives.
+   * Use case 3 only applies if the file that was locally deleted
+   * and the file deleted by the update have a common ancestor.
    */
-  if (entry->schedule == svn_wc_schedule_delete)
+  if (entry->kind == svn_node_file
+      && entry->schedule == svn_wc_schedule_delete)
     {
-      /* The path is a tree conflict victim.
-       * Create a suitable tree conflict descriptor and call
-       * svn_wc__add_tree_conflict_data()
-       */
+      /* The entry is a tree conflict victim. */
+      conflict = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
+      conflict->victim_path = entry->name;
+      conflict->node_kind = entry->kind;
+      conflict->operation = svn_wc_operation_update;
+      conflict->action = svn_wc_conflict_action_delete;
+      conflict->reason = svn_wc_conflict_reason_deleted;
+
+      SVN_ERR(svn_wc__add_tree_conflict_data(log_item, conflict,
+                                             adm_access, pool));
     }
 
   SVN_ERR(svn_wc__loggy_delete_entry(&log_item, adm_access, full_path, pool));
@@ -1914,6 +1935,7 @@ open_file(const char *path,
   svn_wc_adm_access_t *adm_access;
   svn_boolean_t text_conflicted;
   svn_boolean_t prop_conflicted;
+  svn_wc_conflict_description_t *conflict;
 
   /* the file_pool can stick around for a *long* time, so we want to use
      a subpool for any temporary allocations. */
@@ -1924,15 +1946,13 @@ open_file(const char *path,
 
   SVN_ERR(check_path_under_root(fb->dir_baton->path, fb->name, subpool));
 
-  /* It is interesting to note: everything below is just validation. We
-     aren't actually doing any "work" or fetching any persistent data. */
 
   SVN_ERR(svn_io_check_path(fb->path, &kind, subpool));
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                               pb->path, subpool));
   SVN_ERR(svn_wc_entry(&entry, fb->path, adm_access, FALSE, subpool));
 
-  /* Sanity checks. */
+  /* Sanity check. */
 
   /* If replacing, make sure the .svn entry already exists. */
   if (! entry)
@@ -1947,11 +1967,21 @@ open_file(const char *path,
    */
   if (entry->schedule == svn_wc_schedule_delete)
     {
-      /* The file is a tree conflict victim.
-       * Create a suitable tree conflict descriptor and call
-       * svn_wc__add_tree_conflict_data()
-       */
+      /* The file is a tree conflict victim. */
+      conflict = apr_pcalloc(subpool, sizeof(svn_wc_conflict_description_t));
+      conflict->victim_path = entry->name;
+      conflict->node_kind = entry->kind;
+      conflict->operation = svn_wc_operation_update;
+      conflict->action = svn_wc_conflict_action_edit;
+      conflict->reason = svn_wc_conflict_reason_deleted;
+
+      /* Write to the parent dir's log */
+      SVN_ERR(svn_wc__add_tree_conflict_data(pb->log_accum, conflict,
+                                             adm_access, pool));
     }
+
+ /* It is interesting to note: everything below is just validation. We
+     aren't actually doing any "work" or fetching any persistent data. */
 
   /* If the file is in conflict, don't mess with it. */
   SVN_ERR(svn_wc_conflicted_p(&text_conflicted, &prop_conflicted,
