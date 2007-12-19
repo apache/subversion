@@ -26,8 +26,6 @@
 #include <apr_general.h>
 #include <apr_lib.h>
 #include <apr_strings.h>
-#include <apr_network_io.h>
-#include <apr_poll.h>
 
 #include "svn_types.h"
 #include "svn_string.h"
