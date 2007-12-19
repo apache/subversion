@@ -557,7 +557,7 @@ should_elide_mergeinfo(svn_boolean_t *elides,
       /* If we need to adjust the paths in PARENT_MERGEINFO do it now. */
       if (path_suffix)
         adjust_mergeinfo_source_paths(path_tweaked_parent_mergeinfo,
-                                      path_suffix, child_mergeinfo,
+                                      path_suffix, parent_mergeinfo,
                                       subpool);
       else
         path_tweaked_parent_mergeinfo = parent_mergeinfo;
@@ -953,24 +953,18 @@ elide_mergeinfo_catalog_cb(void **dir_baton,
   const char *path_suffix;
   svn_boolean_t elides;
 
-  if (!pb)
-    {
-      /* This means there's actually mergeinfo on the root.  Now, we
-         know that it itself can't be elided, but we do have to set up
-         a dir baton in this case. */
-      struct elide_mergeinfo_catalog_dir_baton *b = apr_pcalloc(pool, 
-                                                                sizeof(*b));
-      b->inherited_mergeinfo_path = path;
-      b->mergeinfo_catalog = cb->mergeinfo_catalog;
-      *dir_baton = b;
-      return SVN_NO_ERROR;
-    }
+  /* pb == NULL would imply that there was an *empty* path in the
+     paths given to the driver (which is different from "/"). */
+  assert(pb != NULL);
 
-  /* Otherwise, we'll just act like everything is a file. */
+  /* We'll just act like everything is a file. */
   *dir_baton = NULL;
 
   /* Is there even any inherited mergeinfo to elide? */
-  if (!pb->inherited_mergeinfo_path)
+  /* (Note that svn_delta_path_driver will call open_directory before
+     the callback for the root (only).) */
+  if (!pb->inherited_mergeinfo_path
+      || strcmp(path, "/") == 0)
     return SVN_NO_ERROR;
 
   path_suffix = svn_path_is_child(pb->inherited_mergeinfo_path,
