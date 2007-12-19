@@ -1362,7 +1362,7 @@ dav_svn__update_report(const dav_resource *resource,
           }
       }
 
-    apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION", action);
+    dav_svn__operational_log(resource->info, action);
   }
 
   /* this will complete the report, and then drive our editor to generate
