@@ -6958,6 +6958,7 @@ def avoid_reflected_revs(sbox):
   # Merge 2:8 from A_COPY(feature branch) to A(trunk).
   short_A_path = shorten_path_kludge(A_path)
   expected_output = wc.State(short_A_path, {
+    ''       : Item(status=' G'),
     'bfile2' : Item(status='A '),
     'bfile1' : Item(status='A '),
     })
@@ -6987,7 +6988,7 @@ def avoid_reflected_revs(sbox):
     'D/H/psi'   : Item(status='  ', wc_rev=6),
     })
   expected_disk = wc.State('', {
-    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A_COPY:3-8'}),
+    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A:3,5\n/A_COPY:3-8\n'}),
     'bfile2'    : Item(bfile2_content),
     'bfile1'    : Item(bfile1_content),
     'tfile2'    : Item(tfile2_content),
@@ -7022,7 +7023,8 @@ def avoid_reflected_revs(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None, None, 1)
+                                       None, None, None, None, None, 1,
+                                       dry_run = False)
   os.chdir(saved_cwd)
 
 
