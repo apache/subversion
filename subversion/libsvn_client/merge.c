@@ -5126,16 +5126,26 @@ calculate_left_hand_side(const char **url_left,
       (! have_mergeinfo_for_source && apr_hash_count(mergeinfo_by_path) == 1))
     have_mergeinfo_for_descendents = TRUE;
 
-  if (! have_mergeinfo_for_source)
-    /* TODO(reint): error? */ ;
+  if (! have_mergeinfo_for_source && ! have_mergeinfo_for_descendents)
+    {
+      /* TODO(reint): Return the branch point. */
+    }                        
   else if (! have_mergeinfo_for_descendents)
-    /* TODO(reint): easy case */ ;
+    {
+      /* TODO(reint): easy case: return the last path/rev in the
+         mergeinfo. */
+    }
   else
-    /* TODO(reint): error, but maybe that's too conservative */ ;
-
-  /* 5: Find the "last" segment and return its URL and the last rev in
-        it */
-  /* TODO(reint): do it. */
+    {
+      /* TODO(reint): This error might be too conservative.  And in
+         any case, this error message is not helpful to the user: it
+         doesn't suggest a next step.  (Also, perhaps should show
+         URL instead of path.) */
+      return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
+                               "Cannot reintegrate from '%s', because "
+                               "it has descendents with different revisions "
+                               "merged", source_repos_rel_path);
+    }
 
   return SVN_NO_ERROR;
 }
