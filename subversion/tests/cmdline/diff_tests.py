@@ -2652,7 +2652,7 @@ def diff_svnpatch(sbox):
   def svnpatch_encode(l):
     return map(append_newline,
                textwrap.wrap(
-                base64.b64encode(
+                base64.encodestring(
                  zlib.compress(
                   "".join(l))),
                 76))
