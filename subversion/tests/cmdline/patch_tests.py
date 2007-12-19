@@ -41,7 +41,7 @@ def append_newline(s): return s + "\n"
 def svnpatch_encode(l):
   return map(append_newline,
              textwrap.wrap(
-              base64.b64encode(
+              base64.encodestring(
                zlib.compress(
                 "".join(l))),
               76))
@@ -57,10 +57,12 @@ def patch_basic(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  os.chdir(wc_dir)
 
   # We might want to use The-Merge-Kludge trick here
-  patch_file_path = os.tempnam(svntest.main.temp_dir, 'tmp')
+  patch_file_path = os.tempnam(os.path.abspath(svntest.main.temp_dir),
+                               'tmp')
+
+  os.chdir(wc_dir)
 
   svnpatch = [
     '( open-root ( 2:d0 ) ) ',
@@ -153,9 +155,11 @@ def patch_unidiff(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  os.chdir(wc_dir)
 
-  patch_file_path = os.tempnam(svntest.main.temp_dir, 'tmp')
+  patch_file_path = os.tempnam(os.path.abspath(svntest.main.temp_dir),
+                               'tmp')
+
+  os.chdir(wc_dir)
 
   unidiff_patch = [
     "Index: A/D/gamma\n",
@@ -214,11 +218,13 @@ def patch_copy_and_move(sbox):
   wc2_dir = sbox.add_wc_path('wc2')
   abs_wc2_dir = os.path.abspath(wc2_dir)
 
-  os.chdir(wc_dir)
+  patch_file_path = os.tempnam(os.path.abspath(svntest.main.temp_dir),
+                               'tmp')
 
-  patch_file_path = os.tempnam(svntest.main.temp_dir, 'tmp')
   mu_path = os.path.join('A', 'mu')
   gamma_path = os.path.join('A', 'D', 'gamma')
+
+  os.chdir(wc_dir)
 
   # set up some properties to ensure base props are considered in the
   # copy and move operations, and commit r2
