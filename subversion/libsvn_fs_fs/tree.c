@@ -964,7 +964,9 @@ svn_fs_fs__check_path(svn_node_kind_t *kind_p,
                       apr_pool_t *pool)
 {
   svn_error_t *err = node_kind(kind_p, root, path, pool);
-  if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND))
+  if (err && 
+      ((err->apr_err == SVN_ERR_FS_NOT_FOUND)
+       || (err->apr_err == SVN_ERR_FS_NOT_DIRECTORY)))
     {
       svn_error_clear(err);
       *kind_p = svn_node_none;
