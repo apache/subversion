@@ -1759,6 +1759,7 @@ typedef struct svn_wc_entry_t
   /* IMPORTANT: If you extend this structure, check the following functions in
    * subversion/libsvn_wc/entries.c, to see if you need to extend them as well.
    *
+   * svn_wc__atts_to_entry()
    * svn_wc_entry_dup()
    * alloc_entry()
    * read_entry()
