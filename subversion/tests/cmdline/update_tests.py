@@ -3772,7 +3772,75 @@ interactive-conflicts = true
                                         None, None, 1,
                                         '-r1', wc_dir)
 
+#----------------------------------------------------------------------
 
+# Helper for tree-conflict tests
+def setup_simple_tree_conflicts(G, G2):
+  j = os.path.join
+  run = svntest.actions.run_and_verify_svn
+
+  # Modify pi, move rho, move tau in wc 1 and commit
+  svntest.main.file_append( j(G, 'pi'), "Change to 'G/pi'.\n")
+  run(None, None, [], 'mv', j(G, 'rho'), j(G, 'rhino'))
+  run(None, None, [], 'mv', j(G, 'tau'), j(G, 'tapir'))
+  run(None, None, [], 'ci', '-m', 'changes in wc 1', G)
+
+  # Move pi, modify rho, move tau in wc 2
+  run(None, None, [], 'mv', j(G2, 'pi'),  j(G2, 'pig'))
+  svntest.main.file_append( j(G2, 'rho'), "Change to 'G/rho'.\n")
+  run(None, None, [], 'mv', j(G2, 'tau'), j(G2, 'tiger'))
+
+def tree_conflicts_in_updated_files(sbox):
+  "tree conflicts in updated files"
+
+  # Detect simple tree conflicts among files edited and renamed in a single
+  # directory.  Mark with a persistent 'tree_conflicts.txt' file that lists
+  # all conflicted paths.
+  
+  # See use cases 1-3 in notes/tree-conflicts/use-cases.txt for background.
+  # The only difference from the 1.4/1.5 behavior is the appearance of the
+  # tree_conflicts.txt file.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make working copy 2
+  wc_dir_2 =  sbox.add_wc_path('2')
+  svntest.actions.duplicate_dir(wc_dir, wc_dir_2)
+  G = os.path.join(wc_dir, 'A', 'D', 'G')
+  G2 = os.path.join(wc_dir_2, 'A', 'D', 'G')
+
+  setup_simple_tree_conflicts(G, G2)
+
+  # Update in wc 2
+  expected_output = wc.State(G2, {
+    ''        : Item(status='C '),
+    'pi'      : Item(status='U '),
+    'rho'     : Item(status='D '),
+    'rhino'   : Item(status='A '),
+    'tau'     : Item(status='D '),
+    'tapir'   : Item(status='A '),
+    })
+  expected_disk = wc.State('', {
+    'pi'      : Item("This is the file 'pi'.\nChange to 'G/pi'.\n"),
+    'pig'     : Item("This is the file 'pi'.\n"),
+    'rho'     : Item("This is the file 'rho'.\nChange to 'G/rho'.\n"),
+    'rhino'   : Item("This is the file 'rho'.\n"),
+    'tapir'   : Item("This is the file 'tau'.\n"),
+    'tiger'   : Item("This is the file 'tau'.\n"),
+    })
+  expected_status = wc.State(G2, {
+    ''        : Item(status='  ', wc_rev=2),
+    'pi'      : Item(status='D ', wc_rev=2),
+    'pig'     : Item(status='A ', wc_rev='-', copied='+'),
+    'rhino'   : Item(status='  ', wc_rev=2),
+    'tapir'   : Item(status='  ', wc_rev=2),
+    'tiger'   : Item(status='A ', wc_rev='-', copied='+'),
+    })
+  svntest.actions.run_and_verify_update(G2,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
 
 #######################################################################
 # Run the tests
@@ -3824,6 +3892,7 @@ test_list = [ None,
               update_copied_from_replaced_and_changed,
               update_accept_conflicts,
               eof_in_interactive_conflict_resolver,
+              tree_conflicts_in_updated_files,
              ]
 
 if __name__ == '__main__':

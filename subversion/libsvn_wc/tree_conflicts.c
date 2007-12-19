@@ -399,7 +399,7 @@ svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
                                        apr_pool_t *pool)
 {
   char *start, *end;
-  svn_wc_conflict_description_t *conflict;
+  svn_wc_conflict_description_t *conflict = NULL;
 
   if (dir_entry->tree_conflict_data == NULL)
     {
@@ -611,7 +611,7 @@ svn_wc__add_tree_conflict_data(svn_stringbuf_t *log_accum,
   SVN_ERR(svn_wc__write_tree_conflicts_to_entry(conflicts, &tmp_entry, pool));
   SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
                                      adm_access,
-                                     "",
+                                     dir_path,
                                      &tmp_entry,
                                      SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA,
                                      pool));
