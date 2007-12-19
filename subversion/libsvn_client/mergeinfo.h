@@ -23,6 +23,14 @@
 /*** Data Structures ***/
 
 
+typedef struct svn_client__remaining_range_info_t {
+  /* Subset of requested merge range. */
+  svn_merge_range_t *range;
+  /* If reflected_ranges is not NULL then above 'range' is a
+     reflective range of it. */
+  apr_array_header_t *reflected_ranges;
+} svn_client__remaining_range_info_t;
+
 /* Structure used by discover_and_merge_children() and consumers of the
    children_with_mergeinfo array it populates.  The struct describes
    working copy paths that meet one or more of the following criteria:
@@ -47,7 +55,9 @@ typedef struct svn_client__merge_path_t
                                         due to authz restrictions. */
   const svn_string_t *propval;       /* Working mergeinfo for PATH at start
                                         of merge.  May be NULL. */
-  apr_array_header_t *remaining_ranges; /* Per path remaining ranges list. */
+  apr_array_header_t *remaining_ranges; /* Per path remaining 
+                                           svn_client__remaining_range_info_t*
+                                           list. */
   apr_hash_t *pre_merge_mergeinfo;      /* mergeinfo on a path prior to a
                                            merge.*/
   svn_boolean_t indirect_mergeinfo;

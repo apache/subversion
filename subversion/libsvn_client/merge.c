@@ -218,12 +218,15 @@ typedef struct merge_cmd_baton_t {
      as needed. */
   svn_ra_session_t *ra_session1;
   svn_ra_session_t *ra_session2;
+  svn_ra_session_t *target_ra_session;
 
   /* Flag indicating the fact target has everything merged already,
      for the sake of children's merge to work it sets itself a dummy
      merge range of requested_end_rev:requested_end_rev. */
   svn_boolean_t target_has_dummy_merge_range;
 
+  /* reflected_ranges is set for each merge range if the merge is reflective.*/
+  apr_array_header_t *reflected_ranges;
   apr_pool_t *pool;
 } merge_cmd_baton_t;
 
@@ -364,6 +367,89 @@ conflict_resolver(svn_wc_conflict_result_t **result,
     }
 
   return err;
+}
+
+/* Retrieves the file at PATH relative to RA_SESSION at revision REVISION
+   and stores it in *FILENAME. All allocation occurs in POOL. */
+static svn_error_t *
+get_file_from_ra(const char **filename, const char *path,
+                 svn_revnum_t revision, svn_ra_session_t *ra_session,
+                 apr_pool_t *pool)
+{
+  apr_file_t *file;
+  svn_stream_t *fstream;
+  const char *temp_dir;
+
+  SVN_ERR(svn_io_temp_dir(&temp_dir, pool));
+  SVN_ERR(svn_io_open_unique_file2(&file, filename,
+                                   svn_path_join(temp_dir, "tmp", pool),
+                                   "", svn_io_file_del_on_pool_cleanup, pool));
+
+  fstream = svn_stream_from_aprfile(file, pool);
+  SVN_ERR(svn_ra_get_file(ra_session, path, revision, fstream,
+                          NULL, NULL, pool));
+  SVN_ERR(svn_io_file_close(file, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* merges MERGE_B->reflected_ranges from MERGE_B->target url to OLDER. */
+static svn_error_t *
+merge_reflected_ranges_b4_reflecting(const char *older,
+                                     const char *file_path_relative_to_target,
+                                     merge_cmd_baton_t *merge_b)
+{
+  int i;
+  svn_diff_file_options_t *options;
+  const char *target_marker = "<<<<<<< .working";
+  const char *left_marker = "||||||| .old";
+  const char *right_marker = ">>>>>>> .new";
+  const char *temp_dir;
+  apr_pool_t *subpool = svn_pool_create(merge_b->pool);
+  SVN_ERR(svn_io_temp_dir(&temp_dir, subpool));
+
+  if (merge_b->merge_options)
+    SVN_ERR(svn_diff_file_options_parse(options,
+                                        merge_b->merge_options, subpool));
+  else
+    options = svn_diff_file_options_create(subpool);
+  for (i = 0; i < merge_b->reflected_ranges->nelts; i++)
+    {
+      svn_diff_t *diff;
+      const char *left, *right, *result_target;
+      svn_merge_range_t *range;
+      svn_stream_t *ostream;
+      apr_file_t *result_f;
+      SVN_ERR(svn_io_open_unique_file2(&result_f, &result_target,
+                                       svn_path_join(temp_dir, "tmp", subpool),
+                                       "", svn_io_file_del_on_pool_cleanup,
+                                       subpool));
+      ostream = svn_stream_from_aprfile(result_f, subpool);
+      range = APR_ARRAY_IDX(merge_b->reflected_ranges, i, svn_merge_range_t *);
+      SVN_ERR(get_file_from_ra(&left, file_path_relative_to_target, 
+                               range->start, merge_b->target_ra_session,
+                               subpool));
+      SVN_ERR(get_file_from_ra(&right, file_path_relative_to_target,
+                               range->end, merge_b->target_ra_session,
+                               subpool));
+      SVN_ERR(svn_diff_file_diff3_2(&diff, left, older, right,
+                                    options, subpool));
+      SVN_ERR(svn_diff_file_output_merge(ostream, diff,
+                                         left, older, right,
+                                         left_marker,
+                                         target_marker,
+                                         right_marker,
+                                         "=======", /* seperator */
+                                         FALSE, /* display original */
+                                         FALSE, /* resolve conflicts */
+                                         subpool));
+      SVN_ERR(svn_stream_close(ostream));
+      SVN_ERR(svn_io_file_flush_to_disk(result_f, subpool));
+
+      SVN_ERR(svn_io_copy_file(result_target, older, TRUE, subpool));
+    }
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
 }
 
 /* A svn_wc_diff_callbacks2_t function. */
@@ -533,6 +619,36 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
 
 /* A svn_wc_diff_callbacks2_t function. */
 static svn_error_t *
+reflective_merge_file_changed(svn_wc_adm_access_t *adm_access,
+                              svn_wc_notify_state_t *content_state,
+                              svn_wc_notify_state_t *prop_state,
+                              const char *mine,
+                              const char *older,
+                              const char *yours,
+                              svn_revnum_t older_rev,
+                              svn_revnum_t yours_rev,
+                              const char *mimetype1,
+                              const char *mimetype2,
+                              const apr_array_header_t *prop_changes,
+                              apr_hash_t *original_props,
+                              void *baton)
+{
+  merge_cmd_baton_t *merge_b = baton;
+  const char *file_path_relative_to_target 
+                                        = mine + strlen(merge_b->target) + 1;
+  if (older)
+    SVN_ERR(merge_reflected_ranges_b4_reflecting(older,
+                                                 file_path_relative_to_target,
+                                                 merge_b));
+  return merge_file_changed(adm_access, content_state, prop_state,
+                            mine, older, yours, older_rev, yours_rev,
+                            mimetype1, mimetype2, prop_changes,
+                            original_props, baton);
+}
+
+
+/* A svn_wc_diff_callbacks2_t function. */
+static svn_error_t *
 merge_file_added(svn_wc_adm_access_t *adm_access,
                  svn_wc_notify_state_t *content_state,
                  svn_wc_notify_state_t *prop_state,
@@ -698,6 +814,38 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
 
 /* A svn_wc_diff_callbacks2_t function. */
 static svn_error_t *
+reflective_merge_file_added(svn_wc_adm_access_t *adm_access,
+                            svn_wc_notify_state_t *content_state,
+                            svn_wc_notify_state_t *prop_state,
+                            const char *mine,
+                            const char *older,
+                            const char *yours,
+                            svn_revnum_t rev1,
+                            svn_revnum_t rev2,
+                            const char *mimetype1,
+                            const char *mimetype2,
+                            const apr_array_header_t *prop_changes,
+                            apr_hash_t *original_props,
+                            void *baton)
+{
+  merge_cmd_baton_t *merge_b = baton;
+  svn_node_kind_t kind;
+
+  SVN_ERR(svn_io_check_path(mine, &kind, merge_b->pool));
+  if (kind == svn_node_none)
+    SVN_ERR(merge_file_added(adm_access, content_state, prop_state, mine, 
+                             older, yours, rev1, rev2, mimetype1, mimetype2,
+                             prop_changes, original_props, baton));
+  else
+    {
+      *content_state = svn_wc_notify_state_unchanged;
+      *prop_state = svn_wc_notify_state_unchanged;
+    }
+  return SVN_NO_ERROR;
+}
+
+/* A svn_wc_diff_callbacks2_t function. */
+static svn_error_t *
 merge_file_deleted(svn_wc_adm_access_t *adm_access,
                    svn_wc_notify_state_t *state,
                    const char *mine,
@@ -765,6 +913,29 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
     }
 
   svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
+}
+
+/* A svn_wc_diff_callbacks2_t function. */
+static svn_error_t *
+reflective_merge_file_deleted(svn_wc_adm_access_t *adm_access,
+                              svn_wc_notify_state_t *state,
+                              const char *mine,
+                              const char *older,
+                              const char *yours,
+                              const char *mimetype1,
+                              const char *mimetype2,
+                              apr_hash_t *original_props,
+                              void *baton)
+{
+  merge_cmd_baton_t *merge_b = baton;
+  svn_node_kind_t kind;
+  SVN_ERR(svn_io_check_path(mine, &kind, merge_b->pool));
+  if (kind == svn_node_file)
+    SVN_ERR(merge_file_deleted(adm_access, state, mine, older, yours,
+                               mimetype1, mimetype2, original_props, baton));
+  else
+    *state = svn_wc_notify_state_unchanged;
   return SVN_NO_ERROR;
 }
 
@@ -890,6 +1061,24 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
 
 /* A svn_wc_diff_callbacks2_t function. */
 static svn_error_t *
+reflective_merge_dir_added(svn_wc_adm_access_t *adm_access,
+                           svn_wc_notify_state_t *state,
+                           const char *path,
+                           svn_revnum_t rev,
+                           void *baton)
+{
+  merge_cmd_baton_t *merge_b = baton;
+  svn_node_kind_t kind;
+  SVN_ERR(svn_io_check_path(path, &kind, merge_b->pool));
+  if (kind == svn_node_none)
+    SVN_ERR(merge_dir_added(adm_access, state, path, rev, baton));
+  else
+    *state = svn_wc_notify_state_unchanged;
+  return SVN_NO_ERROR;
+}
+
+/* A svn_wc_diff_callbacks2_t function. */
+static svn_error_t *
 merge_dir_deleted(svn_wc_adm_access_t *adm_access,
                   svn_wc_notify_state_t *state,
                   const char *path,
@@ -958,6 +1147,23 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
+/* A svn_wc_diff_callbacks2_t function. */
+static svn_error_t *
+reflective_merge_dir_deleted(svn_wc_adm_access_t *adm_access,
+                             svn_wc_notify_state_t *state,
+                             const char *path,
+                             void *baton)
+{
+  merge_cmd_baton_t *merge_b = baton;
+  svn_node_kind_t kind;
+  SVN_ERR(svn_io_check_path(path, &kind, merge_b->pool));
+  if (kind == svn_node_dir)
+    SVN_ERR(merge_dir_deleted(adm_access, state, path, baton));
+  else
+    *state = svn_wc_notify_state_unchanged;
+  return SVN_NO_ERROR;
+}
+
 /* The main callback table for 'svn merge'.  */
 static const svn_wc_diff_callbacks2_t
 merge_callbacks =
@@ -970,6 +1176,17 @@ merge_callbacks =
     merge_props_changed
   };
 
+/* The main callback table for 'svn reflective merge'.  */
+static const svn_wc_diff_callbacks2_t
+reflective_merge_callbacks =
+  {
+    reflective_merge_file_changed,
+    reflective_merge_file_added,
+    reflective_merge_file_deleted,
+    reflective_merge_dir_added,
+    reflective_merge_dir_deleted,
+    merge_props_changed
+  };
 
 /*-----------------------------------------------------------------------*/
 
@@ -1091,12 +1308,15 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
                        && notify_b->merge_b->target_has_dummy_merge_range))
                 {
                   svn_wc_notify_t *notify_merge_begin;
+                  svn_client__remaining_range_info_t *range_info;
                   notify_merge_begin =
                     svn_wc_create_notify(child->path,
                                          svn_wc_notify_merge_begin, pool);
-                  notify_merge_begin->merge_range =
-                    APR_ARRAY_IDX(child->remaining_ranges, 0,
-                                  svn_merge_range_t *);
+                  range_info = 
+                           APR_ARRAY_IDX(child->remaining_ranges, 0,
+                                         svn_client__remaining_range_info_t *);
+                  notify_merge_begin->merge_range = range_info->range;
+
                   if (notify_b->wrapped_func)
                     (*notify_b->wrapped_func)(notify_b->wrapped_baton,
                                               notify_merge_begin, pool);
@@ -1170,6 +1390,12 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
 
    NOTE: This should only be called when honoring mergeinfo.
 
+   *REFLECTIVE_RANGELIST will be populated with commits post merge from
+   target on source within revision1:revision2.
+
+   *REFLECTED_RANGES_LIST will be populated with merge ranges that are
+   merged from target to source within revision1:revision2.
+
    ### FIXME: I strongly suspect that these calculations are
    ### rename-ignorant, not accounting for the situation where the
    ### item at TARGET_URL back when merges were from it to our current
@@ -1178,6 +1404,8 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
 */
 static svn_error_t *
 filter_reflected_revisions(apr_array_header_t **requested_rangelist,
+                           apr_array_header_t **reflected_ranges_list,
+                           apr_array_header_t **reflective_rangelist,
                            const char *source_root_url,
                            const char *url1,
                            svn_revnum_t revision1,
@@ -1189,8 +1417,6 @@ filter_reflected_revisions(apr_array_header_t **requested_rangelist,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *pool)
 {
-  apr_array_header_t *reflective_rangelist = NULL;
-  apr_array_header_t *merge_ranges_list = NULL;
   svn_merge_range_t *range = apr_pcalloc(pool, sizeof(*range));
   svn_revnum_t min_rev = MIN(revision1, revision2);
   svn_revnum_t max_rev = MAX(revision1, revision2);
@@ -1206,8 +1432,8 @@ filter_reflected_revisions(apr_array_header_t **requested_rangelist,
                                             ra_session, NULL, pool));
 
   SVN_ERR(svn_ra_get_commit_and_merge_ranges(ra_session,
-                                             &merge_ranges_list,
-                                             &reflective_rangelist,
+                                             reflected_ranges_list,
+                                             reflective_rangelist,
                                              max_rel_path,
                                              mergeinfo_path,
                                              min_rev, max_rev,
@@ -1220,9 +1446,9 @@ filter_reflected_revisions(apr_array_header_t **requested_rangelist,
   range->end = revision2;
   range->inheritable = inheritable;
   APR_ARRAY_PUSH(*requested_rangelist, svn_merge_range_t *) = range;
-  if (reflective_rangelist)
+  if (*reflective_rangelist)
     SVN_ERR(svn_rangelist_remove(requested_rangelist,
-                                 reflective_rangelist,
+                                 *reflective_rangelist,
                                  *requested_rangelist, FALSE, pool));
   return SVN_NO_ERROR;
 }
@@ -1231,13 +1457,13 @@ filter_reflected_revisions(apr_array_header_t **requested_rangelist,
    drive_merge_report_editor()'s application of the editor to the WC
    -- by subtracting revisions which have already been merged from
    MERGEINFO_PATH into the working copy from the requested range(s)
-   REQUESTED_MERGE, and storing what's left in REMAINING_RANGES.
+   REQUESTED_MERGE, and storing what's left in RANGES_TO_MERGE.
    TARGET_MERGEINFO may be NULL.
 
    NOTE: This should only be called when honoring mergeinfo.  
 */
 static svn_error_t *
-filter_merged_revisions(apr_array_header_t **remaining_ranges,
+filter_merged_revisions(apr_array_header_t **ranges_to_merge,
                         const char *mergeinfo_path,
                         apr_hash_t *target_mergeinfo,
                         apr_hash_t *implicit_mergeinfo,
@@ -1265,20 +1491,20 @@ filter_merged_revisions(apr_array_header_t **remaining_ranges,
              revert to work properly. */
           requested_merge = svn_rangelist_dup(requested_merge, pool);
           SVN_ERR(svn_rangelist_reverse(requested_merge, pool));
-          SVN_ERR(svn_rangelist_intersect(remaining_ranges,
+          SVN_ERR(svn_rangelist_intersect(ranges_to_merge,
                                           target_rangelist,
                                           requested_merge, pool));
-          SVN_ERR(svn_rangelist_reverse(*remaining_ranges, pool));
+          SVN_ERR(svn_rangelist_reverse(*ranges_to_merge, pool));
         }
       else
         {
-          *remaining_ranges = 
+          *ranges_to_merge = 
             apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
         }
     }
   else
     {
-      *remaining_ranges = requested_merge;
+      *ranges_to_merge = requested_merge;
 
 /* ### TODO:  Which evil shall we choose?
    ###
@@ -1312,7 +1538,7 @@ filter_merged_revisions(apr_array_header_t **remaining_ranges,
 #endif
 
       if (target_rangelist)
-        SVN_ERR(svn_rangelist_remove(remaining_ranges, target_rangelist,
+        SVN_ERR(svn_rangelist_remove(ranges_to_merge, target_rangelist,
                                      requested_merge, FALSE, pool));
     }
   return SVN_NO_ERROR;
@@ -1345,14 +1571,23 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
                            apr_pool_t *pool)
 {
   apr_array_header_t *requested_rangelist;
+  apr_array_header_t *reflected_ranges_list = NULL;
+  apr_array_header_t *reflective_rangelist = NULL;
+  apr_array_header_t *ranges_to_merge;
+  svn_merge_range_t *range = NULL, *reflective_range = NULL;
+  apr_array_header_t *reflected_ranges;
   const char *old_url;
   const char *mergeinfo_path;
+  int i = 0, j = 0;
   const char *primary_url = (revision1 < revision2) ? url2 : url1;
 
   /* Determine which of the requested ranges to consider merging... */
   SVN_ERR(svn_ra_get_session_url(ra_session, &old_url, pool));
   SVN_ERR(svn_ra_reparent(ra_session, source_root_url, pool));
-  SVN_ERR(filter_reflected_revisions(&requested_rangelist, source_root_url,
+  SVN_ERR(filter_reflected_revisions(&requested_rangelist,
+                                     &reflected_ranges_list,
+                                     &reflective_rangelist,
+                                     source_root_url,
                                      url1, revision1, url2, revision2,
                                      inheritable, entry->url,
                                      ra_session, ctx, pool));
@@ -1363,10 +1598,64 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
   SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path, primary_url,
                                             source_root_url, TRUE,
                                             ra_session, NULL, pool));
-  SVN_ERR(filter_merged_revisions(remaining_ranges, mergeinfo_path,
+  SVN_ERR(filter_merged_revisions(&ranges_to_merge, mergeinfo_path,
                                   target_mergeinfo, implicit_mergeinfo,
                                   requested_rangelist,
                                   (revision1 > revision2), entry, pool));
+
+  *remaining_ranges = 
+                  apr_array_make(pool, 0,
+                                 sizeof(svn_client__remaining_range_info_t *));
+  /* populate remaining_ranges list. */
+  while (TRUE)
+  {
+    svn_client__remaining_range_info_t *range_info = 
+                                              apr_pcalloc(pool,
+                                                          sizeof(*range_info));
+    if (ranges_to_merge && i < ranges_to_merge->nelts)
+      range = APR_ARRAY_IDX(ranges_to_merge, i, svn_merge_range_t *);
+    if (reflective_rangelist && j < reflective_rangelist->nelts)
+      {
+        reflective_range = APR_ARRAY_IDX(reflective_rangelist, j,
+                                         svn_merge_range_t *);
+        reflected_ranges = APR_ARRAY_IDX(reflected_ranges_list, j,
+                                         apr_array_header_t *);
+      }
+    if (range == NULL && reflective_range == NULL)
+      break;
+
+    if (range && reflective_range)
+      {
+        /* Ranges to merge and reflected ranges won't intersect. */
+        if (range->start < reflective_range->start)
+          {
+            range_info->range = range;
+            ++i;
+          }
+        else
+          {
+            range_info->range = reflective_range;
+            range_info->reflected_ranges = reflected_ranges;
+            ++j;
+          }
+      }
+    else if (range)
+      {
+        range_info->range = range;
+        ++i;
+      }
+    else if (reflective_range)
+      {
+        range_info->range = reflective_range;
+        range_info->reflected_ranges = reflected_ranges;
+        ++j;
+      }
+    APR_ARRAY_PUSH(*remaining_ranges, 
+                   svn_client__remaining_range_info_t *) = range_info;
+    range = NULL;
+    reflective_range = NULL;
+  }
+
   return SVN_NO_ERROR;
 }
 
@@ -1516,6 +1805,8 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
     {
       for (i = 0; i < children_with_mergeinfo->nelts; i++)
         {
+          svn_client__remaining_range_info_t *range_info =
+                                        apr_pcalloc(pool, sizeof(*range_info));
           svn_client__merge_path_t *child =
             APR_ARRAY_IDX(children_with_mergeinfo, i, 
                           svn_client__merge_path_t *);
@@ -1524,10 +1815,13 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
           range->start = revision1;
           range->end = revision2;
           range->inheritable = inheritable;
+          range_info->range = range;
 
           child->remaining_ranges = 
-            apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
-          APR_ARRAY_PUSH(child->remaining_ranges, svn_merge_range_t *) = range;
+            apr_array_make(pool, 1, 
+                           sizeof(svn_client__remaining_range_info_t *));
+          APR_ARRAY_PUSH(child->remaining_ranges,
+                         svn_client__remaining_range_info_t *) = range_info;
         }
       return SVN_NO_ERROR;
     }
@@ -1586,15 +1880,18 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
 
       if (child->remaining_ranges->nelts == 0)
         {
+          svn_client__remaining_range_info_t *range_info =
+                                        apr_pcalloc(pool, sizeof(*range_info));
           svn_merge_range_t *dummy_range = 
             apr_pcalloc(pool, sizeof(*dummy_range));
           dummy_range->start = revision2;
           dummy_range->end = revision2;
           dummy_range->inheritable = inheritable;
+          range_info->range = dummy_range;
           child->remaining_ranges = apr_array_make(pool, 1, 
-                                                   sizeof(dummy_range));
-          APR_ARRAY_PUSH(child->remaining_ranges, svn_merge_range_t *) =
-            dummy_range;
+                                                   sizeof(*range_info));
+          APR_ARRAY_PUSH(child->remaining_ranges,
+                         svn_client__remaining_range_info_t *) = range_info;
           merge_b->target_has_dummy_merge_range = TRUE;
         }
     }
@@ -2134,7 +2431,6 @@ drive_merge_report_editor(const char *target_wcpath,
                           svn_depth_t depth,
                           notification_receiver_baton_t *notify_b,
                           svn_wc_adm_access_t *adm_access,
-                          const svn_wc_diff_callbacks2_t *callbacks,
                           merge_cmd_baton_t *merge_b,
                           apr_pool_t *pool)
 {
@@ -2144,6 +2440,7 @@ drive_merge_report_editor(const char *target_wcpath,
   void *report_baton;
   svn_revnum_t default_start;
   svn_boolean_t honor_mergeinfo;
+  const svn_wc_diff_callbacks2_t *callbacks = &merge_callbacks;
 
   mergeinfo_behavior(&honor_mergeinfo, NULL, merge_b);
 
@@ -2167,10 +2464,20 @@ drive_merge_report_editor(const char *target_wcpath,
                           svn_client__merge_path_t *);
           if (child->remaining_ranges->nelts)
             {
-              svn_merge_range_t *range =
-                APR_ARRAY_IDX(child->remaining_ranges, 0, 
-                              svn_merge_range_t *);
-              default_start = range->start;
+              svn_client__remaining_range_info_t *range_info =
+                APR_ARRAY_IDX(child->remaining_ranges,
+                              0, svn_client__remaining_range_info_t *);
+              default_start = range_info->range->start;
+              /* ### We handle reflective_merges only if target has such
+               * reflective merges. We should do for childs in
+               * children_with_mergeinfo too, but that would be complex
+               * enough to handle.
+               */
+              if (range_info->reflected_ranges)
+                {
+                  merge_b->reflected_ranges = range_info->reflected_ranges;
+                  callbacks = &reflective_merge_callbacks;
+                }
             }
         }
     }
@@ -2184,14 +2491,13 @@ drive_merge_report_editor(const char *target_wcpath,
   SVN_ERR(svn_client__open_ra_session_internal(&merge_b->ra_session2, url1,
                                                NULL, NULL, NULL, FALSE, TRUE,
                                                merge_b->ctx, pool));
-  SVN_ERR(svn_client__get_diff_editor(target_wcpath, adm_access, callbacks,
-                                      merge_b, depth, merge_b->dry_run,
-                                      merge_b->ra_session2, default_start,
-                                      notification_receiver, notify_b,
-                                      merge_b->ctx->cancel_func,
-                                      merge_b->ctx->cancel_baton,
-                                      &diff_editor, &diff_edit_baton,
-                                      pool));
+  SVN_ERR(svn_client__get_diff_editor(target_wcpath, adm_access,
+                                      callbacks, merge_b, depth,
+                                      merge_b->dry_run, merge_b->ra_session2, 
+                                      default_start, notification_receiver,
+                                      notify_b, merge_b->ctx->cancel_func,
+                                      merge_b->ctx->cancel_baton, &diff_editor,
+                                      &diff_edit_baton, pool));
 
   SVN_ERR(svn_ra_do_diff3(merge_b->ra_session1,
                           &reporter, &report_baton, revision2,
@@ -2212,6 +2518,7 @@ drive_merge_report_editor(const char *target_wcpath,
 
       for (i = 1; i < children_with_mergeinfo->nelts; i++)
         {
+          svn_client__remaining_range_info_t *range_info;
           svn_merge_range_t *range;
           const char *child_repos_path;
           svn_client__merge_path_t *child =
@@ -2221,8 +2528,9 @@ drive_merge_report_editor(const char *target_wcpath,
           if (!child || child->absent || (child->remaining_ranges->nelts == 0))
             continue;
 
-          range = APR_ARRAY_IDX(child->remaining_ranges, 0,
-                                svn_merge_range_t *);
+          range_info = APR_ARRAY_IDX(child->remaining_ranges, 0,
+                                     svn_client__remaining_range_info_t *);
+          range = range_info->range;
           if (range->start == default_start)
             continue;
 
@@ -2265,6 +2573,7 @@ get_most_inclusive_start_rev(apr_array_header_t *children_with_mergeinfo,
 
   for (i = 0; i < children_with_mergeinfo->nelts; i++)
     {
+      svn_client__remaining_range_info_t *range_info;
       svn_client__merge_path_t *child =
         APR_ARRAY_IDX(children_with_mergeinfo, i, svn_client__merge_path_t *);
       svn_merge_range_t *range;
@@ -2273,7 +2582,10 @@ get_most_inclusive_start_rev(apr_array_header_t *children_with_mergeinfo,
         continue;
       if (! child->remaining_ranges->nelts)
         continue;
-      range = APR_ARRAY_IDX(child->remaining_ranges, 0, svn_merge_range_t *);
+      range_info = APR_ARRAY_IDX(child->remaining_ranges, 0,
+                                 svn_client__remaining_range_info_t *);
+      range = range_info->range;
+
       if ((i == 0) && (range->start == range->end))
         continue;
       if ((start_rev == SVN_INVALID_REVNUM)
@@ -2302,8 +2614,10 @@ get_youngest_end_rev(apr_array_header_t *children_with_mergeinfo,
         continue;
       if (child->remaining_ranges->nelts > 0)
         {
-          svn_merge_range_t *range = APR_ARRAY_IDX(child->remaining_ranges, 0,
-                                                   svn_merge_range_t *);
+          svn_client__remaining_range_info_t *range_info =
+                           APR_ARRAY_IDX(child->remaining_ranges, 0,
+                                         svn_client__remaining_range_info_t *);
+          svn_merge_range_t *range = range_info->range;
           if ((end_rev == SVN_INVALID_REVNUM)
               || (is_rollback && (range->end > end_rev))
               || ((! is_rollback) && (range->end < end_rev)))
@@ -2313,7 +2627,7 @@ get_youngest_end_rev(apr_array_header_t *children_with_mergeinfo,
   return end_rev;
 }
 
-/* If first item in each child of CHILDREN_WITH_MERGEINFO's
+/* If first item's range in each child of CHILDREN_WITH_MERGEINFO's
    remaining_ranges is inclusive of END_REV, Slice the first range in
    to two at END_REV. All the allocations are persistent and allocated
    from POOL. */
@@ -2332,8 +2646,10 @@ slice_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
         continue;
       if (child->remaining_ranges->nelts > 0)
         {
-          svn_merge_range_t *range = APR_ARRAY_IDX(child->remaining_ranges, 0,
-                                                   svn_merge_range_t *);
+          svn_client__remaining_range_info_t *range_info =
+                           APR_ARRAY_IDX(child->remaining_ranges, 0,
+                                         svn_client__remaining_range_info_t *);
+          svn_merge_range_t *range = range_info->range;
           if ((is_rollback && (range->start > end_rev)
                && (range->end < end_rev))
               || (!is_rollback && (range->start < end_rev)
@@ -2341,6 +2657,10 @@ slice_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
             {
               int j;
               svn_merge_range_t *split_range1, *split_range2;
+              svn_client__remaining_range_info_t *range_info1 =
+                                       apr_pcalloc(pool, sizeof(*range_info1));
+              svn_client__remaining_range_info_t *range_info2 =
+                                       apr_pcalloc(pool, sizeof(*range_info2));
               apr_array_header_t *orig_remaining_ranges =
                                                      child->remaining_ranges;
               split_range1 = svn_merge_range_dup(range, pool);
@@ -2348,19 +2668,21 @@ slice_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
               split_range1->end = end_rev;
               split_range2->start = end_rev;
               child->remaining_ranges =
-                     apr_array_make(pool, (child->remaining_ranges->nelts + 1),
-                                    sizeof(svn_merge_range_t *));
+                  apr_array_make(pool, (child->remaining_ranges->nelts + 1),
+                                 sizeof(svn_client__remaining_range_info_t *));
+              range_info1->range = split_range1;
+              range_info2->range = split_range2;
               APR_ARRAY_PUSH(child->remaining_ranges,
-                             svn_merge_range_t *) = split_range1;
+                           svn_client__remaining_range_info_t *) = range_info1;
               APR_ARRAY_PUSH(child->remaining_ranges,
-                             svn_merge_range_t *) = split_range2;
+                           svn_client__remaining_range_info_t *) = range_info2;
               for (j = 1; j < orig_remaining_ranges->nelts; j++)
                 {
-                  svn_merge_range_t *orig_range =
-                                     APR_ARRAY_IDX(orig_remaining_ranges, j,
-                                                   svn_merge_range_t *);
+                  svn_client__remaining_range_info_t *range_info_orig =
+                           APR_ARRAY_IDX(orig_remaining_ranges, j,
+                                         svn_client__remaining_range_info_t *);
                   APR_ARRAY_PUSH(child->remaining_ranges,
-                                 svn_merge_range_t *) = orig_range;
+                       svn_client__remaining_range_info_t *) = range_info_orig;
                 }
             }
         }
@@ -2391,14 +2713,15 @@ remove_first_range_from_remaining_ranges(
           apr_array_header_t *orig_remaining_ranges = child->remaining_ranges;
           child->remaining_ranges =
             apr_array_make(pool, (child->remaining_ranges->nelts - 1),
-                           sizeof(svn_merge_range_t *));
+                           sizeof(svn_client__remaining_range_info_t *));
           for (j = 1; j < orig_remaining_ranges->nelts; j++)
             {
-              svn_merge_range_t *range = APR_ARRAY_IDX(orig_remaining_ranges,
-                                                       j,
-                                                       svn_merge_range_t *);
-              APR_ARRAY_PUSH(child->remaining_ranges, svn_merge_range_t *)
-                                                                  = range;
+              svn_client__remaining_range_info_t *range_info =
+                           APR_ARRAY_IDX(orig_remaining_ranges,
+                                         j,
+                                         svn_client__remaining_range_info_t *);
+              APR_ARRAY_PUSH(child->remaining_ranges, 
+                            svn_client__remaining_range_info_t *) = range_info;
             }
         }
     }
@@ -3602,8 +3925,15 @@ do_file_merge(const char *url1,
     }
   else
     {
-      remaining_ranges = apr_array_make(pool, 1, sizeof(&range));
-      APR_ARRAY_PUSH(remaining_ranges, svn_merge_range_t *) = &range;
+      svn_client__remaining_range_info_t *range_info = 
+                                           apr_pcalloc(pool,
+                                                       sizeof(*range_info));
+      remaining_ranges = 
+                    apr_array_make(pool, 1,
+                                   sizeof(svn_client__remaining_range_info_t));
+      range_info->range = &range;
+      APR_ARRAY_PUSH(remaining_ranges, 
+                     svn_client__remaining_range_info_t *) = range_info;
     }
 
   subpool = svn_pool_create(pool);
@@ -3612,11 +3942,15 @@ do_file_merge(const char *url1,
     {
       svn_wc_notify_t *n;
 
+      svn_client__remaining_range_info_t *range_info =
+                           APR_ARRAY_IDX(remaining_ranges, i,
+                                         svn_client__remaining_range_info_t *);
+
       /* When using this merge range, account for the exclusivity of
          its low value (which is indicated by this operation being a
          merge vs. revert). */
-      svn_merge_range_t *r = APR_ARRAY_IDX(remaining_ranges, i,
-                                           svn_merge_range_t *);
+
+      svn_merge_range_t *r = range_info->range;
 
       svn_pool_clear(subpool);
 
@@ -3832,13 +4166,17 @@ do_directory_merge(const char *url1,
         {
           svn_client__merge_path_t *item = apr_pcalloc(pool, sizeof(*item));
           svn_merge_range_t *itemrange = apr_pcalloc(pool, sizeof(*itemrange));
+          svn_client__remaining_range_info_t *range_info =
+                                    apr_pcalloc(pool, sizeof(*range_info));
           apr_array_header_t *remaining_ranges =
-            apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
+           apr_array_make(pool, 1, sizeof(svn_client__remaining_range_info_t));
 
           itemrange->start = revision1;
           itemrange->end = revision2;
           itemrange->inheritable = TRUE;
-          APR_ARRAY_PUSH(remaining_ranges, svn_merge_range_t *) = itemrange;
+          range_info->range = itemrange;
+          APR_ARRAY_PUSH(remaining_ranges,
+                         svn_client__remaining_range_info_t *) = range_info;
 
           item->path = apr_pstrdup(pool, target_wcpath);
           item->remaining_ranges = remaining_ranges;
@@ -3847,9 +4185,8 @@ do_directory_merge(const char *url1,
         }
       return drive_merge_report_editor(target_wcpath,
                                        url1, revision1, url2, revision2,
-                                       NULL, is_rollback, depth, notify_b, 
-                                       adm_access, &merge_callbacks, 
-                                       merge_b, pool);
+                                       NULL, is_rollback, depth, notify_b,
+                                       adm_access, merge_b, pool);
     }
 
   /*** If we get here, we're dealing with related sources from the
@@ -3963,10 +4300,8 @@ do_directory_merge(const char *url1,
           SVN_ERR(drive_merge_report_editor(merge_b->target,
                                             real_url1, start_rev, real_url2, 
                                             end_rev, children_with_mergeinfo,
-                                            is_rollback,
-                                            depth, notify_b, adm_access,
-                                            &merge_callbacks, merge_b,
-                                            iterpool));
+                                            is_rollback, depth, notify_b,
+                                            adm_access, merge_b, iterpool));
 
           remove_first_range_from_remaining_ranges(children_with_mergeinfo, 
                                                    pool);
@@ -3995,12 +4330,9 @@ do_directory_merge(const char *url1,
       range.end = revision2;
       range.inheritable = inheritable;
 
-      SVN_ERR(drive_merge_report_editor(merge_b->target,
-                                        url1, revision1, url2, revision2,
-                                        NULL, is_rollback, 
-                                        depth, notify_b, adm_access, 
-                                        &merge_callbacks, merge_b, 
-                                        pool));
+      SVN_ERR(drive_merge_report_editor(merge_b->target, url1, revision1, url2,
+                                        revision2, NULL, is_rollback, depth,
+                                        notify_b, adm_access, merge_b, pool));
     }
 
   /* Record mergeinfo where appropriate.
@@ -4214,6 +4546,11 @@ do_merge(apr_array_header_t *merge_sources,
   merge_cmd_baton.pool = subpool;
   merge_cmd_baton.merge_options = merge_options;
   merge_cmd_baton.diff3_cmd = diff3_cmd;
+  merge_cmd_baton.reflected_ranges = NULL;
+  SVN_ERR(svn_client__open_ra_session_internal(
+                                            &merge_cmd_baton.target_ra_session,
+                                            target_entry->url, NULL, NULL,
+                                            NULL, FALSE, TRUE, ctx, pool));
 
   /* Build the notification receiver baton. */
   notify_baton.wrapped_func = ctx->notify_func2;

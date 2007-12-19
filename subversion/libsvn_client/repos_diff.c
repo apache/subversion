@@ -507,7 +507,7 @@ delete_entry(const char *path,
         }
     }
 
-  if (eb->notify_func)
+  if (eb->notify_func && (state != svn_wc_notify_state_unchanged))
     {
       const char* deleted_path;
       kind_action_state_t *kas = apr_palloc(eb->pool, sizeof(*kas));
@@ -581,7 +581,7 @@ add_directory(const char *path,
                        APR_HASH_KEY_STRING, NULL);
         }
 
-      if (!is_replace)
+      if (!is_replace && (state != svn_wc_notify_state_unchanged))
         {
           notify = svn_wc_create_notify(b->wcpath, action, pool);
           notify->kind = svn_node_dir;
@@ -835,11 +835,16 @@ close_file(void *file_baton,
 
       if (!is_replace)
         {
-          notify = svn_wc_create_notify(b->wcpath, action, pool);
-          notify->kind = svn_node_file;
-          notify->content_state = content_state;
-          notify->prop_state = prop_state;
-          (*eb->notify_func)(eb->notify_baton, notify, pool);
+          if (!(b->added
+                && content_state == svn_wc_notify_state_unchanged
+                && prop_state == svn_wc_notify_state_unchanged))
+            {
+              notify = svn_wc_create_notify(b->wcpath, action, pool);
+              notify->kind = svn_node_file;
+              notify->content_state = content_state;
+              notify->prop_state = prop_state;
+              (*eb->notify_func)(eb->notify_baton, notify, pool);
+            }
         }
     }
 

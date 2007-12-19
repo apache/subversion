@@ -10760,9 +10760,9 @@ test_list = [ None,
               ignore_ancestry_and_mergeinfo,
               merge_from_renamed_branch_fails_while_avoiding_repeat_merge,
               XFail(merge_source_normalization_and_subtree_merges),
-              XFail(merge_non_reflective_changes_from_reflective_rev),
-              XFail(merge_non_reflective_text_and_prop_change),
-              XFail(merge_non_reflective_with_conflict),
+              merge_non_reflective_changes_from_reflective_rev,
+              merge_non_reflective_text_and_prop_change,
+              merge_non_reflective_with_conflict,
              ]
 
 if __name__ == '__main__':
