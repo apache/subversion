@@ -244,7 +244,7 @@ harvest_committables(apr_hash_t *committables,
   apr_byte_t state_flags = 0;
   svn_node_kind_t kind;
   const char *p_path;
-  svn_boolean_t tc, pc;
+  svn_boolean_t tc, pc, treec;
   const char *cf_url = NULL;
   svn_revnum_t cf_rev = entry->copyfrom_rev;
   const svn_string_t *propval;
@@ -328,14 +328,15 @@ harvest_committables(apr_hash_t *committables,
                                           APR_HASH_KEY_STRING))))
         {
           entry = e;
-          SVN_ERR(svn_wc_conflicted_p(&tc, &pc, path, entry, pool));
+          SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &treec, path, entry, pool));
         }
 
       /* No new entry?  Just check the parent's pointer for
          conflicts. */
       else
         {
-          SVN_ERR(svn_wc_conflicted_p(&tc, &pc, p_path, entry, pool));
+          SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &treec, p_path, entry,
+                                       pool));
         }
     }
 
@@ -343,11 +344,18 @@ harvest_committables(apr_hash_t *committables,
      parent's path. */
   else
     {
+      /* Maybe the tree-conflict test should be a separate function. */
+      svn_boolean_t tc_dummy, pc_dummy;
+      svn_wc_entry_t *p_entry;
+      SVN_ERR(svn_wc_entry(&p_entry, p_path, adm_access, TRUE, pool));
+      SVN_ERR(svn_wc_conflicted_p2(&tc_dummy, &pc_dummy, &treec, p_path,
+                                   p_entry, pool));
+
       SVN_ERR(svn_wc_conflicted_p(&tc, &pc, p_path, entry, pool));
     }
 
   /* Bail now if any conflicts exist for the ENTRY. */
-  if (tc || pc)
+  if (tc || pc || treec)
     {
       /* Paths in conflict which are not part of our changelist should
          be ignored. */

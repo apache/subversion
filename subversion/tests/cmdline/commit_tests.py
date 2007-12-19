@@ -2549,6 +2549,67 @@ def start_commit_detect_capabilities(sbox):
   if data != 'yes':
     raise svntest.Failure
 
+#----------------------------------------------------------------------
+
+# Helper for tree-conflict tests
+def setup_simple_tree_conflicts(G, G2):
+  j = os.path.join
+  run = svntest.actions.run_and_verify_svn
+
+  # Modify pi, move rho, move tau in wc 1 and commit
+  svntest.main.file_append( j(G, 'pi'), "Change to 'G/pi'.\n")
+  run(None, None, [], 'mv', j(G, 'rho'), j(G, 'rhino'))
+  run(None, None, [], 'mv', j(G, 'tau'), j(G, 'tapir'))
+  run(None, None, [], 'ci', '-m', 'changes in wc 1', G)
+
+  # Move pi, modify rho, move tau in wc 2
+  run(None, None, [], 'mv', j(G2, 'pi'),  j(G2, 'pig'))
+  svntest.main.file_append( j(G2, 'rho'), "Change to 'G/rho'.\n")
+  run(None, None, [], 'mv', j(G2, 'tau'), j(G2, 'tiger'))
+
+# Helper for commit-failure tests
+def commit_fails_at_path(path, wc_dir, error_re):
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        None,
+                                        None,
+                                        error_re,
+                                        None, None,
+                                        None, None,
+                                        path)
+
+def tree_conflicts_block_commit(sbox):
+  "tree conflicts block commit" 
+  
+  # Commit is not allowed in a directory containing tree conflicts.
+  # This test corresponds to use cases 1-3 in 
+  # notes/tree-conflicts/use-cases.txt.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make working copy 2
+  wc_dir_2 =  sbox.add_wc_path('2')
+  svntest.actions.duplicate_dir(wc_dir, wc_dir_2)  
+  G = os.path.join(wc_dir, 'A', 'D', 'G')
+  G2 = os.path.join(wc_dir_2, 'A', 'D', 'G')
+  D2 = os.path.join(wc_dir_2, 'A', 'D')
+  A2 = os.path.join(wc_dir_2, 'A')
+
+  setup_simple_tree_conflicts(G, G2)
+
+  # Update in wc 2, creating tree conflicts
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', G2)
+
+  error_re = "remains in conflict"
+  commit_fails_at_path(wc_dir_2, wc_dir_2, error_re)
+  commit_fails_at_path(A2, A2, error_re)
+  commit_fails_at_path(D2, D2, error_re)
+  commit_fails_at_path(G2, G2, error_re)
+  commit_fails_at_path(os.path.join(G2, 'pig'), G2, error_re)
+  commit_fails_at_path(os.path.join(G2, 'rhino'), G2, error_re)
+  commit_fails_at_path(os.path.join(G2, 'tapir'), G2, error_re)
+  commit_fails_at_path(os.path.join(G2, 'tiger'), G2, error_re)
+                                        
 
 ########################################################################
 # Run the tests
@@ -2612,6 +2673,7 @@ test_list = [ None,
               no_such_changelist,
               commit_out_of_date_file,
               start_commit_detect_capabilities,
+              tree_conflicts_block_commit,
              ]
 
 if __name__ == '__main__':
