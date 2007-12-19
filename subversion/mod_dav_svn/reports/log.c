@@ -421,7 +421,7 @@ dav_svn__log_report(const dav_resource *resource,
 
   /* We've detected a 'high level' svn action to log. */
   action = apr_psprintf(resource->pool,
-                        "log%s '%s' r%ld:%ld '%s'",
+                        "log%s %s r%ld:%ld %s",
                         include_merged_revisions ? "-merge-sensitive" : "",
                         comma_separated_paths->data, start, end,
                         comma_separated_revprops->data);
