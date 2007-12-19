@@ -555,7 +555,7 @@ AS_HELP_STRING([--enable-gprof],
 
 PYTHON="`$abs_srcdir/build/find_python.sh`"
 if test -z "$PYTHON"; then
-  AC_MSG_WARN([Python 2.0 or later is required to run the testsuite])
+  AC_MSG_WARN([Python 2.2 or later is required to run the testsuite])
   AC_MSG_WARN([or to use the Subversion Python bindings])
   AC_MSG_WARN([])
   AC_MSG_WARN([If you have a suitable Python installed, but not on the])

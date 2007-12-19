@@ -80,7 +80,7 @@ Step 1:  Install a suitable version of SWIG (which is
 
              --with-python=/path/to/correct/python/binary
 
-        to the configure script.  You need Python 2.0 or above.
+        to the configure script.  You need Python 2.2 or above.
 
         If you plan to build the Perl bindings, and have a system
         with more than one version of perl installed, you may need

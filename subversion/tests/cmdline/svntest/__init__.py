@@ -1,11 +1,11 @@
 __all__ = ["main", "tree", "actions"]
 
 import sys
-if sys.hexversion < 0x2000000:
-  sys.stderr.write('[SKIPPED] at least Python 2.0 is required')
+if sys.hexversion < 0x2020000:
+  sys.stderr.write('[SKIPPED] at least Python 2.2 is required')
 
   # note: exiting is a bit harsh for a library module, but we really do
-  # require Python 2.0. this package isn't going to work otherwise. and if
+  # require Python 2.2. this package isn't going to work otherwise. and if
   # a user truly wants to use this package under 1.x somehow (or to clean
   # up in some way), then they can always trap the SystemExit exception
 
