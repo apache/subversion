@@ -139,7 +139,8 @@ svn_wc_append_human_readable_tree_conflict_description(
   return SVN_NO_ERROR;
 }
 
-/* If **INPUT starts with *TOKEN, advance *INPUT by the length of *TOKEN. */
+/* If **INPUT starts with *TOKEN, advance *INPUT by the length of *TOKEN
+ * and return TRUE. Else, return FALSE and leave *INPUT alone. */
 static svn_boolean_t
 advance_on_match(char **input, const char *token)
 {
@@ -585,29 +586,24 @@ svn_wc__add_tree_conflict_data(svn_stringbuf_t *log_accum,
   apr_array_header_t *conflicts;
   svn_wc_entry_t tmp_entry;
 
-  /* Retrieve the node path from adm_access. */
+  /* Make sure the node is a directory.
+   * Otherwise we should not have been called. */
   dir_path = svn_wc_adm_access_path(adm_access);
-
-  /* Make sure the node is a directory. */
   SVN_ERR(svn_wc_entry(&entry, dir_path, adm_access, TRUE, pool));
   assert(entry->kind == svn_node_dir);
 
-  /* Get a list of existing tree conflicts. */
   conflicts = apr_array_make(pool, 0,
                              sizeof(svn_wc_conflict_description_t *));
   SVN_ERR(svn_wc_read_tree_conflicts_from_entry(conflicts, entry, pool));
 
   /* If CONFLICTS has a tree conflict with the same victim_path as the
-   * new conflict, then the working copy has been corrupted.
-   */
+   * new conflict, then the working copy has been corrupted. */
   if (svn_wc__tree_conflict_exists(conflicts, conflict->victim_path))
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                            _("New tree conflict already exists"));
+        _("Attempt to add tree conflict that already exists"));
 
-  /* Add the new tree conflict to CONFLICTS. */
   APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
 
-  /* Loggy write all the tree conflicts via a fresh temp entry. */
   SVN_ERR(svn_wc__write_tree_conflicts_to_entry(conflicts, &tmp_entry, pool));
   SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
                                      adm_access,
