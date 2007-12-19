@@ -552,7 +552,7 @@ elide_mergeinfo(apr_hash_t *parent_mergeinfo,
       /* If we need to adjust the paths in PARENT_MERGEINFO do it now. */
       if (path_suffix)
         adjust_mergeinfo_source_paths(path_tweaked_parent_mergeinfo,
-                                      path_suffix, child_mergeinfo,
+                                      path_suffix, parent_mergeinfo,
                                       subpool);
       else
         path_tweaked_parent_mergeinfo = parent_mergeinfo;
