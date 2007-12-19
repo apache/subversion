@@ -119,23 +119,38 @@ check_hook_result(const char *name, const char *cmd, apr_proc_t *cmd_proc,
     }
   else
     {
-      failure_message = svn_stringbuf_createf(pool,
-        _("'%s' hook failed (exited with a non-zero exitcode of %d).  "),
-        name, exitcode);
+      const char *action;
+      if (strcmp(name, "start-commit") == 0
+          || strcmp(name, "pre-commit") == 0)
+        action = _("Commit");
+      else if (strcmp(name, "pre-revprop-change") == 0)
+        action = _("Revprop change");
+      else if (strcmp(name, "pre-lock") == 0)
+        action = _("Lock");
+      else if (strcmp(name, "pre-unlock") == 0)
+        action = _("Unlock");
+      else
+        action = NULL;
+      if (action == NULL)
+        failure_message = svn_stringbuf_createf(
+            pool, _("%s hook failed (exit code %d)"),
+            name, exitcode);
+      else
+        failure_message = svn_stringbuf_createf(
+            pool, _("%s blocked by %s hook (exit code %d)"),
+            action, name, exitcode);
     }
 
   if (utf8_stderr[0])
     {
       svn_stringbuf_appendcstr(failure_message,
-                               _("The following error output was produced "
-                                 "by the hook:\n"));
+                               _(" with output:\n"));
       svn_stringbuf_appendcstr(failure_message, utf8_stderr);
     }
   else
     {
       svn_stringbuf_appendcstr(failure_message,
-                               _("No error output was produced by the "
-                                 "hook."));
+                               _(" with no output."));
     }
 
   return svn_error_create(SVN_ERR_REPOS_HOOK_FAILURE, err,

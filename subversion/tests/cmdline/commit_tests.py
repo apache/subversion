@@ -1920,9 +1920,21 @@ def hook_failure_message(hookname):
   if svntest.main.server_minor_version < 5:
     return "'%s' hook failed with error output:\n" % hookname
   else:
-    return "'%s' hook failed (exited with a " \
-           "non-zero exitcode of 1).  The following error output " \
-           "was produced by the hook:\n" % hookname
+    if hookname in ["start-commit", "pre-commit"]:
+      action = "Commit"
+    elif hookname == "pre-revprop-change":
+      action = "Revprop change"
+    elif hookname == "pre-lock":
+      action = "Lock"
+    elif hookname == "pre-unlock":
+      action = "Unlock"
+    else:
+      action = None
+    if action is None:
+      message = "%s hook failed (exit code 1)" % (hookname,)
+    else:
+      message = "%s blocked by %s hook (exit code 1)" % (action, hookname)
+    return message + " with output:\n"
 
 
 #----------------------------------------------------------------------

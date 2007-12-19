@@ -34,26 +34,13 @@
 #include "tree.h"
 #include "lock.h"
 #include "svn_private_config.h"
+#include "private/svn_fs_util.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
 /* A prefix for the pool userdata variables used to hold
    per-filesystem shared data.  See fs_serialized_init. */
 #define SVN_FSFS_SHARED_USERDATA_PREFIX "svn-fsfs-shared-"
-
-
-
-/* If filesystem FS is already open, then return an
-   SVN_ERR_FS_ALREADY_OPEN error.  Otherwise, return zero.  */
-static svn_error_t *
-check_already_open(svn_fs_t *fs)
-{
-  if (fs->fsap_data)
-    return svn_error_create(SVN_ERR_FS_ALREADY_OPEN, 0,
-                            _("Filesystem object already open"));
-  else
-    return SVN_NO_ERROR;
-}
 
 
 
@@ -194,7 +181,7 @@ static svn_error_t *
 fs_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
           apr_pool_t *common_pool)
 {
-  SVN_ERR(check_already_open(fs));
+  SVN_ERR(svn_fs__check_fs(fs, FALSE));
 
   initialize_fs_struct(fs);
 

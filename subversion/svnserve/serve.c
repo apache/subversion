@@ -2607,7 +2607,8 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
                                         SVN_RA_SVN_CAP_COMMIT_REVPROPS,
                                         SVN_RA_SVN_CAP_MERGEINFO,
                                         SVN_RA_SVN_CAP_DEPTH,
-                                        SVN_RA_SVN_CAP_LOG_REVPROPS));
+                                        SVN_RA_SVN_CAP_LOG_REVPROPS,
+                                        SVN_RA_SVN_CAP_PARTIAL_REPPLAY));
 
   /* Read client response, which we assume to be in version 2 format:
    * version, capability list, and client URL; then we do an auth

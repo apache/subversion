@@ -3838,7 +3838,7 @@ svn_fs_fs__abort_txn(svn_fs_txn_t *txn,
 {
   fs_fs_data_t *ffd;
 
-  SVN_ERR(svn_fs__check_fs(txn->fs));
+  SVN_ERR(svn_fs__check_fs(txn->fs, TRUE));
 
   /* Clean out the directory cache. */
   ffd = txn->fs->fsap_data;
@@ -5717,7 +5717,7 @@ svn_fs_fs__revision_prop(svn_string_t **value_p,
 {
   apr_hash_t *table;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
   SVN_ERR(svn_fs_fs__revision_proplist(&table, fs, rev, pool));
 
   *value_p = apr_hash_get(table, propname, APR_HASH_KEY_STRING);
@@ -5762,7 +5762,7 @@ svn_fs_fs__change_rev_prop(svn_fs_t *fs,
 {
   struct change_rev_prop_baton cb;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   cb.fs = fs;
   cb.rev = rev;
@@ -5802,7 +5802,7 @@ svn_fs_fs__txn_prop(svn_string_t **value_p,
   apr_hash_t *table;
   svn_fs_t *fs = txn->fs;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
   SVN_ERR(svn_fs_fs__txn_proplist(&table, txn, pool));
 
   *value_p = apr_hash_get(table, propname, APR_HASH_KEY_STRING);
@@ -5821,7 +5821,7 @@ svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p,
   svn_prop_t prop;
   apr_array_header_t *props = apr_array_make(pool, 3, sizeof(svn_prop_t));
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   SVN_ERR(svn_fs_fs__create_txn(txn_p, fs, rev, pool));
 

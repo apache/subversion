@@ -89,7 +89,7 @@ SVN_LIB_SERF
 
 dnl Search for SQLite
 SQLITE_ALLOWED_LIST="3.*"
-SQLITE_RECOMMENDED_VER="3.5.3"
+SQLITE_RECOMMENDED_VER="3.5.4"
 SQLITE_URL="http://www.sqlite.org/sqlite-${SQLITE_RECOMMENDED_VER}.tar.gz"
 SVN_LIB_SQLITE($SQLITE_ALLOWED_LIST, $SQLITE_RECOMMENDED_VER, $SQLITE_URL)
 
@@ -555,7 +555,7 @@ AS_HELP_STRING([--enable-gprof],
 
 PYTHON="`$abs_srcdir/build/find_python.sh`"
 if test -z "$PYTHON"; then
-  AC_MSG_WARN([Python 2.0 or later is required to run the testsuite])
+  AC_MSG_WARN([Python 2.2 or later is required to run the testsuite])
   AC_MSG_WARN([or to use the Subversion Python bindings])
   AC_MSG_WARN([])
   AC_MSG_WARN([If you have a suitable Python installed, but not on the])

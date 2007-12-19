@@ -851,7 +851,7 @@ svn_fs_fs__lock(svn_lock_t **lock_p,
 {
   struct lock_baton lb;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
   path = svn_fs__canonicalize_abspath(path, pool);
 
   lb.lock_p = lock_p;
@@ -876,7 +876,7 @@ svn_fs_fs__generate_lock_token(const char **token,
                                svn_fs_t *fs,
                                apr_pool_t *pool)
 {
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   /* Notice that 'fs' is currently unused.  But perhaps someday, we'll
      want to use the fs UUID + some incremented number?  For now, we
@@ -897,7 +897,7 @@ svn_fs_fs__unlock(svn_fs_t *fs,
 {
   struct unlock_baton ub;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
   path = svn_fs__canonicalize_abspath(path, pool);
 
   ub.fs = fs;
@@ -917,7 +917,7 @@ svn_fs_fs__get_lock(svn_lock_t **lock_p,
                     const char *path,
                     apr_pool_t *pool)
 {
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
   path = svn_fs__canonicalize_abspath(path, pool);
   return get_lock_helper(fs, lock_p, path, FALSE, pool);
 }
@@ -932,7 +932,7 @@ svn_fs_fs__get_locks(svn_fs_t *fs,
 {
   const char *digest_path;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
   path = svn_fs__canonicalize_abspath(path, pool);
 
   /* Get the top digest path in our tree of interest, and then walk it. */

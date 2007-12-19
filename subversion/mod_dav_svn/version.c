@@ -136,6 +136,7 @@ get_vsn_options(apr_pool_t *p, apr_text_header *phdr)
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_MERGEINFO);
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_DEPTH);
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
+  apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY);
   /* ### fork-control? */
 }
 
@@ -1324,11 +1325,11 @@ merge(dav_resource *target,
                                  source->info->r->connection->pool);
 
   /* We've detected a 'high level' svn action to log. */
-  apr_table_set(target->info->r->subprocess_env, "SVN-ACTION",
-                apr_psprintf(target->info->r->pool,
-                             "commit '%s' r%ld",
-                             target->info->repos_path,
-                             new_rev));
+  dav_svn__operational_log(target->info,
+                           apr_psprintf(target->info->r->pool,
+                                        "commit %s r%ld",
+                                        target->info->repos_path,
+                                        new_rev));
 
   /* Since the commit was successful, the txn ID is no longer valid.
      Store an empty txn ID in the activity database so that when the

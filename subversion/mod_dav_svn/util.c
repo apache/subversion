@@ -479,3 +479,12 @@ dav_svn__make_base64_output_stream(apr_bucket_brigade *bb,
 
   return svn_base64_encode(stream, pool);
 }
+
+void
+dav_svn__operational_log(struct dav_resource_private *info, const char *line)
+{
+  apr_table_set(info->r->subprocess_env, "SVN-ACTION", line);
+  apr_table_set(info->r->subprocess_env, "SVN-REPOS", info->repos->fs_path);
+  apr_table_set(info->r->subprocess_env, "SVN-REPOS-NAME",
+                info->repos->repo_basename);
+}
