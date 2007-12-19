@@ -940,7 +940,6 @@ get_commit_and_merge_ranges(apr_array_header_t **merge_ranges_list,
                             apr_pool_t *pool)
 {
   svn_fs__sqlite_stmt_t *stmt;
-  int i;
   svn_boolean_t got_row;
   const char *real_mergeinfo_target = merge_target;
   const char *real_merge_source = merge_source;

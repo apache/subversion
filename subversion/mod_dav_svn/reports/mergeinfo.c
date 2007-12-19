@@ -223,8 +223,6 @@ dav_svn__get_commit_and_merge_ranges_report(const dav_resource *resource,
   /* By default look for explicit mergeinfo only. */
   svn_mergeinfo_inheritance_t inherit = svn_mergeinfo_explicit;
   const dav_svn_repos *repos = resource->info->repos;
-  apr_hash_t *mergeinfo = apr_hash_make(resource->pool);
-  svn_stringbuf_t *commit_rev_mergeinfo;
   apr_bucket_brigade *bb;
   dav_svn__authz_read_baton arb;
   int i;
@@ -346,7 +344,7 @@ dav_svn__get_commit_and_merge_ranges_report(const dav_resource *resource,
         }
 
       serr = dav_svn__send_xml(bb, output,
-                               "<S:" SVN_DAV__COMMIT_REV ">%d</S:"
+                               "<S:" SVN_DAV__COMMIT_REV ">%ld</S:"
                                SVN_DAV__COMMIT_REV ">" DEBUG_CR,
                                commit_range->end);
       /* ### Same error-handling code appears elsewhere.  -Karl */

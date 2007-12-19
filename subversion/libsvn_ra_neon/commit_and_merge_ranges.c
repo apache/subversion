@@ -92,8 +92,6 @@ start_element(int *elem, void *baton, int parent_state, const char *nspace,
 static svn_error_t *
 end_element(void *baton, int state, const char *nspace, const char *elt_name)
 {
-  struct mergeinfo_baton *mb = baton;
-
   const svn_ra_neon__xml_elm_t *elm
     = svn_ra_neon__lookup_xml_elem(commit_and_merge_ranges_report_elements,
                                    nspace, elt_name);

@@ -66,7 +66,6 @@ start_element(svn_ra_serf__xml_parser_t *parser,
               svn_ra_serf__dav_props_t name,
               const char **attrs)
 {
-  mergeinfo_context_t *mergeinfo_ctx = userData;
   mergeinfo_state_e state;
 
   state = parser->state->current_state;
