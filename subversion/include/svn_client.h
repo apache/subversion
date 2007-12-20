@@ -4127,16 +4127,12 @@ svn_client_info(const char *path_or_url,
  * unversioned items the operation will fail.  If @a force is set such items
  * will be deleted.
  *
- * If @a dry_run is true, the patch is carried out, and full notification
- * feedback is provided, but the working copy is not modified.
- *
  * @since New in 1.5.
  */
 svn_error_t *
 svn_client_patch(const char *patch_path,
                  const char *wc_path,
                  svn_boolean_t force,
-                 svn_boolean_t dry_run,
                  apr_file_t *outfile,
                  apr_file_t *errfile,
                  svn_client_ctx_t *ctx,
