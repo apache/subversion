@@ -76,10 +76,8 @@ svn_client_remove_from_changelist(const apr_array_header_t *paths,
 
 struct fe_baton
 {
-  svn_boolean_t store_paths;
   svn_changelist_receiver_t callback_func;
   void *callback_baton;
-  apr_array_header_t *path_list;
   const char *changelist_name;
   apr_pool_t *pool;
 };
@@ -93,19 +91,17 @@ found_an_entry(const char *path,
 {
   struct fe_baton *b = (struct fe_baton *)baton;
 
+  /* If the entry has a changelist, and is a file or is the "this-dir"
+     entry for directory, and the changelist matches what we're looking
+     for... */
   if (entry->changelist
-      && (strcmp(entry->changelist, b->changelist_name) == 0))
-    {
-      if ((entry->kind == svn_node_file)
+      && ((entry->kind == svn_node_file)
           || ((entry->kind == svn_node_dir)
               && (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)))
-        {
-          if (b->store_paths)
-            APR_ARRAY_PUSH(b->path_list, const char *) = apr_pstrdup(b->pool,
-                                                                     path);
-          else
-            SVN_ERR(b->callback_func(b->callback_baton, path));
-        }
+      && (strcmp(entry->changelist, b->changelist_name) == 0))
+    {
+      /* ...then call the callback function. */
+      SVN_ERR(b->callback_func(b->callback_baton, path, pool));
     }
 
   return SVN_NO_ERROR;
@@ -113,40 +109,6 @@ found_an_entry(const char *path,
 
 static const svn_wc_entry_callbacks2_t entry_callbacks =
   { found_an_entry, svn_client__default_walker_error_handler };
-
-svn_error_t *
-svn_client_get_changelist(apr_array_header_t **paths,
-                          const char *changelist_name,
-                          const char *root_path,
-                          svn_client_ctx_t *ctx,
-                          apr_pool_t *pool)
-{
-  struct fe_baton feb;
-  svn_wc_adm_access_t *adm_access;
-
-  feb.store_paths = TRUE;
-  feb.pool = pool;
-  feb.changelist_name = changelist_name;
-  feb.path_list = apr_array_make(pool, 1, sizeof(const char *));
-
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, root_path,
-                                 FALSE, /* no write lock */
-                                 -1, /* levels to lock == infinity */
-                                 ctx->cancel_func, ctx->cancel_baton, pool));
-
-  SVN_ERR(svn_wc_walk_entries3(root_path, adm_access,
-                               &entry_callbacks, &feb,
-                               svn_depth_infinity,
-                               FALSE, /* don't show hidden entries */
-                               ctx->cancel_func, ctx->cancel_baton,
-                               pool));
-
-  SVN_ERR(svn_wc_adm_close(adm_access));
-
-  *paths = feb.path_list;
-  return SVN_NO_ERROR;
-}
-
 
 svn_error_t *
 svn_client_get_changelist_streamy(svn_changelist_receiver_t callback_func,
@@ -159,12 +121,10 @@ svn_client_get_changelist_streamy(svn_changelist_receiver_t callback_func,
   struct fe_baton feb;
   svn_wc_adm_access_t *adm_access;
 
-  feb.store_paths = FALSE;
   feb.callback_func = callback_func;
   feb.callback_baton = callback_baton;
   feb.pool = pool;
   feb.changelist_name = changelist_name;
-  feb.path_list = apr_array_make(pool, 1, sizeof(const char *));
 
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, root_path,
                                  FALSE, /* no write lock */

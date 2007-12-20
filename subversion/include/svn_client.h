@@ -3786,23 +3786,6 @@ svn_client_remove_from_changelist(const apr_array_header_t *paths,
                                   apr_pool_t *pool);
 
 /**
- * Beginning at @a root_path, seek and discover every path which
- * belongs to @a changelist_name.  Return the list of paths in @a
- * *paths.  If no matching paths are found, return an empty array.
- *
- * If @a ctx->cancel_func is non-NULL, invoke it passing @a ctx->cancel_baton
- * during the recursive walk.
- *
- * @since New in 1.5.
- */
-svn_error_t *
-svn_client_get_changelist(apr_array_header_t **paths,
-                          const char *changelist_name,
-                          const char *root_path,
-                          svn_client_ctx_t *ctx,
-                          apr_pool_t *pool);
-
-/**
  * The callback type used by @a svn_client_get_changelist_streamy.
  *
  * On each invocation, @a path is a newly discovered member of the
@@ -3812,7 +3795,8 @@ svn_client_get_changelist(apr_array_header_t **paths,
  */
 typedef svn_error_t *(*svn_changelist_receiver_t)
   (void *baton,
-   const char *path);
+   const char *path,
+   apr_pool_t *pool);
 
 /**
  * A "streamy" version of @a svn_client_get_changelist:
