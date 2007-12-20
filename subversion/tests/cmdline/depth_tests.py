@@ -116,7 +116,7 @@ def depth_files_same_as_nonrecursive(sbox, opt):
   # This duplicates some code from set_up_depthy_working_copies(), but
   # that's because it's abstracting out a different axis.
 
-  sbox.build(create_wc = False)
+  sbox.build(create_wc = False, read_only = True)
   if os.path.exists(sbox.wc_dir):
     svntest.main.safe_rmtree(sbox.wc_dir)
 
