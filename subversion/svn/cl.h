@@ -553,7 +553,7 @@ void svn_cl__check_boolean_prop_val(const char *propname,
 /* De-streamifying wrapper around svn_client_get_changelist_streamy(). */
 svn_error_t *svn_cl__get_changelist(apr_array_header_t **paths_p,
                                     const char *changelist_name,
-                                    const char *root_path,
+                                    const char *path,
                                     svn_client_ctx_t *ctx,
                                     apr_pool_t *pool);
 

@@ -1024,14 +1024,14 @@ changelist_receiver(void *baton,
 svn_error_t *
 svn_cl__get_changelist(apr_array_header_t **paths_p,
                        const char *changelist_name,
-                       const char *root_path,
+                       const char *path,
                        svn_client_ctx_t *ctx,
                        apr_pool_t *pool)
 {
   apr_array_header_t *paths = apr_array_make(pool, 8, sizeof(const char *));
-  SVN_ERR(svn_client_get_changelist_streamy(changelist_receiver, (void *)paths,
-                                            changelist_name, root_path, 
-                                            ctx, pool));
+  SVN_ERR(svn_client_get_changelist(path, changelist_name, svn_depth_infinity,
+                                    changelist_receiver, (void *)paths,
+                                    ctx, pool));
   *paths_p = paths;
   return SVN_NO_ERROR;
 }
