@@ -4737,6 +4737,7 @@ svn_fs_fs__move_into_place(const char *old_filename,
 
       /* Can't rename across devices; fall back to copying. */
       svn_error_clear(err);
+      err = SVN_NO_ERROR;
       SVN_ERR(svn_io_copy_file(old_filename, new_filename, TRUE, pool));
 
       /* Flush the target of the copy to disk. */
