@@ -1006,3 +1006,34 @@ svn_cl__node_kind_str(svn_node_kind_t kind)
       return "";
     }
 }
+
+
+/* Helper for svn_cl__get_changelist(); implements
+   svn_changelist_receiver_t. */
+static svn_error_t *
+changelist_receiver(void *baton,
+                    const char *path,
+                    apr_pool_t *pool)
+{
+  apr_array_header_t *paths = baton;
+  APR_ARRAY_PUSH(paths, const char *) = apr_pstrdup(paths->pool, path);
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_cl__get_changelist(apr_array_header_t **paths_p,
+                       const char *changelist_name,
+                       const char *root_path,
+                       svn_client_ctx_t *ctx,
+                       apr_pool_t *pool)
+{
+  apr_array_header_t *paths = apr_array_make(pool, 8, sizeof(const char *));
+  SVN_ERR(svn_client_get_changelist_streamy(changelist_receiver, (void *)paths,
+                                            changelist_name, root_path, 
+                                            ctx, pool));
+  *paths_p = paths;
+  return SVN_NO_ERROR;
+}
+
+
