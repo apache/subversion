@@ -70,6 +70,11 @@ Candidate changes:
     Branch: 1.4.x-r25178
     Votes:
       +1: vgeorgescu, sussman
+      -0: glasser (the ra_svn protocol, even on trunk, is severely broken
+           if you have anon-access=read and any read-authz-blocked paths;
+           these revs only fix one of a large number of symptoms of this
+           issue.  a better fix might be a way to tell your client not to
+           log in ANONYMOUS even if it's an option)
 
 Veto-blocked changes:
 
