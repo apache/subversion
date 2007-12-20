@@ -634,8 +634,8 @@ reflective_merge_file_changed(svn_wc_adm_access_t *adm_access,
                               void *baton)
 {
   merge_cmd_baton_t *merge_b = baton;
-  const char *file_path_relative_to_target 
-                                        = mine + strlen(merge_b->target) + 1;
+  const char *file_path_relative_to_target = 
+    mine + strlen(merge_b->target) + 1;
   if (older)
     SVN_ERR(merge_reflected_ranges_b4_reflecting(older,
                                                  file_path_relative_to_target,
@@ -1313,8 +1313,8 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
                     svn_wc_create_notify(child->path,
                                          svn_wc_notify_merge_begin, pool);
                   range_info = 
-                           APR_ARRAY_IDX(child->remaining_ranges, 0,
-                                         svn_client__remaining_range_info_t *);
+                    APR_ARRAY_IDX(child->remaining_ranges, 0,
+                                  svn_client__remaining_range_info_t *);
                   notify_merge_begin->merge_range = range_info->range;
 
                   if (notify_b->wrapped_func)
@@ -1604,14 +1604,12 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
                                   (revision1 > revision2), entry, pool));
 
   *remaining_ranges = 
-                  apr_array_make(pool, 0,
-                                 sizeof(svn_client__remaining_range_info_t *));
+     apr_array_make(pool, 0, sizeof(svn_client__remaining_range_info_t *));
   /* populate remaining_ranges list. */
   while (TRUE)
   {
     svn_client__remaining_range_info_t *range_info = 
-                                              apr_pcalloc(pool,
-                                                          sizeof(*range_info));
+      apr_pcalloc(pool, sizeof(*range_info));
     if (ranges_to_merge && i < ranges_to_merge->nelts)
       range = APR_ARRAY_IDX(ranges_to_merge, i, svn_merge_range_t *);
     if (reflective_rangelist && j < reflective_rangelist->nelts)
@@ -1806,7 +1804,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
       for (i = 0; i < children_with_mergeinfo->nelts; i++)
         {
           svn_client__remaining_range_info_t *range_info =
-                                        apr_pcalloc(pool, sizeof(*range_info));
+            apr_pcalloc(pool, sizeof(*range_info));
           svn_client__merge_path_t *child =
             APR_ARRAY_IDX(children_with_mergeinfo, i, 
                           svn_client__merge_path_t *);
@@ -1881,7 +1879,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
       if (child->remaining_ranges->nelts == 0)
         {
           svn_client__remaining_range_info_t *range_info =
-                                        apr_pcalloc(pool, sizeof(*range_info));
+            apr_pcalloc(pool, sizeof(*range_info));
           svn_merge_range_t *dummy_range = 
             apr_pcalloc(pool, sizeof(*dummy_range));
           dummy_range->start = revision2;
@@ -2613,8 +2611,8 @@ get_youngest_end_rev(apr_array_header_t *children_with_mergeinfo,
       if (child->remaining_ranges->nelts > 0)
         {
           svn_client__remaining_range_info_t *range_info =
-                           APR_ARRAY_IDX(child->remaining_ranges, 0,
-                                         svn_client__remaining_range_info_t *);
+            APR_ARRAY_IDX(child->remaining_ranges, 0,
+                          svn_client__remaining_range_info_t *);
           svn_merge_range_t *range = range_info->range;
           if ((end_rev == SVN_INVALID_REVNUM)
               || (is_rollback && (range->end > end_rev))
@@ -2645,8 +2643,8 @@ slice_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
       if (child->remaining_ranges->nelts > 0)
         {
           svn_client__remaining_range_info_t *range_info =
-                           APR_ARRAY_IDX(child->remaining_ranges, 0,
-                                         svn_client__remaining_range_info_t *);
+            APR_ARRAY_IDX(child->remaining_ranges, 0,
+                          svn_client__remaining_range_info_t *);
           svn_merge_range_t *range = range_info->range;
           if ((is_rollback && (range->start > end_rev)
                && (range->end < end_rev))
@@ -2656,9 +2654,9 @@ slice_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
               int j;
               svn_merge_range_t *split_range1, *split_range2;
               svn_client__remaining_range_info_t *range_info1 =
-                                       apr_pcalloc(pool, sizeof(*range_info1));
+                apr_pcalloc(pool, sizeof(*range_info1));
               svn_client__remaining_range_info_t *range_info2 =
-                                       apr_pcalloc(pool, sizeof(*range_info2));
+                apr_pcalloc(pool, sizeof(*range_info2));
               apr_array_header_t *orig_remaining_ranges =
                                                      child->remaining_ranges;
               split_range1 = svn_merge_range_dup(range, pool);
@@ -2666,21 +2664,24 @@ slice_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
               split_range1->end = end_rev;
               split_range2->start = end_rev;
               child->remaining_ranges =
-                  apr_array_make(pool, (child->remaining_ranges->nelts + 1),
-                                 sizeof(svn_client__remaining_range_info_t *));
+                apr_array_make(pool, (child->remaining_ranges->nelts + 1),
+                               sizeof(svn_client__remaining_range_info_t *));
               range_info1->range = split_range1;
               range_info2->range = split_range2;
               APR_ARRAY_PUSH(child->remaining_ranges,
-                           svn_client__remaining_range_info_t *) = range_info1;
+                             svn_client__remaining_range_info_t *) =
+                range_info1;
               APR_ARRAY_PUSH(child->remaining_ranges,
-                           svn_client__remaining_range_info_t *) = range_info2;
+                             svn_client__remaining_range_info_t *) =
+                range_info2;
               for (j = 1; j < orig_remaining_ranges->nelts; j++)
                 {
                   svn_client__remaining_range_info_t *range_info_orig =
-                           APR_ARRAY_IDX(orig_remaining_ranges, j,
-                                         svn_client__remaining_range_info_t *);
+                    APR_ARRAY_IDX(orig_remaining_ranges, j,
+                                  svn_client__remaining_range_info_t *);
                   APR_ARRAY_PUSH(child->remaining_ranges,
-                       svn_client__remaining_range_info_t *) = range_info_orig;
+                                 svn_client__remaining_range_info_t *) =
+                    range_info_orig;
                 }
             }
         }
@@ -2715,11 +2716,11 @@ remove_first_range_from_remaining_ranges(
           for (j = 1; j < orig_remaining_ranges->nelts; j++)
             {
               svn_client__remaining_range_info_t *range_info =
-                           APR_ARRAY_IDX(orig_remaining_ranges,
-                                         j,
-                                         svn_client__remaining_range_info_t *);
+                APR_ARRAY_IDX(orig_remaining_ranges, j,
+                              svn_client__remaining_range_info_t *);
               APR_ARRAY_PUSH(child->remaining_ranges, 
-                            svn_client__remaining_range_info_t *) = range_info;
+                             svn_client__remaining_range_info_t *) =
+                range_info;
             }
         }
     }
@@ -4066,12 +4067,10 @@ do_file_merge(const char *url1,
     }
   else
     {
-      svn_client__remaining_range_info_t *range_info = 
-                                           apr_pcalloc(pool,
-                                                       sizeof(*range_info));
-      remaining_ranges = 
-                    apr_array_make(pool, 1,
-                                   sizeof(svn_client__remaining_range_info_t));
+      svn_client__remaining_range_info_t *range_info =
+        apr_pcalloc(pool, sizeof(*range_info));
+      remaining_ranges =
+        apr_array_make(pool, 1, sizeof(svn_client__remaining_range_info_t));
       range_info->range = &range;
       APR_ARRAY_PUSH(remaining_ranges, 
                      svn_client__remaining_range_info_t *) = range_info;
@@ -4084,8 +4083,8 @@ do_file_merge(const char *url1,
       svn_wc_notify_t *n;
 
       svn_client__remaining_range_info_t *range_info =
-                           APR_ARRAY_IDX(remaining_ranges, i,
-                                         svn_client__remaining_range_info_t *);
+        APR_ARRAY_IDX(remaining_ranges, i,
+                      svn_client__remaining_range_info_t *);
 
       /* When using this merge range, account for the exclusivity of
          its low value (which is indicated by this operation being a
@@ -4308,9 +4307,10 @@ do_directory_merge(const char *url1,
           svn_client__merge_path_t *item = apr_pcalloc(pool, sizeof(*item));
           svn_merge_range_t *itemrange = apr_pcalloc(pool, sizeof(*itemrange));
           svn_client__remaining_range_info_t *range_info =
-                                    apr_pcalloc(pool, sizeof(*range_info));
+            apr_pcalloc(pool, sizeof(*range_info));
           apr_array_header_t *remaining_ranges =
-           apr_array_make(pool, 1, sizeof(svn_client__remaining_range_info_t));
+            apr_array_make(pool, 1,
+                           sizeof(svn_client__remaining_range_info_t));
 
           itemrange->start = revision1;
           itemrange->end = revision2;

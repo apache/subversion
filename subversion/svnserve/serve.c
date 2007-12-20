@@ -1575,9 +1575,9 @@ get_commit_and_merge_ranges(svn_ra_svn_conn_t *conn,
     {
       svn_stringbuf_t *merge_rangelist_string;
       apr_array_header_t *merge_rangelist =
-                    APR_ARRAY_IDX(merge_ranges_list, i, apr_array_header_t *);
+        APR_ARRAY_IDX(merge_ranges_list, i, apr_array_header_t *);
       svn_merge_range_t *commit_range =
-                      APR_ARRAY_IDX(commit_rangelist, i, svn_merge_range_t *);
+        APR_ARRAY_IDX(commit_rangelist, i, svn_merge_range_t *);
 
       SVN_ERR(svn_rangelist_to_stringbuf(&merge_rangelist_string,
                                          merge_rangelist, pool));

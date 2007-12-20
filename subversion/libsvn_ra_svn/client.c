@@ -1141,8 +1141,8 @@ ra_svn_get_commit_and_merge_ranges(svn_ra_session_t *session,
                                          &merge_rangelist_str, &commit_rev));
           SVN_ERR(svn_rangelist__parse(&merge_rangelist, merge_rangelist_str,
                                        FALSE, FALSE, pool));
-          APR_ARRAY_PUSH(*merge_ranges_list, apr_array_header_t *) 
-                                                             = merge_rangelist;
+          APR_ARRAY_PUSH(*merge_ranges_list, apr_array_header_t *) =
+            merge_rangelist;
           range = apr_pcalloc(pool, sizeof(*range));
           range->start = commit_rev - 1;
           range->end = commit_rev;
