@@ -5086,10 +5086,12 @@ remove_irrelevant_ranges(apr_hash_t **mergeinfo_by_path_p,
 static svn_error_t *
 calculate_left_hand_side(const char **url_left,
                          svn_revnum_t *rev_left,
+                         apr_hash_t **source_mergeinfo_p,
                          apr_hash_t *mergeinfo_by_path,
                          const char *target_repos_rel_path,
                          svn_revnum_t target_rev,
                          const char *source_repos_rel_path,
+                         const char *source_repos_root,
                          svn_ra_session_t *ra_session,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *pool)
@@ -5097,6 +5099,7 @@ calculate_left_hand_side(const char **url_left,
   apr_array_header_t *segments; /* array of (svn_location_segment_t *) */
   svn_boolean_t have_mergeinfo_for_source = FALSE, 
     have_mergeinfo_for_descendents = FALSE;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   /* 1: Get the history (segments) for the target */
   SVN_ERR(svn_client__repos_location_segments(&segments,
@@ -5104,17 +5107,17 @@ calculate_left_hand_side(const char **url_left,
                                               target_repos_rel_path,
                                               target_rev, target_rev, 
                                               SVN_INVALID_REVNUM,
-                                              ctx, pool));
+                                              ctx, subpool));
 
   /* 2: Filter mergeinfo_by_path so that all of the ranges come from
      the target's history */
   SVN_ERR(remove_irrelevant_ranges(&mergeinfo_by_path,
                                    mergeinfo_by_path,
                                    segments,
-                                   pool));
+                                   subpool));
 
   /* 3: Elide! */
-  SVN_ERR(svn_client__elide_mergeinfo_catalog(mergeinfo_by_path, pool));
+  SVN_ERR(svn_client__elide_mergeinfo_catalog(mergeinfo_by_path, subpool));
 
   /* 4: N-part conditional */
   /* TODO(reint): make sure we look things up with keys that start
@@ -5129,11 +5132,47 @@ calculate_left_hand_side(const char **url_left,
   if (! have_mergeinfo_for_source && ! have_mergeinfo_for_descendents)
     {
       /* TODO(reint): Return the branch point. */
+      assert(FALSE);
+      svn_pool_destroy(subpool);
+      return SVN_NO_ERROR;
     }                        
   else if (! have_mergeinfo_for_descendents)
     {
-      /* TODO(reint): easy case: return the last path/rev in the
-         mergeinfo. */
+      /* Easy case: return the last path/rev in the mergeinfo. */
+      apr_hash_t *source_mergeinfo = apr_hash_get(mergeinfo_by_path, 
+                                                  source_repos_rel_path,
+                                                  APR_HASH_KEY_STRING);
+      apr_pool_t *iterpool = svn_pool_create(subpool);
+      int i;
+      for (i = segments->nelts - 1; i >= 0; i--)
+        {
+          svn_location_segment_t *segment 
+            = APR_ARRAY_IDX(segments, i, svn_location_segment_t *);
+          apr_array_header_t *rangelist;
+
+          svn_pool_clear(iterpool);
+
+          rangelist = apr_hash_get(source_mergeinfo, 
+                                   apr_pstrcat(iterpool, "/", segment->path, 
+                                               NULL),
+                                   APR_HASH_KEY_STRING);
+          if (rangelist != NULL && rangelist->nelts > 0)
+            {
+              svn_merge_range_t *last_range 
+                = APR_ARRAY_IDX(rangelist, rangelist->nelts - 1, 
+                                svn_merge_range_t *);
+              *rev_left = last_range->end;
+              *url_left = svn_path_join(source_repos_root, segment->path,
+                                        pool);
+              *source_mergeinfo_p = svn_mergeinfo_dup(source_mergeinfo, pool);
+              svn_pool_destroy(iterpool);
+              svn_pool_destroy(subpool);
+              return SVN_NO_ERROR;
+            }
+        }
+      /* We only got here because we had mergeinfo for the source; if
+         there were no segments, then our logic was wrong. */
+      abort();         
     }
   else
     {
@@ -5141,13 +5180,12 @@ calculate_left_hand_side(const char **url_left,
          any case, this error message is not helpful to the user: it
          doesn't suggest a next step.  (Also, perhaps should show
          URL instead of path.) */
+      svn_pool_destroy(subpool);
       return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                                "Cannot reintegrate from '%s', because "
                                "it has descendents with different revisions "
                                "merged", source_repos_rel_path);
     }
-
-  return SVN_NO_ERROR;
 }
 
 
@@ -5234,11 +5272,12 @@ svn_client_merge_reintegrate(const char *source,
                                source_repos_rel_path_as_array, rev2,
                                svn_mergeinfo_inherited, TRUE, pool));
 
-  SVN_ERR(calculate_left_hand_side(&url1, &rev1,
+  SVN_ERR(calculate_left_hand_side(&url1, &rev1, &source_mergeinfo,
                                    mergeinfo_by_path,
                                    target_repos_rel_path,
                                    rev1,
                                    source_repos_rel_path,
+                                   source_repos_root,
                                    ra_session,
                                    ctx,
                                    pool));
@@ -5258,19 +5297,19 @@ svn_client_merge_reintegrate(const char *source,
                              _("'%s@%ld' must be ancestrally related to "
                                "'%s@%ld'"), url1, rev1, url2, rev2);
 
-  /* Temporarily reparent the RA session as required by
-     svn_client__get_history_as_mergeinfo() (it must match the URL). */
+  printf("KFF url1: %s\n", url1);
   printf("KFF rev1: %ld\n", rev1);
+  printf("KFF url2: %s\n", url2);
+  printf("KFF rev2: %ld\n", rev2);
+  printf("KFF yc_ancestor_path: %s\n", yc_ancestor_path);
   printf("KFF yc_ancestor_rev: %ld\n", yc_ancestor_rev);
-  printf("KFF\n");
+  fflush(stdout);
 
-  SVN_ERR(svn_ra_reparent(ra_session, entry->url, pool));
   SVN_ERR(svn_client__get_history_as_mergeinfo(&target_mergeinfo, entry->url,
                                                &target_revision, 
                                                rev1,
                                                yc_ancestor_rev + 1,
                                                NULL, adm_access, ctx, pool));
-  SVN_ERR(svn_ra_reparent(ra_session, entry->repos, pool));
 
   /* ### TODO(reint): Consider CONSIDER_INHERITANCE parameter... */
   SVN_ERR(svn_mergeinfo_diff(&deleted_mergeinfo, &added_mergeinfo,
