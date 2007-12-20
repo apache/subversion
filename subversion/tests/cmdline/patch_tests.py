@@ -206,7 +206,7 @@ def patch_unidiff(sbox):
                                        None, # expected err
                                        None, None, None, None,
                                        1, # check-props
-                                       1) # dry-run
+                                       0) # dry-run
 
 def patch_copy_and_move(sbox):
   "test copy and move operations"

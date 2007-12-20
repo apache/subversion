@@ -438,7 +438,6 @@ svn_wc_apply_svnpatch(apr_file_t *decoded_patch_file,
 svn_error_t *
 svn_wc_apply_unidiff(const char *patch_path,
                      svn_boolean_t force,
-                     svn_boolean_t dry_run,
                      apr_file_t *outfile,
                      apr_file_t *errfile,
                      apr_hash_t *config,
@@ -454,6 +453,7 @@ svn_wc_apply_unidiff(const char *patch_path,
   int nargs = 3; /* the command, the prefix arg and NULL at least */
   int i = 0;
   apr_pool_t *subpool = svn_pool_create(pool);
+  svn_boolean_t dry_run = FALSE; /* disable dry_run for now */
 
   if (force)
     ++nargs;

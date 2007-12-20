@@ -1720,7 +1720,6 @@ svn_error_t *
 svn_client_patch(const char *patch_path,
                  const char *wc_path,
                  svn_boolean_t force,
-                 svn_boolean_t dry_run,
                  apr_file_t *outfile,
                  apr_file_t *errfile,
                  svn_client_ctx_t *ctx,
@@ -1731,6 +1730,7 @@ svn_client_patch(const char *patch_path,
   const svn_delta_editor_t *diff_editor;
   svn_wc_adm_access_t *adm_access;
   struct edit_baton *eb;
+  svn_boolean_t dry_run = FALSE; /* disable dry_run for now */
 
   /* Pull out the svnpatch block. */
   SVN_ERR(extract_svnpatch(patch_path, &decoded_patch_file, pool));
@@ -1761,8 +1761,8 @@ svn_client_patch(const char *patch_path,
     }
 
   /* Now proceed with the unidiff bytes. */
-  SVN_ERR(svn_wc_apply_unidiff(patch_path, force, dry_run,
-                               outfile, errfile, ctx->config, pool));
+  SVN_ERR(svn_wc_apply_unidiff(patch_path, force, outfile, errfile,
+                               ctx->config, pool));
 
   return SVN_NO_ERROR;
 }
