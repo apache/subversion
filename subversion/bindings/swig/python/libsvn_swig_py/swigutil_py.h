@@ -374,6 +374,13 @@ svn_error_t *svn_swig_py_client_blame_receiver_func(void *baton,
                                                     const char *line,
                                                     apr_pool_t *pool);
 
+/* thunked changelist receiver function */
+SVN_SWIG_SWIGUTIL_EXPORT
+svn_error_t *svn_swig_py_changelist_receiver_func(void *baton,
+                                                  const char *path,
+                                                  const char *changelist,
+                                                  apr_pool_t *pool);
+
 /* auth provider callbacks */
 SVN_SWIG_SWIGUTIL_EXPORT
 svn_error_t *svn_swig_py_auth_simple_prompt_func(

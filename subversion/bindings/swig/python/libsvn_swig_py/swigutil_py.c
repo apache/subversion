@@ -2589,6 +2589,37 @@ svn_error_t *svn_swig_py_client_blame_receiver_func(void *baton,
   return err;
 }
 
+svn_error_t *svn_swig_py_changelist_receiver_func(void *baton,
+                                                  const char *path,
+                                                  const char *changelist,
+                                                  apr_pool_t *pool)
+{
+  PyObject *receiver = baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if ((receiver == NULL) || (receiver == Py_None))
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallFunction(receiver, 
+                                      (char *)"ssO&",
+                                      path, changelist, 
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      if (result != Py_None)
+        err = callback_bad_return_error("Not None");
+      Py_DECREF(result);
+    }
+
+  svn_swig_py_release_py_lock();
+  return err;
+}
 
 svn_error_t *
 svn_swig_py_auth_simple_prompt_func(svn_auth_cred_simple_t **cred,

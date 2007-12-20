@@ -40,7 +40,8 @@
 
 %apply const char *MAY_BE_NULL {
     const char *native_eol,
-    const char *comment
+    const char *comment,
+    apr_array_header_t *changelists
 };
 
 #ifdef SWIGRUBY
@@ -176,6 +177,11 @@
 #ifdef SWIGPYTHON
 %callback_typemap(svn_info_receiver_t receiver, void *receiver_baton,
                   svn_swig_py_info_receiver_func,
+                  ,
+                  )
+
+%callback_typemap(svn_changelist_receiver_t callback_func, void *callback_baton,
+                  svn_swig_py_changelist_receiver_func,
                   ,
                   )
 #endif
