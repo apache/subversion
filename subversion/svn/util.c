@@ -1013,8 +1013,10 @@ svn_cl__node_kind_str(svn_node_kind_t kind)
 static svn_error_t *
 changelist_receiver(void *baton,
                     const char *path,
+                    const char *changelist,
                     apr_pool_t *pool)
 {
+  /* No need to check CHANGELIST; our caller only asked about one of them. */
   apr_array_header_t *paths = baton;
   APR_ARRAY_PUSH(paths, const char *) = apr_pstrdup(paths->pool, path);
   return SVN_NO_ERROR;
@@ -1029,9 +1031,12 @@ svn_cl__get_changelist(apr_array_header_t **paths_p,
                        apr_pool_t *pool)
 {
   apr_array_header_t *paths = apr_array_make(pool, 8, sizeof(const char *));
-  SVN_ERR(svn_client_get_changelist(path, changelist_name, svn_depth_infinity,
-                                    changelist_receiver, (void *)paths,
-                                    ctx, pool));
+  apr_array_header_t *changelists = apr_array_make(pool, 1, 
+                                                   sizeof(const char *));
+  APR_ARRAY_PUSH(changelists, const char *) = changelist_name;
+  SVN_ERR(svn_client_get_changelists(path, changelists, svn_depth_infinity,
+                                     changelist_receiver, (void *)paths,
+                                     ctx, pool));
   *paths_p = paths;
   return SVN_NO_ERROR;
 }

@@ -212,6 +212,16 @@ svn_error_t *svn_hash_keys(apr_array_header_t **array,
                            apr_pool_t *pool);
 
 /**
+ * Set @a hash to a new hash whose keys come from the items in @a
+ * keys, and whose values are undefined (though non-zero, per the
+ * apr_hash_t requirements).  Use @a pool for all allocations
+ * (including @a hash and the keys in it).
+ */
+svn_error_t *svn_hash_from_array(apr_hash_t **hash,
+                                 const apr_array_header_t *keys,
+                                 apr_pool_t *pool);
+
+/**
  * Clear any key/value pairs in the hash table.  A wrapper for a
  * apr_hash_clear(), which isn't available until APR 1.3.0.
  *
