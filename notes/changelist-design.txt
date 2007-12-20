@@ -520,6 +520,7 @@ TO-DO list:
   * other commands to augment:
 
     * svn changelist (see UI notes above)
+    * svn add --changelist (for --force invocations)
     * svn status --changelist
     * svn revert --changelist
     * svn log --changelist
