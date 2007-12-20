@@ -1318,18 +1318,24 @@ dav_svn__update_report(const dav_resource *resource,
         /* diff/merge don't ask for inline text-deltas. */
         if (!uc.send_all && strcmp(spath, dst_path) == 0)
           action = apr_psprintf(resource->pool,
-                                "diff-or-merge %s r%ld:%ld depth-%s",
+                                "diff-or-merge %s r%ld:%ld depth-%s%s",
                                 svn_path_uri_encode(spath, resource->pool),
                                 from_revnum,
-                                revnum, svn_depth_to_word(requested_depth));
+                                revnum, svn_depth_to_word(requested_depth),
+                                ignore_ancestry ? " ignore-ancestry" : "");
         else
           action = apr_psprintf(resource->pool,
-                                "%s %s@%ld %s@%ld depth-%s",
+                                "%s %s@%ld %s@%ld depth-%s%s",
                                 (uc.send_all ? "switch" : "diff-or-merge"),
                                 svn_path_uri_encode(spath, resource->pool),
                                 from_revnum,
                                 svn_path_uri_encode(dst_path, resource->pool),
-                                revnum, svn_depth_to_word(requested_depth));
+                                revnum, svn_depth_to_word(requested_depth),
+                                /* ignore-ancestry only applies to merge, and
+                                   we use uc.send_all to know if this is a
+                                   diff-or-merge or not. */
+                                (!uc.send_all && ignore_ancestry
+                                 ? " ignore-ancestry" : ""));
       }
 
     /* Otherwise, it must be checkout, export, update, or status -u. */
@@ -1347,11 +1353,13 @@ dav_svn__update_report(const dav_resource *resource,
           {
             if (text_deltas)
               action = apr_psprintf(resource->pool,
-                                    "update %s r%ld depth-%s",
+                                    "update %s r%ld depth-%s%s",
                                     svn_path_uri_encode(spath,
                                                         resource->pool),
                                     revnum,
-                                    svn_depth_to_word(requested_depth));
+                                    svn_depth_to_word(requested_depth),
+                                    (send_copyfrom_args
+                                     ? " send-copyfrom-args" : ""));
             else
               action = apr_psprintf(resource->pool,
                                     "remote-status %s r%ld depth-%s",
