@@ -936,8 +936,10 @@ class Sandbox:
       # Recursively cleanup any dependent sandboxes.
       for sbox in self.dependents:
         sbox.cleanup_test_paths()
+    # cleanup all test specific working copies and repositories
     for path in self.test_paths:
-      _cleanup_test_path(path)
+      if not path is pristine_dir:
+        _cleanup_test_path(path)
 
 
 _deferred_test_paths = []
