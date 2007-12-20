@@ -264,8 +264,18 @@ static svn_error_t *
 cancel_callback(void *baton)
 {
   svn_client__callback_baton_t *b = baton;
-
   return (b->ctx->cancel_func)(b->ctx->cancel_baton);
+}
+
+
+static svn_error_t *
+get_client_string(void *baton,
+                  const char **name,
+                  apr_pool_t *pool)
+{
+  svn_client__callback_baton_t *b = baton;
+  *name = apr_pstrdup(pool, b->ctx->client_name);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -291,6 +301,7 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   cbtable->progress_func = ctx->progress_func;
   cbtable->progress_baton = ctx->progress_baton;
   cbtable->cancel_func = ctx->cancel_func ? cancel_callback : NULL;
+  cbtable->get_client_string = get_client_string;
 
   cb->base_dir = base_dir;
   cb->base_access = base_access;
