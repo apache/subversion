@@ -216,14 +216,14 @@ operate only on those paths.
 
 The 'svn changelist' command allows a user to define a changelist with
 an arbitrary UTF-8 name, as well as add member paths.  (At the moment,
-a --clear flag is used to remove member paths.)  Unversioned items may
+a --remove flag is used to remove member paths.)  Unversioned items may
 not be added to changelists.
 
 $ svn changelist MYCHANGE foo.c bar.c
 Path 'foo.c' is now part of changelist 'mychange'.
 Path 'bar.c' is now part of changelist 'mychange'.
 
-$ svn changelist bar.c --clear
+$ svn changelist bar.c --remove
 Path 'bar.c' is no longer associated with a changelist.
 
 
@@ -297,7 +297,7 @@ to '--cl' also?)
 
 To destroy a changelist, one would need to remove all member-paths
 from it.  There's no good UI for this yet, other than to use 'svn
-changelist --clear path1 path2 path3 ...'.  ### Improve this?
+changelist --remove path1 path2 path3 ...'.  ### Improve this?
 
 
 D.  Viewing edits in a changelist
