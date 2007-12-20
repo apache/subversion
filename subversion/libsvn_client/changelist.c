@@ -111,12 +111,13 @@ static const svn_wc_entry_callbacks2_t entry_callbacks =
   { found_an_entry, svn_client__default_walker_error_handler };
 
 svn_error_t *
-svn_client_get_changelist_streamy(svn_changelist_receiver_t callback_func,
-                                  void *callback_baton,
-                                  const char *changelist_name,
-                                  const char *root_path,
-                                  svn_client_ctx_t *ctx,
-                                  apr_pool_t *pool)
+svn_client_get_changelist(const char *path,
+                          const char *changelist_name,
+                          svn_depth_t depth,
+                          svn_changelist_receiver_t callback_func,
+                          void *callback_baton,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *pool)
 {
   struct fe_baton feb;
   svn_wc_adm_access_t *adm_access;
@@ -126,18 +127,13 @@ svn_client_get_changelist_streamy(svn_changelist_receiver_t callback_func,
   feb.pool = pool;
   feb.changelist_name = changelist_name;
 
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, root_path,
+  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path,
                                  FALSE, /* no write lock */
                                  -1, /* levels to lock == infinity */
                                  ctx->cancel_func, ctx->cancel_baton, pool));
-
-  SVN_ERR(svn_wc_walk_entries3(root_path, adm_access,
-                               &entry_callbacks, &feb,
-                               svn_depth_infinity,
-                               FALSE, /* don't show hidden entries */
-                               ctx->cancel_func, ctx->cancel_baton,
-                               pool));
-
+  SVN_ERR(svn_wc_walk_entries3(path, adm_access, &entry_callbacks, &feb,
+                               depth, FALSE, /* don't show hidden entries */
+                               ctx->cancel_func, ctx->cancel_baton, pool));
   SVN_ERR(svn_wc_adm_close(adm_access));
 
   return SVN_NO_ERROR;
