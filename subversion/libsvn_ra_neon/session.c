@@ -826,6 +826,16 @@ svn_ra_neon__open(svn_ra_session_t *session,
   unsigned int neon_auth_types = 0;
   neonprogress_baton_t *neonprogress_baton =
     apr_pcalloc(pool, sizeof(*neonprogress_baton));
+  const char *useragent = NULL;
+  const char *client_string = NULL;
+
+  if (callbacks->get_client_string)
+    callbacks->get_client_string(callback_baton, &client_string, pool);
+
+  if (client_string)
+    useragent = apr_pstrcat(pool, "SVN/" SVN_VERSION "/", client_string, NULL);
+  else
+    useragent = "SVN/" SVN_VERSION;
 
   /* Sanity check the URI */
   SVN_ERR(parse_url(uri, repos_URL));
@@ -935,8 +945,16 @@ svn_ra_neon__open(svn_ra_session_t *session,
     ne_set_read_timeout(sess2, timeout);
   }
 
-  ne_set_useragent(sess, "SVN/" SVN_VERSION);
-  ne_set_useragent(sess2, "SVN/" SVN_VERSION);
+  if (useragent)
+    {
+      ne_set_useragent(sess, useragent);
+      ne_set_useragent(sess2, useragent);
+    }
+  else
+    {
+      ne_set_useragent(sess, "SVN/" SVN_VERSION);
+      ne_set_useragent(sess2, "SVN/" SVN_VERSION);
+    }
 
   /* clean up trailing slashes from the URL */
   len = strlen(uri->path);

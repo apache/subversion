@@ -857,6 +857,10 @@ typedef struct svn_client_ctx_t
   svn_wc_conflict_resolver_func_t conflict_func;
   void *conflict_baton;
 
+  /** Custom client name string, or @c null.
+   * @since New in 1.5. */
+  const char *client_name;
+
 } svn_client_ctx_t;
 
 /** @} end group: Client context management */
