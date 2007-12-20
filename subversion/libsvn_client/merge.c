@@ -1376,8 +1376,8 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
 
 /* Set *REQUESTED_RANGELIST to a list of revision ranges consisting of
    a single requested range (between URL1@REVISION1 and
-   URL2@REVISION2), minus merges which originated from TARGET_URL
-   which were already recorded as performed within that range.
+   URL2@REVISION2), minus merges(reflective revisions) which originated
+   from TARGET_URL which were already recorded as performed within that range.
 
    See `MERGEINFO MERGE SOURCE NORMALIZATION' for more requirements
    around the values of URL1, REVISION1, URL2, and REVISION2.
@@ -1403,19 +1403,19 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
    ### trying to merge from that current merge source.  -- cmpilato
 */
 static svn_error_t *
-filter_reflected_revisions(apr_array_header_t **requested_rangelist,
-                           apr_array_header_t **reflected_ranges_list,
-                           apr_array_header_t **reflective_rangelist,
-                           const char *source_root_url,
-                           const char *url1,
-                           svn_revnum_t revision1,
-                           const char *url2,
-                           svn_revnum_t revision2,
-                           svn_boolean_t inheritable,
-                           const char *target_url,
-                           svn_ra_session_t *ra_session,
-                           svn_client_ctx_t *ctx,
-                           apr_pool_t *pool)
+filter_reflective_revisions(apr_array_header_t **requested_rangelist,
+                            apr_array_header_t **reflected_ranges_list,
+                            apr_array_header_t **reflective_rangelist,
+                            const char *source_root_url,
+                            const char *url1,
+                            svn_revnum_t revision1,
+                            const char *url2,
+                            svn_revnum_t revision2,
+                            svn_boolean_t inheritable,
+                            const char *target_url,
+                            svn_ra_session_t *ra_session,
+                            svn_client_ctx_t *ctx,
+                            apr_pool_t *pool)
 {
   svn_merge_range_t *range = apr_pcalloc(pool, sizeof(*range));
   svn_revnum_t min_rev = MIN(revision1, revision2);
@@ -1584,13 +1584,13 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
   /* Determine which of the requested ranges to consider merging... */
   SVN_ERR(svn_ra_get_session_url(ra_session, &old_url, pool));
   SVN_ERR(svn_ra_reparent(ra_session, source_root_url, pool));
-  SVN_ERR(filter_reflected_revisions(&requested_rangelist,
-                                     &reflected_ranges_list,
-                                     &reflective_rangelist,
-                                     source_root_url,
-                                     url1, revision1, url2, revision2,
-                                     inheritable, entry->url,
-                                     ra_session, ctx, pool));
+  SVN_ERR(filter_reflective_revisions(&requested_rangelist,
+                                      &reflected_ranges_list,
+                                      &reflective_rangelist,
+                                      source_root_url,
+                                      url1, revision1, url2, revision2,
+                                      inheritable, entry->url,
+                                      ra_session, ctx, pool));
   SVN_ERR(svn_ra_reparent(ra_session, old_url, pool));
   
   /* ...and of those ranges, determine which ones actually still
