@@ -199,6 +199,19 @@ svn_error_t *svn_hash_diff(apr_hash_t *hash_a,
  */
 
 /**
+ * Return the keys to @a hash in @a *keys.  The keys are assumed to be
+ * (const char *).  The keys are in no particular order.
+ *
+ * The array itself is allocated in @a pool; however, the keys are not
+ * copied from the hash.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_hash_keys(apr_array_header_t **array,
+                           apr_hash_t *hash,
+                           apr_pool_t *pool);
+
+/**
  * Clear any key/value pairs in the hash table.  A wrapper for a
  * apr_hash_clear(), which isn't available until APR 1.3.0.
  *
