@@ -4070,7 +4070,7 @@ do_file_merge(const char *url1,
       svn_client__remaining_range_info_t *range_info =
         apr_pcalloc(pool, sizeof(*range_info));
       remaining_ranges =
-        apr_array_make(pool, 1, sizeof(svn_client__remaining_range_info_t));
+        apr_array_make(pool, 1, sizeof(svn_client__remaining_range_info_t *));
       range_info->range = &range;
       APR_ARRAY_PUSH(remaining_ranges, 
                      svn_client__remaining_range_info_t *) = range_info;
@@ -4310,7 +4310,7 @@ do_directory_merge(const char *url1,
             apr_pcalloc(pool, sizeof(*range_info));
           apr_array_header_t *remaining_ranges =
             apr_array_make(pool, 1,
-                           sizeof(svn_client__remaining_range_info_t));
+                           sizeof(svn_client__remaining_range_info_t *));
 
           itemrange->start = revision1;
           itemrange->end = revision2;
