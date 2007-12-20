@@ -48,7 +48,9 @@
 #include "fs_fs.h"
 #include "id.h"
 
+#include "private/svn_fs_sqlite.h"
 #include "private/svn_fs_mergeinfo.h"
+#include "private/svn_fs_node_origins.h"
 #include "private/svn_fs_util.h"
 #include "../libsvn_fs/fs-loader.h"
 
@@ -120,7 +122,8 @@ static txn_vtable_t txn_vtable = {
   svn_fs_fs__txn_prop,
   svn_fs_fs__txn_proplist,
   svn_fs_fs__change_txn_prop,
-  svn_fs_fs__txn_root
+  svn_fs_fs__txn_root,
+  svn_fs_fs__change_txn_props
 };
 
 /* Pathname helper functions */
@@ -131,7 +134,7 @@ path_format(svn_fs_t *fs, apr_pool_t *pool)
   return svn_path_join(fs->path, PATH_FORMAT, pool);
 }
 
-static const char *
+static APR_INLINE const char *
 path_uuid(svn_fs_t *fs, apr_pool_t *pool)
 {
   return svn_path_join(fs->path, PATH_UUID, pool);
@@ -143,7 +146,19 @@ svn_fs_fs__path_current(svn_fs_t *fs, apr_pool_t *pool)
   return svn_path_join(fs->path, PATH_CURRENT, pool);
 }
 
-static const char *
+static APR_INLINE const char *
+path_txn_current(svn_fs_t *fs, apr_pool_t *pool)
+{
+  return svn_path_join(fs->path, PATH_TXN_CURRENT, pool);
+}
+
+static APR_INLINE const char *
+path_txn_current_lock(svn_fs_t *fs, apr_pool_t *pool)
+{
+  return svn_path_join(fs->path, PATH_TXN_CURRENT_LOCK, pool);
+}
+
+static APR_INLINE const char *
 path_lock(svn_fs_t *fs, apr_pool_t *pool)
 {
   return svn_path_join(fs->path, PATH_LOCK_FILE, pool);
@@ -205,7 +220,7 @@ path_revprops(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
                             apr_psprintf(pool, "%ld", rev), NULL);
 }
 
-static const char *
+static APR_INLINE const char *
 path_txn_dir(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join_many(pool, fs->path, PATH_TXNS_DIR,
@@ -213,38 +228,38 @@ path_txn_dir(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
                             NULL);
 }
 
-static const char *
+static APR_INLINE const char *
 path_txn_changes(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_CHANGES, pool);
 }
 
-static const char *
+static APR_INLINE const char *
 path_txn_props(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_TXN_PROPS, pool);
 }
 
-static const char *
+static APR_INLINE const char *
 path_txn_mergeinfo(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_TXN_MERGEINFO,
                        pool);
 }
 
-static const char *
+static APR_INLINE const char *
 path_txn_next_ids(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_NEXT_IDS, pool);
 }
 
-static const char *
+static APR_INLINE const char *
 path_txn_proto_rev(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_REV, pool);
 }
 
-static const char *
+static APR_INLINE const char *
 path_txn_proto_rev_lock(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_REV_LOCK, pool);
@@ -262,14 +277,14 @@ path_txn_node_rev(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
   return svn_path_join(path_txn_dir(fs, txn_id, pool), name, pool);
 }
 
-static const char *
+static APR_INLINE const char *
 path_txn_node_props(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
 {
   return apr_pstrcat(pool, path_txn_node_rev(fs, id, pool), PATH_EXT_PROPS,
                      NULL);
 }
 
-static const char *
+static APR_INLINE const char *
 path_txn_node_children(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
 {
   return apr_pstrcat(pool, path_txn_node_rev(fs, id, pool),
@@ -366,7 +381,7 @@ free_shared_txn(svn_fs_t *fs, const char *txn_id)
 static svn_error_t *
 with_txnlist_lock(svn_fs_t *fs,
                   svn_error_t *(*body)(svn_fs_t *fs,
-                                       void *baton,
+                                       const void *baton,
                                        apr_pool_t *pool),
                   void *baton,
                   apr_pool_t *pool)
@@ -393,6 +408,119 @@ with_txnlist_lock(svn_fs_t *fs,
   return err;
 }
 
+
+/* Get a lock on empty file LOCK_FILENAME, creating it in POOL. */
+static svn_error_t *
+get_lock_on_filesystem(const char *lock_filename,
+                       apr_pool_t *pool)
+{
+  svn_error_t *err = svn_io_file_lock2(lock_filename, TRUE, FALSE, pool);
+
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      /* No lock file?  No big deal; these are just empty files
+         anyway.  Create it and try again. */
+      svn_error_clear(err);
+      err = NULL;
+
+      SVN_ERR(svn_io_file_create(lock_filename, "", pool));
+      SVN_ERR(svn_io_file_lock2(lock_filename, TRUE, FALSE, pool));
+    }
+
+  return err;
+}
+
+/* Obtain a write lock on the file LOCK_FILENAME (protecting with
+   LOCK_MUTEX if APR is threaded) in a subpool of POOL, call BODY with
+   BATON and that subpool, destroy the subpool (releasing the write
+   lock) and return what BODY returned. */
+static svn_error_t *
+with_some_lock(svn_error_t *(*body)(void *baton,
+                                    apr_pool_t *pool),
+               void *baton,
+               const char *lock_filename,
+#if APR_HAS_THREADS
+               apr_thread_mutex_t *lock_mutex,
+#endif
+               apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_error_t *err;
+
+#if APR_HAS_THREADS
+  apr_status_t status;
+
+  /* POSIX fcntl locks are per-process, so we need to serialize locks
+     within the process. */
+  status = apr_thread_mutex_lock(lock_mutex);
+  if (status)
+    return svn_error_wrap_apr(status, 
+                              _("Can't grab FSFS mutex for '%s'"),
+                              lock_filename);
+#endif
+
+  err = get_lock_on_filesystem(lock_filename, subpool);
+
+  if (!err)
+    err = body(baton, subpool);
+
+  svn_pool_destroy(subpool);
+
+#if APR_HAS_THREADS
+  status = apr_thread_mutex_unlock(lock_mutex);
+  if (status && !err)
+    return svn_error_wrap_apr(status,
+                              _("Can't ungrab FSFS mutex for '%s'"),
+                              lock_filename);
+#endif
+
+  return err;
+}
+
+svn_error_t *
+svn_fs_fs__with_write_lock(svn_fs_t *fs,
+                           svn_error_t *(*body)(void *baton,
+                                                apr_pool_t *pool),
+                           void *baton,
+                           apr_pool_t *pool)
+{
+#if APR_HAS_THREADS
+  fs_fs_data_t *ffd = fs->fsap_data;
+  fs_fs_shared_data_t *ffsd = ffd->shared;
+  apr_thread_mutex_t *mutex = ffsd->fs_write_lock;
+#endif
+
+  return with_some_lock(body, baton,
+                        path_lock(fs, pool),
+#if APR_HAS_THREADS
+                        mutex,
+#endif
+                        pool);
+}
+
+/* Run BODY (with BATON and POOL) while the transaction-current file
+   of FS is locked. */
+static svn_error_t *
+with_txn_current_lock(svn_fs_t *fs,
+                      svn_error_t *(*body)(void *baton,
+                                           apr_pool_t *pool),
+                      void *baton,
+                      apr_pool_t *pool)
+{
+#if APR_HAS_THREADS
+  fs_fs_data_t *ffd = fs->fsap_data;
+  fs_fs_shared_data_t *ffsd = ffd->shared;
+  apr_thread_mutex_t *mutex = ffsd->txn_current_lock;
+#endif
+
+  return with_some_lock(body, baton,
+                        path_txn_current_lock(fs, pool),
+#if APR_HAS_THREADS
+                        mutex,
+#endif
+                        pool);
+}
+
 /* A structure used by unlock_proto_rev() and unlock_proto_rev_body(),
    which see. */
 struct unlock_proto_rev_baton
@@ -403,9 +531,9 @@ struct unlock_proto_rev_baton
 
 /* Callback used in the implementation of unlock_proto_rev(). */
 static svn_error_t *
-unlock_proto_rev_body(svn_fs_t *fs, void *baton, apr_pool_t *pool)
+unlock_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
 {
-  struct unlock_proto_rev_baton *b = baton;
+  const struct unlock_proto_rev_baton *b = baton;
   const char *txn_id = b->txn_id;
   apr_file_t *lockfile = b->lockcookie;
   fs_fs_shared_txn_data_t *txn = get_shared_txn(fs, txn_id, FALSE);
@@ -479,9 +607,9 @@ struct get_writable_proto_rev_baton
 
 /* Callback used in the implementation of get_writable_proto_rev(). */
 static svn_error_t *
-get_writable_proto_rev_body(svn_fs_t *fs, void *baton, apr_pool_t *pool)
+get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
 {
-  struct get_writable_proto_rev_baton *b = baton;
+  const struct get_writable_proto_rev_baton *b = baton;
   apr_file_t **file = b->file;
   void **lockcookie = b->lockcookie;
   const char *txn_id = b->txn_id;
@@ -600,7 +728,7 @@ get_writable_proto_rev(apr_file_t **file,
 
 /* Callback used in the implementation of purge_shared_txn(). */
 static svn_error_t *
-purge_shared_txn_body(svn_fs_t *fs, void *baton, apr_pool_t *pool)
+purge_shared_txn_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
 {
   const char *txn_id = *(const char **)baton;
 
@@ -613,7 +741,7 @@ purge_shared_txn_body(svn_fs_t *fs, void *baton, apr_pool_t *pool)
 static svn_error_t *
 purge_shared_txn(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
-  return with_txnlist_lock(fs, purge_shared_txn_body, &txn_id, pool);
+  return with_txnlist_lock(fs, purge_shared_txn_body, (char **) &txn_id, pool);
 }
 
 
@@ -848,14 +976,15 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
  * For obvious reasons, this does not work *across hosts*.  No one
  * knows about the opened file; not the server, and not the deleting
  * client.  So the file vanishes, and the reader gets stale NFS file
- * handle.  We have this problem with revprops files and current.
+ * handle.  We have this problem with revprops files, current, and
+ * transaction-current.
  *
  * Wrap opens and reads of such files with SVN_RETRY_ESTALE and closes
  * with SVN_IGNORE_ESTALE.  Call these macros within a loop of
  * SVN_ESTALE_RETRY_COUNT iterations (though, realistically, the
  * second try will succeed).  Make sure you put a break statement
  * after the close, at the end of your loop.  Immediately after your
- * loop loop, return err if err.
+ * loop, return err if err.
  *
  * You must initialize err to SVN_NO_ERROR, as these macros do not.
  */
@@ -976,7 +1105,7 @@ svn_fs_fs__hotcopy(const char *src_path,
   SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_UUID, pool));
 
   /* Copy the merge tracking info. */
-  SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, SVN_FS_MERGEINFO__DB_NAME,
+  SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, SVN_FS__SQLITE_DB_NAME,
                                pool));
 
   /* Find the youngest revision from this current file. */
@@ -1743,10 +1872,24 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
                         svn_revnum_t rev,
                         apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   apr_file_t *revision_file;
   apr_off_t root_offset;
   svn_fs_id_t *root_id;
   svn_error_t *err;
+  const char *rev_str = apr_psprintf(ffd->rev_root_id_cache_pool, "%ld", rev);
+  svn_fs_id_t *cached_id;
+
+  /* Calculate an index into the revroot id cache */
+  cached_id = apr_hash_get(ffd->rev_root_id_cache,
+                           rev_str,
+                           APR_HASH_KEY_STRING);
+
+  if (cached_id)
+    {
+      *root_id_p = svn_fs_fs__id_copy(cached_id, pool);
+      return SVN_NO_ERROR;
+    }
 
   err = svn_io_file_open(&revision_file, svn_fs_fs__path_rev(fs, rev, pool),
                          APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
@@ -1765,6 +1908,17 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   SVN_ERR(get_fs_id_at_offset(&root_id, revision_file, root_offset, pool));
 
   SVN_ERR(svn_io_file_close(revision_file, pool));
+
+  /* Cache it */
+  if (apr_hash_count(ffd->rev_root_id_cache) >= NUM_RRI_CACHE_ENTRIES)
+    {
+      /* In order to only use one pool for the whole cache, we need to
+       * completely wipe it to expire entries! */
+      svn_pool_clear(ffd->rev_root_id_cache_pool);
+      ffd->rev_root_id_cache = apr_hash_make(ffd->rev_root_id_cache_pool);
+    }
+  apr_hash_set(ffd->rev_root_id_cache, rev_str, APR_HASH_KEY_STRING,
+               svn_fs_fs__id_copy(root_id, ffd->rev_root_id_cache_pool));
 
   *root_id_p = root_id;
 
@@ -2473,7 +2627,8 @@ svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
   hid = DIR_CACHE_ENTRIES_MASK(svn_fs_fs__id_rev(noderev->id));
 
   /* If we have this directory cached, return it. */
-  if (ffd->dir_cache_id[hid] && svn_fs_fs__id_eq(ffd->dir_cache_id[hid],
+  if (! svn_fs_fs__id_txn_id(noderev->id) &&
+      ffd->dir_cache_id[hid] && svn_fs_fs__id_eq(ffd->dir_cache_id[hid],
                                                  noderev->id))
     {
       *entries_p = ffd->dir_cache[hid];
@@ -3156,9 +3311,7 @@ static svn_error_t *
 get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
 {
   struct get_and_increment_txn_key_baton *cb = baton;
-  const char *txn_current_filename = svn_path_join(cb->fs->path,
-                                                   PATH_TXN_CURRENT,
-                                                   pool);
+  const char *txn_current_filename = path_txn_current(cb->fs, pool);
   apr_file_t *txn_current_file;
   const char *tmp_filename;
   char next_txn_id[MAX_KEY_SIZE+3];
@@ -3235,10 +3388,10 @@ create_txn_dir(const char **id_p, svn_fs_t *fs, svn_revnum_t rev,
      number the transaction is based off into the transaction id. */
   cb.pool = pool;
   cb.fs = fs;
-  SVN_ERR(svn_fs_fs__with_write_lock(fs,
-                                     get_and_increment_txn_key_body,
-                                     &cb,
-                                     pool));
+  SVN_ERR(with_txn_current_lock(fs,
+                                get_and_increment_txn_key_body,
+                                &cb,
+                                pool));
   *id_p = apr_psprintf(pool, "%ld-%s", rev, cb.txn_id);
 
   txn_dir = svn_path_join_many(pool,
@@ -3377,8 +3530,24 @@ svn_fs_fs__change_txn_prop(svn_fs_txn_t *txn,
                            const svn_string_t *value,
                            apr_pool_t *pool)
 {
+  apr_array_header_t *props = apr_array_make(pool, 1, sizeof(svn_prop_t));
+  svn_prop_t prop;
+  
+  prop.name = name;
+  prop.value = value;
+  APR_ARRAY_PUSH(props, svn_prop_t) = prop;
+  
+  return svn_fs_fs__change_txn_props(txn, props, pool);
+}
+
+svn_error_t *
+svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
+                            apr_array_header_t *props,
+                            apr_pool_t *pool)
+{
   apr_file_t *txn_prop_file;
   apr_hash_t *txn_prop = apr_hash_make(pool);
+  int i;
   svn_error_t *err;
 
   err = get_txn_proplist(txn_prop, txn->fs, txn->id, pool);
@@ -3391,7 +3560,12 @@ svn_fs_fs__change_txn_prop(svn_fs_txn_t *txn,
   else if (err)
     return err;
 
-  apr_hash_set(txn_prop, name, APR_HASH_KEY_STRING, value);
+  for (i = 0; i < props->nelts; i++)
+    {
+      svn_prop_t *prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
+
+      apr_hash_set(txn_prop, prop->name, APR_HASH_KEY_STRING, prop->value);
+    }
 
   /* Create a new version of the file and write out the new props. */
   /* Open the transaction properties file. */
@@ -3636,12 +3810,12 @@ svn_fs_fs__abort_txn(svn_fs_txn_t *txn,
 {
   fs_fs_data_t *ffd;
 
-  SVN_ERR(svn_fs__check_fs(txn->fs));
+  SVN_ERR(svn_fs__check_fs(txn->fs, TRUE));
 
   /* Clean out the directory cache. */
   ffd = txn->fs->fsap_data;
   memset(&ffd->dir_cache_id, 0,
-         sizeof(apr_hash_t *) * NUM_DIR_CACHE_ENTRIES);
+         sizeof(svn_fs_id_t *) * NUM_DIR_CACHE_ENTRIES);
 
   /* Now, purge the transaction. */
   SVN_ERR_W(svn_fs_fs__purge_txn(txn->fs, txn->id, pool),
@@ -4318,6 +4492,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                 const svn_fs_id_t *id,
                 const char *start_node_id,
                 const char *start_copy_id,
+                apr_hash_t *node_origins,
                 apr_pool_t *pool)
 {
   node_revision_t *noderev;
@@ -4326,6 +4501,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   char my_copy_id[MAX_KEY_SIZE + 2];
   const svn_fs_id_t *new_id;
   const char *node_id, *copy_id;
+  svn_boolean_t node_id_is_new = FALSE;
 
   *new_id_p = NULL;
 
@@ -4355,7 +4531,8 @@ write_final_rev(const svn_fs_id_t **new_id_p,
           apr_hash_this(hi, NULL, NULL, &val);
           dirent = val;
           SVN_ERR(write_final_rev(&new_id, file, rev, fs, dirent->id,
-                                  start_node_id, start_copy_id, subpool));
+                                  start_node_id, start_copy_id, 
+                                  node_origins, subpool));
           if (new_id && (svn_fs_fs__id_rev(new_id) == rev))
             dirent->id = svn_fs_fs__id_copy(new_id, pool);
         }
@@ -4409,7 +4586,10 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
   node_id = svn_fs_fs__id_node_id(noderev->id);
   if (*node_id == '_')
-    svn_fs_fs__add_keys(start_node_id, node_id + 1, my_node_id);
+    {
+      node_id_is_new = TRUE;
+      svn_fs_fs__add_keys(start_node_id, node_id + 1, my_node_id);
+    }
   else
     strcpy(my_node_id, node_id);
 
@@ -4427,10 +4607,17 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
   noderev->id = new_id;
 
+  if (node_id_is_new)
+    {
+      apr_pool_t *hash_pool = apr_hash_pool_get(node_origins);
+      const char *key = apr_pstrdup(hash_pool, my_node_id);
+      const svn_fs_id_t *val = svn_fs_fs__id_copy(new_id, hash_pool);
+
+      apr_hash_set(node_origins, key, APR_HASH_KEY_STRING, val);
+    }
+
   /* Write out our new node-revision. */
   SVN_ERR(write_noderev_txn(file, noderev, pool));
-
-  SVN_ERR(svn_fs_fs__put_node_revision(fs, id, noderev, FALSE, pool));
 
   /* Return our ID that references the revision file. */
   *new_id_p = noderev->id;
@@ -4550,6 +4737,7 @@ svn_fs_fs__move_into_place(const char *old_filename,
 
       /* Can't rename across devices; fall back to copying. */
       svn_error_clear(err);
+      err = SVN_NO_ERROR;
       SVN_ERR(svn_io_copy_file(old_filename, new_filename, TRUE, pool));
 
       /* Flush the target of the copy to disk. */
@@ -4558,6 +4746,8 @@ svn_fs_fs__move_into_place(const char *old_filename,
       SVN_ERR(svn_io_file_flush_to_disk(file, pool));
       SVN_ERR(svn_io_file_close(file, pool));
     }
+  if (err)
+    return err;
 
 #ifdef __linux__
   {
@@ -4577,7 +4767,7 @@ svn_fs_fs__move_into_place(const char *old_filename,
   }
 #endif
 
-  return err;
+  return SVN_NO_ERROR;
 }
 
 /* Atomically update the current file to hold the specifed REV, NEXT_NODE_ID,
@@ -4631,67 +4821,6 @@ write_final_current(svn_fs_t *fs,
   svn_fs_fs__add_keys(start_copy_id, txn_copy_id, new_copy_id);
 
   return write_current(fs, rev, new_node_id, new_copy_id, pool);
-}
-
-/* Get a write lock in FS, creating it in POOL. */
-static svn_error_t *
-get_write_lock(svn_fs_t *fs,
-               apr_pool_t *pool)
-{
-  const char *lock_filename;
-  svn_node_kind_t kind;
-
-  lock_filename = path_lock(fs, pool);
-
-  /* svn 1.1.1 and earlier deferred lock file creation to the first
-     commit.  So in case the repository was created by an earlier
-     version of svn, check the lock file here. */
-  SVN_ERR(svn_io_check_path(lock_filename, &kind, pool));
-  if ((kind == svn_node_unknown) || (kind == svn_node_none))
-    SVN_ERR(svn_io_file_create(lock_filename, "", pool));
-
-  SVN_ERR(svn_io_file_lock2(lock_filename, TRUE, FALSE, pool));
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_fs_fs__with_write_lock(svn_fs_t *fs,
-                           svn_error_t *(*body)(void *baton,
-                                                apr_pool_t *pool),
-                           void *baton,
-                           apr_pool_t *pool)
-{
-  apr_pool_t *subpool = svn_pool_create(pool);
-  svn_error_t *err;
-
-#if APR_HAS_THREADS
-  fs_fs_data_t *ffd = fs->fsap_data;
-  fs_fs_shared_data_t *ffsd = ffd->shared;
-  apr_status_t status;
-
-  /* POSIX fcntl locks are per-process, so we need to serialize locks
-     within the process. */
-  status = apr_thread_mutex_lock(ffsd->fs_write_lock);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't grab FSFS repository mutex"));
-#endif
-
-  err = get_write_lock(fs, subpool);
-
-  if (!err)
-    err = body(baton, subpool);
-
-  svn_pool_destroy(subpool);
-
-#if APR_HAS_THREADS
-  status = apr_thread_mutex_unlock(ffsd->fs_write_lock);
-  if (status && !err)
-    return svn_error_wrap_apr(status,
-                              _("Can't ungrab FSFS repository mutex"));
-#endif
-
-  return err;
 }
 
 /* Verify that the user registed with FS has all the locks necessary to
@@ -4778,6 +4907,7 @@ struct commit_baton {
   svn_revnum_t *new_rev_p;
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
+  apr_hash_t *node_origins;
 };
 
 /* The work-horse for svn_fs_fs__commit, called with the FS write lock.
@@ -4830,7 +4960,8 @@ commit_body(void *baton, apr_pool_t *pool)
   /* Write out all the node-revisions and directory contents. */
   root_id = svn_fs_fs__id_txn_create("0", "0", cb->txn->id, pool);
   SVN_ERR(write_final_rev(&new_root_id, proto_file, new_rev, cb->fs, root_id,
-                          start_node_id, start_copy_id, pool));
+                          start_node_id, start_copy_id, cb->node_origins, 
+                          pool));
 
   /* Write the changed-path information. */
   SVN_ERR(write_final_changed_path_info(&changed_path_offset, proto_file,
@@ -4853,26 +4984,36 @@ commit_body(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_fs_fs__txn_proplist(&txnprops, cb->txn, pool));
   if (txnprops)
     {
-      if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_OOD,
+      apr_array_header_t *props = apr_array_make(pool, 3, sizeof(svn_prop_t));
+      svn_prop_t prop;
+      prop.value = NULL;
+
+      if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_OOD,
                        APR_HASH_KEY_STRING))
-        SVN_ERR(svn_fs_fs__change_txn_prop
-                (cb->txn, SVN_FS_PROP_TXN_CHECK_OOD,
-                 NULL, pool));
-      if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_LOCKS,
+        {
+          prop.name = SVN_FS__PROP_TXN_CHECK_OOD;
+          APR_ARRAY_PUSH(props, svn_prop_t) = prop;
+        }
+      
+      if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS,
                        APR_HASH_KEY_STRING))
-        SVN_ERR(svn_fs_fs__change_txn_prop
-                (cb->txn, SVN_FS_PROP_TXN_CHECK_LOCKS,
-                 NULL, pool));
-      if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
+        {
+          prop.name = SVN_FS__PROP_TXN_CHECK_LOCKS;
+          APR_ARRAY_PUSH(props, svn_prop_t) = prop;
+        }          
+
+      if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CONTAINS_MERGEINFO,
                        APR_HASH_KEY_STRING))
         {
           target_mergeinfo = apr_hash_make(pool);
           SVN_ERR(get_txn_mergeinfo(target_mergeinfo, cb->txn->fs, cb->txn->id,
                                     pool));
-          SVN_ERR(svn_fs_fs__change_txn_prop
-                  (cb->txn, SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
-                   NULL, pool));
+          prop.name = SVN_FS__PROP_TXN_CONTAINS_MERGEINFO;
+          APR_ARRAY_PUSH(props, svn_prop_t) = prop;
         }
+      
+      if (! apr_is_empty_array(props))
+        SVN_ERR(svn_fs_fs__change_txn_props(cb->txn, props, pool));
     }
 
   /* Create the shard for the rev and revprop file, if we're sharding and
@@ -4944,11 +5085,20 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
                   apr_pool_t *pool)
 {
   struct commit_baton cb;
+  apr_hash_t *node_origins = apr_hash_make(pool);
 
   cb.new_rev_p = new_rev_p;
   cb.fs = fs;
   cb.txn = txn;
-  return svn_fs_fs__with_write_lock(fs, commit_body, &cb, pool);
+  cb.node_origins = node_origins;
+  SVN_ERR(svn_fs_fs__with_write_lock(fs, commit_body, &cb, pool));
+  
+  /* Now that we're no longer locked, we can update the node-origins
+     cache without blocking writers. */
+  if (apr_hash_count(node_origins) > 0)
+    SVN_ERR(svn_fs__set_node_origins(fs, node_origins, pool));
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -5058,15 +5208,19 @@ svn_fs_fs__create(svn_fs_t *fs,
   /* Create the transaction-current file if the repository supports
      the transaction sequence file. */
   if (format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
-    SVN_ERR(svn_io_file_create(svn_path_join(path, PATH_TXN_CURRENT, pool),
-                               "0\n", pool));
+    {
+      SVN_ERR(svn_io_file_create(path_txn_current(fs, pool),
+                                 "0\n", pool));
+      SVN_ERR(svn_io_file_create(path_txn_current_lock(fs, pool),
+                                 "", pool));
+    }
 
   /* This filesystem is ready.  Stamp it with a format number. */
   SVN_ERR(write_format(path_format(fs, pool),
                        ffd->format, ffd->max_files_per_dir, pool));
 
   /* ### this should be before the format file */
-  SVN_ERR(svn_fs_mergeinfo__create_index(path, pool));
+  SVN_ERR(svn_fs__sqlite_create_index(path, pool));
   return SVN_NO_ERROR;
 }
 
@@ -5544,7 +5698,7 @@ svn_fs_fs__revision_prop(svn_string_t **value_p,
 {
   apr_hash_t *table;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
   SVN_ERR(svn_fs_fs__revision_proplist(&table, fs, rev, pool));
 
   *value_p = apr_hash_get(table, propname, APR_HASH_KEY_STRING);
@@ -5589,7 +5743,7 @@ svn_fs_fs__change_rev_prop(svn_fs_t *fs,
 {
   struct change_rev_prop_baton cb;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   cb.fs = fs;
   cb.rev = rev;
@@ -5629,7 +5783,7 @@ svn_fs_fs__txn_prop(svn_string_t **value_p,
   apr_hash_t *table;
   svn_fs_t *fs = txn->fs;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
   SVN_ERR(svn_fs_fs__txn_proplist(&table, txn, pool));
 
   *value_p = apr_hash_get(table, propname, APR_HASH_KEY_STRING);
@@ -5645,8 +5799,10 @@ svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p,
                      apr_pool_t *pool)
 {
   svn_string_t date;
+  svn_prop_t prop;
+  apr_array_header_t *props = apr_array_make(pool, 3, sizeof(svn_prop_t));
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   SVN_ERR(svn_fs_fs__create_txn(txn_p, fs, rev, pool));
 
@@ -5657,20 +5813,26 @@ svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p,
      automatically overwritten with a revision datestamp. */
   date.data = svn_time_to_cstring(apr_time_now(), pool);
   date.len = strlen(date.data);
-  SVN_ERR(svn_fs_fs__change_txn_prop(*txn_p, SVN_PROP_REVISION_DATE,
-                                     &date, pool));
+
+  prop.name = SVN_PROP_REVISION_DATE;
+  prop.value = &date;
+  APR_ARRAY_PUSH(props, svn_prop_t) = prop;
 
   /* Set temporary txn props that represent the requested 'flags'
      behaviors. */
   if (flags & SVN_FS_TXN_CHECK_OOD)
-    SVN_ERR(svn_fs_fs__change_txn_prop
-            (*txn_p, SVN_FS_PROP_TXN_CHECK_OOD,
-             svn_string_create("true", pool), pool));
+    {
+      prop.name = SVN_FS__PROP_TXN_CHECK_OOD;
+      prop.value = svn_string_create("true", pool);
+      APR_ARRAY_PUSH(props, svn_prop_t) = prop;
+    }
 
   if (flags & SVN_FS_TXN_CHECK_LOCKS)
-    SVN_ERR(svn_fs_fs__change_txn_prop
-            (*txn_p, SVN_FS_PROP_TXN_CHECK_LOCKS,
-             svn_string_create("true", pool), pool));
+    {
+      prop.name = SVN_FS__PROP_TXN_CHECK_LOCKS;
+      prop.value = svn_string_create("true", pool);
+      APR_ARRAY_PUSH(props, svn_prop_t) = prop;
+    }
 
-  return SVN_NO_ERROR;
+  return svn_fs_fs__change_txn_props(*txn_p, props, pool);
 }

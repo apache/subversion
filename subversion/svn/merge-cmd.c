@@ -46,11 +46,14 @@ svn_cl__merge(apr_getopt_t *os,
   const char *sourcepath1 = NULL, *sourcepath2 = NULL, *targetpath = "";
   svn_boolean_t using_rev_range_syntax = FALSE;
   svn_error_t *err;
-  svn_opt_revision_t peg_revision1, peg_revision2;
-  apr_array_header_t *options;
+  svn_opt_revision_t first_range_start, first_range_end, peg_revision1,
+    peg_revision2;
+  apr_array_header_t *options, *ranges_to_merge = opt_state->revision_ranges;
 
   SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
                                         opt_state->targets, pool));
+
+  /* Parse at least one, and possible two, sources. */
   if (targets->nelts >= 1)
     {
       SVN_ERR(svn_opt_parse_path(&peg_revision1, &sourcepath1,
@@ -74,12 +77,25 @@ svn_cl__merge(apr_getopt_t *os,
         using_rev_range_syntax = TRUE;
     }
 
-  /* If the first opt_state revision is filled in at this point, then
-     we know the user must have used the '-r' or '-c' switch. */
-  if (opt_state->start_revision.kind != svn_opt_revision_unspecified)
+  if (opt_state->revision_ranges->nelts > 0)
+    {
+      first_range_start = APR_ARRAY_IDX(opt_state->revision_ranges, 0,
+                                        svn_opt_revision_range_t *)->start;
+      first_range_end = APR_ARRAY_IDX(opt_state->revision_ranges, 0,
+                                      svn_opt_revision_range_t *)->end;
+    }
+  else
+    {
+      first_range_start.kind = first_range_end.kind =
+        svn_opt_revision_unspecified;
+    }
+
+  /* If revision_ranges has at least one real range at this point, then
+     we know the user must have used the '-r' and/or '-c' switch(es). */
+  if (first_range_start.kind != svn_opt_revision_unspecified)
     {
       /* A revision *range* is required. */
-      if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
+      if (first_range_end.kind == svn_opt_revision_unspecified)
         return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0,
                                 _("Second revision required"));
 
@@ -88,8 +104,6 @@ svn_cl__merge(apr_getopt_t *os,
 
   if (using_rev_range_syntax)
     {
-      if (targets->nelts < 1 && !opt_state->use_merge_history)
-        return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL, NULL);
       if (targets->nelts > 2)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("Too many arguments given"));
@@ -109,7 +123,13 @@ svn_cl__merge(apr_getopt_t *os,
               ? svn_opt_revision_head : svn_opt_revision_working;
 
           if (targets->nelts == 2)
-            targetpath = APR_ARRAY_IDX(targets, 1, const char *);
+            {
+              targetpath = APR_ARRAY_IDX(targets, 1, const char *);
+              if (svn_path_is_url(targetpath))
+                return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                        "Cannot specifify a revision range "
+                                        "with two URLs");
+            }
         }
     }
   else /* using @rev syntax */
@@ -120,27 +140,27 @@ svn_cl__merge(apr_getopt_t *os,
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("Too many arguments given"));
 
-      opt_state->start_revision = peg_revision1;
-      opt_state->end_revision = peg_revision2;
+      first_range_start = peg_revision1;
+      first_range_end = peg_revision2;
 
       /* Catch 'svn merge wc_path1 wc_path2 [target]' without explicit
          revisions--since it ignores local modifications it may not do what
          the user expects.  Forcing the user to specify a repository
          revision should avoid any confusion. */
-      if ((opt_state->start_revision.kind == svn_opt_revision_unspecified
+      if ((first_range_start.kind == svn_opt_revision_unspecified
            && ! svn_path_is_url(sourcepath1))
           ||
-          (opt_state->end_revision.kind == svn_opt_revision_unspecified
+          (first_range_end.kind == svn_opt_revision_unspecified
            && ! svn_path_is_url(sourcepath2)))
         return svn_error_create
           (SVN_ERR_CLIENT_BAD_REVISION, 0,
            _("A working copy merge source needs an explicit revision"));
 
       /* Default peg revisions to each URL's youngest revision. */
-      if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
-        opt_state->start_revision.kind = svn_opt_revision_head;
-      if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
-        opt_state->end_revision.kind = svn_opt_revision_head;
+      if (first_range_start.kind == svn_opt_revision_unspecified)
+        first_range_start.kind = svn_opt_revision_head;
+      if (first_range_end.kind == svn_opt_revision_unspecified)
+        first_range_end.kind = svn_opt_revision_head;
 
       /* Decide where to apply the delta (defaulting to "."). */
       if (targets->nelts == 3)
@@ -195,28 +215,25 @@ svn_cl__merge(apr_getopt_t *os,
 
   if (using_rev_range_syntax)
     {
+      /* If we don't have a source, use the target as the source. */
       if (! sourcepath1)
-        {
-          /* If a merge source was not specified, try to derive it. */
-          apr_array_header_t *suggested_sources;
-          svn_opt_revision_t working_rev;
-          working_rev.kind = svn_opt_revision_working;
+        sourcepath1 = targetpath;
 
-          SVN_ERR(svn_client_suggest_merge_sources(&suggested_sources,
-                                                   targetpath, &working_rev, 
-                                                   ctx, pool));
-          if (! suggested_sources->nelts)
-            return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                     _("Unable to determine merge source for "
-                                       "'%s' -- please provide an explicit "
-                                       "source"),
-                                     svn_path_local_style(targetpath, pool));
-          sourcepath1 = APR_ARRAY_IDX(suggested_sources, 0, const char *);
+      /* If we don't have at least one valid revision range, pick a
+         good one that spans the entire set of revisions on our
+         source. */
+      if ((first_range_start.kind == svn_opt_revision_unspecified)
+          && (first_range_end.kind == svn_opt_revision_unspecified))
+        {
+          svn_opt_revision_range_t *range = apr_pcalloc(pool, sizeof(*range));
+          ranges_to_merge = apr_array_make(pool, 1, sizeof(range));
+          range->start.kind = svn_opt_revision_number;
+          range->start.value.number = 1;
+          range->end.kind = svn_opt_revision_head;
+          APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = range;
         }
-        
       err = svn_client_merge_peg3(sourcepath1,
-                                  &(opt_state->start_revision),
-                                  &(opt_state->end_revision),
+                                  ranges_to_merge,
                                   &peg_revision1,
                                   targetpath,
                                   opt_state->depth,
@@ -231,9 +248,9 @@ svn_cl__merge(apr_getopt_t *os,
   else
     {
       err = svn_client_merge3(sourcepath1,
-                              &(opt_state->start_revision),
+                              &first_range_start,
                               sourcepath2,
-                              &(opt_state->end_revision),
+                              &first_range_end,
                               targetpath,
                               opt_state->depth,
                               opt_state->ignore_ancestry,

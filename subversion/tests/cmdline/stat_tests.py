@@ -41,7 +41,7 @@ Item = svntest.wc.StateItem
 def status_unversioned_file_in_current_dir(sbox):
   "status on unversioned file in current directory"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   os.chdir(wc_dir)
@@ -116,7 +116,7 @@ def status_update_with_nested_adds(sbox):
 def status_shows_all_in_current_dir(sbox):
   "status -vN shows all items in current directory"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   os.chdir(wc_dir)
@@ -132,7 +132,7 @@ def status_shows_all_in_current_dir(sbox):
 def status_missing_file(sbox):
   "status with a versioned file missing"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   os.chdir(wc_dir)
@@ -159,7 +159,7 @@ def status_missing_file(sbox):
 def status_type_change(sbox):
   "status on versioned items whose type has changed"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   os.chdir(wc_dir)
@@ -206,7 +206,7 @@ def status_type_change(sbox):
 def status_type_change_to_symlink(sbox):
   "status on versioned items replaced by symlinks"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   os.chdir(wc_dir)
@@ -251,12 +251,8 @@ def status_with_new_files_pending(sbox):
   svntest.main.file_append('newfile', 'this is a new file')
   svntest.main.run_svn(None, 'add', 'newfile')
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'ci', '-m', 'logmsg')
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'up', '-r', '1')
 
   output, err = svntest.actions.run_and_verify_svn(None, None, [],
@@ -280,7 +276,7 @@ def status_with_new_files_pending(sbox):
 def status_for_unignored_file(sbox):
   "status for unignored file and directory"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   os.chdir(wc_dir)
@@ -317,7 +313,7 @@ def status_for_unignored_file(sbox):
 def status_for_nonexistent_file(sbox):
   "status on missing and unversioned file"
 
-  sbox.build()
+  sbox.build(read_only = True)
 
   wc_dir = sbox.wc_dir
 
@@ -350,8 +346,6 @@ def status_nonrecursive_update_different_cwd(sbox):
   K_path = os.path.join(wc_dir, 'A', 'C', 'K' )
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'mkdir', '-m', 'rev 2', J_url)
 
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -369,8 +363,6 @@ def status_nonrecursive_update_different_cwd(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      expected_output,
                                      [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'status', '-v', '-N', '-u', 'C')
 
   expected_output = [
@@ -383,8 +375,6 @@ def status_nonrecursive_update_different_cwd(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      expected_output,
                                      [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'status', '-v', '-N', '-u', '.')
 
 
@@ -430,22 +420,16 @@ def status_file_needs_update(sbox):
   svntest.main.file_append('crontab.root', 'New file crontab.root.\n')
   svntest.main.run_svn(None, 'add', 'crontab.root')
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'ci', '-m', 'log msg')
   os.chdir(was_cwd)
   os.chdir(other_wc)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'up')
 
   os.chdir(was_cwd)
   os.chdir(wc_dir)
   svntest.main.file_append('crontab.root', 'New line in crontab.root.\n')
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'ci', '-m', 'log msg')
 
   # The `svntest.actions.run_and_verify_*_status' routines all pass
@@ -502,8 +486,6 @@ def status_uninvited_parent_directory(sbox):
   svntest.main.file_append('newfile', 'New file.\n')
   svntest.main.run_svn(None, 'add', 'newfile')
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'ci', '-m', 'log msg')
 
   os.chdir(was_cwd)
@@ -535,8 +517,6 @@ def status_on_forward_deletion(sbox):
   A_url = top_url + '/A'
 
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'rm', '-m', 'Remove A.', A_url)
 
   svntest.main.safe_rmtree(wc_dir)
@@ -545,8 +525,6 @@ def status_on_forward_deletion(sbox):
   os.chdir(wc_dir)
 
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'co', '-r1', top_url + "@1", 'wc')
   # If the bug is present, this will error with
   #
@@ -568,8 +546,6 @@ def status_on_forward_deletion(sbox):
   #
   svntest.main.safe_rmtree('wc')
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'co', '-r1', A_url + "@1", 'wc')
   svntest.actions.run_and_verify_svn(None, None, [], 'st', '-u', 'wc')
 
@@ -670,10 +646,6 @@ use-commit-times = yes
   other_wc = sbox.add_wc_path('other')
   svntest.actions.run_and_verify_svn("checkout failed", None, [],
                                      'co', sbox.repo_url,
-                                     '--username',
-                                     svntest.main.wc_author,
-                                     '--password',
-                                     svntest.main.wc_passwd,
                                      other_wc,
                                      '--config-dir', config_dir)
 
@@ -691,7 +663,7 @@ use-commit-times = yes
 def status_on_unversioned_dotdot(sbox):
   "status on '..' where '..' is not versioned"
   # See issue #1617 (and #2030).
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   new_dir = os.path.join(wc_dir, 'new_dir')
@@ -756,32 +728,24 @@ def status_on_partially_nonrecursive_wc(sbox):
   # reproduction recipe.  For us, it's r2.
   svntest.main.file_append(rho, 'Whan that Aprille with his shoores soote\n')
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'ci', '-m', 'log msg', rho)
 
   # Make the working copy weird in the right way, then try status -u.
   D_wc = sbox.add_wc_path('D')
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'co', '-r1', '-N', D_url, D_wc)
 
   os.chdir(D_wc)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'up', '-r1', 'H')
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'st', '-u')
 
 
 def missing_dir_in_anchor(sbox):
   "a missing dir in the anchor"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   foo_path = os.path.join(wc_dir, 'foo')
@@ -801,7 +765,7 @@ def missing_dir_in_anchor(sbox):
 def status_in_xml(sbox):
   "status output in XML format"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   file_name = "iota"
@@ -861,10 +825,8 @@ def status_ignored_dir(sbox):
   new_dir = os.path.join(wc_dir, "dir.o")
   new_dir_url = sbox.repo_url + "/dir.o"
 
-  svntest.actions.run_and_verify_svn("Create dir", "Committed revision 2.", [],
-                                     'mkdir', new_dir_url, '-m', 'msg',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd)
+  svntest.actions.run_and_verify_svn("Create dir", "\n|Committed revision 2.", [],
+                                     'mkdir', new_dir_url, '-m', 'msg')
 
   # Make a dir that is ignored by the default ignore patterns.
   os.mkdir(new_dir)
@@ -880,7 +842,7 @@ def status_ignored_dir(sbox):
 
 def status_unversioned_dir(sbox):
   "status on unversioned dir (issue 2030)"
-  sbox.build()
+  sbox.build(read_only = True)
   dir = sbox.repo_dir
   expected_err = ["svn: warning: '" + dir + "' is not a working copy\n",
                   "svn: warning: '" + dir + "' is not a working copy\n"]
@@ -890,7 +852,7 @@ def status_unversioned_dir(sbox):
 
 def status_missing_dir(sbox):
   "status with a versioned directory missing"
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   a_d_g = os.path.join(wc_dir, "A", "D", "G")
 
@@ -923,14 +885,10 @@ def status_add_plus_conflict(sbox):
   trunk_url  = sbox.repo_url + '/trunk'
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'mkdir', '-m', 'rev 2',
                                      branch_url, trunk_url)
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'update', wc_dir)
 
   branch_file = os.path.join(wc_dir, 'branch', 'file')
@@ -940,38 +898,28 @@ def status_add_plus_conflict(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'add', branch_file)
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'commit',
                                      branch_file, '-m', 'rev 3')
 
   svntest.main.file_write(branch_file, "line 1\nline3\n", 'wb')
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'commit',
                                      branch_file, '-m', 'rev 4')
 
   svntest.main.file_write(branch_file, "line 1\nline2\n", 'wb')
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'commit',
                                      branch_file, '-m', 'rev 5')
 
   trunk_dir = os.path.join(wc_dir, 'trunk')
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'merge',
                                      branch_url, '-r', '2:3', trunk_dir)
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'merge',
                                      branch_url, '-r', '4:5', trunk_dir)
 
@@ -1323,7 +1271,7 @@ def change_files_and_commit(wc_dir, files, baserev=1):
 def status_depth_local(sbox):
   "run 'status --depth=X' with local changes"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   A_path = os.path.join(wc_dir, 'A')
   D_path = os.path.join(A_path, 'D')
@@ -1522,7 +1470,7 @@ def status_dash_u_deleted_directories(sbox):
 def status_dash_u_type_change(sbox):
   "status -u on versioned items whose type changed"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   os.chdir(wc_dir)

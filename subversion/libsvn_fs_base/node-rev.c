@@ -28,8 +28,10 @@
 #include "node-rev.h"
 #include "reps-strings.h"
 #include "revs-txns.h"
+#include "id.h"
 
 #include "bdb/nodes-table.h"
+#include "bdb/node-origins-table.h"
 #include "bdb/successors-table.h"
 
 
@@ -52,6 +54,10 @@ svn_fs_base__create_node(const svn_fs_id_t **id_p,
 
   /* Store its NODE-REVISION skel.  */
   SVN_ERR(svn_fs_bdb__put_node_revision(fs, id, noderev, trail, pool));
+
+  /* Add a record in the node origins index table. */
+  SVN_ERR(svn_fs_bdb__set_node_origin(fs, svn_fs_base__id_node_id(id),
+                                      id, trail, pool));
 
   *id_p = id;
   return SVN_NO_ERROR;
@@ -100,6 +106,7 @@ svn_error_t *
 svn_fs_base__delete_node_revision(svn_fs_t *fs,
                                   const svn_fs_id_t *id,
                                   const svn_fs_id_t *pred_id,
+                                  svn_boolean_t origin_also,
                                   trail_t *trail,
                                   apr_pool_t *pool)
 {
@@ -117,6 +124,10 @@ svn_fs_base__delete_node_revision(svn_fs_t *fs,
                                             succ_id_str->data, trail, 
                                             pool));
     }
+
+  if (origin_also)
+    SVN_ERR(svn_fs_bdb__delete_node_origin(fs, svn_fs_base__id_node_id(id),
+                                           trail, pool));
 
   /* ...and then the node itself. */
   return svn_fs_bdb__delete_nodes_entry(fs, id, trail, pool);

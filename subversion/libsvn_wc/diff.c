@@ -689,7 +689,7 @@ directory_elements_diff(struct dir_baton *dir_baton)
         }
     }
 
-  if (dir_baton->depth == svn_depth_empty)
+  if (dir_baton->depth == svn_depth_empty && !in_anchor_not_target)
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, dir_baton->pool));
@@ -1715,7 +1715,9 @@ svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
                         apr_pool_t *pool)
 {
   struct edit_baton *eb;
+  void *inner_baton;
   svn_delta_editor_t *tree_editor;
+  const svn_delta_editor_t *inner_editor;
 
   eb = make_editor_baton(anchor, target, callbacks, callback_baton,
                          depth, ignore_ancestry, use_text_base,
@@ -1736,10 +1738,23 @@ svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
   tree_editor->close_file = close_file;
   tree_editor->close_edit = close_edit;
 
+  inner_editor = tree_editor;
+  inner_baton = eb;
+
+  if (depth == svn_depth_unknown)
+    SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
+                                                &inner_baton,
+                                                inner_editor,
+                                                inner_baton,
+                                                svn_wc_adm_access_path(anchor),
+                                                target,
+                                                anchor,
+                                                pool));
+
   SVN_ERR(svn_delta_get_cancellation_editor(cancel_func,
                                             cancel_baton,
-                                            tree_editor,
-                                            eb,
+                                            inner_editor,
+                                            inner_baton,
                                             editor,
                                             edit_baton,
                                             pool));
@@ -1766,7 +1781,7 @@ svn_wc_get_diff_editor3(svn_wc_adm_access_t *anchor,
                                  target,
                                  callbacks,
                                  callback_baton,
-                                 SVN_DEPTH_FROM_RECURSE(recurse),
+                                 SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                  ignore_ancestry,
                                  use_text_base,
                                  reverse_order,
@@ -1869,7 +1884,7 @@ svn_wc_diff3(svn_wc_adm_access_t *anchor,
              apr_pool_t *pool)
 {
   return svn_wc_diff4(anchor, target, callbacks, callback_baton,
-                      SVN_DEPTH_FROM_RECURSE(recurse), ignore_ancestry,
+                      SVN_DEPTH_INFINITY_OR_FILES(recurse), ignore_ancestry,
                       pool);
 }
 

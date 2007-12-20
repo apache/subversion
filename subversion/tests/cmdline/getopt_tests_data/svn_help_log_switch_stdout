@@ -33,31 +33,34 @@ Valid options:
                                 'BASE'       base rev of item's working copy
                                 'COMMITTED'  last commit at or before BASE
                                 'PREV'       revision just before COMMITTED
-  -q [--quiet]             : print as little as possible
+  -q [--quiet]             : print nothing, or only summary information
   -v [--verbose]           : print extra information
   -g [--use-merge-history] : use/display additional information from merge
                              history
+  -c [--change] ARG        : the change made by ARG
   --targets ARG            : pass contents of file ARG as additional args
   --stop-on-copy           : do not cross copies while traversing history
   --incremental            : give output suitable for concatenation
   --xml                    : output in XML
+  -l [--limit] ARG         : maximum number of log entries
+  --changelist ARG         : operate only on members of changelist ARG
+  --with-all-revprops      : retrieve all revision properties
+  --with-revprop ARG       : retrieve revision property ARG
   --username ARG           : specify a username ARG
   --password ARG           : specify a password ARG
   --no-auth-cache          : do not cache authentication tokens
   --non-interactive        : do no interactive prompting
   --config-dir ARG         : read user configuration files from directory ARG
-  -l [--limit] ARG         : maximum number of log entries
-  --changelist ARG         : operate only on members of changelist ARG
-  --with-all-revprops      : retrieve all revision properties
-  --with-revprop ARG       : retrieve revision property ARG
 
 switch (sw): Update the working copy to a different URL.
-usage: 1. switch URL [PATH]
+usage: 1. switch URL[@PEGREV] [PATH]
        2. switch --relocate FROM TO [PATH...]
 
   1. Update the working copy to mirror a new URL within the repository.
      This behaviour is similar to 'svn update', and is the way to
      move a working copy to a branch or tag within the same repository.
+     If specified, PEGREV determines in which revision the target is first
+     looked up.
 
   2. Rewrite working copy URL metadata to reflect a syntactic change only.
      This is used when repository's root URL changes (such as a scheme
@@ -87,14 +90,17 @@ Valid options:
   -N [--non-recursive]     : obsolete; try --depth=files or --depth=immediates
   --depth ARG              : pass depth ('empty', 'files', 'immediates', or
                             'infinity') as ARG
-  -q [--quiet]             : print as little as possible
+  -q [--quiet]             : print nothing, or only summary information
   --diff3-cmd ARG          : use ARG as merge command
   --relocate               : relocate via URL-rewriting
+  --ignore-externals       : ignore externals definitions
+  --force                  : force operation to run
+  --accept ARG             : specify automatic conflict resolution action
+                            ('postpone', 'base', 'mine', 'theirs', 'edit',
+                             'launch')
   --username ARG           : specify a username ARG
   --password ARG           : specify a password ARG
   --no-auth-cache          : do not cache authentication tokens
   --non-interactive        : do no interactive prompting
   --config-dir ARG         : read user configuration files from directory ARG
-  --ignore-externals       : ignore externals definitions
-  --force                  : force operation to run
 

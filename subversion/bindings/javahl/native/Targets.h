@@ -19,12 +19,8 @@
  * @brief Interface of the class Targets
  */
 
-#if !defined(AFX_TARGETS_H__61202731_41A4_43FF_97C4_7E26DC255BF1__INCLUDED_)
-#define AFX_TARGETS_H__61202731_41A4_43FF_97C4_7E26DC255BF1__INCLUDED_
-
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
+#ifndef TARGETS_H
+#define TARGETS_H
 
 #include <jni.h>
 
@@ -52,5 +48,4 @@ class Targets
   void setDoesNotContainsPath();
 };
 
-// !defined(AFX_TARGETS_H__61202731_41A4_43FF_97C4_7E26DC255BF1__INCLUDED_)
-#endif
+#endif // TARGETS_H

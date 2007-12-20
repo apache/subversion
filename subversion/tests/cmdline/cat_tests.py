@@ -39,7 +39,7 @@ Item = svntest.wc.StateItem
 
 def cat_local_directory(sbox):
   "cat a local directory"
-  sbox.build()
+  sbox.build(read_only = True)
 
   A_path = os.path.join(sbox.wc_dir, 'A')
 
@@ -49,7 +49,7 @@ def cat_local_directory(sbox):
 
 def cat_remote_directory(sbox):
   "cat a remote directory"
-  sbox.build(create_wc = False)
+  sbox.build(create_wc = False, read_only = True)
 
   A_url = sbox.repo_url + '/A'
 
@@ -59,7 +59,7 @@ def cat_remote_directory(sbox):
 
 def cat_base(sbox):
   "cat a file at revision BASE"
-  sbox.build()
+  sbox.build(read_only = True)
 
   wc_dir = sbox.wc_dir
 
@@ -76,7 +76,7 @@ def cat_base(sbox):
 
 def cat_nonexistent_file(sbox):
   "cat a nonexistent file"
-  sbox.build()
+  sbox.build(read_only = True)
 
   wc_dir = sbox.wc_dir
 
@@ -88,7 +88,7 @@ def cat_nonexistent_file(sbox):
 
 def cat_skip_uncattable(sbox):
   "cat should skip uncattable resources"
-  sbox.build()
+  sbox.build(read_only = True)
 
   wc_dir = sbox.wc_dir
   dir_path = os.path.join(wc_dir, 'A', 'D')

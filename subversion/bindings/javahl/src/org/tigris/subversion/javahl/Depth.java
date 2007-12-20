@@ -57,11 +57,63 @@ public final class Depth
         Equivalent to the pre-1.5 default update behavior. */
     public static final int infinity = 3;
 
-    public static final int fromRecurse(boolean recurse)
+    /**
+     * @return A depth value of {@link #infinity} when
+     * <code>recurse</code> is <code>true</code>, or {@link #empty}
+     * otherwise.
+     */
+    public static final int infinityOrEmpty(boolean recurse)
     {
-        if (recurse)
-            return infinity;
-        else
-            return files;
+        return (recurse ? infinity : empty);
+    }
+
+    /**
+     * @return A depth value of {@link #infinity} when
+     * <code>recurse</code> is <code>true</code>, or {@link #files}
+     * otherwise.
+     */
+    public static final int infinityOrFiles(boolean recurse)
+    {
+        return (recurse ? infinity : files);
+    }
+
+    /**
+     * @return A depth value of {@link #infinity} when
+     * <code>recurse</code> is <code>true</code>, or {@link
+     * #immediates} otherwise.
+     */
+    public static final int infinityOrImmediates(boolean recurse)
+    {
+        return (recurse ? infinity : immediates);
+    }
+
+    /**
+     * @return A depth value of {@link #unknown} when
+     * <code>recurse</code> is <code>true</code>, or {@link #empty}
+     * otherwise.
+     */
+    public static final int unknownOrEmpty(boolean recurse)
+    {
+        return (recurse ? unknown : empty);
+    }
+
+    /**
+     * @return A depth value of {@link #unknown} when
+     * <code>recurse</code> is <code>true</code>, or {@link #files}
+     * otherwise.
+     */
+    public static final int unknownOrFiles(boolean recurse)
+    {
+        return (recurse ? unknown : files);
+    }
+
+    /**
+     * @return A depth value of {@link #unknown} when
+     * <code>recurse</code> is <code>true</code>, or {@link
+     * #immediates} otherwise.
+     */
+    public static final int unknownOrImmediates(boolean recurse)
+    {
+        return (recurse ? unknown : immediates);
     }
 }

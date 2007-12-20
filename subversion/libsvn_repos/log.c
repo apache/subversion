@@ -20,6 +20,7 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
+#include "svn_compat.h"
 #include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -644,7 +645,7 @@ svn_repos__is_branching_copy(svn_boolean_t *is_branching,
                                              copy_path, path, rev, subpool));
 
   SVN_ERR(svn_mergeinfo_diff(&deleted, &added, implied_mergeinfo,
-                             mergeinfo, svn_rangelist_ignore_inheritance,
+                             mergeinfo, FALSE,
                              subpool));
   if (apr_hash_count(deleted) == 0 && apr_hash_count(added) == 0)
     {
@@ -661,7 +662,7 @@ svn_repos__is_branching_copy(svn_boolean_t *is_branching,
 
 /* Filter function to be used with svn_fs_get_mergeinfo_for_tree().
    This should return FALSE if PATH is a copy which is considered a
-   "branch"; that is, a copied path which has merge info identical to
+   "branch"; that is, a copied path which has mergeinfo identical to
    what would be expected for a copy from source to destination
    without any modification.
 
@@ -752,8 +753,7 @@ get_combined_mergeinfo(apr_hash_t **mergeinfo,
       apr_hash_t *path_mergeinfo;
 
       apr_hash_this(hi, NULL, NULL, (void *)&path_mergeinfo);
-      SVN_ERR(svn_mergeinfo_merge(mergeinfo, path_mergeinfo,
-                                  svn_rangelist_equal_inheritance, pool));
+      SVN_ERR(svn_mergeinfo_merge(*mergeinfo, path_mergeinfo, pool));
     }
 
   svn_pool_destroy(subpool);
@@ -779,7 +779,7 @@ combine_mergeinfo_rangelists(apr_array_header_t **rangelist,
 
       apr_hash_this(hi, NULL, NULL, (void *)&path_rangelist);
       SVN_ERR(svn_rangelist_merge(rangelist, path_rangelist,
-                                  svn_rangelist_equal_inheritance, pool));
+                                  pool));
     }
 
   return SVN_NO_ERROR;
@@ -813,10 +813,9 @@ get_merged_rev_mergeinfo(apr_hash_t **mergeinfo,
                                  subpool));
 
   SVN_ERR(svn_mergeinfo_diff(&deleted, &changed, prev_mergeinfo,
-                             curr_mergeinfo, svn_rangelist_ignore_inheritance,
+                             curr_mergeinfo, FALSE,
                              subpool));
-  SVN_ERR(svn_mergeinfo_merge(&changed, deleted,
-                              svn_rangelist_equal_inheritance, subpool));
+  SVN_ERR(svn_mergeinfo_merge(changed, deleted, subpool));
 
   *mergeinfo = svn_mergeinfo_dup(changed, pool);
   svn_pool_destroy(subpool);

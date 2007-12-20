@@ -41,9 +41,9 @@ int svn_fs_bdb__open_revisions_table(DB **revisions_p,
 
   BDB_ERR(svn_fs_bdb__check_version());
   BDB_ERR(db_create(&revisions, env, 0));
-  BDB_ERR(revisions->open(SVN_BDB_OPEN_PARAMS(revisions, NULL),
-                          "revisions", 0, DB_RECNO,
-                          open_flags, 0666));
+  BDB_ERR((revisions->open)(SVN_BDB_OPEN_PARAMS(revisions, NULL),
+                            "revisions", 0, DB_RECNO,
+                            open_flags, 0666));
 
   *revisions_p = revisions;
   return 0;
@@ -165,7 +165,7 @@ svn_fs_bdb__youngest_rev(svn_revnum_t *youngest_p,
   DBT key, value;
   db_recno_t recno;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   /* Create a database cursor.  */
   svn_fs_base__trail_debug(trail, "revisions", "cursor");

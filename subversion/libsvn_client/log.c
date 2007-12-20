@@ -31,13 +31,13 @@
 #include "client.h"
 
 #include "svn_client.h"
+#include "svn_compat.h"
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_sorts.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
-#include "private/svn_client_private.h"
 
 
 /*** Getting misc. information ***/
@@ -168,12 +168,13 @@ svn_client__get_copy_source(const char *path_or_url,
     svn_revnum_t at_rev;
     const char *at_url;
     SVN_ERR(svn_client__ra_session_from_path(&ra_session, &at_rev, &at_url,
-                                             path_or_url, revision, revision,
+                                             path_or_url, NULL,
+                                             revision, revision,
                                              ctx, pool));
 
     SVN_ERR(svn_client__path_relative_to_root(&copyfrom_info.target_path,
-                                              path_or_url, NULL, ra_session,
-                                              NULL, pool));
+                                              path_or_url, NULL, TRUE,
+                                              ra_session, NULL, pool));
   }
 
   APR_ARRAY_PUSH(targets, const char *) = path_or_url;
@@ -443,7 +444,7 @@ svn_client_log4(const apr_array_header_t *targets,
       ra_target = url_or_path;
 
     SVN_ERR(svn_client__ra_session_from_path(&ra_session, &ignored_revnum,
-                                             &actual_url, ra_target,
+                                             &actual_url, ra_target, NULL,
                                              peg_revision, &session_opt_rev,
                                              ctx, pool));
   }
@@ -496,16 +497,19 @@ svn_client_log4(const apr_array_header_t *targets,
    * entries if the paths and revisions were passed down.
    */
   {
-    svn_revnum_t start_revnum, end_revnum;
+    svn_revnum_t start_revnum, end_revnum, youngest_rev = SVN_INVALID_REVNUM;
     const char *path = APR_ARRAY_IDX(targets, 0, const char *);
-    svn_error_t *err;
+    svn_boolean_t has_log_revprops;
 
     SVN_ERR(svn_client__get_revision_number
-            (&start_revnum, ra_session, start, path, pool));
+            (&start_revnum, &youngest_rev, ra_session, start, path, pool));
     SVN_ERR(svn_client__get_revision_number
-            (&end_revnum, ra_session, end, path, pool));
+            (&end_revnum, &youngest_rev, ra_session, end, path, pool));
 
-    if ((err = svn_ra_get_log2(ra_session,
+    SVN_ERR(svn_ra_has_capability(ra_session, &has_log_revprops,
+                                  SVN_RA_CAPABILITY_LOG_REVPROPS, pool));
+    if (has_log_revprops)
+      return svn_ra_get_log2(ra_session,
                                condensed_targets,
                                start_revnum,
                                end_revnum,
@@ -516,8 +520,8 @@ svn_client_log4(const apr_array_header_t *targets,
                                revprops,
                                real_receiver,
                                real_receiver_baton,
-                               pool))
-        && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
+                            pool);
+    else
       {
         /* See above pre-1.5 notes. */
         pre_15_receiver_baton_t rb;
@@ -529,12 +533,11 @@ svn_client_log4(const apr_array_header_t *targets,
         rb.baton = real_receiver_baton;
         SVN_ERR(svn_client__ra_session_from_path(&ra_session,
                                                  &ignored_revnum,
-                                                 &actual_url, ra_target,
+                                                 &actual_url, ra_target, NULL,
                                                  peg_revision,
                                                  &session_opt_rev,
                                                  ctx, pool));
-        svn_error_clear(err);
-        err = svn_ra_get_log2(ra_session,
+        return svn_ra_get_log2(ra_session,
                               condensed_targets,
                               start_revnum,
                               end_revnum,
@@ -547,7 +550,6 @@ svn_client_log4(const apr_array_header_t *targets,
                               &rb,
                               pool);
       }
-    return err;
   }
 }
 

@@ -26,8 +26,6 @@
 #include <apr_general.h>
 #include <apr_lib.h>
 #include <apr_strings.h>
-#include <apr_network_io.h>
-#include <apr_poll.h>
 
 #include "svn_types.h"
 #include "svn_string.h"
@@ -155,7 +153,7 @@ static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           if (!subpool)
             subpool = svn_pool_create(pool);
           else
-            apr_pool_clear(subpool);
+            svn_pool_clear(subpool);
           SVN_ERR(conn->block_handler(conn, subpool, conn->block_baton));
         }
       data += count;
@@ -172,7 +170,7 @@ static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
 
   if (subpool)
-    apr_pool_destroy(subpool);
+    svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -678,7 +676,7 @@ static svn_error_t *vparse_tuple(apr_array_header_t *items, apr_pool_t *pool,
       if (**fmt == 'n' && elt->kind == SVN_RA_SVN_NUMBER)
         *va_arg(*ap, apr_uint64_t *) = elt->u.number;
       else if (**fmt == 'r' && elt->kind == SVN_RA_SVN_NUMBER)
-        *va_arg(*ap, svn_revnum_t *) = elt->u.number;
+        *va_arg(*ap, svn_revnum_t *) = (svn_revnum_t) elt->u.number;
       else if (**fmt == 's' && elt->kind == SVN_RA_SVN_STRING)
         *va_arg(*ap, svn_string_t **) = elt->u.string;
       else if (**fmt == 'c' && elt->kind == SVN_RA_SVN_STRING)
@@ -892,7 +890,7 @@ svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
 
   while (1)
     {
-      apr_pool_clear(subpool);
+      svn_pool_clear(subpool);
       SVN_ERR(svn_ra_svn_read_tuple(conn, subpool, "wl", &cmdname, &params));
       for (i = 0; commands[i].cmdname; i++)
         {
@@ -921,7 +919,7 @@ svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
       if (commands[i].terminate)
         break;
     }
-  apr_pool_destroy(subpool);
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 

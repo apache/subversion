@@ -19,12 +19,9 @@
  * @brief Interface of the C++ class Path.
  */
 
-#if !defined(AFX_PATH_H__A143CB2A_1115_4770_8CD5_AA33CCD285FA__INCLUDED_)
-#define AFX_PATH_H__A143CB2A_1115_4770_8CD5_AA33CCD285FA__INCLUDED_
+#ifndef PATH_H
+#define PATH_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
 #include <string>
 #include <jni.h>
 struct svn_error_t;
@@ -98,5 +95,4 @@ class Path
   static jboolean isValid(const char *path);
 };
 
-// !defined(AFX_PATH_H__A143CB2A_1115_4770_8CD5_AA33CCD285FA__INCLUDED_)
-#endif
+#endif  // PATH_H

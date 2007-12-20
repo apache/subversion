@@ -148,3 +148,12 @@ svn_fs_base__err_corrupt_lock(svn_fs_t *fs, const char *lock_token)
      lock_token, fs->path);
 }
 
+svn_error_t *
+svn_fs_base__err_no_such_node_origin(svn_fs_t *fs, const char *node_id)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_NO_SUCH_NODE_ORIGIN, 0,
+     _("No record in 'node-origins' table for node id '%s' in "
+       "filesystem '%s'"), node_id, fs->path);
+}

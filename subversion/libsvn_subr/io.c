@@ -938,7 +938,7 @@ svn_error_t *svn_io_copy_dir_recursively(const char *src,
                               svn_path_local_style(src, pool));
 
   /* Free any memory used by recursion */
-  apr_pool_destroy(subpool);
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
@@ -1877,7 +1877,7 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
     }
   while (need_rewind);
 
-  apr_pool_destroy(subpool);
+  svn_pool_destroy(subpool);
 
   if (!APR_STATUS_IS_ENOENT(status))
     return svn_error_wrap_apr(status, _("Can't read directory '%s'"),

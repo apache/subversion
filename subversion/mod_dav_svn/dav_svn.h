@@ -114,6 +114,16 @@ typedef struct {
   /* is the client a Subversion client? */
   svn_boolean_t is_svn_client;
 
+  /* The client's capabilities.  Maps SVN_RA_CAPABILITY_* keys to
+     "yes" or "no" values.  If a capability is not yet discovered, it
+     is absent from the table.  The table itself is allocated in this
+     structure's 'pool' field, and the keys and values must have at
+     least that lifetime.  Most likely the keys and values are
+     constants anyway (and sufficiently well-informed internal code
+     may therefore compare against those constants' addresses).  If
+     'is_svn_client' is false, then 'capabilities' should be empty. */
+  apr_hash_t *capabilities;
+
   /* The path to the activities db */
   const char *activities_db;
 
@@ -500,6 +510,7 @@ static const dav_report_elem dav_svn__reports_list[] = {
   { SVN_XML_NAMESPACE, "log-report" },
   { SVN_XML_NAMESPACE, "dated-rev-report" },
   { SVN_XML_NAMESPACE, "get-locations" },
+  { SVN_XML_NAMESPACE, "get-location-segments" },
   { SVN_XML_NAMESPACE, "file-revs-report" },
   { SVN_XML_NAMESPACE, "get-locks-report" },
   { SVN_XML_NAMESPACE, "replay-report" },
@@ -525,6 +536,10 @@ dav_error *
 dav_svn__get_locations_report(const dav_resource *resource,
                               const apr_xml_doc *doc,
                               ap_filter_t *output);
+dav_error *
+dav_svn__get_location_segments_report(const dav_resource *resource,
+                                      const apr_xml_doc *doc,
+                                      ap_filter_t *output);
 dav_error *
 dav_svn__file_revs_report(const dav_resource *resource,
                           const apr_xml_doc *doc,
@@ -727,6 +742,11 @@ svn_stream_t *
 dav_svn__make_base64_output_stream(apr_bucket_brigade *bb,
                                    ap_filter_t *output,
                                    apr_pool_t *pool);
+
+/* In INFO->r->subprocess_env set "SVN-ACTION" to LINE, "SVN-REPOS" to
+ * INFO->repos->fs_path, and "SVN-REPOS-NAME" to INFO->repos->repo_basename. */
+void
+dav_svn__operational_log(struct dav_resource_private *info, const char *line);
 
 /*** mirror.c ***/
 

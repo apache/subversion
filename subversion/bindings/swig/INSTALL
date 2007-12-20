@@ -5,7 +5,7 @@ STATUS OF THE SWIG BINDINGS
 * Python
 
   The Python bindings are fairly well developed, although there are some
-  missing parts, most notably, there is no useful wrapping of the svn_ra APIs.
+  missing parts.
 
   (N.B. As discussed below, they will not compile in Debug mode on Windows.)
 
@@ -65,7 +65,7 @@ BUILDING SWIG BINDINGS FOR SVN ON UNIX
 
 
 Step 1:  Install a suitable version of SWIG (which is
-         currently swig version 1.3.24 - 1.3.29).
+         currently swig version 1.3.24 - 1.3.31).
 
     * Perhaps your distribution packages a suitable version - if it does
       install it, and skip to the last bullet point in this section.
@@ -80,7 +80,7 @@ Step 1:  Install a suitable version of SWIG (which is
 
              --with-python=/path/to/correct/python/binary
 
-        to the configure script.  You need Python 2.0 or above.
+        to the configure script.  You need Python 2.2 or above.
 
         If you plan to build the Perl bindings, and have a system
         with more than one version of perl installed, you may need

@@ -37,7 +37,7 @@ repository) is:
   revprops/           Subdirectory containing rev-props
     <shard>/          Shard directory, if sharding is in use (see below)
       <revnum>        File containing rev-props for <revnum>
-  mergeinfo.db        SQLite database containing index for svn:mergeinfo props
+  indexes.sqlite      SQLite database containing index for svn:mergeinfo props
   transactions/       Subdirectory containing transactions
     <txnid>.txn/      Directory containing transaction <txnid>
   transaction-current File containing the next transaction key
@@ -47,6 +47,7 @@ repository) is:
   current             File specifying current revision and next node/copy id
   fs-type             File identifying this filesystem as an FSFS filesystem
   write-lock          Empty file, locked to serialise writers
+  txn-current-lock    Empty file, locked to serialise 'transaction-current'
   uuid                File containing the UUID of the repository
   format              File containing the format number of this filesystem
 
@@ -71,9 +72,9 @@ that contains only a base-36 number.  The current value will be used
 in the next transaction name, along with the revision number the
 transaction is based on.  This sequence number ensures that
 transaction names are not reused, even if the transaction is aborted
-and a new transaction based on the same revision is begun.  The
-"transaction-current" file is read and written under the fs-wide
-write-lock.
+and a new transaction based on the same revision is begun.  The only
+operation that FSFS performs on this file is "get and increment";
+the "txn-current-lock" file is locked during this operation.
 
 Filesystem formats
 ------------------
@@ -99,19 +100,19 @@ The format numbers have the following meanings:
 
 Format 1: (understood by Subversion 1.1+)
   Delta representations in revision files must contain only svndiff0
-  data.  No format options are permitted.  No mergeinfo index is
+  data.  No format options are permitted.  No SQLite index is
   present.  No mechanism is provided to prevent transaction name
   reuse.
 
 Format 2: (understood by Subversion 1.4+)
   Delta representations in revision files may contain either svndiff0
-  or svndiff1 data.  No format options are permitted.  No mergeinfo
+  or svndiff1 data.  No format options are permitted.  No SQLite
   index is present.  No mechanism is provided to prevent transaction
   name reuse.
 
 Format 3: (understood by Subversion 1.5+)
   Delta representations in revision files may contain either svndiff0
-  or svndiff1 data.  The 'layout' format option is permitted.  The mergeinfo
+  or svndiff1 data.  The 'layout' format option is permitted.  The SQLite
   index is present, and should be updated whenever the svn:mergeinfo property
   is set on a node.  To prevent transaction name reuse, transaction names
   should be generated using the transaction sequence number stored in the
@@ -358,6 +359,10 @@ follows:
   * For directory node-revs, the "text" field may have the value
     "-1" if entries have been changed and are contained in a
     "contents" file in the node-rev subdirectory.
+
+  * For the directory node-rev representing the root of the
+    transaction, the "is-fresh-txn-root" field indicates that it has
+    not been made mutable yet (see Issue #2608).
 
   * For file node-revs, the "text" field may have the value "-1
     <offset> <length> <size> <digest>" if the text representation is

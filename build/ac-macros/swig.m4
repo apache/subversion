@@ -8,7 +8,7 @@ dnl python bindings.
 AC_DEFUN(SVN_CHECK_SWIG,
 [
   AC_ARG_WITH(swig,
-              AC_HELP_STRING([--with-swig=PATH],
+              AS_HELP_STRING([--with-swig=PATH],
                              [Try to use 'PATH/bin/swig' to build the
                               swig bindings.  If PATH is not specified,
                               look for a 'swig' binary in your PATH.]),
@@ -75,13 +75,13 @@ AC_DEFUN(SVN_FIND_SWIG,
     #   packages/rpm/rhel-4/subversion.spec
     if test -n "$SWIG_VERSION" &&
        test "$SWIG_VERSION" -ge "103024" &&
-       test "$SWIG_VERSION" -le "103029"; then
+       test "$SWIG_VERSION" -le "103031"; then
       SWIG_SUITABLE=yes
     else
       SWIG_SUITABLE=no
       AC_MSG_WARN([Detected SWIG version $SWIG_VERSION_RAW])
       AC_MSG_WARN([Subversion requires 1.3.24 or later, and is known to work])
-      AC_MSG_WARN([with versions up to 1.3.29])
+      AC_MSG_WARN([with versions up to 1.3.31])
     fi
   fi
  
@@ -204,7 +204,7 @@ AC_DEFUN(SVN_FIND_SWIG,
       svn_cv_ruby_sitedir="$rbconfig_sitedir"
     ])
     AC_ARG_WITH([ruby-sitedir],
-    AC_HELP_STRING([--with-ruby-sitedir=SITEDIR],
+    AS_HELP_STRING([--with-ruby-sitedir=SITEDIR],
                                [install Ruby bindings in SITEDIR
                                 (default is same as ruby's one)]),
     [svn_ruby_installdir="$withval"],
@@ -231,11 +231,11 @@ AC_DEFUN(SVN_FIND_SWIG,
       svn_cv_ruby_test_verbose="normal"
     ])
     AC_ARG_WITH([ruby-test-verbose],
-    AC_HELP_STRING([--with-ruby-test-verbose=LEVEL],
+    AS_HELP_STRING([--with-ruby-test-verbose=LEVEL],
                                [how to use output level for Ruby bindings tests
                                 (default is normal)]),
     [svn_ruby_test_verbose="$withval"],
-		  [svn_ruby_test_verbose="$svn_cv_ruby_test_verbose"])
+                  [svn_ruby_test_verbose="$svn_cv_ruby_test_verbose"])
       SWIG_RB_TEST_VERBOSE="$svn_ruby_test_verbose"
       AC_MSG_RESULT([$SWIG_RB_TEST_VERBOSE])
   fi

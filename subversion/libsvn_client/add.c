@@ -386,7 +386,7 @@ add_dir_recursive(const char *dirname,
           svn_depth_t depth_below_here = depth;
           if (depth == svn_depth_immediates)
             depth_below_here = svn_depth_empty;
-          
+
           SVN_ERR(add_dir_recursive(fullpath, dir_access, depth_below_here,
                                     force, no_ignore, ctx, subpool));
         }
@@ -557,7 +557,7 @@ svn_client_add3(const char *path,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
-  return svn_client_add4(path, SVN_DEPTH_FROM_RECURSE(recursive),
+  return svn_client_add4(path, SVN_DEPTH_INFINITY_OR_FILES(recursive),
                          force, no_ignore, FALSE, ctx,
                          pool);
 }

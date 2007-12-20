@@ -65,6 +65,7 @@ Node-kind: file
 Node-action: add
 Node-copyfrom-rev: 1
 Node-copyfrom-path: foo%20bar.txt
+Text-copy-source-md5: e58d666df0d6cc6e87a7e48440d637e9
 
 
 Node-path: foo%20bar.txt
@@ -94,6 +95,7 @@ Node-kind: file
 Node-action: add
 Node-copyfrom-rev: 2
 Node-copyfrom-path: foo bar.txt
+Text-copy-source-md5: e58d666df0d6cc6e87a7e48440d637e9
 
 
 Node-path: foo bar.txt

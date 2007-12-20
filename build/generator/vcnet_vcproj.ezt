@@ -25,7 +25,7 @@
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="TRUE"
 [end]				AdditionalIncludeDirectories="[for includes][includes][if-index includes last][else];[end][end]"
-				PreprocessorDefinitions="[if-any instrument_apr_pools]APR_POOL_DEBUG=[instrument_apr_pools];[end][for configs.defines][configs.defines][if-index configs.defines last][else];[end][end]"
+				PreprocessorDefinitions="[if-any instrument_apr_pools]APR_POOL_DEBUG=[instrument_apr_pools];[end][for configs.defines][configs.defines][if-index configs.defines last][else];[end][end];_CRT_SECURE_NO_WARNINGS"
 [is configs.name "Debug"]				MinimalRebuild="TRUE"
 				RuntimeLibrary="3"
 				BufferSecurityCheck="TRUE"
@@ -50,7 +50,7 @@
 [end][is configs.name "Debug"]				LinkIncremental="2"
 [else]				LinkIncremental="1"
 [end]				AdditionalLibraryDirectories="..\..\..\db4-win32\lib;[for configs.libdirs][configs.libdirs];[end]"
-				TargetMachine="1"
+				TargetMachine="[is platforms "Win32"]1[end][is platforms "x64"]17[end]"
 				IgnoreDefaultLibraryNames="libc.lib"
 [if-any def_file]				ModuleDefinitionFile="[def_file]"
 [end]				GenerateDebugInformation="TRUE"
@@ -63,6 +63,7 @@
 [is target_type "4"]
 			<Tool
 				Name="VCLibrarianTool"
+				AdditionalOptions="[is platforms "win32"]/MACHINE:X86[end][is platforms "x64"]/MACHINE:X64[end]"
 				OutputFile="$(OutDir)\[target.output_name]"/>
 [end]			<Tool
 				Name="VCMIDLTool"/>
@@ -82,36 +83,36 @@
 [end][end]	</Configurations>
 	<Files>[if-any target.desc]
 		<File
-			RelativePath="..\svn.rc">[for configs]
+			RelativePath="..\svn.rc">[for platforms][for configs]
 			<FileConfiguration
-				Name="[configs.name]|Win32">
+				Name="[configs.name]|[platforms]">
 				<Tool
 					Name="VCResourceCompilerTool"
 					AdditionalIncludeDirectories="[for includes][includes][if-index includes last][else];[end][end]"
 					PreprocessorDefinitions="SVN_FILE_NAME=[target.output_name];SVN_FILE_DESCRIPTION=[target.desc];[is configs.name "Debug"]_DEBUG[else]NDEBUG[end]"/>
-			</FileConfiguration>[end]
+			</FileConfiguration>[end][end]
 		</File>[end]
 [for sources]		<File
 			RelativePath="[sources.path]">
-[if-any sources.custom_build][for configs]
+[if-any sources.custom_build][for platforms][for configs]
 			<FileConfiguration
-				Name="[configs.name]|Win32">
+				Name="[configs.name]|[platforms]">
 				<Tool
 					Name="VCCustomBuildTool"
 					CommandLine="[sources.custom_build]"
 					AdditionalDependencies="[for sources.user_deps]&quot;[sources.user_deps]&quot;;[end]"
 					Outputs="&quot;[sources.custom_target]&quot;"/>
 			</FileConfiguration>
-[end][end]
-[if-any sources.reldir][for configs]
+[end][end][end]
+[if-any sources.reldir][for platforms][for configs]
 			<FileConfiguration
-				Name="[configs.name]|Win32">
+				Name="[configs.name]|[platforms]">
 				<Tool
 					Name="VCCLCompilerTool"
 					ObjectFile="$(IntDir)/[sources.reldir]/"
 					ProgramDataBaseFileName="$(IntDir)/[sources.reldir]/"/>
 			</FileConfiguration>
-[end][end]
+[end][end][end]
 		</File>
 [end]
 [is target_type "2"]		<File RelativePath="..\empty.c"/>[end]

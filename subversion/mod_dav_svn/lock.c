@@ -758,10 +758,10 @@ append_locks(dav_lockdb *lockdb,
                  slock->owner);
 
   /* Log the locking as a 'high-level' action. */
-  apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION",
-                apr_psprintf(resource->info->r->pool,
-                             "lock '%s'",
-                             svn_path_uri_encode(slock->path,
+  dav_svn__operational_log(resource->info,
+                           apr_psprintf(resource->info->r->pool,
+                                        "lock %s",
+                                        svn_path_uri_encode(slock->path,
                                                  resource->info->r->pool)));
 
   return 0;
@@ -845,9 +845,9 @@ remove_lock(dav_lockdb *lockdb,
                                     resource->pool);
 
       /* Log the unlocking as a 'high-level' action. */
-      apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION",
-                    apr_psprintf(resource->info->r->pool,
-                                 "unlock '%s'",
+      dav_svn__operational_log(resource->info,
+                               apr_psprintf(resource->info->r->pool,
+                                 "unlock %s",
                                  svn_path_uri_encode(resource->info->repos_path,
                                                      resource->info->r->pool)));
     }

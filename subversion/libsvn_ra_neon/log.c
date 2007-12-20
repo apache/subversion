@@ -59,11 +59,9 @@ struct log_baton
   /* Place to hold revprop name. */
   const char *revprop_name;
   /* pre-1.5 compatibility */
-  svn_boolean_t seen_revprop_element;
   svn_boolean_t want_author;
   svn_boolean_t want_date;
   svn_boolean_t want_message;
-  svn_boolean_t want_custom_revprops;
 
   /* The current changed path item. */
   svn_log_changed_path_t *this_path_item;
@@ -125,8 +123,6 @@ log_start_element(int *elem, void *baton, int parent,
         SVN_RA_NEON__XML_CDATA },
       { SVN_XML_NAMESPACE, "replaced-path", ELEM_replaced_path,
         SVN_RA_NEON__XML_CDATA },
-      { SVN_XML_NAMESPACE, "no-custom-revprops", ELEM_no_custom_revprops,
-        SVN_RA_NEON__XML_CDATA },
       { SVN_XML_NAMESPACE, "revprop", ELEM_revprop,
         SVN_RA_NEON__XML_CDATA },
       { "DAV:", SVN_DAV__VERSION_NAME, ELEM_version_name,
@@ -160,15 +156,13 @@ log_start_element(int *elem, void *baton, int parent,
       svn_stringbuf_setempty(lb->cdata);
       if (elm->id == ELEM_revprop)
         {
-          lb->seen_revprop_element = TRUE;
-          lb->revprop_name = svn_xml_get_attr_value("name", atts);
+          lb->revprop_name = apr_pstrdup(lb->subpool,
+                                         svn_xml_get_attr_value("name",
+                                                                atts));
           if (lb->revprop_name == NULL)
             return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                                      _("Missing name attr in revprop element"));
         }
-      break;
-    case ELEM_no_custom_revprops:
-      lb->seen_revprop_element = TRUE;
       break;
     case ELEM_has_children:
       lb->log_entry->has_children = TRUE;
@@ -290,13 +284,6 @@ log_end_element(void *baton, int state,
       break;
     case ELEM_log_item:
       {
-        if (lb->want_custom_revprops && !lb->seen_revprop_element)
-          {
-            /* Caller asked for custom revprops, but server is too old. */
-            return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
-                                    _("Server does not support custom revprops"
-                                      " via log"));
-          }
         /* Compatability cruft so that we can provide limit functionality
            even if the server doesn't support it.
 
@@ -351,6 +338,7 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
   int i;
   svn_ra_neon__session_t *ras = session->priv;
   svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
+  svn_boolean_t want_custom_revprops;
   struct log_baton lb;
   svn_string_t bc_url, bc_relative;
   const char *final_bc_url;
@@ -409,7 +397,7 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
   if (revprops)
     {
       lb.want_author = lb.want_date = lb.want_message = FALSE;
-      lb.want_custom_revprops = FALSE;
+      want_custom_revprops = FALSE;
       for (i = 0; i < revprops->nelts; i++)
         {
           char *name = APR_ARRAY_IDX(revprops, i, char *);
@@ -423,7 +411,7 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
           else if (strcmp(name, SVN_PROP_REVISION_LOG) == 0)
             lb.want_message = TRUE;
           else
-            lb.want_custom_revprops = TRUE;
+            want_custom_revprops = TRUE;
         }
     }
   else
@@ -432,8 +420,20 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
                                apr_psprintf(pool,
                                             "<S:all-revprops/>"));
       lb.want_author = lb.want_date = lb.want_message = TRUE;
-      lb.want_custom_revprops = TRUE;
+      want_custom_revprops = TRUE;
     }
+
+  if (want_custom_revprops)
+    {
+      svn_boolean_t has_log_revprops;
+      SVN_ERR(svn_ra_has_capability(session, &has_log_revprops,
+                                    SVN_RA_CAPABILITY_LOG_REVPROPS, pool));
+      if (!has_log_revprops)
+        return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
+                                _("Server does not support custom revprops"
+                                  " via log"));
+    }
+
 
   if (paths)
     {
@@ -459,7 +459,6 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
   lb.limit_compat_bailout = FALSE;
   lb.cdata = svn_stringbuf_create("", pool);
   lb.log_entry = svn_log_entry_create(pool);
-  lb.seen_revprop_element = FALSE;
   lb.want_cdata = NULL;
   reset_log_item(&lb);
 

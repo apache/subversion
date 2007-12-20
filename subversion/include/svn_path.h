@@ -18,7 +18,7 @@
  * @file svn_path.h
  * @brief A path manipulation library
  *
- * All incoming and outgoing paths are non-null and in UTF-8, unless
+ * All incoming and outgoing paths are non-NULL and in UTF-8, unless
  * otherwise documented.
  *
  * No result path ever ends with a separator, no matter whether the
@@ -28,7 +28,7 @@
  * them to be in canonical form as defined by the Subversion path
  * library itself.  The only functions which do *not* have such
  * expectations are:
- * 
+ *
  *    - @c svn_path_canonicalize()
  *    - @c svn_path_is_canonical()
  *    - @c svn_path_internal_style()
@@ -145,7 +145,7 @@ void svn_path_splitext(const char **path_root, const char **path_ext,
 apr_size_t
 svn_path_component_count(const char *path);
 
-/** Add a @a component (a null-terminated C-string) to the
+/** Add a @a component (a NULL-terminated C-string) to the
  * canonicalized @a path.  @a component is allowed to contain
  * directory separators.
  *
@@ -171,7 +171,7 @@ void svn_path_remove_components(svn_stringbuf_t *path, apr_size_t n);
 /** Divide the canonicalized @a path into @a *dirpath and @a
  * *base_name, allocated in @a pool.
  *
- * If @a dirpath or @a base_name is null, then don't set that one.
+ * If @a dirpath or @a base_name is NULL, then don't set that one.
  *
  * Either @a dirpath or @a base_name may be @a path's own address, but they
  * may not both be the same address, or the results are undefined.
@@ -222,7 +222,7 @@ svn_boolean_t svn_dirent_is_root(const char *dirent, apr_size_t len);
 const char *svn_path_canonicalize(const char *path, apr_pool_t *pool);
 
 /** Return @c TRUE iff path is canonical.  Use @a pool for temporary
- * allocations. 
+ * allocations.
  *
  * @note The test for canonicalization is currently defined as
  * "looks exactly the same as @c svn_path_canonicalize() would make
@@ -278,28 +278,28 @@ svn_path_split_if_file(const char *path,
 
 /** Find the common prefix of the canonicalized paths in @a targets
  * (an array of <tt>const char *</tt>'s), and remove redundant paths if @a
- * remove_redundancies is true.
+ * remove_redundancies is TRUE.
  *
  *   - Set @a *pcommon to the absolute path of the path or URL common to
  *     all of the targets.  If the targets have no common prefix, or
  *     are a mix of URLs and local paths, set @a *pcommon to the
  *     empty string.
  *
- *   - If @a pcondensed_targets is non-null, set @a *pcondensed_targets
+ *   - If @a pcondensed_targets is non-NULL, set @a *pcondensed_targets
  *     to an array of targets relative to @a *pcommon, and if
- *     @a remove_redundancies is true, omit any paths/URLs that are
+ *     @a remove_redundancies is TRUE, omit any paths/URLs that are
  *     descendants of another path/URL in @a targets.  If *pcommon
  *     is empty, @a *pcondensed_targets will contain full URLs and/or
  *     absolute paths; redundancies can still be removed (from both URLs
- *     and paths).  If @a pcondensed_targets is null, leave it alone.
+ *     and paths).  If @a pcondensed_targets is NULL, leave it alone.
  *
  * Else if there is exactly one target, then
  *
  *   - Set @a *pcommon to that target, and
  *
- *   - If @a pcondensed_targets is non-null, set @a *pcondensed_targets
+ *   - If @a pcondensed_targets is non-NULL, set @a *pcondensed_targets
  *     to an array containing zero elements.  Else if
- *     @a pcondensed_targets is null, leave it alone.
+ *     @a pcondensed_targets is NULL, leave it alone.
  *
  * If there are no items in @a targets, set @a *pcommon and (if
  * applicable) @a *pcondensed_targets to @c NULL.
@@ -365,6 +365,17 @@ svn_path_remove_redundancies(apr_array_header_t **pcondensed_targets,
 apr_array_header_t *svn_path_decompose(const char *path,
                                        apr_pool_t *pool);
 
+/** Join an array of <tt>const char *</tt> components into a '/'
+ * separated path, allocated in @a pool.  The joined path is absolute if
+ * the first component is a lone dir separator.
+ *
+ * Calling svn_path_compose() on the output of svn_path_decompose()
+ * will return the exact same path.
+ *
+ * @since New in 1.5.
+ */
+const char *svn_path_compose(const apr_array_header_t *components,
+                             apr_pool_t *pool);
 
 /** Test that @a name is a single path component, that is:
  *   - not @c NULL or empty.
@@ -409,8 +420,8 @@ const char *svn_path_is_child(const char *path1,
                               const char *path2,
                               apr_pool_t *pool);
 
-/** Return true if @a path1 is an ancestor of @a path2 or the paths are equal
- * and false otherwise.
+/** Return TRUE if @a path1 is an ancestor of @a path2 or the paths are equal
+ * and FALSE otherwise.
  *
  * @since New in 1.3.
  */
@@ -438,11 +449,11 @@ svn_error_t *svn_path_check_valid(const char *path, apr_pool_t *pool);
 
 /** URI/URL stuff
  *
- * @defgroup svn_path_uri_stuff URI/URL stuff
+ * @defgroup svn_path_uri_stuff URI/URL conversion
  * @{
  */
 
-/** Return true iff @a path looks like a valid absolute URL. */
+/** Return TRUE iff @a path looks like a valid absolute URL. */
 svn_boolean_t svn_path_is_url(const char *path);
 
 /** Return @c TRUE iff @a path is URI-safe, @c FALSE otherwise. */
@@ -492,7 +503,7 @@ const char *svn_path_uri_autoescape(const char *uri,
 
 /** Charset conversion stuff
  *
- * @defgroup svn_path_charset_stuff Charset conversion stuff
+ * @defgroup svn_path_charset_stuff Charset conversion
  * @{
  */
 

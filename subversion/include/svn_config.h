@@ -83,6 +83,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_DIFF_CMD                  "diff-cmd"
 #define SVN_CONFIG_OPTION_DIFF3_CMD                 "diff3-cmd"
 #define SVN_CONFIG_OPTION_DIFF3_HAS_PROGRAM_ARG     "diff3-has-program-arg"
+#define SVN_CONFIG_OPTION_MERGE_TOOL_CMD            "merge-tool-cmd"
 #define SVN_CONFIG_SECTION_MISCELLANY           "miscellany"
 #define SVN_CONFIG_OPTION_GLOBAL_IGNORES            "global-ignores"
 #define SVN_CONFIG_OPTION_LOG_ENCODING              "log-encoding"
@@ -121,12 +122,20 @@ typedef struct svn_config_t svn_config_t;
 /*** Configuration Default Values ***/
 
 /* '*' matches leading dots, e.g. '*.rej' matches '.foo.rej'. */
-#define SVN_CONFIG_DEFAULT_GLOBAL_IGNORES \
-    "*.o *.lo *.la *.al .libs *.so *.so.[0-9]* *.a *.pyc *.pyo" \
-    " *.rej *~ #*# .#* .*.swp .DS_Store"
+/* We want this to be printed on two lines in the generated config file,
+ * but we don't want the # character to end up in the variable.
+ */
+#define SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_1 \
+  "*.o *.lo *.la *.al .libs *.so *.so.[0-9]* *.a *.pyc *.pyo"
+#define SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_2 \
+  "*.rej *~ #*# .#* .*.swp .DS_Store"
 
-#define SVN_CONFIG_TRUE  "true"
-#define SVN_CONFIG_FALSE "false"
+#define SVN_CONFIG_DEFAULT_GLOBAL_IGNORES \
+  SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_1 " " \
+  SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_2
+
+#define SVN_CONFIG_TRUE  "TRUE"
+#define SVN_CONFIG_FALSE "FALSE"
 
 
 /** Read configuration information from the standard sources and merge it
@@ -191,6 +200,8 @@ void svn_config_get(svn_config_t *cfg, const char **valuep,
  * @a value.
  *
  * This function invalidates all value expansions in @a cfg.
+ *
+ * To remove an option, pass NULL for the @c value.
  */
 void svn_config_set(svn_config_t *cfg,
                     const char *section, const char *option,
@@ -199,7 +210,7 @@ void svn_config_set(svn_config_t *cfg,
 /** Like svn_config_get(), but for boolean values.
  *
  * Parses the option as a boolean value. The recognized representations
- * are 'true'/'false', 'yes'/'no', 'on'/'off', '1'/'0'; case does not
+ * are 'TRUE'/'FALSE', 'yes'/'no', 'on'/'off', '1'/'0'; case does not
  * matter. Returns an error if the option doesn't contain a known string.
  */
 svn_error_t *svn_config_get_bool(svn_config_t *cfg, svn_boolean_t *valuep,
@@ -208,7 +219,7 @@ svn_error_t *svn_config_get_bool(svn_config_t *cfg, svn_boolean_t *valuep,
 
 /** Like svn_config_set(), but for boolean values.
  *
- * Sets the option to 'true'/'false', depending on @a value.
+ * Sets the option to 'TRUE'/'FALSE', depending on @a value.
  */
 void svn_config_set_bool(svn_config_t *cfg,
                          const char *section, const char *option,
@@ -374,7 +385,7 @@ svn_error_t *svn_config_ensure(const char *config_dir, apr_pool_t *pool);
 
 /** Accessing cached authentication data in the user config area.
  *
- * @defgroup cached_authentication_data cached authentication data.
+ * @defgroup cached_authentication_data Cached authentication data
  * @{
  */
 

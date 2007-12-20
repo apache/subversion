@@ -29,7 +29,7 @@ AC_DEFUN(SVN_LIB_SQLITE,
   AC_MSG_NOTICE([checking sqlite library])
 
   AC_ARG_WITH(sqlite,
-              AC_HELP_STRING([--with-sqlite=PREFIX],
+              AS_HELP_STRING([--with-sqlite=PREFIX],
                              [Use installed SQLite library.]),
   [
     if test "$withval" = "yes" ; then
@@ -52,6 +52,8 @@ AC_DEFUN(SVN_LIB_SQLITE,
           svn_lib_sqlite="yes"
           SVN_SQLITE_INCLUDES="`$pkg_config $SQLITE_PKGNAME --cflags`"
           SVN_SQLITE_LIBS="`$pkg_config $SQLITE_PKGNAME --libs`"
+          AC_CHECK_LIB(sqlite3, sqlite3_threadsafe,
+                       [threadsafety_runtime_check_avail=yes])
           ;;
         *)
           AC_MSG_RESULT([none or unsupported $sqlite_version])
@@ -62,11 +64,16 @@ AC_DEFUN(SVN_LIB_SQLITE,
     if test -z "$svn_lib_sqlite"; then
       SVN_SQLITE_CONFIG("")
       if test -z "$svn_lib_sqlite"; then
-        AC_WARN([SQLite not found - libsvn_ra_local will be disabled.])
+        AC_MSG_WARN([SQLite not found - libsvn_ra_local will be disabled.])
         SVN_DOWNLOAD_SQLITE
       fi
     fi
   ])
+
+  if test "$threadsafety_runtime_check_avail" = "yes"; then
+    AC_DEFINE([SVN_HAVE_SQLITE_THREADSAFE_PREDICATE], [1],
+      [Defined if SQLite 3.5+'s thread-safety runtime check is available.])
+  fi
 
   AC_SUBST(SVN_SQLITE_INCLUDES)
   AC_SUBST(SVN_SQLITE_LIBS)
@@ -94,7 +101,11 @@ AC_DEFUN(SVN_SQLITE_CONFIG,
         else
           SVN_SQLITE_LIBS="-lsqlite3"
         fi
-      ]) ])
+
+        AC_CHECK_LIB(sqlite3, sqlite3_threadsafe,
+                     [threadsafety_runtime_check_avail=yes])
+      ])
+    ])
 
   if test "$sqlite_dir" != "" && test -d "$sqlite_dir"; then
     CPPFLAGS="$save_CPPFLAGS"

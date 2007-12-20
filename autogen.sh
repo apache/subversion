@@ -57,6 +57,12 @@ if [ ! -f $ltfile ]; then
 fi
 
 echo "Copying libtool helper: $ltfile"
+# An ancient helper might already be present from previous builds,
+# and it might be write-protected (e.g. mode 444, seen on FreeBSD).
+# This would cause cp to fail and print an error message, but leave
+# behind a potentially outdated libtool helper.  So, remove before
+# copying:
+rm -f build/libtool.m4
 cp $ltfile build/libtool.m4
 
 # Create the file detailing all of the build outputs for SVN.
@@ -67,7 +73,7 @@ cp $ltfile build/libtool.m4
 
 PYTHON="`./build/find_python.sh`"
 if test -z "$PYTHON"; then
-  echo "Python 2.0 or later is required to run autogen.sh"
+  echo "Python 2.2 or later is required to run autogen.sh"
   echo "If you have a suitable Python installed, but not on the"
   echo "PATH, set the environment variable PYTHON to the full path"
   echo "to the Python executable, and re-run autogen.sh"

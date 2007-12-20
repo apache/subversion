@@ -66,19 +66,19 @@ typedef struct fs_library_vtable_t
      this statement, now that the minor version has increased. */
   const svn_version_t *(*get_version)(void);
 
-  /* The open/create/open_for_recovery functions are serialized so that they
-     may use the common_pool parameter to allocate fs-global objects such as
-     the bdb env cache. */
+  /* The open_fs/create/open_fs_for_recovery functions are serialized
+     so that they may use the common_pool parameter to allocate
+     fs-global objects such as the bdb env cache. */
   svn_error_t *(*create)(svn_fs_t *fs, const char *path, apr_pool_t *pool,
                          apr_pool_t *common_pool);
-  svn_error_t *(*open)(svn_fs_t *fs, const char *path, apr_pool_t *pool,
-                       apr_pool_t *common_pool);
+  svn_error_t *(*open_fs)(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+                          apr_pool_t *common_pool);
   /* open_for_recovery() is like open(), but used to fill in an fs pointer
      that will be passed to recover().  We assume that the open() method
      might not be immediately appropriate for recovery. */
-  svn_error_t *(*open_for_recovery)(svn_fs_t *fs, const char *path,
-                                    apr_pool_t *pool,
-                                    apr_pool_t *common_pool);
+  svn_error_t *(*open_fs_for_recovery)(svn_fs_t *fs, const char *path,
+                                       apr_pool_t *pool,
+                                       apr_pool_t *common_pool);
   svn_error_t *(*delete_fs)(const char *path, apr_pool_t *pool);
   svn_error_t *(*hotcopy)(const char *src_path, const char *dest_path,
                           svn_boolean_t clean, apr_pool_t *pool);
@@ -198,6 +198,8 @@ typedef struct txn_vtable_t
                               const svn_string_t *value, apr_pool_t *pool);
   svn_error_t *(*root)(svn_fs_root_t **root_p, svn_fs_txn_t *txn,
                        apr_pool_t *pool);
+  svn_error_t *(*change_props)(svn_fs_txn_t *txn, apr_array_header_t *props,
+                               apr_pool_t *pool);
 } txn_vtable_t;
 
 
@@ -224,6 +226,9 @@ typedef struct root_vtable_t
   svn_error_t *(*node_created_rev)(svn_revnum_t *revision,
                                    svn_fs_root_t *root, const char *path,
                                    apr_pool_t *pool);
+  svn_error_t *(*node_origin_rev)(svn_revnum_t *revision,
+                                  svn_fs_root_t *root, const char *path,
+                                  apr_pool_t *pool);
   svn_error_t *(*node_created_path)(const char **created_path,
                                     svn_fs_root_t *root, const char *path,
                                     apr_pool_t *pool);
@@ -302,9 +307,6 @@ typedef struct root_vtable_t
                         svn_fs_root_t *ancestor_root,
                         const char *ancestor_path,
                         apr_pool_t *pool);
-  svn_error_t *(*change_mergeinfo)(svn_fs_root_t *root, const char *path,
-                                   apr_hash_t *info,
-                                   apr_pool_t *pool);
   svn_error_t *(*get_mergeinfo)(apr_hash_t **minfohash,
                                 svn_fs_root_t *root,
                                 const apr_array_header_t *paths,
@@ -341,13 +343,13 @@ typedef struct id_vtable_t
 
 /* These are transaction properties that correspond to the bitfields
    in the 'flags' argument to svn_fs_lock().  */
-#define SVN_FS_PROP_TXN_CHECK_LOCKS            SVN_PROP_PREFIX "check-locks"
-#define SVN_FS_PROP_TXN_CHECK_OOD              SVN_PROP_PREFIX "check-ood"
+#define SVN_FS__PROP_TXN_CHECK_LOCKS           SVN_PROP_PREFIX "check-locks"
+#define SVN_FS__PROP_TXN_CHECK_OOD             SVN_PROP_PREFIX "check-ood"
 
 /* This transaction property determines whether the txn has mergeinfo
    properties set in it, and thus will need some info inserted about
    uid->rev mapping in the mergeinfo table  */
-#define SVN_FS_PROP_TXN_CONTAINS_MERGEINFO     SVN_PROP_PREFIX "contains-mergeinfo"
+#define SVN_FS__PROP_TXN_CONTAINS_MERGEINFO    SVN_PROP_PREFIX "contains-mergeinfo"
 
 
 struct svn_fs_t

@@ -91,7 +91,7 @@ svn_cl__propset(apr_getopt_t *os,
 
   /* Suck up all the remaining arguments into a targets array */
 
-  /* Before allowing svn_opt_args_to_target_array() to canonicalize
+  /* Before allowing svn_opt_args_to_target_array2() to canonicalize
      all the targets, we need to build a list of targets made of both
      ones the user typed, as well as any specified by --changelist.  */
   if (opt_state->changelist)
@@ -220,7 +220,7 @@ svn_cl__propset(apr_getopt_t *os,
             {
               SVN_ERR
                 (svn_cmdline_printf
-                 (pool, SVN_DEPTH_TO_RECURSE(opt_state->depth)
+                 (pool, SVN_DEPTH_IS_RECURSIVE(opt_state->depth)
                   ? _("property '%s' set (recursively) on '%s'\n")
                   : _("property '%s' set on '%s'\n"),
                   pname, svn_path_local_style(target, pool)));

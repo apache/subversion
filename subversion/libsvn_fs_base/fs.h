@@ -61,6 +61,7 @@ typedef struct
   DB *uuids;
   DB *locks;
   DB *lock_tokens;
+  DB *node_origins;
 
   /* A boolean for tracking when we have a live Berkeley DB
      transaction trail alive. */

@@ -19,12 +19,9 @@
  * @brief Interface of the class ProplistCallback
  */
 
-#if !defined(_PROPLISTCALLBACK_H__INCLUDED_)
-#define _PROPLISTCALLBACK_H__INCLUDED_
+#ifndef PROPLISTCALLBACK_H
+#define PROPLISTCALLBACK_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
 #include <jni.h>
 #include "svn_client.h"
 
@@ -57,5 +54,4 @@ class ProplistCallback
   jobject makeMapFromHash(apr_hash_t *prop_hash, apr_pool_t *pool);
 };
 
-// !defined(_PROPLISTCALLBACK_H__INCLUDED_)
-#endif
+#endif  // PROPLISTCALLBACK_H

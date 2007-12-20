@@ -19,12 +19,8 @@
  * @brief Interface of the class BlameCallback
  */
 
-#if !defined(AFX_BLAMECALLBACK_H__3BBF3F0F_C80C_45C9_8AC3_E1AF07E5B810__INCLUDED_)
-#define AFX_BLAMECALLBACK_H__3BBF3F0F_C80C_45C9_8AC3_E1AF07E5B810__INCLUDED_
-
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
+#ifndef BLAMECALLBACK_H
+#define BLAMECALLBACK_H
 
 #include <jni.h>
 #include "svn_client.h"
@@ -65,5 +61,4 @@ class BlameCallback
   jobject m_callback;
 };
 
-// !defined(AFX_BLAMECALLBACK_H__3BBF3F0F_C80C_45C9_8AC3_E1AF07E5B810__INCLUDED_)
-#endif
+#endif  // BLAMECALLBACK_H

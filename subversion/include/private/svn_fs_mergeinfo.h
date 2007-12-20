@@ -24,13 +24,13 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* The name of the sqlite mergeinfo database. */
-#define SVN_FS_MERGEINFO__DB_NAME "mergeinfo.db"
+/* The functions declared here are the API between the two FS
+   libraries and the mergeinfo index.  Currently, the index is stored
+   in a sqlite database (which is created using a function in
+   private/svn_fs_sqlite.h); to implement a different backend, just
+   change these three functions.
+ */
 
-/* Create the mergeinfo index under PATH.  Use POOL for any temporary
-   allocations. */
-svn_error_t *
-svn_fs_mergeinfo__create_index(const char *path, apr_pool_t *pool);
 
 /* Update the mergeinfo index according to the changes made in
    transaction TXN for revision NEW_REV.  MERGEINFO_FOR_PATHS is the
@@ -67,12 +67,13 @@ svn_fs_mergeinfo__get_mergeinfo(apr_hash_t **mergeinfo,
    mergeinfo also includes elided mergeinfo for each one of PATHS.  This
    function conforms to the get_mergeinfo_for_tree() interface.  */
 svn_error_t *
-svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
-                                         svn_fs_root_t *root,
-                                         const apr_array_header_t *paths,
-                                         svn_fs_mergeinfo_filter_func_t filter_func,
-                                         void *filter_func_baton,
-                                         apr_pool_t *pool);
+svn_fs_mergeinfo__get_mergeinfo_for_tree(
+  apr_hash_t **mergeinfo,
+  svn_fs_root_t *root,
+  const apr_array_header_t *paths,
+  svn_fs_mergeinfo_filter_func_t filter_func,
+  void *filter_func_baton,
+  apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

@@ -786,13 +786,60 @@ EOE
     assert_equal(0, ctx.up(@wc_path, 0))
     assert(!File.exists?(path2))
     Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
-      editor = access.update_editor(0, @wc_path)
+      editor = access.update_editor(@wc_path, 0)
       assert_equal(0, editor.target_revision)
 
-      reporter = session.update2(rev2, @wc_path, editor)
+      reporter = session.update2(rev2, "", editor)
       access.crawl_revisions(@wc_path, reporter)
       assert_equal(rev2, editor.target_revision)
     end
+  end
+
+  def test_update_editor_options
+    log = "sample log"
+    file1 = "hello.txt"
+    file2 = "hello2.txt"
+    src = "Hello"
+    dir = "dir"
+    dir_path = File.join(@wc_path, dir)
+    path1 = File.join(dir_path, file1)
+    path2 = File.join(dir_path, file2)
+
+    ctx = make_context(log)
+    config = {}
+    callbacks = Svn::Ra::Callbacks.new(ctx.auth_baton)
+    session = Svn::Ra::Session.open(@repos_uri)
+
+    FileUtils.mkdir(dir_path)
+    File.open(path1, "w") {|f| f.print(src)}
+    ctx.add(dir_path)
+    rev1 = ctx.commit(@wc_path).revision
+
+    File.open(path1, "w") {|f| f.print(src * 2)}
+    File.open(path2, "w") {|f| f.print(src)}
+    ctx.add(path2)
+    rev2 = ctx.commit(@wc_path).revision
+
+    assert(File.exists?(path2))
+    assert_equal(0, ctx.up(@wc_path, 0))
+    assert(!File.exists?(path2))
+    notification_count = 0
+    Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
+      notify_func = Proc.new {|n| notification_count += 1}
+      assert_raises(ArgumentError) do
+        access.update_editor2(:target_revision => 0,
+                              :target => @wc_path,
+                              :notify_fun => notify_func)
+      end
+      editor = access.update_editor(@wc_path, 0, true, nil, false, nil,
+                                    notify_func)
+      assert_equal(0, editor.target_revision)
+
+      reporter = session.update2(rev2, "", editor)
+      access.crawl_revisions(@wc_path, reporter)
+      assert_equal(rev2, editor.target_revision)
+    end
+    assert_equal(4, notification_count, "wrong number of notifications")
   end
 
   def test_switch_editor
@@ -828,10 +875,10 @@ EOE
     assert_equal(rev2, ctx.switch(@wc_path, dir2_uri))
     assert(File.exists?(File.join(@wc_path, file2)))
     Svn::Wc::AdmAccess.open_anchor(@wc_path) do |access, dir_access, target|
-      editor = dir_access.switch_editor(rev2, @wc_path, dir1_uri)
+      editor = dir_access.switch_editor(@wc_path, dir1_uri, rev2)
       assert_equal(rev2, editor.target_revision)
 
-      reporter = session.switch2(rev1, @wc_path, dir1_uri, editor)
+      reporter = session.switch2(rev1, dir1, dir1_uri, editor)
       dir_access.crawl_revisions(@wc_path, reporter)
       assert_equal(rev1, editor.target_revision)
     end
@@ -894,7 +941,7 @@ EOE
     assert(Svn::Wc.ignore?("xxx.C", ["*.H", "*.C"]))
   end
 
-  def test_change_list
+  def test_changelist
     log = "sample log"
     file = "hello.txt"
     src = "Hello"
@@ -906,30 +953,31 @@ EOE
     rev1 = ctx.commit(@wc_path).revision
 
     Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
-      assert_nil(access.entry(@wc_path).change_list)
+      assert_nil(access.entry(@wc_path).changelist)
     end
 
     notifies = []
     notify_collector = Proc.new {|notify| notifies << notify }
-    Svn::Wc.set_change_list(path, "123", nil, nil, notify_collector)
+    Svn::Wc.set_changelist(path, "123", nil, nil, notify_collector)
     Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
-      assert("123", access.entry(@wc_path).change_list)
+      assert("123", access.entry(@wc_path).changelist)
     end
     assert_equal([[path, nil]],
                  notifies.collect {|notify| [notify.path, notify.err]})
 
     notifies = []
-    Svn::Wc.set_change_list(path, "456", nil, nil, notify_collector)
+    Svn::Wc.set_changelist(path, "456", nil, nil, notify_collector)
     Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
-      assert("456", access.entry(@wc_path).change_list)
+      assert("456", access.entry(@wc_path).changelist)
     end
-    assert_equal([[path, nil]],
-                 notifies.collect {|notify| [notify.path, notify.err]})
+    assert_equal([[path, Svn::Error::WcChangelistMove],
+                  [path, NilClass]],
+                 notifies.collect {|notify| [notify.path, notify.err.class]})
 
     notifies = []
-    Svn::Wc.set_change_list(path, "789", "000", nil, notify_collector)
+    Svn::Wc.set_changelist(path, "789", "000", nil, notify_collector)
     Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
-      assert("456", access.entry(@wc_path).change_list)
+      assert("456", access.entry(@wc_path).changelist)
     end
     assert_equal([[path, Svn::Error::WcMismatchedChangeList]],
                  notifies.collect {|notify| [notify.path, notify.err.class]})

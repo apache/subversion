@@ -126,6 +126,9 @@ class GeneratorBase(gen_base.GeneratorBase):
         elif val == '2005' or re.match('9(\.\d+)?', val):
           self.vsnet_version = '9.00'
           self.vsnet_proj_ver = '8.00'
+        elif val == '2008' or re.match('10(\.\d+)?', val):
+          self.vsnet_version = '10.00'
+          self.vsnet_proj_ver = '9.00'
         else:
           self.vsnet_version = val
 
@@ -141,8 +144,8 @@ class GeneratorBase(gen_base.GeneratorBase):
     self._find_bdb()
 
   def _find_bdb(self):
-    "Find the Berkley DB library and version"
-    for ver in ("45", "44", "43", "42", "41", "40"):
+    "Find the Berkeley DB library and version"
+    for ver in ("46", "45", "44", "43", "42", "41", "40"):
       lib = "libdb" + ver
       path = os.path.join(self.bdb_path, "lib")
       if os.path.exists(os.path.join(path, lib + ".lib")):
@@ -182,9 +185,11 @@ class WinGeneratorBase(GeneratorBase):
         sys.stderr.write('Generating for VS.NET 2003\n')
       elif self.vsnet_version == '9.00':
         sys.stderr.write('Generating for VS.NET 2005\n')
+      elif self.vsnet_version == '10.00':
+        sys.stderr.write('Generating for VS.NET 2008\n')
       else:
         sys.stderr.write('WARNING: Unknown VS.NET version "%s",'
-                         ' assumimg "%s"\n' % (self.vsnet_version, '7.00'))
+                         ' assuming "%s"\n' % (self.vsnet_version, '7.00'))
         self.vsnet_version = '7.00'
         self.vsnet_proj_ver = '7.00'
 
@@ -261,6 +266,11 @@ class WinGeneratorBase(GeneratorBase):
 
     #Here we can add additional platforms to compile for
     self.platforms = ['Win32']
+    
+    # VS2002 and VS2003 only allow a single platform per project file
+    if subdir == 'vcnet-vcproj':
+      if self.vsnet_version != '7.00' and self.vsnet_version != '8.00':
+        self.platforms = ['Win32','x64']
 
     #Here we can add additional modes to compile for
     self.configs = ['Debug','Release']
@@ -763,6 +773,10 @@ class WinGeneratorBase(GeneratorBase):
     if self.neon_ver >= 26000:
       fakedefines.append("SVN_NEON_0_26=1")
 
+    # check for neon 0.27.x or newer
+    if self.neon_ver >= 27000:
+      fakedefines.append("SVN_NEON_0_27=1")
+
     if self.serf_lib:
       fakedefines.append("SVN_LIBSVN_CLIENT_LINKS_RA_SERF")
 
@@ -1064,6 +1078,8 @@ class WinGeneratorBase(GeneratorBase):
     source_template = name + '.ezt'
     data = {
       'version' : self.vsnet_proj_ver,
+      'configs' : self.configs,
+      'platforms' : self.platforms      
       }
     for key, val in params:
       data[key] = val

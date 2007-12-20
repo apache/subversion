@@ -35,7 +35,7 @@
 #include "reps-strings.h"
 #include "revs-txns.h"
 #include "id.h"
-#include "tree.h"  /* needed for SVN_FS_PROP_TXN_MERGEINFO */
+#include "tree.h"  /* needed for SVN_FS__PROP_TXN_MERGEINFO */
 
 #include "util/fs_skels.h"
 
@@ -963,6 +963,8 @@ svn_fs_base__dag_remove_node(svn_fs_t *fs,
 
   /* Delete the node revision itself. */
   SVN_ERR(svn_fs_base__delete_node_revision(fs, id, noderev->predecessor_id, 
+                                            noderev->predecessor_id 
+                                              ? FALSE : TRUE,
                                             trail, pool));
 
   return SVN_NO_ERROR;
@@ -1441,7 +1443,7 @@ svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
   *new_rev = SVN_INVALID_REVNUM;
   SVN_ERR(svn_fs_bdb__put_rev(new_rev, fs, &revision, trail, pool));
 
-  target_mergeinfo = apr_hash_get(txnprops, SVN_FS_PROP_TXN_MERGEINFO,
+  target_mergeinfo = apr_hash_get(txnprops, SVN_FS__PROP_TXN_MERGEINFO,
                                   APR_HASH_KEY_STRING);
   if (target_mergeinfo)
     {
@@ -1452,16 +1454,16 @@ svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
       SVN_ERR(svn_hash_read2(mergeinfo, stream, NULL, pool));
       SVN_ERR(svn_fs_mergeinfo__update_index(txn, *new_rev, mergeinfo, pool));
       SVN_ERR(svn_fs_base__set_txn_prop
-              (fs, txn_id, SVN_FS_PROP_TXN_MERGEINFO, NULL, trail, pool));
+              (fs, txn_id, SVN_FS__PROP_TXN_MERGEINFO, NULL, trail, pool));
     }
 
-  if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_OOD, APR_HASH_KEY_STRING))
+  if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_OOD, APR_HASH_KEY_STRING))
     SVN_ERR(svn_fs_base__set_txn_prop
-            (fs, txn_id, SVN_FS_PROP_TXN_CHECK_OOD, NULL, trail, pool));
+            (fs, txn_id, SVN_FS__PROP_TXN_CHECK_OOD, NULL, trail, pool));
 
-  if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CHECK_LOCKS, APR_HASH_KEY_STRING))
+  if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS, APR_HASH_KEY_STRING))
     SVN_ERR(svn_fs_base__set_txn_prop
-            (fs, txn_id, SVN_FS_PROP_TXN_CHECK_LOCKS, NULL, trail, pool));
+            (fs, txn_id, SVN_FS__PROP_TXN_CHECK_LOCKS, NULL, trail, pool));
   /* Promote the unfinished transaction to a committed one. */
   SVN_ERR(svn_fs_base__txn_make_committed(fs, txn_id, *new_rev,
                                           trail, pool));

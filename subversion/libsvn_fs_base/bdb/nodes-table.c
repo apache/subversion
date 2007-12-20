@@ -50,9 +50,9 @@ svn_fs_bdb__open_nodes_table(DB **nodes_p,
 
   BDB_ERR(svn_fs_bdb__check_version());
   BDB_ERR(db_create(&nodes, env, 0));
-  BDB_ERR(nodes->open(SVN_BDB_OPEN_PARAMS(nodes, NULL),
-                      "nodes", 0, DB_BTREE,
-                      open_flags, 0666));
+  BDB_ERR((nodes->open)(SVN_BDB_OPEN_PARAMS(nodes, NULL),
+                        "nodes", 0, DB_BTREE,
+                        open_flags, 0666));
 
   /* Create the `next-key' table entry (use '1' because '0' is
      reserved for the root directory to use). */

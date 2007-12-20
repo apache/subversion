@@ -18,6 +18,7 @@
 
 # General modules
 import os
+import sys
 
 # Our testing module
 import svntest
@@ -76,10 +77,11 @@ def get_txns(repo_dir):
   return txns
 
 def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
-                               revs, dump):
+                               revs, dump, *varargs):
   """Load the array of lines passed in 'dump' into the
   current tests' repository and verify the repository content
-  using the array of wc.States passed in revs"""
+  using the array of wc.States passed in revs. VARARGS are optional
+  arguments passed to the 'load' command"""
 
   if type(dump) is type(""):
     dump = [ dump ]
@@ -87,7 +89,7 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
   output, errput = \
           svntest.main.run_command_stdin(
     svntest.main.svnadmin_binary, expected_stderr, 1, dump,
-    'load', '--quiet', sbox.repo_dir)
+    'load', '--quiet', sbox.repo_dir, *varargs)
 
   if expected_stdout:
     if expected_stdout == svntest.verify.AnyOutput:
@@ -113,8 +115,6 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
       svntest.actions.run_and_verify_svn("Updating to r%s" % (rev+1),
                                          svntest.verify.AnyOutput, [],
                                          "update", "-r%s" % (rev+1),
-                                         '--username', svntest.main.wc_author,
-                                         '--password', svntest.main.wc_passwd,
                                          sbox.wc_dir)
 
       wc_tree = svntest.tree.build_tree_from_wc(sbox.wc_dir)
@@ -147,8 +147,6 @@ def test_create(sbox):
 
   svntest.actions.run_and_verify_svn("Creating rev 0 checkout",
                                      ["Checked out revision 0.\n"], [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      "checkout",
                                      sbox.repo_url, wc_dir)
 
@@ -259,8 +257,6 @@ def empty_date(sbox):
   # Verify that the revision still lacks the svn:date property.
   svntest.actions.run_and_verify_svn(None, [], [], "propget",
                                      "--revprop", "-r1", "svn:date",
-                                     "--username", svntest.main.wc_author,
-                                     "--password", svntest.main.wc_passwd,
                                      sbox.wc_dir)
 
 #----------------------------------------------------------------------
@@ -276,8 +272,6 @@ def dump_copied_dir(sbox):
   new_C_path = os.path.join(wc_dir, 'A', 'B', 'C')
   svntest.main.run_svn(None, 'cp', old_C_path, new_C_path)
   svntest.main.run_svn(None, 'ci', wc_dir, '--quiet',
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        '-m', 'log msg')
 
   output, errput = svntest.main.run_svnadmin("dump", repo_dir)
@@ -302,8 +296,6 @@ def dump_move_dir_modify_child(sbox):
   svntest.main.run_svn(None, 'cp', B_path, Q_path)
   svntest.main.file_append(os.path.join(Q_path, 'lambda'), 'hello')
   svntest.main.run_svn(None, 'ci', wc_dir, '--quiet',
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        '-m', 'log msg')
   output, errput = svntest.main.run_svnadmin("dump", repo_dir)
   svntest.verify.compare_and_display_lines(
@@ -428,8 +420,6 @@ def verify_windows_paths_in_repos(sbox):
   chi_url = sbox.repo_url + '/c:hi'
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'mkdir', '-m', 'log_msg',
                                      chi_url)
 
@@ -465,6 +455,82 @@ def recover_fsfs(sbox):
     "Contents of db/current is unexpected.",
     'db/current', expected_current_contents, actual_current_contents)
 
+#----------------------------------------------------------------------
+
+def load_with_parent_dir(sbox):
+  "'svnadmin load --parent-dir' reparents mergeinfo"
+
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2983. ##
+  test_create(sbox)
+
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svnadmin_tests_data',
+                                   'mergeinfo_included.dump')
+  dumpfile = svntest.main.file_read(dumpfile_location)
+
+  # Create 'sample' dir in sbox.repo_url
+  svntest.actions.run_and_verify_svn(None,
+                                     ['\n', 'Committed revision 1.\n'],
+                                     [], "mkdir", sbox.repo_url + "/sample",
+                                     "-m", "Create sample dir")
+
+  # Load the dump stream
+  load_and_verify_dumpstream(sbox,[],[], None, dumpfile, '--parent-dir',
+                             '/sample')
+
+  # Verify the svn:mergeinfo properties for '--parent-dir'
+  svntest.actions.run_and_verify_svn(None,
+                                     [sbox.repo_url +
+                                      "/sample/branch - /sample/trunk:4-6\n"],
+                                     [], 'propget', 'svn:mergeinfo', '-R',
+                                     sbox.repo_url + '/sample/branch')
+  svntest.actions.run_and_verify_svn(None,
+                                     [sbox.repo_url +
+                                      "/sample/branch1 - " +
+                                      "/sample/branch:5-8\n"],
+                                     [], 'propget', 'svn:mergeinfo', '-R',
+                                     sbox.repo_url + '/sample/branch1')
+
+#----------------------------------------------------------------------
+
+def set_uuid(sbox):
+  "test 'svnadmin setuuid'"
+
+  sbox.build(create_wc=False)
+
+  # Squirrel away the original repository UUID.
+  output, errput = svntest.main.run_svnlook('uuid', sbox.repo_dir)
+  if errput:
+    raise SVNUnexpectedStderr
+  orig_uuid = output[0].rstrip()
+
+  # Try setting a new, bogus UUID.
+  svntest.actions.run_and_verify_svnadmin(None, None, '^.*Malformed UUID.*$',
+                                          'setuuid', sbox.repo_dir, 'abcdef')
+
+  # Try generating a brand new UUID.
+  svntest.actions.run_and_verify_svnadmin(None, [], None,
+                                          'setuuid', sbox.repo_dir)
+  output, errput = svntest.main.run_svnlook('uuid', sbox.repo_dir)
+  if errput:
+    raise SVNUnexpectedStderr
+  new_uuid = output[0].rstrip()
+  if new_uuid == orig_uuid:
+    print "Error: new UUID matches the original one"
+    raise svntest.Failure
+
+  # Now, try setting the UUID back to the original value.
+  svntest.actions.run_and_verify_svnadmin(None, [], None,
+                                          'setuuid', sbox.repo_dir, orig_uuid)
+  output, errput = svntest.main.run_svnlook('uuid', sbox.repo_dir)
+  if errput:
+    raise SVNUnexpectedStderr
+  new_uuid = output[0].rstrip()
+  if new_uuid != orig_uuid:
+    print "Error: new UUID doesn't match the original one"
+    raise svntest.Failure
+  
+
 ########################################################################
 # Run the tests
 
@@ -483,6 +549,8 @@ test_list = [ None,
               setrevprop,
               verify_windows_paths_in_repos,
               SkipUnless(recover_fsfs, svntest.main.is_fs_type_fsfs),
+              load_with_parent_dir,
+              set_uuid,
              ]
 
 if __name__ == '__main__':

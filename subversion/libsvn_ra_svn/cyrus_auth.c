@@ -225,8 +225,12 @@ typedef struct cred_baton {
   /* Any errors we receive from svn_auth_{first,next}_credentials
      are saved here. */
   svn_error_t *err;
+
   /* This flag is set when we run out of credential providers. */
   svn_boolean_t no_more_creds;
+
+  /* Were the auth callbacks ever called? */
+  svn_boolean_t was_used;
 
   apr_pool_t *pool;
 } cred_baton_t;
@@ -259,6 +263,7 @@ get_credentials(cred_baton_t *baton)
 
   baton->username = ((svn_auth_cred_simple_t *)creds)->username;
   baton->password = ((svn_auth_cred_simple_t *)creds)->password;
+  baton->was_used = TRUE;
 
   return TRUE;
 }
@@ -793,11 +798,14 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
           svn_error_clear(err);
           return cred_baton.err;
         }
-      if (cred_baton.no_more_creds)
+      if (cred_baton.no_more_creds
+          || (! success && ! err && ! cred_baton.was_used))
         {
           svn_error_clear(err);
-          /* If we ran out of authentication providers, return the last
-             error sent by the server, if any. */
+          /* If we ran out of authentication providers, or if we got a server
+             error and our callbacks were never called, there's no point in
+             retrying authentication.  Return the last error sent by the
+             server. */
           if (*last_err)
             return svn_error_createf(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                      _("Authentication error from server: %s"),

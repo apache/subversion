@@ -1,5 +1,4 @@
 #!/usr/bin/perl
-
 ###############################################################################
 # Tweak Subversion log messages
 # -----------------------------
@@ -21,6 +20,21 @@
 #
 # The user can edit the message in the textarea, then submit that form,
 # which will return a confirmation and show the new log message.
+#
+# ====================================================================
+# Copyright (c) 2001-2003 CollabNet.  All rights reserved.
+#
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
+#
+# This software consists of voluntary contributions made by many
+# individuals.  For exact contribution history, see the revision
+# history and logs, available at http://subversion.tigris.org/.
+# ====================================================================
+
 ###############################################################################
 
 use strict;

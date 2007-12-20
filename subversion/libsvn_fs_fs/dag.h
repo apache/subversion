@@ -21,6 +21,8 @@
 #include "svn_fs.h"
 #include "svn_delta.h"
 
+#include "fs.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -52,8 +54,6 @@ extern "C" {
 
 
 /* Generic DAG node stuff.  */
-
-typedef struct dag_node_t dag_node_t;
 
 
 /* Fill *NODE with a dag_node_t representing node revision ID in FS,
@@ -109,10 +109,8 @@ svn_error_t *svn_fs_fs__dag_get_predecessor_count(int *count,
                                                   apr_pool_t *pool);
 
 
-/* Return non-zero IFF NODE is currently mutable under Subversion
-   transaction TXN_ID.  */
-svn_boolean_t svn_fs_fs__dag_check_mutable(dag_node_t *node,
-                                           const char *txn_id);
+/* Return non-zero IFF NODE is currently mutable. */
+svn_boolean_t svn_fs_fs__dag_check_mutable(dag_node_t *node);
 
 /* Return the node kind of NODE. */
 svn_node_kind_t svn_fs_fs__dag_node_kind(dag_node_t *node);
@@ -129,11 +127,9 @@ svn_error_t *svn_fs_fs__dag_get_proplist(apr_hash_t **proplist_p,
                                          apr_pool_t *pool);
 
 /* Set the property list of NODE to PROPLIST, allocating from POOL.
-   The node being changed must be mutable.  TXN_ID is the Subversion
-   transaction under which this occurs.  */
+   The node being changed must be mutable.  */
 svn_error_t *svn_fs_fs__dag_set_proplist(dag_node_t *node,
                                          apr_hash_t *proplist,
-                                         const char *txn_id,
                                          apr_pool_t *pool);
 
 
@@ -263,8 +259,7 @@ svn_error_t *svn_fs_fs__dag_delete(dag_node_t *parent,
 /* Delete the node revision assigned to node ID from FS's `nodes'
    table, allocating from POOL.  Also delete any mutable
    representations and strings associated with that node revision.  ID
-   may refer to a file or directory, which must be mutable.  TXN_ID is
-   the Subversion transaction under which this occurs.
+   may refer to a file or directory, which must be mutable.
 
    NOTE: If ID represents a directory, and that directory has mutable
    children, you risk orphaning those children by leaving them
@@ -272,7 +267,6 @@ svn_error_t *svn_fs_fs__dag_delete(dag_node_t *parent,
    callers of this interface know what in the world they are doing.  */
 svn_error_t *svn_fs_fs__dag_remove_node(svn_fs_t *fs,
                                         const svn_fs_id_t *id,
-                                        const char *txn_id,
                                         apr_pool_t *pool);
 
 
@@ -280,11 +274,9 @@ svn_error_t *svn_fs_fs__dag_remove_node(svn_fs_t *fs,
    ID itself, from FS's `nodes' table, allocating from POOL.  Also
    delete any mutable representations and strings associated with that
    node revision.  ID may refer to a file or directory, which may be
-   mutable or immutable.  TXN_ID is the Subversion transaction under
-   which this occurs.  */
+   mutable or immutable. */
 svn_error_t *svn_fs_fs__dag_delete_if_mutable(svn_fs_t *fs,
                                               const svn_fs_id_t *id,
-                                              const char *txn_id,
                                               apr_pool_t *pool);
 
 
@@ -328,20 +320,17 @@ svn_fs_fs__dag_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
                                      apr_pool_t *pool);
 
 /* Return a generic writable stream in *CONTENTS with which to set the
-   contents of FILE.  Allocate the stream in POOL.  TXN_ID is the
-   Subversion transaction under which this occurs.
+   contents of FILE.  Allocate the stream in POOL.
 
    Any previous edits on the file will be deleted, and a new edit
    stream will be constructed.  */
 svn_error_t *svn_fs_fs__dag_get_edit_stream(svn_stream_t **contents,
                                             dag_node_t *file,
-                                            const char *txn_id,
                                             apr_pool_t *pool);
 
 
 /* Signify the completion of edits to FILE made using the stream
    returned by svn_fs_fs__dag_get_edit_stream, allocating from POOL.
-   TXN_ID is the Subversion transaction under which this occurs.
 
    If CHECKSUM is non-null, it must match the checksum for FILE's
    contents (note: this is not recalculated, the recorded checksum is
@@ -350,7 +339,6 @@ svn_error_t *svn_fs_fs__dag_get_edit_stream(svn_stream_t **contents,
    This operation is a no-op if no edits are present.  */
 svn_error_t *svn_fs_fs__dag_finalize_edits(dag_node_t *file,
                                            const char *checksum,
-                                           const char *txn_id,
                                            apr_pool_t *pool);
 
 
@@ -428,11 +416,11 @@ svn_error_t *svn_fs_fs__dag_copy(dag_node_t *to_node,
    may leave us with a slight chance of a false positive, though I
    don't really see how that would happen in practice.  Nevertheless,
    it should probably be fixed.  */
-svn_error_t *svn_fs_fs__things_different(svn_boolean_t *props_changed,
-                                         svn_boolean_t *contents_changed,
-                                         dag_node_t *node1,
-                                         dag_node_t *node2,
-                                         apr_pool_t *pool);
+svn_error_t *svn_fs_fs__dag_things_different(svn_boolean_t *props_changed,
+                                             svn_boolean_t *contents_changed,
+                                             dag_node_t *node1,
+                                             dag_node_t *node2,
+                                             apr_pool_t *pool);
 
 
 /* Set *NODE_ID to the node-id of the coyproot of node NODE, or NULL

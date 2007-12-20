@@ -68,13 +68,13 @@ class TestHarness:
     self._open_log('r')
     log_lines = self.log.readlines()
     skipped = filter(lambda x: x[:6] == 'SKIP: ', log_lines)
+    if skipped:
+      print 'At least one test was SKIPPED, checking ' + self.logfile
+      map(sys.stdout.write, skipped)
     if failed:
       print 'At least one test FAILED, checking ' + self.logfile
       map(sys.stdout.write, filter(lambda x: x[:6] in ('FAIL: ', 'XPASS:'),
                                    log_lines))
-    if skipped:
-      print 'At least one test was SKIPPED, checking ' + self.logfile
-      map(sys.stdout.write, skipped)
     self._close_log()
     return failed
 
@@ -202,21 +202,21 @@ def main():
     server_minor_version, parallel = \
             None, None, None, None, None, None, None, None
   for opt, val in opts:
-    if opt in ('-u', '--url'):
+    if opt in ['-u', '--url']:
       base_url = val
-    elif opt in ('-f', '--fs-type'):
+    elif opt in ['-f', '--fs-type']:
       fs_type = val
-    elif opt in ('--http-library'):
+    elif opt in ['--http-library']:
       http_library = val
-    elif opt in ('--server-minor-version'):
+    elif opt in ['--server-minor-version']:
       server_minor_version = val
-    elif opt in ('-v', '--verbose'):
+    elif opt in ['-v', '--verbose']:
       verbose = 1
-    elif opt in ('-c', '--cleanup'):
+    elif opt in ['-c', '--cleanup']:
       cleanup = 1
-    elif opt in ('--enable-sasl'):
+    elif opt in ['--enable-sasl']:
       enable_sasl = 1
-    elif opt in ('--parallel'):
+    elif opt in ['--parallel']:
       parallel = 1
     else:
       raise getopt.GetoptError

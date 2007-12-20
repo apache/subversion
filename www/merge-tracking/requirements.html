@@ -83,12 +83,14 @@ href="../user-classifications.html#program">SCM automation</a>.</p>
 
 <p>Track which changesets have been applied where, so users can
 repeatedly merge branch A to branch B without having to remember the
-last range of revisions ported.  This would also track changeset <a
-href="#cherry-picking">cherry picking</a> done by users, so we don't
-accidentally re-merge changesets that are already applied.  This is
-the problem that <a href="http://svk.elixus.org/">svk</a> and <a
-href="http://www.gnu.org/software/gnu-arch/">arch</a> claim to have
-already solved, what they're calling <em>star-merge</em>.</p>
+last range of revisions ported.  This would also track
+changeset <a href="#cherry-picking">cherry picking</a> done by users,
+so we don't accidentally re-merge changesets that are already applied.
+This is the problem that <a href="http://svk.elixus.org/">svk</a>
+and <a href="http://www.gnu.org/software/gnu-arch/">arch</a> claim to
+have already solved, what they're calling <em>star-merge</em>
+(although svk does not support cherry-picking in a sense compatible
+with repeated merge).</p>
 
 </div>  <!-- repeated-merge -->
 
@@ -111,7 +113,10 @@ have been merged</a> into branch B.</p>
 multiple different directions.  For example, if you create a release
 branch B by copying the trunk you should be able to both forward port
 changes made on B into trunk and backport changes made on trunk into B
-without confusing the merge tracking algorithm.</p>
+without confusing the merge tracking algorithm.  (This problem is
+harder when you choose to cherry-pick a change from one branch to
+another that you had previously cherry-picked in the other direction;
+Subversion may not support this perfectly.)</p>
 
 <p>Use may be predicated on information from the <em>Show Changesets
 Available for Merge</em> feature (<a href="#auditing">Auditing</a>

@@ -44,12 +44,19 @@ extern "C" {
 #define SVN_RA_SVN_CAP_SVNDIFF1 "svndiff1"
 #define SVN_RA_SVN_CAP_ABSENT_ENTRIES "absent-entries"
 #define SVN_RA_SVN_CAP_COMMIT_REVPROPS "commit-revprops"
+/* maps to SVN_RA_CAPABILITY_MERGEINFO: */
 #define SVN_RA_SVN_CAP_MERGEINFO "mergeinfo"
+/* maps to SVN_RA_CAPABILITY_DEPTH: */
+#define SVN_RA_SVN_CAP_DEPTH "depth"
+/* maps to SVN_RA_CAPABILITY_LOG_REVPROPS */
+#define SVN_RA_SVN_CAP_LOG_REVPROPS "log-revprops"
+/* maps to SVN_RA_CAPABILITY_PARTIAL_REPLAY */
+#define SVN_RA_SVN_CAP_PARTIAL_REPPLAY "partial-replay"
 
 /** ra_svn passes @c svn_dirent_t fields over the wire as a list of
  * words, these are the values used to represent each field.
  *
- * @defgroup ra_svn_dirent_fields ra_svn dirent fields
+ * @defgroup ra_svn_dirent_fields Definitions of ra_svn dirent fields
  * @{
  */
 
@@ -103,14 +110,17 @@ typedef svn_error_t *(*svn_ra_svn_command_handler)(svn_ra_svn_conn_t *conn,
                                                    void *baton);
 
 /** Command table, used by svn_ra_svn_handle_commands().
- *
- * If @c terminate is set, command-handling will cease after command is
- * processed.
  */
 typedef struct svn_ra_svn_cmd_entry_t
 {
+  /** Name of the command */
   const char *cmdname;
+
+  /** Handler for the command */
   svn_ra_svn_command_handler handler;
+
+  /** Termination flag.  If set, command-handling will cease after
+   * command is processed. */
   svn_boolean_t terminate;
 } svn_ra_svn_cmd_entry_t;
 
@@ -213,20 +223,20 @@ svn_error_t *svn_ra_svn_flush(svn_ra_svn_conn_t *conn, apr_pool_t *pool);
  *
  * The format string @a fmt may contain:
  *
- *<pre>
- *   Spec  Argument type         Item type
- *   ----  --------------------  ---------
- *   n     apr_uint64_t          Number
- *   r     svn_revnum_t          Number
- *   s     const svn_string_t *  String
- *   c     const char *          String
- *   w     const char *          Word
- *   b     svn_boolean_t         Word ("true" or "false")
- *   (                           Begin tuple
- *   )                           End tuple
- *   ?                           Remaining elements optional
- *   ! (at beginning or end)     Suppress opening or closing of tuple
- * </pre>
+ *@verbatim
+     Spec  Argument type         Item type
+     ----  --------------------  ---------
+     n     apr_uint64_t          Number
+     r     svn_revnum_t          Number
+     s     const svn_string_t *  String
+     c     const char *          String
+     w     const char *          Word
+     b     svn_boolean_t         Word ("true" or "false")
+     (                           Begin tuple
+     )                           End tuple
+     ?                           Remaining elements optional
+     ! (at beginning or end)     Suppress opening or closing of tuple
+  @endverbatim
  *
  * Inside the optional part of a tuple, 'r' values may be @c
  * SVN_INVALID_REVNUM, 'n' values may be
@@ -242,10 +252,11 @@ svn_error_t *svn_ra_svn_flush(svn_ra_svn_conn_t *conn, apr_pool_t *pool);
  * Use the '!' format specifier to write partial tuples when you have
  * to transmit an array or other unusual data.  For example, to write
  * a tuple containing a revision, an array of words, and a boolean:
- *   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "r(!", rev));
- *   for (i = 0; i < n; i++)
- *     SVN_ERR(svn_ra_svn_write_word(conn, pool, words[i]));
- *   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)b", flag));
+ * @verbatim
+     SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "r(!", rev));
+     for (i = 0; i < n; i++)
+       SVN_ERR(svn_ra_svn_write_word(conn, pool, words[i]));
+     SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)b", flag)); @endverbatim
  */
 svn_error_t *svn_ra_svn_write_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                     const char *fmt, ...);
@@ -267,21 +278,21 @@ svn_error_t *svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,
 /** Parse an array of @c svn_sort__item_t structures as a tuple, using a
  * printf-like interface.  The format string @a fmt may contain:
  *
- *<pre>
- *   Spec  Argument type          Item type
- *   ----  --------------------   ---------
- *   n     apr_uint64_t *         Number
- *   r     svn_revnum_t *         Number
- *   s     svn_string_t **        String
- *   c     const char **          String
- *   w     const char **          Word
- *   b     svn_boolean_t *        Word ("true" or "false")
- *   B     apr_uint64_t *         Word ("true" or "false")
- *   l     apr_array_header_t **  List
- *   (                            Begin tuple
- *   )                            End tuple
- *   ?                            Tuple is allowed to end here
- *</pre>
+ *@verbatim
+     Spec  Argument type          Item type
+     ----  --------------------   ---------
+     n     apr_uint64_t *         Number
+     r     svn_revnum_t *         Number
+     s     svn_string_t **        String
+     c     const char **          String
+     w     const char **          Word
+     b     svn_boolean_t *        Word ("true" or "false")
+     B     apr_uint64_t *         Word ("true" or "false")
+     l     apr_array_header_t **  List
+     (                            Begin tuple
+     )                            End tuple
+     ?                            Tuple is allowed to end here
+  @endverbatim
  *
  * Note that a tuple is only allowed to end precisely at a '?', or at
  * the end of the specification.  So if @a fmt is "c?cc" and @a list
@@ -371,7 +382,7 @@ void svn_ra_svn_get_editor(const svn_delta_editor_t **editor,
 /** Receive edit commands over the network and use them to drive @a editor
  * with @a edit_baton.  On return, @a *aborted will be set if the edit was
  * aborted.  The drive can be terminated with a finish-replay command only
- * if @a for_replay is true.
+ * if @a for_replay is TRUE.
  */
 svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
                                       apr_pool_t *pool,

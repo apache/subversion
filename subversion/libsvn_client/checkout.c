@@ -81,7 +81,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
 
     /* Get the RA connection. */
     SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
-                                             &session_url, url,
+                                             &session_url, url, NULL,
                                              peg_revision, revision, ctx,
                                              session_pool));
 
@@ -136,7 +136,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
             err = svn_client__update_internal(result_rev, path, revision,
                                               depth, ignore_externals,
                                               allow_unver_obstructions,
-                                              use_sleep, ctx, pool);
+                                              use_sleep, FALSE,
+                                              ctx, pool);
             goto done;
           }
 
@@ -154,7 +155,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
           {
             err = svn_client__update_internal(result_rev, path, revision,
                                               depth, ignore_externals,
-                                              allow_unver_obstructions, use_sleep,
+                                              allow_unver_obstructions,
+                                              use_sleep, FALSE,
                                               ctx, pool);
           }
         else
@@ -228,7 +230,7 @@ svn_client_checkout2(svn_revnum_t *result_rev,
 {
   return svn_client__checkout_internal(result_rev, URL, path, peg_revision,
                                        revision,
-                                       SVN_DEPTH_FROM_RECURSE(recurse),
+                                       SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                        ignore_externals, FALSE, NULL, ctx,
                                        pool);
 }
@@ -248,6 +250,6 @@ svn_client_checkout(svn_revnum_t *result_rev,
 
   return svn_client__checkout_internal(result_rev, URL, path, &peg_revision,
                                        revision,
-                                       SVN_DEPTH_FROM_RECURSE(recurse),
+                                       SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                        FALSE, FALSE, NULL, ctx, pool);
 }

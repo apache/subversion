@@ -38,15 +38,16 @@ extern "C" {
    native filesystem directories and revision files. */
 
 /* Names of special files in the fs_fs filesystem. */
-#define PATH_FORMAT        "format"        /* Contains format number */
-#define PATH_UUID          "uuid"          /* Contains UUID */
-#define PATH_CURRENT       "current"       /* Youngest revision */
-#define PATH_LOCK_FILE     "write-lock"    /* Revision lock file */
-#define PATH_REVS_DIR      "revs"          /* Directory of revisions */
-#define PATH_REVPROPS_DIR  "revprops"      /* Directory of revprops */
-#define PATH_TXNS_DIR      "transactions"  /* Directory of transactions */
-#define PATH_TXN_CURRENT   "transaction-current" /* File with next txn key */
-#define PATH_LOCKS_DIR     "locks"         /* Directory of locks */
+#define PATH_FORMAT           "format"           /* Contains format number */
+#define PATH_UUID             "uuid"             /* Contains UUID */
+#define PATH_CURRENT          "current"          /* Youngest revision */
+#define PATH_LOCK_FILE        "write-lock"       /* Revision lock file */
+#define PATH_REVS_DIR         "revs"             /* Directory of revisions */
+#define PATH_REVPROPS_DIR     "revprops"         /* Directory of revprops */
+#define PATH_TXNS_DIR         "transactions"     /* Directory of transactions */
+#define PATH_TXN_CURRENT      "transaction-current" /* File with next txn key */
+#define PATH_TXN_CURRENT_LOCK "txn-current-lock" /* Lock for txn-current */
+#define PATH_LOCKS_DIR         "locks"           /* Directory of locks */
 
 /* Names of special files and file extensions for transactions */
 #define PATH_CHANGES       "changes"       /* Records changes made so far */
@@ -77,11 +78,13 @@ extern "C" {
 #define SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT 3
 
 /* Maximum number of directories to cache dirents for.
-   This *must* be a power of 2 for DIR_CACHE_ENTRIES_INDEX
+   This *must* be a power of 2 for DIR_CACHE_ENTRIES_MASK
    to work.  */
 #define NUM_DIR_CACHE_ENTRIES 128
 #define DIR_CACHE_ENTRIES_MASK(x) ((x) & (NUM_DIR_CACHE_ENTRIES - 1))
 
+/* Maximum number of revroot ids to cache dirents for at a time. */
+#define NUM_RRI_CACHE_ENTRIES 4096
 
 /* Private FSFS-specific data shared between all svn_txn_t objects that
    relate to a particular transaction in a filesystem (as identified
@@ -136,12 +139,34 @@ typedef struct
   /* A lock for intra-process synchronization when grabbing the
      repository write lock. */
   apr_thread_mutex_t *fs_write_lock;
+
+  /* A lock for intra-process synchronization when locking the
+     transaction-current file. */
+  apr_thread_mutex_t *txn_current_lock;
 #endif
 
   /* The common pool, under which this object is allocated, subpools
      of which are used to allocate the transaction objects. */
   apr_pool_t *common_pool;
 } fs_fs_shared_data_t;
+
+typedef struct dag_node_t dag_node_t;
+
+/* Structure for DAG-node cache.  Cache items are arranged in a
+   circular LRU list with a dummy entry, and also indexed with a hash
+   table.  Transaction nodes are cached within the individual txn
+   roots; revision nodes are cached together within the FS object. */
+typedef struct dag_node_cache_t
+{
+  const char *key;                /* Lookup key for cached node: path
+                                     for txns; rev catenated with path
+                                     for revs */
+  dag_node_t *node;               /* Cached node */
+  struct dag_node_cache_t *prev;  /* Next node in LRU list */
+  struct dag_node_cache_t *next;  /* Previous node in LRU list */
+  apr_pool_t *pool;               /* Pool in which node is allocated */
+} dag_node_cache_t;
+
 
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object. */
 typedef struct
@@ -159,6 +184,24 @@ typedef struct
 
   /* The uuid of this FS. */
   const char *uuid;
+
+  /* Caches of immutable data.
+     
+     Both of these could be moved to fs_fs_shared_data_t to make them
+     last longer; on the other hand, this would require adding mutexes
+     for threaded builds.
+  */
+
+  /* A cache of revision root IDs, allocated in this subpool.  (IDs
+     are so small that one pool per ID would be overkill;
+     unfortunately, this means the only way we expire cache entries is
+     by wiping the whole cache.) */
+  apr_hash_t *rev_root_id_cache;
+  apr_pool_t *rev_root_id_cache_pool;
+
+  /* DAG node cache for immutable nodes */
+  dag_node_cache_t rev_node_list;
+  apr_hash_t *rev_node_cache;
 
   /* Data shared between all svn_fs_t objects for a given filesystem. */
   fs_fs_shared_data_t *shared;
@@ -187,6 +230,8 @@ typedef struct
 
 
 /*** Representation ***/
+/* If you add fields to this, check to see if you need to change
+ * svn_fs_fs__rep_copy. */
 typedef struct
 {
   /* MD5 checksum for the contents produced by this representation.
@@ -218,6 +263,8 @@ typedef struct
 
 
 /*** Node-Revision ***/
+/* If you add fields to this, check to see if you need to change
+ * copy_node_revision in dag.c. */
 typedef struct
 {
   /* node kind */

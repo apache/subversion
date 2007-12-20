@@ -33,14 +33,12 @@ Item = svntest.wc.StateItem
 ######################################################################
 # Helpers
 
-def revert_replacement_with_props(sbox, wc_copy,
-                                  contact_repos_for_merge_info = 0):
+def revert_replacement_with_props(sbox, wc_copy):
   """Helper implementing the core of
   revert_{repos,wc}_to_wc_replace_with_props().
 
   Uses a working copy (when wc_copy == True) or a URL (when wc_copy ==
-  False) source to copy from.  CONTACT_REPOS_FOR_MERGE_INFO is only
-  relevant when WC_COPY is true."""
+  False) source to copy from."""
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -102,19 +100,15 @@ def revert_replacement_with_props(sbox, wc_copy,
   else:
     pi_src = sbox.repo_url + '/A/D/G/pi'
 
-  if contact_repos_for_merge_info:
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'cp', '-g', pi_src, rho_path)
-  else:
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       'cp', pi_src, rho_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', pi_src, rho_path)
 
   # Verify both content and props have been copied
-  props = { 'phony-prop' : '*' }
-  if not wc_copy or contact_repos_for_merge_info:
-    props['svn:mergeinfo'] = '/A/D/G/pi:1-2'
+  if wc_copy:
+    props = { 'phony-prop' : '*',
+              'svn:mergeinfo' : '' }
   else:
-    props['svn:mergeinfo'] = ''
+    props = { 'phony-prop' : '*' }
 
   expected_disk.tweak('A/D/G/rho',
                       contents="This is the file 'pi'.\n",
@@ -156,7 +150,7 @@ def revert_replacement_with_props(sbox, wc_copy,
 def revert_from_wc_root(sbox):
   "revert relative to wc root"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   os.chdir(wc_dir)
@@ -253,15 +247,11 @@ def revert_reexpand_keyword(sbox):
   # Commit, without svn:keywords property set.
   svntest.main.run_svn(None, 'add', newfile_path)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'commit', '-m', 'r2', newfile_path)
 
   # Set the property and commit.  This should expand the keyword.
   svntest.main.run_svn(None, 'propset', 'svn:keywords', 'rev', newfile_path)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'commit', '-m', 'r3', newfile_path)
 
   # Verify that the keyword got expanded.
@@ -346,7 +336,7 @@ def revert_replaced_file_without_props(sbox):
 def revert_moved_file(sbox):
     "revert a moved file"
 
-    sbox.build()
+    sbox.build(read_only = True)
     wc_dir = sbox.wc_dir
     iota_path = os.path.join(wc_dir, 'iota')
     iota_path_moved = os.path.join(wc_dir, 'iota_moved')
@@ -439,7 +429,7 @@ def revert_file_merge_replace_with_history(sbox):
 
   # merge changes from r3:1
   expected_output = svntest.wc.State(wc_dir, {
-    'A/D/G/rho': Item(status='A ')
+    'A/D/G/rho': Item(status='R ')
     })
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
   expected_skip = wc.State(wc_dir, { })
@@ -476,7 +466,6 @@ def revert_wc_to_wc_replace_with_props(sbox):
   "revert svn cp PATH PATH replace file with props"
 
   revert_replacement_with_props(sbox, 1)
-  revert_replacement_with_props(sbox, 1, 1)
 
 def revert_repos_to_wc_replace_with_props(sbox):
   "revert svn cp URL PATH replace file with props"
@@ -486,7 +475,7 @@ def revert_repos_to_wc_replace_with_props(sbox):
 def revert_after_second_replace(sbox):
   "revert file after second replace"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   # File scheduled for deletion
@@ -554,12 +543,8 @@ def revert_after_manual_conflict_resolution__text(sbox):
   svntest.main.file_write(iota_path_1, 'Modified iota text')
   svntest.main.file_write(iota_path_2, 'Conflicting iota text')
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'commit', '-m', 'r2', wc_dir_1)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'update', wc_dir_2)
 
   # Resolve the conflict "manually"
@@ -588,12 +573,8 @@ def revert_after_manual_conflict_resolution__prop(sbox):
   svntest.main.run_svn(None, 'propset', 'foo', '1', iota_path_1)
   svntest.main.run_svn(None, 'propset', 'foo', '2', iota_path_2)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'commit', '-m', 'r2', wc_dir_1)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'update', wc_dir_2)
 
   # Resolve the conflict "manually"
@@ -608,7 +589,7 @@ def revert_after_manual_conflict_resolution__prop(sbox):
 def revert_propset__dir(sbox):
   "revert a simple propset on a dir"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   a_path = os.path.join(wc_dir, 'A')
   svntest.main.run_svn(None, 'propset', 'foo', 'x', a_path)
@@ -619,7 +600,7 @@ def revert_propset__dir(sbox):
 def revert_propset__file(sbox):
   "revert a simple propset on a file"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   iota_path = os.path.join(wc_dir, 'iota')
   svntest.main.run_svn(None, 'propset', 'foo', 'x', iota_path)
@@ -635,8 +616,6 @@ def revert_propdel__dir(sbox):
   a_path = os.path.join(wc_dir, 'A')
   svntest.main.run_svn(None, 'propset', 'foo', 'x', a_path)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'commit', '-m', 'ps', a_path)
   svntest.main.run_svn(None, 'propdel', 'foo', a_path)
   expected_output = re.escape("Reverted '" + a_path + "'")
@@ -651,8 +630,6 @@ def revert_propdel__file(sbox):
   iota_path = os.path.join(wc_dir, 'iota')
   svntest.main.run_svn(None, 'propset', 'foo', 'x', iota_path)
   svntest.main.run_svn(None,
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
                        'commit', '-m', 'ps', iota_path)
   svntest.main.run_svn(None, 'propdel', 'foo', iota_path)
   expected_output = re.escape("Reverted '" + iota_path + "'")
@@ -687,16 +664,19 @@ def revert_replaced_with_history_file_1(sbox):
                                         None, None, None, None, None,
                                         wc_dir)
 
+  # update the working copy
+  svntest.main.run_svn(None, 'up', wc_dir)
+  
   # now revert back to the state in r1
   expected_output = svntest.wc.State(wc_dir, {
-    'A/mu': Item(status='A '),
+    'A/mu': Item(status='R '),
     'iota': Item(status='A ')
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/mu', status='R ', copied='+', wc_rev='-')
   expected_status.tweak('iota', status='A ', copied='+', wc_rev='-')
   expected_skip = wc.State(wc_dir, { })
-  expected_disk   = svntest.main.greek_state.copy()
+  expected_disk = svntest.main.greek_state.copy()
   svntest.actions.run_and_verify_merge(wc_dir, '2', '1',
                                        sbox.repo_url,
                                        expected_output,
@@ -705,7 +685,7 @@ def revert_replaced_with_history_file_1(sbox):
                                        expected_skip)
 
   # and commit in r3
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/mu', status='  ', wc_rev=3)
   expected_status.tweak('iota', status='  ', wc_rev=3)
   expected_output = svntest.wc.State(wc_dir, {
@@ -735,7 +715,7 @@ def revert_replaced_with_history_file_1(sbox):
 def status_of_missing_dir_after_revert(sbox):
   "status after schedule-delete, revert, and local rm"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   A_D_G_path = os.path.join(wc_dir, "A", "D", "G")
 
@@ -798,19 +778,19 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
                                         None, None, None, None, None,
                                         wc_dir)
 
+  # update the working copy
+  svntest.main.run_svn(None, 'up', wc_dir)
+
   # now rollback to r1, thereby reinstating the old 'G'
   ### Eventually, expected output for 'A/D/G' should be 'R '
   ### (replaced) instead of 'A ' (added).  See issue #571 for details.
   expected_output = svntest.wc.State(wc_dir, {
-    'A/D/G': Item(status='D '),
-    'A/D/G/alpha': Item(status='D '),
-    'A/D/G/beta': Item(status='D '),
-    'A/D/G': Item(status='A '),
+    'A/D/G': Item(status='R '),
     'A/D/G/rho': Item(status='A '),
     'A/D/G/pi': Item(status='A '),
     'A/D/G/tau': Item(status='A '),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak('A/D/G', status='R ', copied='+', wc_rev='-')
   expected_status.tweak('A/D/G/rho', status='A ', copied='+', wc_rev='-')
   expected_status.tweak('A/D/G/pi',  status='A ', copied='+', wc_rev='-')

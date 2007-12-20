@@ -21,9 +21,6 @@ if [ ! -f "$SVNRM_BIN/autoconf" ] || [ ! -f "$SVNRM_BIN/libtoolize" ] \
 fi
 export PATH="$SVNRM_BIN:$PATH"
 
-rm -f dist.sh
-svn export -r $REV $rs/branches/$BRANCH/dist.sh
-
 mkdir deploy
 
 (cd unix-dependencies &&
@@ -42,5 +39,3 @@ mkdir deploy
   mkdir to-tigris &&
   cd to-tigris &&
   for i in ../subversion-*; do ln -s "$i"; done) || exit $?
-
-rm -f dist.sh

@@ -21,6 +21,7 @@
 #include <apr.h>
 #include <apr_hash.h>
 #include <apr_thread_mutex.h>
+#include <apr_uuid.h>
 
 #include "svn_types.h"
 #include "svn_dso.h"
@@ -392,7 +393,7 @@ svn_fs_open(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
   *fs_p = svn_fs_new(fs_config, pool);
   SVN_ERR(acquire_fs_mutex());
-  err = vtable->open(*fs_p, path, pool, common_pool);
+  err = vtable->open_fs(*fs_p, path, pool, common_pool);
   err2 = release_fs_mutex();
   if (err)
     {
@@ -445,7 +446,7 @@ svn_fs_recover(const char *path,
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
   fs = svn_fs_new(NULL, pool);
   SVN_ERR(acquire_fs_mutex());
-  err = vtable->open_for_recovery(fs, path, pool, common_pool);
+  err = vtable->open_fs_for_recovery(fs, path, pool, common_pool);
   err2 = release_fs_mutex();
   if (err)
     {
@@ -494,7 +495,7 @@ svn_fs_open_berkeley(svn_fs_t *fs, const char *path)
 
   SVN_ERR(fs_library_vtable(&vtable, path, fs->pool));
   SVN_ERR(acquire_fs_mutex());
-  err = vtable->open(fs, path, fs->pool, common_pool);
+  err = vtable->open_fs(fs, path, fs->pool, common_pool);
   err2 = release_fs_mutex();
   if (err)
     {
@@ -632,6 +633,13 @@ svn_fs_change_txn_prop(svn_fs_txn_t *txn, const char *name,
   return txn->vtable->change_prop(txn, name, value, pool);
 }
 
+svn_error_t *
+svn_fs_change_txn_props(svn_fs_txn_t *txn, apr_array_header_t *props, 
+                        apr_pool_t *pool)
+{
+  return txn->vtable->change_props(txn, props, pool);
+}
+
 
 /* --- Root functions --- */
 
@@ -651,7 +659,7 @@ svn_fs_txn_root(svn_fs_root_t **root_p, svn_fs_txn_t *txn, apr_pool_t *pool)
 void
 svn_fs_close_root(svn_fs_root_t *root)
 {
-  apr_pool_destroy(root->pool);
+  svn_pool_destroy(root->pool);
 }
 
 svn_fs_t *
@@ -748,6 +756,13 @@ svn_fs_node_created_rev(svn_revnum_t *revision, svn_fs_root_t *root,
 }
 
 svn_error_t *
+svn_fs_node_origin_rev(svn_revnum_t *revision, svn_fs_root_t *root,
+                       const char *path, apr_pool_t *pool)
+{
+  return root->vtable->node_origin_rev(revision, root, path, pool);
+}
+
+svn_error_t *
 svn_fs_node_created_path(const char **created_path, svn_fs_root_t *root,
                          const char *path, apr_pool_t *pool)
 {
@@ -797,14 +812,6 @@ svn_fs_closest_copy(svn_fs_root_t **root_p, const char **path_p,
                     svn_fs_root_t *root, const char *path, apr_pool_t *pool)
 {
   return root->vtable->closest_copy(root_p, path_p, root, path, pool);
-}
-
-svn_error_t *
-svn_fs_change_mergeinfo(svn_fs_root_t *root, const char *path,
-                        apr_hash_t *minfo,
-                        apr_pool_t *pool)
-{
-  return root->vtable->change_mergeinfo(root, path, minfo, pool);
 }
 
 svn_error_t *
@@ -988,6 +995,18 @@ svn_fs_get_uuid(svn_fs_t *fs, const char **uuid, apr_pool_t *pool)
 svn_error_t *
 svn_fs_set_uuid(svn_fs_t *fs, const char *uuid, apr_pool_t *pool)
 {
+  if (! uuid)
+    {
+      uuid = svn_uuid_generate(pool);
+    }
+  else
+    {
+      apr_uuid_t parsed_uuid;
+      apr_status_t apr_err = apr_uuid_parse(&parsed_uuid, uuid);
+      if (apr_err)
+        return svn_error_createf(SVN_ERR_BAD_UUID, NULL,
+                                 _("Malformed UUID '%s'"), uuid);
+    }
   return fs->vtable->set_uuid(fs, uuid, pool);
 }
 

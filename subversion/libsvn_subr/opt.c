@@ -137,8 +137,9 @@ svn_opt_get_option_from_code(int code,
 
 
 svn_boolean_t
-svn_opt_subcommand_takes_option2(const svn_opt_subcommand_desc2_t *command,
-                                 int option_code)
+svn_opt_subcommand_takes_option3(const svn_opt_subcommand_desc2_t *command,
+                                 int option_code,
+                                 const int *global_options)
 {
   apr_size_t i;
 
@@ -146,7 +147,21 @@ svn_opt_subcommand_takes_option2(const svn_opt_subcommand_desc2_t *command,
     if (command->valid_options[i] == option_code)
       return TRUE;
 
+  if (global_options)
+    for (i = 0; global_options[i]; i++)
+      if (global_options[i] == option_code)
+        return TRUE;
+
   return FALSE;
+}
+
+svn_boolean_t
+svn_opt_subcommand_takes_option2(const svn_opt_subcommand_desc2_t *command,
+                                 int option_code)
+{
+  return svn_opt_subcommand_takes_option3(command,
+                                          option_code,
+                                          NULL);
 }
 
 
@@ -170,6 +185,7 @@ svn_opt_subcommand_takes_option(const svn_opt_subcommand_desc_t *command,
 static svn_error_t *
 print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
                     const apr_getopt_option_t *options_table,
+                    const int *global_options,
                     svn_boolean_t help,
                     apr_pool_t *pool,
                     FILE *stream)
@@ -235,6 +251,32 @@ print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
                 }
             }
         }
+      /* And global options too */
+      if (global_options)
+        for (i = 0; global_options[i]; i++)
+          {
+            if (have_options == FALSE)
+              {
+                SVN_ERR(svn_cmdline_fputs(_("\nValid options:\n"),
+                                          stream, pool));
+                have_options = TRUE;
+              }
+
+            /* convert each option code into an option */
+            option =
+              svn_opt_get_option_from_code2(global_options[i],
+                                            options_table,
+                                            cmd, pool);
+
+            /* print the option's docstring */
+            if (option)
+              {
+                const char *optstr;
+                svn_opt_format_option(&optstr, option, TRUE, pool);
+                SVN_ERR(svn_cmdline_fprintf(stream, pool, "  %s\n",
+                                            optstr));
+              }
+          }
 
       if (have_options)
         SVN_ERR(svn_cmdline_fprintf(stream, pool, "\n"));
@@ -338,7 +380,8 @@ svn_opt_print_generic_help2(const char *header,
   while (cmd_table[i].name)
     {
       if ((err = svn_cmdline_fputs("   ", stream, pool))
-          || (err = print_command_info2(cmd_table + i, opt_table, FALSE,
+          || (err = print_command_info2(cmd_table + i, opt_table,
+                                        NULL, FALSE,
                                         pool, stream))
           || (err = svn_cmdline_fputs("\n", stream, pool)))
         goto print_error;
@@ -431,9 +474,10 @@ svn_opt_format_option(const char **string,
 
 
 void
-svn_opt_subcommand_help2(const char *subcommand,
+svn_opt_subcommand_help3(const char *subcommand,
                          const svn_opt_subcommand_desc2_t *table,
                          const apr_getopt_option_t *options_table,
+                         const int *global_options,
                          apr_pool_t *pool)
 {
   const svn_opt_subcommand_desc2_t *cmd =
@@ -441,7 +485,8 @@ svn_opt_subcommand_help2(const char *subcommand,
   svn_error_t *err;
 
   if (cmd)
-    err = print_command_info2(cmd, options_table, TRUE, pool, stdout);
+    err = print_command_info2(cmd, options_table, global_options,
+                              TRUE, pool, stdout);
   else
     err = svn_cmdline_fprintf(stderr, pool,
                               _("\"%s\": unknown command.\n\n"), subcommand);
@@ -450,6 +495,16 @@ svn_opt_subcommand_help2(const char *subcommand,
     svn_handle_error2(err, stderr, FALSE, "svn: ");
     svn_error_clear(err);
   }
+}
+
+void
+svn_opt_subcommand_help2(const char *subcommand,
+                         const svn_opt_subcommand_desc2_t *table,
+                         const apr_getopt_option_t *options_table,
+                         apr_pool_t *pool)
+{
+  svn_opt_subcommand_help3(subcommand, table, options_table,
+                           NULL, pool);
 }
 
 
@@ -610,6 +665,24 @@ svn_opt_parse_revision(svn_opt_revision_t *start_revision,
 }
 
 
+int
+svn_opt_parse_revision2(apr_array_header_t **ranges_to_merge,
+                        const char *arg,
+                        apr_pool_t *pool)
+{
+  svn_opt_revision_range_t *range = apr_palloc(pool, sizeof(*range));
+
+  range->start.kind = svn_opt_revision_unspecified;
+  range->end.kind = svn_opt_revision_unspecified;
+
+  if (svn_opt_parse_revision(&(range->start), &(range->end),
+                             arg, pool) == -1)
+    return -1;
+
+  APR_ARRAY_PUSH(*ranges_to_merge, svn_opt_revision_range_t *) = range;
+  return 0;
+}
+
 svn_error_t *
 svn_opt_resolve_revisions(svn_opt_revision_t *peg_rev,
                           svn_opt_revision_t *op_rev,
@@ -734,26 +807,22 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
 
       if (path[i] == '@')
         {
-          svn_boolean_t is_url;
           int ret;
           svn_opt_revision_t start_revision, end_revision;
 
           end_revision.kind = svn_opt_revision_unspecified;
 
-          /* URLs get treated differently from wc paths. */
-          is_url = svn_path_is_url(path);
-
           if (path[i + 1] == '\0')  /* looking at empty peg revision */
             {
               ret = 0;
-              start_revision.kind = is_url ? svn_opt_revision_head
-                                           : svn_opt_revision_base;
+              start_revision.kind = svn_opt_revision_unspecified;
             }
           else  /* looking at non-empty peg revision */
             {
               const char *rev_str = path + i + 1;
 
-              if (is_url)
+              /* URLs get treated differently from wc paths. */
+              if (svn_path_is_url(path))
                 {
                   /* URLs are URI-encoded, so we look for dates with
                      URI-encoded delimeters.  */
@@ -781,8 +850,7 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
                                      _("Syntax error parsing revision '%s'"),
                                      path + i + 1);
 
-          *truepath = svn_path_canonicalize(apr_pstrndup(pool, path, i),
-                                            pool);
+          *truepath = apr_pstrmemdup(pool, path, i);
           rev->kind = start_revision.kind;
           rev->value = start_revision.value;
 
@@ -791,7 +859,7 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
     }
 
   /* Didn't find an @-sign. */
-  *truepath = svn_path_canonicalize(path, pool);
+  *truepath = path;
   rev->kind = svn_opt_revision_unspecified;
 
   return SVN_NO_ERROR;
@@ -840,7 +908,39 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
   for (i = 0; i < input_targets->nelts; i++)
     {
       const char *utf8_target = APR_ARRAY_IDX(input_targets, i, const char *);
+      const char *peg_start = NULL; /* pointer to the peg revision, if any */
       const char *target;      /* after all processing is finished */
+      int j;
+
+      /* Remove a peg revision, if any, in the target so that it can
+         be properly canonicalized, otherwise the canonicalization
+         does not treat a ".@BASE" as a "." with a BASE peg revision,
+         and it is not canonicalized to "@BASE".  If any peg revision
+         exists, it is appended to the final canonicalized path or
+         URL.  Do not use svn_opt_parse_path() because the resulting
+         peg revision is a structure that would have to be converted
+         back into a string.  Converting from a string date to the
+         apr_time_t field in the svn_opt_revision_value_t and back to
+         a string would not necessarily preserve the exact bytes of
+         the input date, so its easier just to keep it in string
+         form. */
+      for (j = (strlen(utf8_target) - 1); j >= 0; --j)
+        {
+          /* If we hit a path separator, stop looking.  This is OK
+              only because our revision specifiers can't contain
+              '/'. */
+          if (utf8_target[j] == '/')
+            break;
+          if (utf8_target[j] == '@')
+            {
+              peg_start = utf8_target + j;
+              break;
+            }
+        }
+      if (peg_start)
+        utf8_target = apr_pstrmemdup(pool,
+                                     utf8_target,
+                                     peg_start - utf8_target);
 
       /* URLs and wc-paths get treated differently. */
       if (svn_path_is_url(utf8_target))
@@ -912,6 +1012,11 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
               || 0 == strcmp(base_name, "_svn"))
             continue;
         }
+
+      /* Append the peg revision back to the canonicalized target if
+         there was a peg revision. */
+      if (peg_start)
+        target = apr_pstrcat(pool, target, peg_start, NULL);
 
       APR_ARRAY_PUSH(output_targets, const char *) = target;
     }
@@ -1012,7 +1117,7 @@ print_version_info(const char *pgm_name,
 
 
 svn_error_t *
-svn_opt_print_help2(apr_getopt_t *os,
+svn_opt_print_help3(apr_getopt_t *os,
                     const char *pgm_name,
                     svn_boolean_t print_version,
                     svn_boolean_t quiet,
@@ -1020,6 +1125,7 @@ svn_opt_print_help2(apr_getopt_t *os,
                     const char *header,
                     const svn_opt_subcommand_desc2_t *cmd_table,
                     const apr_getopt_option_t *option_table,
+                    const int *global_options,
                     const char *footer,
                     apr_pool_t *pool)
 {
@@ -1032,8 +1138,9 @@ svn_opt_print_help2(apr_getopt_t *os,
   if (os && targets->nelts)  /* help on subcommand(s) requested */
     for (i = 0; i < targets->nelts; i++)
       {
-        svn_opt_subcommand_help2(APR_ARRAY_IDX(targets, i, const char *),
-                                 cmd_table, option_table, pool);
+        svn_opt_subcommand_help3(APR_ARRAY_IDX(targets, i, const char *),
+                                 cmd_table, option_table,
+                                 global_options, pool);
       }
   else if (print_version)   /* just --version */
     SVN_ERR(print_version_info(pgm_name, version_footer, quiet, pool));
@@ -1049,6 +1156,32 @@ svn_opt_print_help2(apr_getopt_t *os,
                                 _("Type '%s help' for usage.\n"), pgm_name));
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_opt_print_help2(apr_getopt_t *os,
+                    const char *pgm_name,
+                    svn_boolean_t print_version,
+                    svn_boolean_t quiet,
+                    const char *version_footer,
+                    const char *header,
+                    const svn_opt_subcommand_desc2_t *cmd_table,
+                    const apr_getopt_option_t *option_table,
+                    const char *footer,
+                    apr_pool_t *pool)
+{
+  return svn_opt_print_help3(os,
+                             pgm_name,
+                             print_version,
+                             quiet,
+                             version_footer,
+                             header,
+                             cmd_table,
+                             option_table,
+                             NULL,
+                             footer,
+                             pool);
 }
 
 

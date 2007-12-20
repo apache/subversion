@@ -97,6 +97,15 @@ svn_wc__path_switched(const char *wcpath,
                       const svn_wc_entry_t *entry,
                       apr_pool_t *pool);
 
+
+/* Return the shallowest sufficient @c levels_to_lock value for @a depth;
+ * see the @a levels_to_lock parameter of svn_wc_adm_open3() and
+ * similar functions for more information.
+ */
+#define SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth)              \
+  (((depth) == svn_depth_empty || (depth) == svn_depth_files) \
+   ? 0 : (((depth) == svn_depth_immediates) ? 1 : -1))
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

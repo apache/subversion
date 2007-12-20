@@ -24,14 +24,15 @@ module Svn
 
     class Session
       class << self
-        def open(url, config={}, callbacks=nil)
-          Ra.open2(url, callbacks, config)
+        def open(url, config=nil, callbacks=nil)
+          Ra.open2(url, callbacks, config || Svn::Core::Config.get)
         end
       end
 
       def latest_revnum
         Ra.get_latest_revnum(self)
       end
+      alias latest_revision latest_revnum
 
       def dated_revision(time)
         Ra.get_dated_revision(self, time.to_apr_time)
@@ -41,13 +42,21 @@ module Svn
         Ra.change_rev_prop(self, rev || latest_revnum, name, value)
       end
 
+      def []=(name, *args)
+        value = args.pop
+        set_prop(name, value, *args)
+        value
+      end
+
       def proplist(rev=nil)
         Ra.rev_proplist(self, rev || latest_revnum)
       end
+      alias properties proplist
 
       def prop(name, rev=nil)
         Ra.rev_prop(self, rev || latest_revnum, name)
       end
+      alias [] prop
 
       def commit_editor(log_msg, lock_tokens={}, keep_lock=false)
         callback = Proc.new do |new_revision, date, author|
@@ -182,7 +191,7 @@ module Svn
       end
 
       def uuid
-        Ra.uuid(self)
+        Ra.get_uuid(self)
       end
 
       def repos_root
@@ -298,9 +307,10 @@ module Svn
 
     remove_const(:Callbacks)
     class Callbacks
-      attr_accessor :auth_baton
-      def initialize(auth_baton)
-        @auth_baton = auth_baton
+      include Core::Authenticatable
+
+      def initialize(auth_baton=nil)
+        self.auth_baton = auth_baton || Core::AuthBaton.new
       end
 
       def open_tmp_file

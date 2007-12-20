@@ -19,12 +19,11 @@
  * @brief Interface of the class JNIStringHolder
  */
 
-#if !defined(AFX_JNISTRINGHOLDER_H__66F98D96_0371_471D_9E5C_EE5D45954C75__INCLUDED_)
-#define AFX_JNISTRINGHOLDER_H__66F98D96_0371_471D_9E5C_EE5D45954C75__INCLUDED_
+#ifndef JNISTRINGHOLDER_H
+#define JNISTRINGHOLDER_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
+#include <jni.h>
+#include <apr_pools.h>
 
 class JNIStringHolder
 {
@@ -32,10 +31,12 @@ class JNIStringHolder
   JNIStringHolder(jstring jtext);
   ~JNIStringHolder();
   operator const char *() { return m_str; }
+  const char *pstrdup(apr_pool_t *pool);
+
  protected:
   const char *m_str;
   JNIEnv *m_env;
   jstring m_jtext;
 };
 
-#endif // !defined(AFX_JNISTRINGHOLDER_H__66F98D96_0371_471D_9E5C_EE5D45954C75__INCLUDED_)
+#endif  // JNISTRINGHOLDER_H

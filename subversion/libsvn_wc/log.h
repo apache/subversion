@@ -51,6 +51,12 @@ const char *svn_wc__logfile_path(int log_number,
 
 /* Extend **LOG_ACCUM with log instructions to append the contents
    of SRC to DST.
+
+   This command fails to be idempotent or atomic: there's no way to
+   tell if you should re-run this!  This function is deprecated; new
+   uses should not be added, and the single current use (constructing
+   human-readable non-parsed property conflict files) should be
+   rewritten.  See Issue #3015.
 */
 svn_error_t *
 svn_wc__loggy_append(svn_stringbuf_t **log_accum,

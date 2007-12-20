@@ -79,7 +79,10 @@ STATS = """1/1/2003       70
 6/1/2007              133665
 7/1/2007              137575
 8/1/2007              155426
-9/1/2007              159055"""
+9/1/2007              159055
+10/1/2007             169939
+11/1/2007             180831
+12/1/2007             187093"""
 
 
 def get_date(raw_date):
@@ -109,7 +112,7 @@ def parse_stats(str):
 def draw_graph(dates, counts):
   ###########################################################
   # Drawing takes place here.
-  figure(1, figsize=(6.5, 4.5))
+  figure(1)
 
   ax = subplot(111)
   plot_date(dates, counts, color='r', linestyle='-', marker='o', markersize=3)

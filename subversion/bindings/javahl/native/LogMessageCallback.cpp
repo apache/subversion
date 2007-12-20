@@ -23,6 +23,7 @@
 #include "JNIUtil.h"
 #include "svn_time.h"
 #include "svn_sorts.h"
+#include "svn_compat.h"
 
 /**
  * Create a LogMessageCallback object

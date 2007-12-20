@@ -19,7 +19,10 @@ package org.tigris.subversion.javahl;
 
 import org.tigris.subversion.javahl.*;
 
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -641,8 +644,7 @@ public class BasicTests extends SVNTests
         client.propertyCreate(itemPath, "cqcq", "qrz", false, false);
         ProplistCallbackImpl callback = new ProplistCallbackImpl();
 
-        client.properties(itemPath, null, null, Depth.fromRecurse(false),
-                          callback);
+        client.properties(itemPath, null, null, Depth.empty, callback);
         Map propMap = callback.getProperties(itemPath);
         Iterator it = propMap.keySet().iterator();
 
@@ -790,7 +792,7 @@ public class BasicTests extends SVNTests
         }
         client.copy(sources,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    null, true, false, false);
+                    null, true, false);
 
         // Commit the changes, and check the state of the WC.
         assertEquals("Unexpected WC revision number after commit",
@@ -837,7 +839,7 @@ public class BasicTests extends SVNTests
         }
         client.move(srcPaths,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    null, false, true, false, false);
+                    null, false, true, false);
 
         // Commit the changes, and check the state of the WC.
         assertEquals("Unexpected WC revision number after commit",
@@ -861,7 +863,7 @@ public class BasicTests extends SVNTests
     {
         String wcPath = fileToSVNPath(new File(thisTest.getWCPath(),
                                                destPath), false);
-        String[] suggestions = client.suggestMergeSources(wcPath, 
+        String[] suggestions = client.suggestMergeSources(wcPath,
                                                           Revision.WORKING);
         assertNotNull(suggestions);
         assertTrue(suggestions.length >= 1);
@@ -881,7 +883,7 @@ public class BasicTests extends SVNTests
         assertTrue("Unexpected copy source path, expected " +
                    expectedSrc + ", got " + suggestions[0],
                    suggestions[0].endsWith(new File(wcPath).getName()));
-    
+
     }
 
     /**
@@ -2098,38 +2100,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * Test the basic functionality of {@link
-     * org.tigris.subversion.javahl.SVNClientInterface#getMergeInfo(}).
-     * @throws Throwable
-     * @since 1.5
-     */
-    public void testMergeInfoRetrieval() throws Throwable
-    {
-        OneTest thisTest = setupAndPerformMerge();
-
-        // Test retrieval of inerhited mergeinfo from a WC path.
-        String targetPath =
-            new File(thisTest.getWCPath(), "branches/A/mu").getPath();
-        final String mergeSrc = thisTest.getUrl() + "/A/mu";
-        acquireMergeInfoAndAssertEquals("0-2", "2-3", targetPath, mergeSrc);
-
-        // TODO: Test retrieval of uncommitted, inerhited mergeinfo
-        // from a WC path.
-
-        // Commit the result of the merge in preparation for testing
-        // retrieval of merge info from the repository.
-        assertEquals("Unexpected rev number from commit",
-                     Revision.SVN_INVALID_REVNUM,
-                     client.commit(new String[] { thisTest.getWCPath() },
-                                   "log msg", true));
-
-        // Test retrieval of inherited mergeinfo from the repository.
-        targetPath = thisTest.getUrl() + "/branches/A/mu";
-        acquireMergeInfoAndAssertEquals("0-2", "2-3", targetPath, mergeSrc);
-    }
-
-    /**
-     * Helper method for {@link #testMergeInfoRetrieval()}.  Assumes
+     * Helper method for testing mergeinfo retrieval.  Assumes
      * that <code>targetPath</code> has both merge history and
      * available merges.
      * @param expectedMergedRevs The expected revision ranges from the
@@ -2271,6 +2242,24 @@ public class BasicTests extends SVNTests
         assertEquals("wrong revision number from commit",
                      client.commit(new String[] { thisTest.getWCPath() },
                                    "log msg", true), 5);
+
+        // Merge and commit some more changes (r6).
+        appendText(thisTest, "A/mu", "xxxr6", 6);
+        appendText(thisTest, "A/D/G/rho", "yyyr6", 6);
+        assertEquals("wrong revision number from commit",
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "log msg", true),
+                     6);
+
+        // Test retrieval of mergeinfo from a WC path.
+        String targetPath =
+            new File(thisTest.getWCPath(), "branches/A/mu").getPath();
+        final String mergeSrc = thisTest.getUrl() + "/A/mu";
+        acquireMergeInfoAndAssertEquals("2-4", "4-6", targetPath, mergeSrc);
+
+        // Test retrieval of mergeinfo from the repository.
+        targetPath = thisTest.getUrl() + "/branches/A/mu";
+        acquireMergeInfoAndAssertEquals("2-4", "4-6", targetPath, mergeSrc);
     }
 
     /**
@@ -2299,7 +2288,7 @@ public class BasicTests extends SVNTests
         Revision unspec = new Revision(RevisionKind.unspecified);
         client.merge(modUrl, Revision.HEAD,
                      new RevisionRange[] { new RevisionRange(unspec, unspec) },
-                     branchPath, true, Depth.infinity, false, false);
+                     branchPath, true, Depth.infinity, false, false, false);
 
         // commit the changes so that we can verify merge
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
@@ -2324,9 +2313,10 @@ public class BasicTests extends SVNTests
         // user's version of a conflicted file.
         client.setConflictResolver(new ConflictResolverCallback()
             {
-                public int resolve(ConflictDescriptor descrip)
+                public ConflictResult resolve(ConflictDescriptor descrip)
                 {
-                    return ConflictResolverCallback.Result.choose_repos;
+                    return new ConflictResult(ConflictResult.chooseTheirs,
+                                              null);
                 }
             });
 
@@ -2348,12 +2338,68 @@ public class BasicTests extends SVNTests
         mu = appendText(thisTest, "A/mu", "yyy", 1);
 
         // Merge in the previous changes to A/mu (from r2).
-        client.merge(thisTest.getUrl(), Revision.HEAD, new Revision.Number(1),
-                     new Revision.Number(2), thisTest.getWCPath(),
-                     false, Depth.infinity, false, false);
+        RevisionRange[] ranges = new RevisionRange[1];
+        ranges[0] = new RevisionRange(new Revision.Number(1),
+                                      new Revision.Number(2));
+        client.merge(thisTest.getUrl(), Revision.HEAD, ranges,
+                     thisTest.getWCPath(), false, Depth.infinity, false,
+                     false, false);
 
         assertFileContentsEquals("Unexpected conflict resolution",
                                  expectedContents, mu);
+    }
+
+    /**
+     * Test merge --record-only
+     * @throws Throwable
+     * @since 1.5
+     */
+    public void testRecordOnlyMerge() throws Throwable
+    {
+        OneTest thisTest = setupAndPerformMerge();
+
+        // Verify that there are now potential merge sources.
+        String[] suggestedSrcs =
+            client.suggestMergeSources(thisTest.getWCPath() + "/branches/A",
+                                       Revision.WORKING);
+        assertNotNull(suggestedSrcs);
+        assertEquals(1, suggestedSrcs.length);
+
+        // Test that getMergeInfo() returns null.
+        assertNull(client.getMergeInfo(new File(thisTest.getWCPath(), "A")
+                                       .toString(), Revision.HEAD));
+
+        // Merge and commit some changes (r4).
+        appendText(thisTest, "A/mu", "xxx", 4);
+        appendText(thisTest, "A/D/G/rho", "yyy", 4);
+        assertEquals("wrong revision number from commit",
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "log msg", true),
+                     4);
+
+        // --record-only merge changes in A to branches/A
+        String branchPath = thisTest.getWCPath() + "/branches/A";
+        String modUrl = thisTest.getUrl() + "/A";
+
+        RevisionRange[] ranges = new RevisionRange[1];
+        ranges[0] = new RevisionRange(new Revision.Number(2),
+                                      new Revision.Number(4));
+        client.merge(modUrl, Revision.HEAD, ranges,
+                     branchPath, true, Depth.infinity, false, false, true);
+
+        // commit the changes so that we can verify merge
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "branches/A", NodeKind.dir,
+                              CommitItemStateFlags.PropMods);
+        assertEquals("wrong revision number from commit",
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "log msg", true), 5);
+
+        // Test retrieval of mergeinfo from a WC path.
+        String targetPath =
+            new File(thisTest.getWCPath(), "branches/A/mu").getPath();
+        final String mergeSrc = thisTest.getUrl() + "/A/mu";
+        acquireMergeInfoAndAssertEquals("2-4", "4-5", targetPath, mergeSrc);
     }
 
     /**
@@ -2403,12 +2449,30 @@ public class BasicTests extends SVNTests
         final String NL = System.getProperty("line.separator");
         final String sepLine =
             "===================================================================" + NL;
+        final String underSepLine =
+            "___________________________________________________________________" + NL;
         final String expectedDiffBody =
             "@@ -1 +1 @@" + NL +
             "-This is the file 'iota'." + NL +
             "\\ No newline at end of file" + NL +
             "+This is the file 'mu'." + NL +
             "\\ No newline at end of file" + NL;
+        
+        final String iotaPath = thisTest.getWCPath().replace('\\', '/') + "/iota";
+        final String wcPath = fileToSVNPath(new File(thisTest.getWCPath()),
+                false);
+
+        // make edits to iota
+        PrintWriter writer = new PrintWriter(new FileOutputStream(iotaPath));
+        writer.print("This is the file 'mu'.");
+        writer.flush();
+        writer.close();
+        
+        /*
+         * This test does tests with and without svn:eol-style set to native
+         * We will first run all of the tests where this does not matter so
+         * that they are not run twice.
+         */
 
         // Two-path diff of URLs.
         String expectedDiffOutput = "Index: iota" + NL + sepLine +
@@ -2422,32 +2486,174 @@ public class BasicTests extends SVNTests
                                  diffOutput.getPath() + '\'',
                                  expectedDiffOutput, diffOutput);
 
-        // Two-path diff of WC paths.
-        String iotaPath = thisTest.getWCPath().replace('\\', '/') + "/iota";
-        PrintWriter writer = new PrintWriter(new FileOutputStream(iotaPath));
-        writer.print("This is the file 'mu'.");
-        writer.flush();
-        writer.close();
-        expectedDiffOutput = "Index: " + iotaPath + NL + sepLine +
-            "--- " + iotaPath + "\t(revision 1)" + NL +
-            "+++ " + iotaPath + "\t(working copy)" + NL +
-            expectedDiffBody;
-        client.diff(iotaPath, Revision.BASE,
-                    iotaPath, Revision.WORKING,
-                    diffOutput.getPath(), false, true, true, false);
+        // Test relativeToDir fails with urls. */
+        try
+        {
+            client.diff(thisTest.getUrl() + "/iota", Revision.HEAD,
+                        thisTest.getUrl() + "/A/mu", Revision.HEAD,
+                        thisTest.getUrl(), diffOutput.getPath(),
+                        Depth.infinity, true, true, false);
+
+            fail("This test should fail becaus the relativeToDir parameter " +
+                 "does not work with URLs");
+        }
+        catch (Exception ignored)
+        {
+        }
+
+        /* Testing the expected failure when relativeToDir is not a parent
+           path of the target. */
+        try
+        {
+            client.diff(iotaPath, Revision.BASE, iotaPath, Revision.WORKING,
+                        "/non/existent/path", diffOutput.getPath(),
+                        Depth.infinity, true, true, false);
+
+            fail("This test should fail because iotaPath is not a child of " +
+                 "the relativeToDir parameter");
+        }
+        catch (Exception ignored)
+        {
+        }
+
+        // Test diff with a relative path on a directory with prop
+        // changes.
+        String aPath = fileToSVNPath(new File(thisTest.getWCPath() + "/A"),
+                                     false);
+
+        expectedDiffOutput = NL + "Property changes on: A" + NL +
+            underSepLine +
+            "Added: testprop" + NL +
+            "   + Test property value." + NL + NL;
+
+        client.propertySet(aPath, "testprop", "Test property value.", false);
+        client.diff(aPath, Revision.BASE, aPath, Revision.WORKING, wcPath,
+                    diffOutput.getPath(), Depth.infinity, true, true, false);
         assertFileContentsEquals("Unexpected diff output in file '" +
                                  diffOutput.getPath() + '\'',
                                  expectedDiffOutput, diffOutput);
 
-        // Peg revision diff of a single file.
-        client.diff(thisTest.getUrl() + "/iota", Revision.HEAD,
-                    new Revision.Number(1), Revision.HEAD,
-                    diffOutput.getPath(), false, true, true, false);
+        // Test diff where relativeToDir and path are the same.
+        expectedDiffOutput = NL + "Property changes on: ." + NL +
+            underSepLine +
+            "Added: testprop" + NL +
+            "   + Test property value." + NL + NL;
+
+        client.propertySet(aPath, "testprop", "Test property value.", false);
+        client.diff(aPath, Revision.BASE, aPath, Revision.WORKING, aPath,
+                    diffOutput.getPath(), Depth.infinity, true, true, false);
         assertFileContentsEquals("Unexpected diff output in file '" +
                                  diffOutput.getPath() + '\'',
-                                 "", diffOutput);
+                                 expectedDiffOutput, diffOutput);
+        
+        
+        /*
+         * The rest of these tests are run twice.  The first time
+         * without svn:eol-style set and the second time with the
+         * property set to native.  This is tracked by the int named
+         * operativeRevision.  It will have a value = 2 after the
+         * commit which sets the property
+         */
 
-        diffOutput.delete();
+        for (int operativeRevision = 1; operativeRevision < 3; operativeRevision++) 
+         {
+                String revisionPrefix = "While processing operativeRevison=" + operativeRevision + ". ";
+                String assertPrefix = revisionPrefix + "Unexpected diff output in file '";
+                
+                // Undo previous edits to working copy
+                client.revert(wcPath, true);
+                
+                if (operativeRevision == 2) {
+                    // Set svn:eol-style=native on iota
+                    client.propertyCreate(iotaPath, "svn:eol-style", "native", false);
+                    String[] paths = new String[] {iotaPath};
+                    addExpectedCommitItem(thisTest.getWCPath(),
+                            thisTest.getUrl(), "iota",NodeKind.file,
+                            CommitItemStateFlags.PropMods);
+                    client.commit(paths, "Set svn:eol-style to native", false);
+                }
+
+                // make edits to iota and set expected output.
+                writer = new PrintWriter(new FileOutputStream(iotaPath));
+                writer.print("This is the file 'mu'.");
+                writer.flush();
+                writer.close();
+                expectedDiffOutput = "Index: " + iotaPath + NL + sepLine +
+                    "--- " + iotaPath + "\t(revision " + operativeRevision + ")" + NL +
+                    "+++ " + iotaPath + "\t(working copy)" + NL +
+                    expectedDiffBody;
+
+                try 
+                {
+                    // Two-path diff of WC paths.
+                    client.diff(iotaPath, Revision.BASE,
+                                iotaPath, Revision.WORKING,
+                                diffOutput.getPath(), false, true, true, false);
+                    assertFileContentsEquals(assertPrefix +
+                                             diffOutput.getPath() + '\'',
+                                             expectedDiffOutput, diffOutput);
+                    diffOutput.delete();
+                } 
+                catch (ClientException e) 
+                {
+                    fail(revisionPrefix + e.getMessage());
+                }
+                
+                try 
+                {
+                    // Peg revision diff of a single file.
+                    client.diff(thisTest.getUrl() + "/iota", Revision.HEAD,
+                                new Revision.Number(operativeRevision), Revision.HEAD,
+                                diffOutput.getPath(), false, true, true, false);
+                    assertFileContentsEquals(assertPrefix +
+                                             diffOutput.getPath() + '\'',
+                                             "", diffOutput);
+    
+                    diffOutput.delete();
+                } 
+                catch (ClientException e) 
+                {
+                    fail(revisionPrefix + e.getMessage());
+                }
+    
+               // Test svn diff with a relative path.
+                expectedDiffOutput = "Index: iota" + NL + sepLine +
+                    "--- iota\t(revision " + operativeRevision + ")" + NL +
+                    "+++ iota\t(working copy)" + NL +
+                    expectedDiffBody;
+                try 
+                {
+                    client.diff(iotaPath, Revision.BASE, iotaPath, Revision.WORKING,
+                                wcPath, diffOutput.getPath(), Depth.infinity, true, true,
+                                false);
+                    assertFileContentsEquals(assertPrefix +
+                                             diffOutput.getPath() + '\'',
+                                             expectedDiffOutput, diffOutput);
+                    diffOutput.delete();
+                } 
+                catch (ClientException e) 
+                {
+                    fail(revisionPrefix + e.getMessage());
+                }
+    
+                try 
+                {
+                    // Test svn diff with a relative path and trailing slash.
+                    client.diff(iotaPath, Revision.BASE, iotaPath, Revision.WORKING,
+                                wcPath + "/", diffOutput.getPath(), Depth.infinity, true, true,
+                                false);
+                    assertFileContentsEquals(assertPrefix +
+                                             diffOutput.getPath() + '\'',
+                                             expectedDiffOutput, diffOutput);
+                    diffOutput.delete();
+                } 
+                catch (ClientException e) 
+                {
+                    fail(revisionPrefix + e.getMessage());
+                }
+                
+            }
+
     }
 
     private void assertFileContentsEquals(String msg, String expected,
@@ -2727,7 +2933,8 @@ public class BasicTests extends SVNTests
         // Complete the switch using "--force" and check the status
         client.doSwitch(backupTest.getWCPath() + "/A/B/E",
                         backupTest.getUrl() + "/A/D/H",
-                        null, Depth.infinity, false, true);
+                        Revision.HEAD, Revision.HEAD, Depth.infinity,
+                        false, true);
 
         backupTest.getWc().setItemIsSwitched("A/B/E",true);
         backupTest.getWc().removeItem("A/B/E/alpha");

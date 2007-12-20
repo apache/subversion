@@ -88,17 +88,23 @@ module Svn
     Context = Ctx
     class Context
       alias _auth_baton auth_baton
-      attr_reader :auth_baton
+      alias _auth_baton= auth_baton=
+      remove_method :auth_baton, :auth_baton=
+      private :_auth_baton, :_auth_baton=
+
+      include Core::Authenticatable
 
       alias _initialize initialize
+      private :_initialize
       def initialize
         _initialize
-        @prompts = []
-        @batons = []
-        @providers = []
-        @auth_baton = Svn::Core::AuthBaton.new
-        self.auth_baton = @auth_baton
+        self.auth_baton = Core::AuthBaton.new
         init_callbacks
+      end
+
+      def auth_baton=(baton)
+        super(baton)
+        self._auth_baton = auth_baton
       end
 
       def checkout(url, path, revision=nil, peg_rev=nil,
@@ -124,9 +130,10 @@ module Svn
       end
       alias ci commit
 
-      def status(path, rev=nil, depth=nil, get_all=false,
+      def status(path, rev=nil, depth_or_recurse=nil, get_all=false,
                  update=true, no_ignore=false,
                  ignore_externals=false, &status_func)
+        depth = Core::Depth.infinity_or_immediates_from_recurse(depth_or_recurse)
         Client.status3(path, rev, status_func,
                        depth, get_all, update, no_ignore,
                        ignore_externals, self)
@@ -182,18 +189,19 @@ module Svn
         Client.resolved(path, recurse, self)
       end
 
-      def propset(name, value, target, recurse=true, force=false,
+      def propset(name, value, target, depth_or_recurse=nil, force=false,
                   base_revision_for_url=nil)
         base_revision_for_url ||= Svn::Core::INVALID_REVNUM
-        Client.propset3(name, value, target, recurse, force,
+        depth = Core::Depth.infinity_or_empty_from_recurse(depth_or_recurse)
+        Client.propset3(name, value, target, depth, force,
                         base_revision_for_url, self)
       end
       alias prop_set propset
       alias pset propset
       alias ps propset
 
-      def propdel(name, target, recurse=true, force=false)
-        Client.propset2(name, nil, target, recurse, force, self)
+      def propdel(name, *args)
+        propset(name, nil, *args)
       end
       alias prop_del propdel
       alias pdel propdel
@@ -201,10 +209,11 @@ module Svn
 
       # Returns a value of a property, with +name+ attached to +target+,
       # as a Hash such as <tt>{uri1 => value1, uri2 => value2, ...}</tt>.
-      def propget(name, target, rev=nil, peg_rev=nil, recurse=true)
+      def propget(name, target, rev=nil, peg_rev=nil, depth_or_recurse=nil)
         rev ||= "HEAD"
         peg_rev ||= rev
-        Client.propget2(name, target, rev, peg_rev, recurse, self)
+        depth = Core::Depth.infinity_or_empty_from_recurse(depth_or_recurse)
+        Client.propget4(name, target, peg_rev, rev, depth, self).first
       end
       alias prop_get propget
       alias pget propget
@@ -215,10 +224,11 @@ module Svn
       # Returns list of properties attached to +target+ as an Array of
       # Svn::Client::PropListItem.
       # Paths and URIs are available as +target+.
-      def proplist(target, rev=nil, peg_rev=nil, depth=nil, &block)
+      def proplist(target, rev=nil, peg_rev=nil, depth_or_recurse=nil, &block)
         rev ||= "HEAD"
         peg_rev ||= rev
         items = []
+        depth = Core::Depth.infinity_or_empty_from_recurse(depth_or_recurse)
         receiver = Proc.new do |path, prop_hash|
           items << PropListItem.new(path, prop_hash)
           block.call(path, prop_hash) if block
@@ -231,7 +241,7 @@ module Svn
       alias pl proplist
 
       def copy(src_paths, dst_path, rev_or_copy_as_child=nil,
-               make_parents=nil, with_merge_history=nil)
+               make_parents=nil)
         if src_paths.is_a?(Array)
           copy_as_child = rev_or_copy_as_child
           if copy_as_child.nil?
@@ -251,17 +261,16 @@ module Svn
           end
           src_paths = [src_paths]
         end
-        Client.copy4(src_paths, dst_path, copy_as_child, make_parents,
-                     with_merge_history, self)
+        Client.copy4(src_paths, dst_path, copy_as_child, make_parents, self)
       end
       alias cp copy
 
       def move(src_paths, dst_path, force=false, move_as_child=nil,
-               make_parents=nil, with_merge_history=nil)
+               make_parents=nil)
         src_paths = [src_paths] unless src_paths.is_a?(Array)
         move_as_child = src_paths.size == 1 ? false : true if move_as_child.nil?
         Client.move5(src_paths, dst_path, force, move_as_child, make_parents,
-                     with_merge_history, self)
+                     self)
       end
       alias mv move
 
@@ -273,9 +282,10 @@ module Svn
                out_file, err_file, depth=nil,
                ignore_ancestry=false,
                no_diff_deleted=false, force=false,
-               header_encoding=nil)
+               header_encoding=nil, relative_to_dir=nil)
         header_encoding ||= Core::LOCALE_CHARSET
-        Client.diff4(options, path1, rev1, path2, rev2,
+        relative_to_dir &&= Core.path_canonicalize(relative_to_dir)
+        Client.diff4(options, path1, rev1, path2, rev2, relative_to_dir,
                      depth, ignore_ancestry,
                      no_diff_deleted, force, header_encoding,
                      out_file, err_file, self)
@@ -285,10 +295,11 @@ module Svn
                    out_file, err_file, peg_rev=nil,
                    depth=nil, ignore_ancestry=false,
                    no_diff_deleted=false, force=false,
-                   header_encoding=nil)
+                   header_encoding=nil, relative_to_dir=nil)
         header_encoding ||= Core::LOCALE_CHARSET
+        relative_to_dir &&= Core.path_canonicalize(relative_to_dir)
         Client.diff_peg4(options, path, peg_rev, start_rev, end_rev,
-                         depth, ignore_ancestry,
+                         relative_to_dir, depth, ignore_ancestry,
                          no_diff_deleted, force, header_encoding,
                          out_file, err_file, self)
       end
@@ -320,12 +331,16 @@ module Svn
       end
 
 
-      def merge_peg(src, rev1, rev2, target_wcpath,
-                    peg_rev=nil, depth=nil,
-                    ignore_ancestry=false, force=false,
-                    dry_run=false, options=nil, record_only=false)
-        peg_rev ||= uri?(src) ? 'HEAD' : 'WORKING'
-        Client.merge_peg3(src, rev1, rev2, peg_rev,
+      def merge_peg(src, rev1, rev2, *rest)
+        merge_peg2(src, [[rev1, rev2]], *rest)
+      end
+
+      def merge_peg2(src, ranges_to_merge, target_wcpath,
+                     peg_rev=nil, depth=nil,
+                     ignore_ancestry=false, force=false,
+                     dry_run=false, options=nil, record_only=false)
+        peg_rev ||= URI(src).scheme ? 'HEAD' : 'WORKING'
+        Client.merge_peg3(src, ranges_to_merge, peg_rev,
                           target_wcpath, depth, ignore_ancestry,
                           force, record_only, dry_run, options, self)
       end
@@ -353,13 +368,14 @@ module Svn
         Client.unlock(targets, break_lock, self)
       end
 
-      def info(path_or_uri, rev=nil, peg_rev=nil, recurse=false)
+      def info(path_or_uri, rev=nil, peg_rev=nil, depth_or_recurse=false)
         rev ||= URI(path_or_uri).scheme ? "HEAD" : "BASE"
+        depth = Core::Depth.infinity_or_empty_from_recurse(depth_or_recurse)
         peg_rev ||= rev
         receiver = Proc.new do |path, info|
           yield(path, info)
         end
-        Client.info(path_or_uri, rev, peg_rev, receiver, recurse, self)
+        Client.info2(path_or_uri, rev, peg_rev, receiver, depth, self)
       end
 
       # Returns URL for +path+ as a String.
@@ -516,84 +532,17 @@ module Svn
       # +path+ is a relative path from the +path_or_uri+.
       # +dirent+ is an instance of Svn::Core::Dirent.
       # +abs_path+ is an absolute path for +path_or_uri+ in the repository.
-      def list(path_or_uri, rev, peg_rev=nil, recurse=false,
+      def list(path_or_uri, rev, peg_rev=nil, depth_or_recurse=Core::DEPTH_IMMEDIATES,
                dirent_fields=nil, fetch_locks=true,
                &block) # :yields: path, dirent, lock, abs_path
+        depth = Core::Depth.infinity_or_immediates_from_recurse(depth_or_recurse)
         dirent_fields ||= Core::DIRENT_ALL
-        Client.list(path_or_uri, peg_rev, rev, recurse, dirent_fields,
+        Client.list2(path_or_uri, peg_rev, rev, depth, dirent_fields,
                     fetch_locks, block, self)
       end
 
-      def switch(path, uri, rev=nil, depth=nil, ignore_externals=false, allow_unver_obstruction=false)
-        Client.switch2(path, uri, rev, depth, ignore_externals, allow_unver_obstruction, self)
-      end
-
-      def add_simple_provider
-        add_provider(Core.auth_get_simple_provider)
-      end
-
-      if Core.respond_to?(:auth_get_windows_simple_provider)
-        def add_windows_simple_provider
-          add_provider(Core.auth_get_windows_simple_provider)
-        end
-      end
-
-      if Core.respond_to?(:auth_get_keychain_simple_provider)
-        def add_keychain_simple_provider
-          add_provider(Core.auth_get_keychain_simple_provider)
-        end
-      end
-
-      def add_username_provider
-        add_provider(Core.auth_get_username_provider)
-      end
-
-      def add_ssl_client_cert_file_provider
-        add_provider(Core.auth_get_ssl_client_cert_file_provider)
-      end
-
-      def add_ssl_client_cert_pw_file_provider
-        add_provider(Core.auth_get_ssl_client_cert_pw_file_provider)
-      end
-
-      def add_ssl_server_trust_file_provider
-        add_provider(Core.auth_get_ssl_server_trust_file_provider)
-      end
-
-      if Core.respond_to?(:auth_get_windows_ssl_server_trust_provider)
-        def add_windows_ssl_server_trust_provider
-          add_provider(Core.auth_get_windows_ssl_server_trust_provider)
-        end
-      end
-
-      def add_simple_prompt_provider(retry_limit, prompt=Proc.new)
-        args = [retry_limit]
-        klass = Core::AuthCredSimple
-        add_prompt_provider("simple", args, prompt, klass)
-      end
-
-      def add_username_prompt_provider(retry_limit, prompt=Proc.new)
-        args = [retry_limit]
-        klass = Core::AuthCredUsername
-        add_prompt_provider("username", args, prompt, klass)
-      end
-
-      def add_ssl_server_trust_prompt_provider(prompt=Proc.new)
-        args = []
-        klass = Core::AuthCredSSLServerTrust
-        add_prompt_provider("ssl_server_trust", args, prompt, klass)
-      end
-
-      def add_ssl_client_cert_prompt_provider(retry_limit, prompt=Proc.new)
-        args = [retry_limit]
-        klass = Core::AuthCredSSLClientCert
-        add_prompt_provider("ssl_client_cert", args, prompt, klass)
-      end
-
-      def add_ssl_client_cert_pw_prompt_provider(retry_limit, prompt=Proc.new)
-        args = [retry_limit]
-        klass = Core::AuthCredSSLClientCertPw
-        add_prompt_provider("ssl_client_cert_pw", args, prompt, klass)
+      def switch(path, uri, peg_rev=nil, rev=nil, depth=nil, ignore_externals=false, allow_unver_obstruction=false)
+        Client.switch2(path, uri, peg_rev, rev, depth, ignore_externals, allow_unver_obstruction, self)
       end
 
       def set_log_msg_func(callback=Proc.new)
@@ -632,27 +581,24 @@ module Svn
         Core::MergeInfo.new(info)
       end
 
-      def add_to_change_list(change_list_name, *paths)
+      def add_to_changelist(changelist_name, *paths)
         paths = paths[0] if paths.size == 1 and paths[0].is_a?(Array)
-        Client.add_to_changelist(paths, change_list_name, self)
+        Client.add_to_changelist(paths, changelist_name, self)
       end
-      alias_method :add_to_changelist, :add_to_change_list
 
-      def change_list(change_list_name, root_path, &block)
-        args = [change_list_name, root_path, self]
+      def changelist(changelist_name, root_path, &block)
+        args = [changelist_name, root_path, self]
         if block
           Client.get_changelist_streamy(block, *args)
         else
           Client.get_changelist(*args)
         end
       end
-      alias_method :changelist, :change_list
 
-      def remove_from_change_list(change_list_name, *paths)
+      def remove_from_changelist(changelist_name, *paths)
         paths = paths[0] if paths.size == 1 and paths[0].is_a?(Array)
-        Client.remove_from_changelist(paths, change_list_name, self)
+        Client.remove_from_changelist(paths, changelist_name, self)
       end
-      alias_method :remove_from_changelist, :remove_from_change_list
 
       private
       def init_callbacks
@@ -669,42 +615,11 @@ module Svn
         private "#{type}_func2=", "#{type}_baton2="
       end
 
-      def add_prompt_provider(name, args, prompt, cred_class)
-        real_prompt = Proc.new do |*prompt_args|
-          cred = cred_class.new
-          prompt.call(cred, *prompt_args)
-          cred
-        end
-        method_name = "swig_rb_auth_get_#{name}_prompt_provider"
-        baton, pro = Core.__send__(method_name, real_prompt, *args)
-        @batons << baton
-        @prompts << real_prompt
-        add_provider(pro)
-      end
-
-      def add_provider(provider)
-        @providers << provider
-        update_auth_baton
-      end
-
-      def update_auth_baton
-        @auth_baton = Core::AuthBaton.new(@providers, @auth_baton.parameters)
-        self.auth_baton = @auth_baton
-      end
-
       def normalize_path(paths)
         paths = [paths] unless paths.is_a?(Array)
         paths.collect do |path|
           path.chomp(File::SEPARATOR)
         end
-      end
-
-      def uri?(path)
-        uri = URI.parse(path)
-        # URI.parse is pretty liberal in what it will accept as a scheme,
-        # but if we get a scheme and a host we can be pretty sure it's a
-        # URI as far as subversion is concerned.
-        uri.scheme and uri.host
       end
     end
 

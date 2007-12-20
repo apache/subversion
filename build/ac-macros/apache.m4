@@ -15,25 +15,25 @@ HTTPD_WANTED_MMN="$1"
 
 AC_MSG_CHECKING(for static Apache module support)
 AC_ARG_WITH(apache,
-AC_HELP_STRING([--with-apache=DIR],
-	       [Build static Apache modules.  DIR is the path to the top-level
-		Apache source directory. IMPORTANT: Unless you are *absolutely*
+AS_HELP_STRING([--with-apache=DIR],
+               [Build static Apache modules.  DIR is the path to the top-level
+                Apache source directory. IMPORTANT: Unless you are *absolutely*
                 certain that you want to build the modules *statically*, you
                 probably want --with-apxs, and not this option.]),
 [
-	if test "$withval" = "yes"; then
-		AC_MSG_ERROR(You need to specify a directory with --with-apache)
-	fi
+        if test "$withval" = "yes"; then
+                AC_MSG_ERROR(You need to specify a directory with --with-apache)
+        fi
 
-	if test "$withval" = "no"; then
-		BINNAME=""
-	elif test -r $withval/modules/dav/main/mod_dav.h; then
-		APACHE_INCLUDES="$APACHE_INCLUDES -I$withval/include -I$withval/os/unix -I$withval/modules/dav/main -I$withval/srclib/apr/include -I$withval/srclib/apr-util/include"
-		APACHE_TARGET=$withval/modules/dav/svn
-		INSTALL_APACHE_RULE=install-mods-static
-		BINNAME=mod_dav_svn.a
+        if test "$withval" = "no"; then
+                BINNAME=""
+        elif test -r $withval/modules/dav/main/mod_dav.h; then
+                APACHE_INCLUDES="$APACHE_INCLUDES -I$withval/include -I$withval/os/unix -I$withval/modules/dav/main -I$withval/srclib/apr/include -I$withval/srclib/apr-util/include"
+                APACHE_TARGET=$withval/modules/dav/svn
+                INSTALL_APACHE_RULE=install-mods-static
+                BINNAME=mod_dav_svn.a
 
-  		AC_MSG_RESULT(yes - Apache 2.0.x)
+                AC_MSG_RESULT(yes - Apache 2.0.x)
 
                 AC_MSG_CHECKING([httpd version])
                 AC_EGREP_CPP(VERSION_OKAY,
@@ -48,10 +48,10 @@ VERSION_OKAY
                 if test ! -r $withval/srclib/apr/include/apr.h; then
                         AC_MSG_WARN(Apache 2.0.x is not configured)
                 fi
-	else
-		dnl if they pointed us at the wrong place, then just bail
-		AC_MSG_ERROR(no - Unable to locate $withval/modules/dav/main/mod_dav.h)
-	fi
+        else
+                dnl if they pointed us at the wrong place, then just bail
+                AC_MSG_ERROR(no - Unable to locate $withval/modules/dav/main/mod_dav.h)
+        fi
 ],[
     AC_MSG_RESULT(no)
 ])
@@ -59,8 +59,10 @@ VERSION_OKAY
 
 AC_MSG_CHECKING(for Apache module support via DSO through APXS)
 AC_ARG_WITH(apxs,
-[[  --with-apxs[=FILE]      Build shared Apache modules.  FILE is the optional
-                          pathname to the Apache apxs tool; defaults to "apxs".]],
+            [AS_HELP_STRING([[--with-apxs[=FILE]]],
+                            [Build shared Apache modules.  FILE is the optional
+                             pathname to the Apache apxs tool; defaults to
+                             "apxs".])],
 [
     if test "$BINNAME" != ""; then
       AC_MSG_ERROR(--with-apache and --with-apxs are mutually exclusive)
@@ -108,11 +110,11 @@ VERSION_OKAY
         ])
 
     elif test "$APXS_EXPLICIT" != ""; then
-	AC_MSG_ERROR(no - APXS refers to an old version of Apache
+        AC_MSG_ERROR(no - APXS refers to an old version of Apache
                      Unable to locate $APXS_INCLUDE/mod_dav.h)
     else
-	AC_MSG_RESULT(no - Unable to locate $APXS_INCLUDE/mod_dav.h)
-	APXS=""
+        AC_MSG_RESULT(no - Unable to locate $APXS_INCLUDE/mod_dav.h)
+        APXS=""
     fi
 else
     AC_MSG_RESULT(no)

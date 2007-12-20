@@ -73,9 +73,6 @@ typedef struct {
   /* True iff client requested all data inline in the report. */
   svn_boolean_t send_all;
 
-  /* Actual depth used in the response. */
-  svn_depth_t depth;
-
   /* SVNDIFF version to send to client.  */
   int svndiff_version;
 } update_ctx_t;
@@ -500,8 +497,7 @@ maybe_start_update_report(update_ctx_t *uc)
                                 "<S:update-report xmlns:S=\""
                                 SVN_XML_NAMESPACE "\" "
                                 "xmlns:V=\"" SVN_DAV_PROP_NS_DAV "\" "
-                                "xmlns:D=\"DAV:\" depth=\"%s\" %s>" DEBUG_CR,
-                                svn_depth_to_word(uc->depth),
+                                "xmlns:D=\"DAV:\" %s>" DEBUG_CR,
                                 uc->send_all ? "send-all=\"true\"" : ""));
 
       uc->started_update = TRUE;
@@ -685,17 +681,17 @@ upd_change_xxx_prop(void *baton,
 #define NSLEN (sizeof(SVN_PROP_ENTRY_PREFIX) - 1)
       if (! strncmp(name, SVN_PROP_ENTRY_PREFIX, NSLEN))
         {
-          if (! strcmp(name, SVN_PROP_ENTRY_COMMITTED_REV))
+          if (strcmp(name, SVN_PROP_ENTRY_COMMITTED_REV) == 0)
             {
               b->committed_rev = value ?
                 apr_pstrdup(b->pool, value->data) : NULL;
             }
-          else if (! strcmp(name, SVN_PROP_ENTRY_COMMITTED_DATE))
+          else if (strcmp(name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0)
             {
               b->committed_date = value ?
                 apr_pstrdup(b->pool, value->data) : NULL;
             }
-          else if (! strcmp(name, SVN_PROP_ENTRY_LAST_AUTHOR))
+          else if (strcmp(name, SVN_PROP_ENTRY_LAST_AUTHOR) == 0)
             {
               b->last_author = value ?
                 apr_pstrdup(b->pool, value->data) : NULL;
@@ -1161,10 +1157,6 @@ dav_svn__update_report(const dav_resource *resource,
   if (! uc.send_all)
     text_deltas = FALSE;
 
-  /* Stash away the depth value we determined. */
-  uc.depth = (requested_depth == svn_depth_unknown ? svn_depth_infinity
-                                                   : requested_depth);
-
   /* When we call svn_repos_finish_report, it will ultimately run
      dir_delta() between REPOS_PATH/TARGET and TARGET_PATH.  In the
      case of an update or status, these paths should be identical.  In
@@ -1215,6 +1207,7 @@ dav_svn__update_report(const dav_resource *resource,
           {
             const char *path;
             svn_revnum_t rev = SVN_INVALID_REVNUM;
+            svn_boolean_t saw_rev = FALSE;
             const char *linkpath = NULL;
             const char *locktoken = NULL;
             svn_boolean_t start_empty = FALSE;
@@ -1226,22 +1219,25 @@ dav_svn__update_report(const dav_resource *resource,
 
             while (this_attr)
               {
-                if (! strcmp(this_attr->name, "rev"))
-                  rev = SVN_STR_TO_REV(this_attr->value);
-                else if (! strcmp(this_attr->name, "depth"))
+                if (strcmp(this_attr->name, "rev") == 0)
+                  {
+                    rev = SVN_STR_TO_REV(this_attr->value);
+                    saw_rev = TRUE;
+                  }
+                else if (strcmp(this_attr->name, "depth") == 0)
                   depth = svn_depth_from_word(this_attr->value);
-                else if (! strcmp(this_attr->name, "linkpath"))
+                else if (strcmp(this_attr->name, "linkpath") == 0)
                   linkpath = this_attr->value;
-                else if (! strcmp(this_attr->name, "start-empty"))
+                else if (strcmp(this_attr->name, "start-empty") == 0)
                   start_empty = entry_is_empty = TRUE;
-                else if (! strcmp(this_attr->name, "lock-token"))
+                else if (strcmp(this_attr->name, "lock-token") == 0)
                   locktoken = this_attr->value;
 
                 this_attr = this_attr->next;
               }
 
             /* we require the `rev' attribute for this to make sense */
-            if (! SVN_IS_VALID_REVNUM(rev))
+            if (! saw_rev)
               {
                 serr = svn_error_create(SVN_ERR_XML_ATTRIB_NOT_FOUND,
                                         NULL, "Missing XML attribute: rev");
@@ -1322,18 +1318,18 @@ dav_svn__update_report(const dav_resource *resource,
         /* diff/merge don't ask for inline text-deltas. */
         if (!uc.send_all && strcmp(spath, dst_path) == 0)
           action = apr_psprintf(resource->pool,
-                                "diff-or-merge '%s' r%ld:%ld",
+                                "diff-or-merge %s r%ld:%ld depth-%s",
                                 svn_path_uri_encode(spath, resource->pool),
                                 from_revnum,
-                                revnum);
+                                revnum, svn_depth_to_word(requested_depth));
         else
           action = apr_psprintf(resource->pool,
-                                "%s '%s@%ld' '%s@%ld'",
+                                "%s %s@%ld %s@%ld depth-%s",
                                 (uc.send_all ? "switch" : "diff-or-merge"),
                                 svn_path_uri_encode(spath, resource->pool),
                                 from_revnum,
                                 svn_path_uri_encode(dst_path, resource->pool),
-                                revnum);
+                                revnum, svn_depth_to_word(requested_depth));
       }
 
     /* Otherwise, it must be checkout, export, update, or status -u. */
@@ -1343,27 +1339,30 @@ dav_svn__update_report(const dav_resource *resource,
            reports it (and it alone) to the server as being empty. */
         if (entry_counter == 1 && entry_is_empty)
           action = apr_psprintf(resource->pool,
-                                "checkout-or-export '%s' r%ld",
+                                "checkout-or-export %s r%ld depth-%s",
                                 svn_path_uri_encode(spath, resource->pool),
-                                revnum);
+                                revnum,
+                                svn_depth_to_word(requested_depth));
         else
           {
             if (text_deltas)
               action = apr_psprintf(resource->pool,
-                                    "update '%s' r%ld",
+                                    "update %s r%ld depth-%s",
                                     svn_path_uri_encode(spath,
                                                         resource->pool),
-                                    revnum);
+                                    revnum,
+                                    svn_depth_to_word(requested_depth));
             else
               action = apr_psprintf(resource->pool,
-                                    "remote-status '%s' r%ld",
+                                    "remote-status %s r%ld depth-%s",
                                     svn_path_uri_encode(spath,
                                                         resource->pool),
-                                    revnum);
+                                    revnum,
+                                    svn_depth_to_word(requested_depth));
           }
       }
 
-    apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION", action);
+    dav_svn__operational_log(resource->info, action);
   }
 
   /* this will complete the report, and then drive our editor to generate

@@ -91,7 +91,8 @@ svn_cl__switch(apr_getopt_t *os,
   const char *target = NULL, *switch_url = NULL;
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
-  const char *parent_dir, *base_tgt;
+  const char *parent_dir, *base_tgt, *true_path;
+  svn_opt_revision_t peg_revision;
 
   /* This command should discover (or derive) exactly two cmdline
      arguments: a local path to update ("target"), and a new url to
@@ -102,7 +103,7 @@ svn_cl__switch(apr_getopt_t *os,
   /* handle only-rewrite case specially */
   if (opt_state->relocate)
     return rewrite_urls(targets,
-                        SVN_DEPTH_TO_RECURSE(opt_state->depth),
+                        SVN_DEPTH_IS_RECURSIVE(opt_state->depth),
                         ctx, pool);
 
   if (targets->nelts < 1)
@@ -121,6 +122,11 @@ svn_cl__switch(apr_getopt_t *os,
       switch_url = APR_ARRAY_IDX(targets, 0, const char *);
       target = APR_ARRAY_IDX(targets, 1, const char *);
     }
+
+  /* Strip peg revision if targets contains an URI. */
+  SVN_ERR(svn_opt_parse_path(&peg_revision, &true_path, switch_url, pool));
+  APR_ARRAY_IDX(targets, 0, const char *) = true_path;
+  switch_url = true_path;
 
   /* Validate the switch_url */
   if (! svn_path_is_url(switch_url))
@@ -153,6 +159,7 @@ svn_cl__switch(apr_getopt_t *os,
 
   /* Do the 'switch' update. */
   SVN_ERR(svn_client_switch2(NULL, target, switch_url,
+                             &peg_revision,
                              &(opt_state->start_revision),
                              opt_state->depth, opt_state->ignore_externals,
                              opt_state->force, ctx, pool));

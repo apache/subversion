@@ -121,31 +121,6 @@ svn_ra_serf__expand_ns(svn_ra_serf__ns_t *ns_list,
   return prop_name;
 }
 
-/*
- * Look for ATTR_NAME in the attrs array and return its value.
- *
- * Returns NULL if no matching name is found.
- */
-const char *
-svn_ra_serf__find_attr(const char **attrs,
-                       const char *attr_name)
-{
-  const char *attr_val = NULL;
-  const char **tmp_attrs = attrs;
-
-  while (*tmp_attrs)
-    {
-      if (strcmp(*tmp_attrs, attr_name) == 0)
-        {
-          attr_val = *(tmp_attrs + 1);
-          break;
-        }
-      tmp_attrs += 2;
-    }
-
-  return attr_val;
-}
-
 void
 svn_ra_serf__expand_string(const char **cur, apr_size_t *cur_len,
                            const char *new, apr_size_t new_len,
@@ -222,7 +197,7 @@ svn_ra_serf__xml_push_state(svn_ra_serf__xml_parser_t *parser,
       new_state = parser->free_state;
       parser->free_state = parser->free_state->prev;
 
-      apr_pool_clear(new_state->pool);
+      svn_pool_clear(new_state->pool);
     }
 
   if (parser->state)

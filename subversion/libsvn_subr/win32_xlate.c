@@ -21,6 +21,11 @@
 /* Define _WIN32_DCOM for CoInitializeEx(). */
 #define _WIN32_DCOM
 
+#ifdef APR_HAVE_IPV6
+#include <winsock2.h>
+#include <Ws2tcpip.h>
+#include <Wspiapi.h>
+#endif
 #include <windows.h>
 #include <mlang.h>
 

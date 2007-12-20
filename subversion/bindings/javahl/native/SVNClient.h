@@ -19,17 +19,16 @@
  * @brief Interface for the SVNClient class
  */
 
-#if !defined(AFX_SVNCLIENT_H__B5A135CD_3D7C_4ABC_8D75_643B14507979__INCLUDED_)
-#define AFX_SVNCLIENT_H__B5A135CD_3D7C_4ABC_8D75_643B14507979__INCLUDED_
+#ifndef SVNCLIENT_H
+#define SVNCLIENT_H
 
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
-
+#include <vector>
+#include <string>
 #include <jni.h>
 #include "Path.h"
 
 class Revision;
+class RevisionRange;
 class Notify;
 class Notify2;
 class ConflictResolverCallback;
@@ -46,6 +45,7 @@ class InfoCallback;
 class ListCallback;
 class StatusCallback;
 class CommitMessage;
+#include "svn_types.h"
 #include "svn_client.h"
 #include "SVNBase.h"
 
@@ -92,28 +92,30 @@ class SVNClient :public SVNBase
   jobjectArray suggestMergeSources(const char *path, Revision &pegRevision);
   void merge(const char *path1, Revision &revision1, const char *path2,
              Revision &revision2, const char *localPath, bool force,
-             svn_depth_t depth, bool ignoreAncestry, bool dryRun);
-  void merge(const char *path, Revision &pegRevision, Revision &revision1,
-             Revision &revision2, const char *localPath, bool force,
-             svn_depth_t depth, bool ignoreAncestry, bool dryRun);
+             svn_depth_t depth, bool ignoreAncestry, bool dryRun,
+             bool recordOnly);
+  void merge(const char *path, Revision &pegRevision,
+             std::vector<RevisionRange> &rangesToMerge,
+             const char *localPath, bool force, svn_depth_t depth,
+             bool ignoreAncestry, bool dryRun, bool recordOnly);
   void doImport(const char *path, const char *url, const char *message,
                 svn_depth_t depth, bool noIgnore, bool ignoreUnknownNodeTypes);
   jlong doSwitch(const char *path, const char *url, Revision &revision,
-                 svn_depth_t depth, bool ignoreExternals,
-                 bool allowUnverObstructions);
+                 Revision &pegRevision, svn_depth_t depth,
+                 bool ignoreExternals, bool allowUnverObstructions);
   jlong doExport(const char *srcPath, const char *destPath,
                  Revision &revision, Revision &pegRevision, bool force,
                  bool ignoreExternals, svn_depth_t depth,
                  const char *nativeEOL);
-  void resolved(const char *path, bool recurse);
+  void resolved(const char *path, svn_depth_t depth,
+                svn_wc_conflict_choice_t choice);
   void cleanup(const char *path);
   void mkdir(Targets &targets, const char *message, bool makeParents);
   void move(Targets &srcPaths, const char *destPath,
             const char *message, bool force, bool moveAsChild,
-            bool makeParents, bool withMergeHistory);
+            bool makeParents);
   void copy(CopySources &copySources, const char *destPath,
-            const char *message, bool copyAsChild, bool makeParents,
-            bool withMergeHistory);
+            const char *message, bool copyAsChild, bool makeParents);
   jlong commit(Targets &targets, const char *message, svn_depth_t depth,
                bool noUnlock, bool keepChangelist,
                const char *changelistName);
@@ -135,8 +137,8 @@ class SVNClient :public SVNBase
                    Revision &revisionStart,
                    Revision &revisionEnd, bool stopOnCopy,
                    bool discoverPaths, bool includeMergedRevisions,
-                   bool omitLogText, long limit,
-                   LogMessageCallback *callback);
+                   std::vector<std::string> &revProps,
+                   long limit, LogMessageCallback *callback);
   void setPrompt(Prompter *prompter);
   void password(const char *pi_password);
   void username(const char *pi_username);
@@ -162,12 +164,14 @@ class SVNClient :public SVNBase
                       Revision &revision, Revision &pegRevision);
   void diff(const char *target1, Revision &revision1,
             const char *target2, Revision &revision2,
-            const char *outfileName, svn_depth_t depth, bool ignoreAncestry,
-            bool noDiffDelete, bool force);
+            const char *relativeToDir, const char *outfileName,
+            svn_depth_t depth, bool ignoreAncestry, bool noDiffDelete,
+            bool force);
   void diff(const char *target, Revision &pegevision,
             Revision &startRevision, Revision &endRevision,
-            const char *outfileName, svn_depth_t depth, bool ignoreAncestry,
-            bool noDiffDelete, bool force);
+            const char *relativeToDir, const char *outfileName,
+            svn_depth_t depth, bool ignoreAncestry, bool noDiffDelete,
+            bool force);
   void diffSummarize(const char *target1, Revision &revision1,
                      const char *target2, Revision &revision2,
                      svn_depth_t depth, bool ignoreAncestry,
@@ -201,7 +205,7 @@ class SVNClient :public SVNBase
    */
   void diff(const char *target1, Revision &revision1,
             const char *target2, Revision &revision2,
-            Revision *pegRevision,
+            Revision *pegRevision, const char *relativeToDir,
             const char *outfileName, svn_depth_t depth, bool ignoreAncestry,
             bool noDiffDelete, bool force);
 
@@ -215,6 +219,8 @@ class SVNClient :public SVNBase
   Path m_lastPath;
   bool m_cancelOperation;
   CommitMessage *m_commitMessage;
+
+  jobjectArray makeJRevisionRangeArray(apr_array_header_t *ranges);
 
   /**
    * Implements the svn_client_get_commit_log3_t API.
@@ -235,5 +241,4 @@ class SVNClient :public SVNBase
   std::string m_configDir;
 };
 
-// !defined(AFX_SVNCLIENT_H__B5A135CD_3D7C_4ABC_8D75_643B14507979__INCLUDED_)
-#endif
+#endif // SVNCLIENT_H

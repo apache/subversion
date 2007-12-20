@@ -324,12 +324,12 @@ class SvnClientTest < Test::Unit::TestCase
     dir2_path = File.join(dir1_path, dir2)
 
     ctx = make_context(log)
-    assert_nil(ctx.commit(@wc_path))
+    assert_equal(Svn::Core::INVALID_REVNUM,ctx.commit(@wc_path).revision)
     ctx.mkdir(dir1_path)
     assert_equal(0, youngest_rev)
     assert_equal(1, ctx.commit(@wc_path).revision)
     ctx.mkdir(dir2_path)
-    assert_nil(ctx.commit(@wc_path, false))
+    assert_equal(Svn::Core::INVALID_REVNUM,ctx.commit(@wc_path, false).revision)
     assert_equal(2, ctx.ci(@wc_path).revision)
   end
 
@@ -413,6 +413,41 @@ class SvnClientTest < Test::Unit::TestCase
     assert_equal(rev1, rev)
     assert_equal([@wc_path, dir_path, path1, path2].sort,
                  infos.collect{|path, status| path}.sort)
+  end
+
+  def test_status_with_depth
+    setup_greek_tree
+
+    log = "sample log"
+    ctx = make_context(log)
+
+    # make everything out-of-date
+    ctx.prop_set('propname', 'propvalue', @greek.path(:b), :infinity)
+
+    recurse_and_depth_choices.each do |rd|
+      ctx.status(@greek.path(:mu), nil, rd) do |path, status|
+        assert_equal @greek.uri(:mu), status.url
+      end
+    end
+
+    expected_statuses_by_depth = {
+      true => [:beta, :b, :lambda, :e, :f, :alpha],
+      false => [:b, :lambda, :e, :f],
+      'empty' => [:b],
+      'files' => [:b, :lambda],
+      'immediates' => [:b, :lambda, :e, :f],
+      'infinity' => [:beta, :b, :lambda, :e, :f, :alpha],
+    }
+
+    recurse_and_depth_choices.each do |rd|
+      urls = []
+      ctx.status(@greek.path(:b), nil, rd) do |path, status|
+        urls << status.url
+      end
+      assert_equal(expected_statuses_by_depth[rd].map{|s| @greek.uri(s)}.sort,
+                   urls.sort,
+                   "depth '#{rd}")
+    end
   end
 
   def test_checkout
@@ -1295,6 +1330,142 @@ class SvnClientTest < Test::Unit::TestCase
     assert_equal({name2 => value2}, dir_props)
   end
 
+  def recurse_and_depth_choices
+    [false, true, 'empty', 'files', 'immediates', 'infinity']
+  end
+
+  def test_file_prop
+    setup_greek_tree
+
+    log = "sample log"
+    ctx = make_context(log)
+
+    # when no props set, everything is empty
+    recurse_and_depth_choices.each do |rd|
+      assert_equal([],
+                   ctx.prop_list(@greek.path(:mu), nil, nil, rd),
+                   "prop_list with Depth '#{rd}'")
+    end
+
+    recurse_and_depth_choices.each do |rd|
+      assert_equal({},
+                   ctx.prop_get(rd.to_s, @greek.path(:mu), nil, nil, rd),
+                   "prop_get with Depth '#{rd}'")
+    end
+
+    # set some props
+    recurse_and_depth_choices.each do |rd|
+      ctx.prop_set(rd.to_s, rd.to_s, @greek.path(:mu), rd)
+    end
+    ctx.commit(@greek.path(:mu))
+
+    # get the props
+    recurse_and_depth_choices.each do |rd|
+      assert_equal({@greek.uri(:mu) => rd.to_s},
+                   ctx.prop_get(rd.to_s, @greek.path(:mu), nil, nil, rd),
+                   "prop_get with Depth '#{rd}'")
+    end
+
+    prop_hash = {}
+    recurse_and_depth_choices.each {|rd| prop_hash[rd.to_s] = rd.to_s}
+
+    # list the props
+    recurse_and_depth_choices.each do |rd|
+      props = ctx.prop_list(@greek.path(:mu), nil, nil, rd)
+      assert_equal([@greek.uri(:mu)],
+                   props.collect {|item| item.node_name},
+                   "prop_list (node_name) with Depth '#{rd}'")
+
+      props = ctx.plist(@greek.path(:mu), nil, nil, rd)
+      assert_equal([prop_hash],
+                   props.collect {|item| item.prop_hash},
+                   "prop_list (prop_hash) with Depth '#{rd}'")
+
+      recurse_and_depth_choices.each do |rd1|
+        props = ctx.plist(@greek.path(:mu), nil, nil, rd)
+        assert_equal([rd1.to_s],
+                     props.collect {|item| item[rd1.to_s]},
+                     "prop_list (#{rd1.to_s}]) with Depth '#{rd}'")
+      end
+    end
+
+  end
+
+  def test_dir_prop
+    setup_greek_tree
+
+    log = "sample log"
+    ctx = make_context(log)
+
+    # when no props set, everything is empty
+    recurse_and_depth_choices.each do |rd|
+      assert_equal([],
+                   ctx.prop_list(@greek.path(:b), nil, nil, rd),
+                   "prop_list with Depth '#{rd}'")
+    end
+
+    recurse_and_depth_choices.each do |rd|
+      assert_equal({},
+                   ctx.prop_get(rd.to_s, @greek.path(:b), nil, nil, rd),
+                   "prop_get with Depth '#{rd}'")
+    end
+
+    # set some props with various depths
+    recurse_and_depth_choices.each do |rd|
+      ctx.prop_set(rd.to_s, rd.to_s, @greek.path(:b), rd)
+    end
+    ctx.commit(@greek.path(:b))
+
+    expected_props = {
+      true => [:beta, :b, :lambda, :e, :f, :alpha],
+      false => [:b],
+      'empty' => [:b],
+      'files' => [:b, :lambda],
+      'immediates' => [:b, :lambda, :e, :f],
+      'infinity' => [:beta, :b, :lambda, :e, :f, :alpha],
+    }
+
+    paths = [:b, :e, :alpha, :beta, :f, :lambda]
+
+    # how are the props set?
+    recurse_and_depth_choices.each do |rd|
+      paths.each do |path|
+        if expected_props[rd].include?(path)
+          expected = {@greek.uri(path) => rd.to_s}
+        else
+          expected = {}
+        end
+        assert_equal(expected,
+                     ctx.prop_get(rd.to_s, @greek.path(path), nil, nil, false),
+                     "prop_get #{@greek.resolve(path)} with Depth '#{rd}'")
+      end
+    end
+
+    recurse_and_depth_choices.each do |rd_for_prop|
+      recurse_and_depth_choices.each do |rd_for_depth|
+        expected = {}
+        expected_paths = expected_props[rd_for_depth]
+        expected_paths &= expected_props[rd_for_prop]
+        expected_paths.each do |path|
+          expected[@greek.uri(path)] = rd_for_prop.to_s
+        end
+
+        assert_equal(expected,
+                     ctx.prop_get(rd_for_prop.to_s, @greek.path(:b),
+                                  nil, nil, rd_for_depth),
+                     "prop_get '#{rd_for_prop}' with Depth '#{rd_for_depth}'")
+
+      end
+    end
+
+    recurse_and_depth_choices.each do |rd|
+      props = ctx.prop_list(@greek.path(:b), nil, nil, rd)
+      assert_equal(expected_props[rd].collect {|path| @greek.uri(path)}.sort,
+                   props.collect {|item| item.node_name}.sort,
+                   "prop_list (node_name) with Depth '#{rd}'")
+    end
+  end
+
   def test_cat
     log = "sample log"
     src1 = "source1\n"
@@ -1382,6 +1553,38 @@ class SvnClientTest < Test::Unit::TestCase
                  infos.collect{|path, info| path})
     top_info = infos.assoc(repos_base)[1]
     assert_equal(@repos_uri, top_info.url)
+  end
+
+  def test_info_with_depth
+    setup_greek_tree
+
+    log = "sample log"
+    ctx = make_context(log)
+
+    recurse_and_depth_choices.each do |rd|
+      ctx.info(@greek.path(:mu),nil,nil,rd) do |path, info|
+        assert_equal @greek.uri(:mu), info.URL
+      end
+    end
+
+    expected_info_by_depth = {
+      true => [:beta, :b, :lambda, :e, :f, :alpha],
+      false => [:b],
+      'empty' => [:b],
+      'files' => [:b, :lambda],
+      'immediates' => [:b, :lambda, :e, :f],
+      'infinity' => [:beta, :b, :lambda, :e, :f, :alpha],
+    }
+
+    recurse_and_depth_choices.each do |rd|
+      urls = []
+      ctx.info(@greek.path(:b),nil,nil,rd) do |path, info|
+        urls << info.URL
+      end
+      assert_equal expected_info_by_depth[rd].map{|s| @greek.uri(s)}.sort,
+                   urls.sort,
+                   "depth '#{rd}"
+    end
   end
 
   def test_url_from_path
@@ -1571,6 +1774,32 @@ class SvnClientTest < Test::Unit::TestCase
       else
         flunk
       end
+    end
+  end
+
+  def test_list_with_depth
+    setup_greek_tree
+
+    log = "sample log"
+    ctx = make_context(log)
+
+    expected_lists_by_depth = {
+      true => [:beta, :b, :lambda, :e, :f, :alpha],
+      false => [:b, :lambda, :e, :f],
+      'empty' => [:b],
+      'files' => [:b, :lambda],
+      'immediates' => [:b, :lambda, :e, :f],
+      'infinity' => [:beta, :b, :lambda, :e, :f, :alpha],
+    }
+
+    recurse_and_depth_choices.each do |rd|
+      paths = []
+      ctx.list(@greek.path(:b), 'head' ,nil, rd) do |path, dirent, lock, abs_path|
+        paths << (path.empty? ? abs_path : File.join(abs_path, path))
+      end
+      assert_equal(expected_lists_by_depth[rd].map{|s| "/#{@greek.resolve(s)}"}.sort,
+                   paths.sort,
+                   "depth '#{rd}")
     end
   end
 
@@ -1898,13 +2127,13 @@ class SvnClientTest < Test::Unit::TestCase
     assert_equal({"my-prop" => "XXX"}, context.revprop_table)
   end
 
-  def assert_change_list
+  def assert_changelist
     log = "sample log"
     file1 = "hello1.txt"
     file2 = "hello2.txt"
     src = "Hello"
-    change_list1 = "XXX"
-    change_list2 = "YYY"
+    changelist1 = "XXX"
+    changelist2 = "YYY"
     path1 = File.join(@wc_path, file1)
     path2 = File.join(@wc_path, file2)
 
@@ -1915,45 +2144,45 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.add(path2)
     ctx.commit(@wc_path)
 
-    assert_equal([], yield(ctx, change_list1, @wc_path))
-    ctx.add_to_change_list(change_list1, path1)
-    assert_equal([path1], yield(ctx, change_list1, @wc_path))
+    assert_equal([], yield(ctx, changelist1, @wc_path))
+    ctx.add_to_changelist(changelist1, path1)
+    assert_equal([path1], yield(ctx, changelist1, @wc_path))
 
-    assert_equal([], yield(ctx, change_list2, @wc_path))
-    ctx.add_to_change_list(change_list2, path1, path2)
+    assert_equal([], yield(ctx, changelist2, @wc_path))
+    ctx.add_to_changelist(changelist2, path1, path2)
     assert_equal([path1, path2].sort,
-                 yield(ctx, change_list2, @wc_path).sort)
-    assert_equal([], yield(ctx, change_list1, @wc_path))
+                 yield(ctx, changelist2, @wc_path).sort)
+    assert_equal([], yield(ctx, changelist1, @wc_path))
 
-    ctx.add_to_change_list(change_list1, [path1, path2])
+    ctx.add_to_changelist(changelist1, [path1, path2])
     assert_equal([path1, path2].sort,
-                 yield(ctx, change_list1, @wc_path).sort)
-    assert_equal([], yield(ctx, change_list2, @wc_path))
+                 yield(ctx, changelist1, @wc_path).sort)
+    assert_equal([], yield(ctx, changelist2, @wc_path))
 
-    ctx.remove_from_change_list(change_list1, path1)
-    assert_equal([path2], yield(ctx, change_list1, @wc_path))
-    ctx.remove_from_change_list(change_list1, [path2])
-    assert_equal([], yield(ctx, change_list1, @wc_path))
+    ctx.remove_from_changelist(changelist1, path1)
+    assert_equal([path2], yield(ctx, changelist1, @wc_path))
+    ctx.remove_from_changelist(changelist1, [path2])
+    assert_equal([], yield(ctx, changelist1, @wc_path))
 
-    ctx.add_to_change_list(change_list1, path1)
-    ctx.add_to_change_list(change_list2, path2)
-    assert_equal([path1], yield(ctx, change_list1, @wc_path))
-    assert_equal([path2], yield(ctx, change_list2, @wc_path))
-    ctx.remove_from_change_list(nil, [path1, path2])
-    assert_equal([], yield(ctx, change_list1, @wc_path))
-    assert_equal([], yield(ctx, change_list2, @wc_path))
+    ctx.add_to_changelist(changelist1, path1)
+    ctx.add_to_changelist(changelist2, path2)
+    assert_equal([path1], yield(ctx, changelist1, @wc_path))
+    assert_equal([path2], yield(ctx, changelist2, @wc_path))
+    ctx.remove_from_changelist(nil, [path1, path2])
+    assert_equal([], yield(ctx, changelist1, @wc_path))
+    assert_equal([], yield(ctx, changelist2, @wc_path))
   end
 
-  def test_change_list_get_without_block
-    assert_change_list do |ctx, change_list_name, root_path|
-      ctx.change_list(change_list_name, root_path)
+  def test_changelist_get_without_block
+    assert_changelist do |ctx, changelist_name, root_path|
+      ctx.changelist(changelist_name, root_path)
     end
   end
 
-  def test_change_list_get_with_block
-    assert_change_list do |ctx, change_list_name, root_path|
+  def test_changelist_get_with_block
+    assert_changelist do |ctx, changelist_name, root_path|
       paths = []
-      ctx.change_list(change_list_name, root_path) do |path|
+      ctx.changelist(changelist_name, root_path) do |path|
         paths << path
       end
       paths

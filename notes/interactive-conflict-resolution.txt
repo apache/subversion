@@ -1,0 +1,67 @@
+Guide to Property-Conflicts via Interactive Callback
+----------------------------------------------------
+
+Basically, your conflict-callback used to be easy:  for textual
+conflicts, {base, mine, theirs} were always defined, and {merged} was
+almost always present with pre-populated conflict markers.
+
+Now, because we have conflicting property values, any of the four
+files might not exist.  "mine" and "theirs" might be NULL because
+someone's trying to delete the property.  "base" might be NULL because
+both parties are trying to add the same new property.
+
+So your conflict-callback is going to have be careful of NULL values:
+
+* If all three files (base, mine, theirs) are provided, then you're
+  free to show a difference between base and merged (assuming merged
+  is not NULL, then users will see the conflict markers).
+
+* If your conflict callback gets a NULL merged-file, then it means
+  libsvn_wc did not make an attempt to merge things automatically.
+  The conflict callback is welcome to attempt the merge itself; if it
+  does so, then put the result in a new tmpfile somewhere and pass the
+  path back in svn_wc_conflict_result_t->merged_file.  (And don't
+  forget to 'choose_merged' as well.)
+
+* If you receive a NULL base-file, this means that both agents are
+  trying to add the property for the first time.  That's fine: you can
+  still try show a diff between the 'mine' and 'theirs' file.
+
+* If your conflict callback gets a NULL 'mine' or NULL 'theirs', it
+  means that one agent is attempting to delete the property, and one
+  is trying to modify it.  Display this to your users however you
+  wish.
+
+* Note that it's also possible for a property conflict to happen and
+  your callback to *not* get called.  If both agents are trying to
+  modify and existing property, and they *disagree* on the prior base
+  value, then there's no way to do a 3-way merge.  (For example,
+  suppose one agent is trying to change property "color" from "red" to
+  "green", and the other agent is trying to change the same "color"
+  property from "yellow" to "blue".)  In this case, the conflict
+  callback isn't invoked at all; the property is marked (C)onflicted
+  and a .prej file is created to describe the contextual mismatch.
+
+
+
+* Hand-testing your interactive property handling (for sanity):
+
+ - Both agents try to change an existing property, but to different values.
+
+       -> CLI offers a diff between base and merged, to show the prop
+          conflicts.
+
+ - Both agents attempt to add a new property, but with different
+   values.
+
+       -> CLI offers a diff between mine and theirs, to show the
+          disagreement in newly-added values.
+
+ - One agent tries to change an existing property, other agent tries
+   to delete it.
+
+       -> CLI simply says, "You want to delete the prop, they want to
+          set its value to blah."  No other diff offered.
+
+http://svn.collab.net/repos/svn/trunk/subversion/svn/conflict-callbacks.c
+contains the conflict resolution callback for the command-line client.

@@ -51,7 +51,8 @@
          <revnum>:            Revnum of set_path or link_path
        +/-                    '+' indicates depth other than svn_depth_infinity
        If previous is +:
-         <depth>:             "0","1","2" => svn_depth_{empty,files,immediates}
+         <depth>:             "X","E","F","M" =>
+                                 svn_depth_{exclude,empty,files,immediates}
        +/-                    '+' indicates start_empty field set
        +/-                    '+' indicates presence of lock_token field.
        If previous is +:
@@ -156,6 +157,18 @@ read_string(const char **str, apr_file_t *temp, apr_pool_t *pool)
   char *buf;
 
   SVN_ERR(read_number(&len, temp, pool));
+
+  /* Len can never be less than zero.  But could len be so large that
+     len + 1 wraps around and we end up passing 0 to apr_palloc(),
+     thus getting a pointer to no storage?  Probably not (16 exabyte
+     string, anyone?) but let's be future-proof anyway. */
+  if (len + 1 < len)
+    {
+      return svn_error_createf(SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
+                               _("Invalid length (%" APR_UINT64_T_FMT ") "
+                                 "when about to read a string"), len);
+    }
+
   buf = apr_palloc(pool, len + 1);
   SVN_ERR(svn_io_file_read_full(temp, buf, len, NULL, pool));
   buf[len] = 0;
@@ -173,10 +186,46 @@ read_rev(svn_revnum_t *rev, apr_file_t *temp, apr_pool_t *pool)
   if (c == '+')
     {
       SVN_ERR(read_number(&num, temp, pool));
-      *rev = num;
+      *rev = (svn_revnum_t) num;
     }
   else
     *rev = SVN_INVALID_REVNUM;
+  return SVN_NO_ERROR;
+}
+
+/* Read a single character to set *DEPTH (having already read '+')
+   from TEMP.  PATH is the path to which the depth applies, and is
+   used for error reporting only. */
+static svn_error_t *
+read_depth(svn_depth_t *depth, apr_file_t *temp, const char *path,
+           apr_pool_t *pool)
+{
+  char c;
+
+  SVN_ERR(svn_io_file_getc(&c, temp, pool));
+  switch (c)
+    {
+    case 'X':
+      *depth = svn_depth_exclude;
+      break;
+    case 'E':
+      *depth = svn_depth_empty;
+      break;
+    case 'F':
+      *depth = svn_depth_files;
+      break;
+    case 'M':
+      *depth = svn_depth_immediates;
+      break;
+
+      /* Note that we do not tolerate explicit representation of
+         svn_depth_infinity here, because that's not how
+         write_path_info() writes it. */
+    default:
+      return svn_error_createf(SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
+                               _("Invalid depth (%c) for path '%s'"), c, path);
+    }
+  
   return SVN_NO_ERROR;
 }
 
@@ -204,38 +253,9 @@ read_path_info(path_info_t **pi, apr_file_t *temp, apr_pool_t *pool)
   SVN_ERR(read_rev(&(*pi)->rev, temp, pool));
   SVN_ERR(svn_io_file_getc(&c, temp, pool));
   if (c == '+')
-    {
-      /* Could just read directly into &(*pi)->rev, but that would be
-         bad form and perhaps also vulnerable to weird type promotion
-         failures. */
-      apr_uint64_t num;
-      SVN_ERR(read_number(&num, temp, pool));
-      switch (num)
-        {
-        case 0:
-          (*pi)->depth = svn_depth_empty;
-          break;
-        case 1:
-          (*pi)->depth = svn_depth_files;
-          break;
-        case 2:
-          (*pi)->depth = svn_depth_immediates;
-          break;
-
-          /* Note that we do not tolerate explicit representation of
-             svn_depth_infinity as "3" here, because that's the
-             default and should never be sent. */
-        default:
-          return svn_error_createf(SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
-                                   _("Invalid depth (%s) for path '%s'"),
-                                   apr_psprintf(pool, "%" APR_UINT64_T_FMT,
-                                                num), (*pi)->path);
-        }
-    }
+    SVN_ERR(read_depth(&((*pi)->depth), temp, (*pi)->path, pool));
   else
-    {
-      (*pi)->depth = svn_depth_infinity;
-    }
+    (*pi)->depth = svn_depth_infinity;
   SVN_ERR(svn_io_file_getc(&c, temp, pool));
   (*pi)->start_empty = (c == '+');
   SVN_ERR(svn_io_file_getc(&c, temp, pool));
@@ -255,13 +275,13 @@ relevant(path_info_t *pi, const char *prefix, apr_size_t plen)
           (!*prefix || pi->path[plen] == '/'));
 }
 
-/* Fetch the next pathinfo from B->tempfile for a descendent of
+/* Fetch the next pathinfo from B->tempfile for a descendant of
    PREFIX.  If the next pathinfo is for an immediate child of PREFIX,
    set *ENTRY to the path component of the report information and
    *INFO to the path information for that entry.  If the next pathinfo
-   is for a grandchild or other more remote descendent of PREFIX, set
-   *ENTRY to the immediate child corresponding to that descendent and
-   set *INFO to NULL.  If the next pathinfo is not for a descendent of
+   is for a grandchild or other more remote descendant of PREFIX, set
+   *ENTRY to the immediate child corresponding to that descendant and
+   set *INFO to NULL.  If the next pathinfo is not for a descendant of
    PREFIX, or if we reach the end of the report, set both *ENTRY and
    *INFO to NULL.
 
@@ -638,7 +658,12 @@ add_file_smartly(report_baton_t *b,
   if (b->send_copyfrom_args)
     {
       /* Find the destination of the nearest 'copy event' which may have
-         caused o_path@t_root to exist.  */
+         caused o_path@t_root to exist. svn_fs_closest_copy only returns paths
+         starting with '/', so make sure o_path always starts with a '/'
+         too. */
+      if (*o_path != '/')
+        o_path = apr_pstrcat(pool, "/", o_path, NULL);
+
       SVN_ERR(svn_fs_closest_copy(&closest_copy_root, &closest_copy_path,
                                   b->t_root, o_path, pool));
       if (closest_copy_root != NULL)
@@ -646,7 +671,7 @@ add_file_smartly(report_baton_t *b,
           /* If the destination of the copy event is the same path as
              o_path, then we've found something interesting that should
              have 'copyfrom' history. */
-          if (strcmp(closest_copy_path + 1, o_path) == 0)
+          if (strcmp(closest_copy_path, o_path) == 0)
             {
               SVN_ERR(svn_fs_copied_from(copyfrom_rev, copyfrom_path,
                                          closest_copy_root, closest_copy_path,
@@ -943,7 +968,11 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
           if (!name)
             break;
 
-          if (info && !SVN_IS_VALID_REVNUM(info->rev))
+          /* Invalid revnum means we should delete, unless this is
+             just an excluded subpath. */
+          if (info 
+              && !SVN_IS_VALID_REVNUM(info->rev)
+              && info->depth != svn_depth_exclude)
             {
               /* We want to perform deletes before non-replacement adds,
                  for graceful handling of case-only renames on
@@ -962,13 +991,18 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
           s_entry = s_entries ?
             apr_hash_get(s_entries, name, APR_HASH_KEY_STRING) : NULL;
 
-          /* The only special case here is when requested_depth is files
-             but the reported path is a directory.  This is technically
-             a client error, but we handle it anyway, by skipping the
-             entry. */
-          if (requested_depth != svn_depth_files
-              || ((! t_entry || t_entry->kind != svn_node_dir)
-                  && (! s_entry || s_entry->kind != svn_node_dir)))
+          /* The only special cases here are
+
+             - When requested_depth is files but the reported path is
+             a directory.  This is technically a client error, but we
+             handle it anyway, by skipping the entry.
+
+             - When the reported depth is svn_depth_exclude.
+          */
+          if ((! info || info->depth != svn_depth_exclude)
+              && (requested_depth != svn_depth_files
+                  || ((! t_entry || t_entry->kind != svn_node_dir)
+                      && (! s_entry || s_entry->kind != svn_node_dir))))
             SVN_ERR(update_entry(b, s_rev, s_fullpath, s_entry, t_fullpath,
                                  t_entry, dir_baton, e_fullpath, info,
                                  info ? info->depth
@@ -1015,7 +1049,7 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                   /* There is no corresponding target entry, so delete. */
                   e_fullpath = svn_path_join(e_path, s_entry->name, subpool);
                   SVN_ERR(svn_repos_deleted_rev(svn_fs_root_fs(b->t_root),
-                                               svn_path_join(t_path,
+                                                svn_path_join(t_path,
                                                               s_entry->name,
                                                               subpool),
                                                 s_rev, b->t_rev,
@@ -1214,11 +1248,6 @@ write_path_info(report_baton_t *b, const char *path, const char *lpath,
 {
   const char *lrep, *rrep, *drep, *ltrep, *rep;
 
-  if (depth == svn_depth_unknown)
-    return svn_error_createf(SVN_ERR_REPOS_BAD_ARGS, NULL,
-                             _("Unsupported report depth '%s'"),
-                             svn_depth_to_word(depth));
-
   /* Munge the path to be anchor-relative, so that we can use edit paths
      as report paths. */
   path = svn_path_join(b->s_operand, path, pool);
@@ -1228,14 +1257,20 @@ write_path_info(report_baton_t *b, const char *path, const char *lpath,
   rrep = (SVN_IS_VALID_REVNUM(rev)) ?
     apr_psprintf(pool, "+%ld:", rev) : "-";
 
-  if (depth == svn_depth_empty)
-    drep = "+0:";
+  if (depth == svn_depth_exclude)
+    drep = "+X";
+  else if (depth == svn_depth_empty)
+    drep = "+E";
   else if (depth == svn_depth_files)
-    drep = "+1:";
+    drep = "+F";
   else if (depth == svn_depth_immediates)
-    drep = "+2:";
-  else           /* svn_depth_infinity */
+    drep = "+M";
+  else if (depth == svn_depth_infinity)
     drep = "-";
+  else
+    return svn_error_createf(SVN_ERR_REPOS_BAD_ARGS, NULL,
+                             _("Unsupported report depth '%s'"),
+                             svn_depth_to_word(depth));
 
   ltrep = lock_token ? apr_psprintf(pool, "+%" APR_SIZE_T_FMT ":%s",
                                     strlen(lock_token), lock_token) : "-";
@@ -1276,6 +1311,10 @@ svn_repos_link_path3(void *baton, const char *path, const char *link_path,
                      svn_boolean_t start_empty,
                      const char *lock_token, apr_pool_t *pool)
 {
+  if (depth == svn_depth_exclude)
+    return svn_error_create(SVN_ERR_REPOS_BAD_ARGS, NULL,
+                            _("Depth 'exclude' not supported for link"));
+
   return write_path_info(baton, path, link_path, rev, depth,
                          start_empty, lock_token, pool);
 }
@@ -1351,6 +1390,10 @@ svn_repos_begin_report2(void **report_baton,
   report_baton_t *b;
   const char *tempdir;
 
+  if (depth == svn_depth_exclude)
+    return svn_error_create(SVN_ERR_REPOS_BAD_ARGS, NULL,
+                            _("Request depth 'exclude' not supported"));
+
   /* Build a reporter baton.  Copy strings in case the caller doesn't
      keep track of them. */
   b = apr_palloc(pool, sizeof(*b));
@@ -1405,7 +1448,7 @@ svn_repos_begin_report(void **report_baton,
                                  s_operand,
                                  switch_path,
                                  text_deltas,
-                                 SVN_DEPTH_FROM_RECURSE(recurse),
+                                 SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                  ignore_ancestry,
                                  FALSE, /* don't send copyfrom args */
                                  editor,

@@ -13,6 +13,7 @@ Blanket commit access:
        sussman   Ben Collins-Sussman <sussman@red-bean.com>
         kfogel   Karl Fogel <kfogel@red-bean.com>
         gstein   Greg Stein <gstein@lyra.org>
+         brane   Branko Čibej <brane@xbc.nu>
            joe   Joe Orton <joe@light.plus.com>
        ghudson   Greg Hudson <ghudson@mit.edu>
           fitz   Brian W. Fitzpatrick <fitz@red-bean.com>
@@ -107,6 +108,7 @@ Commit access for specific areas:
       dkagedal   David Kågedal <davidk@lysator.liu.se>       (dsvn.el)
         dustin   Dustin J. Mitchell <dustin@zmanda.com>      (svnmerge)
    rocketraman   Raman Gupta <rocketraman@fastmail.fm>       (svnmerge)
+      stylesen   Senthil Kumaran S <senthil@collab.net>      (tests)
 
   Translation of message files:
 
@@ -116,6 +118,7 @@ Commit access for specific areas:
       sunny256   Øyvind A. Holm <sunny@sunbase.org>          (po: nb)
         jzgoda   Jaroslaw Zgoda <jzgoda@o2.pl>               (po: pl)
       karolszk   Karol Szkudlarek <karol@mikronika.com.pl>   (po: pl)
+      arfrever   Arfrever Frehtes Taifersar Arahesis <arfrever.fta@gmail.com> (po: pl)
         plasma   Wei-Hon Chen <plasma@ms9.hinet.net>         (po: zh_TW)
        jihuang   June-Yen Huang <jihuang@iis.sinica.edu.tw>  (po: zh_TW)
        marcosc   Marcos Chaves <marcos.nospam@gmail.com>     (po: pt_BR)
@@ -142,6 +145,8 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
                                                               bindings br.)
        cacknin   Charles Acknin <charlesacknin@gmail.com>    (svnpatch-diff
                                                                 br.)
+          stsp   Stefan Sperling <stsp@elego.de>             (tree-conflicts
+                                                                br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 
@@ -165,7 +170,6 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
 
 Committers who have asked to be listed as dormant:
 
-         brane   Branko Čibej <brane@xbc.nu>
         bdenny   Brian Estlin <brian@implementality.com>
       rassilon   Bill Tutt <rassilon@lyra.org> (Win32, COM, issue-1003-dev br.)
          kraai   Matt Kraai <kraai@alumni.cmu.edu>

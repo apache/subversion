@@ -25,6 +25,7 @@
 #include "svn_string.h"
 #include "svn_wc.h"
 #include "svn_client.h"
+#include "svn_error_codes.h"
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_xml.h"
@@ -215,7 +216,7 @@ svn_cl__status(apr_getopt_t *os,
   svn_opt_revision_t rev;
   struct status_baton sb;
 
-  /* Before allowing svn_opt_args_to_target_array() to canonicalize
+  /* Before allowing svn_opt_args_to_target_array2() to canonicalize
      all the targets, we need to build a list of targets made of both
      ones the user typed, as well as any specified by --changelist.  */
   if (opt_state->changelist)
@@ -226,8 +227,8 @@ svn_cl__status(apr_getopt_t *os,
                                         ctx,
                                         pool));
       if (apr_is_empty_array(changelist_targets))
-        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("no such changelist '%s'"),
+        return svn_error_createf(SVN_ERR_UNKNOWN_CHANGELIST, NULL,
+                                 _("Unknown changelist '%s'"),
                                  opt_state->changelist);
     }
 

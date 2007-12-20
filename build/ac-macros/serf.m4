@@ -9,7 +9,7 @@ AC_DEFUN(SVN_LIB_SERF,
 [
   serf_found=no
 
-  AC_ARG_WITH(serf,AC_HELP_STRING([--with-serf=PREFIX],
+  AC_ARG_WITH(serf,AS_HELP_STRING([--with-serf=PREFIX],
                                   [Serf WebDAV client library]),
   [
     if test "$withval" = "yes" ; then

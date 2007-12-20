@@ -16,7 +16,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 #
 # Author: Archie Cobbs <archie at awarix dot com>
 # Rewritten in Python by: Giovanni Bajo <rasky at develer dot com>
@@ -40,8 +40,8 @@
 # Differences from svnmerge.sh:
 # - More portable: tested as working in FreeBSD and OS/2.
 # - Add double-verbose mode, which shows every svn command executed (-v -v).
-# - "svnmerge avail" now only shows commits in source, not also commits in other
-#   parts of the repository.
+# - "svnmerge avail" now only shows commits in source, not also commits in
+#   other parts of the repository.
 # - Add "svnmerge block" to flag some revisions as blocked, so that
 #   they will not show up anymore in the available list.  Added also
 #   the complementary "svnmerge unblock".
@@ -298,7 +298,7 @@ def launchsvn(s, show=False, pretend=False, **kwargs):
         password = " --password=" + password
     else:
         password = ""
-    cmd = opts["svn"] + username + password + " " + s
+    cmd = opts["svn"] + " --non-interactive" + username + password + " " + s
     if show or opts["verbose"] >= 2:
         print cmd
     if pretend:
@@ -479,7 +479,7 @@ class VersionedProperty:
                 self._changed_values.append(new_value)
                 self.revs.append(rev)
                 self.values.append(new_value)
-                new_value = old_value
+                old_value = new_value
 
         # Indicate that we know nothing about the value of the property
         # after the range of the log.
@@ -1124,7 +1124,12 @@ def display_revisions(revs, display_style, revisions_msg, source_url):
         for start,end in revs.normalized():
             svn_command('log --incremental -v -r %d:%d %s' % \
                         (start, end, source_url))
-    elif display_style == "diffs":
+    elif display_style in ("diffs", "summarize"):
+        if display_style == 'summarize':
+            summarize = '--summarize '
+        else:
+            summarize = ''
+
         for start, end in revs.normalized():
             print
             if start == end:
@@ -1136,7 +1141,8 @@ def display_revisions(revs, display_style, revisions_msg, source_url):
 
             # Note: the starting revision number to 'svn diff' is
             # NOT inclusive so we have to subtract one from ${START}.
-            svn_command("diff -r %d:%d %s" % (start - 1, end, source_url))
+            svn_command("diff -r %d:%d %s %s" % (start - 1, end, summarize,
+                                                 source_url))
     else:
         assert False, "unhandled display style: %s" % display_style
 
@@ -1348,10 +1354,10 @@ def action_merge(branch_dir, branch_props):
         f = open(opts["commit-file"], "w")
         if record_only:
             print >>f, 'Recorded merge of revisions %s via %s from ' % \
-                  (revs | phantom_revs, NAME)
+                  (revs, NAME)
         else:
             print >>f, 'Merged revisions %s via %s from ' % \
-                  (revs | phantom_revs, NAME)
+                  (revs, NAME)
         print >>f, '%s' % opts["source-url"]
         if opts["commit-verbose"]:
             print >>f
@@ -1913,6 +1919,10 @@ command_table = {
                value="diffs",
                default="revisions",
                help="show corresponding diff instead of revision list"),
+        Option("--summarize",
+               dest="avail-display",
+               value="summarize",
+               help="show summarized diff instead of revision list"),
         Option("-l", "--log",
                dest="avail-display",
                value="logs",

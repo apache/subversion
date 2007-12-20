@@ -28,6 +28,7 @@
 #include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_props.h"
+#include "svn_sorts.h"
 
 #include "svn_private_config.h"
 
@@ -39,7 +40,7 @@ struct rev
   svn_revnum_t revision; /* the revision number */
   const char *author;    /* the author of the revision */
   const char *date;      /* the date of the revision */
-  /* Used for merge reporting, and by the pre-1.1 code. */
+  /* Used for merge reporting. */
   const char *path;      /* the absolute repository path */
   struct rev *next;      /* the next revision */
 };
@@ -587,11 +588,6 @@ normalize_blames(struct blame_chain *chain,
     }
 }
 
-static svn_error_t *
-old_blame(const char *target, const char *url,
-          svn_ra_session_t *ra_session,
-          struct file_rev_baton *frb);
-
 svn_error_t *
 svn_client_blame4(const char *target,
                   const svn_opt_revision_t *peg_revision,
@@ -613,7 +609,6 @@ svn_client_blame4(const char *target,
   apr_file_t *file;
   apr_pool_t *iterpool;
   svn_stream_t *stream;
-  svn_error_t *err;
 
   if (start->kind == svn_opt_revision_unspecified
       || end->kind == svn_opt_revision_unspecified)
@@ -627,10 +622,11 @@ svn_client_blame4(const char *target,
 
   /* Get an RA plugin for this filesystem object. */
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &end_revnum,
-                                           &url, target, peg_revision, end,
+                                           &url, target, NULL,
+                                           peg_revision, end,
                                            ctx, pool));
 
-  SVN_ERR(svn_client__get_revision_number(&start_revnum, ra_session,
+  SVN_ERR(svn_client__get_revision_number(&start_revnum, NULL, ra_session,
                                           start, target, pool));
 
   if (end_revnum < start_revnum)
@@ -678,20 +674,10 @@ svn_client_blame4(const char *target,
      We need to ensure that we get one revision before the start_rev,
      if available so that we can know what was actually changed in the start
      revision. */
-  err = svn_ra_get_file_revs2(ra_session, "",
-                              start_revnum - (start_revnum > 0 ? 1 : 0),
-                              end_revnum, include_merged_revisions,
-                              file_rev_handler, &frb, pool);
-
-  /* Fall back if it wasn't supported by the server.  Servers earlier
-     than 1.1 need this. */
-  if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
-    {
-      svn_error_clear(err);
-      err = old_blame(target, url, ra_session, &frb);
-    }
-
-  SVN_ERR(err);
+  SVN_ERR(svn_ra_get_file_revs2(ra_session, "",
+                                start_revnum - (start_revnum > 0 ? 1 : 0),
+                                end_revnum, include_merged_revisions,
+                                file_rev_handler, &frb, pool));
 
   /* Report the blame to the caller. */
 
@@ -752,7 +738,7 @@ svn_client_blame4(const char *target,
           svn_boolean_t eof;
           svn_stringbuf_t *sb;
 
-          apr_pool_clear(iterpool);
+          svn_pool_clear(iterpool);
           SVN_ERR(svn_stream_readline(stream, &sb, "\n", &eof, iterpool));
           if (ctx->cancel_func)
             SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
@@ -932,221 +918,4 @@ svn_client_blame(const char *target,
   wrap_pre_blame3_receiver(&receiver, &receiver_baton, pool);
   return svn_client_blame2(target, end, start, end,
                            receiver, receiver_baton, ctx, pool);
-}
-
-
-
-/* Used only by the old code. */
-/* The baton used for RA->get_log */
-struct log_message_baton {
-  const char *path;        /* The path to be processed */
-  struct rev *eldest;      /* The eldest revision processed */
-  char action;             /* The action associated with the eldest */
-  svn_revnum_t copyrev;    /* The revision the eldest was copied from */
-  svn_cancel_func_t cancel_func; /* cancellation callback */
-  void *cancel_baton;            /* cancellation baton */
-  apr_pool_t *pool;
-};
-
-/* Callback for log messages: accumulates revision metadata into
-   a chronologically ordered list stored in the baton. */
-static svn_error_t *
-log_message_receiver(void *baton,
-                     apr_hash_t *changed_paths,
-                     svn_revnum_t revision,
-                     const char *author,
-                     const char *date,
-                     const char *message,
-                     apr_pool_t *pool)
-{
-  struct log_message_baton *lmb = baton;
-  struct rev *rev;
-
-  if (lmb->cancel_func)
-    SVN_ERR(lmb->cancel_func(lmb->cancel_baton));
-
-  rev = apr_palloc(lmb->pool, sizeof(*rev));
-  rev->revision = revision;
-  rev->author = apr_pstrdup(lmb->pool, author);
-  rev->date = apr_pstrdup(lmb->pool, date);
-  rev->path = lmb->path;
-  rev->next = lmb->eldest;
-  lmb->eldest = rev;
-
-  SVN_ERR(svn_client__prev_log_path(&lmb->path, &lmb->action,
-                                    &lmb->copyrev, changed_paths,
-                                    lmb->path, svn_node_file, revision,
-                                    lmb->pool));
-
-  return SVN_NO_ERROR;
-}
-
-/* This is used when there is no get_file_revs available. */
-static svn_error_t *
-old_blame(const char *target, const char *url,
-          svn_ra_session_t *ra_session,
-          struct file_rev_baton *frb)
-{
-  const char *reposURL;
-  struct log_message_baton lmb;
-  apr_array_header_t *condensed_targets;
-  apr_file_t *file;
-  svn_stream_t *stream;
-  struct rev *rev;
-  svn_node_kind_t kind;
-  apr_pool_t *pool = frb->mainpool;
-
-  SVN_ERR(svn_ra_check_path(ra_session, "", frb->end_rev, &kind, pool));
-
-  if (kind == svn_node_dir)
-    return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
-                             _("URL '%s' refers to a directory"), url);
-
-  condensed_targets = apr_array_make(pool, 1, sizeof(const char *));
-  APR_ARRAY_PUSH(condensed_targets, const char *) = "";
-
-  SVN_ERR(svn_ra_get_repos_root(ra_session, &reposURL, pool));
-
-  /* URI decode the path before placing it in the baton, since changed_paths
-     passed into log_message_receiver will not be URI encoded. */
-  lmb.path = svn_path_uri_decode(url + strlen(reposURL), pool);
-
-  lmb.cancel_func = frb->ctx->cancel_func;
-  lmb.cancel_baton = frb->ctx->cancel_baton;
-  lmb.eldest = NULL;
-  lmb.pool = pool;
-
-  /* Accumulate revision metadata by walking the revisions
-     backwards; this allows us to follow moves/copies
-     correctly. */
-  SVN_ERR(svn_ra_get_log(ra_session,
-                         condensed_targets,
-                         frb->end_rev,
-                         frb->start_rev,
-                         0, /* no limit */
-                         TRUE,
-                         FALSE,
-                         log_message_receiver,
-                         &lmb,
-                         pool));
-
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, reposURL, NULL,
-                                               NULL, NULL, FALSE, FALSE,
-                                               frb->ctx, pool));
-
-  /* Inspect the first revision's change metadata; if there are any
-     prior revisions, compute a new starting revision/path.  If no
-     revisions were selected, no blame is assigned.  A modified
-     item certainly has a prior revision.  It is reasonable for an
-     added item to have none, but anything else is unexpected.  */
-  if (!lmb.eldest)
-    {
-      lmb.eldest = apr_palloc(pool, sizeof(*rev));
-      lmb.eldest->revision = frb->end_rev;
-      lmb.eldest->path = lmb.path;
-      lmb.eldest->next = NULL;
-      rev = apr_palloc(pool, sizeof(*rev));
-      rev->revision = SVN_INVALID_REVNUM;
-      rev->author = NULL;
-      rev->date = NULL;
-      frb->chain->blame = blame_create(frb->chain, rev, 0);
-    }
-  else if (lmb.action == 'M' || SVN_IS_VALID_REVNUM(lmb.copyrev))
-    {
-      rev = apr_palloc(pool, sizeof(*rev));
-      if (SVN_IS_VALID_REVNUM(lmb.copyrev))
-        rev->revision = lmb.copyrev;
-      else
-        rev->revision = lmb.eldest->revision - 1;
-      rev->path = lmb.path;
-      rev->next = lmb.eldest;
-      lmb.eldest = rev;
-      rev = apr_palloc(pool, sizeof(*rev));
-      rev->revision = SVN_INVALID_REVNUM;
-      rev->author = NULL;
-      rev->date = NULL;
-      frb->chain->blame = blame_create(frb->chain, rev, 0);
-    }
-  else if (lmb.action == 'A')
-    {
-      frb->chain->blame = blame_create(frb->chain, lmb.eldest, 0);
-    }
-  else
-    return svn_error_createf(APR_EGENERAL, NULL,
-                             _("Revision action '%c' for "
-                               "revision %ld of '%s' "
-                               "lacks a prior revision"),
-                             lmb.action, lmb.eldest->revision,
-                             svn_path_local_style(lmb.eldest->path, pool));
-
-  /* Walk the revision list in chronological order, downloading
-     each fulltext, diffing it with its predecessor, and accumulating
-     the blame information into db.blame.  Use two iteration pools
-     rather than one, because the diff routines need to look at a
-     sliding window of revisions.  Two pools gives us a ring buffer
-     of sorts. */
-  for (rev = lmb.eldest; rev; rev = rev->next)
-    {
-      const char *tmp;
-      const char *temp_dir;
-      apr_hash_t *props;
-      svn_string_t *mimetype;
-
-      apr_pool_clear(frb->currpool);
-      SVN_ERR(svn_io_temp_dir(&temp_dir, frb->currpool));
-      SVN_ERR(svn_io_open_unique_file2
-              (&file, &tmp,
-               svn_path_join(temp_dir, "tmp", frb->currpool), ".tmp",
-               svn_io_file_del_on_pool_cleanup, frb->currpool));
-
-      stream = svn_stream_from_aprfile(file, frb->currpool);
-      SVN_ERR(svn_ra_get_file(ra_session, rev->path + 1, rev->revision,
-                              stream, NULL, &props, frb->currpool));
-      SVN_ERR(svn_stream_close(stream));
-      SVN_ERR(svn_io_file_close(file, frb->currpool));
-
-      /* If this file has a non-textual mime-type, bail out. */
-      if (! frb->ignore_mime_type && props &&
-          ((mimetype = apr_hash_get(props, SVN_PROP_MIME_TYPE,
-                                    sizeof(SVN_PROP_MIME_TYPE) - 1))))
-        {
-          if (svn_mime_type_is_binary(mimetype->data))
-            return svn_error_createf
-              (SVN_ERR_CLIENT_IS_BINARY_FILE, 0,
-               _("Cannot calculate blame information for binary file '%s'"),
-               svn_path_local_style(target, frb->currpool));
-        }
-
-      if (frb->ctx->notify_func2)
-        {
-          svn_wc_notify_t *notify
-            = svn_wc_create_notify(rev->path, svn_wc_notify_blame_revision,
-                                   pool);
-          notify->kind = svn_node_none;
-          notify->content_state = notify->prop_state
-            = svn_wc_notify_state_inapplicable;
-          notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-          notify->revision = rev->revision;
-          frb->ctx->notify_func2(frb->ctx->notify_baton2, notify, pool);
-        }
-
-      if (frb->ctx->cancel_func)
-        SVN_ERR(frb->ctx->cancel_func(frb->ctx->cancel_baton));
-
-      if (frb->last_filename)
-        {
-          frb->rev = rev;
-          SVN_ERR(add_file_blame(frb->last_filename, tmp, frb->chain,
-                                 frb->rev, frb->diff_options, frb->currpool));
-        }
-
-      frb->last_filename = tmp;
-      {
-        apr_pool_t *tmppool = frb->currpool;
-        frb->currpool = frb->lastpool;
-        frb->lastpool = tmppool;
-      }
-    }
-
-  return SVN_NO_ERROR;
 }

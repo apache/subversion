@@ -261,7 +261,7 @@ def forced_checkout_with_versioned_obstruction(sbox):
   """forced co with versioned obstruction"""
 
   # Make a greek tree working copy
-  sbox.build()
+  sbox.build(read_only = True)
 
   # Create a second repository with the same greek tree
   repo_dir = sbox.repo_dir
@@ -294,7 +294,7 @@ def forced_checkout_with_versioned_obstruction(sbox):
 def import_and_checkout(sbox):
   """import and checkout"""
 
-  sbox.build()
+  sbox.build(read_only = True)
 
   other_repo_dir, other_repo_url = sbox.add_repo_path("other")
   import_from_dir = sbox.add_wc_path("other")
@@ -316,8 +316,6 @@ def import_and_checkout(sbox):
   expected_output = svntest.wc.State(sbox.wc_dir, {})
 
   svntest.actions.run_and_verify_svn(None, None, [], 'import',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      '-m', 'import', import_from_dir,
                                      other_repo_url)
 
@@ -377,7 +375,7 @@ def checkout_broken_eol(sbox):
 def checkout_creates_intermediate_folders(sbox):
   "checkout and create some intermediate folders"
 
-  sbox.build(create_wc = False)
+  sbox.build(create_wc = False, read_only = True)
 
   checkout_target = os.path.join(sbox.wc_dir, 'a', 'b', 'c')
 
@@ -406,8 +404,6 @@ def checkout_peg_rev(sbox):
   svntest.main.file_append(mu_path, 'appended mu text')
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m', 'changed file mu', wc_dir)
 
   # now checkout the repo@1 in another folder, this should create our initial
@@ -446,8 +442,6 @@ def checkout_peg_rev_date(sbox):
   svntest.main.file_append(mu_path, 'appended mu text')
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
                                      'ci', '-m', 'changed file mu', wc_dir)
 
   # now checkout the repo@current_time in another folder, this should create our

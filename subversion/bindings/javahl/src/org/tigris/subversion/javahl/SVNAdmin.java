@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2004-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -114,9 +114,30 @@ public class SVNAdmin
      * @param incremental       the dump will be incremantal
      * @throws ClientException  throw in case of problem
      */
+    public void dump(String path, OutputInterface dataOut,
+                     OutputInterface errorOut, Revision start,
+                     Revision end, boolean incremental)
+            throws ClientException
+    {
+        dump(path, dataOut, errorOut, start, end, incremental, false);
+    }
+
+    /**
+     * dump the data in a repository
+     * @param path              the path to the repository
+     * @param dataOut           the data will be outputed here
+     * @param errorOut          the messages will be outputed here
+     * @param start             the first revision to be dumped
+     * @param end               the last revision to be dumped
+     * @param incremental       the dump will be incremantal
+     * @param useDeltas         the dump will contain deltas between nodes
+     * @throws ClientException  throw in case of problem
+     * @since 1.5
+     */
     public native void dump(String path, OutputInterface dataOut,
                             OutputInterface errorOut, Revision start,
-                            Revision end, boolean incremental)
+                            Revision end, boolean incremental,
+                            boolean useDeltas)
             throws ClientException;
 
     /**
@@ -172,9 +193,34 @@ public class SVNAdmin
      *                          in put optional.
      * @throws ClientException  throw in case of problem
      */
+    public void load(String path, InputInterface dataInput,
+                     OutputInterface messageOutput, boolean ignoreUUID,
+                     boolean forceUUID, String relativePath)
+            throws ClientException
+    {
+        load(path, dataInput, messageOutput, ignoreUUID, forceUUID,
+             false, false, relativePath);
+    }
+
+    /**
+     * load the data of a dump into a repository,
+     * @param path              the path to the repository
+     * @param dataInput         the data input source
+     * @param messageOutput     the target for processing messages
+     * @param ignoreUUID        ignore any UUID found in the input stream
+     * @param forceUUID         set the repository UUID to any found in the
+     *                          stream
+     * @param usePreCommitHook  use the pre-commit hook when processing commits
+     * @param usePostCommitHook use the post-commit hook when processing commits
+     * @param relativePath      the directory in the repository, where the data
+     *                          in put optional.
+     * @throws ClientException  throw in case of problem
+     * @since 1.5
+     */
     public native void load(String path, InputInterface dataInput,
                             OutputInterface messageOutput, boolean ignoreUUID,
-                            boolean forceUUID, String relativePath)
+                            boolean forceUUID, boolean usePreCommitHook,
+                            boolean usePostCommitHook, String relativePath)
             throws ClientException;
 
     /**
@@ -238,12 +284,14 @@ public class SVNAdmin
             throws SubversionException;
 
     /**
-     * verify the repository
+     * Verify the repository at <code>path</code> between revisions
+     * <code>start</code> and <code>end</code>.
+     *
      * @param path              the path to the repository
      * @param messageOut        the receiver of all messages
      * @param start             the first revision
      * @param end               the last revision
-     * @throws ClientException  throw in case of problem
+     * @throws ClientException If an error occurred.
      */
     public native void verify(String path,  OutputInterface messageOut,
                               Revision start, Revision end)

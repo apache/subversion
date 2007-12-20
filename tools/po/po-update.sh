@@ -30,8 +30,8 @@ function make_pot()
 {
   if [ -z "$pot_done" ]; then
     echo "Building subversion.pot..."
-    (cd $svn_base/subversion/ && \
-    find . \
+    (cd $svn_base/subversion/po && \
+    find .. \
     -name .svn -prune -or \
     -name tests -prune -or \
     -name bindings -prune -or \
@@ -55,7 +55,7 @@ function make_pot()
     --flag=do_io_file_wrapper_cleanup:3:c-format \
     --flag=do_io_file_wrapper_cleanup:4:c-format \
     --msgid-bugs-address=dev@subversion.tigris.org \
-    --add-comments --files-from=- -o po/subversion.pot )
+    --add-comments --files-from=- -o subversion.pot )
     pot_done=1
   fi
 }

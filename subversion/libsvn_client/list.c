@@ -134,13 +134,14 @@ svn_client_list2(const char *path_or_url,
 
   /* Get an RA plugin for this filesystem object. */
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &rev,
-                                           &url, path_or_url, peg_revision,
+                                           &url, path_or_url, NULL,
+                                           peg_revision,
                                            revision, ctx, pool));
 
   SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
 
   SVN_ERR(svn_client__path_relative_to_root(&fs_path, url, repos_root,
-                                            ra_session, NULL, pool));
+                                            TRUE, ra_session, NULL, pool));
 
   err = svn_ra_stat(ra_session, "", rev, &dirent, pool);
 
@@ -283,11 +284,7 @@ svn_client_list(const char *path_or_url,
   return svn_client_list2(path_or_url,
                           peg_revision,
                           revision,
-                          /* Don't use SVN_DEPTH_FROM_RECURSE() here,
-                             because it defaults to svn_depth_files
-                             in the non-recursive case, whereas we need
-                             svn_depth_immediates for compatibilty. */
-                          recurse ? svn_depth_infinity : svn_depth_immediates,
+                          SVN_DEPTH_INFINITY_OR_IMMEDIATES(recurse),
                           dirent_fields,
                           fetch_locks,
                           list_func,

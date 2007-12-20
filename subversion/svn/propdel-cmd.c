@@ -25,6 +25,7 @@
 #include "svn_cmdline.h"
 #include "svn_pools.h"
 #include "svn_client.h"
+#include "svn_error_codes.h"
 #include "svn_error.h"
 #include "svn_utf.h"
 #include "svn_path.h"
@@ -56,7 +57,7 @@ svn_cl__propdel(apr_getopt_t *os,
      properties, and it may even be useful to allow, in case invalid
      properties sneaked through somehow. */
 
-  /* Before allowing svn_opt_args_to_target_array() to canonicalize
+  /* Before allowing svn_opt_args_to_target_array2() to canonicalize
      all the targets, we need to build a list of targets made of both
      ones the user typed, as well as any specified by --changelist.  */
   if (opt_state->changelist)
@@ -67,8 +68,8 @@ svn_cl__propdel(apr_getopt_t *os,
                                         ctx,
                                         pool));
       if (apr_is_empty_array(changelist_targets))
-        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("no such changelist '%s'"),
+        return svn_error_createf(SVN_ERR_UNKNOWN_CHANGELIST, NULL,
+                                 _("Unknown changelist '%s'"),
                                  opt_state->changelist);
     }
 
@@ -147,7 +148,7 @@ svn_cl__propdel(apr_getopt_t *os,
             {
               SVN_ERR(svn_cmdline_printf
                       (subpool,
-                       SVN_DEPTH_TO_RECURSE(opt_state->depth)
+                       SVN_DEPTH_IS_RECURSIVE(opt_state->depth)
                        ? _("property '%s' deleted (recursively) from '%s'.\n")
                        : _("property '%s' deleted from '%s'.\n"),
                        pname_utf8, svn_path_local_style(target, subpool)));

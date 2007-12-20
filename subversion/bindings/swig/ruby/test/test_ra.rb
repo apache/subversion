@@ -17,13 +17,24 @@ class SvnRaTest < Test::Unit::TestCase
     assert_equal(Svn::Core.subr_version, Svn::Ra.version)
   end
 
+  def test_uuid
+    session = Svn::Ra::Session.open(@repos_uri)
+    assert_equal(File.read(File.join(@repos_path, "db", "uuid")).strip,
+                 session.uuid)
+  end
+
+  def test_open_without_callback
+    assert_nothing_raised do
+      Svn::Ra::Session.open(@repos_uri)
+    end
+  end
+
   def test_session
     log = "sample log"
     log2 = "sample log2"
     file = "sample.txt"
     src = "sample source"
     path = File.join(@wc_path, file)
-    path_in_repos = "/#{file}"
     ctx = make_context(log)
     config = {}
     path_props = {"my-prop" => "value"}
@@ -39,7 +50,7 @@ class SvnRaTest < Test::Unit::TestCase
     rev1 = info.revision
 
     assert_equal(info.revision, session.dated_revision(info.date))
-    content, props = session.file(path_in_repos, info.revision)
+    content, props = session.file(file, info.revision)
     assert_equal(src, content)
     assert_equal([
                    Svn::Core::PROP_ENTRY_COMMITTED_DATE,
@@ -48,8 +59,7 @@ class SvnRaTest < Test::Unit::TestCase
                    Svn::Core::PROP_ENTRY_COMMITTED_REV,
                  ].sort,
                  props.keys.sort)
-
-    entries, props = session.dir("/", info.revision)
+    entries, props = session.dir("", info.revision)
     assert_equal([file], entries.keys)
     assert(entries[file].file?)
     assert_equal([
@@ -60,9 +70,9 @@ class SvnRaTest < Test::Unit::TestCase
                  ].sort,
                  props.keys.sort)
 
-    entries, props = session.dir("/", info.revision, Svn::Core::DIRENT_KIND)
+    entries, props = session.dir("", info.revision, Svn::Core::DIRENT_KIND)
     assert_equal(Svn::Core::NODE_FILE, entries[file].kind)
-    entries, props = session.dir("/", info.revision, 0)
+    entries, props = session.dir("", info.revision, 0)
     assert_equal(Svn::Core::NODE_NONE, entries[file].kind)
 
     ctx = make_context(log2)
@@ -102,8 +112,8 @@ class SvnRaTest < Test::Unit::TestCase
       infos << [rev, _path, hashed_prop_diffs]
     end
     assert_equal([
-                   [rev1, path_in_repos, {}],
-                   [rev2, path_in_repos, path_props],
+                   [rev1, "/#{file}", {}],
+                   [rev2, "/#{file}", path_props],
                  ],
                  infos)
 
@@ -112,21 +122,21 @@ class SvnRaTest < Test::Unit::TestCase
       infos << [rev, _path, prop_diffs]
     end
     assert_equal([
-                   [rev1, path_in_repos, {}],
-                   [rev2, path_in_repos, path_props],
+                   [rev1, "/#{file}", {}],
+                   [rev2, "/#{file}", path_props],
                  ],
                  infos)
 
-    assert_equal({}, session.get_locks("/"))
+    assert_equal({}, session.get_locks(""))
     locks = []
-    session.lock({path_in_repos => rev2}) do |_path, do_lock, lock, ra_err|
+    session.lock({file => rev2}) do |_path, do_lock, lock, ra_err|
       locks << [_path, do_lock, lock, ra_err]
     end
-    assert_equal([path_in_repos],
+    assert_equal([file],
                  locks.collect{|_path, *rest| _path}.sort)
-    lock = locks.assoc(path_in_repos)[2]
-    assert_equal([path_in_repos],
-                 session.get_locks("/").collect{|_path, *rest| _path})
+    lock = locks.assoc(file)[2]
+    assert_equal(["/#{file}"],
+                 session.get_locks("").collect{|_path, *rest| _path})
     assert_equal(lock.token, session.get_lock(file).token)
     assert_equal([lock.token],
                  session.get_locks(file).values.collect{|l| l.token})
@@ -134,7 +144,7 @@ class SvnRaTest < Test::Unit::TestCase
     assert_equal({}, session.get_locks(file))
   end
 
-  def test_prop
+  def assert_property_access
     log = "sample log"
     file = "sample.txt"
     path = File.join(@wc_path, file)
@@ -147,21 +157,51 @@ class SvnRaTest < Test::Unit::TestCase
     ctx.add(path)
     info = ctx.commit(@wc_path)
 
-    assert_equal(@author, session.prop(Svn::Core::PROP_REVISION_AUTHOR))
-    assert_equal(log, session.prop(Svn::Core::PROP_REVISION_LOG))
+    assert_equal(@author, yield(session, :get, Svn::Core::PROP_REVISION_AUTHOR))
+    assert_equal(log, yield(session, :get, Svn::Core::PROP_REVISION_LOG))
     assert_equal([
                    Svn::Core::PROP_REVISION_AUTHOR,
                    Svn::Core::PROP_REVISION_DATE,
                    Svn::Core::PROP_REVISION_LOG,
                  ].sort,
-                 session.proplist.keys.sort)
-    session.set_prop(Svn::Core::PROP_REVISION_LOG, nil)
-    assert_nil(session.prop(Svn::Core::PROP_REVISION_LOG))
+                 yield(session, :list).keys.sort)
+    yield(session, :set, Svn::Core::PROP_REVISION_LOG, nil)
+    assert_nil(yield(session, :get ,Svn::Core::PROP_REVISION_LOG))
     assert_equal([
                    Svn::Core::PROP_REVISION_AUTHOR,
                    Svn::Core::PROP_REVISION_DATE,
                  ].sort,
-                 session.proplist.keys.sort)
+                 yield(session, :list).keys.sort)
+  end
+
+  def test_prop
+    assert_property_access do |session, action, *args|
+      case action
+      when :get
+        key, = args
+        session[key]
+      when :set
+        key, value = args
+        session[key] = value
+      when :list
+        session.properties
+      end
+    end
+  end
+
+  def test_prop_with_no_ruby_way
+    assert_property_access do |session, action, *args|
+      case action
+      when :get
+        key, = args
+        session.prop(key)
+      when :set
+        key, value = args
+        session.set_prop(key, value)
+      when :list
+        session.proplist
+      end
+    end
   end
 
   def test_callback
@@ -186,11 +226,11 @@ class SvnRaTest < Test::Unit::TestCase
     ctx.up(@wc_path)
 
     editor, editor_baton = session.commit_editor(log) {}
-    reporter = session.update(rev2, "/", editor, editor_baton)
+    reporter = session.update(rev2, "", editor, editor_baton)
     reporter.abort_report
 
     editor, editor_baton = session.commit_editor(log) {}
-    reporter = session.update2(rev2, "/", editor)
+    reporter = session.update2(rev2, "", editor)
     reporter.abort_report
   end
 

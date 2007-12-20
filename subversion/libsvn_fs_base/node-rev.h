@@ -77,11 +77,17 @@ svn_error_t *svn_fs_base__create_successor(const svn_fs_id_t **new_id_p,
 /* Delete node revision ID (with predecessor id PRED_ID, if any) from
    FS's `nodes' table, as part of TRAIL.
 
+   If ORIGIN_ALSO is set, also delete the record for this ID's node ID
+   from the `node-origins' index table (which is typically only done
+   if the caller things that ID points to the only node revision ID in
+   its line of history).
+
    WARNING: This does not check that the node revision is mutable!
    Callers should do that check themselves.  */
 svn_error_t *svn_fs_base__delete_node_revision(svn_fs_t *fs,
                                                const svn_fs_id_t *id,
                                                const svn_fs_id_t *pred_id,
+                                               svn_boolean_t origin_also,
                                                trail_t *trail,
                                                apr_pool_t *pool);
 

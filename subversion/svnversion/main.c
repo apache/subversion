@@ -1,6 +1,6 @@
 /*
  * ====================================================================
- * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -55,7 +55,7 @@ help(const apr_getopt_option_t *options, apr_pool_t *pool)
         "  within WC_PATH does not rely on TRAIL_URL).  The version number\n"
         "  is written to standard output.  For example:\n"
         "\n"
-        "    $ svnversion . /repos/svn/trunk \n"
+        "    $ svnversion . /repos/svn/trunk\n"
         "    4168\n"
         "\n"
         "  The version number will be a single number if the working\n"
@@ -66,6 +66,7 @@ help(const apr_getopt_option_t *options, apr_pool_t *pool)
         "   4123:4168     mixed revision working copy\n"
         "   4168M         modified working copy\n"
         "   4123S         switched working copy\n"
+        "   4123P         partial working copy, from a sparse checkout\n"
         "   4123:4168MS   mixed revision, modified, switched working copy\n"
         "\n"
         "  If invoked on a directory that is not a working copy, an\n"
@@ -247,6 +248,8 @@ main(int argc, const char *argv[])
     SVN_INT_ERR(svn_cmdline_fputs("M", stdout, pool));
   if (res->switched)
     SVN_INT_ERR(svn_cmdline_fputs("S", stdout, pool));
+  if (res->sparse_checkout)
+    SVN_INT_ERR(svn_cmdline_fputs("P", stdout, pool));
 
   if (! no_newline)
     SVN_INT_ERR(svn_cmdline_fputs("\n", stdout, pool));
