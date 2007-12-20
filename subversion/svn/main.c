@@ -1025,7 +1025,7 @@ main(int argc, const char *argv[])
   svn_config_t *cfg;
   svn_boolean_t descend = TRUE;
   svn_boolean_t interactive_conflicts = FALSE;
-  apr_hash_t *changelists = apr_hash_make(pool);
+  apr_hash_t *changelists;
 
   /* Initialize the app. */
   if (svn_cmdline_init("svn", stderr) != EXIT_SUCCESS)
@@ -1063,6 +1063,9 @@ main(int argc, const char *argv[])
   err = svn_ra_initialize(pool);
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+
+  /* Init our changelists hash. */
+  changelists = apr_hash_make(pool);
 
   /* Begin processing arguments. */
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
