@@ -521,6 +521,7 @@ TO-DO list:
 
     * svn changelist (see UI notes above)
     * svn add --changelist (for --force invocations)
+    * svn rm --changelist
     * svn status --changelist
     * svn revert --changelist
     * svn log --changelist
