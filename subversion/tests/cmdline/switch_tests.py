@@ -227,7 +227,7 @@ def commit_routine_switching(wc_dir, verify):
 def routine_switching(sbox):
   "test some basic switching operations"
 
-  sbox.build()
+  sbox.build(read_only = True)
 
   # Setup (and verify) some switched things
   do_routine_switching(sbox.wc_dir, sbox.repo_url, 1)
@@ -637,7 +637,7 @@ def delete_subdir(sbox):
 
 def file_dir_file(sbox):
   "switch a file to a dir and back to the file"
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   file_path = os.path.join(wc_dir, 'iota')
@@ -934,14 +934,13 @@ def commit_mods_below_switch(sbox):
 
 def relocate_beyond_repos_root(sbox):
   "relocate with prefixes longer than repo root"
-  sbox.build()
+  sbox.build(read_only = True)
 
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
   repo_url = sbox.repo_url
   other_repo_dir, other_repo_url = sbox.add_repo_path('other')
   svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
-  svntest.main.safe_rmtree(repo_dir, 1)
 
   A_url = repo_url + "/A"
   other_A_url = other_repo_url + "/A"
@@ -1152,7 +1151,7 @@ def relocate_and_propset(sbox):
 
 def forced_switch(sbox):
   "forced switch tolerates obstructions to adds"
-  sbox.build()
+  sbox.build(read_only = True)
 
   # Dir obstruction
   G_path = os.path.join(sbox.wc_dir, 'A', 'B', 'F', 'G')
@@ -1300,7 +1299,7 @@ def forced_switch_failures(sbox):
 
 def switch_with_obstructing_local_adds(sbox):
   "switch tolerates WC adds"
-  sbox.build()
+  sbox.build(read_only = True)
 
   # Dir obstruction scheduled for addition without history.
   G_path = os.path.join(sbox.wc_dir, 'A', 'B', 'F', 'G')
@@ -1399,7 +1398,7 @@ def switch_with_obstructing_local_adds(sbox):
 
 def switch_scheduled_add(sbox):
   "switch a scheduled-add file"
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   file_path = os.path.join(wc_dir, 'stub_file')
@@ -1701,7 +1700,7 @@ def mergeinfo_switch_elision(sbox):
 def switch_with_depth(sbox):
   "basic tests to verify switch along with depth"
 
-  sbox.build()
+  sbox.build(read_only = True)
 
   # Form some paths and URLs required
   wc_dir = sbox.wc_dir
@@ -2074,7 +2073,7 @@ def switch_to_dir_with_peg_rev2(sbox):
 def switch_to_root(sbox):
   "switch a folder to the root of its repository"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   repo_url = sbox.repo_url
 
