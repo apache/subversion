@@ -106,7 +106,6 @@ svn_error_t *
 svn_fs_base__delete_node_revision(svn_fs_t *fs,
                                   const svn_fs_id_t *id,
                                   const svn_fs_id_t *pred_id,
-                                  svn_boolean_t origin_also,
                                   trail_t *trail,
                                   apr_pool_t *pool)
 {
@@ -115,19 +114,21 @@ svn_fs_base__delete_node_revision(svn_fs_t *fs,
   /* ### TODO: here, we should adjust other nodes to compensate for
      the missing node. */
 
-  /* Remove the successor association... */
+  /* If there is a predecessor node-rev-ID, we need to remove this
+     node as a successor to that node-rev-ID.  Otherwise (if this node
+     has no predecessor), we can remove it as a node origin. */
   if (pred_id)
     {
       node_id_str = svn_fs_unparse_id(pred_id, pool);
       succ_id_str = svn_fs_unparse_id(id, pool);
       SVN_ERR(svn_fs_bdb__successors_delete(fs, node_id_str->data, 
-                                            succ_id_str->data, trail, 
-                                            pool));
+                                            succ_id_str->data, trail, pool));
     }
-
-  if (origin_also)
-    SVN_ERR(svn_fs_bdb__delete_node_origin(fs, svn_fs_base__id_node_id(id),
-                                           trail, pool));
+  else
+    {
+      SVN_ERR(svn_fs_bdb__delete_node_origin(fs, svn_fs_base__id_node_id(id),
+                                             trail, pool));
+    }
 
   /* ...and then the node itself. */
   return svn_fs_bdb__delete_nodes_entry(fs, id, trail, pool);
