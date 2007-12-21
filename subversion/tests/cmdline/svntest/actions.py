@@ -1125,16 +1125,23 @@ def run_and_validate_lock(path, username):
 
 
 # This allows a test to *quickly* bootstrap itself.
-def make_repo_and_wc(sbox, create_wc = True):
+def make_repo_and_wc(sbox, create_wc = True, read_only = False):
   """Create a fresh repository and checkout a wc from it.
 
-  The repo and wc directories will both be named TEST_NAME, and
-  repsectively live within the global dirs 'general_repo_dir' and
-  'general_wc_dir' (variables defined at the top of this test
-  suite.)  Returns on success, raises on failure."""
+  If read_only is False, a dedicated repository will be created, named 
+  TEST_NAME. The repository will live in the global dir 'general_repo_dir'.
+  If read_only is True the pristine repository will be used.
+
+  If create_wc is True, a dedicated working copy will be checked out from
+  the repository, named TEST_NAME. The wc directory will live in the global
+  dir 'general_wc_dir'.
+
+  Both variables 'general_repo_dir' and 'general_wc_dir' are defined at the 
+  top of this test suite.)  Returns on success, raises on failure."""
 
   # Create (or copy afresh) a new repos with a greek tree in it.
-  guarantee_greek_repository(sbox.repo_dir)
+  if not read_only:
+    guarantee_greek_repository(sbox.repo_dir)
 
   if create_wc:
     # Generate the expected output tree.

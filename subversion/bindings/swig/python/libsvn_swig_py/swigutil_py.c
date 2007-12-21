@@ -2109,7 +2109,7 @@ svn_error_t *svn_swig_py_delta_path_driver_cb_func(void **dir_baton,
   result = PyObject_CallFunction(function, (char *)"OsO&",
                                  svn_swig_NewPointerObjString(parent_baton,
                                                               "void *",
-                                                          application_py_pool),
+                                                              application_py_pool),
                                  path, make_ob_pool, pool);
   if (result == NULL)
     {
@@ -2121,7 +2121,7 @@ svn_error_t *svn_swig_py_delta_path_driver_cb_func(void **dir_baton,
     }
   else
     {
-      if (svn_swig_ConvertPtr(result, dir_baton, svn_swig_TypeQuery("void *")) == -1)
+      if (svn_swig_ConvertPtrString(result, dir_baton, "void *") == -1)
         {
           err = type_conversion_error("void *");
         }
@@ -2589,6 +2589,37 @@ svn_error_t *svn_swig_py_client_blame_receiver_func(void *baton,
   return err;
 }
 
+svn_error_t *svn_swig_py_changelist_receiver_func(void *baton,
+                                                  const char *path,
+                                                  const char *changelist,
+                                                  apr_pool_t *pool)
+{
+  PyObject *receiver = baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if ((receiver == NULL) || (receiver == Py_None))
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallFunction(receiver, 
+                                      (char *)"ssO&",
+                                      path, changelist, 
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      if (result != Py_None)
+        err = callback_bad_return_error("Not None");
+      Py_DECREF(result);
+    }
+
+  svn_swig_py_release_py_lock();
+  return err;
+}
 
 svn_error_t *
 svn_swig_py_auth_simple_prompt_func(svn_auth_cred_simple_t **cred,
@@ -3132,6 +3163,52 @@ ra_callbacks_cancel_func(void *baton)
   return svn_swig_py_cancel_func(py_callback);
 }
 
+/* svn_ra_callbacks_t */
+static svn_error_t *
+ra_callbacks_get_client_string(void *baton,
+                               const char **name,
+                               apr_pool_t *pool)
+{
+  PyObject *callbacks = (PyObject *)baton;
+  PyObject *py_callback, *result;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  *name = NULL;
+
+  svn_swig_py_acquire_py_lock();
+
+  py_callback = PyObject_GetAttrString(callbacks, (char *)"get_client_string");
+  if (py_callback == NULL)
+    {
+      err = callback_exception_error();
+      goto finished;
+    }
+  else if (py_callback == Py_None)
+    {
+      goto finished;
+    }
+
+  if ((result = PyObject_CallFunction(py_callback,
+                                      (char *)"O&",
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else if (result != Py_None)
+    {
+      if ((*name = PyString_AsString(result)) == NULL)
+        {
+      	  err = callback_exception_error();
+        }
+    }
+
+  Py_XDECREF(result);
+finished:
+  Py_XDECREF(py_callback);
+  svn_swig_py_release_py_lock();
+  return err;
+}
+
 void
 svn_swig_py_setup_ra_callbacks(svn_ra_callbacks2_t **callbacks,
                                void **baton,
@@ -3170,6 +3247,7 @@ svn_swig_py_setup_ra_callbacks(svn_ra_callbacks2_t **callbacks,
   (*callbacks)->progress_func = ra_callbacks_progress_func;
   (*callbacks)->progress_baton = py_callbacks;
   (*callbacks)->cancel_func = ra_callbacks_cancel_func;
+  (*callbacks)->get_client_string = ra_callbacks_get_client_string;
 
   *baton = py_callbacks;
 }

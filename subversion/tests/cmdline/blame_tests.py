@@ -147,7 +147,7 @@ def blame_directory(sbox):
   import re
 
   # Setup
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   dir = os.path.join(wc_dir, 'A')
 
@@ -541,7 +541,7 @@ def blame_peg_rev_file_not_in_head(sbox):
 def blame_file_not_in_head(sbox):
   "blame target not in HEAD"
 
-  sbox.build(create_wc = False)
+  sbox.build(create_wc = False, read_only = True)
   notexisting_url = sbox.repo_url + '/notexisting'
 
   # Check that a correct error message is printed when blaming a target that

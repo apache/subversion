@@ -194,11 +194,10 @@ svn_cl__diff(apr_getopt_t *os,
      ones the user typed, as well as any specified by --changelist.  */
   if (opt_state->changelist)
     {
-      SVN_ERR(svn_client_get_changelist(&changelist_targets,
-                                        opt_state->changelist,
-                                        "",
-                                        ((svn_cl__cmd_baton_t *)baton)->ctx,
-                                        pool));
+      SVN_ERR(svn_cl__get_changelist(&changelist_targets, 
+                                     opt_state->changelist, "", 
+                                     ((svn_cl__cmd_baton_t *)baton)->ctx,
+                                     pool));
       if (apr_is_empty_array(changelist_targets))
         return svn_error_createf(SVN_ERR_UNKNOWN_CHANGELIST, NULL,
                                  _("Unknown changelist '%s'"),

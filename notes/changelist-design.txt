@@ -216,14 +216,14 @@ operate only on those paths.
 
 The 'svn changelist' command allows a user to define a changelist with
 an arbitrary UTF-8 name, as well as add member paths.  (At the moment,
-a --clear flag is used to remove member paths.)  Unversioned items may
+a --remove flag is used to remove member paths.)  Unversioned items may
 not be added to changelists.
 
 $ svn changelist MYCHANGE foo.c bar.c
 Path 'foo.c' is now part of changelist 'mychange'.
 Path 'bar.c' is now part of changelist 'mychange'.
 
-$ svn changelist bar.c --clear
+$ svn changelist bar.c --remove
 Path 'bar.c' is no longer associated with a changelist.
 
 
@@ -297,7 +297,7 @@ to '--cl' also?)
 
 To destroy a changelist, one would need to remove all member-paths
 from it.  There's no good UI for this yet, other than to use 'svn
-changelist --clear path1 path2 path3 ...'.  ### Improve this?
+changelist --remove path1 path2 path3 ...'.  ### Improve this?
 
 
 D.  Viewing edits in a changelist
@@ -455,3 +455,78 @@ Commandline UI use-cases:
 5. rename a CL
 
      svn cl NEWNAME --changelist OLDNAME
+
+
+==================================================================
+
+Feature Revamp:  sussman and cmpilato.
+
+
+Goal:  changelists should be treated as 'filters' everywhere, not as a
+way to just add targets to a commandline.
+
+
+The basic syntax of commands will be:
+
+  svn subcommand target1 target2 ... targetN \
+                 --changelist foo1 --changelist foo2 ... --changelist fooM
+
+The CLI parses the targets as usual: possibly inserting an implicit
+'.' target, canonicalizing the list, etc.
+
+The CLI now passes a list of changelist-names down into each
+svn_client_subcommand() routine as a "bunch of filters" to apply while
+working.  If svn_client_subcommand() decides to process a target --
+either one it got explicitly, or one it discovered through recursion
+-- it first checks that the target is a member of one of the
+changelists.  If not, it skips the target and keeps going.
+
+(This is the way 'svn commit' currently works:  harvest_committables()
+only harvests things that are committable *and* a member of the
+passed-in changelist.)
+
+This means that the UI use-cases (listed above changes slightly):
+
+
+4. undefine a CL all at once (by removing all members)
+
+     svn cl TARGET --remove --changelist CLNAME
+
+     (TARGET might be implicit '.' or not, and TARGET is treated
+     recursively.)
+
+5. rename a CL
+
+     svn cl NEWNAME TARGET --changelist OLDNAME
+
+     (TARGET might be implicit '.' or not, and TARGET is treated
+     recursively.)
+
+
+
+TO-DO list:
+
+  * allow multiple --changelist args
+
+  * write tests!
+
+  * Done:   svn status should display grouped changelists
+
+  * Done:  'svn info' should display a target's changelist field
+
+  * Almost done:  svn commit --changelist already acts as a filter.
+    Need to pass a *list* of changelists into it, though.
+
+  * other commands to augment:
+
+    * svn changelist (see UI notes above)
+    * svn add --changelist (for --force invocations)
+    * svn rm --changelist
+    * svn status --changelist
+    * svn revert --changelist
+    * svn log --changelist
+    * svn diff --changelist  (only wc-wc and wc-repos cases)
+    * svn update --changelist
+    * svn lock/unlock --changelist
+    * svn propget/propset --changelist
+    * svn proplist/propdel --changelist

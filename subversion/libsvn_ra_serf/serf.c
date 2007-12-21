@@ -379,6 +379,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
   apr_status_t status;
   svn_ra_serf__session_t *serf_sess;
   apr_uri_t url;
+  const char *client_string = NULL;
 
   serf_sess = apr_pcalloc(pool, sizeof(*serf_sess));
   apr_pool_create(&serf_sess->pool, pool);
@@ -441,6 +442,17 @@ svn_ra_serf__open(svn_ra_session_t *session,
   serf_sess->conns[0]->hostinfo = url.hostinfo;
   serf_sess->conns[0]->auth_header = NULL;
   serf_sess->conns[0]->auth_value = NULL;
+  serf_sess->conns[0]->useragent = NULL;
+
+  /* create the user agent string */
+  if (callbacks->get_client_string)
+    callbacks->get_client_string(callback_baton, &client_string, pool);
+
+  if (client_string)
+    serf_sess->conns[0]->useragent = apr_pstrcat(pool, USER_AGENT, "/",
+                                                 client_string, NULL);
+  else
+    serf_sess->conns[0]->useragent = USER_AGENT;
 
   /* go ahead and tell serf about the connection. */
   serf_sess->conns[0]->conn =

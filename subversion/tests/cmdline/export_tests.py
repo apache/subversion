@@ -39,7 +39,7 @@ Item = svntest.wc.StateItem
 
 def export_empty_directory(sbox):
   "export an empty directory"
-  sbox.build(create_wc = False)
+  sbox.build(create_wc = False, read_only = True)
 
   svntest.main.safe_rmtree(sbox.wc_dir)
   export_target = sbox.wc_dir
@@ -50,7 +50,7 @@ def export_empty_directory(sbox):
 
 def export_greek_tree(sbox):
   "export the greek tree"
-  sbox.build(create_wc = False)
+  sbox.build(create_wc = False, read_only = True)
 
   svntest.main.safe_rmtree(sbox.wc_dir)
   export_target = sbox.wc_dir
@@ -66,7 +66,7 @@ def export_greek_tree(sbox):
 
 def export_nonexistent_url(sbox):
   "attempt to export a nonexistent URL"
-  sbox.build(create_wc = False)
+  sbox.build(create_wc = False, read_only = True)
 
   svntest.main.safe_rmtree(sbox.wc_dir)
   export_target = os.path.join(sbox.wc_dir, 'nonexistent')
@@ -77,7 +77,7 @@ def export_nonexistent_url(sbox):
 
 def export_working_copy(sbox):
   "export working copy"
-  sbox.build()
+  sbox.build(read_only = True)
 
   export_target = sbox.add_wc_path('export')
 
@@ -88,7 +88,7 @@ def export_working_copy(sbox):
 
 def export_working_copy_with_mods(sbox):
   "export working copy with mods"
-  sbox.build()
+  sbox.build(read_only = True)
 
   wc_dir = sbox.wc_dir
 
@@ -125,7 +125,7 @@ def export_working_copy_with_mods(sbox):
 
 def export_over_existing_dir(sbox):
   "export over existing dir"
-  sbox.build()
+  sbox.build(read_only = True)
 
   export_target = sbox.add_wc_path('export')
 
@@ -207,7 +207,7 @@ def export_eol_translation(sbox):
 
 def export_working_copy_with_keyword_translation(sbox):
   "export working copy with keyword translation"
-  sbox.build()
+  sbox.build(read_only = True)
 
   wc_dir = sbox.wc_dir
 
@@ -233,7 +233,7 @@ def export_working_copy_with_keyword_translation(sbox):
 
 def export_working_copy_with_property_mods(sbox):
   "export working copy with property mods"
-  sbox.build()
+  sbox.build(read_only = True)
 
   wc_dir = sbox.wc_dir
 
@@ -255,7 +255,7 @@ def export_working_copy_with_property_mods(sbox):
 
 def export_working_copy_at_base_revision(sbox):
   "export working copy at base revision"
-  sbox.build()
+  sbox.build(read_only = True)
 
   wc_dir = sbox.wc_dir
 
@@ -319,7 +319,7 @@ def export_native_eol_option(sbox):
 
 def export_nonexistent_file(sbox):
   "export nonexistent file"
-  sbox.build()
+  sbox.build(read_only = True)
 
   wc_dir = sbox.wc_dir
 
@@ -333,7 +333,7 @@ def export_nonexistent_file(sbox):
 
 def export_unversioned_file(sbox):
   "export unversioned file"
-  sbox.build()
+  sbox.build(read_only = True)
 
   wc_dir = sbox.wc_dir
 
@@ -376,7 +376,7 @@ def export_with_state_deleted(sbox):
 
 def export_creates_intermediate_folders(sbox):
   "export and create some intermediate folders"
-  sbox.build(create_wc = False)
+  sbox.build(create_wc = False, read_only = True)
 
   svntest.main.safe_rmtree(sbox.wc_dir)
   export_target = os.path.join(sbox.wc_dir, 'a', 'b', 'c')

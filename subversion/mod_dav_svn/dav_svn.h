@@ -758,7 +758,7 @@ dav_svn__make_base64_output_stream(apr_bucket_brigade *bb,
                                    apr_pool_t *pool);
 
 /* In INFO->r->subprocess_env set "SVN-ACTION" to LINE, "SVN-REPOS" to
- * INFO->repos->fs_path, and "SVN-REPOS-NAME" to INFO->repos->repo_name. */
+ * INFO->repos->fs_path, and "SVN-REPOS-NAME" to INFO->repos->repo_basename. */
 void
 dav_svn__operational_log(struct dav_resource_private *info, const char *line);
 

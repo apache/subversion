@@ -104,6 +104,9 @@ typedef struct {
 
   /* Current authorization value used for the proxy server; may be NULL */
   char *proxy_auth_value;
+  
+  /* user agent string */
+  const char *useragent;
 
 } svn_ra_serf__connection_t;
 

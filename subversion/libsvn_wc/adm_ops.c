@@ -2946,27 +2946,36 @@ svn_wc_set_changelist(const apr_array_header_t *paths,
           continue;
         }
 
+      /* If the path is already assigned to the changelist we're
+         trying to assign, or if we're trying to remove a changelist
+         assignment from a path that has none, there's nothing to
+         do. */
+      if (entry->changelist 
+          && changelist 
+          && strcmp(entry->changelist, changelist) == 0)
+        continue;
+      if (! (entry->changelist || changelist))
+        continue;
+
       /* Possibly enforce matching with an existing changelist. */
-      if (matching_changelist != NULL)
+      if (matching_changelist
+          && entry->changelist 
+          && strcmp(entry->changelist, matching_changelist) != 0)
         {
-          if (entry->changelist &&
-              (strcmp(entry->changelist, matching_changelist) != 0))
+          if (notify_func)
             {
-              if (notify_func)
-                {
-                  svn_error_t *mismatch_err =
-                    svn_error_createf(SVN_ERR_WC_MISMATCHED_CHANGELIST, NULL,
-                                      _("'%s' is not currently a member of "
-                                        "changelist '%s'."),
-                                      path, matching_changelist);
-                  notify = svn_wc_create_notify(path,
-                                                svn_wc_notify_changelist_failed,
-                                                iterpool);
-                  notify->err = mismatch_err;
-                  notify_func(notify_baton, notify, iterpool);
-                }
-              continue;
+              svn_error_t *mismatch_err =
+                svn_error_createf(SVN_ERR_WC_MISMATCHED_CHANGELIST, NULL,
+                                  _("'%s' is not currently a member of "
+                                    "changelist '%s'."),
+                                  path, matching_changelist);
+              notify = svn_wc_create_notify(path,
+                                            svn_wc_notify_changelist_failed,
+                                            iterpool);
+              notify->err = mismatch_err;
+              notify_func(notify_baton, notify, iterpool);
             }
+          continue;
         }
 
       /* If the path is already a member of a changelist, warn the

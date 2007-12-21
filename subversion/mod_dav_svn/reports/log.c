@@ -250,7 +250,6 @@ dav_svn__log_report(const dav_resource *resource,
   struct log_receiver_baton lrb;
   dav_svn__authz_read_baton arb;
   const dav_svn_repos *repos = resource->info->repos;
-  const char *action;
   const char *target = NULL;
   int limit = 0;
   int ns;
@@ -266,9 +265,9 @@ dav_svn__log_report(const dav_resource *resource,
                                                 sizeof(const char *));
   apr_array_header_t *paths
     = apr_array_make(resource->pool, 1, sizeof(const char *));
-  svn_stringbuf_t *comma_separated_paths =
+  svn_stringbuf_t *space_separated_paths =
     svn_stringbuf_create("", resource->pool);
-  svn_stringbuf_t *comma_separated_revprops =
+  svn_stringbuf_t *space_separated_revprops =
     svn_stringbuf_create("", resource->pool);
 
   /* Sanity check. */
@@ -311,7 +310,6 @@ dav_svn__log_report(const dav_resource *resource,
         {
           revprops = NULL; /* presence indicates fetch all revprops */
           seen_revprop_element = lrb.requested_custom_revprops = TRUE;
-          svn_stringbuf_appendcstr(comma_separated_revprops, "[all]");
         }
       else if (strcmp(child->name, "revprop") == 0)
         {
@@ -327,9 +325,9 @@ dav_svn__log_report(const dav_resource *resource,
                 lrb.requested_custom_revprops = TRUE;
 
               /* Gather a formatted list of revprops for operational logging. */
-              if (comma_separated_revprops->len > 0)
-                svn_stringbuf_appendbytes(comma_separated_revprops, ", ", 2);
-              svn_stringbuf_appendcstr(comma_separated_revprops, name);
+              if (space_separated_revprops->len > 1)
+                svn_stringbuf_appendcstr(space_separated_revprops, " ");
+              svn_stringbuf_appendcstr(space_separated_revprops, name);
             }
           seen_revprop_element = TRUE;
         }
@@ -344,9 +342,9 @@ dav_svn__log_report(const dav_resource *resource,
 
           /* Gather a formatted list of paths to include in our
              operational logging. */
-          if (comma_separated_paths->len > 0)
-            svn_stringbuf_appendbytes(comma_separated_paths, ", ", 2);
-          svn_stringbuf_appendcstr(comma_separated_paths,
+          if (space_separated_paths->len > 1)
+            svn_stringbuf_appendcstr(space_separated_paths, " ");
+          svn_stringbuf_appendcstr(space_separated_paths,
                                    svn_path_uri_encode(target,
                                                        resource->pool));
         }
@@ -419,13 +417,36 @@ dav_svn__log_report(const dav_resource *resource,
 
  cleanup:
 
-  /* We've detected a 'high level' svn action to log. */
-  action = apr_psprintf(resource->pool,
-                        "log%s %s r%ld:%ld %s",
-                        include_merged_revisions ? "-merge-sensitive" : "",
-                        comma_separated_paths->data, start, end,
-                        comma_separated_revprops->data);
-  dav_svn__operational_log(resource->info, action);
+  {
+    /* We've detected a 'high level' svn action to log. */
+    svn_stringbuf_t *options = svn_stringbuf_create("", resource->pool);
+    const char *action;
+
+    if (limit)
+      {
+        char *tmp = apr_psprintf(resource->pool, " limit=%d", limit);
+        svn_stringbuf_appendcstr(options, tmp);
+      }
+    if (discover_changed_paths)
+      svn_stringbuf_appendcstr(options, " discover-changed-paths");
+    if (strict_node_history)
+      svn_stringbuf_appendcstr(options, " strict");
+    if (include_merged_revisions)
+      svn_stringbuf_appendcstr(options, " include-merged-revisions");
+    if (revprops == NULL)
+      svn_stringbuf_appendcstr(options, " all-revprops");
+    else if (revprops->nelts > 0)
+      {
+        svn_stringbuf_appendcstr(options, " (");
+        svn_stringbuf_appendstr(options, space_separated_revprops);
+        svn_stringbuf_appendcstr(options, ")");
+      }
+
+    action = apr_psprintf(resource->pool, "log (%s) r%ld:%ld%s",
+                          space_separated_paths->data, start, end,
+                          options->data);
+    dav_svn__operational_log(resource->info, action);
+  }
 
   /* Flush the contents of the brigade (returning an error only if we
      don't already have one). */

@@ -50,7 +50,7 @@ Item = svntest.wc.StateItem
 def add_files(sbox):
   "schedule: add some files"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   # Create some files, then schedule them for addition
@@ -79,7 +79,7 @@ def add_files(sbox):
 def add_directories(sbox):
   "schedule: add some directories"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   # Create some directories, then schedule them for addition
@@ -108,7 +108,7 @@ def add_directories(sbox):
 def nested_adds(sbox):
   "schedule: add some nested files and directories"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   # Create some directories then schedule them for addition
@@ -165,7 +165,7 @@ def nested_adds(sbox):
 def add_executable(sbox):
   "schedule: add some executable files"
 
-  sbox.build()
+  sbox.build(read_only = True)
 
   def runTest(wc_dir, fileName, perm, executable):
     fileName = os.path.join(wc_dir, fileName)
@@ -195,7 +195,7 @@ def add_executable(sbox):
 def delete_files(sbox):
   "schedule: delete some files"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   # Schedule some files for deletion
@@ -218,7 +218,7 @@ def delete_files(sbox):
 def delete_dirs(sbox):
   "schedule: delete some directories"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   # Schedule some directories for deletion (this is recursive!)
@@ -402,7 +402,7 @@ def revert_delete_dirs(sbox):
 def unschedule_missing_added(sbox):
   "unschedule addition on missing items"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   # Create some files and dirs, then schedule them for addition
@@ -488,7 +488,7 @@ def delete_missing(sbox):
 def revert_inside_newly_added_dir(sbox):
   "revert inside a newly added dir"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   os.chdir(wc_dir)
@@ -618,7 +618,7 @@ def fail_add_directory(sbox):
 def delete_non_existent(sbox):
   "'svn rm non-existent' should exit with an error"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   os.chdir(wc_dir)

@@ -44,6 +44,7 @@
 #include "svn_opt.h"
 #include "svn_utf.h"
 #include "svn_auth.h"
+#include "svn_hash.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -1024,6 +1025,7 @@ main(int argc, const char *argv[])
   svn_config_t *cfg;
   svn_boolean_t descend = TRUE;
   svn_boolean_t interactive_conflicts = FALSE;
+  apr_hash_t *changelists;
 
   /* Initialize the app. */
   if (svn_cmdline_init("svn", stderr) != EXIT_SUCCESS)
@@ -1061,6 +1063,9 @@ main(int argc, const char *argv[])
   err = svn_ra_initialize(pool);
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+
+  /* Init our changelists hash. */
+  changelists = apr_hash_make(pool);
 
   /* Begin processing arguments. */
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
@@ -1391,6 +1396,8 @@ main(int argc, const char *argv[])
         break;
       case opt_changelist:
         opt_state.changelist = apr_pstrdup(pool, opt_arg);
+        apr_hash_set(changelists, opt_state.changelist,
+                     APR_HASH_KEY_STRING, (void *)1);
         break;
       case opt_keep_changelist:
         opt_state.keep_changelist = TRUE;
@@ -1432,6 +1439,11 @@ main(int argc, const char *argv[])
         break;
       }
     }
+
+  /* Turn our hash of changelists into an array of unique ones. */
+  err = svn_hash_keys(&(opt_state.changelists), changelists, pool);
+  if (err)
+    return svn_cmdline_handle_exit_error(err, pool, "svn: ");
 
   /* ### This really belongs in libsvn_client.  The trouble is,
      there's no one place there to run it from, no

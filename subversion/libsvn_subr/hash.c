@@ -436,6 +436,48 @@ svn_hash_diff(apr_hash_t *hash_a,
 /*** Misc. hash APIs ***/
 
 svn_error_t *
+svn_hash_keys(apr_array_header_t **array,
+              apr_hash_t *hash,
+              apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  
+  *array = apr_array_make(pool, apr_hash_count(hash), sizeof(const char *));
+
+  for (hi = apr_hash_first(pool, hash); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      const char *path;
+
+      apr_hash_this(hi, &key, NULL, NULL);
+      path = key;
+      
+      APR_ARRAY_PUSH(*array, const char *) = path;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_hash_from_array(apr_hash_t **hash_p,
+                    const apr_array_header_t *keys,
+                    apr_pool_t *pool)
+{
+  int i;
+  apr_hash_t *hash = apr_hash_make(pool);
+  for (i = 0; i < keys->nelts; i++)
+    {
+      const void *key = keys->elts + (keys->elt_size * i);
+      key = apr_pmemdup(pool, key, keys->elt_size);
+      apr_hash_set(hash, key, keys->elt_size, (void *)1);
+    }
+  *hash_p = hash;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_hash__clear(apr_hash_t *hash)
 {
 #if APR_VERSION_AT_LEAST(1, 3, 0)

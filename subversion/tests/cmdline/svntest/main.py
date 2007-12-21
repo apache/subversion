@@ -743,8 +743,16 @@ the rules. You can add sections SECTIONS (ex. groups, aliases...) with
 an appropriate list of mappings.
 """
   fp = open(sbox.authz_file, 'w')
+
+  # When the sandbox repository is read only it's name will be different from
+  # the repository name.
+  repo_name = sbox.repo_dir
+  while repo_name[-1] == '/':
+    repo_name = repo_name[:-1]
+  repo_name = os.path.basename(repo_name)
+
   if sbox.repo_url.startswith("http"):
-    prefix = sbox.name + ":"
+    prefix = repo_name + ":"
   else:
     prefix = ""
   if sections:
@@ -848,14 +856,20 @@ class Sandbox:
   def __init__(self, module, idx):
     self._set_name("%s-%d" % (module, idx))
 
-  def _set_name(self, name):
+  def _set_name(self, name, read_only = False):
     """A convenience method for renaming a sandbox, useful when
     working with multiple repositories in the same unit test."""
-    self.name = name
+    if not name is None:
+      self.name = name
+    self.read_only = read_only
     self.wc_dir = os.path.join(general_wc_dir, self.name)
-    self.repo_dir = os.path.join(general_repo_dir, self.name)
-    self.repo_url = test_area_url + '/' + self.repo_dir
-
+    if not read_only:
+      self.repo_dir = os.path.join(general_repo_dir, self.name)
+      self.repo_url = test_area_url + '/' + self.repo_dir
+    else:
+      self.repo_dir = pristine_dir
+      self.repo_url = pristine_url
+      
     ### TODO: Move this into to the build() method
     # For dav tests we need a single authz file which must be present,
     # so we recreate it each time a sandbox is created with some default
@@ -895,10 +909,9 @@ class Sandbox:
       shutil.copytree(self.wc_dir, clone.wc_dir, symlinks=True)
     return clone
 
-  def build(self, name = None, create_wc = True):
-    if name != None:
-      self._set_name(name)
-    if actions.make_repo_and_wc(self, create_wc):
+  def build(self, name = None, create_wc = True, read_only = False):
+    self._set_name(name, read_only)
+    if actions.make_repo_and_wc(self, create_wc, read_only):
       raise Failure("Could not build repository and sandbox '%s'" % self.name)
 
   def add_test_path(self, path, remove=True):
@@ -907,8 +920,8 @@ class Sandbox:
       safe_rmtree(path)
 
   def add_repo_path(self, suffix, remove=1):
-    path = self.repo_dir + '.' + suffix
-    url  = self.repo_url + '.' + suffix
+    path = os.path.join(general_repo_dir, self.name)  + '.' + suffix
+    url  = test_area_url + '/' + path
     self.add_test_path(path, remove)
     return path, url
 
@@ -923,8 +936,10 @@ class Sandbox:
       # Recursively cleanup any dependent sandboxes.
       for sbox in self.dependents:
         sbox.cleanup_test_paths()
+    # cleanup all test specific working copies and repositories
     for path in self.test_paths:
-      _cleanup_test_path(path)
+      if not path is pristine_dir:
+        _cleanup_test_path(path)
 
 
 _deferred_test_paths = []
