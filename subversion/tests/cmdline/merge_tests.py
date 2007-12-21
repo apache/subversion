@@ -10410,7 +10410,7 @@ test_list = [ None,
               merge_from_renamed_branch_fails_while_avoiding_repeat_merge,
               merge_source_normalization_and_subtree_merges,
               merge_non_reflective_changes_from_reflective_rev,
-              XFail(merge_non_reflective_text_and_prop_change),
+              merge_non_reflective_text_and_prop_change,
               merge_non_reflective_with_conflict,
              ]
 

@@ -634,8 +634,9 @@ reflective_merge_file_changed(svn_wc_adm_access_t *adm_access,
                               void *baton)
 {
   merge_cmd_baton_t *merge_b = baton;
+  int merge_target_len = strlen(merge_b->target);
   const char *file_path_relative_to_target = 
-    mine + strlen(merge_b->target) + 1;
+    mine + (merge_target_len ? merge_target_len + 1 : 0);
   if (older)
     SVN_ERR(merge_reflected_ranges_b4_reflecting(older,
                                                  file_path_relative_to_target,
