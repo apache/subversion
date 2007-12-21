@@ -9989,6 +9989,34 @@ def merge_non_reflective_text_and_prop_change(sbox):
                                        None, None, None, None, None, 1,
                                        dry_run = False)
   os.chdir(saved_cwd)
+  # Revert 
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
+  #Redo the above merge with current working directory being a implicit
+  #target
+  os.chdir(ABE_path)
+  #TODO Duplicating above expected_* for the target '', should be
+  #smart enough here to reuse without duplicating.
+  expected_output = wc.State('', {
+    ''         : Item(status=' U'),
+    'alpha'    : Item(status='G '),
+    'beta'     : Item(status=' U'),
+    })
+  expected_status = wc.State('', {
+    ''         : Item(status=' M', wc_rev=7),
+    'alpha'    : Item(status='M ', wc_rev=7),
+    'beta'     : Item(status=' M', wc_rev=7),
+    })
+  expected_skip = wc.State('', {})
+
+  svntest.actions.run_and_verify_merge('', None, None,
+                                       sbox.repo_url + '/A/B/E_COPY',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None, 1,
+                                       dry_run = False)
+  os.chdir(saved_cwd)
 
 def merge_non_reflective_with_conflict(sbox):
   "merge non-reflective with conflict"
@@ -10382,7 +10410,7 @@ test_list = [ None,
               merge_from_renamed_branch_fails_while_avoiding_repeat_merge,
               merge_source_normalization_and_subtree_merges,
               merge_non_reflective_changes_from_reflective_rev,
-              merge_non_reflective_text_and_prop_change,
+              XFail(merge_non_reflective_text_and_prop_change),
               merge_non_reflective_with_conflict,
              ]
 
