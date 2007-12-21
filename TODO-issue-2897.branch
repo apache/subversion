@@ -1,5 +1,2 @@
-* Fix the finding mergeinfo from a parent logic for 
-'get-commit-and-merge-ranges' API, which is terribly broken as of now.
-
 * Make merge_source and merge_target given to 'get-commit-and-merge-ranges'
   peg revision aware.
