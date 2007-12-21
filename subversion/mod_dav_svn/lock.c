@@ -760,9 +760,10 @@ append_locks(dav_lockdb *lockdb,
   /* Log the locking as a 'high-level' action. */
   dav_svn__operational_log(resource->info,
                            apr_psprintf(resource->info->r->pool,
-                                        "lock %s",
+                                        "lock %s%s",
                                         svn_path_uri_encode(slock->path,
-                                                 resource->info->r->pool)));
+                                                 resource->info->r->pool),
+                                        info->lock_steal ? " steal" : ""));
 
   return 0;
 }
@@ -847,9 +848,10 @@ remove_lock(dav_lockdb *lockdb,
       /* Log the unlocking as a 'high-level' action. */
       dav_svn__operational_log(resource->info,
                                apr_psprintf(resource->info->r->pool,
-                                 "unlock %s",
+                                 "unlock %s%s",
                                  svn_path_uri_encode(resource->info->repos_path,
-                                                     resource->info->r->pool)));
+                                                     resource->info->r->pool),
+                                            info->lock_break ? " break" : ""));
     }
 
   return 0;
