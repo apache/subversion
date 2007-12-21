@@ -33,9 +33,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: subversion 1.4.6\n"
+"Project-Id-Version: subversion 1.4.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-12-09 22:21+0800\n"
+"POT-Creation-Date: 2007-12-21 10:06+0800\n"
 "PO-Revision-Date: 2007-12-09 22:20+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
@@ -6576,7 +6576,7 @@ msgstr "没有版本 0"
 msgid "Multiple revision arguments encountered; can't specify -r and -c, or try '-r N:M' instead of '-r N -r M'"
 msgstr "遇到了多个版本参数；不能同时指定 -r 和 -c，请使用“-r N:M”代替“-r N -r M"
 
-#: ../svn/main.c:1005 ../svnadmin/main.c:1244
+#: ../svn/main.c:1005 ../svnadmin/main.c:1249
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "版本参数“%s”中有语法错误"
@@ -6595,7 +6595,7 @@ msgstr "原生换行符号参数“%s”中有语法错误"
 msgid "Subcommand argument required\n"
 msgstr "必须提供子命令参数\n"
 
-#: ../svn/main.c:1268 ../svnadmin/main.c:1367 ../svndumpfilter/main.c:1226
+#: ../svn/main.c:1268 ../svnadmin/main.c:1372 ../svndumpfilter/main.c:1226
 #: ../svnlook/main.c:2056
 #, c-format
 msgid "Unknown command: '%s'\n"
@@ -7449,26 +7449,30 @@ msgstr ""
 "%s\n"
 "\n"
 
-#: ../svnadmin/main.c:1110
+#: ../svnadmin/main.c:1097
+msgid "No paths to unlock provided"
+msgstr "没有提供解锁路径"
+
+#: ../svnadmin/main.c:1115
 #, c-format
 msgid "Path '%s' isn't locked.\n"
 msgstr "路径“%s”没有被锁定。\n"
 
-#: ../svnadmin/main.c:1122
+#: ../svnadmin/main.c:1127
 #, c-format
 msgid "Removed lock on '%s'.\n"
 msgstr "删除“%s”上的锁。\n"
 
-#: ../svnadmin/main.c:1230
+#: ../svnadmin/main.c:1235
 msgid "Multiple revision arguments encountered; try '-r N:M' instead of '-r N -r M'"
 msgstr "遇到了多个版本参数；请使用“-r N:M”代替“-r M -r N”"
 
-#: ../svnadmin/main.c:1349
+#: ../svnadmin/main.c:1354
 #, c-format
 msgid "subcommand argument required\n"
 msgstr "必须提供子命令参数\n"
 
-#: ../svnadmin/main.c:1434
+#: ../svnadmin/main.c:1439
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
