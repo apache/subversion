@@ -67,3 +67,4 @@ class Callbacks:
   invalidate_wc_props = None
   progress_func = None
   cancel_func = None
+  get_client_string = None

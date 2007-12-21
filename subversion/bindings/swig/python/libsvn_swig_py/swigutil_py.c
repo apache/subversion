@@ -3163,6 +3163,52 @@ ra_callbacks_cancel_func(void *baton)
   return svn_swig_py_cancel_func(py_callback);
 }
 
+/* svn_ra_callbacks_t */
+static svn_error_t *
+ra_callbacks_get_client_string(void *baton,
+                               const char **name,
+                               apr_pool_t *pool)
+{
+  PyObject *callbacks = (PyObject *)baton;
+  PyObject *py_callback, *result;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  *name = NULL;
+
+  svn_swig_py_acquire_py_lock();
+
+  py_callback = PyObject_GetAttrString(callbacks, (char *)"get_client_string");
+  if (py_callback == NULL)
+    {
+      err = callback_exception_error();
+      goto finished;
+    }
+  else if (py_callback == Py_None)
+    {
+      goto finished;
+    }
+
+  if ((result = PyObject_CallFunction(py_callback,
+                                      (char *)"O&",
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else if (result != Py_None)
+    {
+      if ((*name = PyString_AsString(result)) == NULL)
+        {
+      	  err = callback_exception_error();
+        }
+    }
+
+  Py_XDECREF(result);
+finished:
+  Py_XDECREF(py_callback);
+  svn_swig_py_release_py_lock();
+  return err;
+}
+
 void
 svn_swig_py_setup_ra_callbacks(svn_ra_callbacks2_t **callbacks,
                                void **baton,
@@ -3201,6 +3247,7 @@ svn_swig_py_setup_ra_callbacks(svn_ra_callbacks2_t **callbacks,
   (*callbacks)->progress_func = ra_callbacks_progress_func;
   (*callbacks)->progress_baton = py_callbacks;
   (*callbacks)->cancel_func = ra_callbacks_cancel_func;
+  (*callbacks)->get_client_string = ra_callbacks_get_client_string;
 
   *baton = py_callbacks;
 }
