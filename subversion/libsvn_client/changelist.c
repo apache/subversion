@@ -130,7 +130,7 @@ svn_client_get_changelists(const char *path,
   feb.callback_baton = callback_baton;
   feb.pool = pool;
   if (changelists)
-    SVN_ERR(svn_hash_from_array(&(feb.changelists), changelists, pool));
+    SVN_ERR(svn_hash_from_cstring_keys(&(feb.changelists), changelists, pool));
   else
     feb.changelists = NULL;
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path,

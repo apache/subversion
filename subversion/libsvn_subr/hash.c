@@ -460,17 +460,17 @@ svn_hash_keys(apr_array_header_t **array,
 
 
 svn_error_t *
-svn_hash_from_array(apr_hash_t **hash_p,
-                    const apr_array_header_t *keys,
-                    apr_pool_t *pool)
+svn_hash_from_cstring_keys(apr_hash_t **hash_p,
+                           const apr_array_header_t *keys,
+                           apr_pool_t *pool)
 {
   int i;
   apr_hash_t *hash = apr_hash_make(pool);
   for (i = 0; i < keys->nelts; i++)
     {
-      const void *key = keys->elts + (keys->elt_size * i);
-      key = apr_pmemdup(pool, key, keys->elt_size);
-      apr_hash_set(hash, key, keys->elt_size, (void *)1);
+      const char *key = 
+        apr_pstrdup(pool, APR_ARRAY_IDX(keys, i, const char *));
+      apr_hash_set(hash, key, APR_HASH_KEY_STRING, key);
     }
   *hash_p = hash;
   return SVN_NO_ERROR;
