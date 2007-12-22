@@ -886,13 +886,13 @@ get_commit_and_merge_ranges(apr_array_header_t **merge_ranges_list,
   svn_fs__sqlite_stmt_t *stmt;
   svn_boolean_t got_row;
   apr_array_header_t *merge_rangelist;
-  svn_boolean_t get_elided_parent_mergeinfo = FALSE;
+  svn_boolean_t get_inherited_mergeinfo = FALSE;
   svn_revnum_t last_commit_rev = SVN_INVALID_REVNUM;
   apr_hash_t *rev_target_hash = apr_hash_make(pool);
 
   if (inherit == svn_mergeinfo_inherited
       || inherit == svn_mergeinfo_nearest_ancestor)
-    get_elided_parent_mergeinfo = TRUE;
+    get_inherited_mergeinfo = TRUE;
   *commit_rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
   *merge_ranges_list = apr_array_make(pool, 0, sizeof(apr_array_header_t *));
   merge_rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
@@ -925,7 +925,7 @@ get_commit_and_merge_ranges(apr_array_header_t **merge_ranges_list,
       inheritable = svn_fs__sqlite_column_boolean(stmt, 3);
       mergedfrom = svn_fs__sqlite_column_text(stmt, 4);
       mergedto = svn_fs__sqlite_column_text(stmt, 5);
-      if (get_elided_parent_mergeinfo)
+      if (get_inherited_mergeinfo)
         {
           if ((svn_path_is_ancestor(mergedto, merge_target) == FALSE)
               || (svn_path_is_ancestor(mergedfrom, merge_source) == FALSE))
