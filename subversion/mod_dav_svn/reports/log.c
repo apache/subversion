@@ -434,10 +434,10 @@ dav_svn__log_report(const dav_resource *resource,
     if (include_merged_revisions)
       svn_stringbuf_appendcstr(options, " include-merged-revisions");
     if (revprops == NULL)
-      svn_stringbuf_appendcstr(options, " all-revprops");
+      svn_stringbuf_appendcstr(options, " revprops=all");
     else if (revprops->nelts > 0)
       {
-        svn_stringbuf_appendcstr(options, " (");
+        svn_stringbuf_appendcstr(options, " revprops=(");
         svn_stringbuf_appendstr(options, space_separated_revprops);
         svn_stringbuf_appendcstr(options, ")");
       }
