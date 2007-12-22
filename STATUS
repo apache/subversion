@@ -23,16 +23,6 @@ Status of 1.4.7:
 
 Candidate changes:
 
-  * r28578
-    Fix incorrect raise of cleared error.  If this code path is reached
-    (which happens if you symlink db/transactions/ to another filesystem, 
-    say), the server will try to handle an error which is a dangling 
-    pointer.  Madness (and even segfaults) ensues.
-    Justification:
-      Dangling pointers and crashes are bad.  Obvious fix.
-    Votes:
-      +1: glasser, dlr
-
   * r28544
     Fix an important memory leak in the Python bindings.
     Justification: Simple patch. This serious memory leak probably
@@ -90,3 +80,13 @@ Veto-blocked changes:
       -1: cmpilato (new features showing up in patch releases?  nuh-uh.)
 
 Approved changes:
+
+  * r28578
+    Fix incorrect raise of cleared error.  If this code path is reached
+    (which happens if you symlink db/transactions/ to another filesystem, 
+    say), the server will try to handle an error which is a dangling 
+    pointer.  Madness (and even segfaults) ensues.
+    Justification:
+      Dangling pointers and crashes are bad.  Obvious fix.
+    Votes:
+      +1: glasser, dlr, hwright
