@@ -1650,11 +1650,12 @@ public interface SVNClientInterface
 
     /**
      * Recursively get the paths which belong to a changelist
-     * @param changelist  changelist name
      * @param rootPath    the wc path under which to check
+     * @param changelists the changelists to look under
+     * @param depth       the depth to recurse
      * @since 1.5
      */
-    String[] getChangelist(String changelist, String rootPath)
+    void getChangelists(String rootPath, String[] changelists, int depth)
             throws ClientException;
 
     /**

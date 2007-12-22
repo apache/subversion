@@ -1575,26 +1575,43 @@ Java_org_tigris_subversion_javahl_SVNClient_removeFromChangelist
   cl->removeFromChangelist(targets, changelist_name);
 }
 
-JNIEXPORT jobjectArray JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_getChangelist
-(JNIEnv *env, jobject jthis, jstring jchangelist, jstring jroot_path)
+JNIEXPORT void JNICALL
+Java_org_tigris_subversion_javahl_SVNClient_getChangelists
+(JNIEnv *env, jobject jthis, jstring jroot_path, jobjectArray jchangelists, jint jdepth)
 {
   JNIEntry(SVNClient, getChangelist);
   SVNClient *cl = SVNClient::getCppObject(jthis);
   if (cl == NULL)
     {
       JNIUtil::throwError("bad C++ this");
-      return NULL;
+      return;
     }
-  JNIStringHolder changelist_name(jchangelist);
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
 
   JNIStringHolder root_path(jroot_path);
   if (JNIUtil::isExceptionThrown())
-    return NULL;
+    return;
 
-  return cl->getChangelist(changelist_name, root_path);
+  // Build the changelist vector from the Java array.
+  std::vector<std::string> changelists;
+
+  jint arraySize = env->GetArrayLength(jchangelists);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  for (int i = 0; i < arraySize; ++i)
+    {
+      jobject jchangelist = env->GetObjectArrayElement(jchangelists, i);
+      if (JNIUtil::isExceptionThrown())
+        return;
+
+      JNIStringHolder changelist((jstring)jchangelist);
+      if (JNIUtil::isExceptionThrown())
+        return;
+
+      changelists.push_back(std::string((const char *)changelist));
+    }
+
+  cl->getChangelists(root_path, changelists, (svn_depth_t) jdepth);
 }
 
 JNIEXPORT void JNICALL

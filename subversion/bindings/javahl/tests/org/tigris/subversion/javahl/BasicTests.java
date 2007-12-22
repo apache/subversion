@@ -2078,14 +2078,16 @@ public class BasicTests extends SVNTests
         // build the working copy
         OneTest thisTest = new OneTest();
         String changelistName = "changelist1";
+        String[] changelists = new String[] { changelistName };
 
         String[] paths = new String[]
             {thisTest.getWCPath() + "/iota"};
 
         // Add a path to a changelist, and check to see if it got added
         client.addToChangelist(paths, changelistName);
-        String[] cl = client.getChangelist(changelistName,
-                                           thisTest.getWCPath());
+        String[] cl = new String[0];
+        client.getChangelists(thisTest.getWCPath(), changelists,
+                              Depth.infinity);
         assertTrue(java.util.Arrays.equals(cl, paths));
         // Does status report this changelist?
         Status[] status = client.status(paths[0], false, false, false, false,
@@ -2095,7 +2097,8 @@ public class BasicTests extends SVNTests
         // Remove the path from the changelist, and check to see if the path is
         // actually removed.
         client.removeFromChangelist(paths, changelistName);
-        cl = client.getChangelist(changelistName, thisTest.getWCPath());
+        client.getChangelists(thisTest.getWCPath(), changelists,
+                              Depth.infinity);
         assertTrue(cl.length == 0);
     }
 
