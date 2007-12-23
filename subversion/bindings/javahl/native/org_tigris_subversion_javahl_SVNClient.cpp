@@ -43,6 +43,7 @@
 #include "InfoCallback.h"
 #include "StatusCallback.h"
 #include "ListCallback.h"
+#include "ChangelistCallback.h"
 #include "svn_version.h"
 #include "svn_private_config.h"
 #include "version.h"
@@ -1577,7 +1578,8 @@ Java_org_tigris_subversion_javahl_SVNClient_removeFromChangelist
 
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_getChangelists
-(JNIEnv *env, jobject jthis, jstring jroot_path, jobjectArray jchangelists, jint jdepth)
+(JNIEnv *env, jobject jthis, jstring jroot_path, jobjectArray jchangelists,
+ jint jdepth, jobject jchangelistCallback)
 {
   JNIEntry(SVNClient, getChangelist);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1611,7 +1613,8 @@ Java_org_tigris_subversion_javahl_SVNClient_getChangelists
       changelists.push_back(std::string((const char *)changelist));
     }
 
-  cl->getChangelists(root_path, changelists, (svn_depth_t) jdepth);
+  ChangelistCallback callback(jchangelistCallback);
+  cl->getChangelists(root_path, changelists, (svn_depth_t) jdepth, &callback);
 }
 
 JNIEXPORT void JNICALL

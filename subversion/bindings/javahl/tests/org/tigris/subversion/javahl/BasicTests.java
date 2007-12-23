@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -2077,16 +2078,18 @@ public class BasicTests extends SVNTests
         OneTest thisTest = new OneTest();
         String changelistName = "changelist1";
         String[] changelists = new String[] { changelistName };
+        MyChangelistCallback clCallback = new MyChangelistCallback();
 
         String[] paths = new String[]
             {thisTest.getWCPath() + "/iota"};
 
         // Add a path to a changelist, and check to see if it got added
         client.addToChangelist(paths, changelistName);
-        String[] cl = new String[0];
+        String[] cl = new String[1];
         client.getChangelists(thisTest.getWCPath(), changelists,
-                              Depth.infinity);
-        assertTrue(java.util.Arrays.equals(cl, paths));
+                              Depth.infinity, clCallback);
+        cl[0] = (String) clCallback.get(paths[0]).get(0);
+        assertTrue(java.util.Arrays.equals(cl, changelists));
         // Does status report this changelist?
         Status[] status = client.status(paths[0], false, false, false, false,
                                         false);
@@ -2095,9 +2098,10 @@ public class BasicTests extends SVNTests
         // Remove the path from the changelist, and check to see if the path is
         // actually removed.
         client.removeFromChangelist(paths, changelistName);
+        clCallback.clear();
         client.getChangelists(thisTest.getWCPath(), changelists,
-                              Depth.infinity);
-        assertTrue(cl.length == 0);
+                              Depth.infinity, clCallback);
+        assertTrue(clCallback.isEmpty());
     }
 
     /**
@@ -3023,6 +3027,32 @@ public class BasicTests extends SVNTests
         public void onSummary(DiffSummary descriptor)
         {
             super.put(descriptor.getPath(), descriptor);
+        }
+    }
+
+    private class MyChangelistCallback extends HashMap
+        implements ChangelistCallback
+    {
+        public void doChangelist(String path, String changelist)
+        {
+            if (super.containsKey(path))
+            {
+                // Append the changelist to the existing list
+                List changelistList = (List) super.get(path);
+                changelistList.add(changelist);
+            }
+            else
+            {
+                // Create a new changelist with that list
+                List changelistList = new ArrayList();
+                changelistList.add(changelist);
+                super.put(path, changelistList);
+            }
+        }
+
+        public List get(String path)
+        {
+            return (List) super.get(path);
         }
     }
 }
