@@ -5025,6 +5025,7 @@ entry for file with defun.
                     ["Show Changeset" svn-log-view-diff t]
                     ["Ediff file at point" svn-log-ediff-specific-revision t]
                     ["Find file at point" svn-log-find-file-at-point t]
+                    ["Get older revision for file at point" svn-log-get-specific-revision t]
                     ["Edit log message" svn-log-edit-log-entry t]))
 
 (defun svn-log-view-popup-menu (event)
