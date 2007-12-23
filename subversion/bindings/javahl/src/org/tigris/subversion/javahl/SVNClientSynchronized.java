@@ -1645,12 +1645,12 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @since 1.5
      */
     public void getChangelists(String rootPath, String[] changelists,
-                                   int depth)
+                               int depth, ChangelistCallback callback)
             throws ClientException
     {
         synchronized (clazz)
         {
-            worker.getChangelists(rootPath, changelists, depth);
+            worker.getChangelists(rootPath, changelists, depth, callback);
         }
     }
 

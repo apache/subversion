@@ -44,6 +44,7 @@ class LogMessageCallback;
 class InfoCallback;
 class ListCallback;
 class StatusCallback;
+class ChangelistCallback;
 class CommitMessage;
 #include "svn_types.h"
 #include "svn_client.h"
@@ -148,7 +149,7 @@ class SVNClient :public SVNBase
   void addToChangelist(Targets &srcPaths, const char *changelist);
   void removeFromChangelist(Targets &srcPaths, const char *changelist);
   void getChangelists(const char *path, std::vector<std::string> &changelists,
-                      svn_depth_t depth);
+                      svn_depth_t depth, ChangelistCallback *callback);
   void status(const char *path, svn_depth_t depth, bool onServer,
               bool getAll, bool noIgnore, bool ignoreExternals,
               StatusCallback *callback);

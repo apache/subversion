@@ -37,6 +37,7 @@
 #include "LogMessageCallback.h"
 #include "InfoCallback.h"
 #include "StatusCallback.h"
+#include "ChangelistCallback.h"
 #include "ListCallback.h"
 #include "JNIByteArray.h"
 #include "CommitMessage.h"
@@ -1577,7 +1578,8 @@ void SVNClient::removeFromChangelist(Targets &srcPaths, const char *changelist)
 
 void SVNClient::getChangelists(const char *rootPath,
                                std::vector<std::string> &changelists,
-                               svn_depth_t depth)
+                               svn_depth_t depth,
+                               ChangelistCallback *callback)
 {
     Pool requestPool;
     svn_client_ctx_t *ctx = getContext(NULL);
@@ -1594,7 +1596,8 @@ void SVNClient::getChangelists(const char *rootPath,
     }
 
     SVN_JNI_ERR(svn_client_get_changelists(rootPath, cl_changelists, depth,
-                                           NULL, NULL, ctx, requestPool.pool()),
+                                           ChangelistCallback::callback,
+                                           callback, ctx, requestPool.pool()),
                 );
 }
 
