@@ -5079,7 +5079,9 @@ Commands:
 (defun svn-log-file-name-at-point (respect-checkout-prefix-path)
   (let ((full-file-name)
         (file-name)
-        (checkout-prefix-path (when respect-checkout-prefix-path (svn-status-checkout-prefix-path))))
+        (checkout-prefix-path (if respect-checkout-prefix-path
+                                  (svn-status-checkout-prefix-path)
+                                "")))
     (save-excursion
       (beginning-of-line)
       (when (looking-at "   [MA] /\\(.+\\)$")
@@ -5133,7 +5135,7 @@ When called with a prefix argument, ask the user for the revision."
   ;; (message "%S" (svn-status-make-line-info (svn-log-file-name-at-point t)))
   (let ((default-directory (svn-status-base-dir)))
     (svn-status-get-specific-revision-internal
-     (list (svn-status-make-line-info (svn-log-file-name-at-point nil)))
+     (list (svn-status-make-line-info (svn-log-file-name-at-point t)))
      (svn-log-revision-at-point)
      nil)))
 
