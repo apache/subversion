@@ -976,7 +976,7 @@ svn_repos_node_location_segments(svn_repos_t *repos,
             return SVN_NO_ERROR;
         }
 
-      /* Trasmit the segment (if its within the scope of our concern). */
+      /* Transmit the segment (if it's within the scope of our concern). */
       SVN_ERR(maybe_crop_and_send_segment(segment, start_rev, end_rev,
                                           receiver, receiver_baton, subpool));
 
