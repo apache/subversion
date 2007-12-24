@@ -1422,21 +1422,23 @@ filter_reflective_revisions(apr_array_header_t **requested_rangelist,
   svn_revnum_t min_rev = MIN(revision1, revision2);
   svn_revnum_t max_rev = MAX(revision1, revision2);
   const char *max_url = (revision1 < revision2) ? url2 : url1;
-  const char *max_rel_path;
-  const char *mergeinfo_path;
+  const char *merge_target;
+  const char *merge_source;
 
-  SVN_ERR(svn_client__path_relative_to_root(&max_rel_path, max_url,
+  /* To find reflections actual merge source will become merge target 
+     and viceversa. */
+  SVN_ERR(svn_client__path_relative_to_root(&merge_target, max_url,
                                             source_root_url, FALSE, ra_session,
                                             NULL, pool));
-  SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path, target_url,
+  SVN_ERR(svn_client__path_relative_to_root(&merge_source, target_url,
                                             source_root_url, FALSE,
                                             ra_session, NULL, pool));
 
   SVN_ERR(svn_ra_get_commit_and_merge_ranges(ra_session,
                                              reflected_ranges_list,
                                              reflective_rangelist,
-                                             max_rel_path,
-                                             mergeinfo_path,
+                                             merge_target,
+                                             merge_source,
                                              min_rev, max_rev,
                                              svn_mergeinfo_inherited,
                                              pool));
