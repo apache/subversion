@@ -416,15 +416,8 @@ merge_reflected_ranges_b4_reflecting(const char *older,
   for (i = 0; i < merge_b->reflected_ranges->nelts; i++)
     {
       svn_diff_t *diff;
-      const char *left, *right, *result_target;
+      const char *left, *right;
       svn_merge_range_t *range;
-      svn_stream_t *ostream;
-      apr_file_t *result_f;
-      SVN_ERR(svn_io_open_unique_file2(&result_f, &result_target,
-                                       svn_path_join(temp_dir, "tmp", subpool),
-                                       "", svn_io_file_del_on_pool_cleanup,
-                                       subpool));
-      ostream = svn_stream_from_aprfile(result_f, subpool);
       range = APR_ARRAY_IDX(merge_b->reflected_ranges, i, svn_merge_range_t *);
       SVN_ERR(get_file_from_ra(&left, file_path_relative_to_target, 
                                range->start, merge_b->target_ra_session,
@@ -434,19 +427,30 @@ merge_reflected_ranges_b4_reflecting(const char *older,
                                subpool));
       SVN_ERR(svn_diff_file_diff3_2(&diff, left, older, right,
                                     options, subpool));
-      SVN_ERR(svn_diff_file_output_merge(ostream, diff,
-                                         left, older, right,
-                                         left_marker,
-                                         target_marker,
-                                         right_marker,
-                                         "=======", /* seperator */
-                                         FALSE, /* display original */
-                                         FALSE, /* resolve conflicts */
-                                         subpool));
-      SVN_ERR(svn_stream_close(ostream));
-      SVN_ERR(svn_io_file_flush_to_disk(result_f, subpool));
-
-      SVN_ERR(svn_io_copy_file(result_target, older, TRUE, subpool));
+      if (svn_diff_contains_diffs(diff) && !svn_diff_contains_conflicts(diff))
+        {
+          svn_stream_t *ostream;
+          apr_file_t *result_f;
+          const char *result_target;
+          SVN_ERR(svn_io_open_unique_file2(&result_f, &result_target,
+                                           svn_path_join(temp_dir, "tmp",
+                                                         subpool),
+                                           "", svn_io_file_del_on_pool_cleanup,
+                                           subpool));
+          ostream = svn_stream_from_aprfile(result_f, subpool);
+          SVN_ERR(svn_diff_file_output_merge(ostream, diff,
+                                             left, older, right,
+                                             left_marker,
+                                             target_marker,
+                                             right_marker,
+                                             "=======", /* seperator */
+                                             FALSE, /* display original */
+                                             FALSE, /* resolve conflicts */
+                                             subpool));
+          SVN_ERR(svn_stream_close(ostream));
+          SVN_ERR(svn_io_file_flush_to_disk(result_f, subpool));
+          SVN_ERR(svn_io_copy_file(result_target, older, TRUE, subpool));
+        }
     }
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;

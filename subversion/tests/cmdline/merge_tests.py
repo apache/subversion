@@ -10752,7 +10752,7 @@ test_list = [ None,
               merge_non_reflective_changes_from_reflective_rev,
               merge_non_reflective_text_and_prop_change,
               merge_non_reflective_with_conflict,
-              XFail(merge_non_reflective_with_complex_conflict),
+              merge_non_reflective_with_complex_conflict,
              ]
 
 if __name__ == '__main__':
