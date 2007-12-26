@@ -922,6 +922,8 @@ class Sandbox:
   def add_repo_path(self, suffix, remove=1):
     path = os.path.join(general_repo_dir, self.name)  + '.' + suffix
     url  = test_area_url + '/' + path
+    if windows:
+      url = url.replace('\\', '/')
     self.add_test_path(path, remove)
     return path, url
 
