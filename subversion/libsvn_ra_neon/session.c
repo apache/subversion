@@ -506,11 +506,11 @@ static svn_error_t *get_server_settings(const char **proxy_host,
       while ((token = apr_strtok(auth_types_list, ";", &last)) != NULL)
         {
           auth_types_list = NULL;
-          if (strcasecmp("basic", token) == 0)
+          if (svn_cstring_casecmp("basic", token) == 0)
             *neon_auth_types |= NE_AUTH_BASIC;
-          else if (strcasecmp("digest", token) == 0)
+          else if (svn_cstring_casecmp("digest", token) == 0)
             *neon_auth_types |= NE_AUTH_DIGEST;
-          else if (strcasecmp("negotiate", token) == 0)
+          else if (svn_cstring_casecmp("negotiate", token) == 0)
             *neon_auth_types |= NE_AUTH_NEGOTIATE;
           else
             return svn_error_createf(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
@@ -649,7 +649,7 @@ parse_capabilities(ne_request *req,
                                                   ne_header_cursor,
                                                   &header_name,
                                                   &header_value);
-    if (ne_header_cursor && strcasecmp(header_name, "dav") == 0)
+    if (ne_header_cursor && svn_cstring_casecmp(header_name, "dav") == 0)
       {
         /* By the time we get the headers, Neon has downcased them and
            merged them together -- merged in the sense that if a
@@ -861,7 +861,7 @@ svn_ra_neon__open(svn_ra_session_t *session,
   for (itr = uri->scheme; *itr; ++itr)
     *itr = tolower(*itr);
 
-  is_ssl_session = (strcasecmp(uri->scheme, "https") == 0);
+  is_ssl_session = (svn_cstring_casecmp(uri->scheme, "https") == 0);
   if (is_ssl_session)
     {
       if (ne_has_support(NE_FEATURE_SSL) == 0)
@@ -1040,7 +1040,7 @@ svn_ra_neon__open(svn_ra_session_t *session,
                SVN_CONFIG_OPTION_SSL_TRUST_DEFAULT_CA,
                "true");
 
-      if (strcasecmp(trust_default_ca, "true") == 0)
+      if (svn_cstring_casecmp(trust_default_ca, "true") == 0)
         {
           ne_ssl_trust_default_ca(sess);
           ne_ssl_trust_default_ca(sess2);
