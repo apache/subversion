@@ -73,7 +73,7 @@ for c in xrange(256):
         elif c >= 48 and c < 58:
             bits.append('SVN_CTYPE_DIGIT')
 
-        # Uppedcase letters
+        # Uppercase letters
         elif c >= 65 and c < 91:
             bits.append('SVN_CTYPE_UPPER')
             # Hexaecimal digits
@@ -83,7 +83,7 @@ for c in xrange(256):
         # Lowercase letters
         elif c >= 97 and c < 123:
             bits.append('SVN_CTYPE_LOWER')
-            # Hexaecimal digits
+            # Hexadecimal digits
             if c <= 102:
                 bits.append('SVN_CTYPE_XALPHA')
 
@@ -106,7 +106,7 @@ for c in xrange(256):
 # casefold_table
 warn_generated()
 for c in xrange(256):
-    # Uppedcase letters
+    # Uppercase letters
     if c >= 65 and c < 91:
         fold = "'%s'" % names[c]
     # Lowercase letters
