@@ -408,11 +408,10 @@ merge_reflected_ranges_b4_reflecting(const char *older,
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   SVN_ERR(svn_io_temp_dir(&temp_dir, subpool));
 
+  options = svn_diff_file_options_create(subpool);
   if (merge_b->merge_options)
     SVN_ERR(svn_diff_file_options_parse(options,
                                         merge_b->merge_options, subpool));
-  else
-    options = svn_diff_file_options_create(subpool);
   for (i = 0; i < merge_b->reflected_ranges->nelts; i++)
     {
       svn_diff_t *diff;
