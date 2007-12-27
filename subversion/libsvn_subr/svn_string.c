@@ -579,7 +579,7 @@ svn_cstring_join(apr_array_header_t *strings,
 }
 
 int
-svn_cstring_casecmp(const char *str1, const char* str2)
+svn_cstring_casecmp(const char *str1, const char *str2)
 {
   for (;;)
     {
