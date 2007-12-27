@@ -1416,7 +1416,7 @@ filter_reflective_revisions(apr_array_header_t **requested_rangelist,
                             const char *url2,
                             svn_revnum_t revision2,
                             svn_boolean_t inheritable,
-                            const char *target_url,
+                            const svn_wc_entry_t *entry,
                             svn_ra_session_t *ra_session,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool)
@@ -1428,23 +1428,6 @@ filter_reflective_revisions(apr_array_header_t **requested_rangelist,
   const char *merge_target;
   const char *merge_source;
 
-  /* To find reflections actual merge source will become merge target 
-     and viceversa. */
-  SVN_ERR(svn_client__path_relative_to_root(&merge_target, max_url,
-                                            source_root_url, FALSE, ra_session,
-                                            NULL, pool));
-  SVN_ERR(svn_client__path_relative_to_root(&merge_source, target_url,
-                                            source_root_url, FALSE,
-                                            ra_session, NULL, pool));
-
-  SVN_ERR(svn_ra_get_commit_and_merge_ranges(ra_session,
-                                             reflected_ranges_list,
-                                             reflective_rangelist,
-                                             merge_target,
-                                             merge_source,
-                                             min_rev, max_rev,
-                                             svn_mergeinfo_inherited,
-                                             pool));
   /* Create a single-item list of ranges with our one requested range
      in it, and then remove overlapping revision ranges from that range. */
   *requested_rangelist = apr_array_make(pool, 1, sizeof(range));
@@ -1452,6 +1435,40 @@ filter_reflective_revisions(apr_array_header_t **requested_rangelist,
   range->end = revision2;
   range->inheritable = inheritable;
   APR_ARRAY_PUSH(*requested_rangelist, svn_merge_range_t *) = range;
+
+  /* If working copy target is not up-to-date with min_rev, no point in 
+     finding reflections. */
+  if (min_rev >= entry->revision)
+    return SVN_NO_ERROR;
+
+  /* Reduce max_rev if it is bigger than target working copy revision,
+     i.e if working copy is still at r100 and reflection is requested for
+     20:150, reduce it to 20:100. We do this as the only definite youngest
+     target node we can peg is @working_copy_revision. To get all reflective
+     revisions working copy should be at max_rev i.e r150 in other words
+     it is always preferred to do a merge on a up-to-date working copy.
+  */
+  max_rev = MIN(entry->revision, max_rev);
+
+  /* To find reflections actual merge source will become merge target 
+     and viceversa. */
+  SVN_ERR(svn_client__path_relative_to_root(&merge_target, max_url,
+                                            source_root_url, FALSE, ra_session,
+                                            NULL, pool));
+  SVN_ERR(svn_client__path_relative_to_root(&merge_source, entry->url,
+                                            source_root_url, FALSE,
+                                            ra_session, NULL, pool));
+
+  SVN_ERR(svn_client__get_commit_and_merge_ranges(ra_session,
+                                                  reflected_ranges_list,
+                                                  reflective_rangelist,
+                                                  merge_target,
+                                                  merge_source,
+                                                  entry->revision,
+                                                  min_rev,
+                                                  max_rev,
+                                                  svn_mergeinfo_inherited,
+                                                  ctx, pool));
   if (*reflective_rangelist)
     SVN_ERR(svn_rangelist_remove(requested_rangelist,
                                  *reflective_rangelist,
@@ -1595,7 +1612,7 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
                                       &reflective_rangelist,
                                       source_root_url,
                                       url1, revision1, url2, revision2,
-                                      inheritable, entry->url,
+                                      inheritable, entry,
                                       ra_session, ctx, pool));
   SVN_ERR(svn_ra_reparent(ra_session, old_url, pool));
   

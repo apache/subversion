@@ -240,5 +240,45 @@ svn_client__elide_mergeinfo_for_tree(apr_hash_t *children_with_mergeinfo,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool);
 
+/** Retrieve COMMIT_RANGELIST and a MERGE_RANGES_LIST from a given
+ * MERGE_SOURCE@MERGE_SOURCE_PEG_REV to a MERGE_TARGET@MAX_COMMIT_REV.
+ * where each commit_rev in @a commit_rangelist > @a min_commit_rev and
+ * <= @a max_commit_rev.
+ * 
+ * COMMIT_RANGELIST and MERGE_RANGES_LIST will never be NULL,
+ * but may be empty.
+ *
+ * COMMIT_RANGELIST and MERGE_RANGES_LIST are having
+ * one-one corresponding and hence they are equal in size.
+ *
+ * COMMIT_RANGELIST has elements of type 'svn_merge_range_t *'.
+ * MERGE_RANGES_LIST has elements of type 'apr_array_header_t *' which
+ * contains 'svn_merge_range_t *'.
+ *
+ * COMMIT_RANGELIST is sorted in ascending order.
+ *
+ * MERGE_RANGES_LIST is not sorted.
+ *
+ * SESSION indicates the ra_session of the repository root.
+ *
+ * INHERIT indicates whether explicit, explicit or inherited, or
+ * only inherited mergeinfo for MERGE_TARGET is retrieved.
+ *
+ * Do any necessary temporary allocation in POOL.
+ *
+ * CTX is the client context baton.
+ */
+svn_error_t *
+svn_client__get_commit_and_merge_ranges(svn_ra_session_t *session,
+                                        apr_array_header_t **merge_ranges_list,
+                                        apr_array_header_t **commit_rangelist,
+                                        const char *merge_target,
+                                        const char *merge_source,
+                                        svn_revnum_t merge_source_peg_rev,
+                                        svn_revnum_t min_commit_rev,
+                                        svn_revnum_t max_commit_rev,
+                                        svn_mergeinfo_inheritance_t inherit,
+                                        svn_client_ctx_t *ctx,
+                                        apr_pool_t *pool);
 
 #endif /* SVN_LIBSVN_CLIENT_MERGEINFO_H */
