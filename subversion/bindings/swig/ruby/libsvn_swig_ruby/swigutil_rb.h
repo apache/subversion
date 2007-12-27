@@ -446,7 +446,10 @@ svn_error_t *svn_swig_rb_proplist_receiver(void *baton,
                                            apr_pool_t *pool);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
-svn_error_t *svn_swig_rb_changelist_receiver(void *baton, const char *path);
+svn_error_t *svn_swig_rb_changelist_receiver(void *baton,
+                                             const char *path,
+                                             const char *changelist,
+                                             apr_pool_t *pool);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 extern svn_ra_reporter3_t *svn_swig_rb_ra_reporter3;
