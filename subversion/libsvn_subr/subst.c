@@ -23,7 +23,6 @@
 
 #include <stdlib.h>
 #include <assert.h>
-#include <apr_general.h>  /* for strcasecmp() */
 #include <apr_pools.h>
 #include <apr_tables.h>
 #include <apr_file_io.h>
@@ -400,7 +399,7 @@ svn_subst_build_keywords2(apr_hash_t **kw,
 
       if ((! strcmp(keyword, SVN_KEYWORD_REVISION_LONG))
           || (! strcmp(keyword, SVN_KEYWORD_REVISION_MEDIUM))
-          || (! strcasecmp(keyword, SVN_KEYWORD_REVISION_SHORT)))
+          || (! svn_cstring_casecmp(keyword, SVN_KEYWORD_REVISION_SHORT)))
         {
           svn_string_t *revision_val;
 
@@ -413,7 +412,7 @@ svn_subst_build_keywords2(apr_hash_t **kw,
                        APR_HASH_KEY_STRING, revision_val);
         }
       else if ((! strcmp(keyword, SVN_KEYWORD_DATE_LONG))
-               || (! strcasecmp(keyword, SVN_KEYWORD_DATE_SHORT)))
+               || (! svn_cstring_casecmp(keyword, SVN_KEYWORD_DATE_SHORT)))
         {
           svn_string_t *date_val;
 
@@ -424,7 +423,7 @@ svn_subst_build_keywords2(apr_hash_t **kw,
                        APR_HASH_KEY_STRING, date_val);
         }
       else if ((! strcmp(keyword, SVN_KEYWORD_AUTHOR_LONG))
-               || (! strcasecmp(keyword, SVN_KEYWORD_AUTHOR_SHORT)))
+               || (! svn_cstring_casecmp(keyword, SVN_KEYWORD_AUTHOR_SHORT)))
         {
           svn_string_t *author_val;
 
@@ -435,7 +434,7 @@ svn_subst_build_keywords2(apr_hash_t **kw,
                        APR_HASH_KEY_STRING, author_val);
         }
       else if ((! strcmp(keyword, SVN_KEYWORD_URL_LONG))
-               || (! strcasecmp(keyword, SVN_KEYWORD_URL_SHORT)))
+               || (! svn_cstring_casecmp(keyword, SVN_KEYWORD_URL_SHORT)))
         {
           svn_string_t *url_val;
 
@@ -445,7 +444,7 @@ svn_subst_build_keywords2(apr_hash_t **kw,
           apr_hash_set(*kw, SVN_KEYWORD_URL_SHORT,
                        APR_HASH_KEY_STRING, url_val);
         }
-      else if ((! strcasecmp(keyword, SVN_KEYWORD_ID)))
+      else if ((! svn_cstring_casecmp(keyword, SVN_KEYWORD_ID)))
         {
           svn_string_t *id_val;
 

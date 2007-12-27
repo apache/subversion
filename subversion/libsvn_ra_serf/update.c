@@ -794,7 +794,7 @@ handle_fetch(serf_request_t *request,
           return error_fetch(request, fetch_ctx, err);
         }
 
-      if (val && strcasecmp(val, "application/vnd.svn-svndiff") == 0)
+      if (val && svn_cstring_casecmp(val, "application/vnd.svn-svndiff") == 0)
         {
           fetch_ctx->delta_stream =
               svn_txdelta_parse_svndiff(info->textdelta,

@@ -372,7 +372,7 @@ svn_ra_serf__is_conn_closing(serf_bucket_t *response)
 
   hdrs = serf_bucket_response_get_headers(response);
   val = serf_bucket_headers_get(hdrs, "Connection");
-  if (val && strcasecmp("close", val) == 0)
+  if (val && svn_cstring_casecmp("close", val) == 0)
     {
       return SERF_ERROR_CLOSING;
     }
