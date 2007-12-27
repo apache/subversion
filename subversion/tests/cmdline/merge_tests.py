@@ -9502,6 +9502,139 @@ def basic_reintegrate(sbox):
                                         expected_status, None, None, None,
                                         None, None, wc_dir)
 
+def reintegrate_branch_never_merged_to(sbox):
+  "merge --reintegrate on a never-updated branch"
+
+  # Make A_COPY branch in r2, and do a few more commits to A in r3-6.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  expected_disk, expected_status = setup_branch(sbox)
+
+  # Make a change on the branch, to A/mu.  Commit in r7.
+  svntest.main.file_write(os.path.join(wc_dir, "A_COPY", "mu"),
+                          "Changed on the branch.")
+  expected_output = wc.State(wc_dir, {'A_COPY/mu' : Item(verb='Sending')})
+  expected_status.tweak('A_COPY/mu', wc_rev=7)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, wc_dir)
+  expected_disk.tweak('A_COPY/mu', contents='Changed on the branch.')
+
+  # Update the wcs.
+  expected_output = wc.State(wc_dir, {})
+  expected_status.tweak(wc_rev='7')
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
+                                        expected_disk, expected_status,
+                                        None, None, None, None, None, True)
+
+  # Make another change on the branch: copy tau to tauprime.  Commit
+  # in r8.
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     os.path.join(wc_dir, 'A_COPY', 'D', 'G',
+                                                  'tau'),
+                                     os.path.join(wc_dir, 'A_COPY', 'D', 'G',
+                                                  'tauprime'))
+  expected_output = wc.State(wc_dir, {
+    'A_COPY/D/G/tauprime' : Item(verb='Adding')
+    })
+  expected_status.add({'A_COPY/D/G/tauprime': Item(status='  ', wc_rev=8)})
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, wc_dir)
+  expected_disk.add({
+    'A_COPY/D/G/tauprime' : Item(props={SVN_PROP_MERGE_INFO: ''},
+                                 contents="This is the file 'tau'.\n")
+    })
+
+  # Update the trunk (well, the whole wc) (since reintegrate really
+  # wants a clean wc).
+  expected_output = wc.State(wc_dir, {})
+  expected_status.tweak(wc_rev='8')
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
+                                        expected_disk, expected_status,
+                                        None, None, None, None, None, True)
+
+  # *finally*, actually run merge --reintegrate in trunk with the
+  # branch URL.  This should bring in the mu change and the tauprime
+  # change.
+  A_path = os.path.join(wc_dir, "A")
+  short_A_path = shorten_path_kludge(A_path)
+  expected_output = wc.State(short_A_path, {
+    ''             : Item(status=' U'),
+    'mu'           : Item(status='U '),
+    'D/G/tauprime' : Item(status='A '),
+    })
+  k_expected_status = wc.State(short_A_path, {
+    "B"            : Item(status='  ', wc_rev=8),
+    "B/lambda"     : Item(status='  ', wc_rev=8),
+    "B/E"          : Item(status='  ', wc_rev=8),
+    "B/E/alpha"    : Item(status='  ', wc_rev=8),
+    "B/E/beta"     : Item(status='  ', wc_rev=8),
+    "B/F"          : Item(status='  ', wc_rev=8),
+    "mu"           : Item(status='M ', wc_rev=8),
+    "C"            : Item(status='  ', wc_rev=8),
+    "D"            : Item(status='  ', wc_rev=8),
+    "D/gamma"      : Item(status='  ', wc_rev=8),
+    "D/G"          : Item(status='  ', wc_rev=8),
+    "D/G/pi"       : Item(status='  ', wc_rev=8),
+    "D/G/rho"      : Item(status='  ', wc_rev=8),
+    "D/G/tau"      : Item(status='  ', wc_rev=8),
+    "D/G/tauprime" : Item(status='A ', wc_rev='-', copied='+'),
+    "D/H"          : Item(status='  ', wc_rev=8),
+    "D/H/chi"      : Item(status='  ', wc_rev=8),
+    "D/H/omega"    : Item(status='  ', wc_rev=8),
+    "D/H/psi"      : Item(status='  ', wc_rev=8),
+    ""             : Item(status=' M', wc_rev=8),
+  })
+  k_expected_disk = wc.State('', {
+    ''             : Item(props={SVN_PROP_MERGE_INFO : '/A_COPY:2-8'}),
+    'B'            : Item(),
+    'B/lambda'     : Item("This is the file 'lambda'.\n"),
+    'B/E'          : Item(),
+    'B/E/alpha'    : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'     : Item("New content"),
+    'B/F'          : Item(),
+    'mu'           : Item("Changed on the branch."),
+    'C'            : Item(),
+    'D'            : Item(),
+    'D/gamma'      : Item("This is the file 'gamma'.\n"),
+    'D/G'          : Item(),
+    'D/G/pi'       : Item("This is the file 'pi'.\n"),
+    'D/G/rho'      : Item("New content"),
+    'D/G/tau'      : Item("This is the file 'tau'.\n"),
+    'D/G/tauprime' : Item("This is the file 'tau'.\n"),
+    'D/H'          : Item(),
+    'D/H/chi'      : Item("This is the file 'chi'.\n"),
+    'D/H/omega'    : Item("New content"),
+    'D/H/psi'      : Item("New content"),
+  })
+  expected_skip = wc.State(short_A_path, {})
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_A_path, None, None,
+                                       sbox.repo_url + '/A_COPY',
+                                       expected_output,
+                                       k_expected_disk,
+                                       k_expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, True, True,
+                                       '--reintegrate')
+  os.chdir(saved_cwd)
+
+  # Finally, commit the result of the merge (r9).
+  expected_output = wc.State(wc_dir, {
+    'A/D/G/tauprime' : Item(verb='Adding'),
+    'A/mu'           : Item(verb='Sending'),
+    'A'              : Item(verb='Sending'),
+    })
+  expected_status.add({
+    'A/D/G/tauprime' : Item(status='  ', wc_rev=9),
+    })
+  expected_status.tweak('A', 'A/mu', wc_rev=9)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, wc_dir)
 
 
 ########################################################################
@@ -9591,6 +9724,7 @@ test_list = [ None,
               merge_from_renamed_branch_fails_while_avoiding_repeat_merge,
               merge_source_normalization_and_subtree_merges,
               basic_reintegrate,
+              XFail(reintegrate_branch_never_merged_to),
              ]
 
 if __name__ == '__main__':
