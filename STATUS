@@ -66,6 +66,13 @@ Candidate changes:
            issue.  a better fix might be a way to tell your client not to
            log in ANONYMOUS even if it's an option)
 
+  * r28658-28660
+    Avoid locale-specific case-folding string comparisons.
+    Justification:
+      strcasecmp('I', 'i') != 0 in a Turkish locale. Other examples exist.
+    Votes:
+      +1: brane
+
 Veto-blocked changes:
 
   * r21531, r21848, r21934
