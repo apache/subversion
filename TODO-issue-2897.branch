@@ -1,2 +1,0 @@
-* Make merge_source and merge_target given to 'get-commit-and-merge-ranges'
-  peg revision aware.
