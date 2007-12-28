@@ -917,7 +917,7 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
  * @a session indicates the ra_session of the repository root.
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
- * only inherited mergeinfo for @a paths is retrieved.
+ * only inherited mergeinfo for @a merge_target is retrieved.
  *
  * Do any necessary temporary allocation in @a pool.
  *

@@ -97,7 +97,7 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(
  * @a root indicates the revision root to use when looking up paths.
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
- * only inherited mergeinfo for @a paths is retrieved.
+ * only inherited mergeinfo for @a merge_target is retrieved.
  *
  * Do any necessary temporary allocation in @a pool.
  */
