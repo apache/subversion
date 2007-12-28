@@ -847,6 +847,34 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
   return svn_fs__sqlite_close(db, err);
 }
 
+/*It builds comma seperated paths originating from path which are ancestors of
+ * PATH and PATH itself. Perform all allocations in POOL.
+ * for PATH='/a/b/c/d.html, it generated *ROOTED_PATH_SEGMENTS as
+ * ('/a/b/c/d.html', '/a/b/c', '/a/b', '/a', '/').
+ */
+static void
+construct_rooted_path_segments(svn_stringbuf_t **rooted_path_segments,
+                               const char *path,
+                               apr_pool_t *pool)
+{
+  svn_stringbuf_t *path_str = svn_stringbuf_create(path, pool);
+  *rooted_path_segments = svn_stringbuf_create("(", pool);
+  while (path_str->len > 1)
+  {
+    svn_stringbuf_appendcstr(*rooted_path_segments, "'");
+    svn_stringbuf_appendcstr(*rooted_path_segments, path_str->data);
+    svn_stringbuf_appendcstr(*rooted_path_segments, "',");
+    svn_path_remove_component(path_str);
+  }
+  if (path_str->len)
+    {
+      svn_stringbuf_appendcstr(*rooted_path_segments, "'");
+      svn_stringbuf_appendcstr(*rooted_path_segments, path_str->data);
+      svn_stringbuf_appendcstr(*rooted_path_segments, "'");
+    }
+  svn_stringbuf_appendcstr(*rooted_path_segments, ")");
+}
+
 /* Helper function for 'svn_fs_mergeinfo__get_commit_and_merge_ranges'.
 
    Set *COMMIT_RANGELIST to a list of revisions (sorted in
@@ -886,6 +914,8 @@ get_commit_and_merge_ranges(apr_array_header_t **merge_ranges_list,
   svn_fs__sqlite_stmt_t *stmt;
   svn_boolean_t got_row;
   apr_array_header_t *merge_rangelist;
+  svn_stringbuf_t *merge_source_where_clause, *merge_target_where_clause;
+  const char *query;
   svn_boolean_t get_inherited_mergeinfo = FALSE;
   svn_revnum_t last_commit_rev = SVN_INVALID_REVNUM;
   apr_hash_t *rev_target_hash = apr_hash_make(pool);
@@ -897,13 +927,19 @@ get_commit_and_merge_ranges(apr_array_header_t **merge_ranges_list,
   *merge_ranges_list = apr_array_make(pool, 0, sizeof(apr_array_header_t *));
   merge_rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
 
-  SVN_ERR(svn_fs__sqlite_prepare(&stmt, db,
-                                 "SELECT revision, mergedrevstart, "
-                                 "mergedrevend, inheritable, mergedfrom, "
-                                 "mergedto FROM mergeinfo_changed "
-                                 "WHERE revision between ? AND ? "
-                                 "ORDER BY revision ASC, mergedto ASC; ",
-                                 pool));
+  construct_rooted_path_segments(&merge_source_where_clause,
+                                 merge_source, pool);
+  construct_rooted_path_segments(&merge_target_where_clause,
+                                 merge_target, pool);
+  query = apr_psprintf(pool, "SELECT revision, mergedrevstart, "
+                             "mergedrevend, inheritable, mergedfrom, "
+                             "mergedto FROM mergeinfo_changed "
+                             "WHERE mergedfrom in %s AND mergedto in %s "
+                             "AND revision between ? AND ? "
+                             "ORDER BY revision ASC, mergedto ASC; ",
+                             merge_source_where_clause->data,
+                             merge_target_where_clause->data);
+  SVN_ERR(svn_fs__sqlite_prepare(&stmt, db, query, pool));
   SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 1, min_commit_rev + 1));
   SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 2, max_commit_rev));
   SVN_ERR(svn_fs__sqlite_step(&got_row, stmt));
