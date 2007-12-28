@@ -427,14 +427,28 @@ svn_ra_serf__open(svn_ra_session_t *session,
   serf_sess->conns[0]->session = serf_sess;
   serf_sess->conns[0]->last_status_code = -1;
 
-  /* fetch the DNS record for this host */
-  status = apr_sockaddr_info_get(&serf_sess->conns[0]->address, url.hostname,
-                                 APR_UNSPEC, url.port, 0, serf_sess->pool);
-  if (status)
+  /* Unless we're using a proxy, fetch the DNS record for this host */
+  if (! serf_sess->using_proxy)
     {
-      return svn_error_wrap_apr(status,
-                                _("Could not lookup hostname `%s'"),
-                                url.hostname);
+      status = apr_sockaddr_info_get(&serf_sess->conns[0]->address,
+                                     url.hostname,
+                                     APR_UNSPEC, url.port, 0, serf_sess->pool);
+      if (status)
+        {
+          return svn_error_wrap_apr(status,
+                                    _("Could not lookup hostname `%s'"),
+                                    url.hostname);
+        }
+    }
+  else
+    {
+      /* Create an address with unresolved hostname. */
+      apr_sockaddr_t *sa = apr_pcalloc(serf_sess->pool, sizeof(apr_sockaddr_t));
+      sa->pool = serf_sess->pool;
+      sa->hostname = apr_pstrdup(serf_sess->pool, url.hostname);
+      sa->port = url.port;
+      sa->family = APR_UNSPEC;
+      serf_sess->conns[0]->address = sa;
     }
 
   serf_sess->conns[0]->using_ssl = serf_sess->using_ssl;
