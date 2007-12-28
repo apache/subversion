@@ -1399,12 +1399,6 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
 
    *REFLECTED_RANGES_LIST will be populated with merge ranges that are
    merged from target to source within revision1:revision2.
-
-   ### FIXME: I strongly suspect that these calculations are
-   ### rename-ignorant, not accounting for the situation where the
-   ### item at TARGET_URL back when merges were from it to our current
-   ### merge source is not the same item at TARGET_URL now that we're
-   ### trying to merge from that current merge source.  -- cmpilato
 */
 static svn_error_t *
 filter_reflective_revisions(apr_array_header_t **requested_rangelist,
