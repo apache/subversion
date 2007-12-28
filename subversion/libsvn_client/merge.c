@@ -5239,9 +5239,7 @@ svn_client_merge_reintegrate(const char *source,
   svn_revnum_t yc_ancestor_rev;
   const char *url1, *url2;
   svn_revnum_t rev1, rev2;
-  svn_opt_revision_t opt_rev1;
-  apr_hash_t *target_mergeinfo, *source_mergeinfo;
-  apr_hash_t *deleted_mergeinfo, *added_mergeinfo;
+  apr_hash_t *source_mergeinfo;
 
 
   /* Open an admistrative session with the working copy. */
@@ -5308,7 +5306,7 @@ svn_client_merge_reintegrate(const char *source,
                                                    url2, rev2,
                                                    url1, rev1,
                                                    ctx, pool));
-  
+
   if (!(yc_ancestor_path && SVN_IS_VALID_REVNUM(yc_ancestor_rev)))
     return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                              _("'%s@%ld' must be ancestrally related to "
@@ -5322,34 +5320,48 @@ svn_client_merge_reintegrate(const char *source,
   printf("KFF yc_ancestor_rev: %ld\n", yc_ancestor_rev);
   fflush(stdout);
 
-  opt_rev1.kind = svn_opt_revision_number;
-  opt_rev1.value.number = rev1;
-  SVN_ERR(svn_client__get_history_as_mergeinfo(&target_mergeinfo, entry->url,
-                                               &opt_rev1,
-                                               rev1,
-                                               yc_ancestor_rev + 1,
-                                               NULL, adm_access, ctx, pool));
+  if (rev1 > yc_ancestor_rev)
+    {
+      /* Have we actually merged anything to the source from the
+         target?  If so, make sure we've merged a contiguous
+         prefix. */
+      svn_opt_revision_t opt_rev1;
+      apr_hash_t *target_mergeinfo, *deleted_mergeinfo, *added_mergeinfo;
 
-  /* ### TODO(reint): Consider CONSIDER_INHERITANCE parameter... */
-  SVN_ERR(svn_mergeinfo_diff(&deleted_mergeinfo, &added_mergeinfo,
-                             target_mergeinfo, source_mergeinfo, FALSE,
-                             pool));
+      opt_rev1.kind = svn_opt_revision_number;
+      opt_rev1.value.number = rev1;
+      SVN_ERR(svn_client__get_history_as_mergeinfo(&target_mergeinfo,
+                                                   entry->url,
+                                                   &opt_rev1,
+                                                   rev1,
+                                                   yc_ancestor_rev + 1,
+                                                   NULL, adm_access, ctx,
+                                                   pool));
 
-  {
-    svn_string_t *debug_output;
-    SVN_ERR(svn_mergeinfo__to_string(&debug_output, target_mergeinfo, pool));
-    printf("KFF target_mergeinfo:\n%s\n\n", debug_output->data);
-    SVN_ERR(svn_mergeinfo__to_string(&debug_output, source_mergeinfo, pool));
-    printf("KFF source_mergeinfo:\n%s\n\n", debug_output->data);
-    SVN_ERR(svn_mergeinfo__to_string(&debug_output, deleted_mergeinfo, pool));
-    printf("KFF deleted_mergeinfo:\n%s\n\n", debug_output->data);
-    SVN_ERR(svn_mergeinfo__to_string(&debug_output, added_mergeinfo, pool));
-    printf("KFF added_mergeinfo:\n%s\n\n", debug_output->data);
-    fflush(stdout);
-  }
+      /* ### TODO(reint): Consider CONSIDER_INHERITANCE parameter... */
+      SVN_ERR(svn_mergeinfo_diff(&deleted_mergeinfo, &added_mergeinfo,
+                                 target_mergeinfo, source_mergeinfo, FALSE,
+                                 pool));
 
-  SVN_ERR(ensure_all_missing_ranges_are_phantoms(ra_session, deleted_mergeinfo,
-                                                 pool));
+      {
+        svn_string_t *debug_output;
+        SVN_ERR(svn_mergeinfo__to_string(&debug_output, target_mergeinfo,
+                                         pool));
+        printf("KFF target_mergeinfo:\n%s\n\n", debug_output->data);
+        SVN_ERR(svn_mergeinfo__to_string(&debug_output, source_mergeinfo,
+                                         pool));
+        printf("KFF source_mergeinfo:\n%s\n\n", debug_output->data);
+        SVN_ERR(svn_mergeinfo__to_string(&debug_output, deleted_mergeinfo,
+                                         pool));
+        printf("KFF deleted_mergeinfo:\n%s\n\n", debug_output->data);
+        SVN_ERR(svn_mergeinfo__to_string(&debug_output, added_mergeinfo, pool));
+        printf("KFF added_mergeinfo:\n%s\n\n", debug_output->data);
+        fflush(stdout);
+      }
+
+      SVN_ERR(ensure_all_missing_ranges_are_phantoms(ra_session,
+                                                     deleted_mergeinfo, pool));
+    }
 
   /* Left side: trunk@youngest-trunk-rev-merged-to-branch-at-specified-peg-rev
    * Right side: branch@specified-peg-revision */
