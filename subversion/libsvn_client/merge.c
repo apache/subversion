@@ -225,7 +225,9 @@ typedef struct merge_cmd_baton_t {
      merge range of requested_end_rev:requested_end_rev. */
   svn_boolean_t target_has_dummy_merge_range;
 
-  /* reflected_ranges is set for each merge range if the merge is reflective.*/
+  /* reflected_ranges is set for each merge range if the merge is reflective.
+   * It contains individual elements of type ' svn_merge_range_t *'.
+   */
   apr_array_header_t *reflected_ranges;
   apr_pool_t *pool;
 } merge_cmd_baton_t;
@@ -395,7 +397,7 @@ get_file_from_ra(const char **filename, const char *path,
 
 /* merges MERGE_B->reflected_ranges from MERGE_B->target url to OLDER. */
 static svn_error_t *
-merge_reflected_ranges_b4_reflecting(const char *older,
+merge_reflected_ranges_before_reflecting(const char *older,
                                      const char *file_path_relative_to_target,
                                      merge_cmd_baton_t *merge_b)
 {
@@ -620,7 +622,13 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* A svn_wc_diff_callbacks2_t function. */
+/* A svn_wc_diff_callbacks2_t function.
+ * This callback applies the original reflected_ranges of the reflective
+ * revision to OLDER, thus at the end of applying all ranges from 
+ * reflected_ranges we are left with
+ * extraneous changes(non merge(from current merge target url) changes)
+ * introduced in the reflective revision.
+ */
 static svn_error_t *
 reflective_merge_file_changed(svn_wc_adm_access_t *adm_access,
                               svn_wc_notify_state_t *content_state,
@@ -641,7 +649,7 @@ reflective_merge_file_changed(svn_wc_adm_access_t *adm_access,
   const char *file_path_relative_to_target = 
     mine + (merge_target_len ? merge_target_len + 1 : 0);
   if (older)
-    SVN_ERR(merge_reflected_ranges_b4_reflecting(older,
+    SVN_ERR(merge_reflected_ranges_before_reflecting(older,
                                                  file_path_relative_to_target,
                                                  merge_b));
   return merge_file_changed(adm_access, content_state, prop_state,
@@ -1180,7 +1188,35 @@ merge_callbacks =
     merge_props_changed
   };
 
-/* The main callback table for 'svn reflective merge'.  */
+/* The main callback table for 'svn reflective merge'.
+ * The REFLECTIVE REVISION is a revision where some merge is committed on
+ * our current merge source from our current merge target url of the ranges 
+ * formally known as REFLECTED_RANGES.
+ *
+ * Ex: You could have merged 'r8, r18, r23, r28' from your /trunk to 
+ * /feature_branch and commited them on r46.
+ * 
+ * In the above example r46 is a REFLECTIVE REVISION and '7:8', '17:18', 
+ * '22:23', '27:28' are rREFLECTED_RANGES when we merge /feature_branch
+ * back to /trunk.
+ *
+ * As the change is from our current merge target, it does not make sense
+ * to retrieve it back from the merge source via reflective revision.
+ *
+ * We can avoid merging reflective revision at all, but it would be
+ * lossy if the reflective revision had some other change(not a result of
+ * merge from merge target url).
+ *
+ * Typically these extraneous changes could be conflict resolution, merge from
+ * some other source, local adhoc changes.
+ * 
+ * This callback extracts these extraneous changes alone and applies to our
+ * working copy target.
+ *
+ * merge report editor is driven with the following reflective callback
+ * structure for a reflective merge, which is identified by
+ * merge_cmd_baton->reflected_ranges.
+ */
 static const svn_wc_diff_callbacks2_t
 reflective_merge_callbacks =
   {
