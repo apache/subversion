@@ -5276,6 +5276,9 @@ svn_client_merge_reintegrate(const char *source,
                                source_repos_rel_path_as_array, rev2,
                                svn_mergeinfo_inherited, TRUE, pool));
 
+  if (!mergeinfo_by_path)
+    mergeinfo_by_path = apr_hash_make(pool);
+
   SVN_ERR(calculate_left_hand_side(&url1, &rev1, &source_mergeinfo,
                                    mergeinfo_by_path,
                                    target_repos_rel_path,
