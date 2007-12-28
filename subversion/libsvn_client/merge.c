@@ -4744,16 +4744,10 @@ svn_client_merge3(const char *source1,
 
   /* Unless we're ignoring ancestry, see if the two sources are related.  */
   if (! ignore_ancestry)
-    {
-      svn_opt_revision_t opt_rev1, opt_rev2;
-      opt_rev1.kind = opt_rev2.kind = svn_opt_revision_number;
-      opt_rev1.value.number = rev1;
-      opt_rev2.value.number = rev2;
-      SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_path, &yc_rev,
-                                                       URL1, &opt_rev1,
-                                                       URL2, &opt_rev2,
-                                                       ctx, pool));
-    }
+    SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_path, &yc_rev,
+                                                     URL1, rev1,
+                                                     URL2, rev2,
+                                                     ctx, pool));
 
   /* Check for a youngest common ancestor.  If we have one, we'll be
      doing merge tracking.
@@ -5225,7 +5219,7 @@ svn_client_merge_reintegrate(const char *source,
   svn_revnum_t yc_ancestor_rev;
   const char *url1, *url2;
   svn_revnum_t rev1, rev2;
-  svn_opt_revision_t source_revision, target_revision;
+  svn_opt_revision_t opt_rev1;
   apr_hash_t *target_mergeinfo, *source_mergeinfo;
   apr_hash_t *deleted_mergeinfo, *added_mergeinfo;
 
@@ -5289,14 +5283,10 @@ svn_client_merge_reintegrate(const char *source,
                                    ctx,
                                    pool));
 
-  source_revision.kind = svn_opt_revision_number;
-  source_revision.value.number = rev2;
-  target_revision.kind = svn_opt_revision_number;
-  target_revision.value.number = rev1;
   SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_ancestor_path,
                                                    &yc_ancestor_rev,
-                                                   url2, &source_revision,
-                                                   url1, &target_revision,
+                                                   url2, rev2,
+                                                   url1, rev1,
                                                    ctx, pool));
   
   if (!(yc_ancestor_path && SVN_IS_VALID_REVNUM(yc_ancestor_rev)))
@@ -5312,8 +5302,10 @@ svn_client_merge_reintegrate(const char *source,
   printf("KFF yc_ancestor_rev: %ld\n", yc_ancestor_rev);
   fflush(stdout);
 
+  opt_rev1.kind = svn_opt_revision_number;
+  opt_rev1.value.number = rev1;
   SVN_ERR(svn_client__get_history_as_mergeinfo(&target_mergeinfo, entry->url,
-                                               &target_revision, 
+                                               &opt_rev1,
                                                rev1,
                                                yc_ancestor_rev + 1,
                                                NULL, adm_access, ctx, pool));
