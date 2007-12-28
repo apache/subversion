@@ -343,6 +343,15 @@ svn_cstring_join(apr_array_header_t *strings,
                  const char *separator,
                  apr_pool_t *pool);
 
+/**
+ * Compare two strings @a atr1 and @a atr2, treating case-equivalent
+ * unaccented Latin (ASCII subset) letters as equal.
+ *
+ * @since New in 1.5.
+ */
+int svn_cstring_casecmp(const char *str1, const char *str2);
+
+
 /** @} */
 
 /** @} */

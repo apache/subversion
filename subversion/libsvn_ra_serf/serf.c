@@ -75,7 +75,7 @@ capabilities_headers_iterator_callback(void *baton,
 {
   struct capabilities_response_baton *crb = baton;
 
-  if (strcasecmp(key, "dav") == 0)
+  if (svn_cstring_casecmp(key, "dav") == 0)
     {
       /* Each header may contain multiple values, separated by commas, e.g.:
            DAV: version-control,checkout,working-resource
@@ -407,7 +407,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
     {
       url.port = apr_uri_port_of_scheme(url.scheme);
     }
-  serf_sess->using_ssl = (strcasecmp(url.scheme, "https") == 0);
+  serf_sess->using_ssl = (svn_cstring_casecmp(url.scheme, "https") == 0);
 
   serf_sess->capabilities = apr_hash_make(serf_sess->pool);
 

@@ -794,7 +794,7 @@ handle_fetch(serf_request_t *request,
           return error_fetch(request, fetch_ctx, err);
         }
 
-      if (val && strcasecmp(val, "application/vnd.svn-svndiff") == 0)
+      if (val && svn_cstring_casecmp(val, "application/vnd.svn-svndiff") == 0)
         {
           fetch_ctx->delta_stream =
               svn_txdelta_parse_svndiff(info->textdelta,
@@ -2219,6 +2219,9 @@ finish_report(void *report_baton,
       sess->conns[i]->hostinfo = sess->conns[0]->hostinfo;
       sess->conns[i]->using_ssl = sess->conns[0]->using_ssl;
       sess->conns[i]->using_compression = sess->conns[0]->using_compression;
+      sess->conns[i]->proxy_auth_header = sess->conns[0]->proxy_auth_header;
+      sess->conns[i]->proxy_auth_value = sess->conns[0]->proxy_auth_value;
+      sess->conns[i]->useragent = sess->conns[0]->useragent;
       sess->conns[i]->last_status_code = -1;
       sess->conns[i]->ssl_context = NULL;
       sess->conns[i]->session = sess;

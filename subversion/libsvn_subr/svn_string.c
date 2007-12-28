@@ -25,6 +25,7 @@
 #include <apr_md5.h>
 #include <apr_fnmatch.h>
 #include "svn_string.h"  /* loads "svn_types.h" and <apr_pools.h> */
+#include "svn_ctype.h"
 
 
 
@@ -575,4 +576,17 @@ svn_cstring_join(apr_array_header_t *strings,
       svn_stringbuf_appendbytes(new_str, separator, sep_len);
     }
   return new_str->data;
+}
+
+int
+svn_cstring_casecmp(const char *str1, const char *str2)
+{
+  for (;;)
+    {
+      const int a = *str1++;
+      const int b = *str2++;
+      const int cmp = svn_ctype_casecmp(a, b);
+      if (cmp || !a || !b)
+        return cmp;
+    }
 }

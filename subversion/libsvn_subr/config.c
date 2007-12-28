@@ -618,14 +618,14 @@ svn_config_get_bool(svn_config_t *cfg, svn_boolean_t *valuep,
   svn_config_get(cfg, &tmp_value, section, option, NULL);
   if (tmp_value == NULL)
     *valuep = default_value;
-  else if (0 == strcasecmp(tmp_value, SVN_CONFIG_TRUE)
-           || 0 == strcasecmp(tmp_value, "yes")
-           || 0 == strcasecmp(tmp_value, "on")
+  else if (0 == svn_cstring_casecmp(tmp_value, SVN_CONFIG_TRUE)
+           || 0 == svn_cstring_casecmp(tmp_value, "yes")
+           || 0 == svn_cstring_casecmp(tmp_value, "on")
            || 0 == strcmp(tmp_value, "1"))
     *valuep = TRUE;
-  else if (0 == strcasecmp(tmp_value, SVN_CONFIG_FALSE)
-           || 0 == strcasecmp(tmp_value, "no")
-           || 0 == strcasecmp(tmp_value, "off")
+  else if (0 == svn_cstring_casecmp(tmp_value, SVN_CONFIG_FALSE)
+           || 0 == svn_cstring_casecmp(tmp_value, "no")
+           || 0 == svn_cstring_casecmp(tmp_value, "off")
            || 0 == strcmp(tmp_value, "0"))
     *valuep = FALSE;
   else

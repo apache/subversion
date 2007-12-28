@@ -68,7 +68,8 @@
 #endif
 
 %apply const apr_array_header_t *STRINGLIST {
-  apr_array_header_t *src_paths
+  apr_array_header_t *src_paths,
+  apr_array_header_t *changelists
 }
 
 %apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {

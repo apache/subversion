@@ -3657,7 +3657,10 @@ svn_swig_rb_proplist_receiver(void *baton,
 }
 
 svn_error_t *
-svn_swig_rb_changelist_receiver(void *baton, const char *path)
+svn_swig_rb_changelist_receiver(void *baton,
+                                const char *path,
+                                const char *changelist,
+                                apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   VALUE proc, rb_pool;
@@ -3668,8 +3671,9 @@ svn_swig_rb_changelist_receiver(void *baton, const char *path)
 
     cbb.receiver = proc;
     cbb.message = id_call;
-    cbb.args = rb_ary_new3(1,
-                           c2r_string2(path));
+    cbb.args = rb_ary_new3(2,
+                           c2r_string2(path),
+                           c2r_string2(changelist));
     invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
   }
 
