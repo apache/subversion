@@ -9543,6 +9543,7 @@ def reintegrate_branch_never_merged_to(sbox):
                                         None, None, wc_dir)
   expected_disk.add({
     'A_COPY/D/G/tauprime' : Item(props={SVN_PROP_MERGE_INFO: ''},
+                                 ### TODO(reint): why empty?
                                  contents="This is the file 'tau'.\n")
     })
 
@@ -9560,7 +9561,6 @@ def reintegrate_branch_never_merged_to(sbox):
   A_path = os.path.join(wc_dir, "A")
   short_A_path = shorten_path_kludge(A_path)
   expected_output = wc.State(short_A_path, {
-    ''             : Item(status=' U'),
     'mu'           : Item(status='U '),
     'D/G/tauprime' : Item(status='A '),
     })
@@ -9602,7 +9602,9 @@ def reintegrate_branch_never_merged_to(sbox):
     'D/G/pi'       : Item("This is the file 'pi'.\n"),
     'D/G/rho'      : Item("New content"),
     'D/G/tau'      : Item("This is the file 'tau'.\n"),
-    'D/G/tauprime' : Item("This is the file 'tau'.\n"),
+    'D/G/tauprime' : Item("This is the file 'tau'.\n",
+                          ### TODO(reint): why empty?
+                          props={SVN_PROP_MERGE_INFO: ''}),
     'D/H'          : Item(),
     'D/H/chi'      : Item("This is the file 'chi'.\n"),
     'D/H/omega'    : Item("New content"),
@@ -9724,7 +9726,7 @@ test_list = [ None,
               merge_from_renamed_branch_fails_while_avoiding_repeat_merge,
               merge_source_normalization_and_subtree_merges,
               basic_reintegrate,
-              XFail(reintegrate_branch_never_merged_to),
+              reintegrate_branch_never_merged_to,
              ]
 
 if __name__ == '__main__':
