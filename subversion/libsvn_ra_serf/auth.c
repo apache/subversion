@@ -150,33 +150,46 @@ svn_ra_serf__handle_auth(int code,
         return svn_error_create(SVN_ERR_AUTHN_FAILED, NULL, NULL);
     }
 
-  auth_name = apr_strtok(auth_hdr, " ", &auth_attr);
+  /* If multiple *-Authenticate headers are found, serf will combine them into
+     one header, with the values separated by a comma. */
+  auth_name = apr_strtok(auth_hdr, " ,", &auth_attr);
 
-  /* Find the matching authentication handler.
-     Note that we don't reuse the auth protocol stored in the session,
-     as that may have changed. (ex. fallback from ntlm to basic.) */
-  for (prot = serf_auth_protocols; prot->code != 0; ++prot)
+  while (auth_name)
     {
-      if (code == prot->code && strcmp(auth_name, prot->auth_name) == 0)
+      svn_boolean_t proto_found = FALSE;
+
+      /* Find the matching authentication handler.
+         Note that we don't reuse the auth protocol stored in the session,
+         as that may have changed. (ex. fallback from ntlm to basic.) */
+      for (prot = serf_auth_protocols; prot->code != 0; ++prot)
         {
-          svn_serf__auth_handler_func_t handler = prot->handle_func;
-          /* If this is the first time we use this protocol in this session,
-             make sure to initialize the authentication part of the session
-             first. */
-          if (code == 401 && session->auth_protocol != prot)
+          if (code == prot->code && strcmp(auth_name, prot->auth_name) == 0)
             {
-              SVN_ERR(prot->init_conn_func(session, conn, session->pool));
-              session->auth_protocol = prot;
+              svn_serf__auth_handler_func_t handler = prot->handle_func;
+              /* If this is the first time we use this protocol in this session,
+                 make sure to initialize the authentication part of the session
+                 first. */
+              if (code == 401 && session->auth_protocol != prot)
+                {
+                  proto_found = TRUE;
+                  SVN_ERR(prot->init_conn_func(session, conn, session->pool));
+                  session->auth_protocol = prot;
+                }
+             else if (code == 407 && session->proxy_auth_protocol != prot)
+                {
+                  proto_found = TRUE;
+                  SVN_ERR(prot->init_conn_func(session, conn, session->pool));
+                  session->proxy_auth_protocol = prot;
+                }
+              SVN_ERR(handler(session, conn, request, response,
+                              auth_hdr, auth_attr, session->pool));
+              break;
             }
-         else if (code == 407 && session->proxy_auth_protocol != prot)
-            {
-              SVN_ERR(prot->init_conn_func(session, conn, session->pool));
-              session->proxy_auth_protocol = prot;
-            }
-          SVN_ERR(handler(session, conn, request, response,
-                          auth_hdr, auth_attr, session->pool));
-          break;
         }
+      if (proto_found)
+        break;
+
+      auth_name = apr_strtok(NULL, " ,", &auth_attr);
     }
   if (prot->auth_name == NULL)
     {
