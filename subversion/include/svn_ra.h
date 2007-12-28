@@ -899,7 +899,11 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
  * @a merge_source to a @a merge_target
  * where each commit_rev in @a commit_rangelist > @a min_commit_rev and
  * <= @a max_commit_rev.
- * 
+ *
+ * @a merge_source and @a merge_target is expected to be a single
+ * location segment within @a min_commit_rev(exclusive) and
+ * @a max_commit_rev(inclusive).
+ *
  * @a commit_rangelist and @a merge_ranges_list will never be @c NULL,
  * but may be empty.
  *
