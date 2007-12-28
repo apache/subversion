@@ -5137,8 +5137,28 @@ calculate_left_hand_side(const char **url_left,
 
   if (! have_mergeinfo_for_source && ! have_mergeinfo_for_descendents)
     {
-      /* TODO(reint): Return the branch point. */
-      assert(FALSE);
+      /* TODO(reint): Make sure we're not fetching location segments
+         over and over. */
+      /* We never merged to the source.  Just return the branch point. */
+      const char *yc_ancestor_path,
+        *source_url = svn_path_join(source_repos_root, source_repos_rel_path,
+                                    subpool),
+        *target_url = svn_path_join(source_repos_root, target_repos_rel_path,
+                                    subpool);
+
+      SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_ancestor_path,
+                                                       rev_left,
+                                                       source_url, source_rev,
+                                                       target_url, target_rev,
+                                                       ctx, subpool));
+      if (!(yc_ancestor_path && SVN_IS_VALID_REVNUM(*rev_left)))
+        return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
+                                 _("'%s@%ld' must be ancestrally related to "
+                                   "'%s@%ld'"), source_url, source_rev,
+                                 target_url, target_rev);
+      *url_left = svn_path_join(source_repos_root, yc_ancestor_path, pool);
+      *source_mergeinfo_p = apr_hash_make(pool);
+
       svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
