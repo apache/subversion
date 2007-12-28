@@ -1,7 +1,3 @@
-* Optimize the sql query to retrieve the 'get-commit-and-merge-ranges' by
-  applying a where clause like 
-  "mergedto in ('/a, '/a/b', '/a/b/c', '/a/b/c/d')"
-
 * Write a testcase for merge_target(a.k.a merge_source in reflective sense)
   having line of history different skipping few latest nodes.(i.e copy from
   a past rev and see how reflection is avoided.
