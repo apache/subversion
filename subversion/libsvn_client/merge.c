@@ -1410,9 +1410,10 @@ filter_reflective_revisions(apr_array_header_t **requested_rangelist,
                             const char *url2,
                             svn_revnum_t revision2,
                             svn_boolean_t inheritable,
+                            const char *entry_path,
                             const svn_wc_entry_t *entry,
                             svn_ra_session_t *ra_session,
-                            svn_client_ctx_t *ctx,
+                            merge_cmd_baton_t *merge_b,
                             apr_pool_t *pool)
 {
   svn_merge_range_t *range = apr_pcalloc(pool, sizeof(*range));
@@ -1429,6 +1430,12 @@ filter_reflective_revisions(apr_array_header_t **requested_rangelist,
   range->end = revision2;
   range->inheritable = inheritable;
   APR_ARRAY_PUSH(*requested_rangelist, svn_merge_range_t *) = range;
+
+  /*FIXME We are not handling the reflecive revisions for subtrees to target,
+    So no need to make a ra-call.
+   */
+  if (strcmp(merge_b->target, entry_path) != 0)
+    return SVN_NO_ERROR;
 
   /* If working copy target is not up-to-date with min_rev, no point in 
      finding reflections. */
@@ -1462,7 +1469,7 @@ filter_reflective_revisions(apr_array_header_t **requested_rangelist,
                                                   min_rev,
                                                   max_rev,
                                                   svn_mergeinfo_inherited,
-                                                  ctx, pool));
+                                                  merge_b->ctx, pool));
   if (*reflective_rangelist)
     SVN_ERR(svn_rangelist_remove(requested_rangelist,
                                  *reflective_rangelist,
@@ -1583,8 +1590,9 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
                            apr_hash_t *target_mergeinfo,
                            apr_hash_t *implicit_mergeinfo,
                            svn_ra_session_t *ra_session,
+                           const char *entry_path,
                            const svn_wc_entry_t *entry,
-                           svn_client_ctx_t *ctx,
+                           merge_cmd_baton_t *merge_b,
                            apr_pool_t *pool)
 {
   apr_array_header_t *requested_rangelist;
@@ -1606,8 +1614,8 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
                                       &reflective_rangelist,
                                       source_root_url,
                                       url1, revision1, url2, revision2,
-                                      inheritable, entry,
-                                      ra_session, ctx, pool));
+                                      inheritable, entry_path, entry,
+                                      ra_session, merge_b, pool));
   SVN_ERR(svn_ra_reparent(ra_session, old_url, pool));
   
   /* ...and of those ranges, determine which ones actually still
@@ -1882,8 +1890,8 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                                          inheritable, 
                                          child->pre_merge_mergeinfo,
                                          implicit_mergeinfo,
-                                         ra_session, child_entry, merge_b->ctx,
-                                         pool));
+                                         ra_session, child->path, child_entry,
+                                         merge_b, pool));
     }
 
   /* Take advantage of the depth first ordering,
@@ -4080,7 +4088,7 @@ do_file_merge(const char *url1,
                                          TRUE, target_mergeinfo, 
                                          implicit_mergeinfo,
                                          merge_b->ra_session1,
-                                         entry, ctx, pool));
+                                         target_wcpath, entry, merge_b, pool));
     }
   else
     {
