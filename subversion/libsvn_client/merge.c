@@ -5152,6 +5152,10 @@ calculate_left_hand_side(const char **url_left,
 
           svn_pool_clear(iterpool);
 
+          /* Ignore gaps in history. */
+          if (!segment->path)
+            continue;
+
           rangelist = apr_hash_get(source_mergeinfo,
                                    apr_pstrcat(iterpool, "/", segment->path,
                                                NULL),
