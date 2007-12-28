@@ -76,7 +76,7 @@ for c in xrange(256):
         # Uppercase letters
         elif c >= 65 and c < 91:
             bits.append('SVN_CTYPE_UPPER')
-            # Hexaecimal digits
+            # Hexadecimal digits
             if c <= 70:
                 bits.append('SVN_CTYPE_XALPHA')
 
