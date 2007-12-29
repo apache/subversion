@@ -29,9 +29,6 @@
 #include <ap_provider.h>
 #include <apr_uri.h>
 #include <mod_dav.h>
-#if AP_MODULE_MAGIC_AT_LEAST(20060110,0)
-#include <mod_auth.h>
-#endif
 
 #include "mod_dav_svn.h"
 #include "mod_authz_svn.h"
