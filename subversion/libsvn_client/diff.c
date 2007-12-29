@@ -604,7 +604,8 @@ diff_content_changed(const char *path,
           /* Output the actual diff */
           SVN_ERR(svn_diff_file_output_unified3
                   (os, diff, tmpfile1, tmpfile2, label1, label2,
-                   diff_cmd_baton->header_encoding, rel_to_dir, subpool));
+                   diff_cmd_baton->header_encoding, rel_to_dir,
+                   opts->show_c_function, subpool));
         }
     }
 
