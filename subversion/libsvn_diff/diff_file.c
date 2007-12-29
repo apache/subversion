@@ -749,6 +749,8 @@ typedef struct svn_diff__file_output_baton_t
 
   /* Should we emit C functions in the unified diff header */
   svn_boolean_t show_c_function;
+  /* Extra strings to skip over if we match. */
+  apr_array_header_t *extra_skip_match;
   /* "Context" to append to the @@ line when the show_c_function option
    * is set. */
   svn_stringbuf_t *extra_context;
@@ -821,7 +823,9 @@ output_unified_line(svn_diff__file_output_baton_t *baton,
               if (baton->show_c_function
                   && (type == svn_diff__file_output_unified_skip
                       || type == svn_diff__file_output_unified_context)
-                  && (svn_ctype_isalpha(*curp) || *curp == '$' || *curp == '_'))
+                  && (svn_ctype_isalpha(*curp) || *curp == '$' || *curp == '_')
+                  && !svn_cstring_match_glob_list(curp,
+                                                  baton->extra_skip_match))
                 {
                   svn_stringbuf_setempty(baton->extra_context);
                   collect_extra = TRUE;
@@ -1155,6 +1159,8 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
 
   if (svn_diff_contains_diffs(diff))
     {
+      char **c;
+
       memset(&baton, 0, sizeof(baton));
       baton.output_stream = output_stream;
       baton.pool = pool;
@@ -1164,6 +1170,14 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
       baton.hunk = svn_stringbuf_create("", pool);
       baton.show_c_function = show_c_function;
       baton.extra_context = svn_stringbuf_create("", pool);
+      baton.extra_skip_match = apr_array_make(pool, 3, sizeof(char **));
+
+      c = apr_array_push(baton.extra_skip_match);
+      *c = "public:*";
+      c = apr_array_push(baton.extra_skip_match);
+      *c = "private:*";
+      c = apr_array_push(baton.extra_skip_match);
+      *c = "protected:*";
 
       SVN_ERR(svn_utf_cstring_from_utf8_ex2(&baton.context_str, " ",
                                             header_encoding, pool));
