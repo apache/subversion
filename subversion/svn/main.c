@@ -172,7 +172,11 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                            "
                        "    --ignore-eol-style:\n"
                        "                            "
-                       "       Ignore changes in EOL style")},
+                       "       Ignore changes in EOL style\n"
+                       "                            "
+                       "    -p (--show-c-function):\n"
+                       "                            "
+                       "       Show C function name in diff output.")},
 #endif
   {"targets",       opt_targets, 1,
                     N_("pass contents of file ARG as additional args")},
