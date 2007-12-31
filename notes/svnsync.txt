@@ -128,9 +128,33 @@ A: svnsync will simply not copy parts of the repository that you
 
 Q: Can I mirror a subdirectory of a master repository?
 
-A: While the underlying RA layer command that svnsync relies on does
-   support that, svnsync itself does not currently. (Patches welcome!)
-   If you need this ability right now, you may want to look into SVK
+A: As of Subversion 1.5, it is possible to limit svnsync to a subdirectory
+   of the master repository.
+   This is most useful when the master repository is organized in projects, 
+   and you want to sync only one project.
+   Example showing svnsync of project1 in the master repository:
+   /project1
+      /branches
+      /tags
+      /trunk
+   /project2
+      /branches
+      /tags
+      /trunk
+
+   The following commands will sync all changes in /project1 to the target 
+   repository:
+$ svnsync init file://`pwd`/dest http://svn.example.org/source/repos/project1
+$ svnsync sync file://`pwd`/dest
+   
+   Note: this syntax only allows you to limit the scope of svnsync to
+   /project1. It does not: 
+   - allow you to sync two or more projects from the master repository. 
+   - recognize renames of project1. Example, if the original name of project1
+   was secretproject, only the changes starting from the revision in which the
+   rename to project1 was committed will be synced.
+
+   If you need any of these abilities right now, you may want to look into SVK
    (http://svk.bestpractical.com/).
 
 Q: What happens when I change a revprop on the master server?
