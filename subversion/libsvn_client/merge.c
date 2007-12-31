@@ -397,7 +397,7 @@ get_file_from_ra(const char **filename, const char *path,
 
 /* merges MERGE_B->reflected_ranges from MERGE_B->target url to OLDER. */
 static svn_error_t *
-merge_reflected_ranges_before_reflecting(const char *older,
+merge_reflected_ranges_to_pre_reflective_file(const char *older,
                                      const char *file_path_relative_to_target,
                                      merge_cmd_baton_t *merge_b)
 {
@@ -649,7 +649,7 @@ reflective_merge_file_changed(svn_wc_adm_access_t *adm_access,
   const char *file_path_relative_to_target = 
     mine + (merge_target_len ? merge_target_len + 1 : 0);
   if (older)
-    SVN_ERR(merge_reflected_ranges_before_reflecting(older,
+    SVN_ERR(merge_reflected_ranges_to_pre_reflective_file(older,
                                                  file_path_relative_to_target,
                                                  merge_b));
   return merge_file_changed(adm_access, content_state, prop_state,
