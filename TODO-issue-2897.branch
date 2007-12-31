@@ -2,7 +2,4 @@
   having line of history different skipping few latest nodes.(i.e copy from
   a past rev and see how reflection is avoided.
 
-* 'get-commit-and-merge-ranges' implementation is agnostic about
-  svn_mergeinfo_nearest_ancestor and svn_mergeinfo_inherited.
-
 * Address David's queries on reflective_merge_callback implementation.
