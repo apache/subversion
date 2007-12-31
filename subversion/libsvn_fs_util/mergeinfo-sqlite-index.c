@@ -848,28 +848,47 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
 }
 
 /*It builds comma seperated paths originating from path which are ancestors of
- * PATH and PATH itself. Perform all allocations in POOL.
- * for PATH='/a/b/c/d.html, it generated *ROOTED_PATH_SEGMENTS as
+ * PATH and PATH itself based on INHERIT. Perform all allocations in POOL.
+ * For PATH='/a/b/c/d.html, it generates *ROOTED_PATH_SEGMENTS as follows
+ * based on INHERIT.
+ * If INHERIT == svn_mergeinfo_explicit,
+ * ('/a/b/c/d.html').
+ * If INHERIT == svn_mergeinfo_inherited,
  * ('/a/b/c/d.html', '/a/b/c', '/a/b', '/a', '/').
+ * If INHERIT == svn_mergeinfo_nearest_ancestor,
+ * ('/a/b/c', '/a/b', '/a', '/').
  */
 static void
 construct_rooted_path_segments(svn_stringbuf_t **rooted_path_segments,
                                const char *path,
+                               svn_mergeinfo_inheritance_t inherit,
                                apr_pool_t *pool)
 {
-  svn_stringbuf_t *path_str = svn_stringbuf_create(path, pool);
   *rooted_path_segments = svn_stringbuf_create("(", pool);
-  while (path_str->len > 1)
-  {
-    svn_stringbuf_appendcstr(*rooted_path_segments, "'");
-    svn_stringbuf_appendcstr(*rooted_path_segments, path_str->data);
-    svn_stringbuf_appendcstr(*rooted_path_segments, "',");
-    svn_path_remove_component(path_str);
-  }
-  if (path_str->len)
+  if (inherit == svn_mergeinfo_inherited
+      || inherit == svn_mergeinfo_nearest_ancestor)
+    {
+      svn_stringbuf_t *path_str = svn_stringbuf_create(path, pool);
+      if (inherit == svn_mergeinfo_nearest_ancestor)
+        svn_path_remove_component(path_str);
+      while (path_str->len > 1)
+        {
+          svn_stringbuf_appendcstr(*rooted_path_segments, "'");
+          svn_stringbuf_appendcstr(*rooted_path_segments, path_str->data);
+          svn_stringbuf_appendcstr(*rooted_path_segments, "',");
+          svn_path_remove_component(path_str);
+        }
+      if (path_str->len)
+        {
+          svn_stringbuf_appendcstr(*rooted_path_segments, "'");
+          svn_stringbuf_appendcstr(*rooted_path_segments, path_str->data);
+          svn_stringbuf_appendcstr(*rooted_path_segments, "'");
+        }
+    }
+  else if (inherit == svn_mergeinfo_explicit)
     {
       svn_stringbuf_appendcstr(*rooted_path_segments, "'");
-      svn_stringbuf_appendcstr(*rooted_path_segments, path_str->data);
+      svn_stringbuf_appendcstr(*rooted_path_segments, path);
       svn_stringbuf_appendcstr(*rooted_path_segments, "'");
     }
   svn_stringbuf_appendcstr(*rooted_path_segments, ")");
@@ -928,9 +947,9 @@ get_commit_and_merge_ranges(apr_array_header_t **merge_ranges_list,
   merge_rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
 
   construct_rooted_path_segments(&merge_source_where_clause,
-                                 merge_source, pool);
+                                 merge_source, inherit, pool);
   construct_rooted_path_segments(&merge_target_where_clause,
-                                 merge_target, pool);
+                                 merge_target, inherit, pool);
   query = apr_psprintf(pool, "SELECT revision, mergedrevstart, "
                              "mergedrevend, inheritable, mergedfrom, "
                              "mergedto FROM mergeinfo_changed "
@@ -961,21 +980,6 @@ get_commit_and_merge_ranges(apr_array_header_t **merge_ranges_list,
       inheritable = svn_fs__sqlite_column_boolean(stmt, 3);
       mergedfrom = svn_fs__sqlite_column_text(stmt, 4);
       mergedto = svn_fs__sqlite_column_text(stmt, 5);
-      if (get_inherited_mergeinfo)
-        {
-          if ((svn_path_is_ancestor(mergedto, merge_target) == FALSE)
-              || (svn_path_is_ancestor(mergedfrom, merge_source) == FALSE))
-            {
-              SVN_ERR(svn_fs__sqlite_step(&got_row, stmt));
-              continue;
-            }
-        }
-      else if ((strcmp(mergedto, merge_target) != 0)
-                || strcmp(mergedfrom, merge_source) != 0)
-        {
-          SVN_ERR(svn_fs__sqlite_step(&got_row, stmt));
-          continue;
-        }
 
       cur_parent_path = apr_hash_get(rev_target_hash, commit_rev_ptr,
                                      sizeof(*commit_rev_ptr));
