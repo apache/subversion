@@ -1159,7 +1159,7 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
 
   if (svn_diff_contains_diffs(diff))
     {
-      char **c;
+      const char **c;
 
       memset(&baton, 0, sizeof(baton));
       baton.output_stream = output_stream;
