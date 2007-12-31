@@ -408,6 +408,7 @@ merge_reflected_ranges_to_pre_reflective_file(const char *older,
   const char *right_marker = ">>>>>>> .new";
   const char *temp_dir;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
+  apr_pool_t *iterpool = svn_pool_create(merge_b->pool);
   SVN_ERR(svn_io_temp_dir(&temp_dir, subpool));
 
   options = svn_diff_file_options_create(subpool);
@@ -419,15 +420,16 @@ merge_reflected_ranges_to_pre_reflective_file(const char *older,
       svn_diff_t *diff;
       const char *left, *right;
       svn_merge_range_t *range;
+      svn_pool_clear(iterpool);
       range = APR_ARRAY_IDX(merge_b->reflected_ranges, i, svn_merge_range_t *);
       SVN_ERR(get_file_from_ra(&left, file_path_relative_to_target, 
                                range->start, merge_b->target_ra_session,
-                               subpool));
+                               iterpool));
       SVN_ERR(get_file_from_ra(&right, file_path_relative_to_target,
                                range->end, merge_b->target_ra_session,
-                               subpool));
+                               iterpool));
       SVN_ERR(svn_diff_file_diff3_2(&diff, left, older, right,
-                                    options, subpool));
+                                    options, iterpool));
       if (svn_diff_contains_diffs(diff) && !svn_diff_contains_conflicts(diff))
         {
           svn_stream_t *ostream;
@@ -435,10 +437,10 @@ merge_reflected_ranges_to_pre_reflective_file(const char *older,
           const char *result_target;
           SVN_ERR(svn_io_open_unique_file2(&result_f, &result_target,
                                            svn_path_join(temp_dir, "tmp",
-                                                         subpool),
+                                                         iterpool),
                                            "", svn_io_file_del_on_pool_cleanup,
-                                           subpool));
-          ostream = svn_stream_from_aprfile(result_f, subpool);
+                                           iterpool));
+          ostream = svn_stream_from_aprfile(result_f, iterpool);
           SVN_ERR(svn_diff_file_output_merge(ostream, diff,
                                              left, older, right,
                                              left_marker,
@@ -447,12 +449,13 @@ merge_reflected_ranges_to_pre_reflective_file(const char *older,
                                              "=======", /* seperator */
                                              FALSE, /* display original */
                                              FALSE, /* resolve conflicts */
-                                             subpool));
+                                             iterpool));
           SVN_ERR(svn_stream_close(ostream));
-          SVN_ERR(svn_io_file_flush_to_disk(result_f, subpool));
-          SVN_ERR(svn_io_copy_file(result_target, older, TRUE, subpool));
+          SVN_ERR(svn_io_file_flush_to_disk(result_f, iterpool));
+          SVN_ERR(svn_io_copy_file(result_target, older, TRUE, iterpool));
         }
     }
+  svn_pool_destroy(iterpool);
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
