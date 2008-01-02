@@ -24,10 +24,10 @@ import main, verify, tree, wc, parsers
 from svntest import Failure
 
 def no_sleep_for_timestamps():
-  os.environ['SVN_SLEEP_FOR_TIMESTAMPS'] = 'no'
+  os.environ['SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS'] = 'yes'
 
 def do_sleep_for_timestamps():
-  os.environ['SVN_SLEEP_FOR_TIMESTAMPS'] = 'yes'
+  os.environ['SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS'] = 'no'
 
 def setup_pristine_repository():
   """Create the pristine repository and 'svn import' the greek tree"""
