@@ -1,5 +1,1 @@
-* Write a testcase for merge_target(a.k.a merge_source in reflective sense)
-  having line of history different skipping few latest nodes.(i.e copy from
-  a past rev and see how reflection is avoided.
-
 * Address David's queries on reflective_merge_callback implementation.
