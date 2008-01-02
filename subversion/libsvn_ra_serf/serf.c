@@ -75,7 +75,7 @@ capabilities_headers_iterator_callback(void *baton,
 {
   struct capabilities_response_baton *crb = baton;
 
-  if (strcasecmp(key, "dav") == 0)
+  if (svn_cstring_casecmp(key, "dav") == 0)
     {
       /* Each header may contain multiple values, separated by commas, e.g.:
            DAV: version-control,checkout,working-resource
@@ -379,6 +379,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
   apr_status_t status;
   svn_ra_serf__session_t *serf_sess;
   apr_uri_t url;
+  const char *client_string = NULL;
 
   serf_sess = apr_pcalloc(pool, sizeof(*serf_sess));
   apr_pool_create(&serf_sess->pool, pool);
@@ -406,7 +407,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
     {
       url.port = apr_uri_port_of_scheme(url.scheme);
     }
-  serf_sess->using_ssl = (strcasecmp(url.scheme, "https") == 0);
+  serf_sess->using_ssl = (svn_cstring_casecmp(url.scheme, "https") == 0);
 
   serf_sess->capabilities = apr_hash_make(serf_sess->pool);
 
@@ -426,14 +427,28 @@ svn_ra_serf__open(svn_ra_session_t *session,
   serf_sess->conns[0]->session = serf_sess;
   serf_sess->conns[0]->last_status_code = -1;
 
-  /* fetch the DNS record for this host */
-  status = apr_sockaddr_info_get(&serf_sess->conns[0]->address, url.hostname,
-                                 APR_UNSPEC, url.port, 0, serf_sess->pool);
-  if (status)
+  /* Unless we're using a proxy, fetch the DNS record for this host */
+  if (! serf_sess->using_proxy)
     {
-      return svn_error_wrap_apr(status,
-                                _("Could not lookup hostname `%s'"),
-                                url.hostname);
+      status = apr_sockaddr_info_get(&serf_sess->conns[0]->address,
+                                     url.hostname,
+                                     APR_UNSPEC, url.port, 0, serf_sess->pool);
+      if (status)
+        {
+          return svn_error_wrap_apr(status,
+                                    _("Could not lookup hostname `%s'"),
+                                    url.hostname);
+        }
+    }
+  else
+    {
+      /* Create an address with unresolved hostname. */
+      apr_sockaddr_t *sa = apr_pcalloc(serf_sess->pool, sizeof(apr_sockaddr_t));
+      sa->pool = serf_sess->pool;
+      sa->hostname = apr_pstrdup(serf_sess->pool, url.hostname);
+      sa->port = url.port;
+      sa->family = APR_UNSPEC;
+      serf_sess->conns[0]->address = sa;
     }
 
   serf_sess->conns[0]->using_ssl = serf_sess->using_ssl;
@@ -441,6 +456,17 @@ svn_ra_serf__open(svn_ra_session_t *session,
   serf_sess->conns[0]->hostinfo = url.hostinfo;
   serf_sess->conns[0]->auth_header = NULL;
   serf_sess->conns[0]->auth_value = NULL;
+  serf_sess->conns[0]->useragent = NULL;
+
+  /* create the user agent string */
+  if (callbacks->get_client_string)
+    callbacks->get_client_string(callback_baton, &client_string, pool);
+
+  if (client_string)
+    serf_sess->conns[0]->useragent = apr_pstrcat(pool, USER_AGENT, "/",
+                                                 client_string, NULL);
+  else
+    serf_sess->conns[0]->useragent = USER_AGENT;
 
   /* go ahead and tell serf about the connection. */
   serf_sess->conns[0]->conn =

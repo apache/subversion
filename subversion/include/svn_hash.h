@@ -212,6 +212,18 @@ svn_error_t *svn_hash_keys(apr_array_header_t **array,
                            apr_pool_t *pool);
 
 /**
+ * Set @a hash to a new hash whose keys come from the items in @a keys
+ * (an array of <tt>const char *</tt> items), and whose values are
+ * match their corresponding key.  Use @a pool for all allocations
+ * (including @a hash, its keys, and its values).
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_hash_from_cstring_keys(apr_hash_t **hash,
+                                        const apr_array_header_t *keys,
+                                        apr_pool_t *pool);
+
+/**
  * Clear any key/value pairs in the hash table.  A wrapper for a
  * apr_hash_clear(), which isn't available until APR 1.3.0.
  *

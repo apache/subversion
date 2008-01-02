@@ -2222,6 +2222,8 @@ static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
     *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_MERGEINFO);
   else if (strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0)
     *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_LOG_REVPROPS);
+  else if (strcmp(capability, SVN_RA_CAPABILITY_PARTIAL_REPLAY) == 0)
+    *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_PARTIAL_REPLAY);
   else  /* Don't know any other capabilities, so error. */
     {
       return svn_error_createf

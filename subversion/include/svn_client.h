@@ -857,6 +857,10 @@ typedef struct svn_client_ctx_t
   svn_wc_conflict_resolver_func_t conflict_func;
   void *conflict_baton;
 
+  /** Custom client name string, or @c null.
+   * @since New in 1.5. */
+  const char *client_name;
+
 } svn_client_ctx_t;
 
 /** @} end group: Client context management */
@@ -3796,7 +3800,7 @@ svn_client_add_to_changelist(const apr_array_header_t *paths,
  * If a path is not already a member of @a changelist, attempt to
  * throw a notification warning that the path has been skipped.
  *
- * If @a changelist is NULL, then be more lax: for each path, remove
+ * If @a changelist is @c null, then be more lax: for each path, remove
  * it from whatever changelist it's already a member of.
  *
  * @note This metadata is purely a client-side "bookkeeping"
@@ -3811,53 +3815,39 @@ svn_client_remove_from_changelist(const apr_array_header_t *paths,
                                   apr_pool_t *pool);
 
 /**
- * Beginning at @a root_path, seek and discover every path which
- * belongs to @a changelist_name.  Return the list of paths in @a
- * *paths.  If no matching paths are found, return an empty array.
- *
- * If @a ctx->cancel_func is non-NULL, invoke it passing @a ctx->cancel_baton
- * during the recursive walk.
- *
- * @since New in 1.5.
- */
-svn_error_t *
-svn_client_get_changelist(apr_array_header_t **paths,
-                          const char *changelist_name,
-                          const char *root_path,
-                          svn_client_ctx_t *ctx,
-                          apr_pool_t *pool);
-
-/**
- * The callback type used by @a svn_client_get_changelist_streamy.
+ * The callback type used by @a svn_client_get_changelist
  *
  * On each invocation, @a path is a newly discovered member of the
  * changelist, and @a baton is a private function closure.
  *
  * @since New in 1.5.
  */
-typedef svn_error_t *(*svn_changelist_receiver_t)
-  (void *baton,
-   const char *path);
+typedef svn_error_t *(*svn_changelist_receiver_t) (void *baton,
+                                                   const char *path,
+                                                   const char *changelist,
+                                                   apr_pool_t *pool);
 
 /**
- * A "streamy" version of @a svn_client_get_changelist:
+ * Beginning at @a path, crawl to @a depth to discover every path in
+ * or under @a path which belongs to one of the changelists in @a
+ * changelists (an array of <tt>const char *</tt> changelist names).
+ * If @a changelists is @c null, discover paths with any changelist.
+ * Call @a callback_func (with @a callback_baton) each time a
+ * changelist-having path is discovered.
  *
- * Beginning at @a root_path, seek and discover every path which
- * belongs to @a changelist_name.  Call @a callback_func (with @a
- * callback_baton) each time a changelist member is found.
- *
- * If @a ctx->cancel_func is non-NULL, invoke it passing @a ctx->cancel_baton
- * during the recursive walk.
+ * If @a ctx->cancel_func is not @c null, invoke it passing @a
+ * ctx->cancel_baton during the recursive walk.
  *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_get_changelist_streamy(svn_changelist_receiver_t callback_func,
-                                  void *callback_baton,
-                                  const char *changelist_name,
-                                  const char *root_path,
-                                  svn_client_ctx_t *ctx,
-                                  apr_pool_t *pool);
+svn_client_get_changelists(const char *path,
+                           const apr_array_header_t *changelists,
+                           svn_depth_t depth,
+                           svn_changelist_receiver_t callback_func,
+                           void *callback_baton,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *pool);
 
 /** @} */
 

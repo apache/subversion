@@ -41,7 +41,7 @@ Item = svntest.wc.StateItem
 def status_unversioned_file_in_current_dir(sbox):
   "status on unversioned file in current directory"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   os.chdir(wc_dir)
@@ -116,7 +116,7 @@ def status_update_with_nested_adds(sbox):
 def status_shows_all_in_current_dir(sbox):
   "status -vN shows all items in current directory"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   os.chdir(wc_dir)
@@ -132,7 +132,7 @@ def status_shows_all_in_current_dir(sbox):
 def status_missing_file(sbox):
   "status with a versioned file missing"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   os.chdir(wc_dir)
@@ -159,7 +159,7 @@ def status_missing_file(sbox):
 def status_type_change(sbox):
   "status on versioned items whose type has changed"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   os.chdir(wc_dir)
@@ -206,7 +206,7 @@ def status_type_change(sbox):
 def status_type_change_to_symlink(sbox):
   "status on versioned items replaced by symlinks"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   os.chdir(wc_dir)
@@ -276,7 +276,7 @@ def status_with_new_files_pending(sbox):
 def status_for_unignored_file(sbox):
   "status for unignored file and directory"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   os.chdir(wc_dir)
@@ -313,7 +313,7 @@ def status_for_unignored_file(sbox):
 def status_for_nonexistent_file(sbox):
   "status on missing and unversioned file"
 
-  sbox.build()
+  sbox.build(read_only = True)
 
   wc_dir = sbox.wc_dir
 
@@ -663,7 +663,7 @@ use-commit-times = yes
 def status_on_unversioned_dotdot(sbox):
   "status on '..' where '..' is not versioned"
   # See issue #1617 (and #2030).
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   new_dir = os.path.join(wc_dir, 'new_dir')
@@ -745,7 +745,7 @@ def status_on_partially_nonrecursive_wc(sbox):
 def missing_dir_in_anchor(sbox):
   "a missing dir in the anchor"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   foo_path = os.path.join(wc_dir, 'foo')
@@ -765,7 +765,7 @@ def missing_dir_in_anchor(sbox):
 def status_in_xml(sbox):
   "status output in XML format"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   file_name = "iota"
@@ -842,7 +842,7 @@ def status_ignored_dir(sbox):
 
 def status_unversioned_dir(sbox):
   "status on unversioned dir (issue 2030)"
-  sbox.build()
+  sbox.build(read_only = True)
   dir = sbox.repo_dir
   expected_err = ["svn: warning: '" + dir + "' is not a working copy\n",
                   "svn: warning: '" + dir + "' is not a working copy\n"]
@@ -852,7 +852,7 @@ def status_unversioned_dir(sbox):
 
 def status_missing_dir(sbox):
   "status with a versioned directory missing"
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   a_d_g = os.path.join(wc_dir, "A", "D", "G")
 
@@ -1271,7 +1271,7 @@ def change_files_and_commit(wc_dir, files, baserev=1):
 def status_depth_local(sbox):
   "run 'status --depth=X' with local changes"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   A_path = os.path.join(wc_dir, 'A')
   D_path = os.path.join(A_path, 'D')
@@ -1470,7 +1470,7 @@ def status_dash_u_deleted_directories(sbox):
 def status_dash_u_type_change(sbox):
   "status -u on versioned items whose type changed"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   os.chdir(wc_dir)

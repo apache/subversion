@@ -36,6 +36,7 @@
 #include "diff.h"
 #include "svn_private_config.h"
 #include "svn_path.h"
+#include "svn_ctype.h"
 
 
 /* A token, i.e. a line read from a file. */
@@ -546,6 +547,7 @@ static const apr_getopt_option_t diff_options[] =
   { "ignore-space-change", 'b', 0, NULL },
   { "ignore-all-space", 'w', 0, NULL },
   { "ignore-eol-style", SVN_DIFF__OPT_IGNORE_EOL_STYLE, 0, NULL },
+  { "show-c-function", 'p', 0, NULL },
   /* ### For compatibility; we don't support the argument to -u, because
    * ### we don't have optional argument support. */
   { "unified", 'u', 0, NULL },
@@ -597,6 +599,9 @@ svn_diff_file_options_parse(svn_diff_file_options_t *options,
           break;
         case SVN_DIFF__OPT_IGNORE_EOL_STYLE:
           options->ignore_eol_style = TRUE;
+          break;
+        case 'p':
+          options->show_c_function = TRUE;
           break;
         default:
           break;
@@ -716,6 +721,9 @@ svn_diff_file_diff4(svn_diff_t **diff,
 
 /** Display unified context diffs **/
 
+/* Maximum length of the extra context to show when show_c_function is set.
+ * GNU diff uses 40, let's be brave and use 50 instead. */
+#define SVN_DIFF__EXTRA_CONTEXT_LENGTH 50
 typedef struct svn_diff__file_output_baton_t
 {
   svn_stream_t *output_stream;
@@ -739,6 +747,16 @@ typedef struct svn_diff__file_output_baton_t
   apr_off_t   hunk_length[2];
   svn_stringbuf_t *hunk;
 
+  /* Should we emit C functions in the unified diff header */
+  svn_boolean_t show_c_function;
+  /* Extra strings to skip over if we match. */
+  apr_array_header_t *extra_skip_match;
+  /* "Context" to append to the @@ line when the show_c_function option
+   * is set. */
+  svn_stringbuf_t *extra_context;
+  /* Extra context for the current hunk. */
+  char hunk_extra_context[SVN_DIFF__EXTRA_CONTEXT_LENGTH + 1];
+
   apr_pool_t *pool;
 } svn_diff__file_output_baton_t;
 
@@ -761,6 +779,8 @@ output_unified_line(svn_diff__file_output_baton_t *baton,
   svn_error_t *err;
   svn_boolean_t bytes_processed = FALSE;
   svn_boolean_t had_cr = FALSE;
+  /* Are we collecting extra context? */
+  svn_boolean_t collect_extra = FALSE;
 
   length = baton->length[idx];
   curp = baton->curp[idx];
@@ -799,6 +819,17 @@ output_unified_line(svn_diff__file_output_baton_t *baton,
                 default:
                   break;
                 }
+
+              if (baton->show_c_function
+                  && (type == svn_diff__file_output_unified_skip
+                      || type == svn_diff__file_output_unified_context)
+                  && (svn_ctype_isalpha(*curp) || *curp == '$' || *curp == '_')
+                  && !svn_cstring_match_glob_list(curp,
+                                                  baton->extra_skip_match))
+                {
+                  svn_stringbuf_setempty(baton->extra_context);
+                  collect_extra = TRUE;
+                }
             }
 
           eol = find_eol_start(curp, length);
@@ -825,6 +856,11 @@ output_unified_line(svn_diff__file_output_baton_t *baton,
                     {
                       svn_stringbuf_appendbytes(baton->hunk, curp, len);
                     }
+                  if (collect_extra)
+                    {
+                      svn_stringbuf_appendbytes(baton->extra_context,
+                                                curp, len);
+                    }
 
                   baton->curp[idx] = eol;
                   baton->length[idx] = length;
@@ -838,6 +874,11 @@ output_unified_line(svn_diff__file_output_baton_t *baton,
           if (type != svn_diff__file_output_unified_skip)
             {
               svn_stringbuf_appendbytes(baton->hunk, curp, length);
+            }
+
+          if (collect_extra)
+            {
+              svn_stringbuf_appendbytes(baton->extra_context, curp, length);
             }
 
           bytes_processed = TRUE;
@@ -858,6 +899,8 @@ output_unified_line(svn_diff__file_output_baton_t *baton,
                 {
                   svn_stringbuf_appendbytes(baton->hunk, curp, 1);
                 }
+              /* We don't append the LF to extra_context, since it would
+               * just be stripped anyway. */
               ++curp;
               --length;
             }
@@ -960,7 +1003,10 @@ output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
 
   SVN_ERR(svn_stream_printf_from_utf8(baton->output_stream,
                                       baton->header_encoding,
-                                      baton->pool, " @@" APR_EOL_STR));
+                                      baton->pool, " @@%s%s" APR_EOL_STR,
+                                      baton->hunk_extra_context[0]
+                                      ? " " : "",
+                                      baton->hunk_extra_context));
 
   /* Output the hunk content */
   hunk_len = baton->hunk->len;
@@ -1010,6 +1056,27 @@ output_unified_diff_modified(void *baton,
         {
           SVN_ERR(output_unified_line(output_baton,
                                       svn_diff__file_output_unified_skip, 0));
+        }
+
+      if (output_baton->show_c_function)
+        {
+          int p;
+
+          /* Save the extra context for later use.
+           * Note that the last byte of the hunk_extra_context array is never
+           * touched after it is zero-initialized, so the array is always
+           * 0-terminated. */
+          strncpy(output_baton->hunk_extra_context,
+                  output_baton->extra_context->data,
+                  SVN_DIFF__EXTRA_CONTEXT_LENGTH);
+          /* Trim whitespace at the end, most notably to get rid of any
+           * newline characters. */
+          p = strlen(output_baton->hunk_extra_context);
+          while (p > 0
+                 && svn_ctype_isspace(output_baton->hunk_extra_context[p - 1]))
+            {
+              output_baton->hunk_extra_context[--p] = '\0';
+            }
         }
     }
 
@@ -1084,6 +1151,7 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
                               const char *modified_header,
                               const char *header_encoding,
                               const char *relative_to_dir,
+                              svn_boolean_t show_c_function,
                               apr_pool_t *pool)
 {
   svn_diff__file_output_baton_t baton;
@@ -1091,6 +1159,8 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
 
   if (svn_diff_contains_diffs(diff))
     {
+      const char **c;
+
       memset(&baton, 0, sizeof(baton));
       baton.output_stream = output_stream;
       baton.pool = pool;
@@ -1098,6 +1168,16 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
       baton.path[0] = original_path;
       baton.path[1] = modified_path;
       baton.hunk = svn_stringbuf_create("", pool);
+      baton.show_c_function = show_c_function;
+      baton.extra_context = svn_stringbuf_create("", pool);
+      baton.extra_skip_match = apr_array_make(pool, 3, sizeof(char **));
+
+      c = apr_array_push(baton.extra_skip_match);
+      *c = "public:*";
+      c = apr_array_push(baton.extra_skip_match);
+      *c = "private:*";
+      c = apr_array_push(baton.extra_skip_match);
+      *c = "protected:*";
 
       SVN_ERR(svn_utf_cstring_from_utf8_ex2(&baton.context_str, " ",
                                             header_encoding, pool));
@@ -1187,7 +1267,7 @@ svn_diff_file_output_unified2(svn_stream_t *output_stream,
   return svn_diff_file_output_unified3(output_stream, diff,
                                        original_path, modified_path,
                                        original_header, modified_header,
-                                       header_encoding, NULL, pool);
+                                       header_encoding, NULL, FALSE, pool);
 }
 
 svn_error_t *

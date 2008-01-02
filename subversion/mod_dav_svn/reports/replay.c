@@ -485,16 +485,14 @@ dav_svn__replay_report(const dav_resource *resource,
                                 resource->pool);
 
   {
-    const char *action;
+    const char *action, *log_base_dir;
 
     if (base_dir && base_dir[0] != '\0')
-      action = apr_psprintf(resource->info->r->pool,
-                            "replay %s r%ld",
-                            svn_path_uri_encode(base_dir,
-                                                resource->info->r->pool), rev);
+      log_base_dir = svn_path_uri_encode(base_dir, resource->info->r->pool);
     else
-      action = apr_psprintf(resource->info->r->pool, "replay r%ld", rev);
-
+      log_base_dir = "/";
+    action = apr_psprintf(resource->info->r->pool, "replay %s r%ld",
+                          log_base_dir, rev);
     dav_svn__operational_log(resource->info, action);
   }
 

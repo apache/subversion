@@ -586,13 +586,11 @@ module Svn
         Client.add_to_changelist(paths, changelist_name, self)
       end
 
-      def changelist(changelist_name, root_path, &block)
-        args = [changelist_name, root_path, self]
-        if block
-          Client.get_changelist_streamy(block, *args)
-        else
-          Client.get_changelist(*args)
-        end
+      def changelist(changelist_name, root_path, depth=nil, &block)
+        lists_contents = Hash.new{|h,k| h[k]=[]}
+        block ||= lambda{|path, changelist| lists_contents[changelist] << path }
+        Client.get_changelists(root_path, [changelist_name], depth, block, self)
+        lists_contents
       end
 
       def remove_from_changelist(changelist_name, *paths)

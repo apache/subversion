@@ -1135,15 +1135,15 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
     }
     else if (SvPOK($input)) {
         char *input = SvPV_nolen($input);
-        if (strcasecmp(input, "BASE") == 0)
+        if (svn_cstring_casecmp(input, "BASE") == 0)
             rev.kind = svn_opt_revision_base;
-        else if (strcasecmp(input, "HEAD") == 0)
+        else if (svn_cstring_casecmp(input, "HEAD") == 0)
             rev.kind = svn_opt_revision_head;
-        else if (strcasecmp(input, "WORKING") == 0)
+        else if (svn_cstring_casecmp(input, "WORKING") == 0)
             rev.kind = svn_opt_revision_working;
-        else if (strcasecmp(input, "COMMITTED") == 0)
+        else if (svn_cstring_casecmp(input, "COMMITTED") == 0)
             rev.kind = svn_opt_revision_committed;
-        else if (strcasecmp(input, "PREV") == 0)
+        else if (svn_cstring_casecmp(input, "PREV") == 0)
             rev.kind = svn_opt_revision_previous;
         else if (*input == '{') {
             svn_boolean_t matched;

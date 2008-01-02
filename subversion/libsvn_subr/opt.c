@@ -553,19 +553,19 @@ svn_opt_subcommand_help(const char *subcommand,
 static int
 revision_from_word(svn_opt_revision_t *revision, const char *word)
 {
-  if (strcasecmp(word, "head") == 0)
+  if (svn_cstring_casecmp(word, "head") == 0)
     {
       revision->kind = svn_opt_revision_head;
     }
-  else if (strcasecmp(word, "prev") == 0)
+  else if (svn_cstring_casecmp(word, "prev") == 0)
     {
       revision->kind = svn_opt_revision_previous;
     }
-  else if (strcasecmp(word, "base") == 0)
+  else if (svn_cstring_casecmp(word, "base") == 0)
     {
       revision->kind = svn_opt_revision_base;
     }
-  else if (strcasecmp(word, "committed") == 0)
+  else if (svn_cstring_casecmp(word, "committed") == 0)
     {
       revision->kind = svn_opt_revision_committed;
     }

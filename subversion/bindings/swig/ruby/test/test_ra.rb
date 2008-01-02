@@ -365,8 +365,8 @@ class SvnRaTest < Test::Unit::TestCase
     branch = File.join(@wc_path, "branch")
     trunk_path = File.join(trunk, file)
     branch_path = File.join(branch, file)
-    trunk_uri = "/trunk"
-    branch_uri = "/branch"
+    session_relative_trunk_path = "trunk"
+    repository_branch_path = "/branch"
 
     ctx = make_context(log)
     ctx.mkdir(trunk, branch)
@@ -382,17 +382,18 @@ class SvnRaTest < Test::Unit::TestCase
     callbacks = Svn::Ra::Callbacks.new(ctx.auth_baton)
     session = Svn::Ra::Session.open(@repos_uri, config, callbacks)
 
-    assert_nil(session.mergeinfo(trunk_uri))
+    assert_nil(session.mergeinfo(session_relative_trunk_path))
     ctx.merge(branch, rev1, branch, rev2, trunk)
-    assert_nil(session.mergeinfo(trunk_uri))
+    assert_nil(session.mergeinfo(session_relative_trunk_path))
 
     rev3 = ctx.commit(@wc_path).revision
-    mergeinfo = session.mergeinfo(trunk_uri)
-    assert_equal([trunk_uri], mergeinfo.keys)
-    trunk_mergeinfo = mergeinfo[trunk_uri]
-    assert_equal([branch_uri], trunk_mergeinfo.keys)
+    mergeinfo = session.mergeinfo(session_relative_trunk_path)
+    assert_equal([session_relative_trunk_path], mergeinfo.keys)
+    trunk_mergeinfo = mergeinfo[session_relative_trunk_path]
+    assert_equal([repository_branch_path], trunk_mergeinfo.keys)
     assert_equal([[1, 2, true]],
-                 trunk_mergeinfo[branch_uri].collect {|range| range.to_a})
+                 trunk_mergeinfo[repository_branch_path].collect {|range|
+                    range.to_a})
 
     ctx.rm(branch_path)
     rev4 = ctx.commit(@wc_path).revision
@@ -401,11 +402,12 @@ class SvnRaTest < Test::Unit::TestCase
     assert(!File.exist?(trunk_path))
     rev5 = ctx.commit(@wc_path).revision
 
-    mergeinfo = session.mergeinfo(trunk_uri, rev5)
-    assert_equal([trunk_uri], mergeinfo.keys)
-    trunk_mergeinfo = mergeinfo[trunk_uri]
-    assert_equal([branch_uri], trunk_mergeinfo.keys)
+    mergeinfo = session.mergeinfo(session_relative_trunk_path, rev5)
+    assert_equal([session_relative_trunk_path], mergeinfo.keys)
+    trunk_mergeinfo = mergeinfo[session_relative_trunk_path]
+    assert_equal([repository_branch_path], trunk_mergeinfo.keys)
     assert_equal([[1, 2, true], [3, 4, true]],
-                 trunk_mergeinfo[branch_uri].collect {|range| range.to_a})
+                 trunk_mergeinfo[repository_branch_path].collect {|range|
+                    range.to_a})
   end
 end

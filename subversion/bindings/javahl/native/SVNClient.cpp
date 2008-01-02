@@ -37,6 +37,7 @@
 #include "LogMessageCallback.h"
 #include "InfoCallback.h"
 #include "StatusCallback.h"
+#include "ChangelistCallback.h"
 #include "ListCallback.h"
 #include "JNIByteArray.h"
 #include "CommitMessage.h"
@@ -1575,37 +1576,29 @@ void SVNClient::removeFromChangelist(Targets &srcPaths, const char *changelist)
                                                   requestPool.pool()), );
 }
 
-jobjectArray SVNClient::getChangelist(const char *changelist,
-                                      const char *rootPath)
+void SVNClient::getChangelists(const char *rootPath,
+                               std::vector<std::string> &changelists,
+                               svn_depth_t depth,
+                               ChangelistCallback *callback)
 {
     Pool requestPool;
     svn_client_ctx_t *ctx = getContext(NULL);
-    apr_array_header_t *paths;
 
-    SVN_JNI_ERR(svn_client_get_changelist(&paths, changelist, rootPath,
-                                          ctx, requestPool.pool()),
-                NULL);
+    apr_array_header_t *cl_changelists 
+      = apr_array_make(requestPool.pool(), changelists.size(), sizeof(char *));
 
-    JNIEnv *env = JNIUtil::getEnv();
-    jclass clazz = env->FindClass("java/lang/String");
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    jobjectArray jpaths = env->NewObjectArray(paths->nelts, clazz, NULL);
-
-    for (int i = 0; i < paths->nelts; ++i)
+    std::vector<std::string>::const_iterator it;
+    for (it = changelists.begin(); it < changelists.end(); ++it)
     {
-        const char *path = APR_ARRAY_IDX(paths, i, const char *);
-        jstring jpath = JNIUtil::makeJString(path);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-
-        env->SetObjectArrayElement(jpaths, i, jpath);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
+        APR_ARRAY_PUSH(cl_changelists, const char *) = it->c_str();
+        if (JNIUtil::isExceptionThrown())
+            return;
     }
 
-    return jpaths;
+    SVN_JNI_ERR(svn_client_get_changelists(rootPath, cl_changelists, depth,
+                                           ChangelistCallback::callback,
+                                           callback, ctx, requestPool.pool()),
+                );
 }
 
 jobject SVNClient::createJavaLock(const svn_lock_t *lock)

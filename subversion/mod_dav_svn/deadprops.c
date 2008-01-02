@@ -172,11 +172,10 @@ save_value(dav_db *db, const dav_prop_name *name, const svn_string_t *value)
         /* Tell the logging subsystem about the revprop change. */
         dav_svn__operational_log(db->resource->info,
                                  apr_psprintf(db->resource->pool,
-                                   "revprop-change r%ld %s %s",
+                                   "revprop-change r%ld %s",
                                    db->resource->info->root.rev,
                                    svn_path_uri_encode(propname,
-                                                       db->resource->pool),
-                                   db->resource->info->repos->repo_name));
+                                                       db->resource->pool)));
       }
   else
     serr = svn_repos_fs_change_node_prop(db->resource->info->root.root,
@@ -507,6 +506,9 @@ static void get_name(dav_db *db, dav_prop_name *pname)
 static dav_error *
 db_first_name(dav_db *db, dav_prop_name *pname)
 {
+  /* for operational logging */
+  char *action = NULL;
+
   /* if we don't have a copy of the properties, then get one */
   if (db->props == NULL)
     {
@@ -520,16 +522,24 @@ db_first_name(dav_db *db, dav_prop_name *pname)
                                        db->resource->info->root.txn,
                                        db->p);
           else
-            serr = svn_repos_fs_revision_proplist
-              (&db->props,
-               db->resource->info->repos->repos,
-               db->resource->info->root.rev,
-               db->authz_read_func,
-               db->authz_read_baton,
-               db->p);
+            {
+              action = apr_psprintf(db->resource->pool, "revprop-list r%ld",
+                                    db->resource->info->root.rev);
+              serr = svn_repos_fs_revision_proplist
+                (&db->props,
+                 db->resource->info->repos->repos,
+                 db->resource->info->root.rev,
+                 db->authz_read_func,
+                 db->authz_read_baton,
+                 db->p);
+            }
         }
       else
         {
+          action = apr_psprintf(db->resource->pool, "prop-list %s@%ld",
+                            svn_path_uri_encode(db->resource->info->repos_path,
+                                                db->resource->pool),
+                            db->resource->info->root.rev);
           serr = svn_fs_node_proplist(&db->props,
                                       db->resource->info->root.root,
                                       get_repos_path(db->resource->info),
@@ -547,6 +557,10 @@ db_first_name(dav_db *db, dav_prop_name *pname)
 
   /* fetch the first key */
   get_name(db, pname);
+
+  /* If we have a high-level action to log, do so. */
+  if (action != NULL)
+    dav_svn__operational_log(db->resource->info, action);
 
   return NULL;
 }

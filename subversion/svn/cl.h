@@ -154,7 +154,9 @@ typedef struct svn_cl__opt_state_t
   const char *native_eol;        /* override system standard eol marker */
   svn_boolean_t summarize;       /* create a summary of a diff */
   svn_boolean_t remove;          /* deassociate a changelist */
-  const char *changelist;        /* operate on this changelist */
+  apr_array_header_t *changelists; /* changelist filters */
+  const char *changelist;        /* operate on this changelist
+                                    THIS IS TEMPORARY (LAST OF CHANGELISTS) */
   svn_boolean_t keep_changelist; /* don't remove changelist after commit */
   svn_boolean_t keep_local;      /* delete path only from repository */
   svn_boolean_t all_revprops;    /* retrieve all props */
@@ -549,6 +551,12 @@ void svn_cl__check_boolean_prop_val(const char *propname,
                                     const char *propval,
                                     apr_pool_t *pool);
 
+/* De-streamifying wrapper around svn_client_get_changelist_streamy(). */
+svn_error_t *svn_cl__get_changelist(apr_array_header_t **paths_p,
+                                    const char *changelist_name,
+                                    const char *path,
+                                    svn_client_ctx_t *ctx,
+                                    apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

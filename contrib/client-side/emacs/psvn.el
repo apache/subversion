@@ -5025,6 +5025,7 @@ entry for file with defun.
                     ["Show Changeset" svn-log-view-diff t]
                     ["Ediff file at point" svn-log-ediff-specific-revision t]
                     ["Find file at point" svn-log-find-file-at-point t]
+                    ["Get older revision for file at point" svn-log-get-specific-revision t]
                     ["Edit log message" svn-log-edit-log-entry t]))
 
 (defun svn-log-view-popup-menu (event)
@@ -5079,7 +5080,9 @@ Commands:
 (defun svn-log-file-name-at-point (respect-checkout-prefix-path)
   (let ((full-file-name)
         (file-name)
-        (checkout-prefix-path (when respect-checkout-prefix-path (svn-status-checkout-prefix-path))))
+        (checkout-prefix-path (if respect-checkout-prefix-path
+                                  (svn-status-checkout-prefix-path)
+                                "")))
     (save-excursion
       (beginning-of-line)
       (when (looking-at "   [MA] /\\(.+\\)$")
@@ -5133,7 +5136,7 @@ When called with a prefix argument, ask the user for the revision."
   ;; (message "%S" (svn-status-make-line-info (svn-log-file-name-at-point t)))
   (let ((default-directory (svn-status-base-dir)))
     (svn-status-get-specific-revision-internal
-     (list (svn-status-make-line-info (svn-log-file-name-at-point nil)))
+     (list (svn-status-make-line-info (svn-log-file-name-at-point t)))
      (svn-log-revision-at-point)
      nil)))
 

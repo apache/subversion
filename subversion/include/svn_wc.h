@@ -1759,6 +1759,7 @@ typedef struct svn_wc_entry_t
   /* IMPORTANT: If you extend this structure, check the following functions in
    * subversion/libsvn_wc/entries.c, to see if you need to extend them as well.
    *
+   * svn_wc__atts_to_entry()
    * svn_wc_entry_dup()
    * alloc_entry()
    * read_entry()
@@ -3570,9 +3571,10 @@ svn_boolean_t svn_wc_is_entry_prop(const char *name);
 
 /** Callback type used by @c svn_wc_canonicalize_svn_prop.
  *
- * It should set @a mime_type to the value of @a SVN_PROP_MIME_TYPE
- * for the path passed to @c svn_wc_canonicalize_svn_prop (allocated
- * from @a pool), and then write the contents of the file to @a
+ * If @a mime_type is non-null, it sets @a *mime_type to the value of
+ * @a SVN_PROP_MIME_TYPE for the path passed to @c
+ * svn_wc_canonicalize_svn_prop (allocated from @a pool).  If @a
+ * stream is non-null, it writes the contents of the file to @a
  * stream.
  *
  * (Currently, this is used if you are attempting to set the @a

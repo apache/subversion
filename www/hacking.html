@@ -1027,12 +1027,12 @@ for portability to non-Unix platforms.</p>
 <li><p>Exceptions are stored in svn_error_t structures:</p>
 
 <pre>
-typedef struct svn_error
+typedef struct svn_error_t
 {
   apr_status_t apr_err;      /* APR error value, possibly SVN_ custom err */
   const char *message;       /* details from producer of error */
-  struct svn_error *child;   /* ptr to the error we "wrap" */
-  ap_pool_t *pool;           /* place to generate message strings from */
+  struct svn_error_t *child; /* ptr to the error we "wrap" */
+  apr_pool_t *pool;          /* place to generate message strings from */
   const char *file;          /* Only used iff SVN_DEBUG */
   long line;                 /* Only used iff SVN_DEBUG */
 } svn_error_t;

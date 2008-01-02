@@ -568,7 +568,7 @@ def no_copy_overwrites(sbox):
 def no_wc_copy_overwrites(sbox):
   "svn cp PATH PATH cannot overwrite destination"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   # File simply missing
@@ -756,7 +756,7 @@ def copy_delete_commit(sbox):
 def mv_and_revert_directory(sbox):
   "move and revert a directory"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   F_path = os.path.join(wc_dir, 'A', 'B', 'F')
@@ -1229,7 +1229,7 @@ def resurrect_deleted_file(sbox):
 def diff_repos_to_wc_copy(sbox):
   "copy file from repos to working copy and run diff"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   iota_repos_path = sbox.repo_url + '/iota'
@@ -1373,7 +1373,7 @@ def revision_kinds_local_source(sbox):
 
 def copy_over_missing_file(sbox):
   "copy over a missing file"
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   mu_path = os.path.join(wc_dir, 'A', 'mu')
@@ -1486,7 +1486,7 @@ def double_uri_escaping_1814(sbox):
 def wc_to_wc_copy_between_different_repos(sbox):
   "wc to wc copy attempts between different repos"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   sbox2 = sbox.clone_dependent()
@@ -1696,7 +1696,7 @@ def old_dir_url_to_url(sbox):
 def wc_copy_dir_to_itself(sbox):
   "copy wc dir to itself"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   dnames = ['A','A/B']
 
@@ -1794,7 +1794,7 @@ def repos_to_wc_copy_replace_with_props(sbox):
 def delete_replaced_file(sbox):
   "delete file scheduled for replace"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   # File scheduled for deletion.
@@ -1827,7 +1827,7 @@ def delete_replaced_file(sbox):
 def mv_unversioned_file(sbox):
   "move an unversioned file"
   # Issue #2436: Attempting to move an unversioned file would seg fault.
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   unver_path_1 = os.path.join(wc_dir, 'unversioned1')
@@ -2413,7 +2413,7 @@ def move_file_back_and_forth(sbox):
 def move_dir_back_and_forth(sbox):
   "move a moved dir back to original location"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   D_path = os.path.join(wc_dir, 'A', 'D')
@@ -2834,7 +2834,7 @@ def move_to_relative_paths(sbox):
 def move_from_relative_paths(sbox):
   "move file using relative src path names"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   F_path = os.path.join(wc_dir, 'A', 'B', 'F')
   beta_rel_path = os.path.join('..', 'E', 'beta')
@@ -2856,7 +2856,7 @@ def move_from_relative_paths(sbox):
 def copy_to_relative_paths(sbox):
   "copy file using relative dst path names"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   rel_path = os.path.join('..', '..', '..')
@@ -2877,7 +2877,7 @@ def copy_to_relative_paths(sbox):
 def copy_from_relative_paths(sbox):
   "copy file using relative src path names"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   F_path = os.path.join(wc_dir, 'A', 'B', 'F')
   beta_rel_path = os.path.join('..', 'E', 'beta')

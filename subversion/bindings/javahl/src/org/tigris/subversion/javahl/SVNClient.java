@@ -1239,7 +1239,8 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native String[] getChangelist(String changelist, String rootPath)
+    public native void getChangelists(String rootPath, String[] changelists,
+                                      int depth, ChangelistCallback callback)
             throws ClientException;
 
     /**

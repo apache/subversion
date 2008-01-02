@@ -58,6 +58,9 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
   svn_mergeinfo_inheritance_t inherit = svn_mergeinfo_explicit;
   apr_array_header_t *paths
     = apr_array_make(resource->pool, 0, sizeof(const char *));
+  /* for high-level logging */
+  svn_stringbuf_t *space_separated_paths =
+    svn_stringbuf_create("", resource->pool);
 
   /* Sanity check. */
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
@@ -93,6 +96,13 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
           target = svn_path_join(resource->info->repos_path, rel_path,
                                  resource->pool);
           (*((const char **)(apr_array_push(paths)))) = target;
+          /* Gather a formatted list of paths to include in our
+             operational logging. */
+          if (space_separated_paths->len > 1)
+            svn_stringbuf_appendcstr(space_separated_paths, " ");
+          svn_stringbuf_appendcstr(space_separated_paths,
+                                   svn_path_uri_encode(target,
+                                                       resource->pool));
         }
       else if (strcmp(child->name, SVN_DAV__INCLUDE_DESCENDANTS) == 0)
         {
@@ -184,19 +194,9 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
  cleanup:
 
   /* We've detected a 'high level' svn action to log. */
-  if (paths->nelts == 0)
-    action = "get-mergeinfo";
-  else if (paths->nelts == 1)
-    action = apr_psprintf(resource->pool, "get-mergeinfo %s",
-                          svn_path_uri_encode(APR_ARRAY_IDX
-                                              (paths, 0, const char *),
-                                              resource->pool));
-  else
-    action = apr_psprintf(resource->pool, "get-mergeinfo-partial %s",
-                          svn_path_uri_encode(APR_ARRAY_IDX
-                                              (paths, 0, const char *),
-                                              resource->pool));
-
+  action = apr_psprintf(resource->pool, "get-mergeinfo (%s) %s",
+                        space_separated_paths->data,
+                        svn_inheritance_to_word(inherit));
   dav_svn__operational_log(resource->info, action);
 
   /* Flush the contents of the brigade (returning an error only if we

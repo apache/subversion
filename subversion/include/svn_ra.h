@@ -117,6 +117,16 @@ typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t)
   (void *session_baton,
    svn_revnum_t *latest_revnum);
 
+/** A function type which allows the RA layer to ask about any
+ * customizations to the client name string.  This is primarily used
+ * by HTTP-based RA layers wishing to extend the string reported to
+ * Apache/mod_dav_svn via the User-agent HTTP header.
+ */
+typedef svn_error_t *(*svn_ra_get_client_string_func_t)(void *baton,
+                                                        const char **name,
+                                                        apr_pool_t *pool);
+
+
 /**
  * A callback function type for use in @c get_file_revs.
  * @a baton is provided by the caller, @a path is the pathname of the file
@@ -487,6 +497,11 @@ typedef struct svn_ra_callbacks2_t
    * @since New in 1.5
    */
   svn_cancel_func_t cancel_func;
+
+  /** Client string customization callback function
+   * @since New in 1.5
+   */
+  svn_ra_get_client_string_func_t get_client_string;
 
 } svn_ra_callbacks2_t;
 
