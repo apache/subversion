@@ -44,6 +44,7 @@
 #include "StatusCallback.h"
 #include "ListCallback.h"
 #include "ChangelistCallback.h"
+#include "StringArray.h"
 #include "svn_version.h"
 #include "svn_private_config.h"
 #include "version.h"
@@ -278,25 +279,9 @@ Java_org_tigris_subversion_javahl_SVNClient_logMessages
 
   LogMessageCallback callback(jlogMessageCallback);
 
-  // Build the rev prop vector from the Java array.
-  std::vector<std::string> revProps;
-
-  jint arraySize = env->GetArrayLength(jrevProps);
+  StringArray revProps(jrevProps);
   if (JNIUtil::isExceptionThrown())
     return;
-
-  for (int i = 0; i < arraySize; ++i)
-    {
-      jobject jrevProp = env->GetObjectArrayElement(jrevProps, i);
-      if (JNIUtil::isExceptionThrown())
-        return;
-
-      JNIStringHolder revProp((jstring)jrevProp);
-      if (JNIUtil::isExceptionThrown())
-        return;
-
-      revProps.push_back(std::string((const char *)revProp));
-    }
 
   cl->logMessages(path, pegRevision, revisionStart, revisionEnd,
                   jstopOnCopy ? true: false, jdisoverPaths ? true : false,
@@ -536,27 +521,9 @@ Java_org_tigris_subversion_javahl_SVNClient_commit
     return -1;
 
   // Build the changelist vector from the Java array.
-  std::vector<std::string> changelists;
-
-  if (jchangelists != NULL)
-    {
-      jint arraySize = env->GetArrayLength(jchangelists);
-      if (JNIUtil::isExceptionThrown())
-        return -1;
-
-      for (int i = 0; i < arraySize; ++i)
-        {
-          jobject jchangelist = env->GetObjectArrayElement(jchangelists, i);
-          if (JNIUtil::isExceptionThrown())
-            return -1;
-
-          JNIStringHolder changelist((jstring)jchangelist);
-          if (JNIUtil::isExceptionThrown())
-            return -1;
-
-          changelists.push_back(std::string((const char *)changelist));
-        }
-    }
+  StringArray changelists(jchangelists);
+  if (JNIUtil::isExceptionThrown())
+    return -1;
 
   return cl->commit(targets, message, (svn_depth_t)jdepth,
                     jnoUnlock ? true : false, jkeepChangelist ? true : false,
@@ -1612,25 +1579,9 @@ Java_org_tigris_subversion_javahl_SVNClient_getChangelists
   if (JNIUtil::isExceptionThrown())
     return;
 
-  // Build the changelist vector from the Java array.
-  std::vector<std::string> changelists;
-
-  jint arraySize = env->GetArrayLength(jchangelists);
+  StringArray changelists(jchangelists);
   if (JNIUtil::isExceptionThrown())
     return;
-
-  for (int i = 0; i < arraySize; ++i)
-    {
-      jobject jchangelist = env->GetObjectArrayElement(jchangelists, i);
-      if (JNIUtil::isExceptionThrown())
-        return;
-
-      JNIStringHolder changelist((jstring)jchangelist);
-      if (JNIUtil::isExceptionThrown())
-        return;
-
-      changelists.push_back(std::string((const char *)changelist));
-    }
 
   ChangelistCallback callback(jchangelistCallback);
   cl->getChangelists(root_path, changelists, (svn_depth_t) jdepth, &callback);
