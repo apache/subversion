@@ -19,8 +19,8 @@
 #ifndef SVN_LIBSVN_CLIENT_MERGEINFO_H
 #define SVN_LIBSVN_CLIENT_MERGEINFO_H
 
-#include <svn_wc.h>
-#include <svn_client.h>
+#include "svn_wc.h"
+#include "svn_client.h"
 
 
 /*** Data Structures ***/
