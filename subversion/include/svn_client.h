@@ -1571,11 +1571,12 @@ svn_error_t *svn_client_import(svn_client_commit_info_t **commit_info_p,
  *
  * Unlock paths in the repository, unless @a keep_locks is TRUE.
  *
- * If @a changelist_name is non-NULL, then use it as a restrictive filter
+ * If @a changelists is non-NULL, it is an array of <tt>const char
+ * *</tt> changelist names used as a restrictive filter
  * on items that are committed;  that is, don't commit anything unless
- * it's a member of changelist @a changelist_name.  After the commit
+ * it's a member of one of those changelists.  After the commit
  * completes successfully, remove changelist associations from the
- * targets, unless @a keep_changelist is set.  If no items are
+ * targets, unless @a keep_changelists is set.  If no items are
  * committed, return an error with @c SVN_ERR_UNKNOWN_CHANGELIST as
  * its root cause.
  *
@@ -1592,8 +1593,8 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *targets,
                    svn_depth_t depth,
                    svn_boolean_t keep_locks,
-                   svn_boolean_t keep_changelist,
-                   const char *changelist_name,
+                   svn_boolean_t keep_changelists,
+                   const apr_array_header_t *changelists,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 

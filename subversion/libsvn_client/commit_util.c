@@ -31,6 +31,7 @@
 #include "svn_props.h"
 #include "svn_md5.h"
 #include "svn_iter.h"
+#include "svn_hash.h"
 
 #include <assert.h>
 #include <stdlib.h>  /* for qsort() */
@@ -184,15 +185,16 @@ static svn_wc_entry_callbacks2_t add_tokens_callbacks = {
   svn_client__default_walker_error_handler
 };
 
-/* Whether CHANGELIST_NAME is NULL, or ENTRY->changelist (which may be
-   NULL) matches CHANGELIST_NAME. */
+/* Return TRUE iff CHANGELISTS is NULL or ENTRY->changelist (which may be
+   NULL) is a key in CHANGELISTS. */
 static APR_INLINE svn_boolean_t
-considered_committable(const char *changelist_name,
+considered_committable(apr_hash_t *changelists,
                        const svn_wc_entry_t *entry)
 {
-  return (changelist_name == NULL ||
-          (entry->changelist &&
-           strcmp(changelist_name, entry->changelist) == 0) ? TRUE : FALSE);
+  return ((changelists == NULL)
+          || (entry->changelist &&
+              apr_hash_get(changelists, entry->changelist, 
+                           APR_HASH_KEY_STRING))) ? TRUE : FALSE;
 }
 
 /* Recursively search for commit candidates in (and under) PATH (with
@@ -213,15 +215,16 @@ considered_committable(const char *changelist_name,
    with history as URL, and add 'deleted' entries to COMMITTABLES as
    items to delete in the copy destination.
 
-   If CHANGELIST_NAME is non-NULL, then use it as a restrictive filter
+   If CHANGELISTS is non-NULL, it is a hash whose keys are const char *
+   changelist names used as a restrictive filter
    when harvesting committables; that is, don't add a path to
-   COMMITTABLES unless it's a member of the changelist.
+   COMMITTABLES unless it's a member of one of those changelists.
 
    If CTX->CANCEL_FUNC is non-null, call it with CTX->CANCEL_BATON to see
    if the user has cancelled the operation.
 
-   Any items added to COMMITTABLES are allocated from the COMITTABLES hash pool,
-   not POOL.  POOL is used for temporary allocations. */
+   Any items added to COMMITTABLES are allocated from the COMITTABLES
+   hash pool, not POOL.  POOL is used for temporary allocations. */
 static svn_error_t *
 harvest_committables(apr_hash_t *committables,
                      apr_hash_t *lock_tokens,
@@ -235,7 +238,7 @@ harvest_committables(apr_hash_t *committables,
                      svn_boolean_t copy_mode,
                      svn_depth_t depth,
                      svn_boolean_t just_locked,
-                     const char *changelist_name,
+                     apr_hash_t *changelists,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
@@ -351,7 +354,7 @@ harvest_committables(apr_hash_t *committables,
     {
       /* Paths in conflict which are not part of our changelist should
          be ignored. */
-      if (considered_committable(changelist_name, entry))
+      if (considered_committable(changelists, entry))
         return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
                                  _("Aborting commit: '%s' remains in conflict"),
                                  svn_path_local_style(path, pool));
@@ -510,7 +513,7 @@ harvest_committables(apr_hash_t *committables,
   /* Now, if this is something to commit, add it to our list. */
   if (state_flags)
     {
-      if (considered_committable(changelist_name, entry))
+      if (considered_committable(changelists, entry))
         {
           /* Finally, add the committable item. */
           add_committable(committables, path, entry->kind, url,
@@ -605,8 +608,7 @@ harvest_committables(apr_hash_t *committables,
                               && (this_entry->schedule
                                   == svn_wc_schedule_delete))
                             {
-                              if (considered_committable(changelist_name,
-                                                         entry))
+                              if (considered_committable(changelists, entry))
                                 {
                                   add_committable(
                                     committables, full_path,
@@ -660,7 +662,7 @@ harvest_committables(apr_hash_t *committables,
                      copy_mode,
                      depth_below_here,
                      just_locked,
-                     changelist_name,
+                     changelists,
                      ctx,
                      loop_pool));
           }
@@ -721,13 +723,14 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                  apr_array_header_t *targets,
                                  svn_depth_t depth,
                                  svn_boolean_t just_locked,
-                                 const char *changelist_name,
+                                 const apr_array_header_t *changelists,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool)
 {
   int i = 0;
   svn_wc_adm_access_t *dir_access;
   apr_pool_t *subpool = svn_pool_create(pool);
+  apr_hash_t *changelist_hash = NULL;
 
   /* It's possible that one of the named targets has a parent that is
    * itself scheduled for addition or replacement -- that is, the
@@ -758,6 +761,11 @@ svn_client__harvest_committables(apr_hash_t **committables,
 
   /* And the LOCK_TOKENS dito. */
   *lock_tokens = apr_hash_make(pool);
+
+  /* If we have a list of changelists, convert that into a hash with
+     changelist keys. */
+  if (changelists && changelists->nelts)
+    SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
 
   do
     {
@@ -850,17 +858,12 @@ svn_client__harvest_committables(apr_hash_t **committables,
       SVN_ERR(harvest_committables(*committables, *lock_tokens, target,
                                    dir_access, entry->url, NULL,
                                    entry, NULL, FALSE, FALSE, depth,
-                                   just_locked, changelist_name,
+                                   just_locked, changelist_hash,
                                    ctx, subpool));
 
       i++;
     }
   while (i < targets->nelts);
-
-  if (changelist_name && apr_hash_count(*committables) == 0)
-    /* None of the paths we examined were in the changelist. */
-    return svn_error_createf(SVN_ERR_UNKNOWN_CHANGELIST, NULL,
-                             _("Unknown changelist '%s'"), changelist_name);
 
   /* Make sure that every path in danglers is part of the commit. */
   SVN_ERR(svn_iter_apr_hash(NULL,
