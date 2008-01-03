@@ -80,7 +80,7 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(
  * where each commit_rev in @a commit_rangelist > @a min_commit_rev and
  * <= @a max_commit_rev.
  *
- * @a merge_source and @a merge_target is expected to be a single
+ * @a merge_source and @a merge_target are each expected to be a single
  * location segment within @a min_commit_rev(exclusive) and
  * @a max_commit_rev(inclusive).
  *
