@@ -198,6 +198,70 @@ def guarantee_repos_and_wc(sbox):
   svntest.actions.run_and_verify_status(wc_path, expected_status)
 
 
+def merge_history_repos(sbox):
+  """Make a repos with varied and interesting merge history, similar
+to the repos found at:
+http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=c2__Sample%20repository"""
+
+  upsilon_path = os.path.join('A', 'upsilon')
+  branch_a = os.path.join('branches', 'a')
+  branch_c = os.path.join('branches', 'c')
+
+  # Create an empty repository - r0
+  svntest.main.safe_rmtree(sbox.repo_dir, 1)
+  svntest.main.safe_rmtree(sbox.wc_dir, 1)
+  svntest.main.create_repos(sbox.repo_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], "co", sbox.repo_url,
+                                     sbox.wc_dir)
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+
+  # Create trunk/tags/branches - r1
+  svntest.main.run_svn(None, 'mkdir', 'trunk')
+  svntest.main.run_svn(None, 'mkdir', 'tags')
+  svntest.main.run_svn(None, 'mkdir', 'branches')
+  svntest.main.run_svn(None, 'ci', '-m',
+                       'Add trunk/tags/branches structure.')
+
+  # Import greek tree to trunk - r2
+  svntest.main.greek_state.write_to_disk('trunk')
+  svntest.main.run_svn(None, 'add', os.path.join('trunk', 'A'),
+                       os.path.join('trunk', 'iota'))
+  svntest.main.run_svn(None, 'ci', '-m',
+                       'Import greek tree into trunk.')
+
+  # Create a branch - r3
+  svntest.main.run_svn(None, 'cp', 'trunk', branch_a)
+  svntest.main.run_svn(None, 'ci', '-m',
+                       'Create branches/a from trunk.')
+
+  # Some changes on the branch - r4
+  svntest.main.file_append(os.path.join(branch_a, 'iota'),
+                           "'A' has changed a bit.\n")
+  svntest.main.file_append(os.path.join(branch_a, 'A', 'mu'),
+                           "Don't forget to look at 'upsilnon', too.")
+  svntest.main.file_write(os.path.join(branch_a, upsilon_path),
+                          "This is the file 'upsilon'.\n")
+  svntest.main.run_svn(None, 'add',
+                       os.path.join(branch_a, upsilon_path))
+  svntest.main.run_svn(None, 'ci', '-m',
+                       "Add the file 'upsilon', and change some other files.\n")
+
+  # Create another branch - r5
+  svntest.main.run_svn(None, 'cp', 'trunk', branch_c)
+  svntest.main.run_svn(None, 'ci', '-m',
+                       'Create branches/c from trunk.')
+
+  # Do some mergeing - r6
+  os.chdir('trunk')
+  svntest.main.run_svn(None, 'merge', os.path.join('..', branch_a))
+  svntest.main.run_svn(None, 'ci', '-m',
+                       'Merged branches/a to trunk.')
+  os.chdir('..')
+
+  # Restore working directory
+  os.chdir(was_cwd)
 
 
 # For errors seen while parsing log data.
@@ -926,9 +990,7 @@ def check_merge_results(log_chain, expected_merges):
 def merge_sensitive_log_single_revision(sbox):
   "test sensitive log on a single revision"
 
-  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
-                                               'mergetracking_data',
-                                               'basic-merge.dump'))
+  merge_history_repos(sbox)
 
   # Paths we care about
   wc_dir = sbox.wc_dir
@@ -962,9 +1024,7 @@ def merge_sensitive_log_single_revision(sbox):
 def merge_sensitive_log_branching_revision(sbox):
   "test 'svn log -g' on a branching revision"
 
-  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
-                                               'mergetracking_data',
-                                               'basic-merge.dump'))
+  merge_history_repos(sbox)
 
   # Paths we care about
   wc_dir = sbox.wc_dir
@@ -985,9 +1045,7 @@ def merge_sensitive_log_branching_revision(sbox):
 def merge_sensitive_log_non_branching_revision(sbox):
   "test 'svn log -g' on a non-branching revision"
 
-  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
-                                               'mergetracking_data',
-                                               'basic-merge.dump'))
+  merge_history_repos(sbox)
 
   TRUNK_path = os.path.join(sbox.wc_dir, "trunk")
 
@@ -1006,9 +1064,7 @@ def merge_sensitive_log_non_branching_revision(sbox):
 def merge_sensitive_log_added_path(sbox):
   "test 'svn log -g' a path added before merge"
 
-  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
-                                               'mergetracking_data',
-                                               'basic-merge.dump'))
+  merge_history_repos(sbox)
 
   XI_path = os.path.join(sbox.wc_dir, "trunk", "A", "xi")
 
