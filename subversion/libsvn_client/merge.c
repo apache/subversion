@@ -1,4 +1,3 @@
-
 /*
  * merge.c: merging
  *
