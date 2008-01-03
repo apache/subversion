@@ -1100,7 +1100,7 @@ print_version_info(const char *pgm_name,
   SVN_ERR(svn_cmdline_printf(pool, _("%s, version %s\n"
                                      "   compiled %s, %s\n\n"), pgm_name,
                              SVN_VERSION, __DATE__, __TIME__));
-  SVN_ERR(svn_cmdline_fputs(_("Copyright (C) 2000-2007 CollabNet.\n"
+  SVN_ERR(svn_cmdline_fputs(_("Copyright (C) 2000-2008 CollabNet.\n"
                               "Subversion is open source software, see"
                               " http://subversion.tigris.org/\n"
                               "This product includes software developed by "
