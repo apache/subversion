@@ -1171,6 +1171,12 @@ svn_mergeinfo_intersect(apr_hash_t **mergeinfo,
   apr_hash_index_t *hi;
 
   *mergeinfo = apr_hash_make(pool);
+
+  /* ### TODO(reint): Do we care about the case when a path in one
+     ### mergeinfo hash has inheritable mergeinfo, and in the other
+     ### has non-inhertiable mergeinfo?  It seems like that path
+     ### itself should really be an intersection, while child paths
+     ### should not be... */
   for (hi = apr_hash_first(apr_hash_pool_get(mergeinfo1), mergeinfo1);
        hi; hi = apr_hash_next(hi))
     {
