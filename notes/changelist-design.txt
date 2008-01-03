@@ -532,4 +532,6 @@ TO-DO list:
       * svn propget/propset --changelist
       * svn proplist/propdel --changelist
 
+  * ensure that the bindings implementations of these APIs are up to snuff
+
   * write tests!
