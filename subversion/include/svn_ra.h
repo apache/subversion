@@ -616,7 +616,7 @@ svn_error_t *svn_ra_reparent(svn_ra_session_t *ra_session,
                              const char *url,
                              apr_pool_t *pool);
 
-/** Set @a *repos_URL to the repository URL to which @a ra_session was
+/** Set @a *url to the repository URL to which @a ra_session was
  * opened or most recently reparented.
  */
 svn_error_t *svn_ra_get_session_url(svn_ra_session_t *ra_session,
