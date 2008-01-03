@@ -21,8 +21,6 @@ Remaining work (which can be done post-merge)
 * Fix UI constraints for 'merge --reintegrate', which is "incompatible"
   with --ignore-ancestry and --record-only (dlr)
 
-* Add C test for svn_mergeinfo_intersect(). (dlr)
-
 * Examine "TODO(reint)", including (but not limited to):
 
   * Error messages (kfogel)
