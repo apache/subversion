@@ -1205,7 +1205,7 @@ delete_entry(const char *path,
 
   /* DELETE our entry */
   delete_ctx = apr_pcalloc(pool, sizeof(*delete_ctx));
-  delete_ctx->path = path;
+  delete_ctx->path = apr_pstrdup(pool, path);
   delete_ctx->revision = revision;
   delete_ctx->lock_token_hash = dir->commit->lock_tokens;
   delete_ctx->keep_locks = dir->commit->keep_locks;
@@ -1299,7 +1299,7 @@ add_directory(const char *path,
   dir->base_revision = SVN_INVALID_REVNUM;
   dir->copy_revision = copyfrom_revision;
   dir->copy_path = copyfrom_path;
-  dir->name = path;
+  dir->name = apr_pstrdup(dir->pool, path);
   dir->checked_in_url =
       svn_path_url_add_component(parent->commit->checked_in_url,
                                  path, dir->pool);
@@ -1409,7 +1409,7 @@ open_directory(const char *path,
 
   dir->added = FALSE;
   dir->base_revision = base_revision;
-  dir->name = path;
+  dir->name = apr_pstrdup(dir->pool, path);
   dir->changed_props = apr_hash_make(dir->pool);
   dir->removed_props = apr_hash_make(dir->pool);
 
@@ -1528,7 +1528,7 @@ add_file(const char *path,
 
   new_file->commit = dir->commit;
 
-  new_file->name = path;
+  new_file->name = apr_pstrdup(new_file->pool, path);
 
   new_file->added = TRUE;
   new_file->base_revision = SVN_INVALID_REVNUM;
@@ -1608,7 +1608,7 @@ open_file(const char *path,
   new_file->commit = ctx->commit;
 
   /* TODO: Remove directory names? */
-  new_file->name = path;
+  new_file->name = apr_pstrdup(new_file->pool, path);
 
   new_file->added = FALSE;
   new_file->base_revision = base_revision;
