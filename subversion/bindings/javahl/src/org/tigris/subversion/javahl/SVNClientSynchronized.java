@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -640,13 +640,13 @@ public class SVNClientSynchronized implements SVNClientInterface
      */
     public long commit(String[] path, String message, int depth,
                        boolean noUnlock, boolean keepChangelist,
-                       String changelistName)
+                       String[] changelists)
             throws ClientException
     {
         synchronized (clazz)
         {
             return worker.commit(path, message, depth, noUnlock,
-                                 keepChangelist, changelistName);
+                                 keepChangelist, changelists);
         }
     }
 

@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -521,7 +521,7 @@ JNIEXPORT jlong JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_commit
 (JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jmessage,
  jint jdepth, jboolean jnoUnlock, jboolean jkeepChangelist,
- jstring jchangelistName)
+ jobjectArray jchangelists)
 {
   JNIEntry(SVNClient, commit);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -535,13 +535,32 @@ Java_org_tigris_subversion_javahl_SVNClient_commit
   if (JNIUtil::isExceptionThrown())
     return -1;
 
-  JNIStringHolder changelistName(jchangelistName);
-  if (JNIUtil::isExceptionThrown())
-    return -1;
+  // Build the changelist vector from the Java array.
+  std::vector<std::string> changelists;
+
+  if (jchangelists != NULL)
+    {
+      jint arraySize = env->GetArrayLength(jchangelists);
+      if (JNIUtil::isExceptionThrown())
+        return -1;
+
+      for (int i = 0; i < arraySize; ++i)
+        {
+          jobject jchangelist = env->GetObjectArrayElement(jchangelists, i);
+          if (JNIUtil::isExceptionThrown())
+            return -1;
+
+          JNIStringHolder changelist((jstring)jchangelist);
+          if (JNIUtil::isExceptionThrown())
+            return -1;
+
+          changelists.push_back(std::string((const char *)changelist));
+        }
+    }
 
   return cl->commit(targets, message, (svn_depth_t)jdepth,
                     jnoUnlock ? true : false, jkeepChangelist ? true : false,
-                    changelistName);
+                    changelists);
 }
 
 JNIEXPORT void JNICALL
