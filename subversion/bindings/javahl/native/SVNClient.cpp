@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -386,7 +386,7 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision,
 
 jlong SVNClient::commit(Targets &targets, const char *message,
                         svn_depth_t depth, bool noUnlock, bool keepChangelist,
-                        const char *changelistName)
+                        std::vector<std::string> &changelists)
 {
     Pool requestPool;
     svn_commit_info_t *commit_info = NULL;
@@ -396,8 +396,19 @@ jlong SVNClient::commit(Targets &targets, const char *message,
     if (ctx == NULL)
         return SVN_INVALID_REVNUM;
 
+    apr_array_header_t *cl_changelists 
+      = apr_array_make(requestPool.pool(), changelists.size(), sizeof(char *));
+
+    std::vector<std::string>::const_iterator it;
+    for (it = changelists.begin(); it < changelists.end(); ++it)
+    {
+        APR_ARRAY_PUSH(cl_changelists, const char *) = it->c_str();
+        if (JNIUtil::isExceptionThrown())
+            return SVN_INVALID_REVNUM;
+    }
+
     SVN_JNI_ERR(svn_client_commit4(&commit_info, targets2, depth,
-                                   noUnlock, keepChangelist, changelistName,
+                                   noUnlock, keepChangelist, cl_changelists,
                                    ctx, requestPool.pool()),
                 SVN_INVALID_REVNUM);
 

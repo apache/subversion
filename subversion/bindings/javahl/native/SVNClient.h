@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -119,7 +119,7 @@ class SVNClient :public SVNBase
             const char *message, bool copyAsChild, bool makeParents);
   jlong commit(Targets &targets, const char *message, svn_depth_t depth,
                bool noUnlock, bool keepChangelist,
-               const char *changelistName);
+               std::vector<std::string> &changelists);
   jlongArray update(Targets &targets, Revision &revision, svn_depth_t depth,
                     bool ignoreExternals, bool allowUnverObstructions);
   void add(const char *path, svn_depth_t depth, bool force, bool no_ignore,
