@@ -937,7 +937,6 @@ Node revisions:
                PROP-KEY ::= atom ;
                DATA-KEY ::= atom ;
           EDIT-DATA-KEY ::= atom ;
-              MERGEINFO ::= (HAS-MERGEINFO MERGEINFO-COUNT) ;
           HAS-MERGEINFO ::= "0" | "1" ;
         MERGEINFO-COUNT ::= number ;
 
