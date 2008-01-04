@@ -231,6 +231,9 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   svntest.main.run_svn(None, 'ci', '-m',
                        'Import greek tree into trunk.')
 
+  # Update from the repository to avoid a mix-rev working copy
+  svntest.main.run_svn(None, 'up')
+
   # Create a branch - r3
   svntest.main.run_svn(None, 'cp', 'trunk', branch_a)
   svntest.main.run_svn(None, 'ci', '-m',
