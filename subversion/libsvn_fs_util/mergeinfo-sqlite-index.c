@@ -858,6 +858,9 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
  * If INHERIT == svn_mergeinfo_nearest_ancestor,
  * ('/a/b/c', '/a/b', '/a', '/').
  */
+/* ### This function has a serious security bug and must be either
+   ### fixed or replaced by the non-SQLite implementation!  See Issue
+   ### #3063. */
 static void
 construct_rooted_path_segments(svn_stringbuf_t **rooted_path_segments,
                                const char *path,
