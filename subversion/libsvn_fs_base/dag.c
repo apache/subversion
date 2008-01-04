@@ -1515,3 +1515,124 @@ svn_fs_base__things_different(svn_boolean_t *props_changed,
 
   return SVN_NO_ERROR;
 }
+
+
+
+/*** Mergeinfo tracking stuff ***/
+
+svn_error_t *svn_fs_base__dag_get_has_mergeinfo(svn_boolean_t *has_mergeinfo,
+                                                dag_node_t *node,
+                                                trail_t *trail,
+                                                apr_pool_t *pool)
+{
+  node_revision_t *node_rev;
+  svn_fs_t *fs = svn_fs_base__dag_get_fs(node);
+  const svn_fs_id_t *id = svn_fs_base__dag_get_id(node);
+
+  SVN_ERR(svn_fs_bdb__get_node_revision(&node_rev, fs, id, trail, pool));
+  *has_mergeinfo = node_rev->has_mergeinfo;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *svn_fs_base__dag_set_has_mergeinfo(dag_node_t *node,
+                                                svn_boolean_t has_mergeinfo,
+                                                svn_boolean_t *had_mergeinfo,
+                                                const char *txn_id,
+                                                trail_t *trail,
+                                                apr_pool_t *pool)
+{
+  node_revision_t *node_rev;
+  svn_fs_t *fs = svn_fs_base__dag_get_fs(node);
+  const svn_fs_id_t *id = svn_fs_base__dag_get_id(node);
+
+  if (! svn_fs_base__dag_check_mutable(node, txn_id))
+    return svn_error_createf(SVN_ERR_FS_NOT_MUTABLE, NULL,
+                             _("Attempted merge tracking info change on "
+                               "immutable node"));
+
+  SVN_ERR(svn_fs_bdb__get_node_revision(&node_rev, fs, id, trail, pool));
+  *had_mergeinfo = node_rev->has_mergeinfo;
+
+  /* Are we changing the node? */
+  if ((! has_mergeinfo) != (! *had_mergeinfo))
+    {
+      /* Not the new has-mergeinfo state. */
+      node_rev->has_mergeinfo = has_mergeinfo;
+
+      /* Increment or decrement the mergeinfo count as necessary. */
+      if (has_mergeinfo)
+        node_rev->mergeinfo_count++;
+      else
+        node_rev->mergeinfo_count--;
+
+      SVN_ERR(svn_fs_bdb__put_node_revision(fs, id, node_rev, trail, pool));
+    }
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *svn_fs_base__dag_get_mergeinfo_count(apr_int64_t *count,
+                                                  dag_node_t *node,
+                                                  trail_t *trail,
+                                                  apr_pool_t *pool)
+{
+  node_revision_t *node_rev;
+  svn_fs_t *fs = svn_fs_base__dag_get_fs(node);
+  const svn_fs_id_t *id = svn_fs_base__dag_get_id(node);
+
+  SVN_ERR(svn_fs_bdb__get_node_revision(&node_rev, fs, id, trail, pool));
+  *count = node_rev->mergeinfo_count;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *svn_fs_base__dag_set_mergeinfo_count(dag_node_t *node,
+                                                  apr_int64_t count,
+                                                  const char *txn_id,
+                                                  trail_t *trail,
+                                                  apr_pool_t *pool)
+{
+  node_revision_t *node_rev;
+  svn_fs_t *fs = svn_fs_base__dag_get_fs(node);
+  const svn_fs_id_t *id = svn_fs_base__dag_get_id(node);
+
+  if (! svn_fs_base__dag_check_mutable(node, txn_id))
+    return svn_error_createf(SVN_ERR_FS_NOT_MUTABLE, NULL,
+                             _("Attempted mergeinfo count change on "
+                               "immutable node"));
+
+  SVN_ERR(svn_fs_bdb__get_node_revision(&node_rev, fs, id, trail, pool));
+  if (node_rev->mergeinfo_count == count)
+    {
+      node_rev->mergeinfo_count = count;
+      SVN_ERR(svn_fs_bdb__put_node_revision(fs, id, node_rev, trail, pool));
+    }
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *svn_fs_base__dag_adjust_mergeinfo_count(dag_node_t *node,
+                                                     apr_int64_t count_delta,
+                                                     const char *txn_id,
+                                                     trail_t *trail,
+                                                     apr_pool_t *pool)
+{
+  node_revision_t *node_rev;
+  svn_fs_t *fs = svn_fs_base__dag_get_fs(node);
+  const svn_fs_id_t *id = svn_fs_base__dag_get_id(node);
+
+  if (! svn_fs_base__dag_check_mutable(node, txn_id))
+    return svn_error_createf(SVN_ERR_FS_NOT_MUTABLE, NULL,
+                             _("Attempted mergeinfo count change on "
+                               "immutable node"));
+
+  if (count_delta == 0)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_fs_bdb__get_node_revision(&node_rev, fs, id, trail, pool));
+  node_rev->mergeinfo_count = node_rev->mergeinfo_count + count_delta;
+  assert(node_rev->mergeinfo_count >= 0);
+  SVN_ERR(svn_fs_bdb__put_node_revision(fs, id, node_rev, trail, pool));
+
+  return SVN_NO_ERROR;
+}

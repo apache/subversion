@@ -848,6 +848,35 @@ make_path_mutable(svn_fs_root_t *root,
 }
 
 
+/* Walk up PARENT_PATH to the root of the tree, adjusting each node's
+   mergeinfo count by COUNT_DELTA as part of Subversion transaction
+   TXN_ID and TRAIL.  Use POOL for allocations. */
+static svn_error_t *
+adjust_parent_mergeinfo_counts(parent_path_t *parent_path,
+                               apr_int64_t count_delta,
+                               const char *txn_id, 
+                               trail_t *trail,
+                               apr_pool_t *pool)
+{
+  parent_path_t *pp = parent_path;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  if (count_delta == 0)
+    return SVN_NO_ERROR;
+
+  while (pp)
+    {
+      svn_pool_clear(subpool);
+      SVN_ERR(svn_fs_base__dag_adjust_mergeinfo_count(pp->node, count_delta,
+                                                      txn_id, trail, subpool));
+      pp = pp->parent;
+    }
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Open the node identified by PATH in ROOT, as part of TRAIL.  Set
    *DAG_NODE_P to the node we find, allocated in TRAIL->pool.  Return
    the error SVN_ERR_FS_NOT_FOUND if this node doesn't exist. */
@@ -1264,6 +1293,25 @@ txn_body_change_node_prop(void *baton,
   /* Overwrite the node's proplist. */
   SVN_ERR(svn_fs_base__dag_set_proplist(parent_path->node, proplist,
                                         txn_id, trail, trail->pool));
+
+  /* If this was a change to the mergeinfo property, we have some
+     extra recording to do. */
+  if (strcmp(args->name, SVN_PROP_MERGEINFO) == 0)
+    {
+      svn_boolean_t had_mergeinfo, has_mergeinfo = args->value ? TRUE : FALSE;
+      
+      /* First, note on our node that it has mergeinfo. */
+      SVN_ERR(svn_fs_base__dag_set_has_mergeinfo(parent_path->node,
+                                                 has_mergeinfo, &had_mergeinfo,
+                                                 txn_id, trail, trail->pool));
+      
+      /* If this is a change from the old state, we need to update our
+         node's parents' mergeinfo counts by a factor of 1. */
+      if (parent_path->parent && ((! had_mergeinfo) != (! has_mergeinfo)))
+        SVN_ERR(adjust_parent_mergeinfo_counts(parent_path->parent,
+                                               has_mergeinfo ? 1 : -1,
+                                               txn_id, trail, trail->pool));
+    }
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(args->root->fs, txn_id,
@@ -2675,6 +2723,7 @@ txn_body_delete(void *baton,
   const char *path = args->path;
   parent_path_t *parent_path;
   const char *txn_id = root->txn;
+  apr_int64_t mergeinfo_count;
 
   if (! root->is_txn_root)
     return SVN_FS__NOT_TXN(root);
@@ -2695,12 +2744,25 @@ txn_body_delete(void *baton,
                                                   trail, trail->pool));
     }
 
-  /* Make the parent directory mutable, and do the deletion.  */
+  /* Make the parent directory mutable. */
   SVN_ERR(make_path_mutable(root, parent_path->parent, path,
                             trail, trail->pool));
+
+  /* Squirrel away the mergeinfo count that the node carries. */
+  SVN_ERR(svn_fs_base__dag_get_mergeinfo_count(&mergeinfo_count,
+                                               parent_path->node,
+                                               trail, trail->pool));
+
+  /* Do the deletion. */
   SVN_ERR(svn_fs_base__dag_delete(parent_path->parent->node,
                                   parent_path->entry,
                                   txn_id, trail, trail->pool));
+
+  /* Decrement mergeinfo counts on the parents of this node by the
+     count it currently carried. */
+  SVN_ERR(adjust_parent_mergeinfo_counts(parent_path->parent,
+                                         -mergeinfo_count, txn_id, 
+                                         trail, trail->pool));
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path,
@@ -2780,6 +2842,7 @@ txn_body_copy(void *baton,
     {
       svn_fs_path_change_kind_t kind;
       dag_node_t *new_node;
+      apr_int64_t old_mergeinfo_count = 0, mergeinfo_count;
 
       /* If TO_PATH already existed prior to the copy, note that this
          operation is a replacement, not an addition. */
@@ -2792,12 +2855,26 @@ txn_body_copy(void *baton,
       SVN_ERR(make_path_mutable(to_root, to_parent_path->parent,
                                 to_path, trail, trail->pool));
 
+      /* If this is a replacement operation, we need to know the old
+         node's mergeinfo count. */
+      if (to_parent_path->node)
+        SVN_ERR(svn_fs_base__dag_get_mergeinfo_count(&old_mergeinfo_count,
+                                                     to_parent_path->node,
+                                                     trail, trail->pool));
+      /* Do the copy. */
       SVN_ERR(svn_fs_base__dag_copy(to_parent_path->parent->node,
                                     to_parent_path->entry,
                                     from_node,
                                     args->preserve_history,
                                     from_root->rev,
                                     from_path, txn_id, trail, trail->pool));
+
+      /* Adjust the mergeinfo counts of the destination's parents. */
+      SVN_ERR(svn_fs_base__dag_get_mergeinfo_count(&mergeinfo_count, from_node,
+                                                   trail, trail->pool));
+      SVN_ERR(adjust_parent_mergeinfo_counts
+              (to_parent_path->parent, mergeinfo_count - old_mergeinfo_count,
+               txn_id, trail, trail->pool));
 
       /* Make a record of this modification in the changes table. */
       SVN_ERR(get_dag(&new_node, to_root, to_path, trail, trail->pool));
