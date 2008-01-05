@@ -858,22 +858,23 @@ adjust_parent_mergeinfo_counts(parent_path_t *parent_path,
                                trail_t *trail,
                                apr_pool_t *pool)
 {
-  apr_pool_t *subpool;
+  apr_pool_t *iterpool;
   parent_path_t *pp = parent_path;
 
   if (count_delta == 0)
     return SVN_NO_ERROR;
 
-  subpool = svn_pool_create(pool);
+  iterpool = svn_pool_create(pool);
 
   while (pp)
     {
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
       SVN_ERR(svn_fs_base__dag_adjust_mergeinfo_count(pp->node, count_delta,
-                                                      txn_id, trail, subpool));
+                                                      txn_id, trail,
+                                                      iterpool));
       pp = pp->parent;
     }
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
