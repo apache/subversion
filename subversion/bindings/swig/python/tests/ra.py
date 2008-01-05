@@ -344,6 +344,17 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
 
     reporter.finish_report(reporter_baton)
 
+  def test_namestring(self):
+    # Only ra-{neon,serf} support this right now.
+    if REPOS_URL.startswith('http'):
+      called = [False]
+      def cb(pool):
+        called[0] = True
+        return 'namestring_test'
+      self.callbacks.get_client_string = cb
+      svn.ra.stat(self.ra_ctx, "", 1)
+      self.assert_(called[0])
+
 def suite():
     return unittest.makeSuite(SubversionRepositoryAccessTestCase, 'test')
 

@@ -246,7 +246,7 @@ test_parse_combine_rangeinfo(const char **msg,
 }
 
 
-#define NBR_BROKEN_MERGEINFO_VALS 34
+#define NBR_BROKEN_MERGEINFO_VALS 35
 /* Invalid mergeinfo values. */
 static const char * const broken_mergeinfo_vals[NBR_BROKEN_MERGEINFO_VALS] =
   {
@@ -290,7 +290,9 @@ static const char * const broken_mergeinfo_vals[NBR_BROKEN_MERGEINFO_VALS] =
     "/trunk:3,7,20-20*,25-30",
     /* path mapped to range with no revisions */
     "/trunk:",
-    "/trunk:2-9\n/branch:"
+    "/trunk:2-9\n/branch:",
+    /* No path */
+    ":1-3"
   };
 
 static svn_error_t *

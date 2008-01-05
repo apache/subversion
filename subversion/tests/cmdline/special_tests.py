@@ -501,7 +501,7 @@ def checkout_repo_with_symlinks(sbox):
 def diff_symlink_to_dir(sbox):
   "diff a symlink to a directory"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   # Create a symlink to A/D/.

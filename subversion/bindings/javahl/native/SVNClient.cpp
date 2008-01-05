@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -37,10 +37,12 @@
 #include "LogMessageCallback.h"
 #include "InfoCallback.h"
 #include "StatusCallback.h"
+#include "ChangelistCallback.h"
 #include "ListCallback.h"
 #include "JNIByteArray.h"
 #include "CommitMessage.h"
 #include "EnumMapper.h"
+#include "StringArray.h"
 #include "svn_types.h"
 #include "svn_client.h"
 #include "svn_sorts.h"
@@ -198,7 +200,7 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
                             Revision &revisionStart,
                             Revision &revisionEnd, bool stopOnCopy,
                             bool discoverPaths, bool includeMergedRevisions,
-                            std::vector<std::string> &revProps,
+                            StringArray &revProps,
                             long limit, LogMessageCallback *callback)
 {
     Pool requestPool;
@@ -213,16 +215,6 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
     const apr_array_header_t *targets = target.array(requestPool);
     SVN_JNI_ERR(target.error_occured(), );
 
-    apr_array_header_t *cl_revprops = apr_array_make(requestPool.pool(), 3,
-                                                     sizeof(char *));
-    std::vector<std::string>::const_iterator it;
-    for (it = revProps.begin(); it < revProps.end(); ++it)
-    {
-        APR_ARRAY_PUSH(cl_revprops, const char *) = it->c_str();
-        if (JNIUtil::isExceptionThrown())
-            return;
-    }
-
     SVN_JNI_ERR(svn_client_log4(targets,
                                 pegRevision.revision(),
                                 revisionStart.revision(),
@@ -231,7 +223,7 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
                                 discoverPaths,
                                 stopOnCopy,
                                 includeMergedRevisions,
-                                cl_revprops,
+                                revProps.array(requestPool),
                                 LogMessageCallback::callback, callback, ctx,
                                 requestPool.pool()), );
 }
@@ -385,7 +377,7 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision,
 
 jlong SVNClient::commit(Targets &targets, const char *message,
                         svn_depth_t depth, bool noUnlock, bool keepChangelist,
-                        const char *changelistName)
+                        StringArray &changelists)
 {
     Pool requestPool;
     svn_commit_info_t *commit_info = NULL;
@@ -396,7 +388,8 @@ jlong SVNClient::commit(Targets &targets, const char *message,
         return SVN_INVALID_REVNUM;
 
     SVN_JNI_ERR(svn_client_commit4(&commit_info, targets2, depth,
-                                   noUnlock, keepChangelist, changelistName,
+                                   noUnlock, keepChangelist,
+                                   changelists.array(requestPool),
                                    ctx, requestPool.pool()),
                 SVN_INVALID_REVNUM);
 
@@ -1575,37 +1568,19 @@ void SVNClient::removeFromChangelist(Targets &srcPaths, const char *changelist)
                                                   requestPool.pool()), );
 }
 
-jobjectArray SVNClient::getChangelist(const char *changelist,
-                                      const char *rootPath)
+void SVNClient::getChangelists(const char *rootPath,
+                               StringArray &changelists,
+                               svn_depth_t depth,
+                               ChangelistCallback *callback)
 {
     Pool requestPool;
     svn_client_ctx_t *ctx = getContext(NULL);
-    apr_array_header_t *paths;
 
-    SVN_JNI_ERR(svn_client_get_changelist(&paths, changelist, rootPath,
-                                          ctx, requestPool.pool()),
-                NULL);
-
-    JNIEnv *env = JNIUtil::getEnv();
-    jclass clazz = env->FindClass("java/lang/String");
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    jobjectArray jpaths = env->NewObjectArray(paths->nelts, clazz, NULL);
-
-    for (int i = 0; i < paths->nelts; ++i)
-    {
-        const char *path = APR_ARRAY_IDX(paths, i, const char *);
-        jstring jpath = JNIUtil::makeJString(path);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-
-        env->SetObjectArrayElement(jpaths, i, jpath);
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-    }
-
-    return jpaths;
+    SVN_JNI_ERR(svn_client_get_changelists(rootPath,
+                                           changelists.array(requestPool),
+                                           depth, ChangelistCallback::callback,
+                                           callback, ctx, requestPool.pool()),
+                );
 }
 
 jobject SVNClient::createJavaLock(const svn_lock_t *lock)

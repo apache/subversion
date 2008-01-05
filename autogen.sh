@@ -73,7 +73,7 @@ cp $ltfile build/libtool.m4
 
 PYTHON="`./build/find_python.sh`"
 if test -z "$PYTHON"; then
-  echo "Python 2.0 or later is required to run autogen.sh"
+  echo "Python 2.2 or later is required to run autogen.sh"
   echo "If you have a suitable Python installed, but not on the"
   echo "PATH, set the environment variable PYTHON to the full path"
   echo "to the Python executable, and re-run autogen.sh"

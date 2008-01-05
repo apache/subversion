@@ -82,7 +82,8 @@ STATS = """1/1/2003       70
 9/1/2007              159055
 10/1/2007             169939
 11/1/2007             180831
-12/1/2007             187093"""
+12/1/2007             187093
+1/1/2008              199432"""
 
 
 def get_date(raw_date):
@@ -120,6 +121,7 @@ def draw_graph(dates, counts):
   ax.xaxis.set_major_formatter( DateFormatter('%Y') )
   ax.xaxis.set_major_locator( YearLocator() )
   ax.xaxis.set_minor_locator( MonthLocator() )
+  ax.set_xlim( (dates[0] - 92, dates[len(dates) - 1] + 92) )
 
   ax.yaxis.set_major_formatter( FormatStrFormatter('%d') )
 

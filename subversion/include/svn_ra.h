@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -116,6 +116,16 @@ typedef svn_error_t *(*svn_ra_invalidate_wc_props_func_t)(void *baton,
 typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t)
   (void *session_baton,
    svn_revnum_t *latest_revnum);
+
+/** A function type which allows the RA layer to ask about any
+ * customizations to the client name string.  This is primarily used
+ * by HTTP-based RA layers wishing to extend the string reported to
+ * Apache/mod_dav_svn via the User-agent HTTP header.
+ */
+typedef svn_error_t *(*svn_ra_get_client_string_func_t)(void *baton,
+                                                        const char **name,
+                                                        apr_pool_t *pool);
+
 
 /**
  * A callback function type for use in @c get_file_revs.
@@ -488,6 +498,11 @@ typedef struct svn_ra_callbacks2_t
    */
   svn_cancel_func_t cancel_func;
 
+  /** Client string customization callback function
+   * @since New in 1.5
+   */
+  svn_ra_get_client_string_func_t get_client_string;
+
 } svn_ra_callbacks2_t;
 
 /** Similar to svn_ra_callbacks2_t, except that the progress
@@ -601,7 +616,7 @@ svn_error_t *svn_ra_reparent(svn_ra_session_t *ra_session,
                              const char *url,
                              apr_pool_t *pool);
 
-/** Set @a *repos_URL to the repository URL to which @a ra_session was
+/** Set @a *url to the repository URL to which @a ra_session was
  * opened or most recently reparented.
  */
 svn_error_t *svn_ra_get_session_url(svn_ra_session_t *ra_session,
@@ -1264,7 +1279,7 @@ svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
                              svn_boolean_t discover_changed_paths,
                              svn_boolean_t strict_node_history,
                              svn_boolean_t include_merged_revisions,
-                             apr_array_header_t *revprops,
+                             const apr_array_header_t *revprops,
                              svn_log_entry_receiver_t receiver,
                              void *receiver_baton,
                              apr_pool_t *pool);

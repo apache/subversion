@@ -1921,13 +1921,13 @@ def hook_failure_message(hookname):
     return "'%s' hook failed with error output:\n" % hookname
   else:
     if hookname in ["start-commit", "pre-commit"]:
-      action = "commit"
+      action = "Commit"
     elif hookname == "pre-revprop-change":
-      action = "revprop change"
+      action = "Revprop change"
     elif hookname == "pre-lock":
-      action = "lock"
+      action = "Lock"
     elif hookname == "pre-unlock":
-      action = "unlock"
+      action = "Unlock"
     else:
       action = None
     if action is None:
@@ -2468,21 +2468,6 @@ def changelist_near_conflict(sbox):
 
 #----------------------------------------------------------------------
 
-def no_such_changelist(sbox):
-  "'svn commit --changelist=not-found' should warn"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  # Attempt to commit a non-existent changelist.
-  expected_output = svntest.wc.State(wc_dir, {})
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  svntest.actions.run_and_verify_svn("Attempt to commit a changelist with no "
-                                     "relevant paths should warn",
-                                     None, ".*Unknown changelist 'not-found'",
-                                     "commit", "--changelist=not-found",
-                                     "-m", "msg", wc_dir)
-
 def commit_out_of_date_file(sbox):
   "try to commit a file that is out-of-date"
 
@@ -2670,7 +2655,6 @@ test_list = [ None,
               pre_commit_hook_test,
               versioned_log_message,
               changelist_near_conflict,
-              no_such_changelist,
               commit_out_of_date_file,
               start_commit_detect_capabilities,
               tree_conflicts_block_commit,

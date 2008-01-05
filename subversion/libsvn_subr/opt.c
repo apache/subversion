@@ -553,19 +553,19 @@ svn_opt_subcommand_help(const char *subcommand,
 static int
 revision_from_word(svn_opt_revision_t *revision, const char *word)
 {
-  if (strcasecmp(word, "head") == 0)
+  if (svn_cstring_casecmp(word, "head") == 0)
     {
       revision->kind = svn_opt_revision_head;
     }
-  else if (strcasecmp(word, "prev") == 0)
+  else if (svn_cstring_casecmp(word, "prev") == 0)
     {
       revision->kind = svn_opt_revision_previous;
     }
-  else if (strcasecmp(word, "base") == 0)
+  else if (svn_cstring_casecmp(word, "base") == 0)
     {
       revision->kind = svn_opt_revision_base;
     }
-  else if (strcasecmp(word, "committed") == 0)
+  else if (svn_cstring_casecmp(word, "committed") == 0)
     {
       revision->kind = svn_opt_revision_committed;
     }
@@ -1100,7 +1100,7 @@ print_version_info(const char *pgm_name,
   SVN_ERR(svn_cmdline_printf(pool, _("%s, version %s\n"
                                      "   compiled %s, %s\n\n"), pgm_name,
                              SVN_VERSION, __DATE__, __TIME__));
-  SVN_ERR(svn_cmdline_fputs(_("Copyright (C) 2000-2007 CollabNet.\n"
+  SVN_ERR(svn_cmdline_fputs(_("Copyright (C) 2000-2008 CollabNet.\n"
                               "Subversion is open source software, see"
                               " http://subversion.tigris.org/\n"
                               "This product includes software developed by "

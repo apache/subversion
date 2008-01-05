@@ -1491,6 +1491,57 @@ def perms_on_symlink(sbox):
   finally:
     os.chdir(saved_cwd)
 
+# Use a property with a custom namespace, ie 'ns:prop' or 'mycompany:prop'.
+def remove_custom_ns_props(sbox):
+  "remove a property with a custom namespace"
+
+  # Bootstrap
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Add a property to a file
+  iota_path = os.path.join(wc_dir, 'iota')
+  svntest.main.run_svn(None, 'propset', 'ns:cash-sound', 'cha-ching!', iota_path)
+
+  # Commit the file
+  svntest.main.run_svn(None,
+                       'ci', '-m', 'logmsg', iota_path)
+
+  # Now, make a backup copy of the working copy
+  wc_backup = sbox.add_wc_path('backup')
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+
+  # Remove the property
+  svntest.main.run_svn(None, 'propdel', 'ns:cash-sound', iota_path)
+
+  # Create expected trees.
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', wc_rev=3, status='  ')
+
+  # Commit the one file.
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  # Create expected trees for the update.
+  expected_output = svntest.wc.State(wc_backup, {
+    'iota' : Item(status=' U'),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_backup, 3)
+  expected_status.tweak('iota', wc_rev=3, status='  ')
+
+  # Do the update and check the results in three ways... INCLUDING PROPS
+  svntest.actions.run_and_verify_update(wc_backup,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, 1)
+
 ########################################################################
 # Run the tests
 
@@ -1521,6 +1572,7 @@ test_list = [ None,
               depthy_url_proplist,
               invalid_propnames,
               SkipUnless(perms_on_symlink, svntest.main.is_posix_os),
+              remove_custom_ns_props,
              ]
 
 if __name__ == '__main__':

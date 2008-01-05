@@ -87,13 +87,18 @@ svn_fs__canonicalize_abspath(const char *path, apr_pool_t *pool)
 }
 
 svn_error_t *
-svn_fs__check_fs(svn_fs_t *fs)
+svn_fs__check_fs(svn_fs_t *fs, 
+                 svn_boolean_t expect_open)
 {
-  if (fs->fsap_data)
+  if ((expect_open && fs->fsap_data)
+      || ((! expect_open) && (! fs->fsap_data)))
     return SVN_NO_ERROR;
-  else
+  if (expect_open)
     return svn_error_create(SVN_ERR_FS_NOT_OPEN, 0,
                             _("Filesystem object has not been opened yet"));
+  else
+    return svn_error_create(SVN_ERR_FS_ALREADY_OPEN, 0,
+                            _("Filesystem object already open"));
 }
 
 char *

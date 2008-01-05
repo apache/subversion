@@ -102,18 +102,6 @@ check_bdb_version(void)
 }
 
 
-/* If FS is already open, then return an SVN_ERR_FS_ALREADY_OPEN
-   error.  Otherwise, return zero.  */
-static svn_error_t *
-check_already_open(svn_fs_t *fs)
-{
-  if (fs->fsap_data)
-    return svn_error_create(SVN_ERR_FS_ALREADY_OPEN, 0,
-                            _("Filesystem object already open"));
-  else
-    return SVN_NO_ERROR;
-}
-
 
 /* Cleanup functions.  */
 
@@ -314,7 +302,7 @@ base_bdb_set_errcall(svn_fs_t *fs,
 {
   base_fs_data_t *bfd = fs->fsap_data;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
   bfd->bdb->error_info->user_callback = db_errcall_fcn;
 
   return SVN_NO_ERROR;
@@ -518,7 +506,7 @@ open_databases(svn_fs_t *fs, svn_boolean_t create,
 {
   base_fs_data_t *bfd;
 
-  SVN_ERR(check_already_open(fs));
+  SVN_ERR(svn_fs__check_fs(fs, FALSE));
 
   bfd = apr_pcalloc(fs->pool, sizeof(*bfd));
   fs->vtable = &fs_vtable;

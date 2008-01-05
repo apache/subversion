@@ -3461,9 +3461,9 @@ do_walk(walker_ctx_t *ctx, int depth)
      Note: if we cared, we could look at the 'User-Agent:' request
      header and distinguish an svn client ('svn ls') from a generic
      DAV client.  */
-  apr_table_set(ctx->info.r->subprocess_env, "SVN-ACTION",
-                apr_psprintf(params->pool,
-                             "list-dir '%s' r%ld",
+  dav_svn__operational_log(&ctx->info,
+                           apr_psprintf(params->pool,
+                             "list-dir %s r%ld",
                              svn_path_uri_encode(ctx->info.repos_path,
                                                  params->pool),
                              ctx->info.root.rev));

@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -43,6 +43,8 @@
 #include "InfoCallback.h"
 #include "StatusCallback.h"
 #include "ListCallback.h"
+#include "ChangelistCallback.h"
+#include "StringArray.h"
 #include "svn_version.h"
 #include "svn_private_config.h"
 #include "version.h"
@@ -277,25 +279,9 @@ Java_org_tigris_subversion_javahl_SVNClient_logMessages
 
   LogMessageCallback callback(jlogMessageCallback);
 
-  // Build the rev prop vector from the Java array.
-  std::vector<std::string> revProps;
-
-  jint arraySize = env->GetArrayLength(jrevProps);
+  StringArray revProps(jrevProps);
   if (JNIUtil::isExceptionThrown())
     return;
-
-  for (int i = 0; i < arraySize; ++i)
-    {
-      jobject jrevProp = env->GetObjectArrayElement(jrevProps, i);
-      if (JNIUtil::isExceptionThrown())
-        return;
-
-      JNIStringHolder revProp((jstring)jrevProp);
-      if (JNIUtil::isExceptionThrown())
-        return;
-
-      revProps.push_back(std::string((const char *)revProp));
-    }
 
   cl->logMessages(path, pegRevision, revisionStart, revisionEnd,
                   jstopOnCopy ? true: false, jdisoverPaths ? true : false,
@@ -520,7 +506,7 @@ JNIEXPORT jlong JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_commit
 (JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jmessage,
  jint jdepth, jboolean jnoUnlock, jboolean jkeepChangelist,
- jstring jchangelistName)
+ jobjectArray jchangelists)
 {
   JNIEntry(SVNClient, commit);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -534,13 +520,14 @@ Java_org_tigris_subversion_javahl_SVNClient_commit
   if (JNIUtil::isExceptionThrown())
     return -1;
 
-  JNIStringHolder changelistName(jchangelistName);
+  // Build the changelist vector from the Java array.
+  StringArray changelists(jchangelists);
   if (JNIUtil::isExceptionThrown())
     return -1;
 
   return cl->commit(targets, message, (svn_depth_t)jdepth,
                     jnoUnlock ? true : false, jkeepChangelist ? true : false,
-                    changelistName);
+                    changelists);
 }
 
 JNIEXPORT void JNICALL
@@ -1575,26 +1562,29 @@ Java_org_tigris_subversion_javahl_SVNClient_removeFromChangelist
   cl->removeFromChangelist(targets, changelist_name);
 }
 
-JNIEXPORT jobjectArray JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_getChangelist
-(JNIEnv *env, jobject jthis, jstring jchangelist, jstring jroot_path)
+JNIEXPORT void JNICALL
+Java_org_tigris_subversion_javahl_SVNClient_getChangelists
+(JNIEnv *env, jobject jthis, jstring jroot_path, jobjectArray jchangelists,
+ jint jdepth, jobject jchangelistCallback)
 {
   JNIEntry(SVNClient, getChangelist);
   SVNClient *cl = SVNClient::getCppObject(jthis);
   if (cl == NULL)
     {
       JNIUtil::throwError("bad C++ this");
-      return NULL;
+      return;
     }
-  JNIStringHolder changelist_name(jchangelist);
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
 
   JNIStringHolder root_path(jroot_path);
   if (JNIUtil::isExceptionThrown())
-    return NULL;
+    return;
 
-  return cl->getChangelist(changelist_name, root_path);
+  StringArray changelists(jchangelists);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  ChangelistCallback callback(jchangelistCallback);
+  cl->getChangelists(root_path, changelists, (svn_depth_t) jdepth, &callback);
 }
 
 JNIEXPORT void JNICALL

@@ -13,6 +13,7 @@ Blanket commit access:
        sussman   Ben Collins-Sussman <sussman@red-bean.com>
         kfogel   Karl Fogel <kfogel@red-bean.com>
         gstein   Greg Stein <gstein@lyra.org>
+         brane   Branko Čibej <brane@xbc.nu>
            joe   Joe Orton <joe@light.plus.com>
        ghudson   Greg Hudson <ghudson@mit.edu>
           fitz   Brian W. Fitzpatrick <fitz@red-bean.com>
@@ -169,7 +170,6 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
 
 Committers who have asked to be listed as dormant:
 
-         brane   Branko Čibej <brane@xbc.nu>
         bdenny   Brian Estlin <brian@implementality.com>
       rassilon   Bill Tutt <rassilon@lyra.org> (Win32, COM, issue-1003-dev br.)
          kraai   Matt Kraai <kraai@alumni.cmu.edu>

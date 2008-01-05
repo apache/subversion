@@ -271,7 +271,8 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
 
   hdrs_bkt = serf_bucket_request_get_headers(*req_bkt);
   serf_bucket_headers_setn(hdrs_bkt, "Host", conn->hostinfo);
-  serf_bucket_headers_setn(hdrs_bkt, "User-Agent", USER_AGENT);
+  serf_bucket_headers_setn(hdrs_bkt, "User-Agent", conn->useragent);
+
   if (content_type)
     {
       serf_bucket_headers_setn(hdrs_bkt, "Content-Type", content_type);
@@ -371,7 +372,7 @@ svn_ra_serf__is_conn_closing(serf_bucket_t *response)
 
   hdrs = serf_bucket_response_get_headers(response);
   val = serf_bucket_headers_get(hdrs, "Connection");
-  if (val && strcasecmp("close", val) == 0)
+  if (val && svn_cstring_casecmp("close", val) == 0)
     {
       return SERF_ERROR_CLOSING;
     }

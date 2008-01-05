@@ -22,6 +22,7 @@ svn_config.h      _core (some symbols)
 svn_ctype.h       (1)
 svn_dav.h         (2)
 svn_delta.h       _delta
+svn_diff.h        _diff
 svn_error.h       (2)
 svn_error_codes.h _core
 svn_fs.h          _fs

@@ -295,15 +295,15 @@ I.    INTRODUCTION
          SQLite is a lightweight, embeddable SQL library necessary to
          build any repository-related code.
 
-         You can get sqlite 3.5.3 from:
+         You can get sqlite 3.5.4 from:
 
-               http://www.sqlite.org/sqlite-3.5.3.tar.gz
+               http://www.sqlite.org/sqlite-3.5.4.tar.gz
 
          SQLite must be built in thread-safe mode (with 'configure
          --enable-threadsafe').  If building SQLite yourself, you
          have the option of unpacking the archive into the top of the
          Subversion source tree and renaming the resulting directory
-         within the Subversion source code from ./sqlite-3.5.3/ to
+         within the Subversion source code from ./sqlite-3.5.4/ to
          ./sqlite/.  Subversion will then build and install it for
          you.
 
@@ -527,14 +527,13 @@ I.    INTRODUCTION
       is done: See section III for details.
 
 
-      11.  Python 2.0 or newer (http://www.python.org/)  (OPTIONAL)
+      11.  Python 2.2 or newer (http://www.python.org/)  (OPTIONAL)
 
       If you want to run "make check" or build from the latest source
       under Unix as described in section II.B and III.D, install
-      Python 2.0 or higher on your system. The majority of the test
+      Python 2.2 or higher on your system. The majority of the test
       suite is written in Python, as is part of Subversion's build
-      system.  Note that compiling under Windows requires Python 2.2
-      or newer.
+      system.
 
 
       12. Perl 5.8 or newer (Windows only)  (OPTIONAL)

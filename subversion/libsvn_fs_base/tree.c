@@ -366,7 +366,7 @@ svn_fs_base__revision_root(svn_fs_root_t **root_p,
   struct revision_root_args args;
   svn_fs_root_t *root;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   args.root_p = &root;
   args.rev = rev;
@@ -1092,7 +1092,9 @@ base_check_path(svn_node_kind_t *kind_p,
                 apr_pool_t *pool)
 {
   svn_error_t *err = node_kind(kind_p, root, path, pool);
-  if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND))
+  if (err && 
+      ((err->apr_err == SVN_ERR_FS_NOT_FOUND)
+       || (err->apr_err == SVN_ERR_FS_NOT_DIRECTORY)))
     {
       svn_error_clear(err);
       *kind_p = svn_node_none;
@@ -1792,7 +1794,7 @@ merge(svn_stringbuf_t *conflict_p,
     }
 
   /* We have the same fs, now check it. */
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   source_id   = svn_fs_base__dag_get_id(source);
   target_id   = svn_fs_base__dag_get_id(target);
@@ -4182,7 +4184,8 @@ txn_body_closest_copy(void *baton, trail_t *trail)
                 trail, trail->pool);
   if (err)
     {
-      if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+      if ((err->apr_err == SVN_ERR_FS_NOT_FOUND)
+          || (err->apr_err == SVN_ERR_FS_NOT_DIRECTORY))
         {
           svn_error_clear(err);
           return SVN_NO_ERROR;

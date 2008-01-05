@@ -162,6 +162,22 @@ extern const apr_uint32_t *const svn_ctype_table;
 
 /** @} */
 
+/**
+ * @defgroup ctype_case ASCII-subset case folding
+ * @{
+ */
+
+/**
+ * Compare two characters @a a and @a b, treating case-equivalent
+ * unaccented Latin (ASCII subset) letters as equal.
+ *
+ * @since New in 1.5.
+ */
+int svn_ctype_casecmp(int a, int b);
+
+
+/** @} */
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

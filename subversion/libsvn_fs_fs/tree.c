@@ -327,7 +327,7 @@ svn_fs_fs__revision_root(svn_fs_root_t **root_p,
 {
   dag_node_t *root_dir;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   SVN_ERR(svn_fs_fs__dag_revision_root(&root_dir, fs, rev, pool));
 
@@ -964,7 +964,9 @@ svn_fs_fs__check_path(svn_node_kind_t *kind_p,
                       apr_pool_t *pool)
 {
   svn_error_t *err = node_kind(kind_p, root, path, pool);
-  if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND))
+  if (err && 
+      ((err->apr_err == SVN_ERR_FS_NOT_FOUND)
+       || (err->apr_err == SVN_ERR_FS_NOT_DIRECTORY)))
     {
       svn_error_clear(err);
       *kind_p = svn_node_none;
@@ -1230,7 +1232,7 @@ merge(svn_stringbuf_t *conflict_p,
     }
 
   /* We have the same fs, now check it. */
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   source_id   = svn_fs_fs__dag_get_id(source);
   target_id   = svn_fs_fs__dag_get_id(target);
