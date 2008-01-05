@@ -5267,9 +5267,14 @@ svn_client_merge_reintegrate(const char *source,
                                                NULL, NULL, NULL,
                                                FALSE, FALSE, ctx, pool));
   SVN_ERR(svn_ra_get_repos_root(ra_session, &source_repos_root, pool));
-  /* ### TODO(reint): Require that source_repos_root equals wc_repos_root,
-     ### since mergeinfo doesn't come into play for cross-repository
-     ### merging. */
+
+  /* source_repos_root and wc_repos_root are required to be the same,
+     as mergeinfo doesn't come into play for cross-repository merging. */
+  if (strcmp(source_repos_root, wc_repos_root) != 0)
+    return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
+                             _("'%s' must be from the same repository as "
+                               "'%s'"), svn_path_local_style(source, pool),
+                             svn_path_local_style(target_wcpath, pool));
 
   SVN_ERR(ensure_wc_reflects_repository_subtree(target_wcpath, ctx, pool));
 
