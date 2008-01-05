@@ -36,9 +36,11 @@ extern "C" {
 const char *
 svn_fs__canonicalize_abspath(const char *path, apr_pool_t *pool);
 
-/* Verify that FS refers to an open database; return an appropriate
-   error if this is not the case.  */
-svn_error_t *svn_fs__check_fs(svn_fs_t *fs);
+/* If EXPECT_OPEN, verify that FS refers to an open database;
+   otherwise, verify that FS refers to an unopened database.  Return
+   an appropriate error if the expecation fails to match the
+   reality.  */
+svn_error_t *svn_fs__check_fs(svn_fs_t *fs, svn_boolean_t expect_open);
 
 /* Constructing nice error messages for roots.  */
 

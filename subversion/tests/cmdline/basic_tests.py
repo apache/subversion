@@ -38,7 +38,7 @@ Item = wc.StateItem
 def basic_checkout(sbox):
   "basic checkout of a wc"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   # Checkout of a different URL into a working copy fails
@@ -85,7 +85,7 @@ def basic_checkout(sbox):
 def basic_status(sbox):
   "basic status command"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   # Created expected output tree for 'svn status'
@@ -643,7 +643,7 @@ def basic_conflict(sbox):
 def basic_cleanup(sbox):
   "basic cleanup command"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   # Lock some directories.
@@ -841,7 +841,7 @@ def basic_revert(sbox):
 def basic_switch(sbox):
   "basic switch command"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   ### Switch the file `iota' to `A/D/gamma'.
@@ -1288,7 +1288,7 @@ def basic_import(sbox):
 def basic_cat(sbox):
   "basic cat of files"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   mu_path = os.path.join(wc_dir, 'A', 'mu')
@@ -1306,7 +1306,7 @@ def basic_cat(sbox):
 def basic_ls(sbox):
   'basic ls'
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   # Even on Windows, the output will use forward slashes, so that's
@@ -1392,7 +1392,7 @@ def nonexistent_repository(sbox):
 def basic_auth_cache(sbox):
   "basic auth caching"
 
-  sbox.build(create_wc = False)
+  sbox.build(create_wc = False, read_only = True)
   wc_dir         = sbox.wc_dir
 
   repo_dir       = sbox.repo_dir
@@ -1430,7 +1430,7 @@ def basic_add_ignores(sbox):
   # where dir contains some items that match the ignore list and some
   # do not would add all items, ignored or not.
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   dir_path = os.path.join(wc_dir, 'dir')
@@ -1459,7 +1459,7 @@ def basic_add_local_ignores(sbox):
 
   #Issue #2243
   #svn add command not keying off svn:ignore value
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   dir_path = os.path.join(wc_dir, 'dir')
@@ -1477,7 +1477,7 @@ def basic_add_no_ignores(sbox):
   'add ignored files in added dirs'
 
   # add ignored files using the '--no-ignore' option
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   dir_path = os.path.join(wc_dir, 'dir')
@@ -1561,7 +1561,7 @@ def basic_add_parents(sbox):
 def uri_syntax(sbox):
   'make sure URI syntaxes are parsed correctly'
 
-  sbox.build(create_wc = False)
+  sbox.build(create_wc = False, read_only = True)
   local_dir = sbox.wc_dir
 
   # Revision 6638 made 'svn co http://host' seg fault, this tests the fix.
@@ -1580,7 +1580,7 @@ def uri_syntax(sbox):
 def basic_checkout_file(sbox):
   "trying to check out a file should fail"
 
-  sbox.build()
+  sbox.build(read_only = True)
 
   iota_url = sbox.repo_url + '/iota'
 
@@ -1607,7 +1607,7 @@ def basic_info(sbox):
       print "Expected paths:", expected_paths
       raise svntest.Failure
 
-  sbox.build()
+  sbox.build(read_only = True)
 
   os.chdir(sbox.wc_dir)
 
@@ -1630,7 +1630,7 @@ def repos_root(sbox):
       print "Bad or missing repository root"
       raise svntest.Failure
 
-  sbox.build()
+  sbox.build(read_only = True)
 
   output, errput = svntest.main.run_svn(None, "info",
                                         sbox.wc_dir)
@@ -1748,7 +1748,7 @@ def ls_nonhead(sbox):
 def cat_added_PREV(sbox):
   "cat added file using -rPREV"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   f_path = os.path.join(wc_dir, 'f')
 
@@ -2162,7 +2162,7 @@ def automatic_conflict_resolution(sbox):
 def info_nonexisting_file(sbox):
   "get info on a file not in the repo"
 
-  sbox.build(create_wc = False)
+  sbox.build(create_wc = False, read_only = True)
   idonotexist_url = sbox.repo_url + '/IdoNotExist'
   output, errput = svntest.main.run_svn(1, 'info', idonotexist_url)
 

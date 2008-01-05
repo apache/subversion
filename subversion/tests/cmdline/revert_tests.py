@@ -150,7 +150,7 @@ def revert_replacement_with_props(sbox, wc_copy):
 def revert_from_wc_root(sbox):
   "revert relative to wc root"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   os.chdir(wc_dir)
@@ -336,7 +336,7 @@ def revert_replaced_file_without_props(sbox):
 def revert_moved_file(sbox):
     "revert a moved file"
 
-    sbox.build()
+    sbox.build(read_only = True)
     wc_dir = sbox.wc_dir
     iota_path = os.path.join(wc_dir, 'iota')
     iota_path_moved = os.path.join(wc_dir, 'iota_moved')
@@ -475,7 +475,7 @@ def revert_repos_to_wc_replace_with_props(sbox):
 def revert_after_second_replace(sbox):
   "revert file after second replace"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   # File scheduled for deletion
@@ -589,7 +589,7 @@ def revert_after_manual_conflict_resolution__prop(sbox):
 def revert_propset__dir(sbox):
   "revert a simple propset on a dir"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   a_path = os.path.join(wc_dir, 'A')
   svntest.main.run_svn(None, 'propset', 'foo', 'x', a_path)
@@ -600,7 +600,7 @@ def revert_propset__dir(sbox):
 def revert_propset__file(sbox):
   "revert a simple propset on a file"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   iota_path = os.path.join(wc_dir, 'iota')
   svntest.main.run_svn(None, 'propset', 'foo', 'x', iota_path)
@@ -715,7 +715,7 @@ def revert_replaced_with_history_file_1(sbox):
 def status_of_missing_dir_after_revert(sbox):
   "status after schedule-delete, revert, and local rm"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   A_D_G_path = os.path.join(wc_dir, "A", "D", "G")
 

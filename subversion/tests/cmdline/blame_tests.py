@@ -68,7 +68,9 @@ def parse_and_verify_blame(output, expected_blame, with_merged=0):
   if len(results) != len(expected_blame):
     raise svntest.Failure, "expected and actual results not the same length"
 
-  for (num, (item, expected_item)) in enumerate(zip(results, expected_blame)):
+  pairs = zip(results, expected_blame)
+  for num in xrange(len(pairs)):
+    (item, expected_item) = pairs[num]
     for key in keys:
       if item[key] != expected_item[key]:
         raise svntest.Failure, 'on line %d, expecting %s "%s", found "%s"' % \
@@ -145,7 +147,7 @@ def blame_directory(sbox):
   import re
 
   # Setup
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   dir = os.path.join(wc_dir, 'A')
 
@@ -539,7 +541,7 @@ def blame_peg_rev_file_not_in_head(sbox):
 def blame_file_not_in_head(sbox):
   "blame target not in HEAD"
 
-  sbox.build(create_wc = False)
+  sbox.build(create_wc = False, read_only = True)
   notexisting_url = sbox.repo_url + '/notexisting'
 
   # Check that a correct error message is printed when blaming a target that

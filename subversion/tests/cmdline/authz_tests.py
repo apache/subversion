@@ -342,7 +342,7 @@ def authz_write_access(sbox):
 def authz_checkout_test(sbox):
   "test authz for checkout"
 
-  sbox.build(create_wc = False)
+  sbox.build(create_wc = False, read_only = True)
   local_dir = sbox.wc_dir
 
   write_restrictive_svnserve_conf(sbox.repo_dir)
@@ -380,7 +380,7 @@ def authz_checkout_test(sbox):
 def authz_checkout_and_update_test(sbox):
   "test authz for checkout and update"
 
-  sbox.build(create_wc = False)
+  sbox.build(create_wc = False, read_only = True)
   local_dir = sbox.wc_dir
 
   write_restrictive_svnserve_conf(sbox.repo_dir)
@@ -437,7 +437,7 @@ def authz_checkout_and_update_test(sbox):
 def authz_partial_export_test(sbox):
   "test authz for export with unreadable subfolder"
 
-  sbox.build(create_wc = False)
+  sbox.build(create_wc = False, read_only = True)
   local_dir = sbox.wc_dir
 
   # cleanup remains of a previous test run.
@@ -627,7 +627,7 @@ def authz_aliases(sbox):
 def authz_validate(sbox):
   "test the authz validation rules"
 
-  sbox.build(create_wc = False)
+  sbox.build(create_wc = False, read_only = True)
 
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
@@ -748,7 +748,7 @@ def authz_locking(sbox):
 def authz_svnserve_anon_access_read(sbox):
   "authz issue #2712"
 
-  sbox.build(create_wc = False)
+  sbox.build(create_wc = False, read_only = True)
   svntest.main.safe_rmtree(sbox.wc_dir)
   B_path = os.path.join(sbox.wc_dir, 'A', 'B')
   B_url = sbox.repo_url + '/A/B'
@@ -776,7 +776,7 @@ def authz_svnserve_anon_access_read(sbox):
 def authz_switch_to_directory(sbox):
   "switched to directory, no read access on parents"
 
-  sbox.build()
+  sbox.build(read_only = True)
 
   write_authz_file(sbox, {"/": "*=rw", "/A/B": "*=", "/A/B/E": "jrandom = rw"})
 

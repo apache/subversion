@@ -149,9 +149,12 @@ get_file_for_validation(const svn_string_t **mime_type,
   apr_hash_t *props;
 
   SVN_ERR(svn_ra_get_file(ra_session, "", gb->base_revision_for_url,
-                          stream, NULL, &props, pool));
+                          stream, NULL,
+                          (mime_type ? &props : NULL),
+                          pool));
 
-  *mime_type = apr_hash_get(props, SVN_PROP_MIME_TYPE, APR_HASH_KEY_STRING);
+  if (mime_type)
+    *mime_type = apr_hash_get(props, SVN_PROP_MIME_TYPE, APR_HASH_KEY_STRING);
 
   return SVN_NO_ERROR;
 }

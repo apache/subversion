@@ -29,10 +29,6 @@
 #include <ap_provider.h>
 #include <apr_uri.h>
 #include <mod_dav.h>
-#if AP_MODULE_MAGIC_AT_LEAST(20060110,0)
-#include <mod_auth.h>
-APR_OPTIONAL_FN_TYPE(ap_satisfies) *ap_satisfies;
-#endif
 
 #include "mod_dav_svn.h"
 #include "mod_authz_svn.h"
@@ -616,13 +612,6 @@ static int auth_checker(request_rec *r)
  * Module flesh
  */
 
-#if AP_MODULE_MAGIC_AT_LEAST(20060110,0)
-static void import_ap_satisfies(void)
-{
-    ap_satisfies = APR_RETRIEVE_OPTIONAL_FN(ap_satisfies);
-}
-#endif
-
 static void register_hooks(apr_pool_t *p)
 {
     static const char * const mod_ssl[] = { "mod_ssl.c", NULL };
@@ -633,9 +622,6 @@ static void register_hooks(apr_pool_t *p)
      * give SSLOptions +FakeBasicAuth a chance to work. */
     ap_hook_check_user_id(check_user_id, mod_ssl, NULL, APR_HOOK_FIRST);
     ap_hook_auth_checker(auth_checker, NULL, NULL, APR_HOOK_FIRST);
-#if AP_MODULE_MAGIC_AT_LEAST(20060110,0)
-    ap_hook_optional_fn_retrieve(import_ap_satisfies, NULL, NULL, APR_HOOK_MIDDLE);
-#endif
     ap_register_provider(p,
                          AUTHZ_SVN__SUBREQ_BYPASS_PROV_GRP,
                          AUTHZ_SVN__SUBREQ_BYPASS_PROV_NAME,

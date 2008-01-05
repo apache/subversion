@@ -314,7 +314,12 @@ Request:
   <S:log-report xmlns:S="svn:">
     <S:start-revision>2</S:start-revision>
     <S:end-revision>2</S:end-revision>
-    <S:path></S:path>
+    <S:limit>1</S:limit> (optional)
+    <S:discover-changed-paths/> (optional)
+    <S:strict-node-history/> (optional)
+    <S:include-merged-revisions/> (optional)
+    <S:revprop>REVPROP</S:revprop>... | <S:all-revprops/> (optional)
+    <S:path></S:path>... (optional)
   </S:log-report>
 
 Response:
@@ -326,6 +331,12 @@ Response:
       <S:creator-displayname>bob</S:creator-displayname>
       <S:date>2006-02-27T18:44:26.149336Z</S:date>
       <D:comment>Add doo-hickey</D:comment>
+      <S:revprop name="REVPROP">value</S:revprop>... (optional)
+      <S:has-children/> (optional)
+      <S:added-path( copyfrom-path="PATH" copyfrom-rev="REVNUM">PATH</S:added-path>... (optional)
+      <S:replaced-path( copyfrom-path="PATH" copyfrom-rev="REVNUM">PATH</S:replaced-path>... (optional)
+      <S:deleted-path>PATH</S:deleted-path>... (optional)
+      <S:modified-path>PATH</S:modified-path>... (optional)
     </S:log-item>
     ...multiple log-items for each returned revision...
   </S:log-report>

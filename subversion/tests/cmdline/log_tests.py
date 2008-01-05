@@ -491,7 +491,7 @@ def log_where_nothing_changed(sbox):
 #----------------------------------------------------------------------
 def log_to_revision_zero(sbox):
   "'svn log -v -r 1:0 wc_root'"
-  sbox.build()
+  sbox.build(read_only = True)
 
   # This used to segfault the server.
 
@@ -1073,7 +1073,7 @@ def log_changes_list(sbox):
 def only_one_wc_path(sbox):
   "svn log of two wc paths is disallowed"
 
-  sbox.build()
+  sbox.build(read_only = True)
   os.chdir(sbox.wc_dir)
 
   svntest.actions.run_and_verify_log_xml(
