@@ -858,11 +858,13 @@ adjust_parent_mergeinfo_counts(parent_path_t *parent_path,
                                trail_t *trail,
                                apr_pool_t *pool)
 {
+  apr_pool_t *subpool;
   parent_path_t *pp = parent_path;
-  apr_pool_t *subpool = svn_pool_create(pool);
 
   if (count_delta == 0)
     return SVN_NO_ERROR;
+
+  subpool = svn_pool_create(pool);
 
   while (pp)
     {
