@@ -4214,7 +4214,8 @@ names are relative to the directory where `svn-status' was run."
                                                            (file-name-nondirectory file-name)
                                                            ".svn-base"))
                            (progn
-                             (svn-run nil t 'cat "cat" "-r" revision (file-name-nondirectory file-name))
+                             (svn-run nil t 'cat "cat" "-r" revision
+                                      (concat default-directory (file-name-nondirectory file-name)))
                              ;;todo: error processing
                              ;;svn: Filesystem has no item
                              ;;svn: file not found: revision `15', path `/trunk/file.txt'
@@ -4225,7 +4226,9 @@ names are relative to the directory where `svn-status' was run."
                   (erase-buffer) ;Widen, because we'll save the whole buffer.
                   (insert content)
                   (goto-char (point-min))
-                  (save-buffer)))
+                  (let ((write-file-functions nil)
+                        (require-final-newline nil))
+                    (save-buffer))))
             (find-file file-name-with-revision)))))
     ;;(message "default-directory: %s revision-file-info: %S" default-directory svn-status-get-specific-revision-file-info)
     (nreverse svn-status-get-specific-revision-file-info)))
