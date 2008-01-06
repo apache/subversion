@@ -1501,6 +1501,96 @@ def status_dash_u_type_change(sbox):
                                      [],
                                      "status", "-u")
 
+#----------------------------------------------------------------------
+
+def status_with_tree_conflicts(sbox):
+  "status with tree conflicts" 
+  
+  # Status messages reflecting tree conflict status.
+  # These tests correspond to use cases 1-3 in 
+  # notes/tree-conflicts/use-cases.txt.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make working copy 2
+  wc_dir_2 =  sbox.add_wc_path('2')
+  svntest.actions.duplicate_dir(wc_dir, wc_dir_2)  
+  G = os.path.join(wc_dir, 'A', 'D', 'G')
+  G2 = os.path.join(wc_dir_2, 'A', 'D', 'G')
+  rho2 = os.path.join(G2, 'rho')
+  pi2 = os.path.join(G2, 'pi')
+  pig2 = os.path.join(G2, 'pig')
+  rhino2 = os.path.join(G2, 'rhino')
+  tiger2 = os.path.join(G2, 'tiger')
+  tapir2 = os.path.join(G2, 'tapir')
+
+  svntest.actions.set_up_tree_conflicts(G, G2)
+
+  # Update in wc 2, creating tree conflicts
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', G2)
+
+  # check status of G in wc 2
+  expected = svntest.verify.UnorderedOutput(
+         ["C      %s\n" % G2,
+          "D      %s\n" % pi2,
+          "A  +   %s\n" % pig2,
+          "?      %s\n" % rho2,
+          "A  +   %s\n" % tiger2])
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     "status", G2)
+
+  # check status of G in wc 2, with -v
+  expected = svntest.verify.UnorderedOutput(
+         ["C               2        2 jrandom      %s\n" % G2,
+          "D               2        2 jrandom      %s\n" % pi2,
+          "A  +            -       ?   ?           %s\n" % pig2,
+          "?                                       %s\n" % rho2,
+          "                2        2 jrandom      %s\n" % rhino2,
+          "A  +            -       ?   ?           %s\n" % tiger2,
+          "                2        2 jrandom      %s\n" % tapir2])
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     "status", "-v", G2)
+
+  # check status of G in wc 2, with -xml
+  template = ["<?xml version=\"1.0\"?>\n",
+              "<status>\n",
+              "<target\n",
+              "   path=\"%s\">\n" % G2,
+              "<entry\n",
+              "   path=\"%s\">\n" % G2,
+              "<wc-status\n",
+              "   props=\"none\"\n",
+              "   tree-conflicted=\"true\"\n",  # <-- true!
+              "   item=\"normal\"\n",
+              "   revision=\"2\">\n",
+              "<commit\n",
+              "   revision=\"2\">\n",
+              "<author>%s</author>\n" % svntest.main.wc_author,
+              "<date></date>\n", # will be ignored
+              "</commit>\n",
+              "</wc-status>\n",
+              "</entry>\n",
+             ]
+
+  output, error = svntest.actions.run_and_verify_svn(None, None, [],
+                                                     'status', G2,
+                                                     '--xml')
+
+  for i in range(0, len(output)):
+    if output[i].startswith("<date>"):
+      continue # ignore <date>
+    if output[i] == "</entry>\n":
+      break # read only the first entry
+    if output[i] != template[i]:
+      print "ERROR: expected:", template[i], "actual:", output[i]
+      raise svntest.Failure
+
+
 ########################################################################
 # Run the tests
 
@@ -1538,6 +1628,7 @@ test_list = [ None,
               status_depth_local,
               status_depth_update,
               status_dash_u_type_change,
+              status_with_tree_conflicts,
              ]
 
 if __name__ == '__main__':

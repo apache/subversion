@@ -47,7 +47,6 @@ struct status_baton
   svn_boolean_t show_last_committed;
   svn_boolean_t skip_unrecognized;
   svn_boolean_t repos_locks;
-  svn_boolean_t show_tree_conflicts;
   apr_pool_t *pool;
 
   apr_hash_t *cached_changelists;
@@ -120,7 +119,6 @@ print_status_normal_or_xml(void *baton,
                                sb->show_last_committed,
                                sb->skip_unrecognized,
                                sb->repos_locks,
-                               sb->show_tree_conflicts,
                                sb->pool);
 
   if (err)
@@ -281,7 +279,6 @@ svn_cl__status(apr_getopt_t *os,
   sb.pool = subpool;
   sb.cached_changelists = master_cl_hash;
   sb.cl_pool = pool;
-  sb.show_tree_conflicts = opt_state->show_tree_conflicts;
 
   for (i = 0; i < targets->nelts; i++)
     {
