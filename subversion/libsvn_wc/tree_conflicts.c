@@ -615,34 +615,3 @@ svn_wc__add_tree_conflict_data(svn_stringbuf_t *log_accum,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_wc__is_tree_conflict_victim(svn_boolean_t *tree_conflict_victim,
-                                const char *path,
-                                svn_wc_adm_access_t *adm_access,
-                                apr_pool_t *pool)
-{
-  /* Retrieve node path from adm_access. */
-
-  /* Check whether node is a directory. If not, throw an error. */
-
-  /* Get the entry for the directory. */
-
-  /* If there is already a tree conflict victim with the same path
-   * as the one we got as an argument, set tree_conflict_victim to
-   * true, else set it to false */
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc__tree_conflict_resolved(const char* victim_path,
-                               svn_wc_adm_access_t *adm_access,
-                               apr_pool_t *pool)
-{
-  /* Make sure the node is a directory.
-   * Otherwise we should not have been called. */
-
-  /* In the dir entry, remove the tree conflict data for this victim. */
-
-  return SVN_NO_ERROR;
-}
