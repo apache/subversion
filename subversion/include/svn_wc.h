@@ -2292,10 +2292,10 @@ typedef struct svn_wc_status2_t
 
   /** @} */
 
-  /** The entry's tree-conflict status.
+  /** Set @c TRUE if the entry is a directory containing tree conflicts.
    * @since New in 1.6
    */
-  enum svn_wc_status_kind tree_status;
+  svn_boolean_t tree_conflicted;
 
   /* NOTE! Please update svn_wc_dup_status2() when adding new fields here. */
 } svn_wc_status2_t;
