@@ -2536,22 +2536,6 @@ def start_commit_detect_capabilities(sbox):
 
 #----------------------------------------------------------------------
 
-# Helper for tree-conflict tests
-def setup_simple_tree_conflicts(G, G2):
-  j = os.path.join
-  run = svntest.actions.run_and_verify_svn
-
-  # Modify pi, move rho, move tau in wc 1 and commit
-  svntest.main.file_append( j(G, 'pi'), "Change to 'G/pi'.\n")
-  run(None, None, [], 'mv', j(G, 'rho'), j(G, 'rhino'))
-  run(None, None, [], 'mv', j(G, 'tau'), j(G, 'tapir'))
-  run(None, None, [], 'ci', '-m', 'changes in wc 1', G)
-
-  # Move pi, modify rho, move tau in wc 2
-  run(None, None, [], 'mv', j(G2, 'pi'),  j(G2, 'pig'))
-  svntest.main.file_append( j(G2, 'rho'), "Change to 'G/rho'.\n")
-  run(None, None, [], 'mv', j(G2, 'tau'), j(G2, 'tiger'))
-
 # Helper for commit-failure tests
 def commit_fails_at_path(path, wc_dir, error_re):
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -2580,7 +2564,7 @@ def tree_conflicts_block_commit(sbox):
   D2 = os.path.join(wc_dir_2, 'A', 'D')
   A2 = os.path.join(wc_dir_2, 'A')
 
-  setup_simple_tree_conflicts(G, G2)
+  svntest.actions.set_up_tree_conflicts(G, G2)
 
   # Update in wc 2, creating tree conflicts
   svntest.actions.run_and_verify_svn(None, None, [], 'up', G2)
