@@ -1,5 +1,5 @@
 ;;; psvn.el --- Subversion interface for emacs
-;; Copyright (C) 2002-2007 by Stefan Reichoer
+;; Copyright (C) 2002-2008 by Stefan Reichoer
 
 ;; Author: Stefan Reichoer <stefan@xsteve.at>
 ;; $Id$
@@ -5081,7 +5081,8 @@ Commands:
   (let ((full-file-name)
         (file-name)
         (checkout-prefix-path (if respect-checkout-prefix-path
-                                  (svn-status-checkout-prefix-path)
+                                  (url-unhex-string
+                                   (svn-status-checkout-prefix-path))
                                 "")))
     (save-excursion
       (beginning-of-line)
