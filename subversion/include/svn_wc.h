@@ -4684,6 +4684,18 @@ svn_wc_append_human_readable_tree_conflict_description(
                                        svn_stringbuf_t *descriptions,
                                        svn_wc_conflict_description_t *conflict,
                                        apr_pool_t *pool);
+
+/**
+ * Append to @a stringbuf an XML representation of the tree conflict data
+ * for @a conflict, in a format suitable for 'svn info --xml'.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc_append_tree_conflict_info_xml(svn_stringbuf_t *str,
+                                     svn_wc_conflict_description_t *conflict,
+                                     apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }

@@ -20,6 +20,7 @@
 #include "log.h"
 #include "entries.h"
 #include "svn_types.h"
+#include "svn_xml.h"
 #include "svn_private_config.h"
 
 #include <assert.h>
@@ -615,3 +616,81 @@ svn_wc__add_tree_conflict_data(svn_stringbuf_t *log_accum,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_wc_append_tree_conflict_info_xml(svn_stringbuf_t *str,
+                                     svn_wc_conflict_description_t *conflict,
+                                     apr_pool_t *pool)
+{
+  apr_hash_t *att_hash = apr_hash_make(pool);
+  const char *tmp;
+
+  apr_hash_set(att_hash, "victim", APR_HASH_KEY_STRING,
+               conflict->victim_path);
+
+  switch (conflict->node_kind)
+    {
+      case svn_node_dir:
+        tmp = SVN_WC__NODE_DIR;
+        break;
+      case svn_node_file:
+        tmp = SVN_WC__NODE_FILE;
+        break;
+      default:
+        return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+            _("Bad node_kind in tree conflict description"));
+    }
+  apr_hash_set(att_hash, "kind", APR_HASH_KEY_STRING, tmp);
+
+  switch (conflict->operation)
+    {
+      case svn_wc_operation_update:
+        tmp = SVN_WC__OPERATION_UPDATE;
+        break;
+      case svn_wc_operation_switch:
+        tmp = SVN_WC__OPERATION_SWITCH;
+        break;
+      case svn_wc_operation_merge:
+        tmp = SVN_WC__OPERATION_MERGE;
+      default:
+        return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+            _("Bad operation in tree conflict description"));
+    }
+  apr_hash_set(att_hash, "operation", APR_HASH_KEY_STRING, tmp);
+
+  switch (conflict->action)
+    {
+      case svn_wc_conflict_action_edit:
+        tmp = SVN_WC__CONFLICT_ACTION_EDITED;
+        break;
+      case svn_wc_conflict_action_delete:
+        tmp = SVN_WC__CONFLICT_ACTION_DELETED;
+        break;
+      default:
+        return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+            _("Bad action in tree conflict description"));
+    }
+  apr_hash_set(att_hash, "action", APR_HASH_KEY_STRING, tmp);
+
+  switch (conflict->reason)
+    {
+      case svn_wc_conflict_reason_edited:
+        tmp = SVN_WC__CONFLICT_REASON_EDITED;
+        break;
+      case svn_wc_conflict_reason_deleted:
+        tmp = SVN_WC__CONFLICT_REASON_DELETED;
+        break;
+      case svn_wc_conflict_reason_missing:
+        tmp = SVN_WC__CONFLICT_REASON_MISSING;
+        break;
+      default:
+        return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+            _("Bad reason in tree conflict description"));
+    }
+  apr_hash_set(att_hash, "reason", APR_HASH_KEY_STRING, tmp);
+
+  svn_xml_make_open_tag_hash(&str, pool, svn_xml_self_closing,
+                             "tree-conflict", att_hash);
+
+  return SVN_NO_ERROR;
+}
