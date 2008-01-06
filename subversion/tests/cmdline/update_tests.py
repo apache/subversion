@@ -3774,32 +3774,15 @@ interactive-conflicts = true
 
 #----------------------------------------------------------------------
 
-# Helper for tree-conflict tests
-def setup_simple_tree_conflicts(G, G2):
-  j = os.path.join
-  run = svntest.actions.run_and_verify_svn
-
-  # Modify pi, move rho, move tau in wc 1 and commit
-  svntest.main.file_append( j(G, 'pi'), "Change to 'G/pi'.\n")
-  run(None, None, [], 'mv', j(G, 'rho'), j(G, 'rhino'))
-  run(None, None, [], 'mv', j(G, 'tau'), j(G, 'tapir'))
-  run(None, None, [], 'ci', '-m', 'changes in wc 1', G)
-
-  # Move pi, modify rho, move tau in wc 2
-  run(None, None, [], 'mv', j(G2, 'pi'),  j(G2, 'pig'))
-  svntest.main.file_append( j(G2, 'rho'), "Change to 'G/rho'.\n")
-  run(None, None, [], 'mv', j(G2, 'tau'), j(G2, 'tiger'))
-
 def tree_conflicts_in_updated_files(sbox):
   "tree conflicts in updated files"
 
   # Detect simple tree conflicts among files edited and renamed in a single
-  # directory.  Mark with a persistent 'tree_conflicts.txt' file that lists
-  # all conflicted paths.
+  # directory.  See use cases 1-3 in notes/tree-conflicts/use-cases.txt for
+  # background.
   
-  # See use cases 1-3 in notes/tree-conflicts/use-cases.txt for background.
-  # The only difference from the 1.4/1.5 behavior is the appearance of the
-  # tree_conflicts.txt file.
+  # We do not try to track renames.  The only difference from the behavior
+  # of Subversion 1.4/1.5 is the conflicted status of the directory.
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -3810,7 +3793,7 @@ def tree_conflicts_in_updated_files(sbox):
   G = os.path.join(wc_dir, 'A', 'D', 'G')
   G2 = os.path.join(wc_dir_2, 'A', 'D', 'G')
 
-  setup_simple_tree_conflicts(G, G2)
+  svntest.actions.set_up_tree_conflicts(G, G2)
 
   # Update in wc 2
   expected_output = wc.State(G2, {
