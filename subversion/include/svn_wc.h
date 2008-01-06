@@ -1790,8 +1790,6 @@ typedef struct svn_wc_entry_t
   svn_depth_t depth;
 
   /** Serialized data for all of the tree conflicts detected in this_dir.
-   * If no tree_conflict_report file exists in this_dir, the data in this
-   * field is ignored.
    *
    * @since New in 1.6. */
   const char *tree_conflict_data;

@@ -1373,7 +1373,6 @@ log_do_committed(struct log_runner *loggy,
                                    | SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS
                                    | SVN_WC__ENTRY_MODIFY_WORKING_SIZE
                                    | SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA
-                                   | SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_REPORT
                                    | SVN_WC__ENTRY_MODIFY_FORCE),
                                   FALSE, pool)))
     return svn_error_createf
