@@ -1539,6 +1539,9 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
    *REFLECTED_RANGES_LIST array will be populated with array of
    merge range(svn_merge_range_t *) that are merged from target to source
    within revision1:revision2.
+
+   Both *REFLECTIVE_RANGELIST and *REFLECTED_RANGES_LIST correspond 1-1 with
+   each other.
 */
 static svn_error_t *
 filter_reflective_revisions(apr_array_header_t **requested_rangelist,
