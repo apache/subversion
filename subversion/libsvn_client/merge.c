@@ -4920,24 +4920,20 @@ ensure_wc_reflects_repository_subtree(const char *target_wcpath,
   SVN_ERR(svn_wc_revision_status(&wc_stat, target_wcpath, NULL, FALSE, 
                                  ctx->cancel_func, ctx->cancel_baton, pool));
 
-  /* ### TODO(reint): bikeshedding: These shouldn't say "Cannot merge",
-     but rather "Cannot full-tree-auto-merge", but we need a name for
-     that.  Or just make the error say "Working copy has a switched
-     subtree". */
   if (wc_stat->switched)
     return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                            _("Cannot merge into a working copy with a  "
-                              "switched subtree"));
+                            _("Cannot reintegrate into a working copy "
+                              "with a switched subtree"));
 
   if (wc_stat->sparse_checkout)
     return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                            _("Cannot merge into a working copy that is not "
-                              "entirely at infinite depth"));
+                            _("Cannot reintegrate into a working copy "
+                              "not entirely at infinite depth"));
 
   if (wc_stat->modified)
     return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                            _("Cannot merge into a working copy with local "
-                              "modifications"));
+                            _("Cannot reintegrate into a working copy "
+                              "that has local modifications"));
 
   if (! (SVN_IS_VALID_REVNUM(wc_stat->min_rev)
          && SVN_IS_VALID_REVNUM(wc_stat->max_rev)))
@@ -4946,8 +4942,8 @@ ensure_wc_reflects_repository_subtree(const char *target_wcpath,
 
   if (wc_stat->min_rev != wc_stat->max_rev)
     return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                            _("Cannot merge into mixed-revision working copy; "
-                              "try updating first"));
+                            _("Cannot reintegrate into mixed-revision "
+                              "working copy; try updating first"));
 
   return SVN_NO_ERROR;
 }
@@ -5006,16 +5002,16 @@ ensure_all_missing_ranges_are_phantoms(svn_ra_session_t *ra_session,
 
           if (svn_merge_range_contains_rev(range, dirent->created_rev))
             {
-              /* ### TODO(reint): This message might not be optimal (for
-                 example, should we include the whole URL or just the path?
-                 should we be more clear that this particular revision
-                 might not be the only problem?)
-              */
+              const char *full_url;
+
+              svn_pool_destroy(iterpool);
+
+              SVN_ERR(svn_ra_get_session_url(ra_session, &full_url, pool));
+              full_url = svn_path_url_add_component(full_url, path, pool);
               return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                                       _("Revision %ld not yet merged from "
-                                         "'%s'"), 
-                                       dirent->created_rev,
-                                       path);
+                                       _("At least one revision (r%ld) "
+                                         "not yet merged from '%s'"), 
+                                       dirent->created_rev, full_url);
             }
         }
     }
@@ -5205,15 +5201,18 @@ calculate_left_hand_side(const char **url_left,
     }
   else
     {
-      /* TODO(reint): This error might be too conservative.  And in
-         any case, this error message is not helpful to the user: it
-         doesn't suggest a next step.  (Also, perhaps should show
-         URL instead of path.) */
-      svn_pool_destroy(subpool);
+      const char *full_url;
+      SVN_ERR(svn_ra_get_session_url(ra_session, &full_url, pool));
+      full_url = svn_path_url_add_component(full_url, source_repos_rel_path,
+                                            pool);
       return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                               "Cannot reintegrate from '%s', because "
-                               "it has descendents with different revisions "
-                               "merged", source_repos_rel_path);
+                               "Cannot reintegrate from '%s' yet:\nSome "
+                               "revisions have have been merged into its "
+                               "descendants that have\nnot been been merged "
+                               "into the reintegration target;\n"
+                               "merge them first, then retry.", full_url);
+      /* TODO(reint): It would be even better to print out mergeinfo_catalog
+         here.  Is there a helper function for that? */ 
     }
 }
 
@@ -5316,6 +5315,7 @@ svn_client_merge_reintegrate(const char *source,
                              _("'%s@%ld' must be ancestrally related to "
                                "'%s@%ld'"), url1, rev1, url2, rev2);
 
+  /* ### TODO(reint): Clearly, these prints should not stay. */
   printf("KFF url1: %s\n", url1);
   printf("KFF rev1: %ld\n", rev1);
   printf("KFF url2: %s\n", url2);
@@ -5347,6 +5347,7 @@ svn_client_merge_reintegrate(const char *source,
                                  target_mergeinfo, source_mergeinfo, FALSE,
                                  pool));
 
+      /* ### TODO(reint): Clearly, these prints should not stay. */
       {
         svn_string_t *debug_output;
         SVN_ERR(svn_mergeinfo__to_string(&debug_output, target_mergeinfo,

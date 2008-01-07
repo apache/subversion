@@ -23,8 +23,6 @@ Remaining work (which can be done post-merge)
 
 * Examine "TODO(reint)", including (but not limited to):
 
-  * Error messages (kfogel)
-
   * "Is this the same line?" direct ancestor check (glasser)
 
   * authz check (glasser)
