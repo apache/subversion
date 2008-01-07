@@ -5206,10 +5206,10 @@ calculate_left_hand_side(const char **url_left,
       full_url = svn_path_url_add_component(full_url, source_repos_rel_path,
                                             pool);
       return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                               "Cannot reintegrate from '%s' yet:\nSome "
-                               "revisions have have been merged into its "
-                               "descendants that have\nnot been been merged "
-                               "into the reintegration target;\n"
+                               "Cannot reintegrate from '%s' yet:\n"
+                               "Some revisions have been merged under it "
+                               "that have not been merged\n"
+                               "into the reintegration target; "
                                "merge them first, then retry.", full_url);
       /* TODO(reint): It would be even better to print out mergeinfo_catalog
          here.  Is there a helper function for that? */ 
