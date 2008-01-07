@@ -30,7 +30,7 @@ XFail = svntest.testcase.XFail
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 
-from merge_tests import setup_branch
+from merge_tests import set_up_branch
 from merge_tests import shorten_path_kludge
 
 from svntest.main import SVN_PROP_MERGE_INFO
@@ -78,7 +78,7 @@ def mergeinfo_and_skipped_paths(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  wc_disk, wc_status = setup_branch(sbox, False, 3)
+  wc_disk, wc_status = set_up_branch(sbox, False, 3)
 
   # Create a restrictive authz where part of the merge source and part
   # of the target are inaccesible.
