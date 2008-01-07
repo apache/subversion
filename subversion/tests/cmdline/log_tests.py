@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -204,7 +204,9 @@ to the repos found at:
 http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=c2__Sample%20repository"""
 
   upsilon_path = os.path.join('A', 'upsilon')
+  omicron_path = os.path.join('blocked', 'omicron')
   branch_a = os.path.join('branches', 'a')
+  branch_b = os.path.join('branches', 'b')
   branch_c = os.path.join('branches', 'c')
 
   # Create an empty repository - r0
@@ -243,7 +245,7 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   svntest.main.file_append(os.path.join(branch_a, 'iota'),
                            "'A' has changed a bit.\n")
   svntest.main.file_append(os.path.join(branch_a, 'A', 'mu'),
-                           "Don't forget to look at 'upsilnon', too.")
+                           "Don't forget to look at 'upsilon', too.")
   svntest.main.file_write(os.path.join(branch_a, upsilon_path),
                           "This is the file 'upsilon'.\n")
   svntest.main.run_svn(None, 'add',
@@ -262,6 +264,62 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   svntest.main.run_svn(None, 'ci', '-m',
                        'Merged branches/a to trunk.')
   os.chdir('..')
+
+  # Add omicron to branches/a - r7
+  svntest.main.run_svn(None, 'mkdir', os.path.join(branch_a, 'blocked'))
+  svntest.main.file_write(os.path.join(branch_a, omicron_path),
+                          "This is the file 'omicron'.\n")
+  svntest.main.run_svn(None, 'add',
+                       os.path.join(branch_a, omicron_path))
+  svntest.main.run_svn(None, 'ci', '-m',
+                       "Add omicron to branches/a.  " +
+                       "It will be blocked from merging in r8.")
+
+  # Block r7 from being merged to trunk - r8
+  mergeinfo, actual_stderr = svntest.main.run_svn(None, 'pg', 'svn:mergeinfo',
+                                                  'trunk')
+  for m, i in zip(mergeinfo[:], range(0, len(mergeinfo))):
+    mergeinfo[i] = mergeinfo[i][:-1]
+  mergeinfo.append("/branches/a:7")
+  svntest.main.run_svn(None, 'ps', 'svn:mergeinfo', '\n'.join(mergeinfo),
+                       'trunk')
+  svntest.main.run_svn(None, 'ci', '-m',
+                       "Block r7 from merging to trunk.")
+
+  # Wording change in mu - r9
+  svntest.main.file_write(os.path.join('trunk', 'A', 'mu'),
+                          "This is the file 'mu'.\n" +
+                          "Don't forget to look at 'upsilon', as well.")
+  svntest.main.run_svn(None, 'ci', '-m',
+                       "Wording change in mu.")
+
+  # Update from the repository to avoid a mix-rev working copy
+  svntest.main.run_svn(None, 'up')
+
+  # Create another branch - r10
+  svntest.main.run_svn(None, 'cp', 'trunk', branch_b)
+  svntest.main.run_svn(None, 'ci', '-m',
+                       "Create branches/b from trunk")
+
+  # Add another file, make some changes on branches/a - r11
+  svntest.main.file_append(os.path.join(branch_a, upsilon_path),
+                           "There is also the file 'xi'.")
+  svntest.main.file_write(os.path.join(branch_a, 'A', 'xi'),
+                          "This is the file 'xi'.\n")
+  svntest.main.run_svn(None, 'add',
+                       os.path.join(branch_a, 'A', 'xi'))
+  svntest.main.file_write(os.path.join(branch_a, 'iota'),
+                          "This is the file 'iota'.\n" +
+                          "'A' has changed a bit, with 'upsilon', and 'xi'.")
+  svntest.main.run_svn(None, 'ci', '-m',
+                       "Added 'xi' to branches/a, made a few other changes.")
+
+  # Merge branches/a to branches/b - r12
+  os.chdir(branch_b)
+  svntest.main.run_svn(None, 'merge', os.path.join('..', 'a'))
+  svntest.main.run_svn(None, 'ci', '-m',
+                       "Merged branches/a to branches/b")
+  os.chdir(os.path.join('..', '..'))
 
   # Restore working directory
   os.chdir(was_cwd)
