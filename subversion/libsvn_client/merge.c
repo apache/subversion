@@ -1532,11 +1532,13 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
 
    NOTE: This should only be called when honoring mergeinfo.
 
-   *REFLECTIVE_RANGELIST will be populated with commits post merge from
-   target on source within revision1:revision2.
+   *REFLECTIVE_RANGELIST array will be populated with a single commit revision
+   range(svn_merge_range_t *) of commit revision which had the merge from 
+   target to source within revision1:revision2.
 
-   *REFLECTED_RANGES_LIST will be populated with merge ranges that are
-   merged from target to source within revision1:revision2.
+   *REFLECTED_RANGES_LIST array will be populated with array of
+   merge range(svn_merge_range_t *) that are merged from target to source
+   within revision1:revision2.
 */
 static svn_error_t *
 filter_reflective_revisions(apr_array_header_t **requested_rangelist,
