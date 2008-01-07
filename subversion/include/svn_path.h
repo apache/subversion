@@ -465,12 +465,17 @@ const char *svn_path_uri_encode(const char *path, apr_pool_t *pool);
 /** Return a URI-decoded copy of @a path, allocated in @a pool. */
 const char *svn_path_uri_decode(const char *path, apr_pool_t *pool);
 
-/** Extend @a url by a single @a component, URI-encoding that @a component
- * before adding it to the @a url.  Return the new @a url, allocated in
- * @a pool.  Notes: if @a component is @c NULL, just return a copy or @a url
- * allocated in @a pool; if @a component is already URI-encoded, calling
- * code should just use <tt>svn_path_join (url, component, pool)</tt>.  @a url
- * does not need to be a canonical path, it may have trailing '/'.
+/** Extend @a url by @a component, URI-encoding that @a component
+ * before adding it to the @a url; return the new @a url, allocated in
+ * @a pool.  If @a component is @c NULL, just return a copy of @a url,
+ * allocated in @a pool.
+ *
+ * @a component need not be a single path segment, but if it contains
+ * multiple segments, they must be separated by '/'.  If @a component
+ * is already URI-encoded, just use <tt>svn_path_join (url, component,
+ * pool)</tt> instead.
+ *
+ * @a url need not be a canonical path; it may have a trailing '/'.
  */
 const char *svn_path_url_add_component(const char *url,
                                        const char *component,
