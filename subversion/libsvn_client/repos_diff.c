@@ -867,37 +867,45 @@ close_directory(void *dir_baton,
   if (b->propchanges->nelts > 0)
     {
       svn_wc_adm_access_t *adm_access;
-      err = get_path_access(&adm_access, eb->adm_access, b->wcpath,
-                            eb->dry_run, b->pool);
-
-      if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED)
+      apr_array_header_t *regular_props;
+      SVN_ERR(svn_categorize_props(b->propchanges, NULL, NULL,
+                                   &regular_props, pool));
+      if (regular_props->nelts)
         {
-          /* ### maybe try to stat the local b->wcpath? */
-          /* If the path doesn't exist, then send a 'skipped' notification. */
-          if (eb->notify_func)
-            {
-              svn_wc_notify_t *notify
-                = svn_wc_create_notify(b->wcpath, svn_wc_notify_skip, pool);
-              notify->kind = svn_node_dir;
-              notify->content_state = notify->prop_state
-                = svn_wc_notify_state_missing;
-              (*eb->notify_func)(eb->notify_baton, notify, pool);
-            }
-          svn_error_clear(err);
-          return SVN_NO_ERROR;
-        }
-      else if (err)
-        return err;
+          err = get_path_access(&adm_access, eb->adm_access, b->wcpath,
+                                eb->dry_run, b->pool);
 
-      /* Don't do the props_changed stuff if this is a dry_run and we don't
-         have an access baton, since in that case the directory will already
-         have been recognised as added, in which case they cannot conflict. */
-      if (! eb->dry_run || adm_access)
-        SVN_ERR(eb->diff_callbacks->dir_props_changed
-                (adm_access, &prop_state,
-                 b->wcpath,
-                 b->propchanges, b->pristine_props,
-                 b->edit_baton->diff_cmd_baton));
+          if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED)
+            {
+              /* ### maybe try to stat the local b->wcpath? */
+              /* If the path doesn't exist, then send a 'skipped' notification. */
+              if (eb->notify_func)
+                {
+                  svn_wc_notify_t *notify
+                    = svn_wc_create_notify(b->wcpath, svn_wc_notify_skip,
+                                           pool);
+                  notify->kind = svn_node_dir;
+                  notify->content_state = notify->prop_state
+                    = svn_wc_notify_state_missing;
+                  (*eb->notify_func)(eb->notify_baton, notify, pool);
+                }
+              svn_error_clear(err);
+              return SVN_NO_ERROR;
+            }
+          else if (err)
+            return err;
+
+          /* Don't do the props_changed stuff if this is a dry_run and we don't
+             have an access baton, since in that case the directory will
+             already have been recognised as added, in which case they cannot
+             conflict. */
+          if (! eb->dry_run || adm_access)
+            SVN_ERR(eb->diff_callbacks->dir_props_changed
+                    (adm_access, &prop_state,
+                     b->wcpath,
+                     b->propchanges, b->pristine_props,
+                     b->edit_baton->diff_cmd_baton));
+        }
     }
 
   /* ### Don't notify added directories as they triggered notification

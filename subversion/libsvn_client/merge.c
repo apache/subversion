@@ -229,6 +229,11 @@ typedef struct merge_cmd_baton_t {
    * It contains individual elements of type ' svn_merge_range_t *'.
    */
   apr_array_header_t *reflected_ranges;
+  /* Before running the actual reflective rev merge we do get
+   * a summary of merge and store the to be affected paths as keys in
+   * this hash with value being of type svn_client_diff_summarize_kind_t *.
+   */
+  apr_hash_t *reflective_rev_affected_paths;
   apr_pool_t *pool;
 } merge_cmd_baton_t;
 
@@ -369,6 +374,83 @@ conflict_resolver(svn_wc_conflict_result_t **result,
     }
 
   return err;
+}
+
+
+/* Records the affected path in BATON hash,
+ * implements svn_client_diff_summarize_func_t interface. All persistent 
+ * allocations occur from BATON hash's pool. */
+static svn_error_t *
+get_diff_summary_func_cb(const svn_client_diff_summarize_t *summary,
+                         void *baton,
+                         apr_pool_t *pool)
+{
+  apr_hash_t *reflective_rev_affected_paths = baton;
+  const char *path;
+  svn_client_diff_summarize_kind_t *summary_kind, *orig_summary_kind;
+  apr_pool_t *persist_pool = apr_hash_pool_get(reflective_rev_affected_paths);
+  summary_kind = apr_pcalloc(persist_pool, sizeof(*summary_kind));
+
+  path = apr_pstrdup(persist_pool, summary->path);
+  *summary_kind = summary->summarize_kind;
+  orig_summary_kind = apr_hash_get(reflective_rev_affected_paths, path,
+                                   APR_HASH_KEY_STRING);
+  if (orig_summary_kind)
+    {
+      if (((*orig_summary_kind == svn_client_diff_summarize_kind_added)
+            && (*summary_kind == svn_client_diff_summarize_kind_deleted))
+          ||
+           ((*orig_summary_kind == svn_client_diff_summarize_kind_deleted)
+             && (*summary_kind == svn_client_diff_summarize_kind_added)))
+        apr_hash_set(reflective_rev_affected_paths, path, APR_HASH_KEY_STRING,
+                     NULL);
+    }
+  else
+    apr_hash_set(reflective_rev_affected_paths, path, APR_HASH_KEY_STRING,
+                 summary_kind);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Summarize MERGE_B->reflected_ranges from MERGE_B->target url to 
+   MERGE_B->reflective_rev_affected_paths. */
+static svn_error_t *
+summarize_reflected_ranges(svn_depth_t depth,
+                           merge_cmd_baton_t *merge_b)
+{
+  int i;
+  const char *target_url;
+  apr_pool_t *iterpool = svn_pool_create(merge_b->pool);
+
+  SVN_ERR(svn_ra_get_session_url(merge_b->target_ra_session,
+                                 &target_url,
+                                 merge_b->pool));
+  svn_hash__clear(merge_b->reflective_rev_affected_paths);
+  for (i = 0; i < merge_b->reflected_ranges->nelts; i++)
+    {
+      svn_merge_range_t *range;
+      svn_opt_revision_t opt_revision1;
+      svn_opt_revision_t opt_revision2;
+      svn_opt_revision_t peg_revision;
+      svn_pool_clear(iterpool);
+      range = APR_ARRAY_IDX(merge_b->reflected_ranges, i, svn_merge_range_t *);
+      peg_revision.kind = svn_opt_revision_number;
+      peg_revision.value.number = range->start;
+      opt_revision1.kind = svn_opt_revision_number;
+      opt_revision1.value.number = range->start;
+      opt_revision2.kind = svn_opt_revision_number;
+      opt_revision2.value.number = range->end;
+      SVN_ERR(svn_client_diff_summarize_peg2(target_url, &peg_revision,
+                                        &opt_revision1, &opt_revision2,
+                                        depth,
+                                        merge_b->ignore_ancestry,
+                                        get_diff_summary_func_cb,
+                                        merge_b->reflective_rev_affected_paths,
+                                        merge_b->ctx,
+                                        iterpool));
+    }
+  return SVN_NO_ERROR;
 }
 
 /* Retrieves the file at PATH relative to RA_SESSION at revision REVISION
@@ -844,10 +926,18 @@ reflective_merge_file_added(svn_wc_adm_access_t *adm_access,
                             void *baton)
 {
   merge_cmd_baton_t *merge_b = baton;
-  svn_node_kind_t kind;
+  int merge_target_len = strlen(merge_b->target);
+  const char *file_path_relative_to_target = 
+    mine + (merge_target_len ? merge_target_len + 1 : 0);
+  svn_client_diff_summarize_kind_t *summary_kind =
+    apr_hash_get(merge_b->reflective_rev_affected_paths,
+                 file_path_relative_to_target,
+                 APR_HASH_KEY_STRING);
 
-  SVN_ERR(svn_io_check_path(mine, &kind, merge_b->pool));
-  if (kind == svn_node_none)
+  /* Checking for non-Null summary_kind should be enough!!.
+     As *reflected* summary and reflective merge drive can not give
+     two different summaries. */
+  if (!summary_kind)
     SVN_ERR(merge_file_added(adm_access, content_state, prop_state, mine, 
                              older, yours, rev1, rev2, mimetype1, mimetype2,
                              prop_changes, original_props, baton));
@@ -1083,9 +1173,18 @@ reflective_merge_dir_added(svn_wc_adm_access_t *adm_access,
                            void *baton)
 {
   merge_cmd_baton_t *merge_b = baton;
-  svn_node_kind_t kind;
-  SVN_ERR(svn_io_check_path(path, &kind, merge_b->pool));
-  if (kind == svn_node_none)
+  int merge_target_len = strlen(merge_b->target);
+  const char *file_path_relative_to_target = 
+    path + (merge_target_len ? merge_target_len + 1 : 0);
+  svn_client_diff_summarize_kind_t *summary_kind =
+    apr_hash_get(merge_b->reflective_rev_affected_paths,
+                 file_path_relative_to_target,
+                 APR_HASH_KEY_STRING);
+
+  /* Checking for non-Null summary_kind should be enough!!.
+     As *reflected* summary and reflective merge drive can not give
+     two different summaries. */
+  if (!summary_kind)
     SVN_ERR(merge_dir_added(adm_access, state, path, rev, baton));
   else
     *state = svn_wc_notify_state_unchanged;
@@ -2537,6 +2636,7 @@ drive_merge_report_editor(const char *target_wcpath,
                 {
                   merge_b->reflected_ranges = range_info->reflected_ranges;
                   callbacks = &reflective_merge_callbacks;
+                  SVN_ERR(summarize_reflected_ranges(depth, merge_b));
                 }
             }
         }
@@ -4773,6 +4873,7 @@ do_merge(apr_array_header_t *merge_sources,
   merge_cmd_baton.merge_options = merge_options;
   merge_cmd_baton.diff3_cmd = diff3_cmd;
   merge_cmd_baton.reflected_ranges = NULL;
+  merge_cmd_baton.reflective_rev_affected_paths = apr_hash_make(pool);
   SVN_ERR(svn_client__open_ra_session_internal(
                                             &merge_cmd_baton.target_ra_session,
                                             target_entry->url, NULL, NULL,
