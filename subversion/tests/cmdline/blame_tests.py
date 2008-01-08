@@ -182,7 +182,6 @@ def blame_in_xml(sbox):
     'iota' : Item(verb='Sending'),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, None, None,
                                         None, None, wc_dir)
 
   # Retrieve last changed date from svn info
@@ -252,7 +251,6 @@ def blame_on_unknown_revision(sbox):
       'iota' : Item(verb='Sending'),
       })
     svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                          None, None, None, None,
                                           None, None, wc_dir)
 
   output, error = svntest.actions.run_and_verify_svn(None, None, [],
@@ -324,14 +322,12 @@ def blame_eol_styles(sbox):
     for i in range(1,3):
       svntest.main.file_append(file_path, "Extra line %d" % (i) + "\n")
       svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                            None, None, None, None,
                                             None, None, wc_dir)
 
     svntest.main.run_svn(None, 'propset', 'svn:eol-style', eol,
                          file_path)
 
     svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                          None, None, None, None,
                                           None, None, wc_dir)
 
     output, error = svntest.actions.run_and_verify_svn(None, None, [],
@@ -360,7 +356,6 @@ def blame_ignore_whitespace(sbox):
       'iota' : Item(verb='Sending'),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, None, None,
                                         None, None, wc_dir)
 
   # commit only whitespace changes
@@ -372,7 +367,6 @@ def blame_ignore_whitespace(sbox):
       'iota' : Item(verb='Sending'),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, None, None,
                                         None, None, wc_dir)
 
   # match the blame output, as defined in the blame code:
@@ -397,7 +391,6 @@ def blame_ignore_whitespace(sbox):
       'iota' : Item(verb='Sending'),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, None, None,
                                         None, None, wc_dir)
 
   expected_output = [
@@ -427,7 +420,6 @@ def blame_ignore_eolstyle(sbox):
       'iota' : Item(verb='Sending'),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, None, None,
                                         None, None, wc_dir)
 
   # commit only eol changes
@@ -439,7 +431,6 @@ def blame_ignore_eolstyle(sbox):
       'iota' : Item(verb='Sending'),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, None, None,
                                         None, None, wc_dir)
 
   expected_output = [

@@ -59,8 +59,7 @@ def svnversion_test(sbox):
   expected_status.tweak('A/mu', wc_rev=2)
   if svntest.actions.run_and_verify_commit(wc_dir,
                                            expected_output, expected_status,
-                                           None, None, None, None, None,
-                                           wc_dir):
+                                           None, wc_dir):
     raise svntest.Failure
 
   # Unmodified, mixed
@@ -165,8 +164,7 @@ def ignore_externals(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                       wc_dir)
+                                        None, wc_dir)
 
   # Update to get it on disk
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
