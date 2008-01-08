@@ -947,7 +947,7 @@ def run_and_verify_status(wc_dir_name, output_tree,
 
   # Verify actual output against expected output.
   try:
-    tree.compare_trees ("output", actual, output_tree,
+    tree.compare_trees ("status", actual, output_tree,
                         singleton_handler_a, a_baton,
                         singleton_handler_b, b_baton)
   except tree.SVNTreeError:
