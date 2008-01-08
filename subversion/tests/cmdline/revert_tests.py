@@ -67,7 +67,7 @@ def revert_replacement_with_props(sbox, wc_copy):
                       props={ 'svn:eol-style': 'LF' })
 
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
+  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
 
   # Commit props
   expected_output = svntest.wc.State(wc_dir, {
@@ -80,8 +80,7 @@ def revert_replacement_with_props(sbox, wc_copy):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Bring wc into sync
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
@@ -114,7 +113,7 @@ def revert_replacement_with_props(sbox, wc_copy):
                       contents="This is the file 'pi'.\n",
                       props=props)
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
+  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
 
   # Now revert
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
@@ -134,7 +133,7 @@ def revert_replacement_with_props(sbox, wc_copy):
   expected_disk.tweak('A/D/G/rho',
                       props={ 'svn:eol-style': 'LF' })
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
+  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
 
 
 
@@ -304,8 +303,7 @@ def revert_replaced_file_without_props(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None,
-                                        None, None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # delete file1
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', file1_path)
@@ -392,8 +390,7 @@ def revert_file_merge_replace_with_history(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
   # create new rho file
   svntest.main.file_write(rho_path, "new rho\n")
 
@@ -411,9 +408,7 @@ def revert_file_merge_replace_with_history(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        None,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, None, wc_dir)
 
   # Update working copy
   expected_output = svntest.wc.State(wc_dir, {})
@@ -452,7 +447,7 @@ def revert_file_merge_replace_with_history(sbox):
 
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
   expected_disk.tweak('A/D/G/rho', contents="new rho\n")
-  svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
+  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
 
   # Make sure the revert removed the copy from information.
   output, err = svntest.actions.run_and_verify_svn(None, None, [], 'info',
@@ -520,7 +515,7 @@ def revert_after_second_replace(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
+  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
 
 
 #----------------------------------------------------------------------
@@ -661,8 +656,7 @@ def revert_replaced_with_history_file_1(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # update the working copy
   svntest.main.run_svn(None, 'up', wc_dir)
@@ -695,8 +689,7 @@ def revert_replaced_with_history_file_1(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Verify the content of 'mu'
   svntest.actions.run_and_verify_svn(None, text_r1, [], 'cat', mu_path)
@@ -758,8 +751,7 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # copy A/D/G from A/B/E and commit
   E_path = os.path.join(wc_dir, "A", "B", "E")
@@ -775,8 +767,7 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # update the working copy
   svntest.main.run_svn(None, 'up', wc_dir)
@@ -862,8 +853,7 @@ def revert_replaced_with_history_file_2(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
 ########################################################################
 # Run the tests

@@ -260,7 +260,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "\n                            "
                        " '" SVN_CL__ACCEPT_LAUNCH "')")},
   {"from-source",   opt_from_source, 1,
-                    N_("query a particular merge source URL\n")},
+                    N_("query a particular merge source URL")},
   {"reintegrate",   opt_reintegrate, 0,
                     N_("lump-merge all of source URL's unmerged changes")},
   {0,               0, 0, 0},

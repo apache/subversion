@@ -79,8 +79,6 @@ def test_misc(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
   # give the repo a new UUID
@@ -207,8 +205,6 @@ def delete_file_in_moved_dir(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
   output, errput = svntest.main.run_svnlook("dirs-changed", repo_dir)
@@ -345,8 +341,6 @@ def changed_copy_info(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
   output, errput = svntest.main.run_svnlook("changed", repo_dir)
@@ -443,8 +437,6 @@ def diff_ignore_whitespace(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
   # Check the output of 'svnlook diff -x --ignore-space-change' on mu.
@@ -498,8 +490,6 @@ def diff_ignore_eolstyle(sbox):
                                           expected_output,
                                           expected_status,
                                           None,
-                                          None, None,
-                                          None, None,
                                           wc_dir)
 
     # Grab the diff
