@@ -362,8 +362,7 @@ def export_with_state_deleted(sbox):
   expected_status.remove('A/B/E/alpha')
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   export_target = sbox.add_wc_path('export')
   expected_output = svntest.wc.State(sbox.wc_dir, {})

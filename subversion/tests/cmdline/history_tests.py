@@ -60,8 +60,6 @@ def cat_traces_renames(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
   # rename pi to rho.  commit r3.
@@ -86,8 +84,6 @@ def cat_traces_renames(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
   # update whole wc to HEAD
