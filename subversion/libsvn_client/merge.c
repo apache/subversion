@@ -229,11 +229,13 @@ typedef struct merge_cmd_baton_t {
    * It contains individual elements of type ' svn_merge_range_t *'.
    */
   apr_array_header_t *reflected_ranges;
+
   /* Before running the actual reflective rev merge we do get
    * a summary of merge and store the to be affected paths as keys in
    * this hash with value being of type svn_client_diff_summarize_kind_t *.
    */
   apr_hash_t *reflective_rev_affected_paths;
+
   apr_pool_t *pool;
 } merge_cmd_baton_t;
 
@@ -934,8 +936,8 @@ reflective_merge_file_added(svn_wc_adm_access_t *adm_access,
                  file_path_relative_to_target,
                  APR_HASH_KEY_STRING);
 
-  /* Checking for non-Null summary_kind should be enough!!.
-     As *reflected* summary and reflective merge drive can not give
+  /* Checking for non-NULL summary_kind should be sufficient,
+     as cumulative *reflected* summary and reflective merge drive can not give
      two different summaries. */
   if (!summary_kind)
     SVN_ERR(merge_file_added(adm_access, content_state, prop_state, mine, 
@@ -1181,8 +1183,8 @@ reflective_merge_dir_added(svn_wc_adm_access_t *adm_access,
                  file_path_relative_to_target,
                  APR_HASH_KEY_STRING);
 
-  /* Checking for non-Null summary_kind should be enough!!.
-     As *reflected* summary and reflective merge drive can not give
+  /* Checking for non-NULL summary_kind should be sufficient,
+     as cumulative *reflected* summary and reflective merge drive can not give
      two different summaries. */
   if (!summary_kind)
     SVN_ERR(merge_dir_added(adm_access, state, path, rev, baton));
