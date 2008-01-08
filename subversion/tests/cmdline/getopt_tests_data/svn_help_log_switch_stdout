@@ -46,6 +46,8 @@ Valid options:
   --changelist ARG         : operate only on members of changelist ARG
   --with-all-revprops      : retrieve all revision properties
   --with-revprop ARG       : retrieve revision property ARG
+
+Global options:
   --username ARG           : specify a username ARG
   --password ARG           : specify a password ARG
   --no-auth-cache          : do not cache authentication tokens
@@ -98,6 +100,8 @@ Valid options:
   --accept ARG             : specify automatic conflict resolution action
                             ('postpone', 'base', 'mine', 'theirs', 'edit',
                              'launch')
+
+Global options:
   --username ARG           : specify a username ARG
   --password ARG           : specify a password ARG
   --no-auth-cache          : do not cache authentication tokens
