@@ -18,9 +18,6 @@ Merge-back-to-trunk blockers
 Remaining work (which can be done post-merge)
 =============================================
 
-* Fix UI constraints for 'merge --reintegrate', which is "incompatible"
-  with --ignore-ancestry and --record-only (dlr)
-
 * Examine "TODO(reint)", including (but not limited to):
 
   * "Is this the same line?" direct ancestor check (glasser)

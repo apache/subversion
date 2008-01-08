@@ -1526,9 +1526,6 @@ main(int argc, const char *argv[])
         }
     }
 
-  /* ### TODO(reint): when reintegrate is set, ignore_ancestry should
-     ### not be passed, because it is ignored. */
-
   /* Check that the subcommand wasn't passed any inappropriate options. */
   for (i = 0; i < received_opts->nelts; i++)
     {
@@ -1735,6 +1732,37 @@ main(int argc, const char *argv[])
                              _("--auto-props and --no-auto-props are "
                                "mutually exclusive"));
       return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+    }
+
+  /* The --reintegrate option is mutually exclusive with both
+     --ignore-ancestry and --record-only. */
+  if (opt_state.reintegrate)
+    {
+      if (opt_state.ignore_ancestry)
+        {
+          if (opt_state.record_only)
+            {
+              err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                     _("--reintegrate is mutually exclusive "
+                                       "with both --ignore-ancestry "
+                                       "and --record-only"));
+              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+            }
+          else
+            {
+              err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                     _("--reintegrate is mutually exclusive "
+                                       "with --ignore-ancestry"));
+              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+            }
+          }
+      else if (opt_state.record_only)
+        {
+          err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                 _("--reintegrate is mutually exclusive "
+                                   "with --record-only"));
+          return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+        }
     }
 
   /* Update auto-props-enable option, and populate the MIME types map,
