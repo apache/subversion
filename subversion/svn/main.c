@@ -1743,24 +1743,24 @@ main(int argc, const char *argv[])
           if (opt_state.record_only)
             {
               err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
-                                     _("--reintegrate is mutually exclusive "
-                                       "with both --ignore-ancestry "
-                                       "and --record-only"));
+                                     _("--reintegrate cannot be used with "
+                                       "--ignore-ancestry or "
+                                       "--record-only"));
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
           else
             {
               err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
-                                     _("--reintegrate is mutually exclusive "
-                                       "with --ignore-ancestry"));
+                                     _("--reintegrate cannot be used with "
+                                       "--ignore-ancestry"));
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
           }
       else if (opt_state.record_only)
         {
           err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
-                                 _("--reintegrate is mutually exclusive "
-                                   "with --record-only"));
+                                 _("--reintegrate cannot be used with "
+                                   "--record-only"));
           return svn_cmdline_handle_exit_error(err, pool, "svn: ");
         }
     }
