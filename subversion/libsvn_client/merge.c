@@ -443,14 +443,11 @@ summarize_reflected_ranges(svn_depth_t depth,
       opt_revision1.value.number = range->start;
       opt_revision2.kind = svn_opt_revision_number;
       opt_revision2.value.number = range->end;
-      SVN_ERR(svn_client_diff_summarize_peg2(target_url, &peg_revision,
-                                        &opt_revision1, &opt_revision2,
-                                        depth,
-                                        merge_b->ignore_ancestry,
-                                        get_diff_summary_func_cb,
-                                        merge_b->reflective_rev_affected_paths,
-                                        merge_b->ctx,
-                                        iterpool));
+      SVN_ERR(svn_client_diff_summarize_peg2
+              (target_url, &peg_revision, &opt_revision1, &opt_revision2,
+	       depth, merge_b->ignore_ancestry, get_diff_summary_func_cb,
+               merge_b->reflective_rev_affected_paths, merge_b->ctx,
+	       iterpool));
     }
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
