@@ -245,11 +245,11 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "open-directory") == 0)
     {
-      const char *rev, *dirname;
+      const char *rev, *dir_name;
       replay_info_t *info;
 
-      dirname = svn_xml_get_attr_value("name", attrs);
-      if (!dirname)
+      dir_name = svn_xml_get_attr_value("name", attrs);
+      if (!dir_name)
         {
           return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                     _("Missing name attr in open-directory element"));
@@ -263,7 +263,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
 
       info = push_state(parser, ctx, OPEN_DIR);
 
-      SVN_ERR(ctx->editor->open_directory(dirname, info->parent->baton,
+      SVN_ERR(ctx->editor->open_directory(dir_name, info->parent->baton,
                                           SVN_STR_TO_REV(rev),
                                           parser->state->pool, &info->baton));
     }

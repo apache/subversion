@@ -193,8 +193,7 @@ def externals_test_setup(sbox):
   svntest.actions.run_and_verify_commit(wc_init_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_init_dir)
+                                        None, wc_init_dir)
 
   return external_url_for
 
@@ -519,8 +518,7 @@ def update_receive_change_under_external(sbox):
   svntest.actions.run_and_verify_commit(other_wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        other_wc_dir)
+                                        None, other_wc_dir)
 
   # Now update the regular wc to see if we get the change.  Note that
   # none of the module *properties* in this wc have been changed; only
@@ -555,8 +553,7 @@ def update_receive_change_under_external(sbox):
   svntest.actions.run_and_verify_commit(other_wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        other_wc_dir)
+                                        None, other_wc_dir)
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'up', os.path.join(wc_dir, "A", "C"))

@@ -407,17 +407,12 @@ def get_child(node, name):
   return None
 
 
-# Helpers for compare_trees
-def default_singleton_handler_a(a, baton):
-  "Printing SVNTreeNode A's name, then raise SVNTreeUnequal."
-  print "Couldn't find node '%s' in expected tree" % a.name
-  a.pprint()
-  raise SVNTreeUnequal
-
-def default_singleton_handler_b(b, baton):
-  "Printing SVNTreeNode B's name, then raise SVNTreeUnequal."
-  print "Couldn't find node '%s' in actual tree" % b.name
-  b.pprint()
+# Helper for compare_trees
+def default_singleton_handler(node, description):
+  """Print SVNTreeNode NODE's name, describing it with the string
+  DESCRIPTION, then raise SVNTreeUnequal."""
+  print "Couldn't find node '%s' in %s tree" % (node.name, description)
+  node.pprint()
   raise SVNTreeUnequal
 
 # A test helper function implementing the singleton_handler_a API.
@@ -445,7 +440,8 @@ def detect_conflict_files(node, extra_files):
 
 # Main tree comparison routine!
 
-def compare_trees(a, b,
+def compare_trees(label,
+                  a, b,
                   singleton_handler_a = None,
                   a_baton = None,
                   singleton_handler_b = None,
@@ -453,7 +449,10 @@ def compare_trees(a, b,
   """Compare SVNTreeNodes A (actual) and B (expected), expressing
   differences using FUNC_A and FUNC_B.  FUNC_A and FUNC_B are
   functions of two arguments (a SVNTreeNode and a context baton), and
-  may raise exception SVNTreeUnequal.  Their return value is ignored.
+  may raise exception SVNTreeUnequal, in which case they use the
+  string LABEL to describe the error (their return value is ignored).
+  LABEL is typically "output", "disk", "status", or some other word
+  that labels the trees being compared.
 
   If A and B are both files, then return if their contents,
   properties, and names are all the same; else raise a SVNTreeUnequal.
@@ -466,7 +465,8 @@ def compare_trees(a, b,
   def display_nodes(a, b):
     'Display two nodes, expected and actual.'
     print "============================================================="
-    print "Expected '%s' and actual '%s' are different!" % (b.name, a.name)
+    print "Expected '%s' and actual '%s' in %s tree are different!" \
+          % (b.name, a.name, label)
     print "============================================================="
     print "EXPECTED NODE TO BE:"
     print "============================================================="
@@ -478,9 +478,11 @@ def compare_trees(a, b,
 
   # Setup singleton handlers
   if (singleton_handler_a is None):
-    singleton_handler_a = default_singleton_handler_a
+    singleton_handler_a = default_singleton_handler
+    a_baton = "expected " + label
   if (singleton_handler_b is None):
-    singleton_handler_b = default_singleton_handler_b
+    singleton_handler_b = default_singleton_handler
+    b_baton = "actual " + label
 
   try:
     # A and B are both files.
@@ -510,7 +512,7 @@ def compare_trees(a, b,
         b_child = get_child(b, a_child.name)
         if b_child:
           accounted_for.append(b_child)
-          compare_trees(a_child, b_child,
+          compare_trees(label, a_child, b_child,
                         singleton_handler_a, a_baton,
                         singleton_handler_b, b_baton)
         else:

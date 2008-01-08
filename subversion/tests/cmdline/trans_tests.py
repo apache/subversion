@@ -269,8 +269,7 @@ def keywords_from_birth(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None,
-                                        None, None, None, None, wc_dir)
+                                        None, None, wc_dir)
 
   # Make sure the unexpanded URL keyword got expanded correctly.
   fp = open(url_unexp_path, 'r')
@@ -429,8 +428,7 @@ def update_modified_with_translation(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        rho_path)
+                                        None, rho_path)
 
   # Change rho again
   svntest.main.file_write(rho_path, "1\n2\n3\n4\n4.5\n5\n6\n7\n8\n9\n")
@@ -442,8 +440,7 @@ def update_modified_with_translation(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        rho_path)
+                                        None, rho_path)
 
   # Locally modify rho again.
   svntest.main.file_write(rho_path, "1\n2\n3\n4\n4.5\n5\n6\n7\n8\n9\n10\n")
@@ -608,8 +605,7 @@ def cat_keyword_expansion(sbox):
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Change the author to value which will get truncated on expansion
   full_author = "x" * 400
@@ -634,8 +630,7 @@ def cat_keyword_expansion(sbox):
   expected_status.tweak('A/B/lambda', wc_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # At one stage the keywords were expanded to values for the requested
   # revision, not to those committed revision
@@ -673,8 +668,7 @@ def copy_propset_commit(sbox):
   expected_status.tweak('A/mu2', status='  ', wc_rev=2, copied=None)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
 #----------------------------------------------------------------------
 #      Create a greek tree, commit a keyword into one file,
@@ -697,8 +691,7 @@ def propset_commit_checkout_nocrash(sbox):
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Set property to do keyword expansion on A/mu, commit.
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -710,8 +703,7 @@ def propset_commit_checkout_nocrash(sbox):
   expected_status.tweak('A/mu', wc_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Check out into another wc dir
   other_wc_dir = sbox.add_wc_path('other')

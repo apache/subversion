@@ -181,7 +181,6 @@ def commit_routine_switching(wc_dir, verify):
   svntest.actions.run_and_verify_commit(
     wc_dir, None, None,
     "svn: Cannot commit both .* as they refer to the same URL$",
-    None, None, None, None,
     wc_dir)
 
   # Okay, that all taken care of, let's revert the A/D/G/pi path and
@@ -211,8 +210,7 @@ def commit_routine_switching(wc_dir, verify):
     svntest.actions.run_and_verify_commit(wc_dir,
                                           expected_output,
                                           expected_status,
-                                          None, None, None, None, None,
-                                          wc_dir)
+                                          None, wc_dir)
   else:
     svntest.main.run_svn(None,
                          'ci', '-m', 'log msg', wc_dir)
@@ -531,8 +529,7 @@ def relocate_deleted_missing_copied(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Remove A/B/F to create a missing entry
   svntest.main.safe_rmtree(os.path.join(wc_dir, 'A', 'B', 'F'))
@@ -592,8 +589,7 @@ def relocate_deleted_missing_copied(sbox):
                         status='  ', wc_rev='3', copied=None)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
 
 #----------------------------------------------------------------------
@@ -854,8 +850,7 @@ def obstructed_switch(sbox):
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   svntest.main.file_append(alpha_path, "hello")
   out, err = svntest.main.run_svn(1,
@@ -929,8 +924,7 @@ def commit_mods_below_switch(sbox):
   # with "'A/C/E' is missing or not locked"
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        C_path, D_path)
+                                        None, C_path, D_path)
 
 def relocate_beyond_repos_root(sbox):
   "relocate with prefixes longer than repo root"
@@ -1010,8 +1004,7 @@ def refresh_read_only_attribute(sbox):
   expected_status.tweak('A/mu', wc_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        mu_path)
+                                        None, mu_path)
 
   # The file on which svn:needs-lock was set is now expected to be read-only.
   if os.access(mu_path, os.W_OK):
@@ -1129,8 +1122,7 @@ def relocate_and_propset(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Now gamma should be marked as `deleted' under the hood, at
   # revision 2.  Meanwhile, A/D is still lagging at revision 1.
@@ -1143,8 +1135,6 @@ def relocate_and_propset(sbox):
                                         None,
                                         None,
                                         "[Oo]ut.of.date",
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 #----------------------------------------------------------------------
@@ -1491,7 +1481,6 @@ def mergeinfo_switch_elision(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None, None, None,
                                         wc_dir)
 
   # Make some changes under A/B
@@ -1502,8 +1491,7 @@ def mergeinfo_switch_elision(sbox):
                                      {'A/B/E/beta' : Item(verb='Sending')})
   expected_status.tweak('A/B/E/beta', wc_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # r4 - modify and commit A/B/E/alpha
   svntest.main.file_write(alpha_path, "New content")
@@ -1511,8 +1499,7 @@ def mergeinfo_switch_elision(sbox):
                                      {'A/B/E/alpha' : Item(verb='Sending')})
   expected_status.tweak('A/B/E/alpha', wc_rev=4)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Merge r2:4 into A/B_COPY_1
   short_B_COPY_1_path = shorten_path_kludge(B_COPY_1_path)
@@ -1564,8 +1551,7 @@ def mergeinfo_switch_elision(sbox):
   expected_status.tweak('A/B_COPY_1/E/beta',  wc_rev=5)
   expected_status.tweak('A/B_COPY_1/lambda',  wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Merge r2:4 into A/B_COPY_2/E
   short_E_COPY_2_path = shorten_path_kludge(E_COPY_2_path)

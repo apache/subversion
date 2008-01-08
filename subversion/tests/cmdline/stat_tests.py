@@ -89,8 +89,7 @@ def status_update_with_nested_adds(sbox):
 
   # Commit.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None,
-                                        None, None, None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Now we go to the backup working copy, still at revision 1.
   # We will run 'svn st -u', and make sure that newdir/newfile is reported
@@ -959,8 +958,7 @@ def inconsistent_eol(sbox):
   expected_status.tweak('iota', wc_rev=2)
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None,
-                                        None, None, None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Make the eol style inconsistent and verify that status says nothing.
   svntest.main.file_write(iota_path, "line 1\nline 2\r\n", "wb")
@@ -993,8 +991,7 @@ def status_update_with_incoming_props(sbox):
   # Commit the working copy
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Create expected trees for an update to revision 1.
   expected_output = svntest.wc.State(wc_dir, {
@@ -1128,8 +1125,7 @@ def status_update_verbose_with_incoming_props(sbox):
   # Commit the working copy
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Create expected trees for an update to revision 1.
   expected_output = svntest.wc.State(wc_dir, {
@@ -1207,8 +1203,7 @@ def status_nonrecursive_update(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Create expected trees for an update to revision 1.
   expected_output = svntest.wc.State(wc_dir, {
@@ -1265,8 +1260,7 @@ def change_files_and_commit(wc_dir, files, baserev=1):
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
 def status_depth_local(sbox):
   "run 'status --depth=X' with local changes"

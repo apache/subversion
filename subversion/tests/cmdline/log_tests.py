@@ -1264,8 +1264,6 @@ def retrieve_revprops(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         '-m', msg2,
                                         omega_path)
 

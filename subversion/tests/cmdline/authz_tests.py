@@ -68,8 +68,6 @@ def authz_open_root(sbox):
                                         expected_output,
                                         None,
                                         None,
-                                        None, None,
-                                        None, None,
                                         mu_path)
 
 #----------------------------------------------------------------------
@@ -106,8 +104,6 @@ def authz_open_directory(sbox):
                                         expected_output,
                                         None,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 def broken_authz_file(sbox):
@@ -738,8 +734,6 @@ def authz_locking(sbox):
                                         expected_output,
                                         [],
                                         None,
-                                        None, None,
-                                        None, None,
                                         mu_path)
 
 # test for issue #2712: if anon-access == read, svnserve should also check

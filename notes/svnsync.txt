@@ -18,9 +18,9 @@ lets the user you'll run svnsync as make arbitrary propchanges.
 
 $ cat <<'EOF' > dest/hooks/pre-revprop-change
 #!/bin/sh
-USER="\$3"
+USER="$3"
 
-if [ "\$USER" = "svnsync" ]; then exit 0; fi
+if [ "$USER" = "svnsync" ]; then exit 0; fi
 
 echo "Only the svnsync user can change revprops" >&2
 exit 1

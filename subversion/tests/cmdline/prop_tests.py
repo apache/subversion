@@ -86,7 +86,8 @@ def make_local_props(sbox):
   actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
 
   # Compare actual vs. expected disk trees.
-  svntest.tree.compare_trees(actual_disk_tree, expected_disk.old_tree())
+  svntest.tree.compare_trees("disk", actual_disk_tree,
+                             expected_disk.old_tree())
 
   # Edit without actually changing the property
   svntest.main.use_editor('identity')
@@ -128,8 +129,6 @@ def commit_props(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 
@@ -166,8 +165,7 @@ def update_props(sbox):
   # Commit the one file.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Overwrite mu_path and H_path to refer to the backup copies from
   # here on out.
@@ -223,8 +221,7 @@ def downdate_props(sbox):
   # Commit the one file.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Make some mod (something to commit)
   svntest.main.file_append(mu_path, "some mod")
@@ -242,8 +239,7 @@ def downdate_props(sbox):
   # Commit the one file.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Create expected output tree for an update.
   expected_output = svntest.wc.State(wc_dir, {
@@ -297,8 +293,7 @@ def remove_props(sbox):
   # Commit the one file.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
 #----------------------------------------------------------------------
 
@@ -391,7 +386,6 @@ def commit_conflict_dirprops(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir, None, None,
                                         "out[- ]of[- ]date",
-                                        None, None, None, None,
                                         wc_dir)
 
 #----------------------------------------------------------------------
@@ -454,8 +448,7 @@ def commit_replacement_props(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
 #----------------------------------------------------------------------
 
@@ -1018,8 +1011,6 @@ def binary_props(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
   # Create expected output, disk, and status trees for an update of
@@ -1276,8 +1267,7 @@ def update_props_on_wc_root(sbox):
   # Commit the working copy
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
  # Create expected output tree for an update of the wc_backup.
   expected_output = svntest.wc.State(wc_backup, {
@@ -1322,7 +1312,8 @@ def props_on_replaced_file(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('iota', contents="some mod")
   actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees(actual_disk_tree, expected_disk.old_tree())
+  svntest.tree.compare_trees("disk", actual_disk_tree,
+                             expected_disk.old_tree())
 
   # now add a new property to iota
   svntest.main.run_svn(None, 'propset', 'red', 'mojo', iota_path)
@@ -1331,7 +1322,8 @@ def props_on_replaced_file(sbox):
   # What we expect the disk tree to look like:
   expected_disk.tweak('iota', props={'red' : 'mojo', 'groovy' : 'baby'})
   actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees(actual_disk_tree, expected_disk.old_tree())
+  svntest.tree.compare_trees("disk", actual_disk_tree,
+                             expected_disk.old_tree())
 
 #----------------------------------------------------------------------
 
@@ -1524,8 +1516,7 @@ def remove_custom_ns_props(sbox):
   # Commit the one file.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Create expected trees for the update.
   expected_output = svntest.wc.State(wc_backup, {
