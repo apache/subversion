@@ -9860,6 +9860,105 @@ def reintegrate_branch_never_merged_to(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
+def reintegrate_fail_on_modified_wc(sbox):
+  "merge --reintegrate should fail in modified wc"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  A_path = os.path.join(wc_dir, "A")
+  mu_path = os.path.join(A_path, "mu")
+  ignored_expected_disk, ignored_expected_status = set_up_branch(sbox)
+  svntest.main.file_write(mu_path, "Changed on 'trunk' (the merge target).")
+  svntest.actions.run_and_verify_merge(
+    A_path, None, None, sbox.repo_url + '/A_COPY', None, None, None, None,
+    ".*Cannot reintegrate into a working copy that has local modifications.*",
+    None, None, None, None, True, False, '--reintegrate')
+  
+def reintegrate_fail_on_mixed_rev_wc(sbox):
+  "merge --reintegrate should fail in mixed-rev wc"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  A_path = os.path.join(wc_dir, "A")
+  mu_path = os.path.join(A_path, "mu")
+  ignored_expected_disk, expected_status = set_up_branch(sbox)
+  # Make and commit a change, in order to get a mixed-rev wc.
+  svntest.main.file_write(mu_path, "Changed on 'trunk' (the merge target).")
+  expected_output = wc.State(wc_dir, {
+    'A/mu'           : Item(verb='Sending'),
+    })
+  expected_status.tweak('A/mu', wc_rev=7)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+  # Try merging into that same wc, expecting failure.
+  svntest.actions.run_and_verify_merge(
+    A_path, None, None, sbox.repo_url + '/A_COPY', None, None, None, None,
+    ".*Cannot reintegrate into mixed-revision working copy.*",
+    None, None, None, None, True, False, '--reintegrate')
+
+def reintegrate_fail_on_switched_wc(sbox):
+  "merge --reintegrate should fail in switched wc"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  A_path = os.path.join(wc_dir, "A")
+  G_path = os.path.join(A_path, "D", "G")
+  switch_url = sbox.repo_url + "/A/D/H"
+  expected_disk, expected_status = set_up_branch(sbox)
+
+  # Switch a subdir of the target.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/pi'          : Item(status='D '),
+    'A/D/G/rho'         : Item(status='D '),
+    'A/D/G/tau'         : Item(status='D '),
+    'A/D/G/chi'         : Item(status='A '),
+    'A/D/G/psi'         : Item(status='A '),
+    'A/D/G/omega'       : Item(status='A '),
+    })
+  expected_disk.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
+  expected_disk.add({
+    'A/D/G/chi'   : Item(contents="This is the file 'chi'.\n"),
+    'A/D/G/psi'   : Item(contents="New content"),
+    'A/D/G/omega' : Item(contents="New content"),
+    })
+  expected_status.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
+  expected_status.add({
+    'A/D/G'       : Item(status='  ', wc_rev=6, switched='S'),
+    'A/D/G/chi'   : Item(status='  ', wc_rev=6),
+    'A/D/G/psi'   : Item(status='  ', wc_rev=6),
+    'A/D/G/omega' : Item(status='  ', wc_rev=6),
+    })
+  svntest.actions.run_and_verify_switch(wc_dir,
+                                        G_path,
+                                        switch_url,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, False);
+  svntest.actions.run_and_verify_merge(
+    A_path, None, None, sbox.repo_url + '/A_COPY', None, None, None, None,
+    ".*Cannot reintegrate into a working copy with a switched subtree.*",
+    None, None, None, None, True, False, '--reintegrate')
+
+def reintegrate_fail_on_shallow_wc(sbox):
+  "merge --reintegrate should fail in shallow wc"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  expected_disk, expected_status = set_up_branch(sbox)
+  A_path = os.path.join(wc_dir, "A")
+  G_path = os.path.join(A_path, "D", "G")
+  # Our default checkout doesn't have any subdirs at non-infinite
+  # depth, so we'll have to create one the old-fashioned way: remove a
+  # tree, then "update" it back into existence at a shallower depth.
+  svntest.main.safe_rmtree(G_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'update', G_path,
+                                     '--depth=files')
+  # Even though everything is actually present (as G has no subdirs
+  # anyway), the reintegration should fail, because G's depth is other
+  # than infinity.
+  svntest.actions.run_and_verify_merge(
+    A_path, None, None, sbox.repo_url + '/A_COPY', None, None, None, None,
+    ".*Cannot reintegrate into a working copy not.*at infinite depth.*",
+    None, None, None, None, True, False, '--reintegrate')
+
+
 ########################################################################
 # Run the tests
 
@@ -9949,6 +10048,10 @@ test_list = [ None,
               XFail(new_subtrees_should_not_break_merge),
               basic_reintegrate,
               reintegrate_branch_never_merged_to,
+              reintegrate_fail_on_modified_wc,
+              reintegrate_fail_on_mixed_rev_wc,
+              reintegrate_fail_on_switched_wc,
+              reintegrate_fail_on_shallow_wc,
              ]
 
 if __name__ == '__main__':
