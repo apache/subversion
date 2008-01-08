@@ -455,9 +455,8 @@ def blame_ignore_eolstyle(sbox):
 def blame_merge_info(sbox):
   "test 'svn blame -g'"
 
-  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
-                                               'mergetracking_data',
-                                               'basic-merge.dump'))
+  from log_tests import merge_history_repos
+  merge_history_repos(sbox)
 
   wc_dir = sbox.wc_dir
   iota_path = os.path.join(wc_dir, 'trunk', 'iota')
@@ -482,9 +481,8 @@ def blame_merge_info(sbox):
 def blame_merge_out_of_range(sbox):
   "don't look for merged files out of range"
 
-  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
-                                               'mergetracking_data',
-                                               'basic-merge.dump'))
+  from log_tests import merge_history_repos
+  merge_history_repos(sbox)
 
   wc_dir = sbox.wc_dir
   upsilon_path = os.path.join(wc_dir, 'trunk', 'A', 'upsilon')
