@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -616,7 +616,7 @@ svn_error_t *svn_ra_reparent(svn_ra_session_t *ra_session,
                              const char *url,
                              apr_pool_t *pool);
 
-/** Set @a *repos_URL to the repository URL to which @a ra_session was
+/** Set @a *url to the repository URL to which @a ra_session was
  * opened or most recently reparented.
  */
 svn_error_t *svn_ra_get_session_url(svn_ra_session_t *ra_session,
@@ -1289,7 +1289,7 @@ svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
                              svn_boolean_t discover_changed_paths,
                              svn_boolean_t strict_node_history,
                              svn_boolean_t include_merged_revisions,
-                             apr_array_header_t *revprops,
+                             const apr_array_header_t *revprops,
                              svn_log_entry_receiver_t receiver,
                              void *receiver_baton,
                              apr_pool_t *pool);

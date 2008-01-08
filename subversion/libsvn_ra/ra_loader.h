@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2005-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2005-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -163,7 +163,7 @@ typedef struct svn_ra__vtable_t {
                           svn_boolean_t discover_changed_paths,
                           svn_boolean_t strict_node_history,
                           svn_boolean_t include_merged_revisions,
-                          apr_array_header_t *revprops,
+                          const apr_array_header_t *revprops,
                           svn_log_entry_receiver_t receiver,
                           void *receiver_baton,
                           apr_pool_t *pool);

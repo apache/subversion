@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -46,6 +46,7 @@ class ListCallback;
 class StatusCallback;
 class ChangelistCallback;
 class CommitMessage;
+class StringArray;
 #include "svn_types.h"
 #include "svn_client.h"
 #include "SVNBase.h"
@@ -119,7 +120,7 @@ class SVNClient :public SVNBase
             const char *message, bool copyAsChild, bool makeParents);
   jlong commit(Targets &targets, const char *message, svn_depth_t depth,
                bool noUnlock, bool keepChangelist,
-               const char *changelistName);
+               StringArray &changelists);
   jlongArray update(Targets &targets, Revision &revision, svn_depth_t depth,
                     bool ignoreExternals, bool allowUnverObstructions);
   void add(const char *path, svn_depth_t depth, bool force, bool no_ignore,
@@ -138,7 +139,7 @@ class SVNClient :public SVNBase
                    Revision &revisionStart,
                    Revision &revisionEnd, bool stopOnCopy,
                    bool discoverPaths, bool includeMergedRevisions,
-                   std::vector<std::string> &revProps,
+                   StringArray &revProps,
                    long limit, LogMessageCallback *callback);
   void setPrompt(Prompter *prompter);
   void password(const char *pi_password);
@@ -148,7 +149,7 @@ class SVNClient :public SVNBase
   jobject info(const char *path);
   void addToChangelist(Targets &srcPaths, const char *changelist);
   void removeFromChangelist(Targets &srcPaths, const char *changelist);
-  void getChangelists(const char *path, std::vector<std::string> &changelists,
+  void getChangelists(const char *path, StringArray &changelists,
                       svn_depth_t depth, ChangelistCallback *callback);
   void status(const char *path, svn_depth_t depth, bool onServer,
               bool getAll, bool noIgnore, bool ignoreExternals,

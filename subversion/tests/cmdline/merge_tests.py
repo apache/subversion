@@ -2603,8 +2603,8 @@ def merge_prop_change_to_deleted_target(sbox):
                                      '-r1:2', '--ignore-ancestry', '.')
 
 
-def setup_dir_replace(sbox):
-  """Setup the working copy for directory replace tests, creating
+def set_up_dir_replace(sbox):
+  """Set up the working copy for directory replace tests, creating
   directory 'A/B/F/foo' with files 'new file' and 'new file2' within
   it (r2), and merging 'foo' onto 'C' (r3), then deleting 'A/B/F/foo'
   (r4)."""
@@ -2719,7 +2719,7 @@ def setup_dir_replace(sbox):
 def merge_dir_replace(sbox):
   "merge a replacement of a directory"
 
-  setup_dir_replace(sbox)
+  set_up_dir_replace(sbox)
   wc_dir = sbox.wc_dir
 
   C_path = os.path.join(wc_dir, 'A', 'C')
@@ -2833,7 +2833,7 @@ def merge_dir_replace(sbox):
 def merge_dir_and_file_replace(sbox):
   "replace both dir and one of its children"
 
-  setup_dir_replace(sbox)
+  set_up_dir_replace(sbox)
   wc_dir = sbox.wc_dir
 
   C_path = os.path.join(wc_dir, 'A', 'C')
@@ -4660,7 +4660,7 @@ def obey_reporter_api_semantics_while_doing_subtree_merges(sbox):
                                        None,
                                        None, 1)
 
-def setup_branch(sbox, branch_only = False, nbr_of_branches = 1):
+def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
   '''Starting with standard greek tree, copy 'A' NBR_OF_BRANCHES times
   to A_COPY, A_COPY_2, A_COPY_3, and so on.  Then make four modifications
   (setting file contents to "New content") under A:
@@ -4825,7 +4825,7 @@ def mergeinfo_inheritance(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  wc_disk, wc_status = setup_branch(sbox)
+  wc_disk, wc_status = set_up_branch(sbox)
 
   # Some paths we'll care about
   A_COPY_path      = os.path.join(wc_dir, "A_COPY")
@@ -5145,7 +5145,7 @@ def mergeinfo_elision(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  wc_disk, wc_status = setup_branch(sbox)
+  wc_disk, wc_status = set_up_branch(sbox)
 
   # Some paths we'll care about
   A_COPY_path      = os.path.join(wc_dir, "A_COPY")
@@ -5363,7 +5363,7 @@ def mergeinfo_inheritance_and_discontinuous_ranges(sbox):
   D_COPY_path      = os.path.join(wc_dir, "A_COPY", "D")
   A_COPY_rho_path  = os.path.join(wc_dir, "A_COPY", "D", "G", "rho")
 
-  expected_disk, expected_status = setup_branch(sbox)
+  expected_disk, expected_status = set_up_branch(sbox)
 
   # Merge r4 into A_COPY
   saved_cwd = os.getcwd()
@@ -5464,7 +5464,7 @@ def merge_to_target_with_copied_children(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  expected_disk, expected_status = setup_branch(sbox)
+  expected_disk, expected_status = set_up_branch(sbox)
 
   # Some paths we'll care about
   D_COPY_path = os.path.join(wc_dir, "A_COPY", "D")
@@ -5546,7 +5546,7 @@ def merge_to_switched_path(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  wc_disk, wc_status = setup_branch(sbox)
+  wc_disk, wc_status = set_up_branch(sbox)
 
   # Some paths we'll care about
   A_COPY_D_path = os.path.join(wc_dir, "A_COPY", "D")
@@ -5718,7 +5718,7 @@ def merge_to_path_with_switched_children(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  wc_disk, wc_status = setup_branch(sbox, False, 3)
+  wc_disk, wc_status = set_up_branch(sbox, False, 3)
 
   # Some paths we'll care about
   D_path = os.path.join(wc_dir, "A", "D")
@@ -6194,7 +6194,7 @@ def empty_mergeinfo(sbox):
   #      to nothing).
   sbox.build()
   wc_dir = sbox.wc_dir
-  wc_disk, wc_status = setup_branch(sbox)
+  wc_disk, wc_status = set_up_branch(sbox)
 
   # Some paths we'll care about
   A_COPY_path = os.path.join(wc_dir, "A_COPY")
@@ -6300,7 +6300,7 @@ def empty_mergeinfo(sbox):
   # latter elides to the former.  And then the empty mergeinfo on A_COPY,
   # which has no parent with explicit mergeinfo to override (in either the WC
   # or the repos) itself elides.  This leaves the WC in the same unmodified
-  # state as after the call to setup_branch().
+  # state as after the call to set_up_branch().
   short_rho_COPY_path = shorten_path_kludge(rho_COPY_path)
   expected_output = expected_merge_output(
     [[4,3]], 'G    ' + short_rho_COPY_path + '\n')
@@ -6322,7 +6322,7 @@ def prop_add_to_child_with_mergeinfo(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  expected_disk, expected_status = setup_branch(sbox)
+  expected_disk, expected_status = set_up_branch(sbox)
 
   # Some paths we'll care about
   beta_path = os.path.join(wc_dir, "A", "B", "E", "beta")
@@ -6400,7 +6400,7 @@ def diff_repos_does_not_update_mergeinfo(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  expected_disk, expected_status = setup_branch(sbox)
+  expected_disk, expected_status = set_up_branch(sbox)
 
   # Create a second repository with the same greek tree
   repo_dir = sbox.repo_dir
@@ -6455,7 +6455,7 @@ def avoid_reflected_revs(sbox):
   # Create a WC with a single branch
   sbox.build()
   wc_dir = sbox.wc_dir
-  wc_disk, wc_status = setup_branch(sbox, True, 1)
+  wc_disk, wc_status = set_up_branch(sbox, True, 1)
 
   # Some paths we'll care about
   A_path = os.path.join(wc_dir, 'A')
@@ -6954,7 +6954,7 @@ def merge_to_out_of_date_target(sbox):
   # Create a WC with a branch.
   sbox.build()
   wc_dir = sbox.wc_dir
-  wc_disk, wc_status = setup_branch(sbox, False, 1)
+  wc_disk, wc_status = set_up_branch(sbox, False, 1)
 
   # Make second working copy
   other_wc = sbox.add_wc_path('other')
@@ -7281,7 +7281,7 @@ def no_mergeinfo_from_no_op_merge(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  wc_disk, wc_status = setup_branch(sbox)
+  wc_disk, wc_status = set_up_branch(sbox)
 
   # Some paths we'll care about
   H_path = os.path.join(wc_dir, "A", "D", "H")
@@ -7523,7 +7523,7 @@ def merge_to_sparse_directories(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  wc_disk, wc_status = setup_branch(sbox, False, 1)
+  wc_disk, wc_status = set_up_branch(sbox, False, 1)
 
   # Some paths we'll care about
   A_path = os.path.join(wc_dir, "A")
@@ -7732,7 +7732,7 @@ def merge_old_and_new_revs_from_renamed_dir(sbox):
   # Create a WC with a single branch
   sbox.build()
   wc_dir = sbox.wc_dir
-  wc_disk, wc_status = setup_branch(sbox, True, 1)
+  wc_disk, wc_status = set_up_branch(sbox, True, 1)
 
   # Some paths we'll care about
   A_url = sbox.repo_url + '/A'
@@ -8318,7 +8318,7 @@ def mergeinfo_recording_in_skipped_merge(sbox):
   # Create a WC with a single branch
   sbox.build()
   wc_dir = sbox.wc_dir
-  wc_disk, wc_status = setup_branch(sbox, True, 1)
+  wc_disk, wc_status = set_up_branch(sbox, True, 1)
 
   # Some paths we'll care about
   A_url = sbox.repo_url + '/A'
@@ -8419,7 +8419,7 @@ def cherry_picking(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  wc_disk, wc_status = setup_branch(sbox)
+  wc_disk, wc_status = set_up_branch(sbox)
 
   # Some paths we'll care about
   H_path = os.path.join(wc_dir, "A", "D", "H")
@@ -8614,7 +8614,7 @@ def propchange_of_subdir_raises_conflict(sbox):
   # Create a WC with a single branch
   sbox.build()
   wc_dir = sbox.wc_dir
-  wc_disk, wc_status = setup_branch(sbox, True, 1)
+  wc_disk, wc_status = set_up_branch(sbox, True, 1)
 
   # Some paths we'll care about
   B_url = sbox.repo_url + '/A/B'
@@ -8715,7 +8715,7 @@ def reverse_merge_prop_add_on_child(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  wc_disk, wc_status = setup_branch(sbox, True, 1)
+  wc_disk, wc_status = set_up_branch(sbox, True, 1)
 
   # Some paths we'll care about
   G_path = os.path.join(wc_dir, "A", "D", "G")
@@ -8815,7 +8815,7 @@ def merge_target_with_non_inheritable_mergeinfo(sbox):
   # Create a WC with a single branch
   sbox.build()
   wc_dir = sbox.wc_dir
-  wc_disk, wc_status = setup_branch(sbox, True, 1)
+  wc_disk, wc_status = set_up_branch(sbox, True, 1)
 
   # Some paths we'll care about
   B_url = sbox.repo_url + '/A/B'
@@ -8974,7 +8974,7 @@ def ignore_ancestry_and_mergeinfo(sbox):
   # Create a WC with a single branch
   sbox.build()
   wc_dir = sbox.wc_dir
-  wc_disk, wc_status = setup_branch(sbox, True, 1)
+  wc_disk, wc_status = set_up_branch(sbox, True, 1)
 
   # Some paths we'll care about
   A_B_url = sbox.repo_url + '/A/B'
@@ -9169,7 +9169,7 @@ def merge_source_normalization_and_subtree_merges(sbox):
   G_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "G")
 
   # Use our helper to copy 'A' to 'A_COPY' then make some changes under 'A'
-  wc_disk, wc_status = setup_branch(sbox)
+  wc_disk, wc_status = set_up_branch(sbox)
 
   # r7 - Move A to A_MOVED
   svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 7.\n'],

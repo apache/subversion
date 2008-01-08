@@ -506,27 +506,32 @@ This means that the UI use-cases (listed above changes slightly):
 
 TO-DO list:
 
-  * allow multiple --changelist args
+  * [DONE] allow multiple --changelist args
+
+  * [DONE] svn status should display grouped changelists
+
+  * [DONE] 'svn info' should display a target's changelist field
+
+  * [DONE] svn commit --changelist already acts as a filter;
+    needs to handle a *list* of changelists, though
+
+  * rename --keep-changelist option to --keep-changelists
+
+  * other commands to augment (fix --changelist interpretation, and
+    possibly allow multiple changelists):
+
+      * svn changelist (see UI notes above)
+      * svn add --changelist (for --force invocations)
+      * svn rm --changelist
+      * svn status --changelist
+      * svn revert --changelist
+      * svn log --changelist
+      * svn diff --changelist  (only wc-wc and wc-repos cases)
+      * svn update --changelist
+      * svn lock/unlock --changelist
+      * svn propget/propset --changelist
+      * svn proplist/propdel --changelist
+
+  * ensure that the bindings implementations of these APIs are up to snuff
 
   * write tests!
-
-  * Done:   svn status should display grouped changelists
-
-  * Done:  'svn info' should display a target's changelist field
-
-  * Almost done:  svn commit --changelist already acts as a filter.
-    Need to pass a *list* of changelists into it, though.
-
-  * other commands to augment:
-
-    * svn changelist (see UI notes above)
-    * svn add --changelist (for --force invocations)
-    * svn rm --changelist
-    * svn status --changelist
-    * svn revert --changelist
-    * svn log --changelist
-    * svn diff --changelist  (only wc-wc and wc-repos cases)
-    * svn update --changelist
-    * svn lock/unlock --changelist
-    * svn propget/propset --changelist
-    * svn proplist/propdel --changelist

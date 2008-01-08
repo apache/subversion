@@ -30,7 +30,7 @@ XFail = svntest.testcase.XFail
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 
-from merge_tests import setup_branch
+from merge_tests import set_up_branch
 from merge_tests import shorten_path_kludge
 
 from svntest.main import SVN_PROP_MERGE_INFO
@@ -49,9 +49,13 @@ from svntest.actions import inject_conflict_into_expected_state
 
 #----------------------------------------------------------------------
 
-# Test for issue #2893
-# Handle merge info for portions of a tree not checked out due to
-# insufficient authz.
+# Test for issues
+#
+# #2893 - Handle merge info for portions of a tree not checked out due
+#        to insufficient authz.
+#
+# #2997 - If skipped paths come first in operative merge mergeinfo
+#         is incomplete
 def mergeinfo_and_skipped_paths(sbox):
   "skipped paths get overriding mergeinfo"
 
@@ -74,7 +78,7 @@ def mergeinfo_and_skipped_paths(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  wc_disk, wc_status = setup_branch(sbox, False, 3)
+  wc_disk, wc_status = set_up_branch(sbox, False, 3)
 
   # Create a restrictive authz where part of the merge source and part
   # of the target are inaccesible.
@@ -99,6 +103,7 @@ def mergeinfo_and_skipped_paths(sbox):
   # Some paths we'll use in the second WC.
   A_COPY_path = os.path.join(wc_restricted, "A_COPY")
   A_COPY_2_path = os.path.join(wc_restricted, "A_COPY_2")
+  A_COPY_2_H_path = os.path.join(wc_restricted, "A_COPY_2", "D", "H")
   A_COPY_3_path = os.path.join(wc_restricted, "A_COPY_3")
   omega_path = os.path.join(wc_restricted, "A_COPY", "D", "H", "omega")
 
@@ -322,6 +327,44 @@ def mergeinfo_and_skipped_paths(sbox):
                                        None, None, None, None,
                                        None, 1, 0)
   os.chdir(saved_cwd)
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '--recursive',
+                                     wc_restricted)
+
+  # Test issue #2997.  If a merge requires two separate editor drives and the
+  # first is non-operative we should still update the mergeinfo to reflect
+  # this.
+  #
+  # Merge -c5 -c8 to the restricted WC's A_COPY_2/D/H.  r5 gets merged first
+  # but is a no-op, r8 get's merged next and is operative so the mergeinfo
+  # should be updated to reflect both merges.
+  short_path = shorten_path_kludge(A_COPY_2_H_path)
+  expected_output = wc.State(short_path, {
+    'omega' : Item(status='U '),
+    })
+  expected_status = wc.State(short_path, {
+    ''      : Item(status=' M', wc_rev=8),
+    'chi'   : Item(status=' M', wc_rev=8),
+    'omega' : Item(status='MM', wc_rev=8),
+    })
+  expected_disk = wc.State('', {
+    ''      : Item(props={SVN_PROP_MERGE_INFO : '/A/D/H:5*,8*'}),
+    'omega' : Item("New content",
+                   props={SVN_PROP_MERGE_INFO : '/A/D/H/omega:5,8'}),
+    'chi'   : Item("This is the file 'chi'.\n",
+                   props={SVN_PROP_MERGE_INFO : '/A/D/H/chi:5,8'}),
+    })
+  expected_skip = wc.State(short_path, {'psi' : Item()})
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_path, '4', '5',
+                                       sbox.repo_url + \
+                                       '/A/D/H',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1, 0, '-c5', '-c8')
 
 ########################################################################
 # Run the tests

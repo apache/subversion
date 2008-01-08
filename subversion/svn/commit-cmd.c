@@ -104,7 +104,7 @@ svn_cl__commit(apr_getopt_t *os,
                            opt_state->depth,
                            no_unlock,
                            opt_state->keep_changelist,
-                           opt_state->changelist,
+                           opt_state->changelists,
                            ctx,
                            pool);
   if (err)

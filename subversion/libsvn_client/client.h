@@ -835,9 +835,10 @@ typedef struct
    If JUST_LOCKED is TRUE, treat unmodified items with lock tokens as
    commit candidates.
 
-   If CHANGELIST_NAME is non-NULL, then use it as a restrictive filter
+   If CHANGELISTS is non-NULL, it is an array of const char *
+   changelist names used as a restrictive filter
    when harvesting committables; that is, don't add a path to
-   COMMITTABLES unless it's a member of the changelist.
+   COMMITTABLES unless it's a member of one of those changelists.
 
    If CTX->CANCEL_FUNC is non-null, it will be called with
    CTX->CANCEL_BATON while harvesting to determine if the client has
@@ -849,7 +850,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                  apr_array_header_t *targets,
                                  svn_depth_t depth,
                                  svn_boolean_t just_locked,
-                                 const char *changelist_name,
+                                 const apr_array_header_t *changelists,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
 
