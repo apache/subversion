@@ -276,15 +276,12 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
                        "It will be blocked from merging in r8.")
 
   # Block r7 from being merged to trunk - r8
-  mergeinfo, actual_stderr = svntest.main.run_svn(None, 'pg', 'svn:mergeinfo',
-                                                  'trunk')
-  for m, i in zip(mergeinfo[:], range(0, len(mergeinfo))):
-    mergeinfo[i] = mergeinfo[i][:-1]
-  mergeinfo.append("/branches/a:7")
-  svntest.main.run_svn(None, 'ps', 'svn:mergeinfo', '\n'.join(mergeinfo),
-                       'trunk')
+  os.chdir('trunk')
+  svntest.main.run_svn(None, 'merge', '--record-only', '-r6:7',
+                       os.path.join('..', branch_a))
   svntest.main.run_svn(None, 'ci', '-m',
                        "Block r7 from merging to trunk.")
+  os.chdir('..')
 
   # Wording change in mu - r9
   svntest.main.file_write(os.path.join('trunk', 'A', 'mu'),
@@ -318,8 +315,47 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   os.chdir(branch_b)
   svntest.main.run_svn(None, 'merge', os.path.join('..', 'a'))
   svntest.main.run_svn(None, 'ci', '-m',
-                       "Merged branches/a to branches/b")
+                       "Merged branches/a to branches/b.")
   os.chdir(os.path.join('..', '..'))
+
+  # More wording changes - r13
+  svntest.main.file_append(os.path.join(branch_b, 'A', 'D', 'gamma'),
+                           "Watch out for the rays!")
+  svntest.main.run_svn(None, 'ci', '-m',
+                       "Modify 'gamma' on branches/b.")
+
+  # More merging - r14
+  os.chdir('trunk')
+  svntest.main.run_svn(None, 'merge', os.path.join('..', branch_b))
+  svntest.main.run_svn(None, 'ci', '-m',
+                       "Merged branches/b to trunk.")
+  os.chdir('..')
+
+  # Even more merging - r15
+  os.chdir(branch_c)
+  svntest.main.run_svn(None, 'merge', os.path.join('..', '..', 'trunk'))
+  svntest.main.run_svn(None, 'ci', '-m',
+                       "Bring branches/c up to date with trunk.")
+  os.chdir(os.path.join('..', '..'))
+
+  # Modify a file on branches/c - r16
+  svntest.main.file_append(os.path.join(branch_c, 'A', 'mu'),
+                           "\nThis is yet more content in 'mu'.")
+  svntest.main.run_svn(None, 'ci', '-m',
+                       "Modify 'mu' on branches/c.")
+
+  # Merge branches/c to trunk, which produces a conflict - r17
+  os.chdir('trunk')
+  svntest.main.run_svn(None, 'merge', os.path.join('..', branch_c))
+  svntest.main.file_write(os.path.join('A', 'mu'),
+                          "This is the file 'mu'.\n" +
+                          "Don't forget to look at 'upsilon', as well.\n" +
+                          "This is yet more content in 'mu'.")
+  svntest.main.run_svn(None, 'resolved', os.path.join('A', 'mu'))
+  svntest.main.run_svn(None, 'ci', '-m',
+                       "Merge branches/c to trunk, " +
+                       "resolving a conflict in 'mu'.")
+  os.chdir('..')
 
   # Restore working directory
   os.chdir(was_cwd)
