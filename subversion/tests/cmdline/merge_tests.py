@@ -5237,7 +5237,6 @@ def mergeinfo_inheritance(sbox):
     'D/H/omega' : Item("This is the file 'omega'.\n"),
     })
   expected_skip = wc.State(short_A_COPY_path, { })
-  raise svntest.Failure("PTB")
   svntest.actions.run_and_verify_merge(short_A_COPY_path, '2', '9',
                                        sbox.repo_url + \
                                        '/A',
