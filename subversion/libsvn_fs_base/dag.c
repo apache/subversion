@@ -1557,7 +1557,7 @@ svn_error_t *svn_fs_base__dag_set_has_mergeinfo(dag_node_t *node,
   /* Are we changing the node? */
   if ((! has_mergeinfo) != (! *had_mergeinfo))
     {
-      /* Not the new has-mergeinfo state. */
+      /* Note the new has-mergeinfo state. */
       node_rev->has_mergeinfo = has_mergeinfo;
 
       /* Increment or decrement the mergeinfo count as necessary. */
@@ -1601,8 +1601,13 @@ svn_error_t *svn_fs_base__dag_set_mergeinfo_count(dag_node_t *node,
                              _("Attempted mergeinfo count change on "
                                "immutable node"));
 
+  if ((count < 0) || ((node->kind == svn_node_file) && (count > 1)))
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Invalid value (%" APR_INT64_T_FMT ") for "
+                               "node revision mergeinfo count"), count);
+
   SVN_ERR(svn_fs_bdb__get_node_revision(&node_rev, fs, id, trail, pool));
-  if (node_rev->mergeinfo_count == count)
+  if (node_rev->mergeinfo_count != count)
     {
       node_rev->mergeinfo_count = count;
       SVN_ERR(svn_fs_bdb__put_node_revision(fs, id, node_rev, trail, pool));
@@ -1631,7 +1636,13 @@ svn_error_t *svn_fs_base__dag_adjust_mergeinfo_count(dag_node_t *node,
 
   SVN_ERR(svn_fs_bdb__get_node_revision(&node_rev, fs, id, trail, pool));
   node_rev->mergeinfo_count = node_rev->mergeinfo_count + count_delta;
-  assert(node_rev->mergeinfo_count >= 0);
+  if ((node_rev->mergeinfo_count < 0) 
+      || ((node->kind == svn_node_file) && (node_rev->mergeinfo_count > 1)))
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Invalid value (%" APR_INT64_T_FMT ") for "
+                               "node revision mergeinfo count"),
+                             node_rev->mergeinfo_count);
+
   SVN_ERR(svn_fs_bdb__put_node_revision(fs, id, node_rev, trail, pool));
 
   return SVN_NO_ERROR;

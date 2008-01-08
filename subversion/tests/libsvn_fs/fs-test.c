@@ -4669,7 +4669,9 @@ unordered_txn_dirprops(const char **msg,
   SVN_ERR(svn_test__set_file_contents(txn_root, "/A/B/E/alpha",
                                       "New contents", pool));
 
-  /* Change dir props in the other. */
+  /* Change dir props in the other.  (We're using svn:mergeinfo
+     property just to make sure special handling logic for that
+     property doesn't croak.) */
   SET_STR(&pval, "/A/C:1");
   SVN_ERR(svn_fs_change_node_prop(txn_root2, "/A/B", "svn:mergeinfo", 
                                   &pval, pool));
