@@ -1050,9 +1050,17 @@ reflective_merge_file_deleted(svn_wc_adm_access_t *adm_access,
                               void *baton)
 {
   merge_cmd_baton_t *merge_b = baton;
-  svn_node_kind_t kind;
-  SVN_ERR(svn_io_check_path(mine, &kind, merge_b->pool));
-  if (kind == svn_node_file)
+  const char *file_path_relative_to_target = get_relative_path(merge_b->target,
+                                                               mine);
+  svn_client_diff_summarize_kind_t *summary_kind =
+    apr_hash_get(merge_b->reflective_rev_affected_paths,
+                 file_path_relative_to_target,
+                 APR_HASH_KEY_STRING);
+
+  /* Checking for non-NULL summary_kind should be sufficient,
+     as cumulative *reflected* summary and reflective merge drive can not give
+     two different summaries. */
+  if (!summary_kind)
     SVN_ERR(merge_file_deleted(adm_access, state, mine, older, yours,
                                mimetype1, mimetype2, original_props, baton));
   else
@@ -1284,9 +1292,17 @@ reflective_merge_dir_deleted(svn_wc_adm_access_t *adm_access,
                              void *baton)
 {
   merge_cmd_baton_t *merge_b = baton;
-  svn_node_kind_t kind;
-  SVN_ERR(svn_io_check_path(path, &kind, merge_b->pool));
-  if (kind == svn_node_dir)
+  const char *file_path_relative_to_target = get_relative_path(merge_b->target,
+                                                               path);
+  svn_client_diff_summarize_kind_t *summary_kind =
+    apr_hash_get(merge_b->reflective_rev_affected_paths,
+                 file_path_relative_to_target,
+                 APR_HASH_KEY_STRING);
+
+  /* Checking for non-NULL summary_kind should be sufficient,
+     as cumulative *reflected* summary and reflective merge drive can not give
+     two different summaries. */
+  if (!summary_kind)
     SVN_ERR(merge_dir_deleted(adm_access, state, path, baton));
   else
     *state = svn_wc_notify_state_unchanged;
