@@ -1033,21 +1033,23 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
 
 svn_error_t *
 svn_client__get_commit_and_merge_ranges(svn_ra_session_t *session,
-                                        apr_array_header_t **merge_ranges_list,
-                                        apr_array_header_t **commit_rangelist,
-                                        const char *merge_target,
-                                        const char *merge_source,
-                                        svn_revnum_t merge_source_peg_rev,
-                                        svn_revnum_t min_commit_rev,
-                                        svn_revnum_t max_commit_rev,
-                                        svn_mergeinfo_inheritance_t inherit,
-                                        svn_client_ctx_t *ctx,
-                                        apr_pool_t *pool)
+                               apr_array_header_t **merge_ranges_list,
+                               apr_array_header_t **commit_rangelist,
+                               apr_array_header_t **merge_source_path_segments,
+                               const char *merge_target,
+                               const char *merge_source,
+                               svn_revnum_t merge_source_peg_rev,
+                               svn_revnum_t min_commit_rev,
+                               svn_revnum_t max_commit_rev,
+                               svn_mergeinfo_inheritance_t inherit,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *pool)
 {
   apr_array_header_t *source_segments;
   int i;
   *merge_ranges_list = apr_array_make(pool, 0, sizeof(apr_array_header_t *));
   *commit_rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
+  *merge_source_path_segments = apr_array_make(pool, 0, sizeof(const char *));
   SVN_ERR(svn_client__repos_location_segments(&source_segments, session,
                                               merge_source,
                                               merge_source_peg_rev,
@@ -1085,6 +1087,8 @@ svn_client__get_commit_and_merge_ranges(svn_ra_session_t *session,
                          svn_merge_range_t *) = commit_range;
           APR_ARRAY_PUSH(*merge_ranges_list,
                          apr_array_header_t *) = merge_ranges;
+          APR_ARRAY_PUSH(*merge_source_path_segments,
+                         const char *) = segment->path;
         }
     }
   return SVN_NO_ERROR;

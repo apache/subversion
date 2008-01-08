@@ -30,6 +30,9 @@ typedef struct svn_client__remaining_range_info_t {
      reflective range of it. It contains individual elements of
      type 'svn_merge_range_t *'. */
   apr_array_header_t *reflected_ranges;
+  /* reflected_target_segment is of value 'target url absolute repository 
+     path segment' at refective merge. */
+  const char *reflected_target_segment;
 } svn_client__remaining_range_info_t;
 
 /* Structure used by discover_and_merge_children() and consumers of the
@@ -246,11 +249,14 @@ svn_client__elide_mergeinfo_for_tree(apr_hash_t *children_with_mergeinfo,
  * where each commit_rev in @a commit_rangelist > @a min_commit_rev and
  * <= @a max_commit_rev.
  * 
- * COMMIT_RANGELIST and MERGE_RANGES_LIST will never be NULL,
- * but may be empty.
+ * COMMIT_RANGELIST, MERGE_RANGES_LIST and MERGE_SOURCE_PATH_SEGMENTS will
+ * never be NULL, but may be empty.
  *
- * COMMIT_RANGELIST and MERGE_RANGES_LIST are having
- * one-one corresponding and hence they are equal in size.
+ * *MERGE_SOURCE_PATH_SEGMENTS are filled with merge source segment paths of
+ * type const char *.
+ *
+ * COMMIT_RANGELIST, MERGE_RANGES_LIST and MERGE_SOURCE_PATH_SEGMENTS are
+ * having one-one corresponding and hence they are equal in size.
  *
  * COMMIT_RANGELIST has elements of type 'svn_merge_range_t *'.
  * MERGE_RANGES_LIST has elements of type 'apr_array_header_t *' which
@@ -271,15 +277,16 @@ svn_client__elide_mergeinfo_for_tree(apr_hash_t *children_with_mergeinfo,
  */
 svn_error_t *
 svn_client__get_commit_and_merge_ranges(svn_ra_session_t *session,
-                                        apr_array_header_t **merge_ranges_list,
-                                        apr_array_header_t **commit_rangelist,
-                                        const char *merge_target,
-                                        const char *merge_source,
-                                        svn_revnum_t merge_source_peg_rev,
-                                        svn_revnum_t min_commit_rev,
-                                        svn_revnum_t max_commit_rev,
-                                        svn_mergeinfo_inheritance_t inherit,
-                                        svn_client_ctx_t *ctx,
-                                        apr_pool_t *pool);
+                               apr_array_header_t **merge_ranges_list,
+                               apr_array_header_t **commit_rangelist,
+                               apr_array_header_t **merge_source_path_segments,
+                               const char *merge_target,
+                               const char *merge_source,
+                               svn_revnum_t merge_source_peg_rev,
+                               svn_revnum_t min_commit_rev,
+                               svn_revnum_t max_commit_rev,
+                               svn_mergeinfo_inheritance_t inherit,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *pool);
 
 #endif /* SVN_LIBSVN_CLIENT_MERGEINFO_H */

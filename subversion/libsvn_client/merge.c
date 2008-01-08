@@ -230,6 +230,11 @@ typedef struct merge_cmd_baton_t {
    */
   apr_array_header_t *reflected_ranges;
 
+  /* reflected_target_segment_path is a merge target segment that is reflected
+     in current reflective merge pass. If current merge pass is not reflective
+     its value is irrelevant. */
+  const char *reflected_target_segment_path;
+
   /* Before running the actual reflective rev merge we do get
    * a summary of merge and store the to be affected paths as keys in
    * this hash with value being of type svn_client_diff_summarize_kind_t *.
@@ -415,19 +420,22 @@ get_diff_summary_func_cb(const svn_client_diff_summarize_t *summary,
 }
 
 
-/* Summarize MERGE_B->reflected_ranges from MERGE_B->target url to 
+/* Summarize MERGE_B->reflected_ranges from
+   MERGE_B->reflected_target_segment_path to
    MERGE_B->reflective_rev_affected_paths. */
 static svn_error_t *
 summarize_reflected_ranges(svn_depth_t depth,
                            merge_cmd_baton_t *merge_b)
 {
   int i;
-  const char *target_url;
+  const char *target_url, *target_root_url;
   apr_pool_t *iterpool = svn_pool_create(merge_b->pool);
 
-  SVN_ERR(svn_ra_get_session_url(merge_b->target_ra_session,
-                                 &target_url,
-                                 merge_b->pool));
+  SVN_ERR(svn_ra_get_repos_root(merge_b->target_ra_session, &target_root_url,
+                                merge_b->pool));
+  target_url = svn_path_join(target_root_url, 
+                             merge_b->reflected_target_segment_path,
+                             merge_b->pool);
   svn_hash__clear(merge_b->reflective_rev_affected_paths);
   for (i = 0; i < merge_b->reflected_ranges->nelts; i++)
     {
@@ -1547,13 +1555,18 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
    merge range(svn_merge_range_t *) that are merged from target to source
    within revision1:revision2.
 
-   Both *REFLECTIVE_RANGELIST and *REFLECTED_RANGES_LIST correspond 1-1 with
-   each other.
+   *REFLECTED_TARGET_SEGMENTS array will be populated with target segment 
+   repository path names(const char*) that are merged to source
+   within revision1:revision2.
+
+   *REFLECTIVE_RANGELIST, *REFLECTED_RANGES_LIST and *REFLECTED_TARGET_SEGMENTS 
+   correspond 1-1 with each other.
 */
 static svn_error_t *
 filter_reflective_revisions(apr_array_header_t **requested_rangelist,
                             apr_array_header_t **reflected_ranges_list,
                             apr_array_header_t **reflective_rangelist,
+                            apr_array_header_t **reflected_target_segments,
                             const char *source_root_url,
                             const char *url1,
                             svn_revnum_t revision1,
@@ -1613,6 +1626,7 @@ filter_reflective_revisions(apr_array_header_t **requested_rangelist,
   SVN_ERR(svn_client__get_commit_and_merge_ranges(ra_session,
                                                   reflected_ranges_list,
                                                   reflective_rangelist,
+                                                  reflected_target_segments,
                                                   merge_target,
                                                   merge_source,
                                                   entry->revision,
@@ -1747,10 +1761,12 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
 {
   apr_array_header_t *requested_rangelist;
   apr_array_header_t *reflected_ranges_list = NULL;
+  apr_array_header_t *reflected_target_segments = NULL;
   apr_array_header_t *reflective_rangelist = NULL;
   apr_array_header_t *ranges_to_merge;
   svn_merge_range_t *range = NULL, *reflective_range = NULL;
   apr_array_header_t *reflected_ranges;
+  const char *reflected_target_segment;
   const char *old_url;
   const char *mergeinfo_path;
   int i = 0, j = 0;
@@ -1762,6 +1778,7 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
   SVN_ERR(filter_reflective_revisions(&requested_rangelist,
                                       &reflected_ranges_list,
                                       &reflective_rangelist,
+                                      &reflected_target_segments,
                                       source_root_url,
                                       url1, revision1, url2, revision2,
                                       inheritable, entry_path, entry,
@@ -1793,6 +1810,8 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
                                          svn_merge_range_t *);
         reflected_ranges = APR_ARRAY_IDX(reflected_ranges_list, j,
                                          apr_array_header_t *);
+        reflected_target_segment = APR_ARRAY_IDX(reflected_target_segments, j,
+                                                 const char *);
       }
     if (range == NULL && reflective_range == NULL)
       break;
@@ -1809,6 +1828,7 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
           {
             range_info->range = reflective_range;
             range_info->reflected_ranges = reflected_ranges;
+            range_info->reflected_target_segment = reflected_target_segment;
             ++j;
           }
       }
@@ -1821,6 +1841,7 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
       {
         range_info->range = reflective_range;
         range_info->reflected_ranges = reflected_ranges;
+        range_info->reflected_target_segment = reflected_target_segment;
         ++j;
       }
     APR_ARRAY_PUSH(*remaining_ranges, 
@@ -2646,6 +2667,8 @@ drive_merge_report_editor(const char *target_wcpath,
               if (range_info->reflected_ranges)
                 {
                   merge_b->reflected_ranges = range_info->reflected_ranges;
+                  merge_b->reflected_target_segment_path =
+                    range_info->reflected_target_segment;
                   callbacks = &reflective_merge_callbacks;
                   SVN_ERR(summarize_reflected_ranges(depth, merge_b));
                 }
