@@ -452,6 +452,7 @@ summarize_reflected_ranges(svn_depth_t depth,
                                         merge_b->ctx,
                                         iterpool));
     }
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
