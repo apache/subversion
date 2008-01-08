@@ -9308,7 +9308,7 @@ def basic_reintegrate(sbox):
   # Make A_COPY branch in r2, and do a few more commits to A in r3-6.
   sbox.build()
   wc_dir = sbox.wc_dir
-  expected_disk, expected_status = setup_branch(sbox)
+  expected_disk, expected_status = set_up_branch(sbox)
 
   # Make a change on the branch, to A/mu.  Commit in r7.
   svntest.main.file_write(os.path.join(wc_dir, "A_COPY", "mu"),
@@ -9508,7 +9508,7 @@ def reintegrate_branch_never_merged_to(sbox):
   # Make A_COPY branch in r2, and do a few more commits to A in r3-6.
   sbox.build()
   wc_dir = sbox.wc_dir
-  expected_disk, expected_status = setup_branch(sbox)
+  expected_disk, expected_status = set_up_branch(sbox)
 
   # Make a change on the branch, to A/mu.  Commit in r7.
   svntest.main.file_write(os.path.join(wc_dir, "A_COPY", "mu"),
