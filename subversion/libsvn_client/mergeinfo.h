@@ -28,7 +28,7 @@ typedef struct svn_client__remaining_range_info_t {
   svn_merge_range_t *range;
   /* If reflected_ranges is not NULL then above 'range' is a
      reflective range of it. It contains individual elements of
-     type ' svn_merge_range_t *'. */
+     type 'svn_merge_range_t *'. */
   apr_array_header_t *reflected_ranges;
 } svn_client__remaining_range_info_t;
 
