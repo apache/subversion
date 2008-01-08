@@ -709,6 +709,16 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
+/* Returns the PATH which is relative to BASEPATH. */
+static const char *
+get_relative_path(const char *basepath, const char *path)
+{
+  int base_path_len = strlen(basepath);
+  const char *relative_path =
+    path + (base_path_len ? base_path_len + 1 : 0);
+  return relative_path;
+}
+
 /* A svn_wc_diff_callbacks2_t function.
  * This callback applies the original reflected_ranges of the reflective
  * revision to OLDER, thus at the end of applying all ranges from 
@@ -732,9 +742,8 @@ reflective_merge_file_changed(svn_wc_adm_access_t *adm_access,
                               void *baton)
 {
   merge_cmd_baton_t *merge_b = baton;
-  int merge_target_len = strlen(merge_b->target);
-  const char *file_path_relative_to_target = 
-    mine + (merge_target_len ? merge_target_len + 1 : 0);
+  const char *file_path_relative_to_target = get_relative_path(merge_b->target,
+                                                               mine);
   if (older)
     SVN_ERR(merge_reflected_ranges_to_pre_reflective_file(older,
                                                  file_path_relative_to_target,
@@ -928,9 +937,8 @@ reflective_merge_file_added(svn_wc_adm_access_t *adm_access,
                             void *baton)
 {
   merge_cmd_baton_t *merge_b = baton;
-  int merge_target_len = strlen(merge_b->target);
-  const char *file_path_relative_to_target = 
-    mine + (merge_target_len ? merge_target_len + 1 : 0);
+  const char *file_path_relative_to_target = get_relative_path(merge_b->target,
+                                                               mine);
   svn_client_diff_summarize_kind_t *summary_kind =
     apr_hash_get(merge_b->reflective_rev_affected_paths,
                  file_path_relative_to_target,
@@ -1175,9 +1183,8 @@ reflective_merge_dir_added(svn_wc_adm_access_t *adm_access,
                            void *baton)
 {
   merge_cmd_baton_t *merge_b = baton;
-  int merge_target_len = strlen(merge_b->target);
-  const char *file_path_relative_to_target = 
-    path + (merge_target_len ? merge_target_len + 1 : 0);
+  const char *file_path_relative_to_target = get_relative_path(merge_b->target,
+                                                               path);
   svn_client_diff_summarize_kind_t *summary_kind =
     apr_hash_get(merge_b->reflective_rev_affected_paths,
                  file_path_relative_to_target,
@@ -2012,8 +2019,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
       if (strlen(child->path) == merge_target_len)
         child_repos_path = "";
       else
-        child_repos_path = child->path +
-          (merge_target_len ? merge_target_len + 1 : 0);
+        child_repos_path = get_relative_path(merge_b->target, child->path);
       child_url1 = svn_path_join(url1, child_repos_path, iterpool);
       child_url2 = svn_path_join(url2, child_repos_path, iterpool);
 
@@ -4730,8 +4736,7 @@ do_directory_merge(const char *url1,
           if (strlen(child->path) == merge_target_len)
             child_repos_path = "";
           else
-            child_repos_path = child->path +
-              (merge_target_len ? merge_target_len + 1 : 0);
+            child_repos_path = get_relative_path(merge_b->target, child->path);
           child_merge_src_canon_path = svn_path_join(mergeinfo_path,
                                                      child_repos_path,
                                                      iterpool);
