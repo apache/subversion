@@ -1177,9 +1177,9 @@ def merge_sensitive_log_added_path(sbox):
   check_merge_results(log_chain, expected_merges)
 
   revprops = [{'svn:author': 'jrandom', 'svn:date': '',
-               'svn:log': 'Merge branches/b to trunk'},
+               'svn:log': 'Merged branches/b to trunk.'},
               {'svn:author': 'jrandom', 'svn:date': '',
-               'svn:log': 'Merge branches/a to branches/b'},
+               'svn:log': 'Merged branches/a to branches/b.'},
               {'svn:author': 'jrandom', 'svn:date': '',
                'svn:log': "Added 'xi' to branches/a,"
                ' made a few other changes.'}]
