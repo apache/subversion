@@ -1824,6 +1824,7 @@ merge(svn_stringbuf_t *conflict_p,
       dag_node_t *source,
       dag_node_t *ancestor,
       const char *txn_id,
+      apr_int64_t *mergeinfo_increment_out,
       trail_t *trail,
       apr_pool_t *pool)
 {
@@ -1833,6 +1834,7 @@ merge(svn_stringbuf_t *conflict_p,
   apr_pool_t *iterpool;
   svn_fs_t *fs;
   int pred_count;
+  apr_int64_t mergeinfo_increment = 0;
 
   /* Make sure everyone comes from the same filesystem. */
   fs = svn_fs_base__dag_get_fs(ancestor);
@@ -2019,8 +2021,25 @@ merge(svn_stringbuf_t *conflict_p,
          process, but the transaction did not touch this entry. */
       else if (t_entry && svn_fs_base__id_eq(a_entry->id, t_entry->id))
         {
-          if (s_entry)
-            {
+          dag_node_t *t_ent_node;
+          apr_int64_t mergeinfo_start;
+          SVN_ERR(svn_fs_base__dag_get_node(&t_ent_node, fs,
+                                            t_entry->id, trail, iterpool));
+          SVN_ERR(svn_fs_base__dag_get_mergeinfo_count(&mergeinfo_start,
+                                                       t_ent_node, trail,
+                                                       iterpool));
+          mergeinfo_increment -= mergeinfo_start;
+
+           if (s_entry)
+             {
+              dag_node_t *s_ent_node;
+              apr_int64_t mergeinfo_end;
+              SVN_ERR(svn_fs_base__dag_get_node(&s_ent_node, fs,
+                                                s_entry->id, trail, iterpool));
+              SVN_ERR(svn_fs_base__dag_get_mergeinfo_count(&mergeinfo_end,
+                                                           s_ent_node, trail,
+                                                           iterpool));
+              mergeinfo_increment += mergeinfo_end;
               SVN_ERR(svn_fs_base__dag_set_entry(target, key, s_entry->id,
                                                  txn_id, trail, iterpool));
             }
@@ -2038,6 +2057,7 @@ merge(svn_stringbuf_t *conflict_p,
         {
           dag_node_t *s_ent_node, *t_ent_node, *a_ent_node;
           const char *new_tpath;
+          apr_int64_t sub_mergeinfo_increment;
 
           /* If SOURCE-ENTRY and TARGET-ENTRY are both null, that's a
              double delete; flag a conflict. */
@@ -2085,7 +2105,8 @@ merge(svn_stringbuf_t *conflict_p,
           new_tpath = svn_path_join(target_path, t_entry->name, iterpool);
           SVN_ERR(merge(conflict_p, new_tpath,
                         t_ent_node, s_ent_node, a_ent_node,
-                        txn_id, trail, iterpool));
+                        txn_id, &sub_mergeinfo_increment, trail, iterpool));
+          mergeinfo_increment += sub_mergeinfo_increment;
         }
 
       /* We've taken care of any possible implications E could have.
@@ -2105,6 +2126,8 @@ merge(svn_stringbuf_t *conflict_p,
       const void *key;
       void *val;
       apr_ssize_t klen;
+      dag_node_t *s_ent_node;
+      apr_int64_t mergeinfo_s;
 
       svn_pool_clear(iterpool);
 
@@ -2119,6 +2142,12 @@ merge(svn_stringbuf_t *conflict_p,
                                           t_entry->name,
                                           iterpool));
 
+      SVN_ERR(svn_fs_base__dag_get_node(&s_ent_node, fs,
+                                        s_entry->id, trail, iterpool));
+      SVN_ERR(svn_fs_base__dag_get_mergeinfo_count(&mergeinfo_s,
+                                                   s_ent_node, trail,
+                                                   iterpool));
+      mergeinfo_increment += mergeinfo_s;
       SVN_ERR(svn_fs_base__dag_set_entry
               (target, s_entry->name, s_entry->id, txn_id, trail, iterpool));
     }
@@ -2130,6 +2159,11 @@ merge(svn_stringbuf_t *conflict_p,
                                                  trail, pool));
   SVN_ERR(update_ancestry(fs, source_id, target_id, txn_id, target_path,
                           pred_count, trail, pool));
+  SVN_ERR(svn_fs_base__dag_adjust_mergeinfo_count(target, mergeinfo_increment,
+                                                  txn_id, trail, pool));
+ 
+  if (mergeinfo_increment_out)
+    *mergeinfo_increment_out = mergeinfo_increment;
 
   return SVN_NO_ERROR;
 }
@@ -2207,8 +2241,8 @@ txn_body_merge(void *baton, trail_t *trail)
     {
       int pred_count;
 
-      SVN_ERR(merge(args->conflict, "/", txn_root_node,
-                    source_node, ancestor_node, txn_id, trail, trail->pool));
+      SVN_ERR(merge(args->conflict, "/", txn_root_node, source_node, 
+                    ancestor_node, txn_id, NULL, trail, trail->pool));
 
       SVN_ERR(svn_fs_base__dag_get_predecessor_count(&pred_count,
                                                      source_node, trail,
