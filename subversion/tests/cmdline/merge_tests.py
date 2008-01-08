@@ -9417,7 +9417,7 @@ def merge_source_normalization_and_subtree_merges(sbox):
                                        None, 1)
   os.chdir(saved_cwd)
 
-# Test for issue #????: 'subtrees with intersecting mergeinfo, that don't
+# Test for issue #3067: 'subtrees with intersecting mergeinfo, that don't
 # exist at the start of a merge range shouldn't break the merge'
 #
 # Set as XFail until this issue is resolved.
