@@ -1230,7 +1230,7 @@ svn_error_t *svn_fs_closest_copy(svn_fs_root_t **root_p,
  *
  * @a root indicates the revision root to use when looking up paths.
  *
- * @a paths indicate the paths you are requesting information for
+ * @a paths indicate the paths for which you are requesting information.
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a paths is retrieved.
