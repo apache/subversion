@@ -651,6 +651,11 @@ def only_trunk_A_with_changes(sbox):
   run_test(sbox, "svnsync-trunk-A-changes.dump", "/trunk/A", 
            "svnsync-trunk-A-changes.expected.dump")
 
+# test for issue #2904
+def move_and_modify_in_the_same_revision(sbox):
+  "test move parent and modify child file in same rev"
+  run_test(sbox, "svnsync-move-and-modify.dump")
+
 ########################################################################
 # Run the tests
 
@@ -681,6 +686,7 @@ test_list = [ None,
               copy_revprops,
               only_trunk,
               only_trunk_A_with_changes,
+              move_and_modify_in_the_same_revision,
              ]
 
 if __name__ == '__main__':

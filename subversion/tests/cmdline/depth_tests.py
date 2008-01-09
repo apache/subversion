@@ -166,7 +166,7 @@ def depth_empty_update_bypass_single_file(sbox):
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None, wc)
+                                        None, wc)
 
   # Update the depth-empty wc, expecting not to receive the change to iota.
   expected_output = svntest.wc.State(wc_empty, { })
@@ -203,7 +203,7 @@ def depth_immediates_get_top_file_mod_only(sbox):
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None, wc)
+                                        None, wc)
 
   # Update the depth-immediates wc, expecting to receive only the
   # change to iota.
@@ -253,7 +253,7 @@ def depth_empty_commit(sbox):
   svntest.actions.run_and_verify_commit(wc_empty,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
+                                        None,
                                         wc_empty)
 
 #----------------------------------------------------------------------
@@ -287,7 +287,7 @@ def depth_empty_with_file(sbox):
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None, wc)
+                                        None, wc)
 
   # Delete iota in the "other" wc.
   other_iota_path = os.path.join(wc, 'iota')
@@ -298,7 +298,7 @@ def depth_empty_with_file(sbox):
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None, wc)
+                                        None, wc)
 
   # Update the depth-empty wc just a little, expecting to receive
   # the change in iota.
@@ -384,7 +384,7 @@ def depth_empty_with_dir(sbox):
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None, wc)
+                                        None, wc)
 
   # Update "A" by name in wc_empty, expect to receive the change to A/mu.
   expected_output = svntest.wc.State(wc_empty, { 'A/mu' : Item(status='U ') })
@@ -411,7 +411,7 @@ def depth_empty_with_dir(sbox):
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None, wc)
+                                        None, wc)
 
 
   # Update "A" by name in wc_empty, expect to A/mu to disappear.
@@ -641,7 +641,7 @@ def depth_empty_unreceive_delete(sbox):
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None, wc)
+                                        None, wc)
 
   # Update the depth-empty wc, expecting not to receive the deletion of iota.
   expected_output = svntest.wc.State(wc_empty, { })
@@ -675,7 +675,7 @@ def depth_immediates_unreceive_delete(sbox):
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None, wc)
+                                        None, wc)
 
   # Update the depth-immediates wc, expecting not to receive the deletion
   # of A/mu.
@@ -717,7 +717,7 @@ def depth_immediates_receive_delete(sbox):
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None, wc)
+                                        None, wc)
 
   # Update the depth-immediates wc, expecting to receive the deletion of A.
   expected_output = svntest.wc.State(wc_immed, {
@@ -766,8 +766,6 @@ def depth_immediates_subdir_propset_1(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         A_path)
 
   # Create expected output tree for the update.
@@ -988,8 +986,6 @@ def commit_propmods_with_depth_empty(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         '--depth=empty',
                                         wc_dir, D_path)
 
@@ -1156,8 +1152,6 @@ def commit_depth_immediates(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         '--depth', 'immediates',
                                         wc_dir, G_path)
 
@@ -1189,7 +1183,7 @@ def depth_immediates_receive_new_dir(sbox):
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None, wc)
+                                        None, wc)
 
   # Update the depth-immediates wc, expecting to receive just the
   # new directory, without the file.

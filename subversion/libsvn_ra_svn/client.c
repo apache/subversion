@@ -2,7 +2,7 @@
  * client.c :  Functions for repository access via the Subversion protocol
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1264,7 +1264,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
                                svn_boolean_t discover_changed_paths,
                                svn_boolean_t strict_node_history,
                                svn_boolean_t include_merged_revisions,
-                               apr_array_header_t *revprops,
+                               const apr_array_header_t *revprops,
                                svn_log_entry_receiver_t receiver,
                                void *receiver_baton, apr_pool_t *pool)
 {
@@ -2281,6 +2281,8 @@ static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
     *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_MERGEINFO);
   else if (strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0)
     *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_LOG_REVPROPS);
+  else if (strcmp(capability, SVN_RA_CAPABILITY_PARTIAL_REPLAY) == 0)
+    *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_PARTIAL_REPLAY);
   else  /* Don't know any other capabilities, so error. */
     {
       return svn_error_createf

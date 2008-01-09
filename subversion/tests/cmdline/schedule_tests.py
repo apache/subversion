@@ -478,8 +478,7 @@ def delete_missing(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
 #----------------------------------------------------------------------
 # Regression test for issue #854:

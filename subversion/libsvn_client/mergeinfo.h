@@ -57,8 +57,6 @@ typedef struct svn_client__merge_path_t
                                         ranges. */
   svn_boolean_t absent;              /* PATH is absent from the WC, probably
                                         due to authz restrictions. */
-  const svn_string_t *propval;       /* Working mergeinfo for PATH at start
-                                        of merge.  May be NULL. */
   apr_array_header_t *remaining_ranges; /* Per path remaining 
                                            svn_client__remaining_range_info_t*
                                            list. */

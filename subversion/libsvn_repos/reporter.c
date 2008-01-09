@@ -164,9 +164,15 @@ read_string(const char **str, apr_file_t *temp, apr_pool_t *pool)
      string, anyone?) but let's be future-proof anyway. */
   if (len + 1 < len)
     {
+      /* xgettext doesn't expand preprocessor definitions, so we must
+         pass translatable string to apr_psprintf() function to create
+         intermediate string with appropriate format specifier. */
       return svn_error_createf(SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
-                               _("Invalid length (%" APR_UINT64_T_FMT ") "
-                                 "when about to read a string"), len);
+                               apr_psprintf(pool,
+                                            _("Invalid length (%%%s) when "
+                                              "about to read a string"),
+                                            APR_UINT64_T_FMT),
+                               len);
     }
 
   buf = apr_palloc(pool, len + 1);

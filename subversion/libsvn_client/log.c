@@ -2,7 +2,7 @@
  * log.c:  return log messages
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -218,7 +218,7 @@ typedef struct
   /* ra session for retrieving revprops from old servers */
   svn_ra_session_t *ra_session;
   /* caller's list of requested revprops, receiver, and baton */
-  apr_array_header_t *revprops;
+  const apr_array_header_t *revprops;
   svn_log_entry_receiver_t receiver;
   void *baton;
 } pre_15_receiver_baton_t;
@@ -307,7 +307,7 @@ svn_client_log4(const apr_array_header_t *targets,
                 svn_boolean_t discover_changed_paths,
                 svn_boolean_t strict_node_history,
                 svn_boolean_t include_merged_revisions,
-                apr_array_header_t *revprops,
+                const apr_array_header_t *revprops,
                 svn_log_entry_receiver_t real_receiver,
                 void *real_receiver_baton,
                 svn_client_ctx_t *ctx,
