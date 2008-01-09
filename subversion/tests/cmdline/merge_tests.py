@@ -9958,6 +9958,25 @@ def reintegrate_fail_on_shallow_wc(sbox):
     ".*Cannot reintegrate into a working copy not.*at infinite depth.*",
     None, None, None, None, True, False, '--reintegrate')
 
+def reintegrate_fail_on_stale_source(sbox):
+  "merge --reintegrate should fail on stale source"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  expected_disk, expected_status = set_up_branch(sbox)
+  A_path = os.path.join(wc_dir, "A")
+  mu_path = os.path.join(A_path, "mu")
+  svntest.main.file_append(mu_path, 'some text appended to mu\n')
+  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+                                     '-m', 'a change to mu', mu_path);
+  # Unmix the revisions in the working copy.
+  svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir);
+  # The merge --reintegrate should fail because target has changes not
+  # present in source.
+  svntest.actions.run_and_verify_merge(
+    A_path, None, None, sbox.repo_url + '/A_COPY', None, None, None, None,
+    ".*", ###TODO(reint): need a more specific check here
+    None, None, None, None, True, False, '--reintegrate')
+
 
 ########################################################################
 # Run the tests
@@ -10052,6 +10071,7 @@ test_list = [ None,
               reintegrate_fail_on_mixed_rev_wc,
               reintegrate_fail_on_switched_wc,
               reintegrate_fail_on_shallow_wc,
+              XFail(reintegrate_fail_on_stale_source),
              ]
 
 if __name__ == '__main__':
