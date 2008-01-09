@@ -4471,7 +4471,7 @@ do_directory_merge(const char *url1,
                   svn_merge_range_t *rng;
                   apr_hash_t *merge_mergeinfo, *added_path_mergeinfo;
                   apr_array_header_t *rangelist;
-                  svn_wc_entry_t *entry;
+                  const svn_wc_entry_t *entry;
                   const char *common_ancestor_path =
                     svn_path_get_longest_ancestor(added_path,
                                                   target_merge_path->path,
