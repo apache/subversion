@@ -1685,12 +1685,21 @@ main(int argc, const char *argv[])
   if (descend == FALSE)
     {
       if (subcommand->cmd_func == svn_cl__status)
-        opt_state.depth = SVN_DEPTH_INFINITY_OR_IMMEDIATES(FALSE);
-      else if (subcommand->cmd_func == svn_cl__revert)
-        /* Be especially conservative, since revert can lose data. */
-        opt_state.depth = svn_depth_empty;
+        {
+          opt_state.depth = SVN_DEPTH_INFINITY_OR_IMMEDIATES(FALSE);
+        }
+      else if (subcommand->cmd_func == svn_cl__revert
+               || subcommand->cmd_func == svn_cl__add)
+        {
+          /* In pre-1.5 Subversion, some commands treated -N like
+             --depth=empty, so .  Also, with revert it makes sense to be
+             especially conservative, since revert can lose data. */
+          opt_state.depth = svn_depth_empty;
+        }
       else
-        opt_state.depth = SVN_DEPTH_INFINITY_OR_FILES(FALSE);
+        {
+          opt_state.depth = SVN_DEPTH_INFINITY_OR_FILES(FALSE);
+        }
     }
   /* Create a client context object. */
   command_baton.opt_state = &opt_state;
