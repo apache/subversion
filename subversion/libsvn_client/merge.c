@@ -5451,7 +5451,8 @@ svn_client_merge_reintegrate(const char *source,
                              _("'%s@%ld' must be ancestrally related to "
                                "'%s@%ld'"), url1, rev1, url2, rev2);
 
-  /* ### TODO(reint): Clearly, these prints should not stay. */
+#if 0
+  /* ### TODO(reint): get rid of these prints when no longer needed */
   printf("KFF url1: %s\n", url1);
   printf("KFF rev1: %ld\n", rev1);
   printf("KFF url2: %s\n", url2);
@@ -5459,6 +5460,7 @@ svn_client_merge_reintegrate(const char *source,
   printf("KFF yc_ancestor_path: %s\n", yc_ancestor_path);
   printf("KFF yc_ancestor_rev: %ld\n", yc_ancestor_rev);
   fflush(stdout);
+#endif /* 0/1 */
 
   if (rev1 > yc_ancestor_rev)
     {
@@ -5483,7 +5485,8 @@ svn_client_merge_reintegrate(const char *source,
                                  target_mergeinfo, source_mergeinfo, FALSE,
                                  pool));
 
-      /* ### TODO(reint): Clearly, these prints should not stay. */
+#if 0
+      /* ### TODO(reint): get rid of these prints when no longer needed */
       {
         svn_string_t *debug_output;
         SVN_ERR(svn_mergeinfo__to_string(&debug_output, target_mergeinfo,
@@ -5499,6 +5502,7 @@ svn_client_merge_reintegrate(const char *source,
         printf("KFF added_mergeinfo:\n%s\n\n", debug_output->data);
         fflush(stdout);
       }
+#endif /* 0/1 */
 
       SVN_ERR(ensure_all_missing_ranges_are_phantoms(ra_session,
                                                      deleted_mergeinfo, pool));
