@@ -242,16 +242,16 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
                        'Create branches/a from trunk.')
 
   # Some changes on the branch - r4
-  svntest.main.file_append(os.path.join(branch_a, 'iota'),
-                           "'A' has changed a bit.\n")
-  svntest.main.file_append(os.path.join(branch_a, 'A', 'mu'),
-                           "Don't forget to look at 'upsilon', too.")
+  svntest.main.file_append_binary(os.path.join(branch_a, 'iota'),
+                                  "'A' has changed a bit.\n")
+  svntest.main.file_append_binary(os.path.join(branch_a, 'A', 'mu'),
+                                  "Don't forget to look at 'upsilon', too.")
   svntest.main.file_write(os.path.join(branch_a, upsilon_path),
-                          "This is the file 'upsilon'.\n")
+                          "This is the file 'upsilon'.\n", "wb")
   svntest.main.run_svn(None, 'add',
                        os.path.join(branch_a, upsilon_path))
   svntest.main.run_svn(None, 'ci', '-m',
-                       "Add the file 'upsilon', and change some other files.\n")
+                       "Add the file 'upsilon', and change some other files.")
 
   # Create another branch - r5
   svntest.main.run_svn(None, 'cp', 'trunk', branch_c)
@@ -286,7 +286,7 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   # Wording change in mu - r9
   svntest.main.file_write(os.path.join('trunk', 'A', 'mu'),
                           "This is the file 'mu'.\n" +
-                          "Don't forget to look at 'upsilon', as well.")
+                          "Don't forget to look at 'upsilon', as well.", "wb")
   svntest.main.run_svn(None, 'ci', '-m',
                        "Wording change in mu.")
 
@@ -299,15 +299,16 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
                        "Create branches/b from trunk")
 
   # Add another file, make some changes on branches/a - r11
-  svntest.main.file_append(os.path.join(branch_a, upsilon_path),
-                           "There is also the file 'xi'.")
+  svntest.main.file_append_binary(os.path.join(branch_a, upsilon_path),
+                                  "There is also the file 'xi'.")
   svntest.main.file_write(os.path.join(branch_a, 'A', 'xi'),
-                          "This is the file 'xi'.\n")
+                          "This is the file 'xi'.\n", "wb")
   svntest.main.run_svn(None, 'add',
                        os.path.join(branch_a, 'A', 'xi'))
   svntest.main.file_write(os.path.join(branch_a, 'iota'),
                           "This is the file 'iota'.\n" +
-                          "'A' has changed a bit, with 'upsilon', and 'xi'.")
+                          "'A' has changed a bit, with 'upsilon', and 'xi'.",
+                          "wb")
   svntest.main.run_svn(None, 'ci', '-m',
                        "Added 'xi' to branches/a, made a few other changes.")
 
@@ -319,8 +320,8 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   os.chdir(os.path.join('..', '..'))
 
   # More wording changes - r13
-  svntest.main.file_append(os.path.join(branch_b, 'A', 'D', 'gamma'),
-                           "Watch out for the rays!")
+  svntest.main.file_append_binary(os.path.join(branch_b, 'A', 'D', 'gamma'),
+                                  "Watch out for the rays!")
   svntest.main.run_svn(None, 'ci', '-m',
                        "Modify 'gamma' on branches/b.")
 
@@ -339,8 +340,8 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   os.chdir(os.path.join('..', '..'))
 
   # Modify a file on branches/c - r16
-  svntest.main.file_append(os.path.join(branch_c, 'A', 'mu'),
-                           "\nThis is yet more content in 'mu'.")
+  svntest.main.file_append_binary(os.path.join(branch_c, 'A', 'mu'),
+                                  "\nThis is yet more content in 'mu'.")
   svntest.main.run_svn(None, 'ci', '-m',
                        "Modify 'mu' on branches/c.")
 
@@ -350,7 +351,8 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   svntest.main.file_write(os.path.join('A', 'mu'),
                           "This is the file 'mu'.\n" +
                           "Don't forget to look at 'upsilon', as well.\n" +
-                          "This is yet more content in 'mu'.")
+                          "This is yet more content in 'mu'.",
+                          "wb")
   svntest.main.run_svn(None, 'resolved', os.path.join('A', 'mu'))
   svntest.main.run_svn(None, 'ci', '-m',
                        "Merge branches/c to trunk, " +
