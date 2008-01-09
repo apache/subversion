@@ -347,10 +347,18 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
         }
       else
         {
-          SVN_ERR(svn_wc_adm_open3(&src_access, NULL, src_parent, FALSE,
-                                   pair->src_kind == svn_node_dir ? -1 : 0,
-                                   ctx->cancel_func, ctx->cancel_baton,
-                                   iterpool));
+          err = svn_wc_adm_open3(&src_access, NULL, src_parent, FALSE,
+                                 pair->src_kind == svn_node_dir ? -1 : 0,
+                                 ctx->cancel_func, ctx->cancel_baton,
+                                 iterpool);
+          /* The parent of a copy src might not be versioned at all. */
+          if (err && err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
+            {
+              src_access = NULL;
+              svn_error_clear(err);
+              err = NULL;
+            }
+          SVN_ERR(err);
         }
 
       /* Perform the copy */
@@ -365,13 +373,16 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
       if (err)
         break;
 
-      err = propagate_mergeinfo_within_wc(pair, src_access, dst_access,
-                                          ctx, pool);
-      if (err)
-        break;
-
-      if (src_access != dst_access)
-        SVN_ERR(svn_wc_adm_close(src_access));
+      if (src_access)
+        {
+          err = propagate_mergeinfo_within_wc(pair, src_access, dst_access,
+                                              ctx, pool);
+          if (err)
+            break;
+          
+          if (src_access != dst_access)
+            SVN_ERR(svn_wc_adm_close(src_access));
+        }
     }
 
   svn_sleep_for_timestamps();
