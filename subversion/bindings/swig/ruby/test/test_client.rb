@@ -2127,7 +2127,7 @@ class SvnClientTest < Test::Unit::TestCase
     assert_equal({"my-prop" => "XXX"}, context.revprop_table)
   end
 
-  def assert_changelist
+  def assert_changelists
     log = "sample log"
     file1 = "hello1.txt"
     file2 = "hello2.txt"
@@ -2144,45 +2144,61 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.add(path2)
     ctx.commit(@wc_path)
 
-    assert_equal({}, yield(ctx, changelist1, @wc_path))
+    assert_equal({}, yield(ctx, changelist1))
+    assert_equal({}, yield(ctx, nil))
+    assert_equal({}, yield(ctx, []))
+    assert_equal({}, yield(ctx, [changelist1]))
+    assert_equal({}, yield(ctx, [changelist2]))
     ctx.add_to_changelist(changelist1, path1)
-    assert_equal({changelist1=>[path1]}, yield(ctx, changelist1, @wc_path))
+    assert_equal({changelist1=>[path1]}, yield(ctx, changelist1))
+    assert_equal({changelist1=>[path1]}, yield(ctx, nil))
+    assert_equal({}, yield(ctx, []))
+    assert_equal({changelist1=>[path1]}, yield(ctx, [changelist1]))
+    assert_equal({}, yield(ctx, [changelist2]))
 
-    assert_equal({}, yield(ctx, changelist2, @wc_path))
+    assert_equal({}, yield(ctx, changelist2))
     ctx.add_to_changelist(changelist2, path1, path2)
-    assert_equal({changelist2=>[path1, path2]},
-                 yield(ctx, changelist2, @wc_path))
-    assert_equal({}, yield(ctx, changelist1, @wc_path))
+    assert_equal({changelist2=>[path1, path2]}, yield(ctx, changelist2))
+    assert_equal({}, yield(ctx, changelist1))
 
     ctx.add_to_changelist(changelist1, [path1, path2])
-    assert_equal({changelist1=>[path1, path2]},
-                 yield(ctx, changelist1, @wc_path))
-    assert_equal({}, yield(ctx, changelist2, @wc_path))
+    assert_equal({changelist1=>[path1, path2]}, yield(ctx, changelist1))
+    assert_equal({}, yield(ctx, changelist2))
 
     ctx.remove_from_changelist(changelist1, path1)
-    assert_equal({changelist1=>[path2]}, yield(ctx, changelist1, @wc_path))
+    assert_equal({changelist1=>[path2]}, yield(ctx, changelist1))
     ctx.remove_from_changelist(changelist1, [path2])
-    assert_equal({}, yield(ctx, changelist1, @wc_path))
+    assert_equal({}, yield(ctx, changelist1))
 
     ctx.add_to_changelist(changelist1, path1)
     ctx.add_to_changelist(changelist2, path2)
-    assert_equal({changelist1=>[path1]}, yield(ctx, changelist1, @wc_path))
-    assert_equal({changelist2=>[path2]}, yield(ctx, changelist2, @wc_path))
+    assert_equal({changelist1=>[path1]}, yield(ctx, changelist1))
+    assert_equal({changelist2=>[path2]}, yield(ctx, changelist2))
+
+    assert_equal({changelist1=>[path1]}, yield(ctx, changelist1))
+    assert_equal({changelist2=>[path2]}, yield(ctx, changelist2))
+    assert_equal({changelist1=>[path1]}, yield(ctx, [changelist1]))
+    assert_equal({changelist2=>[path2]}, yield(ctx, [changelist2]))
+    assert_equal({changelist1=>[path1],changelist2=>[path2]}, yield(ctx, nil))
+    assert_equal({}, yield(ctx, []))
+    assert_equal({changelist1=>[path1],changelist2=>[path2]},
+                 yield(ctx, [changelist1,changelist2]))
+
     ctx.remove_from_changelist(nil, [path1, path2])
-    assert_equal({}, yield(ctx, changelist1, @wc_path))
-    assert_equal({}, yield(ctx, changelist2, @wc_path))
+    assert_equal({}, yield(ctx, changelist1))
+    assert_equal({}, yield(ctx, changelist2))
   end
 
-  def test_changelist_get_without_block
-    assert_changelist do |ctx, changelist_name, root_path|
-      ctx.changelist(changelist_name, root_path)
+  def test_changelists_get_without_block
+    assert_changelists do |ctx, changelist_name|
+      ctx.changelists(changelist_name, @wc_path)
     end
   end
 
-  def test_changelist_get_with_block
-    assert_changelist do |ctx, changelist_name, root_path|
+  def test_changelists_get_with_block
+    assert_changelists do |ctx, changelist_name|
       changelists = Hash.new{|h,k| h[k]=[]}
-      ctx.changelist(changelist_name, root_path) do |path,cl_name|
+      ctx.changelists(changelist_name, @wc_path) do |path,cl_name|
         changelists[cl_name] << path
       end
       changelists
