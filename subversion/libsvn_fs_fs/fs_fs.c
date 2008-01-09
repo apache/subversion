@@ -256,13 +256,26 @@ path_txn_next_ids(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 static APR_INLINE const char *
 path_txn_proto_rev(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
-  return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_REV, pool);
+  fs_fs_data_t *ffd = fs->fsap_data;
+  if (ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
+    return svn_path_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
+                              apr_pstrcat(pool, txn_id, PATH_EXT_REV, NULL),
+                              NULL);
+  else
+    return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_REV, pool);
 }
 
 static APR_INLINE const char *
 path_txn_proto_rev_lock(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
-  return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_REV_LOCK, pool);
+  fs_fs_data_t *ffd = fs->fsap_data;
+  if (ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
+    return svn_path_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
+                              apr_pstrcat(pool, txn_id, PATH_EXT_REV_LOCK, 
+                                          NULL),
+                              NULL);
+  else
+    return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_REV_LOCK, pool);
 }
 
 static const char *
@@ -1178,6 +1191,11 @@ svn_fs_fs__hotcopy(const char *src_path,
      developed.*/
   dst_subdir = svn_path_join(dst_path, PATH_TXNS_DIR, pool);
   SVN_ERR(svn_io_make_dir_recursively(dst_subdir, pool));
+  if (format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
+    {
+      dst_subdir = svn_path_join(dst_path, PATH_TXN_PROTOS_DIR, pool);
+      SVN_ERR(svn_io_make_dir_recursively(dst_subdir, pool));
+    }
 
   /* Now copy the locks tree. */
   src_subdir = svn_path_join(src_path, PATH_LOCKS_DIR, pool);
@@ -3796,11 +3814,40 @@ svn_fs_fs__purge_txn(svn_fs_t *fs,
                      const char *txn_id,
                      apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
+
   /* Remove the shared transaction object associated with this transaction. */
   SVN_ERR(purge_shared_txn(fs, txn_id, pool));
   /* Remove the directory associated with this transaction. */
-  return svn_io_remove_dir2(path_txn_dir(fs, txn_id, pool), FALSE,
-                            NULL, NULL, pool);
+  SVN_ERR(svn_io_remove_dir2(path_txn_dir(fs, txn_id, pool), FALSE,
+                             NULL, NULL, pool));
+  if (ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
+    {
+      /* Delete protorev and its lock, which aren't in the txn
+         directory.  It's OK if they don't exist (for example, if this
+         is post-commit and the proto-rev has been moved into
+         place). */
+      svn_error_t *err = svn_io_remove_file(path_txn_proto_rev(fs, txn_id,
+                                                               pool), pool);
+      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+        {
+          svn_error_clear(err);
+          err = NULL;
+        }
+      if (err)
+        return err;
+
+      err = svn_io_remove_file(path_txn_proto_rev_lock(fs, txn_id, pool), 
+                               pool);
+      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+        {
+          svn_error_clear(err);
+          err = NULL;
+        }
+      if (err)
+        return err;
+    }
+  return SVN_NO_ERROR;
 }
 
 
@@ -5197,6 +5244,11 @@ svn_fs_fs__create(svn_fs_t *fs,
   SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path, PATH_TXNS_DIR,
                                                     pool),
                                       pool));
+
+  if (format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
+    SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path, PATH_TXN_PROTOS_DIR,
+                                                      pool),
+                                        pool));
 
   SVN_ERR(svn_io_file_create(svn_fs_fs__path_current(fs, pool), "0 1 1\n",
                              pool));
