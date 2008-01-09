@@ -21,3 +21,7 @@ Remaining work (which can be done post-merge)
   * "Is this the same line?" direct ancestor check (glasser)
 
   * authz check (glasser)
+
+  * remember there may be some TODO(reint) comments in .py tests; they
+    won't show up in a tags-search.
+
