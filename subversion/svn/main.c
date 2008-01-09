@@ -391,8 +391,14 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    WC  -> WC:   copy and schedule for addition (with history)\n"
      "    WC  -> URL:  immediately commit a copy of WC to URL\n"
      "    URL -> WC:   check out URL into WC, schedule for addition\n"
-     "    URL -> URL:  complete server-side copy;  used to branch & tag\n"
-     "  All the SRCs must be of the same type.\n"),
+     "    URL -> URL:  complete server-side copy;  used to branch and tag\n"
+     "  All the SRCs must be of the same type.\n"
+     "\n"
+     "WARNING: For compatibility with previous versions of Subversion,\n"
+     "copies performed using two working copy paths (WC -> WC) will not\n"
+     "contact the repository.  As such, they may not, by default, be able\n"
+     "to propagate merge tracking information from the source of the copy\n"
+     "to the destination.\n"),
     {'r', 'q', opt_parents, SVN_CL__LOG_MSG_OPTIONS} },
 
   { "delete", svn_cl__delete, {"del", "remove", "rm"}, N_
