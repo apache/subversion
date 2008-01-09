@@ -1225,15 +1225,17 @@ svn_error_t *svn_fs_closest_copy(svn_fs_root_t **root_p,
 
 /** Retrieve mergeinfo for multiple nodes.
  *
- * @a minfohash is filled with mergeinfo for each of the @a paths,
- * stored as a string.  It will never be @c NULL, but may be empty.
+ * Set @a *minfohash to a hash table allocated in @a pool, and fill it
+ * with mergeinfo for each path in @a paths.  Use a string (textual)
+ * representation for the mergeinfo.  If there is no mergeinfo, then
+ * @a *minfohash is empty (never @c NULL).
  *
- * @a root indicates the revision root to use when looking up paths.
+ * @a root is revision root to use when looking up paths.
  *
- * @a paths indicate the paths you are requesting information for
+ * @a paths are the paths you are requesting information for.
  *
- * @a inherit indicates whether explicit, explicit or inherited, or
- * only inherited mergeinfo for @a paths is retrieved.
+ * @a inherit indicates whether to retrieve explicit,
+ * explicit-or-inherited, or only inherited mergeinfo.
  *
  * Do any necessary temporary allocation in @a pool.
  *
