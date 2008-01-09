@@ -880,11 +880,11 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a paths is retrieved.
  *
- * If @a include_descendents is TRUE, then additionally return the
- * mergeinfo for any descendent of any element of @a paths which has
+ * If @a include_descendants is TRUE, then additionally return the
+ * mergeinfo for any descendant of any element of @a paths which has
  * the @c SVN_PROP_MERGEINFO property explicitly set on it.  (Note
  * that inheritance is only taken into account for the elements in @a
- * paths; descendents of the elements in @a paths which get their
+ * paths; descendants of the elements in @a paths which get their
  * mergeinfo via inheritance are not included in @a *mergeoutput.)
  *
  * Allocate the returned values in @a pool.
@@ -902,7 +902,7 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
                                   const apr_array_header_t *paths,
                                   svn_revnum_t revision,
                                   svn_mergeinfo_inheritance_t inherit,
-                                  svn_boolean_t include_descendents,
+                                  svn_boolean_t include_descendants,
                                   apr_pool_t *pool);
 
 /**

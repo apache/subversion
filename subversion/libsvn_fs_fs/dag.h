@@ -115,10 +115,10 @@ svn_error_t *svn_fs_fs__dag_get_mergeinfo_count(apr_int64_t *count,
                                                 apr_pool_t *pool);
 
 /* Set *DO_THEY to a flag indicating whether or not NODE is a
-   directory with at least one descendent (not including itself) with
+   directory with at least one descendant (not including itself) with
    svn:mergeinfo. */
 svn_error_t *
-svn_fs_fs__dag_has_descendents_with_mergeinfo(svn_boolean_t *do_they,
+svn_fs_fs__dag_has_descendants_with_mergeinfo(svn_boolean_t *do_they,
                                               dag_node_t *node,
                                               apr_pool_t *pool);
 

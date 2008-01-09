@@ -5223,7 +5223,7 @@ calculate_left_hand_side(const char **url_left,
 {
   apr_array_header_t *segments; /* array of (svn_location_segment_t *) */
   svn_boolean_t have_mergeinfo_for_source = FALSE,
-    have_mergeinfo_for_descendents = FALSE;
+    have_mergeinfo_for_descendants = FALSE;
   apr_hash_t *mergeinfo_catalog;
   apr_array_header_t *source_repos_rel_path_as_array
     = apr_array_make(pool, 1, sizeof(const char *));
@@ -5237,7 +5237,7 @@ calculate_left_hand_side(const char **url_left,
                                               SVN_INVALID_REVNUM,
                                               ctx, subpool));
 
-  /* Get the mergeinfo from the source, including its descendents. */
+  /* Get the mergeinfo from the source, including its descendants. */
   APR_ARRAY_PUSH(source_repos_rel_path_as_array, const char *)
     = source_repos_rel_path;
   SVN_ERR(svn_ra_get_mergeinfo(ra_session, &mergeinfo_catalog,
@@ -5269,9 +5269,9 @@ calculate_left_hand_side(const char **url_left,
     have_mergeinfo_for_source = TRUE;
   if (apr_hash_count(mergeinfo_catalog) > 1 ||
       (! have_mergeinfo_for_source && apr_hash_count(mergeinfo_catalog) == 1))
-    have_mergeinfo_for_descendents = TRUE;
+    have_mergeinfo_for_descendants = TRUE;
 
-  if (! have_mergeinfo_for_source && ! have_mergeinfo_for_descendents)
+  if (! have_mergeinfo_for_source && ! have_mergeinfo_for_descendants)
     {
       /* TODO(reint): Make sure we're not fetching location segments
          over and over. */
@@ -5298,7 +5298,7 @@ calculate_left_hand_side(const char **url_left,
       svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
-  else if (! have_mergeinfo_for_descendents)
+  else if (! have_mergeinfo_for_descendants)
     {
       /* Easy case: return the last path/rev in the mergeinfo. */
       apr_hash_t *source_mergeinfo = apr_hash_get(mergeinfo_catalog,

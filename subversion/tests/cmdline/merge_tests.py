@@ -4900,7 +4900,7 @@ def mergeinfo_inheritance(sbox):
     })
   svntest.actions.run_and_verify_status(beta_COPY_path, expected_status)
 
-  # Merge r3 into A_COPY.  A_COPY's two descendents with mergeinfo,
+  # Merge r3 into A_COPY.  A_COPY's two descendants with mergeinfo,
   # A_COPY/B/E/beta and A_COPY/D/G/rho must have complete mergeinfo
   # so they both should pick up r3 too.
   short_A_COPY_path = shorten_path_kludge(A_COPY_path)
@@ -5259,7 +5259,7 @@ def mergeinfo_elision(sbox):
   os.chdir(saved_cwd)
 
   # Merge r3:6 into A_COPY.  This would result in identical mergeinfo
-  # (r4-6) on A_COPY and two of it's descendents, A_COPY/D/G and
+  # (r4-6) on A_COPY and two of it's descendants, A_COPY/D/G and
   # A_COPY/B/E/beta, so the mergeinfo on the latter two should elide
   # to A_COPY.  In the case of A_COPY/D/G this means its wholly uncommitted
   # mergeinfo is removed leaving no prop mods.  In the case of

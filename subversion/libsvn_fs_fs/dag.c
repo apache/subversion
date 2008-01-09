@@ -263,7 +263,7 @@ svn_fs_fs__dag_has_mergeinfo(svn_boolean_t *has_mergeinfo,
 }
 
 svn_error_t *
-svn_fs_fs__dag_has_descendents_with_mergeinfo(svn_boolean_t *do_they,
+svn_fs_fs__dag_has_descendants_with_mergeinfo(svn_boolean_t *do_they,
                                               dag_node_t *node,
                                               apr_pool_t *pool)
 {

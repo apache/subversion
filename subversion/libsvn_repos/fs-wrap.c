@@ -549,7 +549,7 @@ svn_repos_fs_get_mergeinfo(apr_hash_t **mergeinfo,
                            const apr_array_header_t *paths,
                            svn_revnum_t rev,
                            svn_mergeinfo_inheritance_t inherit,
-                           svn_boolean_t include_descendents,
+                           svn_boolean_t include_descendants,
                            svn_repos_authz_func_t authz_read_func,
                            void *authz_read_baton,
                            apr_pool_t *pool)
@@ -598,10 +598,10 @@ svn_repos_fs_get_mergeinfo(apr_hash_t **mergeinfo,
      in *MERGEINFO, avoiding massive authz overhead which would allow
      us to protect the name of where a change was merged from, but not
      the change itself. */
-  /* ### TODO(reint): ... but how about descendent merged-to paths? */
+  /* ### TODO(reint): ... but how about descendant merged-to paths? */
   if (readable_paths->nelts > 0)
     SVN_ERR(svn_fs_get_mergeinfo(mergeinfo, root, readable_paths, inherit,
-                                 include_descendents, pool));
+                                 include_descendants, pool));
   else
     *mergeinfo = NULL;
 

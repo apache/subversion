@@ -1481,10 +1481,10 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_hash_index_t *hi;
   const char *path, *info, *inherit_word;
   svn_mergeinfo_inheritance_t inherit;
-  svn_boolean_t include_descendents;
+  svn_boolean_t include_descendants;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)wb", &paths, &rev,
-                                 &inherit_word, &include_descendents));
+                                 &inherit_word, &include_descendants));
   inherit = svn_inheritance_from_word(inherit_word);
 
   /* Canonicalize the paths which mergeinfo has been requested for. */
@@ -1508,7 +1508,7 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_CMD_ERR(svn_repos_fs_get_mergeinfo(&mergeinfo, b->repos,
                                          canonical_paths, rev,
                                          inherit,
-                                         include_descendents,
+                                         include_descendants,
                                          authz_check_access_cb_func(b), b,
                                          pool));
   if (mergeinfo != NULL && apr_hash_count(mergeinfo) > 0)

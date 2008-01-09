@@ -305,7 +305,7 @@ typedef struct
   svn_boolean_t is_fresh_txn_root;
 
   /* Number of nodes with svn:mergeinfo properties that are
-     descendents of this node (including it itself) */
+     descendants of this node (including it itself) */
   apr_int64_t mergeinfo_count;
 
   /* Does this node itself have svn:mergeinfo? */

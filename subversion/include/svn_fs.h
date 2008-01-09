@@ -1235,11 +1235,11 @@ svn_error_t *svn_fs_closest_copy(svn_fs_root_t **root_p,
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a paths is retrieved.
  *
- * If @a include_descendents is TRUE, then additionally return the
- * mergeinfo for any descendent of any element of @a paths which has
+ * If @a include_descendants is TRUE, then additionally return the
+ * mergeinfo for any descendant of any element of @a paths which has
  * the @c SVN_PROP_MERGEINFO property explicitly set on it.  (Note
  * that inheritance is only taken into account for the elements in @a
- * paths; descendents of the elements in @a paths which get their
+ * paths; descendants of the elements in @a paths which get their
  * mergeinfo via inheritance are not included in @a *mergeoutput.)
  *
  * Do any necessary temporary allocation in @a pool.
@@ -1250,7 +1250,7 @@ svn_error_t *svn_fs_get_mergeinfo(apr_hash_t **minfohash,
                                   svn_fs_root_t *root,
                                   const apr_array_header_t *paths,
                                   svn_mergeinfo_inheritance_t inherit,
-                                  svn_boolean_t include_descendents,
+                                  svn_boolean_t include_descendants,
                                   apr_pool_t *pool);
 
 /**

@@ -1050,7 +1050,7 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
                                          const apr_array_header_t *paths,
                                          svn_revnum_t revision,
                                          svn_mergeinfo_inheritance_t inherit,
-                                         svn_boolean_t include_descendents,
+                                         svn_boolean_t include_descendants,
                                          apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
@@ -1069,7 +1069,7 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
     }
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)wb)", revision,
                                  svn_inheritance_to_word(inherit),
-                                 include_descendents));
+                                 include_descendants));
 
   SVN_ERR(handle_auth_request(sess_baton, pool));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "(?l)", &mergeinfo_tuple));
