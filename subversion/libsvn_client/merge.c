@@ -5258,7 +5258,12 @@ calculate_left_hand_side(const char **url_left,
 
   /* See which case we fall into: */
   /* TODO(reint): make sure we look things up with keys that start
-     with slash */
+     with slash.  This may not be as simple as it sounds, since
+     source_repos_rel_path is also used as the component argument to
+     (e.g.) svn_path_join(), which expects the component to *not*
+     start with a slash (or at least, it will behave in a way we
+     probably don't want if the component *does* start with slash).
+  */
   if (apr_hash_get(mergeinfo_catalog, source_repos_rel_path,
                    APR_HASH_KEY_STRING))
     have_mergeinfo_for_source = TRUE;
