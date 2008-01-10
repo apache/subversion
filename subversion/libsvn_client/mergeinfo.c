@@ -1032,18 +1032,19 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
 }
 
 svn_error_t *
-svn_client__get_commit_and_merge_ranges(svn_ra_session_t *session,
-                               apr_array_header_t **merge_ranges_list,
-                               apr_array_header_t **commit_rangelist,
-                               apr_array_header_t **merge_source_path_segments,
-                               const char *merge_target,
-                               const char *merge_source,
-                               svn_revnum_t merge_source_peg_rev,
-                               svn_revnum_t min_commit_rev,
-                               svn_revnum_t max_commit_rev,
-                               svn_mergeinfo_inheritance_t inherit,
-                               svn_client_ctx_t *ctx,
-                               apr_pool_t *pool)
+svn_client__get_commit_and_merge_ranges
+(svn_ra_session_t *session,
+ apr_array_header_t **merge_ranges_list,
+ apr_array_header_t **commit_rangelist,
+ apr_array_header_t **merge_source_path_segments,
+ const char *merge_target,
+ const char *merge_source,
+ svn_revnum_t merge_source_peg_rev,
+ svn_revnum_t min_commit_rev,
+ svn_revnum_t max_commit_rev,
+ svn_mergeinfo_inheritance_t inherit,
+ svn_client_ctx_t *ctx,
+ apr_pool_t *pool)
 {
   apr_array_header_t *source_segments;
   int i;
@@ -1065,15 +1066,11 @@ svn_client__get_commit_and_merge_ranges(svn_ra_session_t *session,
       /* No path segment?  Skip it. */
       if (! segment->path)
         continue;
-      SVN_ERR(svn_ra_get_commit_and_merge_ranges(session,
-                                                &merge_ranges_list_for_segment,
-                                                &commit_rangelist_for_segment,
-                                                merge_target,
-                                                segment->path,
-                                                segment->range_start,
-                                                segment->range_end,
-                                                svn_mergeinfo_inherited,
-                                                pool));
+      SVN_ERR(svn_ra_get_commit_and_merge_ranges
+              (session, &merge_ranges_list_for_segment,
+               &commit_rangelist_for_segment, merge_target, segment->path,
+               segment->range_start, segment->range_end,
+               svn_mergeinfo_inherited, pool));
       for (j = 0; j < commit_rangelist_for_segment->nelts; j++)
         {
           svn_merge_range_t *commit_range;

@@ -511,9 +511,10 @@ get_file_from_ra(const char **filename, const char *path,
 
 /* merges MERGE_B->reflected_ranges from MERGE_B->target url to OLDER. */
 static svn_error_t *
-merge_reflected_ranges_to_pre_reflective_file(const char *older,
-                                     const char *file_path_relative_to_target,
-                                     merge_cmd_baton_t *merge_b)
+merge_reflected_ranges_to_pre_reflective_file
+(const char *older,
+ const char *file_path_relative_to_target,
+ merge_cmd_baton_t *merge_b)
 {
   int i;
   svn_diff_file_options_t *options;
@@ -797,9 +798,8 @@ reflective_merge_file_changed(svn_wc_adm_access_t *adm_access,
   const char *file_path_relative_to_target = get_relative_path(merge_b->target,
                                                                mine);
   if (older)
-    SVN_ERR(merge_reflected_ranges_to_pre_reflective_file(older,
-                                                 file_path_relative_to_target,
-                                                 merge_b));
+    SVN_ERR(merge_reflected_ranges_to_pre_reflective_file
+            (older, file_path_relative_to_target, merge_b));
   return merge_file_changed(adm_access, content_state, prop_state,
                             mine, older, yours, older_rev, yours_rev,
                             mimetype1, mimetype2, prop_changes,
@@ -5036,10 +5036,9 @@ do_merge(apr_array_header_t *merge_sources,
   merge_cmd_baton.diff3_cmd = diff3_cmd;
   merge_cmd_baton.reflected_ranges = NULL;
   merge_cmd_baton.reflective_rev_affected_paths = apr_hash_make(pool);
-  SVN_ERR(svn_client__open_ra_session_internal(
-                                            &merge_cmd_baton.target_ra_session,
-                                            target_entry->url, NULL, NULL,
-                                            NULL, FALSE, TRUE, ctx, pool));
+  SVN_ERR(svn_client__open_ra_session_internal
+          (&merge_cmd_baton.target_ra_session, target_entry->url, NULL, NULL,
+           NULL, FALSE, TRUE, ctx, pool));
   merge_cmd_baton.first_range = TRUE;
   merge_cmd_baton.working_mergeinfo = NULL;
   merge_cmd_baton.long_pool = pool;

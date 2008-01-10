@@ -159,17 +159,13 @@ create_commit_and_merge_ranges_body(void *baton,
   tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(minfo_report_head,
                                           strlen(minfo_report_head), alloc);
   serf_bucket_aggregate_append(body_bkt, tmp_bkt);
-  svn_ra_serf__add_tag_buckets(body_bkt, "S:" SVN_DAV__MERGE_TARGET,
-                              apr_xml_quote_string(pool, 
-                                                   mergeinfo_ctx->merge_target,
-                                                   0),
-                              alloc);
+  svn_ra_serf__add_tag_buckets
+  (body_bkt, "S:" SVN_DAV__MERGE_TARGET,
+   apr_xml_quote_string(pool, mergeinfo_ctx->merge_target, 0), alloc);
 
-  svn_ra_serf__add_tag_buckets(body_bkt, "S:" SVN_DAV__MERGE_SOURCE,
-                              apr_xml_quote_string(pool, 
-                                                   mergeinfo_ctx->merge_source,
-                                                   0),
-                              alloc);
+  svn_ra_serf__add_tag_buckets
+  (body_bkt, "S:" SVN_DAV__MERGE_SOURCE,
+   apr_xml_quote_string(pool, mergeinfo_ctx->merge_source, 0), alloc);
 
   svn_ra_serf__add_tag_buckets(body_bkt,
                                "S:" SVN_DAV__MIN_COMMIT_REVISION,
@@ -190,15 +186,16 @@ create_commit_and_merge_ranges_body(void *baton,
 }
 
 svn_error_t *
-svn_ra_serf__get_commit_and_merge_ranges(svn_ra_session_t *ra_session,
-                                        apr_array_header_t **merge_ranges_list,
-                                        apr_array_header_t **commit_rangelist,
-                                        const char* merge_target,
-                                        const char* merge_source,
-                                        svn_revnum_t min_commit_rev,
-                                        svn_revnum_t max_commit_rev,
-                                        svn_mergeinfo_inheritance_t inherit,
-                                        apr_pool_t *pool)
+svn_ra_serf__get_commit_and_merge_ranges
+(svn_ra_session_t *ra_session,
+ apr_array_header_t **merge_ranges_list,
+ apr_array_header_t **commit_rangelist,
+ const char* merge_target,
+ const char* merge_source,
+ svn_revnum_t min_commit_rev,
+ svn_revnum_t max_commit_rev,
+ svn_mergeinfo_inheritance_t inherit,
+ apr_pool_t *pool)
 {
   svn_error_t *err;
   int status_code;
