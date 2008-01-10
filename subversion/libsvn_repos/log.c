@@ -620,9 +620,7 @@ get_combined_mergeinfo(apr_hash_t **mergeinfo,
 
   /* Get the mergeinfo for each tree roots in PATHS. */
   SVN_ERR(svn_fs_revision_root(&root, fs, rev, subpool));
-
-  SVN_ERR(svn_fs_get_mergeinfo_for_tree(&tree_mergeinfo, root, paths,
-                                        NULL, NULL, pool));
+  SVN_ERR(svn_fs_get_mergeinfo_for_tree(&tree_mergeinfo, root, paths, pool));
 
   *mergeinfo = apr_hash_make(pool);
 
