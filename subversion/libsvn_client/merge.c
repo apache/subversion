@@ -1841,9 +1841,6 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
   apr_array_header_t *reflected_target_segments = NULL;
   apr_array_header_t *reflective_rangelist = NULL;
   apr_array_header_t *ranges_to_merge;
-  svn_merge_range_t *range = NULL, *reflective_range = NULL;
-  apr_array_header_t *reflected_ranges;
-  const char *reflected_target_segment;
   const char *old_url;
   const char *mergeinfo_path;
   int i = 0, j = 0;
@@ -1877,6 +1874,9 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
   /* populate remaining_ranges list. */
   while (TRUE)
   {
+    svn_merge_range_t *range = NULL, *reflective_range = NULL;
+    apr_array_header_t *reflected_ranges;
+    const char *reflected_target_segment;
     svn_client__remaining_range_info_t *range_info = 
       apr_pcalloc(pool, sizeof(*range_info));
     if (ranges_to_merge && i < ranges_to_merge->nelts)
@@ -1923,8 +1923,6 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
       }
     APR_ARRAY_PUSH(*remaining_ranges, 
                    svn_client__remaining_range_info_t *) = range_info;
-    range = NULL;
-    reflective_range = NULL;
   }
 
   return SVN_NO_ERROR;
