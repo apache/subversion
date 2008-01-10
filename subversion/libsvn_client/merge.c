@@ -477,9 +477,9 @@ summarize_reflected_ranges(svn_depth_t depth,
       opt_revision2.value.number = range->end;
       SVN_ERR(svn_client_diff_summarize_peg2
               (target_url, &peg_revision, &opt_revision1, &opt_revision2,
-	       depth, merge_b->ignore_ancestry, get_diff_summary_func_cb,
+               depth, merge_b->ignore_ancestry, get_diff_summary_func_cb,
                merge_b->reflective_rev_affected_paths, merge_b->ctx,
-	       iterpool));
+               iterpool));
     }
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
@@ -543,11 +543,11 @@ merge_reflected_ranges_to_pre_reflective_file
                              iterpool);
       if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
         {
-	  /* path is missing, it could be due to no-op mergeinfo recording
-	     on some segments where this path is not applicable at 
-	     range->start. */
+          /* path is missing, it could be due to no-op mergeinfo recording
+             on some segments where this path is not applicable at 
+             range->start. */
           svn_error_clear(err);
-	  continue;
+          continue;
         }
       else
         SVN_ERR(err);
@@ -556,11 +556,11 @@ merge_reflected_ranges_to_pre_reflective_file
                              merge_b->target_ra_session, iterpool);
       if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
         {
-	  /* path is missing, it could be due to no-op mergeinfo recording
-	     on some segments where this path is not applicable at 
-	     range->end. */
+          /* path is missing, it could be due to no-op mergeinfo recording
+             on some segments where this path is not applicable at 
+             range->end. */
           svn_error_clear(err);
-	  continue;
+          continue;
         }
       else
         SVN_ERR(err);
