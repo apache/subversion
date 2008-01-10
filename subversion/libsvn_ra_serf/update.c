@@ -732,6 +732,7 @@ handle_fetch(serf_request_t *request,
   apr_status_t status;
   report_fetch_t *fetch_ctx = handler_baton;
   svn_error_t *err;
+  serf_status_line sl;
 
   if (fetch_ctx->read_headers == FALSE)
     {
@@ -807,6 +808,21 @@ handle_fetch(serf_request_t *request,
         }
 
       fetch_ctx->read_headers = TRUE;
+    }
+
+  /* If the error code wasn't 200, something went wrong. Don't use the returned
+     data as its probably an error message. Just bail out instead. */
+  status = serf_bucket_response_status(response, &sl);
+  if (SERF_BUCKET_READ_ERROR(status))
+    {
+      return status;
+    }
+  if (sl.code != 200)
+    {
+      err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                              _("GET request failed: %d %s"),
+                              sl.code, sl.reason);
+      return error_fetch(request, fetch_ctx, err);
     }
 
   while (1)
