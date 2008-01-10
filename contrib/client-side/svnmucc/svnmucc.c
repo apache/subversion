@@ -119,6 +119,8 @@ typedef enum {
   ACTION_MV,
   ACTION_MKDIR,
   ACTION_CP,
+  ACTION_PROPSET,
+  ACTION_PROPDEL,
   ACTION_PUT,
   ACTION_RM
 } action_code_t;
@@ -128,15 +130,52 @@ struct operation {
     OP_OPEN,
     OP_DELETE,
     OP_ADD,
-    OP_REPLACE
+    OP_REPLACE,
+    OP_PROPSET           /* only for files for which no other operation is
+                            occuring; directories are OP_OPEN with non-empty
+                            props */
   } operation;
-  svn_node_kind_t kind;  /* to copy, mkdir, or put */
+  svn_node_kind_t kind;  /* to copy, mkdir, put or set revprops */
   svn_revnum_t rev;      /* to copy, valid for add and replace */
   const char *url;       /* to copy, valid for add and replace */
   const char *src_file;  /* for put, the source file for contents */
   apr_hash_t *children;  /* const char *path -> struct operation * */
+  apr_table_t *props;    /* const char *prop_name -> const char *prop_value */
   void *baton;           /* as returned by the commit editor */
 };
+
+
+/* State to be passed to set_props iterator */
+struct driver_state {
+  const svn_delta_editor_t *editor;
+  svn_node_kind_t kind;
+  apr_pool_t *pool;
+  void *baton;
+  svn_error_t* err;
+};
+  
+
+/* An iterator (for use via apr_table_do) which sets node properties.
+   REC is a pointer to a struct driver_state. */
+static int
+set_props(void *rec, const char *key, const char *value)
+{
+  struct driver_state *d_state = (struct driver_state*)rec;
+  svn_string_t *value_svnstring 
+    = value ? svn_string_create(value, d_state->pool) : NULL;
+
+  if (d_state->kind == svn_node_dir)
+    d_state->err = d_state->editor->change_dir_prop(d_state->baton, key,
+                                                    value_svnstring,
+                                                    d_state->pool);
+  else
+    d_state->err = d_state->editor->change_file_prop(d_state->baton, key,
+                                                     value_svnstring,
+                                                     d_state->pool);
+  if (d_state->err)
+    return 0;
+  return 1;
+}
 
 
 /* Drive EDITOR to affect the change represented by OPERATION.  HEAD
@@ -149,6 +188,7 @@ drive(struct operation *operation,
 {
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_hash_index_t *hi;
+  struct driver_state state;
   for (hi = apr_hash_first(pool, operation->children);
        hi; hi = apr_hash_next(hi))
     {
@@ -181,7 +221,8 @@ drive(struct operation *operation,
             }
         }
       /* Adds and replacements could also be for directories or files. */
-      if (child->operation == OP_ADD || child->operation == OP_REPLACE)
+      if (child->operation == OP_ADD || child->operation == OP_REPLACE
+          || child->operation == OP_PROPSET)
         {
           if (child->kind == svn_node_dir)
             {
@@ -213,19 +254,40 @@ drive(struct operation *operation,
                                           handler_baton, NULL, pool));
           SVN_ERR(svn_io_file_close(f, pool));
         }
-      /* If we opened a file, we need to close it. */
+      /* If we opened a file, we need to apply outstanding propmods,
+         then close it. */
       if (file_baton)
         {
+          if ((child->kind == svn_node_file) 
+              && (! apr_is_empty_table(child->props)))
+            {
+              state.baton = file_baton;
+              state.pool = subpool;
+              state.editor = editor;
+              state.kind = child->kind;
+              if (! apr_table_do(set_props, &state, child->props, NULL))
+                SVN_ERR(state.err);
+            }
           SVN_ERR(editor->close_file(file_baton, NULL, subpool));
         }
       /* If we opened, added, or replaced a directory, we need to
-         recurse and then close it. */
+         recurse, apply outstanding propmods, and then close it. */
       if ((child->kind == svn_node_dir)
           && (child->operation == OP_OPEN
               || child->operation == OP_ADD
               || child->operation == OP_REPLACE))
         {
           SVN_ERR(drive(child, head, editor, subpool));
+          if ((child->kind == svn_node_dir) 
+              && (! apr_is_empty_table(child->props)))
+            {
+              state.baton = child->baton;
+              state.pool = subpool;
+              state.editor = editor;
+              state.kind = child->kind;
+              if (! apr_table_do(set_props, &state, child->props, NULL))
+                SVN_ERR(state.err);
+            }
           SVN_ERR(editor->close_directory(child->baton, subpool));
         }
     }
@@ -252,6 +314,7 @@ get_operation(const char *path,
       child->operation = OP_OPEN;
       child->rev = SVN_INVALID_REVNUM;
       child->kind = svn_node_dir;
+      child->props = apr_table_make(pool, 0);
       apr_hash_set(operation->children, path, APR_HASH_KEY_STRING, child);
     }
   return child;
@@ -271,12 +334,14 @@ subtract_anchor(const char *anchor, const char *url, apr_pool_t *pool)
    intermediate nodes that are required.  Here's what's expected for
    each action type:
 
-      ACTION         URL    REV      SRC-FILE
-      ------------   -----  -------  --------
-      ACTION_MKDIR   NULL   invalid  NULL
-      ACTION_CP      valid  valid    NULL
-      ACTION_PUT     NULL   invalid  valid
-      ACTION_RM      NULL   invalid  NULL
+      ACTION          URL    REV      SRC-FILE  PROPNAME
+      ------------    -----  -------  --------  --------
+      ACTION_MKDIR    NULL   invalid  NULL      NULL
+      ACTION_CP       valid  valid    NULL      NULL
+      ACTION_PUT      NULL   invalid  valid     NULL
+      ACTION_RM       NULL   invalid  NULL      NULL
+      ACTION_PROPSET  valid  invalid  NULL      valid
+      ACTION_PROPDEL  valid  invalid  NULL      valid
 
    Node type information is obtained for any copy source (to determine
    whether to create a file or directory) and for any deleted path (to
@@ -287,6 +352,8 @@ build(action_code_t action,
       const char *path,
       const char *url,
       svn_revnum_t rev,
+      const char *prop_name,
+      const char *prop_value,
       const char *src_file,
       svn_revnum_t head,
       const char *anchor,
@@ -330,17 +397,43 @@ build(action_code_t action,
         }
     }
 
+  /* Handle property changes. */
+  if (prop_name)
+    {
+      if (operation->operation == OP_DELETE)
+        return svn_error_createf(SVN_ERR_BAD_URL, NULL,
+                                 "cannot set properties on a location being"
+                                 " deleted ('%s')", path);
+      SVN_ERR(svn_ra_check_path(session,
+                                copy_src ? copy_src : path,
+                                copy_src ? copy_rev : head,
+                                &operation->kind, pool));
+      if (operation->kind == svn_node_none)
+        return svn_error_createf(SVN_ERR_BAD_URL, NULL, 
+                                 "propset: '%s' not found", path);
+      else if ((operation->kind == svn_node_file)
+               && (operation->operation == OP_OPEN))
+        operation->operation = OP_PROPSET;
+      apr_table_set(operation->props, prop_name, prop_value);
+      if (!operation->rev)
+        operation->rev = rev;
+      return SVN_NO_ERROR;
+    }
+
   /* We won't fuss about multiple operations on the same path in the
      following cases:
 
        - the prior operation was, in fact, a no-op (open)
+       - the prior operation was a propset placeholder
        - the prior operation was a deletion
 
      Note: while the operation structure certainly supports the
      ability to do a copy of a file followed by a put of new contents
      for the file, we don't let that happen (yet).
   */
-  if (operation->operation != OP_OPEN && operation->operation != OP_DELETE)
+  if (operation->operation != OP_OPEN
+      && operation->operation != OP_PROPSET
+      && operation->operation != OP_DELETE)
     return svn_error_createf(SVN_ERR_BAD_URL, NULL,
                              "unsupported multiple operations on '%s'", path);
 
@@ -436,8 +529,13 @@ struct action {
    * cp      source   target
    * put     target   source
    * rm      target   (null)
+   * propset target   (null)
    */
   const char *path[2];
+
+  /* property name/value */
+  const char *prop_name;
+  const char *prop_value;
 };
 
 static svn_error_t *
@@ -487,10 +585,10 @@ execute(const apr_array_header_t *actions,
           path1 = subtract_anchor(anchor, action->path[0], pool);
           path2 = subtract_anchor(anchor, action->path[1], pool);
           SVN_ERR(build(ACTION_RM, path1, NULL,
-                        SVN_INVALID_REVNUM, NULL, head, anchor,
+                        SVN_INVALID_REVNUM, NULL, NULL, NULL, head, anchor,
                         session, &root, pool));
           SVN_ERR(build(ACTION_CP, path2, action->path[0],
-                        head, NULL, head, anchor,
+                        head, NULL, NULL, NULL, head, anchor,
                         session, &root, pool));
           break;
         case ACTION_CP:
@@ -499,26 +597,34 @@ execute(const apr_array_header_t *actions,
           if (action->rev == SVN_INVALID_REVNUM)
             action->rev = head;
           SVN_ERR(build(ACTION_CP, path2, action->path[0],
-                        action->rev, NULL, head, anchor,
+                        action->rev, NULL, NULL, NULL, head, anchor,
                         session, &root, pool));
           break;
         case ACTION_RM:
           path1 = subtract_anchor(anchor, action->path[0], pool);
           SVN_ERR(build(ACTION_RM, path1, NULL,
-                        SVN_INVALID_REVNUM, NULL, head, anchor,
+                        SVN_INVALID_REVNUM, NULL, NULL, NULL, head, anchor,
                         session, &root, pool));
           break;
         case ACTION_MKDIR:
           path1 = subtract_anchor(anchor, action->path[0], pool);
           SVN_ERR(build(ACTION_MKDIR, path1, action->path[0],
-                        SVN_INVALID_REVNUM, NULL, head, anchor,
+                        SVN_INVALID_REVNUM, NULL, NULL, NULL, head, anchor,
                         session, &root, pool));
           break;
         case ACTION_PUT:
           path1 = subtract_anchor(anchor, action->path[0], pool);
           SVN_ERR(build(ACTION_PUT, path1, action->path[0],
-                        SVN_INVALID_REVNUM, action->path[1], head, anchor,
-                        session, &root, pool));
+                        SVN_INVALID_REVNUM, NULL, NULL, action->path[1], 
+                        head, anchor, session, &root, pool));
+          break;
+        case ACTION_PROPSET:
+        case ACTION_PROPDEL:
+          path1 = subtract_anchor(anchor, action->path[0], pool);
+          SVN_ERR(build(action->action, path1, action->path[0], 
+                        SVN_INVALID_REVNUM, 
+                        action->prop_name, action->prop_value, 
+                        NULL, head, anchor, session, &root, pool));
           break;
         }
     }
@@ -550,6 +656,8 @@ usage(apr_pool_t *pool, int exit_val)
     "  rm URL                delete URL\n"
     "  put SRC-FILE URL      add or modify file URL with contents copied\n"
     "                        from SRC-FILE\n"
+    "  propset NAME VAL URL  Set property NAME on URL to value VAL\n"
+    "  propdel NAME URL      Delete property NAME from URL\n"
     "\nOptions:\n"
     "  -h, --help            display this text\n"
     "  -m, --message ARG     use ARG as a log message\n"
@@ -733,6 +841,10 @@ main(int argc, const char **argv)
         action->action = ACTION_RM;
       else if (! strcmp(action_string, "put"))
         action->action = ACTION_PUT;
+      else if (! strcmp(action_string, "propset"))
+        action->action = ACTION_PROPSET;
+      else if (! strcmp(action_string, "propdel"))
+        action->action = ACTION_PROPDEL;
       else
         handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                        "'%s' is not an action\n",
@@ -776,10 +888,33 @@ main(int argc, const char **argv)
             insufficient(pool);
         }
 
+      /* For propset and propdel, a property name (and maybe value)
+         comes next. */
+      if ((action->action == ACTION_PROPSET) 
+          || (action->action == ACTION_PROPDEL))
+        {
+          action->prop_name = APR_ARRAY_IDX(action_args, i, const char *);
+          if (++i == action_args->nelts)
+            insufficient(pool);
+
+          if (action->action == ACTION_PROPDEL)
+            {
+              action->prop_value = NULL;
+            }
+          else
+            {
+              action->prop_value = APR_ARRAY_IDX(action_args, i, const char *);
+              if (++i == action_args->nelts)
+                insufficient(pool);
+            }
+        }
+
       /* How many URLs does this action expect? */
       if (action->action == ACTION_RM
           || action->action == ACTION_MKDIR
-          || action->action == ACTION_PUT)
+          || action->action == ACTION_PUT
+          || action->action == ACTION_PROPSET
+          || action->action == ACTION_PROPDEL)
         num_url_args = 1;
       else
         num_url_args = 2;
