@@ -3712,7 +3712,7 @@ def allow_unversioned_parent_for_copy_src(sbox):
   svntest.actions.duplicate_dir(wc_dir, wc2_dir)
   copy_to_path = os.path.join(wc_dir, 'A', 'copy_of_wc2')
 
-  # Attempt a copy between different repositories.
+  # Copy the wc-in-unversioned-parent working copy to our original wc.
   svntest.actions.run_and_verify_svn(None,
                                      None,
                                      [],
