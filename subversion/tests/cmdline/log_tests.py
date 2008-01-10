@@ -454,25 +454,26 @@ def parse_log_output(log_lines):
         paths = []
         path_line = log_lines.pop(0).strip()
 
-        # Stop on either a blank line or a "Result of a merge..." line
-        while path_line != '' and path_line[0:6] != 'Result':
+        # Stop on either a blank line or a "Merged via: ..." line
+        while path_line != '' and path_line[0:6] != 'Merged':
           paths.append( (path_line[0], path_line[2:]) )
           path_line = log_lines.pop(0).strip()
 
         this_item['paths'] = paths
 
-        if path_line[0:6] == 'Result':
+        if path_line[0:6] == 'Merged':
           is_result = 1
           result_line = path_line
 
-      elif next_line[0:6] == 'Result':
+      elif next_line[0:6] == 'Merged':
         is_result = 1
         result_line = next_line.strip()
 
-      # Parse output of "Result of a merge..." line
+      # Parse output of "Merged via: ..." line
       if is_result:
         merges = []
-        for rev_str in result_line[24:].split(','):
+        prefix_len = len('Merged via: ')
+        for rev_str in result_line[prefix_len:].split(','):
           merges.append(int(rev_str.strip()[1:]))
         this_item['merges'] = merges
 
@@ -999,7 +1000,7 @@ Merge r12 and r14 from branch to trunk.
 r14 | bob   | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 1 line
 Changed paths:
    M /trunk/death-ray.c
-Result of a merge from: r24
+Merged via: r24
 
 Remove inadvertent changes to Death-Ray-o-Matic introduced in r12.
 ------------------------------------------------------------------------
@@ -1007,7 +1008,7 @@ r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 1 line
 Changed paths:
    M /trunk/frobnicator/frapnalyzer.c
    M /trunk/death-ray.c
-Result of a merge from: r24
+Merged via: r24
 
 Fix frapnalyzer bug in frobnicator.
 ------------------------------------------------------------------------''',
@@ -1017,22 +1018,22 @@ r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 1 line
 Merge r12 and r14 from branch to trunk.
 ------------------------------------------------------------------------
 r14 | bob   | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 1 line
-Result of a merge from: r24
+Merged via: r24
 
 Remove inadvertent changes to Death-Ray-o-Matic introduced in r12.
 ------------------------------------------------------------------------
 r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 1 line
-Result of a merge from: r24
+Merged via: r24
 
 Fix frapnalyzer bug in frobnicator.
 ------------------------------------------------------------------------
 r10 | alice | 2007-04-16 19:02:28 -0500 (Mon, 16 Apr 2007) | 1 line
-Result of a merge from: r12, r24
+Merged via: r12, r24
 
 Fix frapnalyzer documentation.
 ------------------------------------------------------------------------
 r9 | bob   | 2007-04-16 19:01:48 -0500 (Mon, 16 Apr 2007) | 1 line
-Result of a merge from: r12, r24
+Merged via: r12, r24
 
 Whitespace fixes.  No functional change.
 ------------------------------------------------------------------------''',
@@ -1058,8 +1059,8 @@ Log message for revision 3.
 
 
 def check_merge_results(log_chain, expected_merges):
-  '''Check LOG_CHAIN to see if the log information contains 'Result of Merge'
-  informaiton indicated by EXPECTED_MERGES.  EXPECTED_MERGES is a dictionary
+  '''Check LOG_CHAIN to see if the log information contains 'Merged via'
+  information indicated by EXPECTED_MERGES.  EXPECTED_MERGES is a dictionary
   whose key is the merged revision, and whose value is the merging revision.'''
 
   # Check to see if the number and values of the revisions is correct
