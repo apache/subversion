@@ -614,11 +614,9 @@ get_mergeinfo_for_children(sqlite3 *db,
       if (lastmerged_rev > 0)
         {
           apr_hash_t *db_mergeinfo;
-          svn_boolean_t omit = FALSE;
 
           SVN_ERR(parse_mergeinfo_from_db(db, merged_path, lastmerged_rev,
                                           &db_mergeinfo, subpool));
-
           SVN_ERR(svn_mergeinfo_merge(path_mergeinfo, db_mergeinfo, pool));
         }
 
