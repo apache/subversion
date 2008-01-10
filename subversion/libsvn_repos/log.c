@@ -546,56 +546,6 @@ svn_repos__get_path_mergeinfo(apr_hash_t **mergeinfo,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_repos__is_branching_copy(svn_boolean_t *is_branching,
-                             svn_fs_root_t *root,
-                             const char *path,
-                             apr_hash_t *path_mergeinfo,
-                             apr_pool_t *pool)
-{
-  const char *copy_path;
-  svn_fs_root_t *copy_root;
-  svn_revnum_t copy_rev;
-  apr_hash_t *mergeinfo, *implied_mergeinfo;
-  apr_hash_t *deleted, *added;
-  svn_revnum_t rev = svn_fs_revision_root_revision(root);
-  apr_pool_t *subpool = svn_pool_create(pool);
-
-  /* Assume it's not a branching revision */
-  *is_branching = FALSE;
-
-  /* If we weren't supplied with any path_mergeinfo, we need to go fetch it. */
-  if (path_mergeinfo != NULL)
-    mergeinfo = path_mergeinfo;
-  else
-    SVN_ERR(svn_repos__get_path_mergeinfo(&mergeinfo, svn_fs_root_fs(root),
-                                          path, rev, subpool));
-
-  /* Check and see if there was a copy in this revision.  If not, set omit to
-     FALSE and return.  */
-  SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, root, path,
-                              subpool));
-  if (copy_root == NULL)
-    {
-      svn_pool_destroy(subpool);
-      return SVN_NO_ERROR;
-    }
-
-  copy_rev = svn_fs_revision_root_revision(copy_root);
-  if (copy_rev != rev)
-    {
-      svn_pool_destroy(subpool);
-      return SVN_NO_ERROR;
-    }
-
-  /* TODO: Because we have no way of using merginfo to detect a branching copy,
-     we now have no way to know if the revision is a branching copy, which makes
-     this function quite useless.  It will disappear shortly, but for right
-     now, we settle with just returning FALSE. */
-  svn_pool_destroy(subpool);
-  return SVN_NO_ERROR;
-}
-
 /* Return the combined rangelists for everyone's mergeinfo for the
    PATHS tree at REV in *RANGELIST.  Perform all allocations in POOL. */
 static svn_error_t *
