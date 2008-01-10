@@ -326,7 +326,8 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
 
   # More merging - r14
   os.chdir('trunk')
-  svntest.main.run_svn(None, 'merge', os.path.join('..', branch_b))
+  svntest.main.run_svn(None, 'merge', '--accept=mine',
+                       os.path.join('..', branch_b))
   svntest.main.run_svn(None, 'ci', '-m',
                        "Merged branches/b to trunk.")
   os.chdir('..')

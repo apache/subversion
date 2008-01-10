@@ -531,17 +531,39 @@ merge_reflected_ranges_to_pre_reflective_file(const char *older,
                                         merge_b->merge_options, subpool));
   for (i = 0; i < merge_b->reflected_ranges->nelts; i++)
     {
+      svn_error_t *err;
       svn_diff_t *diff;
       const char *left, *right;
       svn_merge_range_t *range;
       svn_pool_clear(iterpool);
       range = APR_ARRAY_IDX(merge_b->reflected_ranges, i, svn_merge_range_t *);
-      SVN_ERR(get_file_from_ra(&left, file_path_relative_to_target, 
-                               range->start, merge_b->target_ra_session,
-                               iterpool));
-      SVN_ERR(get_file_from_ra(&right, file_path_relative_to_target,
-                               range->end, merge_b->target_ra_session,
-                               iterpool));
+      err = get_file_from_ra(&left, file_path_relative_to_target,
+                             range->start, merge_b->target_ra_session,
+                             iterpool);
+      if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
+        {
+	  /* path is missing, it could be due to no-op mergeinfo recording
+	     on some segments where this path is not applicable at 
+	     range->start. */
+          svn_error_clear(err);
+	  continue;
+        }
+      else
+        SVN_ERR(err);
+
+      err = get_file_from_ra(&right, file_path_relative_to_target, range->end,
+                             merge_b->target_ra_session, iterpool);
+      if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
+        {
+	  /* path is missing, it could be due to no-op mergeinfo recording
+	     on some segments where this path is not applicable at 
+	     range->end. */
+          svn_error_clear(err);
+	  continue;
+        }
+      else
+        SVN_ERR(err);
+
       SVN_ERR(svn_diff_file_diff3_2(&diff, left, older, right,
                                     options, iterpool));
       if (svn_diff_contains_diffs(diff) && !svn_diff_contains_conflicts(diff))
