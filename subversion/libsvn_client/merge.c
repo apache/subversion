@@ -795,13 +795,28 @@ reflective_merge_file_changed(svn_wc_adm_access_t *adm_access,
                               void *baton)
 {
   merge_cmd_baton_t *merge_b = baton;
+  const char *tmp_older = older;
   const char *file_path_relative_to_target = get_relative_path(merge_b->target,
                                                                mine);
   if (older)
-    SVN_ERR(merge_reflected_ranges_to_pre_reflective_file
-            (older, file_path_relative_to_target, merge_b));
+    {
+      const char *temp_dir;
+      SVN_ERR(svn_io_temp_dir(&temp_dir, merge_b->pool));
+      SVN_ERR(svn_io_open_unique_file2(NULL, &tmp_older,
+                                       svn_path_join(temp_dir, "tmp",
+                                                     merge_b->pool),
+                                       "", svn_io_file_del_on_pool_cleanup,
+                                       merge_b->pool));
+      /* Being paranoid about *possiblity* of this callback
+         called with OLDER being some working copy adm area file,
+         We copy OLDER to a temporary file and tweak it to extract the
+         non-reflective changes. */
+      SVN_ERR(svn_io_copy_file(older, tmp_older, TRUE, merge_b->pool));
+      SVN_ERR(merge_reflected_ranges_to_pre_reflective_file
+              (tmp_older, file_path_relative_to_target, merge_b));
+    }
   return merge_file_changed(adm_access, content_state, prop_state,
-                            mine, older, yours, older_rev, yours_rev,
+                            mine, tmp_older, yours, older_rev, yours_rev,
                             mimetype1, mimetype2, prop_changes,
                             original_props, baton);
 }
