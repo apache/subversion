@@ -1766,14 +1766,14 @@ end_report(svn_ra_serf__xml_parser_t *parser,
            *
            * Example:
            * path: 
-           *  /svn-test-work/repositories/log_tests-17/!svn/ver/4/branches/a
+           *  /repositories/log_tests-17/!svn/ver/4/branches/a
            * repos_root: 
            *  http://localhost/repositories/log_tests-17
            * destination:
            *  http://localhost/repositories/log_tests-17/branches/a
            *
            * So, find 'branches/a' as the difference. Cut it of path, gives us:
-           *  /svn-test-work/repositories/log_tests-17/!svn/ver/4
+           *  /repositories/log_tests-17/!svn/ver/4
            */
           if (strcmp(ctx->destination, ctx->sess->repos_root_str) != 0)
             {
@@ -1798,14 +1798,14 @@ end_report(svn_ra_serf__xml_parser_t *parser,
            *
            * Example:
            * path: 
-           *  /svn-test-work/repositories/log_tests-17/!svn/ver/2
+           *  /repositories/log_tests-17/!svn/ver/2
            * repos_root path: 
-           *  /svn-test-work/repositories/log_tests-17
+           *  /repositories/log_tests-17
            * source:
-           *  /svn-test-work/repositories/log_tests-17/trunk
+           *  /repositories/log_tests-17/trunk
            *
            * So, find 'trunk' as the difference. Addding it to path, gives us:
-           *  /svn-test-work/repositories/log_tests-17/!svn/ver/2/trunk
+           *  /repositories/log_tests-17/!svn/ver/2/trunk
            */
           if (strcmp(ctx->source, ctx->sess->repos_root.path) != 0)
             {
