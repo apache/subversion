@@ -9173,8 +9173,6 @@ def merge_source_normalization_and_subtree_merges(sbox):
 
 # Test for issue #3067: 'subtrees with intersecting mergeinfo, that don't
 # exist at the start of a merge range shouldn't break the merge'
-#
-# Set as XFail until this issue is resolved.
 def new_subtrees_should_not_break_merge(sbox):
   "subtrees added after start of merge range are ok"
 
@@ -9491,7 +9489,7 @@ test_list = [ None,
               ignore_ancestry_and_mergeinfo,
               merge_from_renamed_branch_fails_while_avoiding_repeat_merge,
               merge_source_normalization_and_subtree_merges,
-              XFail(new_subtrees_should_not_break_merge),
+              new_subtrees_should_not_break_merge,
              ]
 
 if __name__ == '__main__':
