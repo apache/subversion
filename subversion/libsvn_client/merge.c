@@ -796,9 +796,12 @@ reflective_merge_file_changed(svn_wc_adm_access_t *adm_access,
 {
   merge_cmd_baton_t *merge_b = baton;
   const char *tmp_older = older;
+  svn_boolean_t is_binary;
   const char *file_path_relative_to_target = get_relative_path(merge_b->target,
                                                                mine);
-  if (older)
+  is_binary = (mimetype1 && svn_mime_type_is_binary(mimetype1))
+               || (mimetype2 && svn_mime_type_is_binary(mimetype2));
+  if (older && !is_binary)
     {
       const char *temp_dir;
       SVN_ERR(svn_io_temp_dir(&temp_dir, merge_b->pool));
