@@ -2,7 +2,7 @@
  * fs_loader.h:  Declarations for the FS loader library
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -315,8 +315,6 @@ typedef struct root_vtable_t
   svn_error_t *(*get_mergeinfo_for_tree)(apr_hash_t **mergeinfo,
                                          svn_fs_root_t *root,
                                          const apr_array_header_t *paths,
-                                         svn_fs_mergeinfo_filter_func_t filter_func,
-                                         void *filter_func_baton,
                                          apr_pool_t *pool);
   svn_error_t *(*get_commit_and_merge_ranges)
                 (apr_array_header_t **merge_ranges_list,

@@ -199,10 +199,10 @@ svn_error_t *svn_hash_diff(apr_hash_t *hash_a,
  */
 
 /**
- * Return the keys to @a hash in @a *keys.  The keys are assumed to be
+ * Return the keys to @a hash in @a *array.  The keys are assumed to be
  * (const char *).  The keys are in no particular order.
  *
- * The array itself is allocated in @a pool; however, the keys are not
+ * @a *array itself is allocated in @a pool; however, the keys are not
  * copied from the hash.
  *
  * @since New in 1.5.
@@ -212,10 +212,10 @@ svn_error_t *svn_hash_keys(apr_array_header_t **array,
                            apr_pool_t *pool);
 
 /**
- * Set @a hash to a new hash whose keys come from the items in @a keys
+ * Set @a *hash to a new hash whose keys come from the items in @a keys
  * (an array of <tt>const char *</tt> items), and whose values are
  * match their corresponding key.  Use @a pool for all allocations
- * (including @a hash, its keys, and its values).
+ * (including @a *hash, its keys, and its values).
  *
  * @since New in 1.5.
  */

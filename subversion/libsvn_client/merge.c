@@ -1447,6 +1447,10 @@ typedef struct
      cleared after each invocation of the callback. */
   apr_hash_t *skipped_paths;
 
+  /* A list of the root paths of any added subtrees which might require
+     their own explicit mergeinfo. */
+  apr_hash_t *added_paths;
+
   /* Flag indicating whether it is a single file merge or not. */
   svn_boolean_t is_single_file_merge;
 
@@ -1582,6 +1586,29 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
 
           apr_hash_set(notify_b->skipped_paths, skipped_path,
                        APR_HASH_KEY_STRING, skipped_path);
+        }
+      if (notify->action == svn_wc_notify_update_add)
+        {
+          svn_boolean_t is_root_of_added_subtree = FALSE;
+          const char *added_path = apr_pstrdup(notify_b->pool, notify->path);
+          const char *added_path_parent = NULL;
+
+          /* Stash the root path of any added subtrees. */
+          if (notify_b->added_paths == NULL)
+            {
+              notify_b->added_paths = apr_hash_make(notify_b->pool);
+              is_root_of_added_subtree = TRUE;
+            }
+          else
+            {
+              added_path_parent = svn_path_dirname(added_path, pool);
+              if (!apr_hash_get(notify_b->added_paths, added_path_parent,
+                                APR_HASH_KEY_STRING))
+                is_root_of_added_subtree = TRUE;
+            }
+          if (is_root_of_added_subtree)
+            apr_hash_set(notify_b->added_paths, added_path,
+                         APR_HASH_KEY_STRING, added_path);
         }
     }
   /* Otherwise, our merge sources aren't ancestors of one another. */
@@ -4956,6 +4983,105 @@ do_directory_merge(const char *url1,
                                                 child_entry, adm_access,
                                                 merge_b->ctx, iterpool));
         } /* (i = 0; i < children_with_mergeinfo->nelts; i++) */
+      
+      /* If a path has an immediate parent with non-inheritable mergeinfo at
+         this point, then it meets criteria 3 or 5 described in
+         get_mergeinfo_paths' doc string.  For paths which exist prior to a
+         merge explicit mergeinfo has already been set.  But for paths added
+         during the merge this is not the case.  The path might have explicit
+         mergeinfo from the merge source, but no mergeinfo yet exists
+         describing *this* merge.  So the added path has either incomplete
+         explicit mergeinfo or inherits incomplete mergeinfo from its
+         immediate parent (if any, the parent might have only non-inheritable
+         ranges in which case the path simply inherits empty mergeinfo).
+
+         So here we look at the root path of each subtree added during the
+         merge and set explicit mergeinfo on it if it meets the aforementioned
+         conditions. */
+      if (notify_b->added_paths)
+        {
+          apr_hash_index_t *hi;
+
+          for (hi = apr_hash_first(NULL, notify_b->added_paths); hi;
+               hi = apr_hash_next(hi))
+            {
+              const void *key;
+              const char *added_path;
+              const svn_string_t *added_path_parent_propval;
+
+              apr_hash_this(hi, &key, NULL, NULL);
+              added_path = key;
+
+              apr_pool_clear(iterpool);
+              
+              /* Rather than using svn_client__get_wc_mergeinfo() and
+                 analyzing the mergeinfo it returns to determine if
+                 ADDED_PATH's parent has non-inheritable mergeinfo, it is
+                 much simpler to just get the svn_string_t representation
+                 of the svn:mergeinfo prop and look for the '*'
+                 non-inheritable marker. */
+              SVN_ERR(svn_wc_prop_get(&added_path_parent_propval,
+                                      SVN_PROP_MERGEINFO,
+                                      svn_path_dirname(added_path, iterpool),
+                                      adm_access, iterpool));
+              if (added_path_parent_propval
+                  && strstr(added_path_parent_propval->data,
+                            SVN_MERGEINFO_NONINHERITABLE_STR))
+                {
+                  /* ADDED_PATH's immediate parent has non-inheritable
+                     mergeinfo. */
+                  svn_boolean_t inherited;
+                  svn_merge_range_t *rng;
+                  apr_hash_t *merge_mergeinfo, *added_path_mergeinfo;
+                  apr_array_header_t *rangelist;
+                  const svn_wc_entry_t *entry;
+                  const char *common_ancestor_path =
+                    svn_path_get_longest_ancestor(added_path,
+                                                  target_merge_path->path,
+                                                  iterpool);
+                  const char *relative_added_path =
+                    added_path + strlen(common_ancestor_path) + 1;
+                  SVN_ERR(svn_wc__entry_versioned(&entry, added_path,
+                                                  adm_access, FALSE,
+                                                  iterpool));
+
+                  /* Calculate the mergeinfo resulting from this merge. */
+                  merge_mergeinfo = apr_hash_make(iterpool);
+                  rangelist = apr_array_make(iterpool, 1,
+                                             sizeof(svn_merge_range_t *));                            
+                  rng = svn_merge_range_dup(&range, iterpool);
+                  if (entry->kind == svn_node_file)
+                    rng->inheritable = TRUE;
+                  else
+                    rng->inheritable =
+                      (!(depth == svn_depth_infinity
+                         || depth == svn_depth_immediates));
+                  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = rng;
+                  apr_hash_set(merge_mergeinfo,
+                               svn_path_join(mergeinfo_path,
+                                             relative_added_path,
+                                             iterpool),
+                               APR_HASH_KEY_STRING, rangelist);
+
+                  /* Get any explicit mergeinfo the added path has. */
+                  SVN_ERR(svn_client__get_wc_mergeinfo(
+                    &added_path_mergeinfo, &inherited, FALSE,
+                    svn_mergeinfo_explicit, entry, added_path,
+                    NULL, NULL, adm_access, merge_b->ctx, iterpool));
+
+                  /* Combine the explict mergeinfo on the added path (if any)
+                     with the mergeinfo for this merge. */
+                  if (added_path_mergeinfo)
+                    SVN_ERR(svn_mergeinfo_merge(merge_mergeinfo,
+                                                added_path_mergeinfo,
+                                                iterpool));
+                  SVN_ERR(svn_client__record_wc_mergeinfo(added_path,
+                                                          merge_mergeinfo,
+                                                          adm_access,
+                                                          iterpool));
+                }
+            }
+        }
     } /* (!merge_b->dry_run && merge_b->same_repos) */
 
   svn_pool_destroy(iterpool);
@@ -5063,6 +5189,7 @@ do_merge(apr_array_header_t *merge_sources,
   notify_baton.nbr_operative_notifications = 0;
   notify_baton.merged_paths = NULL;
   notify_baton.skipped_paths = NULL;
+  notify_baton.added_paths = NULL;
   notify_baton.is_single_file_merge = FALSE;
   notify_baton.children_with_mergeinfo = NULL;
   notify_baton.cur_ancestor_index = -1;

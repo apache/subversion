@@ -926,6 +926,10 @@ svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
       assert(*path != '/');
     }
+
+  if (include_merged_revisions)
+    SVN_ERR(svn_ra__assert_mergeinfo_capable_server(session, NULL, pool));
+
   return session->vtable->get_log(session, paths, start, end, limit,
                                   discover_changed_paths, strict_node_history,
                                   include_merged_revisions, revprops,
@@ -1083,6 +1087,9 @@ svn_error_t *svn_ra_get_file_revs2(svn_ra_session_t *session,
   svn_error_t *err;
 
   assert(*path != '/');
+
+  if (include_merged_revisions)
+    SVN_ERR(svn_ra__assert_mergeinfo_capable_server(session, NULL, pool));
 
   err = session->vtable->get_file_revs(session, path, start, end,
                                        include_merged_revisions,

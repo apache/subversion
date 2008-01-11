@@ -56,6 +56,11 @@ from svntest.actions import inject_conflict_into_expected_state
 #
 # #2997 - If skipped paths come first in operative merge mergeinfo
 #         is incomplete
+#
+# #2829 - Improve handling for skipped paths encountered during a merge.
+#         This is *not* a full test of issue #2829, see also merge_tests.py,
+#         search for "2829".  This tests the problem where a merge adds a path
+#         with a missing sibling and so needs its own explicit mergeinfo.
 def mergeinfo_and_skipped_paths(sbox):
   "skipped paths get overriding mergeinfo"
 
@@ -106,6 +111,7 @@ def mergeinfo_and_skipped_paths(sbox):
   A_COPY_2_H_path = os.path.join(wc_restricted, "A_COPY_2", "D", "H")
   A_COPY_3_path = os.path.join(wc_restricted, "A_COPY_3")
   omega_path = os.path.join(wc_restricted, "A_COPY", "D", "H", "omega")
+  zeta_path = os.path.join(wc_dir, "A", "D", "H", "zeta")
 
   # Restrict access to some more of the merge destination the
   # old fashioned way, delete it via the OS.
@@ -365,6 +371,62 @@ def mergeinfo_and_skipped_paths(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, 1, 0, '-c5', '-c8')
+
+  os.chdir(saved_cwd)
+
+  # Test issue #2829 'Improve handling for skipped paths encountered
+  # during a merge'
+
+  # Revert previous changes to restricted WC
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '--recursive',
+                                     wc_restricted)
+  # Add new path 'A/D/H/zeta'
+  svntest.main.file_write(zeta_path, "This is the file 'zeta'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', zeta_path)
+  expected_output = wc.State(wc_dir, {'A/D/H/zeta' : Item(verb='Adding')})
+  wc_status.add({'A/D/H/zeta' : Item(status='  ', wc_rev=9)})
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        wc_status, None, wc_dir)
+
+  # Merge -r7:9 to the restricted WC's A_COPY_2/D/H.
+  #
+  # r9 adds a path, 'A_COPY_2/D/H/zeta', which has a parent with
+  # non-inheritable mergeinfo (due to the fact 'A_COPY_2/D/H/psi' is missing).
+  # 'A_COPY_2/D/H/zeta' must therefore get its own explicit mergeinfo from
+  # this merge.
+  short_path = shorten_path_kludge(A_COPY_2_H_path)
+  expected_output = wc.State(short_path, {
+    'omega' : Item(status='U '),
+    'zeta'  : Item(status='A '),
+    })
+  expected_status = wc.State(short_path, {
+    ''      : Item(status=' M', wc_rev=8),
+    'chi'   : Item(status=' M', wc_rev=8),
+    'omega' : Item(status='MM', wc_rev=8),
+    'zeta'  : Item(status='A ', copied='+', wc_rev='-'),
+    })
+  expected_disk = wc.State('', {
+    ''      : Item(props={SVN_PROP_MERGE_INFO : '/A/D/H:8-9*'}),
+    'omega' : Item("New content",
+                   props={SVN_PROP_MERGE_INFO : '/A/D/H/omega:8-9'}),
+    'chi'   : Item("This is the file 'chi'.\n",
+                   props={SVN_PROP_MERGE_INFO : '/A/D/H/chi:8-9'}),
+    'zeta'  : Item("This is the file 'zeta'.\n",
+                   props={SVN_PROP_MERGE_INFO : '/A/D/H/zeta:8-9'}),
+    })
+  expected_skip = wc.State(short_path, {})
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_path, '7', '9',
+                                       sbox.repo_url + \
+                                       '/A/D/H',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1, 0)
+  os.chdir(saved_cwd)
 
 ########################################################################
 # Run the tests

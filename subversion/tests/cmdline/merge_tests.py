@@ -9380,7 +9380,7 @@ def new_subtrees_should_not_break_merge(sbox):
     'B/lambda'  : Item(status='  ', wc_rev=2),
     'B/F'       : Item(status='  ', wc_rev=2),
     'C'         : Item(status='  ', wc_rev=2),
-    'D'         : Item(status=' M', wc_rev=2),
+    'D'         : Item(status='  ', wc_rev=2),
     'D/G'       : Item(status='  ', wc_rev=2),
     'D/G/pi'    : Item(status='  ', wc_rev=2),
     'D/G/rho'   : Item(status='  ', wc_rev=2),
@@ -9402,7 +9402,7 @@ def new_subtrees_should_not_break_merge(sbox):
     'B/lambda'  : Item("This is the file 'lambda'.\n"),
     'B/F'       : Item(),
     'C'         : Item(),
-    'D'         : Item(props={SVN_PROP_MERGE_INFO : '/A/D:5-6'}),
+    'D'         : Item(), # Mergeinfo elides to 'A_COPY'
     'D/G'       : Item(),
     'D/G/pi'    : Item("This is the file 'pi'.\n"),
     'D/G/rho'   : Item("This is the file 'rho'.\n"),

@@ -3699,6 +3699,28 @@ def URI_encoded_repos_to_wc(sbox):
   copy_URL_to_WC('A', 'A COPY', 2)
   copy_URL_to_WC('A COPY', 'A_COPY_2', 3)
 
+#----------------------------------------------------------------------
+# Issue #3068: copy source parent may be unversioned
+def allow_unversioned_parent_for_copy_src(sbox):
+  "copy wc in unversioned parent to other wc"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  # Make the "other" working copy
+  wc2_dir = sbox.add_wc_path('other')
+  svntest.actions.duplicate_dir(wc_dir, wc2_dir)
+  copy_to_path = os.path.join(wc_dir, 'A', 'copy_of_wc2')
+
+  # Copy the wc-in-unversioned-parent working copy to our original wc.
+  svntest.actions.run_and_verify_svn(None,
+                                     None,
+                                     [],
+                                     'cp',
+                                     wc2_dir,
+                                     copy_to_path)
+
+
 ########################################################################
 # Run the tests
 
@@ -3773,6 +3795,7 @@ test_list = [ None,
               copy_make_parents_wc_repo,
               copy_make_parents_repo_repo,
               URI_encoded_repos_to_wc,
+              allow_unversioned_parent_for_copy_src,
              ]
 
 if __name__ == '__main__':
