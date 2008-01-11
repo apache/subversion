@@ -8348,19 +8348,6 @@ def cherry_picking(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
                                         None, wc_dir)
 
-  # Try some merges with multiple ranges that should compact to
-  # nothing and result in a no-op.
-  svntest.actions.run_and_verify_svn(None, [], [], 'merge',
-                                     '-c4', '-c-4',
-                                     sbox.repo_url + '/A', A_COPY_path)
-  svntest.actions.run_and_verify_svn(None, [], [], 'merge',
-                                     '-r7:3', '-r3:7',
-                                     sbox.repo_url + '/A', A_COPY_path)
-  svntest.actions.run_and_verify_svn(None, [], [], 'merge',
-                                     '-r3:2', '-c-4', '-r2:8', '-c-6',
-                                     '-r8:3', '-c-3', '-r4:5',
-                                     sbox.repo_url + '/A', A_COPY_path)
-
   # Do multiple additive merges to a file"
   # Merge -r2:4 -c6 into A_COPY/D/G/rho.
   short_rho_COPY_path = shorten_path_kludge(rho_COPY_path)
