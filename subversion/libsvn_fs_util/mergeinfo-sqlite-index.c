@@ -820,9 +820,11 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
   return svn_fs__sqlite_close(db, err);
 }
 
-/*It builds comma seperated paths originating from path which are ancestors of
- * PATH and PATH itself based on INHERIT. Perform all allocations in POOL.
- * For PATH='/a/b/c/d.html, it generates *ROOTED_PATH_SEGMENTS as follows
+/* It adds paths originating from PATH which are ancestors of
+ * PATH and PATH itself based on INHERIT to *ROOTED_PATH_SEGMENTS.
+ * Type of values stored in *ROOTED_PATH_SEGMENTS is 'const char *'.
+ * Perform all allocations in POOL.
+ * For PATH='/a/b/c/d.html'.
  * based on INHERIT.
  * If INHERIT == svn_mergeinfo_explicit,
  * ('/a/b/c/d.html').
@@ -830,17 +832,19 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
  * ('/a/b/c/d.html', '/a/b/c', '/a/b', '/a', '/').
  * If INHERIT == svn_mergeinfo_nearest_ancestor,
  * ('/a/b/c', '/a/b', '/a', '/').
+ * Based on the number of paths added it generates corresponding
+ * number of "?" in the sqlite prepared statement string enclosed in 
+ * "(" and ")" and stores it in *STUFFED_QUESTION_MARKS.
  */
-/* ### This function has a serious security bug and must be either
-   ### fixed or replaced by the non-SQLite implementation!  See Issue
-   ### #3063. */
 static void
-construct_rooted_path_segments(svn_stringbuf_t **rooted_path_segments,
-                               const char *path,
-                               svn_mergeinfo_inheritance_t inherit,
-                               apr_pool_t *pool)
+get_rooted_path_segments(apr_array_header_t **rooted_path_segments,
+                         svn_stringbuf_t **stuffed_question_marks,
+                         const char *path,
+                         svn_mergeinfo_inheritance_t inherit,
+                         apr_pool_t *pool)
 {
-  *rooted_path_segments = svn_stringbuf_create("(", pool);
+  *rooted_path_segments = apr_array_make(pool, 1, sizeof(const char *));
+  *stuffed_question_marks = svn_stringbuf_create("(", pool);
   if (inherit == svn_mergeinfo_inherited
       || inherit == svn_mergeinfo_nearest_ancestor)
     {
@@ -849,25 +853,25 @@ construct_rooted_path_segments(svn_stringbuf_t **rooted_path_segments,
         svn_path_remove_component(path_str);
       while (path_str->len > 1)
         {
-          svn_stringbuf_appendcstr(*rooted_path_segments, "'");
-          svn_stringbuf_appendcstr(*rooted_path_segments, path_str->data);
-          svn_stringbuf_appendcstr(*rooted_path_segments, "',");
+          svn_stringbuf_appendcstr(*stuffed_question_marks, "?,");
+          APR_ARRAY_PUSH(*rooted_path_segments, const char *) =
+	    apr_pstrdup(pool, path_str->data);
           svn_path_remove_component(path_str);
         }
       if (path_str->len)
         {
-          svn_stringbuf_appendcstr(*rooted_path_segments, "'");
-          svn_stringbuf_appendcstr(*rooted_path_segments, path_str->data);
-          svn_stringbuf_appendcstr(*rooted_path_segments, "'");
+          svn_stringbuf_appendcstr(*stuffed_question_marks, "?");
+          APR_ARRAY_PUSH(*rooted_path_segments, const char *) =
+	    apr_pstrdup(pool, path_str->data);
         }
     }
   else if (inherit == svn_mergeinfo_explicit)
     {
-      svn_stringbuf_appendcstr(*rooted_path_segments, "'");
-      svn_stringbuf_appendcstr(*rooted_path_segments, path);
-      svn_stringbuf_appendcstr(*rooted_path_segments, "'");
+      svn_stringbuf_appendcstr(*stuffed_question_marks, "?");
+      APR_ARRAY_PUSH(*rooted_path_segments, const char *) =
+        apr_pstrdup(pool, path);
     }
-  svn_stringbuf_appendcstr(*rooted_path_segments, ")");
+  svn_stringbuf_appendcstr(*stuffed_question_marks, ")");
 }
 
 /* Helper function for 'svn_fs_mergeinfo__get_commit_and_merge_ranges'.
@@ -909,9 +913,13 @@ get_commit_and_merge_ranges(apr_array_header_t **merge_ranges_list,
   svn_fs__sqlite_stmt_t *stmt;
   svn_boolean_t got_row;
   apr_array_header_t *merge_rangelist;
+  apr_array_header_t *merge_source_rooted_path_segments, 
+                     *merge_target_rooted_path_segments;
   svn_stringbuf_t *merge_source_where_clause, *merge_target_where_clause;
   const char *query;
   svn_boolean_t get_inherited_mergeinfo = FALSE;
+  int next_prepared_statement_param_pos;
+  int i;
   svn_revnum_t last_commit_rev = SVN_INVALID_REVNUM;
   apr_hash_t *rev_target_hash = apr_hash_make(pool);
 
@@ -922,21 +930,43 @@ get_commit_and_merge_ranges(apr_array_header_t **merge_ranges_list,
   *merge_ranges_list = apr_array_make(pool, 0, sizeof(apr_array_header_t *));
   merge_rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
 
-  construct_rooted_path_segments(&merge_source_where_clause,
-                                 merge_source, inherit, pool);
-  construct_rooted_path_segments(&merge_target_where_clause,
-                                 merge_target, inherit, pool);
+  get_rooted_path_segments(&merge_source_rooted_path_segments,
+                           &merge_source_where_clause,
+                           merge_source, inherit, pool);
+  get_rooted_path_segments(&merge_target_rooted_path_segments,
+                           &merge_target_where_clause,
+                           merge_target, inherit, pool);
   query = apr_psprintf(pool, "SELECT revision, mergedrevstart, "
                              "mergedrevend, inheritable, mergedfrom, "
                              "mergedto FROM mergeinfo_changed "
-                             "WHERE mergedfrom in %s AND mergedto in %s "
-                             "AND revision between ? AND ? "
+                             "WHERE revision between ? AND ? "
+                             "AND mergedfrom in %s AND mergedto in %s "
                              "ORDER BY revision ASC, mergedto ASC; ",
                              merge_source_where_clause->data,
                              merge_target_where_clause->data);
   SVN_ERR(svn_fs__sqlite_prepare(&stmt, db, query, pool));
   SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 1, min_commit_rev + 1));
   SVN_ERR(svn_fs__sqlite_bind_int64(stmt, 2, max_commit_rev));
+  next_prepared_statement_param_pos = 3;
+
+  for (i = 0; i < merge_source_rooted_path_segments->nelts; i++)
+    {
+      const char *path_item = APR_ARRAY_IDX(merge_source_rooted_path_segments,
+                                            i, const char *);
+      SVN_ERR(svn_fs__sqlite_bind_text(stmt, next_prepared_statement_param_pos,
+                                       path_item));
+      ++next_prepared_statement_param_pos;
+    }
+
+  for (i = 0; i < merge_target_rooted_path_segments->nelts; i++)
+    {
+      const char *path_item = APR_ARRAY_IDX(merge_target_rooted_path_segments,
+                                            i, const char *);
+      SVN_ERR(svn_fs__sqlite_bind_text(stmt, next_prepared_statement_param_pos,
+                                       path_item));
+      ++next_prepared_statement_param_pos;
+    }
+
   SVN_ERR(svn_fs__sqlite_step(&got_row, stmt));
   while (got_row)
     {
