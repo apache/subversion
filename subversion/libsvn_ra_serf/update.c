@@ -1775,7 +1775,8 @@ end_report(svn_ra_serf__xml_parser_t *parser,
            * So, find 'branches/a' as the difference. Cut it of path, gives us:
            *  /repositories/log_tests-17/!svn/ver/4
            */
-          if (strcmp(ctx->destination, ctx->sess->repos_root_str) != 0)
+          if (ctx->destination && 
+              strcmp(ctx->destination, ctx->sess->repos_root_str) != 0)
             {
               apr_size_t root_count, src_count;
 
