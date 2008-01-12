@@ -742,9 +742,10 @@ def authz_locking(sbox):
 def authz_svnserve_anon_access_read(sbox):
   "authz issue #2712"
 
-  sbox.build(create_wc = False, read_only = True)
+  sbox.build(create_wc = False)
   svntest.main.safe_rmtree(sbox.wc_dir)
   B_path = os.path.join(sbox.wc_dir, 'A', 'B')
+  other_B_path = B_path + '_other'
   B_url = sbox.repo_url + '/A/B'
   D_path = os.path.join(sbox.wc_dir, 'A', 'D')
   D_url = sbox.repo_url + '/A/D'
@@ -754,7 +755,7 @@ def authz_svnserve_anon_access_read(sbox):
 
   # Give jrandom read access to /A/B.  Anonymous users can only
   # access /A/D.
-  write_authz_file(sbox, { "/A/B" : "jrandom = r",
+  write_authz_file(sbox, { "/A/B" : "jrandom = rw",
                            "/A/D" : "* = r" })
 
   # Perform a checkout of /A/B, expecting to see no errors.
@@ -766,6 +767,39 @@ def authz_svnserve_anon_access_read(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      D_url, D_path)
+
+  # Now try a switch.
+  svntest.main.safe_rmtree(D_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'switch', D_url, B_path)
+
+  # Check out /A/B with an unknown username, expect error.
+  svntest.actions.run_and_verify_svn(
+    None, None,
+    ".*Authentication error from server: Username not found.*",
+    'checkout',
+    '--non-interactive',
+    '--username', 'losing_user',
+    B_url, B_path + '_unsuccessful')
+
+  # Check out a second copy of /A/B, make changes for later merge.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     B_url, other_B_path)
+  other_alpha_path = os.path.join(other_B_path, 'E', 'alpha')
+  svntest.main.file_append(other_alpha_path, "fish\n")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'commit', '-m', 'log msg',
+                                     other_B_path)
+
+  # Now try to merge.  This is an atypical merge, since our "branch"
+  # is not really a branch (it's the same URL), but we only care about
+  # authz here, not the semantics of the merge.  (Merges had been
+  # failing in authz, for the reasons summarized in
+  # http://subversion.tigris.org/issues/show_bug.cgi?id=2712#desc13.)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'merge', '-c', '2',
+                                     B_url, B_path)
 
 def authz_switch_to_directory(sbox):
   "switched to directory, no read access on parents"
@@ -803,8 +837,8 @@ test_list = [ None,
                          server_authz_has_aliases),
               Skip(authz_validate, svntest.main.is_ra_type_file),
               Skip(authz_locking, svntest.main.is_ra_type_file),
-              SkipUnless(authz_svnserve_anon_access_read,
-                         svntest.main.is_ra_type_svn),
+              XFail(SkipUnless(authz_svnserve_anon_access_read,
+                               svntest.main.is_ra_type_svn)),
               XFail(Skip(authz_switch_to_directory,
                          svntest.main.is_ra_type_file)),
              ]
