@@ -105,9 +105,8 @@ typedef struct svn_cl__opt_state_t
   /* Max number of log messages to get back from svn_client_log2. */
   int limit;
 
-  /* Note: after option processing is done, the depth flag will
-     reflect the switch actually given on the command line, or
-     svn_depth_unknown if none. */
+  /* After option processing is done, reflects the switch actually
+     given on the command line, or svn_depth_unknown if none. */
   svn_depth_t depth;
 
   /* Was --no-unlock specified? */
@@ -148,7 +147,7 @@ typedef struct svn_cl__opt_state_t
   const char *old_target;        /* diff target */
   const char *new_target;        /* diff target */
   svn_boolean_t relocate;        /* rewrite urls (svn switch) */
-  const char * config_dir;       /* over-riding configuration directory */
+  const char *config_dir;        /* over-riding configuration directory */
   svn_boolean_t autoprops;       /* enable automatic properties */
   svn_boolean_t no_autoprops;    /* disable automatic properties */
   const char *native_eol;        /* override system standard eol marker */
@@ -165,6 +164,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t use_merge_history; /* use/display extra merge information */
   svn_cl__accept_t accept_which; /* how to handle conflicts */
   const char *from_source;       /* merge source to query (svn mergeinfo) */
+  svn_depth_t new_depth;         /* new sticky ambient depth value */
 } svn_cl__opt_state_t;
 
 

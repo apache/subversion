@@ -1064,6 +1064,10 @@ svn_client_checkout(svn_revnum_t *result_rev,
  * If @a depth is @c svn_depth_unknown, take the working depth from
  * @a paths and then behave as described above.
  *
+ * If @a depth_is_sticky is set and @a depth is not @c
+ * svn_depth_unknown, then in addition to updating PATHS, also set
+ * their sticky ambient depth value to @a depth.
+ *
  * If @a allow_unver_obstructions is TRUE then the update tolerates
  * existing unversioned items that obstruct added paths from @a URL.  Only
  * obstructions of the same type (file or dir) as the added item are
@@ -1087,6 +1091,7 @@ svn_client_update3(apr_array_header_t **result_revs,
                    const apr_array_header_t *paths,
                    const svn_opt_revision_t *revision,
                    svn_depth_t depth,
+                   svn_boolean_t depth_is_sticky,
                    svn_boolean_t ignore_externals,
                    svn_boolean_t allow_unver_obstructions,
                    svn_client_ctx_t *ctx,
@@ -1094,9 +1099,10 @@ svn_client_update3(apr_array_header_t **result_revs,
 
 /**
  * Similar to svn_client_update3() but with @a allow_unver_obstructions
- * always set to FALSE, and @a depth set according to @a recurse:
- * if @a recurse is TRUE, set @a depth to @c svn_depth_infinity, if
- * @a recurse is FALSE, set @a depth to @c svn_depth_files.
+ * always set to FALSE, @a depth_is_sticky to FALSE, and @a depth set
+ * according to @a recurse: if @a recurse is TRUE, set @a depth to @c
+ * svn_depth_infinity, if @a recurse is FALSE, set @a depth to @c
+ * svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -1152,6 +1158,10 @@ svn_client_update(svn_revnum_t *result_rev,
  * ignoring subdirectories completely.  Else if @c svn_depth_empty,
  * switch just @a path and touch nothing underneath it.
  *
+ * If @a depth_is_sticky is set and @a depth is not @c
+ * svn_depth_unknown, then in addition to switching PATH, also set
+ * its sticky ambient depth value to @a depth.
+ *
  * If @a ignore_externals is set, don't process externals definitions
  * as part of this operation.
  *
@@ -1179,6 +1189,7 @@ svn_client_switch2(svn_revnum_t *result_rev,
                    const svn_opt_revision_t *peg_revision,
                    const svn_opt_revision_t *revision,
                    svn_depth_t depth,
+                   svn_boolean_t depth_is_sticky,
                    svn_boolean_t ignore_externals,
                    svn_boolean_t allow_unver_obstructions,
                    svn_client_ctx_t *ctx,
@@ -1186,11 +1197,11 @@ svn_client_switch2(svn_revnum_t *result_rev,
 
 
 /**
- * Similar to svn_client_switch2() but with @a allow_unver_obstructions
- * and @a ignore_externals always set to FALSE, and @a depth set according
- * to @a recurse: if @a recurse is TRUE, set @a depth to
- * @c svn_depth_infinity, if @a recurse is FALSE, set @a depth to
- * @c svn_depth_files.
+ * Similar to svn_client_switch2() but with @a allow_unver_obstructions, 
+ * @a ignore_externals, and @a depth_is_sticky always set to FALSE,
+ * and @a depth set according to @a recurse: if @a recurse is TRUE,
+ * set @a depth to @c svn_depth_infinity, if @a recurse is FALSE, set
+ * @a depth to @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */

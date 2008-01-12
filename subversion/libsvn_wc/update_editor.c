@@ -89,8 +89,12 @@ struct edit_baton
      pointing to the final revision. */
   svn_revnum_t *target_revision;
 
-  /* The requested depth of this edit */
+  /* The requested depth of this edit. */
   svn_depth_t requested_depth;
+
+  /* Is the requested depth merely an operational limitation, or is
+     also the new sticky ambient depth of the update target? */
+  svn_boolean_t depth_is_sticky;
 
   /* Need to know if the user wants us to overwrite the 'now' times on
      edited/added files with the last-commit-time. */
@@ -3164,6 +3168,7 @@ make_editor(svn_revnum_t *target_revision,
             svn_boolean_t use_commit_times,
             const char *switch_url,
             svn_depth_t depth,
+            svn_boolean_t depth_is_sticky,
             svn_boolean_t allow_unver_obstructions,
             svn_wc_notify_func2_t notify_func,
             void *notify_baton,
@@ -3187,6 +3192,10 @@ make_editor(svn_revnum_t *target_revision,
   const svn_delta_editor_t *inner_editor;
   const svn_wc_entry_t *entry;
 
+  /* An unknown depth can't be sticky. */
+  if (depth == svn_depth_unknown)
+    depth_is_sticky = FALSE;
+  
   /* Get the anchor entry, so we can fetch the repository root. */
   SVN_ERR(svn_wc_entry(&entry, anchor, adm_access, FALSE, pool));
 
@@ -3211,6 +3220,7 @@ make_editor(svn_revnum_t *target_revision,
   eb->anchor                   = anchor;
   eb->target                   = target;
   eb->requested_depth          = depth;
+  eb->depth_is_sticky          = depth_is_sticky;
   eb->notify_func              = notify_func;
   eb->notify_baton             = notify_baton;
   eb->traversal_info           = traversal_info;
@@ -3283,6 +3293,7 @@ svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                           const char *target,
                           svn_boolean_t use_commit_times,
                           svn_depth_t depth,
+                          svn_boolean_t depth_is_sticky,
                           svn_boolean_t allow_unver_obstructions,
                           svn_wc_notify_func2_t notify_func,
                           void *notify_baton,
@@ -3300,7 +3311,7 @@ svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                           apr_pool_t *pool)
 {
   return make_editor(target_revision, anchor, svn_wc_adm_access_path(anchor),
-                     target, use_commit_times, NULL, depth,
+                     target, use_commit_times, NULL, depth, depth_is_sticky,
                      allow_unver_obstructions, notify_func, notify_baton,
                      cancel_func, cancel_baton, conflict_func, conflict_baton,
                      fetch_func, fetch_baton,
@@ -3327,7 +3338,7 @@ svn_wc_get_update_editor2(svn_revnum_t *target_revision,
 {
   return svn_wc_get_update_editor3(target_revision, anchor, target,
                                    use_commit_times,
-                                   SVN_DEPTH_INFINITY_OR_FILES(recurse),
+                                   SVN_DEPTH_INFINITY_OR_FILES(recurse), FALSE,
                                    FALSE, notify_func, notify_baton,
                                    cancel_func, cancel_baton, NULL, NULL,
                                    NULL, NULL,
@@ -3357,7 +3368,7 @@ svn_wc_get_update_editor(svn_revnum_t *target_revision,
 
   return svn_wc_get_update_editor3(target_revision, anchor, target,
                                    use_commit_times,
-                                   SVN_DEPTH_INFINITY_OR_FILES(recurse),
+                                   SVN_DEPTH_INFINITY_OR_FILES(recurse), FALSE,
                                    FALSE, svn_wc__compat_call_notify_func, nb,
                                    cancel_func, cancel_baton, NULL, NULL,
                                    NULL, NULL,
@@ -3372,6 +3383,7 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                           const char *switch_url,
                           svn_boolean_t use_commit_times,
                           svn_depth_t depth,
+                          svn_boolean_t depth_is_sticky,
                           svn_boolean_t allow_unver_obstructions,
                           svn_wc_notify_func2_t notify_func,
                           void *notify_baton,
@@ -3389,9 +3401,9 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
   assert(switch_url);
 
   return make_editor(target_revision, anchor, svn_wc_adm_access_path(anchor),
-                     target, use_commit_times, switch_url, depth,
-                     allow_unver_obstructions, notify_func, notify_baton,
-                     cancel_func, cancel_baton,
+                     target, use_commit_times, switch_url, 
+                     depth, depth_is_sticky, allow_unver_obstructions, 
+                     notify_func, notify_baton, cancel_func, cancel_baton,
                      conflict_func, conflict_baton,
                      NULL, NULL, /* TODO(sussman): add fetch callback here  */
                      diff3_cmd, preserved_exts,
@@ -3419,7 +3431,7 @@ svn_wc_get_switch_editor2(svn_revnum_t *target_revision,
 
   return svn_wc_get_switch_editor3(target_revision, anchor, target,
                                    switch_url, use_commit_times,
-                                   SVN_DEPTH_INFINITY_OR_FILES(recurse),
+                                   SVN_DEPTH_INFINITY_OR_FILES(recurse), FALSE,
                                    FALSE, notify_func, notify_baton,
                                    cancel_func, cancel_baton,
                                    NULL, NULL, diff3_cmd,
@@ -3450,7 +3462,7 @@ svn_wc_get_switch_editor(svn_revnum_t *target_revision,
 
   return svn_wc_get_switch_editor3(target_revision, anchor, target,
                                    switch_url, use_commit_times,
-                                   SVN_DEPTH_INFINITY_OR_FILES(recurse),
+                                   SVN_DEPTH_INFINITY_OR_FILES(recurse), FALSE,
                                    FALSE, svn_wc__compat_call_notify_func, nb,
                                    cancel_func, cancel_baton,
                                    NULL, NULL, diff3_cmd,
