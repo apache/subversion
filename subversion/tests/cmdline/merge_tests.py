@@ -8357,19 +8357,6 @@ def cherry_picking(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
                                         None, wc_dir)
 
-  # Try some merges with multiple ranges that should compact to
-  # nothing and result in a no-op.
-  svntest.actions.run_and_verify_svn(None, [], [], 'merge',
-                                     '-c4', '-c-4',
-                                     sbox.repo_url + '/A', A_COPY_path)
-  svntest.actions.run_and_verify_svn(None, [], [], 'merge',
-                                     '-r7:3', '-r3:7',
-                                     sbox.repo_url + '/A', A_COPY_path)
-  svntest.actions.run_and_verify_svn(None, [], [], 'merge',
-                                     '-r3:2', '-c-4', '-r2:8', '-c-6',
-                                     '-r8:3', '-c-3', '-r4:5',
-                                     sbox.repo_url + '/A', A_COPY_path)
-
   # Do multiple additive merges to a file"
   # Merge -r2:4 -c6 into A_COPY/D/G/rho.
   short_rho_COPY_path = shorten_path_kludge(rho_COPY_path)
@@ -9195,8 +9182,6 @@ def merge_source_normalization_and_subtree_merges(sbox):
 
 # Test for issue #3067: 'subtrees with intersecting mergeinfo, that don't
 # exist at the start of a merge range shouldn't break the merge'
-#
-# Set as XFail until this issue is resolved.
 def new_subtrees_should_not_break_merge(sbox):
   "subtrees added after start of merge range are ok"
 
@@ -11156,7 +11141,7 @@ test_list = [ None,
               ignore_ancestry_and_mergeinfo,
               merge_from_renamed_branch_fails_while_avoiding_repeat_merge,
               merge_source_normalization_and_subtree_merges,
-              XFail(new_subtrees_should_not_break_merge),
+              new_subtrees_should_not_break_merge,
               merge_non_reflective_changes_from_reflective_rev,
               merge_non_reflective_text_and_prop_change,
               merge_non_reflective_with_conflict,

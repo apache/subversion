@@ -2201,223 +2201,6 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
 
 /*-----------------------------------------------------------------------*/
 
-/*** Compacting Merge Ranges ***/
-
-
-/* Callback for qsort() calls which need to sort svn_merge_range_t *.
-   Wraps svn_sort_compare_ranges() but first "normalizes" all ranges
-   so range->end > range->start. */
-static int
-compare_merge_ranges(const void *a,
-                     const void *b)
-{
-  /* ### Are all these pointer gymnastics necessary?
-     ### There's gotta be a simpler way... */
-  svn_merge_range_t *s1 = *((svn_merge_range_t * const *) a);
-  svn_merge_range_t *s2 = *((svn_merge_range_t * const *) b);
-
-  /* Convert the svn_merge_range_t to svn_merge_range_t and leverage our
-     existing comparison function. */
-  svn_merge_range_t r1 = { MIN(s1->start, s1->end),
-                           MAX(s1->start, s1->end),
-                           TRUE};
-  svn_merge_range_t r2 = { MIN(s2->start, s2->end),
-                           MAX(s2->start, s2->end),
-                           TRUE};
-  svn_merge_range_t *r1p = &r1;
-  svn_merge_range_t *r2p = &r2;
-  return svn_sort_compare_ranges(&r1p, &r2p);
-}
-
-/* Another qsort() callback.  Wraps compare_merge_ranges(), but only
-   for ranges that share a common "direction", e.g. additive or
-   subtractive ranges.  If both ranges are subtractive, the range with
-   the lowest (highest absolute) range value is consider the lesser.
-   If the direction is not the same, then consider additive merges to
-   always be less than subtractive merges. */
-static int
-compare_merge_ranges2(const void *a,
-                      const void *b)
-{
-  svn_merge_range_t *s1 = *((svn_merge_range_t * const *) a);
-  svn_merge_range_t *s2 = *((svn_merge_range_t * const *) b);
-  svn_boolean_t s1_reversed = s1->start > s1->end;
-  svn_boolean_t s2_reversed = s2->start > s2->end;
-
-  if (s1_reversed && s2_reversed)
-    return -(compare_merge_ranges(a, b));
-  else if (s1_reversed)
-    return 1;
-  else if (s2_reversed)
-    return -1;
-  else
-    return compare_merge_ranges(a, b);
-}
-
-/* Helper for compact_merge_ranges.  Take *RANGES, an array of
-   svn_merge_range_t *, and and remove any redundant ranges, possibly
-   removing items from *RANGES.  *RANGES must be sorted per
-   compare_merge_ranges() and is guaranteed to be sorted thusly
-   upon completion.  All range in RANGES must also be of the same
-   "direction" (additive or subtractive). */
-static void
-remove_redundant_ranges(apr_array_header_t **ranges)
-{
-  svn_merge_range_t *range_1 = NULL;
-  svn_merge_range_t *range_2;
-  int i;
-
-  for (i = 0; i < (*ranges)->nelts; i++)
-    {
-      if (range_1 == NULL)
-        {
-          range_1 = APR_ARRAY_IDX(*ranges, i, svn_merge_range_t *);
-          continue;
-        }
-      else
-        {
-          range_2 = APR_ARRAY_IDX(*ranges, i, svn_merge_range_t *);
-        }
-      if (svn_range_compact(&range_1, &range_2))
-        {
-          if (!range_2)
-            {
-              /* Able to compact the two ranges into one.
-                 Remove merge_ranges[i] and from array. */
-              int j;
-              for (j = i; j < (*ranges)->nelts - 1; j++)
-                {
-                  APR_ARRAY_IDX(*ranges, j, svn_merge_range_t *) =
-                    APR_ARRAY_IDX(*ranges, j + 1, svn_merge_range_t *);
-                }
-              apr_array_pop(*ranges);
-              i--; /* Reprocess this element */
-            }
-        }
-    }
-}
-
-/* Helper for compact_merge_ranges.  SOURCES is array of svn_merge_range_t *
-   sorted per compare_merge_ranges().  Remove any redundant ranges between
-   adjacent ranges and store the result in *COMPACTED_RANGES, allocated out
-   of pool.  The ranges in *COMPACTED_RANGES will remain sorted as per
-   compare_merge_ranges.  Range in RANGES can be of either direction
-   (additive and/or subtractive). */
-static void
-compact_add_sub_ranges(apr_array_header_t **compacted_sources,
-                       apr_array_header_t *sources,
-                       apr_pool_t *pool)
-{
-  int i;
-  svn_merge_range_t *range_1 = NULL;
-  svn_merge_range_t *range_2;
-  apr_array_header_t *merge_ranges = apr_array_copy(pool, sources);
-
-  for (i = 0; i < merge_ranges->nelts; i++)
-    {
-      if (range_1 == NULL)
-        {
-          range_1 = APR_ARRAY_IDX(merge_ranges, i, svn_merge_range_t *);
-          continue;
-        }
-      else
-        {
-          range_2 = APR_ARRAY_IDX(merge_ranges, i, svn_merge_range_t *);
-        }
-
-      if (svn_range_compact(&range_1, &range_2))
-        {
-          if (range_1 == NULL && range_2 == NULL) /* ranges cancel each out */
-            {
-              /* Remove merge_ranges[i] and merge_ranges[i + 1]
-                 from the array. */
-              int j;
-              for (j = i - 1; j < merge_ranges->nelts - 2; j++)
-                {
-                  APR_ARRAY_IDX(merge_ranges, j, svn_merge_range_t *) =
-                    APR_ARRAY_IDX(merge_ranges, j + 2, svn_merge_range_t *);
-                }
-              apr_array_pop(merge_ranges);
-              apr_array_pop(merge_ranges);
-              /* Make range_1 the last range processed if one exists. */
-              if (i > 1)
-                range_1 = APR_ARRAY_IDX(merge_ranges, i - 2,
-                                        svn_merge_range_t *);
-            }
-          else if (!range_2) /* ranges compacted into range_ 1 */
-            {
-              /* Remove merge_ranges[i] and from array. */
-              int j;
-              for (j = i; j < merge_ranges->nelts - 1; j++)
-                {
-                  APR_ARRAY_IDX(merge_ranges, j, svn_merge_range_t *) =
-                    APR_ARRAY_IDX(merge_ranges, j + 1, svn_merge_range_t *);
-                }
-              apr_array_pop(merge_ranges);
-
-              i--; /* Reprocess merge_ranges[i] */
-            }
-          else /* ranges compacted */
-            {
-              range_1 = range_2;
-            }
-        } /* if (svn_range_compact(&range_1, &range_2)) */
-
-    }
-
-  *compacted_sources = merge_ranges;
-}
-
-/* SOURCES is array of svn_merge_range_t *sorted per compare_merge_ranges(). */
-static svn_error_t *
-compact_merge_ranges(apr_array_header_t **compacted_sources_p,
-                     apr_array_header_t *merge_ranges,
-                     apr_pool_t *pool)
-{
-  apr_array_header_t *additive_sources =
-    apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
-  apr_array_header_t *subtractive_sources =
-    apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
-  apr_array_header_t *compacted_sources;
-  int i;
-
-  for (i = 0; i < merge_ranges->nelts; i++)
-    {
-      svn_merge_range_t *range =
-        svn_merge_range_dup(APR_ARRAY_IDX(merge_ranges, i,
-                                          svn_merge_range_t *), pool);
-      if (range->start > range->end)
-        APR_ARRAY_PUSH(subtractive_sources, svn_merge_range_t *) = range;
-      else
-        APR_ARRAY_PUSH(additive_sources, svn_merge_range_t *) = range;
-    }
-
-  qsort(additive_sources->elts, additive_sources->nelts,
-        additive_sources->elt_size, compare_merge_ranges);
-  remove_redundant_ranges(&additive_sources);
-  qsort(subtractive_sources->elts, subtractive_sources->nelts,
-        subtractive_sources->elt_size, compare_merge_ranges);
-  remove_redundant_ranges(&subtractive_sources);
-
-  for (i = 0; i < subtractive_sources->nelts; i++)
-    {
-      svn_merge_range_t *range =
-        svn_merge_range_dup(APR_ARRAY_IDX(subtractive_sources, i,
-                                          svn_merge_range_t *), pool);
-      APR_ARRAY_PUSH(additive_sources, svn_merge_range_t *) = range;
-    }
-
-  qsort(additive_sources->elts, additive_sources->nelts,
-        additive_sources->elt_size, compare_merge_ranges);
-  compact_add_sub_ranges(&compacted_sources, additive_sources, pool);
-  qsort(compacted_sources->elts, compacted_sources->nelts,
-        compacted_sources->elt_size, compare_merge_ranges2);
-  *compacted_sources_p = compacted_sources;
-  return SVN_NO_ERROR;
-}
-
-/*-----------------------------------------------------------------------*/
-
 /*** Other Helper Functions ***/
 
 
@@ -2886,7 +2669,48 @@ drive_merge_report_editor(const char *target_wcpath,
                                      svn_client__remaining_range_info_t *);
           range = range_info->range;
           if (range->start == default_start)
-            continue;
+            {
+              continue;
+            }
+          else
+            {
+              /* While we need to describe subtrees requiring different merge
+                 ranges than TARGET_WCPATH will have applied, we don't need to
+                 describe a subtree's subtree if that latter is having the
+                 same range applied as the former. */
+              int j;
+              svn_client__merge_path_t *parent = NULL;
+              
+              /* Does CHILD have a parent with mergeinfo other
+                 than TARGET_WCPATH? */
+              for (j = i - 1; j > 0; j--)
+                {
+                  svn_client__merge_path_t *potential_parent =
+                    APR_ARRAY_IDX(children_with_mergeinfo, j,
+                                  svn_client__merge_path_t *);
+                  if (svn_path_is_ancestor(potential_parent->path,
+                                           child->path))
+                    {
+                      parent = potential_parent;
+                      break;
+                    }
+                }
+
+              /* CHILD does have a parent with mergeinfo, if CHILD's first
+                 remaining range is the same as its parent there is no need
+                 to describe it separately. */
+              if (parent && parent->remaining_ranges->nelts != 0)
+                {
+                  svn_merge_range_t *parent_range =
+                    APR_ARRAY_IDX(parent->remaining_ranges, 0,
+                                  svn_merge_range_t *);
+                  svn_merge_range_t *child_range =
+                    APR_ARRAY_IDX(child->remaining_ranges, 0,
+                                  svn_merge_range_t *);
+                  if (parent_range->start == child_range->start)
+                    continue;
+                }
+            }
 
           child_repos_path = child->path +
             (target_wcpath_len ? target_wcpath_len + 1 : 0);
@@ -4265,11 +4089,7 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
         }
     }
 
-  /* Okay.  We have a list of svn_merge_range_t's.  Now, we need to
-     compact that list to remove redundances and such. */
-  SVN_ERR(compact_merge_ranges(&merge_range_ts, merge_range_ts, pool));
-
-  /* No compacted ranges to merge?  No problem. */
+  /* No ranges to merge?  No problem. */
   if (merge_range_ts->nelts == 0)
     return SVN_NO_ERROR;
 
