@@ -1096,6 +1096,7 @@ main(int argc, const char *argv[])
   opt_state.revision_ranges =
     apr_array_make(pool, 0, sizeof(svn_opt_revision_range_t *));
   opt_state.depth = svn_depth_unknown;
+  opt_state.set_depth = svn_depth_unknown;
   opt_state.accept_which = svn_cl__accept_invalid;
 
   /* No args?  Show usage. */
