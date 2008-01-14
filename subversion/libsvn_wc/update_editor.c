@@ -92,10 +92,6 @@ struct edit_baton
   /* The requested depth of this edit. */
   svn_depth_t requested_depth;
 
-  /* Is the requested depth merely an operational limitation, or is
-     also the new sticky ambient depth of the update target? */
-  svn_boolean_t depth_is_sticky;
-
   /* Need to know if the user wants us to overwrite the 'now' times on
      edited/added files with the last-commit-time. */
   svn_boolean_t use_commit_times;
@@ -3220,7 +3216,6 @@ make_editor(svn_revnum_t *target_revision,
   eb->anchor                   = anchor;
   eb->target                   = target;
   eb->requested_depth          = depth;
-  eb->depth_is_sticky          = depth_is_sticky;
   eb->notify_func              = notify_func;
   eb->notify_baton             = notify_baton;
   eb->traversal_info           = traversal_info;
