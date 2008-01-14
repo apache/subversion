@@ -3408,8 +3408,7 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
 
       if (has_mergeinfo)
         {
-          /* Merge in this particular node's mergeinfo, if the
-             filterer lets us. */
+          /* Get this node's mergeinfo and run the action on it. */
           apr_hash_t *proplist, *kid_mergeinfo_hash;
           svn_string_t *mergeinfo_string;
 
