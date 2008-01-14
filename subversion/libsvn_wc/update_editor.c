@@ -92,6 +92,10 @@ struct edit_baton
   /* The requested depth of this edit. */
   svn_depth_t requested_depth;
 
+  /* Is the requested depth merely an operational limitation, or is
+     also the new sticky ambient depth of the update target? */
+  svn_boolean_t depth_is_sticky;
+
   /* Need to know if the user wants us to overwrite the 'now' times on
      edited/added files with the last-commit-time. */
   svn_boolean_t use_commit_times;
@@ -486,9 +490,10 @@ complete_directory(struct edit_baton *eb,
   /* After a depth upgrade the entry must reflect the new depth.
      Upgrading to infinity changes the depth of *all* directories,
      upgrading to something else only changes the target. */
-  if (eb->requested_depth == svn_depth_infinity
-      || (strcmp(path, svn_path_join(eb->anchor, eb->target, pool)) == 0
-          && eb->requested_depth > entry->depth))
+  if (eb->depth_is_sticky &&
+      (eb->requested_depth == svn_depth_infinity
+       || (strcmp(path, svn_path_join(eb->anchor, eb->target, pool)) == 0
+           && eb->requested_depth > entry->depth)))
     entry->depth = eb->requested_depth;
 
   /* Remove any deleted or missing entries. */
@@ -3216,6 +3221,7 @@ make_editor(svn_revnum_t *target_revision,
   eb->anchor                   = anchor;
   eb->target                   = target;
   eb->requested_depth          = depth;
+  eb->depth_is_sticky          = depth_is_sticky;
   eb->notify_func              = notify_func;
   eb->notify_baton             = notify_baton;
   eb->traversal_info           = traversal_info;
