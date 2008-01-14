@@ -3277,8 +3277,8 @@ make_editor(svn_revnum_t *target_revision,
                            adm_access, FALSE, pool));
       if (target_entry && (target_entry->depth > depth))
         return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                 _("Ambient depth shallowing is not yet "
-                                   "supported"));
+                                 _("Shallowing of working copy depths is not "
+                                   "yet supported"));
     }
   else
     {
