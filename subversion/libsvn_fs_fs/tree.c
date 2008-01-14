@@ -3730,50 +3730,35 @@ fs_get_mergeinfo(apr_hash_t **mergeinfo,
   return SVN_NO_ERROR;
 }
 
-/* Baton for filter_and_collect_mergeinfo. */
-struct facm_baton {
-  apr_hash_t *combined_mergeinfo_hash;
-  svn_fs_mergeinfo_filter_func_t filter_func;
-  void *filter_func_baton;
-};
-
 /* Implements crawler_action_t; used by
    get_mergeinfo_hash_for_tree. */
 static svn_error_t *
-filter_and_collect_mergeinfo(void *baton,
+collect_mergeinfo_for_tree(void *baton,
                              const char *path,
                              apr_hash_t *path_mergeinfo_hash,
                              apr_pool_t *temp_pool,
                              apr_pool_t *result_pool)
 {
-  struct facm_baton *b = baton;
-  svn_boolean_t skip = FALSE;
+  apr_hash_t *combined_mergeinfo_hash = baton;
 
-  if (b->filter_func)
-    SVN_ERR(b->filter_func(b->filter_func_baton, &skip,
-                           path, path_mergeinfo_hash, temp_pool));
-
-  if (!skip)
-    SVN_ERR(svn_mergeinfo_merge(b->combined_mergeinfo_hash,
-                                path_mergeinfo_hash, result_pool));
+  SVN_ERR(svn_mergeinfo_merge(combined_mergeinfo_hash,
+                              path_mergeinfo_hash, result_pool));
 
   return SVN_NO_ERROR;
 }
 
-/* Finds all the "tree" mergeinfo for PATH in ROOT, using the given
-   filter function.  This is the mergeinfo for PATH itself (calculated
-   with inheritance) combined with all the mergeinfo for all of PATH's
-   descendants (calculated without inheritance).  Returns it in
-   *PATH_MERGEINFO_HASH_FOR_TREE; if there ends up being no mergeinfo
-   at all, this is NULL.  RESULT_POOL is used for the returned hash;
-   TEMP_POOL for everything else.
+/* Finds all the "tree" mergeinfo for PATH in ROOT.  This is the
+   mergeinfo for PATH itself (calculated with inheritance) combined
+   with all the mergeinfo for all of PATH's descendants (calculated
+   without inheritance).  Returns it in *PATH_MERGEINFO_HASH_FOR_TREE;
+   if there ends up being no mergeinfo at all, this is NULL.
+   RESULT_POOL is used for the returned hash; TEMP_POOL for everything
+   else.
  */
 static svn_error_t *
 get_mergeinfo_hash_for_tree(apr_hash_t **path_mergeinfo_hash_for_tree,
                             svn_fs_root_t *root,
                             const char *path,
-                            svn_fs_mergeinfo_filter_func_t filter_func,
-                            void *filter_func_baton,
                             apr_pool_t *temp_pool,
                             apr_pool_t *result_pool)
 {
@@ -3795,40 +3780,20 @@ get_mergeinfo_hash_for_tree(apr_hash_t **path_mergeinfo_hash_for_tree,
   if (!this_path_mergeinfo_hash)
     this_path_mergeinfo_hash = apr_hash_make(result_pool);
 
-  /* Should we be looking here at all? */
-  if (filter_func)
-    {
-      svn_boolean_t skip;
-      SVN_ERR(filter_func(filter_func_baton, &skip, path, 
-                          this_path_mergeinfo_hash, temp_pool));
-      if (skip)
-        {
-          *path_mergeinfo_hash_for_tree = NULL;
-          return SVN_NO_ERROR;
-        }
-    }
-
   SVN_ERR(get_dag(&this_dag, root, path, temp_pool));
   SVN_ERR(svn_fs_fs__dag_has_descendants_with_mergeinfo(&go_down, this_dag,
                                                         temp_pool));
   if (go_down)
-    {
-      /* Now crawl the tree under PATH, pruning based on mergeinfo_count,
-         and add in mergeinfo (ignoring inheritance) for everything below,
-         as long as filter_func says it's OK.
-      */
-      struct facm_baton b;
-      b.combined_mergeinfo_hash = this_path_mergeinfo_hash;
-      b.filter_func = filter_func;
-      b.filter_func_baton = filter_func_baton;
-      SVN_ERR(crawl_directory_dag_for_mergeinfo(root,
-                                                path,
-                                                this_dag,
-                                                filter_and_collect_mergeinfo,
-                                                &b,
-                                                temp_pool,
-                                                result_pool));
-    }
+    /* Now crawl the tree under PATH, pruning based on mergeinfo_count,
+       and add in mergeinfo (ignoring inheritance) for everything below.
+    */
+    SVN_ERR(crawl_directory_dag_for_mergeinfo(root,
+                                              path,
+                                              this_dag,
+                                              collect_mergeinfo_for_tree,
+                                              this_path_mergeinfo_hash,
+                                              temp_pool,
+                                              result_pool));
 
   if (apr_hash_count(this_path_mergeinfo_hash) > 0)
     *path_mergeinfo_hash_for_tree = this_path_mergeinfo_hash;
@@ -3842,8 +3807,6 @@ static svn_error_t *
 fs_get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
                           svn_fs_root_t *root,
                           const apr_array_header_t *paths,
-                          svn_fs_mergeinfo_filter_func_t filter_func,
-                          void *filter_func_baton,
                           apr_pool_t *pool)
 {
   apr_hash_t *result_hash = apr_hash_make(pool);
@@ -3862,9 +3825,7 @@ fs_get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
       svn_pool_clear(iterpool);
 
       SVN_ERR(get_mergeinfo_hash_for_tree(&path_mergeinfo_hash_for_tree,
-                                          root, path, filter_func,
-                                          filter_func_baton, iterpool,
-                                          pool));
+                                          root, path, iterpool, pool));
       if (path_mergeinfo_hash_for_tree)
         apr_hash_set(result_hash, path, APR_HASH_KEY_STRING,
                      path_mergeinfo_hash_for_tree);

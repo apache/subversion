@@ -561,7 +561,6 @@ get_combined_mergeinfo(apr_hash_t **mergeinfo,
   apr_hash_t *tree_mergeinfo;
   apr_pool_t *subpool = svn_pool_create(pool);
   const apr_array_header_t *query_paths;
-  struct filter_baton fb;
 
   /* Revision 0 doesn't have any mergeinfo. */
   if (rev == 0)
