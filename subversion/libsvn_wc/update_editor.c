@@ -3256,24 +3256,41 @@ make_editor(svn_revnum_t *target_revision,
   inner_editor = tree_editor;
   inner_baton = eb;
 
-  /* Easy out: we only need an ambient filter if the caller has no
-     particular depth request in mind -- because if a depth was
-     explicitly requested, libsvn_delta/depth_filter_editor.c will
-     ensure that we never see editor calls we don't want anyway. 
-  */
-  /* ### (This can also be skipped if the server understands depth;
-     ### consider letting the depth RA capability percolate down to
-     ### this level.) */
+  /* If our requested depth is sticky, we'll raise an error if asked
+     to make our target more shallow, which is currently unsupported.
 
-  if (depth == svn_depth_unknown)
-    SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
-                                                &inner_baton,
-                                                inner_editor,
-                                                inner_baton,
-                                                anchor,
-                                                target,
-                                                adm_access,
-                                                pool));
+     Otherwise, if our requested depth is *not* sticky, then we need
+     to limit the scope of our operation to the ambient depths present
+     in the working copy already.  If a depth was explicitly
+     requested, libsvn_delta/depth_filter_editor.c will ensure that we
+     never see editor calls that extend beyond the scope of the
+     requested depth.  But even what we do so might extend beyond the
+     scope of our ambient depth.  So we use another filtering editor
+     to avoid modifying the ambient working copy depth when not asked
+     to do so.  (This can also be skipped if the server understands
+     consider letting the depth RA capability percolate down to this
+     level.) */
+  if (depth_is_sticky)
+    {
+      const svn_wc_entry_t *target_entry;
+      SVN_ERR(svn_wc_entry(&target_entry, svn_path_join(anchor, target, pool), 
+                           adm_access, FALSE, pool));
+      if (target_entry && (target_entry->depth > depth))
+        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                 _("Ambient depth shallowing is not yet "
+                                   "supported"));
+    }
+  else
+    {
+      SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
+                                                  &inner_baton,
+                                                  inner_editor,
+                                                  inner_baton,
+                                                  anchor,
+                                                  target,
+                                                  adm_access,
+                                                  pool));
+    }
 
   SVN_ERR(svn_delta_get_cancellation_editor(cancel_func,
                                             cancel_baton,
