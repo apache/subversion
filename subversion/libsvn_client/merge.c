@@ -2704,13 +2704,8 @@ drive_merge_report_editor(const char *target_wcpath,
                   svn_client__remaining_range_info_t *parent_range_info =
                     APR_ARRAY_IDX(parent->remaining_ranges, 0,
                                   svn_client__remaining_range_info_t *);
-                  svn_client__remaining_range_info_t *child_range_info =
-                    APR_ARRAY_IDX(child->remaining_ranges, 0,
-                                  svn_client__remaining_range_info_t *);
-                  if (parent_range_info && child_range_info
-                      && parent_range_info->range && child_range_info->range
-                      && parent_range_info->range->start == 
-                         child_range_info->range->start)
+                  if (parent_range_info && parent_range_info->range
+                      && parent_range_info->range->start == range->start)
                     continue;
                 }
             }
