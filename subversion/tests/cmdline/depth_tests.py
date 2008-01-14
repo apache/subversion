@@ -85,6 +85,19 @@ def set_up_depthy_working_copies(sbox, empty=False, files=False,
 
   return wc_empty, wc_files, wc_immediates, wc
 
+def verify_depth(msg, depth, path="."):
+  """Verifies that PATH has depth DEPTH.  MSG is the failure message."""
+  if depth == "infinity":
+    # Check for absence of depth line.
+    out, err = svntest.actions.run_and_verify_svn(None, None, [], "info", path)
+    for line in out:
+      if line.startswith("Depth:"):
+        raise svntest.failure(msg)
+  else:
+    svntest.actions.run_and_verify_svn(
+      msg,
+      "Depth: %s|Path.+|URL.+|Repository.+|Revision.+|Node Kind.+|"
+      "Schedule.+|Last.+|\n" % depth, [], "info", path)
 
 #----------------------------------------------------------------------
 # Ensure that 'checkout --depth=empty' results in a depth-empty working copy.
@@ -99,11 +112,8 @@ def depth_empty_checkout(sbox):
   if os.path.exists(os.path.join(wc_empty, "A")):
     raise svntest.Failure("depth-empty checkout created subdir 'A'")
 
-  svntest.actions.run_and_verify_svn(
-    "Expected depth empty for top of WC, got some other depth",
-    "Depth: empty|Path.+|URL.+|Repository.+|Revision.+|Node Kind.+|" \
-    "Schedule.+|Last.+|\n",
-    [], "info", wc_empty)
+  verify_depth("Expected depth empty for top of WC, got some other depth",
+               "empty", wc_empty)
 
 
 # Helper for two test functions.
@@ -133,10 +143,8 @@ def depth_files_same_as_nonrecursive(sbox, opt):
   if os.path.exists(os.path.join(sbox.wc_dir, "A")):
     raise svntest.Failure("'checkout %s' unexpectedly created subdir 'A'" % opt)
 
-  svntest.actions.run_and_verify_svn(
-    "Expected depth files for top of WC, got some other depth",
-    "Depth: files|Path.+|URL.+|Repository.+|Revision.+|Node Kind.+|" \
-    "Schedule.+|Last.+|\n", [], "info", sbox.wc_dir)
+  verify_depth("Expected depth files for top of WC, got some other depth",
+               "files", sbox.wc_dir)
 
 
 def depth_files_checkout(sbox):
@@ -560,10 +568,7 @@ def depth_mixed_bring_in_dir(sbox):
                                         '--set-depth', 'files',
                                         A_path)
   # Check that A was added at depth=files.
-  svntest.actions.run_and_verify_svn(None, "Depth: files|Path.+|URL.+|" \
-                                     "Repository.+|Revision.+|Node Kind.+|" \
-                                     "Schedule.+|Last.+|\n", [], "info",
-                                     A_path)
+  verify_depth(None, "files", A_path)
 
   # Now, bring in A/B at depth-immediates.
   expected_output = svntest.wc.State(wc_empty, {
@@ -591,10 +596,7 @@ def depth_mixed_bring_in_dir(sbox):
                                         '--set-depth', 'immediates',
                                         B_path)
   # Check that A/B was added at depth=immediates.
-  svntest.actions.run_and_verify_svn(None, "Depth: immediates|Path.+|URL.+|" \
-                                     "Repository.+|Revision.+|Node Kind.+|" \
-                                     "Schedule.+|Last.+|\n", [], "info",
-                                     B_path)
+  verify_depth(None, "immediates", B_path)
 
   # Now, bring in A/C at depth-empty.
   expected_output = svntest.wc.State(wc_empty, {
@@ -619,10 +621,7 @@ def depth_mixed_bring_in_dir(sbox):
                                         '--set-depth', 'empty',
                                         C_path)
   # Check that A/C was added at depth=empty.
-  svntest.actions.run_and_verify_svn(None, "Depth: empty|Path.+|URL.+|" \
-                                     "Repository.+|Revision.+|Node Kind.+|" \
-                                     "Schedule.+|Last.+|\n", [], "info",
-                                     C_path)
+  verify_depth(None, "empty", C_path)
 
 #----------------------------------------------------------------------
 def depth_empty_unreceive_delete(sbox):
@@ -839,9 +838,7 @@ def depth_update_to_more_depth(sbox):
                                         None, None,
                                         None, None, None, None,
                                         '--set-depth', 'files')
-  svntest.actions.run_and_verify_svn(None, "Depth: files|Path.+|URL.+|" \
-                                     "Repository.+|Revision.+|Node Kind.+|" \
-                                     "Schedule.+|Last.+|\n", [], "info")
+  verify_depth(None, "files")
 
   # Run 'svn up --set-depth=immediates' in the now depth-files working copy.
   expected_output = svntest.wc.State('', {
@@ -863,12 +860,8 @@ def depth_update_to_more_depth(sbox):
                                         None, None,
                                         None, None, None, None,
                                         '--set-depth', 'immediates')
-  svntest.actions.run_and_verify_svn(None, "Depth: immediates|Path.+|URL.+|" \
-                                     "Repository.+|Revision.+|Node Kind.+|" \
-                                     "Schedule.+|Last.+|\n", [], "info")
-  svntest.actions.run_and_verify_svn(None, "Depth: empty|Path.+|URL.+|" \
-                                     "Repository.+|Revision.+|Node Kind.+|" \
-                                     "Schedule.+|Last.+|\n", [], "info", "A")
+  verify_depth(None, "immediates")
+  verify_depth(None, "empty", "A")
 
   # Upgrade 'A' to depth-files.
   expected_output = svntest.wc.State('', {
@@ -892,12 +885,8 @@ def depth_update_to_more_depth(sbox):
                                         None, None,
                                         None, None, None, None,
                                         '--set-depth', 'files', 'A')
-  svntest.actions.run_and_verify_svn(None, "Depth: immediates|Path.+|URL.+|" \
-                                     "Repository.+|Revision.+|Node Kind.+|" \
-                                     "Schedule.+|Last.+|\n", [], "info")
-  svntest.actions.run_and_verify_svn(None, "Depth: files|Path.+|URL.+|" \
-                                     "Repository.+|Revision.+|Node Kind.+|" \
-                                     "Schedule.+|Last.+|\n", [], "info", "A")
+  verify_depth(None, "immediates")
+  verify_depth(None, "files", "A")
 
   # Run 'svn up --set-depth=infinity' in the working copy.
   expected_output = svntest.wc.State('', {
@@ -928,14 +917,10 @@ def depth_update_to_more_depth(sbox):
                                         None, None,
                                         None, None, None, None,
                                         '--set-depth', 'infinity')
-  # svn info doesn't print a 'Depth:' line for infinity, so we verify
-  # that no such line is present in the output.
-  output1, err = svntest.actions.run_and_verify_svn(None, None, [], "info")
-  output2, err = svntest.actions.run_and_verify_svn(None, None, [], "info", "A")
-  for line in output1 + output2:
-    if line.startswith("Depth:"):
-      raise svntest.Failure("Non-infinity depth detected after an upgrade \
-                             to depth-infinity")
+  verify_depth("Non-infinity depth detected after an upgrade to depth-infinity",
+               "infinity")
+  verify_depth("Non-infinity depth detected after an upgrade to depth-infinity",
+               "infinity", "A")
 
 def commit_propmods_with_depth_empty(sbox):
   "commit property mods only, using --depth=empty"
@@ -1208,10 +1193,7 @@ def depth_immediates_receive_new_dir(sbox):
                                         expected_status,
                                         None, None, None, None, None)
   # Check that the new directory was added at depth=empty.
-  svntest.actions.run_and_verify_svn(None, "Depth: empty|Path.+|URL.+|" \
-                                     "Repository.+|Revision.+|Node Kind.+|" \
-                                     "Schedule.+|Last.+|\n", [], "info",
-                                     other_I_path)
+  verify_depth(None, "empty", other_I_path)
 
 def add_tree_with_depth_files(sbox):
   "add multi-subdir tree with --depth=files"  # For issue #2931
@@ -1262,9 +1244,7 @@ def upgrade_from_above(sbox):
                                           expected_status,
                                           None, None, None, None, None, None,
                                           '--set-depth=files')
-    svntest.actions.run_and_verify_svn(None, "Depth: +files|Path.+|URL.+|" \
-                                       "Repository.+|Revision.+|Node Kind.+|" \
-                                       "Schedule.+|Last.+|\n", [], "info")
+    verify_depth(None, "files")
   finally:
     os.chdir(saved_cwd)
 
@@ -1287,9 +1267,7 @@ def upgrade_from_above(sbox):
                                         expected_status,
                                         None, None, None, None, None, None,
                                         '--set-depth=files', wc)
-  svntest.actions.run_and_verify_svn(None, "Depth: +files|Path.+|URL.+|" \
-                                     "Repository.+|Revision.+|Node Kind.+|" \
-                                     "Schedule.+|Last.+|\n", [], "info", wc)
+  verify_depth(None, "files", wc)
 
 def status_in_depthy_wc(sbox):
   "status -u at various depths in non-infinity wc"
