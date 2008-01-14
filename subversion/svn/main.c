@@ -92,7 +92,7 @@ typedef enum {
   opt_summarize,
   opt_targets,
   opt_depth,
-  opt_new_depth,
+  opt_set_depth,
   opt_version,
   opt_xml,
   opt_keep_local,
@@ -185,7 +185,7 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("limit operation by depth ARG ('empty', 'files',\n"
                        "                            "
                        "'immediates', or 'infinity')")},
-  {"new-depth",     opt_new_depth, 1,
+  {"set-depth",     opt_set_depth, 1,
                     N_("set new sticky depth to ARG ('empty', 'files',\n"
                        "                            "
                        "'immediates', or 'infinity')")},
@@ -876,7 +876,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     modification to the working copy.  All properties from the repository\n"
      "     are applied to the obstructing path.\n"
      "\n"
-     "     Use the --new-depth option to set a new sticky ambient depth on the\n"
+     "     Use the --set-depth option to set a new sticky ambient depth on the\n"
      "     the targets of this operation.  Currently, the ambient depth of a\n"
      "     working copy directory can only be increased (telescoped more\n"
      "     deeply); you can cannot make a directory more shallow.\n"
@@ -885,7 +885,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     This is used when repository's root URL changes (such as a scheme\n"
      "     or hostname change) but your working copy still reflects the same\n"
     "     directory within the same repository.\n"),
-    { 'r', 'N', opt_depth, opt_new_depth, 'q', opt_merge_cmd, opt_relocate, 
+    { 'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_relocate, 
       opt_ignore_externals, opt_force, opt_accept} },
 
   { "unlock", svn_cl__unlock, {0}, N_
@@ -929,11 +929,11 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  are applied to the obstructing path.  Obstructing paths are reported\n"
      "  in the first column with code 'E'.\n"
      "\n"
-     "  Use the --new-depth option to set a new sticky ambient depth on the\n"
+     "  Use the --set-depth option to set a new sticky ambient depth on the\n"
      "  the targets of this operation.  Currently, the ambient depth of a\n"
      "  working copy directory can only be increased (telescoped more\n"
      "  deeply); you can cannot make a directory more shallow.\n"),
-    {'r', 'N', opt_depth, opt_new_depth, 'q', opt_merge_cmd, opt_force, 
+    {'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_force, 
      opt_ignore_externals, opt_changelist, opt_editor_cmd, opt_accept} },
 
   { NULL, NULL, {0}, NULL, {0} }
@@ -1302,16 +1302,16 @@ main(int argc, const char *argv[])
                                  utf8_opt_arg), pool, "svn: ");
           }
         break;
-      case opt_new_depth:
+      case opt_set_depth:
         err = svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool);
         if (err)
           return svn_cmdline_handle_exit_error
             (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                _("Error converting depth "
                                  "from locale to UTF8")), pool, "svn: ");
-        opt_state.new_depth = svn_depth_from_word(utf8_opt_arg);
-        if (opt_state.new_depth == svn_depth_unknown
-            || opt_state.new_depth == svn_depth_exclude)
+        opt_state.set_depth = svn_depth_from_word(utf8_opt_arg);
+        if (opt_state.set_depth == svn_depth_unknown
+            || opt_state.set_depth == svn_depth_exclude)
           {
             return svn_cmdline_handle_exit_error
               (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
@@ -1604,12 +1604,12 @@ main(int argc, const char *argv[])
         }
     }
 
-  /* Disallow simultaneous use of both --depth and --new-depth. */
+  /* Disallow simultaneous use of both --depth and --set-depth. */
   if ((opt_state.depth != svn_depth_unknown)
-      && (opt_state.new_depth != svn_depth_unknown))
+      && (opt_state.set_depth != svn_depth_unknown))
     {
       err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("--depth and --new-depth are mutually "
+                             _("--depth and --set-depth are mutually "
                                "exclusive"));
       return svn_cmdline_handle_exit_error(err, pool, "svn: ");
     }

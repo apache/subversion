@@ -160,9 +160,9 @@ svn_cl__switch(apr_getopt_t *os,
                          FALSE, FALSE, pool);
 
   /* Deal with depthstuffs. */
-  if (opt_state->new_depth)
+  if (opt_state->set_depth)
     {
-      depth = opt_state->new_depth;
+      depth = opt_state->set_depth;
       depth_is_sticky = TRUE;
     }
   else

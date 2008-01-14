@@ -164,7 +164,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t use_merge_history; /* use/display extra merge information */
   svn_cl__accept_t accept_which; /* how to handle conflicts */
   const char *from_source;       /* merge source to query (svn mergeinfo) */
-  svn_depth_t new_depth;         /* new sticky ambient depth value */
+  svn_depth_t set_depth;         /* new sticky ambient depth value */
 } svn_cl__opt_state_t;
 
 
