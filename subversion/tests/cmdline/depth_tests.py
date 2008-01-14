@@ -94,10 +94,8 @@ def verify_depth(msg, depth, path="."):
       if line.startswith("Depth:"):
         raise svntest.failure(msg)
   else:
-    svntest.actions.run_and_verify_svn(
-      msg,
-      "Depth: %s|Path.+|URL.+|Repository.+|Revision.+|Node Kind.+|"
-      "Schedule.+|Last.+|\n" % depth, [], "info", path)
+    svntest.actions.run_and_verify_svn_match_any(
+      msg, "^Depth: %s\n$" % depth, [], "info", path)
 
 #----------------------------------------------------------------------
 # Ensure that 'checkout --depth=empty' results in a depth-empty working copy.
@@ -187,6 +185,21 @@ def depth_empty_update_bypass_single_file(sbox):
                                         expected_status,
                                         None, None, None, None, None)
 
+  # And the wc should still be depth-empty.
+  verify_depth(None, "empty", wc_empty)
+
+  # Even if we explicitly ask for a depth-infinity update, we still shouldn't
+  # get the change to iota.
+  svntest.actions.run_and_verify_update(wc_empty,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, False,
+                                        "--depth=infinity", wc_empty)
+
+  # And the wc should still be depth-empty.
+  verify_depth(None, "empty", wc_empty)
+
 
 #----------------------------------------------------------------------
 def depth_immediates_get_top_file_mod_only(sbox):
@@ -232,6 +245,7 @@ def depth_immediates_get_top_file_mod_only(sbox):
                                         expected_disk,
                                         expected_status,
                                         None, None, None, None, None)
+  verify_depth(None, "immediates", wc_immediates)
 
 
 #----------------------------------------------------------------------
@@ -1419,7 +1433,7 @@ test_list = [ None,
               depth_empty_checkout,
               depth_files_checkout,
               nonrecursive_checkout,
-              depth_empty_update_bypass_single_file,
+              XFail(depth_empty_update_bypass_single_file),
               depth_immediates_get_top_file_mod_only,
               depth_empty_commit,
               depth_empty_with_file,

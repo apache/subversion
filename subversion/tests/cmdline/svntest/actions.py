@@ -176,6 +176,23 @@ def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
   verify.verify_outputs(message, out, err, expected_stdout, expected_stderr)
   return out, err
 
+def run_and_verify_svn_match_any(message, expected_stdout, expected_stderr,
+                                 *varargs):
+  """Like run_and_verify_svn, except that only one stdout line must match
+  EXPECTED_STDOUT."""
+
+  if expected_stderr is None:
+    raise verify.SVNIncorrectDatatype("expected_stderr must not be None")
+
+  want_err = None
+  if expected_stderr is not None and expected_stderr is not []:
+    want_err = True
+
+  out, err = main.run_svn(want_err, *varargs)
+  verify.verify_outputs(message, out, err, expected_stdout, expected_stderr,
+                        False)
+  return out, err
+
 
 def run_and_verify_load(repo_dir, dump_file_content):
   "Runs 'svnadmin load' and reports any errors."
