@@ -34,8 +34,8 @@
 
 
 /* Helper functions/variables.  */
-static const char *standard_txns[6]
-  = { "0", "1", "2", "3", "4", "5" };
+static const char *standard_txns[]
+  = { "0", "1", "2", "3", "4", "5", "6" };
 static const char *standard_changes[19][6]
      /* KEY   PATH   NODEREVID  KIND     TEXT PROP */
   = { { "0",  "/foo",  "1.0.0",  "add",     0,  0  },

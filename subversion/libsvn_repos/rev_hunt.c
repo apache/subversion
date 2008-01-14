@@ -1147,24 +1147,9 @@ find_interesting_revisions(apr_array_header_t *path_revisions,
       APR_ARRAY_PUSH(path_revisions, struct path_revision *) = path_rev;
 
       if (include_merged_revisions)
-        {
-          svn_boolean_t branching_rev;
-          svn_fs_root_t *merge_root;
-
-          SVN_ERR(get_merged_path_revisions(path_revisions, repos, path_rev,
-                                            authz_read_func, authz_read_baton,
-                                            pool));
-
-          /* Are looking at a branching revision?  If so, break. */
-          SVN_ERR(svn_fs_revision_root(&merge_root, repos->fs,
-                                       path_rev->revnum,
-                                       iter_pool));
-          SVN_ERR(svn_repos__is_branching_copy(&branching_rev, merge_root,
-                                               path_rev->path, NULL, pool));
-
-          if (branching_rev)
-            break;
-        }
+        SVN_ERR(get_merged_path_revisions(path_revisions, repos, path_rev,
+                                          authz_read_func, authz_read_baton,
+                                          pool));
 
       if (path_rev->revnum <= start)
         break;

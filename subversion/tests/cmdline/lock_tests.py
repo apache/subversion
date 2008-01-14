@@ -69,7 +69,6 @@ def lock_file(sbox):
 
   # attempt (and fail) to commit as user Sally
   svntest.actions.run_and_verify_commit(wc_b, None, None, err_re,
-                                        None, None, None, None,
                                         '--username',
                                         svntest.main.wc_author2,
                                         '-m', '', file_path_b)
@@ -86,7 +85,6 @@ def lock_file(sbox):
 
   # attempt (and fail) to commit as user Sally
   svntest.actions.run_and_verify_commit(wc_b, None, None, err_re,
-                                        None, None, None, None,
                                         '--username',
                                         svntest.main.wc_author2,
                                         '-m', '', file_path_b)
@@ -893,8 +891,6 @@ def lock_uri_encoded(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         file_path)
 
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
@@ -1240,8 +1236,6 @@ def info_moved_path(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
   # Create a new, unrelated iota, creating r3.
@@ -1258,8 +1252,6 @@ def info_moved_path(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
   # Lock the new iota.
@@ -1313,8 +1305,6 @@ def ls_url_encoded(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
   # Lock the file.
@@ -1384,8 +1374,6 @@ def examine_lock_encoded_recurse(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         file_path)
 
   # lock the file and validate the contents

@@ -252,32 +252,32 @@ print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
             }
         }
       /* And global options too */
-      if (global_options)
-        for (i = 0; global_options[i]; i++)
-          {
-            if (have_options == FALSE)
-              {
-                SVN_ERR(svn_cmdline_fputs(_("\nValid options:\n"),
-                                          stream, pool));
-                have_options = TRUE;
-              }
+      if (global_options && *global_options)
+        {
+          SVN_ERR(svn_cmdline_fputs(_("\nGlobal options:\n"),
+                                    stream, pool));
+          have_options = TRUE;
 
-            /* convert each option code into an option */
-            option =
-              svn_opt_get_option_from_code2(global_options[i],
-                                            options_table,
-                                            cmd, pool);
-
-            /* print the option's docstring */
-            if (option)
-              {
-                const char *optstr;
-                svn_opt_format_option(&optstr, option, TRUE, pool);
-                SVN_ERR(svn_cmdline_fprintf(stream, pool, "  %s\n",
-                                            optstr));
-              }
-          }
-
+          for (i = 0; global_options[i]; i++)
+            {
+              
+              /* convert each option code into an option */
+              option =
+                svn_opt_get_option_from_code2(global_options[i],
+                                              options_table,
+                                              cmd, pool);
+              
+              /* print the option's docstring */
+              if (option)
+                {
+                  const char *optstr;
+                  svn_opt_format_option(&optstr, option, TRUE, pool);
+                  SVN_ERR(svn_cmdline_fprintf(stream, pool, "  %s\n",
+                                              optstr));
+                }
+            }
+        }
+          
       if (have_options)
         SVN_ERR(svn_cmdline_fprintf(stream, pool, "\n"));
     }

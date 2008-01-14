@@ -842,6 +842,49 @@ EOE
     assert_equal(4, notification_count, "wrong number of notifications")
   end
 
+  def test_update_editor2_conflict_func
+    log = "sample log"
+    source1 = "source"
+    source2 = "SOURCE"
+    source3 = "SHOYU"
+    file = "file"
+    path = File.join(@wc_path, file)
+    ctx = make_context(log)
+
+    File.open(path, "w") {|f| f.print(source1)}
+    ctx.add(path)
+    rev1 = ctx.ci(@wc_path).revision
+
+    File.open(path, "w") {|f| f.print(source2)}
+    rev2 = ctx.ci(@wc_path).revision
+
+    ctx.up(@wc_path, rev1)
+    File.open(path, "w") {|f| f.print(source3)}
+
+    session = Svn::Ra::Session.open(@repos_uri)
+
+    conflicted_paths = {}
+
+    Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
+      editor = access.update_editor2(
+          :target => @wc_path,
+          :conflict_func => lambda{|n|
+            conflicted_paths[n.path]=true
+            Svn::Wc::CONFLICT_CHOOSE_MERGED
+          },
+          :target_revision => 0
+      )
+
+      assert_equal(0, editor.target_revision)
+
+      reporter = session.update2(rev2, "", editor)
+      access.crawl_revisions(@wc_path, reporter)
+      assert_equal(rev2, editor.target_revision)
+    end
+
+    assert_equal([path], conflicted_paths.keys);
+  end
+
   def test_switch_editor
     log = "sample log"
     file1 = "hello.txt"
