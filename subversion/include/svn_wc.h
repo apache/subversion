@@ -2871,7 +2871,8 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  * Assuming @a path is under version control and in a state of conflict,
  * then take @a path *out* of this state.  If @a resolve_text is TRUE then
  * any text conflict is resolved, if @a resolve_props is TRUE then any
- * property conflicts are resolved.
+ * property conflicts are resolved, if @a resolve_tree is TRUE then any
+ * tree conflicts are resolved.
  *
  * If @a depth is @c svn_depth_empty, act only on @a path; if
  * @c svn_depth_files, resolve @a path and its conflicted file
@@ -2904,11 +2905,32 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  * return @c SVN_NO_ERROR.
  *
  * If @c path was successfully taken out of a state of conflict, report this
- * information to @c notify_func (if non-@c NULL.)  If only text or only
- * property conflict resolution was requested, and it was successful, then
- * success gets reported.
+ * information to @c notify_func (if non-@c NULL.)  If only text, only
+ * property, or only tree conflict resolution was requested, and it was
+ * successful, then success gets reported.
  *
- * @since New in 1.5.
+ * @since New in 1.6.
+ */
+
+svn_error_t *svn_wc_resolved_conflict4(const char *path,
+                                       svn_wc_adm_access_t *adm_access,
+                                       svn_boolean_t resolve_text,
+                                       svn_boolean_t resolve_props,
+                                       svn_boolean_t resolve_tree,
+                                       svn_depth_t depth,
+                                       svn_wc_conflict_choice_t conflict_choice,
+                                       svn_wc_notify_func2_t notify_func,
+                                       void *notify_baton,
+                                       svn_cancel_func_t cancel_func,
+                                       void *cancel_baton,
+                                       apr_pool_t *pool);
+
+
+/**
+ * Similar to svn_wc_resolved_conflict4(), but without tree-conflict
+ * resolution support.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 svn_error_t *svn_wc_resolved_conflict3(const char *path,
                                        svn_wc_adm_access_t *adm_access,

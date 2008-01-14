@@ -2557,8 +2557,9 @@ attempt_deletion(const char *parent_dir,
 
    PATH is the path to the item to be resolved, BASE_NAME is the basename
    of PATH, and CONFLICT_DIR is the access baton for PATH.  ORIG_ENTRY is
-   the entry prior to resolution. RESOLVE_TEXT and RESOLVE_PROPS are TRUE
-   if text and property conficts respectively are to be resolved. */
+   the entry prior to resolution. RESOLVE_TEXT, RESOLVE_PROPS and
+   RESOLVE_TREE are TRUE if text, property and tree conflicts respectively
+   are to be resolved. */
 static svn_error_t *
 resolve_conflict_on_entry(const char *path,
                           const svn_wc_entry_t *orig_entry,
@@ -2566,6 +2567,7 @@ resolve_conflict_on_entry(const char *path,
                           const char *base_name,
                           svn_boolean_t resolve_text,
                           svn_boolean_t resolve_props,
+                          svn_boolean_t resolve_tree,
                           svn_wc_conflict_choice_t conflict_choice,
                           svn_wc_notify_func2_t notify_func,
                           void *notify_baton,
@@ -2637,6 +2639,14 @@ resolve_conflict_on_entry(const char *path,
       need_feedback |= was_present;
     }
 
+  if (resolve_tree && (entry->kind == svn_node_dir)
+      && entry->tree_conflict_data) 
+    {
+      modify_flags |= SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA;
+      entry->tree_conflict_data = NULL;
+      need_feedback |= was_present;
+    }
+
   if (modify_flags)
     {
       /* Although removing the files is sufficient to indicate that the
@@ -2654,12 +2664,14 @@ resolve_conflict_on_entry(const char *path,
           /* Sanity check:  see if libsvn_wc *still* thinks this item is in a
              state of conflict that we have asked to resolve.  If not, report
              the successful resolution.  */
-          svn_boolean_t text_conflict, prop_conflict;
-          SVN_ERR(svn_wc_conflicted_p(&text_conflict, &prop_conflict,
-                                      svn_wc_adm_access_path(conflict_dir),
-                                      entry, pool));
+          svn_boolean_t text_conflict, prop_conflict, tree_conflict;
+          SVN_ERR(svn_wc_conflicted_p2(&text_conflict, &prop_conflict,
+                                       &tree_conflict,
+                                       svn_wc_adm_access_path(conflict_dir),
+                                       entry, pool));
           if ((! (resolve_text && text_conflict))
-              && (! (resolve_props && prop_conflict)))
+              && (! (resolve_props && prop_conflict))
+              && (! (resolve_tree && tree_conflict)))
             (*notify_func)(notify_baton,
                            svn_wc_create_notify(path, svn_wc_notify_resolved,
                                                 pool), pool);
@@ -2677,6 +2689,8 @@ struct resolve_callback_baton
   svn_boolean_t resolve_text;
   /* TRUE if property conflicts are to be resolved. */
   svn_boolean_t resolve_props;
+  /* TRUE if tree conflicts are to be resolved. */
+  svn_boolean_t resolve_tree;
   /* The type of automatic conflict resolution to perform */
   svn_wc_conflict_choice_t conflict_choice;
   /* An access baton for the tree, with write access */
@@ -2713,6 +2727,7 @@ resolve_found_entry_callback(const char *path,
 
   return resolve_conflict_on_entry(path, entry, adm_access, base_name,
                                    baton->resolve_text, baton->resolve_props,
+                                   baton->resolve_tree,
                                    baton->conflict_choice, baton->notify_func,
                                    baton->notify_baton, pool);
 }
@@ -2780,10 +2795,32 @@ svn_wc_resolved_conflict3(const char *path,
                           void *cancel_baton,
                           apr_pool_t *pool)
 {
+  return svn_wc_resolved_conflict4(path, adm_access, resolve_text,
+                                   resolve_props, FALSE, depth,
+                                   svn_wc_conflict_choose_merged,
+                                   notify_func, notify_baton, cancel_func,
+                                   cancel_baton, pool);
+}
+
+svn_error_t *
+svn_wc_resolved_conflict4(const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_boolean_t resolve_text,
+                          svn_boolean_t resolve_props,
+                          svn_boolean_t resolve_tree,
+                          svn_depth_t depth,
+                          svn_wc_conflict_choice_t conflict_choice,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          apr_pool_t *pool)
+{
   struct resolve_callback_baton *baton = apr_pcalloc(pool, sizeof(*baton));
 
   baton->resolve_text = resolve_text;
   baton->resolve_props = resolve_props;
+  baton->resolve_tree = resolve_tree;
   baton->adm_access = adm_access;
   baton->notify_func = notify_func;
   baton->notify_baton = notify_baton;
