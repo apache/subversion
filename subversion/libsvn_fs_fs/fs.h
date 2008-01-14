@@ -45,6 +45,7 @@ extern "C" {
 #define PATH_REVS_DIR         "revs"             /* Directory of revisions */
 #define PATH_REVPROPS_DIR     "revprops"         /* Directory of revprops */
 #define PATH_TXNS_DIR         "transactions"     /* Directory of transactions */
+#define PATH_TXN_PROTOS_DIR   "txn-protorevs"    /* Directory of proto-revs */
 #define PATH_TXN_CURRENT      "transaction-current" /* File with next txn key */
 #define PATH_TXN_CURRENT_LOCK "txn-current-lock" /* Lock for txn-current */
 #define PATH_LOCKS_DIR         "locks"           /* Directory of locks */
@@ -53,13 +54,16 @@ extern "C" {
 #define PATH_CHANGES       "changes"       /* Records changes made so far */
 #define PATH_TXN_PROPS     "props"         /* Transaction properties */
 #define PATH_NEXT_IDS      "next-ids"      /* Next temporary ID assignments */
-#define PATH_REV           "rev"           /* Proto rev file */
-#define PATH_REV_LOCK      "rev-lock"      /* Proto rev (write) lock file */
 #define PATH_TXN_MERGEINFO "mergeinfo"     /* Transaction mergeinfo props */
 #define PATH_PREFIX_NODE   "node."         /* Prefix for node filename */
 #define PATH_EXT_TXN       ".txn"          /* Extension of txn dir */
 #define PATH_EXT_CHILDREN  ".children"     /* Extension for dir contents */
 #define PATH_EXT_PROPS     ".props"        /* Extension for node props */
+#define PATH_EXT_REV       ".rev"          /* Extension of protorev file */
+#define PATH_EXT_REV_LOCK  ".rev-lock"     /* Extension of protorev lock file */
+/* Names of files in legacy FS formats */
+#define PATH_REV           "rev"           /* Proto rev file */
+#define PATH_REV_LOCK      "rev-lock"      /* Proto rev (write) lock file */
 
 /* The format number of this filesystem.
    This is independent of the repository format number, and
@@ -76,6 +80,9 @@ extern "C" {
 /* The minimum format number that supports the "layout" filesystem
    format option. */
 #define SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT 3
+
+/* The minimum format number that stores protorevs in a separate directory. */
+#define SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT 3
 
 /* Maximum number of directories to cache dirents for.
    This *must* be a power of 2 for DIR_CACHE_ENTRIES_MASK

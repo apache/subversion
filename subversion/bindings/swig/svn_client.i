@@ -68,7 +68,10 @@
 #endif
 
 %apply const apr_array_header_t *STRINGLIST {
-  apr_array_header_t *src_paths,
+  apr_array_header_t *src_paths
+}
+
+%apply const apr_array_header_t *STRINGLIST_MAY_BE_NULL {
   apr_array_header_t *changelists
 }
 

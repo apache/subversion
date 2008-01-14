@@ -274,16 +274,6 @@ svn_repos__get_path_mergeinfo(apr_hash_t **mergeinfo,
                               svn_revnum_t revnum,
                               apr_pool_t *pool);
 
-/* Determine whether or not PATH  in ROOT is a branching copy.  PATH_MERGEINFO
-   should be the the mergeinfo for PATH in ROOT.  If PATH_MERGEINFO is NULL, it
-   will be fetched internally.  The result is returned in *IS_BRANCHING. */
-svn_error_t *
-svn_repos__is_branching_copy(svn_boolean_t *is_branching,
-                             svn_fs_root_t *root,
-                             const char *path,
-                             apr_hash_t *path_mergeinfo,
-                             apr_pool_t *pool);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

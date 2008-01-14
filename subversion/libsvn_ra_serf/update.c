@@ -732,6 +732,7 @@ handle_fetch(serf_request_t *request,
   apr_status_t status;
   report_fetch_t *fetch_ctx = handler_baton;
   svn_error_t *err;
+  serf_status_line sl;
 
   if (fetch_ctx->read_headers == FALSE)
     {
@@ -807,6 +808,21 @@ handle_fetch(serf_request_t *request,
         }
 
       fetch_ctx->read_headers = TRUE;
+    }
+
+  /* If the error code wasn't 200, something went wrong. Don't use the returned
+     data as its probably an error message. Just bail out instead. */
+  status = serf_bucket_response_status(response, &sl);
+  if (SERF_BUCKET_READ_ERROR(status))
+    {
+      return status;
+    }
+  if (sl.code != 200)
+    {
+      err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                              _("GET request failed: %d %s"),
+                              sl.code, sl.reason);
+      return error_fetch(request, fetch_ctx, err);
     }
 
   while (1)
@@ -1734,7 +1750,6 @@ end_report(svn_ra_serf__xml_parser_t *parser,
           const char *c;
           apr_size_t comp_count;
           svn_stringbuf_t *path;
-          svn_boolean_t fix_root = FALSE;
 
           c = svn_ra_serf__get_ver_prop(info->props, info->base_name,
                                         info->base_rev, "DAV:", "checked-in");
@@ -1745,32 +1760,55 @@ end_report(svn_ra_serf__xml_parser_t *parser,
 
           svn_path_remove_components(path, comp_count);
 
-          /* Our paths may be relative to a file from the actual root, so
-           * we would need to strip out the difference from our fixed point
-           * to the root and then add it back in after we replace the
-           * version number.
+          /* Find out the difference of the destination compared to the repos
+           * root url. Cut of this difference from path, which will give us our
+           * version resource root path.
+           *
+           * Example:
+           * path: 
+           *  /repositories/log_tests-17/!svn/ver/4/branches/a
+           * repos_root: 
+           *  http://localhost/repositories/log_tests-17
+           * destination:
+           *  http://localhost/repositories/log_tests-17/branches/a
+           *
+           * So, find 'branches/a' as the difference. Cut it of path, gives us:
+           *  /repositories/log_tests-17/!svn/ver/4
            */
-          if (strcmp(ctx->source, ctx->sess->repos_root.path) != 0)
+          if (ctx->destination && 
+              strcmp(ctx->destination, ctx->sess->repos_root_str) != 0)
             {
               apr_size_t root_count, src_count;
 
-              src_count = svn_path_component_count(ctx->source);
-              root_count = svn_path_component_count(ctx->sess->repos_root.path);
+              src_count = svn_path_component_count(ctx->destination);
+              root_count = svn_path_component_count(ctx->sess->repos_root_str);
 
               svn_path_remove_components(path, src_count - root_count);
-
-              fix_root = TRUE;
             }
 
           /* At this point, we should just have the version number
            * remaining.  We know our target revision, so we'll replace it
            * and recreate what we just chopped off.
-          */
+           */
           svn_path_remove_component(path);
 
           svn_path_add_component(path, apr_ltoa(info->pool, info->base_rev));
 
-          if (fix_root == TRUE)
+          /* Similar as above, we now have to add the relative path between 
+           * source and root path. 
+           *
+           * Example:
+           * path: 
+           *  /repositories/log_tests-17/!svn/ver/2
+           * repos_root path: 
+           *  /repositories/log_tests-17
+           * source:
+           *  /repositories/log_tests-17/trunk
+           *
+           * So, find 'trunk' as the difference. Addding it to path, gives us:
+           *  /repositories/log_tests-17/!svn/ver/2/trunk
+           */
+          if (strcmp(ctx->source, ctx->sess->repos_root.path) != 0)
             {
               apr_size_t root_len;
 
@@ -1779,6 +1817,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
               svn_path_add_component(path, &ctx->source[root_len]);
             }
 
+          /* Re-add the filename. */
           svn_path_add_component(path, info->name);
 
           info->delta_base = svn_string_create_from_buf(path, info->pool);

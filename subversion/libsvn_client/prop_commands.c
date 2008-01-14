@@ -588,52 +588,6 @@ propget_walk_cb(const char *path,
 }
 
 
-/* If REVISION represents a revision not present in the working copy,
- * then set *NEW_TARGET to the url for TARGET, allocated in POOL; else
- * set *NEW_TARGET to TARGET (just assign, do not copy), whether or
- * not TARGET is a url.
- *
- * TARGET and *NEW_TARGET may be the same, though most callers
- * probably don't want them to be.
- */
-static svn_error_t *
-maybe_convert_to_url(const char **new_target,
-                     const char *target,
-                     const svn_opt_revision_t *revision,
-                     apr_pool_t *pool)
-{
-  /* If we don't already have a url, and the revision kind is such
-     that we need a url, then get one. */
-  if ((revision->kind != svn_opt_revision_unspecified)
-      && (revision->kind != svn_opt_revision_base)
-      && (revision->kind != svn_opt_revision_working)
-      && (revision->kind != svn_opt_revision_committed)
-      && (! svn_path_is_url(target)))
-    {
-      svn_wc_adm_access_t *adm_access;
-      svn_node_kind_t kind;
-      const char *pdir;
-      const svn_wc_entry_t *entry;
-
-      SVN_ERR(svn_io_check_path(target, &kind, pool));
-      if (kind == svn_node_file)
-        svn_path_split(target, &pdir, NULL, pool);
-      else
-        pdir = target;
-
-      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, pdir, FALSE,
-                               0, NULL, NULL, pool));
-      SVN_ERR(svn_wc__entry_versioned(&entry, target, adm_access, FALSE, pool));
-
-      *new_target = entry->url;
-    }
-  else
-    *new_target = target;
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Helper for the remote case of svn_client_propget.
  *
  * Get the value of property PROPNAME in REVNUM, using RA_LIB and
@@ -799,7 +753,7 @@ svn_client__get_prop_from_wc(apr_hash_t *props, const char *propname,
 svn_error_t *
 svn_client_propget4(apr_hash_t **props,
                     const char *propname,
-                    const char *target,
+                    const char *path_or_url,
                     const svn_opt_revision_t *peg_revision,
                     const svn_opt_revision_t *revision,
                     svn_revnum_t *actual_revnum,
@@ -807,28 +761,56 @@ svn_client_propget4(apr_hash_t **props,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *adm_access;
-  const svn_wc_entry_t *node;
-  const char *utarget;  /* target, or the url for target */
-  const char *url;
   svn_revnum_t revnum;
 
   SVN_ERR(error_if_wcprop_name(propname));
 
   *props = apr_hash_make(pool);
 
-  SVN_ERR(maybe_convert_to_url(&utarget, target, revision, pool));
-
-  /* Iff utarget is a url, that means we must use it, that is, the
-     requested property information is not available locally. */
-  if (svn_path_is_url(utarget))
+  if (! svn_path_is_url(path_or_url)
+      && (peg_revision->kind == svn_opt_revision_base
+          || peg_revision->kind == svn_opt_revision_working
+          || peg_revision->kind == svn_opt_revision_committed
+          || peg_revision->kind == svn_opt_revision_unspecified)
+      && (revision->kind == svn_opt_revision_base
+          || revision->kind == svn_opt_revision_working
+          || revision->kind == svn_opt_revision_committed
+          || revision->kind == svn_opt_revision_unspecified))
     {
+      svn_wc_adm_access_t *adm_access;
+      const svn_wc_entry_t *node;
+      svn_boolean_t pristine;
+      int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
+
+      SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path_or_url,
+                                     FALSE, adm_lock_level,
+                                     ctx->cancel_func, ctx->cancel_baton,
+                                     pool));
+      SVN_ERR(svn_wc__entry_versioned(&node, path_or_url, adm_access, 
+                                      FALSE, pool));
+
+      SVN_ERR(svn_client__get_revision_number
+              (&revnum, NULL, NULL, revision, path_or_url, pool));
+
+      /* If FALSE, we must want the working revision. */
+      pristine = (revision->kind == svn_opt_revision_committed
+                  || revision->kind == svn_opt_revision_base);
+
+      SVN_ERR(svn_client__get_prop_from_wc(*props, propname, path_or_url, 
+                                           pristine, node, adm_access, 
+                                           depth, ctx, pool));
+
+      SVN_ERR(svn_wc_adm_close(adm_access));
+    }
+  else
+    {
+      const char *url;
       svn_ra_session_t *ra_session;
       svn_node_kind_t kind;
 
       /* Get an RA plugin for this filesystem object. */
       SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
-                                               &url, target, NULL,
+                                               &url, path_or_url, NULL,
                                                peg_revision,
                                                revision, ctx, pool));
 
@@ -837,30 +819,6 @@ svn_client_propget4(apr_hash_t **props,
       SVN_ERR(remote_propget(*props, propname, url, "",
                              kind, revnum, ra_session,
                              depth, pool));
-    }
-  else  /* working copy path */
-    {
-      svn_boolean_t pristine;
-      int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
-
-      SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target,
-                                     FALSE, adm_lock_level,
-                                     ctx->cancel_func, ctx->cancel_baton,
-                                     pool));
-      SVN_ERR(svn_wc__entry_versioned(&node, target, adm_access, FALSE, pool));
-
-      SVN_ERR(svn_client__get_revision_number
-              (&revnum, NULL, NULL, revision, target, pool));
-
-      /* If FALSE, we must want the working revision. */
-      pristine = (revision->kind == svn_opt_revision_committed
-                  || revision->kind == svn_opt_revision_base);
-
-      SVN_ERR(svn_client__get_prop_from_wc(*props, propname, target, pristine,
-                                           node, adm_access, depth, ctx,
-                                           pool));
-
-      SVN_ERR(svn_wc_adm_close(adm_access));
     }
 
   if (actual_revnum)
@@ -1151,7 +1109,7 @@ proplist_walk_cb(const char *path,
 
 
 svn_error_t *
-svn_client_proplist3(const char *target,
+svn_client_proplist3(const char *path_or_url,
                      const svn_opt_revision_t *peg_revision,
                      const svn_opt_revision_t *revision,
                      svn_depth_t depth,
@@ -1162,50 +1120,34 @@ svn_client_proplist3(const char *target,
 {
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *node;
-  const char *utarget;  /* target, or the url for target */
   const char *url;
   svn_revnum_t revnum;
-
-  SVN_ERR(maybe_convert_to_url(&utarget, target, revision, pool));
 
   if (depth == svn_depth_unknown)
     depth = svn_depth_empty;
 
-  /* Iff utarget is a url, that means we must use it, that is, the
-     requested property information is not available locally. */
-  if (svn_path_is_url(utarget))
-    {
-      svn_ra_session_t *ra_session;
-      svn_node_kind_t kind;
-      apr_pool_t *subpool = svn_pool_create(pool);
-
-      /* Get an RA session for this URL. */
-      SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
-                                               &url, target, NULL,
-                                               peg_revision,
-                                               revision, ctx, pool));
-
-      SVN_ERR(svn_ra_check_path(ra_session, "", revnum, &kind, pool));
-
-      SVN_ERR(remote_proplist(url, "",
-                              kind, revnum, ra_session,
-                              depth, receiver, receiver_baton,
-                              pool, subpool));
-      svn_pool_destroy(subpool);
-    }
-  else  /* working copy path */
+  if (! svn_path_is_url(path_or_url)
+      && (peg_revision->kind == svn_opt_revision_base
+          || peg_revision->kind == svn_opt_revision_working
+          || peg_revision->kind == svn_opt_revision_committed
+          || peg_revision->kind == svn_opt_revision_unspecified)
+      && (revision->kind == svn_opt_revision_base
+          || revision->kind == svn_opt_revision_working
+          || revision->kind == svn_opt_revision_committed
+          || revision->kind == svn_opt_revision_unspecified))
     {
       svn_boolean_t pristine;
       int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
 
-      SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target,
+      SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path_or_url,
                                      FALSE, levels_to_lock,
                                      ctx->cancel_func, ctx->cancel_baton,
                                      pool));
-      SVN_ERR(svn_wc__entry_versioned(&node, target, adm_access, FALSE, pool));
+      SVN_ERR(svn_wc__entry_versioned(&node, path_or_url, adm_access, 
+                                      FALSE, pool));
 
-      SVN_ERR(svn_client__get_revision_number
-              (&revnum, NULL, NULL, revision, target, pool));
+      SVN_ERR(svn_client__get_revision_number(&revnum, NULL, NULL, 
+                                              revision, path_or_url, pool));
 
       if ((revision->kind == svn_opt_revision_committed)
           || (revision->kind == svn_opt_revision_base))
@@ -1229,9 +1171,8 @@ svn_client_proplist3(const char *target,
           wb.receiver = receiver;
           wb.receiver_baton = receiver_baton;
 
-          SVN_ERR(svn_wc_walk_entries3(target, adm_access,
-                                       &walk_callbacks, &wb,
-                                       depth, FALSE,
+          SVN_ERR(svn_wc_walk_entries3(path_or_url, adm_access,
+                                       &walk_callbacks, &wb, depth, FALSE,
                                        ctx->cancel_func, ctx->cancel_baton,
                                        pool));
         }
@@ -1239,12 +1180,13 @@ svn_client_proplist3(const char *target,
         {
           apr_hash_t *hash;
 
-          SVN_ERR(pristine_or_working_props(&hash, target, adm_access,
+          SVN_ERR(pristine_or_working_props(&hash, path_or_url, adm_access,
                                             pristine, pool));
-          SVN_ERR(call_receiver(target, hash, receiver, receiver_baton, pool));
+          SVN_ERR(call_receiver(path_or_url, hash, 
+                                receiver, receiver_baton, pool));
 
-          /* If depth is at least svn_depth_files and target is a directory,
-             we'll need to iterate over the directory entries. */
+          /* If DEPTH is at least svn_depth_files and PATH_OR_URL is a
+             directory, we'll need to iterate over the directory entries. */
           if (depth > svn_depth_empty && (node->kind == svn_node_dir))
             {
               apr_hash_t *entries;
@@ -1252,7 +1194,10 @@ svn_client_proplist3(const char *target,
               apr_pool_t *iterpool = svn_pool_create(pool);
 
               SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
-              for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+
+              for (hi = apr_hash_first(pool, entries); 
+                   hi; 
+                   hi = apr_hash_next(hi))
                 {
                   const void *key;
                   void *val;
@@ -1268,7 +1213,7 @@ svn_client_proplist3(const char *target,
                   if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
                     continue;
 
-                  path = svn_path_join(target, key, iterpool);
+                  path = svn_path_join(path_or_url, key, iterpool);
 
                   if (current_entry->kind == svn_node_file
                       || depth == svn_depth_immediates)
@@ -1280,7 +1225,7 @@ svn_client_proplist3(const char *target,
                                        : svn_wc_schedule_delete))
                         continue;
 
-                      SVN_ERR(pristine_or_working_props(&hash, path,
+                      SVN_ERR(pristine_or_working_props(&hash, path, 
                                                         adm_access,
                                                         pristine, iterpool));
                       SVN_ERR(call_receiver(path, hash, receiver,
@@ -1292,6 +1237,24 @@ svn_client_proplist3(const char *target,
         }
 
       SVN_ERR(svn_wc_adm_close(adm_access));
+    }
+  else /* remote target */
+    {
+      svn_ra_session_t *ra_session;
+      svn_node_kind_t kind;
+      apr_pool_t *subpool = svn_pool_create(pool);
+
+      /* Get an RA session for this URL. */
+      SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
+                                               &url, path_or_url, NULL,
+                                               peg_revision,
+                                               revision, ctx, pool));
+
+      SVN_ERR(svn_ra_check_path(ra_session, "", revnum, &kind, pool));
+
+      SVN_ERR(remote_proplist(url, "", kind, revnum, ra_session, depth, 
+                              receiver, receiver_baton, pool, subpool));
+      svn_pool_destroy(subpool);
     }
 
   return SVN_NO_ERROR;
