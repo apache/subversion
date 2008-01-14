@@ -134,7 +134,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                                        repos, revnum, depth, pool));
             /* Have update fix the incompleteness. */
             err = svn_client__update_internal(result_rev, path, revision,
-                                              depth, ignore_externals,
+                                              depth, TRUE, ignore_externals,
                                               allow_unver_obstructions,
                                               use_sleep, FALSE,
                                               ctx, pool);
@@ -154,7 +154,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
         if (entry->url && (strcmp(entry->url, session_url) == 0))
           {
             err = svn_client__update_internal(result_rev, path, revision,
-                                              depth, ignore_externals,
+                                              depth, TRUE, ignore_externals,
                                               allow_unver_obstructions,
                                               use_sleep, FALSE,
                                               ctx, pool);

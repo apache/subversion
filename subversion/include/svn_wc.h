@@ -3262,9 +3262,9 @@ svn_error_t *svn_wc_get_actual_target(const char *path,
  * Else if it is @c svn_depth_empty, update exactly the uppermost
  * target, and don't touch its entries.
  *
- * @note @a depth overrides whatever depth is already set in @a anchor
- * or @a target.  To use those depths, the caller should detect them
- * and set @a depth accordingly.
+ * If @a depth_is_sticky is set and @a depth is not @c
+ * svn_depth_unknown, then in addition to updating PATHS, also set
+ * their sticky ambient depth value to @a depth.
  *
  * @since New in 1.5.
  */
@@ -3273,6 +3273,7 @@ svn_error_t *svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                                        const char *target,
                                        svn_boolean_t use_commit_times,
                                        svn_depth_t depth,
+                                       svn_boolean_t depth_is_sticky,
                                        svn_boolean_t allow_unver_obstructions,
                                        svn_wc_notify_func2_t notify_func,
                                        void *notify_baton,
@@ -3295,9 +3296,10 @@ svn_error_t *svn_wc_get_update_editor3(svn_revnum_t *target_revision,
  * Similar to svn_wc_get_update_editor3() but with the @a
  * allow_unver_obstructions parameter always set to FALSE, @a
  * conflict_func and baton set to NULL, @a fetch_func and baton set to
- * NULL, @a preserved_exts set to NULL, and @a depth set according to
- * @a recurse: if @a recurse is TRUE, pass @c svn_depth_infinity, if
- * FALSE, pass @c svn_depth_files.
+ * NULL, @a preserved_exts set to NULL, @a depth_is_sticky set to
+ * FALSE, and @a depth set according to @a recurse: if @a recurse is
+ * TRUE, pass @c svn_depth_infinity, if FALSE, pass @c
+ * svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -3388,7 +3390,7 @@ svn_error_t *svn_wc_get_update_editor(svn_revnum_t *target_revision,
  * have their working timestamp set to the last-committed-time.  If
  * FALSE, the working files will be touched with the 'now' time.
  *
- * @a depth behaves as for svn_wc_get_update_editor3().
+ * @a depth and @a depth_is_sticky behave as for svn_wc_get_update_editor3().
  *
  * If @a allow_unver_obstructions is TRUE, then allow unversioned
  * obstructions when adding a path.
@@ -3401,6 +3403,7 @@ svn_error_t *svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                                        const char *switch_url,
                                        svn_boolean_t use_commit_times,
                                        svn_depth_t depth,
+                                       svn_boolean_t depth_is_sticky,
                                        svn_boolean_t allow_unver_obstructions,
                                        svn_wc_notify_func2_t notify_func,
                                        void *notify_baton,
@@ -3419,8 +3422,9 @@ svn_error_t *svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
  * Similar to svn_wc_get_switch_editor3() but with the
  * @a allow_unver_obstructions parameter always set to FALSE,
  * @a preserved_exts set to NULL, @a conflict_func and baton set to NULL,
- * and @a depth set according to @a recurse: if @a recurse is TRUE, pass @c
- * svn_depth_infinity, if FALSE, pass @c svn_depth_files.
+ * @a depth_is_sticky set to FALSE, and @a depth set according to @a
+ * recurse: if @a recurse is TRUE, pass @c svn_depth_infinity, if
+ * FALSE, pass @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */

@@ -491,7 +491,8 @@ def depth_immediates_bring_in_file(sbox):
 def depth_immediates_fill_in_dir(sbox):
   "bring a dir into a depth-immediates working copy"
 
-  # Run 'svn up A' to fill in A as a depth-infinity subdir.
+  # Run 'svn up A --set-depth=infinity' to fill in A as a
+  # depth-infinity subdir.
   ign_a, ign_b, wc_immediates, wc \
                         = set_up_depthy_working_copies(sbox, immediates=True)
   A_path = os.path.join(wc_immediates, 'A')
@@ -523,14 +524,14 @@ def depth_immediates_fill_in_dir(sbox):
                                         expected_status,
                                         None, None,
                                         None, None, None, None,
-                                        '--depth', 'infinity',
+                                        '--set-depth', 'infinity',
                                         A_path)
 
 #----------------------------------------------------------------------
 def depth_mixed_bring_in_dir(sbox):
   "bring a dir into a mixed-depth working copy"
 
-  # Run 'svn up --depth=immediates A' in a depth-empty working copy.
+  # Run 'svn up --set-depth=immediates A' in a depth-empty working copy.
   wc_empty, ign_a, ign_b, wc = set_up_depthy_working_copies(sbox, empty=True)
   A_path = os.path.join(wc_empty, 'A')
   B_path = os.path.join(wc_empty, 'A', 'B')
@@ -556,7 +557,7 @@ def depth_mixed_bring_in_dir(sbox):
                                         expected_status,
                                         None, None,
                                         None, None, None, None,
-                                        '--depth', 'files',
+                                        '--set-depth', 'files',
                                         A_path)
   # Check that A was added at depth=files.
   svntest.actions.run_and_verify_svn(None, "Depth: files|Path.+|URL.+|" \
@@ -587,7 +588,7 @@ def depth_mixed_bring_in_dir(sbox):
                                         expected_status,
                                         None, None,
                                         None, None, None, None,
-                                        '--depth', 'immediates',
+                                        '--set-depth', 'immediates',
                                         B_path)
   # Check that A/B was added at depth=immediates.
   svntest.actions.run_and_verify_svn(None, "Depth: immediates|Path.+|URL.+|" \
@@ -615,7 +616,7 @@ def depth_mixed_bring_in_dir(sbox):
                                         expected_status,
                                         None, None,
                                         None, None, None, None,
-                                        '--depth', 'empty',
+                                        '--set-depth', 'empty',
                                         C_path)
   # Check that A/C was added at depth=empty.
   svntest.actions.run_and_verify_svn(None, "Depth: empty|Path.+|URL.+|" \
@@ -820,7 +821,7 @@ def depth_update_to_more_depth(sbox):
 
   os.chdir(wc_dir)
 
-  # Run 'svn up --depth=files' in a depth-empty working copy.
+  # Run 'svn up --set-depth=files' in a depth-empty working copy.
   expected_output = svntest.wc.State('', {
     'iota'              : Item(status='A '),
     })
@@ -837,12 +838,12 @@ def depth_update_to_more_depth(sbox):
                                         expected_status,
                                         None, None,
                                         None, None, None, None,
-                                        '--depth', 'files')
+                                        '--set-depth', 'files')
   svntest.actions.run_and_verify_svn(None, "Depth: files|Path.+|URL.+|" \
                                      "Repository.+|Revision.+|Node Kind.+|" \
                                      "Schedule.+|Last.+|\n", [], "info")
 
-  # Run 'svn up --depth=immediates' in the now depth-files working copy.
+  # Run 'svn up --set-depth=immediates' in the now depth-files working copy.
   expected_output = svntest.wc.State('', {
     'A'              : Item(status='A '),
     })
@@ -861,7 +862,7 @@ def depth_update_to_more_depth(sbox):
                                         expected_status,
                                         None, None,
                                         None, None, None, None,
-                                        '--depth', 'immediates')
+                                        '--set-depth', 'immediates')
   svntest.actions.run_and_verify_svn(None, "Depth: immediates|Path.+|URL.+|" \
                                      "Repository.+|Revision.+|Node Kind.+|" \
                                      "Schedule.+|Last.+|\n", [], "info")
@@ -890,7 +891,7 @@ def depth_update_to_more_depth(sbox):
                                         expected_status,
                                         None, None,
                                         None, None, None, None,
-                                        '--depth', 'files', 'A')
+                                        '--set-depth', 'files', 'A')
   svntest.actions.run_and_verify_svn(None, "Depth: immediates|Path.+|URL.+|" \
                                      "Repository.+|Revision.+|Node Kind.+|" \
                                      "Schedule.+|Last.+|\n", [], "info")
@@ -898,7 +899,7 @@ def depth_update_to_more_depth(sbox):
                                      "Repository.+|Revision.+|Node Kind.+|" \
                                      "Schedule.+|Last.+|\n", [], "info", "A")
 
-  # Run 'svn up --depth=infinity' in the working copy.
+  # Run 'svn up --set-depth=infinity' in the working copy.
   expected_output = svntest.wc.State('', {
     'A/B'            : Item(status='A '),
     'A/B/lambda'     : Item(status='A '),
@@ -926,7 +927,7 @@ def depth_update_to_more_depth(sbox):
                                         expected_status,
                                         None, None,
                                         None, None, None, None,
-                                        '--depth', 'infinity')
+                                        '--set-depth', 'infinity')
   # svn info doesn't print a 'Depth:' line for infinity, so we verify
   # that no such line is present in the output.
   output1, err = svntest.actions.run_and_verify_svn(None, None, [], "info")
@@ -1049,7 +1050,7 @@ def diff_in_depthy_wc(sbox):
 
   # Upgrade to depth-files.
   svntest.actions.run_and_verify_svn(None, None, [], 'up',
-                                     '--depth', 'files', '-r1')
+                                     '--set-depth', 'files', '-r1')
   # The diff should contain only the propchange on '.' and the
   # contents change on iota.
   expected_output = svntest.verify.UnorderedOutput(diff[:13])
@@ -1062,7 +1063,7 @@ def diff_in_depthy_wc(sbox):
 
   # Upgrade to depth-immediates.
   svntest.actions.run_and_verify_svn(None, None, [], 'up',
-                                     '--depth', 'immediates', '-r1')
+                                     '--set-depth', 'immediates', '-r1')
   # The diff should contain the propchanges on '.' and 'A' and the
   # contents change on iota.
   expected_output = svntest.verify.UnorderedOutput(diff[:19])
@@ -1075,7 +1076,7 @@ def diff_in_depthy_wc(sbox):
 
   # Upgrade A to depth-files.
   svntest.actions.run_and_verify_svn(None, None, [], 'up',
-                                     '--depth', 'files', '-r1', 'A')
+                                     '--set-depth', 'files', '-r1', 'A')
   # The diff should contain everything but the contents change on
   # gamma (which does not exist in this working copy).
   expected_output = svntest.verify.UnorderedOutput(diff)
@@ -1226,7 +1227,7 @@ def add_tree_with_depth_files(sbox):
 def upgrade_from_above(sbox):
   "upgrade a depth=empty wc from above"
 
-  # The bug was that 'svn up --depth=files' worked from within the
+  # The bug was that 'svn up --set-depth=files' worked from within the
   # working copy, but not from without with working copy top given
   # as an argument.  Both ways would correctly cause 'iota' to
   # appear, but only the former actually upgraded the depth of the
@@ -1260,7 +1261,7 @@ def upgrade_from_above(sbox):
                                           expected_disk,
                                           expected_status,
                                           None, None, None, None, None, None,
-                                          '--depth=files')
+                                          '--set-depth=files')
     svntest.actions.run_and_verify_svn(None, "Depth: +files|Path.+|URL.+|" \
                                        "Repository.+|Revision.+|Node Kind.+|" \
                                        "Schedule.+|Last.+|\n", [], "info")
@@ -1285,7 +1286,7 @@ def upgrade_from_above(sbox):
                                         expected_disk,
                                         expected_status,
                                         None, None, None, None, None, None,
-                                        '--depth=files', wc)
+                                        '--set-depth=files', wc)
   svntest.actions.run_and_verify_svn(None, "Depth: +files|Path.+|URL.+|" \
                                      "Repository.+|Revision.+|Node Kind.+|" \
                                      "Schedule.+|Last.+|\n", [], "info", wc)
@@ -1329,7 +1330,7 @@ def status_in_depthy_wc(sbox):
 
   # Upgrade to depth-files.
   svntest.actions.run_and_verify_svn(None, None, [], 'up',
-                                     '--depth', 'files', '-r1')
+                                     '--set-depth', 'files', '-r1')
   # The output should contain only the changes on '.' and 'iota'.
   expected_output = svntest.verify.UnorderedOutput(status[:3])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
@@ -1341,7 +1342,7 @@ def status_in_depthy_wc(sbox):
 
   # Upgrade to depth-immediates.
   svntest.actions.run_and_verify_svn(None, None, [], 'up',
-                                     '--depth', 'immediates', '-r1')
+                                     '--set-depth', 'immediates', '-r1')
   # The output should contain the changes on '.', 'A' and 'iota'.
   expected_output = svntest.verify.UnorderedOutput(status[:4])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
@@ -1353,7 +1354,7 @@ def status_in_depthy_wc(sbox):
 
   # Upgrade A to depth-files.
   svntest.actions.run_and_verify_svn(None, None, [], 'up',
-                                     '--depth', 'files', '-r1', 'A')
+                                     '--set-depth', 'files', '-r1', 'A')
   # The output should contain everything but the change on
   # gamma (which does not exist in this working copy).
   expected_output = svntest.verify.UnorderedOutput(status)
