@@ -515,55 +515,6 @@ next_history_rev(apr_array_header_t *histories)
   return next_rev;
 }
 
-struct filter_baton
-{
-  svn_fs_t *fs;
-  svn_revnum_t rev;
-  svn_fs_root_t *root;
-
-  /* Boolean which shortcircuits the filter process.  See note in
-     branching_copy_filter() for details. */
-  svn_boolean_t finding_current_revision;
-};
-
-/* Use an algorithm similar to the one on in
-   libsvn_client/copy.c:get_implied_mergeinfo() to determine the expected
-   mergeinfo for a branching copy from SRC_PATH to DST_PATH in REV.
-   Return the resulting mergeinfo in *IMPLIED_MERGEINFO. */
-static svn_error_t *
-calculate_branching_copy_mergeinfo(apr_hash_t **implied_mergeinfo,
-                                   svn_fs_root_t *src_root,
-                                   const char *src_path,
-                                   const char *dst_path,
-                                   svn_revnum_t rev,
-                                   apr_pool_t *pool)
-{
-  svn_fs_root_t *copy_root;
-  const char *copy_path;
-  svn_revnum_t oldest_rev;
-  svn_merge_range_t *range;
-  apr_array_header_t *rangelist;
-
-  *implied_mergeinfo = apr_hash_make(pool);
-
-  SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, src_root, src_path,
-                              pool));
-  if (copy_root == NULL)
-    return SVN_NO_ERROR;
-
-  oldest_rev = svn_fs_revision_root_revision(copy_root);
-
-  range = apr_palloc(pool, sizeof(*range));
-  range->start = oldest_rev;
-  range->end = rev - 1;
-  range->inheritable = TRUE;
-  rangelist = apr_array_make(pool, 1, sizeof(range));
-  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
-  apr_hash_set(*implied_mergeinfo, dst_path, APR_HASH_KEY_STRING, rangelist);
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_repos__get_path_mergeinfo(apr_hash_t **mergeinfo,
                               svn_fs_t *fs,
@@ -595,123 +546,6 @@ svn_repos__get_path_mergeinfo(apr_hash_t **mergeinfo,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_repos__is_branching_copy(svn_boolean_t *is_branching,
-                             svn_fs_root_t *root,
-                             const char *path,
-                             apr_hash_t *path_mergeinfo,
-                             apr_pool_t *pool)
-{
-  const char *copy_path;
-  svn_fs_root_t *copy_root;
-  svn_revnum_t copy_rev;
-  apr_hash_t *mergeinfo, *implied_mergeinfo;
-  apr_hash_t *deleted, *added;
-  svn_revnum_t rev = svn_fs_revision_root_revision(root);
-  apr_pool_t *subpool = svn_pool_create(pool);
-
-  /* Assume it's not a branching revision */
-  *is_branching = FALSE;
-
-  /* If we weren't supplied with any path_mergeinfo, we need to go fetch it. */
-  if (path_mergeinfo != NULL)
-    mergeinfo = path_mergeinfo;
-  else
-    SVN_ERR(svn_repos__get_path_mergeinfo(&mergeinfo, svn_fs_root_fs(root),
-                                          path, rev, subpool));
-
-  /* Check and see if there was a copy in this revision.  If not, set omit to
-     FALSE and return.  */
-  SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, root, path,
-                              subpool));
-  if (copy_root == NULL)
-    {
-      svn_pool_destroy(subpool);
-      return SVN_NO_ERROR;
-    }
-
-  copy_rev = svn_fs_revision_root_revision(copy_root);
-  if (copy_rev != rev)
-    {
-      svn_pool_destroy(subpool);
-      return SVN_NO_ERROR;
-    }
-
-  /* At this point, we know that PATH was created as a copy in REV.  Using an
-     algorithm similar to libsvn_client/copy.c:get_implied_mergeinfo(), check
-     to see if the mergeinfo generated on a branching copy, and the mergeinfo
-     that we are presented with matches.  If so, omit the path. */
-  SVN_ERR(calculate_branching_copy_mergeinfo(&implied_mergeinfo, copy_root,
-                                             copy_path, path, rev, subpool));
-
-  SVN_ERR(svn_mergeinfo_diff(&deleted, &added, implied_mergeinfo,
-                             mergeinfo, FALSE,
-                             subpool));
-  if (apr_hash_count(deleted) == 0 && apr_hash_count(added) == 0)
-    {
-      svn_pool_destroy(subpool);
-      return SVN_NO_ERROR;
-    }
-
-  /* If we've reached this point, we've found a branching revision. */
-  *is_branching = TRUE;
-
-  svn_pool_destroy(subpool);
-  return SVN_NO_ERROR;
-}
-
-/* Filter function to be used with svn_fs_get_mergeinfo_for_tree().
-   This should return FALSE if PATH is a copy which is considered a
-   "branch"; that is, a copied path which has mergeinfo identical to
-   what would be expected for a copy from source to destination
-   without any modification.
-
-   This function implements the svn_fs_mergeinfo_filter_func_t API. */
-static svn_error_t *
-branching_copy_filter(void *baton,
-                      svn_boolean_t *omit,
-                      const char *path,
-                      apr_hash_t *path_mergeinfo,
-                      apr_pool_t *pool)
-{
-  struct filter_baton *fb = (struct filter_baton *) baton;
-  svn_node_kind_t kind;
-  svn_boolean_t is_branching;
-
-  /* Assume *omit is FALSE, unless determined otherwise. */
-  *omit = FALSE;
-
-  /* If the rev isn't the rev of interest for which we are currently looking
-     for new mergeinfo, don't omit this path's mergeinfo.
-
-     Consider the following scenario:  We are finding the mergeinfo difference
-     between r10, which is a branching copy, and r9 which is the previous
-     revision.  If the current revision is r10, *and*, we are looking for
-     mergeinfo in r10, we may want to omit, so this test should fail.
-
-     However, if the current revision is r11, and we're looking for mergeinfo
-     in r10, we want to keep it in, even if r10 is a branching revision.  If
-     we didn't those extra revisions would show up as a diff with r11, and they
-     would get pulled in as children of r11.
-
-     Whew!  That's a long explantion for a single line of code. :) */
-  if (!fb->finding_current_revision)
-    return SVN_NO_ERROR;
-
-  /* Find out if the path even exists in fb->root. */
-  SVN_ERR(svn_fs_check_path(&kind, fb->root, path, pool));
-  if (kind == svn_node_none)
-    return SVN_NO_ERROR;
-
-  /* Finally, do the generic check for branching revisions. */
-  SVN_ERR(svn_repos__is_branching_copy(&is_branching, fb->root, path,
-                                       path_mergeinfo, pool));
-  if (is_branching)
-    *omit = TRUE;
-
-  return SVN_NO_ERROR;
-}
-
 /* Return the combined rangelists for everyone's mergeinfo for the
    PATHS tree at REV in *RANGELIST.  Perform all allocations in POOL. */
 static svn_error_t *
@@ -739,20 +573,18 @@ get_combined_mergeinfo(apr_hash_t **mergeinfo,
   /* Get the mergeinfo for each tree roots in PATHS. */
   SVN_ERR(svn_fs_revision_root(&root, fs, rev, subpool));
 
-  fb.fs = fs;
-  fb.rev = rev;
-  fb.root = root;
-  fb.finding_current_revision = (rev == current_rev);
-  
-  if (fb.finding_current_revision)
+  if (rev == current_rev)
     query_paths = paths;
   else
     {
       /* If we're looking at a previous revision, some of the paths
          might not exist, and svn_fs_get_mergeinfo_for_tree expects
          them to! */
+      /* TODO(reint): This is somewhat of a hack, though; perhaps this
+         indicates that svn_fs_get_mergeinfo_for_tree is not the right
+         API to be using. */
       int i;
-      apr_array_header_t *existing_paths = apr_array_make(pool, paths->nelts, 
+      apr_array_header_t *existing_paths = apr_array_make(pool, paths->nelts,
                                                           sizeof(const char *));
       for (i = 0; i < paths->nelts; i++)
         {
@@ -766,7 +598,7 @@ get_combined_mergeinfo(apr_hash_t **mergeinfo,
     }
 
   SVN_ERR(svn_fs_get_mergeinfo_for_tree(&tree_mergeinfo, root, query_paths,
-                                        branching_copy_filter, &fb, pool));
+                                        pool));
 
   *mergeinfo = apr_hash_make(pool);
 

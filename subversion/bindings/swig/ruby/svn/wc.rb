@@ -323,6 +323,7 @@ module Svn
             :diff3_cmd => nil,
             :notify_func => nil,
             :cancel_func => nil,
+            :conflict_func => nil,
             :traversal_info => _traversal_info,
             :preserved_exts => []
           }
@@ -336,9 +337,6 @@ module Svn
         # callback.
         arguments[:fetch_func] = nil
 
-        # TODO(rb support conflict_fun): implement support for the
-        # conflict_func callback.
-        arguments[:conflict_func] = nil
 
         results = Wc.get_update_editor3(arguments[:target_revision], self,
                                         arguments[:target],
@@ -387,6 +385,7 @@ module Svn
           :diff3_cmd => nil,
           :notify_func => nil,
           :cancel_func => nil,
+          :conflict_func => nil,
           :traversal_info => _traversal_info,
           :preserved_exts => []
         }
@@ -394,10 +393,6 @@ module Svn
         Util.validate_options(arguments,
                               optional_arguments_defaults.keys,
                               SWITCH_EDITOR2_REQUIRED_ARGUMENTS_KEYS)
-
-        # TODO(rb support conflict_fun): implement support for the
-        # conflict_func callback.
-        arguments[:conflict_func]=nil
 
         results = Wc.get_switch_editor3(arguments[:target_revision], self,
                                         arguments[:target],

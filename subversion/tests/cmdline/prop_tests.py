@@ -1533,6 +1533,83 @@ def remove_custom_ns_props(sbox):
                                         expected_status,
                                         None, None, None, None, None, 1)
 
+def props_over_time(sbox):
+  "property retrieval with peg and operative revs"
+
+  # Bootstrap
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Convenience variables
+  iota_path = os.path.join(wc_dir, 'iota')
+  iota_url = sbox.repo_url + '/iota'
+    
+  # Add/tweak a property 'revision' with value revision-committed to a
+  # file, commit, and then repeat this a few times.
+  for rev in range(2, 4):
+    svntest.main.run_svn(None, 'propset', 'revision', str(rev), iota_path)
+    svntest.main.run_svn(None, 'ci', '-m', 'logmsg', iota_path)
+
+  # Backdate to r2 so the defaults for URL- vs. WC-style queries are
+  # different.
+  svntest.main.run_svn(None, 'up', '-r2', wc_dir)
+  
+  # Now, test propget of the property across many combinations of
+  # pegrevs, operative revs, and wc-path vs. url style input specs.
+  # NOTE: We're using 0 in these loops to mean "unspecified".
+  for path in iota_path, iota_url:
+    for peg_rev in range(0, 4):
+      for op_rev in range(0, 4):
+        # Calculate the expected property value.  If there is an
+        # operative rev, we expect the output to match revisions
+        # there.  Else, we'll be looking at the peg-rev value.  And if
+        # neither are supplied, it depends on the path vs. URL
+        # question.
+        if op_rev > 1:
+          expected = str(op_rev)
+        elif op_rev == 1:
+          expected = None
+        else:
+          if peg_rev > 1:
+            expected = str(peg_rev)
+          elif peg_rev == 1:
+            expected = None
+          else:
+            if path == iota_url:
+              expected = "3" # HEAD
+            else:
+              expected = "2" # BASE
+
+        peg_path = path + (peg_rev != 0 and '@' + str(peg_rev) or "")
+
+        ### Test 'svn propget'
+        pget_expected = expected
+        if pget_expected:
+          pget_expected = [ pget_expected + "\n" ]
+        if op_rev != 0:
+          svntest.actions.run_and_verify_svn(None, pget_expected, [],
+                                             'propget', 'revision', peg_path,
+                                             '-r', str(op_rev))
+        else:
+          svntest.actions.run_and_verify_svn(None, pget_expected, [],
+                                             'propget', 'revision', peg_path)
+
+        ### Test 'svn proplist -v'
+        if op_rev != 0 or peg_rev != 0:  # a revision-ful query output URLs
+          path = iota_url
+        plist_expected = expected
+        if plist_expected:
+          plist_expected = [ "Properties on '" + path + "':\n",
+                             "  revision : " + expected + "\n" ]
+
+        if op_rev != 0:
+          svntest.actions.run_and_verify_svn(None, plist_expected, [],
+                                             'proplist', '-v', peg_path,
+                                             '-r', str(op_rev))
+        else:
+          svntest.actions.run_and_verify_svn(None, plist_expected, [],
+                                             'proplist', '-v', peg_path)
+
 ########################################################################
 # Run the tests
 
@@ -1564,6 +1641,7 @@ test_list = [ None,
               invalid_propnames,
               SkipUnless(perms_on_symlink, svntest.main.is_posix_os),
               remove_custom_ns_props,
+              props_over_time,
              ]
 
 if __name__ == '__main__':

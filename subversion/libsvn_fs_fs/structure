@@ -40,6 +40,9 @@ repository) is:
   indexes.sqlite      SQLite database containing index for svn:mergeinfo props
   transactions/       Subdirectory containing transactions
     <txnid>.txn/      Directory containing transaction <txnid>
+  txn-protorevs/      Subdirectory containing transaction proto-revision files
+    <txnid>.rev       Proto-revision file for transaction <txnid>
+    <txnid>.rev-lock  Write lock for proto-rev file
   transaction-current File containing the next transaction key
   locks/              Subdirectory containing locks
     <partial-digest>/ Subdirectory named for first 3 letters of an MD5 digest
@@ -102,13 +105,15 @@ Format 1: (understood by Subversion 1.1+)
   Delta representations in revision files must contain only svndiff0
   data.  No format options are permitted.  No SQLite index is
   present.  No mechanism is provided to prevent transaction name
-  reuse.
+  reuse.  Proto-rev and its lock are stored in transactions/<txnid>/rev
+  and transactions/<txnid>/rev-lock.
 
 Format 2: (understood by Subversion 1.4+)
   Delta representations in revision files may contain either svndiff0
   or svndiff1 data.  No format options are permitted.  No SQLite
   index is present.  No mechanism is provided to prevent transaction
-  name reuse.
+  name reuse.  Proto-rev and its lock are stored in transactions/<txnid>/rev
+  and transactions/<txnid>/rev-lock.
 
 Format 3: (understood by Subversion 1.5+)
   Delta representations in revision files may contain either svndiff0
@@ -116,7 +121,8 @@ Format 3: (understood by Subversion 1.5+)
   index is present, and should be updated whenever the svn:mergeinfo property
   is set on a node.  To prevent transaction name reuse, transaction names
   should be generated using the transaction sequence number stored in the
-  transaction-current file.
+  transaction-current file.  Proto-rev and its lock are stored in
+  txn-protorevs/<txnid>.rev and txn-protorevs/<txnid>.rev-lock.
 
 Filesystem format options
 -------------------------
@@ -314,8 +320,6 @@ Transaction layout
 
 A transaction directory has the following layout:
 
-  rev                        Prototype rev file with new text reps
-  rev-lock                   Lockfile for writing to the above
   props                      Transaction props
   mergeinfo                  Transaction mergeinfo props, if any
   next-ids                   Next temporary node-ID and copy-ID
@@ -323,6 +327,13 @@ A transaction directory has the following layout:
   node.<nid>.<cid>           New node-rev data for node
   node.<nid>.<cid>.props     Props for new node-rev, if changed
   node.<nid>.<cid>.children  Directory contents for node-rev
+
+In FS formats 1 and 2, it also contains:
+
+  rev                        Prototype rev file with new text reps
+  rev-lock                   Lockfile for writing to the above
+
+In newer formats, these files are in the txn-protorevs/ directory.
 
 The prototype rev file is used to store the text representations as
 they are received from the client.  To ensure that only one client is

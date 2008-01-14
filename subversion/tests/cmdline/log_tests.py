@@ -242,16 +242,16 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
                        'Create branches/a from trunk.')
 
   # Some changes on the branch - r4
-  svntest.main.file_append(os.path.join(branch_a, 'iota'),
-                           "'A' has changed a bit.\n")
-  svntest.main.file_append(os.path.join(branch_a, 'A', 'mu'),
-                           "Don't forget to look at 'upsilon', too.")
+  svntest.main.file_append_binary(os.path.join(branch_a, 'iota'),
+                                  "'A' has changed a bit.\n")
+  svntest.main.file_append_binary(os.path.join(branch_a, 'A', 'mu'),
+                                  "Don't forget to look at 'upsilon', too.")
   svntest.main.file_write(os.path.join(branch_a, upsilon_path),
-                          "This is the file 'upsilon'.\n")
+                          "This is the file 'upsilon'.\n", "wb")
   svntest.main.run_svn(None, 'add',
                        os.path.join(branch_a, upsilon_path))
   svntest.main.run_svn(None, 'ci', '-m',
-                       "Add the file 'upsilon', and change some other files.\n")
+                       "Add the file 'upsilon', and change some other files.")
 
   # Create another branch - r5
   svntest.main.run_svn(None, 'cp', 'trunk', branch_c)
@@ -286,7 +286,7 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   # Wording change in mu - r9
   svntest.main.file_write(os.path.join('trunk', 'A', 'mu'),
                           "This is the file 'mu'.\n" +
-                          "Don't forget to look at 'upsilon', as well.")
+                          "Don't forget to look at 'upsilon', as well.", "wb")
   svntest.main.run_svn(None, 'ci', '-m',
                        "Wording change in mu.")
 
@@ -299,15 +299,16 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
                        "Create branches/b from trunk")
 
   # Add another file, make some changes on branches/a - r11
-  svntest.main.file_append(os.path.join(branch_a, upsilon_path),
-                           "There is also the file 'xi'.")
+  svntest.main.file_append_binary(os.path.join(branch_a, upsilon_path),
+                                  "There is also the file 'xi'.")
   svntest.main.file_write(os.path.join(branch_a, 'A', 'xi'),
-                          "This is the file 'xi'.\n")
+                          "This is the file 'xi'.\n", "wb")
   svntest.main.run_svn(None, 'add',
                        os.path.join(branch_a, 'A', 'xi'))
   svntest.main.file_write(os.path.join(branch_a, 'iota'),
                           "This is the file 'iota'.\n" +
-                          "'A' has changed a bit, with 'upsilon', and 'xi'.")
+                          "'A' has changed a bit, with 'upsilon', and 'xi'.",
+                          "wb")
   svntest.main.run_svn(None, 'ci', '-m',
                        "Added 'xi' to branches/a, made a few other changes.")
 
@@ -319,8 +320,8 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   os.chdir(os.path.join('..', '..'))
 
   # More wording changes - r13
-  svntest.main.file_append(os.path.join(branch_b, 'A', 'D', 'gamma'),
-                           "Watch out for the rays!")
+  svntest.main.file_append_binary(os.path.join(branch_b, 'A', 'D', 'gamma'),
+                                  "Watch out for the rays!")
   svntest.main.run_svn(None, 'ci', '-m',
                        "Modify 'gamma' on branches/b.")
 
@@ -339,8 +340,8 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   os.chdir(os.path.join('..', '..'))
 
   # Modify a file on branches/c - r16
-  svntest.main.file_append(os.path.join(branch_c, 'A', 'mu'),
-                           "\nThis is yet more content in 'mu'.")
+  svntest.main.file_append_binary(os.path.join(branch_c, 'A', 'mu'),
+                                  "\nThis is yet more content in 'mu'.")
   svntest.main.run_svn(None, 'ci', '-m',
                        "Modify 'mu' on branches/c.")
 
@@ -350,7 +351,8 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   svntest.main.file_write(os.path.join('A', 'mu'),
                           "This is the file 'mu'.\n" +
                           "Don't forget to look at 'upsilon', as well.\n" +
-                          "This is yet more content in 'mu'.")
+                          "This is yet more content in 'mu'.",
+                          "wb")
   svntest.main.run_svn(None, 'resolved', os.path.join('A', 'mu'))
   svntest.main.run_svn(None, 'ci', '-m',
                        "Merge branches/c to trunk, " +
@@ -452,25 +454,26 @@ def parse_log_output(log_lines):
         paths = []
         path_line = log_lines.pop(0).strip()
 
-        # Stop on either a blank line or a "Result of a merge..." line
-        while path_line != '' and path_line[0:6] != 'Result':
+        # Stop on either a blank line or a "Merged via: ..." line
+        while path_line != '' and path_line[0:6] != 'Merged':
           paths.append( (path_line[0], path_line[2:]) )
           path_line = log_lines.pop(0).strip()
 
         this_item['paths'] = paths
 
-        if path_line[0:6] == 'Result':
+        if path_line[0:6] == 'Merged':
           is_result = 1
           result_line = path_line
 
-      elif next_line[0:6] == 'Result':
+      elif next_line[0:6] == 'Merged':
         is_result = 1
         result_line = next_line.strip()
 
-      # Parse output of "Result of a merge..." line
+      # Parse output of "Merged via: ..." line
       if is_result:
         merges = []
-        for rev_str in result_line[24:].split(','):
+        prefix_len = len('Merged via: ')
+        for rev_str in result_line[prefix_len:].split(','):
           merges.append(int(rev_str.strip()[1:]))
         this_item['merges'] = merges
 
@@ -997,7 +1000,7 @@ Merge r12 and r14 from branch to trunk.
 r14 | bob   | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 1 line
 Changed paths:
    M /trunk/death-ray.c
-Result of a merge from: r24
+Merged via: r24
 
 Remove inadvertent changes to Death-Ray-o-Matic introduced in r12.
 ------------------------------------------------------------------------
@@ -1005,7 +1008,7 @@ r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 1 line
 Changed paths:
    M /trunk/frobnicator/frapnalyzer.c
    M /trunk/death-ray.c
-Result of a merge from: r24
+Merged via: r24
 
 Fix frapnalyzer bug in frobnicator.
 ------------------------------------------------------------------------''',
@@ -1015,22 +1018,22 @@ r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 1 line
 Merge r12 and r14 from branch to trunk.
 ------------------------------------------------------------------------
 r14 | bob   | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 1 line
-Result of a merge from: r24
+Merged via: r24
 
 Remove inadvertent changes to Death-Ray-o-Matic introduced in r12.
 ------------------------------------------------------------------------
 r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 1 line
-Result of a merge from: r24
+Merged via: r24
 
 Fix frapnalyzer bug in frobnicator.
 ------------------------------------------------------------------------
 r10 | alice | 2007-04-16 19:02:28 -0500 (Mon, 16 Apr 2007) | 1 line
-Result of a merge from: r12, r24
+Merged via: r12, r24
 
 Fix frapnalyzer documentation.
 ------------------------------------------------------------------------
 r9 | bob   | 2007-04-16 19:01:48 -0500 (Mon, 16 Apr 2007) | 1 line
-Result of a merge from: r12, r24
+Merged via: r12, r24
 
 Whitespace fixes.  No functional change.
 ------------------------------------------------------------------------''',
@@ -1056,8 +1059,8 @@ Log message for revision 3.
 
 
 def check_merge_results(log_chain, expected_merges):
-  '''Check LOG_CHAIN to see if the log information contains 'Result of Merge'
-  informaiton indicated by EXPECTED_MERGES.  EXPECTED_MERGES is a dictionary
+  '''Check LOG_CHAIN to see if the log information contains 'Merged via'
+  information indicated by EXPECTED_MERGES.  EXPECTED_MERGES is a dictionary
   whose key is the merged revision, and whose value is the merging revision.'''
 
   # Check to see if the number and values of the revisions is correct
@@ -1365,8 +1368,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               XFail(SkipUnless(merge_sensitive_log_non_branching_revision,
                                server_has_mergeinfo)),
-              SkipUnless(merge_sensitive_log_added_path,
-                         server_has_mergeinfo),
+              XFail(SkipUnless(merge_sensitive_log_added_path,
+                               server_has_mergeinfo)),
               log_single_change,
               XFail(log_changes_range),
               XFail(log_changes_list),

@@ -340,7 +340,24 @@ def get_props(path):
         # we knew this was a multiline property.
         props[name] = props[name] + "\n"
         first_value = 0
-      props[name] = props[name] + line
+      # Keep the line endings consistent with what was done to the first
+      # line by stripping whitespace and then appending a newline.  This
+      # prevents multiline props on Windows that must be stored as UTF8/LF
+      # in the repository (e.g. svn:mergeinfo), say like this:
+      #
+      #   "propname : propvalLine1<LF>propvalLine2<LF>propvalLine3"
+      #
+      # but that print to stdout like this:
+      #
+      #   Properties on 'somepath':<CR><LF>
+      #     propname : propvalLine1<CR><CR><LF>
+      #   propvalLine1<CR><CR><LF>
+      #   propvalLine1<CR><LF>
+      #
+      # from looking like this in the returned PROPS hash:
+      #
+      #   "propname" --> "propvalLine1<LF>propvalLine2<CR><LF>propvalLine3<LF>"
+      props[name] = props[name] + line.strip() + "\n"
 
   return props
 

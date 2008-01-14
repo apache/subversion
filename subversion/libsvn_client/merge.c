@@ -1040,6 +1040,10 @@ typedef struct
      cleared after each invocation of the callback. */
   apr_hash_t *skipped_paths;
 
+  /* A list of the root paths of any added subtrees which might require
+     their own explicit mergeinfo. */
+  apr_hash_t *added_paths;
+
   /* Flag indicating whether it is a single file merge or not. */
   svn_boolean_t is_single_file_merge;
 
@@ -1172,6 +1176,29 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
 
           apr_hash_set(notify_b->skipped_paths, skipped_path,
                        APR_HASH_KEY_STRING, skipped_path);
+        }
+      if (notify->action == svn_wc_notify_update_add)
+        {
+          svn_boolean_t is_root_of_added_subtree = FALSE;
+          const char *added_path = apr_pstrdup(notify_b->pool, notify->path);
+          const char *added_path_parent = NULL;
+
+          /* Stash the root path of any added subtrees. */
+          if (notify_b->added_paths == NULL)
+            {
+              notify_b->added_paths = apr_hash_make(notify_b->pool);
+              is_root_of_added_subtree = TRUE;
+            }
+          else
+            {
+              added_path_parent = svn_path_dirname(added_path, pool);
+              if (!apr_hash_get(notify_b->added_paths, added_path_parent,
+                                APR_HASH_KEY_STRING))
+                is_root_of_added_subtree = TRUE;
+            }
+          if (is_root_of_added_subtree)
+            apr_hash_set(notify_b->added_paths, added_path,
+                         APR_HASH_KEY_STRING, added_path);
         }
     }
   /* Otherwise, our merge sources aren't ancestors of one another. */
@@ -1668,223 +1695,6 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
 
 /*-----------------------------------------------------------------------*/
 
-/*** Compacting Merge Ranges ***/
-
-
-/* Callback for qsort() calls which need to sort svn_merge_range_t *.
-   Wraps svn_sort_compare_ranges() but first "normalizes" all ranges
-   so range->end > range->start. */
-static int
-compare_merge_ranges(const void *a,
-                     const void *b)
-{
-  /* ### Are all these pointer gymnastics necessary?
-     ### There's gotta be a simpler way... */
-  svn_merge_range_t *s1 = *((svn_merge_range_t * const *) a);
-  svn_merge_range_t *s2 = *((svn_merge_range_t * const *) b);
-
-  /* Convert the svn_merge_range_t to svn_merge_range_t and leverage our
-     existing comparison function. */
-  svn_merge_range_t r1 = { MIN(s1->start, s1->end),
-                           MAX(s1->start, s1->end),
-                           TRUE};
-  svn_merge_range_t r2 = { MIN(s2->start, s2->end),
-                           MAX(s2->start, s2->end),
-                           TRUE};
-  svn_merge_range_t *r1p = &r1;
-  svn_merge_range_t *r2p = &r2;
-  return svn_sort_compare_ranges(&r1p, &r2p);
-}
-
-/* Another qsort() callback.  Wraps compare_merge_ranges(), but only
-   for ranges that share a common "direction", e.g. additive or
-   subtractive ranges.  If both ranges are subtractive, the range with
-   the lowest (highest absolute) range value is consider the lesser.
-   If the direction is not the same, then consider additive merges to
-   always be less than subtractive merges. */
-static int
-compare_merge_ranges2(const void *a,
-                      const void *b)
-{
-  svn_merge_range_t *s1 = *((svn_merge_range_t * const *) a);
-  svn_merge_range_t *s2 = *((svn_merge_range_t * const *) b);
-  svn_boolean_t s1_reversed = s1->start > s1->end;
-  svn_boolean_t s2_reversed = s2->start > s2->end;
-
-  if (s1_reversed && s2_reversed)
-    return -(compare_merge_ranges(a, b));
-  else if (s1_reversed)
-    return 1;
-  else if (s2_reversed)
-    return -1;
-  else
-    return compare_merge_ranges(a, b);
-}
-
-/* Helper for compact_merge_ranges.  Take *RANGES, an array of
-   svn_merge_range_t *, and and remove any redundant ranges, possibly
-   removing items from *RANGES.  *RANGES must be sorted per
-   compare_merge_ranges() and is guaranteed to be sorted thusly
-   upon completion.  All range in RANGES must also be of the same
-   "direction" (additive or subtractive). */
-static void
-remove_redundant_ranges(apr_array_header_t **ranges)
-{
-  svn_merge_range_t *range_1 = NULL;
-  svn_merge_range_t *range_2;
-  int i;
-
-  for (i = 0; i < (*ranges)->nelts; i++)
-    {
-      if (range_1 == NULL)
-        {
-          range_1 = APR_ARRAY_IDX(*ranges, i, svn_merge_range_t *);
-          continue;
-        }
-      else
-        {
-          range_2 = APR_ARRAY_IDX(*ranges, i, svn_merge_range_t *);
-        }
-      if (svn_range_compact(&range_1, &range_2))
-        {
-          if (!range_2)
-            {
-              /* Able to compact the two ranges into one.
-                 Remove merge_ranges[i] and from array. */
-              int j;
-              for (j = i; j < (*ranges)->nelts - 1; j++)
-                {
-                  APR_ARRAY_IDX(*ranges, j, svn_merge_range_t *) =
-                    APR_ARRAY_IDX(*ranges, j + 1, svn_merge_range_t *);
-                }
-              apr_array_pop(*ranges);
-              i--; /* Reprocess this element */
-            }
-        }
-    }
-}
-
-/* Helper for compact_merge_ranges.  SOURCES is array of svn_merge_range_t *
-   sorted per compare_merge_ranges().  Remove any redundant ranges between
-   adjacent ranges and store the result in *COMPACTED_RANGES, allocated out
-   of pool.  The ranges in *COMPACTED_RANGES will remain sorted as per
-   compare_merge_ranges.  Range in RANGES can be of either direction
-   (additive and/or subtractive). */
-static void
-compact_add_sub_ranges(apr_array_header_t **compacted_sources,
-                       apr_array_header_t *sources,
-                       apr_pool_t *pool)
-{
-  int i;
-  svn_merge_range_t *range_1 = NULL;
-  svn_merge_range_t *range_2;
-  apr_array_header_t *merge_ranges = apr_array_copy(pool, sources);
-
-  for (i = 0; i < merge_ranges->nelts; i++)
-    {
-      if (range_1 == NULL)
-        {
-          range_1 = APR_ARRAY_IDX(merge_ranges, i, svn_merge_range_t *);
-          continue;
-        }
-      else
-        {
-          range_2 = APR_ARRAY_IDX(merge_ranges, i, svn_merge_range_t *);
-        }
-
-      if (svn_range_compact(&range_1, &range_2))
-        {
-          if (range_1 == NULL && range_2 == NULL) /* ranges cancel each out */
-            {
-              /* Remove merge_ranges[i] and merge_ranges[i + 1]
-                 from the array. */
-              int j;
-              for (j = i - 1; j < merge_ranges->nelts - 2; j++)
-                {
-                  APR_ARRAY_IDX(merge_ranges, j, svn_merge_range_t *) =
-                    APR_ARRAY_IDX(merge_ranges, j + 2, svn_merge_range_t *);
-                }
-              apr_array_pop(merge_ranges);
-              apr_array_pop(merge_ranges);
-              /* Make range_1 the last range processed if one exists. */
-              if (i > 1)
-                range_1 = APR_ARRAY_IDX(merge_ranges, i - 2,
-                                        svn_merge_range_t *);
-            }
-          else if (!range_2) /* ranges compacted into range_ 1 */
-            {
-              /* Remove merge_ranges[i] and from array. */
-              int j;
-              for (j = i; j < merge_ranges->nelts - 1; j++)
-                {
-                  APR_ARRAY_IDX(merge_ranges, j, svn_merge_range_t *) =
-                    APR_ARRAY_IDX(merge_ranges, j + 1, svn_merge_range_t *);
-                }
-              apr_array_pop(merge_ranges);
-
-              i--; /* Reprocess merge_ranges[i] */
-            }
-          else /* ranges compacted */
-            {
-              range_1 = range_2;
-            }
-        } /* if (svn_range_compact(&range_1, &range_2)) */
-
-    }
-
-  *compacted_sources = merge_ranges;
-}
-
-/* SOURCES is array of svn_merge_range_t *sorted per compare_merge_ranges(). */
-static svn_error_t *
-compact_merge_ranges(apr_array_header_t **compacted_sources_p,
-                     apr_array_header_t *merge_ranges,
-                     apr_pool_t *pool)
-{
-  apr_array_header_t *additive_sources =
-    apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
-  apr_array_header_t *subtractive_sources =
-    apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
-  apr_array_header_t *compacted_sources;
-  int i;
-
-  for (i = 0; i < merge_ranges->nelts; i++)
-    {
-      svn_merge_range_t *range =
-        svn_merge_range_dup(APR_ARRAY_IDX(merge_ranges, i,
-                                          svn_merge_range_t *), pool);
-      if (range->start > range->end)
-        APR_ARRAY_PUSH(subtractive_sources, svn_merge_range_t *) = range;
-      else
-        APR_ARRAY_PUSH(additive_sources, svn_merge_range_t *) = range;
-    }
-
-  qsort(additive_sources->elts, additive_sources->nelts,
-        additive_sources->elt_size, compare_merge_ranges);
-  remove_redundant_ranges(&additive_sources);
-  qsort(subtractive_sources->elts, subtractive_sources->nelts,
-        subtractive_sources->elt_size, compare_merge_ranges);
-  remove_redundant_ranges(&subtractive_sources);
-
-  for (i = 0; i < subtractive_sources->nelts; i++)
-    {
-      svn_merge_range_t *range =
-        svn_merge_range_dup(APR_ARRAY_IDX(subtractive_sources, i,
-                                          svn_merge_range_t *), pool);
-      APR_ARRAY_PUSH(additive_sources, svn_merge_range_t *) = range;
-    }
-
-  qsort(additive_sources->elts, additive_sources->nelts,
-        additive_sources->elt_size, compare_merge_ranges);
-  compact_add_sub_ranges(&compacted_sources, additive_sources, pool);
-  qsort(compacted_sources->elts, compacted_sources->nelts,
-        compacted_sources->elt_size, compare_merge_ranges2);
-  *compacted_sources_p = compacted_sources;
-  return SVN_NO_ERROR;
-}
-
-/*-----------------------------------------------------------------------*/
-
 /*** Other Helper Functions ***/
 
 
@@ -2339,7 +2149,48 @@ drive_merge_report_editor(const char *target_wcpath,
           range = APR_ARRAY_IDX(child->remaining_ranges, 0,
                                 svn_merge_range_t *);
           if (range->start == default_start)
-            continue;
+            {
+              continue;
+            }
+          else
+            {
+              /* While we need to describe subtrees requiring different merge
+                 ranges than TARGET_WCPATH will have applied, we don't need to
+                 describe a subtree's subtree if that latter is having the
+                 same range applied as the former. */
+              int j;
+              svn_client__merge_path_t *parent = NULL;
+              
+              /* Does CHILD have a parent with mergeinfo other
+                 than TARGET_WCPATH? */
+              for (j = i - 1; j > 0; j--)
+                {
+                  svn_client__merge_path_t *potential_parent =
+                    APR_ARRAY_IDX(children_with_mergeinfo, j,
+                                  svn_client__merge_path_t *);
+                  if (svn_path_is_ancestor(potential_parent->path,
+                                           child->path))
+                    {
+                      parent = potential_parent;
+                      break;
+                    }
+                }
+
+              /* CHILD does have a parent with mergeinfo, if CHILD's first
+                 remaining range is the same as its parent there is no need
+                 to describe it separately. */
+              if (parent && parent->remaining_ranges->nelts != 0)
+                {
+                  svn_merge_range_t *parent_range =
+                    APR_ARRAY_IDX(parent->remaining_ranges, 0,
+                                  svn_merge_range_t *);
+                  svn_merge_range_t *child_range =
+                    APR_ARRAY_IDX(child->remaining_ranges, 0,
+                                  svn_merge_range_t *);
+                  if (parent_range->start == child_range->start)
+                    continue;
+                }
+            }
 
           child_repos_path = child->path +
             (target_wcpath_len ? target_wcpath_len + 1 : 0);
@@ -3705,11 +3556,7 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
         }
     }
 
-  /* Okay.  We have a list of svn_merge_range_t's.  Now, we need to
-     compact that list to remove redundances and such. */
-  SVN_ERR(compact_merge_ranges(&merge_range_ts, merge_range_ts, pool));
-
-  /* No compacted ranges to merge?  No problem. */
+  /* No ranges to merge?  No problem. */
   if (merge_range_ts->nelts == 0)
     return SVN_NO_ERROR;
 
@@ -4419,6 +4266,105 @@ do_directory_merge(const char *url1,
                                                 child_entry, adm_access,
                                                 merge_b->ctx, iterpool));
         } /* (i = 0; i < children_with_mergeinfo->nelts; i++) */
+      
+      /* If a path has an immediate parent with non-inheritable mergeinfo at
+         this point, then it meets criteria 3 or 5 described in
+         get_mergeinfo_paths' doc string.  For paths which exist prior to a
+         merge explicit mergeinfo has already been set.  But for paths added
+         during the merge this is not the case.  The path might have explicit
+         mergeinfo from the merge source, but no mergeinfo yet exists
+         describing *this* merge.  So the added path has either incomplete
+         explicit mergeinfo or inherits incomplete mergeinfo from its
+         immediate parent (if any, the parent might have only non-inheritable
+         ranges in which case the path simply inherits empty mergeinfo).
+
+         So here we look at the root path of each subtree added during the
+         merge and set explicit mergeinfo on it if it meets the aforementioned
+         conditions. */
+      if (notify_b->added_paths)
+        {
+          apr_hash_index_t *hi;
+
+          for (hi = apr_hash_first(NULL, notify_b->added_paths); hi;
+               hi = apr_hash_next(hi))
+            {
+              const void *key;
+              const char *added_path;
+              const svn_string_t *added_path_parent_propval;
+
+              apr_hash_this(hi, &key, NULL, NULL);
+              added_path = key;
+
+              apr_pool_clear(iterpool);
+              
+              /* Rather than using svn_client__get_wc_mergeinfo() and
+                 analyzing the mergeinfo it returns to determine if
+                 ADDED_PATH's parent has non-inheritable mergeinfo, it is
+                 much simpler to just get the svn_string_t representation
+                 of the svn:mergeinfo prop and look for the '*'
+                 non-inheritable marker. */
+              SVN_ERR(svn_wc_prop_get(&added_path_parent_propval,
+                                      SVN_PROP_MERGEINFO,
+                                      svn_path_dirname(added_path, iterpool),
+                                      adm_access, iterpool));
+              if (added_path_parent_propval
+                  && strstr(added_path_parent_propval->data,
+                            SVN_MERGEINFO_NONINHERITABLE_STR))
+                {
+                  /* ADDED_PATH's immediate parent has non-inheritable
+                     mergeinfo. */
+                  svn_boolean_t inherited;
+                  svn_merge_range_t *rng;
+                  apr_hash_t *merge_mergeinfo, *added_path_mergeinfo;
+                  apr_array_header_t *rangelist;
+                  const svn_wc_entry_t *entry;
+                  const char *common_ancestor_path =
+                    svn_path_get_longest_ancestor(added_path,
+                                                  target_merge_path->path,
+                                                  iterpool);
+                  const char *relative_added_path =
+                    added_path + strlen(common_ancestor_path) + 1;
+                  SVN_ERR(svn_wc__entry_versioned(&entry, added_path,
+                                                  adm_access, FALSE,
+                                                  iterpool));
+
+                  /* Calculate the mergeinfo resulting from this merge. */
+                  merge_mergeinfo = apr_hash_make(iterpool);
+                  rangelist = apr_array_make(iterpool, 1,
+                                             sizeof(svn_merge_range_t *));                            
+                  rng = svn_merge_range_dup(&range, iterpool);
+                  if (entry->kind == svn_node_file)
+                    rng->inheritable = TRUE;
+                  else
+                    rng->inheritable =
+                      (!(depth == svn_depth_infinity
+                         || depth == svn_depth_immediates));
+                  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = rng;
+                  apr_hash_set(merge_mergeinfo,
+                               svn_path_join(mergeinfo_path,
+                                             relative_added_path,
+                                             iterpool),
+                               APR_HASH_KEY_STRING, rangelist);
+
+                  /* Get any explicit mergeinfo the added path has. */
+                  SVN_ERR(svn_client__get_wc_mergeinfo(
+                    &added_path_mergeinfo, &inherited, FALSE,
+                    svn_mergeinfo_explicit, entry, added_path,
+                    NULL, NULL, adm_access, merge_b->ctx, iterpool));
+
+                  /* Combine the explict mergeinfo on the added path (if any)
+                     with the mergeinfo for this merge. */
+                  if (added_path_mergeinfo)
+                    SVN_ERR(svn_mergeinfo_merge(merge_mergeinfo,
+                                                added_path_mergeinfo,
+                                                iterpool));
+                  SVN_ERR(svn_client__record_wc_mergeinfo(added_path,
+                                                          merge_mergeinfo,
+                                                          adm_access,
+                                                          iterpool));
+                }
+            }
+        }
     } /* (!merge_b->dry_run && merge_b->same_repos) */
 
   svn_pool_destroy(iterpool);
@@ -4521,6 +4467,7 @@ do_merge(apr_array_header_t *merge_sources,
   notify_baton.nbr_operative_notifications = 0;
   notify_baton.merged_paths = NULL;
   notify_baton.skipped_paths = NULL;
+  notify_baton.added_paths = NULL;
   notify_baton.is_single_file_merge = FALSE;
   notify_baton.children_with_mergeinfo = NULL;
   notify_baton.cur_ancestor_index = -1;

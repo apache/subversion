@@ -1,7 +1,7 @@
 /* mergeinfo-sqlite-index.c
  *
  * ====================================================================
- * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -595,8 +595,6 @@ get_mergeinfo_for_children(sqlite3 *db,
                            const char *path,
                            svn_revnum_t rev,
                            apr_hash_t *path_mergeinfo,
-                           svn_fs_mergeinfo_filter_func_t filter_func,
-                           void *filter_func_baton,
                            apr_pool_t *pool)
 {
   svn_fs__sqlite_stmt_t *stmt;
@@ -631,17 +629,10 @@ get_mergeinfo_for_children(sqlite3 *db,
       if (lastmerged_rev > 0)
         {
           apr_hash_t *db_mergeinfo;
-          svn_boolean_t omit = FALSE;
 
           SVN_ERR(parse_mergeinfo_from_db(db, merged_path, lastmerged_rev,
                                           &db_mergeinfo, subpool));
-
-          if (filter_func)
-            SVN_ERR(filter_func(filter_func_baton, &omit, merged_path,
-                                db_mergeinfo, subpool));
-
-          if (!omit)
-            SVN_ERR(svn_mergeinfo_merge(path_mergeinfo, db_mergeinfo, pool));
+          SVN_ERR(svn_mergeinfo_merge(path_mergeinfo, db_mergeinfo, pool));
         }
 
       SVN_ERR(svn_fs__sqlite_step(&got_row, stmt));
@@ -753,8 +744,6 @@ svn_error_t *
 svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
                                          svn_fs_root_t *root,
                                          const apr_array_header_t *paths,
-                                         svn_fs_mergeinfo_filter_func_t filter_func,
-                                         void *filter_func_baton,
                                          apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -781,23 +770,7 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
       if (!path_mergeinfo)
         path_mergeinfo = apr_hash_make(pool);
 
-      if (filter_func)
-        {
-          svn_boolean_t omit;
-
-          err = filter_func(filter_func_baton, &omit, path, path_mergeinfo,
-                            pool);
-          MAYBE_CLEANUP;
-
-          if (omit)
-            {
-              apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, NULL);
-              continue;
-            }
-        }
-
-      err = get_mergeinfo_for_children(db, path, rev, path_mergeinfo,
-                                       filter_func, filter_func_baton, pool);
+      err = get_mergeinfo_for_children(db, path, rev, path_mergeinfo, pool);
       MAYBE_CLEANUP;
 
       apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, path_mergeinfo);

@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1225,15 +1225,17 @@ svn_error_t *svn_fs_closest_copy(svn_fs_root_t **root_p,
 
 /** Retrieve mergeinfo for multiple nodes.
  *
- * @a minfohash is filled with mergeinfo for each of the @a paths,
- * stored as a string.  It will never be @c NULL, but may be empty.
+ * Set @a *minfohash to a hash table allocated in @a pool, and fill it
+ * with mergeinfo for each path in @a paths.  Use a string (textual)
+ * representation for the mergeinfo.  If there is no mergeinfo, then
+ * @a *minfohash is empty (never @c NULL).
  *
- * @a root indicates the revision root to use when looking up paths.
+ * @a root is revision root to use when looking up paths.
  *
- * @a paths indicate the paths for which you are requesting information.
+ * @a paths are the paths you are requesting information for.
  *
- * @a inherit indicates whether explicit, explicit or inherited, or
- * only inherited mergeinfo for @a paths is retrieved.
+ * @a inherit indicates whether to retrieve explicit,
+ * explicit-or-inherited, or only inherited mergeinfo.
  *
  * If @a include_descendants is TRUE, then additionally return the
  * mergeinfo for any descendant of any element of @a paths which has
@@ -1253,21 +1255,6 @@ svn_error_t *svn_fs_get_mergeinfo(apr_hash_t **minfohash,
                                   svn_boolean_t include_descendants,
                                   apr_pool_t *pool);
 
-/**
- * Optionally filter paths which are discoved to have mergeinfo.
- *
- * Set @a *omit to @c TRUE if @a path with @a path_mergeinfo should be omitted
- * from mergeinfo returned, or @c FALSE if not.  Use @a pool for allocations.
- *
- * @since New in 1.5.
- */
-typedef svn_error_t *(*svn_fs_mergeinfo_filter_func_t)
-  (void *baton,
-   svn_boolean_t *omit,
-   const char *path,
-   apr_hash_t *path_mergeinfo,
-   apr_pool_t *pool);
-
 /** Retrieve combined mergeinfo for multiple nodes, and their children.
  *
  * @a mergeinfo is filled with mergeinfo for each of the @a paths and
@@ -1278,9 +1265,6 @@ typedef svn_error_t *(*svn_fs_mergeinfo_filter_func_t)
  *
  * @a paths indicate the paths you are requesting information for.
  *
- * If @a filter_func is not @c NULL, use it to potentially filter each path
- * for which mergeinfo is found.
- *
  * Do any necessary temporary allocation in @a pool.
  *
  * @since New in 1.5.
@@ -1289,8 +1273,6 @@ svn_error_t *
 svn_fs_get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
                               svn_fs_root_t *root,
                               const apr_array_header_t *paths,
-                              svn_fs_mergeinfo_filter_func_t filter_func,
-                              void *filter_func_baton,
                               apr_pool_t *pool);
 
 /** Merge changes between two nodes into a third node.

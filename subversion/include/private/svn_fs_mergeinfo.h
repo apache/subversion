@@ -72,8 +72,6 @@ svn_fs_mergeinfo__get_mergeinfo_for_tree(
   apr_hash_t **mergeinfo,
   svn_fs_root_t *root,
   const apr_array_header_t *paths,
-  svn_fs_mergeinfo_filter_func_t filter_func,
-  void *filter_func_baton,
   apr_pool_t *pool);
 
 #ifdef __cplusplus

@@ -369,6 +369,15 @@ handle_lock(serf_request_t *request,
         {
           ctx->error = svn_ra_serf__handle_server_error(request, response,
                                                         pool);
+
+          /* Older servers may not give a descriptive error. */
+          if (!ctx->error)
+            {
+              ctx->error = svn_error_createf(SVN_ERR_FS_PATH_ALREADY_LOCKED,
+                                             NULL,
+                                             _("Lock request failed: %d %s"),
+                                             ctx->status_code, ctx->reason);
+            }
           return ctx->error->apr_err;
         }
 

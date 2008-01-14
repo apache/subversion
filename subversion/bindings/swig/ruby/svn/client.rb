@@ -586,10 +586,11 @@ module Svn
         Client.add_to_changelist(paths, changelist_name, self)
       end
 
-      def changelist(changelist_name, root_path, depth=nil, &block)
+      def changelists(changelists_names, root_path, depth=nil, &block)
         lists_contents = Hash.new{|h,k| h[k]=[]}
+        changelists_names = [changelists_names] if changelists_names.is_a?(String)
         block ||= lambda{|path, changelist| lists_contents[changelist] << path }
-        Client.get_changelists(root_path, [changelist_name], depth, block, self)
+        Client.get_changelists(root_path, changelists_names, depth, block, self)
         lists_contents
       end
 

@@ -2,7 +2,7 @@
  * fs_loader.c:  Front-end to the various FS back ends
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -830,14 +830,9 @@ svn_error_t *
 svn_fs_get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
                               svn_fs_root_t *root,
                               const apr_array_header_t *paths,
-                              svn_fs_mergeinfo_filter_func_t filter_func,
-                              void *filter_func_baton,
                               apr_pool_t *pool)
 {
-  return root->vtable->get_mergeinfo_for_tree(mergeinfo, root, paths,
-                                              filter_func,
-                                              filter_func_baton,
-                                              pool);
+  return root->vtable->get_mergeinfo_for_tree(mergeinfo, root, paths, pool);
 }
 
 svn_error_t *
