@@ -186,9 +186,9 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                            "
                        "'immediates', or 'infinity')")},
   {"set-depth",     opt_set_depth, 1,
-                    N_("set new sticky depth to ARG ('empty', 'files',\n"
+                    N_("set new working copy depth to ARG ('empty',\n"
                        "                            "
-                       "'immediates', or 'infinity')")},
+                       "'files', 'immediates', or 'infinity')")},
   {"xml",           opt_xml, 0, N_("output in XML")},
   {"strict",        opt_strict, 0, N_("use strict semantics")},
   {"stop-on-copy",  opt_stop_on_copy, 0,
@@ -876,10 +876,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     modification to the working copy.  All properties from the repository\n"
      "     are applied to the obstructing path.\n"
      "\n"
-     "     Use the --set-depth option to set a new sticky ambient depth on the\n"
-     "     the targets of this operation.  Currently, the ambient depth of a\n"
-     "     working copy directory can only be increased (telescoped more\n"
-     "     deeply); you can cannot make a directory more shallow.\n"
+     "     Use the --set-depth option to set a new working copy depth on the\n"
+     "     the targets of this operation.  Currently, the depth of a working\n"
+     "     copy directory can only be increased (telescoped more deeply); you\n"
+     "     cannot make a directory more shallow.\n"
      "\n"
      "  2. Rewrite working copy URL metadata to reflect a syntactic change only.\n"
      "     This is used when repository's root URL changes (such as a scheme\n"
@@ -929,10 +929,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  are applied to the obstructing path.  Obstructing paths are reported\n"
      "  in the first column with code 'E'.\n"
      "\n"
-     "  Use the --set-depth option to set a new sticky ambient depth on the\n"
-     "  the targets of this operation.  Currently, the ambient depth of a\n"
-     "  working copy directory can only be increased (telescoped more\n"
-     "  deeply); you can cannot make a directory more shallow.\n"),
+     "  Use the --set-depth option to set a new working copy depth on the\n"
+     "  the targets of this operation.  Currently, the depth of a working\n"
+     "  copy directory can only be increased (telescoped more deeply); you\n"
+     "  cannot make a directory more shallow.\n"),
     {'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_force, 
      opt_ignore_externals, opt_changelist, opt_editor_cmd, opt_accept} },
 
