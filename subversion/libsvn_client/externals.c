@@ -208,7 +208,7 @@ switch_external(const char *path,
           if (strcmp(entry->url, url) == 0)
             {
               SVN_ERR(svn_client__update_internal(NULL, path, revision,
-                                                  svn_depth_unknown,
+                                                  svn_depth_unknown, FALSE,
                                                   FALSE, FALSE,
                                                   timestamp_sleep, TRUE,
                                                   ctx, subpool));
@@ -250,7 +250,7 @@ switch_external(const char *path,
 
               SVN_ERR(svn_client__switch_internal(NULL, path, url,
                                                   peg_revision, revision,
-                                                  svn_depth_infinity,
+                                                  svn_depth_infinity, TRUE,
                                                   timestamp_sleep,
                                                   FALSE, FALSE, ctx, subpool));
 

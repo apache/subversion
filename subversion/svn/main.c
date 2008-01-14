@@ -92,6 +92,7 @@ typedef enum {
   opt_summarize,
   opt_targets,
   opt_depth,
+  opt_set_depth,
   opt_version,
   opt_xml,
   opt_keep_local,
@@ -181,9 +182,13 @@ const apr_getopt_option_t svn_cl__options[] =
   {"targets",       opt_targets, 1,
                     N_("pass contents of file ARG as additional args")},
   {"depth",         opt_depth, 1,
-                    N_("pass depth ('empty', 'files', 'immediates', or\n"
+                    N_("limit operation by depth ARG ('empty', 'files',\n"
                        "                            "
-                       "'infinity') as ARG")},
+                       "'immediates', or 'infinity')")},
+  {"set-depth",     opt_set_depth, 1,
+                    N_("set new working copy depth to ARG ('empty',\n"
+                       "                            "
+                       "'files', 'immediates', or 'infinity')")},
   {"xml",           opt_xml, 0, N_("output in XML")},
   {"strict",        opt_strict, 0, N_("use strict semantics")},
   {"stop-on-copy",  opt_stop_on_copy, 0,
@@ -860,22 +865,27 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     If specified, PEGREV determines in which revision the target is first\n"
      "     looked up.\n"
      "\n"
+     "     If --force is used, unversioned obstructing paths in the working\n"
+     "     copy do not automatically cause a failure if the switch attempts to\n"
+     "     add the same path.  If the obstructing path is the same type (file\n"
+     "     or directory) as the corresponding path in the repository it becomes\n"
+     "     versioned but its contents are left 'as-is' in the working copy.\n"
+     "     This means that an obstructing directory's unversioned children may\n"
+     "     also obstruct and become versioned.  For files, any content differences\n"
+     "     between the obstruction and the repository are treated like a local\n"
+     "     modification to the working copy.  All properties from the repository\n"
+     "     are applied to the obstructing path.\n"
+     "\n"
+     "     Use the --set-depth option to set a new working copy depth on the\n"
+     "     the targets of this operation.  Currently, the depth of a working\n"
+     "     copy directory can only be increased (telescoped more deeply); you\n"
+     "     cannot make a directory more shallow.\n"
+     "\n"
      "  2. Rewrite working copy URL metadata to reflect a syntactic change only.\n"
      "     This is used when repository's root URL changes (such as a scheme\n"
      "     or hostname change) but your working copy still reflects the same\n"
-     "     directory within the same repository.\n"
-     "\n"
-     "  If --force is used, unversioned obstructing paths in the working\n"
-     "  copy do not automatically cause a failure if the switch attempts to\n"
-     "  add the same path.  If the obstructing path is the same type (file\n"
-     "  or directory) as the corresponding path in the repository it becomes\n"
-     "  versioned but its contents are left 'as-is' in the working copy.\n"
-     "  This means that an obstructing directory's unversioned children may\n"
-     "  also obstruct and become versioned.  For files, any content differences\n"
-     "  between the obstruction and the repository are treated like a local\n"
-     "  modification to the working copy.  All properties from the repository\n"
-     "  are applied to the obstructing path.\n"),
-    { 'r', 'N', opt_depth, 'q', opt_merge_cmd, opt_relocate, 
+    "     directory within the same repository.\n"),
+    { 'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_relocate, 
       opt_ignore_externals, opt_force, opt_accept} },
 
   { "unlock", svn_cl__unlock, {0}, N_
@@ -917,9 +927,14 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  between the obstruction and the repository are treated like a local\n"
      "  modification to the working copy.  All properties from the repository\n"
      "  are applied to the obstructing path.  Obstructing paths are reported\n"
-     "  in the first column with code 'E'.\n"),
-    {'r', 'N', opt_depth, 'q', opt_merge_cmd, opt_force, opt_ignore_externals,
-     opt_changelist, opt_editor_cmd, opt_accept} },
+     "  in the first column with code 'E'.\n"
+     "\n"
+     "  Use the --set-depth option to set a new working copy depth on the\n"
+     "  the targets of this operation.  Currently, the depth of a working\n"
+     "  copy directory can only be increased (telescoped more deeply); you\n"
+     "  cannot make a directory more shallow.\n"),
+    {'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_force, 
+     opt_ignore_externals, opt_changelist, opt_editor_cmd, opt_accept} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -1081,6 +1096,7 @@ main(int argc, const char *argv[])
   opt_state.revision_ranges =
     apr_array_make(pool, 0, sizeof(svn_opt_revision_range_t *));
   opt_state.depth = svn_depth_unknown;
+  opt_state.set_depth = svn_depth_unknown;
   opt_state.accept_which = svn_cl__accept_invalid;
 
   /* No args?  Show usage. */
@@ -1278,6 +1294,25 @@ main(int argc, const char *argv[])
         opt_state.depth = svn_depth_from_word(utf8_opt_arg);
         if (opt_state.depth == svn_depth_unknown
             || opt_state.depth == svn_depth_exclude)
+          {
+            return svn_cmdline_handle_exit_error
+              (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("'%s' is not a valid depth; try "
+                                   "'empty', 'files', 'immediates', "
+                                   "or 'infinity'"),
+                                 utf8_opt_arg), pool, "svn: ");
+          }
+        break;
+      case opt_set_depth:
+        err = svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool);
+        if (err)
+          return svn_cmdline_handle_exit_error
+            (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                               _("Error converting depth "
+                                 "from locale to UTF8")), pool, "svn: ");
+        opt_state.set_depth = svn_depth_from_word(utf8_opt_arg);
+        if (opt_state.set_depth == svn_depth_unknown
+            || opt_state.set_depth == svn_depth_exclude)
           {
             return svn_cmdline_handle_exit_error
               (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
@@ -1569,7 +1604,17 @@ main(int argc, const char *argv[])
           return svn_cmdline_handle_exit_error(err, pool, "svn: ");
         }
     }
-  
+
+  /* Disallow simultaneous use of both --depth and --set-depth. */
+  if ((opt_state.depth != svn_depth_unknown)
+      && (opt_state.set_depth != svn_depth_unknown))
+    {
+      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("--depth and --set-depth are mutually "
+                               "exclusive"));
+      return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+    }
+
   /* Ensure that 'revision_ranges' has at least one item, and that
      'start_revision' and 'end_revision' match that item. */
   if (opt_state.revision_ranges->nelts == 0)

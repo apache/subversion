@@ -64,21 +64,26 @@ usage: 1. switch URL[@PEGREV] [PATH]
      If specified, PEGREV determines in which revision the target is first
      looked up.
 
+     If --force is used, unversioned obstructing paths in the working
+     copy do not automatically cause a failure if the switch attempts to
+     add the same path.  If the obstructing path is the same type (file
+     or directory) as the corresponding path in the repository it becomes
+     versioned but its contents are left 'as-is' in the working copy.
+     This means that an obstructing directory's unversioned children may
+     also obstruct and become versioned.  For files, any content differences
+     between the obstruction and the repository are treated like a local
+     modification to the working copy.  All properties from the repository
+     are applied to the obstructing path.
+
+     Use the --set-depth option to set a new working copy depth on the
+     the targets of this operation.  Currently, the depth of a working
+     copy directory can only be increased (telescoped more deeply); you
+     cannot make a directory more shallow.
+
   2. Rewrite working copy URL metadata to reflect a syntactic change only.
      This is used when repository's root URL changes (such as a scheme
      or hostname change) but your working copy still reflects the same
      directory within the same repository.
-
-  If --force is used, unversioned obstructing paths in the working
-  copy do not automatically cause a failure if the switch attempts to
-  add the same path.  If the obstructing path is the same type (file
-  or directory) as the corresponding path in the repository it becomes
-  versioned but its contents are left 'as-is' in the working copy.
-  This means that an obstructing directory's unversioned children may
-  also obstruct and become versioned.  For files, any content differences
-  between the obstruction and the repository are treated like a local
-  modification to the working copy.  All properties from the repository
-  are applied to the obstructing path.
 
 Valid options:
   -r [--revision] ARG      : ARG (some commands also take ARG1:ARG2 range)
@@ -90,8 +95,10 @@ Valid options:
                                 'COMMITTED'  last commit at or before BASE
                                 'PREV'       revision just before COMMITTED
   -N [--non-recursive]     : obsolete; try --depth=files or --depth=immediates
-  --depth ARG              : pass depth ('empty', 'files', 'immediates', or
-                            'infinity') as ARG
+  --depth ARG              : limit operation by depth ARG ('empty', 'files',
+                            'immediates', or 'infinity')
+  --set-depth ARG          : set new working copy depth to ARG ('empty',
+                            'files', 'immediates', or 'infinity')
   -q [--quiet]             : print nothing, or only summary information
   --diff3-cmd ARG          : use ARG as merge command
   --relocate               : relocate via URL-rewriting
