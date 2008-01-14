@@ -154,16 +154,22 @@ svn_error_t *svn_fs_base__dag_set_proplist(dag_node_t *node,
 
 /* Mergeinfo tracking stuff. */
 
-/* Set *HAS_MERGEINFO to TRUE iff NODE does not record that it's
-   property list contains merge tracking information, as part of
-   TRAIL.  Use POOL for necessary allocations. 
+/* If HAS_MERGEINFO is not null, set *HAS_MERGEINFO to TRUE iff NODE
+   records that its property list contains merge tracking information.
+
+   If COUNT is not null, set *COUNT to the number of nodes --
+   including NODE itself -- in the subtree rooted at NODE which claim
+   to carry merge tracking information.
+
+   Do this as part of TRAIL, and use POOL for necessary allocations.
 
    NOTE:  No validation against NODE's actual property list is
    performed. */
-svn_error_t *svn_fs_base__dag_get_has_mergeinfo(svn_boolean_t *has_mergeinfo,
-                                                dag_node_t *node,
-                                                trail_t *trail,
-                                                apr_pool_t *pool);
+svn_error_t *svn_fs_base__dag_get_mergeinfo_stats(svn_boolean_t *has_mergeinfo,
+                                                  apr_int64_t *count,
+                                                  dag_node_t *node,
+                                                  trail_t *trail,
+                                                  apr_pool_t *pool);
 
 /* If HAS_MERGEINFO is set, record on NODE that its property list
    carries merge tracking information.  Otherwise, record on NODE its
@@ -185,17 +191,6 @@ svn_error_t *svn_fs_base__dag_set_has_mergeinfo(dag_node_t *node,
                                                 const char *txn_id,
                                                 trail_t *trail,
                                                 apr_pool_t *pool);
-
-/* Set *COUNT to the number of nodes -- including NODE itself -- in
-   the subtree rooted at NODE which claim to carry merge tracking
-   information.  Do this as part of TRAIL, and use POOL for necessary
-   allocations.
-
-   NOTE:  No validation of these claims is performed. */
-svn_error_t *svn_fs_base__dag_get_mergeinfo_count(apr_int64_t *count,
-                                                  dag_node_t *node,
-                                                  trail_t *trail,
-                                                  apr_pool_t *pool);
 
 /* Record on NODE that COUNT nodes -- including NODE itself -- in the
    subtree rooted at NODE claim to carry merge tracking information.

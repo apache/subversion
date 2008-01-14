@@ -2025,7 +2025,7 @@ merge(svn_stringbuf_t *conflict_p,
           apr_int64_t mergeinfo_start;
           SVN_ERR(svn_fs_base__dag_get_node(&t_ent_node, fs,
                                             t_entry->id, trail, iterpool));
-          SVN_ERR(svn_fs_base__dag_get_mergeinfo_count(&mergeinfo_start,
+          SVN_ERR(svn_fs_base__dag_get_mergeinfo_stats(NULL, &mergeinfo_start,
                                                        t_ent_node, trail,
                                                        iterpool));
           mergeinfo_increment -= mergeinfo_start;
@@ -2036,7 +2036,7 @@ merge(svn_stringbuf_t *conflict_p,
               apr_int64_t mergeinfo_end;
               SVN_ERR(svn_fs_base__dag_get_node(&s_ent_node, fs,
                                                 s_entry->id, trail, iterpool));
-              SVN_ERR(svn_fs_base__dag_get_mergeinfo_count(&mergeinfo_end,
+              SVN_ERR(svn_fs_base__dag_get_mergeinfo_stats(NULL, &mergeinfo_end,
                                                            s_ent_node, trail,
                                                            iterpool));
               mergeinfo_increment += mergeinfo_end;
@@ -2144,7 +2144,7 @@ merge(svn_stringbuf_t *conflict_p,
 
       SVN_ERR(svn_fs_base__dag_get_node(&s_ent_node, fs,
                                         s_entry->id, trail, iterpool));
-      SVN_ERR(svn_fs_base__dag_get_mergeinfo_count(&mergeinfo_s,
+      SVN_ERR(svn_fs_base__dag_get_mergeinfo_stats(NULL, &mergeinfo_s,
                                                    s_ent_node, trail,
                                                    iterpool));
       mergeinfo_increment += mergeinfo_s;
@@ -2786,7 +2786,7 @@ txn_body_delete(void *baton,
                             trail, trail->pool));
 
   /* Squirrel away the mergeinfo count that the node carries. */
-  SVN_ERR(svn_fs_base__dag_get_mergeinfo_count(&mergeinfo_count,
+  SVN_ERR(svn_fs_base__dag_get_mergeinfo_stats(NULL, &mergeinfo_count,
                                                parent_path->node,
                                                trail, trail->pool));
 
@@ -2895,7 +2895,7 @@ txn_body_copy(void *baton,
       /* If this is a replacement operation, we need to know the old
          node's mergeinfo count. */
       if (to_parent_path->node)
-        SVN_ERR(svn_fs_base__dag_get_mergeinfo_count(&old_mergeinfo_count,
+        SVN_ERR(svn_fs_base__dag_get_mergeinfo_stats(NULL, &old_mergeinfo_count,
                                                      to_parent_path->node,
                                                      trail, trail->pool));
       /* Do the copy. */
@@ -2907,8 +2907,9 @@ txn_body_copy(void *baton,
                                     from_path, txn_id, trail, trail->pool));
 
       /* Adjust the mergeinfo counts of the destination's parents. */
-      SVN_ERR(svn_fs_base__dag_get_mergeinfo_count(&mergeinfo_count, from_node,
-                                                   trail, trail->pool));
+      SVN_ERR(svn_fs_base__dag_get_mergeinfo_stats(NULL, &mergeinfo_count, 
+                                                   from_node, trail, 
+                                                   trail->pool));
       SVN_ERR(adjust_parent_mergeinfo_counts
               (to_parent_path->parent, mergeinfo_count - old_mergeinfo_count,
                txn_id, trail, trail->pool));

@@ -1520,17 +1520,21 @@ svn_fs_base__things_different(svn_boolean_t *props_changed,
 
 /*** Mergeinfo tracking stuff ***/
 
-svn_error_t *svn_fs_base__dag_get_has_mergeinfo(svn_boolean_t *has_mergeinfo,
-                                                dag_node_t *node,
-                                                trail_t *trail,
-                                                apr_pool_t *pool)
+svn_error_t *svn_fs_base__dag_get_mergeinfo_stats(svn_boolean_t *has_mergeinfo,
+                                                  apr_int64_t *count,
+                                                  dag_node_t *node,
+                                                  trail_t *trail,
+                                                  apr_pool_t *pool)
 {
   node_revision_t *node_rev;
   svn_fs_t *fs = svn_fs_base__dag_get_fs(node);
   const svn_fs_id_t *id = svn_fs_base__dag_get_id(node);
 
   SVN_ERR(svn_fs_bdb__get_node_revision(&node_rev, fs, id, trail, pool));
-  *has_mergeinfo = node_rev->has_mergeinfo;
+  if (has_mergeinfo)
+    *has_mergeinfo = node_rev->has_mergeinfo;
+  if (count)
+    *count = node_rev->mergeinfo_count;
   return SVN_NO_ERROR;
 }
 
@@ -1571,20 +1575,6 @@ svn_error_t *svn_fs_base__dag_set_has_mergeinfo(dag_node_t *node,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *svn_fs_base__dag_get_mergeinfo_count(apr_int64_t *count,
-                                                  dag_node_t *node,
-                                                  trail_t *trail,
-                                                  apr_pool_t *pool)
-{
-  node_revision_t *node_rev;
-  svn_fs_t *fs = svn_fs_base__dag_get_fs(node);
-  const svn_fs_id_t *id = svn_fs_base__dag_get_id(node);
-
-  SVN_ERR(svn_fs_bdb__get_node_revision(&node_rev, fs, id, trail, pool));
-  *count = node_rev->mergeinfo_count;
-  return SVN_NO_ERROR;
-}
 
 svn_error_t *svn_fs_base__dag_set_mergeinfo_count(dag_node_t *node,
                                                   apr_int64_t count,
