@@ -1699,13 +1699,14 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @since 1.5
      */
     public void info2(String pathOrUrl, Revision revision,
-                      Revision pegRevision, int depth,
+                      Revision pegRevision, int depth, String[] changelists,
                       InfoCallback callback)
         throws ClientException
     {
         synchronized (clazz)
         {
-            worker.info2(pathOrUrl, revision, pegRevision, depth, callback);
+            worker.info2(pathOrUrl, revision, pegRevision, depth, changelists,
+                         callback);
         }
     }
 

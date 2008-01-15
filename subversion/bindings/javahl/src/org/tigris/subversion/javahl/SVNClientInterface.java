@@ -1710,11 +1710,12 @@ public interface SVNClientInterface
      * @param revision      the revision of the item to return
      * @param pegRevision   the revision to interpret pathOrUrl
      * @param depth         the depth to recurse
+     * @param changelists   if non-null, filter paths using changelists
      * @param callback      a callback to receive the infos retreived
      * @since 1.5
      */
     void info2(String pathOrUrl, Revision revision, Revision pegRevision,
-               int depth, InfoCallback callback)
+               int depth, String[] changelists, InfoCallback callback)
         throws ClientException;
 
     /**

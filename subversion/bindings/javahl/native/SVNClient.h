@@ -55,7 +55,8 @@ class SVNClient :public SVNBase
 {
  public:
   void info2(const char *path, Revision &revision, Revision &pegRevision,
-             svn_depth_t depth, InfoCallback *callback);
+             svn_depth_t depth, StringArray &changelists,
+             InfoCallback *callback);
   void unlock(Targets &targets, bool force);
   void lock(Targets &targets, const char *comment, bool force);
   jobjectArray revProperties(jobject jthis, const char *path,
