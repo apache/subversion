@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -2904,7 +2904,7 @@ public class BasicTests extends SVNTests
         // Attempt to update backup WC with "--force"
         assertEquals("wrong revision from update",
                      client.update(backupTest.getWCPath(),
-                                   null, Depth.infinity, false, true),
+                                   null, Depth.infinity, false, false, true),
                      2);
 
         // ----- TEST SWITCH -----
@@ -2939,7 +2939,7 @@ public class BasicTests extends SVNTests
         client.doSwitch(backupTest.getWCPath() + "/A/B/E",
                         backupTest.getUrl() + "/A/D/H",
                         Revision.HEAD, Revision.HEAD, Depth.infinity,
-                        false, true);
+                        false, false, true);
 
         backupTest.getWc().setItemIsSwitched("A/B/E",true);
         backupTest.getWc().removeItem("A/B/E/alpha");

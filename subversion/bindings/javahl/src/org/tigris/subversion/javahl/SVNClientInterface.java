@@ -533,13 +533,16 @@ public interface SVNClientInterface
      *                 Revision.HEAD will update to the
      *                 latest revision.
      * @param depth  the depth to recursively update.
+     * @param depthIsSticky if set, and depth is not Depth.Unknown, then also
+     *                      set the ambient depth value to depth.
      * @param ignoreExternals if externals are ignored during update
      * @param allowUnverObstructions allow unversioned paths that obstruct adds
      * @throws ClientException
      * @since 1.5
      */
     long update(String path, Revision revision, int depth,
-                boolean ignoreExternals, boolean allowUnverObstructions)
+                boolean depthIsSticky, boolean ignoreExternals,
+                boolean allowUnverObstructions)
             throws ClientException;
 
     /**
@@ -549,13 +552,15 @@ public interface SVNClientInterface
      *                 Revision.HEAD will update to the
      *                 latest revision.
      * @param depth  the depth to recursively update.
+     * @param depthIsSticky if set, and depth is not Depth.Unknown, then also
+     *                      set the ambient depth value to depth.
      * @param ignoreExternals if externals are ignored during update
      * @param allowUnverObstructions allow unversioned paths that obstruct adds
      * @throws ClientException
      * @since 1.5
      */
     long[] update(String[] path, Revision revision, int depth,
-                  boolean ignoreExternals,
+                  boolean depthIsSticky, boolean ignoreExternals,
                   boolean allowUnverObstructions) throws ClientException;
 
     /**
@@ -812,14 +817,16 @@ public interface SVNClientInterface
      * @param revision  the new base revision of working copy
      * @param pegRevision the revision at which to interpret <code>path</code>
      * @param depth     how deep to traverse into subdirectories
+     * @param depthIsSticky if set, and depth is not Depth.Unknown, then also
+     *                      set the ambient depth value to depth.
      * @param ignoreExternals whether to process externals definitions
      * @param allowUnverObstructions allow unversioned paths that obstruct adds
      * @throws ClientException
      * @since 1.5
      */
     long doSwitch(String path, String url, Revision revision,
-                  Revision pegRevision, int depth, boolean ignoreExternals,
-                  boolean allowUnverObstructions)
+                  Revision pegRevision, int depth, boolean depthIsSticky,
+                  boolean ignoreExternals, boolean allowUnverObstructions)
             throws ClientException;
 
     /**

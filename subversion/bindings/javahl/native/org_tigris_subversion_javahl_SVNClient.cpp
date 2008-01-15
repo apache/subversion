@@ -479,7 +479,7 @@ Java_org_tigris_subversion_javahl_SVNClient_add
 JNIEXPORT jlongArray JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_update
 (JNIEnv *env, jobject jthis, jobjectArray jpath, jobject jrevision,
- jint jdepth, jboolean jignoreExternals,
+ jint jdepth, jboolean jdepthIsSticky, jboolean jignoreExternals,
  jboolean jallowUnverObstructions)
 {
   JNIEntry(SVNClient, update);
@@ -498,6 +498,7 @@ Java_org_tigris_subversion_javahl_SVNClient_update
     return NULL;
 
   return cl->update(targets, revision, (svn_depth_t)jdepth,
+                    jdepthIsSticky ? true : false,
                     jignoreExternals ? true : false,
                     jallowUnverObstructions ? true : false);
 }
@@ -681,8 +682,8 @@ Java_org_tigris_subversion_javahl_SVNClient_doExport
 JNIEXPORT jlong JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_doSwitch
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jurl, jobject jrevision,
- jobject jPegRevision, jint jdepth, jboolean jignoreExternals,
- jboolean jallowUnverObstructions)
+ jobject jPegRevision, jint jdepth, jboolean jdepthIsSticky,
+ jboolean jignoreExternals, jboolean jallowUnverObstructions)
 {
   JNIEntry(SVNClient, doSwitch);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -708,6 +709,7 @@ Java_org_tigris_subversion_javahl_SVNClient_doSwitch
     return -1;
 
   return cl->doSwitch(path, url, revision, pegRevision, (svn_depth_t) jdepth,
+                      jdepthIsSticky ? true : false,
                       jignoreExternals ? true : false,
                       jallowUnverObstructions ? true : false);
 }

@@ -104,7 +104,8 @@ class SVNClient :public SVNBase
                 svn_depth_t depth, bool noIgnore, bool ignoreUnknownNodeTypes);
   jlong doSwitch(const char *path, const char *url, Revision &revision,
                  Revision &pegRevision, svn_depth_t depth,
-                 bool ignoreExternals, bool allowUnverObstructions);
+                 bool depthIsSticky, bool ignoreExternals,
+                 bool allowUnverObstructions);
   jlong doExport(const char *srcPath, const char *destPath,
                  Revision &revision, Revision &pegRevision, bool force,
                  bool ignoreExternals, svn_depth_t depth,
@@ -122,7 +123,8 @@ class SVNClient :public SVNBase
                bool noUnlock, bool keepChangelist,
                StringArray &changelists);
   jlongArray update(Targets &targets, Revision &revision, svn_depth_t depth,
-                    bool ignoreExternals, bool allowUnverObstructions);
+                    bool depthIsSticky, bool ignoreExternals,
+                    bool allowUnverObstructions);
   void add(const char *path, svn_depth_t depth, bool force, bool no_ignore,
            bool add_parents);
   void revert(const char *path, svn_depth_t depth);

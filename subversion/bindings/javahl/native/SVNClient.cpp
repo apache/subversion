@@ -338,7 +338,8 @@ void SVNClient::add(const char *path,
 }
 
 jlongArray SVNClient::update(Targets &targets, Revision &revision,
-                             svn_depth_t depth, bool ignoreExternals,
+                             svn_depth_t depth, bool depthIsSticky,
+                             bool ignoreExternals,
                              bool allowUnverObstructions)
 {
     Pool requestPool;
@@ -353,7 +354,7 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision,
     SVN_JNI_ERR(svn_client_update3(&revs, array,
                                    revision.revision(),
                                    depth,
-                                   FALSE  /* depth_is_sticky */,
+                                   depthIsSticky,
                                    ignoreExternals,
                                    allowUnverObstructions,
                                    ctx, requestPool.pool()),
@@ -525,7 +526,8 @@ jlong SVNClient::doExport(const char *srcPath, const char *destPath,
 
 jlong SVNClient::doSwitch(const char *path, const char *url,
                           Revision &revision, Revision &pegRevision,
-                          svn_depth_t depth, bool ignoreExternals,
+                          svn_depth_t depth, bool depthIsSticky,
+                          bool ignoreExternals,
                           bool allowUnverObstructions)
 {
     Pool requestPool;
@@ -546,7 +548,7 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
                                    pegRevision.revision(),
                                    revision.revision(),
                                    depth,
-                                   FALSE  /* depth_is_sticky */,
+                                   depthIsSticky,
                                    ignoreExternals,
                                    allowUnverObstructions,
                                    ctx,
