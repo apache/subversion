@@ -4089,9 +4089,9 @@ svn_client_info2(const char *path_or_url,
                  apr_pool_t *pool);
 
 /**
- * Similar to svn_client_info2() but with @a depth set according to
- * @a recurse: if @a recurse is TRUE, @a depth is @c svn_depth_infinity,
- * else @c svn_depth_empty.
+ * Similar to svn_client_info2() but with @a changelists passed as @c
+ * NULL, and @a depth set according to @a recurse: if @a recurse is
+ * TRUE, @a depth is @c svn_depth_infinity, else @c svn_depth_empty.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
