@@ -666,9 +666,9 @@ svn_opt_parse_revision(svn_opt_revision_t *start_revision,
 
 
 int
-svn_opt_parse_revision2(apr_array_header_t **ranges_to_merge,
-                        const char *arg,
-                        apr_pool_t *pool)
+svn_opt_parse_revision_to_range(apr_array_header_t *opt_ranges,
+                                const char *arg,
+                                apr_pool_t *pool)
 {
   svn_opt_revision_range_t *range = apr_palloc(pool, sizeof(*range));
 
@@ -679,7 +679,7 @@ svn_opt_parse_revision2(apr_array_header_t **ranges_to_merge,
                              arg, pool) == -1)
     return -1;
 
-  APR_ARRAY_PUSH(*ranges_to_merge, svn_opt_revision_range_t *) = range;
+  APR_ARRAY_PUSH(opt_ranges, svn_opt_revision_range_t *) = range;
   return 0;
 }
 
