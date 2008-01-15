@@ -58,6 +58,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             const svn_opt_revision_t *peg_revision,
                             const svn_opt_revision_t *revision,
                             svn_depth_t depth,
+                            svn_boolean_t depth_is_sticky,
                             svn_boolean_t *timestamp_sleep,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
@@ -87,6 +88,10 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                                                  APR_HASH_KEY_STRING)
                                   : NULL;
 
+  /* An unknown depth can't be sticky. */
+  if (depth == svn_depth_unknown)
+    depth_is_sticky = FALSE;
+  
   /* Get the external diff3, if any. */
   svn_config_get(cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
                  SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
@@ -145,8 +150,8 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later on. */
   SVN_ERR(svn_wc_get_switch_editor3(&revnum, adm_access, target,
-                                    switch_rev_url, use_commit_times, depth,
-                                    allow_unver_obstructions,
+                                    switch_rev_url, use_commit_times, depth, 
+                                    depth_is_sticky, allow_unver_obstructions,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->conflict_func, ctx->conflict_baton,
@@ -232,14 +237,15 @@ svn_client_switch2(svn_revnum_t *result_rev,
                    const svn_opt_revision_t *peg_revision,
                    const svn_opt_revision_t *revision,
                    svn_depth_t depth,
+                   svn_boolean_t depth_is_sticky,
                    svn_boolean_t ignore_externals,
                    svn_boolean_t allow_unver_obstructions,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
   return svn_client__switch_internal(result_rev, path, switch_url,
-                                     peg_revision, revision,
-                                     depth, NULL, ignore_externals,
+                                     peg_revision, revision, depth, 
+                                     depth_is_sticky, NULL, ignore_externals,
                                      allow_unver_obstructions, ctx, pool);
 }
 
@@ -257,5 +263,5 @@ svn_client_switch(svn_revnum_t *result_rev,
   return svn_client__switch_internal(result_rev, path, switch_url,
                                      &peg_revision, revision,
                                      SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                                     NULL, FALSE, FALSE, ctx, pool);
+                                     FALSE, NULL, FALSE, FALSE, ctx, pool);
 }
