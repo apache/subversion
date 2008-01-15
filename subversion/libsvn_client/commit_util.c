@@ -185,18 +185,6 @@ static svn_wc_entry_callbacks2_t add_tokens_callbacks = {
   svn_client__default_walker_error_handler
 };
 
-/* Return TRUE iff CHANGELISTS is NULL or ENTRY->changelist (which may be
-   NULL) is a key in CHANGELISTS. */
-static APR_INLINE svn_boolean_t
-considered_committable(apr_hash_t *changelists,
-                       const svn_wc_entry_t *entry)
-{
-  return ((changelists == NULL)
-          || (entry->changelist &&
-              apr_hash_get(changelists, entry->changelist, 
-                           APR_HASH_KEY_STRING))) ? TRUE : FALSE;
-}
-
 /* Recursively search for commit candidates in (and under) PATH (with
    entry ENTRY and ancestry URL), and add those candidates to
    COMMITTABLES.  If in ADDS_ONLY modes, only new additions are
@@ -354,7 +342,7 @@ harvest_committables(apr_hash_t *committables,
     {
       /* Paths in conflict which are not part of our changelist should
          be ignored. */
-      if (considered_committable(changelists, entry))
+      if (SVN_CLIENT__CL_MATCH(changelists, entry))
         return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
                                  _("Aborting commit: '%s' remains in conflict"),
                                  svn_path_local_style(path, pool));
@@ -513,7 +501,7 @@ harvest_committables(apr_hash_t *committables,
   /* Now, if this is something to commit, add it to our list. */
   if (state_flags)
     {
-      if (considered_committable(changelists, entry))
+      if (SVN_CLIENT__CL_MATCH(changelists, entry))
         {
           /* Finally, add the committable item. */
           add_committable(committables, path, entry->kind, url,
@@ -608,7 +596,7 @@ harvest_committables(apr_hash_t *committables,
                               && (this_entry->schedule
                                   == svn_wc_schedule_delete))
                             {
-                              if (considered_committable(changelists, entry))
+                              if (SVN_CLIENT__CL_MATCH(changelists, entry))
                                 {
                                   add_committable(
                                     committables, full_path,
