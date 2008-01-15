@@ -1209,8 +1209,8 @@ main(int argc, const char *argv[])
         }
         break;
       case 'r':
-        if (svn_opt_parse_revision2(&(opt_state.revision_ranges),
-                                    opt_arg, pool) != 0)
+        if (svn_opt_parse_revision_to_range(opt_state.revision_ranges,
+                                            opt_arg, pool) != 0)
           {
             err = svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool);
             if (! err)
