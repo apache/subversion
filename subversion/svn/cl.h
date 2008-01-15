@@ -156,7 +156,7 @@ typedef struct svn_cl__opt_state_t
   apr_array_header_t *changelists; /* changelist filters */
   const char *changelist;        /* operate on this changelist
                                     THIS IS TEMPORARY (LAST OF CHANGELISTS) */
-  svn_boolean_t keep_changelist; /* don't remove changelist after commit */
+  svn_boolean_t keep_changelists;/* don't remove changelists after commit */
   svn_boolean_t keep_local;      /* delete path only from repository */
   svn_boolean_t all_revprops;    /* retrieve all props */
   apr_hash_t *revprop_table;     /* table of revision properties to get/set */

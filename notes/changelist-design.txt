@@ -508,7 +508,7 @@ TO-DO list:
   [X] allow multiple --changelist args
   [X] svn status should display grouped changelists
   [X] 'svn info' should display a target's changelist field
-  [ ] rename --keep-changelist option to --keep-changelists
+  [X] rename --keep-changelist option to --keep-changelists
   [ ] fix --changelist and allow multiple changelists in subcommands:
 
       [ ] svn add --changelist (for --force invocations)
