@@ -485,53 +485,66 @@ changelists.  If not, it skips the target and keeps going.
 only harvests things that are committable *and* a member of the
 passed-in changelist.)
 
-This means that the UI use-cases (listed above changes slightly):
+This means that the UI use-cases listed above change slightly:
 
 
-4. undefine a CL all at once (by removing all members)
-
-     svn cl TARGET --remove --changelist CLNAME
-
-     (TARGET might be implicit '.' or not, and TARGET is treated
-     recursively.)
-
-5. rename a CL
-
-     svn cl NEWNAME TARGET --changelist OLDNAME
-
-     (TARGET might be implicit '.' or not, and TARGET is treated
-     recursively.)
-
+   4. undefine a CL all at once (by removing all members)
+   
+        svn cl TARGET --remove --changelist CLNAME
+   
+        (TARGET might be implicit '.' or not, and TARGET is treated
+        recursively.)
+   
+   5. rename a CL
+   
+        svn cl NEWNAME TARGET --changelist OLDNAME
+   
+        (TARGET might be implicit '.' or not, and TARGET is treated
+        recursively.)
 
 
 TO-DO list:
 
-  * [DONE] allow multiple --changelist args
+  [X] allow multiple --changelist args
+  [X] svn status should display grouped changelists
+  [X] 'svn info' should display a target's changelist field
+  [X] rename --keep-changelist option to --keep-changelists
+  [ ] fix --changelist and allow multiple changelists in subcommands:
 
-  * [DONE] svn status should display grouped changelists
+      No-problem subcommands:
+      [ ] svn add --changelist (for --force invocations)
+      [X] svn commit --changelist
+      [ ] svn diff --changelist  (only wc-wc and wc-repos cases)
+      [X] svn info --changelist
+      [ ] svn propget/propset --changelist
+      [ ] svn proplist/propdel --changelist
+      [ ] svn revert --changelist
+      [ ] svn rm --changelist
+      [ ] svn status --changelist
+      [ ] svn update --changelist
 
-  * [DONE] 'svn info' should display a target's changelist field
+      Problem subcommands (see below):
+      [ ] svn changelist (see UI notes above)
+      [ ] svn lock --changelist
+      [ ] svn log --changelist
+      [ ] svn unlock --changelist
 
-  * [DONE] svn commit --changelist already acts as a filter;
-    needs to handle a *list* of changelists, though
+  [ ] ensure that the bindings implementations of these APIs are up to snuff
+  [ ] write tests!
 
-  * rename --keep-changelist option to --keep-changelists
+Problem Subcommands:
 
-  * other commands to augment (fix --changelist interpretation, and
-    possibly allow multiple changelists):
+  Using a definition of --changelist as a filter means that
+  subcommands which are, by default, non-recursive in nature, have a
+  somewhat odd interface.  For example, 'svn info --changelist FOO'
+  (which ultimately translates to 'svn info . --depth empty
+  --changelist FOO') will either return exactly one info result, or
+  exactly none, depending on whether or not the current working
+  directory is in changelist FOO.  This is trivially worked around by
+  deepening the invocation:  'svn info -R --changelist FOO'
 
-      * svn changelist (see UI notes above)
-      * svn add --changelist (for --force invocations)
-      * svn rm --changelist
-      * svn status --changelist
-      * svn revert --changelist
-      * svn log --changelist
-      * svn diff --changelist  (only wc-wc and wc-repos cases)
-      * svn update --changelist
-      * svn lock/unlock --changelist
-      * svn propget/propset --changelist
-      * svn proplist/propdel --changelist
+  But what about subcommands for which there is no --depth support,
+  such as 'lock', 'log', 'unlock'; indeed, even the 'changelist'
+  subcommand itself?  Do we lose the changelist support, or grow some
+  sort of depth-crawling ability for these things?
 
-  * ensure that the bindings implementations of these APIs are up to snuff
-
-  * write tests!

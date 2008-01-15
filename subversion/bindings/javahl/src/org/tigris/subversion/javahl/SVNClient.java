@@ -430,26 +430,25 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #update(String[], Revision, int, boolean,
-     *                                boolean)} instead.
+     *                                boolean, boolean)} instead.
      * @since 1.0
      */
     public long update(String path, Revision revision, boolean recurse)
             throws ClientException
     {
-        return update(new String[]{path}, revision,
-                      Depth.unknownOrFiles(recurse), false, false)[0];
+        return update(new String[]{path}, revision, recurse, false)[0];
     }
 
     /**
      * @deprecated Use {@link #update(String[], Revision, int, boolean,
-     *                                boolean)} instead.
+     *                                boolean, boolean)} instead.
      * @since 1.2
      */
     public long[] update(String[] path, Revision revision,
                          boolean recurse, boolean ignoreExternals)
             throws ClientException
     {
-        return update(path, revision, Depth.unknownOrFiles(recurse),
+        return update(path, revision, Depth.unknownOrFiles(recurse), false,
                       ignoreExternals, false);
     }
 
@@ -457,11 +456,11 @@ public class SVNClient implements SVNClientInterface
      * @since 1.5
      */
     public long update(String path, Revision revision, int depth,
-                       boolean ignoreExternals,
+                       boolean depthIsSticky, boolean ignoreExternals,
                        boolean allowUnverObstructions)
             throws ClientException
     {
-        return update(new String[]{path}, revision, depth,
+        return update(new String[]{path}, revision, depth, depthIsSticky,
                       ignoreExternals, allowUnverObstructions)[0];
     }
 
@@ -469,13 +468,14 @@ public class SVNClient implements SVNClientInterface
      * @since 1.5
      */
     public native long[] update(String[] path, Revision revision,
-                                int depth, boolean ignoreExternals,
+                                int depth, boolean depthIsSticky,
+                                boolean ignoreExternals,
                                 boolean allowUnverObstructions)
             throws ClientException;
 
     /**
      * @deprecated Use {@link #commit(String[], String, int, boolean, boolean,
-     *                                String)} instead.
+     *                                String[])} instead.
      * @since 1.0
      */
     public long commit(String[] path, String message, boolean recurse)
@@ -486,7 +486,7 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #commit(String[], String, int, boolean, boolean,
-     *                                String)} instead.
+     *                                String[])} instead.
      * @since 1.2
      */
     public long commit(String[] path, String message, boolean recurse,
@@ -654,7 +654,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         return doSwitch(path, url, revision, Revision.HEAD,
-                        Depth.unknownOrFiles(recurse), false, false);
+                        Depth.unknownOrFiles(recurse), false, false, false);
     }
 
     /**
@@ -662,7 +662,7 @@ public class SVNClient implements SVNClientInterface
      */
     public native long doSwitch(String path, String url, Revision revision,
                                 Revision pegRevision, int depth,
-                                boolean ignoreExternals,
+                                boolean depthIsSticky, boolean ignoreExternals,
                                 boolean allowUnverObstructions)
             throws ClientException;
 
@@ -697,7 +697,7 @@ public class SVNClient implements SVNClientInterface
     /**
      * @deprecated Use {@link #merge(String, Revision, String, Revision,
      *                               String, boolean, int, boolean,
-     *                               boolean)} instead.
+     *                               boolean, boolean)} instead.
      * @since 1.0
      */
     public void merge(String path1, Revision revision1, String path2,
@@ -712,7 +712,7 @@ public class SVNClient implements SVNClientInterface
     /**
      * @deprecated Use {@link #merge(String, Revision, String, Revision,
      *                               String, boolean, int, boolean,
-     *                               boolean)} instead.
+     *                               boolean, boolean)} instead.
      * @since 1.2
      */
     public void merge(String path1, Revision revision1, String path2,
@@ -737,7 +737,7 @@ public class SVNClient implements SVNClientInterface
     /**
      * @deprecated Use {@link #merge(String, Revision, RevisionRange[],
      *                               String, boolean, int, boolean,
-     *                               boolean)} instead.
+     *                               boolean, boolean)} instead.
      * @since 1.2
      */
     public void merge(String path, Revision pegRevision, Revision revision1,
@@ -777,8 +777,8 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #diff(String, Revision, String, Revision,
-     *                              String, int, boolean, boolean, boolean)}
-     *                              instead.
+     *                              String, String, int, boolean, boolean,
+     *                              boolean)} instead.
      * @since 1.0
      */
     public void diff(String target1, Revision revision1, String target2,
@@ -792,8 +792,8 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #diff(String, Revision, String, Revision,
-     *                              String, int, boolean, boolean, boolean)}
-     *                              instead.
+     *                              String, String, int, boolean, boolean,
+     *                              boolean)} instead.
      * @since 1.2
      */
     public void diff(String target1, Revision revision1, String target2,
@@ -819,8 +819,8 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #diff(String, Revision, Revision, Revision,
-     *                              String, int, boolean, boolean, boolean)}
-     *                              instead.
+     *                              String, String, int, boolean, boolean,
+     *                              boolean)} instead.
      * @since 1.2
      */
     public void diff(String target, Revision pegRevision,
@@ -1317,7 +1317,7 @@ public class SVNClient implements SVNClientInterface
     {
         MyInfoCallback callback = new MyInfoCallback();
         info2(pathOrUrl, revision, pegRevision,
-              Depth.infinityOrEmpty(recurse), callback);
+              Depth.infinityOrEmpty(recurse), null, callback);
         return callback.getInfoArray();
     }
 
@@ -1326,7 +1326,7 @@ public class SVNClient implements SVNClientInterface
      */
     public native void info2(String pathOrUrl, Revision revision,
                              Revision pegRevision, int depth,
-                             InfoCallback callback)
+                             String[] changelists, InfoCallback callback)
             throws ClientException;
 
     /**

@@ -103,7 +103,7 @@ svn_cl__commit(apr_getopt_t *os,
                            targets,
                            opt_state->depth,
                            no_unlock,
-                           opt_state->keep_changelist,
+                           opt_state->keep_changelists,
                            opt_state->changelists,
                            ctx,
                            pool);

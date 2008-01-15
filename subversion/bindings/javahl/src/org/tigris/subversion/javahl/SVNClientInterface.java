@@ -503,8 +503,8 @@ public interface SVNClientInterface
      *                 latest revision.
      * @param recurse recursively update.
      * @throws ClientException
-     * @deprecated Use {@link #update(String[], Revision, int, boolean,
-     *                                boolean)} instead.
+     * @deprecated Use {@link #update(String, Revision, int, boolean,
+     *                                boolean, boolean)} instead.
      * @since 1.0
      */
     long update(String path, Revision revision, boolean recurse)
@@ -520,7 +520,7 @@ public interface SVNClientInterface
      * @param ignoreExternals if externals are ignored during update
      * @throws ClientException
      * @deprecated Use {@link #update(String[], Revision, int, boolean,
-     *                                boolean)} instead.
+     *                                boolean, boolean)} instead.
      * @since 1.2
      */
     long[] update(String[] path, Revision revision, boolean recurse,
@@ -533,13 +533,16 @@ public interface SVNClientInterface
      *                 Revision.HEAD will update to the
      *                 latest revision.
      * @param depth  the depth to recursively update.
+     * @param depthIsSticky if set, and depth is not {@link Depth#unknown},
+     *                      then also set the ambient depth value to depth.
      * @param ignoreExternals if externals are ignored during update
      * @param allowUnverObstructions allow unversioned paths that obstruct adds
      * @throws ClientException
      * @since 1.5
      */
     long update(String path, Revision revision, int depth,
-                boolean ignoreExternals, boolean allowUnverObstructions)
+                boolean depthIsSticky, boolean ignoreExternals,
+                boolean allowUnverObstructions)
             throws ClientException;
 
     /**
@@ -549,13 +552,15 @@ public interface SVNClientInterface
      *                 Revision.HEAD will update to the
      *                 latest revision.
      * @param depth  the depth to recursively update.
+     * @param depthIsSticky if set, and depth is not {@link Depth#unknown},
+     *                      then also set the ambient depth value to depth.
      * @param ignoreExternals if externals are ignored during update
      * @param allowUnverObstructions allow unversioned paths that obstruct adds
      * @throws ClientException
      * @since 1.5
      */
     long[] update(String[] path, Revision revision, int depth,
-                  boolean ignoreExternals,
+                  boolean depthIsSticky, boolean ignoreExternals,
                   boolean allowUnverObstructions) throws ClientException;
 
     /**
@@ -568,7 +573,7 @@ public interface SVNClientInterface
      * invalid.
      * @throws ClientException
      * @deprecated Use {@link #commit(String[], String, int, boolean, boolean,
-     *                                String)} instead.
+     *                                String[])} instead.
      */
     long commit(String[] path, String message, boolean recurse)
             throws ClientException;
@@ -584,7 +589,7 @@ public interface SVNClientInterface
      * invalid.
      * @throws ClientException
      * @deprecated Use {@link #commit(String[], String, int, boolean, boolean,
-     *                                String)} instead.
+     *                                String[])} instead.
      * @since 1.2
      */
     long commit(String[] path, String message, boolean recurse,
@@ -597,7 +602,7 @@ public interface SVNClientInterface
      * @param depth           how deep to recurse in subdirectories
      * @param noUnlock        do remove any locks
      * @param keepChangelist  keep changelist associations after the commit.
-     * @param changelistName  if non-null, filter paths using changelist
+     * @param changelists  if non-null, filter paths using changelists
      * @return The new revision number created by the commit, or
      * {@link Revision#SVN_INVALID_REVNUM} if the revision number is
      * invalid.
@@ -812,14 +817,16 @@ public interface SVNClientInterface
      * @param revision  the new base revision of working copy
      * @param pegRevision the revision at which to interpret <code>path</code>
      * @param depth     how deep to traverse into subdirectories
+     * @param depthIsSticky if set, and depth is not {@link Depth#unknown},
+     *                      then also set the ambient depth value to depth.
      * @param ignoreExternals whether to process externals definitions
      * @param allowUnverObstructions allow unversioned paths that obstruct adds
      * @throws ClientException
      * @since 1.5
      */
     long doSwitch(String path, String url, Revision revision,
-                  Revision pegRevision, int depth, boolean ignoreExternals,
-                  boolean allowUnverObstructions)
+                  Revision pegRevision, int depth, boolean depthIsSticky,
+                  boolean ignoreExternals, boolean allowUnverObstructions)
             throws ClientException;
 
     /**
@@ -877,7 +884,7 @@ public interface SVNClientInterface
      * @param recurse       traverse into subdirectories
      * @throws ClientException
      * @deprecated Use {@link #merge(String, Revision, String, Revision,
-     *                               String, boolean, int, boolean,
+     *                               String, boolean, int, boolean, boolean,
      *                               boolean)} instead.
      * @since 1.0
      */
@@ -898,7 +905,7 @@ public interface SVNClientInterface
      * @param dryRun        do not change anything
      * @throws ClientException
      * @deprecated Use {@link #merge(String, Revision, String, Revision,
-     *                               String, boolean, int, boolean,
+     *                               String, boolean, int, boolean, boolean,
      *                               boolean)} instead.
      * @since 1.2
      */
@@ -942,7 +949,7 @@ public interface SVNClientInterface
      * @throws ClientException
      * @deprecated Use {@link #merge(String, Revision, RevisionRange[],
      *                               String, boolean, int, boolean,
-     *                               boolean)} instead.
+     *                               boolean, boolean)} instead.
      * @since 1.2
      */
     void merge(String path, Revision pegRevision, Revision revision1,
@@ -1008,8 +1015,8 @@ public interface SVNClientInterface
      * @param recurse       traverse into subdirectories
      * @throws ClientException
      * @deprecated Use {@link #diff(String, Revision, String, Revision,
-     *                              String, int, boolean, boolean, boolean)}
-     *                              instead.
+     *                              String, String, int, boolean, boolean,
+     *                              boolean)} instead.
      * @since 1.0
      */
     void diff(String target1, Revision revision1, String target2,
@@ -1029,8 +1036,8 @@ public interface SVNClientInterface
      * @param force         diff even on binary files
      * @throws ClientException
      * @deprecated Use {@link #diff(String, Revision, String, Revision,
-     *                              String, int, boolean, boolean, boolean)}
-     *                              instead.
+     *                              String, String, int, boolean, boolean,
+     *                              boolean)} instead.
      * @since 1.2
      */
     void diff(String target1, Revision revision1, String target2,
@@ -1072,8 +1079,8 @@ public interface SVNClientInterface
      * @param force         diff even on binary files
      * @throws ClientException
      * @deprecated Use {@link #diff(String, Revision, Revision, Revision,
-     *                              String, int, boolean, boolean, boolean)}
-     *                              instead.
+     *                              String, String, int, boolean, boolean,
+     *                              boolean)} instead.
      * @since 1.2
      */
     void diff(String target, Revision pegRevision, Revision startRevision,
@@ -1703,11 +1710,12 @@ public interface SVNClientInterface
      * @param revision      the revision of the item to return
      * @param pegRevision   the revision to interpret pathOrUrl
      * @param depth         the depth to recurse
+     * @param changelists   if non-null, filter paths using changelists
      * @param callback      a callback to receive the infos retreived
      * @since 1.5
      */
     void info2(String pathOrUrl, Revision revision, Revision pegRevision,
-               int depth, InfoCallback callback)
+               int depth, String[] changelists, InfoCallback callback)
         throws ClientException;
 
     /**
