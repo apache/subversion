@@ -2144,7 +2144,8 @@ jobject SVNClient::createJavaInfo(const svn_wc_entry_t *entry)
 
 void
 SVNClient::info2(const char *path, Revision &revision, Revision &pegRevision,
-                 svn_depth_t depth, InfoCallback *callback)
+                 svn_depth_t depth, StringArray &changelists,
+                 InfoCallback *callback)
 {
     SVN_JNI_NULL_PTR_EX(path, "path", );
 
@@ -2160,8 +2161,9 @@ SVNClient::info2(const char *path, Revision &revision, Revision &pegRevision,
                                  pegRevision.revision(),
                                  revision.revision(),
                                  InfoCallback::callback,
-                                 callback,
-                                 depth, ctx, requestPool.pool()), );
+                                 callback, depth,
+                                 changelists.array(requestPool), ctx,
+                                 requestPool.pool()), );
 }
 
 jobjectArray SVNClient::makeJRevisionRangeArray(apr_array_header_t *ranges)

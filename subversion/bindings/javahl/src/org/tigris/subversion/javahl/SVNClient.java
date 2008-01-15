@@ -1317,7 +1317,7 @@ public class SVNClient implements SVNClientInterface
     {
         MyInfoCallback callback = new MyInfoCallback();
         info2(pathOrUrl, revision, pegRevision,
-              Depth.infinityOrEmpty(recurse), callback);
+              Depth.infinityOrEmpty(recurse), null, callback);
         return callback.getInfoArray();
     }
 
@@ -1326,7 +1326,7 @@ public class SVNClient implements SVNClientInterface
      */
     public native void info2(String pathOrUrl, Revision revision,
                              Revision pegRevision, int depth,
-                             InfoCallback callback)
+                             String[] changelists, InfoCallback callback)
             throws ClientException;
 
     /**

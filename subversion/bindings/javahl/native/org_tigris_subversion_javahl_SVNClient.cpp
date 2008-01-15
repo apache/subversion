@@ -1635,7 +1635,8 @@ Java_org_tigris_subversion_javahl_SVNClient_unlock
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_info2
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
- jobject jpegRevision, jint jdepth, jobject jinfoCallback)
+ jobject jpegRevision, jint jdepth, jobjectArray jchangelists,
+ jobject jinfoCallback)
 {
   JNIEntry(SVNClient, info2);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1656,7 +1657,11 @@ Java_org_tigris_subversion_javahl_SVNClient_info2
   if (JNIUtil::isExceptionThrown())
     return;
 
+  StringArray changelists(jchangelists);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
   InfoCallback callback(jinfoCallback);
-  cl->info2(path, revision, pegRevision, (svn_depth_t)jdepth,
+  cl->info2(path, revision, pegRevision, (svn_depth_t)jdepth, changelists,
             &callback);
 }
