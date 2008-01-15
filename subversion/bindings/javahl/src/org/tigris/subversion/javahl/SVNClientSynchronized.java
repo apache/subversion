@@ -581,13 +581,14 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @since 1.5
      */
     public long update(String path, Revision revision, int depth,
-                       boolean ignoreExternals, boolean allowUnverObstructions)
+                       boolean depthIsSticky, boolean ignoreExternals,
+                       boolean allowUnverObstructions)
             throws ClientException
     {
         synchronized(clazz)
         {
-            return worker.update(path, revision, depth, ignoreExternals,
-                                 allowUnverObstructions);
+            return worker.update(path, revision, depth, depthIsSticky,
+                                 ignoreExternals, allowUnverObstructions);
         }
     }
 
@@ -595,14 +596,14 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @since 1.5
      */
     public long[] update(String[] path, Revision revision, int depth,
-                         boolean ignoreExternals,
+                         boolean depthIsSticky, boolean ignoreExternals,
                          boolean allowUnverObstructions)
             throws ClientException
     {
         synchronized(clazz)
         {
-            return worker.update(path, revision, depth, ignoreExternals,
-                                 allowUnverObstructions);
+            return worker.update(path, revision, depth, depthIsSticky,
+                                 ignoreExternals, allowUnverObstructions);
         }
     }
 
@@ -835,14 +836,15 @@ public class SVNClientSynchronized implements SVNClientInterface
      */
     public long doSwitch(String path, String url, Revision revision,
                          Revision pegRevision, int depth,
-                         boolean ignoreExternals,
+                         boolean depthIsSticky, boolean ignoreExternals,
                          boolean allowUnverObstructions)
             throws ClientException
     {
         synchronized(clazz)
         {
             return worker.doSwitch(path, url, revision, pegRevision, depth,
-                                   ignoreExternals, allowUnverObstructions);
+                                   depthIsSticky, ignoreExternals,
+                                   allowUnverObstructions);
         }
     }
 

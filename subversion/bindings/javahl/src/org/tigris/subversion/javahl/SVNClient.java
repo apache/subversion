@@ -436,8 +436,7 @@ public class SVNClient implements SVNClientInterface
     public long update(String path, Revision revision, boolean recurse)
             throws ClientException
     {
-        return update(new String[]{path}, revision,
-                      Depth.unknownOrFiles(recurse), false, false)[0];
+        return update(new String[]{path}, revision, recurse, false)[0];
     }
 
     /**
@@ -449,7 +448,7 @@ public class SVNClient implements SVNClientInterface
                          boolean recurse, boolean ignoreExternals)
             throws ClientException
     {
-        return update(path, revision, Depth.unknownOrFiles(recurse),
+        return update(path, revision, Depth.unknownOrFiles(recurse), false,
                       ignoreExternals, false);
     }
 
@@ -457,11 +456,11 @@ public class SVNClient implements SVNClientInterface
      * @since 1.5
      */
     public long update(String path, Revision revision, int depth,
-                       boolean ignoreExternals,
+                       boolean depthIsSticky, boolean ignoreExternals,
                        boolean allowUnverObstructions)
             throws ClientException
     {
-        return update(new String[]{path}, revision, depth,
+        return update(new String[]{path}, revision, depth, depthIsSticky,
                       ignoreExternals, allowUnverObstructions)[0];
     }
 
@@ -469,7 +468,8 @@ public class SVNClient implements SVNClientInterface
      * @since 1.5
      */
     public native long[] update(String[] path, Revision revision,
-                                int depth, boolean ignoreExternals,
+                                int depth, boolean depthIsSticky,
+                                boolean ignoreExternals,
                                 boolean allowUnverObstructions)
             throws ClientException;
 
@@ -654,7 +654,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         return doSwitch(path, url, revision, Revision.HEAD,
-                        Depth.unknownOrFiles(recurse), false, false);
+                        Depth.unknownOrFiles(recurse), false, false, false);
     }
 
     /**
@@ -662,7 +662,7 @@ public class SVNClient implements SVNClientInterface
      */
     public native long doSwitch(String path, String url, Revision revision,
                                 Revision pegRevision, int depth,
-                                boolean ignoreExternals,
+                                boolean depthIsSticky, boolean ignoreExternals,
                                 boolean allowUnverObstructions)
             throws ClientException;
 
