@@ -1125,6 +1125,7 @@ do_entry_deletion(struct edit_baton *eb,
    * mark the containing directory as tree conflicted.
    * This is tree conflict use case 2 as described in the
    * paper attached to issue #2282
+   * See also notes/tree-conflicts/detection.txt
    */
   if (entry->kind == svn_node_file)
     {
@@ -1151,10 +1152,13 @@ do_entry_deletion(struct edit_baton *eb,
    * This _could_ be tree conflict use case 3 as described in the
    * paper attached to issue #2282
    *
-   * TODO: Make this test smarter! Flagging every delete by the update
-   * as a tree conflict raises way too many false positives.
-   * Use case 3 only applies if the file that was locally deleted
-   * and the file deleted by the update have a common ancestor.
+   * XXX: Flagging every delete of an already deleted file by the
+   * update as a tree conflict causes false positives.
+   * Use case 3 actually only applies if the file that was locally
+   * deleted and the file deleted by the update have a common ancestor.
+   * Getting at this information is very hard though without proper
+   * rename tracking. So currently, this is the best we can do.
+   * See also notes/tree-conflicts/detection.txt
    */
   if (entry->kind == svn_node_file
       && entry->schedule == svn_wc_schedule_delete)
@@ -1980,6 +1984,7 @@ open_file(const char *path,
 
   /* If the file is scheduled for deletion, we have a tree conflict.
    * This is use case 1 described in the paper attached to issue #2282
+   * See also notes/tree-conflicts/detection.txt
    */
   if (entry->schedule == svn_wc_schedule_delete)
     {

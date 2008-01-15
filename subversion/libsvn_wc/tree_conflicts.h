@@ -167,22 +167,6 @@ svn_wc__add_tree_conflict_data(svn_stringbuf_t *log_accum,
                                svn_wc_adm_access_t *adm_access,
                                apr_pool_t *pool);
 
-/* Set TREE_CONFLICT_VICTIM to TRUE if path is already a recorded
- * tree conflict victim in the directory corresponding to ADM_ACCESS.
- * Do all allocations in POOL. */
-svn_error_t *
-svn_wc__is_tree_conflict_victim(svn_boolean_t *tree_conflict_victim,
-                                const char *path,
-                                svn_wc_adm_access_t *adm_access,
-                                apr_pool_t *pool);
-
-/* Mark the tree conflict for VICTIM_PATH as resolved in the directory
- * belonging to ADM_ACCESS. Do all allocations in POOL. */
-svn_error_t *
-svn_wc__tree_conflict_resolved(const char* victim_path,
-                               svn_wc_adm_access_t *adm_access,
-                               apr_pool_t *pool);
-
 /*
  * Write tree conflicts (svn_wc_conflict_description_t)
  * in CONFLICTS to DIR_ENTRY.
