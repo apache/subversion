@@ -1582,14 +1582,13 @@ svn_error_t *svn_client_import(svn_client_commit_info_t **commit_info_p,
  *
  * Unlock paths in the repository, unless @a keep_locks is TRUE.
  *
- * If @a changelists is non-NULL, it is an array of <tt>const char
- * *</tt> changelist names used as a restrictive filter
- * on items that are committed;  that is, don't commit anything unless
- * it's a member of one of those changelists.  After the commit
- * completes successfully, remove changelist associations from the
- * targets, unless @a keep_changelists is set.  If no items are
- * committed, return an error with @c SVN_ERR_UNKNOWN_CHANGELIST as
- * its root cause.
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items that are committed;
+ * that is, don't commit anything unless it's a member of one of those
+ * changelists.  After the commit completes successfully, remove
+ * changelist associations from the targets, unless @a
+ * keep_changelists is set.  If @a changelists is
+ * empty (or altogether @c NULL), no changelist filtering occurs.
  *
  * Use @a pool for any temporary allocations.
  *
@@ -4070,6 +4069,12 @@ svn_info_dup(const svn_info_t *info, apr_pool_t *pool);
  * recurse fully, invoking @a receiver on @a path_or_url and
  * everything beneath it.
  *
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items that whose info is
+ * reported; that is, don't report info about any item anything unless
+ * it's a member of one of those changelists.  If @a changelists is
+ * empty (or altogether @c NULL), no changelist filtering occurs.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
@@ -4079,6 +4084,7 @@ svn_client_info2(const char *path_or_url,
                  svn_info_receiver_t receiver,
                  void *receiver_baton,
                  svn_depth_t depth,
+                 const apr_array_header_t *changelists,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
