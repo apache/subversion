@@ -1938,6 +1938,16 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
       *reverted = TRUE;
     }
 
+  /* If the entry is for this_dir, delete tree conflict data. */
+  if ((strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0) 
+      && entry->tree_conflict_data)
+    {
+      flags |= SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA;
+      tmp_entry.tree_conflict_data = NULL;
+      *reverted = TRUE;
+
+    }
+
   SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access, fullpath,
                                      &tmp_entry, flags, pool));
 
