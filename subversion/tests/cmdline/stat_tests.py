@@ -1505,32 +1505,24 @@ def status_with_tree_conflicts(sbox):
   # notes/tree-conflicts/use-cases.txt.
 
   sbox.build()
-  wc_dir = sbox.wc_dir
+  G = os.path.join(sbox.wc_dir, 'A', 'D', 'G')
 
-  # Make working copy 2
-  wc_dir_2 =  sbox.add_wc_path('2')
-  svntest.actions.duplicate_dir(wc_dir, wc_dir_2)  
-  G = os.path.join(wc_dir, 'A', 'D', 'G')
+  # Set up tree conflicts in wc 2
+  wc_dir_2 = svntest.actions.set_up_tree_conflicts(sbox)
   G2 = os.path.join(wc_dir_2, 'A', 'D', 'G')
-  rho2 = os.path.join(G2, 'rho')
   pi2 = os.path.join(G2, 'pi')
-  pig2 = os.path.join(G2, 'pig')
-  rhino2 = os.path.join(G2, 'rhino')
-  tiger2 = os.path.join(G2, 'tiger')
-  tapir2 = os.path.join(G2, 'tapir')
+  rho2 = os.path.join(G2, 'rho')
 
-  svntest.actions.set_up_tree_conflicts(G, G2)
-
-  # Update in wc 2, creating tree conflicts
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', G2)
+  # Update in wc 2, revealing tree conflicts
+  svntest.main.run_svn(None,'up', wc_dir_2)
 
   # check status of G in wc 2
   expected = svntest.verify.UnorderedOutput(
          ["C      %s\n" % G2,
           "D      %s\n" % pi2,
-          "A  +   %s\n" % pig2,
           "?      %s\n" % rho2,
-          "A  +   %s\n" % tiger2])
+          ])
+
   svntest.actions.run_and_verify_svn(None,
                                      expected,
                                      [],
@@ -1540,17 +1532,17 @@ def status_with_tree_conflicts(sbox):
   expected = svntest.verify.UnorderedOutput(
          ["C               2        2 jrandom      %s\n" % G2,
           "D               2        2 jrandom      %s\n" % pi2,
-          "A  +            -       ?   ?           %s\n" % pig2,
           "?                                       %s\n" % rho2,
-          "                2        2 jrandom      %s\n" % rhino2,
-          "A  +            -       ?   ?           %s\n" % tiger2,
-          "                2        2 jrandom      %s\n" % tapir2])
+          ])
+
   svntest.actions.run_and_verify_svn(None,
                                      expected,
                                      [],
                                      "status", "-v", G2)
 
   # check status of G in wc 2, with -xml
+  output, error = svntest.main.run_svn(None, 'status', G2, '--xml')
+
   template = ["<?xml version=\"1.0\"?>\n",
               "<status>\n",
               "<target\n",
@@ -1570,10 +1562,6 @@ def status_with_tree_conflicts(sbox):
               "</wc-status>\n",
               "</entry>\n",
              ]
-
-  output, error = svntest.actions.run_and_verify_svn(None, None, [],
-                                                     'status', G2,
-                                                     '--xml')
 
   for i in range(0, len(output)):
     if output[i].startswith("<date>"):

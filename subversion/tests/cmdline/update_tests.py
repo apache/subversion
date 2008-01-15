@@ -643,6 +643,7 @@ def update_delete_modified_files(sbox):
   # expect an 'obstructed update' error (see issue #1196), but
   # nowadays we expect success (see issue #1806).
   expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E'       : Item(status='C '), # tree conflict (issue #2282)
     'A/B/E/alpha' : Item(status='D '),
     'A/D/G'       : Item(status='D '),
     })
@@ -656,6 +657,7 @@ def update_delete_modified_files(sbox):
   expected_disk.remove('A/D/G/rho')
   expected_disk.remove('A/D/G/tau')
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/B/E', status='C ') # tree conflict (issue #2282)
   expected_status.remove('A/B/E/alpha')
   expected_status.remove('A/D/G')
   expected_status.remove('A/D/G/pi')
@@ -924,6 +926,7 @@ def prop_update_on_scheduled_delete(sbox):
 
   # Expected output tree for update of other_wc.
   expected_output = svntest.wc.State(other_wc, {
+    ''     : Item(status='C '), # tree conflict (issue #2282)
     'iota' : Item(status=' U'),
     })
 
@@ -933,6 +936,7 @@ def prop_update_on_scheduled_delete(sbox):
 
   # Expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(other_wc, 2)
+  expected_status.tweak('', status='C ') # tree conflict (issue #2282)
   expected_status.tweak('iota', status='D ')
 
   # Do the update and check the results in three ways.
@@ -3737,53 +3741,46 @@ interactive-conflicts = true
 def tree_conflicts_in_updated_files(sbox):
   "tree conflicts in updated files"
 
-  # Detect simple tree conflicts among files edited and renamed in a single
-  # directory.  See use cases 1-3 in notes/tree-conflicts/use-cases.txt for
-  # background.
-  
-  # We do not try to track renames.  The only difference from the behavior
-  # of Subversion 1.4/1.5 is the conflicted status of the directory.
+  # Detect simple tree conflicts among files edited or deleted in a single
+  # directory.
+
+  # See use cases 1-3 in notes/tree-conflicts/use-cases.txt for background.
+  # Note that we do not try to track renames.  The only difference from
+  # the behavior of Subversion 1.4 and 1.5 is the conflicted status of the
+  # parent directory.
 
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # Make working copy 2
-  wc_dir_2 =  sbox.add_wc_path('2')
-  svntest.actions.duplicate_dir(wc_dir, wc_dir_2)
-  G = os.path.join(wc_dir, 'A', 'D', 'G')
-  G2 = os.path.join(wc_dir_2, 'A', 'D', 'G')
-
-  svntest.actions.set_up_tree_conflicts(G, G2)
+  # Set up tree conflicts in wc 2
+  wc_dir_2 = svntest.actions.set_up_tree_conflicts(sbox)
 
   # Update in wc 2
-  expected_output = wc.State(G2, {
-    ''        : Item(status='C '),
-    'pi'      : Item(status='U '),
-    'rho'     : Item(status='D '),
-    'rhino'   : Item(status='A '),
-    'tau'     : Item(status='D '),
-    'tapir'   : Item(status='A '),
+  expected_output = wc.State(wc_dir_2, {
+    'A/D/G'       : Item(status='C '),
+    'A/D/G/pi'    : Item(status='U '),
+    'A/D/G/rho'   : Item(status='D '),
+    'A/D/G/tau'   : Item(status='D '),
     })
-  expected_disk = wc.State('', {
-    'pi'      : Item("This is the file 'pi'.\nChange to 'G/pi'.\n"),
-    'pig'     : Item("This is the file 'pi'.\n"),
-    'rho'     : Item("This is the file 'rho'.\nChange to 'G/rho'.\n"),
-    'rhino'   : Item("This is the file 'rho'.\n"),
-    'tapir'   : Item("This is the file 'tau'.\n"),
-    'tiger'   : Item("This is the file 'tau'.\n"),
-    })
-  expected_status = wc.State(G2, {
-    ''        : Item(status='C ', wc_rev=2),
-    'pi'      : Item(status='D ', wc_rev=2),
-    'pig'     : Item(status='A ', wc_rev='-', copied='+'),
-    'rhino'   : Item(status='  ', wc_rev=2),
-    'tapir'   : Item(status='  ', wc_rev=2),
-    'tiger'   : Item(status='A ', wc_rev='-', copied='+'),
-    })
-  svntest.actions.run_and_verify_update(G2,
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/D/G/pi',
+                      contents="This is the file 'pi'.\nEdited in wc 1.\n")
+  expected_disk.tweak('A/D/G/rho',
+                      contents="This is the file 'rho'.\nEdited in wc 2.\n")
+  expected_disk.remove('A/D/G/tau')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir_2, 2)
+  expected_status.tweak('A/D/G',     status='C ')
+  expected_status.tweak('A/D/G/pi',  status='D ')
+  expected_status.remove('A/D/G/rho',
+                         'A/D/G/tau')
+
+  svntest.actions.run_and_verify_update(wc_dir_2,
                                         expected_output,
                                         expected_disk,
                                         expected_status)
+
 
 #######################################################################
 # Run the tests

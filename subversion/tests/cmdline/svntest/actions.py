@@ -1377,20 +1377,61 @@ def make_conflict_marker_text(wc_text, merged_text, merged_rev):
   return "<<<<<<< .working\n" + wc_text + "=======\n" + \
          merged_text + ">>>>>>> .merge-right.r" + str(merged_rev) + "\n"
 
-def set_up_tree_conflicts(G, G2):
-  """Modify and move files in two working copies.  Commit in the first wc.
-  The second wc will have tree conflicts.  For background, see use cases
-  1-3 in notes/tree-conflict/use-cases.txt."""
+def set_up_tree_conflicts(sbox, do_copy=False):
+  """Edit and delete files in two working copies so that tree conflicts
+  will appear.  See notes/tree-conflict/use-cases.txt for background.
+
+  For update testing, wc 2 is a duplicate of wc 1 (with the same URL), so
+  DO_COPY should be False.
+
+  For switch testing, the URL of wc 2 should be a copy of the first URL,
+  so DO_COPY should be True.
+  """
+
+  wc_dir = sbox.wc_dir
   j = os.path.join
+  G = j(wc_dir, 'A', 'D', 'G')
 
-  # Modify pi, move rho, move tau in wc 1 and commit
-  main.file_append( j(G, 'pi'), "Change to 'G/pi'.\n")
-  run_and_verify_svn(None, None, [], 'mv', j(G, 'rho'), j(G, 'rhino'))
-  run_and_verify_svn(None, None, [], 'mv', j(G, 'tau'), j(G, 'tapir'))
-  run_and_verify_svn(None, None, [], 'ci', '-m', 'changes in wc 1', G)
+  if do_copy:
+    # Create wc 2 as a copy of wc 1.
+    A_url  = sbox.repo_url + '/A'
+    A2_url = sbox.repo_url + '/A2'
+    main.run_svn(None, 'cp', A_url, A2_url, '-m', 'copy A to A2')
+    main.run_svn(None, 'up', wc_dir)
+    A = j(wc_dir, 'A')
+    A2 = j(wc_dir, 'A2')
+    G2 = j(wc_dir, 'A2', 'D', 'G')
+  else:
+    # Create wc 2 as a duplicate of wc 1.
+    wc_dir_2 =  sbox.add_wc_path('2')
+    duplicate_dir(wc_dir, wc_dir_2)
+    main.run_svn(None, 'up', wc_dir_2)
+    G2 = j(wc_dir_2, 'A', 'D', 'G')
 
-  # Move pi, modify rho, move tau in wc 2
-  run_and_verify_svn(None, None, [], 'mv', j(G2, 'pi'),  j(G2, 'pig'))
-  main.file_append( j(G2, 'rho'), "Change to 'G/rho'.\n")
-  run_and_verify_svn(None, None, [], 'mv', j(G2, 'tau'), j(G2, 'tiger'))
+  # Replace the files in /A/D/H of wc 1 to break the common ancestry.
+  # TODO: first implement ancestry-checking.
 
+  # Use case 1
+  # Action: Edited
+  main.file_append(j(G, 'pi'), "Edited in wc 1.\n")
+  # Reason: Deleted
+  main.run_svn(None, 'del', j(G2, 'pi'))
+
+  # Use case 2
+  # Action: Deleted
+  main.run_svn(None, 'del', j(G, 'rho'))
+  # Reason: Edited
+  main.file_append(j(G2, 'rho'), "Edited in wc 2.\n")
+
+  # Use case 3
+  # Action: Deleted
+  main.run_svn(None, 'del', j(G, 'tau'))
+  # Reason: Deleted
+  main.run_svn(None, 'del', j(G2, 'tau'))
+
+  if do_copy:
+    main.run_svn(None, 'ci', '-m', 'Changes in wc 1.', A)
+    return None
+  else:
+    main.run_svn(None, 'ci', '-m', 'Changes in wc 1.', wc_dir)
+    return wc_dir_2

@@ -780,7 +780,8 @@ def failed_anchor_is_target(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'switch',
                                      G_url, H_path)
 
-  expected_status.tweak('A/D/H', status='  ') # remains switched
+  expected_status.tweak('A/D/H', status='C ') # remains switched and also has
+                                              # a tree conflict (issue #2282)
   expected_status.add({ 'A/D/H/psi' : Item(status='  ',
                                            switched=None,
                                            wc_rev=2) })
@@ -2106,6 +2107,95 @@ def switch_to_root(sbox):
                                         expected_disk,
                                         expected_status)
 
+#----------------------------------------------------------------------
+
+def tree_conflicts_in_switched_files(sbox):
+  "tree conflicts in switched files"
+
+  # Detect simple tree conflicts among files edited and renamed in a single
+  # directory.  See use cases 1-3 in notes/tree-conflicts/use-cases.txt for
+  # background.
+  
+  # We do not try to track renames.  The only difference from the behavior
+  # of Subversion 1.4/1.5 is the conflicted status of the directory.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  A = os.path.join(wc_dir, 'A')
+
+  # Set up tree conflicts in wc 2
+  svntest.actions.set_up_tree_conflicts(sbox, True)
+  A2 = os.path.join(sbox.wc_dir, 'A2')
+
+  # Switch wc 2 to url 1
+  expected_output = svntest.wc.State(wc_dir, {
+    'A2/D/G'       : Item(status='C '),
+    'A2/D/G/pi'    : Item(status='U '),
+    'A2/D/G/rho'   : Item(status='D '),
+    'A2/D/G/tau'   : Item(status='D '),
+    })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A2'           : Item(),
+    'A2/mu'        : Item("This is the file 'mu'.\n"),
+    'A2/B'         : Item(),
+    'A2/B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'A2/B/E'       : Item(),
+    'A2/B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'A2/B/E/beta'  : Item("This is the file 'beta'.\n"),
+    'A2/B/F'       : Item(),
+    'A2/C'         : Item(),
+    'A2/D'         : Item(),
+    'A2/D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'A2/D/G'       : Item(),
+    'A2/D/G/pi'    : Item("This is the file 'pi'.\nEdited in wc 1.\n"),
+    'A2/D/G/rho'   : Item("This is the file 'rho'.\nEdited in wc 2.\n"),
+    'A2/D/H'       : Item(),
+    'A2/D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'A2/D/H/psi'   : Item("This is the file 'psi'.\n"),
+    'A2/D/H/omega' : Item("This is the file 'omega'.\n"),
+  })
+  expected_disk.tweak('A/D/G/pi',
+                      contents="This is the file 'pi'.\nEdited in wc 1.\n")
+  expected_disk.remove('A/D/G/rho',
+                       'A/D/G/tau')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'A2'           : Item(wc_rev=3),
+    'A2/mu'        : Item(wc_rev=3),
+    'A2/B'         : Item(wc_rev=3),
+    'A2/B/lambda'  : Item(wc_rev=3),
+    'A2/B/E'       : Item(wc_rev=3),
+    'A2/B/E/alpha' : Item(wc_rev=3),
+    'A2/B/E/beta'  : Item(wc_rev=3),
+    'A2/B/F'       : Item(wc_rev=3),
+    'A2/C'         : Item(wc_rev=3),
+    'A2/D'         : Item(wc_rev=3),
+    'A2/D/gamma'   : Item(wc_rev=3),
+    'A2/D/G'       : Item(wc_rev=3),
+    'A2/D/G/pi'    : Item(wc_rev=3),
+    'A2/D/H'       : Item(wc_rev=3),
+    'A2/D/H/chi'   : Item(wc_rev=3),
+    'A2/D/H/psi'   : Item(wc_rev=3),
+    'A2/D/H/omega' : Item(wc_rev=3),
+  })
+  expected_status.tweak(status='  ')
+  expected_status.tweak('A2', switched='S')
+  expected_status.tweak('A2/D/G', status='C ')
+  expected_status.tweak('A2/D/G/pi', status='D ')
+  expected_status.tweak('A/D/G/pi', wc_rev=3)
+  expected_status.remove('A/D/G/rho',
+                         'A/D/G/tau')
+
+  svntest.actions.run_and_verify_switch(wc_dir, A2, 
+                                        sbox.repo_url + '/A',
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -2140,6 +2230,7 @@ test_list = [ None,
               switch_urls_with_spaces,
               switch_to_dir_with_peg_rev2,
               switch_to_root,
+              tree_conflicts_in_switched_files,
              ]
 
 if __name__ == '__main__':
