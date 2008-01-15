@@ -511,13 +511,11 @@ TO-DO list:
   [X] rename --keep-changelist option to --keep-changelists
   [ ] fix --changelist and allow multiple changelists in subcommands:
 
+      No-problem subcommands:
       [ ] svn add --changelist (for --force invocations)
-      [ ] svn changelist (see UI notes above)
       [X] svn commit --changelist
       [ ] svn diff --changelist  (only wc-wc and wc-repos cases)
       [X] svn info --changelist
-      [ ] svn lock/unlock --changelist
-      [ ] svn log --changelist
       [ ] svn propget/propset --changelist
       [ ] svn proplist/propdel --changelist
       [ ] svn revert --changelist
@@ -525,5 +523,28 @@ TO-DO list:
       [ ] svn status --changelist
       [ ] svn update --changelist
 
+      Problem subcommands (see below):
+      [ ] svn changelist (see UI notes above)
+      [ ] svn lock --changelist
+      [ ] svn log --changelist
+      [ ] svn unlock --changelist
+
   [ ] ensure that the bindings implementations of these APIs are up to snuff
   [ ] write tests!
+
+Problem Subcommands:
+
+  Using a definition of --changelist as a filter means that
+  subcommands which are, by default, non-recursive in nature, have a
+  somewhat odd interface.  For example, 'svn info --changelist FOO'
+  (which ultimately translates to 'svn info . --depth empty
+  --changelist FOO') will either return exactly one info result, or
+  exactly none, depending on whether or not the current working
+  directory is in changelist FOO.  This is trivially worked around by
+  deepening the invocation:  'svn info -R --changelist FOO'
+
+  But what about subcommands for which there is no --depth support,
+  such as 'lock', 'log', 'unlock'; indeed, even the 'changelist'
+  subcommand itself?  Do we lose the changelist support, or grow some
+  sort of depth-crawling ability for these things?
+
