@@ -24,6 +24,7 @@
 #include "svn_client.h"
 #include "svn_pools.h"
 #include "svn_path.h"
+#include "svn_hash.h"
 #include "svn_wc.h"
 
 #include "svn_private_config.h"
@@ -205,6 +206,7 @@ push_dir_info(svn_ra_session_t *ra_session,
 /* Callback and baton for crawl_entries() walk over entries files. */
 struct found_entry_baton
 {
+  apr_hash_t *changelist_hash;
   svn_info_receiver_t receiver;
   void *receiver_baton;
 };
@@ -216,7 +218,6 @@ info_found_entry_callback(const char *path,
                           apr_pool_t *pool)
 {
   struct found_entry_baton *fe_baton = walk_baton;
-  svn_info_t *info;
 
   /* We're going to receive dirents twice;  we want to ignore the
      first one (where it's a child of a parent dir), and only print
@@ -225,9 +226,13 @@ info_found_entry_callback(const char *path,
       && (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR)))
     return SVN_NO_ERROR;
 
-  SVN_ERR(build_info_from_entry(&info, entry, pool));
-
-  return fe_baton->receiver(fe_baton->receiver_baton, path, info, pool);
+  if (SVN_CLIENT__CL_MATCH(fe_baton->changelist_hash, entry))
+    {
+      svn_info_t *info;
+      SVN_ERR(build_info_from_entry(&info, entry, pool));
+      SVN_ERR(fe_baton->receiver(fe_baton->receiver_baton, path, info, pool));
+    }
+  return SVN_NO_ERROR;
 }
 
 
@@ -247,31 +252,35 @@ crawl_entries(const char *wcpath,
               svn_info_receiver_t receiver,
               void *receiver_baton,
               svn_depth_t depth,
+              apr_hash_t *changelist_hash,
               svn_client_ctx_t *ctx,
               apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
-  svn_info_t *info;
-  struct found_entry_baton fe_baton;
   int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
 
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, wcpath, FALSE,
-                                 adm_lock_level,
-                                 ctx->cancel_func, ctx->cancel_baton,
-                                 pool));
+  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, wcpath, FALSE, 
+                                 adm_lock_level, ctx->cancel_func, 
+                                 ctx->cancel_baton, pool));
   SVN_ERR(svn_wc__entry_versioned(&entry, wcpath, adm_access, FALSE, pool));
 
-  SVN_ERR(build_info_from_entry(&info, entry, pool));
-  fe_baton.receiver = receiver;
-  fe_baton.receiver_baton = receiver_baton;
 
   if (entry->kind == svn_node_file)
     {
-      return receiver(receiver_baton, wcpath, info, pool);
+      if (SVN_CLIENT__CL_MATCH(changelist_hash, entry))
+        {
+          svn_info_t *info;
+          SVN_ERR(build_info_from_entry(&info, entry, pool));
+          return receiver(receiver_baton, wcpath, info, pool);
+        }
     }
   else if (entry->kind == svn_node_dir)
     {
+      struct found_entry_baton fe_baton;
+      fe_baton.changelist_hash = changelist_hash;
+      fe_baton.receiver = receiver;
+      fe_baton.receiver_baton = receiver_baton;
       SVN_ERR(svn_wc_walk_entries3(wcpath, adm_access,
                                    &entry_walk_callbacks, &fe_baton,
                                    depth, FALSE, ctx->cancel_func,
@@ -337,6 +346,7 @@ svn_client_info2(const char *path_or_url,
                  svn_info_receiver_t receiver,
                  void *receiver_baton,
                  svn_depth_t depth,
+                 const apr_array_header_t *changelists,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
@@ -359,9 +369,12 @@ svn_client_info2(const char *path_or_url,
           || peg_revision->kind == svn_opt_revision_unspecified))
     {
       /* Do all digging in the working copy. */
-      return crawl_entries(path_or_url,
-                           receiver, receiver_baton,
-                           depth, ctx, pool);
+      apr_hash_t *changelist_hash = NULL;
+      if (changelists && changelists->nelts)
+        SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, 
+                                           changelists, pool));
+      return crawl_entries(path_or_url, receiver, receiver_baton,
+                           depth, changelist_hash, ctx, pool);
     }
 
   /* Go repository digging instead. */
@@ -517,8 +530,8 @@ svn_client_info(const char *path_or_url,
 {
   return svn_client_info2(path_or_url, peg_revision, revision,
                           receiver, receiver_baton,
-                          SVN_DEPTH_INFINITY_OR_EMPTY(recurse),
-                          ctx, pool);
+                          SVN_DEPTH_INFINITY_OR_EMPTY(recurse), 
+                          NULL, ctx, pool);
 }
 
 svn_info_t *
