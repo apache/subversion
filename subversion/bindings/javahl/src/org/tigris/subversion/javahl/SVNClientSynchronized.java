@@ -549,8 +549,8 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * @deprecated Use {@link #update(String[], Revision, int, boolean,
-     *                                boolean)} instead.
+     * @deprecated Use {@link #update(String, Revision, int, boolean,
+     *                                boolean, boolean)} instead.
      * @since 1.0
      */
     public long update(String path, Revision revision, boolean recurse)
@@ -564,7 +564,7 @@ public class SVNClientSynchronized implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #update(String[], Revision, int, boolean,
-     *                                boolean)} instead.
+     *                                boolean, boolean)} instead.
      * @since 1.2
      */
     public long[] update(String[] path, Revision revision, boolean recurse,
@@ -609,7 +609,7 @@ public class SVNClientSynchronized implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #commit(String[], String, int, boolean, boolean,
-     *                                String)} instead.
+     *                                String[])} instead.
      * @since 1.0
      */
     public long commit(String[] path, String message, boolean recurse)
@@ -623,7 +623,7 @@ public class SVNClientSynchronized implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #commit(String[], String, int, boolean, boolean,
-     *                                String)} instead.
+     *                                String[])} instead.
      * @since 1.2
      */
     public long commit(String[] path, String message, boolean recurse,
@@ -907,7 +907,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     /**
      * @deprecated Use {@link #merge(String, Revision, String, Revision,
      *                               String, boolean, int, boolean,
-     *                               boolean)} instead.
+     *                               boolean, boolean)} instead.
      * @since 1.0
      */
     public void merge(String path1, Revision revision1, String path2,
@@ -925,7 +925,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     /**
      * @deprecated Use {@link #merge(String, Revision, String, Revision,
      *                               String, boolean, int, boolean,
-     *                               boolean)} instead.
+     *                               boolean, boolean)} instead.
      * @since 1.2
      */
     public void merge(String path1, Revision revision1, String path2,
@@ -958,7 +958,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     /**
      * @deprecated Use {@link #merge(String, Revision, RevisionRange[],
      *                               String, boolean, int, boolean,
-     *                               boolean)} instead.
+     *                               boolean, boolean)} instead.
      * @since 1.2
      */
     public void merge(String path, Revision pegRevision, Revision revision1,
@@ -1018,8 +1018,8 @@ public class SVNClientSynchronized implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #diff(String, Revision, String, Revision,
-     *                              String, int, boolean, boolean, boolean)}
-     *                              instead.
+     *                              String, String, int, boolean, boolean,
+     *                              boolean)} instead.
      * @since 1.0
      */
     public void diff(String target1, Revision revision1, String target2,
@@ -1035,8 +1035,8 @@ public class SVNClientSynchronized implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #diff(String, Revision, String, Revision,
-     *                              String, int, boolean, boolean, boolean)}
-     *                              instead.
+     *                              String, String, int, boolean, boolean,
+     *                              boolean)} instead.
      * @since 1.2
      */
     public void diff(String target1, Revision revision1, String target2,
@@ -1071,8 +1071,8 @@ public class SVNClientSynchronized implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #diff(String, Revision, Revision, Revision,
-     *                              String, int, boolean, boolean, boolean)}
-     *                              instead.
+     *                              String, String, int, boolean, boolean,
+     *                              boolean)} instead.
      * @since 1.2
      */
     public void diff(String target, Revision pegRevision,
