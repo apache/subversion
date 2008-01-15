@@ -68,7 +68,7 @@ typedef enum {
   opt_encoding,
   opt_force_log,
   opt_force,
-  opt_keep_changelist,
+  opt_keep_changelists,
   opt_ignore_ancestry,
   opt_ignore_externals,
   opt_incremental,
@@ -239,8 +239,8 @@ const apr_getopt_option_t svn_cl__options[] =
   {"remove",         opt_remove, 0, N_("remove changelist association")},
   {"changelist",    opt_changelist, 1,
                     N_("operate only on members of changelist ARG")},
-  {"keep-changelist", opt_keep_changelist, 0,
-                    N_("don't delete changelist after commit")},
+  {"keep-changelists", opt_keep_changelists, 0,
+                    N_("don't delete changelists after commit")},
   {"keep-local",    opt_keep_local, 0, N_("keep path in working copy")},
   {"with-all-revprops",  opt_with_all_revprops, 0,
                     N_("retrieve all revision properties")},
@@ -382,7 +382,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
        "  successful commit.\n"),
 #endif
     {'q', 'N', opt_depth, opt_targets, opt_no_unlock, SVN_CL__LOG_MSG_OPTIONS,
-     opt_changelist, opt_keep_changelist} },
+     opt_changelist, opt_keep_changelists} },
 
   { "copy", svn_cl__copy, {"cp"}, N_
     ("Duplicate something in working copy or repository, remembering\n"
@@ -1442,8 +1442,8 @@ main(int argc, const char *argv[])
         apr_hash_set(changelists, opt_state.changelist,
                      APR_HASH_KEY_STRING, (void *)1);
         break;
-      case opt_keep_changelist:
-        opt_state.keep_changelist = TRUE;
+      case opt_keep_changelists:
+        opt_state.keep_changelists = TRUE;
         break;
       case opt_keep_local:
         opt_state.keep_local = TRUE;
