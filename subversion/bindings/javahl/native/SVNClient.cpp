@@ -1730,12 +1730,12 @@ cancel(void *baton)
         return SVN_NO_ERROR;
 }
 
-/* An svn_wc_status_func_t callback function for anaylyzing status
+/* An svn_wc_status_func2_t callback function for anaylyzing status
  * structures. */
 static void
 analyze_status(void *baton,
                const char *path,
-               svn_wc_status_t *status)
+               svn_wc_status2_t *status)
 {
     struct version_status_baton *sb = (version_status_baton *)baton;
 
@@ -1846,9 +1846,9 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
     ctx.cancel_baton = &sb;
 
     svn_error_t *err;
-    err = svn_client_status(NULL, intPath.c_str(), &rev, analyze_status,
-                            &sb, TRUE, TRUE, FALSE, FALSE, &ctx,
-                            requestPool.pool());
+    err = svn_client_status3(NULL, intPath.c_str(), &rev, analyze_status,
+                             &sb, svn_depth_infinity, TRUE, FALSE, FALSE,
+                             FALSE, &ctx, requestPool.pool());
     if (err && (err->apr_err == SVN_ERR_CANCELLED))
         svn_error_clear(err);
     else
@@ -1972,8 +1972,9 @@ jobject SVNClient::info(const char *path)
     Path intPath(path);
     SVN_JNI_ERR(intPath.error_occured(), NULL);
 
-    SVN_JNI_ERR(svn_wc_adm_probe_open2(&adm_access, NULL, intPath.c_str(),
-                                       FALSE, 0, requestPool.pool()),
+    SVN_JNI_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, intPath.c_str(),
+                                       FALSE, 0, NULL, NULL,
+                                       requestPool.pool()),
                 NULL);
     SVN_JNI_ERR(svn_wc_entry(&entry, intPath.c_str(), adm_access, FALSE,
                              requestPool.pool()),
