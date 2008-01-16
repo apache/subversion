@@ -851,7 +851,8 @@ public class SVNClient implements SVNClientInterface
      */
     public native void diffSummarize(String target1, Revision revision1,
                                      String target2, Revision revision2,
-                                     int depth, boolean ignoreAncestry,
+                                     int depth, String[] changelists,
+                                     boolean ignoreAncestry,
                                      DiffSummaryReceiver receiver)
             throws ClientException;
 
@@ -861,7 +862,8 @@ public class SVNClient implements SVNClientInterface
     public native void diffSummarize(String target, Revision pegRevision,
                                      Revision startRevision,
                                      Revision endRevision,
-                                     int depth, boolean ignoreAncestry,
+                                     int depth, String[] changelists,
+                                     boolean ignoreAncestry,
                                      DiffSummaryReceiver receiver)
             throws ClientException;
 
