@@ -28,6 +28,7 @@
 #include "svn_hash.h"
 
 #include "client.h"
+#include "private/svn_wc_private.h"
 
 
 /*** Code. ***/
@@ -95,10 +96,7 @@ found_an_entry(const char *path,
   /* If the entry has a changelist, and is a file or is the "this-dir"
      entry for directory, and the changelist matches one that we're
      looking for (or we aren't looking for any in particular)... */
-  if (entry->changelist
-      && ((! b->changelists)
-          || apr_hash_get(b->changelists, entry->changelist, 
-                          APR_HASH_KEY_STRING))
+  if (SVN_WC__CL_MATCH(b->changelists, entry)
       && ((entry->kind == svn_node_file)
           || ((entry->kind == svn_node_dir)
               && (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0))))
