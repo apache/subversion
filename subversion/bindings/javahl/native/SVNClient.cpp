@@ -893,6 +893,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                      const char *target2, Revision &revision2,
                      Revision *pegRevision, const char *relativeToDir,
                      const char *outfileName, svn_depth_t depth,
+                     StringArray &changelists,
                      bool ignoreAncestry, bool noDiffDelete, bool force)
 {
     svn_error_t *err;
@@ -945,6 +946,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                    SVN_APR_LOCALE_CHARSET,
                                    outfile,
                                    NULL /* error file */,
+                                   changelists.array(requestPool),
                                    ctx,
                                    requestPool.pool());
     }
@@ -974,6 +976,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                SVN_APR_LOCALE_CHARSET,
                                outfile,
                                NULL /* error file */,
+                               changelists.array(requestPool),
                                ctx,
                                requestPool.pool());
     }
@@ -994,22 +997,22 @@ cleanup:
 void SVNClient::diff(const char *target1, Revision &revision1,
                      const char *target2, Revision &revision2,
                      const char *relativeToDir, const char *outfileName,
-                     svn_depth_t depth, bool ignoreAncestry,
-                     bool noDiffDelete, bool force)
+                     svn_depth_t depth, StringArray &changelists,
+                     bool ignoreAncestry, bool noDiffDelete, bool force)
 {
     diff(target1, revision1, target2, revision2, NULL, relativeToDir,
-         outfileName, depth, ignoreAncestry, noDiffDelete, force);
+         outfileName, depth, changelists, ignoreAncestry, noDiffDelete, force);
 }
 
 void SVNClient::diff(const char *target, Revision &pegRevision,
                      Revision &startRevision, Revision &endRevision,
                      const char *relativeToDir, const char *outfileName,
-                     svn_depth_t depth, bool ignoreAncestry,
-                     bool noDiffDelete, bool force)
+                     svn_depth_t depth, StringArray &changelists,
+                     bool ignoreAncestry, bool noDiffDelete, bool force)
 {
     diff(target, startRevision, NULL, endRevision, &pegRevision,
-         relativeToDir, outfileName, depth, ignoreAncestry, noDiffDelete,
-         force);
+         relativeToDir, outfileName, depth, changelists,
+         ignoreAncestry, noDiffDelete, force);
 }
 
 void

@@ -1062,8 +1062,8 @@ public interface SVNClientInterface
      */
     void diff(String target1, Revision revision1, String target2,
               Revision revision2, String relativeToDir, String outFileName,
-              int depth, boolean ignoreAncestry, boolean noDiffDeleted,
-              boolean force)
+              int depth, String[] changelists, boolean ignoreAncestry,
+              boolean noDiffDeleted, boolean force)
             throws ClientException;
 
     /**
@@ -1105,8 +1105,8 @@ public interface SVNClientInterface
      */
     void diff(String target, Revision pegRevision, Revision startRevision,
               Revision endRevision, String relativeToDir, String outFileName,
-              int depth, boolean ignoreAncestry, boolean noDiffDeleted,
-              boolean force)
+              int depth, String[] changelists, boolean ignoreAncestry,
+              boolean noDiffDeleted, boolean force)
             throws ClientException;
 
     /**

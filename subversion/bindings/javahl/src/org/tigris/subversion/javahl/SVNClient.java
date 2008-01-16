@@ -803,7 +803,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         diff(target1, revision1, target2, revision2, null, outFileName,
-             Depth.unknownOrFiles(recurse), ignoreAncestry, noDiffDeleted,
+             Depth.unknownOrFiles(recurse), null, ignoreAncestry, noDiffDeleted,
              force);
     }
 
@@ -812,7 +812,7 @@ public class SVNClient implements SVNClientInterface
      */
     public native void diff(String target1, Revision revision1, String target2,
                             Revision revision2, String relativeToDir,
-                            String outFileName, int depth,
+                            String outFileName, int depth, String[] changelists,
                             boolean ignoreAncestry, boolean noDiffDeleted,
                             boolean force)
             throws ClientException;
@@ -831,7 +831,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         diff(target, pegRevision, startRevision, endRevision, null,
-             outFileName, Depth.unknownOrFiles(recurse), ignoreAncestry,
+             outFileName, Depth.unknownOrFiles(recurse), null, ignoreAncestry,
              noDiffDeleted, force);
     }
 
@@ -841,8 +841,9 @@ public class SVNClient implements SVNClientInterface
     public native void diff(String target, Revision pegRevision,
                             Revision startRevision, Revision endRevision,
                             String relativeToDir, String outFileName,
-                            int depth, boolean ignoreAncestry,
-                            boolean noDiffDeleted, boolean force)
+                            int depth, String[] changelists,
+                            boolean ignoreAncestry, boolean noDiffDeleted,
+                            boolean force)
             throws ClientException;
 
     /**
