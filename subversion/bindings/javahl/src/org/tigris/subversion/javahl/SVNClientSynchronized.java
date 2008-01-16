@@ -1057,15 +1057,16 @@ public class SVNClientSynchronized implements SVNClientInterface
      */
     public void diff(String target1, Revision revision1, String target2,
                      Revision revision2, String relativeToDir,
-                     String outFileName, int depth, boolean ignoreAncestry,
-                     boolean noDiffDeleted, boolean force)
+                     String outFileName, int depth, String[] changelists,
+                     boolean ignoreAncestry, boolean noDiffDeleted,
+                     boolean force)
             throws ClientException
     {
         synchronized (clazz)
         {
             worker.diff(target1, revision1, target2, revision2, relativeToDir,
-                        outFileName, depth, ignoreAncestry, noDiffDeleted,
-                        force);
+                        outFileName, depth, changelists, ignoreAncestry,
+                        noDiffDeleted, force);
         }
     }
 
@@ -1096,15 +1097,15 @@ public class SVNClientSynchronized implements SVNClientInterface
     public void diff(String target, Revision pegRevision,
                      Revision startRevision, Revision endRevision,
                      String relativeToDir, String outFileName, int depth,
-                     boolean ignoreAncestry, boolean noDiffDeleted,
-                     boolean force)
+                     String[] changelists, boolean ignoreAncestry,
+                     boolean noDiffDeleted, boolean force)
             throws ClientException
     {
         synchronized (clazz)
         {
             worker.diff(target, pegRevision, startRevision, endRevision,
-                        relativeToDir, outFileName, depth, ignoreAncestry,
-                        noDiffDeleted, force);
+                        relativeToDir, outFileName, depth, changelists,
+                        ignoreAncestry, noDiffDeleted, force);
         }
     }
 

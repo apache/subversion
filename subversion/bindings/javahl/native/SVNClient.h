@@ -171,13 +171,13 @@ class SVNClient :public SVNBase
   void diff(const char *target1, Revision &revision1,
             const char *target2, Revision &revision2,
             const char *relativeToDir, const char *outfileName,
-            svn_depth_t depth, bool ignoreAncestry, bool noDiffDelete,
-            bool force);
+            svn_depth_t depth, StringArray &changelists,
+            bool ignoreAncestry, bool noDiffDelete, bool force);
   void diff(const char *target, Revision &pegevision,
             Revision &startRevision, Revision &endRevision,
             const char *relativeToDir, const char *outfileName,
-            svn_depth_t depth, bool ignoreAncestry, bool noDiffDelete,
-            bool force);
+            svn_depth_t depth, StringArray &changelists,
+            bool ignoreAncestry, bool noDiffDelete, bool force);
   void diffSummarize(const char *target1, Revision &revision1,
                      const char *target2, Revision &revision2,
                      svn_depth_t depth, bool ignoreAncestry,
@@ -212,8 +212,8 @@ class SVNClient :public SVNBase
   void diff(const char *target1, Revision &revision1,
             const char *target2, Revision &revision2,
             Revision *pegRevision, const char *relativeToDir,
-            const char *outfileName, svn_depth_t depth, bool ignoreAncestry,
-            bool noDiffDelete, bool force);
+            const char *outfileName, svn_depth_t depth, StringArray &changelists,
+            bool ignoreAncestry, bool noDiffDelete, bool force);
 
   jobject createJavaInfo(const svn_wc_entry_t *entry);
 
