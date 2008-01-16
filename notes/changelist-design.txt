@@ -512,7 +512,6 @@ TO-DO list:
   [ ] fix --changelist and allow multiple changelists in subcommands:
 
       No-problem subcommands:
-      [ ] svn add --changelist (for --force invocations)
       [X] svn commit --changelist
       [X] svn diff --changelist (only wc-wc and wc-repos cases)
       [X] svn info --changelist
