@@ -35,18 +35,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Return TRUE iff CLHASH (a hash whose keys are const char *
-   changelist names) is NULL or if ENTRY->changelist (which may be
-   NULL) is a key in CLHASH.  */
-#define SVN_CLIENT__CL_MATCH(clhash, entry) \
-        (((clhash == NULL) \
-          || (entry \
-              && entry->changelist \
-              && apr_hash_get(clhash, entry->changelist, \
-                              APR_HASH_KEY_STRING))) ? TRUE : FALSE)
-
-
-
 /* Set *URL and *PEG_REVNUM (the latter is ignored if NULL) to the
    repository URL of PATH_OR_URL.  If PATH_OR_URL is a WC path and
    PEG_REVISION->kind is svn_opt_revision_working, use the

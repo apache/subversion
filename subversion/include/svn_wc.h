@@ -3725,6 +3725,12 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * If @a cancel_func is non-NULL, it will be used along with @a cancel_baton
  * to periodically check if the client has canceled the operation.
  *
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items whose differences are
+ * reported; that is, don't generate diffs about any item unless
+ * it's a member of one of those changelists.  If @a changelists is
+ * empty (or altogether @c NULL), no changelist filtering occurs.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
@@ -3738,13 +3744,15 @@ svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
                         svn_boolean_t reverse_order,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
+                        const apr_array_header_t *changelists,
                         const svn_delta_editor_t **editor,
                         void **edit_baton,
                         apr_pool_t *pool);
+
 /**
- * Similar to svn_wc_get_diff_editor4(), but with @a depth set to
- * @c svn_depth_infinity if @a recurse is TRUE, or @a svn_depth_files
- * if @a recurse is FALSE.
+ * Similar to svn_wc_get_diff_editor4(), but with @a changelists
+ * passed as @c NULL, and @a depth set to @c svn_depth_infinity if @a
+ * recurse is TRUE, or @a svn_depth_files if @a recurse is FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
 
@@ -3830,6 +3838,12 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
  * @a ignore_ancestry is @c FALSE, then any discontinuous node ancestry will
  * result in the diff given as a full delete followed by an add.
  *
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items whose differences are
+ * reported; that is, don't generate diffs about any item unless
+ * it's a member of one of those changelists.  If @a changelists is
+ * empty (or altogether @c NULL), no changelist filtering occurs.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
@@ -3839,13 +3853,14 @@ svn_wc_diff4(svn_wc_adm_access_t *anchor,
              void *callback_baton,
              svn_depth_t depth,
              svn_boolean_t ignore_ancestry,
+             const apr_array_header_t *changelists,
              apr_pool_t *pool);
 
 
 /**
- * Similar to svn_wc_diff4(), but with @a depth set to
- * @c svn_depth_infinity if @a recurse is TRUE, or @a svn_depth_files
- * if @a recurse is FALSE.
+ * Similar to svn_wc_diff4(), but with @a changelists passed @c NULL,
+ * and @a depth set to @c svn_depth_infinity if @a recurse is TRUE, or
+ * @a svn_depth_files if @a recurse is FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
