@@ -1191,9 +1191,9 @@ Java_org_tigris_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_tigris
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_diffSummarize__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2IZLorg_tigris_subversion_javahl_DiffSummaryReceiver_2
+Java_org_tigris_subversion_javahl_SVNClient_diffSummarize__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2I_3Ljava_lang_String_2ZLorg_tigris_subversion_javahl_DiffSummaryReceiver_2
 (JNIEnv *env, jobject jthis, jstring jtarget1, jobject jrevision1,
- jstring jtarget2, jobject jrevision2, jint jdepth,
+ jstring jtarget2, jobject jrevision2, jint jdepth, jobjectArray jchangelists,
  jboolean jignoreAncestry, jobject jdiffSummaryReceiver)
 {
   JNIEntry(SVNClient, diffSummarize);
@@ -1224,17 +1224,21 @@ Java_org_tigris_subversion_javahl_SVNClient_diffSummarize__Ljava_lang_String_2Lo
   if (JNIUtil::isExceptionThrown())
     return;
 
+  StringArray changelists(jchangelists);
+  if (JNIUtil::isExceptionThrown())
+    return;
 
   cl->diffSummarize(target1, revision1, target2, revision2,
-                    (svn_depth_t)jdepth,
+                    (svn_depth_t)jdepth, changelists,
                     jignoreAncestry ? true: false, receiver);
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_diffSummarize__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_Revision_2IZLorg_tigris_subversion_javahl_DiffSummaryReceiver_2
+Java_org_tigris_subversion_javahl_SVNClient_diffSummarize__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_Revision_2I_3Ljava_lang_String_2ZLorg_tigris_subversion_javahl_DiffSummaryReceiver_2
 (JNIEnv *env, jobject jthis, jstring jtarget, jobject jPegRevision,
  jobject jStartRevision, jobject jEndRevision, jint jdepth,
- jboolean jignoreAncestry, jobject jdiffSummaryReceiver)
+ jobjectArray jchangelists, jboolean jignoreAncestry,
+ jobject jdiffSummaryReceiver)
 {
   JNIEntry(SVNClient, diffSummarize);
 
@@ -1260,8 +1264,12 @@ Java_org_tigris_subversion_javahl_SVNClient_diffSummarize__Ljava_lang_String_2Lo
   if (JNIUtil::isExceptionThrown())
     return;
 
+  StringArray changelists(jchangelists);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
   cl->diffSummarize(target, pegRevision, startRevision, endRevision,
-                    (svn_depth_t)jdepth,
+                    (svn_depth_t)jdepth, changelists,
                     jignoreAncestry ? true : false, receiver);
 }
 

@@ -180,12 +180,12 @@ class SVNClient :public SVNBase
             bool ignoreAncestry, bool noDiffDelete, bool force);
   void diffSummarize(const char *target1, Revision &revision1,
                      const char *target2, Revision &revision2,
-                     svn_depth_t depth, bool ignoreAncestry,
-                     DiffSummaryReceiver &receiver);
+                     svn_depth_t depth, StringArray &changelists,
+                     bool ignoreAncestry, DiffSummaryReceiver &receiver);
   void diffSummarize(const char *target, Revision &pegRevision,
                      Revision &startRevision, Revision &endRevision,
-                     svn_depth_t depth, bool ignoreAncestry,
-                     DiffSummaryReceiver &receiver);
+                     svn_depth_t depth, StringArray &changelists,
+                     bool ignoreAncestry, DiffSummaryReceiver &receiver);
 
   const char *getLastPath();
   void dispose(jobject jthis);

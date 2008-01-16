@@ -1018,7 +1018,8 @@ void SVNClient::diff(const char *target, Revision &pegRevision,
 void
 SVNClient::diffSummarize(const char *target1, Revision &revision1,
                          const char *target2, Revision &revision2,
-                         svn_depth_t depth, bool ignoreAncestry,
+                         svn_depth_t depth, StringArray &changelists,
+                         bool ignoreAncestry,
                          DiffSummaryReceiver &receiver)
 {
     Pool requestPool;
@@ -1039,6 +1040,7 @@ SVNClient::diffSummarize(const char *target1, Revision &revision1,
                                            path2.c_str(), revision2.revision(),
                                            depth,
                                            ignoreAncestry,
+                                           changelists.array(requestPool),
                                            DiffSummaryReceiver::summarize,
                                            &receiver,
                                            ctx, requestPool.pool()), );
@@ -1047,8 +1049,8 @@ SVNClient::diffSummarize(const char *target1, Revision &revision1,
 void
 SVNClient::diffSummarize(const char *target, Revision &pegRevision,
                          Revision &startRevision, Revision &endRevision,
-                         svn_depth_t depth, bool ignoreAncestry,
-                         DiffSummaryReceiver &receiver)
+                         svn_depth_t depth, StringArray &changelists,
+                         bool ignoreAncestry, DiffSummaryReceiver &receiver)
 {
     Pool requestPool;
 
@@ -1067,6 +1069,7 @@ SVNClient::diffSummarize(const char *target, Revision &pegRevision,
                                                endRevision.revision(),
                                                depth,
                                                ignoreAncestry,
+                                               changelists.array(requestPool),
                                                DiffSummaryReceiver::summarize,
                                                &receiver, ctx,
                                                requestPool.pool()), );

@@ -2690,7 +2690,7 @@ public class BasicTests extends SVNTests
         // Perform a recursive diff summary, ignoring ancestry.
         client.diffSummarize(thisTest.getUrl(), new Revision.Number(0),
                              thisTest.getUrl(), Revision.HEAD, Depth.infinity,
-                             false, summaries);
+                             null, false, summaries);
         assertExpectedDiffSummaries(summaries);
 
         summaries.clear();
@@ -2698,7 +2698,7 @@ public class BasicTests extends SVNTests
         // ignoring ancestry.
         client.diffSummarize(thisTest.getUrl(), Revision.HEAD,
                              new Revision.Number(0), Revision.HEAD,
-                             Depth.infinity, false, summaries);
+                             Depth.infinity, null, false, summaries);
         assertExpectedDiffSummaries(summaries);
     }
 
