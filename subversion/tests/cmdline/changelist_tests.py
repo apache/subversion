@@ -244,6 +244,78 @@ def info_with_changelists(sbox):
         raise svntest.Failure("Expected paths (%s) and actual paths (%s) "
                               "don't gel" % (str(expected_paths), str(paths)))
       
+#----------------------------------------------------------------------
+
+def diff_with_changelists(sbox):
+  "diff --changelist (wc-wc and repos-wc)"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Add a line of text to all the versioned files in the tree.
+  mod_all_files(wc_dir, "New text.\n")
+
+  # Add files to changelists based on the last character in their names.
+  changelist_all_files(wc_dir, clname_from_lastchar_cb)
+  
+  # Now, test various combinations of changelist specification and depths.
+  for is_repos_wc in [0, 1]:
+    for clname in [['a'], ['i'], ['a', 'i']]:
+      for depth in ['files', 'infinity']:
+
+        # Figure out what we expect to see in our diff output.
+        expected_paths = []
+        if 'a' in clname:
+          if depth == 'infinity':
+            expected_paths.append('A/B/lambda')
+            expected_paths.append('A/B/E/alpha')
+            expected_paths.append('A/B/E/beta')
+            expected_paths.append('A/D/gamma')
+            expected_paths.append('A/D/H/omega')
+          if depth == 'files' or depth == 'infinity':
+            expected_paths.append('iota')
+        if 'i' in clname:
+          if depth == 'infinity':
+            expected_paths.append('A/D/G/pi')
+            expected_paths.append('A/D/H/chi')
+            expected_paths.append('A/D/H/psi')
+        expected_paths = map(lambda x:
+                             os.path.join(wc_dir, x.replace('/', os.sep)),
+                             expected_paths)
+        expected_paths.sort()
+            
+        # Build the command line.
+        args = ['diff']
+        for cl in clname:
+          args.append('--changelist')
+          args.append(cl)
+        if depth:
+          args.append('--depth')
+          args.append(depth)
+        if is_repos_wc:
+          args.append('--old')
+          args.append(sbox.repo_url)
+          args.append('--new')
+          args.append(sbox.wc_dir)
+        else:
+          args.append(wc_dir)
+  
+        # Run 'svn diff ...'
+        output, errput = svntest.main.run_svn(None, *args)
+  
+        # Filter the output for lines that begin with 'Index:', and
+        # reduce even those lines to just the actual path.
+        def startswith_path(line):
+          return line[:7] == 'Index: ' and 1 or 0
+        paths = map(lambda x: x[7:].rstrip(), filter(startswith_path, output))
+        paths.sort()
+  
+        # And, compare!
+        if (paths != expected_paths):
+          raise svntest.Failure("Expected paths (%s) and actual paths (%s) "
+                                "don't gel"
+                                % (str(expected_paths), str(paths)))
+
   
 ########################################################################
 # Run the tests
@@ -253,6 +325,7 @@ test_list = [ None,
               commit_one_changelist,
               commit_multiple_changelists,
               info_with_changelists,
+              diff_with_changelists,
              ]
 
 if __name__ == '__main__':

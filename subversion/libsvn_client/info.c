@@ -226,7 +226,7 @@ info_found_entry_callback(const char *path,
       && (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR)))
     return SVN_NO_ERROR;
 
-  if (SVN_CLIENT__CL_MATCH(fe_baton->changelist_hash, entry))
+  if (SVN_WC__CL_MATCH(fe_baton->changelist_hash, entry))
     {
       svn_info_t *info;
       SVN_ERR(build_info_from_entry(&info, entry, pool));
@@ -268,7 +268,7 @@ crawl_entries(const char *wcpath,
 
   if (entry->kind == svn_node_file)
     {
-      if (SVN_CLIENT__CL_MATCH(changelist_hash, entry))
+      if (SVN_WC__CL_MATCH(changelist_hash, entry))
         {
           svn_info_t *info;
           SVN_ERR(build_info_from_entry(&info, entry, pool));
