@@ -192,9 +192,9 @@ def info_with_tree_conflicts(sbox):
 
   verify_lines(output,
                ["Tree conflicts:",
-                "The update wants to edit the file 'pi'",
-                "The update wants to delete the file 'rho'",
-                "The update wants to delete the file 'tau'",
+                "The update edited the file 'pi'",
+                "The update deleted the file 'rho'",
+                "The update deleted the file 'tau'",
                 ])
 
   # check XML info of G in wc 2
