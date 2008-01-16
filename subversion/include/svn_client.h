@@ -2297,16 +2297,17 @@ svn_client_diff_summarize2(const char *path1,
                            const svn_opt_revision_t *revision2,
                            svn_depth_t depth,
                            svn_boolean_t ignore_ancestry,
+                           const apr_array_header_t *changelists,
                            svn_client_diff_summarize_func_t summarize_func,
                            void *summarize_baton,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *pool);
 
 /**
- * Similar to svn_client_diff_summarize2(), but with @a depth set
- * according to @a recurse: if @a recurse is TRUE, set @a depth to
- * @c svn_depth_infinity, if @a recurse is FALSE, set @a depth to
- * @c svn_depth_files.
+ * Similar to svn_client_diff_summarize2(), but with @a changelists
+ * passed as @c NULL, and @a depth set according to @a recurse: if @a
+ * recurse is TRUE, set @a depth to @c svn_depth_infinity, if @a
+ * recurse is FALSE, set @a depth to @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  *
@@ -2351,16 +2352,18 @@ svn_client_diff_summarize_peg2(const char *path,
                                const svn_opt_revision_t *end_revision,
                                svn_depth_t depth,
                                svn_boolean_t ignore_ancestry,
+                               const apr_array_header_t *changelists,
                                svn_client_diff_summarize_func_t summarize_func,
                                void *summarize_baton,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *pool);
 
 /**
- * Similar to svn_client_diff_summarize_peg2(), but with @a depth set
- * according to @a recurse: if @a recurse is TRUE, set @a depth to
- * @c svn_depth_infinity, if @a recurse is FALSE, set @a depth to
- * @c svn_depth_files.
+ * Similar to svn_client_diff_summarize_peg2(), but with @a
+ * changelists passed as @c NULL, and @a depth set according to @a
+ * recurse: if @a recurse is TRUE, set @a depth to @c
+ * svn_depth_infinity, if @a recurse is FALSE, set @a depth to @c
+ * svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  *
