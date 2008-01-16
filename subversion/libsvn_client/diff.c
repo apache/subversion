@@ -1810,6 +1810,7 @@ svn_client_diff_summarize2(const char *path1,
                            const svn_opt_revision_t *revision2,
                            svn_depth_t depth,
                            svn_boolean_t ignore_ancestry,
+                           const apr_array_header_t *changelists,
                            svn_client_diff_summarize_func_t summarize_func,
                            void *summarize_baton,
                            svn_client_ctx_t *ctx,
@@ -1831,6 +1832,7 @@ svn_client_diff_summarize2(const char *path1,
   diff_params.depth = depth;
   diff_params.ignore_ancestry = ignore_ancestry;
   diff_params.no_diff_deleted = FALSE;
+  diff_params.changelists = changelists;
 
   return do_diff_summarize(&diff_params, summarize_func, summarize_baton,
                            ctx, pool);
@@ -1851,7 +1853,7 @@ svn_client_diff_summarize(const char *path1,
   return svn_client_diff_summarize2(path1, revision1, path2,
                                     revision2,
                                     SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                                    ignore_ancestry, summarize_func,
+                                    ignore_ancestry, NULL, summarize_func,
                                     summarize_baton, ctx, pool);
 }
 
@@ -1862,6 +1864,7 @@ svn_client_diff_summarize_peg2(const char *path,
                                const svn_opt_revision_t *end_revision,
                                svn_depth_t depth,
                                svn_boolean_t ignore_ancestry,
+                               const apr_array_header_t *changelists,
                                svn_client_diff_summarize_func_t summarize_func,
                                void *summarize_baton,
                                svn_client_ctx_t *ctx,
@@ -1879,6 +1882,7 @@ svn_client_diff_summarize_peg2(const char *path,
   diff_params.depth = depth;
   diff_params.ignore_ancestry = ignore_ancestry;
   diff_params.no_diff_deleted = FALSE;
+  diff_params.changelists = changelists;
 
   return do_diff_summarize(&diff_params, summarize_func, summarize_baton,
                            ctx, pool);
@@ -1900,7 +1904,7 @@ svn_client_diff_summarize_peg(const char *path,
   return svn_client_diff_summarize_peg2(path, peg_revision,
                                         start_revision, end_revision,
                                         SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                                        ignore_ancestry,
+                                        ignore_ancestry, NULL,
                                         summarize_func, summarize_baton,
                                         ctx, pool);
 }

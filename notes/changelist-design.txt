@@ -514,7 +514,7 @@ TO-DO list:
       No-problem subcommands:
       [ ] svn add --changelist (for --force invocations)
       [X] svn commit --changelist
-      [ ] svn diff --changelist  (only wc-wc and wc-repos cases)
+      [X] svn diff --changelist (only wc-wc and wc-repos cases)
       [X] svn info --changelist
       [ ] svn propget/propset --changelist
       [ ] svn proplist/propdel --changelist
