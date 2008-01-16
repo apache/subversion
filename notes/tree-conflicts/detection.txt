@@ -1,0 +1,189 @@
+
+                               -*- text -*-
+
+                          TREE CONFLICT DETECTION
+
+
+Issue reference:  http://subversion.tigris.org/issues/show_bug.cgi?id=2282
+
+
+This file describes how tree conflicts described in use-cases.txt
+can be detected. It documents how detection currently works in the
+actual code, and also explains the limits of tree conflict detection
+imposed by Subversion's current design.
+
+Note that at the time of writing tree conflict detection has only been
+implemented for use cases 1 to 3. The current implementation has imperfect
+tree conflict detection, but it is still better than not handling tree
+conflicts at all. It provides a good safety net that helps users avoid
+running into tree conflict use cases 1 to 3. Once Subversion has been
+taught about true renames tree conflict detection can be changed to make
+use of this and become extremely precise.
+
+To detect use cases 4 to 6, the editor will have to contact the repository
+during the diff/merge editor drive to inquire about ancestry of files.
+This requires client context to be passed down into the editor.
+This has not been implemented yet, but it is possible. Whether it actually
+fits the overall editor design is an open question.
+
+--------------------------------------------------------------------------
+
+==========
+USE CASE 1
+==========
+
+If the update tries to modify a file that has been locally deleted,
+the file is a tree conflict victim.
+
+Without true renames, it is hard to make this check smarter (see below).
+
+==========
+USE CASE 2
+==========
+
+If the update wants to delete a file that has local modifications,
+the file is considered a tree conflict victim.
+
+Without true renames, it is hard to make this check smarter (see below).
+
+==========
+USE CASE 3
+==========
+
+Currently, every attempt by the update to delete a file that has
+already been deleted in the working copy is flagged as a tree conflict.
+
+Getting better than this is hard without true renames.
+
+========================================================================
+WHY DETECTION OF USE CASES 1 TO 3 WOULD BE MUCH BETTER WITH TRUE RENAMES
+========================================================================
+
+To properly detect the situations described in the "diagram of current
+behaviour" for use case 2 and 3, we would need to have access to a list of
+all files the update will add with history.
+
+For use case 1 a list of all files that where locally added with history
+would be needed.
+
+We would need access to this list during the whole update editor drive.
+Then we could do something like this in the editor callbacks:
+
+      edit_file(file):
+
+        if file is locally deleted:
+          for each added_file in files_locally_added_with_history:
+            if file has common ancestor with added_file:
+              /* user ran "svn move file added_file" */
+              use case 1 has happened!
+          
+      delete_file(file):
+
+        if file is locally modified: 
+          for each added_file in files_added_with_history_by_update:
+            if file has common ancestor with added_file:
+              use case 2 has happened!
+
+        else if file is locally deleted: 
+          for each added_file in files_added_with_history_by_update:
+            if file has common ancestor with added_file:
+              use case 3 has happened!
+
+Since the update editor drive crawls through the working copy and
+the callbacks consider only a single file, we would need to somehow
+generate the list before checking for tree conflicts.
+Two ideas for this are:
+
+        1) Wrap the update editor with another editor that passes
+           all calls through but takes note of which files the
+           update adds with history. Once the wrapped editor is
+           done run a second pass over the working copy to populate
+           it with tree conflict info.
+
+        2) Wrap the update editor with another editor that does
+           not actually execute any edits but remembers them all.
+           It only applies the edits once the wrapped editor has
+           been fully driven. Tree conflicts could now be detected
+           precisely because the list of files we need would be
+           present before the actual edit is carried out.
+
+Approach 2 is obviously insane.
+
+Approach 1 has the problem that there is no reliable way of storing
+the file list in face of an abort.
+
+Keeping the list in RAM is dangerous, because the list would be lost
+if the user aborts, leaving behind an inconsistent working copy that
+potentially lacks tree conflict info for some conflicts.
+
+The usual place to store persistent information inside the working
+copy is the entries file in the administrative area. Loggy writes
+to this file ensure consistency even if the update is aborted.
+But keeping the list in entries files also has problems:
+Which entries file do we keep it in? Scattering the list across lots of
+entries files isn't an option because the list needs to be global.
+Crawling the whole working copy at the start of an update to gather
+lost file lists would be too much of a performance penalty.
+
+Storing it in the entries file of the anchor of the update operation
+(i.e. the current working directory of the "svn update" process) is a
+bad idea as well because when the interrupted update is continued the
+anchor might have changed. The user may change the working directory
+before running "svn update" again.
+
+Either way, interrupted updates would leave scattered partial lists of files
+in entries throughout the working copy. And interrupted updates may not
+correctly mark all tree conflicts.
+
+So how can, for example, use case 3 be detected properly?
+
+The answer could be "true renames". All the above is due to the fact
+that we have to try to catch use case 3 from a "delete this file"
+callback. We are in fact trying to reconstruct whether a deletion
+of a file was due to the file being moved with "svn move" or not.
+
+But if we had a callback in the update editor like:
+
+        move_file(source, dest);
+
+detecting use case 3 would be extremely simple. Simply check whether
+the source of the move is locally deleted. If it is, use case 3 has
+happened, and the source of the move is a tree conflict victim.
+
+Use case 2 could be caught by checking whether the source of the move
+has local modifications.
+
+Use case 1 could be detected by checking whether the target for a
+file modification by update matches the source of a rename operation
+in the working copy. This would require storing rename information
+inside the administrative areas of both the source and target directories
+of file move operations to avoid having to maintain a global list of
+rename operations in the working copy for reference by the update editor.
+
+==========
+USE CASE 4
+==========
+
+Foo.c is a tree conflict victim only if the Foo.c does not exist
+in working copy B and if somewhere in the history of branch B there
+is a file Foo.c which has common ancestry with the Foo.c on branch A.
+
+Also, Foo.c on branch A at rev <left merge rev> and Foo.c on branch A
+at rev <right merge rev> and Foo.c on branch B at the point where it
+was deleted all have to have a common ancestor.
+
+==========
+USE CASE 5
+==========
+
+If Foo.c on branch B has been modified since its common ancestor
+with the deleted Foo.c on branch A, then we have a tree conflict.
+
+==========
+USE CASE 6
+==========
+
+If Foo.c ever existed in the history of branch B, and it has a common
+ancestor with the Foo.c that was deleted on branch A, it is a tree
+conflict victim.
+

@@ -105,9 +105,8 @@ typedef struct svn_cl__opt_state_t
   /* Max number of log messages to get back from svn_client_log2. */
   int limit;
 
-  /* Note: after option processing is done, the depth flag will
-     reflect the switch actually given on the command line, or
-     svn_depth_unknown if none. */
+  /* After option processing is done, reflects the switch actually
+     given on the command line, or svn_depth_unknown if none. */
   svn_depth_t depth;
 
   /* Was --no-unlock specified? */
@@ -148,7 +147,7 @@ typedef struct svn_cl__opt_state_t
   const char *old_target;        /* diff target */
   const char *new_target;        /* diff target */
   svn_boolean_t relocate;        /* rewrite urls (svn switch) */
-  const char * config_dir;       /* over-riding configuration directory */
+  const char *config_dir;        /* over-riding configuration directory */
   svn_boolean_t autoprops;       /* enable automatic properties */
   svn_boolean_t no_autoprops;    /* disable automatic properties */
   const char *native_eol;        /* override system standard eol marker */
@@ -157,7 +156,7 @@ typedef struct svn_cl__opt_state_t
   apr_array_header_t *changelists; /* changelist filters */
   const char *changelist;        /* operate on this changelist
                                     THIS IS TEMPORARY (LAST OF CHANGELISTS) */
-  svn_boolean_t keep_changelist; /* don't remove changelist after commit */
+  svn_boolean_t keep_changelists;/* don't remove changelists after commit */
   svn_boolean_t keep_local;      /* delete path only from repository */
   svn_boolean_t all_revprops;    /* retrieve all props */
   apr_hash_t *revprop_table;     /* table of revision properties to get/set */
@@ -165,7 +164,11 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t use_merge_history; /* use/display extra merge information */
   svn_cl__accept_t accept_which; /* how to handle conflicts */
   const char *from_source;       /* merge source to query (svn mergeinfo) */
+<<<<<<< .working
   svn_boolean_t reintegrate;     /* use "reintegrate" merge-source heuristic */
+=======
+  svn_depth_t set_depth;         /* new sticky ambient depth value */
+>>>>>>> .merge-right.r28930
 } svn_cl__opt_state_t;
 
 

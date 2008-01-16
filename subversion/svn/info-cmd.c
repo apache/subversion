@@ -444,37 +444,14 @@ svn_cl__info(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets = NULL;
-  apr_array_header_t *changelist_targets = NULL, *combined_targets = NULL;
   apr_pool_t *subpool = svn_pool_create(pool);
   int i;
   svn_error_t *err;
   svn_opt_revision_t peg_revision;
   svn_info_receiver_t receiver;
 
-  /* Before allowing svn_opt_args_to_target_array2() to canonicalize
-     all the targets, we need to build a list of targets made of both
-     ones the user typed, as well as any specified by --changelist.  */
-  if (opt_state->changelist)
-    {
-      SVN_ERR(svn_cl__get_changelist(&changelist_targets,
-                                     opt_state->changelist, "", /* ### FIXME */
-                                     ctx, pool));
-      if (apr_is_empty_array(changelist_targets))
-        return svn_error_createf(SVN_ERR_UNKNOWN_CHANGELIST, NULL,
-                                 _("Unknown changelist '%s'"),
-                                 opt_state->changelist);
-    }
-
-  if (opt_state->targets && changelist_targets)
-    combined_targets = apr_array_append(pool, opt_state->targets,
-                                        changelist_targets);
-  else if (opt_state->targets)
-    combined_targets = opt_state->targets;
-  else if (changelist_targets)
-    combined_targets = changelist_targets;
-
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
-                                        combined_targets, pool));
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
+                                        opt_state->targets, pool));
 
   /* Add "." if user passed 0 arguments. */
   svn_opt_push_implicit_dot_target(targets, pool);
@@ -518,11 +495,10 @@ svn_cl__info(apr_getopt_t *os,
           && (peg_revision.kind == svn_opt_revision_unspecified))
         peg_revision.kind = svn_opt_revision_head;
 
-      err = svn_client_info2(truepath,
+      err = svn_client_info2(truepath, 
                              &peg_revision, &(opt_state->start_revision),
-                             receiver, NULL,
-                             opt_state->depth,
-                             ctx, subpool);
+                             receiver, NULL, opt_state->depth,
+                             opt_state->changelists, ctx, subpool);
 
       /* If one of the targets is a non-existent URL or wc-entry,
          don't bail out.  Just warn and move on to the next target. */

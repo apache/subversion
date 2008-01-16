@@ -96,6 +96,7 @@ def clname_from_lastchar_cb(full_path):
     """
   return full_path[-1]
 
+
 ######################################################################
 # Tests
 #
@@ -138,6 +139,7 @@ def commit_one_changelist(sbox):
                                         "--changelist",
                                         "a")
   
+#----------------------------------------------------------------------
 
 def commit_multiple_changelists(sbox):
   "commit with multiple --changelist's"
@@ -178,6 +180,71 @@ def commit_multiple_changelists(sbox):
                                         "--changelist", "a",
                                         "--changelist", "i")
 
+#----------------------------------------------------------------------
+
+def info_with_changelists(sbox):
+  "info --changelist"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Add files ending in 'a' and 'i' to changelists "a" and "i".
+  def a_i_lastchar_changelist_cb(full_path):
+    if full_path[-1] == 'a' or full_path[-1] == 'i':
+      return full_path[-1]
+    return ''
+  changelist_all_files(wc_dir, a_i_lastchar_changelist_cb)
+  
+  # Now, test various combinations of changelist specification and depths.
+  for clname in [['a'], ['i'], ['a', 'i']]:
+    for depth in [None, 'files', 'infinity']:
+
+      # Figure out what we expect to see in our info output.
+      expected_paths = []
+      if 'a' in clname:
+        if depth == 'infinity':
+          expected_paths.append('A/B/lambda')
+          expected_paths.append('A/B/E/alpha')
+          expected_paths.append('A/B/E/beta')
+          expected_paths.append('A/D/gamma')
+          expected_paths.append('A/D/H/omega')
+        if depth == 'files' or depth == 'infinity':
+          expected_paths.append('iota')
+      if 'i' in clname:
+        if depth == 'infinity':
+          expected_paths.append('A/D/G/pi')
+          expected_paths.append('A/D/H/chi')
+          expected_paths.append('A/D/H/psi')
+      expected_paths = map(lambda x:
+                           os.path.join(wc_dir, x.replace('/', os.sep)),
+                           expected_paths)
+      expected_paths.sort()
+          
+      # Build the command line.
+      args = ['info', wc_dir]
+      for cl in clname:
+        args.append('--changelist')
+        args.append(cl)
+      if depth:
+        args.append('--depth')
+        args.append(depth)
+
+      # Run 'svn info ...'
+      output, errput = svntest.main.run_svn(None, *args)
+
+      # Filter the output for lines that begin with 'Path:', and
+      # reduce even tohse lines to just the actual path.
+      def startswith_path(line):
+        return line[:6] == 'Path: ' and 1 or 0
+      paths = map(lambda x: x[6:].rstrip(), filter(startswith_path, output))
+      paths.sort()
+
+      # And, compare!
+      if (paths != expected_paths):
+        raise svntest.Failure("Expected paths (%s) and actual paths (%s) "
+                              "don't gel" % (str(expected_paths), str(paths)))
+      
+  
 ########################################################################
 # Run the tests
 
@@ -185,6 +252,7 @@ def commit_multiple_changelists(sbox):
 test_list = [ None,
               commit_one_changelist,
               commit_multiple_changelists,
+              info_with_changelists,
              ]
 
 if __name__ == '__main__':

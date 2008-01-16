@@ -292,15 +292,16 @@ def compare_and_display_lines(message, label, expected, actual,
     raise raisable
 
 def verify_outputs(message, actual_stdout, actual_stderr,
-                   expected_stdout, expected_stderr):
+                   expected_stdout, expected_stderr, all_stdout=True):
   """Compare and display expected vs. actual stderr and stdout lines,
   raising an exception if outputs don't match.  If EXPECTED_STDERR or
   EXPECTED_STDOUT is a string the string is interpreted as a regular
   expression.  For EXPECTED_STDOUT and ACTUAL_STDOUT to match, every
-  line in ACTUAL_STDOUT must match the EXPECTED_STDOUT regex.  For
-  EXPECTED_STDERR regexes only one line in ACTUAL_STDERR need match."""
+  line in ACTUAL_STDOUT must match the EXPECTED_STDOUT regex, unless
+  ALL_STDOUT is false.  For EXPECTED_STDERR regexes only one line in
+  ACTUAL_STDERR need match."""
   expected_stderr = createExpectedOutput(expected_stderr, False)
-  expected_stdout = createExpectedOutput(expected_stdout, True)
+  expected_stdout = createExpectedOutput(expected_stdout, all_stdout)
 
   for (actual, expected, label, raisable) in (
       (actual_stderr, expected_stderr, 'STDERR', SVNExpectedStderr),

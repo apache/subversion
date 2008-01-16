@@ -170,26 +170,28 @@ typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
-                              svn_wc_adm_access_t *associated,
-                              const char *path,
-                              svn_boolean_t write_lock,
-                              int levels_to_lock,
-                              svn_cancel_func_t cancel_func,
-                              void *cancel_baton,
-                              apr_pool_t *pool);
+svn_error_t *
+svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
+                 svn_wc_adm_access_t *associated,
+                 const char *path,
+                 svn_boolean_t write_lock,
+                 int levels_to_lock,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_adm_open3(), but without cancellation support.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
-svn_error_t *svn_wc_adm_open2(svn_wc_adm_access_t **adm_access,
-                              svn_wc_adm_access_t *associated,
-                              const char *path,
-                              svn_boolean_t write_lock,
-                              int levels_to_lock,
-                              apr_pool_t *pool);
+svn_error_t *
+svn_wc_adm_open2(svn_wc_adm_access_t **adm_access,
+                 svn_wc_adm_access_t *associated,
+                 const char *path,
+                 svn_boolean_t write_lock,
+                 int levels_to_lock,
+                 apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_adm_open2(), but with @a tree_lock instead of
@@ -198,12 +200,13 @@ svn_error_t *svn_wc_adm_open2(svn_wc_adm_access_t **adm_access,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
-svn_error_t *svn_wc_adm_open(svn_wc_adm_access_t **adm_access,
-                             svn_wc_adm_access_t *associated,
-                             const char *path,
-                             svn_boolean_t write_lock,
-                             svn_boolean_t tree_lock,
-                             apr_pool_t *pool);
+svn_error_t *
+svn_wc_adm_open(svn_wc_adm_access_t **adm_access,
+                svn_wc_adm_access_t *associated,
+                const char *path,
+                svn_boolean_t write_lock,
+                svn_boolean_t tree_lock,
+                apr_pool_t *pool);
 
 /**
  * Checks the working copy to determine the node type of @a path.  If
@@ -218,14 +221,15 @@ svn_error_t *svn_wc_adm_open(svn_wc_adm_access_t **adm_access,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
-                                    svn_wc_adm_access_t *associated,
-                                    const char *path,
-                                    svn_boolean_t write_lock,
-                                    int levels_to_lock,
-                                    svn_cancel_func_t cancel_func,
-                                    void *cancel_baton,
-                                    apr_pool_t *pool);
+svn_error_t *
+svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
+                       svn_wc_adm_access_t *associated,
+                       const char *path,
+                       svn_boolean_t write_lock,
+                       int levels_to_lock,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_adm_probe_open3() without the cancel
@@ -233,12 +237,13 @@ svn_error_t *svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
-svn_error_t *svn_wc_adm_probe_open2(svn_wc_adm_access_t **adm_access,
-                                    svn_wc_adm_access_t *associated,
-                                    const char *path,
-                                    svn_boolean_t write_lock,
-                                    int levels_to_lock,
-                                    apr_pool_t *pool);
+svn_error_t *
+svn_wc_adm_probe_open2(svn_wc_adm_access_t **adm_access,
+                       svn_wc_adm_access_t *associated,
+                       const char *path,
+                       svn_boolean_t write_lock,
+                       int levels_to_lock,
+                       apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_adm_probe_open2(), but with @a tree_lock instead of
@@ -247,12 +252,13 @@ svn_error_t *svn_wc_adm_probe_open2(svn_wc_adm_access_t **adm_access,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
-svn_error_t *svn_wc_adm_probe_open(svn_wc_adm_access_t **adm_access,
-                                   svn_wc_adm_access_t *associated,
-                                   const char *path,
-                                   svn_boolean_t write_lock,
-                                   svn_boolean_t tree_lock,
-                                   apr_pool_t *pool);
+svn_error_t *
+svn_wc_adm_probe_open(svn_wc_adm_access_t **adm_access,
+                      svn_wc_adm_access_t *associated,
+                      const char *path,
+                      svn_boolean_t write_lock,
+                      svn_boolean_t tree_lock,
+                      apr_pool_t *pool);
 
 /**
  * Open access batons for @a path and return in @a *anchor_access and
@@ -294,10 +300,11 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
  *
  * @a pool is used only for local processing, it is not used for the batons.
  */
-svn_error_t *svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
-                                 svn_wc_adm_access_t *associated,
-                                 const char *path,
-                                 apr_pool_t *pool);
+svn_error_t *
+svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
+                    svn_wc_adm_access_t *associated,
+                    const char *path,
+                    apr_pool_t *pool);
 
 /** Check the working copy to determine the node type of @a path.  If
  * @a path is a versioned directory then the behaviour is like that of
@@ -306,10 +313,11 @@ svn_error_t *svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
  * svn_wc_adm_retrieve() with @a path replaced by the parent directory of
  * @a path.
  */
-svn_error_t *svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
-                                       svn_wc_adm_access_t *associated,
-                                       const char *path,
-                                       apr_pool_t *pool);
+svn_error_t *
+svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
+                          svn_wc_adm_access_t *associated,
+                          const char *path,
+                          apr_pool_t *pool);
 
 /**
  * Try various ways to obtain an access baton for @a path.
@@ -335,14 +343,15 @@ svn_error_t *svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_wc_adm_probe_try3(svn_wc_adm_access_t **adm_access,
-                                   svn_wc_adm_access_t *associated,
-                                   const char *path,
-                                   svn_boolean_t write_lock,
-                                   int levels_to_lock,
-                                   svn_cancel_func_t cancel_func,
-                                   void *cancel_baton,
-                                   apr_pool_t *pool);
+svn_error_t *
+svn_wc_adm_probe_try3(svn_wc_adm_access_t **adm_access,
+                      svn_wc_adm_access_t *associated,
+                      const char *path,
+                      svn_boolean_t write_lock,
+                      int levels_to_lock,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
+                      apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_adm_probe_try3() without the cancel
@@ -350,12 +359,13 @@ svn_error_t *svn_wc_adm_probe_try3(svn_wc_adm_access_t **adm_access,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
-svn_error_t *svn_wc_adm_probe_try2(svn_wc_adm_access_t **adm_access,
-                                   svn_wc_adm_access_t *associated,
-                                   const char *path,
-                                   svn_boolean_t write_lock,
-                                   int levels_to_lock,
-                                   apr_pool_t *pool);
+svn_error_t *
+svn_wc_adm_probe_try2(svn_wc_adm_access_t **adm_access,
+                      svn_wc_adm_access_t *associated,
+                      const char *path,
+                      svn_boolean_t write_lock,
+                      int levels_to_lock,
+                      apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_adm_probe_try2(), but with @a tree_lock instead of
@@ -364,12 +374,13 @@ svn_error_t *svn_wc_adm_probe_try2(svn_wc_adm_access_t **adm_access,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
-svn_error_t *svn_wc_adm_probe_try(svn_wc_adm_access_t **adm_access,
-                                  svn_wc_adm_access_t *associated,
-                                  const char *path,
-                                  svn_boolean_t write_lock,
-                                  svn_boolean_t tree_lock,
-                                  apr_pool_t *pool);
+svn_error_t *
+svn_wc_adm_probe_try(svn_wc_adm_access_t **adm_access,
+                     svn_wc_adm_access_t *associated,
+                     const char *path,
+                     svn_boolean_t write_lock,
+                     svn_boolean_t tree_lock,
+                     apr_pool_t *pool);
 
 
 /** Give up the access baton @a adm_access, and its lock if any. This will
@@ -393,9 +404,10 @@ apr_pool_t *svn_wc_adm_access_pool(svn_wc_adm_access_t *adm_access);
 svn_boolean_t svn_wc_adm_locked(svn_wc_adm_access_t *adm_access);
 
 /** Set @a *locked to non-zero if @a path is locked, else set it to zero. */
-svn_error_t *svn_wc_locked(svn_boolean_t *locked,
-                           const char *path,
-                           apr_pool_t *pool);
+svn_error_t *
+svn_wc_locked(svn_boolean_t *locked,
+              const char *path,
+              apr_pool_t *pool);
 
 
 /**
@@ -475,9 +487,10 @@ svn_wc_traversal_info_t *svn_wc_init_traversal_info(apr_pool_t *pool);
  *
  * The hashes, keys, and values have the same lifetime as @a traversal_info.
  */
-void svn_wc_edited_externals(apr_hash_t **externals_old,
-                             apr_hash_t **externals_new,
-                             svn_wc_traversal_info_t *traversal_info);
+void
+svn_wc_edited_externals(apr_hash_t **externals_old,
+                        apr_hash_t **externals_new,
+                        svn_wc_traversal_info_t *traversal_info);
 
 
 /** Set @a *depths to a hash table mapping <tt>const char *</tt>
@@ -500,8 +513,9 @@ void svn_wc_edited_externals(apr_hash_t **externals_old,
  *
  * @since New in 1.5.
  */
-void svn_wc_traversed_depths(apr_hash_t **depths,
-                             svn_wc_traversal_info_t *traversal_info);
+void
+svn_wc_traversed_depths(apr_hash_t **depths,
+                        svn_wc_traversal_info_t *traversal_info);
 
 
 /** One external item.  This usually represents one line from an
@@ -907,7 +921,8 @@ typedef struct svn_wc_notify_t {
  * @since New in 1.2.
  */
 svn_wc_notify_t *
-svn_wc_create_notify(const char *path, svn_wc_notify_action_t action,
+svn_wc_create_notify(const char *path,
+                     svn_wc_notify_action_t action,
                      apr_pool_t *pool);
 
 /**
@@ -916,7 +931,8 @@ svn_wc_create_notify(const char *path, svn_wc_notify_action_t action,
  * @since New in 1.2.
  */
 svn_wc_notify_t *
-svn_wc_dup_notify(const svn_wc_notify_t *notify, apr_pool_t *pool);
+svn_wc_dup_notify(const svn_wc_notify_t *notify,
+                  apr_pool_t *pool);
 
 /**
  * Notify the world that @a notify->action has happened to @a notify->path.
@@ -1480,19 +1496,21 @@ typedef struct svn_wc_diff_callbacks_t
  * @a path is a valid working copy directory, else set it to 0.
  * Return error @c APR_ENOENT if @a path does not exist at all.
  */
-svn_error_t *svn_wc_check_wc(const char *path,
-                             int *wc_format,
-                             apr_pool_t *pool);
+svn_error_t *
+svn_wc_check_wc(const char *path,
+                int *wc_format,
+                apr_pool_t *pool);
 
 
 /** Set @a *has_binary_prop to @c TRUE iff @a path has been marked
  * with a property indicating that it is non-text (in other words, binary).
  * @a adm_access is an access baton set that contains @a path.
  */
-svn_error_t *svn_wc_has_binary_prop(svn_boolean_t *has_binary_prop,
-                                    const char *path,
-                                    svn_wc_adm_access_t *adm_access,
-                                    apr_pool_t *pool);
+svn_error_t *
+svn_wc_has_binary_prop(svn_boolean_t *has_binary_prop,
+                       const char *path,
+                       svn_wc_adm_access_t *adm_access,
+                       apr_pool_t *pool);
 
 
 /* Detecting modification. */
@@ -1517,21 +1535,23 @@ svn_error_t *svn_wc_has_binary_prop(svn_boolean_t *has_binary_prop,
  * function may "repair" @a filename's text-time by setting it to
  * @a filename's last modification time.
  */
-svn_error_t *svn_wc_text_modified_p(svn_boolean_t *modified_p,
-                                    const char *filename,
-                                    svn_boolean_t force_comparison,
-                                    svn_wc_adm_access_t *adm_access,
-                                    apr_pool_t *pool);
+svn_error_t *
+svn_wc_text_modified_p(svn_boolean_t *modified_p,
+                       const char *filename,
+                       svn_boolean_t force_comparison,
+                       svn_wc_adm_access_t *adm_access,
+                       apr_pool_t *pool);
 
 
 /** Set @a *modified_p to non-zero if @a path's properties are modified
  * with regard to the base revision, else set @a modified_p to zero.
  * @a adm_access must be an access baton for @a path.
  */
-svn_error_t *svn_wc_props_modified_p(svn_boolean_t *modified_p,
-                                     const char *path,
-                                     svn_wc_adm_access_t *adm_access,
-                                     apr_pool_t *pool);
+svn_error_t *
+svn_wc_props_modified_p(svn_boolean_t *modified_p,
+                        const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        apr_pool_t *pool);
 
 
 
@@ -1798,11 +1818,12 @@ typedef struct svn_wc_entry_t
  *
  * Use @a pool only for local processing.
  */
-svn_error_t *svn_wc_entry(const svn_wc_entry_t **entry,
-                          const char *path,
-                          svn_wc_adm_access_t *adm_access,
-                          svn_boolean_t show_hidden,
-                          apr_pool_t *pool);
+svn_error_t *
+svn_wc_entry(const svn_wc_entry_t **entry,
+             const char *path,
+             svn_wc_adm_access_t *adm_access,
+             svn_boolean_t show_hidden,
+             apr_pool_t *pool);
 
 
 /** Parse the `entries' file for @a adm_access and return a hash @a entries,
@@ -1835,17 +1856,19 @@ svn_error_t *svn_wc_entry(const svn_wc_entry_t **entry,
  * routine to open its @a path and read the @c SVN_WC_ENTRY_THIS_DIR
  * structure, or call svn_wc_entry() on its @a path.
  */
-svn_error_t *svn_wc_entries_read(apr_hash_t **entries,
-                                 svn_wc_adm_access_t *adm_access,
-                                 svn_boolean_t show_hidden,
-                                 apr_pool_t *pool);
+svn_error_t *
+svn_wc_entries_read(apr_hash_t **entries,
+                    svn_wc_adm_access_t *adm_access,
+                    svn_boolean_t show_hidden,
+                    apr_pool_t *pool);
 
 
 /** Return a duplicate of @a entry, allocated in @a pool.  No part of the new
  * entry will be shared with @a entry.
  */
-svn_wc_entry_t *svn_wc_entry_dup(const svn_wc_entry_t *entry,
-                                 apr_pool_t *pool);
+svn_wc_entry_t *
+svn_wc_entry_dup(const svn_wc_entry_t *entry,
+                 apr_pool_t *pool);
 
 
 /** Given a @a dir_path under version control, decide if one of its
@@ -1855,11 +1878,12 @@ svn_wc_entry_t *svn_wc_entry_dup(const svn_wc_entry_t *entry,
  * (If the entry mentions that a .rej or .prej exist, but they are
  * both removed, assume the conflict has been resolved by the user.)
  */
-svn_error_t *svn_wc_conflicted_p(svn_boolean_t *text_conflicted_p,
-                                 svn_boolean_t *prop_conflicted_p,
-                                 const char *dir_path,
-                                 const svn_wc_entry_t *entry,
-                                 apr_pool_t *pool);
+svn_error_t *
+svn_wc_conflicted_p(svn_boolean_t *text_conflicted_p,
+                    svn_boolean_t *prop_conflicted_p,
+                    const char *dir_path,
+                    const svn_wc_entry_t *entry,
+                    apr_pool_t *pool);
 
 /** Set @a *url and @a *rev to the ancestor URL and revision for @a path,
  * allocating in @a pool.  @a adm_access must be an access baton for @a path.
@@ -1867,11 +1891,12 @@ svn_error_t *svn_wc_conflicted_p(svn_boolean_t *text_conflicted_p,
  * If @a url or @a rev is NULL, then ignore it (just don't return the
  * corresponding information).
  */
-svn_error_t *svn_wc_get_ancestry(char **url,
-                                 svn_revnum_t *rev,
-                                 const char *path,
-                                 svn_wc_adm_access_t *adm_access,
-                                 apr_pool_t *pool);
+svn_error_t *
+svn_wc_get_ancestry(char **url,
+                    svn_revnum_t *rev,
+                    const char *path,
+                    svn_wc_adm_access_t *adm_access,
+                    apr_pool_t *pool);
 
 
 /** A callback vtable invoked by the generic entry-walker function.
@@ -1941,16 +1966,17 @@ typedef struct svn_wc_entry_callbacks_t
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_wc_walk_entries3(const char *path,
-                                  svn_wc_adm_access_t *adm_access,
-                                  const svn_wc_entry_callbacks2_t
-                                  *walk_callbacks,
-                                  void *walk_baton,
-                                  svn_depth_t depth,
-                                  svn_boolean_t show_hidden,
-                                  svn_cancel_func_t cancel_func,
-                                  void *cancel_baton,
-                                  apr_pool_t *pool);
+svn_error_t *
+svn_wc_walk_entries3(const char *path,
+                     svn_wc_adm_access_t *adm_access,
+                     const svn_wc_entry_callbacks2_t
+                     *walk_callbacks,
+                     void *walk_baton,
+                     svn_depth_t depth,
+                     svn_boolean_t show_hidden,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
+                     apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_walk_entries3(), but without cancellation support
@@ -1959,37 +1985,40 @@ svn_error_t *svn_wc_walk_entries3(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
-svn_error_t *svn_wc_walk_entries2(const char *path,
-                                  svn_wc_adm_access_t *adm_access,
-                                  const svn_wc_entry_callbacks_t
-                                  *walk_callbacks,
-                                  void *walk_baton,
-                                  svn_boolean_t show_hidden,
-                                  svn_cancel_func_t cancel_func,
-                                  void *cancel_baton,
-                                  apr_pool_t *pool);
+svn_error_t *
+svn_wc_walk_entries2(const char *path,
+                     svn_wc_adm_access_t *adm_access,
+                     const svn_wc_entry_callbacks_t
+                     *walk_callbacks,
+                     void *walk_baton,
+                     svn_boolean_t show_hidden,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
+                     apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_walk_entries2(), but without cancellation support.
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
-svn_error_t *svn_wc_walk_entries(const char *path,
-                                 svn_wc_adm_access_t *adm_access,
-                                 const svn_wc_entry_callbacks_t
-                                 *walk_callbacks,
-                                 void *walk_baton,
-                                 svn_boolean_t show_hidden,
-                                 apr_pool_t *pool);
+svn_error_t *
+svn_wc_walk_entries(const char *path,
+                    svn_wc_adm_access_t *adm_access,
+                    const svn_wc_entry_callbacks_t
+                    *walk_callbacks,
+                    void *walk_baton,
+                    svn_boolean_t show_hidden,
+                    apr_pool_t *pool);
 
 
 /** Mark missing @a path as 'deleted' in its @a parent's list of entries.
  *
  * Return @c SVN_ERR_WC_PATH_FOUND if @a path isn't actually missing.
  */
-svn_error_t *svn_wc_mark_missing_deleted(const char *path,
-                                         svn_wc_adm_access_t *parent,
-                                         apr_pool_t *pool);
+svn_error_t *
+svn_wc_mark_missing_deleted(const char *path,
+                            svn_wc_adm_access_t *parent,
+                            apr_pool_t *pool);
 
 
 /** Ensure that an administrative area exists for @a path, so that @a
@@ -2015,13 +2044,14 @@ svn_error_t *svn_wc_mark_missing_deleted(const char *path,
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_wc_ensure_adm3(const char *path,
-                                const char *uuid,
-                                const char *url,
-                                const char *repos,
-                                svn_revnum_t revision,
-                                svn_depth_t depth,
-                                apr_pool_t *pool);
+svn_error_t *
+svn_wc_ensure_adm3(const char *path,
+                   const char *uuid,
+                   const char *url,
+                   const char *repos,
+                   svn_revnum_t revision,
+                   svn_depth_t depth,
+                   apr_pool_t *pool);
 
 
 /**
@@ -2032,12 +2062,13 @@ svn_error_t *svn_wc_ensure_adm3(const char *path,
  *
  * @since New in 1.3.
  */
-svn_error_t *svn_wc_ensure_adm2(const char *path,
-                                const char *uuid,
-                                const char *url,
-                                const char *repos,
-                                svn_revnum_t revision,
-                                apr_pool_t *pool);
+svn_error_t *
+svn_wc_ensure_adm2(const char *path,
+                   const char *uuid,
+                   const char *url,
+                   const char *repos,
+                   svn_revnum_t revision,
+                   apr_pool_t *pool);
 
 
 /**
@@ -2045,11 +2076,12 @@ svn_error_t *svn_wc_ensure_adm2(const char *path,
  *
  * @deprecated Provided for backwards compatibility with the 1.2 API.
  */
-svn_error_t *svn_wc_ensure_adm(const char *path,
-                               const char *uuid,
-                               const char *url,
-                               svn_revnum_t revision,
-                               apr_pool_t *pool);
+svn_error_t *
+svn_wc_ensure_adm(const char *path,
+                  const char *uuid,
+                  const char *url,
+                  svn_revnum_t revision,
+                  apr_pool_t *pool);
 
 
 /** Set the repository root URL of @a path to @a repos, if possible.
@@ -2070,7 +2102,8 @@ svn_error_t *svn_wc_ensure_adm(const char *path,
  */
 svn_error_t *
 svn_wc_maybe_set_repos_root(svn_wc_adm_access_t *adm_access,
-                            const char *path, const char *repos,
+                            const char *path,
+                            const char *repos,
                             apr_pool_t *pool);
 
 
@@ -2287,8 +2320,9 @@ typedef struct svn_wc_status_t
  *
  * @since New in 1.2.
  */
-svn_wc_status2_t *svn_wc_dup_status2(svn_wc_status2_t *orig_stat,
-                                     apr_pool_t *pool);
+svn_wc_status2_t *
+svn_wc_dup_status2(svn_wc_status2_t *orig_stat,
+                   apr_pool_t *pool);
 
 
 /**
@@ -2296,8 +2330,9 @@ svn_wc_status2_t *svn_wc_dup_status2(svn_wc_status2_t *orig_stat,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
-svn_wc_status_t *svn_wc_dup_status(svn_wc_status_t *orig_stat,
-                                   apr_pool_t *pool);
+svn_wc_status_t *
+svn_wc_dup_status(svn_wc_status_t *orig_stat,
+                  apr_pool_t *pool);
 
 
 /**
@@ -2327,10 +2362,11 @@ svn_wc_status_t *svn_wc_dup_status(svn_wc_status_t *orig_stat,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_wc_status2(svn_wc_status2_t **status,
-                            const char *path,
-                            svn_wc_adm_access_t *adm_access,
-                            apr_pool_t *pool);
+svn_error_t *
+svn_wc_status2(svn_wc_status2_t **status,
+               const char *path,
+               svn_wc_adm_access_t *adm_access,
+               apr_pool_t *pool);
 
 
 /**
@@ -2338,10 +2374,11 @@ svn_error_t *svn_wc_status2(svn_wc_status2_t **status,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
-svn_error_t *svn_wc_status(svn_wc_status_t **status,
-                           const char *path,
-                           svn_wc_adm_access_t *adm_access,
-                           apr_pool_t *pool);
+svn_error_t *
+svn_wc_status(svn_wc_status_t **status,
+              const char *path,
+              svn_wc_adm_access_t *adm_access,
+              apr_pool_t *pool);
 
 
 
@@ -2426,22 +2463,23 @@ typedef void (*svn_wc_status_func_t)(void *baton,
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_wc_get_status_editor3(const svn_delta_editor_t **editor,
-                                       void **edit_baton,
-                                       void **set_locks_baton,
-                                       svn_revnum_t *edit_revision,
-                                       svn_wc_adm_access_t *anchor,
-                                       const char *target,
-                                       svn_depth_t depth,
-                                       svn_boolean_t get_all,
-                                       svn_boolean_t no_ignore,
-                                       apr_array_header_t *ignore_patterns,
-                                       svn_wc_status_func2_t status_func,
-                                       void *status_baton,
-                                       svn_cancel_func_t cancel_func,
-                                       void *cancel_baton,
-                                       svn_wc_traversal_info_t *traversal_info,
-                                       apr_pool_t *pool);
+svn_error_t *
+svn_wc_get_status_editor3(const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          void **set_locks_baton,
+                          svn_revnum_t *edit_revision,
+                          svn_wc_adm_access_t *anchor,
+                          const char *target,
+                          svn_depth_t depth,
+                          svn_boolean_t get_all,
+                          svn_boolean_t no_ignore,
+                          apr_array_header_t *ignore_patterns,
+                          svn_wc_status_func2_t status_func,
+                          void *status_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_traversal_info_t *traversal_info,
+                          apr_pool_t *pool);
 
 /**
  * Like svn_wc_get_status_editor3(), but with @a ignore_patterns
@@ -2453,22 +2491,23 @@ svn_error_t *svn_wc_get_status_editor3(const svn_delta_editor_t **editor,
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
-svn_error_t *svn_wc_get_status_editor2(const svn_delta_editor_t **editor,
-                                       void **edit_baton,
-                                       void **set_locks_baton,
-                                       svn_revnum_t *edit_revision,
-                                       svn_wc_adm_access_t *anchor,
-                                       const char *target,
-                                       apr_hash_t *config,
-                                       svn_boolean_t recurse,
-                                       svn_boolean_t get_all,
-                                       svn_boolean_t no_ignore,
-                                       svn_wc_status_func2_t status_func,
-                                       void *status_baton,
-                                       svn_cancel_func_t cancel_func,
-                                       void *cancel_baton,
-                                       svn_wc_traversal_info_t *traversal_info,
-                                       apr_pool_t *pool);
+svn_error_t *
+svn_wc_get_status_editor2(const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          void **set_locks_baton,
+                          svn_revnum_t *edit_revision,
+                          svn_wc_adm_access_t *anchor,
+                          const char *target,
+                          apr_hash_t *config,
+                          svn_boolean_t recurse,
+                          svn_boolean_t get_all,
+                          svn_boolean_t no_ignore,
+                          svn_wc_status_func2_t status_func,
+                          void *status_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_traversal_info_t *traversal_info,
+                          apr_pool_t *pool);
 
 /**
  * Same as svn_wc_get_status_editor2(), but with @a set_locks_baton set
@@ -2476,21 +2515,22 @@ svn_error_t *svn_wc_get_status_editor2(const svn_delta_editor_t **editor,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
-svn_error_t *svn_wc_get_status_editor(const svn_delta_editor_t **editor,
-                                      void **edit_baton,
-                                      svn_revnum_t *edit_revision,
-                                      svn_wc_adm_access_t *anchor,
-                                      const char *target,
-                                      apr_hash_t *config,
-                                      svn_boolean_t recurse,
-                                      svn_boolean_t get_all,
-                                      svn_boolean_t no_ignore,
-                                      svn_wc_status_func_t status_func,
-                                      void *status_baton,
-                                      svn_cancel_func_t cancel_func,
-                                      void *cancel_baton,
-                                      svn_wc_traversal_info_t *traversal_info,
-                                      apr_pool_t *pool);
+svn_error_t *
+svn_wc_get_status_editor(const svn_delta_editor_t **editor,
+                         void **edit_baton,
+                         svn_revnum_t *edit_revision,
+                         svn_wc_adm_access_t *anchor,
+                         const char *target,
+                         apr_hash_t *config,
+                         svn_boolean_t recurse,
+                         svn_boolean_t get_all,
+                         svn_boolean_t no_ignore,
+                         svn_wc_status_func_t status_func,
+                         void *status_baton,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         svn_wc_traversal_info_t *traversal_info,
+                         apr_pool_t *pool);
 
 
 /**
@@ -2540,28 +2580,30 @@ svn_wc_status_set_repos_locks(void *set_locks_baton,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_wc_copy2(const char *src,
-                          svn_wc_adm_access_t *dst_parent,
-                          const char *dst_basename,
-                          svn_cancel_func_t cancel_func,
-                          void *cancel_baton,
-                          svn_wc_notify_func2_t notify_func,
-                          void *notify_baton,
-                          apr_pool_t *pool);
+svn_error_t *
+svn_wc_copy2(const char *src,
+             svn_wc_adm_access_t *dst_parent,
+             const char *dst_basename,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
+             svn_wc_notify_func2_t notify_func,
+             void *notify_baton,
+             apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_copy2(), but takes an @c svn_wc_notify_func_t instead.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
-svn_error_t *svn_wc_copy(const char *src,
-                         svn_wc_adm_access_t *dst_parent,
-                         const char *dst_basename,
-                         svn_cancel_func_t cancel_func,
-                         void *cancel_baton,
-                         svn_wc_notify_func_t notify_func,
-                         void *notify_baton,
-                         apr_pool_t *pool);
+svn_error_t *
+svn_wc_copy(const char *src,
+            svn_wc_adm_access_t *dst_parent,
+            const char *dst_basename,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
+            svn_wc_notify_func_t notify_func,
+            void *notify_baton,
+            apr_pool_t *pool);
 
 /**
  * Schedule @a path for deletion, it will be deleted from the repository on
@@ -2588,40 +2630,43 @@ svn_error_t *svn_wc_copy(const char *src,
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_wc_delete3(const char *path,
-                            svn_wc_adm_access_t *adm_access,
-                            svn_cancel_func_t cancel_func,
-                            void *cancel_baton,
-                            svn_wc_notify_func2_t notify_func,
-                            void *notify_baton,
-                            svn_boolean_t keep_local,
-                            apr_pool_t *pool);
+svn_error_t *
+svn_wc_delete3(const char *path,
+               svn_wc_adm_access_t *adm_access,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               svn_wc_notify_func2_t notify_func,
+               void *notify_baton,
+               svn_boolean_t keep_local,
+               apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_delete3(), but with @a keep_local always set to FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
-svn_error_t *svn_wc_delete2(const char *path,
-                            svn_wc_adm_access_t *adm_access,
-                            svn_cancel_func_t cancel_func,
-                            void *cancel_baton,
-                            svn_wc_notify_func2_t notify_func,
-                            void *notify_baton,
-                            apr_pool_t *pool);
+svn_error_t *
+svn_wc_delete2(const char *path,
+               svn_wc_adm_access_t *adm_access,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               svn_wc_notify_func2_t notify_func,
+               void *notify_baton,
+               apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_delete2(), but takes an @c svn_wc_notify_func_t instead.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
-svn_error_t *svn_wc_delete(const char *path,
-                           svn_wc_adm_access_t *adm_access,
-                           svn_cancel_func_t cancel_func,
-                           void *cancel_baton,
-                           svn_wc_notify_func_t notify_func,
-                           void *notify_baton,
-                           apr_pool_t *pool);
+svn_error_t *
+svn_wc_delete(const char *path,
+              svn_wc_adm_access_t *adm_access,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              svn_wc_notify_func_t notify_func,
+              void *notify_baton,
+              apr_pool_t *pool);
 
 
 /**
@@ -2679,30 +2724,32 @@ svn_error_t *svn_wc_delete(const char *path,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_wc_add2(const char *path,
-                         svn_wc_adm_access_t *parent_access,
-                         const char *copyfrom_url,
-                         svn_revnum_t copyfrom_rev,
-                         svn_cancel_func_t cancel_func,
-                         void *cancel_baton,
-                         svn_wc_notify_func2_t notify_func,
-                         void *notify_baton,
-                         apr_pool_t *pool);
+svn_error_t *
+svn_wc_add2(const char *path,
+            svn_wc_adm_access_t *parent_access,
+            const char *copyfrom_url,
+            svn_revnum_t copyfrom_rev,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
+            svn_wc_notify_func2_t notify_func,
+            void *notify_baton,
+            apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_add2(), but takes an @c svn_wc_notify_func_t instead.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
-svn_error_t *svn_wc_add(const char *path,
-                        svn_wc_adm_access_t *parent_access,
-                        const char *copyfrom_url,
-                        svn_revnum_t copyfrom_rev,
-                        svn_cancel_func_t cancel_func,
-                        void *cancel_baton,
-                        svn_wc_notify_func_t notify_func,
-                        void *notify_baton,
-                        apr_pool_t *pool);
+svn_error_t *
+svn_wc_add(const char *path,
+           svn_wc_adm_access_t *parent_access,
+           const char *copyfrom_url,
+           svn_revnum_t copyfrom_rev,
+           svn_cancel_func_t cancel_func,
+           void *cancel_baton,
+           svn_wc_notify_func_t notify_func,
+           void *notify_baton,
+           apr_pool_t *pool);
 
 /** Add a file to a working copy at @a dst_path, obtaining the text-base's
  * contents from @a new_text_base_path, the wc file's content from
@@ -2742,15 +2789,16 @@ svn_error_t *svn_wc_add(const char *path,
  *
  * @since New in 1.4
  */
-svn_error_t *svn_wc_add_repos_file2(const char *dst_path,
-                                    svn_wc_adm_access_t *adm_access,
-                                    const char *new_text_base_path,
-                                    const char *new_text_path,
-                                    apr_hash_t *new_base_props,
-                                    apr_hash_t *new_props,
-                                    const char *copyfrom_url,
-                                    svn_revnum_t copyfrom_rev,
-                                    apr_pool_t *pool);
+svn_error_t *
+svn_wc_add_repos_file2(const char *dst_path,
+                       svn_wc_adm_access_t *adm_access,
+                       const char *new_text_base_path,
+                       const char *new_text_path,
+                       apr_hash_t *new_base_props,
+                       apr_hash_t *new_props,
+                       const char *copyfrom_url,
+                       svn_revnum_t copyfrom_rev,
+                       apr_pool_t *pool);
 
 /** Same as svn_wc_add_repos_file2(), except that it doesn't have the
  * new_text_base_path and new_base_props arguments.
@@ -2759,13 +2807,14 @@ svn_error_t *svn_wc_add_repos_file2(const char *dst_path,
  *
  */
 
-svn_error_t *svn_wc_add_repos_file(const char *dst_path,
-                                   svn_wc_adm_access_t *adm_access,
-                                   const char *new_text_path,
-                                   apr_hash_t *new_props,
-                                   const char *copyfrom_url,
-                                   svn_revnum_t copyfrom_rev,
-                                   apr_pool_t *pool);
+svn_error_t *
+svn_wc_add_repos_file(const char *dst_path,
+                      svn_wc_adm_access_t *adm_access,
+                      const char *new_text_path,
+                      apr_hash_t *new_props,
+                      const char *copyfrom_url,
+                      svn_revnum_t copyfrom_rev,
+                      apr_pool_t *pool);
 
 
 /** Remove entry @a name in @a adm_access from revision control.  @a name
@@ -2850,17 +2899,18 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_wc_resolved_conflict3(const char *path,
-                                       svn_wc_adm_access_t *adm_access,
-                                       svn_boolean_t resolve_text,
-                                       svn_boolean_t resolve_props,
-                                       svn_depth_t depth,
-                                       svn_wc_conflict_choice_t conflict_choice,
-                                       svn_wc_notify_func2_t notify_func,
-                                       void *notify_baton,
-                                       svn_cancel_func_t cancel_func,
-                                       void *cancel_baton,
-                                       apr_pool_t *pool);
+svn_error_t *
+svn_wc_resolved_conflict3(const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_boolean_t resolve_text,
+                          svn_boolean_t resolve_props,
+                          svn_depth_t depth,
+                          svn_wc_conflict_choice_t conflict_choice,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          apr_pool_t *pool);
 
 
 /**
@@ -2871,16 +2921,17 @@ svn_error_t *svn_wc_resolved_conflict3(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
-svn_error_t *svn_wc_resolved_conflict2(const char *path,
-                                       svn_wc_adm_access_t *adm_access,
-                                       svn_boolean_t resolve_text,
-                                       svn_boolean_t resolve_props,
-                                       svn_boolean_t recurse,
-                                       svn_wc_notify_func2_t notify_func,
-                                       void *notify_baton,
-                                       svn_cancel_func_t cancel_func,
-                                       void *cancel_baton,
-                                       apr_pool_t *pool);
+svn_error_t *
+svn_wc_resolved_conflict2(const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_boolean_t resolve_text,
+                          svn_boolean_t resolve_props,
+                          svn_boolean_t recurse,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_resolved_conflict2(), but takes an
@@ -2888,14 +2939,15 @@ svn_error_t *svn_wc_resolved_conflict2(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
-svn_error_t *svn_wc_resolved_conflict(const char *path,
-                                      svn_wc_adm_access_t *adm_access,
-                                      svn_boolean_t resolve_text,
-                                      svn_boolean_t resolve_props,
-                                      svn_boolean_t recurse,
-                                      svn_wc_notify_func_t notify_func,
-                                      void *notify_baton,
-                                      apr_pool_t *pool);
+svn_error_t *
+svn_wc_resolved_conflict(const char *path,
+                         svn_wc_adm_access_t *adm_access,
+                         svn_boolean_t resolve_text,
+                         svn_boolean_t resolve_props,
+                         svn_boolean_t recurse,
+                         svn_wc_notify_func_t notify_func,
+                         void *notify_baton,
+                         apr_pool_t *pool);
 
 
 /* Commits. */
@@ -2996,17 +3048,18 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_wc_process_committed4(const char *path,
-                                       svn_wc_adm_access_t *adm_access,
-                                       svn_boolean_t recurse,
-                                       svn_revnum_t new_revnum,
-                                       const char *rev_date,
-                                       const char *rev_author,
-                                       apr_array_header_t *wcprop_changes,
-                                       svn_boolean_t remove_lock,
-                                       svn_boolean_t remove_changelist,
-                                       const unsigned char *digest,
-                                       apr_pool_t *pool);
+svn_error_t *
+svn_wc_process_committed4(const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_boolean_t recurse,
+                          svn_revnum_t new_revnum,
+                          const char *rev_date,
+                          const char *rev_author,
+                          apr_array_header_t *wcprop_changes,
+                          svn_boolean_t remove_lock,
+                          svn_boolean_t remove_changelist,
+                          const unsigned char *digest,
+                          apr_pool_t *pool);
 
 /** Similar to svn_wc_process_committed4(), but with @a
  * remove_changelist set to FALSE.
@@ -3015,16 +3068,17 @@ svn_error_t *svn_wc_process_committed4(const char *path,
  *
  * @deprecated Provided for backwards compatibility with the 1.4 API.
  */
-svn_error_t *svn_wc_process_committed3(const char *path,
-                                       svn_wc_adm_access_t *adm_access,
-                                       svn_boolean_t recurse,
-                                       svn_revnum_t new_revnum,
-                                       const char *rev_date,
-                                       const char *rev_author,
-                                       apr_array_header_t *wcprop_changes,
-                                       svn_boolean_t remove_lock,
-                                       const unsigned char *digest,
-                                       apr_pool_t *pool);
+svn_error_t *
+svn_wc_process_committed3(const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_boolean_t recurse,
+                          svn_revnum_t new_revnum,
+                          const char *rev_date,
+                          const char *rev_author,
+                          apr_array_header_t *wcprop_changes,
+                          svn_boolean_t remove_lock,
+                          const unsigned char *digest,
+                          apr_pool_t *pool);
 
 /** Similar to svn_wc_process_committed3(), but with @a digest set to
  * NULL.
@@ -3033,15 +3087,16 @@ svn_error_t *svn_wc_process_committed3(const char *path,
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
-svn_error_t *svn_wc_process_committed2(const char *path,
-                                       svn_wc_adm_access_t *adm_access,
-                                       svn_boolean_t recurse,
-                                       svn_revnum_t new_revnum,
-                                       const char *rev_date,
-                                       const char *rev_author,
-                                       apr_array_header_t *wcprop_changes,
-                                       svn_boolean_t remove_lock,
-                                       apr_pool_t *pool);
+svn_error_t *
+svn_wc_process_committed2(const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_boolean_t recurse,
+                          svn_revnum_t new_revnum,
+                          const char *rev_date,
+                          const char *rev_author,
+                          apr_array_header_t *wcprop_changes,
+                          svn_boolean_t remove_lock,
+                          apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_process_committed2(), but with @a remove_lock set to
@@ -3049,14 +3104,15 @@ svn_error_t *svn_wc_process_committed2(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
-svn_error_t *svn_wc_process_committed(const char *path,
-                                      svn_wc_adm_access_t *adm_access,
-                                      svn_boolean_t recurse,
-                                      svn_revnum_t new_revnum,
-                                      const char *rev_date,
-                                      const char *rev_author,
-                                      apr_array_header_t *wcprop_changes,
-                                      apr_pool_t *pool);
+svn_error_t *
+svn_wc_process_committed(const char *path,
+                         svn_wc_adm_access_t *adm_access,
+                         svn_boolean_t recurse,
+                         svn_revnum_t new_revnum,
+                         const char *rev_date,
+                         const char *rev_author,
+                         apr_array_header_t *wcprop_changes,
+                         apr_pool_t *pool);
 
 
 
@@ -3173,10 +3229,11 @@ svn_wc_crawl_revisions(const char *path,
  * @note Due to the way in which "WC-root-ness" is calculated, passing
  * a @a path of `.' to this function will always return @c TRUE.
  */
-svn_error_t *svn_wc_is_wc_root(svn_boolean_t *wc_root,
-                               const char *path,
-                               svn_wc_adm_access_t *adm_access,
-                               apr_pool_t *pool);
+svn_error_t *
+svn_wc_is_wc_root(svn_boolean_t *wc_root,
+                  const char *path,
+                  svn_wc_adm_access_t *adm_access,
+                  apr_pool_t *pool);
 
 
 /** Conditionally split @a path into an @a anchor and @a target for the
@@ -3190,10 +3247,11 @@ svn_error_t *svn_wc_is_wc_root(svn_boolean_t *wc_root,
  *
  * Allocate @a anchor and @a target in @a pool.
  */
-svn_error_t *svn_wc_get_actual_target(const char *path,
-                                      const char **anchor,
-                                      const char **target,
-                                      apr_pool_t *pool);
+svn_error_t *
+svn_wc_get_actual_target(const char *path,
+                         const char **anchor,
+                         const char **target,
+                         apr_pool_t *pool);
 
 
 
@@ -3262,59 +3320,62 @@ svn_error_t *svn_wc_get_actual_target(const char *path,
  * Else if it is @c svn_depth_empty, update exactly the uppermost
  * target, and don't touch its entries.
  *
- * @note @a depth overrides whatever depth is already set in @a anchor
- * or @a target.  To use those depths, the caller should detect them
- * and set @a depth accordingly.
+ * If @a depth_is_sticky is set and @a depth is not @c
+ * svn_depth_unknown, then in addition to updating PATHS, also set
+ * their sticky ambient depth value to @a depth.
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_wc_get_update_editor3(svn_revnum_t *target_revision,
-                                       svn_wc_adm_access_t *anchor,
-                                       const char *target,
-                                       svn_boolean_t use_commit_times,
-                                       svn_depth_t depth,
-                                       svn_boolean_t allow_unver_obstructions,
-                                       svn_wc_notify_func2_t notify_func,
-                                       void *notify_baton,
-                                       svn_cancel_func_t cancel_func,
-                                       void *cancel_baton,
-                                       svn_wc_conflict_resolver_func_t
-                                                            conflict_func,
-                                       void *conflict_baton,
-                                       svn_wc_get_file_t fetch_func,
-                                       void *fetch_baton,
-                                       const char *diff3_cmd,
-                                       apr_array_header_t *preserved_exts,
-                                       const svn_delta_editor_t **editor,
-                                       void **edit_baton,
-                                       svn_wc_traversal_info_t *ti,
-                                       apr_pool_t *pool);
+svn_error_t *
+svn_wc_get_update_editor3(svn_revnum_t *target_revision,
+                          svn_wc_adm_access_t *anchor,
+                          const char *target,
+                          svn_boolean_t use_commit_times,
+                          svn_depth_t depth,
+                          svn_boolean_t depth_is_sticky,
+                          svn_boolean_t allow_unver_obstructions,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_conflict_resolver_func_t conflict_func,
+                          void *conflict_baton,
+                          svn_wc_get_file_t fetch_func,
+                          void *fetch_baton,
+                          const char *diff3_cmd,
+                          apr_array_header_t *preserved_exts,
+                          const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          svn_wc_traversal_info_t *ti,
+                          apr_pool_t *pool);
 
 
 /**
  * Similar to svn_wc_get_update_editor3() but with the @a
  * allow_unver_obstructions parameter always set to FALSE, @a
  * conflict_func and baton set to NULL, @a fetch_func and baton set to
- * NULL, @a preserved_exts set to NULL, and @a depth set according to
- * @a recurse: if @a recurse is TRUE, pass @c svn_depth_infinity, if
- * FALSE, pass @c svn_depth_files.
+ * NULL, @a preserved_exts set to NULL, @a depth_is_sticky set to
+ * FALSE, and @a depth set according to @a recurse: if @a recurse is
+ * TRUE, pass @c svn_depth_infinity, if FALSE, pass @c
+ * svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
-svn_error_t *svn_wc_get_update_editor2(svn_revnum_t *target_revision,
-                                       svn_wc_adm_access_t *anchor,
-                                       const char *target,
-                                       svn_boolean_t use_commit_times,
-                                       svn_boolean_t recurse,
-                                       svn_wc_notify_func2_t notify_func,
-                                       void *notify_baton,
-                                       svn_cancel_func_t cancel_func,
-                                       void *cancel_baton,
-                                       const char *diff3_cmd,
-                                       const svn_delta_editor_t **editor,
-                                       void **edit_baton,
-                                       svn_wc_traversal_info_t *ti,
-                                       apr_pool_t *pool);
+svn_error_t *
+svn_wc_get_update_editor2(svn_revnum_t *target_revision,
+                          svn_wc_adm_access_t *anchor,
+                          const char *target,
+                          svn_boolean_t use_commit_times,
+                          svn_boolean_t recurse,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          const char *diff3_cmd,
+                          const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          svn_wc_traversal_info_t *ti,
+                          apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_get_update_editor2(), but takes an svn_wc_notify_func_t
@@ -3322,20 +3383,21 @@ svn_error_t *svn_wc_get_update_editor2(svn_revnum_t *target_revision,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
-svn_error_t *svn_wc_get_update_editor(svn_revnum_t *target_revision,
-                                      svn_wc_adm_access_t *anchor,
-                                      const char *target,
-                                      svn_boolean_t use_commit_times,
-                                      svn_boolean_t recurse,
-                                      svn_wc_notify_func_t notify_func,
-                                      void *notify_baton,
-                                      svn_cancel_func_t cancel_func,
-                                      void *cancel_baton,
-                                      const char *diff3_cmd,
-                                      const svn_delta_editor_t **editor,
-                                      void **edit_baton,
-                                      svn_wc_traversal_info_t *ti,
-                                      apr_pool_t *pool);
+svn_error_t *
+svn_wc_get_update_editor(svn_revnum_t *target_revision,
+                         svn_wc_adm_access_t *anchor,
+                         const char *target,
+                         svn_boolean_t use_commit_times,
+                         svn_boolean_t recurse,
+                         svn_wc_notify_func_t notify_func,
+                         void *notify_baton,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         const char *diff3_cmd,
+                         const svn_delta_editor_t **editor,
+                         void **edit_baton,
+                         svn_wc_traversal_info_t *ti,
+                         apr_pool_t *pool);
 
 /**
  * A variant of svn_wc_get_update_editor().
@@ -3388,57 +3450,61 @@ svn_error_t *svn_wc_get_update_editor(svn_revnum_t *target_revision,
  * have their working timestamp set to the last-committed-time.  If
  * FALSE, the working files will be touched with the 'now' time.
  *
- * @a depth behaves as for svn_wc_get_update_editor3().
+ * @a depth and @a depth_is_sticky behave as for svn_wc_get_update_editor3().
  *
  * If @a allow_unver_obstructions is TRUE, then allow unversioned
  * obstructions when adding a path.
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
-                                       svn_wc_adm_access_t *anchor,
-                                       const char *target,
-                                       const char *switch_url,
-                                       svn_boolean_t use_commit_times,
-                                       svn_depth_t depth,
-                                       svn_boolean_t allow_unver_obstructions,
-                                       svn_wc_notify_func2_t notify_func,
-                                       void *notify_baton,
-                                       svn_cancel_func_t cancel_func,
-                                       void *cancel_baton,
-                                       svn_wc_conflict_resolver_func_t conflict_func,
-                                       void *conflict_baton,
-                                       const char *diff3_cmd,
-                                       apr_array_header_t *preserved_exts,
-                                       const svn_delta_editor_t **editor,
-                                       void **edit_baton,
-                                       svn_wc_traversal_info_t *ti,
-                                       apr_pool_t *pool);
+svn_error_t *
+svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
+                          svn_wc_adm_access_t *anchor,
+                          const char *target,
+                          const char *switch_url,
+                          svn_boolean_t use_commit_times,
+                          svn_depth_t depth,
+                          svn_boolean_t depth_is_sticky,
+                          svn_boolean_t allow_unver_obstructions,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_conflict_resolver_func_t conflict_func,
+                          void *conflict_baton,
+                          const char *diff3_cmd,
+                          apr_array_header_t *preserved_exts,
+                          const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          svn_wc_traversal_info_t *ti,
+                          apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_get_switch_editor3() but with the
  * @a allow_unver_obstructions parameter always set to FALSE,
  * @a preserved_exts set to NULL, @a conflict_func and baton set to NULL,
- * and @a depth set according to @a recurse: if @a recurse is TRUE, pass @c
- * svn_depth_infinity, if FALSE, pass @c svn_depth_files.
+ * @a depth_is_sticky set to FALSE, and @a depth set according to @a
+ * recurse: if @a recurse is TRUE, pass @c svn_depth_infinity, if
+ * FALSE, pass @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
-svn_error_t *svn_wc_get_switch_editor2(svn_revnum_t *target_revision,
-                                       svn_wc_adm_access_t *anchor,
-                                       const char *target,
-                                       const char *switch_url,
-                                       svn_boolean_t use_commit_times,
-                                       svn_boolean_t recurse,
-                                       svn_wc_notify_func2_t notify_func,
-                                       void *notify_baton,
-                                       svn_cancel_func_t cancel_func,
-                                       void *cancel_baton,
-                                       const char *diff3_cmd,
-                                       const svn_delta_editor_t **editor,
-                                       void **edit_baton,
-                                       svn_wc_traversal_info_t *ti,
-                                       apr_pool_t *pool);
+svn_error_t *
+svn_wc_get_switch_editor2(svn_revnum_t *target_revision,
+                          svn_wc_adm_access_t *anchor,
+                          const char *target,
+                          const char *switch_url,
+                          svn_boolean_t use_commit_times,
+                          svn_boolean_t recurse,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          const char *diff3_cmd,
+                          const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          svn_wc_traversal_info_t *ti,
+                          apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_get_switch_editor2(), but takes an
@@ -3446,21 +3512,22 @@ svn_error_t *svn_wc_get_switch_editor2(svn_revnum_t *target_revision,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
-svn_error_t *svn_wc_get_switch_editor(svn_revnum_t *target_revision,
-                                      svn_wc_adm_access_t *anchor,
-                                      const char *target,
-                                      const char *switch_url,
-                                      svn_boolean_t use_commit_times,
-                                      svn_boolean_t recurse,
-                                      svn_wc_notify_func_t notify_func,
-                                      void *notify_baton,
-                                      svn_cancel_func_t cancel_func,
-                                      void *cancel_baton,
-                                      const char *diff3_cmd,
-                                      const svn_delta_editor_t **editor,
-                                      void **edit_baton,
-                                      svn_wc_traversal_info_t *ti,
-                                      apr_pool_t *pool);
+svn_error_t *
+svn_wc_get_switch_editor(svn_revnum_t *target_revision,
+                         svn_wc_adm_access_t *anchor,
+                         const char *target,
+                         const char *switch_url,
+                         svn_boolean_t use_commit_times,
+                         svn_boolean_t recurse,
+                         svn_wc_notify_func_t notify_func,
+                         void *notify_baton,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         const char *diff3_cmd,
+                         const svn_delta_editor_t **editor,
+                         void **edit_baton,
+                         svn_wc_traversal_info_t *ti,
+                         apr_pool_t *pool);
 
 
 
@@ -3488,10 +3555,11 @@ svn_error_t *svn_wc_get_switch_editor(svn_revnum_t *target_revision,
  * then an empty hash is returned.  @a adm_access is an access baton
  * set that contains @a path.
  */
-svn_error_t *svn_wc_prop_list(apr_hash_t **props,
-                              const char *path,
-                              svn_wc_adm_access_t *adm_access,
-                              apr_pool_t *pool);
+svn_error_t *
+svn_wc_prop_list(apr_hash_t **props,
+                 const char *path,
+                 svn_wc_adm_access_t *adm_access,
+                 apr_pool_t *pool);
 
 
 /** Set @a *value to the value of property @a name for @a path, allocating
@@ -3500,11 +3568,12 @@ svn_error_t *svn_wc_prop_list(apr_hash_t **props,
  * return the error @c SVN_ERR_BAD_PROP_KIND.  @a adm_access is an access
  * baton set that contains @a path.
  */
-svn_error_t *svn_wc_prop_get(const svn_string_t **value,
-                             const char *name,
-                             const char *path,
-                             svn_wc_adm_access_t *adm_access,
-                             apr_pool_t *pool);
+svn_error_t *
+svn_wc_prop_get(const svn_string_t **value,
+                const char *name,
+                const char *path,
+                svn_wc_adm_access_t *adm_access,
+                apr_pool_t *pool);
 
 /**
  * Set property @a name to @a value for @a path, or if @a value is
@@ -3526,12 +3595,13 @@ svn_error_t *svn_wc_prop_get(const svn_string_t **value,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_wc_prop_set2(const char *name,
-                              const svn_string_t *value,
-                              const char *path,
-                              svn_wc_adm_access_t *adm_access,
-                              svn_boolean_t skip_checks,
-                              apr_pool_t *pool);
+svn_error_t *
+svn_wc_prop_set2(const char *name,
+                 const svn_string_t *value,
+                 const char *path,
+                 svn_wc_adm_access_t *adm_access,
+                 svn_boolean_t skip_checks,
+                 apr_pool_t *pool);
 
 
 /**
@@ -3539,11 +3609,12 @@ svn_error_t *svn_wc_prop_set2(const char *name,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
-svn_error_t *svn_wc_prop_set(const char *name,
-                             const svn_string_t *value,
-                             const char *path,
-                             svn_wc_adm_access_t *adm_access,
-                             apr_pool_t *pool);
+svn_error_t *
+svn_wc_prop_set(const char *name,
+                const svn_string_t *value,
+                const char *path,
+                svn_wc_adm_access_t *adm_access,
+                apr_pool_t *pool);
 
 
 /** Return TRUE iff @a name is a 'normal' property name.  'Normal' is
@@ -3607,15 +3678,16 @@ typedef svn_error_t *(*svn_wc_canonicalize_svn_prop_get_file_t)
  * ### This is not actually related to the WC, but it does need to call
  * ### svn_wc_parse_externals_description2.
  */
-svn_error_t *svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
-                                          const char *propname,
-                                          const svn_string_t *propval,
-                                          const char *path,
-                                          svn_node_kind_t kind,
-                                          svn_boolean_t skip_some_checks,
-                                          svn_wc_canonicalize_svn_prop_get_file_t prop_getter,
-                                          void *getter_baton,
-                                          apr_pool_t *pool);
+svn_error_t *
+svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
+                             const char *propname,
+                             const svn_string_t *propval,
+                             const char *path,
+                             svn_node_kind_t kind,
+                             svn_boolean_t skip_some_checks,
+                             svn_wc_canonicalize_svn_prop_get_file_t prop_getter,
+                             void *getter_baton,
+                             apr_pool_t *pool);
 
 
 
@@ -3655,19 +3727,20 @@ svn_error_t *svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
-                                     const char *target,
-                                     const svn_wc_diff_callbacks2_t *callbacks,
-                                     void *callback_baton,
-                                     svn_depth_t depth,
-                                     svn_boolean_t ignore_ancestry,
-                                     svn_boolean_t use_text_base,
-                                     svn_boolean_t reverse_order,
-                                     svn_cancel_func_t cancel_func,
-                                     void *cancel_baton,
-                                     const svn_delta_editor_t **editor,
-                                     void **edit_baton,
-                                     apr_pool_t *pool);
+svn_error_t *
+svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
+                        const char *target,
+                        const svn_wc_diff_callbacks2_t *callbacks,
+                        void *callback_baton,
+                        svn_depth_t depth,
+                        svn_boolean_t ignore_ancestry,
+                        svn_boolean_t use_text_base,
+                        svn_boolean_t reverse_order,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        const svn_delta_editor_t **editor,
+                        void **edit_baton,
+                        apr_pool_t *pool);
 /**
  * Similar to svn_wc_get_diff_editor4(), but with @a depth set to
  * @c svn_depth_infinity if @a recurse is TRUE, or @a svn_depth_files
@@ -3677,19 +3750,20 @@ svn_error_t *svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
 
  * @since New in 1.2.
  */
-svn_error_t *svn_wc_get_diff_editor3(svn_wc_adm_access_t *anchor,
-                                     const char *target,
-                                     const svn_wc_diff_callbacks2_t *callbacks,
-                                     void *callback_baton,
-                                     svn_boolean_t recurse,
-                                     svn_boolean_t ignore_ancestry,
-                                     svn_boolean_t use_text_base,
-                                     svn_boolean_t reverse_order,
-                                     svn_cancel_func_t cancel_func,
-                                     void *cancel_baton,
-                                     const svn_delta_editor_t **editor,
-                                     void **edit_baton,
-                                     apr_pool_t *pool);
+svn_error_t *
+svn_wc_get_diff_editor3(svn_wc_adm_access_t *anchor,
+                        const char *target,
+                        const svn_wc_diff_callbacks2_t *callbacks,
+                        void *callback_baton,
+                        svn_boolean_t recurse,
+                        svn_boolean_t ignore_ancestry,
+                        svn_boolean_t use_text_base,
+                        svn_boolean_t reverse_order,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        const svn_delta_editor_t **editor,
+                        void **edit_baton,
+                        apr_pool_t *pool);
 
 
 /**
@@ -3698,19 +3772,20 @@ svn_error_t *svn_wc_get_diff_editor3(svn_wc_adm_access_t *anchor,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
-svn_error_t *svn_wc_get_diff_editor2(svn_wc_adm_access_t *anchor,
-                                     const char *target,
-                                     const svn_wc_diff_callbacks_t *callbacks,
-                                     void *callback_baton,
-                                     svn_boolean_t recurse,
-                                     svn_boolean_t ignore_ancestry,
-                                     svn_boolean_t use_text_base,
-                                     svn_boolean_t reverse_order,
-                                     svn_cancel_func_t cancel_func,
-                                     void *cancel_baton,
-                                     const svn_delta_editor_t **editor,
-                                     void **edit_baton,
-                                     apr_pool_t *pool);
+svn_error_t *
+svn_wc_get_diff_editor2(svn_wc_adm_access_t *anchor,
+                        const char *target,
+                        const svn_wc_diff_callbacks_t *callbacks,
+                        void *callback_baton,
+                        svn_boolean_t recurse,
+                        svn_boolean_t ignore_ancestry,
+                        svn_boolean_t use_text_base,
+                        svn_boolean_t reverse_order,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        const svn_delta_editor_t **editor,
+                        void **edit_baton,
+                        apr_pool_t *pool);
 
 
 /**
@@ -3719,18 +3794,19 @@ svn_error_t *svn_wc_get_diff_editor2(svn_wc_adm_access_t *anchor,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
-svn_error_t *svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
-                                    const char *target,
-                                    const svn_wc_diff_callbacks_t *callbacks,
-                                    void *callback_baton,
-                                    svn_boolean_t recurse,
-                                    svn_boolean_t use_text_base,
-                                    svn_boolean_t reverse_order,
-                                    svn_cancel_func_t cancel_func,
-                                    void *cancel_baton,
-                                    const svn_delta_editor_t **editor,
-                                    void **edit_baton,
-                                    apr_pool_t *pool);
+svn_error_t *
+svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
+                       const char *target,
+                       const svn_wc_diff_callbacks_t *callbacks,
+                       void *callback_baton,
+                       svn_boolean_t recurse,
+                       svn_boolean_t use_text_base,
+                       svn_boolean_t reverse_order,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       const svn_delta_editor_t **editor,
+                       void **edit_baton,
+                       apr_pool_t *pool);
 
 
 /**
@@ -3756,13 +3832,14 @@ svn_error_t *svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_wc_diff4(svn_wc_adm_access_t *anchor,
-                          const char *target,
-                          const svn_wc_diff_callbacks2_t *callbacks,
-                          void *callback_baton,
-                          svn_depth_t depth,
-                          svn_boolean_t ignore_ancestry,
-                          apr_pool_t *pool);
+svn_error_t *
+svn_wc_diff4(svn_wc_adm_access_t *anchor,
+             const char *target,
+             const svn_wc_diff_callbacks2_t *callbacks,
+             void *callback_baton,
+             svn_depth_t depth,
+             svn_boolean_t ignore_ancestry,
+             apr_pool_t *pool);
 
 
 /**
@@ -3772,13 +3849,14 @@ svn_error_t *svn_wc_diff4(svn_wc_adm_access_t *anchor,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
-svn_error_t *svn_wc_diff3(svn_wc_adm_access_t *anchor,
-                          const char *target,
-                          const svn_wc_diff_callbacks2_t *callbacks,
-                          void *callback_baton,
-                          svn_boolean_t recurse,
-                          svn_boolean_t ignore_ancestry,
-                          apr_pool_t *pool);
+svn_error_t *
+svn_wc_diff3(svn_wc_adm_access_t *anchor,
+             const char *target,
+             const svn_wc_diff_callbacks2_t *callbacks,
+             void *callback_baton,
+             svn_boolean_t recurse,
+             svn_boolean_t ignore_ancestry,
+             apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_diff3(), but with a @c svn_wc_diff_callbacks_t argument
@@ -3786,13 +3864,14 @@ svn_error_t *svn_wc_diff3(svn_wc_adm_access_t *anchor,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
-svn_error_t *svn_wc_diff2(svn_wc_adm_access_t *anchor,
-                          const char *target,
-                          const svn_wc_diff_callbacks_t *callbacks,
-                          void *callback_baton,
-                          svn_boolean_t recurse,
-                          svn_boolean_t ignore_ancestry,
-                          apr_pool_t *pool);
+svn_error_t *
+svn_wc_diff2(svn_wc_adm_access_t *anchor,
+             const char *target,
+             const svn_wc_diff_callbacks_t *callbacks,
+             void *callback_baton,
+             svn_boolean_t recurse,
+             svn_boolean_t ignore_ancestry,
+             apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_diff2(), but with @a ignore_ancestry always set
@@ -3800,12 +3879,13 @@ svn_error_t *svn_wc_diff2(svn_wc_adm_access_t *anchor,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
-svn_error_t *svn_wc_diff(svn_wc_adm_access_t *anchor,
-                         const char *target,
-                         const svn_wc_diff_callbacks_t *callbacks,
-                         void *callback_baton,
-                         svn_boolean_t recurse,
-                         apr_pool_t *pool);
+svn_error_t *
+svn_wc_diff(svn_wc_adm_access_t *anchor,
+            const char *target,
+            const svn_wc_diff_callbacks_t *callbacks,
+            void *callback_baton,
+            svn_boolean_t recurse,
+            apr_pool_t *pool);
 
 
 /** Given a @a path to a file or directory under version control, discover
@@ -3823,11 +3903,12 @@ svn_error_t *svn_wc_diff(svn_wc_adm_access_t *anchor,
  * allocated in @a pool, and can be used to compare old and new values of
  * properties.
  */
-svn_error_t *svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
-                                   apr_hash_t **original_props,
-                                   const char *path,
-                                   svn_wc_adm_access_t *adm_access,
-                                   apr_pool_t *pool);
+svn_error_t *
+svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
+                      apr_hash_t **original_props,
+                      const char *path,
+                      svn_wc_adm_access_t *adm_access,
+                      apr_pool_t *pool);
 
 
 /** The outcome of a merge carried out (or tried as a dry-run) by
@@ -3917,56 +3998,59 @@ typedef enum svn_wc_merge_outcome_t
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_wc_merge3(enum svn_wc_merge_outcome_t *merge_outcome,
-                           const char *left,
-                           const char *right,
-                           const char *merge_target,
-                           svn_wc_adm_access_t *adm_access,
-                           const char *left_label,
-                           const char *right_label,
-                           const char *target_label,
-                           svn_boolean_t dry_run,
-                           const char *diff3_cmd,
-                           const apr_array_header_t *merge_options,
-                           const apr_array_header_t *prop_diff,
-                           svn_wc_conflict_resolver_func_t conflict_func,
-                           void *conflict_baton,
-                           apr_pool_t *pool);
+svn_error_t *
+svn_wc_merge3(enum svn_wc_merge_outcome_t *merge_outcome,
+              const char *left,
+              const char *right,
+              const char *merge_target,
+              svn_wc_adm_access_t *adm_access,
+              const char *left_label,
+              const char *right_label,
+              const char *target_label,
+              svn_boolean_t dry_run,
+              const char *diff3_cmd,
+              const apr_array_header_t *merge_options,
+              const apr_array_header_t *prop_diff,
+              svn_wc_conflict_resolver_func_t conflict_func,
+              void *conflict_baton,
+              apr_pool_t *pool);
 
 /** Similar to svn_wc_merge3(), but with @a prop_diff, @a
  * conflict_func, @a conflict_baton set to NULL.
  *
  * @deprecated Provided for backwards compatibility with the 1.4 API.
  */
-svn_error_t *svn_wc_merge2(enum svn_wc_merge_outcome_t *merge_outcome,
-                           const char *left,
-                           const char *right,
-                           const char *merge_target,
-                           svn_wc_adm_access_t *adm_access,
-                           const char *left_label,
-                           const char *right_label,
-                           const char *target_label,
-                           svn_boolean_t dry_run,
-                           const char *diff3_cmd,
-                           const apr_array_header_t *merge_options,
-                           apr_pool_t *pool);
+svn_error_t *
+svn_wc_merge2(enum svn_wc_merge_outcome_t *merge_outcome,
+              const char *left,
+              const char *right,
+              const char *merge_target,
+              svn_wc_adm_access_t *adm_access,
+              const char *left_label,
+              const char *right_label,
+              const char *target_label,
+              svn_boolean_t dry_run,
+              const char *diff3_cmd,
+              const apr_array_header_t *merge_options,
+              apr_pool_t *pool);
 
 
 /** Similar to svn_wc_merge2(), but with @a merge_options set to NULL.
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
-svn_error_t *svn_wc_merge(const char *left,
-                          const char *right,
-                          const char *merge_target,
-                          svn_wc_adm_access_t *adm_access,
-                          const char *left_label,
-                          const char *right_label,
-                          const char *target_label,
-                          svn_boolean_t dry_run,
-                          enum svn_wc_merge_outcome_t *merge_outcome,
-                          const char *diff3_cmd,
-                          apr_pool_t *pool);
+svn_error_t *
+svn_wc_merge(const char *left,
+             const char *right,
+             const char *merge_target,
+             svn_wc_adm_access_t *adm_access,
+             const char *left_label,
+             const char *right_label,
+             const char *target_label,
+             svn_boolean_t dry_run,
+             enum svn_wc_merge_outcome_t *merge_outcome,
+             const char *diff3_cmd,
+             apr_pool_t *pool);
 
 
 /** Given a @a path under version control, merge an array of @a
@@ -4049,9 +4133,10 @@ svn_wc_merge_prop_diffs(svn_wc_notify_state_t *state,
  * diffs.  If the WC has no text-base, return a @c NULL instead of a
  * path.
  */
-svn_error_t *svn_wc_get_pristine_copy_path(const char *path,
-                                           const char **pristine_path,
-                                           apr_pool_t *pool);
+svn_error_t *
+svn_wc_get_pristine_copy_path(const char *path,
+                              const char **pristine_path,
+                              apr_pool_t *pool);
 
 
 /**
@@ -4344,11 +4429,12 @@ svn_wc_translated_file2(const char **xlated_path,
  *
  * @deprecated Provided for compatibility with the 1.3 API
  */
-svn_error_t *svn_wc_translated_file(const char **xlated_p,
-                                    const char *vfile,
-                                    svn_wc_adm_access_t *adm_access,
-                                    svn_boolean_t force_repair,
-                                    apr_pool_t *pool);
+svn_error_t *
+svn_wc_translated_file(const char **xlated_p,
+                       const char *vfile,
+                       svn_wc_adm_access_t *adm_access,
+                       svn_boolean_t force_repair,
+                       apr_pool_t *pool);
 
 
 /** Returns a @a stream allocated in @a pool with access to the given
@@ -4407,26 +4493,28 @@ svn_wc_translated_stream(svn_stream_t **stream,
  *
  * @since New in 1.4.
  */
-svn_error_t *svn_wc_transmit_text_deltas2(const char **tempfile,
-                                          unsigned char digest[],
-                                          const char *path,
-                                          svn_wc_adm_access_t *adm_access,
-                                          svn_boolean_t fulltext,
-                                          const svn_delta_editor_t *editor,
-                                          void *file_baton,
-                                          apr_pool_t *pool);
+svn_error_t *
+svn_wc_transmit_text_deltas2(const char **tempfile,
+                             unsigned char digest[],
+                             const char *path,
+                             svn_wc_adm_access_t *adm_access,
+                             svn_boolean_t fulltext,
+                             const svn_delta_editor_t *editor,
+                             void *file_baton,
+                             apr_pool_t *pool);
 
 /** Similar to svn_wc_transmit_text_deltas2(), but with @a digest set to NULL.
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
-svn_error_t *svn_wc_transmit_text_deltas(const char *path,
-                                         svn_wc_adm_access_t *adm_access,
-                                         svn_boolean_t fulltext,
-                                         const svn_delta_editor_t *editor,
-                                         void *file_baton,
-                                         const char **tempfile,
-                                         apr_pool_t *pool);
+svn_error_t *
+svn_wc_transmit_text_deltas(const char *path,
+                            svn_wc_adm_access_t *adm_access,
+                            svn_boolean_t fulltext,
+                            const svn_delta_editor_t *editor,
+                            void *file_baton,
+                            const char **tempfile,
+                            apr_pool_t *pool);
 
 
 /** Given a @a path with its accompanying @a entry, transmit all local
@@ -4441,22 +4529,24 @@ svn_error_t *svn_wc_transmit_text_deltas(const char *path,
  * @note Starting version 1.5, no tempfile will ever be returned
  *       anymore.  If @a *tempfile is passed, its value is set to @c NULL.
  */
-svn_error_t *svn_wc_transmit_prop_deltas(const char *path,
-                                         svn_wc_adm_access_t *adm_access,
-                                         const svn_wc_entry_t *entry,
-                                         const svn_delta_editor_t *editor,
-                                         void *baton,
-                                         const char **tempfile,
-                                         apr_pool_t *pool);
+svn_error_t *
+svn_wc_transmit_prop_deltas(const char *path,
+                            svn_wc_adm_access_t *adm_access,
+                            const svn_wc_entry_t *entry,
+                            const svn_delta_editor_t *editor,
+                            void *baton,
+                            const char **tempfile,
+                            apr_pool_t *pool);
 
 
 /** Get the run-time configured list of ignore patterns from the
  * @c svn_config_t's in the @a config hash, and store them in @a *patterns.
  * Allocate @a *patterns and its contents in @a pool.
  */
-svn_error_t *svn_wc_get_default_ignores(apr_array_header_t **patterns,
-                                        apr_hash_t *config,
-                                        apr_pool_t *pool);
+svn_error_t *
+svn_wc_get_default_ignores(apr_array_header_t **patterns,
+                           apr_hash_t *config,
+                           apr_pool_t *pool);
 
 /** Get the list of ignore patterns from the @c svn_config_t's in the
  * @a config hash and the local ignore patterns from the directory
@@ -4465,10 +4555,11 @@ svn_error_t *svn_wc_get_default_ignores(apr_array_header_t **patterns,
  *
  * @since New in 1.3.
  */
-svn_error_t *svn_wc_get_ignores(apr_array_header_t **patterns,
-                                apr_hash_t *config,
-                                svn_wc_adm_access_t *adm_access,
-                                apr_pool_t *pool);
+svn_error_t *
+svn_wc_get_ignores(apr_array_header_t **patterns,
+                   apr_hash_t *config,
+                   svn_wc_adm_access_t *adm_access,
+                   apr_pool_t *pool);
 
 /** Return TRUE iff @a str matches any of the elements of @a list, a
  * list of zero or more ignore patterns.
@@ -4476,7 +4567,8 @@ svn_error_t *svn_wc_get_ignores(apr_array_header_t **patterns,
  * @since New in 1.5.
  */
 svn_boolean_t
-svn_wc_match_ignore_list(const char *str, apr_array_header_t *list,
+svn_wc_match_ignore_list(const char *str,
+                         apr_array_header_t *list,
                          apr_pool_t *pool);
 
 
@@ -4484,17 +4576,20 @@ svn_wc_match_ignore_list(const char *str, apr_array_header_t *list,
  * a write lock for @a path.  If @a path is read-only, due to locking
  * properties, make it writable.  Perform temporary allocations in @a
  * pool. */
-svn_error_t *svn_wc_add_lock(const char *path, const svn_lock_t *lock,
-                             svn_wc_adm_access_t *adm_access,
-                             apr_pool_t *pool);
+svn_error_t *
+svn_wc_add_lock(const char *path,
+                const svn_lock_t *lock,
+                svn_wc_adm_access_t *adm_access,
+                apr_pool_t *pool);
 
 /** Remove any lock from @a path.  @a adm_access must contain a
  * write-lock for @a path.  If @a path has a lock and the locking
  * so specifies, make the file read-only.  Don't return an error if @a
  * path didn't have a lock.  Perform temporary allocations in @a pool. */
-svn_error_t *svn_wc_remove_lock(const char *path,
-                                svn_wc_adm_access_t *adm_access,
-                                apr_pool_t *pool);
+svn_error_t *
+svn_wc_remove_lock(const char *path,
+                   svn_wc_adm_access_t *adm_access,
+                   apr_pool_t *pool);
 
 
 /** A structure to report a summary of a working copy, including the

@@ -411,15 +411,28 @@ int svn_opt_parse_revision(svn_opt_revision_t *start_revision,
                            apr_pool_t *pool);
 
 /**
- * Similar to svn_opt_parse_revision but stores result in
- * @a *ranges_to_merge, an array of @c svn_opt_revision_range_t *'s.
+ * Parse @a arg, where @a arg is "N" or "N:M", into a
+ * @c svn_opt_revision_range_t and push that onto @a opt_ranges.
+ *
+ *    - If @a arg is "N", set the @c start field of the
+ *      @c svn_opt_revision_range_t to represent N and the @c end field
+ *      to @c svn_opt_revision_unspecified.
+ *
+ *    - If @a arg is "N:M", set the @c start field of the
+ *      @c svn_opt_revision_range_t to represent N and the @c end field
+ *      to represent M.
+ *
+ * If @a arg is invalid, return -1; else return 0.  It is invalid to omit
+ * a revision (as in, ":", "N:" or ":M").
+ *
+ * Use @a pool to allocate @c svn_opt_revision_range_t pushed to the array.
  *
  * @since New in 1.5.
  */
 int
-svn_opt_parse_revision2(apr_array_header_t **ranges_to_merge,
-                        const char *arg,
-                        apr_pool_t *pool);
+svn_opt_parse_revision_to_range(apr_array_header_t *opt_ranges,
+                                const char *arg,
+                                apr_pool_t *pool);
 
 /**
  * Resolve peg revisions and operational revisions in the following way:

@@ -35,7 +35,18 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* Return TRUE iff CLHASH (a hash whose keys are const char *
+   changelist names) is NULL or if ENTRY->changelist (which may be
+   NULL) is a key in CLHASH.  */
+#define SVN_CLIENT__CL_MATCH(clhash, entry) \
+        (((clhash == NULL) \
+          || (entry \
+              && entry->changelist \
+              && apr_hash_get(clhash, entry->changelist, \
+                              APR_HASH_KEY_STRING))) ? TRUE : FALSE)
 
+
+
 /* Set *URL and *PEG_REVNUM (the latter is ignored if NULL) to the
    repository URL of PATH_OR_URL.  If PATH_OR_URL is a WC path and
    PEG_REVISION->kind is svn_opt_revision_working, use the
@@ -529,6 +540,10 @@ svn_client__make_local_parents(const char *path,
    svn_depth_empty, just update PATH; if PATH is a directory, that
    means touching only its properties not its entries.
 
+   If DEPTH_IS_STICKY is set and DEPTH is not svn_depth_unknown, then
+   in addition to updating PATH, also set its sticky ambient depth
+   value to DEPTH.
+
    If IGNORE_EXTERNALS is true, do no externals processing.
 
    If TIMESTAMP_SLEEP is NULL this function will sleep before
@@ -552,6 +567,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             const char *path,
                             const svn_opt_revision_t *revision,
                             svn_depth_t depth,
+                            svn_boolean_t depth_is_sticky,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
                             svn_boolean_t *timestamp_sleep,
@@ -603,7 +619,9 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
    *TIMESTAMP_SLEEP if no sleep is required.  If IGNORE_EXTERNALS is true,
    don't process externals.  If ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned
    children of PATH that obstruct items added from the repos are tolerated;
-   if FALSE, these obstructions cause the switch to fail. */
+   if FALSE, these obstructions cause the switch to fail. 
+
+   DEPTH and DEPTH_IS_STICKY behave as for svn_client__update_internal(). */
 svn_error_t *
 svn_client__switch_internal(svn_revnum_t *result_rev,
                             const char *path,
@@ -611,6 +629,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             const svn_opt_revision_t *peg_revision,
                             const svn_opt_revision_t *revision,
                             svn_depth_t depth,
+                            svn_boolean_t depth_is_sticky,
                             svn_boolean_t *timestamp_sleep,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
