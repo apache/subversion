@@ -912,23 +912,14 @@ svn_ra_get_dir(svn_ra_session_t *session,
  *
  * @since New in 1.5.
  */
-<<<<<<< .working
-svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
-                                  apr_hash_t **mergeoutput,
-                                  const apr_array_header_t *paths,
-                                  svn_revnum_t revision,
-                                  svn_mergeinfo_inheritance_t inherit,
-                                  svn_boolean_t include_descendants,
-                                  apr_pool_t *pool);
-=======
 svn_error_t *
 svn_ra_get_mergeinfo(svn_ra_session_t *session,
                      apr_hash_t **mergeoutput,
                      const apr_array_header_t *paths,
                      svn_revnum_t revision,
                      svn_mergeinfo_inheritance_t inherit,
+                     svn_boolean_t include_descendants,
                      apr_pool_t *pool);
->>>>>>> .merge-right.r28930
 
 /**
  * Ask the RA layer to update a working copy.

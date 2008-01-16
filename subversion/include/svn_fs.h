@@ -1305,21 +1305,13 @@ svn_fs_closest_copy(svn_fs_root_t **root_p,
  *
  * @since New in 1.5.
  */
-<<<<<<< .working
-svn_error_t *svn_fs_get_mergeinfo(apr_hash_t **minfohash,
-                                  svn_fs_root_t *root,
-                                  const apr_array_header_t *paths,
-                                  svn_mergeinfo_inheritance_t inherit,
-                                  svn_boolean_t include_descendants,
-                                  apr_pool_t *pool);
-=======
 svn_error_t *
 svn_fs_get_mergeinfo(apr_hash_t **minfohash,
                      svn_fs_root_t *root,
                      const apr_array_header_t *paths,
                      svn_mergeinfo_inheritance_t inherit,
+                     svn_boolean_t include_descendants,
                      apr_pool_t *pool);
->>>>>>> .merge-right.r28930
 
 /** Retrieve combined mergeinfo for multiple nodes, and their children.
  *
