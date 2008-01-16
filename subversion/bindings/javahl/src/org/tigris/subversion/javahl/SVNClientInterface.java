@@ -1097,6 +1097,7 @@ public interface SVNClientInterface
      * @param relativeToDir index path is relative to this path
      * @param outFileName   file name where difference are written
      * @param depth         how deep to traverse into subdirectories
+     * @param changelists  if non-null, filter paths using changelists
      * @param ignoreAncestry ignore if files are not related
      * @param noDiffDeleted no output on deleted files
      * @param force         diff even on binary files
@@ -1118,6 +1119,7 @@ public interface SVNClientInterface
      * @param target2 Path or URL.
      * @param revision2 Revision of <code>target2</code>.
      * @param depth how deep to recurse.
+     * @param changelists  if non-null, filter paths using changelists
      * @param ignoreAncestry Whether to ignore unrelated files during
      * comparison.  False positives may potentially be reported if
      * this parameter <code>false</code>, since a file might have been
@@ -1151,6 +1153,7 @@ public interface SVNClientInterface
      * @param endRevision End of range for comparsion of
      * <code>target</code>.
      * @param depth how deep to recurse.
+     * @param changelists  if non-null, filter paths using changelists
      * @param ignoreAncestry Whether to ignore unrelated files during
      * comparison.  False positives may potentially be reported if
      * this parameter <code>false</code>, since a file might have been
