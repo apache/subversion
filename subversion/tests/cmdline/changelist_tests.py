@@ -114,7 +114,7 @@ def commit_one_changelist(sbox):
   # Add a line of text to all the versioned files in the tree.
   mod_all_files(wc_dir, "New text.\n")
 
-  # Add files to changelists based on their last names.
+  # Add files to changelists based on the last character in their names.
   changelist_all_files(wc_dir, clname_from_lastchar_cb)
   
   # Now, test a commit that uses a single changelist filter (--changelist a).
@@ -150,7 +150,7 @@ def commit_multiple_changelists(sbox):
   # Add a line of text to all the versioned files in the tree.
   mod_all_files(wc_dir, "New text.\n")
 
-  # Add files to changelists based on their last names.
+  # Add files to changelists based on the last character in their names.
   changelist_all_files(wc_dir, clname_from_lastchar_cb)
   
   # Now, test a commit that uses multiple changelist filters
@@ -188,12 +188,8 @@ def info_with_changelists(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # Add files ending in 'a' and 'i' to changelists "a" and "i".
-  def a_i_lastchar_changelist_cb(full_path):
-    if full_path[-1] == 'a' or full_path[-1] == 'i':
-      return full_path[-1]
-    return ''
-  changelist_all_files(wc_dir, a_i_lastchar_changelist_cb)
+  # Add files to changelists based on the last character in their names.
+  changelist_all_files(wc_dir, clname_from_lastchar_cb)
   
   # Now, test various combinations of changelist specification and depths.
   for clname in [['a'], ['i'], ['a', 'i']]:
@@ -233,7 +229,7 @@ def info_with_changelists(sbox):
       output, errput = svntest.main.run_svn(None, *args)
 
       # Filter the output for lines that begin with 'Path:', and
-      # reduce even tohse lines to just the actual path.
+      # reduce even those lines to just the actual path.
       def startswith_path(line):
         return line[:6] == 'Path: ' and 1 or 0
       paths = map(lambda x: x[6:].rstrip(), filter(startswith_path, output))
