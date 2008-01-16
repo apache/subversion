@@ -44,15 +44,15 @@ new_tree_conflict_phrases(apr_pool_t *pool)
   struct tree_conflict_phrases *phrases =
     apr_pcalloc(pool, sizeof(struct tree_conflict_phrases));
 
-  phrases->update_deleted = _("The update wants to delete the file '%s'\n"
+  phrases->update_deleted = _("The update deleted the file '%s'\n"
                               "(possibly as part of a rename operation).\n");
 
-  phrases->update_edited = _("The update wants to edit the file '%s'.\n");
+  phrases->update_edited = _("The update edited the file '%s'.\n");
 
-  phrases->merge_deleted = _("The merge wants to delete the file '%s'\n"
+  phrases->merge_deleted = _("The merge deleted the file '%s'\n"
                              "(possibly as part of a rename operation).\n");
 
-  phrases->merge_edited = _("The merge wants to edit the file '%s'.\n");
+  phrases->merge_edited = _("The merge edited the file '%s'.\n");
 
   phrases->we_deleted = _("You have deleted '%s' locally.\n"
                           "Maybe you renamed it?\n");
