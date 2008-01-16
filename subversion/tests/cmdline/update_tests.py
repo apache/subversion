@@ -2989,15 +2989,19 @@ def mergeinfo_update_elision(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
+  # Update A to get all paths to the same working revision.
+  svntest.actions.run_and_verify_svn(None, ["At revision 7.\n"], [],
+                                     'up', wc_dir)
+
   # Merge r6:7 into A/B_COPY/E
   short_E_COPY_path = shorten_path_kludge(E_COPY_path)
   expected_output = wc.State(short_E_COPY_path, {
     'alpha' : Item(status='U '),
     })
   expected_merge_status = wc.State(short_E_COPY_path, {
-    ''        : Item(status=' M', wc_rev=6),
+    ''        : Item(status=' M', wc_rev=7),
     'alpha' : Item(status='MM', wc_rev=7),
-    'beta'  : Item(status='  ', wc_rev=6),
+    'beta'  : Item(status='  ', wc_rev=7),
     })
   expected_merge_disk = wc.State('', {
     ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:3-5,7'}),
