@@ -2871,153 +2871,71 @@ svn_error_t *svn_wc_remove_lock(const char *path,
 
 
 svn_error_t *
-svn_wc_set_changelist(const apr_array_header_t *paths,
+svn_wc_set_changelist(const char *path,
                       const char *changelist,
-                      const char *matching_changelist,
+                      svn_wc_adm_access_t *adm_access,
                       svn_cancel_func_t cancel_func,
                       void *cancel_baton,
                       svn_wc_notify_func2_t notify_func,
                       void *notify_baton,
                       apr_pool_t *pool)
 {
-  int i;
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  const svn_wc_entry_t *entry;
+  svn_wc_entry_t newentry;
+  svn_wc_notify_t *notify;
 
-  for (i = 0; i < paths->nelts; i++)
+  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
+  if (! entry)
+    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                             _("'%s' is not under version control"), path);
+
+  /* We can't do changelists on directories. */
+  if (entry->kind == svn_node_dir)
+    return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
+                             _("'%s' is a directory, and thus cannot"
+                               " be a member of a changelist"), path);
+
+  /* If the path has no changelist and we're removing changelist, skip it. */
+  if (! (changelist || entry->changelist))
+    return SVN_NO_ERROR;
+
+  /* If the path is already assigned to the changelist we're
+     trying to assign, skip it. */
+  if (entry->changelist 
+      && changelist 
+      && strcmp(entry->changelist, changelist) == 0)
+    return SVN_NO_ERROR;
+
+  /* If the path is already a member of a changelist, warn the
+     user about this, but still allow the reassignment to happen. */
+  if (entry->changelist && changelist && notify_func)
     {
-      const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      svn_wc_adm_access_t *adm_access;
-      const svn_wc_entry_t *entry;
-      svn_wc_entry_t newentry;
-      svn_wc_notify_t *notify;
-
-      svn_pool_clear(iterpool);
-
-      /* Check for cancellation */
-      if (cancel_func)
-        SVN_ERR(cancel_func(cancel_baton));
-
-      SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path,
-                                     TRUE, /* get write lock */
-                                     0, /* levels to lock */
-                                     NULL, NULL, iterpool));
-
-      SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, iterpool));
-
-      /* Is this an unversioned path?  Skip it. */
-      if (! entry)
-        {
-          if (notify_func)
-            {
-              svn_error_t *unversioned_err =
-                  svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                    _("'%s' is not under version control"),
-                                    path);
-              notify = svn_wc_create_notify(path,
-                                            svn_wc_notify_changelist_failed,
-                                            iterpool);
-              notify->err = unversioned_err;
-              notify_func(notify_baton, notify, iterpool);
-            }
-          continue;
-        }
-
-      /* Is path a directory?  Skip it.
-
-         ### TODO(sussman): we may want to allow directories to be
-             members of changelists one day, but we'll have to make
-             them take --depth arguments or something, to Do It Right.
-      */
-      if (entry->kind == svn_node_dir)
-        {
-          if (notify_func)
-            {
-              svn_error_t *unversioned_err =
-                  svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
-                                    _("'%s' is a directory, and thus cannot"
-                                      " be a member of a changelist"),
-                                    path);
-              notify = svn_wc_create_notify(path,
-                                            svn_wc_notify_changelist_failed,
-                                            iterpool);
-              notify->err = unversioned_err;
-              notify_func(notify_baton, notify, iterpool);
-            }
-          continue;
-        }
-
-      /* If the path is already assigned to the changelist we're
-         trying to assign, or if we're trying to remove a changelist
-         assignment from a path that has none, there's nothing to
-         do. */
-      if (entry->changelist 
-          && changelist 
-          && strcmp(entry->changelist, changelist) == 0)
-        continue;
-      if (! (entry->changelist || changelist))
-        continue;
-
-      /* Possibly enforce matching with an existing changelist. */
-      if (matching_changelist
-          && entry->changelist 
-          && strcmp(entry->changelist, matching_changelist) != 0)
-        {
-          if (notify_func)
-            {
-              svn_error_t *mismatch_err =
-                svn_error_createf(SVN_ERR_WC_MISMATCHED_CHANGELIST, NULL,
-                                  _("'%s' is not currently a member of "
-                                    "changelist '%s'."),
-                                  path, matching_changelist);
-              notify = svn_wc_create_notify(path,
-                                            svn_wc_notify_changelist_failed,
-                                            iterpool);
-              notify->err = mismatch_err;
-              notify_func(notify_baton, notify, iterpool);
-            }
-          continue;
-        }
-
-      /* If the path is already a member of a changelist, warn the
-         user about this, but still allow the reassignment to happen.
-      */
-      if (entry->changelist && changelist)
-        {
-          if (notify_func)
-            {
-              svn_error_t *unversioned_err =
-                  svn_error_createf(SVN_ERR_WC_CHANGELIST_MOVE, NULL,
-                                    _("Removing '%s' from"
-                                      " changelist '%s'."),
-                                    path, entry->changelist);
-              notify = svn_wc_create_notify(path,
-                                            svn_wc_notify_changelist_moved,
-                                            iterpool);
-              notify->err = unversioned_err;
-              notify_func(notify_baton, notify, iterpool);
-            }
-        }
-
-      newentry.changelist = changelist;
-
-      SVN_ERR(svn_wc__entry_modify(adm_access, entry->name, &newentry,
-                                   SVN_WC__ENTRY_MODIFY_CHANGELIST,
-                                   TRUE, iterpool));
-      SVN_ERR(svn_wc_adm_close(adm_access));
-
-      if (notify_func)
-        {
-          notify = svn_wc_create_notify(path,
-                                        changelist
-                                        ? svn_wc_notify_changelist_set
-                                        : svn_wc_notify_changelist_clear,
-                                        iterpool);
-          notify->changelist_name = changelist;
-          notify_func(notify_baton, notify, iterpool);
-        }
+      svn_error_t *unversioned_err =
+        svn_error_createf(SVN_ERR_WC_CHANGELIST_MOVE, NULL,
+                          _("Removing '%s' from changelist '%s'."),
+                          path, entry->changelist);
+      notify = svn_wc_create_notify(path, svn_wc_notify_changelist_moved, 
+                                    pool);
+      notify->err = unversioned_err;
+      notify_func(notify_baton, notify, pool);
     }
-
-  svn_pool_destroy(iterpool);
+  
+  /* Tweak the entry. */
+  newentry.changelist = changelist;
+  SVN_ERR(svn_wc__entry_modify(adm_access, entry->name, &newentry,
+                               SVN_WC__ENTRY_MODIFY_CHANGELIST, TRUE, pool));
+  
+  /* And tell someone what we've done. */
+  if (notify_func)
+    {
+      notify = svn_wc_create_notify(path, 
+                                    changelist 
+                                    ? svn_wc_notify_changelist_set
+                                    : svn_wc_notify_changelist_clear,
+                                    pool);
+      notify->changelist_name = changelist;
+      notify_func(notify_baton, notify, pool);
+    }
 
   return SVN_NO_ERROR;
 }

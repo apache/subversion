@@ -39,54 +39,63 @@ svn_cl__changelist(apr_getopt_t *os,
                    void *baton,
                    apr_pool_t *pool)
 {
-  const char *changelist_name;
+  const char *changelist_name = NULL;
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  apr_array_header_t *paths;
-  int i;
+  svn_depth_t depth = opt_state->depth;
 
+  /* If we're not removing changelists, then our first argument should
+     be the name of a changelist. */
+
+  if (! opt_state->remove)
+    {
+      apr_array_header_t *args;
+      SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
+      changelist_name = APR_ARRAY_IDX(args, 0, const char *);
+      SVN_ERR(svn_utf_cstring_to_utf8(&changelist_name, 
+                                      changelist_name, pool));
+    }
+
+  /* Parse the remaining arguments as paths. */
   SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
                                         opt_state->targets, pool));
 
-  /* If using changelists, convert targets into a set of paths that
-     match the specified changelist(s). */
-  if (opt_state->changelists)
-    SVN_ERR(svn_cl__changelist_paths(&targets, 
-                                     opt_state->changelists, targets,
-                                     svn_depth_infinity, ctx, pool));
+  /* Add "." if user passed 0 arguments */
+  svn_opt_push_implicit_dot_target(targets, pool);
 
-  if (opt_state->remove)
-    {
-      if (targets->nelts < 1)
-        return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
-
-      changelist_name = NULL;
-      paths = targets;
-    }
+  if (! opt_state->quiet)
+    svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
+                         FALSE, FALSE, pool);
   else
-    {
-      if (targets->nelts < 2)
-        return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+    /* FIXME: This is required because svn_client_create_context()
+       always initializes ctx->notify_func2 to a wrapper function
+       which calls ctx->notify_func() if it isn't NULL.  In other
+       words, typically, ctx->notify_func2 is never NULL.  This isn't
+       usually a problem, but the changelist logic generates
+       svn_error_t's as part of its notification.  
 
-      changelist_name = APR_ARRAY_IDX(targets, 0, const char *);
-      paths = apr_array_make(pool, targets->nelts-1, sizeof(const char *));
+       So, svn_wc_set_changelist() checks its notify_func (our
+       ctx->notify_func2) for NULL-ness, and seeing non-NULL-ness,
+       generates a notificaton object and svn_error_t to describe some
+       problem.  It passes that off to its notify_func (our
+       ctx->notify_func2) which drops the notification on the floor
+       (because it wraps a NULL ctx->notify_func).  But svn_error_t's
+       dropped on the floor cause SEGFAULTs at pool cleanup time --
+       they need instead to be cleared. 
 
-      for (i = 1; i < targets->nelts; i++)
-        APR_ARRAY_PUSH(paths, const char *) = APR_ARRAY_IDX(targets, i,
-                                                            const char *);
-    }
+       SOOOooo... we set our ctx->notify_func2 to NULL so the WC code
+       doesn't even generate the errors.  */
+    ctx->notify_func2 = NULL;
 
-  svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
-                       FALSE, FALSE, pool);
+  if (depth == svn_depth_unknown)
+    depth = svn_depth_empty;
 
-
-  /* We now have two different APIs to use: */
-
-  if (changelist_name != NULL)
+  if (changelist_name)
     {
       SVN_ERR(svn_cl__try
-              (svn_client_add_to_changelist(paths, changelist_name,
+              (svn_client_add_to_changelist(targets, changelist_name,
+                                            depth, opt_state->changelists,
                                             ctx, pool),
                NULL, opt_state->quiet,
                SVN_ERR_UNVERSIONED_RESOURCE,
@@ -95,16 +104,10 @@ svn_cl__changelist(apr_getopt_t *os,
     }
   else
     {
-      /* Note that some other client might pass a non-NULL value for
-         CHANGELIST_NAME below, should it want to cause
-         strict-checking that certain paths really belong to a certain
-         changelist before removing them.  The commandline client,
-         however, is pretty relaxed.  It just removes files from
-         "whatever" changelist paths are already part of. */
-
       SVN_ERR(svn_cl__try
-              (svn_client_remove_from_changelist(paths, changelist_name,
-                                                 ctx, pool),
+              (svn_client_remove_from_changelists(targets, depth, 
+                                                  opt_state->changelists,
+                                                  ctx, pool),
                NULL, opt_state->quiet,
                SVN_ERR_UNVERSIONED_RESOURCE,
                SVN_ERR_WC_PATH_NOT_FOUND,

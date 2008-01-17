@@ -3796,11 +3796,18 @@ svn_client_cat(svn_stream_t *out,
  */
 
 /**
- * Add each path in @a paths to changelist @a changelist.
+ * Add each path in @a paths (recursing to @a depth as necessary) to
+ * @a changelist.  If a path is already a member of another
+ * changelist, then remove it from the other changelist and add it to
+ * @a changelist.  (For now, a path cannot belong to two changelists
+ * at once.)
  *
- * If a path is already a member of another changelist, then remove it
- * from the other changelist and add it to @a changelist.  (For now, a path
- * cannot belong to two changelists at once.)
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items whose changelist
+ * assignments are adjusted; that is, don't tweak the changeset of any
+ * item unless it's currently a member of one of those changelists.
+ * If @a changelists is empty (or altogether @c NULL), no changelist
+ * filtering occurs.
  *
  * @note This metadata is purely a client-side "bookkeeping"
  * convenience, and is entirely managed by the working copy.
@@ -3810,17 +3817,22 @@ svn_client_cat(svn_stream_t *out,
 svn_error_t *
 svn_client_add_to_changelist(const apr_array_header_t *paths,
                              const char *changelist,
+                             svn_depth_t depth,
+                             const apr_array_header_t *changelists,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
 /**
- * Remove each path in @a paths from changelist @a changelist.
+ * Remove each path in @a paths (recursing to @a depth as necessary)
+ * from changelists to which they are currently assigned.
  *
- * If a path is not already a member of @a changelist, attempt to
- * throw a notification warning that the path has been skipped.
- *
- * If @a changelist is @c null, then be more lax: for each path, remove
- * it from whatever changelist it's already a member of.
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items whose changelist
+ * assignments are removed; that is, don't remove from a changeset any
+ * item unless it's currently a member of one of those changelists.
+ * If @a changelists is empty (or altogether @c NULL), all changelist
+ * assignments in and under each path in @a paths (to @a depth) will
+ * be removed.
  *
  * @note This metadata is purely a client-side "bookkeeping"
  * convenience, and is entirely managed by the working copy.
@@ -3828,10 +3840,11 @@ svn_client_add_to_changelist(const apr_array_header_t *paths,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_remove_from_changelist(const apr_array_header_t *paths,
-                                  const char *changelist,
-                                  svn_client_ctx_t *ctx,
-                                  apr_pool_t *pool);
+svn_client_remove_from_changelists(const apr_array_header_t *paths,
+                                   svn_depth_t depth,
+                                   const apr_array_header_t *changelists,
+                                   svn_client_ctx_t *ctx,
+                                   apr_pool_t *pool);
 
 /**
  * The callback type used by @a svn_client_get_changelist

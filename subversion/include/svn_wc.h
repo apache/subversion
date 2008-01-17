@@ -4669,29 +4669,22 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
 
 
 /**
- * For each path in @a paths, set its entry's 'changelist' attribute
- * to @a changelist.  (If @a changelist is NULL, then path is no
- * longer a member of any changelist).
+ * Set @a path's entry's 'changelist' attribute to @a changelist iff
+ * @a changelist is not @c NULL; otherwise, remove any current
+ * changelist assignment from @a path.  @a adm_access is an access
+ * baton set that contains @a path.
  *
- * NOTE:  for now, directories are NOT allowed to be associated with
- * changelists;  there is confusion about whether they should/do
- * behave as depth-0 or depth-infinity objects.
+ * If @a cancel_func is not @c NULL, call it with @a cancel_baton to
+ * determine if the client has cancelled the operation.
  *
- * If @a matching_changelist is not NULL, then enforce that each
- * path's existing entry->changelist field matches @a
- * matching_changelist; if the path is part of some other changelist,
- * skip it path and try to throw @a svn_wc_notify_changelist_failure
- * notification.  If @a matching_changelist is NULL, then be lax and
- * don't enforce any matching, just write the new entry->changelist
- * value unconditionally.
+ * If @a notify_func is not @c NULL, call it with @a notify_baton to
+ * report the change (using notification types @c
+ * svn_wc_notify_changelist_set and @c svn_wc_notify_changelist_clear).
  *
- * If @a cancel_func is non-NULL, call it with @a cancel_baton to determine
- * if the client has cancelled the operation.
- *
- * If @a notify_func is non-NULL, it will be called with @a
- * notify_baton, the each path for changelist association, and the
- * notification type (@c svn_wc_notify_changelist_set or @c
- * svn_wc_notify_changelist_clear).
+ * @note For now, directories are NOT allowed to be associated with
+ * changelists; there is confusion about whether they should behave
+ * as depth-0 or depth-infinity objects.  If @a path is a directory,
+ * return @c SVN_ERR_UNSUPPORTED_FEATURE.
  *
  * @note This metadata is purely a client-side "bookkeeping"
  * convenience, and is entirely managed by the working copy.
@@ -4699,9 +4692,9 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_wc_set_changelist(const apr_array_header_t *paths,
+svn_wc_set_changelist(const char *path,
                       const char *changelist,
-                      const char *matching_changelist,
+                      svn_wc_adm_access_t *adm_access,
                       svn_cancel_func_t cancel_func,
                       void *cancel_baton,
                       svn_wc_notify_func2_t notify_func,
