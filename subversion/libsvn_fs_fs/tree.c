@@ -440,6 +440,26 @@ parent_path_path(parent_path_t *parent_path,
 }
 
 
+/* Return the FS path for the parent path chain object CHILD relative
+   to its ANCESTOR in the same chain, allocated in POOL.  */
+static const char *
+parent_path_relpath(parent_path_t *child,
+                    parent_path_t *ancestor,
+                    apr_pool_t *pool)
+{
+  const char *path_so_far = "";
+  parent_path_t *this_node = child;
+  while (this_node != ancestor)
+    {
+      assert(this_node != NULL);
+      path_so_far = svn_path_join(this_node->entry, path_so_far, pool);
+      this_node = this_node->parent;
+    }
+  return path_so_far;
+}
+
+
+
 /* Choose a copy ID inheritance method *INHERIT_P to be used in the
    event that immutable node CHILD in FS needs to be made mutable.  If
    the inheritance method is copy_id_inherit_new, also return a
@@ -3558,8 +3578,6 @@ get_mergeinfo_hash_for_path(apr_hash_t **mergeinfo_hash,
   else
     {
       apr_hash_t *temp_mergeinfo_hash;
-      const char *ancestor_path, *my_path;
-      int anc_len, my_len;
 
       /* We're inheriting this, so we need to (a) remove
          non-inheritable ranges and (b) add the rest of the path to
@@ -3574,15 +3592,11 @@ get_mergeinfo_hash_for_path(apr_hash_t **mergeinfo_hash,
                                         NULL, SVN_INVALID_REVNUM,
                                         SVN_INVALID_REVNUM, pool));
 
-      ancestor_path = parent_path_path(nearest_ancestor, pool);
-      my_path = parent_path_path(parent_path, pool);
-      anc_len = strlen(ancestor_path);
-      my_len = strlen(my_path);
-      assert (my_len >= anc_len + 2 && my_path[anc_len] == '/');
-      
       SVN_ERR(append_to_merged_froms(mergeinfo_hash,
                                      temp_mergeinfo_hash,
-                                     my_path + anc_len + 1,
+                                     parent_path_relpath(parent_path,
+                                                         nearest_ancestor,
+                                                         pool),
                                      result_pool));
       return SVN_NO_ERROR;
     }
