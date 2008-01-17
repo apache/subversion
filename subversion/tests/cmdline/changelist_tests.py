@@ -305,7 +305,13 @@ def diff_with_changelists(sbox):
           return line[:7] == 'Index: ' and 1 or 0
         paths = map(lambda x: x[7:].rstrip(), filter(startswith_path, output))
         paths.sort()
-  
+
+        # Diff output on Win32 uses '/' path separators.
+        if sys.platform == 'win32':
+          paths = map(lambda x:
+                      x.replace('/', os.sep),
+                      paths)
+
         # And, compare!
         if (paths != expected_paths):
           raise svntest.Failure("Expected paths (%s) and actual paths (%s) "
