@@ -309,20 +309,15 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *adm_access;
-  const svn_wc_entry_t *node;
-  int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
-
   /* Since Subversion controls the "svn:" property namespace, we
      don't honor the 'skip_checks' flag here.  Unusual property
      combinations, like svn:eol-style with a non-text svn:mime-type,
      are understandable, but revprops on local targets are not. */
+
   if (is_revision_prop_name(propname))
-    {
-      return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
-                               _("Revision property '%s' not allowed "
-                                 "in this context"), propname);
-    }
+    return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
+                             _("Revision property '%s' not allowed "
+                               "in this context"), propname);
 
   SVN_ERR(error_if_wcprop_name(propname));
 
@@ -332,25 +327,22 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
 
   if (svn_path_is_url(target))
     {
-        /* The rationale for requiring the base_revision_for_url
-           argument is that without it, it's too easy to possibly
-           overwrite someone else's change without noticing.  (See
-           also tools/examples/svnput.c). */
+      /* The rationale for requiring the base_revision_for_url
+         argument is that without it, it's too easy to possibly
+         overwrite someone else's change without noticing.  (See also
+         tools/examples/svnput.c). */
       if (! SVN_IS_VALID_REVNUM(base_revision_for_url))
-        return svn_error_createf
-          (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-           _("Setting property on non-local target '%s' needs a base revision"),
-           target);
+        return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
+                                 _("Setting property on non-local target '%s' "
+                                   "needs a base revision"), target);
 
       if (depth > svn_depth_empty)
-        return svn_error_createf
-          (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-           _("Setting property recursively on non-local target '%s' is "
-             "not supported"),
-           target);
+        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                 _("Setting property recursively on non-local "
+                                   "target '%s' is not supported"), target);
 
       /* ### When you set svn:eol-style or svn:keywords on a wc file,
-         ### Subversion send a textdelta at commit time to properly
+         ### Subversion sends a textdelta at commit time to properly
          ### normalize the file in the repository.  If we want to
          ### support editing these properties on URLs, then we should
          ### generate the same textdelta; for now, we won't support
@@ -360,43 +352,47 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
        */
       if ((strcmp(propname, SVN_PROP_EOL_STYLE) == 0) ||
           (strcmp(propname, SVN_PROP_KEYWORDS) == 0))
-        return svn_error_createf
-          (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-           _("Setting property '%s' on non-local target '%s' is not supported"),
-           propname, target);
+        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                 _("Setting property '%s' on non-local target "
+                                   "'%s' is not supported"), propname, target);
 
-      return propset_on_url(commit_info_p, propname, propval, target,
-                            skip_checks, base_revision_for_url, ctx, pool);
-    }
-
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target, TRUE,
-                                 adm_lock_level, ctx->cancel_func,
-                                 ctx->cancel_baton, pool));
-  SVN_ERR(svn_wc__entry_versioned(&node, target, adm_access, FALSE, pool));
-
-  if (depth >= svn_depth_files && node->kind == svn_node_dir)
-    {
-      static const svn_wc_entry_callbacks2_t walk_callbacks
-        = { propset_walk_cb, svn_client__default_walker_error_handler };
-      struct propset_walk_baton wb;
-
-      wb.base_access = adm_access;
-      wb.propname = propname;
-      wb.propval = propval;
-      wb.force = skip_checks;
-
-      SVN_ERR(svn_wc_walk_entries3(target, adm_access,
-                                   &walk_callbacks, &wb, depth, FALSE,
-                                   ctx->cancel_func, ctx->cancel_baton,
-                                   pool));
+      SVN_ERR(propset_on_url(commit_info_p, propname, propval, target,
+                             skip_checks, base_revision_for_url, ctx, pool));
     }
   else
     {
-      SVN_ERR(svn_wc_prop_set2(propname, propval, target,
-                               adm_access, skip_checks, pool));
+      svn_wc_adm_access_t *adm_access;
+      int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
+      svn_wc_entry_t *entry;
+      
+      SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target, TRUE,
+                                     adm_lock_level, ctx->cancel_func,
+                                     ctx->cancel_baton, pool));
+      SVN_ERR(svn_wc__entry_versioned(&entry, target, adm_access, 
+                                      FALSE, pool));
+
+      if (depth >= svn_depth_files && entry->kind == svn_node_dir)
+        {
+          static const svn_wc_entry_callbacks2_t walk_callbacks
+            = { propset_walk_cb, svn_client__default_walker_error_handler };
+          struct propset_walk_baton wb;
+
+          wb.base_access = adm_access;
+          wb.propname = propname;
+          wb.propval = propval;
+          wb.force = skip_checks;
+          SVN_ERR(svn_wc_walk_entries3(target, adm_access, &walk_callbacks, 
+                                       &wb, depth, FALSE, ctx->cancel_func, 
+                                       ctx->cancel_baton, pool));
+        }
+      else
+        {
+          SVN_ERR(svn_wc_prop_set2(propname, propval, target,
+                                   adm_access, skip_checks, pool));
+        }
+      SVN_ERR(svn_wc_adm_close(adm_access));
     }
 
-  SVN_ERR(svn_wc_adm_close(adm_access));
   return SVN_NO_ERROR;
 }
 
