@@ -2084,7 +2084,7 @@ public class BasicTests extends SVNTests
             {thisTest.getWCPath() + "/iota"};
 
         // Add a path to a changelist, and check to see if it got added
-        client.addToChangelist(paths, changelistName);
+        client.addToChangelist(paths, changelistName, Depth.infinity, null);
         String[] cl = new String[1];
         client.getChangelists(thisTest.getWCPath(), changelists,
                               Depth.infinity, clCallback);
@@ -2097,7 +2097,7 @@ public class BasicTests extends SVNTests
 
         // Remove the path from the changelist, and check to see if the path is
         // actually removed.
-        client.removeFromChangelist(paths, changelistName);
+        client.removeFromChangelists(paths, Depth.infinity, changelists);
         clCallback.clear();
         client.getChangelists(thisTest.getWCPath(), changelists,
                               Depth.infinity, clCallback);

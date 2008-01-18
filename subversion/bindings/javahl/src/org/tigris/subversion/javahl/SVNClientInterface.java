@@ -1643,20 +1643,24 @@ public interface SVNClientInterface
 
     /**
      * Add paths to a changelist
-     * @param paths      paths to add to the changelist
-     * @param changelist changelist name
+     * @param paths       paths to add to the changelist
+     * @param changelist  changelist name
+     * @param depth       the depth to recurse
+     * @param changelists changelists to filter by
      * @since 1.5
      */
-    void addToChangelist(String[] paths, String changelist)
+    void addToChangelist(String[] paths, String changelist, int depth,
+                         String[] changelists)
             throws ClientException;
 
     /**
      * Remove paths from a changelist
-     * @param paths      paths to remove from the changelist
-     * @param changelist changelist name
+     * @param paths       paths to remove from the changelist
+     * @param depth       the depth to recurse
+     * @param changelists changelists to filter by
      * @since 1.5
      */
-    void removeFromChangelist(String[] paths, String changelist)
+    void removeFromChangelists(String[] paths, int depth, String[] changelist)
             throws ClientException;
 
     /**

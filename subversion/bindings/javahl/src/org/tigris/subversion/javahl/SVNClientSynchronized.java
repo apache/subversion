@@ -1625,24 +1625,26 @@ public class SVNClientSynchronized implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public void addToChangelist(String[] paths, String changelist)
+    public void addToChangelist(String[] paths, String changelist, int depth,
+                                String[] changelists)
             throws ClientException
     {
         synchronized (clazz)
         {
-            worker.addToChangelist(paths, changelist);
+            worker.addToChangelist(paths, changelist, depth, changelists);
         }
     }
 
     /**
      * @since 1.5
      */
-    public void removeFromChangelist(String[] paths, String changelist)
+    public void removeFromChangelists(String[] paths, int depth,
+                                      String[] changelists)
             throws ClientException
     {
         synchronized (clazz)
         {
-            worker.removeFromChangelist(paths, changelist);
+            worker.removeFromChangelists(paths, depth, changelists);
         }
     }
 

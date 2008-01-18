@@ -1230,13 +1230,15 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native void addToChangelist(String[] paths, String changelist)
+    public native void addToChangelist(String[] paths, String changelist,
+                                       int depth, String[] changelists)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public native void removeFromChangelist(String[] paths, String changelist)
+    public native void removeFromChangelists(String[] paths, int depth,
+                                             String[] changelists)
             throws ClientException;
 
     /**

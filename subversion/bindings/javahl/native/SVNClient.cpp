@@ -1554,7 +1554,8 @@ svn_error_t *SVNClient::checkCancel(void *cancelBaton)
         return SVN_NO_ERROR;
 }
 
-void SVNClient::addToChangelist(Targets &srcPaths, const char *changelist)
+void SVNClient::addToChangelist(Targets &srcPaths, const char *changelist,
+                                svn_depth_t depth, StringArray &changelists)
 {
     Pool requestPool;
     svn_client_ctx_t *ctx = getContext(NULL);
@@ -1562,11 +1563,13 @@ void SVNClient::addToChangelist(Targets &srcPaths, const char *changelist)
     const apr_array_header_t *srcs = srcPaths.array(requestPool);
     SVN_JNI_ERR(srcPaths.error_occured(), );
 
-    SVN_JNI_ERR(svn_client_add_to_changelist(srcs, changelist, ctx,
-                                             requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_add_to_changelist(srcs, changelist, depth,
+                                             changelists.array(requestPool),
+                                             ctx, requestPool.pool()), );
 }
 
-void SVNClient::removeFromChangelist(Targets &srcPaths, const char *changelist)
+void SVNClient::removeFromChangelists(Targets &srcPaths, svn_depth_t depth,
+                                      StringArray &changelists)
 {
     Pool requestPool;
     svn_client_ctx_t *ctx = getContext(NULL);
@@ -1574,8 +1577,9 @@ void SVNClient::removeFromChangelist(Targets &srcPaths, const char *changelist)
     const apr_array_header_t *srcs = srcPaths.array(requestPool);
     SVN_JNI_ERR(srcPaths.error_occured(), );
 
-    SVN_JNI_ERR(svn_client_remove_from_changelist(srcs, changelist, ctx,
-                                                  requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_remove_from_changelists(srcs, depth,
+                                                changelists.array(requestPool),
+                                                ctx, requestPool.pool()), );
 }
 
 void SVNClient::getChangelists(const char *rootPath,
