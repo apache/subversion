@@ -516,8 +516,10 @@ TO-DO list:
       [X] svn commit --changelist
       [X] svn diff --changelist (only wc-wc and wc-repos cases)
       [X] svn info --changelist
-      [ ] svn propget/propset --changelist
-      [ ] svn proplist/propdel --changelist
+      [X] svn propget --changelist
+      [X] svn proplist --changelist
+      [X] svn propset --changelist
+      [X] svn propdel --changelist
       [ ] svn revert --changelist
       [ ] svn rm --changelist
       [ ] svn status --changelist

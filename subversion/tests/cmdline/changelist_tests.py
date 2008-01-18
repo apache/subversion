@@ -134,7 +134,22 @@ def verify_changelist_output(output, expected_adds=None,
     elif match:
       raise svntest.Failure("Unexpected changelist add line: " + line)    
     raise svntest.Failure("Unexpected line: " + line)
-        
+
+def verify_pget_output(output, expected_props):
+  """Compare lines of OUTPUT from 'svn propget' against EXPECTED_PROPS
+  (a dictionary mapping paths to property values)."""
+  
+  _re_pget = re.compile('^(.*) - (.*)$')
+  actual_props = {}
+  for line in output:
+    try:
+      path, prop = line.rstrip().split(' - ')
+    except:
+      raise svntest.Failure("Unexpected output line: " + line)
+    actual_props[path] = prop
+  if expected_props != actual_props:
+    raise svntest.Failure("Got unexpected property results")
+  
     
 ######################################################################
 # Tests
@@ -534,6 +549,92 @@ def diff_with_changelists(sbox):
                                 "don't gel"
                                 % (str(expected_paths), str(paths)))
 
+#----------------------------------------------------------------------
+
+def propmods_with_changelists(sbox):
+  "propset/del/get --changelist"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Add files to changelists based on the last character in their names.
+  changelist_all_files(wc_dir, clname_from_lastchar_cb)
+
+  # Set property 'name'='value' on all working copy items.
+  svntest.main.run_svn(None, "pset", "--depth", "infinity",
+                       "name", "value", wc_dir)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({'' : Item(props={ 'name' : 'value' })})
+  expected_disk.tweak('A', 'A/B', 'A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
+                      'A/B/F', 'A/B/lambda', 'A/C', 'A/D', 'A/D/G',
+                      'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', 'A/D/H',
+                      'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi', 'A/D/gamma',
+                      'A/mu', 'iota', props={ 'name' : 'value' })
+  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
+  svntest.tree.compare_trees("disk", actual_disk_tree,
+                             expected_disk.old_tree())
+
+  # Remove the 'name' property from files in the 'o' and 'i' changelists.
+  svntest.main.run_svn(None, "pdel", "--depth", "infinity",
+                       "name", "--changelist", "o", "--changelist", "i",
+                       wc_dir)
+  expected_disk.tweak('A/D/G/pi', 'A/D/G/rho', 'A/D/H/chi', 'A/D/H/psi',
+                      props={})
+  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
+  svntest.tree.compare_trees("disk", actual_disk_tree,
+                             expected_disk.old_tree())
+
+  # Add 'foo'='bar' property on all files under A/B to depth files and
+  # in changelist 'a'.
+  svntest.main.run_svn(None, "pset", "--depth", "files",
+                       "foo", "bar", "--changelist", "a",
+                       os.path.join(wc_dir, 'A', 'B'))
+  expected_disk.tweak('A/B/lambda', props={ 'name' : 'value',
+                                            'foo'  : 'bar' })
+  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
+  svntest.tree.compare_trees("disk", actual_disk_tree,
+                             expected_disk.old_tree())
+  
+  # Add 'bloo'='blarg' property to all files in changelist 'a'.
+  svntest.main.run_svn(None, "pset", "--depth", "infinity",
+                       "bloo", "blarg", "--changelist", "a",
+                       wc_dir)
+  expected_disk.tweak('A/B/lambda', props={ 'name' : 'value',
+                                            'foo'  : 'bar',
+                                            'bloo' : 'blarg' })
+  expected_disk.tweak('A/B/E/alpha', 'A/B/E/beta', 'A/D/H/omega', 'A/D/gamma',
+                      'iota', props={ 'name' : 'value',
+                                      'bloo' : 'blarg' })
+  actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
+  svntest.tree.compare_trees("disk", actual_disk_tree,
+                             expected_disk.old_tree())
+
+  # Propget 'name' in files in changelists 'a' and 'i' to depth files.
+  output, errput = svntest.main.run_svn(None, "pget",
+                                        "--depth", "files", "name",
+                                        "--changelist", "a",
+                                        "--changelist", "i",
+                                        wc_dir)
+  verify_pget_output(output, {
+    os.path.join(wc_dir, 'iota') : 'value',
+    })
+  
+  # Propget 'name' in files in changelists 'a' and 'i' to depth infinity.
+  output, errput = svntest.main.run_svn(None, "pget",
+                                        "--depth", "infinity", "name",
+                                        "--changelist", "a",
+                                        "--changelist", "i",
+                                        wc_dir)
+  verify_pget_output(output, {
+    os.path.join(wc_dir, 'A', 'D', 'gamma')      : 'value',
+    os.path.join(wc_dir, 'A', 'B', 'E', 'alpha') : 'value',
+    os.path.join(wc_dir, 'iota')                 : 'value',
+    os.path.join(wc_dir, 'A', 'B', 'E', 'beta')  : 'value',
+    os.path.join(wc_dir, 'A', 'B', 'lambda')     : 'value',
+    os.path.join(wc_dir, 'A', 'D', 'H', 'omega') : 'value',
+    })
+ 
+  
   
 ########################################################################
 # Run the tests
@@ -545,6 +646,7 @@ test_list = [ None,
               commit_multiple_changelists,
               info_with_changelists,
               diff_with_changelists,
+              propmods_with_changelists,
              ]
 
 if __name__ == '__main__':
