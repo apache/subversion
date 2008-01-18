@@ -3305,6 +3305,22 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                                entry, child_of_noninheritable->path,
                                merge_cmd_baton->target, NULL, adm_access,
                                merge_cmd_baton->ctx, iterpool));
+
+                      /* This child didn't have explicit working mergeinfo
+                         at the start of the merge.  Make a note of that in
+                         our hash of working mergeinfo in the event this is
+                         a no-op merge. */
+                      if (merge_cmd_baton->first_range)
+                        {
+                          working_mergeinfo_t *working_mergeinfo =
+                            apr_pcalloc(merge_cmd_baton->long_pool,
+                                        sizeof(*working_mergeinfo));
+                          apr_hash_set(merge_cmd_baton->working_mergeinfo,
+                                       child_of_noninheritable->path,
+                                       APR_HASH_KEY_STRING,
+                                       working_mergeinfo);
+                        }
+
                       SVN_ERR(svn_client__record_wc_mergeinfo(
                         child_of_noninheritable->path, mergeinfo, adm_access,
                         iterpool));

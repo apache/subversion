@@ -140,6 +140,7 @@ svn_client__get_wc_mergeinfo(apr_hash_t **mergeinfo,
   const char *walk_path = "";
   apr_hash_t *wc_mergeinfo;
   svn_boolean_t switched;
+  svn_revnum_t base_revision = entry->revision;
 
   if (limit_path)
     SVN_ERR(svn_path_get_absolute(&limit_path, limit_path, pool));
@@ -223,6 +224,13 @@ svn_client__get_wc_mergeinfo(apr_hash_t **mergeinfo,
             }
 
           SVN_ERR(svn_wc_entry(&entry, wcpath, adm_access, FALSE, pool));
+
+          /* Look in WCPATH's parents only if the parents share the same
+             working revision. */
+          if (entry->revision != base_revision)
+            {
+              break;
+            }
 
           if (entry)
             /* We haven't yet risen above the root of the WC. */

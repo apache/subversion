@@ -56,6 +56,12 @@ extern "C" {
  * ranges.  These non-inheritable ranges apply only to the path which they
  * are set on.
  *
+ * Due to Subversion's allowance for mixed revision working copies, both
+ * elision and inheritance within the working copy presume the path
+ * between a path and its nearest parent with mergeinfo is at the same
+ * working revision.  If this is not the case then neither inheritance nor
+ * elision can occur.
+ *
  * The value of the @c SVN_PROP_MERGEINFO property is a string consisting of
  * a path, a colon, and comma separated revision list, containing one or more
  * revision or revision ranges. Revision range start and end points are

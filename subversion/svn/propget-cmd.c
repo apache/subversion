@@ -167,7 +167,6 @@ svn_cl__propget(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   const char *pname, *pname_utf8;
   apr_array_header_t *args, *targets;
-  apr_array_header_t *changelist_targets = NULL, *combined_targets = NULL;
   svn_stream_t *out;
   int i;
 
@@ -181,32 +180,18 @@ svn_cl__propget(apr_getopt_t *os,
                              _("'%s' is not a valid Subversion property name"),
                              pname_utf8);
 
-  /* Before allowing svn_opt_args_to_target_array2() to canonicalize
-     all the remaining targets, we need to build a list of targets made of both
-     ones the user typed, as well as any specified by --changelist.  */
-  if (opt_state->changelist)
-    {
-      SVN_ERR(svn_cl__get_changelist(&changelist_targets,
-                                     opt_state->changelist, "", ctx, pool));
-      if (apr_is_empty_array(changelist_targets))
-        return svn_error_createf(SVN_ERR_UNKNOWN_CHANGELIST, NULL,
-                                 _("Unknown changelist '%s'"),
-                                 opt_state->changelist);
-    }
-
-  if (opt_state->targets && changelist_targets)
-    combined_targets = apr_array_append(pool, opt_state->targets,
-                                        changelist_targets);
-  else if (opt_state->targets)
-    combined_targets = opt_state->targets;
-  else if (changelist_targets)
-    combined_targets = changelist_targets;
-
   SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
-                                        combined_targets, pool));
+                                        opt_state->targets, pool));
 
   /* Add "." if user passed 0 file arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
+
+  /* If using changelists, convert targets into a set of paths that
+     match the specified changelist(s). */
+  if (opt_state->changelists)
+    SVN_ERR(svn_cl__changelist_paths(&targets, 
+                                     opt_state->changelists, targets,
+                                     svn_depth_infinity, ctx, pool));
 
   /* Open a stream to stdout. */
   SVN_ERR(svn_stream_for_stdout(&out, pool));

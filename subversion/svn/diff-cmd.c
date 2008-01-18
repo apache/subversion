@@ -149,7 +149,6 @@ svn_cl__diff(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   apr_array_header_t *options;
   apr_array_header_t *targets;
-  apr_array_header_t *changelist_targets = NULL, *combined_targets = NULL;
   apr_file_t *outfile, *errfile;
   apr_status_t status;
   const char *old_target, *new_target;
@@ -189,31 +188,8 @@ svn_cl__diff(apr_getopt_t *os,
       SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
     }
 
-  /* Before allowing svn_opt_args_to_target_array2() to canonicalize
-     all the targets, we need to build a list of targets made of both
-     ones the user typed, as well as any specified by --changelist.  */
-  if (opt_state->changelist)
-    {
-      SVN_ERR(svn_cl__get_changelist(&changelist_targets, 
-                                     opt_state->changelist, "", 
-                                     ((svn_cl__cmd_baton_t *)baton)->ctx,
-                                     pool));
-      if (apr_is_empty_array(changelist_targets))
-        return svn_error_createf(SVN_ERR_UNKNOWN_CHANGELIST, NULL,
-                                 _("Unknown changelist '%s'"),
-                                 opt_state->changelist);
-    }
-
-  if (opt_state->targets && changelist_targets)
-    combined_targets = apr_array_append(pool, opt_state->targets,
-                                        changelist_targets);
-  else if (opt_state->targets)
-    combined_targets = opt_state->targets;
-  else if (changelist_targets)
-    combined_targets = changelist_targets;
-
   SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
-                                        combined_targets, pool));
+                                        opt_state->targets, pool));
 
   if (! opt_state->old_target && ! opt_state->new_target
       && (targets->nelts == 2)
@@ -347,6 +323,7 @@ svn_cl__diff(apr_getopt_t *os,
                      &opt_state->end_revision,
                      opt_state->depth,
                      opt_state->notice_ancestry ? FALSE : TRUE,
+                     opt_state->changelists,
                      summarize_func,
                      (void *) target1,
                      ((svn_cl__cmd_baton_t *)baton)->ctx,
@@ -366,6 +343,7 @@ svn_cl__diff(apr_getopt_t *os,
                      svn_cmdline_output_encoding(pool),
                      outfile,
                      errfile,
+                     opt_state->changelists,
                      ((svn_cl__cmd_baton_t *)baton)->ctx,
                      iterpool));
         }
@@ -391,6 +369,7 @@ svn_cl__diff(apr_getopt_t *os,
                      &opt_state->end_revision,
                      opt_state->depth,
                      opt_state->notice_ancestry ? FALSE : TRUE,
+                     opt_state->changelists,
                      summarize_func,
                      (void *) truepath,
                      ((svn_cl__cmd_baton_t *)baton)->ctx,
@@ -410,6 +389,7 @@ svn_cl__diff(apr_getopt_t *os,
                      svn_cmdline_output_encoding(pool),
                      outfile,
                      errfile,
+                     opt_state->changelists,
                      ((svn_cl__cmd_baton_t *)baton)->ctx,
                      iterpool));
         }

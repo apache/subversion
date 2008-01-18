@@ -3725,6 +3725,12 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * If @a cancel_func is non-NULL, it will be used along with @a cancel_baton
  * to periodically check if the client has canceled the operation.
  *
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items whose differences are
+ * reported; that is, don't generate diffs about any item unless
+ * it's a member of one of those changelists.  If @a changelists is
+ * empty (or altogether @c NULL), no changelist filtering occurs.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
@@ -3738,13 +3744,15 @@ svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
                         svn_boolean_t reverse_order,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
+                        const apr_array_header_t *changelists,
                         const svn_delta_editor_t **editor,
                         void **edit_baton,
                         apr_pool_t *pool);
+
 /**
- * Similar to svn_wc_get_diff_editor4(), but with @a depth set to
- * @c svn_depth_infinity if @a recurse is TRUE, or @a svn_depth_files
- * if @a recurse is FALSE.
+ * Similar to svn_wc_get_diff_editor4(), but with @a changelists
+ * passed as @c NULL, and @a depth set to @c svn_depth_infinity if @a
+ * recurse is TRUE, or @a svn_depth_files if @a recurse is FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
 
@@ -3830,6 +3838,12 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
  * @a ignore_ancestry is @c FALSE, then any discontinuous node ancestry will
  * result in the diff given as a full delete followed by an add.
  *
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items whose differences are
+ * reported; that is, don't generate diffs about any item unless
+ * it's a member of one of those changelists.  If @a changelists is
+ * empty (or altogether @c NULL), no changelist filtering occurs.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
@@ -3839,13 +3853,14 @@ svn_wc_diff4(svn_wc_adm_access_t *anchor,
              void *callback_baton,
              svn_depth_t depth,
              svn_boolean_t ignore_ancestry,
+             const apr_array_header_t *changelists,
              apr_pool_t *pool);
 
 
 /**
- * Similar to svn_wc_diff4(), but with @a depth set to
- * @c svn_depth_infinity if @a recurse is TRUE, or @a svn_depth_files
- * if @a recurse is FALSE.
+ * Similar to svn_wc_diff4(), but with @a changelists passed @c NULL,
+ * and @a depth set to @c svn_depth_infinity if @a recurse is TRUE, or
+ * @a svn_depth_files if @a recurse is FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
@@ -4654,29 +4669,22 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
 
 
 /**
- * For each path in @a paths, set its entry's 'changelist' attribute
- * to @a changelist.  (If @a changelist is NULL, then path is no
- * longer a member of any changelist).
+ * Set @a path's entry's 'changelist' attribute to @a changelist iff
+ * @a changelist is not @c NULL; otherwise, remove any current
+ * changelist assignment from @a path.  @a adm_access is an access
+ * baton set that contains @a path.
  *
- * NOTE:  for now, directories are NOT allowed to be associated with
- * changelists;  there is confusion about whether they should/do
- * behave as depth-0 or depth-infinity objects.
+ * If @a cancel_func is not @c NULL, call it with @a cancel_baton to
+ * determine if the client has cancelled the operation.
  *
- * If @a matching_changelist is not NULL, then enforce that each
- * path's existing entry->changelist field matches @a
- * matching_changelist; if the path is part of some other changelist,
- * skip it path and try to throw @a svn_wc_notify_changelist_failure
- * notification.  If @a matching_changelist is NULL, then be lax and
- * don't enforce any matching, just write the new entry->changelist
- * value unconditionally.
+ * If @a notify_func is not @c NULL, call it with @a notify_baton to
+ * report the change (using notification types @c
+ * svn_wc_notify_changelist_set and @c svn_wc_notify_changelist_clear).
  *
- * If @a cancel_func is non-NULL, call it with @a cancel_baton to determine
- * if the client has cancelled the operation.
- *
- * If @a notify_func is non-NULL, it will be called with @a
- * notify_baton, the each path for changelist association, and the
- * notification type (@c svn_wc_notify_changelist_set or @c
- * svn_wc_notify_changelist_clear).
+ * @note For now, directories are NOT allowed to be associated with
+ * changelists; there is confusion about whether they should behave
+ * as depth-0 or depth-infinity objects.  If @a path is a directory,
+ * return @c SVN_ERR_UNSUPPORTED_FEATURE.
  *
  * @note This metadata is purely a client-side "bookkeeping"
  * convenience, and is entirely managed by the working copy.
@@ -4684,9 +4692,9 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_wc_set_changelist(const apr_array_header_t *paths,
+svn_wc_set_changelist(const char *path,
                       const char *changelist,
-                      const char *matching_changelist,
+                      svn_wc_adm_access_t *adm_access,
                       svn_cancel_func_t cancel_func,
                       void *cancel_baton,
                       svn_wc_notify_func2_t notify_func,

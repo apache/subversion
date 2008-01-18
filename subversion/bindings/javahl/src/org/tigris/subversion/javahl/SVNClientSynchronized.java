@@ -1057,15 +1057,16 @@ public class SVNClientSynchronized implements SVNClientInterface
      */
     public void diff(String target1, Revision revision1, String target2,
                      Revision revision2, String relativeToDir,
-                     String outFileName, int depth, boolean ignoreAncestry,
-                     boolean noDiffDeleted, boolean force)
+                     String outFileName, int depth, String[] changelists,
+                     boolean ignoreAncestry, boolean noDiffDeleted,
+                     boolean force)
             throws ClientException
     {
         synchronized (clazz)
         {
             worker.diff(target1, revision1, target2, revision2, relativeToDir,
-                        outFileName, depth, ignoreAncestry, noDiffDeleted,
-                        force);
+                        outFileName, depth, changelists, ignoreAncestry,
+                        noDiffDeleted, force);
         }
     }
 
@@ -1096,15 +1097,15 @@ public class SVNClientSynchronized implements SVNClientInterface
     public void diff(String target, Revision pegRevision,
                      Revision startRevision, Revision endRevision,
                      String relativeToDir, String outFileName, int depth,
-                     boolean ignoreAncestry, boolean noDiffDeleted,
-                     boolean force)
+                     String[] changelists, boolean ignoreAncestry,
+                     boolean noDiffDeleted, boolean force)
             throws ClientException
     {
         synchronized (clazz)
         {
             worker.diff(target, pegRevision, startRevision, endRevision,
-                        relativeToDir, outFileName, depth, ignoreAncestry,
-                        noDiffDeleted, force);
+                        relativeToDir, outFileName, depth, changelists,
+                        ignoreAncestry, noDiffDeleted, force);
         }
     }
 
@@ -1113,14 +1114,15 @@ public class SVNClientSynchronized implements SVNClientInterface
      */
     public void diffSummarize(String target1, Revision revision1,
                               String target2, Revision revision2,
-                              int depth, boolean ignoreAncestry,
+                              int depth, String[] changelists,
+                              boolean ignoreAncestry,
                               DiffSummaryReceiver receiver)
         throws ClientException
     {
         synchronized (clazz)
         {
             worker.diffSummarize(target1, revision1, target2, revision2,
-                                 depth, ignoreAncestry, receiver);
+                                 depth, changelists, ignoreAncestry, receiver);
         }
     }
 
@@ -1129,15 +1131,16 @@ public class SVNClientSynchronized implements SVNClientInterface
      */
     public void diffSummarize(String target, Revision pegRevision,
                               Revision startRevision, Revision endRevision,
-                              int depth, boolean ignoreAncestry,
+                              int depth, String[] changelists,
+                              boolean ignoreAncestry,
                               DiffSummaryReceiver receiver)
         throws ClientException
     {
         synchronized (clazz)
         {
             worker.diffSummarize(target, pegRevision, startRevision,
-                                 endRevision, depth, ignoreAncestry,
-                                 receiver);
+                                 endRevision, depth, changelists,
+                                 ignoreAncestry, receiver);
         }
     }
 
@@ -1622,24 +1625,26 @@ public class SVNClientSynchronized implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public void addToChangelist(String[] paths, String changelist)
+    public void addToChangelist(String[] paths, String changelist, int depth,
+                                String[] changelists)
             throws ClientException
     {
         synchronized (clazz)
         {
-            worker.addToChangelist(paths, changelist);
+            worker.addToChangelist(paths, changelist, depth, changelists);
         }
     }
 
     /**
      * @since 1.5
      */
-    public void removeFromChangelist(String[] paths, String changelist)
+    public void removeFromChangelists(String[] paths, int depth,
+                                      String[] changelists)
             throws ClientException
     {
         synchronized (clazz)
         {
-            worker.removeFromChangelist(paths, changelist);
+            worker.removeFromChangelists(paths, depth, changelists);
         }
     }
 

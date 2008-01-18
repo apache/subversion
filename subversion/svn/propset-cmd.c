@@ -50,7 +50,6 @@ svn_cl__propset(apr_getopt_t *os,
   svn_string_t *propval = NULL;
   svn_boolean_t propval_came_from_cmdline;
   apr_array_header_t *args, *targets;
-  apr_array_header_t *changelist_targets = NULL, *combined_targets = NULL;
   int i;
 
   /* PNAME and PROPVAL expected as first 2 arguments if filedata was
@@ -90,39 +89,25 @@ svn_cl__propset(apr_getopt_t *os,
          _("Bad encoding option: prop value not stored as UTF8"));
 
   /* Suck up all the remaining arguments into a targets array */
-
-  /* Before allowing svn_opt_args_to_target_array2() to canonicalize
-     all the targets, we need to build a list of targets made of both
-     ones the user typed, as well as any specified by --changelist.  */
-  if (opt_state->changelist)
-    {
-      SVN_ERR(svn_cl__get_changelist(&changelist_targets,
-                                     opt_state->changelist, "", ctx, pool));
-      if (apr_is_empty_array(changelist_targets))
-        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("no such changelist '%s'"),
-                                 opt_state->changelist);
-    }
-
-  if (opt_state->targets && changelist_targets)
-    combined_targets = apr_array_append(pool, opt_state->targets,
-                                        changelist_targets);
-  else if (opt_state->targets)
-    combined_targets = opt_state->targets;
-  else if (changelist_targets)
-    combined_targets = changelist_targets;
-
   SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
-                                        combined_targets, pool));
+                                        opt_state->targets, pool));
+
+  /* Implicit "." is okay for revision properties; it just helps
+     us find the right repository. */
+  if (opt_state->revprop)
+    svn_opt_push_implicit_dot_target(targets, pool);
+
+  /* If using changelists, convert targets into a set of paths that
+     match the specified changelist(s). */
+  if (opt_state->changelists)
+    SVN_ERR(svn_cl__changelist_paths(&targets, 
+                                     opt_state->changelists, targets,
+                                     svn_depth_infinity, ctx, pool));
 
   if (opt_state->revprop)  /* operate on a revprop */
     {
       svn_revnum_t rev;
       const char *URL;
-
-      /* Implicit "." is okay for revision properties; it just helps
-         us find the right repository. */
-      svn_opt_push_implicit_dot_target(targets, pool);
 
       SVN_ERR(svn_cl__revprop_prepare(&opt_state->start_revision, targets,
                                       &URL, pool));

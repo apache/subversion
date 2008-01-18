@@ -492,15 +492,15 @@ This means that the UI use-cases listed above change slightly:
    
         svn cl TARGET --remove --changelist CLNAME
    
-        (TARGET might be implicit '.' or not, and TARGET is treated
-        recursively.)
+        (TARGET might be implicit '.' or not, and depth is empty by
+        default; use --depth to override.)
    
    5. rename a CL
    
         svn cl NEWNAME TARGET --changelist OLDNAME
    
-        (TARGET might be implicit '.' or not, and TARGET is treated
-        recursively.)
+        (TARGET might be implicit '.' or not, and depth is empty by
+        default; use --depth to override.)
 
 
 TO-DO list:
@@ -512,9 +512,9 @@ TO-DO list:
   [ ] fix --changelist and allow multiple changelists in subcommands:
 
       No-problem subcommands:
-      [ ] svn add --changelist (for --force invocations)
+      [X] svn changelist --changelist
       [X] svn commit --changelist
-      [ ] svn diff --changelist  (only wc-wc and wc-repos cases)
+      [X] svn diff --changelist (only wc-wc and wc-repos cases)
       [X] svn info --changelist
       [ ] svn propget/propset --changelist
       [ ] svn proplist/propdel --changelist
@@ -524,10 +524,9 @@ TO-DO list:
       [ ] svn update --changelist
 
       Problem subcommands (see below):
-      [ ] svn changelist (see UI notes above)
-      [ ] svn lock --changelist
-      [ ] svn log --changelist
-      [ ] svn unlock --changelist
+      [X] svn lock --changelist              ### removed changelist support
+      [X] svn log --changelist               ### removed changelist support
+      [X] svn unlock --changelist            ### removed changelist support
 
   [ ] ensure that the bindings implementations of these APIs are up to snuff
   [ ] write tests!

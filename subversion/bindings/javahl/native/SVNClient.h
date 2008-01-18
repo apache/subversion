@@ -150,8 +150,10 @@ class SVNClient :public SVNBase
   jstring getAdminDirectoryName();
   jboolean isAdminDirectory(const char *name);
   jobject info(const char *path);
-  void addToChangelist(Targets &srcPaths, const char *changelist);
-  void removeFromChangelist(Targets &srcPaths, const char *changelist);
+  void addToChangelist(Targets &srcPaths, const char *changelist,
+                       svn_depth_t depth, StringArray &changelists);
+  void removeFromChangelists(Targets &srcPaths, svn_depth_t depth,
+                             StringArray &changelists);
   void getChangelists(const char *path, StringArray &changelists,
                       svn_depth_t depth, ChangelistCallback *callback);
   void status(const char *path, svn_depth_t depth, bool onServer,
@@ -171,21 +173,21 @@ class SVNClient :public SVNBase
   void diff(const char *target1, Revision &revision1,
             const char *target2, Revision &revision2,
             const char *relativeToDir, const char *outfileName,
-            svn_depth_t depth, bool ignoreAncestry, bool noDiffDelete,
-            bool force);
+            svn_depth_t depth, StringArray &changelists,
+            bool ignoreAncestry, bool noDiffDelete, bool force);
   void diff(const char *target, Revision &pegevision,
             Revision &startRevision, Revision &endRevision,
             const char *relativeToDir, const char *outfileName,
-            svn_depth_t depth, bool ignoreAncestry, bool noDiffDelete,
-            bool force);
+            svn_depth_t depth, StringArray &changelists,
+            bool ignoreAncestry, bool noDiffDelete, bool force);
   void diffSummarize(const char *target1, Revision &revision1,
                      const char *target2, Revision &revision2,
-                     svn_depth_t depth, bool ignoreAncestry,
-                     DiffSummaryReceiver &receiver);
+                     svn_depth_t depth, StringArray &changelists,
+                     bool ignoreAncestry, DiffSummaryReceiver &receiver);
   void diffSummarize(const char *target, Revision &pegRevision,
                      Revision &startRevision, Revision &endRevision,
-                     svn_depth_t depth, bool ignoreAncestry,
-                     DiffSummaryReceiver &receiver);
+                     svn_depth_t depth, StringArray &changelists,
+                     bool ignoreAncestry, DiffSummaryReceiver &receiver);
 
   const char *getLastPath();
   void dispose(jobject jthis);
@@ -212,8 +214,8 @@ class SVNClient :public SVNBase
   void diff(const char *target1, Revision &revision1,
             const char *target2, Revision &revision2,
             Revision *pegRevision, const char *relativeToDir,
-            const char *outfileName, svn_depth_t depth, bool ignoreAncestry,
-            bool noDiffDelete, bool force);
+            const char *outfileName, svn_depth_t depth, StringArray &changelists,
+            bool ignoreAncestry, bool noDiffDelete, bool force);
 
   jobject createJavaInfo(const svn_wc_entry_t *entry);
 

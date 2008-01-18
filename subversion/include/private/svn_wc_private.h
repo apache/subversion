@@ -106,6 +106,17 @@ svn_wc__path_switched(const char *wcpath,
   (((depth) == svn_depth_empty || (depth) == svn_depth_files) \
    ? 0 : (((depth) == svn_depth_immediates) ? 1 : -1))
 
+
+/* Return TRUE iff CLHASH (a hash whose keys are const char *
+   changelist names) is NULL or if ENTRY->changelist (which may be
+   NULL) is a key in CLHASH.  */
+#define SVN_WC__CL_MATCH(clhash, entry) \
+        (((clhash == NULL) \
+          || (entry \
+              && entry->changelist \
+              && apr_hash_get(clhash, entry->changelist, \
+                              APR_HASH_KEY_STRING))) ? TRUE : FALSE)
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
