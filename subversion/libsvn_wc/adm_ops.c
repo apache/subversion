@@ -1655,6 +1655,9 @@ svn_wc_add(const char *path,
                      cancel_func, cancel_baton,
                      svn_wc__compat_call_notify_func, &nb, pool);
 }
+
+
+
 /* Thoughts on Reversion.
 
     What does is mean to revert a given PATH in a tree?  We'll
@@ -1720,8 +1723,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
                     apr_pool_t *pool)
 {
   const char *fullpath;
-  /* If true, force reinstallation of working file. */
-  svn_boolean_t reinstall_working = FALSE;
+  svn_boolean_t reinstall_working = FALSE; /* force working file reinstall? */
   svn_wc_entry_t tmp_entry;
   apr_uint64_t flags = 0;
   svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
@@ -1782,10 +1784,8 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
      if we're reverting a replacement.  This is just an optimization. */
   if (baseprops)
     {
-      SVN_ERR(svn_wc__install_props(&log_accum, adm_access, fullpath, baseprops,
-                                    baseprops,
-                                    revert_base,
-                                    pool));
+      SVN_ERR(svn_wc__install_props(&log_accum, adm_access, fullpath, 
+                                    baseprops, baseprops, revert_base, pool));
       *reverted = TRUE;
     }
 
@@ -1816,18 +1816,16 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
                                  _("Error restoring text for '%s'"),
                                  svn_path_local_style(fullpath, pool));
 
-      /* Look for a revert base file.  If it exists use it for
-       * the text base for the file.  If it doesn't use the normal
-       * text base. */
+      /* Look for a revert base file.  If it exists use it for the
+         text base for the file.  If it doesn't use the normal text base. */
       SVN_ERR(svn_wc__loggy_move
               (&log_accum, &tgt_modified, adm_access,
                svn_wc__text_revert_path(fullpath, FALSE, pool), base_thing,
                FALSE, pool));
       reinstall_working = reinstall_working || tgt_modified;
 
-      /* A shortcut: since we will translate when reinstall_working, we
-         don't need to check if the working file is modified
-      */
+      /* A shortcut: since we will translate when reinstall_working,
+         we don't need to check if the working file is modified. */
       if (! reinstall_working)
         SVN_ERR(svn_wc__text_modified_internal_p(&reinstall_working,
                                                  fullpath, FALSE, adm_access,
@@ -1872,7 +1870,6 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
                svn_path_join(svn_wc_adm_access_path(adm_access),
                              entry->conflict_old, pool), pool));
     }
-
   if (entry->conflict_new)
     {
       flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_NEW;
@@ -1882,7 +1879,6 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
                svn_path_join(svn_wc_adm_access_path(adm_access),
                              entry->conflict_new, pool), pool));
     }
-
   if (entry->conflict_wrk)
     {
       flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_WRK;
@@ -1893,7 +1889,8 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
                              entry->conflict_wrk, pool), pool));
     }
 
-  /* Remove the prej-file if the entry lists one (and it exists) */
+  /* Remove the property conflict file if the entry lists one (and it
+     exists) */
   if (entry->prejfile)
     {
       flags |= SVN_WC__ENTRY_MODIFY_PREJFILE;
@@ -1938,11 +1935,12 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
       *reverted = TRUE;
     }
 
+  /* Modify the entry, loggily. */
   SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access, fullpath,
                                      &tmp_entry, flags, pool));
 
   /* Don't run log if nothing to change. */
-  if (!svn_stringbuf_isempty(log_accum))
+  if (! svn_stringbuf_isempty(log_accum))
     {
       SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
       SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
@@ -1987,15 +1985,15 @@ svn_wc_revert3(const char *path,
       if ((disk_kind != svn_node_dir)
           && (entry->schedule != svn_wc_schedule_add))
         {
-          /* When the directory itself is missing, we can't revert
-             without hitting the network.  Someday a '--force' option
-             will make this happen.  For now, send notification of the
-             failure. */
+          /* When the directory itself is missing, we can't revert without
+             hitting the network.  Someday a '--force' option will
+             make this happen.  For now, send notification of the failure. */
           if (notify_func != NULL)
-            (*notify_func)
-              (notify_baton,
-               svn_wc_create_notify(path, svn_wc_notify_failed_revert,
-                                    pool), pool);
+            {
+              svn_wc_notify_t *notify = 
+                svn_wc_create_notify(path, svn_wc_notify_failed_revert, pool);
+              notify_func(notify_baton, notify, pool);
+            }
           return SVN_NO_ERROR;
         }
     }
@@ -2023,12 +2021,11 @@ svn_wc_revert3(const char *path,
      basename.  For files, we always do this split.  */
   if (kind == svn_node_dir)
     SVN_ERR(svn_wc_is_wc_root(&wc_root, path, dir_access, pool));
-  if (! wc_root)
-    {
-      /* Split the base_name from the parent path. */
-      svn_path_split(path, &p_dir, &bname, pool);
-    }
 
+  /* If this is a workign copy root, split the base_name from the
+     parent path. */
+  if (! wc_root)
+    svn_path_split(path, &p_dir, &bname, pool);
 
   /* Additions. */
   if (entry->schedule == svn_wc_schedule_add)
@@ -2055,21 +2052,19 @@ svn_wc_revert3(const char *path,
           apr_hash_t *entries;
           const svn_wc_entry_t *parents_entry;
 
-          /*
-           * We are trying to revert the current directory which is
-           * scheduled for addition. This is supposed to fail (Issue #854)
-           * */
+          /* We are trying to revert the current directory which is
+             scheduled for addition. This is supposed to fail (Issue #854) */
           if (path[0] == '\0')
-            {
-              return svn_error_create(SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
-                                      _("Cannot revert addition of current directory; "
-                                        "please try again from the parent directory"));
-            }
+            return svn_error_create(SVN_ERR_WC_INVALID_OP_ON_CWD, NULL,
+                                    _("Cannot revert addition of current "
+                                      "directory; please try again from the "
+                                      "parent directory"));
 
           SVN_ERR(svn_wc_entries_read(&entries, parent_access, TRUE, pool));
           parents_entry = apr_hash_get(entries, basey, APR_HASH_KEY_STRING);
           if (parents_entry)
             was_deleted = parents_entry->deleted;
+
           if (kind == svn_node_none
               || svn_wc__adm_missing(parent_access, path))
             {
@@ -2083,15 +2078,20 @@ svn_wc_revert3(const char *path,
               SVN_ERR(svn_wc__entries_write(entries, parent_access, pool));
             }
           else
-            SVN_ERR(svn_wc_remove_from_revision_control
-                    (dir_access, SVN_WC_ENTRY_THIS_DIR, FALSE, FALSE,
-                     cancel_func, cancel_baton, pool));
+            {
+              SVN_ERR(svn_wc_remove_from_revision_control
+                      (dir_access, SVN_WC_ENTRY_THIS_DIR, FALSE, FALSE,
+                       cancel_func, cancel_baton, pool));
+            }
         }
       else  /* Else it's `none', or something exotic like a symlink... */
-        return svn_error_createf
-          (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-           _("Unknown or unexpected kind for path '%s'"),
-           svn_path_local_style(path, pool));
+        {
+          return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+                                   _("Unknown or unexpected kind for path "
+                                     "'%s'"),
+                                   svn_path_local_style(path, pool));
+
+        }
 
       /* Recursivity is taken care of by svn_wc_remove_from_revision_control,
          and we've definitely reverted PATH at this point. */
