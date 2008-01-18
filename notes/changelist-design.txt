@@ -544,7 +544,8 @@ Problem Subcommands:
   deepening the invocation:  'svn info -R --changelist FOO'
 
   But what about subcommands for which there is no --depth support,
-  such as 'lock', 'log', 'unlock'; indeed, even the 'changelist'
-  subcommand itself?  Do we lose the changelist support, or grow some
-  sort of depth-crawling ability for these things?
+  such as 'lock', 'log', 'unlock'?  Do we lose the changelist support,
+  or grow some sort of depth-crawling ability for these things?
 
+  RESOLUTION: We've removed changelist support from 'lock', 'unlock',
+  and 'log'.
