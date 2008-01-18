@@ -2228,8 +2228,10 @@ revert_internal(const char *path,
         {
           const void *key;
           const char *keystring;
+          void *val;
           const char *full_entry_path;
           svn_depth_t depth_under_here = depth;
+          svn_wc_entry_t *child_entry;
 
           if (depth == svn_depth_files || depth == svn_depth_immediates)
             depth_under_here = svn_depth_empty;
@@ -2237,11 +2239,17 @@ revert_internal(const char *path,
           svn_pool_clear(subpool);
 
           /* Get the next entry */
-          apr_hash_this(hi, &key, NULL, NULL);
+          apr_hash_this(hi, &key, NULL, &val);
           keystring = key;
+          child_entry = val;
 
           /* Skip "this dir" */
           if (! strcmp(keystring, SVN_WC_ENTRY_THIS_DIR))
+            continue;
+
+          /* Skip subdirectories if we're called with depth-files. */
+          if ((depth == svn_depth_files) 
+              && (child_entry->kind != svn_node_file))
             continue;
 
           /* Add the entry name to FULL_ENTRY_PATH. */
