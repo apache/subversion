@@ -9530,6 +9530,7 @@ def basic_reintegrate(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
   
+
   # Make another change on the branch: copy tau to tauprime.  Commit
   # in r9.
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
@@ -9537,12 +9538,58 @@ def basic_reintegrate(sbox):
                                                   'tau'),
                                      os.path.join(wc_dir, 'A_COPY', 'D', 'G',
                                                   'tauprime'))
+
+  # Update the wcs again.
+  #
+  # Note: this update had to be added because of r28942 (which was
+  # merged into the reintegrate branch in r28947).  Without this
+  # update, the update to r9 later will fail in expected disk tree:
+  #
+  #   =============================================================
+  #   Expected 'tauprime' and actual 'tauprime' in disk tree are different!
+  #   =============================================================
+  #   EXPECTED NODE TO BE:
+  #   =============================================================
+  #    * Node name:   tauprime
+  #       Path:       A_COPY/D/G/tauprime
+  #       Contents:   This is the file 'tau'.
+  #   
+  #       Properties: {'svn:mergeinfo': '/A/D/G/tau:2-7'}
+  #       Attributes: {}
+  #       Children:   N/A (node is a file)
+  #   =============================================================
+  #   ACTUAL NODE FOUND:
+  #   =============================================================
+  #    * Node name:   tauprime
+  #       Path:       G/tauprime
+  #       Contents:   This is the file 'tau'.
+  #   
+  #       Properties: {'svn:mergeinfo': ''}
+  #       Attributes: {}
+  #       Children:   N/A (node is a file)
+  #
+  # What is truly strange (IMHO) is that you can put this update
+  # *after* the 'svn cp' below, and the test still passes; but if
+  # you put it after the commit, the test fails with the above error.
+  # It is as if the mergeinfo inheritance happens in the commit step
+  # (I would have expected it to happen in the cp step).
+  #
+  # By the way, the test passes -- as one would expect -- if this
+  # update is put right before the 'svn cp tau tauprime' command
+  # immediately above.
+  expected_output = wc.State(wc_dir, {})
+  expected_status.tweak(wc_rev='8')
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
+                                        expected_disk, expected_status,
+                                        None, None, None, None, None, True)
+
   expected_output = wc.State(wc_dir, {
     'A_COPY/D/G/tauprime' : Item(verb='Adding')
     })
   expected_status.add({'A_COPY/D/G/tauprime': Item(status='  ', wc_rev=9)})
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
+
   expected_disk.add({
     'A_COPY/D/G/tauprime' : Item(props={SVN_PROP_MERGE_INFO: '/A/D/G/tau:2-7'},
                                  contents="This is the file 'tau'.\n")
