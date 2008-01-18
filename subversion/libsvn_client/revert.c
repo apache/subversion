@@ -66,7 +66,7 @@ revert(const char *path,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  pool));
 
-  err = svn_wc_revert3(path, adm_access, depth, use_commit_times,
+  err = svn_wc_revert3(path, adm_access, depth, use_commit_times, NULL,
                        ctx->cancel_func, ctx->cancel_baton,
                        ctx->notify_func2, ctx->notify_baton2,
                        pool);
