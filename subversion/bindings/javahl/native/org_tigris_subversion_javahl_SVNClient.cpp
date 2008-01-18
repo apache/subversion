@@ -1538,7 +1538,8 @@ Java_org_tigris_subversion_javahl_SVNClient_info
 
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_addToChangelist
-(JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jchangelist)
+(JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jchangelist,
+ jint jdepth, jobjectArray jchangelists)
 {
   JNIEntry(SVNClient, addToChangelist);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1555,12 +1556,18 @@ Java_org_tigris_subversion_javahl_SVNClient_addToChangelist
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->addToChangelist(targets, changelist_name);
+  StringArray changelists(jchangelists);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  cl->addToChangelist(targets, changelist_name, (svn_depth_t) jdepth,
+                      changelists);
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_removeFromChangelist
-(JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jchangelist)
+Java_org_tigris_subversion_javahl_SVNClient_removeFromChangelists
+(JNIEnv *env, jobject jthis, jobjectArray jtargets, jint jdepth,
+ jobjectArray jchangelists)
 {
   JNIEntry(SVNClient, removeFromChangelist);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1573,11 +1580,11 @@ Java_org_tigris_subversion_javahl_SVNClient_removeFromChangelist
   if (JNIUtil::isExceptionThrown())
     return;
 
-  JNIStringHolder changelist_name(jchangelist);
+  StringArray changelists(jchangelists);
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->removeFromChangelist(targets, changelist_name);
+  cl->removeFromChangelists(targets, (svn_depth_t)jdepth, changelists);
 }
 
 JNIEXPORT void JNICALL
