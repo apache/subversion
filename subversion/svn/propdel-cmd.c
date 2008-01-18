@@ -62,13 +62,6 @@ svn_cl__propdel(apr_getopt_t *os,
   /* Add "." if user passed 0 file arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
 
-  /* If using changelists, convert targets into a set of paths that
-     match the specified changelist(s). */
-  if (opt_state->changelists)
-    SVN_ERR(svn_cl__changelist_paths(&targets, 
-                                     opt_state->changelists, targets,
-                                     svn_depth_infinity, ctx, pool));
-
   if (opt_state->revprop)  /* operate on a revprop */
     {
       svn_revnum_t rev;
@@ -120,7 +113,7 @@ svn_cl__propdel(apr_getopt_t *os,
                                NULL, target,
                                opt_state->depth,
                                FALSE, SVN_INVALID_REVNUM,
-                               ctx, subpool),
+                               opt_state->changelists, ctx, subpool),
                               &success, opt_state->quiet,
                               SVN_ERR_UNVERSIONED_RESOURCE,
                               SVN_ERR_ENTRY_NOT_FOUND,
