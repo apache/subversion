@@ -38,6 +38,7 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_io.h"
 #include "svn_md5.h"
@@ -1706,7 +1707,6 @@ svn_wc_add(const char *path,
 
 */
 
-
 /* Revert ENTRY for NAME in directory represented by ADM_ACCESS. Sets
    *REVERTED to TRUE if something actually is reverted.
 
@@ -1950,83 +1950,44 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
 }
 
 
-svn_error_t *
-svn_wc_revert3(const char *path,
-               svn_wc_adm_access_t *parent_access,
-               svn_depth_t depth,
-               svn_boolean_t use_commit_times,
-               svn_cancel_func_t cancel_func,
-               void *cancel_baton,
-               svn_wc_notify_func2_t notify_func,
-               void *notify_baton,
-               apr_pool_t *pool)
+/* Revert PATH of on-disk KIND.  ENTRY is the working copy entry for
+   PATH.  *DEPTH is the depth of the reversion crawl the caller is
+   using; this function may choose to override that value as needed.
+
+   See svn_wc_revert3() for the interpretations of PARENT_ACCESS,
+   USE_COMMIT_TIMES, CANCEL_FUNC, CANCEL_BATON, NOTIFY_FUNC, and
+   NOTIFY_BATON.
+
+   Use POOL for allocations.
+ */
+static svn_error_t *
+revert_entry(svn_depth_t *depth,
+             const char *path,
+             svn_node_kind_t kind,
+             const svn_wc_entry_t *entry,
+             svn_wc_adm_access_t *parent_access,
+             svn_boolean_t use_commit_times,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
+             svn_wc_notify_func2_t notify_func,
+             void *notify_baton,
+             apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
-  const char *p_dir = NULL, *bname = NULL;
-  const svn_wc_entry_t *entry;
-  svn_boolean_t wc_root = FALSE, reverted = FALSE;
+  const char *bname;
+  svn_boolean_t reverted = FALSE;
+  svn_boolean_t is_wc_root = FALSE;
   svn_wc_adm_access_t *dir_access;
 
-  /* Check cancellation here, so recursive calls get checked early. */
-  if (cancel_func)
-    SVN_ERR(cancel_func(cancel_baton));
-
+  /* Fetch the access baton for this path. */
   SVN_ERR(svn_wc_adm_probe_retrieve(&dir_access, parent_access, path, pool));
-
-  /* Safeguard 1:  is this a versioned resource? */
-  SVN_ERR_W(svn_wc__entry_versioned(&entry, path, dir_access, FALSE, pool),
-            _("Cannot revert"));
-
-  /* Safeguard 1.5: is this a missing versioned directory? */
-  if (entry->kind == svn_node_dir)
-    {
-      svn_node_kind_t disk_kind;
-      SVN_ERR(svn_io_check_path(path, &disk_kind, pool));
-      if ((disk_kind != svn_node_dir)
-          && (entry->schedule != svn_wc_schedule_add))
-        {
-          /* When the directory itself is missing, we can't revert without
-             hitting the network.  Someday a '--force' option will
-             make this happen.  For now, send notification of the failure. */
-          if (notify_func != NULL)
-            {
-              svn_wc_notify_t *notify = 
-                svn_wc_create_notify(path, svn_wc_notify_failed_revert, pool);
-              notify_func(notify_baton, notify, pool);
-            }
-          return SVN_NO_ERROR;
-        }
-    }
-
-  /* Safeguard 2:  can we handle this node kind? */
-  if ((entry->kind != svn_node_file) && (entry->kind != svn_node_dir))
-    return svn_error_createf
-      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-       _("Cannot revert '%s': unsupported entry node kind"),
-       svn_path_local_style(path, pool));
-
-  /* Safeguard 3:  can we deal with the node kind of PATH current in
-     the working copy? */
-  SVN_ERR(svn_io_check_path(path, &kind, pool));
-  if ((kind != svn_node_none)
-      && (kind != svn_node_file)
-      && (kind != svn_node_dir))
-    return svn_error_createf
-      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-       _("Cannot revert '%s': unsupported node kind in working copy"),
-       svn_path_local_style(path, pool));
 
   /* For directories, determine if PATH is a WC root so that we can
      tell if it is safe to split PATH into a parent directory and
      basename.  For files, we always do this split.  */
   if (kind == svn_node_dir)
-    SVN_ERR(svn_wc_is_wc_root(&wc_root, path, dir_access, pool));
-
-  /* If this is a workign copy root, split the base_name from the
-     parent path. */
-  if (! wc_root)
-    svn_path_split(path, &p_dir, &bname, pool);
-
+    SVN_ERR(svn_wc_is_wc_root(&is_wc_root, path, dir_access, pool));
+  bname = is_wc_root ? NULL : svn_path_basename(path, pool);
+  
   /* Additions. */
   if (entry->schedule == svn_wc_schedule_add)
     {
@@ -2095,7 +2056,7 @@ svn_wc_revert3(const char *path,
 
       /* Recursivity is taken care of by svn_wc_remove_from_revision_control,
          and we've definitely reverted PATH at this point. */
-      depth = svn_depth_empty;
+      *depth = svn_depth_empty;
       reverted = TRUE;
 
       /* If the removed item was *also* in a 'deleted' state, make
@@ -2103,7 +2064,7 @@ svn_wc_revert3(const char *path,
          parent. */
       if (was_deleted)
         {
-          svn_wc_entry_t *tmpentry;
+          svn_wc_entry_t *tmpentry; /* ### FIXME: Why the heap alloc? */
           tmpentry = apr_pcalloc(pool, sizeof(*tmpentry));
           tmpentry->kind = entry->kind;
           tmpentry->deleted = TRUE;
@@ -2156,7 +2117,7 @@ svn_wc_revert3(const char *path,
 
           /* Force recursion on replaced directories. */
           if (entry->schedule == svn_wc_schedule_replace)
-            depth = svn_depth_infinity;
+            *depth = svn_depth_infinity;
           break;
 
         default:
@@ -2170,6 +2131,90 @@ svn_wc_revert3(const char *path,
     (*notify_func)(notify_baton,
                    svn_wc_create_notify(path, svn_wc_notify_revert, pool),
                    pool);
+  
+  return SVN_NO_ERROR;
+}
+
+
+/* This is just the guts of svn_wc_revert3() save that it accepts a
+   hash CHANGELIST_HASH whose keys are changelist names instead of an
+   array of said names.  See svn_wc_revert3() for additional
+   documentation. */
+static svn_error_t *
+revert_internal(const char *path,
+                svn_wc_adm_access_t *parent_access,
+                svn_depth_t depth,
+                svn_boolean_t use_commit_times,
+                apr_hash_t *changelist_hash,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                svn_wc_notify_func2_t notify_func,
+                void *notify_baton,
+                apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+  const svn_wc_entry_t *entry;
+  svn_wc_adm_access_t *dir_access;
+
+  /* Check cancellation here, so recursive calls get checked early. */
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
+
+  /* Fetch the access baton for this path. */
+  SVN_ERR(svn_wc_adm_probe_retrieve(&dir_access, parent_access, path, pool));
+
+  /* Safeguard 1:  is this a versioned resource? */
+  SVN_ERR_W(svn_wc__entry_versioned(&entry, path, dir_access, FALSE, pool),
+            _("Cannot revert"));
+
+  /* Safeguard 1.5:  is this a missing versioned directory? */
+  if (entry->kind == svn_node_dir)
+    {
+      svn_node_kind_t disk_kind;
+      SVN_ERR(svn_io_check_path(path, &disk_kind, pool));
+      if ((disk_kind != svn_node_dir)
+          && (entry->schedule != svn_wc_schedule_add))
+        {
+          /* When the directory itself is missing, we can't revert without
+             hitting the network.  Someday a '--force' option will
+             make this happen.  For now, send notification of the failure. */
+          if (notify_func != NULL)
+            {
+              svn_wc_notify_t *notify = 
+                svn_wc_create_notify(path, svn_wc_notify_failed_revert, pool);
+              notify_func(notify_baton, notify, pool);
+            }
+          return SVN_NO_ERROR;
+        }
+    }
+
+  /* Safeguard 2:  can we handle this entry's recorded kind? */
+  if ((entry->kind != svn_node_file) && (entry->kind != svn_node_dir))
+    return svn_error_createf
+      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+       _("Cannot revert '%s': unsupported entry node kind"),
+       svn_path_local_style(path, pool));
+
+  /* Safeguard 3:  can we deal with the node kind of PATH currently in
+     the working copy? */
+  SVN_ERR(svn_io_check_path(path, &kind, pool));
+  if ((kind != svn_node_none)
+      && (kind != svn_node_file)
+      && (kind != svn_node_dir))
+    return svn_error_createf
+      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+       _("Cannot revert '%s': unsupported node kind in working copy"),
+       svn_path_local_style(path, pool));
+
+  /* If the entry passes changelist filtering, revert it!  */
+  if (SVN_WC__CL_MATCH(changelist_hash, entry))
+    {
+      /* Actually revert this entry.  If this is a working copy root,
+         we provide a base_name from the parent path. */
+      SVN_ERR(revert_entry(&depth, path, kind, entry,
+                           parent_access, use_commit_times, cancel_func,
+                           cancel_baton, notify_func, notify_baton, pool));
+    }
 
   /* Finally, recurse if requested. */
   if (entry->kind == svn_node_dir && depth > svn_depth_empty)
@@ -2203,16 +2248,37 @@ svn_wc_revert3(const char *path,
           full_entry_path = svn_path_join(path, keystring, subpool);
 
           /* Revert the entry. */
-          SVN_ERR(svn_wc_revert3(full_entry_path, dir_access,
-                                 depth_under_here, use_commit_times,
-                                 cancel_func, cancel_baton,
-                                 notify_func, notify_baton, subpool));
+          SVN_ERR(revert_internal(full_entry_path, dir_access, 
+                                  depth_under_here, use_commit_times, 
+                                  changelist_hash, cancel_func, cancel_baton,
+                                  notify_func, notify_baton, subpool));
         }
 
       svn_pool_destroy(subpool);
     }
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc_revert3(const char *path,
+               svn_wc_adm_access_t *parent_access,
+               svn_depth_t depth,
+               svn_boolean_t use_commit_times,
+               const apr_array_header_t *changelists,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               svn_wc_notify_func2_t notify_func,
+               void *notify_baton,
+               apr_pool_t *pool)
+{
+  apr_hash_t *changelist_hash = NULL;
+  if (changelists && changelists->nelts)
+    SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
+  return revert_internal(path, parent_access, depth, use_commit_times,
+                         changelist_hash, cancel_func, cancel_baton,
+                         notify_func, notify_baton, pool);
 }
 
 
@@ -2227,15 +2293,10 @@ svn_wc_revert2(const char *path,
                void *notify_baton,
                apr_pool_t *pool)
 {
-  return svn_wc_revert3(path,
-                        parent_access,
+  return svn_wc_revert3(path, parent_access, 
                         recursive ? svn_depth_infinity : svn_depth_empty,
-                        use_commit_times,
-                        cancel_func,
-                        cancel_baton,
-                        notify_func,
-                        notify_baton,
-                        pool);
+                        use_commit_times, NULL, cancel_func, cancel_baton,
+                        notify_func, notify_baton, pool);
 }
 
 
