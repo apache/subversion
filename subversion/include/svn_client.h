@@ -2722,6 +2722,12 @@ svn_client_relocate(const char *dir,
  * properties on immediate subdirectories; else if @c svn_depth_infinity,
  * revert path and everything under it fully recursively.
  *
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items reverted; that is,
+ * don't revert any item unless it's a member of one of those
+ * changelists.  If @a changelists is empty (or altogether @c NULL),
+ * no changelist filtering occurs.
+ *
  * If @a ctx->notify_func2 is non-NULL, then for each item reverted,
  * call @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of
  * the reverted item.
@@ -2735,14 +2741,16 @@ svn_client_relocate(const char *dir,
 svn_error_t *
 svn_client_revert2(const apr_array_header_t *paths,
                    svn_depth_t depth,
+                   const apr_array_header_t *changelists,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 
 /**
- * Similar to svn_client_revert2(), but with @a depth set according to
- * @a recurse: if @a recurse is TRUE, @a depth is @c svn_depth_infinity,
- * else if @a recurse is FALSE, @a depth is @c svn_depth_empty.
+ * Similar to svn_client_revert2(), but with @a changelists passed as
+ * @c NULL, and @a depth set according to @a recurse: if @a recurse is
+ * TRUE, @a depth is @c svn_depth_infinity, else if @a recurse is
+ * FALSE, @a depth is @c svn_depth_empty.
  *
  * @note Most APIs map @a recurse==FALSE to @a depth==svn_depth_files;
  * revert is deliberately different.
