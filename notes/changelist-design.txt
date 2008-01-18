@@ -520,7 +520,7 @@ TO-DO list:
       [X] svn proplist --changelist
       [X] svn propset --changelist
       [X] svn propdel --changelist
-      [ ] svn revert --changelist
+      [X] svn revert --changelist
       [ ] svn status --changelist
       [ ] svn update --changelist
 

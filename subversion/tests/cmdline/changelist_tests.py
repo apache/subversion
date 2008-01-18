@@ -634,8 +634,62 @@ def propmods_with_changelists(sbox):
     os.path.join(wc_dir, 'A', 'D', 'H', 'omega') : 'value',
     })
  
+
+#----------------------------------------------------------------------
+
+def revert_with_changelists(sbox):
+  "revert --changelist"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Add files to changelists based on the last character in their names.
+  changelist_all_files(wc_dir, clname_from_lastchar_cb)
   
+  # Add a line of text to all the versioned files in the tree.
+  mod_all_files(wc_dir, "Please, oh please, revert me!\n")
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/lambda', 'A/B/E/alpha', 'A/B/E/beta',
+                        'A/D/gamma', 'A/D/H/omega', 'iota', 'A/mu',
+                        'A/D/G/tau', 'A/D/G/pi', 'A/D/H/chi',
+                        'A/D/H/psi', 'A/D/G/rho', status='M ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # 'svn revert --changelist a WC_DIR' (without depth, no change expected)
+  svntest.main.run_svn(None, "revert", "--changelist", "a", wc_dir)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # 'svn revert --changelist o --depth files WC_DIR WC_DIR/A/B' (no change)
+  svntest.main.run_svn(None, "revert", "--depth", "files",
+                       "--changelist", "o",
+                       wc_dir, os.path.join(wc_dir, 'A', 'B'))
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # 'svn revert --changelist a --depth files WC_DIR WC_DIR/A/B'
+  # (iota, lambda reverted)
+  svntest.main.run_svn(None, "revert", "--depth", "files",
+                       "--changelist", "a",
+                       wc_dir, os.path.join(wc_dir, 'A', 'B'))
+  expected_status.tweak('iota', 'A/B/lambda', status='  ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # 'svn revert --changelist a --changelist i --depth infinity WC_DIR'
+  # (alpha, beta, gamma, omega, pi, chi, psi reverted)
+  svntest.main.run_svn(None, "revert", "--depth", "infinity",
+                       "--changelist", "a", "--changelist", "i",
+                       wc_dir)
+  expected_status.tweak('A/B/E/alpha', 'A/B/E/beta', 'A/D/gamma',
+                        'A/D/H/omega', 'A/D/G/pi', 'A/D/H/chi',
+                        'A/D/H/psi', status='  ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # 'svn revert --depth infinity WC_DIR' (back to pristine-ness)
+  svntest.main.run_svn(None, "revert", "--depth", "infinity",
+                       wc_dir)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
   
+
 ########################################################################
 # Run the tests
 
@@ -647,6 +701,7 @@ test_list = [ None,
               info_with_changelists,
               diff_with_changelists,
               propmods_with_changelists,
+              revert_with_changelists,
              ]
 
 if __name__ == '__main__':
