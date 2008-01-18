@@ -1191,12 +1191,14 @@ public class SVNClientSynchronized implements SVNClientInterface
      */
     public void properties(String path, Revision revision,
                            Revision pegRevision, int depth,
+                           String[] changelists,
                            ProplistCallback callback)
             throws ClientException
     {
         synchronized (clazz)
         {
-            worker.properties(path, revision, pegRevision, depth, callback);
+            worker.properties(path, revision, pegRevision, depth, changelists,
+                              callback);
         }
     }
 
@@ -1263,12 +1265,12 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @since 1.5
      */
     public void propertySet(String path, String name, String value, int depth,
-                     boolean force)
+                            String[] changelists, boolean force)
             throws ClientException
     {
         synchronized(clazz)
         {
-            worker.propertySet(path, name, value, depth, force);
+            worker.propertySet(path, name, value, depth, changelists, force);
         }
     }
 
@@ -1288,12 +1290,13 @@ public class SVNClientSynchronized implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public void propertyRemove(String path, String name, int depth)
+    public void propertyRemove(String path, String name, int depth,
+                               String[] changelists)
             throws ClientException
     {
         synchronized(clazz)
         {
-            worker.propertyRemove(path, name, depth);
+            worker.propertyRemove(path, name, depth, changelists);
         }
     }
 
@@ -1361,12 +1364,12 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @since 1.5
      */
     public void propertyCreate(String path, String name, String value,
-                               int depth, boolean force)
+                               int depth, String[] changelists, boolean force)
             throws ClientException
     {
         synchronized(clazz)
         {
-            worker.propertyCreate(path, name, value, depth, force);
+            worker.propertyCreate(path, name, value, depth, changelists, force);
         }
     }
 

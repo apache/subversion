@@ -83,12 +83,13 @@ class SVNClient :public SVNBase
   void streamFileContent(const char *path, Revision &revision,
                          Revision &pegRevision, jobject outputStream,
                          size_t bufSize);
-  void propertyRemove(const char *path, const char *name, svn_depth_t depth);
+  void propertyRemove(const char *path, const char *name, svn_depth_t depth,
+                      StringArray &changelists);
   void propertySet(const char *path, const char *name, const char *value,
-                   svn_depth_t depth, bool force);
+                   svn_depth_t depth, StringArray &changelists, bool force);
   void properties(const char *path, Revision &revision,
                   Revision &pegRevision, svn_depth_t depth,
-                  ProplistCallback *callback);
+                  StringArray &changelists, ProplistCallback *callback);
   jobject getMergeInfo(const char *target, Revision &pegRevision);
   jobjectArray getAvailableMerges(const char *target, Revision &pegRevision,
                                   const char *mergeSource);
@@ -198,7 +199,8 @@ class SVNClient :public SVNBase
  private:
   static svn_error_t *checkCancel(void *cancelBaton);
   void propertySet(const char *path, const char *name,
-                   svn_string_t *value, svn_depth_t depth, bool force,
+                   svn_string_t *value, svn_depth_t depth,
+                   StringArray &changelists, bool force,
                    svn_revnum_t baseRevisionForURL);
   jobject createJavaProperty(jobject jthis, const char *path,
                              const char *name, svn_string_t *value);
