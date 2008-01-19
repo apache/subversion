@@ -879,18 +879,25 @@ void SVNClient::propertySet(const char *path, const char *name,
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
     SVN_JNI_NULL_PTR_EX(name, "name", );
-    SVN_JNI_NULL_PTR_EX(value, "value", );
-    svn_string_t *val = svn_string_create(value, requestPool.pool());
-    propertySet(path, name, val, depth, changelists, force);
-}
 
-void SVNClient::propertyRemove(const char *path, const char *name,
-                               svn_depth_t depth, StringArray &changelists)
-{
-    Pool requestPool;
-    SVN_JNI_NULL_PTR_EX(path, "path", );
-    SVN_JNI_NULL_PTR_EX(name, "name", );
-    propertySet(path, name, (svn_string_t *) NULL, depth, changelists, false);
+    svn_string_t *val;
+    if (value == NULL)
+      val = NULL;
+    else
+      val = svn_string_create(value, requestPool.pool());
+
+    svn_commit_info_t *commit_info = NULL;
+    Path intPath(path);
+    SVN_JNI_ERR(intPath.error_occured(), );
+
+    svn_client_ctx_t *ctx = getContext(NULL);
+    if (ctx == NULL)
+        return;
+
+    SVN_JNI_ERR(svn_client_propset3(&commit_info, name, val, intPath.c_str(),
+                                    depth, force, SVN_INVALID_REVNUM,
+                                    changelists.array(requestPool),
+                                    ctx, requestPool.pool()), );
 }
 
 void SVNClient::diff(const char *target1, Revision &revision1,
@@ -1275,25 +1282,6 @@ jobject SVNClient::createJavaProperty(jobject jthis, const char *path,
         return NULL;
 
     return jprop;
-}
-
-void SVNClient::propertySet(const char *path, const char *name,
-                            svn_string_t *value, svn_depth_t depth,
-                            StringArray &changelists, bool force)
-{
-    svn_commit_info_t *commit_info = NULL;
-    Pool requestPool;
-    Path intPath(path);
-    SVN_JNI_ERR(intPath.error_occured(), );
-
-    svn_client_ctx_t *ctx = getContext(NULL);
-    if (ctx == NULL)
-        return;
-
-    SVN_JNI_ERR(svn_client_propset3(&commit_info, name, value, intPath.c_str(),
-                                    depth, force, SVN_INVALID_REVNUM,
-                                    changelists.array(requestPool),
-                                    ctx, requestPool.pool()), );
 }
 
 jbyteArray SVNClient::fileContent(const char *path, Revision &revision,
