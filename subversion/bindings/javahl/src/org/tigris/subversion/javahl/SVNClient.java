@@ -390,13 +390,13 @@ public class SVNClient implements SVNClientInterface
     public void revert(String path, boolean recurse)
             throws ClientException
     {
-        revert(path, Depth.infinityOrEmpty(recurse));
+        revert(path, Depth.infinityOrEmpty(recurse), null);
     }
 
     /**
      * @since 1.5
      */
-    public native void revert(String path, int depth)
+    public native void revert(String path, int depth, String[] changelists)
             throws ClientException;
 
     /**

@@ -440,7 +440,8 @@ Java_org_tigris_subversion_javahl_SVNClient_remove
 
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_revert
-(JNIEnv *env, jobject jthis, jstring jpath, jint jdepth)
+(JNIEnv *env, jobject jthis, jstring jpath, jint jdepth,
+ jobjectArray jchangelists)
 {
   JNIEntry(SVNClient, revert);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -453,7 +454,11 @@ Java_org_tigris_subversion_javahl_SVNClient_revert
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->revert(path, (svn_depth_t)jdepth);
+  StringArray changelists(jchangelists);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  cl->revert(path, (svn_depth_t)jdepth, changelists);
 }
 
 JNIEXPORT void JNICALL

@@ -449,10 +449,12 @@ public interface SVNClientInterface
      * Reverts a file to a pristine state.
      * @param path      path of the file.
      * @param depth     the depth to recurse into subdirectories
+     * @param changelists changelists to filter by
      * @throws ClientException
      * @since 1.5
      */
-    void revert(String path, int depth) throws ClientException;
+    void revert(String path, int depth, String[] changelists)
+            throws ClientException;
 
     /**
      * Adds a file to the repository.
