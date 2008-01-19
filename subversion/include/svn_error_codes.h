@@ -650,6 +650,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 48,
              "Attempted to write to readonly SQLite db")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_FS_NO_SUCH_CHECKSUM_REP,
+             SVN_ERR_FS_CATEGORY_START + 49,
+             "Filesystem has no such checksum-representation index record")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,

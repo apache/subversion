@@ -1443,7 +1443,9 @@ struct txn_deltify_args
 
   /* The base is what we're deltifying against.  It's not necessarily
      the "next" revision of the node; skip deltas mean we sometimes
-     deltify against a successor many generations away. */
+     deltify against a successor many generations away.  This may be
+     NULL, in which case we'll avoid deltification and simply index
+     TGT_ID's data checksum. */
   const svn_fs_id_t *base_id;
 
   /* We only deltify props for directories.
@@ -1462,10 +1464,19 @@ txn_body_txn_deltify(void *baton, trail_t *trail)
 
   SVN_ERR(svn_fs_base__dag_get_node(&tgt_node, trail->fs, args->tgt_id,
                                     trail, trail->pool));
-  SVN_ERR(svn_fs_base__dag_get_node(&base_node, trail->fs, args->base_id,
-                                    trail, trail->pool));
-  SVN_ERR(svn_fs_base__dag_deltify(tgt_node, base_node, args->is_dir,
-                                   trail, trail->pool));
+
+  /* If we have something to deltify against, do so. */
+  if (args->base_id)
+    {
+      SVN_ERR(svn_fs_base__dag_get_node(&base_node, trail->fs, args->base_id,
+                                        trail, trail->pool));
+      SVN_ERR(svn_fs_base__dag_deltify(tgt_node, base_node, args->is_dir,
+                                       trail, trail->pool));
+    }
+
+  /* If this isn't a directory, record a mapping of TGT_NODE's data
+     checksum to its representation key. */
+  SVN_ERR(svn_fs_base__dag_index_data_checksum(tgt_node, trail, trail->pool));
 
   return SVN_NO_ERROR;
 }
@@ -1567,6 +1578,12 @@ deltify_mutable(svn_fs_t *fs,
 
       svn_pool_destroy(subpool);
     }
+
+  /* Index ID's data checksum. */
+  td_args.tgt_id = id;
+  td_args.base_id = NULL;
+  td_args.is_dir = (kind == svn_node_dir);
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_txn_deltify, &td_args, pool));
 
   /* Finally, deltify old data against this node. */
   {
