@@ -83,8 +83,6 @@ class SVNClient :public SVNBase
   void streamFileContent(const char *path, Revision &revision,
                          Revision &pegRevision, jobject outputStream,
                          size_t bufSize);
-  void propertyRemove(const char *path, const char *name, svn_depth_t depth,
-                      StringArray &changelists);
   void propertySet(const char *path, const char *name, const char *value,
                    svn_depth_t depth, StringArray &changelists, bool force);
   void properties(const char *path, Revision &revision,
@@ -198,9 +196,6 @@ class SVNClient :public SVNBase
   static jobject createJavaLock(const svn_lock_t *lock);
  private:
   static svn_error_t *checkCancel(void *cancelBaton);
-  void propertySet(const char *path, const char *name,
-                   svn_string_t *value, svn_depth_t depth,
-                   StringArray &changelists, bool force);
   jobject createJavaProperty(jobject jthis, const char *path,
                              const char *name, svn_string_t *value);
   svn_client_ctx_t *getContext(const char *message);

@@ -997,9 +997,12 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native void propertyRemove(String path, String name,
-                                      int depth, String[] changelists)
-            throws ClientException;
+    public void propertyRemove(String path, String name, int depth,
+                               String[] changelists)
+            throws ClientException
+    {
+        propertySet(path, name, null, depth, changelists, false);
+    }
 
     /**
      * @deprecated Use {@link #propertyCreate(String, String, String, int,
