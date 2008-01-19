@@ -500,11 +500,12 @@ public class SVNClientSynchronized implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public void revert(String path, int depth) throws ClientException
+    public void revert(String path, int depth, String[] changelists)
+            throws ClientException
     {
         synchronized(clazz)
         {
-            worker.revert(path, depth);
+            worker.revert(path, depth, changelists);
         }
     }
 

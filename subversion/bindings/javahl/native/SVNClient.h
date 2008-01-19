@@ -129,7 +129,7 @@ class SVNClient :public SVNBase
                     bool allowUnverObstructions);
   void add(const char *path, svn_depth_t depth, bool force, bool no_ignore,
            bool add_parents);
-  void revert(const char *path, svn_depth_t depth);
+  void revert(const char *path, svn_depth_t depth, StringArray &changelists);
   void remove(Targets &targets, const char *message, bool force,
               bool keep_local);
   void notification(Notify *notify);
