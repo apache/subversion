@@ -9531,19 +9531,13 @@ def basic_reintegrate(sbox):
                                         expected_status, None, wc_dir)
   
 
-  # Make another change on the branch: copy tau to tauprime.  Commit
-  # in r9.
-  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
-                                     os.path.join(wc_dir, 'A_COPY', 'D', 'G',
-                                                  'tau'),
-                                     os.path.join(wc_dir, 'A_COPY', 'D', 'G',
-                                                  'tauprime'))
-
   # Update the wcs again.
   #
   # Note: this update had to be added because of r28942 (which was
   # merged into the reintegrate branch in r28947).  Without this
-  # update, the update to r9 later will fail in expected disk tree:
+  # update, the mergeinfo will not be inherited properly as part of
+  # the 'svn cp tau tauprime' step, and later (during the post-commit
+  # update, with the new expected_disk) we'll get an error like this:
   #
   #   =============================================================
   #   Expected 'tauprime' and actual 'tauprime' in disk tree are different!
@@ -9568,20 +9562,19 @@ def basic_reintegrate(sbox):
   #       Attributes: {}
   #       Children:   N/A (node is a file)
   #
-  # What is truly strange (IMHO) is that you can put this update
-  # *after* the 'svn cp' below, and the test still passes; but if
-  # you put it after the commit, the test fails with the above error.
-  # It is as if the mergeinfo inheritance happens in the commit step
-  # (I would have expected it to happen in the cp step).
-  #
-  # By the way, the test passes -- as one would expect -- if this
-  # update is put right before the 'svn cp tau tauprime' command
-  # immediately above.
   expected_output = wc.State(wc_dir, {})
   expected_status.tweak(wc_rev='8')
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status,
                                         None, None, None, None, None, True)
+
+  # Make another change on the branch: copy tau to tauprime.  Commit
+  # in r9.
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     os.path.join(wc_dir, 'A_COPY', 'D', 'G',
+                                                  'tau'),
+                                     os.path.join(wc_dir, 'A_COPY', 'D', 'G',
+                                                  'tauprime'))
 
   expected_output = wc.State(wc_dir, {
     'A_COPY/D/G/tauprime' : Item(verb='Adding')
