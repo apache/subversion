@@ -861,6 +861,7 @@ Berkeley DB tables
                 "uuids" : recno(UUID)
                 "locks" : btree(TOKEN -> LOCK)
           "lock-tokens" : btree(PATH -> TOKEN)
+        "checksum-reps" : btree(MD5SUM -> REP)
 
 Syntactic elements
 ------------------
@@ -954,8 +955,8 @@ Representations:
                    KIND ::= "fulltext" | "delta" ;
              
                    SIZE ::= number ;
-               CHECKSUM ::= ("md5" BYTES) ;
-                  BYTES ::= atom ;
+               CHECKSUM ::= ("md5" MD5SUM) ;
+                 MD5SUM ::= atom ;
 
 
 Strings:
@@ -995,7 +996,7 @@ Node origins:
 
                 NODE-ID ::= NODE-REV-ID ;
 
-        
+
 Lexical elements
 ----------------
 

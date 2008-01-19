@@ -45,6 +45,7 @@
 #include "bdb/copies-table.h"
 #include "bdb/reps-table.h"
 #include "bdb/strings-table.h"
+#include "bdb/checksum-reps-table.h"
 
 #include "private/svn_fs_mergeinfo.h"
 #include "private/svn_fs_util.h"
@@ -1202,9 +1203,13 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
                                 trail_t *trail,
                                 apr_pool_t *pool)
 {
+  svn_error_t *err = SVN_NO_ERROR;
   svn_fs_t *fs = file->fs;   /* just for nicer indentation */
   node_revision_t *noderev;
   const char *old_data_key;
+  const char *dup_rep_key;
+  const char *rep_checksum;
+  unsigned char digest[APR_MD5_DIGESTSIZE];
 
   /* Make sure our node is a file. */
   if (file->kind != svn_node_file)
@@ -1226,29 +1231,44 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
   if (! noderev->edit_key)
     return SVN_NO_ERROR;
 
-  if (checksum)
-    {
-      unsigned char digest[APR_MD5_DIGESTSIZE];
-      const char *hex;
+  /* Get our representation's checksum. */
+  SVN_ERR(svn_fs_base__rep_contents_checksum
+          (digest, fs, noderev->edit_key, trail, pool));
+  rep_checksum = svn_md5_digest_to_cstring_display(digest, pool);
 
-      SVN_ERR(svn_fs_base__rep_contents_checksum
-              (digest, fs, noderev->edit_key, trail, pool));
-
-      hex = svn_md5_digest_to_cstring_display(digest, pool);
-      if (strcmp(checksum, hex) != 0)
-        return svn_error_createf
-          (SVN_ERR_CHECKSUM_MISMATCH,
-           NULL,
-           _("Checksum mismatch, rep '%s':\n"
-             "   expected:  %s\n"
-             "     actual:  %s\n"),
-           noderev->edit_key, checksum, hex);
-    }
+  /* If our caller provided a checksum to compare, do so. */
+  if (checksum && (strcmp(checksum, rep_checksum) != 0))
+    return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
+                             _("Checksum mismatch, rep '%s':\n"
+                               "   expected:  %s\n"
+                               "     actual:  %s\n"),
+                             noderev->edit_key, checksum, rep_checksum);
 
   /* Now, we want to delete the old representation and replace it with
      the new.  Of course, we don't actually delete anything until
      everything is being properly referred to by the node-revision
-     skel. */
+     skel.  
+
+     Now, if the result of all this editing is that we've created a
+     representation that describes content already represented
+     immutably in our database, we don't even need to keep these edits.
+     We can simply point our data_key at that pre-existing
+     representation and throw away our work!  */
+  err = svn_fs_bdb__get_checksum_rep(&dup_rep_key, fs, rep_checksum, 
+                                     trail, pool);
+  if (! err)
+    {
+      SVN_ERR(svn_fs_base__delete_rep_if_mutable(fs, noderev->edit_key,
+                                                 txn_id, trail, pool));
+      noderev->edit_key = dup_rep_key;
+    }
+  else if (err && (err->apr_err == SVN_ERR_FS_NO_SUCH_CHECKSUM_REP))
+    {
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+    }
+  SVN_ERR(err);
+
   old_data_key = noderev->data_key;
   noderev->data_key = noderev->edit_key;
   noderev->edit_key = NULL;
@@ -1416,6 +1436,30 @@ svn_fs_base__dag_deltify(dag_node_t *target,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_fs_base__dag_index_data_checksum(dag_node_t *node, 
+                                     trail_t *trail, 
+                                     apr_pool_t *pool)
+{
+  node_revision_t *node_rev;
+  unsigned char digest[APR_MD5_DIGESTSIZE];
+  const char *checksum;
+
+  SVN_ERR(svn_fs_bdb__get_node_revision(&node_rev, trail->fs, node->id,
+                                        trail, pool));
+  if (node_rev->data_key)
+    {
+      SVN_ERR(svn_fs_base__rep_contents_checksum(digest, trail->fs, 
+                                                 node_rev->data_key, 
+                                                 trail, pool));
+      checksum = svn_md5_digest_to_cstring_display(digest, pool);
+      SVN_ERR(svn_fs_bdb__set_checksum_rep(trail->fs, checksum, 
+                                           node_rev->data_key,
+                                           trail, pool));
+    }
+  return SVN_NO_ERROR;
+}
 
 
 
