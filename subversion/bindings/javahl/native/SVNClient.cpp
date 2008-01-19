@@ -881,7 +881,7 @@ void SVNClient::propertySet(const char *path, const char *name,
     SVN_JNI_NULL_PTR_EX(name, "name", );
     SVN_JNI_NULL_PTR_EX(value, "value", );
     svn_string_t *val = svn_string_create(value, requestPool.pool());
-    propertySet(path, name, val, depth, changelists, force, SVN_INVALID_REVNUM);
+    propertySet(path, name, val, depth, changelists, force);
 }
 
 void SVNClient::propertyRemove(const char *path, const char *name,
@@ -890,8 +890,7 @@ void SVNClient::propertyRemove(const char *path, const char *name,
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
     SVN_JNI_NULL_PTR_EX(name, "name", );
-    propertySet(path, name, (svn_string_t *) NULL, depth, changelists, false,
-                SVN_INVALID_REVNUM);
+    propertySet(path, name, (svn_string_t *) NULL, depth, changelists, false);
 }
 
 void SVNClient::diff(const char *target1, Revision &revision1,
@@ -1280,8 +1279,7 @@ jobject SVNClient::createJavaProperty(jobject jthis, const char *path,
 
 void SVNClient::propertySet(const char *path, const char *name,
                             svn_string_t *value, svn_depth_t depth,
-                            StringArray &changelists, bool force,
-                            svn_revnum_t baseRevisionForURL)
+                            StringArray &changelists, bool force)
 {
     svn_commit_info_t *commit_info = NULL;
     Pool requestPool;
@@ -1293,7 +1291,7 @@ void SVNClient::propertySet(const char *path, const char *name,
         return;
 
     SVN_JNI_ERR(svn_client_propset3(&commit_info, name, value, intPath.c_str(),
-                                    depth, force, baseRevisionForURL,
+                                    depth, force, SVN_INVALID_REVNUM,
                                     changelists.array(requestPool),
                                     ctx, requestPool.pool()), );
 }

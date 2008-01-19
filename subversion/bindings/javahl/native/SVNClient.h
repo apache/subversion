@@ -200,8 +200,7 @@ class SVNClient :public SVNBase
   static svn_error_t *checkCancel(void *cancelBaton);
   void propertySet(const char *path, const char *name,
                    svn_string_t *value, svn_depth_t depth,
-                   StringArray &changelists, bool force,
-                   svn_revnum_t baseRevisionForURL);
+                   StringArray &changelists, bool force);
   jobject createJavaProperty(jobject jthis, const char *path,
                              const char *name, svn_string_t *value);
   svn_client_ctx_t *getContext(const char *message);
