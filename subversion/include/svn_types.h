@@ -820,7 +820,7 @@ const char *
 svn_uuid_generate(apr_pool_t *pool);
 
 /**
- * Merge info representing a merge of a range of revisions.
+ * Mergeinfo representing a merge of a range of revisions.
  *
  * @since New in 1.5
  */
