@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -192,6 +192,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_BAD_UUID,
              SVN_ERR_BAD_CATEGORY_START + 8,
              "Bogus UUID")
+
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_BAD_CHECKSUM_KIND,
+             SVN_ERR_BAD_CATEGORY_START + 9,
+             "Unsupported checksum type")
 
   /* xml errors */
 

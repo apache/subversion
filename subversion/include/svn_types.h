@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -936,6 +936,44 @@ svn_inheritance_to_word(svn_mergeinfo_inheritance_t inherit);
  */
 svn_mergeinfo_inheritance_t
 svn_inheritance_from_word(const char *word);
+
+/**
+ * Various types of checksums.
+ *
+ * @since New in 1.5.
+ */
+typedef enum
+{
+  svn_checksum_md5,
+  svn_checksum_sha1
+} svn_checksum_kind_t;
+
+/**
+ * A generic checksum representation.
+ *
+ * @since New in 1.5.
+ */
+typedef struct svn_checksum_t
+{
+  /** The bytes of the checksum. */
+  unsigned char *digest;
+
+  /** The type of the checksum.  This should never be changed by consumers
+   *  of the APIs. */
+  svn_checksum_kind_t kind;
+} svn_checksum_t;
+
+/**
+ * Allocate and initialize a @c svn_checksum_t structure of type @a kind, and
+ * return it as @a *checksum.  @a *checksum is allocated in *pool.  If @a kind
+ * is not recognized, return @c SVN_ERR_BAD_CHECKSUM_KIND.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_checksum_create(svn_checksum_t **checksum,
+                    svn_checksum_kind_t kind,
+                    apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

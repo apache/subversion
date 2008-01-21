@@ -31,6 +31,7 @@
 #include "svn_xml.h"
 #include "svn_pools.h"
 #include "svn_string.h"
+#include "svn_md5.h"
 #include "svn_private_config.h"
 
 #include "fs-loader.h"
@@ -887,10 +888,27 @@ svn_fs_file_length(svn_filesize_t *length_p, svn_fs_root_t *root,
 }
 
 svn_error_t *
-svn_fs_file_md5_checksum(unsigned char digest[], svn_fs_root_t *root,
-                         const char *path, apr_pool_t *pool)
+svn_fs_file_checksum(svn_checksum_t *checksum,
+                     svn_fs_root_t *root,
+                     const char *path,
+                     apr_pool_t *pool)
 {
-  return root->vtable->file_md5_checksum(digest, root, path, pool);
+  return root->vtable->file_checksum(checksum, root, path, pool);
+}
+
+svn_error_t *
+svn_fs_file_md5_checksum(unsigned char digest[],
+                         svn_fs_root_t *root,
+                         const char *path,
+                         apr_pool_t *pool)
+{
+  svn_checksum_t *md5sum;
+  
+  SVN_ERR(svn_checksum_create(&md5sum, svn_checksum_md5, pool));
+  SVN_ERR(svn_fs_file_checksum(md5sum, root, path, pool));
+  memcpy(digest, md5sum->digest, APR_MD5_DIGESTSIZE);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
