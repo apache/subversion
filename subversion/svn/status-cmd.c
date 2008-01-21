@@ -224,9 +224,14 @@ svn_cl__status(apr_getopt_t *os,
   /* If using changelists, convert targets into a set of paths that
      match the specified changelist(s). */
   if (opt_state->changelists)
-    SVN_ERR(svn_cl__changelist_paths(&targets, 
-                                     opt_state->changelists, targets,
-                                     svn_depth_infinity, ctx, pool));
+    {
+      svn_depth_t cl_depth = opt_state->depth;
+      if (cl_depth == svn_depth_unknown)
+        cl_depth = svn_depth_infinity;
+      SVN_ERR(svn_cl__changelist_paths(&targets, 
+                                       opt_state->changelists, targets,
+                                       cl_depth, ctx, pool));
+    }
 
   /* We want our -u statuses to be against HEAD. */
   rev.kind = svn_opt_revision_head;

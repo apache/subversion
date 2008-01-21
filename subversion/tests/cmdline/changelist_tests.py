@@ -811,7 +811,7 @@ test_list = [ None,
               diff_with_changelists,
               propmods_with_changelists,
               revert_with_changelists,
-              XFail(update_with_changelists),
+              update_with_changelists,
              ]
 
 if __name__ == '__main__':
