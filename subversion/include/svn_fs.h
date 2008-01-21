@@ -1488,13 +1488,14 @@ svn_fs_file_length(svn_filesize_t *length_p,
                    apr_pool_t *pool);
 
 
-/** Put the MD5 checksum of file @a path into @a digest, which points
- * to @c APR_MD5_DIGESTSIZE bytes of storage.  Use @a pool only for temporary
- * allocations.
+/** Put the checksum of file @a path into @a checksum->checksum, which has
+ * been previously allocated with svn_checksum_create().  The type of the
+ * checksum returned will be determined by @a checksum->kind.  Use @a pool
+ * only for temporary allocations.
  *
  * If the filesystem does not have a prerecorded checksum for @a path,
- * do not calculate a checksum dynamically, just put all 0's into @a
- * digest.  (By convention, the all-zero checksum is considered to
+ * and do not calculate a checksum dynamically, just put all 0's into
+ * @a digest.  (By convention, the all-zero checksum is considered to
  * match any checksum.)
  *
  * Notes:
@@ -1518,6 +1519,21 @@ svn_fs_file_length(svn_filesize_t *length_p,
  * Internally, of course, the filesystem checksums everything, because
  * it has access to the lowest level storage forms: strings behind
  * representations.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_fs_file_checksum(svn_checksum_t *checksum,
+                     svn_fs_root_t *root,
+                     const char *path,
+                     apr_pool_t *pool);
+
+/**
+ * Same as svn_fs_file_checksum(), only always put the MD5 checksum into of
+ * file @path into @a digest, which should point to @c APR_MD5_DIGESTSIZE bytes
+ * of storage.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_fs_file_md5_checksum(unsigned char digest[],

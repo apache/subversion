@@ -1,7 +1,7 @@
 /* tree.c : tree-like filesystem, built on DAG filesystem
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -38,6 +38,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_md5.h"
+#include "svn_sha1.h"
 #include "svn_mergeinfo.h"
 #include "svn_fs.h"
 #include "svn_sorts.h"
@@ -3122,7 +3123,7 @@ struct file_checksum_args
 {
   svn_fs_root_t *root;
   const char *path;
-  unsigned char *digest;  /* OUT parameter, APR_MD5_DIGESTSIZE bytes long */
+  svn_checksum_t *checksum;  /* OUT parameter */
 };
 
 static svn_error_t *
@@ -3133,21 +3134,29 @@ txn_body_file_checksum(void *baton,
   dag_node_t *file;
 
   SVN_ERR(get_dag(&file, args->root, args->path, trail, trail->pool));
-  return svn_fs_base__dag_file_checksum(args->digest, file,
-                                        trail, trail->pool);
+
+  if (args->checksum->kind == svn_checksum_md5)
+    return svn_fs_base__dag_file_checksum(args->checksum->digest, file,
+                                          trail, trail->pool);
+  else if (args->checksum->kind == svn_checksum_sha1)
+    memset(args->checksum->digest, 0, APR_SHA1_DIGESTSIZE);
+  else
+    return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
+
+  return SVN_NO_ERROR;  
 }
 
 static svn_error_t *
-base_file_md5_checksum(unsigned char digest[],
-                       svn_fs_root_t *root,
-                       const char *path,
-                       apr_pool_t *pool)
+base_file_checksum(svn_checksum_t *checksum,
+                   svn_fs_root_t *root,
+                   const char *path,
+                   apr_pool_t *pool)
 {
   struct file_checksum_args args;
 
   args.root = root;
   args.path = path;
-  args.digest = digest;
+  args.checksum = checksum;
   SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_file_checksum, &args,
                                  pool));
 
@@ -4603,7 +4612,7 @@ static root_vtable_t root_vtable = {
   base_copy,
   base_revision_link,
   base_file_length,
-  base_file_md5_checksum,
+  base_file_checksum,
   base_file_contents,
   base_make_file,
   base_apply_textdelta,
