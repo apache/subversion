@@ -157,7 +157,7 @@ class SVNClient :public SVNBase
                       svn_depth_t depth, ChangelistCallback *callback);
   void status(const char *path, svn_depth_t depth, bool onServer,
               bool getAll, bool noIgnore, bool ignoreExternals,
-              StatusCallback *callback);
+              StringArray &changelists, StatusCallback *callback);
   void list(const char *url, Revision &revision, Revision &pegRevision,
             svn_depth_t depth, int direntFields, bool fetchLocks,
             ListCallback *callback);

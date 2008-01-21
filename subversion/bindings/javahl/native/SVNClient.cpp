@@ -154,7 +154,8 @@ void SVNClient::list(const char *url, Revision &revision,
 void
 SVNClient::status(const char *path, svn_depth_t depth,
                   bool onServer, bool getAll, bool noIgnore,
-                  bool ignoreExternals, StatusCallback *callback)
+                  bool ignoreExternals, StringArray &changelists,
+                  StatusCallback *callback)
 {
     Pool requestPool;
     svn_revnum_t youngest = SVN_INVALID_REVNUM;
@@ -177,6 +178,7 @@ SVNClient::status(const char *path, svn_depth_t depth,
                                    depth,
                                    getAll, onServer, noIgnore,
                                    ignoreExternals,
+                                   changelists.array(requestPool),
                                    ctx, requestPool.pool()), );
 }
 
@@ -1853,7 +1855,7 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
     svn_error_t *err;
     err = svn_client_status3(NULL, intPath.c_str(), &rev, analyze_status,
                              &sb, svn_depth_infinity, TRUE, FALSE, FALSE,
-                             FALSE, &ctx, requestPool.pool());
+                             FALSE, NULL, &ctx, requestPool.pool());
     if (err && (err->apr_err == SVN_ERR_CANCELLED))
         svn_error_clear(err);
     else

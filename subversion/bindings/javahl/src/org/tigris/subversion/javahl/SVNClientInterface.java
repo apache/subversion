@@ -132,17 +132,18 @@ public interface SVNClientInterface
     /**
      * List a directory or file of the working copy.
      *
-     * @param path      Path to explore.
-     * @param depth     How deep to recurse into subdirectories.
-     * @param onServer  Request status information from server.
-     * @param getAll    get status for uninteresting (unchanged) files.
-     * @param noIgnore  get status for normaly ignored files and directories.
+     * @param path        Path to explore.
+     * @param depth       How deep to recurse into subdirectories.
+     * @param onServer    Request status information from server.
+     * @param getAll      get status for uninteresting (unchanged) files.
+     * @param noIgnore    get status for normaly ignored files and directories.
      * @param ignoreExternals if externals are ignored during status
+     * @param changelists changelists to filter by
      * @since 1.5
      */
     void status(String path, int depth, boolean onServer,
                 boolean getAll, boolean noIgnore, boolean ignoreExternals,
-                StatusCallback callback)
+                String[] changelists, StatusCallback callback)
             throws ClientException;
 
     /**
