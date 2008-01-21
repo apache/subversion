@@ -1699,6 +1699,12 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
  * definition, and with @c svn_wc_notify_status_completed
  * after each.
  *
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items whose statuses are
+ * reported; that is, don't report status about any item unless
+ * it's a member of one of those changelists.  If @a changelists is
+ * empty (or altogether @c NULL), no changelist filtering occurs.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
@@ -1712,13 +1718,15 @@ svn_client_status3(svn_revnum_t *result_rev,
                    svn_boolean_t update,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_externals,
+                   const apr_array_header_t *changelists,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 /**
- * Like svn_client_status3(), except with @a recurse instead of @a depth.
- * If @a recurse is TRUE, behave as if for @c svn_depth_infinity; else
- * if @a recurse is FALSE, behave as if for @c svn_depth_immediates.
+ * Like svn_client_status3(), except with @a changelists passed as @c
+ * NULL, and with @a recurse instead of @a depth.  If @a recurse is
+ * TRUE, behave as if for @c svn_depth_infinity; else if @a recurse is
+ * FALSE, behave as if for @c svn_depth_immediates.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.
