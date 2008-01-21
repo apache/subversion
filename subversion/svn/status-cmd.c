@@ -192,6 +192,7 @@ do_status(svn_cl__opt_state_t *opt_state,
                              opt_state->update,
                              opt_state->no_ignore,
                              opt_state->ignore_externals,
+                             opt_state->changelists,
                              ctx, pool));
 
   if (opt_state->xml)
@@ -220,18 +221,6 @@ svn_cl__status(apr_getopt_t *os,
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
-
-  /* If using changelists, convert targets into a set of paths that
-     match the specified changelist(s). */
-  if (opt_state->changelists)
-    {
-      svn_depth_t cl_depth = opt_state->depth;
-      if (cl_depth == svn_depth_unknown)
-        cl_depth = svn_depth_infinity;
-      SVN_ERR(svn_cl__changelist_paths(&targets, 
-                                       opt_state->changelists, targets,
-                                       cl_depth, ctx, pool));
-    }
 
   /* We want our -u statuses to be against HEAD. */
   rev.kind = svn_opt_revision_head;
