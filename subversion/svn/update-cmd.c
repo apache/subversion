@@ -55,9 +55,14 @@ svn_cl__update(apr_getopt_t *os,
   /* If using changelists, convert targets into a set of paths that
      match the specified changelist(s). */
   if (opt_state->changelists)
-    SVN_ERR(svn_cl__changelist_paths(&targets, 
-                                     opt_state->changelists, targets,
-                                     svn_depth_infinity, ctx, pool));
+    {
+      svn_depth_t cl_depth = opt_state->depth;
+      if (cl_depth == svn_depth_unknown)
+        cl_depth = svn_depth_infinity;
+      SVN_ERR(svn_cl__changelist_paths(&targets, 
+                                       opt_state->changelists, targets,
+                                       cl_depth, ctx, pool));
+    }
 
   if (! opt_state->quiet)
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
