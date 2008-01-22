@@ -1528,7 +1528,7 @@ txn_body_txn_deltify(void *baton, trail_t *trail)
 
   /* If this isn't a directory, record a mapping of TGT_NODE's data
      checksum to its representation key. */
-  SVN_ERR(svn_fs_base__dag_index_data_checksum(tgt_node, trail, trail->pool));
+  SVN_ERR(svn_fs_base__dag_index_checksums(tgt_node, trail, trail->pool));
 
   return SVN_NO_ERROR;
 }
