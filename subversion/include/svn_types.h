@@ -848,6 +848,15 @@ svn_merge_range_t *
 svn_merge_range_dup(svn_merge_range_t *range, apr_pool_t *pool);
 
 /**
+ * Returns true if the changeset committed in revision @a rev is one
+ * of the changesets in the range @a range.
+ *
+ * @since New in 1.5.
+ */
+svn_boolean_t
+svn_merge_range_contains_rev(svn_merge_range_t *range, svn_revnum_t rev);
+
+/**
  * The three ways to request mergeinfo affecting a given path.
  *
  * @since New in 1.5.

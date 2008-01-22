@@ -108,6 +108,26 @@ svn_error_t *svn_fs_fs__dag_get_predecessor_count(int *count,
                                                   dag_node_t *node,
                                                   apr_pool_t *pool);
 
+/* Set *COUNT to the number of node under NODE (inclusive) with
+   svn:mergeinfo properties, allocating from POOL.  */
+svn_error_t *svn_fs_fs__dag_get_mergeinfo_count(apr_int64_t *count,
+                                                dag_node_t *node,
+                                                apr_pool_t *pool);
+
+/* Set *DO_THEY to a flag indicating whether or not NODE is a
+   directory with at least one descendant (not including itself) with
+   svn:mergeinfo. */
+svn_error_t *
+svn_fs_fs__dag_has_descendants_with_mergeinfo(svn_boolean_t *do_they,
+                                              dag_node_t *node,
+                                              apr_pool_t *pool);
+
+/* Set *HAS_MERGEINFO to a flag indicating whether or not NODE itself
+   has svn:mergeinfo set on it. */
+svn_error_t *
+svn_fs_fs__dag_has_mergeinfo(svn_boolean_t *has_mergeinfo,
+                             dag_node_t *node,
+                             apr_pool_t *pool);
 
 /* Return non-zero IFF NODE is currently mutable. */
 svn_boolean_t svn_fs_fs__dag_check_mutable(dag_node_t *node);
@@ -131,6 +151,18 @@ svn_error_t *svn_fs_fs__dag_get_proplist(apr_hash_t **proplist_p,
 svn_error_t *svn_fs_fs__dag_set_proplist(dag_node_t *node,
                                          apr_hash_t *proplist,
                                          apr_pool_t *pool);
+
+/* Increment the mergeinfo_count field on NODE by INCREMENT.  The node
+   being changed must be mutable.  */
+svn_error_t *svn_fs_fs__dag_increment_mergeinfo_count(dag_node_t *node,
+                                                      apr_int64_t increment,
+                                                      apr_pool_t *pool);
+
+/* Set the has-mergeinfo flag on NODE to HAS_MERGEINFO.  The node
+   being changed must be mutable.  */
+svn_error_t *svn_fs_fs__dag_set_has_mergeinfo(dag_node_t *node,
+                                              svn_boolean_t has_mergeinfo,
+                                              apr_pool_t *pool);
 
 
 

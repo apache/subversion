@@ -2515,6 +2515,31 @@ svn_client_merge(const char *source1,
                  apr_pool_t *pool);
 
 
+
+/**
+ * Perform a reintegration merge of @a source into @target_wc_path.
+ * @a target_wc_path must be a single-revision, @c svn_depth_infinity,
+ * pristine, unswitched working copy -- in other words, it must
+ * reflect a single revision tree, the "target".  The mergeinfo on @a
+ * source must reflect that all of the target has been merged into it.
+ * Then this behaves like a merge with svn_client_merge3() from the
+ * target's URL to the source.
+ *
+ * All other options are handled identically to svn_client_merge3().
+ * The depth of the merge is always @c svn_depth_infinity.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_merge_reintegrate(const char *source,
+                             const svn_opt_revision_t *peg_revision,
+                             const char *target_wcpath,
+                             svn_boolean_t force,
+                             svn_boolean_t dry_run,
+                             const apr_array_header_t *merge_options,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *pool);
+
 /**
  * Merge the changes between the filesystem object @a source in peg
  * revision @a peg_revision, as it changed between the ranges described
