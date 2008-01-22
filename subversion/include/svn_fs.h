@@ -30,6 +30,7 @@
 #include "svn_error.h"
 #include "svn_delta.h"
 #include "svn_io.h"
+#include "svn_mergeinfo.h"
 
 
 #ifdef __cplusplus
