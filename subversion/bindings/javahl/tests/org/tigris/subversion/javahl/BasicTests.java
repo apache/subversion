@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -645,7 +645,7 @@ public class BasicTests extends SVNTests
         client.propertyCreate(itemPath, "cqcq", "qrz", false, false);
         ProplistCallbackImpl callback = new ProplistCallbackImpl();
 
-        client.properties(itemPath, null, null, Depth.empty, callback);
+        client.properties(itemPath, null, null, Depth.empty, null, callback);
         Map propMap = callback.getProperties(itemPath);
         Iterator it = propMap.keySet().iterator();
 
@@ -2084,7 +2084,7 @@ public class BasicTests extends SVNTests
             {thisTest.getWCPath() + "/iota"};
 
         // Add a path to a changelist, and check to see if it got added
-        client.addToChangelist(paths, changelistName);
+        client.addToChangelist(paths, changelistName, Depth.infinity, null);
         String[] cl = new String[1];
         client.getChangelists(thisTest.getWCPath(), changelists,
                               Depth.infinity, clCallback);
@@ -2097,7 +2097,7 @@ public class BasicTests extends SVNTests
 
         // Remove the path from the changelist, and check to see if the path is
         // actually removed.
-        client.removeFromChangelist(paths, changelistName);
+        client.removeFromChangelists(paths, Depth.infinity, changelists);
         clCallback.clear();
         client.getChangelists(thisTest.getWCPath(), changelists,
                               Depth.infinity, clCallback);
@@ -2497,7 +2497,7 @@ public class BasicTests extends SVNTests
             client.diff(thisTest.getUrl() + "/iota", Revision.HEAD,
                         thisTest.getUrl() + "/A/mu", Revision.HEAD,
                         thisTest.getUrl(), diffOutput.getPath(),
-                        Depth.infinity, true, true, false);
+                        Depth.infinity, null, true, true, false);
 
             fail("This test should fail becaus the relativeToDir parameter " +
                  "does not work with URLs");
@@ -2512,7 +2512,7 @@ public class BasicTests extends SVNTests
         {
             client.diff(iotaPath, Revision.BASE, iotaPath, Revision.WORKING,
                         "/non/existent/path", diffOutput.getPath(),
-                        Depth.infinity, true, true, false);
+                        Depth.infinity, null, true, true, false);
 
             fail("This test should fail because iotaPath is not a child of " +
                  "the relativeToDir parameter");
@@ -2533,7 +2533,8 @@ public class BasicTests extends SVNTests
 
         client.propertySet(aPath, "testprop", "Test property value.", false);
         client.diff(aPath, Revision.BASE, aPath, Revision.WORKING, wcPath,
-                    diffOutput.getPath(), Depth.infinity, true, true, false);
+                    diffOutput.getPath(), Depth.infinity, null, true, true,
+                    false);
         assertFileContentsEquals("Unexpected diff output in file '" +
                                  diffOutput.getPath() + '\'',
                                  expectedDiffOutput, diffOutput);
@@ -2546,7 +2547,8 @@ public class BasicTests extends SVNTests
 
         client.propertySet(aPath, "testprop", "Test property value.", false);
         client.diff(aPath, Revision.BASE, aPath, Revision.WORKING, aPath,
-                    diffOutput.getPath(), Depth.infinity, true, true, false);
+                    diffOutput.getPath(), Depth.infinity, null, true, true,
+                    false);
         assertFileContentsEquals("Unexpected diff output in file '" +
                                  diffOutput.getPath() + '\'',
                                  expectedDiffOutput, diffOutput);
@@ -2628,9 +2630,9 @@ public class BasicTests extends SVNTests
                     expectedDiffBody;
                 try 
                 {
-                    client.diff(iotaPath, Revision.BASE, iotaPath, Revision.WORKING,
-                                wcPath, diffOutput.getPath(), Depth.infinity, true, true,
-                                false);
+                    client.diff(iotaPath, Revision.BASE, iotaPath,
+                                Revision.WORKING, wcPath, diffOutput.getPath(),
+                                Depth.infinity, null, true, true, false);
                     assertFileContentsEquals(assertPrefix +
                                              diffOutput.getPath() + '\'',
                                              expectedDiffOutput, diffOutput);
@@ -2644,9 +2646,10 @@ public class BasicTests extends SVNTests
                 try 
                 {
                     // Test svn diff with a relative path and trailing slash.
-                    client.diff(iotaPath, Revision.BASE, iotaPath, Revision.WORKING,
-                                wcPath + "/", diffOutput.getPath(), Depth.infinity, true, true,
-                                false);
+                    client.diff(iotaPath, Revision.BASE, iotaPath,
+                                Revision.WORKING, wcPath + "/",
+                                diffOutput.getPath(), Depth.infinity, null,
+                                true, true, false);
                     assertFileContentsEquals(assertPrefix +
                                              diffOutput.getPath() + '\'',
                                              expectedDiffOutput, diffOutput);
@@ -2687,7 +2690,7 @@ public class BasicTests extends SVNTests
         // Perform a recursive diff summary, ignoring ancestry.
         client.diffSummarize(thisTest.getUrl(), new Revision.Number(0),
                              thisTest.getUrl(), Revision.HEAD, Depth.infinity,
-                             false, summaries);
+                             null, false, summaries);
         assertExpectedDiffSummaries(summaries);
 
         summaries.clear();
@@ -2695,7 +2698,7 @@ public class BasicTests extends SVNTests
         // ignoring ancestry.
         client.diffSummarize(thisTest.getUrl(), Revision.HEAD,
                              new Revision.Number(0), Revision.HEAD,
-                             Depth.infinity, false, summaries);
+                             Depth.infinity, null, false, summaries);
         assertExpectedDiffSummaries(summaries);
     }
 
@@ -2904,7 +2907,7 @@ public class BasicTests extends SVNTests
         // Attempt to update backup WC with "--force"
         assertEquals("wrong revision from update",
                      client.update(backupTest.getWCPath(),
-                                   null, Depth.infinity, false, true),
+                                   null, Depth.infinity, false, false, true),
                      2);
 
         // ----- TEST SWITCH -----
@@ -2939,7 +2942,7 @@ public class BasicTests extends SVNTests
         client.doSwitch(backupTest.getWCPath() + "/A/B/E",
                         backupTest.getUrl() + "/A/D/H",
                         Revision.HEAD, Revision.HEAD, Depth.infinity,
-                        false, true);
+                        false, false, true);
 
         backupTest.getWc().setItemIsSwitched("A/B/E",true);
         backupTest.getWc().removeItem("A/B/E/alpha");

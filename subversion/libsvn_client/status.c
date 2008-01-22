@@ -32,6 +32,7 @@
 #include "svn_delta.h"
 #include "svn_client.h"
 #include "svn_error.h"
+#include "svn_hash.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
@@ -46,7 +47,8 @@
 struct status_baton
 {
   svn_boolean_t deleted_in_repos;          /* target is deleted in repos */
-  svn_wc_status_func2_t real_status_func;   /* real status function */
+  apr_hash_t *changelist_hash;             /* keys are changelist names */
+  svn_wc_status_func2_t real_status_func;  /* real status function */
   void *real_status_baton;                 /* real status baton */
 };
 
@@ -68,6 +70,12 @@ tweak_status(void *baton,
      through here. */
   if (sb->deleted_in_repos)
     status->repos_text_status = svn_wc_status_deleted;
+
+  /* If the status item has an entry, but doesn't belong to one of the
+     changelists our caller is interested in, we filter our this status
+     transmission.  */
+  if (! SVN_WC__CL_MATCH(sb->changelist_hash, status->entry))
+    return;
 
   /* Call the real status function/baton. */
   sb->real_status_func(sb->real_status_baton, path, status);
@@ -210,6 +218,7 @@ svn_client_status3(svn_revnum_t *result_rev,
                    svn_boolean_t update,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_externals,
+                   const apr_array_header_t *changelists,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -222,12 +231,16 @@ svn_client_status3(svn_revnum_t *result_rev,
   struct status_baton sb;
   apr_array_header_t *ignores;
   svn_error_t *err;
-
+  apr_hash_t *changelist_hash = NULL;
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
+
+  if (changelists && changelists->nelts)
+    SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
 
   sb.real_status_func = status_func;
   sb.real_status_baton = status_baton;
   sb.deleted_in_repos = FALSE;
+  sb.changelist_hash = changelist_hash;
 
   /* Try to open the target directory. If the target is a file or an
      unversioned directory, open the parent directory instead */
@@ -412,8 +425,7 @@ svn_client_status2(svn_revnum_t *result_rev,
   return svn_client_status3(result_rev, path, revision,
                             status_func, status_baton,
                             SVN_DEPTH_INFINITY_OR_IMMEDIATES(recurse),
-                            get_all, update,
-                            no_ignore, ignore_externals,
+                            get_all, update, no_ignore, ignore_externals, NULL,
                             ctx, pool);
 }
 

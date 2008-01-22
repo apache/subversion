@@ -5118,6 +5118,11 @@ def mergeinfo_elision(sbox):
                                         None,
                                         wc_dir)
 
+  # Update A_COPY to get all paths to the same working revision.
+  svntest.actions.run_and_verify_svn(None, ["At revision 7.\n"], [],
+                                     'up', wc_dir)
+  wc_status.tweak(wc_rev=7)
+
   # Merge r4 into A_COPY/D/G.
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
@@ -5126,10 +5131,10 @@ def mergeinfo_elision(sbox):
     'rho' : Item(status='U ')
     })
   expected_status = wc.State(short_G_COPY_path, {
-    ''    : Item(status=' M', wc_rev=2),
-    'pi'  : Item(status='  ', wc_rev=2),
-    'rho' : Item(status='M ', wc_rev=2),
-    'tau' : Item(status='  ', wc_rev=2),
+    ''    : Item(status=' M', wc_rev=7),
+    'pi'  : Item(status='  ', wc_rev=7),
+    'rho' : Item(status='M ', wc_rev=7),
+    'tau' : Item(status='  ', wc_rev=7),
     })
   expected_disk = wc.State('', {
     ''    : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:4'}),
@@ -5163,25 +5168,25 @@ def mergeinfo_elision(sbox):
     'D/H/omega' : Item(status='U ')
     })
   expected_status = wc.State(short_A_COPY_path, {
-    ''          : Item(status=' M', wc_rev=2),
-    'B'         : Item(status='  ', wc_rev=2),
-    'mu'        : Item(status='  ', wc_rev=2),
-    'B/E'       : Item(status='  ', wc_rev=2),
-    'B/E/alpha' : Item(status='  ', wc_rev=2),
+    ''          : Item(status=' M', wc_rev=7),
+    'B'         : Item(status='  ', wc_rev=7),
+    'mu'        : Item(status='  ', wc_rev=7),
+    'B/E'       : Item(status='  ', wc_rev=7),
+    'B/E/alpha' : Item(status='  ', wc_rev=7),
     'B/E/beta'  : Item(status=' M', wc_rev=7),
-    'B/lambda'  : Item(status='  ', wc_rev=2),
-    'B/F'       : Item(status='  ', wc_rev=2),
-    'C'         : Item(status='  ', wc_rev=2),
-    'D'         : Item(status='  ', wc_rev=2),
-    'D/G'       : Item(status='  ', wc_rev=2),
-    'D/G/pi'    : Item(status='  ', wc_rev=2),
-    'D/G/rho'   : Item(status='M ', wc_rev=2),
-    'D/G/tau'   : Item(status='  ', wc_rev=2),
-    'D/gamma'   : Item(status='  ', wc_rev=2),
-    'D/H'       : Item(status='  ', wc_rev=2),
-    'D/H/chi'   : Item(status='  ', wc_rev=2),
-    'D/H/psi'   : Item(status='  ', wc_rev=2),
-    'D/H/omega' : Item(status='M ', wc_rev=2),
+    'B/lambda'  : Item(status='  ', wc_rev=7),
+    'B/F'       : Item(status='  ', wc_rev=7),
+    'C'         : Item(status='  ', wc_rev=7),
+    'D'         : Item(status='  ', wc_rev=7),
+    'D/G'       : Item(status='  ', wc_rev=7),
+    'D/G/pi'    : Item(status='  ', wc_rev=7),
+    'D/G/rho'   : Item(status='M ', wc_rev=7),
+    'D/G/tau'   : Item(status='  ', wc_rev=7),
+    'D/gamma'   : Item(status='  ', wc_rev=7),
+    'D/H'       : Item(status='  ', wc_rev=7),
+    'D/H/chi'   : Item(status='  ', wc_rev=7),
+    'D/H/psi'   : Item(status='  ', wc_rev=7),
+    'D/H/omega' : Item(status='M ', wc_rev=7),
     })
   expected_disk = wc.State('', {
     ''          : Item(props={SVN_PROP_MERGE_INFO : '/A:4-6'}),
@@ -7226,16 +7231,21 @@ def no_mergeinfo_from_no_op_merge(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
                                         None, wc_dir)
 
+  # Update A_COPY to get all paths to the same working revision.
+  svntest.actions.run_and_verify_svn(None, ["At revision 7.\n"], [],
+                                     'up', wc_dir)
+  wc_status.tweak(wc_rev=7)
+
   # Merge r4 into A_COPY/D/G.
   short_G_COPY_path = shorten_path_kludge(G_COPY_path)
   expected_output = wc.State(short_G_COPY_path, {
     'rho' : Item(status='U ')
     })
   expected_status = wc.State(short_G_COPY_path, {
-    ''         : Item(status=' M', wc_rev=2),
-    'pi'       : Item(status='  ', wc_rev=2),
-    'rho'      : Item(status='M ', wc_rev=2),
-    'tau'      : Item(status='  ', wc_rev=2),
+    ''         : Item(status=' M', wc_rev=7),
+    'pi'       : Item(status='  ', wc_rev=7),
+    'rho'      : Item(status='M ', wc_rev=7),
+    'tau'      : Item(status='  ', wc_rev=7),
     })
   expected_disk = wc.State('', {
     ''         : Item(props={SVN_PROP_MERGE_INFO : '/A/D/G:4'}),
@@ -7327,22 +7337,27 @@ def no_mergeinfo_from_no_op_merge(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
                                         None, wc_dir)
 
+  # Update A_COPY to get all paths to the same working revision.
+  svntest.actions.run_and_verify_svn(None, ["At revision 9.\n"], [],
+                                     'up', wc_dir)
+  wc_status.tweak(wc_rev=9)
+
   # Merge r5:9 --depth immediates to A_COPY/D
   short_D_COPY_path = shorten_path_kludge(D_COPY_path)
   expected_output = wc.State(short_D_COPY_path, {
     'H' : Item(status=' U'),
     })
   expected_status = wc.State(short_D_COPY_path, {
-    ''        : Item(status=' M', wc_rev=8),
-    'H'       : Item(status=' M', wc_rev=8),
-    'H/chi'   : Item(status='  ', wc_rev=8),
-    'H/omega' : Item(status='  ', wc_rev=8),
-    'H/psi'   : Item(status='  ', wc_rev=8),
-    'G'       : Item(status=' M', wc_rev=8),
-    'G/pi'    : Item(status='  ', wc_rev=8),
-    'G/rho'   : Item(status='  ', wc_rev=8),
-    'G/tau'   : Item(status='  ', wc_rev=8),
-    'gamma'   : Item(status='  ', wc_rev=8),
+    ''        : Item(status=' M', wc_rev=9),
+    'H'       : Item(status=' M', wc_rev=9),
+    'H/chi'   : Item(status='  ', wc_rev=9),
+    'H/omega' : Item(status='  ', wc_rev=9),
+    'H/psi'   : Item(status='  ', wc_rev=9),
+    'G'       : Item(status=' M', wc_rev=9),
+    'G/pi'    : Item(status='  ', wc_rev=9),
+    'G/rho'   : Item(status='  ', wc_rev=9),
+    'G/tau'   : Item(status='  ', wc_rev=9),
+    'gamma'   : Item(status='  ', wc_rev=9),
     })
   expected_disk = wc.State('', {
     ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/D:6-9'}),
@@ -7395,6 +7410,12 @@ def no_mergeinfo_from_no_op_merge(sbox):
   #
   # Merge r3:8 A_COPY/D/H and A_COPY/D/G should
   # both retain mergeinfo for r9*
+
+  # Update A_COPY to get all paths to the same working revision.
+  svntest.actions.run_and_verify_svn(None, ["At revision 10.\n"], [],
+                                     'up', wc_dir)
+  expected_status.tweak(wc_rev=10)
+
   short_D_COPY_path = shorten_path_kludge(D_COPY_path)
   expected_output = wc.State(short_D_COPY_path, {
     'H/omega' : Item(status='U '),

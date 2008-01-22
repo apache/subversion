@@ -87,16 +87,16 @@ typedef struct svn_error_t
 /** The various types of nodes in the Subversion filesystem. */
 typedef enum
 {
-  /* absent */
+  /** absent */
   svn_node_none,
 
-  /* regular file */
+  /** regular file */
   svn_node_file,
 
-  /* directory */
+  /** directory */
   svn_node_dir,
 
-  /* something's here, but we don't know what */
+  /** something's here, but we don't know what */
   svn_node_unknown
 } svn_node_kind_t;
 
@@ -820,7 +820,7 @@ const char *
 svn_uuid_generate(apr_pool_t *pool);
 
 /**
- * Merge info representing a merge of a range of revisions.
+ * Mergeinfo representing a merge of a range of revisions.
  *
  * @since New in 1.5
  */

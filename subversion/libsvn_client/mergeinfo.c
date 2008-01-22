@@ -58,7 +58,7 @@ svn_client__parse_mergeinfo(apr_hash_t **mergeinfo,
      ### svn_client__get_prop_from_wc(). */
   SVN_ERR(svn_client__get_prop_from_wc(props, SVN_PROP_MERGEINFO,
                                        wcpath, pristine, entry, adm_access,
-                                       svn_depth_empty, ctx, pool));
+                                       svn_depth_empty, NULL, ctx, pool));
   propval = apr_hash_get(props, wcpath, APR_HASH_KEY_STRING);
   if (propval)
     SVN_ERR(svn_mergeinfo_parse(mergeinfo, propval->data, pool));
@@ -139,6 +139,7 @@ svn_client__get_wc_mergeinfo(apr_hash_t **mergeinfo,
   const char *walk_path = "";
   apr_hash_t *wc_mergeinfo;
   svn_boolean_t switched;
+  svn_revnum_t base_revision = entry->revision;
 
   if (limit_path)
     SVN_ERR(svn_path_get_absolute(&limit_path, limit_path, pool));
@@ -222,6 +223,13 @@ svn_client__get_wc_mergeinfo(apr_hash_t **mergeinfo,
             }
 
           SVN_ERR(svn_wc_entry(&entry, wcpath, adm_access, FALSE, pool));
+
+          /* Look in WCPATH's parents only if the parents share the same
+             working revision. */
+          if (entry->revision != base_revision)
+            {
+              break;
+            }
 
           if (entry)
             /* We haven't yet risen above the root of the WC. */
@@ -364,7 +372,7 @@ svn_client__get_wc_or_repos_mergeinfo(apr_hash_t **target_mergeinfo,
           SVN_ERR(svn_client__get_prop_from_wc(props, SVN_PROP_MERGEINFO,
                                                target_wcpath, TRUE, entry,
                                                adm_access, svn_depth_empty,
-                                               ctx, pool));
+                                               NULL, ctx, pool));
           if (apr_hash_get(props, target_wcpath, APR_HASH_KEY_STRING) == NULL)
             {
               const char *repos_rel_path;

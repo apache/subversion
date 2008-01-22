@@ -82,6 +82,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             const char *path,
                             const svn_opt_revision_t *revision,
                             svn_depth_t depth,
+                            svn_boolean_t depth_is_sticky,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
                             svn_boolean_t *timestamp_sleep,
@@ -115,6 +116,10 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
 
+  /* An unknown depth can't be sticky. */
+  if (depth == svn_depth_unknown)
+    depth_is_sticky = FALSE;
+  
   /* ### Ah, the irony.  We'd like to base our levels_to_lock on the
      ### depth we're going to use for the update.  But that may depend
      ### on the depth in the working copy, which we can't discover
@@ -203,7 +208,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */
   SVN_ERR(svn_wc_get_update_editor3(&revnum, adm_access, target,
-                                    use_commit_times, depth,
+                                    use_commit_times, depth, depth_is_sticky,
                                     allow_unver_obstructions,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
@@ -287,6 +292,7 @@ svn_client_update3(apr_array_header_t **result_revs,
                    const apr_array_header_t *paths,
                    const svn_opt_revision_t *revision,
                    svn_depth_t depth,
+                   svn_boolean_t depth_is_sticky,
                    svn_boolean_t ignore_externals,
                    svn_boolean_t allow_unver_obstructions,
                    svn_client_ctx_t *ctx,
@@ -310,8 +316,8 @@ svn_client_update3(apr_array_header_t **result_revs,
       if (ctx->cancel_func && (err = ctx->cancel_func(ctx->cancel_baton)))
         break;
 
-      err = svn_client__update_internal(&result_rev, path, revision,
-                                        depth, ignore_externals,
+      err = svn_client__update_internal(&result_rev, path, revision, depth, 
+                                        depth_is_sticky, ignore_externals,
                                         allow_unver_obstructions,
                                         &sleep, TRUE, ctx, subpool);
       if (err && err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
@@ -350,7 +356,7 @@ svn_client_update2(apr_array_header_t **result_revs,
                    apr_pool_t *pool)
 {
   return svn_client_update3(result_revs, paths, revision,
-                            SVN_DEPTH_INFINITY_OR_FILES(recurse),
+                            SVN_DEPTH_INFINITY_OR_FILES(recurse), FALSE,
                             ignore_externals, FALSE, ctx, pool);
 }
 
@@ -364,5 +370,6 @@ svn_client_update(svn_revnum_t *result_rev,
 {
   return svn_client__update_internal(result_rev, path, revision,
                                      SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                                     FALSE, FALSE, NULL, TRUE, ctx, pool);
+                                     FALSE, FALSE, FALSE, NULL, 
+                                     TRUE, ctx, pool);
 }

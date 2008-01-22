@@ -68,4 +68,4 @@ svn_error_t *svn_fs_bdb__delete_node_origin(svn_fs_t *fs,
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_FS_TXN_TABLE_H */
+#endif /* SVN_LIBSVN_FS_NODE_ORIGINS_TABLE_H */
