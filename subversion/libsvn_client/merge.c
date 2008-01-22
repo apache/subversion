@@ -5318,6 +5318,7 @@ calculate_left_hand_side(const char **url_left,
       /* TODO(reint): It would be even better to print out mergeinfo_catalog
          here.  Is there a helper function for that? */ 
     }
+  return SVN_NO_ERROR;
 }
 
 
