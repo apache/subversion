@@ -217,31 +217,33 @@ is_valid_node_revision_header_skel(skel_t *skel, skel_t **kind_p)
   /* set the *KIND_P pointer. */
   *kind_p = skel->children;
 
-  /* without predecessor... */
-  if ((len == 2)
-      && skel->children->is_atom
-      && skel->children->next->is_atom
-      && (skel->children->next->data[0] == '/'))
-    return TRUE;
+  /* check for valid lengths. */
+  if (! ((len == 2) || (len == 3) || (len == 4) || (len == 6)))
+    return FALSE;
 
-  /* or with predecessor... */
-  if ((len == 3)
-      && skel->children->is_atom
-      && skel->children->next->is_atom
-      && (skel->children->next->data[0] == '/')
-      && skel->children->next->next->is_atom)
-    return TRUE;
+  /* got mergeinfo stuff? */
+  if ((len > 4)
+      && (! (skel->children->next->next->next->next->is_atom
+             && skel->children->next->next->next->next->next->is_atom)))
+    return FALSE;
+      
+  /* got predecessor count? */
+  if ((len > 3)
+      && (! skel->children->next->next->next->is_atom))
+    return FALSE;
 
-  /* or with predecessor and predecessor count... */
-  if ((len == 4)
-      && skel->children->is_atom
-      && skel->children->next->is_atom
-      && (skel->children->next->data[0] == '/')
-      && skel->children->next->next->is_atom
-      && skel->children->next->next->next->is_atom)
-    return TRUE;
+  /* got predecessor? */
+  if ((len > 2)
+      && (! skel->children->next->next->is_atom))
+    return FALSE;
 
-  return FALSE;
+  /* got the basics? */
+  if (! (skel->children->is_atom
+         && skel->children->next->is_atom
+         && (skel->children->next->data[0] == '/')))
+    return FALSE;
+
+  return TRUE;
 }
 
 
@@ -603,7 +605,7 @@ svn_fs_base__parse_node_revision_skel(node_revision_t **noderev_p,
                                       apr_pool_t *pool)
 {
   node_revision_t *noderev;
-  skel_t *header_skel;
+  skel_t *header_skel, *cur_skel;
 
   /* Validate the skel. */
   if (! is_valid_node_revision_skel(skel))
@@ -627,17 +629,35 @@ svn_fs_base__parse_node_revision_skel(node_revision_t **noderev_p,
   /* PREDECESSOR-ID */
   if (header_skel->children->next->next)
     {
-      noderev->predecessor_id
-        = svn_fs_base__id_parse(header_skel->children->next->next->data,
-                                header_skel->children->next->next->len, pool);
+      cur_skel = header_skel->children->next->next;
+      if (cur_skel->len)
+        noderev->predecessor_id = svn_fs_base__id_parse(cur_skel->data, 
+                                                        cur_skel->len, pool);
 
       /* PREDECESSOR-COUNT */
       noderev->predecessor_count = -1;
-      if (header_skel->children->next->next->next)
-        noderev->predecessor_count =
-          atoi(apr_pstrmemdup(pool,
-                              header_skel->children->next->next->next->data,
-                              header_skel->children->next->next->next->len));
+      if (cur_skel->next)
+        {
+          cur_skel = cur_skel->next;
+          if (cur_skel->len)
+            noderev->predecessor_count = atoi(apr_pstrmemdup(pool,
+                                                             cur_skel->data,
+                                                             cur_skel->len));
+
+          /* HAS-MERGEINFO and MERGEINFO-COUNT */
+          if (cur_skel->next)
+            {
+              cur_skel = cur_skel->next;
+              noderev->has_mergeinfo = atoi(apr_pstrmemdup(pool,
+                                                           cur_skel->data,
+                                                           cur_skel->len)) 
+                                         ? TRUE : FALSE;
+              noderev->mergeinfo_count = 
+                apr_atoi64(apr_pstrmemdup(pool,
+                                          cur_skel->next->data,
+                                          cur_skel->next->len));
+            }
+        }
     }
 
   /* PROP-KEY */
@@ -1153,10 +1173,20 @@ svn_fs_base__unparse_node_revision_skel(skel_t **skel_p,
 {
   skel_t *skel;
   skel_t *header_skel;
+  const char *num_str;
 
   /* Create the skel. */
   skel = svn_fs_base__make_empty_list(pool);
   header_skel = svn_fs_base__make_empty_list(pool);
+
+  /* MERGEINFO-COUNT */
+  num_str = apr_psprintf(pool, "%" APR_INT64_T_FMT, noderev->mergeinfo_count);
+  svn_fs_base__prepend(svn_fs_base__str_atom(num_str, pool), header_skel); 
+ 
+  /* HAS-MERGEINFO */
+  svn_fs_base__prepend(svn_fs_base__mem_atom(noderev->has_mergeinfo 
+                                               ? "1" : "0",
+                                             1, pool), header_skel); 
 
   /* PREDECESSOR-COUNT */
   if (noderev->predecessor_count != -1)
@@ -1165,6 +1195,10 @@ svn_fs_base__unparse_node_revision_skel(skel_t **skel_p,
                                            noderev->predecessor_count);
       svn_fs_base__prepend(svn_fs_base__str_atom(count_str, pool),
                            header_skel);
+    }
+  else
+    {
+      svn_fs_base__prepend(svn_fs_base__mem_atom(NULL, 0, pool), header_skel);
     }
 
   /* PREDECESSOR-ID */
@@ -1177,7 +1211,9 @@ svn_fs_base__unparse_node_revision_skel(skel_t **skel_p,
                            header_skel);
     }
   else
-    svn_fs_base__prepend(svn_fs_base__mem_atom(NULL, 0, pool), header_skel);
+    {
+      svn_fs_base__prepend(svn_fs_base__mem_atom(NULL, 0, pool), header_skel);
+    }
 
   /* CREATED-PATH */
   svn_fs_base__prepend(svn_fs_base__str_atom(noderev->created_path, pool),

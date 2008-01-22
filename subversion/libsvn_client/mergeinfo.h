@@ -19,6 +19,9 @@
 #ifndef SVN_LIBSVN_CLIENT_MERGEINFO_H
 #define SVN_LIBSVN_CLIENT_MERGEINFO_H
 
+#include "svn_wc.h"
+#include "svn_client.h"
+
 
 /*** Data Structures ***/
 
@@ -153,6 +156,14 @@ svn_client__get_history_as_mergeinfo(apr_hash_t **mergeinfo_p,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool);
 
+/* Translates an array SEGMENTS (of svn_location_t *), like the one
+   returned from svn_client__repos_location_segments, into a mergeinfo
+   hash *MERGEINFO_P, allocated in POOL. */
+svn_error_t *
+svn_client__mergeinfo_from_segments(apr_hash_t **mergeinfo_p,
+                                    apr_array_header_t *segments,
+                                    apr_pool_t *pool);
+
 /* Parse any mergeinfo from the WCPATH's ENTRY and store it in
    MERGEINFO.  If PRISTINE is true parse the pristine mergeinfo,
    working otherwise. If no record of any mergeinfo exists, set
@@ -234,6 +245,11 @@ svn_client__elide_mergeinfo_for_tree(apr_hash_t *children_with_mergeinfo,
                                      svn_wc_adm_access_t *adm_access,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool);
+
+/* TODO(reint): Document. */
+svn_error_t *
+svn_client__elide_mergeinfo_catalog(apr_hash_t *mergeinfo_catalog,
+                                    apr_pool_t *pool);
 
 
 #endif /* SVN_LIBSVN_CLIENT_MERGEINFO_H */

@@ -153,6 +153,14 @@ typedef struct
   /* path at which this node first came into existence.  */
   const char *created_path;
 
+  /* does this node revision have the mergeinfo tracking property set
+     on it? */
+  svn_boolean_t has_mergeinfo;
+
+  /* number of children of this node which have the mergeinfo tracking
+     property set (0 for files). */
+  apr_int64_t mergeinfo_count;
+
 } node_revision_t;
 
 

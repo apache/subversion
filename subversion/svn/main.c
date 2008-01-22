@@ -100,7 +100,8 @@ typedef enum {
   opt_with_all_revprops,
   opt_parents,
   opt_accept,
-  opt_from_source
+  opt_from_source,
+  opt_reintegrate
 } svn_cl__longopt_t;
 
 /* Option codes and descriptions for the command line client.
@@ -265,6 +266,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        " '" SVN_CL__ACCEPT_LAUNCH "')")},
   {"from-source",   opt_from_source, 1,
                     N_("query a particular merge source URL")},
+  {"reintegrate",   opt_reintegrate, 0,
+                    N_("lump-merge all of source URL's unmerged changes")},
   {0,               0, 0, 0},
 };
 
@@ -599,7 +602,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  first source is an ancestor of the second, or vice-versa.  This is\n"
      "  guaranteed to be the case when using the third form listed above.\n"),
     {'r', 'c', 'N', opt_depth, 'q', opt_force, opt_dry_run, opt_merge_cmd,
-     opt_record_only, 'x', opt_ignore_ancestry, opt_accept} },
+     opt_record_only, 'x', opt_ignore_ancestry, opt_accept, opt_reintegrate} },
 
   { "mergeinfo", svn_cl__mergeinfo, {0}, N_
     ("Query merge-related information.\n"
@@ -1475,6 +1478,9 @@ main(int argc, const char *argv[])
         err = svn_utf_cstring_to_utf8(&path_utf8, opt_arg, pool);
         opt_state.from_source = svn_path_canonicalize(path_utf8, pool);
         break;
+      case opt_reintegrate:
+        opt_state.reintegrate = TRUE;
+        break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
@@ -1783,6 +1789,37 @@ main(int argc, const char *argv[])
                              _("--auto-props and --no-auto-props are "
                                "mutually exclusive"));
       return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+    }
+
+  /* The --reintegrate option is mutually exclusive with both
+     --ignore-ancestry and --record-only. */
+  if (opt_state.reintegrate)
+    {
+      if (opt_state.ignore_ancestry)
+        {
+          if (opt_state.record_only)
+            {
+              err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                     _("--reintegrate cannot be used with "
+                                       "--ignore-ancestry or "
+                                       "--record-only"));
+              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+            }
+          else
+            {
+              err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                     _("--reintegrate cannot be used with "
+                                       "--ignore-ancestry"));
+              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+            }
+          }
+      else if (opt_state.record_only)
+        {
+          err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                 _("--reintegrate cannot be used with "
+                                   "--record-only"));
+          return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+        }
     }
 
   /* Update auto-props-enable option, and populate the MIME types map,
