@@ -481,13 +481,13 @@ def load_with_parent_dir(sbox):
   # Verify the svn:mergeinfo properties for '--parent-dir'
   svntest.actions.run_and_verify_svn(None,
                                      [sbox.repo_url +
-                                      "/sample/branch - /sample/trunk:4-6\n"],
+                                      "/sample/branch - /sample/trunk:5-7\n"],
                                      [], 'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url + '/sample/branch')
   svntest.actions.run_and_verify_svn(None,
                                      [sbox.repo_url +
                                       "/sample/branch1 - " +
-                                      "/sample/branch:5-8\n"],
+                                      "/sample/branch:6-9\n"],
                                      [], 'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url + '/sample/branch1')
 
