@@ -100,6 +100,8 @@ class SVNClient :public SVNBase
              std::vector<RevisionRange> &rangesToMerge,
              const char *localPath, bool force, svn_depth_t depth,
              bool ignoreAncestry, bool dryRun, bool recordOnly);
+  void mergeReintegrate(const char *path, Revision &pegRevision,
+                        const char *localPath, bool force, bool dryRun);
   void doImport(const char *path, const char *url, const char *message,
                 svn_depth_t depth, bool noIgnore, bool ignoreUnknownNodeTypes);
   jlong doSwitch(const char *path, const char *url, Revision &revision,

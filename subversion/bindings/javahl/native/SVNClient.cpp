@@ -709,6 +709,30 @@ void SVNClient::merge(const char *path, Revision &pegRevision,
                                       requestPool.pool()), );
 }
 
+void SVNClient::mergeReintegrate(const char *path, Revision &pegRevision,
+                                 const char *localPath, bool force, bool dryRun)
+{
+    Pool requestPool;
+    SVN_JNI_NULL_PTR_EX(path, "path", );
+    SVN_JNI_NULL_PTR_EX(localPath, "localPath", );
+    Path intLocalPath(localPath);
+    SVN_JNI_ERR(intLocalPath.error_occured(), );
+
+    Path srcPath(path);
+    SVN_JNI_ERR(srcPath.error_occured(), );
+
+    svn_client_ctx_t *ctx = getContext(NULL);
+    if (ctx == NULL)
+        return;
+
+    SVN_JNI_ERR(svn_client_merge_reintegrate(srcPath.c_str(),
+                                             pegRevision.revision(),
+                                             intLocalPath.c_str(),
+                                             force, dryRun,
+                                             NULL, ctx,
+                                             requestPool.pool()), );
+}
+
 jobject
 SVNClient::getMergeInfo(const char *target, Revision &pegRevision)
 {
