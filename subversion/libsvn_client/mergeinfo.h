@@ -93,6 +93,10 @@ svn_client__get_wc_mergeinfo(apr_hash_t **mergeinfo,
    INHERIT indicates whether explicit, explicit or inherited, or only
    inherited mergeinfo for REL_PATH is obtained.
 
+   If REL_PATH does not exist at REV, SVN_ERR_FS_NOT_FOUND or
+   SVN_ERR_RA_DAV_REQUEST_FAILED is returned and *TARGET_MERGEINFO
+   is untouched.
+
    If there is no mergeinfo available for REL_PATH, or if the server
    doesn't support a mergeinfo capability and SQUELCH_INCAPABLE is
    TRUE, set *TARGET_MERGEINFO to NULL. */
