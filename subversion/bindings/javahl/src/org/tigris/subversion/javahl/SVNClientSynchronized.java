@@ -164,13 +164,14 @@ public class SVNClientSynchronized implements SVNClientInterface
      */
     public void status(String path, int depth, boolean onServer,
                        boolean getAll, boolean noIgnore,
-                       boolean ignoreExternals, StatusCallback callback)
+                       boolean ignoreExternals, String[] changelists,
+                       StatusCallback callback)
             throws ClientException
     {
         synchronized (clazz)
         {
             worker.status(path, depth, onServer, getAll, noIgnore,
-                          ignoreExternals, callback);
+                          ignoreExternals, changelists, callback);
         }
     }
 

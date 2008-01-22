@@ -1341,6 +1341,13 @@ svn_repos_get_logs(svn_repos_t *repos,
  *
  * If @a revision is @c SVN_INVALID_REVNUM, it defaults to youngest.
  *
+ * If @a include_descendants is TRUE, then additionally return the
+ * mergeinfo for any descendant of any element of @a paths which has
+ * the @c SVN_PROP_MERGEINFO property explicitly set on it.  (Note
+ * that inheritance is only taken into account for the elements in @a
+ * paths; descendants of the elements in @a paths which get their
+ * mergeinfo via inheritance are not included in @a *mergeoutput.)
+ *
  * If optional @a authz_read_func is non-NULL, then use this function
  * (along with optional @a authz_read_baton) to check the readability
  * of each path which mergeinfo was requested for (from @a paths).
@@ -1356,6 +1363,7 @@ svn_repos_fs_get_mergeinfo(apr_hash_t **mergeoutput,
                            const apr_array_header_t *paths,
                            svn_revnum_t revision,
                            svn_mergeinfo_inheritance_t inherit,
+                           svn_boolean_t include_descendants,
                            svn_repos_authz_func_t authz_read_func,
                            void *authz_read_baton,
                            apr_pool_t *pool);

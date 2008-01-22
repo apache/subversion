@@ -946,7 +946,7 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
                                      &(external->revision),
                                      status_func, status_baton,
                                      depth, get_all, update,
-                                     no_ignore, FALSE, ctx, iterpool));
+                                     no_ignore, FALSE, NULL, ctx, iterpool));
         }
     }
 

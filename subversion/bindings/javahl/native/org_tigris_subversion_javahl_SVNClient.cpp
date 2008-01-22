@@ -163,7 +163,8 @@ JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_status
 (JNIEnv *env, jobject jthis, jstring jpath, jint jdepth,
  jboolean jonServer, jboolean jgetAll, jboolean jnoIgnore,
- jboolean jignoreExternals, jobject jstatusCallback)
+ jboolean jignoreExternals, jobjectArray jchangelists,
+ jobject jstatusCallback)
 {
   JNIEntry(SVNClient, status);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -174,11 +175,15 @@ Java_org_tigris_subversion_javahl_SVNClient_status
   if (JNIUtil::isExceptionThrown())
     return;
 
+  StringArray changelists(jchangelists);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
   StatusCallback callback(jstatusCallback);
   cl->status(path, (svn_depth_t)jdepth,
              jonServer ? true:false,
              jgetAll ? true:false, jnoIgnore ? true:false,
-             jignoreExternals ? true:false, &callback);
+             jignoreExternals ? true:false, changelists, &callback);
 }
 
 JNIEXPORT void JNICALL

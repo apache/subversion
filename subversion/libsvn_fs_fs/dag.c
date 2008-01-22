@@ -118,6 +118,8 @@ copy_node_revision(node_revision_t *noderev,
   nr->predecessor_count = noderev->predecessor_count;
   nr->data_rep = svn_fs_fs__rep_copy(noderev->data_rep, pool);
   nr->prop_rep = svn_fs_fs__rep_copy(noderev->prop_rep, pool);
+  nr->mergeinfo_count = noderev->mergeinfo_count;
+  nr->has_mergeinfo = noderev->has_mergeinfo;
 
   if (noderev->created_path)
     nr->created_path = apr_pstrdup(pool, noderev->created_path);
@@ -236,6 +238,52 @@ svn_fs_fs__dag_get_predecessor_count(int *count,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_fs__dag_get_mergeinfo_count(apr_int64_t *count,
+                                   dag_node_t *node,
+                                   apr_pool_t *pool)
+{
+  node_revision_t *noderev;
+
+  SVN_ERR(get_node_revision(&noderev, node, pool));
+  *count = noderev->mergeinfo_count;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__dag_has_mergeinfo(svn_boolean_t *has_mergeinfo,
+                             dag_node_t *node,
+                             apr_pool_t *pool)
+{
+  node_revision_t *noderev;
+
+  SVN_ERR(get_node_revision(&noderev, node, pool));
+  *has_mergeinfo = noderev->has_mergeinfo;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__dag_has_descendants_with_mergeinfo(svn_boolean_t *do_they,
+                                              dag_node_t *node,
+                                              apr_pool_t *pool)
+{
+  node_revision_t *noderev;
+
+  if (node->kind != svn_node_dir)
+    {
+      *do_they = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(get_node_revision(&noderev, node, pool));
+  if (noderev->mergeinfo_count > 1)
+    *do_they = TRUE;
+  else if (noderev->mergeinfo_count == 1 && !noderev->has_mergeinfo)
+    *do_they = TRUE;
+  else
+    *do_they = FALSE;
+  return SVN_NO_ERROR;
+}
 
 
 /*** Directory node functions ***/
@@ -449,6 +497,85 @@ svn_fs_fs__dag_set_proplist(dag_node_t *node,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_fs_fs__dag_increment_mergeinfo_count(dag_node_t *node,
+                                         apr_int64_t increment,
+                                         apr_pool_t *pool)
+{
+  node_revision_t *noderev;
+
+  /* Sanity check: this node better be mutable! */
+  if (! svn_fs_fs__dag_check_mutable(node))
+    {
+      svn_string_t *idstr = svn_fs_fs__id_unparse(node->id, pool);
+      return svn_error_createf
+        (SVN_ERR_FS_NOT_MUTABLE, NULL,
+         "Can't increment mergeinfo count on *immutable* node-revision %s",
+         idstr->data);
+    }
+
+  if (increment == 0)
+    return SVN_NO_ERROR;
+
+  /* Go get a fresh NODE-REVISION for this node. */
+  SVN_ERR(get_node_revision(&noderev, node, pool));
+
+  noderev->mergeinfo_count += increment;
+  if (noderev->mergeinfo_count < 0)
+    {
+      svn_string_t *idstr = svn_fs_fs__id_unparse(node->id, pool);
+      return svn_error_createf
+        (SVN_ERR_FS_CORRUPT, NULL,
+         _("Can't increment mergeinfo count on node-revision %s to negative "
+           "value %" APR_INT64_T_FMT),
+         idstr->data, noderev->mergeinfo_count);
+    }
+  if (noderev->mergeinfo_count > 1 && noderev->kind == svn_node_file)
+    {
+      svn_string_t *idstr = svn_fs_fs__id_unparse(node->id, pool);
+      return svn_error_createf
+        (SVN_ERR_FS_CORRUPT, NULL,
+         _("Can't increment mergeinfo count on *file* node-revision %s to "
+           "%" APR_INT64_T_FMT " (> 1)"),
+         idstr->data, noderev->mergeinfo_count);
+    }
+
+  /* Flush it out. */
+  SVN_ERR(svn_fs_fs__put_node_revision(node->fs, noderev->id,
+                                       noderev, FALSE, pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__dag_set_has_mergeinfo(dag_node_t *node,
+                                 svn_boolean_t has_mergeinfo,
+                                 apr_pool_t *pool)
+{
+  node_revision_t *noderev;
+
+  /* Sanity check: this node better be mutable! */
+  if (! svn_fs_fs__dag_check_mutable(node))
+    {
+      svn_string_t *idstr = svn_fs_fs__id_unparse(node->id, pool);
+      return svn_error_createf
+        (SVN_ERR_FS_NOT_MUTABLE, NULL,
+         "Can't set mergeinfo flag on *immutable* node-revision %s",
+         idstr->data);
+    }
+
+  /* Go get a fresh NODE-REVISION for this node. */
+  SVN_ERR(get_node_revision(&noderev, node, pool));
+
+  noderev->has_mergeinfo = has_mergeinfo;
+
+  /* Flush it out. */
+  SVN_ERR(svn_fs_fs__put_node_revision(node->fs, noderev->id,
+                                       noderev, FALSE, pool));
+
+  return SVN_NO_ERROR;
+}
 
 
 /*** Roots. ***/
