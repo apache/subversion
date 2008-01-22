@@ -584,9 +584,16 @@ svn_fs_base__dag_set_proplist(dag_node_t *node,
                               trail_t *trail,
                               apr_pool_t *pool)
 {
+  svn_error_t *err;
   node_revision_t *noderev;
-  const char *rep_key, *mutable_rep_key;
+  const char *rep_key, *mutable_rep_key, *dup_rep_key;
   svn_fs_t *fs = svn_fs_base__dag_get_fs(node);
+  svn_stream_t *wstream;
+  apr_size_t len;
+  skel_t *proplist_skel;
+  svn_stringbuf_t *raw_proplist_buf;
+  unsigned char digest[APR_MD5_DIGESTSIZE];
+  const char *checksum;
 
   /* Sanity check: this node better be mutable! */
   if (! svn_fs_base__dag_check_mutable(node, txn_id))
@@ -602,6 +609,33 @@ svn_fs_base__dag_set_proplist(dag_node_t *node,
                                         trail, pool));
   rep_key = noderev->prop_key;
 
+  /* Flatten the proplist into a string, and calculate its md5 hash. */
+  SVN_ERR(svn_fs_base__unparse_proplist_skel(&proplist_skel,
+                                             proplist, pool));
+  raw_proplist_buf = svn_fs_base__unparse_skel(proplist_skel, pool);
+  apr_md5(digest, raw_proplist_buf->data, raw_proplist_buf->len);
+  checksum = svn_md5_digest_to_cstring_display(digest, pool);
+
+  /* If the resulting property list is exactly the same as another
+     string in the database, just use the previously existing string
+     and get outta here. */
+  err = svn_fs_bdb__get_checksum_rep(&dup_rep_key, fs, checksum, 
+                                     trail, pool);
+  if (! err)
+    {
+      SVN_ERR(svn_fs_base__delete_rep_if_mutable(fs, noderev->prop_key,
+                                                 txn_id, trail, pool));
+      noderev->prop_key = dup_rep_key;
+      return svn_fs_bdb__put_node_revision(fs, node->id, noderev,
+                                           trail, pool);
+    }
+  else if (err && (err->apr_err == SVN_ERR_FS_NO_SUCH_CHECKSUM_REP))
+    {
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+    }
+  SVN_ERR(err);
+
   /* Get a mutable version of this rep (updating the node revision if
      this isn't a NOOP)  */
   SVN_ERR(svn_fs_base__get_mutable_rep(&mutable_rep_key, rep_key,
@@ -614,22 +648,12 @@ svn_fs_base__dag_set_proplist(dag_node_t *node,
     }
 
   /* Replace the old property list with the new one. */
-  {
-    svn_stream_t *wstream;
-    apr_size_t len;
-    skel_t *proplist_skel;
-    svn_stringbuf_t *raw_proplist_buf;
-
-    SVN_ERR(svn_fs_base__unparse_proplist_skel(&proplist_skel,
-                                               proplist, pool));
-    raw_proplist_buf = svn_fs_base__unparse_skel(proplist_skel, pool);
-    SVN_ERR(svn_fs_base__rep_contents_write_stream(&wstream, fs,
-                                                   mutable_rep_key, txn_id,
-                                                   TRUE, trail, pool));
-    len = raw_proplist_buf->len;
-    SVN_ERR(svn_stream_write(wstream, raw_proplist_buf->data, &len));
-    SVN_ERR(svn_stream_close(wstream));
-  }
+  SVN_ERR(svn_fs_base__rep_contents_write_stream(&wstream, fs,
+                                                 mutable_rep_key, txn_id,
+                                                 TRUE, trail, pool));
+  len = raw_proplist_buf->len;
+  SVN_ERR(svn_stream_write(wstream, raw_proplist_buf->data, &len));
+  SVN_ERR(svn_stream_close(wstream));
 
   return SVN_NO_ERROR;
 }
@@ -1437,27 +1461,36 @@ svn_fs_base__dag_deltify(dag_node_t *target,
 }
 
 
-svn_error_t *
-svn_fs_base__dag_index_data_checksum(dag_node_t *node, 
-                                     trail_t *trail, 
-                                     apr_pool_t *pool)
+/* Store a `checksum-reps' index record for the representation whose
+   key is REP. */
+static svn_error_t *
+store_checksum_rep(const char *rep,
+                   trail_t *trail,
+                   apr_pool_t *pool)
 {
-  node_revision_t *node_rev;
+  svn_fs_t *fs = trail->fs;
   unsigned char digest[APR_MD5_DIGESTSIZE];
   const char *checksum;
 
+  SVN_ERR(svn_fs_base__rep_contents_checksum(digest, fs, rep, trail, pool));
+  checksum = svn_md5_digest_to_cstring_display(digest, pool);
+  return svn_fs_bdb__set_checksum_rep(fs, checksum, rep, trail, pool);
+}
+
+svn_error_t *
+svn_fs_base__dag_index_checksums(dag_node_t *node, 
+                                 trail_t *trail, 
+                                 apr_pool_t *pool)
+{
+  node_revision_t *node_rev;
+
   SVN_ERR(svn_fs_bdb__get_node_revision(&node_rev, trail->fs, node->id,
                                         trail, pool));
-  if (node_rev->data_key)
-    {
-      SVN_ERR(svn_fs_base__rep_contents_checksum(digest, trail->fs, 
-                                                 node_rev->data_key, 
-                                                 trail, pool));
-      checksum = svn_md5_digest_to_cstring_display(digest, pool);
-      SVN_ERR(svn_fs_bdb__set_checksum_rep(trail->fs, checksum, 
-                                           node_rev->data_key,
-                                           trail, pool));
-    }
+  if ((node_rev->kind == svn_node_file) && node_rev->data_key)
+    SVN_ERR(store_checksum_rep(node_rev->data_key, trail, pool));
+  if (node_rev->prop_key)
+    SVN_ERR(store_checksum_rep(node_rev->prop_key, trail, pool));
+
   return SVN_NO_ERROR;
 }
 

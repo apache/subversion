@@ -87,11 +87,14 @@ svn_error_t *svn_fs_bdb__set_checksum_rep(svn_fs_t *fs,
 {
   base_fs_data_t *bfd = fs->fsap_data;
   DBT key, value;
+#ifdef SVN_DISALLOW_CHECKSUM_REP_CHANGES
   int db_err;
+#endif
   
   /* Create a key from our CHECKSUM. */
   svn_fs_base__str_to_dbt(&key, checksum);
-  
+
+#ifdef SVN_DISALLOW_CHECKSUM_REP_CHANGES
   /* Check to see if we already have a mapping for CHECKSUM.  If so,
      and the value is the same one we were about to write, that's
      cool -- just do nothing.  If, however, the value is *different*,
@@ -112,6 +115,7 @@ svn_error_t *svn_fs_bdb__set_checksum_rep(svn_fs_t *fs,
       else
         return SVN_NO_ERROR;
     }
+#endif
   
   /* Create a value from our REP_KEY, and add this record to the table. */
   svn_fs_base__str_to_dbt(&value, rep_key);
