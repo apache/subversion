@@ -163,7 +163,8 @@ JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_status
 (JNIEnv *env, jobject jthis, jstring jpath, jint jdepth,
  jboolean jonServer, jboolean jgetAll, jboolean jnoIgnore,
- jboolean jignoreExternals, jobject jstatusCallback)
+ jboolean jignoreExternals, jobjectArray jchangelists,
+ jobject jstatusCallback)
 {
   JNIEntry(SVNClient, status);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -174,11 +175,15 @@ Java_org_tigris_subversion_javahl_SVNClient_status
   if (JNIUtil::isExceptionThrown())
     return;
 
+  StringArray changelists(jchangelists);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
   StatusCallback callback(jstatusCallback);
   cl->status(path, (svn_depth_t)jdepth,
              jonServer ? true:false,
              jgetAll ? true:false, jnoIgnore ? true:false,
-             jignoreExternals ? true:false, &callback);
+             jignoreExternals ? true:false, changelists, &callback);
 }
 
 JNIEXPORT void JNICALL
@@ -440,7 +445,8 @@ Java_org_tigris_subversion_javahl_SVNClient_remove
 
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_revert
-(JNIEnv *env, jobject jthis, jstring jpath, jint jdepth)
+(JNIEnv *env, jobject jthis, jstring jpath, jint jdepth,
+ jobjectArray jchangelists)
 {
   JNIEntry(SVNClient, revert);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -453,7 +459,11 @@ Java_org_tigris_subversion_javahl_SVNClient_revert
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->revert(path, (svn_depth_t)jdepth);
+  StringArray changelists(jchangelists);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  cl->revert(path, (svn_depth_t)jdepth, changelists);
 }
 
 JNIEXPORT void JNICALL
@@ -864,7 +874,8 @@ Java_org_tigris_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_tigri
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_properties
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
- jobject jpegRevision, jint jdepth, jobject jproplistCallback)
+ jobject jpegRevision, jint jdepth, jobjectArray jchangelists,
+ jobject jproplistCallback)
 {
   JNIEntry(SVNClient, properties);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -885,15 +896,19 @@ Java_org_tigris_subversion_javahl_SVNClient_properties
   if (JNIUtil::isExceptionThrown())
     return;
 
+  StringArray changelists(jchangelists);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
   ProplistCallback callback(jproplistCallback);
   cl->properties(path, revision, pegRevision, (svn_depth_t)jdepth,
-                 &callback);
+                 changelists, &callback);
 }
 
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_propertySet
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jstring jvalue,
- jint jdepth, jboolean jforce)
+ jint jdepth, jobjectArray jchangelists, jboolean jforce)
 {
   JNIEntry(SVNClient, propertySet);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -914,29 +929,12 @@ Java_org_tigris_subversion_javahl_SVNClient_propertySet
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->propertySet(path, name, value, (svn_depth_t)jdepth, jforce ? true:false);
-}
-
-JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_propertyRemove
-(JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jint jdepth)
-{
-  JNIEntry(SVNClient, propertyRemove);
-  SVNClient *cl = SVNClient::getCppObject(jthis);
-  if (cl == NULL)
-    {
-      JNIUtil::throwError(_("bad C++ this"));
-      return;
-    }
-  JNIStringHolder path(jpath);
+  StringArray changelists(jchangelists);
   if (JNIUtil::isExceptionThrown())
     return;
 
-  JNIStringHolder name(jname);
-  if (JNIUtil::isExceptionThrown())
-    return;
-
-  cl->propertyRemove(path, name, (svn_depth_t)jdepth);
+  cl->propertySet(path, name, value, (svn_depth_t)jdepth, changelists, 
+                  jforce ? true:false);
 }
 
 JNIEXPORT jobject JNICALL

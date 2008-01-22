@@ -154,7 +154,8 @@ void SVNClient::list(const char *url, Revision &revision,
 void
 SVNClient::status(const char *path, svn_depth_t depth,
                   bool onServer, bool getAll, bool noIgnore,
-                  bool ignoreExternals, StatusCallback *callback)
+                  bool ignoreExternals, StringArray &changelists,
+                  StatusCallback *callback)
 {
     Pool requestPool;
     svn_revnum_t youngest = SVN_INVALID_REVNUM;
@@ -177,6 +178,7 @@ SVNClient::status(const char *path, svn_depth_t depth,
                                    depth,
                                    getAll, onServer, noIgnore,
                                    ignoreExternals,
+                                   changelists.array(requestPool),
                                    ctx, requestPool.pool()), );
 }
 
@@ -302,7 +304,8 @@ void SVNClient::remove(Targets &targets, const char *message, bool force,
                                    ctx, requestPool.pool()), );
 }
 
-void SVNClient::revert(const char *path, svn_depth_t depth)
+void SVNClient::revert(const char *path, svn_depth_t depth,
+                       StringArray &changelists)
 {
     Pool requestPool;
 
@@ -315,7 +318,9 @@ void SVNClient::revert(const char *path, svn_depth_t depth)
     Targets target(path);
     const apr_array_header_t *targets = target.array(requestPool);
     SVN_JNI_ERR(target.error_occured(), );
-    SVN_JNI_ERR(svn_client_revert2(targets, depth, ctx, requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_revert2(targets, depth,
+                                   changelists.array(requestPool), ctx,
+                                   requestPool.pool()), );
 }
 
 void SVNClient::add(const char *path,
@@ -829,7 +834,7 @@ jobject SVNClient::propertyGet(jobject jthis, const char *path,
     SVN_JNI_ERR(svn_client_propget4(&props, name,
                                     intPath.c_str(), pegRevision.revision(),
                                     revision.revision(), NULL, svn_depth_empty,
-                                    ctx, requestPool.pool()),
+                                    NULL, ctx, requestPool.pool()),
                 NULL);
 
     apr_hash_index_t *hi;
@@ -849,7 +854,7 @@ jobject SVNClient::propertyGet(jobject jthis, const char *path,
 
 void SVNClient::properties(const char *path, Revision &revision,
                            Revision &pegRevision, svn_depth_t depth,
-                           ProplistCallback *callback)
+                           StringArray &changelists, ProplistCallback *callback)
 {
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -862,6 +867,7 @@ void SVNClient::properties(const char *path, Revision &revision,
 
     SVN_JNI_ERR(svn_client_proplist3(intPath.c_str(), pegRevision.revision(),
                                      revision.revision(), depth,
+                                     changelists.array(requestPool),
                                      ProplistCallback::callback, callback,
                                      ctx, requestPool.pool()), );
 
@@ -869,24 +875,31 @@ void SVNClient::properties(const char *path, Revision &revision,
 }
 
 void SVNClient::propertySet(const char *path, const char *name,
-                            const char *value, svn_depth_t depth, bool force)
+                            const char *value, svn_depth_t depth,
+                            StringArray &changelists, bool force)
 {
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
     SVN_JNI_NULL_PTR_EX(name, "name", );
-    SVN_JNI_NULL_PTR_EX(value, "value", );
-    svn_string_t *val = svn_string_create(value, requestPool.pool());
-    propertySet(path, name, val, depth, force, SVN_INVALID_REVNUM);
-}
 
-void SVNClient::propertyRemove(const char *path, const char *name,
-                               svn_depth_t depth)
-{
-    Pool requestPool;
-    SVN_JNI_NULL_PTR_EX(path, "path", );
-    SVN_JNI_NULL_PTR_EX(name, "name", );
-    propertySet(path, name, (svn_string_t *) NULL, depth, false,
-                SVN_INVALID_REVNUM);
+    svn_string_t *val;
+    if (value == NULL)
+      val = NULL;
+    else
+      val = svn_string_create(value, requestPool.pool());
+
+    svn_commit_info_t *commit_info = NULL;
+    Path intPath(path);
+    SVN_JNI_ERR(intPath.error_occured(), );
+
+    svn_client_ctx_t *ctx = getContext(NULL);
+    if (ctx == NULL)
+        return;
+
+    SVN_JNI_ERR(svn_client_propset3(&commit_info, name, val, intPath.c_str(),
+                                    depth, force, SVN_INVALID_REVNUM,
+                                    changelists.array(requestPool),
+                                    ctx, requestPool.pool()), );
 }
 
 void SVNClient::diff(const char *target1, Revision &revision1,
@@ -1271,24 +1284,6 @@ jobject SVNClient::createJavaProperty(jobject jthis, const char *path,
         return NULL;
 
     return jprop;
-}
-
-void SVNClient::propertySet(const char *path, const char *name,
-                            svn_string_t *value, svn_depth_t depth, bool force,
-                            svn_revnum_t baseRevisionForURL)
-{
-    svn_commit_info_t *commit_info = NULL;
-    Pool requestPool;
-    Path intPath(path);
-    SVN_JNI_ERR(intPath.error_occured(), );
-
-    svn_client_ctx_t *ctx = getContext(NULL);
-    if (ctx == NULL)
-        return;
-
-    SVN_JNI_ERR(svn_client_propset3(&commit_info, name, value, intPath.c_str(),
-                                    depth, force, baseRevisionForURL,
-                                    ctx, requestPool.pool()), );
 }
 
 jbyteArray SVNClient::fileContent(const char *path, Revision &revision,
@@ -1860,7 +1855,7 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
     svn_error_t *err;
     err = svn_client_status3(NULL, intPath.c_str(), &rev, analyze_status,
                              &sb, svn_depth_infinity, TRUE, FALSE, FALSE,
-                             FALSE, &ctx, requestPool.pool());
+                             FALSE, NULL, &ctx, requestPool.pool());
     if (err && (err->apr_err == SVN_ERR_CANCELLED))
         svn_error_clear(err);
     else

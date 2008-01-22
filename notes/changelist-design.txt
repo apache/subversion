@@ -509,27 +509,28 @@ TO-DO list:
   [X] svn status should display grouped changelists
   [X] 'svn info' should display a target's changelist field
   [X] rename --keep-changelist option to --keep-changelists
-  [ ] fix --changelist and allow multiple changelists in subcommands:
+  [X] fix --changelist and allow multiple changelists in subcommands:
 
       No-problem subcommands:
       [X] svn changelist --changelist
       [X] svn commit --changelist
       [X] svn diff --changelist (only wc-wc and wc-repos cases)
       [X] svn info --changelist
-      [ ] svn propget/propset --changelist
-      [ ] svn proplist/propdel --changelist
-      [ ] svn revert --changelist
-      [ ] svn rm --changelist
-      [ ] svn status --changelist
-      [ ] svn update --changelist
+      [X] svn propget --changelist
+      [X] svn proplist --changelist
+      [X] svn propset --changelist
+      [X] svn propdel --changelist
+      [X] svn revert --changelist
+      [X] svn status --changelist
 
       Problem subcommands (see below):
+      [X] svn update --changelist
       [X] svn lock --changelist              ### removed changelist support
       [X] svn log --changelist               ### removed changelist support
       [X] svn unlock --changelist            ### removed changelist support
 
   [ ] ensure that the bindings implementations of these APIs are up to snuff
-  [ ] write tests!
+  [X] write tests!
 
 Problem Subcommands:
 
@@ -540,10 +541,26 @@ Problem Subcommands:
   --changelist FOO') will either return exactly one info result, or
   exactly none, depending on whether or not the current working
   directory is in changelist FOO.  This is trivially worked around by
-  deepening the invocation:  'svn info -R --changelist FOO'
+  deepening the invocation: 'svn info -R --changelist FOO'.  But what
+  about subcommands for which there is no --depth support, such as
+  'lock', 'log', 'unlock'?  Do we lose the changelist support, or grow
+  some sort of depth-crawling ability for these things?  [RESOLUTION:
+  We've removed changelist support from 'lock', 'unlock', and 'log'.]
 
-  But what about subcommands for which there is no --depth support,
-  such as 'lock', 'log', 'unlock'; indeed, even the 'changelist'
-  subcommand itself?  Do we lose the changelist support, or grow some
-  sort of depth-crawling ability for these things?
+  'svn update' presents an interesting challenge, too.  The public
+  svn_client_update3() API takes a list of paths, and returns a list
+  of revision numbers to which those paths were updated.  Each path is
+  treated as, effectively, a separate update -- complete with output
+  line that notes the updated-to revision.  So, if we do changelist
+  expansion outside the API, we might turn a single-target operation
+  into a multi-target one, and the user sees N full updates processes
+  happen.  If we push 'changelists' down into the API, we can fake a
+  single update with notification tricks.  But that starts to get
+  nasty when we look at non-file changelist support later and the
+  interactions with externals and such.  And if we push 'changelists'
+  all the way down into the update editor, then we've got a mess of a
+  whole 'nuther type, downloading tons of server data we won't use,
+  and so on.  [RESOLUTION: Let the command-line client do the
+  changelist path expansion.]
 
+  

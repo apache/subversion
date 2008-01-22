@@ -83,12 +83,11 @@ class SVNClient :public SVNBase
   void streamFileContent(const char *path, Revision &revision,
                          Revision &pegRevision, jobject outputStream,
                          size_t bufSize);
-  void propertyRemove(const char *path, const char *name, svn_depth_t depth);
   void propertySet(const char *path, const char *name, const char *value,
-                   svn_depth_t depth, bool force);
+                   svn_depth_t depth, StringArray &changelists, bool force);
   void properties(const char *path, Revision &revision,
                   Revision &pegRevision, svn_depth_t depth,
-                  ProplistCallback *callback);
+                  StringArray &changelists, ProplistCallback *callback);
   jobject getMergeInfo(const char *target, Revision &pegRevision);
   jobjectArray getAvailableMerges(const char *target, Revision &pegRevision,
                                   const char *mergeSource);
@@ -128,7 +127,7 @@ class SVNClient :public SVNBase
                     bool allowUnverObstructions);
   void add(const char *path, svn_depth_t depth, bool force, bool no_ignore,
            bool add_parents);
-  void revert(const char *path, svn_depth_t depth);
+  void revert(const char *path, svn_depth_t depth, StringArray &changelists);
   void remove(Targets &targets, const char *message, bool force,
               bool keep_local);
   void notification(Notify *notify);
@@ -158,7 +157,7 @@ class SVNClient :public SVNBase
                       svn_depth_t depth, ChangelistCallback *callback);
   void status(const char *path, svn_depth_t depth, bool onServer,
               bool getAll, bool noIgnore, bool ignoreExternals,
-              StatusCallback *callback);
+              StringArray &changelists, StatusCallback *callback);
   void list(const char *url, Revision &revision, Revision &pegRevision,
             svn_depth_t depth, int direntFields, bool fetchLocks,
             ListCallback *callback);
@@ -197,9 +196,6 @@ class SVNClient :public SVNBase
   static jobject createJavaLock(const svn_lock_t *lock);
  private:
   static svn_error_t *checkCancel(void *cancelBaton);
-  void propertySet(const char *path, const char *name,
-                   svn_string_t *value, svn_depth_t depth, bool force,
-                   svn_revnum_t baseRevisionForURL);
   jobject createJavaProperty(jobject jthis, const char *path,
                              const char *name, svn_string_t *value);
   svn_client_ctx_t *getContext(const char *message);

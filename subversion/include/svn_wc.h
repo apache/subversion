@@ -4283,9 +4283,10 @@ svn_wc_relocate(const char *path,
 /**
  * Revert changes to @a path.  Perform necessary allocations in @a pool.
  *
- * @a parent_access is an access baton for the directory containing @a path,
- * unless @a path is a wc root, in which case @a parent_access refers to
- * @a path itself.
+ * @a parent_access is an access baton for the directory containing @a
+ * path, unless @a path is a working copy root (as determined by @c
+ * svn_wc_is_wc_root), in which case @a parent_access refers to @a
+ * path itself.
  *
  * If @a depth is @c svn_depth_empty, revert just @a path (if a
  * directory, then revert just the properties on that directory).
@@ -4294,6 +4295,12 @@ svn_wc_relocate(const char *path,
  * @c svn_depth_immediates, revert all of the preceding plus
  * properties on immediate subdirectories; else if @c svn_depth_infinity,
  * revert path and everything under it fully recursively.
+ *
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items reverted; that is,
+ * don't revert any item unless it's a member of one of those
+ * changelists.  If @a changelists is empty (or altogether @c NULL),
+ * no changelist filtering occurs.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton at
  * various points during the reversion process.  If it returns an
@@ -4318,6 +4325,7 @@ svn_wc_revert3(const char *path,
                svn_wc_adm_access_t *parent_access,
                svn_depth_t depth,
                svn_boolean_t use_commit_times,
+               const apr_array_header_t *changelists,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                svn_wc_notify_func2_t notify_func,
@@ -4325,9 +4333,10 @@ svn_wc_revert3(const char *path,
                apr_pool_t *pool);
 
 /**
- * Similar to svn_wc_revert3(), but with @a depth set according to
- * @a recursive: if @a recursive is TRUE, @a depth is
- * @c svn_depth_infinity; if FALSE, @a depth is @c svn_depth_empty.
+ * Similar to svn_wc_revert3(), but with @a changelists passed as @c
+ * NULL, and @a depth set according to @a recursive: if @a recursive
+ * is TRUE, @a depth is @c svn_depth_infinity; if FALSE, @a depth is
+ * @c svn_depth_empty.
  *
  * @note Most APIs map @a recurse==FALSE to @a depth==svn_depth_files;
  * revert is deliberately different.

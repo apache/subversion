@@ -97,13 +97,6 @@ svn_cl__propset(apr_getopt_t *os,
   if (opt_state->revprop)
     svn_opt_push_implicit_dot_target(targets, pool);
 
-  /* If using changelists, convert targets into a set of paths that
-     match the specified changelist(s). */
-  if (opt_state->changelists)
-    SVN_ERR(svn_cl__changelist_paths(&targets, 
-                                     opt_state->changelists, targets,
-                                     svn_depth_infinity, ctx, pool));
-
   if (opt_state->revprop)  /* operate on a revprop */
     {
       svn_revnum_t rev;
@@ -183,12 +176,9 @@ svn_cl__propset(apr_getopt_t *os,
           svn_pool_clear(subpool);
           SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
           SVN_ERR(svn_cl__try(svn_client_propset3
-                              (&commit_info,
-                               pname_utf8,
-                               propval, target,
-                               opt_state->depth,
-                               opt_state->force,
-                               SVN_INVALID_REVNUM,
+                              (&commit_info, pname_utf8, propval, target,
+                               opt_state->depth, opt_state->force,
+                               SVN_INVALID_REVNUM, opt_state->changelists,
                                ctx, subpool),
                               &success, opt_state->quiet,
                               SVN_ERR_UNVERSIONED_RESOURCE,

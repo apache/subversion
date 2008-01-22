@@ -59,7 +59,7 @@ svn_client__parse_mergeinfo(apr_hash_t **mergeinfo,
      ### svn_client__get_prop_from_wc(). */
   SVN_ERR(svn_client__get_prop_from_wc(props, SVN_PROP_MERGEINFO,
                                        wcpath, pristine, entry, adm_access,
-                                       svn_depth_empty, ctx, pool));
+                                       svn_depth_empty, NULL, ctx, pool));
   propval = apr_hash_get(props, wcpath, APR_HASH_KEY_STRING);
   if (propval)
     SVN_ERR(svn_mergeinfo_parse(mergeinfo, propval->data, pool));
@@ -373,7 +373,7 @@ svn_client__get_wc_or_repos_mergeinfo(apr_hash_t **target_mergeinfo,
           SVN_ERR(svn_client__get_prop_from_wc(props, SVN_PROP_MERGEINFO,
                                                target_wcpath, TRUE, entry,
                                                adm_access, svn_depth_empty,
-                                               ctx, pool));
+                                               NULL, ctx, pool));
           if (apr_hash_get(props, target_wcpath, APR_HASH_KEY_STRING) == NULL)
             {
               const char *repos_rel_path;

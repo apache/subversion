@@ -132,17 +132,18 @@ public interface SVNClientInterface
     /**
      * List a directory or file of the working copy.
      *
-     * @param path      Path to explore.
-     * @param depth     How deep to recurse into subdirectories.
-     * @param onServer  Request status information from server.
-     * @param getAll    get status for uninteresting (unchanged) files.
-     * @param noIgnore  get status for normaly ignored files and directories.
+     * @param path        Path to explore.
+     * @param depth       How deep to recurse into subdirectories.
+     * @param onServer    Request status information from server.
+     * @param getAll      get status for uninteresting (unchanged) files.
+     * @param noIgnore    get status for normaly ignored files and directories.
      * @param ignoreExternals if externals are ignored during status
+     * @param changelists changelists to filter by
      * @since 1.5
      */
     void status(String path, int depth, boolean onServer,
                 boolean getAll, boolean noIgnore, boolean ignoreExternals,
-                StatusCallback callback)
+                String[] changelists, StatusCallback callback)
             throws ClientException;
 
     /**
@@ -449,10 +450,12 @@ public interface SVNClientInterface
      * Reverts a file to a pristine state.
      * @param path      path of the file.
      * @param depth     the depth to recurse into subdirectories
+     * @param changelists changelists to filter by
      * @throws ClientException
      * @since 1.5
      */
-    void revert(String path, int depth) throws ClientException;
+    void revert(String path, int depth, String[] changelists)
+            throws ClientException;
 
     /**
      * Adds a file to the repository.
@@ -1217,12 +1220,13 @@ public interface SVNClientInterface
      * @param revision    the revision of the item
      * @param pegRevision the revision to interpret path
      * @param depth       the depth to recurse into subdirectories
+     * @param changelists changelists to filter by
      * @param callback    the callback to use to return the properties
      * @throws ClientException
      * @since 1.5
      */
     void properties(String path, Revision revision, Revision pegRevision,
-                    int depth, ProplistCallback callback)
+                    int depth, String[] changelists, ProplistCallback callback)
             throws ClientException;
 
     /**
@@ -1292,12 +1296,13 @@ public interface SVNClientInterface
      * @param name    name of the property
      * @param value   new value of the property
      * @param depth   the depth to recurse into subdirectories
+     * @param changelists changelists to filter by
      * @param force   do not check if the value is valid
      * @throws ClientException
      * @since 1.5
      */
     void propertySet(String path, String name, String value, int depth,
-                     boolean force)
+                     String[] changelists, boolean force)
             throws ClientException;
 
     /**
@@ -1317,10 +1322,12 @@ public interface SVNClientInterface
      * @param path      path of the item
      * @param name      name of the property
      * @param depth     the depth to recurse into subdirectories
+     * @param changelists changelists to filter by
      * @throws ClientException
      * @since 1.5
      */
-    void propertyRemove(String path, String name, int depth)
+    void propertyRemove(String path, String name, int depth,
+                        String[] changelists)
             throws ClientException;
 
     /**
@@ -1392,12 +1399,13 @@ public interface SVNClientInterface
      * @param name    name of the property
      * @param value   new value of the property
      * @param depth   depth to set property on the subdirectories
+     * @param changelists changelists to filter by
      * @param force   do not check if the value is valid
      * @throws ClientException
      * @since 1.5
      */
     void propertyCreate(String path, String name, String value, int depth,
-                        boolean force)
+                        String[] changelists, boolean force)
             throws ClientException;
 
     /**

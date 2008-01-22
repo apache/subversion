@@ -1699,6 +1699,12 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
  * definition, and with @c svn_wc_notify_status_completed
  * after each.
  *
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items whose statuses are
+ * reported; that is, don't report status about any item unless
+ * it's a member of one of those changelists.  If @a changelists is
+ * empty (or altogether @c NULL), no changelist filtering occurs.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
@@ -1712,13 +1718,15 @@ svn_client_status3(svn_revnum_t *result_rev,
                    svn_boolean_t update,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_externals,
+                   const apr_array_header_t *changelists,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 /**
- * Like svn_client_status3(), except with @a recurse instead of @a depth.
- * If @a recurse is TRUE, behave as if for @c svn_depth_infinity; else
- * if @a recurse is FALSE, behave as if for @c svn_depth_immediates.
+ * Like svn_client_status3(), except with @a changelists passed as @c
+ * NULL, and with @a recurse instead of @a depth.  If @a recurse is
+ * TRUE, behave as if for @c svn_depth_infinity; else if @a recurse is
+ * FALSE, behave as if for @c svn_depth_immediates.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -2747,6 +2755,12 @@ svn_client_relocate(const char *dir,
  * properties on immediate subdirectories; else if @c svn_depth_infinity,
  * revert path and everything under it fully recursively.
  *
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items reverted; that is,
+ * don't revert any item unless it's a member of one of those
+ * changelists.  If @a changelists is empty (or altogether @c NULL),
+ * no changelist filtering occurs.
+ *
  * If @a ctx->notify_func2 is non-NULL, then for each item reverted,
  * call @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of
  * the reverted item.
@@ -2760,14 +2774,16 @@ svn_client_relocate(const char *dir,
 svn_error_t *
 svn_client_revert2(const apr_array_header_t *paths,
                    svn_depth_t depth,
+                   const apr_array_header_t *changelists,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 
 /**
- * Similar to svn_client_revert2(), but with @a depth set according to
- * @a recurse: if @a recurse is TRUE, @a depth is @c svn_depth_infinity,
- * else if @a recurse is FALSE, @a depth is @c svn_depth_empty.
+ * Similar to svn_client_revert2(), but with @a changelists passed as
+ * @c NULL, and @a depth set according to @a recurse: if @a recurse is
+ * TRUE, @a depth is @c svn_depth_infinity, else if @a recurse is
+ * FALSE, @a depth is @c svn_depth_empty.
  *
  * @note Most APIs map @a recurse==FALSE to @a depth==svn_depth_files;
  * revert is deliberately different.
@@ -3179,6 +3195,12 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
  * SVN_ERR_BAD_MIME_TYPE (if @a propname is "svn:mime-type", but @a
  * propval is not a valid mime-type).
  *
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items whose properties are
+ * set; that is, don't set properties on any item unless it's a member
+ * of one of those changelists.  If @a changelists is empty (or
+ * altogether @c NULL), no changelist filtering occurs.
+ *
  * If @a ctx->cancel_func is non-NULL, invoke it passing @a
  * ctx->cancel_baton at various places during the operation.
  *
@@ -3194,14 +3216,16 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
                     svn_depth_t depth,
                     svn_boolean_t skip_checks,
                     svn_revnum_t base_revision_for_url,
+                    const apr_array_header_t *changelists,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
 
 /**
  * Like svn_client_propset3(), but with @a base_revision_for_url
- * always @c SVN_INVALID_REVNUM; @a commit_info_p always NULL; and
- * @a depth set according to @a recurse: if @a recurse is TRUE,
- * @a depth is @c svn_depth_infinity, else @c svn_depth_empty.
+ * always @c SVN_INVALID_REVNUM; @a commit_info_p always @c NULL; @a
+ * changelists always @c NULL; and @a depth set according to @a
+ * recurse: if @a recurse is TRUE, @a depth is @c svn_depth_infinity,
+ * else @c svn_depth_empty.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -3287,6 +3311,12 @@ svn_client_revprop_set(const char *propname,
  * and all of its immediate children (both files and directories); if
  * @c svn_depth_infinity, from @a target and everything beneath it.
  *
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items whose properties are
+ * set; that is, don't set properties on any item unless it's a member
+ * of one of those changelists.  If @a changelists is empty (or
+ * altogether @c NULL), no changelist filtering occurs.
+ *
  * If error, don't touch @a *props, otherwise @a *props is a hash table
  * even if empty.
  *
@@ -3300,13 +3330,15 @@ svn_client_propget4(apr_hash_t **props,
                     const svn_opt_revision_t *revision,
                     svn_revnum_t *actual_revnum,
                     svn_depth_t depth,
+                    const apr_array_header_t *changelists,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
 
 /**
- * Similar to svn_client_propget4(), but with @a depth set according
- * to @a recurse: if @a recurse is TRUE, then @a depth is
- * @c svn_depth_infinity, else @c svn_depth_empty.
+ * Similar to svn_client_propget4(), but with @a changelists passed as
+ * @c NULL, and @a depth set according to @a recurse: if @a recurse is
+ * TRUE, then @a depth is @c svn_depth_infinity, else @c
+ * svn_depth_empty.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -3399,6 +3431,12 @@ svn_client_revprop_get(const char *propname,
  * equivalent to @c svn_depth_empty.  All other values produce undefined
  * results.
  *
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items whose properties are
+ * set; that is, don't set properties on any item unless it's a member
+ * of one of those changelists.  If @a changelists is empty (or
+ * altogether @c NULL), no changelist filtering occurs.
+ *
  * If @a target is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
  *
  * @since New in 1.5.
@@ -3408,16 +3446,18 @@ svn_client_proplist3(const char *target,
                      const svn_opt_revision_t *peg_revision,
                      const svn_opt_revision_t *revision,
                      svn_depth_t depth,
+                     const apr_array_header_t *changelists,
                      svn_proplist_receiver_t receiver,
                      void *receiver_baton,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 
 /**
- * Similar to svn_client_proplist3(), except the properties are returned
- * as an array of @c svn_client_proplist_item_t * structures, instead of
- * by invoking the receiver function, and @a recurse is used instead of
- * a @c svn_depth_t parameter (FALSE corresponds to @c svn_depth_empty,
+ * Similar to svn_client_proplist3(), except the properties are
+ * returned as an array of @c svn_client_proplist_item_t * structures
+ * instead of by invoking the receiver function, there's no support
+ * for @a changelists filtering, and @a recurse is used instead of a
+ * @c svn_depth_t parameter (FALSE corresponds to @c svn_depth_empty,
  * and TRUE to @c svn_depth_infinity).
  *
  * @since New in 1.2.

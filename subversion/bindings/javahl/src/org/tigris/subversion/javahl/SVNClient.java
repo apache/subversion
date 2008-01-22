@@ -158,7 +158,7 @@ public class SVNClient implements SVNClientInterface
         MyStatusCallback callback = new MyStatusCallback();
 
         status(path, Depth.unknownOrImmediates(descend), onServer, getAll,
-               noIgnore, ignoreExternals, callback);
+               noIgnore, ignoreExternals, null, callback);
 
         return callback.getStatusArray();
     }
@@ -168,7 +168,8 @@ public class SVNClient implements SVNClientInterface
      */
     public native void status(String path, int depth, boolean onServer,
                               boolean getAll, boolean noIgnore,
-                              boolean ignoreExternals, StatusCallback callback)
+                              boolean ignoreExternals, String[] changelists,
+                              StatusCallback callback)
             throws ClientException;
 
     /**
@@ -390,13 +391,13 @@ public class SVNClient implements SVNClientInterface
     public void revert(String path, boolean recurse)
             throws ClientException
     {
-        revert(path, Depth.infinityOrEmpty(recurse));
+        revert(path, Depth.infinityOrEmpty(recurse), null);
     }
 
     /**
      * @since 1.5
      */
-    public native void revert(String path, int depth)
+    public native void revert(String path, int depth, String[] changelists)
             throws ClientException;
 
     /**
@@ -898,7 +899,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         ProplistCallbackImpl callback = new ProplistCallbackImpl();
-        properties(path, revision, pegRevision, Depth.empty, callback);
+        properties(path, revision, pegRevision, Depth.empty, null, callback);
 
         Map propMap = callback.getProperties(path);
         if (propMap == null)
@@ -923,6 +924,7 @@ public class SVNClient implements SVNClientInterface
      */
     public native void properties(String path, Revision revision,
                                   Revision pegRevision, int depth,
+                                  String[] changelists,
                                   ProplistCallback callback)
             throws ClientException;
 
@@ -947,7 +949,8 @@ public class SVNClient implements SVNClientInterface
                                    boolean recurse, boolean force)
             throws ClientException
     {
-        propertySet(path, name, value, Depth.infinityOrEmpty(recurse), force);
+        propertySet(path, name, value, Depth.infinityOrEmpty(recurse), null,
+                    force);
     }
 
     /**
@@ -978,7 +981,8 @@ public class SVNClient implements SVNClientInterface
      * @since 1.5
      */
     public native void propertySet(String path, String name, String value,
-                                   int depth, boolean force)
+                                   int depth, String[] changelists,
+                                   boolean force)
             throws ClientException;
 
     /**
@@ -988,15 +992,18 @@ public class SVNClient implements SVNClientInterface
     public void propertyRemove(String path, String name, boolean recurse)
             throws ClientException
     {
-        propertyRemove(path, name, Depth.infinityOrEmpty(recurse));
+        propertyRemove(path, name, Depth.infinityOrEmpty(recurse), null);
     }
 
     /**
      * @since 1.5
      */
-    public native void propertyRemove(String path, String name,
-                                      int depth)
-            throws ClientException;
+    public void propertyRemove(String path, String name, int depth,
+                               String[] changelists)
+            throws ClientException
+    {
+        propertySet(path, name, null, depth, changelists, false);
+    }
 
     /**
      * @deprecated Use {@link #propertyCreate(String, String, String, int,
@@ -1050,10 +1057,10 @@ public class SVNClient implements SVNClientInterface
      * @since 1.5
      */
     public void propertyCreate(String path, String name, String value,
-                               int depth, boolean force)
+                               int depth, String[] changelists, boolean force)
             throws ClientException
     {
-        propertySet(path, name, value, depth, force);
+        propertySet(path, name, value, depth, changelists, force);
     }
 
     /**
