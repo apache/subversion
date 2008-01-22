@@ -689,6 +689,115 @@ def revert_with_changelists(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
   
+#----------------------------------------------------------------------
+
+def update_with_changelists(sbox):
+  "update --changelist"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Add a line of text to all the versioned files in the tree, commit, update.
+  mod_all_files(wc_dir, "Added line.\n")
+  svntest.main.run_svn(None, "commit", "-m", "logmsg", wc_dir)
+  svntest.main.run_svn(None, "update", wc_dir)
+
+  # Add files to changelists based on the last character in their names.
+  changelist_all_files(wc_dir, clname_from_lastchar_cb)
+
+  ### Backdate only the files in the 'a' and 'i' changelists at depth
+  ### files under WC_DIR and WC_DIR/A/B.
+
+  # We expect update to only touch lambda and iota.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/lambda' : Item(status='U '),
+    'iota' : Item(status='U '),
+    })
+
+  # Disk state should have all the files except iota and lambda
+  # carrying new text.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/B/E/alpha',
+                      contents="This is the file 'alpha'.\nAdded line.\n")
+  expected_disk.tweak('A/B/E/beta',
+                      contents="This is the file 'beta'.\nAdded line.\n")
+  expected_disk.tweak('A/D/gamma',
+                      contents="This is the file 'gamma'.\nAdded line.\n")
+  expected_disk.tweak('A/D/H/omega',
+                      contents="This is the file 'omega'.\nAdded line.\n")
+  expected_disk.tweak('A/mu',
+                      contents="This is the file 'mu'.\nAdded line.\n")
+  expected_disk.tweak('A/D/G/tau',
+                      contents="This is the file 'tau'.\nAdded line.\n")
+  expected_disk.tweak('A/D/G/pi',
+                      contents="This is the file 'pi'.\nAdded line.\n")
+  expected_disk.tweak('A/D/H/chi',
+                      contents="This is the file 'chi'.\nAdded line.\n")
+  expected_disk.tweak('A/D/H/psi',
+                      contents="This is the file 'psi'.\nAdded line.\n")
+  expected_disk.tweak('A/D/G/rho',
+                      contents="This is the file 'rho'.\nAdded line.\n")
+
+  # Status is clean, but with iota and lambda at r1 and all else at r2.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('iota', 'A/B/lambda', wc_rev=1)
+
+  # Update.
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1,
+                                        "-r", "1",
+                                        "--changelist", "a",
+                                        "--changelist", "i",
+                                        "--depth", "files",
+                                        wc_dir,
+                                        os.path.join(wc_dir, 'A', 'B'))
+
+  ### Backdate to depth infinity all changelists "a", "i", and "o" now.
+
+  # We expect update to only touch all the files ending in 'a', 'i',
+  # and 'o' (except lambda and iota which were previously updated).
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/pi' : Item(status='U '),
+    'A/D/H/chi' : Item(status='U '),
+    'A/D/H/psi' : Item(status='U '),
+    'A/D/G/rho' : Item(status='U '),
+    'A/B/E/alpha' : Item(status='U '),
+    'A/B/E/beta' : Item(status='U '),
+    'A/D/gamma' : Item(status='U '),
+    'A/D/H/omega' : Item(status='U '),
+    })
+
+  # Disk state should have only tau and mu carrying new text.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu',
+                      contents="This is the file 'mu'.\nAdded line.\n")
+  expected_disk.tweak('A/D/G/tau',
+                      contents="This is the file 'tau'.\nAdded line.\n")
+
+  # Status is clean, but with iota and lambda at r1 and all else at r2.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('iota', 'A/B/lambda', 'A/D/G/pi', 'A/D/H/chi',
+                        'A/D/H/psi', 'A/D/G/rho', 'A/B/E/alpha',
+                        'A/B/E/beta', 'A/D/gamma', 'A/D/H/omega', wc_rev=1)
+
+  # Update.
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1,
+                                        "-r", "1",
+                                        "--changelist", "a",
+                                        "--changelist", "i",
+                                        "--changelist", "o",
+                                        "--depth", "infinity",
+                                        wc_dir)
+
 
 ########################################################################
 # Run the tests
@@ -702,6 +811,7 @@ test_list = [ None,
               diff_with_changelists,
               propmods_with_changelists,
               revert_with_changelists,
+              update_with_changelists,
              ]
 
 if __name__ == '__main__':

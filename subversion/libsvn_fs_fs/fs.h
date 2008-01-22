@@ -311,6 +311,13 @@ typedef struct
   /* is this the unmodified root of a transaction? */
   svn_boolean_t is_fresh_txn_root;
 
+  /* Number of nodes with svn:mergeinfo properties that are
+     descendants of this node (including it itself) */
+  apr_int64_t mergeinfo_count;
+
+  /* Does this node itself have svn:mergeinfo? */
+  svn_boolean_t has_mergeinfo;
+
 } node_revision_t;
 
 

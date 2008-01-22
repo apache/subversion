@@ -158,7 +158,7 @@ public class SVNClient implements SVNClientInterface
         MyStatusCallback callback = new MyStatusCallback();
 
         status(path, Depth.unknownOrImmediates(descend), onServer, getAll,
-               noIgnore, ignoreExternals, callback);
+               noIgnore, ignoreExternals, null, callback);
 
         return callback.getStatusArray();
     }
@@ -168,7 +168,8 @@ public class SVNClient implements SVNClientInterface
      */
     public native void status(String path, int depth, boolean onServer,
                               boolean getAll, boolean noIgnore,
-                              boolean ignoreExternals, StatusCallback callback)
+                              boolean ignoreExternals, String[] changelists,
+                              StatusCallback callback)
             throws ClientException;
 
     /**

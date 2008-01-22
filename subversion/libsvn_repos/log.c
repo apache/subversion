@@ -533,7 +533,7 @@ svn_repos__get_path_mergeinfo(apr_hash_t **mergeinfo,
 
   SVN_ERR(svn_fs_revision_root(&root, fs, revnum, subpool));
   SVN_ERR(svn_fs_get_mergeinfo(&tmp_mergeinfo, root, paths,
-                               svn_mergeinfo_inherited, subpool));
+                               svn_mergeinfo_inherited, FALSE, subpool));
 
   mergeinfo_str = apr_hash_get(tmp_mergeinfo, path, APR_HASH_KEY_STRING);
   if (mergeinfo_str != NULL)
@@ -560,6 +560,7 @@ get_combined_mergeinfo(apr_hash_t **mergeinfo,
   apr_hash_index_t *hi;
   apr_hash_t *tree_mergeinfo;
   apr_pool_t *subpool = svn_pool_create(pool);
+  const apr_array_header_t *query_paths;
 
   /* Revision 0 doesn't have any mergeinfo. */
   if (rev == 0)
@@ -570,7 +571,33 @@ get_combined_mergeinfo(apr_hash_t **mergeinfo,
 
   /* Get the mergeinfo for each tree roots in PATHS. */
   SVN_ERR(svn_fs_revision_root(&root, fs, rev, subpool));
-  SVN_ERR(svn_fs_get_mergeinfo_for_tree(&tree_mergeinfo, root, paths, pool));
+
+  if (rev == current_rev)
+    query_paths = paths;
+  else
+    {
+      /* If we're looking at a previous revision, some of the paths
+         might not exist, and svn_fs_get_mergeinfo_for_tree expects
+         them to! */
+      /* TODO(reint): This is somewhat of a hack, though; perhaps this
+         indicates that svn_fs_get_mergeinfo_for_tree is not the right
+         API to be using. */
+      int i;
+      apr_array_header_t *existing_paths = apr_array_make(pool, paths->nelts,
+                                                          sizeof(const char *));
+      for (i = 0; i < paths->nelts; i++)
+        {
+          const char *path = APR_ARRAY_IDX(paths, i, const char *);
+          svn_node_kind_t kind;
+          SVN_ERR(svn_fs_check_path(&kind, root, path, pool));
+          if (kind != svn_node_none)
+            APR_ARRAY_PUSH(existing_paths, const char *) = path;
+        }
+      query_paths = existing_paths;
+    }
+
+  SVN_ERR(svn_fs_get_mergeinfo_for_tree(&tree_mergeinfo, root, query_paths,
+                                        pool));
 
   *mergeinfo = apr_hash_make(pool);
 
