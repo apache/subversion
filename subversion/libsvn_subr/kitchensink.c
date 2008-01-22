@@ -21,6 +21,7 @@
 
 #include "svn_types.h"
 #include "svn_error.h"
+#include "svn_mergeinfo.h"
 #include "svn_private_config.h"
 
 svn_error_t *
