@@ -1290,20 +1290,21 @@ replay_rev_finished(svn_revnum_t revision,
   SVN_ERR(svn_ra_rev_proplist(rb->to_session, revision, &existing_props,
                               subpool));
 
+
   /* Ok, we're done with the data, now we just need to copy the remaining 
      'svn:date' and 'svn:author' revprops and we're all set. */
   filtered = filter_props(&filtered_count, rev_props, 
                           filter_include_date_author_log_sync, 
-                          pool);
+                          subpool);
   SVN_ERR(write_revprops(&filtered_count, rb->to_session, revision, filtered, 
-                         pool));
-
-  svn_pool_clear(subpool);
+                         subpool));
 
   /* Remove all extra properties in TARGET. */
 
   SVN_ERR(remove_props_not_in_source(rb->to_session, revision, 
-                                     rev_props, existing_props, pool));
+                                     rev_props, existing_props, subpool));
+
+  svn_pool_clear(subpool);
 
   /* Ok, we're done, bring the last-merged-rev property up to date. */
 

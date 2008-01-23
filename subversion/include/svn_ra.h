@@ -31,6 +31,7 @@
 #include "svn_error.h"
 #include "svn_delta.h"
 #include "svn_auth.h"
+#include "svn_mergeinfo.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -885,15 +886,24 @@ svn_ra_get_dir(svn_ra_session_t *session,
 /**
  * Set @a *mergeoutput to a hash mapping <tt>const char *</tt> target
  * paths (taken from @a paths) to mergeinfo hashes (which themselves
- * map <tt>const char *</tt> merged-from paths to 
+ * map <tt>const char *</tt> merged-from paths to
  * <tt>apr_array_header_t *</tt> revision range lists of
  * <tt>svn_merge_range_t *</tt> elements).  If no mergeinfo is
  * available, set @a *mergeoutput to @c NULL.  The requested mergeinfo
  * hashes are for @a paths (which are relative to @a session's URL) in
- * @a revision.  Allocate the returned values in @a pool.
+ * @a revision.
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a paths is retrieved.
+ *
+ * If @a include_descendants is TRUE, then additionally return the
+ * mergeinfo for any descendant of any element of @a paths which has
+ * the @c SVN_PROP_MERGEINFO property explicitly set on it.  (Note
+ * that inheritance is only taken into account for the elements in @a
+ * paths; descendants of the elements in @a paths which get their
+ * mergeinfo via inheritance are not included in @a *mergeoutput.)
+ *
+ * Allocate the returned values in @a pool.
  *
  * If @a revision is @c SVN_INVALID_REVNUM, it defaults to youngest.
  *
@@ -909,6 +919,7 @@ svn_ra_get_mergeinfo(svn_ra_session_t *session,
                      const apr_array_header_t *paths,
                      svn_revnum_t revision,
                      svn_mergeinfo_inheritance_t inherit,
+                     svn_boolean_t include_descendants,
                      apr_pool_t *pool);
 
 /** Retrieve @a commit_rangelist and a @a merge_ranges_list from a given

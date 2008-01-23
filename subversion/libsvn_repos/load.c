@@ -31,6 +31,7 @@
 
 #include <apr_lib.h>
 
+#include "private/svn_mergeinfo_private.h"
 
 /*----------------------------------------------------------------------*/
 
@@ -236,32 +237,91 @@ read_key_or_val(char **pbuf,
   return SVN_NO_ERROR;
 }
 
+
 /* Prepend the mergeinfo source paths in MERGEINFO_ORIG with PARENT_DIR, and
    return it in *MERGEINFO_VAL. */
 static svn_error_t *
-prefix_mergeinfo_paths(const char **mergeinfo_val, const char *mergeinfo_orig,
-                       const char *parent_dir, apr_pool_t *pool)
+prefix_mergeinfo_paths(svn_string_t **mergeinfo_val,
+                       const svn_string_t *mergeinfo_orig,
+                       const char *parent_dir,
+                       apr_pool_t *pool)
 {
   apr_hash_t *prefixed_mergeinfo, *mergeinfo;
   apr_hash_index_t *hi;
-  svn_stringbuf_t *merge_val;
-  const char *path;
-  const void *merge_source;
   void *rangelist;
 
-  SVN_ERR(svn_mergeinfo_parse(&mergeinfo, mergeinfo_orig, pool));
+  SVN_ERR(svn_mergeinfo_parse(&mergeinfo, mergeinfo_orig->data, pool));
   prefixed_mergeinfo = apr_hash_make(pool);
   for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
     {
+      const char *path;
+      const void *merge_source;
       apr_hash_this(hi, &merge_source, NULL, &rangelist);
       path = svn_path_join(parent_dir, (const char*)merge_source+1, pool);
       apr_hash_set(prefixed_mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
     }
-  svn_mergeinfo_to_stringbuf(&merge_val, prefixed_mergeinfo, pool);
-  *mergeinfo_val = merge_val->data;
+  SVN_ERR(svn_mergeinfo__to_string(mergeinfo_val, prefixed_mergeinfo, pool));
 
   return SVN_NO_ERROR;
 }
+
+
+/* Examine the mergeinfo in INITIAL_VAL, renumber revisions in rangelists
+   as appropriate, and return the (possibly new) mergeinfo in *FINAL_VAL
+   (allocated from POOL). */
+static svn_error_t *
+renumber_mergeinfo_revs(svn_string_t **final_val,
+                        const svn_string_t *initial_val,
+                        struct revision_baton *rb,
+                        apr_pool_t *pool)
+{
+  apr_hash_t *mergeinfo;
+  apr_hash_t *final_mergeinfo = apr_hash_make(pool);
+  apr_hash_index_t *hi;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  SVN_ERR(svn_mergeinfo_parse(&mergeinfo, initial_val->data, subpool));
+  for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
+    {
+      const char *merge_source;
+      apr_array_header_t *rangelist;
+      struct parse_baton *pb = rb->pb;
+      int i;
+      const void *key;
+      void *val;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      merge_source = (const char *) key;
+      rangelist = (apr_array_header_t *) val;
+
+      /* Possibly renumber revisions in merge source's rangelist. */
+      for (i = 0; i < rangelist->nelts; i++)
+        {
+          svn_revnum_t *rev_from_map;
+          svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
+                                                   svn_merge_range_t *);
+
+          if ((rev_from_map = apr_hash_get(pb->rev_map, &range->start,
+                                           sizeof(svn_revnum_t))))
+            if (SVN_IS_VALID_REVNUM(*rev_from_map))
+              range->start = *rev_from_map;;
+
+          if ((rev_from_map = apr_hash_get(pb->rev_map, &range->end,
+                                           sizeof(svn_revnum_t))))
+            if (SVN_IS_VALID_REVNUM(*rev_from_map))
+              range->end = *rev_from_map;
+         }
+       apr_hash_set(final_mergeinfo, merge_source,
+                    APR_HASH_KEY_STRING, rangelist);
+     }
+
+  SVN_ERR(svn_mergeinfo_sort(final_mergeinfo, subpool));
+  SVN_ERR(svn_mergeinfo__to_string(final_val, final_mergeinfo, pool));
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Read CONTENT_LENGTH bytes from STREAM, parsing the bytes as an
    encoded Subversion properties hash, and making multiple calls to
@@ -1134,14 +1194,22 @@ set_node_property(void *baton,
   struct revision_baton *rb = nb->rb;
   const char *parent_dir = rb->pb->parent_dir;
 
-  if (parent_dir && strcmp(name, SVN_PROP_MERGEINFO) == 0)
+  if (strcmp(name, SVN_PROP_MERGEINFO) == 0)
     {
-      /* Prefix the merge source paths with PARENT_DIR. */
-      /* ASSUMPTION: All source paths are included in the dump stream. */
-      const char *mergeinfo_val;
-      SVN_ERR(prefix_mergeinfo_paths(&mergeinfo_val, value->data,
-                                     parent_dir, nb->pool));
-      value = svn_string_create(mergeinfo_val, nb->pool);
+      /* Renumber mergeinfo as appropriate. */
+      svn_string_t *renumbered_mergeinfo;
+      SVN_ERR(renumber_mergeinfo_revs(&renumbered_mergeinfo, value, rb,
+                                      nb->pool));
+      value = renumbered_mergeinfo;
+      if (parent_dir)
+        {
+          /* Prefix the merge source paths with PARENT_DIR. */
+          /* ASSUMPTION: All source paths are included in the dump stream. */
+          svn_string_t *mergeinfo_val;
+          SVN_ERR(prefix_mergeinfo_paths(&mergeinfo_val, value, parent_dir,
+                                         nb->pool));
+          value = mergeinfo_val;
+        }
     }
 
   SVN_ERR(svn_fs_change_node_prop(rb->txn_root, nb->path,

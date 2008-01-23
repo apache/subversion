@@ -47,6 +47,7 @@ extern "C" {
 #define SVN_DAV__COMMIT_MERGE_INFO "commit-merge-info"
 #define SVN_DAV__MERGE_RANGES "merge-ranges"
 #define SVN_DAV__COMMIT_REV "commit-rev"
+#define SVN_DAV__INCLUDE_DESCENDANTS "include-descendants"
 #define SVN_DAV__VERSION_NAME "version-name"
 
 #ifdef __cplusplus

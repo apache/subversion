@@ -19,6 +19,9 @@
 #ifndef SVN_LIBSVN_CLIENT_MERGEINFO_H
 #define SVN_LIBSVN_CLIENT_MERGEINFO_H
 
+#include "svn_wc.h"
+#include "svn_client.h"
+
 
 /*** Data Structures ***/
 
@@ -104,6 +107,10 @@ svn_client__get_wc_mergeinfo(apr_hash_t **mergeinfo,
    INHERIT indicates whether explicit, explicit or inherited, or only
    inherited mergeinfo for REL_PATH is obtained.
 
+   If REL_PATH does not exist at REV, SVN_ERR_FS_NOT_FOUND or
+   SVN_ERR_RA_DAV_REQUEST_FAILED is returned and *TARGET_MERGEINFO
+   is untouched.
+
    If there is no mergeinfo available for REL_PATH, or if the server
    doesn't support a mergeinfo capability and SQUELCH_INCAPABLE is
    TRUE, set *TARGET_MERGEINFO to NULL. */
@@ -166,6 +173,14 @@ svn_client__get_history_as_mergeinfo(apr_hash_t **mergeinfo_p,
                                      svn_wc_adm_access_t *adm_access,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool);
+
+/* Translates an array SEGMENTS (of svn_location_t *), like the one
+   returned from svn_client__repos_location_segments, into a mergeinfo
+   hash *MERGEINFO_P, allocated in POOL. */
+svn_error_t *
+svn_client__mergeinfo_from_segments(apr_hash_t **mergeinfo_p,
+                                    apr_array_header_t *segments,
+                                    apr_pool_t *pool);
 
 /* Parse any mergeinfo from the WCPATH's ENTRY and store it in
    MERGEINFO.  If PRISTINE is true parse the pristine mergeinfo,
@@ -294,5 +309,11 @@ svn_client__get_commit_and_merge_ranges
  svn_mergeinfo_inheritance_t inherit,
  svn_client_ctx_t *ctx,
  apr_pool_t *pool);
+
+/* TODO(reint): Document. */
+svn_error_t *
+svn_client__elide_mergeinfo_catalog(apr_hash_t *mergeinfo_catalog,
+                                    apr_pool_t *pool);
+
 
 #endif /* SVN_LIBSVN_CLIENT_MERGEINFO_H */

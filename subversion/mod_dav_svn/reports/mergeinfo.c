@@ -47,6 +47,7 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
   dav_error *derr = NULL;
   apr_xml_elem *child;
   apr_hash_t *mergeinfo;
+  svn_boolean_t include_descendants = FALSE;
   dav_svn__authz_read_baton arb;
   const dav_svn_repos *repos = resource->info->repos;
   const char *action;
@@ -105,6 +106,14 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
                                    svn_path_uri_encode(target,
                                                        resource->pool));
         }
+      else if (strcmp(child->name, SVN_DAV__INCLUDE_DESCENDANTS) == 0)
+        {
+          const char *word = dav_xml_get_cdata(child, resource->pool, 1);
+          if (strcmp(word, "yes") == 0)
+            include_descendants = TRUE;
+          /* Else the client isn't supposed to send anyway, so just
+             leave it false. */
+        }
       /* else unknown element; skip it */
     }
 
@@ -116,7 +125,8 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
   bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
 
   serr = svn_repos_fs_get_mergeinfo(&mergeinfo, repos->repos, paths, rev,
-                                    inherit, dav_svn__authz_read_func(&arb),
+                                    inherit, include_descendants,
+                                    dav_svn__authz_read_func(&arb),
                                     &arb, resource->pool);
   if (serr)
     {

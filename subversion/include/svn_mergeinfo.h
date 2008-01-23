@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -230,6 +230,24 @@ svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
                      svn_boolean_t consider_inheritance,
                      apr_pool_t *pool);
 
+/** Find the intersection of two mergeinfo hashes (consisting of @c
+ * const char * paths mapped to @c apr_array_header_t *'s of @c
+ * svn_merge_range_t * elements), @a mergeinfo1 and @a mergeinfo2, and
+ * place the result in @a mergeinfo, which is (deeply) allocated in @a
+ * pool.
+ *
+ * Note: The rangelists of @a mergeinfo1 and @a mergeinfo2 must be
+ * sorted as said by @c svn_sort_compare_ranges(). @a output is
+ * guaranteed to be in sorted order.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_mergeinfo_intersect(apr_hash_t **mergeinfo,
+                        apr_hash_t *mergeinfo1,
+                        apr_hash_t *mergeinfo2,
+                        apr_pool_t *pool);
+
 /** Find the intersection of two rangelists consisting of @c
  * svn_merge_range_t * elements, @a rangelist1 and @a rangelist2, and
  * place the result in @a *rangelist (which is never @c NULL).
@@ -380,6 +398,48 @@ svn_mergeinfo_dup(apr_hash_t *mergeinfo, apr_pool_t *pool);
  */
 apr_array_header_t *
 svn_rangelist_dup(apr_array_header_t *rangelist, apr_pool_t *pool);
+
+
+/**
+ * The three ways to request mergeinfo affecting a given path.
+ *
+ * @since New in 1.5.
+ */
+typedef enum
+{
+  /** Explicit mergeinfo only. */
+  svn_mergeinfo_explicit,
+
+  /** Explicit mergeinfo, or if that doesn't exist, the inherited
+      mergeinfo from a target's nearest (path-wise, not history-wise)
+      ancestor. */ 
+  svn_mergeinfo_inherited,
+
+  /** Mergeinfo on target's nearest (path-wise, not history-wise)
+      ancestor, regardless of whether target has explict mergeinfo. */
+  svn_mergeinfo_nearest_ancestor
+} svn_mergeinfo_inheritance_t;
+
+/** Return a constant string expressing @a inherit as an English word,
+ * i.e., "explicit" (default), "inherited", or "nearest_ancestor".
+ * The string is not localized, as it may be used for client<->server
+ * communications.
+ *
+ * @since New in 1.5.
+ */
+const char *
+svn_inheritance_to_word(svn_mergeinfo_inheritance_t inherit);
+
+
+/** Return the appropriate @c svn_mergeinfo_inheritance_t for @a word.
+ * @a word is as returned from svn_inheritance_to_word().  Defaults to
+ * @c svn_mergeinfo_explicit.
+ *
+ * @since New in 1.5.
+ */
+svn_mergeinfo_inheritance_t
+svn_inheritance_from_word(const char *word);
+
 
 #ifdef __cplusplus
 }

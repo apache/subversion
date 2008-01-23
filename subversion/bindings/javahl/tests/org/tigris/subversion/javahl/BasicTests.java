@@ -2163,9 +2163,12 @@ public class BasicTests extends SVNTests
         PrintWriter writer = new PrintWriter(new FileOutputStream(f, true));
         writer.print(toAppend);
         writer.close();
-        WC wc = thisTest.getWc();
-        wc.setItemWorkingCopyRevision(path, rev);
-        wc.setItemContent(path, wc.getItemContent(path) + toAppend);
+        if (rev > 0)
+        {
+            WC wc = thisTest.getWc();
+            wc.setItemWorkingCopyRevision(path, rev);
+            wc.setItemContent(path, wc.getItemContent(path) + toAppend);
+        }
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(), path,
                               NodeKind.file, CommitItemStateFlags.TextMods);
         return f;
@@ -2305,6 +2308,82 @@ public class BasicTests extends SVNTests
         assertEquals("wrong revision number from commit",
                      client.commit(new String[] { thisTest.getWCPath() },
                                    "log msg", true), 5);
+    }
+
+    /**
+     * Test reintegrating a branch with trunk
+     * (e.g. 'svn merge --reintegrate').
+     * @throws Throwable
+     * @since 1.5
+     */
+    public void testMergeReintegrate() throws Throwable
+    {
+        OneTest thisTest = setupAndPerformMerge();
+
+        // Test that getMergeInfo() returns null.
+        assertNull(client.getMergeInfo(new File(thisTest.getWCPath(), "A")
+                                       .toString(), Revision.HEAD));
+
+        // Merge and commit some changes to main (r4).
+        appendText(thisTest, "A/mu", "xxx", 4);
+        assertEquals("wrong revision number from main commit",
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "log msg", true),
+                     4);
+        // Merge and commit some changes to branch (r5).
+        appendText(thisTest, "branches/A/D/G/rho", "yyy", -1);
+        assertEquals("wrong revision number from branch commit",
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "log msg", true),
+                     5);
+
+        // update the branch WC (to r5) before merge
+        client.update(thisTest.getWCPath() + "/branches", Revision.HEAD, true);
+
+        String branchPath = thisTest.getWCPath() + "/branches/A";
+        String modUrl = thisTest.getUrl() + "/A";
+        Revision unspec = new Revision(RevisionKind.unspecified);
+        client.merge(modUrl, Revision.HEAD,
+                     new RevisionRange[] { new RevisionRange(unspec, unspec) },
+                     branchPath, true, Depth.infinity, false, false, false);
+
+        // commit the changes so that we can verify merge
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "branches/A", NodeKind.dir,
+                              CommitItemStateFlags.PropMods);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "branches/A/mu", NodeKind.file,
+                              CommitItemStateFlags.TextMods);
+        assertEquals("wrong revision number from commit",
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "log msg", true), 6);
+
+        // now we --reintegrate the branch with main
+        String branchUrl = thisTest.getUrl() + "/branches/A";
+        try
+        {
+            client.mergeReintegrate(branchUrl, Revision.HEAD,
+                                    thisTest.getWCPath() + "/A", true, false);
+            fail("reintegrate merged into a mixed-revision WC");
+        }
+        catch(ClientException e)
+        {
+            // update the WC (to r6) and try again
+            client.update(thisTest.getWCPath(), Revision.HEAD, true);
+            client.mergeReintegrate(branchUrl, Revision.HEAD,
+                                    thisTest.getWCPath() + "/A", true, false);
+        }
+        // commit the changes so that we can verify merge
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "A", NodeKind.dir,
+                              CommitItemStateFlags.PropMods);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "A/D/G/rho", NodeKind.file,
+                              CommitItemStateFlags.TextMods);
+        assertEquals("wrong revision number from commit",
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "log msg", true), 7);
+
     }
 
     /**

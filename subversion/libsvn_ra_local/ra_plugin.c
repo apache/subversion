@@ -653,6 +653,7 @@ svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
                             const apr_array_header_t *paths,
                             svn_revnum_t revision,
                             svn_mergeinfo_inheritance_t inherit,
+                            svn_boolean_t include_descendants,
                             apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
@@ -669,7 +670,8 @@ svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
     }
 
   SVN_ERR(svn_repos_fs_get_mergeinfo(&tmp_mergeinfo, sess->repos, abs_paths,
-                                     revision, inherit, NULL, NULL, pool));
+                                     revision, inherit, include_descendants,
+                                     NULL, NULL, pool));
   *mergeinfo = NULL;
   if (tmp_mergeinfo != NULL && apr_hash_count(tmp_mergeinfo) > 0)
     {

@@ -311,6 +311,7 @@ typedef struct root_vtable_t
                                 svn_fs_root_t *root,
                                 const apr_array_header_t *paths,
                                 svn_mergeinfo_inheritance_t inherit,
+                                svn_boolean_t include_descendants,
                                 apr_pool_t *pool);
   svn_error_t *(*get_mergeinfo_for_tree)(apr_hash_t **mergeinfo,
                                          svn_fs_root_t *root,
@@ -353,12 +354,6 @@ typedef struct id_vtable_t
    in the 'flags' argument to svn_fs_lock().  */
 #define SVN_FS__PROP_TXN_CHECK_LOCKS           SVN_PROP_PREFIX "check-locks"
 #define SVN_FS__PROP_TXN_CHECK_OOD             SVN_PROP_PREFIX "check-ood"
-
-/* This transaction property determines whether the txn has mergeinfo
-   properties set in it, and thus will need some info inserted about
-   uid->rev mapping in the mergeinfo table  */
-#define SVN_FS__PROP_TXN_CONTAINS_MERGEINFO    SVN_PROP_PREFIX "contains-mergeinfo"
-
 
 struct svn_fs_t
 {

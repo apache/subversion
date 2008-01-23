@@ -1196,6 +1196,42 @@ svn_mergeinfo_merge(apr_hash_t *mergeinfo, apr_hash_t *changes,
 }
 
 svn_error_t *
+svn_mergeinfo_intersect(apr_hash_t **mergeinfo,
+                        apr_hash_t *mergeinfo1,
+                        apr_hash_t *mergeinfo2,
+                        apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+
+  *mergeinfo = apr_hash_make(pool);
+
+  /* ### TODO(reint): Do we care about the case when a path in one
+     ### mergeinfo hash has inheritable mergeinfo, and in the other
+     ### has non-inhertiable mergeinfo?  It seems like that path
+     ### itself should really be an intersection, while child paths
+     ### should not be... */
+  for (hi = apr_hash_first(apr_hash_pool_get(mergeinfo1), mergeinfo1);
+       hi; hi = apr_hash_next(hi))
+    {
+      apr_array_header_t *rangelist;
+      const void *path;
+      void *val;
+      apr_hash_this(hi, &path, NULL, &val);
+
+      rangelist = apr_hash_get(mergeinfo2, path, APR_HASH_KEY_STRING);
+      if (rangelist)
+        {
+          SVN_ERR(svn_rangelist_intersect(&rangelist,
+                                          (apr_array_header_t *) val,
+                                          rangelist, pool));
+          if (rangelist->nelts > 0)
+            apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_mergeinfo_remove(apr_hash_t **mergeinfo, apr_hash_t *eraser,
                      apr_hash_t *whiteboard, apr_pool_t *pool)
 {
@@ -1575,4 +1611,17 @@ svn_merge_range_dup(svn_merge_range_t *range, apr_pool_t *pool)
   svn_merge_range_t *new_range = apr_palloc(pool, sizeof(*new_range));
   memcpy(new_range, range, sizeof(*new_range));
   return new_range;
+}
+
+svn_boolean_t
+svn_merge_range_contains_rev(svn_merge_range_t *range, svn_revnum_t rev)
+{
+  assert(SVN_IS_VALID_REVNUM(range->start));
+  assert(SVN_IS_VALID_REVNUM(range->end));
+  assert(range->start != range->end);
+
+  if (range->start < range->end)
+    return rev > range->start && rev <= range->end;
+  else
+    return rev > range->end && rev <= range->start;
 }
