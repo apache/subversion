@@ -94,7 +94,11 @@
 /* svn_wc_match_ignore_list() */
 %apply const apr_array_header_t *STRINGLIST {
   apr_array_header_t *list
-};
+}
+
+%apply const apr_array_header_t *STRINGLIST_MAY_BE_NULL {
+  apr_array_header_t *changelists
+}
 
 /* svn_wc_cleanup2() */
 %apply const char *MAY_BE_NULL {
