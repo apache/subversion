@@ -237,32 +237,34 @@ read_key_or_val(char **pbuf,
   return SVN_NO_ERROR;
 }
 
+
 /* Prepend the mergeinfo source paths in MERGEINFO_ORIG with PARENT_DIR, and
    return it in *MERGEINFO_VAL. */
 static svn_error_t *
-prefix_mergeinfo_paths(const char **mergeinfo_val, const char *mergeinfo_orig,
-                       const char *parent_dir, apr_pool_t *pool)
+prefix_mergeinfo_paths(svn_string_t **mergeinfo_val,
+                       const svn_string_t *mergeinfo_orig,
+                       const char *parent_dir,
+                       apr_pool_t *pool)
 {
   apr_hash_t *prefixed_mergeinfo, *mergeinfo;
   apr_hash_index_t *hi;
-  svn_stringbuf_t *merge_val;
-  const char *path;
-  const void *merge_source;
   void *rangelist;
 
-  SVN_ERR(svn_mergeinfo_parse(&mergeinfo, mergeinfo_orig, pool));
+  SVN_ERR(svn_mergeinfo_parse(&mergeinfo, mergeinfo_orig->data, pool));
   prefixed_mergeinfo = apr_hash_make(pool);
   for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
     {
+      const char *path;
+      const void *merge_source;
       apr_hash_this(hi, &merge_source, NULL, &rangelist);
       path = svn_path_join(parent_dir, (const char*)merge_source+1, pool);
       apr_hash_set(prefixed_mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
     }
-  svn_mergeinfo_to_stringbuf(&merge_val, prefixed_mergeinfo, pool);
-  *mergeinfo_val = merge_val->data;
+  SVN_ERR(svn_mergeinfo__to_string(mergeinfo_val, prefixed_mergeinfo, pool));
 
   return SVN_NO_ERROR;
 }
+
 
 /* Examine the mergeinfo in INITIAL_VAL, renumber revisions in rangelists
    as appropriate, and return the (possibly new) mergeinfo in *FINAL_VAL
@@ -1203,10 +1205,10 @@ set_node_property(void *baton,
         {
           /* Prefix the merge source paths with PARENT_DIR. */
           /* ASSUMPTION: All source paths are included in the dump stream. */
-          const char *mergeinfo_val;
-          SVN_ERR(prefix_mergeinfo_paths(&mergeinfo_val, value->data,
-                                         parent_dir, nb->pool));
-          value = svn_string_create(mergeinfo_val, nb->pool);
+          svn_string_t *mergeinfo_val;
+          SVN_ERR(prefix_mergeinfo_paths(&mergeinfo_val, value, parent_dir,
+                                         nb->pool));
+          value = mergeinfo_val;
         }
     }
 
