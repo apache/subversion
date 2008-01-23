@@ -623,8 +623,9 @@ svn_fs_base__dag_set_proplist(dag_node_t *node,
                                      trail, pool);
   if (! err)
     {
-      SVN_ERR(svn_fs_base__delete_rep_if_mutable(fs, noderev->prop_key,
-                                                 txn_id, trail, pool));
+      if (noderev->prop_key)
+        SVN_ERR(svn_fs_base__delete_rep_if_mutable(fs, noderev->prop_key,
+                                                   txn_id, trail, pool));
       noderev->prop_key = dup_rep_key;
       return svn_fs_bdb__put_node_revision(fs, node->id, noderev,
                                            trail, pool);
