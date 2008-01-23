@@ -264,9 +264,9 @@ svn_fs_base__dag_init_fs(svn_fs_t *fs)
 
 /* Given directory NODEREV in FS, set *ENTRIES_P to its entries list
    hash, as part of TRAIL, or to NULL if NODEREV has no entries.  The
-   entries list will be allocated in POOL, and the entries in
-   that list will not have interesting value in their 'kind' fields.
-   If NODEREV is not a directory, return the error SVN_ERR_FS_NOT_DIRECTORY. */
+   entries list will be allocated in POOL, and the entries in that
+   list will not have interesting value in their 'kind' fields.  If
+   NODEREV is not a directory, return the error SVN_ERR_FS_NOT_DIRECTORY. */
 static svn_error_t *
 get_dir_entries(apr_hash_t **entries_p,
                 svn_fs_t *fs,
@@ -593,7 +593,8 @@ svn_fs_base__dag_set_proplist(dag_node_t *node,
       svn_string_t *idstr = svn_fs_base__id_unparse(node->id, pool);
       return svn_error_createf
         (SVN_ERR_FS_NOT_MUTABLE, NULL,
-         _("Can't set proplist on *immutable* node-revision %s"), idstr->data);
+         _("Can't set proplist on *immutable* node-revision %s"), 
+         idstr->data);
     }
 
   /* Go get a fresh NODE-REVISION for this node. */
@@ -1447,8 +1448,8 @@ svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
                                   APR_HASH_KEY_STRING);
   if (target_mergeinfo)
     {
-      svn_stringbuf_t *buf = svn_stringbuf_create_from_string(target_mergeinfo,
-                                                              pool);
+      svn_stringbuf_t *buf = 
+        svn_stringbuf_create_from_string(target_mergeinfo, pool);
       svn_stream_t *stream = svn_stream_from_stringbuf(buf, pool);
       apr_hash_t *mergeinfo = apr_hash_make(pool);
       SVN_ERR(svn_hash_read2(mergeinfo, stream, NULL, pool));
@@ -1461,9 +1462,11 @@ svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
     SVN_ERR(svn_fs_base__set_txn_prop
             (fs, txn_id, SVN_FS__PROP_TXN_CHECK_OOD, NULL, trail, pool));
 
-  if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS, APR_HASH_KEY_STRING))
+  if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS, 
+                   APR_HASH_KEY_STRING))
     SVN_ERR(svn_fs_base__set_txn_prop
             (fs, txn_id, SVN_FS__PROP_TXN_CHECK_LOCKS, NULL, trail, pool));
+
   /* Promote the unfinished transaction to a committed one. */
   SVN_ERR(svn_fs_base__txn_make_committed(fs, txn_id, *new_rev,
                                           trail, pool));
@@ -1520,11 +1523,12 @@ svn_fs_base__things_different(svn_boolean_t *props_changed,
 
 /*** Mergeinfo tracking stuff ***/
 
-svn_error_t *svn_fs_base__dag_get_mergeinfo_stats(svn_boolean_t *has_mergeinfo,
-                                                  apr_int64_t *count,
-                                                  dag_node_t *node,
-                                                  trail_t *trail,
-                                                  apr_pool_t *pool)
+svn_error_t *
+svn_fs_base__dag_get_mergeinfo_stats(svn_boolean_t *has_mergeinfo,
+                                     apr_int64_t *count,
+                                     dag_node_t *node,
+                                     trail_t *trail,
+                                     apr_pool_t *pool)
 {
   node_revision_t *node_rev;
   svn_fs_t *fs = svn_fs_base__dag_get_fs(node);
@@ -1539,12 +1543,13 @@ svn_error_t *svn_fs_base__dag_get_mergeinfo_stats(svn_boolean_t *has_mergeinfo,
 }
 
 
-svn_error_t *svn_fs_base__dag_set_has_mergeinfo(dag_node_t *node,
-                                                svn_boolean_t has_mergeinfo,
-                                                svn_boolean_t *had_mergeinfo,
-                                                const char *txn_id,
-                                                trail_t *trail,
-                                                apr_pool_t *pool)
+svn_error_t *
+svn_fs_base__dag_set_has_mergeinfo(dag_node_t *node,
+                                   svn_boolean_t has_mergeinfo,
+                                   svn_boolean_t *had_mergeinfo,
+                                   const char *txn_id,
+                                   trail_t *trail,
+                                   apr_pool_t *pool)
 {
   node_revision_t *node_rev;
   svn_fs_t *fs = svn_fs_base__dag_get_fs(node);
@@ -1576,11 +1581,12 @@ svn_error_t *svn_fs_base__dag_set_has_mergeinfo(dag_node_t *node,
 }
 
 
-svn_error_t *svn_fs_base__dag_set_mergeinfo_count(dag_node_t *node,
-                                                  apr_int64_t count,
-                                                  const char *txn_id,
-                                                  trail_t *trail,
-                                                  apr_pool_t *pool)
+svn_error_t *
+svn_fs_base__dag_set_mergeinfo_count(dag_node_t *node,
+                                     apr_int64_t count,
+                                     const char *txn_id,
+                                     trail_t *trail,
+                                     apr_pool_t *pool)
 {
   node_revision_t *node_rev;
   svn_fs_t *fs = svn_fs_base__dag_get_fs(node);
@@ -1606,11 +1612,12 @@ svn_error_t *svn_fs_base__dag_set_mergeinfo_count(dag_node_t *node,
 }
 
 
-svn_error_t *svn_fs_base__dag_adjust_mergeinfo_count(dag_node_t *node,
-                                                     apr_int64_t count_delta,
-                                                     const char *txn_id,
-                                                     trail_t *trail,
-                                                     apr_pool_t *pool)
+svn_error_t *
+svn_fs_base__dag_adjust_mergeinfo_count(dag_node_t *node,
+                                        apr_int64_t count_delta,
+                                        const char *txn_id,
+                                        trail_t *trail,
+                                        apr_pool_t *pool)
 {
   node_revision_t *node_rev;
   svn_fs_t *fs = svn_fs_base__dag_get_fs(node);

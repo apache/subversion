@@ -306,7 +306,8 @@ txn_body_txn_root(void *baton,
   if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_OOD, APR_HASH_KEY_STRING))
     flags |= SVN_FS_TXN_CHECK_OOD;
 
-  if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS, APR_HASH_KEY_STRING))
+  if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS, 
+                   APR_HASH_KEY_STRING))
     flags |= SVN_FS_TXN_CHECK_LOCKS;
 
   root = make_txn_root(fs, svn_txn_id, txn->base_rev, flags, trail->pool);
@@ -1305,8 +1306,9 @@ txn_body_change_node_prop(void *baton,
       
       /* First, note on our node that it has mergeinfo. */
       SVN_ERR(svn_fs_base__dag_set_has_mergeinfo(parent_path->node,
-                                                 has_mergeinfo, &had_mergeinfo,
-                                                 txn_id, trail, trail->pool));
+                                                 has_mergeinfo, 
+                                                 &had_mergeinfo, txn_id, 
+                                                 trail, trail->pool));
       
       /* If this is a change from the old state, we need to update our
          node's parents' mergeinfo counts by a factor of 1. */
@@ -1544,7 +1546,7 @@ txn_body_pred_count(void *baton, trail_t *trail)
 
 struct txn_pred_id_args
 {
-  const svn_fs_id_t *id;      /* The node id of for we want the predecessor. */
+  const svn_fs_id_t *id;      /* The node id whose predecessor we want. */
   const svn_fs_id_t *pred_id; /* The returned predecessor id. */
   apr_pool_t *pool;           /* The pool in which to allocate pred_id. */
 };
@@ -2035,8 +2037,10 @@ merge(svn_stringbuf_t *conflict_p,
               dag_node_t *s_ent_node;
               apr_int64_t mergeinfo_end;
               SVN_ERR(svn_fs_base__dag_get_node(&s_ent_node, fs,
-                                                s_entry->id, trail, iterpool));
-              SVN_ERR(svn_fs_base__dag_get_mergeinfo_stats(NULL, &mergeinfo_end,
+                                                s_entry->id, trail, 
+                                                iterpool));
+              SVN_ERR(svn_fs_base__dag_get_mergeinfo_stats(NULL, 
+                                                           &mergeinfo_end,
                                                            s_ent_node, trail,
                                                            iterpool));
               mergeinfo_increment += mergeinfo_end;
@@ -2719,7 +2723,8 @@ txn_body_make_dir(void *baton,
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path,
                      svn_fs_base__dag_get_id(sub_dir),
-                     svn_fs_path_change_add, FALSE, FALSE, trail, trail->pool));
+                     svn_fs_path_change_add, FALSE, FALSE, 
+                     trail, trail->pool));
 
   return SVN_NO_ERROR;
 }
@@ -2895,7 +2900,8 @@ txn_body_copy(void *baton,
       /* If this is a replacement operation, we need to know the old
          node's mergeinfo count. */
       if (to_parent_path->node)
-        SVN_ERR(svn_fs_base__dag_get_mergeinfo_stats(NULL, &old_mergeinfo_count,
+        SVN_ERR(svn_fs_base__dag_get_mergeinfo_stats(NULL, 
+                                                     &old_mergeinfo_count,
                                                      to_parent_path->node,
                                                      trail, trail->pool));
       /* Do the copy. */
@@ -3155,8 +3161,10 @@ txn_body_make_file(void *baton,
                                      trail, trail->pool));
 
   /* Make a record of this modification in the changes table. */
-  SVN_ERR(add_change(root->fs, txn_id, path, svn_fs_base__dag_get_id(child),
-                     svn_fs_path_change_add, TRUE, FALSE, trail, trail->pool));
+  SVN_ERR(add_change(root->fs, txn_id, path, 
+                     svn_fs_base__dag_get_id(child),
+                     svn_fs_path_change_add, TRUE, FALSE, 
+                     trail, trail->pool));
 
   return SVN_NO_ERROR;
 }
