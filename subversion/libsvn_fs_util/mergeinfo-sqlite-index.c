@@ -94,8 +94,6 @@ static svn_merge_range_t no_mergeinfo = { SVN_INVALID_REVNUM,
    Populate the 'mergeinfo' with CURR_MERGEINFO, and populate the
    'mergeinfo_changed' table with ADDED_MERGEINFO.
 
-   OLD_ROOT should be a revision root for rev NEW_REV-1.
-
    Use POOL for temporary allocations. */
 static svn_error_t *
 index_path_mergeinfo(svn_revnum_t new_rev,
@@ -104,7 +102,6 @@ index_path_mergeinfo(svn_revnum_t new_rev,
                      apr_hash_t *curr_mergeinfo,
                      apr_hash_t *orig_mergeinfo,
                      apr_hash_t *added_mergeinfo,
-                     svn_fs_root_t *old_root,
                      apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
@@ -272,7 +269,7 @@ index_txn_mergeinfo(sqlite3 *db,
                                  pool));
       SVN_ERR(index_path_mergeinfo(new_rev, db, (const char *) path,
                                    curr_mergeinfo, orig_mergeinfo_for_path,
-                                   added_mergeinfo_for_path, old_root, pool));
+                                   added_mergeinfo_for_path, pool));
     }
   return SVN_NO_ERROR;
 }
