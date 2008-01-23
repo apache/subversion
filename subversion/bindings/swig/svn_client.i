@@ -76,10 +76,7 @@
 }
 
 %apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
-  apr_array_header_t **paths
-}
-
-%apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
+  apr_array_header_t **paths,
   apr_array_header_t **suggestions
 }
 
