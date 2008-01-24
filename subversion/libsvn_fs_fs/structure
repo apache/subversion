@@ -43,14 +43,14 @@ repository) is:
   txn-protorevs/      Subdirectory containing transaction proto-revision files
     <txnid>.rev       Proto-revision file for transaction <txnid>
     <txnid>.rev-lock  Write lock for proto-rev file
-  transaction-current File containing the next transaction key
+  txn-current         File containing the next transaction key
   locks/              Subdirectory containing locks
     <partial-digest>/ Subdirectory named for first 3 letters of an MD5 digest
       <digest>        File containing locks/children for path with <digest>
   current             File specifying current revision and next node/copy id
   fs-type             File identifying this filesystem as an FSFS filesystem
   write-lock          Empty file, locked to serialise writers
-  txn-current-lock    Empty file, locked to serialise 'transaction-current'
+  txn-current-lock    Empty file, locked to serialise 'txn-current'
   uuid                File containing the UUID of the repository
   format              File containing the format number of this filesystem
 
@@ -70,14 +70,14 @@ read in, mutated, and written out again.  Note that readers are never
 blocked by any operation - writers must ensure that the filesystem is
 always in a consistent state.
 
-The "transaction-current" file is a file with a single line of text
-that contains only a base-36 number.  The current value will be used
-in the next transaction name, along with the revision number the
-transaction is based on.  This sequence number ensures that
-transaction names are not reused, even if the transaction is aborted
-and a new transaction based on the same revision is begun.  The only
-operation that FSFS performs on this file is "get and increment";
-the "txn-current-lock" file is locked during this operation.
+The "txn-current" file is a file with a single line of text that
+contains only a base-36 number.  The current value will be used in the
+next transaction name, along with the revision number the transaction
+is based on.  This sequence number ensures that transaction names are
+not reused, even if the transaction is aborted and a new transaction
+based on the same revision is begun.  The only operation that FSFS
+performs on this file is "get and increment"; the "txn-current-lock"
+file is locked during this operation.
 
 Filesystem formats
 ------------------
@@ -121,7 +121,7 @@ Format 3: (understood by Subversion 1.5+)
   index is present, and should be updated whenever the svn:mergeinfo property
   is set on a node.  To prevent transaction name reuse, transaction names
   should be generated using the transaction sequence number stored in the
-  transaction-current file.  Proto-rev and its lock are stored in
+  txn-current file.  Proto-rev and its lock are stored in
   txn-protorevs/<txnid>.rev and txn-protorevs/<txnid>.rev-lock.
 
 Filesystem format options
