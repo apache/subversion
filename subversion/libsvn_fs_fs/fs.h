@@ -46,7 +46,7 @@ extern "C" {
 #define PATH_REVPROPS_DIR     "revprops"         /* Directory of revprops */
 #define PATH_TXNS_DIR         "transactions"     /* Directory of transactions */
 #define PATH_TXN_PROTOS_DIR   "txn-protorevs"    /* Directory of proto-revs */
-#define PATH_TXN_CURRENT      "transaction-current" /* File with next txn key */
+#define PATH_TXN_CURRENT      "txn-current" /* File with next txn key */
 #define PATH_TXN_CURRENT_LOCK "txn-current-lock" /* Lock for txn-current */
 #define PATH_LOCKS_DIR         "locks"           /* Directory of locks */
 
@@ -74,7 +74,7 @@ extern "C" {
 #define SVN_FS_FS__MIN_SVNDIFF1_FORMAT 2
 
 /* The minimum format number that supports transaction ID generation
-   using a transaction sequence in the transaction-current file. */
+   using a transaction sequence in the txn-current file. */
 #define SVN_FS_FS__MIN_TXN_CURRENT_FORMAT 3
 
 /* The minimum format number that supports the "layout" filesystem
@@ -148,7 +148,7 @@ typedef struct
   apr_thread_mutex_t *fs_write_lock;
 
   /* A lock for intra-process synchronization when locking the
-     transaction-current file. */
+     txn-current file. */
   apr_thread_mutex_t *txn_current_lock;
 #endif
 
