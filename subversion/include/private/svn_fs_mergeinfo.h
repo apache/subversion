@@ -62,17 +62,6 @@ svn_fs_mergeinfo__get_mergeinfo(apr_hash_t **mergeinfo,
                                 svn_boolean_t include_descendants,
                                 apr_pool_t *pool);
 
-/* Get the combined mergeinfo for the tree under each one of PATHS
-   (an array of absolute-in-the-fs paths) under ROOT, and return it
-   in *MERGEINFO, mapping char * paths to mergeinfo hashs.  The resulting
-   mergeinfo also includes elided mergeinfo for each one of PATHS.  This
-   function conforms to the get_mergeinfo_for_tree() interface.  */
-svn_error_t *
-svn_fs_mergeinfo__get_mergeinfo_for_tree(
-  apr_hash_t **mergeinfo,
-  svn_fs_root_t *root,
-  const apr_array_header_t *paths,
-  apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
