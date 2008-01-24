@@ -4717,8 +4717,7 @@ static root_vtable_t root_vtable = {
   base_contents_changed,
   base_get_file_delta_stream,
   base_merge,
-  svn_fs_mergeinfo__get_mergeinfo,
-  svn_fs_mergeinfo__get_mergeinfo_for_tree
+  svn_fs_mergeinfo__get_mergeinfo
 };
 
 
