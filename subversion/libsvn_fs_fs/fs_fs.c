@@ -513,7 +513,7 @@ svn_fs_fs__with_write_lock(svn_fs_t *fs,
                         pool);
 }
 
-/* Run BODY (with BATON and POOL) while the transaction-current file
+/* Run BODY (with BATON and POOL) while the txn-current file
    of FS is locked. */
 static svn_error_t *
 with_txn_current_lock(svn_fs_t *fs,
@@ -992,7 +992,7 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
  * knows about the opened file; not the server, and not the deleting
  * client.  So the file vanishes, and the reader gets stale NFS file
  * handle.  We have this problem with revprops files, current, and
- * transaction-current.
+ * txn-current.
  *
  * Wrap opens and reads of such files with SVN_RETRY_ESTALE and closes
  * with SVN_IGNORE_ESTALE.  Call these macros within a loop of
@@ -1207,7 +1207,7 @@ svn_fs_fs__hotcopy(const char *src_path,
                                         PATH_LOCKS_DIR, TRUE, NULL,
                                         NULL, pool));
 
-  /* Copy the transaction-current file. */
+  /* Copy the txn-current file. */
   if (format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
     SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_TXN_CURRENT, pool));
 
@@ -3382,7 +3382,7 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
   svn_pool_destroy(iterpool);
 
   /* Increment the key and add a trailing \n to the string so the
-     transaction-current file has a newline in it. */
+     txn-current file has a newline in it. */
   svn_fs_fs__next_key(cb->txn_id, &len, next_txn_id);
   next_txn_id[len] = '\n';
   ++len;
@@ -3419,7 +3419,7 @@ create_txn_dir(const char **id_p, svn_fs_t *fs, svn_revnum_t rev,
   const char *txn_dir;
 
   /* Get the current transaction sequence value, which is a base-36
-     number, from the transaction-current file, and write an
+     number, from the txn-current file, and write an
      incremented value back out to the file.  Place the revision
      number the transaction is based off into the transaction id. */
   cb.pool = pool;
@@ -5277,7 +5277,7 @@ svn_fs_fs__create(svn_fs_t *fs,
 
   SVN_ERR(write_revision_zero(fs));
 
-  /* Create the transaction-current file if the repository supports
+  /* Create the txn-current file if the repository supports
      the transaction sequence file. */
   if (format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
     {

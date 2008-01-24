@@ -98,7 +98,7 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
         return svn_error_wrap_apr(status,
                                   _("Can't create FSFS txn list mutex"));
 
-      /* ... not to mention locking the transaction-current file. */
+      /* ... not to mention locking the txn-current file. */
       status = apr_thread_mutex_create(&ffsd->txn_current_lock,
                                        APR_THREAD_MUTEX_DEFAULT, common_pool);
       if (status)
