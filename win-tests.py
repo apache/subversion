@@ -242,8 +242,6 @@ def locate_libs():
   if gen_obj.libintl_path is not None:
     dlls.append(os.path.join(gen_obj.libintl_path, 'bin', 'intl3_svn.dll'))
 
-  dlls.append(os.path.join(gen_obj.sqlite_path, 'bin', 'sqlite3.dll'))
-
   if gen_obj.bdb_lib is not None:
     partial_path = os.path.join(gen_obj.bdb_path, 'bin', gen_obj.bdb_lib)
     if objdir == 'Debug':
