@@ -369,14 +369,16 @@ module Svn
         Client.unlock(targets, break_lock, self)
       end
 
-      def info(path_or_uri, rev=nil, peg_rev=nil, depth_or_recurse=false)
+      def info(path_or_uri, rev=nil, peg_rev=nil, depth_or_recurse=false,
+               changelists=nil)
         rev ||= URI(path_or_uri).scheme ? "HEAD" : "BASE"
         depth = Core::Depth.infinity_or_empty_from_recurse(depth_or_recurse)
         peg_rev ||= rev
         receiver = Proc.new do |path, info|
           yield(path, info)
         end
-        Client.info2(path_or_uri, rev, peg_rev, receiver, depth, self)
+        Client.info2(path_or_uri, rev, peg_rev, receiver, depth, changelists,
+                     self)
       end
 
       # Returns URL for +path+ as a String.
