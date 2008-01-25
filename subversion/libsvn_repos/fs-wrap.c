@@ -23,9 +23,11 @@
 #include "svn_error.h"
 #include "svn_fs.h"
 #include "svn_path.h"
+#include "svn_hash.h"
 #include "svn_props.h"
 #include "svn_repos.h"
 #include "repos.h"
+#include "svn_mergeinfo.h"
 #include "svn_private_config.h"
 
 
@@ -595,10 +597,78 @@ svn_repos_fs_get_mergeinfo(apr_hash_t **mergeinfo,
      in *MERGEINFO, avoiding massive authz overhead which would allow
      us to protect the name of where a change was merged from, but not
      the change itself. */
-  /* ### TODO(reint): ... but how about descendant merged-to paths? */
-  if (readable_paths->nelts > 0)
-    SVN_ERR(svn_fs_get_mergeinfo(mergeinfo, root, readable_paths, inherit,
-                                 include_descendants, pool));
+   if (readable_paths->nelts > 0)
+     {
+
+       SVN_ERR(svn_fs_get_mergeinfo(mergeinfo, root, readable_paths, inherit,
+                                    include_descendants, pool));
+
+       if (include_descendants)
+         {
+           /* The mergeinfo might have paths that never got authz-checked;
+              if so, check them now.  But only check the ones where we
+              can't know by examining 'paths' and 'readable_paths',
+              since an authz check is (relatively) expensive. */
+
+           apr_hash_index_t *hi;
+           apr_hash_t *original_paths_hash, *readable_paths_hash;
+
+           /* Make lookups easy by converting to hash. */
+           SVN_ERR(svn_hash_from_cstring_keys(&original_paths_hash,
+                                              paths, pool));
+           if (readable_paths == paths)
+             {
+               readable_paths_hash = original_paths_hash;
+             }
+           else
+             {
+               SVN_ERR(svn_hash_from_cstring_keys(&readable_paths_hash,
+                                                  readable_paths, pool));
+             }
+
+           for (hi = apr_hash_first(pool, *mergeinfo); hi;
+                hi = apr_hash_next(hi))
+             {
+               const void *key;
+               void *val;
+               const char *path;
+               const char *raw_mergeinfo_string;
+
+               svn_pool_clear(iterpool);
+               apr_hash_this(hi, &key, NULL, &val);
+               path = key;
+               raw_mergeinfo_string = val;
+
+               if (! apr_hash_get(readable_paths_hash, path,
+                                  APR_HASH_KEY_STRING))
+                 {
+                   /* It's not in readable_paths, so if it *is* in
+                      the original paths, that means it was already
+                      authz-checked and found unreadable -- in which
+                      case remove it from the mergeinfo. */
+                   if (readable_paths_hash != original_paths_hash
+                       && apr_hash_get(original_paths_hash, path,
+                                       APR_HASH_KEY_STRING))
+                     {
+                       apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING,
+                                    NULL);
+                     }
+                   else
+                     {
+                       /* We have to actually do the authz check,
+                          because we have no other information about
+                          the path's readability. */
+                       svn_boolean_t readable;
+                       SVN_ERR(authz_read_func(&readable, root, path,
+                                               authz_read_baton, iterpool));
+                       if (! readable)
+                         apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING,
+                                      NULL);
+                     }
+                 }
+             }
+         }
+     }
   else
     *mergeinfo = NULL;
 
