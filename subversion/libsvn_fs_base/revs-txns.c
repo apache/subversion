@@ -561,63 +561,6 @@ svn_fs_base__set_txn_prop(svn_fs_t *fs,
   return put_txn(fs, txn, txn_name, trail, pool);
 }
 
-svn_error_t *
-svn_fs_base__set_txn_mergeinfo(svn_fs_t *fs,
-                               const char *txn_name,
-                               const char *path,
-                               const svn_string_t *value,
-                               trail_t *trail,
-                               apr_pool_t *pool)
-{
-  transaction_t *txn;
-  apr_hash_t *target_mergeinfo;
-  svn_stringbuf_t *serialized_buf;
-  const svn_string_t *serialized_str;
-  svn_stream_t *stream;
-
-  SVN_ERR(get_txn(&txn, fs, txn_name, FALSE, trail, pool));
-  if (txn->kind != transaction_kind_normal)
-    return svn_fs_base__err_txn_not_mutable(fs, txn_name);
-
-  if (txn->proplist == NULL)
-    {
-     /* If we're deleting a property, exit now.  Otherwise, create a
-        proplist. */
-      if (value == NULL)
-        return SVN_NO_ERROR;
-
-      txn->proplist = apr_hash_make(pool);
-    }
-
-  /* De-serialize the current mergeinfo. */
-  target_mergeinfo = apr_hash_make(pool);
-  serialized_str = apr_hash_get(txn->proplist, SVN_FS__PROP_TXN_MERGEINFO,
-                                APR_HASH_KEY_STRING);
-  if (serialized_str)
-    {
-      serialized_buf = svn_stringbuf_create_from_string(serialized_str, pool);
-      stream = svn_stream_from_stringbuf(serialized_buf, pool);
-      SVN_ERR(svn_hash_read2(target_mergeinfo, stream, NULL, pool));
-    }
-  else
-    {
-      serialized_buf = svn_stringbuf_create("", pool);
-      stream = svn_stream_from_stringbuf(serialized_buf, pool);
-    }
-
-  /* Set the mergeinfo for the path, and re-serialize the hash for
-     storage. */
-  apr_hash_set(target_mergeinfo, path, APR_HASH_KEY_STRING, value);
-  SVN_ERR(svn_hash_write2(target_mergeinfo, stream, NULL, pool));
-  serialized_str = svn_string_create_from_buf(serialized_buf, pool);
-
-  /* Set the property. */
-  apr_hash_set(txn->proplist, SVN_FS__PROP_TXN_MERGEINFO,
-               APR_HASH_KEY_STRING, serialized_str);
-
-  /* Now overwrite the transaction. */
-  return put_txn(fs, txn, txn_name, trail, pool);
-}
 
 static svn_error_t *
 txn_body_change_txn_prop(void *baton, trail_t *trail)

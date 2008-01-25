@@ -132,11 +132,12 @@ module Svn
 
       def status(path, rev=nil, depth_or_recurse=nil, get_all=false,
                  update=true, no_ignore=false,
-                 ignore_externals=false, &status_func)
+                 ignore_externals=false, changelists_names=nil, &status_func)
         depth = Core::Depth.infinity_or_immediates_from_recurse(depth_or_recurse)
+        changelists_names = [changelists_names] unless changelists_names.is_a?(Array) or changelists_names.nil?
         Client.status3(path, rev, status_func,
                        depth, get_all, update, no_ignore,
-                       ignore_externals, self)
+                       ignore_externals, changelists_names, self)
       end
       alias st status
 
@@ -158,11 +159,12 @@ module Svn
       end
 
       def update(paths, rev="HEAD", depth=nil, ignore_externals=false,
-                 allow_unver_obstruction=false)
+                 allow_unver_obstruction=false, depth_is_sticky=false)
         paths_is_array = paths.is_a?(Array)
         paths = [paths] unless paths_is_array
-        result = Client.update3(paths, rev, depth, ignore_externals,
-                                allow_unver_obstruction, self)
+        result = Client.update3(paths, rev, depth, depth_is_sticky,
+                                ignore_externals, allow_unver_obstruction,
+                                self)
         result = result.first unless paths_is_array
         result
       end
@@ -190,11 +192,12 @@ module Svn
       end
 
       def propset(name, value, target, depth_or_recurse=nil, force=false,
-                  base_revision_for_url=nil)
+                  base_revision_for_url=nil, changelists_names=nil)
         base_revision_for_url ||= Svn::Core::INVALID_REVNUM
         depth = Core::Depth.infinity_or_empty_from_recurse(depth_or_recurse)
+        changelists_names = [changelists_names] unless changelists_names.is_a?(Array) or changelists_names.nil?
         Client.propset3(name, value, target, depth, force,
-                        base_revision_for_url, self)
+                        base_revision_for_url, changelists_names, self)
       end
       alias prop_set propset
       alias pset propset
@@ -209,11 +212,13 @@ module Svn
 
       # Returns a value of a property, with +name+ attached to +target+,
       # as a Hash such as <tt>{uri1 => value1, uri2 => value2, ...}</tt>.
-      def propget(name, target, rev=nil, peg_rev=nil, depth_or_recurse=nil)
+      def propget(name, target, rev=nil, peg_rev=nil, depth_or_recurse=nil,
+                  changelists_names=nil)
         rev ||= "HEAD"
         peg_rev ||= rev
         depth = Core::Depth.infinity_or_empty_from_recurse(depth_or_recurse)
-        Client.propget4(name, target, peg_rev, rev, depth, self).first
+        changelists_names = [changelists_names] unless changelists_names.is_a?(Array) or changelists_names.nil?
+        Client.propget4(name, target, peg_rev, rev, depth, changelists_names, self).first
       end
       alias prop_get propget
       alias pget propget
@@ -224,7 +229,8 @@ module Svn
       # Returns list of properties attached to +target+ as an Array of
       # Svn::Client::PropListItem.
       # Paths and URIs are available as +target+.
-      def proplist(target, rev=nil, peg_rev=nil, depth_or_recurse=nil, &block)
+      def proplist(target, rev=nil, peg_rev=nil, depth_or_recurse=nil,
+                   changelists_names=nil, &block)
         rev ||= "HEAD"
         peg_rev ||= rev
         items = []
@@ -233,7 +239,9 @@ module Svn
           items << PropListItem.new(path, prop_hash)
           block.call(path, prop_hash) if block
         end
-        Client.proplist3(target, rev, peg_rev, depth, receiver, self)
+        changelists_names = [changelists_names] unless changelists_names.is_a?(Array) or changelists_names.nil?
+        Client.proplist3(target, rev, peg_rev, depth, changelists_names,
+                         receiver, self)
         items
       end
       alias prop_list proplist
@@ -282,26 +290,26 @@ module Svn
                out_file, err_file, depth=nil,
                ignore_ancestry=false,
                no_diff_deleted=false, force=false,
-               header_encoding=nil, relative_to_dir=nil)
+               header_encoding=nil, relative_to_dir=nil, changelists=nil)
         header_encoding ||= Core::LOCALE_CHARSET
         relative_to_dir &&= Core.path_canonicalize(relative_to_dir)
         Client.diff4(options, path1, rev1, path2, rev2, relative_to_dir,
                      depth, ignore_ancestry,
                      no_diff_deleted, force, header_encoding,
-                     out_file, err_file, self)
+                     out_file, err_file, changelists, self)
       end
 
       def diff_peg(options, path, start_rev, end_rev,
                    out_file, err_file, peg_rev=nil,
                    depth=nil, ignore_ancestry=false,
                    no_diff_deleted=false, force=false,
-                   header_encoding=nil, relative_to_dir=nil)
+                   header_encoding=nil, relative_to_dir=nil, changelists=nil)
         header_encoding ||= Core::LOCALE_CHARSET
         relative_to_dir &&= Core.path_canonicalize(relative_to_dir)
         Client.diff_peg4(options, path, peg_rev, start_rev, end_rev,
                          relative_to_dir, depth, ignore_ancestry,
                          no_diff_deleted, force, header_encoding,
-                         out_file, err_file, self)
+                         out_file, err_file, changelists, self)
       end
 
       # Invokes block once for each item changed between <tt>path1</tt>
@@ -309,17 +317,19 @@ module Svn
       # and returns +nil+.
       # +diff+ is an instance of Svn::Client::DiffSummarize.
       def diff_summarize(path1, rev1, path2, rev2,
-                         depth=nil, ignore_ancestry=true,
+                         depth=nil, ignore_ancestry=true, changelists=nil,
                          &block) # :yields: diff
         Client.diff_summarize2(path1, rev1, path2, rev2,
-                               depth, ignore_ancestry, block, self)
+                               depth, ignore_ancestry, changelists, block,
+                               self)
       end
 
       def diff_summarize_peg(path1, rev1, rev2, peg_rev=nil,
-                             depth=nil, ignore_ancestry=true,
+                             depth=nil, ignore_ancestry=true, changelists=nil,
                              &block)
         Client.diff_summarize_peg2(path1, rev1, rev2, peg_rev,
-                                   depth, ignore_ancestry, block, self)
+                                   depth, ignore_ancestry, changelists, block,
+                                   self)
       end
 
       def merge(src1, rev1, src2, rev2, target_wcpath,
@@ -368,14 +378,16 @@ module Svn
         Client.unlock(targets, break_lock, self)
       end
 
-      def info(path_or_uri, rev=nil, peg_rev=nil, depth_or_recurse=false)
+      def info(path_or_uri, rev=nil, peg_rev=nil, depth_or_recurse=false,
+               changelists=nil)
         rev ||= URI(path_or_uri).scheme ? "HEAD" : "BASE"
         depth = Core::Depth.infinity_or_empty_from_recurse(depth_or_recurse)
         peg_rev ||= rev
         receiver = Proc.new do |path, info|
           yield(path, info)
         end
-        Client.info2(path_or_uri, rev, peg_rev, receiver, depth, self)
+        Client.info2(path_or_uri, rev, peg_rev, receiver, depth, changelists,
+                     self)
       end
 
       # Returns URL for +path+ as a String.
@@ -541,8 +553,12 @@ module Svn
                     fetch_locks, block, self)
       end
 
-      def switch(path, uri, peg_rev=nil, rev=nil, depth=nil, ignore_externals=false, allow_unver_obstruction=false)
-        Client.switch2(path, uri, peg_rev, rev, depth, ignore_externals, allow_unver_obstruction, self)
+      def switch(path, uri, peg_rev=nil, rev=nil, depth=nil,
+                 ignore_externals=false, allow_unver_obstruction=false,
+                 depth_is_sticky=false)
+
+        Client.switch2(path, uri, peg_rev, rev, depth, depth_is_sticky,
+                       ignore_externals, allow_unver_obstruction, self)
       end
 
       def set_log_msg_func(callback=Proc.new)
@@ -581,22 +597,24 @@ module Svn
         Core::MergeInfo.new(info)
       end
 
-      def add_to_changelist(changelist_name, *paths)
-        paths = paths[0] if paths.size == 1 and paths[0].is_a?(Array)
-        Client.add_to_changelist(paths, changelist_name, self)
+      def add_to_changelist(changelist_name, paths, depth=nil, changelists_names=nil)
+        paths = [paths] unless paths.is_a?(Array)
+        changelists_names = [changelists_names] unless changelists_names.is_a?(Array) or changelists_names.nil?
+        Client.add_to_changelist(paths, changelist_name, depth, changelists_names, self)
       end
 
       def changelists(changelists_names, root_path, depth=nil, &block)
         lists_contents = Hash.new{|h,k| h[k]=[]}
-        changelists_names = [changelists_names] if changelists_names.is_a?(String)
+        changelists_names = [changelists_names] unless changelists_names.is_a?(Array) or changelists_names.nil?
         block ||= lambda{|path, changelist| lists_contents[changelist] << path }
         Client.get_changelists(root_path, changelists_names, depth, block, self)
         lists_contents
       end
 
-      def remove_from_changelist(changelist_name, *paths)
-        paths = paths[0] if paths.size == 1 and paths[0].is_a?(Array)
-        Client.remove_from_changelist(paths, changelist_name, self)
+      def remove_from_changelists(changelists_names, paths, depth=nil)
+        changelists_names = [changelists_names] unless changelists_names.is_a?(Array) or changelists_names.nil?
+        paths = [paths] unless paths.is_a?(Array)
+        Client.remove_from_changelists(paths, depth, changelists_names, self)
       end
 
       private

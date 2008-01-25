@@ -872,6 +872,36 @@ Java_org_tigris_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_tigri
 }
 
 JNIEXPORT void JNICALL
+Java_org_tigris_subversion_javahl_SVNClient_mergeReintegrate
+(JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
+ jstring jlocalPath, jboolean jforce, jboolean jdryRun)
+{
+  JNIEntry(SVNClient, mergeReintegrate);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return;
+    }
+
+  JNIStringHolder path(jpath);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  Revision pegRevision(jpegRevision);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  JNIStringHolder localPath(jlocalPath);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  cl->mergeReintegrate(path, pegRevision, localPath,
+                       jforce ? true:false,
+                       jdryRun ? true:false);
+}
+
+JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_properties
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
  jobject jpegRevision, jint jdepth, jobjectArray jchangelists,

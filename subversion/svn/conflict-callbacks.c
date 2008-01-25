@@ -401,8 +401,10 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                 "  (d)iff     - show all changes made to merged file\n"
                 "  (e)dit     - change merged file in an editor\n"
                 "  (r)esolved - accept merged version of file\n"
-                "  (m)ine     - accept my version of file\n"
-                "  (t)heirs   - accept their version of file\n"
+                "  (m)ine     - accept my version of file "
+                "(and ignore their changes)\n"
+                "  (t)heirs   - accept their version of file "
+                "(and revert my changes)\n"
                 "  (l)aunch   - use third-party tool to resolve conflict\n"
                 "  (h)elp     - show this list\n\n")));
             }
@@ -504,8 +506,10 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
               _("  (p)ostpone - resolve the conflict later\n"
-                "  (m)ine     - accept pre-existing item\n"
-                "  (t)heirs   - accept incoming item\n"
+                "  (m)ine     - accept pre-existing item "
+                "(ignore upstream addition)\n"
+                "  (t)heirs   - accept incoming item "
+                "(overwrite pre-existing item)\n"
                 "  (h)elp     - show this list\n\n")));
             }
           if (strcmp(answer, "p") == 0)

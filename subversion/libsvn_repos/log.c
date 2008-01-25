@@ -515,41 +515,10 @@ next_history_rev(apr_array_header_t *histories)
   return next_rev;
 }
 
-svn_error_t *
-svn_repos__get_path_mergeinfo(apr_hash_t **mergeinfo,
-                              svn_fs_t *fs,
-                              const char *path,
-                              svn_revnum_t revnum,
-                              apr_pool_t *pool)
-{
-  apr_hash_t *tmp_mergeinfo;
-  const char *mergeinfo_str;
-  svn_fs_root_t *root;
-  apr_pool_t *subpool = svn_pool_create(pool);
-  apr_array_header_t *paths = apr_array_make(subpool, 1,
-                                             sizeof(const char *));
-
-  APR_ARRAY_PUSH(paths, const char *) = path;
-
-  SVN_ERR(svn_fs_revision_root(&root, fs, revnum, subpool));
-  SVN_ERR(svn_fs_get_mergeinfo(&tmp_mergeinfo, root, paths,
-                               svn_mergeinfo_inherited, FALSE, subpool));
-
-  mergeinfo_str = apr_hash_get(tmp_mergeinfo, path, APR_HASH_KEY_STRING);
-  if (mergeinfo_str != NULL)
-    SVN_ERR(svn_mergeinfo_parse(mergeinfo, mergeinfo_str, pool));
-  else
-    *mergeinfo = apr_hash_make(pool);
-
-  svn_pool_destroy(subpool);
-
-  return SVN_NO_ERROR;
-}
-
 /* Return the combined rangelists for everyone's mergeinfo for the
    PATHS tree at REV in *RANGELIST.  Perform all allocations in POOL. */
 static svn_error_t *
-get_combined_mergeinfo(apr_hash_t **mergeinfo,
+get_combined_mergeinfo(apr_hash_t **mergeinfo_catalog,
                        svn_fs_t *fs,
                        svn_revnum_t rev,
                        svn_revnum_t current_rev,
@@ -565,7 +534,7 @@ get_combined_mergeinfo(apr_hash_t **mergeinfo,
   /* Revision 0 doesn't have any mergeinfo. */
   if (rev == 0)
     {
-      *mergeinfo = apr_hash_make(pool);
+      *mergeinfo_catalog = apr_hash_make(pool);
       return SVN_NO_ERROR;
     }
 
@@ -577,11 +546,10 @@ get_combined_mergeinfo(apr_hash_t **mergeinfo,
   else
     {
       /* If we're looking at a previous revision, some of the paths
-         might not exist, and svn_fs_get_mergeinfo_for_tree expects
-         them to! */
+         might not exist, and svn_fs_get_mergeinfo expects them to! */
       /* TODO(reint): This is somewhat of a hack, though; perhaps this
-         indicates that svn_fs_get_mergeinfo_for_tree is not the right
-         API to be using. */
+         indicates that svn_fs_get_mergeinfo is not the right API to
+         be using. */
       int i;
       apr_array_header_t *existing_paths = apr_array_make(pool, paths->nelts,
                                                           sizeof(const char *));
@@ -596,18 +564,22 @@ get_combined_mergeinfo(apr_hash_t **mergeinfo,
       query_paths = existing_paths;
     }
 
-  SVN_ERR(svn_fs_get_mergeinfo_for_tree(&tree_mergeinfo, root, query_paths,
-                                        pool));
+  SVN_ERR(svn_fs_get_mergeinfo(&tree_mergeinfo, root, query_paths,
+                               svn_mergeinfo_inherited, TRUE,
+                               subpool));
 
-  *mergeinfo = apr_hash_make(pool);
+  *mergeinfo_catalog = apr_hash_make(pool);
 
   /* Merge all the mergeinfos into one mergeinfo */
   for (hi = apr_hash_first(subpool, tree_mergeinfo); hi; hi = apr_hash_next(hi))
     {
-      apr_hash_t *path_mergeinfo;
+      apr_hash_t *mergeinfo;
+      const char *mergeinfo_string;
 
-      apr_hash_this(hi, NULL, NULL, (void *)&path_mergeinfo);
-      SVN_ERR(svn_mergeinfo_merge(*mergeinfo, path_mergeinfo, pool));
+      apr_hash_this(hi, NULL, NULL, (void *)&mergeinfo_string);
+      SVN_ERR(svn_mergeinfo_parse(&mergeinfo, mergeinfo_string,
+                                  pool));
+      SVN_ERR(svn_mergeinfo_merge(*mergeinfo_catalog, mergeinfo, pool));
     }
 
   svn_pool_destroy(subpool);

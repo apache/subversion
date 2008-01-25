@@ -30,6 +30,7 @@
 #include "svn_error.h"
 #include "svn_delta.h"
 #include "svn_io.h"
+#include "svn_mergeinfo.h"
 
 
 #ifdef __cplusplus
@@ -1312,26 +1313,6 @@ svn_fs_get_mergeinfo(apr_hash_t **minfohash,
                      svn_mergeinfo_inheritance_t inherit,
                      svn_boolean_t include_descendants,
                      apr_pool_t *pool);
-
-/** Retrieve combined mergeinfo for multiple nodes, and their children.
- *
- * @a mergeinfo is filled with mergeinfo for each of the @a paths and
- * their children, stored as a mergeinfo hash.  It will never be @c NULL,
- * but may be empty.
- *
- * @a root indicate the revision root to use when looking up paths.
- *
- * @a paths indicate the paths you are requesting information for.
- *
- * Do any necessary temporary allocation in @a pool.
- *
- * @since New in 1.5.
- */
-svn_error_t *
-svn_fs_get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
-                              svn_fs_root_t *root,
-                              const apr_array_header_t *paths,
-                              apr_pool_t *pool);
 
 /** Merge changes between two nodes into a third node.
  *

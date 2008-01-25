@@ -1269,6 +1269,7 @@ filter_reflected_revisions(apr_array_header_t **requested_rangelist,
   const char *min_url = (revision1 < revision2) ? url1 : url2;
   const char *max_url = (revision1 < revision2) ? url2 : url1;
   const char *min_rel_path, *max_rel_path;
+  svn_error_t *err;
 
   SVN_ERR(svn_client__path_relative_to_root(&min_rel_path, min_url,
                                             source_root_url, FALSE, ra_session,
@@ -1278,19 +1279,61 @@ filter_reflected_revisions(apr_array_header_t **requested_rangelist,
                                             NULL, pool));
 
   /* Find any mergeinfo for TARGET_URL added to the line of history
-     between URL1@REVISION1 and URL2@REVISION2. */
-  SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &start_mergeinfo,
-                                          min_rel_path, min_rev,
-                                          svn_mergeinfo_inherited, TRUE,
-                                          pool));
-  SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &end_mergeinfo,
-                                          max_rel_path, max_rev,
-                                          svn_mergeinfo_inherited, TRUE,
-                                          pool));
+     between URL1@REVISION1 and URL2@REVISION2.
 
-  SVN_ERR(svn_mergeinfo_diff(&deleted_mergeinfo, &added_mergeinfo,
-                             start_mergeinfo, end_mergeinfo,
-                             FALSE, pool));
+     When operating on subtrees with intersecting mergeinfo, URL1@REVISION1
+     might have been deleted and URL2@REVISION2 won't exist.  Alternatively,
+     URL2@REVISION2 might have been added and won't exist in URL1@REVISION1.
+     In either case don't return an error.  In the first case just proceed
+     without bothering to look for ADDED_MERGEINFO, in the second case all
+     the mergeinfo found *is* the added mergeinfo. */
+  err = svn_client__get_repos_mergeinfo(ra_session, &start_mergeinfo,
+                                        min_rel_path, min_rev,
+                                        svn_mergeinfo_inherited, TRUE,
+                                        pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_FS_NOT_FOUND
+          || err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED)
+        {
+          svn_error_clear(err);
+          err = NULL;
+          start_mergeinfo = NULL;
+        }
+      else
+        {
+          return err;
+        }
+    }
+
+  err = svn_client__get_repos_mergeinfo(ra_session, &end_mergeinfo,
+                                        max_rel_path, max_rev,
+                                        svn_mergeinfo_inherited, TRUE,
+                                        pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_FS_NOT_FOUND
+          || err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED)
+        {
+          svn_error_clear(err);
+          err = NULL;
+          end_mergeinfo = NULL;
+        }
+      else
+        {
+          return err;
+        }
+    }
+
+  if (start_mergeinfo && end_mergeinfo)
+    SVN_ERR(svn_mergeinfo_diff(&deleted_mergeinfo, &added_mergeinfo,
+                               start_mergeinfo, end_mergeinfo,
+                               FALSE, pool));
+  else if (end_mergeinfo)
+    added_mergeinfo = end_mergeinfo;
+  else
+    added_mergeinfo = NULL;
+
 
   if (added_mergeinfo)
     {
@@ -5318,6 +5361,7 @@ calculate_left_hand_side(const char **url_left,
       /* TODO(reint): It would be even better to print out mergeinfo_catalog
          here.  Is there a helper function for that? */ 
     }
+  return SVN_NO_ERROR;
 }
 
 

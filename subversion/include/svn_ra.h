@@ -31,6 +31,7 @@
 #include "svn_error.h"
 #include "svn_delta.h"
 #include "svn_auth.h"
+#include "svn_mergeinfo.h"
 
 #ifdef __cplusplus
 extern "C" {

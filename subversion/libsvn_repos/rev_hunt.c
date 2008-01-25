@@ -2,7 +2,7 @@
  *                their properties.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1003,6 +1003,37 @@ svn_repos_node_location_segments(svn_repos_t *repos,
   return SVN_NO_ERROR;
 }
 
+/* Get the mergeinfo for PATH in REPOS at REVNUM and store it in MERGEINFO. */
+static svn_error_t *
+get_path_mergeinfo(apr_hash_t **mergeinfo,
+                   svn_fs_t *fs,
+                   const char *path,
+                   svn_revnum_t revnum,
+                   apr_pool_t *pool)
+{
+  apr_hash_t *tmp_mergeinfo;
+  const char *mergeinfo_str;
+  svn_fs_root_t *root;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_array_header_t *paths = apr_array_make(subpool, 1,
+                                             sizeof(const char *));
+
+  APR_ARRAY_PUSH(paths, const char *) = path;
+
+  SVN_ERR(svn_fs_revision_root(&root, fs, revnum, subpool));
+  SVN_ERR(svn_fs_get_mergeinfo(&tmp_mergeinfo, root, paths,
+                               svn_mergeinfo_inherited, FALSE, subpool));
+
+  mergeinfo_str = apr_hash_get(tmp_mergeinfo, path, APR_HASH_KEY_STRING);
+  if (mergeinfo_str != NULL)
+    SVN_ERR(svn_mergeinfo_parse(mergeinfo, mergeinfo_str, pool));
+  else
+    *mergeinfo = apr_hash_make(pool);
+
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
 
 struct path_revision
 {
@@ -1029,12 +1060,10 @@ get_merged_path_revisions(apr_array_header_t *path_revisions,
   apr_hash_index_t *hi;
 
   /* First, figure out if old_path_rev is a merging revision or not. */
-  SVN_ERR(svn_repos__get_path_mergeinfo(&curr_mergeinfo, repos->fs,
-                                        old_path_rev->path,
-                                        old_path_rev->revnum, subpool));
-  SVN_ERR(svn_repos__get_path_mergeinfo(&prev_mergeinfo, repos->fs,
-                                        old_path_rev->path,
-                                        old_path_rev->revnum - 1, subpool));
+  SVN_ERR(get_path_mergeinfo(&curr_mergeinfo, repos->fs, old_path_rev->path,
+                             old_path_rev->revnum, subpool));
+  SVN_ERR(get_path_mergeinfo(&prev_mergeinfo, repos->fs, old_path_rev->path,
+                             old_path_rev->revnum - 1, subpool));
   SVN_ERR(svn_mergeinfo_diff(&deleted, &changed, prev_mergeinfo, curr_mergeinfo,
                              FALSE, subpool));
   SVN_ERR(svn_mergeinfo_merge(changed, deleted, subpool));
