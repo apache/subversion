@@ -47,6 +47,8 @@ repository) is:
   locks/              Subdirectory containing locks
     <partial-digest>/ Subdirectory named for first 3 letters of an MD5 digest
       <digest>        File containing locks/children for path with <digest>
+  node-origins/       Lazy cache of origin noderevs for nodes
+    <nodeid>          File containing noderev ID of origin of node <nodeid>
   current             File specifying current revision and next node/copy id
   fs-type             File identifying this filesystem as an FSFS filesystem
   write-lock          Empty file, locked to serialise writers
@@ -182,6 +184,11 @@ implications for svn_fs_compare_ids and svn_fs_check_related.  The IDs
 _1.0.t1 is not related to the ID _1.0.t2 even though they have the
 same node-ID, because temporary node-IDs are restricted in scope to
 the transactions they belong to.
+
+There is a lazily created cache mapping from node-IDs to the full
+node-revision ID where they are created.  This is in the node-origins
+directory; the file name is the node-ID and the contents is the
+node-revision ID.
 
 Copy-IDs and copy roots
 -----------------------

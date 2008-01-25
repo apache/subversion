@@ -50,7 +50,6 @@
 
 #include "private/svn_fs_sqlite.h"
 #include "private/svn_fs_mergeinfo.h"
-#include "private/svn_fs_node_origins.h"
 #include "private/svn_fs_util.h"
 #include "../libsvn_fs/fs-loader.h"
 
@@ -306,6 +305,12 @@ path_txn_node_children(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
                      PATH_EXT_CHILDREN, NULL);
 }
 
+static APR_INLINE const char *
+path_node_origin(svn_fs_t *fs, const char *node_id, apr_pool_t *pool)
+{
+  return svn_path_join_many(pool, fs->path, PATH_NODE_ORIGINS_DIR,
+                            node_id, NULL);
+}
 
 
 /* Functions for working with shared transaction data. */
@@ -1205,6 +1210,14 @@ svn_fs_fs__hotcopy(const char *src_path,
   if (kind == svn_node_dir)
     SVN_ERR(svn_io_copy_dir_recursively(src_subdir, dst_path,
                                         PATH_LOCKS_DIR, TRUE, NULL,
+                                        NULL, pool));
+
+  /* Now copy the node-origins cache tree. */
+  src_subdir = svn_path_join(src_path, PATH_NODE_ORIGINS_DIR, pool);
+  SVN_ERR(svn_io_check_path(src_subdir, &kind, pool));
+  if (kind == svn_node_dir)
+    SVN_ERR(svn_io_copy_dir_recursively(src_subdir, dst_path,
+                                        PATH_NODE_ORIGINS_DIR, TRUE, NULL,
                                         NULL, pool));
 
   /* Copy the txn-current file. */
@@ -5163,7 +5176,7 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
   /* Now that we're no longer locked, we can update the node-origins
      cache without blocking writers. */
   if (apr_hash_count(node_origins) > 0)
-    SVN_ERR(svn_fs__set_node_origins(fs, node_origins, pool));
+    SVN_ERR(svn_fs_fs__set_node_origins(fs, node_origins, pool));
 
   return SVN_NO_ERROR;
 }
@@ -5645,6 +5658,147 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
 
   return SVN_NO_ERROR;
 }
+
+/** Node origin lazy cache. */
+
+/* If directory PATH does not exist, create it and give it the same
+   permissions as FS->path.*/
+svn_error_t *
+svn_fs_fs__ensure_dir_exists(const char *path,
+                             svn_fs_t *fs,
+                             apr_pool_t *pool)
+{
+  svn_error_t *err = svn_io_dir_make(path, APR_OS_DEFAULT, pool);
+  if (err && APR_STATUS_IS_EEXIST(err->apr_err))
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR(err);
+
+  /* We successfully created a new directory.  Dup the permissions
+     from FS->path. */
+  SVN_ERR(svn_fs_fs__dup_perms(path, fs->path, pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
+                           svn_fs_t *fs,
+                           const char *node_id,
+                           apr_pool_t *pool)
+{
+  apr_file_t *fd;
+  svn_stringbuf_t *origin_stringbuf;
+  svn_error_t *err;
+
+  err = svn_io_file_open(&fd, path_node_origin(fs, node_id, pool),
+                         APR_READ, APR_OS_DEFAULT, pool);
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR(err);
+
+  SVN_ERR(svn_stringbuf_from_aprfile(&origin_stringbuf, fd, pool));
+
+  *origin_id = svn_fs_fs__id_parse(origin_stringbuf->data,
+                                   origin_stringbuf->len, pool);
+
+  SVN_ERR(svn_io_file_close(fd, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Helper for svn_fs_fs__set_node_origin[s].  Exactly like
+   svn_fs_fs__set_node_origin, except that it throws an error if the
+   file can't be written. */
+static svn_error_t *
+set_node_origin(svn_fs_t *fs,
+                const char *node_id,
+                const svn_fs_id_t *node_rev_id,
+                apr_pool_t *pool)
+{
+  apr_file_t *file;
+  svn_string_t *node_rev_id_string;
+
+  SVN_ERR(svn_fs_fs__ensure_dir_exists(svn_path_join(fs->path,
+                                                     PATH_NODE_ORIGINS_DIR,
+                                                     pool),
+                                       fs, pool));
+
+  node_rev_id_string = svn_fs_fs__id_unparse(node_rev_id, pool);
+
+  SVN_ERR(svn_io_file_open(&file, path_node_origin(fs, node_id, pool),
+                           APR_WRITE | APR_CREATE | APR_TRUNCATE
+                           | APR_BUFFERED, APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_io_file_write_full(file,
+                                 node_rev_id_string->data,
+                                 node_rev_id_string->len, NULL, pool));
+  SVN_ERR(svn_io_file_close(file, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_fs__set_node_origins(svn_fs_t *fs,
+                            apr_hash_t *node_origins,
+                            apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  for (hi = apr_hash_first(pool, node_origins);
+       hi != NULL;
+       hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      const char *node_id;
+      const svn_fs_id_t *node_rev_id;
+      svn_error_t *err;
+
+      svn_pool_clear(iterpool);
+
+      apr_hash_this(hi, &key, NULL, &val);
+      node_id = key;
+      node_rev_id = val;
+
+      err = set_node_origin(fs, node_id, node_rev_id, iterpool);
+      if (err && APR_STATUS_IS_EACCES(err->apr_err))
+        {
+          /* It's just a cache; stop trying if I can't write. */
+          svn_error_clear(err);
+          err = NULL;
+          goto cleanup;
+        }
+      SVN_ERR(err);
+    }
+
+ cleanup:
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__set_node_origin(svn_fs_t *fs,
+                           const char *node_id,
+                           const svn_fs_id_t *node_rev_id,
+                           apr_pool_t *pool)
+{
+  svn_error_t *err = set_node_origin(fs, node_id, node_rev_id, pool);
+  if (err && APR_STATUS_IS_EACCES(err->apr_err))
+    {
+      /* It's just a cache; stop trying if I can't write. */
+      svn_error_clear(err);
+      err = NULL;
+    }
+  return err;
+}
+
 
 svn_error_t *
 svn_fs_fs__list_transactions(apr_array_header_t **names_p,

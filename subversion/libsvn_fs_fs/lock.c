@@ -135,29 +135,6 @@ digest_path_from_path(svn_fs_t *fs,
 }
 
 
-/* If directory PATH does not exist, create it and give it the same
-   permissions as FS->path.*/
-static svn_error_t *
-ensure_dir_exists(const char *path,
-                  svn_fs_t *fs,
-                  apr_pool_t *pool)
-{
-  svn_error_t *err = svn_io_dir_make(path, APR_OS_DEFAULT, pool);
-  if (err && APR_STATUS_IS_EEXIST(err->apr_err))
-    {
-      svn_error_clear(err);
-      return SVN_NO_ERROR;
-    }
-  SVN_ERR(err);
-
-  /* We successfully created a new directory.  Dup the permissions
-     from FS->path. */
-  SVN_ERR(svn_fs_fs__dup_perms(path, fs->path, pool));
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Write to DIGEST_PATH a representation of CHILDREN (which may be
    empty, if the versioned path in FS represented by DIGEST_PATH has
    no children) and LOCK (which may be NULL if that versioned path is
@@ -175,9 +152,10 @@ write_digest_file(apr_hash_t *children,
   apr_hash_t *hash = apr_hash_make(pool);
   const char *tmp_path;
 
-  SVN_ERR(ensure_dir_exists(svn_path_join(fs->path, PATH_LOCKS_DIR, pool),
-                            fs, pool));
-  SVN_ERR(ensure_dir_exists(svn_path_dirname(digest_path, pool), fs, pool));
+  SVN_ERR(svn_fs_fs__ensure_dir_exists(svn_path_join(fs->path, PATH_LOCKS_DIR, 
+                                                     pool), fs, pool));
+  SVN_ERR(svn_fs_fs__ensure_dir_exists(svn_path_dirname(digest_path, pool), fs,
+                                       pool));
   SVN_ERR(svn_io_open_unique_file2
           (&fd, &tmp_path, digest_path, ".tmp", svn_io_file_del_none, pool));
 
