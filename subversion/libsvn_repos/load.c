@@ -275,10 +275,10 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
                         struct revision_baton *rb,
                         apr_pool_t *pool)
 {
-  apr_hash_t *mergeinfo;
-  apr_hash_t *final_mergeinfo = apr_hash_make(pool);
-  apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
+  apr_hash_t *mergeinfo;
+  apr_hash_t *final_mergeinfo = apr_hash_make(subpool);
+  apr_hash_index_t *hi;
 
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo, initial_val->data, subpool));
   for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
@@ -300,15 +300,14 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
           svn_revnum_t *rev_from_map;
           svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
                                                    svn_merge_range_t *);
+          rev_from_map = apr_hash_get(pb->rev_map, &range->start,
+                                      sizeof(svn_revnum_t));
+          if (rev_from_map && SVN_IS_VALID_REVNUM(*rev_from_map))
+              range->start = *rev_from_map;
 
-          if ((rev_from_map = apr_hash_get(pb->rev_map, &range->start,
-                                           sizeof(svn_revnum_t))))
-            if (SVN_IS_VALID_REVNUM(*rev_from_map))
-              range->start = *rev_from_map;;
-
-          if ((rev_from_map = apr_hash_get(pb->rev_map, &range->end,
-                                           sizeof(svn_revnum_t))))
-            if (SVN_IS_VALID_REVNUM(*rev_from_map))
+          rev_from_map = apr_hash_get(pb->rev_map, &range->end,
+                                      sizeof(svn_revnum_t));
+          if (rev_from_map && SVN_IS_VALID_REVNUM(*rev_from_map))
               range->end = *rev_from_map;
          }
        apr_hash_set(final_mergeinfo, merge_source,
@@ -316,7 +315,7 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
      }
 
   SVN_ERR(svn_mergeinfo_sort(final_mergeinfo, subpool));
-  SVN_ERR(svn_mergeinfo__to_string(final_val, final_mergeinfo, pool));
+  SVN_ERR(svn_mergeinfo__to_string(final_val, final_mergeinfo, subpool));
   svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
