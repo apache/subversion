@@ -4777,9 +4777,11 @@ txn_body_get_mergeinfo_data_and_entries(void *baton, trail_t *trail)
                        child_mergeinfo_hash);
         }
 
-      /* Otherwise, if the child has descendants with mergeinfo, add
-         it to the children_atop_mergeinfo_trees hash. */
-      else if (kid_count > 0)
+      /* If the child has descendants with mergeinfo -- that is, if
+         the count of descendants beneath it carrying mergeinfo, not
+         including itself, is non-zero -- then add it to the
+         children_atop_mergeinfo_trees hash to be crawled later. */
+      if ((kid_count - (has_mergeinfo ? 1 : 0)) > 0)
         {
           if (svn_fs_base__dag_node_kind(child_node) != svn_node_dir)
             {
