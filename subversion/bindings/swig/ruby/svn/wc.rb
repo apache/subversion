@@ -319,6 +319,7 @@ module Svn
             :target_revision => nil,
             :use_commit_times => true,
             :depth => nil,
+            :depth_is_sticky => false,
             :allow_unver_obstruction => false,
             :diff3_cmd => nil,
             :notify_func => nil,
@@ -337,11 +338,11 @@ module Svn
         # callback.
         arguments[:fetch_func] = nil
 
-
         results = Wc.get_update_editor3(arguments[:target_revision], self,
                                         arguments[:target],
                                         arguments[:use_commit_times],
                                         arguments[:depth],
+                                        arguments[:depth_is_sticky],
                                         arguments[:allow_unver_obstruction],
                                         arguments[:notify_func],
                                         arguments[:cancel_func],
@@ -381,6 +382,7 @@ module Svn
           :target_revision => nil,
           :use_commit_times => true,
           :depth => nil,
+          :depth_is_sticky => false,
           :allow_unver_obstruction => false,
           :diff3_cmd => nil,
           :notify_func => nil,
@@ -399,6 +401,7 @@ module Svn
                                         arguments[:switch_url],
                                         arguments[:use_commit_times],
                                         arguments[:depth],
+                                        arguments[:depth_is_sticky],
                                         arguments[:allow_unver_obstruction],
                                         arguments[:notify_func],
                                         arguments[:cancel_func],

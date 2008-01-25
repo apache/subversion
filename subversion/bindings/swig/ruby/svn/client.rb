@@ -158,11 +158,12 @@ module Svn
       end
 
       def update(paths, rev="HEAD", depth=nil, ignore_externals=false,
-                 allow_unver_obstruction=false)
+                 allow_unver_obstruction=false, depth_is_sticky=false)
         paths_is_array = paths.is_a?(Array)
         paths = [paths] unless paths_is_array
-        result = Client.update3(paths, rev, depth, ignore_externals,
-                                allow_unver_obstruction, self)
+        result = Client.update3(paths, rev, depth, depth_is_sticky,
+                                ignore_externals, allow_unver_obstruction,
+                                self)
         result = result.first unless paths_is_array
         result
       end
@@ -541,8 +542,12 @@ module Svn
                     fetch_locks, block, self)
       end
 
-      def switch(path, uri, peg_rev=nil, rev=nil, depth=nil, ignore_externals=false, allow_unver_obstruction=false)
-        Client.switch2(path, uri, peg_rev, rev, depth, ignore_externals, allow_unver_obstruction, self)
+      def switch(path, uri, peg_rev=nil, rev=nil, depth=nil,
+                 ignore_externals=false, allow_unver_obstruction=false,
+                 depth_is_sticky=false)
+
+        Client.switch2(path, uri, peg_rev, rev, depth, depth_is_sticky,
+                       ignore_externals, allow_unver_obstruction, self)
       end
 
       def set_log_msg_func(callback=Proc.new)
