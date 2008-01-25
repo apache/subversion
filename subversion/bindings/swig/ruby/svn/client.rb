@@ -590,22 +590,24 @@ module Svn
         Core::MergeInfo.new(info)
       end
 
-      def add_to_changelist(changelist_name, *paths)
-        paths = paths[0] if paths.size == 1 and paths[0].is_a?(Array)
-        Client.add_to_changelist(paths, changelist_name, self)
+      def add_to_changelist(changelist_name, paths, depth=nil, changelists_names=nil)
+        paths = [paths] unless paths.is_a?(Array)
+        changelists_names = [changelists_names] unless changelists_names.is_a?(Array) or changelists_names.nil?
+        Client.add_to_changelist(paths, changelist_name, depth, changelists_names, self)
       end
 
       def changelists(changelists_names, root_path, depth=nil, &block)
         lists_contents = Hash.new{|h,k| h[k]=[]}
-        changelists_names = [changelists_names] if changelists_names.is_a?(String)
+        changelists_names = [changelists_names] unless changelists_names.is_a?(Array) or changelists_names.nil?
         block ||= lambda{|path, changelist| lists_contents[changelist] << path }
         Client.get_changelists(root_path, changelists_names, depth, block, self)
         lists_contents
       end
 
-      def remove_from_changelist(changelist_name, *paths)
-        paths = paths[0] if paths.size == 1 and paths[0].is_a?(Array)
-        Client.remove_from_changelist(paths, changelist_name, self)
+      def remove_from_changelists(changelists_names, paths, depth=nil)
+        changelists_names = [changelists_names] unless changelists_names.is_a?(Array) or changelists_names.nil?
+        paths = [paths] unless paths.is_a?(Array)
+        Client.remove_from_changelists(paths, depth, changelists_names, self)
       end
 
       private
