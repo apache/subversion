@@ -894,12 +894,11 @@ get_rooted_path_segments(apr_array_header_t **rooted_path_segments,
 
    Retrieve the necessary records from DB; allocate the results in POOL.
 
-   ### Why are we returning an array of 'svn_merge_range_t' objects
-   ### below, instead of just 'svn_revnum_t's?  Isn't representing
-   ### single revisions exactly what 'svn_revnum_t' is for?  -Karl
-
    Represent each revision in *COMMIT_RANGELIST as an
    'svn_merge_range_t *' object where obj->start == obj->end - 1.
+   We store them as 'svn_merge_range_t *' for usage convenience, as this
+   *COMMIT_RANGELIST can be operated(negated) with other rangelists like
+   'requested merge range list' directly.
 
    If INHERIT is svn_mergeinfo_inherited or svn_mergeinfo_nearest_ancestor,
    use the parents of MERGE_SOURCE and MERGE_TARGET instead.
