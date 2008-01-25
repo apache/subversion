@@ -132,11 +132,12 @@ module Svn
 
       def status(path, rev=nil, depth_or_recurse=nil, get_all=false,
                  update=true, no_ignore=false,
-                 ignore_externals=false, &status_func)
+                 ignore_externals=false, changelists_names=nil, &status_func)
         depth = Core::Depth.infinity_or_immediates_from_recurse(depth_or_recurse)
+        changelists_names = [changelists_names] unless changelists_names.is_a?(Array) or changelists_names.nil?
         Client.status3(path, rev, status_func,
                        depth, get_all, update, no_ignore,
-                       ignore_externals, self)
+                       ignore_externals, changelists_names, self)
       end
       alias st status
 
