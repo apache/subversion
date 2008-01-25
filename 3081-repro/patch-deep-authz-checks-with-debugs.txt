@@ -1,0 +1,322 @@
+[[[
+See the comment below about "avoiding massive authz overhead"?  Well,
+this is a patch that doesn't avoid it :-).  This patch does what that
+comment claims we shouldn't do.  I don't think it should be applied,
+but I wanted to save the work here just in case.  This patch also
+includes some debugging prints; search for "KFF".
+
+* subversion/include/svn_mergeinfo.h, subversion/libsvn_subr/mergeinfo.c
+  (svn_pathranges_to_paths): New function.
+
+* subversion/include/svn_string.h, subversion/libsvn_subr/svn_string.c
+  (svn_cstring_find_char_backward): New function.
+
+* subversion/libsvn_repos/fs-wrap.c: Include svn_hash.h, svn_mergeinfo.h.
+  (svn_repos_fs_get_mergeinfo): Do authz checking on the paths
+    returned in mergeinfo that haven't already been checked.
+
+* reintegrate-branch-TODO: Remove the reminder about this.
+]]]
+
+Index: subversion/include/svn_mergeinfo.h
+===================================================================
+--- subversion/include/svn_mergeinfo.h	(revision 28964)
++++ subversion/include/svn_mergeinfo.h	(working copy)
+@@ -399,6 +399,31 @@
+ apr_array_header_t *
+ svn_rangelist_dup(apr_array_header_t *rangelist, apr_pool_t *pool);
+ 
++/** Set @a *paths to a list of all the unique paths mentioned in the
++ * block @a raw_pathranges, allocating @a *paths in @a pool.
++ * @a raw_pathranges is in the same format as a value in a mergeinfo
++ * hash, e.g.:
++ *
++ *   "/branches/b2:8
++ *    /branches/b3:9
++ *    /branches/b4:10
++ *    /branches/b5:11"
++ *
++ * The newlines are given visually above; the same string could be
++ * more accurately (but less comprehensibly) represented like this:
++ *
++ *   "/branches/b2:8\n/branches/b3:9-15\n/branches/b4:10\n/branches/b5:11"
++ *
++ * If @a raw_pathranges is not in mergeinfo format, return the error
++ * @c SVN_ERR_MERGEINFO_PARSE_ERROR, in which case the value of @a *paths 
++ * is undefined.
++ */
++svn_error_t *
++svn_pathranges_to_paths(apr_array_header_t **paths,
++                        const char *raw_pathranges,
++                        apr_pool_t *pool);
++
++
+ #ifdef __cplusplus
+ }
+ #endif /* __cplusplus */
+Index: subversion/include/svn_string.h
+===================================================================
+--- subversion/include/svn_string.h	(revision 28964)
++++ subversion/include/svn_string.h	(working copy)
+@@ -352,6 +352,12 @@
+ int svn_cstring_casecmp(const char *str1, const char *str2);
+ 
+ 
++/** Return position of last occurrence of @a ch in @a str of length @a len,
++ * or return @a len if no occurrence.
++ */
++apr_size_t
++svn_cstring_find_char_backward(const char *str, apr_size_t len, char ch);
++
+ /** @} */
+ 
+ /** @} */
+Index: subversion/libsvn_subr/svn_string.c
+===================================================================
+--- subversion/libsvn_subr/svn_string.c	(revision 28964)
++++ subversion/libsvn_subr/svn_string.c	(working copy)
+@@ -590,3 +590,15 @@
+         return cmp;
+     }
+ }
++
++apr_size_t
++svn_cstring_find_char_backward(const char *str, apr_size_t len, char ch)
++{
++  /* We could just replace find_char_backward() with this public
++     function, since their calling signatures are the same.  But the
++     helper is static APR_INLINE, which means that its other callers
++     in this file will get special treatment that they wouldn't get
++     with a non-static inline function.  So we wrap it; the penalty is
++     only in the source code anyway, because of the inlining. */
++  return find_char_backward(str, len, ch);
++}
+Index: subversion/libsvn_subr/mergeinfo.c
+===================================================================
+--- subversion/libsvn_subr/mergeinfo.c	(revision 28964)
++++ subversion/libsvn_subr/mergeinfo.c	(working copy)
+@@ -593,6 +593,29 @@
+ }
+ 
+ 
++svn_error_t *
++svn_pathranges_to_paths(apr_array_header_t **paths,
++                        const char *raw_pathranges,
++                        apr_pool_t *pool)
++{
++  int i;
++  *paths = svn_cstring_split(raw_pathranges, "\n", FALSE, pool);
++  for (i = 0; i < (*paths)->nelts; i++)
++    {
++      char *this_path = APR_ARRAY_IDX(*paths, i, char *);
++      apr_size_t len = strlen(this_path);
++      apr_size_t posn = svn_cstring_find_char_backward(this_path, len, ':');
++      if (posn != len)
++        this_path[posn] = '\0';
++      else
++        return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
++                                 _("'%s' is not in mergeinfo "
++                                   "pathrange format"), this_path);
++    }
++  return SVN_NO_ERROR;
++}
++
++
+ /* Merge revision list RANGELIST into *MERGEINFO, doing some trivial
+    attempts to combine ranges as we go. */
+ svn_error_t *
+Index: subversion/libsvn_repos/fs-wrap.c
+===================================================================
+--- subversion/libsvn_repos/fs-wrap.c	(revision 28964)
++++ subversion/libsvn_repos/fs-wrap.c	(working copy)
+@@ -23,9 +23,11 @@
+ #include "svn_error.h"
+ #include "svn_fs.h"
+ #include "svn_path.h"
++#include "svn_hash.h"
+ #include "svn_props.h"
+ #include "svn_repos.h"
+ #include "repos.h"
++#include "svn_mergeinfo.h"
+ #include "svn_private_config.h"
+ 
+ 
+@@ -595,10 +597,161 @@
+      in *MERGEINFO, avoiding massive authz overhead which would allow
+      us to protect the name of where a change was merged from, but not
+      the change itself. */
+-  /* ### TODO(reint): ... but how about descendant merged-to paths? */
+-  if (readable_paths->nelts > 0)
+-    SVN_ERR(svn_fs_get_mergeinfo(mergeinfo, root, readable_paths, inherit,
+-                                 include_descendants, pool));
++   if (readable_paths->nelts > 0)
++     {
++       SVN_ERR(svn_fs_get_mergeinfo(mergeinfo, root, readable_paths, inherit,
++                                    include_descendants, pool));
++
++       if (include_descendants)
++         {
++           /* The mergeinfo might have paths that never got authz-checked;
++              if so, check them now.  But only check the ones where we
++              can't know by examining 'paths' and 'readable_paths',
++              since an authz check is (relatively) expensive. */
++
++           apr_hash_index_t *hi;
++           apr_hash_t *original_paths_hash, *readable_paths_hash;
++
++#define KFF_DEBUG 1
++
++           if (KFF_DEBUG)
++             {
++               FILE *fp = fopen("/tmp/kff.out", "a");
++               if (fp == NULL)
++                 exit(1);
++               fprintf(fp, "KFF: include_descendants is true\n");
++               fprintf(fp, "KFF: paths: '%s'\n",
++                       svn_cstring_join((apr_array_header_t *) paths,
++                                        ", ", pool));
++               fprintf(fp, "KFF: readable_paths: '%s'\n",
++                       svn_cstring_join((apr_array_header_t *) readable_paths,
++                                        ", ", pool));
++               fprintf(fp, "KFF: *mergeinfo count: %d\n",
++                       apr_hash_count(*mergeinfo));
++               fclose(fp);
++             }
++
++           /* Make lookups easy by converting to hash. */
++           SVN_ERR(svn_hash_from_cstring_keys(&original_paths_hash,
++                                              paths, pool));
++           if (readable_paths == paths)
++             {
++               readable_paths_hash = original_paths_hash;
++             }
++           else
++             {
++               SVN_ERR(svn_hash_from_cstring_keys(&readable_paths_hash,
++                                                  readable_paths, pool));
++             }
++
++           for (hi = apr_hash_first(pool, *mergeinfo); hi;
++                hi = apr_hash_next(hi))
++             {
++               const void *key;
++               void *val;
++               const char *path;
++               const char *raw_mergeinfo_string;
++               apr_array_header_t *mergeinfo_value_paths;
++               int j;
++
++               svn_pool_clear(iterpool);
++               apr_hash_this(hi, &key, NULL, &val);
++               path = key;
++               raw_mergeinfo_string = val;
++
++               if (KFF_DEBUG)
++                 {
++                   FILE *fp = fopen("/tmp/kff.out", "a");
++                   if (fp == NULL)
++                     exit(1);
++                   fprintf(fp, "KFF: loop hit '%s'\n", path);
++                   fprintf(fp, "KFF: mergeinfo for '%s':\n", path);
++                   fprintf(fp, "'%s'\n",
++                           (char *) apr_hash_get(*mergeinfo, path,
++                                                 APR_HASH_KEY_STRING));
++                   fprintf(fp, "KFF: (rp_h == op_h? --> %d)\n",
++                           readable_paths_hash == original_paths_hash);
++                   fclose(fp);
++                 }
++
++               SVN_ERR(svn_pathranges_to_paths(&mergeinfo_value_paths,
++                                               raw_mergeinfo_string,
++                                               iterpool));
++               for (j = 0; j < mergeinfo_value_paths->nelts; j++)
++                 {
++                   char *this_path = APR_ARRAY_IDX(mergeinfo_value_paths,
++                                                   j, char *);
++                   if (KFF_DEBUG)
++                     {
++                       FILE *fp = fopen("/tmp/kff.out", "a");
++                       if (fp == NULL)
++                         exit(1);
++                       fprintf(fp, "KFF: mergeinfo value path: '%s'\n",
++                               this_path);
++                       fclose(fp);
++                     }
++                 }
++
++               if (! apr_hash_get(readable_paths_hash, path,
++                                  APR_HASH_KEY_STRING))
++                 {
++                   if (KFF_DEBUG)
++                     {
++                       FILE *fp = fopen("/tmp/kff.out", "a");
++                       if (fp == NULL)
++                         exit(1);
++                       fprintf(fp, "KFF: '%s' is not in readable_paths\n",
++                               path);
++                       fclose(fp);
++                     }
++
++                   /* It's not in readable_paths, so if it *is* in
++                      the original paths, that means it was already
++                      authz-checked and found unreadable -- in which
++                      case remove it from the mergeinfo. */
++                   if (readable_paths_hash != original_paths_hash
++                       && apr_hash_get(original_paths_hash, path,
++                                       APR_HASH_KEY_STRING))
++                     {
++                       if (KFF_DEBUG)
++                         {
++                           FILE *fp = fopen("/tmp/kff.out", "a");
++                           if (fp == NULL)
++                             exit(1);
++                           fprintf(fp, "KFF: '%s' is easily unreadable\n",
++                                   path);
++                           fclose(fp);
++                         }
++
++                       apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING,
++                                    NULL);
++                     }
++                   else
++                     {
++                       /* We have to actually do the authz check,
++                          because we have no other information about
++                          the path's readability. */
++                       svn_boolean_t readable;
++                       SVN_ERR(authz_read_func(&readable, root, path,
++                                               authz_read_baton, iterpool));
++                       if (KFF_DEBUG)
++                         {
++                           FILE *fp = fopen("/tmp/kff.out", "a");
++                           if (fp == NULL)
++                             exit(1);
++                           fprintf(fp, "KFF: '%s' authz-checked --> %d\n",
++                                   path, readable);
++                           fclose(fp);
++                         }
++
++                       if (! readable)
++                         apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING,
++                                      NULL);
++                     }
++                 }
++             }
++         }
++     }
+   else
+     *mergeinfo = NULL;
+ 
+Index: reintegrate-branch-TODO
+===================================================================
+--- reintegrate-branch-TODO	(revision 28964)
++++ reintegrate-branch-TODO	(working copy)
+@@ -20,8 +20,6 @@
+ 
+   * "Is this the same line?" direct ancestor check (glasser)
+ 
+-  * authz check (glasser)
+-
+   * remember there may be some TODO(reint) comments in .py tests; they
+     won't show up in a tags-search.
+ 

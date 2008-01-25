@@ -1,0 +1,332 @@
+This directory contains various scripts that attempt to reproduce the
+mergeinfo-authz case that r29051 is intended address.  
+
+None of the scripts are successful in reproducing it.  Note that
+r29051 passes 'make check'; the issue is merely that we don't know
+whether it solves the problem it's meant to solve.
+
+To try one of the reproduction scripts, apply 'debugs-patch.txt' from
+the top of the source code tree, then run the script (say, 'repro.sh')
+like this:
+
+   $ rm -f /tmp/kff.out; ./repro.sh; cat /tmp/kff.out
+
+If there's any debug output, it will be shown at the end.  You may
+need to tweak one line in the script; it should be obvious which one.
+
+Here is an IRC conversation between glasser and kfogel about our
+problems trying to come up with a reproduction case:
+
+<kfogel>  glasser: regarding
+          http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=134402
+
+<kfogel>  Yes, sure, I understand the scenario in theory.  What I
+          can't seem to do is construct a series of commands that
+          actually causes that.
+
+<glasser> kfogel: mmhmm?
+
+<glasser> you mean to get the nested mergeinfo?
+
+<kfogel>  Maybe I just need to set the mergeinfo manually, but I've
+          been trying to do it via actual merges followed by a merge
+          --reintegrate.
+
+<kfogel>  yeah
+
+<kfogel>  I'll paste my current script, hold on.
+
+<glasser> copy A to A_COPY
+
+<glasser> do stuff
+
+<glasser> merge some revs of A_COPY back to A
+
+<glasser> merge more revs from A_COPY/B/E back to A/B/E
+
+<glasser> (not using reintegrate)
+
+<glasser> or you can go in the other direction, whatever
+
+<kfogel>  http://pastebin.ca/872623
+          [note: this corresponds to 'nested-branch-repro.sh' in the
+          same directory as this README]
+
+<kfogel>  glasser: that's what I'm trying (or think I'm trying, though
+          the path names are slightly different)
+
+<kfogel>  hmmm
+
+<kfogel>  sorry, the script above tries something different
+
+<kfogel>  what you describe above, I'm pretty sure I tried before
+
+<glasser> ah.  i'm not sure what you're trying to do in the script
+
+<glasser> nested branches don't seem to be relevant here
+
+<glasser> you need to be running merge multiple times, at least
+
+<kfogel>  I'll try a reworked script using those exact paths up there,
+          so we can be speaking the same language
+
+<kfogel>  But the problem is we've been hand-waving about what this
+          scenario actually is -- and when I try to actually make it
+          fully concrete, I can't stimulate the conditions.
+
+<glasser> ok
+
+<glasser> give me the next versin, then I'll try
+
+<kfogel>  sure, few minutes
+
+<kfogel>  glasser: there has to be a --reintegrate merge somewhere,
+          though... right?
+
+<kfogel>  (the goal is to stimulate the new authz checks in
+          svn_repos_fs_get_mergeinfo() )
+
+<glasser> at the end
+
+<glasser> but you need two merges first, to set up two layers of
+          mergeinfo
+
+<glasser> Of course, all that this discussion proves
+
+<kfogel>  hell, my old script had that
+
+<kfogel>  :-)
+
+<kfogel>  "...proves, is that this stuff is a rare edge case" ?
+
+<glasser> is that inherited mergeinfo is so complicated that it
+          manages to confuse even people with their heads deep in the
+          implementation
+
+<glasser> show old script?
+
+<kfogel>  well, I actually wouldn't call my head deep in the
+          implementation (that's a big part of the problem here).  But
+          I did expect to be able to write a test case, yes.
+
+<kfogel>  I did.
+
+<kfogel>  you saw it
+
+<kfogel>  (note that along with it is the patch to fs-wrap.c that I
+          posted, which has various debug prints to /tmp/kff.out so
+          one can see that the expected things are not happening)
+
+<glasser> but, I mean, you do have a reasonable understanding of
+          subversion at least :)
+
+<glasser> the thing you pastebinned?
+
+<kfogel>  Note also that the earlier script I pastebin'd never bothers
+          with the untrusted user.  My debug prints are just to show
+          that the *check* happens, and even that's not happening.  If
+          the check itself happened, I could construct a authz file
+          that would make the check fail.
+
+<glasser> oh, the one in the mail
+
+<glasser> the pastebinned one doesn't do nested merge, does it?
+
+<kfogel>  it does, although I don't think that's strictly necessary
+          for what it's trying to show.
+
+<glasser> maybe we are meaning different things by nested
+
+<glasser> I don't care about having *two branches*
+
+<glasser> I care about *merging subtrees*
+
+<kfogel>  I did that too.
+
+<glasser> in the pastebinned one?  where?
+
+<kfogel>  (it happens that the subtree changes got into branch1 by
+          being merged from branch2, that's all.)
+
+<kfogel>  let me see...
+
+<glasser> you only merge once before teh reintegrate!
+
+<kfogel>  oh, I see what you mean.
+
+<kfogel>  I think.
+
+<glasser> this is what is needed
+
+<glasser> * cp trunk branch
+
+<glasser> * make change rA and rB on branch, touching a bunch of files
+          each
+
+<glasser> er, on trunk, sorry
+
+<kfogel>  ??
+
+<glasser> * merge rA from trunk to branch
+
+<kfogel>  *nod*
+
+<glasser> * merge rB from trunk/some-subdir to branch/some-subdir
+
+<kfogel>  *nod nod*
+
+<glasser> make some random other change on branch
+
+<glasser> * merge --reintegrate it back
+
+<kfogel>  *nod nod nod*
+
+<kfogel>  the "some random other change" is necessary why?
+
+<glasser> well, i guess it's not, but "to give something to actaully
+          be reintegrating"
+
+<kfogel>  yeah
+
+<kfogel>  before I write this as a script, I'm going to spell it out
+          at the level of detail I think we need here:
+
+<kfogel>     1. create repos, import a greek tree into /trunk
+
+<kfogel>     2. create /branches/b1 from /trunk
+
+<kfogel>     3. make several commits worth of random trunk changes,
+          including rX and rY.
+
+<kfogel>     (uh, make that "two commits" -- *just* rX and rY)
+
+<kfogel>     4. merge rX from trunk to branch b1
+
+<kfogel>     5. merge rY from trunk/B/E to branches/b1/B/E  (assume rY
+          is just a change to alpha and beta)
+
+<kfogel>     6. make some other random change on b1  (say,
+          branches/b1/A/mu)
+
+<kfogel>     7. cd back into trunk wc
+
+<kfogel>     8. merge --reintegrate
+
+<kfogel>   
+
+<glasser> yup
+
+<kfogel>  I should see my prints checking auth at least two paths.
+
+<glasser> now, that would fail with "duh, I dunno if X or Y should be
+          the base"
+
+<kfogel>  s/at/for at/
+
+<glasser> but if you can't see B/E, it wouldn't
+
+<glasser> although huh
+
+<kfogel>  I don't understand the error you're proposing...
+
+<glasser> mm
+
+<glasser> grr
+
+<glasser> read authz is hard :)
+
+* kfogel takes schadenfreudliches joy in glasser's slow realization that this is harder than it looks
+
+<glasser> "no wonder nobody else tries to do it for non-trivial
+          things"
+
+<glasser> no, I mean, technically, what I'm describing would work the
+          way we're describing it
+
+<kfogel>  Now *there's* a sentence to take home and chew on :-).
+
+<glasser> in practice, the semantics is kind of hard to grok though.
+          what *should* be the goal of a --reintegrate
+
+<glasser> I mean, our idea is "do a diff with the left-hand-side being
+          'the trunk revision that we are synced up to'"
+
+<kfogel>  basically
+
+<glasser> the whole point of the get-mergeinfo-including-descendents
+          thing is to let us punt if there is no single revision that
+          it's merged up to (but rather has different bits merged
+          differently)
+
+<kfogel>  (at least, we can manipulate things so we're dealing with
+          that case, yes)
+
+<glasser> but if authz makes us not see stuff that has actually been
+          merged, then... well, i guess we can't see it anyway.  if
+          you're having people who can't see all the files in the
+          branch running the merges, then life is hard.  i guess
+          that's ok
+
+<kfogel>  That was what I was saying in my original mail, I think.
+
+<kfogel>  That I can't construct a scenario in which someone who
+          doesn't have auth on path foo would somehow do a merge that
+          gets mergeinfo applying to foo.
+
+<kfogel>  (IOW, that earlier checks already cover this.)
+
+<glasser> oh, that's true
+
+<glasser> but they could do a READ op
+
+
+
+<glasser> like, somebody *else* does the merge that gets the mergeinfo
+          onto it
+
+<glasser> and then they run --reintegrate on a parent of foo, and
+          since reintegrate uses include_descendants...
+
+<glasser> so you need the unprivileged user to run the reintegrate
+
+<glasser> only
+
+<kfogel>  glasser: right, I tried that too
+
+<kfogel>  glasser: in my various scripts, I've generally only used
+          user 'juntrusted' for the reintegrate step, not for any of
+          the others.
+
+<kfogel>  (right now I'm not even doing that -- I use 'jtrusted' for
+          everything and watch the debug output)
+
+<glasser> nod
+
+<kfogel>  glasser: frankly, I'm tempted (I know this is bad behavior,
+          but...) to just check in the authz protection changes (which
+          already pass make check) and then dare the world to come up
+          with a test case.
+
+<glasser> Hmm, are you capable of getting them to at least execute
+          without passing?
+
+<glasser> They did look good to me (if overly clever, though that was
+          due to how the function was already written)
+
+<kfogel>  glasser: what do you mean by execute without passing?
+
+<kfogel>  You mean the conditional checks?
+
+<kfogel>  No.
+
+<kfogel>  That's what I've been trying to do.  If I could do that,
+          everything would be jolly.
+
+<kfogel>  I have verified (by independent means) that authz is working
+          on the repos.
+
+<glasser> right, right
+
+<kfogel>  I had juntrusted accidentally checking out at one point,
+          when A/ was protected from reading, and juntrusted got no
+          subdir A.

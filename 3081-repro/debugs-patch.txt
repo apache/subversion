@@ -1,0 +1,130 @@
+[[[
+Just add some debugging prints.
+
+* subversion/libsvn_repos/fs-wrap.c
+  (svn_repos_fs_get_mergeinfo): Add debugging prints that indicate
+    whether and how the mergeinfo authz check is happening.
+
+* subversion/svnserve/serve.c
+  (must_have_access): Add a debugging print that shows this function
+    was called on a given path.
+]]]
+
+Index: subversion/libsvn_repos/fs-wrap.c
+===================================================================
+--- subversion/libsvn_repos/fs-wrap.c	(revision 29051)
++++ subversion/libsvn_repos/fs-wrap.c	(working copy)
+@@ -613,6 +613,25 @@
+            apr_hash_index_t *hi;
+            apr_hash_t *original_paths_hash, *readable_paths_hash;
+ 
++#define KFF_DEBUG 1
++
++           if (KFF_DEBUG)
++             {
++               FILE *fp = fopen("/tmp/kff.out", "a");
++               if (fp == NULL)
++                 exit(1);
++               fprintf(fp, "KFF: include_descendants is true\n");
++               fprintf(fp, "KFF: paths: '%s'\n",
++                       svn_cstring_join((apr_array_header_t *) paths,
++                                        ", ", pool));
++               fprintf(fp, "KFF: readable_paths: '%s'\n",
++                       svn_cstring_join((apr_array_header_t *) readable_paths,
++                                        ", ", pool));
++               fprintf(fp, "KFF: *mergeinfo count: %d\n",
++                       apr_hash_count(*mergeinfo));
++               fclose(fp);
++             }
++
+            /* Make lookups easy by converting to hash. */
+            SVN_ERR(svn_hash_from_cstring_keys(&original_paths_hash,
+                                               paths, pool));
+@@ -639,9 +658,34 @@
+                path = key;
+                raw_mergeinfo_string = val;
+ 
++               if (KFF_DEBUG)
++                 {
++                   FILE *fp = fopen("/tmp/kff.out", "a");
++                   if (fp == NULL)
++                     exit(1);
++                   fprintf(fp, "KFF: loop hit '%s'\n", path);
++                   fprintf(fp, "KFF: mergeinfo for '%s':\n", path);
++                   fprintf(fp, "'%s'\n",
++                           (char *) apr_hash_get(*mergeinfo, path,
++                                                 APR_HASH_KEY_STRING));
++                   fprintf(fp, "KFF: (rp_h == op_h? --> %d)\n",
++                           readable_paths_hash == original_paths_hash);
++                   fclose(fp);
++                 }
++
+                if (! apr_hash_get(readable_paths_hash, path,
+                                   APR_HASH_KEY_STRING))
+                  {
++                   if (KFF_DEBUG)
++                     {
++                       FILE *fp = fopen("/tmp/kff.out", "a");
++                       if (fp == NULL)
++                         exit(1);
++                       fprintf(fp, "KFF: '%s' is not in readable_paths\n",
++                               path);
++                       fclose(fp);
++                     }
++
+                    /* It's not in readable_paths, so if it *is* in
+                       the original paths, that means it was already
+                       authz-checked and found unreadable -- in which
+@@ -650,6 +694,16 @@
+                        && apr_hash_get(original_paths_hash, path,
+                                        APR_HASH_KEY_STRING))
+                      {
++                       if (KFF_DEBUG)
++                         {
++                           FILE *fp = fopen("/tmp/kff.out", "a");
++                           if (fp == NULL)
++                             exit(1);
++                           fprintf(fp, "KFF: '%s' is easily unreadable\n",
++                                   path);
++                           fclose(fp);
++                         }
++
+                        apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING,
+                                     NULL);
+                      }
+@@ -661,6 +715,16 @@
+                        svn_boolean_t readable;
+                        SVN_ERR(authz_read_func(&readable, root, path,
+                                                authz_read_baton, iterpool));
++                       if (KFF_DEBUG)
++                         {
++                           FILE *fp = fopen("/tmp/kff.out", "a");
++                           if (fp == NULL)
++                             exit(1);
++                           fprintf(fp, "KFF: '%s' authz-checked --> %d\n",
++                                   path, readable);
++                           fclose(fp);
++                         }
++
+                        if (! readable)
+                          apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING,
+                                       NULL);
+Index: subversion/svnserve/serve.c
+===================================================================
+--- subversion/svnserve/serve.c	(revision 29051)
++++ subversion/svnserve/serve.c	(working copy)
+@@ -499,6 +499,14 @@
+       ))
+     SVN_ERR(auth_request(conn, pool, b, req, TRUE));
+ 
++  if (1) /* kff */
++    {
++      FILE *fp = fopen("/tmp/kff.out", "a");
++      if (fp == NULL)
++        exit(1);
++      fprintf(fp, "KFF: must_have_access('%s')\n", path);
++      fclose(fp);
++    }
+   /* Now that an authentication has been done get the new take of
+      authz on the request. */
+   if (! lookup_access(pool, b, required, path, needs_username))
