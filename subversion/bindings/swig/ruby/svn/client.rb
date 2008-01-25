@@ -310,17 +310,19 @@ module Svn
       # and returns +nil+.
       # +diff+ is an instance of Svn::Client::DiffSummarize.
       def diff_summarize(path1, rev1, path2, rev2,
-                         depth=nil, ignore_ancestry=true,
+                         depth=nil, ignore_ancestry=true, changelists=nil,
                          &block) # :yields: diff
         Client.diff_summarize2(path1, rev1, path2, rev2,
-                               depth, ignore_ancestry, block, self)
+                               depth, ignore_ancestry, changelists, block,
+                               self)
       end
 
       def diff_summarize_peg(path1, rev1, rev2, peg_rev=nil,
-                             depth=nil, ignore_ancestry=true,
+                             depth=nil, ignore_ancestry=true, changelists=nil,
                              &block)
         Client.diff_summarize_peg2(path1, rev1, rev2, peg_rev,
-                                   depth, ignore_ancestry, block, self)
+                                   depth, ignore_ancestry, changelists, block,
+                                   self)
       end
 
       def merge(src1, rev1, src2, rev2, target_wcpath,
