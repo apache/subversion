@@ -980,6 +980,28 @@ public interface SVNClientInterface
              throws ClientException;
 
     /**
+     * Perform a reintegration merge of path into localPath.
+     * localPath must be a single-revision, infinite depth,
+     * pristine, unswitched working copy -- in other words, it must
+     * reflect a single revision tree, the "target".  The mergeinfo on
+     * path must reflect that all of the target has been merged into it.
+     * Then this behaves like a merge from the target's URL to the
+     * localPath.
+     *
+     * The depth of the merge is always infinity.
+     * @param path          path or url
+     * @param pegRevision   revision to interpret path
+     * @param localPath     target local path
+     * @param force         overwrite local changes
+     * @param dryRun        do not change anything
+     * @throws ClientException
+     * @since 1.5
+     */
+    void mergeReintegrate(String path, Revision pegRevision,
+                          String localPath, boolean force, boolean dryRun)
+             throws ClientException;
+
+    /**
      * Get merge info for <code>path</code> at <code>pegRevision</code>.
      * @param path WC path or URL.
      * @param pegRevision peg revision at which to get the merge info for

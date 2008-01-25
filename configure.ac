@@ -87,12 +87,6 @@ SVN_LIB_NEON($NEON_ALLOWED_LIST, $NEON_RECOMMENDED_VER, $NEON_URL)
 dnl Search for serf as an alternative to neon
 SVN_LIB_SERF
 
-dnl Search for SQLite
-SQLITE_ALLOWED_LIST="3.*"
-SQLITE_RECOMMENDED_VER="3.5.4"
-SQLITE_URL="http://www.sqlite.org/sqlite-${SQLITE_RECOMMENDED_VER}.tar.gz"
-SVN_LIB_SQLITE($SQLITE_ALLOWED_LIST, $SQLITE_RECOMMENDED_VER, $SQLITE_URL)
-
 dnl Set up a number of directories ---------------------
 
 dnl Create SVN_BINDIR for proper substitution

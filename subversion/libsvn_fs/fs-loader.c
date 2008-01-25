@@ -828,15 +828,6 @@ svn_fs_get_mergeinfo(apr_hash_t **minfohash,
 }
 
 svn_error_t *
-svn_fs_get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
-                              svn_fs_root_t *root,
-                              const apr_array_header_t *paths,
-                              apr_pool_t *pool)
-{
-  return root->vtable->get_mergeinfo_for_tree(mergeinfo, root, paths, pool);
-}
-
-svn_error_t *
 svn_fs_merge(const char **conflict_p, svn_fs_root_t *source_root,
              const char *source_path, svn_fs_root_t *target_root,
              const char *target_path, svn_fs_root_t *ancestor_root,

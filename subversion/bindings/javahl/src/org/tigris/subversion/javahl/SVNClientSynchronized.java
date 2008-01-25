@@ -994,6 +994,20 @@ public class SVNClientSynchronized implements SVNClientInterface
     /**
      * @since 1.5
      */
+    public void mergeReintegrate(String path, Revision pegRevision,
+                                 String localPath, boolean force,
+                                 boolean dryRun)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.mergeReintegrate(path, pegRevision, localPath, force, dryRun);
+        }
+    }
+
+    /**
+     * @since 1.5
+     */
     public MergeInfo getMergeInfo(String path, Revision pegRevision)
         throws SubversionException
     {

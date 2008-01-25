@@ -1157,7 +1157,7 @@ set_prop_merge_state(svn_wc_notify_state_t *state,
       svn_wc_notify_state_merged,
       svn_wc_notify_state_obstructed,
       svn_wc_notify_state_conflicted };
-  int state_pos, i;
+  int state_pos = 0, i;
 
   if (! state)
     return;

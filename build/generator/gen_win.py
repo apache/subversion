@@ -50,7 +50,6 @@ class GeneratorBase(gen_base.GeneratorBase):
     self.swig_path = None
     self.vsnet_version = '7.00'
     self.vsnet_proj_ver = '7.00'
-    self.sqlite_path = None
     self.skip_sections = { 'mod_dav_svn': None,
                            'mod_authz_svn': None }
 
@@ -95,8 +94,6 @@ class GeneratorBase(gen_base.GeneratorBase):
         self.zlib_path = val
       elif opt == '--with-swig':
         self.swig_path = val
-      elif opt == '--with-sqlite':
-        self.sqlite_path = val
       elif opt == '--with-sasl':
         self.sasl_path = val
       elif opt == '--with-openssl':
@@ -167,11 +164,6 @@ class WinGeneratorBase(GeneratorBase):
 
     # Initialize parent
     GeneratorBase.__init__(self, fname, verfname, options)
-
-    if self.sqlite_path == None:
-      sys.stderr.write('ERROR: Sqlite path not specifed. ' + \
-                       'Use --with-sqlite option.')
-      sys.exit(1)
 
     if self.bdb_lib is not None:
       sys.stderr.write("Found %s.lib in %s\n" % (self.bdb_lib, self.bdb_path))
@@ -841,7 +833,6 @@ class WinGeneratorBase(GeneratorBase):
 
     fakeincludes.extend([
                          self.apath(self.zlib_path),
-                         self.apath(self.sqlite_path, 'inc')
                          ])
 
     if self.sasl_path:
@@ -862,7 +853,7 @@ class WinGeneratorBase(GeneratorBase):
     fakelibdirs = [ self.apath(self.bdb_path, "lib"),
                     self.apath(self.neon_path),
                     self.apath(self.zlib_path),
-                    self.apath(self.sqlite_path, "lib") ]
+                    ]
     if self.sasl_path:
       fakelibdirs.append(self.apath(self.sasl_path, "lib"))
     if self.serf_lib:
@@ -939,9 +930,6 @@ class WinGeneratorBase(GeneratorBase):
 
       if dep.external_lib == '$(SVN_DB_LIBS)':
         nondeplibs.append(dblib)
-
-      if dep.external_lib == '$(SVN_SQLITE_LIBS)':
-        nondeplibs.append('sqlite3.lib')
 
       if self.neon_lib and dep.external_lib == '$(NEON_LIBS)':
         nondeplibs.append(neonlib)

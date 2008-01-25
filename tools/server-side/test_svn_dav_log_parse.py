@@ -1,4 +1,4 @@
-#!/usr/bin/python2.2
+#!/usr/bin/python
 
 # ====================================================================
 # Copyright (c) 2008 CollabNet.  All rights reserved.
