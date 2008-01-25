@@ -58,7 +58,6 @@
 #include "bdb/copies-table.h"
 #include "bdb/node-origins-table.h"
 #include "../libsvn_fs/fs-loader.h"
-#include "private/svn_fs_mergeinfo.h"
 #include "private/svn_fs_util.h"
 #include "private/svn_mergeinfo_private.h"
 

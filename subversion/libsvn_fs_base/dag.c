@@ -45,7 +45,6 @@
 #include "bdb/reps-table.h"
 #include "bdb/strings-table.h"
 
-#include "private/svn_fs_mergeinfo.h"
 #include "private/svn_fs_util.h"
 #include "../libsvn_fs/fs-loader.h"
 
