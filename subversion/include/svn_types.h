@@ -968,20 +968,22 @@ typedef struct svn_checksum_t
   unsigned char *digest;
 
   /** The type of the checksum.  This should never be changed by consumers
-   *  of the APIs. */
+      of the APIs. */
   svn_checksum_kind_t kind;
+
+  /** The pool to use for new digest allocations.  It should match the
+      pool that this checksum was allocated from. */
+  apr_pool_t *pool;
 } svn_checksum_t;
 
 /**
- * Allocate and initialize a @c svn_checksum_t structure of type @a kind, and
- * return it as @a *checksum.  @a *checksum is allocated in *pool.  If @a kind
- * is not recognized, return @c SVN_ERR_BAD_CHECKSUM_KIND.
+ * Allocate, initialize and return a @c svn_checksum_t structure of type
+ * @a kind.  The checksum is allocated in @a pool.
  *
  * @since New in 1.5.
  */
-svn_error_t *
-svn_checksum_create(svn_checksum_t **checksum,
-                    svn_checksum_kind_t kind,
+svn_checksum_t *
+svn_checksum_create(svn_checksum_kind_t kind,
                     apr_pool_t *pool);
 
 #ifdef __cplusplus

@@ -23,27 +23,28 @@
 
 
 
-svn_error_t *
-svn_checksum_create(svn_checksum_t **checksum,
-                    svn_checksum_kind_t kind,
+svn_checksum_t *
+svn_checksum_create(svn_checksum_kind_t kind,
                     apr_pool_t *pool)
 {
-  *checksum = apr_palloc(pool, sizeof(*checksum));
+  svn_checksum_t *checksum = apr_palloc(pool, sizeof(*checksum));
 
   switch (kind)
     {
       case svn_checksum_md5:
-        (*checksum)->digest = apr_palloc(pool, APR_MD5_DIGESTSIZE);
+        checksum->digest = apr_palloc(pool, APR_MD5_DIGESTSIZE);
         break;
 
       case svn_checksum_sha1:
-        (*checksum)->digest = apr_palloc(pool, APR_SHA1_DIGESTSIZE);
+        checksum->digest = apr_palloc(pool, APR_SHA1_DIGESTSIZE);
         break;
 
       default:
-        return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
+        return NULL;
     }
 
-  (*checksum)->kind = kind;
-  return SVN_NO_ERROR;
+  checksum->kind = kind;
+  checksum->pool = pool;
+
+  return checksum;
 }
