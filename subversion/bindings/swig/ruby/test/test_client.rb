@@ -2157,7 +2157,7 @@ class SvnClientTest < Test::Unit::TestCase
     assert_equal({}, yield(ctx, [changelist2]))
 
     assert_equal({}, yield(ctx, changelist2))
-    ctx.add_to_changelist(changelist2, path1, path2)
+    ctx.add_to_changelist(changelist2, [path1, path2])
     assert_equal({changelist2=>[path1, path2]}, yield(ctx, changelist2))
     assert_equal({}, yield(ctx, changelist1))
 
@@ -2165,9 +2165,9 @@ class SvnClientTest < Test::Unit::TestCase
     assert_equal({changelist1=>[path1, path2]}, yield(ctx, changelist1))
     assert_equal({}, yield(ctx, changelist2))
 
-    ctx.remove_from_changelist(changelist1, path1)
+    ctx.remove_from_changelists(changelist1, path1)
     assert_equal({changelist1=>[path2]}, yield(ctx, changelist1))
-    ctx.remove_from_changelist(changelist1, [path2])
+    ctx.remove_from_changelists(changelist1, [path2])
     assert_equal({}, yield(ctx, changelist1))
 
     ctx.add_to_changelist(changelist1, path1)
@@ -2184,7 +2184,7 @@ class SvnClientTest < Test::Unit::TestCase
     assert_equal({changelist1=>[path1],changelist2=>[path2]},
                  yield(ctx, [changelist1,changelist2]))
 
-    ctx.remove_from_changelist(nil, [path1, path2])
+    ctx.remove_from_changelists(nil, [path1, path2])
     assert_equal({}, yield(ctx, changelist1))
     assert_equal({}, yield(ctx, changelist2))
   end

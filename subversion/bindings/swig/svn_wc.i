@@ -48,7 +48,6 @@
 %ignore svn_wc_entry;
 %ignore svn_wc_notify;
 
-%ignore svn_wc_set_changelist;
 #endif
 
 /* -----------------------------------------------------------------------
@@ -230,27 +229,6 @@
 %}
 
 %include svn_wc_h.swg
-
-
-#ifdef SWIGRUBY
-%header %{
-#define _svn_wc_set_changelist svn_wc_set_changelist
-%}
-%rename(svn_wc_set_changelist) _svn_wc_set_changelist;
-%apply const char *MAY_BE_NULL {
-  const char *changelist_may_be_null,
-  const char *matching_changelist_may_be_null
-}
-svn_error_t *
-_svn_wc_set_changelist(const apr_array_header_t *paths,
-                       const char *changelist_may_be_null,
-                       const char *matching_changelist_may_be_null,
-                       svn_cancel_func_t cancel_func,
-                       void *cancel_baton,
-                       svn_wc_notify_func2_t notify_func,
-                       void *notify_baton,
-                       apr_pool_t *pool);
-#endif
 
 
 

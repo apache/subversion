@@ -12,7 +12,7 @@ module Svn
     self.swig_init_asp_dot_net_hack()
 
     @@alias_targets = %w(parse_externals_description
-                         ensure_adm cleanup set_changelist)
+                         ensure_adm cleanup)
     class << self
       @@alias_targets.each do |target|
         alias_method "_#{target}", target
@@ -68,14 +68,6 @@ module Svn
     def ignore?(path, patterns)
       Wc.match_ignore_list(path, patterns)
     end
-
-    def set_changelist(paths, changelist_name, matching_changelist_name=nil,
-                        cancel_func=nil, notify_func=nil)
-      paths = [paths] unless paths.is_a?(Array)
-      Wc._set_changelist(paths, changelist_name, matching_changelist_name,
-                         cancel_func, notify_func)
-    end
-    module_function :set_changelist
 
     module ExternalsDescription
       module_function
@@ -538,6 +530,12 @@ module Svn
 
       def remove_lock(path)
         Wc.remove_lock(path, self)
+      end
+
+      def set_changelist(path, changelist_name, cancel_func=nil,
+                         notify_func=nil)
+        Wc.set_changelist(path, changelist_name, self, cancel_func,
+                          notify_func)
       end
 
       private
