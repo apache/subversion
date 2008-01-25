@@ -236,8 +236,6 @@ def locate_libs():
                            'libapr%s.dll' % (suffix)))
   dlls.append(os.path.join(gen_obj.apr_util_path, objdir,
                              'libaprutil%s.dll' % (suffix)))
-  dlls.append(os.path.join(gen_obj.apr_iconv_path, objdir,
-                           'libapriconv%s.dll' % (suffix)))
 
   if gen_obj.libintl_path is not None:
     dlls.append(os.path.join(gen_obj.libintl_path, 'bin', 'intl3_svn.dll'))
@@ -269,8 +267,6 @@ def locate_libs():
     copy_changed_file(mod_dav_svn_path, abs_objdir)
     copy_changed_file(mod_authz_svn_path, abs_objdir)
 
-  apriconv_so_path = os.path.join(gen_obj.apr_iconv_path, objdir, 'iconv')
-  os.environ['APR_ICONV_PATH'] = os.path.abspath(apriconv_so_path)
   os.environ['PATH'] = abs_objdir + os.pathsep + os.environ['PATH']
 
 def fix_case(path):
