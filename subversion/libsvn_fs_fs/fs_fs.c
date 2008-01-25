@@ -5693,6 +5693,7 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
   svn_stringbuf_t *origin_stringbuf;
   svn_error_t *err;
 
+  *origin_id = NULL;
   err = svn_io_file_open(&fd, path_node_origin(fs, node_id, pool),
                          APR_READ, APR_OS_DEFAULT, pool);
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
