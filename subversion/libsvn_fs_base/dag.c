@@ -35,7 +35,6 @@
 #include "reps-strings.h"
 #include "revs-txns.h"
 #include "id.h"
-#include "tree.h"  /* needed for SVN_FS__PROP_TXN_MERGEINFO */
 
 #include "util/fs_skels.h"
 
@@ -1433,7 +1432,6 @@ svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
   apr_hash_t *txnprops;
   svn_fs_t *fs = txn->fs;
   const char *txn_id = txn->id;
-  const svn_string_t *target_mergeinfo;
 
   /* Remove any temporary transaction properties initially created by
      begin_txn().  */
@@ -1443,20 +1441,6 @@ svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
   revision.txn_id = txn_id;
   *new_rev = SVN_INVALID_REVNUM;
   SVN_ERR(svn_fs_bdb__put_rev(new_rev, fs, &revision, trail, pool));
-
-  target_mergeinfo = apr_hash_get(txnprops, SVN_FS__PROP_TXN_MERGEINFO,
-                                  APR_HASH_KEY_STRING);
-  if (target_mergeinfo)
-    {
-      svn_stringbuf_t *buf = 
-        svn_stringbuf_create_from_string(target_mergeinfo, pool);
-      svn_stream_t *stream = svn_stream_from_stringbuf(buf, pool);
-      apr_hash_t *mergeinfo = apr_hash_make(pool);
-      SVN_ERR(svn_hash_read2(mergeinfo, stream, NULL, pool));
-      SVN_ERR(svn_fs_mergeinfo__update_index(txn, *new_rev, mergeinfo, pool));
-      SVN_ERR(svn_fs_base__set_txn_prop
-              (fs, txn_id, SVN_FS__PROP_TXN_MERGEINFO, NULL, trail, pool));
-    }
 
   if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_OOD, APR_HASH_KEY_STRING))
     SVN_ERR(svn_fs_base__set_txn_prop
