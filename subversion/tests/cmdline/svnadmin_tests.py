@@ -529,7 +529,53 @@ def set_uuid(sbox):
   if new_uuid != orig_uuid:
     print "Error: new UUID doesn't match the original one"
     raise svntest.Failure
-  
+
+#----------------------------------------------------------------------
+
+def reflect_dropped_renumbered_revs(sbox):
+  "reflect dropped renumbered revs in svn:mergeinfo"
+
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3020. ##
+
+  test_create(sbox)
+
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svndumpfilter_tests_data',
+                                   'with_merges.dump')
+  dumpfile = svntest.main.file_read(dumpfile_location)
+
+  # Create 'toplevel' dir in sbox.repo_url
+  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 1.\n'],
+                                     [], "mkdir", sbox.repo_url + "/toplevel",
+                                     "-m", "Create toplevel dir")
+
+  # Load the dump stream in sbox.repo_url
+  load_and_verify_dumpstream(sbox,[],[], None, dumpfile)
+
+  # Load the dump stream in toplevel dir
+  load_and_verify_dumpstream(sbox,[],[], None, dumpfile, '--parent-dir',
+                             '/toplevel')
+
+  # Verify the svn:mergeinfo properties
+  svntest.actions.run_and_verify_svn(None, ["/trunk:1-4\n"],
+                                     [], 'propget', 'svn:mergeinfo',
+                                     sbox.repo_url + '/branch2')
+  svntest.actions.run_and_verify_svn(None, ["/branch1:5-9\n"],
+                                     [], 'propget', 'svn:mergeinfo',
+                                     sbox.repo_url + '/trunk')
+  svntest.actions.run_and_verify_svn(None, ["/toplevel/trunk:1-13\n"],
+                                     [], 'propget', 'svn:mergeinfo',
+                                     sbox.repo_url + '/toplevel/branch2')
+  svntest.actions.run_and_verify_svn(None, ["/toplevel/branch1:14-18\n"],
+                                     [], 'propget', 'svn:mergeinfo',
+                                     sbox.repo_url + '/toplevel/trunk')
+  svntest.actions.run_and_verify_svn(None, ["/toplevel/trunk:1-12\n"],
+                                     [], 'propget', 'svn:mergeinfo',
+                                     sbox.repo_url + '/toplevel/branch1')
+  svntest.actions.run_and_verify_svn(None, ["/trunk:1-3\n"],
+                                     [], 'propget', 'svn:mergeinfo',
+                                     sbox.repo_url + '/branch1')
+
 
 ########################################################################
 # Run the tests
@@ -551,6 +597,7 @@ test_list = [ None,
               SkipUnless(recover_fsfs, svntest.main.is_fs_type_fsfs),
               load_with_parent_dir,
               set_uuid,
+              reflect_dropped_renumbered_revs,
              ]
 
 if __name__ == '__main__':
