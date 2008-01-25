@@ -53,7 +53,6 @@
 #include "id.h"
 
 #include "private/svn_fs_mergeinfo.h"
-#include "private/svn_fs_node_origins.h"
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_fs_util.h"
 #include "../libsvn_fs/fs-loader.h"
@@ -3013,17 +3012,14 @@ fs_node_origin_rev(svn_revnum_t *revision,
 
   if (node_id[0] != '_')
     {
-      const char *cached_origin_id_str;
-      SVN_ERR(svn_fs__get_node_origin(&cached_origin_id_str,
-                                      fs,
-                                      node_id,
-                                      pool));
-      if (cached_origin_id_str != NULL)
+      const svn_fs_id_t *cached_origin_id;
+      SVN_ERR(svn_fs_fs__get_node_origin(&cached_origin_id,
+                                         fs,
+                                         node_id,
+                                         pool));
+      if (cached_origin_id != NULL)
         {
-          *revision = 
-            svn_fs_fs__id_rev(svn_fs_fs__id_parse(cached_origin_id_str,
-                                                  strlen(cached_origin_id_str),
-                                                  pool));
+          *revision = svn_fs_fs__id_rev(cached_origin_id);
           return SVN_NO_ERROR;
         }
     }
@@ -3087,8 +3083,8 @@ fs_node_origin_rev(svn_revnum_t *revision,
       /* Wow, I don't want to have to do all that again.  Let's cache
          the result. */
       if (node_id[0] != '_')
-        SVN_ERR(svn_fs__set_node_origin(fs, node_id, 
-                                        svn_fs_fs__dag_get_id(node), pool));
+        SVN_ERR(svn_fs_fs__set_node_origin(fs, node_id,
+                                           svn_fs_fs__dag_get_id(node), pool));
 
       svn_pool_destroy(subpool);
       svn_pool_destroy(predidpool);

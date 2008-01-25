@@ -445,5 +445,47 @@ svn_error_t *svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p, svn_fs_t *fs,
 svn_error_t *svn_fs_fs__txn_prop(svn_string_t **value_p, svn_fs_txn_t *txn,
                                  const char *propname, apr_pool_t *pool);
 
+/* If directory PATH does not exist, create it and give it the same
+   permissions as FS->path.*/
+svn_error_t *svn_fs_fs__ensure_dir_exists(const char *path,
+                                          svn_fs_t *fs,
+                                          apr_pool_t *pool);
+
+/* Update the node origin index for FS based on the hash
+   NODE_ORIGIN_FOR_PATHS, which maps from const char * "Node IDs" to
+   const svn_fs_id_t * node-rev-ids.  Returns an error if any cache
+   entry exists with a different value; pre-existing entries with the
+   same value are ignored.  Use POOL for any temporary allocations.
+
+   Because this is just an "optional" cache, this function does not
+   return an error if the underlying storage is readonly; it still
+   returns an error for other error conditions.
+ */
+svn_error_t *
+svn_fs_fs__set_node_origins(svn_fs_t *fs,
+                            apr_hash_t *node_origins,
+                            apr_pool_t *pool);
+
+/* Shorthand for calling svn_fs_fs__set_node_origins with just one pair.
+ */
+svn_error_t *
+svn_fs_fs__set_node_origin(svn_fs_t *fs,
+                           const char *node_id,
+                           const svn_fs_id_t *node_rev_id,
+                           apr_pool_t *pool);
+
+/* Set *ORIGIN_ID to the node revision ID from which the history of
+   all nodes in FS whose "Node ID" is NODE_ID springs, as determined
+   by a look in the index.  ORIGIN_ID needs to be parsed in an
+   FS-backend-specific way.  Use POOL for allocations.
+
+   If there is no entry for NODE_ID in the cache, return NULL
+   in *ORIGIN_ID. */
+svn_error_t *
+svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
+                           svn_fs_t *fs,
+                           const char *node_id,
+                           apr_pool_t *pool);
+
 
 #endif
