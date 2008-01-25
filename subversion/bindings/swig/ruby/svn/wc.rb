@@ -438,11 +438,11 @@ module Svn
 
       def diff_editor2(target, callbacks, depth=nil,
                        ignore_ancestry=true, use_text_base=false,
-                       reverse_order=false, cancel_func=nil)
+                       reverse_order=false, cancel_func=nil, changelists=nil)
         editor, editor_baton = Wc.get_diff_editor4(self, target, callbacks,
                                                    depth, ignore_ancestry,
                                                    use_text_base, reverse_order,
-                                                   cancel_func)
+                                                   cancel_func, changelists)
         editor.baton = editor_baton
         editor
       end
