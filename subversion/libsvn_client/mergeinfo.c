@@ -228,9 +228,7 @@ svn_client__get_wc_mergeinfo(apr_hash_t **mergeinfo,
           /* Look in WCPATH's parents only if the parents share the same
              working revision. */
           if (entry->revision != base_revision)
-            {
-              break;
-            }
+            break;
 
           if (entry)
             /* We haven't yet risen above the root of the WC. */
