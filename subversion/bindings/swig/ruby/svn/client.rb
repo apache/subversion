@@ -191,11 +191,12 @@ module Svn
       end
 
       def propset(name, value, target, depth_or_recurse=nil, force=false,
-                  base_revision_for_url=nil)
+                  base_revision_for_url=nil, changelists_names=nil)
         base_revision_for_url ||= Svn::Core::INVALID_REVNUM
         depth = Core::Depth.infinity_or_empty_from_recurse(depth_or_recurse)
+        changelists_names = [changelists_names] unless changelists_names.is_a?(Array) or changelists_names.nil?
         Client.propset3(name, value, target, depth, force,
-                        base_revision_for_url, self)
+                        base_revision_for_url, changelists_names, self)
       end
       alias prop_set propset
       alias pset propset
@@ -210,11 +211,13 @@ module Svn
 
       # Returns a value of a property, with +name+ attached to +target+,
       # as a Hash such as <tt>{uri1 => value1, uri2 => value2, ...}</tt>.
-      def propget(name, target, rev=nil, peg_rev=nil, depth_or_recurse=nil)
+      def propget(name, target, rev=nil, peg_rev=nil, depth_or_recurse=nil,
+                  changelists_names=nil)
         rev ||= "HEAD"
         peg_rev ||= rev
         depth = Core::Depth.infinity_or_empty_from_recurse(depth_or_recurse)
-        Client.propget4(name, target, peg_rev, rev, depth, self).first
+        changelists_names = [changelists_names] unless changelists_names.is_a?(Array) or changelists_names.nil?
+        Client.propget4(name, target, peg_rev, rev, depth, changelists_names, self).first
       end
       alias prop_get propget
       alias pget propget
@@ -225,7 +228,8 @@ module Svn
       # Returns list of properties attached to +target+ as an Array of
       # Svn::Client::PropListItem.
       # Paths and URIs are available as +target+.
-      def proplist(target, rev=nil, peg_rev=nil, depth_or_recurse=nil, &block)
+      def proplist(target, rev=nil, peg_rev=nil, depth_or_recurse=nil,
+                   changelists_names=nil, &block)
         rev ||= "HEAD"
         peg_rev ||= rev
         items = []
@@ -234,7 +238,9 @@ module Svn
           items << PropListItem.new(path, prop_hash)
           block.call(path, prop_hash) if block
         end
-        Client.proplist3(target, rev, peg_rev, depth, receiver, self)
+        changelists_names = [changelists_names] unless changelists_names.is_a?(Array) or changelists_names.nil?
+        Client.proplist3(target, rev, peg_rev, depth, changelists_names,
+                         receiver, self)
         items
       end
       alias prop_list proplist
