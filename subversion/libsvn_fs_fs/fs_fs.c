@@ -48,8 +48,6 @@
 #include "fs_fs.h"
 #include "id.h"
 
-#include "private/svn_fs_sqlite.h"
-#include "private/svn_fs_mergeinfo.h"
 #include "private/svn_fs_util.h"
 #include "../libsvn_fs/fs-loader.h"
 
@@ -1123,10 +1121,6 @@ svn_fs_fs__hotcopy(const char *src_path,
 
   /* Copy the uuid. */
   SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_UUID, pool));
-
-  /* Copy the merge tracking info. */
-  SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, SVN_FS__SQLITE_DB_NAME,
-                               pool));
 
   /* Find the youngest revision from this current file. */
   SVN_ERR(get_youngest(&youngest, dst_path, pool));
@@ -5142,10 +5136,6 @@ commit_body(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_fs_fs__move_into_place(revprop_filename, final_revprop,
                                      old_rev_filename, pool));
 
-  /* Update the merge tracking information index. */
-  SVN_ERR(svn_fs_mergeinfo__update_index(cb->txn, new_rev, target_mergeinfo,
-                                         pool));
-
   /* Update the 'current' file. */
   SVN_ERR(write_final_current(cb->fs, cb->txn->id, new_rev, start_node_id,
                               start_copy_id, pool));
@@ -5303,9 +5293,6 @@ svn_fs_fs__create(svn_fs_t *fs,
   /* This filesystem is ready.  Stamp it with a format number. */
   SVN_ERR(write_format(path_format(fs, pool),
                        ffd->format, ffd->max_files_per_dir, pool));
-
-  /* ### this should be before the format file */
-  SVN_ERR(svn_fs__sqlite_create_index(path, pool));
   return SVN_NO_ERROR;
 }
 
