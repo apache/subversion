@@ -532,11 +532,13 @@ gls_receiver(svn_location_segment_t *segment,
 static int
 compare_segments(const void *a, const void *b)
 {
-  const svn_location_segment_t *a_seg = a;
-  const svn_location_segment_t *b_seg = b;
+  const svn_location_segment_t *a_seg 
+    = *((const svn_location_segment_t * const *) a);
+  const svn_location_segment_t *b_seg 
+    = *((const svn_location_segment_t * const *) b);
   if (a_seg->range_start == b_seg->range_start)
     return 0;
-  return (a_seg->range_start < b_seg->range_start) ? 1 : -1;
+  return (a_seg->range_start < b_seg->range_start) ? -1 : 1;
 }
 
 svn_error_t *
