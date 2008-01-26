@@ -1582,8 +1582,11 @@ svn_fs_base__dag_set_mergeinfo_count(dag_node_t *node,
 
   if ((count < 0) || ((node->kind == svn_node_file) && (count > 1)))
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Invalid value (%" APR_INT64_T_FMT ") for "
-                               "node revision mergeinfo count"), count);
+                             apr_psprintf(pool,
+                                          _("Invalid value (%%%s) for node "
+                                            "revision mergeinfo count"),
+                                          APR_INT64_T_FMT),
+                             count);
 
   SVN_ERR(svn_fs_bdb__get_node_revision(&node_rev, fs, id, trail, pool));
   if (node_rev->mergeinfo_count != count)
@@ -1619,8 +1622,10 @@ svn_fs_base__dag_adjust_mergeinfo_count(dag_node_t *node,
   if ((node_rev->mergeinfo_count < 0) 
       || ((node->kind == svn_node_file) && (node_rev->mergeinfo_count > 1)))
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Invalid value (%" APR_INT64_T_FMT ") for "
-                               "node revision mergeinfo count"),
+                             apr_psprintf(pool,
+                                          _("Invalid value (%%%s) for node "
+                                            "revision mergeinfo count"),
+                                          APR_INT64_T_FMT),
                              node_rev->mergeinfo_count);
 
   SVN_ERR(svn_fs_bdb__put_node_revision(fs, id, node_rev, trail, pool));
