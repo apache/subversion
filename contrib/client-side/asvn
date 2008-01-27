@@ -36,7 +36,7 @@
 #
 #
 #-------------------------------------------------------------------------
-SVN=/usr/local/bin/svn
+SVN=/usr/bin/svn
 ACTION=""
 DEV_PROP="dir:devices"
 SYM_PROP="dir:symlinks"
@@ -58,8 +58,8 @@ function cleanup()
 function basedirname()
 {
     refname="$1"
-    dir="`dirname $2`"
-    ref=`expr "$dir" : "$refname/\(.*\)"`
+    dir="`dirname \"$2\"`"
+    ref="`expr \"$dir\" : \"$refname/\(.*\)\"`"
     if [ -z "$ref" ]
     then
 	echo .
@@ -73,8 +73,8 @@ function basedirname()
 #
 function addignorefile()
 {
-    file=`basename $1`
-    dir=`dirname $1`
+    file="`basename \"$1\"`"
+    dir="`dirname \"$1\"`"
 
     efile="`echo $file |sed -e 's!\([\[\(\$]\)!\\\\\1!g'`"
     gefile="`echo $efile |sed -e 's!\(\\\\\)!\\\\\\\\\1!g'`"
@@ -90,8 +90,8 @@ function addignorefile()
 
 function deleteignorefile()
 {
-    file=`basename $1`
-    dir=`dirname $1`
+    file="`basename \"$1\"`"
+    dir="`dirname \"$1\"`"
     efile="`echo $file |sed -e 's!\([\[\(\$]\)!\\\\\1!g'`"
     gefile="`echo $efile |sed -e 's!\(\\\\\)!\\\\\\\\\1!g'`"
     echo "deleting ignore setting for '$file'"
@@ -107,8 +107,8 @@ function recorddirinfo
 {
     eval "find $PCWD $SKIPSVN -o \( -type d ! -name .svn  -print \)" |while read dirlist
     do
-	updatedirsymlinks $1 $dirlist
-	updatedirdevices $1 $dirlist
+	updatedirsymlinks $1 "$dirlist"
+	updatedirdevices $1 "$dirlist"
     done
 }
 
@@ -126,15 +126,15 @@ function updatedirdevices()
     #
     # Obtain the list of devices in this directory
     #
-    find "$dir" \( \( -type b -o -type c -o -type p \) -print \)  -o  -type d ! -name "`basename $dir`" -prune | while read file
+    find "$dir" \( \( -type b -o -type c -o -type p \) -print \)  -o  -type d ! -name "`basename \"$dir\"`" -prune | while read file
     do
-	echo -n `find $file -printf "file='%f' mode=%m user=%u(%U) group=%g(%G)"`
-	[ -b $file ] && echo -n ' type=b'
-	[ -c $file ] && echo -n ' type=c'
-	[ -p $file ] && echo ' type=p'
-	if [ -b $file -o -c $file ] 
+	echo -n `find "$file" -printf "file='%f' mode=%m user=%u(%U) group=%g(%G)"`
+	[ -b "$file" ] && echo -n ' type=b'
+	[ -c "$file" ] && echo -n ' type=c'
+	[ -p "$file" ] && echo ' type=p'
+	if [ -b "$file" -o -c "$file" ] 
 	then
-	    ls -l $file |
+	    ls -l "$file" |
 		sed -e 's/^[-lcpbrdwxXstugoTS]* *[0-9] [^ ]* *[^ ]* *\([0-9]*\), *\([0-9]*\) .*/ major=\1 minor=\2/'
 	fi
 	# In this case file is the full path.
@@ -145,7 +145,7 @@ function updatedirdevices()
     #
     # Obtain the currently defined devices
     #
-    $SVN propget $DEV_PROP $dir >$TMPFILE1
+    $SVN propget $DEV_PROP "$dir" >$TMPFILE1
 
     #
     # If the two list are the same then there is nothing to do.
@@ -161,16 +161,16 @@ function updatedirdevices()
 	if [ "$CHECKIN" = "true" ]
 	then
 	    # Add the current devices to the property
-	    $SVN propset $DEV_PROP $dir -F $TMPFILE
+	    $SVN propset $DEV_PROP "$dir" -F $TMPFILE
 	else
 	    # Delete all the unwanted devices ie not in TMPFILE1
 	    cat $TMPFILE |while read line
 	    do
-		file=`expr "$line" : "file='\(.*\)' mode"`
+		file="`expr \"$line\" : \"file='\(.*\)' mode\"`"
 		if ! grep -q "file='$file'" $TMPFILE1
 		then
-		    rm $file
-		    deleteignorefile $file
+		    rm "$file"
+		    deleteignorefile "$file"
 		fi
 	    done
 	fi
@@ -178,7 +178,7 @@ function updatedirdevices()
 	# There are no devices in this directory
 	if [ "$CHECKIN" = "true" ]
 	then
-	    $SVN propdel $DEV_PROP $dir
+	    $SVN propdel $DEV_PROP "$dir"
 	fi
     fi
 
@@ -192,7 +192,7 @@ function updatedirdevices()
 	    #echo info = $info
 	    [ -z "$info" ] && continue
 	    grep -q "$info" $TMPFILE && continue # This line still matches
-	    file=`expr "$info" : "file='\(.*\)' "`
+	    file="`expr \"$info\" : \"file='\(.*\)' \"`"
 	    mode=`expr "$info" : ".*' mode=\([0-9]*\) "`
 	    user=`expr "$info" : ".* user=\([^(]*\)("`
 	    uid=`expr "$info" : ".* user=[^(]*(\([0-9]*\) "`
@@ -205,10 +205,10 @@ function updatedirdevices()
 	    # This file is either missing or wrong
 	    # Delete the old and create it anew.
 	    #
-	    rm -f $dir/$file
-	    mknod --mode=$mode $dir/$file $type $major $minor
-	    chown $user:$group $dir/$file
-	    addignorefile $dir/$file
+	    rm -f "$dir/$file"
+	    mknod --mode=$mode "$dir/$file" $type $major $minor
+	    chown $user:$group "$dir/$file"
+	    addignorefile "$dir/$file"
 	done
     fi
 }
@@ -228,7 +228,7 @@ function updatedirsymlinks()
     #
     # Obtain the list of symlinks in this directory
     #
-    find "$dir" \( -type l -printf "file='%f' dest='%l'\n" \)  -o  -type d ! -name "`basename $dir`" -prune |
+    find "$dir" \( -type l -printf "file='%f' dest='%l'\n" \)  -o  -type d ! -name "`basename \"$dir\"`" -prune |
 	sort >$TMPFILE
     
     #
@@ -236,14 +236,14 @@ function updatedirsymlinks()
     #
     cat $TMPFILE |while read line
     do
-	file=`expr "$line" : "file='\(.*\)' dest"`
+	file="`expr \"$line\" : \"file='\(.*\)' dest\"`"
 	addignorefile "$dir/$file"
     done
     
     #
     # Obtain the currently defined symlinks
     #
-    $SVN propget $SYM_PROP $dir >$TMPFILE1
+    $SVN propget $SYM_PROP "$dir" >$TMPFILE1
 
     #
     # If the two list are the same then there is nothing to do.
@@ -259,17 +259,17 @@ function updatedirsymlinks()
 	if [ "$CHECKIN" = "true" ]
 	then
 	    # Add the current symlinks to the property
-	    $SVN propset $SYM_PROP $dir -F $TMPFILE
+	    $SVN propset $SYM_PROP "$dir" -F $TMPFILE
 	else
 	    # Delete all the unwanted symlinks
 	    cat $TMPFILE |while read line
 	    do
-		file=`expr "$line" : "file='\(.*\)' dest"`
-		efile="`echo $file |sed -e 's!\([\[\(\$]\)!\\\\\1!g'`"
+		file="`expr \"$line\" : \"file='\(.*\)' dest\"`"
+		efile="`echo \"$file\" |sed -e 's!\([\[\(\$]\)!\\\\\1!g'`"
 		if ! grep -q "file='$efile'" $TMPFILE1
 		then
-		    rm $dir/$file
-		    deleteignorefile $dir/$file
+		    rm "$dir/$file"
+		    deleteignorefile "$dir/$file"
 		fi
 	    done
 	fi
@@ -277,7 +277,7 @@ function updatedirsymlinks()
 	# There are no symlinks in this directory
 	if [ "$CHECKIN" = "true" ]
 	then
-	    $SVN propdel $SYM_PROP $dir
+	    $SVN propdel $SYM_PROP "$dir"
 	fi
     fi
 
@@ -289,15 +289,15 @@ function updatedirsymlinks()
 	cat $TMPFILE1 |while read info
 	do
 	    [ -z "$info" ] && continue
-	    file=`expr "$info" : "file='\(.*\)' dest"`
-	    dest=`expr "$info" : ".*' dest='\(.*\)'$"`
+	    file="`expr \"$info\" : \"file='\(.*\)' dest\"`"
+	    dest="`expr \"$info\" : \".*' dest='\(.*\)'$\"`"
 
-	    if [ -L $dir/$file  ]
+	    if [ -L "$dir/$file" ]
 	    then
-		[ "`find $dir/$file -printf '%l'`" = "$dest" ] && continue
+		[ "`find \"$dir/$file\" -printf '%l'`" = "$dest" ] && continue
 	    fi 
-	    rm -f $dir/$file
-	    ln -s $dest $dir/$file
+	    rm -f "$dir/$file"
+	    ln -s "$dest" "$dir/$file"
 	done
     fi
 }
@@ -313,24 +313,27 @@ function recordpermissions()
 
     # Find all the directories and files
     cp /dev/null $TMPFILE
+
     eval "find $PCWD $SKIPSVN -o \( \( -type d ! -name .svn  \) -o -type f \) $PRINTDETAILS" | while read info
     do
 	device=`expr "$info" : "file='\(.*\)' mode"`
 	info=`expr "$info" : "file='.*' \(mode.*\)"`
+
 	if [ "$PCWD" = "$device" ]
 	then
 	    dir="."
 	    file=""
 	else
-	    dir="`basedirname $PCWD $device`"
-	    file="`basename $device`"
+	    dir="`basedirname \"$PCWD\" \"$device\"`"
+	    file="`basename \"$device\"`"
 	fi
+
 	# see if the properties have changed.
-	if [ "`$SVN propget $FILE_PROP $dir/$file`" != "$info" ]
+	if [ "`$SVN propget $FILE_PROP \"$dir/$file\"`" != "$info" ]
 	then
 	    if [ "$CHECKIN" = "true" ]
 	    then
-		$SVN propset $FILE_PROP  "$info" $dir/$file
+		$SVN propset $FILE_PROP  "$info" "$dir/$file"
 	    else
 		info=`$SVN propget $FILE_PROP "$dir/$file"`
 		mode=`expr "$info" : "mode=\([0-9]*\) "`
@@ -342,8 +345,8 @@ function recordpermissions()
 		then
 		    echo "property $FILE_PROP not set for $dir/$file"
 		else
-		    chown $user:$group  $dir/$file
-		    chmod $mode $dir/$file
+		    chown $user:$group  "$dir/$file"
+		    chmod $mode "$dir/$file"
 		fi
 	    fi
 	fi
@@ -364,8 +367,8 @@ function post_checkout()
     if [ "$CHDIR" = "true" ]
     then
 	shift $(($# -1))
-	cd $1
-    PCWD="$PCWD/$1"
+	cd "`basename \"$1\"`"
+    PCWD="$PCWD/`basename \"$1\"`"
     fi
     recorddirinfo 
     recordpermissions 
