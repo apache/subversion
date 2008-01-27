@@ -326,7 +326,7 @@ it's not guaranteed.
 The first argument can be either a single string or a reference to an
 array of strings.  Each of these indicates a path in the repository
 which you are interested in.  Revisions which don't change any of these
-paths (or files below them) will be ignored.  Simply pass '/' if you don't
+paths (or files below them) will be ignored.  Simply pass '' if you don't
 want to limit by path.
 
 C<$start> and C<$end> should be revision numbers.  If C<$start> has a lower
@@ -387,7 +387,7 @@ This example prints some of the information received in a simple format,
 showing which paths were changed in each revision, for all revisions starting
 from the first:
 
-    $ra->get_log('/', 1, $ra->get_latest_revnum, 0, 1, 0,
+    $ra->get_log('', 1, $ra->get_latest_revnum, 0, 1, 0,
                  \&log_callback);
 
     sub log_callback
