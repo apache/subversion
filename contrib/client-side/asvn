@@ -36,6 +36,12 @@
 #
 #
 #-------------------------------------------------------------------------
+
+# $HeadURL$
+# $LastChangedDate$
+# $LastChangedBy$
+# $LastChangedRevision$
+
 SVN=/usr/bin/svn
 ACTION=""
 DEV_PROP="dir:devices"
