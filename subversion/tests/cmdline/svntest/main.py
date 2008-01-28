@@ -181,7 +181,7 @@ fs_type = None
 work_dir = "svn-test-work"
 
 # Constant for the merge info property.
-SVN_PROP_MERGE_INFO = "svn:mergeinfo"
+SVN_PROP_MERGEINFO = "svn:mergeinfo"
 
 # Where we want all the repositories and working copies to live.
 # Each test will have its own!

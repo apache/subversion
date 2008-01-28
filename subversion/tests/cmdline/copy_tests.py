@@ -22,7 +22,7 @@ import stat, os, re
 # Our testing module
 import svntest
 
-from svntest.main import SVN_PROP_MERGE_INFO
+from svntest.main import SVN_PROP_MERGEINFO
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -146,7 +146,7 @@ def copy_replace_with_props(sbox, wc_copy):
 
   # Verify both content and props have been copied
   if wc_copy:
-    props = { SVN_PROP_MERGE_INFO : '',
+    props = { SVN_PROP_MERGEINFO : '',
               'phony-prop' : '*'}
   else:
     props = { 'phony-prop' : '*'}
@@ -1000,7 +1000,7 @@ def repos_to_wc(sbox):
 
   # Validate the merge info of the copy destination (we expect none)
   svntest.actions.run_and_verify_svn(None, [], [],
-                                     'propget', SVN_PROP_MERGE_INFO,
+                                     'propget', SVN_PROP_MERGEINFO,
                                      os.path.join(D_dir, 'B'))
 
 #----------------------------------------------------------------------
@@ -2677,7 +2677,7 @@ def copy_added_paths_to_URL(sbox):
   # Validate the merge info of the copy destination (we expect none).
   svntest.actions.run_and_verify_svn(None, [], [],
                                      'propget',
-                                     SVN_PROP_MERGE_INFO, upsilon_copy_URL)
+                                     SVN_PROP_MERGEINFO, upsilon_copy_URL)
 
   # Copy added dir A/D/I to URL://A/D/G/I
   I_copy_URL = sbox.repo_url + '/A/D/G/I'
@@ -3229,8 +3229,8 @@ def copy_peg_rev_local_files(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/D/H/psi', contents=iota_text)
   expected_disk.add({
-    'iota'      : Item(contents=psi_text, props={SVN_PROP_MERGE_INFO : ''}),
-    'A/D/H/psi' : Item(contents=iota_text, props={SVN_PROP_MERGE_INFO : ''}),
+    'iota'      : Item(contents=psi_text, props={SVN_PROP_MERGEINFO : ''}),
+    'A/D/H/psi' : Item(contents=iota_text, props={SVN_PROP_MERGEINFO : ''}),
     'sigma'     : Item(contents=psi_text, props={}),
     })
 
@@ -3305,11 +3305,11 @@ def copy_peg_rev_local_dirs(sbox):
   expected_disk.remove('A/D/G/rho')
   expected_disk.remove('A/D/G/tau')
   expected_disk.add({
-    'A/B/E'       : Item(props={SVN_PROP_MERGE_INFO : ''}),
+    'A/B/E'       : Item(props={SVN_PROP_MERGEINFO : ''}),
     'A/B/E/pi'    : Item(contents="This is the file 'pi'.\n"),
     'A/B/E/rho'   : Item(contents="This is the file 'rho'.\n"),
     'A/B/E/tau'   : Item(contents="This is the file 'tau'.\n"),
-    'A/D/G'       : Item(props={SVN_PROP_MERGE_INFO : ''}),
+    'A/D/G'       : Item(props={SVN_PROP_MERGEINFO : ''}),
     'A/D/G/beta'  : Item(contents="This is the file 'beta'.\n"),
     'A/J'         : Item(props={}),
     'A/J/alpha'   : Item(contents="This is the file 'alpha'.\n"),
@@ -3360,7 +3360,7 @@ def copy_peg_rev_url(sbox):
 
   # Validate the copy destination's mergeinfo (we expect none).
   svntest.actions.run_and_verify_svn(None, [], [],
-                                     'propget', SVN_PROP_MERGE_INFO, sigma_url)
+                                     'propget', SVN_PROP_MERGEINFO, sigma_url)
 
   # Update to HEAD and verify disk contents
   expected_output = svntest.wc.State(wc_dir, {
