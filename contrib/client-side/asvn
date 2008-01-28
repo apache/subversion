@@ -90,7 +90,7 @@ function addignorefile()
         echo "$efile" >>$TMPFILE2 
         $SVN propset svn:ignore -F $TMPFILE2 "$dir"
         echo setting ignore
-#cat $TMPFILE2 >&2
+        #cat $TMPFILE2 >&2
     fi
 }
 
@@ -105,7 +105,7 @@ function deleteignorefile()
     then
         $SVN propget svn:ignore "$dir" |sed -e '/^$/d'  |grep -v "^$gefile\$" >$TMPFILE2
         $SVN propset svn:ignore -F $TMPFILE2 "$dir"
-#cat $TMPFILE2 >&2
+        #cat $TMPFILE2 >&2
     fi
 }
 
@@ -374,7 +374,7 @@ function post_checkout()
     then
         shift $(($# -1))
         cd "`basename \"$1\"`"
-    PCWD="$PCWD/`basename \"$1\"`"
+        PCWD="$PCWD/`basename \"$1\"`"
     fi
     recorddirinfo 
     recordpermissions 
@@ -382,11 +382,11 @@ function post_checkout()
 
 CHDIR=false
 case "$1" in
-checkout|co)        CHDIR=true; ACTION="post";;
-commit|ci)        ACTION="pre";;
-switch|sw)        ACTION="post";;
-update|up)        ACTION="post";;
-*);;
+  checkout|co)      CHDIR=true; ACTION="post";;
+  commit|ci)        ACTION="pre";;
+  switch|sw)        ACTION="post";;
+  update|up)        ACTION="post";;
+  *);;
 esac
 
 [ "$ACTION" =  "pre" ] && pre_checkin $@
