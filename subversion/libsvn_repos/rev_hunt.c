@@ -1141,8 +1141,9 @@ find_interesting_revisions(apr_array_header_t *path_revisions,
                                       history, iter_pool));
 
       /* Check to see if we already saw this path (and it's ancestors) */
-      if (is_path_in_hash(duplicate_path_revs, path_rev->path, path_rev->revnum,
-                          iter_pool))
+      if (include_merged_revisions
+          && is_path_in_hash(duplicate_path_revs, path_rev->path,
+                             path_rev->revnum, iter_pool))
          break;
 
       /* Check authorization. */
@@ -1164,17 +1165,21 @@ find_interesting_revisions(apr_array_header_t *path_revisions,
       APR_ARRAY_PUSH(path_revisions, struct path_revision *) = path_rev;
 
       if (include_merged_revisions)
-        SVN_ERR(get_merged_mergeinfo(&path_rev->merged_mergeinfo, repos,
-                                     path_rev, pool));
+        {
+          SVN_ERR(get_merged_mergeinfo(&path_rev->merged_mergeinfo, repos,
+                                       path_rev, pool));
+
+          /* Add the path/rev pair to the hash, so we can filter out future
+             occurrences of it.  We only care about this if including merged
+             revisions, 'cause that's the only time we can have duplicates. */
+          apr_hash_set(duplicate_path_revs,
+                       apr_psprintf(iter_pool, "%s:%ld", path_rev->path,
+                                    path_rev->revnum),
+                       APR_HASH_KEY_STRING, path_rev);
+        }
       else
         path_rev->merged_mergeinfo = NULL;
 
-      /* Add the path/rev pair to the hash, so we can filter out future
-         occurrences of it. */
-      apr_hash_set(duplicate_path_revs,
-                   apr_psprintf(iter_pool, "%s:%ld", path_rev->path,
-                                path_rev->revnum),
-                   APR_HASH_KEY_STRING, path_rev);
 
       if (path_rev->revnum <= start)
         break;
