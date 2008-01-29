@@ -64,7 +64,9 @@ typedef struct svn_client__merge_path_t
    whether the mergeinfo was inherited (TRUE or FALSE).
    
    This function will search for inherited mergeinfo in the parents of
-   WCPATH only if those parents are at the same working revision as WCPATH.
+   WCPATH only if the working revision of WCPATH falls within the range
+   of the parent's last committed revision to the parent's working
+   revision (inclusive).
 
    INHERIT indicates whether explicit, explicit or inherited, or only
    inherited mergeinfo for WCPATH is retrieved.
