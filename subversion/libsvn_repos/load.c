@@ -315,7 +315,7 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
      }
 
   SVN_ERR(svn_mergeinfo_sort(final_mergeinfo, subpool));
-  SVN_ERR(svn_mergeinfo__to_string(final_val, final_mergeinfo, subpool));
+  SVN_ERR(svn_mergeinfo__to_string(final_val, final_mergeinfo, pool));
   svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
