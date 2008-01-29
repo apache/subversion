@@ -33,15 +33,34 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/*** The filesystem structure.  ***/
+/*** Filesystem schema versions ***/
 
-/* The format number of this filesystem.
-   This is independent of the repository format number, and
-   independent of any other FS back ends. */
-#define SVN_FS_BASE__FORMAT_NUMBER   2
+/* The format number of this filesystem.  This is independent of the
+   repository format number, and independent of any other FS back
+   ends.  See the SVN_FS_BASE__MIN_*_FORMAT defines to get a sense of
+   what changes and features were added in which versions of this
+   back-end's format.  */
+#define SVN_FS_BASE__FORMAT_NUMBER                3
+
+/* Minimum format number that supports node-origins tracking */
+#define SVN_FS_BASE__MIN_NODE_ORIGINS_FORMAT      3
+
+/* Minimum format number that supports mergeinfo */
+#define SVN_FS_BASE__MIN_MERGEINFO_FORMAT         3
 
 /* Minimum format number that supports svndiff version 1.  */
-#define SVN_FS_BASE__MIN_SVNDIFF1_FORMAT 2
+#define SVN_FS_BASE__MIN_SVNDIFF1_FORMAT          2
+
+/* Return SVN_ERR_UNSUPPORTED_FEATURE if the version of filesystem FS does
+   not indicate support for FEATURE (which REQUIRES a newer version). */
+svn_error_t *
+svn_fs_base__test_required_feature_format(svn_fs_t *fs, 
+                                          const char *feature, 
+                                          int requires);
+
+
+
+/*** The filesystem structure.  ***/
 
 typedef struct
 {
@@ -154,11 +173,11 @@ typedef struct
   const char *created_path;
 
   /* does this node revision have the mergeinfo tracking property set
-     on it? */
+     on it?  (only valid for FS schema 3 and newer) */
   svn_boolean_t has_mergeinfo;
 
   /* number of children of this node which have the mergeinfo tracking
-     property set (0 for files). */
+     property set  (0 for files; valid only for FS schema 3 and newer). */
   apr_int64_t mergeinfo_count;
 
 } node_revision_t;
