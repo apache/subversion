@@ -1468,7 +1468,7 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
                                                       merged_pos,
                                                       struct path_revision *);
     
-      if (main_pr->revnum < merged_pr->revnum)
+      if (main_pr->revnum <= merged_pr->revnum)
         {
           SVN_ERR(send_path_revision(main_pr, repos, &sb, handler,
                                      handler_baton));
