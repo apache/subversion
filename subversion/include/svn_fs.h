@@ -207,10 +207,6 @@ svn_fs_open(svn_fs_t **fs_p,
  * filesystem if the requested upgrade is not supported.  Use @a pool
  * for necessary allocations.
  *
- * @warning Callers this function must have exclusive access to the
- * filesystem through the entire lifetime of the operation, and this
- * serialization is not provided by the function itself.
- *
  * @note You probably don't want to use this directly.  Take a look at
  * svn_repos_upgrade() instead.
  *
