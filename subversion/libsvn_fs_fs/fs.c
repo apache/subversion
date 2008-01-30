@@ -301,6 +301,7 @@ static fs_library_vtable_t library_vtable = {
   fs_create,
   fs_open,
   fs_open_for_recovery,
+  svn_fs_fs__upgrade,
   fs_delete_fs,
   fs_hotcopy,
   fs_get_description,

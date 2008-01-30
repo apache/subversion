@@ -403,6 +403,15 @@ svn_fs_open(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   return err2;
 }
 
+svn_error_t *
+svn_fs_upgrade(const char *path, apr_pool_t *pool)
+{
+  fs_library_vtable_t *vtable;
+
+  SVN_ERR(fs_library_vtable(&vtable, path, pool));
+  return vtable->upgrade_fs(path, pool);
+}
+
 const char *
 svn_fs_path(svn_fs_t *fs, apr_pool_t *pool)
 {
