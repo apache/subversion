@@ -1019,6 +1019,10 @@ svn_fs_fs__upgrade(const char *path, apr_pool_t *pool)
   int format, max_files_per_dir;
   const char *format_path = svn_path_join(path, PATH_FORMAT, pool);
 
+  /* We need to actually do real upgrade work here before claiming
+     it's done! */
+  return svn_error_create(SVN_ERR_FS_UNSUPPORTED_UPGRADE, NULL, NULL);
+
   /* Read the FS format number and max-files-per-dir setting. */
   SVN_ERR(read_format(&format, &max_files_per_dir, format_path, pool));
 
