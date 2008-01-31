@@ -14,7 +14,10 @@ Status of 1.5.0:
 
 Candidate changes:
 
- * NONE AT THIS TIME
+ * r29099
+   Fix JavaHL test failure with record-only merge
+   Votes:
+     +1: markphip
 
 Approved changes:
 
