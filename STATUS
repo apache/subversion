@@ -14,11 +14,11 @@ Status of 1.5.0:
 
 Candidate changes:
 
- * r29094
-   Fix merge_tests-45,78 and blame_tests-10,11 failures over bdb
-   Votes:
-     +1: kameshj
+ * NONE AT THIS TIME
 
 Approved changes:
 
-  No approved changes at the moment!
+ * r29094
+   Fix merge_tests-45,78 and blame_tests-10,11 failures over bdb
+   Votes:
+     +1: kameshj, cmpilato
