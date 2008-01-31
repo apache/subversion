@@ -22,12 +22,6 @@ Candidate changes:
    Votes:
      +1: pburba (r29085 only)
 
- * r29114:
-     Remove FSFS code to manipulate an ultimately-ignored transaction mergeinfo
-     file.
-   Votes:
-     +1: glasser
-
 Approved changes:
 
  * r29101; recommended-but-not-required: r29098

@@ -240,13 +240,6 @@ path_txn_props(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 }
 
 static APR_INLINE const char *
-path_txn_mergeinfo(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
-{
-  return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_TXN_MERGEINFO,
-                       pool);
-}
-
-static APR_INLINE const char *
 path_txn_next_ids(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_NEXT_IDS, pool);
@@ -3624,77 +3617,6 @@ svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
   return SVN_NO_ERROR;
 }
 
-/* Store the mergeinfo list for transaction TXN_ID into new hash
-   *MINFO.  Perform allocation of *MINFO and temporary allocations in
-   *POOL. Sets *MINFO to NULL if no mergeinfo has changed. */
-
-static svn_error_t *
-get_txn_mergeinfo(apr_hash_t **minfo,
-                  svn_fs_t *fs,
-                  const char *txn_id,
-                  apr_pool_t *pool)
-{
-  apr_file_t *txn_minfo_file;
-  apr_hash_t *result;
-
-  /* Open the transaction mergeinfo file. */
-  svn_error_t *err = svn_io_file_open(&txn_minfo_file,
-                                      path_txn_mergeinfo(fs, txn_id, pool),
-                                      APR_READ | APR_BUFFERED,
-                                      APR_OS_DEFAULT, pool);
-  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-    {
-      svn_error_clear(err);
-      *minfo = NULL;
-      return SVN_NO_ERROR;
-    }
-  SVN_ERR(err);
-
-  result = apr_hash_make(pool);
-  /* Read in the property list. */
-  SVN_ERR(svn_hash_read2(result,
-                         svn_stream_from_aprfile(txn_minfo_file, pool),
-                         SVN_HASH_TERMINATOR, pool));
-
-  SVN_ERR(svn_io_file_close(txn_minfo_file, pool));
-
-  *minfo = result;
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Change mergeinfo for path NAME in TXN to VALUE.  */
-
-svn_error_t *
-svn_fs_fs__change_txn_mergeinfo(svn_fs_txn_t *txn,
-                                const char *name,
-                                const svn_string_t *value,
-                                apr_pool_t *pool)
-{
-  apr_file_t *txn_minfo_file;
-  apr_hash_t *txn_minfo;
-
-  SVN_ERR(get_txn_mergeinfo(&txn_minfo, txn->fs, txn->id, pool));
-  if (txn_minfo == NULL) /* doesn't exist yet */
-    txn_minfo = apr_hash_make(pool);
-
-  apr_hash_set(txn_minfo, name, APR_HASH_KEY_STRING, value);
-
-  /* Create a new version of the file and write out the new minfos. */
-  /* Open the transaction minfoerties file. */
-  SVN_ERR(svn_io_file_open(&txn_minfo_file,
-                           path_txn_mergeinfo(txn->fs, txn->id, pool),
-                           APR_WRITE | APR_CREATE | APR_TRUNCATE
-                           | APR_BUFFERED, APR_OS_DEFAULT, pool));
-
-  SVN_ERR(svn_hash_write(txn_minfo, txn_minfo_file, pool));
-
-  SVN_ERR(svn_io_file_close(txn_minfo_file, pool));
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_fs_fs__get_txn(transaction_t **txn_p,
                    svn_fs_t *fs,
@@ -5011,7 +4933,6 @@ commit_body(void *baton, apr_pool_t *pool)
   char *buf;
   apr_hash_t *txnprops;
   svn_string_t date;
-  apr_hash_t *target_mergeinfo;
 
   /* Get the current youngest revision. */
   SVN_ERR(svn_fs_fs__youngest_rev(&old_rev, cb->fs, pool));
@@ -5088,8 +5009,6 @@ commit_body(void *baton, apr_pool_t *pool)
         SVN_ERR(svn_fs_fs__change_txn_props(cb->txn, props, pool));
     }
   
-  SVN_ERR(get_txn_mergeinfo(&target_mergeinfo, cb->txn->fs, cb->txn->id, pool));
-
   /* Create the shard for the rev and revprop file, if we're sharding and
      this is the first revision of a new shard.  We don't care if this
      fails because the shard already existed for some reason. */
