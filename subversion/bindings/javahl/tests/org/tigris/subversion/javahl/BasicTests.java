@@ -2481,8 +2481,8 @@ public class BasicTests extends SVNTests
 
         // Test retrieval of mergeinfo from a WC path.
         String targetPath =
-            new File(thisTest.getWCPath(), "branches/A/mu").getPath();
-        final String mergeSrc = thisTest.getUrl() + "/A/mu";
+            new File(thisTest.getWCPath(), "branches/A").getPath();
+        final String mergeSrc = thisTest.getUrl() + "/A";
         acquireMergeInfoAndAssertEquals("2-4", "4-5", targetPath, mergeSrc);
     }
 

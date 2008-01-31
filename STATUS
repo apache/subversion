@@ -14,11 +14,6 @@ Status of 1.5.0:
 
 Candidate changes:
 
- * r29099
-   Fix JavaHL test failure with record-only merge
-   Votes:
-     +1: markphip
-
  * r29101; recommended-but-not-required: r29098
    Protect against some unnecessary (and sometimes expensive) RA reparentings
    Notes:
