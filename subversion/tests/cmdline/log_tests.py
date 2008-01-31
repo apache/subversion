@@ -240,7 +240,7 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   svntest.main.run_svn(None, 'cp', 'trunk', branch_a)
   svntest.main.run_svn(None, 'ci', '-m',
                        'Create branches/a from trunk.',
-                       '--username', 'copier')
+                       '--username', svntest.main.wc_author2)
 
   # Some changes on the branch - r4
   svntest.main.file_append_binary(os.path.join(branch_a, 'iota'),
@@ -258,14 +258,14 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   svntest.main.run_svn(None, 'cp', 'trunk', branch_c)
   svntest.main.run_svn(None, 'ci', '-m',
                        'Create branches/c from trunk.',
-                       '--username', 'copier')
+                       '--username', svntest.main.wc_author2)
 
   # Do some mergeing - r6
   os.chdir('trunk')
   svntest.main.run_svn(None, 'merge', os.path.join('..', branch_a))
   svntest.main.run_svn(None, 'ci', '-m',
                        'Merged branches/a to trunk.',
-                       '--username', 'merger')
+                       '--username', svntest.main.wc_author2)
   os.chdir('..')
 
   # Add omicron to branches/a - r7
@@ -284,7 +284,7 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
                        os.path.join('..', branch_a))
   svntest.main.run_svn(None, 'ci', '-m',
                        "Block r7 from merging to trunk.",
-                       '--username', 'merger')
+                       '--username', svntest.main.wc_author2)
   os.chdir('..')
 
   # Wording change in mu - r9
@@ -301,7 +301,7 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   svntest.main.run_svn(None, 'cp', 'trunk', branch_b)
   svntest.main.run_svn(None, 'ci', '-m',
                        "Create branches/b from trunk",
-                       '--username', 'copier')
+                       '--username', svntest.main.wc_author2)
 
   # Add another file, make some changes on branches/a - r11
   svntest.main.file_append_binary(os.path.join(branch_a, upsilon_path),
@@ -322,7 +322,7 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   svntest.main.run_svn(None, 'merge', os.path.join('..', 'a'))
   svntest.main.run_svn(None, 'ci', '-m',
                        "Merged branches/a to branches/b.",
-                       '--username', 'merger')
+                       '--username', svntest.main.wc_author2)
   os.chdir(os.path.join('..', '..'))
 
   # More wording changes - r13
@@ -336,7 +336,7 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   svntest.main.run_svn(None, 'merge', os.path.join('..', branch_b))
   svntest.main.run_svn(None, 'ci', '-m',
                        "Merged branches/b to trunk.",
-                       '--username', 'merger')
+                       '--username', svntest.main.wc_author2)
   os.chdir('..')
 
   # Even more merging - r15
@@ -344,7 +344,7 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   svntest.main.run_svn(None, 'merge', os.path.join('..', '..', 'trunk'))
   svntest.main.run_svn(None, 'ci', '-m',
                        "Bring branches/c up to date with trunk.",
-                       '--username', 'merger')
+                       '--username', svntest.main.wc_author2)
   os.chdir(os.path.join('..', '..'))
 
   # Modify a file on branches/c - r16
@@ -365,7 +365,7 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   svntest.main.run_svn(None, 'ci', '-m',
                        "Merge branches/c to trunk, " +
                        "resolving a conflict in 'mu'.",
-                       '--username', 'merger')
+                       '--username', svntest.main.wc_author2)
   os.chdir('..')
 
   # Restore working directory
