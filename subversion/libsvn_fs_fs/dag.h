@@ -222,16 +222,15 @@ svn_error_t *svn_fs_fs__dag_open(dag_node_t **child_p,
 
 
 /* Set *ENTRIES_P to a hash table of NODE's entries.  The keys of the
-   table are entry names, and the values are svn_fs_dirent_t's.  Use
-   POOL for temporary allocations.
-
-   The returned table is *not* allocated in POOL, and becomes invalid
-   on the next call to this function or svn_fs_fs__rep_contents_dir.
-   If the caller needs the table to live longer, it should copy the
-   hash using svn_fs_fs__copy_dir_entries. */
+   table are entry names, and the values are svn_fs_dirent_t's.  The
+   returned table (and its keys and values) is allocated in POOL,
+   which is also used for temporary allocations.  NODE_POOL is used
+   for any allocation of memory that needs to live as long as NODE
+   lives. */
 svn_error_t *svn_fs_fs__dag_dir_entries(apr_hash_t **entries_p,
                                         dag_node_t *node,
-                                        apr_pool_t *pool);
+                                        apr_pool_t *pool,
+                                        apr_pool_t *node_pool);
 
 
 /* Set ENTRY_NAME in NODE to point to ID (with kind KIND), allocating
