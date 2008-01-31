@@ -812,6 +812,14 @@ def revprop_change(sbox):
                                      'propget', '--revprop', '-r', '0',
                                      'cash-sound', sbox.wc_dir)
 
+  # Now test that blocking the revprop delete.
+  svntest.actions.disable_revprop_changes(sbox.repo_dir)
+  svntest.actions.run_and_verify_svn(None, None, '.*pre-revprop-change.* 0 jrandom cash-sound D',
+                                     'propdel', '--revprop', '-r', '0',
+                                     'cash-sound', sbox.wc_dir)
+
+  # Now test actually deleting the revprop.
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propdel', '--revprop', '-r', '0',
                                      'cash-sound', sbox.wc_dir)
