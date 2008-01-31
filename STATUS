@@ -19,6 +19,14 @@ Candidate changes:
    Votes:
      +1: markphip
 
+ * r29101; recommended-but-not-required: r29098
+   Protect against some unnecessary (and sometimes expensive) RA reparentings
+   Notes:
+     r29098 isn't required, but is a formatting tweak that touches a bunch of
+     lines, some of which are also touched by r29101.
+   Votes:
+     +1: cmpilato
+
 Approved changes:
 
  * NONE AT THIS TIME
