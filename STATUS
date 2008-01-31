@@ -22,6 +22,8 @@ Candidate changes:
    Votes:
      +1: pburba
 
+Approved changes:
+
  * r29101; recommended-but-not-required: r29098
    Protect against some unnecessary (and sometimes expensive) RA reparentings
    Notes:
@@ -29,7 +31,3 @@ Candidate changes:
      lines, some of which are also touched by r29101.
    Votes:
      +1: cmpilato, pburba
-
-Approved changes:
-
- * NONE AT THIS TIME
