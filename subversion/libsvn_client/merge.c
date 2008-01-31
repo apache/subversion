@@ -253,7 +253,13 @@ typedef struct merge_cmd_baton_t {
   const apr_array_header_t *merge_options;
 
   /* RA sessions used throughout a merge operation.  Opened/re-parented
-     as needed. */
+     as needed.  
+
+     NOTE: During the actual merge editor drive, RA_SESSION1 is used
+     for the primary editing and RA_SESSION2 for fetching additional
+     information -- as necessary -- from the repository.  So during
+     this phase of the merge, you *must not* reparent RA_SESSION1; use
+     (temporarily reparenting if you must) RA_SESSION2 instead.  */
   svn_ra_session_t *ra_session1;
   svn_ra_session_t *ra_session2;
 
@@ -369,7 +375,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
           const svn_wc_entry_t *target_entry;
           const char *old_url = NULL;
           
-          SVN_ERR(svn_ra_get_repos_root(merge_b->ra_session1,
+          SVN_ERR(svn_ra_get_repos_root(merge_b->ra_session2,
                                         &merge_source_root_url, pool));
           
           /* Get an entry for PATH so we can find it's base revision. */
@@ -380,7 +386,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
              target's URL. */
           SVN_ERR(svn_client_url_from_path(&target_url, path, pool));
           SVN_ERR(svn_client__ensure_ra_session_url(&old_url, 
-                                                    merge_b->ra_session1,
+                                                    merge_b->ra_session2,
                                                     target_url, pool));
           
           /* Parse the incoming mergeinfo to allow easier meddling. */
@@ -431,7 +437,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                                                     &start_revision,
                                                     &end_url,
                                                     &end_revision,
-                                                    merge_b->ra_session1,
+                                                    merge_b->ra_session2,
                                                     target_url,
                                                     &peg_rev,
                                                     &rev1_opt,
@@ -496,10 +502,10 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                 }
             } /* mergeinfo_catalog hash iteration */
 
-          /* If we reparented MERGE_B->RA_SESSION1 above, put it back
+          /* If we reparented MERGE_B->RA_SESSION2 above, put it back
              to the original URL. */
           if (old_url)
-            SVN_ERR(svn_ra_reparent(merge_b->ra_session1, old_url, pool));
+            SVN_ERR(svn_ra_reparent(merge_b->ra_session2, old_url, pool));
 
         } /* Property is non-empty mergeinfo. */
     } /* (i = 0; i < (*props)->nelts; ++i) */
