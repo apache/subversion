@@ -406,10 +406,22 @@ svn_fs_open(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
 svn_error_t *
 svn_fs_upgrade(const char *path, apr_pool_t *pool)
 {
+  svn_error_t *err;
+  svn_error_t *err2;
   fs_library_vtable_t *vtable;
+  svn_fs_t *fs;
 
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
-  return vtable->upgrade_fs(path, pool);
+  fs = svn_fs_new(NULL, pool);
+  SVN_ERR(acquire_fs_mutex());
+  err = vtable->upgrade_fs(fs, path, pool, common_pool);
+  err2 = release_fs_mutex();
+  if (err)
+    {
+      svn_error_clear(err2);
+      return err;
+    }
+  return err2;
 }
 
 const char *

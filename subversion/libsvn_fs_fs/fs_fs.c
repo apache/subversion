@@ -1013,15 +1013,12 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 }
 
 
-svn_error_t *
-svn_fs_fs__upgrade(const char *path, apr_pool_t *pool)
+static svn_error_t *
+upgrade_body(void *baton, apr_pool_t *pool)
 {
+  svn_fs_t *fs = baton;
   int format, max_files_per_dir;
-  const char *format_path = svn_path_join(path, PATH_FORMAT, pool);
-
-  /* We need to actually do real upgrade work here before claiming
-     it's done! */
-  return svn_error_create(SVN_ERR_FS_UNSUPPORTED_UPGRADE, NULL, NULL);
+  const char *format_path = path_format(fs, pool);
 
   /* Read the FS format number and max-files-per-dir setting. */
   SVN_ERR(read_format(&format, &max_files_per_dir, format_path, pool));
@@ -1034,20 +1031,19 @@ svn_fs_fs__upgrade(const char *path, apr_pool_t *pool)
      file', make that file and its corresponding lock file. */
   if (format < SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
     {
-      SVN_ERR(svn_io_file_create(svn_path_join(path, PATH_TXN_CURRENT, pool),
-                                 "0\n", pool));
-      SVN_ERR(svn_io_file_create(svn_path_join(path, PATH_TXN_CURRENT_LOCK,
-                                               pool),
-                                 "", pool));
+      SVN_ERR(svn_io_file_create(path_txn_current(fs, pool), "0\n", pool));
+      SVN_ERR(svn_io_file_create(path_txn_current_lock(fs, pool), "", pool));
     }
 
   /* If our filesystem predates the existance of the 'txn-protorevs'
      dir, make that directory.  */
   if (format < SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
-    SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path, 
-                                                      PATH_TXN_PROTOS_DIR,
-                                                      pool),
-                                        pool));
+    {
+      /* We don't use path_txn_proto_rev() here because it expects
+         we've already bumped our format. */
+      SVN_ERR(svn_io_make_dir_recursively
+              (svn_path_join(fs->path, PATH_TXN_PROTOS_DIR, pool), pool));
+    }
 
   /* Bump the format file.  We pass 0 for the max_files_per_dir here
      so we don't have to fuss with sharding directories ourselves. */
@@ -1055,6 +1051,13 @@ svn_fs_fs__upgrade(const char *path, apr_pool_t *pool)
                        TRUE, pool));
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_fs__upgrade(svn_fs_t *fs, apr_pool_t *pool)
+{
+  return svn_fs_fs__with_write_lock(fs, upgrade_body, (void *)fs, pool);
 }
 
 

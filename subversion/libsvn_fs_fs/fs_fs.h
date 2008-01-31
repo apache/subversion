@@ -26,9 +26,8 @@ svn_error_t *svn_fs_fs__open(svn_fs_t *fs,
                              const char *path,
                              apr_pool_t *pool);
 
-/* Upgrade the fsfs filesystem pointed to by PATH.  Use POOL for
-   temporary allocations. */
-svn_error_t *svn_fs_fs__upgrade(const char *path, 
+/* Upgrade the fsfs filesystem FS.  Use POOL for temporary allocations. */
+svn_error_t *svn_fs_fs__upgrade(svn_fs_t *fs,
                                 apr_pool_t *pool);
 
 /* Copy the fsfs filesystem at SRC_PATH into a new copy at DST_PATH.

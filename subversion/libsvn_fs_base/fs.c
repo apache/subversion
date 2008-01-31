@@ -786,7 +786,8 @@ base_open_for_recovery(svn_fs_t *fs, const char *path, apr_pool_t *pool,
 }
 
 static svn_error_t *
-base_upgrade(const char *path, apr_pool_t *pool)
+base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+             apr_pool_t *common_pool)
 {
   /* Currently, upgrading just means bumping the format file's stored
      version number. */
