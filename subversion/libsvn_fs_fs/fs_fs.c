@@ -1026,10 +1026,33 @@ svn_fs_fs__upgrade(const char *path, apr_pool_t *pool)
   /* Read the FS format number and max-files-per-dir setting. */
   SVN_ERR(read_format(&format, &max_files_per_dir, format_path, pool));
 
-  /* If we aren't already at the youngest version of the FS, make it so. */
-  if (format != SVN_FS_FS__FORMAT_NUMBER)
-    SVN_ERR(write_format(format_path, SVN_FS_FS__FORMAT_NUMBER, 
-                         max_files_per_dir, TRUE, pool));
+  /* If we're already up-to-date, there's nothing to be done here. */
+  if (format == SVN_FS_FS__FORMAT_NUMBER)
+    return SVN_NO_ERROR;
+
+  /* If our filesystem predates the existance of the 'txn-current
+     file', make that file and its corresponding lock file. */
+  if (format < SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
+    {
+      SVN_ERR(svn_io_file_create(svn_path_join(path, PATH_TXN_CURRENT, pool),
+                                 "0\n", pool));
+      SVN_ERR(svn_io_file_create(svn_path_join(path, PATH_TXN_CURRENT_LOCK,
+                                               pool),
+                                 "", pool));
+    }
+
+  /* If our filesystem predates the existance of the 'txn-protorevs'
+     dir, make that directory.  */
+  if (format < SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
+    SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path, 
+                                                      PATH_TXN_PROTOS_DIR,
+                                                      pool),
+                                        pool));
+
+  /* Bump the format file.  We pass 0 for the max_files_per_dir here
+     so we don't have to fuss with sharding directories ourselves. */
+  SVN_ERR(write_format(format_path, SVN_FS_FS__FORMAT_NUMBER, 0, 
+                       TRUE, pool));
 
   return SVN_NO_ERROR;
 }
