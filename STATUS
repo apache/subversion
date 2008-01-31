@@ -14,13 +14,13 @@ Status of 1.5.0:
 
 Candidate changes:
 
- * r29085:
+ * r29107, r29085:
      Stop merge from adding mergeinfo from a target's own history.
    Notes:
      No real functional change in terms of what gets merged and what doesn't,
      but it does reduce redundant explicit mergeinfo in some common use cases.
    Votes:
-     +1: pburba
+     +1: pburba (r29085 only)
 
 Approved changes:
 
