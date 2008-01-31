@@ -14,7 +14,10 @@ Status of 1.5.0:
 
 Candidate changes:
 
-  No candidate changes at the moment!
+ * r29094
+   Fix merge_tests-45,78 and blame_tests-10,11 failures over bdb
+   Votes:
+     +1: kameshj
 
 Approved changes:
 
