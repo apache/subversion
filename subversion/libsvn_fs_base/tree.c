@@ -1305,7 +1305,7 @@ txn_body_change_node_prop(void *baton,
      ### If the format *doesn't* support mergeinfo recording, should
      ### we fuss about attempts to change the svn:mergeinfo property
      ### in any way save to delete it?  */
-  if ((bfd->format > SVN_FS_BASE__MIN_MERGEINFO_FORMAT)
+  if ((bfd->format >= SVN_FS_BASE__MIN_MERGEINFO_FORMAT)
       && (strcmp(args->name, SVN_PROP_MERGEINFO) == 0))
     {
       svn_boolean_t had_mergeinfo, has_mergeinfo = args->value ? TRUE : FALSE;
@@ -2172,7 +2172,7 @@ merge(svn_stringbuf_t *conflict_p,
                           pred_count, trail, pool));
 
   /* Tweak mergeinfo data if our format supports it. */
-  if (bfd->format > SVN_FS_BASE__MIN_MERGEINFO_FORMAT)
+  if (bfd->format >= SVN_FS_BASE__MIN_MERGEINFO_FORMAT)
     {
       SVN_ERR(svn_fs_base__dag_adjust_mergeinfo_count(target, 
                                                       mergeinfo_increment,
@@ -2805,7 +2805,7 @@ txn_body_delete(void *baton,
 
   /* Decrement mergeinfo counts on the parents of this node by the
      count it previously carried, if our format supports it. */
-  if (bfd->format > SVN_FS_BASE__MIN_MERGEINFO_FORMAT)
+  if (bfd->format >= SVN_FS_BASE__MIN_MERGEINFO_FORMAT)
     {
       apr_int64_t mergeinfo_count;
       SVN_ERR(svn_fs_base__dag_get_mergeinfo_stats(NULL, &mergeinfo_count,
@@ -2931,7 +2931,7 @@ txn_body_copy(void *baton,
 
       /* Adjust the mergeinfo counts of the destination's parents if
          our format supports it. */
-      if (bfd->format > SVN_FS_BASE__MIN_MERGEINFO_FORMAT)
+      if (bfd->format >= SVN_FS_BASE__MIN_MERGEINFO_FORMAT)
         {
           SVN_ERR(svn_fs_base__dag_get_mergeinfo_stats(NULL, 
                                                        &mergeinfo_count, 
