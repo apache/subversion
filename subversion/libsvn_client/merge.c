@@ -341,10 +341,10 @@ mergeinfo_behavior(svn_boolean_t *honor_mergeinfo,
    filtered self-referential mergeinfo. */
 static svn_error_t*
 filter_self_referential_mergeinfo(apr_array_header_t **props,
-                                   const char *path,
-                                   merge_cmd_baton_t *merge_b,
-                                   svn_wc_adm_access_t *adm_access,
-                                   apr_pool_t *pool)
+                                  const char *path,
+                                  merge_cmd_baton_t *merge_b,
+                                  svn_wc_adm_access_t *adm_access,
+                                  apr_pool_t *pool)
 {
   svn_boolean_t honor_mergeinfo, record_mergeinfo;
   apr_array_header_t *adjusted_props;
