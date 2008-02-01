@@ -20,7 +20,7 @@ Candidate changes:
      No real functional change in terms of what gets merged and what doesn't,
      but it does reduce redundant explicit mergeinfo in some common use cases.
    Votes:
-     +1: pburba (r29085 only)
+     +1: pburba (r29085 only), kfogel (r29085 and r29107)
 
 Approved changes:
 
