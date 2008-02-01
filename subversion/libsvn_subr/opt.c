@@ -872,19 +872,18 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
                               apr_array_header_t *known_targets,
                               apr_pool_t *pool)
 {
-  svn_error_t *error = svn_opt_args_to_target_array3(targets_p,
+  svn_error_t *err = svn_opt_args_to_target_array3(targets_p,
                                                      os,
                                                      known_targets,
                                                      pool);
-  if (error) 
+
+  if (err && err->apr_err == SVN_ERR_RESERVED_FILENAME_SPECIFIED)
     {
-      if (error->apr_err == SVN_ERR_RESERVED_FILENAME_SPECIFIED)
-        svn_error_clear(error);
-      else
-        return error;
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
     }
-  return SVN_NO_ERROR;
-  
+
+  return err;
 }
 
 
@@ -895,7 +894,7 @@ svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
                               apr_pool_t *pool)
 {
   int i;
-  svn_error_t *error = SVN_NO_ERROR;
+  svn_error_t *err = SVN_NO_ERROR;
   apr_array_header_t *input_targets =
     apr_array_make(pool, DEFAULT_ARRAY_SIZE, sizeof(const char *));
   apr_array_header_t *output_targets =
@@ -1034,11 +1033,9 @@ svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
           if (0 == strcmp(base_name, ".svn")
               || 0 == strcmp(base_name, "_svn"))
             {
-              char *error_str = apr_psprintf(pool, _("'%s' ends in a "
-                                                     "reserved name"), target);
-              error = svn_error_create(SVN_ERR_RESERVED_FILENAME_SPECIFIED,
-                                       error,
-                                       error_str);
+              err = svn_error_createf(SVN_ERR_RESERVED_FILENAME_SPECIFIED,
+                                      NULL, _("'%s' ends in a reserved name"),
+                                      target);
               continue;
             }
         }
@@ -1056,9 +1053,8 @@ svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
      passing it to the cmd_func. */
 
   *targets_p = output_targets;
-  if (error)
-    return error;
-  return SVN_NO_ERROR;
+
+  return err;
 }
 
 
