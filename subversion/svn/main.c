@@ -1476,6 +1476,11 @@ main(int argc, const char *argv[])
         break;
       case opt_from_source:
         err = svn_utf_cstring_to_utf8(&path_utf8, opt_arg, pool);
+        if (! svn_path_is_url(path_utf8))
+          return svn_cmdline_handle_exit_error
+            (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                               _("'%s' is not a URL"), opt_arg),
+             pool, "svn: ");
         opt_state.from_source = svn_path_canonicalize(path_utf8, pool);
         break;
       case opt_reintegrate:
