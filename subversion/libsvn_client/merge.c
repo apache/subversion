@@ -378,7 +378,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
           SVN_ERR(svn_ra_get_repos_root(merge_b->ra_session2,
                                         &merge_source_root_url, pool));
           
-          /* Get an entry for PATH so we can find it's base revision. */
+          /* Get an entry for PATH so we can find its base revision. */
           SVN_ERR(svn_wc__entry_versioned(&target_entry, path, adm_access, 
                                           FALSE, pool));
           
