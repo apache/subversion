@@ -61,8 +61,9 @@ svn_cl__propedit(apr_getopt_t *os,
                              pname_utf8);
 
   /* Suck up all the remaining arguments into a targets array */
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
-                                        opt_state->targets, pool));
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets, 
+                                                      pool));
 
   if (opt_state->revprop)  /* operate on a revprop */
     {

@@ -490,6 +490,18 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
                               apr_array_header_t *known_targets,
                               apr_pool_t *pool);
 
+/**
+ * This is the same as svn_opt_args_to_target_array2() except that it returns
+ * errors when a path has the same name as a working copy directory.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
+                              apr_getopt_t *os,
+                              apr_array_header_t *known_targets,
+                              apr_pool_t *pool);
+
 
 /**
  * The same as svn_opt_args_to_target_array2() except that, in

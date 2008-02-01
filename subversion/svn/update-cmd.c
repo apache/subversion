@@ -46,7 +46,7 @@ svn_cl__update(apr_getopt_t *os,
   svn_depth_t depth;
   svn_boolean_t depth_is_sticky;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
+  SVN_ERR(svn_opt_args_to_target_array3(&targets, os,
                                         opt_state->targets, pool));
 
   /* Add "." if user passed 0 arguments */
