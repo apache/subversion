@@ -14,16 +14,6 @@ Status of 1.5.0:
 
 Candidate changes:
 
- * r29101
-     Avoid unnecessary RA reparenting operations.
-   Votes:
-     +1: kfogel
-
- * r29098
-     Add trivial early-out check, reindenting as a result.
-   Votes:
-     +1 kfogel
-
  * r29107, r29085:
      Stop merge from adding mergeinfo from a target's own history.
    Notes:
@@ -43,4 +33,4 @@ Approved changes:
      r29098 isn't required, but is a formatting tweak that touches a bunch of
      lines, some of which are also touched by r29101.
    Votes:
-     +1: cmpilato, pburba
+     +1: cmpilato, pburba, kfogel
