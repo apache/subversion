@@ -39,4 +39,9 @@ Candidate changes:
    Votes:
      +1: hwright
 
+ * r29143:
+   Fix duplicate revision detection in 'blame -g'.
+   Votes:
+     +1: hwright
+
 Approved changes:
