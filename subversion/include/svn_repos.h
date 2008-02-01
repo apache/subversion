@@ -204,10 +204,50 @@ svn_repos_create(svn_repos_t **repos_p,
                  apr_hash_t *fs_config,
                  apr_pool_t *pool);
 
+/**
+ * Upgrade the Subversion repository (and its underlying versioned
+ * filesystem) located in the directory @a path to the latest version
+ * supported by this library.  If the requested upgrade is not
+ * supported due to the current state of the repository or it
+ * underlying filesystem, return @c SVN_ERR_REPOS_UNSUPPORTED_UPGRADE
+ * or @c SVN_ERR_FS_UNSUPPORTED_UPGRADE (respectively) and make no
+ * changes to the repository or filesystem.
+ *
+ * Acquires an exclusive lock on the repository, upgrades the
+ * repository, and releases the lock.  If an exclusive lock can't be
+ * acquired, returns error.
+ *
+ * If @a nonblocking is TRUE, an error of type EWOULDBLOCK is
+ * returned if the lock is not immediately available.
+ *
+ * If @a start_callback is not NULL, it will be called with @a
+ * start_callback_baton as argument before the upgrade starts, but
+ * after the exclusive lock has been acquired.
+ *
+ * Use @a pool for necessary allocations.
+ *
+ * @note This functionality is provided as a convenience for
+ * administrators wishing to make use of new Subversion functionality
+ * without a potentially costly full repository dump/load.  As such,
+ * the operation performs only the minimum amount of work needed to
+ * accomplish this while maintaining the integrity of the repository.
+ * It does *not* guarantee the most optimized repository state as a
+ * dump and subsequent load would.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_repos_upgrade(const char *path,
+                  svn_boolean_t nonblocking,
+                  svn_error_t *(*start_callback)(void *baton),
+                  void *start_callback_baton,
+                  apr_pool_t *pool);
+
 /** Destroy the Subversion repository found at @a path, using @a pool for any
  * necessary allocations.
  */
 svn_error_t *svn_repos_delete(const char *path, apr_pool_t *pool);
+
 
 /** Return the filesystem associated with repository object @a repos. */
 svn_fs_t *svn_repos_fs(svn_repos_t *repos);
