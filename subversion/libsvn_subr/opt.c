@@ -1057,7 +1057,7 @@ svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
 
   *targets_p = output_targets;
   if (error)
-  	 return error;
+    return error;
   return SVN_NO_ERROR;
 }
 
