@@ -1034,7 +1034,7 @@ svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
               || 0 == strcmp(base_name, "_svn"))
             {
               err = svn_error_createf(SVN_ERR_RESERVED_FILENAME_SPECIFIED,
-                                      NULL, _("'%s' ends in a reserved name"),
+                                      err, _("'%s' ends in a reserved name"),
                                       target);
               continue;
             }
