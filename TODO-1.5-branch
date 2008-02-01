@@ -1,6 +1,0 @@
-We are very close to creating the 1.5.x branch.  This file lists the
-tasks we want to complete before then.  Tasks which are not branch-blockers
-should be placed in the issue tracker and given the 1.5 milestone.
-
-  * Finish Issue #2897 (reflective merges) and merge the issue-2897
-    branch to trunk.  [kameshj]
