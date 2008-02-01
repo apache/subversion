@@ -55,7 +55,6 @@ extern "C" {
 #define PATH_CHANGES       "changes"       /* Records changes made so far */
 #define PATH_TXN_PROPS     "props"         /* Transaction properties */
 #define PATH_NEXT_IDS      "next-ids"      /* Next temporary ID assignments */
-#define PATH_TXN_MERGEINFO "mergeinfo"     /* Transaction mergeinfo props */
 #define PATH_PREFIX_NODE   "node."         /* Prefix for node filename */
 #define PATH_EXT_TXN       ".txn"          /* Extension of txn dir */
 #define PATH_EXT_CHILDREN  ".children"     /* Extension for dir contents */
@@ -192,6 +191,9 @@ typedef struct
 
   /* The uuid of this FS. */
   const char *uuid;
+
+  /* The revision that was youngest, last time we checked. */
+  svn_revnum_t youngest_rev_cache;
 
   /* Caches of immutable data.
      

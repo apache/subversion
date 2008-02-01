@@ -239,7 +239,8 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   # Create a branch - r3
   svntest.main.run_svn(None, 'cp', 'trunk', branch_a)
   svntest.main.run_svn(None, 'ci', '-m',
-                       'Create branches/a from trunk.')
+                       'Create branches/a from trunk.',
+                       '--username', svntest.main.wc_author2)
 
   # Some changes on the branch - r4
   svntest.main.file_append_binary(os.path.join(branch_a, 'iota'),
@@ -256,13 +257,15 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   # Create another branch - r5
   svntest.main.run_svn(None, 'cp', 'trunk', branch_c)
   svntest.main.run_svn(None, 'ci', '-m',
-                       'Create branches/c from trunk.')
+                       'Create branches/c from trunk.',
+                       '--username', svntest.main.wc_author2)
 
   # Do some mergeing - r6
   os.chdir('trunk')
   svntest.main.run_svn(None, 'merge', os.path.join('..', branch_a))
   svntest.main.run_svn(None, 'ci', '-m',
-                       'Merged branches/a to trunk.')
+                       'Merged branches/a to trunk.',
+                       '--username', svntest.main.wc_author2)
   os.chdir('..')
 
   # Add omicron to branches/a - r7
@@ -280,7 +283,8 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   svntest.main.run_svn(None, 'merge', '--record-only', '-r6:7',
                        os.path.join('..', branch_a))
   svntest.main.run_svn(None, 'ci', '-m',
-                       "Block r7 from merging to trunk.")
+                       "Block r7 from merging to trunk.",
+                       '--username', svntest.main.wc_author2)
   os.chdir('..')
 
   # Wording change in mu - r9
@@ -296,7 +300,8 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   # Create another branch - r10
   svntest.main.run_svn(None, 'cp', 'trunk', branch_b)
   svntest.main.run_svn(None, 'ci', '-m',
-                       "Create branches/b from trunk")
+                       "Create branches/b from trunk",
+                       '--username', svntest.main.wc_author2)
 
   # Add another file, make some changes on branches/a - r11
   svntest.main.file_append_binary(os.path.join(branch_a, upsilon_path),
@@ -316,7 +321,8 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   os.chdir(branch_b)
   svntest.main.run_svn(None, 'merge', os.path.join('..', 'a'))
   svntest.main.run_svn(None, 'ci', '-m',
-                       "Merged branches/a to branches/b.")
+                       "Merged branches/a to branches/b.",
+                       '--username', svntest.main.wc_author2)
   os.chdir(os.path.join('..', '..'))
 
   # More wording changes - r13
@@ -329,14 +335,16 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   os.chdir('trunk')
   svntest.main.run_svn(None, 'merge', os.path.join('..', branch_b))
   svntest.main.run_svn(None, 'ci', '-m',
-                       "Merged branches/b to trunk.")
+                       "Merged branches/b to trunk.",
+                       '--username', svntest.main.wc_author2)
   os.chdir('..')
 
   # Even more merging - r15
   os.chdir(branch_c)
   svntest.main.run_svn(None, 'merge', os.path.join('..', '..', 'trunk'))
   svntest.main.run_svn(None, 'ci', '-m',
-                       "Bring branches/c up to date with trunk.")
+                       "Bring branches/c up to date with trunk.",
+                       '--username', svntest.main.wc_author2)
   os.chdir(os.path.join('..', '..'))
 
   # Modify a file on branches/c - r16
@@ -356,7 +364,8 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   svntest.main.run_svn(None, 'resolved', os.path.join('A', 'mu'))
   svntest.main.run_svn(None, 'ci', '-m',
                        "Merge branches/c to trunk, " +
-                       "resolving a conflict in 'mu'.")
+                       "resolving a conflict in 'mu'.",
+                       '--username', svntest.main.wc_author2)
   os.chdir('..')
 
   # Restore working directory

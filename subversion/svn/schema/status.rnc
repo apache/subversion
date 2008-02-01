@@ -16,7 +16,7 @@ attlist.target &=
   ## The target path.
   attribute path { string }
 
-target = element changelist { attlist.changelist, entry*, against? }
+changelist = element changelist { attlist.changelist, entry*, against? }
 attlist.changelist &=
   ## The changelist name.
   attribute name { string }

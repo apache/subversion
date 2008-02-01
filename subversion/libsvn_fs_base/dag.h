@@ -192,20 +192,6 @@ svn_error_t *svn_fs_base__dag_set_has_mergeinfo(dag_node_t *node,
                                                 trail_t *trail,
                                                 apr_pool_t *pool);
 
-/* Record on NODE that COUNT nodes -- including NODE itself -- in the
-   subtree rooted at NODE claim to carry merge tracking information.
-   NODE must be mutable under TXN_ID (the Subversion transaction under
-   which this operation occurs).  Do this as part of TRAIL, and use
-   POOL for necessary allocations.
-
-   NOTE:  No validation of these claims is performed. */
-svn_error_t *svn_fs_base__dag_set_mergeinfo_count(dag_node_t *node,
-                                                  apr_int64_t count,
-                                                  const char *txn_id,
-                                                  trail_t *trail,
-                                                  apr_pool_t *pool);
-
-
 /* Record on NODE a change of COUNT_DELTA nodes -- including NODE
    itself -- in the subtree rooted at NODE claim to carry merge
    tracking information.  That is, add COUNT_DELTA to NODE's current
