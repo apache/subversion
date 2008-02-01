@@ -1372,6 +1372,50 @@ svn_repos_open(svn_repos_t **repos_p,
 
 
 svn_error_t *
+svn_repos_upgrade(const char *path,
+                  svn_boolean_t nonblocking,
+                  svn_error_t *(*start_callback)(void *baton),
+                  void *start_callback_baton,
+                  apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  const char *format_path;
+  int format;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  
+  /* Fetch a repository object; for the Berkeley DB backend, it is
+     initialized with an EXCLUSIVE lock on the database.  This will at
+     least prevent others from trying to read or write to it while we
+     run recovery. (Other backends should do their own locking; see
+     lock_repos.) */
+  SVN_ERR(get_repos(&repos, path, TRUE, nonblocking, FALSE, subpool));
+
+  if (start_callback)
+    SVN_ERR(start_callback(start_callback_baton));
+
+  /* Try to overwrite with its own contents.  We do this only to
+     verify that we can, because we don't want to actually bump the
+     format of the repository until our underlying filesystem claims
+     to have been upgraded correctly. */
+  format_path = svn_path_join(repos->path, SVN_REPOS__FORMAT, subpool);
+  SVN_ERR(svn_io_read_version_file(&format, format_path, subpool));
+  SVN_ERR(svn_io_write_version_file(format_path, format, subpool));
+  
+  /* Try to upgrade the filesystem. */
+  SVN_ERR(svn_fs_upgrade(repos->db_path, subpool));
+
+  /* Now overwrite our format file with the latest version. */
+  SVN_ERR(svn_io_write_version_file(format_path, SVN_REPOS__FORMAT_NUMBER, 
+                                    subpool));
+
+  /* Close shop and free the subpool, to release the exclusive lock. */
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_repos_delete(const char *path,
                  apr_pool_t *pool)
 {

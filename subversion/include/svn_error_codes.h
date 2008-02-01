@@ -640,6 +640,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 46,
              "Filesystem has no such node origin record")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_FS_UNSUPPORTED_UPGRADE,
+             SVN_ERR_FS_CATEGORY_START + 47,
+             "Filesystem upgrade is not supported")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,
@@ -689,6 +694,10 @@ SVN_ERROR_START
              SVN_ERR_REPOS_CATEGORY_START + 9,
              "Error running post-unlock hook")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_REPOS_UNSUPPORTED_UPGRADE,
+             SVN_ERR_REPOS_CATEGORY_START + 10,
+             "Repository upgrade is not supported")
 
   /* generic RA errors */
 

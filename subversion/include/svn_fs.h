@@ -201,6 +201,22 @@ svn_fs_open(svn_fs_t **fs_p,
             apr_pool_t *pool);
 
 /**
+ * Upgrade the Subversion filesystem located in the directory @a path
+ * to the latest version supported by this library.  Return @c
+ * SVN_ERR_FS_UNSUPPORTED_UPGRADE and make no changes to the
+ * filesystem if the requested upgrade is not supported.  Use @a pool
+ * for necessary allocations.
+ *
+ * @note You probably don't want to use this directly.  Take a look at
+ * svn_repos_upgrade() instead.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_fs_upgrade(const char *path,
+               apr_pool_t *pool);
+
+/**
  * Return, in @a *fs_type, a string identifying the back-end type of
  * the Subversion filesystem located in @a path.  Allocate @a *fs_type
  * in @a pool.
