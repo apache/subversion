@@ -14,4 +14,9 @@ Status of 1.5.0:
 
 Candidate changes:
 
+ * r29111:
+     Fix blame_tests 10 and 11 over ra_dav by using standard usernames.
+   Votes:
+     +1: hwright
+
 Approved changes:
