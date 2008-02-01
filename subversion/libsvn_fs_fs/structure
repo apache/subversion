@@ -37,7 +37,6 @@ repository) is:
   revprops/           Subdirectory containing rev-props
     <shard>/          Shard directory, if sharding is in use (see below)
       <revnum>        File containing rev-props for <revnum>
-  indexes.sqlite      SQLite database containing index for svn:mergeinfo props
   transactions/       Subdirectory containing transactions
     <txnid>.txn/      Directory containing transaction <txnid>
   txn-protorevs/      Subdirectory containing transaction proto-revision files
@@ -105,24 +104,22 @@ The format numbers have the following meanings:
 
 Format 1: (understood by Subversion 1.1+)
   Delta representations in revision files must contain only svndiff0
-  data.  No format options are permitted.  No SQLite index is
-  present.  No mechanism is provided to prevent transaction name
-  reuse.  Proto-rev and its lock are stored in transactions/<txnid>/rev
-  and transactions/<txnid>/rev-lock.
+  data.  No format options are permitted.  No mechanism is provided to
+  prevent transaction name reuse.  Proto-rev and its lock are stored
+  in transactions/<txnid>/rev and transactions/<txnid>/rev-lock.
 
 Format 2: (understood by Subversion 1.4+)
   Delta representations in revision files may contain either svndiff0
-  or svndiff1 data.  No format options are permitted.  No SQLite
-  index is present.  No mechanism is provided to prevent transaction
-  name reuse.  Proto-rev and its lock are stored in transactions/<txnid>/rev
-  and transactions/<txnid>/rev-lock.
+  or svndiff1 data.  No format options are permitted.  No mechanism is
+  provided to prevent transaction name reuse.  Proto-rev and its lock
+  are stored in transactions/<txnid>/rev and
+  transactions/<txnid>/rev-lock.
 
 Format 3: (understood by Subversion 1.5+)
   Delta representations in revision files may contain either svndiff0
-  or svndiff1 data.  The 'layout' format option is permitted.  The SQLite
-  index is present, and should be updated whenever the svn:mergeinfo property
-  is set on a node.  To prevent transaction name reuse, transaction names
-  should be generated using the transaction sequence number stored in the
+  or svndiff1 data.  The 'layout' format option is permitted.  To
+  prevent transaction name reuse, transaction names should be
+  generated using the transaction sequence number stored in the
   txn-current file.  Proto-rev and its lock are stored in
   txn-protorevs/<txnid>.rev and txn-protorevs/<txnid>.rev-lock.
 
@@ -328,7 +325,6 @@ Transaction layout
 A transaction directory has the following layout:
 
   props                      Transaction props
-  mergeinfo                  Transaction mergeinfo props, if any
   next-ids                   Next temporary node-ID and copy-ID
   changes                    Changed-path information so far
   node.<nid>.<cid>           New node-rev data for node
@@ -347,11 +343,9 @@ they are received from the client.  To ensure that only one client is
 writing to the file at a given time, the "rev-lock" file is locked for
 the duration of each write.
 
-The three kinds of props files are all in hash dump format.  The
-"props" file will always be present.  The "mergeinfo" file may be
-absent if no svn:mergeinfo properties have been changed on any node in
-the transaction.  The "node.<nid>.<cid>.props" file will only be
-present if the node-rev properties have been changed.
+The two kinds of props files are all in hash dump format.  The "props"
+file will always be present.  The "node.<nid>.<cid>.props" file will
+only be present if the node-rev properties have been changed.
 
 The "next-ids" file contains a single line "<next-temp-node-id>
 <next-temp-copy-id>\n" giving the next temporary node-ID and copy-ID

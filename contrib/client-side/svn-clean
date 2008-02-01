@@ -28,7 +28,7 @@ my $use_svn_module = eval { require SVN::Client };
 
 my $CWD = getcwd;
 
-my @exclude      = "";
+my @exclude      = ();
 my $force        = 0;
 my $quiet        = 0;
 my $print        = 0;

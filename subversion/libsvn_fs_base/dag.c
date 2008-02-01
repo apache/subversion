@@ -1616,6 +1616,9 @@ svn_fs_base__dag_set_has_mergeinfo(dag_node_t *node,
   svn_fs_t *fs = svn_fs_base__dag_get_fs(node);
   const svn_fs_id_t *id = svn_fs_base__dag_get_id(node);
 
+  SVN_ERR(svn_fs_base__test_required_feature_format
+          (trail->fs, "mergeinfo", SVN_FS_BASE__MIN_MERGEINFO_FORMAT));
+
   if (! svn_fs_base__dag_check_mutable(node, txn_id))
     return svn_error_createf(SVN_ERR_FS_NOT_MUTABLE, NULL,
                              _("Attempted merge tracking info change on "
@@ -1643,37 +1646,6 @@ svn_fs_base__dag_set_has_mergeinfo(dag_node_t *node,
 
 
 svn_error_t *
-svn_fs_base__dag_set_mergeinfo_count(dag_node_t *node,
-                                     apr_int64_t count,
-                                     const char *txn_id,
-                                     trail_t *trail,
-                                     apr_pool_t *pool)
-{
-  node_revision_t *node_rev;
-  svn_fs_t *fs = svn_fs_base__dag_get_fs(node);
-  const svn_fs_id_t *id = svn_fs_base__dag_get_id(node);
-
-  if (! svn_fs_base__dag_check_mutable(node, txn_id))
-    return svn_error_createf(SVN_ERR_FS_NOT_MUTABLE, NULL,
-                             _("Attempted mergeinfo count change on "
-                               "immutable node"));
-
-  if ((count < 0) || ((node->kind == svn_node_file) && (count > 1)))
-    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Invalid value (%" APR_INT64_T_FMT ") for "
-                               "node revision mergeinfo count"), count);
-
-  SVN_ERR(svn_fs_bdb__get_node_revision(&node_rev, fs, id, trail, pool));
-  if (node_rev->mergeinfo_count != count)
-    {
-      node_rev->mergeinfo_count = count;
-      SVN_ERR(svn_fs_bdb__put_node_revision(fs, id, node_rev, trail, pool));
-    }
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
 svn_fs_base__dag_adjust_mergeinfo_count(dag_node_t *node,
                                         apr_int64_t count_delta,
                                         const char *txn_id,
@@ -1683,6 +1655,9 @@ svn_fs_base__dag_adjust_mergeinfo_count(dag_node_t *node,
   node_revision_t *node_rev;
   svn_fs_t *fs = svn_fs_base__dag_get_fs(node);
   const svn_fs_id_t *id = svn_fs_base__dag_get_id(node);
+
+  SVN_ERR(svn_fs_base__test_required_feature_format
+          (trail->fs, "mergeinfo", SVN_FS_BASE__MIN_MERGEINFO_FORMAT));
 
   if (! svn_fs_base__dag_check_mutable(node, txn_id))
     return svn_error_createf(SVN_ERR_FS_NOT_MUTABLE, NULL,
@@ -1697,8 +1672,10 @@ svn_fs_base__dag_adjust_mergeinfo_count(dag_node_t *node,
   if ((node_rev->mergeinfo_count < 0) 
       || ((node->kind == svn_node_file) && (node_rev->mergeinfo_count > 1)))
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Invalid value (%" APR_INT64_T_FMT ") for "
-                               "node revision mergeinfo count"),
+                             apr_psprintf(pool,
+                                          _("Invalid value (%%%s) for node "
+                                            "revision mergeinfo count"),
+                                          APR_INT64_T_FMT),
                              node_rev->mergeinfo_count);
 
   SVN_ERR(svn_fs_bdb__put_node_revision(fs, id, node_rev, trail, pool));

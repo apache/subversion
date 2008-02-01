@@ -564,6 +564,10 @@ get_combined_mergeinfo(apr_hash_t **mergeinfo_catalog,
       query_paths = existing_paths;
     }
 
+  /* We do not need to call svn_repos_fs_get_mergeinfo() (which performs authz)
+     because we are already doing authz on the changed paths and the log
+     messages when we go to fill the log entry.  See fill_log_entry() for
+     details. */
   SVN_ERR(svn_fs_get_mergeinfo(&tree_mergeinfo, root, query_paths,
                                svn_mergeinfo_inherited, TRUE,
                                subpool));

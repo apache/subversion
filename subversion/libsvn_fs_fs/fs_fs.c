@@ -240,13 +240,6 @@ path_txn_props(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 }
 
 static APR_INLINE const char *
-path_txn_mergeinfo(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
-{
-  return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_TXN_MERGEINFO,
-                       pool);
-}
-
-static APR_INLINE const char *
 path_txn_next_ids(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_NEXT_IDS, pool);
@@ -950,6 +943,9 @@ check_format(int format)
      SVN_FS_FS__FORMAT_NUMBER, format);
 }
 
+static svn_error_t *
+get_youngest(svn_revnum_t *youngest_p, const char *fs_path, apr_pool_t *pool);
+
 svn_error_t *
 svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
@@ -979,6 +975,8 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   ffd->uuid = apr_pstrdup(fs->pool, buf);
 
   SVN_ERR(svn_io_file_close(uuid_file, pool));
+
+  SVN_ERR(get_youngest(&(ffd->youngest_rev_cache), path, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1230,7 +1228,10 @@ svn_fs_fs__youngest_rev(svn_revnum_t *youngest_p,
                         svn_fs_t *fs,
                         apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
+
   SVN_ERR(get_youngest(youngest_p, fs->path, pool));
+  ffd->youngest_rev_cache = *youngest_p;
 
   return SVN_NO_ERROR;
 }
@@ -1297,6 +1298,45 @@ static svn_error_t * read_header_block(apr_hash_t **headers,
   return SVN_NO_ERROR;
 }
 
+/* Return SVN_ERR_FS_NO_SUCH_REVISION if the given revision is newer
+   than the current youngest revision or is simply not a valid
+   revision number, else return success.
+
+   FSFS is based around the concept that commits only take effect when
+   the number in "current" is bumped.  Thus if there happens to be a rev
+   or revprops file installed for a revision higher than the one recorded
+   in "current" (because a commit failed between installing the rev file
+   and bumping "current", or because an administrator rolled back the
+   repository by resetting "current" without deleting rev files, etc), it
+   ought to be completely ignored.  This function provides the check
+   by which callers can make that decision. */
+static svn_error_t *
+ensure_revision_exists(svn_fs_t *fs,
+                       svn_revnum_t rev,
+                       apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  if (! SVN_IS_VALID_REVNUM(rev))
+    return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                             _("Invalid revision number '%ld'"), rev);
+
+
+  /* Did the revision exist the last time we checked the current
+     file? */
+  if (rev <= ffd->youngest_rev_cache)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(get_youngest(&(ffd->youngest_rev_cache), fs->path, pool));
+
+  /* Check again. */
+  if (rev <= ffd->youngest_rev_cache)
+    return SVN_NO_ERROR;
+
+  return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                           _("No such revision %ld"), rev);
+}
+
 /* Open the revision file for revision REV in filesystem FS and store
    the newly opened file in FILE.  Seek to location OFFSET before
    returning.  Perform temporary allocations in POOL. */
@@ -1308,6 +1348,8 @@ open_and_seek_revision(apr_file_t **file,
                        apr_pool_t *pool)
 {
   apr_file_t *rev_file;
+
+  SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
   SVN_ERR(svn_io_file_open(&rev_file, svn_fs_fs__path_rev(fs, rev, pool),
                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
@@ -1923,6 +1965,8 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   const char *rev_str = apr_psprintf(ffd->rev_root_id_cache_pool, "%ld", rev);
   svn_fs_id_t *cached_id;
 
+  SVN_ERR(ensure_revision_exists(fs, rev, pool));
+
   /* Calculate an index into the revroot id cache */
   cached_id = apr_hash_get(ffd->rev_root_id_cache,
                            rev_str,
@@ -1978,6 +2022,8 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
   const char *tmp_path;
   apr_file_t *f;
 
+  SVN_ERR(ensure_revision_exists(fs, rev, pool));
+
   SVN_ERR(svn_io_open_unique_file2
           (&f, &tmp_path, final_path, ".tmp", svn_io_file_del_none, pool));
   SVN_ERR(svn_hash_write(proplist, f, pool));
@@ -2004,6 +2050,8 @@ svn_fs_fs__revision_proplist(apr_hash_t **proplist_p,
   svn_error_t *err = SVN_NO_ERROR;
   int i;
   apr_pool_t *iterpool;
+
+  SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
   proplist = apr_hash_make(pool);
   iterpool = svn_pool_create(pool);
@@ -2655,6 +2703,32 @@ get_dir_contents(apr_hash_t *entries,
   return SVN_NO_ERROR;
 }
 
+/* Return a copy of the directory hash ENTRIES in POOL. */
+static apr_hash_t *
+copy_dir_entries(apr_hash_t *entries,
+                 apr_pool_t *pool)
+{
+  apr_hash_t *new_entries = apr_hash_make(pool);
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+    {
+      void *val;
+      svn_fs_dirent_t *dirent, *new_dirent;
+
+      apr_hash_this(hi, NULL, NULL, &val);
+      dirent = val;
+      new_dirent = apr_palloc(pool, sizeof(*new_dirent));
+      new_dirent->name = apr_pstrdup(pool, dirent->name);
+      new_dirent->kind = dirent->kind;
+      new_dirent->id = svn_fs_fs__id_copy(dirent->id, pool);
+      apr_hash_set(new_entries, new_dirent->name, APR_HASH_KEY_STRING,
+                   new_dirent);
+    }
+  return new_entries;
+}
+
+
 svn_error_t *
 svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
                             svn_fs_t *fs,
@@ -2662,11 +2736,12 @@ svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
                             apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  apr_hash_t *entries;
+  apr_hash_t *unparsed_entries, *parsed_entries;
   apr_hash_index_t *hi;
   unsigned int hid;
 
-  /* Calculate an index into the dir entries cache */
+  /* Calculate an index into the dir entries cache.  This should be
+     completely ignored if this is a mutable noderev. */
   hid = DIR_CACHE_ENTRIES_MASK(svn_fs_fs__id_rev(noderev->id));
 
   /* If we have this directory cached, return it. */
@@ -2674,35 +2749,28 @@ svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
       ffd->dir_cache_id[hid] && svn_fs_fs__id_eq(ffd->dir_cache_id[hid],
                                                  noderev->id))
     {
-      *entries_p = ffd->dir_cache[hid];
+      *entries_p = copy_dir_entries(ffd->dir_cache[hid], pool);
       return SVN_NO_ERROR;
     }
 
   /* Read in the directory hash. */
-  entries = apr_hash_make(pool);
-  SVN_ERR(get_dir_contents(entries, fs, noderev, pool));
+  unparsed_entries = apr_hash_make(pool);
+  SVN_ERR(get_dir_contents(unparsed_entries, fs, noderev, pool));
 
-  /* Prepare to cache this directory. */
-  ffd->dir_cache_id[hid] = NULL;
-  if (ffd->dir_cache_pool[hid])
-    svn_pool_clear(ffd->dir_cache_pool[hid]);
-  else
-    ffd->dir_cache_pool[hid] = svn_pool_create(fs->pool);
-  ffd->dir_cache[hid] = apr_hash_make(ffd->dir_cache_pool[hid]);
+  parsed_entries = apr_hash_make(pool);
 
-  /* Translate the string dir entries into real entries in the dir cache. */
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+  /* Translate the string dir entries into real entries. */
+  for (hi = apr_hash_first(pool, unparsed_entries); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       void *val;
       char *str_val;
       char *str, *last_str;
-      svn_fs_dirent_t *dirent = apr_pcalloc(ffd->dir_cache_pool[hid],
-                                            sizeof(*dirent));
+      svn_fs_dirent_t *dirent = apr_pcalloc(pool, sizeof(*dirent));
 
       apr_hash_this(hi, &key, NULL, &val);
       str_val = apr_pstrdup(pool, *((char **)val));
-      dirent->name = apr_pstrdup(ffd->dir_cache_pool[hid], key);
+      dirent->name = apr_pstrdup(pool, key);
 
       str = apr_strtok(str_val, " ", &last_str);
       if (str == NULL)
@@ -2728,40 +2796,31 @@ svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                                 _("Directory entry corrupt"));
 
-      dirent->id = svn_fs_fs__id_parse(str, strlen(str),
-                                       ffd->dir_cache_pool[hid]);
+      dirent->id = svn_fs_fs__id_parse(str, strlen(str), pool);
 
-      apr_hash_set(ffd->dir_cache[hid], dirent->name, APR_HASH_KEY_STRING, dirent);
+      apr_hash_set(parsed_entries, dirent->name, APR_HASH_KEY_STRING, dirent);
     }
 
-  /* Mark which directory we've cached and return it. */
-  ffd->dir_cache_id[hid] = svn_fs_fs__id_copy(noderev->id, ffd->dir_cache_pool[hid]);
-  *entries_p = ffd->dir_cache[hid];
-  return SVN_NO_ERROR;
-}
-
-apr_hash_t *
-svn_fs_fs__copy_dir_entries(apr_hash_t *entries,
-                            apr_pool_t *pool)
-{
-  apr_hash_t *new_entries = apr_hash_make(pool);
-  apr_hash_index_t *hi;
-
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+  /* If this is an immutable directory, let's cache the contents. */
+  if (! svn_fs_fs__id_txn_id(noderev->id))
     {
-      void *val;
-      svn_fs_dirent_t *dirent, *new_dirent;
+      /* Start by NULLing the ID field, so that we never leave the
+         cache in an illegal state. */
+      ffd->dir_cache_id[hid] = NULL;
 
-      apr_hash_this(hi, NULL, NULL, &val);
-      dirent = val;
-      new_dirent = apr_palloc(pool, sizeof(*new_dirent));
-      new_dirent->name = apr_pstrdup(pool, dirent->name);
-      new_dirent->kind = dirent->kind;
-      new_dirent->id = svn_fs_fs__id_copy(dirent->id, pool);
-      apr_hash_set(new_entries, new_dirent->name, APR_HASH_KEY_STRING,
-                   new_dirent);
+      if (ffd->dir_cache_pool[hid])
+        svn_pool_clear(ffd->dir_cache_pool[hid]);
+      else
+        ffd->dir_cache_pool[hid] = svn_pool_create(fs->pool);
+
+      ffd->dir_cache[hid] = copy_dir_entries(parsed_entries,
+                                             ffd->dir_cache_pool[hid]);
+      ffd->dir_cache_id[hid] = svn_fs_fs__id_copy(noderev->id,
+                                                  ffd->dir_cache_pool[hid]);
     }
-  return new_entries;
+
+  *entries_p = parsed_entries;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -3285,6 +3344,8 @@ svn_fs_fs__paths_changed(apr_hash_t **changed_paths_p,
   apr_hash_t *changed_paths;
   apr_file_t *revision_file;
 
+  SVN_ERR(ensure_revision_exists(fs, rev, pool));
+
   SVN_ERR(svn_io_file_open(&revision_file, svn_fs_fs__path_rev(fs, rev, pool),
                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
@@ -3624,77 +3685,6 @@ svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
   return SVN_NO_ERROR;
 }
 
-/* Store the mergeinfo list for transaction TXN_ID into new hash
-   *MINFO.  Perform allocation of *MINFO and temporary allocations in
-   *POOL. Sets *MINFO to NULL if no mergeinfo has changed. */
-
-static svn_error_t *
-get_txn_mergeinfo(apr_hash_t **minfo,
-                  svn_fs_t *fs,
-                  const char *txn_id,
-                  apr_pool_t *pool)
-{
-  apr_file_t *txn_minfo_file;
-  apr_hash_t *result;
-
-  /* Open the transaction mergeinfo file. */
-  svn_error_t *err = svn_io_file_open(&txn_minfo_file,
-                                      path_txn_mergeinfo(fs, txn_id, pool),
-                                      APR_READ | APR_BUFFERED,
-                                      APR_OS_DEFAULT, pool);
-  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-    {
-      svn_error_clear(err);
-      *minfo = NULL;
-      return SVN_NO_ERROR;
-    }
-  SVN_ERR(err);
-
-  result = apr_hash_make(pool);
-  /* Read in the property list. */
-  SVN_ERR(svn_hash_read2(result,
-                         svn_stream_from_aprfile(txn_minfo_file, pool),
-                         SVN_HASH_TERMINATOR, pool));
-
-  SVN_ERR(svn_io_file_close(txn_minfo_file, pool));
-
-  *minfo = result;
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Change mergeinfo for path NAME in TXN to VALUE.  */
-
-svn_error_t *
-svn_fs_fs__change_txn_mergeinfo(svn_fs_txn_t *txn,
-                                const char *name,
-                                const svn_string_t *value,
-                                apr_pool_t *pool)
-{
-  apr_file_t *txn_minfo_file;
-  apr_hash_t *txn_minfo;
-
-  SVN_ERR(get_txn_mergeinfo(&txn_minfo, txn->fs, txn->id, pool));
-  if (txn_minfo == NULL) /* doesn't exist yet */
-    txn_minfo = apr_hash_make(pool);
-
-  apr_hash_set(txn_minfo, name, APR_HASH_KEY_STRING, value);
-
-  /* Create a new version of the file and write out the new minfos. */
-  /* Open the transaction minfoerties file. */
-  SVN_ERR(svn_io_file_open(&txn_minfo_file,
-                           path_txn_mergeinfo(txn->fs, txn->id, pool),
-                           APR_WRITE | APR_CREATE | APR_TRUNCATE
-                           | APR_BUFFERED, APR_OS_DEFAULT, pool));
-
-  SVN_ERR(svn_hash_write(txn_minfo, txn_minfo_file, pool));
-
-  SVN_ERR(svn_io_file_close(txn_minfo_file, pool));
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_fs_fs__get_txn(transaction_t **txn_p,
                    svn_fs_t *fs,
@@ -3957,28 +3947,30 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
                      svn_node_kind_t kind,
                      apr_pool_t *pool)
 {
-  fs_fs_data_t *ffd = fs->fsap_data;
   representation_t *rep = parent_noderev->data_rep;
   const char *filename = path_txn_node_children(fs, parent_noderev->id, pool);
   apr_file_t *file;
   svn_stream_t *out;
-  svn_boolean_t have_cached;
-  unsigned int hid;
 
   if (!rep || !rep->txn_id)
     {
-      apr_hash_t *entries;
+      {
+        apr_hash_t *entries;
+        apr_pool_t *subpool = svn_pool_create(pool);
 
-      /* Before we can modify the directory, we need to dump its old
-         contents into a mutable representation file. */
-      SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, parent_noderev,
-                                          pool));
-      SVN_ERR(unparse_dir_entries(&entries, entries, pool));
-      SVN_ERR(svn_io_file_open(&file, filename,
-                               APR_WRITE | APR_CREATE | APR_BUFFERED,
-                               APR_OS_DEFAULT, pool));
-      out = svn_stream_from_aprfile(file, pool);
-      SVN_ERR(svn_hash_write2(entries, out, SVN_HASH_TERMINATOR, pool));
+        /* Before we can modify the directory, we need to dump its old
+           contents into a mutable representation file. */
+        SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, parent_noderev,
+                                            subpool));
+        SVN_ERR(unparse_dir_entries(&entries, entries, subpool));
+        SVN_ERR(svn_io_file_open(&file, filename,
+                                 APR_WRITE | APR_CREATE | APR_BUFFERED,
+                                 APR_OS_DEFAULT, pool));
+        out = svn_stream_from_aprfile(file, pool);
+        SVN_ERR(svn_hash_write2(entries, out, SVN_HASH_TERMINATOR, subpool));
+
+        svn_pool_destroy(subpool);
+      }
 
       /* Mark the node-rev's data rep as mutable. */
       rep = apr_pcalloc(pool, sizeof(*rep));
@@ -3996,15 +3988,7 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
       out = svn_stream_from_aprfile(file, pool);
     }
 
-  /* Calculate an index into the dir entries cache.  */
-  hid = DIR_CACHE_ENTRIES_MASK(svn_fs_fs__id_rev(parent_noderev->id));
-
-  /* Make a note if we have this directory cached. */
-  have_cached = (ffd->dir_cache_id[hid]
-                 && svn_fs_fs__id_eq(ffd->dir_cache_id[hid], parent_noderev->id));
-
-  /* Append an incremental hash entry for the entry change, and update
-     the cached directory if necessary. */
+  /* Append an incremental hash entry for the entry change. */
   if (id)
     {
       const char *val = unparse_dir_entry(kind, id, pool);
@@ -4013,24 +3997,11 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
                                 "V %" APR_SIZE_T_FMT "\n%s\n",
                                 strlen(name), name,
                                 strlen(val), val));
-      if (have_cached)
-        {
-          svn_fs_dirent_t *dirent;
-
-          dirent = apr_palloc(ffd->dir_cache_pool[hid], sizeof(*dirent));
-          dirent->name = apr_pstrdup(ffd->dir_cache_pool[hid], name);
-          dirent->kind = kind;
-          dirent->id = svn_fs_fs__id_copy(id, ffd->dir_cache_pool[hid]);
-          apr_hash_set(ffd->dir_cache[hid], dirent->name, APR_HASH_KEY_STRING,
-                       dirent);
-        }
     }
   else
     {
       SVN_ERR(svn_stream_printf(out, pool, "D %" APR_SIZE_T_FMT "\n%s\n",
                                 strlen(name), name));
-      if (have_cached)
-        apr_hash_set(ffd->dir_cache[hid], name, APR_HASH_KEY_STRING, NULL);
     }
 
   SVN_ERR(svn_io_file_close(file, pool));
@@ -4605,7 +4576,6 @@ write_final_rev(const svn_fs_id_t **new_id_p,
       subpool = svn_pool_create(pool);
 
       SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, noderev, pool));
-      entries = svn_fs_fs__copy_dir_entries(entries, pool);
 
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
@@ -5011,7 +4981,6 @@ commit_body(void *baton, apr_pool_t *pool)
   char *buf;
   apr_hash_t *txnprops;
   svn_string_t date;
-  apr_hash_t *target_mergeinfo;
 
   /* Get the current youngest revision. */
   SVN_ERR(svn_fs_fs__youngest_rev(&old_rev, cb->fs, pool));
@@ -5088,8 +5057,6 @@ commit_body(void *baton, apr_pool_t *pool)
         SVN_ERR(svn_fs_fs__change_txn_props(cb->txn, props, pool));
     }
   
-  SVN_ERR(get_txn_mergeinfo(&target_mergeinfo, cb->txn->fs, cb->txn->id, pool));
-
   /* Create the shard for the rev and revprop file, if we're sharding and
      this is the first revision of a new shard.  We don't care if this
      fails because the shard already existed for some reason. */
@@ -5139,6 +5106,7 @@ commit_body(void *baton, apr_pool_t *pool)
   /* Update the 'current' file. */
   SVN_ERR(write_final_current(cb->fs, cb->txn->id, new_rev, start_node_id,
                               start_copy_id, pool));
+  ffd->youngest_rev_cache = new_rev;
 
   /* Remove this transaction directory. */
   SVN_ERR(svn_fs_fs__purge_txn(cb->fs, cb->txn->id, pool));
@@ -5293,6 +5261,8 @@ svn_fs_fs__create(svn_fs_t *fs,
   /* This filesystem is ready.  Stamp it with a format number. */
   SVN_ERR(write_format(path_format(fs, pool),
                        ffd->format, ffd->max_files_per_dir, pool));
+
+  ffd->youngest_rev_cache = 0;
   return SVN_NO_ERROR;
 }
 

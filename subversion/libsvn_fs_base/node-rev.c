@@ -26,6 +26,7 @@
 #include "node-rev.h"
 #include "reps-strings.h"
 #include "id.h"
+#include "../libsvn_fs/fs-loader.h"
 
 #include "bdb/nodes-table.h"
 #include "bdb/node-origins-table.h"
@@ -44,6 +45,7 @@ svn_fs_base__create_node(const svn_fs_id_t **id_p,
                          apr_pool_t *pool)
 {
   svn_fs_id_t *id;
+  base_fs_data_t *bfd = fs->fsap_data;
 
   /* Find an unused ID for the node.  */
   SVN_ERR(svn_fs_bdb__new_node_id(&id, fs, copy_id, txn_id, trail, pool));
@@ -51,9 +53,13 @@ svn_fs_base__create_node(const svn_fs_id_t **id_p,
   /* Store its NODE-REVISION skel.  */
   SVN_ERR(svn_fs_bdb__put_node_revision(fs, id, noderev, trail, pool));
 
-  /* Add a record in the node origins index table. */
-  SVN_ERR(svn_fs_bdb__set_node_origin(fs, svn_fs_base__id_node_id(id),
-                                      id, trail, pool));
+  /* Add a record in the node origins index table if our format
+     supports it.  */
+  if (bfd->format >= SVN_FS_BASE__MIN_NODE_ORIGINS_FORMAT)
+    {
+      SVN_ERR(svn_fs_bdb__set_node_origin(fs, svn_fs_base__id_node_id(id),
+                                          id, trail, pool));
+    }
 
   *id_p = id;
   return SVN_NO_ERROR;
@@ -98,12 +104,18 @@ svn_fs_base__delete_node_revision(svn_fs_t *fs,
                                   trail_t *trail,
                                   apr_pool_t *pool)
 {
+  base_fs_data_t *bfd = fs->fsap_data;
+
   /* ### todo: here, we should adjust other nodes to compensate for
      the missing node. */
 
-  if (origin_also)
-    SVN_ERR(svn_fs_bdb__delete_node_origin(fs, svn_fs_base__id_node_id(id),
-                                           trail, pool));
+  /* Delete the node origin record, too, if asked to do so and our
+     format supports it. */
+  if (origin_also && (bfd->format >= SVN_FS_BASE__MIN_NODE_ORIGINS_FORMAT))
+    {
+      SVN_ERR(svn_fs_bdb__delete_node_origin(fs, svn_fs_base__id_node_id(id),
+                                             trail, pool));
+    }
 
   return svn_fs_bdb__delete_nodes_entry(fs, id, trail, pool);
 }

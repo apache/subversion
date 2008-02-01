@@ -29,7 +29,7 @@ XFail = svntest.testcase.XFail
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 
-from svntest.main import SVN_PROP_MERGE_INFO
+from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import server_has_mergeinfo
 
 def adjust_error_for_server_version(expected_err):
@@ -82,7 +82,7 @@ def explicit_mergeinfo_source(sbox):
   # Make a copy, and dummy up some mergeinfo.
   mergeinfo = '/A/B:1\n/A/D/G:1\n'
   propval_path = os.path.join(wc_dir, 'propval.tmp')
-  svntest.actions.set_prop(None, SVN_PROP_MERGE_INFO, mergeinfo, H_path,
+  svntest.actions.set_prop(None, SVN_PROP_MERGEINFO, mergeinfo, H_path,
                            propval_path)
   svntest.main.run_svn(None, "cp", H_path, H2_path)
   svntest.main.run_svn(None, "ci", "-m", "r2", wc_dir)

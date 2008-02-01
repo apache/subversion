@@ -1169,6 +1169,7 @@ svn_fs_base__unparse_representation_skel(skel_t **skel_p,
 svn_error_t *
 svn_fs_base__unparse_node_revision_skel(skel_t **skel_p,
                                         const node_revision_t *noderev,
+                                        int format,
                                         apr_pool_t *pool)
 {
   skel_t *skel;
@@ -1179,14 +1180,27 @@ svn_fs_base__unparse_node_revision_skel(skel_t **skel_p,
   skel = svn_fs_base__make_empty_list(pool);
   header_skel = svn_fs_base__make_empty_list(pool);
 
-  /* MERGEINFO-COUNT */
-  num_str = apr_psprintf(pool, "%" APR_INT64_T_FMT, noderev->mergeinfo_count);
-  svn_fs_base__prepend(svn_fs_base__str_atom(num_str, pool), header_skel); 
+  /* Store mergeinfo stuffs only if the schema level supports it. */
+  if (format >= SVN_FS_BASE__MIN_MERGEINFO_FORMAT)
+    {
+      /* MERGEINFO-COUNT */
+      num_str = apr_psprintf(pool, "%" APR_INT64_T_FMT, 
+                             noderev->mergeinfo_count);
+      svn_fs_base__prepend(svn_fs_base__str_atom(num_str, pool), header_skel);
  
-  /* HAS-MERGEINFO */
-  svn_fs_base__prepend(svn_fs_base__mem_atom(noderev->has_mergeinfo 
-                                               ? "1" : "0",
-                                             1, pool), header_skel); 
+      /* HAS-MERGEINFO */
+      svn_fs_base__prepend(svn_fs_base__mem_atom(noderev->has_mergeinfo 
+                                                 ? "1" : "0",
+                                                 1, pool), header_skel); 
+
+      /* PREDECESSOR-COUNT padding (only if we *don't* have a valid
+         value; if we do, we'll pick that up below) */
+      if (noderev->predecessor_count == -1)
+        {
+          svn_fs_base__prepend(svn_fs_base__mem_atom(NULL, 0, pool), 
+                               header_skel);
+        }
+    }
 
   /* PREDECESSOR-COUNT */
   if (noderev->predecessor_count != -1)
@@ -1195,10 +1209,6 @@ svn_fs_base__unparse_node_revision_skel(skel_t **skel_p,
                                            noderev->predecessor_count);
       svn_fs_base__prepend(svn_fs_base__str_atom(count_str, pool),
                            header_skel);
-    }
-  else
-    {
-      svn_fs_base__prepend(svn_fs_base__mem_atom(NULL, 0, pool), header_skel);
     }
 
   /* PREDECESSOR-ID */

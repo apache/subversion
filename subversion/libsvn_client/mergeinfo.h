@@ -64,7 +64,9 @@ typedef struct svn_client__merge_path_t
    whether the mergeinfo was inherited (TRUE or FALSE).
    
    This function will search for inherited mergeinfo in the parents of
-   WCPATH only if those parents are at the same working revision as WCPATH.
+   WCPATH only if the working revision of WCPATH falls within the range
+   of the parent's last committed revision to the parent's working
+   revision (inclusive).
 
    INHERIT indicates whether explicit, explicit or inherited, or only
    inherited mergeinfo for WCPATH is retrieved.
@@ -148,7 +150,8 @@ svn_client__get_wc_or_repos_mergeinfo(apr_hash_t **target_mergeinfo,
    be used to fetch information about PATH_OR_URL (if PATH_OR_URL is a
    working copy path), or NULL.  If RANGE_YOUNGEST and RANGE_OLDEST
    are valid, use them to bound the revision ranges of returned
-   mergeinfo.  */
+   mergeinfo.  See svn_ra_get_location_segments() for the rules
+   governing PEG_REVISION, START_REVISION, and END_REVISION.*/
 svn_error_t *
 svn_client__get_history_as_mergeinfo(apr_hash_t **mergeinfo_p,
                                      const char *path_or_url,
