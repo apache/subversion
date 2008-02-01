@@ -1298,8 +1298,18 @@ static svn_error_t * read_header_block(apr_hash_t **headers,
   return SVN_NO_ERROR;
 }
 
-/* Throw an error if the given revision is newer than the current
-   youngest revision. */
+/* Return SVN_ERR_FS_NO_SUCH_REVISION if the given revision is newer
+   than the current youngest revision or is simply not a valid
+   revision number, else return success.
+
+   FSFS is based around the concept that commits only take effect when
+   the number in "current" is bumped.  Thus if there happens to be a rev
+   or revprops file installed for a revision higher than the one recorded
+   in "current" (because a commit failed between installing the rev file
+   and bumping "current", or because an administrator rolled back the
+   repository by resetting "current" without deleting rev files, etc), it
+   ought to be completely ignored.  This function provides the check
+   by which callers can make that decision. */
 static svn_error_t *
 ensure_revision_exists(svn_fs_t *fs,
                        svn_revnum_t rev,
