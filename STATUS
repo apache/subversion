@@ -14,6 +14,12 @@ Status of 1.5.0:
 
 Candidate changes:
 
+ * r29153
+   Fix SEGFAULTs triggered by passing a non-URL in the --from-source switch
+   to 'svn mergeinfo'
+   Votes:
+     +1: cmpilato
+
  * r29148
    Fix a path canonicalization bug in ra_serf that broke WC entries files
    Votes:
