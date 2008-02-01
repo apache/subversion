@@ -505,22 +505,24 @@ test_rangelist_intersect(const char **msg,
                          apr_pool_t *pool)
 {
   apr_array_header_t *rangelist1, *rangelist2, *intersection;
-  svn_merge_range_t expected_intersection[4] =
-    { {0, 1, TRUE}, {2, 4, TRUE}, {11, 12, TRUE}, {30, 32, TRUE} };
+  svn_merge_range_t expected_intersection[] =
+    { {0, 1, TRUE}, {2, 4, TRUE}, {11, 12, TRUE}, {30, 32, TRUE},
+      {39, 42, TRUE} };
 
   *msg = "intersection of rangelists";
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_mergeinfo_parse(&info1, "/trunk: 1-6,12-16,30-32", pool));
-  SVN_ERR(svn_mergeinfo_parse(&info2, "/trunk: 1,3-4,7,9,11-12,31-34", pool));
+  SVN_ERR(svn_mergeinfo_parse(&info1, "/trunk: 1-6,12-16,30-32,40-42", pool));
+  SVN_ERR(svn_mergeinfo_parse(&info2, "/trunk: 1,3-4,7,9,11-12,31-34,38-44", 
+                              pool));
   rangelist1 = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
   rangelist2 = apr_hash_get(info2, "/trunk", APR_HASH_KEY_STRING);
 
   SVN_ERR(svn_rangelist_intersect(&intersection, rangelist1, rangelist2,
                                   pool));
 
-  return verify_ranges_match(intersection, expected_intersection, 4,
+  return verify_ranges_match(intersection, expected_intersection, 5,
                              "svn_rangelist_intersect", "intersect", pool);
 }
 
@@ -1454,7 +1456,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_rangelist_reverse),
     SVN_TEST_PASS(test_rangelist_count_revs),
     SVN_TEST_PASS(test_rangelist_to_revs),
-    SVN_TEST_PASS(test_rangelist_intersect),
+    SVN_TEST_XFAIL(test_rangelist_intersect),
     SVN_TEST_PASS(test_diff_mergeinfo),
     SVN_TEST_PASS(test_merge_mergeinfo),
     SVN_TEST_PASS(test_mergeinfo_intersect),
