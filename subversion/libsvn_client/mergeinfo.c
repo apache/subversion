@@ -1085,14 +1085,12 @@ svn_client_mergeinfo_get_available(apr_array_header_t **rangelist,
   svn_ra_session_t *ra_session;
   int num_ranges = 0;
   const char *repos_root;
-  apr_pool_t *sesspool = svn_pool_create(pool);
+  apr_pool_t *sesspool;
   svn_opt_revision_t head_revision;
   head_revision.kind = svn_opt_revision_head;
 
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, merge_source_url,
-                                               NULL, NULL, NULL, FALSE,
-                                               TRUE, ctx, sesspool));
-
+  assert(svn_path_is_url(merge_source_url));
+  
   /* Step 1: Across the set of possible merges, see what's already
      been merged into PATH_OR_URL@PEG_REVISION (or what's already part
      of the history it shares with that of MERGE_SOURCE_URL.  */
@@ -1111,6 +1109,10 @@ svn_client_mergeinfo_get_available(apr_array_header_t **rangelist,
 
   /* Step 2: See what merge sources can be derived from the history of
      MERGE_SOURCE_URL. */
+  sesspool = svn_pool_create(pool);
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, merge_source_url,
+                                               NULL, NULL, NULL, FALSE,
+                                               TRUE, ctx, sesspool));
   SVN_ERR(svn_client__get_history_as_mergeinfo(&source_history, 
                                                merge_source_url,
                                                &head_revision, 
