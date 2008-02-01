@@ -188,8 +188,9 @@ svn_cl__diff(apr_getopt_t *os,
       SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
     }
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
-                                        opt_state->targets, pool));
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets, 
+                                                      pool));
 
   if (! opt_state->old_target && ! opt_state->new_target
       && (targets->nelts == 2)
@@ -228,7 +229,8 @@ svn_cl__diff(apr_getopt_t *os,
                                            : APR_ARRAY_IDX(tmp, 0,
                                                            const char *));
 
-      SVN_ERR(svn_opt_args_to_target_array2(&tmp2, os, tmp, pool));
+      SVN_ERR(svn_cl__args_to_target_array_print_reserved(&tmp2, os, tmp, 
+                                                          pool));
       SVN_ERR(svn_opt_parse_path(&old_rev, &old_target,
                                  APR_ARRAY_IDX(tmp2, 0, const char *),
                                  pool));
