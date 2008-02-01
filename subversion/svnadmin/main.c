@@ -1337,7 +1337,7 @@ subcommand_upgrade(apr_getopt_t *os, void *baton, apr_pool_t *pool)
           SVN_ERR(svn_repos_upgrade(opt_state->repository_path, FALSE,
                                     upgrade_started, pool, pool));
         }
-      else if (err->apr_err == SVN_ERR_REPOS_UNSUPPORTED_UPGRADE)
+      else if (err->apr_err == SVN_ERR_FS_UNSUPPORTED_UPGRADE)
         {
           return svn_error_quick_wrap
             (err, _("Upgrade of this repository's underlying versioned "
