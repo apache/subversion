@@ -20,10 +20,12 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
- * r29139
+ * r29139, r29161
    Introduce 'svnadmin upgrade' and backing APIs.
    Justification:
      We shouldn't make upgraders-to-1.5 dump/load unnecessarily.
+   Notes:
+     r29161 is the removal of non-overlapping, non-related changes.
    Votes:
      +1: cmpilato
      -1: glasser: The svnadmin-upgrade branch was great, r29139 accidentally
