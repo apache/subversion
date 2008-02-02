@@ -1271,14 +1271,11 @@ svn_ra_neon__parsed_request(svn_ra_neon__session_t *sess,
                             svn_boolean_t spool_response,
                             apr_pool_t *pool)
 {
-  SVN_ERR_W(parsed_request(sess, method, url, body, body_file,
-                           set_parser,
-                           startelm_cb, cdata_cb, endelm_cb,
-                           baton, extra_headers, status_code,
-                           spool_response, pool),
-            apr_psprintf(pool,_("%s request failed on '%s'"), method, url));
-
-  return SVN_NO_ERROR;
+  return parsed_request(sess, method, url, body, body_file,
+                        set_parser,
+                        startelm_cb, cdata_cb, endelm_cb,
+                        baton, extra_headers, status_code,
+                        spool_response, pool);
 }
 
 
