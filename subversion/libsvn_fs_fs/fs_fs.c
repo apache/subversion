@@ -299,11 +299,8 @@ path_txn_node_children(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
 static APR_INLINE const char *
 path_node_origin(svn_fs_t *fs, const char *node_id, apr_pool_t *pool)
 {
-  int len = strlen(node_id);
-  const char *node_id_minus_last_char = 
-    (len == 1) ? "0" : apr_pstrmemdup(pool, node_id, len - 1);
   return svn_path_join_many(pool, fs->path, PATH_NODE_ORIGINS_DIR,
-                            node_id_minus_last_char, NULL);
+                            node_id, NULL);
 }
 
 
@@ -5721,20 +5718,18 @@ svn_fs_fs__ensure_dir_exists(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* Set *NODE_ORIGINS to a hash mapping 'const char *' node IDs to
-   'svn_string_t *' node revision IDs.  Use POOL for allocations. */
-static svn_error_t *
-get_node_origins_from_file(svn_fs_t *fs,
-                           apr_hash_t **node_origins,
-                           const char *node_origins_file,
+svn_error_t *
+svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
+                           svn_fs_t *fs,
+                           const char *node_id,
                            apr_pool_t *pool)
 {
   apr_file_t *fd;
+  svn_stringbuf_t *origin_stringbuf;
   svn_error_t *err;
-  svn_stream_t *stream;
 
-  *node_origins = NULL;
-  err = svn_io_file_open(&fd, node_origins_file, 
+  *origin_id = NULL;
+  err = svn_io_file_open(&fd, path_node_origin(fs, node_id, pool),
                          APR_READ, APR_OS_DEFAULT, pool);
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
@@ -5743,79 +5738,42 @@ get_node_origins_from_file(svn_fs_t *fs,
     }
   SVN_ERR(err);
 
-  stream = svn_stream_from_aprfile2(fd, FALSE, pool);
-  *node_origins = apr_hash_make(pool);
-  SVN_ERR(svn_hash_read2(*node_origins, stream, SVN_HASH_TERMINATOR, pool));
-  return svn_stream_close(stream);
-}
+  SVN_ERR(svn_stringbuf_from_aprfile(&origin_stringbuf, fd, pool));
 
-svn_error_t *
-svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
-                           svn_fs_t *fs,
-                           const char *node_id,
-                           apr_pool_t *pool)
-{
-  apr_hash_t *node_origins;
+  *origin_id = svn_fs_fs__id_parse(origin_stringbuf->data,
+                                   origin_stringbuf->len, pool);
 
-  *origin_id = NULL;
-  SVN_ERR(get_node_origins_from_file(fs, &node_origins, 
-                                     path_node_origin(fs, node_id, pool), 
-                                     pool));
-  if (node_origins)
-    {
-      svn_string_t *origin_id_str =
-        apr_hash_get(node_origins, node_id, APR_HASH_KEY_STRING);
-      if (origin_id_str)
-        *origin_id = svn_fs_fs__id_parse(origin_id_str->data,
-                                         origin_id_str->len, pool);
-    }
+  SVN_ERR(svn_io_file_close(fd, pool));
+
   return SVN_NO_ERROR;
 }
 
-                      
-/* Helper for svn_fs_fs__set_node_origin[s].  Takes a hash of
-   NODE_ORIGINS records -- all destined for the same NODE_ORIGINS_PATH
-   file -- and merges them with any records already present in that
-   file.  */
+/* Helper for svn_fs_fs__set_node_origin[s].  Exactly like
+   svn_fs_fs__set_node_origin, except that it throws an error if the
+   file can't be written. */
 static svn_error_t *
-set_node_origins_for_file(svn_fs_t *fs,
-                          const char *node_origins_path,
-                          apr_hash_t *node_origins,
-                          apr_pool_t *pool)
+set_node_origin(svn_fs_t *fs,
+                const char *node_id,
+                const svn_fs_id_t *node_rev_id,
+                apr_pool_t *pool)
 {
-  apr_file_t *fd;
-  const char *path_tmp;
-  svn_stream_t *stream;
-  apr_hash_t *old_origins;
+  apr_file_t *file;
+  svn_string_t *node_rev_id_string;
 
   SVN_ERR(svn_fs_fs__ensure_dir_exists(svn_path_join(fs->path,
                                                      PATH_NODE_ORIGINS_DIR,
                                                      pool),
                                        fs, pool));
 
-  /* Read the previously existing origins (if any), and merge our
-     updates with it. */
-  SVN_ERR(get_node_origins_from_file(fs, &old_origins, 
-                                     node_origins_path, pool));
-  if (old_origins)
-    node_origins = apr_hash_overlay(pool, old_origins, node_origins);
+  node_rev_id_string = svn_fs_fs__id_unparse(node_rev_id, pool);
 
-
-  /* ### 
-   * ### LA DEE DAH -- Did anybody else spot the race condition here? 
-   * ###
-   */
-
-
-  /* Create a temporary file, write out our hash, and close the file. */
-  SVN_ERR(svn_io_open_unique_file2(&fd, &path_tmp, node_origins_path, ".tmp", 
-                                   svn_io_file_del_none, pool));
-  stream = svn_stream_from_aprfile2(fd, FALSE, pool);
-  SVN_ERR(svn_hash_write2(node_origins, stream, SVN_HASH_TERMINATOR, pool));
-  SVN_ERR(svn_stream_close(stream));
-
-  /* Rename the temp file as the real destination */
-  SVN_ERR(svn_io_file_rename(path_tmp, node_origins_path, pool));
+  SVN_ERR(svn_io_file_open(&file, path_node_origin(fs, node_id, pool),
+                           APR_WRITE | APR_CREATE | APR_TRUNCATE
+                           | APR_BUFFERED, APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_io_file_write_full(file,
+                                 node_rev_id_string->data,
+                                 node_rev_id_string->len, NULL, pool));
+  SVN_ERR(svn_io_file_close(file, pool));
 
   return SVN_NO_ERROR;
 }
@@ -5828,11 +5786,7 @@ svn_fs_fs__set_node_origins(svn_fs_t *fs,
 {
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(pool);
-  apr_hash_t *hash_of_hashes = apr_hash_make(pool);
 
-  /* Split the hash of node IDs and origin node revision IDs into a
-     hash of hashes keyed on the filenames in which each of these bad
-     boys is supposed to be stored. */
   for (hi = apr_hash_first(pool, node_origins);
        hi != NULL;
        hi = apr_hash_next(hi))
@@ -5840,46 +5794,27 @@ svn_fs_fs__set_node_origins(svn_fs_t *fs,
       const void *key;
       void *val;
       const char *node_id;
-      svn_string_t *node_rev_id_str;
-      apr_hash_t *file_hash;
-      const char *filename;
-
-      apr_hash_this(hi, &key, NULL, &val);
-      node_id = key;
-      node_rev_id_str = svn_fs_fs__id_unparse(val, pool);
-      filename = path_node_origin(fs, node_id, pool);
-      file_hash = apr_hash_get(hash_of_hashes, filename, APR_HASH_KEY_STRING);
-      if (! file_hash)
-        {
-          file_hash = apr_hash_make(pool);
-          apr_hash_set(hash_of_hashes, filename, APR_HASH_KEY_STRING, 
-                       file_hash);
-        }
-      apr_hash_set(file_hash, node_id, APR_HASH_KEY_STRING, node_rev_id_str);
-    }
-
-  /* Now, iterate over the hash of hashes, calling 
-     set_node_origins_for_file on each set.  */
-  for (hi = apr_hash_first(pool, hash_of_hashes);
-       hi != NULL;
-       hi = apr_hash_next(hi))
-    {
-      const void *key;
-      void *val;
+      const svn_fs_id_t *node_rev_id;
       svn_error_t *err;
 
       svn_pool_clear(iterpool);
 
       apr_hash_this(hi, &key, NULL, &val);
-      err = set_node_origins_for_file(fs, key, val, iterpool);
+      node_id = key;
+      node_rev_id = val;
+
+      err = set_node_origin(fs, node_id, node_rev_id, iterpool);
       if (err && APR_STATUS_IS_EACCES(err->apr_err))
         {
+          /* It's just a cache; stop trying if I can't write. */
           svn_error_clear(err);
-          err = SVN_NO_ERROR;
+          err = NULL;
+          goto cleanup;
         }
       SVN_ERR(err);
     }
 
+ cleanup:
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
@@ -5890,14 +5825,7 @@ svn_fs_fs__set_node_origin(svn_fs_t *fs,
                            const svn_fs_id_t *node_rev_id,
                            apr_pool_t *pool)
 {
-  svn_error_t *err;
-  apr_hash_t *file_hash = apr_hash_make(pool);
-  const char *filename = path_node_origin(fs, node_id, pool);
-
-  apr_hash_set(file_hash, node_id, APR_HASH_KEY_STRING, 
-               svn_fs_fs__id_unparse(node_rev_id, pool));
-
-  err = set_node_origins_for_file(fs, filename, file_hash, pool);
+  svn_error_t *err = set_node_origin(fs, node_id, node_rev_id, pool);
   if (err && APR_STATUS_IS_EACCES(err->apr_err))
     {
       /* It's just a cache; stop trying if I can't write. */
