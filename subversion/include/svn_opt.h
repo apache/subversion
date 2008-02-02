@@ -484,9 +484,10 @@ svn_opt_resolve_revisions(svn_opt_revision_t *peg_rev,
  * If a path has the same name as a Subversion working copy
  * administrative directory, return SVN_ERR_RESERVED_FILENAME_SPECIFIED;
  * if multiple reserved paths are encountered, return a chain of
- * errors, all of which are SVN_ERR_RESERVED_FILENAME_SPECIFIED.
- * If this is the only type of error encountered, complete the
- * operation before returning the error(s).
+ * errors, all of which are SVN_ERR_RESERVED_FILENAME_SPECIFIED.  Do
+ * not return this type of error in a chain with any other type of
+ * error, and if this is the only type of error encountered, complete
+ * the operation before returning the error(s).
  *
  * @since New in 1.5.
  */
