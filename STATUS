@@ -26,6 +26,8 @@ Candidate changes:
      We shouldn't make upgraders-to-1.5 dump/load unnecessarily.
    Votes:
      +1: cmpilato
+     -1: glasser: The svnadmin-upgrade branch was great, r29139 accidentally
+         included unrelated changes to fs_fs.c
  
  * r29127, r29135, r29136, r29138
    Fix issue #3026: _svn and .svn are silently ignored as file arguments.
