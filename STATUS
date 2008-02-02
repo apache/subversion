@@ -20,11 +20,6 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
- * r29148
-   Fix a path canonicalization bug in ra_serf that broke WC entries files
-   Votes:
-     +1: cmpilato
-
  * r29139
    Introduce 'svnadmin upgrade' and backing APIs.
    Justification:
@@ -40,11 +35,6 @@ Candidate changes:
          (mentioned on dev@); I'll be happy to remove this vote once that's 
          fixed.)
 
- * r29111:
-   Fix blame_tests 10 and 11 over ra_dav by using standard usernames.
-   Votes:
-     +1: hwright
-
  * r29143:
    Fix duplicate revision detection in 'blame -g'.
    Votes:
@@ -56,3 +46,15 @@ Candidate changes:
      +1: epg
 
 Approved changes:
+
+ * r29148
+   Fix a path canonicalization bug in ra_serf that broke WC entries files
+   Votes:
+     +1: cmpilato
+     +1: epg
+
+ * r29111:
+   Fix blame_tests 10 and 11 over ra_dav by using standard usernames.
+   Votes:
+     +1: hwright
+     +1: epg
