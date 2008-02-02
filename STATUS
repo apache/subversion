@@ -31,13 +31,13 @@ Candidate changes:
      -1: glasser: The svnadmin-upgrade branch was great, r29139 accidentally
          included unrelated changes to fs_fs.c
  
- * r29127, r29135, r29136, r29138
+ * r29127, r29135, r29136, r29138, r29163, r29164
    Fix issue #3026: _svn and .svn are silently ignored as file arguments.
    Votes:
-     +1: kfogel (r29127 only)
+     +1: kfogel (r29127, r29163, r29164)
      -1: glasser (The docstring for the new public API has some problems
          (mentioned on dev@); I'll be happy to remove this vote once that's 
-         fixed.)
+         fixed.  [r29163 and r29164 might address these concerns. -kfogel])
 
  * r29143:
    Fix duplicate revision detection in 'blame -g'.
