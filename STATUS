@@ -46,9 +46,3 @@ Candidate changes:
      +1: epg
 
 Approved changes:
-
- * r29148
-   Fix a path canonicalization bug in ra_serf that broke WC entries files
-   Votes:
-     +1: cmpilato
-     +1: epg
