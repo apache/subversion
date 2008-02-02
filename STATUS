@@ -52,9 +52,3 @@ Approved changes:
    Votes:
      +1: cmpilato
      +1: epg
-
- * r29111:
-   Fix blame_tests 10 and 11 over ra_dav by using standard usernames.
-   Votes:
-     +1: hwright
-     +1: epg
