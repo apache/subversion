@@ -50,4 +50,9 @@ Candidate changes:
    Votes:
      +1: hwright
 
+ * r29155:
+   Allow packagers to build some parts of svn against installed svn libs.
+   Votes:
+     +1: epg
+
 Approved changes:
