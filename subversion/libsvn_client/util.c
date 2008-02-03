@@ -194,7 +194,7 @@ svn_client__path_relative_to_root(const char **rel_path,
      WC entry, we'll ask the RA layer.  */
   if (repos_root == NULL)
     {
-      if ((err = svn_ra_get_repos_root(ra_session, &repos_root, pool)))
+      if ((err = svn_ra_get_repos_root2(ra_session, &repos_root, pool)))
         goto cleanup;
     }
 
@@ -284,7 +284,7 @@ svn_client__get_repos_root(const char **repos_root,
                                                   pool)))
         goto cleanup;
 
-      if ((err = svn_ra_get_repos_root(ra_session, repos_root, pool)))
+      if ((err = svn_ra_get_repos_root2(ra_session, repos_root, pool)))
         goto cleanup;
     }
 
