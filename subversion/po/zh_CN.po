@@ -35,8 +35,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.5.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2008-01-29 10:26+0800\n"
-"PO-Revision-Date: 2008-01-29 10:25+0800\n"
+"POT-Creation-Date: 2008-02-03 16:54+0800\n"
+"PO-Revision-Date: 2008-02-03 17:22+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1262,8 +1262,8 @@ msgstr "%s\t（工作副本）"
 msgid "Cannot display: file marked as a binary type.%s"
 msgstr "无法显示: 文件标记为二进制类型。%s"
 
-#: ../libsvn_client/diff.c:893 ../libsvn_client/merge.c:3596
-#: ../libsvn_client/merge.c:4821
+#: ../libsvn_client/diff.c:893 ../libsvn_client/merge.c:3804
+#: ../libsvn_client/merge.c:5029
 msgid "Not all required revisions are specified"
 msgstr "没有全部提供需要的版本"
 
@@ -1368,9 +1368,9 @@ msgstr "该版本没有 URL “%s”"
 msgid "No common parent found, unable to operate on disjoint arguments"
 msgstr "没有找到公共父节点，不能在分离的参数上操作"
 
-#: ../libsvn_client/locking_commands.c:261 ../libsvn_client/merge.c:4838
-#: ../libsvn_client/merge.c:4844 ../libsvn_client/merge.c:5404
-#: ../libsvn_client/merge.c:5560 ../libsvn_client/ra.c:389
+#: ../libsvn_client/locking_commands.c:261 ../libsvn_client/merge.c:5046
+#: ../libsvn_client/merge.c:5052 ../libsvn_client/merge.c:5612
+#: ../libsvn_client/merge.c:5768 ../libsvn_client/ra.c:389
 #: ../libsvn_client/ra.c:426 ../libsvn_client/ra.c:629
 #, c-format
 msgid "'%s' has no URL"
@@ -1431,21 +1431,21 @@ msgstr "不支持存取混合方案 (“%s”与“%s”)"
 #. xgettext: the '.working', '.merge-left.r%ld' and
 #. '.merge-right.r%ld' strings are used to tag onto a file
 #. name in case of a merge conflict
-#: ../libsvn_client/merge.c:539
+#: ../libsvn_client/merge.c:759
 msgid ".working"
 msgstr ".working"
 
-#: ../libsvn_client/merge.c:541
+#: ../libsvn_client/merge.c:761
 #, c-format
 msgid ".merge-left.r%ld"
 msgstr ".merge-left.r%ld"
 
-#: ../libsvn_client/merge.c:544
+#: ../libsvn_client/merge.c:764
 #, c-format
 msgid ".merge-right.r%ld"
 msgstr ".merge-right.r%ld"
 
-#: ../libsvn_client/merge.c:2028
+#: ../libsvn_client/merge.c:2248
 #, c-format
 msgid ""
 "One or more conflicts were produced while merging r%ld:%ld into\n"
@@ -1456,41 +1456,41 @@ msgstr ""
 "当合并 r%ld:%ld 到 “%s” 时出现了一个或更多的冲突\n"
 "请解决所有冲突后，再次运行合并，处理剩余的未合并版本"
 
-#: ../libsvn_client/merge.c:4489
+#: ../libsvn_client/merge.c:4697
 msgid "Use of two URLs is not compatible with mergeinfo modification"
 msgstr "使用两个 URL 与合并信息修改不兼容"
 
-#: ../libsvn_client/merge.c:5067
+#: ../libsvn_client/merge.c:5275
 msgid "Cannot reintegrate into a working copy with a switched subtree"
 msgstr "不能重新集成到包含已经切换子目录的工作副本"
 
-#: ../libsvn_client/merge.c:5072
+#: ../libsvn_client/merge.c:5280
 msgid "Cannot reintegrate into a working copy not entirely at infinite depth"
 msgstr "不能重新集成到非全部无限制深度的工作副本"
 
-#: ../libsvn_client/merge.c:5077
+#: ../libsvn_client/merge.c:5285
 msgid "Cannot reintegrate into a working copy that has local modifications"
 msgstr "不能重新集成到有本地修改的工作副本"
 
-#: ../libsvn_client/merge.c:5083
+#: ../libsvn_client/merge.c:5291
 msgid "Cannot determine revision of working copy"
 msgstr "不能确定工作副本的版本"
 
-#: ../libsvn_client/merge.c:5087
+#: ../libsvn_client/merge.c:5295
 msgid "Cannot reintegrate into mixed-revision working copy; try updating first"
 msgstr "不能重新集成到有混合版本的工作副本；请先更新"
 
-#: ../libsvn_client/merge.c:5154
+#: ../libsvn_client/merge.c:5362
 #, c-format
 msgid "At least one revision (r%ld) not yet merged from '%s'"
 msgstr "至少有一个版本(r%ld)没有自“%s”合并"
 
-#: ../libsvn_client/merge.c:5298 ../libsvn_client/merge.c:5463
+#: ../libsvn_client/merge.c:5506 ../libsvn_client/merge.c:5671
 #, c-format
 msgid "'%s@%ld' must be ancestrally related to '%s@%ld'"
 msgstr "“%s@%ld”必须与“%s@%ld”有祖先关系"
 
-#: ../libsvn_client/merge.c:5422
+#: ../libsvn_client/merge.c:5630
 #, c-format
 msgid "'%s' must be from the same repository as '%s'"
 msgstr "“%s”必须与“%s”在同一个版本库中"
@@ -1742,15 +1742,15 @@ msgstr "正在创建修改"
 msgid "deleting changes"
 msgstr "正在删除修改"
 
-#: ../libsvn_fs_base/bdb/changes-table.c:145 ../libsvn_fs_fs/fs_fs.c:2902
+#: ../libsvn_fs_base/bdb/changes-table.c:145 ../libsvn_fs_fs/fs_fs.c:2895
 msgid "Missing required node revision ID"
 msgstr "缺少必须的节点版本 ID"
 
-#: ../libsvn_fs_base/bdb/changes-table.c:156 ../libsvn_fs_fs/fs_fs.c:2912
+#: ../libsvn_fs_base/bdb/changes-table.c:156 ../libsvn_fs_fs/fs_fs.c:2905
 msgid "Invalid change ordering: new node revision ID without delete"
 msgstr "无效的改变顺序: 有新的节点版本 ID 而没删除"
 
-#: ../libsvn_fs_base/bdb/changes-table.c:166 ../libsvn_fs_fs/fs_fs.c:2923
+#: ../libsvn_fs_base/bdb/changes-table.c:166 ../libsvn_fs_fs/fs_fs.c:2916
 msgid "Invalid change ordering: non-add change on deleted path"
 msgstr "无效的改变顺序: 对删除路径进行非增加的改变"
 
@@ -1826,7 +1826,7 @@ msgstr "正在从“nodes”表删除条目"
 msgid "reading node revision"
 msgstr "正在读取节点版本"
 
-#: ../libsvn_fs_base/bdb/nodes-table.c:250
+#: ../libsvn_fs_base/bdb/nodes-table.c:251
 msgid "storing node revision"
 msgstr "正在存储节点版本"
 
@@ -2004,17 +2004,17 @@ msgstr "试图打开不存在的子节点“%s”"
 msgid "Attempted to open node with an illegal name '%s'"
 msgstr "试图以非法名字“%s”打开节点"
 
-#: ../libsvn_fs_base/dag.c:1543
+#: ../libsvn_fs_base/dag.c:1546
 #, c-format
 msgid "Attempted merge tracking info change on immutable node"
 msgstr "试图在不变节点合并跟踪信息的修改"
 
-#: ../libsvn_fs_base/dag.c:1580 ../libsvn_fs_base/dag.c:1614
+#: ../libsvn_fs_base/dag.c:1586
 #, c-format
 msgid "Attempted mergeinfo count change on immutable node"
 msgstr "试图在不变节点修改合并信息计数"
 
-#: ../libsvn_fs_base/dag.c:1586 ../libsvn_fs_base/dag.c:1626
+#: ../libsvn_fs_base/dag.c:1598
 #, c-format
 msgid "Invalid value (%%%s) for node revision mergeinfo count"
 msgstr "节点合并信息计数的值非法(%%%s)"
@@ -2094,22 +2094,27 @@ msgstr "不正确的数据库版本: 用 %d.%d.%d 版本编译，正在运行版
 msgid "Berkeley DB error for filesystem '%s' while closing environment:\n"
 msgstr "关闭文件系统“%s”的BDB环境句柄时出错: \n"
 
-#: ../libsvn_fs_base/fs.c:529
+#: ../libsvn_fs_base/fs.c:532
 #, c-format
 msgid "Berkeley DB error for filesystem '%s' while creating environment:\n"
 msgstr "创建文件系统“%s”的BDB环境句柄时出错: \n"
 
-#: ../libsvn_fs_base/fs.c:535
+#: ../libsvn_fs_base/fs.c:538
 #, c-format
 msgid "Berkeley DB error for filesystem '%s' while opening environment:\n"
 msgstr "打开文件系统“%s”的BDB环境句柄时出错: \n"
 
-#: ../libsvn_fs_base/fs.c:670
+#: ../libsvn_fs_base/fs.c:677
+#, c-format
+msgid "The '%s' feature requires version %d of the filesystem schema; filesystem '%s' uses only version %d"
+msgstr "“%s”特性需要文件系统方案版本 %d；文件系统“%s”版本仅为 %d"
+
+#: ../libsvn_fs_base/fs.c:699
 #, c-format
 msgid "Expected FS format '%d'; found format '%d'"
 msgstr "期望文件系统格式“%d”；发现格式“%d”"
 
-#: ../libsvn_fs_base/fs.c:1117
+#: ../libsvn_fs_base/fs.c:1147
 msgid ""
 "Error copying logfile;  the DB_LOG_AUTOREMOVE feature\n"
 "may be interfering with the hotcopy algorithm.  If\n"
@@ -2119,7 +2124,7 @@ msgstr ""
 "复制日志文件出错；DB_LOG_AUTOREMOVE 特性可能妨碍热复制。如果问题一直存在，请\n"
 "尝试在 DB_CONFIG 中禁用此特性。"
 
-#: ../libsvn_fs_base/fs.c:1136
+#: ../libsvn_fs_base/fs.c:1166
 msgid ""
 "Error running catastrophic recovery on hotcopy;  the\n"
 "DB_LOG_AUTOREMOVE feature may be interfering with the\n"
@@ -2129,11 +2134,11 @@ msgstr ""
 "热复制时执行灾难恢复出错；DB_LOG_AUTOREMOVE 特性可能妨碍热复制。如果问题一直\n"
 "存在，请尝试在 DB_CONFIG 中禁用此特性。"
 
-#: ../libsvn_fs_base/fs.c:1183
+#: ../libsvn_fs_base/fs.c:1213
 msgid "Module for working with a Berkeley DB repository."
 msgstr "模块只能操作BDB版本库。"
 
-#: ../libsvn_fs_base/fs.c:1217
+#: ../libsvn_fs_base/fs.c:1247
 #, c-format
 msgid "Unsupported FS loader version (%d) for bdb"
 msgstr "不支持的BDB之FS加载器版本 (%d)"
@@ -2246,53 +2251,53 @@ msgstr "事务终止，但清除失败"
 msgid "Failure opening '%s'"
 msgstr "打开“%s”失败"
 
-#: ../libsvn_fs_base/tree.c:1393 ../libsvn_fs_fs/tree.c:1153
+#: ../libsvn_fs_base/tree.c:1399 ../libsvn_fs_fs/tree.c:1153
 msgid "Cannot compare property value between two different filesystems"
 msgstr "不能在两个不同的文件系统之间比较属性值"
 
-#: ../libsvn_fs_base/tree.c:1720
+#: ../libsvn_fs_base/tree.c:1726
 msgid "Corrupt DB: faulty predecessor count"
 msgstr "损坏的数据库: 先前的数目不完整"
 
-#: ../libsvn_fs_base/tree.c:1775 ../libsvn_fs_fs/tree.c:1189
+#: ../libsvn_fs_base/tree.c:1781 ../libsvn_fs_fs/tree.c:1189
 #, c-format
 msgid "Unexpected immutable node at '%s'"
 msgstr "“%s”有意外的不变节点"
 
-#: ../libsvn_fs_base/tree.c:1796 ../libsvn_fs_fs/tree.c:1212
+#: ../libsvn_fs_base/tree.c:1802 ../libsvn_fs_fs/tree.c:1212
 #, c-format
 msgid "Conflict at '%s'"
 msgstr "在“%s”冲突"
 
-#: ../libsvn_fs_base/tree.c:1848 ../libsvn_fs_base/tree.c:2594
+#: ../libsvn_fs_base/tree.c:1855 ../libsvn_fs_base/tree.c:2607
 #: ../libsvn_fs_fs/tree.c:1263 ../libsvn_fs_fs/tree.c:1789
 msgid "Bad merge; ancestor, source, and target not all in same fs"
 msgstr "错误的合并；初始，原始，目标不在同一个文件系统"
 
-#: ../libsvn_fs_base/tree.c:1864 ../libsvn_fs_fs/tree.c:1279
+#: ../libsvn_fs_base/tree.c:1871 ../libsvn_fs_fs/tree.c:1279
 #, c-format
 msgid "Bad merge; target '%s' has id '%s', same as ancestor"
 msgstr "错误的合并: 目标“%s”拥有标识“%s”，与初始相同"
 
-#: ../libsvn_fs_base/tree.c:2401
+#: ../libsvn_fs_base/tree.c:2414
 #, c-format
 msgid "Transaction '%s' out-of-date with respect to revision '%s'"
 msgstr "事务 “%s” 过时，对于版本 “%s” "
 
-#: ../libsvn_fs_base/tree.c:2779 ../libsvn_fs_fs/tree.c:1929
+#: ../libsvn_fs_base/tree.c:2792 ../libsvn_fs_fs/tree.c:1929
 msgid "The root directory cannot be deleted"
 msgstr "不能删除根目录"
 
-#: ../libsvn_fs_base/tree.c:2990 ../libsvn_fs_fs/tree.c:2010
+#: ../libsvn_fs_base/tree.c:3013 ../libsvn_fs_fs/tree.c:2010
 #, c-format
 msgid "Cannot copy between two different filesystems ('%s' and '%s')"
 msgstr "不能在两个不同的文件系统（“%s”和“%s”）之间复制"
 
-#: ../libsvn_fs_base/tree.c:2999 ../libsvn_fs_fs/tree.c:2016
+#: ../libsvn_fs_base/tree.c:3022 ../libsvn_fs_fs/tree.c:2016
 msgid "Copy from mutable tree not currently supported"
 msgstr "当前不支持从可变的树复制"
 
-#: ../libsvn_fs_base/tree.c:3496 ../libsvn_fs_fs/tree.c:2461
+#: ../libsvn_fs_base/tree.c:3519 ../libsvn_fs_fs/tree.c:2461
 #, c-format
 msgid ""
 "Base checksum mismatch on '%s':\n"
@@ -2303,23 +2308,23 @@ msgstr ""
 "  期望: %s\n"
 "  实际: %s\n"
 
-#: ../libsvn_fs_base/tree.c:3751 ../libsvn_fs_fs/tree.c:2697
+#: ../libsvn_fs_base/tree.c:3774 ../libsvn_fs_fs/tree.c:2697
 msgid "Cannot compare file contents between two different filesystems"
 msgstr "不能在两个不同的文件系统间比较文件内容"
 
-#: ../libsvn_fs_base/tree.c:3760 ../libsvn_fs_base/tree.c:3765
+#: ../libsvn_fs_base/tree.c:3783 ../libsvn_fs_base/tree.c:3788
 #: ../libsvn_fs_fs/tree.c:2706 ../libsvn_fs_fs/tree.c:2711
 #: ../libsvn_ra/compat.c:677
 #, c-format
 msgid "'%s' is not a file"
 msgstr "“%s”不是一个文件"
 
-#: ../libsvn_fs_base/tree.c:4767 ../libsvn_fs_base/tree.c:4955
+#: ../libsvn_fs_base/tree.c:4792 ../libsvn_fs_base/tree.c:4980
 #, c-format
 msgid "Node-revision '%s' claims to have mergeinfo but doesn't"
 msgstr "节点版本“%s”声称自己有合并信息，实际上却没有"
 
-#: ../libsvn_fs_base/tree.c:4791
+#: ../libsvn_fs_base/tree.c:4816
 #, c-format
 msgid "Node-revision '%s' claims to sit atop a tree containing mergeinfo but is not a directory"
 msgstr "节点版本“%s”声称自己是包含合并信息的树顶，实际上却不是目录"
@@ -2388,164 +2393,164 @@ msgstr "模块与文本文件(FSFS)版本库一起工作。"
 msgid "Unsupported FS loader version (%d) for fsfs"
 msgstr "不支持的FSFS之FS加载器版本 (%d)"
 
-#: ../libsvn_fs_fs/fs_fs.c:415
+#: ../libsvn_fs_fs/fs_fs.c:408
 #, c-format
 msgid "Can't grab FSFS txn list mutex"
 msgstr "不能获取文件系统事务列表互斥体"
 
-#: ../libsvn_fs_fs/fs_fs.c:423
+#: ../libsvn_fs_fs/fs_fs.c:416
 #, c-format
 msgid "Can't ungrab FSFS txn list mutex"
 msgstr "不能释放文件系统事务列表互斥体"
 
-#: ../libsvn_fs_fs/fs_fs.c:476
+#: ../libsvn_fs_fs/fs_fs.c:469
 #, c-format
 msgid "Can't grab FSFS mutex for '%s'"
 msgstr "无法为 “%s” 获取 FSFS 互斥体"
 
-#: ../libsvn_fs_fs/fs_fs.c:491
+#: ../libsvn_fs_fs/fs_fs.c:484
 #, c-format
 msgid "Can't ungrab FSFS mutex for '%s'"
 msgstr "不能为 “%s” 释放 FSFS 互斥体"
 
-#: ../libsvn_fs_fs/fs_fs.c:562
+#: ../libsvn_fs_fs/fs_fs.c:555
 #, c-format
 msgid "Can't unlock unknown transaction '%s'"
 msgstr "不能解锁未知事务“%s”"
 
-#: ../libsvn_fs_fs/fs_fs.c:566
+#: ../libsvn_fs_fs/fs_fs.c:559
 #, c-format
 msgid "Can't unlock nonlocked transaction '%s'"
 msgstr "不能解锁未锁事务“%s”"
 
-#: ../libsvn_fs_fs/fs_fs.c:573
+#: ../libsvn_fs_fs/fs_fs.c:566
 #, c-format
 msgid "Can't unlock prototype revision lockfile for transaction '%s'"
 msgstr "不能为事务“%s”解锁原型版本锁文件"
 
-#: ../libsvn_fs_fs/fs_fs.c:579
+#: ../libsvn_fs_fs/fs_fs.c:572
 #, c-format
 msgid "Can't close prototype revision lockfile for transaction '%s'"
 msgstr "不能为事务“%s”关闭原型版本锁文件"
 
-#: ../libsvn_fs_fs/fs_fs.c:641
+#: ../libsvn_fs_fs/fs_fs.c:634
 #, c-format
 msgid "Cannot write to the prototype revision file of transaction '%s' because a previous representation is currently being written by this process"
 msgstr "因为当前进程正在写入以前版本，所以不能为事务 '%s' 写入原型版本文件。"
 
-#: ../libsvn_fs_fs/fs_fs.c:677
+#: ../libsvn_fs_fs/fs_fs.c:670
 #, c-format
 msgid "Cannot write to the prototype revision file of transaction '%s' because a previous representation is currently being written by another process"
 msgstr "因为其它进程正在写入以前版本，所以不能为事务 '%s' 写入原型版本文件。"
 
-#: ../libsvn_fs_fs/fs_fs.c:684 ../libsvn_subr/io.c:1545
+#: ../libsvn_fs_fs/fs_fs.c:677 ../libsvn_subr/io.c:1545
 #, c-format
 msgid "Can't get exclusive lock on file '%s'"
 msgstr "不能获取文件“%s”的排它锁"
 
-#: ../libsvn_fs_fs/fs_fs.c:796
+#: ../libsvn_fs_fs/fs_fs.c:789
 #, c-format
 msgid "Format file '%s' contains an unexpected non-digit"
 msgstr "格式文件“%s”包含一个意外的非数字字符"
 
-#: ../libsvn_fs_fs/fs_fs.c:844
+#: ../libsvn_fs_fs/fs_fs.c:837
 #, c-format
 msgid "Can't read first line of format file '%s'"
 msgstr "不能读取格式文件“%s”的首行"
 
-#: ../libsvn_fs_fs/fs_fs.c:888
+#: ../libsvn_fs_fs/fs_fs.c:881
 #, c-format
 msgid "'%s' contains invalid filesystem format option '%s'"
 msgstr "“%s”包含非法文件系统格式选项“%s”"
 
-#: ../libsvn_fs_fs/fs_fs.c:949
+#: ../libsvn_fs_fs/fs_fs.c:942
 #, c-format
 msgid "Expected FS format between '1' and '%d'; found format '%d'"
 msgstr "期望文件系统格式在“1”到“%d”之间；发现格式“%d”"
 
-#: ../libsvn_fs_fs/fs_fs.c:1272 ../libsvn_fs_fs/fs_fs.c:1286
+#: ../libsvn_fs_fs/fs_fs.c:1265 ../libsvn_fs_fs/fs_fs.c:1279
 msgid "Found malformed header in revision file"
 msgstr "在版本文件中找到非法文件头"
 
-#: ../libsvn_fs_fs/fs_fs.c:1388 ../libsvn_fs_fs/fs_fs.c:1402
-#: ../libsvn_fs_fs/fs_fs.c:1409 ../libsvn_fs_fs/fs_fs.c:1416
-#: ../libsvn_fs_fs/fs_fs.c:1424 ../libsvn_fs_fs/fs_fs.c:1432
+#: ../libsvn_fs_fs/fs_fs.c:1381 ../libsvn_fs_fs/fs_fs.c:1395
+#: ../libsvn_fs_fs/fs_fs.c:1402 ../libsvn_fs_fs/fs_fs.c:1409
+#: ../libsvn_fs_fs/fs_fs.c:1417 ../libsvn_fs_fs/fs_fs.c:1425
 msgid "Malformed text rep offset line in node-rev"
 msgstr "node-rev 中有非法的文本版本偏移行"
 
-#: ../libsvn_fs_fs/fs_fs.c:1501
+#: ../libsvn_fs_fs/fs_fs.c:1494
 msgid "Missing kind field in node-rev"
 msgstr "node-rev 中没有 kind"
 
-#: ../libsvn_fs_fs/fs_fs.c:1532
+#: ../libsvn_fs_fs/fs_fs.c:1525
 msgid "Missing cpath in node-rev"
 msgstr "node-rev 中没有 cpath"
 
-#: ../libsvn_fs_fs/fs_fs.c:1559 ../libsvn_fs_fs/fs_fs.c:1565
+#: ../libsvn_fs_fs/fs_fs.c:1552 ../libsvn_fs_fs/fs_fs.c:1558
 msgid "Malformed copyroot line in node-rev"
 msgstr "node-rev 中的 copyroot 行非法"
 
-#: ../libsvn_fs_fs/fs_fs.c:1583 ../libsvn_fs_fs/fs_fs.c:1589
+#: ../libsvn_fs_fs/fs_fs.c:1576 ../libsvn_fs_fs/fs_fs.c:1582
 msgid "Malformed copyfrom line in node-rev"
 msgstr "node-rev 中的 copyfrom 行非法"
 
-#: ../libsvn_fs_fs/fs_fs.c:1714 ../libsvn_fs_fs/fs_fs.c:4378
+#: ../libsvn_fs_fs/fs_fs.c:1707 ../libsvn_fs_fs/fs_fs.c:4300
 msgid "Attempted to write to non-transaction"
 msgstr "试图写至非事务"
 
-#: ../libsvn_fs_fs/fs_fs.c:1798
+#: ../libsvn_fs_fs/fs_fs.c:1791
 msgid "Malformed representation header"
 msgstr "非法的修订版头"
 
-#: ../libsvn_fs_fs/fs_fs.c:1822
+#: ../libsvn_fs_fs/fs_fs.c:1815
 msgid "Missing node-id in node-rev"
 msgstr "node-rev 中没有 node-id"
 
-#: ../libsvn_fs_fs/fs_fs.c:1828
+#: ../libsvn_fs_fs/fs_fs.c:1821
 msgid "Corrupt node-id in node-rev"
 msgstr "node-rev 中的 node-id 损坏"
 
-#: ../libsvn_fs_fs/fs_fs.c:1873
+#: ../libsvn_fs_fs/fs_fs.c:1866
 #, c-format
 msgid "Revision file lacks trailing newline"
 msgstr "版本文件缺少结尾换行"
 
-#: ../libsvn_fs_fs/fs_fs.c:1885
+#: ../libsvn_fs_fs/fs_fs.c:1878
 #, c-format
 msgid "Final line in revision file longer than 64 characters"
 msgstr "版本文件的最后一行大于 64 个字符"
 
-#: ../libsvn_fs_fs/fs_fs.c:1900
+#: ../libsvn_fs_fs/fs_fs.c:1893
 msgid "Final line in revision file missing space"
 msgstr "版本文件的最后一行缺少空白字符"
 
-#: ../libsvn_fs_fs/fs_fs.c:1943 ../libsvn_fs_fs/fs_fs.c:2027
+#: ../libsvn_fs_fs/fs_fs.c:1936 ../libsvn_fs_fs/fs_fs.c:2020
 #: ../libsvn_repos/log.c:1183 ../libsvn_repos/log.c:1187
 #, c-format
 msgid "No such revision %ld"
 msgstr "没有版本 %ld"
 
-#: ../libsvn_fs_fs/fs_fs.c:2100
+#: ../libsvn_fs_fs/fs_fs.c:2093
 msgid "Malformed svndiff data in representation"
 msgstr "修订版的svndiff 数据非法"
 
-#: ../libsvn_fs_fs/fs_fs.c:2243 ../libsvn_fs_fs/fs_fs.c:2256
+#: ../libsvn_fs_fs/fs_fs.c:2236 ../libsvn_fs_fs/fs_fs.c:2249
 msgid "Reading one svndiff window read beyond the end of the representation"
 msgstr "读svndiff窗口时超出了结尾"
 
-#: ../libsvn_fs_fs/fs_fs.c:2392
+#: ../libsvn_fs_fs/fs_fs.c:2385
 msgid "svndiff data requested non-existent source"
 msgstr "svndiff 数据请求不存在的来源"
 
-#: ../libsvn_fs_fs/fs_fs.c:2398
+#: ../libsvn_fs_fs/fs_fs.c:2391
 msgid "svndiff requested position beyond end of stream"
 msgstr "svndiff 请求的位置超出了流的结尾"
 
-#: ../libsvn_fs_fs/fs_fs.c:2421 ../libsvn_fs_fs/fs_fs.c:2438
+#: ../libsvn_fs_fs/fs_fs.c:2414 ../libsvn_fs_fs/fs_fs.c:2431
 msgid "svndiff window length is corrupt"
 msgstr "svndiff 的窗体长度已损坏"
 
-#: ../libsvn_fs_fs/fs_fs.c:2486
+#: ../libsvn_fs_fs/fs_fs.c:2479
 #, c-format
 msgid ""
 "Checksum mismatch while reading representation:\n"
@@ -2556,84 +2561,84 @@ msgstr ""
 "       期望:  %s\n"
 "       实际:  %s\n"
 
-#: ../libsvn_fs_fs/fs_fs.c:2710 ../libsvn_fs_fs/fs_fs.c:2723
-#: ../libsvn_fs_fs/fs_fs.c:2729 ../libsvn_fs_fs/fs_fs.c:5480
-#: ../libsvn_fs_fs/fs_fs.c:5489 ../libsvn_fs_fs/fs_fs.c:5495
+#: ../libsvn_fs_fs/fs_fs.c:2703 ../libsvn_fs_fs/fs_fs.c:2716
+#: ../libsvn_fs_fs/fs_fs.c:2722 ../libsvn_fs_fs/fs_fs.c:5399
+#: ../libsvn_fs_fs/fs_fs.c:5408 ../libsvn_fs_fs/fs_fs.c:5414
 msgid "Directory entry corrupt"
 msgstr "目录条目损坏"
 
-#: ../libsvn_fs_fs/fs_fs.c:3068 ../libsvn_fs_fs/fs_fs.c:3076
-#: ../libsvn_fs_fs/fs_fs.c:3108 ../libsvn_fs_fs/fs_fs.c:3128
-#: ../libsvn_fs_fs/fs_fs.c:3162 ../libsvn_fs_fs/fs_fs.c:3167
+#: ../libsvn_fs_fs/fs_fs.c:3061 ../libsvn_fs_fs/fs_fs.c:3069
+#: ../libsvn_fs_fs/fs_fs.c:3101 ../libsvn_fs_fs/fs_fs.c:3121
+#: ../libsvn_fs_fs/fs_fs.c:3155 ../libsvn_fs_fs/fs_fs.c:3160
 msgid "Invalid changes line in rev-file"
 msgstr "rev-file 中有非法修改行"
 
-#: ../libsvn_fs_fs/fs_fs.c:3101
+#: ../libsvn_fs_fs/fs_fs.c:3094
 msgid "Invalid change kind in rev file"
 msgstr "rev 文件中有无效的改变种类"
 
-#: ../libsvn_fs_fs/fs_fs.c:3121
+#: ../libsvn_fs_fs/fs_fs.c:3114
 msgid "Invalid text-mod flag in rev-file"
 msgstr "rev-file 中有无效的 text-mod 标志"
 
-#: ../libsvn_fs_fs/fs_fs.c:3141
+#: ../libsvn_fs_fs/fs_fs.c:3134
 msgid "Invalid prop-mod flag in rev-file"
 msgstr "rev-file 中有无效的 prop-mod 标志"
 
-#: ../libsvn_fs_fs/fs_fs.c:3325
+#: ../libsvn_fs_fs/fs_fs.c:3318
 msgid "Copying from transactions not allowed"
 msgstr "不允许从事务复制"
 
-#: ../libsvn_fs_fs/fs_fs.c:3493
+#: ../libsvn_fs_fs/fs_fs.c:3486
 #, c-format
 msgid "Unable to create transaction directory in '%s' for revision %ld"
 msgstr "无法在“%s”中为版本 %ld 创建事务目录"
 
-#: ../libsvn_fs_fs/fs_fs.c:3780 ../libsvn_fs_fs/fs_fs.c:3787
+#: ../libsvn_fs_fs/fs_fs.c:3702 ../libsvn_fs_fs/fs_fs.c:3709
 msgid "next-id file corrupt"
 msgstr "next-id 文件损坏"
 
-#: ../libsvn_fs_fs/fs_fs.c:3904
+#: ../libsvn_fs_fs/fs_fs.c:3826
 msgid "Transaction cleanup failed"
 msgstr "事务清理失败"
 
-#: ../libsvn_fs_fs/fs_fs.c:4072
+#: ../libsvn_fs_fs/fs_fs.c:3994
 msgid "Invalid change type"
 msgstr "无效的修改类型"
 
-#: ../libsvn_fs_fs/fs_fs.c:4397
+#: ../libsvn_fs_fs/fs_fs.c:4319
 msgid "Can't set text contents of a directory"
 msgstr "无法设定目录的文本内容"
 
-#: ../libsvn_fs_fs/fs_fs.c:4481 ../libsvn_fs_fs/fs_fs.c:4486
-#: ../libsvn_fs_fs/fs_fs.c:4493
+#: ../libsvn_fs_fs/fs_fs.c:4403 ../libsvn_fs_fs/fs_fs.c:4408
+#: ../libsvn_fs_fs/fs_fs.c:4415
 msgid "Corrupt current file"
 msgstr "当前文件损坏"
 
-#: ../libsvn_fs_fs/fs_fs.c:4793 ../libsvn_subr/io.c:2832 ../svn/util.c:378
+#: ../libsvn_fs_fs/fs_fs.c:4715 ../libsvn_subr/io.c:2832 ../svn/util.c:378
 #: ../svn/util.c:393 ../svn/util.c:417
 #, c-format
 msgid "Can't stat '%s'"
 msgstr "不能取得“%s”的状态"
 
-#: ../libsvn_fs_fs/fs_fs.c:4797
+#: ../libsvn_fs_fs/fs_fs.c:4719
 #, c-format
 msgid "Can't chmod '%s'"
 msgstr "无法修改“%s”的存取权限"
 
-#: ../libsvn_fs_fs/fs_fs.c:5023
+#: ../libsvn_fs_fs/fs_fs.c:4944
 msgid "Transaction out of date"
 msgstr "事务过时"
 
-#: ../libsvn_fs_fs/fs_fs.c:5421
+#: ../libsvn_fs_fs/fs_fs.c:5340
 msgid "Recovery encountered a non-directory node"
 msgstr "修复时遇到非目录节点"
 
-#: ../libsvn_fs_fs/fs_fs.c:5443
+#: ../libsvn_fs_fs/fs_fs.c:5362
 msgid "Recovery encountered a deltified directory representation"
 msgstr "修复时遇到差异目录表示"
 
-#: ../libsvn_fs_fs/fs_fs.c:5851
+#: ../libsvn_fs_fs/fs_fs.c:5770
 msgid "No such transaction"
 msgstr "无此事务"
 
