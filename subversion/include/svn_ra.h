@@ -1378,7 +1378,7 @@ svn_ra_stat(svn_ra_session_t *session,
 /**
  * Set @a *uuid to the repository's UUID, allocated in @a pool.
  *
- * @since New in 1.5.
+ * @since New in 1.6.
  */
 svn_error_t *
 svn_ra_get_uuid2(svn_ra_session_t *session,
@@ -1389,7 +1389,7 @@ svn_ra_get_uuid2(svn_ra_session_t *session,
  * Similar to svn_ra_get_uuid2(), but returns the value allocated in
  * @a session's pool.
  *
- * @deprecated Provided for backward compatibility with the 1.4 API.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  * @since New in 1.2.
  */
 svn_error_t *
@@ -1402,7 +1402,7 @@ svn_ra_get_uuid(svn_ra_session_t *session,
  * The value will not include a trailing '/'.  The returned URL is
  * guaranteed to be a prefix of the @a session's URL.
  *
- * @since New in 1.5.
+ * @since New in 1.6.
  */
 svn_error_t *
 svn_ra_get_repos_root2(svn_ra_session_t *session,
@@ -1414,7 +1414,7 @@ svn_ra_get_repos_root2(svn_ra_session_t *session,
  * Similar to svn_ra_get_repos_root2(), but returns the value
  * allocated in @a session's pool.
  *
- * @deprecated Provided for backward compatibility with the 1.4 API.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  * @since New in 1.2.
  */
 svn_error_t *
