@@ -1393,7 +1393,7 @@ svn_ra_get_uuid2(svn_ra_session_t *session,
  * @since New in 1.2.
  */
 svn_error_t *
-svn_ra_get_uuidX(svn_ra_session_t *session,
+svn_ra_get_uuid(svn_ra_session_t *session,
                 const char **uuid,
                 apr_pool_t *pool);
 
@@ -1418,7 +1418,7 @@ svn_ra_get_repos_root2(svn_ra_session_t *session,
  * @since New in 1.2.
  */
 svn_error_t *
-svn_ra_get_repos_rootX(svn_ra_session_t *session,
+svn_ra_get_repos_root(svn_ra_session_t *session,
                       const char **url,
                       apr_pool_t *pool);
 
