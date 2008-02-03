@@ -35,8 +35,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.4.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-12-21 10:06+0800\n"
-"PO-Revision-Date: 2007-12-09 22:20+0800\n"
+"POT-Creation-Date: 2008-02-03 16:54+0800\n"
+"PO-Revision-Date: 2008-02-03 16:24+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1259,7 +1259,7 @@ msgstr "不能读“%s”的条目"
 #: ../libsvn_client/info.c:389
 #, c-format
 msgid "Server does not support retrieving information about the repository root"
-msgstr "服务器不支持获取版本库根的信息"
+msgstr "服务器不支持取得版本库根的信息"
 
 #: ../libsvn_client/info.c:396 ../libsvn_client/info.c:411
 #: ../libsvn_client/info.c:421
@@ -2412,21 +2412,21 @@ msgstr "不能取得“%s”的状态"
 msgid "Can't chmod '%s'"
 msgstr "无法修改“%s”的存取权限"
 
-#: ../libsvn_fs_fs/fs_fs.c:4160
+#: ../libsvn_fs_fs/fs_fs.c:4161
 #, c-format
 msgid "Can't grab FSFS repository mutex"
 msgstr "不能获取FSFS版本库互斥体"
 
-#: ../libsvn_fs_fs/fs_fs.c:4174
+#: ../libsvn_fs_fs/fs_fs.c:4175
 #, c-format
 msgid "Can't ungrab FSFS repository mutex"
 msgstr "不能释放FSFS版本库互斥体"
 
-#: ../libsvn_fs_fs/fs_fs.c:4292
+#: ../libsvn_fs_fs/fs_fs.c:4293
 msgid "Transaction out of date"
 msgstr "事务过时"
 
-#: ../libsvn_fs_fs/fs_fs.c:4592
+#: ../libsvn_fs_fs/fs_fs.c:4593
 msgid "No such transaction"
 msgstr "无此事务"
 
@@ -2560,7 +2560,7 @@ msgstr ""
 
 #: ../libsvn_ra_dav/fetch.c:1151
 msgid "Server response missing the expected deadprop-count property"
-msgstr "服务器响应丢失了期望的deadprop-count属性"
+msgstr "服务器响应丢失了期望的 deadprop-count 属性"
 
 #: ../libsvn_ra_dav/fetch.c:1324
 msgid "Server does not support date-based operations"
@@ -2591,7 +2591,7 @@ msgstr "DAV 请求失败；可能是版本库的 pre-revprop-change 钩子执行
 #: ../libsvn_ra_dav/fetch.c:2643
 #, c-format
 msgid "Error writing to '%s': unexpected EOF"
-msgstr "写入“%s”时出错: 意外的 EOF"
+msgstr "写入 “%s” 时出错: 意外的 EOF"
 
 #: ../libsvn_ra_dav/fetch.c:2788
 #, c-format
@@ -2693,7 +2693,7 @@ msgstr "元素“open-root没有revisioin属性"
 
 #: ../libsvn_ra_dav/replay.c:172 ../libsvn_ra_serf/replay.c:198
 msgid "Missing name attr in delete-entry element"
-msgstr "元素delete-entry没有name属性"
+msgstr "元素 delete-entry 没有 attr 属性"
 
 #: ../libsvn_ra_dav/replay.c:176
 msgid "Missing rev attr in delete-entry element"
@@ -2701,7 +2701,7 @@ msgstr "元素delete-entry没有rev属性"
 
 #: ../libsvn_ra_dav/replay.c:196 ../libsvn_ra_serf/replay.c:224
 msgid "Missing name attr in open-directory element"
-msgstr "元素open-directory没有name属性"
+msgstr "元素 open-directory 没有 name 属性"
 
 #: ../libsvn_ra_dav/replay.c:248 ../libsvn_ra_dav/replay.c:353
 #: ../libsvn_ra_serf/replay.c:378
@@ -2947,11 +2947,11 @@ msgstr "open-directory元素没有revision属性"
 
 #: ../libsvn_ra_serf/replay.c:250
 msgid "Missing name attr in add-directory element"
-msgstr "add-directory元素没有name属性"
+msgstr "元素 add-directory 没有 name 属性"
 
 #: ../libsvn_ra_serf/replay.c:285
 msgid "Missing name attr in open-file element"
-msgstr "open-file元素没有name属性"
+msgstr "元素 open-file 没有 name 属性"
 
 #: ../libsvn_ra_serf/replay.c:291
 msgid "Missing revision attr in open-file element"
@@ -2959,7 +2959,7 @@ msgstr "open-file元素没有revision属性"
 
 #: ../libsvn_ra_serf/replay.c:311
 msgid "Missing name attr in add-file element"
-msgstr "add-file元素没有name属性"
+msgstr "元素 add-file 没有 name 属性"
 
 #: ../libsvn_ra_serf/serf.c:52
 msgid "Access repository via WebDAV protocol through serf."
@@ -4979,7 +4979,7 @@ msgstr "文件“%s”有二进制的 mime 类型属性"
 #: ../libsvn_wc/props.c:1537
 #, c-format
 msgid "Unrecognized line ending style for '%s'"
-msgstr "“%s”包含无法识别的行结束样式"
+msgstr "“%s” 含有无法识别的行结束样式"
 
 #: ../libsvn_wc/props.c:2109
 #, c-format
@@ -7451,7 +7451,7 @@ msgstr ""
 
 #: ../svnadmin/main.c:1097
 msgid "No paths to unlock provided"
-msgstr "没有提供解锁路径"
+msgstr "没有提供解锁的路径"
 
 #: ../svnadmin/main.c:1115
 #, c-format
