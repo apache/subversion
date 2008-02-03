@@ -817,7 +817,7 @@ svn_client_export4(svn_revnum_t *result_rev,
                                                revision, ctx, pool));
 
       /* Get the repository root. */
-      SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root_url, pool));
+      SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, pool));
 
       eb->root_path = to;
       eb->root_url = url;
