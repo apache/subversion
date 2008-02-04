@@ -42,7 +42,6 @@ struct rev
   const char *date;      /* the date of the revision */
   /* Used for merge reporting. */
   const char *path;      /* the absolute repository path */
-  struct rev *next;      /* the next revision */
 };
 
 /* One chunk of blame */
