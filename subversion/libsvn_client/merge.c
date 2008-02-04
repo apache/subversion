@@ -346,12 +346,12 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                                   svn_wc_adm_access_t *adm_access,
                                   apr_pool_t *pool)
 {
-  svn_boolean_t honor_mergeinfo, record_mergeinfo;
+  svn_boolean_t honor_mergeinfo;
   apr_array_header_t *adjusted_props;
   int i;
 
   /* If we aren't honoring mergeinfo, get outta here. */
-  mergeinfo_behavior(&honor_mergeinfo, &record_mergeinfo, merge_b);
+  mergeinfo_behavior(&honor_mergeinfo, NULL, merge_b);
   if (! honor_mergeinfo)
     return SVN_NO_ERROR;
 
@@ -369,7 +369,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
         }
       else /* Non-empty mergeinfo; filter self-referential mergeinfo out. */
         {
-          apr_hash_t *mergeinfo_catalog;
+          apr_hash_t *mergeinfo;
           apr_hash_index_t *hi;
           const char *target_url, *merge_source_root_url;
           const svn_wc_entry_t *target_entry;
@@ -390,10 +390,9 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                                                     target_url, pool));
           
           /* Parse the incoming mergeinfo to allow easier meddling. */
-          SVN_ERR(svn_mergeinfo_parse(&mergeinfo_catalog, 
-                                      prop->value->data, pool));
+          SVN_ERR(svn_mergeinfo_parse(&mergeinfo, prop->value->data, pool));
           
-          for (hi = apr_hash_first(NULL, mergeinfo_catalog);
+          for (hi = apr_hash_first(NULL, mergeinfo);
                hi; hi = apr_hash_next(hi))
             {
               int j;
@@ -500,7 +499,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                                       pool);
                   APR_ARRAY_PUSH(adjusted_props, svn_prop_t) = *adjusted_prop;
                 }
-            } /* mergeinfo_catalog hash iteration */
+            } /* mergeinfo hash iteration */
 
           /* If we reparented MERGE_B->RA_SESSION2 above, put it back
              to the original URL. */
