@@ -18,6 +18,7 @@
 
 # General modules
 import os
+import shutil
 import sys
 
 # Our testing module
@@ -576,6 +577,66 @@ def reflect_dropped_renumbered_revs(sbox):
                                      [], 'propget', 'svn:mergeinfo',
                                      sbox.repo_url + '/branch1')
 
+#----------------------------------------------------------------------
+
+def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
+  """fsfs recovery checks missing revs / revprops files"""
+  # Set up a repository containing the greek tree.
+  sbox.build(create_wc = False)
+
+  # Remove the revs file for revision 1
+  os.remove(os.path.join(sbox.repo_dir, 'db','revs','0', '1'));
+  
+  # Verify 'svnadmin recover' fails when youngest has a revprops
+  # file but no revs file
+  output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
+
+  if svntest.verify.verify_outputs(
+    "Output of 'svnadmin recover' is unexpected.",
+    None,
+    errput,
+    None,
+    ".*Expected youngest rev to be 1 but found 0"):
+    raise svntest.Failure
+
+  # Remove previous repository and recreate
+  shutil.rmtree(sbox.repo_dir)
+  sbox.build(create_wc = False)
+
+  # Remove the revprops file for revision 1
+  os.remove(os.path.join(sbox.repo_dir, 'db','revprops','0','1'));
+
+  # Verify 'svnadmin recover' fails when youngest has a revs file
+  # but no revprops file (issue #2992).
+  output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
+
+  if svntest.verify.verify_outputs(
+    "Output of 'svnadmin recover' is unexpected.",
+    None,
+    errput,
+    None,
+    ".*Revision 1 has a revs file but no revprops file"):
+    raise svntest.Failure
+
+  # Remove previous repository and recreate
+  shutil.rmtree(sbox.repo_dir)
+  sbox.build(create_wc = False)
+
+  # Change revprops file to a directory for revision 1
+  os.remove(os.path.join(sbox.repo_dir, 'db','revprops','0','1'));
+  os.mkdir(os.path.join(sbox.repo_dir, 'db','revprops','0','1'));
+
+  # Verify 'svnadmin recover' fails when youngest has a revs file
+  # but no revprops file (another aspect of issue #2992).
+  output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
+
+  if svntest.verify.verify_outputs(
+    "Output of 'svnadmin recover' is unexpected.",
+    None,
+    errput,
+    None,
+    ".*Revision 1 has a non-file where its revprops file should be.*"):
+    raise svntest.Failure
 
 ########################################################################
 # Run the tests
@@ -598,6 +659,8 @@ test_list = [ None,
               load_with_parent_dir,
               set_uuid,
               reflect_dropped_renumbered_revs,
+              SkipUnless(fsfs_recover_handle_missing_revs_or_revprops_file,
+                         svntest.main.is_fs_type_fsfs),
              ]
 
 if __name__ == '__main__':
