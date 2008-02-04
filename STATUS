@@ -14,12 +14,6 @@ Status of 1.5.0:
 
 Candidate changes:
 
- * r29153
-   Fix SEGFAULTs triggered by passing a non-URL in the --from-source switch
-   to 'svn mergeinfo'
-   Votes:
-     +1: cmpilato
-
  * r29139, r29161
    Introduce 'svnadmin upgrade' and backing APIs.
    Justification:
@@ -54,3 +48,10 @@ Candidate changes:
      +1: kameshj
 
 Approved changes:
+
+ * r29153
+   Fix SEGFAULTs triggered by passing a non-URL in the --from-source switch
+   to 'svn mergeinfo'
+   Votes:
+     +1: cmpilato, hwright
+
