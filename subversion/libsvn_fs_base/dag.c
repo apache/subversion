@@ -1230,8 +1230,7 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
   svn_error_t *err = SVN_NO_ERROR;
   svn_fs_t *fs = file->fs;   /* just for nicer indentation */
   node_revision_t *noderev;
-  const char *old_data_key;
-  const char *dup_rep_key;
+  const char *old_data_key, *new_data_key, *useless_data_key = NULL;
   const char *rep_checksum;
   unsigned char digest[APR_MD5_DIGESTSIZE];
 
@@ -1278,24 +1277,23 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
      immutably in our database, we don't even need to keep these edits.
      We can simply point our data_key at that pre-existing
      representation and throw away our work!  */
-  err = svn_fs_bdb__get_checksum_rep(&dup_rep_key, fs, rep_checksum, 
+  old_data_key = noderev->data_key;
+  err = svn_fs_bdb__get_checksum_rep(&new_data_key, fs, rep_checksum, 
                                      trail, pool);
   if (! err)
     {
-      SVN_ERR(svn_fs_base__delete_rep_if_mutable(fs, noderev->edit_key,
-                                                 txn_id, trail, pool));
-      noderev->edit_key = dup_rep_key;
+      useless_data_key = noderev->edit_key;
     }
   else if (err && (err->apr_err == SVN_ERR_FS_NO_SUCH_CHECKSUM_REP))
     {
       svn_error_clear(err);
       err = SVN_NO_ERROR;
+      new_data_key = noderev->edit_key;
     }
   SVN_ERR(err);
-
-  old_data_key = noderev->data_key;
-  noderev->data_key = noderev->edit_key;
+  noderev->data_key = new_data_key;
   noderev->edit_key = NULL;
+
   SVN_ERR(svn_fs_bdb__put_node_revision(fs, file->id, noderev, trail, pool));
 
   /* Only *now* can we safely destroy the old representation (if it
@@ -1303,6 +1301,12 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
   if (old_data_key)
     SVN_ERR(svn_fs_base__delete_rep_if_mutable(fs, old_data_key, txn_id,
                                                trail, pool));
+
+  /* Throw away our edit -- there was an existing representation whose
+     contents matched our goal. */
+  if (useless_data_key)
+    SVN_ERR(svn_fs_base__delete_rep_if_mutable(fs, useless_data_key,
+                                               txn_id, trail, pool));
 
   return SVN_NO_ERROR;
 }
