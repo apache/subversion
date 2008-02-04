@@ -49,4 +49,8 @@ Candidate changes:
    Votes:
      +1: epg
 
+ * r29176:
+   Don't remove *reflected* revisions from requested merge range list.
+     +1: kameshj
+
 Approved changes:
