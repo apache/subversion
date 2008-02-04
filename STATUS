@@ -48,10 +48,3 @@ Candidate changes:
      +1: kameshj
 
 Approved changes:
-
- * r29153
-   Fix SEGFAULTs triggered by passing a non-URL in the --from-source switch
-   to 'svn mergeinfo'
-   Votes:
-     +1: cmpilato, hwright
-
