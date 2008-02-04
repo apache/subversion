@@ -5591,9 +5591,22 @@ recover_body(void *baton, apr_pool_t *pool)
   char max_node_id[MAX_KEY_SIZE] = "0", max_copy_id[MAX_KEY_SIZE] = "0";
   char next_node_id[MAX_KEY_SIZE], next_copy_id[MAX_KEY_SIZE];
   apr_size_t len;
+  svn_revnum_t youngest_rev;
+  svn_node_kind_t youngest_revprops_kind;
 
   /* First, we need to know the largest revision in the filesystem. */
   SVN_ERR(recover_get_largest_revision(fs, &max_rev, pool));
+
+  /* Get the expected youngest revision */
+  SVN_ERR(get_youngest(&youngest_rev, fs->path, pool));
+
+  /* When get_youngest() returns 0, either the youngest revision truly
+     is 0 or the db/current file was recreated as part of opening the
+     filesystem for recovery. */
+  if (youngest_rev != 0 && youngest_rev != max_rev)
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Expected youngest rev to be %ld "
+                               "but found %ld"), youngest_rev, max_rev);
 
   /* Next we need to find the maximum node id and copy id in use across the
      filesystem.  Unfortunately, the only way we can get this information
@@ -5618,6 +5631,27 @@ recover_body(void *baton, apr_pool_t *pool)
       SVN_ERR(recover_find_max_ids(fs, rev, rev_file, root_offset,
                                    max_node_id, max_copy_id, iterpool));
     }
+
+  /* Before setting current, verify that there is a revprops file
+     for the youngest revision.  (Issue #2992) */
+  svn_pool_clear(iterpool);
+  SVN_ERR(svn_io_check_path(path_revprops(fs, max_rev, iterpool),
+                            &youngest_revprops_kind, iterpool));
+  if (youngest_revprops_kind == svn_node_none)
+    {
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                               _("Revision %ld has a revs file but no "
+                                 "revprops file"),
+                               max_rev);
+    }
+  else if (youngest_revprops_kind != svn_node_file)
+    {
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                               _("Revision %ld has a non-file where its "
+                                 "revprops file should be"),
+                               max_rev);
+    }
+
   svn_pool_destroy(iterpool);
 
   /* Now that we finally have the maximum revision, node-id and copy-id, we
