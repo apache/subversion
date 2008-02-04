@@ -43,6 +43,11 @@ Candidate changes:
    Votes:
      +1: epg
 
+ * r29166:
+   Don't wrap the error with info about the HTTP method.
+   Votes:
+     +1: epg
+
  * r29176:
    Don't remove *reflected* revisions from requested merge range list.
      +1: kameshj
