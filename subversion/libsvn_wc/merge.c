@@ -434,7 +434,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                       contains_conflicts = FALSE;
                       goto merge_complete;
                     }
-                  case svn_wc_conflict_choose_theirs:
+                  case svn_wc_conflict_choose_theirs_all:
                     {
                       SVN_ERR(svn_wc__loggy_copy
                               (log_accum, NULL, adm_access,
@@ -445,7 +445,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                       contains_conflicts = FALSE;
                       goto merge_complete;
                     }
-                  case svn_wc_conflict_choose_mine:
+                  case svn_wc_conflict_choose_mine_all:
                     {
                       /* Do nothing to merge_target, let it live untouched! */
                       *merge_outcome = svn_wc_merge_merged;
@@ -679,7 +679,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                   contains_conflicts = FALSE;
                   goto merge_complete;
                 }
-              case svn_wc_conflict_choose_theirs:
+              case svn_wc_conflict_choose_theirs_all:
                 {
                   SVN_ERR(svn_wc__loggy_copy
                           (log_accum, NULL, adm_access,
@@ -694,7 +694,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                    user's file, we do nothing.  We also do nothing if
                    the response claims to have already resolved the
                    problem.*/
-              case svn_wc_conflict_choose_mine:
+              case svn_wc_conflict_choose_mine_all:
                 {
                   *merge_outcome = svn_wc_merge_merged;
                   contains_conflicts = FALSE;

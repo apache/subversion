@@ -2093,11 +2093,11 @@ def automatic_conflict_resolution(sbox):
                                      lambda_path_backup)
   svntest.actions.run_and_verify_svn("Resolved command", None, [],
                                      'resolved',
-                                     '--accept=mine',
+                                     '--accept=mine-all',
                                      mu_path_backup)
   svntest.actions.run_and_verify_svn("Resolved command", None, [],
                                      'resolved',
-                                     '--accept=theirs',
+                                     '--accept=theirs-all',
                                      rho_path_backup)
 
   # Set the expected disk contents for the test
