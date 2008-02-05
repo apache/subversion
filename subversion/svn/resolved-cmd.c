@@ -63,6 +63,12 @@ svn_cl__resolved(apr_getopt_t *os,
     case svn_cl__accept_mine:
       conflict_choice = svn_wc_conflict_choose_mine;
       break;
+    case svn_cl__accept_theirs_all:
+      conflict_choice = svn_wc_conflict_choose_theirs_all;
+      break;
+    case svn_cl__accept_mine_all:
+      conflict_choice = svn_wc_conflict_choose_mine_all;
+      break;
     default:
       return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                               _("invalid 'accept' ARG"));
