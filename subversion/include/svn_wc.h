@@ -2869,11 +2869,11 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  * if any); if @c svn_depth_infinity, resolve @a path and every
  * conflicted file or directory anywhere beneath it.
  *
- * If @a conflict_choice is svn_wc_conflict_choose_base, resolve the
+ * If @a conflict_choice is @c svn_wc_conflict_choose_base, resolve the
  * conflict with the old file contents; if
- * svn_wc_conflict_choose_mine, use the original working contents;
- * if svn_wc_conflict_choose_theirs, the new contents; and if
- * svn_wc_conflict_choose_merged, don't change the contents at all,
+ * @c svn_wc_conflict_choose_mine, use the original working contents;
+ * if @c svn_wc_conflict_choose_theirs, the new contents; and if
+ * @c svn_wc_conflict_choose_merged, don't change the contents at all,
  * just remove the conflict status (i.e. pre-1.5 behavior).
  *
  * @a adm_access is an access baton, with a write lock, for @a path.
