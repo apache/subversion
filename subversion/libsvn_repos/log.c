@@ -344,7 +344,7 @@ struct path_info
  * otherwise we open a new one.
  *
  * If no more history is available or the history revision is less
- * than (earlier) than START, or the history is not available due
+ * (earlier) than START, or the history is not available due
  * to authorization, then INFO->DONE is set to TRUE.
  *
  * A STRICT value of FALSE will indicate to follow history across copied
