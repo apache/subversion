@@ -735,13 +735,8 @@ SVN_ERROR_START
              "Path is not locked")
 
   /** @since New in 1.5. */
-  SVN_ERRDEF(SVN_ERR_RA_UNKNOWN_CAPABILITY,
-             SVN_ERR_RA_CATEGORY_START + 8,
-             "Inquiry about unknown capability")
-
-  /** @since New in 1.5. */
   SVN_ERRDEF(SVN_ERR_RA_PARTIAL_REPLAY_NOT_SUPPORTED,
-             SVN_ERR_RA_CATEGORY_START + 9,
+             SVN_ERR_RA_CATEGORY_START + 8,
              "Server can only replay from the root of a repository")
 
   /* ra_dav errors */
@@ -1140,6 +1135,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_RESERVED_FILENAME_SPECIFIED,
              SVN_ERR_MISC_CATEGORY_START + 25,
              "Reserved directory name in command line arguments")
+
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_UNKNOWN_CAPABILITY,
+             SVN_ERR_MISC_CATEGORY_START + 26,
+             "Inquiry about unknown capability")
 
   /* command-line client errors */
 

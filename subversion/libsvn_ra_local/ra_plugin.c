@@ -1376,7 +1376,7 @@ svn_ra_local__has_capability(svn_ra_session_t *session,
   else  /* Don't know any other capabilities, so error. */
     {
       return svn_error_createf
-        (SVN_ERR_RA_UNKNOWN_CAPABILITY, NULL,
+        (SVN_ERR_UNKNOWN_CAPABILITY, NULL,
          _("Don't know anything about capability '%s'"), capability);
     }
 
