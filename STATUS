@@ -23,7 +23,7 @@ Candidate changes:
    Votes:
      +1: cmpilato
      -1: glasser: The svnadmin-upgrade branch was great, r29139 accidentally
-         included unrelated changes to fs_fs.c
+         included unrelated changes to fs_fs.c (hasn't reviewed r29161)
  
  * r29127, r29135, r29136, r29138, r29163, r29164
    Fix issue #3026: _svn and .svn are silently ignored as file arguments.
@@ -56,9 +56,9 @@ Candidate changes:
    Votes:
      +1: hwright
 
+Approved changes:
+
  * r29208:
    Eliminate a superfluous API rev in svn_client_propget.
    Votes:
-     +1: hwright
-
-Approved changes:
+     +1: hwright, cmpilato
