@@ -58,4 +58,10 @@ Candidate changes:
    Votes:
      +1: lgo
 
+ * r29202:
+   When choosing which revision to display for a line in 'blame -g', prefer
+    older revisions to younger ones.
+   Votes:
+     +1: hwright
+
 Approved changes:
