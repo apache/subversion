@@ -326,7 +326,7 @@ svn_client__path_relative_to_root(const char **rel_path,
    those changelists.  If CHANGELISTS is empty (or altogether NULL),
    no changelist filtering occurs.
 
-   Treat DEPTH as in svn_client_propget4().
+   Treat DEPTH as in svn_client_propget3().
 */
 svn_error_t *
 svn_client__get_prop_from_wc(apr_hash_t *props, 
