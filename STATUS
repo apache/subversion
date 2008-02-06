@@ -53,4 +53,9 @@ Candidate changes:
    Votes:
      +1: hwright
 
+ * r29208:
+   Eliminate a superfluous API rev in svn_client_propget.
+   Votes:
+     +1: hwright
+
 Approved changes:
