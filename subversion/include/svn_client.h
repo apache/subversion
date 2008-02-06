@@ -3323,7 +3323,7 @@ svn_client_revprop_set(const char *propname,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_propget4(apr_hash_t **props,
+svn_client_propget3(apr_hash_t **props,
                     const char *propname,
                     const char *target,
                     const svn_opt_revision_t *peg_revision,
@@ -3335,28 +3335,10 @@ svn_client_propget4(apr_hash_t **props,
                     apr_pool_t *pool);
 
 /**
- * Similar to svn_client_propget4(), but with @a changelists passed as
- * @c NULL, and @a depth set according to @a recurse: if @a recurse is
- * TRUE, then @a depth is @c svn_depth_infinity, else @c
- * svn_depth_empty.
- *
- * @deprecated Provided for backward compatibility with the 1.4 API.
- */
-svn_error_t *
-svn_client_propget3(apr_hash_t **props,
-                    const char *propname,
-                    const char *target,
-                    const svn_opt_revision_t *peg_revision,
-                    const svn_opt_revision_t *revision,
-                    svn_revnum_t *actual_revnum,
-                    svn_boolean_t recurse,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool);
-
-
-/**
- * Similar to svn_client_propget3(), except that @a actual_revnum is
- * always @c NULL.
+ * Similar to svn_client_propget3(), except that @a actual_revnum and
+ * @a changelists are always @c NULL, and @a depth is set according to
+ * @a recurse: if @a recurse is TRUE, then @a depth is @c
+ * svn_depth_infinity, else @c svn_depth_empty.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */

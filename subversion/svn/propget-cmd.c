@@ -266,7 +266,7 @@ svn_cl__propget(apr_getopt_t *os,
           SVN_ERR(svn_opt_parse_path(&peg_revision, &truepath, target,
                                      subpool));
 
-          SVN_ERR(svn_client_propget4(&props, pname_utf8, truepath,
+          SVN_ERR(svn_client_propget3(&props, pname_utf8, truepath,
                                       &peg_revision,
                                       &(opt_state->start_revision),
                                       NULL, opt_state->depth, 

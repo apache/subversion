@@ -609,7 +609,7 @@ propget_walk_cb(const char *path,
  * SESSION.  Store the value ('svn_string_t *') in PROPS, under the
  * path key "TARGET_PREFIX/TARGET_RELATIVE" ('const char *').
  *
- * Recurse according to DEPTH, similarly to svn_client_propget4().
+ * Recurse according to DEPTH, similarly to svn_client_propget3().
  *
  * KIND is the kind of the node at "TARGET_PREFIX/TARGET_RELATIVE".
  * Yes, caller passes this; it makes the recursion more efficient :-).
@@ -784,7 +784,7 @@ svn_client__get_prop_from_wc(apr_hash_t *props,
 
 /* Note: this implementation is very similar to svn_client_proplist. */
 svn_error_t *
-svn_client_propget4(apr_hash_t **props,
+svn_client_propget3(apr_hash_t **props,
                     const char *propname,
                     const char *path_or_url,
                     const svn_opt_revision_t *peg_revision,
@@ -861,30 +861,6 @@ svn_client_propget4(apr_hash_t **props,
 }
 
 svn_error_t *
-svn_client_propget3(apr_hash_t **props,
-                    const char *propname,
-                    const char *target,
-                    const svn_opt_revision_t *peg_revision,
-                    const svn_opt_revision_t *revision,
-                    svn_revnum_t *actual_revnum,
-                    svn_boolean_t recurse,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool)
-{
-  return svn_client_propget4(props,
-                             propname,
-                             target,
-                             peg_revision,
-                             revision,
-                             actual_revnum,
-                             SVN_DEPTH_INFINITY_OR_EMPTY(recurse),
-                             NULL,
-                             ctx,
-                             pool);
-}
-
-
-svn_error_t *
 svn_client_propget2(apr_hash_t **props,
                     const char *propname,
                     const char *target,
@@ -894,8 +870,16 @@ svn_client_propget2(apr_hash_t **props,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
-  return svn_client_propget3(props, propname, target, peg_revision,
-                             revision, NULL, recurse, ctx, pool);
+  return svn_client_propget3(props,
+                             propname,
+                             target,
+                             peg_revision,
+                             revision,
+                             NULL,
+                             SVN_DEPTH_INFINITY_OR_EMPTY(recurse),
+                             NULL,
+                             ctx,
+                             pool);
 }
 
 
