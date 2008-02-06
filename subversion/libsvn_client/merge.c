@@ -1560,21 +1560,16 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
                            apr_pool_t *pool)
 {
   apr_array_header_t *requested_rangelist;
-  const char *old_url;
   const char *mergeinfo_path;
   svn_merge_range_t *range = apr_pcalloc(pool, sizeof(*range));
   const char *primary_url = (revision1 < revision2) ? url2 : url1;
 
   /* Determine which of the requested ranges to consider merging... */
-  SVN_ERR(svn_client__ensure_ra_session_url(&old_url, ra_session, 
-                                            source_root_url, pool));
   requested_rangelist = apr_array_make(pool, 1, sizeof(range));
   range->start = revision1;
   range->end = revision2;
   range->inheritable = inheritable;
   APR_ARRAY_PUSH(requested_rangelist, svn_merge_range_t *) = range;
-  if (old_url)
-    SVN_ERR(svn_ra_reparent(ra_session, old_url, pool));
   
   /* ...and of those ranges, determine which ones actually still
      need merging. */
