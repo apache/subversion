@@ -43,20 +43,9 @@ Candidate changes:
    Votes:
      +1: epg
 
- * r29166:
-   Don't wrap the error with info about the HTTP method.
-   Votes:
-     +1: epg
-
  * r29176:
    Don't remove *reflected* revisions from requested merge range list.
      +1: kameshj
-
- * r29199:
-   Follow up fix backported in r29159: use the session pool for the repository
-    root string.
-   Votes:
-     +1: lgo
 
  * r29202:
    When choosing which revision to display for a line in 'blame -g', prefer
@@ -65,3 +54,14 @@ Candidate changes:
      +1: hwright
 
 Approved changes:
+
+ * r29166:
+   Don't wrap the error with info about the HTTP method.
+   Votes:
+     +1: epg, hwright
+
+ * r29199:
+   Follow up fix backported in r29159: use the session pool for the repository
+    root string.
+   Votes:
+     +1: lgo, hwright
