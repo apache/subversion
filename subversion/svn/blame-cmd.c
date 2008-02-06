@@ -2,7 +2,7 @@
  * blame-cmd.c -- Display blame information
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -158,17 +158,27 @@ blame_receiver(void *baton,
   svn_cl__opt_state_t *opt_state =
     ((blame_baton_t *) baton)->opt_state;
   svn_stream_t *out = ((blame_baton_t *)baton)->out;
+  svn_boolean_t use_merged = FALSE;
 
   if (opt_state->use_merge_history)
     {
-      if (revision != merged_revision)
-        svn_stream_printf(out, pool, "G ");
+      /* Choose which revision to use.  If they aren't equal, prefer the
+         earliest revision.  Since we do a forward blame, we want to the first
+         revision which put the line in its current state, so we use the
+         earliest revision.  If we ever switch to a backward blame algorithm,
+         we may need to adjust this. */
+      if (merged_revision < revision)
+        {
+          svn_stream_printf(out, pool, "G ");
+          use_merged = TRUE;
+        }
       else
         svn_stream_printf(out, pool, "  ");
-
-      SVN_ERR(print_line_info(out, merged_revision, merged_author, merged_date,
-                              merged_path, opt_state->verbose, pool));
     }
+ 
+  if (use_merged)
+    SVN_ERR(print_line_info(out, merged_revision, merged_author, merged_date,
+                            merged_path, opt_state->verbose, pool));
   else
     SVN_ERR(print_line_info(out, revision, author, date, NULL,
                             opt_state->verbose, pool));
