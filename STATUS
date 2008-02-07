@@ -66,4 +66,10 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r29218
+   Fix some Ruby tests failures caused by a sequencing bug in
+   libsvn_fs_base/fs.c:base_open().
+   Votes:
+     +1: cmpilato
+
 Approved changes:
