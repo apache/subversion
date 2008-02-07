@@ -67,10 +67,15 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r29225
+   Fix single-file no-op merge notifications to not print headers.
+   Votes:
+     +1: cmpilato
+
+Approved changes:
+
  * r29220
    Fix test framework issue that considers no actual output as OK, even if 
    there's output expected.
    Votes:
-     +1: lgo
-
-Approved changes:
+     +1: lgo, cmpilato
