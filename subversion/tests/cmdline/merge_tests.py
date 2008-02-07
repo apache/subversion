@@ -10558,7 +10558,7 @@ test_list = [ None,
               reintegrate_fail_on_shallow_wc,
               XFail(reintegrate_fail_on_stale_source),
               dont_add_mergeinfo_from_own_history,
-              XFail(merge_range_predates_history),
+              merge_range_predates_history,
              ]
 
 if __name__ == '__main__':
