@@ -68,8 +68,3 @@ Candidate changes:
      +1: cmpilato
 
 Approved changes:
-
- * r29215
-   Fix an RA session lifetime bug.
-   Votes:
-     +1: cmpilato, hwright
