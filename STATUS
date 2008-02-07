@@ -56,11 +56,6 @@ Candidate changes:
    Votes:
      +1: hwright
 
- * r29215
-   Fix an RA session lifetime bug.
-   Votes:
-     +1: cmpilato
-
  * r29198, r29214, r29216
    Fix issue #3094, which resulted in noop merges.
    Votes:
@@ -73,3 +68,8 @@ Candidate changes:
      +1: cmpilato
 
 Approved changes:
+
+ * r29215
+   Fix an RA session lifetime bug.
+   Votes:
+     +1: cmpilato, hwright
