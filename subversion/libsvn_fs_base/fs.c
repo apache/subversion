@@ -709,6 +709,7 @@ base_open(svn_fs_t *fs, const char *path, apr_pool_t *pool,
 {
   int format;
   svn_error_t *svn_err;
+  svn_boolean_t write_format_file = FALSE;
 
   /* Read the FS format number. */
   svn_err = svn_io_read_version_file(&format, 
@@ -719,10 +720,9 @@ base_open(svn_fs_t *fs, const char *path, apr_pool_t *pool,
       /* Pre-1.2 filesystems did not have a format file (you could say
          they were format "0"), so they get upgraded on the fly. */
       svn_error_clear(svn_err);
+      svn_err = SVN_NO_ERROR;
       format = SVN_FS_BASE__FORMAT_NUMBER;
-      svn_err = svn_io_write_version_file(svn_path_join(path, FORMAT_FILE, 
-                                                        pool), format, pool);
-      if (svn_err) goto error;
+      write_format_file = TRUE;
     }
   else if (svn_err)
     goto error;
@@ -733,6 +733,15 @@ base_open(svn_fs_t *fs, const char *path, apr_pool_t *pool,
 
   ((base_fs_data_t *) fs->fsap_data)->format = format;
   SVN_ERR(check_format(format));
+
+  /* If we lack a format file, write one. */
+  if (write_format_file)
+    {
+      svn_err = svn_io_write_version_file(svn_path_join(path, FORMAT_FILE, 
+                                                        pool), format, pool);
+      if (svn_err) goto error;
+    }
+
   return base_serialized_init(fs, common_pool, pool);
 
  error:
