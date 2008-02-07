@@ -395,12 +395,20 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                                  NULL);
           else
             prompt = apr_pstrcat(subpool, prompt,
-                                 _(", (M)ine-all, (T)heirs-all"),
+                                 _(", all of (M)ine, all of (T)heirs"),
                                  NULL);
           if (performed_edit)
             prompt = apr_pstrcat(subpool, prompt, _(", (r)esolved"), NULL);
+
+          /* Line break here depends on what we've printed already. */
+          if ((! diff_allowed) && performed_edit)
+            prompt = apr_pstrcat(subpool, prompt, ",\n        ", NULL);
+          else
+            prompt = apr_pstrcat(subpool, prompt, ", ", NULL);
+
           prompt = apr_pstrcat(subpool, prompt,
-                               _(", (h)elp for more options : "), NULL);
+                               _("(h)elp for more options: "),
+                               NULL);
 
           SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt, b->pb, subpool));
 
