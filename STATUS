@@ -67,4 +67,10 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r29220
+   Fix test framework issue that considers no actual output as OK, even if 
+   there's output expected.
+   Votes:
+     +1: lgo
+
 Approved changes:
