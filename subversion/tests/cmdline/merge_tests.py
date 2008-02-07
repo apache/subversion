@@ -10433,6 +10433,7 @@ def merge_range_predates_history(sbox):
   trunk_url = sbox.repo_url + "/trunk"
   branches_url = sbox.repo_url + "/branches"
   branch_path = os.path.join(wc_dir, "branches", "branch")
+  branch_file_path = os.path.join(wc_dir, "branches", "branch", "file")
   branch_url = sbox.repo_url + "/branches/branch"
 
   # Tweak a file and commit. (r2)
@@ -10457,7 +10458,7 @@ def merge_range_predates_history(sbox):
   # Now, try to merge trunk into the branch.  There should be one
   # outstanding change -- the addition of the file.
   expected_output = expected_merge_output([[4,5]],
-                                          'A    ' + trunk_file_path + '\n')
+                                          'A    ' + branch_file_path + '\n')
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'merge',
                                      trunk_url, branch_path)
   
