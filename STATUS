@@ -33,27 +33,37 @@ Candidate changes:
          (mentioned on dev@); I'll be happy to remove this vote once that's 
          fixed.  [r29163 and r29164 might address these concerns. -kfogel])
 
- * r29143:
+ * r29143
    Fix duplicate revision detection in 'blame -g'.
    Votes:
      +1: hwright
 
- * r29155:
+ * r29155
    Allow packagers to build some parts of svn against installed svn libs.
    Votes:
      +1: epg
 
- * r29176, r29210:
+ * r29176, r29210
    Notes:
-    r29176: Don't remove *reflected* revisions from requested merge range list.
-    r29210: Follow-up to r29176 don't reparent ra_session unnecessarily.
+     r29176: Don't remove reflected revisions from requested merge range list.
+     r29210: Follow-up to r29176 don't reparent ra_session unnecessarily.
    Votes:
      +1: kameshj
 
- * r29202:
+ * r29202
    When choosing which revision to display for a line in 'blame -g', prefer
-    older revisions to younger ones.
+   older revisions to younger ones.
    Votes:
      +1: hwright
+
+ * r29215
+   Fix an RA session lifetime bug.
+   Votes:
+     +1: cmpilato
+
+ * r29198, r29214, r29216
+   Fix issue #3094, which resulted in noop merges.
+   Votes:
+     +1: cmpilato
 
 Approved changes:
