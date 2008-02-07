@@ -131,6 +131,12 @@ class ExpectedOutput:
         all_lines_match_re = True
       else:
         all_lines_match_re = False
+
+      # If a regex was provided assume that we actually require 
+      # some output. Fail if we don't.
+      if len(actual) == 0:
+        return False
+
       for i in range(0, len(actual)):
         if self.match_all:
           if not self.is_equivalent_line(expected_re, actual[i]):
