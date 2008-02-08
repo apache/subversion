@@ -465,6 +465,10 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
             arg = svn_base64_encode_string(arg, pool);
           SVN_ERR(svn_ra_svn_write_cstring(sess->conn, pool, arg->data));
         }
+      else
+        {
+          SVN_ERR(svn_ra_svn_write_cstring(sess->conn, pool, ""));
+        }
     }
 
   if (!status || strcmp(status, "step") == 0)
