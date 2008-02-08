@@ -273,9 +273,12 @@ typedef struct merge_cmd_baton_t {
      its value is irrelevant. */
   const char *reflected_target_segment_path;
 
-  /* Before running the actual reflective rev merge we do get
-   * a summary of merge and store the to be affected paths as keys in
-   * this hash with value being of type svn_client_diff_summarize_kind_t *.
+  /* Before running the actual *reflective* rev merge we need to get
+   * a summary of *reflected* merges.
+   * This *reflected* summary is represented as
+   * REFLECTIVE_REV_AFFECTED_PATHS an hash of path VS
+   * 'svn_client_diff_summarize_kind_t *' values describing how they were
+   * affected by the reflected ranges under consideration.
    */
   apr_hash_t *reflective_rev_affected_paths;
 
