@@ -1315,6 +1315,15 @@ find_nearest_ancestor(apr_array_header_t *children_with_mergeinfo,
 }
 
 
+#define IS_OPERATIVE_NOTIFICATION(notify)  \
+                    (notify->content_state == svn_wc_notify_state_conflicted \
+                     || notify->content_state == svn_wc_notify_state_merged  \
+                     || notify->content_state == svn_wc_notify_state_changed \
+                     || notify->prop_state == svn_wc_notify_state_conflicted \
+                     || notify->prop_state == svn_wc_notify_state_merged     \
+                     || notify->prop_state == svn_wc_notify_state_changed    \
+                     || notify->action == svn_wc_notify_update_add)
+
 /* Our svn_wc_notify_func2_t wrapper.*/
 static void
 notification_receiver(void *baton, const svn_wc_notify_t *notify,
@@ -1324,13 +1333,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
   svn_boolean_t is_operative_notification = FALSE;
 
   /* Is the notification the result of a real operative merge? */
-  if (notify->content_state == svn_wc_notify_state_conflicted
-      || notify->content_state == svn_wc_notify_state_merged
-      || notify->content_state == svn_wc_notify_state_changed
-      || notify->prop_state == svn_wc_notify_state_conflicted
-      || notify->prop_state == svn_wc_notify_state_merged
-      || notify->prop_state == svn_wc_notify_state_changed
-      || notify->action == svn_wc_notify_update_add)
+  if (IS_OPERATIVE_NOTIFICATION(notify))
     {
       notify_b->nbr_operative_notifications++;
       is_operative_notification = TRUE;
@@ -2817,12 +2820,21 @@ single_file_merge_get_file(const char **filename,
 }
 
 
-/* Send a notification specific to a single-file merge. */
+/* Send a notification specific to a single-file merge if the states
+   indicate there's something worth reporting.
+
+   If *HEADER_SENT is not set and HEADER_NOTIFICATION is not NULL, then
+   send the header notification before sending the state notification,
+   and set *HEADER_SENT to TRUE. */
 static APR_INLINE void
-single_file_merge_notify(void *notify_baton, const char *target_wcpath,
+single_file_merge_notify(void *notify_baton, 
+                         const char *target_wcpath,
                          svn_wc_notify_action_t action,
                          svn_wc_notify_state_t text_state,
-                         svn_wc_notify_state_t prop_state, apr_pool_t *pool)
+                         svn_wc_notify_state_t prop_state, 
+                         svn_wc_notify_t *header_notification,
+                         svn_boolean_t *header_sent,
+                         apr_pool_t *pool)
 {
   svn_wc_notify_t *notify = svn_wc_create_notify(target_wcpath, action, pool);
   notify->kind = svn_node_file;
@@ -2830,6 +2842,14 @@ single_file_merge_notify(void *notify_baton, const char *target_wcpath,
   notify->prop_state = prop_state;
   if (notify->content_state == svn_wc_notify_state_missing)
     notify->action = svn_wc_notify_skip;
+
+  if (IS_OPERATIVE_NOTIFICATION(notify)
+      && header_notification 
+      && (! *header_sent))
+    {
+      notification_receiver(notify_baton, header_notification, pool);
+      *header_sent = TRUE;
+    }
   notification_receiver(notify_baton, notify, pool);
 }
 
@@ -4022,6 +4042,7 @@ do_file_merge(const char *url1,
   for (i = 0; i < remaining_ranges->nelts; i++)
     {
       svn_wc_notify_t *n;
+      svn_boolean_t header_sent = FALSE;
 
       /* When using this merge range, account for the exclusivity of
          its low value (which is indicated by this operation being a
@@ -4036,7 +4057,6 @@ do_file_merge(const char *url1,
                                subpool);
       if (merge_b->sources_ancestral)
         n->merge_range = r;
-      notification_receiver(notify_b, n, subpool);
 
       /* While we currently don't allow it, in theory we could be
          fetching two fulltexts from two different repositories here. */
@@ -4077,7 +4097,8 @@ do_file_merge(const char *url1,
                                      merge_b));
           single_file_merge_notify(notify_b, target_wcpath,
                                    svn_wc_notify_update_delete, text_state,
-                                   svn_wc_notify_state_unknown, subpool);
+                                   svn_wc_notify_state_unknown, n,
+                                   &header_sent, subpool);
 
           /* ...plus add... */
           SVN_ERR(merge_file_added(adm_access,
@@ -4092,7 +4113,7 @@ do_file_merge(const char *url1,
                                    merge_b));
           single_file_merge_notify(notify_b, target_wcpath,
                                    svn_wc_notify_update_add, text_state,
-                                   prop_state, subpool);
+                                   prop_state, n, &header_sent, subpool);
           /* ... equals replace. */
         }
       else
@@ -4109,7 +4130,7 @@ do_file_merge(const char *url1,
                                      merge_b));
           single_file_merge_notify(notify_b, target_wcpath,
                                    svn_wc_notify_update_update, text_state,
-                                   prop_state, subpool);
+                                   prop_state, n, &header_sent, subpool);
         }
 
       /* Ignore if temporary file not found. It may have been renamed. */

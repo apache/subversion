@@ -73,8 +73,3 @@ Candidate changes:
      +1: cmpilato
 
 Approved changes:
-
- * r29225
-   Fix single-file no-op merge notifications to not print headers.
-   Votes:
-     +1: cmpilato, pburba

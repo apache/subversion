@@ -7188,7 +7188,7 @@ def no_mergeinfo_from_no_op_merge(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   wc_disk, wc_status = set_up_branch(sbox)
-
+  raise svntest.Failure("PTB")
   # Some paths we'll care about
   H_path = os.path.join(wc_dir, "A", "D", "H")
   beta_COPY_path = os.path.join(wc_dir, "A_COPY", "B", "E", "beta")
@@ -7260,7 +7260,7 @@ def no_mergeinfo_from_no_op_merge(sbox):
   # Do a no-op merge to a file with committed mergeinfo:
   #   -r2:4 into A_COPY/B/E/beta.
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output([[3,4]], None),
+                                     [],
                                      [], 'merge', '-r2:4',
                                      sbox.repo_url + '/A/B/E/beta',
                                      short_beta_COPY_path)
@@ -7269,7 +7269,7 @@ def no_mergeinfo_from_no_op_merge(sbox):
   # -c3 into A_COPY/D/G/tau.
   short_tau_COPY_path = shorten_path_kludge(tau_COPY_path)
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output([[3]]),
+                                     [],
                                      [], 'merge', '-c3',
                                      sbox.repo_url + '/A/D/G/tau',
                                      short_tau_COPY_path)
@@ -7278,7 +7278,7 @@ def no_mergeinfo_from_no_op_merge(sbox):
   #   -r4:6 into A_COPY/D/G.
   short_tau_COPY_path = shorten_path_kludge(tau_COPY_path)
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output([[5,6]], None),
+                                     [],
                                      [], 'merge', '-r4:6',
                                      sbox.repo_url + '/A/D/G',
                                      short_G_COPY_path)
@@ -7292,7 +7292,7 @@ def no_mergeinfo_from_no_op_merge(sbox):
   os.chdir(svntest.main.work_dir)
   short_C_COPY_path = shorten_path_kludge(C_COPY_path)
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output([[2,7]], None),
+                                     [],
                                      [], 'merge',
                                      sbox.repo_url + '/A/C',
                                      short_C_COPY_path)
