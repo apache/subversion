@@ -80,7 +80,7 @@ Candidate changes:
      +1: epg
 
  * r29243
-   Expand svnserve SASL documentation.
+   Expand svnserve SASL documentation (depends on r29242).
    Votes:
      +1: epg
 
