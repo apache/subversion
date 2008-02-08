@@ -3814,7 +3814,8 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
                 {
                   svn_location_segment_t *new_segment =
                     apr_pcalloc(pool, sizeof(*new_segment));
-                  new_segment->path = copyfrom_path;
+                  /* Skip the leading '/'. */
+                  new_segment->path = copyfrom_path + 1;
                   new_segment->range_start = copyfrom_rev;
                   new_segment->range_end = copyfrom_rev;
                   segment->range_start = copyfrom_rev + 1;
