@@ -1164,10 +1164,10 @@ typedef enum svn_wc_conflict_choice_t
      work of "installing" the chosen file.
   */
   svn_wc_conflict_choose_base,       /* original version */
-  svn_wc_conflict_choose_theirs,     /* incoming version */
-  svn_wc_conflict_choose_mine,       /* own version (for conflicted hunks) */
-  svn_wc_conflict_choose_theirs_all, /* incoming (for conflicted hunks) */
+  svn_wc_conflict_choose_theirs_all, /* incoming version */
   svn_wc_conflict_choose_mine_all,   /* own version */
+  svn_wc_conflict_choose_theirs,     /* incoming (for conflicted hunks) */
+  svn_wc_conflict_choose_mine,       /* own (for conflicted hunks) */
   svn_wc_conflict_choose_merged      /* merged version */
 
 } svn_wc_conflict_choice_t;
