@@ -130,7 +130,7 @@ typedef void (*svn_fs_warning_callback_t)(void *baton, svn_error_t *err);
  * By default, this is set to a function that will crash the process.
  * Dumping to @c stderr or <tt>/dev/tty</tt> is not acceptable default
  * behavior for server processes, since those may both be equivalent to
- * <tt>/dev/NULL</tt>.
+ * <tt>/dev/null</tt>.
  */
 void
 svn_fs_set_warning_func(svn_fs_t *fs,
