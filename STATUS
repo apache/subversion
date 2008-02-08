@@ -73,4 +73,21 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r29241
+   Fix client/server deadlock in ra_svn gssapi.
+   Votes:
+     +1: epg
+
+ * r29242
+   Use "svn" for SASL service/application name rather than "svn" for
+   one and "subversion" for the other.  INCOMPATIBLE: if this does not
+   go into 1.5.0, it must be reverted on trunk.
+   Votes:
+     +1: epg
+
+ * r29243
+   Expand svnserve SASL documentation.
+   Votes:
+     +1: epg
+
 Approved changes:
