@@ -82,13 +82,14 @@ Contents
   First, you need to configure how the Cyrus SASL library should authenticate
   a client's username and password.  These options are not stored in
   svnserve.conf, but in a special configuration file read by Cyrus SASL.  This
-  file must be named subversion.conf.  Cyrus SASL will look for this file in a
-  known location, usually the same directory where its plugins are located,
-  i.e. /usr/lib/sasl2.  Some SASL distributions will look for the file in a
-  different directory, e.g. /etc/sasl2.
+  file must be named svn.conf, and must be readable by the svnserve process.
+  Cyrus SASL will look for this file in a known location, usually the same
+  directory where its plugins are located, i.e. /usr/lib/sasl2.  Some SASL
+  distributions will look for the file in a different directory, e.g.
+  /etc/sasl2.
   
   The list of possible options can be found in the doc/options.html file in the
-  Cyrus SASL sources.  A simple subversion.conf might look like this:
+  Cyrus SASL sources.  A simple svn.conf might look like this:
   
     pwcheck_method: auxprop
     auxprop_plugin: sasldb
@@ -120,7 +121,7 @@ Contents
   in a local database, you can use Kerberos, LDAP, you can store passwords in
   a SQL database, etc.  Read the SASL documentation for details.
   
-  After creating the subversion.conf file, you need to tell svnserve to start
+  After creating the svn.conf file, you need to tell svnserve to start
   using Cyrus SASL for authentication.  To do this, just set "use-sasl" to
   "true" in the [sasl] section of the svnserve.conf file.  You should now be
   able to authenticate.
@@ -136,7 +137,7 @@ Contents
     "SearchPath": set this to the path where SASL's plugins (the *.dll files)
                   are located
     "ConfFile":   set this to the path where Cyrus SASL should look for the
-                  subversion.conf file
+                  svn.conf file
 
 5. Compatibility
 ================
