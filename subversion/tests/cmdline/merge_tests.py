@@ -7188,7 +7188,7 @@ def no_mergeinfo_from_no_op_merge(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   wc_disk, wc_status = set_up_branch(sbox)
-  raise svntest.Failure("PTB")
+
   # Some paths we'll care about
   H_path = os.path.join(wc_dir, "A", "D", "H")
   beta_COPY_path = os.path.join(wc_dir, "A_COPY", "B", "E", "beta")
