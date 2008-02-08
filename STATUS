@@ -61,10 +61,11 @@ Candidate changes:
    Votes:
      +1: hwright
 
- * r29198, r29214, r29216
+ * r29198, r29214, r29216, r29239
    Fix issue #3094, which resulted in noop merges.
    Votes:
-     +1: cmpilato
+     +1: cmpilato (all but r29239)
+     +1: pburba
 
  * r29218
    Fix some Ruby tests failures caused by a sequencing bug in
