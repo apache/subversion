@@ -47,7 +47,7 @@ repository) is:
     <partial-digest>/ Subdirectory named for first 3 letters of an MD5 digest
       <digest>        File containing locks/children for path with <digest>
   node-origins/       Lazy cache of origin noderevs for nodes
-    <nodeid>          File containing noderev ID of origin of node <nodeid>
+    <partial-nodeid>  File containing noderev ID of origins of nodes
   current             File specifying current revision and next node/copy id
   fs-type             File identifying this filesystem as an FSFS filesystem
   write-lock          Empty file, locked to serialise writers
@@ -58,10 +58,16 @@ repository) is:
 Files in the revprops directory are in the hash dump format used by
 svn_hash_write.
 
-The format of the "current" file is a single line of the form
-"<youngest-revision> <next-node-id> <next-copy-id>\n" giving the
-youngest revision, the next unique node-ID, and the next unique
-copy-ID for the repository.
+The format of the "current" file is:
+
+ * Format 3 and above: a single line of the form
+   "<youngest-revision>\n" giving the youngest revision for the
+   repository.
+
+ * Format 2 and below: a single line of the form "<youngest-revision>
+   <next-node-id> <next-copy-id>\n" giving the youngest revision, the
+   next unique node-ID, and the next unique copy-ID for the
+   repository.
 
 The "write-lock" file is an empty file which is locked before the
 final stage of a commit and unlocked after the new "current" file has
@@ -107,13 +113,15 @@ Format 1: (understood by Subversion 1.1+)
   data.  No format options are permitted.  No mechanism is provided to
   prevent transaction name reuse.  Proto-rev and its lock are stored
   in transactions/<txnid>/rev and transactions/<txnid>/rev-lock.
+  Node-IDs and copy-IDs use the "current" file.
 
 Format 2: (understood by Subversion 1.4+)
   Delta representations in revision files may contain either svndiff0
   or svndiff1 data.  No format options are permitted.  No mechanism is
   provided to prevent transaction name reuse.  Proto-rev and its lock
   are stored in transactions/<txnid>/rev and
-  transactions/<txnid>/rev-lock.
+  transactions/<txnid>/rev-lock.  Node-IDs and copy-IDs use the
+  "current" file.
 
 Format 3: (understood by Subversion 1.5+)
   Delta representations in revision files may contain either svndiff0
@@ -122,6 +130,7 @@ Format 3: (understood by Subversion 1.5+)
   generated using the transaction sequence number stored in the
   txn-current file.  Proto-rev and its lock are stored in
   txn-protorevs/<txnid>.rev and txn-protorevs/<txnid>.rev-lock.
+  Node-IDs and copy-IDs do not use the "current" file.
 
 Filesystem format options
 -------------------------
@@ -164,17 +173,27 @@ and to simplify the allocation of fresh node-IDs during a transaction,
 we treat the fields of a node-ID in new and interesting ways.
 
 Within a revision file, node-revs have a txn-id field of the form
-"r<rev>/<offset>", to support easy lookup.  The node-id and copy-id
-fields are unique base36 values as in the BDB implementation.
+"r<rev>/<offset>", to support easy lookup.  New node-revision IDs
+assigned within a transaction have the txn-id field of "t<txnid>".
 
-New node-revision IDs assigned within a transaction have the txn-id
-field of "t<txnid>".  The node-id or copy-id field may be base36
-values if the node-revision is derived from a pre-existing node and/or
-copy; if the node-revision must have a freshly-assigned node-id or
-copy-id, it uses "_" followed by a base36 unique to the transaction.
-During the final phase of a commit, node-revision IDs are rewritten to
-have unique node-ID and copy-ID fields and to have "r<rev>/<offset>"
-txn-id fields.
+When a new node-id or copy-id is assigned in a transaction, the ID
+used is a "_" followed by a base36 number unique to the transaction.
+During the final phase of a comment, node-revision IDs are rewritten
+to have repository-wide unique node-ID and copy-ID fields, and to have
+"r<rev>/<offset>" txn-id fields.
+
+In Format 3 and above, this uniqueness is done by changing a temporary
+id of "_<base36>" to "<rev>-<base36>".  Note that this means that the
+originating revision of a line of history or a copy can be determined
+by looking at the node ID.
+
+In Format 2 and below, the "current" file contains global base36
+node-ID and copy-ID counters; during the commit, the counter value is
+added to the transaction-specific base36 ID, and the value in
+"current" is adjusted.
+
+(It is legal for Format 3 repositories to contain Format 2-style IDs;
+this just prevents I/O-less node-origin-rev lookup for those nodes.)
 
 The temporary assignment of node-ID and copy-ID fields has
 implications for svn_fs_compare_ids and svn_fs_check_related.  The IDs
@@ -184,8 +203,10 @@ the transactions they belong to.
 
 There is a lazily created cache mapping from node-IDs to the full
 node-revision ID where they are created.  This is in the node-origins
-directory; the file name is the node-ID and the contents is the
-node-revision ID.
+directory; the file name is the node-ID without its last character (or
+"0" for single-character node IDs) and the contents is a serialized
+hash mapping from node-ID to node-revision ID.  This cache is only
+used for node-IDs of the pre-Format 3 style.
 
 Copy-IDs and copy roots
 -----------------------
