@@ -5608,13 +5608,42 @@ recover_body(void *baton, apr_pool_t *pool)
   /* Get the expected youngest revision */
   SVN_ERR(get_youngest(&youngest_rev, fs->path, pool));
 
-  /* When get_youngest() returns 0, either the youngest revision truly
-     is 0 or the db/current file was recreated as part of opening the
-     filesystem for recovery. */
-  if (youngest_rev != 0 && youngest_rev != max_rev)
+  /* Policy note:
+
+     Since the revprops file is written after the revs file, the true
+     maximum available revision is the youngest one for which both are
+     present.  That's probably the same as the max_rev we just found,
+     but if it's not, we could, in theory, repeatedly decrement
+     max_rev until we find a revision that has both a revs and
+     revprops file, then write db/current with that.
+
+     But we choose not to.  If a repository is so corrupt that it's
+     missing at least one revprops file, we shouldn't assume that the
+     youngest revision for which both the revs and revprops files are
+     present is healthy.  In other words, we're willing to recover
+     from a missing or out-of-date db/current file, because db/current
+     is truly redundant -- it's basically a cache so we don't have to
+     find max_rev each time, albeit a cache with unusual semantics,
+     since it also officially defines when a revision goes live.  But
+     if we're missing more than the cache, it's time to back out and
+     let the admin reconstruct things by hand: correctness at that
+     point may depend on external things like checking a commit email
+     list, looking in particular working copies, etc.
+
+     This policy matches well with a typical naive backup scenario.
+     Say you're rsyncing your FSFS repository nightly to the same
+     location.  Once revs and revprops are written, you've got the
+     maximum rev; if the backup should bomb before db/current is
+     written, then db/current could stay arbitrarily out-of-date, but
+     we can still recover.  It's a small window, but we might as well
+     do what we can. */
+
+  /* Even if db/current were missing, it would be created with 0 by
+     get_youngest(), so this conditional remains valid. */
+  if (youngest_rev > max_rev)
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Expected youngest rev to be %ld "
-                               "but found %ld"), youngest_rev, max_rev);
+                             _("Expected current rev to be <= %ld "
+                               "but found %ld"), max_rev, youngest_rev);
 
   /* We only need to search for maximum IDs for old FS formats which
      se global ID counters. */
