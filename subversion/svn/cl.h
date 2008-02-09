@@ -67,10 +67,10 @@ typedef enum
 
   /* Resolve the conflict by taking the entire pre-conflict working
      copy file. */
-  svn_cl__accept_mine_all,
+  svn_cl__accept_mine_full,
 
   /* Resolve the conflict by taking the entire post-conflict base file. */
-  svn_cl__accept_theirs_all,
+  svn_cl__accept_theirs_full,
 
   /* Launch user's editor and resolve conflict with edited file. */
   svn_cl__accept_edit,
@@ -84,8 +84,8 @@ typedef enum
 #define SVN_CL__ACCEPT_BASE "base"
 #define SVN_CL__ACCEPT_MINE "mine"
 #define SVN_CL__ACCEPT_THEIRS "theirs"
-#define SVN_CL__ACCEPT_MINE_ALL "mine-all"
-#define SVN_CL__ACCEPT_THEIRS_ALL "theirs-all"
+#define SVN_CL__ACCEPT_MINE_FULL "mine-full"
+#define SVN_CL__ACCEPT_THEIRS_FULL "theirs-full"
 #define SVN_CL__ACCEPT_EDIT "edit"
 #define SVN_CL__ACCEPT_LAUNCH "launch"
 

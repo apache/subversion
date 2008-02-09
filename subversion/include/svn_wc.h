@@ -1163,12 +1163,12 @@ typedef enum svn_wc_conflict_choice_t
      resolving the conflict here and now.  libsvn_wc will then do the
      work of "installing" the chosen file.
   */
-  svn_wc_conflict_choose_base,       /* original version */
-  svn_wc_conflict_choose_theirs_all, /* incoming version */
-  svn_wc_conflict_choose_mine_all,   /* own version */
-  svn_wc_conflict_choose_theirs,     /* incoming (for conflicted hunks) */
-  svn_wc_conflict_choose_mine,       /* own (for conflicted hunks) */
-  svn_wc_conflict_choose_merged      /* merged version */
+  svn_wc_conflict_choose_base,        /* original version */
+  svn_wc_conflict_choose_theirs_full, /* incoming version */
+  svn_wc_conflict_choose_mine_full,   /* own version */
+  svn_wc_conflict_choose_theirs,      /* incoming (for conflicted hunks) */
+  svn_wc_conflict_choose_mine,        /* own (for conflicted hunks) */
+  svn_wc_conflict_choose_merged       /* merged version */
 
 } svn_wc_conflict_choice_t;
 
@@ -2873,8 +2873,8 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  *
  * If @a conflict_choice is @c svn_wc_conflict_choose_base, resolve the
  * conflict with the old file contents; if
- * @c svn_wc_conflict_choose_mine_all, use the original working contents;
- * if @c svn_wc_conflict_choose_theirs_all, the new contents; and if
+ * @c svn_wc_conflict_choose_mine_full, use the original working contents;
+ * if @c svn_wc_conflict_choose_theirs_full, the new contents; and if
  * @c svn_wc_conflict_choose_merged, don't change the contents at all,
  * just remove the conflict status, which is the pre-1.5 behavior.
  *
