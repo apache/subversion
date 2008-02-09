@@ -2830,8 +2830,8 @@ svn_client_resolved(const char *path,
  *
  * If @a conflict_choice is @c svn_wc_conflict_choose_base, resolve the
  * conflict with the old file contents; if
- * @c svn_wc_conflict_choose_mine_all, use the original working contents;
- * if @c svn_wc_conflict_choose_theirs_all, the new contents; and if
+ * @c svn_wc_conflict_choose_mine_full, use the original working contents;
+ * if @c svn_wc_conflict_choose_theirs_full, the new contents; and if
  * @c svn_wc_conflict_choose_merged, don't change the contents at all,
  * just remove the conflict status, which is the pre-1.5 behavior.
  *

@@ -263,8 +263,8 @@ const apr_getopt_option_t svn_cl__options[] =
                           waste the user's time with them. */
                        /* " '" SVN_CL__ACCEPT_MINE "'," */
                        /* " '" SVN_CL__ACCEPT_THEIRS "'," */
-                       " '" SVN_CL__ACCEPT_MINE_ALL "',"
-                       " '" SVN_CL__ACCEPT_THEIRS_ALL "',"
+                       " '" SVN_CL__ACCEPT_MINE_FULL "',"
+                       " '" SVN_CL__ACCEPT_THEIRS_FULL "',"
                        "\n                            "
                        " '" SVN_CL__ACCEPT_EDIT "',"
                        " '" SVN_CL__ACCEPT_LAUNCH "')")},
@@ -777,8 +777,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
                                 don't waste the user's time with them. */
                              /* " '" SVN_CL__ACCEPT_MINE "'," */
                              /* " '" SVN_CL__ACCEPT_THEIRS "'," */
-                             " '" SVN_CL__ACCEPT_MINE_ALL "',"
-                             " '" SVN_CL__ACCEPT_THEIRS_ALL "')")}} },
+                             " '" SVN_CL__ACCEPT_MINE_FULL "',"
+                             " '" SVN_CL__ACCEPT_THEIRS_FULL "')")}} },
 
   { "revert", svn_cl__revert, {0}, N_
     ("Restore pristine working copy file (undo most local edits).\n"

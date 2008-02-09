@@ -67,10 +67,10 @@ svn_cl__accept_from_word(const char *word)
   if (strcmp(word, SVN_CL__ACCEPT_THEIRS) == 0)
     return svn_cl__accept_theirs;
 #endif /* 0 */
-  if (strcmp(word, SVN_CL__ACCEPT_MINE_ALL) == 0)
-    return svn_cl__accept_mine_all;
-  if (strcmp(word, SVN_CL__ACCEPT_THEIRS_ALL) == 0)
-    return svn_cl__accept_theirs_all;
+  if (strcmp(word, SVN_CL__ACCEPT_MINE_FULL) == 0)
+    return svn_cl__accept_mine_full;
+  if (strcmp(word, SVN_CL__ACCEPT_THEIRS_FULL) == 0)
+    return svn_cl__accept_theirs_full;
   if (strcmp(word, SVN_CL__ACCEPT_EDIT) == 0)
     return svn_cl__accept_edit;
   if (strcmp(word, SVN_CL__ACCEPT_LAUNCH) == 0)
@@ -228,11 +228,11 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
     case svn_cl__accept_theirs:
       (*result)->choice = svn_wc_conflict_choose_theirs;
       return SVN_NO_ERROR;
-    case svn_cl__accept_mine_all:
-      (*result)->choice = svn_wc_conflict_choose_mine_all;
+    case svn_cl__accept_mine_full:
+      (*result)->choice = svn_wc_conflict_choose_mine_full;
       return SVN_NO_ERROR;
-    case svn_cl__accept_theirs_all:
-      (*result)->choice = svn_wc_conflict_choose_theirs_all;
+    case svn_cl__accept_theirs_full:
+      (*result)->choice = svn_wc_conflict_choose_theirs_full;
       return SVN_NO_ERROR;
     case svn_cl__accept_edit:
       if (desc->merged_file)
@@ -391,11 +391,11 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
           prompt = apr_pstrdup(subpool, _("Select: (p)ostpone"));
           if (diff_allowed)
             prompt = apr_pstrcat(subpool, prompt,
-                                 _(", (D)iff-all, (e)dit"),
+                                 _(", (D)iff in full, (e)dit"),
                                  NULL);
           else
             prompt = apr_pstrcat(subpool, prompt,
-                                 _(", all of (M)ine, all of (T)heirs"),
+                                 _(", (M)ine in full, (T)heirs in full"),
                                  NULL);
           if (performed_edit)
             prompt = apr_pstrcat(subpool, prompt, _(", (r)esolved"), NULL);
@@ -419,16 +419,16 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
           if ((answer[0] == 'h') || (answer[0] == '?'))
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
-              _("  (p)ostpone   - mark the conflict to be resolved later\n"
-                "  (D)iff-all   - show all changes made to merged file\n"
-                "  (e)dit       - change merged file in an editor\n"
-                "  (r)esolved   - accept merged version of file\n"
-                "  (M)ine-all   - accept my version of entire file "
+              _("  (p)ostpone    - mark the conflict to be resolved later\n"
+                "  (D)iff-full   - show all changes made to merged file\n"
+                "  (e)dit        - change merged file in an editor\n"
+                "  (r)esolved    - accept merged version of file\n"
+                "  (M)ine-full   - accept my version of entire file "
                 "(ignore their changes)\n"
-                "  (T)heirs-all - accept their version of entire file "
+                "  (T)heirs-full - accept their version of entire file "
                 "(lose my changes)\n"
-                "  (l)aunch     - use third-party tool to resolve conflict\n"
-                "  (h)elp       - show this list\n\n")));
+                "  (l)aunch      - use third-party tool to resolve conflict\n"
+                "  (h)elp        - show this list\n\n")));
             }
           else if (answer[0] == 'p')
             {
@@ -454,12 +454,12 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
             }
           else if (answer[0] == 'M')
             {
-              (*result)->choice = svn_wc_conflict_choose_mine_all;
+              (*result)->choice = svn_wc_conflict_choose_mine_full;
               break;
             }
           else if (answer[0] == 'T')
             {
-              (*result)->choice = svn_wc_conflict_choose_theirs_all;
+              (*result)->choice = svn_wc_conflict_choose_theirs_full;
               break;
             }
           else if (answer[0] == 'd')
@@ -540,7 +540,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                    _("Conflict discovered when trying to add '%s'.\n"
                      "An object of the same name already exists.\n"),
                    desc->path));
-      prompt = _("Select: (p)ostpone, (M)ine-all, (T)heirs-all, (h)elp :");
+      prompt = _("Select: (p)ostpone, (M)ine-full, (T)heirs-full, (h)elp :");
 
       while (1)
         {
@@ -555,12 +555,12 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
           if ((answer[0] == 'h') || (answer[0] == '?'))
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
-              _("  (p)ostpone   - resolve the conflict later\n"
-                "  (M)ine-all   - accept pre-existing item "
+              _("  (p)ostpone    - resolve the conflict later\n"
+                "  (M)ine-full   - accept pre-existing item "
                 "(ignore upstream addition)\n"
-                "  (T)heirs-all - accept incoming item "
+                "  (T)heirs-full - accept incoming item "
                 "(overwrite pre-existing item)\n"
-                "  (h)elp       - show this list\n\n")));
+                "  (h)elp        - show this list\n\n")));
             }
           if (answer[0] == 'p')
             {
@@ -569,12 +569,12 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
             }
           if (answer[0] == 'M')
             {
-              (*result)->choice = svn_wc_conflict_choose_mine_all;
+              (*result)->choice = svn_wc_conflict_choose_mine_full;
               break;
             }
           if (answer[0] == 'T')
             {
-              (*result)->choice = svn_wc_conflict_choose_theirs_all;
+              (*result)->choice = svn_wc_conflict_choose_theirs_full;
               break;
             }
           if (strcmp(answer, "m") == 0)
