@@ -502,15 +502,18 @@ static svn_error_t *parse_url(const char *url, apr_uri_t *uri,
 
 /* Open a session to URL, returning it in *SESS_P, allocating it in POOL.
    URI is a parsed version of URL.  CALLBACKS and CALLBACKS_BATON
-   are provided by the caller of ra_svn_open. If tunnel_argv is non-null,
+   are provided by the caller of ra_svn_open. If TUNNEL_ARGV is non-null,
    it points to a program argument list to use when invoking the tunnel agent.
-*/
+   SERVER_CAPABILITIES is a pointer to the encapsulating
+   svn_ra_session_t's server_capabilities hash [KFF: see comment in
+   marshal.c:svn_ra_svn_create_conn() about what to do with it]. */
 static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
                                  const char *url,
                                  const apr_uri_t *uri,
                                  const char **tunnel_argv,
                                  const svn_ra_callbacks2_t *callbacks,
                                  void *callbacks_baton,
+                                 apr_hash_t *server_capabilities,
                                  apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess;
@@ -531,6 +534,9 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   sess->callbacks = callbacks;
   sess->callbacks_baton = callbacks_baton;
   sess->bytes_read = sess->bytes_written = 0;
+  /* KFF: see comment in marshal.c:svn_ra_svn_create_conn() about what
+     to do here. */ 
+  sess->server_capabilities = server_capabilities;
 
   if (tunnel_argv)
     SVN_ERR(make_tunnel(tunnel_argv, &conn, pool));
@@ -644,7 +650,8 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session, const char *url,
   /* We open the session in a subpool so we can get rid of it if we
      reparent with a server that doesn't support reparenting. */
   SVN_ERR(open_session(&sess, url, &uri, tunnel_argv,
-                       callbacks, callback_baton, sess_pool));
+                       callbacks, callback_baton,
+                       session->server_capabilities, sess_pool));
   session->priv = sess;
 
   return SVN_NO_ERROR;
@@ -680,7 +687,11 @@ static svn_error_t *ra_svn_reparent(svn_ra_session_t *ra_session,
   err = parse_url(url, &uri, sess_pool);
   if (! err)
     err = open_session(&new_sess, url, &uri, sess->tunnel_argv,
-                       sess->callbacks, sess->callbacks_baton, sess_pool);
+                       sess->callbacks, sess->callbacks_baton,
+                       ra_session->server_capabilities, sess_pool);
+
+  /* KFF: how best to ensure that server_capabilities gets into conn? */
+
   /* We destroy the new session pool on error, since it is allocated in
      the main session pool. */
   if (err)

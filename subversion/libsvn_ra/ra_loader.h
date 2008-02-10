@@ -249,6 +249,12 @@ typedef struct svn_ra__vtable_t {
                   apr_pool_t *pool);
 } svn_ra__vtable_t;
 
+
+/* KFF: document these */
+extern const char *svn_ra__server_capability_yes;
+extern const char *svn_ra__server_capability_no;
+extern const char *svn_ra__server_capability_server_yes;
+
 /* The RA session object. */
 struct svn_ra_session_t {
   const svn_ra__vtable_t *vtable;
@@ -258,6 +264,21 @@ struct svn_ra_session_t {
 
   /* Private data for the RA implementation. */
   void *priv;
+
+  /* Map SVN_RA_CAPABILITY_foo keys to "yes", "no", or "server-yes" values.
+
+     If a capability is not yet discovered, it is absent from the
+     table.  If the server has reported support for the capability,
+     but it's a capability that needs per-repository support as well
+     (e.g., mergeinfo), then the value is "server-yes"; else it is
+     simply "yes" if supported or "no" if not.
+
+     The table itself is allocated in the svn_ra_session_t's pool;
+     keys and values must have at least that lifetime.  Most likely
+     the keys and values are constants anyway (and sufficiently
+     well-informed internal code may just compare against those
+     constants' addresses, therefore). */
+  apr_hash_t *server_capabilities;
 };
 
 /* Each libsvn_ra_foo defines a function named svn_ra_foo__init of this type.

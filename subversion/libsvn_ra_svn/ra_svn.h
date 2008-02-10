@@ -79,7 +79,8 @@ struct svn_ra_svn_conn_st {
   const char *repos_root;
   ra_svn_block_handler_t block_handler;
   void *block_baton;
-  apr_hash_t *capabilities;
+  apr_hash_t *server_capabilities; /* KFF: See comment in
+                                      svn_ra_svn_create_conn. */ 
   apr_pool_t *pool;
 };
 
@@ -96,6 +97,8 @@ struct svn_ra_svn__session_baton_t {
   void *callbacks_baton;
   apr_off_t bytes_read, bytes_written; /* apr_off_t's because that's what
                                           the callback interface uses */
+  apr_hash_t *server_capabilities; /* Points outward to the encapsulating
+                                      svn_ra_session_t's capabilities. */
 };
 
 /* Set a callback for blocked writes on conn.  This handler may

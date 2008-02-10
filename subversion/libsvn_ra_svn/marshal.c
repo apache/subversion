@@ -58,7 +58,21 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
   conn->write_pos = 0;
   conn->block_handler = NULL;
   conn->block_baton = NULL;
-  conn->capabilities = apr_hash_make(pool);
+
+  /* KFF: This is tricky.  conn->capabilities is normally supposed to
+     point out to the encapsulating svn_ra_svn__session_baton_t's
+     capabilities (which in turn just points to the encapsulating
+     svn_ra_session_t's capabilities, got that?).  But there are a
+     couple of cases where a conn is created by itself -- search for
+     svn_ra_svn_create_conn in client.c, for example.  In those
+     cases, we could just set conn->capabilities to NULL, but that
+     makes for inconsistent semantics.  A better solution would be to
+     create the hash here, but then in client.c:open_session(), where
+     we create the conn and then hook it up with 'sess', to copy the
+     hash elements over explicitly and then set conn->capabilities to
+     sess->capabilities.  */
+  conn->server_capabilities = apr_hash_make(pool);
+
   conn->pool = pool;
 
   if (sock != NULL)
@@ -83,7 +97,9 @@ svn_error_t *svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Capability entry is not a word"));
       word = apr_pstrdup(conn->pool, item->u.word);
-      apr_hash_set(conn->capabilities, word, APR_HASH_KEY_STRING, word);
+      apr_hash_set(conn->server_capabilities,
+                   word, APR_HASH_KEY_STRING, word);
+      /* KFF: settle namespace issues for capabilities */
     }
   return SVN_NO_ERROR;
 }
@@ -91,8 +107,9 @@ svn_error_t *svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
 svn_boolean_t svn_ra_svn_has_capability(svn_ra_svn_conn_t *conn,
                                         const char *capability)
 {
-  return (apr_hash_get(conn->capabilities, capability,
+  return (apr_hash_get(conn->server_capabilities, capability,
                        APR_HASH_KEY_STRING) != NULL);
+  /* KFF: settle namespace issues for capabilities */
 }
 
 void

@@ -173,7 +173,7 @@ exchange_capabilities(svn_ra_serf__session_t *serf_sess, apr_pool_t *pool)
 
   crb.pool = pool;
   crb.done = FALSE;
-  crb.capabilities = serf_sess->capabilities;
+  crb.capabilities = serf_sess->server_capabilities;
 
   /* No obvious advantage to using svn_ra_serf__create_options_req() here. */
   handler = apr_pcalloc(pool, sizeof(*handler));
@@ -199,16 +199,15 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
 {
   svn_ra_serf__session_t *serf_sess = ra_session->priv;
 
-  const char *cap_result = apr_hash_get(serf_sess->capabilities,
-                                        capability,
-                                        APR_HASH_KEY_STRING);
+  const char *cap_result = apr_hash_get(serf_sess->server_capabilities,
+                                        capability, APR_HASH_KEY_STRING);
 
   /* If any capability is unknown, they're all unknown, so ask. */
   if (cap_result == NULL)
     SVN_ERR(exchange_capabilities(serf_sess, pool));
 
   /* Try again, now that we've fetched the capabilities. */
-  cap_result = apr_hash_get(serf_sess->capabilities,
+  cap_result = apr_hash_get(serf_sess->server_capabilities,
                             capability, APR_HASH_KEY_STRING);
 
   if (cap_result == capability_yes)
@@ -409,7 +408,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
     }
   serf_sess->using_ssl = (svn_cstring_casecmp(url.scheme, "https") == 0);
 
-  serf_sess->capabilities = apr_hash_make(serf_sess->pool);
+  serf_sess->server_capabilities = apr_hash_make(serf_sess->pool);
 
   SVN_ERR(load_config(serf_sess, config, serf_sess->pool));
 

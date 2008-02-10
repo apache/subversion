@@ -167,14 +167,9 @@ struct svn_ra_serf__session_t {
   /* vtable and info object handling the authentication */
   const svn_ra_serf__auth_protocol_t *auth_protocol;
 
-  /* Maps SVN_RA_CAPABILITY_foo keys to "yes" or "no" values.
-     If a capability is not yet discovered, it is absent from the table.
-     The table itself is allocated in the svn_ra_serf__session_t's pool;
-     keys and values must have at least that lifetime.  Most likely
-     the keys and values are constants anyway (and sufficiently
-     well-informed internal code may just compare against those
-     constants' addresses, therefore). */
-  apr_hash_t *capabilities;
+  /* This must point outward to the encapsulating svn_ra_session_t *'s
+     server_capabilities. */
+  apr_hash_t *server_capabilities;
 
   /* Are we using a proxy? */
   int using_proxy;

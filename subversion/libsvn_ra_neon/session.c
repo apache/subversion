@@ -634,11 +634,11 @@ parse_capabilities(ne_request *req,
   void *ne_header_cursor = NULL;
 
   /* Start out assuming all capabilities are unsupported. */
-  apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
+  apr_hash_set(ras->server_capabilities, SVN_RA_CAPABILITY_DEPTH,
                APR_HASH_KEY_STRING, capability_no);
-  apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+  apr_hash_set(ras->server_capabilities, SVN_RA_CAPABILITY_MERGEINFO,
                APR_HASH_KEY_STRING, capability_no);
-  apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
+  apr_hash_set(ras->server_capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
                APR_HASH_KEY_STRING, capability_no);
 
   /* Then find out which ones are supported. */
@@ -679,20 +679,24 @@ parse_capabilities(ne_request *req,
            until we have many more capabilities. */
 
         if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_DEPTH, vals))
-          apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
+          apr_hash_set(ras->server_capabilities,
+                       SVN_RA_CAPABILITY_DEPTH,
                        APR_HASH_KEY_STRING, capability_yes);
 
         if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
-          apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+          apr_hash_set(ras->server_capabilities,
+                       SVN_RA_CAPABILITY_MERGEINFO,
                        APR_HASH_KEY_STRING, capability_yes);
 
         if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
-          apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
+          apr_hash_set(ras->server_capabilities,
+                       SVN_RA_CAPABILITY_LOG_REVPROPS,
                        APR_HASH_KEY_STRING, capability_yes);
 
         if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY, 
                                         vals))
-          apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_PARTIAL_REPLAY,
+          apr_hash_set(ras->server_capabilities,
+                       SVN_RA_CAPABILITY_PARTIAL_REPLAY,
                        APR_HASH_KEY_STRING, capability_yes);
       }
   } while (ne_header_cursor);
@@ -749,7 +753,7 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
                             apr_pool_t *pool)
 {
   svn_ra_neon__session_t *ras = session->priv;
-  const char *cap_result = apr_hash_get(ras->capabilities,
+  const char *cap_result = apr_hash_get(ras->server_capabilities,
                                         capability,
                                         APR_HASH_KEY_STRING);
 
@@ -759,7 +763,7 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
 
 
   /* Try again, now that we've fetched the capabilities. */
-  cap_result = apr_hash_get(ras->capabilities,
+  cap_result = apr_hash_get(ras->server_capabilities,
                             capability, APR_HASH_KEY_STRING);
 
   if (cap_result == capability_yes)
@@ -980,7 +984,7 @@ svn_ra_neon__open(svn_ra_session_t *session,
   ras->compression = compression;
   ras->progress_baton = callbacks->progress_baton;
   ras->progress_func = callbacks->progress_func;
-  ras->capabilities = apr_hash_make(ras->pool);
+  ras->server_capabilities = apr_hash_make(ras->pool);
   /* save config and server group in the auth parameter hash */
   svn_auth_set_parameter(ras->callbacks->auth_baton,
                          SVN_AUTH_PARAM_CONFIG, cfg);
