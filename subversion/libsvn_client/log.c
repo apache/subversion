@@ -176,16 +176,11 @@ svn_client__get_copy_source(const char *path_or_url,
   APR_ARRAY_PUSH(targets, const char *) = path_or_url;
 
   /* Find the copy source.  Trace back in history to find the revision
-     at which this node was created (copied or added). 
-
-     ### Reuse ra_session by way of svn_ra_get_log()?
-     err = svn_ra_get_log(ra_session, rel_paths, revision, 1, 0, TRUE, TRUE,
-                          copyfrom_info_receiver, &copyfrom_info, pool);
-  */
-  err = svn_client_log4(targets, revision, revision, &oldest_rev, 0,
-                        TRUE, TRUE, FALSE, apr_array_make(pool, 0,
-                                                          sizeof(const char *)),
-                        copyfrom_info_receiver, &copyfrom_info, ctx, pool);
+     at which this node was created (copied or added). */
+  err = svn_ra_get_log2(ra_session, targets, revision->value.number, 1, 0, TRUE,
+                        TRUE, FALSE,
+                        apr_array_make(pool, 0, sizeof(const char *)),
+                        copyfrom_info_receiver, &copyfrom_info, pool);
 
   svn_pool_destroy(sesspool);
 
