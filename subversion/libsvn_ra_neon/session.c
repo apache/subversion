@@ -619,10 +619,12 @@ ra_neon_neonprogress(void *baton, off_t progress, off_t total)
 
 /** Capabilities exchange. */
 
-/* The only two possible values for a capability. */
+/* Both server and repository support the capability. */
 static const char *capability_yes = "yes";
+/* Either server or repository does not support the capability. */
 static const char *capability_no = "no";
-
+/* Server supports the capability, but don't yet know if repository does. */
+static const char *capability_server_yes = "server-yes";
 
 /* Store in RAS the capabilities discovered from REQ's headers.
    Use POOL for temporary allocation only. */
@@ -683,8 +685,10 @@ parse_capabilities(ne_request *req,
                        APR_HASH_KEY_STRING, capability_yes);
 
         if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
+          /* The server doesn't know what repository we're referring
+             to, so it can't just say capability_yes. */
           apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
-                       APR_HASH_KEY_STRING, capability_yes);
+                       APR_HASH_KEY_STRING, capability_server_yes);
 
         if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
           apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
@@ -757,10 +761,61 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
   if (cap_result == NULL)
     SVN_ERR(exchange_capabilities(ras, pool));
 
-
   /* Try again, now that we've fetched the capabilities. */
   cap_result = apr_hash_get(ras->capabilities,
                             capability, APR_HASH_KEY_STRING);
+
+  /* Some capabilities depend on the repository as well as the server.
+     NOTE: ../libsvn_ra_serf/serf.c:svn_ra_serf__has_capability()
+     has a very similar code block.  If you change something here,
+     check there as well. */
+  if (cap_result == capability_server_yes)
+    {
+      if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
+        {
+          /* Handle mergeinfo specially.  Mergeinfo depends on the
+             repository as well as the server, but the server routine
+             that answered our exchange_capabilities() call above
+             didn't even know which repository we were interested in
+             -- it just told us whether the server supports mergeinfo.
+             If the answer was 'no', there's no point checking the
+             particular repository; but if it was 'yes, we still must
+             change it to 'no' iff the repository itself doesn't
+             support mergeinfo. */
+          apr_hash_t *ignored_mergeoutput;
+          svn_error_t *err;
+          apr_array_header_t *paths = apr_array_make(pool, 1,
+                                                     sizeof(char *));
+          APR_ARRAY_PUSH(paths, const char *) = "";
+          
+          err = svn_ra_neon__get_mergeinfo(session, &ignored_mergeoutput,
+                                           paths, 0, FALSE, FALSE, pool);
+          
+          if (err)
+            {
+              if (err->apr_err != SVN_ERR_UNSUPPORTED_FEATURE)
+                return err;
+              else
+                {
+                  svn_error_clear(err);
+                  cap_result = capability_no;
+                }
+            }
+          else
+            cap_result = capability_yes;
+          
+          apr_hash_set(ras->capabilities,
+                       SVN_RA_CAPABILITY_MERGEINFO, APR_HASH_KEY_STRING,
+                       cap_result);
+        }
+      else
+        {
+          return svn_error_createf
+            (SVN_ERR_UNKNOWN_CAPABILITY, NULL,
+             _("Don't know how to handle 'server-yes' for capability '%s'"),
+             capability);
+        }
+    }
 
   if (cap_result == capability_yes)
     {

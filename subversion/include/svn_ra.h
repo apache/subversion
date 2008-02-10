@@ -907,9 +907,9 @@ svn_ra_get_dir(svn_ra_session_t *session,
  *
  * If @a revision is @c SVN_INVALID_REVNUM, it defaults to youngest.
  *
- * If the server doesn't support retrieval of mergeinfo (which will
- * never happen for file:// URLs), return an @c
- * SVN_ERR_UNSUPPORTED_FEATURE error.
+ * If the server doesn't support retrieval of mergeinfo (which can
+ * happen even for file:// URLs, if the repository itself hasn't been
+ * upgraded), return an @c SVN_ERR_UNSUPPORTED_FEATURE error.
  *
  * @since New in 1.5.
  */
