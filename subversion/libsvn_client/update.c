@@ -232,13 +232,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
                                 SVN_RA_CAPABILITY_DEPTH, pool));
 
-  /* KFF: temporary debugging block */
-  {
-    svn_boolean_t mergeinfo_capability;
-    SVN_ERR(svn_ra_has_capability(ra_session, &mergeinfo_capability,
-                                  SVN_RA_CAPABILITY_MERGEINFO, pool));
-  }
-
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the
      update_editor will be driven by svn_repos_dir_delta2. */
