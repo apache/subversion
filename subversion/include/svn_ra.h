@@ -891,7 +891,8 @@ svn_ra_get_dir(svn_ra_session_t *session,
  * <tt>svn_merge_range_t *</tt> elements).  If no mergeinfo is
  * available, set @a *mergeoutput to @c NULL.  The requested mergeinfo
  * hashes are for @a paths (which are relative to @a session's URL) in
- * @a revision.
+ * @a revision.  If one of the paths does not exist in that revision,
+ * return SVN_ERR_FS_NOT_FOUND.
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a paths is retrieved.
@@ -909,7 +910,8 @@ svn_ra_get_dir(svn_ra_session_t *session,
  *
  * If the server doesn't support retrieval of mergeinfo (which can
  * happen even for file:// URLs, if the repository itself hasn't been
- * upgraded), return an @c SVN_ERR_UNSUPPORTED_FEATURE error.
+ * upgraded), return @c SVN_ERR_UNSUPPORTED_FEATURE in preference to
+ * any other error that might otherwise be returned.
  *
  * @since New in 1.5.
  */

@@ -2254,14 +2254,22 @@ static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
 
           if (err)
             {
-              if (err->apr_err != SVN_ERR_UNSUPPORTED_FEATURE)
-                return err;
-              else
+              if (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
                 {
                   svn_error_clear(err);
                   sess->repository_supports_mergeinfo = -1;
                   *has = FALSE;
                 }
+              else if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+                {
+                  /* Mergeinfo requests use relative paths, and
+                     anyway we're in r0, so this is a likely error,
+                     but it means the repository supports mergeinfo! */
+                  svn_error_clear(err);
+                  sess->repository_supports_mergeinfo = 1;
+                }
+              else
+                return err;
             }
         }
     }

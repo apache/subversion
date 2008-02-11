@@ -244,13 +244,22 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
           
           if (err)
             {
-              if (err->apr_err != SVN_ERR_UNSUPPORTED_FEATURE)
-                return err;
-              else
+              if (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
                 {
                   svn_error_clear(err);
                   cap_result = capability_no;
                 }
+              else if (err->apr_err == SVN_ERR_FS_NOT_FOUND
+                       || err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+                {
+                  /* Mergeinfo requests use relative paths, and
+                     anyway we're in r0, so this is a likely error,
+                     but it means the repository supports mergeinfo! */
+                  svn_error_clear(err);
+                  cap_result = capability_yes;
+                }
+              else
+                return err;
             }
           else
             cap_result = capability_yes;
