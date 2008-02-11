@@ -444,6 +444,9 @@ svn_ra_local__open(svn_ra_session_t *session,
   /* Be sure username is NULL so we know to look it up / ask for it */
   sess->username = NULL;
 
+  /* We haven't asked yet, so initialize to the "don't know" value. */
+  sess->repository_supports_mergeinfo = 0;
+
   session->priv = sess;
   return SVN_NO_ERROR;
 }
@@ -1366,6 +1369,8 @@ svn_ra_local__has_capability(svn_ra_session_t *session,
                              const char *capability,
                              apr_pool_t *pool)
 {
+  svn_ra_local__session_baton_t *sess = session->priv;
+
   if (strcmp(capability, SVN_RA_CAPABILITY_DEPTH) == 0
       || strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0
       || strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0
@@ -1378,6 +1383,40 @@ svn_ra_local__has_capability(svn_ra_session_t *session,
       return svn_error_createf
         (SVN_ERR_UNKNOWN_CAPABILITY, NULL,
          _("Don't know anything about capability '%s'"), capability);
+    }
+
+  /* With mergeinfo, the code's capabilities may not reflect the
+     repository's, so inquire further.
+
+     NOTE: ../libsvn_ra_svn/client.c:ra_svn_has_capability() has very
+     similar code; if you change this, check there too. */
+  if (*has && strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
+    {
+      if (sess->repository_supports_mergeinfo == -1)
+        {
+          *has = FALSE;
+        }
+      else if (sess->repository_supports_mergeinfo == 0)
+        {
+          apr_hash_t *ignored_mergeoutput;
+          svn_error_t *err;
+          apr_array_header_t *paths = apr_array_make(pool, 1, sizeof(char *));
+          APR_ARRAY_PUSH(paths, const char *) = "";
+          err = svn_ra_local__get_mergeinfo(session, &ignored_mergeoutput,
+                                            paths, 0, FALSE, FALSE, pool);
+
+          if (err)
+            {
+              if (err->apr_err != SVN_ERR_UNSUPPORTED_FEATURE)
+                return err;
+              else
+                {
+                  svn_error_clear(err);
+                  sess->repository_supports_mergeinfo = -1;
+                  *has = FALSE;
+                }
+            }
+        }
     }
 
   return SVN_NO_ERROR;

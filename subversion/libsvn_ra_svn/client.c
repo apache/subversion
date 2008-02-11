@@ -531,6 +531,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   sess->callbacks = callbacks;
   sess->callbacks_baton = callbacks_baton;
   sess->bytes_read = sess->bytes_written = 0;
+  sess->repository_supports_mergeinfo = 0;
 
   if (tunnel_argv)
     SVN_ERR(make_tunnel(tunnel_argv, &conn, pool));
@@ -2229,6 +2230,40 @@ static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
       return svn_error_createf
         (SVN_ERR_UNKNOWN_CAPABILITY, NULL,
          _("Don't know anything about capability '%s'"), capability);
+    }
+
+  /* With mergeinfo, the server's capabilities may not reflect the
+     repository's, so inquire further.
+
+     NOTE: ../libsvn_ra_local/ra_plugin.c:svn_ra_local__has_capability()
+     has very similar code; if you change this, check there too. */
+  if (*has && strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
+    {
+      if (sess->repository_supports_mergeinfo == -1)
+        {
+          *has = FALSE;
+        }
+      else if (sess->repository_supports_mergeinfo == 0)
+        {
+          apr_hash_t *ignored_mergeoutput;
+          svn_error_t *err;
+          apr_array_header_t *paths = apr_array_make(pool, 1, sizeof(char *));
+          APR_ARRAY_PUSH(paths, const char *) = "";
+          err = ra_svn_get_mergeinfo(session, &ignored_mergeoutput,
+                                     paths, 0, FALSE, FALSE, pool);
+
+          if (err)
+            {
+              if (err->apr_err != SVN_ERR_UNSUPPORTED_FEATURE)
+                return err;
+              else
+                {
+                  svn_error_clear(err);
+                  sess->repository_supports_mergeinfo = -1;
+                  *has = FALSE;
+                }
+            }
+        }
     }
 
   return SVN_NO_ERROR;
