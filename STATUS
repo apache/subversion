@@ -73,9 +73,3 @@ Approved changes:
    Fix issue #3094, which resulted in noop merges.
    Votes:
      +1: cmpilato, pburba
-
- * r29202
-   When choosing which revision to display for a line in 'blame -g', prefer
-   older revisions to younger ones.
-   Votes:
-     +1: hwright, markphip
