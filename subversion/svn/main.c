@@ -1630,8 +1630,7 @@ main(int argc, const char *argv[])
       && opt_state.reintegrate)
     {
       err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("-r and -c can't be used with "
-                               "--reintegrate\n"));
+                             _("-r and -c can't be used with --reintegrate"));
       return svn_cmdline_handle_exit_error(err, pool, "svn: ");
     }
 
