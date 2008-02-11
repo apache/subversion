@@ -84,10 +84,3 @@ Approved changes:
    older revisions to younger ones.
    Votes:
      +1: hwright, markphip
-
- * r29271, r29273
-   Disallow -r/-c with --reintegrate, those options are ignored anyway
-   when using --reintegrate.
-   Votes:
-     +1: pburba
-     +1: cmpilato
