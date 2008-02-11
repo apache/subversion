@@ -33,11 +33,6 @@ Candidate changes:
          (mentioned on dev@); I'll be happy to remove this vote once that's 
          fixed.  [r29163 and r29164 might address these concerns. -kfogel])
 
- * r29143
-   Fix duplicate revision detection in 'blame -g'.
-   Votes:
-     +1: hwright
-
  * r29155
    Allow packagers to build some parts of svn against installed svn libs.
    Votes:
@@ -91,4 +86,9 @@ Approved changes:
    Fix issue #3094, which resulted in noop merges.
    Votes:
      +1: cmpilato, pburba
+
+ * r29143
+   Fix duplicate revision detection in 'blame -g'.
+   Votes:
+     +1: hwright, cmpilato
 
