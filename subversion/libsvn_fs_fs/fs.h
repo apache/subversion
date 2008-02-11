@@ -192,6 +192,9 @@ typedef struct
   /* The uuid of this FS. */
   const char *uuid;
 
+  /* The revision that was youngest, last time we checked. */
+  svn_revnum_t youngest_rev_cache;
+
   /* Caches of immutable data.
      
      Both of these could be moved to fs_fs_shared_data_t to make them

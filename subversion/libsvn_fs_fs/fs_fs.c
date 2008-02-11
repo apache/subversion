@@ -943,6 +943,9 @@ check_format(int format)
      SVN_FS_FS__FORMAT_NUMBER, format);
 }
 
+static svn_error_t *
+get_youngest(svn_revnum_t *youngest_p, const char *fs_path, apr_pool_t *pool);
+
 svn_error_t *
 svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
@@ -972,6 +975,8 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   ffd->uuid = apr_pstrdup(fs->pool, buf);
 
   SVN_ERR(svn_io_file_close(uuid_file, pool));
+
+  SVN_ERR(get_youngest(&(ffd->youngest_rev_cache), path, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1223,7 +1228,10 @@ svn_fs_fs__youngest_rev(svn_revnum_t *youngest_p,
                         svn_fs_t *fs,
                         apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
+
   SVN_ERR(get_youngest(youngest_p, fs->path, pool));
+  ffd->youngest_rev_cache = *youngest_p;
 
   return SVN_NO_ERROR;
 }
@@ -1290,6 +1298,35 @@ static svn_error_t * read_header_block(apr_hash_t **headers,
   return SVN_NO_ERROR;
 }
 
+/* Throw an error if the given revision is newer than the current
+   youngest revision. */
+static svn_error_t *
+ensure_revision_exists(svn_fs_t *fs,
+                       svn_revnum_t rev,
+                       apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  if (! SVN_IS_VALID_REVNUM(rev))
+    return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                             _("Invalid revision number '%ld'"), rev);
+
+
+  /* Did the revision exist the last time we checked the current
+     file? */
+  if (rev <= ffd->youngest_rev_cache)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(get_youngest(&(ffd->youngest_rev_cache), fs->path, pool));
+
+  /* Check again. */
+  if (rev <= ffd->youngest_rev_cache)
+    return SVN_NO_ERROR;
+
+  return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                           _("No such revision %ld"), rev);
+}
+
 /* Open the revision file for revision REV in filesystem FS and store
    the newly opened file in FILE.  Seek to location OFFSET before
    returning.  Perform temporary allocations in POOL. */
@@ -1301,6 +1338,8 @@ open_and_seek_revision(apr_file_t **file,
                        apr_pool_t *pool)
 {
   apr_file_t *rev_file;
+
+  SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
   SVN_ERR(svn_io_file_open(&rev_file, svn_fs_fs__path_rev(fs, rev, pool),
                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
@@ -1916,6 +1955,8 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   const char *rev_str = apr_psprintf(ffd->rev_root_id_cache_pool, "%ld", rev);
   svn_fs_id_t *cached_id;
 
+  SVN_ERR(ensure_revision_exists(fs, rev, pool));
+
   /* Calculate an index into the revroot id cache */
   cached_id = apr_hash_get(ffd->rev_root_id_cache,
                            rev_str,
@@ -1971,6 +2012,8 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
   const char *tmp_path;
   apr_file_t *f;
 
+  SVN_ERR(ensure_revision_exists(fs, rev, pool));
+
   SVN_ERR(svn_io_open_unique_file2
           (&f, &tmp_path, final_path, ".tmp", svn_io_file_del_none, pool));
   SVN_ERR(svn_hash_write(proplist, f, pool));
@@ -1997,6 +2040,8 @@ svn_fs_fs__revision_proplist(apr_hash_t **proplist_p,
   svn_error_t *err = SVN_NO_ERROR;
   int i;
   apr_pool_t *iterpool;
+
+  SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
   proplist = apr_hash_make(pool);
   iterpool = svn_pool_create(pool);
@@ -3277,6 +3322,8 @@ svn_fs_fs__paths_changed(apr_hash_t **changed_paths_p,
   apr_off_t changes_offset;
   apr_hash_t *changed_paths;
   apr_file_t *revision_file;
+
+  SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
   SVN_ERR(svn_io_file_open(&revision_file, svn_fs_fs__path_rev(fs, rev, pool),
                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
@@ -5058,6 +5105,7 @@ commit_body(void *baton, apr_pool_t *pool)
   /* Update the 'current' file. */
   SVN_ERR(write_final_current(cb->fs, cb->txn->id, new_rev, start_node_id,
                               start_copy_id, pool));
+  ffd->youngest_rev_cache = new_rev;
 
   /* Remove this transaction directory. */
   SVN_ERR(svn_fs_fs__purge_txn(cb->fs, cb->txn->id, pool));
@@ -5212,6 +5260,8 @@ svn_fs_fs__create(svn_fs_t *fs,
   /* This filesystem is ready.  Stamp it with a format number. */
   SVN_ERR(write_format(path_format(fs, pool),
                        ffd->format, ffd->max_files_per_dir, pool));
+
+  ffd->youngest_rev_cache = 0;
   return SVN_NO_ERROR;
 }
 

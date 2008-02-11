@@ -64,11 +64,6 @@ Candidate changes:
 
 Approved changes:
 
- * r29106
-   Don't open revisions greater than HEAD if revs files exist (fsfs).
-   Votes:
-     +1: epg, cmpilato
-
  * r29198, r29214, r29216, r29239, r29270
    Fix issue #3094, which resulted in noop merges.
    Votes:
