@@ -272,8 +272,8 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
         {
           return svn_error_createf
             (SVN_ERR_UNKNOWN_CAPABILITY, NULL,
-             _("Don't know how to handle 'server-yes' for capability '%s'"),
-             capability);
+             _("Don't know how to handle '%s' for capability '%s'"),
+             capability_server_yes, capability);
         }
     }
 
