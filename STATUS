@@ -45,12 +45,6 @@ Candidate changes:
    Votes:
      +1: kameshj
 
- * r29202
-   When choosing which revision to display for a line in 'blame -g', prefer
-   older revisions to younger ones.
-   Votes:
-     +1: hwright
-
  * r29241
    Fix client/server deadlock in ra_svn gssapi.
    Votes:
@@ -91,4 +85,10 @@ Approved changes:
    Fix duplicate revision detection in 'blame -g'.
    Votes:
      +1: hwright, cmpilato
+
+ * r29202
+   When choosing which revision to display for a line in 'blame -g', prefer
+   older revisions to younger ones.
+   Votes:
+     +1: hwright, markphip
 
