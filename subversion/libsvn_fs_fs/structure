@@ -130,7 +130,8 @@ Format 3: (understood by Subversion 1.5+)
   generated using the transaction sequence number stored in the
   txn-current file.  Proto-rev and its lock are stored in
   txn-protorevs/<txnid>.rev and txn-protorevs/<txnid>.rev-lock.
-  Node-IDs and copy-IDs do not use the "current" file.
+  Node-IDs and copy-IDs do not use the "current" file.  minfo-here and
+  minfo-count node-revision fields are maintained.
 
 Filesystem format options
 -------------------------
