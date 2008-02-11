@@ -14,11 +14,6 @@ Status of 1.5.0:
 
 Candidate changes:
 
- * r29106
-   Don't open revisions greater than HEAD if revs files exist (fsfs).
-   Votes:
-     +1: epg
-
  * r29139, r29161
    Introduce 'svnadmin upgrade' and backing APIs.
    Justification:
@@ -61,12 +56,6 @@ Candidate changes:
    Votes:
      +1: hwright
 
- * r29198, r29214, r29216, r29239, r29270
-   Fix issue #3094, which resulted in noop merges.
-   Votes:
-     +1: cmpilato (all but r29239 and r29270)
-     +1: pburba
-
  * r29241
    Fix client/server deadlock in ra_svn gssapi.
    Votes:
@@ -84,10 +73,22 @@ Candidate changes:
    Votes:
      +1: epg
 
- * r29271
+ * r29271, r29273
    Disallow -r/-c with --reintegrate, those options are ignored anyway
    when using --reintegrate.
    Votes:
-     +1: pburba
+     +1: pburba (not r29273)
+     +1: cmpilato
 
 Approved changes:
+
+ * r29106
+   Don't open revisions greater than HEAD if revs files exist (fsfs).
+   Votes:
+     +1: epg, cmpilato
+
+ * r29198, r29214, r29216, r29239, r29270
+   Fix issue #3094, which resulted in noop merges.
+   Votes:
+     +1: cmpilato, pburba
+
