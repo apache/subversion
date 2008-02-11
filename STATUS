@@ -74,11 +74,6 @@ Approved changes:
    Votes:
      +1: cmpilato, pburba
 
- * r29143
-   Fix duplicate revision detection in 'blame -g'.
-   Votes:
-     +1: hwright, cmpilato
-
  * r29202
    When choosing which revision to display for a line in 'blame -g', prefer
    older revisions to younger ones.
