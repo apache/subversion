@@ -92,11 +92,6 @@ Candidate changes:
 
 Approved changes:
 
- * r29174
-   Fix internal docs and a pool usage issue for copy-on-update feature.
-   Votes:
-     +1: glasser, hwright
-
  * r29180
    Remove an unused struct member.
    Votes:
