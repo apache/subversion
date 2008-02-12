@@ -19,7 +19,7 @@ BEGIN {
             merge3 merge2 merge merge_peg3 merge_peg2 merge_peg
             cleanup relocate revert2 revert resolved resolved2 copy4
             copy3 copy2 copy move5 move4 move3 move2 move propset3
-            propset2 propset revprop_set propget4 propget3 propget2
+            propset2 propset revprop_set propget3 propget2
             propget revprop_get proplist3 proplist2 proplist
             revprop_list export4 export3 export2 export list2 list
             ls3 ls2 ls cat2 cat add_to_changelist

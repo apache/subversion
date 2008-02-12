@@ -218,7 +218,7 @@ module Svn
         peg_rev ||= rev
         depth = Core::Depth.infinity_or_empty_from_recurse(depth_or_recurse)
         changelists_names = [changelists_names] unless changelists_names.is_a?(Array) or changelists_names.nil?
-        Client.propget4(name, target, peg_rev, rev, depth, changelists_names, self).first
+        Client.propget3(name, target, peg_rev, rev, depth, changelists_names, self).first
       end
       alias prop_get propget
       alias pget propget

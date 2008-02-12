@@ -1693,11 +1693,12 @@ main(int argc, const char *argv[])
       /* Ensure that everything is written to stdout, so the user will
          see any print errors. */
       err = svn_cmdline_fflush(stdout);
-      if (err) {
-        svn_handle_error2(err, stderr, FALSE, "svnadmin: ");
-        svn_error_clear(err);
-        return EXIT_FAILURE;
-      }
+      if (err)
+        {
+          svn_handle_error2(err, stderr, FALSE, "svnadmin: ");
+          svn_error_clear(err);
+          return EXIT_FAILURE;
+        }
       return EXIT_SUCCESS;
     }
 }

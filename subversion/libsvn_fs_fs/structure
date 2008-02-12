@@ -106,31 +106,46 @@ option line is of the form "<option>\n" or "<option> <parameters>\n".
 Clients should raise an error if they encounter an option not
 permitted by the format number in use.
 
-The format numbers have the following meanings:
+The formats are:
 
-Format 1: (understood by Subversion 1.1+)
-  Delta representations in revision files must contain only svndiff0
-  data.  No format options are permitted.  No mechanism is provided to
-  prevent transaction name reuse.  Proto-rev and its lock are stored
-  in transactions/<txnid>/rev and transactions/<txnid>/rev-lock.
-  Node-IDs and copy-IDs use the "current" file.
+  Format 1, understood by Subversion 1.1+
+  Format 2, understood by Subversion 1.4+
+  Format 3, understood by Subversion 1.5+
 
-Format 2: (understood by Subversion 1.4+)
-  Delta representations in revision files may contain either svndiff0
-  or svndiff1 data.  No format options are permitted.  No mechanism is
-  provided to prevent transaction name reuse.  Proto-rev and its lock
-  are stored in transactions/<txnid>/rev and
-  transactions/<txnid>/rev-lock.  Node-IDs and copy-IDs use the
-  "current" file.
+The differences between the formats are:
 
-Format 3: (understood by Subversion 1.5+)
-  Delta representations in revision files may contain either svndiff0
-  or svndiff1 data.  The 'layout' format option is permitted.  To
-  prevent transaction name reuse, transaction names should be
-  generated using the transaction sequence number stored in the
-  txn-current file.  Proto-rev and its lock are stored in
-  txn-protorevs/<txnid>.rev and txn-protorevs/<txnid>.rev-lock.
-  Node-IDs and copy-IDs do not use the "current" file.
+Delta representation in revision files
+  Format 1: svndiff0 only
+  Formats 2-3: svndiff0 or svndiff1
+
+Format options
+  Formats 1-2: none permitted
+  Format 3: "layout" option
+
+Transaction name reuse
+  Formats 1-2: transaction names may be reused
+  Format 3: transaction names generated using txn-current file
+
+Location of proto-rev file and its lock
+  Formats 1-2: transactions/<txnid>/rev and
+    transactions/<txnid>/rev-lock.
+  Format 3: txn-protorevs/<txnid>.rev and
+    txn-protorevs/<txnid>.rev-lock.
+
+Node-ID and copy-ID generation
+  Formats 1-2: Node-IDs and copy-IDs are guaranteed to form a
+    monotonically increasing base36 sequence using the "current"
+    file.
+  Format 3: Node-IDs and copy-IDs use the new revision number to
+    ensure uniqueness and the "current" file just contains the
+    youngest revision.
+
+Mergeinfo metadata:
+  Format 1-2: minfo-here and minfo-count node-revision fields are not
+    stored.  svn_fs_get_mergeinfo returns an error.
+  Format 3: minfo-here and minfo-count node-revision fields are
+    maintained.  svn_fs_get_mergeinfo works.
+
 
 Filesystem format options
 -------------------------
