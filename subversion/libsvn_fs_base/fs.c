@@ -795,6 +795,16 @@ base_open_for_recovery(svn_fs_t *fs, const char *path, apr_pool_t *pool,
 }
 
 static svn_error_t *
+base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+             apr_pool_t *common_pool)
+{
+  /* Currently, upgrading just means bumping the format file's stored
+     version number. */
+  return svn_io_write_version_file(svn_path_join(path, FORMAT_FILE, pool), 
+                                   SVN_FS_BASE__FORMAT_NUMBER, pool);
+}
+
+static svn_error_t *
 base_bdb_recover(svn_fs_t *fs,
                  svn_cancel_func_t cancel_func, void *cancel_baton,
                  apr_pool_t *pool)
@@ -1230,6 +1240,7 @@ static fs_library_vtable_t library_vtable = {
   base_create,
   base_open,
   base_open_for_recovery,
+  base_upgrade,
   base_delete_fs,
   base_hotcopy,
   base_get_description,

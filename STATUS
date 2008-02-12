@@ -14,17 +14,6 @@ Status of 1.5.0:
 
 Candidate changes:
 
- * r29139, r29161
-   Introduce 'svnadmin upgrade' and backing APIs.
-   Justification:
-     We shouldn't make upgraders-to-1.5 dump/load unnecessarily.
-   Notes:
-     r29161 is the removal of non-overlapping, non-related changes.
-   Votes:
-     +1: cmpilato
-     -1: glasser: The svnadmin-upgrade branch was great, r29139 accidentally
-         included unrelated changes to fs_fs.c (hasn't reviewed r29161)
- 
  * r29127, r29135, r29136, r29138, r29163, r29164
    Fix issue #3026: _svn and .svn are silently ignored as file arguments.
    Votes:

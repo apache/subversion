@@ -888,16 +888,14 @@ read_format(int *pformat, int *max_files_per_dir,
 }
 
 /* Write the format number and maximum number of files per directory
-   to a new format file in PATH.
+   to a new format file in PATH, possibly expecting to overwrite a
+   previously existing file.
 
    Use POOL for temporary allocation. */
 static svn_error_t *
 write_format(const char *path, int format, int max_files_per_dir,
-             apr_pool_t *pool)
+             svn_boolean_t overwrite, apr_pool_t *pool)
 {
-  /* svn_io_write_version_file() does a load of magic to allow it to
-     replace version files that already exist.  Luckily, we never need to
-     do that. */
   const char *contents;
 
   assert (1 <= format && format <= SVN_FS_FS__FORMAT_NUMBER);
@@ -919,14 +917,45 @@ write_format(const char *path, int format, int max_files_per_dir,
       contents = apr_psprintf(pool, "%d\n", format);
     }
 
-  /* Create the file */
-  SVN_ERR(svn_io_file_create(path, contents, pool));
+  /* svn_io_write_version_file() does a load of magic to allow it to
+     replace version files that already exist.  We only need to do
+     that when we're allowed to overwrite an existing file. */
+  if (! overwrite)
+    {
+      /* Create the file */
+      SVN_ERR(svn_io_file_create(path, contents, pool));
+    }
+  else
+    {
+      apr_file_t *format_file;
+      const char *path_tmp;
+      
+      /* Create a temporary file to write the data to */
+      SVN_ERR(svn_io_open_unique_file2(&format_file, &path_tmp, path, ".tmp",
+                                       svn_io_file_del_none, pool));
+
+      /* ...dump out our version number string... */
+      SVN_ERR(svn_io_file_write_full(format_file, contents,
+                                     strlen(contents), NULL, pool));
+
+      /* ...and close the file. */
+      SVN_ERR(svn_io_file_close(format_file, pool));
+
+#ifdef WIN32
+      /* make the destination writable, but only on Windows, because
+         Windows does not let us replace read-only files. */
+      SVN_ERR(svn_io_set_file_read_write(path, TRUE, pool));
+#endif /* WIN32 */
+
+      /* rename the temp file as the real destination */
+      SVN_ERR(svn_io_file_rename(path_tmp, path, pool));
+    }
+
   /* And set the perms to make it read only */
   SVN_ERR(svn_io_set_file_read_only(path, FALSE, pool));
 
   return SVN_NO_ERROR;
 }
-
 
 /* Return the error SVN_ERR_FS_UNSUPPORTED_FORMAT if FS's format
    number is not the same as a format number supported by this
@@ -980,6 +1009,55 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
+
+
+static svn_error_t *
+upgrade_body(void *baton, apr_pool_t *pool)
+{
+  svn_fs_t *fs = baton;
+  int format, max_files_per_dir;
+  const char *format_path = path_format(fs, pool);
+
+  /* Read the FS format number and max-files-per-dir setting. */
+  SVN_ERR(read_format(&format, &max_files_per_dir, format_path, pool));
+
+  /* If we're already up-to-date, there's nothing to be done here. */
+  if (format == SVN_FS_FS__FORMAT_NUMBER)
+    return SVN_NO_ERROR;
+
+  /* If our filesystem predates the existance of the 'txn-current
+     file', make that file and its corresponding lock file. */
+  if (format < SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
+    {
+      SVN_ERR(svn_io_file_create(path_txn_current(fs, pool), "0\n", pool));
+      SVN_ERR(svn_io_file_create(path_txn_current_lock(fs, pool), "", pool));
+    }
+
+  /* If our filesystem predates the existance of the 'txn-protorevs'
+     dir, make that directory.  */
+  if (format < SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
+    {
+      /* We don't use path_txn_proto_rev() here because it expects
+         we've already bumped our format. */
+      SVN_ERR(svn_io_make_dir_recursively
+              (svn_path_join(fs->path, PATH_TXN_PROTOS_DIR, pool), pool));
+    }
+
+  /* Bump the format file.  We pass 0 for the max_files_per_dir here
+     so we don't have to fuss with sharding directories ourselves. */
+  SVN_ERR(write_format(format_path, SVN_FS_FS__FORMAT_NUMBER, 0, 
+                       TRUE, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_fs__upgrade(svn_fs_t *fs, apr_pool_t *pool)
+{
+  return svn_fs_fs__with_write_lock(fs, upgrade_body, (void *)fs, pool);
+}
+
 
 /* SVN_ERR-like macros for dealing with ESTALE
  *
@@ -1218,7 +1296,7 @@ svn_fs_fs__hotcopy(const char *src_path,
 
   /* Hotcopied FS is complete. Stamp it with a format file. */
   SVN_ERR(write_format(svn_path_join(dst_path, PATH_FORMAT, pool),
-                       format, max_files_per_dir, pool));
+                       format, max_files_per_dir, FALSE, pool));
 
   return SVN_NO_ERROR;
 }
@@ -5259,7 +5337,7 @@ svn_fs_fs__create(svn_fs_t *fs,
 
   /* This filesystem is ready.  Stamp it with a format number. */
   SVN_ERR(write_format(path_format(fs, pool),
-                       ffd->format, ffd->max_files_per_dir, pool));
+                       ffd->format, ffd->max_files_per_dir, FALSE, pool));
 
   ffd->youngest_rev_cache = 0;
   return SVN_NO_ERROR;
