@@ -1447,141 +1447,6 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
 
 /*** Determining What Remains To Be Merged ***/
 
-
-/* Set *REQUESTED_RANGELIST to a list of revision ranges consisting of
-   a single requested range (between URL1@REVISION1 and
-   URL2@REVISION2), minus merges which originated from TARGET_URL
-   which were already recorded as performed within that range.
-
-   See `MERGEINFO MERGE SOURCE NORMALIZATION' for more requirements
-   around the values of URL1, REVISION1, URL2, and REVISION2.
-
-   Use SOURCE_ROOT_URL for all the various relative-mergeinfo-path
-   calculations needed to do this work.
-
-   RA_SESSION is an RA session whose session URL is the root URL of
-   the source repository.
-
-   NOTE: This should only be called when honoring mergeinfo.
-
-   ### FIXME: I strongly suspect that these calculations are
-   ### rename-ignorant, not accounting for the situation where the
-   ### item at TARGET_URL back when merges were from it to our current
-   ### merge source is not the same item at TARGET_URL now that we're
-   ### trying to merge from that current merge source.  -- cmpilato
-*/
-static svn_error_t *
-filter_reflected_revisions(apr_array_header_t **requested_rangelist,
-                           const char *source_root_url,
-                           const char *url1,
-                           svn_revnum_t revision1,
-                           const char *url2,
-                           svn_revnum_t revision2,
-                           svn_boolean_t inheritable,
-                           const char *target_url,
-                           svn_ra_session_t *ra_session,
-                           svn_client_ctx_t *ctx,
-                           apr_pool_t *pool)
-{
-  apr_array_header_t *src_rangelist_for_tgt = NULL;
-  apr_hash_t *added_mergeinfo, *deleted_mergeinfo,
-    *start_mergeinfo, *end_mergeinfo;
-  svn_merge_range_t *range = apr_pcalloc(pool, sizeof(*range));
-  svn_revnum_t min_rev = MIN(revision1, revision2);
-  svn_revnum_t max_rev = MAX(revision1, revision2);
-  const char *min_url = (revision1 < revision2) ? url1 : url2;
-  const char *max_url = (revision1 < revision2) ? url2 : url1;
-  const char *min_rel_path, *max_rel_path;
-  svn_error_t *err;
-
-  SVN_ERR(svn_client__path_relative_to_root(&min_rel_path, min_url,
-                                            source_root_url, FALSE, ra_session,
-                                            NULL, pool));
-  SVN_ERR(svn_client__path_relative_to_root(&max_rel_path, max_url,
-                                            source_root_url, FALSE, ra_session,
-                                            NULL, pool));
-
-  /* Find any mergeinfo for TARGET_URL added to the line of history
-     between URL1@REVISION1 and URL2@REVISION2.
-
-     When operating on subtrees with intersecting mergeinfo, URL1@REVISION1
-     might have been deleted and URL2@REVISION2 won't exist.  Alternatively,
-     URL2@REVISION2 might have been added and won't exist in URL1@REVISION1.
-     In either case don't return an error.  In the first case just proceed
-     without bothering to look for ADDED_MERGEINFO, in the second case all
-     the mergeinfo found *is* the added mergeinfo. */
-  err = svn_client__get_repos_mergeinfo(ra_session, &start_mergeinfo,
-                                        min_rel_path, min_rev,
-                                        svn_mergeinfo_inherited, TRUE,
-                                        pool);
-  if (err)
-    {
-      if (err->apr_err == SVN_ERR_FS_NOT_FOUND
-          || err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED)
-        {
-          svn_error_clear(err);
-          err = NULL;
-          start_mergeinfo = NULL;
-        }
-      else
-        {
-          return err;
-        }
-    }
-
-  err = svn_client__get_repos_mergeinfo(ra_session, &end_mergeinfo,
-                                        max_rel_path, max_rev,
-                                        svn_mergeinfo_inherited, TRUE,
-                                        pool);
-  if (err)
-    {
-      if (err->apr_err == SVN_ERR_FS_NOT_FOUND
-          || err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED)
-        {
-          svn_error_clear(err);
-          err = NULL;
-          end_mergeinfo = NULL;
-        }
-      else
-        {
-          return err;
-        }
-    }
-
-  if (start_mergeinfo && end_mergeinfo)
-    SVN_ERR(svn_mergeinfo_diff(&deleted_mergeinfo, &added_mergeinfo,
-                               start_mergeinfo, end_mergeinfo,
-                               FALSE, pool));
-  else if (end_mergeinfo)
-    added_mergeinfo = end_mergeinfo;
-  else
-    added_mergeinfo = NULL;
-
-
-  if (added_mergeinfo)
-    {
-      const char *mergeinfo_path;
-      SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path, target_url,
-                                                source_root_url, TRUE,
-                                                ra_session, NULL, pool));
-      src_rangelist_for_tgt = apr_hash_get(added_mergeinfo, mergeinfo_path,
-                                           APR_HASH_KEY_STRING);
-    }
-
-  /* Create a single-item list of ranges with our one requested range
-     in it, and then remove overlapping revision ranges from that range. */
-  *requested_rangelist = apr_array_make(pool, 1, sizeof(range));
-  range->start = revision1;
-  range->end = revision2;
-  range->inheritable = inheritable;
-  APR_ARRAY_PUSH(*requested_rangelist, svn_merge_range_t *) = range;
-  if (src_rangelist_for_tgt)
-    SVN_ERR(svn_rangelist_remove(requested_rangelist, src_rangelist_for_tgt,
-                                 *requested_rangelist,
-                                 FALSE, pool));
-  return SVN_NO_ERROR;
-}
-
 /* Calculate a rangelist of svn_merge_range_t *'s -- for use by
    drive_merge_report_editor()'s application of the editor to the WC
    -- by subtracting revisions which have already been merged from
@@ -1674,10 +1539,9 @@ filter_merged_revisions(apr_array_header_t **remaining_ranges,
 }
 
 /* Populate *REMAINING_RANGES with a list of revision ranges
-   constructed by taking after removing reflective merge
-   ranges and already-merged ranges from *RANGE.  Cascade URL1,
-   REVISION1, UR2, REVISION2, TARGET_MERGEINFO, IS_ROLLBACK, REL_PATH,
-   RA_SESSION, ENTRY, CTX, and POOL.
+   constructed by taking after removing already-merged ranges. 
+   Cascade SOURCE_ROOT_URL, URL1, REVISION1, URL2, REVISION2, INHERITABLE,
+   TARGET_MERGEINFO, IMPLICIT_MERGEINFO, RA_SESSION, ENTRY, CTX, and POOL.
 
    See `MERGEINFO MERGE SOURCE NORMALIZATION' for more requirements
    around the values of URL1, REVISION1, URL2, and REVISION2.
@@ -1700,19 +1564,16 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
                            apr_pool_t *pool)
 {
   apr_array_header_t *requested_rangelist;
-  const char *old_url;
   const char *mergeinfo_path;
+  svn_merge_range_t *range = apr_pcalloc(pool, sizeof(*range));
   const char *primary_url = (revision1 < revision2) ? url2 : url1;
 
   /* Determine which of the requested ranges to consider merging... */
-  SVN_ERR(svn_client__ensure_ra_session_url(&old_url, ra_session, 
-                                            source_root_url, pool));
-  SVN_ERR(filter_reflected_revisions(&requested_rangelist, source_root_url,
-                                     url1, revision1, url2, revision2,
-                                     inheritable, entry->url,
-                                     ra_session, ctx, pool));
-  if (old_url)
-    SVN_ERR(svn_ra_reparent(ra_session, old_url, pool));
+  requested_rangelist = apr_array_make(pool, 1, sizeof(range));
+  range->start = revision1;
+  range->end = revision2;
+  range->inheritable = inheritable;
+  APR_ARRAY_PUSH(requested_rangelist, svn_merge_range_t *) = range;
   
   /* ...and of those ranges, determine which ones actually still
      need merging. */

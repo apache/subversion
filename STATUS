@@ -56,10 +56,3 @@ Candidate changes:
      +1: epg
 
 Approved changes:
-
- * r29176, r29210
-   Notes:
-     r29176: Don't remove reflected revisions from requested merge range list.
-     r29210: Follow-up to r29176 don't reparent ra_session unnecessarily.
-   Votes:
-     +1: kameshj, pburba
