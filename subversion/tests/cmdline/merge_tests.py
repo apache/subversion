@@ -10421,7 +10421,47 @@ def dont_add_mergeinfo_from_own_history(sbox):
                                        expected_A_skip,
                                        None, None, None, None,
                                        None, 1)
-  os.chdir(saved_cwd)
+
+def merge_range_predates_history(sbox):
+  "merge range predates history (issue #3094)"
+  
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_path = os.path.join(wc_dir, "iota")
+  trunk_file_path = os.path.join(wc_dir, "trunk", "file")
+  trunk_url = sbox.repo_url + "/trunk"
+  branches_url = sbox.repo_url + "/branches"
+  branch_path = os.path.join(wc_dir, "branches", "branch")
+  branch_file_path = os.path.join(wc_dir, "branches", "branch", "file")
+  branch_url = sbox.repo_url + "/branches/branch"
+
+  # Tweak a file and commit. (r2)
+  svntest.main.file_append(iota_path, "More data.\n")
+  svntest.main.run_svn(None, 'ci', '-m', 'tweak iota', wc_dir)
+
+  # Create our trunk and branches directory, and update working copy. (r3)
+  svntest.main.run_svn(None, 'mkdir', trunk_url, branches_url,
+                       '-m', 'add trunk and branches dirs')
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+  # Add a file to the trunk and commit. (r4)
+  svntest.main.file_append(trunk_file_path, "This is the file 'file'.\n")
+  svntest.main.run_svn(None, 'add', trunk_file_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'add trunk file', wc_dir)
+
+  # Branch trunk from r3, and update working copy. (r5) 
+  svntest.main.run_svn(None, 'cp', trunk_url, branch_url, '-r3',
+                       '-m', 'branch trunk@2')
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+  # Now, try to merge trunk into the branch.  There should be one
+  # outstanding change -- the addition of the file.
+  expected_output = expected_merge_output([[4,5]],
+                                          'A    ' + branch_file_path + '\n')
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'merge',
+                                     trunk_url, branch_path)
+  
 
 ########################################################################
 # Run the tests
@@ -10518,6 +10558,7 @@ test_list = [ None,
               reintegrate_fail_on_shallow_wc,
               XFail(reintegrate_fail_on_stale_source),
               dont_add_mergeinfo_from_own_history,
+              merge_range_predates_history,
              ]
 
 if __name__ == '__main__':

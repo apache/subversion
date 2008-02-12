@@ -3784,6 +3784,7 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
   svn_revnum_t peg_revnum;
   svn_revnum_t oldest_requested = SVN_INVALID_REVNUM;
   svn_revnum_t youngest_requested = SVN_INVALID_REVNUM;
+  svn_revnum_t trim_revision = SVN_INVALID_REVNUM;
   svn_opt_revision_t youngest_opt_rev;
   apr_array_header_t *merge_range_ts, *segments;
   apr_pool_t *subpool;
@@ -3896,6 +3897,80 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
                                               oldest_requested,
                                               ctx, pool));
 
+  /* See if we fetched enough history to do the job.  "Surely we did,"
+     you say.  "After all, we covered the entire requested merge
+     range."  Yes, that's true, but if our first segment doesn't
+     extend back to the oldest request revision, we've got a special
+     case to deal with.  Or if the first segment represents a gap,
+     that's another special case.  */
+  trim_revision = SVN_INVALID_REVNUM;
+  if (segments->nelts)
+    {
+      svn_location_segment_t *segment = 
+        APR_ARRAY_IDX(segments, 0, svn_location_segment_t *);
+
+      /* If the first segment doesn't start with the OLDEST_REQUESTED
+         revision, we'll need to pass a trim revision to our range
+         cruncher. */
+      if (segment->range_start != oldest_requested)
+        {
+          trim_revision = segment->range_start;
+        }
+
+      /* Else, if the first segment has no path (and therefore is a
+         gap), then we'll fetch the copy source revision from the
+         second segment (provided there is one, of course) and use it
+         to prepend an extra pathful segment to our list. 
+
+         ### We could avoid this bit entirely if we'd passed
+         ### SVN_INVALID_REVNUM instead of OLDEST_REQUESTED to
+         ### svn_client__repos_location_segments(), but that would
+         ### really penalize clients hitting pre-1.5 repositories with
+         ### the typical small merge range request (because of the
+         ### lack of a node-origins cache in the repository).  */
+      else if (! segment->path)
+        {
+          if (segments->nelts > 1)
+            {
+              svn_location_segment_t *segment2 = 
+                APR_ARRAY_IDX(segments, 1, svn_location_segment_t *);
+              const char *copyfrom_path, *segment_url;
+              svn_revnum_t copyfrom_rev;
+              svn_opt_revision_t range_start_rev;
+              range_start_rev.kind = svn_opt_revision_number;
+              range_start_rev.value.number = segment2->range_start;
+
+              segment_url = svn_path_url_add_component(source_root_url,
+                                                       segment2->path, pool);
+              SVN_ERR(svn_client__get_copy_source(segment_url, 
+                                                  &range_start_rev,
+                                                  &copyfrom_path, 
+                                                  &copyfrom_rev,
+                                                  ctx, pool));
+              /* Got copyfrom data?  Fix up the first segment to cover
+                 back to COPYFROM_REV + 1, and then prepend a new
+                 segment covering just COPYFROM_REV. */
+              if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
+                {
+                  svn_location_segment_t *new_segment =
+                    apr_pcalloc(pool, sizeof(*new_segment));
+                  /* Skip the leading '/'. */
+                  new_segment->path = (*copyfrom_path == '/')
+                    ? copyfrom_path + 1 : copyfrom_path;
+                  new_segment->range_start = copyfrom_rev;
+                  new_segment->range_end = copyfrom_rev;
+                  segment->range_start = copyfrom_rev + 1;
+                  APR_ARRAY_PUSH(segments, svn_location_segment_t *) = NULL;
+                  memmove(segments->elts + segments->elt_size,
+                          segments->elts, 
+                          segments->elt_size * (segments->nelts - 1));
+                  APR_ARRAY_IDX(segments, 0, svn_location_segment_t *) =
+                    new_segment;
+                }
+            }
+        }
+    }
+
   /* For each range in our requested range set, try to determine the
      path(s) associated with that range.  */
   for (i = 0; i < merge_range_ts->nelts; i++)
@@ -3904,6 +3979,22 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
         APR_ARRAY_IDX(merge_range_ts, i, svn_merge_range_t *);
       apr_array_header_t *merge_sources;
       int j;
+
+      if (SVN_IS_VALID_REVNUM(trim_revision))
+        {
+          /* If the youngest of the range revisions predates the trim
+             revision, discard the range. */
+          if (MAX(range->start, range->end) < trim_revision)
+            continue;
+
+          /* Otherwise, if either of oldest of the range revisions predates
+             the trim revision, update the range revision to be equal
+             to the trim revision. */
+          if (range->start < trim_revision)
+            range->start = trim_revision;
+          if (range->end < trim_revision)
+            range->end = trim_revision;
+        }
 
       /* Copy the resulting merge sources into master list thereof. */
       SVN_ERR(combine_range_with_segments(&merge_sources, range,

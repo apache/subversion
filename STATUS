@@ -63,8 +63,3 @@ Candidate changes:
      +1: epg
 
 Approved changes:
-
- * r29198, r29214, r29216, r29239, r29270
-   Fix issue #3094, which resulted in noop merges.
-   Votes:
-     +1: cmpilato, pburba
