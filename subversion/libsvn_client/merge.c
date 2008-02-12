@@ -1642,7 +1642,7 @@ get_full_mergeinfo(apr_hash_t **recorded_mergeinfo,
       sesspool = svn_pool_create(pool);
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session, url,
                                                    NULL, NULL, NULL, FALSE, 
-                                                   TRUE, ctx, pool));
+                                                   TRUE, ctx, sesspool));
     }
 
   /* Our underlying APIs can't yet handle the case where the peg

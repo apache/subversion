@@ -92,11 +92,6 @@ Candidate changes:
 
 Approved changes:
 
- * r29234
-   Fix pool handling in mergeinfo fetch.
-   Votes:
-     +1: glasser, hwright
-
  * r29267
    Remove a removed API from Perl bindings.
    Votes:
