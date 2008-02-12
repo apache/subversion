@@ -180,8 +180,9 @@ svn_cl__propget(apr_getopt_t *os,
                              _("'%s' is not a valid Subversion property name"),
                              pname_utf8);
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
-                                        opt_state->targets, pool));
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets, 
+                                                      pool));
 
   /* Add "." if user passed 0 file arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
@@ -266,7 +267,7 @@ svn_cl__propget(apr_getopt_t *os,
           SVN_ERR(svn_opt_parse_path(&peg_revision, &truepath, target,
                                      subpool));
 
-          SVN_ERR(svn_client_propget4(&props, pname_utf8, truepath,
+          SVN_ERR(svn_client_propget3(&props, pname_utf8, truepath,
                                       &peg_revision,
                                       &(opt_state->start_revision),
                                       NULL, opt_state->depth, 

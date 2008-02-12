@@ -259,10 +259,14 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                            "
                        "('" SVN_CL__ACCEPT_POSTPONE "',"
                        " '" SVN_CL__ACCEPT_BASE "',"
-                       " '" SVN_CL__ACCEPT_MINE "',"
-                       " '" SVN_CL__ACCEPT_THEIRS "',"
-                       " '" SVN_CL__ACCEPT_EDIT "',"
+                       /* These two are not implemented yet, so don't
+                          waste the user's time with them. */
+                       /* " '" SVN_CL__ACCEPT_MINE "'," */
+                       /* " '" SVN_CL__ACCEPT_THEIRS "'," */
+                       " '" SVN_CL__ACCEPT_MINE_FULL "',"
+                       " '" SVN_CL__ACCEPT_THEIRS_FULL "',"
                        "\n                            "
+                       " '" SVN_CL__ACCEPT_EDIT "',"
                        " '" SVN_CL__ACCEPT_LAUNCH "')")},
   {"from-source",   opt_from_source, 1,
                     N_("query a particular merge source URL")},
@@ -769,8 +773,12 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {{opt_accept, N_("specify automatic conflict resolution source\n"
                              "                            "
                              " '" SVN_CL__ACCEPT_BASE "',"
-                             " '" SVN_CL__ACCEPT_MINE "',"
-                             " '" SVN_CL__ACCEPT_THEIRS "')")}} },
+                             /* These two are not implemented yet, so
+                                don't waste the user's time with them. */
+                             /* " '" SVN_CL__ACCEPT_MINE "'," */
+                             /* " '" SVN_CL__ACCEPT_THEIRS "'," */
+                             " '" SVN_CL__ACCEPT_MINE_FULL "',"
+                             " '" SVN_CL__ACCEPT_THEIRS_FULL "')")}} },
 
   { "revert", svn_cl__revert, {0}, N_
     ("Restore pristine working copy file (undo most local edits).\n"
@@ -1476,6 +1484,11 @@ main(int argc, const char *argv[])
         break;
       case opt_from_source:
         err = svn_utf_cstring_to_utf8(&path_utf8, opt_arg, pool);
+        if (! svn_path_is_url(path_utf8))
+          return svn_cmdline_handle_exit_error
+            (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                               _("'%s' is not a URL"), opt_arg),
+             pool, "svn: ");
         opt_state.from_source = svn_path_canonicalize(path_utf8, pool);
         break;
       case opt_reintegrate:
@@ -1608,6 +1621,17 @@ main(int argc, const char *argv[])
                                    "or both -c and -r"));
           return svn_cmdline_handle_exit_error(err, pool, "svn: ");
         }
+    }
+
+  /* Merge doesn't support specifying a revision range
+     when using --reintegrate. */
+  if (subcommand->cmd_func == svn_cl__merge
+      && opt_state.revision_ranges->nelts
+      && opt_state.reintegrate)
+    {
+      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("-r and -c can't be used with --reintegrate"));
+      return svn_cmdline_handle_exit_error(err, pool, "svn: ");
     }
 
   /* Disallow simultaneous use of both --depth and --set-depth. */

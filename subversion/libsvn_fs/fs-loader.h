@@ -66,9 +66,9 @@ typedef struct fs_library_vtable_t
      this statement, now that the minor version has increased. */
   const svn_version_t *(*get_version)(void);
 
-  /* The open_fs/create/open_fs_for_recovery functions are serialized
-     so that they may use the common_pool parameter to allocate
-     fs-global objects such as the bdb env cache. */
+  /* The open_fs/create/open_fs_for_recovery/upgrade_fs functions are
+     serialized so that they may use the common_pool parameter to
+     allocate fs-global objects such as the bdb env cache. */
   svn_error_t *(*create)(svn_fs_t *fs, const char *path, apr_pool_t *pool,
                          apr_pool_t *common_pool);
   svn_error_t *(*open_fs)(svn_fs_t *fs, const char *path, apr_pool_t *pool,
@@ -79,6 +79,8 @@ typedef struct fs_library_vtable_t
   svn_error_t *(*open_fs_for_recovery)(svn_fs_t *fs, const char *path,
                                        apr_pool_t *pool,
                                        apr_pool_t *common_pool);
+  svn_error_t *(*upgrade_fs)(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+                             apr_pool_t *common_pool);
   svn_error_t *(*delete_fs)(const char *path, apr_pool_t *pool);
   svn_error_t *(*hotcopy)(const char *src_path, const char *dest_path,
                           svn_boolean_t clean, apr_pool_t *pool);

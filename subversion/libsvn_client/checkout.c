@@ -95,8 +95,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
          _("URL '%s' refers to a file, not a directory"), session_url);
 
     /* Get the repos UUID and root URL. */
-    SVN_ERR(svn_ra_get_uuid(ra_session, &uuid, session_pool));
-    SVN_ERR(svn_ra_get_repos_root(ra_session, &repos, session_pool));
+    SVN_ERR(svn_ra_get_uuid2(ra_session, &uuid, session_pool));
+    SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos, session_pool));
 
     SVN_ERR(svn_io_check_path(path, &kind, pool));
 

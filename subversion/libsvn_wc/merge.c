@@ -257,17 +257,6 @@ maybe_update_target_eols(const char **new_target,
 }
 
 
-/* Internal version of svn_wc_merge, also used to (loggily) merge updates
-   from the repository.
-
-   In the case of updating, the update can have sent new properties,
-   which could affect the way the wc target is detranslated and
-   compared with LEFT and RIGHT for merging.
-
-   Property changes sent by the update are provided in PROP_DIFF.
-
- */
-
 svn_error_t *
 svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        enum svn_wc_merge_outcome_t *merge_outcome,
@@ -445,7 +434,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                       contains_conflicts = FALSE;
                       goto merge_complete;
                     }
-                  case svn_wc_conflict_choose_theirs:
+                  case svn_wc_conflict_choose_theirs_full:
                     {
                       SVN_ERR(svn_wc__loggy_copy
                               (log_accum, NULL, adm_access,
@@ -456,7 +445,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                       contains_conflicts = FALSE;
                       goto merge_complete;
                     }
-                  case svn_wc_conflict_choose_mine:
+                  case svn_wc_conflict_choose_mine_full:
                     {
                       /* Do nothing to merge_target, let it live untouched! */
                       *merge_outcome = svn_wc_merge_merged;
@@ -690,7 +679,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                   contains_conflicts = FALSE;
                   goto merge_complete;
                 }
-              case svn_wc_conflict_choose_theirs:
+              case svn_wc_conflict_choose_theirs_full:
                 {
                   SVN_ERR(svn_wc__loggy_copy
                           (log_accum, NULL, adm_access,
@@ -705,7 +694,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                    user's file, we do nothing.  We also do nothing if
                    the response claims to have already resolved the
                    problem.*/
-              case svn_wc_conflict_choose_mine:
+              case svn_wc_conflict_choose_mine_full:
                 {
                   *merge_outcome = svn_wc_merge_merged;
                   contains_conflicts = FALSE;

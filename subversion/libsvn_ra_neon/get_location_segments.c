@@ -142,9 +142,10 @@ svn_ra_neon__get_location_segments(svn_ra_session_t *session,
   svn_string_t bc_url, bc_relative;
   const char *bc;
   int status_code = 0;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   /* Build the request body. */
-  request_body = svn_stringbuf_create("", pool);
+  request_body = svn_stringbuf_create("", subpool);
   svn_stringbuf_appendcstr(request_body,
                            "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
                            DEBUG_CR "<S:get-location-segments xmlns:S=\""
@@ -152,27 +153,27 @@ svn_ra_neon__get_location_segments(svn_ra_session_t *session,
 
   /* Tack on the path... */
   svn_stringbuf_appendcstr(request_body, "<S:path>");
-  svn_stringbuf_appendcstr(request_body, apr_xml_quote_string(pool, path, 0));
+  svn_stringbuf_appendcstr(request_body, apr_xml_quote_string(subpool, path, 0));
   svn_stringbuf_appendcstr(request_body, "</S:path>" DEBUG_CR);
 
   /* ...and maybe a peg revision... */
   if (SVN_IS_VALID_REVNUM(peg_revision))
     svn_stringbuf_appendcstr
-      (request_body, apr_psprintf(pool,
+      (request_body, apr_psprintf(subpool,
                                   "<S:peg-revision>%ld</S:peg-revision>"
                                   DEBUG_CR, peg_revision));
 
   /* ...and maybe a start revision... */
   if (SVN_IS_VALID_REVNUM(start_rev))
     svn_stringbuf_appendcstr
-      (request_body, apr_psprintf(pool,
+      (request_body, apr_psprintf(subpool,
                                   "<S:start-revision>%ld</S:start-revision>"
                                   DEBUG_CR, start_rev));
 
   /* ...and maybe an end revision. */
   if (SVN_IS_VALID_REVNUM(end_rev))
     svn_stringbuf_appendcstr
-      (request_body, apr_psprintf(pool,
+      (request_body, apr_psprintf(subpool,
                                   "<S:end-revision>%ld</S:end-revision>"
                                   DEBUG_CR, end_rev));
 
@@ -180,7 +181,7 @@ svn_ra_neon__get_location_segments(svn_ra_session_t *session,
 
   request_baton.receiver = receiver;
   request_baton.receiver_baton = receiver_baton;
-  request_baton.subpool = svn_pool_create(pool);
+  request_baton.subpool = svn_pool_create(subpool);
 
   /* ras's URL may not exist in HEAD, and thus it's not safe to send
      it as the main argument to the REPORT request; it might cause
@@ -188,15 +189,16 @@ svn_ra_neon__get_location_segments(svn_ra_session_t *session,
      baseline-collection URL, which we get from the PEG_REVISION.  */
   SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
                                          ras, ras->url->data,
-                                         peg_revision, pool));
-  bc = svn_path_url_add_component(bc_url.data, bc_relative.data, pool);
+                                         peg_revision, subpool));
+  bc = svn_path_url_add_component(bc_url.data, bc_relative.data, subpool);
 
   err = svn_ra_neon__parsed_request(ras, "REPORT", bc,
                                     request_body->data, NULL, NULL,
                                     gls_start_element, NULL, NULL,
                                     &request_baton, NULL, &status_code,
-                                    FALSE, pool);
+                                    FALSE, subpool);
   svn_pool_destroy(request_baton.subpool);
+  svn_pool_destroy(subpool);
 
   /* Map status 501: Method Not Implemented to our not implemented error.
      1.0.x servers and older don't support this report. */

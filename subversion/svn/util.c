@@ -1010,6 +1010,28 @@ svn_cl__node_kind_str(svn_node_kind_t kind)
 }
 
 
+svn_error_t *
+svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets,
+                                            apr_getopt_t *os,
+                                            apr_array_header_t *known_targets,
+                                            apr_pool_t *pool)
+{
+  svn_error_t *error = svn_opt_args_to_target_array3(targets, os,
+                                                     known_targets, pool);
+  if (error)
+    {
+      if (error->apr_err ==  SVN_ERR_RESERVED_FILENAME_SPECIFIED)
+        {
+          svn_handle_error2(error, stderr, FALSE, "svn: Skipping argument: ");
+          svn_error_clear(error);
+        }
+      else
+        return error;
+    }
+  return SVN_NO_ERROR;
+}
+
+
 /* Helper for svn_cl__get_changelist(); implements
    svn_changelist_receiver_t. */
 static svn_error_t *
