@@ -92,11 +92,6 @@ Candidate changes:
 
 Approved changes:
 
- * r29267
-   Remove a removed API from Perl bindings.
-   Votes:
-     +1: glasser, hwright
-
  * r29284
    In FSFS structure doc, reformat the part about format versions.
    Justification:
