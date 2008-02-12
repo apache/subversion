@@ -1405,13 +1405,18 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
           *conflict_remains = TRUE;
           break;
         }
-      case svn_wc_conflict_choose_mine:
+      case svn_wc_conflict_choose_mine_full:
         {
           /* No need to change working_props; it already contains working_val */
           *conflict_remains = FALSE;
           break;
         }
-      case svn_wc_conflict_choose_theirs:
+      /* I think _mine_full and _theirs_full are appropriate for prop
+         behavior as well as the text behavior.  There should even be
+         analogous behaviors for _mine and _theirs when those are
+         ready, namely: fold in all non-conflicting prop changes, and
+         then choose _mine side or _theirs side for conflicting ones. */
+      case svn_wc_conflict_choose_theirs_full:
         {
           apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, new_val);
           *conflict_remains = FALSE;

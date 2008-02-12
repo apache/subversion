@@ -130,7 +130,7 @@ typedef void (*svn_fs_warning_callback_t)(void *baton, svn_error_t *err);
  * By default, this is set to a function that will crash the process.
  * Dumping to @c stderr or <tt>/dev/tty</tt> is not acceptable default
  * behavior for server processes, since those may both be equivalent to
- * <tt>/dev/NULL</tt>.
+ * <tt>/dev/null</tt>.
  */
 void
 svn_fs_set_warning_func(svn_fs_t *fs,
@@ -199,6 +199,22 @@ svn_fs_open(svn_fs_t **fs_p,
             const char *path,
             apr_hash_t *fs_config,
             apr_pool_t *pool);
+
+/**
+ * Upgrade the Subversion filesystem located in the directory @a path
+ * to the latest version supported by this library.  Return @c
+ * SVN_ERR_FS_UNSUPPORTED_UPGRADE and make no changes to the
+ * filesystem if the requested upgrade is not supported.  Use @a pool
+ * for necessary allocations.
+ *
+ * @note You probably don't want to use this directly.  Take a look at
+ * svn_repos_upgrade() instead.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_fs_upgrade(const char *path,
+               apr_pool_t *pool);
 
 /**
  * Return, in @a *fs_type, a string identifying the back-end type of

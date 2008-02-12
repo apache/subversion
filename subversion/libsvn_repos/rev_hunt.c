@@ -1165,21 +1165,18 @@ find_interesting_revisions(apr_array_header_t *path_revisions,
       APR_ARRAY_PUSH(path_revisions, struct path_revision *) = path_rev;
 
       if (include_merged_revisions)
-        {
-          SVN_ERR(get_merged_mergeinfo(&path_rev->merged_mergeinfo, repos,
-                                       path_rev, pool));
-
-          /* Add the path/rev pair to the hash, so we can filter out future
-             occurrences of it.  We only care about this if including merged
-             revisions, 'cause that's the only time we can have duplicates. */
-          apr_hash_set(duplicate_path_revs,
-                       apr_psprintf(iter_pool, "%s:%ld", path_rev->path,
-                                    path_rev->revnum),
-                       APR_HASH_KEY_STRING, path_rev);
-        }
+        SVN_ERR(get_merged_mergeinfo(&path_rev->merged_mergeinfo, repos,
+                                     path_rev, pool));
       else
         path_rev->merged_mergeinfo = NULL;
 
+      /* Add the path/rev pair to the hash, so we can filter out future
+         occurrences of it.  We only care about this if including merged
+         revisions, 'cause that's the only time we can have duplicates. */
+      apr_hash_set(duplicate_path_revs,
+                   apr_psprintf(pool, "%s:%ld", path_rev->path,
+                                path_rev->revnum),
+                   APR_HASH_KEY_STRING, (void *)0xdeadbeef);
 
       if (path_rev->revnum <= start)
         break;

@@ -326,7 +326,8 @@ static svn_error_t *new_sasl_ctx(sasl_conn_t **sasl_ctx,
   sasl_security_properties_t secprops;
   int result;
 
-  result = sasl_client_new("svn", hostname, local_addrport, remote_addrport,
+  result = sasl_client_new(SVN_RA_SVN_SASL_NAME,
+                           hostname, local_addrport, remote_addrport,
                            callbacks, SASL_SUCCESS_DATA,
                            sasl_ctx);
   if (result != SASL_OK)
@@ -464,6 +465,10 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
           if (strcmp(mech, "CRAM-MD5") != 0)
             arg = svn_base64_encode_string(arg, pool);
           SVN_ERR(svn_ra_svn_write_cstring(sess->conn, pool, arg->data));
+        }
+      else
+        {
+          SVN_ERR(svn_ra_svn_write_cstring(sess->conn, pool, ""));
         }
     }
 

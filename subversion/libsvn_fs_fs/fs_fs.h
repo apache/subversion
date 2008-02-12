@@ -26,6 +26,10 @@ svn_error_t *svn_fs_fs__open(svn_fs_t *fs,
                              const char *path,
                              apr_pool_t *pool);
 
+/* Upgrade the fsfs filesystem FS.  Use POOL for temporary allocations. */
+svn_error_t *svn_fs_fs__upgrade(svn_fs_t *fs,
+                                apr_pool_t *pool);
+
 /* Copy the fsfs filesystem at SRC_PATH into a new copy at DST_PATH.
    Use POOL for temporary allocations. */
 svn_error_t *svn_fs_fs__hotcopy(const char *src_path,
@@ -173,12 +177,8 @@ svn_error_t *svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
                                          apr_array_header_t *props,
                                          apr_pool_t *pool);
 
-/* Set the transaction mergeinfo for NAME to VALUE in transaction TXN.
-   Perform temporary allocations from POOL.  */
-svn_error_t *svn_fs_fs__change_txn_mergeinfo(svn_fs_txn_t *txn,
-                                             const char *name,
-                                             const svn_string_t *value,
-                                             apr_pool_t *pool);
+/* Return whether or not the given FS supports mergeinfo metadata. */
+svn_boolean_t svn_fs_fs__fs_supports_mergeinfo(svn_fs_t *fs);
 
 /* Store a transaction record in *TXN_P for the transaction identified
    by TXN_ID in filesystem FS.  Allocate everything from POOL. */
@@ -442,22 +442,12 @@ svn_error_t *svn_fs_fs__ensure_dir_exists(const char *path,
                                           svn_fs_t *fs,
                                           apr_pool_t *pool);
 
-/* Update the node origin index for FS based on the hash
-   NODE_ORIGIN_FOR_PATHS, which maps from const char * "Node IDs" to
-   const svn_fs_id_t * node-rev-ids.  Returns an error if any cache
-   entry exists with a different value; pre-existing entries with the
-   same value are ignored.  Use POOL for any temporary allocations.
+/* Update the node origin index for FS, recording the mapping from
+   NODE_ID to NODE_REV_ID.  Use POOL for any temporary allocations.
 
    Because this is just an "optional" cache, this function does not
    return an error if the underlying storage is readonly; it still
    returns an error for other error conditions.
- */
-svn_error_t *
-svn_fs_fs__set_node_origins(svn_fs_t *fs,
-                            apr_hash_t *node_origins,
-                            apr_pool_t *pool);
-
-/* Shorthand for calling svn_fs_fs__set_node_origins with just one pair.
  */
 svn_error_t *
 svn_fs_fs__set_node_origin(svn_fs_t *fs,

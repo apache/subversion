@@ -3566,7 +3566,7 @@ def update_accept_conflicts(sbox):
                                      ['G    %s\n' % (alpha_path_backup,),
                                       'Updated to revision 2.\n'],
                                      [],
-                                     'update', '--accept=mine',
+                                     'update', '--accept=mine-full',
                                      alpha_path_backup)
 
   # beta: --accept=theirs
@@ -3575,7 +3575,7 @@ def update_accept_conflicts(sbox):
                                      ['G    %s\n' % (beta_path_backup,),
                                       'Updated to revision 2.\n'],
                                      [],
-                                     'update', '--accept=theirs',
+                                     'update', '--accept=theirs-full',
                                      beta_path_backup)
 
   # pi: --accept=edit

@@ -105,7 +105,7 @@ static svn_error_t *initialize(apr_pool_t *pool)
 
   /* The second parameter tells SASL to look for a configuration file
      named subversion.conf. */
-  result = sasl_server_init(callbacks, "subversion");
+  result = sasl_server_init(callbacks, SVN_RA_SVN_SASL_NAME);
   if (result != SASL_OK)
     {
       svn_error_t *err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
@@ -247,7 +247,7 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
 
   /* Create a SASL context. SASL_SUCCESS_DATA tells SASL that the protocol
      supports sending data along with the final "success" message. */
-  result = sasl_server_new("svn",
+  result = sasl_server_new(SVN_RA_SVN_SASL_NAME,
                            hostname, b->realm,
                            localaddrport, remoteaddrport,
                            NULL, SASL_SUCCESS_DATA,

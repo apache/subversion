@@ -855,7 +855,7 @@ jobject SVNClient::propertyGet(jobject jthis, const char *path,
         return NULL;
 
     apr_hash_t *props;
-    SVN_JNI_ERR(svn_client_propget4(&props, name,
+    SVN_JNI_ERR(svn_client_propget3(&props, name,
                                     intPath.c_str(), pegRevision.revision(),
                                     revision.revision(), NULL, svn_depth_empty,
                                     NULL, ctx, requestPool.pool()),

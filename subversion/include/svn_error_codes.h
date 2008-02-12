@@ -646,6 +646,11 @@ SVN_ERROR_START
              "Filesystem has no such node origin record")
 
   /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_FS_UNSUPPORTED_UPGRADE,
+             SVN_ERR_FS_CATEGORY_START + 47,
+             "Filesystem upgrade is not supported")
+
+  /** @since New in 1.5. */
   SVN_ERRDEF(SVN_ERR_FS_NO_SUCH_CHECKSUM_REP,
              SVN_ERR_FS_CATEGORY_START + 49,
              "Filesystem has no such checksum-representation index record")
@@ -699,6 +704,10 @@ SVN_ERROR_START
              SVN_ERR_REPOS_CATEGORY_START + 9,
              "Error running post-unlock hook")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_REPOS_UNSUPPORTED_UPGRADE,
+             SVN_ERR_REPOS_CATEGORY_START + 10,
+             "Repository upgrade is not supported")
 
   /* generic RA errors */
 
@@ -736,12 +745,8 @@ SVN_ERROR_START
              "Path is not locked")
 
   /** @since New in 1.5. */
-  SVN_ERRDEF(SVN_ERR_RA_UNKNOWN_CAPABILITY,
-             SVN_ERR_RA_CATEGORY_START + 8,
-             "Inquiry about unknown capability")
-
   SVN_ERRDEF(SVN_ERR_RA_PARTIAL_REPLAY_NOT_SUPPORTED,
-             SVN_ERR_RA_CATEGORY_START + 9,
+             SVN_ERR_RA_CATEGORY_START + 8,
              "Server can only replay from the root of a repository")
 
   /* ra_dav errors */
@@ -1131,9 +1136,20 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 23,
              "Iteration terminated before completion")
 
+  /** @since New in 1.5. */
   SVN_ERRDEF(SVN_ERR_UNKNOWN_CHANGELIST,
              SVN_ERR_MISC_CATEGORY_START + 24,
              "Unknown changelist")
+  
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_RESERVED_FILENAME_SPECIFIED,
+             SVN_ERR_MISC_CATEGORY_START + 25,
+             "Reserved directory name in command line arguments")
+
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_UNKNOWN_CAPABILITY,
+             SVN_ERR_MISC_CATEGORY_START + 26,
+             "Inquiry about unknown capability")
 
   /* command-line client errors */
 

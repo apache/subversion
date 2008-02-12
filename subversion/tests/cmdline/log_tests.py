@@ -1188,9 +1188,9 @@ def merge_sensitive_log_added_path(sbox):
   }
   check_merge_results(log_chain, expected_merges)
 
-  revprops = [{'svn:author': 'jrandom', 'svn:date': '',
+  revprops = [{'svn:author': 'jconstant', 'svn:date': '',
                'svn:log': 'Merged branches/b to trunk.'},
-              {'svn:author': 'jrandom', 'svn:date': '',
+              {'svn:author': 'jconstant', 'svn:date': '',
                'svn:log': 'Merged branches/a to branches/b.'},
               {'svn:author': 'jrandom', 'svn:date': '',
                'svn:log': "Added 'xi' to branches/a,"
@@ -1373,12 +1373,12 @@ test_list = [ None,
               log_parser,
               XFail(SkipUnless(merge_sensitive_log_single_revision,
                                server_has_mergeinfo)),
-              XFail(SkipUnless(merge_sensitive_log_branching_revision,
-                               server_has_mergeinfo)),
+              SkipUnless(merge_sensitive_log_branching_revision,
+                         server_has_mergeinfo),
               XFail(SkipUnless(merge_sensitive_log_non_branching_revision,
                                server_has_mergeinfo)),
-              XFail(SkipUnless(merge_sensitive_log_added_path,
-                               server_has_mergeinfo)),
+              SkipUnless(merge_sensitive_log_added_path,
+                         server_has_mergeinfo),
               log_single_change,
               XFail(log_changes_range),
               XFail(log_changes_list),
