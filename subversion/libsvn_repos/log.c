@@ -515,6 +515,7 @@ get_combined_mergeinfo(apr_hash_t **mergeinfo_catalog,
   apr_hash_index_t *hi;
   apr_hash_t *tree_mergeinfo;
   apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(subpool);
   apr_array_header_t *query_paths;
   int i;
 
@@ -522,6 +523,7 @@ get_combined_mergeinfo(apr_hash_t **mergeinfo_catalog,
   if (rev == 0)
     {
       *mergeinfo_catalog = apr_hash_make(pool);
+      svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
 
@@ -536,7 +538,8 @@ get_combined_mergeinfo(apr_hash_t **mergeinfo_catalog,
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
       svn_node_kind_t kind;
 
-      SVN_ERR(svn_fs_check_path(&kind, root, path, subpool));
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_fs_check_path(&kind, root, path, iterpool));
       if (kind == svn_node_none)
         {
           svn_revnum_t copy_rev;
@@ -545,7 +548,7 @@ get_combined_mergeinfo(apr_hash_t **mergeinfo_catalog,
 
           /* Check to see if the node was copied, and if so, use the previous
              path to check for mergeinfo. */
-          SVN_ERR(svn_fs_revision_root(&rev_root, fs, rev + 1, subpool));
+          SVN_ERR(svn_fs_revision_root(&rev_root, fs, rev + 1, iterpool));
           SVN_ERR(svn_fs_copied_from(&copy_rev, &copy_path, rev_root, path,
                                      subpool));
           if (copy_path != NULL)
@@ -901,6 +904,7 @@ do_merged_logs(svn_fs_t *fs,
 
   /* Loop through all the revisions in the range and add any
      where a path was changed to the array.  */
+  iterpool = svn_pool_create(pool);
   for (current = hist_end; any_histories_left;
        current = next_history_rev(histories))
     {
@@ -912,6 +916,7 @@ do_merged_logs(svn_fs_t *fs,
             && apr_hash_get(found_revisions, &current, sizeof (svn_revnum_t)))
         break;
 
+      svn_pool_clear(iterpool);
       for (i = 0; i < histories->nelts; i++)
         {
           struct path_info *info = APR_ARRAY_IDX(histories, i,
@@ -930,7 +935,7 @@ do_merged_logs(svn_fs_t *fs,
         {
           svn_revnum_t *cur_rev = apr_palloc(permpool, sizeof(*cur_rev));
           apr_hash_t *mergeinfo;
-          apr_array_header_t *cur_paths = apr_array_make(pool, paths->nelts,
+          apr_array_header_t *cur_paths = apr_array_make(iterpool, paths->nelts,
                                                          sizeof(const char *));
 
           /* Get the current paths of our history objects. */
@@ -952,7 +957,6 @@ do_merged_logs(svn_fs_t *fs,
     }
 
   /* Work loop for processing the revisions we found. */
-  iterpool = svn_pool_create(pool);
   for (i = 0; (i < revs->nelts) && ( !(use_limit && limit == 0) ); ++i)
     {
       svn_revnum_t rev = APR_ARRAY_IDX(revs,
