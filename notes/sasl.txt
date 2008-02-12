@@ -196,3 +196,25 @@ Contents
   
   As a consequence, you won't be able to use the saslauthd daemon to
   authenticate users, because that method only works with plain text passwords.
+
+8. GSSAPI
+=========
+
+  The realm in svnserve.conf is your Kerberos authentation realm,
+  e.g. "EXAMPLE.COM".  Cyrus's GSSAPI implementation does not support
+  encryption, except for very basic 56-bit DES.  If you leave the encrypt
+  settings out of your svnserve.conf entirely, you're fine; just don't set
+  max-encryption higher than 56.
+
+  You need a Kerberos principal for each svn server, in the form
+  "svn/${SERVER_FQDN}@${REALM}", e.g. "svn/svn1.example.com@EXAMPLE>COM".
+  If you don't store it in /etc/krb5.keytab, you'll need to set the
+  KRB5_KTNAME environment variable when starting svnserve, e.g.
+
+    KRB5_KTNAME=/etc/svn.keytab sudo -u svn svnserve -d -r /svn
+
+  This keytab file must also be readable by the svnserve process.
+
+  All you need in the svn.conf file is:
+
+    mech_list: gssapi
