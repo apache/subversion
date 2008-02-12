@@ -92,11 +92,6 @@ Candidate changes:
 
 Approved changes:
 
- * r29180
-   Remove an unused struct member.
-   Votes:
-     +1: glasser, hwright
-
  * r29234
    Fix pool handling in mergeinfo fetch.
    Votes:
