@@ -327,6 +327,23 @@ static const char *mergeinfo1 = "/trunk: 3,5,7-9,10,11,13,14\n/fred:8-10";
 
 #define NBR_RANGELIST_DELTAS 4
 
+
+/* Convert a single svn_merge_range_t * back into an svn_stringbuf_t *.  */
+static char *
+range_to_string(svn_merge_range_t *range,
+                apr_pool_t *pool)
+{
+  if (range->start == range->end - 1)
+    return apr_psprintf(pool, "%ld%s", range->end,
+                        range->inheritable
+                        ? "" : SVN_MERGEINFO_NONINHERITABLE_STR);
+  else
+    return apr_psprintf(pool, "%ld-%ld%s", range->start + 1,
+                        range->end, range->inheritable
+                        ? "" : SVN_MERGEINFO_NONINHERITABLE_STR);
+}
+
+
 /* Verify that ACTUAL_RANGELIST matches EXPECTED_RANGES (an array of
    NBR_EXPECTED length).  Return an error based careful examination if
    they do not match.  FUNC_VERIFIED is the name of the API being
@@ -351,13 +368,10 @@ verify_ranges_match(apr_array_header_t *actual_rangelist,
       if (range->start != expected_ranges[i].start
           || range->end != expected_ranges[i].end
           || range->inheritable != expected_ranges[i].inheritable)
-          return fail(pool, "%s should report range %ld-%ld%s, "
-                      "but found %ld-%ld%s",
-                      func_verified, expected_ranges[i].start,
-                      expected_ranges[i].end,
-                      expected_ranges[i].inheritable ? "*" : "",
-                      range->start, range->end,
-                      range->inheritable ? "*" : "");
+        return fail(pool, "%s should report range %s, but found %s",
+                    func_verified,
+                    range_to_string(&expected_ranges[i], pool),
+                    range_to_string(range, pool));
     }
   return SVN_NO_ERROR;
 }
@@ -505,22 +519,24 @@ test_rangelist_intersect(const char **msg,
                          apr_pool_t *pool)
 {
   apr_array_header_t *rangelist1, *rangelist2, *intersection;
-  svn_merge_range_t expected_intersection[4] =
-    { {0, 1, TRUE}, {2, 4, TRUE}, {11, 12, TRUE}, {30, 32, TRUE} };
+  svn_merge_range_t expected_intersection[] =
+    { {0, 1, TRUE}, {2, 4, TRUE}, {11, 12, TRUE}, {30, 32, TRUE},
+      {39, 42, TRUE} };
 
   *msg = "intersection of rangelists";
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_mergeinfo_parse(&info1, "/trunk: 1-6,12-16,30-32", pool));
-  SVN_ERR(svn_mergeinfo_parse(&info2, "/trunk: 1,3-4,7,9,11-12,31-34", pool));
+  SVN_ERR(svn_mergeinfo_parse(&info1, "/trunk: 1-6,12-16,30-32,40-42", pool));
+  SVN_ERR(svn_mergeinfo_parse(&info2, "/trunk: 1,3-4,7,9,11-12,31-34,38-44", 
+                              pool));
   rangelist1 = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
   rangelist2 = apr_hash_get(info2, "/trunk", APR_HASH_KEY_STRING);
 
   SVN_ERR(svn_rangelist_intersect(&intersection, rangelist1, rangelist2,
                                   pool));
 
-  return verify_ranges_match(intersection, expected_intersection, 4,
+  return verify_ranges_match(intersection, expected_intersection, 5,
                              "svn_rangelist_intersect", "intersect", pool);
 }
 
@@ -851,6 +867,175 @@ test_remove_rangelist(const char **msg,
         }
     }
   return err;
+}
+
+#define RANDOM_REV_ARRAY_LENGTH 100
+
+/* Random number seed. */
+static apr_uint32_t random_rev_array_seed;
+
+/* Fill 3/4 of the array with 1s. */
+static void
+randomly_fill_rev_array(svn_boolean_t *revs)
+{
+  int i;
+  for (i = 0; i < RANDOM_REV_ARRAY_LENGTH; i++)
+    {
+      apr_uint32_t next = svn_test_rand(&random_rev_array_seed);
+      revs[i] = (next < 0x40000000) ? 0 : 1;
+    }
+}
+
+static svn_error_t *
+rev_array_to_rangelist(apr_array_header_t **rangelist,
+                       svn_boolean_t *revs,
+                       apr_pool_t *pool)
+{
+  svn_stringbuf_t *buf = svn_stringbuf_create("/trunk: ", pool);
+  svn_boolean_t first = TRUE;
+  apr_hash_t *mergeinfo;
+  int i;
+
+  for (i = 0; i < RANDOM_REV_ARRAY_LENGTH; i++)
+    {
+      if (revs[i])
+        {
+          if (first)
+            first = FALSE;
+          else
+            svn_stringbuf_appendcstr(buf, ",");
+          svn_stringbuf_appendcstr(buf, apr_psprintf(pool, "%d", i));
+        }
+    }
+
+  SVN_ERR(svn_mergeinfo_parse(&mergeinfo, buf->data, pool));
+  *rangelist = apr_hash_get(mergeinfo, "/trunk", APR_HASH_KEY_STRING);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_rangelist_remove_randomly(const char **msg,
+                               svn_boolean_t msg_only,
+                               svn_test_opts_t *opts,
+                               apr_pool_t *pool)
+{
+  int i;
+  apr_pool_t *iterpool;
+
+  *msg = "test rangelist remove with random data";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  random_rev_array_seed = (apr_uint32_t) apr_time_now();
+
+  iterpool = svn_pool_create(pool);
+
+  for (i = 0; i < 20; i++)
+    {
+      svn_boolean_t first_revs[RANDOM_REV_ARRAY_LENGTH],
+        second_revs[RANDOM_REV_ARRAY_LENGTH],
+        expected_revs[RANDOM_REV_ARRAY_LENGTH];
+      apr_array_header_t *first_rangelist, *second_rangelist,
+        *expected_rangelist, *actual_rangelist;
+      /* There will be at most RANDOM_REV_ARRAY_LENGTH ranges in 
+         expected_rangelist. */
+      svn_merge_range_t expected_range_array[RANDOM_REV_ARRAY_LENGTH];
+      int j;
+
+      svn_pool_clear(iterpool);
+
+      randomly_fill_rev_array(first_revs);
+      randomly_fill_rev_array(second_revs);
+      for (j = 0; j < RANDOM_REV_ARRAY_LENGTH; j++)
+        expected_revs[j] = second_revs[j] && !first_revs[j];
+
+      SVN_ERR(rev_array_to_rangelist(&first_rangelist, first_revs, iterpool));
+      SVN_ERR(rev_array_to_rangelist(&second_rangelist, second_revs, iterpool));
+      SVN_ERR(rev_array_to_rangelist(&expected_rangelist, expected_revs,
+                                     iterpool));
+
+      for (j = 0; j < expected_rangelist->nelts; j++)
+        {
+          expected_range_array[j] = *(APR_ARRAY_IDX(expected_rangelist, j,
+                                                    svn_merge_range_t *));
+        }
+
+      SVN_ERR(svn_rangelist_remove(&actual_rangelist, first_rangelist,
+                                   second_rangelist, TRUE, iterpool));
+
+      SVN_ERR(verify_ranges_match(actual_rangelist,
+                                  expected_range_array,
+                                  expected_rangelist->nelts,
+                                  "svn_rangelist_remove random call",
+                                  "remove", iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_rangelist_intersect_randomly(const char **msg,
+                                  svn_boolean_t msg_only,
+                                  svn_test_opts_t *opts,
+                                  apr_pool_t *pool)
+{
+  int i;
+  apr_pool_t *iterpool;
+
+  *msg = "test rangelist intersect with random data";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  random_rev_array_seed = (apr_uint32_t) apr_time_now();
+
+  iterpool = svn_pool_create(pool);
+
+  for (i = 0; i < 20; i++)
+    {
+      svn_boolean_t first_revs[RANDOM_REV_ARRAY_LENGTH],
+        second_revs[RANDOM_REV_ARRAY_LENGTH],
+        expected_revs[RANDOM_REV_ARRAY_LENGTH];
+      apr_array_header_t *first_rangelist, *second_rangelist,
+        *expected_rangelist, *actual_rangelist;
+      /* There will be at most RANDOM_REV_ARRAY_LENGTH ranges in 
+         expected_rangelist. */
+      svn_merge_range_t expected_range_array[RANDOM_REV_ARRAY_LENGTH];
+      int j;
+
+      svn_pool_clear(iterpool);
+
+      randomly_fill_rev_array(first_revs);
+      randomly_fill_rev_array(second_revs);
+      for (j = 0; j < RANDOM_REV_ARRAY_LENGTH; j++)
+        expected_revs[j] = second_revs[j] && first_revs[j];
+
+      SVN_ERR(rev_array_to_rangelist(&first_rangelist, first_revs, iterpool));
+      SVN_ERR(rev_array_to_rangelist(&second_rangelist, second_revs, iterpool));
+      SVN_ERR(rev_array_to_rangelist(&expected_rangelist, expected_revs,
+                                     iterpool));
+
+      for (j = 0; j < expected_rangelist->nelts; j++)
+        {
+          expected_range_array[j] = *(APR_ARRAY_IDX(expected_rangelist, j,
+                                                    svn_merge_range_t *));
+        }
+
+      SVN_ERR(svn_rangelist_intersect(&actual_rangelist, first_rangelist,
+                                      second_rangelist, iterpool));
+
+      SVN_ERR(verify_ranges_match(actual_rangelist,
+                                  expected_range_array,
+                                  expected_rangelist->nelts,
+                                  "svn_rangelist_intersect random call",
+                                  "intersect", iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
 }
 
 /* ### Share code with test_diff_mergeinfo() and test_remove_rangelist(). */
@@ -1450,11 +1635,13 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_parse_combine_rangeinfo),
     SVN_TEST_PASS(test_parse_broken_mergeinfo),
     SVN_TEST_PASS(test_remove_rangelist),
+    SVN_TEST_PASS(test_rangelist_remove_randomly),
     SVN_TEST_PASS(test_remove_mergeinfo),
     SVN_TEST_PASS(test_rangelist_reverse),
     SVN_TEST_PASS(test_rangelist_count_revs),
     SVN_TEST_PASS(test_rangelist_to_revs),
     SVN_TEST_PASS(test_rangelist_intersect),
+    SVN_TEST_PASS(test_rangelist_intersect_randomly),
     SVN_TEST_PASS(test_diff_mergeinfo),
     SVN_TEST_PASS(test_merge_mergeinfo),
     SVN_TEST_PASS(test_mergeinfo_intersect),
