@@ -193,6 +193,9 @@ svn_error_t *svn_fs_fs__change_txn_mergeinfo(svn_fs_txn_t *txn,
                                              const svn_string_t *value,
                                              apr_pool_t *pool);
 
+/* Return whether or not the given FS supports mergeinfo metadata. */
+svn_boolean_t svn_fs_fs__fs_supports_mergeinfo(svn_fs_t *fs);
+
 /* Store a transaction record in *TXN_P for the transaction identified
    by TXN_ID in filesystem FS.  Allocate everything from POOL. */
 svn_error_t *svn_fs_fs__get_txn(transaction_t **txn_p,

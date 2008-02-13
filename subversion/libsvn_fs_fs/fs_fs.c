@@ -975,6 +975,13 @@ check_format(int format)
      SVN_FS_FS__FORMAT_NUMBER, format);
 }
 
+svn_boolean_t
+svn_fs_fs__fs_supports_mergeinfo(svn_fs_t *fs)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  return ffd->format >= SVN_FS_FS__MIN_MERGEINFO_FORMAT;
+}
+
 static svn_error_t *
 get_youngest(svn_revnum_t *youngest_p, const char *fs_path, apr_pool_t *pool);
 
@@ -1739,11 +1746,13 @@ representation_string(representation_t *rep,
                                                           pool));
 }
 
-/* Write the node-revision NODEREV into the file FILE.  Temporary
+/* Write the node-revision NODEREV into the file FILE.  Only write
+   mergeinfo-related metadata if INCLUDE_MERGEINFO is true.  Temporary
    allocations are from POOL. */
 static svn_error_t *
 write_noderev_txn(apr_file_t *file,
                   node_revision_t *noderev,
+                  svn_boolean_t include_mergeinfo,
                   apr_pool_t *pool)
 {
   svn_stream_t *outfile;
@@ -1797,13 +1806,16 @@ write_noderev_txn(apr_file_t *file,
   if (noderev->is_fresh_txn_root)
     SVN_ERR(svn_stream_printf(outfile, pool, HEADER_FRESHTXNRT ": y\n"));
 
-  if (noderev->mergeinfo_count > 0)
-    SVN_ERR(svn_stream_printf(outfile, pool, HEADER_MINFO_CNT ": %"
-                              APR_INT64_T_FMT "\n", 
-                              noderev->mergeinfo_count));
+  if (include_mergeinfo)
+    {
+      if (noderev->mergeinfo_count > 0)
+        SVN_ERR(svn_stream_printf(outfile, pool, HEADER_MINFO_CNT ": %"
+                                  APR_INT64_T_FMT "\n",
+                                  noderev->mergeinfo_count));
 
-  if (noderev->has_mergeinfo)
-    SVN_ERR(svn_stream_printf(outfile, pool, HEADER_MINFO_HERE ": y\n"));
+      if (noderev->has_mergeinfo)
+        SVN_ERR(svn_stream_printf(outfile, pool, HEADER_MINFO_HERE ": y\n"));
+    }
 
   SVN_ERR(svn_stream_printf(outfile, pool, "\n"));
 
@@ -1830,7 +1842,9 @@ svn_fs_fs__put_node_revision(svn_fs_t *fs,
                            APR_WRITE | APR_CREATE | APR_TRUNCATE
                            | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
-  SVN_ERR(write_noderev_txn(noderev_file, noderev, pool));
+  SVN_ERR(write_noderev_txn(noderev_file, noderev,
+                            svn_fs_fs__fs_supports_mergeinfo(fs),
+                            pool));
 
   SVN_ERR(svn_io_file_close(noderev_file, pool));
 
@@ -4757,7 +4771,9 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   noderev->id = new_id;
 
   /* Write out our new node-revision. */
-  SVN_ERR(write_noderev_txn(file, noderev, pool));
+  SVN_ERR(write_noderev_txn(file, noderev,
+                            svn_fs_fs__fs_supports_mergeinfo(fs),
+                            pool));
 
   /* Return our ID that references the revision file. */
   *new_id_p = noderev->id;

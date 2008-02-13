@@ -70,11 +70,6 @@ Candidate changes:
 
 Approved changes:
 
- * r29280
-   In FSFS, require the new FS format for mergeinfo operations.
-   Votes:
-     +1: glasser, cmpilato
-
  * r29281
    Remove declaration of removed function.
    Votes:
