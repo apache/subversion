@@ -75,13 +75,6 @@ Approved changes:
    Votes:
      +1: glasser, cmpilato
 
- * r29277
-   Fix pool usage in FSFS.
-   Notes:
-     Fixes segfault in svnadmin dump for >4096 revs.
-   Votes:
-     +1: glasser, cmpilato
-
  * r29281
    Remove declaration of removed function.
    Votes:

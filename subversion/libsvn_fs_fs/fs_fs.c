@@ -2033,7 +2033,7 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   apr_off_t root_offset;
   svn_fs_id_t *root_id;
   svn_error_t *err;
-  const char *rev_str = apr_psprintf(ffd->rev_root_id_cache_pool, "%ld", rev);
+  const char *rev_str = apr_psprintf(pool, "%ld", rev);
   svn_fs_id_t *cached_id;
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
@@ -2067,7 +2067,7 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
 
   SVN_ERR(svn_io_file_close(revision_file, pool));
 
-  /* Cache it */
+  /* Make sure our cache size doesn't grow without bounds. */
   if (apr_hash_count(ffd->rev_root_id_cache) >= NUM_RRI_CACHE_ENTRIES)
     {
       /* In order to only use one pool for the whole cache, we need to
@@ -2075,7 +2075,12 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
       svn_pool_clear(ffd->rev_root_id_cache_pool);
       ffd->rev_root_id_cache = apr_hash_make(ffd->rev_root_id_cache_pool);
     }
-  apr_hash_set(ffd->rev_root_id_cache, rev_str, APR_HASH_KEY_STRING,
+
+  /* Cache the answer, copying both the key and value into the cache's
+     pool. */
+  apr_hash_set(ffd->rev_root_id_cache,
+               apr_pstrdup(ffd->rev_root_id_cache_pool, rev_str),
+               APR_HASH_KEY_STRING,
                svn_fs_fs__id_copy(root_id, ffd->rev_root_id_cache_pool));
 
   *root_id_p = root_id;
