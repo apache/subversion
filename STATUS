@@ -59,8 +59,3 @@ Approved changes:
    Remove use of an extra RA session.
    Votes:
      +1: hwright, epg
-
- * r29309
-   Prevent svnsync from printing blank lines on edit-less revision syncs.
-   Votes:
-     +1: cmpilato, epg
