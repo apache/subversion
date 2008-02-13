@@ -733,6 +733,7 @@ typedef struct {
   void *wrapped_edit_baton;
   const char *to_url;  /* URL we're copying into, for correct copyfrom URLs */
   svn_boolean_t called_open_root;
+  svn_boolean_t got_textdeltas;
   svn_revnum_t base_revision;
   svn_boolean_t quiet;
 } edit_baton_t;
@@ -773,12 +774,6 @@ open_root(void *edit_baton,
   eb->called_open_root = TRUE;
   dir_baton->edit_baton = edit_baton;
   *root_baton = dir_baton;
-
-  if (! eb->quiet)
-    {
-      SVN_ERR(svn_cmdline_printf(pool, _("Transmitting file data ")));
-      SVN_ERR(svn_cmdline_fflush(stdout));
-    }
 
   return SVN_NO_ERROR;
 }
@@ -903,10 +898,13 @@ apply_textdelta(void *file_baton,
 
   if (! eb->quiet)
     {
+      if (! eb->got_textdeltas)
+        SVN_ERR(svn_cmdline_printf(pool, _("Transmitting file data ")));
       SVN_ERR(svn_cmdline_printf(pool, "."));
       SVN_ERR(svn_cmdline_fflush(stdout));
     }
 
+  eb->got_textdeltas = TRUE;
   return eb->wrapped_editor->apply_textdelta(fb->wrapped_node_baton,
                                              base_checksum, pool,
                                              handler, handler_baton);
@@ -1010,7 +1008,8 @@ close_edit(void *edit_baton,
 
   if (! eb->quiet)
     {
-      SVN_ERR(svn_cmdline_printf(pool, "\n"));
+      if (eb->got_textdeltas)
+        SVN_ERR(svn_cmdline_printf(pool, "\n"));
     }
 
   return eb->wrapped_editor->close_edit(eb->wrapped_edit_baton, pool);
@@ -1035,7 +1034,7 @@ get_sync_editor(const svn_delta_editor_t *wrapped_editor,
                 apr_pool_t *pool)
 {
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(pool);
-  edit_baton_t *eb = apr_palloc(pool, sizeof(*eb));
+  edit_baton_t *eb = apr_pcalloc(pool, sizeof(*eb));
 
   tree_editor->set_target_revision = set_target_revision;
   tree_editor->open_root = open_root;
@@ -1055,7 +1054,6 @@ get_sync_editor(const svn_delta_editor_t *wrapped_editor,
 
   eb->wrapped_editor = wrapped_editor;
   eb->wrapped_edit_baton = wrapped_edit_baton;
-  eb->called_open_root = FALSE;
   eb->base_revision = base_revision;
   eb->to_url = to_url;
   eb->quiet = quiet;
