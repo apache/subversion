@@ -90,6 +90,11 @@ Candidate changes:
    Votes:
      +1: hwright
 
+ * r29309
+   Prevent svnsync from printing blank lines on edit-less revision syncs.
+   Votes:
+     +1: cmpilato
+
 Approved changes:
 
  * r29284
