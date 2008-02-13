@@ -157,14 +157,10 @@ svn_client__get_copy_source(const char *path_or_url,
   svn_error_t *err;
   copyfrom_info_t copyfrom_info = { NULL, NULL, SVN_INVALID_REVNUM, pool };
   apr_array_header_t *targets = apr_array_make(pool, 1, sizeof(path_or_url));
-  svn_opt_revision_t oldest_rev;
   apr_pool_t *sesspool = svn_pool_create(pool);
   svn_ra_session_t *ra_session;
   svn_revnum_t at_rev;
   const char *at_url;
-
-  oldest_rev.kind = svn_opt_revision_number;
-  oldest_rev.value.number = 1;
 
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &at_rev, &at_url,
                                            path_or_url, NULL,
@@ -173,11 +169,11 @@ svn_client__get_copy_source(const char *path_or_url,
   SVN_ERR(svn_client__path_relative_to_root(&copyfrom_info.target_path,
                                             path_or_url, NULL, TRUE,
                                             ra_session, NULL, pool));
-  APR_ARRAY_PUSH(targets, const char *) = path_or_url;
+  APR_ARRAY_PUSH(targets, const char *) = "";
 
   /* Find the copy source.  Trace back in history to find the revision
      at which this node was created (copied or added). */
-  err = svn_ra_get_log2(ra_session, targets, revision->value.number, 1, 0, TRUE,
+  err = svn_ra_get_log2(ra_session, targets, at_rev, 1, 0, TRUE,
                         TRUE, FALSE,
                         apr_array_make(pool, 0, sizeof(const char *)),
                         copyfrom_info_receiver, &copyfrom_info, pool);
