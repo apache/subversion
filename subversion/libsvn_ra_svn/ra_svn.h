@@ -96,21 +96,6 @@ struct svn_ra_svn__session_baton_t {
   void *callbacks_baton;
   apr_off_t bytes_read, bytes_written; /* apr_off_t's because that's what
                                           the callback interface uses */
-
-  /* A trit ("troolean"?) indicating whether the repository supports
-     mergeinfo (even if the server does, the repository may not).
-
-        0 ==> don't know yet
-        1 ==> supports mergeinfo
-       -1 ==> does not support mergeinfo
-
-     We record it here so we can avoid asking more than once, as it
-     costs us a round-trip to find out.
-
-     NOTE: there is a similar trick in svn_ra_local__session_baton_t.
-     If you change this code, you'll probably want to check there too.
-   */
-  char repository_supports_mergeinfo;
 };
 
 /* Set a callback for blocked writes on conn.  This handler may

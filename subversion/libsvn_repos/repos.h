@@ -128,6 +128,13 @@ struct svn_repos_t
      *repository's* capabilities, but no, they represent the
      client's -- we just don't have any other place to persist them. */
   apr_array_header_t *client_capabilities;
+
+  /* Maps SVN_REPOS_CAPABILITY_foo keys to "yes" or "no" values.
+     If a capability is not yet discovered, it is absent from the table.
+     Most likely the keys and values are constants anyway (and
+     sufficiently well-informed internal code may just compare against
+     those constants' addresses, therefore). */
+  apr_hash_t *repository_capabilities;
 };
 
 

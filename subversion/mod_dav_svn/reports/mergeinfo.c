@@ -199,9 +199,25 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
                         svn_inheritance_to_word(inherit));
   dav_svn__operational_log(resource->info, action);
 
-  /* Flush the contents of the brigade (returning an error only if we
-     don't already have one). */
-  if ((apr_err = ap_fflush(output, bb)) && !derr)
+  /* If we already have an error, don't even flush the contents of the
+     brigade, because we don't want mod_dav.c:dav_method_report() to
+     think we've sent anything back to the client yet -- as long as it
+     doesn't think that, it'll send the real error to the client,
+     which is what we'd prefer.  This situation is described in more
+     detail in httpd-2.2.6/modules/dav/main/mod_dav.c, line 4066, in
+     the comment in dav_method_report() that says:
+
+        If an error occurred during the report delivery, there's
+        basically nothing we can do but abort the connection and
+        log an error.  This is one of the limitations of HTTP; it
+        needs to "know" the entire status of the response before
+        generating it, which is just impossible in these streamy
+        response situations.
+
+     In other words, flushing the brigade here would cause
+     r->sent_bodyct (see dav_method_report()) to flip from 0 to 1.
+  */
+  if (!derr && (apr_err = ap_fflush(output, bb)))
     derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
                                 HTTP_INTERNAL_SERVER_ERROR,
                                 "Error flushing brigade.",

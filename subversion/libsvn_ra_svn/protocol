@@ -119,14 +119,18 @@ Upon receiving the client's response to the greeting, the server sends
 an authentication request, which is a command response whose arguments
 match the prototype:
 
-  auth-request: ( ( mech:word ... ) realm:string )
+  auth-request: ( ( mech:word ... ) realm:string ( cap:word ... ) )
 
 The mech values give a list of SASL mechanisms supported by the
 server.  The realm string is similar to an HTTP authentication realm
 as defined in [RFC 2617]; it allows the server to indicate which of
-several protection spaces the server wishes to authenticate in.  If
-the mechanism list is empty, then no authentication is required and no
-further action takes place as part of the authentication challenge;
+several protection spaces the server wishes to authenticate in.  The
+cap values list the repository capabilities (that is, capabilities
+that require both the server and repository to support them before the
+server can claim them as capabilities, e.g., SVN_RA_SVN_CAP_MERGEINFO).
+
+If the mechanism list is empty, then no authentication is required and
+no further action takes place as part of the authentication challenge;
 otherwise, the client responds with a tuple matching the prototype:
 
   auth-response: ( mech:word [ token:string ] )

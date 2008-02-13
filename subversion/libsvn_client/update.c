@@ -232,6 +232,21 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
                                 SVN_RA_CAPABILITY_DEPTH, pool));
 
+  {
+    svn_boolean_t server_supports_mergeinfo;
+    FILE *fp;
+
+    SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_mergeinfo,
+                                  SVN_RA_CAPABILITY_MERGEINFO, pool));
+    fp = fopen("/tmp/kff.out", "a");
+    if (fp)
+      {
+        fprintf(fp, "KFF: server_supports_mergeinfo: %d\n",
+                server_supports_mergeinfo);
+        fclose(fp);
+      }
+  }
+
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the
      update_editor will be driven by svn_repos_dir_delta2. */
