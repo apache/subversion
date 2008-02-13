@@ -186,13 +186,6 @@ svn_error_t *svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
                                          apr_array_header_t *props,
                                          apr_pool_t *pool);
 
-/* Set the transaction mergeinfo for NAME to VALUE in transaction TXN.
-   Perform temporary allocations from POOL.  */
-svn_error_t *svn_fs_fs__change_txn_mergeinfo(svn_fs_txn_t *txn,
-                                             const char *name,
-                                             const svn_string_t *value,
-                                             apr_pool_t *pool);
-
 /* Return whether or not the given FS supports mergeinfo metadata. */
 svn_boolean_t svn_fs_fs__fs_supports_mergeinfo(svn_fs_t *fs);
 
