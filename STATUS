@@ -58,33 +58,6 @@ Candidate changes:
    Votes:
      +1: glasser
 
- * r29277
-   Fix pool usage in FSFS.
-   Notes:
-     Fixes segfault in svnadmin dump for >4096 revs.
-   Votes:
-     +1: glasser
-
- * r29280
-   In FSFS, require the new FS format for mergeinfo operations.
-   Votes:
-     +1: glasser
-
- * r29281
-   Remove declaration of removed function.
-   Votes:
-     +1: glasser
-
- * r29250
-   Node-origins solution for FSFS: hybrid of cmpilato's on-disk
-   36-entries-per-file hash and encoding the revision directly into
-   new nodes.
-   Notes:
-     Minor conflict in fs_fs.c; the merge-right section can be deleted
-     safely.
-   Votes:
-     +1: glasser
-
  * r29254, r29255
    Remove use of an extra RA session.
    Votes:
@@ -106,3 +79,29 @@ Approved changes:
    Votes:
      +1: glasser, hwright
 
+ * r29250
+   Node-origins solution for FSFS: hybrid of cmpilato's on-disk
+   36-entries-per-file hash and encoding the revision directly into
+   new nodes.
+   Notes:
+     Minor conflict in fs_fs.c; the merge-right section can be deleted
+     safely.
+   Votes:
+     +1: glasser, cmpilato
+
+ * r29280
+   In FSFS, require the new FS format for mergeinfo operations.
+   Votes:
+     +1: glasser, cmpilato
+
+ * r29277
+   Fix pool usage in FSFS.
+   Notes:
+     Fixes segfault in svnadmin dump for >4096 revs.
+   Votes:
+     +1: glasser, cmpilato
+
+ * r29281
+   Remove declaration of removed function.
+   Votes:
+     +1: glasser, cmpilato
