@@ -37,12 +37,6 @@ Candidate changes:
    Votes:
      +1: glasser
 
- * r29117, 29126
-   Fix several bugs in svn_rangelist_intersection, a fundamental mergeinfo
-   operation.  Has tests.  Also adds extra tests for svn_rangelist_remove.
-   Votes:
-     +1: glasser
-
  * r29194
    Rename an error code.
    Notes:
@@ -77,4 +71,11 @@ Candidate changes:
      +1: hwright
 
 Approved changes:
+
+ * r29117, 29126
+   Fix several bugs in svn_rangelist_intersection, a fundamental mergeinfo
+   operation.  Has tests.  Also adds extra tests for svn_rangelist_remove.
+   Votes:
+     +1: glasser, kameshj
+
 
