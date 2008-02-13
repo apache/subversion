@@ -70,15 +70,6 @@ Candidate changes:
 
 Approved changes:
 
- * r29284
-   In FSFS structure doc, reformat the part about format versions.
-   Note: This depends on r29250.
-   Justification:
-     If we make yet another change to the format, we'll need to
-     backport this change in order to backport that change.
-   Votes:
-     +1: glasser, hwright
-
  * r29280
    In FSFS, require the new FS format for mergeinfo operations.
    Votes:
