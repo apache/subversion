@@ -31,36 +31,12 @@ Candidate changes:
    Votes:
      +1: epg
 
- * r29091
-   Simplify a part of the code which has been responsible for FSFS
-   corruption.  Possibly fixes corruption issues itself.
-   Votes:
-     +1: glasser
-
- * r29194
-   Rename an error code.
-   Notes:
-     Must be reverted on trunk if not backported.
-     Depends on r29193 (loosely).
-   Votes:
-     +1: glasser
-
  * r29230-29231, r29233
    Obsessively destroy Neon requests, even in error cases.
    Notes:
      Either r29230 or r29231 prevents a reproducible segfault.
    Votes:
      +1: glasser
-
- * r29254, r29255
-   Remove use of an extra RA session.
-   Votes:
-     +1: hwright
-
- * r29309
-   Prevent svnsync from printing blank lines on edit-less revision syncs.
-   Votes:
-     +1: cmpilato
 
  * r29329
    Fix regression in svnadmin verify in r24559, new in 1.5.x.  We can
@@ -71,3 +47,26 @@ Candidate changes:
 
 Approved changes:
 
+ * r29091
+   Simplify a part of the code which has been responsible for FSFS
+   corruption.  Possibly fixes corruption issues itself.
+   Votes:
+     +1: glasser, epg
+
+ * r29194
+   Rename an error code.
+   Notes:
+     Must be reverted on trunk if not backported.
+     Depends on r29193 (loosely).
+   Votes:
+     +1: glasser, epg
+
+ * r29254, r29255
+   Remove use of an extra RA session.
+   Votes:
+     +1: hwright, epg
+
+ * r29309
+   Prevent svnsync from printing blank lines on edit-less revision syncs.
+   Votes:
+     +1: cmpilato, epg
