@@ -2680,11 +2680,11 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
     SVN_ERR(svn_repos_has_capability(b.repos, &supports_mergeinfo,
                                      SVN_REPOS_CAPABILITY_MERGEINFO, pool));
 
-    SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "wcc(!",
+    SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(cc(!",
                                    "success", uuid, b.repos_url));
     if (supports_mergeinfo)
       SVN_ERR(svn_ra_svn_write_word(conn, pool, SVN_RA_SVN_CAP_MERGEINFO));
-    SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)"));
+    SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
   }
                       
   return svn_ra_svn_handle_commands(conn, pool, main_commands, &b);
