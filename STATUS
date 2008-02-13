@@ -68,5 +68,13 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r29320
+   Rename the JavaHL MergeInfo class to Mergeinfo, for consistency with our
+   mergeinfo-as-noun policy.
+   Note: This is an incompatible change, and must be backported or reverted
+     on trunk.
+   Votes:
+     +1: hwright
+
 Approved changes:
 
