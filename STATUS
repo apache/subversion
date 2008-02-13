@@ -79,16 +79,6 @@ Approved changes:
    Votes:
      +1: glasser, hwright
 
- * r29250
-   Node-origins solution for FSFS: hybrid of cmpilato's on-disk
-   36-entries-per-file hash and encoding the revision directly into
-   new nodes.
-   Notes:
-     Minor conflict in fs_fs.c; the merge-right section can be deleted
-     safely.
-   Votes:
-     +1: glasser, cmpilato
-
  * r29280
    In FSFS, require the new FS format for mergeinfo operations.
    Votes:

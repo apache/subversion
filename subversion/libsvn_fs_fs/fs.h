@@ -84,6 +84,9 @@ extern "C" {
 /* The minimum format number that stores protorevs in a separate directory. */
 #define SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT 3
 
+/* The minimum format number that doesn't keep node and copy ID counters. */
+#define SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT 3
+
 /* Maximum number of directories to cache dirents for.
    This *must* be a power of 2 for DIR_CACHE_ENTRIES_MASK
    to work.  */

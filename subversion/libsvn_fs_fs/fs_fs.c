@@ -299,8 +299,11 @@ path_txn_node_children(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
 static APR_INLINE const char *
 path_node_origin(svn_fs_t *fs, const char *node_id, apr_pool_t *pool)
 {
+  int len = strlen(node_id);
+  const char *node_id_minus_last_char =
+    (len == 1) ? "0" : apr_pstrmemdup(pool, node_id, len - 1);
   return svn_path_join_many(pool, fs->path, PATH_NODE_ORIGINS_DIR,
-                            node_id, NULL);
+                            node_id_minus_last_char, NULL);
 }
 
 
@@ -4611,8 +4614,8 @@ write_hash_rep(svn_filesize_t *size,
    transaction into the permanent rev-file FILE.  Return the offset of
    the new node-revision in *OFFSET.  If this is a directory, all
    children are copied as well.  START_NODE_ID and START_COPY_ID are
-   the first available node and copy ids for this filesystem.
-   Temporary allocations are from POOL. */
+   the first available node and copy ids for this filesystem, for older
+   FS formats. Temporary allocations are from POOL. */
 static svn_error_t *
 write_final_rev(const svn_fs_id_t **new_id_p,
                 apr_file_t *file,
@@ -4621,16 +4624,15 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                 const svn_fs_id_t *id,
                 const char *start_node_id,
                 const char *start_copy_id,
-                apr_hash_t *node_origins,
                 apr_pool_t *pool)
 {
   node_revision_t *noderev;
   apr_off_t my_offset;
-  char my_node_id[MAX_KEY_SIZE + 2];
-  char my_copy_id[MAX_KEY_SIZE + 2];
+  char my_node_id_buf[MAX_KEY_SIZE + 2];
+  char my_copy_id_buf[MAX_KEY_SIZE + 2];
   const svn_fs_id_t *new_id;
-  const char *node_id, *copy_id;
-  svn_boolean_t node_id_is_new = FALSE;
+  const char *node_id, *copy_id, *my_node_id, *my_copy_id;
+  fs_fs_data_t *ffd = fs->fsap_data;
 
   *new_id_p = NULL;
 
@@ -4660,8 +4662,8 @@ write_final_rev(const svn_fs_id_t **new_id_p,
           apr_hash_this(hi, NULL, NULL, &val);
           dirent = val;
           SVN_ERR(write_final_rev(&new_id, file, rev, fs, dirent->id,
-                                  start_node_id, start_copy_id, 
-                                  node_origins, subpool));
+                                  start_node_id, start_copy_id,
+                                  subpool));
           if (new_id && (svn_fs_fs__id_rev(new_id) == rev))
             dirent->id = svn_fs_fs__id_copy(new_id, pool);
         }
@@ -4716,17 +4718,30 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   node_id = svn_fs_fs__id_node_id(noderev->id);
   if (*node_id == '_')
     {
-      node_id_is_new = TRUE;
-      svn_fs_fs__add_keys(start_node_id, node_id + 1, my_node_id);
+      if (ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
+        my_node_id = apr_psprintf(pool, "%s-%ld", node_id + 1, rev);
+      else
+        {
+          svn_fs_fs__add_keys(start_node_id, node_id + 1, my_node_id_buf);
+          my_node_id = my_node_id_buf;
+        }
     }
   else
-    strcpy(my_node_id, node_id);
+    my_node_id = node_id;
 
   copy_id = svn_fs_fs__id_copy_id(noderev->id);
   if (*copy_id == '_')
-    svn_fs_fs__add_keys(start_copy_id, copy_id + 1, my_copy_id);
+    {
+      if (ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
+        my_copy_id = apr_psprintf(pool, "%s-%ld", copy_id + 1, rev);
+      else
+        {
+          svn_fs_fs__add_keys(start_copy_id, copy_id + 1, my_copy_id_buf);
+          my_copy_id = my_copy_id_buf;
+        }
+    }
   else
-    strcpy(my_copy_id, copy_id);
+    my_copy_id = copy_id;
 
   if (noderev->copyroot_rev == SVN_INVALID_REVNUM)
     noderev->copyroot_rev = rev;
@@ -4735,15 +4750,6 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                                     pool);
 
   noderev->id = new_id;
-
-  if (node_id_is_new)
-    {
-      apr_pool_t *hash_pool = apr_hash_pool_get(node_origins);
-      const char *key = apr_pstrdup(hash_pool, my_node_id);
-      const svn_fs_id_t *val = svn_fs_fs__id_copy(new_id, hash_pool);
-
-      apr_hash_set(node_origins, key, APR_HASH_KEY_STRING, val);
-    }
 
   /* Write out our new node-revision. */
   SVN_ERR(write_noderev_txn(file, noderev, pool));
@@ -4899,8 +4905,10 @@ svn_fs_fs__move_into_place(const char *old_filename,
   return SVN_NO_ERROR;
 }
 
-/* Atomically update the current file to hold the specifed REV, NEXT_NODE_ID,
-   and NEXT_COPY_ID.  Perform temporary allocations in POOL. */
+/* Atomically update the current file to hold the specifed REV,
+   NEXT_NODE_ID, and NEXT_COPY_ID.  (The two next-ID parameters are
+   ignored and may be NULL if the FS format does not use them.)
+   Perform temporary allocations in POOL. */
 static svn_error_t *
 write_current(svn_fs_t *fs, svn_revnum_t rev, const char *next_node_id,
               const char *next_copy_id, apr_pool_t *pool)
@@ -4908,9 +4916,13 @@ write_current(svn_fs_t *fs, svn_revnum_t rev, const char *next_node_id,
   char *buf;
   const char *tmp_name, *name;
   apr_file_t *file;
+  fs_fs_data_t *ffd = fs->fsap_data;
 
   /* Now we can just write out this line. */
-  buf = apr_psprintf(pool, "%ld %s %s\n", rev, next_node_id, next_copy_id);
+  if (ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
+    buf = apr_psprintf(pool, "%ld\n", rev);
+  else
+    buf = apr_psprintf(pool, "%ld %s %s\n", rev, next_node_id, next_copy_id);
 
   name = svn_fs_fs__path_current(fs, pool);
   SVN_ERR(svn_io_open_unique_file2(&file, &tmp_name, name, ".tmp",
@@ -4941,6 +4953,10 @@ write_final_current(svn_fs_t *fs,
   const char *txn_node_id, *txn_copy_id;
   char new_node_id[MAX_KEY_SIZE + 2];
   char new_copy_id[MAX_KEY_SIZE + 2];
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  if (ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
+    return write_current(fs, rev, NULL, NULL, pool);
 
   /* To find the next available ids, we add the id that used to be in
      the current file, to the next ids from the transaction file. */
@@ -5036,7 +5052,6 @@ struct commit_baton {
   svn_revnum_t *new_rev_p;
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
-  apr_hash_t *node_origins;
 };
 
 /* The work-horse for svn_fs_fs__commit, called with the FS write lock.
@@ -5050,7 +5065,7 @@ commit_body(void *baton, apr_pool_t *pool)
   const char *old_rev_filename, *rev_filename, *proto_filename;
   const char *revprop_filename, *final_revprop;
   const svn_fs_id_t *root_id, *new_root_id;
-  const char *start_node_id, *start_copy_id;
+  const char *start_node_id = NULL, *start_copy_id = NULL;
   svn_revnum_t old_rev, new_rev;
   apr_file_t *proto_file;
   void *proto_file_lockcookie;
@@ -5075,8 +5090,9 @@ commit_body(void *baton, apr_pool_t *pool)
   SVN_ERR(verify_locks(cb->fs, cb->txn->id, pool));
 
   /* Get the next node_id and copy_id to use. */
-  SVN_ERR(get_next_revision_ids(&start_node_id, &start_copy_id, cb->fs,
-                                pool));
+  if (ffd->format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
+    SVN_ERR(get_next_revision_ids(&start_node_id, &start_copy_id, cb->fs,
+                                  pool));
 
   /* We are going to be one better than this puny old revision. */
   new_rev = old_rev + 1;
@@ -5088,7 +5104,7 @@ commit_body(void *baton, apr_pool_t *pool)
   /* Write out all the node-revisions and directory contents. */
   root_id = svn_fs_fs__id_txn_create("0", "0", cb->txn->id, pool);
   SVN_ERR(write_final_rev(&new_root_id, proto_file, new_rev, cb->fs, root_id,
-                          start_node_id, start_copy_id, cb->node_origins, 
+                          start_node_id, start_copy_id,
                           pool));
 
   /* Write the changed-path information. */
@@ -5200,20 +5216,11 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
                   apr_pool_t *pool)
 {
   struct commit_baton cb;
-  apr_hash_t *node_origins = apr_hash_make(pool);
 
   cb.new_rev_p = new_rev_p;
   cb.fs = fs;
   cb.txn = txn;
-  cb.node_origins = node_origins;
-  SVN_ERR(svn_fs_fs__with_write_lock(fs, commit_body, &cb, pool));
-  
-  /* Now that we're no longer locked, we can update the node-origins
-     cache without blocking writers. */
-  if (apr_hash_count(node_origins) > 0)
-    SVN_ERR(svn_fs_fs__set_node_origins(fs, node_origins, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__with_write_lock(fs, commit_body, &cb, pool);
 }
 
 svn_error_t *
@@ -5318,7 +5325,9 @@ svn_fs_fs__create(svn_fs_t *fs,
                                                       pool),
                                         pool));
 
-  SVN_ERR(svn_io_file_create(svn_fs_fs__path_current(fs, pool), "0 1 1\n",
+  SVN_ERR(svn_io_file_create(svn_fs_fs__path_current(fs, pool),
+                             (format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT
+                              ? "0\n" : "0 1 1\n"),
                              pool));
   SVN_ERR(svn_io_file_create(path_lock(fs, pool), "", pool));
   SVN_ERR(svn_fs_fs__set_uuid(fs, svn_uuid_generate(pool), pool));
@@ -5585,48 +5594,60 @@ recover_body(void *baton, apr_pool_t *pool)
 {
   struct recover_baton *b = baton;
   svn_fs_t *fs = b->fs;
-  svn_revnum_t rev, max_rev;
-  apr_pool_t *iterpool;
-  char max_node_id[MAX_KEY_SIZE] = "0", max_copy_id[MAX_KEY_SIZE] = "0";
-  char next_node_id[MAX_KEY_SIZE], next_copy_id[MAX_KEY_SIZE];
-  apr_size_t len;
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_revnum_t max_rev;
+  char next_node_id_buf[MAX_KEY_SIZE], next_copy_id_buf[MAX_KEY_SIZE];
+  char *next_node_id = NULL, *next_copy_id = NULL;
 
   /* First, we need to know the largest revision in the filesystem. */
   SVN_ERR(recover_get_largest_revision(fs, &max_rev, pool));
 
-  /* Next we need to find the maximum node id and copy id in use across the
-     filesystem.  Unfortunately, the only way we can get this information
-     is to scan all the noderevs of all the revisions and keep track as
-     we go along. */
-  iterpool = svn_pool_create(pool);
-  for (rev = 0; rev <= max_rev; rev++)
+  /* We only need to search for maximum IDs for old FS formats which
+     se global ID counters. */
+  if (ffd->format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
     {
-      apr_file_t *rev_file;
-      apr_off_t root_offset;
+      /* Next we need to find the maximum node id and copy id in use across the
+         filesystem.  Unfortunately, the only way we can get this information
+         is to scan all the noderevs of all the revisions and keep track as
+         we go along. */
+      svn_revnum_t rev;
+      apr_pool_t *iterpool = svn_pool_create(pool);
+      char max_node_id[MAX_KEY_SIZE] = "0", max_copy_id[MAX_KEY_SIZE] = "0";
+      apr_size_t len;
 
-      svn_pool_clear(iterpool);
+      for (rev = 0; rev <= max_rev; rev++)
+        {
+          apr_file_t *rev_file;
+          apr_off_t root_offset;
 
-      if (b->cancel_func)
-        SVN_ERR(b->cancel_func(b->cancel_baton));
+          svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_io_file_open(&rev_file,
-                               svn_fs_fs__path_rev(fs, rev, iterpool),
-                               APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
-                               iterpool));
-      SVN_ERR(get_root_changes_offset(&root_offset, NULL, rev_file, iterpool));
-      SVN_ERR(recover_find_max_ids(fs, rev, rev_file, root_offset,
-                                   max_node_id, max_copy_id, iterpool));
+          if (b->cancel_func)
+            SVN_ERR(b->cancel_func(b->cancel_baton));
+
+          SVN_ERR(svn_io_file_open(&rev_file,
+                                   svn_fs_fs__path_rev(fs, rev, iterpool),
+                                   APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
+                                   iterpool));
+          SVN_ERR(get_root_changes_offset(&root_offset, NULL, rev_file,
+                                          iterpool));
+          SVN_ERR(recover_find_max_ids(fs, rev, rev_file, root_offset,
+                                       max_node_id, max_copy_id, iterpool));
+        }
+      svn_pool_destroy(iterpool);
+
+      /* Now that we finally have the maximum revision, node-id and copy-id, we
+         can bump the two ids to get the next of each. */
+      len = strlen(max_node_id);
+      svn_fs_fs__next_key(max_node_id, &len, next_node_id_buf);
+      next_node_id = next_node_id_buf;
+      len = strlen(max_copy_id);
+      svn_fs_fs__next_key(max_copy_id, &len, next_copy_id_buf);
+      next_copy_id = next_copy_id_buf;
     }
-  svn_pool_destroy(iterpool);
 
-  /* Now that we finally have the maximum revision, node-id and copy-id, we
-     can bump the two ids to get the next of each, and store them all in a
-     new current file. */
-  len = strlen(max_node_id);
-  svn_fs_fs__next_key(max_node_id, &len, next_node_id);
-  len = strlen(max_copy_id);
-  svn_fs_fs__next_key(max_copy_id, &len, next_copy_id);
-
+  /* Now store the discovered youngest revision, and the next IDs if
+     relevant, in a new current file. */
   SVN_ERR(write_current(fs, max_rev, next_node_id, next_copy_id, pool));
 
   return SVN_NO_ERROR;
@@ -5717,18 +5738,20 @@ svn_fs_fs__ensure_dir_exists(const char *path,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
-                           svn_fs_t *fs,
-                           const char *node_id,
+/* Set *NODE_ORIGINS to a hash mapping 'const char *' node IDs to
+   'svn_string_t *' node revision IDs.  Use POOL for allocations. */
+static svn_error_t *
+get_node_origins_from_file(svn_fs_t *fs,
+                           apr_hash_t **node_origins,
+                           const char *node_origins_file,
                            apr_pool_t *pool)
 {
   apr_file_t *fd;
-  svn_stringbuf_t *origin_stringbuf;
   svn_error_t *err;
+  svn_stream_t *stream;
 
-  *origin_id = NULL;
-  err = svn_io_file_open(&fd, path_node_origin(fs, node_id, pool),
+  *node_origins = NULL;
+  err = svn_io_file_open(&fd, node_origins_file,
                          APR_READ, APR_OS_DEFAULT, pool);
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
@@ -5737,86 +5760,94 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
     }
   SVN_ERR(err);
 
-  SVN_ERR(svn_stringbuf_from_aprfile(&origin_stringbuf, fd, pool));
+  stream = svn_stream_from_aprfile2(fd, FALSE, pool);
+  *node_origins = apr_hash_make(pool);
+  SVN_ERR(svn_hash_read2(*node_origins, stream, SVN_HASH_TERMINATOR, pool));
+  return svn_stream_close(stream);
+}
 
-  *origin_id = svn_fs_fs__id_parse(origin_stringbuf->data,
-                                   origin_stringbuf->len, pool);
+svn_error_t *
+svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
+                           svn_fs_t *fs,
+                           const char *node_id,
+                           apr_pool_t *pool)
+{
+  apr_hash_t *node_origins;
 
-  SVN_ERR(svn_io_file_close(fd, pool));
-
+  *origin_id = NULL;
+  SVN_ERR(get_node_origins_from_file(fs, &node_origins, 
+                                     path_node_origin(fs, node_id, pool), 
+                                     pool));
+  if (node_origins)
+    {
+      svn_string_t *origin_id_str =
+        apr_hash_get(node_origins, node_id, APR_HASH_KEY_STRING);
+      if (origin_id_str)
+        *origin_id = svn_fs_fs__id_parse(origin_id_str->data,
+                                         origin_id_str->len, pool);
+    }
   return SVN_NO_ERROR;
 }
 
-/* Helper for svn_fs_fs__set_node_origin[s].  Exactly like
-   svn_fs_fs__set_node_origin, except that it throws an error if the
-   file can't be written. */
+
+/* Helper for svn_fs_fs__set_node_origin.  Takes a NODE_ID/NODE_REV_ID
+   pair and adds it to the NODE_ORIGINS_PATH file.  */
 static svn_error_t *
-set_node_origin(svn_fs_t *fs,
-                const char *node_id,
-                const svn_fs_id_t *node_rev_id,
-                apr_pool_t *pool)
+set_node_origins_for_file(svn_fs_t *fs,
+                          const char *node_origins_path,
+                          const char *node_id,
+                          svn_string_t *node_rev_id,
+                          apr_pool_t *pool)
 {
-  apr_file_t *file;
-  svn_string_t *node_rev_id_string;
+  apr_file_t *fd;
+  const char *path_tmp;
+  svn_stream_t *stream;
+  apr_hash_t *origins_hash;
+  svn_string_t *old_node_rev_id;
 
   SVN_ERR(svn_fs_fs__ensure_dir_exists(svn_path_join(fs->path,
                                                      PATH_NODE_ORIGINS_DIR,
                                                      pool),
                                        fs, pool));
 
-  node_rev_id_string = svn_fs_fs__id_unparse(node_rev_id, pool);
+  /* Read the previously existing origins (if any), and merge our
+     update with it. */
+  SVN_ERR(get_node_origins_from_file(fs, &origins_hash,
+                                     node_origins_path, pool));
+  if (! origins_hash)
+    origins_hash = apr_hash_make(pool);
 
-  SVN_ERR(svn_io_file_open(&file, path_node_origin(fs, node_id, pool),
-                           APR_WRITE | APR_CREATE | APR_TRUNCATE
-                           | APR_BUFFERED, APR_OS_DEFAULT, pool));
-  SVN_ERR(svn_io_file_write_full(file,
-                                 node_rev_id_string->data,
-                                 node_rev_id_string->len, NULL, pool));
-  SVN_ERR(svn_io_file_close(file, pool));
+  old_node_rev_id = apr_hash_get(origins_hash, node_id, APR_HASH_KEY_STRING);
+
+  if (old_node_rev_id && !svn_string_compare(node_rev_id, old_node_rev_id))
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Node origin for '%s' exists with a different "
+                               "value (%s) than what we were about to store "
+                               "(%s)"),
+                             node_id, old_node_rev_id->data, node_rev_id->data);
+
+  apr_hash_set(origins_hash, node_id, APR_HASH_KEY_STRING, node_rev_id);
+
+  /* Sure, there's a race condition here.  Two processes could be
+     trying to add different cache elements to the same file at the
+     same time, and the entries added by the first one to write will
+     be lost.  But this is just a cache of reconstructible data, so
+     we'll accept this problem in return for not having to deal with
+     locking overhead. */
+
+  /* Create a temporary file, write out our hash, and close the file. */
+  SVN_ERR(svn_io_open_unique_file2(&fd, &path_tmp, node_origins_path, ".tmp",
+                                   svn_io_file_del_none, pool));
+  stream = svn_stream_from_aprfile2(fd, FALSE, pool);
+  SVN_ERR(svn_hash_write2(origins_hash, stream, SVN_HASH_TERMINATOR, pool));
+  SVN_ERR(svn_stream_close(stream));
+
+  /* Rename the temp file as the real destination */
+  SVN_ERR(svn_io_file_rename(path_tmp, node_origins_path, pool));
 
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_fs_fs__set_node_origins(svn_fs_t *fs,
-                            apr_hash_t *node_origins,
-                            apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-  apr_pool_t *iterpool = svn_pool_create(pool);
-
-  for (hi = apr_hash_first(pool, node_origins);
-       hi != NULL;
-       hi = apr_hash_next(hi))
-    {
-      const void *key;
-      void *val;
-      const char *node_id;
-      const svn_fs_id_t *node_rev_id;
-      svn_error_t *err;
-
-      svn_pool_clear(iterpool);
-
-      apr_hash_this(hi, &key, NULL, &val);
-      node_id = key;
-      node_rev_id = val;
-
-      err = set_node_origin(fs, node_id, node_rev_id, iterpool);
-      if (err && APR_STATUS_IS_EACCES(err->apr_err))
-        {
-          /* It's just a cache; stop trying if I can't write. */
-          svn_error_clear(err);
-          err = NULL;
-          goto cleanup;
-        }
-      SVN_ERR(err);
-    }
-
- cleanup:
-  svn_pool_destroy(iterpool);
-  return SVN_NO_ERROR;
-}
 
 svn_error_t *
 svn_fs_fs__set_node_origin(svn_fs_t *fs,
@@ -5824,7 +5855,13 @@ svn_fs_fs__set_node_origin(svn_fs_t *fs,
                            const svn_fs_id_t *node_rev_id,
                            apr_pool_t *pool)
 {
-  svn_error_t *err = set_node_origin(fs, node_id, node_rev_id, pool);
+  svn_error_t *err;
+  const char *filename = path_node_origin(fs, node_id, pool);
+
+  err = set_node_origins_for_file(fs, filename,
+                                  node_id,
+                                  svn_fs_fs__id_unparse(node_rev_id, pool),
+                                  pool);
   if (err && APR_STATUS_IS_EACCES(err->apr_err))
     {
       /* It's just a cache; stop trying if I can't write. */

@@ -455,22 +455,12 @@ svn_error_t *svn_fs_fs__ensure_dir_exists(const char *path,
                                           svn_fs_t *fs,
                                           apr_pool_t *pool);
 
-/* Update the node origin index for FS based on the hash
-   NODE_ORIGIN_FOR_PATHS, which maps from const char * "Node IDs" to
-   const svn_fs_id_t * node-rev-ids.  Returns an error if any cache
-   entry exists with a different value; pre-existing entries with the
-   same value are ignored.  Use POOL for any temporary allocations.
+/* Update the node origin index for FS, recording the mapping from
+   NODE_ID to NODE_REV_ID.  Use POOL for any temporary allocations.
 
    Because this is just an "optional" cache, this function does not
    return an error if the underlying storage is readonly; it still
    returns an error for other error conditions.
- */
-svn_error_t *
-svn_fs_fs__set_node_origins(svn_fs_t *fs,
-                            apr_hash_t *node_origins,
-                            apr_pool_t *pool);
-
-/* Shorthand for calling svn_fs_fs__set_node_origins with just one pair.
  */
 svn_error_t *
 svn_fs_fs__set_node_origin(svn_fs_t *fs,

@@ -3000,8 +3000,8 @@ fs_node_origin_rev(svn_revnum_t *revision,
                    apr_pool_t *pool)
 {
   svn_fs_t *fs = svn_fs_root_fs(root);
-  const svn_fs_id_t *given_noderev_id;
-  const char *node_id;
+  const svn_fs_id_t *given_noderev_id, *cached_origin_id;
+  const char *node_id, *dash;
 
   path = svn_fs__canonicalize_abspath(path, pool);
 
@@ -3009,86 +3009,99 @@ fs_node_origin_rev(svn_revnum_t *revision,
   SVN_ERR(fs_node_id(&given_noderev_id, root, path, pool));
   node_id = svn_fs_fs__id_node_id(given_noderev_id);
 
-  if (node_id[0] != '_')
+  /* Is it a brand new uncommitted node? */
+  if (node_id[0] == '_')
     {
-      const svn_fs_id_t *cached_origin_id;
-      SVN_ERR(svn_fs_fs__get_node_origin(&cached_origin_id,
-                                         fs,
-                                         node_id,
-                                         pool));
-      if (cached_origin_id != NULL)
-        {
-          *revision = svn_fs_fs__id_rev(cached_origin_id);
-          return SVN_NO_ERROR;
-        }
-    }
-
-    {
-      /* Ah well, it's not in the cache.  Let's actually calculate it,
-         then. */
-      svn_fs_root_t *curroot = root;
-      apr_pool_t *subpool = svn_pool_create(pool);
-      apr_pool_t *predidpool = svn_pool_create(pool);
-      svn_stringbuf_t *lastpath = svn_stringbuf_create(path, pool);
-      svn_revnum_t lastrev = SVN_INVALID_REVNUM;
-      dag_node_t *node;
-      const svn_fs_id_t *pred_id;
-
-      /* Walk the closest-copy chain back to the first copy in our history.
-         
-         NOTE: We merely *assume* that this is faster than walking the
-         predecessor chain, because we *assume* that copies of parent
-         directories happen less often than modifications to a given item. */
-      while (1)
-        {
-          svn_revnum_t currev;
-          const char *curpath = lastpath->data;
-
-          svn_pool_clear(subpool);
-
-          /* Get a root pointing to LASTREV.  (The first time around,
-             LASTREV is invalid, but that's cool because CURROOT is
-             already initialized.)  */
-          if (SVN_IS_VALID_REVNUM(lastrev))
-            SVN_ERR(svn_fs_fs__revision_root(&curroot, fs, lastrev, subpool));
-
-          /* Find the previous location using the closest-copy shortcut. */
-          SVN_ERR(prev_location(&curpath, &currev, fs, curroot, curpath,
-                                subpool));
-          if (! curpath)
-            break;
-
-          /* Update our LASTPATH and LASTREV variables (which survive
-             SUBPOOL). */
-          svn_stringbuf_set(lastpath, curpath);
-          lastrev = currev;
-        }
-
-      /* Walk the predecessor links back to origin. */
-      SVN_ERR(fs_node_id(&pred_id, curroot, lastpath->data, predidpool));
-      while (pred_id)
-        {
-          svn_pool_clear(subpool);
-          SVN_ERR(svn_fs_fs__dag_get_node(&node, fs, pred_id, subpool));
-          svn_pool_clear(predidpool);
-          SVN_ERR(svn_fs_fs__dag_get_predecessor_id(&pred_id, node, 
-                                                    predidpool));
-        }
-  
-      /* When we get here, NODE should be the first node-revision in our
-         chain. */
-      SVN_ERR(svn_fs_fs__dag_get_revision(revision, node, pool));
-
-      /* Wow, I don't want to have to do all that again.  Let's cache
-         the result. */
-      if (node_id[0] != '_')
-        SVN_ERR(svn_fs_fs__set_node_origin(fs, node_id,
-                                           svn_fs_fs__dag_get_id(node), pool));
-
-      svn_pool_destroy(subpool);
-      svn_pool_destroy(predidpool);
+      *revision = SVN_INVALID_REVNUM;
       return SVN_NO_ERROR;
     }
+
+  /* Maybe this is a new-style node ID that just has the revision
+     sitting right in it. */
+  dash = strchr(node_id, '-');
+  if (dash && *(dash+1))
+    {
+      *revision = SVN_STR_TO_REV(dash + 1);
+      return SVN_NO_ERROR;
+    }
+
+  /* OK, it's an old-style ID?  Maybe it's cached. */
+  SVN_ERR(svn_fs_fs__get_node_origin(&cached_origin_id,
+                                     fs,
+                                     node_id,
+                                     pool));
+  if (cached_origin_id != NULL)
+    {
+      *revision = svn_fs_fs__id_rev(cached_origin_id);
+      return SVN_NO_ERROR;
+    }
+
+  {
+    /* Ah well, the answer isn't in the ID itself or in the cache.
+       Let's actually calculate it, then. */
+    svn_fs_root_t *curroot = root;
+    apr_pool_t *subpool = svn_pool_create(pool);
+    apr_pool_t *predidpool = svn_pool_create(pool);
+    svn_stringbuf_t *lastpath = svn_stringbuf_create(path, pool);
+    svn_revnum_t lastrev = SVN_INVALID_REVNUM;
+    dag_node_t *node;
+    const svn_fs_id_t *pred_id;
+
+    /* Walk the closest-copy chain back to the first copy in our history.
+
+       NOTE: We merely *assume* that this is faster than walking the
+       predecessor chain, because we *assume* that copies of parent
+       directories happen less often than modifications to a given item. */
+    while (1)
+      {
+        svn_revnum_t currev;
+        const char *curpath = lastpath->data;
+
+        svn_pool_clear(subpool);
+
+        /* Get a root pointing to LASTREV.  (The first time around,
+           LASTREV is invalid, but that's cool because CURROOT is
+           already initialized.)  */
+        if (SVN_IS_VALID_REVNUM(lastrev))
+          SVN_ERR(svn_fs_fs__revision_root(&curroot, fs, lastrev, subpool));
+
+        /* Find the previous location using the closest-copy shortcut. */
+        SVN_ERR(prev_location(&curpath, &currev, fs, curroot, curpath,
+                              subpool));
+        if (! curpath)
+          break;
+
+        /* Update our LASTPATH and LASTREV variables (which survive
+           SUBPOOL). */
+        svn_stringbuf_set(lastpath, curpath);
+        lastrev = currev;
+      }
+
+    /* Walk the predecessor links back to origin. */
+    SVN_ERR(fs_node_id(&pred_id, curroot, lastpath->data, predidpool));
+    while (pred_id)
+      {
+        svn_pool_clear(subpool);
+        SVN_ERR(svn_fs_fs__dag_get_node(&node, fs, pred_id, subpool));
+        svn_pool_clear(predidpool);
+        SVN_ERR(svn_fs_fs__dag_get_predecessor_id(&pred_id, node,
+                                                  predidpool));
+      }
+
+    /* When we get here, NODE should be the first node-revision in our
+       chain. */
+    SVN_ERR(svn_fs_fs__dag_get_revision(revision, node, pool));
+
+    /* Wow, I don't want to have to do all that again.  Let's cache
+       the result. */
+    if (node_id[0] != '_')
+      SVN_ERR(svn_fs_fs__set_node_origin(fs, node_id,
+                                         svn_fs_fs__dag_get_id(node), pool));
+
+    svn_pool_destroy(subpool);
+    svn_pool_destroy(predidpool);
+    return SVN_NO_ERROR;
+  }
 }
 
 
