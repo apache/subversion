@@ -1396,12 +1396,9 @@ merge(svn_stringbuf_t *conflict_p,
   /* ### todo: it would be more efficient to simply check for a NULL
      entries hash where necessary below than to allocate an empty hash
      here, but another day, another day... */
-  SVN_ERR(svn_fs_fs__dag_dir_entries(&s_entries, source, pool));
-  s_entries = svn_fs_fs__copy_dir_entries(s_entries, pool);
-  SVN_ERR(svn_fs_fs__dag_dir_entries(&t_entries, target, pool));
-  t_entries = svn_fs_fs__copy_dir_entries(t_entries, pool);
-  SVN_ERR(svn_fs_fs__dag_dir_entries(&a_entries, ancestor, pool));
-  a_entries = svn_fs_fs__copy_dir_entries(a_entries, pool);
+  SVN_ERR(svn_fs_fs__dag_dir_entries(&s_entries, source, pool, pool));
+  SVN_ERR(svn_fs_fs__dag_dir_entries(&t_entries, target, pool, pool));
+  SVN_ERR(svn_fs_fs__dag_dir_entries(&a_entries, ancestor, pool, pool));
 
   /* for each entry E in a_entries... */
   iterpool = svn_pool_create(pool);
@@ -1863,13 +1860,10 @@ fs_dir_entries(apr_hash_t **table_p,
                apr_pool_t *pool)
 {
   dag_node_t *node;
-  apr_hash_t *entries;
 
-  /* Get the entries for this path and copy them into the callers's
-     pool. */
+  /* Get the entries for this path in the caller's pool. */
   SVN_ERR(get_dag(&node, root, path, pool));
-  SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, node, pool));
-  *table_p = svn_fs_fs__copy_dir_entries(entries, pool);
+  SVN_ERR(svn_fs_fs__dag_dir_entries(table_p, node, pool, pool));
   return SVN_NO_ERROR;
 }
 
@@ -3422,8 +3416,7 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
-  SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, dir_dag, pool));
-  entries = svn_fs_fs__copy_dir_entries(entries, pool);
+  SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, dir_dag, pool, pool));
 
   for (hi = apr_hash_first(pool, entries);
        hi;

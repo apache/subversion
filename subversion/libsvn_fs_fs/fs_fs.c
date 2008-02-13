@@ -2793,6 +2793,32 @@ get_dir_contents(apr_hash_t *entries,
   return SVN_NO_ERROR;
 }
 
+/* Return a copy of the directory hash ENTRIES in POOL. */
+static apr_hash_t *
+copy_dir_entries(apr_hash_t *entries,
+                 apr_pool_t *pool)
+{
+  apr_hash_t *new_entries = apr_hash_make(pool);
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+    {
+      void *val;
+      svn_fs_dirent_t *dirent, *new_dirent;
+
+      apr_hash_this(hi, NULL, NULL, &val);
+      dirent = val;
+      new_dirent = apr_palloc(pool, sizeof(*new_dirent));
+      new_dirent->name = apr_pstrdup(pool, dirent->name);
+      new_dirent->kind = dirent->kind;
+      new_dirent->id = svn_fs_fs__id_copy(dirent->id, pool);
+      apr_hash_set(new_entries, new_dirent->name, APR_HASH_KEY_STRING,
+                   new_dirent);
+    }
+  return new_entries;
+}
+
+
 svn_error_t *
 svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
                             svn_fs_t *fs,
@@ -2800,11 +2826,12 @@ svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
                             apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  apr_hash_t *entries;
+  apr_hash_t *unparsed_entries, *parsed_entries;
   apr_hash_index_t *hi;
   unsigned int hid;
 
-  /* Calculate an index into the dir entries cache */
+  /* Calculate an index into the dir entries cache.  This should be
+     completely ignored if this is a mutable noderev. */
   hid = DIR_CACHE_ENTRIES_MASK(svn_fs_fs__id_rev(noderev->id));
 
   /* If we have this directory cached, return it. */
@@ -2812,35 +2839,28 @@ svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
       ffd->dir_cache_id[hid] && svn_fs_fs__id_eq(ffd->dir_cache_id[hid],
                                                  noderev->id))
     {
-      *entries_p = ffd->dir_cache[hid];
+      *entries_p = copy_dir_entries(ffd->dir_cache[hid], pool);
       return SVN_NO_ERROR;
     }
 
   /* Read in the directory hash. */
-  entries = apr_hash_make(pool);
-  SVN_ERR(get_dir_contents(entries, fs, noderev, pool));
+  unparsed_entries = apr_hash_make(pool);
+  SVN_ERR(get_dir_contents(unparsed_entries, fs, noderev, pool));
 
-  /* Prepare to cache this directory. */
-  ffd->dir_cache_id[hid] = NULL;
-  if (ffd->dir_cache_pool[hid])
-    svn_pool_clear(ffd->dir_cache_pool[hid]);
-  else
-    ffd->dir_cache_pool[hid] = svn_pool_create(fs->pool);
-  ffd->dir_cache[hid] = apr_hash_make(ffd->dir_cache_pool[hid]);
+  parsed_entries = apr_hash_make(pool);
 
-  /* Translate the string dir entries into real entries in the dir cache. */
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+  /* Translate the string dir entries into real entries. */
+  for (hi = apr_hash_first(pool, unparsed_entries); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       void *val;
       char *str_val;
       char *str, *last_str;
-      svn_fs_dirent_t *dirent = apr_pcalloc(ffd->dir_cache_pool[hid],
-                                            sizeof(*dirent));
+      svn_fs_dirent_t *dirent = apr_pcalloc(pool, sizeof(*dirent));
 
       apr_hash_this(hi, &key, NULL, &val);
       str_val = apr_pstrdup(pool, *((char **)val));
-      dirent->name = apr_pstrdup(ffd->dir_cache_pool[hid], key);
+      dirent->name = apr_pstrdup(pool, key);
 
       str = apr_strtok(str_val, " ", &last_str);
       if (str == NULL)
@@ -2866,40 +2886,31 @@ svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                                 _("Directory entry corrupt"));
 
-      dirent->id = svn_fs_fs__id_parse(str, strlen(str),
-                                       ffd->dir_cache_pool[hid]);
+      dirent->id = svn_fs_fs__id_parse(str, strlen(str), pool);
 
-      apr_hash_set(ffd->dir_cache[hid], dirent->name, APR_HASH_KEY_STRING, dirent);
+      apr_hash_set(parsed_entries, dirent->name, APR_HASH_KEY_STRING, dirent);
     }
 
-  /* Mark which directory we've cached and return it. */
-  ffd->dir_cache_id[hid] = svn_fs_fs__id_copy(noderev->id, ffd->dir_cache_pool[hid]);
-  *entries_p = ffd->dir_cache[hid];
-  return SVN_NO_ERROR;
-}
-
-apr_hash_t *
-svn_fs_fs__copy_dir_entries(apr_hash_t *entries,
-                            apr_pool_t *pool)
-{
-  apr_hash_t *new_entries = apr_hash_make(pool);
-  apr_hash_index_t *hi;
-
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+  /* If this is an immutable directory, let's cache the contents. */
+  if (! svn_fs_fs__id_txn_id(noderev->id))
     {
-      void *val;
-      svn_fs_dirent_t *dirent, *new_dirent;
+      /* Start by NULLing the ID field, so that we never leave the
+         cache in an illegal state. */
+      ffd->dir_cache_id[hid] = NULL;
 
-      apr_hash_this(hi, NULL, NULL, &val);
-      dirent = val;
-      new_dirent = apr_palloc(pool, sizeof(*new_dirent));
-      new_dirent->name = apr_pstrdup(pool, dirent->name);
-      new_dirent->kind = dirent->kind;
-      new_dirent->id = svn_fs_fs__id_copy(dirent->id, pool);
-      apr_hash_set(new_entries, new_dirent->name, APR_HASH_KEY_STRING,
-                   new_dirent);
+      if (ffd->dir_cache_pool[hid])
+        svn_pool_clear(ffd->dir_cache_pool[hid]);
+      else
+        ffd->dir_cache_pool[hid] = svn_pool_create(fs->pool);
+
+      ffd->dir_cache[hid] = copy_dir_entries(parsed_entries,
+                                             ffd->dir_cache_pool[hid]);
+      ffd->dir_cache_id[hid] = svn_fs_fs__id_copy(noderev->id,
+                                                  ffd->dir_cache_pool[hid]);
     }
-  return new_entries;
+
+  *entries_p = parsed_entries;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -4026,28 +4037,30 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
                      svn_node_kind_t kind,
                      apr_pool_t *pool)
 {
-  fs_fs_data_t *ffd = fs->fsap_data;
   representation_t *rep = parent_noderev->data_rep;
   const char *filename = path_txn_node_children(fs, parent_noderev->id, pool);
   apr_file_t *file;
   svn_stream_t *out;
-  svn_boolean_t have_cached;
-  unsigned int hid;
 
   if (!rep || !rep->txn_id)
     {
-      apr_hash_t *entries;
+      {
+        apr_hash_t *entries;
+        apr_pool_t *subpool = svn_pool_create(pool);
 
-      /* Before we can modify the directory, we need to dump its old
-         contents into a mutable representation file. */
-      SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, parent_noderev,
-                                          pool));
-      SVN_ERR(unparse_dir_entries(&entries, entries, pool));
-      SVN_ERR(svn_io_file_open(&file, filename,
-                               APR_WRITE | APR_CREATE | APR_BUFFERED,
-                               APR_OS_DEFAULT, pool));
-      out = svn_stream_from_aprfile(file, pool);
-      SVN_ERR(svn_hash_write2(entries, out, SVN_HASH_TERMINATOR, pool));
+        /* Before we can modify the directory, we need to dump its old
+           contents into a mutable representation file. */
+        SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, parent_noderev,
+                                            subpool));
+        SVN_ERR(unparse_dir_entries(&entries, entries, subpool));
+        SVN_ERR(svn_io_file_open(&file, filename,
+                                 APR_WRITE | APR_CREATE | APR_BUFFERED,
+                                 APR_OS_DEFAULT, pool));
+        out = svn_stream_from_aprfile(file, pool);
+        SVN_ERR(svn_hash_write2(entries, out, SVN_HASH_TERMINATOR, subpool));
+
+        svn_pool_destroy(subpool);
+      }
 
       /* Mark the node-rev's data rep as mutable. */
       rep = apr_pcalloc(pool, sizeof(*rep));
@@ -4065,15 +4078,7 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
       out = svn_stream_from_aprfile(file, pool);
     }
 
-  /* Calculate an index into the dir entries cache.  */
-  hid = DIR_CACHE_ENTRIES_MASK(svn_fs_fs__id_rev(parent_noderev->id));
-
-  /* Make a note if we have this directory cached. */
-  have_cached = (ffd->dir_cache_id[hid]
-                 && svn_fs_fs__id_eq(ffd->dir_cache_id[hid], parent_noderev->id));
-
-  /* Append an incremental hash entry for the entry change, and update
-     the cached directory if necessary. */
+  /* Append an incremental hash entry for the entry change. */
   if (id)
     {
       const char *val = unparse_dir_entry(kind, id, pool);
@@ -4082,24 +4087,11 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
                                 "V %" APR_SIZE_T_FMT "\n%s\n",
                                 strlen(name), name,
                                 strlen(val), val));
-      if (have_cached)
-        {
-          svn_fs_dirent_t *dirent;
-
-          dirent = apr_palloc(ffd->dir_cache_pool[hid], sizeof(*dirent));
-          dirent->name = apr_pstrdup(ffd->dir_cache_pool[hid], name);
-          dirent->kind = kind;
-          dirent->id = svn_fs_fs__id_copy(id, ffd->dir_cache_pool[hid]);
-          apr_hash_set(ffd->dir_cache[hid], dirent->name, APR_HASH_KEY_STRING,
-                       dirent);
-        }
     }
   else
     {
       SVN_ERR(svn_stream_printf(out, pool, "D %" APR_SIZE_T_FMT "\n%s\n",
                                 strlen(name), name));
-      if (have_cached)
-        apr_hash_set(ffd->dir_cache[hid], name, APR_HASH_KEY_STRING, NULL);
     }
 
   SVN_ERR(svn_io_file_close(file, pool));
@@ -4673,7 +4665,6 @@ write_final_rev(const svn_fs_id_t **new_id_p,
       subpool = svn_pool_create(pool);
 
       SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, noderev, pool));
-      entries = svn_fs_fs__copy_dir_entries(entries, pool);
 
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {

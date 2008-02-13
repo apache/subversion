@@ -74,22 +74,13 @@ svn_error_t *svn_fs_fs__rev_get_root(svn_fs_id_t **root_id,
                                      apr_pool_t *pool);
 
 /* Set *ENTRIES to an apr_hash_t of dirent structs that contain the
-   directory entries of node-revision NODEREV in filesystem FS.  Use
-   POOL for temporary allocations.  The returned hash does *not* live
-   in POOL, and becomes invalid on the next call to this function.  If
-   you need it to live longer, copy it with
-   svn_fs_fs__copy_dir_entries. */
+   directory entries of node-revision NODEREV in filesystem FS.  The
+   returned table (and its keys and values) is allocated in POOL,
+   which is also used for temporary allocations. */
 svn_error_t *svn_fs_fs__rep_contents_dir(apr_hash_t **entries,
                                          svn_fs_t *fs,
                                          node_revision_t *noderev,
                                          apr_pool_t *pool);
-
-/* Return a copy of the directory hash ENTRIES in POOL.  Use this to
-   copy the result of svn_fs_fs__rep_contents_dir into a predictable
-   place so that doesn't become invalid before it's no longer
-   needed. */
-apr_hash_t *svn_fs_fs__copy_dir_entries(apr_hash_t *entries,
-                                        apr_pool_t *pool);
 
 /* Set *CONTENTS to be a readable svn_stream_t that receives the text
    representation of node-revision NODEREV as seen in filesystem FS.

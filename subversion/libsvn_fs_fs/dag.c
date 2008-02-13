@@ -291,9 +291,8 @@ svn_fs_fs__dag_has_descendants_with_mergeinfo(svn_boolean_t *do_they,
 /* Some of these are helpers for functions outside this section. */
 
 /* Set *ID_P to the node-id for entry NAME in PARENT.  If no such
-   entry, set *ID_P to NULL but do not error.  The node-id is not
-   necessarily allocated in POOL; the caller should copy if it
-   cares.  */
+   entry, set *ID_P to NULL but do not error.  The node-id is
+   allocated in POOL. */
 static svn_error_t *
 dir_entry_id_from_node(const svn_fs_id_t **id_p,
                        dag_node_t *parent,
@@ -302,14 +301,18 @@ dir_entry_id_from_node(const svn_fs_id_t **id_p,
 {
   apr_hash_t *entries;
   svn_fs_dirent_t *dirent;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
-  SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, parent, pool));
+  SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, parent, subpool, pool));
   if (entries)
     dirent = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
   else
     dirent = NULL;
 
-  *id_p = dirent ? dirent->id : NULL;
+  *id_p = dirent ? svn_fs_fs__id_copy(dirent->id, pool) : NULL;
+
+  svn_pool_destroy(subpool);
+
   return SVN_NO_ERROR;
 }
 
@@ -411,11 +414,12 @@ make_entry(dag_node_t **child_p,
 svn_error_t *
 svn_fs_fs__dag_dir_entries(apr_hash_t **entries,
                            dag_node_t *node,
-                           apr_pool_t *pool)
+                           apr_pool_t *pool,
+                           apr_pool_t *node_pool)
 {
   node_revision_t *noderev;
 
-  SVN_ERR(get_node_revision(&noderev, node, pool));
+  SVN_ERR(get_node_revision(&noderev, node, node_pool));
 
   if (noderev->kind != svn_node_dir)
     return svn_error_create(SVN_ERR_FS_NOT_DIRECTORY, NULL,
@@ -740,6 +744,7 @@ svn_fs_fs__dag_delete(dag_node_t *parent,
   svn_fs_t *fs = parent->fs;
   svn_fs_dirent_t *dirent;
   svn_fs_id_t *id;
+  apr_pool_t *subpool;
 
   /* Make sure parent is a directory. */
   if (parent->kind != svn_node_dir)
@@ -762,8 +767,10 @@ svn_fs_fs__dag_delete(dag_node_t *parent,
   /* Get a fresh NODE-REVISION for the parent node. */
   SVN_ERR(get_node_revision(&parent_noderev, parent, pool));
 
+  subpool = svn_pool_create(pool);
+
   /* Get a dirent hash for this directory. */
-  SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, parent_noderev, pool));
+  SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, parent_noderev, subpool));
 
   /* Find name in the ENTRIES hash. */
   dirent = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
@@ -776,9 +783,10 @@ svn_fs_fs__dag_delete(dag_node_t *parent,
       (SVN_ERR_FS_NO_SUCH_ENTRY, NULL,
        "Delete failed--directory has no entry '%s'", name);
 
-  /* Stash a copy of the ID, since dirent will become invalid during
-     svn_fs_fs__dag_delete_if_mutable. */
+  /* Copy the ID out of the subpool and release the rest of the
+     directory listing. */
   id = svn_fs_fs__id_copy(dirent->id, pool);
+  svn_pool_destroy(subpool);
 
   /* If mutable, remove it and any mutable children from db. */
   SVN_ERR(svn_fs_fs__dag_delete_if_mutable(parent->fs, id, pool));
@@ -834,8 +842,7 @@ svn_fs_fs__dag_delete_if_mutable(svn_fs_t *fs,
       apr_hash_index_t *hi;
 
       /* Loop over hash entries */
-      SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, node, pool));
-      entries = svn_fs_fs__copy_dir_entries(entries, pool);
+      SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, node, pool, pool));
       if (entries)
         {
           for (hi = apr_hash_first(pool, entries);

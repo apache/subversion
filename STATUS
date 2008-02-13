@@ -47,12 +47,6 @@ Candidate changes:
 
 Approved changes:
 
- * r29091
-   Simplify a part of the code which has been responsible for FSFS
-   corruption.  Possibly fixes corruption issues itself.
-   Votes:
-     +1: glasser, epg
-
  * r29194
    Rename an error code.
    Notes:
