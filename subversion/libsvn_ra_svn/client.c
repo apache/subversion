@@ -1046,7 +1046,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
 /* If REVISION is SVN_INVALID_REVNUM, no value is sent to the
    server, which defaults to youngest. */
 static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
-                                         apr_hash_t **mergeinfo,
+                                         svn_mergeinfo_catalog_t *catalog,
                                          const apr_array_header_t *paths,
                                          svn_revnum_t revision,
                                          svn_mergeinfo_inheritance_t inherit,
@@ -1059,7 +1059,6 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
   apr_array_header_t *mergeinfo_tuple;
   svn_ra_svn_item_t *elt;
   const char *path, *to_parse;
-  apr_hash_t *for_path;
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "get-mergeinfo"));
   for (i = 0; i < paths->nelts; i++)
@@ -1074,12 +1073,14 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
   SVN_ERR(handle_auth_request(sess_baton, pool));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "(?l)", &mergeinfo_tuple));
 
-  *mergeinfo = NULL;
+  *catalog = NULL;
   if (mergeinfo_tuple != NULL && mergeinfo_tuple->nelts > 0)
     {
-      *mergeinfo = apr_hash_make(pool);
+      *catalog = apr_hash_make(pool);
       for (i = 0; i < mergeinfo_tuple->nelts; i++)
         {
+          svn_mergeinfo_t for_path;
+
           elt = &((svn_ra_svn_item_t *) mergeinfo_tuple->elts)[i];
           if (elt->kind != SVN_RA_SVN_LIST)
             return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -1087,7 +1088,7 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
           SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "cc",
                                          &path, &to_parse));
           SVN_ERR(svn_mergeinfo_parse(&for_path, to_parse, pool));
-          apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, for_path);
+          apr_hash_set(*catalog, path, APR_HASH_KEY_STRING, for_path);
         }
     }
 

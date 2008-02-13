@@ -1376,6 +1376,8 @@ svn_repos_get_logs(svn_repos_t *repos,
  * info (as managed by svn_mergeinfo.h), or @c NULL if there is no
  * mergeinfo visible or available.
  *
+ * TODO(miapi): This currently stores values as strings.  Bad!
+ *
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a paths is fetched.
  *
@@ -1398,7 +1400,7 @@ svn_repos_get_logs(svn_repos_t *repos,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_repos_fs_get_mergeinfo(apr_hash_t **mergeoutput,
+svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeoutput,
                            svn_repos_t *repos,
                            const apr_array_header_t *paths,
                            svn_revnum_t revision,

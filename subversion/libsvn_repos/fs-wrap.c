@@ -544,7 +544,7 @@ svn_repos_fs_get_locks(apr_hash_t **locks,
 
 
 svn_error_t *
-svn_repos_fs_get_mergeinfo(apr_hash_t **mergeinfo,
+svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
                            svn_repos_t *repos,
                            const apr_array_header_t *paths,
                            svn_revnum_t rev,

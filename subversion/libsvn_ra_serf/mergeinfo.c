@@ -43,8 +43,8 @@ typedef enum {
   MERGEINFO_INFO
 } mergeinfo_state_e;
 
-/* Baton for accumulating mergeinfo.  RESULT stores the final
-   mergeinfo hash result we are going to hand back to the caller of
+/* Baton for accumulating mergeinfo.  RESULT_CATALOG stores the final
+   mergeinfo catalog result we are going to hand back to the caller of
    get_mergeinfo.  curr_path and curr_info contain the value of the
    CDATA from the mergeinfo items as we get them from the server.  */
 
@@ -52,7 +52,7 @@ typedef struct {
   apr_pool_t *pool;
   svn_stringbuf_t *curr_path;
   svn_stringbuf_t *curr_info;
-  apr_hash_t *result;
+  svn_mergeinfo_t result_catalog;
   svn_boolean_t done;
   const apr_array_header_t *paths;
   svn_revnum_t revision;
@@ -113,11 +113,11 @@ end_element(svn_ra_serf__xml_parser_t *parser, void *userData,
     {
       if (mergeinfo_ctx->curr_info->len && mergeinfo_ctx->curr_path->len)
         {
-          apr_hash_t *path_mergeinfo;
+          svn_mergeinfo_t path_mergeinfo;
           SVN_ERR(svn_mergeinfo_parse(&path_mergeinfo,
                                       mergeinfo_ctx->curr_info->data,
                                       mergeinfo_ctx->pool));
-          apr_hash_set(mergeinfo_ctx->result,
+          apr_hash_set(mergeinfo_ctx->result_catalog,
                        apr_pstrmemdup(mergeinfo_ctx->pool,
                                       mergeinfo_ctx->curr_path->data,
                                       mergeinfo_ctx->curr_path->len),
@@ -225,7 +225,7 @@ create_mergeinfo_body(void *baton,
    and fill in the MERGEINFO hash with the results.  */
 svn_error_t *
 svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
-                           apr_hash_t **mergeinfo,
+                           svn_mergeinfo_catalog_t *catalog,
                            const apr_array_header_t *paths,
                            svn_revnum_t revision,
                            svn_mergeinfo_inheritance_t inherit,
@@ -252,7 +252,7 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
   mergeinfo_ctx->curr_path = svn_stringbuf_create("", pool);
   mergeinfo_ctx->curr_info = svn_stringbuf_create("", pool);
   mergeinfo_ctx->done = FALSE;
-  mergeinfo_ctx->result = apr_hash_make(pool);
+  mergeinfo_ctx->result_catalog = apr_hash_make(pool);
   mergeinfo_ctx->paths = paths;
   mergeinfo_ctx->revision = revision;
   mergeinfo_ctx->inherit = inherit;
@@ -295,7 +295,7 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
     SVN_ERR(err);
 
   if (mergeinfo_ctx->done)
-    *mergeinfo = mergeinfo_ctx->result;
+    *catalog = mergeinfo_ctx->result_catalog;
 
   return SVN_NO_ERROR;
 }

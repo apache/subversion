@@ -26,11 +26,15 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* Take a hash of mergeinfo in MERGEINPUT, and convert it back to
-   a text format mergeinfo in OUTPUT.  If INPUT contains no elements,
-   return the empty string. */
+/* Take a mergeinfo in MERGEINPUT, and convert it back to a text
+   format mergeinfo in OUTPUT.  If INPUT contains no elements, return
+   the empty string.
+
+   TODO(miapi): Make this public, replacing
+   svn_mergeinfo_to_stringbuf.
+*/
 svn_error_t *
-svn_mergeinfo__to_string(svn_string_t **output, apr_hash_t *mergeinput,
+svn_mergeinfo__to_string(svn_string_t **output, svn_mergeinfo_t mergeinput,
                          apr_pool_t *pool);
 
 /* Return whether INFO1 and INFO2 are equal in *IS_EQUAL.
@@ -53,18 +57,17 @@ svn_mergeinfo__to_string(svn_string_t **output, apr_hash_t *mergeinput,
    Use POOL for temporary allocations. */
 svn_error_t *
 svn_mergeinfo__equals(svn_boolean_t *is_equal,
-                      apr_hash_t *info1,
-                      apr_hash_t *info2,
+                      svn_mergeinfo_t info1,
+                      svn_mergeinfo_t info2,
                       svn_boolean_t consider_inheritance,
                       apr_pool_t *pool);
 
-/* Examine MERGEINFO, a mapping from paths to apr_array_header_t *'s
-   of svn_merge_range_t *, removing all paths from the hash which map to
+/* Examine MERGEINFO, removing all paths from the hash which map to
    empty rangelists.  POOL is used only to allocate the apr_hash_index_t
    iterator.  Returns TRUE if any paths were removed and FALSE if none were
    removed or MERGEINFO is NULL. */
 svn_boolean_t
-svn_mergeinfo__remove_empty_rangelists(apr_hash_t *mergeinfo,
+svn_mergeinfo__remove_empty_rangelists(svn_mergeinfo_t mergeinfo,
                                        apr_pool_t *pool);
 
 

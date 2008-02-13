@@ -2635,12 +2635,9 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
 
 
 /**
- * Set @a *mergeinfo to a hash mapping <tt>const char *</tt> source
- * URLs to an <tt>apr_array_header_t *</tt> list of
- * <tt>svn_merge_range_t *</tt> revision ranges representing merge
- * sources and corresponding revision ranges which have been merged
- * into @a path_or_url as of @a peg_revision, or @c NULL if there is
- * no mergeinfo.
+ * Set @a *mergeinfo to the mergeinfo describing the ranges which have
+ * been merged into @a path_or_url as of @a peg_revision, or @c NULL
+ * if there is no mergeinfo.
  *
  * Use @a pool for all necessary allocations.
  *
@@ -2651,7 +2648,7 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
+svn_client_mergeinfo_get_merged(svn_mergeinfo_t *mergeinfo,
                                 const char *path_or_url,
                                 const svn_opt_revision_t *peg_revision,
                                 svn_client_ctx_t *ctx,

@@ -44,7 +44,7 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
   apr_status_t apr_err;
   dav_error *derr = NULL;
   apr_xml_elem *child;
-  apr_hash_t *mergeinfo;
+  svn_mergeinfo_catalog_t catalog;
   svn_boolean_t include_descendants = FALSE;
   dav_svn__authz_read_baton arb;
   const dav_svn_repos *repos = resource->info->repos;
@@ -122,7 +122,7 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
   /* Build mergeinfo brigade */
   bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
 
-  serr = svn_repos_fs_get_mergeinfo(&mergeinfo, repos->repos, paths, rev,
+  serr = svn_repos_fs_get_mergeinfo(&catalog, repos->repos, paths, rev,
                                     inherit, include_descendants,
                                     dav_svn__authz_read_func(&arb),
                                     &arb, resource->pool);
@@ -145,13 +145,13 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
       goto cleanup;
     }
 
-  if (mergeinfo != NULL && apr_hash_count (mergeinfo) > 0)
+  if (catalog != NULL && apr_hash_count (catalog) > 0)
     {
       const void *key;
       void *value;
       apr_hash_index_t *hi;
 
-      for (hi = apr_hash_first(resource->pool, mergeinfo); hi;
+      for (hi = apr_hash_first(resource->pool, catalog); hi;
            hi = apr_hash_next(hi))
         {
           const char *path, *info;
@@ -162,6 +162,8 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
             "<S:" SVN_DAV__MERGEINFO_INFO ">%s</S:" SVN_DAV__MERGEINFO_INFO ">"
             DEBUG_CR
             "</S:" SVN_DAV__MERGEINFO_ITEM ">";
+
+          /* TODO(miapi): Will need to unparse here. */
 
           apr_hash_this(hi, &key, NULL, &value);
           path = (const char *)key + strlen(resource->info->repos_path);

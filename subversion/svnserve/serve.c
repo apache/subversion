@@ -1476,7 +1476,7 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   server_baton_t *b = baton;
   svn_revnum_t rev;
   apr_array_header_t *paths, *canonical_paths;
-  apr_hash_t *mergeinfo;
+  svn_mergeinfo_catalog_t mergeinfo;
   int i;
   apr_hash_index_t *hi;
   const char *path, *info, *inherit_word;
@@ -1511,6 +1511,7 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                          include_descendants,
                                          authz_check_access_cb_func(b), b,
                                          pool));
+  /* TODO(miapi): Will have to unparse here. */
   if (mergeinfo != NULL && apr_hash_count(mergeinfo) > 0)
     {
       const void *key;
