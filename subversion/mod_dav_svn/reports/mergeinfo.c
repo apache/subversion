@@ -31,6 +31,7 @@
 #include "svn_path.h"
 #include "svn_dav.h"
 #include "private/svn_dav_protocol.h"
+#include "private/svn_mergeinfo_private.h"
 
 #include "../dav_svn.h"
 
@@ -51,6 +52,7 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
   const char *action;
   int ns;
   apr_bucket_brigade *bb;
+  apr_hash_index_t *hi;
 
   /* These get determined from the request document. */
   svn_revnum_t rev = SVN_INVALID_REVNUM;
@@ -133,6 +135,16 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
       goto cleanup;
     }
 
+  serr = svn_mergeinfo__remove_prefix_from_catalog(&catalog, catalog,
+                                                   resource->info->repos_path,
+                                                   resource->pool);
+  if (serr)
+    {
+      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
+                                  resource->pool);
+      goto cleanup;
+    }
+
   serr = dav_svn__send_xml(bb, output,
                            DAV_XML_HEADER DEBUG_CR
                            "<S:" SVN_DAV__MERGEINFO_REPORT " "
@@ -145,41 +157,45 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
       goto cleanup;
     }
 
-  if (catalog != NULL && apr_hash_count (catalog) > 0)
+  for (hi = apr_hash_first(resource->pool, catalog); hi;
+       hi = apr_hash_next(hi))
     {
       const void *key;
       void *value;
-      apr_hash_index_t *hi;
+      const char *path;
+      svn_mergeinfo_t mergeinfo;
+      svn_string_t *mergeinfo_string;
+      const char itemformat[] = "<S:" SVN_DAV__MERGEINFO_ITEM ">"
+        DEBUG_CR
+        "<S:" SVN_DAV__MERGEINFO_PATH ">%s</S:" SVN_DAV__MERGEINFO_PATH ">"
+        DEBUG_CR
+        "<S:" SVN_DAV__MERGEINFO_INFO ">%s</S:" SVN_DAV__MERGEINFO_INFO ">"
+        DEBUG_CR
+        "</S:" SVN_DAV__MERGEINFO_ITEM ">";
 
-      for (hi = apr_hash_first(resource->pool, catalog); hi;
-           hi = apr_hash_next(hi))
+      apr_hash_this(hi, &key, NULL, &value);
+      path = key;
+      mergeinfo = value;
+      serr = svn_mergeinfo__to_string(&mergeinfo_string, mergeinfo, 
+                                      resource->pool);
+      if (serr)
         {
-          const char *path, *info;
-          const char itemformat[] = "<S:" SVN_DAV__MERGEINFO_ITEM ">"
-            DEBUG_CR
-            "<S:" SVN_DAV__MERGEINFO_PATH ">%s</S:" SVN_DAV__MERGEINFO_PATH ">"
-            DEBUG_CR
-            "<S:" SVN_DAV__MERGEINFO_INFO ">%s</S:" SVN_DAV__MERGEINFO_INFO ">"
-            DEBUG_CR
-            "</S:" SVN_DAV__MERGEINFO_ITEM ">";
-
-          /* TODO(miapi): Will need to unparse here. */
-
-          apr_hash_this(hi, &key, NULL, &value);
-          path = (const char *)key + strlen(resource->info->repos_path);
-          info = value;
-          serr = dav_svn__send_xml(bb, output, itemformat,
-                                   apr_xml_quote_string(resource->pool,
-                                                        path, 0),
-                                   apr_xml_quote_string(resource->pool,
-                                                        info, 0));
-          if (serr)
-            {
-              derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                          "Error ending REPORT response.",
-                                          resource->pool);
-              goto cleanup;
-            }
+          derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                      "Error ending REPORT response.",
+                                      resource->pool);
+          goto cleanup;
+        }
+      serr = dav_svn__send_xml(bb, output, itemformat,
+                               apr_xml_quote_string(resource->pool,
+                                                    path, 0),
+                               apr_xml_quote_string(resource->pool,
+                                                    mergeinfo_string->data, 0));
+      if (serr)
+        {
+          derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                      "Error ending REPORT response.",
+                                      resource->pool);
+          goto cleanup;
         }
     }
 

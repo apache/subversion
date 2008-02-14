@@ -118,6 +118,10 @@ extern "C" {
  * typedefs for @c apr_hash_t *; there is no static type-checking, and
  * you still use standard @c apr_hash_t functions to interact with
  * them.
+ *
+ * Note that while the keys of mergeinfos are always relative to the
+ * repository root, the keys of a catalog may be relative to something
+ * else, such as an RA session root.
  */
 
 typedef apr_hash_t *svn_mergeinfo_t;

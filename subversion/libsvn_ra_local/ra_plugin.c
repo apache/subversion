@@ -29,6 +29,7 @@
 
 #include "svn_private_config.h"
 #include "../libsvn_ra/ra_loader.h"
+#include "private/svn_mergeinfo_private.h"
 
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
@@ -657,7 +658,7 @@ svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
                             apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  apr_hash_t *tmp_mergeinfo;
+  svn_mergeinfo_catalog_t tmp_catalog;
   int i;
   apr_array_header_t *abs_paths = 
     apr_array_make(pool, 0, sizeof(const char *));
@@ -669,36 +670,16 @@ svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
         svn_path_join(sess->fs_path->data, relative_path, pool);
     }
 
-  SVN_ERR(svn_repos_fs_get_mergeinfo(&tmp_mergeinfo, sess->repos, abs_paths,
+  SVN_ERR(svn_repos_fs_get_mergeinfo(&tmp_catalog, sess->repos, abs_paths,
                                      revision, inherit, include_descendants,
                                      NULL, NULL, pool));
-  /* TODO(miapi): This step should be unnecessary since the repos
-     should give a parsed catalog. */
-  *catalog = NULL;
-  if (tmp_mergeinfo != NULL && apr_hash_count(tmp_mergeinfo) > 0)
-    {
-      const void *key;
-      apr_ssize_t klen;
-      void *value;
-      apr_hash_index_t *hi;
-
-      *catalog = apr_hash_make(pool);
-
-      for (hi = apr_hash_first(pool, tmp_mergeinfo); hi;
-           hi = apr_hash_next(hi))
-        {
-          const char *path, *info;
-          apr_ssize_t path_len;
-          apr_hash_t *for_path;
-
-          apr_hash_this(hi, &key, &klen, &value);
-          path = (const char *)key + sess->fs_path->len;
-          path_len = klen - sess->fs_path->len;
-          info = value;
-          SVN_ERR(svn_mergeinfo_parse(&for_path, info, pool));
-          apr_hash_set(*catalog, path, path_len, for_path);
-        }
-    }
+  if (apr_hash_count(tmp_catalog) > 0)
+    SVN_ERR(svn_mergeinfo__remove_prefix_from_catalog(catalog,
+                                                      tmp_catalog,
+                                                      sess->fs_path->data,
+                                                      pool));
+  else
+    *catalog = NULL;
 
   return SVN_NO_ERROR;
 }

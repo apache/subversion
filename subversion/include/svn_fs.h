@@ -1302,8 +1302,6 @@ svn_fs_closest_copy(svn_fs_root_t **root_p,
  * @a *catalog is a catalog for @a paths.  It will never be @c NULL,
  * but may be empty.
  *
- * TODO(miapi): This currently stores values as strings.  Bad!
- *
  * @a root is revision root to use when looking up paths.
  *
  * @a paths are the paths you are requesting information for.

@@ -600,7 +600,7 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
     SVN_ERR(svn_fs_get_mergeinfo(mergeinfo, root, readable_paths, inherit,
                                  include_descendants, pool));
   else
-    *mergeinfo = NULL;
+    *mergeinfo = apr_hash_make(pool);
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;

@@ -1371,12 +1371,7 @@ svn_repos_get_logs(svn_repos_t *repos,
 
 /**
  * Fetch the mergeinfo for @a paths at @a rev, and save it to @a
- * mergeoutput.  @a mergeoutput is a mapping of @c char * target paths
- * (from @a paths) to textual (@c char *) representations of merge
- * info (as managed by svn_mergeinfo.h), or @c NULL if there is no
- * mergeinfo visible or available.
- *
- * TODO(miapi): This currently stores values as strings.  Bad!
+ * *catalog.  It will never be @c NULL but may be empty.
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a paths is fetched.
@@ -1400,7 +1395,7 @@ svn_repos_get_logs(svn_repos_t *repos,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeoutput,
+svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                            svn_repos_t *repos,
                            const apr_array_header_t *paths,
                            svn_revnum_t revision,

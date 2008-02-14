@@ -5112,20 +5112,14 @@ get_mergeinfos_for_paths(svn_fs_root_t *root,
 
 
 /* Implements svn_fs_get_mergeinfo. */
-/* TODO(miapi): Change to return a real catalog, not an "unparsed
-   catalog". */
 static svn_error_t *
-base_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
+base_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                    svn_fs_root_t *root,
                    const apr_array_header_t *paths,
                    svn_mergeinfo_inheritance_t inherit,
                    svn_boolean_t include_descendants,
                    apr_pool_t *pool)
 {
-  int i;
-  svn_mergeinfo_catalog_t mergeinfo_as_hashes;
-  apr_pool_t *subpool, *iterpool;
-
   /* Verify that our filesystem version supports mergeinfo stuff. */
   SVN_ERR(svn_fs_base__test_required_feature_format
           (root->fs, "mergeinfo", SVN_FS_BASE__MIN_MERGEINFO_FORMAT));
@@ -5134,42 +5128,10 @@ base_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
   if (root->is_txn_root)
     return svn_error_create(SVN_ERR_FS_NOT_REVISION_ROOT, NULL, NULL);
 
-  subpool = svn_pool_create(pool);
-  iterpool = svn_pool_create(subpool);
-
   /* Retrieve a path -> mergeinfo mapping. */
-  SVN_ERR(get_mergeinfos_for_paths(root, &mergeinfo_as_hashes, paths,
-                                   inherit, include_descendants,
-                                   subpool));
-
-  *mergeinfo = apr_hash_make(pool);
-
-  /* Convert each mergeinfo hash value into a textual representation. */
-  /* TODO(miapi): Remove the bug here (by just removing this code)
-     that loses all the descendants. */
-  for (i = 0; i < paths->nelts; i++)
-    {
-      svn_stringbuf_t *mergeinfo_buf;
-      svn_mergeinfo_t path_mergeinfo;
-      const char *path = APR_ARRAY_IDX(paths, i, const char *);
-
-      svn_pool_clear(iterpool);
-
-      path_mergeinfo = apr_hash_get(mergeinfo_as_hashes, path, 
-                                    APR_HASH_KEY_STRING);
-      if (path_mergeinfo)
-        {
-          SVN_ERR(svn_mergeinfo_sort(path_mergeinfo, iterpool));
-          SVN_ERR(svn_mergeinfo_to_stringbuf(&mergeinfo_buf, path_mergeinfo,
-                                             iterpool));
-          apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING,
-                       apr_pstrdup(pool, mergeinfo_buf->data));
-        }
-    }
-  svn_pool_destroy(iterpool);
-  svn_pool_destroy(subpool);
-
-  return SVN_NO_ERROR;
+  return get_mergeinfos_for_paths(root, catalog, paths,
+                                  inherit, include_descendants,
+                                  pool);
 }
 
 

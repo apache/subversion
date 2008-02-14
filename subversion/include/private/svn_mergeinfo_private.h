@@ -70,6 +70,19 @@ svn_boolean_t
 svn_mergeinfo__remove_empty_rangelists(svn_mergeinfo_t mergeinfo,
                                        apr_pool_t *pool);
 
+/* Makes a shallow (ie, mergeinfos are not duped, or altered at all;
+   keys share storage) copy of IN_CATALOG in *OUT_CATALOG.  PREFIX is
+   removed from the beginning of each key in the catalog; it is
+   illegal for any key to not start with PREFIX.  The new hash and
+   temporary values are allocated in POOL.  (This is useful for making
+   the return value from svn_ra_get_mergeinfo relative to the session
+   root, say.) */
+svn_error_t *
+svn_mergeinfo__remove_prefix_from_catalog(svn_mergeinfo_catalog_t *out_catalog,
+                                          svn_mergeinfo_catalog_t in_catalog,
+                                          const char *prefix,
+                                          apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }
