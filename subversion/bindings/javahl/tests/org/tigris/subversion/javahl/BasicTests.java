@@ -2399,7 +2399,7 @@ public class BasicTests extends SVNTests
             {
                 public ConflictResult resolve(ConflictDescriptor descrip)
                 {
-                    return new ConflictResult(ConflictResult.chooseTheirs,
+                    return new ConflictResult(ConflictResult.chooseTheirsFull,
                                               null);
                 }
             });
