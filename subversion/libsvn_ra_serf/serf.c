@@ -222,7 +222,7 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
   else if (cap_result == NULL)
     {
       return svn_error_createf
-        (SVN_ERR_RA_UNKNOWN_CAPABILITY, NULL,
+        (SVN_ERR_UNKNOWN_CAPABILITY, NULL,
          _("Don't know anything about capability '%s'"), capability);
     }
   else  /* "can't happen" */

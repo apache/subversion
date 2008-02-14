@@ -21,14 +21,6 @@ Candidate changes:
 
 Approved changes:
 
- * r29194
-   Rename an error code.
-   Notes:
-     Must be reverted on trunk if not backported.
-     Depends on r29193 (loosely).
-   Votes:
-     +1: glasser, epg
-
  * r29230-29231, r29233
    Obsessively destroy Neon requests, even in error cases.
    Notes:

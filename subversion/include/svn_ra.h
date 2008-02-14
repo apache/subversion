@@ -1688,7 +1688,7 @@ svn_ra_replay(svn_ra_session_t *session,
  * @a capability (one of the capabilities beginning with
  * @c "SVN_RA_CAPABILITY_"), else set @a *has to FALSE.
  *
- * If @a capability isn't recognized, throw @c SVN_ERR_RA_UNKNOWN_CAPABILITY,
+ * If @a capability isn't recognized, throw @c SVN_ERR_UNKNOWN_CAPABILITY,
  * with the effect on @a *has undefined.
  *
  * Use @a pool for all allocation.
