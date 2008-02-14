@@ -14,6 +14,14 @@ Status of 1.5.0:
 
 Candidate changes:
 
+ * r29364, r29360, r29358, r29366
+   Issue #3089: detect mergeinfo capability based on repository support.
+   Notes:
+     r29358 and r29366 are a pair -- the latter is the real change,
+     it just depends on the former for context.
+   Votes:
+     +1: kfogel
+
  * r29155
    Allow packagers to build some parts of svn against installed svn libs.
    Votes:
