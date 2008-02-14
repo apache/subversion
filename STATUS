@@ -28,11 +28,6 @@ Approved changes:
    Votes:
      +1: epg, cmpilato
 
- * r29261
-   Make the propget API usable in the Ruby bindings.
-   Votes:
-     +1: joeswatosh, cmpilato
-
  * r29313
    This is a follow on to the already approved r29250 "Yet another node-
    origins-cache-for-FSFS implementation!" that modifies the Ruby bindings
