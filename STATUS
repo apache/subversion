@@ -21,9 +21,3 @@ Candidate changes:
 
 Approved changes:
 
- * r29329
-   Fix regression in svnadmin verify in r24559, new in 1.5.x.  We can
-   just roll back 24559 on the 1.5.x branch, but that makes svnadmin
-   unusable on large repositories.  We must do one or the other.
-   Votes:
-     +1: epg, cmpilato

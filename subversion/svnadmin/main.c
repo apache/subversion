@@ -649,13 +649,9 @@ recode_stream_create(FILE *std_stream, apr_pool_t *pool)
 }
 
 
-/* Common implementation for dump and verify.  First three parameters mirror
-   the 'svn_opt_subcommand_t' type.  The DUMP_CONTENTS parameter determines
-   whether to send the dump to stdout or an empty stream. */
+/* This implements `svn_opt_subcommand_t'. */
 static svn_error_t *
-dump_repo(apr_getopt_t *os, void *baton,
-          apr_pool_t *pool, svn_boolean_t dump_contents,
-          svn_boolean_t incremental)
+subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
@@ -690,32 +686,18 @@ dump_repo(apr_getopt_t *os, void *baton,
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
        _("First revision cannot be higher than second"));
 
-  /* Run the dump to STDOUT.  Let the user redirect output into
-     a file if they want.  :-)  */
-  if (dump_contents)
-    SVN_ERR(create_stdio_stream(&stdout_stream, apr_file_open_stdout, pool));
-  else
-    stdout_stream = NULL;
+  SVN_ERR(create_stdio_stream(&stdout_stream, apr_file_open_stdout, pool));
 
   /* Progress feedback goes to STDERR, unless they asked to suppress it. */
   if (! opt_state->quiet)
     stderr_stream = recode_stream_create(stderr, pool);
 
   SVN_ERR(svn_repos_dump_fs2(repos, stdout_stream, stderr_stream,
-                             lower, upper, incremental,
+                             lower, upper, opt_state->incremental,
                              opt_state->use_deltas, check_cancel, NULL,
                              pool));
 
   return SVN_NO_ERROR;
-}
-
-
-/* This implements `svn_opt_subcommand_t'. */
-static svn_error_t *
-subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
-{
-  struct svnadmin_opt_state *opt_state = baton;
-  return dump_repo(os, baton, pool, TRUE, opt_state->incremental);
 }
 
 
@@ -1122,8 +1104,29 @@ static svn_error_t *
 subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
-  return dump_repo(os, baton, pool, FALSE,
-               opt_state->start_revision.kind != svn_opt_revision_unspecified);
+  svn_stream_t *stderr_stream;
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_revnum_t youngest, lower, upper;
+
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  fs = svn_repos_fs(repos);
+  SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
+
+  /* Find the revision numbers at which to start and end. */
+  SVN_ERR(get_revnum(&lower, &opt_state->start_revision,
+                     youngest, repos, pool));
+  SVN_ERR(get_revnum(&upper, &opt_state->end_revision,
+                     youngest, repos, pool));
+
+  if (opt_state->quiet)
+    stderr_stream = NULL;
+  else
+    stderr_stream = recode_stream_create(stderr, pool);
+
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  return svn_repos_verify_fs(repos, stderr_stream, lower, upper,
+                             check_cancel, NULL, pool);
 }
 
 

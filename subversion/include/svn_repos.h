@@ -1937,12 +1937,40 @@ enum svn_repos_load_uuid
   svn_repos_load_uuid_force
 };
 
+
+/**
+ * Verify the contents of the file system in @a repos.
+ *
+ * If @a feedback_stream is not @c NULL, write feedback to it (lines of
+ * the form "* Verified revision %ld\n").
+ *
+ * If @a start_rev is @c SVN_INVALID_REVNUM, then start verifying at
+ * revision 0.  If @a end_rev is @c SVN_INVALID_REVNUM, then verify
+ * through the @c HEAD revision.
+ *
+ * If @a cancel_func is not @c NULL, call it periodically with @a
+ * cancel_baton as argument to see if the caller wishes to cancel the
+ * verification.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_repos_verify_fs(svn_repos_t *repos,
+                    svn_stream_t *feedback_stream,
+                    svn_revnum_t start_rev,
+                    svn_revnum_t end_rev,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *pool);
+
+
 /**
  * Dump the contents of the filesystem within already-open @a repos into
  * writable @a dumpstream.  Begin at revision @a start_rev, and dump every
  * revision up through @a end_rev.  Use @a pool for all allocation.  If
- * non-@c NULL, send feedback to @a feedback_stream. @a dumpstream can be
- * @c NULL for the purpose of verifying the repository.
+ * non-@c NULL, send feedback to @a feedback_stream.  If @a dumpstream is
+ * @c NULL, this is effectively a primitive verify.  It is not complete,
+ * however; see svn_fs_verify instead.
  *
  * If @a start_rev is @c SVN_INVALID_REVNUM, then start dumping at revision
  * 0.  If @a end_rev is @c SVN_INVALID_REVNUM, then dump through the @c HEAD

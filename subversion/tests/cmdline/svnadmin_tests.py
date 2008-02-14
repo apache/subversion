@@ -432,6 +432,137 @@ def verify_windows_paths_in_repos(sbox):
 
 #----------------------------------------------------------------------
 
+def verify_incremental_fsfs(sbox):
+  """svnadmin verify detects corruption dump can't"""
+
+  # setup a repo with a directory 'c:hi'
+  sbox.build(create_wc = False)
+  repo_url = sbox.repo_url
+  E_url = sbox.repo_url + '/A/B/E'
+
+  # Create A/B/E/bravo in r2.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', '-m', 'log_msg',
+                                     E_url + '/bravo')
+  # Corrupt r2's reference to A/C by replacing "dir 7-1.0.r1/1568" with
+  # "dir 7-1.0.r1/1569" (increment offset) and updating the checksum for
+  # this directory listing to "c9b5a2d26473a4e28088673dda9df804" so that
+  # the listing itself is valid.
+  r2 = sbox.repo_dir + "/db/revs/0/2"
+  fp = open(r2, 'w')
+  fp.write("""id: 0-2.0.r2/0
+type: dir
+count: 0
+cpath: /A/B/E/bravo
+copyroot: 0 /
+
+PLAIN
+K 5
+alpha
+V 17
+file 3-1.0.r1/719
+K 4
+beta
+V 17
+file 4-1.0.r1/840
+K 5
+bravo
+V 14
+dir 0-2.0.r2/0
+END
+ENDREP
+id: 2-1.0.r2/181
+type: dir
+pred: 2-1.0.r1/1043
+count: 1
+text: 2 69 99 99 f63001f7fddd1842d8891474d0982111
+cpath: /A/B/E
+copyroot: 0 /
+
+PLAIN
+K 1
+E
+V 16
+dir 2-1.0.r2/181
+K 1
+F
+V 17
+dir 5-1.0.r1/1160
+K 6
+lambda
+V 17
+file 6-1.0.r1/597
+END
+ENDREP
+id: 1-1.0.r2/424
+type: dir
+pred: 1-1.0.r1/1335
+count: 1
+text: 2 316 95 95 bccb66379b4f825dac12b50d80211bae
+cpath: /A/B
+copyroot: 0 /
+
+PLAIN
+K 1
+B
+V 16
+dir 1-1.0.r2/424
+K 1
+C
+V 17
+dir 7-1.0.r1/1569
+K 1
+D
+V 17
+dir 8-1.0.r1/3061
+K 2
+mu
+V 18
+file i-1.0.r1/1451
+END
+ENDREP
+id: 0-1.0.r2/692
+type: dir
+pred: 0-1.0.r1/3312
+count: 1
+text: 2 558 121 121 c9b5a2d26473a4e28088673dda9df804
+cpath: /A
+copyroot: 0 /
+
+PLAIN
+K 1
+A
+V 16
+dir 0-1.0.r2/692
+K 4
+iota
+V 18
+file j-1.0.r1/3428
+END
+ENDREP
+id: 0.0.r2/904
+type: dir
+pred: 0.0.r1/3624
+count: 2
+text: 2 826 65 65 e44e4151d0d124533338619f082c8c9a
+cpath: /
+copyroot: 0 /
+
+_0.0.t1-1 add false false /A/B/E/bravo
+
+
+904 1031
+""")
+  fp.close()
+
+  output, errput = svntest.main.run_svnadmin("verify", "-r2", sbox.repo_dir)
+  svntest.verify.verify_outputs(
+    message=None, actual_stdout=output, actual_stderr=errput,
+    expected_stdout=None,
+    expected_stderr=".*Missing id field in node-rev")
+
+#----------------------------------------------------------------------
+
 def recover_fsfs(sbox):
   "recover a repository (FSFS only)"
 
@@ -594,6 +725,7 @@ test_list = [ None,
               hotcopy_format,
               setrevprop,
               verify_windows_paths_in_repos,
+              SkipUnless(verify_incremental_fsfs, svntest.main.is_fs_type_fsfs),
               SkipUnless(recover_fsfs, svntest.main.is_fs_type_fsfs),
               load_with_parent_dir,
               set_uuid,
