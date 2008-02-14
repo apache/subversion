@@ -86,14 +86,11 @@ typedef struct
 
 /* A log callback conforming to the svn_log_message_receiver_t
    interface for obtaining the copy source of a node at a path and
-   storing it in *BATON (a struct copyfrom_info_t *). */
+   storing it in *BATON (a struct copyfrom_info_t *).
+   Implements svn_log_entry_receiver_t. */
 static svn_error_t *
 copyfrom_info_receiver(void *baton,
-                       apr_hash_t *changed_paths,
-                       svn_revnum_t revision,
-                       const char *author,
-                       const char *date,
-                       const char *message,
+                       svn_log_entry_t *log_entry,
                        apr_pool_t *pool)
 {
   copyfrom_info_t *copyfrom_info = baton;
@@ -101,14 +98,15 @@ copyfrom_info_receiver(void *baton,
     /* The copy source has already been found. */
     return SVN_NO_ERROR;
 
-  if (changed_paths)
+  if (log_entry->changed_paths)
     {
       int i;
       const char *path;
       svn_log_changed_path_t *changed_path;
       /* Sort paths into depth-first order. */
       apr_array_header_t *sorted_changed_paths =
-        svn_sort__hash(changed_paths, svn_sort_compare_items_as_paths, pool);
+        svn_sort__hash(log_entry->changed_paths,
+                       svn_sort_compare_items_as_paths, pool);
 
       for (i = (sorted_changed_paths->nelts -1) ; i >= 0 ; i--)
         {
@@ -159,14 +157,10 @@ svn_client__get_copy_source(const char *path_or_url,
   svn_error_t *err;
   copyfrom_info_t copyfrom_info = { NULL, NULL, SVN_INVALID_REVNUM, pool };
   apr_array_header_t *targets = apr_array_make(pool, 1, sizeof(path_or_url));
-  svn_opt_revision_t oldest_rev;
   apr_pool_t *sesspool = svn_pool_create(pool);
   svn_ra_session_t *ra_session;
   svn_revnum_t at_rev;
   const char *at_url;
-
-  oldest_rev.kind = svn_opt_revision_number;
-  oldest_rev.value.number = 1;
 
   SVN_ERR(svn_client__ra_session_from_path(&ra_session, &at_rev, &at_url,
                                            path_or_url, NULL,
@@ -175,18 +169,14 @@ svn_client__get_copy_source(const char *path_or_url,
   SVN_ERR(svn_client__path_relative_to_root(&copyfrom_info.target_path,
                                             path_or_url, NULL, TRUE,
                                             ra_session, NULL, pool));
-  APR_ARRAY_PUSH(targets, const char *) = path_or_url;
+  APR_ARRAY_PUSH(targets, const char *) = "";
 
   /* Find the copy source.  Trace back in history to find the revision
-     at which this node was created (copied or added). 
-
-     ### Reuse ra_session by way of svn_ra_get_log()?
-     err = svn_ra_get_log(ra_session, rel_paths, revision, 1, 0, TRUE, TRUE,
-                          copyfrom_info_receiver, &copyfrom_info, pool);
-  */
-  err = svn_client_log3(targets, revision, revision, &oldest_rev, 0,
-                        TRUE, TRUE, copyfrom_info_receiver, &copyfrom_info,
-                        ctx, pool);
+     at which this node was created (copied or added). */
+  err = svn_ra_get_log2(ra_session, targets, at_rev, 1, 0, TRUE,
+                        TRUE, FALSE,
+                        apr_array_make(pool, 0, sizeof(const char *)),
+                        copyfrom_info_receiver, &copyfrom_info, pool);
 
   svn_pool_destroy(sesspool);
 
