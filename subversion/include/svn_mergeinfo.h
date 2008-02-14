@@ -107,7 +107,8 @@ extern "C" {
  *     with slashes) to non-empty arrays (@c apr_array_header_t *) of
  *     merge ranges (@c svn_merge_range_t *), ordered from smallest
  *     revision range to largest.  These hashes are called "mergeinfo"
- *     and are represented by @c svn_mergeinfo_t.
+ *     and are represented by @c svn_mergeinfo_t.  The sorted arrays
+ *     are called "rangelists".
  *
  * (c) Hashes mapping paths (@c const char *, starting with slashes)
  *     to @c svn_mergeinfo_t.  These hashes are called "mergeinfo
