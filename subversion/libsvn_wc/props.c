@@ -1769,7 +1769,7 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
           SVN_ERR(diff_mergeinfo_props(&deleted_mergeinfo,
                                        &added_mergeinfo,
                                        old_val, new_val, pool));
-          SVN_ERR(svn_mergeinfo_to_string((svn_string_t **)new_val,
+          SVN_ERR(svn_mergeinfo_to_string((svn_string_t **)&new_val,
                                           added_mergeinfo, pool));
           apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, new_val);
         }
