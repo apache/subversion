@@ -712,7 +712,7 @@ adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
     }
 
   SVN_ERR(svn_mergeinfo_sort(final_mergeinfo, subpool));
-  SVN_ERR(svn_mergeinfo__to_string(final_val, final_mergeinfo, pool));
+  SVN_ERR(svn_mergeinfo_to_string(final_val, final_mergeinfo, pool));
   svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;

@@ -1527,9 +1527,9 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       svn_pool_clear(iterpool);
 
       apr_hash_this(hi, &key, NULL, &value);
-      SVN_ERR(svn_mergeinfo__to_string(&mergeinfo_string,
-                                       (svn_mergeinfo_t) value,
-                                       iterpool));
+      SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_string,
+                                      (svn_mergeinfo_t) value,
+                                      iterpool));
       SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "(cs)", (const char *) key,
                                      mergeinfo_string));
     }

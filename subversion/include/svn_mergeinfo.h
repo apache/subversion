@@ -399,18 +399,16 @@ svn_mergeinfo_inheritable(svn_mergeinfo_t *inheritable_mergeinfo,
                           svn_revnum_t end,
                           apr_pool_t *pool);
 
-/** Converts a mergeinfo @a input to an unparsed mergeinfo in @a
- * output.  If @a input contains no elements, return the empty string.
- *
- * TODO(miapi): This is never used in a mutable context and should
- * produce svn_string_t instead (and we can get rid of
- * svn_mergeinfo__to_string).
+/** Take a mergeinfo in MERGEINPUT, and convert it back to unparsed
+ *  mergeinfo in *OUTPUT.  If INPUT contains no elements, return the
+ *  empty string.
  *
  * @since New in 1.5.
- */
+*/
 svn_error_t *
-svn_mergeinfo_to_stringbuf(svn_stringbuf_t **output, svn_mergeinfo_t input,
-                           apr_pool_t *pool);
+svn_mergeinfo_to_string(svn_string_t **output,
+                        svn_mergeinfo_t mergeinput,
+                        apr_pool_t *pool);
 
 /** Take a hash of mergeinfo in @a mergeinfo, and sort the rangelists
  * associated with each key (in place).

@@ -1238,9 +1238,12 @@ svn_rangelist_to_stringbuf(svn_stringbuf_t **output,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_mergeinfo_to_stringbuf(svn_stringbuf_t **output, svn_mergeinfo_t input,
-                           apr_pool_t *pool)
+/* Converts a mergeinfo @a input to an unparsed mergeinfo in @a
+ * output.  If @a input contains no elements, return the empty string.
+ */
+static svn_error_t *
+mergeinfo_to_stringbuf(svn_stringbuf_t **output, svn_mergeinfo_t input,
+                       apr_pool_t *pool)
 {
   *output = svn_stringbuf_create("", pool);
 
@@ -1248,41 +1251,34 @@ svn_mergeinfo_to_stringbuf(svn_stringbuf_t **output, svn_mergeinfo_t input,
     {
       apr_array_header_t *sorted =
         svn_sort__hash(input, svn_sort_compare_items_as_paths, pool);
-      svn_sort__item_t elt;
-      svn_stringbuf_t *revlist, *combined;
       int i;
 
-      /* Handle the elements that need newlines at the end.  */
-      for (i = 0; i < sorted->nelts - 1; i++)
+      for (i = 0; i < sorted->nelts; i++)
         {
-          elt = APR_ARRAY_IDX(sorted, i, svn_sort__item_t);
+          svn_sort__item_t elt = APR_ARRAY_IDX(sorted, i, svn_sort__item_t);
+          svn_stringbuf_t *revlist;
 
           SVN_ERR(svn_rangelist_to_stringbuf(&revlist, elt.value, pool));
-          combined = svn_stringbuf_createf(pool, "%s:%s\n", (char *) elt.key,
-                                           revlist->data);
-          svn_stringbuf_appendstr(*output, combined);
+          svn_stringbuf_appendcstr(*output,
+                                   apr_psprintf(pool, "%s:%s",
+                                                (char *) elt.key,
+                                                revlist->data));
+          if (i < sorted->nelts - 1)
+            svn_stringbuf_appendcstr(*output, "\n");
         }
-
-      /* Now handle the last element, which is not newline terminated.  */
-      elt = APR_ARRAY_IDX(sorted, i, svn_sort__item_t);
-
-      SVN_ERR(svn_rangelist_to_stringbuf(&revlist, elt.value, pool));
-      combined = svn_stringbuf_createf(pool, "%s:%s", (char *) elt.key,
-                                       revlist->data);
-      svn_stringbuf_appendstr(*output, combined);
     }
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_mergeinfo__to_string(svn_string_t **output, svn_mergeinfo_t input,
-                         apr_pool_t *pool)
+svn_mergeinfo_to_string(svn_string_t **output, svn_mergeinfo_t input,
+                        apr_pool_t *pool)
 {
   if (apr_hash_count(input) > 0)
     {
       svn_stringbuf_t *mergeinfo_buf;
-      SVN_ERR(svn_mergeinfo_to_stringbuf(&mergeinfo_buf, input, pool));
+      SVN_ERR(mergeinfo_to_stringbuf(&mergeinfo_buf, input, pool));
       *output = svn_string_create_from_buf(mergeinfo_buf, pool);
     }
   else

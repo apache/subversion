@@ -176,8 +176,8 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
       apr_hash_this(hi, &key, NULL, &value);
       path = key;
       mergeinfo = value;
-      serr = svn_mergeinfo__to_string(&mergeinfo_string, mergeinfo, 
-                                      resource->pool);
+      serr = svn_mergeinfo_to_string(&mergeinfo_string, mergeinfo, 
+                                     resource->pool);
       if (serr)
         {
           derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,

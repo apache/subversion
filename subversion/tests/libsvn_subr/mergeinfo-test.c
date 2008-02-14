@@ -576,7 +576,6 @@ test_merge_mergeinfo(const char **msg,
                      apr_pool_t *pool)
 {
   int i;
-  svn_stringbuf_t *output;
 
   /* Structures and constants for test_merge_mergeinfo() */
   /* Number of svn_mergeinfo_merge test sets */
@@ -699,7 +698,6 @@ test_merge_mergeinfo(const char **msg,
       SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo[i].mergeinfo1, pool));
       SVN_ERR(svn_mergeinfo_parse(&info2, mergeinfo[i].mergeinfo2, pool));
       SVN_ERR(svn_mergeinfo_merge(info1, info2, pool));
-      SVN_ERR(svn_mergeinfo_to_stringbuf(&output, info1, pool));
       if (mergeinfo[i].expected_paths != apr_hash_count(info1))
         return fail(pool, "Wrong number of paths in merged mergeinfo");
       for (j = 0; j < mergeinfo[i].expected_paths; j++)
@@ -1112,7 +1110,7 @@ test_mergeinfo_to_string(const char **msg,
 
   SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo1, pool));
 
-  SVN_ERR(svn_mergeinfo__to_string(&output, info1, pool));
+  SVN_ERR(svn_mergeinfo_to_string(&output, info1, pool));
 
   if (svn_string_compare(expected, output) != TRUE)
     return fail(pool, "Mergeinfo string not what we expected");

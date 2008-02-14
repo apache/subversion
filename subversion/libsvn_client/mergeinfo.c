@@ -82,7 +82,7 @@ svn_client__record_wc_mergeinfo(const char *wcpath,
   if (mergeinfo)
     {
       /* The WC will contain mergeinfo. */
-      SVN_ERR(svn_mergeinfo__to_string(&mergeinfo_str, mergeinfo, pool));
+      SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_str, mergeinfo, pool));
     }
   else
     {

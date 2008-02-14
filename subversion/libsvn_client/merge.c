@@ -3955,13 +3955,11 @@ do_file_merge(const char *url1,
             apr_pcalloc(merge_b->long_pool, sizeof(*working_mergeinfo));
           if (!indirect && target_mergeinfo)
             {
-              svn_stringbuf_t *mergeinfo_stringbuf;
-
-              SVN_ERR(svn_mergeinfo_to_stringbuf(&mergeinfo_stringbuf,
-                                                 target_mergeinfo, pool));
+              svn_string_t *mergeinfo_string;
+              SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_string,
+                                              target_mergeinfo, pool));
               working_mergeinfo->working_mergeinfo_propval =
-                svn_string_create(mergeinfo_stringbuf->data,
-                                  merge_b->long_pool);
+                svn_string_dup(mergeinfo_string, merge_b->long_pool);
             }
           apr_hash_set(merge_b->working_mergeinfo, target_wcpath,
                        APR_HASH_KEY_STRING, working_mergeinfo);

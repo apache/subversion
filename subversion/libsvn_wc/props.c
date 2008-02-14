@@ -994,7 +994,7 @@ svn_wc__revert_props_restore(const char *path,
 /* Parse FROM_PROP_VAL and TO_PROP_VAL into mergeinfo hashes, and
    calculate the deltas between them. */
 static svn_error_t *
-diff_mergeinfo_props(apr_hash_t **deleted, apr_hash_t **added,
+diff_mergeinfo_props(svn_mergeinfo_t *deleted, svn_mergeinfo_t *added,
                      const svn_string_t *from_prop_val,
                      const svn_string_t *to_prop_val, apr_pool_t *pool)
 {
@@ -1006,7 +1006,7 @@ diff_mergeinfo_props(apr_hash_t **deleted, apr_hash_t **added,
     }
   else
     {
-      apr_hash_t *from, *to;
+      svn_mergeinfo_t from, to;
       SVN_ERR(svn_mergeinfo_parse(&from, from_prop_val->data, pool));
       SVN_ERR(svn_mergeinfo_parse(&to, to_prop_val->data, pool));
       SVN_ERR(svn_mergeinfo_diff(deleted, added, from, to,
@@ -1025,12 +1025,11 @@ combine_mergeinfo_props(const svn_string_t **output,
                         const svn_string_t *prop_val2,
                         apr_pool_t *pool)
 {
-  apr_hash_t *mergeinfo1, *mergeinfo2;
+  svn_mergeinfo_t mergeinfo1, mergeinfo2;
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo1, prop_val1->data, pool));
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo2, prop_val2->data, pool));
   SVN_ERR(svn_mergeinfo_merge(mergeinfo1, mergeinfo2, pool));
-  SVN_ERR(svn_mergeinfo__to_string((svn_string_t **) output,
-                                   mergeinfo1, pool));
+  SVN_ERR(svn_mergeinfo_to_string((svn_string_t **)output, mergeinfo1, pool));
   return SVN_NO_ERROR;
 }
 
@@ -1044,7 +1043,7 @@ combine_forked_mergeinfo_props(const svn_string_t **output,
                                const svn_string_t *to_prop_val,
                                apr_pool_t *pool)
 {
-  apr_hash_t *from_mergeinfo, *l_deleted, *l_added, *r_deleted, *r_added;
+  svn_mergeinfo_t from_mergeinfo, l_deleted, l_added, r_deleted, r_added;
 
   /* ### OPTIMIZE: Use from_mergeinfo when diff'ing. */
   SVN_ERR(diff_mergeinfo_props(&l_deleted, &l_added, from_prop_val,
@@ -1061,8 +1060,7 @@ combine_forked_mergeinfo_props(const svn_string_t **output,
   SVN_ERR(svn_mergeinfo_remove(&from_mergeinfo, l_deleted,
                                from_mergeinfo, pool));
 
-  return svn_mergeinfo__to_string((svn_string_t **) output, from_mergeinfo,
-                                  pool);
+  return svn_mergeinfo_to_string((svn_string_t **)output, from_mergeinfo, pool);
 }
 
 
@@ -1767,13 +1765,12 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
           /* Discover any mergeinfo additions in the
              incoming value relative to the base, and
              "combine" those with the empty WC value. */
-          apr_hash_t *deleted_mergeinfo, *added_mergeinfo;
+          svn_mergeinfo_t deleted_mergeinfo, added_mergeinfo;
           SVN_ERR(diff_mergeinfo_props(&deleted_mergeinfo,
                                        &added_mergeinfo,
                                        old_val, new_val, pool));
-          SVN_ERR(svn_mergeinfo__to_string((svn_string_t **)
-                                           &new_val,
-                                           added_mergeinfo, pool));
+          SVN_ERR(svn_mergeinfo_to_string((svn_string_t **)new_val,
+                                          added_mergeinfo, pool));
           apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, new_val);
         }
       else

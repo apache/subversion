@@ -26,16 +26,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* Take a mergeinfo in MERGEINPUT, and convert it back to a text
-   format mergeinfo in OUTPUT.  If INPUT contains no elements, return
-   the empty string.
-
-   TODO(miapi): Make this public, replacing
-   svn_mergeinfo_to_stringbuf.
-*/
-svn_error_t *
-svn_mergeinfo__to_string(svn_string_t **output, svn_mergeinfo_t mergeinput,
-                         apr_pool_t *pool);
 
 /* Return whether INFO1 and INFO2 are equal in *IS_EQUAL.
 
