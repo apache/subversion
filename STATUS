@@ -21,13 +21,6 @@ Candidate changes:
 
 Approved changes:
 
- * r29193
-   Add "@since" tags to some error codes.
-   Notes:
-     Depends on the _svn/.svn backport (r29127 et al).
-   Votes:
-     +1: glasser, cmpilato
-
  * r29194
    Rename an error code.
    Notes:
