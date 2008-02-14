@@ -31,32 +31,6 @@ Candidate changes:
    Votes:
      +1: epg
 
- * r29230-29231, r29233
-   Obsessively destroy Neon requests, even in error cases.
-   Notes:
-     Either r29230 or r29231 prevents a reproducible segfault.
-   Votes:
-     +1: glasser
-
- * r29329
-   Fix regression in svnadmin verify in r24559, new in 1.5.x.  We can
-   just roll back 24559 on the 1.5.x branch, but that makes svnadmin
-   unusable on large repositories.  We must do one or the other.
-   Votes:
-     +1: epg
-
- * r29261
-   Make the propget API usable in the Ruby bindings.
-   Votes:
-     +1: joeswatosh
-
- * r29313
-   This is a follow on to the already approved r29250 "Yet another node-
-   origins-cache-for-FSFS implementation!" that modifies the Ruby bindings
-   tests so they pass.
-   Votes:
-     +1: joeswatosh
-
 Approved changes:
 
  * r29194
@@ -66,3 +40,29 @@ Approved changes:
      Depends on r29193 (loosely).
    Votes:
      +1: glasser, epg
+
+ * r29230-29231, r29233
+   Obsessively destroy Neon requests, even in error cases.
+   Notes:
+     Either r29230 or r29231 prevents a reproducible segfault.
+   Votes:
+     +1: glasser, cmpilato
+
+ * r29329
+   Fix regression in svnadmin verify in r24559, new in 1.5.x.  We can
+   just roll back 24559 on the 1.5.x branch, but that makes svnadmin
+   unusable on large repositories.  We must do one or the other.
+   Votes:
+     +1: epg, cmpilato
+
+ * r29261
+   Make the propget API usable in the Ruby bindings.
+   Votes:
+     +1: joeswatosh, cmpilato
+
+ * r29313
+   This is a follow on to the already approved r29250 "Yet another node-
+   origins-cache-for-FSFS implementation!" that modifies the Ruby bindings
+   tests so they pass.
+   Votes:
+     +1: joeswatosh, cmpilato
