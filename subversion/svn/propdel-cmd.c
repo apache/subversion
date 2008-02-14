@@ -56,8 +56,10 @@ svn_cl__propdel(apr_getopt_t *os,
      properties, and it may even be useful to allow, in case invalid
      properties sneaked through somehow. */
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
-                                        opt_state->targets, pool));
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets, 
+                                                      pool));
+
 
   /* Add "." if user passed 0 file arguments */
   svn_opt_push_implicit_dot_target(targets, pool);

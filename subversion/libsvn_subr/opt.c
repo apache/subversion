@@ -872,7 +872,27 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
                               apr_array_header_t *known_targets,
                               apr_pool_t *pool)
 {
+  svn_error_t *err = svn_opt_args_to_target_array3(targets_p, os, 
+                                                   known_targets, pool);
+
+  if (err && err->apr_err == SVN_ERR_RESERVED_FILENAME_SPECIFIED)
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+
+  return err;
+}
+
+
+svn_error_t *
+svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
+                              apr_getopt_t *os,
+                              apr_array_header_t *known_targets,
+                              apr_pool_t *pool)
+{
   int i;
+  svn_error_t *err = SVN_NO_ERROR;
   apr_array_header_t *input_targets =
     apr_array_make(pool, DEFAULT_ARRAY_SIZE, sizeof(const char *));
   apr_array_header_t *output_targets =
@@ -1010,7 +1030,12 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
              synchronized! */
           if (0 == strcmp(base_name, ".svn")
               || 0 == strcmp(base_name, "_svn"))
-            continue;
+            {
+              err = svn_error_createf(SVN_ERR_RESERVED_FILENAME_SPECIFIED,
+                                      err, _("'%s' ends in a reserved name"),
+                                      target);
+              continue;
+            }
         }
 
       /* Append the peg revision back to the canonicalized target if
@@ -1026,7 +1051,8 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
      passing it to the cmd_func. */
 
   *targets_p = output_targets;
-  return SVN_NO_ERROR;
+
+  return err;
 }
 
 

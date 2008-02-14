@@ -680,6 +680,7 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 %ignore svn_commit_info_dup;
 
 %ignore svn_opt_args_to_target_array2;
+%ignore svn_opt_args_to_target_array3;
 %ignore svn_opt_parse_num_args;
 %ignore svn_opt_parse_all_args;
 #endif

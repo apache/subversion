@@ -47,8 +47,9 @@ svn_cl__copy(apr_getopt_t *os,
   svn_error_t *err;
   int i;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
-                                        opt_state->targets, pool));
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets, 
+                                                      pool));
   if (targets->nelts < 2)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 

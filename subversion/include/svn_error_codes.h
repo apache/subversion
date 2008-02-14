@@ -1133,6 +1133,10 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_UNKNOWN_CHANGELIST,
              SVN_ERR_MISC_CATEGORY_START + 24,
              "Unknown changelist")
+  
+  SVN_ERRDEF(SVN_ERR_RESERVED_FILENAME_SPECIFIED,
+             SVN_ERR_MISC_CATEGORY_START + 25,
+             "Reserved directory name in command line arguments")
 
   /* command-line client errors */
 

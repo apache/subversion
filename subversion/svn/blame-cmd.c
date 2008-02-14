@@ -202,8 +202,9 @@ svn_cl__blame(apr_getopt_t *os,
   svn_boolean_t end_revision_unspecified = FALSE;
   svn_diff_file_options_t *diff_options = svn_diff_file_options_create(pool);
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
-                                        opt_state->targets, pool));
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets, 
+                                                      pool));
 
   /* Blame needs a file on which to operate. */
   if (! targets->nelts)
