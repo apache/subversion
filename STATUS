@@ -27,10 +27,3 @@ Approved changes:
    unusable on large repositories.  We must do one or the other.
    Votes:
      +1: epg, cmpilato
-
- * r29313
-   This is a follow on to the already approved r29250 "Yet another node-
-   origins-cache-for-FSFS implementation!" that modifies the Ruby bindings
-   tests so they pass.
-   Votes:
-     +1: joeswatosh, cmpilato
