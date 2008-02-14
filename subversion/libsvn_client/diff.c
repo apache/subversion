@@ -1690,7 +1690,8 @@ svn_client_diff_peg4(const apr_array_header_t *options,
         (start_revision->kind == svn_opt_revision_base 
          || end_revision->kind == svn_opt_revision_base) )
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
-                            _("'BASE' revision cannot be used on a URL."));
+                            _("Revision type requires a working copy "
+                              "path, not a URL"));
 
   /* fill diff_param */
   diff_params.options = options;
