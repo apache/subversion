@@ -872,10 +872,8 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
                               apr_array_header_t *known_targets,
                               apr_pool_t *pool)
 {
-  svn_error_t *err = svn_opt_args_to_target_array3(targets_p,
-                                                     os,
-                                                     known_targets,
-                                                     pool);
+  svn_error_t *err = svn_opt_args_to_target_array3(targets_p, os, 
+                                                   known_targets, pool);
 
   if (err && err->apr_err == SVN_ERR_RESERVED_FILENAME_SPECIFIED)
     {
