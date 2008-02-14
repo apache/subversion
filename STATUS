@@ -21,13 +21,6 @@ Candidate changes:
 
 Approved changes:
 
- * r29230-29231, r29233
-   Obsessively destroy Neon requests, even in error cases.
-   Notes:
-     Either r29230 or r29231 prevents a reproducible segfault.
-   Votes:
-     +1: glasser, cmpilato
-
  * r29329
    Fix regression in svnadmin verify in r24559, new in 1.5.x.  We can
    just roll back 24559 on the 1.5.x branch, but that makes svnadmin

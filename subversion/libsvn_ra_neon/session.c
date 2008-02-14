@@ -708,6 +708,7 @@ exchange_capabilities(svn_ra_neon__session_t *ras, apr_pool_t *pool)
 {
   int http_ret_code;
   svn_ra_neon__request_t *rar;
+  svn_error_t *err = SVN_NO_ERROR;
 
   rar = svn_ra_neon__request_create(ras, "OPTIONS", ras->url->data, pool);
 
@@ -715,8 +716,10 @@ exchange_capabilities(svn_ra_neon__session_t *ras, apr_pool_t *pool)
   ne_add_request_header(rar->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
   ne_add_request_header(rar->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
 
-  SVN_ERR(svn_ra_neon__request_dispatch(&http_ret_code, rar,
-                                        NULL, NULL, 200, 0, pool));
+  err = svn_ra_neon__request_dispatch(&http_ret_code, rar,
+                                      NULL, NULL, 200, 0, pool);
+  if (err)
+    goto cleanup;
 
   if (http_ret_code == 200)
     {
@@ -732,7 +735,10 @@ exchange_capabilities(svn_ra_neon__session_t *ras, apr_pool_t *pool)
          http_ret_code);
     }
 
-  return SVN_NO_ERROR;
+ cleanup:
+  svn_ra_neon__request_destroy(rar);
+
+  return err;
 }
 
 
