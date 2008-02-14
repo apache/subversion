@@ -294,17 +294,14 @@ svn_rangelist_reverse(apr_array_header_t *rangelist, apr_pool_t *pool);
 
 /** Take an array of svn_merge_range_t *'s in @a rangelist, and convert it
  * back to a text format rangelist in @a output.  If @a rangelist contains
- * no elements, sets @a output with empty string.
- *
- * TODO(miapi): This is never used in a mutable context and should
- * produce svn_string_t instead.
+ * no elements, sets @a output to the empty string.
  *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_rangelist_to_stringbuf(svn_stringbuf_t **output,
-                           const apr_array_header_t *rangelist,
-                           apr_pool_t *pool);
+svn_rangelist_to_string(svn_string_t **output,
+                        const apr_array_header_t *rangelist,
+                        apr_pool_t *pool);
 
 /** Take an array of svn_merge_range_t *'s in @a rangelist, and return the
  * number of distint revisions included in it.

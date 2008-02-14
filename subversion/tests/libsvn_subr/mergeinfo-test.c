@@ -1071,8 +1071,8 @@ test_rangelist_to_string(const char **msg,
                          apr_pool_t *pool)
 {
   apr_array_header_t *result;
-  svn_stringbuf_t *output;
-  svn_stringbuf_t *expected = svn_stringbuf_create("3,5,7-11,13-14", pool);
+  svn_string_t *output;
+  svn_string_t *expected = svn_string_create("3,5,7-11,13-14", pool);
 
   *msg = "turning rangelist back into a string";
 
@@ -1085,9 +1085,9 @@ test_rangelist_to_string(const char **msg,
   if (!result)
     return fail(pool, "Missing path in parsed mergeinfo");
 
-  SVN_ERR(svn_rangelist_to_stringbuf(&output, result, pool));
+  SVN_ERR(svn_rangelist_to_string(&output, result, pool));
 
-  if (svn_stringbuf_compare(expected, output) != TRUE)
+  if (svn_string_compare(expected, output) != TRUE)
     return fail(pool, "Rangelist string not what we expected");
 
   return SVN_NO_ERROR;

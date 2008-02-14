@@ -331,19 +331,19 @@ combine_with_lastrange(svn_merge_range_t** lastrange,
     }
 }
 
-/* Convert a single svn_merge_range_t * back into an svn_stringbuf_t *.  */
+/* Convert a single svn_merge_range_t * back into an svn_string_t *.  */
 static svn_error_t *
-range_to_stringbuf(svn_stringbuf_t **result, svn_merge_range_t *range,
-                       apr_pool_t *pool)
+range_to_string(svn_string_t **result, svn_merge_range_t *range,
+                apr_pool_t *pool)
 {
   if (range->start == range->end - 1)
-    *result = svn_stringbuf_createf(pool, "%ld%s", range->end,
-                                    range->inheritable
-                                    ? "" : SVN_MERGEINFO_NONINHERITABLE_STR);
+    *result = svn_string_createf(pool, "%ld%s", range->end,
+                                 range->inheritable
+                                 ? "" : SVN_MERGEINFO_NONINHERITABLE_STR);
   else
-    *result = svn_stringbuf_createf(pool, "%ld-%ld%s", range->start + 1,
-                                    range->end, range->inheritable
-                                    ? "" : SVN_MERGEINFO_NONINHERITABLE_STR);
+    *result = svn_string_createf(pool, "%ld-%ld%s", range->start + 1,
+                                 range->end, range->inheritable
+                                 ? "" : SVN_MERGEINFO_NONINHERITABLE_STR);
   return SVN_NO_ERROR;
 }
 
@@ -375,14 +375,14 @@ combine_with_adjacent_lastrange(svn_merge_range_t **lastrange,
 
   if (*lastrange)
     {
-      svn_stringbuf_t *r1, *r2;
+      svn_string_t *r1, *r2;
 
       if ((*lastrange)->start <= mrange->end
           && mrange->start <= (*lastrange)->end)
         {
           /* The ranges intersect. */
-          SVN_ERR(range_to_stringbuf(&r1, *lastrange, pool));
-          SVN_ERR(range_to_stringbuf(&r2, mrange, pool));
+          SVN_ERR(range_to_string(&r1, *lastrange, pool));
+          SVN_ERR(range_to_string(&r2, mrange, pool));
 
           /* svn_mergeinfo_parse promises to combine adjacent
              ranges, but not overlapping ranges. */
@@ -402,8 +402,8 @@ combine_with_adjacent_lastrange(svn_merge_range_t **lastrange,
         }
       else if ((*lastrange)->start > mrange->start)
         {
-          SVN_ERR(range_to_stringbuf(&r1, *lastrange, pool));
-          SVN_ERR(range_to_stringbuf(&r2, mrange, pool));
+          SVN_ERR(range_to_string(&r1, *lastrange, pool));
+          SVN_ERR(range_to_string(&r2, mrange, pool));
           return svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
                                    _("Unable to parse unordered revision "
                                      "ranges '%s' and '%s'"),
@@ -1208,32 +1208,34 @@ svn_mergeinfo_remove(svn_mergeinfo_t *mergeinfo, svn_mergeinfo_t eraser,
 }
 
 svn_error_t *
-svn_rangelist_to_stringbuf(svn_stringbuf_t **output,
-                           const apr_array_header_t *rangelist,
-                           apr_pool_t *pool)
+svn_rangelist_to_string(svn_string_t **output,
+                        const apr_array_header_t *rangelist,
+                        apr_pool_t *pool)
 {
-  *output = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *buf = svn_stringbuf_create("", pool);
 
   if (rangelist->nelts > 0)
     {
       int i;
       svn_merge_range_t *range;
-      svn_stringbuf_t *toappend;
+      svn_string_t *toappend;
 
       /* Handle the elements that need commas at the end.  */
       for (i = 0; i < rangelist->nelts - 1; i++)
         {
           range = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
-          SVN_ERR(range_to_stringbuf(&toappend, range, pool));
-          svn_stringbuf_appendstr(*output, toappend);
-          svn_stringbuf_appendcstr(*output, ",");
+          SVN_ERR(range_to_string(&toappend, range, pool));
+          svn_stringbuf_appendcstr(buf, toappend->data);
+          svn_stringbuf_appendcstr(buf, ",");
         }
 
       /* Now handle the last element, which needs no comma.  */
       range = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
-      SVN_ERR(range_to_stringbuf(&toappend, range, pool));
-      svn_stringbuf_appendstr(*output, toappend);
+      SVN_ERR(range_to_string(&toappend, range, pool));
+      svn_stringbuf_appendcstr(buf, toappend->data);
     }
+
+  *output = svn_string_create_from_buf(buf, pool);
 
   return SVN_NO_ERROR;
 }
@@ -1256,9 +1258,9 @@ mergeinfo_to_stringbuf(svn_stringbuf_t **output, svn_mergeinfo_t input,
       for (i = 0; i < sorted->nelts; i++)
         {
           svn_sort__item_t elt = APR_ARRAY_IDX(sorted, i, svn_sort__item_t);
-          svn_stringbuf_t *revlist;
+          svn_string_t *revlist;
 
-          SVN_ERR(svn_rangelist_to_stringbuf(&revlist, elt.value, pool));
+          SVN_ERR(svn_rangelist_to_string(&revlist, elt.value, pool));
           svn_stringbuf_appendcstr(*output,
                                    apr_psprintf(pool, "%s:%s",
                                                 (char *) elt.key,

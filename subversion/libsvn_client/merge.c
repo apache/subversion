@@ -484,17 +484,17 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                  this. */
               if (adjusted_rangelist->nelts)
                 {
-                  svn_stringbuf_t *adjusted_rangelist_sb;
+                  svn_string_t *adjusted_rangelist_s;
                   svn_prop_t *adjusted_prop =
                     apr_pcalloc(pool, sizeof(*adjusted_prop));
 
-                  SVN_ERR(svn_rangelist_to_stringbuf(&adjusted_rangelist_sb, 
-                                                     adjusted_rangelist, 
-                                                     pool));
+                  SVN_ERR(svn_rangelist_to_string(&adjusted_rangelist_s,
+                                                  adjusted_rangelist,
+                                                  pool));
                   adjusted_prop->name = SVN_PROP_MERGEINFO;
                   adjusted_prop->value = 
                     svn_string_create(apr_pstrcat(pool, source_path, ":",
-                                                  adjusted_rangelist_sb->data,
+                                                  adjusted_rangelist_s->data,
                                                   NULL),
                                       pool);
                   APR_ARRAY_PUSH(adjusted_props, svn_prop_t) = *adjusted_prop;
