@@ -48,7 +48,7 @@ Candidate changes:
  * r29254, r29255, r29334
    Remove use of an extra RA session.
    Votes:
-     +1: hwright, epg (not r29334)
+     +1: hwright, epg
 
 Approved changes:
 
