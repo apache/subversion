@@ -5073,7 +5073,8 @@ get_mergeinfos_for_paths(svn_fs_root_t *root,
                                      txn_body_get_mergeinfo_for_path,
                                      &gmfp_args, iterpool));
       if (path_mergeinfo)
-        apr_hash_set(result_catalog, path, APR_HASH_KEY_STRING, 
+        apr_hash_set(result_catalog, apr_pstrdup(pool, path),
+                     APR_HASH_KEY_STRING,
                      path_mergeinfo);
 
       /* If we're including descendants, do so. */
