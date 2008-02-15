@@ -28,7 +28,7 @@ Blanket commit access:
        striker   Sander Striker <striker@apache.org>
          naked   Nuutti Kotivuori <naked@iki.fi>
        dwhedon   David Kimdon <dwhedon@debian.org>
-           dlr   Daniel Rall <dlr@collab.net>
+           dlr   Daniel Rall <dlr@finemaltcoding.com>
            mbk   Mark Benedetto King <mbk@lowlatency.com>
            epg   Eric Gillespie <epg@pretzelnet.org>
            jaa   Jani Averbach <jaa@iki.fi>
@@ -171,7 +171,7 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
 Committers who have asked to be listed as dormant:
 
         bdenny   Brian Estlin <brian@implementality.com>
-      rassilon   Bill Tutt <rassilon@lyra.org> (Win32, COM, issue-1003-dev br.)
+      rassilon   Bill Tutt <bill@tutts.org> (Win32, COM, issue-1003-dev br.)
          kraai   Matt Kraai <kraai@alumni.cmu.edu>
 
 ## Local Variables:

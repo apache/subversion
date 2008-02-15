@@ -12,7 +12,7 @@ module Svn
     self.swig_init_asp_dot_net_hack()
 
     @@alias_targets = %w(parse_externals_description
-                         ensure_adm cleanup set_changelist)
+                         ensure_adm cleanup)
     class << self
       @@alias_targets.each do |target|
         alias_method "_#{target}", target
@@ -68,14 +68,6 @@ module Svn
     def ignore?(path, patterns)
       Wc.match_ignore_list(path, patterns)
     end
-
-    def set_changelist(paths, changelist_name, matching_changelist_name=nil,
-                        cancel_func=nil, notify_func=nil)
-      paths = [paths] unless paths.is_a?(Array)
-      Wc._set_changelist(paths, changelist_name, matching_changelist_name,
-                         cancel_func, notify_func)
-    end
-    module_function :set_changelist
 
     module ExternalsDescription
       module_function
@@ -319,10 +311,12 @@ module Svn
             :target_revision => nil,
             :use_commit_times => true,
             :depth => nil,
+            :depth_is_sticky => false,
             :allow_unver_obstruction => false,
             :diff3_cmd => nil,
             :notify_func => nil,
             :cancel_func => nil,
+            :conflict_func => nil,
             :traversal_info => _traversal_info,
             :preserved_exts => []
           }
@@ -336,14 +330,11 @@ module Svn
         # callback.
         arguments[:fetch_func] = nil
 
-        # TODO(rb support conflict_fun): implement support for the
-        # conflict_func callback.
-        arguments[:conflict_func] = nil
-
         results = Wc.get_update_editor3(arguments[:target_revision], self,
                                         arguments[:target],
                                         arguments[:use_commit_times],
                                         arguments[:depth],
+                                        arguments[:depth_is_sticky],
                                         arguments[:allow_unver_obstruction],
                                         arguments[:notify_func],
                                         arguments[:cancel_func],
@@ -383,10 +374,12 @@ module Svn
           :target_revision => nil,
           :use_commit_times => true,
           :depth => nil,
+          :depth_is_sticky => false,
           :allow_unver_obstruction => false,
           :diff3_cmd => nil,
           :notify_func => nil,
           :cancel_func => nil,
+          :conflict_func => nil,
           :traversal_info => _traversal_info,
           :preserved_exts => []
         }
@@ -395,15 +388,12 @@ module Svn
                               optional_arguments_defaults.keys,
                               SWITCH_EDITOR2_REQUIRED_ARGUMENTS_KEYS)
 
-        # TODO(rb support conflict_fun): implement support for the
-        # conflict_func callback.
-        arguments[:conflict_func]=nil
-
         results = Wc.get_switch_editor3(arguments[:target_revision], self,
                                         arguments[:target],
                                         arguments[:switch_url],
                                         arguments[:use_commit_times],
                                         arguments[:depth],
+                                        arguments[:depth_is_sticky],
                                         arguments[:allow_unver_obstruction],
                                         arguments[:notify_func],
                                         arguments[:cancel_func],
@@ -440,11 +430,11 @@ module Svn
 
       def diff_editor2(target, callbacks, depth=nil,
                        ignore_ancestry=true, use_text_base=false,
-                       reverse_order=false, cancel_func=nil)
+                       reverse_order=false, cancel_func=nil, changelists=nil)
         editor, editor_baton = Wc.get_diff_editor4(self, target, callbacks,
                                                    depth, ignore_ancestry,
                                                    use_text_base, reverse_order,
-                                                   cancel_func)
+                                                   cancel_func, changelists)
         editor.baton = editor_baton
         editor
       end
@@ -540,6 +530,12 @@ module Svn
 
       def remove_lock(path)
         Wc.remove_lock(path, self)
+      end
+
+      def set_changelist(path, changelist_name, cancel_func=nil,
+                         notify_func=nil)
+        Wc.set_changelist(path, changelist_name, self, cancel_func,
+                          notify_func)
       end
 
       private

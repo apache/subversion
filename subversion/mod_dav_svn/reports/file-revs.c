@@ -322,12 +322,12 @@ dav_svn__file_revs_report(const dav_resource *resource,
  cleanup:
 
   /* We've detected a 'high level' svn action to log. */
-  apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION",
-                apr_psprintf(resource->pool, "blame%s '%s' r%ld:%ld",
-                             include_merged_revisions ?
-                                                    "-merge-sensitive" : "",
+  dav_svn__operational_log(resource->info,
+                           apr_psprintf(resource->pool, "blame %s r%ld:%ld%s",
                              svn_path_uri_encode(path, resource->pool),
-                             start, end));
+                             start, end,
+                             (include_merged_revisions
+                              ? " include-merged-revisions" : "")));
 
   /* Flush the contents of the brigade (returning an error only if we
      don't already have one). */

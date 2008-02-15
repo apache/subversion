@@ -542,6 +542,9 @@ svn_wc__adm_steal_write_lock(svn_wc_adm_access_t **adm_access,
 /* This is essentially the guts of svn_wc_adm_open3, with the additional
  * parameter UNDER_CONSTRUCTION that gets set TRUE only when locking the
  * admin directory during initial creation.
+ *
+ * If the working copy is already locked, return SVN_ERR_WC_LOCKED; if 
+ * it is not a versioned directory, return SVN_ERR_WC_NOT_DIRECTORY.
  */
 static svn_error_t *
 do_open(svn_wc_adm_access_t **adm_access,

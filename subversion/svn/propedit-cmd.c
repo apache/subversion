@@ -61,8 +61,9 @@ svn_cl__propedit(apr_getopt_t *os,
                              pname_utf8);
 
   /* Suck up all the remaining arguments into a targets array */
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
-                                        opt_state->targets, pool));
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets, 
+                                                      pool));
 
   if (opt_state->revprop)  /* operate on a revprop */
     {
@@ -176,11 +177,11 @@ svn_cl__propedit(apr_getopt_t *os,
           peg_revision.kind = svn_opt_revision_unspecified;
 
           /* Fetch the current property. */
-          SVN_ERR(svn_client_propget4(&props, pname_utf8, target,
+          SVN_ERR(svn_client_propget3(&props, pname_utf8, target,
                                       &peg_revision,
                                       &(opt_state->start_revision),
-                                      &base_rev,
-                                      svn_depth_empty, ctx, subpool));
+                                      &base_rev, svn_depth_empty, 
+                                      NULL, ctx, subpool));
 
           /* Get the property value. */
           propval = apr_hash_get(props, target, APR_HASH_KEY_STRING);
@@ -257,7 +258,7 @@ svn_cl__propedit(apr_getopt_t *os,
               err = svn_client_propset3(&commit_info,
                                         pname_utf8, edited_propval, target,
                                         svn_depth_empty, opt_state->force,
-                                        base_rev,
+                                        base_rev, NULL,
                                         ctx, subpool);
               if (ctx->log_msg_func3)
                 SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton2, err));

@@ -93,12 +93,15 @@ svn_cl__switch(apr_getopt_t *os,
   const svn_wc_entry_t *entry;
   const char *parent_dir, *base_tgt, *true_path;
   svn_opt_revision_t peg_revision;
+  svn_depth_t depth;
+  svn_boolean_t depth_is_sticky;
 
   /* This command should discover (or derive) exactly two cmdline
      arguments: a local path to update ("target"), and a new url to
      switch to ("switch_url"). */
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
-                                        opt_state->targets, pool));
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets, 
+                                                      pool));
 
   /* handle only-rewrite case specially */
   if (opt_state->relocate)
@@ -157,11 +160,22 @@ svn_cl__switch(apr_getopt_t *os,
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
                          FALSE, FALSE, pool);
 
+  /* Deal with depthstuffs. */
+  if (opt_state->set_depth != svn_depth_unknown)
+    {
+      depth = opt_state->set_depth;
+      depth_is_sticky = TRUE;
+    }
+  else
+    {
+      depth = opt_state->depth;
+      depth_is_sticky = FALSE;
+    }
+
   /* Do the 'switch' update. */
-  SVN_ERR(svn_client_switch2(NULL, target, switch_url,
-                             &peg_revision,
-                             &(opt_state->start_revision),
-                             opt_state->depth, opt_state->ignore_externals,
+  SVN_ERR(svn_client_switch2(NULL, target, switch_url, &peg_revision,
+                             &(opt_state->start_revision), depth, 
+                             depth_is_sticky, opt_state->ignore_externals,
                              opt_state->force, ctx, pool));
 
   return SVN_NO_ERROR;

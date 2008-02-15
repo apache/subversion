@@ -506,11 +506,11 @@ static svn_error_t *get_server_settings(const char **proxy_host,
       while ((token = apr_strtok(auth_types_list, ";", &last)) != NULL)
         {
           auth_types_list = NULL;
-          if (strcasecmp("basic", token) == 0)
+          if (svn_cstring_casecmp("basic", token) == 0)
             *neon_auth_types |= NE_AUTH_BASIC;
-          else if (strcasecmp("digest", token) == 0)
+          else if (svn_cstring_casecmp("digest", token) == 0)
             *neon_auth_types |= NE_AUTH_DIGEST;
-          else if (strcasecmp("negotiate", token) == 0)
+          else if (svn_cstring_casecmp("negotiate", token) == 0)
             *neon_auth_types |= NE_AUTH_NEGOTIATE;
           else
             return svn_error_createf(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
@@ -619,9 +619,12 @@ ra_neon_neonprogress(void *baton, off_t progress, off_t total)
 
 /** Capabilities exchange. */
 
-/* The only two possible values for a capability. */
+/* Both server and repository support the capability. */
 static const char *capability_yes = "yes";
+/* Either server or repository does not support the capability. */
 static const char *capability_no = "no";
+/* Server supports the capability, but don't yet know if repository does. */
+static const char *capability_server_yes = "server-yes";
 
 
 /* Store in RAS the capabilities discovered from REQ's headers.
@@ -649,7 +652,7 @@ parse_capabilities(ne_request *req,
                                                   ne_header_cursor,
                                                   &header_name,
                                                   &header_value);
-    if (ne_header_cursor && strcasecmp(header_name, "dav") == 0)
+    if (ne_header_cursor && svn_cstring_casecmp(header_name, "dav") == 0)
       {
         /* By the time we get the headers, Neon has downcased them and
            merged them together -- merged in the sense that if a
@@ -683,8 +686,10 @@ parse_capabilities(ne_request *req,
                        APR_HASH_KEY_STRING, capability_yes);
 
         if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
+          /* The server doesn't know what repository we're referring
+             to, so it can't just say capability_yes. */
           apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
-                       APR_HASH_KEY_STRING, capability_yes);
+                       APR_HASH_KEY_STRING, capability_server_yes);
 
         if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
           apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
@@ -708,6 +713,7 @@ exchange_capabilities(svn_ra_neon__session_t *ras, apr_pool_t *pool)
 {
   int http_ret_code;
   svn_ra_neon__request_t *rar;
+  svn_error_t *err = SVN_NO_ERROR;
 
   rar = svn_ra_neon__request_create(ras, "OPTIONS", ras->url->data, pool);
 
@@ -715,8 +721,10 @@ exchange_capabilities(svn_ra_neon__session_t *ras, apr_pool_t *pool)
   ne_add_request_header(rar->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
   ne_add_request_header(rar->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
 
-  SVN_ERR(svn_ra_neon__request_dispatch(&http_ret_code, rar,
-                                        NULL, NULL, 200, 0, pool));
+  err = svn_ra_neon__request_dispatch(&http_ret_code, rar,
+                                      NULL, NULL, 200, 0, pool);
+  if (err)
+    goto cleanup;
 
   if (http_ret_code == 200)
     {
@@ -732,7 +740,10 @@ exchange_capabilities(svn_ra_neon__session_t *ras, apr_pool_t *pool)
          http_ret_code);
     }
 
-  return SVN_NO_ERROR;
+ cleanup:
+  svn_ra_neon__request_destroy(rar);
+
+  return err;
 }
 
 
@@ -756,6 +767,68 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
   cap_result = apr_hash_get(ras->capabilities,
                             capability, APR_HASH_KEY_STRING);
 
+  /* Some capabilities depend on the repository as well as the server.
+     NOTE: ../libsvn_ra_serf/serf.c:svn_ra_serf__has_capability()
+     has a very similar code block.  If you change something here,
+     check there as well. */
+  if (cap_result == capability_server_yes)
+    {
+      if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
+        {
+          /* Handle mergeinfo specially.  Mergeinfo depends on the
+             repository as well as the server, but the server routine
+             that answered our exchange_capabilities() call above
+             didn't even know which repository we were interested in
+             -- it just told us whether the server supports mergeinfo.
+             If the answer was 'no', there's no point checking the
+             particular repository; but if it was 'yes, we still must
+             change it to 'no' iff the repository itself doesn't
+             support mergeinfo. */
+          apr_hash_t *ignored_mergeoutput;
+          svn_error_t *err;
+          apr_array_header_t *paths = apr_array_make(pool, 1,
+                                                     sizeof(char *));
+          APR_ARRAY_PUSH(paths, const char *) = "";
+          
+          err = svn_ra_neon__get_mergeinfo(session, &ignored_mergeoutput,
+                                           paths, 0, FALSE, FALSE, pool);
+          
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
+                {
+                  svn_error_clear(err);
+                  cap_result = capability_no;
+                }
+              else if (err->apr_err == SVN_ERR_FS_NOT_FOUND
+                       || err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+                {
+                  /* Mergeinfo requests use relative paths, and
+                     anyway we're in r0, so this is a likely error,
+                     but it means the repository supports mergeinfo! */
+                  svn_error_clear(err);
+                  cap_result = capability_yes;
+                }
+              else
+                return err;
+
+            }
+          else
+            cap_result = capability_yes;
+          
+          apr_hash_set(ras->capabilities,
+                       SVN_RA_CAPABILITY_MERGEINFO, APR_HASH_KEY_STRING,
+                       cap_result);
+        }
+      else
+        {
+          return svn_error_createf
+            (SVN_ERR_UNKNOWN_CAPABILITY, NULL,
+             _("Don't know how to handle '%s' for capability '%s'"),
+             capability_server_yes, capability);
+        }
+    }
+
   if (cap_result == capability_yes)
     {
       *has = TRUE;
@@ -767,7 +840,7 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
   else if (cap_result == NULL)
     {
       return svn_error_createf
-        (SVN_ERR_RA_UNKNOWN_CAPABILITY, NULL,
+        (SVN_ERR_UNKNOWN_CAPABILITY, NULL,
          _("Don't know anything about capability '%s'"), capability);
     }
   else  /* "can't happen" */
@@ -826,6 +899,16 @@ svn_ra_neon__open(svn_ra_session_t *session,
   unsigned int neon_auth_types = 0;
   neonprogress_baton_t *neonprogress_baton =
     apr_pcalloc(pool, sizeof(*neonprogress_baton));
+  const char *useragent = NULL;
+  const char *client_string = NULL;
+
+  if (callbacks->get_client_string)
+    callbacks->get_client_string(callback_baton, &client_string, pool);
+
+  if (client_string)
+    useragent = apr_pstrcat(pool, "SVN/" SVN_VERSION "/", client_string, NULL);
+  else
+    useragent = "SVN/" SVN_VERSION;
 
   /* Sanity check the URI */
   SVN_ERR(parse_url(uri, repos_URL));
@@ -851,7 +934,7 @@ svn_ra_neon__open(svn_ra_session_t *session,
   for (itr = uri->scheme; *itr; ++itr)
     *itr = tolower(*itr);
 
-  is_ssl_session = (strcasecmp(uri->scheme, "https") == 0);
+  is_ssl_session = (svn_cstring_casecmp(uri->scheme, "https") == 0);
   if (is_ssl_session)
     {
       if (ne_has_support(NE_FEATURE_SSL) == 0)
@@ -935,8 +1018,16 @@ svn_ra_neon__open(svn_ra_session_t *session,
     ne_set_read_timeout(sess2, timeout);
   }
 
-  ne_set_useragent(sess, "SVN/" SVN_VERSION);
-  ne_set_useragent(sess2, "SVN/" SVN_VERSION);
+  if (useragent)
+    {
+      ne_set_useragent(sess, useragent);
+      ne_set_useragent(sess2, useragent);
+    }
+  else
+    {
+      ne_set_useragent(sess, "SVN/" SVN_VERSION);
+      ne_set_useragent(sess2, "SVN/" SVN_VERSION);
+    }
 
   /* clean up trailing slashes from the URL */
   len = strlen(uri->path);
@@ -1022,7 +1113,7 @@ svn_ra_neon__open(svn_ra_session_t *session,
                SVN_CONFIG_OPTION_SSL_TRUST_DEFAULT_CA,
                "true");
 
-      if (strcasecmp(trust_default_ca, "true") == 0)
+      if (svn_cstring_casecmp(trust_default_ca, "true") == 0)
         {
           ne_ssl_trust_default_ca(sess);
           ne_ssl_trust_default_ca(sess2);

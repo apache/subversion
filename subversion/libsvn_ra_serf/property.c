@@ -839,10 +839,17 @@ svn_ra_serf__set_baton_props(svn_ra_serf__prop_set_t setprop, void *baton,
     prop_name = SVN_PROP_ENTRY_LOCK_TOKEN;
   else if (strcmp(name, "checked-in") == 0)
     prop_name = SVN_RA_SERF__WC_CHECKED_IN_URL;
+  else if (strcmp(ns, "DAV:") == 0 ||
+           strcmp(ns, SVN_DAV_PROP_NS_DAV) == 0)
+    {
+      /* Here DAV: properties not yet converted to svn: properties should be 
+         ignored. */
+      return SVN_NO_ERROR;
+    }
   else
     {
-      /* do nothing for now? */
-      return SVN_NO_ERROR;
+      /* An unknown namespace, must be a custom property. */
+      prop_name = apr_pstrcat(pool, ns, name, NULL);
     }
 
   return setprop(baton, prop_name, val, pool);

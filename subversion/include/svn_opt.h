@@ -411,15 +411,28 @@ int svn_opt_parse_revision(svn_opt_revision_t *start_revision,
                            apr_pool_t *pool);
 
 /**
- * Similar to svn_opt_parse_revision but stores result in
- * @a *ranges_to_merge, an array of @c svn_opt_revision_range_t *'s.
+ * Parse @a arg, where @a arg is "N" or "N:M", into a
+ * @c svn_opt_revision_range_t and push that onto @a opt_ranges.
+ *
+ *    - If @a arg is "N", set the @c start field of the
+ *      @c svn_opt_revision_range_t to represent N and the @c end field
+ *      to @c svn_opt_revision_unspecified.
+ *
+ *    - If @a arg is "N:M", set the @c start field of the
+ *      @c svn_opt_revision_range_t to represent N and the @c end field
+ *      to represent M.
+ *
+ * If @a arg is invalid, return -1; else return 0.  It is invalid to omit
+ * a revision (as in, ":", "N:" or ":M").
+ *
+ * Use @a pool to allocate @c svn_opt_revision_range_t pushed to the array.
  *
  * @since New in 1.5.
  */
 int
-svn_opt_parse_revision2(apr_array_header_t **ranges_to_merge,
-                        const char *arg,
-                        apr_pool_t *pool);
+svn_opt_parse_revision_to_range(apr_array_header_t *opt_ranges,
+                                const char *arg,
+                                apr_pool_t *pool);
 
 /**
  * Resolve peg revisions and operational revisions in the following way:
@@ -464,10 +477,30 @@ svn_opt_resolve_revisions(svn_opt_revision_t *peg_rev,
  *
  * On each URL target, do some IRI-to-URI encoding and some
  * auto-escaping.  On each local path, canonicalize case and path
- * separators, and silently skip it if it has the same name as a
- * Subversion working copy administrative directory.
+ * separators.
  *
  * Allocate @a *targets_p and its elements in @a pool.
+ *
+ * If a path has the same name as a Subversion working copy
+ * administrative directory, return SVN_ERR_RESERVED_FILENAME_SPECIFIED;
+ * if multiple reserved paths are encountered, return a chain of
+ * errors, all of which are SVN_ERR_RESERVED_FILENAME_SPECIFIED.  Do
+ * not return this type of error in a chain with any other type of
+ * error, and if this is the only type of error encountered, complete
+ * the operation before returning the error(s).
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
+                              apr_getopt_t *os,
+                              apr_array_header_t *known_targets,
+                              apr_pool_t *pool);
+
+/**
+ * This is the same as svn_opt_args_to_target_array3() except that it
+ * silently ignores paths that have the same name as a working copy
+ * administrative directory.
  *
  * @since New in 1.2.
  */

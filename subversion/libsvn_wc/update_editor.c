@@ -89,8 +89,12 @@ struct edit_baton
      pointing to the final revision. */
   svn_revnum_t *target_revision;
 
-  /* The requested depth of this edit */
+  /* The requested depth of this edit. */
   svn_depth_t requested_depth;
+
+  /* Is the requested depth merely an operational limitation, or is
+     also the new sticky ambient depth of the update target? */
+  svn_boolean_t depth_is_sticky;
 
   /* Need to know if the user wants us to overwrite the 'now' times on
      edited/added files with the last-commit-time. */
@@ -486,9 +490,10 @@ complete_directory(struct edit_baton *eb,
   /* After a depth upgrade the entry must reflect the new depth.
      Upgrading to infinity changes the depth of *all* directories,
      upgrading to something else only changes the target. */
-  if (eb->requested_depth == svn_depth_infinity
-      || (strcmp(path, svn_path_join(eb->anchor, eb->target, pool)) == 0
-          && eb->requested_depth > entry->depth))
+  if (eb->depth_is_sticky &&
+      (eb->requested_depth == svn_depth_infinity
+       || (strcmp(path, svn_path_join(eb->anchor, eb->target, pool)) == 0
+           && eb->requested_depth > entry->depth)))
     entry->depth = eb->requested_depth;
 
   /* Remove any deleted or missing entries. */
@@ -1937,13 +1942,20 @@ open_file(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* Fills out the text_base_path and new_text_base_path fields in
-   FILE_BATON (to text-base or revert-base); if CHECKSUM_P is non-NULL
-   and the path already has an entry, sets *CHECKSUM_P to the checksum
-   from its entry. If non-NULL, set *REPLACED_P and *USE_REVERT_BASE_P
-   to whether or not the entry is replaced and whether or not it needs
-   to use the revert base (ie, it is replaced with history)
-   respectively. */
+/* Fill out FB->text_base_path and FB->new_text_base_path to the
+   permanent and temporary text-base paths respectively, or (if the
+   entry is replaced with history) to the permanent and temporary
+   revert-base paths respectively.
+
+   If REPLACED_P and USE_REVERT_BASE are non-NULL, set *REPLACED_P and
+   *USE_REVERT_BASE_P to whether or not the entry is replaced, and to
+   whether or not it needs to use the revert base (i.e., it's replaced
+   with history), respectively.  If CHECKSUM_P is non-NULL and the
+   path already has an entry, set *CHECKSUM_P to the entry's checksum.
+
+   Use POOL for temporary allocation and for *CHECKSUM_P (if
+   applicable), but allocate FB->text_base_path and
+   FB->new_text_base_path in FB->pool. */
 static svn_error_t *
 choose_base_paths(const char **checksum_p,
                   svn_boolean_t *replaced_p,
@@ -2748,13 +2760,15 @@ close_file(void *file_baton,
 
 
 
-/* Beginning at DEST_DIR within a working copy, search the working
-   copy for an pre-existing versioned file which is exactly equal to
-   COPYFROM_PATH@COPYFROM_REV.
+/* Beginning at DEST_DIR (and its associated entry DEST_ENTRY) within
+   a working copy, search the working copy for an pre-existing
+   versioned file which is exactly equal to COPYFROM_PATH@COPYFROM_REV.
+
+   If the file isn't found, set *RETURN_PATH to NULL.
 
    If the file is found, return the absolute path to it in
    *RETURN_PATH, as well as a (read-only) access_t for its parent in
-   *RETURN_ACCESS.  If the file isn't found, set *RETURN_PATH to NULL.
+   *RETURN_ACCESS.
 */
 static svn_error_t *
 locate_copyfrom(const char *copyfrom_path,
@@ -2931,7 +2945,8 @@ locate_copyfrom(const char *copyfrom_path,
 
 
 /* Given a set of properties PROPS_IN, find all regular properties
-   and return these in a new set, alloced on POOL. */
+   and shallowly copy them into a new set (allocate the new set in
+   POOL, but the set's members retain their original allocations). */
 static apr_hash_t *
 copy_regular_props(apr_hash_t *props_in,
                    apr_pool_t *pool)
@@ -2985,9 +3000,9 @@ add_file_with_history(const char *path,
   const svn_wc_entry_t *path_entry;
   svn_error_t *err;
 
-  /* ### TODO: consider, a la add_file, doing temporary allocations
-     ### that don't need to stick around with the baton in a
-     ### subpool */
+  /* The file_pool can stick around for a *long* time, so we want to
+     use a subpool for any temporary allocations. */
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   /* First, fake an add_file() call.  Notice that we don't send any
      copyfrom args, lest we end up infinitely recursing.  :-)  */
@@ -2996,17 +3011,17 @@ add_file_with_history(const char *path,
   tfb->added_with_history = TRUE;
 
   /* Attempt to locate the copyfrom_path in the working copy first. */
-  SVN_ERR(svn_wc_entry(&path_entry, pb->path, eb->adm_access, FALSE, pool));
+  SVN_ERR(svn_wc_entry(&path_entry, pb->path, eb->adm_access, FALSE, subpool));
   err = locate_copyfrom(copyfrom_path, copyfrom_rev,
                         pb->path, path_entry,
-                        &src_path, &src_access, pool);
+                        &src_path, &src_access, subpool);
   if (err && err->apr_err == SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND)
     svn_error_clear(err);
   else if (err)
     return err;
 
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, pb->edit_baton->adm_access,
-                              pb->path, pb->pool));
+                              pb->path, subpool));
   /* Make a unique file name for the copyfrom text-base. */
   SVN_ERR(svn_wc_create_tmp_file2(NULL, &tfb->copied_text_base,
                                   svn_wc_adm_access_path(adm_access),
@@ -3018,9 +3033,9 @@ add_file_with_history(const char *path,
       /* Copy the existing file's text-base over to the (temporary)
          new text-base, where the file baton expects it to be. */
       const char *src_text_base_path = svn_wc__text_base_path(src_path,
-                                                              FALSE, pool);
+                                                              FALSE, subpool);
       SVN_ERR(svn_io_copy_file(src_text_base_path, tfb->copied_text_base,
-                               TRUE, pool));
+                               TRUE, subpool));
 
       /* Grab the existing file's base-props into memory. */
       SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL,
@@ -3041,7 +3056,7 @@ add_file_with_history(const char *path,
          svn_stream_close() automatically closes the text-base file for us. */
       SVN_ERR(svn_io_file_open(&textbase_file, tfb->copied_text_base,
                                (APR_WRITE | APR_TRUNCATE | APR_CREATE),
-                               APR_OS_DEFAULT, pool));
+                               APR_OS_DEFAULT, subpool));
       textbase_stream = svn_stream_from_aprfile2(textbase_file, FALSE, pool);
 
       /* copyfrom_path is a absolute path, fetch_func requires a path relative
@@ -3066,7 +3081,7 @@ add_file_with_history(const char *path,
       svn_boolean_t text_changed;
 
       SVN_ERR(svn_wc_text_modified_p(&text_changed, src_path, FALSE,
-                                     src_access, pool));
+                                     src_access, subpool));
 
       if (text_changed)
         {
@@ -3077,9 +3092,11 @@ add_file_with_history(const char *path,
                                           pool));
 
           SVN_ERR(svn_io_copy_file(src_path, tfb->copied_working_text, TRUE,
-                                   pool));
+                                   subpool));
         }
     }
+
+  svn_pool_destroy(subpool);
 
   *file_baton = tfb;
   return SVN_NO_ERROR;
@@ -3164,6 +3181,7 @@ make_editor(svn_revnum_t *target_revision,
             svn_boolean_t use_commit_times,
             const char *switch_url,
             svn_depth_t depth,
+            svn_boolean_t depth_is_sticky,
             svn_boolean_t allow_unver_obstructions,
             svn_wc_notify_func2_t notify_func,
             void *notify_baton,
@@ -3187,6 +3205,10 @@ make_editor(svn_revnum_t *target_revision,
   const svn_delta_editor_t *inner_editor;
   const svn_wc_entry_t *entry;
 
+  /* An unknown depth can't be sticky. */
+  if (depth == svn_depth_unknown)
+    depth_is_sticky = FALSE;
+  
   /* Get the anchor entry, so we can fetch the repository root. */
   SVN_ERR(svn_wc_entry(&entry, anchor, adm_access, FALSE, pool));
 
@@ -3211,6 +3233,7 @@ make_editor(svn_revnum_t *target_revision,
   eb->anchor                   = anchor;
   eb->target                   = target;
   eb->requested_depth          = depth;
+  eb->depth_is_sticky          = depth_is_sticky;
   eb->notify_func              = notify_func;
   eb->notify_baton             = notify_baton;
   eb->traversal_info           = traversal_info;
@@ -3246,24 +3269,41 @@ make_editor(svn_revnum_t *target_revision,
   inner_editor = tree_editor;
   inner_baton = eb;
 
-  /* Easy out: we only need an ambient filter if the caller has no
-     particular depth request in mind -- because if a depth was
-     explicitly requested, libsvn_delta/depth_filter_editor.c will
-     ensure that we never see editor calls we don't want anyway. 
-  */
-  /* ### (This can also be skipped if the server understands depth;
-     ### consider letting the depth RA capability percolate down to
-     ### this level.) */
+  /* If our requested depth is sticky, we'll raise an error if asked
+     to make our target more shallow, which is currently unsupported.
 
-  if (depth == svn_depth_unknown)
-    SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
-                                                &inner_baton,
-                                                inner_editor,
-                                                inner_baton,
-                                                anchor,
-                                                target,
-                                                adm_access,
-                                                pool));
+     Otherwise, if our requested depth is *not* sticky, then we need
+     to limit the scope of our operation to the ambient depths present
+     in the working copy already.  If a depth was explicitly
+     requested, libsvn_delta/depth_filter_editor.c will ensure that we
+     never see editor calls that extend beyond the scope of the
+     requested depth.  But even what we do so might extend beyond the
+     scope of our ambient depth.  So we use another filtering editor
+     to avoid modifying the ambient working copy depth when not asked
+     to do so.  (This can also be skipped if the server understands
+     consider letting the depth RA capability percolate down to this
+     level.) */
+  if (depth_is_sticky)
+    {
+      const svn_wc_entry_t *target_entry;
+      SVN_ERR(svn_wc_entry(&target_entry, svn_path_join(anchor, target, pool), 
+                           adm_access, FALSE, pool));
+      if (target_entry && (target_entry->depth > depth))
+        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                 _("Shallowing of working copy depths is not "
+                                   "yet supported"));
+    }
+  else
+    {
+      SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
+                                                  &inner_baton,
+                                                  inner_editor,
+                                                  inner_baton,
+                                                  anchor,
+                                                  target,
+                                                  adm_access,
+                                                  pool));
+    }
 
   SVN_ERR(svn_delta_get_cancellation_editor(cancel_func,
                                             cancel_baton,
@@ -3283,6 +3323,7 @@ svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                           const char *target,
                           svn_boolean_t use_commit_times,
                           svn_depth_t depth,
+                          svn_boolean_t depth_is_sticky,
                           svn_boolean_t allow_unver_obstructions,
                           svn_wc_notify_func2_t notify_func,
                           void *notify_baton,
@@ -3300,7 +3341,7 @@ svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                           apr_pool_t *pool)
 {
   return make_editor(target_revision, anchor, svn_wc_adm_access_path(anchor),
-                     target, use_commit_times, NULL, depth,
+                     target, use_commit_times, NULL, depth, depth_is_sticky,
                      allow_unver_obstructions, notify_func, notify_baton,
                      cancel_func, cancel_baton, conflict_func, conflict_baton,
                      fetch_func, fetch_baton,
@@ -3327,7 +3368,7 @@ svn_wc_get_update_editor2(svn_revnum_t *target_revision,
 {
   return svn_wc_get_update_editor3(target_revision, anchor, target,
                                    use_commit_times,
-                                   SVN_DEPTH_INFINITY_OR_FILES(recurse),
+                                   SVN_DEPTH_INFINITY_OR_FILES(recurse), FALSE,
                                    FALSE, notify_func, notify_baton,
                                    cancel_func, cancel_baton, NULL, NULL,
                                    NULL, NULL,
@@ -3357,7 +3398,7 @@ svn_wc_get_update_editor(svn_revnum_t *target_revision,
 
   return svn_wc_get_update_editor3(target_revision, anchor, target,
                                    use_commit_times,
-                                   SVN_DEPTH_INFINITY_OR_FILES(recurse),
+                                   SVN_DEPTH_INFINITY_OR_FILES(recurse), FALSE,
                                    FALSE, svn_wc__compat_call_notify_func, nb,
                                    cancel_func, cancel_baton, NULL, NULL,
                                    NULL, NULL,
@@ -3372,6 +3413,7 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                           const char *switch_url,
                           svn_boolean_t use_commit_times,
                           svn_depth_t depth,
+                          svn_boolean_t depth_is_sticky,
                           svn_boolean_t allow_unver_obstructions,
                           svn_wc_notify_func2_t notify_func,
                           void *notify_baton,
@@ -3389,9 +3431,9 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
   assert(switch_url);
 
   return make_editor(target_revision, anchor, svn_wc_adm_access_path(anchor),
-                     target, use_commit_times, switch_url, depth,
-                     allow_unver_obstructions, notify_func, notify_baton,
-                     cancel_func, cancel_baton,
+                     target, use_commit_times, switch_url, 
+                     depth, depth_is_sticky, allow_unver_obstructions, 
+                     notify_func, notify_baton, cancel_func, cancel_baton,
                      conflict_func, conflict_baton,
                      NULL, NULL, /* TODO(sussman): add fetch callback here  */
                      diff3_cmd, preserved_exts,
@@ -3419,7 +3461,7 @@ svn_wc_get_switch_editor2(svn_revnum_t *target_revision,
 
   return svn_wc_get_switch_editor3(target_revision, anchor, target,
                                    switch_url, use_commit_times,
-                                   SVN_DEPTH_INFINITY_OR_FILES(recurse),
+                                   SVN_DEPTH_INFINITY_OR_FILES(recurse), FALSE,
                                    FALSE, notify_func, notify_baton,
                                    cancel_func, cancel_baton,
                                    NULL, NULL, diff3_cmd,
@@ -3450,7 +3492,7 @@ svn_wc_get_switch_editor(svn_revnum_t *target_revision,
 
   return svn_wc_get_switch_editor3(target_revision, anchor, target,
                                    switch_url, use_commit_times,
-                                   SVN_DEPTH_INFINITY_OR_FILES(recurse),
+                                   SVN_DEPTH_INFINITY_OR_FILES(recurse), FALSE,
                                    FALSE, svn_wc__compat_call_notify_func, nb,
                                    cancel_func, cancel_baton,
                                    NULL, NULL, diff3_cmd,

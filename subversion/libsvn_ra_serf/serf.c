@@ -47,9 +47,12 @@
 
 /** Capabilities exchange. */
 
-/* The only two possible values for a capability. */
+/* Both server and repository support the capability. */
 static const char *capability_yes = "yes";
+/* Either server or repository does not support the capability. */
 static const char *capability_no = "no";
+/* Server supports the capability, but don't yet know if repository does. */
+static const char *capability_server_yes = "server-yes";
 
 /* Baton type for parsing capabilities out of "OPTIONS" response headers. */
 struct capabilities_response_baton
@@ -75,7 +78,7 @@ capabilities_headers_iterator_callback(void *baton,
 {
   struct capabilities_response_baton *crb = baton;
 
-  if (strcasecmp(key, "dav") == 0)
+  if (svn_cstring_casecmp(key, "dav") == 0)
     {
       /* Each header may contain multiple values, separated by commas, e.g.:
            DAV: version-control,checkout,working-resource
@@ -96,8 +99,10 @@ capabilities_headers_iterator_callback(void *baton,
 
       if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
         {
+          /* The server doesn't know what repository we're referring
+             to, so it can't just say capability_yes. */
           apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
-                       APR_HASH_KEY_STRING, capability_yes);
+                       APR_HASH_KEY_STRING, capability_server_yes);
         }
 
       if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
@@ -211,6 +216,67 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
   cap_result = apr_hash_get(serf_sess->capabilities,
                             capability, APR_HASH_KEY_STRING);
 
+  /* Some capabilities depend on the repository as well as the server.
+     NOTE: ../libsvn_ra_neon/session.c:svn_ra_neon__has_capability()
+     has a very similar code block.  If you change something here,
+     check there as well. */
+  if (cap_result == capability_server_yes)
+    {
+      if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
+        {
+          /* Handle mergeinfo specially.  Mergeinfo depends on the
+             repository as well as the server, but the server routine
+             that answered our exchange_capabilities() call above
+             didn't even know which repository we were interested in
+             -- it just told us whether the server supports mergeinfo.
+             If the answer was 'no', there's no point checking the
+             particular repository; but if it was 'yes, we still must
+             change it to 'no' iff the repository itself doesn't
+             support mergeinfo. */
+          apr_hash_t *ignored_mergeoutput;
+          svn_error_t *err;
+          apr_array_header_t *paths = apr_array_make(pool, 1,
+                                                     sizeof(char *));
+          APR_ARRAY_PUSH(paths, const char *) = "";
+          
+          err = svn_ra_serf__get_mergeinfo(ra_session, &ignored_mergeoutput,
+                                           paths, 0, FALSE, FALSE, pool);
+          
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
+                {
+                  svn_error_clear(err);
+                  cap_result = capability_no;
+                }
+              else if (err->apr_err == SVN_ERR_FS_NOT_FOUND
+                       || err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+                {
+                  /* Mergeinfo requests use relative paths, and
+                     anyway we're in r0, so this is a likely error,
+                     but it means the repository supports mergeinfo! */
+                  svn_error_clear(err);
+                  cap_result = capability_yes;
+                }
+              else
+                return err;
+            }
+          else
+            cap_result = capability_yes;
+          
+          apr_hash_set(serf_sess->capabilities,
+                       SVN_RA_CAPABILITY_MERGEINFO, APR_HASH_KEY_STRING,
+                       cap_result);
+        }
+      else
+        {
+          return svn_error_createf
+            (SVN_ERR_UNKNOWN_CAPABILITY, NULL,
+             _("Don't know how to handle '%s' for capability '%s'"),
+             capability_server_yes, capability);
+        }
+    }
+
   if (cap_result == capability_yes)
     {
       *has = TRUE;
@@ -222,7 +288,7 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
   else if (cap_result == NULL)
     {
       return svn_error_createf
-        (SVN_ERR_RA_UNKNOWN_CAPABILITY, NULL,
+        (SVN_ERR_UNKNOWN_CAPABILITY, NULL,
          _("Don't know anything about capability '%s'"), capability);
     }
   else  /* "can't happen" */
@@ -379,6 +445,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
   apr_status_t status;
   svn_ra_serf__session_t *serf_sess;
   apr_uri_t url;
+  const char *client_string = NULL;
 
   serf_sess = apr_pcalloc(pool, sizeof(*serf_sess));
   apr_pool_create(&serf_sess->pool, pool);
@@ -406,7 +473,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
     {
       url.port = apr_uri_port_of_scheme(url.scheme);
     }
-  serf_sess->using_ssl = (strcasecmp(url.scheme, "https") == 0);
+  serf_sess->using_ssl = (svn_cstring_casecmp(url.scheme, "https") == 0);
 
   serf_sess->capabilities = apr_hash_make(serf_sess->pool);
 
@@ -426,14 +493,28 @@ svn_ra_serf__open(svn_ra_session_t *session,
   serf_sess->conns[0]->session = serf_sess;
   serf_sess->conns[0]->last_status_code = -1;
 
-  /* fetch the DNS record for this host */
-  status = apr_sockaddr_info_get(&serf_sess->conns[0]->address, url.hostname,
-                                 APR_UNSPEC, url.port, 0, serf_sess->pool);
-  if (status)
+  /* Unless we're using a proxy, fetch the DNS record for this host */
+  if (! serf_sess->using_proxy)
     {
-      return svn_error_wrap_apr(status,
-                                _("Could not lookup hostname `%s'"),
-                                url.hostname);
+      status = apr_sockaddr_info_get(&serf_sess->conns[0]->address,
+                                     url.hostname,
+                                     APR_UNSPEC, url.port, 0, serf_sess->pool);
+      if (status)
+        {
+          return svn_error_wrap_apr(status,
+                                    _("Could not lookup hostname `%s'"),
+                                    url.hostname);
+        }
+    }
+  else
+    {
+      /* Create an address with unresolved hostname. */
+      apr_sockaddr_t *sa = apr_pcalloc(serf_sess->pool, sizeof(apr_sockaddr_t));
+      sa->pool = serf_sess->pool;
+      sa->hostname = apr_pstrdup(serf_sess->pool, url.hostname);
+      sa->port = url.port;
+      sa->family = APR_UNSPEC;
+      serf_sess->conns[0]->address = sa;
     }
 
   serf_sess->conns[0]->using_ssl = serf_sess->using_ssl;
@@ -441,6 +522,17 @@ svn_ra_serf__open(svn_ra_session_t *session,
   serf_sess->conns[0]->hostinfo = url.hostinfo;
   serf_sess->conns[0]->auth_header = NULL;
   serf_sess->conns[0]->auth_value = NULL;
+  serf_sess->conns[0]->useragent = NULL;
+
+  /* create the user agent string */
+  if (callbacks->get_client_string)
+    callbacks->get_client_string(callback_baton, &client_string, pool);
+
+  if (client_string)
+    serf_sess->conns[0]->useragent = apr_pstrcat(pool, USER_AGENT, "/",
+                                                 client_string, NULL);
+  else
+    serf_sess->conns[0]->useragent = USER_AGENT;
 
   /* go ahead and tell serf about the connection. */
   serf_sess->conns[0]->conn =

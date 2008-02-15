@@ -1,7 +1,4 @@
 /*
- * svn_fs_sqlite.h: Declarations for APIs of libsvn_fs_util to
- * be consumed by only fs_* libs.
- *
  * ====================================================================
  * Copyright (c) 2007 CollabNet.  All rights reserved.
  *
@@ -15,25 +12,36 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ *
+ * svn_diff.i: SWIG interface file for svn_diff.h
  */
 
-#ifndef SVN_FS_SQLITE_H
-#define SVN_FS_SQLITE_H
+#if defined(SWIGPYTHON)
+%module(package="libsvn") diff
+#elif defined(SWIGPERL)
+%module "SVN::_Diff"
+#elif defined(SWIGRUBY)
+%module "svn::ext::diff"
+#endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+%include svn_global.swg
+%import core.i
 
-/* The name of the sqlite index database. */
-#define SVN_FS__SQLITE_DB_NAME "indexes.sqlite"
+/* -----------------------------------------------------------------------
+   %apply-ing of typemaps defined elsewhere
+*/
 
-/* Create index database under PATH.  Use POOL for any temporary
-   allocations. */
-svn_error_t *
-svn_fs__sqlite_create_index(const char *path, apr_pool_t *pool);
+%apply const char *MAY_BE_NULL {
+    const char *original_header,
+    const char *modified_header,
+    const char *header_encoding,
+    const char *relative_to_dir
+};
 
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
+#ifdef SWIGPYTHON
+%apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
+#endif
 
-#endif /* SVN_FS_SQLITE_H */
+/* ----------------------------------------------------------------------- */
+
+%include svn_diff_h.swg

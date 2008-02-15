@@ -82,8 +82,9 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
 #pragma convert(1208)
 #endif
       {
-        fprintf(error_stream, "%s: error: cannot open '/dev/null'\n",
-                progname);
+        if (error_stream)
+          fprintf(error_stream, "%s: error: cannot open '/dev/null'\n",
+                  progname);
         return EXIT_FAILURE;
       }
   }
@@ -92,7 +93,8 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
   /* Ignore any errors encountered while attempting to change stream
      buffering, as the streams should retain their default buffering
      modes. */
-  setvbuf(error_stream, NULL, _IONBF, 0);
+  if (error_stream)
+    setvbuf(error_stream, NULL, _IONBF, 0);
 #ifndef WIN32
   setvbuf(stdout, NULL, _IOLBF, 0);
 #endif

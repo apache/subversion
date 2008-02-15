@@ -221,6 +221,16 @@ def main():
               'rm',               'boozle/guz/svnmucc-test.py',
               'put', sys.argv[0], 'boozle/guz/svnmucc-test.py')
 
+  # revision 16
+  run_svnmucc(['R /foo/bar (from /foo/foo:15)'], #---------
+              'rm',                            'foo/bar',
+              'cp', '15', 'foo/foo',           'foo/bar',
+              'propset',  'testprop',  'true', 'foo/bar')
+
+  # revision 17
+  run_svnmucc(['M /foo/bar'], #---------
+              'propdel', 'testprop', 'foo/bar')
+
 if __name__ == "__main__":
   try:
     # remove any previously existing repository, then create a new one

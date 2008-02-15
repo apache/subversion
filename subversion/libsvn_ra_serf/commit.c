@@ -516,6 +516,38 @@ checkout_file(file_context_t *file)
   svn_ra_serf__handler_t *handler;
   svn_error_t *err;
 
+  if (file->parent_dir)
+    {
+      dir_context_t *dir;
+
+      dir = file->parent_dir;
+      while (dir && ! apr_hash_get(file->commit->copied_entries,
+                                   dir->name, APR_HASH_KEY_STRING))
+        {
+          dir = dir->parent_dir;
+        }
+          
+
+      /* Is our parent a copy?  If so, we're already implicitly checked out. */
+      if (dir)
+        {
+          const char *diff_path;
+
+          /* Implicitly checkout this dir now. */
+          file->checkout = apr_pcalloc(file->pool, sizeof(*file->checkout));
+          file->checkout->pool = file->pool;
+
+          file->checkout->activity_url = file->commit->activity_url;
+          file->checkout->activity_url_len = file->commit->activity_url_len;
+          diff_path = svn_path_is_child(dir->name, file->name, file->pool);
+          file->checkout->resource_url =
+            svn_path_url_add_component(dir->checkout->resource_url,
+                                       diff_path,
+                                       file->pool);
+          return SVN_NO_ERROR;
+        }
+    }
+
   /* Checkout our file into the activity URL now. */
   handler = apr_pcalloc(file->pool, sizeof(*handler));
   handler->session = file->commit->session;
@@ -1205,7 +1237,7 @@ delete_entry(const char *path,
 
   /* DELETE our entry */
   delete_ctx = apr_pcalloc(pool, sizeof(*delete_ctx));
-  delete_ctx->path = path;
+  delete_ctx->path = apr_pstrdup(pool, path);
   delete_ctx->revision = revision;
   delete_ctx->lock_token_hash = dir->commit->lock_tokens;
   delete_ctx->keep_locks = dir->commit->keep_locks;
@@ -1299,7 +1331,7 @@ add_directory(const char *path,
   dir->base_revision = SVN_INVALID_REVNUM;
   dir->copy_revision = copyfrom_revision;
   dir->copy_path = copyfrom_path;
-  dir->name = path;
+  dir->name = apr_pstrdup(dir->pool, path);
   dir->checked_in_url =
       svn_path_url_add_component(parent->commit->checked_in_url,
                                  path, dir->pool);
@@ -1409,7 +1441,7 @@ open_directory(const char *path,
 
   dir->added = FALSE;
   dir->base_revision = base_revision;
-  dir->name = path;
+  dir->name = apr_pstrdup(dir->pool, path);
   dir->changed_props = apr_hash_make(dir->pool);
   dir->removed_props = apr_hash_make(dir->pool);
 
@@ -1528,7 +1560,7 @@ add_file(const char *path,
 
   new_file->commit = dir->commit;
 
-  new_file->name = path;
+  new_file->name = apr_pstrdup(new_file->pool, path);
 
   new_file->added = TRUE;
   new_file->base_revision = SVN_INVALID_REVNUM;
@@ -1608,7 +1640,7 @@ open_file(const char *path,
   new_file->commit = ctx->commit;
 
   /* TODO: Remove directory names? */
-  new_file->name = path;
+  new_file->name = apr_pstrdup(new_file->pool, path);
 
   new_file->added = FALSE;
   new_file->base_revision = base_revision;

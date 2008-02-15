@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -146,8 +146,9 @@ void svn_client_get_username_prompt_provider
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-void svn_client_get_simple_provider(svn_auth_provider_object_t **provider,
-                                    apr_pool_t *pool);
+void
+svn_client_get_simple_provider(svn_auth_provider_object_t **provider,
+                               apr_pool_t *pool);
 
 
 #if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN)
@@ -172,9 +173,9 @@ void svn_client_get_simple_provider(svn_auth_provider_object_t **provider,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-void svn_client_get_windows_simple_provider
-  (svn_auth_provider_object_t **provider,
-   apr_pool_t *pool);
+void
+svn_client_get_windows_simple_provider(svn_auth_provider_object_t **provider,
+                                       apr_pool_t *pool);
 #endif /* WIN32 || DOXYGEN */
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -188,8 +189,9 @@ void svn_client_get_windows_simple_provider
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-void svn_client_get_username_provider(svn_auth_provider_object_t **provider,
-                                      apr_pool_t *pool);
+void
+svn_client_get_username_provider(svn_auth_provider_object_t **provider,
+                                 apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -201,7 +203,8 @@ void svn_client_get_username_provider(svn_auth_provider_object_t **provider,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-void svn_client_get_ssl_server_trust_file_provider
+void
+svn_client_get_ssl_server_trust_file_provider
   (svn_auth_provider_object_t **provider,
    apr_pool_t *pool);
 
@@ -215,7 +218,8 @@ void svn_client_get_ssl_server_trust_file_provider
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-void svn_client_get_ssl_client_cert_file_provider
+void
+svn_client_get_ssl_client_cert_file_provider
   (svn_auth_provider_object_t **provider,
    apr_pool_t *pool);
 
@@ -229,7 +233,8 @@ void svn_client_get_ssl_client_cert_file_provider
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-void svn_client_get_ssl_client_cert_pw_file_provider
+void
+svn_client_get_ssl_client_cert_pw_file_provider
   (svn_auth_provider_object_t **provider,
    apr_pool_t *pool);
 
@@ -243,7 +248,8 @@ void svn_client_get_ssl_client_cert_pw_file_provider
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-void svn_client_get_ssl_server_trust_prompt_provider
+void
+svn_client_get_ssl_server_trust_prompt_provider
   (svn_auth_provider_object_t **provider,
    svn_auth_ssl_server_trust_prompt_func_t prompt_func,
    void *prompt_baton,
@@ -260,7 +266,8 @@ void svn_client_get_ssl_server_trust_prompt_provider
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-void svn_client_get_ssl_client_cert_prompt_provider
+void
+svn_client_get_ssl_client_cert_prompt_provider
   (svn_auth_provider_object_t **provider,
    svn_auth_ssl_client_cert_prompt_func_t prompt_func,
    void *prompt_baton,
@@ -278,7 +285,8 @@ void svn_client_get_ssl_client_cert_prompt_provider
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-void svn_client_get_ssl_client_cert_pw_prompt_provider
+void
+svn_client_get_ssl_client_cert_pw_prompt_provider
   (svn_auth_provider_object_t **provider,
    svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
    void *prompt_baton,
@@ -857,6 +865,10 @@ typedef struct svn_client_ctx_t
   svn_wc_conflict_resolver_func_t conflict_func;
   void *conflict_baton;
 
+  /** Custom client name string, or @c null.
+   * @since New in 1.5. */
+  const char *client_name;
+
 } svn_client_ctx_t;
 
 /** @} end group: Client context management */
@@ -1060,6 +1072,10 @@ svn_client_checkout(svn_revnum_t *result_rev,
  * If @a depth is @c svn_depth_unknown, take the working depth from
  * @a paths and then behave as described above.
  *
+ * If @a depth_is_sticky is set and @a depth is not @c
+ * svn_depth_unknown, then in addition to updating PATHS, also set
+ * their sticky ambient depth value to @a depth.
+ *
  * If @a allow_unver_obstructions is TRUE then the update tolerates
  * existing unversioned items that obstruct added paths from @a URL.  Only
  * obstructions of the same type (file or dir) as the added item are
@@ -1083,6 +1099,7 @@ svn_client_update3(apr_array_header_t **result_revs,
                    const apr_array_header_t *paths,
                    const svn_opt_revision_t *revision,
                    svn_depth_t depth,
+                   svn_boolean_t depth_is_sticky,
                    svn_boolean_t ignore_externals,
                    svn_boolean_t allow_unver_obstructions,
                    svn_client_ctx_t *ctx,
@@ -1090,9 +1107,10 @@ svn_client_update3(apr_array_header_t **result_revs,
 
 /**
  * Similar to svn_client_update3() but with @a allow_unver_obstructions
- * always set to FALSE, and @a depth set according to @a recurse:
- * if @a recurse is TRUE, set @a depth to @c svn_depth_infinity, if
- * @a recurse is FALSE, set @a depth to @c svn_depth_files.
+ * always set to FALSE, @a depth_is_sticky to FALSE, and @a depth set
+ * according to @a recurse: if @a recurse is TRUE, set @a depth to @c
+ * svn_depth_infinity, if @a recurse is FALSE, set @a depth to @c
+ * svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -1148,6 +1166,10 @@ svn_client_update(svn_revnum_t *result_rev,
  * ignoring subdirectories completely.  Else if @c svn_depth_empty,
  * switch just @a path and touch nothing underneath it.
  *
+ * If @a depth_is_sticky is set and @a depth is not @c
+ * svn_depth_unknown, then in addition to switching PATH, also set
+ * its sticky ambient depth value to @a depth.
+ *
  * If @a ignore_externals is set, don't process externals definitions
  * as part of this operation.
  *
@@ -1175,6 +1197,7 @@ svn_client_switch2(svn_revnum_t *result_rev,
                    const svn_opt_revision_t *peg_revision,
                    const svn_opt_revision_t *revision,
                    svn_depth_t depth,
+                   svn_boolean_t depth_is_sticky,
                    svn_boolean_t ignore_externals,
                    svn_boolean_t allow_unver_obstructions,
                    svn_client_ctx_t *ctx,
@@ -1182,11 +1205,11 @@ svn_client_switch2(svn_revnum_t *result_rev,
 
 
 /**
- * Similar to svn_client_switch2() but with @a allow_unver_obstructions
- * and @a ignore_externals always set to FALSE, and @a depth set according
- * to @a recurse: if @a recurse is TRUE, set @a depth to
- * @c svn_depth_infinity, if @a recurse is FALSE, set @a depth to
- * @c svn_depth_files.
+ * Similar to svn_client_switch2() but with @a allow_unver_obstructions, 
+ * @a ignore_externals, and @a depth_is_sticky always set to FALSE,
+ * and @a depth set according to @a recurse: if @a recurse is TRUE,
+ * set @a depth to @c svn_depth_infinity, if @a recurse is FALSE, set
+ * @a depth to @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -1489,14 +1512,15 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_client_import3(svn_commit_info_t **commit_info_p,
-                                const char *path,
-                                const char *url,
-                                svn_depth_t depth,
-                                svn_boolean_t no_ignore,
-                                svn_boolean_t ignore_unknown_node_types,
-                                svn_client_ctx_t *ctx,
-                                apr_pool_t *pool);
+svn_error_t *
+svn_client_import3(svn_commit_info_t **commit_info_p,
+                   const char *path,
+                   const char *url,
+                   svn_depth_t depth,
+                   svn_boolean_t no_ignore,
+                   svn_boolean_t ignore_unknown_node_types,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
 
 /**
  * Similar to svn_client_import3(), but with @a ignore_unknown_node_types
@@ -1507,13 +1531,14 @@ svn_error_t *svn_client_import3(svn_commit_info_t **commit_info_p,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API
  */
-svn_error_t *svn_client_import2(svn_commit_info_t **commit_info_p,
-                                const char *path,
-                                const char *url,
-                                svn_boolean_t nonrecursive,
-                                svn_boolean_t no_ignore,
-                                svn_client_ctx_t *ctx,
-                                apr_pool_t *pool);
+svn_error_t *
+svn_client_import2(svn_commit_info_t **commit_info_p,
+                   const char *path,
+                   const char *url,
+                   svn_boolean_t nonrecursive,
+                   svn_boolean_t no_ignore,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
 
 /**
  * Similar to svn_client_import2(), but with @a no_ignore always set
@@ -1522,12 +1547,13 @@ svn_error_t *svn_client_import2(svn_commit_info_t **commit_info_p,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
-svn_error_t *svn_client_import(svn_client_commit_info_t **commit_info_p,
-                               const char *path,
-                               const char *url,
-                               svn_boolean_t nonrecursive,
-                               svn_client_ctx_t *ctx,
-                               apr_pool_t *pool);
+svn_error_t *
+svn_client_import(svn_client_commit_info_t **commit_info_p,
+                  const char *path,
+                  const char *url,
+                  svn_boolean_t nonrecursive,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
 
 /** @} */
 
@@ -1567,13 +1593,13 @@ svn_error_t *svn_client_import(svn_client_commit_info_t **commit_info_p,
  *
  * Unlock paths in the repository, unless @a keep_locks is TRUE.
  *
- * If @a changelist_name is non-NULL, then use it as a restrictive filter
- * on items that are committed;  that is, don't commit anything unless
- * it's a member of changelist @a changelist_name.  After the commit
- * completes successfully, remove changelist associations from the
- * targets, unless @a keep_changelist is set.  If no items are
- * committed, return an error with @c SVN_ERR_UNKNOWN_CHANGELIST as
- * its root cause.
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items that are committed;
+ * that is, don't commit anything unless it's a member of one of those
+ * changelists.  After the commit completes successfully, remove
+ * changelist associations from the targets, unless @a
+ * keep_changelists is set.  If @a changelists is
+ * empty (or altogether @c NULL), no changelist filtering occurs.
  *
  * Use @a pool for any temporary allocations.
  *
@@ -1588,8 +1614,8 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *targets,
                    svn_depth_t depth,
                    svn_boolean_t keep_locks,
-                   svn_boolean_t keep_changelist,
-                   const char *changelist_name,
+                   svn_boolean_t keep_changelists,
+                   const apr_array_header_t *changelists,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
@@ -1673,6 +1699,12 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
  * definition, and with @c svn_wc_notify_status_completed
  * after each.
  *
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items whose statuses are
+ * reported; that is, don't report status about any item unless
+ * it's a member of one of those changelists.  If @a changelists is
+ * empty (or altogether @c NULL), no changelist filtering occurs.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
@@ -1686,13 +1718,15 @@ svn_client_status3(svn_revnum_t *result_rev,
                    svn_boolean_t update,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_externals,
+                   const apr_array_header_t *changelists,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 /**
- * Like svn_client_status3(), except with @a recurse instead of @a depth.
- * If @a recurse is TRUE, behave as if for @c svn_depth_infinity; else
- * if @a recurse is FALSE, behave as if for @c svn_depth_immediates.
+ * Like svn_client_status3(), except with @a changelists passed as @c
+ * NULL, and with @a recurse instead of @a depth.  If @a recurse is
+ * TRUE, behave as if for @c svn_depth_infinity; else if @a recurse is
+ * FALSE, behave as if for @c svn_depth_immediates.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -1797,7 +1831,7 @@ svn_client_log4(const apr_array_header_t *targets,
                 svn_boolean_t discover_changed_paths,
                 svn_boolean_t strict_node_history,
                 svn_boolean_t include_merged_revisions,
-                apr_array_header_t *revprops,
+                const apr_array_header_t *revprops,
                 svn_log_entry_receiver_t receiver,
                 void *receiver_baton,
                 svn_client_ctx_t *ctx,
@@ -2040,6 +2074,15 @@ svn_client_blame(const char *path_or_url,
  * The authentication baton cached in @a ctx is used to communicate with
  * the repository.
  *
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items whose differences are
+ * reported; that is, don't generate diffs about any item unless
+ * it's a member of one of those changelists.  If @a changelists is
+ * empty (or altogether @c NULL), no changelist filtering occurs.
+ *
+ * @note Changelist filtering only applies to diffs in which at least
+ * one side of the diff represents working copy data.
+ *
  * @note @a header_encoding doesn't affect headers generated by external
  * diff programs.
  *
@@ -2050,49 +2093,52 @@ svn_client_blame(const char *path_or_url,
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_client_diff4(const apr_array_header_t *diff_options,
-                              const char *path1,
-                              const svn_opt_revision_t *revision1,
-                              const char *path2,
-                              const svn_opt_revision_t *revision2,
-                              const char *relative_to_dir,
-                              svn_depth_t depth,
-                              svn_boolean_t ignore_ancestry,
-                              svn_boolean_t no_diff_deleted,
-                              svn_boolean_t ignore_content_type,
-                              svn_boolean_t svnpatch_format,
-                              const char *header_encoding,
-                              apr_file_t *outfile,
-                              apr_file_t *errfile,
-                              svn_client_ctx_t *ctx,
-                              apr_pool_t *pool);
+svn_error_t *
+svn_client_diff4(const apr_array_header_t *diff_options,
+                 const char *path1,
+                 const svn_opt_revision_t *revision1,
+                 const char *path2,
+                 const svn_opt_revision_t *revision2,
+                 const char *relative_to_dir,
+                 svn_depth_t depth,
+                 svn_boolean_t ignore_ancestry,
+                 svn_boolean_t no_diff_deleted,
+                 svn_boolean_t ignore_content_type,
+                 svn_boolean_t svnpatch_format,
+                 const char *header_encoding,
+                 apr_file_t *outfile,
+                 apr_file_t *errfile,
+                 const apr_array_header_t *changelists,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
 
 
 /**
- * Similar to svn_client_diff4(), but with @a depth set according to
- * @a recurse: if @a recurse is TRUE, set @a depth to @c
- * svn_depth_infinity, if @a recurse is FALSE, set @a depth to @c
- * svn_depth_empty.  @a svnpatch_format is set to @c FALSE to disable
- * any svnpatch format diff to take place.
+ * Similar to svn_client_diff4(), but with @a changelists passed as @c
+ * NULL, and @a depth set according to @a recurse: if @a recurse is
+ * TRUE, set @a depth to @c svn_depth_infinity, if @a recurse is
+ * FALSE, set @a depth to @c svn_depth_empty.  @a svnpatch_format is set
+ * to @c FALSE to keep svnpatch format diff to occur.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  *
  * @since New in 1.3.
  */
-svn_error_t *svn_client_diff3(const apr_array_header_t *diff_options,
-                              const char *path1,
-                              const svn_opt_revision_t *revision1,
-                              const char *path2,
-                              const svn_opt_revision_t *revision2,
-                              svn_boolean_t recurse,
-                              svn_boolean_t ignore_ancestry,
-                              svn_boolean_t no_diff_deleted,
-                              svn_boolean_t ignore_content_type,
-                              const char *header_encoding,
-                              apr_file_t *outfile,
-                              apr_file_t *errfile,
-                              svn_client_ctx_t *ctx,
-                              apr_pool_t *pool);
+svn_error_t *
+svn_client_diff3(const apr_array_header_t *diff_options,
+                 const char *path1,
+                 const svn_opt_revision_t *revision1,
+                 const char *path2,
+                 const svn_opt_revision_t *revision2,
+                 svn_boolean_t recurse,
+                 svn_boolean_t ignore_ancestry,
+                 svn_boolean_t no_diff_deleted,
+                 svn_boolean_t ignore_content_type,
+                 const char *header_encoding,
+                 apr_file_t *outfile,
+                 apr_file_t *errfile,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
 
 
 /**
@@ -2103,19 +2149,20 @@ svn_error_t *svn_client_diff3(const apr_array_header_t *diff_options,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_client_diff2(const apr_array_header_t *diff_options,
-                              const char *path1,
-                              const svn_opt_revision_t *revision1,
-                              const char *path2,
-                              const svn_opt_revision_t *revision2,
-                              svn_boolean_t recurse,
-                              svn_boolean_t ignore_ancestry,
-                              svn_boolean_t no_diff_deleted,
-                              svn_boolean_t ignore_content_type,
-                              apr_file_t *outfile,
-                              apr_file_t *errfile,
-                              svn_client_ctx_t *ctx,
-                              apr_pool_t *pool);
+svn_error_t *
+svn_client_diff2(const apr_array_header_t *diff_options,
+                 const char *path1,
+                 const svn_opt_revision_t *revision1,
+                 const char *path2,
+                 const svn_opt_revision_t *revision2,
+                 svn_boolean_t recurse,
+                 svn_boolean_t ignore_ancestry,
+                 svn_boolean_t no_diff_deleted,
+                 svn_boolean_t ignore_content_type,
+                 apr_file_t *outfile,
+                 apr_file_t *errfile,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
 
 /**
  * Similar to svn_client_diff2(), but with @a ignore_content_type
@@ -2123,18 +2170,19 @@ svn_error_t *svn_client_diff2(const apr_array_header_t *diff_options,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
-svn_error_t *svn_client_diff(const apr_array_header_t *diff_options,
-                             const char *path1,
-                             const svn_opt_revision_t *revision1,
-                             const char *path2,
-                             const svn_opt_revision_t *revision2,
-                             svn_boolean_t recurse,
-                             svn_boolean_t ignore_ancestry,
-                             svn_boolean_t no_diff_deleted,
-                             apr_file_t *outfile,
-                             apr_file_t *errfile,
-                             svn_client_ctx_t *ctx,
-                             apr_pool_t *pool);
+svn_error_t *
+svn_client_diff(const apr_array_header_t *diff_options,
+                const char *path1,
+                const svn_opt_revision_t *revision1,
+                const char *path2,
+                const svn_opt_revision_t *revision2,
+                svn_boolean_t recurse,
+                svn_boolean_t ignore_ancestry,
+                svn_boolean_t no_diff_deleted,
+                apr_file_t *outfile,
+                apr_file_t *errfile,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
 
 /**
  * Produce diff output which describes the delta between the
@@ -2150,48 +2198,51 @@ svn_error_t *svn_client_diff(const apr_array_header_t *diff_options,
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_client_diff_peg4(const apr_array_header_t *diff_options,
-                                  const char *path,
-                                  const svn_opt_revision_t *peg_revision,
-                                  const svn_opt_revision_t *start_revision,
-                                  const svn_opt_revision_t *end_revision,
-                                  const char *relative_to_dir,
-                                  svn_depth_t depth,
-                                  svn_boolean_t ignore_ancestry,
-                                  svn_boolean_t no_diff_deleted,
-                                  svn_boolean_t ignore_content_type,
-                                  svn_boolean_t svnpatch_format,
-                                  const char *header_encoding,
-                                  apr_file_t *outfile,
-                                  apr_file_t *errfile,
-                                  svn_client_ctx_t *ctx,
-                                  apr_pool_t *pool);
+svn_error_t *
+svn_client_diff_peg4(const apr_array_header_t *diff_options,
+                     const char *path,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *start_revision,
+                     const svn_opt_revision_t *end_revision,
+                     const char *relative_to_dir,
+                     svn_depth_t depth,
+                     svn_boolean_t ignore_ancestry,
+                     svn_boolean_t no_diff_deleted,
+                     svn_boolean_t ignore_content_type,
+                     svn_boolean_t svnpatch_format,
+                     const char *header_encoding,
+                     apr_file_t *outfile,
+                     apr_file_t *errfile,
+                     const apr_array_header_t *changelists,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool);
 
 /**
- * Similar to svn_client_diff_peg4(), but with @a depth set according
- * to @a recurse: if @a recurse is TRUE, set @a depth to
- * @c svn_depth_infinity, if @a recurse is FALSE, set @a depth to
- * @c svn_depth_files.  @a svnpatch_format is set to @c FALSE to disable
- * any svnpatch format diff to take place.
+ * Similar to svn_client_diff_peg4(), but with @a changelists passed
+ * as @c NULL, and @a depth set according to @a recurse: if @a recurse
+ * is TRUE, set @a depth to @c svn_depth_infinity, if @a recurse is
+ * FALSE, set @a depth to @c svn_depth_files.  @a svnpatch_format is set
+ * to @c FALSE to keep svnpatch format diff to occur.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  *
  * @since New in 1.3.
  */
-svn_error_t *svn_client_diff_peg3(const apr_array_header_t *diff_options,
-                                  const char *path,
-                                  const svn_opt_revision_t *peg_revision,
-                                  const svn_opt_revision_t *start_revision,
-                                  const svn_opt_revision_t *end_revision,
-                                  svn_boolean_t recurse,
-                                  svn_boolean_t ignore_ancestry,
-                                  svn_boolean_t no_diff_deleted,
-                                  svn_boolean_t ignore_content_type,
-                                  const char *header_encoding,
-                                  apr_file_t *outfile,
-                                  apr_file_t *errfile,
-                                  svn_client_ctx_t *ctx,
-                                  apr_pool_t *pool);
+svn_error_t *
+svn_client_diff_peg3(const apr_array_header_t *diff_options,
+                     const char *path,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *start_revision,
+                     const svn_opt_revision_t *end_revision,
+                     svn_boolean_t recurse,
+                     svn_boolean_t ignore_ancestry,
+                     svn_boolean_t no_diff_deleted,
+                     svn_boolean_t ignore_content_type,
+                     const char *header_encoding,
+                     apr_file_t *outfile,
+                     apr_file_t *errfile,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool);
 
 /**
  * Similar to svn_client_diff_peg3(), but with @a header_encoding set to
@@ -2201,19 +2252,20 @@ svn_error_t *svn_client_diff_peg3(const apr_array_header_t *diff_options,
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_client_diff_peg2(const apr_array_header_t *diff_options,
-                                  const char *path,
-                                  const svn_opt_revision_t *peg_revision,
-                                  const svn_opt_revision_t *start_revision,
-                                  const svn_opt_revision_t *end_revision,
-                                  svn_boolean_t recurse,
-                                  svn_boolean_t ignore_ancestry,
-                                  svn_boolean_t no_diff_deleted,
-                                  svn_boolean_t ignore_content_type,
-                                  apr_file_t *outfile,
-                                  apr_file_t *errfile,
-                                  svn_client_ctx_t *ctx,
-                                  apr_pool_t *pool);
+svn_error_t *
+svn_client_diff_peg2(const apr_array_header_t *diff_options,
+                     const char *path,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *start_revision,
+                     const svn_opt_revision_t *end_revision,
+                     svn_boolean_t recurse,
+                     svn_boolean_t ignore_ancestry,
+                     svn_boolean_t no_diff_deleted,
+                     svn_boolean_t ignore_content_type,
+                     apr_file_t *outfile,
+                     apr_file_t *errfile,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool);
 
 /**
  * Similar to svn_client_diff_peg2(), but with @a ignore_content_type
@@ -2222,18 +2274,19 @@ svn_error_t *svn_client_diff_peg2(const apr_array_header_t *diff_options,
  * @since New in 1.1.
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
-svn_error_t *svn_client_diff_peg(const apr_array_header_t *diff_options,
-                                 const char *path,
-                                 const svn_opt_revision_t *peg_revision,
-                                 const svn_opt_revision_t *start_revision,
-                                 const svn_opt_revision_t *end_revision,
-                                 svn_boolean_t recurse,
-                                 svn_boolean_t ignore_ancestry,
-                                 svn_boolean_t no_diff_deleted,
-                                 apr_file_t *outfile,
-                                 apr_file_t *errfile,
-                                 svn_client_ctx_t *ctx,
-                                 apr_pool_t *pool);
+svn_error_t *
+svn_client_diff_peg(const apr_array_header_t *diff_options,
+                    const char *path,
+                    const svn_opt_revision_t *peg_revision,
+                    const svn_opt_revision_t *start_revision,
+                    const svn_opt_revision_t *end_revision,
+                    svn_boolean_t recurse,
+                    svn_boolean_t ignore_ancestry,
+                    svn_boolean_t no_diff_deleted,
+                    apr_file_t *outfile,
+                    apr_file_t *errfile,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
 
 /**
  * Produce a diff summary which lists the changed items between
@@ -2258,16 +2311,17 @@ svn_client_diff_summarize2(const char *path1,
                            const svn_opt_revision_t *revision2,
                            svn_depth_t depth,
                            svn_boolean_t ignore_ancestry,
+                           const apr_array_header_t *changelists,
                            svn_client_diff_summarize_func_t summarize_func,
                            void *summarize_baton,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *pool);
 
 /**
- * Similar to svn_client_diff_summarize2(), but with @a depth set
- * according to @a recurse: if @a recurse is TRUE, set @a depth to
- * @c svn_depth_infinity, if @a recurse is FALSE, set @a depth to
- * @c svn_depth_files.
+ * Similar to svn_client_diff_summarize2(), but with @a changelists
+ * passed as @c NULL, and @a depth set according to @a recurse: if @a
+ * recurse is TRUE, set @a depth to @c svn_depth_infinity, if @a
+ * recurse is FALSE, set @a depth to @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  *
@@ -2312,16 +2366,18 @@ svn_client_diff_summarize_peg2(const char *path,
                                const svn_opt_revision_t *end_revision,
                                svn_depth_t depth,
                                svn_boolean_t ignore_ancestry,
+                               const apr_array_header_t *changelists,
                                svn_client_diff_summarize_func_t summarize_func,
                                void *summarize_baton,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *pool);
 
 /**
- * Similar to svn_client_diff_summarize_peg2(), but with @a depth set
- * according to @a recurse: if @a recurse is TRUE, set @a depth to
- * @c svn_depth_infinity, if @a recurse is FALSE, set @a depth to
- * @c svn_depth_files.
+ * Similar to svn_client_diff_summarize_peg2(), but with @a
+ * changelists passed as @c NULL, and @a depth set according to @a
+ * recurse: if @a recurse is TRUE, set @a depth to @c
+ * svn_depth_infinity, if @a recurse is FALSE, set @a depth to @c
+ * svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  *
@@ -2464,6 +2520,31 @@ svn_client_merge(const char *source1,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
+
+
+/**
+ * Perform a reintegration merge of @a source into @target_wc_path.
+ * @a target_wc_path must be a single-revision, @c svn_depth_infinity,
+ * pristine, unswitched working copy -- in other words, it must
+ * reflect a single revision tree, the "target".  The mergeinfo on @a
+ * source must reflect that all of the target has been merged into it.
+ * Then this behaves like a merge with svn_client_merge3() from the
+ * target's URL to the source.
+ *
+ * All other options are handled identically to svn_client_merge3().
+ * The depth of the merge is always @c svn_depth_infinity.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_merge_reintegrate(const char *source,
+                             const svn_opt_revision_t *peg_revision,
+                             const char *target_wcpath,
+                             svn_boolean_t force,
+                             svn_boolean_t dry_run,
+                             const apr_array_header_t *merge_options,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *pool);
 
 /**
  * Merge the changes between the filesystem object @a source in peg
@@ -2680,6 +2761,12 @@ svn_client_relocate(const char *dir,
  * properties on immediate subdirectories; else if @c svn_depth_infinity,
  * revert path and everything under it fully recursively.
  *
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items reverted; that is,
+ * don't revert any item unless it's a member of one of those
+ * changelists.  If @a changelists is empty (or altogether @c NULL),
+ * no changelist filtering occurs.
+ *
  * If @a ctx->notify_func2 is non-NULL, then for each item reverted,
  * call @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of
  * the reverted item.
@@ -2693,14 +2780,16 @@ svn_client_relocate(const char *dir,
 svn_error_t *
 svn_client_revert2(const apr_array_header_t *paths,
                    svn_depth_t depth,
+                   const apr_array_header_t *changelists,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 
 /**
- * Similar to svn_client_revert2(), but with @a depth set according to
- * @a recurse: if @a recurse is TRUE, @a depth is @c svn_depth_infinity,
- * else if @a recurse is FALSE, @a depth is @c svn_depth_empty.
+ * Similar to svn_client_revert2(), but with @a changelists passed as
+ * @c NULL, and @a depth set according to @a recurse: if @a recurse is
+ * TRUE, @a depth is @c svn_depth_infinity, else if @a recurse is
+ * FALSE, @a depth is @c svn_depth_empty.
  *
  * @note Most APIs map @a recurse==FALSE to @a depth==svn_depth_files;
  * revert is deliberately different.
@@ -2745,12 +2834,18 @@ svn_client_resolved(const char *path,
  * if any); if @c svn_depth_infinity, resolve @a path and every
  * conflicted file or directory anywhere beneath it.
  *
- * If @a conflict_choice is svn_wc_conflict_choose_base, resolve the
+ * If @a conflict_choice is @c svn_wc_conflict_choose_base, resolve the
  * conflict with the old file contents; if
- * svn_wc_conflict_choose_mine, use the original working contents;
- * if svn_wc_conflict_choose_theirs, the new contents; and if
- * svn_wc_conflict_choose_merged, don't change the contents at all,
- * just remove the conflict status (i.e. pre-1.5 behavior).
+ * @c svn_wc_conflict_choose_mine_full, use the original working contents;
+ * if @c svn_wc_conflict_choose_theirs_full, the new contents; and if
+ * @c svn_wc_conflict_choose_merged, don't change the contents at all,
+ * just remove the conflict status, which is the pre-1.5 behavior.
+ *
+ * (@c svn_wc_conflict_choose_theirs and @c svn_wc_conflict_choose_mine
+ * are not yet implemented; the effect of passing one of those values
+ * as @a conflict_choice is currently undefined, which may or may not
+ * be an underhanded way of allowing real behaviors to be added for
+ * them later without revving this interface.)
  *
  * If @a path is not in a state of conflict to begin with, do nothing.
  * If @a path's conflict state is removed and @a ctx->notify_func2 is non-NULL,
@@ -3112,6 +3207,12 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
  * SVN_ERR_BAD_MIME_TYPE (if @a propname is "svn:mime-type", but @a
  * propval is not a valid mime-type).
  *
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items whose properties are
+ * set; that is, don't set properties on any item unless it's a member
+ * of one of those changelists.  If @a changelists is empty (or
+ * altogether @c NULL), no changelist filtering occurs.
+ *
  * If @a ctx->cancel_func is non-NULL, invoke it passing @a
  * ctx->cancel_baton at various places during the operation.
  *
@@ -3127,14 +3228,16 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
                     svn_depth_t depth,
                     svn_boolean_t skip_checks,
                     svn_revnum_t base_revision_for_url,
+                    const apr_array_header_t *changelists,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
 
 /**
  * Like svn_client_propset3(), but with @a base_revision_for_url
- * always @c SVN_INVALID_REVNUM; @a commit_info_p always NULL; and
- * @a depth set according to @a recurse: if @a recurse is TRUE,
- * @a depth is @c svn_depth_infinity, else @c svn_depth_empty.
+ * always @c SVN_INVALID_REVNUM; @a commit_info_p always @c NULL; @a
+ * changelists always @c NULL; and @a depth set according to @a
+ * recurse: if @a recurse is TRUE, @a depth is @c svn_depth_infinity,
+ * else @c svn_depth_empty.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -3220,28 +3323,16 @@ svn_client_revprop_set(const char *propname,
  * and all of its immediate children (both files and directories); if
  * @c svn_depth_infinity, from @a target and everything beneath it.
  *
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items whose properties are
+ * set; that is, don't set properties on any item unless it's a member
+ * of one of those changelists.  If @a changelists is empty (or
+ * altogether @c NULL), no changelist filtering occurs.
+ *
  * If error, don't touch @a *props, otherwise @a *props is a hash table
  * even if empty.
  *
  * @since New in 1.5.
- */
-svn_error_t *
-svn_client_propget4(apr_hash_t **props,
-                    const char *propname,
-                    const char *target,
-                    const svn_opt_revision_t *peg_revision,
-                    const svn_opt_revision_t *revision,
-                    svn_revnum_t *actual_revnum,
-                    svn_depth_t depth,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool);
-
-/**
- * Similar to svn_client_propget4(), but with @a depth set according
- * to @a recurse: if @a recurse is TRUE, then @a depth is
- * @c svn_depth_infinity, else @c svn_depth_empty.
- *
- * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_client_propget3(apr_hash_t **props,
@@ -3250,14 +3341,16 @@ svn_client_propget3(apr_hash_t **props,
                     const svn_opt_revision_t *peg_revision,
                     const svn_opt_revision_t *revision,
                     svn_revnum_t *actual_revnum,
-                    svn_boolean_t recurse,
+                    svn_depth_t depth,
+                    const apr_array_header_t *changelists,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
 
-
 /**
- * Similar to svn_client_propget3(), except that @a actual_revnum is
- * always @c NULL.
+ * Similar to svn_client_propget3(), except that @a actual_revnum and
+ * @a changelists are always @c NULL, and @a depth is set according to
+ * @a recurse: if @a recurse is TRUE, then @a depth is @c
+ * svn_depth_infinity, else @c svn_depth_empty.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
@@ -3332,6 +3425,12 @@ svn_client_revprop_get(const char *propname,
  * equivalent to @c svn_depth_empty.  All other values produce undefined
  * results.
  *
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items whose properties are
+ * set; that is, don't set properties on any item unless it's a member
+ * of one of those changelists.  If @a changelists is empty (or
+ * altogether @c NULL), no changelist filtering occurs.
+ *
  * If @a target is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
  *
  * @since New in 1.5.
@@ -3341,16 +3440,18 @@ svn_client_proplist3(const char *target,
                      const svn_opt_revision_t *peg_revision,
                      const svn_opt_revision_t *revision,
                      svn_depth_t depth,
+                     const apr_array_header_t *changelists,
                      svn_proplist_receiver_t receiver,
                      void *receiver_baton,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 
 /**
- * Similar to svn_client_proplist3(), except the properties are returned
- * as an array of @c svn_client_proplist_item_t * structures, instead of
- * by invoking the receiver function, and @a recurse is used instead of
- * a @c svn_depth_t parameter (FALSE corresponds to @c svn_depth_empty,
+ * Similar to svn_client_proplist3(), except the properties are
+ * returned as an array of @c svn_client_proplist_item_t * structures
+ * instead of by invoking the receiver function, there's no support
+ * for @a changelists filtering, and @a recurse is used instead of a
+ * @c svn_depth_t parameter (FALSE corresponds to @c svn_depth_empty,
  * and TRUE to @c svn_depth_infinity).
  *
  * @since New in 1.2.
@@ -3754,11 +3855,18 @@ svn_client_cat(svn_stream_t *out,
  */
 
 /**
- * Add each path in @a paths to changelist @a changelist.
+ * Add each path in @a paths (recursing to @a depth as necessary) to
+ * @a changelist.  If a path is already a member of another
+ * changelist, then remove it from the other changelist and add it to
+ * @a changelist.  (For now, a path cannot belong to two changelists
+ * at once.)
  *
- * If a path is already a member of another changelist, then remove it
- * from the other changelist and add it to @a changelist.  (For now, a path
- * cannot belong to two changelists at once.)
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items whose changelist
+ * assignments are adjusted; that is, don't tweak the changeset of any
+ * item unless it's currently a member of one of those changelists.
+ * If @a changelists is empty (or altogether @c NULL), no changelist
+ * filtering occurs.
  *
  * @note This metadata is purely a client-side "bookkeeping"
  * convenience, and is entirely managed by the working copy.
@@ -3768,17 +3876,22 @@ svn_client_cat(svn_stream_t *out,
 svn_error_t *
 svn_client_add_to_changelist(const apr_array_header_t *paths,
                              const char *changelist,
+                             svn_depth_t depth,
+                             const apr_array_header_t *changelists,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
 /**
- * Remove each path in @a paths from changelist @a changelist.
+ * Remove each path in @a paths (recursing to @a depth as necessary)
+ * from changelists to which they are currently assigned.
  *
- * If a path is not already a member of @a changelist, attempt to
- * throw a notification warning that the path has been skipped.
- *
- * If @a changelist is NULL, then be more lax: for each path, remove
- * it from whatever changelist it's already a member of.
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items whose changelist
+ * assignments are removed; that is, don't remove from a changeset any
+ * item unless it's currently a member of one of those changelists.
+ * If @a changelists is empty (or altogether @c NULL), all changelist
+ * assignments in and under each path in @a paths (to @a depth) will
+ * be removed.
  *
  * @note This metadata is purely a client-side "bookkeeping"
  * convenience, and is entirely managed by the working copy.
@@ -3786,59 +3899,46 @@ svn_client_add_to_changelist(const apr_array_header_t *paths,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_remove_from_changelist(const apr_array_header_t *paths,
-                                  const char *changelist,
-                                  svn_client_ctx_t *ctx,
-                                  apr_pool_t *pool);
+svn_client_remove_from_changelists(const apr_array_header_t *paths,
+                                   svn_depth_t depth,
+                                   const apr_array_header_t *changelists,
+                                   svn_client_ctx_t *ctx,
+                                   apr_pool_t *pool);
 
 /**
- * Beginning at @a root_path, seek and discover every path which
- * belongs to @a changelist_name.  Return the list of paths in @a
- * *paths.  If no matching paths are found, return an empty array.
- *
- * If @a ctx->cancel_func is non-NULL, invoke it passing @a ctx->cancel_baton
- * during the recursive walk.
- *
- * @since New in 1.5.
- */
-svn_error_t *
-svn_client_get_changelist(apr_array_header_t **paths,
-                          const char *changelist_name,
-                          const char *root_path,
-                          svn_client_ctx_t *ctx,
-                          apr_pool_t *pool);
-
-/**
- * The callback type used by @a svn_client_get_changelist_streamy.
+ * The callback type used by @a svn_client_get_changelist
  *
  * On each invocation, @a path is a newly discovered member of the
  * changelist, and @a baton is a private function closure.
  *
  * @since New in 1.5.
  */
-typedef svn_error_t *(*svn_changelist_receiver_t)
-  (void *baton,
-   const char *path);
+typedef svn_error_t *(*svn_changelist_receiver_t) (void *baton,
+                                                   const char *path,
+                                                   const char *changelist,
+                                                   apr_pool_t *pool);
 
 /**
- * A "streamy" version of @a svn_client_get_changelist:
+ * Beginning at @a path, crawl to @a depth to discover every path in
+ * or under @a path which belongs to one of the changelists in @a
+ * changelists (an array of <tt>const char *</tt> changelist names).
+ * If @a changelists is @c null, discover paths with any changelist.
+ * Call @a callback_func (with @a callback_baton) each time a
+ * changelist-having path is discovered.
  *
- * Beginning at @a root_path, seek and discover every path which
- * belongs to @a changelist_name.  Call @a callback_func (with @a
- * callback_baton) each time a changelist member is found.
- *
- * If @a ctx->cancel_func is non-NULL, invoke it passing @a ctx->cancel_baton
- * during the recursive walk.
+ * If @a ctx->cancel_func is not @c null, invoke it passing @a
+ * ctx->cancel_baton during the recursive walk.
  *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_get_changelist_streamy(svn_changelist_receiver_t callback_func,
-                                  void *callback_baton,
-                                  const char *changelist_name,
-                                  const char *root_path,
-                                  svn_client_ctx_t *ctx,
-                                  apr_pool_t *pool);
+svn_client_get_changelists(const char *path,
+                           const apr_array_header_t *changelists,
+                           svn_depth_t depth,
+                           svn_changelist_receiver_t callback_func,
+                           void *callback_baton,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *pool);
 
 /** @} */
 
@@ -4074,6 +4174,12 @@ svn_info_dup(const svn_info_t *info, apr_pool_t *pool);
  * recurse fully, invoking @a receiver on @a path_or_url and
  * everything beneath it.
  *
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items whose info is
+ * reported; that is, don't report info about any item unless
+ * it's a member of one of those changelists.  If @a changelists is
+ * empty (or altogether @c NULL), no changelist filtering occurs.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
@@ -4083,13 +4189,14 @@ svn_client_info2(const char *path_or_url,
                  svn_info_receiver_t receiver,
                  void *receiver_baton,
                  svn_depth_t depth,
+                 const apr_array_header_t *changelists,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
 /**
- * Similar to svn_client_info2() but with @a depth set according to
- * @a recurse: if @a recurse is TRUE, @a depth is @c svn_depth_infinity,
- * else @c svn_depth_empty.
+ * Similar to svn_client_info2() but with @a changelists passed as @c
+ * NULL, and @a depth set according to @a recurse: if @a recurse is
+ * TRUE, @a depth is @c svn_depth_infinity, else @c svn_depth_empty.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */

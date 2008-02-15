@@ -1157,7 +1157,7 @@ set_prop_merge_state(svn_wc_notify_state_t *state,
       svn_wc_notify_state_merged,
       svn_wc_notify_state_obstructed,
       svn_wc_notify_state_conflicted };
-  int state_pos, i;
+  int state_pos = 0, i;
 
   if (! state)
     return;
@@ -1405,13 +1405,18 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
           *conflict_remains = TRUE;
           break;
         }
-      case svn_wc_conflict_choose_mine:
+      case svn_wc_conflict_choose_mine_full:
         {
           /* No need to change working_props; it already contains working_val */
           *conflict_remains = FALSE;
           break;
         }
-      case svn_wc_conflict_choose_theirs:
+      /* I think _mine_full and _theirs_full are appropriate for prop
+         behavior as well as the text behavior.  There should even be
+         analogous behaviors for _mine and _theirs when those are
+         ready, namely: fold in all non-conflicting prop changes, and
+         then choose _mine side or _theirs side for conflicting ones. */
+      case svn_wc_conflict_choose_theirs_full:
         {
           apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, new_val);
           *conflict_remains = FALSE;
@@ -2372,25 +2377,29 @@ get_file_for_validation(const svn_string_t **mime_type,
                         apr_pool_t *pool)
 {
   struct getter_baton *gb = baton;
-  apr_file_t *fp;
-  svn_stream_t *read_stream;
 
-  SVN_ERR(svn_wc_prop_get(mime_type, SVN_PROP_MIME_TYPE,
-                          gb->path, gb->adm_access, pool));
+  if (mime_type)
+    SVN_ERR(svn_wc_prop_get(mime_type, SVN_PROP_MIME_TYPE,
+                            gb->path, gb->adm_access, pool));
 
-  /* Open PATH. */
-  SVN_ERR(svn_io_file_open(&fp, gb->path,
-                           (APR_READ | APR_BINARY | APR_BUFFERED),
-                           0, pool));
+  if (stream) {
+    apr_file_t *fp;
+    svn_stream_t *read_stream;
 
-  /* Get a READ_STREAM from the file we just opened. */
-  read_stream = svn_stream_from_aprfile(fp, pool);
+    /* Open PATH. */
+    SVN_ERR(svn_io_file_open(&fp, gb->path,
+                             (APR_READ | APR_BINARY | APR_BUFFERED),
+                             0, pool));
 
-  /* Copy from the file into the translating stream. */
-  SVN_ERR(svn_stream_copy(read_stream, stream, pool));
+    /* Get a READ_STREAM from the file we just opened. */
+    read_stream = svn_stream_from_aprfile(fp, pool);
 
-  SVN_ERR(svn_stream_close(read_stream));
-  SVN_ERR(svn_io_file_close(fp, pool));
+    /* Copy from the file into the translating stream. */
+    SVN_ERR(svn_stream_copy(read_stream, stream, pool));
+
+    SVN_ERR(svn_stream_close(read_stream));
+    SVN_ERR(svn_io_file_close(fp, pool));
+  }
 
   return SVN_NO_ERROR;
 }
@@ -2408,15 +2417,26 @@ validate_eol_prop_against_file(const char *path,
   const char *path_display
     = svn_path_is_url(path) ? path : svn_path_local_style(path, pool);
 
-  /* The "getter" will do a newline translation.  All we really care
-     about here is whether or not the function fails on inconsistent
-     line endings.  The function is "translating" to an empty stream.
-     This is sneeeeeeeeeeeaky. */
+  /* First just ask the "getter" for the MIME type. */
+  SVN_ERR(getter(&mime_type, NULL, getter_baton, pool));
+
+  /* See if this file has been determined to be binary. */
+  if (mime_type && svn_mime_type_is_binary(mime_type->data))
+    return svn_error_createf
+      (SVN_ERR_ILLEGAL_TARGET, NULL,
+       _("File '%s' has binary mime type property"),
+       path_display);
+
+  /* Now ask the getter for the contents of the file; this will do a
+     newline translation.  All we really care about here is whether or
+     not the function fails on inconsistent line endings.  The
+     function is "translating" to an empty stream.  This is
+     sneeeeeeeeeeeaky. */
   translating_stream = svn_subst_stream_translated(svn_stream_empty(pool),
                                                    "", FALSE, NULL, FALSE,
                                                    pool);
 
-  err = getter(&mime_type, translating_stream, getter_baton, pool);
+  err = getter(NULL, translating_stream, getter_baton, pool);
 
   if (!err)
     err = svn_stream_close(translating_stream);
@@ -2427,13 +2447,6 @@ validate_eol_prop_against_file(const char *path,
                              path_display);
   else if (err)
     return err;
-
-  /* See if this file has been determined to be binary. */
-  if (mime_type && svn_mime_type_is_binary(mime_type->data))
-    return svn_error_createf
-      (SVN_ERR_ILLEGAL_TARGET, NULL,
-       _("File '%s' has binary mime type property"),
-       path_display);
 
   return SVN_NO_ERROR;
 }

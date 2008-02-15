@@ -27,7 +27,7 @@ Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
-from svntest.main import SVN_PROP_MERGE_INFO
+from svntest.main import SVN_PROP_MERGEINFO
 
 ### Bummer.  It would be really nice to have easy access to the URL
 ### member of our entries files so that switches could be testing by
@@ -181,7 +181,6 @@ def commit_routine_switching(wc_dir, verify):
   svntest.actions.run_and_verify_commit(
     wc_dir, None, None,
     "svn: Cannot commit both .* as they refer to the same URL$",
-    None, None, None, None,
     wc_dir)
 
   # Okay, that all taken care of, let's revert the A/D/G/pi path and
@@ -211,8 +210,7 @@ def commit_routine_switching(wc_dir, verify):
     svntest.actions.run_and_verify_commit(wc_dir,
                                           expected_output,
                                           expected_status,
-                                          None, None, None, None, None,
-                                          wc_dir)
+                                          None, wc_dir)
   else:
     svntest.main.run_svn(None,
                          'ci', '-m', 'log msg', wc_dir)
@@ -227,7 +225,7 @@ def commit_routine_switching(wc_dir, verify):
 def routine_switching(sbox):
   "test some basic switching operations"
 
-  sbox.build()
+  sbox.build(read_only = True)
 
   # Setup (and verify) some switched things
   do_routine_switching(sbox.wc_dir, sbox.repo_url, 1)
@@ -531,8 +529,7 @@ def relocate_deleted_missing_copied(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Remove A/B/F to create a missing entry
   svntest.main.safe_rmtree(os.path.join(wc_dir, 'A', 'B', 'F'))
@@ -592,8 +589,7 @@ def relocate_deleted_missing_copied(sbox):
                         status='  ', wc_rev='3', copied=None)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
 
 #----------------------------------------------------------------------
@@ -637,7 +633,7 @@ def delete_subdir(sbox):
 
 def file_dir_file(sbox):
   "switch a file to a dir and back to the file"
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   file_path = os.path.join(wc_dir, 'iota')
@@ -854,8 +850,7 @@ def obstructed_switch(sbox):
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   svntest.main.file_append(alpha_path, "hello")
   out, err = svntest.main.run_svn(1,
@@ -929,19 +924,17 @@ def commit_mods_below_switch(sbox):
   # with "'A/C/E' is missing or not locked"
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        C_path, D_path)
+                                        None, C_path, D_path)
 
 def relocate_beyond_repos_root(sbox):
   "relocate with prefixes longer than repo root"
-  sbox.build()
+  sbox.build(read_only = True)
 
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
   repo_url = sbox.repo_url
   other_repo_dir, other_repo_url = sbox.add_repo_path('other')
   svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
-  svntest.main.safe_rmtree(repo_dir, 1)
 
   A_url = repo_url + "/A"
   other_A_url = other_repo_url + "/A"
@@ -1011,8 +1004,7 @@ def refresh_read_only_attribute(sbox):
   expected_status.tweak('A/mu', wc_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        mu_path)
+                                        None, mu_path)
 
   # The file on which svn:needs-lock was set is now expected to be read-only.
   if os.access(mu_path, os.W_OK):
@@ -1130,8 +1122,7 @@ def relocate_and_propset(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Now gamma should be marked as `deleted' under the hood, at
   # revision 2.  Meanwhile, A/D is still lagging at revision 1.
@@ -1144,15 +1135,13 @@ def relocate_and_propset(sbox):
                                         None,
                                         None,
                                         "[Oo]ut.of.date",
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 #----------------------------------------------------------------------
 
 def forced_switch(sbox):
   "forced switch tolerates obstructions to adds"
-  sbox.build()
+  sbox.build(read_only = True)
 
   # Dir obstruction
   G_path = os.path.join(sbox.wc_dir, 'A', 'B', 'F', 'G')
@@ -1300,7 +1289,7 @@ def forced_switch_failures(sbox):
 
 def switch_with_obstructing_local_adds(sbox):
   "switch tolerates WC adds"
-  sbox.build()
+  sbox.build(read_only = True)
 
   # Dir obstruction scheduled for addition without history.
   G_path = os.path.join(sbox.wc_dir, 'A', 'B', 'F', 'G')
@@ -1399,7 +1388,7 @@ def switch_with_obstructing_local_adds(sbox):
 
 def switch_scheduled_add(sbox):
   "switch a scheduled-add file"
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   file_path = os.path.join(wc_dir, 'stub_file')
@@ -1492,7 +1481,6 @@ def mergeinfo_switch_elision(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None, None, None,
                                         wc_dir)
 
   # Make some changes under A/B
@@ -1503,8 +1491,7 @@ def mergeinfo_switch_elision(sbox):
                                      {'A/B/E/beta' : Item(verb='Sending')})
   expected_status.tweak('A/B/E/beta', wc_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # r4 - modify and commit A/B/E/alpha
   svntest.main.file_write(alpha_path, "New content")
@@ -1512,8 +1499,7 @@ def mergeinfo_switch_elision(sbox):
                                      {'A/B/E/alpha' : Item(verb='Sending')})
   expected_status.tweak('A/B/E/alpha', wc_rev=4)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Merge r2:4 into A/B_COPY_1
   short_B_COPY_1_path = shorten_path_kludge(B_COPY_1_path)
@@ -1530,7 +1516,7 @@ def mergeinfo_switch_elision(sbox):
     'F'       : Item(status='  ', wc_rev=2),
     })
   expected_merge_disk = svntest.wc.State('', {
-    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:3-4'}),
+    ''        : Item(props={SVN_PROP_MERGEINFO : '/A/B:3-4'}),
     'lambda'  : Item("This is the file 'lambda'.\n"),
     'E'       : Item(),
     'E/alpha' : Item("New content"),
@@ -1565,8 +1551,7 @@ def mergeinfo_switch_elision(sbox):
   expected_status.tweak('A/B_COPY_1/E/beta',  wc_rev=5)
   expected_status.tweak('A/B_COPY_1/lambda',  wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, None, None,
-                                        None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Merge r2:4 into A/B_COPY_2/E
   short_E_COPY_2_path = shorten_path_kludge(E_COPY_2_path)
@@ -1580,7 +1565,7 @@ def mergeinfo_switch_elision(sbox):
     'beta'  : Item(status='M ', wc_rev=2),
     })
   expected_merge_disk = svntest.wc.State('', {
-    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:3-4'}),
+    ''        : Item(props={SVN_PROP_MERGEINFO : '/A/B/E:3-4'}),
     'alpha' : Item("New content"),
     'beta'  : Item("New content"),
     })
@@ -1615,14 +1600,14 @@ def mergeinfo_switch_elision(sbox):
   expected_disk.tweak("A/B/E/alpha", contents="New content")
   expected_disk.tweak("A/B/E/beta", contents="New content")
   expected_disk.add({
-    "A/B_COPY_1"         : Item(props={SVN_PROP_MERGE_INFO : '/A/B:3-4'}),
+    "A/B_COPY_1"         : Item(props={SVN_PROP_MERGEINFO : '/A/B:3-4'}),
     "A/B_COPY_1/E"       : Item(),
     "A/B_COPY_1/F"       : Item(),
     "A/B_COPY_1/lambda"  : Item("This is the file 'lambda'.\n"),
     "A/B_COPY_1/E/alpha" : Item("New content"),
     "A/B_COPY_1/E/beta"  : Item("New content"),
-    "A/B_COPY_2"         : Item(props={SVN_PROP_MERGE_INFO : '/A/B:3-4'}),
-    "A/B_COPY_2/E"       : Item(props={SVN_PROP_MERGE_INFO : '/A/B/E:3-4'}),
+    "A/B_COPY_2"         : Item(props={SVN_PROP_MERGEINFO : '/A/B:3-4'}),
+    "A/B_COPY_2/E"       : Item(props={SVN_PROP_MERGEINFO : '/A/B/E:3-4'}),
     "A/B_COPY_2/F"       : Item(),
     "A/B_COPY_2/lambda"  : Item("This is the file 'lambda'.\n"),
     "A/B_COPY_2/E/alpha" : Item("New content"),
@@ -1676,9 +1661,9 @@ def mergeinfo_switch_elision(sbox):
                                         None, None, None, None, None, 1)
 
   svntest.actions.run_and_verify_svn(None,
-                                     ["property '" + SVN_PROP_MERGE_INFO +
+                                     ["property '" + SVN_PROP_MERGEINFO +
                                       "' set on '" + lambda_path + "'" +
-                                      "\n"], [], 'ps', SVN_PROP_MERGE_INFO,
+                                      "\n"], [], 'ps', SVN_PROP_MERGEINFO,
                                      '/A/B/lambda:3-4', lambda_path)
 
   expected_output = svntest.wc.State(sbox.wc_dir, {
@@ -1686,7 +1671,7 @@ def mergeinfo_switch_elision(sbox):
     })
   expected_disk.tweak("A/B_COPY_1/lambda",
                       contents="This is the file 'lambda'.\n",
-                      props={SVN_PROP_MERGE_INFO : '/A/B/lambda:3-4'})
+                      props={SVN_PROP_MERGEINFO : '/A/B/lambda:3-4'})
   expected_status.tweak("A/B_COPY_1/lambda", switched=None, status=' M')
   svntest.actions.run_and_verify_switch(sbox.wc_dir,
                                         lambda_path,
@@ -1701,7 +1686,7 @@ def mergeinfo_switch_elision(sbox):
 def switch_with_depth(sbox):
   "basic tests to verify switch along with depth"
 
-  sbox.build()
+  sbox.build(read_only = True)
 
   # Form some paths and URLs required
   wc_dir = sbox.wc_dir
@@ -2074,7 +2059,7 @@ def switch_to_dir_with_peg_rev2(sbox):
 def switch_to_root(sbox):
   "switch a folder to the root of its repository"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   repo_url = sbox.repo_url
 

@@ -338,6 +338,12 @@ typedef struct svn_diff_file_options_t
   /** Whether to treat all end-of-line markers the same when comparing lines.
    * The default is @c FALSE. */
   svn_boolean_t ignore_eol_style;
+  /** Whether the '@@' lines of the unified diff output should include a prefix
+    * of the nearest preceding line that starts with a character that might be
+    * the initial character of a C language identifier.  The default is
+    * @c FALSE.
+    */
+  svn_boolean_t show_c_function;
 } svn_diff_file_options_t;
 
 /** Allocate a @c svn_diff_file_options_t structure in @a pool, initializing
@@ -484,10 +490,11 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
                               const char *modified_header,
                               const char *header_encoding,
                               const char *relative_to_dir,
+                              svn_boolean_t show_c_function,
                               apr_pool_t *pool);
 
 /** Similar to svn_diff_file_output_unified3(), but with @a relative_to_dir
- * set to NULL.
+ * set to NULL and @a show_c_function to false.
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */

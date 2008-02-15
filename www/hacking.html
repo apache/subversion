@@ -1027,12 +1027,12 @@ for portability to non-Unix platforms.</p>
 <li><p>Exceptions are stored in svn_error_t structures:</p>
 
 <pre>
-typedef struct svn_error
+typedef struct svn_error_t
 {
   apr_status_t apr_err;      /* APR error value, possibly SVN_ custom err */
   const char *message;       /* details from producer of error */
-  struct svn_error *child;   /* ptr to the error we "wrap" */
-  ap_pool_t *pool;           /* place to generate message strings from */
+  struct svn_error_t *child; /* ptr to the error we "wrap" */
+  apr_pool_t *pool;          /* place to generate message strings from */
   const char *file;          /* Only used iff SVN_DEBUG */
   long line;                 /* Only used iff SVN_DEBUG */
 } svn_error_t;
@@ -2094,7 +2094,7 @@ href="#lightweight-branches" >section on lightweight branches</a>, and
 this mail:</p>
 
 <pre>
-   <a href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=132746"
+   <a href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&amp;msgNo=132746"
 >http://subversion.tigris.org/servlets/ReadMsg?list=dev&amp;msgNo=132746
    From: Karl Fogel &lt;kfogel@red-bean.com&gt;
    To: dev@subversion.tigris.org
@@ -2753,7 +2753,7 @@ changes in every detail and have tested them."</p>
 <p>Before proposing a change in STATUS, you should try merging it onto
 the branch to ensure that it doesn't produce merge conflicts.  If
 conflicts occur, please create a new temporary branch from the release
-branch with your changed merged and the conflicts resolved.  The
+branch with your changes merged and the conflicts resolved.  The
 branch should be named A.B.x-rYYYY, where YYYY is the first revision
 of your change in the STATUS file.  Add a note in the STATUS file
 about the existence of the temporary branch.  If the change involves

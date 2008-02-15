@@ -410,10 +410,6 @@ class SvnFsTest < Test::Unit::TestCase
 
     yield(:create, [path, config])
 
-    assert_raises(Svn::Error::Cancelled) do
-      yield(:recover, [path], Proc.new{raise Svn::Error::Cancelled})
-    end
-
     assert_nothing_raised do
       yield(:recover, [path], Proc.new{})
     end
@@ -499,15 +495,6 @@ class SvnFsTest < Test::Unit::TestCase
     assert(!File.exist?(trunk_path))
     rev5 = ctx.commit(@wc_path).revision
     assert_equal({trunk_in_repos => "#{branch_in_repos}:2,4"},
-                 @fs.root.mergeinfo(trunk_in_repos))
-
-
-    new_mergeinfo_str = "#{branch_in_repos}:2"
-    @fs.transaction do |txn|
-      new_mergeinfo = Svn::Core::MergeInfo.parse(new_mergeinfo_str)
-      txn.root.change_mergeinfo(trunk_in_repos, new_mergeinfo)
-    end
-    assert_equal({trunk_in_repos => new_mergeinfo_str},
                  @fs.root.mergeinfo(trunk_in_repos))
   end
 end

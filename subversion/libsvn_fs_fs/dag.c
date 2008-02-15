@@ -118,6 +118,8 @@ copy_node_revision(node_revision_t *noderev,
   nr->predecessor_count = noderev->predecessor_count;
   nr->data_rep = svn_fs_fs__rep_copy(noderev->data_rep, pool);
   nr->prop_rep = svn_fs_fs__rep_copy(noderev->prop_rep, pool);
+  nr->mergeinfo_count = noderev->mergeinfo_count;
+  nr->has_mergeinfo = noderev->has_mergeinfo;
 
   if (noderev->created_path)
     nr->created_path = apr_pstrdup(pool, noderev->created_path);
@@ -236,6 +238,52 @@ svn_fs_fs__dag_get_predecessor_count(int *count,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_fs__dag_get_mergeinfo_count(apr_int64_t *count,
+                                   dag_node_t *node,
+                                   apr_pool_t *pool)
+{
+  node_revision_t *noderev;
+
+  SVN_ERR(get_node_revision(&noderev, node, pool));
+  *count = noderev->mergeinfo_count;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__dag_has_mergeinfo(svn_boolean_t *has_mergeinfo,
+                             dag_node_t *node,
+                             apr_pool_t *pool)
+{
+  node_revision_t *noderev;
+
+  SVN_ERR(get_node_revision(&noderev, node, pool));
+  *has_mergeinfo = noderev->has_mergeinfo;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__dag_has_descendants_with_mergeinfo(svn_boolean_t *do_they,
+                                              dag_node_t *node,
+                                              apr_pool_t *pool)
+{
+  node_revision_t *noderev;
+
+  if (node->kind != svn_node_dir)
+    {
+      *do_they = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(get_node_revision(&noderev, node, pool));
+  if (noderev->mergeinfo_count > 1)
+    *do_they = TRUE;
+  else if (noderev->mergeinfo_count == 1 && !noderev->has_mergeinfo)
+    *do_they = TRUE;
+  else
+    *do_they = FALSE;
+  return SVN_NO_ERROR;
+}
 
 
 /*** Directory node functions ***/
@@ -243,9 +291,8 @@ svn_fs_fs__dag_get_predecessor_count(int *count,
 /* Some of these are helpers for functions outside this section. */
 
 /* Set *ID_P to the node-id for entry NAME in PARENT.  If no such
-   entry, set *ID_P to NULL but do not error.  The node-id is not
-   necessarily allocated in POOL; the caller should copy if it
-   cares.  */
+   entry, set *ID_P to NULL but do not error.  The node-id is
+   allocated in POOL. */
 static svn_error_t *
 dir_entry_id_from_node(const svn_fs_id_t **id_p,
                        dag_node_t *parent,
@@ -254,14 +301,18 @@ dir_entry_id_from_node(const svn_fs_id_t **id_p,
 {
   apr_hash_t *entries;
   svn_fs_dirent_t *dirent;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
-  SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, parent, pool));
+  SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, parent, subpool, pool));
   if (entries)
     dirent = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
   else
     dirent = NULL;
 
-  *id_p = dirent ? dirent->id : NULL;
+  *id_p = dirent ? svn_fs_fs__id_copy(dirent->id, pool) : NULL;
+
+  svn_pool_destroy(subpool);
+
   return SVN_NO_ERROR;
 }
 
@@ -363,11 +414,12 @@ make_entry(dag_node_t **child_p,
 svn_error_t *
 svn_fs_fs__dag_dir_entries(apr_hash_t **entries,
                            dag_node_t *node,
-                           apr_pool_t *pool)
+                           apr_pool_t *pool,
+                           apr_pool_t *node_pool)
 {
   node_revision_t *noderev;
 
-  SVN_ERR(get_node_revision(&noderev, node, pool));
+  SVN_ERR(get_node_revision(&noderev, node, node_pool));
 
   if (noderev->kind != svn_node_dir)
     return svn_error_create(SVN_ERR_FS_NOT_DIRECTORY, NULL,
@@ -449,6 +501,89 @@ svn_fs_fs__dag_set_proplist(dag_node_t *node,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_fs_fs__dag_increment_mergeinfo_count(dag_node_t *node,
+                                         apr_int64_t increment,
+                                         apr_pool_t *pool)
+{
+  node_revision_t *noderev;
+
+  /* Sanity check: this node better be mutable! */
+  if (! svn_fs_fs__dag_check_mutable(node))
+    {
+      svn_string_t *idstr = svn_fs_fs__id_unparse(node->id, pool);
+      return svn_error_createf
+        (SVN_ERR_FS_NOT_MUTABLE, NULL,
+         "Can't increment mergeinfo count on *immutable* node-revision %s",
+         idstr->data);
+    }
+
+  if (increment == 0)
+    return SVN_NO_ERROR;
+
+  /* Go get a fresh NODE-REVISION for this node. */
+  SVN_ERR(get_node_revision(&noderev, node, pool));
+
+  noderev->mergeinfo_count += increment;
+  if (noderev->mergeinfo_count < 0)
+    {
+      svn_string_t *idstr = svn_fs_fs__id_unparse(node->id, pool);
+      return svn_error_createf
+        (SVN_ERR_FS_CORRUPT, NULL,
+         apr_psprintf(pool,
+                      _("Can't increment mergeinfo count on node-revision %%s "
+                        "to negative value %%%s"),
+                      APR_INT64_T_FMT),
+         idstr->data, noderev->mergeinfo_count);
+    }
+  if (noderev->mergeinfo_count > 1 && noderev->kind == svn_node_file)
+    {
+      svn_string_t *idstr = svn_fs_fs__id_unparse(node->id, pool);
+      return svn_error_createf
+        (SVN_ERR_FS_CORRUPT, NULL,
+         apr_psprintf(pool,
+                      _("Can't increment mergeinfo count on *file* "
+                        "node-revision %%s to %%%s (> 1)"),
+                      APR_INT64_T_FMT),
+         idstr->data, noderev->mergeinfo_count);
+    }
+
+  /* Flush it out. */
+  SVN_ERR(svn_fs_fs__put_node_revision(node->fs, noderev->id,
+                                       noderev, FALSE, pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__dag_set_has_mergeinfo(dag_node_t *node,
+                                 svn_boolean_t has_mergeinfo,
+                                 apr_pool_t *pool)
+{
+  node_revision_t *noderev;
+
+  /* Sanity check: this node better be mutable! */
+  if (! svn_fs_fs__dag_check_mutable(node))
+    {
+      svn_string_t *idstr = svn_fs_fs__id_unparse(node->id, pool);
+      return svn_error_createf
+        (SVN_ERR_FS_NOT_MUTABLE, NULL,
+         "Can't set mergeinfo flag on *immutable* node-revision %s",
+         idstr->data);
+    }
+
+  /* Go get a fresh NODE-REVISION for this node. */
+  SVN_ERR(get_node_revision(&noderev, node, pool));
+
+  noderev->has_mergeinfo = has_mergeinfo;
+
+  /* Flush it out. */
+  SVN_ERR(svn_fs_fs__put_node_revision(node->fs, noderev->id,
+                                       noderev, FALSE, pool));
+
+  return SVN_NO_ERROR;
+}
 
 
 /*** Roots. ***/
@@ -609,6 +744,7 @@ svn_fs_fs__dag_delete(dag_node_t *parent,
   svn_fs_t *fs = parent->fs;
   svn_fs_dirent_t *dirent;
   svn_fs_id_t *id;
+  apr_pool_t *subpool;
 
   /* Make sure parent is a directory. */
   if (parent->kind != svn_node_dir)
@@ -631,8 +767,10 @@ svn_fs_fs__dag_delete(dag_node_t *parent,
   /* Get a fresh NODE-REVISION for the parent node. */
   SVN_ERR(get_node_revision(&parent_noderev, parent, pool));
 
+  subpool = svn_pool_create(pool);
+
   /* Get a dirent hash for this directory. */
-  SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, parent_noderev, pool));
+  SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, parent_noderev, subpool));
 
   /* Find name in the ENTRIES hash. */
   dirent = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
@@ -645,9 +783,10 @@ svn_fs_fs__dag_delete(dag_node_t *parent,
       (SVN_ERR_FS_NO_SUCH_ENTRY, NULL,
        "Delete failed--directory has no entry '%s'", name);
 
-  /* Stash a copy of the ID, since dirent will become invalid during
-     svn_fs_fs__dag_delete_if_mutable. */
+  /* Copy the ID out of the subpool and release the rest of the
+     directory listing. */
   id = svn_fs_fs__id_copy(dirent->id, pool);
+  svn_pool_destroy(subpool);
 
   /* If mutable, remove it and any mutable children from db. */
   SVN_ERR(svn_fs_fs__dag_delete_if_mutable(parent->fs, id, pool));
@@ -703,8 +842,7 @@ svn_fs_fs__dag_delete_if_mutable(svn_fs_t *fs,
       apr_hash_index_t *hi;
 
       /* Loop over hash entries */
-      SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, node, pool));
-      entries = svn_fs_fs__copy_dir_entries(entries, pool);
+      SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, node, pool, pool));
       if (entries)
         {
           for (hi = apr_hash_first(pool, entries);

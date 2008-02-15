@@ -1481,9 +1481,10 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_hash_index_t *hi;
   const char *path, *info, *inherit_word;
   svn_mergeinfo_inheritance_t inherit;
+  svn_boolean_t include_descendants;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)w", &paths, &rev,
-                                 &inherit_word));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)wb", &paths, &rev,
+                                 &inherit_word, &include_descendants));
   inherit = svn_inheritance_from_word(inherit_word);
 
   /* Canonicalize the paths which mergeinfo has been requested for. */
@@ -1507,6 +1508,7 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_CMD_ERR(svn_repos_fs_get_mergeinfo(&mergeinfo, b->repos,
                                          canonical_paths, rev,
                                          inherit,
+                                         include_descendants,
                                          authz_check_access_cb_func(b), b,
                                          pool));
   if (mergeinfo != NULL && apr_hash_count(mergeinfo) > 0)
@@ -2603,10 +2605,9 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
                                         SVN_RA_SVN_CAP_SVNDIFF1,
                                         SVN_RA_SVN_CAP_ABSENT_ENTRIES,
                                         SVN_RA_SVN_CAP_COMMIT_REVPROPS,
-                                        SVN_RA_SVN_CAP_MERGEINFO,
                                         SVN_RA_SVN_CAP_DEPTH,
                                         SVN_RA_SVN_CAP_LOG_REVPROPS,
-                                        SVN_RA_SVN_CAP_PARTIAL_REPPLAY));
+                                        SVN_RA_SVN_CAP_PARTIAL_REPLAY));
 
   /* Read client response, which we assume to be in version 2 format:
    * version, capability list, and client URL; then we do an auth
@@ -2667,7 +2668,24 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
     }
 
   SVN_ERR(svn_fs_get_uuid(b.fs, &uuid, pool));
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "cc", uuid, b.repos_url));
 
+  /* We can't claim mergeinfo capability until we know whether the
+     repository supports mergeinfo (i.e., is not a 1.4 repository),
+     but we don't get the repository url from the client until after
+     we've already sent the initial list of server capabilities.  So
+     we list repository capabilities here, in our first response after
+     the client has sent the url. */  
+  {
+    svn_boolean_t supports_mergeinfo;
+    SVN_ERR(svn_repos_has_capability(b.repos, &supports_mergeinfo,
+                                     SVN_REPOS_CAPABILITY_MERGEINFO, pool));
+
+    SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(cc(!",
+                                   "success", uuid, b.repos_url));
+    if (supports_mergeinfo)
+      SVN_ERR(svn_ra_svn_write_word(conn, pool, SVN_RA_SVN_CAP_MERGEINFO));
+    SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
+  }
+                      
   return svn_ra_svn_handle_commands(conn, pool, main_commands, &b);
 }

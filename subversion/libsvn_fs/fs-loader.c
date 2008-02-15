@@ -2,7 +2,7 @@
  * fs_loader.c:  Front-end to the various FS back ends
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -394,6 +394,27 @@ svn_fs_open(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   *fs_p = svn_fs_new(fs_config, pool);
   SVN_ERR(acquire_fs_mutex());
   err = vtable->open_fs(*fs_p, path, pool, common_pool);
+  err2 = release_fs_mutex();
+  if (err)
+    {
+      svn_error_clear(err2);
+      return err;
+    }
+  return err2;
+}
+
+svn_error_t *
+svn_fs_upgrade(const char *path, apr_pool_t *pool)
+{
+  svn_error_t *err;
+  svn_error_t *err2;
+  fs_library_vtable_t *vtable;
+  svn_fs_t *fs;
+
+  SVN_ERR(fs_library_vtable(&vtable, path, pool));
+  fs = svn_fs_new(NULL, pool);
+  SVN_ERR(acquire_fs_mutex());
+  err = vtable->upgrade_fs(fs, path, pool, common_pool);
   err2 = release_fs_mutex();
   if (err)
     {
@@ -819,23 +840,11 @@ svn_fs_get_mergeinfo(apr_hash_t **minfohash,
                      svn_fs_root_t *root,
                      const apr_array_header_t *paths,
                      svn_mergeinfo_inheritance_t inherit,
+                     svn_boolean_t include_descendants,
                      apr_pool_t *pool)
 {
-  return root->vtable->get_mergeinfo(minfohash, root, paths, inherit, pool);
-}
-
-svn_error_t *
-svn_fs_get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
-                              svn_fs_root_t *root,
-                              const apr_array_header_t *paths,
-                              svn_fs_mergeinfo_filter_func_t filter_func,
-                              void *filter_func_baton,
-                              apr_pool_t *pool)
-{
-  return root->vtable->get_mergeinfo_for_tree(mergeinfo, root, paths,
-                                              filter_func,
-                                              filter_func_baton,
-                                              pool);
+  return root->vtable->get_mergeinfo(minfohash, root, paths, inherit, 
+                                     include_descendants, pool);
 }
 
 svn_error_t *

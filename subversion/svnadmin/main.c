@@ -197,6 +197,7 @@ static svn_opt_subcommand_t
   subcommand_setlog,
   subcommand_setrevprop,
   subcommand_setuuid,
+  subcommand_upgrade,
   subcommand_verify;
 
 enum
@@ -433,6 +434,19 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     "generate a brand new UUID for the repository.\n"),
    {0} },
 
+  {"upgrade", subcommand_upgrade, {0}, N_
+   ("usage: svnadmin upgrade REPOS_PATH\n\n"
+    "Upgrade the repository located at REPOS_PATH to the latest supported\n"
+    "schema version.\n\n"
+    "This functionality is provided as a convenience for repository\n"
+    "administrators who wish to make use of new Subversion functionality\n"
+    "without having to undertake a potentially costly full repository dump\n"
+    "and load operation.  As such, the upgrade performs only the minimum\n"
+    "amount of work needed to accomplish this while still maintaining the\n"
+    "integrity of the repository.  It does not guarantee the most optimized\n"
+    "repository state as a dump and subsequent load would.\n"),
+   {0} },
+
   {"verify", subcommand_verify, {0}, N_
    ("usage: svnadmin verify REPOS_PATH\n\n"
     "Verifies the data stored in the repository.\n"),
@@ -635,13 +649,9 @@ recode_stream_create(FILE *std_stream, apr_pool_t *pool)
 }
 
 
-/* Common implementation for dump and verify.  First three parameters mirror
-   the 'svn_opt_subcommand_t' type.  The DUMP_CONTENTS parameter determines
-   whether to send the dump to stdout or an empty stream. */
+/* This implements `svn_opt_subcommand_t'. */
 static svn_error_t *
-dump_repo(apr_getopt_t *os, void *baton,
-          apr_pool_t *pool, svn_boolean_t dump_contents,
-          svn_boolean_t incremental)
+subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
@@ -676,32 +686,18 @@ dump_repo(apr_getopt_t *os, void *baton,
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
        _("First revision cannot be higher than second"));
 
-  /* Run the dump to STDOUT.  Let the user redirect output into
-     a file if they want.  :-)  */
-  if (dump_contents)
-    SVN_ERR(create_stdio_stream(&stdout_stream, apr_file_open_stdout, pool));
-  else
-    stdout_stream = NULL;
+  SVN_ERR(create_stdio_stream(&stdout_stream, apr_file_open_stdout, pool));
 
   /* Progress feedback goes to STDERR, unless they asked to suppress it. */
   if (! opt_state->quiet)
     stderr_stream = recode_stream_create(stderr, pool);
 
   SVN_ERR(svn_repos_dump_fs2(repos, stdout_stream, stderr_stream,
-                             lower, upper, incremental,
+                             lower, upper, opt_state->incremental,
                              opt_state->use_deltas, check_cancel, NULL,
                              pool));
 
   return SVN_NO_ERROR;
-}
-
-
-/* This implements `svn_opt_subcommand_t'. */
-static svn_error_t *
-subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
-{
-  struct svnadmin_opt_state *opt_state = baton;
-  return dump_repo(os, baton, pool, TRUE, opt_state->incremental);
 }
 
 
@@ -1108,8 +1104,29 @@ static svn_error_t *
 subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
-  return dump_repo(os, baton, pool, FALSE,
-               opt_state->start_revision.kind != svn_opt_revision_unspecified);
+  svn_stream_t *stderr_stream;
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_revnum_t youngest, lower, upper;
+
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  fs = svn_repos_fs(repos);
+  SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
+
+  /* Find the revision numbers at which to start and end. */
+  SVN_ERR(get_revnum(&lower, &opt_state->start_revision,
+                     youngest, repos, pool));
+  SVN_ERR(get_revnum(&upper, &opt_state->end_revision,
+                     youngest, repos, pool));
+
+  if (opt_state->quiet)
+    stderr_stream = NULL;
+  else
+    stderr_stream = recode_stream_create(stderr, pool);
+
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  return svn_repos_verify_fs(repos, stderr_stream, lower, upper,
+                             check_cancel, NULL, pool);
 }
 
 
@@ -1272,6 +1289,76 @@ subcommand_rmlocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+
+/* A callback which is called when the upgrade starts. */
+static svn_error_t *
+upgrade_started(void *baton)
+{
+  apr_pool_t *pool = (apr_pool_t *)baton;
+
+  SVN_ERR(svn_cmdline_printf(pool,
+                             _("Repository lock acquired.\n"
+                               "Please wait; upgrading the"
+                               " repository may take some time...\n")));
+  SVN_ERR(svn_cmdline_fflush(stdout));
+
+  /* Enable cancellation signal handlers. */
+  setup_cancellation_signals(signal_handler);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_upgrade(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  svn_error_t *err;
+  struct svnadmin_opt_state *opt_state = baton;
+
+  /* Restore default signal handlers. */
+  setup_cancellation_signals(SIG_DFL);
+
+  err = svn_repos_upgrade(opt_state->repository_path, TRUE,
+                          upgrade_started, pool, pool);
+  if (err)
+    {
+      if (APR_STATUS_IS_EAGAIN(err->apr_err))
+        {
+          svn_error_clear(err);
+          err = SVN_NO_ERROR;
+          if (! opt_state->wait)
+            return svn_error_create(SVN_ERR_REPOS_LOCKED, NULL,
+                                    _("Failed to get exclusive repository "
+                                      "access; perhaps another process\n"
+                                      "such as httpd, svnserve or svn "
+                                      "has it open?"));
+          SVN_ERR(svn_cmdline_printf(pool,
+                                     _("Waiting on repository lock; perhaps"
+                                       " another process has it open?\n")));
+          SVN_ERR(svn_cmdline_fflush(stdout));
+          SVN_ERR(svn_repos_upgrade(opt_state->repository_path, FALSE,
+                                    upgrade_started, pool, pool));
+        }
+      else if (err->apr_err == SVN_ERR_FS_UNSUPPORTED_UPGRADE)
+        {
+          return svn_error_quick_wrap
+            (err, _("Upgrade of this repository's underlying versioned "
+                    "filesystem is not supported; consider "
+                    "dumping and loading the data elsewhere"));
+        }
+      else if (err->apr_err == SVN_ERR_REPOS_UNSUPPORTED_UPGRADE)
+        {
+          return svn_error_quick_wrap
+            (err, _("Upgrade of this repository is not supported; consider "
+                    "dumping and loading the data elsewhere"));
+        }
+    }
+  SVN_ERR(err);
+
+  SVN_ERR(svn_cmdline_printf(pool, _("\nUpgrade completed.\n")));
+  return SVN_NO_ERROR;
+}
 
 
 
@@ -1609,11 +1696,12 @@ main(int argc, const char *argv[])
       /* Ensure that everything is written to stdout, so the user will
          see any print errors. */
       err = svn_cmdline_fflush(stdout);
-      if (err) {
-        svn_handle_error2(err, stderr, FALSE, "svnadmin: ");
-        svn_error_clear(err);
-        return EXIT_FAILURE;
-      }
+      if (err)
+        {
+          svn_handle_error2(err, stderr, FALSE, "svnadmin: ");
+          svn_error_clear(err);
+          return EXIT_FAILURE;
+        }
       return EXIT_SUCCESS;
     }
 }

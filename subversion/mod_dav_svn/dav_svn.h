@@ -122,7 +122,7 @@ typedef struct {
      constants anyway (and sufficiently well-informed internal code
      may therefore compare against those constants' addresses).  If
      'is_svn_client' is false, then 'capabilities' should be empty. */
-  apr_hash_t *capabilities;
+  apr_hash_t *client_capabilities;
 
   /* The path to the activities db */
   const char *activities_db;
@@ -742,6 +742,11 @@ svn_stream_t *
 dav_svn__make_base64_output_stream(apr_bucket_brigade *bb,
                                    ap_filter_t *output,
                                    apr_pool_t *pool);
+
+/* In INFO->r->subprocess_env set "SVN-ACTION" to LINE, "SVN-REPOS" to
+ * INFO->repos->fs_path, and "SVN-REPOS-NAME" to INFO->repos->repo_basename. */
+void
+dav_svn__operational_log(struct dav_resource_private *info, const char *line);
 
 /*** mirror.c ***/
 

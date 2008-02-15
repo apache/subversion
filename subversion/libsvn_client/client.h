@@ -37,7 +37,6 @@ extern "C" {
 #define SVN_CLIENT_SVNPATCH_VERSION   1
 
 
-
 /* Set *URL and *PEG_REVNUM (the latter is ignored if NULL) to the
    repository URL of PATH_OR_URL.  If PATH_OR_URL is a WC path and
    PEG_REVISION->kind is svn_opt_revision_working, use the
@@ -210,16 +209,16 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
 /* Set *ANCESTOR_PATH and *ANCESTOR_REVISION to the youngest common
    ancestor path (a path relative to the root of the repository) and
    revision, respectively, of the two locations identified as
-   PATH_OR_URL1@REVISION1 and PATH_OR_URL2@REVISION2.  Use the
-   authentication baton cached in CTX to authenticate against the
-   repository.  Use POOL for all allocations. */
+   PATH_OR_URL1@REV1 and PATH_OR_URL2@REV1.  Use the authentication
+   baton cached in CTX to authenticate against the repository.  Use
+   POOL for all allocations. */
 svn_error_t *
 svn_client__get_youngest_common_ancestor(const char **ancestor_path,
                                          svn_revnum_t *ancestor_revision,
                                          const char *path_or_url1,
-                                         const svn_opt_revision_t *revision1,
+                                         svn_revnum_t rev1,
                                          const char *path_or_url2,
-                                         const svn_opt_revision_t *revision2,
+                                         svn_revnum_t rev2,
                                          svn_client_ctx_t *ctx,
                                          apr_pool_t *pool);
 
@@ -323,14 +322,24 @@ svn_client__path_relative_to_root(const char **rel_path,
    with WC paths of char * for keys and property values of
    svn_string_t * for values.  Assumes that PROPS is non-NULL.
 
-   Treat DEPTH as in svn_client_propget4().
+   CHANGELISTS is an array of const char * changelist names, used as a
+   restrictive filter on items whose properties are set; that is,
+   don't set properties on any item unless it's a member of one of
+   those changelists.  If CHANGELISTS is empty (or altogether NULL),
+   no changelist filtering occurs.
+
+   Treat DEPTH as in svn_client_propget3().
 */
 svn_error_t *
-svn_client__get_prop_from_wc(apr_hash_t *props, const char *propname,
-                             const char *target, svn_boolean_t pristine,
+svn_client__get_prop_from_wc(apr_hash_t *props, 
+                             const char *propname,
+                             const char *target, 
+                             svn_boolean_t pristine,
                              const svn_wc_entry_t *entry,
                              svn_wc_adm_access_t *adm_access,
-                             svn_depth_t depth, svn_client_ctx_t *ctx,
+                             svn_depth_t depth, 
+                             const apr_array_header_t *changelists,
+                             svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
 /* Retrieve the oldest revision of the node at REL_PATH at REV since
@@ -531,6 +540,10 @@ svn_client__make_local_parents(const char *path,
    svn_depth_empty, just update PATH; if PATH is a directory, that
    means touching only its properties not its entries.
 
+   If DEPTH_IS_STICKY is set and DEPTH is not svn_depth_unknown, then
+   in addition to updating PATH, also set its sticky ambient depth
+   value to DEPTH.
+
    If IGNORE_EXTERNALS is true, do no externals processing.
 
    If TIMESTAMP_SLEEP is NULL this function will sleep before
@@ -554,6 +567,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             const char *path,
                             const svn_opt_revision_t *revision,
                             svn_depth_t depth,
+                            svn_boolean_t depth_is_sticky,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
                             svn_boolean_t *timestamp_sleep,
@@ -605,7 +619,9 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
    *TIMESTAMP_SLEEP if no sleep is required.  If IGNORE_EXTERNALS is true,
    don't process externals.  If ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned
    children of PATH that obstruct items added from the repos are tolerated;
-   if FALSE, these obstructions cause the switch to fail. */
+   if FALSE, these obstructions cause the switch to fail. 
+
+   DEPTH and DEPTH_IS_STICKY behave as for svn_client__update_internal(). */
 svn_error_t *
 svn_client__switch_internal(svn_revnum_t *result_rev,
                             const char *path,
@@ -613,6 +629,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             const svn_opt_revision_t *peg_revision,
                             const svn_opt_revision_t *revision,
                             svn_depth_t depth,
+                            svn_boolean_t depth_is_sticky,
                             svn_boolean_t *timestamp_sleep,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
@@ -844,9 +861,10 @@ typedef struct
    If JUST_LOCKED is TRUE, treat unmodified items with lock tokens as
    commit candidates.
 
-   If CHANGELIST_NAME is non-NULL, then use it as a restrictive filter
+   If CHANGELISTS is non-NULL, it is an array of const char *
+   changelist names used as a restrictive filter
    when harvesting committables; that is, don't add a path to
-   COMMITTABLES unless it's a member of the changelist.
+   COMMITTABLES unless it's a member of one of those changelists.
 
    If CTX->CANCEL_FUNC is non-null, it will be called with
    CTX->CANCEL_BATON while harvesting to determine if the client has
@@ -858,7 +876,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                  apr_array_header_t *targets,
                                  svn_depth_t depth,
                                  svn_boolean_t just_locked,
-                                 const char *changelist_name,
+                                 const apr_array_header_t *changelists,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
 

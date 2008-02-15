@@ -26,7 +26,7 @@ import warnings
 # Our testing module
 import svntest
 from svntest import wc
-from svntest.main import SVN_PROP_MERGE_INFO
+from svntest.main import SVN_PROP_MERGEINFO
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -318,10 +318,10 @@ def patch_copy_and_move(sbox):
                       props={'pristineg': 'pristg'})
   expected_disk.add({
     'A/C/gamma'   : Item(gamma_contents,
-                         props={SVN_PROP_MERGE_INFO : '',
+                         props={SVN_PROP_MERGEINFO : '',
                                 'pristineg': 'pristg'}),
     'mu-ng'       : Item(mu_contents,
-                         props={SVN_PROP_MERGE_INFO : '',
+                         props={SVN_PROP_MERGEINFO : '',
                                 'pristinem': 'pristm',
                                 'newprop': 'newpropval'}),
   })

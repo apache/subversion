@@ -94,6 +94,13 @@ def _usage_exit():
   print "           increase the speed of frequent rebuilds."
   print "           *** Do not use unless you understand the consequences. ***"
   print
+  print "  UNIX-specific options:"
+  print
+  print "  --installed-libs"
+  print "           Comma-separated list of Subversion libraries to find"
+  print "           pre-installed instead of building (probably only"
+  print "           useful for packagers)"
+  print
   print "  Windows-specific options:"
   print
   print "  --with-apr=DIR"
@@ -142,9 +149,6 @@ def _usage_exit():
   print
   print "  --with-swig=DIR"
   print "           look for the swig program in DIR"
-  print
-  print "  --with-sqlite=DIR"
-  print "           look for sqlite in DIR"
   print
   print "  --with-sasl=DIR"
   print "           look for the sasl headers and libs in DIR"
@@ -209,7 +213,6 @@ if __name__ == '__main__':
                             'with-zlib=',
                             'with-junit=',
                             'with-swig=',
-                            'with-sqlite=',
                             'with-sasl=',
                             'enable-pool-debug',
                             'enable-purify',
@@ -218,6 +221,7 @@ if __name__ == '__main__':
                             'enable-bdb-in-apr-util',
                             'enable-ml',
                             'disable-shared',
+                            'installed-libs=',
                             'vsnet-version=',
                             ])
     if len(args) > 1:
