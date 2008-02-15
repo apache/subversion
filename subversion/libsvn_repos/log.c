@@ -848,6 +848,162 @@ get_path_histories(apr_array_header_t **histories,
   return SVN_NO_ERROR;
 }
 
+/* Unpack a rangelist into a list of discrete revisions. */
+static svn_error_t *
+rangelist_to_revs(apr_array_header_t **revs,
+                  const apr_array_header_t *rangelist,
+                  apr_pool_t *pool)
+{
+  int i;
+
+  *revs = apr_array_make(pool, rangelist->nelts, sizeof(svn_revnum_t));
+
+  for (i = 0; i < rangelist->nelts; i++)
+    {
+      svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
+                                               svn_merge_range_t *);
+      svn_revnum_t rev = range->start + 1;
+
+      while (rev <= range->end)
+        {
+          APR_ARRAY_PUSH(*revs, svn_revnum_t) = rev;
+          rev += 1;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Look through paths in MERGEINFO, and find the one(s) in which REVISION is
+   part of it's rangelist. */
+static svn_error_t *
+find_merge_sources(apr_array_header_t **merge_sources,
+                   svn_revnum_t revision,
+                   svn_mergeinfo_t mergeinfo,
+                   apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+
+  *merge_sources = apr_array_make(pool, 0, sizeof(const char *));
+  for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
+    {
+      apr_array_header_t *rangelist;
+      const char *key;
+      int i;
+
+      apr_hash_this(hi, (void*) &key, NULL, (void*) &rangelist);
+
+      for (i = 0; i < rangelist->nelts; i++)
+        {
+          svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
+                                                   svn_merge_range_t *);
+
+          if (revision > range->start && revision <= range->end)
+            APR_ARRAY_PUSH(*merge_sources, const char *) = key;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Return TRUE is the paths in PATHLIST1 are the same as those in PATHLIST2,
+   FALSE otherwise. */
+static svn_boolean_t
+pathlists_are_equal(apr_array_header_t *pathlist1,
+                    apr_array_header_t *pathlist2)
+{
+  int i;
+
+  if (pathlist1->nelts != pathlist2->nelts)
+    return FALSE;
+
+  for (i = 0; i < pathlist1->nelts; i++)
+    {
+      const char *path1 = APR_ARRAY_IDX(pathlist1, i, const char *);
+      const char *path2 = APR_ARRAY_IDX(pathlist2, i, const char *);
+
+      if (strcmp(path1, path2) != 0)
+        return FALSE;
+    }
+
+  return TRUE;
+}
+
+struct path_list_range
+{
+  apr_array_header_t *paths;
+  svn_merge_range_t range;
+};
+
+static svn_error_t *
+combine_mergeinfo_path_lists(apr_array_header_t **combined_list,
+                             svn_mergeinfo_t mergeinfo,
+                             apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  apr_array_header_t *rangelist;
+  apr_array_header_t *revs;
+  apr_array_header_t *path_lists;
+  struct path_list_range *plr;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  int i;
+
+  /* Get all the revisions in all the mergeinfo. */
+  rangelist = apr_array_make(subpool, 0, sizeof(svn_merge_range_t *));
+  for (hi = apr_hash_first(subpool, mergeinfo); hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *path;
+      apr_array_header_t *changes;
+
+      apr_hash_this(hi, (void *) &path, NULL, (void *) &changes);
+      SVN_ERR(svn_rangelist_merge(&rangelist, changes, subpool));
+    }
+  SVN_ERR(rangelist_to_revs(&revs, rangelist, subpool));
+
+  /* For each revision, find the mergeinfo path(s) it belongs to.
+     TODO: Figure out a clever algorithm to do this on a per-rangelist basis. */
+  path_lists = apr_array_make(subpool, revs->nelts,
+                              sizeof(apr_array_header_t *));
+  for (i = 0; i < revs->nelts; i++)
+    {
+      svn_revnum_t rev = APR_ARRAY_IDX(revs, i, svn_revnum_t);
+      apr_array_header_t *paths;
+
+      SVN_ERR(find_merge_sources(&paths, rev, mergeinfo, pool));
+      APR_ARRAY_PUSH(path_lists, apr_array_header_t *) = paths;
+    }
+
+  /* Condense the revision and pathlist lists back to rangelist notiation. */
+  *combined_list = apr_array_make(pool, 0, sizeof(struct path_list_range *));
+  plr = apr_palloc(pool, sizeof(*plr));
+  plr->range.start = APR_ARRAY_IDX(revs, 0, svn_revnum_t);
+  plr->paths = APR_ARRAY_IDX(path_lists, 0, apr_array_header_t *);
+
+  for (i = 1; i < revs->nelts; i++)
+    {
+      apr_array_header_t *cur_pathlist = APR_ARRAY_IDX(path_lists, i,
+                                                       apr_array_header_t *);
+      apr_array_header_t *prev_pathlist = APR_ARRAY_IDX(path_lists, i - 1,
+                                                        apr_array_header_t *);
+      if (! pathlists_are_equal(cur_pathlist, prev_pathlist))
+        {
+          plr->range.end = APR_ARRAY_IDX(revs, i - 1, svn_revnum_t);
+          APR_ARRAY_PUSH(*combined_list, struct path_list_range *) = plr;
+
+          plr = apr_palloc(pool, sizeof(*plr));
+          plr->range.start = APR_ARRAY_IDX(revs, i, svn_revnum_t);
+          plr->paths = cur_pathlist;
+        }
+    }
+  plr->range.end = APR_ARRAY_IDX(revs, i - 1, svn_revnum_t);
+  APR_ARRAY_PUSH(*combined_list, struct path_list_range *) = plr;
+
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
 /* In order to prevent log message overload, we always do merged logs in a 
    non-streamy sort of way, using this algorithm:
      1) Get all mainline revisions for PATHS (regardless of LIMIT), marking 
@@ -977,35 +1133,31 @@ do_merged_logs(svn_fs_t *fs,
 
       if (has_children)
         {
-          apr_hash_index_t *hi;
+          apr_array_header_t *combined_list;
           svn_log_entry_t *empty_log_entry;
+          apr_pool_t *iterpool2 = svn_pool_create(iterpool);
+          int j;
 
-          for (hi = apr_hash_first(pool, mergeinfo); hi;
-               hi = apr_hash_next(hi))
+          SVN_ERR(combine_mergeinfo_path_lists(&combined_list, mergeinfo,
+                                               iterpool));
+
+          /* Because the combined_lists are ordered youngest to oldest,
+             iterate over them in reverse. */
+          for (j = combined_list->nelts - 1; j >= 0; j--)
             {
-              const char *path;
-              apr_array_header_t *rangelist;
-              int j;
+              struct path_list_range *pl_range = APR_ARRAY_IDX(combined_list, j,
+                                                     struct path_list_range *);
 
-              svn_pool_clear(iterpool);
-              apr_hash_this(hi, (void *) &path, NULL, (void *) &rangelist);
-
-              for (j = 0; j < rangelist->nelts; j++)
-                {
-                  svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, j,
-                                                           svn_merge_range_t *);
-                  apr_array_header_t *path_arr = apr_array_make(iterpool, 1,
-                                                         sizeof(const char *));
-
-                  APR_ARRAY_PUSH(path_arr, const char *) = path;
-                  SVN_ERR(do_merged_logs(fs, path_arr, range->start, range->end,
-                                         0, discover_changed_paths,
-                                         strict_node_history, revprops, TRUE,
-                                         found_revisions, receiver,
-                                         receiver_baton, authz_read_func,
-                                         authz_read_baton, permpool, iterpool));
-                }
+              svn_pool_clear(iterpool2);
+              SVN_ERR(do_merged_logs(fs, pl_range->paths,
+                                     pl_range->range.start, pl_range->range.end,
+                                     0, discover_changed_paths,
+                                     strict_node_history, revprops, TRUE,
+                                     found_revisions, receiver, receiver_baton,
+                                     authz_read_func, authz_read_baton,
+                                     permpool, iterpool2));
             }
+          svn_pool_destroy(iterpool2);
 
           /* Send the empty revision.  */
           empty_log_entry = svn_log_entry_create(iterpool);
