@@ -27,5 +27,12 @@ Candidate changes:
    Votes:
      +1: epg
 
+ * r29268, r29269, r29287, r29389
+   Fix 'log -g'.
+   Notes: Performance improvements may follow, but merging this is better
+     than nothing (as 'log -g' is currently and completely broken on 1.5.x).
+   Votes:
+     +1: hwright
+
 Approved changes:
 
