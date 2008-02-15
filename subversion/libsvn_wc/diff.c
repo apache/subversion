@@ -545,13 +545,21 @@ file_diff(struct dir_baton *dir_baton,
 
   /* If the item is schedule-add *with history*, then we don't want to
      see a comparison to the empty file;  we want the usual working
-     vs. text-base comparision; we also don't want svnpatch be affected
-     by this behaviour as replace operations -- which we want svnpatch to
-     carry -- could slip through doing so. */
+     vs. text-base comparision. */
   if (copied)
     {
       schedule = svn_wc_schedule_normal;
-      file_to_diff = TRUE;
+
+      /* Regarding svnpatch, when this file is only copied we only want
+       * to consider it when its parent was *not* copied as well.  This
+       * allows loose fuzzing and prevent adding the file to diffables
+       * when it doesn't need to.  This is also true for move ops. */
+      const svn_wc_entry_t *parent_entry;
+      SVN_ERR(svn_wc_entry(&parent_entry, dir_baton->path,
+                           adm_access, TRUE, dir_baton->pool));
+
+      if (! parent_entry->copied)
+        file_to_diff = TRUE;
     }
 
   /* If this was scheduled replace and we are ignoring ancestry,
