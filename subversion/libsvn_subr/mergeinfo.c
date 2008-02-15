@@ -961,31 +961,6 @@ svn_rangelist_count_revs(apr_array_header_t *rangelist)
   return nbr_revs;
 }
 
-svn_error_t *
-svn_rangelist_to_revs(apr_array_header_t **revs,
-                      const apr_array_header_t *rangelist,
-                      apr_pool_t *pool)
-{
-  int i;
-
-  *revs = apr_array_make(pool, rangelist->nelts, sizeof(svn_revnum_t));
-
-  for (i = 0; i < rangelist->nelts; i++)
-    {
-      svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
-                                               svn_merge_range_t *);
-      svn_revnum_t rev = range->start + 1;
-
-      while (rev <= range->end)
-        {
-          APR_ARRAY_PUSH(*revs, svn_revnum_t) = rev;
-          rev += 1;
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Record deletions and additions of entire range lists (by path
    presence), and delegate to svn_rangelist_diff() for delta
    calculations on a specific path. */

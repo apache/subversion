@@ -309,17 +309,6 @@ svn_rangelist_to_string(svn_string_t **output,
 apr_uint64_t
 svn_rangelist_count_revs(apr_array_header_t *rangelist);
 
-/** Take an array of @c svn_merge_range_t *'s in @a rangelist, and convert it
- * to an array of @c svn_revnum_t's in @a revs.  If @a rangelist contains
- * no elements, return an empty array.
- *
- * @since New in 1.5.
- */
-svn_error_t *
-svn_rangelist_to_revs(apr_array_header_t **revs,
-                      const apr_array_header_t *rangelist,
-                      apr_pool_t *pool);
-
 /** Return a deep copy of @c svn_merge_range_t *'s in @a rangelist excluding
  * all non-inheritable @c svn_merge_range_t.  If @a start and @a end are valid
  * revisions and @a start is less than or equal to @a end, then exclude only the
