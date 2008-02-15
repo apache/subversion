@@ -1299,10 +1299,8 @@ svn_fs_closest_copy(svn_fs_root_t **root_p,
 
 /** Retrieve mergeinfo for multiple nodes.
  *
- * Set @a *minfohash to a hash table allocated in @a pool, and fill it
- * with mergeinfo for each path in @a paths.  Use a string (textual)
- * representation for the mergeinfo.  If there is no mergeinfo, then
- * @a *minfohash is empty (never @c NULL).
+ * @a *catalog is a catalog for @a paths.  It will never be @c NULL,
+ * but may be empty.
  *
  * @a root is revision root to use when looking up paths.
  *
@@ -1323,7 +1321,7 @@ svn_fs_closest_copy(svn_fs_root_t **root_p,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_fs_get_mergeinfo(apr_hash_t **minfohash,
+svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                      svn_fs_root_t *root,
                      const apr_array_header_t *paths,
                      svn_mergeinfo_inheritance_t inherit,

@@ -505,7 +505,7 @@ next_history_rev(apr_array_header_t *histories)
 /* Return the combined rangelists for everyone's mergeinfo for the
    PATHS tree at REV in *RANGELIST.  Perform all allocations in POOL. */
 static svn_error_t *
-get_combined_mergeinfo(apr_hash_t **mergeinfo_catalog,
+get_combined_mergeinfo(svn_mergeinfo_t *combined_mergeinfo,
                        svn_fs_t *fs,
                        svn_revnum_t rev,
                        const apr_array_header_t *paths,
@@ -522,7 +522,7 @@ get_combined_mergeinfo(apr_hash_t **mergeinfo_catalog,
   /* Revision 0 doesn't have any mergeinfo. */
   if (rev == 0)
     {
-      *mergeinfo_catalog = apr_hash_make(pool);
+      *combined_mergeinfo = apr_hash_make(pool);
       svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
@@ -566,19 +566,18 @@ get_combined_mergeinfo(apr_hash_t **mergeinfo_catalog,
                                svn_mergeinfo_inherited, TRUE,
                                subpool));
 
-  *mergeinfo_catalog = apr_hash_make(pool);
+  *combined_mergeinfo = apr_hash_make(subpool);
 
   /* Merge all the mergeinfos into one mergeinfo */
   for (hi = apr_hash_first(subpool, tree_mergeinfo); hi; hi = apr_hash_next(hi))
     {
-      apr_hash_t *mergeinfo;
-      const char *mergeinfo_string;
+      svn_mergeinfo_t mergeinfo;
 
-      apr_hash_this(hi, NULL, NULL, (void *)&mergeinfo_string);
-      SVN_ERR(svn_mergeinfo_parse(&mergeinfo, mergeinfo_string,
-                                  pool));
-      SVN_ERR(svn_mergeinfo_merge(*mergeinfo_catalog, mergeinfo, pool));
+      apr_hash_this(hi, NULL, NULL, (void *)&mergeinfo);
+      SVN_ERR(svn_mergeinfo_merge(*combined_mergeinfo, mergeinfo, subpool));
     }
+
+  *combined_mergeinfo = svn_mergeinfo_dup(*combined_mergeinfo, pool);
 
   svn_pool_destroy(subpool);
 
@@ -588,7 +587,7 @@ get_combined_mergeinfo(apr_hash_t **mergeinfo_catalog,
 /* Determine all the revisions which were merged into PATHS in REV.  Return
    them as a new MERGEINFO.  */
 static svn_error_t *
-get_merged_rev_mergeinfo(apr_hash_t **mergeinfo,
+get_merged_rev_mergeinfo(svn_mergeinfo_t *mergeinfo,
                          svn_fs_t *fs,
                          const apr_array_header_t *paths,
                          svn_revnum_t rev,

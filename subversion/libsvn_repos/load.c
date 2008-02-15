@@ -260,7 +260,7 @@ prefix_mergeinfo_paths(svn_string_t **mergeinfo_val,
       path = svn_path_join(parent_dir, (const char*)merge_source+1, pool);
       apr_hash_set(prefixed_mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
     }
-  SVN_ERR(svn_mergeinfo__to_string(mergeinfo_val, prefixed_mergeinfo, pool));
+  SVN_ERR(svn_mergeinfo_to_string(mergeinfo_val, prefixed_mergeinfo, pool));
 
   return SVN_NO_ERROR;
 }
@@ -315,7 +315,7 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
      }
 
   SVN_ERR(svn_mergeinfo_sort(final_mergeinfo, subpool));
-  SVN_ERR(svn_mergeinfo__to_string(final_val, final_mergeinfo, pool));
+  SVN_ERR(svn_mergeinfo_to_string(final_val, final_mergeinfo, pool));
   svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
