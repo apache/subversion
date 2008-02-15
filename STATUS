@@ -29,11 +29,6 @@ Candidate changes:
 
 Approved changes:
 
- * r29189, r29228, r29232, r29251
-   New UI for interactive conflict resolution.
-   Votes:
-     +1: kfogel, cmpilato
-
  * r29328, r29336
    JavaHL adjustment for new UI for interactive conflict resolution.
    Notes: depends on the [r29189, r29228, r29232, r29251] group.

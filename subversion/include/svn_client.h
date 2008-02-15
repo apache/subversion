@@ -2828,12 +2828,18 @@ svn_client_resolved(const char *path,
  * if any); if @c svn_depth_infinity, resolve @a path and every
  * conflicted file or directory anywhere beneath it.
  *
- * If @a conflict_choice is svn_wc_conflict_choose_base, resolve the
+ * If @a conflict_choice is @c svn_wc_conflict_choose_base, resolve the
  * conflict with the old file contents; if
- * svn_wc_conflict_choose_mine, use the original working contents;
- * if svn_wc_conflict_choose_theirs, the new contents; and if
- * svn_wc_conflict_choose_merged, don't change the contents at all,
- * just remove the conflict status (i.e. pre-1.5 behavior).
+ * @c svn_wc_conflict_choose_mine_full, use the original working contents;
+ * if @c svn_wc_conflict_choose_theirs_full, the new contents; and if
+ * @c svn_wc_conflict_choose_merged, don't change the contents at all,
+ * just remove the conflict status, which is the pre-1.5 behavior.
+ *
+ * (@c svn_wc_conflict_choose_theirs and @c svn_wc_conflict_choose_mine
+ * are not yet implemented; the effect of passing one of those values
+ * as @a conflict_choice is currently undefined, which may or may not
+ * be an underhanded way of allowing real behaviors to be added for
+ * them later without revving this interface.)
  *
  * If @a path is not in a state of conflict to begin with, do nothing.
  * If @a path's conflict state is removed and @a ctx->notify_func2 is non-NULL,

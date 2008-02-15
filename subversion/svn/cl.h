@@ -53,11 +53,24 @@ typedef enum
   /* Resolve the conflict with the pre-conflict base file. */
   svn_cl__accept_base,
 
-  /* Resolve the conflict with the pre-conflict working copy file. */
+  /* Resolve the conflicted hunks by choosing the corresponding text
+     from the pre-conflict working copy file.
+
+     Note: this is a placeholder, not actually implemented in 1.5. */
   svn_cl__accept_mine,
 
-  /* Resolve the conflict with the post-conflict base file. */
+  /* Resolve the conflicted hunks by choosing the corresponding text
+     from the post-conflict base copy file.
+     
+     Note: this is a placeholder, not actually implemented in 1.5. */
   svn_cl__accept_theirs,
+
+  /* Resolve the conflict by taking the entire pre-conflict working
+     copy file. */
+  svn_cl__accept_mine_full,
+
+  /* Resolve the conflict by taking the entire post-conflict base file. */
+  svn_cl__accept_theirs_full,
 
   /* Launch user's editor and resolve conflict with edited file. */
   svn_cl__accept_edit,
@@ -71,6 +84,8 @@ typedef enum
 #define SVN_CL__ACCEPT_BASE "base"
 #define SVN_CL__ACCEPT_MINE "mine"
 #define SVN_CL__ACCEPT_THEIRS "theirs"
+#define SVN_CL__ACCEPT_MINE_FULL "mine-full"
+#define SVN_CL__ACCEPT_THEIRS_FULL "theirs-full"
 #define SVN_CL__ACCEPT_EDIT "edit"
 #define SVN_CL__ACCEPT_LAUNCH "launch"
 

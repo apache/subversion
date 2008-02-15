@@ -61,10 +61,16 @@ svn_cl__accept_from_word(const char *word)
     return svn_cl__accept_postpone;
   if (strcmp(word, SVN_CL__ACCEPT_BASE) == 0)
     return svn_cl__accept_base;
+#if 0 /* not yet implemented */
   if (strcmp(word, SVN_CL__ACCEPT_MINE) == 0)
     return svn_cl__accept_mine;
   if (strcmp(word, SVN_CL__ACCEPT_THEIRS) == 0)
     return svn_cl__accept_theirs;
+#endif /* 0 */
+  if (strcmp(word, SVN_CL__ACCEPT_MINE_FULL) == 0)
+    return svn_cl__accept_mine_full;
+  if (strcmp(word, SVN_CL__ACCEPT_THEIRS_FULL) == 0)
+    return svn_cl__accept_theirs_full;
   if (strcmp(word, SVN_CL__ACCEPT_EDIT) == 0)
     return svn_cl__accept_edit;
   if (strcmp(word, SVN_CL__ACCEPT_LAUNCH) == 0)
@@ -222,6 +228,12 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
     case svn_cl__accept_theirs:
       (*result)->choice = svn_wc_conflict_choose_theirs;
       return SVN_NO_ERROR;
+    case svn_cl__accept_mine_full:
+      (*result)->choice = svn_wc_conflict_choose_mine_full;
+      return SVN_NO_ERROR;
+    case svn_cl__accept_theirs_full:
+      (*result)->choice = svn_wc_conflict_choose_theirs_full;
+      return SVN_NO_ERROR;
     case svn_cl__accept_edit:
       if (desc->merged_file)
         {
@@ -378,15 +390,25 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
 
           prompt = apr_pstrdup(subpool, _("Select: (p)ostpone"));
           if (diff_allowed)
-            prompt = apr_pstrcat(subpool, prompt, _(", (d)iff, (e)dit"),
+            prompt = apr_pstrcat(subpool, prompt,
+                                 _(", (D)iff in full, (e)dit"),
                                  NULL);
           else
-            prompt = apr_pstrcat(subpool, prompt, _(", (m)ine, (t)heirs"),
+            prompt = apr_pstrcat(subpool, prompt,
+                                 _(", (M)ine in full, (T)heirs in full"),
                                  NULL);
           if (performed_edit)
             prompt = apr_pstrcat(subpool, prompt, _(", (r)esolved"), NULL);
+
+          /* Line break here depends on what we've printed already. */
+          if ((! diff_allowed) && performed_edit)
+            prompt = apr_pstrcat(subpool, prompt, ",\n        ", NULL);
+          else
+            prompt = apr_pstrcat(subpool, prompt, ", ", NULL);
+
           prompt = apr_pstrcat(subpool, prompt,
-                               _(", (h)elp for more options : "), NULL);
+                               _("(h)elp for more options: "),
+                               NULL);
 
           SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt, b->pb, subpool));
 
@@ -397,16 +419,16 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
           if ((answer[0] == 'h') || (answer[0] == '?'))
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
-              _("  (p)ostpone - mark the conflict to be resolved later\n"
-                "  (d)iff     - show all changes made to merged file\n"
-                "  (e)dit     - change merged file in an editor\n"
-                "  (r)esolved - accept merged version of file\n"
-                "  (m)ine     - accept my version of file "
-                "(and ignore their changes)\n"
-                "  (t)heirs   - accept their version of file "
-                "(and revert my changes)\n"
-                "  (l)aunch   - use third-party tool to resolve conflict\n"
-                "  (h)elp     - show this list\n\n")));
+              _("  (p)ostpone    - mark the conflict to be resolved later\n"
+                "  (D)iff-full   - show all changes made to merged file\n"
+                "  (e)dit        - change merged file in an editor\n"
+                "  (r)esolved    - accept merged version of file\n"
+                "  (M)ine-full   - accept my version of entire file "
+                "(ignore their changes)\n"
+                "  (T)heirs-full - accept their version of entire file "
+                "(lose my changes)\n"
+                "  (l)aunch      - use third-party tool to resolve conflict\n"
+                "  (h)elp        - show this list\n\n")));
             }
           else if (answer[0] == 'p')
             {
@@ -416,15 +438,39 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
             }
           else if (answer[0] == 'm')
             {
-              (*result)->choice = svn_wc_conflict_choose_mine;
-              break;
+              SVN_ERR(svn_cmdline_fprintf
+                      (stderr, subpool,
+                       _("Sorry, '(m)ine' is not yet implemented; see\n"
+        "http://subversion.tigris.org/issues/show_bug.cgi?id=3049\n\n")));
+              continue;
             }
           else if (answer[0] == 't')
             {
-              (*result)->choice = svn_wc_conflict_choose_theirs;
+              SVN_ERR(svn_cmdline_fprintf
+                      (stderr, subpool,
+                       _("Sorry, '(t)heirs' is not yet implemented; see\n"
+        "http://subversion.tigris.org/issues/show_bug.cgi?id=3049\n\n")));
+              continue;
+            }
+          else if (answer[0] == 'M')
+            {
+              (*result)->choice = svn_wc_conflict_choose_mine_full;
+              break;
+            }
+          else if (answer[0] == 'T')
+            {
+              (*result)->choice = svn_wc_conflict_choose_theirs_full;
               break;
             }
           else if (answer[0] == 'd')
+            {
+              SVN_ERR(svn_cmdline_fprintf
+                      (stderr, subpool,
+                       _("Sorry, '(d)iff' is not yet implemented; see\n"
+        "http://subversion.tigris.org/issues/show_bug.cgi?id=3048\n\n")));
+              continue;
+            }
+          else if (answer[0] == 'D')
             {
               if (! diff_allowed)
                 {
@@ -494,7 +540,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                    _("Conflict discovered when trying to add '%s'.\n"
                      "An object of the same name already exists.\n"),
                    desc->path));
-      prompt = _("Select: (p)ostpone, (m)ine, (t)heirs, (h)elp :");
+      prompt = _("Select: (p)ostpone, (M)ine-full, (T)heirs-full, (h)elp :");
 
       while (1)
         {
@@ -505,27 +551,43 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
           if ((strcmp(answer, "h") == 0) || (strcmp(answer, "?") == 0))
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
-              _("  (p)ostpone - resolve the conflict later\n"
-                "  (m)ine     - accept pre-existing item "
+              _("  (p)ostpone    - resolve the conflict later\n"
+                "  (M)ine-full   - accept pre-existing item "
                 "(ignore upstream addition)\n"
-                "  (t)heirs   - accept incoming item "
+                "  (T)heirs-full - accept incoming item "
                 "(overwrite pre-existing item)\n"
-                "  (h)elp     - show this list\n\n")));
+                "  (h)elp        - show this list\n\n")));
             }
           if (strcmp(answer, "p") == 0)
             {
               (*result)->choice = svn_wc_conflict_choose_postpone;
               break;
             }
+          if (strcmp(answer, "M") == 0)
+            {
+              (*result)->choice = svn_wc_conflict_choose_mine_full;
+              break;
+            }
+          if (strcmp(answer, "T") == 0)
+            {
+              (*result)->choice = svn_wc_conflict_choose_theirs_full;
+              break;
+            }
           if (strcmp(answer, "m") == 0)
             {
-              (*result)->choice = svn_wc_conflict_choose_mine;
-              break;
+              SVN_ERR(svn_cmdline_fprintf
+                      (stderr, subpool,
+                       _("Sorry, '(m)ine' is not yet implemented; see\n"
+        "http://subversion.tigris.org/issues/show_bug.cgi?id=3049\n\n")));
+              continue;
             }
           if (strcmp(answer, "t") == 0)
             {
-              (*result)->choice = svn_wc_conflict_choose_theirs;
-              break;
+              SVN_ERR(svn_cmdline_fprintf
+                      (stderr, subpool,
+                       _("Sorry, '(t)heirs' is not yet implemented; see\n"
+        "http://subversion.tigris.org/issues/show_bug.cgi?id=3049\n\n")));
+              continue;
             }
         }
     }

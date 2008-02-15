@@ -2652,10 +2652,10 @@ resolve_conflict_on_entry(const char *path,
     case svn_wc_conflict_choose_base:
       auto_resolve_src = entry->conflict_old;
       break;
-    case svn_wc_conflict_choose_mine:
+    case svn_wc_conflict_choose_mine_full:
       auto_resolve_src = entry->conflict_wrk;
       break;
-    case svn_wc_conflict_choose_theirs:
+    case svn_wc_conflict_choose_theirs_full:
       auto_resolve_src = entry->conflict_new;
       break;
     case svn_wc_conflict_choose_merged:

@@ -1163,10 +1163,12 @@ typedef enum svn_wc_conflict_choice_t
      resolving the conflict here and now.  libsvn_wc will then do the
      work of "installing" the chosen file.
   */
-  svn_wc_conflict_choose_base,   /* user chooses the original version */
-  svn_wc_conflict_choose_theirs, /* user chooses incoming version */
-  svn_wc_conflict_choose_mine,   /* user chooses his/her own version */
-  svn_wc_conflict_choose_merged  /* user chooses the merged version */
+  svn_wc_conflict_choose_base,        /* original version */
+  svn_wc_conflict_choose_theirs_full, /* incoming version */
+  svn_wc_conflict_choose_mine_full,   /* own version */
+  svn_wc_conflict_choose_theirs,      /* incoming (for conflicted hunks) */
+  svn_wc_conflict_choose_mine,        /* own (for conflicted hunks) */
+  svn_wc_conflict_choose_merged       /* merged version */
 
 } svn_wc_conflict_choice_t;
 
@@ -2869,12 +2871,18 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  * if any); if @c svn_depth_infinity, resolve @a path and every
  * conflicted file or directory anywhere beneath it.
  *
- * If @a conflict_choice is svn_wc_conflict_choose_base, resolve the
+ * If @a conflict_choice is @c svn_wc_conflict_choose_base, resolve the
  * conflict with the old file contents; if
- * svn_wc_conflict_choose_mine, use the original working contents;
- * if svn_wc_conflict_choose_theirs, the new contents; and if
- * svn_wc_conflict_choose_merged, don't change the contents at all,
- * just remove the conflict status (i.e. pre-1.5 behavior).
+ * @c svn_wc_conflict_choose_mine_full, use the original working contents;
+ * if @c svn_wc_conflict_choose_theirs_full, the new contents; and if
+ * @c svn_wc_conflict_choose_merged, don't change the contents at all,
+ * just remove the conflict status, which is the pre-1.5 behavior.
+ *
+ * (@c svn_wc_conflict_choose_theirs and @c svn_wc_conflict_choose_mine
+ * are not yet implemented; the effect of passing one of those values
+ * as @a conflict_choice is currently undefined, which may or may not
+ * be an underhanded way of allowing real behaviors to be added for
+ * them later without revving this interface.)
  *
  * @a adm_access is an access baton, with a write lock, for @a path.
  *

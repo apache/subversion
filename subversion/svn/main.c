@@ -259,10 +259,14 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                            "
                        "('" SVN_CL__ACCEPT_POSTPONE "',"
                        " '" SVN_CL__ACCEPT_BASE "',"
-                       " '" SVN_CL__ACCEPT_MINE "',"
-                       " '" SVN_CL__ACCEPT_THEIRS "',"
-                       " '" SVN_CL__ACCEPT_EDIT "',"
+                       /* These two are not implemented yet, so don't
+                          waste the user's time with them. */
+                       /* " '" SVN_CL__ACCEPT_MINE "'," */
+                       /* " '" SVN_CL__ACCEPT_THEIRS "'," */
+                       " '" SVN_CL__ACCEPT_MINE_FULL "',"
+                       " '" SVN_CL__ACCEPT_THEIRS_FULL "',"
                        "\n                            "
+                       " '" SVN_CL__ACCEPT_EDIT "',"
                        " '" SVN_CL__ACCEPT_LAUNCH "')")},
   {"from-source",   opt_from_source, 1,
                     N_("query a particular merge source URL")},
@@ -769,8 +773,12 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {{opt_accept, N_("specify automatic conflict resolution source\n"
                              "                            "
                              " '" SVN_CL__ACCEPT_BASE "',"
-                             " '" SVN_CL__ACCEPT_MINE "',"
-                             " '" SVN_CL__ACCEPT_THEIRS "')")}} },
+                             /* These two are not implemented yet, so
+                                don't waste the user's time with them. */
+                             /* " '" SVN_CL__ACCEPT_MINE "'," */
+                             /* " '" SVN_CL__ACCEPT_THEIRS "'," */
+                             " '" SVN_CL__ACCEPT_MINE_FULL "',"
+                             " '" SVN_CL__ACCEPT_THEIRS_FULL "')")}} },
 
   { "revert", svn_cl__revert, {0}, N_
     ("Restore pristine working copy file (undo most local edits).\n"
