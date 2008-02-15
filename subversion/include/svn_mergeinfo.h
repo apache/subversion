@@ -131,8 +131,6 @@ typedef apr_hash_t *svn_mergeinfo_catalog_t;
  * mergeinfo is available, return an empty mergeinfo (never @c NULL).
  * Perform temporary allocations in @a pool.
  *
- * TODO(miapi): This should take an svn_string_t *!
- *
  * If @a input is not a grammatically correct @c SVN_PROP_MERGEINFO
  * property, contains overlapping or unordered revision ranges, or revision
  * ranges with a start revision greater than or equal to its end revision,
