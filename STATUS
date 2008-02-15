@@ -38,5 +38,12 @@ Candidate changes:
    Votes:
      +1: epg
 
+ * r29377
+   Merge multiple changesets from mergeinfo-unaware repo(pre-1.5)
+   using 1.5 client gives a merge range notification *only* for first
+   of such changesets, though it does a merge of all changesets.
+   Votes:
+     +1: kameshj
+
 Approved changes:
 
