@@ -104,7 +104,6 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
   apr_hash_index_t *hi;
   const char *from_path;
   apr_array_header_t *merge_revarray;
-  svn_stringbuf_t *merge_revstr;
 
   if (old_mergeinfo_val)
     SVN_ERR(svn_mergeinfo_parse(&old_mergeinfo_hash, old_mergeinfo_val, pool));
@@ -125,12 +124,13 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
     {
       const void *key;
       void *val;
+      svn_string_t *merge_revstr;
 
       apr_hash_this(hi, &key, NULL, &val);
       from_path = key;
       merge_revarray = val;
 
-      SVN_ERR(svn_rangelist_to_stringbuf(&merge_revstr, merge_revarray, pool));
+      SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray, pool));
 
       SVN_ERR(file_printf_from_utf8(file, encoding,
                                     _("   Reverted %s:r%s%s"),
@@ -143,12 +143,13 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
     {
       const void *key;
       void *val;
+      svn_string_t *merge_revstr;
 
       apr_hash_this(hi, &key, NULL, &val);
       from_path = key;
       merge_revarray = val;
 
-      SVN_ERR(svn_rangelist_to_stringbuf(&merge_revstr, merge_revarray, pool));
+      SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray, pool));
 
       SVN_ERR(file_printf_from_utf8(file, encoding,
                                     _("   Merged %s:r%s%s"),
