@@ -2199,6 +2199,42 @@ svn_swig_rb_notify_func2(void *baton,
 }
 
 svn_error_t *
+svn_swig_rb_conflict_resolver_func
+    (svn_wc_conflict_result_t **result,
+     const svn_wc_conflict_description_t *description,
+     void *baton,
+     apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  VALUE proc, rb_pool;
+
+  svn_swig_rb_from_baton((VALUE)baton, &proc, &rb_pool);
+
+  if (NIL_P(proc)) {
+    *result = svn_wc_create_conflict_result(svn_wc_conflict_choose_postpone,
+                                            description->merged_file,
+                                            pool);
+  } else {
+    callback_baton_t cbb;
+    VALUE fret;
+
+    cbb.receiver = proc;
+    cbb.message = id_call;
+    cbb.args = rb_ary_new3(
+                   1,
+                   c2r_swig_type((void *)description,
+                                 (void *)"svn_wc_conflict_description_t *") );
+    invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
+    fret = invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
+    *result = svn_wc_create_conflict_result(NUM2INT(fret),
+                                            description->merged_file,
+                                            pool);
+  }
+
+  return err;
+}
+
+svn_error_t *
 svn_swig_rb_commit_callback(svn_revnum_t new_revision,
                             const char *date,
                             const char *author,
@@ -3657,7 +3693,10 @@ svn_swig_rb_proplist_receiver(void *baton,
 }
 
 svn_error_t *
-svn_swig_rb_changelist_receiver(void *baton, const char *path)
+svn_swig_rb_changelist_receiver(void *baton,
+                                const char *path,
+                                const char *changelist,
+                                apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   VALUE proc, rb_pool;
@@ -3668,8 +3707,9 @@ svn_swig_rb_changelist_receiver(void *baton, const char *path)
 
     cbb.receiver = proc;
     cbb.message = id_call;
-    cbb.args = rb_ary_new3(1,
-                           c2r_string2(path));
+    cbb.args = rb_ary_new3(2,
+                           c2r_string2(path),
+                           c2r_string2(changelist));
     invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
   }
 

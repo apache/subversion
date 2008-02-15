@@ -160,7 +160,7 @@ svn_fs_base__youngest_rev(svn_revnum_t *youngest_p,
                           apr_pool_t *pool)
 {
   svn_revnum_t youngest;
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
   SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_youngest_rev, &youngest,
                                  pool));
   *youngest_p = youngest;
@@ -195,7 +195,7 @@ svn_fs_base__revision_proplist(apr_hash_t **table_p,
   struct revision_proplist_args args;
   apr_hash_t *table;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   args.table_p = &table;
   args.rev = rev;
@@ -217,7 +217,7 @@ svn_fs_base__revision_prop(svn_string_t **value_p,
   struct revision_proplist_args args;
   apr_hash_t *table;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   /* Get the proplist. */
   args.table_p = &table;
@@ -292,7 +292,7 @@ svn_fs_base__change_rev_prop(svn_fs_t *fs,
 {
   struct change_rev_prop_args args;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   args.rev = rev;
   args.name = name;
@@ -487,7 +487,7 @@ svn_fs_base__txn_proplist(apr_hash_t **table_p,
   apr_hash_t *table;
   svn_fs_t *fs = txn->fs;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   args.table_p = &table;
   args.id = txn->id;
@@ -508,7 +508,7 @@ svn_fs_base__txn_prop(svn_string_t **value_p,
   apr_hash_t *table;
   svn_fs_t *fs = txn->fs;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   /* Get the proplist. */
   args.table_p = &table;
@@ -561,63 +561,6 @@ svn_fs_base__set_txn_prop(svn_fs_t *fs,
   return put_txn(fs, txn, txn_name, trail, pool);
 }
 
-svn_error_t *
-svn_fs_base__set_txn_mergeinfo(svn_fs_t *fs,
-                               const char *txn_name,
-                               const char *path,
-                               const svn_string_t *value,
-                               trail_t *trail,
-                               apr_pool_t *pool)
-{
-  transaction_t *txn;
-  apr_hash_t *target_mergeinfo;
-  svn_stringbuf_t *serialized_buf;
-  const svn_string_t *serialized_str;
-  svn_stream_t *stream;
-
-  SVN_ERR(get_txn(&txn, fs, txn_name, FALSE, trail, pool));
-  if (txn->kind != transaction_kind_normal)
-    return svn_fs_base__err_txn_not_mutable(fs, txn_name);
-
-  if (txn->proplist == NULL)
-    {
-     /* If we're deleting a property, exit now.  Otherwise, create a
-        proplist. */
-      if (value == NULL)
-        return SVN_NO_ERROR;
-
-      txn->proplist = apr_hash_make(pool);
-    }
-
-  /* De-serialize the current mergeinfo. */
-  target_mergeinfo = apr_hash_make(pool);
-  serialized_str = apr_hash_get(txn->proplist, SVN_FS__PROP_TXN_MERGEINFO,
-                                APR_HASH_KEY_STRING);
-  if (serialized_str)
-    {
-      serialized_buf = svn_stringbuf_create_from_string(serialized_str, pool);
-      stream = svn_stream_from_stringbuf(serialized_buf, pool);
-      SVN_ERR(svn_hash_read2(target_mergeinfo, stream, NULL, pool));
-    }
-  else
-    {
-      serialized_buf = svn_stringbuf_create("", pool);
-      stream = svn_stream_from_stringbuf(serialized_buf, pool);
-    }
-
-  /* Set the mergeinfo for the path, and re-serialize the hash for
-     storage. */
-  apr_hash_set(target_mergeinfo, path, APR_HASH_KEY_STRING, value);
-  SVN_ERR(svn_hash_write2(target_mergeinfo, stream, NULL, pool));
-  serialized_str = svn_string_create_from_buf(serialized_buf, pool);
-
-  /* Set the property. */
-  apr_hash_set(txn->proplist, SVN_FS__PROP_TXN_MERGEINFO,
-               APR_HASH_KEY_STRING, serialized_str);
-
-  /* Now overwrite the transaction. */
-  return put_txn(fs, txn, txn_name, trail, pool);
-}
 
 static svn_error_t *
 txn_body_change_txn_prop(void *baton, trail_t *trail)
@@ -637,7 +580,7 @@ svn_fs_base__change_txn_prop(svn_fs_txn_t *txn,
   struct change_txn_prop_args args;
   svn_fs_t *fs = txn->fs;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   args.id = txn->id;
   args.name = name;
@@ -766,7 +709,7 @@ svn_fs_base__begin_txn(svn_fs_txn_t **txn_p,
   struct begin_txn_args args;
   svn_string_t date;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   args.txn_p = &txn;
   args.rev   = rev;
@@ -826,7 +769,7 @@ svn_fs_base__open_txn(svn_fs_txn_t **txn_p,
   svn_fs_txn_t *txn;
   struct open_txn_args args;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   args.txn_p = &txn;
   args.name = name;
@@ -997,7 +940,7 @@ svn_fs_base__purge_txn(svn_fs_t *fs,
   transaction_t *txn;
   int i;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   /* Open the transaction, expecting it to be dead. */
   args.txn_p = &txn;
@@ -1054,7 +997,7 @@ svn_error_t *
 svn_fs_base__abort_txn(svn_fs_txn_t *txn,
                        apr_pool_t *pool)
 {
-  SVN_ERR(svn_fs__check_fs(txn->fs));
+  SVN_ERR(svn_fs__check_fs(txn->fs, TRUE));
 
   /* Set the transaction to "dead". */
   SVN_ERR(svn_fs_base__retry_txn(txn->fs, txn_body_abort_txn, txn, pool));
@@ -1089,7 +1032,7 @@ svn_fs_base__list_transactions(apr_array_header_t **names_p,
   apr_array_header_t *names;
   struct list_transactions_args args;
 
-  SVN_ERR(svn_fs__check_fs(fs));
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
   args.names_p = &names;
   args.pool = pool;

@@ -2,7 +2,7 @@
  * log.c:  return log messages
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -30,6 +30,7 @@
 
 #include "client.h"
 
+#include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_compat.h"
 #include "svn_error.h"
@@ -85,14 +86,11 @@ typedef struct
 
 /* A log callback conforming to the svn_log_message_receiver_t
    interface for obtaining the copy source of a node at a path and
-   storing it in *BATON (a struct copyfrom_info_t *). */
+   storing it in *BATON (a struct copyfrom_info_t *).
+   Implements svn_log_entry_receiver_t. */
 static svn_error_t *
 copyfrom_info_receiver(void *baton,
-                       apr_hash_t *changed_paths,
-                       svn_revnum_t revision,
-                       const char *author,
-                       const char *date,
-                       const char *message,
+                       svn_log_entry_t *log_entry,
                        apr_pool_t *pool)
 {
   copyfrom_info_t *copyfrom_info = baton;
@@ -100,14 +98,15 @@ copyfrom_info_receiver(void *baton,
     /* The copy source has already been found. */
     return SVN_NO_ERROR;
 
-  if (changed_paths)
+  if (log_entry->changed_paths)
     {
       int i;
       const char *path;
       svn_log_changed_path_t *changed_path;
       /* Sort paths into depth-first order. */
       apr_array_header_t *sorted_changed_paths =
-        svn_sort__hash(changed_paths, svn_sort_compare_items_as_paths, pool);
+        svn_sort__hash(log_entry->changed_paths,
+                       svn_sort_compare_items_as_paths, pool);
 
       for (i = (sorted_changed_paths->nelts -1) ; i >= 0 ; i--)
         {
@@ -158,36 +157,29 @@ svn_client__get_copy_source(const char *path_or_url,
   svn_error_t *err;
   copyfrom_info_t copyfrom_info = { NULL, NULL, SVN_INVALID_REVNUM, pool };
   apr_array_header_t *targets = apr_array_make(pool, 1, sizeof(path_or_url));
-  svn_opt_revision_t oldest_rev;
+  apr_pool_t *sesspool = svn_pool_create(pool);
+  svn_ra_session_t *ra_session;
+  svn_revnum_t at_rev;
+  const char *at_url;
 
-  oldest_rev.kind = svn_opt_revision_number;
-  oldest_rev.value.number = 1;
-
-  {
-    svn_ra_session_t *ra_session;
-    svn_revnum_t at_rev;
-    const char *at_url;
-    SVN_ERR(svn_client__ra_session_from_path(&ra_session, &at_rev, &at_url,
-                                             path_or_url, NULL,
-                                             revision, revision,
-                                             ctx, pool));
-
-    SVN_ERR(svn_client__path_relative_to_root(&copyfrom_info.target_path,
-                                              path_or_url, NULL, TRUE,
-                                              ra_session, NULL, pool));
-  }
-
-  APR_ARRAY_PUSH(targets, const char *) = path_or_url;
+  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &at_rev, &at_url,
+                                           path_or_url, NULL,
+                                           revision, revision,
+                                           ctx, sesspool));
+  SVN_ERR(svn_client__path_relative_to_root(&copyfrom_info.target_path,
+                                            path_or_url, NULL, TRUE,
+                                            ra_session, NULL, pool));
+  APR_ARRAY_PUSH(targets, const char *) = "";
 
   /* Find the copy source.  Trace back in history to find the revision
      at which this node was created (copied or added). */
-  err = svn_client_log3(targets, revision, revision, &oldest_rev, 0,
-                        TRUE, TRUE, copyfrom_info_receiver, &copyfrom_info,
-                        ctx, pool);
-  /* ### Reuse ra_session by way of svn_ra_get_log()?
-  err = svn_ra_get_log(ra_session, rel_paths, revision, 1, 0, TRUE, TRUE,
-                       copyfrom_info_receiver, &copyfrom_info, pool);
-  */
+  err = svn_ra_get_log2(ra_session, targets, at_rev, 1, 0, TRUE,
+                        TRUE, FALSE,
+                        apr_array_make(pool, 0, sizeof(const char *)),
+                        copyfrom_info_receiver, &copyfrom_info, pool);
+
+  svn_pool_destroy(sesspool);
+
   if (err)
     {
       if (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
@@ -218,7 +210,7 @@ typedef struct
   /* ra session for retrieving revprops from old servers */
   svn_ra_session_t *ra_session;
   /* caller's list of requested revprops, receiver, and baton */
-  apr_array_header_t *revprops;
+  const apr_array_header_t *revprops;
   svn_log_entry_receiver_t receiver;
   void *baton;
 } pre_15_receiver_baton_t;
@@ -307,7 +299,7 @@ svn_client_log4(const apr_array_header_t *targets,
                 svn_boolean_t discover_changed_paths,
                 svn_boolean_t strict_node_history,
                 svn_boolean_t include_merged_revisions,
-                apr_array_header_t *revprops,
+                const apr_array_header_t *revprops,
                 svn_log_entry_receiver_t real_receiver,
                 void *real_receiver_baton,
                 svn_client_ctx_t *ctx,
@@ -370,6 +362,7 @@ svn_client_log4(const apr_array_header_t *targets,
       svn_wc_adm_access_t *adm_access;
       apr_array_header_t *target_urls;
       apr_array_header_t *real_targets;
+      apr_pool_t *iterpool;
       int i;
 
       /* See FIXME about multiple wc targets, below. */
@@ -381,16 +374,19 @@ svn_client_log4(const apr_array_header_t *targets,
       /* Get URLs for each target */
       target_urls = apr_array_make(pool, 1, sizeof(const char *));
       real_targets = apr_array_make(pool, 1, sizeof(const char *));
+      iterpool = svn_pool_create(pool);
       for (i = 0; i < targets->nelts; i++)
         {
           const svn_wc_entry_t *entry;
           const char *URL;
           const char *target = APR_ARRAY_IDX(targets, i, const char *);
+
+          svn_pool_clear(iterpool);
           SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target,
                                          FALSE, 0, ctx->cancel_func,
-                                         ctx->cancel_baton, pool));
+                                         ctx->cancel_baton, iterpool));
           SVN_ERR(svn_wc__entry_versioned(&entry, target, adm_access, FALSE,
-                                         pool));
+                                         iterpool));
 
           if (! entry->url)
             return svn_error_createf
@@ -403,6 +399,7 @@ svn_client_log4(const apr_array_header_t *targets,
           APR_ARRAY_PUSH(target_urls, const char *) = URL;
           APR_ARRAY_PUSH(real_targets, const char *) = target;
         }
+      svn_pool_destroy(iterpool);
 
       /* if we have no valid target_urls, just exit. */
       if (target_urls->nelts == 0)

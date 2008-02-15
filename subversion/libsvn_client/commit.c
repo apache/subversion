@@ -1186,7 +1186,7 @@ struct post_commit_baton
   svn_wc_committed_queue_t *queue;
   apr_pool_t *qpool;
   svn_wc_adm_access_t *base_dir_access;
-  svn_boolean_t keep_changelist;
+  svn_boolean_t keep_changelists;
   svn_boolean_t keep_locks;
   apr_hash_t *digests;
 };
@@ -1244,7 +1244,7 @@ post_process_commit_item(void *baton, void *this_item, apr_pool_t *pool)
           (&(btn->queue),
            item->path, adm_access, loop_recurse,
            item->incoming_prop_changes,
-           remove_lock, (! btn->keep_changelist),
+           remove_lock, (! btn->keep_changelists),
            apr_hash_get(btn->digests, item->path, APR_HASH_KEY_STRING),
            subpool));
 
@@ -1346,8 +1346,8 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *targets,
                    svn_depth_t depth,
                    svn_boolean_t keep_locks,
-                   svn_boolean_t keep_changelist,
-                   const char *changelist_name,
+                   svn_boolean_t keep_changelists,
+                   const apr_array_header_t *changelists,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -1629,7 +1629,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                                                   rel_targets,
                                                   depth,
                                                   ! keep_locks,
-                                                  changelist_name,
+                                                  changelists,
                                                   ctx,
                                                   pool)))
     goto cleanup;
@@ -1716,7 +1716,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
       btn.queue = queue;
       btn.qpool = pool;
       btn.base_dir_access = base_dir_access;
-      btn.keep_changelist = keep_changelist;
+      btn.keep_changelists = keep_changelists;
       btn.keep_locks = keep_locks;
       btn.digests = digests;
 

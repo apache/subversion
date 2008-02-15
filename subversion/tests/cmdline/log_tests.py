@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -198,6 +198,178 @@ def guarantee_repos_and_wc(sbox):
   svntest.actions.run_and_verify_status(wc_path, expected_status)
 
 
+def merge_history_repos(sbox):
+  """Make a repos with varied and interesting merge history, similar
+to the repos found at:
+http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=c2__Sample%20repository"""
+
+  upsilon_path = os.path.join('A', 'upsilon')
+  omicron_path = os.path.join('blocked', 'omicron')
+  branch_a = os.path.join('branches', 'a')
+  branch_b = os.path.join('branches', 'b')
+  branch_c = os.path.join('branches', 'c')
+
+  # Create an empty repository - r0
+  svntest.main.safe_rmtree(sbox.repo_dir, 1)
+  svntest.main.safe_rmtree(sbox.wc_dir, 1)
+  svntest.main.create_repos(sbox.repo_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], "co", sbox.repo_url,
+                                     sbox.wc_dir)
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+
+  # Create trunk/tags/branches - r1
+  svntest.main.run_svn(None, 'mkdir', 'trunk')
+  svntest.main.run_svn(None, 'mkdir', 'tags')
+  svntest.main.run_svn(None, 'mkdir', 'branches')
+  svntest.main.run_svn(None, 'ci', '-m',
+                       'Add trunk/tags/branches structure.')
+
+  # Import greek tree to trunk - r2
+  svntest.main.greek_state.write_to_disk('trunk')
+  svntest.main.run_svn(None, 'add', os.path.join('trunk', 'A'),
+                       os.path.join('trunk', 'iota'))
+  svntest.main.run_svn(None, 'ci', '-m',
+                       'Import greek tree into trunk.')
+
+  # Update from the repository to avoid a mix-rev working copy
+  svntest.main.run_svn(None, 'up')
+
+  # Create a branch - r3
+  svntest.main.run_svn(None, 'cp', 'trunk', branch_a)
+  svntest.main.run_svn(None, 'ci', '-m',
+                       'Create branches/a from trunk.',
+                       '--username', svntest.main.wc_author2)
+
+  # Some changes on the branch - r4
+  svntest.main.file_append_binary(os.path.join(branch_a, 'iota'),
+                                  "'A' has changed a bit.\n")
+  svntest.main.file_append_binary(os.path.join(branch_a, 'A', 'mu'),
+                                  "Don't forget to look at 'upsilon', too.")
+  svntest.main.file_write(os.path.join(branch_a, upsilon_path),
+                          "This is the file 'upsilon'.\n", "wb")
+  svntest.main.run_svn(None, 'add',
+                       os.path.join(branch_a, upsilon_path))
+  svntest.main.run_svn(None, 'ci', '-m',
+                       "Add the file 'upsilon', and change some other files.")
+
+  # Create another branch - r5
+  svntest.main.run_svn(None, 'cp', 'trunk', branch_c)
+  svntest.main.run_svn(None, 'ci', '-m',
+                       'Create branches/c from trunk.',
+                       '--username', svntest.main.wc_author2)
+
+  # Do some mergeing - r6
+  os.chdir('trunk')
+  svntest.main.run_svn(None, 'merge', os.path.join('..', branch_a))
+  svntest.main.run_svn(None, 'ci', '-m',
+                       'Merged branches/a to trunk.',
+                       '--username', svntest.main.wc_author2)
+  os.chdir('..')
+
+  # Add omicron to branches/a - r7
+  svntest.main.run_svn(None, 'mkdir', os.path.join(branch_a, 'blocked'))
+  svntest.main.file_write(os.path.join(branch_a, omicron_path),
+                          "This is the file 'omicron'.\n")
+  svntest.main.run_svn(None, 'add',
+                       os.path.join(branch_a, omicron_path))
+  svntest.main.run_svn(None, 'ci', '-m',
+                       "Add omicron to branches/a.  " +
+                       "It will be blocked from merging in r8.")
+
+  # Block r7 from being merged to trunk - r8
+  os.chdir('trunk')
+  svntest.main.run_svn(None, 'merge', '--record-only', '-r6:7',
+                       os.path.join('..', branch_a))
+  svntest.main.run_svn(None, 'ci', '-m',
+                       "Block r7 from merging to trunk.",
+                       '--username', svntest.main.wc_author2)
+  os.chdir('..')
+
+  # Wording change in mu - r9
+  svntest.main.file_write(os.path.join('trunk', 'A', 'mu'),
+                          "This is the file 'mu'.\n" +
+                          "Don't forget to look at 'upsilon', as well.", "wb")
+  svntest.main.run_svn(None, 'ci', '-m',
+                       "Wording change in mu.")
+
+  # Update from the repository to avoid a mix-rev working copy
+  svntest.main.run_svn(None, 'up')
+
+  # Create another branch - r10
+  svntest.main.run_svn(None, 'cp', 'trunk', branch_b)
+  svntest.main.run_svn(None, 'ci', '-m',
+                       "Create branches/b from trunk",
+                       '--username', svntest.main.wc_author2)
+
+  # Add another file, make some changes on branches/a - r11
+  svntest.main.file_append_binary(os.path.join(branch_a, upsilon_path),
+                                  "There is also the file 'xi'.")
+  svntest.main.file_write(os.path.join(branch_a, 'A', 'xi'),
+                          "This is the file 'xi'.\n", "wb")
+  svntest.main.run_svn(None, 'add',
+                       os.path.join(branch_a, 'A', 'xi'))
+  svntest.main.file_write(os.path.join(branch_a, 'iota'),
+                          "This is the file 'iota'.\n" +
+                          "'A' has changed a bit, with 'upsilon', and 'xi'.",
+                          "wb")
+  svntest.main.run_svn(None, 'ci', '-m',
+                       "Added 'xi' to branches/a, made a few other changes.")
+
+  # Merge branches/a to branches/b - r12
+  os.chdir(branch_b)
+  svntest.main.run_svn(None, 'merge', os.path.join('..', 'a'))
+  svntest.main.run_svn(None, 'ci', '-m',
+                       "Merged branches/a to branches/b.",
+                       '--username', svntest.main.wc_author2)
+  os.chdir(os.path.join('..', '..'))
+
+  # More wording changes - r13
+  svntest.main.file_append_binary(os.path.join(branch_b, 'A', 'D', 'gamma'),
+                                  "Watch out for the rays!")
+  svntest.main.run_svn(None, 'ci', '-m',
+                       "Modify 'gamma' on branches/b.")
+
+  # More merging - r14
+  os.chdir('trunk')
+  svntest.main.run_svn(None, 'merge', os.path.join('..', branch_b))
+  svntest.main.run_svn(None, 'ci', '-m',
+                       "Merged branches/b to trunk.",
+                       '--username', svntest.main.wc_author2)
+  os.chdir('..')
+
+  # Even more merging - r15
+  os.chdir(branch_c)
+  svntest.main.run_svn(None, 'merge', os.path.join('..', '..', 'trunk'))
+  svntest.main.run_svn(None, 'ci', '-m',
+                       "Bring branches/c up to date with trunk.",
+                       '--username', svntest.main.wc_author2)
+  os.chdir(os.path.join('..', '..'))
+
+  # Modify a file on branches/c - r16
+  svntest.main.file_append_binary(os.path.join(branch_c, 'A', 'mu'),
+                                  "\nThis is yet more content in 'mu'.")
+  svntest.main.run_svn(None, 'ci', '-m',
+                       "Modify 'mu' on branches/c.")
+
+  # Merge branches/c to trunk, which produces a conflict - r17
+  os.chdir('trunk')
+  svntest.main.run_svn(None, 'merge', os.path.join('..', branch_c))
+  svntest.main.file_write(os.path.join('A', 'mu'),
+                          "This is the file 'mu'.\n" +
+                          "Don't forget to look at 'upsilon', as well.\n" +
+                          "This is yet more content in 'mu'.",
+                          "wb")
+  svntest.main.run_svn(None, 'resolved', os.path.join('A', 'mu'))
+  svntest.main.run_svn(None, 'ci', '-m',
+                       "Merge branches/c to trunk, " +
+                       "resolving a conflict in 'mu'.",
+                       '--username', svntest.main.wc_author2)
+  os.chdir('..')
+
+  # Restore working directory
+  os.chdir(was_cwd)
 
 
 # For errors seen while parsing log data.
@@ -291,25 +463,26 @@ def parse_log_output(log_lines):
         paths = []
         path_line = log_lines.pop(0).strip()
 
-        # Stop on either a blank line or a "Result of a merge..." line
-        while path_line != '' and path_line[0:6] != 'Result':
+        # Stop on either a blank line or a "Merged via: ..." line
+        while path_line != '' and path_line[0:6] != 'Merged':
           paths.append( (path_line[0], path_line[2:]) )
           path_line = log_lines.pop(0).strip()
 
         this_item['paths'] = paths
 
-        if path_line[0:6] == 'Result':
+        if path_line[0:6] == 'Merged':
           is_result = 1
           result_line = path_line
 
-      elif next_line[0:6] == 'Result':
+      elif next_line[0:6] == 'Merged':
         is_result = 1
         result_line = next_line.strip()
 
-      # Parse output of "Result of a merge..." line
+      # Parse output of "Merged via: ..." line
       if is_result:
         merges = []
-        for rev_str in result_line[24:].split(','):
+        prefix_len = len('Merged via: ')
+        for rev_str in result_line[prefix_len:].split(','):
           merges.append(int(rev_str.strip()[1:]))
         this_item['merges'] = merges
 
@@ -491,7 +664,7 @@ def log_where_nothing_changed(sbox):
 #----------------------------------------------------------------------
 def log_to_revision_zero(sbox):
   "'svn log -v -r 1:0 wc_root'"
-  sbox.build()
+  sbox.build(read_only = True)
 
   # This used to segfault the server.
 
@@ -836,7 +1009,7 @@ Merge r12 and r14 from branch to trunk.
 r14 | bob   | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 1 line
 Changed paths:
    M /trunk/death-ray.c
-Result of a merge from: r24
+Merged via: r24
 
 Remove inadvertent changes to Death-Ray-o-Matic introduced in r12.
 ------------------------------------------------------------------------
@@ -844,7 +1017,7 @@ r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 1 line
 Changed paths:
    M /trunk/frobnicator/frapnalyzer.c
    M /trunk/death-ray.c
-Result of a merge from: r24
+Merged via: r24
 
 Fix frapnalyzer bug in frobnicator.
 ------------------------------------------------------------------------''',
@@ -854,22 +1027,22 @@ r24 | chuck | 2007-04-30 10:18:01 -0500 (Mon, 16 Apr 2007) | 1 line
 Merge r12 and r14 from branch to trunk.
 ------------------------------------------------------------------------
 r14 | bob   | 2007-04-16 18:50:29 -0500 (Mon, 16 Apr 2007) | 1 line
-Result of a merge from: r24
+Merged via: r24
 
 Remove inadvertent changes to Death-Ray-o-Matic introduced in r12.
 ------------------------------------------------------------------------
 r12 | alice | 2007-04-16 19:02:48 -0500 (Mon, 16 Apr 2007) | 1 line
-Result of a merge from: r24
+Merged via: r24
 
 Fix frapnalyzer bug in frobnicator.
 ------------------------------------------------------------------------
 r10 | alice | 2007-04-16 19:02:28 -0500 (Mon, 16 Apr 2007) | 1 line
-Result of a merge from: r12, r24
+Merged via: r12, r24
 
 Fix frapnalyzer documentation.
 ------------------------------------------------------------------------
 r9 | bob   | 2007-04-16 19:01:48 -0500 (Mon, 16 Apr 2007) | 1 line
-Result of a merge from: r12, r24
+Merged via: r12, r24
 
 Whitespace fixes.  No functional change.
 ------------------------------------------------------------------------''',
@@ -895,8 +1068,8 @@ Log message for revision 3.
 
 
 def check_merge_results(log_chain, expected_merges):
-  '''Check LOG_CHAIN to see if the log information contains 'Result of Merge'
-  informaiton indicated by EXPECTED_MERGES.  EXPECTED_MERGES is a dictionary
+  '''Check LOG_CHAIN to see if the log information contains 'Merged via'
+  information indicated by EXPECTED_MERGES.  EXPECTED_MERGES is a dictionary
   whose key is the merged revision, and whose value is the merging revision.'''
 
   # Check to see if the number and values of the revisions is correct
@@ -926,9 +1099,7 @@ def check_merge_results(log_chain, expected_merges):
 def merge_sensitive_log_single_revision(sbox):
   "test sensitive log on a single revision"
 
-  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
-                                               'mergetracking_data',
-                                               'basic-merge.dump'))
+  merge_history_repos(sbox)
 
   # Paths we care about
   wc_dir = sbox.wc_dir
@@ -962,9 +1133,7 @@ def merge_sensitive_log_single_revision(sbox):
 def merge_sensitive_log_branching_revision(sbox):
   "test 'svn log -g' on a branching revision"
 
-  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
-                                               'mergetracking_data',
-                                               'basic-merge.dump'))
+  merge_history_repos(sbox)
 
   # Paths we care about
   wc_dir = sbox.wc_dir
@@ -985,9 +1154,7 @@ def merge_sensitive_log_branching_revision(sbox):
 def merge_sensitive_log_non_branching_revision(sbox):
   "test 'svn log -g' on a non-branching revision"
 
-  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
-                                               'mergetracking_data',
-                                               'basic-merge.dump'))
+  merge_history_repos(sbox)
 
   TRUNK_path = os.path.join(sbox.wc_dir, "trunk")
 
@@ -1006,9 +1173,7 @@ def merge_sensitive_log_non_branching_revision(sbox):
 def merge_sensitive_log_added_path(sbox):
   "test 'svn log -g' a path added before merge"
 
-  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
-                                               'mergetracking_data',
-                                               'basic-merge.dump'))
+  merge_history_repos(sbox)
 
   XI_path = os.path.join(sbox.wc_dir, "trunk", "A", "xi")
 
@@ -1023,10 +1188,10 @@ def merge_sensitive_log_added_path(sbox):
   }
   check_merge_results(log_chain, expected_merges)
 
-  revprops = [{'svn:author': 'jrandom', 'svn:date': '',
-               'svn:log': 'Merge branches/b to trunk'},
-              {'svn:author': 'jrandom', 'svn:date': '',
-               'svn:log': 'Merge branches/a to branches/b'},
+  revprops = [{'svn:author': 'jconstant', 'svn:date': '',
+               'svn:log': 'Merged branches/b to trunk.'},
+              {'svn:author': 'jconstant', 'svn:date': '',
+               'svn:log': 'Merged branches/a to branches/b.'},
               {'svn:author': 'jrandom', 'svn:date': '',
                'svn:log': "Added 'xi' to branches/a,"
                ' made a few other changes.'}]
@@ -1073,7 +1238,7 @@ def log_changes_list(sbox):
 def only_one_wc_path(sbox):
   "svn log of two wc paths is disallowed"
 
-  sbox.build()
+  sbox.build(read_only = True)
   os.chdir(sbox.wc_dir)
 
   svntest.actions.run_and_verify_log_xml(
@@ -1111,8 +1276,6 @@ def retrieve_revprops(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         '-m', msg2,
                                         omega_path)
 
@@ -1208,12 +1371,12 @@ test_list = [ None,
               log_base_peg,
               log_verbose,
               log_parser,
-              SkipUnless(merge_sensitive_log_single_revision,
-                         server_has_mergeinfo),
+              XFail(SkipUnless(merge_sensitive_log_single_revision,
+                               server_has_mergeinfo)),
               SkipUnless(merge_sensitive_log_branching_revision,
                          server_has_mergeinfo),
-              SkipUnless(merge_sensitive_log_non_branching_revision,
-                         server_has_mergeinfo),
+              XFail(SkipUnless(merge_sensitive_log_non_branching_revision,
+                               server_has_mergeinfo)),
               SkipUnless(merge_sensitive_log_added_path,
                          server_has_mergeinfo),
               log_single_change,

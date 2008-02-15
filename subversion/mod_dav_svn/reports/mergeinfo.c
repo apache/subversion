@@ -45,11 +45,13 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
   dav_error *derr = NULL;
   apr_xml_elem *child;
   apr_hash_t *mergeinfo;
+  svn_boolean_t include_descendants = FALSE;
   dav_svn__authz_read_baton arb;
   const dav_svn_repos *repos = resource->info->repos;
   const char *action;
   int ns;
   apr_bucket_brigade *bb;
+  svn_boolean_t sent_anything = FALSE;
 
   /* These get determined from the request document. */
   svn_revnum_t rev = SVN_INVALID_REVNUM;
@@ -57,6 +59,9 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
   svn_mergeinfo_inheritance_t inherit = svn_mergeinfo_explicit;
   apr_array_header_t *paths
     = apr_array_make(resource->pool, 0, sizeof(const char *));
+  /* for high-level logging */
+  svn_stringbuf_t *space_separated_paths =
+    svn_stringbuf_create("", resource->pool);
 
   /* Sanity check. */
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
@@ -92,6 +97,21 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
           target = svn_path_join(resource->info->repos_path, rel_path,
                                  resource->pool);
           (*((const char **)(apr_array_push(paths)))) = target;
+          /* Gather a formatted list of paths to include in our
+             operational logging. */
+          if (space_separated_paths->len > 1)
+            svn_stringbuf_appendcstr(space_separated_paths, " ");
+          svn_stringbuf_appendcstr(space_separated_paths,
+                                   svn_path_uri_encode(target,
+                                                       resource->pool));
+        }
+      else if (strcmp(child->name, SVN_DAV__INCLUDE_DESCENDANTS) == 0)
+        {
+          const char *word = dav_xml_get_cdata(child, resource->pool, 1);
+          if (strcmp(word, "yes") == 0)
+            include_descendants = TRUE;
+          /* Else the client isn't supposed to send anyway, so just
+             leave it false. */
         }
       /* else unknown element; skip it */
     }
@@ -104,7 +124,8 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
   bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
 
   serr = svn_repos_fs_get_mergeinfo(&mergeinfo, repos->repos, paths, rev,
-                                    inherit, dav_svn__authz_read_func(&arb),
+                                    inherit, include_descendants,
+                                    dav_svn__authz_read_func(&arb),
                                     &arb, resource->pool);
   if (serr)
     {
@@ -113,6 +134,13 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
       goto cleanup;
     }
 
+  /* Ideally, dav_svn__send_xml() would set a flag in bb (or rather,
+     in r->sent_bodyct, see dav_method_report()), and ap_fflush()
+     would not set that flag unless it actually sent something.  But
+     we are condemned to live in another universe, so we must keep
+     track ourselves of whether we've sent anything or not.  See the
+     long comment after the 'cleanup' label for more details. */
+  sent_anything = TRUE;
   serr = dav_svn__send_xml(bb, output,
                            DAV_XML_HEADER DEBUG_CR
                            "<S:" SVN_DAV__MERGEINFO_REPORT " "
@@ -174,25 +202,38 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
  cleanup:
 
   /* We've detected a 'high level' svn action to log. */
-  if (paths->nelts == 0)
-    action = "get-mergeinfo";
-  else if (paths->nelts == 1)
-    action = apr_psprintf(resource->pool, "get-mergeinfo '%s'",
-                          svn_path_uri_encode(APR_ARRAY_IDX
-                                              (paths, 0, const char *),
-                                              resource->pool));
-  else
-    action = apr_psprintf(resource->pool, "get-mergeinfo-partial '%s'",
-                          svn_path_uri_encode(APR_ARRAY_IDX
-                                              (paths, 0, const char *),
-                                              resource->pool));
+  action = apr_psprintf(resource->pool, "get-mergeinfo (%s) %s",
+                        space_separated_paths->data,
+                        svn_inheritance_to_word(inherit));
+  dav_svn__operational_log(resource->info, action);
 
-  apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION", action);
+  /* We don't flush the brigade unless there's something in it to
+     flush; that way, if we jumped to 'cleanup' before sending
+     anything, we will be able to report derr accurately to the
+     client.
 
+     To understand this, see mod_dav.c:dav_method_report(): as long as
+     it doesn't think we've sent anything to the client, it'll send
+     the real error, which is what we'd prefer.  This situation is
+     described in httpd-2.2.6/modules/dav/main/mod_dav.c, line 4066,
+     in the comment in dav_method_report() that says:
 
-  /* Flush the contents of the brigade (returning an error only if we
-     don't already have one). */
-  if ((apr_err = ap_fflush(output, bb)) && !derr)
+        If an error occurred during the report delivery, there's
+        basically nothing we can do but abort the connection and
+        log an error.  This is one of the limitations of HTTP; it
+        needs to "know" the entire status of the response before
+        generating it, which is just impossible in these streamy
+        response situations.
+
+     In other words, flushing the brigade here would cause
+     r->sent_bodyct (see dav_method_report()) to become non-zero,
+     *even* if we hadn't tried to send any data to the brigade yet.
+     So we don't flush unless data was actually sent. */
+  apr_err = 0;
+  if (sent_anything)
+    apr_err = ap_fflush(output, bb);
+      
+  if (apr_err && !derr)
     derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
                                 HTTP_INTERNAL_SERVER_ERROR,
                                 "Error flushing brigade.",

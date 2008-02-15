@@ -43,8 +43,9 @@ svn_cl__cat(apr_getopt_t *os,
   svn_stream_t *out;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
-                                        opt_state->targets, pool));
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets, 
+                                                      pool));
 
   /* Cat cannot operate on an implicit '.' so a filename is required */
   if (! targets->nelts)

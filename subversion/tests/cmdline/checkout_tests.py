@@ -261,7 +261,7 @@ def forced_checkout_with_versioned_obstruction(sbox):
   """forced co with versioned obstruction"""
 
   # Make a greek tree working copy
-  sbox.build()
+  sbox.build(read_only = True)
 
   # Create a second repository with the same greek tree
   repo_dir = sbox.repo_dir
@@ -294,7 +294,7 @@ def forced_checkout_with_versioned_obstruction(sbox):
 def import_and_checkout(sbox):
   """import and checkout"""
 
-  sbox.build()
+  sbox.build(read_only = True)
 
   other_repo_dir, other_repo_url = sbox.add_repo_path("other")
   import_from_dir = sbox.add_wc_path("other")
@@ -375,7 +375,7 @@ def checkout_broken_eol(sbox):
 def checkout_creates_intermediate_folders(sbox):
   "checkout and create some intermediate folders"
 
-  sbox.build(create_wc = False)
+  sbox.build(create_wc = False, read_only = True)
 
   checkout_target = os.path.join(sbox.wc_dir, 'a', 'b', 'c')
 
@@ -545,8 +545,7 @@ def co_with_obstructing_local_adds(sbox):
 
   # Commit.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None,
-                                        None, None, None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Create various paths scheduled for addition which will obstruct
   # the adds coming from the repos.
@@ -643,33 +642,35 @@ def co_with_obstructing_local_adds(sbox):
   # Test that file and dir obstructions scheduled for addition *with*
   # history fail when update tries to add the same path.
 
-  # URL to URL copy of A/D/G to A/M.
+  # URL to URL copy of A/D/G to A/D/M.
   G_URL = sbox.repo_url + '/A/D/G'
-  M_URL = sbox.repo_url + '/A/M'
+  M_URL = sbox.repo_url + '/A/D/M'
   svntest.actions.run_and_verify_svn("Copy error:", None, [],
                                      'cp', G_URL, M_URL, '-m', '')
 
-  # WC to WC copy of A/D/H to A/M, M now scheduled for addition with
-  # history in WC and pending addition from the repos.
+  # WC to WC copy of A/D/H to A/D/M.  (M is now scheduled for addition
+  # with history in WC and pending addition from the repos).
+  D_path = os.path.join(wc_dir, 'A', 'D')
   H_path = os.path.join(wc_dir, 'A', 'D', 'H')
-  A_path = os.path.join(wc_dir, 'A')
-  M_path = os.path.join(wc_dir, 'A', 'M')
+  M_path = os.path.join(wc_dir, 'A', 'D', 'M')
 
   svntest.actions.run_and_verify_svn("Copy error:", None, [],
                                      'cp', H_path, M_path)
 
-  # URL to URL copy of A/D/H/omega to omicron.
-  omega_URL = sbox.repo_url + '/A/D/H/omega'
-  omicron_URL = sbox.repo_url + '/omicron'
+  # URL to URL copy of A/B/E/alpha to A/B/F/omicron.
+  omega_URL = sbox.repo_url + '/A/B/E/alpha'
+  omicron_URL = sbox.repo_url + '/A/B/F/omicron'
   svntest.actions.run_and_verify_svn("Copy error:", None, [],
                                      'cp', omega_URL, omicron_URL,
                                      '-m', '')
 
-  # WC to WC copy of A/D/H/chi to omicron, omicron now scheduled for
-  # addition with history in WC and pending addition from the repos.
+  # WC to WC copy of A/D/H/chi to /A/B/F/omicron.  (omicron is now
+  # scheduled for addition with history in WC and pending addition
+  # from the repos).
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  omicron_path = os.path.join(wc_dir, 'A', 'B', 'F', 'omicron')
   chi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'chi')
-  omicron_path = os.path.join(wc_dir, 'omicron')
-
+  
   svntest.actions.run_and_verify_svn("Copy error:", None, [],
                                      'cp', chi_path,
                                      omicron_path)
@@ -677,8 +678,9 @@ def co_with_obstructing_local_adds(sbox):
   # Try to co M's Parent.
   sout, serr = svntest.actions.run_and_verify_svn("Checkout XPASS",
                                                   [], svntest.verify.AnyOutput,
-                                                  'co', sbox.repo_url + '/A',
-                                                  A_path)
+                                                  'checkout',
+                                                  sbox.repo_url + '/A/D',
+                                                  D_path)
 
   test_stderr("svn: Failed to add directory '.*M': a versioned " \
               "directory of the same name already exists\n", serr)
@@ -686,18 +688,19 @@ def co_with_obstructing_local_adds(sbox):
   # --force shouldn't help either.
   sout, serr = svntest.actions.run_and_verify_svn("Checkout XPASS",
                                                   [], svntest.verify.AnyOutput,
-                                                  'co', sbox.repo_url + '/A',
-                                                  A_path, '--force')
+                                                  'checkout',
+                                                  sbox.repo_url + '/A/D',
+                                                  D_path, '--force')
 
   test_stderr("svn: Failed to add directory '.*M': a versioned " \
               "directory of the same name already exists\n", serr)
 
-  # Try to co omicron's parent, non-recusively so as not to
-  # try and update M first.
+  # Try to co omicron's parent.
   sout, serr = svntest.actions.run_and_verify_svn("Checkout XPASS",
                                                   [], svntest.verify.AnyOutput,
-                                                  'co', sbox.repo_url,
-                                                  wc_dir, '-N')
+                                                  'checkout',
+                                                  sbox.repo_url + '/A/B/F',
+                                                  F_path)
 
   test_stderr("svn: Failed to add file '.*omicron': a file of the same " \
               "name is already scheduled for addition with history\n", serr)
@@ -705,8 +708,9 @@ def co_with_obstructing_local_adds(sbox):
   # Again, --force shouldn't matter.
   sout, serr = svntest.actions.run_and_verify_svn("Checkout XPASS",
                                                   [], svntest.verify.AnyOutput,
-                                                  'co', sbox.repo_url,
-                                                  wc_dir, '-N', '--force')
+                                                  'checkout',
+                                                  sbox.repo_url + '/A/B/F',
+                                                  F_path, '--force')
 
   test_stderr("svn: Failed to add file '.*omicron': a file of the same " \
               "name is already scheduled for addition with history\n", serr)

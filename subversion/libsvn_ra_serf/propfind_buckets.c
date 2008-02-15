@@ -158,7 +158,8 @@ static void become_request(serf_bucket_t *bucket)
   hdrs_bkt = serf_bucket_request_get_headers(bucket);
 
   serf_bucket_headers_setn(hdrs_bkt, "Host", ctx->conn->hostinfo);
-  serf_bucket_headers_setn(hdrs_bkt, "User-Agent", USER_AGENT);
+  serf_bucket_headers_setn(hdrs_bkt, "User-Agent", ctx->conn->useragent);
+
   if (ctx->conn->using_compression == TRUE)
     {
       serf_bucket_headers_setn(hdrs_bkt, "Accept-Encoding", "gzip");

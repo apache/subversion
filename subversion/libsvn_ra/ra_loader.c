@@ -2,7 +2,7 @@
  * ra_loader.c:  logic for loading different RA library implementations
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -504,7 +504,7 @@ svn_error_t *svn_ra_reparent(svn_ra_session_t *session,
 
   /* Make sure the new URL is in the same repository, so that the
      implementations don't have to do it. */
-  SVN_ERR(svn_ra_get_repos_root(session, &repos_root, pool));
+  SVN_ERR(svn_ra_get_repos_root2(session, &repos_root, pool));
   if (! svn_path_is_ancestor(repos_root, url))
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                              _("'%s' isn't in the same repository as '%s'"),
@@ -663,6 +663,7 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
                                   const apr_array_header_t *paths,
                                   svn_revnum_t revision,
                                   svn_mergeinfo_inheritance_t inherit,
+                                  svn_boolean_t include_descendants,
                                   apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -684,7 +685,8 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
     }
 
   return session->vtable->get_mergeinfo(session, mergeinfo, paths,
-                                        revision, inherit, pool);
+                                        revision, inherit,
+                                        include_descendants, pool);
 }
 
 svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
@@ -892,7 +894,7 @@ svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
                              svn_boolean_t discover_changed_paths,
                              svn_boolean_t strict_node_history,
                              svn_boolean_t include_merged_revisions,
-                             apr_array_header_t *revprops,
+                             const apr_array_header_t *revprops,
                              svn_log_entry_receiver_t receiver,
                              void *receiver_baton,
                              apr_pool_t *pool)
@@ -903,6 +905,10 @@ svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
       assert(*path != '/');
     }
+
+  if (include_merged_revisions)
+    SVN_ERR(svn_ra__assert_mergeinfo_capable_server(session, NULL, pool));
+
   return session->vtable->get_log(session, paths, start, end, limit,
                                   discover_changed_paths, strict_node_history,
                                   include_merged_revisions, revprops,
@@ -960,11 +966,29 @@ svn_error_t *svn_ra_stat(svn_ra_session_t *session,
   return session->vtable->stat(session, path, revision, dirent, pool);
 }
 
+svn_error_t *svn_ra_get_uuid2(svn_ra_session_t *session,
+                              const char **uuid,
+                              apr_pool_t *pool)
+{
+  SVN_ERR(session->vtable->get_uuid(session, uuid, pool));
+  *uuid = *uuid ? apr_pstrdup(pool, *uuid) : NULL;
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *svn_ra_get_uuid(svn_ra_session_t *session,
                              const char **uuid,
                              apr_pool_t *pool)
 {
   return session->vtable->get_uuid(session, uuid, pool);
+}
+
+svn_error_t *svn_ra_get_repos_root2(svn_ra_session_t *session,
+                                    const char **url,
+                                    apr_pool_t *pool)
+{
+  SVN_ERR(session->vtable->get_repos_root(session, url, pool));
+  *url = *url ? apr_pstrdup(pool, *url) : NULL;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *svn_ra_get_repos_root(svn_ra_session_t *session,
@@ -1060,6 +1084,9 @@ svn_error_t *svn_ra_get_file_revs2(svn_ra_session_t *session,
   svn_error_t *err;
 
   assert(*path != '/');
+
+  if (include_merged_revisions)
+    SVN_ERR(svn_ra__assert_mergeinfo_capable_server(session, NULL, pool));
 
   err = session->vtable->get_file_revs(session, path, start, end,
                                        include_merged_revisions,

@@ -38,7 +38,7 @@ Item = wc.StateItem
 def basic_checkout(sbox):
   "basic checkout of a wc"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   # Checkout of a different URL into a working copy fails
@@ -85,7 +85,7 @@ def basic_checkout(sbox):
 def basic_status(sbox):
   "basic status command"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   # Created expected output tree for 'svn status'
@@ -126,8 +126,6 @@ def basic_commit(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 
@@ -162,8 +160,7 @@ def basic_update(sbox):
 
   # Commit.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None,
-                                        None, None, None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Create expected output tree for an update of the wc_backup.
   expected_output = wc.State(wc_backup, {
@@ -354,7 +351,7 @@ def basic_corruption(sbox):
   # This commit should fail due to text base corruption.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, "svn: Checksum",
-                                        None, None, None, None, wc_dir)
+                                        wc_dir)
 
   # Restore the uncorrupted text base.
   os.chmod(tb_dir_path, 0777)
@@ -366,8 +363,7 @@ def basic_corruption(sbox):
 
   # This commit should succeed.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None,
-                                        None, None, None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Create expected output tree for an update of the other_wc.
   expected_output = wc.State(other_wc, {
@@ -454,7 +450,6 @@ def basic_merging_update(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None, None, None,
                                         wc_dir)
 
   # Make a backup copy of the working copy
@@ -481,7 +476,6 @@ def basic_merging_update(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None, None, None,
                                         wc_dir)
 
   # Make local mods to wc_backup by recreating mu and rho
@@ -562,8 +556,7 @@ def basic_conflict(sbox):
 
   # Commit.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None,
-                                        None, None, None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Create expected output tree for an update of the wc_backup.
   expected_output = wc.State(wc_backup, {
@@ -643,7 +636,7 @@ def basic_conflict(sbox):
 def basic_cleanup(sbox):
   "basic cleanup command"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   # Lock some directories.
@@ -841,7 +834,7 @@ def basic_revert(sbox):
 def basic_switch(sbox):
   "basic switch command"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   ### Switch the file `iota' to `A/D/gamma'.
@@ -1155,8 +1148,7 @@ def basic_checkout_deleted(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Now try to checkout revision 1 of A/D.
   url = sbox.repo_url + '/A/D'
@@ -1201,8 +1193,7 @@ def basic_node_kind_change(sbox):
   expected_status.remove('A/D/gamma')
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Try and fail to create a directory (file deleted)
   svntest.actions.run_and_verify_svn('Cannot change node kind',
@@ -1288,7 +1279,7 @@ def basic_import(sbox):
 def basic_cat(sbox):
   "basic cat of files"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   mu_path = os.path.join(wc_dir, 'A', 'mu')
@@ -1306,7 +1297,7 @@ def basic_cat(sbox):
 def basic_ls(sbox):
   'basic ls'
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   # Even on Windows, the output will use forward slashes, so that's
@@ -1392,7 +1383,7 @@ def nonexistent_repository(sbox):
 def basic_auth_cache(sbox):
   "basic auth caching"
 
-  sbox.build(create_wc = False)
+  sbox.build(create_wc = False, read_only = True)
   wc_dir         = sbox.wc_dir
 
   repo_dir       = sbox.repo_dir
@@ -1430,7 +1421,7 @@ def basic_add_ignores(sbox):
   # where dir contains some items that match the ignore list and some
   # do not would add all items, ignored or not.
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   dir_path = os.path.join(wc_dir, 'dir')
@@ -1459,7 +1450,7 @@ def basic_add_local_ignores(sbox):
 
   #Issue #2243
   #svn add command not keying off svn:ignore value
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   dir_path = os.path.join(wc_dir, 'dir')
@@ -1477,7 +1468,7 @@ def basic_add_no_ignores(sbox):
   'add ignored files in added dirs'
 
   # add ignored files using the '--no-ignore' option
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   dir_path = os.path.join(wc_dir, 'dir')
@@ -1553,15 +1544,13 @@ def basic_add_parents(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 #----------------------------------------------------------------------
 def uri_syntax(sbox):
   'make sure URI syntaxes are parsed correctly'
 
-  sbox.build(create_wc = False)
+  sbox.build(create_wc = False, read_only = True)
   local_dir = sbox.wc_dir
 
   # Revision 6638 made 'svn co http://host' seg fault, this tests the fix.
@@ -1580,7 +1569,7 @@ def uri_syntax(sbox):
 def basic_checkout_file(sbox):
   "trying to check out a file should fail"
 
-  sbox.build()
+  sbox.build(read_only = True)
 
   iota_url = sbox.repo_url + '/iota'
 
@@ -1607,7 +1596,7 @@ def basic_info(sbox):
       print "Expected paths:", expected_paths
       raise svntest.Failure
 
-  sbox.build()
+  sbox.build(read_only = True)
 
   os.chdir(sbox.wc_dir)
 
@@ -1630,7 +1619,7 @@ def repos_root(sbox):
       print "Bad or missing repository root"
       raise svntest.Failure
 
-  sbox.build()
+  sbox.build(read_only = True)
 
   output, errput = svntest.main.run_svn(None, "info",
                                         sbox.wc_dir)
@@ -1695,8 +1684,6 @@ def info_nonhead(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
   # Get info for old iota at r1.
   output, errput = svntest.actions.run_and_verify_svn(None, None, [],
@@ -1734,8 +1721,7 @@ def ls_nonhead(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Check that we can list a file in A/D/G at revision 1.
   rho_url = sbox.repo_url + "/A/D/G/rho"
@@ -1748,7 +1734,7 @@ def ls_nonhead(sbox):
 def cat_added_PREV(sbox):
   "cat added file using -rPREV"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   f_path = os.path.join(wc_dir, 'f')
 
@@ -1805,8 +1791,6 @@ def delete_keep_local(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
   # Update working copy to check disk state still greek tree
@@ -1997,8 +1981,7 @@ def automatic_conflict_resolution(sbox):
 
   # Commit.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None,
-                                        None, None, None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Create expected output tree for an update of the wc_backup.
   expected_output = wc.State(wc_backup, {
@@ -2110,11 +2093,11 @@ def automatic_conflict_resolution(sbox):
                                      lambda_path_backup)
   svntest.actions.run_and_verify_svn("Resolved command", None, [],
                                      'resolved',
-                                     '--accept=mine',
+                                     '--accept=mine-full',
                                      mu_path_backup)
   svntest.actions.run_and_verify_svn("Resolved command", None, [],
                                      'resolved',
-                                     '--accept=theirs',
+                                     '--accept=theirs-full',
                                      rho_path_backup)
 
   # Set the expected disk contents for the test
@@ -2162,7 +2145,7 @@ def automatic_conflict_resolution(sbox):
 def info_nonexisting_file(sbox):
   "get info on a file not in the repo"
 
-  sbox.build(create_wc = False)
+  sbox.build(create_wc = False, read_only = True)
   idonotexist_url = sbox.repo_url + '/IdoNotExist'
   output, errput = svntest.main.run_svn(1, 'info', idonotexist_url)
 

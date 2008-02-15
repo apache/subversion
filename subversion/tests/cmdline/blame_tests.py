@@ -68,7 +68,9 @@ def parse_and_verify_blame(output, expected_blame, with_merged=0):
   if len(results) != len(expected_blame):
     raise svntest.Failure, "expected and actual results not the same length"
 
-  for (num, (item, expected_item)) in enumerate(zip(results, expected_blame)):
+  pairs = zip(results, expected_blame)
+  for num in xrange(len(pairs)):
+    (item, expected_item) = pairs[num]
     for key in keys:
       if item[key] != expected_item[key]:
         raise svntest.Failure, 'on line %d, expecting %s "%s", found "%s"' % \
@@ -145,7 +147,7 @@ def blame_directory(sbox):
   import re
 
   # Setup
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   dir = os.path.join(wc_dir, 'A')
 
@@ -180,7 +182,6 @@ def blame_in_xml(sbox):
     'iota' : Item(verb='Sending'),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, None, None,
                                         None, None, wc_dir)
 
   # Retrieve last changed date from svn info
@@ -250,7 +251,6 @@ def blame_on_unknown_revision(sbox):
       'iota' : Item(verb='Sending'),
       })
     svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                          None, None, None, None,
                                           None, None, wc_dir)
 
   output, error = svntest.actions.run_and_verify_svn(None, None, [],
@@ -322,14 +322,12 @@ def blame_eol_styles(sbox):
     for i in range(1,3):
       svntest.main.file_append(file_path, "Extra line %d" % (i) + "\n")
       svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                            None, None, None, None,
                                             None, None, wc_dir)
 
     svntest.main.run_svn(None, 'propset', 'svn:eol-style', eol,
                          file_path)
 
     svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                          None, None, None, None,
                                           None, None, wc_dir)
 
     output, error = svntest.actions.run_and_verify_svn(None, None, [],
@@ -358,7 +356,6 @@ def blame_ignore_whitespace(sbox):
       'iota' : Item(verb='Sending'),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, None, None,
                                         None, None, wc_dir)
 
   # commit only whitespace changes
@@ -370,7 +367,6 @@ def blame_ignore_whitespace(sbox):
       'iota' : Item(verb='Sending'),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, None, None,
                                         None, None, wc_dir)
 
   # match the blame output, as defined in the blame code:
@@ -395,7 +391,6 @@ def blame_ignore_whitespace(sbox):
       'iota' : Item(verb='Sending'),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, None, None,
                                         None, None, wc_dir)
 
   expected_output = [
@@ -425,7 +420,6 @@ def blame_ignore_eolstyle(sbox):
       'iota' : Item(verb='Sending'),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, None, None,
                                         None, None, wc_dir)
 
   # commit only eol changes
@@ -437,7 +431,6 @@ def blame_ignore_eolstyle(sbox):
       'iota' : Item(verb='Sending'),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, None, None,
                                         None, None, wc_dir)
 
   expected_output = [
@@ -453,9 +446,8 @@ def blame_ignore_eolstyle(sbox):
 def blame_merge_info(sbox):
   "test 'svn blame -g'"
 
-  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
-                                               'mergetracking_data',
-                                               'basic-merge.dump'))
+  from log_tests import merge_history_repos
+  merge_history_repos(sbox)
 
   wc_dir = sbox.wc_dir
   iota_path = os.path.join(wc_dir, 'trunk', 'iota')
@@ -480,9 +472,8 @@ def blame_merge_info(sbox):
 def blame_merge_out_of_range(sbox):
   "don't look for merged files out of range"
 
-  svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
-                                               'mergetracking_data',
-                                               'basic-merge.dump'))
+  from log_tests import merge_history_repos
+  merge_history_repos(sbox)
 
   wc_dir = sbox.wc_dir
   upsilon_path = os.path.join(wc_dir, 'trunk', 'A', 'upsilon')
@@ -494,7 +485,7 @@ def blame_merge_out_of_range(sbox):
       { 'revision' : 4,
         'author' : 'jrandom',
         'text' : "This is the file 'upsilon'.\n",
-        'merged' : 1,
+        'merged' : 0,
       },
       { 'revision' : 11,
         'author': 'jrandom',
@@ -539,7 +530,7 @@ def blame_peg_rev_file_not_in_head(sbox):
 def blame_file_not_in_head(sbox):
   "blame target not in HEAD"
 
-  sbox.build(create_wc = False)
+  sbox.build(create_wc = False, read_only = True)
   notexisting_url = sbox.repo_url + '/notexisting'
 
   # Check that a correct error message is printed when blaming a target that
@@ -564,10 +555,8 @@ test_list = [ None,
               blame_eol_styles,
               blame_ignore_whitespace,
               blame_ignore_eolstyle,
-              SkipUnless(blame_merge_info,
-                         server_has_mergeinfo),
-              SkipUnless(blame_merge_out_of_range,
-                         server_has_mergeinfo),
+              SkipUnless(blame_merge_info, server_has_mergeinfo),
+              SkipUnless(blame_merge_out_of_range, server_has_mergeinfo),
               blame_peg_rev_file_not_in_head,
               blame_file_not_in_head,
              ]

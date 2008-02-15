@@ -108,6 +108,26 @@ svn_error_t *svn_fs_fs__dag_get_predecessor_count(int *count,
                                                   dag_node_t *node,
                                                   apr_pool_t *pool);
 
+/* Set *COUNT to the number of node under NODE (inclusive) with
+   svn:mergeinfo properties, allocating from POOL.  */
+svn_error_t *svn_fs_fs__dag_get_mergeinfo_count(apr_int64_t *count,
+                                                dag_node_t *node,
+                                                apr_pool_t *pool);
+
+/* Set *DO_THEY to a flag indicating whether or not NODE is a
+   directory with at least one descendant (not including itself) with
+   svn:mergeinfo. */
+svn_error_t *
+svn_fs_fs__dag_has_descendants_with_mergeinfo(svn_boolean_t *do_they,
+                                              dag_node_t *node,
+                                              apr_pool_t *pool);
+
+/* Set *HAS_MERGEINFO to a flag indicating whether or not NODE itself
+   has svn:mergeinfo set on it. */
+svn_error_t *
+svn_fs_fs__dag_has_mergeinfo(svn_boolean_t *has_mergeinfo,
+                             dag_node_t *node,
+                             apr_pool_t *pool);
 
 /* Return non-zero IFF NODE is currently mutable. */
 svn_boolean_t svn_fs_fs__dag_check_mutable(dag_node_t *node);
@@ -131,6 +151,18 @@ svn_error_t *svn_fs_fs__dag_get_proplist(apr_hash_t **proplist_p,
 svn_error_t *svn_fs_fs__dag_set_proplist(dag_node_t *node,
                                          apr_hash_t *proplist,
                                          apr_pool_t *pool);
+
+/* Increment the mergeinfo_count field on NODE by INCREMENT.  The node
+   being changed must be mutable.  */
+svn_error_t *svn_fs_fs__dag_increment_mergeinfo_count(dag_node_t *node,
+                                                      apr_int64_t increment,
+                                                      apr_pool_t *pool);
+
+/* Set the has-mergeinfo flag on NODE to HAS_MERGEINFO.  The node
+   being changed must be mutable.  */
+svn_error_t *svn_fs_fs__dag_set_has_mergeinfo(dag_node_t *node,
+                                              svn_boolean_t has_mergeinfo,
+                                              apr_pool_t *pool);
 
 
 
@@ -190,16 +222,15 @@ svn_error_t *svn_fs_fs__dag_open(dag_node_t **child_p,
 
 
 /* Set *ENTRIES_P to a hash table of NODE's entries.  The keys of the
-   table are entry names, and the values are svn_fs_dirent_t's.  Use
-   POOL for temporary allocations.
-
-   The returned table is *not* allocated in POOL, and becomes invalid
-   on the next call to this function or svn_fs_fs__rep_contents_dir.
-   If the caller needs the table to live longer, it should copy the
-   hash using svn_fs_fs__copy_dir_entries. */
+   table are entry names, and the values are svn_fs_dirent_t's.  The
+   returned table (and its keys and values) is allocated in POOL,
+   which is also used for temporary allocations.  NODE_POOL is used
+   for any allocation of memory that needs to live as long as NODE
+   lives. */
 svn_error_t *svn_fs_fs__dag_dir_entries(apr_hash_t **entries_p,
                                         dag_node_t *node,
-                                        apr_pool_t *pool);
+                                        apr_pool_t *pool,
+                                        apr_pool_t *node_pool);
 
 
 /* Set ENTRY_NAME in NODE to point to ID (with kind KIND), allocating

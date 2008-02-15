@@ -26,6 +26,10 @@ svn_error_t *svn_fs_fs__open(svn_fs_t *fs,
                              const char *path,
                              apr_pool_t *pool);
 
+/* Upgrade the fsfs filesystem FS.  Use POOL for temporary allocations. */
+svn_error_t *svn_fs_fs__upgrade(svn_fs_t *fs,
+                                apr_pool_t *pool);
+
 /* Copy the fsfs filesystem at SRC_PATH into a new copy at DST_PATH.
    Use POOL for temporary allocations. */
 svn_error_t *svn_fs_fs__hotcopy(const char *src_path,
@@ -70,22 +74,13 @@ svn_error_t *svn_fs_fs__rev_get_root(svn_fs_id_t **root_id,
                                      apr_pool_t *pool);
 
 /* Set *ENTRIES to an apr_hash_t of dirent structs that contain the
-   directory entries of node-revision NODEREV in filesystem FS.  Use
-   POOL for temporary allocations.  The returned hash does *not* live
-   in POOL, and becomes invalid on the next call to this function.  If
-   you need it to live longer, copy it with
-   svn_fs_fs__copy_dir_entries. */
+   directory entries of node-revision NODEREV in filesystem FS.  The
+   returned table (and its keys and values) is allocated in POOL,
+   which is also used for temporary allocations. */
 svn_error_t *svn_fs_fs__rep_contents_dir(apr_hash_t **entries,
                                          svn_fs_t *fs,
                                          node_revision_t *noderev,
                                          apr_pool_t *pool);
-
-/* Return a copy of the directory hash ENTRIES in POOL.  Use this to
-   copy the result of svn_fs_fs__rep_contents_dir into a predictable
-   place so that doesn't become invalid before it's no longer
-   needed. */
-apr_hash_t *svn_fs_fs__copy_dir_entries(apr_hash_t *entries,
-                                        apr_pool_t *pool);
 
 /* Set *CONTENTS to be a readable svn_stream_t that receives the text
    representation of node-revision NODEREV as seen in filesystem FS.
@@ -182,12 +177,8 @@ svn_error_t *svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
                                          apr_array_header_t *props,
                                          apr_pool_t *pool);
 
-/* Set the transaction mergeinfo for NAME to VALUE in transaction TXN.
-   Perform temporary allocations from POOL.  */
-svn_error_t *svn_fs_fs__change_txn_mergeinfo(svn_fs_txn_t *txn,
-                                             const char *name,
-                                             const svn_string_t *value,
-                                             apr_pool_t *pool);
+/* Return whether or not the given FS supports mergeinfo metadata. */
+svn_boolean_t svn_fs_fs__fs_supports_mergeinfo(svn_fs_t *fs);
 
 /* Store a transaction record in *TXN_P for the transaction identified
    by TXN_ID in filesystem FS.  Allocate everything from POOL. */
@@ -444,6 +435,38 @@ svn_error_t *svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p, svn_fs_t *fs,
    from POOL. */
 svn_error_t *svn_fs_fs__txn_prop(svn_string_t **value_p, svn_fs_txn_t *txn,
                                  const char *propname, apr_pool_t *pool);
+
+/* If directory PATH does not exist, create it and give it the same
+   permissions as FS->path.*/
+svn_error_t *svn_fs_fs__ensure_dir_exists(const char *path,
+                                          svn_fs_t *fs,
+                                          apr_pool_t *pool);
+
+/* Update the node origin index for FS, recording the mapping from
+   NODE_ID to NODE_REV_ID.  Use POOL for any temporary allocations.
+
+   Because this is just an "optional" cache, this function does not
+   return an error if the underlying storage is readonly; it still
+   returns an error for other error conditions.
+ */
+svn_error_t *
+svn_fs_fs__set_node_origin(svn_fs_t *fs,
+                           const char *node_id,
+                           const svn_fs_id_t *node_rev_id,
+                           apr_pool_t *pool);
+
+/* Set *ORIGIN_ID to the node revision ID from which the history of
+   all nodes in FS whose "Node ID" is NODE_ID springs, as determined
+   by a look in the index.  ORIGIN_ID needs to be parsed in an
+   FS-backend-specific way.  Use POOL for allocations.
+
+   If there is no entry for NODE_ID in the cache, return NULL
+   in *ORIGIN_ID. */
+svn_error_t *
+svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
+                           svn_fs_t *fs,
+                           const char *node_id,
+                           apr_pool_t *pool);
 
 
 #endif

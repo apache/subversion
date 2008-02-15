@@ -668,7 +668,8 @@ diff_content_changed(const char *path,
           /* Output the actual diff */
           SVN_ERR(svn_diff_file_output_unified3
                   (os, diff, tmpfile1, tmpfile2, label1, label2,
-                   diff_cmd_baton->header_encoding, rel_to_dir, subpool));
+                   diff_cmd_baton->header_encoding, rel_to_dir,
+                   opts->show_c_function, subpool));
         }
     }
 
@@ -924,6 +925,9 @@ struct diff_parameters
 
   /* Ignore deleted */
   svn_boolean_t no_diff_deleted;
+
+  /* Changelists of interest */
+  const apr_array_header_t *changelists;
 };
 
 /** Helper structure: filled by check_paths() */
@@ -1167,6 +1171,7 @@ diff_wc_wc(const apr_array_header_t *options,
            const svn_opt_revision_t *revision2,
            svn_depth_t depth,
            svn_boolean_t ignore_ancestry,
+           const apr_array_header_t *changelists,
            const svn_wc_diff_callbacks2_t *callbacks,
            struct diff_cmd_baton *callback_baton,
            svn_client_ctx_t *ctx,
@@ -1202,7 +1207,7 @@ diff_wc_wc(const apr_array_header_t *options,
   callback_baton->revnum2 = SVN_INVALID_REVNUM;  /* WC */
 
   SVN_ERR(svn_wc_diff4(adm_access, target, callbacks, callback_baton,
-                       depth, ignore_ancestry,
+                       depth, ignore_ancestry, changelists,
                        callback_baton->svnpatch_file, pool));
   SVN_ERR(svn_wc_adm_close(adm_access));
   return SVN_NO_ERROR;
@@ -1301,6 +1306,7 @@ diff_repos_wc(const apr_array_header_t *options,
               svn_boolean_t reverse,
               svn_depth_t depth,
               svn_boolean_t ignore_ancestry,
+              const apr_array_header_t *changelists,
               const svn_wc_diff_callbacks2_t *callbacks,
               struct diff_cmd_baton *callback_baton,
               svn_client_ctx_t *ctx,
@@ -1380,6 +1386,7 @@ diff_repos_wc(const apr_array_header_t *options,
                                   rev2_is_base,
                                   reverse,
                                   ctx->cancel_func, ctx->cancel_baton,
+                                  changelists,
                                   &diff_editor, &diff_edit_baton,
                                   callback_baton->svnpatch_file,
                                   pool));
@@ -1448,6 +1455,7 @@ do_diff(const struct diff_parameters *diff_param,
                                 diff_param->path2, diff_param->revision2,
                                 FALSE, diff_param->depth,
                                 diff_param->ignore_ancestry,
+                                diff_param->changelists,
                                 callbacks, callback_baton, ctx, pool));
         }
     }
@@ -1461,6 +1469,7 @@ do_diff(const struct diff_parameters *diff_param,
                                 diff_param->path1, diff_param->revision1,
                                 TRUE, diff_param->depth,
                                 diff_param->ignore_ancestry,
+                                diff_param->changelists,
                                 callbacks, callback_baton, ctx, pool));
         }
       else /* path2 is a working copy path */
@@ -1470,6 +1479,7 @@ do_diff(const struct diff_parameters *diff_param,
                              diff_param->path2, diff_param->revision2,
                              diff_param->depth,
                              diff_param->ignore_ancestry,
+                             diff_param->changelists,
                              callbacks, callback_baton, ctx, pool));
         }
     }
@@ -1607,6 +1617,7 @@ svn_client_diff4(const apr_array_header_t *options,
                  const char *header_encoding,
                  apr_file_t *outfile,
                  apr_file_t *errfile,
+                 const apr_array_header_t *changelists,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
@@ -1631,6 +1642,7 @@ svn_client_diff4(const apr_array_header_t *options,
   diff_params.depth = depth;
   diff_params.ignore_ancestry = ignore_ancestry;
   diff_params.no_diff_deleted = no_diff_deleted;
+  diff_params.changelists = changelists;
 
   /* setup callback and baton */
   diff_callbacks.file_changed = diff_file_changed;
@@ -1691,7 +1703,7 @@ svn_client_diff3(const apr_array_header_t *options,
                           SVN_DEPTH_INFINITY_OR_FILES(recurse),
                           ignore_ancestry, no_diff_deleted,
                           ignore_content_type, FALSE, header_encoding,
-                          outfile, errfile, ctx, pool);
+                          outfile, errfile, NULL, ctx, pool);
 }
 
 svn_error_t *
@@ -1749,6 +1761,7 @@ svn_client_diff_peg4(const apr_array_header_t *options,
                      const char *header_encoding,
                      apr_file_t *outfile,
                      apr_file_t *errfile,
+                     const apr_array_header_t *changelists,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
@@ -1758,6 +1771,13 @@ svn_client_diff_peg4(const apr_array_header_t *options,
   svn_wc_diff_callbacks2_t diff_callbacks;
 
   const char *tempdir;
+
+  if (svn_path_is_url(path) && 
+        (start_revision->kind == svn_opt_revision_base 
+         || end_revision->kind == svn_opt_revision_base) )
+    return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
+                            _("Revision type requires a working copy "
+                              "path, not a URL"));
 
   /* fill diff_param */
   diff_params.options = options;
@@ -1769,6 +1789,7 @@ svn_client_diff_peg4(const apr_array_header_t *options,
   diff_params.depth = depth;
   diff_params.ignore_ancestry = ignore_ancestry;
   diff_params.no_diff_deleted = no_diff_deleted;
+  diff_params.changelists = changelists;
 
   /* setup callback and baton */
   diff_callbacks.file_changed = diff_file_changed;
@@ -1838,6 +1859,7 @@ svn_client_diff_peg3(const apr_array_header_t *options,
                               header_encoding,
                               outfile,
                               errfile,
+                              NULL,
                               ctx,
                               pool);
 }
@@ -1892,6 +1914,7 @@ svn_client_diff_summarize2(const char *path1,
                            const svn_opt_revision_t *revision2,
                            svn_depth_t depth,
                            svn_boolean_t ignore_ancestry,
+                           const apr_array_header_t *changelists,
                            svn_client_diff_summarize_func_t summarize_func,
                            void *summarize_baton,
                            svn_client_ctx_t *ctx,
@@ -1913,6 +1936,7 @@ svn_client_diff_summarize2(const char *path1,
   diff_params.depth = depth;
   diff_params.ignore_ancestry = ignore_ancestry;
   diff_params.no_diff_deleted = FALSE;
+  diff_params.changelists = changelists;
 
   return do_diff_summarize(&diff_params, summarize_func, summarize_baton,
                            ctx, pool);
@@ -1933,7 +1957,7 @@ svn_client_diff_summarize(const char *path1,
   return svn_client_diff_summarize2(path1, revision1, path2,
                                     revision2,
                                     SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                                    ignore_ancestry, summarize_func,
+                                    ignore_ancestry, NULL, summarize_func,
                                     summarize_baton, ctx, pool);
 }
 
@@ -1944,6 +1968,7 @@ svn_client_diff_summarize_peg2(const char *path,
                                const svn_opt_revision_t *end_revision,
                                svn_depth_t depth,
                                svn_boolean_t ignore_ancestry,
+                               const apr_array_header_t *changelists,
                                svn_client_diff_summarize_func_t summarize_func,
                                void *summarize_baton,
                                svn_client_ctx_t *ctx,
@@ -1961,6 +1986,7 @@ svn_client_diff_summarize_peg2(const char *path,
   diff_params.depth = depth;
   diff_params.ignore_ancestry = ignore_ancestry;
   diff_params.no_diff_deleted = FALSE;
+  diff_params.changelists = changelists;
 
   return do_diff_summarize(&diff_params, summarize_func, summarize_baton,
                            ctx, pool);
@@ -1982,7 +2008,7 @@ svn_client_diff_summarize_peg(const char *path,
   return svn_client_diff_summarize_peg2(path, peg_revision,
                                         start_revision, end_revision,
                                         SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                                        ignore_ancestry,
+                                        ignore_ancestry, NULL,
                                         summarize_func, summarize_baton,
                                         ctx, pool);
 }

@@ -1,5 +1,5 @@
 ;;; psvn.el --- Subversion interface for emacs
-;; Copyright (C) 2002-2007 by Stefan Reichoer
+;; Copyright (C) 2002-2008 by Stefan Reichoer
 
 ;; Author: Stefan Reichoer <stefan@xsteve.at>
 ;; $Id$
@@ -3017,10 +3017,14 @@ When called with a prefix argument go back the given number of lines."
   "Jump to a dired buffer, containing the file at point."
   (interactive)
   (let* ((line-info (svn-status-get-line-information))
-         (file-full-path (svn-status-line-info->full-path line-info)))
+         (file-full-path (if line-info
+                             (svn-status-line-info->full-path line-info)
+                           default-directory)))
     (let ((default-directory
             (file-name-as-directory
-             (expand-file-name (svn-status-line-info->directory-containing-line-info line-info t)))))
+             (expand-file-name (if line-info
+                                   (svn-status-line-info->directory-containing-line-info line-info t)
+                                 default-directory)))))
       (if (fboundp 'dired-jump-back) (dired-jump-back) (dired-jump))) ;; Xemacs uses dired-jump-back
     (dired-goto-file file-full-path)))
 
@@ -4214,7 +4218,8 @@ names are relative to the directory where `svn-status' was run."
                                                            (file-name-nondirectory file-name)
                                                            ".svn-base"))
                            (progn
-                             (svn-run nil t 'cat "cat" "-r" revision (file-name-nondirectory file-name))
+                             (svn-run nil t 'cat "cat" "-r" revision
+                                      (concat default-directory (file-name-nondirectory file-name)))
                              ;;todo: error processing
                              ;;svn: Filesystem has no item
                              ;;svn: file not found: revision `15', path `/trunk/file.txt'
@@ -4225,7 +4230,9 @@ names are relative to the directory where `svn-status' was run."
                   (erase-buffer) ;Widen, because we'll save the whole buffer.
                   (insert content)
                   (goto-char (point-min))
-                  (save-buffer)))
+                  (let ((write-file-functions nil)
+                        (require-final-newline nil))
+                    (save-buffer))))
             (find-file file-name-with-revision)))))
     ;;(message "default-directory: %s revision-file-info: %S" default-directory svn-status-get-specific-revision-file-info)
     (nreverse svn-status-get-specific-revision-file-info)))
@@ -5025,6 +5032,7 @@ entry for file with defun.
                     ["Show Changeset" svn-log-view-diff t]
                     ["Ediff file at point" svn-log-ediff-specific-revision t]
                     ["Find file at point" svn-log-find-file-at-point t]
+                    ["Get older revision for file at point" svn-log-get-specific-revision t]
                     ["Edit log message" svn-log-edit-log-entry t]))
 
 (defun svn-log-view-popup-menu (event)
@@ -5079,7 +5087,10 @@ Commands:
 (defun svn-log-file-name-at-point (respect-checkout-prefix-path)
   (let ((full-file-name)
         (file-name)
-        (checkout-prefix-path (when respect-checkout-prefix-path (svn-status-checkout-prefix-path))))
+        (checkout-prefix-path (if respect-checkout-prefix-path
+                                  (url-unhex-string
+                                   (svn-status-checkout-prefix-path))
+                                "")))
     (save-excursion
       (beginning-of-line)
       (when (looking-at "   [MA] /\\(.+\\)$")
@@ -5133,7 +5144,7 @@ When called with a prefix argument, ask the user for the revision."
   ;; (message "%S" (svn-status-make-line-info (svn-log-file-name-at-point t)))
   (let ((default-directory (svn-status-base-dir)))
     (svn-status-get-specific-revision-internal
-     (list (svn-status-make-line-info (svn-log-file-name-at-point nil)))
+     (list (svn-status-make-line-info (svn-log-file-name-at-point t)))
      (svn-log-revision-at-point)
      nil)))
 

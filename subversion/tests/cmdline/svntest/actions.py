@@ -24,10 +24,10 @@ import main, verify, tree, wc, parsers
 from svntest import Failure
 
 def no_sleep_for_timestamps():
-  os.environ['SVN_SLEEP_FOR_TIMESTAMPS'] = 'no'
+  os.environ['SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS'] = 'yes'
 
 def do_sleep_for_timestamps():
-  os.environ['SVN_SLEEP_FOR_TIMESTAMPS'] = 'yes'
+  os.environ['SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS'] = 'no'
 
 def setup_pristine_repository():
   """Create the pristine repository and 'svn import' the greek tree"""
@@ -85,7 +85,7 @@ def setup_pristine_repository():
     expected_output_tree = tree.build_generic_tree(output_list)
 
     try:
-      tree.compare_trees(output_tree, expected_output_tree)
+      tree.compare_trees("output", output_tree, expected_output_tree)
     except tree.SVNTreeUnequal:
       verify.display_trees("ERROR:  output of import command is unexpected.",
                            "OUTPUT TREE", expected_output_tree, output_tree)
@@ -176,6 +176,23 @@ def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
   verify.verify_outputs(message, out, err, expected_stdout, expected_stderr)
   return out, err
 
+def run_and_verify_svn_match_any(message, expected_stdout, expected_stderr,
+                                 *varargs):
+  """Like run_and_verify_svn, except that only one stdout line must match
+  EXPECTED_STDOUT."""
+
+  if expected_stderr is None:
+    raise verify.SVNIncorrectDatatype("expected_stderr must not be None")
+
+  want_err = None
+  if expected_stderr is not None and expected_stderr is not []:
+    want_err = True
+
+  out, err = main.run_svn(want_err, *varargs)
+  verify.verify_outputs(message, out, err, expected_stdout, expected_stderr,
+                        False)
+  return out, err
+
 
 def run_and_verify_load(repo_dir, dump_file_content):
   "Runs 'svnadmin load' and reports any errors."
@@ -237,9 +254,10 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
 
   The subcommand output will be verified against OUTPUT_TREE,
   and the working copy itself will be verified against DISK_TREE.
-  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
-  tree.compare_trees - see that function's doc string for more details.
-  Returns if successful and raise on failure.
+  For the latter comparison, SINGLETON_HANDLER_A and
+  SINGLETON_HANDLER_B will be passed to tree.compare_trees -- see that
+  function's doc string for more details.  Return if successful, raise
+  on failure.
 
   WC_DIR_NAME is deleted if present unless the '--force' option is passed
   in *ARGS."""
@@ -268,13 +286,13 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
   actual = tree.build_tree_from_checkout (output)
 
   # Verify actual output against expected output.
-  tree.compare_trees (actual, output_tree)
+  tree.compare_trees ("output", actual, output_tree)
 
   # Create a tree by scanning the working copy
   actual = tree.build_tree_from_wc (wc_dir_name)
 
   # Verify expected disk against actual disk.
-  tree.compare_trees (actual, disk_tree,
+  tree.compare_trees ("disk", actual, disk_tree,
                       singleton_handler_a, a_baton,
                       singleton_handler_b, b_baton)
 
@@ -289,9 +307,10 @@ def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
 
   The subcommand output will be verified against OUTPUT_TREE,
   and the exported copy itself will be verified against DISK_TREE.
-  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
-  tree.compare_trees - see that function's doc string for more details.
-  Returns if successful and raise on failure."""
+  For the latter comparison, SINGLETON_HANDLER_A and
+  SINGLETON_HANDLER_B will be passed to tree.compare_trees -- see that
+  function's doc string for more details.  Return if successful, raise
+  on failure."""
 
   if isinstance(output_tree, wc.State):
     output_tree = output_tree.old_tree()
@@ -306,7 +325,7 @@ def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
   actual = tree.build_tree_from_checkout (output)
 
   # Verify actual output against expected output.
-  tree.compare_trees (actual, output_tree)
+  tree.compare_trees ("output", actual, output_tree)
 
   # Create a tree by scanning the working copy.  Don't ignore
   # the .svn directories so that we generate an error if they
@@ -314,7 +333,7 @@ def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
   actual = tree.build_tree_from_wc (export_dir_name, ignore_svn=False)
 
   # Verify expected disk against actual disk.
-  tree.compare_trees (actual, disk_tree,
+  tree.compare_trees ("disk", actual, disk_tree,
                       singleton_handler_a, a_baton,
                       singleton_handler_b, b_baton)
 
@@ -459,7 +478,9 @@ def run_and_verify_log_xml(message=None, expected_paths=None,
   if not parse:
     return
 
-  for (index, entry) in enumerate(LogParser().parse(stdout)):
+  entries = LogParser().parse(stdout)
+  for index in xrange(len(entries)):
+    entry = entries[index]
     if expected_revprops != None:
       entry.assert_revprops(expected_revprops[index])
     if expected_paths != None:
@@ -478,19 +499,23 @@ def verify_update(actual_output, wc_dir_name,
   verified against DISK_TREE (if provided), and the working copy's
   'svn status' output will be verified against STATUS_TREE (if
   provided).  (This is a good way to check that revision numbers were
-  bumped.)  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed
-  to tree.compare_trees - see that function's doc string for more
-  details.  If CHECK_PROPS is set, then disk comparison will examine
-  props.  Returns if successful, raises on failure."""
+  bumped.)
+
+  Return if successful, raise on failure.
+
+  For the comparison with DISK_TREE, pass SINGLETON_HANDLER_A and
+  SINGLETON_HANDLER_B to tree.compare_trees -- see that function's doc
+  string for more details.  If CHECK_PROPS is set, then disk
+  comparison will examine props."""
 
   # Verify actual output against expected output.
   if output_tree:
-    tree.compare_trees (actual_output, output_tree)
+    tree.compare_trees ("output", actual_output, output_tree)
 
   # Create a tree by scanning the working copy, and verify it
   if disk_tree:
     actual_disk = tree.build_tree_from_wc (wc_dir_name, check_props)
-    tree.compare_trees (actual_disk, disk_tree,
+    tree.compare_trees ("disk", actual_disk, disk_tree,
                         singleton_handler_a, a_baton,
                         singleton_handler_b, b_baton)
 
@@ -547,12 +572,14 @@ def run_and_verify_update(wc_dir_name,
   working copy itself will be verified against DISK_TREE.  If optional
   STATUS_TREE is given, then 'svn status' output will be compared.
   (This is a good way to check that revision numbers were bumped.)
-  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
-  tree.compare_trees - see that function's doc string for more
-  details.
+
+  For the DISK_TREE verification, SINGLETON_HANDLER_A and
+  SINGLETON_HANDLER_B will be passed to tree.compare_trees -- see that
+  function's doc string for more details.
 
   If CHECK_PROPS is set, then disk comparison will examine props.
-  Returns if successful, raises on failure."""
+
+  Return if successful, raise on failure."""
 
   if isinstance(output_tree, wc.State):
     output_tree = output_tree.old_tree()
@@ -632,16 +659,17 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
   working copy itself will be verified against DISK_TREE.  If optional
   STATUS_TREE is given, then 'svn status' output will be compared.
   The 'skipped' merge output will be compared to SKIP_TREE.
-  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
-  tree.compare_trees - see that function's doc string for more
-  details.
+
+  For the DISK_TREE verification, SINGLETON_HANDLER_A and
+  SINGLETON_HANDLER_B will be passed to tree.compare_trees -- see that
+  function's doc string for more details.
 
   If CHECK_PROPS is set, then disk comparison will examine props.
 
   If DRY_RUN is set then a --dry-run merge will be carried out first and
   the output compared with that of the full merge.
 
-  Returns if successful, raises on failure."""
+  Return if successful, raise on failure."""
 
   if isinstance(output_tree, wc.State):
     output_tree = output_tree.old_tree()
@@ -669,7 +697,7 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
     out_dry, err_dry = main.run_svn(error_re_string, *dry_run_command)
     post_disk = tree.build_tree_from_wc(dir)
     try:
-      tree.compare_trees(post_disk, pre_disk)
+      tree.compare_trees("disk", post_disk, pre_disk)
     except tree.SVNTreeError:
       print "============================================================="
       print "Dry-run merge altered working copy"
@@ -712,7 +740,7 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
     raise Failure
 
   myskiptree = tree.build_tree_from_skipped(out)
-  tree.compare_trees(myskiptree, skip_tree,
+  tree.compare_trees("skip", myskiptree, skip_tree,
                      extra_skip, None, missing_skip, None)
 
   actual = tree.build_tree_from_checkout(out, 0)
@@ -776,7 +804,7 @@ def run_and_verify_patch(dir, patch_path,
     out_dry, err_dry = main.run_svn(error_re_string, *dry_run_command)
     post_disk = tree.build_tree_from_wc(dir)
     try:
-      tree.compare_trees(post_disk, pre_disk)
+      tree.compare_trees("disk", post_disk, pre_disk)
     except tree.SVNTreeError:
       print "============================================================="
       print "'svn patch --dry-run' altered working copy"
@@ -822,7 +850,7 @@ def run_and_verify_patch(dir, patch_path,
     raise Failure
 
   myskiptree = tree.build_tree_from_skipped(out)
-  tree.compare_trees(myskiptree, skip_tree,
+  tree.compare_trees("skip", myskiptree, skip_tree,
                      extra_skip, None, missing_skip, None)
 
   mytree = tree.build_tree_from_checkout(out, 0)
@@ -912,10 +940,15 @@ def run_and_verify_switch(wc_dir_name,
   working copy itself will be verified against DISK_TREE.  If optional
   STATUS_TREE is given, then 'svn status' output will be
   compared.  (This is a good way to check that revision numbers were
-  bumped.)  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
-  tree.compare_trees - see that function's doc string for more details.
-  If CHECK_PROPS is set, then disk comparison will examine props.
-  Returns if successful, raises on failure."""
+  bumped.)
+
+  For the DISK_TREE verification, SINGLETON_HANDLER_A and
+  SINGLETON_HANDLER_B will be passed to tree.compare_trees -- see that
+  function's doc string for more details.
+
+  If CHECK_PROPS is set, then disk comparison will examine props. 
+
+  Return if successful, raise on failure."""
 
   if isinstance(output_tree, wc.State):
     output_tree = output_tree.old_tree()
@@ -948,10 +981,6 @@ def run_and_verify_switch(wc_dir_name,
 
 def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
                           error_re_string = None,
-                          singleton_handler_a = None,
-                          a_baton = None,
-                          singleton_handler_b = None,
-                          b_baton = None,
                           *args):
   """Commit and verify results within working copy WC_DIR_NAME,
   sending ARGS to the commit subcommand.
@@ -965,9 +994,7 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
   ERROR_RE_STRING is a string, the commit must exit with error, and
   the error message must match regular expression ERROR_RE_STRING.
 
-  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
-  tree.compare_trees - see that function's doc string for more
-  details.  Returns if successful, raises on failure."""
+  Return if successful, raise on failure."""
 
   if isinstance(output_tree, wc.State):
     output_tree = output_tree.old_tree()
@@ -1020,7 +1047,7 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
 
   # Verify actual output against expected output.
   try:
-    tree.compare_trees (actual, output_tree)
+    tree.compare_trees ("output", actual, output_tree)
   except tree.SVNTreeError:
       verify.display_trees("Output of commit is unexpected",
                            "OUTPUT TREE", output_tree, actual)
@@ -1054,7 +1081,7 @@ def run_and_verify_status(wc_dir_name, output_tree,
 
   # Verify actual output against expected output.
   try:
-    tree.compare_trees (actual, output_tree,
+    tree.compare_trees ("status", actual, output_tree,
                         singleton_handler_a, a_baton,
                         singleton_handler_b, b_baton)
   except tree.SVNTreeError:
@@ -1084,11 +1111,11 @@ def run_and_verify_unquiet_status(wc_dir_name, output_tree,
 
   # Verify actual output against expected output.
   if (singleton_handler_a or singleton_handler_b):
-    tree.compare_trees (actual, output_tree,
+    tree.compare_trees ("output", actual, output_tree,
                         singleton_handler_a, a_baton,
                         singleton_handler_b, b_baton)
   else:
-    tree.compare_trees (actual, output_tree)
+    tree.compare_trees ("output", actual, output_tree)
 
 def run_and_verify_diff_summarize_xml(error_re_string = [],
                                       expected_prefix = None,
@@ -1196,7 +1223,7 @@ def run_and_verify_diff_summarize(output_tree, error_re_string = None,
 
   # Verify actual output against expected output.
   try:
-    tree.compare_trees (actual, output_tree,
+    tree.compare_trees ("output", actual, output_tree,
                         singleton_handler_a, a_baton,
                         singleton_handler_b, b_baton)
   except tree.SVNTreeError:
@@ -1240,16 +1267,23 @@ def run_and_validate_lock(path, username):
 
 
 # This allows a test to *quickly* bootstrap itself.
-def make_repo_and_wc(sbox, create_wc = True):
+def make_repo_and_wc(sbox, create_wc = True, read_only = False):
   """Create a fresh repository and checkout a wc from it.
 
-  The repo and wc directories will both be named TEST_NAME, and
-  repsectively live within the global dirs 'general_repo_dir' and
-  'general_wc_dir' (variables defined at the top of this test
-  suite.)  Returns on success, raises on failure."""
+  If read_only is False, a dedicated repository will be created, named 
+  TEST_NAME. The repository will live in the global dir 'general_repo_dir'.
+  If read_only is True the pristine repository will be used.
+
+  If create_wc is True, a dedicated working copy will be checked out from
+  the repository, named TEST_NAME. The wc directory will live in the global
+  dir 'general_wc_dir'.
+
+  Both variables 'general_repo_dir' and 'general_wc_dir' are defined at the 
+  top of this test suite.)  Returns on success, raises on failure."""
 
   # Create (or copy afresh) a new repos with a greek tree in it.
-  guarantee_greek_repository(sbox.repo_dir)
+  if not read_only:
+    guarantee_greek_repository(sbox.repo_dir)
 
   if create_wc:
     # Generate the expected output tree.
@@ -1321,17 +1355,15 @@ pre-revprop-change hook script and (if appropriate) making it executable."""
   hook_path = main.get_pre_revprop_change_hook_path (repo_dir)
   main.create_python_hook_script (hook_path, 'import sys; sys.exit(0)')
 
-def disable_revprop_changes(repo_dir, message):
+def disable_revprop_changes(repo_dir):
   """Disable revprop changes in a repository REPO_DIR by creating a
 pre-revprop-change hook script like enable_revprop_changes, except that
-the hook prints MESSAGE to stderr and exits non-zero.  MESSAGE is printed
-very simply, and should have no newlines or quotes."""
-
+the hook prints "pre-revprop-change" followed by sys.argv"""
   hook_path = main.get_pre_revprop_change_hook_path (repo_dir)
   main.create_python_hook_script (hook_path,
                                   'import sys\n'
-                                  'sys.stderr.write("%s")\n'
-                                  'sys.exit(1)\n' % (message,))
+                                  'sys.stderr.write("pre-revprop-change %s %s %s %s %s" % (sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5]))\n'
+                                  'sys.exit(1)\n')
 
 def create_failing_post_commit_hook(repo_dir):
   """Disable commits in a repository REPOS_DIR by creating a post-commit hook
@@ -1409,8 +1441,7 @@ def inject_conflict_into_wc(sbox, state_path, file_path,
   if expected_status:
     expected_status.tweak(state_path, wc_rev=merged_rev)
   run_and_verify_commit(wc_dir, expected_output, expected_status,
-                        None, None, None, None, None,
-                        file_path)
+                        None, file_path)
 
   # Backdate the file.
   output, errput = main.run_svn(None, "up", "-r", str(prev_rev),

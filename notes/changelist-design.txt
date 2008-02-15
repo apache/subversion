@@ -216,14 +216,14 @@ operate only on those paths.
 
 The 'svn changelist' command allows a user to define a changelist with
 an arbitrary UTF-8 name, as well as add member paths.  (At the moment,
-a --clear flag is used to remove member paths.)  Unversioned items may
+a --remove flag is used to remove member paths.)  Unversioned items may
 not be added to changelists.
 
 $ svn changelist MYCHANGE foo.c bar.c
 Path 'foo.c' is now part of changelist 'mychange'.
 Path 'bar.c' is now part of changelist 'mychange'.
 
-$ svn changelist bar.c --clear
+$ svn changelist bar.c --remove
 Path 'bar.c' is no longer associated with a changelist.
 
 
@@ -297,7 +297,7 @@ to '--cl' also?)
 
 To destroy a changelist, one would need to remove all member-paths
 from it.  There's no good UI for this yet, other than to use 'svn
-changelist --clear path1 path2 path3 ...'.  ### Improve this?
+changelist --remove path1 path2 path3 ...'.  ### Improve this?
 
 
 D.  Viewing edits in a changelist
@@ -455,3 +455,112 @@ Commandline UI use-cases:
 5. rename a CL
 
      svn cl NEWNAME --changelist OLDNAME
+
+
+==================================================================
+
+Feature Revamp:  sussman and cmpilato.
+
+
+Goal:  changelists should be treated as 'filters' everywhere, not as a
+way to just add targets to a commandline.
+
+
+The basic syntax of commands will be:
+
+  svn subcommand target1 target2 ... targetN \
+                 --changelist foo1 --changelist foo2 ... --changelist fooM
+
+The CLI parses the targets as usual: possibly inserting an implicit
+'.' target, canonicalizing the list, etc.
+
+The CLI now passes a list of changelist-names down into each
+svn_client_subcommand() routine as a "bunch of filters" to apply while
+working.  If svn_client_subcommand() decides to process a target --
+either one it got explicitly, or one it discovered through recursion
+-- it first checks that the target is a member of one of the
+changelists.  If not, it skips the target and keeps going.
+
+(This is the way 'svn commit' currently works:  harvest_committables()
+only harvests things that are committable *and* a member of the
+passed-in changelist.)
+
+This means that the UI use-cases listed above change slightly:
+
+
+   4. undefine a CL all at once (by removing all members)
+   
+        svn cl TARGET --remove --changelist CLNAME
+   
+        (TARGET might be implicit '.' or not, and depth is empty by
+        default; use --depth to override.)
+   
+   5. rename a CL
+   
+        svn cl NEWNAME TARGET --changelist OLDNAME
+   
+        (TARGET might be implicit '.' or not, and depth is empty by
+        default; use --depth to override.)
+
+
+TO-DO list:
+
+  [X] allow multiple --changelist args
+  [X] svn status should display grouped changelists
+  [X] 'svn info' should display a target's changelist field
+  [X] rename --keep-changelist option to --keep-changelists
+  [X] fix --changelist and allow multiple changelists in subcommands:
+
+      No-problem subcommands:
+      [X] svn changelist --changelist
+      [X] svn commit --changelist
+      [X] svn diff --changelist (only wc-wc and wc-repos cases)
+      [X] svn info --changelist
+      [X] svn propget --changelist
+      [X] svn proplist --changelist
+      [X] svn propset --changelist
+      [X] svn propdel --changelist
+      [X] svn revert --changelist
+      [X] svn status --changelist
+
+      Problem subcommands (see below):
+      [X] svn update --changelist
+      [X] svn lock --changelist              ### removed changelist support
+      [X] svn log --changelist               ### removed changelist support
+      [X] svn unlock --changelist            ### removed changelist support
+
+  [ ] ensure that the bindings implementations of these APIs are up to snuff
+  [X] write tests!
+
+Problem Subcommands:
+
+  Using a definition of --changelist as a filter means that
+  subcommands which are, by default, non-recursive in nature, have a
+  somewhat odd interface.  For example, 'svn info --changelist FOO'
+  (which ultimately translates to 'svn info . --depth empty
+  --changelist FOO') will either return exactly one info result, or
+  exactly none, depending on whether or not the current working
+  directory is in changelist FOO.  This is trivially worked around by
+  deepening the invocation: 'svn info -R --changelist FOO'.  But what
+  about subcommands for which there is no --depth support, such as
+  'lock', 'log', 'unlock'?  Do we lose the changelist support, or grow
+  some sort of depth-crawling ability for these things?  [RESOLUTION:
+  We've removed changelist support from 'lock', 'unlock', and 'log'.]
+
+  'svn update' presents an interesting challenge, too.  The public
+  svn_client_update3() API takes a list of paths, and returns a list
+  of revision numbers to which those paths were updated.  Each path is
+  treated as, effectively, a separate update -- complete with output
+  line that notes the updated-to revision.  So, if we do changelist
+  expansion outside the API, we might turn a single-target operation
+  into a multi-target one, and the user sees N full updates processes
+  happen.  If we push 'changelists' down into the API, we can fake a
+  single update with notification tricks.  But that starts to get
+  nasty when we look at non-file changelist support later and the
+  interactions with externals and such.  And if we push 'changelists'
+  all the way down into the update editor, then we've got a mess of a
+  whole 'nuther type, downloading tons of server data we won't use,
+  and so on.  [RESOLUTION: Let the command-line client do the
+  changelist path expansion.]
+
+  

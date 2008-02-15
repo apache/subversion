@@ -131,8 +131,9 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   apr_pool_t *subpool = svn_pool_create(pool);
   int i;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
-                                        opt_state->targets, pool));
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets, 
+                                                      pool));
 
   /* Add "." if user passed 0 arguments. */
   svn_opt_push_implicit_dot_target(targets, pool);

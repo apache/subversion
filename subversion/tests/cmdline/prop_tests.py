@@ -22,7 +22,7 @@ import sys, re, os, stat
 # Our testing module
 import svntest
 
-from svntest.main import SVN_PROP_MERGE_INFO
+from svntest.main import SVN_PROP_MERGEINFO
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -86,7 +86,8 @@ def make_local_props(sbox):
   actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
 
   # Compare actual vs. expected disk trees.
-  svntest.tree.compare_trees(actual_disk_tree, expected_disk.old_tree())
+  svntest.tree.compare_trees("disk", actual_disk_tree,
+                             expected_disk.old_tree())
 
   # Edit without actually changing the property
   svntest.main.use_editor('identity')
@@ -128,8 +129,6 @@ def commit_props(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 
@@ -166,8 +165,7 @@ def update_props(sbox):
   # Commit the one file.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Overwrite mu_path and H_path to refer to the backup copies from
   # here on out.
@@ -223,8 +221,7 @@ def downdate_props(sbox):
   # Commit the one file.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Make some mod (something to commit)
   svntest.main.file_append(mu_path, "some mod")
@@ -242,8 +239,7 @@ def downdate_props(sbox):
   # Commit the one file.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Create expected output tree for an update.
   expected_output = svntest.wc.State(wc_dir, {
@@ -297,8 +293,7 @@ def remove_props(sbox):
   # Commit the one file.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
 #----------------------------------------------------------------------
 
@@ -391,7 +386,6 @@ def commit_conflict_dirprops(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir, None, None,
                                         "out[- ]of[- ]date",
-                                        None, None, None, None,
                                         wc_dir)
 
 #----------------------------------------------------------------------
@@ -454,8 +448,7 @@ def commit_replacement_props(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
 #----------------------------------------------------------------------
 
@@ -675,12 +668,12 @@ def inappropriate_props(sbox):
   # ...grammatically incorrect
   svntest.actions.run_and_verify_svn('illegal grammar', None,
                                      "svn: Pathname not terminated by ':'\n",
-                                     'propset', SVN_PROP_MERGE_INFO, '/trunk',
+                                     'propset', SVN_PROP_MERGEINFO, '/trunk',
                                      path)
   svntest.actions.run_and_verify_svn('illegal grammar', None,
                                      "svn: Invalid revision number found "
                                       "parsing 'one'\n",
-                                     'propset', SVN_PROP_MERGE_INFO,
+                                     'propset', SVN_PROP_MERGEINFO,
                                      '/trunk:one', path)
 
   # ...contain overlapping revision ranges
@@ -688,20 +681,20 @@ def inappropriate_props(sbox):
                                      "svn: Parsing of overlapping revision "
                                       "ranges '9-20' and '18-22' is not "
                                       "supported\n",
-                                     'propset', SVN_PROP_MERGE_INFO,
+                                     'propset', SVN_PROP_MERGEINFO,
                                      '/branch:5-7,9-20,18-22', path)
 
   svntest.actions.run_and_verify_svn('overlapping ranges', None,
                                      "svn: Parsing of overlapping revision "
                                       "ranges '3' and '3' is not supported\n",
-                                     'propset', SVN_PROP_MERGE_INFO,
+                                     'propset', SVN_PROP_MERGEINFO,
                                      '/branch:3,3', path)
 
   # ...contain unordered revision ranges
   svntest.actions.run_and_verify_svn('unordered ranges', None,
                                      "svn: Unable to parse unordered "
                                       "revision ranges '5' and '2-3'\n",
-                                     'propset', SVN_PROP_MERGE_INFO,
+                                     'propset', SVN_PROP_MERGEINFO,
                                      '/featureX:5,2-3,9', path)
 
   # ...contain revision ranges with start revisions greater than or
@@ -709,14 +702,14 @@ def inappropriate_props(sbox):
   svntest.actions.run_and_verify_svn('range start >= range end', None,
                                      "svn: Unable to parse reversed "
                                       "revision range '20-5'\n",
-                                     'propset', SVN_PROP_MERGE_INFO,
+                                     'propset', SVN_PROP_MERGEINFO,
                                      '/featureX:4,20-5', path)
 
   # ...contain paths mapped to empty revision ranges
   svntest.actions.run_and_verify_svn('empty ranges', None,
                                      "svn: Mergeinfo for '/trunk' maps to "
                                       "an empty revision range\n",
-                                     'propset', SVN_PROP_MERGE_INFO,
+                                     'propset', SVN_PROP_MERGEINFO,
                                      '/trunk:', path)
 
 #----------------------------------------------------------------------
@@ -803,9 +796,8 @@ def revprop_change(sbox):
                                      'cash-sound', 'cha-ching!', sbox.wc_dir)
 
   # Now test error output from revprop-change hook.
-  message = 'revprop_change test'
-  svntest.actions.disable_revprop_changes(sbox.repo_dir, message)
-  svntest.actions.run_and_verify_svn(None, None, '.*' + message,
+  svntest.actions.disable_revprop_changes(sbox.repo_dir)
+  svntest.actions.run_and_verify_svn(None, None, '.*pre-revprop-change.* 0 jrandom cash-sound A',
                                      'propset', '--revprop', '-r', '0',
                                      'cash-sound', 'cha-ching!', sbox.wc_dir)
 
@@ -820,6 +812,14 @@ def revprop_change(sbox):
                                      'propget', '--revprop', '-r', '0',
                                      'cash-sound', sbox.wc_dir)
 
+  # Now test that blocking the revprop delete.
+  svntest.actions.disable_revprop_changes(sbox.repo_dir)
+  svntest.actions.run_and_verify_svn(None, None, '.*pre-revprop-change.* 0 jrandom cash-sound D',
+                                     'propdel', '--revprop', '-r', '0',
+                                     'cash-sound', sbox.wc_dir)
+
+  # Now test actually deleting the revprop.
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propdel', '--revprop', '-r', '0',
                                      'cash-sound', sbox.wc_dir)
@@ -1018,8 +1018,6 @@ def binary_props(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
   # Create expected output, disk, and status trees for an update of
@@ -1276,8 +1274,7 @@ def update_props_on_wc_root(sbox):
   # Commit the working copy
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
  # Create expected output tree for an update of the wc_backup.
   expected_output = svntest.wc.State(wc_backup, {
@@ -1322,7 +1319,8 @@ def props_on_replaced_file(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('iota', contents="some mod")
   actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees(actual_disk_tree, expected_disk.old_tree())
+  svntest.tree.compare_trees("disk", actual_disk_tree,
+                             expected_disk.old_tree())
 
   # now add a new property to iota
   svntest.main.run_svn(None, 'propset', 'red', 'mojo', iota_path)
@@ -1331,7 +1329,8 @@ def props_on_replaced_file(sbox):
   # What we expect the disk tree to look like:
   expected_disk.tweak('iota', props={'red' : 'mojo', 'groovy' : 'baby'})
   actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees(actual_disk_tree, expected_disk.old_tree())
+  svntest.tree.compare_trees("disk", actual_disk_tree,
+                             expected_disk.old_tree())
 
 #----------------------------------------------------------------------
 
@@ -1491,6 +1490,133 @@ def perms_on_symlink(sbox):
   finally:
     os.chdir(saved_cwd)
 
+# Use a property with a custom namespace, ie 'ns:prop' or 'mycompany:prop'.
+def remove_custom_ns_props(sbox):
+  "remove a property with a custom namespace"
+
+  # Bootstrap
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Add a property to a file
+  iota_path = os.path.join(wc_dir, 'iota')
+  svntest.main.run_svn(None, 'propset', 'ns:cash-sound', 'cha-ching!', iota_path)
+
+  # Commit the file
+  svntest.main.run_svn(None,
+                       'ci', '-m', 'logmsg', iota_path)
+
+  # Now, make a backup copy of the working copy
+  wc_backup = sbox.add_wc_path('backup')
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+
+  # Remove the property
+  svntest.main.run_svn(None, 'propdel', 'ns:cash-sound', iota_path)
+
+  # Create expected trees.
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', wc_rev=3, status='  ')
+
+  # Commit the one file.
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status,
+                                        None, wc_dir)
+
+  # Create expected trees for the update.
+  expected_output = svntest.wc.State(wc_backup, {
+    'iota' : Item(status=' U'),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_backup, 3)
+  expected_status.tweak('iota', wc_rev=3, status='  ')
+
+  # Do the update and check the results in three ways... INCLUDING PROPS
+  svntest.actions.run_and_verify_update(wc_backup,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, 1)
+
+def props_over_time(sbox):
+  "property retrieval with peg and operative revs"
+
+  # Bootstrap
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Convenience variables
+  iota_path = os.path.join(wc_dir, 'iota')
+  iota_url = sbox.repo_url + '/iota'
+    
+  # Add/tweak a property 'revision' with value revision-committed to a
+  # file, commit, and then repeat this a few times.
+  for rev in range(2, 4):
+    svntest.main.run_svn(None, 'propset', 'revision', str(rev), iota_path)
+    svntest.main.run_svn(None, 'ci', '-m', 'logmsg', iota_path)
+
+  # Backdate to r2 so the defaults for URL- vs. WC-style queries are
+  # different.
+  svntest.main.run_svn(None, 'up', '-r2', wc_dir)
+  
+  # Now, test propget of the property across many combinations of
+  # pegrevs, operative revs, and wc-path vs. url style input specs.
+  # NOTE: We're using 0 in these loops to mean "unspecified".
+  for path in iota_path, iota_url:
+    for peg_rev in range(0, 4):
+      for op_rev in range(0, 4):
+        # Calculate the expected property value.  If there is an
+        # operative rev, we expect the output to match revisions
+        # there.  Else, we'll be looking at the peg-rev value.  And if
+        # neither are supplied, it depends on the path vs. URL
+        # question.
+        if op_rev > 1:
+          expected = str(op_rev)
+        elif op_rev == 1:
+          expected = None
+        else:
+          if peg_rev > 1:
+            expected = str(peg_rev)
+          elif peg_rev == 1:
+            expected = None
+          else:
+            if path == iota_url:
+              expected = "3" # HEAD
+            else:
+              expected = "2" # BASE
+
+        peg_path = path + (peg_rev != 0 and '@' + str(peg_rev) or "")
+
+        ### Test 'svn propget'
+        pget_expected = expected
+        if pget_expected:
+          pget_expected = [ pget_expected + "\n" ]
+        if op_rev != 0:
+          svntest.actions.run_and_verify_svn(None, pget_expected, [],
+                                             'propget', 'revision', peg_path,
+                                             '-r', str(op_rev))
+        else:
+          svntest.actions.run_and_verify_svn(None, pget_expected, [],
+                                             'propget', 'revision', peg_path)
+
+        ### Test 'svn proplist -v'
+        if op_rev != 0 or peg_rev != 0:  # a revision-ful query output URLs
+          path = iota_url
+        plist_expected = expected
+        if plist_expected:
+          plist_expected = [ "Properties on '" + path + "':\n",
+                             "  revision : " + expected + "\n" ]
+
+        if op_rev != 0:
+          svntest.actions.run_and_verify_svn(None, plist_expected, [],
+                                             'proplist', '-v', peg_path,
+                                             '-r', str(op_rev))
+        else:
+          svntest.actions.run_and_verify_svn(None, plist_expected, [],
+                                             'proplist', '-v', peg_path)
+
 ########################################################################
 # Run the tests
 
@@ -1509,7 +1635,12 @@ test_list = [ None,
               copy_inherits_special_props,
               # If we learn how to write a pre-revprop-change hook for
               # non-Posix platforms, we won't have to skip here:
-              Skip(revprop_change, is_non_posix_and_non_windows_os),
+              # TODO(epg): Removed Skip as long as we have this XFail
+              # because I couldn't get Skip and XFail to interact
+              # properly (it kept showing the failure and then
+              # printing PASS instead of XFAIL).
+              #Skip(revprop_change, is_non_posix_and_non_windows_os),
+              XFail(revprop_change, svntest.main.is_ra_type_dav),
               prop_value_conversions,
               binary_props,
               recursive_base_wc_ops,
@@ -1521,6 +1652,8 @@ test_list = [ None,
               depthy_url_proplist,
               invalid_propnames,
               SkipUnless(perms_on_symlink, svntest.main.is_posix_os),
+              remove_custom_ns_props,
+              props_over_time,
              ]
 
 if __name__ == '__main__':

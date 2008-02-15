@@ -24,10 +24,6 @@ extern "C" {
 
 #include "svn_props.h"
 
-/* A transaction property which maps to a skel form of apr_hash_t
-   (target wc path char * -> actual mergeinfo). */
-#define SVN_FS__PROP_TXN_MERGEINFO     SVN_PROP_PREFIX "txn-mergeinfo"
-
 
 
 /* These functions implement some of the calls in the FS loader

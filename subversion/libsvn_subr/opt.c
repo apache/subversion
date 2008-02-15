@@ -252,32 +252,32 @@ print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
             }
         }
       /* And global options too */
-      if (global_options)
-        for (i = 0; global_options[i]; i++)
-          {
-            if (have_options == FALSE)
-              {
-                SVN_ERR(svn_cmdline_fputs(_("\nValid options:\n"),
-                                          stream, pool));
-                have_options = TRUE;
-              }
+      if (global_options && *global_options)
+        {
+          SVN_ERR(svn_cmdline_fputs(_("\nGlobal options:\n"),
+                                    stream, pool));
+          have_options = TRUE;
 
-            /* convert each option code into an option */
-            option =
-              svn_opt_get_option_from_code2(global_options[i],
-                                            options_table,
-                                            cmd, pool);
-
-            /* print the option's docstring */
-            if (option)
-              {
-                const char *optstr;
-                svn_opt_format_option(&optstr, option, TRUE, pool);
-                SVN_ERR(svn_cmdline_fprintf(stream, pool, "  %s\n",
-                                            optstr));
-              }
-          }
-
+          for (i = 0; global_options[i]; i++)
+            {
+              
+              /* convert each option code into an option */
+              option =
+                svn_opt_get_option_from_code2(global_options[i],
+                                              options_table,
+                                              cmd, pool);
+              
+              /* print the option's docstring */
+              if (option)
+                {
+                  const char *optstr;
+                  svn_opt_format_option(&optstr, option, TRUE, pool);
+                  SVN_ERR(svn_cmdline_fprintf(stream, pool, "  %s\n",
+                                              optstr));
+                }
+            }
+        }
+          
       if (have_options)
         SVN_ERR(svn_cmdline_fprintf(stream, pool, "\n"));
     }
@@ -553,19 +553,19 @@ svn_opt_subcommand_help(const char *subcommand,
 static int
 revision_from_word(svn_opt_revision_t *revision, const char *word)
 {
-  if (strcasecmp(word, "head") == 0)
+  if (svn_cstring_casecmp(word, "head") == 0)
     {
       revision->kind = svn_opt_revision_head;
     }
-  else if (strcasecmp(word, "prev") == 0)
+  else if (svn_cstring_casecmp(word, "prev") == 0)
     {
       revision->kind = svn_opt_revision_previous;
     }
-  else if (strcasecmp(word, "base") == 0)
+  else if (svn_cstring_casecmp(word, "base") == 0)
     {
       revision->kind = svn_opt_revision_base;
     }
-  else if (strcasecmp(word, "committed") == 0)
+  else if (svn_cstring_casecmp(word, "committed") == 0)
     {
       revision->kind = svn_opt_revision_committed;
     }
@@ -666,9 +666,9 @@ svn_opt_parse_revision(svn_opt_revision_t *start_revision,
 
 
 int
-svn_opt_parse_revision2(apr_array_header_t **ranges_to_merge,
-                        const char *arg,
-                        apr_pool_t *pool)
+svn_opt_parse_revision_to_range(apr_array_header_t *opt_ranges,
+                                const char *arg,
+                                apr_pool_t *pool)
 {
   svn_opt_revision_range_t *range = apr_palloc(pool, sizeof(*range));
 
@@ -679,7 +679,7 @@ svn_opt_parse_revision2(apr_array_header_t **ranges_to_merge,
                              arg, pool) == -1)
     return -1;
 
-  APR_ARRAY_PUSH(*ranges_to_merge, svn_opt_revision_range_t *) = range;
+  APR_ARRAY_PUSH(opt_ranges, svn_opt_revision_range_t *) = range;
   return 0;
 }
 
@@ -872,7 +872,27 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
                               apr_array_header_t *known_targets,
                               apr_pool_t *pool)
 {
+  svn_error_t *err = svn_opt_args_to_target_array3(targets_p, os, 
+                                                   known_targets, pool);
+
+  if (err && err->apr_err == SVN_ERR_RESERVED_FILENAME_SPECIFIED)
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+
+  return err;
+}
+
+
+svn_error_t *
+svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
+                              apr_getopt_t *os,
+                              apr_array_header_t *known_targets,
+                              apr_pool_t *pool)
+{
   int i;
+  svn_error_t *err = SVN_NO_ERROR;
   apr_array_header_t *input_targets =
     apr_array_make(pool, DEFAULT_ARRAY_SIZE, sizeof(const char *));
   apr_array_header_t *output_targets =
@@ -1010,7 +1030,12 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
              synchronized! */
           if (0 == strcmp(base_name, ".svn")
               || 0 == strcmp(base_name, "_svn"))
-            continue;
+            {
+              err = svn_error_createf(SVN_ERR_RESERVED_FILENAME_SPECIFIED,
+                                      err, _("'%s' ends in a reserved name"),
+                                      target);
+              continue;
+            }
         }
 
       /* Append the peg revision back to the canonicalized target if
@@ -1026,7 +1051,8 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
      passing it to the cmd_func. */
 
   *targets_p = output_targets;
-  return SVN_NO_ERROR;
+
+  return err;
 }
 
 
@@ -1100,7 +1126,7 @@ print_version_info(const char *pgm_name,
   SVN_ERR(svn_cmdline_printf(pool, _("%s, version %s\n"
                                      "   compiled %s, %s\n\n"), pgm_name,
                              SVN_VERSION, __DATE__, __TIME__));
-  SVN_ERR(svn_cmdline_fputs(_("Copyright (C) 2000-2007 CollabNet.\n"
+  SVN_ERR(svn_cmdline_fputs(_("Copyright (C) 2000-2008 CollabNet.\n"
                               "Subversion is open source software, see"
                               " http://subversion.tigris.org/\n"
                               "This product includes software developed by "

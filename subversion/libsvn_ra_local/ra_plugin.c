@@ -2,7 +2,7 @@
  * ra_plugin.c : the main RA module for local repository access
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -653,6 +653,7 @@ svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
                             const apr_array_header_t *paths,
                             svn_revnum_t revision,
                             svn_mergeinfo_inheritance_t inherit,
+                            svn_boolean_t include_descendants,
                             apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
@@ -669,7 +670,8 @@ svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
     }
 
   SVN_ERR(svn_repos_fs_get_mergeinfo(&tmp_mergeinfo, sess->repos, abs_paths,
-                                     revision, inherit, NULL, NULL, pool));
+                                     revision, inherit, include_descendants,
+                                     NULL, NULL, pool));
   *mergeinfo = NULL;
   if (tmp_mergeinfo != NULL && apr_hash_count(tmp_mergeinfo) > 0)
     {
@@ -843,7 +845,7 @@ svn_ra_local__get_log(svn_ra_session_t *session,
                       svn_boolean_t discover_changed_paths,
                       svn_boolean_t strict_node_history,
                       svn_boolean_t include_merged_revisions,
-                      apr_array_header_t *revprops,
+                      const apr_array_header_t *revprops,
                       svn_log_entry_receiver_t receiver,
                       void *receiver_baton,
                       apr_pool_t *pool)
@@ -1364,17 +1366,26 @@ svn_ra_local__has_capability(svn_ra_session_t *session,
                              const char *capability,
                              apr_pool_t *pool)
 {
+  svn_ra_local__session_baton_t *sess = session->priv;
+
   if (strcmp(capability, SVN_RA_CAPABILITY_DEPTH) == 0
-      || strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0
       || strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0
       || strcmp(capability, SVN_RA_CAPABILITY_PARTIAL_REPLAY) == 0)
     {
       *has = TRUE;
     }
+  else if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
+    {
+      /* With mergeinfo, the code's capabilities may not reflect the
+         repository's, so inquire further. */
+      SVN_ERR(svn_repos_has_capability(sess->repos, has,
+                                       SVN_REPOS_CAPABILITY_MERGEINFO,
+                                       pool));
+    }
   else  /* Don't know any other capabilities, so error. */
     {
       return svn_error_createf
-        (SVN_ERR_RA_UNKNOWN_CAPABILITY, NULL,
+        (SVN_ERR_UNKNOWN_CAPABILITY, NULL,
          _("Don't know anything about capability '%s'"), capability);
     }
 

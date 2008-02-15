@@ -2,7 +2,7 @@
  * fs_loader.h:  Declarations for the FS loader library
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -66,9 +66,9 @@ typedef struct fs_library_vtable_t
      this statement, now that the minor version has increased. */
   const svn_version_t *(*get_version)(void);
 
-  /* The open_fs/create/open_fs_for_recovery functions are serialized
-     so that they may use the common_pool parameter to allocate
-     fs-global objects such as the bdb env cache. */
+  /* The open_fs/create/open_fs_for_recovery/upgrade_fs functions are
+     serialized so that they may use the common_pool parameter to
+     allocate fs-global objects such as the bdb env cache. */
   svn_error_t *(*create)(svn_fs_t *fs, const char *path, apr_pool_t *pool,
                          apr_pool_t *common_pool);
   svn_error_t *(*open_fs)(svn_fs_t *fs, const char *path, apr_pool_t *pool,
@@ -79,6 +79,8 @@ typedef struct fs_library_vtable_t
   svn_error_t *(*open_fs_for_recovery)(svn_fs_t *fs, const char *path,
                                        apr_pool_t *pool,
                                        apr_pool_t *common_pool);
+  svn_error_t *(*upgrade_fs)(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+                             apr_pool_t *common_pool);
   svn_error_t *(*delete_fs)(const char *path, apr_pool_t *pool);
   svn_error_t *(*hotcopy)(const char *src_path, const char *dest_path,
                           svn_boolean_t clean, apr_pool_t *pool);
@@ -311,13 +313,8 @@ typedef struct root_vtable_t
                                 svn_fs_root_t *root,
                                 const apr_array_header_t *paths,
                                 svn_mergeinfo_inheritance_t inherit,
+                                svn_boolean_t include_descendants,
                                 apr_pool_t *pool);
-  svn_error_t *(*get_mergeinfo_for_tree)(apr_hash_t **mergeinfo,
-                                         svn_fs_root_t *root,
-                                         const apr_array_header_t *paths,
-                                         svn_fs_mergeinfo_filter_func_t filter_func,
-                                         void *filter_func_baton,
-                                         apr_pool_t *pool);
 } root_vtable_t;
 
 
@@ -345,12 +342,6 @@ typedef struct id_vtable_t
    in the 'flags' argument to svn_fs_lock().  */
 #define SVN_FS__PROP_TXN_CHECK_LOCKS           SVN_PROP_PREFIX "check-locks"
 #define SVN_FS__PROP_TXN_CHECK_OOD             SVN_PROP_PREFIX "check-ood"
-
-/* This transaction property determines whether the txn has mergeinfo
-   properties set in it, and thus will need some info inserted about
-   uid->rev mapping in the mergeinfo table  */
-#define SVN_FS__PROP_TXN_CONTAINS_MERGEINFO    SVN_PROP_PREFIX "contains-mergeinfo"
-
 
 struct svn_fs_t
 {

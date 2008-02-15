@@ -34,26 +34,13 @@
 #include "tree.h"
 #include "lock.h"
 #include "svn_private_config.h"
+#include "private/svn_fs_util.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
 /* A prefix for the pool userdata variables used to hold
    per-filesystem shared data.  See fs_serialized_init. */
 #define SVN_FSFS_SHARED_USERDATA_PREFIX "svn-fsfs-shared-"
-
-
-
-/* If filesystem FS is already open, then return an
-   SVN_ERR_FS_ALREADY_OPEN error.  Otherwise, return zero.  */
-static svn_error_t *
-check_already_open(svn_fs_t *fs)
-{
-  if (fs->fsap_data)
-    return svn_error_create(SVN_ERR_FS_ALREADY_OPEN, 0,
-                            _("Filesystem object already open"));
-  else
-    return SVN_NO_ERROR;
-}
 
 
 
@@ -111,7 +98,7 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
         return svn_error_wrap_apr(status,
                                   _("Can't create FSFS txn list mutex"));
 
-      /* ... not to mention locking the transaction-current file. */
+      /* ... not to mention locking the txn-current file. */
       status = apr_thread_mutex_create(&ffsd->txn_current_lock,
                                        APR_THREAD_MUTEX_DEFAULT, common_pool);
       if (status)
@@ -194,7 +181,7 @@ static svn_error_t *
 fs_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
           apr_pool_t *common_pool)
 {
-  SVN_ERR(check_already_open(fs));
+  SVN_ERR(svn_fs__check_fs(fs, FALSE));
 
   initialize_fs_struct(fs);
 
@@ -246,6 +233,21 @@ fs_open_for_recovery(svn_fs_t *fs,
   /* Now open the filesystem properly by calling the vtable method directly. */
   return fs_open(fs, path, pool, common_pool);
 }
+
+
+
+/* This implements the fs_library_vtable_t.uprade_fs() API. */
+static svn_error_t *
+fs_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+           apr_pool_t *common_pool)
+{
+  SVN_ERR(svn_fs__check_fs(fs, FALSE));
+  initialize_fs_struct(fs);
+  SVN_ERR(svn_fs_fs__open(fs, path, pool));
+  SVN_ERR(fs_serialized_init(fs, common_pool, pool));
+  return svn_fs_fs__upgrade(fs, pool);
+}
+
 
 
 
@@ -314,6 +316,7 @@ static fs_library_vtable_t library_vtable = {
   fs_create,
   fs_open,
   fs_open_for_recovery,
+  fs_upgrade,
   fs_delete_fs,
   fs_hotcopy,
   fs_get_description,

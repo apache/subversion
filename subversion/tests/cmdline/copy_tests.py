@@ -22,7 +22,7 @@ import stat, os, re
 # Our testing module
 import svntest
 
-from svntest.main import SVN_PROP_MERGE_INFO
+from svntest.main import SVN_PROP_MERGEINFO
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -73,8 +73,7 @@ or a url (when false) copy source is used."""
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
 # Helper for wc_copy_replace_with_props and
 # repos_to_wc_copy_replace_with_props
@@ -110,7 +109,7 @@ def copy_replace_with_props(sbox, wc_copy):
                       props={ 'svn:eol-style': 'LF' })
 
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
+  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
 
   # Commit props
   expected_output = svntest.wc.State(wc_dir, {
@@ -123,8 +122,7 @@ def copy_replace_with_props(sbox, wc_copy):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Bring wc into sync
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
@@ -148,7 +146,7 @@ def copy_replace_with_props(sbox, wc_copy):
 
   # Verify both content and props have been copied
   if wc_copy:
-    props = { SVN_PROP_MERGE_INFO : '',
+    props = { SVN_PROP_MERGEINFO : '',
               'phony-prop' : '*'}
   else:
     props = { 'phony-prop' : '*'}
@@ -157,7 +155,7 @@ def copy_replace_with_props(sbox, wc_copy):
                       contents="This is the file 'pi'.\n",
                       props=props)
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
+  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
 
   # Now commit and verify
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
@@ -171,8 +169,7 @@ def copy_replace_with_props(sbox, wc_copy):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
 
 ######################################################################
@@ -313,8 +310,6 @@ def basic_copy_and_move_files(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
   # Issue 1091, alpha2 would now have the wrong checksum and so a
@@ -328,8 +323,6 @@ def basic_copy_and_move_files(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
   # Assure that attempts at local copy and move fail when a log
@@ -384,8 +377,6 @@ def receive_copy_in_update(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
   # Now update the other working copy; it should receive a full add of
@@ -460,8 +451,6 @@ def resurrect_deleted_dir(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
   # Use 'svn cp URL@1 URL' to resurrect the deleted directory, where
@@ -509,8 +498,6 @@ def copy_deleted_dir_into_prefix(sbox):
                                         expected_output,
                                         None,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
   # Ok, copy from a deleted URL into a prefix of that URL, this used to
@@ -568,7 +555,7 @@ def no_copy_overwrites(sbox):
 def no_wc_copy_overwrites(sbox):
   "svn cp PATH PATH cannot overwrite destination"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   # File simply missing
@@ -618,8 +605,6 @@ def copy_modify_commit(sbox):
                                         expected_output,
                                         None,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 #----------------------------------------------------------------------
@@ -646,8 +631,7 @@ def copy_files_with_properties(sbox):
   expected_status.tweak('A/D/G/rho', status='  ', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Set another property, but don't commit it yet
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -694,8 +678,7 @@ def copy_files_with_properties(sbox):
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
 #----------------------------------------------------------------------
 
@@ -725,8 +708,6 @@ def copy_delete_commit(sbox):
                                         expected_output,
                                         None,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
   # copy a tree
@@ -747,8 +728,6 @@ def copy_delete_commit(sbox):
                                         expected_output,
                                         None,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 
@@ -756,7 +735,7 @@ def copy_delete_commit(sbox):
 def mv_and_revert_directory(sbox):
   "move and revert a directory"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   F_path = os.path.join(wc_dir, 'A', 'B', 'F')
@@ -1021,7 +1000,7 @@ def repos_to_wc(sbox):
 
   # Validate the merge info of the copy destination (we expect none)
   svntest.actions.run_and_verify_svn(None, [], [],
-                                     'propget', SVN_PROP_MERGE_INFO,
+                                     'propget', SVN_PROP_MERGEINFO,
                                      os.path.join(D_dir, 'B'))
 
 #----------------------------------------------------------------------
@@ -1229,7 +1208,7 @@ def resurrect_deleted_file(sbox):
 def diff_repos_to_wc_copy(sbox):
   "copy file from repos to working copy and run diff"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   iota_repos_path = sbox.repo_url + '/iota'
@@ -1321,10 +1300,10 @@ def revision_kinds_local_source(sbox):
     'A/mu' : Item(verb='Sending'), })
   svntest.main.file_append(mu_path, "New r2 text.\n")
   svntest.actions.run_and_verify_commit(wc_dir, expected_output, None,
-                                        None, None, None, None, None, wc_dir)
+                                        None, wc_dir)
   svntest.main.file_append(mu_path, "New r3 text.\n")
   svntest.actions.run_and_verify_commit(wc_dir, expected_output, None,
-                                        None, None, None, None, None, wc_dir)
+                                        None, wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r2', mu_path)
   svntest.main.file_append(mu_path, "Working copy.\n")
 
@@ -1365,7 +1344,7 @@ def revision_kinds_local_source(sbox):
 
   # Check that the new files have the right contents
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir)
-  svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
+  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
 
 
 #-------------------------------------------------------------
@@ -1373,7 +1352,7 @@ def revision_kinds_local_source(sbox):
 
 def copy_over_missing_file(sbox):
   "copy over a missing file"
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   mu_path = os.path.join(wc_dir, 'A', 'mu')
@@ -1421,8 +1400,7 @@ def repos_to_wc_1634(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Now copy the directory back.
   E_url = sbox.repo_url + "/A/B/E@1"
@@ -1486,7 +1464,7 @@ def double_uri_escaping_1814(sbox):
 def wc_to_wc_copy_between_different_repos(sbox):
   "wc to wc copy attempts between different repos"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   sbox2 = sbox.clone_dependent()
@@ -1546,8 +1524,7 @@ def wc_to_wc_copy_deleted(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
   # Copy including stuff in state deleted=true
   svntest.actions.run_and_verify_svn(None, None, [], 'copy', B_path, B2_path)
@@ -1608,8 +1585,7 @@ def wc_to_wc_copy_deleted(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
 #----------------------------------------------------------------------
 # Test for copy into a non-existent URL path
@@ -1696,7 +1672,7 @@ def old_dir_url_to_url(sbox):
 def wc_copy_dir_to_itself(sbox):
   "copy wc dir to itself"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   dnames = ['A','A/B']
 
@@ -1794,7 +1770,7 @@ def repos_to_wc_copy_replace_with_props(sbox):
 def delete_replaced_file(sbox):
   "delete file scheduled for replace"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   # File scheduled for deletion.
@@ -1827,7 +1803,7 @@ def delete_replaced_file(sbox):
 def mv_unversioned_file(sbox):
   "move an unversioned file"
   # Issue #2436: Attempting to move an unversioned file would seg fault.
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   unver_path_1 = os.path.join(wc_dir, 'unversioned1')
@@ -1907,8 +1883,7 @@ def force_move(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
   svntest.actions.run_and_verify_svn('Cat file', expected_file_content, [],
                                      'cat',
                                      sbox.repo_url + '/dest')
@@ -1971,8 +1946,6 @@ def copy_copied_file_and_dir(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 
@@ -2028,8 +2001,6 @@ def move_copied_file_and_dir(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 
@@ -2089,8 +2060,6 @@ def move_moved_file_and_dir(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 
@@ -2160,8 +2129,6 @@ def move_file_within_moved_dir(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 
@@ -2230,8 +2197,6 @@ def move_file_out_of_moved_dir(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 
@@ -2300,8 +2265,6 @@ def move_dir_within_moved_dir(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 
@@ -2369,8 +2332,6 @@ def move_dir_out_of_moved_dir(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 def move_file_back_and_forth(sbox):
@@ -2405,15 +2366,13 @@ def move_file_back_and_forth(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 
 def move_dir_back_and_forth(sbox):
   "move a moved dir back to original location"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   D_path = os.path.join(wc_dir, 'A', 'D')
@@ -2556,8 +2515,6 @@ def copy_move_added_paths(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
   # Run_and_verify_commit() doesn't handle status of unversioned paths
@@ -2615,7 +2572,8 @@ def copy_added_paths_with_props(sbox):
   actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
 
   # Compare actual vs. expected disk trees.
-  svntest.tree.compare_trees(actual_disk_tree, expected_disk.old_tree())
+  svntest.tree.compare_trees("disk", actual_disk_tree,
+                             expected_disk.old_tree())
 
   # Copy added dir K to dir A/C
   I_copy_path = os.path.join(wc_dir, 'A', 'C', 'I')
@@ -2655,14 +2613,13 @@ def copy_added_paths_with_props(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
   # Read disk state with props
   actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
 
   # Compare actual vs. expected disk trees.
-  svntest.tree.compare_trees(actual_disk_tree, expected_disk.old_tree())
+  svntest.tree.compare_trees("disk", actual_disk_tree,
+                             expected_disk.old_tree())
 
 def copy_added_paths_to_URL(sbox):
   "copy added path to URL"
@@ -2720,7 +2677,7 @@ def copy_added_paths_to_URL(sbox):
   # Validate the merge info of the copy destination (we expect none).
   svntest.actions.run_and_verify_svn(None, [], [],
                                      'propget',
-                                     SVN_PROP_MERGE_INFO, upsilon_copy_URL)
+                                     SVN_PROP_MERGEINFO, upsilon_copy_URL)
 
   # Copy added dir A/D/I to URL://A/D/G/I
   I_copy_URL = sbox.repo_url + '/A/D/G/I'
@@ -2753,8 +2710,6 @@ def copy_added_paths_to_URL(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
   # Created expected output for update
@@ -2834,7 +2789,7 @@ def move_to_relative_paths(sbox):
 def move_from_relative_paths(sbox):
   "move file using relative src path names"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   F_path = os.path.join(wc_dir, 'A', 'B', 'F')
   beta_rel_path = os.path.join('..', 'E', 'beta')
@@ -2856,7 +2811,7 @@ def move_from_relative_paths(sbox):
 def copy_to_relative_paths(sbox):
   "copy file using relative dst path names"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   rel_path = os.path.join('..', '..', '..')
@@ -2877,7 +2832,7 @@ def copy_to_relative_paths(sbox):
 def copy_from_relative_paths(sbox):
   "copy file using relative src path names"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   F_path = os.path.join(wc_dir, 'A', 'B', 'F')
   beta_rel_path = os.path.join('..', 'E', 'beta')
@@ -2947,8 +2902,6 @@ def move_multiple_wc(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 #----------------------------------------------------------------------
@@ -2996,8 +2949,6 @@ def copy_multiple_wc(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 #----------------------------------------------------------------------
@@ -3172,8 +3123,7 @@ def copy_multiple_repo_wc(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
+                                        None, wc_dir)
 
 #----------------------------------------------------------------------
 
@@ -3279,13 +3229,13 @@ def copy_peg_rev_local_files(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/D/H/psi', contents=iota_text)
   expected_disk.add({
-    'iota'      : Item(contents=psi_text, props={SVN_PROP_MERGE_INFO : ''}),
-    'A/D/H/psi' : Item(contents=iota_text, props={SVN_PROP_MERGE_INFO : ''}),
+    'iota'      : Item(contents=psi_text, props={SVN_PROP_MERGEINFO : ''}),
+    'A/D/H/psi' : Item(contents=iota_text, props={SVN_PROP_MERGEINFO : ''}),
     'sigma'     : Item(contents=psi_text, props={}),
     })
 
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 3)
-  svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
+  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
 
 
 #----------------------------------------------------------------------
@@ -3355,11 +3305,11 @@ def copy_peg_rev_local_dirs(sbox):
   expected_disk.remove('A/D/G/rho')
   expected_disk.remove('A/D/G/tau')
   expected_disk.add({
-    'A/B/E'       : Item(props={SVN_PROP_MERGE_INFO : ''}),
+    'A/B/E'       : Item(props={SVN_PROP_MERGEINFO : ''}),
     'A/B/E/pi'    : Item(contents="This is the file 'pi'.\n"),
     'A/B/E/rho'   : Item(contents="This is the file 'rho'.\n"),
     'A/B/E/tau'   : Item(contents="This is the file 'tau'.\n"),
-    'A/D/G'       : Item(props={SVN_PROP_MERGE_INFO : ''}),
+    'A/D/G'       : Item(props={SVN_PROP_MERGEINFO : ''}),
     'A/D/G/beta'  : Item(contents="This is the file 'beta'.\n"),
     'A/J'         : Item(props={}),
     'A/J/alpha'   : Item(contents="This is the file 'alpha'.\n"),
@@ -3367,7 +3317,7 @@ def copy_peg_rev_local_dirs(sbox):
     })
 
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 5)
-  svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
+  svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
 
 
 #----------------------------------------------------------------------
@@ -3410,7 +3360,7 @@ def copy_peg_rev_url(sbox):
 
   # Validate the copy destination's mergeinfo (we expect none).
   svntest.actions.run_and_verify_svn(None, [], [],
-                                     'propget', SVN_PROP_MERGE_INFO, sigma_url)
+                                     'propget', SVN_PROP_MERGEINFO, sigma_url)
 
   # Update to HEAD and verify disk contents
   expected_output = svntest.wc.State(wc_dir, {
@@ -3475,8 +3425,6 @@ def old_dir_wc_to_wc(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 
@@ -3519,8 +3467,6 @@ def copy_make_parents_wc_wc(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 #----------------------------------------------------------------------
@@ -3563,8 +3509,6 @@ def copy_make_parents_repo_wc(sbox):
                                         expected_output,
                                         expected_status,
                                         None,
-                                        None, None,
-                                        None, None,
                                         wc_dir)
 
 
@@ -3750,11 +3694,32 @@ def URI_encoded_repos_to_wc(sbox):
     svntest.actions.run_and_verify_commit(wc_dir,
                                           expected_output,
                                           expected_status,
-                                          None, None, None, None, None,
-                                          wc_dir)
+                                          None, wc_dir)
 
   copy_URL_to_WC('A', 'A COPY', 2)
   copy_URL_to_WC('A COPY', 'A_COPY_2', 3)
+
+#----------------------------------------------------------------------
+# Issue #3068: copy source parent may be unversioned
+def allow_unversioned_parent_for_copy_src(sbox):
+  "copy wc in unversioned parent to other wc"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  # Make the "other" working copy
+  wc2_dir = sbox.add_wc_path('other')
+  svntest.actions.duplicate_dir(wc_dir, wc2_dir)
+  copy_to_path = os.path.join(wc_dir, 'A', 'copy_of_wc2')
+
+  # Copy the wc-in-unversioned-parent working copy to our original wc.
+  svntest.actions.run_and_verify_svn(None,
+                                     None,
+                                     [],
+                                     'cp',
+                                     wc2_dir,
+                                     copy_to_path)
+
 
 ########################################################################
 # Run the tests
@@ -3830,6 +3795,7 @@ test_list = [ None,
               copy_make_parents_wc_repo,
               copy_make_parents_repo_repo,
               URI_encoded_repos_to_wc,
+              allow_unversioned_parent_for_copy_src,
              ]
 
 if __name__ == '__main__':

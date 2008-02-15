@@ -223,7 +223,12 @@ SVN_RB_SWIG_SWIGUTIL_EXPORT
 void svn_swig_rb_notify_func2(void *baton,
                               const svn_wc_notify_t *notify,
                               apr_pool_t *pool);
-
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+svn_error_t *svn_swig_rb_conflict_resolver_func
+    (svn_wc_conflict_result_t **result,
+     const svn_wc_conflict_description_t *description,
+     void *baton,
+     apr_pool_t *pool);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 svn_error_t *svn_swig_rb_commit_callback(svn_revnum_t new_revision,
                                          const char *date,
@@ -446,7 +451,10 @@ svn_error_t *svn_swig_rb_proplist_receiver(void *baton,
                                            apr_pool_t *pool);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
-svn_error_t *svn_swig_rb_changelist_receiver(void *baton, const char *path);
+svn_error_t *svn_swig_rb_changelist_receiver(void *baton,
+                                             const char *path,
+                                             const char *changelist,
+                                             apr_pool_t *pool);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 extern svn_ra_reporter3_t *svn_swig_rb_ra_reporter3;

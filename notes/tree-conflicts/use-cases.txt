@@ -410,7 +410,7 @@ Problems With Current Behavior
 Diagram of current behavior
 
 
-            (edit)
+            (move)
     urlA        -- +Bar.c ------------------>
                /   -Foo.c             |
               /    (r50)              |
@@ -433,7 +433,7 @@ Desired behavior
 Diagram of desired behaviour
 
 
-            (edit)
+            (move)
     urlA        -- +Bar.c ----------------->
                /   -Foo.c             |
               /    (r50)              |

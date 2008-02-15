@@ -2,7 +2,7 @@
  * client.c :  Functions for repository access via the Subversion protocol
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -517,7 +517,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   svn_ra_svn_conn_t *conn;
   apr_socket_t *sock;
   apr_uint64_t minver, maxver;
-  apr_array_header_t *mechlist, *caplist;
+  apr_array_header_t *mechlist, *server_caplist, *repos_caplist;
 
   sess = apr_palloc(pool, sizeof(*sess));
   sess->pool = pool;
@@ -547,7 +547,8 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
 
   /* Read server's greeting. */
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "nnll", &minver, &maxver,
-                                       &mechlist, &caplist));
+                                       &mechlist, &server_caplist));
+
   /* We support protocol version 2. */
   if (minver > 2)
     return svn_error_createf(SVN_ERR_RA_SVN_BAD_VERSION, NULL,
@@ -557,7 +558,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
     return svn_error_createf(SVN_ERR_RA_SVN_BAD_VERSION, NULL,
                              _("Server only supports versions up to %d"),
                              (int) maxver);
-  SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
+  SVN_ERR(svn_ra_svn_set_capabilities(conn, server_caplist));
 
   /* All released versions of Subversion support edit-pipeline,
    * so we do not support servers that do not. */
@@ -581,9 +582,12 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   /* This is where the security layer would go into effect if we
    * supported security layers, which is a ways off. */
 
-  /* Read the repository's uuid and root URL. */
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "c?c", &conn->uuid,
-                                       &conn->repos_root));
+  /* Read the repository's uuid and root URL, and perhaps learn more
+     capabilities that weren't available before now. */
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "c?c?l", &conn->uuid,
+                                       &conn->repos_root, &repos_caplist));
+  SVN_ERR(svn_ra_svn_set_capabilities(conn, repos_caplist));
+
   if (conn->repos_root)
     {
       conn->repos_root = svn_path_canonicalize(conn->repos_root, pool);
@@ -1050,6 +1054,7 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
                                          const apr_array_header_t *paths,
                                          svn_revnum_t revision,
                                          svn_mergeinfo_inheritance_t inherit,
+                                         svn_boolean_t include_descendants,
                                          apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
@@ -1066,8 +1071,9 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
       path = APR_ARRAY_IDX(paths, i, const char *);
       SVN_ERR(svn_ra_svn_write_cstring(conn, pool, path));
     }
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)w)", revision,
-                                 svn_inheritance_to_word(inherit)));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)wb)", revision,
+                                 svn_inheritance_to_word(inherit),
+                                 include_descendants));
 
   SVN_ERR(handle_auth_request(sess_baton, pool));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "(?l)", &mergeinfo_tuple));
@@ -1203,7 +1209,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
                                svn_boolean_t discover_changed_paths,
                                svn_boolean_t strict_node_history,
                                svn_boolean_t include_merged_revisions,
-                               apr_array_header_t *revprops,
+                               const apr_array_header_t *revprops,
                                svn_log_entry_receiver_t receiver,
                                void *receiver_baton, apr_pool_t *pool)
 {
@@ -2220,10 +2226,12 @@ static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
     *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_MERGEINFO);
   else if (strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0)
     *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_LOG_REVPROPS);
+  else if (strcmp(capability, SVN_RA_CAPABILITY_PARTIAL_REPLAY) == 0)
+    *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_PARTIAL_REPLAY);
   else  /* Don't know any other capabilities, so error. */
     {
       return svn_error_createf
-        (SVN_ERR_RA_UNKNOWN_CAPABILITY, NULL,
+        (SVN_ERR_UNKNOWN_CAPABILITY, NULL,
          _("Don't know anything about capability '%s'"), capability);
     }
 

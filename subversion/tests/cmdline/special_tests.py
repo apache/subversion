@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#  special_tests.py:  testing special file handling
+#  special_tests.py:  testing special and reserved file handling
 #
 #  Subversion is a tool for revision control.
 #  See http://subversion.tigris.org for more information.
@@ -75,7 +75,7 @@ def general_symlink(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None,
-                                        None, None, None, None, wc_dir)
+                                        wc_dir)
 
   ## Now we should update to the previous version, verify that no
   ## symlink is present, then update back to HEAD and see if the symlink
@@ -117,8 +117,7 @@ def general_symlink(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None,
-                                        None, None, None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
 
 def replace_file_with_symlink(sbox):
@@ -233,8 +232,7 @@ def copy_tree_with_symlink(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None,
-                                        None, None, None, None, wc_dir)
+                                        expected_status, None, wc_dir)
   # Copy H to H2
   H_path = os.path.join(wc_dir, 'A', 'D', 'H')
   H2_path = os.path.join(wc_dir, 'A', 'D', 'H2')
@@ -277,8 +275,7 @@ def replace_symlink_with_file(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None,
-                                        None, None, None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
 
   # Now replace the symlink with a normal file and try to commit, we
@@ -329,8 +326,7 @@ def remove_symlink(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None,
-                                        None, None, None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
   # Now remove it
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', newfile_path)
@@ -346,8 +342,7 @@ def remove_symlink(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None,
-                                        None, None, None, None, wc_dir)
+                                        expected_status, None, wc_dir)
 
 def merge_symlink_into_file(sbox):
   "merge symlink into file"
@@ -374,7 +369,7 @@ def merge_symlink_into_file(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output, None, None,
-                                        None, None, None, None, wc_dir)
+                                        wc_dir)
 
   # Commit a symlink in its place
   linktarget_path = os.path.join(wc_dir, 'linktarget')
@@ -387,7 +382,7 @@ def merge_symlink_into_file(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output, None, None,
-                                        None, None, None, None, wc_dir)
+                                        wc_dir)
 
   # merge the creation of the symlink into the original directory
   svntest.main.run_svn(None,
@@ -410,7 +405,7 @@ def merge_symlink_into_file(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output, None, None,
-                                        None, None, None, None, wc_dir)
+                                        wc_dir)
 
 
 
@@ -439,7 +434,7 @@ def merge_file_into_symlink(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output, None, None,
-                                        None, None, None, None, wc_dir)
+                                        wc_dir)
 
   # Commit a symlink in its place
   linktarget_path = os.path.join(wc_dir, 'linktarget')
@@ -452,7 +447,7 @@ def merge_file_into_symlink(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output, None, None,
-                                        None, None, None, None, wc_dir)
+                                        wc_dir)
 
   svntest.main.file_write(gamma_path, 'changed file', 'w+')
 
@@ -461,7 +456,7 @@ def merge_file_into_symlink(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output, None, None,
-                                        None, None, None, None, wc_dir)
+                                        wc_dir)
 
   # ok, now merge the change to the file into the symlink we created, this
   # gives us a weird error
@@ -501,7 +496,7 @@ def checkout_repo_with_symlinks(sbox):
 def diff_symlink_to_dir(sbox):
   "diff a symlink to a directory"
 
-  sbox.build()
+  sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
   # Create a symlink to A/D/.
@@ -609,6 +604,25 @@ def update_obstructing_symlink(sbox):
     raise svntest.Failure
 
 
+def warn_on_reserved_name(sbox):
+  "warn when attempt operation on a reserved name"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  if os.path.exists(os.path.join(wc_dir, ".svn")):
+    reserved_path = os.path.join(wc_dir, "_svn")
+  elif os.path.exists(os.path.join(wc_dir, "_svn")):
+    reserved_path = os.path.join(wc_dir, ".svn")
+  else:
+    # We don't know how to test this, but have no reason to believe
+    # it would fail.  (TODO: any way to return 'Skip', though?)
+    return
+  svntest.main.file_append(reserved_path, 'expecting rejection')
+  svntest.actions.run_and_verify_svn(
+    "Adding a file with a reserved name failed to result in an error",
+    None, ".*Skipping argument: '.+' ends in a reserved name.*",
+    'add', reserved_path)
+
+
 ########################################################################
 # Run the tests
 
@@ -628,6 +642,7 @@ test_list = [ None,
               checkout_repo_with_unknown_special_type,
               replace_symlink_with_dir,
               SkipUnless(update_obstructing_symlink, svntest.main.is_posix_os),
+              warn_on_reserved_name,
              ]
 
 if __name__ == '__main__':

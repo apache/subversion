@@ -330,7 +330,7 @@ check_if_session_is_at_repos_root(svn_ra_session_t *sess,
 {
   const char *sess_root;
 
-  SVN_ERR(svn_ra_get_repos_root(sess, &sess_root, pool));
+  SVN_ERR(svn_ra_get_repos_root2(sess, &sess_root, pool));
 
   if (strcmp(url, sess_root) == 0)
     return SVN_NO_ERROR;
@@ -623,7 +623,7 @@ do_initialize(svn_ra_session_t *to_session,
   SVN_ERR(svn_ra_open2(&from_session, baton->from_url,
                        &(baton->source_callbacks), baton,
                        baton->config, pool));
-  SVN_ERR(svn_ra_get_repos_root(from_session, &root_url, pool));
+  SVN_ERR(svn_ra_get_repos_root2(from_session, &root_url, pool));
 
   /* If we're doing a partial replay, we have to check first if the server 
      supports this. */
@@ -634,7 +634,7 @@ do_initialize(svn_ra_session_t *to_session,
                                                &server_supports_partial_replay,
                                                SVN_RA_CAPABILITY_PARTIAL_REPLAY,
                                                pool);
-      if (err && err->apr_err == SVN_ERR_RA_UNKNOWN_CAPABILITY)
+      if (err && err->apr_err == SVN_ERR_UNKNOWN_CAPABILITY)
         {
           svn_error_clear(err);
           return svn_error_create(SVN_ERR_RA_PARTIAL_REPLAY_NOT_SUPPORTED, NULL, 
@@ -646,7 +646,7 @@ do_initialize(svn_ra_session_t *to_session,
                                  svn_string_create(baton->from_url, pool),
                                  pool));
 
-  SVN_ERR(svn_ra_get_uuid(from_session, &uuid, pool));
+  SVN_ERR(svn_ra_get_uuid2(from_session, &uuid, pool));
 
   SVN_ERR(svn_ra_change_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_UUID,
                                  svn_string_create(uuid, pool), pool));
@@ -733,6 +733,7 @@ typedef struct {
   void *wrapped_edit_baton;
   const char *to_url;  /* URL we're copying into, for correct copyfrom URLs */
   svn_boolean_t called_open_root;
+  svn_boolean_t got_textdeltas;
   svn_revnum_t base_revision;
   svn_boolean_t quiet;
 } edit_baton_t;
@@ -773,12 +774,6 @@ open_root(void *edit_baton,
   eb->called_open_root = TRUE;
   dir_baton->edit_baton = edit_baton;
   *root_baton = dir_baton;
-
-  if (! eb->quiet)
-    {
-      SVN_ERR(svn_cmdline_printf(pool, _("Transmitting file data ")));
-      SVN_ERR(svn_cmdline_fflush(stdout));
-    }
 
   return SVN_NO_ERROR;
 }
@@ -903,10 +898,13 @@ apply_textdelta(void *file_baton,
 
   if (! eb->quiet)
     {
+      if (! eb->got_textdeltas)
+        SVN_ERR(svn_cmdline_printf(pool, _("Transmitting file data ")));
       SVN_ERR(svn_cmdline_printf(pool, "."));
       SVN_ERR(svn_cmdline_fflush(stdout));
     }
 
+  eb->got_textdeltas = TRUE;
   return eb->wrapped_editor->apply_textdelta(fb->wrapped_node_baton,
                                              base_checksum, pool,
                                              handler, handler_baton);
@@ -1010,7 +1008,8 @@ close_edit(void *edit_baton,
 
   if (! eb->quiet)
     {
-      SVN_ERR(svn_cmdline_printf(pool, "\n"));
+      if (eb->got_textdeltas)
+        SVN_ERR(svn_cmdline_printf(pool, "\n"));
     }
 
   return eb->wrapped_editor->close_edit(eb->wrapped_edit_baton, pool);
@@ -1035,7 +1034,7 @@ get_sync_editor(const svn_delta_editor_t *wrapped_editor,
                 apr_pool_t *pool)
 {
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(pool);
-  edit_baton_t *eb = apr_palloc(pool, sizeof(*eb));
+  edit_baton_t *eb = apr_pcalloc(pool, sizeof(*eb));
 
   tree_editor->set_target_revision = set_target_revision;
   tree_editor->open_root = open_root;
@@ -1055,7 +1054,6 @@ get_sync_editor(const svn_delta_editor_t *wrapped_editor,
 
   eb->wrapped_editor = wrapped_editor;
   eb->wrapped_edit_baton = wrapped_edit_baton;
-  eb->called_open_root = FALSE;
   eb->base_revision = base_revision;
   eb->to_url = to_url;
   eb->quiet = quiet;
@@ -1130,7 +1128,7 @@ open_source_session(svn_ra_session_t **from_session,
   /* Ok, now sanity check the UUID of the source repository, it
      wouldn't be a good thing to sync from a different repository. */
 
-  SVN_ERR(svn_ra_get_uuid(*from_session, &uuid, pool));
+  SVN_ERR(svn_ra_get_uuid2(*from_session, &uuid, pool));
 
   if (strcmp(uuid, from_uuid->data) != 0)
     return svn_error_createf(APR_EINVAL, NULL,
@@ -1151,7 +1149,8 @@ typedef struct {
 /* Return a replay baton allocated from POOL and populated with
    data from the provided parameters. */
 static replay_baton_t *
-make_replay_baton(svn_ra_session_t *from_session, svn_ra_session_t *to_session,
+make_replay_baton(svn_ra_session_t *from_session, 
+                  svn_ra_session_t *to_session,
                   subcommand_baton_t *sb, apr_pool_t *pool)
 {
   replay_baton_t *rb = apr_pcalloc(pool, sizeof(*rb));
@@ -1162,16 +1161,14 @@ make_replay_baton(svn_ra_session_t *from_session, svn_ra_session_t *to_session,
 }
 
 /* Filter out svn:date and svn:author properties. */
-static svn_boolean_t filter_exclude_date_author_log_sync(const char *key)
+static svn_boolean_t 
+filter_exclude_date_author_sync(const char *key)
 {
   if (strncmp(key, SVN_PROP_REVISION_AUTHOR, 
               sizeof(SVN_PROP_REVISION_AUTHOR) - 1) == 0)
     return TRUE;
   else if (strncmp(key, SVN_PROP_REVISION_DATE, 
                    sizeof(SVN_PROP_REVISION_DATE) - 1) == 0)
-    return TRUE;
-  else if (strncmp(key, SVN_PROP_REVISION_LOG, 
-                   sizeof(SVN_PROP_REVISION_LOG) - 1) == 0)
     return TRUE;
   else if (strncmp(key, SVNSYNC_PROP_PREFIX,
                    sizeof(SVNSYNC_PROP_PREFIX) - 1) == 0)
@@ -1181,9 +1178,10 @@ static svn_boolean_t filter_exclude_date_author_log_sync(const char *key)
 }
 
 /* Filter out all properties except svn:date and svn:author */
-static svn_boolean_t filter_include_date_author_log_sync(const char *key)
+static svn_boolean_t 
+filter_include_date_author_sync(const char *key)
 {
-  return ! filter_exclude_date_author_log_sync(key);
+  return ! filter_exclude_date_author_sync(key);
 }
 
 /* Callback function for svn_ra_replay_range, invoked when starting to parse
@@ -1222,20 +1220,22 @@ replay_rev_started(svn_revnum_t revision,
                                                     revision),
                                  pool));
 
-  /* The actual copy is just a replay hooked up to a commit.
-     Include all the revision properties from the source repositories, except
-     svn:author and svn:date, those are not guaranteed to get through the
-     editor anyway. 
-   */
+  /* The actual copy is just a replay hooked up to a commit.  Include
+     all the revision properties from the source repositories, except
+     'svn:author' and 'svn:date', those are not guaranteed to get
+     through the editor anyway. */
   filtered = filter_props(&filtered_count, rev_props,
-                          filter_exclude_date_author_log_sync,
+                          filter_exclude_date_author_sync,
                           pool);
-  /* svn_ra_get_commit_editor3 requires the log message to be set. It's possible
-     that we didn't receive 'svn:log' here, so we have to set it to at least
-     the empty string. If there's a svn:log property on this revision, we will 
-     write the actual value in the replay_rev_finished callback. */
-  apr_hash_set(filtered, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING, 
-               svn_string_create("", pool));
+
+  /* svn_ra_get_commit_editor3 requires the log message to be
+     set. It's possible that we didn't receive 'svn:log' here, so we
+     have to set it to at least the empty string. If there's a svn:log
+     property on this revision, we will write the actual value in the
+     replay_rev_finished callback. */
+  if (! apr_hash_get(filtered, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING))
+    apr_hash_set(filtered, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
+                 svn_string_create("", pool));
 
   SVN_ERR(svn_ra_get_commit_editor3(rb->to_session, &commit_editor,
                                     &commit_baton,
@@ -1243,10 +1243,9 @@ replay_rev_started(svn_revnum_t revision,
                                     commit_callback, rb->sb,
                                     NULL, FALSE, pool));
 
-  /* There's one catch though, the diff shows us props we can't
-     send over the RA interface, so we need an editor that's smart
-     enough to filter those out for us.  */
-
+  /* There's one catch though, the diff shows us props we can't send
+     over the RA interface, so we need an editor that's smart enough
+     to filter those out for us.  */
   SVN_ERR(get_sync_editor(commit_editor, commit_baton, revision - 1,
                           rb->sb->to_url, rb->sb->quiet, 
                           &sync_editor, &sync_baton, pool));
@@ -1290,23 +1289,22 @@ replay_rev_finished(svn_revnum_t revision,
   SVN_ERR(svn_ra_rev_proplist(rb->to_session, revision, &existing_props,
                               subpool));
 
+
   /* Ok, we're done with the data, now we just need to copy the remaining 
      'svn:date' and 'svn:author' revprops and we're all set. */
   filtered = filter_props(&filtered_count, rev_props, 
-                          filter_include_date_author_log_sync, 
-                          pool);
+                          filter_include_date_author_sync, 
+                          subpool);
   SVN_ERR(write_revprops(&filtered_count, rb->to_session, revision, filtered, 
-                         pool));
+                         subpool));
+
+  /* Remove all extra properties in TARGET. */
+  SVN_ERR(remove_props_not_in_source(rb->to_session, revision, 
+                                     rev_props, existing_props, subpool));
 
   svn_pool_clear(subpool);
 
-  /* Remove all extra properties in TARGET. */
-
-  SVN_ERR(remove_props_not_in_source(rb->to_session, revision, 
-                                     rev_props, existing_props, pool));
-
   /* Ok, we're done, bring the last-merged-rev property up to date. */
-
   SVN_ERR(svn_ra_change_rev_prop
           (rb->to_session,
            0,
@@ -1317,13 +1315,11 @@ replay_rev_finished(svn_revnum_t revision,
 
   /* And finally drop the currently copying prop, since we're done
      with this revision. */
-
   SVN_ERR(svn_ra_change_rev_prop(rb->to_session, 0,
                                  SVNSYNC_PROP_CURRENTLY_COPYING,
                                  NULL, subpool));
 
   /* Notify the user that we copied revision properties. */
-
   if (! rb->sb->quiet)
     SVN_ERR(log_properties_copied(filtered_count > 0, revision, subpool));
 
@@ -1425,17 +1421,15 @@ do_synchronize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
   else
     {
       if (to_latest != last_merged)
-        {
-          return svn_error_createf
-            (APR_EINVAL, NULL,
-             _("Destination HEAD (%ld) is not the last merged revision (%ld); "
-               "have you committed to the destination without using svnsync?"),
-             to_latest, last_merged);
-        }
+        return svn_error_createf(APR_EINVAL, NULL,
+                                 _("Destination HEAD (%ld) is not the last "
+                                   "merged revision (%ld); have you "
+                                   "committed to the destination without "
+                                   "using svnsync?"),
+                                 to_latest, last_merged);
     }
 
   /* Now check to see if there are any revisions to copy. */
-
   SVN_ERR(svn_ra_get_latest_revnum(from_session, &from_latest, pool));
 
   if (from_latest < atol(last_merged_rev->data))
@@ -1443,9 +1437,7 @@ do_synchronize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
 
   /* Ok, so there are new revisions, iterate over them copying them
      into the destination repository. */
-
-  rb = make_replay_baton(from_session, to_session, 
-                         baton, pool);
+  rb = make_replay_baton(from_session, to_session, baton, pool);
     
   start_revision = atol(last_merged_rev->data) + 1;
   end_revision = from_latest;
@@ -1453,10 +1445,8 @@ do_synchronize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
   SVN_ERR(check_cancel(NULL));
 
   SVN_ERR(svn_ra_replay_range(from_session, start_revision, end_revision, 
-                              0, TRUE,
-                              replay_rev_started, replay_rev_finished, 
-                              rb, 
-                              pool));
+                              0, TRUE, replay_rev_started, 
+                              replay_rev_finished, rb, pool));
 
   return SVN_NO_ERROR;
 }

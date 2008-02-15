@@ -35,6 +35,10 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/** The application and service name used for sasl_client_new,
+ * sasl_server_init, and sasl_server_new. */
+#define SVN_RA_SVN_SASL_NAME "svn"
+
 extern volatile svn_atomic_t svn_ra_svn__sasl_status;
 
 /* Initialize secprops with default values. */

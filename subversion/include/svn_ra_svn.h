@@ -51,7 +51,7 @@ extern "C" {
 /* maps to SVN_RA_CAPABILITY_LOG_REVPROPS */
 #define SVN_RA_SVN_CAP_LOG_REVPROPS "log-revprops"
 /* maps to SVN_RA_CAPABILITY_PARTIAL_REPLAY */
-#define SVN_RA_SVN_CAP_PARTIAL_REPPLAY "partial-replay"
+#define SVN_RA_SVN_CAP_PARTIAL_REPLAY "partial-replay"
 
 /** ra_svn passes @c svn_dirent_t fields over the wire as a list of
  * words, these are the values used to represent each field.
@@ -157,10 +157,13 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
                                           apr_file_t *out_file,
                                           apr_pool_t *pool);
 
-/** Initialize a connection's capabilities to the ones specified in
- * @a list, which contains svn_ra_svn_item_t entries (which should
- * be of type SVN_RA_SVN_WORD; a malformed data error will result if
- * any are not). */
+/** Add the capabilities in @a list to @a conn's capabilities.
+ * @a list contains svn_ra_svn_item_t entries (which should be of type
+ * SVN_RA_SVN_WORD; a malformed data error will result if any are not).
+ *
+ * This is idempotent: if a given capability was already set for
+ * @a conn, it remains set.
+ */
 svn_error_t *svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
                                          apr_array_header_t *list);
 

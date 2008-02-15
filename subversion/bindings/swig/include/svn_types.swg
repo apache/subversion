@@ -561,10 +561,10 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
   svn_swig_rb_push_pool(_global_svn_swig_rb_pool);
 }
 
-%typemap(argout) apr_pool_t *pool
+%typemap(freearg) apr_pool_t *pool
 {
   VALUE target;
-  target = _global_vresult_address == &$result ? self : $result;
+  target = _global_vresult_address == &vresult ? self : vresult;
   if (!svn_swig_rb_set_pool(target, _global_svn_swig_rb_pool))
     svn_swig_rb_destroy_pool(_global_svn_swig_rb_pool);
   svn_swig_rb_pop_pool(_global_svn_swig_rb_pool);
@@ -819,12 +819,8 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #ifdef SWIGRUBY
 %typemap(in) (svn_wc_conflict_resolver_func_t conflict_func, void *conflict_baton)
 {
-  /* ### TODO(rb support conflict_fun): implement
   $1 = svn_swig_rb_conflict_resolver_func;
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-  */
-  $1 = NULL;
-  $2 = NULL;
 }
 
 %typemap(argout) (svn_wc_conflict_resolver_func_t conflict_func, void *conflict_baton)
@@ -1135,15 +1131,15 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
     }
     else if (SvPOK($input)) {
         char *input = SvPV_nolen($input);
-        if (strcasecmp(input, "BASE") == 0)
+        if (svn_cstring_casecmp(input, "BASE") == 0)
             rev.kind = svn_opt_revision_base;
-        else if (strcasecmp(input, "HEAD") == 0)
+        else if (svn_cstring_casecmp(input, "HEAD") == 0)
             rev.kind = svn_opt_revision_head;
-        else if (strcasecmp(input, "WORKING") == 0)
+        else if (svn_cstring_casecmp(input, "WORKING") == 0)
             rev.kind = svn_opt_revision_working;
-        else if (strcasecmp(input, "COMMITTED") == 0)
+        else if (svn_cstring_casecmp(input, "COMMITTED") == 0)
             rev.kind = svn_opt_revision_committed;
-        else if (strcasecmp(input, "PREV") == 0)
+        else if (svn_cstring_casecmp(input, "PREV") == 0)
             rev.kind = svn_opt_revision_previous;
         else if (*input == '{') {
             svn_boolean_t matched;

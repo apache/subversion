@@ -48,6 +48,7 @@
 #include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_md5.h"
+#include "svn_hash.h"
 
 #include "private/svn_wc_private.h"
 
@@ -168,6 +169,9 @@ struct edit_baton {
   /* A token holder, helps to build the svnpatch. */
   int next_token;
 
+  /* Hash whose keys are const char * changelist names. */
+  apr_hash_t *changelist_hash;
+
   apr_pool_t *pool;
 };
 
@@ -266,9 +270,15 @@ struct callbacks_wrapper_baton {
  * calculating diffs.  USE_TEXT_BASE defines whether to compare
  * against working files or text-bases.  REVERSE_ORDER defines which
  * direction to perform the diff.
+ * 
+ * CHANGELISTS is a list of const char * changelist names, used to
+ * filter diff output responses to only those items in one of the
+ * specified changelists, empty (or NULL altogether) if no changelist
+ * filtering is requested.
  */
-static struct edit_baton *
-make_editor_baton(svn_wc_adm_access_t *anchor,
+static svn_error_t *
+make_editor_baton(struct edit_baton **edit_baton,
+                  svn_wc_adm_access_t *anchor,
                   const char *target,
                   const svn_wc_diff_callbacks2_t *callbacks,
                   void *callback_baton,
@@ -276,10 +286,16 @@ make_editor_baton(svn_wc_adm_access_t *anchor,
                   svn_boolean_t ignore_ancestry,
                   svn_boolean_t use_text_base,
                   svn_boolean_t reverse_order,
+                  const apr_array_header_t *changelists,
                   apr_pool_t *pool)
 {
-  struct edit_baton *eb = apr_pcalloc(pool, sizeof(*eb));
+  apr_hash_t *changelist_hash = NULL;
+  struct edit_baton *eb;
 
+  if (changelists && changelists->nelts)
+    SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
+
+  eb = apr_pcalloc(pool, sizeof(*eb));
   eb->anchor = anchor;
   eb->anchor_path = svn_wc_adm_access_path(anchor);
   eb->target = apr_pstrdup(pool, target);
@@ -292,9 +308,11 @@ make_editor_baton(svn_wc_adm_access_t *anchor,
   eb->diff_targets = apr_array_make(pool, 1, sizeof(const char *));
   eb->next_token = 0;
   eb->svnpatch_stream = NULL;
+  eb->changelist_hash = changelist_hash;
   eb->pool = pool;
 
-  return eb;
+  *edit_baton = eb;
+  return SVN_NO_ERROR;
 }
 
 static const char *
@@ -543,6 +561,11 @@ file_diff(struct dir_baton *dir_baton,
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, dir_baton->edit_baton->anchor,
                               dir_baton->path, pool));
 
+  /* If the item is not a member of a specified changelist (and there are
+     some specified changelists), skip it. */
+  if (! SVN_WC__CL_MATCH(dir_baton->edit_baton->changelist_hash, entry))
+    return SVN_NO_ERROR;
+
   /* If the item is schedule-add *with history*, then we don't want to
      see a comparison to the empty file;  we want the usual working
      vs. text-base comparision. */
@@ -765,6 +788,7 @@ directory_elements_diff(struct dir_baton *dir_baton)
 {
   apr_hash_t *entries;
   apr_hash_index_t *hi;
+  const svn_wc_entry_t *this_dir_entry;
   svn_boolean_t in_anchor_not_target;
   apr_pool_t *subpool;
   svn_wc_adm_access_t *adm_access;
@@ -792,12 +816,18 @@ directory_elements_diff(struct dir_baton *dir_baton)
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, dir_baton->edit_baton->anchor,
                               dir_baton->path, dir_baton->pool));
 
+  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, dir_baton->pool));
+  this_dir_entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR, 
+                                APR_HASH_KEY_STRING);
+
   /* Check for local property mods on this directory, if we haven't
-     already reported them. */
-  if (!in_anchor_not_target && !apr_hash_get(dir_baton->compared, "", 0))
+     already reported them and we aren't changelist-filted. */
+  if (SVN_WC__CL_MATCH(dir_baton->edit_baton->changelist_hash, this_dir_entry)
+      && (! in_anchor_not_target)
+      && (! apr_hash_get(dir_baton->compared, "", 0)))
     {
       svn_boolean_t modified;
-
+      
       SVN_ERR(svn_wc_props_modified_p(&modified,
                                       dir_baton->path, adm_access,
                                       dir_baton->pool));
@@ -833,8 +863,6 @@ directory_elements_diff(struct dir_baton *dir_baton)
 
   if (dir_baton->depth == svn_depth_empty && !in_anchor_not_target)
     return SVN_NO_ERROR;
-
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, dir_baton->pool));
 
   subpool = svn_pool_create(dir_baton->pool);
 
@@ -1031,6 +1059,10 @@ report_wc_file_as_added(struct dir_baton *dir_baton,
   const char *translated_file;
   svn_boolean_t file_need_close = TRUE;
 
+  /* If this entry is filtered by changelist specification, do nothing. */
+  if (! SVN_WC__CL_MATCH(dir_baton->edit_baton->changelist_hash, entry))
+    return SVN_NO_ERROR;
+
   SVN_ERR(get_empty_file(eb, &empty_file));
 
   /* We can't show additions for files that don't exist. */
@@ -1049,7 +1081,6 @@ report_wc_file_as_added(struct dir_baton *dir_baton,
       /* Otherwise show just the local modifications. */
       return file_diff(dir_baton, path, entry, pool);
     }
-
 
   emptyprops = apr_hash_make(pool);
 
@@ -1131,8 +1162,8 @@ report_wc_directory_as_added(struct dir_baton *dir_baton,
 {
   struct edit_baton *eb = dir_baton->edit_baton;
   svn_wc_adm_access_t *adm_access;
-  apr_hash_t *emptyprops = apr_hash_make(pool),
-             *wcprops = NULL;
+  apr_hash_t *emptyprops = apr_hash_make(pool), *wcprops = NULL;
+  const svn_wc_entry_t *this_dir_entry;
   apr_array_header_t *propchanges;
   apr_hash_t *entries;
   apr_hash_index_t *hi;
@@ -1141,42 +1172,47 @@ report_wc_directory_as_added(struct dir_baton *dir_baton,
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->anchor,
                               dir_baton->path, pool));
 
+  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
+  this_dir_entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR, 
+                                APR_HASH_KEY_STRING);
 
-  /* Get the BASE or WORKING properties, as appropriate, and simulate
-     their addition. */
-  if (eb->use_text_base)
-    SVN_ERR(svn_wc_get_prop_diffs(NULL, &wcprops,
-                                  dir_baton->path, adm_access, pool));
-  else
-    SVN_ERR(svn_wc_prop_list(&wcprops,
-                             dir_baton->path, adm_access, pool));
-
-  SVN_ERR(svn_prop_diffs(&propchanges,
-                         wcprops, emptyprops, pool));
-
-  if (eb->svnpatch_stream)
+  /* If this directory passes changelist filtering, get its BASE or
+     WORKING properties, as appropriate, and simulate their
+     addition. */
+  if (SVN_WC__CL_MATCH(dir_baton->edit_baton->changelist_hash, this_dir_entry))
     {
-      /* No copy-path, see report_wc_file_as_added() inner-docstrings. */
-      SVN_ERR(eb->diff_editor->add_directory
-              (dir_baton->path, dir_baton->dir_baton, NULL,
-               SVN_INVALID_REVNUM, pool, (void **)&dir_baton));
+      if (eb->use_text_base)
+        SVN_ERR(svn_wc_get_prop_diffs(NULL, &wcprops,
+                                      dir_baton->path, adm_access, pool));
+      else
+        SVN_ERR(svn_wc_prop_list(&wcprops,
+                                 dir_baton->path, adm_access, pool));
+      
+      SVN_ERR(svn_prop_diffs(&propchanges,
+                             wcprops, emptyprops, pool));
+      
+      if (eb->svnpatch_stream)
+        {
+          /* No copy-path, see report_wc_file_as_added() inner-docstrings. */
+          SVN_ERR(eb->diff_editor->add_directory
+                  (dir_baton->path, dir_baton->dir_baton, NULL,
+                   SVN_INVALID_REVNUM, pool, (void **)&dir_baton));
+
+          if (propchanges->nelts > 0)
+            SVN_ERR(svn_wc_transmit_prop_deltas
+                    (dir_baton->path, adm_access, dir_entry, eb->diff_editor,
+                     dir_baton, NULL, pool));
+        }
 
       if (propchanges->nelts > 0)
-        SVN_ERR(svn_wc_transmit_prop_deltas
-                (dir_baton->path, adm_access, dir_entry, eb->diff_editor,
-                 dir_baton, NULL, pool));
+        SVN_ERR(eb->callbacks->dir_props_changed
+                (adm_access, NULL,
+                 dir_baton->path,
+                 propchanges, emptyprops,
+                 eb->callback_baton));
     }
 
-  if (propchanges->nelts > 0)
-    SVN_ERR(eb->callbacks->dir_props_changed
-            (adm_access, NULL,
-             dir_baton->path,
-             propchanges, emptyprops,
-             eb->callback_baton));
-
   /* Report the addition of the directory's contents. */
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
-
   subpool = svn_pool_create(pool);
 
   for (hi = apr_hash_first(pool, entries); hi;
@@ -2635,6 +2671,7 @@ svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
                         svn_boolean_t reverse_order,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
+                        const apr_array_header_t *changelists,
                         const svn_delta_editor_t **editor,
                         void **edit_baton,
                         apr_file_t *svnpatch_file,
@@ -2645,9 +2682,9 @@ svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
   svn_delta_editor_t *tree_editor;
   const svn_delta_editor_t *inner_editor;
 
-  eb = make_editor_baton(anchor, target, callbacks, callback_baton,
-                         depth, ignore_ancestry, use_text_base,
-                         reverse_order, pool);
+  SVN_ERR(make_editor_baton(&eb, anchor, target, callbacks, callback_baton,
+                            depth, ignore_ancestry, use_text_base,
+                            reverse_order, changelists, pool));
 
   if (svnpatch_file)
       eb->svnpatch_stream =
@@ -2719,6 +2756,7 @@ svn_wc_get_diff_editor3(svn_wc_adm_access_t *anchor,
                                  reverse_order,
                                  cancel_func,
                                  cancel_baton,
+                                 NULL,
                                  editor,
                                  edit_baton,
                                  NULL,
@@ -2777,6 +2815,7 @@ svn_wc_diff4(svn_wc_adm_access_t *anchor,
              void *callback_baton,
              svn_depth_t depth,
              svn_boolean_t ignore_ancestry,
+             const apr_array_header_t *changelists,
              apr_file_t *svnpatch_file,
              apr_pool_t *pool)
 {
@@ -2787,8 +2826,9 @@ svn_wc_diff4(svn_wc_adm_access_t *anchor,
   svn_wc_adm_access_t *adm_access;
   svn_delta_editor_t *diff_editor;
 
-  eb = make_editor_baton(anchor, target, callbacks, callback_baton,
-                         depth, ignore_ancestry, FALSE, FALSE, pool);
+  SVN_ERR(make_editor_baton(&eb, anchor, target, callbacks, callback_baton, 
+                            depth, ignore_ancestry, FALSE, FALSE, 
+                            changelists, pool));
 
   /* Get ready with svnpatch work: initiate a stream once and for all to
    * manipulate the svnpatch file.  As much of the functions called
@@ -2870,7 +2910,7 @@ svn_wc_diff3(svn_wc_adm_access_t *anchor,
 {
   return svn_wc_diff4(anchor, target, callbacks, callback_baton,
                       SVN_DEPTH_INFINITY_OR_FILES(recurse), ignore_ancestry,
-                      FALSE, pool);
+                      NULL, FALSE, pool);
 }
 
 svn_error_t *

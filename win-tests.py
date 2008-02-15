@@ -236,13 +236,9 @@ def locate_libs():
                            'libapr%s.dll' % (suffix)))
   dlls.append(os.path.join(gen_obj.apr_util_path, objdir,
                              'libaprutil%s.dll' % (suffix)))
-  dlls.append(os.path.join(gen_obj.apr_iconv_path, objdir,
-                           'libapriconv%s.dll' % (suffix)))
 
   if gen_obj.libintl_path is not None:
     dlls.append(os.path.join(gen_obj.libintl_path, 'bin', 'intl3_svn.dll'))
-
-  dlls.append(os.path.join(gen_obj.sqlite_path, 'bin', 'sqlite3.dll'))
 
   if gen_obj.bdb_lib is not None:
     partial_path = os.path.join(gen_obj.bdb_path, 'bin', gen_obj.bdb_lib)
@@ -271,8 +267,6 @@ def locate_libs():
     copy_changed_file(mod_dav_svn_path, abs_objdir)
     copy_changed_file(mod_authz_svn_path, abs_objdir)
 
-  apriconv_so_path = os.path.join(gen_obj.apr_iconv_path, objdir, 'iconv')
-  os.environ['APR_ICONV_PATH'] = os.path.abspath(apriconv_so_path)
   os.environ['PATH'] = abs_objdir + os.pathsep + os.environ['PATH']
 
 def fix_case(path):

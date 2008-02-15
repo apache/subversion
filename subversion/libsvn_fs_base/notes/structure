@@ -926,15 +926,19 @@ Node revisions:
 
           NODE-REVISION ::= FILE | DIR ;
                    FILE ::= (HEADER PROP-KEY DATA-KEY [EDIT-DATA-KEY]) ;
-                    DIR ::= (HEADER PROP-KEY ENTRIES-KEY) ;
-
-                 HEADER ::= (KIND CREATED-PATH [PRED-ID [PRED-COUNT]]) ;
+                    DIR ::= (HEADER PROP-KEY ENTRIES-KEY) ; 
+                 HEADER ::= (KIND CREATED-PATH 
+                             [PRED-ID [PRED-COUNT 
+                              [HAS-MERGEINFO MERGEINFO-COUNT]]]) ;
                    KIND ::= "file" | "dir" ;
-                PRED-ID ::= NODE-REV-ID ;
-             PRED-COUNT ::= number ;
+                PRED-ID ::= NODE-REV-ID | "";
+             PRED-COUNT ::= number | "" ;
            CREATED-PATH ::= atom ;
                PROP-KEY ::= atom ;
-                REP-KEY ::= atom ;
+               DATA-KEY ::= atom ;
+          EDIT-DATA-KEY ::= atom ;
+          HAS-MERGEINFO ::= "0" | "1" ;
+        MERGEINFO-COUNT ::= number ;
 
 
 Representations:
@@ -1011,7 +1015,6 @@ Numbers:
               hexits-32 ::= /{base16.class}{8}/ ;
               hexits-16 ::= /{base16.class}{4}/ ;
               hexits-48 ::= /{base16.class}{12}/ ;
-
 
 (Note: the following are described in skel.h)
 Skels:

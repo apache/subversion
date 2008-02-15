@@ -40,7 +40,8 @@
 
 %apply const char *MAY_BE_NULL {
     const char *native_eol,
-    const char *comment
+    const char *comment,
+    apr_array_header_t *changelists
 };
 
 #ifdef SWIGRUBY
@@ -70,11 +71,12 @@
   apr_array_header_t *src_paths
 }
 
-%apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
-  apr_array_header_t **paths
+%apply const apr_array_header_t *STRINGLIST_MAY_BE_NULL {
+  apr_array_header_t *changelists
 }
 
 %apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
+  apr_array_header_t **paths,
   apr_array_header_t **suggestions
 }
 
@@ -176,6 +178,11 @@
 #ifdef SWIGPYTHON
 %callback_typemap(svn_info_receiver_t receiver, void *receiver_baton,
                   svn_swig_py_info_receiver_func,
+                  ,
+                  )
+
+%callback_typemap(svn_changelist_receiver_t callback_func, void *callback_baton,
+                  svn_swig_py_changelist_receiver_func,
                   ,
                   )
 #endif
@@ -329,7 +336,6 @@
 %ignore svn_client_copy_source_t::revision;
 %ignore svn_client_copy_source_t::peg_revision;
 
-%ignore svn_client_remove_from_changelist;
 %ignore svn_client_commit4;
 #endif
 
@@ -337,21 +343,13 @@
 
 #ifdef SWIGRUBY
 %header %{
-#define _svn_client_remove_from_changelist svn_client_remove_from_changelist
 #define _svn_client_commit4 svn_client_commit4
 %}
-%rename(svn_client_remove_from_changelist) _svn_client_remove_from_changelist;
 %rename(svn_client_commit4) _svn_client_commit4;
 %apply const char *MAY_BE_NULL {
   const char *removed_changelist,
   const char *changelist_name_may_be_null
 }
-svn_error_t *
-_svn_client_remove_from_changelist(const apr_array_header_t *paths,
-                                   const char *removed_changelist,
-                                   svn_client_ctx_t *ctx,
-                                   apr_pool_t *pool);
-
 svn_error_t *
 _svn_client_commit4(svn_commit_info_t **commit_info_p,
                     const apr_array_header_t *targets,
