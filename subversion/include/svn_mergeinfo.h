@@ -306,9 +306,6 @@ svn_rangelist_to_string(svn_string_t **output,
 /** Take an array of svn_merge_range_t *'s in @a rangelist, and return the
  * number of distint revisions included in it.
  *
- * TODO(miapi): This API is never used outside of test code.  Do we
- * need it?
- *
  * @since New in 1.5.
  */
 apr_uint64_t
@@ -317,9 +314,6 @@ svn_rangelist_count_revs(apr_array_header_t *rangelist);
 /** Take an array of @c svn_merge_range_t *'s in @a rangelist, and convert it
  * to an array of @c svn_revnum_t's in @a revs.  If @a rangelist contains
  * no elements, return an empty array.
- *
- * TODO(miapi): This API is never used outside of test code.  Do we
- * need it?
  *
  * @since New in 1.5.
  */
