@@ -27,11 +27,11 @@ Candidate changes:
    Votes:
      +1: kfogel
 
- * r29328
+ * r29328, r29336
    JavaHL adjustment for new UI for interactive conflict resolution.
    Notes: depends on the [r29189, r29228, r29232, r29251] group.
    Votes:
-     +1: 
+     +1: hwright
 
  * r29155
    Allow packagers to build some parts of svn against installed svn libs.
