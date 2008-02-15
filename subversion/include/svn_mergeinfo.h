@@ -338,40 +338,6 @@ svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
                           svn_revnum_t end,
                           apr_pool_t *pool);
 
-/** Remove redundancies between @a *range_1 and @a *range_2.  @a
- * *range_1 and/or @a *range_2 may be additive or subtractive ranges.
- * The ranges should be sorted such that the minimum of @c
- * *range_1->start and @c *range_1->end is less than or equal to the
- * minimum of @c *range_2->start and @c *range_2->end.
- *
- * If either @a *range_1 or @a *range_2 is NULL, either range contains
- * invalid svn_revnum_t's, or the two ranges do not intersect, then do
- * nothing and return @c FALSE.
- *
- * If the two ranges can be reduced to one range, set @a *range_1 to
- * represent that range, set @a *range_2 to @c NULL, and return @c
- * TRUE.
- *
- * If the two ranges cancel each other out set both @a *range_1 and @a
- * *range_2 to @c NULL and return @c TRUE.
- *
- * If the two ranges intersect but cannot be represented by one range
- * (because one range is additive and the other subtractive) then
- * modify @a *range_1 and @a *range_2 to remove the intersecting
- * ranges and return @c TRUE.
- *
- * The inheritability of @a *range_1 or @a *range_2 is not taken into
- * account.
- *
- * TODO(miapi): This API is never used outside of test code.  Do we
- * need it?
- *
- * @since New in 1.5.
- */
-svn_boolean_t
-svn_range_compact(svn_merge_range_t **range_1,
-                  svn_merge_range_t **range_2);
-
 /** Return a deep copy of @a mergeinfo, excluding all non-inheritable
  * @c svn_merge_range_t.  If @a start and @a end are valid revisions
  * and @a start is less than or equal to @a end, then exclude only the
