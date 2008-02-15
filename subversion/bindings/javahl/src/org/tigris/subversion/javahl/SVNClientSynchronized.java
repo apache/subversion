@@ -1008,12 +1008,12 @@ public class SVNClientSynchronized implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public MergeInfo getMergeInfo(String path, Revision pegRevision)
+    public Mergeinfo getMergeinfo(String path, Revision pegRevision)
         throws SubversionException
     {
         synchronized (clazz)
         {
-            return worker.getMergeInfo(path, pegRevision);
+            return worker.getMergeinfo(path, pegRevision);
         }
     }
 

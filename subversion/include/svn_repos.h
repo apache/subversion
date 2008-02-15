@@ -248,6 +248,40 @@ svn_repos_upgrade(const char *path,
  */
 svn_error_t *svn_repos_delete(const char *path, apr_pool_t *pool);
 
+/**
+ * Set @a *has to TRUE if @a repos has @a capability (one of the
+ * capabilities beginning with @c "SVN_REPOS_CAPABILITY_"), else set
+ * @a *has to FALSE.
+ *
+ * If @a capability isn't recognized, throw @c SVN_ERR_UNKNOWN_CAPABILITY,
+ * with the effect on @a *has undefined.
+ *
+ * Use @a pool for all allocation.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_repos_has_capability(svn_repos_t *repos,
+                         svn_boolean_t *has,
+                         const char *capability,
+                         apr_pool_t *pool);
+
+/**
+ * The capability of doing the right thing with merge-tracking
+ * information, both storing it and responding to queries about it.
+ *
+ * @since New in 1.5.
+ */
+#define SVN_REPOS_CAPABILITY_MERGEINFO "mergeinfo"
+/*       *** PLEASE READ THIS IF YOU ADD A NEW CAPABILITY ***
+ *
+ * @c SVN_REPOS_CAPABILITY_foo strings should not include colons, to
+ * be consistent with @c SVN_RA_CAPABILITY_foo strings, which forbid
+ * colons for their own reasons.  While this RA limitation has no
+ * direct impact on repository capabilities, there's no reason to be
+ * gratuitously different either.
+ */
+
 
 /** Return the filesystem associated with repository object @a repos. */
 svn_fs_t *svn_repos_fs(svn_repos_t *repos);
@@ -1934,12 +1968,40 @@ enum svn_repos_load_uuid
   svn_repos_load_uuid_force
 };
 
+
+/**
+ * Verify the contents of the file system in @a repos.
+ *
+ * If @a feedback_stream is not @c NULL, write feedback to it (lines of
+ * the form "* Verified revision %ld\n").
+ *
+ * If @a start_rev is @c SVN_INVALID_REVNUM, then start verifying at
+ * revision 0.  If @a end_rev is @c SVN_INVALID_REVNUM, then verify
+ * through the @c HEAD revision.
+ *
+ * If @a cancel_func is not @c NULL, call it periodically with @a
+ * cancel_baton as argument to see if the caller wishes to cancel the
+ * verification.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_repos_verify_fs(svn_repos_t *repos,
+                    svn_stream_t *feedback_stream,
+                    svn_revnum_t start_rev,
+                    svn_revnum_t end_rev,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *pool);
+
+
 /**
  * Dump the contents of the filesystem within already-open @a repos into
  * writable @a dumpstream.  Begin at revision @a start_rev, and dump every
  * revision up through @a end_rev.  Use @a pool for all allocation.  If
- * non-@c NULL, send feedback to @a feedback_stream. @a dumpstream can be
- * @c NULL for the purpose of verifying the repository.
+ * non-@c NULL, send feedback to @a feedback_stream.  If @a dumpstream is
+ * @c NULL, this is effectively a primitive verify.  It is not complete,
+ * however; see svn_fs_verify instead.
  *
  * If @a start_rev is @c SVN_INVALID_REVNUM, then start dumping at revision
  * 0.  If @a end_rev is @c SVN_INVALID_REVNUM, then dump through the @c HEAD

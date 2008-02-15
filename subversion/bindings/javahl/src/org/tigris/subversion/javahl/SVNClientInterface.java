@@ -1002,7 +1002,7 @@ public interface SVNClientInterface
              throws ClientException;
 
     /**
-     * Get merge info for <code>path</code> at <code>pegRevision</code>.
+     * Get mergeinfo for <code>path</code> at <code>pegRevision</code>.
      * @param path WC path or URL.
      * @param pegRevision peg revision at which to get the merge info for
      * <code>path</code>.
@@ -1010,11 +1010,11 @@ public interface SVNClientInterface
      * @throws SubversionException
      * @since 1.5
      */
-    MergeInfo getMergeInfo(String path, Revision pegRevision)
+    Mergeinfo getMergeinfo(String path, Revision pegRevision)
         throws SubversionException;
 
     /**
-     * Get merge info for <code>path</code> at <code>pegRevision</code>.
+     * Get mergeinfo for <code>path</code> at <code>pegRevision</code>.
      * @param path WC path or URL.
      * @param pegRevision Revision at which to get the merge info for
      * <code>path</code>.

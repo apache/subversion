@@ -410,10 +410,6 @@ class SvnFsTest < Test::Unit::TestCase
 
     yield(:create, [path, config])
 
-    assert_raises(Svn::Error::Cancelled) do
-      yield(:recover, [path], Proc.new{raise Svn::Error::Cancelled})
-    end
-
     assert_nothing_raised do
       yield(:recover, [path], Proc.new{})
     end

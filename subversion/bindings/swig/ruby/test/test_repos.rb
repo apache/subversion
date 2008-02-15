@@ -726,28 +726,6 @@ EOF
       started = true
     end
     assert(started)
-
-    started = false
-    cancel_called = false
-    cancel_proc = Proc.new do
-      cancel_called = true
-    end
-    Svn::Repos.recover(@repos_path, false, cancel_proc) do
-      started = true
-    end
-    assert(started)
-    assert(cancel_called)
-
-    started = false
-    cancel_proc = Proc.new do
-      raise Svn::Error::Cancelled
-    end
-    assert_raises(Svn::Error::Cancelled) do
-      Svn::Repos.recover(@repos_path, false, cancel_proc) do
-        started = true
-      end
-    end
-    assert(started)
   end
 
   def test_mergeinfo

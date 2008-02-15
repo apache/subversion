@@ -2607,13 +2607,12 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
 
   /* Send greeting.  We don't support version 1 any more, so we can
    * send an empty mechlist. */
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwwwww)",
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwwww)",
                                         (apr_uint64_t) 2, (apr_uint64_t) 2,
                                         SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                         SVN_RA_SVN_CAP_SVNDIFF1,
                                         SVN_RA_SVN_CAP_ABSENT_ENTRIES,
                                         SVN_RA_SVN_CAP_COMMIT_REVPROPS,
-                                        SVN_RA_SVN_CAP_MERGEINFO,
                                         SVN_RA_SVN_CAP_DEPTH,
                                         SVN_RA_SVN_CAP_LOG_REVPROPS,
                                         SVN_RA_SVN_CAP_PARTIAL_REPLAY));
@@ -2677,7 +2676,24 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
     }
 
   SVN_ERR(svn_fs_get_uuid(b.fs, &uuid, pool));
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "cc", uuid, b.repos_url));
 
+  /* We can't claim mergeinfo capability until we know whether the
+     repository supports mergeinfo (i.e., is not a 1.4 repository),
+     but we don't get the repository url from the client until after
+     we've already sent the initial list of server capabilities.  So
+     we list repository capabilities here, in our first response after
+     the client has sent the url. */  
+  {
+    svn_boolean_t supports_mergeinfo;
+    SVN_ERR(svn_repos_has_capability(b.repos, &supports_mergeinfo,
+                                     SVN_REPOS_CAPABILITY_MERGEINFO, pool));
+
+    SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(cc(!",
+                                   "success", uuid, b.repos_url));
+    if (supports_mergeinfo)
+      SVN_ERR(svn_ra_svn_write_word(conn, pool, SVN_RA_SVN_CAP_MERGEINFO));
+    SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
+  }
+                      
   return svn_ra_svn_handle_commands(conn, pool, main_commands, &b);
 }

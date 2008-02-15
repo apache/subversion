@@ -1349,12 +1349,21 @@ svn_ra_local__has_capability(svn_ra_session_t *session,
                              const char *capability,
                              apr_pool_t *pool)
 {
+  svn_ra_local__session_baton_t *sess = session->priv;
+
   if (strcmp(capability, SVN_RA_CAPABILITY_DEPTH) == 0
-      || strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0
       || strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0
       || strcmp(capability, SVN_RA_CAPABILITY_PARTIAL_REPLAY) == 0)
     {
       *has = TRUE;
+    }
+  else if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
+    {
+      /* With mergeinfo, the code's capabilities may not reflect the
+         repository's, so inquire further. */
+      SVN_ERR(svn_repos_has_capability(sess->repos, has,
+                                       SVN_REPOS_CAPABILITY_MERGEINFO,
+                                       pool));
     }
   else  /* Don't know any other capabilities, so error. */
     {

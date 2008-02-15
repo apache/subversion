@@ -1617,6 +1617,9 @@ svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
 
   /* Read the node-rev id. */
   value = apr_hash_get(headers, HEADER_ID, APR_HASH_KEY_STRING);
+  if (value == NULL)
+      return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                              _("Missing id field in node-rev"));
 
   SVN_ERR(svn_io_file_close(revision_file, pool));
 
