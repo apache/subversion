@@ -610,7 +610,7 @@ file_diff(struct dir_baton *dir_baton,
                baseprops,
                dir_baton->edit_baton->callback_baton));
 
-        file_to_diff = TRUE;
+      file_to_diff = TRUE;
 
       /* Replace will fallthrough! */
       if (schedule == svn_wc_schedule_delete)
