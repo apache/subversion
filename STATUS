@@ -39,12 +39,3 @@ Approved changes:
    Notes: depends on the [r29189, r29228, r29232, r29251] group.
    Votes:
      +1: hwright, cmpilato
-
- * r29377, r29383 (obvious fix)
-   Merge multiple changesets from mergeinfo-unaware repo(pre-1.5)
-   using 1.5 client gives a merge range notification *only* for first
-   of such changesets, though it does a merge of all changesets.
-   Notes:
-     r29383 is an obvious fix, so I assume it can dodge the voting -- cmpilato
-   Votes:
-     +1: kameshj, cmpilato
