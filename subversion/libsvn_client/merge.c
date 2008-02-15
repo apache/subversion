@@ -4396,6 +4396,10 @@ do_directory_merge(const char *url1,
       range.start = revision1;
       range.end = revision2;
       range.inheritable = inheritable;
+      /* Reset cur_ancestor_index to -1 so that subsequent
+       * cherry picked revision ranges will be notified
+       * upon subsequent operative merge. */
+      notify_b->cur_ancestor_index = -1;
 
       SVN_ERR(drive_merge_report_editor(merge_b->target,
                                         url1, revision1, url2, revision2,
