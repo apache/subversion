@@ -34,5 +34,10 @@ Candidate changes:
    Votes:
      +1: hwright
 
+ * r29379, r29401
+   Support Neon 0.28.
+   Votes:
+     +1: arfrever
+
 Approved changes:
 
