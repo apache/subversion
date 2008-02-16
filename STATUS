@@ -14,7 +14,7 @@ Status of 1.5.0:
 
 Candidate changes:
 
- * r29364, r29360, r29358, r29366
+ * r29364, r29360, r29358, r29366, r29399
    Issue #3089: detect mergeinfo capability based on repository support.
    Notes:
      r29358 and r29366 are a pair -- the latter is the real change,
