@@ -766,7 +766,7 @@ class ChangedPaths(object):
 
       line = revFile.readline()
       if line != '\n':
-        (copyfromRev, copyfromPath) = line.split(' ')
+        (copyfromRev, copyfromPath) = line[:-1].split(' ', 1)
       else:
         copyfromRev = -1
         copyfromPath = ''
