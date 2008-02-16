@@ -516,6 +516,11 @@ class Rep(object):
     self.offset = int(offset)
     self.length = int(length)
     self.size = int(size)
+
+    if digest in '0000000000000000':
+      # The null digest, which means accept anything.
+      digest = None
+
     self.digest = digest
     self.currentRev = currentRev
 
