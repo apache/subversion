@@ -586,7 +586,8 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
      capabilities that weren't available before now. */
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "c?c?l", &conn->uuid,
                                        &conn->repos_root, &repos_caplist));
-  SVN_ERR(svn_ra_svn_set_capabilities(conn, repos_caplist));
+  if (repos_caplist)
+    SVN_ERR(svn_ra_svn_set_capabilities(conn, repos_caplist));
 
   if (conn->repos_root)
     {
