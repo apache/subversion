@@ -800,12 +800,13 @@ def dumpChangedPaths(changedPaths):
        (id, action, textMod, propMod,
         copyfromRev, copyfromPath)) in changedPaths:
     print " %s:" % path
+    print "  id: %s" % id
     print "  action: %s" % action
     print "  text mod: %s" % textMod
     print "  prop mod: %s" % propMod
     if copyfromRev != -1:
-      print "copyfrom path: %s" % copyfromPath
-      print "copyfrom rev: %s" % copyfromRev
+      print "  copyfrom path: %s" % copyfromPath
+      print "  copyfrom rev: %s" % copyfromRev
     print
 
 
