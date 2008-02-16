@@ -513,7 +513,7 @@ get_combined_mergeinfo(svn_mergeinfo_t *combined_mergeinfo,
 {
   svn_fs_root_t *root;
   apr_hash_index_t *hi;
-  apr_hash_t *tree_mergeinfo;
+  svn_mergeinfo_catalog_t tree_mergeinfo;
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_pool_t *iterpool = svn_pool_create(subpool);
   apr_array_header_t *query_paths;
