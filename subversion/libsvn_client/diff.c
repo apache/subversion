@@ -104,6 +104,7 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
   apr_hash_index_t *hi;
   const char *from_path;
   apr_array_header_t *merge_revarray;
+  svn_stringbuf_t *merge_revstr;
 
   if (old_mergeinfo_val)
     SVN_ERR(svn_mergeinfo_parse(&old_mergeinfo_hash, old_mergeinfo_val, pool));
@@ -124,13 +125,12 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
     {
       const void *key;
       void *val;
-      svn_string_t *merge_revstr;
 
       apr_hash_this(hi, &key, NULL, &val);
       from_path = key;
       merge_revarray = val;
 
-      SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray, pool));
+      SVN_ERR(svn_rangelist_to_stringbuf(&merge_revstr, merge_revarray, pool));
 
       SVN_ERR(file_printf_from_utf8(file, encoding,
                                     _("   Reverted %s:r%s%s"),
@@ -143,13 +143,12 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
     {
       const void *key;
       void *val;
-      svn_string_t *merge_revstr;
 
       apr_hash_this(hi, &key, NULL, &val);
       from_path = key;
       merge_revarray = val;
 
-      SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray, pool));
+      SVN_ERR(svn_rangelist_to_stringbuf(&merge_revstr, merge_revarray, pool));
 
       SVN_ERR(file_printf_from_utf8(file, encoding,
                                     _("   Merged %s:r%s%s"),
@@ -1686,13 +1685,6 @@ svn_client_diff_peg4(const apr_array_header_t *options,
 
   struct diff_cmd_baton diff_cmd_baton;
   svn_wc_diff_callbacks2_t diff_callbacks;
-
-  if (svn_path_is_url(path) && 
-        (start_revision->kind == svn_opt_revision_base 
-         || end_revision->kind == svn_opt_revision_base) )
-    return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
-                            _("Revision type requires a working copy "
-                              "path, not a URL"));
 
   /* fill diff_param */
   diff_params.options = options;

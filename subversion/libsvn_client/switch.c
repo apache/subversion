@@ -134,7 +134,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                                            switch_url, adm_access,
                                            peg_revision, revision,
                                            ctx, pool));
-  SVN_ERR(svn_ra_get_repos_root2(ra_session, &source_root, pool));
+  SVN_ERR(svn_ra_get_repos_root(ra_session, &source_root, pool));
 
   /* Disallow a switch operation to change the repository root of the
      target. */

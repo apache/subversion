@@ -309,7 +309,7 @@ typedef struct root_vtable_t
                         svn_fs_root_t *ancestor_root,
                         const char *ancestor_path,
                         apr_pool_t *pool);
-  svn_error_t *(*get_mergeinfo)(svn_mergeinfo_catalog_t *catalog,
+  svn_error_t *(*get_mergeinfo)(apr_hash_t **minfohash,
                                 svn_fs_root_t *root,
                                 const apr_array_header_t *paths,
                                 svn_mergeinfo_inheritance_t inherit,

@@ -80,15 +80,18 @@ validator_func(void *baton,
      by destroying the subpool. */
   if (! url_uuid)
     {
-      apr_pool_t *sesspool = svn_pool_create(pool);
+      apr_pool_t *subpool = svn_pool_create(pool);
       svn_ra_session_t *ra_session;
+      const char *ra_uuid, *ra_root;
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session, url, NULL,
                                                    NULL, NULL, FALSE, TRUE,
-                                                   b->ctx, sesspool));
+                                                   b->ctx, subpool));
+      SVN_ERR(svn_ra_get_uuid(ra_session, &ra_uuid, subpool));
+      SVN_ERR(svn_ra_get_repos_root(ra_session, &ra_root, subpool));
       url_uuid = &APR_ARRAY_PUSH(uuids, struct url_uuid_t);
-      SVN_ERR(svn_ra_get_uuid2(ra_session, &(url_uuid->uuid), pool));
-      SVN_ERR(svn_ra_get_repos_root2(ra_session, &(url_uuid->root), pool));
-      svn_pool_destroy(sesspool);
+      url_uuid->root = apr_pstrdup(b->pool, ra_root);
+      url_uuid->uuid = apr_pstrdup(b->pool, ra_uuid);
+      svn_pool_destroy(subpool);
     }
 
   /* Make sure the url is a repository root if desired. */

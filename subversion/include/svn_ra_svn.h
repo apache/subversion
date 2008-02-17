@@ -157,13 +157,10 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
                                           apr_file_t *out_file,
                                           apr_pool_t *pool);
 
-/** Add the capabilities in @a list to @a conn's capabilities.
- * @a list contains svn_ra_svn_item_t entries (which should be of type
- * SVN_RA_SVN_WORD; a malformed data error will result if any are not).
- *
- * This is idempotent: if a given capability was already set for
- * @a conn, it remains set.
- */
+/** Initialize a connection's capabilities to the ones specified in
+ * @a list, which contains svn_ra_svn_item_t entries (which should
+ * be of type SVN_RA_SVN_WORD; a malformed data error will result if
+ * any are not). */
 svn_error_t *svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
                                          apr_array_header_t *list);
 

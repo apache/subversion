@@ -1115,7 +1115,7 @@ def merge_sensitive_log_single_revision(sbox):
 
   log_chain = parse_log_output(output)
   expected_merges = {
-    14: [], 13 : [14], 12 : [14], 11 : [14, 12], 7 : [14, 12],
+    14: [], 13 : [14], 12 : [14], 11 : [14, 12],
     }
   check_merge_results(log_chain, expected_merges)
 
@@ -1125,7 +1125,7 @@ def merge_sensitive_log_single_revision(sbox):
                                                    '-g', '-r12', BRANCH_B_path)
   log_chain = parse_log_output(output)
   expected_merges = {
-      12: [], 11 : [12], 7 : [12],
+      12: [], 11 : [12],
     }
   check_merge_results(log_chain, expected_merges)
 
@@ -1165,7 +1165,7 @@ def merge_sensitive_log_non_branching_revision(sbox):
   # Parse and check output.  There should be one extra revision.
   log_chain = parse_log_output(output)
   expected_merges = {
-    6: [], 4 : [6], 3: [6],
+    6: [], 4 : [6],
   }
   check_merge_results(log_chain, expected_merges)
 
@@ -1188,9 +1188,9 @@ def merge_sensitive_log_added_path(sbox):
   }
   check_merge_results(log_chain, expected_merges)
 
-  revprops = [{'svn:author': 'jconstant', 'svn:date': '',
+  revprops = [{'svn:author': 'jrandom', 'svn:date': '',
                'svn:log': 'Merged branches/b to trunk.'},
-              {'svn:author': 'jconstant', 'svn:date': '',
+              {'svn:author': 'jrandom', 'svn:date': '',
                'svn:log': 'Merged branches/a to branches/b.'},
               {'svn:author': 'jrandom', 'svn:date': '',
                'svn:log': "Added 'xi' to branches/a,"
@@ -1371,14 +1371,14 @@ test_list = [ None,
               log_base_peg,
               log_verbose,
               log_parser,
-              SkipUnless(merge_sensitive_log_single_revision,
-                         server_has_mergeinfo),
-              SkipUnless(merge_sensitive_log_branching_revision,
-                         server_has_mergeinfo),
-              SkipUnless(merge_sensitive_log_non_branching_revision,
-                         server_has_mergeinfo),
-              SkipUnless(merge_sensitive_log_added_path,
-                         server_has_mergeinfo),
+              XFail(SkipUnless(merge_sensitive_log_single_revision,
+                               server_has_mergeinfo)),
+              XFail(SkipUnless(merge_sensitive_log_branching_revision,
+                               server_has_mergeinfo)),
+              XFail(SkipUnless(merge_sensitive_log_non_branching_revision,
+                               server_has_mergeinfo)),
+              XFail(SkipUnless(merge_sensitive_log_added_path,
+                               server_has_mergeinfo)),
               log_single_change,
               XFail(log_changes_range),
               XFail(log_changes_list),

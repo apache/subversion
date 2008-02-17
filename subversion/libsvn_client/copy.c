@@ -821,7 +821,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
 
   svn_pool_destroy(iterpool);
 
-  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
+  SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
 
   /* For each src/dst pair, check to see if that SRC_URL is a child of
      the DST_URL (excepting the case where DST_URL is the repo root).
@@ -1007,7 +1007,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
                                          info->src_url, info->src_revnum, 
                                          FALSE, ctx, pool));
       if (mergeinfo)
-        SVN_ERR(svn_mergeinfo_to_string(&info->mergeinfo, mergeinfo, pool));
+        SVN_ERR(svn_mergeinfo__to_string(&info->mergeinfo, mergeinfo, pool));
 
       APR_ARRAY_PUSH(paths, const char *) = info->dst_path;
       if (is_move && (! info->resurrection))
@@ -1257,7 +1257,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
 
   /* Reparent the ra_session to repos_root. So that 'svn_ra_get_log'
      on paths relative to repos_root would work fine. */
-  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
+  SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
   SVN_ERR(svn_ra_reparent(ra_session, repos_root, pool));
 
   /* ### TODO: This extra loop would be unnecessary if this code lived
@@ -1292,7 +1292,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
         mergeinfo = wc_mergeinfo;
       if (mergeinfo)
         {
-          SVN_ERR(svn_mergeinfo_to_string((svn_string_t **)
+          SVN_ERR(svn_mergeinfo__to_string((svn_string_t **)
                                            &mergeinfo_prop->value,
                                            mergeinfo, pool));
           APR_ARRAY_PUSH(item->outgoing_prop_changes, svn_prop_t *) =
@@ -1634,7 +1634,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
     const char *parent;
 
     /* Get the repository uuid of SRC_URL */
-    src_err = svn_ra_get_uuid2(ra_session, &src_uuid, pool);
+    src_err = svn_ra_get_uuid(ra_session, &src_uuid, pool);
     if (src_err && src_err->apr_err != SVN_ERR_RA_NO_REPOS_UUID)
       return src_err;
 

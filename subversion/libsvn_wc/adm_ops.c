@@ -2615,15 +2615,19 @@ attempt_deletion(const char *parent_dir,
 
 /* Conflict resolution involves removing the conflict files, if they exist,
    and clearing the conflict filenames from the entry.  The latter needs to
-   be done whether or not the conflict files exist.
+   be done whether or not the conflict files exist.  If @a conflict_choice
+   is svn_wc_conflict_choose_base, resolve the conflict with the old
+   file contents; if svn_wc_conflict_choose_mine, use the original
+   working contents; if svn_wc_conflict_choose_theirs, the new
+   contents; and if svn_wc_conflict_choose_merged, don't change the
+   contents at all, just remove the conflict status (i.e. pre-1.5 behavior).
+
+   @since 1.5 Automatic Conflict Resolution (Issue 2784)
 
    PATH is the path to the item to be resolved, BASE_NAME is the basename
    of PATH, and CONFLICT_DIR is the access baton for PATH.  ORIG_ENTRY is
    the entry prior to resolution. RESOLVE_TEXT and RESOLVE_PROPS are TRUE
-   if text and property conficts respectively are to be resolved.
-
-   See svn_wc_resolved_conflict3() for how CONFLICT_CHOICE behaves.
-*/
+   if text and property conficts respectively are to be resolved. */
 static svn_error_t *
 resolve_conflict_on_entry(const char *path,
                           const svn_wc_entry_t *orig_entry,

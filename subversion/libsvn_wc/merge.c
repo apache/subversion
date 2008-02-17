@@ -257,6 +257,20 @@ maybe_update_target_eols(const char **new_target,
 }
 
 
+/* Internal version of svn_wc_merge, also used to (loggily) merge updates
+   from the repository.
+
+   In the case of updating, the update can have sent new properties,
+   which could affect the way the wc target is detranslated and
+   compared with LEFT and RIGHT for merging.
+
+   Property changes sent by the update are provided in PROP_DIFF.
+
+   If COPYFROM_TEXT is non-null, the working text is taken from this
+   file instead of from the actual version in the working copy (and
+   the merge_target is allowed to not be under version control in this
+   case).
+ */
 svn_error_t *
 svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        enum svn_wc_merge_outcome_t *merge_outcome,

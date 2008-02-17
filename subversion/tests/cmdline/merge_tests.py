@@ -9911,7 +9911,7 @@ def reintegrate_fail_on_stale_source(sbox):
     None, None, None, None, True, False, '--reintegrate')
 
 def dont_add_mergeinfo_from_own_history(sbox):
-  "cyclic merges don't add mergeinfo from own history"
+  "cyclic merges dont add mergeinfo from own history"
 
   sbox.build()
   wc_dir = sbox.wc_dir

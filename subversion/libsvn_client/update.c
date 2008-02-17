@@ -196,7 +196,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
      never *depend* upon it in a strict sense, however.)
      Second, if people mix old and new clients, this information will
      be dropped by the old clients, which might be annoying. */
-  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
+  SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
   SVN_ERR(svn_wc_maybe_set_repos_root(dir_access, path, repos_root, pool));
 
   /* Build a baton for the file-fetching callback. */

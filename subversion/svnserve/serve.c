@@ -44,8 +44,6 @@
 #include "svn_mergeinfo.h"
 #include "svn_user.h"
 
-#include "private/svn_mergeinfo_private.h"
-
 #include "server.h"
 
 typedef struct {
@@ -1478,13 +1476,12 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   server_baton_t *b = baton;
   svn_revnum_t rev;
   apr_array_header_t *paths, *canonical_paths;
-  svn_mergeinfo_catalog_t mergeinfo;
+  apr_hash_t *mergeinfo;
   int i;
   apr_hash_index_t *hi;
-  const char *inherit_word;
+  const char *path, *info, *inherit_word;
   svn_mergeinfo_inheritance_t inherit;
   svn_boolean_t include_descendants;
-  apr_pool_t *iterpool;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)wb", &paths, &rev,
                                  &inherit_word, &include_descendants));
@@ -1514,28 +1511,23 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                          include_descendants,
                                          authz_check_access_cb_func(b), b,
                                          pool));
-  SVN_ERR(svn_mergeinfo__remove_prefix_from_catalog(&mergeinfo, mergeinfo,
-                                                    b->fs_path->data, pool));
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "success"));
-  iterpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
+  if (mergeinfo != NULL && apr_hash_count(mergeinfo) > 0)
     {
       const void *key;
       void *value;
-      svn_string_t *mergeinfo_string;
 
-      svn_pool_clear(iterpool);
-
-      apr_hash_this(hi, &key, NULL, &value);
-      SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_string,
-                                      (svn_mergeinfo_t) value,
-                                      iterpool));
-      SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "(cs)", (const char *) key,
-                                     mergeinfo_string));
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "success"));
+      for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
+        {
+          apr_hash_this(hi, &key, NULL, &value);
+          path = (const char *)key + b->fs_path->len;
+          info = value;
+          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "(cc)", path, info));
+        }
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
     }
-  svn_pool_destroy(iterpool);
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
-
+  else
+    SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "()"));
   return SVN_NO_ERROR;
 }
 
@@ -2607,12 +2599,13 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
 
   /* Send greeting.  We don't support version 1 any more, so we can
    * send an empty mechlist. */
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwwww)",
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwwwww)",
                                         (apr_uint64_t) 2, (apr_uint64_t) 2,
                                         SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                         SVN_RA_SVN_CAP_SVNDIFF1,
                                         SVN_RA_SVN_CAP_ABSENT_ENTRIES,
                                         SVN_RA_SVN_CAP_COMMIT_REVPROPS,
+                                        SVN_RA_SVN_CAP_MERGEINFO,
                                         SVN_RA_SVN_CAP_DEPTH,
                                         SVN_RA_SVN_CAP_LOG_REVPROPS,
                                         SVN_RA_SVN_CAP_PARTIAL_REPLAY));
@@ -2676,24 +2669,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
     }
 
   SVN_ERR(svn_fs_get_uuid(b.fs, &uuid, pool));
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "cc", uuid, b.repos_url));
 
-  /* We can't claim mergeinfo capability until we know whether the
-     repository supports mergeinfo (i.e., is not a 1.4 repository),
-     but we don't get the repository url from the client until after
-     we've already sent the initial list of server capabilities.  So
-     we list repository capabilities here, in our first response after
-     the client has sent the url. */  
-  {
-    svn_boolean_t supports_mergeinfo;
-    SVN_ERR(svn_repos_has_capability(b.repos, &supports_mergeinfo,
-                                     SVN_REPOS_CAPABILITY_MERGEINFO, pool));
-
-    SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(cc(!",
-                                   "success", uuid, b.repos_url));
-    if (supports_mergeinfo)
-      SVN_ERR(svn_ra_svn_write_word(conn, pool, SVN_RA_SVN_CAP_MERGEINFO));
-    SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
-  }
-                      
   return svn_ra_svn_handle_commands(conn, pool, main_commands, &b);
 }

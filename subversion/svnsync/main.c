@@ -330,7 +330,7 @@ check_if_session_is_at_repos_root(svn_ra_session_t *sess,
 {
   const char *sess_root;
 
-  SVN_ERR(svn_ra_get_repos_root2(sess, &sess_root, pool));
+  SVN_ERR(svn_ra_get_repos_root(sess, &sess_root, pool));
 
   if (strcmp(url, sess_root) == 0)
     return SVN_NO_ERROR;
@@ -623,7 +623,7 @@ do_initialize(svn_ra_session_t *to_session,
   SVN_ERR(svn_ra_open2(&from_session, baton->from_url,
                        &(baton->source_callbacks), baton,
                        baton->config, pool));
-  SVN_ERR(svn_ra_get_repos_root2(from_session, &root_url, pool));
+  SVN_ERR(svn_ra_get_repos_root(from_session, &root_url, pool));
 
   /* If we're doing a partial replay, we have to check first if the server 
      supports this. */
@@ -646,7 +646,7 @@ do_initialize(svn_ra_session_t *to_session,
                                  svn_string_create(baton->from_url, pool),
                                  pool));
 
-  SVN_ERR(svn_ra_get_uuid2(from_session, &uuid, pool));
+  SVN_ERR(svn_ra_get_uuid(from_session, &uuid, pool));
 
   SVN_ERR(svn_ra_change_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_UUID,
                                  svn_string_create(uuid, pool), pool));
@@ -1128,7 +1128,7 @@ open_source_session(svn_ra_session_t **from_session,
   /* Ok, now sanity check the UUID of the source repository, it
      wouldn't be a good thing to sync from a different repository. */
 
-  SVN_ERR(svn_ra_get_uuid2(*from_session, &uuid, pool));
+  SVN_ERR(svn_ra_get_uuid(*from_session, &uuid, pool));
 
   if (strcmp(uuid, from_uuid->data) != 0)
     return svn_error_createf(APR_EINVAL, NULL,

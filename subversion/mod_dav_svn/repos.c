@@ -1229,7 +1229,7 @@ get_parentpath_resource(request_rec *r,
   repos->base_url = ap_construct_url(r->pool, "", r);
   repos->special_uri = dav_svn__get_special_uri(r);
   repos->username = r->user;
-  repos->client_capabilities = apr_hash_make(repos->pool);
+  repos->capabilities = apr_hash_make(repos->pool);
 
   /* Make sure this type of resource always has a trailing slash; if
      not, redirect to a URI that does. */
@@ -1633,7 +1633,7 @@ get_resource(request_rec *r,
 
   /* Allocate room for capabilities, but don't search for any until
      we know that this is a Subversion client. */
-  repos->client_capabilities = apr_hash_make(repos->pool);
+  repos->capabilities = apr_hash_make(repos->pool);
 
   /* Remember if the requesting client is a Subversion client, and if
      so, what its capabilities are. */
@@ -1652,7 +1652,7 @@ get_resource(request_rec *r,
            more than that). */
 
         /* Start out assuming no capabilities. */
-        apr_hash_set(repos->client_capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+        apr_hash_set(repos->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
                      APR_HASH_KEY_STRING, capability_no);
 
         /* Then see what we can find. */
@@ -1665,8 +1665,7 @@ get_resource(request_rec *r,
             if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_MERGEINFO,
                                             vals))
               {
-                apr_hash_set(repos->client_capabilities,
-                             SVN_RA_CAPABILITY_MERGEINFO,
+                apr_hash_set(repos->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
                              APR_HASH_KEY_STRING, capability_yes);
               }
           }
@@ -1699,7 +1698,7 @@ get_resource(request_rec *r,
       /* Store the capabilities of the current connection, making sure
          to use the same pool repos->repos itself was created in. */
       serr = svn_repos_remember_client_capabilities
-        (repos->repos, capabilities_as_list(repos->client_capabilities,
+        (repos->repos, capabilities_as_list(repos->capabilities,
                                             r->connection->pool));
       if (serr != NULL)
         {

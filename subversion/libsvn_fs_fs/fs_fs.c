@@ -1386,18 +1386,8 @@ static svn_error_t * read_header_block(apr_hash_t **headers,
   return SVN_NO_ERROR;
 }
 
-/* Return SVN_ERR_FS_NO_SUCH_REVISION if the given revision is newer
-   than the current youngest revision or is simply not a valid
-   revision number, else return success.
-
-   FSFS is based around the concept that commits only take effect when
-   the number in "current" is bumped.  Thus if there happens to be a rev
-   or revprops file installed for a revision higher than the one recorded
-   in "current" (because a commit failed between installing the rev file
-   and bumping "current", or because an administrator rolled back the
-   repository by resetting "current" without deleting rev files, etc), it
-   ought to be completely ignored.  This function provides the check
-   by which callers can make that decision. */
+/* Throw an error if the given revision is newer than the current
+   youngest revision. */
 static svn_error_t *
 ensure_revision_exists(svn_fs_t *fs,
                        svn_revnum_t rev,
@@ -5623,51 +5613,9 @@ recover_body(void *baton, apr_pool_t *pool)
   svn_revnum_t max_rev;
   char next_node_id_buf[MAX_KEY_SIZE], next_copy_id_buf[MAX_KEY_SIZE];
   char *next_node_id = NULL, *next_copy_id = NULL;
-  svn_revnum_t youngest_rev;
-  svn_node_kind_t youngest_revprops_kind;
 
   /* First, we need to know the largest revision in the filesystem. */
   SVN_ERR(recover_get_largest_revision(fs, &max_rev, pool));
-
-  /* Get the expected youngest revision */
-  SVN_ERR(get_youngest(&youngest_rev, fs->path, pool));
-
-  /* Policy note:
-
-     Since the revprops file is written after the revs file, the true
-     maximum available revision is the youngest one for which both are
-     present.  That's probably the same as the max_rev we just found,
-     but if it's not, we could, in theory, repeatedly decrement
-     max_rev until we find a revision that has both a revs and
-     revprops file, then write db/current with that.
-
-     But we choose not to.  If a repository is so corrupt that it's
-     missing at least one revprops file, we shouldn't assume that the
-     youngest revision for which both the revs and revprops files are
-     present is healthy.  In other words, we're willing to recover
-     from a missing or out-of-date db/current file, because db/current
-     is truly redundant -- it's basically a cache so we don't have to
-     find max_rev each time, albeit a cache with unusual semantics,
-     since it also officially defines when a revision goes live.  But
-     if we're missing more than the cache, it's time to back out and
-     let the admin reconstruct things by hand: correctness at that
-     point may depend on external things like checking a commit email
-     list, looking in particular working copies, etc.
-
-     This policy matches well with a typical naive backup scenario.
-     Say you're rsyncing your FSFS repository nightly to the same
-     location.  Once revs and revprops are written, you've got the
-     maximum rev; if the backup should bomb before db/current is
-     written, then db/current could stay arbitrarily out-of-date, but
-     we can still recover.  It's a small window, but we might as well
-     do what we can. */
-
-  /* Even if db/current were missing, it would be created with 0 by
-     get_youngest(), so this conditional remains valid. */
-  if (youngest_rev > max_rev)
-    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Expected current rev to be <= %ld "
-                               "but found %ld"), max_rev, youngest_rev);
 
   /* We only need to search for maximum IDs for old FS formats which
      se global ID counters. */
@@ -5712,21 +5660,6 @@ recover_body(void *baton, apr_pool_t *pool)
       svn_fs_fs__next_key(max_copy_id, &len, next_copy_id_buf);
       next_copy_id = next_copy_id_buf;
     }
-
-  /* Before setting current, verify that there is a revprops file
-     for the youngest revision.  (Issue #2992) */
-  SVN_ERR(svn_io_check_path(path_revprops(fs, max_rev, pool),
-                            &youngest_revprops_kind, pool));
-  if (youngest_revprops_kind == svn_node_none)
-    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Revision %ld has a revs file but no "
-                               "revprops file"),
-                             max_rev);
-  else if (youngest_revprops_kind != svn_node_file)
-    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Revision %ld has a non-file where its "
-                               "revprops file should be"),
-                             max_rev);
 
   /* Now store the discovered youngest revision, and the next IDs if
      relevant, in a new current file. */

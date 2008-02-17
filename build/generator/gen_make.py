@@ -5,7 +5,6 @@
 import os
 import sys
 import string
-import ConfigParser
 
 import gen_base
 import generator.swig.header_wrappers
@@ -54,13 +53,6 @@ class Generator(gen_base.GeneratorBase):
     install_deps = self.graph.get_deps(gen_base.DT_INSTALL)
     install_sources = self.graph.get_all_sources(gen_base.DT_INSTALL)
 
-    cp = ConfigParser.ConfigParser()
-    cp.read('gen-make.opts')
-    if cp.has_option('options', '--installed-libs'):
-      self.installed_libs = cp.get('options', '--installed-libs').split(',')
-    else:
-      self.installed_libs = []
-
     # ensure consistency between runs
     install_deps.sort()
     install_sources.sort(lambda s1, s2: cmp(s1.name, s2.name))
@@ -76,16 +68,10 @@ class Generator(gen_base.GeneratorBase):
 
         # construct a list of the other .la libs to link against
         retreat = build_path_retreat(target.path)
-        if target.name in self.installed_libs:
-          deps = []
-          link = [ '-l%s-%s' % (target.name[3:], self.version) ]
-        else:
-          deps = [ target.filename ]
-          link = [ build_path_join(retreat, target.filename) ]
+        deps = [ target.filename ]
+        link = [ build_path_join(retreat, target.filename) ]
         for source in self.graph.get_sources(gen_base.DT_LINK, target.name):
           if not isinstance(source, gen_base.TargetLib) or source.external_lib:
-            continue
-          elif source.name in self.installed_libs:
             continue
           deps.append(source.filename)
           link.append(build_path_join(retreat, source.filename))
@@ -230,8 +216,6 @@ class Generator(gen_base.GeneratorBase):
             # expeditiously.  It is of questionable validity for a build
             # node to have external_project but not have external_lib.
             pass
-          elif link_dep.name in self.installed_libs:
-            libs.append('-l%s-%s' % (link_dep.name[3:], self.version))
           else:
             # append the output of the target to our stated dependencies
             if not self.assume_shared_libs:

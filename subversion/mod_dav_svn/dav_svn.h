@@ -122,7 +122,7 @@ typedef struct {
      constants anyway (and sufficiently well-informed internal code
      may therefore compare against those constants' addresses).  If
      'is_svn_client' is false, then 'capabilities' should be empty. */
-  apr_hash_t *client_capabilities;
+  apr_hash_t *capabilities;
 
   /* The path to the activities db */
   const char *activities_db;

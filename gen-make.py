@@ -94,13 +94,6 @@ def _usage_exit():
   print "           increase the speed of frequent rebuilds."
   print "           *** Do not use unless you understand the consequences. ***"
   print
-  print "  UNIX-specific options:"
-  print
-  print "  --installed-libs"
-  print "           Comma-separated list of Subversion libraries to find"
-  print "           pre-installed instead of building (probably only"
-  print "           useful for packagers)"
-  print
   print "  Windows-specific options:"
   print
   print "  --with-apr=DIR"
@@ -221,7 +214,6 @@ if __name__ == '__main__':
                             'enable-bdb-in-apr-util',
                             'enable-ml',
                             'disable-shared',
-                            'installed-libs=',
                             'vsnet-version=',
                             ])
     if len(args) > 1:

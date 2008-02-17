@@ -566,16 +566,7 @@ generate_error(svn_ra_neon__request_t *req, apr_pool_t *pool)
         }
     case NE_AUTH:
       errcode = SVN_ERR_RA_NOT_AUTHORIZED;
-#ifdef SVN_NEON_0_27
-      /* neon >= 0.27 gives a descriptive error message after auth
-       * failure; expose this since it's a useful diagnostic e.g. for
-       * an unsupported challenge scheme, or a local GSSAPI error due
-       * to an expired ticket. */
-      SVN_ERR(svn_utf_cstring_to_utf8(&msg, ne_get_error(req->ne_sess), pool));
-      msg = apr_psprintf(pool, _("authorization failed: %s"), msg);
-#else
       msg = _("authorization failed");
-#endif
       break;
 
     case NE_CONNECT:

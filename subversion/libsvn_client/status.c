@@ -172,7 +172,8 @@ reporter_finish_report(void *report_baton, apr_pool_t *pool)
     }
   SVN_ERR(err);
 
-  SVN_ERR(svn_ra_get_repos_root2(ras, &repos_root, rb->pool));
+  SVN_ERR(svn_ra_get_repos_root(ras, &repos_root, subpool));
+  repos_root = apr_pstrdup(rb->pool, repos_root);
 
   /* Close the RA session. */
   svn_pool_destroy(subpool);

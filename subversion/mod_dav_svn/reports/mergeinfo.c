@@ -31,7 +31,6 @@
 #include "svn_path.h"
 #include "svn_dav.h"
 #include "private/svn_dav_protocol.h"
-#include "private/svn_mergeinfo_private.h"
 
 #include "../dav_svn.h"
 
@@ -45,15 +44,13 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
   apr_status_t apr_err;
   dav_error *derr = NULL;
   apr_xml_elem *child;
-  svn_mergeinfo_catalog_t catalog;
+  apr_hash_t *mergeinfo;
   svn_boolean_t include_descendants = FALSE;
   dav_svn__authz_read_baton arb;
   const dav_svn_repos *repos = resource->info->repos;
   const char *action;
   int ns;
   apr_bucket_brigade *bb;
-  apr_hash_index_t *hi;
-  svn_boolean_t sent_anything = FALSE;
 
   /* These get determined from the request document. */
   svn_revnum_t rev = SVN_INVALID_REVNUM;
@@ -125,7 +122,7 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
   /* Build mergeinfo brigade */
   bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
 
-  serr = svn_repos_fs_get_mergeinfo(&catalog, repos->repos, paths, rev,
+  serr = svn_repos_fs_get_mergeinfo(&mergeinfo, repos->repos, paths, rev,
                                     inherit, include_descendants,
                                     dav_svn__authz_read_func(&arb),
                                     &arb, resource->pool);
@@ -136,23 +133,6 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
       goto cleanup;
     }
 
-  serr = svn_mergeinfo__remove_prefix_from_catalog(&catalog, catalog,
-                                                   resource->info->repos_path,
-                                                   resource->pool);
-  if (serr)
-    {
-      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
-                                  resource->pool);
-      goto cleanup;
-    }
-
-  /* Ideally, dav_svn__send_xml() would set a flag in bb (or rather,
-     in r->sent_bodyct, see dav_method_report()), and ap_fflush()
-     would not set that flag unless it actually sent something.  But
-     we are condemned to live in another universe, so we must keep
-     track ourselves of whether we've sent anything or not.  See the
-     long comment after the 'cleanup' label for more details. */
-  sent_anything = TRUE;
   serr = dav_svn__send_xml(bb, output,
                            DAV_XML_HEADER DEBUG_CR
                            "<S:" SVN_DAV__MERGEINFO_REPORT " "
@@ -165,45 +145,39 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
       goto cleanup;
     }
 
-  for (hi = apr_hash_first(resource->pool, catalog); hi;
-       hi = apr_hash_next(hi))
+  if (mergeinfo != NULL && apr_hash_count (mergeinfo) > 0)
     {
       const void *key;
       void *value;
-      const char *path;
-      svn_mergeinfo_t mergeinfo;
-      svn_string_t *mergeinfo_string;
-      const char itemformat[] = "<S:" SVN_DAV__MERGEINFO_ITEM ">"
-        DEBUG_CR
-        "<S:" SVN_DAV__MERGEINFO_PATH ">%s</S:" SVN_DAV__MERGEINFO_PATH ">"
-        DEBUG_CR
-        "<S:" SVN_DAV__MERGEINFO_INFO ">%s</S:" SVN_DAV__MERGEINFO_INFO ">"
-        DEBUG_CR
-        "</S:" SVN_DAV__MERGEINFO_ITEM ">";
+      apr_hash_index_t *hi;
 
-      apr_hash_this(hi, &key, NULL, &value);
-      path = key;
-      mergeinfo = value;
-      serr = svn_mergeinfo_to_string(&mergeinfo_string, mergeinfo, 
-                                     resource->pool);
-      if (serr)
+      for (hi = apr_hash_first(resource->pool, mergeinfo); hi;
+           hi = apr_hash_next(hi))
         {
-          derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                      "Error ending REPORT response.",
-                                      resource->pool);
-          goto cleanup;
-        }
-      serr = dav_svn__send_xml(bb, output, itemformat,
-                               apr_xml_quote_string(resource->pool,
-                                                    path, 0),
-                               apr_xml_quote_string(resource->pool,
-                                                    mergeinfo_string->data, 0));
-      if (serr)
-        {
-          derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                      "Error ending REPORT response.",
-                                      resource->pool);
-          goto cleanup;
+          const char *path, *info;
+          const char itemformat[] = "<S:" SVN_DAV__MERGEINFO_ITEM ">"
+            DEBUG_CR
+            "<S:" SVN_DAV__MERGEINFO_PATH ">%s</S:" SVN_DAV__MERGEINFO_PATH ">"
+            DEBUG_CR
+            "<S:" SVN_DAV__MERGEINFO_INFO ">%s</S:" SVN_DAV__MERGEINFO_INFO ">"
+            DEBUG_CR
+            "</S:" SVN_DAV__MERGEINFO_ITEM ">";
+
+          apr_hash_this(hi, &key, NULL, &value);
+          path = (const char *)key + strlen(resource->info->repos_path);
+          info = value;
+          serr = dav_svn__send_xml(bb, output, itemformat,
+                                   apr_xml_quote_string(resource->pool,
+                                                        path, 0),
+                                   apr_xml_quote_string(resource->pool,
+                                                        info, 0));
+          if (serr)
+            {
+              derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                          "Error ending REPORT response.",
+                                          resource->pool);
+              goto cleanup;
+            }
         }
     }
 
@@ -225,33 +199,9 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
                         svn_inheritance_to_word(inherit));
   dav_svn__operational_log(resource->info, action);
 
-  /* We don't flush the brigade unless there's something in it to
-     flush; that way, if we jumped to 'cleanup' before sending
-     anything, we will be able to report derr accurately to the
-     client.
-
-     To understand this, see mod_dav.c:dav_method_report(): as long as
-     it doesn't think we've sent anything to the client, it'll send
-     the real error, which is what we'd prefer.  This situation is
-     described in httpd-2.2.6/modules/dav/main/mod_dav.c, line 4066,
-     in the comment in dav_method_report() that says:
-
-        If an error occurred during the report delivery, there's
-        basically nothing we can do but abort the connection and
-        log an error.  This is one of the limitations of HTTP; it
-        needs to "know" the entire status of the response before
-        generating it, which is just impossible in these streamy
-        response situations.
-
-     In other words, flushing the brigade here would cause
-     r->sent_bodyct (see dav_method_report()) to become non-zero,
-     *even* if we hadn't tried to send any data to the brigade yet.
-     So we don't flush unless data was actually sent. */
-  apr_err = 0;
-  if (sent_anything)
-    apr_err = ap_fflush(output, bb);
-      
-  if (apr_err && !derr)
+  /* Flush the contents of the brigade (returning an error only if we
+     don't already have one). */
+  if ((apr_err = ap_fflush(output, bb)) && !derr)
     derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
                                 HTTP_INTERNAL_SERVER_ERROR,
                                 "Error flushing brigade.",

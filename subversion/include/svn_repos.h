@@ -248,40 +248,6 @@ svn_repos_upgrade(const char *path,
  */
 svn_error_t *svn_repos_delete(const char *path, apr_pool_t *pool);
 
-/**
- * Set @a *has to TRUE if @a repos has @a capability (one of the
- * capabilities beginning with @c "SVN_REPOS_CAPABILITY_"), else set
- * @a *has to FALSE.
- *
- * If @a capability isn't recognized, throw @c SVN_ERR_UNKNOWN_CAPABILITY,
- * with the effect on @a *has undefined.
- *
- * Use @a pool for all allocation.
- *
- * @since New in 1.5.
- */
-svn_error_t *
-svn_repos_has_capability(svn_repos_t *repos,
-                         svn_boolean_t *has,
-                         const char *capability,
-                         apr_pool_t *pool);
-
-/**
- * The capability of doing the right thing with merge-tracking
- * information, both storing it and responding to queries about it.
- *
- * @since New in 1.5.
- */
-#define SVN_REPOS_CAPABILITY_MERGEINFO "mergeinfo"
-/*       *** PLEASE READ THIS IF YOU ADD A NEW CAPABILITY ***
- *
- * @c SVN_REPOS_CAPABILITY_foo strings should not include colons, to
- * be consistent with @c SVN_RA_CAPABILITY_foo strings, which forbid
- * colons for their own reasons.  While this RA limitation has no
- * direct impact on repository capabilities, there's no reason to be
- * gratuitously different either.
- */
-
 
 /** Return the filesystem associated with repository object @a repos. */
 svn_fs_t *svn_repos_fs(svn_repos_t *repos);
@@ -1405,7 +1371,10 @@ svn_repos_get_logs(svn_repos_t *repos,
 
 /**
  * Fetch the mergeinfo for @a paths at @a rev, and save it to @a
- * *catalog.  It will never be @c NULL but may be empty.
+ * mergeoutput.  @a mergeoutput is a mapping of @c char * target paths
+ * (from @a paths) to textual (@c char *) representations of merge
+ * info (as managed by svn_mergeinfo.h), or @c NULL if there is no
+ * mergeinfo visible or available.
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a paths is fetched.
@@ -1429,7 +1398,7 @@ svn_repos_get_logs(svn_repos_t *repos,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
+svn_repos_fs_get_mergeinfo(apr_hash_t **mergeoutput,
                            svn_repos_t *repos,
                            const apr_array_header_t *paths,
                            svn_revnum_t revision,

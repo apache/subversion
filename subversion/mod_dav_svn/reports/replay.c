@@ -398,7 +398,6 @@ dav_svn__replay_report(const dav_resource *resource,
   apr_xml_elem *child;
   svn_fs_root_t *root;
   svn_error_t *err;
-  apr_status_t apr_err;
   void *edit_baton;
   int ns;
 
@@ -497,13 +496,7 @@ dav_svn__replay_report(const dav_resource *resource,
     dav_svn__operational_log(resource->info, action);
   }
 
-  /* Flush the brigade. */
-  if ((apr_err = ap_fflush(output, bb)))
-    return dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
-                                HTTP_INTERNAL_SERVER_ERROR,
-                                "Error flushing brigade "
-                                "in dav_svn__reply_report.",
-                                resource->pool);
+  ap_fflush(output, bb);
 
   return NULL;
 }

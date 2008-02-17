@@ -85,7 +85,7 @@ apr_status_t dav_svn__location_in_filter(ap_filter_t *f,
     master_uri = dav_svn__get_master_uri(r);
 
     if (r->main || !master_uri) {
-        ap_remove_input_filter(f);
+        ap_remove_output_filter(f);
         return ap_get_brigade(f->next, bb, mode, block, readbytes);
     }
 

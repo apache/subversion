@@ -342,7 +342,10 @@ svn_client_uuid_from_url(const char **uuid,
                                                NULL, NULL, FALSE, TRUE,
                                                ctx, subpool));
 
-  SVN_ERR(svn_ra_get_uuid2(ra_session, uuid, pool));
+  SVN_ERR(svn_ra_get_uuid(ra_session, uuid, subpool));
+
+  /* Copy the uuid in to the passed-in pool. */
+  *uuid = apr_pstrdup(pool, *uuid);
 
   /* destroy the RA session */
   svn_pool_destroy(subpool);
@@ -493,7 +496,7 @@ svn_client__ensure_ra_session_url(const char **old_session_url,
   *old_session_url = NULL;
   SVN_ERR(svn_ra_get_session_url(ra_session, old_session_url, pool));
   if (! session_url)
-    SVN_ERR(svn_ra_get_repos_root2(ra_session, &session_url, pool));
+    SVN_ERR(svn_ra_get_repos_root(ra_session, &session_url, pool));
   if (strcmp(*old_session_url, session_url) != 0)
     SVN_ERR(svn_ra_reparent(ra_session, session_url, pool));
   return SVN_NO_ERROR;
@@ -677,7 +680,7 @@ svn_client__repos_locations(const char **start_url,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_url, subpool));
+  SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_url, subpool));
 
   revs = apr_array_make(subpool, 2, sizeof(svn_revnum_t));
   APR_ARRAY_PUSH(revs, svn_revnum_t) = start_revnum;

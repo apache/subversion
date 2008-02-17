@@ -26,6 +26,12 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/* Take a hash of mergeinfo in MERGEINPUT, and convert it back to
+   a text format mergeinfo in OUTPUT.  If INPUT contains no elements,
+   return the empty string. */
+svn_error_t *
+svn_mergeinfo__to_string(svn_string_t **output, apr_hash_t *mergeinput,
+                         apr_pool_t *pool);
 
 /* Return whether INFO1 and INFO2 are equal in *IS_EQUAL.
 
@@ -47,31 +53,19 @@ extern "C" {
    Use POOL for temporary allocations. */
 svn_error_t *
 svn_mergeinfo__equals(svn_boolean_t *is_equal,
-                      svn_mergeinfo_t info1,
-                      svn_mergeinfo_t info2,
+                      apr_hash_t *info1,
+                      apr_hash_t *info2,
                       svn_boolean_t consider_inheritance,
                       apr_pool_t *pool);
 
-/* Examine MERGEINFO, removing all paths from the hash which map to
+/* Examine MERGEINFO, a mapping from paths to apr_array_header_t *'s
+   of svn_merge_range_t *, removing all paths from the hash which map to
    empty rangelists.  POOL is used only to allocate the apr_hash_index_t
    iterator.  Returns TRUE if any paths were removed and FALSE if none were
    removed or MERGEINFO is NULL. */
 svn_boolean_t
-svn_mergeinfo__remove_empty_rangelists(svn_mergeinfo_t mergeinfo,
+svn_mergeinfo__remove_empty_rangelists(apr_hash_t *mergeinfo,
                                        apr_pool_t *pool);
-
-/* Makes a shallow (ie, mergeinfos are not duped, or altered at all;
-   keys share storage) copy of IN_CATALOG in *OUT_CATALOG.  PREFIX is
-   removed from the beginning of each key in the catalog; it is
-   illegal for any key to not start with PREFIX.  The new hash and
-   temporary values are allocated in POOL.  (This is useful for making
-   the return value from svn_ra_get_mergeinfo relative to the session
-   root, say.) */
-svn_error_t *
-svn_mergeinfo__remove_prefix_from_catalog(svn_mergeinfo_catalog_t *out_catalog,
-                                          svn_mergeinfo_catalog_t in_catalog,
-                                          const char *prefix,
-                                          apr_pool_t *pool);
 
 
 #ifdef __cplusplus

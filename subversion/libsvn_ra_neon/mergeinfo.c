@@ -35,8 +35,8 @@
 
 #include "ra_neon.h"
 
-/* Baton for accumulating mergeinfo.  CATALOG stores the final
-   mergeinfo catalog result we are going to hand back to the caller of
+/* Baton for accumulating mergeinfo.  RESULT stores the final
+   mergeinfo hash result we are going to hand back to the caller of
    get_mergeinfo.  curr_path and curr_info contain the value of the
    CDATA from the mergeinfo items as we get them from the server.  */
 
@@ -45,7 +45,7 @@ struct mergeinfo_baton
   apr_pool_t *pool;
   const char *curr_path;
   svn_stringbuf_t *curr_info;
-  svn_mergeinfo_catalog_t catalog;
+  apr_hash_t *result;
   svn_error_t *err;
 };
 
@@ -110,13 +110,13 @@ end_element(void *baton, int state, const char *nspace, const char *elt_name)
     {
       if (mb->curr_info && mb->curr_path)
         {
-          svn_mergeinfo_t path_mergeinfo;
+          apr_hash_t *path_mergeinfo;
 
           mb->err = svn_mergeinfo_parse(&path_mergeinfo, mb->curr_info->data,
                                         mb->pool);
           SVN_ERR(mb->err);
 
-          apr_hash_set(mb->catalog, mb->curr_path,  APR_HASH_KEY_STRING,
+          apr_hash_set(mb->result, mb->curr_path,  APR_HASH_KEY_STRING,
                        path_mergeinfo);
         }
     }
@@ -150,10 +150,10 @@ cdata_handler(void *baton, int state, const char *cdata, size_t len)
 }
 
 /* Request a mergeinfo-report from the URL attached to SESSION,
-   and fill in the CATALOG with the results.  */
+   and fill in the MERGEINFO hash with the results.  */
 svn_error_t *
 svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
-                           svn_mergeinfo_catalog_t *catalog,
+                           apr_hash_t **mergeinfo,
                            const apr_array_header_t *paths,
                            svn_revnum_t revision,
                            svn_mergeinfo_inheritance_t inherit,
@@ -213,7 +213,7 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
   mb.pool = pool;
   mb.curr_path = NULL;
   mb.curr_info = svn_stringbuf_create("", pool);
-  mb.catalog = apr_hash_make(pool);
+  mb.result = apr_hash_make(pool);
   mb.err = SVN_NO_ERROR;
 
   /* ras's URL may not exist in HEAD, and thus it's not safe to send
@@ -241,7 +241,7 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
                                       pool));
 
   if (mb.err == SVN_NO_ERROR)
-    *catalog = mb.catalog;
+    *mergeinfo = mb.result;
 
   return mb.err;
 }

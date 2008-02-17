@@ -743,7 +743,7 @@ SVNClient::getMergeinfo(const char *target, Revision &pegRevision)
     if (ctx == NULL)
         return NULL;
 
-    svn_mergeinfo_t mergeinfo;
+    apr_hash_t *mergeinfo;
     Path intLocalTarget(target);
     SVN_JNI_ERR(intLocalTarget.error_occured(), NULL);
     SVN_JNI_ERR(svn_client_mergeinfo_get_merged(&mergeinfo,

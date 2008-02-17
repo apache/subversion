@@ -223,14 +223,9 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
 /* Merge the difference between LEFT and RIGHT into MERGE_TARGET,
    accumulating instructions to update the working copy into LOG_ACCUM.
 
-   Note that, in the case of updating, the update can have sent new
-   properties, which could affect the way the wc target is
-   detranslated and compared with LEFT and RIGHT for merging.
-
    If COPYFROM_TEXT is not NULL, the "local mods" text should be taken
-   from the path named there instead of from MERGE_TARGET (but the
-   merge should still be installed into MERGE_TARGET).  The merge
-   target is allowed to not be under version control in this case.
+   from the path named their instead of MERGE_TARGET (but the merge
+   should still be installed into MERGE_TARGET).
 
    The merge result is stored in *MERGE_OUTCOME and merge conflicts
    are marked in MERGE_RESULT using LEFT_LABEL, RIGHT_LABEL and
@@ -248,10 +243,9 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
    conflict is encountered, giving the callback a chance to resolve
    the conflict (before marking the file 'conflicted').
 
-   Property changes sent by the update are provided in PROP_DIFF.
-
    For a complete description, see svn_wc_merge2() for which this is
    the (loggy) implementation.
+
 */
 svn_error_t *
 svn_wc__merge_internal(svn_stringbuf_t **log_accum,

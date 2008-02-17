@@ -3017,14 +3017,10 @@ When called with a prefix argument go back the given number of lines."
   "Jump to a dired buffer, containing the file at point."
   (interactive)
   (let* ((line-info (svn-status-get-line-information))
-         (file-full-path (if line-info
-                             (svn-status-line-info->full-path line-info)
-                           default-directory)))
+         (file-full-path (svn-status-line-info->full-path line-info)))
     (let ((default-directory
             (file-name-as-directory
-             (expand-file-name (if line-info
-                                   (svn-status-line-info->directory-containing-line-info line-info t)
-                                 default-directory)))))
+             (expand-file-name (svn-status-line-info->directory-containing-line-info line-info t)))))
       (if (fboundp 'dired-jump-back) (dired-jump-back) (dired-jump))) ;; Xemacs uses dired-jump-back
     (dired-goto-file file-full-path)))
 

@@ -46,8 +46,7 @@ USAGE="USAGE: ./dist.sh -v VERSION -r REVISION -pr REPOS-PATH \
            ./dist.sh -v 0.36.0 -r 8278 -pr trunk
            ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0
            ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0 -alpha 1
-           ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0 -beta 1
-           ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0 -nightly r8282"
+           ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0 -beta 1"
 
 # Let's check and set all the arguments
 ARG_PREV=""
@@ -61,7 +60,6 @@ do
         -pr)  REPOS_PATH="$ARG" ;;
      -alpha)  ALPHA="$ARG" ;;
       -beta)  BETA="$ARG" ;;
-   -nightly)  NIGHTLY="$ARG" ;;
         -rc)  RC="$ARG" ;;
        -apr)  APR_PATH="$ARG" ;;
       -apru)  APRU_PATH="$ARG" ;;
@@ -72,7 +70,7 @@ do
     ARG_PREV=""
   else
     case $ARG in
-      -v|-r|-rs|-pr|-alpha|-beta|-rc|-apr|-apru|-apri|-zlib|-neon|-nightly)
+      -v|-r|-rs|-pr|-alpha|-beta|-rc|-apr|-apru|-apri|-zlib|-neon)
         ARG_PREV=$ARG
         ;;
       -zip) ZIP=1 ;;
@@ -86,10 +84,9 @@ do
   fi
 done
 
-if [ -n "$ALPHA" ] && [ -n "$BETA" ] && [ -n "$NIGHTLY" ] ||
-   [ -n "$ALPHA" ] && [ -n "$RC" ] && [ -n "$NIGHTLY" ] ||
-   [ -n "$BETA" ] && [ -n "$RC" ] && [ -n "$NIGHTLY" ] ||
-   [ -n "$ALPHA" ] && [ -n "$BETA" ] && [ -n "$RC" ]; then
+if [ -n "$ALPHA" ] && [ -n "$BETA" ] ||
+   [ -n "$ALPHA" ] && [ -n "$RC" ] ||
+   [ -n "$BETA" ] && [ -n "$RC" ] ; then
   echo " $USAGE"
   exit 1
 elif [ -n "$ALPHA" ] ; then
@@ -101,14 +98,11 @@ elif [ -n "$BETA" ] ; then
 elif [ -n "$RC" ] ; then
   VER_TAG="Release Candidate $RC"
   VER_NUMTAG="-rc$RC"
-elif [ -n "$NIGHTLY" ] ; then
-  VER_TAG="Nightly Build ($NIGHTLY)"
-  VER_NUMTAG="-nightly-$NIGHTLY"
 else
   VER_TAG="r$REVISION"
   VER_NUMTAG=""
 fi
-
+  
 if [ -n "$ZIP" ] ; then
   EXTRA_EXPORT_OPTIONS="--native-eol CRLF"
 fi

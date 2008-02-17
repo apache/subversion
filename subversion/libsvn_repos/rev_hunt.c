@@ -999,7 +999,8 @@ get_path_mergeinfo(apr_hash_t **mergeinfo,
                    svn_revnum_t revnum,
                    apr_pool_t *pool)
 {
-  svn_mergeinfo_catalog_t tmp_catalog;
+  apr_hash_t *tmp_mergeinfo;
+  const char *mergeinfo_str;
   svn_fs_root_t *root;
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_array_header_t *paths = apr_array_make(subpool, 1,
@@ -1011,12 +1012,12 @@ get_path_mergeinfo(apr_hash_t **mergeinfo,
   /* We do not need to call svn_repos_fs_get_mergeinfo() (which performs authz)
      because we will filter out unreadable revisions in 
      find_interesting_revision(), above */
-  SVN_ERR(svn_fs_get_mergeinfo(&tmp_catalog, root, paths,
+  SVN_ERR(svn_fs_get_mergeinfo(&tmp_mergeinfo, root, paths,
                                svn_mergeinfo_inherited, FALSE, subpool));
 
-  *mergeinfo = apr_hash_get(tmp_catalog, path, APR_HASH_KEY_STRING);
-  if (*mergeinfo)
-    *mergeinfo = svn_mergeinfo_dup(*mergeinfo, pool);
+  mergeinfo_str = apr_hash_get(tmp_mergeinfo, path, APR_HASH_KEY_STRING);
+  if (mergeinfo_str != NULL)
+    SVN_ERR(svn_mergeinfo_parse(mergeinfo, mergeinfo_str, pool));
   else
     *mergeinfo = apr_hash_make(pool);
 

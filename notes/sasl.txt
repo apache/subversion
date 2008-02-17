@@ -12,7 +12,6 @@ Contents
   5. Compatibility
   6. Encryption
   7. Known Issues
-  8. GSSAPI
 
 
 1. Obtaining and Building the Cyrus SASL Library

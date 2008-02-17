@@ -162,15 +162,11 @@ is "svn".
 After a successful authentication exchange, the server sends a command
 response whose parameters match the prototype:
 
-  repos-info: ( uuid:string repos-url:string ( cap:word ... ) )
+  repos-info: ( uuid:string repos-url:string )
 
-uuid gives the universal unique identifier of the repository,
-repos-url gives the URL of the repository's root directory, and the
-cap values list the repository capabilities (that is, capabilities
-that require both server and repository support before the server can
-claim them as capabilities, e.g., SVN_RA_SVN_CAP_MERGEINFO).
-
-The client can now begin sending commands from the main command set.
+uuid gives the universal unique identifier of the repository, and
+repos-url gives the URL of the repository's root directory.  The
+client can now begin sending commands from the main command set.
 
 2.1 Capabilities
 

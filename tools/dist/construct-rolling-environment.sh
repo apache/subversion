@@ -3,17 +3,17 @@ set -e
 
 AUTOCONF=autoconf-2.61
 LIBTOOL=libtool-1.5.24
-SWIG=swig-1.3.33
+SWIG=swig-1.3.31
 
-APR=apr-1.2.12
-APR_UTIL=apr-util-1.2.12
+APR=apr-1.2.11
+APR_UTIL=apr-util-1.2.10
 NEON=neon-0.27.2
 ZLIB=zlib-1.2.3
 
-HTTPD=httpd-2.2.8
-HTTPD_OOPS=
-APR_ICONV=apr-iconv-1.2.1
-APR_ICONV_OOPS=
+HTTPD=httpd-2.2.6
+HTTPD_OOPS=-r2
+APR_ICONV=apr-iconv-1.2.0
+APR_ICONV_OOPS=-r2
 
 WIN32_APR_VIA_HTTPD=1
 
