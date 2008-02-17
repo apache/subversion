@@ -412,7 +412,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
 
           SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt, b->pb, subpool));
 
-          /* Check for single charater response. */
+          /* Check for single character response. */
           if (answer[1] != 0)
             continue;
 
@@ -548,7 +548,11 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
 
           SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt, b->pb, subpool));
 
-          if ((strcmp(answer, "h") == 0) || (strcmp(answer, "?") == 0))
+          /* Check for single character response. */
+          if (answer[1] != 0)
+            continue;
+
+          if ((answer[0] == 'h') || (answer[0] == '?'))
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
               _("  (p)ostpone    - resolve the conflict later\n"
@@ -558,17 +562,17 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                 "(overwrite pre-existing item)\n"
                 "  (h)elp        - show this list\n\n")));
             }
-          if (strcmp(answer, "p") == 0)
+          if (answer[0] == 'p')
             {
               (*result)->choice = svn_wc_conflict_choose_postpone;
               break;
             }
-          if (strcmp(answer, "M") == 0)
+          if (answer[0] == 'M')
             {
               (*result)->choice = svn_wc_conflict_choose_mine_full;
               break;
             }
-          if (strcmp(answer, "T") == 0)
+          if (answer[0] == 'T')
             {
               (*result)->choice = svn_wc_conflict_choose_theirs_full;
               break;

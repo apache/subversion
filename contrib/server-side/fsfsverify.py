@@ -516,6 +516,11 @@ class Rep(object):
     self.offset = int(offset)
     self.length = int(length)
     self.size = int(size)
+
+    if digest in '0000000000000000':
+      # The null digest, which means accept anything.
+      digest = None
+
     self.digest = digest
     self.currentRev = currentRev
 
@@ -761,7 +766,7 @@ class ChangedPaths(object):
 
       line = revFile.readline()
       if line != '\n':
-        (copyfromRev, copyfromPath) = line.split(' ')
+        (copyfromRev, copyfromPath) = line[:-1].split(' ', 1)
       else:
         copyfromRev = -1
         copyfromPath = ''
@@ -795,12 +800,13 @@ def dumpChangedPaths(changedPaths):
        (id, action, textMod, propMod,
         copyfromRev, copyfromPath)) in changedPaths:
     print " %s:" % path
+    print "  id: %s" % id
     print "  action: %s" % action
     print "  text mod: %s" % textMod
     print "  prop mod: %s" % propMod
     if copyfromRev != -1:
-      print "copyfrom path: %s" % copyfromPath
-      print "copyfrom rev: %s" % copyfromRev
+      print "  copyfrom path: %s" % copyfromPath
+      print "  copyfrom rev: %s" % copyfromRev
     print
 
 

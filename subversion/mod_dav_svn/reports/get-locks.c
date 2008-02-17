@@ -201,8 +201,7 @@ dav_svn__get_locks_report(const dav_resource *resource,
                                 "Error writing REPORT response.",
                                 resource->pool);
 
-  /* Flush the contents of the brigade (returning an error only if we
-     don't already have one). */
+  /* Flush the contents of the brigade. */
   if ((apr_err = ap_fflush(output, bb)))
     return dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
                                 HTTP_INTERNAL_SERVER_ERROR,

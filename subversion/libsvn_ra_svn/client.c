@@ -517,7 +517,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   svn_ra_svn_conn_t *conn;
   apr_socket_t *sock;
   apr_uint64_t minver, maxver;
-  apr_array_header_t *mechlist, *caplist;
+  apr_array_header_t *mechlist, *server_caplist, *repos_caplist;
 
   sess = apr_palloc(pool, sizeof(*sess));
   sess->pool = pool;
@@ -547,7 +547,8 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
 
   /* Read server's greeting. */
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "nnll", &minver, &maxver,
-                                       &mechlist, &caplist));
+                                       &mechlist, &server_caplist));
+
   /* We support protocol version 2. */
   if (minver > 2)
     return svn_error_createf(SVN_ERR_RA_SVN_BAD_VERSION, NULL,
@@ -557,7 +558,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
     return svn_error_createf(SVN_ERR_RA_SVN_BAD_VERSION, NULL,
                              _("Server only supports versions up to %d"),
                              (int) maxver);
-  SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
+  SVN_ERR(svn_ra_svn_set_capabilities(conn, server_caplist));
 
   /* All released versions of Subversion support edit-pipeline,
    * so we do not support servers that do not. */
@@ -581,9 +582,13 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   /* This is where the security layer would go into effect if we
    * supported security layers, which is a ways off. */
 
-  /* Read the repository's uuid and root URL. */
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "c?c", &conn->uuid,
-                                       &conn->repos_root));
+  /* Read the repository's uuid and root URL, and perhaps learn more
+     capabilities that weren't available before now. */
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "c?c?l", &conn->uuid,
+                                       &conn->repos_root, &repos_caplist));
+  if (repos_caplist)
+    SVN_ERR(svn_ra_svn_set_capabilities(conn, repos_caplist));
+
   if (conn->repos_root)
     {
       conn->repos_root = svn_path_canonicalize(conn->repos_root, pool);
@@ -1046,7 +1051,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
 /* If REVISION is SVN_INVALID_REVNUM, no value is sent to the
    server, which defaults to youngest. */
 static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
-                                         apr_hash_t **mergeinfo,
+                                         svn_mergeinfo_catalog_t *catalog,
                                          const apr_array_header_t *paths,
                                          svn_revnum_t revision,
                                          svn_mergeinfo_inheritance_t inherit,
@@ -1059,7 +1064,6 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
   apr_array_header_t *mergeinfo_tuple;
   svn_ra_svn_item_t *elt;
   const char *path, *to_parse;
-  apr_hash_t *for_path;
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "get-mergeinfo"));
   for (i = 0; i < paths->nelts; i++)
@@ -1074,12 +1078,14 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
   SVN_ERR(handle_auth_request(sess_baton, pool));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "(?l)", &mergeinfo_tuple));
 
-  *mergeinfo = NULL;
+  *catalog = NULL;
   if (mergeinfo_tuple != NULL && mergeinfo_tuple->nelts > 0)
     {
-      *mergeinfo = apr_hash_make(pool);
+      *catalog = apr_hash_make(pool);
       for (i = 0; i < mergeinfo_tuple->nelts; i++)
         {
+          svn_mergeinfo_t for_path;
+
           elt = &((svn_ra_svn_item_t *) mergeinfo_tuple->elts)[i];
           if (elt->kind != SVN_RA_SVN_LIST)
             return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -1087,7 +1093,7 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
           SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "cc",
                                          &path, &to_parse));
           SVN_ERR(svn_mergeinfo_parse(&for_path, to_parse, pool));
-          apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, for_path);
+          apr_hash_set(*catalog, path, APR_HASH_KEY_STRING, for_path);
         }
     }
 

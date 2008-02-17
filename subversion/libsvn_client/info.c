@@ -387,8 +387,8 @@ svn_client_info2(const char *path_or_url,
                                            peg_revision,
                                            revision, ctx, pool));
 
-  SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root_URL, pool));
-  SVN_ERR(svn_ra_get_uuid(ra_session, &repos_UUID, pool));
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_URL, pool));
+  SVN_ERR(svn_ra_get_uuid2(ra_session, &repos_UUID, pool));
 
   svn_path_split(url, &parent_url, &base_name, pool);
   base_name = svn_path_uri_decode(base_name, pool);

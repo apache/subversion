@@ -796,9 +796,8 @@ def revprop_change(sbox):
                                      'cash-sound', 'cha-ching!', sbox.wc_dir)
 
   # Now test error output from revprop-change hook.
-  message = 'revprop_change test'
-  svntest.actions.disable_revprop_changes(sbox.repo_dir, message)
-  svntest.actions.run_and_verify_svn(None, None, '.*' + message,
+  svntest.actions.disable_revprop_changes(sbox.repo_dir)
+  svntest.actions.run_and_verify_svn(None, None, '.*pre-revprop-change.* 0 jrandom cash-sound A',
                                      'propset', '--revprop', '-r', '0',
                                      'cash-sound', 'cha-ching!', sbox.wc_dir)
 
@@ -813,6 +812,14 @@ def revprop_change(sbox):
                                      'propget', '--revprop', '-r', '0',
                                      'cash-sound', sbox.wc_dir)
 
+  # Now test that blocking the revprop delete.
+  svntest.actions.disable_revprop_changes(sbox.repo_dir)
+  svntest.actions.run_and_verify_svn(None, None, '.*pre-revprop-change.* 0 jrandom cash-sound D',
+                                     'propdel', '--revprop', '-r', '0',
+                                     'cash-sound', sbox.wc_dir)
+
+  # Now test actually deleting the revprop.
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propdel', '--revprop', '-r', '0',
                                      'cash-sound', sbox.wc_dir)
@@ -1628,7 +1635,12 @@ test_list = [ None,
               copy_inherits_special_props,
               # If we learn how to write a pre-revprop-change hook for
               # non-Posix platforms, we won't have to skip here:
-              Skip(revprop_change, is_non_posix_and_non_windows_os),
+              # TODO(epg): Removed Skip as long as we have this XFail
+              # because I couldn't get Skip and XFail to interact
+              # properly (it kept showing the failure and then
+              # printing PASS instead of XFAIL).
+              #Skip(revprop_change, is_non_posix_and_non_windows_os),
+              XFail(revprop_change, svntest.main.is_ra_type_dav),
               prop_value_conversions,
               binary_props,
               recursive_base_wc_ops,

@@ -362,6 +362,7 @@ svn_client_log4(const apr_array_header_t *targets,
       svn_wc_adm_access_t *adm_access;
       apr_array_header_t *target_urls;
       apr_array_header_t *real_targets;
+      apr_pool_t *iterpool;
       int i;
 
       /* See FIXME about multiple wc targets, below. */
@@ -373,16 +374,19 @@ svn_client_log4(const apr_array_header_t *targets,
       /* Get URLs for each target */
       target_urls = apr_array_make(pool, 1, sizeof(const char *));
       real_targets = apr_array_make(pool, 1, sizeof(const char *));
+      iterpool = svn_pool_create(pool);
       for (i = 0; i < targets->nelts; i++)
         {
           const svn_wc_entry_t *entry;
           const char *URL;
           const char *target = APR_ARRAY_IDX(targets, i, const char *);
+
+          svn_pool_clear(iterpool);
           SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target,
                                          FALSE, 0, ctx->cancel_func,
-                                         ctx->cancel_baton, pool));
+                                         ctx->cancel_baton, iterpool));
           SVN_ERR(svn_wc__entry_versioned(&entry, target, adm_access, FALSE,
-                                         pool));
+                                         iterpool));
 
           if (! entry->url)
             return svn_error_createf
@@ -395,6 +399,7 @@ svn_client_log4(const apr_array_header_t *targets,
           APR_ARRAY_PUSH(target_urls, const char *) = URL;
           APR_ARRAY_PUSH(real_targets, const char *) = target;
         }
+      svn_pool_destroy(iterpool);
 
       /* if we have no valid target_urls, just exit. */
       if (target_urls->nelts == 0)

@@ -291,7 +291,7 @@ svn_ra__locations_from_log(svn_ra_session_t *session,
   const char *root_url, *url, *rel_path;
 
   /* Fetch the repository root URL and relative path. */
-  SVN_ERR(svn_ra_get_repos_root(session, &root_url, pool));
+  SVN_ERR(svn_ra_get_repos_root2(session, &root_url, pool));
   SVN_ERR(svn_ra_get_session_url(session, &url, pool));
   url = svn_path_join(url, path, pool);
   rel_path = svn_path_uri_decode(url + strlen(root_url), pool);
@@ -515,7 +515,7 @@ svn_ra__location_segments_from_log(svn_ra_session_t *session,
   const char *root_url, *url, *rel_path;
 
   /* Fetch the repository root URL and relative path. */
-  SVN_ERR(svn_ra_get_repos_root(session, &root_url, pool));
+  SVN_ERR(svn_ra_get_repos_root2(session, &root_url, pool));
   SVN_ERR(svn_ra_get_session_url(session, &url, pool));
   url = svn_path_join(url, path, pool);
   rel_path = svn_path_uri_decode(url + strlen(root_url), pool);
@@ -660,7 +660,7 @@ svn_ra__file_revs_from_log(svn_ra_session_t *ra_session,
   svn_stream_t *last_stream;
   apr_pool_t *currpool, *lastpool;
 
-  SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_url, pool));
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_url, pool));
   SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, pool));
 
   /* Create the initial path, using the repos_url and session_url */

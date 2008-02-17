@@ -884,14 +884,11 @@ svn_ra_get_dir(svn_ra_session_t *session,
                apr_pool_t *pool);
 
 /**
- * Set @a *mergeoutput to a hash mapping <tt>const char *</tt> target
- * paths (taken from @a paths) to mergeinfo hashes (which themselves
- * map <tt>const char *</tt> merged-from paths to
- * <tt>apr_array_header_t *</tt> revision range lists of
- * <tt>svn_merge_range_t *</tt> elements).  If no mergeinfo is
- * available, set @a *mergeoutput to @c NULL.  The requested mergeinfo
- * hashes are for @a paths (which are relative to @a session's URL) in
- * @a revision.
+ * Set @a *catalog to a mergeinfo catalog for the paths in @a paths.
+ * If no mergeinfo is available, set @a *catalog to @c NULL.  The
+ * requested mergeinfo hashes are for @a paths (which are relative to
+ * @a session's URL) in @a revision.  If one of the paths does not exist
+ * in that revision, return SVN_ERR_FS_NOT_FOUND.
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a paths is retrieved.
@@ -901,21 +898,22 @@ svn_ra_get_dir(svn_ra_session_t *session,
  * the @c SVN_PROP_MERGEINFO property explicitly set on it.  (Note
  * that inheritance is only taken into account for the elements in @a
  * paths; descendants of the elements in @a paths which get their
- * mergeinfo via inheritance are not included in @a *mergeoutput.)
+ * mergeinfo via inheritance are not included in @a *catalog.)
  *
  * Allocate the returned values in @a pool.
  *
  * If @a revision is @c SVN_INVALID_REVNUM, it defaults to youngest.
  *
- * If the server doesn't support retrieval of mergeinfo (which will
- * never happen for file:// URLs), return an @c
- * SVN_ERR_UNSUPPORTED_FEATURE error.
+ * If the server doesn't support retrieval of mergeinfo (which can
+ * happen even for file:// URLs, if the repository itself hasn't been
+ * upgraded), return @c SVN_ERR_UNSUPPORTED_FEATURE in preference to
+ * any other error that might otherwise be returned.
  *
  * @since New in 1.5.
  */
 svn_error_t *
 svn_ra_get_mergeinfo(svn_ra_session_t *session,
-                     apr_hash_t **mergeoutput,
+                     svn_mergeinfo_catalog_t *catalog,
                      const apr_array_header_t *paths,
                      svn_revnum_t revision,
                      svn_mergeinfo_inheritance_t inherit,
@@ -1376,12 +1374,20 @@ svn_ra_stat(svn_ra_session_t *session,
 
 
 /**
- * Set @a *uuid to the repository's UUID.
+ * Set @a *uuid to the repository's UUID, allocated in @a pool.
  *
- * @note The UUID has the same lifetime as the @a session.
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_ra_get_uuid2(svn_ra_session_t *session,
+                 const char **uuid,
+                 apr_pool_t *pool);
+
+/**
+ * Similar to svn_ra_get_uuid2(), but returns the value allocated in
+ * @a session's pool.
  *
- * Use @a pool for temporary memory allocation.
- *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  * @since New in 1.2.
  */
 svn_error_t *
@@ -1390,14 +1396,23 @@ svn_ra_get_uuid(svn_ra_session_t *session,
                 apr_pool_t *pool);
 
 /**
- * Set @a *url to the repository's root URL.  The value will not include
- * a trailing '/'.  The returned URL is guaranteed to be a prefix of the
- * @a session's URL.
+ * Set @a *url to the repository's root URL, allocated in @a pool.
+ * The value will not include a trailing '/'.  The returned URL is
+ * guaranteed to be a prefix of the @a session's URL.
  *
- * @note The URL has the same lifetime as the @a session.
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_ra_get_repos_root2(svn_ra_session_t *session,
+                       const char **url,
+                       apr_pool_t *pool);
+
+
+/**
+ * Similar to svn_ra_get_repos_root2(), but returns the value
+ * allocated in @a session's pool.
  *
- * Use @a pool for temporary memory allocation.
- *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  * @since New in 1.2.
  */
 svn_error_t *

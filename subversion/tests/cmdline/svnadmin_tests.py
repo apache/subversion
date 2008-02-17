@@ -18,6 +18,7 @@
 
 # General modules
 import os
+import shutil
 import sys
 
 # Our testing module
@@ -565,18 +566,68 @@ _0.0.t1-1 add false false /A/B/E/bravo
 
 def recover_fsfs(sbox):
   "recover a repository (FSFS only)"
-
-  # Set up a repository containing the greek tree.
-  sbox.build(create_wc = False)
-
-  # Read the current contents of the current file.
+  sbox.build()
   current_path = os.path.join(sbox.repo_dir, 'db', 'current')
+
+  # Commit up to r3, so we can test various recovery scenarios.
+  svntest.main.file_append(os.path.join(sbox.wc_dir, 'iota'), 'newer line\n')
+  svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
+
+  svntest.main.file_append(os.path.join(sbox.wc_dir, 'iota'), 'newest line\n')
+  svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
+
+  # Remember the contents of the db/current file.
   expected_current_contents = svntest.main.file_read(current_path)
 
-  # Remove the current file.
-  os.remove(current_path)
+  # Move aside the current file for r3.
+  os.rename(os.path.join(sbox.repo_dir, 'db','current'),
+            os.path.join(sbox.repo_dir, 'db','was_current'));
 
   # Run 'svnadmin recover' and check that the current file is recreated.
+  output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
+  if errput:
+    raise SVNUnexpectedStderr
+
+  actual_current_contents = svntest.main.file_read(current_path)
+  svntest.verify.compare_and_display_lines(
+    "Contents of db/current is unexpected.",
+    'db/current', expected_current_contents, actual_current_contents)
+
+  # Now try writing db/current to be one rev lower than it should be.
+  svntest.main.file_write(current_path, '2\n')
+
+  # Run 'svnadmin recover' and check that the current file is fixed.
+  output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
+  if errput:
+    raise SVNUnexpectedStderr
+
+  actual_current_contents = svntest.main.file_read(current_path)
+  svntest.verify.compare_and_display_lines(
+    "Contents of db/current is unexpected.",
+    'db/current', expected_current_contents, actual_current_contents)
+
+  # Now try writing db/current to be *two* revs lower than it should be.
+  svntest.main.file_write(current_path, '1\n')
+
+  # Run 'svnadmin recover' and check that the current file is fixed.
+  output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
+  if errput:
+    raise SVNUnexpectedStderr
+
+  actual_current_contents = svntest.main.file_read(current_path)
+  svntest.verify.compare_and_display_lines(
+    "Contents of db/current is unexpected.",
+    'db/current', expected_current_contents, actual_current_contents)
+
+  # Now try writing db/current to be fish revs lower than it should be.
+  #
+  # Note: I'm not actually sure it's wise to recover from this, but
+  # detecting it would require rewriting fs_fs.c:get_youngest() to
+  # check the actual contents of its buffer, since atol() will happily
+  # convert "fish" to 0.
+  svntest.main.file_write(current_path, 'fish\n')
+
+  # Run 'svnadmin recover' and check that the current file is fixed.
   output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
   if errput:
     raise SVNUnexpectedStderr
@@ -707,6 +758,67 @@ def reflect_dropped_renumbered_revs(sbox):
                                      [], 'propget', 'svn:mergeinfo',
                                      sbox.repo_url + '/branch1')
 
+#----------------------------------------------------------------------
+
+def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
+  """fsfs recovery checks missing revs / revprops files"""
+  # Set up a repository containing the greek tree.
+  sbox.build()
+
+  # Commit up to r3, so we can test various recovery scenarios.
+  svntest.main.file_append(os.path.join(sbox.wc_dir, 'iota'), 'newer line\n')
+  svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
+
+  svntest.main.file_append(os.path.join(sbox.wc_dir, 'iota'), 'newest line\n')
+  svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
+
+  # Move aside the revs file for r3.
+  os.rename(os.path.join(sbox.repo_dir, 'db','revs','0', '3'),
+            os.path.join(sbox.repo_dir, 'db','revs','0', 'was_3'));
+  
+  # Verify 'svnadmin recover' fails when youngest has a revprops
+  # file but no revs file.
+  output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
+
+  if svntest.verify.verify_outputs(
+    "Output of 'svnadmin recover' is unexpected.", None, errput, None,
+    ".*Expected current rev to be <= 2 but found 3"):
+    raise svntest.Failure
+
+  # Restore the r3 revs file, thus repairing the repository.
+  os.rename(os.path.join(sbox.repo_dir, 'db','revs','0', 'was_3'),
+            os.path.join(sbox.repo_dir, 'db','revs','0', '3'));
+  
+  # Move aside the revprops file for r3.
+  os.rename(os.path.join(sbox.repo_dir, 'db','revprops','0', '3'),
+            os.path.join(sbox.repo_dir, 'db','revprops','0', 'was_3'));
+
+  # Verify 'svnadmin recover' fails when youngest has a revs file
+  # but no revprops file (issue #2992).
+  output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
+
+  if svntest.verify.verify_outputs(
+    "Output of 'svnadmin recover' is unexpected.", None, errput, None,
+    ".*Revision 3 has a revs file but no revprops file"):
+    raise svntest.Failure
+
+  # Restore the r3 revprops file, thus repairing the repository.
+  os.rename(os.path.join(sbox.repo_dir, 'db','revprops','0', 'was_3'),
+            os.path.join(sbox.repo_dir, 'db','revprops','0', '3'));
+
+  # Change revprops file to a directory for revision 3
+  os.rename(os.path.join(sbox.repo_dir, 'db','revprops','0', '3'),
+            os.path.join(sbox.repo_dir, 'db','revprops','0', 'was_3'));
+  os.mkdir(os.path.join(sbox.repo_dir, 'db','revprops','0','3'));
+
+  # Verify 'svnadmin recover' fails when youngest has a revs file
+  # but revprops file is not a file (another aspect of issue #2992).
+  output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
+
+  if svntest.verify.verify_outputs(
+    "Output of 'svnadmin recover' is unexpected.", None, errput, None,
+    ".*Revision 3 has a non-file where its revprops file should be.*"):
+    raise svntest.Failure
 
 ########################################################################
 # Run the tests
@@ -730,6 +842,8 @@ test_list = [ None,
               load_with_parent_dir,
               set_uuid,
               reflect_dropped_renumbered_revs,
+              SkipUnless(fsfs_recover_handle_missing_revs_or_revprops_file,
+                         svntest.main.is_fs_type_fsfs),
              ]
 
 if __name__ == '__main__':
