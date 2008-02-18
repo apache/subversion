@@ -21,6 +21,11 @@ import sys
 import re
 
 
+# A handy constant for refering to the NULL digest (one that
+# matches every digest).
+NULL_DIGEST = '00000000000000000000000000000000'
+
+
 class FsfsVerifyException(Exception):
   pass
 
@@ -517,10 +522,6 @@ class Rep(object):
     self.length = int(length)
     self.size = int(size)
 
-    if digest in '0000000000000000':
-      # The null digest, which means accept anything.
-      digest = None
-
     self.digest = digest
     self.currentRev = currentRev
 
@@ -575,7 +576,7 @@ class Rep(object):
         e.noderev = self.noderev
         raise
 
-      if digest:
+      if digest and (self.digest != NULL_DIGEST):
         assert(digest == self.digest)
     else:
       if f.read(1) != '\n':
@@ -585,7 +586,8 @@ class Rep(object):
       m = md5.new()
       m.update(f.read(self.length))
 
-      if self.digest and self.digest != m.hexdigest():
+      if self.digest and self.digest != NULL_DIGEST \
+          and self.digest != m.hexdigest():
         raise DataCorrupt, \
           "PLAIN data is corrupted.  Expected digest '%s', computed '%s'." % (
             self.digest, m.hexdigest())
