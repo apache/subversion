@@ -640,8 +640,9 @@ struct file_baton
      This gets set if there are file content changes. */
   const char *text_base_path;
 
-  /* This gets set if the file underwent a text change, which guides
-     the code that syncs up the adm dir and working copy. */
+  /* The path to the incoming text base (that is, to a text-base-file-
+     in-progress in the tmp area).  This gets set if there are file
+     content changes. */ 
   const char *new_text_base_path;
 
   /* If this file was added with history, this is the path to a copy
@@ -665,7 +666,8 @@ struct file_baton
   svn_boolean_t received_textdelta;
 
   /* An array of svn_prop_t structures, representing all the property
-     changes to be applied to this file. */
+     changes to be applied to this file.  Once a file baton is
+     initialized, this is never NULL, but it may have zero elements.  */
   apr_array_header_t *propchanges;
 
   /* The last-changed-date of the file.  This is actually a property
