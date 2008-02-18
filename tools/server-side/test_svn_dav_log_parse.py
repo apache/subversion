@@ -48,16 +48,31 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.result, (3,))
 
     def test_get_dir(self):
-        self.assertRaises(svn_dav_log_parse.Error, self.parse, 'get-dir')
-        self.assertRaises(svn_dav_log_parse.Error, self.parse, 'get-dir foo')
-        self.assertRaises(svn_dav_log_parse.Error, self.parse, 'get-dir foo 3')
-        self.assertEqual(self.parse('get-dir /a/b/c r3 ...'), ' ...')
-        self.assertEqual(self.result, ('/a/b/c', 3))
-        self.assertEqual(self.parse('get-dir / r3'), '')
-        self.assertEqual(self.result, ('/', 3))
+        self.get_dir_or_file('get-dir')
+
+    def test_get_file(self):
+        self.get_dir_or_file('get-file')
+
+    def get_dir_or_file(self, c):
+        self.assertRaises(svn_dav_log_parse.Error, self.parse, c)
+        self.assertRaises(svn_dav_log_parse.Error, self.parse, c + ' foo')
+        self.assertRaises(svn_dav_log_parse.Error, self.parse, c + ' foo 3')
+        self.assertEqual(self.parse(c + ' /a/b/c r3 ...'), ' ...')
+        self.assertEqual(self.result, ('/a/b/c', 3, False, False))
+        self.assertEqual(self.parse(c + ' / r3'), '')
+        self.assertEqual(self.result, ('/', 3, False, False))
         # path must be absolute
         self.assertRaises(svn_dav_log_parse.Error,
-                          self.parse, 'get-dir a/b/c r3')
+                          self.parse, c + ' a/b/c r3')
+        self.assertEqual(self.parse(c + ' /k r27 text'), '')
+        self.assertEqual(self.result, ('/k', 27, True, False))
+        self.assertEqual(self.parse(c + ' /k r27 props'), '')
+        self.assertEqual(self.result, ('/k', 27, False, True))
+        self.assertEqual(self.parse(c + ' /k r27 text props'), '')
+        self.assertEqual(self.result, ('/k', 27, True, True))
+        # out of order not accepted
+        self.assertEqual(self.parse(c + ' /k r27 props text'), ' text')
+        self.assertEqual(self.result, ('/k', 27, False, True))
 
     def test_lock(self):
         self.assertRaises(svn_dav_log_parse.Error, self.parse, 'lock')
@@ -66,16 +81,6 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.parse('lock /foo steal ...'), ' ...')
         self.assertEqual(self.result, ('/foo', True))
         self.assertEqual(self.parse('lock /foo stear'), ' stear')
-
-    def test_prop_list(self):
-        self.assertRaises(svn_dav_log_parse.Error,
-                          self.parse, 'prop-list')
-        self.assertRaises(svn_dav_log_parse.Error,
-                          self.parse, 'prop-list /foo')
-        self.assertRaises(svn_dav_log_parse.Error,
-                          self.parse, 'prop-list /foo@bar')
-        self.assertEqual(self.parse('prop-list /foo@3 ...'), ' ...')
-        self.assertEqual(self.result, ('/foo', 3))
 
     def test_change_rev_prop(self):
         self.assertRaises(svn_dav_log_parse.Error,
@@ -277,16 +282,24 @@ if __name__ == '__main__':
         def handle_commit(self, revision):
             self.action = 'commit r%d' % (revision,)
 
-        def handle_get_dir(self, path, revision):
+        def handle_get_dir(self, path, revision, text, props):
             self.action = 'get-dir %s r%d' % (path, revision)
+            if text:
+                self.action += ' text'
+            if props:
+                self.action += ' props'
+
+        def handle_get_file(self, path, revision, text, props):
+            self.action = 'get-file %s r%d' % (path, revision)
+            if text:
+                self.action += ' text'
+            if props:
+                self.action += ' props'
 
         def handle_lock(self, path, steal):
             self.action = 'lock ' + path
             if steal:
                 self.action += ' steal'
-
-        def handle_prop_list(self, path, revision):
-            self.action = 'prop-list %s@%d' % (path, revision)
 
         def handle_change_rev_prop(self, revision, revprop):
             self.action = 'change-rev-prop r%d %s' % (revision, revprop)

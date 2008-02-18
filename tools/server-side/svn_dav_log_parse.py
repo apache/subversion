@@ -46,9 +46,9 @@ General::
 
     change-rev-prop r<N> <REVPROP>
     commit r<N>
-    get-dir <PATH> r<N>
+    get-dir <PATH> r<N> text? props?
+    get-file <PATH> r<N> text? props?
     lock <PATH> steal?
-    prop-list <PATH>@<N>
     rev-proplist r<N>
     unlock <PATH> break?
 
@@ -200,18 +200,22 @@ class Parser(object):
         return line[m.end():]
 
     def _parse_get_dir(self, line):
-        m = _match(line, pPATH, pREVNUM)
-        self.handle_get_dir(m.group(1), int(m.group(2)))
+        m = _match(line, pPATH, pREVNUM, ['text', 'props'])
+        self.handle_get_dir(m.group(1), int(m.group(2)),
+                            m.group(3) is not None,
+                            m.group(4) is not None)
+        return line[m.end():]
+
+    def _parse_get_file(self, line):
+        m = _match(line, pPATH, pREVNUM, ['text', 'props'])
+        self.handle_get_dir(m.group(1), int(m.group(2)),
+                            m.group(3) is not None,
+                            m.group(4) is not None)
         return line[m.end():]
 
     def _parse_lock(self, line):
         m = _match(line, pPATH, ['steal'])
         self.handle_lock(m.group(1), m.group(2) is not None)
-        return line[m.end():]
-
-    def _parse_prop_list(self, line):
-        m = _match(line, pPATHREV)
-        self.handle_prop_list(m.group(1), int(m.group(2)))
         return line[m.end():]
 
     def _parse_change_rev_prop(self, line):
