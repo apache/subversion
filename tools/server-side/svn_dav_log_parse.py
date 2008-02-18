@@ -208,9 +208,9 @@ class Parser(object):
 
     def _parse_get_file(self, line):
         m = _match(line, pPATH, pREVNUM, ['text', 'props'])
-        self.handle_get_dir(m.group(1), int(m.group(2)),
-                            m.group(3) is not None,
-                            m.group(4) is not None)
+        self.handle_get_file(m.group(1), int(m.group(2)),
+                             m.group(3) is not None,
+                             m.group(4) is not None)
         return line[m.end():]
 
     def _parse_lock(self, line):
