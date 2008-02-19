@@ -1091,6 +1091,11 @@ svn_ra_neon__open(svn_ra_session_t *session,
       timeout = DEFAULT_HTTP_TIMEOUT;
     ne_set_read_timeout(sess, timeout);
     ne_set_read_timeout(sess2, timeout);
+
+#ifdef SVN_NEON_0_27
+    ne_set_connect_timeout(sess, timeout);
+    ne_set_connect_timeout(sess2, timeout);
+#endif
   }
 
   if (useragent)
