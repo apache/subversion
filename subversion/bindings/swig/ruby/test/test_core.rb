@@ -834,9 +834,9 @@ EOM
     mergerange3 = Svn::Core::MergeRange.new(1,2,false)
     mergerange4 = Svn::Core::MergeRange.new(1,4,true)
 
-    assert_equal mergerange1, mergerange2
-    assert_not_equal mergerange1, mergerange3
-    assert_not_equal mergerange1, mergerange4
+    assert_equal(mergerange1, mergerange2)
+    assert_not_equal(mergerange1, mergerange3)
+    assert_not_equal(mergerange1, mergerange4)
   end
 
   private
