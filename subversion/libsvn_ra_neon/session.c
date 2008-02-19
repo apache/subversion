@@ -509,8 +509,8 @@ static svn_error_t *get_server_settings(const char **proxy_host,
       svn_config_get(cfg, &debug_str, server_group,
                      SVN_CONFIG_OPTION_NEON_DEBUG_MASK, debug_str);
 #ifdef SVN_NEON_0_26
-      svn_config_get(cfg, &http_auth_types, SVN_CONFIG_SECTION_GLOBAL,
-                     SVN_CONFIG_OPTION_HTTP_AUTH_TYPES, NULL);
+      svn_config_get(cfg, &http_auth_types, server_group,
+                     SVN_CONFIG_OPTION_HTTP_AUTH_TYPES, http_auth_types);
 #endif
       svn_config_get(cfg, pk11_provider, server_group,
                      SVN_CONFIG_OPTION_SSL_PKCS11_PROVIDER, *pk11_provider);
