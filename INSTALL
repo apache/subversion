@@ -310,7 +310,7 @@ I.    INTRODUCTION
         (If you link against both, you can configure which one is used
         in your ~/.subversion/servers configuration file.)
 
-        a. Neon library 0.25, 0.26 or 0.27 (http://www.webdav.org/neon/)
+        a. Neon library 0.25, 0.26, 0.27, or 0.28 (http://www.webdav.org/neon/)
 
            The Neon library allows a Subversion client to interact
            with remote repositories over the Internet via a WebDAV
