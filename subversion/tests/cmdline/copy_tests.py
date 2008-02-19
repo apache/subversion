@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import stat, os, re
+import stat, os, re, shutil
 
 # Our testing module
 import svntest
@@ -3721,6 +3721,39 @@ def allow_unversioned_parent_for_copy_src(sbox):
                                      copy_to_path)
 
 
+#----------------------------------------------------------------------
+# Issue #2986
+def replaced_local_source_for_incoming_copy(sbox):
+  "update receives copy, but local source is replaced"
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+  other_wc_dir = wc_dir + '-other'
+  tau_path = os.path.join(wc_dir, 'A', 'D', 'G', 'tau')
+  rho_url = sbox.repo_url + '/A/D/G/rho'
+  pi_url = sbox.repo_url + '/A/D/G/pi'
+  other_rho_path = os.path.join(other_wc_dir, 'A', 'D', 'G', 'rho')
+
+  # Make the duplicate working copy.
+  shutil.copytree(wc_dir, other_wc_dir)
+  
+  # Commit a replacement from the first working copy.
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm',
+                                     tau_path);
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     rho_url, tau_path);
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'copy rho to tau', wc_dir);
+
+  # Now schedule a replacement in the second working copy, then update
+  # to receive the replacement from the first working copy, with the
+  # source being the now-scheduled-replace file.
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm',
+                                     other_rho_path);
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     pi_url, other_rho_path);
+  svntest.actions.run_and_verify_svn(None, None, [], 'up',
+                                     other_wc_dir)
+
 ########################################################################
 # Run the tests
 
@@ -3796,6 +3829,7 @@ test_list = [ None,
               copy_make_parents_repo_repo,
               URI_encoded_repos_to_wc,
               allow_unversioned_parent_for_copy_src,
+              XFail(replaced_local_source_for_incoming_copy),
              ]
 
 if __name__ == '__main__':
