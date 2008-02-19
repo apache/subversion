@@ -29,6 +29,7 @@
 #include "svn_mergeinfo.h"
 #include "private/svn_mergeinfo_private.h"
 #include "svn_private_config.h"
+#include "svn_hash.h"
 
 /* Attempt to combine two adjacent or overlapping ranges, IN1 and IN2, and put
    the result in OUTPUT.  Return whether they could be combined.
@@ -961,70 +962,79 @@ svn_rangelist_count_revs(apr_array_header_t *rangelist)
   return nbr_revs;
 }
 
+struct mergeinfo_diff_baton
+{
+  svn_mergeinfo_t from;
+  svn_mergeinfo_t to;
+  svn_mergeinfo_t deleted;
+  svn_mergeinfo_t added;
+  svn_boolean_t consider_inheritance;
+  apr_pool_t *pool;
+};
+
+/* This implements the 'svn_hash_diff_func_t' interface.
+   BATON is of type 'struct mergeinfo_diff_baton *'.
+*/
+static svn_error_t *
+mergeinfo_hash_diff_cb(const void *key, apr_ssize_t klen,
+                       enum svn_hash_diff_key_status status,
+                       void *baton)
+{
+  /* hash_a is FROM mergeinfo,
+     hash_b is TO mergeinfo. */
+  struct mergeinfo_diff_baton *cb = baton;
+  apr_array_header_t *from_rangelist, *to_rangelist;
+  const char *path = key;
+  if (status == svn_hash_diff_key_both)
+    {
+      /* Record any deltas (additions or deletions). */
+      apr_array_header_t *deleted_rangelist, *added_rangelist;
+      from_rangelist = apr_hash_get(cb->from, path, APR_HASH_KEY_STRING);
+      to_rangelist = apr_hash_get(cb->to, path, APR_HASH_KEY_STRING);
+      svn_rangelist_diff(&deleted_rangelist, &added_rangelist,
+                         from_rangelist, to_rangelist,
+                         cb->consider_inheritance, cb->pool);
+      if (cb->deleted && deleted_rangelist->nelts > 0)
+        apr_hash_set(cb->deleted, apr_pstrdup(cb->pool, path),
+                     APR_HASH_KEY_STRING, deleted_rangelist);
+      if (cb->added && added_rangelist->nelts > 0)
+        apr_hash_set(cb->added, apr_pstrdup(cb->pool, path),
+                     APR_HASH_KEY_STRING, added_rangelist);
+    }
+  else if ((status == svn_hash_diff_key_a) && cb->deleted)
+    {
+      from_rangelist = apr_hash_get(cb->from, path, APR_HASH_KEY_STRING);
+      apr_hash_set(cb->deleted, apr_pstrdup(cb->pool, path),
+                   APR_HASH_KEY_STRING,
+                   svn_rangelist_dup(from_rangelist, cb->pool));
+    }
+  else if ((status == svn_hash_diff_key_b) && cb->added)
+    {
+      to_rangelist = apr_hash_get(cb->to, path, APR_HASH_KEY_STRING);
+      apr_hash_set(cb->added, apr_pstrdup(cb->pool, path), APR_HASH_KEY_STRING,
+                   svn_rangelist_dup(to_rangelist, cb->pool));
+    }
+  return SVN_NO_ERROR;
+}
+
 /* Record deletions and additions of entire range lists (by path
    presence), and delegate to svn_rangelist_diff() for delta
    calculations on a specific path. */
-/* ### TODO: Merge implementation with
-   ### libsvn_subr/sorts.c:svn_prop_diffs().  Factor out a generic
-   ### hash diffing function for addition to APR's apr_hash.h API. */
 static svn_error_t *
 walk_mergeinfo_hash_for_diff(svn_mergeinfo_t from, svn_mergeinfo_t to,
                              svn_mergeinfo_t deleted, svn_mergeinfo_t added,
                              svn_boolean_t consider_inheritance,
                              apr_pool_t *pool)
 {
-  apr_hash_index_t *hi;
-  const void *key;
-  void *val;
-  const char *path;
-  apr_array_header_t *from_rangelist, *to_rangelist;
+  struct mergeinfo_diff_baton mdb;
+  mdb.from = from;
+  mdb.to = to;
+  mdb.deleted = deleted;
+  mdb.added = added;
+  mdb.consider_inheritance = consider_inheritance;
+  mdb.pool = pool;
 
-  /* Handle path deletions and differences. */
-  for (hi = apr_hash_first(pool, from); hi; hi = apr_hash_next(hi))
-    {
-      apr_hash_this(hi, &key, NULL, &val);
-      path = key;
-      from_rangelist = val;
-
-      /* If the path is not present at all in the "to" hash, the
-         entire "from" rangelist is a deletion.  Paths which are
-         present in the "to" hash require closer scrutiny. */
-      to_rangelist = apr_hash_get(to, path, APR_HASH_KEY_STRING);
-      if (to_rangelist)
-        {
-          /* Record any deltas (additions or deletions). */
-          apr_array_header_t *deleted_rangelist, *added_rangelist;
-          svn_rangelist_diff(&deleted_rangelist, &added_rangelist,
-                             from_rangelist, to_rangelist,
-                             consider_inheritance, pool);
-          if (deleted && deleted_rangelist->nelts > 0)
-            apr_hash_set(deleted, apr_pstrdup(pool, path),
-                         APR_HASH_KEY_STRING, deleted_rangelist);
-          if (added && added_rangelist->nelts > 0)
-            apr_hash_set(added, apr_pstrdup(pool, path),
-                         APR_HASH_KEY_STRING, added_rangelist);
-        }
-      else if (deleted)
-        apr_hash_set(deleted, apr_pstrdup(pool, path), APR_HASH_KEY_STRING,
-                     svn_rangelist_dup(from_rangelist, pool));
-    }
-
-  /* Handle path additions. */
-  if (!added)
-    return SVN_NO_ERROR;
-
-  for (hi = apr_hash_first(pool, to); hi; hi = apr_hash_next(hi))
-    {
-      apr_hash_this(hi, &key, NULL, &val);
-      path = key;
-      to_rangelist = val;
-
-      /* If the path is not present in the "from" hash, the entire
-         "to" rangelist is an addition. */
-      if (apr_hash_get(from, path, APR_HASH_KEY_STRING) == NULL)
-        apr_hash_set(added, apr_pstrdup(pool, path), APR_HASH_KEY_STRING,
-                     svn_rangelist_dup(to_rangelist, pool));
-    }
+  SVN_ERR(svn_hash_diff(from, to, mergeinfo_hash_diff_cb, &mdb, pool));
 
   return SVN_NO_ERROR;
 }
