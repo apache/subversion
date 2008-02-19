@@ -270,6 +270,7 @@
    apr_hash_t *mergein1,
    apr_hash_t *mergein2,
    apr_hash_t *mergeinfo,
+   apr_hash_t *mergeinput,
    apr_hash_t *eraser,
    apr_hash_t *whiteboard,
    apr_hash_t *changes
@@ -291,6 +292,18 @@
     apr_hash_t **added
 }
 #endif
+
+/* -----------------------------------------------------------------------
+/* -----------------------------------------------------------------------
+   output mergeinfo hash
+*/
+
+#ifdef SWIGRUBY
+%apply apr_hash_t **MERGEINFO_HASH {
+  apr_hash_t **catalog
+};
+#endif
+
 
 /* -----------------------------------------------------------------------
    handle the default value of svn_config_get().and the
