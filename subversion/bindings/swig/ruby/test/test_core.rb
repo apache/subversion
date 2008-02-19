@@ -828,6 +828,17 @@ EOM
     assert_not_equal("6-5,8-7,10-13", range_list.inspect)
   end
 
+  def test_mergerange_equality
+    mergerange1 = Svn::Core::MergeRange.new(1,2,true)
+    mergerange2 = Svn::Core::MergeRange.new(1,2,true)
+    mergerange3 = Svn::Core::MergeRange.new(1,2,false)
+    mergerange4 = Svn::Core::MergeRange.new(1,4,true)
+
+    assert_equal mergerange1, mergerange2
+    assert_not_equal mergerange1, mergerange3
+    assert_not_equal mergerange1, mergerange4
+  end
+
   private
   def used_pool
     pool = Svn::Core::Pool.new
