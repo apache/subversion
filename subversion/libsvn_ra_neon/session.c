@@ -416,14 +416,14 @@ client_ssl_callback(void *userdata, ne_session *sess,
 }
 
 /* Set *PROXY_HOST, *PROXY_PORT, *PROXY_USERNAME, *PROXY_PASSWORD,
- * *TIMEOUT_SECONDS, *NEON_DEBUG, *COMPRESSION, and *NEON_AUTO_PROTOCOLS
- * to the information for REQUESTED_HOST, allocated in POOL, if there is
- * any applicable information.  If there is no applicable information or
- * if there is an error, then set *PROXY_PORT to (unsigned int) -1,
- * *TIMEOUT_SECONDS and *NEON_DEBUG to zero, *COMPRESSION to TRUE,
- * *NEON_AUTH_TYPES is left untouched, and the rest are set to NULL.
- * This function can return an error, so before examining any values,
- * check the error return value.
+ * *TIMEOUT_SECONDS, *NEON_DEBUG, *COMPRESSION, *NEON_AUTH_TYPES, and
+ * *PK11_PROVIDER to the information for REQUESTED_HOST, allocated in
+ * POOL, if there is any applicable information.  If there is no
+ * applicable information or if there is an error, then set
+ * *PROXY_PORT to (unsigned int) -1, *TIMEOUT_SECONDS and *NEON_DEBUG
+ * to zero, *COMPRESSION to TRUE, *NEON_AUTH_TYPES is left untouched,
+ * and the rest are set to NULL.  This function can return an error,
+ * so before examining any values, check the error return value.
  */
 static svn_error_t *get_server_settings(const char **proxy_host,
                                         unsigned int *proxy_port,
