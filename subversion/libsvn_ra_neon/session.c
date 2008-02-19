@@ -453,7 +453,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
   *pk11_provider  = NULL;
 
   /* Use the default proxy-specific settings if and only if
-     "http-proxy-expections" is not set to exclude this host. */
+     "http-proxy-exceptions" is not set to exclude this host. */
   svn_config_get(cfg, &exceptions, SVN_CONFIG_SECTION_GLOBAL,
                  SVN_CONFIG_OPTION_HTTP_PROXY_EXCEPTIONS, NULL);
   if (exceptions)
