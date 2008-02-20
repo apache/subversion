@@ -41,13 +41,15 @@ Candidate changes:
      +1: arfrever
      +1: pburba (r29401)
 
- * r29440
+ * r29440, r29458
    With the advent of merge tracking, a reverse merge from a target's
    own history can no-op in some common use cases.  Prior to 1.5 these
    merges worked, so give a helpful warning that an update might be needed.
+   Added r29458, which returns an error rather than printing a warning,
+   should address glasser's -1.
    Votes:
      +1: pburba
-     -1: glasser [don't write to stderr from in a library]
+     -1: (r29440) glasser [don't write to stderr from in a library]
 
  * r29412, r29414, r29415
    Change DAV 'SVN-ACTION' log names (which are already being changed
