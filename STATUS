@@ -40,61 +40,61 @@ Candidate changes:
      +1: pburba
      -1: glasser [don't write to stderr from in a library]
 
-* r29412, r29414, r29415
-  Change DAV 'SVN-ACTION' log names (which are already being changed
-  incompatibly in 1.5) to mesh with svnserve command names, instead of
-  making up yet another vocabulary to describe SVN operations.
-  Votes:
-    +1: glasser
+ * r29412, r29414, r29415
+   Change DAV 'SVN-ACTION' log names (which are already being changed
+   incompatibly in 1.5) to mesh with svnserve command names, instead of
+   making up yet another vocabulary to describe SVN operations.
+   Votes:
+     +1: glasser
 
-* r29418
-  Avoid a hang when you SIGINT svnsync from a 1.4.x server over ra_svn
-  (or in general, when one side has an error when receiving an edit
-  but the other side finishes the command successfully before
-  receiving the asynchronous error).
-  Votes:
-    +1: glasser
+ * r29418
+   Avoid a hang when you SIGINT svnsync from a 1.4.x server over ra_svn
+   (or in general, when one side has an error when receiving an edit
+   but the other side finishes the command successfully before
+   receiving the asynchronous error).
+   Votes:
+     +1: glasser
 
-* r29419
-  Add an extra token to the revprops block in svnserve "replay-range"
-  response.  Avoids a weird "malformed data" error in some cases (eg,
-  SIGINTing an svnsync).
-  Notes:
-    Must be backported or reverted.
-  Votes:
-    +1: glasser
+ * r29419
+   Add an extra token to the revprops block in svnserve "replay-range"
+   response.  Avoids a weird "malformed data" error in some cases (eg,
+   SIGINTing an svnsync).
+   Notes:
+     Must be backported or reverted.
+   Votes:
+     +1: glasser
 
-* r29433
-  Add more details to FSFS corruption errors.
-  Notes:
-    Not vital, but would be helpful for debugging any remaining
-    corruption errors.
-  Votes:
-    +1: glasser
+ * r29433
+   Add more details to FSFS corruption errors.
+   Notes:
+     Not vital, but would be helpful for debugging any remaining
+     corruption errors.
+   Votes:
+     +1: glasser
 
-* r29181, r29374
-  A bunch of mergeinfo API changes (from the mergeinfo-api-cleanup
-  branch).
-  Notes:
-    Must be backported or reverted.
-    r29181 first is just a minor variable name change, but it's both
-    more correct and prevents conflicts in the real change.
-  Votes:
-    +1: glasser
+ * r29181, r29374
+   A bunch of mergeinfo API changes (from the mergeinfo-api-cleanup
+   branch).
+   Notes:
+     Must be backported or reverted.
+     r29181 first is just a minor variable name change, but it's both
+     more correct and prevents conflicts in the real change.
+   Votes:
+     +1: glasser
 
-* r29388
-  Fix pool usage errors in mergeinfo code (WC corruption, segfaults, etc).
-  Notes:
-    Conflicts if applied before r29374 (also nominated).
-  Votes:
-    +1: glasser
+ * r29388
+   Fix pool usage errors in mergeinfo code (WC corruption, segfaults, etc).
+   Notes:
+     Conflicts if applied before r29374 (also nominated).
+   Votes:
+     +1: glasser
 
-* r29382, r29397, r29417
-  A few changes to use the mergeinfo-api-cleanup types.
-  Notes:
-    Depends on r29374.
-  Votes:
-    +1: glasser
+ * r29382, r29397, r29417
+   A few changes to use the mergeinfo-api-cleanup types.
+   Notes:
+     Depends on r29374.
+   Votes:
+     +1: glasser
 
 Approved changes:
 
