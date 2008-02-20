@@ -14,6 +14,15 @@ Status of 1.5.0:
 
 Candidate changes:
 
+ * r29434, r29436, r29438
+   Copy-on-update can use loggy incorrectly, and possibly lead to dataloss
+   Notes: although the issue #2986 summary doesn't say so, r29438
+          actually fixed a dataloss bug (a file could end up with
+          properties that no one had ever intended to put on it).
+          r29434 and r29436 are just regression tests for r29438.
+   Votes:
+     +1: kfogel
+
  * r29155
    Allow packagers to build some parts of svn against installed svn libs.
    Votes:
