@@ -3702,7 +3702,7 @@ fs_get_mergeinfo(apr_hash_t **mergeinfo,
   if (! svn_fs_fs__fs_supports_mergeinfo(root->fs))
     return svn_error_createf
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-       _("Querying mergeinfo requries version %d of the FSFS filesystem "
+       _("Querying mergeinfo requires version %d of the FSFS filesystem "
          "schema; filesystem '%s' uses only version %d"),
        SVN_FS_FS__MIN_MERGEINFO_FORMAT, root->fs->path, ffd->format);
 
