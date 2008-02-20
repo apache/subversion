@@ -112,7 +112,13 @@ Candidate changes:
      Aborting on invalid user input is Bad.
    Votes:
      +1: hwright
-   
+
+ * r29454:
+   Remove the unused svn_rangelist_count_revs() API.
+   Notes:
+     This is an incompatible change; it must be backported or reverted.
+   Votes:
+     +1: hwright
 
 Approved changes:
 
