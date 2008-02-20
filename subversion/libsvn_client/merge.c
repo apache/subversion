@@ -1547,6 +1547,11 @@ filter_merged_revisions(apr_array_header_t **remaining_ranges,
    around the values of URL1, REVISION1, URL2, and REVISION2.
 
    NOTE: This should only be called when honoring mergeinfo.
+
+   When performing reverse merges, return SVN_ERR_CLIENT_NOT_READY_TO_MERGE if
+   URL1@REVISION1, URL2@REVISION2, and ENTRY are all on the same line of
+   history but ENTRY-REVISION is older than the REVISION1-REVISION2 range, see
+   comment re issue #2973 below.
 */
 static svn_error_t *
 calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
@@ -1584,6 +1589,70 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
                                   target_mergeinfo, implicit_mergeinfo,
                                   requested_rangelist,
                                   (revision1 > revision2), entry, pool));
+
+  /* Issue #2973 -- from the continuing series of "Why, since the advent of
+     merge tracking, allowing merges into mixed rev and locally modified
+     working copies isn't simple and could be considered downright evil".
+     
+     If reverse merging a range to the WC path represented by ENTRY, from
+     that path's own history, where the path inherits no locally modified
+     mergeinfo from its WC parents (i.e. there is no uncommitted merge to
+     the WC), and the path's working revision is older than the range, then
+     the merge will always be a no-op.  This is because we only allow reverse
+     merges of ranges in the path's explicit or natural mergeinfo and a
+     reverse merge from the path's future history obviously isn't going to be
+     in either, hence the no-op.
+
+     The problem is two-fold.  First, in a mixed rev WC, the change we
+     want to revert might actually be to some child of the target path
+     which is at a younger working revision.  Sure, we can merge directly
+     to that child or update the WC or even use --ignore-ancestry and then
+     successfully run the reverse merge, but that gets to the second
+     problem: Those courses of action are not very obvious.  Before 1.5 if
+     a user committed a change that didn't touch the commit target, then
+     immediately decided to revert that change via a reverse merge it would
+     just DTRT.  But with the advent of merge tracking the user gets a no-op.
+
+     So in the name of user friendliness, return an error suggesting a helpful
+     course of action.
+  */
+  if (((*remaining_ranges)->nelts == 0)
+      && (revision2 < revision1)
+      && (entry->revision <= revision2))
+    {
+      /* Hmmm, an inoperative reverse merge from the "future".  If it is
+         from our own future return a helpful error. */
+      svn_error_t *err;
+      const char *start_url;
+      svn_opt_revision_t requested, unspec, pegrev, *start_revision;
+      unspec.kind = svn_opt_revision_unspecified;
+      requested.kind = svn_opt_revision_number;
+      requested.value.number = entry->revision;
+      pegrev.kind = svn_opt_revision_number;
+      pegrev.value.number = revision1;
+
+      err = svn_client__repos_locations(&start_url, &start_revision,
+                                        NULL, NULL, ra_session, url1,
+                                        &pegrev, &requested,
+                                        &unspec, ctx, pool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_FS_NOT_FOUND
+              || err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND
+              || err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES)
+            svn_error_clear(err);
+          else
+            return err;
+        }
+      else if (strcmp(start_url, entry->url) == 0)
+        {
+          return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
+                                  _("Cannot reverse-merge a range from a "
+                                    "path's own future history; try "
+                                    "updating first"));
+        }
+    }
+
   return SVN_NO_ERROR;
 }
 
