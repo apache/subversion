@@ -40,5 +40,12 @@ Candidate changes:
      +1: arfrever
      +1: pburba (r29401)
 
+ * r29440
+   With the advent of merge tracking, a reverse merge from a target's
+   own history can no-op in some common use cases.  Prior to 1.5 these
+   merges worked, so give a helpful warning that an update might be needed.
+   Votes:
+     +1: pburba
+
 Approved changes:
 
