@@ -1646,7 +1646,7 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
       else if (strcmp(start_url, entry->url) == 0)
         {
           return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                                  _("Cannot reverse merge a range from a "
+                                  _("Cannot reverse-merge a range from a "
                                     "path's own future history; try "
                                     "updating first"));
         }
