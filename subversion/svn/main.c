@@ -731,7 +731,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn:externals  - A newline separated list of module specifiers,\n"
      "      each of which consists of a relative directory path, optional\n"
      "      revision flags and an URL.  The ordering of the three elements\n"
-     "      implements different behavior.  Subversion 1.4 and earler only\n"
+     "      implements different behavior.  Subversion 1.4 and earlier only\n"
      "      support the following formats and the URLs cannot have peg\n"
      "      revisions:\n"
      "        foo             http://example.com/repos/zig\n"
