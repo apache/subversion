@@ -35,12 +35,6 @@ Candidate changes:
    Votes:
      +1: hwright
 
- * r29379, r29401
-   Support Neon 0.28.
-   Votes:
-     +1: arfrever
-     +1: pburba (r29401)
-
  * r29440, r29458
    With the advent of merge tracking, a reverse merge from a target's
    own history can no-op in some common use cases.  Prior to 1.5 these
@@ -117,4 +111,10 @@ Candidate changes:
      +1: hwright
 
 Approved changes:
+
+ * r29379, r29401
+   Support Neon 0.28.
+   Votes:
+     +1: arfrever
+     +1: pburba (r29401)
 
