@@ -89,5 +89,12 @@ Candidate changes:
   Votes:
     +1: glasser
 
+* r29382, r29397, r29417
+  A few changes to use the mergeinfo-api-cleanup types.
+  Notes:
+    Depends on r29374.
+  Votes:
+    +1: glasser
+
 Approved changes:
 
