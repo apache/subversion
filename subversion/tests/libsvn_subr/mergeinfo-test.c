@@ -458,30 +458,6 @@ test_rangelist_reverse(const char **msg,
 }
 
 static svn_error_t *
-test_rangelist_count_revs(const char **msg,
-                          svn_boolean_t msg_only,
-                          svn_test_opts_t *opts,
-                          apr_pool_t *pool)
-{
-  apr_array_header_t *rangelist;
-  apr_uint64_t nbr_revs;
-
-  *msg = "counting revs in rangelist";
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(svn_mergeinfo_parse(&info1, "/trunk: 3,5-7,10", pool));
-  rangelist = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
-
-  nbr_revs = svn_rangelist_count_revs(rangelist);
-
-  if (nbr_revs != 5)
-    return fail(pool, "expecting 5 revs in count, found %d", nbr_revs);
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 test_rangelist_intersect(const char **msg,
                          svn_boolean_t msg_only,
                          svn_test_opts_t *opts,
@@ -1467,7 +1443,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_rangelist_remove_randomly),
     SVN_TEST_PASS(test_remove_mergeinfo),
     SVN_TEST_PASS(test_rangelist_reverse),
-    SVN_TEST_PASS(test_rangelist_count_revs),
     SVN_TEST_PASS(test_rangelist_intersect),
     SVN_TEST_PASS(test_rangelist_intersect_randomly),
     SVN_TEST_PASS(test_diff_mergeinfo),

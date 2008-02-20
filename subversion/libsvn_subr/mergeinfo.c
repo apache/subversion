@@ -946,22 +946,6 @@ svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
   return SVN_NO_ERROR;
 }
 
-apr_uint64_t
-svn_rangelist_count_revs(apr_array_header_t *rangelist)
-{
-  apr_uint64_t nbr_revs = 0;
-  int i;
-
-  for (i = 0; i < rangelist->nelts; i++)
-    {
-      svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
-                                               svn_merge_range_t *);
-      nbr_revs += range->end - range->start;
-    }
-
-  return nbr_revs;
-}
-
 struct mergeinfo_diff_baton
 {
   svn_mergeinfo_t from;
