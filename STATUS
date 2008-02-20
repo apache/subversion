@@ -35,17 +35,6 @@ Candidate changes:
    Votes:
      +1: hwright
 
- * r29440, r29458
-   With the advent of merge tracking, a reverse merge from a target's
-   own history can no-op in some common use cases.  Prior to 1.5 these
-   merges worked, so give a helpful warning that an update might be needed.
-   Added r29458, which returns an error rather than printing a warning,
-   should address glasser's -1.
-   Votes:
-     +1: pburba
-     -0: glasser [error should say "reverse-merge" with a hyphen for
-                  consistency]
-
  * r29412, r29414, r29415
    Change DAV 'SVN-ACTION' log names (which are already being changed
    incompatibly in 1.5) to mesh with svnserve command names, instead of
@@ -118,3 +107,12 @@ Approved changes:
      +1: arfrever
      +1: pburba (r29401)
 
+ * r29440, r29458, r29461
+   With the advent of merge tracking, a reverse merge from a target's
+   own history can no-op in some common use cases.  Prior to 1.5 these
+   merges worked, so give a helpful warning that an update might be needed.
+   Added r29458, which returns an error rather than printing a warning,
+   should address glasser's -1.  r29461 adds the hyphen.
+   Votes:
+     +1: pburba
+     +1: glasser (via IRC)
