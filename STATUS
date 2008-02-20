@@ -114,10 +114,3 @@ Candidate changes:
 
 Approved changes:
 
- * r29418
-   Avoid a hang when you SIGINT svnsync from a 1.4.x server over ra_svn
-   (or in general, when one side has an error when receiving an edit
-   but the other side finishes the command successfully before
-   receiving the asynchronous error).
-   Votes:
-     +1: glasser, lgo
