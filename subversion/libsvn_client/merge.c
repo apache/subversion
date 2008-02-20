@@ -1547,8 +1547,10 @@ filter_merged_revisions(apr_array_header_t **remaining_ranges,
 
    NOTE: This should only be called when honoring mergeinfo.
 
-   NOTE: In certain circumstances this function may produce a warning,
-         see comment re issue #2973 below.
+   When performing reverse merges, return SVN_ERR_CLIENT_NOT_READY_TO_MERGE if
+   URL1@REVISION1, URL2@REVISION2, and ENTRY are all on the same line of
+   history but ENTRY-REVISION is older than the REVISION1-REVISION2 range, see
+   comment re issue #2973 below.
 */
 static svn_error_t *
 calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
@@ -1610,15 +1612,15 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
      immediately decided to revert that change via a reverse merge it would
      just DTRT.  But with the advent of merge tracking the user gets a no-op.
 
-     So in the name of user friendliness, if this happens, give the user
-     a little help.
+     So in the name of user friendliness, return an error suggesting a helpful
+     course of action.
   */
   if (((*remaining_ranges)->nelts == 0)
       && (revision2 < revision1)
       && (entry->revision <= revision2))
     {
       /* Hmmm, an inoperative reverse merge from the "future".  If it is
-         from our own future give a helpful warning. */
+         from our own future return a helpful error. */
       svn_error_t *err;
       const char *start_url;
       svn_opt_revision_t requested, unspec, pegrev, *start_revision;
@@ -1641,17 +1643,12 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
           else
             return err;
         }
-      else
+      else if (strcmp(start_url, entry->url) == 0)
         {
-          if (strcmp(start_url, entry->url) == 0)
-            {
-              err = svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                                     _("Cannot reverse merge a range from a "
-                                       "path's own future history; try "
-                                       "updating first"));
-              svn_handle_warning(stderr, err);
-              svn_error_clear(err);
-            }
+          return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
+                                  _("Cannot reverse merge a range from a "
+                                    "path's own future history; try "
+                                    "updating first"));
         }
     }
 
