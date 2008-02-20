@@ -49,7 +49,8 @@ Candidate changes:
    should address glasser's -1.
    Votes:
      +1: pburba
-     -1: (r29440) glasser [don't write to stderr from in a library]
+     -0: glasser [error should say "reverse-merge" with a hyphen for
+                  consistency]
 
  * r29412, r29414, r29415
    Change DAV 'SVN-ACTION' log names (which are already being changed
