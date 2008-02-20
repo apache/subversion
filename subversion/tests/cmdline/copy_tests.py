@@ -3895,7 +3895,7 @@ test_list = [ None,
               copy_make_parents_repo_repo,
               URI_encoded_repos_to_wc,
               allow_unversioned_parent_for_copy_src,
-              XFail(replaced_local_source_for_incoming_copy),
+              replaced_local_source_for_incoming_copy,
              ]
 
 if __name__ == '__main__':
