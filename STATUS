@@ -60,16 +60,6 @@ Candidate changes:
    Votes:
      +1: glasser
 
- * r29181, r29374
-   A bunch of mergeinfo API changes (from the mergeinfo-api-cleanup
-   branch).
-   Notes:
-     Must be backported or reverted.
-     r29181 first is just a minor variable name change, but it's both
-     more correct and prevents conflicts in the real change.
-   Votes:
-     +1: glasser
-
  * r29388
    Fix pool usage errors in mergeinfo code (WC corruption, segfaults, etc).
    Notes:
@@ -106,3 +96,13 @@ Approved changes:
    Votes:
      +1: arfrever
      +1: pburba (r29401)
+
+ * r29181, r29374
+   A bunch of mergeinfo API changes (from the mergeinfo-api-cleanup
+   branch).
+   Notes:
+     Must be backported or reverted.
+     r29181 first is just a minor variable name change, but it's both
+     more correct and prevents conflicts in the real change.
+   Votes:
+     +1: glasser, kfogel
