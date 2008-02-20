@@ -709,7 +709,7 @@ parse_capabilities(ne_request *req,
                    svn_ra_neon__session_t *ras,
                    apr_pool_t *pool)
 {
-  void *ne_header_cursor = NULL;
+  const char *header_value;
 
   /* Start out assuming all capabilities are unsupported. */
   apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
@@ -720,62 +720,56 @@ parse_capabilities(ne_request *req,
                APR_HASH_KEY_STRING, capability_no);
 
   /* Then find out which ones are supported. */
-  do {
-    const char *header_name;
-    const char *header_value;
-    ne_header_cursor = ne_response_header_iterate(req,
-                                                  ne_header_cursor,
-                                                  &header_name,
-                                                  &header_value);
-    if (ne_header_cursor && svn_cstring_casecmp(header_name, "dav") == 0)
-      {
-        /* By the time we get the headers, Neon has downcased them and
-           merged them together -- merged in the sense that if a
-           header "foo" appears multiple times, all the values will be
-           concatenated together, with spaces at the splice points.
-           For example, if the server sent:
+  header_value = ne_get_response_header(req, "dav");
+  if (header_value)
+    {
+      /* Multiple headers of the same name will have been merged
+         together by the time we see them (either by an intermediary,
+         as is permitted in HTTP, or by neon) -- merged in the sense
+         that if a header "foo" appears multiple times, all the values
+         will be concatenated together, with spaces at the splice
+         points.  For example, if the server sent:
+         
+            DAV: 1,2
+            DAV: version-control,checkout,working-resource
+            DAV: merge,baseline,activity,version-controlled-collection
+            DAV: http://subversion.tigris.org/xmlns/dav/svn/depth
 
-              DAV: version-control,checkout,working-resource
-              DAV: merge,baseline,activity,version-controlled-collection
-              DAV: http://subversion.tigris.org/xmlns/dav/svn/depth
+          Here we might see:
 
-           Here we might see:
+          header_value == "1,2, version-control,checkout,working-resource, merge,baseline,activity,version-controlled-collection, http://subversion.tigris.org/xmlns/dav/svn/depth, <http://apache.org/dav/propset/fs/1>"
 
-              header_name  == "dav"
-              header_value == "1,2, version-control,checkout,working-resource, merge,baseline,activity,version-controlled-collection, http://subversion.tigris.org/xmlns/dav/svn/depth, <http://apache.org/dav/propset/fs/1>"
-
-           (Deliberately not line-wrapping that, so you can see what
-           we're about to parse.)
-        */
-
-        apr_array_header_t *vals =
-          svn_cstring_split(header_value, ",", TRUE, pool);
-
-        /* Right now we only have a few capabilities to detect, so
-           just seek for them directly.  This could be written
-           slightly more efficiently, but that wouldn't be worth it
-           until we have many more capabilities. */
-
-        if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_DEPTH, vals))
-          apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
-                       APR_HASH_KEY_STRING, capability_yes);
-
-        if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
-          /* The server doesn't know what repository we're referring
-             to, so it can't just say capability_yes. */
-          apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
-                       APR_HASH_KEY_STRING, capability_server_yes);
-
-        if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
-          apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
-                       APR_HASH_KEY_STRING, capability_yes);
-
-        if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY, 
-                                        vals))
-          apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_PARTIAL_REPLAY,
-                       APR_HASH_KEY_STRING, capability_yes);
-      }
-  } while (ne_header_cursor);
+          (Deliberately not line-wrapping that, so you can see what
+          we're about to parse.)
+      */
+      
+      apr_array_header_t *vals =
+        svn_cstring_split(header_value, ",", TRUE, pool);
+      
+      /* Right now we only have a few capabilities to detect, so
+         just seek for them directly.  This could be written
+         slightly more efficiently, but that wouldn't be worth it
+         until we have many more capabilities. */
+      
+      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_DEPTH, vals))
+        apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
+                     APR_HASH_KEY_STRING, capability_yes);
+      
+      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
+        /* The server doesn't know what repository we're referring
+           to, so it can't just say capability_yes. */
+        apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
+                     APR_HASH_KEY_STRING, capability_server_yes);
+      
+      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
+        apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
+                     APR_HASH_KEY_STRING, capability_yes);
+      
+      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY, 
+                                      vals))
+        apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_PARTIAL_REPLAY,
+                     APR_HASH_KEY_STRING, capability_yes);
+    }
 }
 
 
