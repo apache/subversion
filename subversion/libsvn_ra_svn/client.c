@@ -517,7 +517,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   svn_ra_svn_conn_t *conn;
   apr_socket_t *sock;
   apr_uint64_t minver, maxver;
-  apr_array_header_t *mechlist, *caplist;
+  apr_array_header_t *mechlist, *server_caplist, *repos_caplist;
 
   sess = apr_palloc(pool, sizeof(*sess));
   sess->pool = pool;
@@ -547,7 +547,8 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
 
   /* Read server's greeting. */
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "nnll", &minver, &maxver,
-                                       &mechlist, &caplist));
+                                       &mechlist, &server_caplist));
+
   /* We support protocol version 2. */
   if (minver > 2)
     return svn_error_createf(SVN_ERR_RA_SVN_BAD_VERSION, NULL,
@@ -557,7 +558,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
     return svn_error_createf(SVN_ERR_RA_SVN_BAD_VERSION, NULL,
                              _("Server only supports versions up to %d"),
                              (int) maxver);
-  SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
+  SVN_ERR(svn_ra_svn_set_capabilities(conn, server_caplist));
 
   /* All released versions of Subversion support edit-pipeline,
    * so we do not support servers that do not. */
@@ -581,9 +582,13 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   /* This is where the security layer would go into effect if we
    * supported security layers, which is a ways off. */
 
-  /* Read the repository's uuid and root URL. */
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "c?c", &conn->uuid,
-                                       &conn->repos_root));
+  /* Read the repository's uuid and root URL, and perhaps learn more
+     capabilities that weren't available before now. */
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "c?c?l", &conn->uuid,
+                                       &conn->repos_root, &repos_caplist));
+  if (repos_caplist)
+    SVN_ERR(svn_ra_svn_set_capabilities(conn, repos_caplist));
+
   if (conn->repos_root)
     {
       conn->repos_root = svn_path_canonicalize(conn->repos_root, pool);
