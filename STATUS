@@ -46,6 +46,7 @@ Candidate changes:
    merges worked, so give a helpful warning that an update might be needed.
    Votes:
      +1: pburba
+     -1: glasser [don't write to stderr from in a library]
 
 Approved changes:
 
