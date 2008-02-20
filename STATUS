@@ -58,6 +58,7 @@ Candidate changes:
    making up yet another vocabulary to describe SVN operations.
    Votes:
      +1: glasser
+     -0: kfogel (see followup mail to r29412 commit email)
 
  * r29419
    Add an extra token to the revprops block in svnserve "replay-range"
