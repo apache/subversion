@@ -1530,7 +1530,7 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_string,
                                       (svn_mergeinfo_t) value,
                                       iterpool));
-      SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "(cs)", (const char *) key,
+      SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "cs", (const char *) key,
                                      mergeinfo_string));
     }
   svn_pool_destroy(iterpool);
