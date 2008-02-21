@@ -1076,10 +1076,10 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
                                  include_descendants));
 
   SVN_ERR(handle_auth_request(sess_baton, pool));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "(?l)", &mergeinfo_tuple));
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "l", &mergeinfo_tuple));
 
   *catalog = NULL;
-  if (mergeinfo_tuple != NULL && mergeinfo_tuple->nelts > 0)
+  if (mergeinfo_tuple->nelts > 0)
     {
       *catalog = apr_hash_make(pool);
       for (i = 0; i < mergeinfo_tuple->nelts; i++)
