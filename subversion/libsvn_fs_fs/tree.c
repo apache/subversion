@@ -3462,7 +3462,9 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
                                       mergeinfo_string->data,
                                       result_pool));
 
-          apr_hash_set(result_catalog, kid_path, APR_HASH_KEY_STRING,
+          apr_hash_set(result_catalog, 
+                       apr_pstrdup(result_pool, kid_path),
+                       APR_HASH_KEY_STRING,
                        kid_mergeinfo);
         }
 
