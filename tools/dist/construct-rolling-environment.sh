@@ -7,7 +7,7 @@ SWIG=swig-1.3.33
 
 APR=apr-1.2.12
 APR_UTIL=apr-util-1.2.12
-NEON=neon-0.27.2
+NEON=neon-0.28.0
 ZLIB=zlib-1.2.3
 
 HTTPD=httpd-2.2.8
