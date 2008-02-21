@@ -96,8 +96,3 @@ Candidate changes:
 
 Approved changes:
 
- * r29388
-   Fix pool usage errors in mergeinfo code (WC corruption, segfaults, etc).
-   Votes:
-     +1: glasser
-     +1: pburba
