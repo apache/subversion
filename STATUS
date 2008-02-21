@@ -79,13 +79,3 @@ Candidate changes:
      +1: joe
 
 Approved changes:
-
- * r29433, r29478
-   Add more details to FSFS corruption errors.
-   Notes:
-     Not vital, but would be helpful for debugging any remaining
-     corruption errors.  r29478 is a minor comment fix that falls
-     well within the obvious fix rule.
-   Votes:
-     +1: glasser (r29433 only)
-     +1: pburba

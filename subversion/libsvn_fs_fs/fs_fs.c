@@ -1563,11 +1563,13 @@ read_rep_offsets(representation_t **rep_p,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
-                             svn_fs_t *fs,
-                             const svn_fs_id_t *id,
-                             apr_pool_t *pool)
+/* See svn_fs_fs__get_node_revision, which wraps this and adds another
+   error. */
+static svn_error_t *
+get_node_revision_body(node_revision_t **noderev_p,
+                       svn_fs_t *fs,
+                       const svn_fs_id_t *id,
+                       apr_pool_t *pool)
 {
   apr_file_t *revision_file;
   apr_hash_t *headers;
@@ -1729,6 +1731,24 @@ svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
+                             svn_fs_t *fs,
+                             const svn_fs_id_t *id,
+                             apr_pool_t *pool)
+{
+  svn_error_t *err = get_node_revision_body(noderev_p, fs, id, pool);
+  if (err && err->apr_err == SVN_ERR_FS_CORRUPT)
+    {
+      svn_string_t *id_string = svn_fs_fs__id_unparse(id, pool);
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
+                               "Corrupt node-revision '%s'",
+                               id_string->data);
+    }
+  return err;
+}
+
 
 /* Return a formatted string that represents the location of
    representation REP.  If MUTABLE_REP_TRUNCATED is given, the rep is
@@ -2207,15 +2227,13 @@ struct rep_state
   int chunk_index;
 };
 
-/* Read the rep args for REP in filesystem FS and create a rep_state
-   for reading the representation.  Return the rep_state in *REP_STATE
-   and the rep args in *REP_ARGS, both allocated in POOL. */
+/* See create_rep_state, which wraps this and adds another error. */
 static svn_error_t *
-create_rep_state(struct rep_state **rep_state,
-                 struct rep_args **rep_args,
-                 representation_t *rep,
-                 svn_fs_t *fs,
-                 apr_pool_t *pool)
+create_rep_state_body(struct rep_state **rep_state,
+                      struct rep_args **rep_args,
+                      representation_t *rep,
+                      svn_fs_t *fs,
+                      apr_pool_t *pool)
 {
   struct rep_state *rs = apr_pcalloc(pool, sizeof(*rs));
   struct rep_args *ra;
@@ -2244,6 +2262,33 @@ create_rep_state(struct rep_state **rep_state,
   rs->off += 4;
 
   return SVN_NO_ERROR;
+}
+
+/* Read the rep args for REP in filesystem FS and create a rep_state
+   for reading the representation.  Return the rep_state in *REP_STATE
+   and the rep args in *REP_ARGS, both allocated in POOL. */
+static svn_error_t *
+create_rep_state(struct rep_state **rep_state,
+                 struct rep_args **rep_args,
+                 representation_t *rep,
+                 svn_fs_t *fs,
+                 apr_pool_t *pool)
+{
+  svn_error_t *err = create_rep_state_body(rep_state, rep_args, rep, fs, pool);
+  if (err && err->apr_err == SVN_ERR_FS_CORRUPT)
+    {
+      /* ### This always returns "-1" for transaction reps, because
+         ### this particular bit of code doesn't know if the rep is
+         ### stored in the protorev or in the mutable area (for props
+         ### or dir contents).  It is pretty rare for FSFS to *read*
+         ### from the protorev file, though, so this is probably OK.
+         ### And anyone going to debug corruption errors is probably
+         ### going to jump straight to this comment anyway! */
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
+                               "Corrupt representation '%s'",
+                               representation_string(rep, TRUE, pool));
+    }
+  return err;
 }
 
 /* Build an array of rep_state structures in *LIST giving the delta
