@@ -1007,7 +1007,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
                                          info->src_url, info->src_revnum, 
                                          FALSE, ctx, pool));
       if (mergeinfo)
-        SVN_ERR(svn_mergeinfo__to_string(&info->mergeinfo, mergeinfo, pool));
+        SVN_ERR(svn_mergeinfo_to_string(&info->mergeinfo, mergeinfo, pool));
 
       APR_ARRAY_PUSH(paths, const char *) = info->dst_path;
       if (is_move && (! info->resurrection))
@@ -1292,7 +1292,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
         mergeinfo = wc_mergeinfo;
       if (mergeinfo)
         {
-          SVN_ERR(svn_mergeinfo__to_string((svn_string_t **)
+          SVN_ERR(svn_mergeinfo_to_string((svn_string_t **)
                                            &mergeinfo_prop->value,
                                            mergeinfo, pool));
           APR_ARRAY_PUSH(item->outgoing_prop_changes, svn_prop_t *) =

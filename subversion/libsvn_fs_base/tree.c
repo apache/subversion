@@ -4731,7 +4731,7 @@ base_node_origin_rev(svn_revnum_t *revision,
 
 struct get_mergeinfo_data_and_entries_baton
 {
-  apr_hash_t *result_catalog;
+  svn_mergeinfo_catalog_t result_catalog;
   apr_hash_t *children_atop_mergeinfo_trees;
   dag_node_t *node;
   const char *node_path;
@@ -4778,7 +4778,8 @@ txn_body_get_mergeinfo_data_and_entries(void *baton, trail_t *trail)
       /* If the child has mergeinfo, add it to the result catalog. */
       if (has_mergeinfo)
         {
-          apr_hash_t *plist, *child_mergeinfo_hash;
+          apr_hash_t *plist;
+          svn_mergeinfo_t child_mergeinfo;
           svn_string_t *pval;
 
           SVN_ERR(svn_fs_base__dag_get_proplist(&plist, child_node, 
@@ -4793,13 +4794,13 @@ txn_body_get_mergeinfo_data_and_entries(void *baton, trail_t *trail)
                                          "mergeinfo but doesn't"), 
                                        id_str->data);
             }
-          SVN_ERR(svn_mergeinfo_parse(&child_mergeinfo_hash, pval->data, 
+          SVN_ERR(svn_mergeinfo_parse(&child_mergeinfo, pval->data, 
                                       result_pool));
           apr_hash_set(args->result_catalog, 
                        svn_path_join(args->node_path, dirent->name, 
                                      result_pool),
                        APR_HASH_KEY_STRING,
-                       child_mergeinfo_hash);
+                       child_mergeinfo);
         }
 
       /* If the child has descendants with mergeinfo -- that is, if
@@ -4833,7 +4834,7 @@ static svn_error_t *
 crawl_directory_for_mergeinfo(svn_fs_t *fs,
                               dag_node_t *node,
                               const char *node_path,
-                              apr_hash_t *result_catalog,
+                              svn_mergeinfo_catalog_t result_catalog,
                               apr_pool_t *pool)
 {
   struct get_mergeinfo_data_and_entries_baton gmdae_args;
@@ -4874,13 +4875,13 @@ crawl_directory_for_mergeinfo(svn_fs_t *fs,
 }
 
 
-/* Helper for get_mergeinfo_hash_for_path() that will append REL_PATH
+/* Helper for get_mergeinfo_for_path() that will append REL_PATH
    (which may contain slashes) to each path that exists in the
-   mergeinfo hash INPUT, and return a new mergeinfo hash in *OUTPUT.
-   Deep copies the values.  Perform all allocations in POOL. */
+   mergeinfo INPUT, and return a new mergeinfo in *OUTPUT.  Deep
+   copies the values.  Perform all allocations in POOL. */
 static svn_error_t *
-append_to_merged_froms(apr_hash_t **output,
-                       apr_hash_t *input,
+append_to_merged_froms(svn_mergeinfo_t *output,
+                       svn_mergeinfo_t input,
                        const char *rel_path,
                        apr_pool_t *pool)
 {
@@ -4900,13 +4901,13 @@ append_to_merged_froms(apr_hash_t **output,
 
 
 /* Calculate the mergeinfo for PATH under revision ROOT using
-   inheritance type INHERIT.  Set *MERGEINFO_HASH to a parsed
-   mergeinfo hash, or to NULL if there is none.  Results are allocated
-   in POOL; TRAIL->pool is used for temporary allocations.  */
+   inheritance type INHERIT.  Set *MERGEINFO to the mergeinfo, or to
+   NULL if there is none.  Results are allocated in POOL; TRAIL->pool
+   is used for temporary allocations.  */
 
-struct get_mergeinfo_hash_for_path_baton
+struct get_mergeinfo_for_path_baton
 {
-  apr_hash_t **mergeinfo_hash;
+  svn_mergeinfo_t *mergeinfo;
   svn_fs_root_t *root;
   const char *path;
   svn_mergeinfo_inheritance_t inherit;
@@ -4914,16 +4915,16 @@ struct get_mergeinfo_hash_for_path_baton
 };
 
 static svn_error_t *
-txn_body_get_mergeinfo_hash_for_path(void *baton, trail_t *trail)
+txn_body_get_mergeinfo_for_path(void *baton, trail_t *trail)
 {
-  struct get_mergeinfo_hash_for_path_baton *args = baton;
+  struct get_mergeinfo_for_path_baton *args = baton;
   parent_path_t *parent_path, *nearest_ancestor;
   apr_hash_t *proplist;
   svn_string_t *mergeinfo_string;
   apr_pool_t *iterpool;
   dag_node_t *node = NULL;
 
-  *(args->mergeinfo_hash) = NULL;
+  *(args->mergeinfo) = NULL;
   
   SVN_ERR(open_path(&parent_path, args->root, args->path, 0, 
                     NULL, trail, trail->pool));
@@ -4987,20 +4988,20 @@ txn_body_get_mergeinfo_hash_for_path(void *baton, trail_t *trail)
      ranges and b) telescope the merged-from paths.  */
   if (nearest_ancestor == parent_path)
     {
-      SVN_ERR(svn_mergeinfo_parse(args->mergeinfo_hash, 
+      SVN_ERR(svn_mergeinfo_parse(args->mergeinfo, 
                                   mergeinfo_string->data, args->pool));
     }
   else
     {
-      apr_hash_t *tmp_mergeinfo_hash;
-      SVN_ERR(svn_mergeinfo_parse(&tmp_mergeinfo_hash, 
+      svn_mergeinfo_t tmp_mergeinfo;
+      SVN_ERR(svn_mergeinfo_parse(&tmp_mergeinfo,
                                   mergeinfo_string->data, trail->pool));
-      SVN_ERR(svn_mergeinfo_inheritable(&tmp_mergeinfo_hash,
-                                        tmp_mergeinfo_hash,
+      SVN_ERR(svn_mergeinfo_inheritable(&tmp_mergeinfo,
+                                        tmp_mergeinfo,
                                         NULL, SVN_INVALID_REVNUM,
                                         SVN_INVALID_REVNUM, trail->pool));
-      SVN_ERR(append_to_merged_froms(args->mergeinfo_hash,
-                                     tmp_mergeinfo_hash,
+      SVN_ERR(append_to_merged_froms(args->mergeinfo,
+                                     tmp_mergeinfo,
                                      parent_path_relpath(parent_path,
                                                          nearest_ancestor,
                                                          trail->pool),
@@ -5037,26 +5038,25 @@ txn_body_get_node_mergeinfo_stats(void *baton, trail_t *trail)
 }
 
 
-/* Get the mergeinfo for a set of paths, returned in *MERGEINFO_HASH
-   as a hash of mergeinfo hashes keyed by each path.  Returned values
-   are allocated in POOL, while temporary values are allocated in a
-   sub-pool. */
+/* Get the mergeinfo for a set of paths, returned in
+   *MERGEINFO_CATALOG.  Returned values are allocated in POOL, while
+   temporary values are allocated in a sub-pool. */
 static svn_error_t *
-get_mergeinfo_hashes_for_paths(svn_fs_root_t *root,
-                               apr_hash_t **mergeinfo_hash,
-                               const apr_array_header_t *paths,
-                               svn_mergeinfo_inheritance_t inherit,
-                               svn_boolean_t include_descendants,
-                               apr_pool_t *pool)
+get_mergeinfos_for_paths(svn_fs_root_t *root,
+                         svn_mergeinfo_catalog_t *mergeinfo_catalog,
+                         const apr_array_header_t *paths,
+                         svn_mergeinfo_inheritance_t inherit,
+                         svn_boolean_t include_descendants,
+                         apr_pool_t *pool)
 {
-  apr_hash_t *result_hash = apr_hash_make(pool);
+  svn_mergeinfo_catalog_t result_catalog = apr_hash_make(pool);
   apr_pool_t *iterpool = svn_pool_create(pool);
   int i;
 
   for (i = 0; i < paths->nelts; i++)
     {
-      apr_hash_t *path_mergeinfo_hash;
-      struct get_mergeinfo_hash_for_path_baton gmhfp_args;
+      svn_mergeinfo_t path_mergeinfo;
+      struct get_mergeinfo_for_path_baton gmfp_args;
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
       
       svn_pool_clear(iterpool);
@@ -5064,17 +5064,17 @@ get_mergeinfo_hashes_for_paths(svn_fs_root_t *root,
       path = svn_fs__canonicalize_abspath(path, iterpool);
 
       /* Get the mergeinfo for PATH itself. */
-      gmhfp_args.mergeinfo_hash = &path_mergeinfo_hash;
-      gmhfp_args.root = root;
-      gmhfp_args.path = path;
-      gmhfp_args.inherit = inherit;
-      gmhfp_args.pool = pool;
+      gmfp_args.mergeinfo = &path_mergeinfo;
+      gmfp_args.root = root;
+      gmfp_args.path = path;
+      gmfp_args.inherit = inherit;
+      gmfp_args.pool = pool;
       SVN_ERR(svn_fs_base__retry_txn(root->fs, 
-                                     txn_body_get_mergeinfo_hash_for_path,
-                                     &gmhfp_args, iterpool));
-      if (path_mergeinfo_hash)
-        apr_hash_set(result_hash, path, APR_HASH_KEY_STRING, 
-                     path_mergeinfo_hash);
+                                     txn_body_get_mergeinfo_for_path,
+                                     &gmfp_args, iterpool));
+      if (path_mergeinfo)
+        apr_hash_set(result_catalog, path, APR_HASH_KEY_STRING, 
+                     path_mergeinfo);
 
       /* If we're including descendants, do so. */
       if (include_descendants)
@@ -5100,30 +5100,26 @@ get_mergeinfo_hashes_for_paths(svn_fs_root_t *root,
           /* If it's worth crawling, crawl. */
           if (do_crawl)
             SVN_ERR(crawl_directory_for_mergeinfo(root->fs, gnms_args.node,
-                                                  path, result_hash, 
+                                                  path, result_catalog, 
                                                   iterpool));
         }
     }
   svn_pool_destroy(iterpool);
 
-  *mergeinfo_hash = result_hash;
+  *mergeinfo_catalog = result_catalog;
   return SVN_NO_ERROR;
 }
 
 
 /* Implements svn_fs_get_mergeinfo. */
 static svn_error_t *
-base_get_mergeinfo(apr_hash_t **mergeinfo,
+base_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                    svn_fs_root_t *root,
                    const apr_array_header_t *paths,
                    svn_mergeinfo_inheritance_t inherit,
                    svn_boolean_t include_descendants,
                    apr_pool_t *pool)
 {
-  int i;
-  apr_hash_t *mergeinfo_as_hashes;
-  apr_pool_t *subpool, *iterpool;
-
   /* Verify that our filesystem version supports mergeinfo stuff. */
   SVN_ERR(svn_fs_base__test_required_feature_format
           (root->fs, "mergeinfo", SVN_FS_BASE__MIN_MERGEINFO_FORMAT));
@@ -5132,40 +5128,10 @@ base_get_mergeinfo(apr_hash_t **mergeinfo,
   if (root->is_txn_root)
     return svn_error_create(SVN_ERR_FS_NOT_REVISION_ROOT, NULL, NULL);
 
-  subpool = svn_pool_create(pool);
-  iterpool = svn_pool_create(subpool);
-
-  /* Retrieve a path -> mergeinfo hash mapping. */
-  SVN_ERR(get_mergeinfo_hashes_for_paths(root, &mergeinfo_as_hashes, paths, 
-                                         inherit, include_descendants, 
-                                         subpool));
-
-  *mergeinfo = apr_hash_make(pool);
-
-  /* Convert each mergeinfo hash value into a textual representation. */
-  for (i = 0; i < paths->nelts; i++)
-    {
-      svn_stringbuf_t *mergeinfo_buf;
-      apr_hash_t *path_mergeinfo;
-      const char *path = APR_ARRAY_IDX(paths, i, const char *);
-
-      svn_pool_clear(iterpool);
-
-      path_mergeinfo = apr_hash_get(mergeinfo_as_hashes, path, 
-                                    APR_HASH_KEY_STRING);
-      if (path_mergeinfo)
-        {
-          SVN_ERR(svn_mergeinfo_sort(path_mergeinfo, iterpool));
-          SVN_ERR(svn_mergeinfo_to_stringbuf(&mergeinfo_buf, path_mergeinfo,
-                                             iterpool));
-          apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING,
-                       apr_pstrdup(pool, mergeinfo_buf->data));
-        }
-    }
-  svn_pool_destroy(iterpool);
-  svn_pool_destroy(subpool);
-
-  return SVN_NO_ERROR;
+  /* Retrieve a path -> mergeinfo mapping. */
+  return get_mergeinfos_for_paths(root, catalog, paths,
+                                  inherit, include_descendants,
+                                  pool);
 }
 
 

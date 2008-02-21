@@ -96,30 +96,55 @@ extern "C" {
    range is non-inheritable. */
 #define SVN_MERGEINFO_NONINHERITABLE_STR "*"
 
-/** Parse the mergeinfo from @a input into @a *mergeinfo, mapping from
- * paths to @c apr_array_header_t *'s of @c svn_merge_range_t *
- * elements.  If no mergeinfo is available, return an empty hash
- * (never @c NULL).  Perform temporary allocations in @a pool.
+/** Terminology for data structures that contain mergeinfo.
+ *
+ * Subversion commonly uses several data structures to represent
+ * mergeinfo in RAM:
+ *
+ * (a) Strings (@c svn_string_t *) containing "unparsed mergeinfo".
+ *
+ * (b) Hashes mapping merge source paths (@c const char *, starting
+ *     with slashes) to non-empty arrays (@c apr_array_header_t *) of
+ *     merge ranges (@c svn_merge_range_t *), ordered from smallest
+ *     revision range to largest.  These hashes are called "mergeinfo"
+ *     and are represented by @c svn_mergeinfo_t.  The sorted arrays
+ *     are called "rangelists".
+ *
+ * (c) Hashes mapping paths (@c const char *, starting with slashes)
+ *     to @c svn_mergeinfo_t.  These hashes are called "mergeinfo
+ *     catalogs" and are represented by @c svn_mergeinfo_catalog_t.
+ *
+ * Both @c svn_mergeinfo_t and @c svn_mergeinfo_catalog_t are just
+ * typedefs for @c apr_hash_t *; there is no static type-checking, and
+ * you still use standard @c apr_hash_t functions to interact with
+ * them.
+ *
+ * Note that while the keys of mergeinfos are always relative to the
+ * repository root, the keys of a catalog may be relative to something
+ * else, such as an RA session root.
+ */
+
+typedef apr_hash_t *svn_mergeinfo_t;
+typedef apr_hash_t *svn_mergeinfo_catalog_t;
+
+/** Parse the mergeinfo from @a input into @a *mergeinfo.  If no
+ * mergeinfo is available, return an empty mergeinfo (never @c NULL).
+ * Perform temporary allocations in @a pool.
  *
  * If @a input is not a grammatically correct @c SVN_PROP_MERGEINFO
  * property, contains overlapping or unordered revision ranges, or revision
  * ranges with a start revision greater than or equal to its end revision,
  * or contains paths mapped to empty revision ranges, then return
  * @c SVN_ERR_MERGEINFO_PARSE_ERROR.
- *
- * Note: @a *mergeinfo will contain rangelists that are guaranteed to
- * be sorted (ordered by smallest revision ranges to largest).
  * @since New in 1.5.
  */
 svn_error_t *
-svn_mergeinfo_parse(apr_hash_t **mergeinfo, const char *input,
+svn_mergeinfo_parse(svn_mergeinfo_t *mergeinfo, const char *input,
                     apr_pool_t *pool);
 
-/** Calculate the delta between two hashes of mergeinfo (with
- * rangelists sorted in ascending order), @a mergefrom and @a mergeto
- * (which may be @c NULL), and place the result in @a deleted and @a
- * added (neither output argument will ever be @c NULL), stored as the
- * usual mapping of paths to lists of @c svn_merge_range_t *'s.
+/** Calculate the delta between two mergeinfos, @a mergefrom and @a mergeto
+ * (which may be @c NULL), and place the result in @a *deleted and @a
+ * *added (neither output argument may be @c NULL).
  *
  * @a consider_inheritance determines how the rangelists in the two
  * hashes are compared for equality.  If @a consider_inheritance is FALSE,
@@ -139,12 +164,12 @@ svn_mergeinfo_parse(apr_hash_t **mergeinfo, const char *input,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
-                   apr_hash_t *mergefrom, apr_hash_t *mergeto,
+svn_mergeinfo_diff(svn_mergeinfo_t *deleted, svn_mergeinfo_t *added,
+                   svn_mergeinfo_t mergefrom, svn_mergeinfo_t mergeto,
                    svn_boolean_t consider_inheritance,
                    apr_pool_t *pool);
 
-/** Merge hash of mergeinfo, @a changes, into existing hash @a
+/** Merge one mergeinfo, @a changes, into another mergeinfo @a
  * mergeinfo.
  *
  * When intersecting rangelists for a path are merged, the inheritability of
@@ -155,15 +180,10 @@ svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
  *  e.g. '/A: 1,3-4'  merged with '/A: 1,3,4*,5' --> '/A: 1,3-5'
  *       '/A: 1,3-4*' merged with '/A: 1,3,4*,5' --> '/A: 1,3,4*,5'
  *
- * Note: @a mergeinfo and @a changes must have rangelists that are
- * sorted as said by @c svn_sort_compare_ranges().  After the merge @a
- * mergeinfo will have rangelists that are guaranteed to be in sorted
- * order.
- *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_mergeinfo_merge(apr_hash_t *mergeinfo, apr_hash_t *changes,
+svn_mergeinfo_merge(svn_mergeinfo_t mergeinfo, svn_mergeinfo_t changes,
                     apr_pool_t *pool);
 
 /** Removes @a eraser (the subtrahend) from @a whiteboard (the
@@ -172,8 +192,8 @@ svn_mergeinfo_merge(apr_hash_t *mergeinfo, apr_hash_t *changes,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_mergeinfo_remove(apr_hash_t **mergeinfo, apr_hash_t *eraser,
-                     apr_hash_t *whiteboard, apr_pool_t *pool);
+svn_mergeinfo_remove(svn_mergeinfo_t *mergeinfo, svn_mergeinfo_t eraser,
+                     svn_mergeinfo_t whiteboard, apr_pool_t *pool);
 
 /** Calculate the delta between two rangelists consisting of @c
  * svn_merge_range_t * elements (sorted in ascending order), @a from
@@ -230,22 +250,16 @@ svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
                      svn_boolean_t consider_inheritance,
                      apr_pool_t *pool);
 
-/** Find the intersection of two mergeinfo hashes (consisting of @c
- * const char * paths mapped to @c apr_array_header_t *'s of @c
- * svn_merge_range_t * elements), @a mergeinfo1 and @a mergeinfo2, and
- * place the result in @a mergeinfo, which is (deeply) allocated in @a
- * pool.
- *
- * Note: The rangelists of @a mergeinfo1 and @a mergeinfo2 must be
- * sorted as said by @c svn_sort_compare_ranges(). @a output is
- * guaranteed to be in sorted order.
+/** Find the intersection of two mergeinfos, @a mergeinfo1 and @a
+ * mergeinfo2, and place the result in @a *mergeinfo, which is (deeply)
+ * allocated in @a pool.
  *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_mergeinfo_intersect(apr_hash_t **mergeinfo,
-                        apr_hash_t *mergeinfo1,
-                        apr_hash_t *mergeinfo2,
+svn_mergeinfo_intersect(svn_mergeinfo_t *mergeinfo,
+                        svn_mergeinfo_t mergeinfo1,
+                        svn_mergeinfo_t mergeinfo2,
                         apr_pool_t *pool);
 
 /** Find the intersection of two rangelists consisting of @c
@@ -265,6 +279,12 @@ svn_rangelist_intersect(apr_array_header_t **rangelist,
 
 /** Reverse @a rangelist, and the @c start and @c end fields of each
  * range in @a rangelist, in place.
+ *
+ * TODO(miapi): Is this really a valid function?  Rangelists that
+ * aren't sorted, or rangelists containing reverse ranges, are
+ * generally not valid in mergeinfo code.  Can we rewrite the two
+ * places where this is used?
+ *
  * @since New in 1.5.
  */
 svn_error_t *
@@ -272,14 +292,14 @@ svn_rangelist_reverse(apr_array_header_t *rangelist, apr_pool_t *pool);
 
 /** Take an array of svn_merge_range_t *'s in @a rangelist, and convert it
  * back to a text format rangelist in @a output.  If @a rangelist contains
- * no elements, sets @a output with empty string.
+ * no elements, sets @a output to the empty string.
  *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_rangelist_to_stringbuf(svn_stringbuf_t **output,
-                           const apr_array_header_t *rangelist,
-                           apr_pool_t *pool);
+svn_rangelist_to_string(svn_string_t **output,
+                        const apr_array_header_t *rangelist,
+                        apr_pool_t *pool);
 
 /** Take an array of svn_merge_range_t *'s in @a rangelist, and return the
  * number of distint revisions included in it.
@@ -316,81 +336,52 @@ svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
                           svn_revnum_t end,
                           apr_pool_t *pool);
 
-/** Remove redundancies between @a *range_1 and @a *range_2.  @a
- * *range_1 and/or @a *range_2 may be additive or subtractive ranges.
- * The ranges should be sorted such that the minimum of @c
- * *range_1->start and @c *range_1->end is less than or equal to the
- * minimum of @c *range_2->start and @c *range_2->end.
- *
- * If either @a *range_1 or @a *range_2 is NULL, either range contains
- * invalid svn_revnum_t's, or the two ranges do not intersect, then do
- * nothing and return @c FALSE.
- *
- * If the two ranges can be reduced to one range, set @a *range_1 to
- * represent that range, set @a *range_2 to @c NULL, and return @c
- * TRUE.
- *
- * If the two ranges cancel each other out set both @a *range_1 and @a
- * *range_2 to @c NULL and return @c TRUE.
- *
- * If the two ranges intersect but cannot be represented by one range
- * (because one range is additive and the other subtractive) then
- * modify @a *range_1 and @a *range_2 to remove the intersecting
- * ranges and return @c TRUE.
- *
- * The inheritability of @a *range_1 or @a *range_2 is not taken into
- * account.
- *
- * @since New in 1.5.
- */
-svn_boolean_t
-svn_range_compact(svn_merge_range_t **range_1,
-                  svn_merge_range_t **range_2);
-
-/** Return a deep copy of @a mergeinfo, a mapping from paths to
- * @c apr_array_header_t *'s of @c svn_merge_range_t *, excluding all
- * non-inheritable @c svn_merge_range_t.  If @a start and @a end are valid
- * revisions and @a start is less than or equal to @a end, then exclude only the
+/** Return a deep copy of @a mergeinfo, excluding all non-inheritable
+ * @c svn_merge_range_t.  If @a start and @a end are valid revisions
+ * and @a start is less than or equal to @a end, then exclude only the
  * non-inheritable revisions that intersect inclusively with the range
  * defined by @a start and @a end.  If @a path is not NULL remove
- * non-inheritable ranges only for @a path.  If @a mergeinfo is an empty hash,
- * return an empty hash.  Allocate the copy in @a pool.
+ * non-inheritable ranges only for @a path.  Allocate the copy in @a
+ * pool.
  *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_mergeinfo_inheritable(apr_hash_t **inheritable_mergeinfo,
-                          apr_hash_t *mergeinfo,
+svn_mergeinfo_inheritable(svn_mergeinfo_t *inheritable_mergeinfo,
+                          svn_mergeinfo_t mergeinfo,
                           const char *path,
                           svn_revnum_t start,
                           svn_revnum_t end,
                           apr_pool_t *pool);
 
-/** Take a hash of mergeinfo in @a mergeinfo, and convert it back to
- * a text format mergeinfo in @a output.  If @a input contains no
- * elements, return the empty string.
+/** Take a mergeinfo in MERGEINPUT, and convert it back to unparsed
+ *  mergeinfo in *OUTPUT.  If INPUT contains no elements, return the
+ *  empty string.
  *
  * @since New in 1.5.
- */
+*/
 svn_error_t *
-svn_mergeinfo_to_stringbuf(svn_stringbuf_t **output, apr_hash_t *mergeinfo,
-                           apr_pool_t *pool);
+svn_mergeinfo_to_string(svn_string_t **output,
+                        svn_mergeinfo_t mergeinput,
+                        apr_pool_t *pool);
 
 /** Take a hash of mergeinfo in @a mergeinfo, and sort the rangelists
  * associated with each key (in place).
- * Note: This does not sort the hash, only the rangelists in the
- * hash.
+ *
+ * TODO(miapi): mergeinfos should *always* be sorted.  This should be
+ * a private function.
+ *
  * @since New in 1.5
  */
 svn_error_t *
-svn_mergeinfo_sort(apr_hash_t *mergeinfo, apr_pool_t *pool);
+svn_mergeinfo_sort(svn_mergeinfo_t mergeinfo, apr_pool_t *pool);
 
 /** Return a deep copy of @a mergeinfo, allocated in @a pool.
  *
  * @since New in 1.5.
  */
-apr_hash_t *
-svn_mergeinfo_dup(apr_hash_t *mergeinfo, apr_pool_t *pool);
+svn_mergeinfo_t
+svn_mergeinfo_dup(svn_mergeinfo_t mergeinfo, apr_pool_t *pool);
 
 /** Return a deep copy of @a rangelist, allocated in @a pool.
  *

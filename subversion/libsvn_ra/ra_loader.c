@@ -659,7 +659,7 @@ svn_error_t *svn_ra_get_dir2(svn_ra_session_t *session,
 }
 
 svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
-                                  apr_hash_t **mergeinfo,
+                                  svn_mergeinfo_catalog_t *catalog,
                                   const apr_array_header_t *paths,
                                   svn_revnum_t revision,
                                   svn_mergeinfo_inheritance_t inherit,
@@ -680,11 +680,11 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
   err = svn_ra__assert_mergeinfo_capable_server(session, NULL, pool);
   if (err)
     {
-      *mergeinfo = NULL;
+      *catalog = NULL;
       return err;
     }
 
-  return session->vtable->get_mergeinfo(session, mergeinfo, paths,
+  return session->vtable->get_mergeinfo(session, catalog, paths,
                                         revision, inherit,
                                         include_descendants, pool);
 }

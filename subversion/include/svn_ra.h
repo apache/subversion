@@ -884,15 +884,11 @@ svn_ra_get_dir(svn_ra_session_t *session,
                apr_pool_t *pool);
 
 /**
- * Set @a *mergeoutput to a hash mapping <tt>const char *</tt> target
- * paths (taken from @a paths) to mergeinfo hashes (which themselves
- * map <tt>const char *</tt> merged-from paths to
- * <tt>apr_array_header_t *</tt> revision range lists of
- * <tt>svn_merge_range_t *</tt> elements).  If no mergeinfo is
- * available, set @a *mergeoutput to @c NULL.  The requested mergeinfo
- * hashes are for @a paths (which are relative to @a session's URL) in
- * @a revision.  If one of the paths does not exist in that revision,
- * return SVN_ERR_FS_NOT_FOUND.
+ * Set @a *catalog to a mergeinfo catalog for the paths in @a paths.
+ * If no mergeinfo is available, set @a *catalog to @c NULL.  The
+ * requested mergeinfo hashes are for @a paths (which are relative to
+ * @a session's URL) in @a revision.  If one of the paths does not exist
+ * in that revision, return SVN_ERR_FS_NOT_FOUND.
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a paths is retrieved.
@@ -902,7 +898,7 @@ svn_ra_get_dir(svn_ra_session_t *session,
  * the @c SVN_PROP_MERGEINFO property explicitly set on it.  (Note
  * that inheritance is only taken into account for the elements in @a
  * paths; descendants of the elements in @a paths which get their
- * mergeinfo via inheritance are not included in @a *mergeoutput.)
+ * mergeinfo via inheritance are not included in @a *catalog.)
  *
  * Allocate the returned values in @a pool.
  *
@@ -917,7 +913,7 @@ svn_ra_get_dir(svn_ra_session_t *session,
  */
 svn_error_t *
 svn_ra_get_mergeinfo(svn_ra_session_t *session,
-                     apr_hash_t **mergeoutput,
+                     svn_mergeinfo_catalog_t *catalog,
                      const apr_array_header_t *paths,
                      svn_revnum_t revision,
                      svn_mergeinfo_inheritance_t inherit,
