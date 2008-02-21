@@ -157,7 +157,7 @@ def output_info(path, info, window):
     window.AppendText("Changelist: %s\n" % info.changelist)
   window.AppendText("\n")
 
-class _item():
+class _item:
   pass
   
 class SvnCLBrowse(wx.App):
