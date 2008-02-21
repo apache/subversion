@@ -87,12 +87,3 @@ Candidate changes:
      +1: joe
 
 Approved changes:
-
- * r29288, r29348
-   Fix issue #2996: Catch improper argument to diff against base revision.  
-   This fixes a couple of potential aborts farther down the call stack.
-   Justification:
-     Aborting on invalid user input is Bad.
-   Votes:
-     +1: hwright
-     +1: pburba

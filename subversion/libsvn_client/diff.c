@@ -1687,6 +1687,13 @@ svn_client_diff_peg4(const apr_array_header_t *options,
   struct diff_cmd_baton diff_cmd_baton;
   svn_wc_diff_callbacks2_t diff_callbacks;
 
+  if (svn_path_is_url(path) && 
+        (start_revision->kind == svn_opt_revision_base 
+         || end_revision->kind == svn_opt_revision_base) )
+    return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
+                            _("Revision type requires a working copy "
+                              "path, not a URL"));
+
   /* fill diff_param */
   diff_params.options = options;
   diff_params.path1 = path;
