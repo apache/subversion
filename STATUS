@@ -57,7 +57,7 @@ Candidate changes:
    Votes:
      +1: glasser
 
- * r29454:
+ * r29454
    Remove the unused svn_rangelist_count_revs() API.
    Notes:
      This is an incompatible change; it must be backported or reverted.
@@ -66,16 +66,23 @@ Candidate changes:
    Votes:
      +1: hwright
 
- * r29421, r29425:
+ * r29421, r29425
    Enable PKCS#11 (smartcard) support in libsvn_ra_neon.
    Votes:
      +1: joe
 
- * r29422, r29423, r29426, r29429:
+ * r29422, r29423, r29426, r29429
    Various ra_neon configuration handling fixes.
    Notes:        
      Conflicts if applied before r29421+r29425 (nominated above)
    Votes:
      +1: joe
+
+ * r29256, r29482
+   Update Neon shipped in the dependency tarball to 0.28.0.
+   Note: While this isn't required, it would be useful to have the
+     dependency versions on the branch match those we actually ship.
+   Votes:
+     +1: hwright
 
 Approved changes:
