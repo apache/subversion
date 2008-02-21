@@ -2299,6 +2299,9 @@ create_rep_state_body(struct rep_state **rep_state,
   return SVN_NO_ERROR;
 }
 
+/* Read the rep args for REP in filesystem FS and create a rep_state
+   for reading the representation.  Return the rep_state in *REP_STATE
+   and the rep args in *REP_ARGS, both allocated in POOL. */
 static svn_error_t *
 create_rep_state(struct rep_state **rep_state,
                  struct rep_args **rep_args,
@@ -2322,10 +2325,6 @@ create_rep_state(struct rep_state **rep_state,
     }
   return err;
 }
-
-/* Read the rep args for REP in filesystem FS and create a rep_state
-   for reading the representation.  Return the rep_state in *REP_STATE
-   and the rep args in *REP_ARGS, both allocated in POOL. */
 
 /* Build an array of rep_state structures in *LIST giving the delta
    reps from first_rep to a plain-text or self-compressed rep.  Set
