@@ -52,14 +52,6 @@ Candidate changes:
    Votes:
      +1: glasser
 
- * r29433
-   Add more details to FSFS corruption errors.
-   Notes:
-     Not vital, but would be helpful for debugging any remaining
-     corruption errors.
-   Votes:
-     +1: glasser
-
  * r29382, r29397, r29417
    A few changes to use the mergeinfo-api-cleanup types.
    Votes:
@@ -87,3 +79,13 @@ Candidate changes:
      +1: joe
 
 Approved changes:
+
+ * r29433, r29478
+   Add more details to FSFS corruption errors.
+   Notes:
+     Not vital, but would be helpful for debugging any remaining
+     corruption errors.  r29478 is a minor comment fix that falls
+     well within the obvious fix rule.
+   Votes:
+     +1: glasser (r29433 only)
+     +1: pburba
