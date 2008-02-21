@@ -49,7 +49,8 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
   serf_bucket_t *bucket;
   svn_ra_serf__connection_t *conn = baton;
 
-  bucket = serf_bucket_socket_create(sock, conn->bkt_alloc);
+  bucket = serf_context_bucket_socket_create(conn->session->context, 
+                                             sock, conn->bkt_alloc);
   if (conn->using_ssl)
     {
       bucket = serf_bucket_ssl_decrypt_create(bucket, conn->ssl_context,
