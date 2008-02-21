@@ -91,9 +91,3 @@ Candidate changes:
 
 Approved changes:
 
- * r29379, r29401
-   Support Neon 0.28.
-   Votes:
-     +1: arfrever
-     +1: pburba (r29401)
-
