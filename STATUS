@@ -97,4 +97,15 @@ Candidate changes:
    Votes:
      +1: glasser
 
+ * r29489
+   Read and write the response to the ra_svn "get-mergeinfo" command
+   the way we claim to in the protocol document, instead of losing all
+   but the first key-value pair.
+   Notes:
+     Fixes merge_tests.py 78 over ra_svn.  Incompatible "change" to
+     the ra_svn protocol (if you consider "follow the protocol" to be
+     a change).
+   Votes:
+     +1: glasser
+
 Approved changes:
