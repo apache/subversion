@@ -85,4 +85,16 @@ Candidate changes:
    Votes:
      +1: hwright
 
+ * r29486
+   Support "svn changelist -R" (as the usual alias for --depth=infinity).
+   Votes:
+     +1: glasser
+
+ * r29487
+   Clarify that changelists only contain files.
+   Notes:
+     Textual conflict if r29486 is not backported.
+   Votes:
+     +1: glasser
+
 Approved changes:
