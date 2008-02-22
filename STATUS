@@ -70,7 +70,13 @@ Candidate changes:
 
 Approved changes:
 
- * r29382, r29397, r29417
+ * r29382, r29397
    A few changes to use the mergeinfo-api-cleanup types.
+   Votes:
+     +1: glasser, kfogel
+
+ * r29417
+   More mergeinfo-api-cleanup followup.
+   Notes: This depends on the 'log -g' group, above.
    Votes:
      +1: glasser, kfogel
