@@ -413,10 +413,11 @@ dump_node(struct edit_baton *eb,
           if (cmp_rev < eb->oldest_dumped_rev)
             SVN_ERR(svn_stream_printf
                     (eb->feedback_stream, pool,
-                     _("WARNING: Referencing data in revision %ld"
-                       ", which is older than the oldest\nWARNING: dumped revision "
-                       "(%ld).  Loading this dump into an empty "
-                       "repository\nWARNING: will fail.\n"),
+                     _("WARNING: Referencing data in revision %ld,"
+                       " which is older than the oldest\n"
+                       "WARNING: dumped revision (%ld).  Loading this dump"
+                       " into an empty repository\n"
+                       "WARNING: will fail.\n"),
                      cmp_rev, eb->oldest_dumped_rev));
 
           SVN_ERR(svn_stream_printf(eb->stream, pool,
