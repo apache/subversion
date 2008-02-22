@@ -61,13 +61,6 @@ Candidate changes:
    Votes:
      +1: hwright
 
- * r29422, r29423, r29426, r29429
-   Various ra_neon configuration handling fixes.
-   Notes:        
-     Conflicts if applied before r29421+r29425 (nominated above)
-   Votes:
-     +1: joe
-
 Approved changes:
 
  * r29417
@@ -75,3 +68,10 @@ Approved changes:
    Notes: This depends on the 'log -g' group, above.
    Votes:
      +1: glasser, kfogel
+
+ * r29422, r29423, r29426, r29429
+   Various ra_neon configuration handling fixes.
+   Notes:        
+     Conflicts if applied before r29421+r29425 (nominated above)
+   Votes:
+     +1: joe, kfogel
