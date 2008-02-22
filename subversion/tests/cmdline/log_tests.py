@@ -1115,7 +1115,7 @@ def merge_sensitive_log_single_revision(sbox):
 
   log_chain = parse_log_output(output)
   expected_merges = {
-    14: [], 13 : [14], 12 : [14], 11 : [14, 12], 7 : [14, 12],
+    14: [], 13 : [14], 12 : [14], 11 : [14, 12],
     }
   check_merge_results(log_chain, expected_merges)
 
@@ -1125,7 +1125,7 @@ def merge_sensitive_log_single_revision(sbox):
                                                    '-g', '-r12', BRANCH_B_path)
   log_chain = parse_log_output(output)
   expected_merges = {
-      12: [], 11 : [12], 7 : [12],
+      12: [], 11 : [12],
     }
   check_merge_results(log_chain, expected_merges)
 
