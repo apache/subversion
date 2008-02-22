@@ -78,13 +78,6 @@ Candidate changes:
    Votes:
      +1: joe
 
- * r29487
-   Clarify that changelists only contain files.
-   Notes:
-     Textual conflict if r29486 is not backported.
-   Votes:
-     +1: glasser, kfogel (iff r29496 also ported)
-
 Approved changes:
 
  * r29256, r29482
@@ -100,3 +93,10 @@ Approved changes:
      Textual conflict if r29487 is not backported.
    Votes:
      +1: kfogel, epg
+
+ * r29487
+   Clarify that changelists only contain files.
+   Notes:
+     Textual conflict if r29486 is not backported.
+   Votes:
+     +1: glasser, kfogel (iff r29496 also ported)
