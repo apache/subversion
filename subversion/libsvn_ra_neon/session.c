@@ -452,8 +452,8 @@ static svn_error_t *get_server_settings(const char **proxy_host,
   http_auth_types = NULL;
   *pk11_provider  = NULL;
 
-  /* If there are defaults, use them, but only if the requested host
-     is not one of the exceptions to the defaults. */
+  /* Use the default proxy-specific settings if and only if
+     "http-proxy-exceptions" is not set to exclude this host. */
   svn_config_get(cfg, &exceptions, SVN_CONFIG_SECTION_GLOBAL,
                  SVN_CONFIG_OPTION_HTTP_PROXY_EXCEPTIONS, NULL);
   if (exceptions)
@@ -471,19 +471,21 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                      SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME, NULL);
       svn_config_get(cfg, proxy_password, SVN_CONFIG_SECTION_GLOBAL,
                      SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, NULL);
-      svn_config_get(cfg, &timeout_str, SVN_CONFIG_SECTION_GLOBAL,
-                     SVN_CONFIG_OPTION_HTTP_TIMEOUT, NULL);
-      SVN_ERR(svn_config_get_bool(cfg, compression, SVN_CONFIG_SECTION_GLOBAL,
-                                  SVN_CONFIG_OPTION_HTTP_COMPRESSION, TRUE));
-      svn_config_get(cfg, &debug_str, SVN_CONFIG_SECTION_GLOBAL,
-                     SVN_CONFIG_OPTION_NEON_DEBUG_MASK, NULL);
-#ifdef SVN_NEON_0_26
-      svn_config_get(cfg, &http_auth_types, SVN_CONFIG_SECTION_GLOBAL,
-                     SVN_CONFIG_OPTION_HTTP_AUTH_TYPES, NULL);
-#endif
-      svn_config_get(cfg, pk11_provider, SVN_CONFIG_SECTION_GLOBAL,
-                     SVN_CONFIG_OPTION_SSL_PKCS11_PROVIDER, NULL);
     }
+  
+  /* Apply non-proxy-specific settings regardless of exceptions: */
+  svn_config_get(cfg, &timeout_str, SVN_CONFIG_SECTION_GLOBAL,
+                 SVN_CONFIG_OPTION_HTTP_TIMEOUT, NULL);
+  SVN_ERR(svn_config_get_bool(cfg, compression, SVN_CONFIG_SECTION_GLOBAL,
+                              SVN_CONFIG_OPTION_HTTP_COMPRESSION, TRUE));
+  svn_config_get(cfg, &debug_str, SVN_CONFIG_SECTION_GLOBAL,
+                 SVN_CONFIG_OPTION_NEON_DEBUG_MASK, NULL);
+#ifdef SVN_NEON_0_26
+  svn_config_get(cfg, &http_auth_types, SVN_CONFIG_SECTION_GLOBAL,
+                 SVN_CONFIG_OPTION_HTTP_AUTH_TYPES, NULL);
+#endif
+  svn_config_get(cfg, pk11_provider, SVN_CONFIG_SECTION_GLOBAL,
+                 SVN_CONFIG_OPTION_SSL_PKCS11_PROVIDER, NULL);
 
   if (cfg)
     server_group = svn_config_find_group(cfg, requested_host,
@@ -509,8 +511,8 @@ static svn_error_t *get_server_settings(const char **proxy_host,
       svn_config_get(cfg, &debug_str, server_group,
                      SVN_CONFIG_OPTION_NEON_DEBUG_MASK, debug_str);
 #ifdef SVN_NEON_0_26
-      svn_config_get(cfg, &http_auth_types, SVN_CONFIG_SECTION_GLOBAL,
-                     SVN_CONFIG_OPTION_HTTP_AUTH_TYPES, NULL);
+      svn_config_get(cfg, &http_auth_types, server_group,
+                     SVN_CONFIG_OPTION_HTTP_AUTH_TYPES, http_auth_types);
 #endif
       svn_config_get(cfg, pk11_provider, server_group,
                      SVN_CONFIG_OPTION_SSL_PKCS11_PROVIDER, *pk11_provider);
@@ -1091,6 +1093,11 @@ svn_ra_neon__open(svn_ra_session_t *session,
       timeout = DEFAULT_HTTP_TIMEOUT;
     ne_set_read_timeout(sess, timeout);
     ne_set_read_timeout(sess2, timeout);
+
+#ifdef SVN_NEON_0_27
+    ne_set_connect_timeout(sess, timeout);
+    ne_set_connect_timeout(sess2, timeout);
+#endif
   }
 
   if (useragent)
