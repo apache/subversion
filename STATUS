@@ -41,7 +41,6 @@ Candidate changes:
    making up yet another vocabulary to describe SVN operations.
    Votes:
      +1: glasser
-     -0: kfogel (see followup mail to r29412 commit email)
 
  * r29454
    Remove the unused svn_rangelist_count_revs() API.
