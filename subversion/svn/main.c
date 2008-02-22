@@ -334,7 +334,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {'r'} },
 
   { "changelist", svn_cl__changelist, {"cl"}, N_
-    ("Associate (or deassociate) local paths with changelist CLNAME.\n"
+    ("Associate (or deassociate) paths to local files with changelist CLNAME.\n"
      "usage: 1. changelist CLNAME TARGET...\n"
      "       2. changelist --remove TARGET...\n"),
     { 'q', 'R', opt_depth, opt_remove, opt_targets, opt_changelist} },
