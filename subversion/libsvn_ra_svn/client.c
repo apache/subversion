@@ -2182,16 +2182,19 @@ ra_svn_replay_range(svn_ra_session_t *session,
       const svn_delta_editor_t *editor;
       void *edit_baton;
       apr_hash_t *rev_props;
-      svn_ra_svn_item_t *item;
-      
+      const char *word;
+      apr_array_header_t *list;
+
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_ra_svn_read_item(sess->conn, iterpool, &item));
-      if (item->kind != SVN_RA_SVN_LIST)
-        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                _("Revision properties not a list"));
+      SVN_ERR(svn_ra_svn_read_tuple(sess->conn, iterpool,
+                                    "wl", &word, &list));
+      if (strcmp(word, "revprops") != 0)
+        return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                 _("Expected 'revprops', found '%s'"),
+                                 word);
 
-      SVN_ERR(svn_ra_svn_parse_proplist(item->u.list, iterpool, &rev_props));
+      SVN_ERR(svn_ra_svn_parse_proplist(list, iterpool, &rev_props));
 
       SVN_ERR(revstart_func(rev, replay_baton,
                             &editor, &edit_baton,

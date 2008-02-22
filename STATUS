@@ -58,12 +58,3 @@ Approved changes:
    Notes: This depends on the 'log -g' group, above.
    Votes:
      +1: glasser, kfogel
-
- * r29419
-   Add an extra token to the revprops block in svnserve "replay-range"
-   response.  Avoids a weird "malformed data" error in some cases (eg,
-   SIGINTing an svnsync).
-   Notes:
-     Must be backported or reverted.
-   Votes:
-     +1: glasser, kfogel

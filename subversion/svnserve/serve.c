@@ -2382,9 +2382,9 @@ static svn_error_t *replay_range(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                                  authz_check_access_cb_func(b),
                                                  b,
                                                  iterpool));
-      SVN_ERR(svn_ra_svn_start_list(conn, iterpool));
+      SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "w(!", "revprops"));
       SVN_ERR(svn_ra_svn_write_proplist(conn, iterpool, props));
-      SVN_ERR(svn_ra_svn_end_list(conn, iterpool));
+      SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "!)"));
 
       SVN_ERR(replay_one_revision(conn, b, rev, low_water_mark,
                                   send_deltas, iterpool));
