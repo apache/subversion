@@ -317,8 +317,8 @@ client_ssl_pkcs11_pin_entry(void *userdata,
   svn_auth_cred_ssl_client_cert_pw_t *pw_creds;
   
   /* Always prevent PIN caching. */
-  svn_auth_set_parameter
-    (ras->callbacks->auth_baton, SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
+  svn_auth_set_parameter(ras->callbacks->auth_baton,
+                         SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
   
   if (attempt == 0)
     {
@@ -336,9 +336,9 @@ client_ssl_pkcs11_pin_entry(void *userdata,
                                        ras->pool);
     }
   else
-     err = svn_auth_next_credentials(&creds, 
-                                     ras->auth_iterstate,
-                                     ras->pool);
+    {
+      err = svn_auth_next_credentials(&creds, ras->auth_iterstate, ras->pool);
+    }
   
   if (err || ! creds)
     {
