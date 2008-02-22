@@ -39,9 +39,3 @@ Candidate changes:
 
 Approved changes:
 
- * r29539, r29540
-   Add missing values to status.rnc
-   Notes:
-     This might constitute an 'obvious fix'.
-   Votes:
-     +1: cmpilato, lgo
