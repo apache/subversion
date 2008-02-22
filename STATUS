@@ -92,13 +92,6 @@ Candidate changes:
    Votes:
      +1: glasser, kfogel (iff r29496 also ported)
 
- * r29496, 29498
-   Clarifications to r29487 clarification (see above).
-   Notes:
-     Textual conflict if r29487 is not backported.
-   Votes:
-     +1: kfogel
-
 Approved changes:
 
  * r29489
@@ -116,3 +109,10 @@ Approved changes:
    Support "svn changelist -R" (as the usual alias for --depth=infinity).
    Votes:
      +1: glasser, kfogel
+
+ * r29496, 29498
+   Clarifications to r29487 clarification (see above).
+   Notes:
+     Textual conflict if r29487 is not backported.
+   Votes:
+     +1: kfogel, epg
