@@ -999,9 +999,9 @@ combine_mergeinfo_path_lists(apr_array_header_t **combined_list,
          and do so. */
       for (i = 0; i < num_revs; i++)
         {
+          svn_merge_range_t *range;
           rp = APR_ARRAY_IDX(rangelist_paths, i, struct rangelist_path *);
-          svn_merge_range_t *range = APR_ARRAY_IDX(rp->rangelist, 0,
-                                                   svn_merge_range_t *);
+          range = APR_ARRAY_IDX(rp->rangelist, 0, svn_merge_range_t *);
 
           /* Set the start of the range to beyond the end of the range we
              just built.  If the range is now "inverted", we can get pop it
