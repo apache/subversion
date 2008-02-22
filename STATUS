@@ -29,12 +29,3 @@ Approved changes:
           r29434 and r29436 are just regression tests for r29438.
    Votes:
      +1: kfogel, cmpilato
-
- * r29454
-   Remove the unused svn_rangelist_count_revs() API.
-   Notes:
-     This is an incompatible change; it must be backported or reverted.
-     Dependent on r29269 (nominated above) which removes the last use
-     of svn_rangelist_count_revs().
-   Votes:
-     +1: hwright, kfogel (assuming r29269 gets backported)
