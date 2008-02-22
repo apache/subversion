@@ -25,6 +25,11 @@ Candidate changes:
    Votes:
      +1: epg
 
+ * r29546
+   Fix confusing --encoding error from propedit and propset.
+   Votes:
+     +1: epg
+
 Approved changes:
 
  * r29539, r29540
