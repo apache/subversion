@@ -78,13 +78,6 @@ Candidate changes:
    Votes:
      +1: joe
 
- * r29256, r29482
-   Update Neon shipped in the dependency tarball to 0.28.0.
-   Note: While this isn't required, it would be useful to have the
-     dependency versions on the branch match those we actually ship.
-   Votes:
-     +1: hwright
-
  * r29487
    Clarify that changelists only contain files.
    Notes:
@@ -98,6 +91,13 @@ Approved changes:
    Support "svn changelist -R" (as the usual alias for --depth=infinity).
    Votes:
      +1: glasser, kfogel
+
+ * r29256, r29482
+   Update Neon shipped in the dependency tarball to 0.28.0.
+   Note: While this isn't required, it would be useful to have the
+     dependency versions on the branch match those we actually ship.
+   Votes:
+     +1: hwright, kfogel
 
  * r29496, 29498
    Clarifications to r29487 clarification (see above).
