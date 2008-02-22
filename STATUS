@@ -51,13 +51,6 @@ Candidate changes:
    Votes:
      +1: hwright, kfogel (assuming r29269 gets backported)
 
- * r29420
-   Ruby bindings follow along with the mergeinfo-api-cleanup.
-   Notes:
-     This is dependent on r29374 (previously merged).
-   Votes:
-     +1: joeswatosh
-
 Approved changes:
 
  * r29417
@@ -65,3 +58,10 @@ Approved changes:
    Notes: This depends on the 'log -g' group, above.
    Votes:
      +1: glasser, kfogel
+
+ * r29420
+   Ruby bindings follow along with the mergeinfo-api-cleanup.
+   Notes:
+     This is dependent on r29374 (previously merged).
+   Votes:
+     +1: joeswatosh, cmpilato
