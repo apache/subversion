@@ -14,6 +14,13 @@ Status of 1.5.0:
 
 Candidate changes:
 
+ * r29155
+   Allow packagers to build some parts of svn against installed svn libs.
+   Votes:
+     +1: epg
+
+Approved changes:
+
  * r29434, r29436, r29438
    Copy-on-update can use loggy incorrectly, and possibly lead to dataloss
    Notes: although the issue #2986 summary doesn't say so, r29438
@@ -21,14 +28,7 @@ Candidate changes:
           properties that no one had ever intended to put on it).
           r29434 and r29436 are just regression tests for r29438.
    Votes:
-     +1: kfogel
-
- * r29155
-   Allow packagers to build some parts of svn against installed svn libs.
-   Votes:
-     +1: epg
-
-Approved changes:
+     +1: kfogel, cmpilato
 
  * r29417
    More mergeinfo-api-cleanup followup.
