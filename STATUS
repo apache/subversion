@@ -51,10 +51,3 @@ Approved changes:
      of svn_rangelist_count_revs().
    Votes:
      +1: hwright, kfogel (assuming r29269 gets backported)
-
- * r29412, r29414, r29415
-   Change DAV 'SVN-ACTION' log names (which are already being changed
-   incompatibly in 1.5) to mesh with svnserve command names, instead of
-   making up yet another vocabulary to describe SVN operations.
-   Votes:
-     +1: glasser, kfogel

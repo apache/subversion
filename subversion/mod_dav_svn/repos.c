@@ -3463,7 +3463,7 @@ do_walk(walker_ctx_t *ctx, int depth)
      DAV client.  */
   dav_svn__operational_log(&ctx->info,
                            apr_psprintf(params->pool,
-                             "list-dir %s r%ld",
+                             "get-dir %s r%ld text",
                              svn_path_uri_encode(ctx->info.repos_path,
                                                  params->pool),
                              ctx->info.root.rev));
