@@ -24,6 +24,7 @@ import sys
 # Our testing module
 import svntest
 from svntest.verify import SVNExpectedStdout, SVNExpectedStderr
+from svntest.verify import SVNUnexpectedStderr
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
