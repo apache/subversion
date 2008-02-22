@@ -434,6 +434,7 @@ load_config(svn_ra_serf__session_t *session,
   return SVN_NO_ERROR;
 }
 
+#if SERF_VERSION_AT_LEAST(0,1,3)
 static void
 svn_ra_serf__progress(void *progress_baton, apr_off_t read, apr_off_t written)
 {
@@ -445,6 +446,7 @@ svn_ra_serf__progress(void *progress_baton, apr_off_t read, apr_off_t written)
                                   serf_sess->pool);
     }
 }
+#endif
 
 static svn_error_t *
 svn_ra_serf__open(svn_ra_session_t *session,
