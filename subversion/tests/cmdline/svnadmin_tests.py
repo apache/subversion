@@ -587,7 +587,7 @@ def recover_fsfs(sbox):
   # Run 'svnadmin recover' and check that the current file is recreated.
   output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
   if errput:
-    raise SVNUnexpectedStderr
+    raise SVNUnexpectedStderr(errput)
 
   actual_current_contents = svntest.main.file_read(current_path)
   svntest.verify.compare_and_display_lines(
@@ -600,7 +600,7 @@ def recover_fsfs(sbox):
   # Run 'svnadmin recover' and check that the current file is fixed.
   output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
   if errput:
-    raise SVNUnexpectedStderr
+    raise SVNUnexpectedStderr(errput)
 
   actual_current_contents = svntest.main.file_read(current_path)
   svntest.verify.compare_and_display_lines(
@@ -613,7 +613,7 @@ def recover_fsfs(sbox):
   # Run 'svnadmin recover' and check that the current file is fixed.
   output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
   if errput:
-    raise SVNUnexpectedStderr
+    raise SVNUnexpectedStderr(errput)
 
   actual_current_contents = svntest.main.file_read(current_path)
   svntest.verify.compare_and_display_lines(
@@ -631,7 +631,7 @@ def recover_fsfs(sbox):
   # Run 'svnadmin recover' and check that the current file is fixed.
   output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
   if errput:
-    raise SVNUnexpectedStderr
+    raise SVNUnexpectedStderr(errput)
 
   actual_current_contents = svntest.main.file_read(current_path)
   svntest.verify.compare_and_display_lines(
@@ -684,7 +684,7 @@ def set_uuid(sbox):
   # Squirrel away the original repository UUID.
   output, errput = svntest.main.run_svnlook('uuid', sbox.repo_dir)
   if errput:
-    raise SVNUnexpectedStderr
+    raise SVNUnexpectedStderr(errput)
   orig_uuid = output[0].rstrip()
 
   # Try setting a new, bogus UUID.
@@ -696,7 +696,7 @@ def set_uuid(sbox):
                                           'setuuid', sbox.repo_dir)
   output, errput = svntest.main.run_svnlook('uuid', sbox.repo_dir)
   if errput:
-    raise SVNUnexpectedStderr
+    raise SVNUnexpectedStderr(errput)
   new_uuid = output[0].rstrip()
   if new_uuid == orig_uuid:
     print "Error: new UUID matches the original one"
@@ -707,7 +707,7 @@ def set_uuid(sbox):
                                           'setuuid', sbox.repo_dir, orig_uuid)
   output, errput = svntest.main.run_svnlook('uuid', sbox.repo_dir)
   if errput:
-    raise SVNUnexpectedStderr
+    raise SVNUnexpectedStderr(errput)
   new_uuid = output[0].rstrip()
   if new_uuid != orig_uuid:
     print "Error: new UUID doesn't match the original one"
