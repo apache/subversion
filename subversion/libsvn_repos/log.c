@@ -851,8 +851,8 @@ get_path_histories(apr_array_header_t **histories,
 /* Unpack a rangelist into a list of discrete revisions.
  *
  * Take an array of 'svn_merge_range_t's in RANGELIST, return an array
- * of @c 'svn_revnum_t's in *REVS.  If RANGELIST contains no elements,
- * *REVS will be empty.
+ * of 'svn_revnum_t's in *REVS.  If RANGELIST contains no elements, set
+ * *REVS to an empty array.
  */
 static svn_error_t *
 rangelist_to_revs(apr_array_header_t **revs,
