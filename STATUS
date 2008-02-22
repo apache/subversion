@@ -59,7 +59,7 @@ Candidate changes:
      Dependent on r29269 (nominated above) which removes the last use
      of svn_rangelist_count_revs().
    Votes:
-     +1: hwright
+     +1: hwright, kfogel (assuming r29269 gets backported)
 
 Approved changes:
 
