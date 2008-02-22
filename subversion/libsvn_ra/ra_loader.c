@@ -148,7 +148,7 @@ load_ra_module(svn_ra__init_func_t *func,
   if (compat_func)
     *compat_func = NULL;
 
-#if APR_HAS_DSO
+#if defined(SVN_USE_DSO) && APR_HAS_DSO
   {
     apr_dso_handle_t *dso;
     apr_dso_handle_sym_t symbol;

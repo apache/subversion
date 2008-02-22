@@ -602,6 +602,8 @@ AS_HELP_STRING([--enable-loadable-ra-modules],
       if test "$enable_shared" = "no"; then
         AC_MSG_ERROR([--enable-loadable-ra-modules conflicts with --disable-shared])
       fi
+      AC_DEFINE(SVN_USE_DSO, 1,
+                [Defined if svn should try to load DSOs])
     fi
 ])
 
