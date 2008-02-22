@@ -19,13 +19,6 @@ Candidate changes:
    Votes:
      +1: epg
 
- * r29539, r29540
-   Add missing values to status.rnc
-   Notes:
-     This might constitute an 'obvious fix'.
-   Votes:
-     +1: cmpilato
-
  * r29437, r29493
    Rename --enable-dso to --enable-loadable-ra-modules and don't try
    to load DSOs unless that option is used.
@@ -33,3 +26,10 @@ Candidate changes:
      +1: epg
 
 Approved changes:
+
+ * r29539, r29540
+   Add missing values to status.rnc
+   Notes:
+     This might constitute an 'obvious fix'.
+   Votes:
+     +1: cmpilato, lgo
