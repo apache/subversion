@@ -19,7 +19,7 @@ Candidate changes:
    Votes:
      +1: epg
 
- * r29531, r29533, r29542
+ * r29531, r29533, r29542, r29551
    Improve memory usage and runtime of 'log -g'.
    Notes: r29531, -33 are doc string changes to prevent textual conflicts.
      with r29542.
