@@ -1095,7 +1095,7 @@ do_merged_logs(svn_fs_t *fs,
       if (changed)
         {
           svn_revnum_t *cur_rev = apr_palloc(permpool, sizeof(*cur_rev));
-          apr_hash_t *mergeinfo;
+          svn_mergeinfo_t mergeinfo;
           apr_array_header_t *cur_paths = apr_array_make(iterpool, paths->nelts,
                                                          sizeof(const char *));
 
@@ -1124,8 +1124,8 @@ do_merged_logs(svn_fs_t *fs,
                                        (descending_order ? i :
                                         revs->nelts - i - 1),
                                        svn_revnum_t);
-      apr_hash_t *mergeinfo = apr_hash_get(found_revisions, &rev,
-                                           sizeof (svn_revnum_t));
+      svn_mergeinfo_t mergeinfo = apr_hash_get(found_revisions, &rev,
+                                               sizeof (svn_revnum_t));
       svn_boolean_t has_children = (apr_hash_count(mergeinfo) > 0);
 
       svn_pool_clear(iterpool);

@@ -30,12 +30,6 @@ Approved changes:
    Votes:
      +1: kfogel, cmpilato
 
- * r29417
-   More mergeinfo-api-cleanup followup.
-   Notes: This depends on the 'log -g' group, above.
-   Votes:
-     +1: glasser, kfogel
-
  * r29454
    Remove the unused svn_rangelist_count_revs() API.
    Notes:
