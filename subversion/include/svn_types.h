@@ -872,13 +872,13 @@ svn_merge_range_contains_rev(svn_merge_range_t *range, svn_revnum_t rev);
  */
 typedef struct svn_location_segment_t
 {
-  /* The beginning (oldest) and ending (youngest) revisions for this
-     segment. */
+  /** The beginning (oldest) and ending (youngest) revisions for this
+      segment. */
   svn_revnum_t range_start;
   svn_revnum_t range_end;
 
-  /* The absolute (sans leading slash) path for this segment.  May be
-     NULL to indicate gaps in an object's history.  */
+  /** The absolute (sans leading slash) path for this segment.  May be
+      NULL to indicate gaps in an object's history.  */
   const char *path;
 
 } svn_location_segment_t;
