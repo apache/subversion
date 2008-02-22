@@ -942,9 +942,9 @@ struct path_list_range
   svn_merge_range_t range;
 };
 
-/* From a standard mergeinfo representation MERGEINFO, return in 
-   *COMBINED_LIST, allocated in POOL, the list of rangelists and each
-   path which has mergeinfo in that rangelist.  */
+/* From MERGEINFO, return in *COMBINED_LIST, allocated in POOL, a list of
+   'struct path_list_range's.  This list represents the rangelists in
+   MERGEINFO and each path which has mergeinfo in that range.  */
 static svn_error_t *
 combine_mergeinfo_path_lists(apr_array_header_t **combined_list,
                              svn_mergeinfo_t mergeinfo,
@@ -1014,11 +1014,13 @@ combine_mergeinfo_path_lists(apr_array_header_t **combined_list,
   return SVN_NO_ERROR;
 }
 
-/* Find and return the logs for PATHS from HIST_START to HIST_END in FS.
-   If DESCENDING_ORDER is TRUE, send the logs back as we find them, else
-   buffer the logs and send them back in youngest->oldest order.
+/* Find logs for PATHS from HIST_START to HIST_END in FS, and invoke
+   RECEIVER with RECEIVER_BATON on them.  If DESCENDING_ORDER is TRUE, send
+   the logs back as we find them, else buffer the logs and send them back
+   in youngest->oldest order.
+
    FOUND_REVISIONS is a list of revisions that have already been located,
-   which should not be sent again.  It should only be NULL on the 
+   and which should not be sent again.  It should only be NULL on the 
    initial invocation, not on subsequent recursive calls.
 
    Unlike do_logs(), below, this function includes merged revisions in the
@@ -1194,9 +1196,10 @@ do_merged_logs(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Find and return the logs for PATHS from HIST_START to HIST_END in FS.
-   If DESCENDING_ORDER is TRUE, send the logs back as we find them, else
-   buffer the logs and send them back in youngest->oldest order.
+/* Find logs for PATHS from HIST_START to HIST_END in FS, and invoke
+   RECEIVER with RECEIVER_BATON on them.  If DESCENDING_ORDER is TRUE, send
+   the logs back as we find them, else buffer the logs and send them back
+   in youngest->oldest order.
 
    Other parameters are the same as svn_repos_get_logs4(). */
 static svn_error_t *
