@@ -857,14 +857,14 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
              particular repository; but if it was 'yes, we still must
              change it to 'no' iff the repository itself doesn't
              support mergeinfo. */
-          apr_hash_t *ignored_mergeoutput;
+          svn_mergeinfo_catalog_t ignored;
           svn_error_t *err;
           apr_array_header_t *paths = apr_array_make(pool, 1,
                                                      sizeof(char *));
           APR_ARRAY_PUSH(paths, const char *) = "";
           
-          err = svn_ra_neon__get_mergeinfo(session, &ignored_mergeoutput,
-                                           paths, 0, FALSE, FALSE, pool);
+          err = svn_ra_neon__get_mergeinfo(session, &ignored, paths, 0,
+                                           FALSE, FALSE, pool);
           
           if (err)
             {
