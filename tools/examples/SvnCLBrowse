@@ -16,18 +16,11 @@
 # history and logs, available at http://subversion.tigris.org/.
 # ====================================================================
 
+# This script requires Python 2.5
+
 import sys
 import os
-import os.path
-import time
-import string
-
-# Try to use Gnu's getopt module.
 import getopt
-try:
-  my_getopt = getopt.gnu_getopt
-except AttributeError:
-  my_getopt = getopt.getopt
 
 # Try to import the wxWidgets modules.
 try:
@@ -472,7 +465,7 @@ the initial browse location.
   sys.exit(errmsg and 1 or 0)
   
 def main():
-  opts, args = my_getopt(sys.argv[1:], 'h?', ['help'])
+  opts, args = getopt.gnu_getopt(sys.argv[1:], 'h?', ['help'])
   for name, value in opts:
     if name == '-h' or name == '-?' or name == '--help':
       usage_and_exit()
