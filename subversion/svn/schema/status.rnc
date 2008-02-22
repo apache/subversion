@@ -35,7 +35,7 @@ attlist.wc-status &=
   attribute item {
     "added" | "conflicted" | "deleted" | "ignored" | "modified" | "replaced"
     | "external" | "unversioned" | "incomplete" | "obstructed" | "normal"
-    | "none"
+    | "missing" | "external" | "none"
   },
   ## Properties status.
   attribute props { "conflicted" | "modified" | "normal" | "none" },
