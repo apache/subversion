@@ -28,19 +28,27 @@ Candidate changes:
    Votes:
      +1: epg
 
- * r29268, r29269, r29287, r29389
-   Fix 'log -g'.
-   Notes: Performance improvements may follow, but merging this is better
-     than nothing (as 'log -g' is currently and completely broken on 1.5.x).
-   Votes:
-     +1: hwright
-
  * r29412, r29414, r29415
    Change DAV 'SVN-ACTION' log names (which are already being changed
    incompatibly in 1.5) to mesh with svnserve command names, instead of
    making up yet another vocabulary to describe SVN operations.
    Votes:
      +1: glasser
+
+Approved changes:
+
+ * r29417
+   More mergeinfo-api-cleanup followup.
+   Notes: This depends on the 'log -g' group, above.
+   Votes:
+     +1: glasser, kfogel
+
+ * r29268, r29269, r29287, r29389, r29527, r29528
+   Fix 'log -g'.
+   Notes: Performance improvements may follow, but merging this is better
+     than nothing (as 'log -g' is currently and completely broken on 1.5.x).
+   Votes:
+     +1: hwright, kfogel
 
  * r29454
    Remove the unused svn_rangelist_count_revs() API.
@@ -50,11 +58,3 @@ Candidate changes:
      of svn_rangelist_count_revs().
    Votes:
      +1: hwright, kfogel (assuming r29269 gets backported)
-
-Approved changes:
-
- * r29417
-   More mergeinfo-api-cleanup followup.
-   Notes: This depends on the 'log -g' group, above.
-   Votes:
-     +1: glasser, kfogel
