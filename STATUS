@@ -26,4 +26,10 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r29437, r29493
+   Rename --enable-dso to --enable-loadable-ra-modules and don't try
+   to load DSOs unless that option is used.
+   Votes:
+     +1: epg
+
 Approved changes:
