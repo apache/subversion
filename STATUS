@@ -97,6 +97,8 @@ Candidate changes:
    Votes:
      +1: glasser
 
+Approved changes:
+
  * r29489
    Read and write the response to the ra_svn "get-mergeinfo" command
    the way we claim to in the protocol document, instead of losing all
@@ -106,6 +108,4 @@ Candidate changes:
      the ra_svn protocol (if you consider "follow the protocol" to be
      a change).
    Votes:
-     +1: glasser
-
-Approved changes:
+     +1: glasser, kfogel
