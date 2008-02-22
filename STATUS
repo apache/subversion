@@ -70,11 +70,6 @@ Candidate changes:
 
 Approved changes:
 
- * r29421, r29425
-   Enable PKCS#11 (smartcard) support in libsvn_ra_neon.
-   Votes:
-     +1: joe, kfogel
-
  * r29382, r29397, r29417
    A few changes to use the mergeinfo-api-cleanup types.
    Votes:

@@ -40,6 +40,10 @@
 #include "svn_xml.h"
 #include "svn_private_config.h"
 
+#ifdef SVN_NEON_0_28
+#include <ne_pkcs11.h>
+#endif
+
 #include "ra_neon.h"
 
 #define DEFAULT_HTTP_TIMEOUT 3600
@@ -60,6 +64,17 @@ static apr_status_t cleanup_uri(void *uri)
   ne_uri_free(uri);
   return APR_SUCCESS;
 }
+
+#ifdef SVN_NEON_0_28
+/* a cleanup routine attached to the pool that contains the PKCS#11
+   provider object. */
+static apr_status_t cleanup_p11provider(void *provider)
+{
+  ne_ssl_pkcs11_provider *prov = provider;
+  ne_ssl_pkcs11_provider_destroy(prov);
+  return APR_SUCCESS;
+}
+#endif
 
 /* A neon-session callback to 'pull' authentication data when
    challenged.  In turn, this routine 'pulls' the data from the client
@@ -286,6 +301,58 @@ client_ssl_decrypt_cert(svn_ra_neon__session_t *ras,
   return ok;
 }
 
+#ifdef SVN_NEON_0_28
+/* Callback invoked to enter PKCS#11 PIN code. */
+static int
+client_ssl_pkcs11_pin_entry(void *userdata,
+                            int attempt,
+                            const char *slot_descr,
+                            const char *token_label,
+                            unsigned int flags,
+                            char *pin)
+{
+  svn_ra_neon__session_t *ras = userdata;
+  svn_error_t *err;
+  void *creds;
+  svn_auth_cred_ssl_client_cert_pw_t *pw_creds;
+  
+  /* Always prevent PIN caching. */
+  svn_auth_set_parameter
+    (ras->callbacks->auth_baton, SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
+  
+  if (attempt == 0)
+    {
+      const char *realmstring;
+      
+      realmstring = apr_psprintf(ras->pool, 
+                                 _("PIN for token \"%s\" in slot \"%s\""),
+                                 token_label, slot_descr);
+      
+      err = svn_auth_first_credentials(&creds,
+                                       &(ras->auth_iterstate),
+                                       SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
+                                       realmstring,
+                                       ras->callbacks->auth_baton,
+                                       ras->pool);
+    }
+  else
+     err = svn_auth_next_credentials(&creds, 
+                                     ras->auth_iterstate,
+                                     ras->pool);
+  
+  if (err || ! creds)
+    {
+      svn_error_clear(err);
+      return -1;
+    }
+  
+  pw_creds = creds;
+  
+  apr_cpystrn(pin, pw_creds->password, NE_SSL_P11PINLEN);
+  
+  return 0;
+}
+#endif
 
 static void
 client_ssl_callback(void *userdata, ne_session *sess,
@@ -349,14 +416,14 @@ client_ssl_callback(void *userdata, ne_session *sess,
 }
 
 /* Set *PROXY_HOST, *PROXY_PORT, *PROXY_USERNAME, *PROXY_PASSWORD,
- * *TIMEOUT_SECONDS, *NEON_DEBUG, *COMPRESSION, and *NEON_AUTO_PROTOCOLS
- * to the information for REQUESTED_HOST, allocated in POOL, if there is
- * any applicable information.  If there is no applicable information or
- * if there is an error, then set *PROXY_PORT to (unsigned int) -1,
- * *TIMEOUT_SECONDS and *NEON_DEBUG to zero, *COMPRESSION to TRUE,
- * *NEON_AUTH_TYPES is left untouched, and the rest are set to NULL.
- * This function can return an error, so before examining any values,
- * check the error return value.
+ * *TIMEOUT_SECONDS, *NEON_DEBUG, *COMPRESSION, *NEON_AUTH_TYPES, and
+ * *PK11_PROVIDER to the information for REQUESTED_HOST, allocated in
+ * POOL, if there is any applicable information.  If there is no
+ * applicable information or if there is an error, then set
+ * *PROXY_PORT to (unsigned int) -1, *TIMEOUT_SECONDS and *NEON_DEBUG
+ * to zero, *COMPRESSION to TRUE, *NEON_AUTH_TYPES is left untouched,
+ * and the rest are set to NULL.  This function can return an error,
+ * so before examining any values, check the error return value.
  */
 static svn_error_t *get_server_settings(const char **proxy_host,
                                         unsigned int *proxy_port,
@@ -366,6 +433,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                                         int *neon_debug,
                                         svn_boolean_t *compression,
                                         unsigned int *neon_auth_types,
+                                        const char **pk11_provider,
                                         svn_config_t *cfg,
                                         const char *requested_host,
                                         apr_pool_t *pool)
@@ -382,6 +450,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
   timeout_str     = NULL;
   debug_str       = NULL;
   http_auth_types = NULL;
+  *pk11_provider  = NULL;
 
   /* If there are defaults, use them, but only if the requested host
      is not one of the exceptions to the defaults. */
@@ -412,6 +481,8 @@ static svn_error_t *get_server_settings(const char **proxy_host,
       svn_config_get(cfg, &http_auth_types, SVN_CONFIG_SECTION_GLOBAL,
                      SVN_CONFIG_OPTION_HTTP_AUTH_TYPES, NULL);
 #endif
+      svn_config_get(cfg, pk11_provider, SVN_CONFIG_SECTION_GLOBAL,
+                     SVN_CONFIG_OPTION_SSL_PKCS11_PROVIDER, NULL);
     }
 
   if (cfg)
@@ -441,6 +512,8 @@ static svn_error_t *get_server_settings(const char **proxy_host,
       svn_config_get(cfg, &http_auth_types, SVN_CONFIG_SECTION_GLOBAL,
                      SVN_CONFIG_OPTION_HTTP_AUTH_TYPES, NULL);
 #endif
+      svn_config_get(cfg, pk11_provider, server_group,
+                     SVN_CONFIG_OPTION_SSL_PKCS11_PROVIDER, *pk11_provider);
     }
 
   /* Special case: convert the port value, if any. */
@@ -897,6 +970,7 @@ svn_ra_neon__open(svn_ra_session_t *session,
   const char *server_group;
   char *itr;
   unsigned int neon_auth_types = 0;
+  const char *pkcs11_provider;
   neonprogress_baton_t *neonprogress_baton =
     apr_pcalloc(pool, sizeof(*neonprogress_baton));
   const char *useragent = NULL;
@@ -975,6 +1049,7 @@ svn_ra_neon__open(svn_ra_session_t *session,
                                 &debug,
                                 &compression,
                                 &neon_auth_types,
+                                &pkcs11_provider,
                                 cfg,
                                 uri->host,
                                 pool));
@@ -1104,8 +1179,41 @@ svn_ra_neon__open(svn_ra_session_t *session,
       /* For client connections, we register a callback for if the server
          wants to authenticate the client via client certificate. */
 
-      ne_ssl_provide_clicert(sess, client_ssl_callback, ras);
-      ne_ssl_provide_clicert(sess2, client_ssl_callback, ras);
+#ifdef SVN_NEON_0_28
+      if (pkcs11_provider) 
+        {
+          ne_ssl_pkcs11_provider *provider;
+          int rv;
+          
+          /* Initialize the PKCS#11 provider. */
+          rv = ne_ssl_pkcs11_provider_init(&provider, pkcs11_provider);
+          if (rv != NE_PK11_OK)
+            {
+              return svn_error_createf
+                (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+                 _("Invalid config: unable to load PKCS#11 provider '%s'"),
+                 pkcs11_provider);
+            }
+          
+          /* Share the provider between the two sessions. */
+          ne_ssl_set_pkcs11_provider(sess, provider);
+          ne_ssl_set_pkcs11_provider(sess2, provider);
+          
+          ne_ssl_pkcs11_provider_pin(provider, client_ssl_pkcs11_pin_entry,
+                                     ras);
+          
+          apr_pool_cleanup_register(pool, provider, cleanup_p11provider, 
+                                    apr_pool_cleanup_null);
+        }
+      /* Note the "else"; if a PKCS#11 provider is set up, a client
+         cert callback is already configured, so don't displace it
+         with the normal one here.  */
+      else
+#endif
+        {
+          ne_ssl_provide_clicert(sess, client_ssl_callback, ras);
+          ne_ssl_provide_clicert(sess2, client_ssl_callback, ras);
+        }
 
       /* See if the user wants us to trust "default" openssl CAs. */
       trust_default_ca = svn_config_get_server_setting(

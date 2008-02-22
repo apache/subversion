@@ -95,6 +95,8 @@ typedef struct {
   svn_auth_iterstate_t *auth_iterstate; /* state of authentication retries */
   const char *auth_username;            /* last authenticated username used */
 
+  svn_auth_iterstate_t *p11pin_iterstate; /* state of PKCS#11 pin retries */
+
   svn_boolean_t compression;            /* should we use http compression? */
   const char *uuid;                     /* repository UUID */
 
