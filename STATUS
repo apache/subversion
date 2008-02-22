@@ -87,11 +87,6 @@ Candidate changes:
 
 Approved changes:
 
- * r29486
-   Support "svn changelist -R" (as the usual alias for --depth=infinity).
-   Votes:
-     +1: glasser, kfogel
-
  * r29256, r29482
    Update Neon shipped in the dependency tarball to 0.28.0.
    Note: While this isn't required, it would be useful to have the
