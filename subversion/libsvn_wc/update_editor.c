@@ -2767,8 +2767,8 @@ close_file(void *file_baton,
    If the file isn't found, set *RETURN_PATH to NULL.
 
    If the file is found, return the absolute path to it in
-   *RETURN_PATH, as well as a (read-only) access_t for its parent in
-   *RETURN_ACCESS.
+   *RETURN_PATH, its entry in *RETURN_ENTRY, and a (read-only)
+   access_t for its parent in *RETURN_ACCESS.
 */
 static svn_error_t *
 locate_copyfrom(const char *copyfrom_path,
@@ -2776,6 +2776,7 @@ locate_copyfrom(const char *copyfrom_path,
                 const char *dest_dir,
                 const svn_wc_entry_t *dest_entry,
                 const char **return_path,
+                const svn_wc_entry_t **return_entry,
                 svn_wc_adm_access_t **return_access,
                 apr_pool_t *pool)
 {
@@ -2909,7 +2910,7 @@ locate_copyfrom(const char *copyfrom_path,
   /* The candidate file is under version control;  but is it
      really the file we're looking for?  <wave hand in circle> */
   SVN_ERR(svn_wc_entry(&file_entry, cwd->data, ancestor_access,
-                       FALSE, subpool));
+                       FALSE, pool));
   if (! file_entry)
     /* Parent dir is versioned, but file is not.  Be safe and
        return no results (see large discourse above.) */
@@ -2937,6 +2938,7 @@ locate_copyfrom(const char *copyfrom_path,
 
   /* Success!  We found the exact file we wanted! */
   *return_path = apr_pstrdup(pool, cwd->data);
+  *return_entry = file_entry;
   *return_access = ancestor_access;
 
   svn_pool_clear(subpool);
@@ -2996,6 +2998,7 @@ add_file_with_history(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   svn_wc_adm_access_t *adm_access, *src_access;
   const char *src_path;
+  const svn_wc_entry_t *src_entry;
   apr_hash_t *base_props, *working_props;
   const svn_wc_entry_t *path_entry;
   svn_error_t *err;
@@ -3014,7 +3017,7 @@ add_file_with_history(const char *path,
   SVN_ERR(svn_wc_entry(&path_entry, pb->path, eb->adm_access, FALSE, subpool));
   err = locate_copyfrom(copyfrom_path, copyfrom_rev,
                         pb->path, path_entry,
-                        &src_path, &src_access, subpool);
+                        &src_path, &src_entry, &src_access, subpool);
   if (err && err->apr_err == SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND)
     svn_error_clear(err);
   else if (err)
@@ -3031,15 +3034,33 @@ add_file_with_history(const char *path,
   if (src_path != NULL) /* Found a file to copy */
     {
       /* Copy the existing file's text-base over to the (temporary)
-         new text-base, where the file baton expects it to be. */
-      const char *src_text_base_path = svn_wc__text_base_path(src_path,
-                                                              FALSE, subpool);
+         new text-base, where the file baton expects it to be.  Get
+         the text base and props from the usual place or from the
+         revert place, depending on scheduling. */
+
+      const char *src_text_base_path;
+
+      if (src_entry->schedule == svn_wc_schedule_replace
+          && src_entry->copyfrom_url)
+        {
+          src_text_base_path = svn_wc__text_revert_path(src_path,
+                                                        FALSE, subpool);
+          SVN_ERR(svn_wc__load_props(NULL, NULL, &base_props,
+                                     src_access, src_path, pool));
+          /* The old working props are lost, just like the old
+             working file text is.  Just use the base props. */
+          working_props = base_props;
+        }
+      else
+        {
+          src_text_base_path = svn_wc__text_base_path(src_path,
+                                                      FALSE, subpool);
+          SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL,
+                                     src_access, src_path, pool));
+        }
+
       SVN_ERR(svn_io_copy_file(src_text_base_path, tfb->copied_text_base,
                                TRUE, subpool));
-
-      /* Grab the existing file's base-props into memory. */
-      SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL,
-                                 src_access, src_path, pool));
     }
   else  /* Couldn't find a file to copy  */
     {
