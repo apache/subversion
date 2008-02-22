@@ -80,9 +80,3 @@ Candidate changes:
 
 Approved changes:
 
- * r29496, 29498
-   Clarifications to r29487 clarification (see above).
-   Notes:
-     Textual conflict if r29487 is not backported.
-   Votes:
-     +1: kfogel, epg
