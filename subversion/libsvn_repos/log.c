@@ -848,7 +848,12 @@ get_path_histories(apr_array_header_t **histories,
   return SVN_NO_ERROR;
 }
 
-/* Unpack a rangelist into a list of discrete revisions. */
+/* Unpack a rangelist into a list of discrete revisions.
+ *
+ * Take an array of 'svn_merge_range_t's in RANGELIST, return an array
+ * of @c 'svn_revnum_t's in *REVS.  If RANGELIST contains no elements,
+ * *REVS will be empty.
+ */
 static svn_error_t *
 rangelist_to_revs(apr_array_header_t **revs,
                   const apr_array_header_t *rangelist,
@@ -874,8 +879,9 @@ rangelist_to_revs(apr_array_header_t **revs,
   return SVN_NO_ERROR;
 }
 
-/* Look through paths in MERGEINFO, and find the one(s) in which REVISION is
-   part of it's rangelist. */
+/* Set *MERGE_SOURCES to an array of 'char *' paths, where each path
+   is one that in MERGEINFO has REVISION as part of its rangelist.
+   If none, set *MERGE_SOURCES to an empty array. */
 static svn_error_t *
 find_merge_sources(apr_array_header_t **merge_sources,
                    svn_revnum_t revision,
