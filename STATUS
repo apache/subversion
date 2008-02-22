@@ -52,11 +52,6 @@ Candidate changes:
    Votes:
      +1: glasser
 
- * r29382, r29397, r29417
-   A few changes to use the mergeinfo-api-cleanup types.
-   Votes:
-     +1: glasser
-
  * r29454
    Remove the unused svn_rangelist_count_revs() API.
    Notes:
@@ -79,3 +74,8 @@ Approved changes:
    Enable PKCS#11 (smartcard) support in libsvn_ra_neon.
    Votes:
      +1: joe, kfogel
+
+ * r29382, r29397, r29417
+   A few changes to use the mergeinfo-api-cleanup types.
+   Votes:
+     +1: glasser, kfogel
