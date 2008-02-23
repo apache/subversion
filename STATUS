@@ -43,5 +43,12 @@ Candidate changes:
    Votes:
      +1: lgo, jerenkrantz
 
+ * r29484, r29508
+   Add progress notification support for ra_serf.
+   Justification: Permits TSVN etc to get progress feedback from ra_serf
+                  which has been a showstopper for TSVN considering ra_serf.
+   Votes:
+     +1: jerenkrantz
+
 Approved changes:
 
