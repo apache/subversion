@@ -26,7 +26,7 @@ Candidate changes:
    Votes:
      +1: hwright
 
- * r29437, r29493, r29553
+ * r29437, r29493, r29553, r29565
    Rename --enable-dso to --enable-loadable-ra-modules and don't try
    to load DSOs unless that option is used.
    Votes:
