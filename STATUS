@@ -17,7 +17,7 @@ Candidate changes:
  * r29155
    Allow packagers to build some parts of svn against installed svn libs.
    Votes:
-     +1: epg
+     +1: epg, jerenkrantz
 
  * r29531, r29533, r29542, r29551
    Improve memory usage and runtime of 'log -g'.
@@ -30,18 +30,18 @@ Candidate changes:
    Rename --enable-dso to --enable-loadable-ra-modules and don't try
    to load DSOs unless that option is used.
    Votes:
-     +1: epg
+     +1: epg, jerenkrantz
 
  * r29546
    Fix confusing --encoding error from propedit and propset.
    Votes:
-     +1: epg
+     +1: epg, jerenkrantz
 
  * r29559
    Fix 'cleanup working copy' issue in copy test 70 that makes the test fail on
    Windows.
    Votes:
-     +1: lgo
+     +1: lgo, jerenkrantz
 
 Approved changes:
 
