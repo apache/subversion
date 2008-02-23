@@ -592,7 +592,7 @@ fi
 
 SVN_CHECK_SWIG
 
-dnl decide whether we want to link against the RA libraries
+dnl decide whether we want to link against the RA/FS libraries
 AC_ARG_ENABLE(runtime-module-search,
 AS_HELP_STRING([--enable-runtime-module-search],
                [Turn on dynamic loading of RA/FS libraries]),
