@@ -57,3 +57,7 @@ Candidate changes:
 
 Approved changes:
 
+  * r29491
+    Fix test added in r29329, so it works on Windows.
+    Votes:
+      +1: epg, lgo
