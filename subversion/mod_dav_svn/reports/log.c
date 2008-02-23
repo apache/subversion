@@ -28,6 +28,7 @@
 #include "svn_xml.h"
 #include "svn_path.h"
 #include "svn_dav.h"
+#include "svn_pools.h"
 
 #include "../dav_svn.h"
 
