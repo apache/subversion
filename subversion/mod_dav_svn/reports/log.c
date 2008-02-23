@@ -81,6 +81,7 @@ log_receiver(void *baton,
              apr_pool_t *pool)
 {
   struct log_receiver_baton *lrb = baton;
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   SVN_ERR(maybe_send_header(lrb));
 
@@ -107,34 +108,36 @@ log_receiver(void *baton,
         {
           char *name;
           svn_string_t *value;
+
+          svn_pool_clear(iterpool);
           apr_hash_this(hi, (void *)&name, NULL, (void *)&value);
           if (strcmp(name, SVN_PROP_REVISION_AUTHOR) == 0)
             SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                                       "<D:creator-displayname>%s"
                                       "</D:creator-displayname>" DEBUG_CR,
-                                      apr_xml_quote_string(pool,
+                                      apr_xml_quote_string(iterpool,
                                                            value->data, 0)));
           else if (strcmp(name, SVN_PROP_REVISION_DATE) == 0)
             /* ### this should be DAV:creation-date, but we need to format
                ### that date a bit differently */
             SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                                       "<S:date>%s</S:date>" DEBUG_CR,
-                                      apr_xml_quote_string(pool,
+                                      apr_xml_quote_string(iterpool,
                                                            value->data, 0)));
           else if (strcmp(name, SVN_PROP_REVISION_LOG) == 0)
             SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                                       "<D:comment>%s</D:comment>" DEBUG_CR,
                                       apr_xml_quote_string
                                       (pool, svn_xml_fuzzy_escape(value->data,
-                                                                  pool), 0)));
+                                                                  iterpool), 0)));
           else
             {
               SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                                         "<S:revprop name=\"%s\">"
                                         "%s</S:revprop>"
                                         DEBUG_CR,
-                                        apr_xml_quote_string(pool, name, 0),
-                                        apr_xml_quote_string(pool,
+                                        apr_xml_quote_string(iterpool, name, 0),
+                                        apr_xml_quote_string(iterpool,
                                                              value->data, 0)));
             }
         }
@@ -159,6 +162,7 @@ log_receiver(void *baton,
           void *val;
           svn_log_changed_path_t *log_item;
 
+          svn_pool_clear(iterpool);
           apr_hash_this(hi, (void *) &path, NULL, &val);
           log_item = val;
 
@@ -175,17 +179,17 @@ log_receiver(void *baton,
                                           " copyfrom-rev=\"%ld\">"
                                           "%s</S:added-path>" DEBUG_CR,
                                           apr_xml_quote_string
-                                          (pool,
+                                          (iterpool,
                                            log_item->copyfrom_path,
                                            1), /* escape quotes */
                                           log_item->copyfrom_rev,
-                                          apr_xml_quote_string(pool,
+                                          apr_xml_quote_string(iterpool,
                                                                path, 0)));
               else
                 SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                                           "<S:added-path>%s</S:added-path>"
                                           DEBUG_CR,
-                                          apr_xml_quote_string(pool, path,
+                                          apr_xml_quote_string(iterpool, path,
                                                                0)));
               break;
 
@@ -198,17 +202,17 @@ log_receiver(void *baton,
                                           " copyfrom-rev=\"%ld\">"
                                           "%s</S:replaced-path>" DEBUG_CR,
                                           apr_xml_quote_string
-                                          (pool,
+                                          (iterpool,
                                            log_item->copyfrom_path,
                                            1), /* escape quotes */
                                           log_item->copyfrom_rev,
-                                          apr_xml_quote_string(pool,
+                                          apr_xml_quote_string(iterpool,
                                                                path, 0)));
               else
                 SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                                           "<S:replaced-path>%s"
                                           "</S:replaced-path>" DEBUG_CR,
-                                          apr_xml_quote_string(pool, path,
+                                          apr_xml_quote_string(iterpool, path,
                                                                0)));
               break;
 
@@ -216,14 +220,14 @@ log_receiver(void *baton,
               SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                                         "<S:deleted-path>%s</S:deleted-path>"
                                         DEBUG_CR,
-                                        apr_xml_quote_string(pool, path, 0)));
+                                        apr_xml_quote_string(iterpool, path, 0)));
               break;
 
             case 'M':
               SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output,
                                         "<S:modified-path>%s"
                                         "</S:modified-path>" DEBUG_CR,
-                                        apr_xml_quote_string(pool, path, 0)));
+                                        apr_xml_quote_string(iterpool, path, 0)));
               break;
 
             default:
