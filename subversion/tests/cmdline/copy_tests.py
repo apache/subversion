@@ -3817,7 +3817,7 @@ def replaced_local_source_for_incoming_copy(sbox):
                                        other_wc_dir)
 
   finally:
-    shutil.rmtree(other_wc_dir)
+    svntest.main.safe_rmtree(other_wc_dir)
 
 
 ########################################################################
