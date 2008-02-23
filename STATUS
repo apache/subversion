@@ -50,5 +50,10 @@ Candidate changes:
    Votes:
      +1: jerenkrantz
 
+  * r29390
+    Fix incorrect filter usage in mod_dav_svn mirror code.
+    Votes:
+      +1: jerenkrantz
+
 Approved changes:
 
