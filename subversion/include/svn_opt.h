@@ -541,6 +541,8 @@ svn_opt_args_to_target_array(apr_array_header_t **targets_p,
  * @c NULL, allocate a new apr_hash_t in it.  @a revprops maps
  * const char * revprop names to svn_string_t * revprop values for use
  * with svn_repos_get_commit_editor5 and other get_commit_editor APIs.
+ *
+ * @since New in 1.6.
  */
 svn_error_t *
 svn_opt_parse_revprop(apr_hash_t **revprops, const char *revprop_spec,
