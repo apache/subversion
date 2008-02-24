@@ -35,11 +35,6 @@ Candidate changes:
 
 Approved changes:
 
- * r29546
-   Fix confusing --encoding error from propedit and propset.
-   Votes:
-     +1: epg, jerenkrantz
-
  * r29559
    Fix 'cleanup working copy' issue in copy test 70 that makes the test fail on
    Windows.
