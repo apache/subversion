@@ -35,11 +35,6 @@ Candidate changes:
 
 Approved changes:
 
- * r29155
-   Allow packagers to build some parts of svn against installed svn libs.
-   Votes:
-     +1: epg, jerenkrantz
-
   * r29491
     Fix test added in r29329, so it works on Windows.
     Votes:
