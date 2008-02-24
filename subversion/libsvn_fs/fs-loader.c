@@ -80,7 +80,7 @@ load_module(fs_init_func_t *initfunc, const char *name, apr_pool_t *pool)
 {
   *initfunc = NULL;
 
-#if APR_HAS_DSO
+#if defined(SVN_USE_DSO) && APR_HAS_DSO
   {
     apr_dso_handle_t *dso;
     apr_dso_handle_sym_t symbol;

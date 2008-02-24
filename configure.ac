@@ -592,15 +592,18 @@ fi
 
 SVN_CHECK_SWIG
 
-dnl decide whether we want to link against the RA libraries
-AC_ARG_ENABLE(dso,
-AS_HELP_STRING([--enable-dso], [Turn on DSO loading of RA libraries]),
+dnl decide whether we want to link against the RA/FS libraries
+AC_ARG_ENABLE(runtime-module-search,
+AS_HELP_STRING([--enable-runtime-module-search],
+               [Turn on dynamic loading of RA/FS libraries]),
 [
     if test "$enableval" = "yes"; then
       enable_dso=yes
       if test "$enable_shared" = "no"; then
-        AC_MSG_ERROR([--enable-dso conflicts with --disable-shared])
+        AC_MSG_ERROR([--enable-runtime-module-search conflicts with --disable-shared])
       fi
+      AC_DEFINE(SVN_USE_DSO, 1,
+                [Defined if svn should try to load DSOs])
     fi
 ])
 
