@@ -1198,12 +1198,12 @@ $SVN::Auth::SSL::OTHER
 You reply by setting the accepted_failures of the cred object with an integer
 of the values for what you want to accept bitwise AND'd together.
 
-=item SVN::Client::get_ssl_cert_file_provider
+=item SVN::Client::get_ssl_client_cert_file_provider
 
 Returns a client certificate provider that returns information from previously
 cached sessions.  Takes no parameters or optionally a pool parameter.
 
-=item SVN::Client::get_ssl_cert_prompt_provider
+=item SVN::Client::get_ssl_client_cert_prompt_provider
 
 Returns a client certificate provider that prompts the user via a callback.
 Takes two or three parameters: the first is the callback subroutine, the 2nd is
@@ -1213,13 +1213,13 @@ svn_auth_cred_ssl_client_cert object, a realm string, may_save, and a pool.
 The svn_auth_cred_ssl_client_cert the following members: cert_file and
 may_save.
 
-=item SVN::Client::get_ssl_cert_pw_file_provider
+=item SVN::Client::get_ssl_client_cert_pw_file_provider
 
 Returns a client certificate password provider that returns information from
 previously cached sessions.  Takes no parameters or optionally a pool
 parameter.
 
-=item SVN::Client::get_ssl_cert_pw_prompt_provider
+=item SVN::Client::get_ssl_client_cert_pw_prompt_provider
 
 Returns a client certificate password provider that prompts the user via a
 callback. Takes two or three parameters, the first is the callback subroutine,
