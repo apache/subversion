@@ -34,9 +34,3 @@ Candidate changes:
       +1: jerenkrantz
 
 Approved changes:
-
- * r29559
-   Fix 'cleanup working copy' issue in copy test 70 that makes the test fail on
-   Windows.
-   Votes:
-     +1: lgo, jerenkrantz
