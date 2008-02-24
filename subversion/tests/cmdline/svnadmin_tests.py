@@ -449,7 +449,7 @@ def verify_incremental_fsfs(sbox):
   # this directory listing to "c9b5a2d26473a4e28088673dda9df804" so that
   # the listing itself is valid.
   r2 = sbox.repo_dir + "/db/revs/0/2"
-  fp = open(r2, 'w')
+  fp = open(r2, 'wb')
   fp.write("""id: 0-2.0.r2/0
 type: dir
 count: 0

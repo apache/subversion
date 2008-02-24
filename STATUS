@@ -35,11 +35,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r29491
-    Fix test added in r29329, so it works on Windows.
-    Votes:
-      +1: epg, lgo
-
  * r29437, r29493, r29553, r29565
    Rename --enable-dso to --enable-loadable-ra-modules and don't try
    to load DSOs unless that option is used.
