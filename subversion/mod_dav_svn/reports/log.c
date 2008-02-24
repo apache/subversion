@@ -237,6 +237,8 @@ log_receiver(void *baton,
         }
     }
 
+  svn_pool_destroy(iterpool);
+
   SVN_ERR(dav_svn__send_xml(lrb->bb, lrb->output, "</S:log-item>" DEBUG_CR));
 
   return SVN_NO_ERROR;
