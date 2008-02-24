@@ -14,17 +14,36 @@ Status of 1.5.0:
 
 Candidate changes:
 
- * r29155
-   Allow packagers to build some parts of svn against installed svn libs.
-   Votes:
-     +1: epg, jerenkrantz
-
  * r29531, r29533, r29542, r29551
    Improve memory usage and runtime of 'log -g'.
    Notes: r29531, -33 are doc string changes to prevent textual conflicts.
      with r29542.
    Votes:
      +1: hwright
+
+ * r29484, r29508
+   Add progress notification support for ra_serf.
+   Justification: Permits TSVN etc to get progress feedback from ra_serf
+                  which has been a showstopper for TSVN considering ra_serf.
+   Votes:
+     +1: jerenkrantz
+
+  * r29390
+    Fix incorrect filter usage in mod_dav_svn mirror code.
+    Votes:
+      +1: jerenkrantz
+
+Approved changes:
+
+ * r29155
+   Allow packagers to build some parts of svn against installed svn libs.
+   Votes:
+     +1: epg, jerenkrantz
+
+  * r29491
+    Fix test added in r29329, so it works on Windows.
+    Votes:
+      +1: epg, lgo
 
  * r29437, r29493, r29553, r29565
    Rename --enable-dso to --enable-loadable-ra-modules and don't try
@@ -42,22 +61,3 @@ Candidate changes:
    Windows.
    Votes:
      +1: lgo, jerenkrantz
-
- * r29484, r29508
-   Add progress notification support for ra_serf.
-   Justification: Permits TSVN etc to get progress feedback from ra_serf
-                  which has been a showstopper for TSVN considering ra_serf.
-   Votes:
-     +1: jerenkrantz
-
-  * r29390
-    Fix incorrect filter usage in mod_dav_svn mirror code.
-    Votes:
-      +1: jerenkrantz
-
-Approved changes:
-
-  * r29491
-    Fix test added in r29329, so it works on Windows.
-    Votes:
-      +1: epg, lgo
