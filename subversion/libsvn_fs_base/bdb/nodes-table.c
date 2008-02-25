@@ -245,7 +245,8 @@ svn_fs_bdb__put_node_revision(svn_fs_t *fs,
   skel_t *skel;
 
   /* Convert from native type into skel */
-  SVN_ERR(svn_fs_base__unparse_node_revision_skel(&skel, noderev, pool));
+  SVN_ERR(svn_fs_base__unparse_node_revision_skel(&skel, noderev, 
+                                                  bfd->format, pool));
   svn_fs_base__trail_debug(trail, "nodes", "put");
   return BDB_WRAP(fs, _("storing node revision"),
                   bfd->nodes->put(bfd->nodes, db_txn,

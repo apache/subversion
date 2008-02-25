@@ -134,10 +134,23 @@ get_vsn_options(apr_pool_t *p, apr_text_header *phdr)
   apr_text_append(p, phdr,
                   "merge,baseline,activity,version-controlled-collection");
   /* Send SVN_RA_CAPABILITY_* capabilities. */
-  apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_MERGEINFO);
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_DEPTH);
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY);
+  /* Mergeinfo is a special case: here we merely say that the server
+   * knows how to handle mergeinfo -- whether the repository does too
+   * is a separate matter.
+   *
+   * Think of it as offering the client an early out: if the server
+   * can't do merge-tracking, there's no point finding out of the
+   * repository can.  But if the server can, it may be worth expending
+   * an extra round trip to find out if the repository can too (the
+   * extra round trip being necessary because, sadly, we don't have
+   * access to the repository yet here, so we can only announce the
+   * server capability and remain agnostic about the repository).
+   */
+  apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_MERGEINFO);
+
   /* ### fork-control? */
 }
 

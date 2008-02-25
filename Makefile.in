@@ -42,7 +42,6 @@ SVN_APR_LIBS = @SVN_APR_LIBS@
 SVN_APRUTIL_LIBS = @SVN_APRUTIL_LIBS@
 SVN_DB_LIBS =
 SVN_SERF_LIBS = @SVN_SERF_LIBS@
-SVN_SQLITE_LIBS = @SVN_SQLITE_LIBS@
 SVN_SASL_LIBS = @SVN_SASL_LIBS@
 SVN_ZLIB_LIBS = @SVN_ZLIB_LIBS@
 
@@ -105,7 +104,7 @@ LT_CXX_LIBADD = @LT_CXX_LIBADD@
 INCLUDES = -I$(top_srcdir)/subversion/include -I$(top_builddir)/subversion \
            @SVN_NEON_INCLUDES@ \
            @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ @SVN_SERF_INCLUDES@ \
-           @SVN_SASL_INCLUDES@ @SVN_ZLIB_INCLUDES@ @SVN_SQLITE_INCLUDES@
+           @SVN_SASL_INCLUDES@ @SVN_ZLIB_INCLUDES@
 
 APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_TARGET = @APACHE_TARGET@
@@ -641,8 +640,7 @@ $(SWIG_PL_DIR)/native/Makefile.PL: $(SWIG_SRC_DIR)/perl/native/Makefile.PL.in
 $(SWIG_PL_DIR)/native/Makefile: $(SWIG_PL_DIR)/native/Makefile.PL
 	cd $(SWIG_PL_DIR)/native; $(PERL) Makefile.PL
 
-swig-pl_DEPS = autogen-swig-pl libsvn_client libsvn_delta libsvn_diff \
-  libsvn_fs libsvn_ra libsvn_repos libsvn_subr libsvn_wc libsvn_swig_perl \
+swig-pl_DEPS = autogen-swig-pl libsvn_swig_perl \
   $(SWIG_PL_DIR)/native/Makefile
 swig-pl: $(swig-pl_DEPS)
 	if test "$(SWIG_PL_DIR)" != "$(SWIG_PL_SRC_DIR)"; then \

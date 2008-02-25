@@ -722,6 +722,10 @@ module Svn
       def inspect
         super.gsub(/>$/, ":#{to_a.inspect}>")
       end
+
+      def ==(other)
+        to_a == other.to_a
+      end
     end
 
     class MergeInfo < Hash
@@ -757,7 +761,7 @@ module Svn
       end
 
       def to_s
-        Core.mergeinfo_to_stringbuf(self)
+        Core.mergeinfo_to_string(self)
       end
     end
 
@@ -795,7 +799,7 @@ module Svn
       end
 
       def to_s
-        Core.rangelist_to_stringbuf(self)
+        Core.rangelist_to_string(self)
       end
     end
   end

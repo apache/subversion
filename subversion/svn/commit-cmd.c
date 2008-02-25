@@ -51,8 +51,9 @@ svn_cl__commit(apr_getopt_t *os,
   svn_boolean_t no_unlock = FALSE;
   svn_commit_info_t *commit_info = NULL;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
-                                        opt_state->targets, pool));
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets, 
+                                                      pool));
 
   /* Add "." if user passed 0 arguments. */
   svn_opt_push_implicit_dot_target(targets, pool);

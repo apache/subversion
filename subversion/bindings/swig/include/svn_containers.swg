@@ -437,6 +437,14 @@
     if (PyErr_Occurred())
       SWIG_fail;
 }
+%typemap(in) const apr_array_header_t *STRINGLIST_MAY_BE_NULL {
+    $1 = ($input == Py_None) 
+           ? NULL
+           : (apr_array_header_t *)svn_swig_py_strings_to_array($input,
+                                                                _global_pool);
+    if (PyErr_Occurred())
+      SWIG_fail;
+}
 #endif
 #ifdef SWIGPERL
 %typemap(in) const apr_array_header_t *STRINGLIST {

@@ -566,7 +566,16 @@ generate_error(svn_ra_neon__request_t *req, apr_pool_t *pool)
         }
     case NE_AUTH:
       errcode = SVN_ERR_RA_NOT_AUTHORIZED;
+#ifdef SVN_NEON_0_27
+      /* neon >= 0.27 gives a descriptive error message after auth
+       * failure; expose this since it's a useful diagnostic e.g. for
+       * an unsupported challenge scheme, or a local GSSAPI error due
+       * to an expired ticket. */
+      SVN_ERR(svn_utf_cstring_to_utf8(&msg, ne_get_error(req->ne_sess), pool));
+      msg = apr_psprintf(pool, _("authorization failed: %s"), msg);
+#else
       msg = _("authorization failed");
+#endif
       break;
 
     case NE_CONNECT:
@@ -1148,7 +1157,8 @@ get_cancellation_baton(svn_ra_neon__request_t *req,
 
 /* See doc string for svn_ra_neon__parsed_request. */
 static svn_error_t *
-parsed_request(svn_ra_neon__session_t *ras,
+parsed_request(svn_ra_neon__request_t *req,
+               svn_ra_neon__session_t *ras,
                const char *method,
                const char *url,
                const char *body,
@@ -1164,13 +1174,9 @@ parsed_request(svn_ra_neon__session_t *ras,
                svn_boolean_t spool_response,
                apr_pool_t *pool)
 {
-  svn_ra_neon__request_t *req;
   ne_xml_parser *success_parser = NULL;
   const char *msg;
   spool_reader_baton_t spool_reader_baton;
-
-  /* create/prep the request */
-  req = svn_ra_neon__request_create(ras, method, url, pool);
 
   if (body == NULL)
     SVN_ERR(svn_ra_neon__set_neon_body_provider(req, body_file));
@@ -1248,8 +1254,6 @@ parsed_request(svn_ra_neon__session_t *ras,
                                "in the response: %s (%s)"),
                              method, msg, url);
 
-  svn_ra_neon__request_destroy(req);
-
   return SVN_NO_ERROR;
 }
 
@@ -1271,14 +1275,17 @@ svn_ra_neon__parsed_request(svn_ra_neon__session_t *sess,
                             svn_boolean_t spool_response,
                             apr_pool_t *pool)
 {
-  SVN_ERR_W(parsed_request(sess, method, url, body, body_file,
-                           set_parser,
-                           startelm_cb, cdata_cb, endelm_cb,
-                           baton, extra_headers, status_code,
-                           spool_response, pool),
-            apr_psprintf(pool,_("%s request failed on '%s'"), method, url));
-
-  return SVN_NO_ERROR;
+  /* create/prep the request */
+  svn_ra_neon__request_t* req = svn_ra_neon__request_create(sess, method, url,
+                                                           pool);
+  svn_error_t *err = parsed_request(req,
+                                    sess, method, url, body, body_file,
+                                    set_parser,
+                                    startelm_cb, cdata_cb, endelm_cb,
+                                    baton, extra_headers, status_code,
+                                    spool_response, pool);
+  svn_ra_neon__request_destroy(req);
+  return err;
 }
 
 
@@ -1293,6 +1300,7 @@ svn_ra_neon__simple_request(int *code,
 {
   svn_ra_neon__request_t *req =
     svn_ra_neon__request_create(ras, method, url, pool);
+  svn_error_t *err;
 
   /* we don't need the status parser: it's attached to the request
      and detected errors will be returned there... */
@@ -1300,12 +1308,12 @@ svn_ra_neon__simple_request(int *code,
 
   /* svn_ra_neon__request_dispatch() adds the custom error response
      reader.  Neon will take care of the Content-Length calculation */
-  SVN_ERR(svn_ra_neon__request_dispatch(code, req, extra_headers,
-                                        body ? body : "",
-                                        okay_1, okay_2, pool));
+  err = svn_ra_neon__request_dispatch(code, req, extra_headers,
+                                      body ? body : "",
+                                      okay_1, okay_2, pool);
   svn_ra_neon__request_destroy(req);
 
-  return SVN_NO_ERROR;
+  return err;
 }
 
 void

@@ -239,6 +239,7 @@ do_lock(svn_lock_t **lock,
   svn_ra_neon__session_t *ras = session->priv;
   lock_baton_t *lrb = apr_pcalloc(pool, sizeof(*lrb));
   apr_hash_t *extra_headers;
+  svn_error_t *err = SVN_NO_ERROR;
 
   /* To begin, we convert the incoming path into an absolute fs-path. */
   url = svn_path_url_add_component(ras->url->data, path, pool);
@@ -285,17 +286,19 @@ do_lock(svn_lock_t **lock,
     svn_ra_neon__set_header(extra_headers, SVN_DAV_VERSION_NAME_HEADER,
                             apr_psprintf(req->pool, "%ld", current_rev));
 
-  SVN_ERR(svn_ra_neon__request_dispatch(&code, req, extra_headers, body->data,
-                                        200, 0, pool));
+  err = svn_ra_neon__request_dispatch(&code, req, extra_headers, body->data,
+                                      200, 0, pool);
+  if (err)
+    goto cleanup;
 
   /*###FIXME: we never verified whether we have received back the type
     of lock we requested: was it shared/exclusive? was it write/otherwise?
     How many did we get back? Only one? */
-  SVN_ERR(lock_from_baton(lock, req, fs_path.data, lrb, pool));
+  err = lock_from_baton(lock, req, fs_path.data, lrb, pool);
 
+ cleanup:
   svn_ra_neon__request_destroy(req);
-
-  return SVN_NO_ERROR;
+  return err;
 }
 
 svn_error_t *
@@ -519,12 +522,19 @@ svn_ra_neon__get_lock(svn_ra_session_t *session,
   svn_ra_neon__set_header(extra_headers, "Content-Type",
                           "text/xml; charset=\"utf-8\"");
 
-  SVN_ERR_W(svn_ra_neon__request_dispatch(NULL, req, extra_headers, body,
-                                          200, 207, pool),
-            _("Failed to fetch lock information"));
+  err = svn_ra_neon__request_dispatch(NULL, req, extra_headers, body,
+                                      200, 207, pool);
+  if (err)
+    {
+      err = svn_error_quick_wrap(err, _("Failed to fetch lock information"));
+      goto cleanup;
+    }
+
   /*###FIXME We assume here we only got one lock response. The WebDAV
     spec makes no such guarantees. How to make sure we grab the one we need? */
-  SVN_ERR(lock_from_baton(lock, req, fs_path.data, lrb, pool));
+  err = lock_from_baton(lock, req, fs_path.data, lrb, pool);
 
-  return SVN_NO_ERROR;
+ cleanup:
+  svn_ra_neon__request_destroy(req);
+  return err;
 }

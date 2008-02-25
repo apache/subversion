@@ -100,7 +100,8 @@ typedef enum {
   opt_with_all_revprops,
   opt_parents,
   opt_accept,
-  opt_from_source
+  opt_from_source,
+  opt_reintegrate
 } svn_cl__longopt_t;
 
 /* Option codes and descriptions for the command line client.
@@ -238,7 +239,9 @@ const apr_getopt_option_t svn_cl__options[] =
   {"summarize",     opt_summarize, 0, N_("show a summary of the results")},
   {"remove",         opt_remove, 0, N_("remove changelist association")},
   {"changelist",    opt_changelist, 1,
-                    N_("operate only on members of changelist ARG")},
+                    N_("operate only on members of changelist ARG\n"
+                       "                             "
+                       "[aliases: --cl]")},
   {"keep-changelists", opt_keep_changelists, 0,
                     N_("don't delete changelists after commit")},
   {"keep-local",    opt_keep_local, 0, N_("keep path in working copy")},
@@ -247,7 +250,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"with-revprop",  opt_with_revprop, 1,
                     N_("set revision property ARG in new revision\n"
                        "                             "
-                       "using the name=value format")},
+                       "using the name[=value] format")},
   {"parents",       opt_parents, 0, N_("make intermediate directories")},
   {"use-merge-history", 'g', 0,
                     N_("use/display additional information from merge\n"
@@ -258,13 +261,28 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                            "
                        "('" SVN_CL__ACCEPT_POSTPONE "',"
                        " '" SVN_CL__ACCEPT_BASE "',"
-                       " '" SVN_CL__ACCEPT_MINE "',"
-                       " '" SVN_CL__ACCEPT_THEIRS "',"
-                       " '" SVN_CL__ACCEPT_EDIT "',"
+                       /* These two are not implemented yet, so don't
+                          waste the user's time with them. */
+                       /* " '" SVN_CL__ACCEPT_MINE "'," */
+                       /* " '" SVN_CL__ACCEPT_THEIRS "'," */
+                       " '" SVN_CL__ACCEPT_MINE_FULL "',"
+                       " '" SVN_CL__ACCEPT_THEIRS_FULL "',"
                        "\n                            "
+                       " '" SVN_CL__ACCEPT_EDIT "',"
                        " '" SVN_CL__ACCEPT_LAUNCH "')")},
   {"from-source",   opt_from_source, 1,
                     N_("query a particular merge source URL")},
+  {"reintegrate",   opt_reintegrate, 0,
+                    N_("lump-merge all of source URL's unmerged changes")},
+
+  /* Long-opt Aliases
+   *
+   * These have NULL desriptions, but an option code that matches some
+   * other option (whose description should probably mention its aliases).
+  */
+
+  {"cl",            opt_changelist, 1, NULL},
+
   {0,               0, 0, 0},
 };
 
@@ -327,10 +345,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {'r'} },
 
   { "changelist", svn_cl__changelist, {"cl"}, N_
-    ("Associate (or deassociate) local paths with changelist CLNAME.\n"
+    ("Associate (or dissociate) changelist CLNAME with the named files.\n"
      "usage: 1. changelist CLNAME TARGET...\n"
      "       2. changelist --remove TARGET...\n"),
-    { opt_remove, opt_targets, opt_changelist} },
+    { 'q', 'R', opt_depth, opt_remove, opt_targets, opt_changelist} },
 
   { "checkout", svn_cl__checkout, {"co"}, N_
     ("Check out a working copy from a repository.\n"
@@ -528,8 +546,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "usage: lock TARGET...\n"
      "\n"
      "  Use --force to steal the lock from another user or working copy.\n"),
-    { opt_targets, 'm', 'F', opt_force_log, opt_encoding, opt_force, 
-      opt_changelist },
+    { opt_targets, 'm', 'F', opt_force_log, opt_encoding, opt_force },
     {{'F', N_("read lock comment from file ARG")},
      {'m', N_("specify lock comment ARG")},
      {opt_force_log, N_("force validity of lock comment source")}} },
@@ -561,7 +578,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn log http://www.example.com/repo/project/foo.c\n"
      "    svn log http://www.example.com/repo/project foo.c bar.c\n"),
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy, opt_incremental,
-     opt_xml, 'l', opt_changelist, opt_with_all_revprops, opt_with_revprop},
+     opt_xml, 'l', opt_with_all_revprops, opt_with_revprop},
     {{opt_with_revprop, N_("retrieve revision property ARG")},
      {'c', N_("the change made by ARG")}} },
 
@@ -600,7 +617,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  first source is an ancestor of the second, or vice-versa.  This is\n"
      "  guaranteed to be the case when using the third form listed above.\n"),
     {'r', 'c', 'N', opt_depth, 'q', opt_force, opt_dry_run, opt_merge_cmd,
-     opt_record_only, 'x', opt_ignore_ancestry, opt_accept} },
+     opt_record_only, 'x', opt_ignore_ancestry, opt_accept, opt_reintegrate} },
 
   { "mergeinfo", svn_cl__mergeinfo, {0}, N_
     ("Query merge-related information.\n"
@@ -725,7 +742,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn:externals  - A newline separated list of module specifiers,\n"
      "      each of which consists of a relative directory path, optional\n"
      "      revision flags and an URL.  The ordering of the three elements\n"
-     "      implements different behavior.  Subversion 1.4 and earler only\n"
+     "      implements different behavior.  Subversion 1.4 and earlier only\n"
      "      support the following formats and the URLs cannot have peg\n"
      "      revisions:\n"
      "        foo             http://example.com/repos/zig\n"
@@ -767,8 +784,12 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {{opt_accept, N_("specify automatic conflict resolution source\n"
                              "                            "
                              " '" SVN_CL__ACCEPT_BASE "',"
-                             " '" SVN_CL__ACCEPT_MINE "',"
-                             " '" SVN_CL__ACCEPT_THEIRS "')")}} },
+                             /* These two are not implemented yet, so
+                                don't waste the user's time with them. */
+                             /* " '" SVN_CL__ACCEPT_MINE "'," */
+                             /* " '" SVN_CL__ACCEPT_THEIRS "'," */
+                             " '" SVN_CL__ACCEPT_MINE_FULL "',"
+                             " '" SVN_CL__ACCEPT_THEIRS_FULL "')")}} },
 
   { "revert", svn_cl__revert, {0}, N_
     ("Restore pristine working copy file (undo most local edits).\n"
@@ -893,7 +914,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "usage: unlock TARGET...\n"
      "\n"
      "  Use --force to break the lock.\n"),
-    { opt_targets, opt_force, opt_changelist } },
+    { opt_targets, opt_force } },
 
   { "update", svn_cl__update, {"up"},  N_
     ("Bring changes from the repository into the working copy.\n"
@@ -979,48 +1000,6 @@ svn_cl__check_cancel(void *baton)
     return svn_error_create(SVN_ERR_CANCELLED, NULL, _("Caught signal"));
   else
     return SVN_NO_ERROR;
-}
-
-
-/* Parse REVPROP_PAIR as name[=value], adding it to *revprop_table_p, using
- * POOL for all allocations.  *REVPROP_TABLE_P may be NULL, in which case
- * it is created.. */
-static svn_error_t *
-parse_revprop(apr_hash_t **revprop_table_p,
-              const char *revprop_pair,
-              apr_pool_t *pool)
-{
-  const char *sep, *propname;
-  svn_string_t *propval;
-
-  if (! *revprop_pair)
-    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                            _("Revision property pair is empty"));
-
-  if (! *revprop_table_p)
-    *revprop_table_p = apr_hash_make(pool);
-
-  sep = strchr(revprop_pair, '=');
-  if (sep)
-    {
-      propname = apr_pstrndup(pool, revprop_pair, sep - revprop_pair);
-      SVN_ERR(svn_utf_cstring_to_utf8(&propname, propname, pool));
-      propval = svn_string_create(sep + 1, pool);
-    }
-  else
-    {
-      SVN_ERR(svn_utf_cstring_to_utf8(&propname, revprop_pair, pool));
-      propval = svn_string_create("", pool);
-    }
-
-  if (!svn_prop_name_is_valid(propname))
-    return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
-                             _("'%s' is not a valid Subversion property name"),
-                             propname);
-
-  apr_hash_set(*revprop_table_p, propname, APR_HASH_KEY_STRING, propval);
-
-  return SVN_NO_ERROR;
 }
 
 
@@ -1454,7 +1433,7 @@ main(int argc, const char *argv[])
         opt_state.all_revprops = TRUE;
         break;
       case opt_with_revprop:
-        err = parse_revprop(&opt_state.revprop_table, opt_arg, pool);
+        err = svn_opt_parse_revprop(&opt_state.revprop_table, opt_arg, pool);
         if (err != SVN_NO_ERROR)
           return svn_cmdline_handle_exit_error(err, pool, "svn: ");
         break;
@@ -1474,7 +1453,15 @@ main(int argc, const char *argv[])
         break;
       case opt_from_source:
         err = svn_utf_cstring_to_utf8(&path_utf8, opt_arg, pool);
+        if (! svn_path_is_url(path_utf8))
+          return svn_cmdline_handle_exit_error
+            (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                               _("'%s' is not a URL"), opt_arg),
+             pool, "svn: ");
         opt_state.from_source = svn_path_canonicalize(path_utf8, pool);
+        break;
+      case opt_reintegrate:
+        opt_state.reintegrate = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
@@ -1603,6 +1590,17 @@ main(int argc, const char *argv[])
                                    "or both -c and -r"));
           return svn_cmdline_handle_exit_error(err, pool, "svn: ");
         }
+    }
+
+  /* Merge doesn't support specifying a revision range
+     when using --reintegrate. */
+  if (subcommand->cmd_func == svn_cl__merge
+      && opt_state.revision_ranges->nelts
+      && opt_state.reintegrate)
+    {
+      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("-r and -c can't be used with --reintegrate"));
+      return svn_cmdline_handle_exit_error(err, pool, "svn: ");
     }
 
   /* Disallow simultaneous use of both --depth and --set-depth. */
@@ -1784,6 +1782,37 @@ main(int argc, const char *argv[])
                              _("--auto-props and --no-auto-props are "
                                "mutually exclusive"));
       return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+    }
+
+  /* The --reintegrate option is mutually exclusive with both
+     --ignore-ancestry and --record-only. */
+  if (opt_state.reintegrate)
+    {
+      if (opt_state.ignore_ancestry)
+        {
+          if (opt_state.record_only)
+            {
+              err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                     _("--reintegrate cannot be used with "
+                                       "--ignore-ancestry or "
+                                       "--record-only"));
+              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+            }
+          else
+            {
+              err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                     _("--reintegrate cannot be used with "
+                                       "--ignore-ancestry"));
+              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+            }
+          }
+      else if (opt_state.record_only)
+        {
+          err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                 _("--reintegrate cannot be used with "
+                                   "--record-only"));
+          return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+        }
     }
 
   /* Update auto-props-enable option, and populate the MIME types map,

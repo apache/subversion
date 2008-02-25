@@ -1324,7 +1324,7 @@ dav_svn__update_report(const dav_resource *resource,
         /* diff/merge don't ask for inline text-deltas. */
         if (!uc.send_all && strcmp(spath, dst_path) == 0)
           action = apr_psprintf(resource->pool,
-                                "diff-or-merge %s r%ld:%ld%s%s",
+                                "diff %s r%ld:%ld%s%s",
                                 svn_path_uri_encode(spath, resource->pool),
                                 from_revnum,
                                 revnum, log_depth,
@@ -1332,14 +1332,14 @@ dav_svn__update_report(const dav_resource *resource,
         else
           action = apr_psprintf(resource->pool,
                                 "%s %s@%ld %s@%ld%s%s",
-                                (uc.send_all ? "switch" : "diff-or-merge"),
+                                (uc.send_all ? "switch" : "diff"),
                                 svn_path_uri_encode(spath, resource->pool),
                                 from_revnum,
                                 svn_path_uri_encode(dst_path, resource->pool),
                                 revnum, log_depth,
                                 /* ignore-ancestry only applies to merge, and
                                    we use uc.send_all to know if this is a
-                                   diff-or-merge or not. */
+                                   diff/merge or not. */
                                 (!uc.send_all && ignore_ancestry
                                  ? " ignore-ancestry" : ""));
       }
@@ -1368,7 +1368,7 @@ dav_svn__update_report(const dav_resource *resource,
                                      ? " send-copyfrom-args" : ""));
             else
               action = apr_psprintf(resource->pool,
-                                    "remote-status %s r%ld%s",
+                                    "status %s r%ld%s",
                                     svn_path_uri_encode(spath,
                                                         resource->pool),
                                     revnum,

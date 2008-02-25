@@ -35,18 +35,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Return TRUE iff CLHASH (a hash whose keys are const char *
-   changelist names) is NULL or if ENTRY->changelist (which may be
-   NULL) is a key in CLHASH.  */
-#define SVN_CLIENT__CL_MATCH(clhash, entry) \
-        (((clhash == NULL) \
-          || (entry \
-              && entry->changelist \
-              && apr_hash_get(clhash, entry->changelist, \
-                              APR_HASH_KEY_STRING))) ? TRUE : FALSE)
-
-
-
 /* Set *URL and *PEG_REVNUM (the latter is ignored if NULL) to the
    repository URL of PATH_OR_URL.  If PATH_OR_URL is a WC path and
    PEG_REVISION->kind is svn_opt_revision_working, use the
@@ -219,16 +207,16 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
 /* Set *ANCESTOR_PATH and *ANCESTOR_REVISION to the youngest common
    ancestor path (a path relative to the root of the repository) and
    revision, respectively, of the two locations identified as
-   PATH_OR_URL1@REVISION1 and PATH_OR_URL2@REVISION2.  Use the
-   authentication baton cached in CTX to authenticate against the
-   repository.  Use POOL for all allocations. */
+   PATH_OR_URL1@REV1 and PATH_OR_URL2@REV1.  Use the authentication
+   baton cached in CTX to authenticate against the repository.  Use
+   POOL for all allocations. */
 svn_error_t *
 svn_client__get_youngest_common_ancestor(const char **ancestor_path,
                                          svn_revnum_t *ancestor_revision,
                                          const char *path_or_url1,
-                                         const svn_opt_revision_t *revision1,
+                                         svn_revnum_t rev1,
                                          const char *path_or_url2,
-                                         const svn_opt_revision_t *revision2,
+                                         svn_revnum_t rev2,
                                          svn_client_ctx_t *ctx,
                                          apr_pool_t *pool);
 
@@ -332,14 +320,24 @@ svn_client__path_relative_to_root(const char **rel_path,
    with WC paths of char * for keys and property values of
    svn_string_t * for values.  Assumes that PROPS is non-NULL.
 
-   Treat DEPTH as in svn_client_propget4().
+   CHANGELISTS is an array of const char * changelist names, used as a
+   restrictive filter on items whose properties are set; that is,
+   don't set properties on any item unless it's a member of one of
+   those changelists.  If CHANGELISTS is empty (or altogether NULL),
+   no changelist filtering occurs.
+
+   Treat DEPTH as in svn_client_propget3().
 */
 svn_error_t *
-svn_client__get_prop_from_wc(apr_hash_t *props, const char *propname,
-                             const char *target, svn_boolean_t pristine,
+svn_client__get_prop_from_wc(apr_hash_t *props, 
+                             const char *propname,
+                             const char *target, 
+                             svn_boolean_t pristine,
                              const svn_wc_entry_t *entry,
                              svn_wc_adm_access_t *adm_access,
-                             svn_depth_t depth, svn_client_ctx_t *ctx,
+                             svn_depth_t depth, 
+                             const apr_array_header_t *changelists,
+                             svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
 
 /* Retrieve the oldest revision of the node at REL_PATH at REV since

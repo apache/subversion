@@ -76,12 +76,6 @@
 }
 #endif
 
-#ifdef SWIGRUBY
-%apply apr_hash_t **HASH_CSTRING {
-  apr_hash_t **minfohash
-};
-#endif
-
 %apply apr_hash_t *MERGEINFO { apr_hash_t *mergeinhash };
 
 /* -----------------------------------------------------------------------

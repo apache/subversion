@@ -477,10 +477,30 @@ svn_opt_resolve_revisions(svn_opt_revision_t *peg_rev,
  *
  * On each URL target, do some IRI-to-URI encoding and some
  * auto-escaping.  On each local path, canonicalize case and path
- * separators, and silently skip it if it has the same name as a
- * Subversion working copy administrative directory.
+ * separators.
  *
  * Allocate @a *targets_p and its elements in @a pool.
+ *
+ * If a path has the same name as a Subversion working copy
+ * administrative directory, return SVN_ERR_RESERVED_FILENAME_SPECIFIED;
+ * if multiple reserved paths are encountered, return a chain of
+ * errors, all of which are SVN_ERR_RESERVED_FILENAME_SPECIFIED.  Do
+ * not return this type of error in a chain with any other type of
+ * error, and if this is the only type of error encountered, complete
+ * the operation before returning the error(s).
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
+                              apr_getopt_t *os,
+                              apr_array_header_t *known_targets,
+                              apr_pool_t *pool);
+
+/**
+ * This is the same as svn_opt_args_to_target_array3() except that it
+ * silently ignores paths that have the same name as a working copy
+ * administrative directory.
  *
  * @since New in 1.2.
  */
@@ -513,6 +533,20 @@ svn_opt_args_to_target_array(apr_array_header_t **targets_p,
                              svn_opt_revision_t *end_revision,
                              svn_boolean_t extract_revisions,
                              apr_pool_t *pool);
+
+
+/**
+ * Parse revprop key/value pair from @a revprop_spec (name[=value]) into
+ * @a revprops, making copies of both with @a pool.  If @a revprops is
+ * @c NULL, allocate a new apr_hash_t in it.  @a revprops maps
+ * const char * revprop names to svn_string_t * revprop values for use
+ * with svn_repos_get_commit_editor5 and other get_commit_editor APIs.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_opt_parse_revprop(apr_hash_t **revprops, const char *revprop_spec,
+                      apr_pool_t *pool);
 
 
 /**

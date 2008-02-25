@@ -33,7 +33,7 @@ SkipUnless = svntest.testcase.SkipUnless
 from merge_tests import set_up_branch
 from merge_tests import shorten_path_kludge
 
-from svntest.main import SVN_PROP_MERGE_INFO
+from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import write_restrictive_svnserve_conf
 from svntest.main import write_authz_file
 from svntest.main import server_has_mergeinfo
@@ -156,7 +156,7 @@ def mergeinfo_and_skipped_paths(sbox):
     'C'         : Item(status='  ', wc_rev=8),
     })
   expected_disk = wc.State('', {
-    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A:5-8'}),
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:5-8'}),
     'D/H/psi'   : Item("New content"),
     'D/H/chi'   : Item("This is the file 'chi'.\n"),
      # 'D/H/omega' : run_and_verify_merge() doesn't support checking
@@ -170,7 +170,7 @@ def mergeinfo_and_skipped_paths(sbox):
     'D/gamma'   : Item("This is the file 'gamma'.\n"),
     'D'         : Item(),
     'B/lambda'  : Item("This is the file 'lambda'.\n"),
-    'B/E'       : Item(props={SVN_PROP_MERGE_INFO : ''}),
+    'B/E'       : Item(props={SVN_PROP_MERGEINFO : ''}),
     'B/E/alpha' : Item("This is the file 'alpha'.\n"),
     'B/E/beta'  : Item("This is the file 'beta'.\n"),
     'B/F'       : Item(),
@@ -198,7 +198,7 @@ def mergeinfo_and_skipped_paths(sbox):
   # Manually check the props on A_COPY/D/H/omega.
   svntest.actions.run_and_verify_svn(None,
                                      ["Properties on '" + omega_path + "':\n",
-                                      '  ' + SVN_PROP_MERGE_INFO + ' : ' +
+                                      '  ' + SVN_PROP_MERGEINFO + ' : ' +
                                       '\n'],
                                      [], 'pl', '-vR', omega_path)
 
@@ -236,17 +236,17 @@ def mergeinfo_and_skipped_paths(sbox):
     'C'         : Item(status='  ', wc_rev=8),
     })
   expected_disk = wc.State('', {
-    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A:5-8'}),
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:5-8'}),
     'D/H/omega' : Item("New content",
-                       props={SVN_PROP_MERGE_INFO : '/A/D/H/omega:5-8'}),
+                       props={SVN_PROP_MERGEINFO : '/A/D/H/omega:5-8'}),
     'D/H/chi'   : Item("This is the file 'chi'.\n",
-                       props={SVN_PROP_MERGE_INFO : '/A/D/H/chi:5-8'}),
-    'D/H'       : Item(props={SVN_PROP_MERGE_INFO : '/A/D/H:5-8*'}),
+                       props={SVN_PROP_MERGEINFO : '/A/D/H/chi:5-8'}),
+    'D/H'       : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:5-8*'}),
     'D/gamma'   : Item("This is the file 'gamma'.\n",
-                       props={SVN_PROP_MERGE_INFO : '/A/D/gamma:5-8'}),
-    'D'         : Item(props={SVN_PROP_MERGE_INFO : '/A/D:5-8*'}),
+                       props={SVN_PROP_MERGEINFO : '/A/D/gamma:5-8'}),
+    'D'         : Item(props={SVN_PROP_MERGEINFO : '/A/D:5-8*'}),
     'B/lambda'  : Item("This is the file 'lambda'.\n"),
-    'B/E'       : Item(props={SVN_PROP_MERGE_INFO : ''}),
+    'B/E'       : Item(props={SVN_PROP_MERGEINFO : ''}),
     'B/E/alpha' : Item("This is the file 'alpha'.\n"),
     'B/E/beta'  : Item("This is the file 'beta'.\n"),
     'B/F'       : Item(),
@@ -302,7 +302,7 @@ def mergeinfo_and_skipped_paths(sbox):
     'C'         : Item(status='  ', wc_rev=8),
     })
   expected_disk = wc.State('', {
-    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A:6-7'}),
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:6-7'}),
     'D/H/omega' : Item("This is the file 'omega'.\n"),
     'D/H/chi'   : Item("This is the file 'chi'.\n"),
     'D/H/psi'   : Item("This is the file 'psi'.\n"),
@@ -314,9 +314,9 @@ def mergeinfo_and_skipped_paths(sbox):
     'D/G/rho'   : Item("New content"),
     'D/G/tau'   : Item("This is the file 'tau'.\n"),
     'B/lambda'  : Item("This is the file 'lambda'.\n",
-                       props={SVN_PROP_MERGE_INFO : '/A/B/lambda:6-7'}),
-    'B/F'       : Item(props={SVN_PROP_MERGE_INFO : '/A/B/F:6-7'}),
-    'B'         : Item(props={SVN_PROP_MERGE_INFO : '/A/B:6-7*'}),
+                       props={SVN_PROP_MERGEINFO : '/A/B/lambda:6-7'}),
+    'B/F'       : Item(props={SVN_PROP_MERGEINFO : '/A/B/F:6-7'}),
+    'B'         : Item(props={SVN_PROP_MERGEINFO : '/A/B:6-7*'}),
     'mu'        : Item("This is the file 'mu'.\n"),
     'C'         : Item(),
     })
@@ -353,11 +353,11 @@ def mergeinfo_and_skipped_paths(sbox):
     'omega' : Item(status='MM', wc_rev=8),
     })
   expected_disk = wc.State('', {
-    ''      : Item(props={SVN_PROP_MERGE_INFO : '/A/D/H:5*,8*'}),
+    ''      : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:5*,8*'}),
     'omega' : Item("New content",
-                   props={SVN_PROP_MERGE_INFO : '/A/D/H/omega:5,8'}),
+                   props={SVN_PROP_MERGEINFO : '/A/D/H/omega:5,8'}),
     'chi'   : Item("This is the file 'chi'.\n",
-                   props={SVN_PROP_MERGE_INFO : '/A/D/H/chi:5,8'}),
+                   props={SVN_PROP_MERGEINFO : '/A/D/H/chi:5,8'}),
     })
   expected_skip = wc.State(short_path, {'psi' : Item()})
   saved_cwd = os.getcwd()
@@ -406,13 +406,13 @@ def mergeinfo_and_skipped_paths(sbox):
     'zeta'  : Item(status='A ', copied='+', wc_rev='-'),
     })
   expected_disk = wc.State('', {
-    ''      : Item(props={SVN_PROP_MERGE_INFO : '/A/D/H:8-9*'}),
+    ''      : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:8-9*'}),
     'omega' : Item("New content",
-                   props={SVN_PROP_MERGE_INFO : '/A/D/H/omega:8-9'}),
+                   props={SVN_PROP_MERGEINFO : '/A/D/H/omega:8-9'}),
     'chi'   : Item("This is the file 'chi'.\n",
-                   props={SVN_PROP_MERGE_INFO : '/A/D/H/chi:8-9'}),
+                   props={SVN_PROP_MERGEINFO : '/A/D/H/chi:8-9'}),
     'zeta'  : Item("This is the file 'zeta'.\n",
-                   props={SVN_PROP_MERGE_INFO : '/A/D/H/zeta:8-9'}),
+                   props={SVN_PROP_MERGEINFO : '/A/D/H/zeta:8-9'}),
     })
   expected_skip = wc.State(short_path, {})
   saved_cwd = os.getcwd()
