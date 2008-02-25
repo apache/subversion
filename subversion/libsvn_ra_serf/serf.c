@@ -434,6 +434,20 @@ load_config(svn_ra_serf__session_t *session,
   return SVN_NO_ERROR;
 }
 
+#if SERF_VERSION_AT_LEAST(0,1,3)
+static void
+svn_ra_serf__progress(void *progress_baton, apr_off_t read, apr_off_t written)
+{
+  const svn_ra_serf__session_t *serf_sess = progress_baton;
+  if (serf_sess->wc_progress_func)
+    {
+      serf_sess->wc_progress_func(read + written, -1,
+                                  serf_sess->wc_progress_baton,
+                                  serf_sess->pool);
+    }
+}
+#endif
+
 static svn_error_t *
 svn_ra_serf__open(svn_ra_session_t *session,
                   const char *repos_URL,
@@ -454,6 +468,8 @@ svn_ra_serf__open(svn_ra_session_t *session,
   serf_sess->cached_props = apr_hash_make(serf_sess->pool);
   serf_sess->wc_callbacks = callbacks;
   serf_sess->wc_callback_baton = callback_baton;
+  serf_sess->wc_progress_baton = callbacks->progress_baton;
+  serf_sess->wc_progress_func = callbacks->progress_func;
 
   /* todo: reuse serf context across sessions */
   serf_sess->context = serf_context_create(serf_sess->pool);
@@ -540,6 +556,12 @@ svn_ra_serf__open(svn_ra_session_t *session,
                              svn_ra_serf__conn_setup, serf_sess->conns[0],
                              svn_ra_serf__conn_closed, serf_sess->conns[0],
                              serf_sess->pool);
+
+  /* Set the progress callback. */
+#if SERF_VERSION_AT_LEAST(0,1,3)
+  serf_context_set_progress_cb(serf_sess->context, svn_ra_serf__progress,
+                               serf_sess);
+#endif
 
   serf_sess->num_conns = 1;
 

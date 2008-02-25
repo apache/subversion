@@ -49,7 +49,13 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
   serf_bucket_t *bucket;
   svn_ra_serf__connection_t *conn = baton;
 
+#if SERF_VERSION_AT_LEAST(0,1,3)
+  bucket = serf_context_bucket_socket_create(conn->session->context, 
+                                             sock, conn->bkt_alloc);
+#else
   bucket = serf_bucket_socket_create(sock, conn->bkt_alloc);
+#endif
+
   if (conn->using_ssl)
     {
       bucket = serf_bucket_ssl_decrypt_create(bucket, conn->ssl_context,
