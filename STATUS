@@ -21,21 +21,21 @@ Candidate changes:
    Votes:
      +1: hwright
 
-  * r29390
-    Fix incorrect filter usage in mod_dav_svn mirror code.
-    Votes:
-      +1: jerenkrantz
-
   * r29581
     In ra_serf authentication, fix falling back from primary authentication
     scheme to secondary.
     Votes:
       +1: lgo
 
+Approved changes:
+
+  * r29390
+    Fix incorrect filter usage in mod_dav_svn mirror code.
+    Votes:
+      +1: jerenkrantz
+      +0: cmpilato
+
   * r29583
     Replace some abort's in ra_serf with errors.
     Votes:
-      +1: lgo
-
-Approved changes:
-
+      +1: lgo, cmpilato
