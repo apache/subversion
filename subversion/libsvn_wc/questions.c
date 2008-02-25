@@ -601,7 +601,7 @@ svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
         *prop_conflicted_p = TRUE;
     }
 
-  /* If this_dir, check for tree conflicts. */
+  /* Check for tree conflicts (only "this-dir" entries have tree conflicts). */
   if ((strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
       && entry->tree_conflict_data)
     {
