@@ -192,8 +192,8 @@ read_victim_path(svn_wc_conflict_description_t *conflict,
               "sequence in 'victim_path'"));
 
         if (**start != SVN_WC__TREE_CONFLICT_DESC_SEPARATOR
-            || **start != SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR
-            || **start != SVN_WC__TREE_CONFLICT_ESCAPE_CHAR)
+            && **start != SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR
+            && **start != SVN_WC__TREE_CONFLICT_ESCAPE_CHAR)
           return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
             _("Illegal escaped character in 'victim_path' of tree "
               "conflict description"));
@@ -341,6 +341,8 @@ read_reason(svn_wc_conflict_description_t *conflict,
     conflict->reason = svn_wc_conflict_reason_edited;
   else if (advance_on_match(start, SVN_WC__CONFLICT_REASON_DELETED))
     conflict->reason = svn_wc_conflict_reason_deleted;
+  else if (advance_on_match(start, SVN_WC__CONFLICT_REASON_MISSING))
+    conflict->reason = svn_wc_conflict_reason_missing;
   else
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
              _("Invalid 'reason' field in tree conflict description"));
@@ -539,6 +541,9 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
             break;
           case svn_wc_conflict_reason_deleted:
             svn_stringbuf_appendcstr(buf, SVN_WC__CONFLICT_REASON_DELETED);
+            break;
+          case svn_wc_conflict_reason_missing:
+            svn_stringbuf_appendcstr(buf, SVN_WC__CONFLICT_REASON_MISSING);
             break;
           default:
             return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,

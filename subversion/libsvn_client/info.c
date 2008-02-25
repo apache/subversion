@@ -100,13 +100,16 @@ build_info_from_entry(svn_info_t **info,
   tmpinfo->working_size         = entry->working_size;
   tmpinfo->size                 = SVN_INFO_SIZE_UNKNOWN;
 
-  if ((entry->kind == svn_node_dir)
+  /* Check for tree conflicts (only "this-dir" entries have tree conflicts). */
+  if ((strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
       && entry->tree_conflict_data)
+    {
       tmpinfo->tree_conflicts = apr_array_make(pool, 1,
                                      sizeof(svn_wc_conflict_description_t *));
       SVN_ERR(svn_wc_read_tree_conflicts_from_entry(tmpinfo->tree_conflicts,
                                                     entry,
                                                     pool));
+    }
 
   /* lock stuff */
   if (entry->lock_token)  /* the token is the critical bit. */
