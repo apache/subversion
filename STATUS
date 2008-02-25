@@ -34,8 +34,3 @@ Approved changes:
     Votes:
       +1: jerenkrantz
       +0: cmpilato
-
-  * r29583
-    Replace some abort's in ra_serf with errors.
-    Votes:
-      +1: lgo, cmpilato

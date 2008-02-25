@@ -22,6 +22,7 @@
 
 #include "ra_serf.h"
 #include "win32_auth_sspi.h"
+#include "svn_private_config.h"
 
 /*** Forward declarations. ***/
 
@@ -241,11 +242,15 @@ handle_basic_auth(svn_ra_serf__session_t *session,
         }
       else
         {
-          abort();
+          return svn_error_create
+            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+             _("Missing 'realm' attribute in Authorization header."));
         }
       if (!realm_name)
         {
-          abort();
+          return svn_error_create
+            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+             _("Missing 'realm' attribute in Authorization header."));
         }
 
       if (session->repos_url.port_str)
