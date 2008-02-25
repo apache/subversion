@@ -28,9 +28,3 @@ Candidate changes:
       +1: lgo
 
 Approved changes:
-
-  * r29390
-    Fix incorrect filter usage in mod_dav_svn mirror code.
-    Votes:
-      +1: jerenkrantz
-      +0: cmpilato
