@@ -18,11 +18,13 @@
 
 # General modules
 import os
+import shutil
 import sys
 
 # Our testing module
 import svntest
 from svntest.verify import SVNExpectedStdout, SVNExpectedStderr
+from svntest.verify import SVNUnexpectedStderr
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -432,23 +434,204 @@ def verify_windows_paths_in_repos(sbox):
 
 #----------------------------------------------------------------------
 
+def verify_incremental_fsfs(sbox):
+  """svnadmin verify detects corruption dump can't"""
+
+  # setup a repo with a directory 'c:hi'
+  sbox.build(create_wc = False)
+  repo_url = sbox.repo_url
+  E_url = sbox.repo_url + '/A/B/E'
+
+  # Create A/B/E/bravo in r2.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', '-m', 'log_msg',
+                                     E_url + '/bravo')
+  # Corrupt r2's reference to A/C by replacing "dir 7-1.0.r1/1568" with
+  # "dir 7-1.0.r1/1569" (increment offset) and updating the checksum for
+  # this directory listing to "c9b5a2d26473a4e28088673dda9df804" so that
+  # the listing itself is valid.
+  r2 = sbox.repo_dir + "/db/revs/0/2"
+  fp = open(r2, 'wb')
+  fp.write("""id: 0-2.0.r2/0
+type: dir
+count: 0
+cpath: /A/B/E/bravo
+copyroot: 0 /
+
+PLAIN
+K 5
+alpha
+V 17
+file 3-1.0.r1/719
+K 4
+beta
+V 17
+file 4-1.0.r1/840
+K 5
+bravo
+V 14
+dir 0-2.0.r2/0
+END
+ENDREP
+id: 2-1.0.r2/181
+type: dir
+pred: 2-1.0.r1/1043
+count: 1
+text: 2 69 99 99 f63001f7fddd1842d8891474d0982111
+cpath: /A/B/E
+copyroot: 0 /
+
+PLAIN
+K 1
+E
+V 16
+dir 2-1.0.r2/181
+K 1
+F
+V 17
+dir 5-1.0.r1/1160
+K 6
+lambda
+V 17
+file 6-1.0.r1/597
+END
+ENDREP
+id: 1-1.0.r2/424
+type: dir
+pred: 1-1.0.r1/1335
+count: 1
+text: 2 316 95 95 bccb66379b4f825dac12b50d80211bae
+cpath: /A/B
+copyroot: 0 /
+
+PLAIN
+K 1
+B
+V 16
+dir 1-1.0.r2/424
+K 1
+C
+V 17
+dir 7-1.0.r1/1569
+K 1
+D
+V 17
+dir 8-1.0.r1/3061
+K 2
+mu
+V 18
+file i-1.0.r1/1451
+END
+ENDREP
+id: 0-1.0.r2/692
+type: dir
+pred: 0-1.0.r1/3312
+count: 1
+text: 2 558 121 121 c9b5a2d26473a4e28088673dda9df804
+cpath: /A
+copyroot: 0 /
+
+PLAIN
+K 1
+A
+V 16
+dir 0-1.0.r2/692
+K 4
+iota
+V 18
+file j-1.0.r1/3428
+END
+ENDREP
+id: 0.0.r2/904
+type: dir
+pred: 0.0.r1/3624
+count: 2
+text: 2 826 65 65 e44e4151d0d124533338619f082c8c9a
+cpath: /
+copyroot: 0 /
+
+_0.0.t1-1 add false false /A/B/E/bravo
+
+
+904 1031
+""")
+  fp.close()
+
+  output, errput = svntest.main.run_svnadmin("verify", "-r2", sbox.repo_dir)
+  svntest.verify.verify_outputs(
+    message=None, actual_stdout=output, actual_stderr=errput,
+    expected_stdout=None,
+    expected_stderr=".*Missing id field in node-rev")
+
+#----------------------------------------------------------------------
+
 def recover_fsfs(sbox):
   "recover a repository (FSFS only)"
-
-  # Set up a repository containing the greek tree.
-  sbox.build(create_wc = False)
-
-  # Read the current contents of the current file.
+  sbox.build()
   current_path = os.path.join(sbox.repo_dir, 'db', 'current')
+
+  # Commit up to r3, so we can test various recovery scenarios.
+  svntest.main.file_append(os.path.join(sbox.wc_dir, 'iota'), 'newer line\n')
+  svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
+
+  svntest.main.file_append(os.path.join(sbox.wc_dir, 'iota'), 'newest line\n')
+  svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
+
+  # Remember the contents of the db/current file.
   expected_current_contents = svntest.main.file_read(current_path)
 
-  # Remove the current file.
-  os.remove(current_path)
+  # Move aside the current file for r3.
+  os.rename(os.path.join(sbox.repo_dir, 'db','current'),
+            os.path.join(sbox.repo_dir, 'db','was_current'));
 
   # Run 'svnadmin recover' and check that the current file is recreated.
   output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
   if errput:
-    raise SVNUnexpectedStderr
+    raise SVNUnexpectedStderr(errput)
+
+  actual_current_contents = svntest.main.file_read(current_path)
+  svntest.verify.compare_and_display_lines(
+    "Contents of db/current is unexpected.",
+    'db/current', expected_current_contents, actual_current_contents)
+
+  # Now try writing db/current to be one rev lower than it should be.
+  svntest.main.file_write(current_path, '2\n')
+
+  # Run 'svnadmin recover' and check that the current file is fixed.
+  output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
+  if errput:
+    raise SVNUnexpectedStderr(errput)
+
+  actual_current_contents = svntest.main.file_read(current_path)
+  svntest.verify.compare_and_display_lines(
+    "Contents of db/current is unexpected.",
+    'db/current', expected_current_contents, actual_current_contents)
+
+  # Now try writing db/current to be *two* revs lower than it should be.
+  svntest.main.file_write(current_path, '1\n')
+
+  # Run 'svnadmin recover' and check that the current file is fixed.
+  output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
+  if errput:
+    raise SVNUnexpectedStderr(errput)
+
+  actual_current_contents = svntest.main.file_read(current_path)
+  svntest.verify.compare_and_display_lines(
+    "Contents of db/current is unexpected.",
+    'db/current', expected_current_contents, actual_current_contents)
+
+  # Now try writing db/current to be fish revs lower than it should be.
+  #
+  # Note: I'm not actually sure it's wise to recover from this, but
+  # detecting it would require rewriting fs_fs.c:get_youngest() to
+  # check the actual contents of its buffer, since atol() will happily
+  # convert "fish" to 0.
+  svntest.main.file_write(current_path, 'fish\n')
+
+  # Run 'svnadmin recover' and check that the current file is fixed.
+  output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
+  if errput:
+    raise SVNUnexpectedStderr(errput)
 
   actual_current_contents = svntest.main.file_read(current_path)
   svntest.verify.compare_and_display_lines(
@@ -481,13 +664,13 @@ def load_with_parent_dir(sbox):
   # Verify the svn:mergeinfo properties for '--parent-dir'
   svntest.actions.run_and_verify_svn(None,
                                      [sbox.repo_url +
-                                      "/sample/branch - /sample/trunk:4-6\n"],
+                                      "/sample/branch - /sample/trunk:5-7\n"],
                                      [], 'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url + '/sample/branch')
   svntest.actions.run_and_verify_svn(None,
                                      [sbox.repo_url +
                                       "/sample/branch1 - " +
-                                      "/sample/branch:5-8\n"],
+                                      "/sample/branch:6-9\n"],
                                      [], 'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url + '/sample/branch1')
 
@@ -501,7 +684,7 @@ def set_uuid(sbox):
   # Squirrel away the original repository UUID.
   output, errput = svntest.main.run_svnlook('uuid', sbox.repo_dir)
   if errput:
-    raise SVNUnexpectedStderr
+    raise SVNUnexpectedStderr(errput)
   orig_uuid = output[0].rstrip()
 
   # Try setting a new, bogus UUID.
@@ -513,7 +696,7 @@ def set_uuid(sbox):
                                           'setuuid', sbox.repo_dir)
   output, errput = svntest.main.run_svnlook('uuid', sbox.repo_dir)
   if errput:
-    raise SVNUnexpectedStderr
+    raise SVNUnexpectedStderr(errput)
   new_uuid = output[0].rstrip()
   if new_uuid == orig_uuid:
     print "Error: new UUID matches the original one"
@@ -524,12 +707,119 @@ def set_uuid(sbox):
                                           'setuuid', sbox.repo_dir, orig_uuid)
   output, errput = svntest.main.run_svnlook('uuid', sbox.repo_dir)
   if errput:
-    raise SVNUnexpectedStderr
+    raise SVNUnexpectedStderr(errput)
   new_uuid = output[0].rstrip()
   if new_uuid != orig_uuid:
     print "Error: new UUID doesn't match the original one"
     raise svntest.Failure
+
+#----------------------------------------------------------------------
+
+def reflect_dropped_renumbered_revs(sbox):
+  "reflect dropped renumbered revs in svn:mergeinfo"
+
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3020. ##
+
+  test_create(sbox)
+
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svndumpfilter_tests_data',
+                                   'with_merges.dump')
+  dumpfile = svntest.main.file_read(dumpfile_location)
+
+  # Create 'toplevel' dir in sbox.repo_url
+  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 1.\n'],
+                                     [], "mkdir", sbox.repo_url + "/toplevel",
+                                     "-m", "Create toplevel dir")
+
+  # Load the dump stream in sbox.repo_url
+  load_and_verify_dumpstream(sbox,[],[], None, dumpfile)
+
+  # Load the dump stream in toplevel dir
+  load_and_verify_dumpstream(sbox,[],[], None, dumpfile, '--parent-dir',
+                             '/toplevel')
+
+  # Verify the svn:mergeinfo properties
+  svntest.actions.run_and_verify_svn(None, ["/trunk:1-4\n"],
+                                     [], 'propget', 'svn:mergeinfo',
+                                     sbox.repo_url + '/branch2')
+  svntest.actions.run_and_verify_svn(None, ["/branch1:5-9\n"],
+                                     [], 'propget', 'svn:mergeinfo',
+                                     sbox.repo_url + '/trunk')
+  svntest.actions.run_and_verify_svn(None, ["/toplevel/trunk:1-13\n"],
+                                     [], 'propget', 'svn:mergeinfo',
+                                     sbox.repo_url + '/toplevel/branch2')
+  svntest.actions.run_and_verify_svn(None, ["/toplevel/branch1:14-18\n"],
+                                     [], 'propget', 'svn:mergeinfo',
+                                     sbox.repo_url + '/toplevel/trunk')
+  svntest.actions.run_and_verify_svn(None, ["/toplevel/trunk:1-12\n"],
+                                     [], 'propget', 'svn:mergeinfo',
+                                     sbox.repo_url + '/toplevel/branch1')
+  svntest.actions.run_and_verify_svn(None, ["/trunk:1-3\n"],
+                                     [], 'propget', 'svn:mergeinfo',
+                                     sbox.repo_url + '/branch1')
+
+#----------------------------------------------------------------------
+
+def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
+  """fsfs recovery checks missing revs / revprops files"""
+  # Set up a repository containing the greek tree.
+  sbox.build()
+
+  # Commit up to r3, so we can test various recovery scenarios.
+  svntest.main.file_append(os.path.join(sbox.wc_dir, 'iota'), 'newer line\n')
+  svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
+
+  svntest.main.file_append(os.path.join(sbox.wc_dir, 'iota'), 'newest line\n')
+  svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
+
+  # Move aside the revs file for r3.
+  os.rename(os.path.join(sbox.repo_dir, 'db','revs','0', '3'),
+            os.path.join(sbox.repo_dir, 'db','revs','0', 'was_3'));
   
+  # Verify 'svnadmin recover' fails when youngest has a revprops
+  # file but no revs file.
+  output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
+
+  if svntest.verify.verify_outputs(
+    "Output of 'svnadmin recover' is unexpected.", None, errput, None,
+    ".*Expected current rev to be <= 2 but found 3"):
+    raise svntest.Failure
+
+  # Restore the r3 revs file, thus repairing the repository.
+  os.rename(os.path.join(sbox.repo_dir, 'db','revs','0', 'was_3'),
+            os.path.join(sbox.repo_dir, 'db','revs','0', '3'));
+  
+  # Move aside the revprops file for r3.
+  os.rename(os.path.join(sbox.repo_dir, 'db','revprops','0', '3'),
+            os.path.join(sbox.repo_dir, 'db','revprops','0', 'was_3'));
+
+  # Verify 'svnadmin recover' fails when youngest has a revs file
+  # but no revprops file (issue #2992).
+  output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
+
+  if svntest.verify.verify_outputs(
+    "Output of 'svnadmin recover' is unexpected.", None, errput, None,
+    ".*Revision 3 has a revs file but no revprops file"):
+    raise svntest.Failure
+
+  # Restore the r3 revprops file, thus repairing the repository.
+  os.rename(os.path.join(sbox.repo_dir, 'db','revprops','0', 'was_3'),
+            os.path.join(sbox.repo_dir, 'db','revprops','0', '3'));
+
+  # Change revprops file to a directory for revision 3
+  os.rename(os.path.join(sbox.repo_dir, 'db','revprops','0', '3'),
+            os.path.join(sbox.repo_dir, 'db','revprops','0', 'was_3'));
+  os.mkdir(os.path.join(sbox.repo_dir, 'db','revprops','0','3'));
+
+  # Verify 'svnadmin recover' fails when youngest has a revs file
+  # but revprops file is not a file (another aspect of issue #2992).
+  output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
+
+  if svntest.verify.verify_outputs(
+    "Output of 'svnadmin recover' is unexpected.", None, errput, None,
+    ".*Revision 3 has a non-file where its revprops file should be.*"):
+    raise svntest.Failure
 
 ########################################################################
 # Run the tests
@@ -548,9 +838,13 @@ test_list = [ None,
               hotcopy_format,
               setrevprop,
               verify_windows_paths_in_repos,
+              SkipUnless(verify_incremental_fsfs, svntest.main.is_fs_type_fsfs),
               SkipUnless(recover_fsfs, svntest.main.is_fs_type_fsfs),
               load_with_parent_dir,
               set_uuid,
+              reflect_dropped_renumbered_revs,
+              SkipUnless(fsfs_recover_handle_missing_revs_or_revprops_file,
+                         svntest.main.is_fs_type_fsfs),
              ]
 
 if __name__ == '__main__':

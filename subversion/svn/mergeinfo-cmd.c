@@ -131,8 +131,9 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   apr_pool_t *subpool = svn_pool_create(pool);
   int i;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
-                                        opt_state->targets, pool));
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets, 
+                                                      pool));
 
   /* Add "." if user passed 0 arguments. */
   svn_opt_push_implicit_dot_target(targets, pool);
@@ -142,7 +143,7 @@ svn_cl__mergeinfo(apr_getopt_t *os,
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
       const char *truepath;
       svn_opt_revision_t peg_revision;
-      apr_hash_t *mergeinfo;
+      svn_mergeinfo_t mergeinfo;
       const char *root_url;
       apr_hash_index_t *hi;
 

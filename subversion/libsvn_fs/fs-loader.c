@@ -80,7 +80,7 @@ load_module(fs_init_func_t *initfunc, const char *name, apr_pool_t *pool)
 {
   *initfunc = NULL;
 
-#if APR_HAS_DSO
+#if defined(SVN_USE_DSO) && APR_HAS_DSO
   {
     apr_dso_handle_t *dso;
     apr_dso_handle_sym_t symbol;
@@ -394,6 +394,27 @@ svn_fs_open(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   *fs_p = svn_fs_new(fs_config, pool);
   SVN_ERR(acquire_fs_mutex());
   err = vtable->open_fs(*fs_p, path, pool, common_pool);
+  err2 = release_fs_mutex();
+  if (err)
+    {
+      svn_error_clear(err2);
+      return err;
+    }
+  return err2;
+}
+
+svn_error_t *
+svn_fs_upgrade(const char *path, apr_pool_t *pool)
+{
+  svn_error_t *err;
+  svn_error_t *err2;
+  fs_library_vtable_t *vtable;
+  svn_fs_t *fs;
+
+  SVN_ERR(fs_library_vtable(&vtable, path, pool));
+  fs = svn_fs_new(NULL, pool);
+  SVN_ERR(acquire_fs_mutex());
+  err = vtable->upgrade_fs(fs, path, pool, common_pool);
   err2 = release_fs_mutex();
   if (err)
     {
@@ -815,22 +836,15 @@ svn_fs_closest_copy(svn_fs_root_t **root_p, const char **path_p,
 }
 
 svn_error_t *
-svn_fs_get_mergeinfo(apr_hash_t **minfohash,
+svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                      svn_fs_root_t *root,
                      const apr_array_header_t *paths,
                      svn_mergeinfo_inheritance_t inherit,
+                     svn_boolean_t include_descendants,
                      apr_pool_t *pool)
 {
-  return root->vtable->get_mergeinfo(minfohash, root, paths, inherit, pool);
-}
-
-svn_error_t *
-svn_fs_get_mergeinfo_for_tree(apr_hash_t **mergeinfo,
-                              svn_fs_root_t *root,
-                              const apr_array_header_t *paths,
-                              apr_pool_t *pool)
-{
-  return root->vtable->get_mergeinfo_for_tree(mergeinfo, root, paths, pool);
+  return root->vtable->get_mergeinfo(catalog, root, paths, inherit,
+                                     include_descendants, pool);
 }
 
 svn_error_t *

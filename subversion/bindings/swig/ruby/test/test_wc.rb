@@ -1001,28 +1001,26 @@ EOE
 
     notifies = []
     notify_collector = Proc.new {|notify| notifies << notify }
-    Svn::Wc.set_changelist(path, "123", nil, nil, notify_collector)
     Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
-      assert("123", access.entry(@wc_path).changelist)
+      access.set_changelist(path, "123", nil, notify_collector)
     end
     assert_equal([[path, nil]],
                  notifies.collect {|notify| [notify.path, notify.err]})
 
     notifies = []
-    Svn::Wc.set_changelist(path, "456", nil, nil, notify_collector)
     Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
-      assert("456", access.entry(@wc_path).changelist)
+      access.set_changelist(path, "456", nil, notify_collector)
     end
     assert_equal([[path, Svn::Error::WcChangelistMove],
                   [path, NilClass]],
                  notifies.collect {|notify| [notify.path, notify.err.class]})
 
     notifies = []
-    Svn::Wc.set_changelist(path, "789", "000", nil, notify_collector)
-    Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
-      assert("456", access.entry(@wc_path).changelist)
+
+    assert_raises(Svn::Error::ClientIsDirectory) do
+      Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
+        access.set_changelist(@wc_path, "789", nil, notify_collector)
+      end
     end
-    assert_equal([[path, Svn::Error::WcMismatchedChangeList]],
-                 notifies.collect {|notify| [notify.path, notify.err.class]})
   end
 end

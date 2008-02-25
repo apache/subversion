@@ -19,7 +19,7 @@ BEGIN {
             merge3 merge2 merge merge_peg3 merge_peg2 merge_peg
             cleanup relocate revert2 revert resolved resolved2 copy4
             copy3 copy2 copy move5 move4 move3 move2 move propset3
-            propset2 propset revprop_set propget4 propget3 propget2
+            propset2 propset revprop_set propget3 propget2
             propget revprop_get proplist3 proplist2 proplist
             revprop_list export4 export3 export2 export list2 list
             ls3 ls2 ls cat2 cat add_to_changelist
@@ -1198,12 +1198,12 @@ $SVN::Auth::SSL::OTHER
 You reply by setting the accepted_failures of the cred object with an integer
 of the values for what you want to accept bitwise AND'd together.
 
-=item SVN::Client::get_ssl_cert_file_provider
+=item SVN::Client::get_ssl_client_cert_file_provider
 
 Returns a client certificate provider that returns information from previously
 cached sessions.  Takes no parameters or optionally a pool parameter.
 
-=item SVN::Client::get_ssl_cert_prompt_provider
+=item SVN::Client::get_ssl_client_cert_prompt_provider
 
 Returns a client certificate provider that prompts the user via a callback.
 Takes two or three parameters: the first is the callback subroutine, the 2nd is
@@ -1213,13 +1213,13 @@ svn_auth_cred_ssl_client_cert object, a realm string, may_save, and a pool.
 The svn_auth_cred_ssl_client_cert the following members: cert_file and
 may_save.
 
-=item SVN::Client::get_ssl_cert_pw_file_provider
+=item SVN::Client::get_ssl_client_cert_pw_file_provider
 
 Returns a client certificate password provider that returns information from
 previously cached sessions.  Takes no parameters or optionally a pool
 parameter.
 
-=item SVN::Client::get_ssl_cert_pw_prompt_provider
+=item SVN::Client::get_ssl_client_cert_pw_prompt_provider
 
 Returns a client certificate password provider that prompts the user via a
 callback. Takes two or three parameters, the first is the callback subroutine,

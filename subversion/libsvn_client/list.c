@@ -138,7 +138,7 @@ svn_client_list2(const char *path_or_url,
                                            peg_revision,
                                            revision, ctx, pool));
 
-  SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
 
   SVN_ERR(svn_client__path_relative_to_root(&fs_path, url, repos_root,
                                             TRUE, ra_session, NULL, pool));

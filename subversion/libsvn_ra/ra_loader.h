@@ -108,10 +108,11 @@ typedef struct svn_ra__vtable_t {
                           apr_uint32_t dirent_fields,
                           apr_pool_t *pool);
   svn_error_t *(*get_mergeinfo)(svn_ra_session_t *session,
-                                apr_hash_t **mergeinfo,
+                                svn_mergeinfo_catalog_t *mergeinfo,
                                 const apr_array_header_t *paths,
                                 svn_revnum_t revision,
                                 svn_mergeinfo_inheritance_t inherit,
+                                svn_boolean_t include_merged_revisions,
                                 apr_pool_t *pool);
   svn_error_t *(*do_update)(svn_ra_session_t *session,
                             const svn_ra_reporter3_t **reporter,

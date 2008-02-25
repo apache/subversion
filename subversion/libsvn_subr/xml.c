@@ -395,11 +395,13 @@ svn_xml_parse(svn_xml_parser_t *svn_parser,
   /* If expat choked internally, return its error. */
   if (! success)
     {
+      /* Line num is "int" in Expat v1, "long" in v2; hide the difference. */
+      long line = XML_GetCurrentLineNumber(svn_parser->parser);
+
       err = svn_error_createf
         (SVN_ERR_XML_MALFORMED, NULL,
-         _("Malformed XML: %s at line %d"),
-         XML_ErrorString(XML_GetErrorCode(svn_parser->parser)),
-         XML_GetCurrentLineNumber(svn_parser->parser));
+         _("Malformed XML: %s at line %ld"),
+         XML_ErrorString(XML_GetErrorCode(svn_parser->parser)), line);
 
       /* Kill all parsers and return the expat error */
       svn_xml_free_parser(svn_parser);

@@ -161,6 +161,10 @@ struct svn_ra_serf__session_t {
   const svn_ra_callbacks2_t *wc_callbacks;
   void *wc_callback_baton;
 
+  /* Callback function to send info to WC */
+  svn_ra_progress_notify_func_t wc_progress_func;
+  void *wc_progress_baton;
+
   /* Error that we've received but not yet returned upstream. */
   svn_error_t *pending_error;
 
@@ -1189,6 +1193,7 @@ svn_error_t * svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                                          const apr_array_header_t *paths,
                                          svn_revnum_t revision,
                                          svn_mergeinfo_inheritance_t inherit,
+                                         svn_boolean_t include_descendants,
                                          apr_pool_t *pool);
 
 /* Implements the has_capability RA layer function. */

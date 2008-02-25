@@ -403,6 +403,7 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
   svn_ra_neon__request_t *request;
   const char *body;
   apr_hash_t *extra_headers = NULL;
+  svn_error_t *err = SVN_NO_ERROR;
 
   /* assert: vsn_url != NULL */
 
@@ -429,10 +430,12 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
     }
 
   /* run the request and get the resulting status code (and svn_error_t) */
-  SVN_ERR(svn_ra_neon__request_dispatch(code, request, extra_headers, body,
-                                        201 /* Created */,
-                                        allow_404 ? 404 /* Not Found */ : 0,
-                                        pool));
+  err = svn_ra_neon__request_dispatch(code, request, extra_headers, body,
+                                      201 /* Created */,
+                                      allow_404 ? 404 /* Not Found */ : 0,
+                                      pool);
+  if (err)
+    goto cleanup;
 
   if (allow_404 && *code == 404 && request->err)
     {
@@ -441,9 +444,11 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
     }
 
   *locn = svn_ra_neon__request_get_location(request, pool);
+
+ cleanup:
   svn_ra_neon__request_destroy(request);
 
-  return SVN_NO_ERROR;
+  return err;
 }
 
 
@@ -779,6 +784,7 @@ static svn_error_t * commit_delete_entry(const char *path,
       const char *body;
       const char *token;
       svn_stringbuf_t *locks_list;
+      svn_error_t *err = SVN_NO_ERROR;
 
       if (parent->cc->tokens)
         child_tokens = get_child_tokens(parent->cc->tokens, path, pool);
@@ -801,18 +807,22 @@ static svn_error_t * commit_delete_entry(const char *path,
       request =
         svn_ra_neon__request_create(parent->cc->ras, "DELETE", child, pool);
 
-      SVN_ERR(svn_ra_neon__assemble_locktoken_body(&locks_list,
-                                                  child_tokens, request->pool));
+      err = svn_ra_neon__assemble_locktoken_body(&locks_list,
+                                                 child_tokens, request->pool);
+      if (err)
+        goto cleanup;
 
       body = apr_psprintf(request->pool,
                           "<?xml version=\"1.0\" encoding=\"utf-8\"?> %s",
                           locks_list->data);
 
-      SVN_ERR(svn_ra_neon__request_dispatch(&code, request, NULL, body,
-                                            204 /* Created */,
-                                            404 /* Not Found */,
-                                            pool));
+      err = svn_ra_neon__request_dispatch(&code, request, NULL, body,
+                                          204 /* Created */,
+                                          404 /* Not Found */,
+                                          pool);
+    cleanup:
       svn_ra_neon__request_destroy(request);
+      SVN_ERR(err);
     }
   else if (serr)
     return serr;
@@ -1257,6 +1267,7 @@ static svn_error_t * commit_close_file(void *file_baton,
       const char *url = file->rsrc->wr_url;
       apr_hash_t *extra_headers;
       svn_ra_neon__request_t *request;
+      svn_error_t *err = SVN_NO_ERROR;
 
       /* create/prep the request */
       request = svn_ra_neon__request_create(cc->ras, "PUT", url, pool);
@@ -1288,7 +1299,9 @@ static svn_error_t * commit_close_file(void *file_baton,
                                   SVN_SVNDIFF_MIME_TYPE);
 
           /* Give the file to neon. The provider will rewind the file. */
-          SVN_ERR(svn_ra_neon__set_neon_body_provider(request, pb->tmpfile));
+          err = svn_ra_neon__set_neon_body_provider(request, pb->tmpfile);
+          if (err)
+            goto cleanup;
         }
       else
         {
@@ -1296,11 +1309,13 @@ static svn_error_t * commit_close_file(void *file_baton,
         }
 
       /* run the request and get the resulting status code (and svn_error_t) */
-      SVN_ERR(svn_ra_neon__request_dispatch(NULL, request, extra_headers, NULL,
-                                            201 /* Created */,
-                                            204 /* No Content */,
-                                            pool));
+      err = svn_ra_neon__request_dispatch(NULL, request, extra_headers, NULL,
+                                          201 /* Created */,
+                                          204 /* No Content */,
+                                          pool);
+    cleanup:
       svn_ra_neon__request_destroy(request);
+      SVN_ERR(err);
 
       if (pb->tmpfile)
         {

@@ -138,10 +138,11 @@ svn_fs_base__unparse_representation_skel(skel_t **skel_p,
 
 
 /* Unparse NODEREV into a `NODE-REVISION' skel *SKEL_P.  Use POOL for
-   all allocations.  */
+   all allocations.  FORMAT is the format version of the filesystem. */
 svn_error_t *
 svn_fs_base__unparse_node_revision_skel(skel_t **skel_p,
                                         const node_revision_t *noderev,
+                                        int format,
                                         apr_pool_t *pool);
 
 /* Unparse COPY into a `COPY' skel *SKEL_P.  Use POOL for all

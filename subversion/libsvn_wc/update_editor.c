@@ -641,8 +641,9 @@ struct file_baton
      This gets set if there are file content changes. */
   const char *text_base_path;
 
-  /* This gets set if the file underwent a text change, which guides
-     the code that syncs up the adm dir and working copy. */
+  /* The path to the incoming text base (that is, to a text-base-file-
+     in-progress in the tmp area).  This gets set if there are file
+     content changes. */ 
   const char *new_text_base_path;
 
   /* If this file was added with history, this is the path to a copy
@@ -666,7 +667,8 @@ struct file_baton
   svn_boolean_t received_textdelta;
 
   /* An array of svn_prop_t structures, representing all the property
-     changes to be applied to this file. */
+     changes to be applied to this file.  Once a file baton is
+     initialized, this is never NULL, but it may have zero elements.  */
   apr_array_header_t *propchanges;
 
   /* The last-changed-date of the file.  This is actually a property
@@ -2032,13 +2034,20 @@ open_file(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* Fills out the text_base_path and new_text_base_path fields in
-   FILE_BATON (to text-base or revert-base); if CHECKSUM_P is non-NULL
-   and the path already has an entry, sets *CHECKSUM_P to the checksum
-   from its entry. If non-NULL, set *REPLACED_P and *USE_REVERT_BASE_P
-   to whether or not the entry is replaced and whether or not it needs
-   to use the revert base (ie, it is replaced with history)
-   respectively. */
+/* Fill out FB->text_base_path and FB->new_text_base_path to the
+   permanent and temporary text-base paths respectively, or (if the
+   entry is replaced with history) to the permanent and temporary
+   revert-base paths respectively.
+
+   If REPLACED_P and USE_REVERT_BASE are non-NULL, set *REPLACED_P and
+   *USE_REVERT_BASE_P to whether or not the entry is replaced, and to
+   whether or not it needs to use the revert base (i.e., it's replaced
+   with history), respectively.  If CHECKSUM_P is non-NULL and the
+   path already has an entry, set *CHECKSUM_P to the entry's checksum.
+
+   Use POOL for temporary allocation and for *CHECKSUM_P (if
+   applicable), but allocate FB->text_base_path and
+   FB->new_text_base_path in FB->pool. */
 static svn_error_t *
 choose_base_paths(const char **checksum_p,
                   svn_boolean_t *replaced_p,
@@ -2843,13 +2852,15 @@ close_file(void *file_baton,
 
 
 
-/* Beginning at DEST_DIR within a working copy, search the working
-   copy for an pre-existing versioned file which is exactly equal to
-   COPYFROM_PATH@COPYFROM_REV.
+/* Beginning at DEST_DIR (and its associated entry DEST_ENTRY) within
+   a working copy, search the working copy for an pre-existing
+   versioned file which is exactly equal to COPYFROM_PATH@COPYFROM_REV.
+
+   If the file isn't found, set *RETURN_PATH to NULL.
 
    If the file is found, return the absolute path to it in
-   *RETURN_PATH, as well as a (read-only) access_t for its parent in
-   *RETURN_ACCESS.  If the file isn't found, set *RETURN_PATH to NULL.
+   *RETURN_PATH, its entry in *RETURN_ENTRY, and a (read-only)
+   access_t for its parent in *RETURN_ACCESS.
 */
 static svn_error_t *
 locate_copyfrom(const char *copyfrom_path,
@@ -2857,6 +2868,7 @@ locate_copyfrom(const char *copyfrom_path,
                 const char *dest_dir,
                 const svn_wc_entry_t *dest_entry,
                 const char **return_path,
+                const svn_wc_entry_t **return_entry,
                 svn_wc_adm_access_t **return_access,
                 apr_pool_t *pool)
 {
@@ -2990,7 +3002,7 @@ locate_copyfrom(const char *copyfrom_path,
   /* The candidate file is under version control;  but is it
      really the file we're looking for?  <wave hand in circle> */
   SVN_ERR(svn_wc_entry(&file_entry, cwd->data, ancestor_access,
-                       FALSE, subpool));
+                       FALSE, pool));
   if (! file_entry)
     /* Parent dir is versioned, but file is not.  Be safe and
        return no results (see large discourse above.) */
@@ -3018,6 +3030,7 @@ locate_copyfrom(const char *copyfrom_path,
 
   /* Success!  We found the exact file we wanted! */
   *return_path = apr_pstrdup(pool, cwd->data);
+  *return_entry = file_entry;
   *return_access = ancestor_access;
 
   svn_pool_clear(subpool);
@@ -3026,7 +3039,8 @@ locate_copyfrom(const char *copyfrom_path,
 
 
 /* Given a set of properties PROPS_IN, find all regular properties
-   and return these in a new set, alloced on POOL. */
+   and shallowly copy them into a new set (allocate the new set in
+   POOL, but the set's members retain their original allocations). */
 static apr_hash_t *
 copy_regular_props(apr_hash_t *props_in,
                    apr_pool_t *pool)
@@ -3076,13 +3090,14 @@ add_file_with_history(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   svn_wc_adm_access_t *adm_access, *src_access;
   const char *src_path;
+  const svn_wc_entry_t *src_entry;
   apr_hash_t *base_props, *working_props;
   const svn_wc_entry_t *path_entry;
   svn_error_t *err;
 
-  /* ### TODO: consider, a la add_file, doing temporary allocations
-     ### that don't need to stick around with the baton in a
-     ### subpool */
+  /* The file_pool can stick around for a *long* time, so we want to
+     use a subpool for any temporary allocations. */
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   /* First, fake an add_file() call.  Notice that we don't send any
      copyfrom args, lest we end up infinitely recursing.  :-)  */
@@ -3091,17 +3106,17 @@ add_file_with_history(const char *path,
   tfb->added_with_history = TRUE;
 
   /* Attempt to locate the copyfrom_path in the working copy first. */
-  SVN_ERR(svn_wc_entry(&path_entry, pb->path, eb->adm_access, FALSE, pool));
+  SVN_ERR(svn_wc_entry(&path_entry, pb->path, eb->adm_access, FALSE, subpool));
   err = locate_copyfrom(copyfrom_path, copyfrom_rev,
                         pb->path, path_entry,
-                        &src_path, &src_access, pool);
+                        &src_path, &src_entry, &src_access, subpool);
   if (err && err->apr_err == SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND)
     svn_error_clear(err);
   else if (err)
     return err;
 
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, pb->edit_baton->adm_access,
-                              pb->path, pb->pool));
+                              pb->path, subpool));
   /* Make a unique file name for the copyfrom text-base. */
   SVN_ERR(svn_wc_create_tmp_file2(NULL, &tfb->copied_text_base,
                                   svn_wc_adm_access_path(adm_access),
@@ -3111,15 +3126,33 @@ add_file_with_history(const char *path,
   if (src_path != NULL) /* Found a file to copy */
     {
       /* Copy the existing file's text-base over to the (temporary)
-         new text-base, where the file baton expects it to be. */
-      const char *src_text_base_path = svn_wc__text_base_path(src_path,
-                                                              FALSE, pool);
-      SVN_ERR(svn_io_copy_file(src_text_base_path, tfb->copied_text_base,
-                               TRUE, pool));
+         new text-base, where the file baton expects it to be.  Get
+         the text base and props from the usual place or from the
+         revert place, depending on scheduling. */
 
-      /* Grab the existing file's base-props into memory. */
-      SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL,
-                                 src_access, src_path, pool));
+      const char *src_text_base_path;
+
+      if (src_entry->schedule == svn_wc_schedule_replace
+          && src_entry->copyfrom_url)
+        {
+          src_text_base_path = svn_wc__text_revert_path(src_path,
+                                                        FALSE, subpool);
+          SVN_ERR(svn_wc__load_props(NULL, NULL, &base_props,
+                                     src_access, src_path, pool));
+          /* The old working props are lost, just like the old
+             working file text is.  Just use the base props. */
+          working_props = base_props;
+        }
+      else
+        {
+          src_text_base_path = svn_wc__text_base_path(src_path,
+                                                      FALSE, subpool);
+          SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL,
+                                     src_access, src_path, pool));
+        }
+
+      SVN_ERR(svn_io_copy_file(src_text_base_path, tfb->copied_text_base,
+                               TRUE, subpool));
     }
   else  /* Couldn't find a file to copy  */
     {
@@ -3136,7 +3169,7 @@ add_file_with_history(const char *path,
          svn_stream_close() automatically closes the text-base file for us. */
       SVN_ERR(svn_io_file_open(&textbase_file, tfb->copied_text_base,
                                (APR_WRITE | APR_TRUNCATE | APR_CREATE),
-                               APR_OS_DEFAULT, pool));
+                               APR_OS_DEFAULT, subpool));
       textbase_stream = svn_stream_from_aprfile2(textbase_file, FALSE, pool);
 
       /* copyfrom_path is a absolute path, fetch_func requires a path relative
@@ -3161,7 +3194,7 @@ add_file_with_history(const char *path,
       svn_boolean_t text_changed;
 
       SVN_ERR(svn_wc_text_modified_p(&text_changed, src_path, FALSE,
-                                     src_access, pool));
+                                     src_access, subpool));
 
       if (text_changed)
         {
@@ -3172,9 +3205,11 @@ add_file_with_history(const char *path,
                                           pool));
 
           SVN_ERR(svn_io_copy_file(src_path, tfb->copied_working_text, TRUE,
-                                   pool));
+                                   subpool));
         }
     }
+
+  svn_pool_destroy(subpool);
 
   *file_baton = tfb;
   return SVN_NO_ERROR;

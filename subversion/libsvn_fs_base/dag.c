@@ -35,7 +35,6 @@
 #include "reps-strings.h"
 #include "revs-txns.h"
 #include "id.h"
-#include "tree.h"  /* needed for SVN_FS__PROP_TXN_MERGEINFO */
 
 #include "util/fs_skels.h"
 
@@ -46,7 +45,6 @@
 #include "bdb/reps-table.h"
 #include "bdb/strings-table.h"
 
-#include "private/svn_fs_mergeinfo.h"
 #include "private/svn_fs_util.h"
 #include "../libsvn_fs/fs-loader.h"
 
@@ -264,9 +262,9 @@ svn_fs_base__dag_init_fs(svn_fs_t *fs)
 
 /* Given directory NODEREV in FS, set *ENTRIES_P to its entries list
    hash, as part of TRAIL, or to NULL if NODEREV has no entries.  The
-   entries list will be allocated in POOL, and the entries in
-   that list will not have interesting value in their 'kind' fields.
-   If NODEREV is not a directory, return the error SVN_ERR_FS_NOT_DIRECTORY. */
+   entries list will be allocated in POOL, and the entries in that
+   list will not have interesting value in their 'kind' fields.  If
+   NODEREV is not a directory, return the error SVN_ERR_FS_NOT_DIRECTORY. */
 static svn_error_t *
 get_dir_entries(apr_hash_t **entries_p,
                 svn_fs_t *fs,
@@ -593,7 +591,8 @@ svn_fs_base__dag_set_proplist(dag_node_t *node,
       svn_string_t *idstr = svn_fs_base__id_unparse(node->id, pool);
       return svn_error_createf
         (SVN_ERR_FS_NOT_MUTABLE, NULL,
-         _("Can't set proplist on *immutable* node-revision %s"), idstr->data);
+         _("Can't set proplist on *immutable* node-revision %s"), 
+         idstr->data);
     }
 
   /* Go get a fresh NODE-REVISION for this node. */
@@ -1432,7 +1431,6 @@ svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
   apr_hash_t *txnprops;
   svn_fs_t *fs = txn->fs;
   const char *txn_id = txn->id;
-  const svn_string_t *target_mergeinfo;
 
   /* Remove any temporary transaction properties initially created by
      begin_txn().  */
@@ -1443,27 +1441,15 @@ svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
   *new_rev = SVN_INVALID_REVNUM;
   SVN_ERR(svn_fs_bdb__put_rev(new_rev, fs, &revision, trail, pool));
 
-  target_mergeinfo = apr_hash_get(txnprops, SVN_FS__PROP_TXN_MERGEINFO,
-                                  APR_HASH_KEY_STRING);
-  if (target_mergeinfo)
-    {
-      svn_stringbuf_t *buf = svn_stringbuf_create_from_string(target_mergeinfo,
-                                                              pool);
-      svn_stream_t *stream = svn_stream_from_stringbuf(buf, pool);
-      apr_hash_t *mergeinfo = apr_hash_make(pool);
-      SVN_ERR(svn_hash_read2(mergeinfo, stream, NULL, pool));
-      SVN_ERR(svn_fs_mergeinfo__update_index(txn, *new_rev, mergeinfo, pool));
-      SVN_ERR(svn_fs_base__set_txn_prop
-              (fs, txn_id, SVN_FS__PROP_TXN_MERGEINFO, NULL, trail, pool));
-    }
-
   if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_OOD, APR_HASH_KEY_STRING))
     SVN_ERR(svn_fs_base__set_txn_prop
             (fs, txn_id, SVN_FS__PROP_TXN_CHECK_OOD, NULL, trail, pool));
 
-  if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS, APR_HASH_KEY_STRING))
+  if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS, 
+                   APR_HASH_KEY_STRING))
     SVN_ERR(svn_fs_base__set_txn_prop
             (fs, txn_id, SVN_FS__PROP_TXN_CHECK_LOCKS, NULL, trail, pool));
+
   /* Promote the unfinished transaction to a committed one. */
   SVN_ERR(svn_fs_base__txn_make_committed(fs, txn_id, *new_rev,
                                           trail, pool));
@@ -1512,6 +1498,109 @@ svn_fs_base__things_different(svn_boolean_t *props_changed,
   if (contents_changed != NULL)
     *contents_changed = (! svn_fs_base__same_keys(noderev1->data_key,
                                                   noderev2->data_key));
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/*** Mergeinfo tracking stuff ***/
+
+svn_error_t *
+svn_fs_base__dag_get_mergeinfo_stats(svn_boolean_t *has_mergeinfo,
+                                     apr_int64_t *count,
+                                     dag_node_t *node,
+                                     trail_t *trail,
+                                     apr_pool_t *pool)
+{
+  node_revision_t *node_rev;
+  svn_fs_t *fs = svn_fs_base__dag_get_fs(node);
+  const svn_fs_id_t *id = svn_fs_base__dag_get_id(node);
+
+  SVN_ERR(svn_fs_bdb__get_node_revision(&node_rev, fs, id, trail, pool));
+  if (has_mergeinfo)
+    *has_mergeinfo = node_rev->has_mergeinfo;
+  if (count)
+    *count = node_rev->mergeinfo_count;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_base__dag_set_has_mergeinfo(dag_node_t *node,
+                                   svn_boolean_t has_mergeinfo,
+                                   svn_boolean_t *had_mergeinfo,
+                                   const char *txn_id,
+                                   trail_t *trail,
+                                   apr_pool_t *pool)
+{
+  node_revision_t *node_rev;
+  svn_fs_t *fs = svn_fs_base__dag_get_fs(node);
+  const svn_fs_id_t *id = svn_fs_base__dag_get_id(node);
+
+  SVN_ERR(svn_fs_base__test_required_feature_format
+          (trail->fs, "mergeinfo", SVN_FS_BASE__MIN_MERGEINFO_FORMAT));
+
+  if (! svn_fs_base__dag_check_mutable(node, txn_id))
+    return svn_error_createf(SVN_ERR_FS_NOT_MUTABLE, NULL,
+                             _("Attempted merge tracking info change on "
+                               "immutable node"));
+
+  SVN_ERR(svn_fs_bdb__get_node_revision(&node_rev, fs, id, trail, pool));
+  *had_mergeinfo = node_rev->has_mergeinfo;
+
+  /* Are we changing the node? */
+  if ((! has_mergeinfo) != (! *had_mergeinfo))
+    {
+      /* Note the new has-mergeinfo state. */
+      node_rev->has_mergeinfo = has_mergeinfo;
+
+      /* Increment or decrement the mergeinfo count as necessary. */
+      if (has_mergeinfo)
+        node_rev->mergeinfo_count++;
+      else
+        node_rev->mergeinfo_count--;
+
+      SVN_ERR(svn_fs_bdb__put_node_revision(fs, id, node_rev, trail, pool));
+    }
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_base__dag_adjust_mergeinfo_count(dag_node_t *node,
+                                        apr_int64_t count_delta,
+                                        const char *txn_id,
+                                        trail_t *trail,
+                                        apr_pool_t *pool)
+{
+  node_revision_t *node_rev;
+  svn_fs_t *fs = svn_fs_base__dag_get_fs(node);
+  const svn_fs_id_t *id = svn_fs_base__dag_get_id(node);
+
+  SVN_ERR(svn_fs_base__test_required_feature_format
+          (trail->fs, "mergeinfo", SVN_FS_BASE__MIN_MERGEINFO_FORMAT));
+
+  if (! svn_fs_base__dag_check_mutable(node, txn_id))
+    return svn_error_createf(SVN_ERR_FS_NOT_MUTABLE, NULL,
+                             _("Attempted mergeinfo count change on "
+                               "immutable node"));
+
+  if (count_delta == 0)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_fs_bdb__get_node_revision(&node_rev, fs, id, trail, pool));
+  node_rev->mergeinfo_count = node_rev->mergeinfo_count + count_delta;
+  if ((node_rev->mergeinfo_count < 0) 
+      || ((node->kind == svn_node_file) && (node_rev->mergeinfo_count > 1)))
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             apr_psprintf(pool,
+                                          _("Invalid value (%%%s) for node "
+                                            "revision mergeinfo count"),
+                                          APR_INT64_T_FMT),
+                             node_rev->mergeinfo_count);
+
+  SVN_ERR(svn_fs_bdb__put_node_revision(fs, id, node_rev, trail, pool));
 
   return SVN_NO_ERROR;
 }

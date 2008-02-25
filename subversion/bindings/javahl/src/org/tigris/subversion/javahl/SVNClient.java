@@ -158,7 +158,7 @@ public class SVNClient implements SVNClientInterface
         MyStatusCallback callback = new MyStatusCallback();
 
         status(path, Depth.unknownOrImmediates(descend), onServer, getAll,
-               noIgnore, ignoreExternals, callback);
+               noIgnore, ignoreExternals, null, callback);
 
         return callback.getStatusArray();
     }
@@ -168,7 +168,8 @@ public class SVNClient implements SVNClientInterface
      */
     public native void status(String path, int depth, boolean onServer,
                               boolean getAll, boolean noIgnore,
-                              boolean ignoreExternals, StatusCallback callback)
+                              boolean ignoreExternals, String[] changelists,
+                              StatusCallback callback)
             throws ClientException;
 
     /**
@@ -390,13 +391,13 @@ public class SVNClient implements SVNClientInterface
     public void revert(String path, boolean recurse)
             throws ClientException
     {
-        revert(path, Depth.infinityOrEmpty(recurse));
+        revert(path, Depth.infinityOrEmpty(recurse), null);
     }
 
     /**
      * @since 1.5
      */
-    public native void revert(String path, int depth)
+    public native void revert(String path, int depth, String[] changelists)
             throws ClientException;
 
     /**
@@ -764,7 +765,15 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native MergeInfo getMergeInfo(String path, Revision pegRevision)
+    public native void mergeReintegrate(String path, Revision pegRevision,
+                                        String localPath, boolean force,
+                                        boolean dryRun)
+            throws ClientException;
+
+    /**
+     * @since 1.5
+     */
+    public native Mergeinfo getMergeinfo(String path, Revision pegRevision)
             throws SubversionException;
 
     /**
@@ -803,7 +812,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         diff(target1, revision1, target2, revision2, null, outFileName,
-             Depth.unknownOrFiles(recurse), ignoreAncestry, noDiffDeleted,
+             Depth.unknownOrFiles(recurse), null, ignoreAncestry, noDiffDeleted,
              force);
     }
 
@@ -812,7 +821,7 @@ public class SVNClient implements SVNClientInterface
      */
     public native void diff(String target1, Revision revision1, String target2,
                             Revision revision2, String relativeToDir,
-                            String outFileName, int depth,
+                            String outFileName, int depth, String[] changelists,
                             boolean ignoreAncestry, boolean noDiffDeleted,
                             boolean force)
             throws ClientException;
@@ -831,7 +840,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         diff(target, pegRevision, startRevision, endRevision, null,
-             outFileName, Depth.unknownOrFiles(recurse), ignoreAncestry,
+             outFileName, Depth.unknownOrFiles(recurse), null, ignoreAncestry,
              noDiffDeleted, force);
     }
 
@@ -841,8 +850,9 @@ public class SVNClient implements SVNClientInterface
     public native void diff(String target, Revision pegRevision,
                             Revision startRevision, Revision endRevision,
                             String relativeToDir, String outFileName,
-                            int depth, boolean ignoreAncestry,
-                            boolean noDiffDeleted, boolean force)
+                            int depth, String[] changelists,
+                            boolean ignoreAncestry, boolean noDiffDeleted,
+                            boolean force)
             throws ClientException;
 
     /**
@@ -850,7 +860,8 @@ public class SVNClient implements SVNClientInterface
      */
     public native void diffSummarize(String target1, Revision revision1,
                                      String target2, Revision revision2,
-                                     int depth, boolean ignoreAncestry,
+                                     int depth, String[] changelists,
+                                     boolean ignoreAncestry,
                                      DiffSummaryReceiver receiver)
             throws ClientException;
 
@@ -860,7 +871,8 @@ public class SVNClient implements SVNClientInterface
     public native void diffSummarize(String target, Revision pegRevision,
                                      Revision startRevision,
                                      Revision endRevision,
-                                     int depth, boolean ignoreAncestry,
+                                     int depth, String[] changelists,
+                                     boolean ignoreAncestry,
                                      DiffSummaryReceiver receiver)
             throws ClientException;
 
@@ -895,7 +907,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         ProplistCallbackImpl callback = new ProplistCallbackImpl();
-        properties(path, revision, pegRevision, Depth.empty, callback);
+        properties(path, revision, pegRevision, Depth.empty, null, callback);
 
         Map propMap = callback.getProperties(path);
         if (propMap == null)
@@ -920,6 +932,7 @@ public class SVNClient implements SVNClientInterface
      */
     public native void properties(String path, Revision revision,
                                   Revision pegRevision, int depth,
+                                  String[] changelists,
                                   ProplistCallback callback)
             throws ClientException;
 
@@ -944,7 +957,8 @@ public class SVNClient implements SVNClientInterface
                                    boolean recurse, boolean force)
             throws ClientException
     {
-        propertySet(path, name, value, Depth.infinityOrEmpty(recurse), force);
+        propertySet(path, name, value, Depth.infinityOrEmpty(recurse), null,
+                    force);
     }
 
     /**
@@ -975,7 +989,8 @@ public class SVNClient implements SVNClientInterface
      * @since 1.5
      */
     public native void propertySet(String path, String name, String value,
-                                   int depth, boolean force)
+                                   int depth, String[] changelists,
+                                   boolean force)
             throws ClientException;
 
     /**
@@ -985,15 +1000,18 @@ public class SVNClient implements SVNClientInterface
     public void propertyRemove(String path, String name, boolean recurse)
             throws ClientException
     {
-        propertyRemove(path, name, Depth.infinityOrEmpty(recurse));
+        propertyRemove(path, name, Depth.infinityOrEmpty(recurse), null);
     }
 
     /**
      * @since 1.5
      */
-    public native void propertyRemove(String path, String name,
-                                      int depth)
-            throws ClientException;
+    public void propertyRemove(String path, String name, int depth,
+                               String[] changelists)
+            throws ClientException
+    {
+        propertySet(path, name, null, depth, changelists, false);
+    }
 
     /**
      * @deprecated Use {@link #propertyCreate(String, String, String, int,
@@ -1047,10 +1065,10 @@ public class SVNClient implements SVNClientInterface
      * @since 1.5
      */
     public void propertyCreate(String path, String name, String value,
-                               int depth, boolean force)
+                               int depth, String[] changelists, boolean force)
             throws ClientException
     {
-        propertySet(path, name, value, depth, force);
+        propertySet(path, name, value, depth, changelists, force);
     }
 
     /**
@@ -1227,13 +1245,15 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native void addToChangelist(String[] paths, String changelist)
+    public native void addToChangelist(String[] paths, String changelist,
+                                       int depth, String[] changelists)
             throws ClientException;
 
     /**
      * @since 1.5
      */
-    public native void removeFromChangelist(String[] paths, String changelist)
+    public native void removeFromChangelists(String[] paths, int depth,
+                                             String[] changelists)
             throws ClientException;
 
     /**

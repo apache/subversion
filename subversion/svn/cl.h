@@ -53,11 +53,24 @@ typedef enum
   /* Resolve the conflict with the pre-conflict base file. */
   svn_cl__accept_base,
 
-  /* Resolve the conflict with the pre-conflict working copy file. */
+  /* Resolve the conflicted hunks by choosing the corresponding text
+     from the pre-conflict working copy file.
+
+     Note: this is a placeholder, not actually implemented in 1.5. */
   svn_cl__accept_mine,
 
-  /* Resolve the conflict with the post-conflict base file. */
+  /* Resolve the conflicted hunks by choosing the corresponding text
+     from the post-conflict base copy file.
+     
+     Note: this is a placeholder, not actually implemented in 1.5. */
   svn_cl__accept_theirs,
+
+  /* Resolve the conflict by taking the entire pre-conflict working
+     copy file. */
+  svn_cl__accept_mine_full,
+
+  /* Resolve the conflict by taking the entire post-conflict base file. */
+  svn_cl__accept_theirs_full,
 
   /* Launch user's editor and resolve conflict with edited file. */
   svn_cl__accept_edit,
@@ -71,6 +84,8 @@ typedef enum
 #define SVN_CL__ACCEPT_BASE "base"
 #define SVN_CL__ACCEPT_MINE "mine"
 #define SVN_CL__ACCEPT_THEIRS "theirs"
+#define SVN_CL__ACCEPT_MINE_FULL "mine-full"
+#define SVN_CL__ACCEPT_THEIRS_FULL "theirs-full"
 #define SVN_CL__ACCEPT_EDIT "edit"
 #define SVN_CL__ACCEPT_LAUNCH "launch"
 
@@ -165,6 +180,7 @@ typedef struct svn_cl__opt_state_t
   svn_cl__accept_t accept_which; /* how to handle conflicts */
   const char *from_source;       /* merge source to query (svn mergeinfo) */
   svn_depth_t set_depth;         /* new sticky ambient depth value */
+  svn_boolean_t reintegrate;     /* use "reintegrate" merge-source heuristic */
 } svn_cl__opt_state_t;
 
 
@@ -550,12 +566,21 @@ void svn_cl__check_boolean_prop_val(const char *propname,
                                     const char *propval,
                                     apr_pool_t *pool);
 
-/* De-streamifying wrapper around svn_client_get_changelist_streamy(). */
-svn_error_t *svn_cl__get_changelist(apr_array_header_t **paths_p,
-                                    const char *changelist_name,
-                                    const char *path,
-                                    svn_client_ctx_t *ctx,
-                                    apr_pool_t *pool);
+/* De-streamifying wrapper around svn_client_get_changelists(), which
+   is called for each target in TARGETS to populate *PATHS (a list of
+   paths assigned to one of the CHANGELISTS. */
+svn_error_t *svn_cl__changelist_paths(apr_array_header_t **paths,
+                                      const apr_array_header_t *changelists,
+                                      const apr_array_header_t *targets,
+                                      svn_depth_t depth,
+                                      svn_client_ctx_t *ctx,
+                                      apr_pool_t *pool);
+
+svn_error_t *
+svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets_p,
+                                            apr_getopt_t *os,
+                                            apr_array_header_t *known_targets,
+                                            apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

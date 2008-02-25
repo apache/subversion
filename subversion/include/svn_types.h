@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -87,16 +87,16 @@ typedef struct svn_error_t
 /** The various types of nodes in the Subversion filesystem. */
 typedef enum
 {
-  /* absent */
+  /** absent */
   svn_node_none,
 
-  /* regular file */
+  /** regular file */
   svn_node_file,
 
-  /* directory */
+  /** directory */
   svn_node_dir,
 
-  /* something's here, but we don't know what */
+  /** something's here, but we don't know what */
   svn_node_unknown
 } svn_node_kind_t;
 
@@ -820,13 +820,14 @@ const char *
 svn_uuid_generate(apr_pool_t *pool);
 
 /**
- * Merge info representing a merge of a range of revisions.
+ * Mergeinfo representing a merge of a range of revisions.
  *
  * @since New in 1.5
  */
 typedef struct svn_merge_range_t
 {
-  /* If the 'start' field is less than the 'end' field then 'start' is
+  /**
+   * If the 'start' field is less than the 'end' field then 'start' is
    * exclusive and 'end' inclusive of the range described.  If 'start'
    * is greater than 'end' then the opposite is true.  If 'start'
    * equals 'end' the meaning of the range is not defined.
@@ -834,8 +835,9 @@ typedef struct svn_merge_range_t
   svn_revnum_t start;
   svn_revnum_t end;
 
-  /* Whether this merge range should be inherited by treewise
-     descendants of the path to which the range applies. */
+  /**
+   * Whether this merge range should be inherited by treewise
+   * descendants of the path to which the range applies. */
   svn_boolean_t inheritable;
 } svn_merge_range_t;
 
@@ -848,24 +850,13 @@ svn_merge_range_t *
 svn_merge_range_dup(svn_merge_range_t *range, apr_pool_t *pool);
 
 /**
- * The three ways to request mergeinfo affecting a given path.
+ * Returns true if the changeset committed in revision @a rev is one
+ * of the changesets in the range @a range.
  *
  * @since New in 1.5.
  */
-typedef enum
-{
-  /** Explicit mergeinfo only. */
-  svn_mergeinfo_explicit,
-
-  /** Explicit mergeinfo, or if that doesn't exist, the inherited
-      mergeinfo from a target's nearest (path-wise, not history-wise)
-      ancestor. */ 
-  svn_mergeinfo_inherited,
-
-  /** Mergeinfo on target's nearest (path-wise, not history-wise)
-      ancestor, regardless of whether target has explict mergeinfo. */
-  svn_mergeinfo_nearest_ancestor
-} svn_mergeinfo_inheritance_t;
+svn_boolean_t
+svn_merge_range_contains_rev(svn_merge_range_t *range, svn_revnum_t rev);
 
 
 
@@ -881,13 +872,13 @@ typedef enum
  */
 typedef struct svn_location_segment_t
 {
-  /* The beginning (oldest) and ending (youngest) revisions for this
-     segment. */
+  /** The beginning (oldest) and ending (youngest) revisions for this
+      segment. */
   svn_revnum_t range_start;
   svn_revnum_t range_end;
 
-  /* The absolute (sans leading slash) path for this segment.  May be
-     NULL to indicate gaps in an object's history.  */
+  /** The absolute (sans leading slash) path for this segment.  May be
+      NULL to indicate gaps in an object's history.  */
   const char *path;
 
 } svn_location_segment_t;
@@ -913,29 +904,8 @@ typedef svn_error_t *(*svn_location_segment_receiver_t)
 svn_location_segment_t *
 svn_location_segment_dup(svn_location_segment_t *segment,
                          apr_pool_t *pool);
-
 /** @} */
 
-
-/** Return a constant string expressing @a inherit as an English word,
- * i.e., "explicit" (default), "inherited", or "nearest_ancestor".
- * The string is not localized, as it may be used for client<->server
- * communications.
- *
- * @since New in 1.5.
- */
-const char *
-svn_inheritance_to_word(svn_mergeinfo_inheritance_t inherit);
-
-
-/** Return the appropriate @c svn_mergeinfo_inheritance_t for @a word.
- * @a word is as returned from svn_inheritance_to_word().  Defaults to
- * @c svn_mergeinfo_explicit.
- *
- * @since New in 1.5.
- */
-svn_mergeinfo_inheritance_t
-svn_inheritance_from_word(const char *word);
 
 #ifdef __cplusplus
 }

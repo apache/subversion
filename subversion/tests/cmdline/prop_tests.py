@@ -22,7 +22,7 @@ import sys, re, os, stat
 # Our testing module
 import svntest
 
-from svntest.main import SVN_PROP_MERGE_INFO
+from svntest.main import SVN_PROP_MERGEINFO
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -668,12 +668,12 @@ def inappropriate_props(sbox):
   # ...grammatically incorrect
   svntest.actions.run_and_verify_svn('illegal grammar', None,
                                      "svn: Pathname not terminated by ':'\n",
-                                     'propset', SVN_PROP_MERGE_INFO, '/trunk',
+                                     'propset', SVN_PROP_MERGEINFO, '/trunk',
                                      path)
   svntest.actions.run_and_verify_svn('illegal grammar', None,
                                      "svn: Invalid revision number found "
                                       "parsing 'one'\n",
-                                     'propset', SVN_PROP_MERGE_INFO,
+                                     'propset', SVN_PROP_MERGEINFO,
                                      '/trunk:one', path)
 
   # ...contain overlapping revision ranges
@@ -681,20 +681,20 @@ def inappropriate_props(sbox):
                                      "svn: Parsing of overlapping revision "
                                       "ranges '9-20' and '18-22' is not "
                                       "supported\n",
-                                     'propset', SVN_PROP_MERGE_INFO,
+                                     'propset', SVN_PROP_MERGEINFO,
                                      '/branch:5-7,9-20,18-22', path)
 
   svntest.actions.run_and_verify_svn('overlapping ranges', None,
                                      "svn: Parsing of overlapping revision "
                                       "ranges '3' and '3' is not supported\n",
-                                     'propset', SVN_PROP_MERGE_INFO,
+                                     'propset', SVN_PROP_MERGEINFO,
                                      '/branch:3,3', path)
 
   # ...contain unordered revision ranges
   svntest.actions.run_and_verify_svn('unordered ranges', None,
                                      "svn: Unable to parse unordered "
                                       "revision ranges '5' and '2-3'\n",
-                                     'propset', SVN_PROP_MERGE_INFO,
+                                     'propset', SVN_PROP_MERGEINFO,
                                      '/featureX:5,2-3,9', path)
 
   # ...contain revision ranges with start revisions greater than or
@@ -702,14 +702,14 @@ def inappropriate_props(sbox):
   svntest.actions.run_and_verify_svn('range start >= range end', None,
                                      "svn: Unable to parse reversed "
                                       "revision range '20-5'\n",
-                                     'propset', SVN_PROP_MERGE_INFO,
+                                     'propset', SVN_PROP_MERGEINFO,
                                      '/featureX:4,20-5', path)
 
   # ...contain paths mapped to empty revision ranges
   svntest.actions.run_and_verify_svn('empty ranges', None,
                                      "svn: Mergeinfo for '/trunk' maps to "
                                       "an empty revision range\n",
-                                     'propset', SVN_PROP_MERGE_INFO,
+                                     'propset', SVN_PROP_MERGEINFO,
                                      '/trunk:', path)
 
 #----------------------------------------------------------------------
@@ -796,9 +796,8 @@ def revprop_change(sbox):
                                      'cash-sound', 'cha-ching!', sbox.wc_dir)
 
   # Now test error output from revprop-change hook.
-  message = 'revprop_change test'
-  svntest.actions.disable_revprop_changes(sbox.repo_dir, message)
-  svntest.actions.run_and_verify_svn(None, None, '.*' + message,
+  svntest.actions.disable_revprop_changes(sbox.repo_dir)
+  svntest.actions.run_and_verify_svn(None, None, '.*pre-revprop-change.* 0 jrandom cash-sound A',
                                      'propset', '--revprop', '-r', '0',
                                      'cash-sound', 'cha-ching!', sbox.wc_dir)
 
@@ -813,6 +812,14 @@ def revprop_change(sbox):
                                      'propget', '--revprop', '-r', '0',
                                      'cash-sound', sbox.wc_dir)
 
+  # Now test that blocking the revprop delete.
+  svntest.actions.disable_revprop_changes(sbox.repo_dir)
+  svntest.actions.run_and_verify_svn(None, None, '.*pre-revprop-change.* 0 jrandom cash-sound D',
+                                     'propdel', '--revprop', '-r', '0',
+                                     'cash-sound', sbox.wc_dir)
+
+  # Now test actually deleting the revprop.
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propdel', '--revprop', '-r', '0',
                                      'cash-sound', sbox.wc_dir)
@@ -1628,7 +1635,12 @@ test_list = [ None,
               copy_inherits_special_props,
               # If we learn how to write a pre-revprop-change hook for
               # non-Posix platforms, we won't have to skip here:
-              Skip(revprop_change, is_non_posix_and_non_windows_os),
+              # TODO(epg): Removed Skip as long as we have this XFail
+              # because I couldn't get Skip and XFail to interact
+              # properly (it kept showing the failure and then
+              # printing PASS instead of XFAIL).
+              #Skip(revprop_change, is_non_posix_and_non_windows_os),
+              XFail(revprop_change, svntest.main.is_ra_type_dav),
               prop_value_conversions,
               binary_props,
               recursive_base_wc_ops,

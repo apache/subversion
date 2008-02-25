@@ -33,9 +33,9 @@ wc-status = element wc-status { attlist.wc-status, commit?, lock? }
 attlist.wc-status &=
   ## Item/text status.
   attribute item {
-    "added" | "conflicted" | "deleted" | "ignored" | "modified" | "replaced"
-    | "external" | "unversioned" | "incomplete" | "obstructed" | "normal"
-    | "none"
+    "added" | "conflicted" | "deleted" | "external" | "ignored" |
+    "incomplete" | "merged" | "missing" | "modified" | "none" |
+    "normal" | "obstructed" | "replaced" | "unversioned"
   },
   ## Properties status.
   attribute props { "conflicted" | "modified" | "normal" | "none" },

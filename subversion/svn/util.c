@@ -36,12 +36,14 @@
 #include <apr_general.h>
 #include <apr_lib.h>
 
+#include "svn_pools.h"
+#include "svn_error.h"
 #include "svn_ctype.h"
 #include "svn_client.h"
 #include "svn_cmdline.h"
 #include "svn_string.h"
 #include "svn_path.h"
-#include "svn_error.h"
+#include "svn_hash.h"
 #include "svn_io.h"
 #include "svn_utf.h"
 #include "svn_subst.h"
@@ -1008,6 +1010,28 @@ svn_cl__node_kind_str(svn_node_kind_t kind)
 }
 
 
+svn_error_t *
+svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets,
+                                            apr_getopt_t *os,
+                                            apr_array_header_t *known_targets,
+                                            apr_pool_t *pool)
+{
+  svn_error_t *error = svn_opt_args_to_target_array3(targets, os,
+                                                     known_targets, pool);
+  if (error)
+    {
+      if (error->apr_err ==  SVN_ERR_RESERVED_FILENAME_SPECIFIED)
+        {
+          svn_handle_error2(error, stderr, FALSE, "svn: Skipping argument: ");
+          svn_error_clear(error);
+        }
+      else
+        return error;
+    }
+  return SVN_NO_ERROR;
+}
+
+
 /* Helper for svn_cl__get_changelist(); implements
    svn_changelist_receiver_t. */
 static svn_error_t *
@@ -1024,21 +1048,37 @@ changelist_receiver(void *baton,
 
 
 svn_error_t *
-svn_cl__get_changelist(apr_array_header_t **paths_p,
-                       const char *changelist_name,
-                       const char *path,
-                       svn_client_ctx_t *ctx,
-                       apr_pool_t *pool)
+svn_cl__changelist_paths(apr_array_header_t **paths,
+                         const apr_array_header_t *changelists,
+                         const apr_array_header_t *targets,
+                         svn_depth_t depth,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *pool)
 {
-  apr_array_header_t *paths = apr_array_make(pool, 8, sizeof(const char *));
-  apr_array_header_t *changelists = apr_array_make(pool, 1, 
-                                                   sizeof(const char *));
-  APR_ARRAY_PUSH(changelists, const char *) = changelist_name;
-  SVN_ERR(svn_client_get_changelists(path, changelists, svn_depth_infinity,
-                                     changelist_receiver, (void *)paths,
-                                     ctx, pool));
-  *paths_p = paths;
-  return SVN_NO_ERROR;
+  apr_array_header_t *found;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_hash_t *paths_hash;
+  int i;
+
+  if (! (changelists && changelists->nelts))
+    {
+      *paths = (apr_array_header_t *)targets;
+      return SVN_NO_ERROR;
+    }
+
+  found = apr_array_make(pool, 8, sizeof(const char *));
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+      svn_pool_clear(subpool);
+      SVN_ERR(svn_client_get_changelists(target, changelists, depth,
+                                         changelist_receiver, (void *)found,
+                                         ctx, subpool));
+    }
+  svn_pool_destroy(subpool);
+
+  SVN_ERR(svn_hash_from_cstring_keys(&paths_hash, found, pool));
+  return svn_hash_keys(paths, paths_hash, pool);
 }
 
 

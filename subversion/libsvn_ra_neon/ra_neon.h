@@ -95,6 +95,8 @@ typedef struct {
   svn_auth_iterstate_t *auth_iterstate; /* state of authentication retries */
   const char *auth_username;            /* last authenticated username used */
 
+  svn_auth_iterstate_t *p11pin_iterstate; /* state of PKCS#11 pin retries */
+
   svn_boolean_t compression;            /* should we use http compression? */
   const char *uuid;                     /* repository UUID */
 
@@ -260,6 +262,7 @@ svn_error_t * svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
                                          const apr_array_header_t *paths,
                                          svn_revnum_t revision,
                                          svn_mergeinfo_inheritance_t inherit,
+                                         svn_boolean_t include_descendants,
                                          apr_pool_t *pool);
 
 svn_error_t * svn_ra_neon__do_update(svn_ra_session_t *session,

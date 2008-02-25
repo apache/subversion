@@ -350,7 +350,7 @@ harvest_committables(apr_hash_t *committables,
     {
       /* Paths in conflict which are not part of our changelist should
          be ignored. */
-      if (SVN_CLIENT__CL_MATCH(changelists, entry))
+      if (SVN_WC__CL_MATCH(changelists, entry))
         return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
                                  _("Aborting commit: '%s' remains in conflict"),
                                  svn_path_local_style(path, pool));
@@ -509,7 +509,7 @@ harvest_committables(apr_hash_t *committables,
   /* Now, if this is something to commit, add it to our list. */
   if (state_flags)
     {
-      if (SVN_CLIENT__CL_MATCH(changelists, entry))
+      if (SVN_WC__CL_MATCH(changelists, entry))
         {
           /* Finally, add the committable item. */
           add_committable(committables, path, entry->kind, url,
@@ -604,7 +604,7 @@ harvest_committables(apr_hash_t *committables,
                               && (this_entry->schedule
                                   == svn_wc_schedule_delete))
                             {
-                              if (SVN_CLIENT__CL_MATCH(changelists, entry))
+                              if (SVN_WC__CL_MATCH(changelists, entry))
                                 {
                                   add_committable(
                                     committables, full_path,

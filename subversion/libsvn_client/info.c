@@ -235,7 +235,7 @@ info_found_entry_callback(const char *path,
       && (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR)))
     return SVN_NO_ERROR;
 
-  if (SVN_CLIENT__CL_MATCH(fe_baton->changelist_hash, entry))
+  if (SVN_WC__CL_MATCH(fe_baton->changelist_hash, entry))
     {
       svn_info_t *info;
       SVN_ERR(build_info_from_entry(&info, entry, pool));
@@ -277,7 +277,7 @@ crawl_entries(const char *wcpath,
 
   if (entry->kind == svn_node_file)
     {
-      if (SVN_CLIENT__CL_MATCH(changelist_hash, entry))
+      if (SVN_WC__CL_MATCH(changelist_hash, entry))
         {
           svn_info_t *info;
           SVN_ERR(build_info_from_entry(&info, entry, pool));
@@ -396,8 +396,8 @@ svn_client_info2(const char *path_or_url,
                                            peg_revision,
                                            revision, ctx, pool));
 
-  SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root_URL, pool));
-  SVN_ERR(svn_ra_get_uuid(ra_session, &repos_UUID, pool));
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_URL, pool));
+  SVN_ERR(svn_ra_get_uuid2(ra_session, &repos_UUID, pool));
 
   svn_path_split(url, &parent_url, &base_name, pool);
   base_name = svn_path_uri_decode(base_name, pool);

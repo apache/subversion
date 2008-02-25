@@ -45,16 +45,16 @@ extern "C" {
 #define PATH_REVS_DIR         "revs"             /* Directory of revisions */
 #define PATH_REVPROPS_DIR     "revprops"         /* Directory of revprops */
 #define PATH_TXNS_DIR         "transactions"     /* Directory of transactions */
+#define PATH_NODE_ORIGINS_DIR "node-origins"     /* Lazy node-origin cache */
 #define PATH_TXN_PROTOS_DIR   "txn-protorevs"    /* Directory of proto-revs */
-#define PATH_TXN_CURRENT      "transaction-current" /* File with next txn key */
+#define PATH_TXN_CURRENT      "txn-current"      /* File with next txn key */
 #define PATH_TXN_CURRENT_LOCK "txn-current-lock" /* Lock for txn-current */
-#define PATH_LOCKS_DIR         "locks"           /* Directory of locks */
+#define PATH_LOCKS_DIR        "locks"            /* Directory of locks */
 
 /* Names of special files and file extensions for transactions */
 #define PATH_CHANGES       "changes"       /* Records changes made so far */
 #define PATH_TXN_PROPS     "props"         /* Transaction properties */
 #define PATH_NEXT_IDS      "next-ids"      /* Next temporary ID assignments */
-#define PATH_TXN_MERGEINFO "mergeinfo"     /* Transaction mergeinfo props */
 #define PATH_PREFIX_NODE   "node."         /* Prefix for node filename */
 #define PATH_EXT_TXN       ".txn"          /* Extension of txn dir */
 #define PATH_EXT_CHILDREN  ".children"     /* Extension for dir contents */
@@ -74,7 +74,7 @@ extern "C" {
 #define SVN_FS_FS__MIN_SVNDIFF1_FORMAT 2
 
 /* The minimum format number that supports transaction ID generation
-   using a transaction sequence in the transaction-current file. */
+   using a transaction sequence in the txn-current file. */
 #define SVN_FS_FS__MIN_TXN_CURRENT_FORMAT 3
 
 /* The minimum format number that supports the "layout" filesystem
@@ -83,6 +83,13 @@ extern "C" {
 
 /* The minimum format number that stores protorevs in a separate directory. */
 #define SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT 3
+
+/* The minimum format number that doesn't keep node and copy ID counters. */
+#define SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT 3
+
+/* The minimum format number that maintains minfo-here and minfo-count
+   noderev fields. */
+#define SVN_FS_FS__MIN_MERGEINFO_FORMAT 3
 
 /* Maximum number of directories to cache dirents for.
    This *must* be a power of 2 for DIR_CACHE_ENTRIES_MASK
@@ -148,7 +155,7 @@ typedef struct
   apr_thread_mutex_t *fs_write_lock;
 
   /* A lock for intra-process synchronization when locking the
-     transaction-current file. */
+     txn-current file. */
   apr_thread_mutex_t *txn_current_lock;
 #endif
 
@@ -191,6 +198,9 @@ typedef struct
 
   /* The uuid of this FS. */
   const char *uuid;
+
+  /* The revision that was youngest, last time we checked. */
+  svn_revnum_t youngest_rev_cache;
 
   /* Caches of immutable data.
      
@@ -310,6 +320,13 @@ typedef struct
 
   /* is this the unmodified root of a transaction? */
   svn_boolean_t is_fresh_txn_root;
+
+  /* Number of nodes with svn:mergeinfo properties that are
+     descendants of this node (including it itself) */
+  apr_int64_t mergeinfo_count;
+
+  /* Does this node itself have svn:mergeinfo? */
+  svn_boolean_t has_mergeinfo;
 
 } node_revision_t;
 

@@ -410,10 +410,6 @@ class SvnFsTest < Test::Unit::TestCase
 
     yield(:create, [path, config])
 
-    assert_raises(Svn::Error::Cancelled) do
-      yield(:recover, [path], Proc.new{raise Svn::Error::Cancelled})
-    end
-
     assert_nothing_raised do
       yield(:recover, [path], Proc.new{})
     end
@@ -489,7 +485,8 @@ class SvnFsTest < Test::Unit::TestCase
     assert_equal({}, @fs.root.mergeinfo(trunk_in_repos))
 
     rev3 = ctx.commit(@wc_path).revision
-    assert_equal({trunk_in_repos => "#{branch_in_repos}:2"},
+    mergeinfo = Svn::Core::MergeInfo.parse("#{branch_in_repos}:2")
+    assert_equal({trunk_in_repos => mergeinfo},
                  @fs.root.mergeinfo(trunk_in_repos))
 
     ctx.rm(branch_path)
@@ -498,7 +495,7 @@ class SvnFsTest < Test::Unit::TestCase
     ctx.merge(branch, rev3, branch, rev4, trunk)
     assert(!File.exist?(trunk_path))
     rev5 = ctx.commit(@wc_path).revision
-    assert_equal({trunk_in_repos => "#{branch_in_repos}:2,4"},
+    assert_equal({trunk_in_repos => Svn::Core::MergeInfo.parse("#{branch_in_repos}:2,4")},
                  @fs.root.mergeinfo(trunk_in_repos))
   end
 end

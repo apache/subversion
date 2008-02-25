@@ -228,8 +228,8 @@ switch_external(const char *path,
                   SVN_ERR(svn_client__open_ra_session_internal
                           (&ra_session, url, NULL, NULL, NULL, FALSE, TRUE,
                            ctx, subpool));
-                  SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root,
-                                                subpool));
+                  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root,
+                                                 subpool));
 
                   err = svn_client_relocate(path, entry->repos, repos_root,
                                             TRUE, ctx, subpool);
@@ -946,7 +946,7 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
                                      &(external->revision),
                                      status_func, status_baton,
                                      depth, get_all, update,
-                                     no_ignore, FALSE, ctx, iterpool));
+                                     no_ignore, FALSE, NULL, ctx, iterpool));
         }
     }
 

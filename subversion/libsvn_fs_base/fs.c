@@ -58,8 +58,6 @@
 #include "bdb/node-origins-table.h"
 
 #include "../libsvn_fs/fs-loader.h"
-#include "private/svn_fs_sqlite.h"
-#include "private/svn_fs_mergeinfo.h"
 #include "private/svn_fs_util.h"
 
 
@@ -501,8 +499,11 @@ static fs_vtable_t fs_vtable = {
 /* Depending on CREATE, create or open the environment and databases
    for filesystem FS in PATH. Use POOL for temporary allocations. */
 static svn_error_t *
-open_databases(svn_fs_t *fs, svn_boolean_t create,
-               const char *path, apr_pool_t *pool)
+open_databases(svn_fs_t *fs, 
+               svn_boolean_t create,
+               int format,
+               const char *path, 
+               apr_pool_t *pool)
 {
   base_fs_data_t *bfd;
 
@@ -609,12 +610,15 @@ open_databases(svn_fs_t *fs, svn_boolean_t create,
                                                       bfd->bdb->env,
                                                       create)));
 
-  SVN_ERR(BDB_WRAP(fs, (create
-                        ? "creating 'node-origins' table"
-                        : "opening 'node-origins' table"),
-                   svn_fs_bdb__open_node_origins_table(&bfd->node_origins,
-                                                       bfd->bdb->env,
-                                                       create)));
+  if (format >= SVN_FS_BASE__MIN_NODE_ORIGINS_FORMAT)
+    {
+      SVN_ERR(BDB_WRAP(fs, (create
+                            ? "creating 'node-origins' table"
+                            : "opening 'node-origins' table"),
+                       svn_fs_bdb__open_node_origins_table(&bfd->node_origins,
+                                                           bfd->bdb->env,
+                                                           create)));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -625,26 +629,32 @@ base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
             apr_pool_t *common_pool)
 {
   int format = SVN_FS_BASE__FORMAT_NUMBER;
+  svn_error_t *svn_err;
+
+  /* See if we had an explicitly specified pre-1.5-compatible.  */
+  if (fs->config && apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
+                                 APR_HASH_KEY_STRING))
+    format = 2;
+
+  /* See if we had an explicitly specified pre-1.4-compatible.  */
+  if (fs->config && apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
+                                 APR_HASH_KEY_STRING))
+    format = 1;
 
   /* Create the environment and databases. */
-  svn_error_t *svn_err = open_databases(fs, TRUE, path, pool);
+  svn_err = open_databases(fs, TRUE, format, path, pool);
   if (svn_err) goto error;
 
   /* Initialize the DAG subsystem. */
   svn_err = svn_fs_base__dag_init_fs(fs);
   if (svn_err) goto error;
 
-  /* See if we had an explicitly specified pre 1.4 compatible.  */
-  if (fs->config && apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
-                                 APR_HASH_KEY_STRING))
-    format = 1;
-
   /* This filesystem is ready.  Stamp it with a format number. */
   svn_err = svn_io_write_version_file
     (svn_path_join(fs->path, FORMAT_FILE, pool), format, pool);
   if (svn_err) goto error;
 
-  SVN_ERR(svn_fs__sqlite_create_index(path, pool));
+  ((base_fs_data_t *) fs->fsap_data)->format = format;
   return base_serialized_init(fs, common_pool, pool);
 
 error:
@@ -655,6 +665,20 @@ error:
 
 /* Gaining access to an existing Berkeley DB-based filesystem.  */
 
+svn_error_t *
+svn_fs_base__test_required_feature_format(svn_fs_t *fs, 
+                                          const char *feature, 
+                                          int requires)
+{
+  base_fs_data_t *bfd = fs->fsap_data;
+  if (bfd->format < requires)
+    return svn_error_createf
+      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+       _("The '%s' feature requires version %d of the filesystem schema; "
+         "filesystem '%s' uses only version %d"), 
+       feature, requires, fs->path, bfd->format);
+  return SVN_NO_ERROR;
+}
 
 /* Return the error SVN_ERR_FS_UNSUPPORTED_FORMAT if FS's format
    number is not the same as the format number supported by this
@@ -662,8 +686,10 @@ error:
 static svn_error_t *
 check_format(int format)
 {
-  /* We support format 1 and 2 simultaneously.  */
+  /* We support format 1, 2 and 3 simultaneously.  */
   if (format == 1 && SVN_FS_BASE__FORMAT_NUMBER == 2)
+    return SVN_NO_ERROR;
+  if ((format == 1 || format == 2) && SVN_FS_BASE__FORMAT_NUMBER == 3)
     return SVN_NO_ERROR;
 
   if (format != SVN_FS_BASE__FORMAT_NUMBER)
@@ -682,30 +708,40 @@ base_open(svn_fs_t *fs, const char *path, apr_pool_t *pool,
           apr_pool_t *common_pool)
 {
   int format;
-
-  /* Create the environment and databases. */
-  svn_error_t *svn_err = open_databases(fs, FALSE, path, pool);
-  if (svn_err) goto error;
+  svn_error_t *svn_err;
+  svn_boolean_t write_format_file = FALSE;
 
   /* Read the FS format number. */
-  svn_err = svn_io_read_version_file
-    (&format, svn_path_join(fs->path, FORMAT_FILE, pool), pool);
+  svn_err = svn_io_read_version_file(&format, 
+                                     svn_path_join(path, FORMAT_FILE, pool), 
+                                     pool);
   if (svn_err && APR_STATUS_IS_ENOENT(svn_err->apr_err))
     {
       /* Pre-1.2 filesystems did not have a format file (you could say
          they were format "0"), so they get upgraded on the fly. */
       svn_error_clear(svn_err);
+      svn_err = SVN_NO_ERROR;
       format = SVN_FS_BASE__FORMAT_NUMBER;
-      svn_err = svn_io_write_version_file
-        (svn_path_join(fs->path, FORMAT_FILE, pool), format, pool);
-      if (svn_err) goto error;
+      write_format_file = TRUE;
     }
   else if (svn_err)
     goto error;
 
-  /* Now we've got a format number no matter what. */
+  /* Create the environment and databases. */
+  svn_err = open_databases(fs, FALSE, format, path, pool);  
+  if (svn_err) goto error;
+
   ((base_fs_data_t *) fs->fsap_data)->format = format;
   SVN_ERR(check_format(format));
+
+  /* If we lack a format file, write one. */
+  if (write_format_file)
+    {
+      svn_err = svn_io_write_version_file(svn_path_join(path, FORMAT_FILE, 
+                                                        pool), format, pool);
+      if (svn_err) goto error;
+    }
+
   return base_serialized_init(fs, common_pool, pool);
 
  error:
@@ -756,6 +792,16 @@ base_open_for_recovery(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   fs->path = apr_pstrdup(fs->pool, path);
 
   return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+             apr_pool_t *common_pool)
+{
+  /* Currently, upgrading just means bumping the format file's stored
+     version number. */
+  return svn_io_write_version_file(svn_path_join(path, FORMAT_FILE, pool), 
+                                   SVN_FS_BASE__FORMAT_NUMBER, pool);
 }
 
 static svn_error_t *
@@ -1051,10 +1097,6 @@ base_hotcopy(const char *src_path,
   /* Copy the DB_CONFIG file. */
   SVN_ERR(svn_io_dir_file_copy(src_path, dest_path, "DB_CONFIG", pool));
 
-  /* Copy the merge tracking info. */
-  SVN_ERR(svn_io_dir_file_copy(src_path, dest_path, SVN_FS__SQLITE_DB_NAME,
-                               pool));
-
   /* In order to copy the database files safely and atomically, we
      must copy them in chunks which are multiples of the page-size
      used by BDB.  See sleepycat docs for details, or svn issue #1818. */
@@ -1198,6 +1240,7 @@ static fs_library_vtable_t library_vtable = {
   base_create,
   base_open,
   base_open_for_recovery,
+  base_upgrade,
   base_delete_fs,
   base_hotcopy,
   base_get_description,

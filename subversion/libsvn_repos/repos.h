@@ -128,6 +128,13 @@ struct svn_repos_t
      *repository's* capabilities, but no, they represent the
      client's -- we just don't have any other place to persist them. */
   apr_array_header_t *client_capabilities;
+
+  /* Maps SVN_REPOS_CAPABILITY_foo keys to "yes" or "no" values.
+     If a capability is not yet discovered, it is absent from the table.
+     Most likely the keys and values are constants anyway (and
+     sufficiently well-informed internal code may just compare against
+     those constants' addresses, therefore). */
+  apr_hash_t *repository_capabilities;
 };
 
 
@@ -265,14 +272,6 @@ svn_repos__compare_files(svn_boolean_t *changed_p,
                          svn_fs_root_t *root2,
                          const char *path2,
                          apr_pool_t *pool);
-
-/* Get the mergeinfo for PATH in REPOS as REVNUM and store it in MERGEINFO. */
-svn_error_t *
-svn_repos__get_path_mergeinfo(apr_hash_t **mergeinfo,
-                              svn_fs_t *fs,
-                              const char *path,
-                              svn_revnum_t revnum,
-                              apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

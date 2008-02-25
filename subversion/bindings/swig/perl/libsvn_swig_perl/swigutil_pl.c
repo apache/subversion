@@ -1155,7 +1155,7 @@ svn_error_t *svn_swig_pl_info_receiver(void *baton,
     swig_type_info *infoinfo = _SWIG_TYPE("svn_info_t *");
 
     if (!SvOK((SV *)baton))
-        return;
+        return SVN_NO_ERROR;
 
     svn_swig_pl_callback_thunk(CALL_SV, baton, &result, "sSS", path, info,
                                infoinfo, pool, POOLINFO);

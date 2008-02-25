@@ -114,14 +114,14 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * Tests MergeInfo and RevisionRange classes.
+     * Tests Mergeinfo and RevisionRange classes.
      * @since 1.5
      */
-    public void testMergeInfoParser() throws Throwable
+    public void testMergeinfoParser() throws Throwable
     {
         String mergeInfoPropertyValue =
             "/trunk:1-300,305,307,400-405\n/branches/branch:308-400";
-        MergeInfo info = new MergeInfo(mergeInfoPropertyValue);
+        Mergeinfo info = new Mergeinfo(mergeInfoPropertyValue);
         String[] paths = info.getPaths();
         assertEquals(2, paths.length);
         RevisionRange[] trunkRange = info.getRevisionRange("/trunk");
@@ -645,7 +645,7 @@ public class BasicTests extends SVNTests
         client.propertyCreate(itemPath, "cqcq", "qrz", false, false);
         ProplistCallbackImpl callback = new ProplistCallbackImpl();
 
-        client.properties(itemPath, null, null, Depth.empty, callback);
+        client.properties(itemPath, null, null, Depth.empty, null, callback);
         Map propMap = callback.getProperties(itemPath);
         Iterator it = propMap.keySet().iterator();
 
@@ -2084,7 +2084,7 @@ public class BasicTests extends SVNTests
             {thisTest.getWCPath() + "/iota"};
 
         // Add a path to a changelist, and check to see if it got added
-        client.addToChangelist(paths, changelistName);
+        client.addToChangelist(paths, changelistName, Depth.infinity, null);
         String[] cl = new String[1];
         client.getChangelists(thisTest.getWCPath(), changelists,
                               Depth.infinity, clCallback);
@@ -2097,7 +2097,7 @@ public class BasicTests extends SVNTests
 
         // Remove the path from the changelist, and check to see if the path is
         // actually removed.
-        client.removeFromChangelist(paths, changelistName);
+        client.removeFromChangelists(paths, Depth.infinity, changelists);
         clCallback.clear();
         client.getChangelists(thisTest.getWCPath(), changelists,
                               Depth.infinity, clCallback);
@@ -2115,14 +2115,14 @@ public class BasicTests extends SVNTests
      * @param targetPath The path for which to acquire mergeinfo.
      * @param mergeSrc The URL from which to consider merges.
      */
-    private void acquireMergeInfoAndAssertEquals(String expectedMergedRevs,
+    private void acquireMergeinfoAndAssertEquals(String expectedMergedRevs,
                                                  String expectedAvailableRevs,
                                                  String targetPath,
                                                  String mergeSrc)
         throws SubversionException
     {
         // Verify expected merge history.
-        MergeInfo mergeInfo = client.getMergeInfo(targetPath, Revision.HEAD);
+        Mergeinfo mergeInfo = client.getMergeinfo(targetPath, Revision.HEAD);
         assertNotNull("Missing merge info on '" + targetPath + '\'',
                       mergeInfo);
         List ranges = mergeInfo.getRevisions(mergeSrc);
@@ -2163,9 +2163,12 @@ public class BasicTests extends SVNTests
         PrintWriter writer = new PrintWriter(new FileOutputStream(f, true));
         writer.print(toAppend);
         writer.close();
-        WC wc = thisTest.getWc();
-        wc.setItemWorkingCopyRevision(path, rev);
-        wc.setItemContent(path, wc.getItemContent(path) + toAppend);
+        if (rev > 0)
+        {
+            WC wc = thisTest.getWc();
+            wc.setItemWorkingCopyRevision(path, rev);
+            wc.setItemContent(path, wc.getItemContent(path) + toAppend);
+        }
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(), path,
                               NodeKind.file, CommitItemStateFlags.TextMods);
         return f;
@@ -2187,8 +2190,8 @@ public class BasicTests extends SVNTests
         assertNotNull(suggestedSrcs);
         assertEquals(1, suggestedSrcs.length);
 
-        // Test that getMergeInfo() returns null.
-        assertNull(client.getMergeInfo(new File(thisTest.getWCPath(), "A")
+        // Test that getMergeinfo() returns null.
+        assertNull(client.getMergeinfo(new File(thisTest.getWCPath(), "A")
                                        .toString(), Revision.HEAD));
 
         // Merge and commit some changes (r4).
@@ -2260,11 +2263,11 @@ public class BasicTests extends SVNTests
         String targetPath =
             new File(thisTest.getWCPath(), "branches/A/mu").getPath();
         final String mergeSrc = thisTest.getUrl() + "/A/mu";
-        acquireMergeInfoAndAssertEquals("2-4", "4-6", targetPath, mergeSrc);
+        acquireMergeinfoAndAssertEquals("2-4", "4-6", targetPath, mergeSrc);
 
         // Test retrieval of mergeinfo from the repository.
         targetPath = thisTest.getUrl() + "/branches/A/mu";
-        acquireMergeInfoAndAssertEquals("2-4", "4-6", targetPath, mergeSrc);
+        acquireMergeinfoAndAssertEquals("2-4", "4-6", targetPath, mergeSrc);
     }
 
     /**
@@ -2277,8 +2280,8 @@ public class BasicTests extends SVNTests
     {
         OneTest thisTest = setupAndPerformMerge();
 
-        // Test that getMergeInfo() returns null.
-        assertNull(client.getMergeInfo(new File(thisTest.getWCPath(), "A")
+        // Test that getMergeinfo() returns null.
+        assertNull(client.getMergeinfo(new File(thisTest.getWCPath(), "A")
                                        .toString(), Revision.HEAD));
 
         // Merge and commit some changes (r4).
@@ -2308,6 +2311,82 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Test reintegrating a branch with trunk
+     * (e.g. 'svn merge --reintegrate').
+     * @throws Throwable
+     * @since 1.5
+     */
+    public void testMergeReintegrate() throws Throwable
+    {
+        OneTest thisTest = setupAndPerformMerge();
+
+        // Test that getMergeinfo() returns null.
+        assertNull(client.getMergeinfo(new File(thisTest.getWCPath(), "A")
+                                       .toString(), Revision.HEAD));
+
+        // Merge and commit some changes to main (r4).
+        appendText(thisTest, "A/mu", "xxx", 4);
+        assertEquals("wrong revision number from main commit",
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "log msg", true),
+                     4);
+        // Merge and commit some changes to branch (r5).
+        appendText(thisTest, "branches/A/D/G/rho", "yyy", -1);
+        assertEquals("wrong revision number from branch commit",
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "log msg", true),
+                     5);
+
+        // update the branch WC (to r5) before merge
+        client.update(thisTest.getWCPath() + "/branches", Revision.HEAD, true);
+
+        String branchPath = thisTest.getWCPath() + "/branches/A";
+        String modUrl = thisTest.getUrl() + "/A";
+        Revision unspec = new Revision(RevisionKind.unspecified);
+        client.merge(modUrl, Revision.HEAD,
+                     new RevisionRange[] { new RevisionRange(unspec, unspec) },
+                     branchPath, true, Depth.infinity, false, false, false);
+
+        // commit the changes so that we can verify merge
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "branches/A", NodeKind.dir,
+                              CommitItemStateFlags.PropMods);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "branches/A/mu", NodeKind.file,
+                              CommitItemStateFlags.TextMods);
+        assertEquals("wrong revision number from commit",
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "log msg", true), 6);
+
+        // now we --reintegrate the branch with main
+        String branchUrl = thisTest.getUrl() + "/branches/A";
+        try
+        {
+            client.mergeReintegrate(branchUrl, Revision.HEAD,
+                                    thisTest.getWCPath() + "/A", true, false);
+            fail("reintegrate merged into a mixed-revision WC");
+        }
+        catch(ClientException e)
+        {
+            // update the WC (to r6) and try again
+            client.update(thisTest.getWCPath(), Revision.HEAD, true);
+            client.mergeReintegrate(branchUrl, Revision.HEAD,
+                                    thisTest.getWCPath() + "/A", true, false);
+        }
+        // commit the changes so that we can verify merge
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "A", NodeKind.dir,
+                              CommitItemStateFlags.PropMods);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "A/D/G/rho", NodeKind.file,
+                              CommitItemStateFlags.TextMods);
+        assertEquals("wrong revision number from commit",
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "log msg", true), 7);
+
+    }
+
+    /**
      * Test automatic merge conflict resolution.
      * @throws Throwable
      * @since 1.5
@@ -2320,7 +2399,7 @@ public class BasicTests extends SVNTests
             {
                 public ConflictResult resolve(ConflictDescriptor descrip)
                 {
-                    return new ConflictResult(ConflictResult.chooseTheirs,
+                    return new ConflictResult(ConflictResult.chooseTheirsFull,
                                               null);
                 }
             });
@@ -2370,8 +2449,8 @@ public class BasicTests extends SVNTests
         assertNotNull(suggestedSrcs);
         assertEquals(1, suggestedSrcs.length);
 
-        // Test that getMergeInfo() returns null.
-        assertNull(client.getMergeInfo(new File(thisTest.getWCPath(), "A")
+        // Test that getMergeinfo() returns null.
+        assertNull(client.getMergeinfo(new File(thisTest.getWCPath(), "A")
                                        .toString(), Revision.HEAD));
 
         // Merge and commit some changes (r4).
@@ -2402,9 +2481,9 @@ public class BasicTests extends SVNTests
 
         // Test retrieval of mergeinfo from a WC path.
         String targetPath =
-            new File(thisTest.getWCPath(), "branches/A/mu").getPath();
-        final String mergeSrc = thisTest.getUrl() + "/A/mu";
-        acquireMergeInfoAndAssertEquals("2-4", "4-5", targetPath, mergeSrc);
+            new File(thisTest.getWCPath(), "branches/A").getPath();
+        final String mergeSrc = thisTest.getUrl() + "/A";
+        acquireMergeinfoAndAssertEquals("2-4", "4-5", targetPath, mergeSrc);
     }
 
     /**
@@ -2497,7 +2576,7 @@ public class BasicTests extends SVNTests
             client.diff(thisTest.getUrl() + "/iota", Revision.HEAD,
                         thisTest.getUrl() + "/A/mu", Revision.HEAD,
                         thisTest.getUrl(), diffOutput.getPath(),
-                        Depth.infinity, true, true, false);
+                        Depth.infinity, null, true, true, false);
 
             fail("This test should fail becaus the relativeToDir parameter " +
                  "does not work with URLs");
@@ -2512,7 +2591,7 @@ public class BasicTests extends SVNTests
         {
             client.diff(iotaPath, Revision.BASE, iotaPath, Revision.WORKING,
                         "/non/existent/path", diffOutput.getPath(),
-                        Depth.infinity, true, true, false);
+                        Depth.infinity, null, true, true, false);
 
             fail("This test should fail because iotaPath is not a child of " +
                  "the relativeToDir parameter");
@@ -2533,7 +2612,8 @@ public class BasicTests extends SVNTests
 
         client.propertySet(aPath, "testprop", "Test property value.", false);
         client.diff(aPath, Revision.BASE, aPath, Revision.WORKING, wcPath,
-                    diffOutput.getPath(), Depth.infinity, true, true, false);
+                    diffOutput.getPath(), Depth.infinity, null, true, true,
+                    false);
         assertFileContentsEquals("Unexpected diff output in file '" +
                                  diffOutput.getPath() + '\'',
                                  expectedDiffOutput, diffOutput);
@@ -2546,7 +2626,8 @@ public class BasicTests extends SVNTests
 
         client.propertySet(aPath, "testprop", "Test property value.", false);
         client.diff(aPath, Revision.BASE, aPath, Revision.WORKING, aPath,
-                    diffOutput.getPath(), Depth.infinity, true, true, false);
+                    diffOutput.getPath(), Depth.infinity, null, true, true,
+                    false);
         assertFileContentsEquals("Unexpected diff output in file '" +
                                  diffOutput.getPath() + '\'',
                                  expectedDiffOutput, diffOutput);
@@ -2628,9 +2709,9 @@ public class BasicTests extends SVNTests
                     expectedDiffBody;
                 try 
                 {
-                    client.diff(iotaPath, Revision.BASE, iotaPath, Revision.WORKING,
-                                wcPath, diffOutput.getPath(), Depth.infinity, true, true,
-                                false);
+                    client.diff(iotaPath, Revision.BASE, iotaPath,
+                                Revision.WORKING, wcPath, diffOutput.getPath(),
+                                Depth.infinity, null, true, true, false);
                     assertFileContentsEquals(assertPrefix +
                                              diffOutput.getPath() + '\'',
                                              expectedDiffOutput, diffOutput);
@@ -2644,9 +2725,10 @@ public class BasicTests extends SVNTests
                 try 
                 {
                     // Test svn diff with a relative path and trailing slash.
-                    client.diff(iotaPath, Revision.BASE, iotaPath, Revision.WORKING,
-                                wcPath + "/", diffOutput.getPath(), Depth.infinity, true, true,
-                                false);
+                    client.diff(iotaPath, Revision.BASE, iotaPath,
+                                Revision.WORKING, wcPath + "/",
+                                diffOutput.getPath(), Depth.infinity, null,
+                                true, true, false);
                     assertFileContentsEquals(assertPrefix +
                                              diffOutput.getPath() + '\'',
                                              expectedDiffOutput, diffOutput);
@@ -2687,7 +2769,7 @@ public class BasicTests extends SVNTests
         // Perform a recursive diff summary, ignoring ancestry.
         client.diffSummarize(thisTest.getUrl(), new Revision.Number(0),
                              thisTest.getUrl(), Revision.HEAD, Depth.infinity,
-                             false, summaries);
+                             null, false, summaries);
         assertExpectedDiffSummaries(summaries);
 
         summaries.clear();
@@ -2695,7 +2777,7 @@ public class BasicTests extends SVNTests
         // ignoring ancestry.
         client.diffSummarize(thisTest.getUrl(), Revision.HEAD,
                              new Revision.Number(0), Revision.HEAD,
-                             Depth.infinity, false, summaries);
+                             Depth.infinity, null, false, summaries);
         assertExpectedDiffSummaries(summaries);
     }
 
