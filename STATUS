@@ -26,5 +26,16 @@ Candidate changes:
     Votes:
       +1: jerenkrantz
 
+  * r29581
+    In ra_serf authentication, fix falling back from primary authentication
+    scheme to secondary.
+    Votes:
+      +1: lgo
+
+  * r29583
+    Replace some abort's in ra_serf with errors.
+    Votes:
+      +1: lgo
+
 Approved changes:
 
