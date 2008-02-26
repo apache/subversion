@@ -41,8 +41,3 @@ Candidate changes:
       +1: pburba
 
 Approved changes:
-
-  * r29556
-    Fix svnadmin verify -r2 not to become svnadmin verify -r2:HEAD.
-    Votes:
-      +1: epg, pburba

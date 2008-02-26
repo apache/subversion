@@ -1119,6 +1119,11 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(get_revnum(&upper, &opt_state->end_revision,
                      youngest, repos, pool));
 
+  if (upper == SVN_INVALID_REVNUM)
+    {
+      upper = lower;
+    }
+
   if (opt_state->quiet)
     stderr_stream = NULL;
   else
