@@ -27,7 +27,7 @@ Candidate changes:
     Votes:
       +1: lgo
 
-  * r29600
+  * r29600, 29603
     Fix segfault in svnsync copy-revprops.
     Votes:
       +1: epg
