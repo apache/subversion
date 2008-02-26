@@ -82,7 +82,8 @@ def run_copy_revprops(url, expected_error=None):
   elif expected_error is not None:
     raise SVNExpectedStderr
   if not output and not expected_error:
-    # should be: ['Committed revision 1.\n', 'Committed revision 2.\n']
+    # should be: ['Copied properties for revision 1.\n',
+    #             'Copied properties for revision 2.\n']
     raise SVNUnexpectedStdout("Missing stdout")
 
 def run_init(dst_url, src_url):
