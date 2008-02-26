@@ -112,7 +112,7 @@ themselves.</p>
 
 <p>The first question that many people ask is "where should we store
 the merge information?" (what we store will be covered next).  A merge
-history property, named <code>SVN_PROP_MERGE_INFO</code>
+history property, named <code>SVN_PROP_MERGEINFO</code>
 (e.g. <code>svn:mergeinfo</code>) stored in directory and file
 properties.  Each will store the <em>full</em>, <em>complete</em> list
 of current merged-in changes, as far as it knows.  This ensures that
@@ -239,13 +239,13 @@ simply do something different with this single property if they wanted
 to.  Given the rates of change of various very active repositories,
 this will not be a problem we need to solve for many many years.</p>
 
-<p>The payload of <code>SVN_PROP_MERGE_INFO</code> will be duplicated
+<p>The payload of <code>SVN_PROP_MERGEINFO</code> will be duplicated
 in an index separate from the FS which is created during
 <code>svnadmin create</code>, or on-demand for a pre-existing
 repository which has started using Subversion 1.5.  This index will
 support fast querying, be populated during a merge or <code>svnadmin
 load</code>, and cough up its contents as needed during API calls.
-The contents of <code>SVN_PROP_MERGE_INFO</code> is stored redundantly
+The contents of <code>SVN_PROP_MERGEINFO</code> is stored redundantly
 in index (to the FS).  Dan Berlin has prototyped a simple index using
 sqlite3.  David James later proposed a more normalized schema design,
 some of the features of which may become useful for implementing Merge
@@ -279,10 +279,10 @@ according to the following:</p>
   <li>Where to store the info:
   <ol>
     <li>If the merge target is a single file, the merge info goes to
-    the property <code>SVN_PROP_MERGE_INFO</code> set on that file.</li>
+    the property <code>SVN_PROP_MERGEINFO</code> set on that file.</li>
 
     <li>If the merge target is a directory, the merge info goes to the
-    property <code>SVN_PROP_MERGE_INFO</code> set on the shallowest
+    property <code>SVN_PROP_MERGEINFO</code> set on the shallowest
     directory of the merge (e.g. the topmost directory affected by the
     merge) that will require different info than the info already set
     on other directories.</li>
