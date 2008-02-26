@@ -27,13 +27,6 @@ Candidate changes:
     Votes:
       +1: lgo
 
-  * r29591
-    Don't print a warning about dump when we're pretending dump is verify.
-    Notes:
-      May not apply w/out r29557, which is a formatting tweak.
-    Votes:
-      +1: epg
-
   * r29594
     Avoids some test suite cleanup problems on Win32 [BDB] x [NEON | SVN].
     No core code change, just the test suite.
@@ -41,3 +34,10 @@ Candidate changes:
       +1: pburba
 
 Approved changes:
+
+  * r29591
+    Don't print a warning about dump when we're pretending dump is verify.
+    Notes:
+      May not apply w/out r29557, which is a formatting tweak.
+    Votes:
+      +1: epg, pburba
