@@ -185,6 +185,9 @@ struct edit_baton
   /* True if dumped nodes should output deltas instead of full text. */
   svn_boolean_t use_deltas;
 
+  /* True if this "dump" is in fact a verify. */
+  svn_boolean_t verify;
+
   /* The first revision dumped in this dumpstream. */
   svn_revnum_t oldest_dumped_rev;
 
@@ -410,7 +413,7 @@ dump_node(struct edit_baton *eb,
         }
       else
         {
-          if (cmp_rev < eb->oldest_dumped_rev)
+          if (!eb->verify && cmp_rev < eb->oldest_dumped_rev)
             SVN_ERR(svn_stream_printf
                     (eb->feedback_stream, pool,
                      _("WARNING: Referencing data in revision %ld"
@@ -809,6 +812,7 @@ get_dump_editor(const svn_delta_editor_t **editor,
                 svn_stream_t *feedback_stream,
                 svn_revnum_t oldest_dumped_rev,
                 svn_boolean_t use_deltas,
+                svn_boolean_t verify,
                 apr_pool_t *pool)
 {
   /* Allocate an edit baton to be stored in every directory baton.
@@ -826,6 +830,7 @@ get_dump_editor(const svn_delta_editor_t **editor,
   SVN_ERR(svn_fs_revision_root(&(eb->fs_root), fs, to_rev, pool));
   eb->current_rev = to_rev;
   eb->use_deltas = use_deltas;
+  eb->verify = verify;
 
   /* Set up the editor. */
   dump_editor->open_root = open_root;
@@ -1030,7 +1035,7 @@ svn_repos_dump_fs2(svn_repos_t *repos,
       use_deltas_for_rev = use_deltas && (incremental || i != start_rev);
       SVN_ERR(get_dump_editor(&dump_editor, &dump_edit_baton, fs, to_rev,
                               "/", stream, feedback_stream, start_rev,
-                              use_deltas_for_rev, subpool));
+                              use_deltas_for_rev, FALSE, subpool));
 
       /* Drive the editor in one way or another. */
       SVN_ERR(svn_fs_revision_root(&to_root, fs, to_rev, subpool));
@@ -1203,7 +1208,9 @@ svn_repos_verify_fs(svn_repos_t *repos,
       SVN_ERR(get_dump_editor((const svn_delta_editor_t **)&dump_editor,
                               &dump_edit_baton, fs, rev, "",
                               svn_stream_empty(pool), feedback_stream,
-                              start_rev, FALSE, iterpool));
+                              start_rev,
+                              FALSE, TRUE, /* use_deltas, verify */
+                              iterpool));
       dump_editor->close_directory = verify_close_directory;
       SVN_ERR(svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
                                                 dump_editor, dump_edit_baton,
