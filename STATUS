@@ -27,4 +27,16 @@ Candidate changes:
     Votes:
       +1: lgo
 
+  * r29556
+    Fix svnadmin verify -r2 not to become svnadmin verify -r2:HEAD.
+    Votes:
+      +1: epg
+
+  * r29591
+    Don't print a warning about dump when we're pretending dump is verify.
+    Notes:
+      May not apply w/out r29557, which is a formatting tweak.
+    Votes:
+      +1: epg
+
 Approved changes:
