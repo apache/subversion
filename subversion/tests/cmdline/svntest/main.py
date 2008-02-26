@@ -1363,7 +1363,7 @@ def run_tests(test_list, serial_only = False):
   # Cleanup: if a previous run crashed or interrupted the python
   # interpreter, then `temp_dir' was never removed.  This can cause wonkiness.
   if not is_child_process:
-    safe_rmtree(temp_dir)
+    safe_rmtree(temp_dir, 1)
 
   if not testnums:
     # If no test numbers were listed explicitly, include all of them:
@@ -1395,7 +1395,7 @@ def run_tests(test_list, serial_only = False):
   # Remove all scratchwork: the 'pristine' repository, greek tree, etc.
   # This ensures that an 'import' will happen the next time we run.
   if not is_child_process:
-    safe_rmtree(temp_dir)
+    safe_rmtree(temp_dir, 1)
 
   # Cleanup after ourselves.
   _cleanup_deferred_test_paths()
