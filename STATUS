@@ -33,9 +33,3 @@ Candidate changes:
       +1: epg
 
 Approved changes:
-
-  * r29594
-    Avoids some test suite cleanup problems on Win32 [BDB] x [NEON | SVN].
-    No core code change, just the test suite.
-    Votes:
-      +1: pburba, epg

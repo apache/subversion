@@ -140,7 +140,7 @@ def test_create(sbox):
   repo_dir = sbox.repo_dir
   wc_dir = sbox.wc_dir
 
-  svntest.main.safe_rmtree(repo_dir)
+  svntest.main.safe_rmtree(repo_dir, 1)
   svntest.main.safe_rmtree(wc_dir)
 
   svntest.main.create_repos(repo_dir)
