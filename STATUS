@@ -27,11 +27,6 @@ Candidate changes:
     Votes:
       +1: lgo
 
-  * r29556
-    Fix svnadmin verify -r2 not to become svnadmin verify -r2:HEAD.
-    Votes:
-      +1: epg
-
   * r29591
     Don't print a warning about dump when we're pretending dump is verify.
     Notes:
@@ -46,3 +41,8 @@ Candidate changes:
       +1: pburba
 
 Approved changes:
+
+  * r29556
+    Fix svnadmin verify -r2 not to become svnadmin verify -r2:HEAD.
+    Votes:
+      +1: epg, pburba
