@@ -472,6 +472,15 @@ use the following value:
   :group 'psvn)
 (put 'svn-status-default-diff-arguments 'risky-local-variable t)
 
+(defcustom svn-status-default-status-arguments '()
+  "*A list of arguments that is passed to the svn status command.
+The following options are available: --ignore-externals
+
+"
+  :type '(repeat string)
+  :group 'psvn)
+(put 'svn-status-default-status-arguments 'risky-local-variable t)
+
 (defcustom svn-status-default-blame-arguments '("-x" "--ignore-eol-style")
   "*A list of arguments that is passed to the svn blame command.
 See `svn-status-default-diff-arguments' for some examples."
@@ -1096,7 +1105,7 @@ If there is no .svn directory, examine if there is CVS and run
       (setq default-directory dir
             svn-status-remote (when arg t))
       (set-buffer cur-buf)
-      (svn-run t t 'status "status" status-option))))
+      (svn-run t t 'status "status" svn-status-default-status-arguments status-option))))
 
 (defun svn-status-this-directory (arg)
   "Run `svn-status' for the `default-directory'"

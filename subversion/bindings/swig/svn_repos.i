@@ -105,9 +105,6 @@
 }
 #endif
 
-#ifdef SWIGRUBY
-%apply apr_hash_t **HASH_CSTRING { apr_hash_t **mergeoutput };
-#endif
 
 /* ----------------------------------------------------------------------- */
 /* Ruby fixups for functions not following the pool convention. */

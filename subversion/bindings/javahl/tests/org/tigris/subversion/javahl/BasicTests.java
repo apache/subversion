@@ -114,14 +114,14 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * Tests MergeInfo and RevisionRange classes.
+     * Tests Mergeinfo and RevisionRange classes.
      * @since 1.5
      */
-    public void testMergeInfoParser() throws Throwable
+    public void testMergeinfoParser() throws Throwable
     {
         String mergeInfoPropertyValue =
             "/trunk:1-300,305,307,400-405\n/branches/branch:308-400";
-        MergeInfo info = new MergeInfo(mergeInfoPropertyValue);
+        Mergeinfo info = new Mergeinfo(mergeInfoPropertyValue);
         String[] paths = info.getPaths();
         assertEquals(2, paths.length);
         RevisionRange[] trunkRange = info.getRevisionRange("/trunk");
@@ -2115,14 +2115,14 @@ public class BasicTests extends SVNTests
      * @param targetPath The path for which to acquire mergeinfo.
      * @param mergeSrc The URL from which to consider merges.
      */
-    private void acquireMergeInfoAndAssertEquals(String expectedMergedRevs,
+    private void acquireMergeinfoAndAssertEquals(String expectedMergedRevs,
                                                  String expectedAvailableRevs,
                                                  String targetPath,
                                                  String mergeSrc)
         throws SubversionException
     {
         // Verify expected merge history.
-        MergeInfo mergeInfo = client.getMergeInfo(targetPath, Revision.HEAD);
+        Mergeinfo mergeInfo = client.getMergeinfo(targetPath, Revision.HEAD);
         assertNotNull("Missing merge info on '" + targetPath + '\'',
                       mergeInfo);
         List ranges = mergeInfo.getRevisions(mergeSrc);
@@ -2190,8 +2190,8 @@ public class BasicTests extends SVNTests
         assertNotNull(suggestedSrcs);
         assertEquals(1, suggestedSrcs.length);
 
-        // Test that getMergeInfo() returns null.
-        assertNull(client.getMergeInfo(new File(thisTest.getWCPath(), "A")
+        // Test that getMergeinfo() returns null.
+        assertNull(client.getMergeinfo(new File(thisTest.getWCPath(), "A")
                                        .toString(), Revision.HEAD));
 
         // Merge and commit some changes (r4).
@@ -2263,11 +2263,11 @@ public class BasicTests extends SVNTests
         String targetPath =
             new File(thisTest.getWCPath(), "branches/A/mu").getPath();
         final String mergeSrc = thisTest.getUrl() + "/A/mu";
-        acquireMergeInfoAndAssertEquals("2-4", "4-6", targetPath, mergeSrc);
+        acquireMergeinfoAndAssertEquals("2-4", "4-6", targetPath, mergeSrc);
 
         // Test retrieval of mergeinfo from the repository.
         targetPath = thisTest.getUrl() + "/branches/A/mu";
-        acquireMergeInfoAndAssertEquals("2-4", "4-6", targetPath, mergeSrc);
+        acquireMergeinfoAndAssertEquals("2-4", "4-6", targetPath, mergeSrc);
     }
 
     /**
@@ -2280,8 +2280,8 @@ public class BasicTests extends SVNTests
     {
         OneTest thisTest = setupAndPerformMerge();
 
-        // Test that getMergeInfo() returns null.
-        assertNull(client.getMergeInfo(new File(thisTest.getWCPath(), "A")
+        // Test that getMergeinfo() returns null.
+        assertNull(client.getMergeinfo(new File(thisTest.getWCPath(), "A")
                                        .toString(), Revision.HEAD));
 
         // Merge and commit some changes (r4).
@@ -2320,8 +2320,8 @@ public class BasicTests extends SVNTests
     {
         OneTest thisTest = setupAndPerformMerge();
 
-        // Test that getMergeInfo() returns null.
-        assertNull(client.getMergeInfo(new File(thisTest.getWCPath(), "A")
+        // Test that getMergeinfo() returns null.
+        assertNull(client.getMergeinfo(new File(thisTest.getWCPath(), "A")
                                        .toString(), Revision.HEAD));
 
         // Merge and commit some changes to main (r4).
@@ -2399,7 +2399,7 @@ public class BasicTests extends SVNTests
             {
                 public ConflictResult resolve(ConflictDescriptor descrip)
                 {
-                    return new ConflictResult(ConflictResult.chooseTheirs,
+                    return new ConflictResult(ConflictResult.chooseTheirsFull,
                                               null);
                 }
             });
@@ -2449,8 +2449,8 @@ public class BasicTests extends SVNTests
         assertNotNull(suggestedSrcs);
         assertEquals(1, suggestedSrcs.length);
 
-        // Test that getMergeInfo() returns null.
-        assertNull(client.getMergeInfo(new File(thisTest.getWCPath(), "A")
+        // Test that getMergeinfo() returns null.
+        assertNull(client.getMergeinfo(new File(thisTest.getWCPath(), "A")
                                        .toString(), Revision.HEAD));
 
         // Merge and commit some changes (r4).
@@ -2483,7 +2483,7 @@ public class BasicTests extends SVNTests
         String targetPath =
             new File(thisTest.getWCPath(), "branches/A").getPath();
         final String mergeSrc = thisTest.getUrl() + "/A";
-        acquireMergeInfoAndAssertEquals("2-4", "4-5", targetPath, mergeSrc);
+        acquireMergeinfoAndAssertEquals("2-4", "4-5", targetPath, mergeSrc);
     }
 
     /**

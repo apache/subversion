@@ -22,6 +22,7 @@
 
 #include "ra_serf.h"
 #include "win32_auth_sspi.h"
+#include "svn_private_config.h"
 
 /*** Forward declarations. ***/
 
@@ -132,7 +133,7 @@ svn_ra_serf__handle_auth(int code,
 {
   serf_bucket_t *hdrs;
   const svn_ra_serf__auth_protocol_t *prot;
-  char *auth_name, *auth_attr, *auth_hdr;
+  char *auth_name, *auth_attr, *auth_hdr, *header, *header_attr;
 
   hdrs = serf_bucket_response_get_headers(response);
   if (code == 401)
@@ -152,11 +153,12 @@ svn_ra_serf__handle_auth(int code,
 
   /* If multiple *-Authenticate headers are found, serf will combine them into
      one header, with the values separated by a comma. */
-  auth_name = apr_strtok(auth_hdr, " ,", &auth_attr);
+  header = apr_strtok(auth_hdr, ",", &header_attr);
 
-  while (auth_name)
+  while (header)
     {
       svn_boolean_t proto_found = FALSE;
+      auth_name = apr_strtok(header, " ", &auth_attr);
 
       /* Find the matching authentication handler.
          Note that we don't reuse the auth protocol stored in the session,
@@ -166,31 +168,51 @@ svn_ra_serf__handle_auth(int code,
           if (code == prot->code && strcmp(auth_name, prot->auth_name) == 0)
             {
               svn_serf__auth_handler_func_t handler = prot->handle_func;
+              svn_error_t *err = NULL;
+
               /* If this is the first time we use this protocol in this session,
                  make sure to initialize the authentication part of the session
                  first. */
               if (code == 401 && session->auth_protocol != prot)
                 {
-                  proto_found = TRUE;
-                  SVN_ERR(prot->init_conn_func(session, conn, session->pool));
-                  session->auth_protocol = prot;
+                  err = prot->init_conn_func(session, conn, session->pool);
+                  if (err == SVN_NO_ERROR)
+                    session->auth_protocol = prot;
+                  else
+                    session->auth_protocol = NULL;
                 }
              else if (code == 407 && session->proxy_auth_protocol != prot)
                 {
-                  proto_found = TRUE;
-                  SVN_ERR(prot->init_conn_func(session, conn, session->pool));
-                  session->proxy_auth_protocol = prot;
+                  err = prot->init_conn_func(session, conn, session->pool);
+                  if (err == SVN_NO_ERROR)
+                    session->proxy_auth_protocol = prot;
+                  else
+                    session->proxy_auth_protocol = NULL;
                 }
-              SVN_ERR(handler(session, conn, request, response,
-                              auth_hdr, auth_attr, session->pool));
+
+              if (err == SVN_NO_ERROR)
+                {
+                  proto_found = TRUE;
+                  err = handler(session, conn, request, response,
+                                header, auth_attr, session->pool);
+                }
+              if (err)
+                {
+                  /* If authentication fails, just try the next available 
+                     scheme. */
+                  svn_error_clear(err);
+                  proto_found = FALSE;
+                }
+
               break;
             }
         }
       if (proto_found)
         break;
 
-      auth_name = apr_strtok(NULL, " ,", &auth_attr);
+      header = apr_strtok(auth_hdr, ",", &header_attr);
     }
+
   if (prot->auth_name == NULL)
     {
       /* Support more authentication mechanisms. */
@@ -241,11 +263,15 @@ handle_basic_auth(svn_ra_serf__session_t *session,
         }
       else
         {
-          abort();
+          return svn_error_create
+            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+             _("Missing 'realm' attribute in Authorization header."));
         }
       if (!realm_name)
         {
-          abort();
+          return svn_error_create
+            (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+             _("Missing 'realm' attribute in Authorization header."));
         }
 
       if (session->repos_url.port_str)

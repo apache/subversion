@@ -47,9 +47,12 @@
 
 /** Capabilities exchange. */
 
-/* The only two possible values for a capability. */
+/* Both server and repository support the capability. */
 static const char *capability_yes = "yes";
+/* Either server or repository does not support the capability. */
 static const char *capability_no = "no";
+/* Server supports the capability, but don't yet know if repository does. */
+static const char *capability_server_yes = "server-yes";
 
 /* Baton type for parsing capabilities out of "OPTIONS" response headers. */
 struct capabilities_response_baton
@@ -96,8 +99,10 @@ capabilities_headers_iterator_callback(void *baton,
 
       if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
         {
+          /* The server doesn't know what repository we're referring
+             to, so it can't just say capability_yes. */
           apr_hash_set(crb->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
-                       APR_HASH_KEY_STRING, capability_yes);
+                       APR_HASH_KEY_STRING, capability_server_yes);
         }
 
       if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
@@ -210,6 +215,67 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
   /* Try again, now that we've fetched the capabilities. */
   cap_result = apr_hash_get(serf_sess->capabilities,
                             capability, APR_HASH_KEY_STRING);
+
+  /* Some capabilities depend on the repository as well as the server.
+     NOTE: ../libsvn_ra_neon/session.c:svn_ra_neon__has_capability()
+     has a very similar code block.  If you change something here,
+     check there as well. */
+  if (cap_result == capability_server_yes)
+    {
+      if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
+        {
+          /* Handle mergeinfo specially.  Mergeinfo depends on the
+             repository as well as the server, but the server routine
+             that answered our exchange_capabilities() call above
+             didn't even know which repository we were interested in
+             -- it just told us whether the server supports mergeinfo.
+             If the answer was 'no', there's no point checking the
+             particular repository; but if it was 'yes, we still must
+             change it to 'no' iff the repository itself doesn't
+             support mergeinfo. */
+          svn_mergeinfo_catalog_t ignored;
+          svn_error_t *err;
+          apr_array_header_t *paths = apr_array_make(pool, 1,
+                                                     sizeof(char *));
+          APR_ARRAY_PUSH(paths, const char *) = "";
+          
+          err = svn_ra_serf__get_mergeinfo(ra_session, &ignored, paths, 0,
+                                           FALSE, FALSE, pool);
+          
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
+                {
+                  svn_error_clear(err);
+                  cap_result = capability_no;
+                }
+              else if (err->apr_err == SVN_ERR_FS_NOT_FOUND
+                       || err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+                {
+                  /* Mergeinfo requests use relative paths, and
+                     anyway we're in r0, so this is a likely error,
+                     but it means the repository supports mergeinfo! */
+                  svn_error_clear(err);
+                  cap_result = capability_yes;
+                }
+              else
+                return err;
+            }
+          else
+            cap_result = capability_yes;
+          
+          apr_hash_set(serf_sess->capabilities,
+                       SVN_RA_CAPABILITY_MERGEINFO, APR_HASH_KEY_STRING,
+                       cap_result);
+        }
+      else
+        {
+          return svn_error_createf
+            (SVN_ERR_UNKNOWN_CAPABILITY, NULL,
+             _("Don't know how to handle '%s' for capability '%s'"),
+             capability_server_yes, capability);
+        }
+    }
 
   if (cap_result == capability_yes)
     {
@@ -368,6 +434,20 @@ load_config(svn_ra_serf__session_t *session,
   return SVN_NO_ERROR;
 }
 
+#if SERF_VERSION_AT_LEAST(0,1,3)
+static void
+svn_ra_serf__progress(void *progress_baton, apr_off_t read, apr_off_t written)
+{
+  const svn_ra_serf__session_t *serf_sess = progress_baton;
+  if (serf_sess->wc_progress_func)
+    {
+      serf_sess->wc_progress_func(read + written, -1,
+                                  serf_sess->wc_progress_baton,
+                                  serf_sess->pool);
+    }
+}
+#endif
+
 static svn_error_t *
 svn_ra_serf__open(svn_ra_session_t *session,
                   const char *repos_URL,
@@ -388,6 +468,8 @@ svn_ra_serf__open(svn_ra_session_t *session,
   serf_sess->cached_props = apr_hash_make(serf_sess->pool);
   serf_sess->wc_callbacks = callbacks;
   serf_sess->wc_callback_baton = callback_baton;
+  serf_sess->wc_progress_baton = callbacks->progress_baton;
+  serf_sess->wc_progress_func = callbacks->progress_func;
 
   /* todo: reuse serf context across sessions */
   serf_sess->context = serf_context_create(serf_sess->pool);
@@ -474,6 +556,12 @@ svn_ra_serf__open(svn_ra_session_t *session,
                              svn_ra_serf__conn_setup, serf_sess->conns[0],
                              svn_ra_serf__conn_closed, serf_sess->conns[0],
                              serf_sess->pool);
+
+  /* Set the progress callback. */
+#if SERF_VERSION_AT_LEAST(0,1,3)
+  serf_context_set_progress_cb(serf_sess->context, svn_ra_serf__progress,
+                               serf_sess);
+#endif
 
   serf_sess->num_conns = 1;
 

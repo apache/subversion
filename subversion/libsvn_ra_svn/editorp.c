@@ -913,12 +913,28 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
       SVN_ERR(err);
     }
 
-  /* Read and discard editing commands until the edit is complete. */
+  /* Read and discard editing commands until the edit is complete.
+     Hopefully, the other side will call another editor command, run
+     check_for_error, notice the error, write "abort-edit" at us, and
+     throw the error up a few levels on its side (possibly even
+     tossing it right back at us, which is why we can return
+     SVN_NO_ERROR below).
+
+     However, if the other side is way ahead of us, it might
+     completely finish the edit (or sequence of edit/revprops, for
+     "replay-range") before we send over our "failure".  So we should
+     also stop if we see "success".  (Then the other side will try to
+     interpret our "failure" as a command, which will itself fail...
+     The net effect is that whatever error we wrote to the other side
+     will be replaced with SVN_ERR_RA_SVN_UNKNOWN_CMD.)
+   */
   while (!state.done)
     {
       svn_pool_clear(subpool);
       SVN_ERR(svn_ra_svn_read_tuple(conn, subpool, "wl", &cmd, &params));
-      state.done = (strcmp(cmd, "abort-edit") == 0);
+      if (strcmp(cmd, "abort-edit") == 0
+          || strcmp(cmd, "success") == 0)
+        state.done = TRUE;
     }
 
   svn_pool_destroy(subpool);

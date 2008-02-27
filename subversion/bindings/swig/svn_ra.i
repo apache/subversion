@@ -102,12 +102,6 @@
                   svn_swig_rb_ra_lock_callback)
 #endif
 
-#ifdef SWIGRUBY
-%apply apr_hash_t **MERGEINFO_HASH {
-  apr_hash_t **mergeoutput
-};
-#endif
-
 /* ----------------------------------------------------------------------- */
 
 %include svn_ra_h.swg

@@ -81,7 +81,7 @@ load_module(fs_init_func_t *initfunc, const char *name, apr_pool_t *pool)
 {
   *initfunc = NULL;
 
-#if APR_HAS_DSO
+#if defined(SVN_USE_DSO) && APR_HAS_DSO
   {
     apr_dso_handle_t *dso;
     apr_dso_handle_sym_t symbol;
@@ -837,14 +837,14 @@ svn_fs_closest_copy(svn_fs_root_t **root_p, const char **path_p,
 }
 
 svn_error_t *
-svn_fs_get_mergeinfo(apr_hash_t **minfohash,
+svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                      svn_fs_root_t *root,
                      const apr_array_header_t *paths,
                      svn_mergeinfo_inheritance_t inherit,
                      svn_boolean_t include_descendants,
                      apr_pool_t *pool)
 {
-  return root->vtable->get_mergeinfo(minfohash, root, paths, inherit, 
+  return root->vtable->get_mergeinfo(catalog, root, paths, inherit,
                                      include_descendants, pool);
 }
 

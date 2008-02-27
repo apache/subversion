@@ -536,6 +536,20 @@ svn_opt_args_to_target_array(apr_array_header_t **targets_p,
 
 
 /**
+ * Parse revprop key/value pair from @a revprop_spec (name[=value]) into
+ * @a revprops, making copies of both with @a pool.  If @a revprops is
+ * @c NULL, allocate a new apr_hash_t in it.  @a revprops maps
+ * const char * revprop names to svn_string_t * revprop values for use
+ * with svn_repos_get_commit_editor5 and other get_commit_editor APIs.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_opt_parse_revprop(apr_hash_t **revprops, const char *revprop_spec,
+                      apr_pool_t *pool);
+
+
+/**
  * If no targets exist in @a *targets, add `.' as the lone target.
  *
  * (Some commands take an implicit "." string argument when invoked
