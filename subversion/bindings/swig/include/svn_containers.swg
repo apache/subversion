@@ -94,7 +94,8 @@
 %apply apr_hash_t **HASH_SVN_STRING {
   apr_hash_t **props,
   apr_hash_t **original_props,
-  apr_hash_t **table_p
+  apr_hash_t **table_p,
+  apr_hash_t **revprops
 };
 %apply apr_hash_t **HASH_SVN_STRING_MAYBENULL {
   /* svn_config_read_auth_data() */
