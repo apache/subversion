@@ -859,6 +859,7 @@ array_pop_front(apr_array_header_t *arr)
 
   arr->elts += arr->elt_size;
   arr->nelts -= 1;
+  arr->nalloc -= 1;
   return item;
 }
 
@@ -880,7 +881,15 @@ struct rangelist_path
   const char *path;
 };
 
-/* Comparator function for combine_mergeinfo_path_lists().  Returns */
+/* Comparator function for combine_mergeinfo_path_lists().  Sorts 
+   rangelist_path structs in increasing order based upon starting revision,
+   then ending revision of the first element in the rangelist. 
+   
+   This does not sort rangelists based upon subsequent elements, only the
+   first range.  We'll sort any subsequent ranges in the correct order
+   when they get bumped up to the front by removal of earlier ones, so we
+   don't really have to sort them here.  See combine_mergeinfo_path_lists()
+   for details. */
 static int
 compare_rangelist_paths(const void *a, const void *b)
 {
