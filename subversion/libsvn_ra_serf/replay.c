@@ -663,7 +663,7 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
  * used to store the message, parser and handler objects (approx. 250 bytes). 
  * 
  * In my test setup peak performance was reached at max. 30-35 requests. So I
- * added a small margin and choose 50.
+ * added a small margin and chose 50.
  */
 #define MAX_OUTSTANDING_REQUESTS 50
 

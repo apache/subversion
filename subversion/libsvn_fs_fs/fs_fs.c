@@ -1069,7 +1069,18 @@ svn_fs_fs__upgrade(svn_fs_t *fs, apr_pool_t *pool)
 }
 
 
-/* SVN_ERR-like macros for dealing with ESTALE
+/* SVN_ERR-like macros for dealing with recoverable errors on mutable files
+ *
+ * Revprops, current, and txn-current files are mutable; that is, they
+ * change as part of normal fsfs operation, in constrat to revs files, or
+ * the format file, which are written once at create (or upgrade) time.
+ * When more than one host writes to the same repository, we will
+ * sometimes see these recoverable errors when accesssing these files.
+ *
+ * These errors all relate to NFS, and thus we only use this retry code if
+ * ESTALE is defined.
+ *
+ ** ESTALE
  *
  * In NFS v3 and under, the server doesn't track opened files.  If you
  * unlink(2) or rename(2) a file held open by another process *on the
@@ -1080,49 +1091,60 @@ svn_fs_fs__upgrade(svn_fs_t *fs, apr_pool_t *pool)
  * For obvious reasons, this does not work *across hosts*.  No one
  * knows about the opened file; not the server, and not the deleting
  * client.  So the file vanishes, and the reader gets stale NFS file
- * handle.  We have this problem with revprops files, current, and
- * txn-current.
+ * handle.
  *
- * Wrap opens and reads of such files with SVN_RETRY_ESTALE and closes
- * with SVN_IGNORE_ESTALE.  Call these macros within a loop of
- * SVN_ESTALE_RETRY_COUNT iterations (though, realistically, the
+ ** EIO, ENOENT
+ *
+ * Some client implementations (at least the 2.6.18.5 kernel that ships
+ * with Ubuntu Dapper) sometimes give spurious ENOENT (only on open) or
+ * even EIO errors when trying to read these files that have been renamed
+ * over on some other host.
+ *
+ ** Solution
+ *
+ * Wrap opens and reads of such files with RETRY_RECOVERABLE and
+ * closes with IGNORE_RECOVERABLE.  Call these macros within a loop of
+ * RECOVERABLE_RETRY_COUNT iterations (though, realistically, the
  * second try will succeed).  Make sure you put a break statement
  * after the close, at the end of your loop.  Immediately after your
  * loop, return err if err.
  *
- * You must initialize err to SVN_NO_ERROR, as these macros do not.
+ * You must initialize err to SVN_NO_ERROR and filehandle to NULL, as
+ * these macros do not.
  */
 
-#define SVN_ESTALE_RETRY_COUNT 10
+#define RECOVERABLE_RETRY_COUNT 10
 
 #ifdef ESTALE
-#define SVN_RETRY_ESTALE(err, expr)                   \
-  {                                                   \
-    /* Clear err here (svn_error_clear can safely be passed
-     * SVN_NO_ERROR) rather than after finding ESTALE so we can return
-     * the ESTALE error on the last iteration of the loop. */ \
-    svn_error_clear(err);                             \
-    err = (expr);                                     \
-    if (err)                                          \
-      {                                               \
-        if (APR_TO_OS_ERROR(err->apr_err) == ESTALE)  \
-          continue;                                   \
-        return err;                                   \
-      }                                               \
+#define RETRY_RECOVERABLE(err, filehandle, expr)                \
+  {                                                             \
+    svn_error_clear(err);                                       \
+    err = (expr);                                               \
+    if (err)                                                    \
+      {                                                         \
+        apr_status_t _e = APR_TO_OS_ERROR(err->apr_err);        \
+        if ((_e == ESTALE) || (_e == EIO) || (_e == ENOENT)) {  \
+          if (NULL != filehandle)                               \
+            (void)apr_file_close(filehandle);                   \
+          continue;                                             \
+        }                                                       \
+        return err;                                             \
+      }                                                         \
   }
-#define SVN_IGNORE_ESTALE(err, expr)                  \
-  {                                                   \
-    svn_error_clear(err);                             \
-    err = (expr);                                     \
-    if (err)                                          \
-      {                                               \
-        if (APR_TO_OS_ERROR(err->apr_err) != ESTALE)  \
-          return err;                                 \
-      }                                               \
+#define IGNORE_RECOVERABLE(err, expr)                           \
+  {                                                             \
+    svn_error_clear(err);                                       \
+    err = (expr);                                               \
+    if (err)                                                    \
+      {                                                         \
+        apr_status_t _e = APR_TO_OS_ERROR(err->apr_err);        \
+        if ((_e != ESTALE) && (_e != EIO))                      \
+          return err;                                           \
+      }                                                         \
   }
 #else
-#define SVN_RETRY_ESTALE(err, expr)  SVN_ERR(expr)
-#define SVN_IGNORE_ESTALE(err, expr) SVN_ERR(expr)
+#define RETRY_RECOVERABLE(err, filehandle, expr)  SVN_ERR(expr)
+#define IGNORE_RECOVERABLE(err, expr) SVN_ERR(expr)
 #endif
 
 /* Long enough to hold: "<svn_revnum_t> <node id> <copy id>\0"
@@ -1139,7 +1161,7 @@ svn_fs_fs__upgrade(svn_fs_t *fs, apr_pool_t *pool)
 static svn_error_t *
 read_current(const char *fname, char **buf, apr_pool_t *pool)
 {
-  apr_file_t *revision_file;
+  apr_file_t *revision_file = NULL;
   apr_size_t len;
   int i;
   svn_error_t *err = SVN_NO_ERROR;
@@ -1147,18 +1169,20 @@ read_current(const char *fname, char **buf, apr_pool_t *pool)
 
   *buf = apr_palloc(pool, CURRENT_BUF_LEN);
   iterpool = svn_pool_create(pool);
-  for (i = 0; i < SVN_ESTALE_RETRY_COUNT; i++)
+  for (i = 0; i < RECOVERABLE_RETRY_COUNT; i++)
     {
       svn_pool_clear(iterpool);
 
-      SVN_RETRY_ESTALE(err, svn_io_file_open(&revision_file, fname,
-                                             APR_READ | APR_BUFFERED,
-                                             APR_OS_DEFAULT, iterpool));
+      RETRY_RECOVERABLE(err, revision_file,
+                        svn_io_file_open(&revision_file, fname,
+                                         APR_READ | APR_BUFFERED,
+                                         APR_OS_DEFAULT, iterpool));
 
       len = CURRENT_BUF_LEN;
-      SVN_RETRY_ESTALE(err, svn_io_read_length_line(revision_file,
-                                                    *buf, &len, iterpool));
-      SVN_IGNORE_ESTALE(err, svn_io_file_close(revision_file, iterpool));
+      RETRY_RECOVERABLE(err, revision_file,
+                        svn_io_read_length_line(revision_file,
+                                                *buf, &len, iterpool));
+      IGNORE_RECOVERABLE(err, svn_io_file_close(revision_file, iterpool));
 
       break;
     }
@@ -1573,11 +1597,13 @@ read_rep_offsets(representation_t **rep_p,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
-                             svn_fs_t *fs,
-                             const svn_fs_id_t *id,
-                             apr_pool_t *pool)
+/* See svn_fs_fs__get_node_revision, which wraps this and adds another
+   error. */
+static svn_error_t *
+get_node_revision_body(node_revision_t **noderev_p,
+                       svn_fs_t *fs,
+                       const svn_fs_id_t *id,
+                       apr_pool_t *pool)
 {
   apr_file_t *revision_file;
   apr_hash_t *headers;
@@ -1617,6 +1643,9 @@ svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
 
   /* Read the node-rev id. */
   value = apr_hash_get(headers, HEADER_ID, APR_HASH_KEY_STRING);
+  if (value == NULL)
+      return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                              _("Missing id field in node-rev"));
 
   SVN_ERR(svn_io_file_close(revision_file, pool));
 
@@ -1736,6 +1765,24 @@ svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
+                             svn_fs_t *fs,
+                             const svn_fs_id_t *id,
+                             apr_pool_t *pool)
+{
+  svn_error_t *err = get_node_revision_body(noderev_p, fs, id, pool);
+  if (err && err->apr_err == SVN_ERR_FS_CORRUPT)
+    {
+      svn_string_t *id_string = svn_fs_fs__id_unparse(id, pool);
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
+                               "Corrupt node-revision '%s'",
+                               id_string->data);
+    }
+  return err;
+}
+
 
 /* Return a formatted string that represents the location of
    representation REP.  If MUTABLE_REP_TRUNCATED is given, the rep is
@@ -2145,7 +2192,7 @@ svn_fs_fs__revision_proplist(apr_hash_t **proplist_p,
                              svn_revnum_t rev,
                              apr_pool_t *pool)
 {
-  apr_file_t *revprop_file;
+  apr_file_t *revprop_file = NULL;
   apr_hash_t *proplist;
   svn_error_t *err = SVN_NO_ERROR;
   int i;
@@ -2155,13 +2202,12 @@ svn_fs_fs__revision_proplist(apr_hash_t **proplist_p,
 
   proplist = apr_hash_make(pool);
   iterpool = svn_pool_create(pool);
-  for (i = 0; i < SVN_ESTALE_RETRY_COUNT; i++)
+  for (i = 0; i < RECOVERABLE_RETRY_COUNT; i++)
     {
       svn_pool_clear(iterpool);
 
-      /* Clear err here (svn_error_clear can safely be passed
-       * SVN_NO_ERROR) rather than after finding ESTALE so we can
-       * return the ESTALE error on the last iteration of the loop. */
+      /* Clear err here rather than after finding a recoverable error so
+       * we can return that error on the last iteration of the loop. */
       svn_error_clear(err);
       err = svn_io_file_open(&revprop_file, path_revprops(fs, rev, iterpool),
                              APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
@@ -2175,20 +2221,22 @@ svn_fs_fs__revision_proplist(apr_hash_t **proplist_p,
                                        _("No such revision %ld"), rev);
             }
 #ifdef ESTALE
-          else if (APR_TO_OS_ERROR(err->apr_err) == ESTALE)
+          else if (APR_TO_OS_ERROR(err->apr_err) == ESTALE
+                   || APR_TO_OS_ERROR(err->apr_err) == EIO
+                   || APR_TO_OS_ERROR(err->apr_err) == ENOENT)
             continue;
 #endif
           return err;
         }
 
       SVN_ERR(svn_hash__clear(proplist));
-      SVN_RETRY_ESTALE(err,
-                       svn_hash_read2(proplist,
-                                      svn_stream_from_aprfile(revprop_file,
-                                                              iterpool),
-                                      SVN_HASH_TERMINATOR, pool));
+      RETRY_RECOVERABLE(err, revprop_file,
+                        svn_hash_read2(proplist,
+                                       svn_stream_from_aprfile(revprop_file,
+                                                               iterpool),
+                                       SVN_HASH_TERMINATOR, pool));
 
-      SVN_IGNORE_ESTALE(err, svn_io_file_close(revprop_file, iterpool));
+      IGNORE_RECOVERABLE(err, svn_io_file_close(revprop_file, iterpool));
 
       break;
     }
@@ -2214,15 +2262,13 @@ struct rep_state
   int chunk_index;
 };
 
-/* Read the rep args for REP in filesystem FS and create a rep_state
-   for reading the representation.  Return the rep_state in *REP_STATE
-   and the rep args in *REP_ARGS, both allocated in POOL. */
+/* See create_rep_state, which wraps this and adds another error. */
 static svn_error_t *
-create_rep_state(struct rep_state **rep_state,
-                 struct rep_args **rep_args,
-                 representation_t *rep,
-                 svn_fs_t *fs,
-                 apr_pool_t *pool)
+create_rep_state_body(struct rep_state **rep_state,
+                      struct rep_args **rep_args,
+                      representation_t *rep,
+                      svn_fs_t *fs,
+                      apr_pool_t *pool)
 {
   struct rep_state *rs = apr_pcalloc(pool, sizeof(*rs));
   struct rep_args *ra;
@@ -2251,6 +2297,33 @@ create_rep_state(struct rep_state **rep_state,
   rs->off += 4;
 
   return SVN_NO_ERROR;
+}
+
+/* Read the rep args for REP in filesystem FS and create a rep_state
+   for reading the representation.  Return the rep_state in *REP_STATE
+   and the rep args in *REP_ARGS, both allocated in POOL. */
+static svn_error_t *
+create_rep_state(struct rep_state **rep_state,
+                 struct rep_args **rep_args,
+                 representation_t *rep,
+                 svn_fs_t *fs,
+                 apr_pool_t *pool)
+{
+  svn_error_t *err = create_rep_state_body(rep_state, rep_args, rep, fs, pool);
+  if (err && err->apr_err == SVN_ERR_FS_CORRUPT)
+    {
+      /* ### This always returns "-1" for transaction reps, because
+         ### this particular bit of code doesn't know if the rep is
+         ### stored in the protorev or in the mutable area (for props
+         ### or dir contents).  It is pretty rare for FSFS to *read*
+         ### from the protorev file, though, so this is probably OK.
+         ### And anyone going to debug corruption errors is probably
+         ### going to jump straight to this comment anyway! */
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
+                               "Corrupt representation '%s'",
+                               representation_string(rep, TRUE, pool));
+    }
+  return err;
 }
 
 /* Build an array of rep_state structures in *LIST giving the delta
@@ -3516,7 +3589,7 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
 {
   struct get_and_increment_txn_key_baton *cb = baton;
   const char *txn_current_filename = path_txn_current(cb->fs, pool);
-  apr_file_t *txn_current_file;
+  apr_file_t *txn_current_file = NULL;
   const char *tmp_filename;
   char next_txn_id[MAX_KEY_SIZE+3];
   svn_error_t *err = SVN_NO_ERROR;
@@ -3527,20 +3600,23 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
   cb->txn_id = apr_palloc(cb->pool, MAX_KEY_SIZE);
 
   iterpool = svn_pool_create(pool);
-  for (i = 0; i < SVN_ESTALE_RETRY_COUNT; ++i)
+  for (i = 0; i < RECOVERABLE_RETRY_COUNT; ++i)
     {
       svn_pool_clear(iterpool);
 
-      SVN_RETRY_ESTALE(err, svn_io_file_open(&txn_current_file,
-                                             txn_current_filename,
-                                             APR_READ | APR_BUFFERED,
-                                             APR_OS_DEFAULT, iterpool));
+      RETRY_RECOVERABLE(err, txn_current_file,
+                        svn_io_file_open(&txn_current_file,
+                                         txn_current_filename,
+                                         APR_READ | APR_BUFFERED,
+                                         APR_OS_DEFAULT, iterpool));
       len = MAX_KEY_SIZE;
-      SVN_RETRY_ESTALE(err, svn_io_read_length_line(txn_current_file,
-                                                    cb->txn_id,
-                                                    &len,
-                                                    iterpool));
-      SVN_IGNORE_ESTALE(err, svn_io_file_close(txn_current_file, iterpool));
+      RETRY_RECOVERABLE(err, txn_current_file,
+                        svn_io_read_length_line(txn_current_file,
+                                                cb->txn_id,
+                                                &len,
+                                                iterpool));
+      IGNORE_RECOVERABLE(err, svn_io_file_close(txn_current_file,
+                                                iterpool));
 
       break;
     }

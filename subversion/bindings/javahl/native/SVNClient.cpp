@@ -734,7 +734,7 @@ void SVNClient::mergeReintegrate(const char *path, Revision &pegRevision,
 }
 
 jobject
-SVNClient::getMergeInfo(const char *target, Revision &pegRevision)
+SVNClient::getMergeinfo(const char *target, Revision &pegRevision)
 {
     Pool requestPool;
     JNIEnv *env = JNIUtil::getEnv();
@@ -743,7 +743,7 @@ SVNClient::getMergeInfo(const char *target, Revision &pegRevision)
     if (ctx == NULL)
         return NULL;
 
-    apr_hash_t *mergeinfo;
+    svn_mergeinfo_t mergeinfo;
     Path intLocalTarget(target);
     SVN_JNI_ERR(intLocalTarget.error_occured(), NULL);
     SVN_JNI_ERR(svn_client_mergeinfo_get_merged(&mergeinfo,
@@ -754,8 +754,8 @@ SVNClient::getMergeInfo(const char *target, Revision &pegRevision)
     if (mergeinfo == NULL)
         return NULL;
 
-    // Transform mergeinfo into Java MergeInfo object.
-    jclass clazz = env->FindClass(JAVA_PACKAGE "/MergeInfo");
+    // Transform mergeinfo into Java Mergeinfo object.
+    jclass clazz = env->FindClass(JAVA_PACKAGE "/Mergeinfo");
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 

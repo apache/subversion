@@ -20,6 +20,7 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
+#include "svn_iter.h"
 #include "svn_repos.h"
 #include "svn_string.h"
 #include "svn_path.h"
@@ -183,6 +184,9 @@ struct edit_baton
 
   /* True if dumped nodes should output deltas instead of full text. */
   svn_boolean_t use_deltas;
+
+  /* True if this "dump" is in fact a verify. */
+  svn_boolean_t verify;
 
   /* The first revision dumped in this dumpstream. */
   svn_revnum_t oldest_dumped_rev;
@@ -409,13 +413,14 @@ dump_node(struct edit_baton *eb,
         }
       else
         {
-          if (cmp_rev < eb->oldest_dumped_rev)
+          if (!eb->verify && cmp_rev < eb->oldest_dumped_rev)
             SVN_ERR(svn_stream_printf
                     (eb->feedback_stream, pool,
-                     _("WARNING: Referencing data in revision %ld"
-                       ", which is older than the oldest\nWARNING: dumped revision "
-                       "(%ld).  Loading this dump into an empty "
-                       "repository\nWARNING: will fail.\n"),
+                     _("WARNING: Referencing data in revision %ld,"
+                       " which is older than the oldest\n"
+                       "WARNING: dumped revision (%ld).  Loading this dump"
+                       " into an empty repository\n"
+                       "WARNING: will fail.\n"),
                      cmp_rev, eb->oldest_dumped_rev));
 
           SVN_ERR(svn_stream_printf(eb->stream, pool,
@@ -808,6 +813,7 @@ get_dump_editor(const svn_delta_editor_t **editor,
                 svn_stream_t *feedback_stream,
                 svn_revnum_t oldest_dumped_rev,
                 svn_boolean_t use_deltas,
+                svn_boolean_t verify,
                 apr_pool_t *pool)
 {
   /* Allocate an edit baton to be stored in every directory baton.
@@ -825,6 +831,7 @@ get_dump_editor(const svn_delta_editor_t **editor,
   SVN_ERR(svn_fs_revision_root(&(eb->fs_root), fs, to_rev, pool));
   eb->current_rev = to_rev;
   eb->use_deltas = use_deltas;
+  eb->verify = verify;
 
   /* Set up the editor. */
   dump_editor->open_root = open_root;
@@ -1029,7 +1036,7 @@ svn_repos_dump_fs2(svn_repos_t *repos,
       use_deltas_for_rev = use_deltas && (incremental || i != start_rev);
       SVN_ERR(get_dump_editor(&dump_editor, &dump_edit_baton, fs, to_rev,
                               "/", stream, feedback_stream, start_rev,
-                              use_deltas_for_rev, subpool));
+                              use_deltas_for_rev, FALSE, subpool));
 
       /* Drive the editor in one way or another. */
       SVN_ERR(svn_fs_revision_root(&to_root, fs, to_rev, subpool));
@@ -1086,4 +1093,142 @@ svn_repos_dump_fs(svn_repos_t *repos,
   return svn_repos_dump_fs2(repos, stream, feedback_stream, start_rev,
                             end_rev, incremental, FALSE, cancel_func,
                             cancel_baton, pool);
+}
+
+
+/*----------------------------------------------------------------------*/
+
+/* verify, based on dump */
+
+
+/* Creating a new revision that changes /A/B/E/bravo means creating new
+   directory listings for /, /A, /A/B, and /A/B/E in the new revision, with
+   each entry not changed in the new revision a link back to the entry in a
+   previous revision.  svn_repos_replay()ing a revision does not verify that
+   those links are correct.
+
+   For paths actually changed in the revision we verify, we get directory
+   contents or file length twice: once in the dump editor, and once here.
+   We could create a new verify baton, store in it the changed paths, and
+   skip those here, but that means building an entire wrapper editor and
+   managing two levels of batons.  The impact from checking these entries
+   twice should be minimal, while the code to avoid it is not.
+*/
+
+static svn_error_t *
+verify_directory_entry(void *baton, const void *key, apr_ssize_t klen,
+                       void *val, apr_pool_t *pool)
+{
+  struct dir_baton *db = baton;
+  char *path = svn_path_join(db->path, (const char *)key, pool);
+  svn_node_kind_t kind;
+  apr_hash_t *dirents;
+  svn_filesize_t len;
+
+  SVN_ERR(svn_fs_check_path(&kind, db->edit_baton->fs_root, path, pool));
+  switch (kind) {
+  case svn_node_dir:
+    /* Getting this directory's contents is enough to ensure that our
+       link to it is correct. */
+    SVN_ERR(svn_fs_dir_entries(&dirents, db->edit_baton->fs_root, path, pool));
+    break;
+  case svn_node_file:
+    /* Getting this file's size is enough to ensure that our link to it
+       is correct. */
+    SVN_ERR(svn_fs_file_length(&len, db->edit_baton->fs_root, path, pool));
+    break;
+  default:
+    return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                             _("Unexpected node kind %d for '%s'"), kind, path);
+  }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+verify_close_directory(void *dir_baton,
+                apr_pool_t *pool)
+{
+  struct dir_baton *db = dir_baton;
+  apr_hash_t *dirents;
+  SVN_ERR(svn_fs_dir_entries(&dirents, db->edit_baton->fs_root,
+                             db->path, pool));
+  SVN_ERR(svn_iter_apr_hash(NULL, dirents, verify_directory_entry,
+                            dir_baton, pool));
+  return close_directory(dir_baton, pool);
+}
+
+svn_error_t *
+svn_repos_verify_fs(svn_repos_t *repos,
+                    svn_stream_t *feedback_stream,
+                    svn_revnum_t start_rev,
+                    svn_revnum_t end_rev,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *pool)
+{
+  svn_fs_t *fs = svn_repos_fs(repos);
+  svn_revnum_t youngest;
+  svn_revnum_t rev;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  /* Determine the current youngest revision of the filesystem. */
+  SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
+
+  /* Use default vals if necessary. */
+  if (! SVN_IS_VALID_REVNUM(start_rev))
+    start_rev = 0;
+  if (! SVN_IS_VALID_REVNUM(end_rev))
+    end_rev = youngest;
+  if (! feedback_stream)
+    feedback_stream = svn_stream_empty(pool);
+
+  /* Validate the revisions. */
+  if (start_rev > end_rev)
+    return svn_error_createf(SVN_ERR_REPOS_BAD_ARGS, NULL,
+                             _("Start revision %ld"
+                               " is greater than end revision %ld"),
+                             start_rev, end_rev);
+  if (end_rev > youngest)
+    return svn_error_createf(SVN_ERR_REPOS_BAD_ARGS, NULL,
+                             _("End revision %ld is invalid "
+                               "(youngest revision is %ld)"),
+                             end_rev, youngest);
+
+  for (rev = start_rev; rev <= end_rev; rev++)
+    {
+      svn_delta_editor_t *dump_editor;
+      void *dump_edit_baton;
+      const svn_delta_editor_t *cancel_editor;
+      void *cancel_edit_baton;
+      svn_fs_root_t *to_root;
+
+      svn_pool_clear(iterpool);
+
+      /* Get cancellable dump editor, but with our close_directory handler. */
+      SVN_ERR(get_dump_editor((const svn_delta_editor_t **)&dump_editor,
+                              &dump_edit_baton, fs, rev, "",
+                              svn_stream_empty(pool), feedback_stream,
+                              start_rev,
+                              FALSE, TRUE, /* use_deltas, verify */
+                              iterpool));
+      dump_editor->close_directory = verify_close_directory;
+      SVN_ERR(svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
+                                                dump_editor, dump_edit_baton,
+                                                &cancel_editor,
+                                                &cancel_edit_baton,
+                                                iterpool));
+
+      SVN_ERR(svn_fs_revision_root(&to_root, fs, rev, iterpool));
+      SVN_ERR(svn_repos_replay2(to_root, "", SVN_INVALID_REVNUM, FALSE,
+                                cancel_editor, cancel_edit_baton,
+                                NULL, NULL, iterpool));
+      SVN_ERR(svn_stream_printf(feedback_stream, iterpool,
+                                _("* Verified revision %ld.\n"),
+                                rev));
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
 }

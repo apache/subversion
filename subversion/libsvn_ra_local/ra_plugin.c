@@ -29,6 +29,7 @@
 
 #include "svn_private_config.h"
 #include "../libsvn_ra/ra_loader.h"
+#include "private/svn_mergeinfo_private.h"
 
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
@@ -649,7 +650,7 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
 
 static svn_error_t *
 svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
-                            apr_hash_t **mergeinfo,
+                            svn_mergeinfo_catalog_t *catalog,
                             const apr_array_header_t *paths,
                             svn_revnum_t revision,
                             svn_mergeinfo_inheritance_t inherit,
@@ -657,7 +658,7 @@ svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
                             apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  apr_hash_t *tmp_mergeinfo;
+  svn_mergeinfo_catalog_t tmp_catalog;
   int i;
   apr_array_header_t *abs_paths = 
     apr_array_make(pool, 0, sizeof(const char *));
@@ -669,34 +670,16 @@ svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
         svn_path_join(sess->fs_path->data, relative_path, pool);
     }
 
-  SVN_ERR(svn_repos_fs_get_mergeinfo(&tmp_mergeinfo, sess->repos, abs_paths,
+  SVN_ERR(svn_repos_fs_get_mergeinfo(&tmp_catalog, sess->repos, abs_paths,
                                      revision, inherit, include_descendants,
                                      NULL, NULL, pool));
-  *mergeinfo = NULL;
-  if (tmp_mergeinfo != NULL && apr_hash_count(tmp_mergeinfo) > 0)
-    {
-      const void *key;
-      apr_ssize_t klen;
-      void *value;
-      apr_hash_index_t *hi;
-
-      *mergeinfo = apr_hash_make(pool);
-
-      for (hi = apr_hash_first(pool, tmp_mergeinfo); hi;
-           hi = apr_hash_next(hi))
-        {
-          const char *path, *info;
-          apr_ssize_t path_len;
-          apr_hash_t *for_path;
-
-          apr_hash_this(hi, &key, &klen, &value);
-          path = (const char *)key + sess->fs_path->len;
-          path_len = klen - sess->fs_path->len;
-          info = value;
-          SVN_ERR(svn_mergeinfo_parse(&for_path, info, pool));
-          apr_hash_set(*mergeinfo, path, path_len, for_path);
-        }
-    }
+  if (apr_hash_count(tmp_catalog) > 0)
+    SVN_ERR(svn_mergeinfo__remove_prefix_from_catalog(catalog,
+                                                      tmp_catalog,
+                                                      sess->fs_path->data,
+                                                      pool));
+  else
+    *catalog = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -1366,12 +1349,21 @@ svn_ra_local__has_capability(svn_ra_session_t *session,
                              const char *capability,
                              apr_pool_t *pool)
 {
+  svn_ra_local__session_baton_t *sess = session->priv;
+
   if (strcmp(capability, SVN_RA_CAPABILITY_DEPTH) == 0
-      || strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0
       || strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0
       || strcmp(capability, SVN_RA_CAPABILITY_PARTIAL_REPLAY) == 0)
     {
       *has = TRUE;
+    }
+  else if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
+    {
+      /* With mergeinfo, the code's capabilities may not reflect the
+         repository's, so inquire further. */
+      SVN_ERR(svn_repos_has_capability(sess->repos, has,
+                                       SVN_REPOS_CAPABILITY_MERGEINFO,
+                                       pool));
     }
   else  /* Don't know any other capabilities, so error. */
     {

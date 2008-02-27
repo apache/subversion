@@ -239,7 +239,9 @@ const apr_getopt_option_t svn_cl__options[] =
   {"summarize",     opt_summarize, 0, N_("show a summary of the results")},
   {"remove",         opt_remove, 0, N_("remove changelist association")},
   {"changelist",    opt_changelist, 1,
-                    N_("operate only on members of changelist ARG")},
+                    N_("operate only on members of changelist ARG\n"
+                       "                             "
+                       "[aliases: --cl]")},
   {"keep-changelists", opt_keep_changelists, 0,
                     N_("don't delete changelists after commit")},
   {"keep-local",    opt_keep_local, 0, N_("keep path in working copy")},
@@ -272,6 +274,15 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("query a particular merge source URL")},
   {"reintegrate",   opt_reintegrate, 0,
                     N_("lump-merge all of source URL's unmerged changes")},
+
+  /* Long-opt Aliases
+   *
+   * These have NULL desriptions, but an option code that matches some
+   * other option (whose description should probably mention its aliases).
+  */
+
+  {"cl",            opt_changelist, 1, NULL},
+
   {0,               0, 0, 0},
 };
 
@@ -334,10 +345,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {'r'} },
 
   { "changelist", svn_cl__changelist, {"cl"}, N_
-    ("Associate (or deassociate) local paths with changelist CLNAME.\n"
+    ("Associate (or dissociate) changelist CLNAME with the named files.\n"
      "usage: 1. changelist CLNAME TARGET...\n"
      "       2. changelist --remove TARGET...\n"),
-    { 'q', opt_depth, opt_remove, opt_targets, opt_changelist} },
+    { 'q', 'R', opt_depth, opt_remove, opt_targets, opt_changelist} },
 
   { "checkout", svn_cl__checkout, {"co"}, N_
     ("Check out a working copy from a repository.\n"
@@ -731,7 +742,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn:externals  - A newline separated list of module specifiers,\n"
      "      each of which consists of a relative directory path, optional\n"
      "      revision flags and an URL.  The ordering of the three elements\n"
-     "      implements different behavior.  Subversion 1.4 and earler only\n"
+     "      implements different behavior.  Subversion 1.4 and earlier only\n"
      "      support the following formats and the URLs cannot have peg\n"
      "      revisions:\n"
      "        foo             http://example.com/repos/zig\n"
@@ -989,48 +1000,6 @@ svn_cl__check_cancel(void *baton)
     return svn_error_create(SVN_ERR_CANCELLED, NULL, _("Caught signal"));
   else
     return SVN_NO_ERROR;
-}
-
-
-/* Parse REVPROP_PAIR as name[=value], adding it to *revprop_table_p, using
- * POOL for all allocations.  *REVPROP_TABLE_P may be NULL, in which case
- * it is created.. */
-static svn_error_t *
-parse_revprop(apr_hash_t **revprop_table_p,
-              const char *revprop_pair,
-              apr_pool_t *pool)
-{
-  const char *sep, *propname;
-  svn_string_t *propval;
-
-  if (! *revprop_pair)
-    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                            _("Revision property pair is empty"));
-
-  if (! *revprop_table_p)
-    *revprop_table_p = apr_hash_make(pool);
-
-  sep = strchr(revprop_pair, '=');
-  if (sep)
-    {
-      propname = apr_pstrndup(pool, revprop_pair, sep - revprop_pair);
-      SVN_ERR(svn_utf_cstring_to_utf8(&propname, propname, pool));
-      propval = svn_string_create(sep + 1, pool);
-    }
-  else
-    {
-      SVN_ERR(svn_utf_cstring_to_utf8(&propname, revprop_pair, pool));
-      propval = svn_string_create("", pool);
-    }
-
-  if (!svn_prop_name_is_valid(propname))
-    return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
-                             _("'%s' is not a valid Subversion property name"),
-                             propname);
-
-  apr_hash_set(*revprop_table_p, propname, APR_HASH_KEY_STRING, propval);
-
-  return SVN_NO_ERROR;
 }
 
 
@@ -1464,7 +1433,7 @@ main(int argc, const char *argv[])
         opt_state.all_revprops = TRUE;
         break;
       case opt_with_revprop:
-        err = parse_revprop(&opt_state.revprop_table, opt_arg, pool);
+        err = svn_opt_parse_revprop(&opt_state.revprop_table, opt_arg, pool);
         if (err != SVN_NO_ERROR)
           return svn_cmdline_handle_exit_error(err, pool, "svn: ");
         break;

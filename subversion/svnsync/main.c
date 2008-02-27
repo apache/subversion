@@ -262,8 +262,29 @@ get_lock(svn_ra_session_t *session, apr_pool_t *pool)
 }
 
 
+/* Baton for the various subcommands to share. */
+typedef struct {
+  /* common to all subcommands */
+  apr_hash_t *config;
+  svn_ra_callbacks2_t source_callbacks;
+  svn_ra_callbacks2_t sync_callbacks;
+  svn_boolean_t quiet;
+  const char *to_url;
+
+  /* initialize only */
+  const char *from_url;
+
+  /* syncronize only */
+  svn_revnum_t committed_rev;
+
+  /* copy-revprops only */
+  svn_revnum_t start_rev;
+  svn_revnum_t end_rev;
+
+} subcommand_baton_t;
+
 typedef svn_error_t *(*with_locked_func_t)(svn_ra_session_t *session,
-                                           void *baton,
+                                           subcommand_baton_t *baton,
                                            apr_pool_t *pool);
 
 
@@ -274,7 +295,7 @@ typedef svn_error_t *(*with_locked_func_t)(svn_ra_session_t *session,
 static svn_error_t *
 with_locked(svn_ra_session_t *session,
             with_locked_func_t func,
-            void *baton,
+            subcommand_baton_t *baton,
             apr_pool_t *pool)
 {
   svn_error_t *err, *err2;
@@ -531,27 +552,6 @@ copy_revprops(svn_ra_session_t *from_session,
 }
 
 
-/* Baton for the various subcommands to share. */
-typedef struct {
-  /* common to all subcommands */
-  apr_hash_t *config;
-  svn_ra_callbacks2_t source_callbacks;
-  svn_ra_callbacks2_t sync_callbacks;
-  svn_boolean_t quiet;
-  const char *to_url;
-
-  /* initialize only */
-  const char *from_url;
-
-  /* syncronize only */
-  svn_revnum_t committed_rev;
-
-  /* copy-revprops only */
-  svn_revnum_t start_rev;
-  svn_revnum_t end_rev;
-
-} subcommand_baton_t;
-
 /* Return a subcommand baton allocated from POOL and populated with
    data from the provided parameters, which include the global
    OPT_BATON options structure and a handful of other options.  Not
@@ -588,11 +588,10 @@ make_subcommand_baton(opt_baton_t *opt_baton,
  */
 static svn_error_t *
 do_initialize(svn_ra_session_t *to_session,
-              void *b,
+              subcommand_baton_t *baton,
               apr_pool_t *pool)
 {
   svn_ra_session_t *from_session;
-  subcommand_baton_t *baton = b;
   svn_string_t *from_url;
   svn_revnum_t latest;
   const char *uuid, *root_url;
@@ -733,6 +732,7 @@ typedef struct {
   void *wrapped_edit_baton;
   const char *to_url;  /* URL we're copying into, for correct copyfrom URLs */
   svn_boolean_t called_open_root;
+  svn_boolean_t got_textdeltas;
   svn_revnum_t base_revision;
   svn_boolean_t quiet;
 } edit_baton_t;
@@ -773,12 +773,6 @@ open_root(void *edit_baton,
   eb->called_open_root = TRUE;
   dir_baton->edit_baton = edit_baton;
   *root_baton = dir_baton;
-
-  if (! eb->quiet)
-    {
-      SVN_ERR(svn_cmdline_printf(pool, _("Transmitting file data ")));
-      SVN_ERR(svn_cmdline_fflush(stdout));
-    }
 
   return SVN_NO_ERROR;
 }
@@ -903,10 +897,13 @@ apply_textdelta(void *file_baton,
 
   if (! eb->quiet)
     {
+      if (! eb->got_textdeltas)
+        SVN_ERR(svn_cmdline_printf(pool, _("Transmitting file data ")));
       SVN_ERR(svn_cmdline_printf(pool, "."));
       SVN_ERR(svn_cmdline_fflush(stdout));
     }
 
+  eb->got_textdeltas = TRUE;
   return eb->wrapped_editor->apply_textdelta(fb->wrapped_node_baton,
                                              base_checksum, pool,
                                              handler, handler_baton);
@@ -1010,7 +1007,8 @@ close_edit(void *edit_baton,
 
   if (! eb->quiet)
     {
-      SVN_ERR(svn_cmdline_printf(pool, "\n"));
+      if (eb->got_textdeltas)
+        SVN_ERR(svn_cmdline_printf(pool, "\n"));
     }
 
   return eb->wrapped_editor->close_edit(eb->wrapped_edit_baton, pool);
@@ -1035,7 +1033,7 @@ get_sync_editor(const svn_delta_editor_t *wrapped_editor,
                 apr_pool_t *pool)
 {
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(pool);
-  edit_baton_t *eb = apr_palloc(pool, sizeof(*eb));
+  edit_baton_t *eb = apr_pcalloc(pool, sizeof(*eb));
 
   tree_editor->set_target_revision = set_target_revision;
   tree_editor->open_root = open_root;
@@ -1055,7 +1053,6 @@ get_sync_editor(const svn_delta_editor_t *wrapped_editor,
 
   eb->wrapped_editor = wrapped_editor;
   eb->wrapped_edit_baton = wrapped_edit_baton;
-  eb->called_open_root = FALSE;
   eb->base_revision = base_revision;
   eb->to_url = to_url;
   eb->quiet = quiet;
@@ -1335,12 +1332,12 @@ replay_rev_finished(svn_revnum_t revision,
  * locked.  Implements `with_locked_func_t' interface.
  */
 static svn_error_t *
-do_synchronize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
+do_synchronize(svn_ra_session_t *to_session,
+               subcommand_baton_t *baton, apr_pool_t *pool)
 {
   svn_string_t *last_merged_rev;
   svn_revnum_t from_latest;
   svn_ra_session_t *from_session;
-  subcommand_baton_t *baton = b;
   svn_string_t *currently_copying;
   svn_revnum_t to_latest, copying, last_merged;
   svn_revnum_t start_revision, end_revision;
@@ -1497,9 +1494,9 @@ synchronize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
  * repository is locked.  Implements `with_locked_func_t' interface.
  */
 static svn_error_t *
-do_copy_revprops(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
+do_copy_revprops(svn_ra_session_t *to_session,
+                 subcommand_baton_t *baton, apr_pool_t *pool)
 {
-  subcommand_baton_t *baton = b;
   svn_ra_session_t *from_session;
   svn_string_t *last_merged_rev;
   svn_revnum_t i;
@@ -1634,7 +1631,7 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   SVN_ERR(svn_ra_open2(&to_session, baton->to_url, &(baton->sync_callbacks),
                        baton, baton->config, pool));
   SVN_ERR(check_if_session_is_at_repos_root(to_session, baton->to_url, pool));
-  SVN_ERR(with_locked(to_session, do_copy_revprops, &baton, pool));
+  SVN_ERR(with_locked(to_session, do_copy_revprops, baton, pool));
 
   return SVN_NO_ERROR;
 }

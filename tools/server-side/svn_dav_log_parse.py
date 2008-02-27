@@ -44,17 +44,17 @@ The words will *always* be in this order, though some may be absent.
 
 General::
 
+    change-rev-prop r<N> <REVPROP>
     commit r<N>
-    list-dir <PATH> r<N>
+    get-dir <PATH> r<N> text? props?
+    get-file <PATH> r<N> text? props?
     lock <PATH> steal?
-    prop-list <PATH>@<N>
-    revprop-change r<N> <REVPROP>
-    revprop-list r<N>
+    rev-proplist r<N>
     unlock <PATH> break?
 
 Reports::
 
-    blame <PATH> r<N>:<M> include-merged-revisions?
+    get-file-revs <PATH> r<N>:<M> include-merged-revisions?
     get-mergeinfo (<PATH> ...) <I>
     log (<PATH> ...) r<N>:<M> limit=<N>? discover-changed-paths? strict? include-merged-revisions? revprops=all|(<REVPROP> ...)?
     replay <PATH> r<N>
@@ -62,9 +62,9 @@ Reports::
 The update report::
 
     checkout-or-export <PATH> r<N> depth=<D>?
-    diff-or-merge <FROM-PATH>@<N> <TO-PATH>@<M> depth=<D>? ignore-ancestry?
-    diff-or-merge <PATH> r<N>:<M> depth=<D>? ignore-ancestry?
-    remote-status <PATH> r<N> depth=<D>?
+    diff <FROM-PATH>@<N> <TO-PATH>@<M> depth=<D>? ignore-ancestry?
+    diff <PATH> r<N>:<M> depth=<D>? ignore-ancestry?
+    status <PATH> r<N> depth=<D>?
     switch <FROM-PATH>@<N> <TO-PATH>@<M> depth=<D>?
     update <PATH> r<N> depth=<D>? send-copyfrom-args?
 """
@@ -199,9 +199,18 @@ class Parser(object):
         self.handle_commit(int(m.group(1)))
         return line[m.end():]
 
-    def _parse_list_dir(self, line):
-        m = _match(line, pPATH, pREVNUM)
-        self.handle_list_dir(m.group(1), int(m.group(2)))
+    def _parse_get_dir(self, line):
+        m = _match(line, pPATH, pREVNUM, ['text', 'props'])
+        self.handle_get_dir(m.group(1), int(m.group(2)),
+                            m.group(3) is not None,
+                            m.group(4) is not None)
+        return line[m.end():]
+
+    def _parse_get_file(self, line):
+        m = _match(line, pPATH, pREVNUM, ['text', 'props'])
+        self.handle_get_file(m.group(1), int(m.group(2)),
+                             m.group(3) is not None,
+                             m.group(4) is not None)
         return line[m.end():]
 
     def _parse_lock(self, line):
@@ -209,21 +218,16 @@ class Parser(object):
         self.handle_lock(m.group(1), m.group(2) is not None)
         return line[m.end():]
 
-    def _parse_prop_list(self, line):
-        m = _match(line, pPATHREV)
-        self.handle_prop_list(m.group(1), int(m.group(2)))
-        return line[m.end():]
-
-    def _parse_revprop_change(self, line):
+    def _parse_change_rev_prop(self, line):
         # <REVPROP>
         pPROPERTY = pWORD
         m = _match(line, pREVNUM, pPROPERTY)
-        self.handle_revprop_change(int(m.group(1)), m.group(2))
+        self.handle_change_rev_prop(int(m.group(1)), m.group(2))
         return line[m.end():]
 
-    def _parse_revprop_list(self, line):
+    def _parse_rev_proplist(self, line):
         m = _match(line, pREVNUM)
-        self.handle_revprop_list(int(m.group(1)))
+        self.handle_rev_proplist(int(m.group(1)))
         return line[m.end():]
 
     def _parse_unlock(self, line):
@@ -233,13 +237,13 @@ class Parser(object):
 
     # reports
 
-    def _parse_blame(self, line):
+    def _parse_get_file_revs(self, line):
         m = _match(line, pPATH, pREVRANGE, ['include-merged-revisions'])
         path = m.group(1)
         left = int(m.group(2))
         right = int(m.group(3))
         include_merged_revisions    = m.group(4) is not None
-        self.handle_blame(path, left, right, include_merged_revisions)
+        self.handle_get_file_revs(path, left, right, include_merged_revisions)
         return line[m.end():]
 
     def _parse_get_mergeinfo(self, line):
@@ -297,44 +301,44 @@ class Parser(object):
         self.handle_checkout_or_export(path, revision, depth)
         return line[m.end():]
 
-    def _parse_diff_or_merge(self, line):
+    def _parse_diff(self, line):
         # First, try 1-path form.
         try:
             m = _match(line, pPATH, pREVRANGE, [pDEPTH, 'ignore-ancestry'])
-            f = self._parse_diff_or_merge_1path
+            f = self._parse_diff_1path
         except Error:
             # OK, how about 2-path form?
             m = _match(line, pPATHREV, pPATHREV, [pDEPTH, 'ignore-ancestry'])
-            f = self._parse_diff_or_merge_2paths
+            f = self._parse_diff_2paths
         return f(line, m)
 
-    def _parse_diff_or_merge_1path(self, line, m):
+    def _parse_diff_1path(self, line, m):
         path = m.group(1)
         left = int(m.group(2))
         right = int(m.group(3))
         depth = _parse_depth(m.group(5))
         ignore_ancestry = m.group(6) is not None
-        self.handle_diff_or_merge_1path(path, left, right,
+        self.handle_diff_1path(path, left, right,
                                         depth, ignore_ancestry)
         return line[m.end():]
 
-    def _parse_diff_or_merge_2paths(self, line, m):
+    def _parse_diff_2paths(self, line, m):
         from_path = m.group(1)
         from_rev = int(m.group(2))
         to_path = m.group(3)
         to_rev = int(m.group(4))
         depth = _parse_depth(m.group(6))
         ignore_ancestry = m.group(7) is not None
-        self.handle_diff_or_merge_2paths(from_path, from_rev, to_path, to_rev,
+        self.handle_diff_2paths(from_path, from_rev, to_path, to_rev,
                                          depth, ignore_ancestry)
         return line[m.end():]
 
-    def _parse_remote_status(self, line):
+    def _parse_status(self, line):
         m = _match(line, pPATH, pREVNUM, [pDEPTH])
         path = m.group(1)
         revision = int(m.group(2))
         depth = _parse_depth(m.group(4))
-        self.handle_remote_status(path, revision, depth)
+        self.handle_status(path, revision, depth)
         return line[m.end():]
 
     def _parse_switch(self, line):

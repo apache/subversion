@@ -1053,7 +1053,8 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 }
 
 /* Allocate and return a new svn_repos_t * object, initializing the
-   directory pathname members based on PATH.
+   directory pathname members based on PATH, and initializing the
+   REPOSITORY_CAPABILITIES member.
    The members FS, FORMAT, and FS_TYPE are *not* initialized (they are null),
    and it is the caller's responsibility to fill them in if needed.  */
 static svn_repos_t *
@@ -1066,6 +1067,7 @@ create_svn_repos_t(const char *path, apr_pool_t *pool)
   repos->conf_path = svn_path_join(path, SVN_REPOS__CONF_DIR, pool);
   repos->hook_path = svn_path_join(path, SVN_REPOS__HOOK_DIR, pool);
   repos->lock_path = svn_path_join(path, SVN_REPOS__LOCK_DIR, pool);
+  repos->repository_capabilities = apr_hash_make(pool);
 
   return repos;
 }
@@ -1426,6 +1428,85 @@ svn_repos_delete(const char *path,
 
   /* ...then blow away everything else.  */
   SVN_ERR(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Repository supports the capability. */
+static const char *capability_yes = "yes";
+/* Repository does not support the capability. */
+static const char *capability_no = "no";
+
+svn_error_t *
+svn_repos_has_capability(svn_repos_t *repos,
+                         svn_boolean_t *has,
+                         const char *capability,
+                         apr_pool_t *pool)
+{
+  const char *val = apr_hash_get(repos->repository_capabilities,
+                                 capability, APR_HASH_KEY_STRING);
+
+  if (val == capability_yes)
+    {
+      *has = TRUE;
+    }
+  else if (val == capability_no)
+    {
+      *has = FALSE;
+    }
+  /* Else don't know, so investigate. */
+  else if (strcmp(capability, SVN_REPOS_CAPABILITY_MERGEINFO) == 0)
+    {
+      svn_error_t *err;
+      svn_fs_root_t *root;
+      svn_mergeinfo_catalog_t ignored;
+      apr_array_header_t *paths = apr_array_make(pool, 1,
+                                                 sizeof(char *));
+      
+      SVN_ERR(svn_fs_revision_root(&root, repos->fs, 0, pool));
+      APR_ARRAY_PUSH(paths, const char *) = "";
+      err = svn_fs_get_mergeinfo(&ignored, root, paths, FALSE, FALSE, pool);
+
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
+            {
+              svn_error_clear(err);
+              apr_hash_set(repos->repository_capabilities,
+                           SVN_REPOS_CAPABILITY_MERGEINFO,
+                           APR_HASH_KEY_STRING, capability_no);
+              *has = FALSE;
+            }
+          else if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+            {
+              /* Mergeinfo requests use relative paths, and anyway we're
+                 in r0, so we're likely to get this error -- but it
+                 means the repository supports mergeinfo! */
+              svn_error_clear(err);
+              apr_hash_set(repos->repository_capabilities,
+                           SVN_REPOS_CAPABILITY_MERGEINFO,
+                           APR_HASH_KEY_STRING, capability_yes);
+              *has = TRUE;
+            }
+          else
+            {
+              return err;
+            }
+        }
+      else
+        {
+          apr_hash_set(repos->repository_capabilities,
+                       SVN_REPOS_CAPABILITY_MERGEINFO,
+                       APR_HASH_KEY_STRING, capability_yes);
+          *has = TRUE;
+        }
+    }
+  else
+    {
+      return svn_error_createf(SVN_ERR_UNKNOWN_CAPABILITY, 0,
+                               _("unknown capability '%s'"), capability);
+    }
 
   return SVN_NO_ERROR;
 }

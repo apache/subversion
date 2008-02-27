@@ -31,7 +31,7 @@ import java.util.StringTokenizer;
  *
  * @since 1.5
  */
-public class MergeInfo implements java.io.Serializable
+public class Mergeinfo implements java.io.Serializable
 {
     // Update the serialVersionUID when there is a incompatible change
     // made to this class.  See any of the following, depending upon
@@ -48,7 +48,7 @@ public class MergeInfo implements java.io.Serializable
      */
     private Map mergeSources;
 
-    public MergeInfo()
+    public Mergeinfo()
     {
         mergeSources = new HashMap();
     }
@@ -56,12 +56,12 @@ public class MergeInfo implements java.io.Serializable
     /**
      * Create and populate an instance using the contents of the
      * <code>svn:mergeinfo</code> property.
-     * @param mergeInfo <code>svn:mergeinfo</code> property value.
+     * @param mergeinfo <code>svn:mergeinfo</code> property value.
      */
-    public MergeInfo(String mergeInfo)
+    public Mergeinfo(String mergeinfo)
     {
         this();
-        this.loadFromMergeInfoProperty(mergeInfo);
+        this.loadFromMergeinfoProperty(mergeinfo);
     }
 
     /**
@@ -136,16 +136,16 @@ public class MergeInfo implements java.io.Serializable
     /**
      * Parse the <code>svn:mergeinfo</code> property to populate the
      * merge source URLs and revision ranges of this instance.
-     * @param mergeInfo <code>svn:mergeinfo</code> property value.
+     * @param mergeinfo <code>svn:mergeinfo</code> property value.
      */
-    public void loadFromMergeInfoProperty(String mergeInfo)
+    public void loadFromMergeinfoProperty(String mergeinfo)
     {
-        if (mergeInfo == null)
+        if (mergeinfo == null)
             return;
-        StringTokenizer st = new StringTokenizer(mergeInfo, "\n");
+        StringTokenizer st = new StringTokenizer(mergeinfo, "\n");
         while (st.hasMoreTokens())
         {
-            parseMergeInfoLine(st.nextToken());
+            parseMergeinfoLine(st.nextToken());
         }
     }
 
@@ -156,7 +156,7 @@ public class MergeInfo implements java.io.Serializable
      *
      * @param line A line of merge info for a single merge source.
      */
-    private void parseMergeInfoLine(String line)
+    private void parseMergeinfoLine(String line)
     {
         int colon = line.indexOf(':');
         if (colon > 0)
