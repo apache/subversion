@@ -144,9 +144,9 @@ PyObject *svn_swig_py_mergeinfo_to_dict(apr_hash_t *hash,
 /* helper function to convert an apr_hash_t* (const char *->hash of
    mergeinfo hashes) to a Python dict */
 SVN_SWIG_SWIGUTIL_EXPORT
-PyObject *svn_swig_py_mergeinfo_hash_to_dict(apr_hash_t *hash,
-                                        swig_type_info *type,
-                                        PyObject *py_pool);
+PyObject *svn_swig_py_mergeinfo_catalog_to_dict(apr_hash_t *hash,
+                                                swig_type_info *type,
+                                                PyObject *py_pool);
 
 /* helper function to convert an apr_hash_t *(const char *->const char
  *) to a Python dict */
