@@ -1616,6 +1616,9 @@ The results are used to build the `svn-status-info' variable."
           (setq skip-double-external-dir-entry-name (match-string-no-properties 1))
           ;; (message "Going to skip %s" skip-double-external-dir-entry-name)
           nil)
+         ((looking-at "--- Changelist") ; skip svn changelist header lines
+          ;; See: http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt
+          nil)
          (t
           (setq svn-marks (buffer-substring (point) (+ (point) svn-marks-length))
                 svn-file-mark (elt svn-marks 0)         ; 1st column - M,A,C,D,G,? etc
