@@ -288,7 +288,8 @@ svn_cl__conflict_baton_make(svn_cl__accept_t accept_which,
 
 /* A conflict-resolution callback which prompts the user to choose
    one of the 3 fulltexts, edit the merged file on the spot, or just
-   skip the conflict (to be resolved later). */
+   skip the conflict (to be resolved later).
+   Implements @c svn_wc_conflict_resolver_func_t. */
 svn_error_t *
 svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                          const svn_wc_conflict_description_t *desc,
