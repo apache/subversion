@@ -3063,7 +3063,7 @@ ra_callbacks_invalidate_wc_props(void *baton,
   svn_swig_py_acquire_py_lock();
 
   py_callback = PyObject_GetAttrString(callbacks,
-                                       (char *)"invalidate_wc_prop");
+                                       (char *)"invalidate_wc_props");
   if (py_callback == NULL)
     {
       err = callback_exception_error();
