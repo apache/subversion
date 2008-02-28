@@ -122,7 +122,7 @@ class Migrator:
     # Retrieve svnmerge.py's merge history meta data, and roll it into
     # Subversion 1.5 mergeinfo.
     mergeinfo_prop_val = svn.fs.node_prop(root, path,
-                                          svn.core.SVN_PROP_MERGE_INFO)
+                                          svn.core.SVN_PROP_MERGEINFO)
     integrated_prop_val = svn.fs.node_prop(root, path, "svnmerge-integrated")
     if self.verbose:
       print "Discovered pre-existing Subversion mergeinfo of '%s'" % \
@@ -149,8 +149,8 @@ class Migrator:
       # Manipulate the merge history.
       if self.verbose:
         print "Queuing change of %s to '%s'" % \
-          (svn.core.SVN_PROP_MERGE_INFO, mergeinfo_prop_val)
-      svn.fs.change_node_prop(root, path, svn.core.SVN_PROP_MERGE_INFO,
+          (svn.core.SVN_PROP_MERGEINFO, mergeinfo_prop_val)
+      svn.fs.change_node_prop(root, path, svn.core.SVN_PROP_MERGEINFO,
                               mergeinfo_prop_val)
 
       # Remove old property values.
