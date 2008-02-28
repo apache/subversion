@@ -37,4 +37,9 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
+  * r29619
+    Fix invalidate_wc_props callback for Python binding.
+    Votes:
+      +1: epg
+
 Approved changes:
