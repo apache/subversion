@@ -32,4 +32,9 @@ Candidate changes:
     Votes:
       +1: epg
 
+  * r29614
+    Fix overlooked use of renamed SVN_PROP_MERGE_INFO #define.
+    Votes:
+      +1: cmpilato
+
 Approved changes:
