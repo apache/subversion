@@ -1592,11 +1592,9 @@ saying "New Function" --- all the details should be in the source.</p>
 that was changed.  For example, if you have made a change which
 requires trivial changes throughout the rest of the program (e.g.,
 renaming a variable), you needn't name all the functions affected, you
-can just say "All callers changed".  However, if you rename symbols
-(e.g., to add or remove a library prefix), please mention every
-affected symbol, both old and new&nbsp;&mdash;&nbsp;this is the only
-way the rename of a particular symbol would be traceable later.  See
-r20946 for an example of this.</p>
+can just say "All callers changed".  When renaming any symbol, please
+remember to mention both the old and new names, for traceability; see
+r20946 for an example.</p>
 
 <p>In general, there is a tension between making entries easy to find
 by searching for identifiers, and wasting time or producing unreadable
