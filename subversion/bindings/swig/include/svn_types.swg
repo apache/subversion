@@ -151,6 +151,7 @@
   svn_wc_revision_status_t **,
   svn_wc_status_t **,
   svn_wc_status2_t **,
+  svn_wc_committed_queue_t **,
   void **set_locks_baton
 };
 
