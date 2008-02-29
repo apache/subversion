@@ -987,6 +987,7 @@ change_dir_prop(void *dir_baton,
 {
   node_baton_t *db = dir_baton;
   edit_baton_t *eb = db->edit_baton;
+  svn_string_t *real_value = (svn_string_t *)value;
 
   /* only regular properties can pass over libsvn_ra */
   if (svn_property_kind(NULL, name) != svn_prop_regular_kind)
@@ -1003,8 +1004,62 @@ change_dir_prop(void *dir_baton,
   /* Convert svnmerge-integrated data into svn:mergeinfo. */
   if (strcmp(name, "svnmerge-integrated") == 0)
     {
+      if (value)
+        {
+          /* svnmerge-integrated differs from svn:mergeinfo in a pair
+             of ways.  First, it can use tabs, newlines, or spaces to
+             delimit source information.  Secondly, the source paths
+             are relative URLs, whereas svn:mergeinfo uses relative
+             paths (not URI-encoded). */
+          svn_error_t *err;
+          const char *mergeinfo_str;
+          svn_mergeinfo_t mergeinfo;
+          int i;
+          apr_array_header_t *sources = 
+            svn_cstring_split(value->data, " \t\n", TRUE, pool);
+
+          for (i = 0; i < sources->nelts; i++)
+            {
+              apr_array_header_t *path_revs = 
+                svn_cstring_split(APR_ARRAY_IDX(sources, i, const char *), 
+                                  ":", TRUE, pool);
+
+              /* ### TODO: Warn? */
+              if (path_revs->nelts != 2)
+                continue;
+              
+              /* URI-decode the path. */
+              APR_ARRAY_IDX(path_revs, 0, const char *) = 
+                svn_path_uri_decode(APR_ARRAY_IDX(path_revs, 0, const char *), 
+                                    pool);
+
+              /* Slap the relative path and rangelist back together
+                 again (can't use svn_cstring_join() because it puts
+                 the separator characters at the end of the string,
+                 too, for some odd reason). */
+              APR_ARRAY_IDX(sources, i, const char *) = 
+                apr_psprintf(pool, "%s:%s", 
+                             APR_ARRAY_IDX(path_revs, 0, const char *),
+                             APR_ARRAY_IDX(path_revs, 1, const char *));
+            }
+
+          /* Try to parse the mergeinfo string we've created, just to
+             check for bogosity.  If all goes well, we'll unparse it
+             again and use that as our property value.  */
+          mergeinfo_str = svn_cstring_join(sources, "\n", pool);
+          err = svn_mergeinfo_parse(&mergeinfo, mergeinfo_str, pool);
+          if (err)
+            {
+              SVN_ERR(svn_cmdline_fprintf(stderr, pool, 
+                                          "Skipping bogus svnmerge-integrated "
+                                          "value: %s\n", value->data));
+              svn_error_clear(err);
+              return SVN_NO_ERROR;
+            }
+          SVN_ERR(svn_mergeinfo_to_string(&real_value, mergeinfo, pool));
+        }
       SVN_ERR(svn_cmdline_fprintf(stderr, pool, 
-                                  "Renaming '%s' property to '%s'.\n", 
+                                  "Migrating '%s' property as '%s'.\n", 
                                   name, SVN_PROP_MERGEINFO));
       name = SVN_PROP_MERGEINFO;
     }
@@ -1014,12 +1069,12 @@ change_dir_prop(void *dir_baton,
   if (strcmp(name, "svnmerge-blocked") == 0)
     {
       SVN_ERR(svn_cmdline_fprintf(stderr, pool, 
-                                  "Ignoring valid '%s' property.\n", name));
+                                  "Ignoring '%s' property.\n", name));
     }
 #endif
 
   return eb->wrapped_editor->change_dir_prop(db->wrapped_node_baton,
-                                             name, value, pool);
+                                             name, real_value, pool);
 }
 
 static svn_error_t *
