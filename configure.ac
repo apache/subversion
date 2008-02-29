@@ -607,7 +607,7 @@ AS_HELP_STRING([--enable-runtime-module-search],
     fi
 ])
 
-if test "$enable_shared" = "no" || test "use_dso" != "yes"; then
+if test "$enable_shared" = "no" || test "$use_dso" != "yes"; then
   ### We want ra_local first to handle the following scenario:
   ### user has neon and db3 in /usr/local, and db4 in
   ### /usr/local/BerkeleyDB.4.0.  If libsvn_ra_neon.la comes before 
