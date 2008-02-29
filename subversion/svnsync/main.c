@@ -750,6 +750,18 @@ change_file_prop(void *file_baton,
   if (svn_property_kind(NULL, name) != svn_prop_regular_kind)
     return SVN_NO_ERROR;
 
+#ifdef SVN_SYNC__REPAIR_MERGEINFO
+  /* Drop svn:mergeinfo and (errantly set, as this is a file)
+     svnmerge.py properties. */
+  if ((strcmp(name, SVN_PROP_MERGEINFO) == 0)
+      || (strcmp(name, "svnmerge-integrated") == 0)
+      || (strcmp(name, "svnmerge-blocked") == 0))
+    {
+      return svn_cmdline_fprintf(stderr, pool, 
+                                 "Filtering '%s' property.\n", name);
+    }
+#endif
+
   return eb->wrapped_editor->change_file_prop(fb->wrapped_node_baton,
                                               name, value, pool);
 }
@@ -766,6 +778,32 @@ change_dir_prop(void *dir_baton,
   /* only regular properties can pass over libsvn_ra */
   if (svn_property_kind(NULL, name) != svn_prop_regular_kind)
     return SVN_NO_ERROR;
+
+#ifdef SVN_SYNC__REPAIR_MERGEINFO
+  /* Drop svn:mergeinfo properties. */
+  if (strcmp(name, SVN_PROP_MERGEINFO) == 0)
+    {
+      return svn_cmdline_fprintf(stderr, pool, 
+                                 "Filtering '%s' property.\n", name);
+    }
+
+  /* Convert svnmerge-integrated data into svn:mergeinfo. */
+  if (strcmp(name, "svnmerge-integrated") == 0)
+    {
+      SVN_ERR(svn_cmdline_fprintf(stderr, pool, 
+                                  "Renaming '%s' property to '%s'.\n", 
+                                  name, SVN_PROP_MERGEINFO));
+      name = SVN_PROP_MERGEINFO;
+    }
+
+  /* Ignore valid svnmerge-blocked properties (but warn so folks know
+     about them and can run the svnmerge-migrate-history.py script). */
+  if (strcmp(name, "svnmerge-blocked") == 0)
+    {
+      SVN_ERR(svn_cmdline_fprintf(stderr, pool, 
+                                  "Ignoring valid '%s' property.\n", name));
+    }
+#endif
 
   return eb->wrapped_editor->change_dir_prop(db->wrapped_node_baton,
                                              name, value, pool);
