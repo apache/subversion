@@ -122,7 +122,7 @@
   apr_hash_t **type_map,
   apr_hash_t **externals_old,
   apr_hash_t **externals_new,
-  apr_hash_t **depts
+  apr_hash_t **depths
 };
 
 /* -----------------------------------------------------------------------
