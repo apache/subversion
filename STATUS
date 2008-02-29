@@ -42,4 +42,9 @@ Candidate changes:
     Votes:
       +1: epg
 
+  * r29625, r29626
+    In various --version responses, say if built with SASL.
+    Votes:
+      +1: glasser
+
 Approved changes:
