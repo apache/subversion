@@ -169,7 +169,7 @@ def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
     raise verify.SVNIncorrectDatatype("expected_stderr must not be None")
 
   want_err = None
-  if expected_stderr is not None and expected_stderr is not []:
+  if expected_stderr is not None and expected_stderr != []:
     want_err = True
 
   out, err = main.run_svn(want_err, *varargs)
@@ -185,7 +185,7 @@ def run_and_verify_svn_match_any(message, expected_stdout, expected_stderr,
     raise verify.SVNIncorrectDatatype("expected_stderr must not be None")
 
   want_err = None
-  if expected_stderr is not None and expected_stderr is not []:
+  if expected_stderr is not None and expected_stderr != []:
     want_err = True
 
   out, err = main.run_svn(want_err, *varargs)
