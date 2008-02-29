@@ -43,9 +43,8 @@ typedef struct server_baton_t {
   svn_boolean_t tunnel;    /* Tunneled through login agent */
   const char *tunnel_user; /* Allow EXTERNAL to authenticate as this */
   svn_boolean_t read_only; /* Disallow write access (global flag) */
-#ifdef SVN_HAVE_SASL
-  svn_boolean_t use_sasl;  /* Use Cyrus SASL for authentication */
-#endif
+  svn_boolean_t use_sasl;  /* Use Cyrus SASL for authentication;
+                              always false if SVN_HAVE_SASL not defined */
   apr_pool_t *pool;
 } server_baton_t;
 

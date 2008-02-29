@@ -493,11 +493,7 @@ static svn_error_t *must_have_access(svn_ra_svn_conn_t *conn,
      the first time round. */
   if (b->user == NULL
       && get_access(b, AUTHENTICATED) >= req
-      && (b->tunnel_user || b->pwdb
-#ifdef SVN_HAVE_SASL
-          || b->use_sasl
-#endif
-      ))
+      && (b->tunnel_user || b->pwdb || b->use_sasl))
     SVN_ERR(auth_request(conn, pool, b, req, TRUE));
 
   /* Now that an authentication has been done get the new take of
@@ -2561,11 +2557,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
      are given by the client. */
   if (get_access(b, UNAUTHENTICATED) == NO_ACCESS
       && (get_access(b, AUTHENTICATED) == NO_ACCESS
-          || (!b->tunnel_user && !b->pwdb
-#ifdef SVN_HAVE_SASL
-              && !b->use_sasl
-#endif
-              )))
+          || (!b->tunnel_user && !b->pwdb && !b->use_sasl)))
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                             "No access allowed to this repository");
   return SVN_NO_ERROR;
@@ -2603,6 +2595,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   b.authzdb = params->authzdb;
   b.realm = NULL;
   b.pool = pool;
+  b.use_sasl = FALSE;
 
   /* Send greeting.  We don't support version 1 any more, so we can
    * send an empty mechlist. */
