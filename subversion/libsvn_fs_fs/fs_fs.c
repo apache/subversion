@@ -1020,6 +1020,20 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Wrapper around svn_io_file_create which ignores EEXIST. */
+static svn_error_t *
+create_file_ignore_eexist(const char *file,
+                          const char *contents,
+                          apr_pool_t *pool)
+{
+  svn_error_t *err = svn_io_file_create(file, contents, pool);
+  if (err && APR_STATUS_IS_EEXIST(err->apr_err))
+    {
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+    }
+  return err;
+}
 
 static svn_error_t *
 upgrade_body(void *baton, apr_pool_t *pool)
@@ -1039,8 +1053,10 @@ upgrade_body(void *baton, apr_pool_t *pool)
      file', make that file and its corresponding lock file. */
   if (format < SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
     {
-      SVN_ERR(svn_io_file_create(path_txn_current(fs, pool), "0\n", pool));
-      SVN_ERR(svn_io_file_create(path_txn_current_lock(fs, pool), "", pool));
+      SVN_ERR(create_file_ignore_eexist(path_txn_current(fs, pool), "0\n",
+                                        pool));
+      SVN_ERR(create_file_ignore_eexist(path_txn_current_lock(fs, pool), "",
+                                        pool));
     }
 
   /* If our filesystem predates the existance of the 'txn-protorevs'
