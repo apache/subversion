@@ -14,6 +14,12 @@ Status of 1.5.0:
 
 Candidate changes:
 
+  * r29634
+    Tweak the "merge_reintegrate" API: remove the redundant "force" argument
+    and mention the "peg_revision" argument in its doc-string.
+    Votes:
+      +1: julianfoad
+
  * r29531, r29533, r29542, r29551, r29607
    Improve memory usage and runtime of 'log -g'.
    Notes: r29531, -33 are doc string changes to prevent textual conflicts.
