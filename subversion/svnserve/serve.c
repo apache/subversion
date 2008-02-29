@@ -391,11 +391,10 @@ static svn_error_t *auth_request(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
 #ifdef SVN_HAVE_SASL
   if (b->use_sasl)
-    SVN_ERR(cyrus_auth_request(conn, pool, b, required, needs_username));
-  else
+    return cyrus_auth_request(conn, pool, b, required, needs_username);
 #endif
-  SVN_ERR(internal_auth_request(conn, pool, b, required, needs_username));
-  return SVN_NO_ERROR;
+
+  return internal_auth_request(conn, pool, b, required, needs_username);
 }
 
 /* Send a trivial auth notification on CONN which lists no mechanisms,
