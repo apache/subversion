@@ -47,4 +47,9 @@ Candidate changes:
     Votes:
       +1: glasser
 
+  * r29567, r29568, r29578
+    Limit memory usage in mod_dav_svn.
+    Votes:
+      +1: hwright
+
 Approved changes:
