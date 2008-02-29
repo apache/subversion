@@ -184,7 +184,7 @@ class Migrator:
         mergeinfo = svn.core.svn_mergeinfo_parse(mergeinfo_prop_val)
         to_migrate = svn.core.svn_mergeinfo_parse(svnmerge_prop_val)
         mergeinfo = svn.core.svn_mergeinfo_merge(mergeinfo, to_migrate)
-        mergeinfo_prop_val = svn.core.svn_mergeinfo_to_stringbuf(mergeinfo)
+        mergeinfo_prop_val = svn.core.svn_mergeinfo_to_string(mergeinfo)
       else:
         mergeinfo_prop_val = svnmerge_prop_val
 
