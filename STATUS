@@ -32,24 +32,24 @@ Candidate changes:
     Votes:
       +1: epg
 
-  * r29614, r29623
-    Fix uses of renamed mergeinfo API stuffs in svnmerge-migrate-history.py.
-    Votes:
-      +1: cmpilato
-
-  * r29619
-    Fix invalidate_wc_props callback for Python binding.
-    Votes:
-      +1: epg
-
-  * r29625, r29626
-    In various --version responses, say if built with SASL.
-    Votes:
-      +1: glasser
-
   * r29567, r29568, r29578
     Limit memory usage in mod_dav_svn.
     Votes:
       +1: hwright
 
 Approved changes:
+
+  * r29614, r29623
+    Fix uses of renamed mergeinfo API stuffs in svnmerge-migrate-history.py.
+    Votes:
+      +1: cmpilato, hwright
+
+  * r29619
+    Fix invalidate_wc_props callback for Python binding.
+    Votes:
+      +1: epg, hwright
+
+  * r29625, r29626
+    In various --version responses, say if built with SASL.
+    Votes:
+      +1: glasser, hwright
