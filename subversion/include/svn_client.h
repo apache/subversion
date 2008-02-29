@@ -2518,8 +2518,8 @@ svn_client_merge(const char *source1,
 
 /**
  * Perform a reintegration merge of @a source at @a peg_revision
- * into @target_wc_path.
- * @a target_wc_path must be a single-revision, @c svn_depth_infinity,
+ * into @a target_wcpath.
+ * @a target_wcpath must be a single-revision, @c svn_depth_infinity,
  * pristine, unswitched working copy -- in other words, it must
  * reflect a single revision tree, the "target".  The mergeinfo on @a
  * source must reflect that all of the target has been merged into it.
