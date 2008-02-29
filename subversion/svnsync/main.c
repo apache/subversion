@@ -1012,7 +1012,7 @@ change_dir_prop(void *dir_baton,
              are relative URLs, whereas svn:mergeinfo uses relative
              paths (not URI-encoded). */
           svn_error_t *err;
-          const char *mergeinfo_str;
+          svn_stringbuf_t *mergeinfo_buf = svn_stringbuf_create("", pool);
           svn_mergeinfo_t mergeinfo;
           int i;
           apr_array_header_t *sources = 
@@ -1020,6 +1020,7 @@ change_dir_prop(void *dir_baton,
 
           for (i = 0; i < sources->nelts; i++)
             {
+              const char *rel_path;
               apr_array_header_t *path_revs = 
                 svn_cstring_split(APR_ARRAY_IDX(sources, i, const char *), 
                                   ":", TRUE, pool);
@@ -1028,26 +1029,21 @@ change_dir_prop(void *dir_baton,
               if (path_revs->nelts != 2)
                 continue;
               
-              /* URI-decode the path. */
-              APR_ARRAY_IDX(path_revs, 0, const char *) = 
-                svn_path_uri_decode(APR_ARRAY_IDX(path_revs, 0, const char *), 
-                                    pool);
-
-              /* Slap the relative path and rangelist back together
-                 again (can't use svn_cstring_join() because it puts
-                 the separator characters at the end of the string,
-                 too, for some odd reason). */
-              APR_ARRAY_IDX(sources, i, const char *) = 
-                apr_psprintf(pool, "%s:%s", 
-                             APR_ARRAY_IDX(path_revs, 0, const char *),
-                             APR_ARRAY_IDX(path_revs, 1, const char *));
+              /* Append this source's mergeinfo data. */
+              rel_path = APR_ARRAY_IDX(path_revs, 0, const char *);
+              rel_path = svn_path_uri_decode(rel_path, pool);
+              svn_stringbuf_appendcstr(mergeinfo_buf, rel_path);
+              svn_stringbuf_appendcstr(mergeinfo_buf, ":");
+              svn_stringbuf_appendcstr(mergeinfo_buf, 
+                                       APR_ARRAY_IDX(path_revs, 1, 
+                                                     const char *));
+              svn_stringbuf_appendcstr(mergeinfo_buf, "\n");
             }
 
           /* Try to parse the mergeinfo string we've created, just to
              check for bogosity.  If all goes well, we'll unparse it
              again and use that as our property value.  */
-          mergeinfo_str = svn_cstring_join(sources, "\n", pool);
-          err = svn_mergeinfo_parse(&mergeinfo, mergeinfo_str, pool);
+          err = svn_mergeinfo_parse(&mergeinfo, mergeinfo_buf->data, pool);
           if (err)
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, pool, 
