@@ -211,6 +211,11 @@ static svn_error_t * version(apr_pool_t *pool)
   version_footer = svn_stringbuf_create(fs_desc_start, pool);
   SVN_ERR(svn_fs_print_modules(version_footer, pool));
 
+#ifdef SVN_HAVE_SASL
+  svn_stringbuf_appendcstr(version_footer,
+                           _("\nCyrus SASL authentication is available.\n"));
+#endif
+
   return svn_opt_print_help(NULL, "svnserve", TRUE, FALSE, version_footer->data,
                             NULL, NULL, NULL, NULL, pool);
 }
