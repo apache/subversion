@@ -874,7 +874,7 @@ Java_org_tigris_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_tigri
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_mergeReintegrate
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
- jstring jlocalPath, jboolean jforce, jboolean jdryRun)
+ jstring jlocalPath, jboolean jdryRun)
 {
   JNIEntry(SVNClient, mergeReintegrate);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -897,7 +897,6 @@ Java_org_tigris_subversion_javahl_SVNClient_mergeReintegrate
     return;
 
   cl->mergeReintegrate(path, pegRevision, localPath,
-                       jforce ? true:false,
                        jdryRun ? true:false);
 }
 
