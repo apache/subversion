@@ -57,13 +57,13 @@ typedef enum
      from the pre-conflict working copy file.
 
      Note: this is a placeholder, not actually implemented in 1.5. */
-  svn_cl__accept_mine,
+  svn_cl__accept_mine_conflict,
 
   /* Resolve the conflicted hunks by choosing the corresponding text
      from the post-conflict base copy file.
      
      Note: this is a placeholder, not actually implemented in 1.5. */
-  svn_cl__accept_theirs,
+  svn_cl__accept_theirs_conflict,
 
   /* Resolve the conflict by taking the entire pre-conflict working
      copy file. */
@@ -82,8 +82,8 @@ typedef enum
 /* --accept action user input words */
 #define SVN_CL__ACCEPT_POSTPONE "postpone"
 #define SVN_CL__ACCEPT_BASE "base"
-#define SVN_CL__ACCEPT_MINE "mine"
-#define SVN_CL__ACCEPT_THEIRS "theirs"
+#define SVN_CL__ACCEPT_MINE_CONFLICT "mine-conflict"
+#define SVN_CL__ACCEPT_THEIRS_CONFLICT "theirs-conflict"
 #define SVN_CL__ACCEPT_MINE_FULL "mine-full"
 #define SVN_CL__ACCEPT_THEIRS_FULL "theirs-full"
 #define SVN_CL__ACCEPT_EDIT "edit"

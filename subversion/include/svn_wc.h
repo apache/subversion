@@ -1163,12 +1163,12 @@ typedef enum svn_wc_conflict_choice_t
      resolving the conflict here and now.  libsvn_wc will then do the
      work of "installing" the chosen file.
   */
-  svn_wc_conflict_choose_base,        /* original version */
-  svn_wc_conflict_choose_theirs_full, /* incoming version */
-  svn_wc_conflict_choose_mine_full,   /* own version */
-  svn_wc_conflict_choose_theirs,      /* incoming (for conflicted hunks) */
-  svn_wc_conflict_choose_mine,        /* own (for conflicted hunks) */
-  svn_wc_conflict_choose_merged       /* merged version */
+  svn_wc_conflict_choose_base,            /* original version */
+  svn_wc_conflict_choose_theirs_full,     /* incoming version */
+  svn_wc_conflict_choose_mine_full,       /* own version */
+  svn_wc_conflict_choose_theirs_conflict, /* incoming (for conflicted hunks) */
+  svn_wc_conflict_choose_mine_conflict,   /* own (for conflicted hunks) */
+  svn_wc_conflict_choose_merged           /* merged version */
 
 } svn_wc_conflict_choice_t;
 
@@ -2878,11 +2878,12 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  * @c svn_wc_conflict_choose_merged, don't change the contents at all,
  * just remove the conflict status, which is the pre-1.5 behavior.
  *
- * (@c svn_wc_conflict_choose_theirs and @c svn_wc_conflict_choose_mine
- * are not yet implemented; the effect of passing one of those values
- * as @a conflict_choice is currently undefined, which may or may not
- * be an underhanded way of allowing real behaviors to be added for
- * them later without revving this interface.)
+ * (@c svn_wc_conflict_choose_theirs_conflict and
+ * @c svn_wc_conflict_choose_mine_conflict are not yet implemented;
+ * the effect of passing one of those values as @a conflict_choice is
+ * currently undefined, which may or may not be an underhanded way of
+ * allowing real behaviors to be added for them later without revving
+ * this interface.)
  *
  * @a adm_access is an access baton, with a write lock, for @a path.
  *
