@@ -57,11 +57,11 @@ svn_cl__resolved(apr_getopt_t *os,
     case svn_cl__accept_base:
       conflict_choice = svn_wc_conflict_choose_base;
       break;
-    case svn_cl__accept_theirs:
-      conflict_choice = svn_wc_conflict_choose_theirs;
+    case svn_cl__accept_theirs_conflict:
+      conflict_choice = svn_wc_conflict_choose_theirs_conflict;
       break;
-    case svn_cl__accept_mine:
-      conflict_choice = svn_wc_conflict_choose_mine;
+    case svn_cl__accept_mine_conflict:
+      conflict_choice = svn_wc_conflict_choose_mine_conflict;
       break;
     case svn_cl__accept_theirs_full:
       conflict_choice = svn_wc_conflict_choose_theirs_full;

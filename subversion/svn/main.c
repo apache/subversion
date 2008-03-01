@@ -263,8 +263,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        " '" SVN_CL__ACCEPT_BASE "',"
                        /* These two are not implemented yet, so don't
                           waste the user's time with them. */
-                       /* " '" SVN_CL__ACCEPT_MINE "'," */
-                       /* " '" SVN_CL__ACCEPT_THEIRS "'," */
+                       /* " '" SVN_CL__ACCEPT_MINE_CONFLICT "'," */
+                       /* " '" SVN_CL__ACCEPT_THEIRS_CONFLICT "'," */
                        " '" SVN_CL__ACCEPT_MINE_FULL "',"
                        " '" SVN_CL__ACCEPT_THEIRS_FULL "',"
                        "\n                            "
@@ -786,8 +786,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
                              " '" SVN_CL__ACCEPT_BASE "',"
                              /* These two are not implemented yet, so
                                 don't waste the user's time with them. */
-                             /* " '" SVN_CL__ACCEPT_MINE "'," */
-                             /* " '" SVN_CL__ACCEPT_THEIRS "'," */
+                             /* " '" SVN_CL__ACCEPT_MINE_CONFLICT "'," */
+                             /* " '" SVN_CL__ACCEPT_THEIRS_CONFLICT "'," */
                              " '" SVN_CL__ACCEPT_MINE_FULL "',"
                              " '" SVN_CL__ACCEPT_THEIRS_FULL "')")}} },
 
