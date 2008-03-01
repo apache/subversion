@@ -14,10 +14,10 @@ Status of 1.5.0:
 
 Candidate changes:
 
-  * r29648, 29650
+  * r29648, r29650, r29656
     Offer two-letter choices for interactive conflict resolution.
     Votes:
-      +1: kfogel (r26948), markphip
+      +1: kfogel, markphip (r26948, r29650)
 
  * r29531, r29533, r29542, r29551, r29607
    Improve memory usage and runtime of 'log -g'.
