@@ -44,11 +44,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r29625, r29626
-    In various --version responses, say if built with SASL.
-    Votes:
-      +1: glasser, hwright
-
   * r29634
     Tweak the "merge_reintegrate" API: remove the redundant "force" argument
     and mention the "peg_revision" argument in its doc-string.

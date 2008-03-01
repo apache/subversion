@@ -1252,6 +1252,9 @@ svn_ra_print_modules(svn_stringbuf_t *output,
 
           SVN_ERR(check_ra_version(vtable->get_version(), defn->ra_name));
 
+          /* Note: if you change the formatting of the description,
+             bear in mind that ra_svn's description has multiple lines when
+             built with SASL. */
           line = apr_psprintf(iterpool, "* ra_%s : %s\n",
                               defn->ra_name,
                               vtable->get_description());
