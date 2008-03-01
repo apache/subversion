@@ -14,6 +14,11 @@ Status of 1.5.0:
 
 Candidate changes:
 
+  * r29648
+    Offer two-letter choices for interactive conflict resolution.
+    Votes:
+      +1: kfogel
+
   * r29634
     Tweak the "merge_reintegrate" API: remove the redundant "force" argument
     and mention the "peg_revision" argument in its doc-string.
