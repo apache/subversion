@@ -53,13 +53,13 @@ public class ConflictResult
      * Resolve the conflict by choosing the incoming (repository)
      * version of the object (for conflicted hunks only).
      */
-    public static final int chooseTheirs = 4;
+    public static final int chooseTheirsConflict = 4;
 
     /**
      * Resolve the conflict by choosing own (local) version of the
      * object (for conflicted hunks only).
      */
-    public static final int chooseMine = 5;
+    public static final int chooseMineConflict = 5;
 
     /**
      * Resolve the conflict by choosing the merged object
