@@ -44,11 +44,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r29614, r29623
-    Fix uses of renamed mergeinfo API stuffs in svnmerge-migrate-history.py.
-    Votes:
-      +1: cmpilato, hwright
-
   * r29619
     Fix invalidate_wc_props callback for Python binding.
     Votes:
