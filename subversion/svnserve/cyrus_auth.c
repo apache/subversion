@@ -137,9 +137,9 @@ fail_auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool, sasl_conn_t *sasl_ctx)
 static svn_error_t *
 write_failure(svn_ra_svn_conn_t *conn, apr_pool_t *pool, svn_error_t **err_p)
 {
-  svn_error_t *write_err = svn_ra_svn_write_cmd_failure(conn, pool, *err);
-  svn_error_clear(*err);
-  *err = SVN_NO_ERROR;
+  svn_error_t *write_err = svn_ra_svn_write_cmd_failure(conn, pool, *err_p);
+  svn_error_clear(*err_p);
+  *err_p = SVN_NO_ERROR;
   return write_err;
 }
 
