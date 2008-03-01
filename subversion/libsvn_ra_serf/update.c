@@ -1258,7 +1258,8 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       info->fetch_props = TRUE;
 
       info->dir->base_name = "";
-      info->dir->name_buf = svn_stringbuf_create("", info->pool);
+      /* Create empty stringbuf with estimated max. path size. */
+      info->dir->name_buf = svn_stringbuf_create_ensure(256, info->pool);
       info->dir->name = info->dir->name_buf->data;
 
       info->base_name = info->dir->base_name;
