@@ -43,9 +43,3 @@ Candidate changes:
       +1: hwright
 
 Approved changes:
-
-  * r29634
-    Tweak the "merge_reintegrate" API: remove the redundant "force" argument
-    and mention the "peg_revision" argument in its doc-string.
-    Votes:
-      +1: julianfoad, markphip

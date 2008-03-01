@@ -5618,7 +5618,6 @@ svn_error_t *
 svn_client_merge_reintegrate(const char *source,
                              const svn_opt_revision_t *peg_revision,
                              const char *target_wcpath,
-                             svn_boolean_t force,
                              svn_boolean_t dry_run,
                              const apr_array_header_t *merge_options,
                              svn_client_ctx_t *ctx,
@@ -5755,7 +5754,7 @@ svn_client_merge_reintegrate(const char *source,
                                                  wc_repos_root,
                                                  svn_depth_infinity, 
                                                  FALSE,
-                                                 force, FALSE, dry_run,
+                                                 FALSE, FALSE, dry_run,
                                                  merge_options, ctx, pool));
 
   /* Shutdown the administrative session. */
