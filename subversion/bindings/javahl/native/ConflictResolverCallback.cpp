@@ -276,9 +276,9 @@ svn_wc_conflict_choice_t ConflictResolverCallback::javaChoiceToC(jint jchoice)
       return svn_wc_conflict_choose_theirs_full;
     case org_tigris_subversion_javahl_ConflictResult_chooseMineFull:
       return svn_wc_conflict_choose_mine_full;
-    case org_tigris_subversion_javahl_ConflictResult_chooseTheirs:
+    case org_tigris_subversion_javahl_ConflictResult_chooseTheirsConflict:
       return svn_wc_conflict_choose_theirs_conflict;
-    case org_tigris_subversion_javahl_ConflictResult_chooseMine:
+    case org_tigris_subversion_javahl_ConflictResult_chooseMineConflict:
       return svn_wc_conflict_choose_mine_conflict;
     case org_tigris_subversion_javahl_ConflictResult_chooseMerged:
       return svn_wc_conflict_choose_merged;
