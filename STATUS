@@ -44,11 +44,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r29619
-    Fix invalidate_wc_props callback for Python binding.
-    Votes:
-      +1: epg, hwright
-
   * r29625, r29626
     In various --version responses, say if built with SASL.
     Votes:
