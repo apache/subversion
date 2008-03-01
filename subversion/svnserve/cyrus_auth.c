@@ -139,6 +139,7 @@ fail_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool, sasl_conn_t *sasl_ctx)
   svn_error_t *err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                       sasl_errdetail(sasl_ctx));
   SVN_ERR(svn_ra_svn_write_cmd_failure(conn, pool, err));
+  svn_error_clear(err);
   return svn_ra_svn_flush(conn, pool);
 }
 
@@ -242,6 +243,7 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
     {
       svn_error_t *err = svn_error_wrap_apr(apr_err, _("Can't get hostname"));
       SVN_ERR(svn_ra_svn_write_cmd_failure(conn, pool, err));
+      svn_error_clear(err);
       return svn_ra_svn_flush(conn, pool);
     }
 
@@ -257,6 +259,7 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
       svn_error_t *err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                           sasl_errstring(result, NULL, NULL));
       SVN_ERR(svn_ra_svn_write_cmd_failure(conn, pool, err));
+      svn_error_clear(err);
       return svn_ra_svn_flush(conn, pool);
     }
 
@@ -311,6 +314,7 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
                                           _("Could not obtain the list"
                                           " of SASL mechanisms"));
       SVN_ERR(svn_ra_svn_write_cmd_failure(conn, pool, err));
+      svn_error_clear(err);
       return svn_ra_svn_flush(conn, pool);
     }
 
@@ -351,6 +355,7 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
                                  _("Couldn't obtain the authenticated"
                                  " username"));
           SVN_ERR(svn_ra_svn_write_cmd_failure(conn, pool, err));
+          svn_error_clear(err);
           return svn_ra_svn_flush(conn, pool);
         }
     }
