@@ -42,4 +42,10 @@ Candidate changes:
     Votes:
       +1: hwright
 
+  * r29613
+    kou's commit message says it all: "The Ruby bindings:Re-support SWIG
+    1.3.24 and 1.3.27"
+    Votes:
+      +1: joeswatosh
+
 Approved changes:
