@@ -909,8 +909,8 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # test-branch was copied from trunk's r6.  So non-phantom revs
         # since that point should still be available to merge from
         # trunk to test-branch:
-        self.svnmerge("avail -vv --bidirectional", match=r"\n9-10,16$")
-        self.svnmerge("merge -vv --bidirectional", match=r"svn --non-interactive merge --force -r 15:16")
+        self.svnmerge("avail -vv", match=r"\n9-10,16$")
+        self.svnmerge("merge -vv", match=r"svn --non-interactive merge --force -r 15:16")
         p = self.getproperty()
         self.assertEqual("/trunk:1-16", p)
         self.svnmerge("integrated", match=r"^3-16$")
@@ -930,13 +930,13 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # Not using switch, so must update to get latest repository rev.
         self.launch("svn update", match=r"At revision 18")
 
-        # Ensure default is not to check for reflected revisions.
-        self.svnmerge("avail -vv", match=r"\n17-18$")
-
-        # Now check reflected revision is excluded with --bidirectional flag.
+        # Check reflected revision is excluded with --bidirectional
         self.svnmerge("avail -vv --bidirectional", match=r"\n18$")
 
-        self.svnmerge("merge -vv --bidirectional", match=r"svn --non-interactive merge --force -r 17:18")
+        # and without --bidirectional.
+        self.svnmerge("avail -vv", match=r"\n18$")
+
+        self.svnmerge("merge -vv", match=r"svn --non-interactive merge --force -r 17:18")
         p = self.getproperty()
         self.assertEqual("/branches/test-branch:1-18", p)
 
@@ -1018,13 +1018,16 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.launch("svn update", match=r"At revision 20")
 
         # Initialized revs should not be available for merge
-        self.svnmerge("avail -v --bidirectional", match=r"initialized.*17-18")
+        self.svnmerge("avail -v", match=r"initialized.*17-18")
 
         # Latest revision on trunk which was merged from test-branch2
         # should be available for test-branch with --bidirectional flag.
         self.svnmerge("avail -vv --bidirectional", match=r"merged are:\n20$")
 
-        self.svnmerge("merge -vv --bidirectional", match=r"merge --force -r 19:20")
+        # and also without the --bidirectional flag.
+        self.svnmerge("avail -vv", match=r"merged are:\n20$")
+
+        self.svnmerge("merge -vv", match=r"merge --force -r 19:20")
         p = self.getproperty()
         self.assertEqual("/trunk:1-20", p)
 
