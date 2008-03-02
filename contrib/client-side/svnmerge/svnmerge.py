@@ -68,7 +68,7 @@
 #  A "target" is generally user-specified, and may be a working copy or
 #  a URL.
 
-import sys, os, getopt, re, types, tempfile, time, popen2
+import sys, os, getopt, re, types, tempfile, time, popen2, locale
 from bisect import bisect
 from xml.dom import pulldom
 
@@ -89,8 +89,10 @@ LOG_SEPARATOR_RE = re.compile('^((%s)+)' % re.escape(LOG_SEPARATOR),
 # Each line of the embedded log messages will be prefixed by LOG_LINE_PREFIX.
 LOG_LINE_PREFIX = 2 * ' '
 
-# We expect non-localized output from SVN
-os.environ["LC_ALL"] = "C"
+# Set python to the default locale as per environment settings, same as svn
+# TODO we should really parse config and if log-encoding is specified, set
+# the locale to match that encoding
+locale.setlocale(locale.LC_ALL, '')
 
 ###############################################################################
 # Support for older Python versions
@@ -207,6 +209,10 @@ def prefix_lines(prefix, lines):
     The input must be terminated by a newline."""
     assert lines[-1] == "\n"
     return prefix + lines[:-1].replace("\n", "\n"+prefix) + "\n"
+
+def recode_stdout_to_file(s):
+    u = s.decode(sys.stdout.encoding)
+    return u.encode(locale.getdefaultlocale()[1])
 
 class LaunchError(Exception):
     """Signal a failure in execution of an external command. Parameters are the
@@ -933,7 +939,7 @@ def get_commit_log(url, revnum):
     """Return the log message for a specific integer revision
     number."""
     out = launchsvn("log --incremental -r%d %s" % (revnum, url))
-    return "".join(out[1:])
+    return recode_stdout_to_file("".join(out[1:]))
 
 def construct_merged_log_message(url, revnums):
     """Return a commit log message containing all the commit messages
