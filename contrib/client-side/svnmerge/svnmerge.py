@@ -1010,6 +1010,17 @@ def check_old_prop_version(branch_target, branch_props):
                    (opts["prop"], format_merge_props(fixed), branch_target)
         error(err_msg)
 
+def should_find_reflected(branch_dir):
+    should_find_reflected = opts["bidirectional"]
+
+    # If the source has integration info for the target, set find_reflected
+    # even if --bidirectional wasn't specified
+    if not should_find_reflected:
+        source_props = get_merge_props(opts["source-url"])
+        should_find_reflected = source_props.has_key(target_to_pathid(branch_dir))
+
+    return should_find_reflected
+
 def analyze_revs(target_pathid, url, begin=1, end=None,
                  find_reflected=False):
     """For the source of the merges in the source URL being merged into
@@ -1221,7 +1232,8 @@ def action_avail(branch_dir, branch_props):
     """Show commits available for merges."""
     source_revs, phantom_revs, reflected_revs, initialized_revs = \
                analyze_source_revs(branch_dir, opts["source-url"],
-                                   find_reflected=opts["bidirectional"])
+                                   find_reflected=
+                                       should_find_reflected(branch_dir))
     report('skipping phantom revisions: %s' % phantom_revs)
     if reflected_revs:
         report('skipping reflected revisions: %s' % reflected_revs)
@@ -1281,7 +1293,8 @@ def action_merge(branch_dir, branch_props):
 
     source_revs, phantom_revs, reflected_revs, initialized_revs = \
                analyze_source_revs(branch_dir, opts["source-url"],
-                                   find_reflected=opts["bidirectional"])
+                                   find_reflected=
+                                       should_find_reflected(branch_dir))
 
     if opts["revision"]:
         revs = RevisionSet(opts["revision"])
@@ -1846,7 +1859,8 @@ common_opts = [
     Option("-b", "--bidirectional",
            value=True,
            default=False,
-           help="remove reflected and initialized revisions from merge candidates"),
+           help="remove reflected and initialized revisions from merge candidates.  "
+                "Not required but may be specified to speed things up slightly"),
     OptionArg("-f", "--commit-file", metavar="FILE",
               default="svnmerge-commit-message.txt",
               help="set the name of the file where the suggested log message "
@@ -1899,9 +1913,8 @@ command_table = {
     forth and back: e.g., if you committed a merge of a certain
     revision of the branch into the source, you do not want that commit
     to appear as available to merged into the branch (as the code
-    originated in the branch itself!).  svnmerge can not show these
-    so-called "reflected" revisions if you specify the --bidirectional
-    or -b command line option.""",
+    originated in the branch itself!).  svnmerge will automatically
+    exclude these so-called "reflected" revisions.""",
     [
         Option("-A", "--all",
                dest="avail-showwhat",
@@ -1976,9 +1989,8 @@ command_table = {
     forth and back: e.g., if you committed a merge of a certain
     revision of the branch into the source, you do not want that commit
     to appear as available to merged into the branch (as the code
-    originated in the branch itself!).  svnmerge can skip these
-    so-called "reflected" revisions if you specify the --bidirectional
-    or -b command line option.
+    originated in the branch itself!).  svnmerge will automatically
+    exclude these so-called "reflected" revisions.
 
     When manually merging changes across branches, --record-only can
     be used to instruct %s that a manual merge of a certain revision
