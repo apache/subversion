@@ -99,21 +99,31 @@ def clname_from_lastchar_cb(full_path):
 
 
 # Regular expressions for 'svn changelist' output.
+_re_cl_skip = re.compile("Skipped '(.*)'")
 _re_cl_add  = re.compile("Path '(.*)' is now a member of changelist '(.*)'.")
 _re_cl_rem  = re.compile("Path '(.*)' is no longer a member of a changelist.")
 
 def verify_changelist_output(output, expected_adds=None,
-                             expected_removals=None):
+                             expected_removals=None,
+                             expected_skips=None):
   """Compare lines of OUTPUT from 'svn changelist' against
-  EXPECTED_ADDS (a dictionary mapping paths to changelist names) and
-  EXPECTED_REMOVALS (a dictionary mapping paths to ... whatever)."""
+  EXPECTED_ADDS (a dictionary mapping paths to changelist names),
+  EXPECTED_REMOVALS (a dictionary mapping paths to ... whatever), and
+  EXPECTED_SKIPS (a dictionary mapping paths to ... whatever).
+  
+  EXPECTED_SKIPS is ignored if None."""
 
   num_expected = 0
   if expected_adds:
     num_expected += len(expected_adds)
   if expected_removals:
     num_expected += len(expected_removals)
-    
+  if expected_skips:
+    num_expected += len(expected_skips)
+
+  if not expected_skips:
+    output = filter(lambda line: (not _re_cl_skip.match(line)), output)
+
   if len(output) != num_expected:
     raise svntest.Failure("Unexpected number of 'svn changelist' output lines")
 
@@ -133,6 +143,13 @@ def verify_changelist_output(output, expected_adds=None,
         continue
     elif match:
       raise svntest.Failure("Unexpected changelist add line: " + line)    
+    match = _re_cl_skip.match(line)
+    if match \
+       and expected_skips \
+       and expected_skips.has_key(match.group(1)):
+        continue
+    elif match:
+      raise svntest.Failure("Unexpected changelist skip line: " + line)    
     raise svntest.Failure("Unexpected line: " + line)
 
 def verify_pget_output(output, expected_props):
@@ -164,6 +181,49 @@ def add_remove_changelists(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+
+  ### 'Skip' notifications
+
+  def expected_skips_under(*greek_path):
+    "return a dict mapping Greek-tree directories below GREEK_PATH to None"
+    
+    expected_skips = {}
+    for path in expected_skips_all:
+      if path.startswith(os.path.join(wc_dir, *greek_path)):
+        expected_skips[path] = None
+    
+    return expected_skips
+
+  def all_parents(expected_adds):
+    """return a dict mapping Greek-tree directories above directories in
+       EXPECTED_ADDS to None"""
+    
+    expected_skips = {}
+    for path in expected_adds.keys():
+      if not os.path.isdir(path):
+        path = os.path.dirname(path)
+      
+      while path != wc_dir:
+        expected_skips[path] = None
+        path = os.path.dirname(path)
+    
+    expected_skips[wc_dir] = None
+    return expected_skips
+
+  # all dirs in the Greek tree
+  expected_skips_all = dict.fromkeys([
+    os.path.join(wc_dir),
+    os.path.join(wc_dir, 'A'),
+    os.path.join(wc_dir, 'A', 'B'),
+    os.path.join(wc_dir, 'A', 'B', 'E'),
+    os.path.join(wc_dir, 'A', 'B', 'F'),
+    os.path.join(wc_dir, 'A', 'C'),
+    os.path.join(wc_dir, 'A', 'D'),
+    os.path.join(wc_dir, 'A', 'D', 'G'),
+    os.path.join(wc_dir, 'A', 'D', 'H'),
+    ])
+
+  expected_skips_wc_dir = { wc_dir : None }
 
   ### First, we play with just adding to changelists ###
   
