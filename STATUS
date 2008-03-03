@@ -48,15 +48,17 @@ Candidate changes:
     Votes:
       +1: joeswatosh
 
-  * r29671
-    Fix issue #3114 by adding skip notifications for directories to 'svn cl'.
-    Votes:
-      +1: cmpilato
-
   * r29672
     Fix issue #3108, where the help for 'svn cl' indicated that a target path
     was required, but the code didn't enforce such.
     Votes:
       +1: cmpilato
+      -0: I'm not convinced this is future proof.
+          http://svn.haxx.se/dev/archive-2008-03/0048.shtml
 
 Approved changes:
+
+  * r29671
+    Fix issue #3114 by adding skip notifications for directories to 'svn cl'.
+    Votes:
+      +1: cmpilato, lgo
