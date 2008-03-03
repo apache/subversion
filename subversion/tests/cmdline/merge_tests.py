@@ -9424,8 +9424,8 @@ def new_subtrees_should_not_break_merge(sbox):
                                        None, 1)
   os.chdir(saved_cwd)
 
-def basic_reintegrate(sbox):
-  "basic merge --reintegrate support"
+def reintegrate_with_rename(sbox):
+  "merge --reintegrate with renamed file on branch"
 
   # Make A_COPY branch in r2, and do a few more commits to A in r3-6.
   sbox.build()
@@ -10550,7 +10550,7 @@ test_list = [ None,
               merge_from_renamed_branch_fails_while_avoiding_repeat_merge,
               merge_source_normalization_and_subtree_merges,
               new_subtrees_should_not_break_merge,
-              XFail(basic_reintegrate),
+              XFail(reintegrate_with_rename),
               XFail(reintegrate_branch_never_merged_to),
               reintegrate_fail_on_modified_wc,
               reintegrate_fail_on_mixed_rev_wc,
