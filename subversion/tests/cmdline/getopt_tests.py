@@ -58,6 +58,7 @@ del_lines_res = [
                  # Also for 'svn --version':
                  re.compile(r"\* ra_(neon|local|svn|serf) :"),
                  re.compile(r"  - handles '(https?|file|svn)' scheme"),
+                 re.compile(r"  - with Cyrus SASL authentication"),
                  re.compile(r"\* fs_(base|fs) :"),
                 ]
 
