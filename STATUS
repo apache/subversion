@@ -53,7 +53,8 @@ Candidate changes:
     was required, but the code didn't enforce such.
     Votes:
       +1: cmpilato
-      -0: I'm not convinced this is future proof.
+      -0: lgo
+          I'm not convinced this is future proof.
           http://svn.haxx.se/dev/archive-2008-03/0048.shtml
 
 Approved changes:
