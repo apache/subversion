@@ -128,6 +128,25 @@ made to the output:</p>
 
 </div>  <!-- output-changes -->
 
+<div class="h3" id="sasl-compatibility" title="sasl-compatibility">
+<h3>SASL and <code>svn://</code> compatibility</h3>
+
+<p>All 1.x clients, with or without Cyrus SASL support, will be able to
+authenticate against all 1.x servers that do not have Cyrus SASL enabled.
+Note that the <tt>CRAM-MD5</tt> and <tt>ANONYMOUS</tt> mechanisms are
+actually built into Subversion, so you'll be able to use them even if the
+corresponding Cyrus SASL plugins are missing.</p>
+  
+<p>1.x clients without Cyrus SASL support will be able to authenticate
+against 1.5+ servers with SASL enabled, provided the server allows the
+<tt>CRAM-MD5</tt> and/or <tt>ANONYMOUS</tt> mechanisms.</p>
+  
+<p>1.5+ clients with Cyrus SASL support will be able to authenticate against
+1.5+ servers with SASL enabled, provided at least one of the mechanisms
+supported by the server is also supported by the client.</p>
+
+</div>  <!-- sasl-compatibility -->
+
 </div>  <!-- compatibility -->
 
 <div class="h2" id="new-features" title="new-features">
@@ -219,8 +238,37 @@ httpd.conf.</p>
 <h3>Cyrus SASL support for ra_svn and <tt>svnserve</tt> (<em>client
 and server</em>)</h3>
 
-<p>XXX: Described <a
-href="http://svn.collab.net/repos/svn/trunk/notes/sasl.txt">here</a>.</p>
+<p>From <a
+href="http://en.wikipedia.org/wiki/Simple_Authentication_and_Security_Layer">
+Wikipedia</a>: SASL is a framework for authentication and data security in
+Internet protocols.  It decouples authentication mechanisms from application
+protocols, in theory allowing any authentication mechanism supported by SASL to
+be used in any application protocol that uses SASL."</p>
+  
+<p>In practice, the server sends a list of authentication mechanisms that it
+supports.  The client then selects one of these mechanisms based on what the
+client supports, and informs the server of its decision.  After that, a
+number of messages are exchanged until either authentication succeeds or an
+error occurs.  In the latter case, the client is allowed to restart
+authentication.</p>
+  
+<p>The <tt>svn://</tt> protocol has always supported this type of negotiation.
+However, only the <tt>CRAM-MD5</tt> and <tt>ANONYMOUS</tt> mechanisms were
+implemented.  <a href="http://asg.web.cmu.edu/sasl/">Cyrus SASL</a> supports
+all these, and, in addition, provides a host of other mechanisms such as
+<tt>DIGEST-MD5</tt>, OTP (One-Time Passwords), GSSAPI (used for Kerberos
+authentication), NTLM (NT LAN Manager), SRP (Secure Remote Password), and
+others.  The exact list of available mechanisms depends on how SASL was
+compiled, as many of them either have external dependencies, or are not
+built by default.  Also, because each mechanism is actually a shared library
+that is dynamically loaded at runtime, many distributions package these
+mechanisms separately from the core library.</p>
+
+<p>Please see the <a href="#sasl-compatibility">compatibility section</a> for
+information regarding using a 1.5 SASL-enabled server with pre-1.5 clients.
+More information about Subversion's SASL support can be found <a 
+href="http://svn.collab.net/repos/svn/trunk/notes/sasl.txt">in the
+repository</a>.</p>
 
 </div> <!-- cyrus-sasl -->
 
