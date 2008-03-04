@@ -274,7 +274,7 @@ typedef struct {
   /* initialize only */
   const char *from_url;
 
-  /* syncronize only */
+  /* synchronize only */
   svn_revnum_t committed_rev;
 
   /* copy-revprops only */
