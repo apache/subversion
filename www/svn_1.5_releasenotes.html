@@ -515,8 +515,41 @@ repository</a>.</p>
 
 <div class="h3" id="changelist-support" title="changelist-support">
 <h3>Changelist support (<em>client</em>)</h3>
+<p>The Subversion client now contains the notion of a <em>changelist</em>:
+a group of files which are associated with a chosen name.  This becomes
+especially useful when working on several different set of files within the
+same working copy.  Instead of having to remember each file in each set,
+Subversion 1.5 will allow you to associate a changelist with each set of
+files.  Most commands which take a set of files as targets will now also
+accept the <code>--changelist</code> option, which filters those targets
+based upon the members of the changelist.  Changelist membership can be
+edited using the new <code>changelist</code> subcommand.</p>
 
-<p>XXX: Described <a
+<p>Changelists are handled entirely by the client.  They are never sent
+to the server, and aren't visible to other users of the same repository.
+Also, the <code>--changelist</code> option is never additive; if a file
+wouldn't have been included in the list of targets with out
+<code>--changelist</code>, it will not be added to it, regardless of membership
+in the changelist.  Currently, a file may only be in one changelist at a
+time, and directories can not be members of a changelist.</p>
+
+<p>The <code>--changelist</code> option is supported by the following
+subcommands:</p>
+<ul>
+  <li><code>changelist</code></li>
+  <li><code>commit</code></li>
+  <li><code>diff</code> (only wc-wc and wc-repos cases)</li>
+  <li><code>info</code></li>
+  <li><code>propget</code></li>
+  <li><code>proplist</code></li>
+  <li><code>propset</code></li>
+  <li><code>propdel</code></li>
+  <li><code>revert</code></li>
+  <li><code>status</code></li>
+  <li><code>update</code><li>
+</ul>
+
+<p>More information about changelists can be found <a
 href="http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt"
 >here</a>.</p>
 
