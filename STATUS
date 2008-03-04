@@ -58,8 +58,3 @@ Candidate changes:
           http://svn.haxx.se/dev/archive-2008-03/0048.shtml
 
 Approved changes:
-
-  * r29671
-    Fix issue #3114 by adding skip notifications for directories to 'svn cl'.
-    Votes:
-      +1: cmpilato, lgo
