@@ -699,9 +699,22 @@ href="http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt"
 <div class="h3" id="fsfs-sharding" title="fsfs-sharding">
 <h3>FSFS sharding (<em>server</em>)</h3>
 
-<p>XXX: Useful for file systems which don't perform well with a large
-number of files in a directory -- see blog entry <a
-href="http://www.farside.org.uk/200704/tree_structured_fsfs">here</a>.
+<p>The FSFS filesystem backend stores each revision in its own file, and prior
+to Subversion 1.5, all of these files were stored in a common directory in
+the repository.  Now, <em>newly created</em> FSFS repositories will use a 
+two-level directory tree with up to (by default) 1000 files per directory.
+These repositories will only be compatible with other Subversion 1.5 clients,
+but of course, Subversion 1.5 will be able to continue using repositories
+employing the older scheme without any problem.</p>
+
+<p>The primary reason for the change is to help support filesystems with
+less-than-ideal large directory entry count performance.  In addition,
+certain third-party tools may work better with a sharded layout versus
+an unsharded one.</p>
+
+<p>For more information about the technical underpinnings of FSFS sharding, 
+see this <a href="http://www.farside.org.uk/200704/tree_structured_fsfs">blog
+entry</a>.
 <!-- ### Reshard script is not quite finished and currently 
      ### aborts if you try to run it.
  <a
