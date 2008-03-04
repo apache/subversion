@@ -165,9 +165,158 @@ supported by the server is also supported by the client.</p>
 <div class="h3" id="sparse-checkouts" title="sparse-checkouts">
 <h3>Sparse checkouts (<em>client and server</em>)</h3>
 
-<p>XXX: Described <a
+<p>Many users have very large trees of which they only want to checkout
+certain parts.  In previous versions of Subversion, <code>checkout -N</code>
+was not today up to this task.  Subversion 1.5 introduces the
+<code>--depth</code> option to the <code>checkout</code>, <code>switch</code>,
+and <code>update</code> subcommands as a replacement for <code>-N</code>, which
+allows working copies to have very specific contents, leaving out everything
+the user does not want.</p>
+
+<div class="h4" id="sc-depth" title="sc-depth">
+<h4>Depth</h4>
+<p>Each directory now understands the notion of <em>depth</em>, which has
+four possible values: <tt>empty</tt>, <tt>depth-files</tt>, <tt>immediates</tt>,
+<tt>infinity</tt>.  The values are defined as follows:</p>
+
+<table>
+<tr>
+  <td>empty</td>
+  <td>Updates will not pull in any files or subdirectories not already
+    present.</td>
+</tr>
+<tr>
+  <td>files</td>
+  <td>Updates will pull in any files not already present, but not
+    subdirectories.</td>
+</tr>
+<tr>
+  <td>immediates</td>
+  <td>Updates will pull in any files or subdirectories not already present;
+    those subdirectories' will have depth-empty.</td>
+</tr>
+<tr>
+  <td>infinity</td>
+  <td>Updates will pull in any files or subdirectories not already present;
+    those subdirectories' will have depth-infinity.  Equivalent to today's
+    default update behavior.</td>
+</tr>
+</table>
+
+<p>The <code>--depth</code> option sets depth values as it updates the working
+copy, setting any new subdirectories' depth values as described above.</p>
+
+</div>  <!-- sc-depth -->
+
+<div class="h4" id="sc-ui" title="sc-ui">
+<h4>User Interface</h4>
+<p>Affected commands:</p>
+<ul>
+  <li><code>checkout</code></li>
+  <li><code>switch</code></li>
+  <li><code>update</code></li>
+  <li><code>status</code></li>
+  <li><code>info</code></li>
+</ul>
+   
+<p>The <code>-N</code> option becomes a synonym for <code>--depth=files</code>
+for these commands.  This changes the existing <code>-N</code> behavior for
+these commands, but in a trivial way (see below).</p>
+
+<p><code>checkout</code> without <code>--depth</code> or <code>-N</code>
+behaves the same as it does today.  <code>switch</code> and <code>update</code>
+without <code>--depth</code> or <code>-N</code> behave the same way as today
+IFF the working copy is fully depth-infinity.  <code>switch</code> and
+<code>update</code> without <code>--depth</code> or <code>-N</code> will
+<strong>not</strong> change depth values (exception: a missing directory
+specified on the command line will be pulled in).</p>
+   
+<p>Thus, <code>checkout</code> is identical to <code>checkout
+--depth=infinity</code>, but <code>switch</code> and <code>update</code> are
+not the same as <code>switch --depth=infinity</code> and <code>update
+--depth=infinity</code>.  The former update entries according to existing depth
+values, while the latter pull in everything.</p>
+   
+<p>To get started, run <code>checkout</code> with <code>--depth=empty</code>
+or <code>--depth=files</code>.  If additional files or directories are desired,
+pull them in with <code>update</code> commands using appropriate
+<code>--depth</code> options.</p>
+   
+<p>The <code>svn status</code> should list the depth status of the directories,
+in addition to whatever statuses are being currently listed.</p>
+   
+<p>The <code>svn info</code> command should list the depth, iff invoked on a
+directory whose depth is not the default (depth-infinity)</p>
+
+</div>  <!-- sc-ui -->
+
+<div class="h4" id="sc-compat" title="sc-compat">
+<h4>Compatibility with older servers</h4>
+<p>This feature introduces two new concepts into the repository access
+protocol which will not be understood by older servers:</p>
+<ul>
+  <li>Reported Depths &mdash; the depths associated with individual paths
+    included by the client in the description of its working copy state.</li>
+  <li>Requested Depth &mdash; the single depth value used to limit the
+    scope of the server's response to the client.</li>
+</ul>
+
+<p>As such, it's useful to understand how these concepts will be handled
+across the compatability matrix of depth-aware and non-depth-aware clients and
+servers.</p>
+
+<div class="h5" id="sc-compat-dac" title="sc-compat-dac">
+<h5>Depth-aware Clients (DACs)</h5>
+<p>DACs will transmit reported depths (with "infinity" as the default) and will 
+transmit a requested depth (with "unknown" as the default).  They will also
+&mdash; for the sake of older, non-depth-aware servers (NDASs) -- transmit a
+requested recurse value derived from the requested depth:</p>
+<table>
+<tr><th>depth</th><th>recurse</th></tr>
+<tr><td>empty</td><td>no</td></tr>
+<tr><td>files</td><td>no</td></tr>
+<tr><td>unknown</td><td>yes</td></tr>
+<tr><td>immediates</td><td>yes</td></tr>
+<tr><td>infinity</td><td>yes</td></tr>
+</table>
+
+<p>When speaking to an NDAS, the requested recurse value is the only thing
+the server understands , but is obviously more "grainy" than the requested
+depth concept.  The DAC, therefore, must filter out any additional, unwanted
+data that the server transmits in its response.  (This filtering happens in
+the repository access implementation itself so the repository access APIs
+behave as expected regardless of the server's pedigree.)</p>
+
+<p>When speaking to a depth-aware server (DAS), the requested recurse value
+is ignored.  A requested depth of "unknown" means "only send information about
+the stuff in my report, depth-aware-ily".  Other requested depth values are
+honored by the server properly, and the DAC must handle the transformation of
+any working copy depths from their pre-update to their post-update depths and
+content.</p>
+
+</div>  <!-- sc-compat-dac -->
+
+<div class="h5" id="sc-compat-ndac" title="sc-compat-ndac">
+<h5>Non-depth-aware Clients (NDACs)</h5>
+
+<p>NDACs will never transmit reported depths and never transmit a requested
+depth.  But they will transmit a requested recurse value (either "yes" or "no",
+with "yes" being the default).</p>
+
+<p>When speaking to an NDAS, what happens happens.  It's the past, man &mdash;
+you don't get to define the interaction this late in the game!</p>
+
+<p>When speaking to a DAS, the not-reported depths are treated like reported
+depths of "infinity", and the reported recurse values "yes" and "no" map to
+depths of "infinity" and "files", respectively.</p>
+
+</div>  <!-- sc-compat-dac -->
+
+</div>  <!-- sc-compat -->
+
+<p>Sparse checkouts are further described <a
 href="http://svn.collab.net/repos/svn/trunk/notes/sparse-directories.txt"
->here</a>.</p>
+>in the repository</a>.</p>
 
 </div> <!-- sparse-checkouts -->
 
