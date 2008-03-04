@@ -15,7 +15,7 @@ Contents
    2. User Interface
    3. Examples
    4. Implementation Strategy
-   5. Compatability Matters
+   5. Compatibility Matters
    6. Current Status
 
 1. Design
@@ -281,7 +281,7 @@ Contents
    servers, and they'll say they can't because they don't have control
    over the server, and we'll say "So?  This ain't no Grand Hotel!"
 
-5. Compatability Matters
+5. Compatibility Matters
 ========================
 
    This feature introduces two new concepts into the RA protocol which
@@ -295,7 +295,7 @@ Contents
         scope of the server's response to the client.
         
    As such, it's useful to understand how these concepts will be
-   handled across the compatability matrix of depth-aware and
+   handled across the compatibility matrix of depth-aware and
    non-depth-aware clients and servers.
 
    NOTE: in the sections below, it is not necessarily that case that a

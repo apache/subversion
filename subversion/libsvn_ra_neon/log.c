@@ -284,7 +284,7 @@ log_end_element(void *baton, int state,
       break;
     case ELEM_log_item:
       {
-        /* Compatability cruft so that we can provide limit functionality
+        /* Compatibility cruft so that we can provide limit functionality
            even if the server doesn't support it.
 
            If we've seen as many log entries as we're going to show just
