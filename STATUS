@@ -49,4 +49,9 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
+  * r29611, r29630, r29631
+    Apply output typemaps for a few output parameters for 1.5 APIs.
+    Votes:
+      +1: hwright
+
 Approved changes:
