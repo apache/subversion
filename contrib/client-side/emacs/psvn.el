@@ -1626,7 +1626,7 @@ The results are used to build the `svn-status-info' variable."
 
           ;; My attempt to merge the lines uses skip-double-external-dir-entry-name
           ;; and externals-map
-          (setq skip-double-external-dir-entry-name (match-string-no-properties 1))
+          (setq skip-double-external-dir-entry-name (svn-match-string-no-properties 1))
           ;; (message "Going to skip %s" skip-double-external-dir-entry-name)
           nil)
          ((looking-at "--- Changelist") ; skip svn changelist header lines
