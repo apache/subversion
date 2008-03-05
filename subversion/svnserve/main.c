@@ -140,34 +140,47 @@ void winservice_notify_stop(void)
 static const apr_getopt_option_t svnserve__options[] =
   {
     {"daemon",           'd', 0, N_("daemon mode")},
-    {"listen-port",       SVNSERVE_OPT_LISTEN_PORT, 1,
-     N_("listen port (for daemon mode)")},
-    {"listen-host",       SVNSERVE_OPT_LISTEN_HOST, 1,
-     N_("listen hostname or IP address (for daemon mode)")},
-    {"foreground",        SVNSERVE_OPT_FOREGROUND, 0,
-     N_("run in foreground (useful for debugging)")},
-    {"help",             'h', 0, N_("display this help")},
-    {"version",           SVNSERVE_OPT_VERSION, 0,
-     N_("show program version information")},
     {"inetd",            'i', 0, N_("inetd mode")},
+    {"tunnel",           't', 0, N_("tunnel mode")},
+    {"listen-once",      'X', 0, N_("listen-once mode (useful for debugging)")},
+#ifdef WIN32
+    {"service",          SVNSERVE_OPT_SERVICE, 0,
+     N_("Windows service mode (Service Control Manager)")},
+#endif
     {"root",             'r', 1, N_("root of directory to serve")},
     {"read-only",        'R', 0,
      N_("force read only, overriding repository config file")},
-    {"tunnel",           't', 0, N_("tunnel mode")},
-    {"tunnel-user",      SVNSERVE_OPT_TUNNEL_USER, 1,
-     N_("tunnel username (default is current uid's name)")},
-#ifdef CONNECTION_HAVE_THREAD_OPTION
-    {"threads",          'T', 0, N_("use threads instead of fork")},
-#endif
-    {"listen-once",      'X', 0, N_("listen once (useful for debugging)")},
     {"config-file",      SVNSERVE_OPT_CONFIG_FILE, 1,
      N_("read configuration from file ARG")},
-    {"pid-file",         SVNSERVE_OPT_PID_FILE, 1,
-     N_("write server process ID to file ARG")},
-#ifdef WIN32
-    {"service",          SVNSERVE_OPT_SERVICE, 0,
-     N_("run as a windows service (SCM only)")},
+    {"listen-port",       SVNSERVE_OPT_LISTEN_PORT, 1,
+     N_("listen port [mode: daemon]")},
+    {"listen-host",       SVNSERVE_OPT_LISTEN_HOST, 1,
+     N_("listen hostname or IP address [mode: daemon]")},
+#ifdef CONNECTION_HAVE_THREAD_OPTION
+    /* ### Making the assumption here that WIN32 never has fork and so
+       ### this option never exists when --service exists. */
+    {"threads",          'T', 0, N_("use threads instead of fork "
+                                    "[mode: daemon]")},
 #endif
+    {"foreground",        SVNSERVE_OPT_FOREGROUND, 0,
+     N_("run in foreground (useful for debugging)\n"
+        "                             "
+        "[mode: daemon]")},
+    {"pid-file",         SVNSERVE_OPT_PID_FILE, 1,
+     N_("write server process ID to file ARG\n"
+        "                             "
+#ifdef WIN32
+        "[mode: daemon, listen-once, service]")},
+#else
+        "[mode: daemon, listen-once]")},
+#endif
+    {"tunnel-user",      SVNSERVE_OPT_TUNNEL_USER, 1,
+     N_("tunnel username (default is current uid's name)\n"
+        "                             "
+        "[mode: tunnel]")},
+    {"help",             'h', 0, N_("display this help")},
+    {"version",           SVNSERVE_OPT_VERSION, 0,
+     N_("show program version information")},
     {0,                  0,   0, 0}
   };
 
@@ -187,7 +200,12 @@ static void help(apr_pool_t *pool)
 {
   apr_size_t i;
 
-  svn_error_clear(svn_cmdline_fputs(_("usage: svnserve [options]\n"
+  svn_error_clear(svn_cmdline_fputs(_("usage: svnserve [-d | -i | -t | -X"
+#ifdef WIN32
+                                      "| --service"
+#endif
+                                      "] "
+                                      "[options]\n"
                                       "\n"
                                       "Valid options:\n"),
                                     stdout, pool));
@@ -495,7 +513,12 @@ int main(int argc, const char *argv[])
   if (mode_opt_count != 1)
     {
       svn_error_clear(svn_cmdline_fputs
+#ifdef WIN32
+                      (_("You must specify exactly one of -d, -i, -t, "
+                         "--service or -X.\n"),
+#else
                       (_("You must specify exactly one of -d, -i, -t or -X.\n"),
+#endif
                        stderr, pool));
       usage(argv[0], pool);
     }
