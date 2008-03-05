@@ -185,6 +185,15 @@
 ;; Trac ticket links can be enabled in the *svn-log* buffers when using the following:
 ;; (setq svn-log-link-handlers '(trac-ticket-short))
 
+;; Frequently asked questions:
+;; Q1: I need support for user names with blanks/spaces
+;; A1: Add the user names to svn-user-names-including-blanks and set the
+;;     svn-pre-parse-status-hook.
+;;     The problem is, that the user names and the file names from the svn status
+;;     output can both contain blanks. Blanks in file names are supported.
+;;     the svn-user-names-including-blanks list is used to replace the spaces
+;;     in the user names with - to overcome this problem
+
 ;; Comments / suggestions and bug reports are welcome!
 
 ;; Development notes
@@ -1536,7 +1545,11 @@ nb: LOCKED-MARK refers to the kind of locks you get after an error,
         locked-repo-mark
         psvn-extra-info))
 
-(defvar svn-user-names-including-blanks nil "A list of svn user names that include blanks.")
+(defvar svn-user-names-including-blanks nil "A list of svn user names that include blanks.
+To add support for the names \"feng shui\" and \"mister blank\", place the following in your .emacs:
+ (setq svn-user-names-including-blanks '(\"feng shui\" \"mister blank\"))
+ (add-hook 'svn-pre-parse-status-hook 'svn-status-parse-fixup-user-names-including-blanks)
+")
 ;;(setq svn-user-names-including-blanks '("feng shui" "mister blank"))
 ;;(add-hook 'svn-pre-parse-status-hook 'svn-status-parse-fixup-user-names-including-blanks)
 
