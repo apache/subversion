@@ -42,7 +42,11 @@
    authentication realm, and worst of all, this realm overrides the one that
    we pass to sasl_server_new().  If we didn't check this, a user that could
    successfully authenticate in one realm would be able to authenticate
-   in any other realm, simply by appending '@realm' to his username. */
+   in any other realm, simply by appending '@realm' to his username.
+
+   Note that the value returned in *OUT does not need to be
+   '\0'-terminated; we just need to set *OUT_LEN correctly.
+*/
 static int canonicalize_username(sasl_conn_t *conn,
                                  void *context, /* not used */
                                  const char *in, /* the username */
