@@ -153,24 +153,28 @@ static const apr_getopt_option_t svnserve__options[] =
     {"config-file",      SVNSERVE_OPT_CONFIG_FILE, 1,
      N_("read configuration from file ARG")},
     {"listen-port",       SVNSERVE_OPT_LISTEN_PORT, 1,
+#ifdef WIN32
      N_("listen port\n"
         "                             "
-#ifdef WIN32
         "[mode: daemon, service, listen-once]")},
 #else
+     N_("listen port\n"
+        "                             "
         "[mode: daemon, listen-once]")},
 #endif
     {"listen-host",       SVNSERVE_OPT_LISTEN_HOST, 1,
+#ifdef WIN32
      N_("listen hostname or IP address\n"
         "                             "
-#ifdef WIN32
         "[mode: daemon, service, listen-once]")},
 #else
+     N_("listen hostname or IP address\n"
+        "                             "
         "[mode: daemon, listen-once]")},
 #endif
 #ifdef CONNECTION_HAVE_THREAD_OPTION
     /* ### Making the assumption here that WIN32 never has fork and so
-       ### this option never exists when --service exists. */
+     * ### this option never exists when --service exists. */
     {"threads",          'T', 0, N_("use threads instead of fork "
                                     "[mode: daemon]")},
 #endif
@@ -179,11 +183,13 @@ static const apr_getopt_option_t svnserve__options[] =
         "                             "
         "[mode: daemon]")},
     {"pid-file",         SVNSERVE_OPT_PID_FILE, 1,
+#ifdef WIN32
      N_("write server process ID to file ARG\n"
         "                             "
-#ifdef WIN32
         "[mode: daemon, listen-once, service]")},
 #else
+     N_("write server process ID to file ARG\n"
+        "                             "
         "[mode: daemon, listen-once]")},
 #endif
     {"tunnel-user",      SVNSERVE_OPT_TUNNEL_USER, 1,
@@ -212,15 +218,19 @@ static void help(apr_pool_t *pool)
 {
   apr_size_t i;
 
-  svn_error_clear(svn_cmdline_fputs(_("usage: svnserve [-d | -i | -t | -X"
 #ifdef WIN32
-                                      "| --service"
-#endif
-                                      "] "
+  svn_error_clear(svn_cmdline_fputs(_("usage: svnserve [-d | -i | -t | -X "
+                                      "| --service] [options]\n"
+                                      "\n"
+                                      "Valid options:\n"),
+                                    stdout, pool));
+#else
+  svn_error_clear(svn_cmdline_fputs(_("usage: svnserve [-d | -i | -t | -X] "
                                       "[options]\n"
                                       "\n"
                                       "Valid options:\n"),
                                     stdout, pool));
+#endif
   for (i = 0; svnserve__options[i].name && svnserve__options[i].optch; i++)
     {
       const char *optstr;
