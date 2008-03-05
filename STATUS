@@ -50,8 +50,3 @@ Candidate changes:
       +1: cmpilato
 
 Approved changes:
-
-  * r29567, r29568, r29578
-    Limit memory usage in mod_dav_svn.
-    Votes:
-      +1: hwright, +1 pburba

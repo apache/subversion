@@ -167,6 +167,7 @@ file_rev_handler(void *baton,
     {
       const svn_prop_t *prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
 
+      svn_pool_clear(subpool);
       if (prop->value)
         SVN_ERR(send_prop(frb, "set-prop", prop->name, prop->value,
                           subpool));
