@@ -1190,7 +1190,7 @@ do_merged_logs(svn_fs_t *fs,
       svn_pool_clear(iterpool);
 
       if (rev < hist_start)
-        break;
+        continue;
 
       SVN_ERR(send_log(rev, fs, discover_changed_paths, revprops,
                        has_children, receiver, receiver_baton, authz_read_func,
