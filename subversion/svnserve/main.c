@@ -153,9 +153,21 @@ static const apr_getopt_option_t svnserve__options[] =
     {"config-file",      SVNSERVE_OPT_CONFIG_FILE, 1,
      N_("read configuration from file ARG")},
     {"listen-port",       SVNSERVE_OPT_LISTEN_PORT, 1,
-     N_("listen port [mode: daemon]")},
+     N_("listen port\n"
+        "                             "
+#ifdef WIN32
+        "[mode: daemon, service, listen-once]")},
+#else
+        "[mode: daemon, listen-once]")},
+#endif
     {"listen-host",       SVNSERVE_OPT_LISTEN_HOST, 1,
-     N_("listen hostname or IP address [mode: daemon]")},
+     N_("listen hostname or IP address\n"
+        "                             "
+#ifdef WIN32
+        "[mode: daemon, service, listen-once]")},
+#else
+        "[mode: daemon, listen-once]")},
+#endif
 #ifdef CONNECTION_HAVE_THREAD_OPTION
     /* ### Making the assumption here that WIN32 never has fork and so
        ### this option never exists when --service exists. */
