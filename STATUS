@@ -37,11 +37,6 @@ Candidate changes:
     Votes:
       +1: epg
 
-  * r29567, r29568, r29578
-    Limit memory usage in mod_dav_svn.
-    Votes:
-      +1: hwright
-
   * r29613
     kou's commit message says it all: "The Ruby bindings:Re-support SWIG
     1.3.24 and 1.3.27"
@@ -55,3 +50,8 @@ Candidate changes:
       +1: cmpilato
 
 Approved changes:
+
+  * r29567, r29568, r29578
+    Limit memory usage in mod_dav_svn.
+    Votes:
+      +1: hwright, +1 pburba
