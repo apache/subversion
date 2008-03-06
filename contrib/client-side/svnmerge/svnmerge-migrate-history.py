@@ -21,7 +21,6 @@ import sys
 import os
 import sre
 import getopt
-import urllib
 try:
   my_getopt = getopt.gnu_getopt
 except AttributeError:
@@ -192,23 +191,6 @@ class Migrator:
 
   def add_to_mergeinfo(self, svnmerge_prop_val, mergeinfo_prop_val):
     if svnmerge_prop_val is not None:
-      # Convert svnmerge-* property value (which uses any whitespace
-      # for delimiting sources and stores source paths URI-encoded)
-      # into a svn:mergeinfo syntax (which is newline-separated with
-      # URI-decoded paths).
-      sources = svnmerge_prop_val.split()
-      svnmerge_prop_val = ''
-      for source in sources:
-        pieces = source.split(':')
-        if len(pieces) > 2:
-          pieces = [pieces[:-1].join(':'), pieces[-1]]
-        if len(pieces) != 2:
-          continue
-        svnmerge_prop_val = svnmerge_prop_val + \
-                            '%s:%s\n' % (urllib.unquote(pieces[0]), pieces[1])
-
-      # If there is Subversion mergeinfo to merge with, do so.
-      # Otherwise, our svnmerge info simply becomes our new mergeinfo.
       if mergeinfo_prop_val:
         mergeinfo = svn.core.svn_mergeinfo_parse(mergeinfo_prop_val)
         to_migrate = svn.core.svn_mergeinfo_parse(svnmerge_prop_val)
