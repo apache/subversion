@@ -825,8 +825,8 @@ def simple_property_merges(sbox):
   svntest.actions.run_and_verify_svn(None, [], [], 'merge', '-r', '3:4',
                                      alpha_url, alpha_path)
 
-  output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                   'pl', alpha_path)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'pl', alpha_path)
 
   saw_foo = 0
   saw_bar = 0

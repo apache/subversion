@@ -117,10 +117,10 @@ def broken_authz_file(sbox):
 
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
-  out, err = svntest.main.run_svn(1,
-                                  "delete",
-                                  sbox.repo_url + "/A",
-                                  "-m", "a log message");
+  exit_code, out, err = svntest.main.run_svn(1,
+                                             "delete",
+                                             sbox.repo_url + "/A",
+                                             "-m", "a log message");
   if out:
     raise svntest.verify.SVNUnexpectedStdout(out)
   if not err:

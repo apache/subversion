@@ -119,8 +119,8 @@ def status_shows_all_in_current_dir(sbox):
   wc_dir = sbox.wc_dir
 
   os.chdir(wc_dir)
-  output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                   'stat', '-vN')
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'stat', '-vN')
 
   if (len(output) != len(os.listdir("."))):
     raise svntest.Failure
@@ -138,14 +138,16 @@ def status_missing_file(sbox):
 
   os.remove('iota')
 
-  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'status')
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'status')
   for line in output:
     if not re.match("! +iota", line):
       raise svntest.Failure
 
   # This invocation is for issue #2127.
-  output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                   'status', '-u', 'iota')
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'status', '-u',
+                                                              'iota')
   found_it = 0
   for line in output:
     if re.match("! +1 +iota", line):
@@ -169,7 +171,8 @@ def status_type_change(sbox):
   os.rename('A', 'iota')
   os.rename('was_iota', 'A')
 
-  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'status')
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'status')
   if len(output) != 2:
     raise svntest.Failure
   for line in output:
@@ -181,7 +184,8 @@ def status_type_change(sbox):
   os.remove('A')
   os.mkdir('A')
 
-  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'status')
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'status')
   if len(output) != 2:
     raise svntest.Failure
   for line in output:
@@ -193,7 +197,8 @@ def status_type_change(sbox):
   svntest.main.safe_rmtree('iota')
   os.mkdir('iota')
 
-  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'status')
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'status')
   if len(output) != 2:
     raise svntest.Failure
   for line in output:
@@ -216,7 +221,8 @@ def status_type_change_to_symlink(sbox):
   svntest.main.safe_rmtree('A/D')
   os.symlink('bar', 'A/D')
 
-  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'status')
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'status')
   if len(output) != 2:
     raise svntest.Failure
   for line in output:
@@ -229,7 +235,8 @@ def status_type_change_to_symlink(sbox):
   os.symlink('A/mu', 'iota')
   os.symlink('C', 'A/D')
 
-  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'status')
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'status')
   if len(output) != 2:
     raise svntest.Failure
   for line in output:
@@ -254,8 +261,8 @@ def status_with_new_files_pending(sbox):
   svntest.main.run_svn(None,
                        'up', '-r', '1')
 
-  output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                   'status', '-u')
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'status', '-u')
 
   # The bug fixed in revision 3686 was a seg fault.  We don't have a
   # reliable way to detect a seg fault here, since we haven't dealt
@@ -318,9 +325,8 @@ def status_for_nonexistent_file(sbox):
 
   os.chdir(wc_dir)
 
-  output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                   'status',
-                                                   'nonexistent-file')
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+    None, None, [], 'status', 'nonexistent-file')
 
   # there should *not* be a status line printed for the nonexistent file
   for line in output:
@@ -435,8 +441,9 @@ def status_file_needs_update(sbox):
   # the -v flag, which we don't want, as this bug never appeared when
   # -v was passed.  So we run status by hand:
   os.chdir(was_cwd)
-  out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                'status', '-u', other_wc)
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'status', '-u',
+                                                           other_wc)
 
   for line in out:
     if re.match("\\s+\\*.*crontab\\.root$", line):
@@ -497,7 +504,7 @@ def status_uninvited_parent_directory(sbox):
   # We don't want a full status tree here, just one line (or two, if
   # the bug is present).  So run status by hand:
   os.chdir(was_cwd)
-  out, err = svntest.actions.run_and_verify_svn(
+  exit_code, out, err = svntest.actions.run_and_verify_svn(
     None, None, [],
     'status', '-u', os.path.join(other_wc, 'newfile'))
 
@@ -552,7 +559,8 @@ def status_on_forward_deletion(sbox):
 
 def get_last_changed_date(path):
   "get the Last Changed Date for path using svn info"
-  out, err = svntest.actions.run_and_verify_svn(None, None, [], 'info', path)
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'info', path)
   for line in out:
     if re.match("^Last Changed Date", line):
       return line
@@ -562,7 +570,8 @@ def get_last_changed_date(path):
 # Helper for timestamp_behaviour test
 def get_text_timestamp(path):
   "get the text-time for path using svn info"
-  out, err = svntest.actions.run_and_verify_svn(None, None, [], 'info', path)
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'info', path)
   for line in out:
     if re.match("^Text Last Updated", line):
       return line
@@ -672,7 +681,7 @@ def status_on_unversioned_dotdot(sbox):
 
   os.chdir(new_subdir)
 
-  out, err = svntest.main.run_svn(1, 'st', '..')
+  exit_code, out, err = svntest.main.run_svn(1, 'st', '..')
   for line in err:
     if line.find('svn: warning: \'..\' is not a working copy') != -1:
       break
@@ -772,9 +781,9 @@ def status_in_xml(sbox):
   svntest.main.file_append(file_path, "test status --xml\n")
 
   # Retrieve last changed date from svn log
-  output, error = svntest.actions.run_and_verify_svn(None, None, [],
-                                                     'log', file_path,
-                                                     '--xml', '-rHEAD')
+  exit_code, output, error = svntest.actions.run_and_verify_svn(
+    None, None, [], 'log', file_path, '--xml', '-rHEAD')
+
   info_msg = "<date>"
   for line in output:
     if line.find(info_msg) >= 0:
@@ -806,9 +815,10 @@ def status_in_xml(sbox):
               "</status>\n",
              ]
 
-  output, error = svntest.actions.run_and_verify_svn(None, None, [],
-                                                     'status', file_path,
-                                                     '--xml', '-u')
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None, [],
+                                                                'status',
+                                                                file_path,
+                                                                '--xml', '-u')
 
   for i in range(0, len(output)):
     if output[i] != template[i]:
@@ -845,7 +855,8 @@ def status_unversioned_dir(sbox):
   dir = sbox.repo_dir
   expected_err = ["svn: warning: '" + dir + "' is not a working copy\n",
                   "svn: warning: '" + dir + "' is not a working copy\n"]
-  svntest.actions.run_and_verify_svn(None, [], expected_err, "status", dir, dir)
+  svntest.actions.run_and_verify_svn2(None, [], expected_err, 0,
+                                      "status", dir, dir)
 
 #----------------------------------------------------------------------
 
@@ -1034,9 +1045,9 @@ def status_update_with_incoming_props(sbox):
                                      wc_dir)
 
   # Retrieve last changed date from svn log
-  output, error = svntest.actions.run_and_verify_svn(None, None, [],
-                                                     'log', wc_dir,
-                                                     '--xml', '-r1')
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None, [],
+                                                                'log', wc_dir,
+                                                                '--xml', '-r1')
 
   info_msg = "<date>"
   for line in output:
@@ -1089,9 +1100,10 @@ def status_update_with_incoming_props(sbox):
           "</target>\n",
           "</status>\n",]
 
-  output, error = svntest.actions.run_and_verify_svn(None, xout, [],
-                                                     'status', wc_dir,
-                                                     '--xml', '-uN')
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None, xout, [],
+                                                                'status',
+                                                                wc_dir,
+                                                                '--xml', '-uN')
 
 # more incoming prop updates.
 def status_update_verbose_with_incoming_props(sbox):
