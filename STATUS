@@ -43,12 +43,6 @@ Candidate changes:
     Votes:
       +1: joeswatosh
 
-  * r29672
-    Fix issue #3108, where the help for 'svn cl' indicated that a target path
-    was required, but the code didn't enforce such.
-    Votes:
-      +1: cmpilato
-
   * r29611, r29630, r29631
     Apply output typemaps for a few output parameters for 1.5 APIs.
     Votes:
@@ -70,3 +64,9 @@ Candidate changes:
       +1: pburba
 
 Approved changes:
+
+  * r29672
+    Fix issue #3108, where the help for 'svn cl' indicated that a target path
+    was required, but the code didn't enforce such.
+    Votes:
+      +1: cmpilato, pburba
