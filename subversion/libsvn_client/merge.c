@@ -894,7 +894,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
                we had called 'svn cp wc wc'. */
             SVN_ERR(svn_wc_add_repos_file2(mine, adm_access, yours, NULL,
                                            new_props, NULL, copyfrom_url,
-                                           rev2, subpool));
+                                           copyfrom_rev, subpool));
           }
         if (content_state)
           *content_state = svn_wc_notify_state_changed;
@@ -1105,7 +1105,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
         {
           SVN_ERR(svn_io_make_dir_recursively(path, subpool));
           SVN_ERR(svn_wc_add2(path, adm_access,
-                              copyfrom_url, rev,
+                              copyfrom_url, copyfrom_rev,
                               merge_b->ctx->cancel_func,
                               merge_b->ctx->cancel_baton,
                               NULL, NULL, /* don't pass notification func! */
@@ -1122,7 +1122,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
         {
           if (!merge_b->dry_run)
             SVN_ERR(svn_wc_add2(path, adm_access,
-                                copyfrom_url, rev,
+                                copyfrom_url, copyfrom_rev,
                                 merge_b->ctx->cancel_func,
                                 merge_b->ctx->cancel_baton,
                                 NULL, NULL, /* no notification func! */
