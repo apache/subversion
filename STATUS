@@ -54,7 +54,7 @@ Candidate changes:
     Votes:
       +1: hwright
 
-  * r29742-r29744
+  * r29742-r29744, r29746
     Tweak 'svn merge's support for merged adds to better support merges
     from foreign repositories.
     Notes: 'svn merge' has sorta half-supported merges from foreign
@@ -63,8 +63,10 @@ Candidate changes:
       believe this functionality would be extremely useful in vendor
       branch maintenance scenarios.  r29742 contains an errantly
       committed change.  r29743 is just the reversion of that errant
-      change.  r29744 adds a test.
+      change.  r29744 adds a test.  r29746 is a minor code clarification
+      to r29472.
     Votes:
-      +1: cmpilato
+      +1: cmpilato (all but r29746)
+      +1: pburba
 
 Approved changes:
