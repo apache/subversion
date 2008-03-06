@@ -49,6 +49,11 @@ class SVNExpectedStderr(SVNUnexpectedOutput):
   STDERR when output was expected."""
   pass
 
+class SVNUnexpectedExitCode(SVNUnexpectedOutput):
+  """Exception raised if an invocation of svn exits with a value other
+  than what was expected."""
+  pass
+
 class SVNIncorrectDatatype(SVNUnexpectedOutput):
   """Exception raised if invalid input is passed to the
   run_and_verify_* API"""
@@ -324,3 +329,16 @@ def verify_outputs(message, actual_stdout, actual_stderr,
       raisable = main.SVNLineUnequal
 
     compare_and_display_lines(message, label, expected, actual, raisable)
+
+def verify_exit_code(message, actual, expected,
+                     raisable=SVNUnexpectedExitCode):
+  """Compare and display expected vs. actual exit codes:
+  if they don't match, print the difference (preceded by MESSAGE iff
+  not None) and raise an exception."""
+
+  # main.spawn_process() (by virtue of main.wait_on_pipe()) will return an
+  # exit code of None on platforms not supporting Popen3
+  if actual is not None and expected != actual:
+    display_lines(message, "Exit Code",
+                  str(expected) + '\n', str(actual) + '\n')
+    raise raisable

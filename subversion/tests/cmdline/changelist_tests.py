@@ -228,23 +228,23 @@ def add_remove_changelists(sbox):
   ### First, we play with just adding to changelists ###
   
   # svn changelist foo WC_DIR
-  output, errput = svntest.main.run_svn(None, "changelist", "foo",
-                                        wc_dir)
+  exit_code, output, errput = svntest.main.run_svn(None, "changelist", "foo",
+                                                   wc_dir)
   verify_changelist_output(output) # nothing expected
 
   # svn changelist foo WC_DIR --depth files
-  output, errput = svntest.main.run_svn(None, "changelist", "foo",
-                                        "--depth", "files",
-                                        wc_dir)
+  exit_code, output, errput = svntest.main.run_svn(None, "changelist", "foo",
+                                                   "--depth", "files",
+                                                   wc_dir)
   expected_adds = {
     os.path.join(wc_dir, 'iota') : 'foo',
     }
   verify_changelist_output(output, expected_adds)
   
   # svn changelist foo WC_DIR --depth infinity
-  output, errput = svntest.main.run_svn(None, "changelist", "foo",
-                                        "--depth", "infinity",
-                                        wc_dir)
+  exit_code, output, errput = svntest.main.run_svn(None, "changelist", "foo",
+                                                   "--depth", "infinity",
+                                                   wc_dir)
   expected_adds = {
     os.path.join(wc_dir, 'A', 'B', 'E', 'alpha') : 'foo',
     os.path.join(wc_dir, 'A', 'B', 'E', 'beta') : 'foo',
@@ -263,9 +263,10 @@ def add_remove_changelists(sbox):
   ### Now, change some changelists ###
   
   # svn changelist bar WC_DIR/A/D --depth infinity
-  output, errput = svntest.main.run_svn(".*", "changelist", "bar",
-                                        "--depth", "infinity",
-                                        os.path.join(wc_dir, 'A', 'D'))
+  exit_code, output, errput = svntest.main.run_svn(".*", "changelist", "bar",
+                                                   "--depth", "infinity",
+                                                   os.path.join(wc_dir,
+                                                                'A', 'D'))
   expected_adds = {
     os.path.join(wc_dir, 'A', 'D', 'G', 'pi') : 'bar',
     os.path.join(wc_dir, 'A', 'D', 'G', 'rho') : 'bar',
@@ -278,9 +279,10 @@ def add_remove_changelists(sbox):
   verify_changelist_output(output, expected_adds)
 
   # svn changelist baz WC_DIR/A/D/H --depth infinity
-  output, errput = svntest.main.run_svn(".*", "changelist", "baz",
-                                        "--depth", "infinity",
-                                        os.path.join(wc_dir, 'A', 'D', 'H'))
+  exit_code, output, errput = svntest.main.run_svn(".*", "changelist", "baz",
+                                                   "--depth", "infinity",
+                                                   os.path.join(wc_dir, 'A',
+                                                                'D', 'H'))
   expected_adds = {
     os.path.join(wc_dir, 'A', 'D', 'H', 'chi') : 'baz',
     os.path.join(wc_dir, 'A', 'D', 'H', 'omega') : 'baz',
@@ -291,10 +293,11 @@ def add_remove_changelists(sbox):
   ### Now, let's selectively rename some changelists ###
 
   # svn changelist foo-rename WC_DIR --depth infinity --changelist foo
-  output, errput = svntest.main.run_svn(".*", "changelist", "foo-rename",
-                                        "--depth", "infinity",
-                                        "--changelist", "foo",
-                                        wc_dir)
+  exit_code, output, errput = svntest.main.run_svn(".*", "changelist",
+                                                   "foo-rename",
+                                                   "--depth", "infinity",
+                                                   "--changelist", "foo",
+                                                   wc_dir)
   expected_adds = {
     os.path.join(wc_dir, 'A', 'B', 'E', 'alpha') : 'foo-rename',
     os.path.join(wc_dir, 'A', 'B', 'E', 'beta') : 'foo-rename',
@@ -306,11 +309,10 @@ def add_remove_changelists(sbox):
 
   # svn changelist bar WC_DIR --depth infinity
   #     --changelist foo-rename --changelist baz
-  output, errput = svntest.main.run_svn(".*", "changelist", "bar",
-                                        "--depth", "infinity",
-                                        "--changelist", "foo-rename",
-                                        "--changelist", "baz",
-                                        wc_dir)
+  exit_code, output, errput = svntest.main.run_svn(
+    ".*", "changelist", "bar", "--depth", "infinity",
+    "--changelist", "foo-rename", "--changelist", "baz", wc_dir)
+
   expected_adds = {
     os.path.join(wc_dir, 'A', 'B', 'E', 'alpha') : 'bar',
     os.path.join(wc_dir, 'A', 'B', 'E', 'beta') : 'bar',
@@ -326,23 +328,25 @@ def add_remove_changelists(sbox):
   ### Okay.  Time to remove some stuff from changelists now. ###
   
   # svn changelist --remove WC_DIR
-  output, errput = svntest.main.run_svn(None, "changelist", "--remove",
-                                        wc_dir)
+  exit_code, output, errput = svntest.main.run_svn(None, "changelist",
+                                                   "--remove", wc_dir)
   verify_changelist_output(output) # nothing expected
 
   # svn changelist --remove WC_DIR --depth files
-  output, errput = svntest.main.run_svn(None, "changelist", "--remove",
-                                        "--depth", "files",
-                                        wc_dir)
+  exit_code, output, errput = svntest.main.run_svn(None, "changelist",
+                                                   "--remove",
+                                                   "--depth", "files",
+                                                   wc_dir)
   expected_removals = {
     os.path.join(wc_dir, 'iota') : None,
     }
   verify_changelist_output(output, None, expected_removals)
   
   # svn changelist --remove WC_DIR --depth infinity
-  output, errput = svntest.main.run_svn(None, "changelist", "--remove",
-                                        "--depth", "infinity",
-                                        wc_dir)
+  exit_code, output, errput = svntest.main.run_svn(None, "changelist",
+                                                   "--remove",
+                                                   "--depth", "infinity",
+                                                   wc_dir)
   expected_removals = {
     os.path.join(wc_dir, 'A', 'B', 'E', 'alpha') : None,
     os.path.join(wc_dir, 'A', 'B', 'E', 'beta') : None,
@@ -365,10 +369,11 @@ def add_remove_changelists(sbox):
   ### Now, do selective changelist removal ###
   
   # svn changelist --remove WC_DIR --depth infinity --changelist a
-  output, errput = svntest.main.run_svn(None, "changelist", "--remove",
-                                        "--depth", "infinity",
-                                        "--changelist", "a",
-                                        wc_dir)
+  exit_code, output, errput = svntest.main.run_svn(None, "changelist",
+                                                   "--remove",
+                                                   "--depth", "infinity",
+                                                   "--changelist", "a",
+                                                   wc_dir)
   expected_removals = {
     os.path.join(wc_dir, 'A', 'B', 'E', 'alpha') : None,
     os.path.join(wc_dir, 'A', 'B', 'E', 'beta') : None,
@@ -381,11 +386,12 @@ def add_remove_changelists(sbox):
 
   # svn changelist --remove WC_DIR --depth infinity
   #     --changelist i --changelist o
-  output, errput = svntest.main.run_svn(None, "changelist", "--remove",
-                                        "--depth", "infinity",
-                                        "--changelist", "i",
-                                        "--changelist", "o",
-                                        wc_dir)
+  exit_code, output, errput = svntest.main.run_svn(None, "changelist",
+                                                   "--remove",
+                                                   "--depth", "infinity",
+                                                   "--changelist", "i",
+                                                   "--changelist", "o",
+                                                   wc_dir)
   expected_removals = {
     os.path.join(wc_dir, 'A', 'D', 'G', 'pi') : None,
     os.path.join(wc_dir, 'A', 'D', 'G', 'rho') : None,
@@ -517,7 +523,7 @@ def info_with_changelists(sbox):
         args.append(depth)
 
       # Run 'svn info ...'
-      output, errput = svntest.main.run_svn(None, *args)
+      exit_code, output, errput = svntest.main.run_svn(None, *args)
 
       # Filter the output for lines that begin with 'Path:', and
       # reduce even those lines to just the actual path.
@@ -588,7 +594,7 @@ def diff_with_changelists(sbox):
           args.append(wc_dir)
   
         # Run 'svn diff ...'
-        output, errput = svntest.main.run_svn(None, *args)
+        exit_code, output, errput = svntest.main.run_svn(None, *args)
   
         # Filter the output for lines that begin with 'Index:', and
         # reduce even those lines to just the actual path.
@@ -670,21 +676,22 @@ def propmods_with_changelists(sbox):
                              expected_disk.old_tree())
 
   # Propget 'name' in files in changelists 'a' and 'i' to depth files.
-  output, errput = svntest.main.run_svn(None, "pget",
-                                        "--depth", "files", "name",
-                                        "--changelist", "a",
-                                        "--changelist", "i",
-                                        wc_dir)
+  exit_code, output, errput = svntest.main.run_svn(None, "pget",
+                                                   "--depth", "files", "name",
+                                                   "--changelist", "a",
+                                                   "--changelist", "i",
+                                                   wc_dir)
   verify_pget_output(output, {
     os.path.join(wc_dir, 'iota') : 'value',
     })
   
   # Propget 'name' in files in changelists 'a' and 'i' to depth infinity.
-  output, errput = svntest.main.run_svn(None, "pget",
-                                        "--depth", "infinity", "name",
-                                        "--changelist", "a",
-                                        "--changelist", "i",
-                                        wc_dir)
+  exit_code, output, errput = svntest.main.run_svn(None, "pget",
+                                                   "--depth", "infinity",
+                                                   "name",
+                                                   "--changelist", "a",
+                                                   "--changelist", "i",
+                                                   wc_dir)
   verify_pget_output(output, {
     os.path.join(wc_dir, 'A', 'D', 'gamma')      : 'value',
     os.path.join(wc_dir, 'A', 'B', 'E', 'alpha') : 'value',

@@ -276,9 +276,10 @@ def revert_add_files(sbox):
   epsilon_path = os.path.join(wc_dir, 'A', 'D', 'G', 'epsilon')
   files = [delta_path, zeta_path, epsilon_path]
 
-  output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                   'revert',
-                                                   '--recursive', wc_dir)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'revert',
+                                                              '--recursive',
+                                                              wc_dir)
   check_reversion(files, output)
 
 #----------------------------------------------------------------------
@@ -295,9 +296,10 @@ def revert_add_directories(sbox):
   Z_path = os.path.join(wc_dir, 'A', 'D', 'H', 'Z')
   files = [X_path, Y_path, Z_path]
 
-  output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                   'revert',
-                                                   '--recursive', wc_dir)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'revert',
+                                                              '--recursive',
+                                                              wc_dir)
   check_reversion(files, output)
 
 #----------------------------------------------------------------------
@@ -314,9 +316,10 @@ def revert_nested_adds(sbox):
   Z_path = os.path.join(wc_dir, 'A', 'D', 'H', 'Z')
   files = [X_path, Y_path, Z_path]
 
-  output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                   'revert',
-                                                   '--recursive', wc_dir)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'revert',
+                                                              '--recursive',
+                                                              wc_dir)
   check_reversion(files, output)
 
 #----------------------------------------------------------------------
@@ -334,9 +337,10 @@ def revert_add_executable(sbox):
   other_path = os.path.join(wc_dir, 'other_exe')
   files = [all_path, none_path, user_path, group_path, other_path]
 
-  output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                   'revert',
-                                                   '--recursive', wc_dir)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'revert',
+                                                              '--recursive',
+                                                              wc_dir)
   check_reversion(files, output)
 
 #----------------------------------------------------------------------
@@ -354,9 +358,10 @@ def revert_delete_files(sbox):
   omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
   files = [iota_path, mu_path, omega_path, rho_path]
 
-  output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                   'revert',
-                                                   '--recursive', wc_dir)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'revert',
+                                                              '--recursive',
+                                                              wc_dir)
   check_reversion(files, output)
 
 #----------------------------------------------------------------------
@@ -379,9 +384,10 @@ def revert_delete_dirs(sbox):
   files = [E_path, F_path, H_path,
            alpha_path, beta_path, chi_path, omega_path, psi_path]
 
-  output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                   'revert',
-                                                   '--recursive', wc_dir)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'revert',
+                                                              '--recursive',
+                                                              wc_dir)
   check_reversion(files, output)
 
 
