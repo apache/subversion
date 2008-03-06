@@ -63,4 +63,11 @@ Candidate changes:
       +1: cmpilato (all but r29746)
       +1: pburba
 
+  * r29738, 29751
+    Allow 'log -g' to work in reverse order, and with --stop-on-copy.
+    Notes: While r29738 really isn't required (r29751 removes the line it
+      addes), it eliminates textual conflicts when mering r29751.
+    Votes:
+      +1: hwright
+
 Approved changes:
