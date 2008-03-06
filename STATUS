@@ -64,9 +64,3 @@ Candidate changes:
       +1: pburba
 
 Approved changes:
-
-  * r29672
-    Fix issue #3108, where the help for 'svn cl' indicated that a target path
-    was required, but the code didn't enforce such.
-    Votes:
-      +1: cmpilato, pburba
