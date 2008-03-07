@@ -239,7 +239,9 @@ const apr_getopt_option_t svn_cl__options[] =
   {"summarize",     opt_summarize, 0, N_("show a summary of the results")},
   {"remove",         opt_remove, 0, N_("remove changelist association")},
   {"changelist",    opt_changelist, 1,
-                    N_("operate only on members of changelist ARG")},
+                    N_("operate only on members of changelist ARG\n"
+                       "                             "
+                       "[aliases: --cl]")},
   {"keep-changelists", opt_keep_changelists, 0,
                     N_("don't delete changelists after commit")},
   {"keep-local",    opt_keep_local, 0, N_("keep path in working copy")},
@@ -272,6 +274,15 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("query a particular merge source URL")},
   {"reintegrate",   opt_reintegrate, 0,
                     N_("lump-merge all of source URL's unmerged changes")},
+
+  /* Long-opt Aliases
+   *
+   * These have NULL desriptions, but an option code that matches some
+   * other option (whose description should probably mention its aliases).
+  */
+
+  {"cl",            opt_changelist, 1, NULL},
+
   {0,               0, 0, 0},
 };
 

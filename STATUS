@@ -80,12 +80,6 @@ Approved changes:
     Votes:
       +1: kfogel (r29648, r29650, r29656), markphip, hwright (r29660)
 
-  * r29544
-    Poor man's long-option aliasing, introducing --cl as an alias for
-    --changelist.
-    Votes:
-      +1: cmpilato, kfogel
-
   * r29600, r29603
     Fix segfault in svnsync copy-revprops.
     Votes:

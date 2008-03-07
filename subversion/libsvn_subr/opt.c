@@ -242,7 +242,7 @@ print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
                                               cmd, pool);
 
               /* print the option's docstring */
-              if (option)
+              if (option && option->description)
                 {
                   const char *optstr;
                   svn_opt_format_option(&optstr, option, TRUE, pool);
@@ -268,7 +268,7 @@ print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
                                               cmd, pool);
               
               /* print the option's docstring */
-              if (option)
+              if (option && option->description)
                 {
                   const char *optstr;
                   svn_opt_format_option(&optstr, option, TRUE, pool);
@@ -345,7 +345,7 @@ print_command_info(const svn_opt_subcommand_desc_t *cmd,
                                              options_table);
 
               /* print the option's docstring */
-              if (option)
+              if (option && option->description)
                 {
                   const char *optstr;
                   svn_opt_format_option(&optstr, option, TRUE, pool);
