@@ -73,5 +73,12 @@ Candidate changes:
     Votes:
       +1: glasser (via dev mail)
 
+  * r29739, r29769, r29770
+    Bugfixes in svnmerge-migrate-history.py, preventing no-op commits
+    and dealing with syntax differences between svnmerge info and Subversion
+    mergeinfo.
+    Votes:
+      +1: cmpilato
+
 Approved changes:
 
