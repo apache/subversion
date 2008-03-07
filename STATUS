@@ -38,21 +38,6 @@ Candidate changes:
     Votes:
       +1: hwright
 
-  * r29742-r29744, r29746
-    Tweak 'svn merge's support for merged adds to better support merges
-    from foreign repositories.
-    Notes: 'svn merge' has sorta half-supported merges from foreign
-      repositories for a long time, but these changes may be the
-      difference between this support really counting and not.  I
-      believe this functionality would be extremely useful in vendor
-      branch maintenance scenarios.  r29742 contains an errantly
-      committed change.  r29743 is just the reversion of that errant
-      change.  r29744 adds a test.  r29746 is a minor code clarification
-      to r29472.
-    Votes:
-      +1: cmpilato (all but r29746)
-      +1: pburba
-
   * r29738, 29751
     Allow 'log -g' to work in reverse order, and with --stop-on-copy.
     Notes: While r29738 really isn't required (r29751 removes the line it
@@ -82,3 +67,16 @@ Candidate changes:
 
 Approved changes:
 
+  * r29742-r29744, r29746
+    Tweak 'svn merge's support for merged adds to better support merges
+    from foreign repositories.
+    Notes: 'svn merge' has sorta half-supported merges from foreign
+      repositories for a long time, but these changes may be the
+      difference between this support really counting and not.  I
+      believe this functionality would be extremely useful in vendor
+      branch maintenance scenarios.  r29742 contains an errantly
+      committed change.  r29743 is just the reversion of that errant
+      change.  r29744 adds a test.  r29746 is a minor code clarification
+      to r29472.
+    Votes:
+      +1: cmpilato, pburba
