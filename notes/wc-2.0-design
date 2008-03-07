@@ -1,0 +1,259 @@
+                                                                -*- Text -*-
+
+Content
+=======
+
+ * Context
+ * Requirements
+ * Non-goals
+ * Open items / discussion points
+ * Problems in wc-1.0
+ * Possible solutions
+ * Prerequisites for a good wc implementation
+ * Modularization
+ * Implementation proposals for
+   - meta data storage/access abstraction
+   - BASE tree storage/access abstraction
+   - WORKING tree storage/access abstraction
+   - TARGET & MERGE-END tree storage/access abstraction
+   - transactional manipulation API proposal
+   - delta-application algorithm
+      (in light of meta data, tree and textual conflicts)
+   - 
+
+
+Context
+=======
+
+The working copy library has traditionally been a complex piece of
+machinery and libsvn_wc-1.0 (wc-1.0 hereafter) was more a result of
+evolution than it was a result of design.  This can't be said to be
+anybody's fault as much as it was unawareness of the developers at
+the time with the problem(s) inherent to versioning trees instead of
+files (as was the usual context within CVS).  As a result, the WC
+has been one of the most fragile areas of the Subversion versioning
+model.
+
+The wc is where a large number of issues come together which can
+be considered separate issues in the remainder of the system, or
+don't have any effect on the rest of the system at all.  The following
+things come to mind:
+
+ * Different behaviours required by different use-cases (users)
+   For example: some users want mtime's at checkout time
+     to be the checkout time, some want it to be the historical
+     value at check-in time (and others want different variants).
+ * Different filesystems behave differently, yet Subversion
+   is a cross platform tool and tries to behave the same on all
+   filesystems (timestamp resolution may be an example of this).
+
+When considering the wc-1.0 design, one finds that there are a lot
+of situations where the exact state of the versioned tree isn't
+defined.  When explicitly considering which trees relate to the
+working copy at one time or another, the following trees can be
+found:
+
+ * BASE: The tree as it was in unmodified form
+ * WORKING: The tree as it is in modified form, based on the
+     administrative information recorded by the transforming
+     'svn ..' commands
+ * ACTUAL: The tree as it is in modified form on the local disk.
+    This tree may differ from WORKING when having been modified
+    with non-Subversion transforming commands (such as plain 'rm').
+
+In the context of the 'svn update' command:
+
+ * TARGET: The tree to which BASE is being updated and for
+     which the changes w.r.t. BASE are integrated into
+     WORKING and ACTUAL
+
+Additionaly, three more trees may be related to the working copy
+when considering the 'svn merge' command:
+
+ * START: The tree used as the base state for the 'merge' command
+ * END: The tree used as the ending state for the 'merge' command
+    The difference between these trees will be merged into the
+    WORKING and ACTUAL trees.
+ * MERGE-END: The tree in which the merge result has been integrated;
+    because 'merge' is an edit operation on the ACTUAL tree, this
+    is the updated ACTUAL tree
+
+
+Requirements
+============
+
+ * Developer sanity
+   From this requirement, a number of additional ones follow:
+    - Very explicit tree state management; clear difference between
+      each of the 5 states we may be looking at
+    - It must be "fun" to code wc-2.0 enhancements
+ * Speed
+   (Note: a trade off may be required for 'checkout' vs 'status' speed)
+ * Cross-node-type working copy changes
+ * Flexibility
+   The model should make it easy to support central vs local meta data
+   storage, time stamp behaviours, etc.
+ * Gracefull (defined) fallback for non-supported operations
+   When a checkout tries to create a symlink on an OS which supports
+   them, on a filesystem which doesn't, we should cope without
+   canceling the complete checkout.  Same for marking meta data read-only.
+ * Gracefully handle symlinks in relation to any special-handling of
+   files (don't special-handle symlinks!)
+ * Clear/reparable tree state
+   Other than our current loggy system, I mean here: "there is a command
+   by which the user can restart the command he/she last issued and
+   Subversion will help complete that command", which differs from our
+   loggy system in the way that it will return the working copy to a
+   defined (but to the user unknown) state.
+ * Transactional/ repairable tree state (with which I mean something
+   which achieves the same as our loggy system, but better).
+ * Case sensitive filesystem aware / resilient
+
+
+Non-goals
+=========
+
+ * Multiple users with a single working copy (aka shared working copy)
+ * Off-line commits
+ * Distributed VC
+
+Open items / discussion points
+==============================
+
+ * Files changed during the window "sent as part of commit" to
+    "post commit wc processing"; these are currently explicitly
+    supported. Do we want to keep this support (at the cost of speed)?
+
+
+Problems in wc-1.0
+==================
+
+ * There's no way to clear unused parts of the entries cache
+ * The code is littered with path calculations in order
+   to access different parts of the working copy (incl. admin areas)
+ * The code is littered with direct accesses to both wc files and
+   admin area files
+ * It's not always clear at which time log files are being proccessed
+   (ie transactions are being committed), meaning it's not always
+   clear at which version of a tree one is looking at: the pre or post
+   transformation versions...
+ * There's no support for nested transactions (even though some
+   functions want to start a new transaction, regardless whether one
+   was already started)
+ * It's very hard to determine when an action needs to be written
+   to a transaction or needs to be executed directly
+ * All code assumes local access to admin (meta)data
+ * The transaction system contains non-rerunable commands
+ * It's possible to generate combinations of commands, each of which
+   is rerunable, but the series isn't
+ * Long if() blocks to sort through all possible states of
+   WORKING, ACTUAL and BASE, without calling it that.
+ * Large if() blocks dealing with the difference between file and
+   directory nodes
+ * Many special-handling if()s for svn:special files
+ * Manipulation of paths, URLs and base-text paths in 1 function
+ * 'Switchedness' of subdirectories has to be derived from the
+   URLs of the parent and the child, but copied nodes also have
+   non-parent-child source URLs... (confusing)
+ * Duplication of data: a 'copied' boolean and a 'copy_source' URL field
+ * 
+
+Possible solutions
+==================
+
+
+Developer sanity
+----------------
+
+Strict separation between modules should help keep code focused at one
+task.  Probably some of the required user-specific behaviours can (and
+should) be hidden behind vtables; for example: setting the file stamp
+to the commit time, last recorded time or leaving it at the current time
+should be abstracted from.
+
+Access to 'text bases' is another one of these areas: most routines in
+wc-1.0 don't actually need access to a file (a stream would be fine as
+well), but since the files are there, availability is assumed.
+When abstracting all access into streams, the actual administration of
+the BASE tree can be abstracted from: for all we know the 'tree storage
+module' may be reading the stream directly off the repository server.
+[The only module in wc-1.0 which *requires* access to the files is
+the diff/merge library, because it rewinds to the start of the file
+during its processing; an operation not supported by streams...]
+
+
+
+Speed
+-----
+
+wc-1.0 assumes the WORKING tree and the ACTUAL tree match, but then
+goes out of its way to assure they actually do when deemed important.
+The result is a library which calls stat() a lot more often than need be.
+
+One of the possible improvements would be to make wc-2.0 read all of
+the ACTUAL state (concentrated at one place), keeping it around as
+long as required, matching it with the WORKING state before operating
+on either (not only when deemed important!).
+
+Working from the ACTUAL tree will also prove to be a step toward clarity
+regarding the exact tree which is being operated upon.
+
+
+Cross node type change representation
+-------------------------------------
+
+To be done
+
+Flexibility of metadata storage
+-------------------------------
+
+To be done
+
+Transaction duration / memory management
+----------------------------------------
+
+The current pool based memory management system is very good at managing
+memory in a transaction based processing model.  In the wc library, a
+'transaction' often spans more than one call into the library.  We either
+need a sane way to handle this kind of situation using pools, or we may
+need a different memory management strategy in wc-2.0.
+
+
+
+Prerequisites for a good wc implementation
+==========================================
+
+ * Well defined behaviour for cross-node type updates/merges/..
+   (tree conflicts in particular)
+ * Well defined behaviour for special file handling
+ * No special handling of symlinks: they are first class versioned objects
+ * Well defined behaviour for property changes on updates/merges/...
+   (this is a problem which may resemble tree conflicts!)
+ * Modularization
+
+
+
+Modularization
+==============
+
+Strict separation must be applied to a number of modules which can be
+recognised.  This will help prevent spaghetti code as in wc-1.0 where
+one piece of code manipulates paths to a working copy file, its URL
+*and* the path to the base file.
+
+For now, these modules can be separated:
+
+ - tree administration (required for BASE, TARGET and WORKING)
+ - tree access (required for BASE, WORKING, TARGET and ACTUAL)
+ - transactional modifications (required for tree manipulation/
+    transformation processes such as update or merge)
+ - delta-application (required for update/switch/merge updating
+    BASE, WORKING and ACTUAL), meaning all of tree changes, file
+    changes and metadata changes
+ - 
+
+
+Implementation proposals
+========================
+
+To be done
