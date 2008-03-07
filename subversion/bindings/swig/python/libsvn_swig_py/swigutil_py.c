@@ -672,9 +672,9 @@ static PyObject *convert_mergeinfo_hash(void *value, void *ctx,
   return svn_swig_py_mergeinfo_to_dict(value, ctx, py_pool);
 }
 
-PyObject *svn_swig_py_mergeinfo_hash_to_dict(apr_hash_t *hash,
-                                        swig_type_info *type,
-                                        PyObject *py_pool)
+PyObject *svn_swig_py_mergeinfo_catalog_to_dict(apr_hash_t *hash,
+                                                swig_type_info *type,
+                                                PyObject *py_pool)
 {
   return convert_hash(hash, convert_mergeinfo_hash, type, py_pool);
 }

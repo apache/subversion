@@ -36,11 +36,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r29611, r29630, r29631
-    Apply output typemaps for a few output parameters for 1.5 APIs.
-    Votes:
-      +1: hwright, cmpilato
-
   * r29642
     Make sure that "svnadmin upgrade" never leaves an FSFS repository in
     a broken state.
