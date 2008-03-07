@@ -16,8 +16,8 @@ Candidate changes:
 
  * r29531, r29533, r29542, r29551, r29607
    Improve memory usage and runtime of 'log -g'.
-   Notes: r29531, -33 are doc string changes to prevent textual conflicts.
-     with r29542.
+   Notes: r29531 and r29533 are doc string changes to prevent textual
+          conflicts with r29542.
    Votes:
      +1: hwright
 
@@ -25,7 +25,7 @@ Candidate changes:
     Poor man's long-option aliasing, introducing --cl as an alias for
     --changelist.
     Votes:
-      +1: cmpilato
+      +1: cmpilato, kfogel
 
   * r29581
     In ra_serf authentication, fix falling back from primary authentication
@@ -33,10 +33,10 @@ Candidate changes:
     Votes:
       +1: lgo
 
-  * r29600, 29603
+  * r29600, r29603
     Fix segfault in svnsync copy-revprops.
     Votes:
-      +1: epg
+      +1: epg, kfogel
 
   * r29613
     kou's commit message says it all: "The Ruby bindings:Re-support SWIG
