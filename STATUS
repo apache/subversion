@@ -34,6 +34,13 @@ Candidate changes:
     Votes:
       +1: hwright
 
+  * r29787
+    Fix a pool lifetime bug when hashing working mergeinfo that might
+    temporarily change during a merge only to be restored if the merge is
+    ultimately a no-op.
+    Votes:
+      +1: pburba
+
 Approved changes:
 
 
