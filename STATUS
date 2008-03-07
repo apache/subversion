@@ -28,12 +28,6 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
-  * r29763
-    Allow -c to take a comma-delimited revision list, cleaning up the syntax
-    for 'svn merge' a bit.
-    Votes:
-      +1: hwright
-
   * r29787
     Fix a pool lifetime bug when hashing working mergeinfo that might
     temporarily change during a merge only to be restored if the merge is
@@ -43,4 +37,8 @@ Candidate changes:
 
 Approved changes:
 
-
+  * r29763
+    Allow -c to take a comma-delimited revision list, cleaning up the syntax
+    for 'svn merge' a bit.
+    Votes:
+      +1: hwright, pburba
