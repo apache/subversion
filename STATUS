@@ -70,4 +70,28 @@ Candidate changes:
     Votes:
       +1: hwright
 
+  * r29642
+    Make sure that "svnadmin upgrade" never leaves an FSFS repository in
+    a broken state.
+    Votes:
+      +1: glasser (via dev mail)
+
+  * r29659, r29663, r29664
+    Fix error leaks in the svnserve Cyrus SASL implementation.
+    Votes:
+      +1: glasser (via dev mail)
+
+  * r29677, r29679, r29680
+    Fixes a bug where empty mergeinfo on a subtree of a merge target was
+    ignored when determining if a reintegrate merge is allowed. r29679
+    and r29680 are related test tweaks.
+    Votes:
+      +1: glasser (via dev mail)
+
+  * r29678
+    Follow-up to already backported r29625, fix a spurious getopt_tests.py
+    test failure when using SASL.
+    Votes:
+      +1: glasser (via dev mail)
+
 Approved changes:
