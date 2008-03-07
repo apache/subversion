@@ -36,10 +36,4 @@ Candidate changes:
 
 Approved changes:
 
-  * r29738, r29751
-    Allow 'log -g' to work in reverse order, and with --stop-on-copy.
-    Notes: While r29738 really isn't required (r29751 removes the line it
-      adds), it eliminates textual conflicts when merging r29751.
-    Votes:
-      +1: hwright, cmpilato
 

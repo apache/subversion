@@ -1115,16 +1115,38 @@ do_merged_logs(svn_fs_t *fs,
   if (limit == 0)
     use_limit = FALSE;
 
+  /* Find the our oldest revision is using strict node history */
+  iterpool = svn_pool_create(pool);
+  if (strict_node_history)
+    for (i = 0; i < paths->nelts; i++)
+      {
+        const char *path = APR_ARRAY_IDX(paths, i, const char *);
+        svn_revnum_t oldest;
+        svn_fs_root_t *copy_root, *rev_root;
+        const char *copy_path;
+
+        svn_pool_clear(iterpool);
+        SVN_ERR(svn_fs_revision_root(&rev_root, fs, hist_end, iterpool));
+        SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, rev_root, path,
+                                    iterpool));
+
+        if (copy_root != NULL)
+          {
+            oldest = svn_fs_revision_root_revision(copy_root) + 1;
+            hist_start = (oldest > hist_start ? oldest : hist_start);
+          }
+      }
+
   /* We only really care about revisions in which those paths were changed.
      So we ask the filesystem for all the revisions in which any of the
      paths was changed.  */
-  SVN_ERR(get_path_histories(&histories, fs, paths, 0, hist_end,
-                             strict_node_history, authz_read_func,
-                             authz_read_baton, pool));
+  SVN_ERR(get_path_histories(&histories, fs, paths,
+                             (mainline_run ? 0 : hist_start), hist_end,
+                             (mainline_run ? FALSE : strict_node_history),
+                             authz_read_func, authz_read_baton, pool));
 
   /* Loop through all the revisions in the range and add any
      where a path was changed to the array.  */
-  iterpool = svn_pool_create(pool);
   for (current = hist_end; any_histories_left;
        current = next_history_rev(histories))
     {
@@ -1144,8 +1166,10 @@ do_merged_logs(svn_fs_t *fs,
 
           /* Check history for this path in current rev. */
           SVN_ERR(check_history(&changed, info, fs, current,
-                                strict_node_history, authz_read_func,
-                                authz_read_baton, 0, pool));
+                                (mainline_run ? FALSE : strict_node_history),
+                                authz_read_func, authz_read_baton,
+                                (mainline_run ? 0 : hist_start),
+                                pool));
           if (! info->done)
             any_histories_left = TRUE;
         }
@@ -1190,7 +1214,12 @@ do_merged_logs(svn_fs_t *fs,
       svn_pool_clear(iterpool);
 
       if (rev < hist_start)
-        break;
+        {
+          if (descending_order)
+            break;
+          else
+            continue;
+        }
 
       SVN_ERR(send_log(rev, fs, discover_changed_paths, revprops,
                        has_children, receiver, receiver_baton, authz_read_func,
