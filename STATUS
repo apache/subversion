@@ -95,9 +95,3 @@ Approved changes:
     Fix error leaks in the svnserve Cyrus SASL implementation.
     Votes:
       +1: glasser (via dev mail), hwright
-
-  * r29678
-    Follow-up to already backported r29625, fix a spurious getopt_tests.py
-    test failure when using SASL.
-    Votes:
-      +1: glasser (via dev mail), hwright
