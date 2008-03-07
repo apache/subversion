@@ -28,6 +28,12 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
+  * r29763
+    Allow -c to take a comma-delimited revision list, cleaning up the syntax
+    for 'svn merge' a bit.
+    Votes:
+      +1: hwright
+
 Approved changes:
 
   * r29581
