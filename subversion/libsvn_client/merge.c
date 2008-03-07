@@ -813,8 +813,6 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
   merge_cmd_baton_t *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_node_kind_t kind;
-  const char *copyfrom_url;
-  const char *child;
   int i;
   apr_hash_t *new_props;
 
@@ -869,13 +867,24 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
           }
         if (! merge_b->dry_run)
           {
-            child = svn_path_is_child(merge_b->target, mine, subpool);
-            if (child != NULL)
-              copyfrom_url = svn_path_url_add_component(merge_b->url, child,
-                                                        subpool);
-            else
-              copyfrom_url = merge_b->url;
-            SVN_ERR(check_scheme_match(adm_access, copyfrom_url));
+            const char *copyfrom_url = NULL;
+            svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
+
+            /* If this is a merge from the same repository as our working copy,
+               we handle adds as add-with-history.  Otherwise, we'll use a pure
+               add. */
+            if (merge_b->same_repos)
+              {
+                const char *child = svn_path_is_child(merge_b->target, 
+                                                      mine, subpool);
+                if (child != NULL)
+                  copyfrom_url = svn_path_url_add_component(merge_b->url, 
+                                                            child, subpool);
+                else
+                  copyfrom_url = merge_b->url;
+                copyfrom_rev = rev2;
+                SVN_ERR(check_scheme_match(adm_access, copyfrom_url));
+              }
 
             /* Since 'mine' doesn't exist, and this is
                'merge_file_added', I hope it's safe to assume that
@@ -885,7 +894,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
                we had called 'svn cp wc wc'. */
             SVN_ERR(svn_wc_add_repos_file2(mine, adm_access, yours, NULL,
                                            new_props, NULL, copyfrom_url,
-                                           rev2, subpool));
+                                           copyfrom_rev, subpool));
           }
         if (content_state)
           *content_state = svn_wc_notify_state_changed;
@@ -1043,7 +1052,8 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_node_kind_t kind;
   const svn_wc_entry_t *entry;
-  const char *copyfrom_url, *child;
+  const char *copyfrom_url = NULL, *child;
+  svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
 
   /* Easy out:  if we have no adm_access for the parent directory,
      then this portion of the tree-delta "patch" must be inapplicable.
@@ -1065,8 +1075,16 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
 
   child = svn_path_is_child(merge_b->target, path, subpool);
   assert(child != NULL);
-  copyfrom_url = svn_path_url_add_component(merge_b->url, child, subpool);
-  SVN_ERR(check_scheme_match(adm_access, copyfrom_url));
+
+  /* If this is a merge from the same repository as our working copy,
+     we handle adds as add-with-history.  Otherwise, we'll use a pure
+     add. */
+  if (merge_b->same_repos)
+    {
+      copyfrom_url = svn_path_url_add_component(merge_b->url, child, subpool);
+      copyfrom_rev = rev;
+      SVN_ERR(check_scheme_match(adm_access, copyfrom_url));
+    }
 
   SVN_ERR(svn_io_check_path(path, &kind, subpool));
   switch (kind)
@@ -1087,7 +1105,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
         {
           SVN_ERR(svn_io_make_dir_recursively(path, subpool));
           SVN_ERR(svn_wc_add2(path, adm_access,
-                              copyfrom_url, rev,
+                              copyfrom_url, copyfrom_rev,
                               merge_b->ctx->cancel_func,
                               merge_b->ctx->cancel_baton,
                               NULL, NULL, /* don't pass notification func! */
@@ -1104,7 +1122,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
         {
           if (!merge_b->dry_run)
             SVN_ERR(svn_wc_add2(path, adm_access,
-                                copyfrom_url, rev,
+                                copyfrom_url, copyfrom_rev,
                                 merge_b->ctx->cancel_func,
                                 merge_b->ctx->cancel_baton,
                                 NULL, NULL, /* no notification func! */
