@@ -14,43 +14,6 @@ Status of 1.5.0:
 
 Candidate changes:
 
- * r29531, r29533, r29542, r29551, r29607
-   Improve memory usage and runtime of 'log -g'.
-   Notes: r29531 and r29533 are doc string changes to prevent textual
-          conflicts with r29542.
-   Votes:
-     +1: hwright
-
-  * r29581
-    In ra_serf authentication, fix falling back from primary authentication
-    scheme to secondary.
-    Votes:
-      +1: lgo
-
-  * r29613
-    kou's commit message says it all: "The Ruby bindings:Re-support SWIG
-    1.3.24 and 1.3.27"
-    Votes:
-      +1: joeswatosh
-
-  * r29611, r29630, r29631
-    Apply output typemaps for a few output parameters for 1.5 APIs.
-    Votes:
-      +1: hwright
-
-  * r29738, 29751
-    Allow 'log -g' to work in reverse order, and with --stop-on-copy.
-    Notes: While r29738 really isn't required (r29751 removes the line it
-      addes), it eliminates textual conflicts when mering r29751.
-    Votes:
-      +1: hwright
-
-  * r29642
-    Make sure that "svnadmin upgrade" never leaves an FSFS repository in
-    a broken state.
-    Votes:
-      +1: glasser (via dev mail)
-
   * r29677, r29679, r29680
     Fixes a bug where empty mergeinfo on a subtree of a merge target was
     ignored when determining if a reintegrate merge is allowed. r29679
@@ -66,4 +29,43 @@ Candidate changes:
       +1: cmpilato
 
 Approved changes:
+
+ * r29531, r29533, r29542, r29551, r29607
+   Improve memory usage and runtime of 'log -g'.
+   Notes: r29531 and r29533 are doc string changes to prevent textual
+          conflicts with r29542.
+   Votes:
+     +1: hwright, cmpilato
+
+  * r29581
+    In ra_serf authentication, fix falling back from primary authentication
+    scheme to secondary.
+    Votes:
+      +1: lgo
+      +0: cmpilato
+
+  * r29613
+    kou's commit message says it all: "The Ruby bindings:Re-support SWIG
+    1.3.24 and 1.3.27"
+    Votes:
+      +1: joeswatosh
+      +0: cmpilato
+
+  * r29611, r29630, r29631
+    Apply output typemaps for a few output parameters for 1.5 APIs.
+    Votes:
+      +1: hwright, cmpilato
+
+  * r29642
+    Make sure that "svnadmin upgrade" never leaves an FSFS repository in
+    a broken state.
+    Votes:
+      +1: glasser (via dev mail), cmpilato
+
+  * r29738, r29751
+    Allow 'log -g' to work in reverse order, and with --stop-on-copy.
+    Notes: While r29738 really isn't required (r29751 removes the line it
+      adds), it eliminates textual conflicts when merging r29751.
+    Votes:
+      +1: hwright, cmpilato
 
