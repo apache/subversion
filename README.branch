@@ -1,0 +1,102 @@
+This branch adds a simple in-memory cache library that handles
+annoying memory-management details for you.  FSFS has several
+hand-written caches already; this will reduce duplicate code and make
+it easier to add more.
+
+NULL is a legitimate value.  There is no cache_delete (but you can set
+to NULL, which may be good enough).
+
+Basic API:
+
+
+/** Dups @a in into @a *out, in @a pool. */
+typedef svn_error_t *(*svn_cache_dup_func_t)(void **out, void *in, apr_pool_t
+        *pool);
+
+typedef struct svn_cache_t svn_cache_t;
+
+svn_error_t *
+svn_cache_create(svn_cache_t **cache_p,
+                 svn_cache_dup_func_t dup,
+                 apr_ssize_t klen,
+                 int pages,
+                 int items_per_page,
+                 apr_pool_t *pool);
+
+Returns this struct:
+
+struct svn_cache_t {
+    apr_hash_t *hash; /* maps from key(klen) to cache_entry */
+    apr_ssize_t klen;
+    svn_cache_dup_func_t dup;
+    int unallocated_pages; /* initialized to 'pages' */
+    int items_per_page;
+    struct cache_page *sentinel;
+    struct cache_page *partial_page;
+    int partial_page_number_filled;
+    apr_pool_t *cache_pool;
+};
+
+struct cache_page {
+    struct cache_page *prev;
+    struct cache_page *next;
+    apr_pool_t *page_pool;
+    struct cache_entry *first_entry;
+};
+
+struct cache_entry {
+    void *key;
+    void *value;
+    struct cache_page *page;
+};
+
+svn_error_t *
+svn_cache_get(void **value,
+              svn_boolean_t *found,
+              svn_cache_t *cache,
+              void *key,
+              apr_pool_t *pool);
+- look up key in cache->hash using cache->klen, getting ce
+  - if NULL, return found=false
+  - if ce->cache_page->next is not NULL (ie, not partial page), move
+       ce->cache_page to head of list
+  - return ce->value dup'd in pool with cache->dup, found=true
+
+svn_error_t *
+svn_cache_set(svn_cache_t *cache,
+              void *key,
+              void *value,
+              apr_pool_t *pool);
+- look up key in cache->hash using cache->klen, getting ce
+- if ce is not NULL:
+  - if ce->cache_page->next is not NULL, move page to head of list
+  - replace ce->value with value, dup'd in the page pool.  (yes, this
+    is a memleak.  in the corner case where items_per_page=1, refresh
+    the pool first.  in general, don't call svn_cache_set multiple
+    times unleass absolutely necessary...)
+- if cache->partial_page is NULL but cache->unallocated_pages > 0:
+  - allocate cache->partial_page in cache->cache_pool; set its
+    pointers to 0 and its page_pool to a new subpool of cache_pool
+  - set cache->partial_page_number_filled to 0
+  - decrement cache->unallocated_pages
+  - my_page = cache->partial_page
+- if cache->partial_page is NULL:
+  - remove the last page from the LRU list
+  - walk down the linked list at its first_entry, removing each listed
+    element from cache->hash
+  - clear its page_pool
+  - store it in cache->partial_page and set
+    cache->partial_page_number_filled to 0
+  - my_page = cache->partial_page
+- if cache->partial_page is not NULL:
+  - my_page = cache->partial_page
+  - increment cache->partial_page_number_filled
+  - if cache->partial_page_number_filled == cache->items_per_page:
+    - add cache->partial_page to the head of the list
+    - set cache->partial_page to NULL
+- allocate cache_entry ce in my_page->page_pool
+- ce->page = my_page
+- dup value into ce->value in my_page->page_pool
+- dup key into ce->key in my_page->page pool and use it with cache->hash
+  pointing to ce
+- add ce to the front of my_page->first_entry
