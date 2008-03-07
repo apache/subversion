@@ -205,20 +205,13 @@ class Migrator:
         if len(pieces) != 2:
           continue
         pieces[0] = urllib.unquote(pieces[0])
-        print "PIECES = " + str(pieces)
         svnmerge_prop_val = svnmerge_prop_val + '%s\n' % (':'.join(pieces))
 
       # If there is Subversion mergeinfo to merge with, do so.
       # Otherwise, our svnmerge info simply becomes our new mergeinfo.
       if mergeinfo_prop_val:
         mergeinfo = svn.core.svn_mergeinfo_parse(mergeinfo_prop_val)
-        for key, val in mergeinfo.items():
-          print "ORIG_MERGEINFO(%s) = %s" \
-                % (key, map(lambda x: "(%d, %d)" % (x.start, x.end), val))
         to_migrate = svn.core.svn_mergeinfo_parse(svnmerge_prop_val)
-        for key, val in to_migrate.items():
-          print "MERGED_MERGEINFO(%s) = %s" \
-                % (key, map(lambda x: "(%d, %d)" % (x.start, x.end), val))
         mergeinfo_prop_val = svn.core.svn_mergeinfo_to_string(
           svn.core.svn_mergeinfo_merge(mergeinfo, to_migrate))
       else:
