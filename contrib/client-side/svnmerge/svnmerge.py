@@ -756,7 +756,7 @@ def set_blocked_revs(dir, source_pathid, revs):
 
 def is_url(url):
     """Check if url is a valid url."""
-    return re.search(r"^[a-zA-Z][-+\.\w]*://", url) is not None
+    return re.search(r"^[a-zA-Z][-+\.\w]*://[^\s]+$", url) is not None
 
 def is_wc(dir):
     """Check if a directory is a working copy."""
