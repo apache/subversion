@@ -160,9 +160,9 @@ class Migrator:
       if new_mergeinfo_prop_val != mergeinfo_prop_val:
         if self.verbose:
           print "Queuing change of %s to '%s'" % \
-                (svn.core.SVN_PROP_MERGEINFO, mergeinfo_prop_val)
+                (svn.core.SVN_PROP_MERGEINFO, new_mergeinfo_prop_val)
         svn.fs.change_node_prop(root, path, svn.core.SVN_PROP_MERGEINFO,
-                                mergeinfo_prop_val)
+                                new_mergeinfo_prop_val)
 
       # Remove old property values.
       if integrated_prop_val is not None:
