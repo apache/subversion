@@ -26,6 +26,12 @@ Candidate changes:
    Votes:
      +1: hwright
 
+  * r29544
+    Poor man's long-option aliasing, introducing --cl as an alias for
+    --changelist.
+    Votes:
+      +1: cmpilato
+
   * r29581
     In ra_serf authentication, fix falling back from primary authentication
     scheme to secondary.
