@@ -36,9 +36,3 @@ Candidate changes:
       +1: pburba
 
 Approved changes:
-
-  * r29763
-    Allow -c to take a comma-delimited revision list, cleaning up the syntax
-    for 'svn merge' a bit.
-    Votes:
-      +1: hwright, pburba

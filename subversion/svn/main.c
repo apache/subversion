@@ -1192,41 +1192,47 @@ main(int argc, const char *argv[])
                  _("Can't specify -c with --old"));
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
-          changeno = strtol(opt_arg, &end, 10);
-          if (end == opt_arg || *end != '\0')
-            {
-              err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                     _("Non-numeric change argument "
-                                       "given to -c"));
-              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-            }
-          if (changeno == 0)
-            {
-              err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                     _("There is no change 0"));
-              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-            }
 
-          /* Figure out the range:
-                -c N  -> -r N-1:N
-                -c -N -> -r N:N-1 */
-          range = apr_palloc(pool, sizeof(*range));
-          if (changeno > 0)
+          do
             {
-              range->start.value.number = changeno - 1;
-              range->end.value.number = changeno;
-            }
-          else
-            {
-              changeno = -changeno;
-              range->start.value.number = changeno;
-              range->end.value.number = changeno - 1;
-            }
-          opt_state.used_change_arg = TRUE;
-          range->start.kind = svn_opt_revision_number;
-          range->end.kind = svn_opt_revision_number;
-          APR_ARRAY_PUSH(opt_state.revision_ranges,
-                         svn_opt_revision_range_t *) = range;
+              changeno = strtol(opt_arg, &end, 10);
+              if (end == opt_arg || !(*end == '\0' || *end == ',') )
+                {
+                  err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                         _("Non-numeric change argument "
+                                           "given to -c"));
+                  return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+                }
+
+              if (changeno == 0)
+                {
+                  err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                         _("There is no change 0"));
+                  return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+                }
+              opt_arg = end + 1;
+
+              /* Figure out the range:
+                    -c N  -> -r N-1:N
+                    -c -N -> -r N:N-1 */
+              range = apr_palloc(pool, sizeof(*range));
+              if (changeno > 0)
+                {
+                  range->start.value.number = changeno - 1;
+                  range->end.value.number = changeno;
+                }
+              else
+                {
+                  changeno = -changeno;
+                  range->start.value.number = changeno;
+                  range->end.value.number = changeno - 1;
+                }
+              opt_state.used_change_arg = TRUE;
+              range->start.kind = svn_opt_revision_number;
+              range->end.kind = svn_opt_revision_number;
+              APR_ARRAY_PUSH(opt_state.revision_ranges,
+                             svn_opt_revision_range_t *) = range;
+            } while (*end != '\0');
         }
         break;
       case 'r':
