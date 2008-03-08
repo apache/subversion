@@ -91,8 +91,10 @@ Requirements
    (Note: a trade off may be required for 'checkout' vs 'status' speed)
  * Cross-node-type working copy changes
  * Flexibility
-   The model should make it easy to support central vs local meta data
-   storage, time stamp behaviours, etc.
+   The model should make it easy to support
+     - central vs local meta data storage
+     - time stamp behaviours
+     - .svn-less working copy subtrees
  * Gracefull (defined) fallback for non-supported operations
    When a checkout tries to create a symlink on an OS which supports
    them, on a filesystem which doesn't, we should cope without
@@ -108,7 +110,8 @@ Requirements
  * Transactional/ repairable tree state (with which I mean something
    which achieves the same as our loggy system, but better).
  * Case sensitive filesystem aware / resilient
-
+ * Working copy stability; a number of scenario's with switch and
+   update obstructions used to leave the working copy unrecoverable
 
 Non-goals
 =========
@@ -123,6 +126,10 @@ Open items / discussion points
  * Files changed during the window "sent as part of commit" to
     "post commit wc processing"; these are currently explicitly
     supported. Do we want to keep this support (at the cost of speed)?
+ * Single working copy lock. Should we have one lock which locks the
+    entire working copy, disabling any parallel actions on disjoint
+    parts of the working copy?
+ * 
 
 
 Problems in wc-1.0
@@ -156,7 +163,14 @@ Problems in wc-1.0
    URLs of the parent and the child, but copied nodes also have
    non-parent-child source URLs... (confusing)
  * Duplication of data: a 'copied' boolean and a 'copy_source' URL field
- * 
+ * Checkouts fail when checking out files of different casing to a case
+   insensitive filesystem
+ * Checkouts fail when marking working copy admin data as read-only
+   is a non-supported FS operation (VFAT or Samba mounts on Linux have
+   this behaviour)
+ * Obstructed updates leave operations half done; in case of a switch,
+   it's not always possible to switch back (because the switch itself
+   may have left now-unversioned items behind)
 
 Possible solutions
 ==================
@@ -179,7 +193,13 @@ the BASE tree can be abstracted from: for all we know the 'tree storage
 module' may be reading the stream directly off the repository server.
 [The only module in wc-1.0 which *requires* access to the files is
 the diff/merge library, because it rewinds to the start of the file
-during its processing; an operation not supported by streams...]
+during its processing; an operation not supported by streams... and even
+then, if these routines are passed file handles, they'll be quite
+happy, meaning they still don't need to know where the text base /
+source file is...]
+
+In order to keep developers sane, at should be extremely clear at any
+one time - when operating on a tree - which tree is being operated upon.
 
 
 
@@ -197,6 +217,12 @@ on either (not only when deemed important!).
 
 Working from the ACTUAL tree will also prove to be a step toward clarity
 regarding the exact tree which is being operated upon.
+
+[This suggestion from wc-improvements also applies to wc-ng:]
+Most operations are I/O bound and have CPU to spare.  Consider the virtue
+of compressed text bases in order to reduce the amount of I/O required.
+
+
 
 
 Cross node type change representation
@@ -218,6 +244,18 @@ memory in a transaction based processing model.  In the wc library, a
 need a sane way to handle this kind of situation using pools, or we may
 need a different memory management strategy in wc-ng.
 
+Working copy stability
+----------------------
+
+In light of obstructed updates it may not always be desirable to be able
+to resume the current operation (as currently is the case): in some cases
+the user may want to abort the operation, in other cases the user may
+want to resolve the obstruction before re-executing the operation.
+
+The solution to this problem could be 'atomic updates': receiving the
+full working copy transformation, verifying prerequisites, creating
+replacement files and directories and when all that succeeds, update
+the working copy.
 
 
 Prerequisites for a good wc implementation
@@ -229,6 +267,13 @@ Prerequisites for a good wc implementation
  * No special handling of symlinks: they are first class versioned objects
  * Well defined behaviour for property changes on updates/merges/...
    (this is a problem which may resemble tree conflicts!)
+ * File name manipulation routines (availability)
+ * File name comparison routines (!) (availability; which compensate
+     for the different ways Unicode characters can be represented
+     [re: NFC/NFD Unicode issue])
+ * URL manipulation routines (availability)
+ * URL comparison routines (availability; which compensate for
+     different ways the same URL can be encoded)
  * Modularization
 
 
