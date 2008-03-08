@@ -57,15 +57,22 @@ found:
  * WORKING: The tree as it is in modified form, based on the
      administrative information recorded by the transforming
      'svn ..' commands
+     Note: This tree will -as far as text bases goes- generally
+           overlap with BASE, but isn't required to;
+           e.g. "add-with-history"
  * ACTUAL: The tree as it is in modified form on the local disk.
     This tree may differ from WORKING when having been modified
     with non-Subversion transforming commands (such as plain 'rm').
 
 In the context of the 'svn update' command:
 
- * TARGET: The tree to which BASE is being updated and for
+ * BASE-TARGET: The tree to which BASE is being updated and for
      which the changes w.r.t. BASE are integrated into
      WORKING and ACTUAL
+ * WORKING-TARGET, ACTUAL-TARGET: Trees in which the above mentioned
+     changes have been integrated, but which haven't "gone live" yet;
+     these trees generally represent "in transition" or "intermediary"
+     state with the intent to become the final tree.
 
 Additionaly, three more trees may be related to the working copy
 when considering the 'svn merge' command:
@@ -74,9 +81,12 @@ when considering the 'svn merge' command:
  * END: The tree used as the ending state for the 'merge' command
     The difference between these trees will be merged into the
     WORKING and ACTUAL trees.
- * MERGE-END: The tree in which the merge result has been integrated;
-    because 'merge' is an edit operation on the ACTUAL tree, this
-    is the updated ACTUAL tree
+
+Please note that the WORKING-TARGET and ACTUAL-TARGET trees also
+apply to 'svn merge' as they can result in 'add with history' schedules,
+which will place text bases in the WORKING-TARGET tree.  Also note
+that -since merge is by definition an 'edit' operation- the BASE and
+BASE-TARGET trees are not concerned with a merge.
 
 
 Requirements
@@ -129,7 +139,8 @@ Open items / discussion points
  * Single working copy lock. Should we have one lock which locks the
     entire working copy, disabling any parallel actions on disjoint
     parts of the working copy?
- * 
+ * Meta data physical read-only marking (as in wc-1.0). Is it still
+    required, or should it become advisory (ie ignore errors on failure)?
 
 
 Problems in wc-1.0
