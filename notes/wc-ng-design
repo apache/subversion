@@ -86,7 +86,7 @@ Requirements
    From this requirement, a number of additional ones follow:
     - Very explicit tree state management; clear difference between
       each of the 5 states we may be looking at
-    - It must be "fun" to code wc-2.0 enhancements
+    - It must be "fun" to code wc-ng enhancements
  * Speed
    (Note: a trade off may be required for 'checkout' vs 'status' speed)
  * Cross-node-type working copy changes
@@ -190,7 +190,7 @@ wc-1.0 assumes the WORKING tree and the ACTUAL tree match, but then
 goes out of its way to assure they actually do when deemed important.
 The result is a library which calls stat() a lot more often than need be.
 
-One of the possible improvements would be to make wc-2.0 read all of
+One of the possible improvements would be to make wc-ng read all of
 the ACTUAL state (concentrated at one place), keeping it around as
 long as required, matching it with the WORKING state before operating
 on either (not only when deemed important!).
@@ -216,7 +216,7 @@ The current pool based memory management system is very good at managing
 memory in a transaction based processing model.  In the wc library, a
 'transaction' often spans more than one call into the library.  We either
 need a sane way to handle this kind of situation using pools, or we may
-need a different memory management strategy in wc-2.0.
+need a different memory management strategy in wc-ng.
 
 
 
