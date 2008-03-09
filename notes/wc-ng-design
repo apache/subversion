@@ -82,6 +82,9 @@ when considering the 'svn merge' command:
     The difference between these trees will be merged into the
     WORKING and ACTUAL trees.
 
+In the following example 10 == START and 15 == END:
+  $ svn merge -r10:15 http://svn.example.com/svn/ .
+
 Please note that the WORKING-TARGET and ACTUAL-TARGET trees also
 apply to 'svn merge' as they can result in 'add with history' schedules,
 which will place text bases in the WORKING-TARGET tree.  Also note
@@ -122,6 +125,8 @@ Requirements
  * Case sensitive filesystem aware / resilient
  * Working copy stability; a number of scenario's with switch and
    update obstructions used to leave the working copy unrecoverable
+ * Client side 'true renames' support where one side can't be committed
+   without the other
 
 Non-goals
 =========
@@ -141,6 +146,8 @@ Open items / discussion points
     parts of the working copy?
  * Meta data physical read-only marking (as in wc-1.0). Is it still
     required, or should it become advisory (ie ignore errors on failure)?
+ * Is issue #1599 a real use-case we need to address?
+    (Loosing and regaining authz access with updates in between)
 
 
 Problems in wc-1.0
@@ -275,6 +282,8 @@ Prerequisites for a good wc implementation
  * Well defined behaviour for cross-node type updates/merges/..
    (tree conflicts in particular)
  * Well defined behaviour for special file handling
+ * Well defined behaviour for operations on locally missing items
+     (see issue #1082)
  * No special handling of symlinks: they are first class versioned objects
  * Well defined behaviour for property changes on updates/merges/...
    (this is a problem which may resemble tree conflicts!)
@@ -284,7 +293,7 @@ Prerequisites for a good wc implementation
      [re: NFC/NFD Unicode issue])
  * URL manipulation routines (availability)
  * URL comparison routines (availability; which compensate for
-     different ways the same URL can be encoded)
+     different ways the same URL can be encoded; see issue #2490)
  * Modularization
 
 
