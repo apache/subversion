@@ -94,6 +94,12 @@ LOG_LINE_PREFIX = 2 * ' '
 # the locale to match that encoding
 locale.setlocale(locale.LC_ALL, '')
 
+# We want the svn output (such as svn info) to be non-localized
+# Using LC_MESSAGES should not affect localized output of svn log, for example
+if os.environ.has_key("LC_ALL"):
+    del os.environ["LC_ALL"]
+os.environ["LC_MESSAGES"] = "C"
+
 ###############################################################################
 # Support for older Python versions
 ###############################################################################
