@@ -131,7 +131,8 @@ Requirements
    without the other (relates to issue #876)
  * Change detection should become entirely internal to libsvn_wc (referring
    to the fact that libsvn_client currently calls svn_wait_for_timestamps()),
-   even though under 'use-commit-times=yes', this waiting is completely useless.
+   even though under 'use-commit-times=yes', this waiting is
+   completely useless.
  * Last-modified recording as a preparation for solving issue #1256 and
    as defined in this mail, also linked from the issue:
    http://svn.haxx.se/dev/archive-2006-10/0193.shtml
@@ -202,8 +203,8 @@ Problems in wc-1.0
  * Directories which have their own children merged into them (which happens
    when merging a directory-add) won't correctly fold the children into
    schedule==normal, but instead leave them as schedule==add, resulting in
-   a double commit (through HTTP, other RA layers fold the double add, but that's
-   not the point) [see issue #1962]
+   a double commit (through HTTP, other RA layers fold the double add, but
+   that's not the point) [see issue #1962]
 
 Possible solutions
 ==================
@@ -406,7 +407,8 @@ the following would end up being the BASE administration:
 
 And these would end up in WORKING:
 
-- name (if this one differs from BASE, it must point to the source of a rename)
+- name (if this one differs from BASE,
+          it must point to the source of a rename)
 - revision (for an add-with-history)
 - url (for an add-with-history)
 - repos (or can we assume single-repository working copies?)
@@ -430,16 +432,17 @@ And these would end up in WORKING:
 - has_prop_mods
 - changelist
 
-Note that some fields haven't been classified and some have been classified both ways.
-As for the ones which haven't been classified, these can be deduced from the difference
-between the BASE and WORKING or WORKING and ACTUAL trees (schedule, copied, deleted).
+Note that some fields haven't been classified and some have been classified
+both ways.  As for the ones which haven't been classified, these can be
+deduced from the difference between the BASE and WORKING or WORKING and
+ACTUAL trees (schedule, copied, deleted).
 
-'incomplete' should become obsolete when the goal of 'atomic updates' can be realised,
-in which case the tree won't be in an incomplete yet locked state.  This would also
-invalidate issue #1879.
+'incomplete' should become obsolete when the goal of 'atomic updates' can be
+realised, in which case the tree won't be in an incomplete yet locked state.
+This would also invalidate issue #1879.
 
-The following fields are implementation details of internal detection mechanisms, which
-means they don't belong in the public interface:
+The following fields are implementation details of internal detection
+mechanisms, which means they don't belong in the public interface:
 
 - text_time
 - text_size
