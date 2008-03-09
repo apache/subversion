@@ -108,7 +108,7 @@ Requirements
  * Flexibility
    The model should make it easy to support
      - central vs local meta data storage
-     - time stamp behaviours
+     - Last modified time stamp behaviours
      - .svn-less working copy subtrees
  * Gracefull (defined) fallback for non-supported operations
    When a checkout tries to create a symlink on an OS which supports
@@ -128,9 +128,15 @@ Requirements
  * Working copy stability; a number of scenario's with switch and
    update obstructions used to leave the working copy unrecoverable
  * Client side 'true renames' support where one side can't be committed
-   without the other
+   without the other (relates to issue #876)
  * Change detection should become entirely internal to libsvn_wc (referring
-   to the fact that libsvn_client currently calls svn_wait_for_timestamps())
+   to the fact that libsvn_client currently calls svn_wait_for_timestamps()),
+   even though under 'use-commit-times=yes', this waiting is completely useless.
+ * Last-modified recording as a preparation for solving issue #1256 and
+   as defined in this mail, also linked from the issue:
+   http://svn.haxx.se/dev/archive-2006-10/0193.shtml
+ * 
+
 
 Non-goals
 =========
@@ -193,6 +199,11 @@ Problems in wc-1.0
  * Obstructed updates leave operations half done; in case of a switch,
    it's not always possible to switch back (because the switch itself
    may have left now-unversioned items behind)
+ * Directories which have their own children merged into them (which happens
+   when merging a directory-add) won't correctly fold the children into
+   schedule==normal, but instead leave them as schedule==add, resulting in
+   a double commit (through HTTP, other RA layers fold the double add, but that's
+   not the point) [see issue #1962]
 
 Possible solutions
 ==================
@@ -316,6 +327,8 @@ Prerequisites for a good wc implementation
  * Well defined behaviour for special file handling
  * Well defined behaviour for operations on locally missing items
      (see issue #1082)
+ * Well defined change detection scheme for each of the different
+     last-modified handling strategies
  * No special handling of symlinks: they are first class versioned objects
  * Well defined behaviour for property changes on updates/merges/...
    (this is a problem which may resemble tree conflicts!)
@@ -327,7 +340,10 @@ Prerequisites for a good wc implementation
  * URL comparison routines (availability; which compensate for
      different ways the same URL can be encoded; see issue #2490)
  * Modularization
-
+ * Agree on a UI to pull in other parts of the same repository
+   (NOT svn:externals) [relates to issue #1167]
+ * Agree on behaviour for update on moved items (relates to issue #1736)
+ * Case-sensitivity detection code to probe working copy filesystem
 
 
 Modularization
@@ -415,7 +431,8 @@ As for the ones which haven't been classified, these can be deduced from the dif
 between the BASE and WORKING or WORKING and ACTUAL trees (schedule, copied, deleted).
 
 'incomplete' should become obsolete when the goal of 'atomic updates' can be realised,
-in which case the tree won't be in an incomplete yet locked state.
+in which case the tree won't be in an incomplete yet locked state.  This would also
+invalidate issue #1879.
 
 The following fields are implementation details of internal detection mechanisms, which
 means they don't belong in the public interface:
