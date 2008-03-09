@@ -92,6 +92,8 @@ that -since merge is by definition an 'edit' operation- the BASE and
 BASE-TARGET trees are not concerned with a merge.
 
 
+
+
 Requirements
 ============
 
@@ -127,6 +129,8 @@ Requirements
    update obstructions used to leave the working copy unrecoverable
  * Client side 'true renames' support where one side can't be committed
    without the other
+ * Change detection should become entirely internal to libsvn_wc (referring
+   to the fact that libsvn_client currently calls svn_wait_for_timestamps())
 
 Non-goals
 =========
@@ -349,4 +353,81 @@ For now, these modules can be separated:
 Implementation proposals
 ========================
 
-To be done
+Classification of svn_wc_entry_t fields to BASE/WORKING
+-------------------------------------------------------
+
+[Note: This section is mainly to clarify the difference between the BASE
+and WORKING trees, it's not here to mean that we actually need all these
+fields in wc-ng!]
+
+When mapping all fields from svn_wc_entry_t to the BASE and WORKING trees,
+the following would end up being the BASE administration:
+
+- name
+- absent
+- revision
+- url
+- repos
+- uuid
+- kind (node kind)
+- checksum
+- cmt_rev
+- cmt_date
+- cmt_author
+- has_props
+- depth
+- cacheable_props (why is this a field at all; can't the WC code know?)
+- present_props
+- lock_token (locks apply to in-repository paths, hence BASE)
+- lock_owner
+- lock_comment
+- lock_creation_date
+- has_props
+
+And these would end up in WORKING:
+
+- name (if this one differs from BASE, it must point to the source of a rename)
+- revision (for an add-with-history)
+- url (for an add-with-history)
+- repos (or can we assume single-repository working copies?)
+- uuid (or can we assume single-repository working copies?)
+- kind
+- depth
+- checksum (for an add-with-history)
+- cmt_rev (for an add-with-history)
+- cmt_date (for an add-with-history)
+- cmt_author (for an add-with-history)
+- conflict_old
+- conflict_new
+- conflict_wrk
+- prejfile
+- text_time
+- text_size
+- prop_time
+- has_props (can differ from BASE for add-with-history)
+- present_props (can differ from BASE for add-with-history)
+- cacheable_props (can differ from BASE for add-with-history)
+- has_prop_mods
+- changelist
+
+Note that some fields haven't been classified and some have been classified both ways.
+As for the ones which haven't been classified, these can be deduced from the difference
+between the BASE and WORKING or WORKING and ACTUAL trees (schedule, copied, deleted).
+
+'incomplete' should become obsolete when the goal of 'atomic updates' can be realised,
+in which case the tree won't be in an incomplete yet locked state.
+
+The following fields are implementation details of internal detection mechanisms, which
+means they don't belong in the public interface:
+
+- text_time
+- text_size
+- prop_time
+- has_prop_mods
+- keep_local
+
+
+
+Other sections
+--------------
+ remain to be done
