@@ -36,7 +36,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.5.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2008-03-09 15:31+0800\n"
+"POT-Creation-Date: 2008-03-09 16:01+0800\n"
 "PO-Revision-Date: 2008-03-09 15:37+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
@@ -790,7 +790,7 @@ msgstr "没有受版本控制的父目录"
 
 #: ../include/svn_error_codes.h:1024
 msgid "Working copy and merge source not ready for reintegration"
-msgstr "工作副本与合并来源没有准备好重新集成"
+msgstr "工作副本与合并来源没有准备好复兴"
 
 #: ../include/svn_error_codes.h:1030
 msgid "A problem occurred; see later errors for details"
@@ -1480,15 +1480,15 @@ msgstr "使用两个 URL 与合并信息修改不兼容"
 
 #: ../libsvn_client/merge.c:5340
 msgid "Cannot reintegrate into a working copy with a switched subtree"
-msgstr "不能重新集成到包含已经切换子目录的工作副本"
+msgstr "不能复兴到包含已经切换子目录的工作副本"
 
 #: ../libsvn_client/merge.c:5345
 msgid "Cannot reintegrate into a working copy not entirely at infinite depth"
-msgstr "不能重新集成到非全部无限制深度的工作副本"
+msgstr "不能复兴到非全部无限制深度的工作副本"
 
 #: ../libsvn_client/merge.c:5350
 msgid "Cannot reintegrate into a working copy that has local modifications"
-msgstr "不能重新集成到有本地修改的工作副本"
+msgstr "不能复兴到有本地修改的工作副本"
 
 #: ../libsvn_client/merge.c:5356
 msgid "Cannot determine revision of working copy"
@@ -1496,7 +1496,7 @@ msgstr "不能确定工作副本的版本"
 
 #: ../libsvn_client/merge.c:5360
 msgid "Cannot reintegrate into mixed-revision working copy; try updating first"
-msgstr "不能重新集成到有混合版本的工作副本；请先更新"
+msgstr "不能复兴到有混合版本的工作副本；请先更新"
 
 #: ../libsvn_client/merge.c:5427
 #, c-format
