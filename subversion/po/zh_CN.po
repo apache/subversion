@@ -15,6 +15,7 @@
 # Dictionary:
 # BASE revision     基础版本
 # blame             追溯
+# branch            分枝
 # checkout          检出
 # default           默认
 # HEAD revision     最新版本
@@ -35,8 +36,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.5.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2008-03-03 16:35+0800\n"
-"PO-Revision-Date: 2008-03-03 15:32+0800\n"
+"POT-Creation-Date: 2008-03-09 15:31+0800\n"
+"PO-Revision-Date: 2008-03-09 15:37+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1275,8 +1276,8 @@ msgstr "%s\t（工作副本）"
 msgid "Cannot display: file marked as a binary type.%s"
 msgstr "无法显示: 文件标记为二进制类型。%s"
 
-#: ../libsvn_client/diff.c:894 ../libsvn_client/merge.c:3754
-#: ../libsvn_client/merge.c:5073
+#: ../libsvn_client/diff.c:894 ../libsvn_client/merge.c:3776
+#: ../libsvn_client/merge.c:5096
 msgid "Not all required revisions are specified"
 msgstr "没有全部提供需要的版本"
 
@@ -1381,9 +1382,9 @@ msgstr "该版本没有 URL “%s”"
 msgid "No common parent found, unable to operate on disjoint arguments"
 msgstr "没有找到公共父节点，不能在分离的参数上操作"
 
-#: ../libsvn_client/locking_commands.c:261 ../libsvn_client/merge.c:5090
-#: ../libsvn_client/merge.c:5096 ../libsvn_client/merge.c:5650
-#: ../libsvn_client/merge.c:5806 ../libsvn_client/ra.c:386
+#: ../libsvn_client/locking_commands.c:261 ../libsvn_client/merge.c:5113
+#: ../libsvn_client/merge.c:5119 ../libsvn_client/merge.c:5673
+#: ../libsvn_client/merge.c:5829 ../libsvn_client/ra.c:386
 #: ../libsvn_client/ra.c:423 ../libsvn_client/ra.c:626
 #, c-format
 msgid "'%s' has no URL"
@@ -1458,11 +1459,11 @@ msgstr ".merge-left.r%ld"
 msgid ".merge-right.r%ld"
 msgstr ".merge-right.r%ld"
 
-#: ../libsvn_client/merge.c:1649
+#: ../libsvn_client/merge.c:1667
 msgid "Cannot reverse-merge a range from a path's own future history; try updating first"
 msgstr "不能从路径的未来历史中反向合并范围；请先更新"
 
-#: ../libsvn_client/merge.c:2180
+#: ../libsvn_client/merge.c:2200
 #, c-format
 msgid ""
 "One or more conflicts were produced while merging r%ld:%ld into\n"
@@ -1473,41 +1474,41 @@ msgstr ""
 "当合并 r%ld:%ld 到 “%s” 时出现了一个或更多的冲突\n"
 "请解决所有冲突后，再次运行合并，处理剩余的未合并版本"
 
-#: ../libsvn_client/merge.c:4741
+#: ../libsvn_client/merge.c:4764
 msgid "Use of two URLs is not compatible with mergeinfo modification"
 msgstr "使用两个 URL 与合并信息修改不兼容"
 
-#: ../libsvn_client/merge.c:5317
+#: ../libsvn_client/merge.c:5340
 msgid "Cannot reintegrate into a working copy with a switched subtree"
 msgstr "不能重新集成到包含已经切换子目录的工作副本"
 
-#: ../libsvn_client/merge.c:5322
+#: ../libsvn_client/merge.c:5345
 msgid "Cannot reintegrate into a working copy not entirely at infinite depth"
 msgstr "不能重新集成到非全部无限制深度的工作副本"
 
-#: ../libsvn_client/merge.c:5327
+#: ../libsvn_client/merge.c:5350
 msgid "Cannot reintegrate into a working copy that has local modifications"
 msgstr "不能重新集成到有本地修改的工作副本"
 
-#: ../libsvn_client/merge.c:5333
+#: ../libsvn_client/merge.c:5356
 msgid "Cannot determine revision of working copy"
 msgstr "不能确定工作副本的版本"
 
-#: ../libsvn_client/merge.c:5337
+#: ../libsvn_client/merge.c:5360
 msgid "Cannot reintegrate into mixed-revision working copy; try updating first"
 msgstr "不能重新集成到有混合版本的工作副本；请先更新"
 
-#: ../libsvn_client/merge.c:5404
+#: ../libsvn_client/merge.c:5427
 #, c-format
 msgid "At least one revision (r%ld) not yet merged from '%s'"
 msgstr "至少有一个版本(r%ld)没有自“%s”合并"
 
-#: ../libsvn_client/merge.c:5545 ../libsvn_client/merge.c:5709
+#: ../libsvn_client/merge.c:5568 ../libsvn_client/merge.c:5732
 #, c-format
 msgid "'%s@%ld' must be ancestrally related to '%s@%ld'"
 msgstr "“%s@%ld”必须与“%s@%ld”有祖先关系"
 
-#: ../libsvn_client/merge.c:5668
+#: ../libsvn_client/merge.c:5691
 #, c-format
 msgid "'%s' must be from the same repository as '%s'"
 msgstr "“%s”必须与“%s”在同一个版本库中"
@@ -2495,8 +2496,8 @@ msgid "Invalid revision number '%ld'"
 msgstr "无效的版本号“%ld”"
 
 #: ../libsvn_fs_fs/fs_fs.c:1465 ../libsvn_fs_fs/fs_fs.c:2145
-#: ../libsvn_fs_fs/fs_fs.c:2237 ../libsvn_repos/log.c:1388
-#: ../libsvn_repos/log.c:1392
+#: ../libsvn_fs_fs/fs_fs.c:2237 ../libsvn_repos/log.c:1421
+#: ../libsvn_repos/log.c:1425
 #, c-format
 msgid "No such revision %ld"
 msgstr "没有版本 %ld"
@@ -3682,8 +3683,8 @@ msgstr "不支持ra_svn RA加载器版本 %d"
 msgid "Unexpected server response to authentication"
 msgstr "服务器意外响应认证请求"
 
-#: ../libsvn_ra_svn/cyrus_auth.c:171 ../svnserve/cyrus_auth.c:104
-#: ../svnserve/cyrus_auth.c:114
+#: ../libsvn_ra_svn/cyrus_auth.c:171 ../svnserve/cyrus_auth.c:108
+#: ../svnserve/cyrus_auth.c:118
 #, c-format
 msgid "Could not initialize the SASL library"
 msgstr "不能初始化 SASL 库"
@@ -4489,7 +4490,7 @@ msgstr "不能刷新流"
 msgid "Can't flush file to disk"
 msgstr "不能刷新文件到磁盘"
 
-#: ../libsvn_subr/io.c:1628 ../libsvn_subr/prompt.c:97 ../svnserve/main.c:528
+#: ../libsvn_subr/io.c:1628 ../libsvn_subr/prompt.c:97 ../svnserve/main.c:573
 #, c-format
 msgid "Can't open stdin"
 msgstr "无法打开标准输入"
@@ -6131,7 +6132,7 @@ msgstr ""
 msgid "Local, non-commit operations do not take a log message or revision properties"
 msgstr "本地操作，非提交操作无须日志信息或版本属性"
 
-#: ../svn/diff-cmd.c:170 ../svnserve/main.c:535
+#: ../svn/diff-cmd.c:170 ../svnserve/main.c:580
 #, c-format
 msgid "Can't open stdout"
 msgstr "无法打开标准输出"
@@ -6550,7 +6551,7 @@ msgid "treat value as being in charset encoding ARG"
 msgstr "将ARG的值视为字符编码"
 
 #: ../svn/main.c:144 ../svnadmin/main.c:239 ../svndumpfilter/main.c:882
-#: ../svnlook/main.c:134 ../svnserve/main.c:151 ../svnsync/main.c:136
+#: ../svnlook/main.c:134 ../svnserve/main.c:201 ../svnsync/main.c:136
 #: ../svnversion/main.c:127
 msgid "show program version information"
 msgstr "显示程序版本信息"
@@ -7900,60 +7901,60 @@ msgstr "--limit取值不是数字"
 msgid "Argument to --limit must be positive"
 msgstr "--limit取值必须为正"
 
-#: ../svn/main.c:1150 ../svn/main.c:1377
+#: ../svn/main.c:1150 ../svn/main.c:1383
 msgid "Can't specify -c with --old"
 msgstr "不能同时指定 -c 和 --old"
 
-#: ../svn/main.c:1157
+#: ../svn/main.c:1160
 msgid "Non-numeric change argument given to -c"
 msgstr "-c 选项的取值不是数字"
 
-#: ../svn/main.c:1164
+#: ../svn/main.c:1168
 msgid "There is no change 0"
 msgstr "没有版本 0"
 
-#: ../svn/main.c:1198 ../svnadmin/main.c:1473
+#: ../svn/main.c:1204 ../svnadmin/main.c:1473
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "版本参数“%s”中有语法错误"
 
-#: ../svn/main.c:1271 ../svn/main.c:1290
+#: ../svn/main.c:1277 ../svn/main.c:1296
 #, c-format
 msgid "Error converting depth from locale to UTF8"
 msgstr "深度从本地编码转换到 UTF8 失败"
 
-#: ../svn/main.c:1279 ../svn/main.c:1298
+#: ../svn/main.c:1285 ../svn/main.c:1304
 #, c-format
 msgid "'%s' is not a valid depth; try 'empty', 'files', 'immediates', or 'infinity'"
 msgstr "“%s” 不是有效的深度；尝试 “empty”，“files”，“immediates”，或 “infinity”"
 
-#: ../svn/main.c:1405
+#: ../svn/main.c:1411
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "原生换行符号参数“%s”中有语法错误"
 
-#: ../svn/main.c:1451
+#: ../svn/main.c:1457
 #, c-format
 msgid "'%s' is not a valid accept value"
 msgstr "“%s” 不是有效值"
 
-#: ../svn/main.c:1459
+#: ../svn/main.c:1465
 #, c-format
 msgid "'%s' is not a URL"
 msgstr "“%s”不是 URL"
 
-#: ../svn/main.c:1521 ../svndumpfilter/main.c:1314 ../svnlook/main.c:2161
+#: ../svn/main.c:1527 ../svndumpfilter/main.c:1314 ../svnlook/main.c:2161
 #, c-format
 msgid "Subcommand argument required\n"
 msgstr "必须提供子命令参数\n"
 
-#: ../svn/main.c:1540 ../svnadmin/main.c:1605 ../svndumpfilter/main.c:1333
+#: ../svn/main.c:1546 ../svnadmin/main.c:1605 ../svndumpfilter/main.c:1333
 #: ../svnlook/main.c:2180
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "未知命令: “%s”\n"
 
-#: ../svn/main.c:1574
+#: ../svn/main.c:1580
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -7962,64 +7963,64 @@ msgstr ""
 "子命令“%s”不接受选项“%s”\n"
 "输入“svn help %s”得到用法。\n"
 
-#: ../svn/main.c:1588
+#: ../svn/main.c:1594
 msgid "Multiple revision arguments encountered; can't specify -c twice, or both -c and -r"
 msgstr "遇到了多个版本参数；不能指定 -c 两次或者同时使用 -c 和 -r"
 
-#: ../svn/main.c:1602
+#: ../svn/main.c:1608
 msgid "-r and -c can't be used with --reintegrate"
 msgstr "-r 和 -c 不能与 --reintegrate 共存"
 
-#: ../svn/main.c:1611
+#: ../svn/main.c:1617
 msgid "--depth and --set-depth are mutually exclusive"
 msgstr "--depth 与 --set-depth 是互斥的"
 
-#: ../svn/main.c:1661
+#: ../svn/main.c:1667
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr "日志信息文件受版本控制；请使用“--force-log”强制执行"
 
-#: ../svn/main.c:1668
+#: ../svn/main.c:1674
 msgid "Lock comment file is a versioned file; use '--force-log' to override"
 msgstr "锁注释文件受版本控制；请使用“--force-log”强制执行"
 
-#: ../svn/main.c:1688
+#: ../svn/main.c:1694
 msgid "The log message is a pathname (was -F intended?); use '--force-log' to override"
 msgstr "日志信息是路径名称 (本来想用 -F 选项的吗？)；请使用“--force-log”强制执行"
 
-#: ../svn/main.c:1695
+#: ../svn/main.c:1701
 msgid "The lock comment is a pathname (was -F intended?); use '--force-log' to override"
 msgstr "锁注释是路径名称 (本来想用-F 选项的吗？)；请使用“--force-log”强制执行"
 
-#: ../svn/main.c:1706
+#: ../svn/main.c:1712
 msgid "--relocate and --depth are mutually exclusive"
 msgstr "--relocate 与 --depth 是互斥的"
 
-#: ../svn/main.c:1782
+#: ../svn/main.c:1788
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props 与 --no-auto-props 是互斥的"
 
-#: ../svn/main.c:1796
+#: ../svn/main.c:1802
 msgid "--reintegrate cannot be used with --ignore-ancestry or --record-only"
 msgstr "--reintegrate 不能与 --ignore-ancestry 或 --record-only 共存"
 
-#: ../svn/main.c:1804
+#: ../svn/main.c:1810
 msgid "--reintegrate cannot be used with --ignore-ancestry"
 msgstr "--reintegrate 不能与 --ignore-ancestry 共存"
 
-#: ../svn/main.c:1812
+#: ../svn/main.c:1818
 msgid "--reintegrate cannot be used with --record-only"
 msgstr "--reintegrate 不能与 --record-only 共存"
 
-#: ../svn/main.c:1925 ../svn/main.c:1931
+#: ../svn/main.c:1931 ../svn/main.c:1937
 #, c-format
 msgid "--accept=%s incompatible with --non-interactive"
 msgstr "--accept=%s 与 --non-interactive 不兼容"
 
-#: ../svn/main.c:1958
+#: ../svn/main.c:1964
 msgid "Try 'svn help' for more info"
 msgstr "请使用 “svn help” 以得到更多信息"
 
-#: ../svn/main.c:1968
+#: ../svn/main.c:1974
 msgid "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for details)\n"
 msgstr "svn: 运行“svn cleanup”删除锁定 (输入“svn help cleanup”得到用法)\n"
 
@@ -8923,7 +8924,7 @@ msgstr ""
 "\n"
 "可用的子命令: \n"
 
-#: ../svnadmin/main.c:717 ../svnlook/main.c:1759 ../svnserve/main.c:207
+#: ../svnadmin/main.c:717 ../svnlook/main.c:1759 ../svnserve/main.c:247
 msgid ""
 "The following repository back-end (FS) modules are available:\n"
 "\n"
@@ -9692,16 +9693,16 @@ msgstr ""
 msgid "Try 'svnlook help' for more info"
 msgstr "请使用“svnlook help”以得到更多信息"
 
-#: ../svnserve/cyrus_auth.c:254
+#: ../svnserve/cyrus_auth.c:258
 #, c-format
 msgid "Can't get hostname"
 msgstr "无法获取主机名称"
 
-#: ../svnserve/cyrus_auth.c:322
+#: ../svnserve/cyrus_auth.c:326
 msgid "Could not obtain the list of SASL mechanisms"
 msgstr "不能获得SASL机制列表"
 
-#: ../svnserve/cyrus_auth.c:362
+#: ../svnserve/cyrus_auth.c:366
 msgid "Couldn't obtain the authenticated username"
 msgstr "不能获得已经认证的用户名称"
 
@@ -9709,78 +9710,134 @@ msgstr "不能获得已经认证的用户名称"
 msgid "daemon mode"
 msgstr "后台模式"
 
-#: ../svnserve/main.c:144
-msgid "listen port (for daemon mode)"
-msgstr "监听端口（后台模式）"
-
-#: ../svnserve/main.c:146
-msgid "listen hostname or IP address (for daemon mode)"
-msgstr "监听主机名或IP地址（后台模式）"
-
-#: ../svnserve/main.c:148
-msgid "run in foreground (useful for debugging)"
-msgstr "在前台运行（调试用）"
-
-#: ../svnserve/main.c:149 ../svnversion/main.c:125
-msgid "display this help"
-msgstr "显示本帮助"
-
-#: ../svnserve/main.c:152
+#: ../svnserve/main.c:143
 msgid "inetd mode"
 msgstr "inetd 模式"
 
-#: ../svnserve/main.c:153
-msgid "root of directory to serve"
-msgstr "服务的根目录"
-
-#: ../svnserve/main.c:155
-msgid "force read only, overriding repository config file"
-msgstr "强制只读；覆盖版本库配置文件"
-
-#: ../svnserve/main.c:156
+#: ../svnserve/main.c:144
 msgid "tunnel mode"
 msgstr "隧道模式"
 
-#: ../svnserve/main.c:158
-msgid "tunnel username (default is current uid's name)"
-msgstr "隧道用户名（默认是当前UID对应的用户名）"
+#: ../svnserve/main.c:145
+msgid "listen-once mode (useful for debugging)"
+msgstr "监听一次方式（调试用）"
 
-#: ../svnserve/main.c:160
-msgid "use threads instead of fork"
-msgstr "使用线程代替进程"
+#: ../svnserve/main.c:148
+msgid "Windows service mode (Service Control Manager)"
+msgstr "Windows 服务方式（服务管理器）"
 
-#: ../svnserve/main.c:162
-msgid "listen once (useful for debugging)"
-msgstr "监听一次（调试用）"
+#: ../svnserve/main.c:150
+msgid "root of directory to serve"
+msgstr "服务的根目录"
 
-#: ../svnserve/main.c:164
+#: ../svnserve/main.c:152
+msgid "force read only, overriding repository config file"
+msgstr "强制只读；覆盖版本库配置文件"
+
+#: ../svnserve/main.c:154
 msgid "read configuration from file ARG"
 msgstr "从文件 ARG 读取配置"
 
-#: ../svnserve/main.c:166
-msgid "write server process ID to file ARG"
-msgstr "将服务进程ID写入文件ARG中"
+#: ../svnserve/main.c:157
+msgid ""
+"listen port\n"
+"                             [mode: daemon, service, listen-once]"
+msgstr ""
+"监听端口\n"
+"                             [方式: daemon, service, listen-once]"
 
-#: ../svnserve/main.c:169
-msgid "run as a windows service (SCM only)"
-msgstr "作为windows服务运行(仅SCM)"
+#: ../svnserve/main.c:161
+msgid ""
+"listen port\n"
+"                             [mode: daemon, listen-once]"
+msgstr ""
+"监听端口\n"
+"                             [方式: daemon, listen-once]"
 
-#: ../svnserve/main.c:181
+#: ../svnserve/main.c:167
+msgid ""
+"listen hostname or IP address\n"
+"                             [mode: daemon, service, listen-once]"
+msgstr ""
+"监听主机名称或IP地址\n"
+"                             [方式: daemon, service, listen-once]"
+
+#: ../svnserve/main.c:171
+msgid ""
+"listen hostname or IP address\n"
+"                             [mode: daemon, listen-once]"
+msgstr ""
+"监听主机名称或IP地址\n"
+"                             [方式: daemon, listen-once]"
+
+#. ### Making the assumption here that WIN32 never has fork and so
+#. * ### this option never exists when --service exists.
+#: ../svnserve/main.c:178
+msgid "use threads instead of fork [mode: daemon]"
+msgstr "使用线程代替进程 [方式: daemon]"
+
+#: ../svnserve/main.c:182
+msgid ""
+"run in foreground (useful for debugging)\n"
+"                             [mode: daemon]"
+msgstr ""
+"在前台运行（调试用）\n"
+"                             [方式: daemon]"
+
+#: ../svnserve/main.c:187
+msgid ""
+"write server process ID to file ARG\n"
+"                             [mode: daemon, listen-once, service]"
+msgstr ""
+"写进程 PID 到文件 ARG\n"
+"                             [方式: daemon, listen-once, service]"
+
+#: ../svnserve/main.c:191
+msgid ""
+"write server process ID to file ARG\n"
+"                             [mode: daemon, listen-once]"
+msgstr ""
+"写进程 PID 到文件 ARG\n"
+"                             [方式: daemon, listen-once]"
+
+#: ../svnserve/main.c:196
+msgid ""
+"tunnel username (default is current uid's name)\n"
+"                             [mode: tunnel]"
+msgstr ""
+"隧道用户名（默认是当前UID对应的用户名）\n"
+"                             [方式: tunnel]"
+
+#: ../svnserve/main.c:199 ../svnversion/main.c:125
+msgid "display this help"
+msgstr "显示本帮助"
+
+#: ../svnserve/main.c:212
 #, c-format
 msgid "Type '%s --help' for usage.\n"
 msgstr "使用“%s --help”得到用法。\n"
 
-#: ../svnserve/main.c:190
+#: ../svnserve/main.c:222
 msgid ""
-"usage: svnserve [options]\n"
+"usage: svnserve [-d | -i | -t | -X | --service] [options]\n"
 "\n"
 "Valid options:\n"
 msgstr ""
-"用法: svnserve [选项]\n"
+"用法: svnserve [-d | -i | -t | -X | --service] [options]\n"
 "\n"
 "有效选项: \n"
 
-#: ../svnserve/main.c:216
+#: ../svnserve/main.c:228
+msgid ""
+"usage: svnserve [-d | -i | -t | -X] [options]\n"
+"\n"
+"Valid options:\n"
+msgstr ""
+"用法: svnserve [-d | -i | -t | -X] [options]\n"
+"\n"
+"有效选项: \n"
+
+#: ../svnserve/main.c:256
 msgid ""
 "\n"
 "Cyrus SASL authentication is available.\n"
@@ -9788,56 +9845,60 @@ msgstr ""
 "\n"
 "Cyrus SASL 认证可用。\n"
 
-#: ../svnserve/main.c:449
+#: ../svnserve/main.c:489
 #, c-format
 msgid "svnserve: Root path '%s' does not exist or is not a directory.\n"
 msgstr "svnserve: 根路径“%s”不存在，或者不是目录。\n"
 
-#: ../svnserve/main.c:498
+#: ../svnserve/main.c:539
+msgid "You must specify exactly one of -d, -i, -t, --service or -X.\n"
+msgstr "您必须指定 -d, -i, -t, --service 或 -X 中的一个。\n"
+
+#: ../svnserve/main.c:542
 msgid "You must specify exactly one of -d, -i, -t or -X.\n"
 msgstr "您必须指定 -d, -i, -t 或 -X 中的一个。\n"
 
-#: ../svnserve/main.c:516
+#: ../svnserve/main.c:561
 #, c-format
 msgid "Option --tunnel-user is only valid in tunnel mode.\n"
 msgstr "选项 --tunnel-user 只在隧道模式有效。\n"
 
-#: ../svnserve/main.c:581
+#: ../svnserve/main.c:626
 #, c-format
 msgid "svnserve: The --service flag is only valid if the process is started by the Service Control Manager.\n"
 msgstr "svnserve: 只有被服务控制管理器启动时 --service 选项才有效。\n"
 
-#: ../svnserve/main.c:617
+#: ../svnserve/main.c:662
 #, c-format
 msgid "Can't get address info"
 msgstr "不能获取地址信息"
 
-#: ../svnserve/main.c:631
+#: ../svnserve/main.c:676
 #, c-format
 msgid "Can't create server socket"
 msgstr "无法创建服务器套接字"
 
-#: ../svnserve/main.c:642
+#: ../svnserve/main.c:687
 #, c-format
 msgid "Can't bind server socket"
 msgstr "不能绑定服务器套接字"
 
-#: ../svnserve/main.c:708
+#: ../svnserve/main.c:753
 #, c-format
 msgid "Can't accept client connection"
 msgstr "无法接受客户连接"
 
-#: ../svnserve/main.c:760
+#: ../svnserve/main.c:805
 #, c-format
 msgid "Can't create threadattr"
 msgstr "无法创建线程属性"
 
-#: ../svnserve/main.c:768
+#: ../svnserve/main.c:813
 #, c-format
 msgid "Can't set detached state"
 msgstr "不能设置分离的状态"
 
-#: ../svnserve/main.c:781
+#: ../svnserve/main.c:826
 #, c-format
 msgid "Can't create thread"
 msgstr "无法创建线程"
