@@ -234,6 +234,10 @@ source file is...]
 In order to keep developers sane, at should be extremely clear at any
 one time - when operating on a tree - which tree is being operated upon.
 
+One way to prevent the lengthy 'if()' blocks currently in wc-1.0, would be
+to design a dispatch mechanism based on the path-state in WORKING/BASE and the
+required transformation, dispatching to (small) functions which perform
+solely that specific task.
 
 
 Speed
@@ -244,9 +248,9 @@ goes out of its way to assure they actually do when deemed important.
 The result is a library which calls stat() a lot more often than need be.
 
 One of the possible improvements would be to make wc-ng read all of
-the ACTUAL state (concentrated at one place), keeping it around as
-long as required, matching it with the WORKING state before operating
-on either (not only when deemed important!).
+the ACTUAL state (concentrated in one place, using apr_stat()), keeping
+it around as long as required, matching it with the WORKING state before
+operating on either (not only when deemed important!).
 
 Working from the ACTUAL tree will also prove to be a step toward clarity
 regarding the exact tree which is being operated upon.
@@ -306,7 +310,7 @@ replacement files and directories and when all that succeeds, update
 the working copy.
 
 Full workin' copy unit tests
----------------------------
+----------------------------
 
 Exactly because the working copy is such an important part of the
 Subversion experience *and* because of the 'reputation' of wc-1.0,
