@@ -251,7 +251,22 @@ To be done
 Flexibility of metadata storage
 -------------------------------
 
-To be done
+There are 3 known models for storing metadata as requested by different
+groups of users:
+
+ - in-subtree metadata storage (.svn subdir model, as in wc-1.0)
+ - in-'tree root' metadata storage (working copy central)
+ - detached metadata storage (user-central)
+
+A solution to implementing each of these behaviours in order to satisfy
+the wide range of use-cases they solve, would be to define a module
+interface and implement this interface three times (possibly using vtables).
+
+Note that using within-module vtables should be less problematic than our
+post-1.0 experiences with public vtables (such as the ra-layer vtable):
+implementation details are allowed to differ between releases (even patch
+releases).
+
 
 Transaction duration / memory management
 ----------------------------------------
@@ -274,6 +289,19 @@ The solution to this problem could be 'atomic updates': receiving the
 full working copy transformation, verifying prerequisites, creating
 replacement files and directories and when all that succeeds, update
 the working copy.
+
+Full workin' copy unit tests
+---------------------------
+
+Exactly because the working copy is such an important part of the
+Subversion experience *and* because of the 'reputation' of wc-1.0,
+we need a way to ensure wc-ng completely performs according to our
+expectations.  *The* way to ensure we're able to test the most contrived
+edge-cases is to develop a full unit testing test-suite while developing
+wc-ng.  This will both be a measure to ensure working copy stability
+as well as developer sanity: in the early stages of the wc-ng develop-
+ment process, we'll be able to assess how well the design holds up
+under more difficult 'weather'.
 
 
 Prerequisites for a good wc implementation
