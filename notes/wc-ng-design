@@ -381,75 +381,64 @@ Classification of svn_wc_entry_t fields to BASE/WORKING
 and WORKING trees, it's not here to mean that we actually need all these
 fields in wc-ng!]
 
-When mapping all fields from svn_wc_entry_t to the BASE and WORKING trees,
-the following would end up being the BASE administration:
+Here are the mappings of all fields from svn_wc_entry_t to the BASE and
+WORKING trees:
 
-- name
-- absent
-- revision
-- url
-- repos
-- uuid
-- kind (node kind)
-- checksum
-- cmt_rev
-- cmt_date
-- cmt_author
-- has_props
-- depth
-- cacheable_props (why is this a field at all; can't the WC code know?)
-- present_props
-- lock_token (locks apply to in-repository paths, hence BASE)
-- lock_owner
-- lock_comment
-- lock_creation_date
-- has_props
+ +-------------------------------+------+---------+
+ |       svn_wc_entry_t          | BASE | WORKING |
+ +-------------------------------+------+---------+
+ | name                          |  x   |    x (1)|
+ | revision                      |  x   |    x (2)|
+ | url                           |  x   |    x (2)|
+ | repos                         |  x   |    x (3)|
+ | uuid                          |  x   |    x (3)|
+ | kind                          |  x   |    x    |
+ | absent                        |  x   |         |
+ | copyfrom_url                  |      |    x    |
+ | copyfrom_rev                  |      |    x    |
+ | conflict_old                  |      |    x    |
+ | conflict_new                  |      |    x    |
+ | conflict_wrk                  |      |    x    |
+ | prejfile                      |      |    x    |
+ | text_time                     |      |    =    |
+ | prop_time                     |      |    =    |
+ | checksum                      |  x   |    x (2)|
+ | cmt_rev                       |  x   |    x (2)|
+ | cmt_date                      |  x   |    x (2)|
+ | cmt_author                    |  x   |    x (2)|
+ | lock_token                    |  x(6)|         |
+ | lock_owner                    |  x   |         |
+ | lock_comment                  |  x   |         |
+ | lock_creation_date            |  x   |         |
+ | has_props                     |  x   |    x (4)|
+ | has_prop_mods                 |      |    =    |
+ | cachable_props                |  x(5)|    x (4)|
+ | present_props                 |  x   |    x (4)|
+ | changelist                    |      |    x    |
+ | working_size                  |      |    =    |
+ | keep_local                    |      |    =    |
+ | depth                         |  x   |    x    |
+ | schedule                      |      |         |
+ | copied                        |      |         |
+ | deleted                       |      |         |
+ | incomplete                    |      |         |
+ +-------------------------------+------+---------+
 
-And these would end up in WORKING:
+(1) if this one differs from BASE, it must point to the source of a rename
+(2) for an add-with-history
+(3) or can we assume single-repository working copies?
+(4) can differ from BASE for add-with-history
+(5) why is this a field at all; can't the WC code know?
+(6) locks apply to in-repository paths, hence BASE
 
-- name (if this one differs from BASE,
-          it must point to the source of a rename)
-- revision (for an add-with-history)
-- url (for an add-with-history)
-- repos (or can we assume single-repository working copies?)
-- uuid (or can we assume single-repository working copies?)
-- kind
-- depth
-- checksum (for an add-with-history)
-- cmt_rev (for an add-with-history)
-- cmt_date (for an add-with-history)
-- cmt_author (for an add-with-history)
-- conflict_old
-- conflict_new
-- conflict_wrk
-- prejfile
-- text_time
-- text_size
-- prop_time
-- has_props (can differ from BASE for add-with-history)
-- present_props (can differ from BASE for add-with-history)
-- cacheable_props (can differ from BASE for add-with-history)
-- has_prop_mods
-- changelist
+The fields marked with '=' are implementation details of internal detection
+mechanisms, which means they don't belong in the public interface.
 
-Note that some fields haven't been classified and some have been classified
-both ways.  As for the ones which haven't been classified, these can be
-deduced from the difference between the BASE and WORKING or WORKING and
-ACTUAL trees (schedule, copied, deleted).
-
-'incomplete' should become obsolete when the goal of 'atomic updates' can be
-realised, in which case the tree won't be in an incomplete yet locked state.
-This would also invalidate issue #1879.
-
-The following fields are implementation details of internal detection
-mechanisms, which means they don't belong in the public interface:
-
-- text_time
-- text_size
-- prop_time
-- has_prop_mods
-- keep_local
-
+Fields with no check are to become obsolete. 'schedule', 'copied' and
+'deleted' can be deducded from the difference between the BASE and WORKING
+or WORKING and ACTUAL trees.  'incomplete' should become obsolete when the
+goal of 'atomic updates' can be realised, in which case the tree won't be
+in an incomplete yet locked state.  This would also invalidate issue #1879.
 
 
 Other sections
