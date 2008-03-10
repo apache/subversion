@@ -14,16 +14,6 @@ Status of 1.5.0:
 
 Candidate changes:
 
-  * r29739, r29769, r29770, r29784, r29835
-    Bugfixes in svnmerge-migrate-history.py, preventing no-op commits
-    and dealing with syntax differences between svnmerge info and Subversion
-    mergeinfo.
-    Votes:
-      +1: cmpilato
-      +1: pburba (r29739, r29769, r29784)
-      -0: pburba (r29770) Waiting for clarification on what look like a bug,
-      see http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=135916
-
   * r29439
     Simplify (and optimise) parsing of the DAV response header in
     ra_neon capabilities detection.
@@ -38,3 +28,10 @@ Candidate changes:
       +1: dlr
 
 Approved changes:
+
+  * r29739, r29769, r29770, r29784, r29835
+    Bugfixes in svnmerge-migrate-history.py, preventing no-op commits
+    and dealing with syntax differences between svnmerge info and Subversion
+    mergeinfo.
+    Votes:
+      +1: cmpilato, pburba
