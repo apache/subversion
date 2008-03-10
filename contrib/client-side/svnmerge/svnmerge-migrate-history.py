@@ -200,8 +200,6 @@ class Migrator:
       svnmerge_prop_val = ''
       for source in sources:
         pieces = source.split(':')
-        if len(pieces) > 2:
-          pieces = [pieces[:-1].join(':'), pieces[-1]]
         if len(pieces) != 2:
           continue
         pieces[0] = urllib.unquote(pieces[0])
