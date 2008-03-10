@@ -38,4 +38,20 @@ Candidate changes:
     Votes:
       +1: pburba
 
+  * r29439
+    Simplify (and optimise) parsing of the DAV response header in
+    ra_neon capabilities detection.
+    Votes:
+      +1: joe
+
+  * r29821
+    Fix a global symbol leak by marking it static.
+    Votes:
+      +1: joe
+
+  * r29824
+    Support and recommend neon 0.28.1.
+    Votes:
+      +1: joe
+
 Approved changes:
