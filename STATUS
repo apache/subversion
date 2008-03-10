@@ -22,9 +22,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r29828
-    Add Subversion's standard license to the diff-wrap.sh contrib script.
-    Justification:
-      Allows Peter Samuelson to include it in Debian's Subversion package.
-    Votes:
-      +1: dlr, lgo
