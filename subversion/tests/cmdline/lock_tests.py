@@ -1447,9 +1447,10 @@ test_list = [ None,
               unlock_already_unlocked_files,
               info_moved_path,
               ls_url_encoded,
-              unlock_wrong_token,
+              XFail(unlock_wrong_token, svntest.main.is_ra_type_dav),
               examine_lock_encoded_recurse,
-              unlocked_lock_of_other_user,
+              XFail(unlocked_lock_of_other_user,
+                    svntest.main.is_ra_type_dav)
             ]
 
 if __name__ == '__main__':
