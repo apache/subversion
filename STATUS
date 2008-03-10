@@ -59,11 +59,3 @@ Veto-blocked changes:
       -1: cmpilato (new features showing up in patch releases?  nuh-uh.)
 
 Approved changes:
-
-  * r28544
-    Fix an important memory leak in the Python bindings.
-    Justification:
-      Simple patch. This serious memory leak probably affects every
-      non-trivial script which uses the Python bindings.
-    Votes:
-      +1: djames, dlr

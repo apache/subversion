@@ -544,8 +544,10 @@ static PyObject *make_ob_##type(void *value) \
   PyObject *new_py_pool = svn_swig_NewPointerObj(new_pool, \
     svn_swig_TypeQuery("apr_pool_t *"), _global_svn_swig_py_pool); \
   svn_##type##_t *new_value = dup(value, new_pool); \
-  return svn_swig_NewPointerObjString(new_value, "svn_" #type "_t *", \
-      new_py_pool); \
+  PyObject *obj = svn_swig_NewPointerObjString(new_value, "svn_" #type "_t *", \
+                                               new_py_pool); \
+  Py_XDECREF(new_py_pool); \
+  return obj; \
 }
  
 DECLARE_SWIG_CONSTRUCTOR(txdelta_window, svn_txdelta_window_dup)
