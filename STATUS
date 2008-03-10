@@ -40,11 +40,11 @@ Candidate changes:
   * r29821
     Fix a global symbol leak by marking it static.
     Votes:
-      +1: joe
+      +1: joe, dlr
 
   * r29824
     Support and recommend neon 0.28.1.
     Votes:
-      +1: joe
+      +1: joe, dlr
 
 Approved changes:
