@@ -27,6 +27,9 @@ Candidate changes:
     mergeinfo.
     Votes:
       +1: cmpilato
+      +1: pburba (r29739, r29769, r29784)
+      -0: pburba (r29770) Waiting for clarification on what look like a bug,
+      see http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=135916
 
   * r29787
     Fix a pool lifetime bug when hashing working mergeinfo that might
