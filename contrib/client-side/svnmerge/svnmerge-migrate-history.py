@@ -21,6 +21,7 @@ import sys
 import os
 import sre
 import getopt
+import urllib
 try:
   my_getopt = getopt.gnu_getopt
 except AttributeError:
@@ -119,39 +120,50 @@ class Migrator:
 
     ### Bother to handle any pre-existing, inherited svn:mergeinfo?
 
-    # Retrieve svnmerge.py's merge history meta data, and roll it into
-    # Subversion 1.5 mergeinfo.
+    # Retrieve existing Subversion 1.5 mergeinfo.
     mergeinfo_prop_val = svn.fs.node_prop(root, path,
                                           svn.core.SVN_PROP_MERGEINFO)
+    if mergeinfo_prop_val is not None and self.verbose:
+      print "Discovered pre-existing Subversion mergeinfo of '%s'" \
+            % (mergeinfo_prop_val)
+      
+    # Retrieve svnmerge.py's merge history meta data, and roll it into
+    # Subversion 1.5 mergeinfo.
     integrated_prop_val = svn.fs.node_prop(root, path, "svnmerge-integrated")
-    if self.verbose:
-      print "Discovered pre-existing Subversion mergeinfo of '%s'" % \
-        mergeinfo_prop_val
-      print "Discovered svnmerge.py mergeinfo of '%s'" % integrated_prop_val
-    mergeinfo_prop_val = self.add_to_mergeinfo(integrated_prop_val,
-                                               mergeinfo_prop_val)
+    if integrated_prop_val is not None and self.verbose:
+      print "Discovered svnmerge.py mergeinfo of '%s'" \
+            % (integrated_prop_val)
+      
     ### LATER: We handle svnmerge-blocked by converting it into
     ### svn:mergeinfo, until revision blocking becomes available in
     ### Subversion's core.
     blocked_prop_val = svn.fs.node_prop(root, path, "svnmerge-blocked")
-    if self.verbose:
-      print "Discovered svnmerge.py blocked revisions of '%s'" % \
-        blocked_prop_val
-    mergeinfo_prop_val = self.add_to_mergeinfo(blocked_prop_val,
-                                               mergeinfo_prop_val)
+    if blocked_prop_val is not None and self.verbose:
+      print "Discovered svnmerge.py blocked revisions of '%s'" \
+            % (blocked_prop_val)
 
-    if mergeinfo_prop_val is not None:
+    new_mergeinfo_prop_val = self.add_to_mergeinfo(integrated_prop_val,
+                                                   mergeinfo_prop_val)
+    new_mergeinfo_prop_val = self.add_to_mergeinfo(blocked_prop_val,
+                                                   new_mergeinfo_prop_val)
+
+    # If we need to change the value of the svn:mergeinfo property or
+    # delete any svnmerge-* properties, let's do so.
+    if (new_mergeinfo_prop_val != mergeinfo_prop_val) \
+       or (integrated_prop_val is not None) \
+       or (blocked_prop_val is not None):
       # Begin a transaction in which we'll manipulate merge-related
       # properties.  Open the transaction root.
       txn = svn.fs.begin_txn2(self.fs, revnum, 0)
       root = svn.fs.txn_root(txn)
 
       # Manipulate the merge history.
-      if self.verbose:
-        print "Queuing change of %s to '%s'" % \
-          (svn.core.SVN_PROP_MERGEINFO, mergeinfo_prop_val)
-      svn.fs.change_node_prop(root, path, svn.core.SVN_PROP_MERGEINFO,
-                              mergeinfo_prop_val)
+      if new_mergeinfo_prop_val != mergeinfo_prop_val:
+        if self.verbose:
+          print "Queuing change of %s to '%s'" % \
+                (svn.core.SVN_PROP_MERGEINFO, new_mergeinfo_prop_val)
+        svn.fs.change_node_prop(root, path, svn.core.SVN_PROP_MERGEINFO,
+                                new_mergeinfo_prop_val)
 
       # Remove old property values.
       if integrated_prop_val is not None:
@@ -180,11 +192,26 @@ class Migrator:
 
   def add_to_mergeinfo(self, svnmerge_prop_val, mergeinfo_prop_val):
     if svnmerge_prop_val is not None:
+      # Convert svnmerge-* property value (which uses any whitespace
+      # for delimiting sources and stores source paths URI-encoded)
+      # into a svn:mergeinfo syntax (which is newline-separated with
+      # URI-decoded paths).
+      sources = svnmerge_prop_val.split()
+      svnmerge_prop_val = ''
+      for source in sources:
+        pieces = source.split(':')
+        if len(pieces) != 2:
+          continue
+        pieces[0] = urllib.unquote(pieces[0])
+        svnmerge_prop_val = svnmerge_prop_val + '%s\n' % (':'.join(pieces))
+
+      # If there is Subversion mergeinfo to merge with, do so.
+      # Otherwise, our svnmerge info simply becomes our new mergeinfo.
       if mergeinfo_prop_val:
         mergeinfo = svn.core.svn_mergeinfo_parse(mergeinfo_prop_val)
         to_migrate = svn.core.svn_mergeinfo_parse(svnmerge_prop_val)
-        mergeinfo = svn.core.svn_mergeinfo_merge(mergeinfo, to_migrate)
-        mergeinfo_prop_val = svn.core.svn_mergeinfo_to_string(mergeinfo)
+        mergeinfo_prop_val = svn.core.svn_mergeinfo_to_string(
+          svn.core.svn_mergeinfo_merge(mergeinfo, to_migrate))
       else:
         mergeinfo_prop_val = svnmerge_prop_val
 

@@ -28,10 +28,3 @@ Candidate changes:
       +1: dlr
 
 Approved changes:
-
-  * r29739, r29769, r29770, r29784, r29835
-    Bugfixes in svnmerge-migrate-history.py, preventing no-op commits
-    and dealing with syntax differences between svnmerge info and Subversion
-    mergeinfo.
-    Votes:
-      +1: cmpilato, pburba
