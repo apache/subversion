@@ -48,10 +48,3 @@ Candidate changes:
       +1: joe
 
 Approved changes:
-
-  * r29677, r29679, r29680
-    Fixes a bug where empty mergeinfo on a subtree of a merge target was
-    ignored when determining if a reintegrate merge is allowed. r29679
-    and r29680 are related test tweaks.
-    Votes:
-      +1: glasser (via dev mail), pburba

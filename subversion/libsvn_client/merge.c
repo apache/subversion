@@ -5444,7 +5444,7 @@ remove_irrelevant_ranges(svn_mergeinfo_catalog_t *catalog_p,
                          apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  svn_mergeinfo_t new_by_path = apr_hash_make(pool);
+  svn_mergeinfo_catalog_t new_catalog = apr_hash_make(pool);
   svn_mergeinfo_t history_as_mergeinfo;
 
   SVN_ERR(svn_client__mergeinfo_from_segments(&history_as_mergeinfo,
@@ -5468,13 +5468,13 @@ remove_irrelevant_ranges(svn_mergeinfo_catalog_t *catalog_p,
                                       mergeinfo,
                                       history_as_mergeinfo,
                                       pool));
-      if (filtered_mergeinfo
-          && apr_hash_count(filtered_mergeinfo) > 0)
-        apr_hash_set(new_by_path, path, APR_HASH_KEY_STRING, 
-                     filtered_mergeinfo);
+      apr_hash_set(new_catalog,
+                   apr_pstrdup(pool, path),
+                   APR_HASH_KEY_STRING,
+                   filtered_mergeinfo);
     }
 
-  *catalog_p = new_by_path;
+  *catalog_p = new_catalog;
   return SVN_NO_ERROR;
 }
 
