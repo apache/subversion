@@ -14,13 +14,6 @@ Status of 1.5.0:
 
 Candidate changes:
 
-  * r29677, r29679, r29680
-    Fixes a bug where empty mergeinfo on a subtree of a merge target was
-    ignored when determining if a reintegrate merge is allowed. r29679
-    and r29680 are related test tweaks.
-    Votes:
-      +1: glasser (via dev mail)
-
   * r29739, r29769, r29770, r29784
     Bugfixes in svnmerge-migrate-history.py, preventing no-op commits
     and dealing with syntax differences between svnmerge info and Subversion
@@ -55,3 +48,10 @@ Candidate changes:
       +1: joe
 
 Approved changes:
+
+  * r29677, r29679, r29680
+    Fixes a bug where empty mergeinfo on a subtree of a merge target was
+    ignored when determining if a reintegrate merge is allowed. r29679
+    and r29680 are related test tweaks.
+    Votes:
+      +1: glasser (via dev mail), pburba
