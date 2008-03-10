@@ -1951,7 +1951,8 @@ determine_merges_performed(apr_hash_t **merges, const char *target_wcpath,
         {
           working_mergeinfo_t *working_mergeinfo =
             apr_pcalloc(merge_b->long_pool, sizeof(*working_mergeinfo));
-          apr_hash_set(merge_b->working_mergeinfo, target_wcpath,
+          apr_hash_set(merge_b->working_mergeinfo,
+                       apr_pstrdup(merge_b->long_pool, target_wcpath),
                        APR_HASH_KEY_STRING, working_mergeinfo);
         }
     }
@@ -2001,7 +2002,8 @@ determine_merges_performed(apr_hash_t **merges, const char *target_wcpath,
                 = apr_pcalloc(merge_b->long_pool,
                               sizeof(*working_mergeinfo));
               apr_hash_set(merge_b->working_mergeinfo,
-                           (const char *) skipped_path,
+                           apr_pstrdup(merge_b->long_pool,
+                                       (const char *) skipped_path),
                            APR_HASH_KEY_STRING, working_mergeinfo);
             }
 
@@ -3086,7 +3088,8 @@ get_mergeinfo_walk_cb(const char *path,
                 apr_pcalloc(wb->long_pool, sizeof(*working_mergeinfo));
               working_mergeinfo->working_mergeinfo_propval =
                 svn_string_create(propval->data, wb->long_pool);
-              apr_hash_set(wb->working_mergeinfo, child->path,
+              apr_hash_set(wb->working_mergeinfo,
+                           apr_pstrdup(wb->long_pool, child->path),
                            APR_HASH_KEY_STRING, working_mergeinfo);
             }
           if (strstr(propval->data, SVN_MERGEINFO_NONINHERITABLE_STR))
@@ -3533,10 +3536,11 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                           working_mergeinfo_t *working_mergeinfo =
                             apr_pcalloc(merge_cmd_baton->long_pool,
                                         sizeof(*working_mergeinfo));
-                          apr_hash_set(merge_cmd_baton->working_mergeinfo,
-                                       child_of_noninheritable->path,
-                                       APR_HASH_KEY_STRING,
-                                       working_mergeinfo);
+                          apr_hash_set(
+                            merge_cmd_baton->working_mergeinfo,
+                            apr_pstrdup(merge_cmd_baton->long_pool,
+                                        child_of_noninheritable->path),
+                            APR_HASH_KEY_STRING, working_mergeinfo);
                         }
 
                       SVN_ERR(svn_client__record_wc_mergeinfo(
@@ -4048,7 +4052,8 @@ do_file_merge(const char *url1,
               working_mergeinfo->working_mergeinfo_propval =
                 svn_string_dup(mergeinfo_string, merge_b->long_pool);
             }
-          apr_hash_set(merge_b->working_mergeinfo, target_wcpath,
+          apr_hash_set(merge_b->working_mergeinfo,
+                       apr_pstrdup(merge_b->long_pool, target_wcpath),
                        APR_HASH_KEY_STRING, working_mergeinfo);
         }
 
