@@ -29,7 +29,7 @@ Candidate changes:
     temporarily change during a merge only to be restored if the merge is
     ultimately a no-op.
     Votes:
-      +1: pburba
+      +1: pburba, dlr
 
   * r29439
     Simplify (and optimise) parsing of the DAV response header in
