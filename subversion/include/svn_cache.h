@@ -73,10 +73,10 @@ typedef struct svn_cache_t svn_cache_t;
  */
 svn_error_t *
 svn_cache_create(svn_cache_t **cache_p,
-                 svn_cache_dup_func_t dup,
+                 svn_cache_dup_func_t *dup,
                  apr_ssize_t klen,
-                 int pages,
-                 int items_per_page,
+                 apr_int64_t pages,
+                 apr_int64_t items_per_page,
                  svn_boolean_t thread_safe,
                  apr_pool_t *pool);
 
