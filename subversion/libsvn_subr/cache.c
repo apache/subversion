@@ -118,6 +118,8 @@ svn_cache_create(svn_cache_t **cache_p,
   /* ### TODO: mutex */
 
   cache->cache_pool = pool;
+
+  *cache_p = cache;
   return SVN_NO_ERROR;
 }
 
