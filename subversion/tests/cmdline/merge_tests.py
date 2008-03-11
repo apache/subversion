@@ -10728,7 +10728,7 @@ def foreign_repos(sbox):
 
 
 def foreign_repos_2_url(sbox):
-  "merge from a foreign repository"
+  "2-url merge from a foreign repository"
 
   sbox.build()
   wc_dir = sbox.wc_dir
