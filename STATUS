@@ -20,6 +20,14 @@ Candidate changes:
     Votes:
       +1: joe
 
+  * r29797
+    Fix sample VC6 build script.
+    Justification:
+      User-requested nomination (Masaru Tsuchiyama). I assume that the
+      script is otherwise broken.
+    Votes:
+      +1: dlr
+
   * r29855
     Fix a bug in serf's implementation of svn_ra_get_mergeinfo() where
     empty mergeinfo is ignored.
