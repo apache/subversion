@@ -19,6 +19,7 @@
 #include <assert.h>
 
 #include "svn_cache.h"
+#include "svn_pools.h"
 
 /* The cache object. */
 struct svn_cache_t {
@@ -49,10 +50,9 @@ struct svn_cache_t {
    * currently on PARTIAL_PAGE. */
   apr_int64_t partial_page_number_filled;
 
-  /* The pool that the svn_cache_t itself, HASH, and SENTINEL are
-   * allocated in; subpools of this pool are used for the cache_page
-   * and cache_entry structs, as well as the dup'd values and hash
-   * keys.
+  /* The pool that the svn_cache_t itself, HASH, and all pages are
+   * allocated in; subpools of this pool are used for the cache_entry
+   * structs, as well as the dup'd values and hash keys.
    */
   apr_pool_t *cache_pool;
 };
@@ -130,11 +130,13 @@ remove_page_from_list(struct cache_page *page)
   page->next->prev = page->prev;
 }
 
-/* Inserts PAGE immediately behind PRED. */
+/* Inserts PAGE after CACHE's sentinel. */
 static void
-insert_page(struct cache_page *page,
-            struct cache_page *pred)
+insert_page(svn_cache_t *cache,
+            struct cache_page *page)
 {
+  struct cache_page *pred = cache->sentinel;
+
   page->prev = pred;
   page->next = pred->next;
   page->prev->next = page;
@@ -153,22 +155,35 @@ move_page_to_front(svn_cache_t *cache,
     return;
 
   remove_page_from_list(page);
-  insert_page(page, cache->sentinel);
+  insert_page(cache, page);
 }
 
 /* Uses CACHE->dup_func to copy VALUE into *VALUE_P inside POOL, or
    just sets *VALUE_P to NULL if VALUE is NULL. */
 static svn_error_t *
-duplicate(void **value_p,
-          svn_cache_t *cache,
-          void *value,
-          apr_pool_t *pool)
+duplicate_value(void **value_p,
+                svn_cache_t *cache,
+                void *value,
+                apr_pool_t *pool)
 {
   if (value)
     SVN_ERR((cache->dup_func)(value_p, value, pool));
   else
     *value_p = NULL;
   return SVN_NO_ERROR;
+}
+
+/* Copies KEY into *KEY_P inside POOL, using CACHE->KLEN to figure out
+ * how. */
+static const void *
+duplicate_key(svn_cache_t *cache,
+              const void *key,
+              apr_pool_t *pool)
+{
+  if (cache->klen == APR_HASH_KEY_STRING)
+    return apr_pstrdup(pool, key);
+  else
+    return apr_pmemdup(pool, key, cache->klen);
 }
 
 svn_error_t *
@@ -193,10 +208,39 @@ svn_cache_get(void **value_p,
 
   move_page_to_front(cache, entry->page);
 
-  SVN_ERR(duplicate(value_p, cache, entry->value, pool));
+  SVN_ERR(duplicate_value(value_p, cache, entry->value, pool));
   *found = TRUE;
 
   return SVN_NO_ERROR;
+}
+
+/* Removes PAGE from the LRU list, removes all of its entries from
+ * CACHE's hash, clears its pool, and sets its entry pointer to NULL.
+ * Finally, puts it in the "partial page" slot in the cache and sets
+ * partial_page_number_filled to 0.  Must be called on a page actually
+ * in the list. */
+static void
+erase_page(svn_cache_t *cache,
+           struct cache_page *page)
+{
+  remove_page_from_list(page);
+  struct cache_entry *e;
+
+  for (e = page->first_entry;
+       e;
+       e = e->next_entry)
+    {
+      apr_hash_set(cache->hash, e->key, cache->klen, NULL);
+    }
+
+  svn_pool_clear(page->page_pool);
+
+  page->first_entry = NULL;
+  page->prev = NULL;
+  page->next = NULL;
+
+  cache->partial_page = page;
+  cache->partial_page_number_filled = 0;
 }
 
 
@@ -206,6 +250,95 @@ svn_cache_set(svn_cache_t *cache,
               void *value,
               apr_pool_t *pool)
 {
-  /* ### TODO: implement */
+  void *existing_entry = apr_hash_get(cache->hash, key, cache->klen);
+
+  /* Is it already here, but we can do the one-item-per-page
+   * optimization? */
+  if (existing_entry && cache->items_per_page == 1)
+    {
+      /* Special case!  ENTRY is the *only* entry on this page, so
+       * why not wipe it (so as not to leak the previous value).
+       */
+      struct cache_entry *entry = existing_entry;
+      struct cache_page *page = entry->page;
+
+      /* This can't be the partial page, items_per_page == NULL
+       * *never* has a partial page (except for in the temporary state
+       * that we're about to fake). */
+      assert(page->next != NULL);
+      assert(cache->partial_page == NULL);
+
+      erase_page(cache, page);
+      existing_entry = NULL;
+    }
+
+  /* Is it already here, and we just have to leak the old value? */
+  if (existing_entry)
+    {
+      struct cache_entry *entry = existing_entry;
+      struct cache_page *page = entry->page;
+
+      move_page_to_front(cache, page);
+      SVN_ERR(duplicate_value(&(entry->value), cache, value, page->page_pool));
+      return SVN_NO_ERROR;
+    }
+
+  /* Do we not have a partial page to put it on, but we are allowed to
+   * allocate more? */
+  if (cache->partial_page == NULL && cache->unallocated_pages > 0)
+    {
+      cache->partial_page = apr_pcalloc(cache->cache_pool,
+                                        sizeof(*(cache->partial_page)));
+      cache->partial_page->page_pool = svn_pool_create(cache->cache_pool);
+      cache->partial_page_number_filled = 0;
+      (cache->unallocated_pages)--;
+    }
+
+  /* Do we really not have a partial page to put it on, even after the
+   * one-item-per-page optimization and checking the unallocated page
+   * count? */
+  if (cache->partial_page == NULL)
+    {
+      struct cache_page *oldest_page = cache->sentinel->prev;
+
+      assert(oldest_page != cache->sentinel);
+
+      /* Erase the page and put it in cache->partial_page. */
+      erase_page(cache, oldest_page);
+    }
+
+  assert(cache->partial_page != NULL);
+
+  {
+    struct cache_page *page = cache->partial_page;
+    struct cache_entry *new_entry = apr_pcalloc(page->page_pool,
+                                                sizeof(*new_entry));
+
+    /* Copy the key and value into the page's pool.  */
+    new_entry->key = duplicate_key(cache, key, page->page_pool);
+    SVN_ERR(duplicate_value(&(new_entry->value), cache, value,
+                            page->page_pool));
+
+    /* Add the entry to the page's list. */
+    new_entry->page = page;
+    new_entry->next_entry = page->first_entry;
+    page->first_entry = new_entry;
+
+    /* Add the entry to the hash, using the *entry's* copy of the
+     * key. */
+    apr_hash_set(cache->hash, new_entry->key, cache->klen, new_entry);
+
+    /* We've added something else to the partial page. */
+    (cache->partial_page_number_filled)++;
+
+    /* Is it full? */
+    if (cache->partial_page_number_filled >= cache->items_per_page)
+      {
+        insert_page(cache, page);
+        cache->partial_page = NULL;
+      }
+  }
+
+  /* ### TODO: mutex */
   return SVN_NO_ERROR;
 }
