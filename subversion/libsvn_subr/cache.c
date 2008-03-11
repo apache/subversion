@@ -27,7 +27,7 @@ struct svn_cache_t {
   apr_ssize_t klen;
 
   /* Used to copy values in and out of the cache. */
-  svn_cache_dup_func_t *dup;
+  svn_cache_dup_func_t *dup_func;
 
   /* The number of pages we're allowed to allocate before having to
    * try to reuse one. */
@@ -61,7 +61,7 @@ struct svn_cache_t {
  * pool. */
 struct cache_page {
   /* Pointers for the LRU list anchored at the cache's SENTINEL.
-   * (Ignored for the PARTIAL_PAGE.) */
+   * (NULL for the PARTIAL_PAGE.) */
   struct cache_page *prev;
   struct cache_page *next;
 
@@ -90,7 +90,7 @@ struct cache_entry {
 
 svn_error_t *
 svn_cache_create(svn_cache_t **cache_p,
-                 svn_cache_dup_func_t *dup,
+                 svn_cache_dup_func_t *dup_func,
                  apr_ssize_t klen,
                  apr_int64_t pages,
                  apr_int64_t items_per_page,
@@ -102,7 +102,7 @@ svn_cache_create(svn_cache_t **cache_p,
   cache->hash = apr_hash_make(pool);
   cache->klen = klen;
 
-  cache->dup = dup;
+  cache->dup_func = dup_func;
 
   assert(pages >= 1);
   cache->unallocated_pages = pages;
@@ -121,15 +121,81 @@ svn_cache_create(svn_cache_t **cache_p,
   return SVN_NO_ERROR;
 }
 
+/* Removes PAGE from the doubly-linked list it is in (leaving its PREV
+ * and NEXT fields undefined). */
+static void
+remove_page_from_list(struct cache_page *page)
+{
+  page->prev->next = page->next;
+  page->next->prev = page->prev;
+}
+
+/* Inserts PAGE immediately behind PRED. */
+static void
+insert_page(struct cache_page *page,
+            struct cache_page *pred)
+{
+  page->prev = pred;
+  page->next = pred->next;
+  page->prev->next = page;
+  page->next->prev = page;
+}
+
+/* If PAGE is in the circularly linked list (eg, its NEXT isn't NULL),
+ * move it to the front of the list. */
+static void
+move_page_to_front(svn_cache_t *cache,
+                   struct cache_page *page)
+{
+  assert(page != cache->sentinel);
+
+  if (! page->next)
+    return;
+
+  remove_page_from_list(page);
+  insert_page(page, cache->sentinel);
+}
+
+/* Uses CACHE->dup_func to copy VALUE into *VALUE_P inside POOL, or
+   just sets *VALUE_P to NULL if VALUE is NULL. */
+static svn_error_t *
+duplicate(void **value_p,
+          svn_cache_t *cache,
+          void *value,
+          apr_pool_t *pool)
+{
+  if (value)
+    SVN_ERR((cache->dup_func)(value_p, value, pool));
+  else
+    *value_p = NULL;
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
-svn_cache_get(void **value,
+svn_cache_get(void **value_p,
               svn_boolean_t *found,
               svn_cache_t *cache,
               const void *key,
               apr_pool_t *pool)
 {
-  /* ### TODO: implement */
+  /* ### TODO: mutex */
+
+  void *entry_void = apr_hash_get(cache->hash, key, cache->klen);
+  struct cache_entry *entry;
+
+  if (! entry_void)
+    {
+      *found = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  entry = entry_void;
+
+  move_page_to_front(cache, entry->page);
+
+  SVN_ERR(duplicate(value_p, cache, entry->value, pool));
+  *found = TRUE;
+
   return SVN_NO_ERROR;
 }
 
