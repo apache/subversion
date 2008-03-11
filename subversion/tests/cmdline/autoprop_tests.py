@@ -33,8 +33,8 @@ Item = svntest.wc.StateItem
 def check_proplist(path, exp_out, config_dir):
   """Verify that property list on PATH has a value of EXP_OUT"""
 
-  out, err = svntest.main.run_svn(None, 'proplist', '--verbose', path,
-                                  '--config-dir', config_dir)
+  exit_code, out, err = svntest.main.run_svn(None, 'proplist', '--verbose',
+                                             path, '--config-dir', config_dir)
 
   out2 = []
   for line in out[1:]:

@@ -44,9 +44,8 @@ def filter_and_return_output(dump, *varargs):
   if type(dump) is type(""):
     dump = [ dump ]
 
-  ## TODO: Should we need to handle errput?
-  output, errput = \
-          svntest.main.run_command_stdin(
+  ## TODO: Should we need to handle errput and exit_code?
+  exit_code, output, errput = svntest.main.run_command_stdin(
     svntest.main.svndumpfilter_binary, None, 1, dump, *varargs)
 
   return output

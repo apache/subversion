@@ -915,7 +915,7 @@ def repos_to_wc(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
 
   # Modification will only show up if timestamps differ
-  out,err = svntest.main.run_svn(None, 'diff', pi_path)
+  exit_code, out, err = svntest.main.run_svn(None, 'diff', pi_path)
   if err or not out:
     print "diff failed"
     raise svntest.Failure
@@ -1334,7 +1334,7 @@ def revision_kinds_local_source(sbox):
     expected_disk.add({ dst: Item(contents=text) })
 
     # Check that the copied-from revision == from_rev.
-    output, errput = svntest.main.run_svn(None, "info", dst_path)
+    exit_code, output, errput = svntest.main.run_svn(None, "info", dst_path)
     for line in output:
       if line.rstrip() == "Copied From Rev: " + str(from_rev):
         break
@@ -1472,9 +1472,9 @@ def wc_to_wc_copy_between_different_repos(sbox):
   wc2_dir = sbox2.wc_dir
 
   # Attempt a copy between different repositories.
-  out, err = svntest.main.run_svn(1, 'cp',
-                                  os.path.join(wc2_dir, 'A'),
-                                  os.path.join(wc_dir, 'A', 'B'))
+  exit_code, out, err = svntest.main.run_svn(1, 'cp',
+                                             os.path.join(wc2_dir, 'A'),
+                                             os.path.join(wc_dir, 'A', 'B'))
   for line in err:
     if line.find("it is not from repository") != -1:
       break
@@ -1503,9 +1503,9 @@ def wc_to_wc_copy_deleted(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Copy to schedule=delete fails
-  out, err = svntest.main.run_svn(1, 'cp',
-                                  os.path.join(B_path, 'E'),
-                                  os.path.join(B_path, 'F'))
+  exit_code, out, err = svntest.main.run_svn(1, 'cp',
+                                             os.path.join(B_path, 'E'),
+                                             os.path.join(B_path, 'F'))
   for line in err:
     if line.find("is scheduled for deletion") != -1:
       break
@@ -1542,14 +1542,15 @@ def wc_to_wc_copy_deleted(sbox):
   # Attempts to revert the schedule=delete will fail, but should not
   # break the wc.  It's very important that the directory revert fails
   # since it's a placeholder rather than a full hierarchy
-  out, err = svntest.main.run_svn(1, 'revert', '--recursive',
-                                  os.path.join(B2_path, 'F'))
+  exit_code, out, err = svntest.main.run_svn(1, 'revert', '--recursive',
+                                             os.path.join(B2_path, 'F'))
   for line in err:
     if line.find("Error restoring text") != -1:
       break
   else:
     raise svntest.Failure
-  out, err = svntest.main.run_svn(1, 'revert', os.path.join(B2_path, 'lambda'))
+  exit_code, out, err = svntest.main.run_svn(1, 'revert',
+                                             os.path.join(B2_path, 'lambda'))
   for line in err:
     if line.find("Error restoring text") != -1:
       break
@@ -1603,9 +1604,8 @@ def url_to_non_existent_url_path(sbox):
 
   # Expect failure on 'svn cp SRC DST' where one or more ancestor
   # directories of DST do not exist
-  out, err = svntest.main.run_svn(1,
-                                  'cp', dirURL1, dirURL2,
-                                  '-m', 'fooogle')
+  exit_code, out, err = svntest.main.run_svn(1, 'cp', dirURL1, dirURL2,
+                                             '-m', 'fooogle')
   for err_line in err:
     if re.match (msg, err_line):
       break
@@ -2384,10 +2384,9 @@ def move_dir_back_and_forth(sbox):
 
   # Move the moved dir: D_moved back to its starting
   # location at A/D.
-  out, err = svntest.actions.run_and_verify_svn(None, None,
-                                                svntest.verify.AnyOutput,
-                                                'mv', D_move_path,
-                                                D_path)
+  exit_code, out, err = svntest.actions.run_and_verify_svn(
+    None, None, svntest.verify.AnyOutput,
+    'mv', D_move_path, D_path)
 
   for line in err:
     if re.match('.*Cannot copy to .*as it is scheduled for deletion',
@@ -3788,8 +3787,8 @@ def replaced_local_source_for_incoming_copy(sbox):
                                        chi_url, other_psi_path);
     svntest.actions.run_and_verify_svn(None, None, [], 'up',
                                        other_wc_dir)
-    output, errput = svntest.main.run_svn(None, 'proplist',
-                                          '-v', other_omega_path)
+    exit_code, output, errput = svntest.main.run_svn(None, 'proplist',
+                                                     '-v', other_omega_path)
     if len(errput):
       raise svntest.Failure("unexpected error output: %s" % errput)
     if len(output):

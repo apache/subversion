@@ -274,7 +274,7 @@ typedef struct {
   /* initialize only */
   const char *from_url;
 
-  /* syncronize only */
+  /* synchronize only */
   svn_revnum_t committed_rev;
 
   /* copy-revprops only */
@@ -735,6 +735,11 @@ typedef struct {
   svn_boolean_t got_textdeltas;
   svn_revnum_t base_revision;
   svn_boolean_t quiet;
+  svn_boolean_t strip_mergeinfo;    /* Are we stripping svn:mergeinfo? */
+  svn_boolean_t migrate_svnmerge;   /* Are we converting svnmerge.py data? */
+  svn_boolean_t mergeinfo_stripped; /* Did we strip svn:mergeinfo? */
+  svn_boolean_t svnmerge_migrated;  /* Did we convert svnmerge.py data? */
+  svn_boolean_t svnmerge_blocked;   /* Was there any blocked svnmerge data? */
 } edit_baton_t;
 
 
@@ -963,6 +968,27 @@ change_file_prop(void *file_baton,
   if (svn_property_kind(NULL, name) != svn_prop_regular_kind)
     return SVN_NO_ERROR;
 
+  /* Maybe drop svn:mergeinfo.  */
+  if (eb->strip_mergeinfo && (strcmp(name, SVN_PROP_MERGEINFO) == 0))
+    {
+      eb->mergeinfo_stripped = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  /* Maybe drop (errantly set, as this is a file) svnmerge.py properties. */
+  if (eb->migrate_svnmerge && (strcmp(name, "svnmerge-integrated") == 0))
+    {
+      eb->svnmerge_migrated = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  /* Remember if we see any svnmerge-blocked properties.  (They really
+     shouldn't be here, as this is a file, but whatever...)  */
+  if (eb->migrate_svnmerge && (strcmp(name, "svnmerge-blocked") == 0))
+    {
+      eb->svnmerge_blocked = TRUE;
+    }
+
   return eb->wrapped_editor->change_file_prop(fb->wrapped_node_baton,
                                               name, value, pool);
 }
@@ -975,13 +1001,84 @@ change_dir_prop(void *dir_baton,
 {
   node_baton_t *db = dir_baton;
   edit_baton_t *eb = db->edit_baton;
+  svn_string_t *real_value = (svn_string_t *)value;
 
-  /* only regular properties can pass over libsvn_ra */
+  /* Only regular properties can pass over libsvn_ra */
   if (svn_property_kind(NULL, name) != svn_prop_regular_kind)
     return SVN_NO_ERROR;
 
+  /* Maybe drop svn:mergeinfo.  */
+  if (eb->strip_mergeinfo && (strcmp(name, SVN_PROP_MERGEINFO) == 0))
+    {
+      eb->mergeinfo_stripped = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  /* Maybe convert svnmerge-integrated data into svn:mergeinfo.  (We
+     ignore svnmerge-blocked for now.) */
+  /* ### FIXME: Consult the mirror repository's HEAD prop values and
+     ### merge svn:mergeinfo, svnmerge-integrated, and svnmerge-blocked. */
+  if (eb->migrate_svnmerge && (strcmp(name, "svnmerge-integrated") == 0))
+    {
+      if (value)
+        {
+          /* svnmerge-integrated differs from svn:mergeinfo in a pair
+             of ways.  First, it can use tabs, newlines, or spaces to
+             delimit source information.  Secondly, the source paths
+             are relative URLs, whereas svn:mergeinfo uses relative
+             paths (not URI-encoded). */
+          svn_error_t *err;
+          svn_stringbuf_t *mergeinfo_buf = svn_stringbuf_create("", pool);
+          svn_mergeinfo_t mergeinfo;
+          int i;
+          apr_array_header_t *sources = 
+            svn_cstring_split(value->data, " \t\n", TRUE, pool);
+
+          for (i = 0; i < sources->nelts; i++)
+            {
+              const char *rel_path;
+              apr_array_header_t *path_revs = 
+                svn_cstring_split(APR_ARRAY_IDX(sources, i, const char *), 
+                                  ":", TRUE, pool);
+
+              /* ### TODO: Warn? */
+              if (path_revs->nelts != 2)
+                continue;
+              
+              /* Append this source's mergeinfo data. */
+              rel_path = APR_ARRAY_IDX(path_revs, 0, const char *);
+              rel_path = svn_path_uri_decode(rel_path, pool);
+              svn_stringbuf_appendcstr(mergeinfo_buf, rel_path);
+              svn_stringbuf_appendcstr(mergeinfo_buf, ":");
+              svn_stringbuf_appendcstr(mergeinfo_buf, 
+                                       APR_ARRAY_IDX(path_revs, 1, 
+                                                     const char *));
+              svn_stringbuf_appendcstr(mergeinfo_buf, "\n");
+            }
+
+          /* Try to parse the mergeinfo string we've created, just to
+             check for bogosity.  If all goes well, we'll unparse it
+             again and use that as our property value.  */
+          err = svn_mergeinfo_parse(&mergeinfo, mergeinfo_buf->data, pool);
+          if (err)
+            {
+              svn_error_clear(err);
+              return SVN_NO_ERROR;
+            }
+          SVN_ERR(svn_mergeinfo_to_string(&real_value, mergeinfo, pool));
+        }
+      name = SVN_PROP_MERGEINFO;
+      eb->svnmerge_migrated = TRUE;
+    }
+
+  /* Remember if we see any svnmerge-blocked properties. */
+  if (eb->migrate_svnmerge && (strcmp(name, "svnmerge-blocked") == 0))
+    {
+      eb->svnmerge_blocked = TRUE;
+    }
+
   return eb->wrapped_editor->change_dir_prop(db->wrapped_node_baton,
-                                             name, value, pool);
+                                             name, real_value, pool);
 }
 
 static svn_error_t *
@@ -1009,6 +1106,18 @@ close_edit(void *edit_baton,
     {
       if (eb->got_textdeltas)
         SVN_ERR(svn_cmdline_printf(pool, "\n"));
+      if (eb->mergeinfo_stripped)
+        SVN_ERR(svn_cmdline_printf(pool, 
+                                   "NOTE: Dropped Subversion mergeinfo "
+                                   "from this revision.\n"));
+      if (eb->svnmerge_migrated)
+        SVN_ERR(svn_cmdline_printf(pool, 
+                                   "NOTE: Migrated 'svnmerge-integrated' in "
+                                   "this revision.\n"));
+      if (eb->svnmerge_blocked)
+        SVN_ERR(svn_cmdline_printf(pool, 
+                                   "NOTE: Saw 'svnmerge-blocked' in this "
+                                   "revision (but didn't migrate it).\n"));
     }
 
   return eb->wrapped_editor->close_edit(eb->wrapped_edit_baton, pool);
@@ -1056,6 +1165,25 @@ get_sync_editor(const svn_delta_editor_t *wrapped_editor,
   eb->base_revision = base_revision;
   eb->to_url = to_url;
   eb->quiet = quiet;
+
+  if (getenv("SVNSYNC_UNSUPPORTED_STRIP_MERGEINFO"))
+    {
+      eb->strip_mergeinfo = TRUE;
+    }
+  if (getenv("SVNSYNC_UNSUPPORTED_MIGRATE_SVNMERGE"))
+    {
+      /* Current we can't merge property values.  That's only possible
+         if all the properties to be merged were always modified in
+         exactly the same revisions, or if we allow ourselves to
+         lookup the current state of properties in the sync
+         destination.  So for now, migrating svnmerge.py data implies
+         stripping pre-existing svn:mergeinfo. */
+      /* ### FIXME: Do a real migration by consulting the mirror
+         ### repository's HEAD propvalues and merging svn:mergeinfo,
+         ### svnmerge-integrated, and svnmerge-blocked together. */
+      eb->migrate_svnmerge = TRUE;
+      eb->strip_mergeinfo = TRUE;
+    }
 
   *editor = tree_editor;
   *edit_baton = eb;

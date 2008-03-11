@@ -298,8 +298,8 @@
    output mergeinfo hash
 */
 
-#ifdef SWIGRUBY
-%apply apr_hash_t **MERGEINFO_HASH {
+#if defined(SWIGRUBY) || defined(SWIGPYTHON)
+%apply apr_hash_t **MERGEINFO_CATALOG {
   apr_hash_t **catalog
 };
 #endif

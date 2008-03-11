@@ -69,8 +69,8 @@ SVN_LIB_APRUTIL($APU_VER_REGEXES)
 
 # Either a space-separated list of allowable Neon versions, or "any" to
 # mean allow anything.
-NEON_ALLOWED_LIST="0.25.0 0.25.1 0.25.2 0.25.3 0.25.4 0.25.5 0.26.0 0.26.1 0.26.2 0.26.3 0.26.4 0.27.2 0.28.0"
-NEON_RECOMMENDED_VER=0.28.0
+NEON_ALLOWED_LIST="0.25.0 0.25.1 0.25.2 0.25.3 0.25.4 0.25.5 0.26.0 0.26.1 0.26.2 0.26.3 0.26.4 0.27.2 0.28.0 0.28.1 0.29.0-dev"
+NEON_RECOMMENDED_VER=0.28.1
 NEON_URL="http://www.webdav.org/neon/neon-${NEON_RECOMMENDED_VER}.tar.gz"
 dnl You can skip the neon version check only if you know what you are doing 
 AC_ARG_ENABLE(neon-version-check,
@@ -598,7 +598,7 @@ AS_HELP_STRING([--enable-runtime-module-search],
                [Turn on dynamic loading of RA/FS libraries]),
 [
     if test "$enableval" = "yes"; then
-      enable_dso=yes
+      use_dso=yes
       if test "$enable_shared" = "no"; then
         AC_MSG_ERROR([--enable-runtime-module-search conflicts with --disable-shared])
       fi
@@ -607,7 +607,7 @@ AS_HELP_STRING([--enable-runtime-module-search],
     fi
 ])
 
-if test "$enable_shared" = "no" || test "$enable_dso" != "yes"; then
+if test "$enable_shared" = "no" || test "$use_dso" != "yes"; then
   ### We want ra_local first to handle the following scenario:
   ### user has neon and db3 in /usr/local, and db4 in
   ### /usr/local/BerkeleyDB.4.0.  If libsvn_ra_neon.la comes before 

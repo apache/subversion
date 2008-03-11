@@ -220,6 +220,27 @@ decode_group(const unsigned char *in, char *out)
   out[2] = ((in[2] & 0x3) << 6) | in[3];
 }
 
+/* Lookup table for base64 characters; reverse_base64[ch] gives a
+   negative value if ch is not a valid base64 character, or otherwise
+   the value of the byte represented; 'A' => 0 etc. */
+static const signed char reverse_base64[256] = {
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 62, -1, -1, -1, 63, 
+52, 53, 54, 55, 56, 57, 58, 59, 60, 61, -1, -1, -1, -1, -1, -1, 
+-1,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 
+15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, -1, -1, -1, -1, -1, 
+-1, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 
+41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -1, -1, -1, -1, -1, 
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
+};
 
 /* Decode a byte string which may or may not be the total amount of
    data being decoded.  INBUF and *INBUFLEN carry the leftover bytes
@@ -231,8 +252,13 @@ static void
 decode_bytes(svn_stringbuf_t *str, const char *data, apr_size_t len,
              unsigned char *inbuf, int *inbuflen, svn_boolean_t *done)
 {
-  const char *p, *find;
+  const char *p;
   char group[3];
+  signed char find;
+  
+  /* Resize the stringbuf to make room for the (approximate) size of
+     output, to avoid repeated resizes later. */
+  svn_stringbuf_ensure(str, (len / 4) * 3 + 3);
 
   for (p = data; !*done && p < data + len; p++)
     {
@@ -249,9 +275,9 @@ decode_bytes(svn_stringbuf_t *str, const char *data, apr_size_t len,
         }
       else
         {
-          find = strchr(base64tab, *p);
-          if (find != NULL)
-            inbuf[(*inbuflen)++] = find - base64tab;
+          find = reverse_base64[(unsigned char)*p];
+          if (find >= 0)
+            inbuf[(*inbuflen)++] = find;
           if (*inbuflen == 4)
             {
               decode_group(inbuf, group);
