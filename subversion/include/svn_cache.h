@@ -65,6 +65,9 @@ typedef struct svn_cache_t svn_cache_t;
  * @a pages and @a items_per_page must be positive (though they both
  * may certainly be 1).
  *
+ * If @a thread_safe is true, and APR is compiled with threads, all
+ * accesses to the cache will be protected with a mutex.
+ *
  * Note that NULL is a legitimate value for cache entries (and @a dup
  * will not be called on it).
  */
@@ -74,6 +77,7 @@ svn_cache_create(svn_cache_t **cache_p,
                  apr_ssize_t klen,
                  int pages,
                  int items_per_page,
+                 svn_boolean_t thread_safe,
                  apr_pool_t *pool);
 
 /**
@@ -95,10 +99,11 @@ svn_cache_get(void **value,
  * @a key and @a value if necessary (that is, @a key and @a value may
  * have shorter lifetimes than the cache).
  *
- * If there is already a value for @a key, this will replace it; bear
+ * If there is already a value for @a key, this will replace it.  Bear
  * in mind that in some circumstances this may leak memory (that is,
  * the cache's copy of the previous value may not be immediately
- * cleared).
+ * cleared); it is only guaranteed to not leak for caches created with
+ * @a items_per_page equal to 1.
  */
 svn_error_t *
 svn_cache_set(svn_cache_t *cache,
