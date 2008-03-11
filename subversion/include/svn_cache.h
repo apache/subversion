@@ -90,7 +90,7 @@ svn_error_t *
 svn_cache_get(void **value,
               svn_boolean_t *found,
               svn_cache_t *cache,
-              void *key,
+              const void *key,
               apr_pool_t *pool);
 
 /**
@@ -107,7 +107,7 @@ svn_cache_get(void **value,
  */
 svn_error_t *
 svn_cache_set(svn_cache_t *cache,
-              void *key,
+              const void *key,
               void *value,
               apr_pool_t *pool);
 /** @} */
