@@ -4752,26 +4752,27 @@ do_merge(apr_array_header_t *merge_sources,
   int i;
   svn_boolean_t checked_mergeinfo_capability = FALSE;
 
-  /* If this is a dry-run record-only merge, there's nothing to do. */
-  if (record_only && dry_run)
-    return SVN_NO_ERROR;
+  /* Check from some special conditions when in record-only mode
+     (which is a merge-tracking thing). */
+  if (record_only)
+    {
+      /* We can't do a record-only merge if the sources aren't related. */
+      if (! sources_ancestral)
+        return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                _("Use of two URLs is not compatible with "
+                                  "mergeinfo modification"));
 
-  /* Sanity check: we can't do a record-only merge (which is a
-     merge-tracking thing) if the sources aren't related, because we
-     don't do merge-tracking if the sources aren't related.  */
-  if (record_only && (! sources_ancestral))
-    return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
-                            _("Use of two URLs is not compatible with "
-                              "mergeinfo modification"));
+      /* We can't do a record-only merge if the sources aren't from
+         the same repository as the target. */
+      if (! same_repos)
+        return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                _("Merge from foreign repository is not "
+                                  "compatible with mergeinfo modification"));
 
-  /* Sanity check: we can't do a record-only merge (which is a
-     merge-tracking thing) if the sources aren't in the same
-     repository as the target, because we don't do merge-tracking if
-     the sources aren't in the same repository as the target. */
-  if (record_only && (! same_repos))
-    return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
-                            _("Merge from foreign repository is not "
-                              "compatible with mergeinfo modification"));
+      /* If this is a dry-run record-only merge, there's nothing to do. */
+      if (dry_run)
+        return SVN_NO_ERROR;
+    }
 
   /* Ensure a known depth. */
   if (depth == svn_depth_unknown)
