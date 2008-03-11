@@ -57,7 +57,8 @@ def general_symlink(sbox):
     })
 
   # Run a diff and verify that we get the correct output
-  stdout_lines, stderr_lines = svntest.main.run_svn(1, 'diff', wc_dir)
+  exit_code, stdout_lines, stderr_lines = svntest.main.run_svn(1, 'diff',
+                                                               wc_dir)
 
   regex = '^\+link linktarget'
   for line in stdout_lines:
@@ -139,8 +140,9 @@ def replace_file_with_symlink(sbox):
 
   # And does a commit fail?
   os.chdir(was_cwd)
-  stdout_lines, stderr_lines = svntest.main.run_svn(1, 'ci', '-m',
-                                                    'log msg', wc_dir)
+  exit_code, stdout_lines, stderr_lines = svntest.main.run_svn(1, 'ci', '-m',
+                                                               'log msg',
+                                                               wc_dir)
 
   regex = 'svn: Commit failed'
   for line in stderr_lines:
@@ -163,7 +165,7 @@ def import_export_symlink(sbox):
 
   # import this symlink into the repository
   url = sbox.repo_url + "/dirA/dirB/new_link"
-  output, errput = svntest.actions.run_and_verify_svn(
+  exit_code, output, errput = svntest.actions.run_and_verify_svn(
     'Import a symlink', None, [], 'import',
     '-m', 'log msg', new_path, url)
 
@@ -290,8 +292,9 @@ def replace_symlink_with_file(sbox):
 
   # And does a commit fail?
   os.chdir(was_cwd)
-  stdout_lines, stderr_lines = svntest.main.run_svn(1, 'ci', '-m',
-                                                    'log msg', wc_dir)
+  exit_code, stdout_lines, stderr_lines = svntest.main.run_svn(1, 'ci', '-m',
+                                                               'log msg',
+                                                               wc_dir)
 
   regex = 'svn: Commit failed'
   for line in stderr_lines:
@@ -572,8 +575,9 @@ def replace_symlink_with_dir(sbox):
   # I'd expect a failed commit here, but replacing a file locally with a
   # directory seems to make svn think the file is unchanged.
   os.chdir(was_cwd)
-  stdout_lines, stderr_lines = svntest.main.run_svn(1, 'ci', '-m',
-                                                    'log msg', wc_dir)
+  exit_code, stdout_lines, stderr_lines = svntest.main.run_svn(1, 'ci', '-m',
+                                                               'log msg',
+                                                               wc_dir)
   if not (stdout_lines == [] or stderr_lines == []):
     raise svntest.Failure
 

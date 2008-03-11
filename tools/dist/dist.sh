@@ -191,6 +191,15 @@ echo "Exporting $REPOS_PATH r$REVISION into sandbox..."
 
 rm -f "$DISTPATH/STATUS"
 
+# Remove the www/ directory, and create an empty directory in it's place.
+# Export hacking.html from trunk into that directory.
+# (See http://svn.haxx.se/dev/archive-2008-02/0863.shtml for rationale.)
+rm -rf "$DISTPATH/www"
+mkdir "$DISTPATH/www"
+${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS -r "$REVISION" \
+    "http://svn.collab.net/repos/svn/trunk/www/hacking.html" \
+    --username none --password none "$DISTPATH/www/hacking.html"
+
 install_dependency()
 {
   DEP_NAME=$1

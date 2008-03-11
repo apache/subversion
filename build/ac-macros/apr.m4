@@ -111,7 +111,7 @@ AC_DEFUN(SVN_DOWNLOAD_APR,
   echo "get it with SVN and put it in a subdirectory of this source:"
   echo ""
   echo "   svn co \\"
-  echo "    http://svn.apache.org/repos/asf/apr/apr/branches/0.9.x \\"
+  echo "    http://svn.apache.org/repos/asf/apr/apr/branches/1.2.x \\"
   echo "    apr"
   echo ""
   echo "Run that right here in the top level of the Subversion tree."
@@ -124,7 +124,7 @@ AC_DEFUN(SVN_DOWNLOAD_APR,
   echo "getting both from SVN with:"
   echo ""
   echo "   svn co \\"
-  echo "    http://svn.apache.org/repos/asf/apr/apr-util/branches/0.9.x \\"
+  echo "    http://svn.apache.org/repos/asf/apr/apr-util/branches/1.2.x \\"
   echo "    apr-util"
   echo ""
   AC_MSG_ERROR([no suitable apr found])

@@ -418,7 +418,11 @@ def main():
         child_out.close()
         child_in.close()
         child_err.close()
-        revisions = [int(cmd_out[0])]
+        try:
+            revisions = [int(cmd_out[0])]
+        except IndexError, msg:
+            usage_and_exit("svn2feed.py: Invalid value '%s' for " \
+                           "REPOS-PATH" % (repos_path))
     else:
         try:
             rev_range = commit_rev.split(':')

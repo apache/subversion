@@ -2517,8 +2517,9 @@ svn_client_merge(const char *source1,
 
 
 /**
- * Perform a reintegration merge of @a source into @target_wc_path.
- * @a target_wc_path must be a single-revision, @c svn_depth_infinity,
+ * Perform a reintegration merge of @a source at @a peg_revision
+ * into @a target_wcpath.
+ * @a target_wcpath must be a single-revision, @c svn_depth_infinity,
  * pristine, unswitched working copy -- in other words, it must
  * reflect a single revision tree, the "target".  The mergeinfo on @a
  * source must reflect that all of the target has been merged into it.
@@ -2534,7 +2535,6 @@ svn_error_t *
 svn_client_merge_reintegrate(const char *source,
                              const svn_opt_revision_t *peg_revision,
                              const char *target_wcpath,
-                             svn_boolean_t force,
                              svn_boolean_t dry_run,
                              const apr_array_header_t *merge_options,
                              svn_client_ctx_t *ctx,
@@ -2832,11 +2832,12 @@ svn_client_resolved(const char *path,
  * @c svn_wc_conflict_choose_merged, don't change the contents at all,
  * just remove the conflict status, which is the pre-1.5 behavior.
  *
- * (@c svn_wc_conflict_choose_theirs and @c svn_wc_conflict_choose_mine
- * are not yet implemented; the effect of passing one of those values
- * as @a conflict_choice is currently undefined, which may or may not
- * be an underhanded way of allowing real behaviors to be added for
- * them later without revving this interface.)
+ * (@c svn_wc_conflict_choose_theirs_conflict and
+ * @c svn_wc_conflict_choose_mine_conflict are not yet implemented;
+ * the effect of passing one of those values as @a conflict_choice is
+ * currently undefined, which may or may not be an underhanded way of
+ * allowing real behaviors to be added for them later without revving
+ * this interface.)
  *
  * If @a path is not in a state of conflict to begin with, do nothing.
  * If @a path's conflict state is removed and @a ctx->notify_func2 is non-NULL,

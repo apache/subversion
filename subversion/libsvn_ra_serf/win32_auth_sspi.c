@@ -313,4 +313,94 @@ sspi_get_credentials(char *token, apr_size_t token_len, const char **buf,
   return SVN_NO_ERROR;
 }
 
+/* Proxy authentication */
+
+svn_error_t *
+init_proxy_sspi_connection(svn_ra_serf__session_t *session,
+                           svn_ra_serf__connection_t *conn,
+                           apr_pool_t *pool)
+{
+  const char *tmp;
+  apr_size_t tmp_len;
+
+  SVN_ERR(load_security_dll());
+
+  conn->proxy_sspi_context = (serf_sspi_context_t*)
+    apr_palloc(pool, sizeof(serf_sspi_context_t));
+  conn->proxy_sspi_context->ctx.dwLower = 0;
+  conn->proxy_sspi_context->ctx.dwUpper = 0;
+  conn->proxy_sspi_context->state = sspi_auth_not_started;
+
+  /* Setup the initial request to the server with an SSPI header */
+  SVN_ERR(sspi_get_credentials(NULL, 0, &tmp, &tmp_len,
+                               conn->proxy_sspi_context));
+  svn_ra_serf__encode_auth_header("NTLM", &conn->proxy_auth_value, tmp,
+                                  tmp_len,
+                                  pool);
+  conn->proxy_auth_header = "Proxy-Authorization";
+
+  /* Make serf send the initial requests one by one */
+  serf_connection_set_max_outstanding_requests(conn->conn, 1);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+handle_proxy_sspi_auth(svn_ra_serf__session_t *session,
+                       svn_ra_serf__connection_t *conn,
+                       serf_request_t *request,
+                       serf_bucket_t *response,
+                       char *auth_hdr,
+                       char *auth_attr,
+                       apr_pool_t *pool)
+{
+  const char *tmp;
+  char *base64_token, *token = NULL, *last;
+  apr_size_t tmp_len, token_len = 0;
+
+  base64_token = apr_strtok(auth_attr, " ", &last);
+  if (base64_token)
+    {
+      token_len = apr_base64_decode_len(base64_token);
+      token = apr_palloc(pool, token_len);
+      apr_base64_decode(token, base64_token);
+    }
+
+  /* We can get a whole batch of 401 responses from the server, but we should
+     only start the authentication phase once, so if we started authentication
+     ignore all responses with initial NTLM authentication header. */
+  if (!token && conn->proxy_sspi_context->state != sspi_auth_not_started)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(sspi_get_credentials(token, token_len, &tmp, &tmp_len,
+                               conn->proxy_sspi_context));
+
+  svn_ra_serf__encode_auth_header(session->proxy_auth_protocol->auth_name,
+                                  &conn->proxy_auth_value, tmp, tmp_len, pool);
+  conn->proxy_auth_header = "Proxy-Authorization";
+
+  /* If the handshake is finished tell serf it can send as much requests as it
+     likes. */
+  if (conn->proxy_sspi_context->state == sspi_auth_completed)
+    serf_connection_set_max_outstanding_requests(conn->conn, 0);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+setup_request_proxy_sspi_auth(svn_ra_serf__connection_t *conn,
+                              serf_bucket_t *hdrs_bkt)
+{
+  /* Take the default authentication header for this connection, if any. */
+  if (conn->proxy_auth_header && conn->proxy_auth_value)
+    {
+      serf_bucket_headers_setn(hdrs_bkt, conn->proxy_auth_header,
+                               conn->proxy_auth_value);
+      conn->proxy_auth_header = NULL;
+      conn->proxy_auth_value = NULL;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 #endif /* SVN_RA_SERF_SSPI_ENABLED */
