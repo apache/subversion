@@ -4756,13 +4756,22 @@ do_merge(apr_array_header_t *merge_sources,
   if (record_only && dry_run)
     return SVN_NO_ERROR;
 
-  /* Sanity check: we can do a record-only merge (which is a
+  /* Sanity check: we can't do a record-only merge (which is a
      merge-tracking thing) if the sources aren't related, because we
      don't do merge-tracking if the sources aren't related.  */
   if (record_only && (! sources_ancestral))
     return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
                             _("Use of two URLs is not compatible with "
                               "mergeinfo modification"));
+
+  /* Sanity check: we can't do a record-only merge (which is a
+     merge-tracking thing) if the sources aren't in the same
+     repository as the target, because we don't do merge-tracking if
+     the sources aren't in the same repository as the target. */
+  if (record_only && (! same_repos))
+    return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                            _("Merge from foreign repository is not "
+                              "compatible with mergeinfo modification"));
 
   /* Ensure a known depth. */
   if (depth == svn_depth_unknown)
@@ -4984,6 +4993,8 @@ merge_cousins_and_supplement_mergeinfo(const char *target_wcpath,
   apr_array_header_t *remove_sources, *add_sources, *ranges;
   svn_opt_revision_t peg_revision;
   const char *old_url;
+  svn_boolean_t same_repos =
+    (strcmp(wc_repos_root, source_repos_root) == 0) ? TRUE : FALSE;
   
   peg_revision.kind = svn_opt_revision_number;
   SVN_ERR(svn_ra_get_session_url(ra_session, &old_url, pool));
@@ -5030,27 +5041,33 @@ merge_cousins_and_supplement_mergeinfo(const char *target_wcpath,
       faux_source->rev2 = rev2;
       APR_ARRAY_PUSH(faux_sources, merge_source_t *) = faux_source;
       SVN_ERR(do_merge(faux_sources, target_wcpath, entry, adm_access, 
-                       FALSE, TRUE,
-                       (strcmp(wc_repos_root, source_repos_root) == 0),
+                       FALSE, TRUE, same_repos,
                        ignore_ancestry, force, dry_run, 
                        FALSE, depth, merge_options, ctx, pool));
     }
-  /* ... and now we do a pair of record-only merges using the real
-     sources we've calculated.  (We know that each tong in our
-     fork of our merge source history tree has an ancestral
-     relationship with the common ancestral, so we force
-     ancestral=TRUE here.) */
-  SVN_ERR(do_merge(add_sources, target_wcpath, entry, 
-                   adm_access, TRUE, TRUE,
-                   (strcmp(wc_repos_root, source_repos_root) == 0),
-                   ignore_ancestry, force, dry_run, 
-                   TRUE, depth, merge_options, ctx, pool));
-  SVN_ERR(do_merge(remove_sources, target_wcpath, entry, 
-                   adm_access, TRUE, TRUE,
-                   (strcmp(wc_repos_root, source_repos_root) == 0),
-                   ignore_ancestry, force, dry_run, 
-                   TRUE, depth, merge_options, ctx, pool));
+  else if (! same_repos)
+    {
+      return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                              _("Merge from foreign repository is not "
+                                "compatible with mergeinfo modification"));
+    }
 
+  /* ... and now, if we're doing the mergeinfo thang, we execute a
+     pair of record-only merges using the real sources we've
+     calculated.  (We know that each tong in our fork of our merge
+     source history tree has an ancestral relationship with the common
+     ancestral, so we force ancestral=TRUE here.) */
+  if (same_repos)
+    {
+      SVN_ERR(do_merge(add_sources, target_wcpath, entry, 
+                       adm_access, TRUE, TRUE, same_repos,
+                       ignore_ancestry, force, dry_run, 
+                       TRUE, depth, merge_options, ctx, pool));
+      SVN_ERR(do_merge(remove_sources, target_wcpath, entry, 
+                       adm_access, TRUE, TRUE, same_repos,
+                       ignore_ancestry, force, dry_run, 
+                       TRUE, depth, merge_options, ctx, pool));
+    }
   return SVN_NO_ERROR;
 }
 
