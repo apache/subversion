@@ -81,7 +81,7 @@ svn_cache_set(svn_cache_t *cache,
   - decrement cache->unallocated_pages
   - my_page = cache->partial_page
 - if cache->partial_page is NULL:
-  - remove the last page from the LRU list
+  - remove the last page from the LRU list (make sure not sentinel!)
   - walk down the linked list at its first_entry, removing each listed
     element from cache->hash
   - clear its page_pool
