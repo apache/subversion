@@ -55,7 +55,7 @@ typedef struct svn_cache_t svn_cache_t;
  * for all of its storage needs.  The elements in the cache will be
  * indexed by keys of length @a klen, which may be APR_HASH_KEY_STRING
  * if they are strings.  Cached values will be copied in and out of
- * the cache using @a dup.
+ * the cache using @a dup_func.
  *
  * The cache stores up to @a pages * @a items_per_page items at a
  * time.  The exact cache invalidation strategy is not defined here,
@@ -68,12 +68,12 @@ typedef struct svn_cache_t svn_cache_t;
  * If @a thread_safe is true, and APR is compiled with threads, all
  * accesses to the cache will be protected with a mutex.
  *
- * Note that NULL is a legitimate value for cache entries (and @a dup
+ * Note that NULL is a legitimate value for cache entries (and @a dup_func
  * will not be called on it).
  */
 svn_error_t *
 svn_cache_create(svn_cache_t **cache_p,
-                 svn_cache_dup_func_t *dup,
+                 svn_cache_dup_func_t *dup_func,
                  apr_ssize_t klen,
                  apr_int64_t pages,
                  apr_int64_t items_per_page,
