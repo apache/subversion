@@ -111,7 +111,7 @@ end_element(svn_ra_serf__xml_parser_t *parser, void *userData,
   else if (state == MERGEINFO_ITEM
            && strcmp(name.name, SVN_DAV__MERGEINFO_ITEM) == 0)
     {
-      if (mergeinfo_ctx->curr_info->len && mergeinfo_ctx->curr_path->len)
+      if (mergeinfo_ctx->curr_info && mergeinfo_ctx->curr_path->len)
         {
           svn_mergeinfo_t path_mergeinfo;
           SVN_ERR(svn_mergeinfo_parse(&path_mergeinfo,

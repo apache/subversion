@@ -1,5 +1,8 @@
 @echo off
 
+rem ====== Environment change lives only for the duration of the script
+setlocal
+
 rem ====== Set these shell variables before doing a build.
 rem VER is used to name the output bin dir as svn-win32-%VER%
 set VER=trunk
@@ -59,7 +62,7 @@ goto end
 :zliberr
 echo Unable to find zlib
 goto end
-:zliberrstat
+:zlibstaterr
 echo Please copy zlib\static32\zlibstat.lib to zlib\zlibstat.lib
 goto end
 :bdberr
@@ -155,5 +158,5 @@ cd ..
 
 :end
 cd src-%DIR%
+endlocal
 :theveryend
-

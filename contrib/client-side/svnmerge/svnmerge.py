@@ -94,6 +94,12 @@ LOG_LINE_PREFIX = 2 * ' '
 # the locale to match that encoding
 locale.setlocale(locale.LC_ALL, '')
 
+# We want the svn output (such as svn info) to be non-localized
+# Using LC_MESSAGES should not affect localized output of svn log, for example
+if os.environ.has_key("LC_ALL"):
+    del os.environ["LC_ALL"]
+os.environ["LC_MESSAGES"] = "C"
+
 ###############################################################################
 # Support for older Python versions
 ###############################################################################
@@ -211,7 +217,7 @@ def prefix_lines(prefix, lines):
     return prefix + lines[:-1].replace("\n", "\n"+prefix) + "\n"
 
 def recode_stdout_to_file(s):
-    if locale.getdefaultlocale()[1] is None:
+    if locale.getdefaultlocale()[1] is None or sys.stdout.encoding is None:
       return s
     u = s.decode(sys.stdout.encoding)
     return u.encode(locale.getdefaultlocale()[1])
@@ -756,7 +762,7 @@ def set_blocked_revs(dir, source_pathid, revs):
 
 def is_url(url):
     """Check if url is a valid url."""
-    return re.search(r"^[a-zA-Z][-+\.\w]*://", url) is not None
+    return re.search(r"^[a-zA-Z][-+\.\w]*://[^\s]+$", url) is not None
 
 def is_wc(dir):
     """Check if a directory is a working copy."""
