@@ -133,7 +133,7 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
       SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray, pool));
 
       SVN_ERR(file_printf_from_utf8(file, encoding,
-                                    _("   Reverted %s:r%s%s"),
+                                    _("   Reverse-merged %s:r%s%s"),
                                     from_path, merge_revstr->data,
                                     APR_EOL_STR));
     }
