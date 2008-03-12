@@ -18,8 +18,12 @@
 
 #include <assert.h>
 
+#include <apr_thread_mutex.h>
+
 #include "svn_cache.h"
 #include "svn_pools.h"
+
+#include "svn_private_config.h"
 
 /* The cache object. */
 struct svn_cache_t {
@@ -55,6 +59,13 @@ struct svn_cache_t {
    * structs, as well as the dup'd values and hash keys.
    */
   apr_pool_t *cache_pool;
+
+#if APR_HAS_THREADS
+  /* A lock for intra-process synchronization to the cache, or NULL if
+   * the cache's creator doesn't feel the cache needs to be
+   * thread-safe. */
+  apr_thread_mutex_t *mutex;
+#endif
 };
 
 /* A cache page; all items on the page are allocated from the same
@@ -115,7 +126,17 @@ svn_cache_create(svn_cache_t **cache_p,
   /* The sentinel doesn't need a pool.  (We're happy to crash if we
    * accidentally try to treat it like a real page.) */
 
-  /* ### TODO: mutex */
+#if APR_HAS_THREADS
+  if (thread_safe)
+    {
+      apr_status_t status = apr_thread_mutex_create(&(cache->mutex),
+                                                    APR_THREAD_MUTEX_DEFAULT,
+                                                    pool);
+      if (status)
+        return svn_error_wrap_apr(status,
+                                  _("Can't create cache mutex"));
+    }
+#endif
 
   cache->cache_pool = pool;
 
@@ -188,6 +209,41 @@ duplicate_key(svn_cache_t *cache,
     return apr_pmemdup(pool, key, cache->klen);
 }
 
+/* If applicable, locks CACHE's mutex. */
+static svn_error_t *
+lock_cache(svn_cache_t *cache)
+{
+#if APR_HAS_THREADS
+  apr_status_t status;
+  if (! cache->mutex)
+    return SVN_NO_ERROR;
+
+  status = apr_thread_mutex_lock(cache->mutex);
+  if (status)
+    return svn_error_wrap_apr(status, _("Can't lock cache mutex"));
+#endif
+
+  return SVN_NO_ERROR;
+}
+
+/* If applicable, unlocks CACHE's mutex, then returns ERR. */
+static svn_error_t *
+unlock_cache(svn_cache_t *cache,
+             svn_error_t *err)
+{
+#if APR_HAS_THREADS
+  apr_status_t status;
+  if (! cache->mutex)
+    return err;
+
+  status = apr_thread_mutex_unlock(cache->mutex);
+  if (status && !err)
+    return svn_error_wrap_apr(status, _("Can't unlock cache mutex"));
+#endif
+
+  return err;
+}
+
 svn_error_t *
 svn_cache_get(void **value_p,
               svn_boolean_t *found,
@@ -195,25 +251,26 @@ svn_cache_get(void **value_p,
               const void *key,
               apr_pool_t *pool)
 {
-  /* ### TODO: mutex */
-
-  void *entry_void = apr_hash_get(cache->hash, key, cache->klen);
+  void *entry_void;
   struct cache_entry *entry;
+  svn_error_t *err;
 
+  SVN_ERR(lock_cache(cache));
+
+  entry_void = apr_hash_get(cache->hash, key, cache->klen);
   if (! entry_void)
     {
       *found = FALSE;
-      return SVN_NO_ERROR;
+      return unlock_cache(cache, SVN_NO_ERROR);
     }
 
   entry = entry_void;
 
   move_page_to_front(cache, entry->page);
 
-  SVN_ERR(duplicate_value(value_p, cache, entry->value, pool));
   *found = TRUE;
-
-  return SVN_NO_ERROR;
+  err = duplicate_value(value_p, cache, entry->value, pool);
+  return unlock_cache(cache, err);
 }
 
 /* Removes PAGE from the LRU list, removes all of its entries from
@@ -252,7 +309,12 @@ svn_cache_set(svn_cache_t *cache,
               void *value,
               apr_pool_t *pool)
 {
-  void *existing_entry = apr_hash_get(cache->hash, key, cache->klen);
+  void *existing_entry;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  SVN_ERR(lock_cache(cache));
+
+  existing_entry = apr_hash_get(cache->hash, key, cache->klen);
 
   /* Is it already here, but we can do the one-item-per-page
    * optimization? */
@@ -281,8 +343,8 @@ svn_cache_set(svn_cache_t *cache,
       struct cache_page *page = entry->page;
 
       move_page_to_front(cache, page);
-      SVN_ERR(duplicate_value(&(entry->value), cache, value, page->page_pool));
-      return SVN_NO_ERROR;
+      err = duplicate_value(&(entry->value), cache, value, page->page_pool);
+      goto cleanup;
     }
 
   /* Do we not have a partial page to put it on, but we are allowed to
@@ -318,8 +380,10 @@ svn_cache_set(svn_cache_t *cache,
 
     /* Copy the key and value into the page's pool.  */
     new_entry->key = duplicate_key(cache, key, page->page_pool);
-    SVN_ERR(duplicate_value(&(new_entry->value), cache, value,
-                            page->page_pool));
+    err = duplicate_value(&(new_entry->value), cache, value,
+                          page->page_pool);
+    if (err)
+      goto cleanup;
 
     /* Add the entry to the page's list. */
     new_entry->page = page;
@@ -341,6 +405,6 @@ svn_cache_set(svn_cache_t *cache,
       }
   }
 
-  /* ### TODO: mutex */
-  return SVN_NO_ERROR;
+ cleanup:
+  return unlock_cache(cache, err);
 }

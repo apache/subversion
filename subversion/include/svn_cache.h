@@ -70,6 +70,8 @@ typedef struct svn_cache_t svn_cache_t;
  *
  * Note that NULL is a legitimate value for cache entries (and @a dup_func
  * will not be called on it).
+ *
+ * It is not safe for @a dup_func to interact with the cache itself.
  */
 svn_error_t *
 svn_cache_create(svn_cache_t **cache_p,
