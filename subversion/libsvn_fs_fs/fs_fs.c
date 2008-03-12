@@ -2120,21 +2120,14 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   apr_off_t root_offset;
   svn_fs_id_t *root_id;
   svn_error_t *err;
-  const char *rev_str = apr_psprintf(pool, "%ld", rev);
-  svn_fs_id_t *cached_id;
+  svn_boolean_t is_cached;
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
-  /* Calculate an index into the revroot id cache */
-  cached_id = apr_hash_get(ffd->rev_root_id_cache,
-                           rev_str,
-                           APR_HASH_KEY_STRING);
-
-  if (cached_id)
-    {
-      *root_id_p = svn_fs_fs__id_copy(cached_id, pool);
-      return SVN_NO_ERROR;
-    }
+  SVN_ERR(svn_cache_get((void **) root_id_p, &is_cached, ffd->rev_root_id_cache,
+                        &rev, pool));
+  if (is_cached)
+    return SVN_NO_ERROR;
 
   err = svn_io_file_open(&revision_file, svn_fs_fs__path_rev(fs, rev, pool),
                          APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
@@ -2154,21 +2147,7 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
 
   SVN_ERR(svn_io_file_close(revision_file, pool));
 
-  /* Make sure our cache size doesn't grow without bounds. */
-  if (apr_hash_count(ffd->rev_root_id_cache) >= NUM_RRI_CACHE_ENTRIES)
-    {
-      /* In order to only use one pool for the whole cache, we need to
-       * completely wipe it to expire entries! */
-      svn_pool_clear(ffd->rev_root_id_cache_pool);
-      ffd->rev_root_id_cache = apr_hash_make(ffd->rev_root_id_cache_pool);
-    }
-
-  /* Cache the answer, copying both the key and value into the cache's
-     pool. */
-  apr_hash_set(ffd->rev_root_id_cache,
-               apr_pstrdup(ffd->rev_root_id_cache_pool, rev_str),
-               APR_HASH_KEY_STRING,
-               svn_fs_fs__id_copy(root_id, ffd->rev_root_id_cache_pool));
+  SVN_ERR(svn_cache_set(ffd->rev_root_id_cache, &rev, root_id, pool));
 
   *root_id_p = root_id;
 

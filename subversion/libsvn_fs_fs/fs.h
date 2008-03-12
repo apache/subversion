@@ -25,6 +25,7 @@
 #include <apr_network_io.h>
 
 #include "svn_fs.h"
+#include "svn_cache.h"
 #include "private/svn_fs_private.h"
 
 #ifdef __cplusplus
@@ -96,9 +97,6 @@ extern "C" {
    to work.  */
 #define NUM_DIR_CACHE_ENTRIES 128
 #define DIR_CACHE_ENTRIES_MASK(x) ((x) & (NUM_DIR_CACHE_ENTRIES - 1))
-
-/* Maximum number of revroot ids to cache dirents for at a time. */
-#define NUM_RRI_CACHE_ENTRIES 4096
 
 /* Private FSFS-specific data shared between all svn_txn_t objects that
    relate to a particular transaction in a filesystem (as identified
@@ -203,18 +201,15 @@ typedef struct
   svn_revnum_t youngest_rev_cache;
 
   /* Caches of immutable data.
-     
+
      Both of these could be moved to fs_fs_shared_data_t to make them
      last longer; on the other hand, this would require adding mutexes
      for threaded builds.
   */
 
-  /* A cache of revision root IDs, allocated in this subpool.  (IDs
-     are so small that one pool per ID would be overkill;
-     unfortunately, this means the only way we expire cache entries is
-     by wiping the whole cache.) */
-  apr_hash_t *rev_root_id_cache;
-  apr_pool_t *rev_root_id_cache_pool;
+  /* A cache of revision root IDs, mapping from (svn_revnum_t *) to
+     (svn_fs_id_t *).  (Not threadsafe.) */
+  svn_cache_t *rev_root_id_cache;
 
   /* DAG node cache for immutable nodes */
   dag_node_cache_t rev_node_list;
