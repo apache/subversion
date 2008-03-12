@@ -707,6 +707,7 @@ http://svn.collab.net/repos/svn/tags/1.3.1
      - fixed: pool lifetime bug (r17992)
      - fixed: memory leak (r18230)
      - fixed: race condition during application pool initialization (r18721)
+     - fixed: Make pool parameters optional (issue #2444)
  * ruby bindings:
      - fixed: pool management issue (r17795, -811)
      - fixed: protect baton from garbage collection (r17627)
