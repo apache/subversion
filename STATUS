@@ -28,11 +28,10 @@ Candidate changes:
     Votes:
       +1: dlr
 
+Approved changes:
+
   * r29855
     Fix a bug in serf's implementation of svn_ra_get_mergeinfo() where
     empty mergeinfo is ignored.
     Votes:
       +1: pburba, dlr
-
-Approved changes:
-
