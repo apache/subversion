@@ -5,8 +5,8 @@ http://svn.collab.net/repos/svn/tags/1.5.0
  User-visible changes:
   - Major new features:
     * Merge Tracking [foundational] (issue #820)
-    * Sparse checkouts (issue #695)
-    * Interactive conflict resolution
+    * Sparse checkouts (see new '--depth' option) (issue #695)
+    * Interactive conflict resolution (r25670 et al)
     * svn:externals handles relative URLs (issue #1336) and peg URLs
     * Changelist support
     * WebDAV transparent write-through proxy
@@ -53,16 +53,17 @@ http://svn.collab.net/repos/svn/tags/1.5.0
     * Apache HTTPD uses default configured mime-type for files (issue #2304)
     * add "*.pyc" and "*.pyo" patterns to global-ignores list (issue #2415)
     * naming scheme for conflict files is now configurable (issue #2474)
+    * 'svnmucc' is new name for contrib tool formerly called 'mucc'
     * add propset and propdel subcommands to svnmucc (issue #2758)
     * add more authentication options to svnmucc
-    * add option to automatically resolve conflicts (issue #2784)
+    * '--accept' option for resolving conflicts batch-style (issue #2784)
     * removed svn-ref.tex as it's extremely out of date (issue #2762)
     * improved cancellation response in many situations
     * support Neon up to 0.28 [### TODO: if r29800 included, then 0.29]
     * support BDB X.Y.Z  [### TODO: if no upper limit, then remove this]
     * implement deprecated interface against its immediate successor (r24139)
     * HTTP auth protocol now configurable for newer versions of Neon (r21531)
-    * ra_neon now supports Apache redirection and relocation (issue #660)
+    * http:// (over Neon) supports HTTP redirection / relocation (issue #660)
     * authz now supports aliases (r21982)
     * mailer.py now supports properties in commit messages (r21684)
     * ra_serf now supports NTLM/SSPI authentication (issue #2900)
@@ -120,7 +121,7 @@ http://svn.collab.net/repos/svn/tags/1.5.0
     * fixed: be more resilient against faulty entries files (r26482)
     * fixed: 'svn diff -x --ignore-eol-style' showed all of the blanks (r27094)
     * fixed: pre-1.5 client -> 1.5 server reporter API compatibility (r24453)
-    * ra_neon: report progress while spooling delta to disk (r26271)
+    * http:// (over Neon) reports progress while disk-spooling delta (r26271)
     * print "Out of memory" before dying from memory shortage (issue #2167)
     * add vi(m) swap files to the list of default global ignores (r24348)
     * warn when used on old checkout without repository root entry (r25168)
@@ -130,6 +131,8 @@ http://svn.collab.net/repos/svn/tags/1.5.0
     * fixed: Merge to missing file target appears to succeed (issue #2782)
     * fixed: 'svn merge URL PATH -cX' property corruption bug (issue #2781)
     * fixed: Don't update mergeinfo if merging from other repos (issue #2788)
+    * fixed: URL parsing now consistently error-checks early (issue #2207)
+    * fixed: files could be created above cwd (r26047, CVE-2007-3846)
     * Many minor bugfixes, memory leaks plugged, optimizations made, etc
 
   - Server-side bugfixes:
@@ -186,13 +189,16 @@ http://svn.collab.net/repos/svn/tags/1.5.0
     * commit-email.pl: various improvements (r22971, r22589)
     * commit-email.rb: various improvements
     * gen_win.py: auto-detect the path to the JDK on Windows (r24333)
-    * psvn.el: too many improvements to list them all here
+    * psvn.el: too many improvements and new features to list them all here
     * dsvn.el: improve XEmacs compatibility (r24337)
     * svn-tweak-author.py: make NEWAUTHOR argument optional (r24387)
     * support RHEL 4 and 5 in rpm packaging script (r26429)
-    * And more stuff that we just didn't have time to list.  Sorry.
+    * And more stuff that we just didn't have time to list.  Enjoy.
 
  Developer-visible changes:
+ * General stuff:
+   - libsvn_ra_neon is new name for libsvn_ra_dav (to accommodate ra_serf)
+   - many abort() calls removed, replaced with error returns
  * API changes:
    - new APIs allow retrieving multiple revprops in one fetch (issue #2850)
    - new svn_fs_txn_root_base_revision() API (r22610)
