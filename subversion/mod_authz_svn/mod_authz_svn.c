@@ -28,6 +28,8 @@
 #include <ap_config.h>
 #include <ap_provider.h>
 #include <apr_uri.h>
+#include <apr_lib.h>
+#include <strings.h>
 #include <mod_dav.h>
 
 #include "mod_dav_svn.h"
@@ -46,6 +48,7 @@ typedef struct {
     int no_auth_when_anon_ok;
     const char *base_path;
     const char *access_file;
+    const char *force_username_case;
 } authz_svn_config_rec;
 
 /*
@@ -90,6 +93,12 @@ static const command_rec authz_svn_cmds[] =
                  "Set to 'On' to suppress authentication and authorization "
                  "for requests which anonymous users are allowed to perform. "
                  "(default is Off.)"),
+    AP_INIT_TAKE1("AuthzForceUsernameCase", ap_set_string_slot,
+                  (void *)APR_OFFSETOF(authz_svn_config_rec,
+                                       force_username_case),
+                  OR_AUTHCFG,
+                  "Set to 'Upper' or 'Lower' to convert the username before "
+                  "checking for authorization."),
     { NULL }
 };
 
@@ -135,6 +144,41 @@ static svn_authz_t *get_access_conf(request_rec *r,
     return access_conf;
 }
 
+/* Ugly wrappers to macros apr_to(upper|lower) to get a function pointers. */
+static inline int makeupper(int c)
+{
+    return apr_toupper(c);
+}
+static inline int makelower(int c)
+{
+    return apr_tolower(c);
+}
+
+/* Converts STR_TO_CONVERT to upper case if UPPER is true,
+   else converts it to lower case. */
+static void convert_case(char *str_to_convert, svn_boolean_t upper)
+{
+    char *c = str_to_convert;
+    int (*convert_func)(int);
+    convert_func=upper?makeupper:makelower;
+    while (*c) {
+        *c = convert_func(*c);
+        ++c;
+    }
+}
+
+static char* get_username_to_authorize(request_rec *r,
+                                       authz_svn_config_rec *conf)
+{
+    char *username_to_authorize = r->user;
+    if (conf->force_username_case) {
+        username_to_authorize = apr_pstrdup(r->pool, r->user);
+        convert_case(username_to_authorize, 
+                     (strcasecmp(conf->force_username_case, "upper") == 0));
+    }
+    return username_to_authorize;
+}
+
 /* Check if the current request R is allowed.  Upon exit *REPOS_PATH_REF
  * will contain the path and repository name that an operation was requested
  * on in the form 'name:path'.  *DEST_REPOS_PATH_REF will contain the
@@ -162,6 +206,7 @@ static int req_check_access(request_rec *r,
     svn_authz_t *access_conf = NULL;
     svn_error_t *svn_err;
     char errbuf[256];
+    const char *username_to_authorize = get_username_to_authorize(r, conf);
 
     switch (r->method_number) {
     /* All methods requiring read access to all subtrees of r->uri */
@@ -307,7 +352,8 @@ static int req_check_access(request_rec *r,
         || (!repos_path && (authz_svn_type & svn_authz_write)))
       {
         svn_err = svn_repos_authz_check_access(access_conf, repos_name,
-                                               repos_path, r->user,
+                                               repos_path,
+                                               username_to_authorize,
                                                authz_svn_type,
                                                &authz_access_granted,
                                                r->pool);
@@ -353,7 +399,7 @@ static int req_check_access(request_rec *r,
         svn_err = svn_repos_authz_check_access(access_conf,
                                                dest_repos_name,
                                                dest_repos_path,
-                                               r->user,
+                                               username_to_authorize,
                                                svn_authz_write
                                                |svn_authz_recursive,
                                                &authz_access_granted,
@@ -437,9 +483,11 @@ static int subreq_bypass(request_rec *r,
     authz_svn_config_rec *conf = NULL;
     svn_boolean_t authz_access_granted = FALSE;
     char errbuf[256];
+    const char *username_to_authorize;
 
     conf = ap_get_module_config(r->per_dir_config,
                                 &authz_svn_module);
+    username_to_authorize = get_username_to_authorize(r, conf);
 
     /* If configured properly, this should never be true, but just in case. */
     if (!conf->anonymous || !conf->access_file) {
@@ -457,7 +505,8 @@ static int subreq_bypass(request_rec *r,
      */
     if (repos_path) {
         svn_err = svn_repos_authz_check_access(access_conf, repos_name,
-                                               repos_path, r->user,
+                                               repos_path,
+                                               username_to_authorize,
                                                svn_authz_none|svn_authz_read,
                                                &authz_access_granted,
                                                r->pool);
