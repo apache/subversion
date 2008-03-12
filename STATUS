@@ -37,10 +37,10 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
+Approved changes:
+
   * r29878
     Make 'svn diff' say "Reverse-merged" instead of "Reverted", to match
     the verb that 'svn merge' itself uses.
     Votes:
-      +1: cmpilato
-
-Approved changes:
+      +1: cmpilato, dlr
