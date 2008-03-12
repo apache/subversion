@@ -586,7 +586,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     ("Apply the differences between two sources to a working copy path.\n"
      "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
      "       2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
-     "       3. merge [[-c M]... | [-r N:M]...] [SOURCE[@REV] [WCPATH]]\n"
+     "       3. merge [[-c M[,N]]... | [-r N:M]...] [SOURCE[@REV] [WCPATH]]\n"
      "\n"
      "  1. In the first form, the source URLs are specified at revisions\n"
      "     N and M.  These are the two sources to be compared.  The revisions\n"

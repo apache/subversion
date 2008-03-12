@@ -38,8 +38,3 @@ Candidate changes:
       +1: cmpilato
 
 Approved changes:
-
-  * r29883
-    Update help text for 'svn merge'.
-    Votes:
-      +1: hwright, dlr (via email)
