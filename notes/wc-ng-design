@@ -12,13 +12,13 @@ Content
  * Prerequisites for a good wc implementation
  * Modularization
  * Implementation proposals for
-   - meta data storage/access abstraction
+   - metadata storage/access abstraction
    - BASE tree storage/access abstraction
    - WORKING tree storage/access abstraction
    - TARGET & MERGE-END tree storage/access abstraction
    - transactional manipulation API proposal
    - delta-application algorithm
-      (in light of meta data, tree and textual conflicts)
+      (in light of metadata, tree and textual conflicts)
    - 
 
 
@@ -107,13 +107,13 @@ Requirements
  * Cross-node-type working copy changes
  * Flexibility
    The model should make it easy to support
-     - central vs local meta data storage
-     - Last modified time stamp behaviours
+     - central vs local metadata storage
+     - Last modified timestamp behaviours
      - .svn-less working copy subtrees
  * Gracefull (defined) fallback for non-supported operations
    When a checkout tries to create a symlink on an OS which supports
    them, on a filesystem which doesn't, we should cope without
-   canceling the complete checkout.  Same for marking meta data read-only.
+   canceling the complete checkout.  Same for marking metadata read-only.
  * Gracefully handle symlinks in relation to any special-handling of
    files (don't special-handle symlinks!)
  * Clear/reparable tree state
@@ -232,7 +232,7 @@ then, if these routines are passed file handles, they'll be quite
 happy, meaning they still don't need to know where the text base /
 source file is...]
 
-In order to keep developers sane, at should be extremely clear at any
+In order to keep developers sane, it should be extremely clear at any
 one time - when operating on a tree - which tree is being operated upon.
 
 One way to prevent the lengthy 'if()' blocks currently in wc-1.0, would be
@@ -291,8 +291,8 @@ releases).
 Transaction duration / memory management
 ----------------------------------------
 
-The current pool based memory management system is very good at managing
-memory in a transaction based processing model.  In the wc library, a
+The current pool-based memory management system is very good at managing
+memory in a transaction-based processing model.  In the wc library, a
 'transaction' often spans more than one call into the library.  We either
 need a sane way to handle this kind of situation using pools, or we may
 need a different memory management strategy in wc-ng.
