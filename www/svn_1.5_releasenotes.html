@@ -37,7 +37,8 @@ describes what is planned for the release.</p>
   <li>Cancellation improvements</li>
   <li>Changelist support</li>
   <li>Relative and peg URLs in <tt>svn:externals</tt></li>
-  <li>FSFS sharding</li>
+  <li>Improved support for large deployments on FSFS, via sharding</li>
+  <li>Improved FSFS optimizability, via immutable file isolation</li>
   <li>Command-line client improvements</li>
   <li>API changes, improvements and language bindings</li>
   <li>Easier to try out experimental <tt>ra_serf</tt> DAV access module</li>
@@ -159,6 +160,9 @@ supported by the server is also supported by the client.</p>
 <h3>Merge Tracking (<em>client and server</em>)</h3>
 
 <p>XXX</p>
+
+<p>[Don't forget to mention <tt>svnmerge-migrate-history.py</tt>
+script (issue #2878).]</p>
 
 </div> <!-- merge-tracking -->
 
@@ -697,7 +701,8 @@ href="http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt"
 </div>  <!-- relative-externals -->
 
 <div class="h3" id="fsfs-sharding" title="fsfs-sharding">
-<h3>FSFS sharding (<em>server</em>)</h3>
+<h3>Improved support for large deployments on FSFS, via sharding
+    (<em>server</em>)</h3>
 
 <p>The FSFS filesystem backend stores each revision in its own file, and prior
 to Subversion 1.5, all of these files were stored in a common directory in
@@ -707,10 +712,11 @@ These repositories will only be compatible with other Subversion 1.5 clients,
 but of course, Subversion 1.5 will be able to continue using repositories
 employing the older scheme without any problem.</p>
 
-<p>The primary reason for the change is to help support filesystems with
-less-than-ideal large directory entry count performance.  In addition,
-certain third-party tools may work better with a sharded layout versus
-an unsharded one.</p>
+<p>The primary reason for the change is to allow the revision count to
+grow beyond the filesystem's (efficient) directory entry limit.  While
+modern filesystems can support millions of entries per directory, they
+become slower and common administrative tools (e.g. directory
+listings, backups) become unwieldy or fail completely.</p>
 
 <p>For more information about the technical underpinnings of FSFS sharding, 
 see this <a href="http://www.farside.org.uk/200704/tree_structured_fsfs">blog
@@ -723,7 +729,37 @@ entry</a>.
 -->
 </p>
 
+<p>The shard size can by adjusted by editing the
+"<code>layout&nbsp;sharded</code>" line in "db/format" after
+<code>svnadmin&nbsp;create</code> but before populating the
+repository.</p>
+
 </div>  <!-- fsfs-sharding -->
+
+<div class="h3" id="fsfs-isolate-immutable" title="fsfs-isolate-immutable">
+<h3>Improved FSFS optimizability, via immutable file isolation
+    (<em>server</em>)</h3>
+
+<p>The FSFS repositories never change a revision after it is written
+to the disk.  This should allow the operating system to cache these
+files forever, but certain filesystems (e.g. NFS) prohibit such
+caching by default.  The FSFS repository layout has been changed such
+that the immutable files are confined to the directories "db/revs" and
+"db/txn-protorevs".  This allows these directories to be on a mount
+point where caching is enabled (on Linux look at the "nocto" option to
+nfs(5)).</p>
+
+<p>Since commit transactions are now built up in "db/txn-protorevs"
+instead of "db/transactions", the latter directory no longer needs to
+be on the same mount point.  If the repository is stored on a slower
+filesystem (e.g. NFS), then commit performance can be improved by
+moving the transactions directory to local disk (using a symbolic
+link).  If you are using multiple svn servers behind a network load
+scaler, you must configure the load scaler to direct to the same
+server for the duration of the transaction.  This is typically called
+"client affinity".</p>
+
+</div>  <!-- fsfs-isolate-immutable -->
 
 </div>  <!-- new-features -->
 

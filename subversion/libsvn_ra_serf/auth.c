@@ -86,6 +86,13 @@ static const svn_ra_serf__auth_protocol_t serf_auth_protocols[] = {
     handle_sspi_auth,
     setup_request_sspi_auth,
   },
+  {
+    407,
+    "NTLM",
+    init_proxy_sspi_connection,
+    handle_proxy_sspi_auth,
+    setup_request_proxy_sspi_auth,
+  },
 #endif /* SVN_RA_SERF_SSPI_ENABLED */
 
   /* ADD NEW AUTHENTICATION IMPLEMENTATIONS HERE (as they're written) */

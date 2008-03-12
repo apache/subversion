@@ -922,7 +922,6 @@ combine_mergeinfo_path_lists(apr_array_header_t **combined_list,
 {
   apr_hash_index_t *hi;
   apr_array_header_t *rangelist_paths;
-  struct rangelist_path *first_rp;
   apr_pool_t *subpool = svn_pool_create(pool);
 
   /* Create a list of (revision range, path) tuples from MERGEINFO. */
@@ -1039,16 +1038,21 @@ combine_mergeinfo_path_lists(apr_array_header_t **combined_list,
 
   /* Finally, add the last remaining (revision range, path) to the output
      list. */
-  first_rp = APR_ARRAY_IDX(rangelist_paths, 0, struct rangelist_path *);
-  while (first_rp->rangelist->nelts > 0)
+  if (rangelist_paths->nelts > 0)
     {
-      struct path_list_range *plr = apr_palloc(pool, sizeof(*plr));
+      struct rangelist_path *first_rp = APR_ARRAY_IDX(rangelist_paths, 0,
+                                                      struct rangelist_path *);
+      while (first_rp->rangelist->nelts > 0)
+        {
+          struct path_list_range *plr = apr_palloc(pool, sizeof(*plr));
 
-      plr->paths = apr_array_make(pool, 1, sizeof(const char *));
-      APR_ARRAY_PUSH(plr->paths, const char *) = first_rp->path;
-      plr->range = *APR_ARRAY_IDX(first_rp->rangelist, 0, svn_merge_range_t *);
-      array_pop_front(first_rp->rangelist);
-      APR_ARRAY_PUSH(*combined_list, struct path_list_range *) = plr;
+          plr->paths = apr_array_make(pool, 1, sizeof(const char *));
+          APR_ARRAY_PUSH(plr->paths, const char *) = first_rp->path;
+          plr->range = *APR_ARRAY_IDX(first_rp->rangelist, 0,
+                                      svn_merge_range_t *);
+          array_pop_front(first_rp->rangelist);
+          APR_ARRAY_PUSH(*combined_list, struct path_list_range *) = plr;
+        }
     }
 
   svn_pool_destroy(subpool);
@@ -1179,8 +1183,8 @@ do_merged_logs(svn_fs_t *fs,
         {
           svn_revnum_t *cur_rev = apr_palloc(permpool, sizeof(*cur_rev));
           svn_mergeinfo_t mergeinfo;
-          apr_array_header_t *cur_paths = apr_array_make(iterpool, paths->nelts,
-                                                         sizeof(const char *));
+          apr_array_header_t *cur_paths = 
+            apr_array_make(iterpool, paths->nelts, sizeof(const char *));
 
           /* Get the current paths of our history objects. */
           for (i = 0; i < histories->nelts; i++)
@@ -1239,12 +1243,13 @@ do_merged_logs(svn_fs_t *fs,
              iterate over them in reverse. */
           for (j = combined_list->nelts - 1; j >= 0; j--)
             {
-              struct path_list_range *pl_range = APR_ARRAY_IDX(combined_list, j,
-                                                     struct path_list_range *);
+              struct path_list_range *pl_range 
+                = APR_ARRAY_IDX(combined_list, j, struct path_list_range *);
 
               svn_pool_clear(iterpool2);
               SVN_ERR(do_merged_logs(fs, pl_range->paths,
-                                     pl_range->range.start, pl_range->range.end,
+                                     pl_range->range.start, 
+                                     pl_range->range.end,
                                      0, discover_changed_paths,
                                      strict_node_history, revprops, TRUE,
                                      found_revisions, receiver, receiver_baton,

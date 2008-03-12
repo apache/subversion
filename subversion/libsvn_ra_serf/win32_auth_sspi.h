@@ -71,6 +71,25 @@ svn_error_t *
 setup_request_sspi_auth(svn_ra_serf__connection_t *conn,
                         serf_bucket_t *hdrs_bkt);
 
+/* Proxy authentication */
+svn_error_t *
+handle_proxy_sspi_auth(svn_ra_serf__session_t *session,
+                       svn_ra_serf__connection_t *conn,
+                       serf_request_t *request,
+                       serf_bucket_t *response,
+                       char *auth_hdr,
+                       char *auth_attr,
+                       apr_pool_t *pool);
+
+svn_error_t *
+init_proxy_sspi_connection(svn_ra_serf__session_t *session,
+                           svn_ra_serf__connection_t *conn,
+                           apr_pool_t *pool);
+
+svn_error_t *
+setup_request_proxy_sspi_auth(svn_ra_serf__connection_t *conn,
+                              serf_bucket_t *hdrs_bkt);
+
 /* Provides the necessary information for the http authentication headers 
    for both the initial request to open an authentication connection, as 
    the response to the server's authentication challenge. 
