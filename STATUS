@@ -44,10 +44,10 @@ Candidate changes:
       +1: lgo
 
 
+Approved changes:
+
   * r29900
     ra_serf: Fix segfault during commits when svn asks for new credentials with 
     the required write access.
     Votes:
-      +1: lgo
-
-Approved changes:
+      +1: lgo, dlr
