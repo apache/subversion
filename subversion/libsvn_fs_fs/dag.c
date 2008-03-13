@@ -1073,6 +1073,16 @@ svn_fs_fs__dag_dup(dag_node_t *node,
   return new_node;
 }
 
+svn_error_t *
+svn_fs_fs__dag_dup_for_cache(void **out,
+                             void *in,
+                             apr_pool_t *pool)
+{
+  dag_node_t *in_node = in;
+  *out = svn_fs_fs__dag_dup(in_node, pool);
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_fs_fs__dag_open(dag_node_t **child_p,

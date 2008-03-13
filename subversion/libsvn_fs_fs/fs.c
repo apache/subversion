@@ -34,6 +34,7 @@
 #include "tree.h"
 #include "lock.h"
 #include "id.h"
+#include "dag.h"
 #include "svn_private_config.h"
 #include "private/svn_fs_util.h"
 
@@ -189,9 +190,11 @@ initialize_fs_struct(svn_fs_t *fs)
                            dup_ids, sizeof(svn_revnum_t),
                            1, 100, FALSE, fs->pool));
 
-  ffd->rev_node_cache = apr_hash_make(fs->pool);
-  ffd->rev_node_list.prev = &ffd->rev_node_list;
-  ffd->rev_node_list.next = &ffd->rev_node_list;
+  /* Rough estimate: revision DAG nodes have size around 320 bytes, so
+   * let's put 16 on a page. */
+  SVN_ERR(svn_cache_create(&(ffd->rev_node_cache),
+                           svn_fs_fs__dag_dup_for_cache, APR_HASH_KEY_STRING,
+                           1024, 16, FALSE, fs->pool));
 
   return SVN_NO_ERROR;
 }

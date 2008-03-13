@@ -408,3 +408,42 @@ svn_cache_set(svn_cache_t *cache,
  cleanup:
   return unlock_cache(cache, err);
 }
+
+/* Baton type for svn_cache_iter. */
+struct cache_iter_baton {
+  svn_iter_apr_hash_cb_t user_cb;
+  void *user_baton;
+};
+
+/* Call the user's callback with the actual value, not the
+   cache_entry.  Implements the svn_iter_apr_hash_cb_t
+   prototype. */
+static svn_error_t *
+iter_cb(void *baton,
+        const void *key,
+        apr_ssize_t klen,
+        void *val,
+        apr_pool_t *pool)
+{
+  struct cache_iter_baton *b = baton;
+  struct cache_entry *entry = val;
+  return (b->user_cb)(b->user_baton, key, klen, entry->value, pool);
+}
+
+svn_error_t *
+svn_cache_iter(svn_boolean_t *completed,
+               svn_cache_t *cache,
+               svn_iter_apr_hash_cb_t user_cb,
+               void *user_baton,
+               apr_pool_t *pool)
+{
+  struct cache_iter_baton b;
+  b.user_cb = user_cb;
+  b.user_baton = user_baton;
+
+  SVN_ERR(lock_cache(cache));
+  return unlock_cache(cache,
+                      svn_iter_apr_hash(completed, cache->hash, iter_cb, &b,
+                                        pool));
+
+}
