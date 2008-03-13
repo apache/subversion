@@ -37,4 +37,17 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
+  * r29895
+    ra_serf: Handle error contained in report XML during update to avoid an
+    abort.
+    Votes:
+      +1: lgo
+
+
+  * r29900
+    ra_serf: Fix segfault during commits when svn asks for new credentials with 
+    the required write access.
+    Votes:
+      +1: lgo
+
 Approved changes:
