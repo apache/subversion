@@ -35,7 +35,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.5.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2008-03-09 16:04+0800\n"
+"POT-Creation-Date: 2008-03-13 14:22+0800\n"
 "PO-Revision-Date: 2008-03-03 16:14+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
@@ -1226,8 +1226,8 @@ msgstr "“%s” 已有本地修改"
 
 #: ../libsvn_client/diff.c:136
 #, c-format
-msgid "   Reverted %s:r%s%s"
-msgstr "   已恢复 %s:r%s%s"
+msgid "   Reverse-merged %s:r%s%s"
+msgstr "   反向合并 %s:r%s%s"
 
 #: ../libsvn_client/diff.c:155
 #, c-format
@@ -1275,8 +1275,8 @@ msgstr "%s\t（工作副本）"
 msgid "Cannot display: file marked as a binary type.%s"
 msgstr "无法显示: 文件标记为二进制类型。%s"
 
-#: ../libsvn_client/diff.c:894 ../libsvn_client/merge.c:3772
-#: ../libsvn_client/merge.c:5091
+#: ../libsvn_client/diff.c:894 ../libsvn_client/merge.c:3776
+#: ../libsvn_client/merge.c:5096
 msgid "Not all required revisions are specified"
 msgstr "没有全部提供需要的版本"
 
@@ -1381,9 +1381,9 @@ msgstr "该版本没有 URL “%s”"
 msgid "No common parent found, unable to operate on disjoint arguments"
 msgstr "没有找到公共父节点，不能在分离的参数上操作"
 
-#: ../libsvn_client/locking_commands.c:261 ../libsvn_client/merge.c:5108
-#: ../libsvn_client/merge.c:5114 ../libsvn_client/merge.c:5670
-#: ../libsvn_client/merge.c:5826 ../libsvn_client/ra.c:389
+#: ../libsvn_client/locking_commands.c:261 ../libsvn_client/merge.c:5113
+#: ../libsvn_client/merge.c:5119 ../libsvn_client/merge.c:5675
+#: ../libsvn_client/merge.c:5831 ../libsvn_client/ra.c:389
 #: ../libsvn_client/ra.c:426 ../libsvn_client/ra.c:629
 #, c-format
 msgid "'%s' has no URL"
@@ -1462,7 +1462,7 @@ msgstr ".merge-right.r%ld"
 msgid "Cannot reverse-merge a range from a path's own future history; try updating first"
 msgstr "不能从路径的未来历史中反向合并范围；请先更新"
 
-#: ../libsvn_client/merge.c:2198
+#: ../libsvn_client/merge.c:2200
 #, c-format
 msgid ""
 "One or more conflicts were produced while merging r%ld:%ld into\n"
@@ -1473,41 +1473,41 @@ msgstr ""
 "当合并 r%ld:%ld 到 “%s” 时出现了一个或更多的冲突\n"
 "请解决所有冲突后，再次运行合并，处理剩余的未合并版本"
 
-#: ../libsvn_client/merge.c:4759
+#: ../libsvn_client/merge.c:4764
 msgid "Use of two URLs is not compatible with mergeinfo modification"
 msgstr "使用两个 URL 与合并信息修改不兼容"
 
-#: ../libsvn_client/merge.c:5337
+#: ../libsvn_client/merge.c:5342
 msgid "Cannot reintegrate into a working copy with a switched subtree"
 msgstr "不能复兴到包含已经切换子目录的工作副本"
 
-#: ../libsvn_client/merge.c:5342
+#: ../libsvn_client/merge.c:5347
 msgid "Cannot reintegrate into a working copy not entirely at infinite depth"
 msgstr "不能复兴到非全部无限制深度的工作副本"
 
-#: ../libsvn_client/merge.c:5347
+#: ../libsvn_client/merge.c:5352
 msgid "Cannot reintegrate into a working copy that has local modifications"
 msgstr "不能复兴到有本地修改的工作副本"
 
-#: ../libsvn_client/merge.c:5353
+#: ../libsvn_client/merge.c:5358
 msgid "Cannot determine revision of working copy"
 msgstr "不能确定工作副本的版本"
 
-#: ../libsvn_client/merge.c:5357
+#: ../libsvn_client/merge.c:5362
 msgid "Cannot reintegrate into mixed-revision working copy; try updating first"
 msgstr "不能复兴到有混合版本的工作副本；请先更新"
 
-#: ../libsvn_client/merge.c:5424
+#: ../libsvn_client/merge.c:5429
 #, c-format
 msgid "At least one revision (r%ld) not yet merged from '%s'"
 msgstr "至少有一个版本(r%ld)没有自“%s”合并"
 
-#: ../libsvn_client/merge.c:5565 ../libsvn_client/merge.c:5729
+#: ../libsvn_client/merge.c:5570 ../libsvn_client/merge.c:5734
 #, c-format
 msgid "'%s@%ld' must be ancestrally related to '%s@%ld'"
 msgstr "“%s@%ld”必须与“%s@%ld”有祖先关系"
 
-#: ../libsvn_client/merge.c:5688
+#: ../libsvn_client/merge.c:5693
 #, c-format
 msgid "'%s' must be from the same repository as '%s'"
 msgstr "“%s”必须与“%s”在同一个版本库中"
@@ -7208,7 +7208,7 @@ msgid ""
 "Apply the differences between two sources to a working copy path.\n"
 "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
 "       2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
-"       3. merge [[-c M]... | [-r N:M]...] [SOURCE[@REV] [WCPATH]]\n"
+"       3. merge [[-c M[,N]]... | [-r N:M]...] [SOURCE[@REV] [WCPATH]]\n"
 "\n"
 "  1. In the first form, the source URLs are specified at revisions\n"
 "     N and M.  These are the two sources to be compared.  The revisions\n"
@@ -7242,7 +7242,7 @@ msgstr ""
 "将两个源差异应用至工作副本路径。\n"
 "用法: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
 "      2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
-"      3. merge [[-c M]... | [-r N:M]...] [SOURCE[@REV] [WCPATH]]\n"
+"      3. merge [[-c M[,N]]... | [-r N:M]...] [SOURCE[@REV] [WCPATH]]\n"
 "\n"
 "  1、第一种形式中，源 URL 的版本 N 与 M 作为比较的来源。如果没有指定版本，默认\n"
 "     为 HEAD。\n"
