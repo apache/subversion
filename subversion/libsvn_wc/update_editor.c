@@ -3099,8 +3099,9 @@ add_file_with_history(const char *path,
 
   if (src_path != NULL)
     {
-      /* If we copied an existing file over, we need copy its working
-         text and props too, to preserve any local mods. */
+      /* If we copied an existing file over, we need to copy its
+         working text too, to preserve any local mods.  (We already
+         read its working *props* into tfb->copied_working_props.) */
       svn_boolean_t text_changed;
 
       SVN_ERR(svn_wc_text_modified_p(&text_changed, src_path, FALSE,
