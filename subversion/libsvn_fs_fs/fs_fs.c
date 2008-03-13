@@ -2871,31 +2871,6 @@ get_dir_contents(apr_hash_t *entries,
   return SVN_NO_ERROR;
 }
 
-/* Return a copy of the directory hash ENTRIES in POOL. */
-static apr_hash_t *
-copy_dir_entries(apr_hash_t *entries,
-                 apr_pool_t *pool)
-{
-  apr_hash_t *new_entries = apr_hash_make(pool);
-  apr_hash_index_t *hi;
-
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
-    {
-      void *val;
-      svn_fs_dirent_t *dirent, *new_dirent;
-
-      apr_hash_this(hi, NULL, NULL, &val);
-      dirent = val;
-      new_dirent = apr_palloc(pool, sizeof(*new_dirent));
-      new_dirent->name = apr_pstrdup(pool, dirent->name);
-      new_dirent->kind = dirent->kind;
-      new_dirent->id = svn_fs_fs__id_copy(dirent->id, pool);
-      apr_hash_set(new_entries, new_dirent->name, APR_HASH_KEY_STRING,
-                   new_dirent);
-    }
-  return new_entries;
-}
-
 
 svn_error_t *
 svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
@@ -2904,21 +2879,21 @@ svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
                             apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
+  const char *unparsed_id;
   apr_hash_t *unparsed_entries, *parsed_entries;
   apr_hash_index_t *hi;
-  unsigned int hid;
 
-  /* Calculate an index into the dir entries cache.  This should be
-     completely ignored if this is a mutable noderev. */
-  hid = DIR_CACHE_ENTRIES_MASK(svn_fs_fs__id_rev(noderev->id));
-
-  /* If we have this directory cached, return it. */
-  if (! svn_fs_fs__id_txn_id(noderev->id) &&
-      ffd->dir_cache_id[hid] && svn_fs_fs__id_eq(ffd->dir_cache_id[hid],
-                                                 noderev->id))
+  /* Are we looking for an immutable directory?  We could try the
+   * cache. */
+  if (! svn_fs_fs__id_txn_id(noderev->id))
     {
-      *entries_p = copy_dir_entries(ffd->dir_cache[hid], pool);
-      return SVN_NO_ERROR;
+      svn_boolean_t found;
+
+      unparsed_id = svn_fs_fs__id_unparse(noderev->id, pool)->data;
+      SVN_ERR(svn_cache_get((void **) entries_p, &found, ffd->dir_cache,
+                            unparsed_id, pool));
+      if (found)
+        return SVN_NO_ERROR;
     }
 
   /* Read in the directory hash. */
@@ -2971,21 +2946,7 @@ svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
 
   /* If this is an immutable directory, let's cache the contents. */
   if (! svn_fs_fs__id_txn_id(noderev->id))
-    {
-      /* Start by NULLing the ID field, so that we never leave the
-         cache in an illegal state. */
-      ffd->dir_cache_id[hid] = NULL;
-
-      if (ffd->dir_cache_pool[hid])
-        svn_pool_clear(ffd->dir_cache_pool[hid]);
-      else
-        ffd->dir_cache_pool[hid] = svn_pool_create(fs->pool);
-
-      ffd->dir_cache[hid] = copy_dir_entries(parsed_entries,
-                                             ffd->dir_cache_pool[hid]);
-      ffd->dir_cache_id[hid] = svn_fs_fs__id_copy(noderev->id,
-                                                  ffd->dir_cache_pool[hid]);
-    }
+    SVN_ERR(svn_cache_set(ffd->dir_cache, unparsed_id, parsed_entries, pool));
 
   *entries_p = parsed_entries;
   return SVN_NO_ERROR;
@@ -4051,14 +4012,7 @@ svn_error_t *
 svn_fs_fs__abort_txn(svn_fs_txn_t *txn,
                      apr_pool_t *pool)
 {
-  fs_fs_data_t *ffd;
-
   SVN_ERR(svn_fs__check_fs(txn->fs, TRUE));
-
-  /* Clean out the directory cache. */
-  ffd = txn->fs->fsap_data;
-  memset(&ffd->dir_cache_id, 0,
-         sizeof(svn_fs_id_t *) * NUM_DIR_CACHE_ENTRIES);
 
   /* Now, purge the transaction. */
   SVN_ERR_W(svn_fs_fs__purge_txn(txn->fs, txn->id, pool),
