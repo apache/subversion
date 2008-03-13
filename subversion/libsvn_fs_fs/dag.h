@@ -72,7 +72,8 @@ svn_fs_fs__dag_get_node(dag_node_t **node,
 dag_node_t *svn_fs_fs__dag_dup(dag_node_t *node,
                                apr_pool_t *pool);
 
-/* Like svn_fs_fs__dag_dup, but fitting the svn_cache_dup_func_t profile. */
+/* Like svn_fs_fs__dag_dup, but implementing the svn_cache_dup_func_t
+   prototype. */
 svn_cache_dup_func_t svn_fs_fs__dag_dup_for_cache;
 
 /* Return the filesystem containing NODE.  */
