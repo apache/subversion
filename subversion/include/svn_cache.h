@@ -28,6 +28,7 @@
 
 #include "svn_types.h"
 #include "svn_error.h"
+#include "svn_iter.h"
 
 
 #ifdef __cplusplus
@@ -113,6 +114,32 @@ svn_cache_set(svn_cache_t *cache,
               void *value,
               apr_pool_t *pool);
 /** @} */
+
+/**
+ * Iterates over the elements currently in @a cache, calling @a func
+ * for each one until there are no more elements or @a func returns an
+ * error.  Uses @a pool for temporary allocations.
+ *
+ * If @a completed is not NULL, then on return - if @a func returns no
+ * errors - @a *completed will be set to @c TRUE.
+ *
+ * If @a func returns an error other than @c SVN_ERR_ITER_BREAK, that
+ * error is returned.  When @a func returns @c SVN_ERR_ITER_BREAK,
+ * iteration is interrupted, but no error is returned and @a *completed is
+ * set to @c FALSE.
+ *
+ * It is not legal to perform any other cache operations on @a cache
+ * inside @a func.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_cache_iter(svn_boolean_t *completed,
+               svn_cache_t *cache,
+               svn_iter_apr_hash_cb_t func,
+               void *baton,
+               apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }

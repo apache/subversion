@@ -20,8 +20,7 @@
 
 #include "svn_fs.h"
 #include "svn_delta.h"
-
-#include "fs.h"
+#include "svn_cache.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,6 +54,7 @@ extern "C" {
 
 /* Generic DAG node stuff.  */
 
+typedef struct dag_node_t dag_node_t;
 
 /* Fill *NODE with a dag_node_t representing node revision ID in FS,
    allocating in POOL.  */
@@ -72,6 +72,8 @@ svn_fs_fs__dag_get_node(dag_node_t **node,
 dag_node_t *svn_fs_fs__dag_dup(dag_node_t *node,
                                apr_pool_t *pool);
 
+/* Like svn_fs_fs__dag_dup, but fitting the svn_cache_dup_func_t profile. */
+svn_cache_dup_func_t svn_fs_fs__dag_dup_for_cache;
 
 /* Return the filesystem containing NODE.  */
 svn_fs_t *svn_fs_fs__dag_get_fs(dag_node_t *node);
