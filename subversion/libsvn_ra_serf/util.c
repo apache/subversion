@@ -993,6 +993,7 @@ handle_response(serf_request_t *request,
       svn_auth_save_credentials(ctx->session->auth_state, ctx->session->pool);
       ctx->session->auth_attempts = 0;
       ctx->session->auth_state = NULL;
+      ctx->session->realm = NULL;
     }
 
   ctx->conn->last_status_code = sl.code;
