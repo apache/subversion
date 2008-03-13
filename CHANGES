@@ -133,6 +133,7 @@ http://svn.collab.net/repos/svn/tags/1.5.0
     * fixed: Don't update mergeinfo if merging from other repos (issue #2788)
     * fixed: URL parsing now consistently error-checks early (issue #2207)
     * fixed: files could be created above cwd (r26047, CVE-2007-3846)
+    * fixed: local property mods to replaced-with-history file is lost (r26364)
     * Many minor bugfixes, memory leaks plugged, optimizations made, etc
 
   - Server-side bugfixes:
