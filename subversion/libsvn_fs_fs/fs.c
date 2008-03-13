@@ -159,6 +159,7 @@ static fs_vtable_t fs_vtable = {
 
 /* Creating a new filesystem. */
 
+/* Duplicate FS IDs as cache values. */
 static svn_cache_dup_func_t dup_ids;
 static svn_error_t *
 dup_ids(void **out,
@@ -169,6 +170,36 @@ dup_ids(void **out,
   *out = svn_fs_fs__id_copy(id, pool);
   return SVN_NO_ERROR;
 }
+
+/* Duplicate directory listings as cache values. */
+static svn_cache_dup_func_t dup_dir_listing;
+static svn_error_t *
+dup_dir_listing(void **out,
+                void *in,
+                apr_pool_t *pool)
+{
+  apr_hash_t *new_entries = apr_hash_make(pool), *entries = in;
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+    {
+      void *val;
+      svn_fs_dirent_t *dirent, *new_dirent;
+
+      apr_hash_this(hi, NULL, NULL, &val);
+      dirent = val;
+      new_dirent = apr_palloc(pool, sizeof(*new_dirent));
+      new_dirent->name = apr_pstrdup(pool, dirent->name);
+      new_dirent->kind = dirent->kind;
+      new_dirent->id = svn_fs_fs__id_copy(dirent->id, pool);
+      apr_hash_set(new_entries, new_dirent->name, APR_HASH_KEY_STRING,
+                   new_dirent);
+    }
+
+  *out = new_entries;
+  return SVN_NO_ERROR;
+}
+
 
 /* Set up vtable and fsap_data fields in FS. */
 static svn_error_t *
@@ -195,6 +226,11 @@ initialize_fs_struct(svn_fs_t *fs)
   SVN_ERR(svn_cache_create(&(ffd->rev_node_cache),
                            svn_fs_fs__dag_dup_for_cache, APR_HASH_KEY_STRING,
                            1024, 16, FALSE, fs->pool));
+
+  /* Very rough estimate: 1K per directory. */
+  SVN_ERR(svn_cache_create(&(ffd->dir_cache),
+                           dup_dir_listing, APR_HASH_KEY_STRING,
+                           1024, 8, FALSE, fs->pool));
 
   return SVN_NO_ERROR;
 }

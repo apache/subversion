@@ -92,12 +92,6 @@ extern "C" {
    noderev fields. */
 #define SVN_FS_FS__MIN_MERGEINFO_FORMAT 3
 
-/* Maximum number of directories to cache dirents for.
-   This *must* be a power of 2 for DIR_CACHE_ENTRIES_MASK
-   to work.  */
-#define NUM_DIR_CACHE_ENTRIES 128
-#define DIR_CACHE_ENTRIES_MASK(x) ((x) & (NUM_DIR_CACHE_ENTRIES - 1))
-
 /* Private FSFS-specific data shared between all svn_txn_t objects that
    relate to a particular transaction in a filesystem (as identified
    by transaction id and filesystem UUID).  Objects of this type are
@@ -165,11 +159,6 @@ typedef struct
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object. */
 typedef struct
 {
-  /* A cache of the last directory opened within the filesystem. */
-  svn_fs_id_t *dir_cache_id[NUM_DIR_CACHE_ENTRIES];
-  apr_hash_t *dir_cache[NUM_DIR_CACHE_ENTRIES];
-  apr_pool_t *dir_cache_pool[NUM_DIR_CACHE_ENTRIES];
-
   /* The format number of this FS. */
   int format;
   /* The maximum number of files to store per directory (for sharded
@@ -195,6 +184,10 @@ typedef struct
 
   /* DAG node cache for immutable nodes */
   svn_cache_t *rev_node_cache;
+
+  /* A cache of the contents of immutable directories; maps from
+     unparsed FS ID to ###x. */
+  svn_cache_t *dir_cache;
 
   /* Data shared between all svn_fs_t objects for a given filesystem. */
   fs_fs_shared_data_t *shared;
