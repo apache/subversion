@@ -43,4 +43,18 @@ Candidate changes:
     Votes:
       +1: lgo
 
+  * r29914
+    Fix an old mod_dav_svn update REPORT response bug (failure to note stale
+    lock tokens).
+    Notes:
+      Testing this is ... interesting, because current code avoids this
+      codepath or works around the problem.  Test ra_serf by forcing
+      libsvn_ra_serf/update.c:check_lock() to do nothing; test ra_neon by 
+      forcing libsvn_ra_neon/fetch.c:make_reporter()'s 'send_all' parameter
+      to be FALSE.  ra_neon will hopefully soon grow the same workaround for
+      this bug that ra_serf uses, so backport of this fix isn't super-
+      high-priority.
+    Votes:
+      +1: cmpilato
+
 Approved changes:
