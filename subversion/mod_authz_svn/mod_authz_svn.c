@@ -29,7 +29,6 @@
 #include <ap_provider.h>
 #include <apr_uri.h>
 #include <apr_lib.h>
-#include <strings.h>
 #include <mod_dav.h>
 
 #include "mod_dav_svn.h"
@@ -149,12 +148,12 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf)
 }
 
 /* Ugly wrappers to macros apr_to(upper|lower) to get a function pointers. */
-static inline int
+static APR_INLINE int
 makeupper(int c)
 {
   return apr_toupper(c);
 }
-static inline int
+static APR_INLINE int
 makelower(int c)
 {
   return apr_tolower(c);
