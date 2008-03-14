@@ -606,9 +606,9 @@ static svn_error_t *close_all_dirs(report_dir_t *dir)
 
 /** Routines called when we are fetching a file */
 
-/* This function works around a bug in mod_dav_svn in that it will not
- * send remove-prop in the update report when a lock property disappears
- * when send-all is false.
+/* This function works around a bug in some older versions of
+ * mod_dav_svn in that it will not send remove-prop in the update
+ * report when a lock property disappears when send-all is false.
  *
  * Therefore, we'll try to look at our properties and see if there's
  * an active lock.  If not, then we'll assume there isn't a lock
