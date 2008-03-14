@@ -57,4 +57,10 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
+  * r29920
+    Fix the ra_neon skelta-style update REPORT response handler to workaround
+    the mod_dav_svn bug fixed in r29914 (but still present in old servers).
+    Votes:
+      +1: cmpilato
+
 Approved changes:
