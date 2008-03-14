@@ -76,6 +76,7 @@ http://svn.collab.net/repos/svn/tags/1.5.0
     * support Neon up to 0.28
     * HTTP auth protocol now configurable (for Neon 0.26 and higher) (r21531)
     * http:// (over Neon) supports HTTP redirection / relocation (issue #660)
+    * support PKCS#11-provided (smartcard) SSL client certs with Neon (r29421)
     * authz now supports aliases (r21982)
     * authz token rules for authenticated-only, anonymous, and inverse (r23750)
     * mailer.py now supports properties in commit messages (r21684)
