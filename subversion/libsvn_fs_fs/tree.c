@@ -146,7 +146,7 @@ locate_cache(svn_cache_t **cache,
   else
     {
       fs_fs_data_t *ffd = root->fs->fsap_data;
-      if (cache) *cache = ffd->rev_node_cache;
+      if (cache) *cache = ffd->shared_caches->rev_node_cache;
       if (key && path) *key = apr_psprintf(pool, "%ld%s",
                                            root->rev, path);
     }
@@ -171,8 +171,13 @@ dag_node_cache_get(dag_node_t **node_p,
   locate_cache(&cache, &key, root, path, pool);
 
   SVN_ERR(svn_cache_get((void **) &node, &found, cache, key, pool));
-  if (found)
-    *node_p = node;
+  if (found && node)
+    {
+      /* Patch up the FS, since this might have come from an old FS
+       * object. */
+      svn_fs_fs__dag_set_fs(node, root->fs);
+      *node_p = node;
+    }
   else
     *node_p = NULL;
   return SVN_NO_ERROR;

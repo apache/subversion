@@ -67,7 +67,7 @@ done
 
 "$SERVER_CMD" -d -r "$ABS_BUILDDIR/subversion/tests/cmdline" \
             --listen-host 127.0.0.1 \
-            --listen-port $SVNSERVE_PORT \
+            --listen-port $SVNSERVE_PORT -T \
             --pid-file $SVNSERVE_PID &
 
 BASE_URL=svn://127.0.0.1:$SVNSERVE_PORT
