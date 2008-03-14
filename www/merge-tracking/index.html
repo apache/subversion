@@ -43,9 +43,12 @@ recording and using merge history to avoid common cases of the
 repeated merge problem, and allowing for cherry-picking of changes.
 It exposes merge history via properties, and allows for repository
 dump/load (including the ability to re-create the merge history
-index).  It adds <a href="http://www.sqlite.org/">sqlite</a> as a
-dependency, and supports both the FSFS and BerkeleyDB Subversion file
-system backends.</p>
+index).  It supports both the FSFS and BerkeleyDB Subversion file
+system backends.  (Early implementations added <a
+href="http://www.sqlite.org/">sqlite</a> as a dependency, but this was
+later removed: Subversion 1.5 does <em>not</em> use SQLite.)
+
+</p>
 
 <p>Remaining tasks for 1.5.0 are tracked in the <a
 href="/issues/buglist.cgi?component=subversion&amp;issue_status=NEW&amp;issue_status=STARTED&amp;issue_status=REOPENED&amp;target_milestone=1.5&amp;keywords=merge-tracking&amp;keywords_type=anytokens&amp;cmdtype=doit&amp;order=%27Importance%27&amp;Submit+query=Submit+query"
