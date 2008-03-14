@@ -28,31 +28,42 @@ describes what is planned for the release.</p>
 <h2>What's New in Subversion 1.5</h2>
 
 <ul>
-  <li>Merge Tracking</li>
-  <li>Sparse checkouts</li>
-  <li>Copy/move-related improvements</li>
-  <li>Interactive conflict resolution</li>
-  <li>WebDAV transparent write-through proxy</li>
-  <li>Cyrus SASL support for ra_svn and <tt>svnserve</tt></li>
-  <li>Cancellation improvements</li>
-  <li>Changelist support</li>
-  <li>Relative and peg URLs in <tt>svn:externals</tt></li>
-  <li>Improved support for large deployments on FSFS, via sharding</li>
-  <li>Improved FSFS optimizability, via immutable file isolation</li>
-  <li>Command-line client improvements</li>
-  <li>API changes, improvements and language bindings</li>
-  <li>Easier to try out experimental <tt>ra_serf</tt> DAV access module</li>
-  <li>More than XXX new bug fixes</li>
+  <li><a href="#merge-tracking"
+      >Merge tracking (foundational)</a></li>
+  <li><a href="#sparse-checkouts"
+      >Sparse checkouts (via new <tt>--depth</tt> option)</a></li>
+  <li><a href="#interactive-conflict-resolution"
+      >Interactive conflict resolution</a></li>
+  <li><a href="#changelists"
+      >Changelist support</a></li>
+  <li><a href="#externals"
+      >Relative URLs, peg revisions in <tt>svn:externals</tt></a></li>
+  <li><a href="#cyrus-sasl"
+      >Cyrus SASL support for ra_svn and <tt>svnserve</tt></a></li>
+  <li><a href="#fsfs-sharding"
+      >Improved support for large deployments on FSFS, via sharding</a></li>
+  <li><a href="#fsfs-isolate-immutable"
+      >Improved FSFS optimizability, via immutable file isolation</a></li>
+  <li><a href="#webdav-proxy"
+      >WebDAV transparent write-through proxy</a></li>
+  <li><a href="#XXXtodoXXX"
+      >Improvements to <tt>copy</tt> and <tt>move</tt></a></li>
+  <li><a href="#XXXtodoXXX"
+      >Speed improvements, cancellation response improvements</a></li>
+  <li><a href="#XXXtodoXXX"
+      >Easier to try experimental <tt>ra_serf</tt> DAV access module</a></li>
+  <li><a href="#XXXtodoXXX"
+      >More than 150 new bug fixes, enhancements</a></li>
+  <li><a href="#XXXtodoXXX"
+      >API changes, improvements, and much language bindings work</a></li>
 </ul>
 
-<p>Details are described below.</p>
-
 <p>Subversion 1.5 is a superset of all previous Subversion releases,
-and is considered the current "best" release.  Anything in 1.0.x
-through 1.4.x is also in 1.5, but 1.5 contains features and bugfixes
-not present in any earlier release.  The new features will eventually
-be documented in a 1.5 version of the free Subversion book, see <a
-href="http://svnbook.red-bean.com">svnbook.red-bean.com</a>.</p>
+and is considered the current "best" release.  Any feature or bugfix
+in 1.0.x through 1.4.x is also in 1.5, but 1.5 contains features and
+bugfixes not present in any earlier release.  The new features will
+eventually be documented in a 1.5 version of the free Subversion book,
+see <a href="http://svnbook.red-bean.com" >svnbook.red-bean.com</a>.</p>
 
 </div>  <!-- news -->
 
@@ -60,65 +71,101 @@ href="http://svnbook.red-bean.com">svnbook.red-bean.com</a>.</p>
 <h2>Compatibility Concerns</h2>
 
 <p>Older clients and servers interoperate transparently with 1.5
-servers and clients.  Of course, some of the new 1.5 features may not
-be available unless both client and server are the latest version
-(e.g. <a href="/merge-tracking/func-spec.html#migration-and-interoperability"
->Merge Tracking</a>).  There is <strong>no need</strong> to dump and
-reload your repositories; Subversion 1.5 can read repositories created
-by earlier versions.  To upgrade an existing installation, just
-install the newest libraries and binaries on top of the older
-ones.</p>
+servers and clients.  However, some of the new 1.5 features (e.g., <a
+href="#merge-tracking" >merge tracking</a>) may not be available
+unless both client and server are the latest version .  There are also
+cases (e.g., <a href="#sparse-checkouts">sparse checkouts</a>) where a
+new feature will work but will run less efficiently if the client is
+new and the server old.</p>
 
-<p>XXX: Note new FS node-origins index (which lazily populates while
-responding to queries), and new svn-populate-node-origins-index tool.</p>
+<p>There is <strong>no need</strong> to dump and reload your
+repositories.  Subversion 1.5 can read repositories created by earlier
+versions.  To upgrade an existing installation, just install the
+newest libraries and binaries on top of the older ones.</p>
 
 <p>Subversion 1.5 maintains API/ABI compatibility with earlier
-releases, by only adding new functions.  A program written to the 1.0,
-1.1, 1.2 or 1.3 API can both compile and run using 1.5 libraries.
-However, a program written for 1.5 cannot necessarily compile or run
-against older libraries.  However, see the <a href="#apis">API</a>
-section on some clarifications on existing APIs.</p>
+releases, by only adding new functions, never removing old ones.  A
+program written to the 1.0, 1.1, 1.2, 1.3, or 1.4 API can both compile
+and run using 1.5 libraries.  However, a program written for 1.5
+cannot necessarily compile or run against older libraries.  See the <a
+href="#apis" >API</a> section on some clarifications on existing
+APIs.</p>
 
-<div class="h3" id="wc-and-repos-format-change" title="wc-format-change">
+<div class="h3" id="wc-and-repos-format-change"
+             title="wc-and-repos-format-change">
 <h3>Working Copy and Repository Format Changes</h3>
 
-<p>Due to certain improvements and bugfixes made to the working copy
-library, the version number of the working copy format has been
-incremented. This means that Subversion clients earlier than 1.5 will
-<em>not</em> be able to work with working copies produced by Subversion
-1.5.  Similarly, the repository format has changed as well, meaning
-that pre-1.5 Subversion tools that normally access a repository
-directly (e.g. <tt>svnserve</tt>, <tt>mod_dav_svn</tt>, <tt>svnadmin</tt>)
-won't be able to read a repository originally created by Subversion
-1.5.</p>
+<p>The working copy format has been upgraded.  This means that 1.4 and
+older Subversion clients will <em>not</em> be able to work with
+working copies produced by Subversion 1.5.  Working copies are <a
+href="#wc-upgrades" >upgraded automatically</a>.</p>
 
-<p><strong>WARNING:</strong> if a Subversion 1.5 client encounters a pre-1.5
-working copy, it will <em>automatically</em> upgrade the working copy
-format as soon as it touches it, making it unreadable by older
-Subversion clients.  If you are using several versions of Subversion
-on your machine, you need to be careful about which version you use in
-which working copy, to avoid accidentally upgrading the working copy
-format.  This "auto upgrade" feature, however, does <em>not</em> occur
-with the new repository format.</p>
+<p>Similarly, the repository format has changed, meaning that 1.4 and
+older versions of Subversion tools that normally access a repository
+directly (e.g. <tt>svnserve</tt>, <tt>mod_dav_svn</tt>,
+<tt>svnadmin</tt>) won't be able to read a repository created by
+Subversion 1.5.  But, repositories are <a href="#repos-upgrades"
+><strong>not</strong> upgraded automatically</a>.</p>
 
-<p>If you do accidentally upgrade a 1.4 (only) working copy, you can
-use <a
+<div class="h4" id="repos-upgrades" title="repos-upgrades">
+<h4>Repository Upgrades</h4>
+
+<p>The Subversion 1.5 server works with 1.4 and older repositories,
+and it will <strong>not</strong> upgrade such repositories to 1.5
+unless specifically requested to via the
+<tt>svnadmin&nbsp;upgrade</tt> command.  This means that some of the
+new 1.5 features will not become available simply by upgrading your
+server: you will also have to upgrade your repositories.  (We decided
+not to auto-upgrade repositories because we didn't want 1.5 to
+silently make repositories unusable by 1.4&nbsp;&mdash;&nbsp;that step
+should be a conscious decision on the part of the repository
+admin.)</p>
+
+<p>After upgrading a repository, you may wish to run the <a
+href="http://svn.collab.net/repos/svn/trunk/tools/server-side/svn-populate-node-origins-index.c"
+>svn-populate-node-origins-index</a> program on it.  Subversion 1.5
+maintains a node-origins index for each repository, and builds the
+index lazily as the information is needed.  For old repositories with
+lots of revisions, it's better to run that tool once to create the
+index, than to have live queries be slower until the index has built
+itself.  See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=3024" >issue
+#3024</a> for details.</p>
+
+</div>  <!-- repos-upgrades -->
+
+<div class="h4" id="wc-upgrades" title="wc-upgrades">
+<h4>Working Copy Upgrades</h4>
+
+<p><strong>WARNING:</strong> if a Subversion 1.5 client encounters a
+pre-1.5 working copy, it will <em>automatically</em> upgrade the
+working copy format as soon as it touches it, making it unreadable by
+older Subversion clients.  If you are using several versions of
+Subversion on your machine, be careful about which version you use in
+which working copy, to avoid accidentally upgrading a working copy.
+(But note that this "auto upgrade" behavior does <em>not</em> occur
+with the <a href="#repos-upgrades" >repositories</a>, only working
+copies.)</p>
+
+<p>If you accidentally upgrade a 1.4 working copy to 1.5, and wish to
+downgrade back to 1.4, use the <a
 href="http://svn.collab.net/repos/svn/trunk/tools/client-side/change-svn-wc-format.py"
->this script</a> to downgrade it back 1.4.  See <a
+><tt>change-svn-wc-format.py</tt></a> script.  See <a
 href="http://subversion.tigris.org/faq.html#working-copy-format-change"
->the FAQ</a> for details, and run the script with the
+>this FAQ entry</a> for details, and run the script with the
 <code>--help</code> option for usage instructions.</p>
 
-</div>  <!-- wc-format-change -->
+</div>  <!-- wc-upgrades -->
+
+</div>  <!-- wc-and-repos-format-change -->
 
 <div class="h3" id="output-changes" title="output-changes">
 <h3>Command Line Output Changes</h3>
 
-<p>Although the Subversion developers try hard to keep output from the
-command line programs compatible between releases, new information
-sometimes has to be added.  This might break scripts that rely on the
-exact format of the output.  In 1.5, the following changes have been
-made to the output:</p>
+<p>Although we try hard to keep output from the command line programs
+compatible between releases, new information sometimes has to be
+added.  This can break scripts that rely on the exact format of the
+output.  1.5 contains the following output changes:</p>
 
 <p>XXX: Enumerate changes to output (e.g. for changelists).</p>
 
@@ -130,7 +177,7 @@ made to the output:</p>
 </div>  <!-- output-changes -->
 
 <div class="h3" id="sasl-compatibility" title="sasl-compatibility">
-<h3>SASL and <code>svn://</code></h3>
+<h3>SASL and <code>svn://</code> access</h3>
 
 <p>All 1.x clients, with or without Cyrus SASL support, will be able to
 authenticate against all 1.x servers that do not have Cyrus SASL enabled.
@@ -145,6 +192,9 @@ against 1.5+ servers with SASL enabled, provided the server allows the
 <p>1.5+ clients with Cyrus SASL support will be able to authenticate against
 1.5+ servers with SASL enabled, provided at least one of the mechanisms
 supported by the server is also supported by the client.</p>
+
+<p>See <a href="#cyrus-sasl" >this section</a> for more information on
+using Cyrus SASL with Subversion.</p>
 
 </div>  <!-- sasl-compatibility -->
 
@@ -164,10 +214,14 @@ supported by the server is also supported by the client.</p>
 <p>[Don't forget to mention <tt>svnmerge-migrate-history.py</tt>
 script (issue #2878).]</p>
 
+(and point to <a
+href="/merge-tracking/func-spec.html#migration-and-interoperability"
+>Merge Tracking and Interoperability</a>)
+
 </div> <!-- merge-tracking -->
 
 <div class="h3" id="sparse-checkouts" title="sparse-checkouts">
-<h3>Sparse checkouts (<em>client and server</em>)</h3>
+<h3>Sparse checkouts  (<em>client and server</em>)</h3>
 
 <p>Many users have very large trees of which they only want to checkout
 certain parts.  In previous versions of Subversion, <code>checkout -N</code>
@@ -324,7 +378,8 @@ href="http://svn.collab.net/repos/svn/trunk/notes/sparse-directories.txt"
 
 </div> <!-- sparse-checkouts -->
 
-<div class="h3" id="conflict-resolution" title="conflict-resolution">
+<div class="h3" id="interactive-conflict-resolution"
+             title="interactive-conflict-resolution">
 <h3>Interactive Conflict Resolution (<em>client</em>)</h3>
 
 <p>Added support for interactive conflict resolution in the command
@@ -376,148 +431,9 @@ by setting it on the (new) <code>conflict_func</code> field of their
 <code>svn_client_ctx_t</code>, and may provide additional state to the
 callback via the corresponding <code>conflict_baton</code> field.</p>
 
-</div>  <!-- conflict-resolution -->
+</div>  <!-- interactive-conflict-resolution -->
 
-<div class="h3" id="webdav-proxy" title="webdav-proxy">
-<h3>WebDAV transparent write-through proxy (<em>server</em>)</h3>
-
-<p>Subversion 1.4 <a
-href="http://subversion.tigris.org/svn_1.4_releasenotes.html#svnsync">
-introduced <tt>svnsync</tt></a>&mdash;a tool which provided the ability to
-replicate repository history from one repository to another.  Though useful,
-<tt>svnsync</tt> could only pull revision history from a repository, not push
-additional commits back to the master.  Subversion 1.5 adds WebDAV proxy
-support to <tt>mod_dav_svn</tt>, effectly allowing bidirectional revision
-history replication between master servers and slave servers using
-<tt>mod_dav_svn</tt>.</p>
-
-<p>All clients interact with a slave server, but the slave transparently
-passes all of the write-oriented activites to the master (rewriting the
-content as necessary).  The slaves are essentially read-only, but they
-do have a complete copy of the repository locally.  This serves to
-alleviate read traffic from the master server which may be desirable
-in certain circumstances.</p>
-
-<p>This model has several advantages to using a straight HTTP DAV-aware
-caching proxy, in that each slave can respond to all read-only requests
-without ever having to relay them to the master backend.</p>
-
-<div class="h4" id="webdav-proxy-requirements"
-    title="webdav-proxy-requirements">
-<h4>Requirements</h4>
-<ul>
-  <li>Subversion 1.5 or newer.</li>
-  <li>Apache HTTP Server 2.2.0 or higher with mod_proxy enabled.
-    (Several fixes to mod_proxy were committed for this patch that were not
-    backported to the 2.0 branch of httpd.)</li>
-</ul>
-
-</div>  <!-- webdav-proxy-requirements -->
-
-<div class="h4" id="webdav-proxy-example" title="webdav-proxy-example">
-<h4>Example configuration</h4>
-
-<p>Participants:</p>
-<ul>
-  <li>Slave &rarr; <tt>slave.example.com</tt>  (there can be many!)</li>
-  <li>Master &rarr; <tt>master.example.com</tt> (there can only be one!)</li>
-  <li>A WebDAV client (<tt>ra_neon</tt>, <tt>ra_serf</tt>, other WebDAV
-    clients)</li>
-</ul>
-
-<p>Each client does:</p>
-<pre><code>
-    % svn co http://slave.example.com/repos/slave/
-    ...
-    % svn ci
-    % ...etc...
-</code></pre>
-<p>(The client can perform all operations as normal.)</p>
-
-<p>Each slave has:</p>
-<pre><code>
-    &lt;Location /repos/slave&gt;
-      DAV svn
-      SVNPath /my/local/copy/of/repos
-      SVNMasterURI http://master.example.com/repos/master
-    &lt;/Location&gt;
-</code></pre>
-
-<p>The master MUST have a post-commit hook that updates all of the slaves.  An
-example that does this using <code>svnadmin dump</code>/<code>svnadmin
-load</code> and ssh is provided below.  <tt>svnsync</tt> can probably do the
-same thing (XXX: we should probably answer this question more confidently).</p>
-
-<p>Additionally, if locks are permitted on the master repository, lock databases
-need to kept in sync via post-lock and post-unlock hooks on the master pushing
-the lock state to the slaves.  (Username preservation is left as an exercise to
-the reader.)(XXX: Same as above.)  If the lock database is not propogated, users 
-will not be able to accurately determine whether a lock is held - but locking
-will still work.</p>
-
-<p>A sample synchronization script may look like this:</p>
-<pre><code>
-    #!/bin/sh
-    REPOS="$1"
-    REV="$2"
-    SLAVE_HOST=slave.example.com
-    SLAVE_PATH=/my/local/copy/of/repos
-
-    # Ensure svnadmin is in your PATH on both this machine and the remote server!
-    svnadmin dump --incremental -r$2 $1 &gt; /tmp/$2.dump
-    scp /tmp/$2.dump $SLAVE_HOST:$SLAVE_PATH
-    ssh $SLAVE_HOST "svnadmin load $SLAVE_PATH &lt; $SLAVE_PATH/$2.dump"
-    ssh $SLAVE_HOST "rm $SLAVE_PATH/$2.dump"
-    rm /tmp/$2.dump
-</code></pre>
-
-</div>  <!-- webdav-proxy-example -->
-
-<p>Additional information about WebDAV proxy support is available <a
-href="http://svn.collab.net/repos/svn/trunk/notes/webdav-proxy">in the
-repository</a>.</p>
-
-</div>  <!-- webdav-proxy -->
-
-<div class="h3" id="cyrus-sasl" title="cyrus-sasl">
-<h3>Cyrus SASL support for ra_svn and <tt>svnserve</tt> (<em>client
-and server</em>)</h3>
-
-<p>From <a
-href="http://en.wikipedia.org/wiki/Simple_Authentication_and_Security_Layer">
-Wikipedia</a>: SASL is a framework for authentication and data security in
-Internet protocols.  It decouples authentication mechanisms from application
-protocols, in theory allowing any authentication mechanism supported by SASL to
-be used in any application protocol that uses SASL."</p>
-  
-<p>In practice, the server sends a list of authentication mechanisms that it
-supports.  The client then selects one of these mechanisms based on what the
-client supports, and informs the server of its decision.  After that, a
-number of messages are exchanged until either authentication succeeds or an
-error occurs.  In the latter case, the client is allowed to restart
-authentication.</p>
-  
-<p>The <tt>svn://</tt> protocol has always supported this type of negotiation.
-However, only the <tt>CRAM-MD5</tt> and <tt>ANONYMOUS</tt> mechanisms were
-implemented.  <a href="http://asg.web.cmu.edu/sasl/">Cyrus SASL</a> supports
-all these, and, in addition, provides a host of other mechanisms such as
-<tt>DIGEST-MD5</tt>, OTP (One-Time Passwords), GSSAPI (used for Kerberos
-authentication), NTLM (NT LAN Manager), SRP (Secure Remote Password), and
-others.  The exact list of available mechanisms depends on how SASL was
-compiled, as many of them either have external dependencies, or are not
-built by default.  Also, because each mechanism is actually a shared library
-that is dynamically loaded at runtime, many distributions package these
-mechanisms separately from the core library.</p>
-
-<p>Please see the <a href="#sasl-compatibility">compatibility section</a> for
-information regarding using a 1.5 SASL-enabled server with pre-1.5 clients.
-More information about Subversion's SASL support can be found <a 
-href="http://svn.collab.net/repos/svn/trunk/notes/sasl.txt">in the
-repository</a>.</p>
-
-</div> <!-- cyrus-sasl -->
-
-<div class="h3" id="changelist-support" title="changelist-support">
+<div class="h3" id="changelists" title="changelists">
 <h3>Changelist support (<em>client</em>)</h3>
 <p>The Subversion client now contains the notion of a <em>changelist</em>:
 a group of files which are associated with a chosen name.  This becomes
@@ -557,10 +473,11 @@ subcommands:</p>
 href="http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt"
 >here</a>.</p>
 
-</div>  <!-- changelist-support -->
+</div>  <!-- changelists -->
 
-<div class="h3" id="relative-externals" title="relative-externals">
-<h3>Relative peg URLs in <tt>svn:externals</tt> (<em>client</em>)</h3>
+<div class="h3" id="externals" title="externals">
+<h3>Relative URLs, peg revisions in <tt>svn:externals</tt>
+    (<em>client</em>)</h3>
 
 <p>Two additions to the <tt>svn:externals</tt> feature</p>
   <ul>
@@ -698,7 +615,46 @@ href="http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt"
     </li>
   </ul>
 
-</div>  <!-- relative-externals -->
+</div>  <!-- externals -->
+
+<div class="h3" id="cyrus-sasl" title="cyrus-sasl">
+<h3>Cyrus SASL support for ra_svn and <tt>svnserve</tt> (<em>client
+and server</em>)</h3>
+
+<p>From <a
+href="http://en.wikipedia.org/wiki/Simple_Authentication_and_Security_Layer">
+Wikipedia</a>: SASL is a framework for authentication and data security in
+Internet protocols.  It decouples authentication mechanisms from application
+protocols, in theory allowing any authentication mechanism supported by SASL to
+be used in any application protocol that uses SASL."</p>
+  
+<p>In practice, the server sends a list of authentication mechanisms that it
+supports.  The client then selects one of these mechanisms based on what the
+client supports, and informs the server of its decision.  After that, a
+number of messages are exchanged until either authentication succeeds or an
+error occurs.  In the latter case, the client is allowed to restart
+authentication.</p>
+  
+<p>The <tt>svn://</tt> protocol has always supported this type of negotiation.
+However, only the <tt>CRAM-MD5</tt> and <tt>ANONYMOUS</tt> mechanisms were
+implemented.  <a href="http://asg.web.cmu.edu/sasl/">Cyrus SASL</a> supports
+all these, and, in addition, provides a host of other mechanisms such as
+<tt>DIGEST-MD5</tt>, OTP (One-Time Passwords), GSSAPI (used for Kerberos
+authentication), NTLM (NT LAN Manager), SRP (Secure Remote Password), and
+others.  The exact list of available mechanisms depends on how SASL was
+compiled, as many of them either have external dependencies, or are not
+built by default.  Also, because each mechanism is actually a shared library
+that is dynamically loaded at runtime, many distributions package these
+mechanisms separately from the core library.</p>
+
+<p>Please see the <a href="#sasl-compatibility">compatibility
+section</a> for information regarding using a 1.5 SASL-enabled server
+with pre-1.5 clients.  More information about Subversion's SASL
+support can be found in <a
+href="http://svn.collab.net/repos/svn/trunk/notes/sasl.txt"
+>sasl.txt</a>.</p>
+
+</div> <!-- cyrus-sasl -->
 
 <div class="h3" id="fsfs-sharding" title="fsfs-sharding">
 <h3>Improved support for large deployments on FSFS, via sharding
@@ -760,6 +716,107 @@ server for the duration of the transaction.  This is typically called
 "client affinity".</p>
 
 </div>  <!-- fsfs-isolate-immutable -->
+
+<div class="h3" id="webdav-proxy" title="webdav-proxy">
+<h3>WebDAV transparent write-through proxy (<em>server</em>)</h3>
+
+<p>Subversion 1.4 <a
+href="http://subversion.tigris.org/svn_1.4_releasenotes.html#svnsync">
+introduced <tt>svnsync</tt></a>&mdash;a tool which provided the ability to
+replicate repository history from one repository to another.  Though useful,
+<tt>svnsync</tt> could only pull revision history from a repository, not push
+additional commits back to the master.  Subversion 1.5 adds WebDAV proxy
+support to <tt>mod_dav_svn</tt>, effectly allowing bidirectional revision
+history replication between master servers and slave servers using
+<tt>mod_dav_svn</tt>.</p>
+
+<p>All clients interact with a slave server, but the slave transparently
+passes all of the write-oriented activites to the master (rewriting the
+content as necessary).  The slaves are essentially read-only, but they
+do have a complete copy of the repository locally.  This serves to
+alleviate read traffic from the master server which may be desirable
+in certain circumstances.</p>
+
+<p>This model has several advantages to using a straight HTTP DAV-aware
+caching proxy, in that each slave can respond to all read-only requests
+without ever having to relay them to the master backend.</p>
+
+<div class="h4" id="webdav-proxy-requirements"
+    title="webdav-proxy-requirements">
+<h4>Requirements</h4>
+<ul>
+  <li>Subversion 1.5 or newer.</li>
+  <li>Apache HTTP Server 2.2.0 or higher with mod_proxy enabled.
+    (Several fixes to mod_proxy were committed for this patch that were not
+    backported to the 2.0 branch of httpd.)</li>
+</ul>
+
+</div>  <!-- webdav-proxy-requirements -->
+
+<div class="h4" id="webdav-proxy-example" title="webdav-proxy-example">
+<h4>Example configuration</h4>
+
+<p>Participants:</p>
+<ul>
+  <li>Slave &rarr; <tt>slave.example.com</tt>  (there can be many!)</li>
+  <li>Master &rarr; <tt>master.example.com</tt> (there can only be one!)</li>
+  <li>A WebDAV client (<tt>ra_neon</tt>, <tt>ra_serf</tt>, other WebDAV
+    clients)</li>
+</ul>
+
+<p>Each client does:</p>
+<pre><code>
+    % svn co http://slave.example.com/repos/slave/
+    ...
+    % svn ci
+    % ...etc...
+</code></pre>
+<p>(The client can perform all operations as normal.)</p>
+
+<p>Each slave has:</p>
+<pre><code>
+    &lt;Location /repos/slave&gt;
+      DAV svn
+      SVNPath /my/local/copy/of/repos
+      SVNMasterURI http://master.example.com/repos/master
+    &lt;/Location&gt;
+</code></pre>
+
+<p>The master MUST have a post-commit hook that updates all of the slaves.  An
+example that does this using <code>svnadmin dump</code>/<code>svnadmin
+load</code> and ssh is provided below.  <tt>svnsync</tt> can probably do the
+same thing (XXX: we should probably answer this question more confidently).</p>
+
+<p>Additionally, if locks are permitted on the master repository, lock databases
+need to kept in sync via post-lock and post-unlock hooks on the master pushing
+the lock state to the slaves.  (Username preservation is left as an exercise to
+the reader.)(XXX: Same as above.)  If the lock database is not propogated, users 
+will not be able to accurately determine whether a lock is held - but locking
+will still work.</p>
+
+<p>A sample synchronization script may look like this:</p>
+<pre><code>
+    #!/bin/sh
+    REPOS="$1"
+    REV="$2"
+    SLAVE_HOST=slave.example.com
+    SLAVE_PATH=/my/local/copy/of/repos
+
+    # Ensure svnadmin is in your PATH on both this machine and the remote server!
+    svnadmin dump --incremental -r$2 $1 &gt; /tmp/$2.dump
+    scp /tmp/$2.dump $SLAVE_HOST:$SLAVE_PATH
+    ssh $SLAVE_HOST "svnadmin load $SLAVE_PATH &lt; $SLAVE_PATH/$2.dump"
+    ssh $SLAVE_HOST "rm $SLAVE_PATH/$2.dump"
+    rm /tmp/$2.dump
+</code></pre>
+
+</div>  <!-- webdav-proxy-example -->
+
+<p>Additional information about WebDAV proxy support is available <a
+href="http://svn.collab.net/repos/svn/trunk/notes/webdav-proxy">in the
+repository</a>.</p>
+
+</div>  <!-- webdav-proxy -->
 
 </div>  <!-- new-features -->
 
