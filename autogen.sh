@@ -46,7 +46,7 @@ if [ "x$libtoolize" = "x" ]; then
     exit 1
 fi
 
-$libtoolize --copy --automake
+$libtoolize --copy --automake --force
 
 ltpath="`dirname $libtoolize`"
 ltfile=${LIBTOOL_M4-`cd $ltpath/../share/aclocal ; pwd`/libtool.m4}
@@ -64,6 +64,18 @@ echo "Copying libtool helper: $ltfile"
 # copying:
 rm -f build/libtool.m4
 cp $ltfile build/libtool.m4
+
+for file in ltoptions.m4 ltsugar.m4 ltversion.m4 lt~obsolete.m4 ; do
+    rm -f build/$file
+    ltfile=${LIBTOOL_M4-`cd $ltpath/../share/aclocal ; pwd`/$file}
+
+    if [ ! -f $ltfile ]; then
+        continue
+    fi
+
+    echo "Copying libtool helper: $ltfile"
+    cp $ltfile build/$file
+done
 
 # Create the file detailing all of the build outputs for SVN.
 #

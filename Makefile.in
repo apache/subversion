@@ -327,6 +327,10 @@ local-extraclean: local-distclean extraclean-swig
               $(top_srcdir)/build/config.guess \
               $(top_srcdir)/build/config.sub \
               $(top_srcdir)/build/libtool.m4 \
+              $(top_srcdir)/build/ltoptions.m4 \
+              $(top_srcdir)/build/ltsugar.m4 \
+              $(top_srcdir)/build/ltversion.m4 \
+              $(top_srcdir)/build/lt~obsolete.m4 \
               $(top_srcdir)/build/ltmain.sh
 
 # clean everything, including test output.

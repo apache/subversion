@@ -143,7 +143,7 @@ else
   sh_libtool="$abs_builddir/libtool"
   SVN_LIBTOOL="\$(SHELL) $sh_libtool"
   dnl libtoolize requires that the following line not be indented
-AC_PROG_LIBTOOL
+ifdef([LT_INIT], [LT_INIT], [AC_PROG_LIBTOOL])
 fi
 AC_SUBST(SVN_LIBTOOL)
 
