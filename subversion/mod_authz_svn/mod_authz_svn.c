@@ -3,7 +3,7 @@
  *                  based authorization for a Subversion repository.
  *
  * ====================================================================
- * Copyright (c) 2003-2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -55,7 +55,8 @@ typedef struct {
  * Configuration
  */
 
-static void *create_authz_svn_dir_config(apr_pool_t *p, char *d)
+static void *
+create_authz_svn_dir_config(apr_pool_t *p, char *d)
 {
   authz_svn_config_rec *conf = apr_pcalloc(p, sizeof(*conf));
   conf->base_path = d;
@@ -105,8 +106,8 @@ static const command_rec authz_svn_cmds[] =
 /*
  * Get the, possibly cached, svn_authz_t for this request.
  */
-static svn_authz_t *get_access_conf(request_rec *r,
-                                    authz_svn_config_rec *conf)
+static svn_authz_t *
+get_access_conf(request_rec *r, authz_svn_config_rec *conf)
 {
   const char *cache_key = NULL;
   void *user_data = NULL;
@@ -148,18 +149,21 @@ static svn_authz_t *get_access_conf(request_rec *r,
 }
 
 /* Ugly wrappers to macros apr_to(upper|lower) to get a function pointers. */
-static inline int makeupper(int c)
+static inline int
+makeupper(int c)
 {
   return apr_toupper(c);
 }
-static inline int makelower(int c)
+static inline int
+makelower(int c)
 {
   return apr_tolower(c);
 }
 
 /* Converts STR_TO_CONVERT to upper case if UPPER is true,
    else converts it to lower case. */
-static void convert_case(char *str_to_convert, svn_boolean_t upper)
+static void
+convert_case(char *str_to_convert, svn_boolean_t upper)
 {
   char *c = str_to_convert;
   int (*convert_func)(int);
@@ -171,8 +175,8 @@ static void convert_case(char *str_to_convert, svn_boolean_t upper)
     }
 }
 
-static char* get_username_to_authorize(request_rec *r,
-                                       authz_svn_config_rec *conf)
+static char *
+get_username_to_authorize(request_rec *r, authz_svn_config_rec *conf)
 {
   char *username_to_authorize = r->user;
   if (conf->force_username_case) 
@@ -191,10 +195,11 @@ static char* get_username_to_authorize(request_rec *r,
  * Returns OK when access is allowed, DECLINED when it isn't, or an HTTP_
  * error code when an error occurred.
  */
-static int req_check_access(request_rec *r,
-                            authz_svn_config_rec *conf,
-                            const char **repos_path_ref,
-                            const char **dest_repos_path_ref)
+static int
+req_check_access(request_rec *r,
+                 authz_svn_config_rec *conf,
+                 const char **repos_path_ref,
+                 const char **dest_repos_path_ref)
 {
   const char *dest_uri;
   apr_uri_t parsed_dest_uri;
@@ -442,11 +447,10 @@ static int req_check_access(request_rec *r,
  * request.  FILE and LINE should be supplied via the APLOG_MARK macro.
  * ALLOWED is boolean.  REPOS_PATH and DEST_REPOS_PATH are information
  * about the request.  DEST_REPOS_PATH may be NULL. */
-static void log_access_verdict(const char *file, int line,
-                               const request_rec *r,
-                               int allowed,
-                               const char *repos_path,
-                               const char *dest_repos_path)
+static void
+log_access_verdict(const char *file, int line,
+                   const request_rec *r, int allowed,
+                   const char *repos_path, const char *dest_repos_path)
 {
   int level = allowed ? APLOG_INFO : APLOG_ERR;
   const char *verdict = allowed ? "granted" : "denied";
@@ -480,9 +484,10 @@ static void log_access_verdict(const char *file, int line,
  * generation of an apache request when checking GET access from
  * "mod_dav_svn/authz.c" .
  */
-static int subreq_bypass(request_rec *r,
-                         const char *repos_path,
-                         const char *repos_name)
+static int
+subreq_bypass(request_rec *r,
+              const char *repos_path,
+              const char *repos_name)
 {
   svn_error_t *svn_err = NULL;
   svn_authz_t *access_conf = NULL;
@@ -550,7 +555,8 @@ static int subreq_bypass(request_rec *r,
  * Hooks
  */
 
-static int access_checker(request_rec *r)
+static int
+access_checker(request_rec *r)
 {
   authz_svn_config_rec *conf = ap_get_module_config(r->per_dir_config,
                                                     &authz_svn_module);
@@ -606,7 +612,8 @@ static int access_checker(request_rec *r)
   return OK;
 }
 
-static int check_user_id(request_rec *r)
+static int
+check_user_id(request_rec *r)
 {
   authz_svn_config_rec *conf = ap_get_module_config(r->per_dir_config,
                                                     &authz_svn_module);
@@ -633,7 +640,8 @@ static int check_user_id(request_rec *r)
   return status;
 }
 
-static int auth_checker(request_rec *r)
+static int
+auth_checker(request_rec *r)
 {
   authz_svn_config_rec *conf = ap_get_module_config(r->per_dir_config,
                                                     &authz_svn_module);
@@ -674,7 +682,8 @@ static int auth_checker(request_rec *r)
  * Module flesh
  */
 
-static void register_hooks(apr_pool_t *p)
+static void
+register_hooks(apr_pool_t *p)
 {
   static const char * const mod_ssl[] = { "mod_ssl.c", NULL };
 
