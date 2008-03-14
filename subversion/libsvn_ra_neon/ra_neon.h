@@ -995,6 +995,14 @@ svn_ra_neon__unlock(svn_ra_session_t *session,
                     apr_pool_t *pool);
 
 /*
+ * Internal implementation of get_lock RA layer function. */
+svn_error_t *
+svn_ra_neon__get_lock_internal(svn_ra_neon__session_t *session,
+                               svn_lock_t **lock,
+                               const char *path,
+                               apr_pool_t *pool);
+
+/*
  * Implements the get_lock RA layer function. */
 svn_error_t *
 svn_ra_neon__get_lock(svn_ra_session_t *session,

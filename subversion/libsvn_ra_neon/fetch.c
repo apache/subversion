@@ -205,6 +205,9 @@ typedef struct {
      otherwise, it stays false (i.e., it's not a modern server). */
   svn_boolean_t receiving_all;
 
+  /* Hash mapping 'const char *' paths -> 'const char *' lock tokens. */
+  apr_hash_t *lock_tokens;
+
 } report_baton_t;
 
 static const svn_ra_neon__xml_elm_t report_elements[] =
@@ -1842,17 +1845,39 @@ add_node_props(report_baton_t *rb, apr_pool_t *pool)
   svn_ra_neon__resource_t *rsrc = NULL;
   apr_hash_t *props = NULL;
 
-  /* Do nothing if parsing a modern report, because the properties
+  /* Do nothing if parsing a send-all-style report, because the properties
      already come inline. */
   if (rb->receiving_all)
     return SVN_NO_ERROR;
 
-  /* Do nothing if we aren't fetching content.  */
+  /* Do nothing (else) if we aren't fetching content.  */
   if (!rb->fetch_content)
     return SVN_NO_ERROR;
 
   if (rb->file_baton)
     {
+      const char *lock_token = apr_hash_get(rb->lock_tokens,
+                                            TOP_DIR(rb).pathbuf->data,
+                                            TOP_DIR(rb).pathbuf->len);
+
+      /* Workaround a buglet in older versions of mod_dav_svn in that it
+         will not send remove-prop in the update report when a lock
+         property disappears when send-all is false.  */
+      if (lock_token)
+        {
+          svn_lock_t *lock;
+          SVN_ERR(svn_ra_neon__get_lock_internal(rb->ras, &lock, 
+                                                 TOP_DIR(rb).pathbuf->data, 
+                                                 pool));
+          if (! (lock
+                 && lock->token 
+                 && (strcmp(lock->token, lock_token) == 0)))
+            SVN_ERR(rb->editor->change_file_prop(rb->file_baton,
+                                                 SVN_PROP_ENTRY_LOCK_TOKEN,
+                                                 NULL, pool));
+        }
+
+      /* If we aren't supposed to be fetching props, don't. */
       if (! rb->fetch_props)
         return SVN_NO_ERROR;
 
@@ -2224,7 +2249,13 @@ static svn_error_t * reporter_set_path(void *report_baton,
                                          svn_depth_to_word(depth));
 
   if (lock_token)
-    tokenstring = apr_psprintf(pool, "lock-token=\"%s\"", lock_token);
+    {
+      tokenstring = apr_psprintf(pool, "lock-token=\"%s\"", lock_token);
+      apr_hash_set(rb->lock_tokens, 
+                   apr_pstrdup(apr_hash_pool_get(rb->lock_tokens), path), 
+                   APR_HASH_KEY_STRING,
+                   apr_pstrdup(apr_hash_pool_get(rb->lock_tokens), lock_token));
+    }
 
   svn_xml_escape_cdata_cstring(&qpath, path, pool);
   if (start_empty)
@@ -2260,7 +2291,13 @@ static svn_error_t * reporter_link_path(void *report_baton,
                                          svn_depth_to_word(depth));
 
   if (lock_token)
-    tokenstring = apr_psprintf(pool, "lock-token=\"%s\"", lock_token);
+    {
+      tokenstring = apr_psprintf(pool, "lock-token=\"%s\"", lock_token);
+      apr_hash_set(rb->lock_tokens, 
+                   apr_pstrdup(apr_hash_pool_get(rb->lock_tokens), path), 
+                   APR_HASH_KEY_STRING,
+                   apr_pstrdup(apr_hash_pool_get(rb->lock_tokens), lock_token));
+    }
 
   /* Convert the copyfrom_* url/rev "public" pair into a Baseline
      Collection (BC) URL that represents the revision -- and a
@@ -2504,6 +2541,7 @@ make_reporter(svn_ra_session_t *session,
   rb->base64_decoder = NULL;
   rb->cdata_accum = svn_stringbuf_create("", pool);
   rb->send_copyfrom_args = send_copyfrom_args;
+  rb->lock_tokens = apr_hash_make(pool);
 
   /* Neon "pulls" request body content from the caller. The reporter is
      organized where data is "pushed" into self. To match these up, we use
