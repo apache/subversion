@@ -73,11 +73,15 @@ dag_node_t *svn_fs_fs__dag_dup(dag_node_t *node,
                                apr_pool_t *pool);
 
 /* Like svn_fs_fs__dag_dup, but implementing the svn_cache_dup_func_t
-   prototype. */
+   prototype, and NULLing the FS field. */
 svn_cache_dup_func_t svn_fs_fs__dag_dup_for_cache;
 
 /* Return the filesystem containing NODE.  */
 svn_fs_t *svn_fs_fs__dag_get_fs(dag_node_t *node);
+
+/* Changes the filesystem containing NODE to FS.  (Used when pulling
+   nodes out of a shared cache, say.) */
+void svn_fs_fs__dag_set_fs(dag_node_t *node, svn_fs_t *fs);
 
 
 /* Set *REV to NODE's revision number, allocating in POOL.  If NODE

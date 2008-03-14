@@ -54,7 +54,7 @@ class SubversionRepositoryTestSetup(TestSetup):
 
         r = repos.svn_repos_create(REPOS_PATH, '', '', None, None)
         repos.svn_repos_load_fs2(r, dumpfile, StringIO(),
-                                repos.svn_repos_load_uuid_default, '',
+                                repos.svn_repos_load_uuid_ignore, '',
                                 0, 0, None)
 
     def tearDown(self):

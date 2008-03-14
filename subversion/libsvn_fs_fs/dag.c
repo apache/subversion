@@ -98,6 +98,12 @@ svn_fs_fs__dag_get_fs(dag_node_t *node)
   return node->fs;
 }
 
+void
+svn_fs_fs__dag_set_fs(dag_node_t *node, svn_fs_t *fs)
+{
+  node->fs = fs;
+}
+
 
 /* Dup NODEREV and all associated data into POOL.
    Leaves the id and is_fresh_txn_root fields as zero bytes. */
@@ -1078,8 +1084,10 @@ svn_fs_fs__dag_dup_for_cache(void **out,
                              void *in,
                              apr_pool_t *pool)
 {
-  dag_node_t *in_node = in;
-  *out = svn_fs_fs__dag_dup(in_node, pool);
+  dag_node_t *in_node = in, *out_node;
+  out_node = svn_fs_fs__dag_dup(in_node, pool);
+  out_node->fs = NULL;
+  *out = out_node;
   return SVN_NO_ERROR;
 }
 
