@@ -107,6 +107,29 @@ directly (e.g. <tt>svnserve</tt>, <tt>mod_dav_svn</tt>,
 Subversion 1.5.  But, repositories are <a href="#repos-upgrades"
 ><strong>not</strong> upgraded automatically</a>.</p>
 
+<div class="h4" id="wc-upgrades" title="wc-upgrades">
+<h4>Working Copy Upgrades</h4>
+
+<p><strong>WARNING:</strong> if a Subversion 1.5 client encounters a
+pre-1.5 working copy, it will <em>automatically</em> upgrade the
+working copy format as soon as it touches it, making it unreadable by
+older Subversion clients.  If you are using several versions of
+Subversion on your machine, be careful about which version you use in
+which working copy, to avoid accidentally upgrading a working copy.
+(But note that this "auto upgrade" behavior does <em>not</em> occur
+with the <a href="#repos-upgrades" >repositories</a>, only working
+copies.)</p>
+
+<p>If you accidentally upgrade a 1.4 working copy to 1.5, and wish to
+downgrade back to 1.4, use the <a
+href="http://svn.collab.net/repos/svn/trunk/tools/client-side/change-svn-wc-format.py"
+><tt>change-svn-wc-format.py</tt></a> script.  See <a
+href="http://subversion.tigris.org/faq.html#working-copy-format-change"
+>this FAQ entry</a> for details, and run the script with the
+<code>--help</code> option for usage instructions.</p>
+
+</div>  <!-- wc-upgrades -->
+
 <div class="h4" id="repos-upgrades" title="repos-upgrades">
 <h4>Repository Upgrades</h4>
 
@@ -133,29 +156,6 @@ href="http://subversion.tigris.org/issues/show_bug.cgi?id=3024" >issue
 #3024</a> for details.</p>
 
 </div>  <!-- repos-upgrades -->
-
-<div class="h4" id="wc-upgrades" title="wc-upgrades">
-<h4>Working Copy Upgrades</h4>
-
-<p><strong>WARNING:</strong> if a Subversion 1.5 client encounters a
-pre-1.5 working copy, it will <em>automatically</em> upgrade the
-working copy format as soon as it touches it, making it unreadable by
-older Subversion clients.  If you are using several versions of
-Subversion on your machine, be careful about which version you use in
-which working copy, to avoid accidentally upgrading a working copy.
-(But note that this "auto upgrade" behavior does <em>not</em> occur
-with the <a href="#repos-upgrades" >repositories</a>, only working
-copies.)</p>
-
-<p>If you accidentally upgrade a 1.4 working copy to 1.5, and wish to
-downgrade back to 1.4, use the <a
-href="http://svn.collab.net/repos/svn/trunk/tools/client-side/change-svn-wc-format.py"
-><tt>change-svn-wc-format.py</tt></a> script.  See <a
-href="http://subversion.tigris.org/faq.html#working-copy-format-change"
->this FAQ entry</a> for details, and run the script with the
-<code>--help</code> option for usage instructions.</p>
-
-</div>  <!-- wc-upgrades -->
 
 </div>  <!-- wc-and-repos-format-change -->
 
