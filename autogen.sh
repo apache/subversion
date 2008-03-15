@@ -40,12 +40,14 @@ done
 #
 
 libtoolize="`./build/PrintPath glibtoolize libtoolize libtoolize15`"
+lt_major_version=`$libtoolize --version 2>/dev/null | sed -e 's/^[^0-9]*//' -e 's/\..*//' -e '/^$/d' -e 1q`
 
 if [ "x$libtoolize" = "x" ]; then
     echo "libtoolize not found in path"
     exit 1
 fi
 
+rm -f build/config.guess build/config.sub
 $libtoolize --copy --automake --force
 
 ltpath="`dirname $libtoolize`"
@@ -65,17 +67,34 @@ echo "Copying libtool helper: $ltfile"
 rm -f build/libtool.m4
 cp $ltfile build/libtool.m4
 
-for file in ltoptions.m4 ltsugar.m4 ltversion.m4 lt~obsolete.m4 ; do
+for file in ltoptions.m4 ltsugar.m4 ltversion.m4 lt~obsolete.m4; do
     rm -f build/$file
-    ltfile=${LIBTOOL_M4-`cd $ltpath/../share/aclocal ; pwd`/$file}
 
-    if [ ! -f $ltfile ]; then
-        continue
+    if [ $lt_major_version -ge 2 ]; then
+        ltfile=${LIBTOOL_M4-`cd $ltpath/../share/aclocal ; pwd`/$file}
+
+        if [ ! -f $ltfile ]; then
+            echo "$ltfile not found (try setting the LIBTOOL_M4 environment variable)"
+            exit 1
+        fi
+
+        echo "Copying libtool helper: $ltfile"
+        cp $ltfile build/$file
     fi
-
-    echo "Copying libtool helper: $ltfile"
-    cp $ltfile build/$file
 done
+
+if [ $lt_major_version -ge 2 ]; then
+    for file in config.guess config.sub; do
+        configfile=${LIBTOOL_CONFIG-`cd $ltpath/../share/libtool/config ; pwd`/$file}
+
+        if [ ! -f $configfile ]; then
+            echo "$configfile not found (try setting the LIBTOOL_CONFIG environment variable)"
+            exit 1
+        fi
+
+	cp $configfile build/$file
+    done
+fi
 
 # Create the file detailing all of the build outputs for SVN.
 #
