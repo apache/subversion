@@ -63,4 +63,11 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
+  * r29801, r29925, r29930
+    Support Libtool 2.2.
+    Notes:
+      r29801 probably isn't required, but minimizes the diff against trunk.
+    Votes:
+      +1: arfrever
+
 Approved changes:
