@@ -74,6 +74,7 @@ http://svn.collab.net/repos/svn/tags/1.5.0
     * removed svn-ref.tex as it's extremely out of date (issue #2762)
     * improved cancellation response in many situations
     * support Neon up to 0.28
+    * character set conversion now uses native API on Windows (r25650)
     * HTTP auth protocol now configurable (for Neon 0.26 and higher) (r21531)
     * http:// (over Neon) supports HTTP redirection / relocation (issue #660)
     * support PKCS#11-provided (smartcard) SSL client certs with Neon (r29421)
