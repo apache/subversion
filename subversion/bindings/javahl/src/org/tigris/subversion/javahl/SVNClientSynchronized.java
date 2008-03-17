@@ -995,13 +995,12 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @since 1.5
      */
     public void mergeReintegrate(String path, Revision pegRevision,
-                                 String localPath, boolean force,
-                                 boolean dryRun)
+                                 String localPath, boolean dryRun)
             throws ClientException
     {
         synchronized(clazz)
         {
-            worker.mergeReintegrate(path, pegRevision, localPath, force, dryRun);
+            worker.mergeReintegrate(path, pegRevision, localPath, dryRun);
         }
     }
 

@@ -55,7 +55,16 @@ set_entry_changelist(const char *path,
 
   /* We only care about files right now. */
   if (entry->kind != svn_node_file)
-    return SVN_NO_ERROR;
+    {
+      if ((strcmp(SVN_WC_ENTRY_THIS_DIR, entry->name) == 0)
+          && (b->ctx->notify_func2))
+        b->ctx->notify_func2(b->ctx->notify_baton2,
+                             svn_wc_create_notify(path, 
+                                                  svn_wc_notify_skip, 
+                                                  pool),
+                             pool);
+      return SVN_NO_ERROR;
+    }
 
   /* See if this entry passes our changelist filtering. */
   if (! SVN_WC__CL_MATCH(b->changelist_hash, entry))

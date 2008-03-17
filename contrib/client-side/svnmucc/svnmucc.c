@@ -22,6 +22,8 @@
 #include "svn_path.h"
 #include "svn_ra.h"
 #include "svn_config.h"
+#include "svn_props.h"
+#include "svn_string.h"
 #include <apr_lib.h>
 #include <stdio.h>
 #include <string.h>
@@ -101,17 +103,18 @@ ra_callbacks(const char *username,
   return callbacks;
 }
 
-static svn_error_t *
-commit_callback(svn_revnum_t revision,
-                const char *date,
-                const char *author,
-                void *baton)
-{
-  apr_pool_t *pool = baton;
 
+
+static svn_error_t *
+commit_callback(const svn_commit_info_t *commit_info,
+                void *baton,
+                apr_pool_t *pool)
+{
   SVN_ERR(svn_cmdline_printf(pool, "r%ld committed by %s at %s\n",
-                             revision, author ? author : "(no author)",
-                             date));
+                             commit_info->revision,
+                             (commit_info->author
+                              ? commit_info->author : "(no author)"),
+                             commit_info->date));
   return SVN_NO_ERROR;
 }
 
@@ -541,7 +544,7 @@ struct action {
 static svn_error_t *
 execute(const apr_array_header_t *actions,
         const char *anchor,
-        const char *message,
+        apr_hash_t *revprops,
         const char *username,
         const char *password,
         const char *config_dir,
@@ -629,8 +632,8 @@ execute(const apr_array_header_t *actions,
         }
     }
 
-  SVN_ERR(svn_ra_get_commit_editor(session, &editor, &editor_baton, message,
-                                   commit_callback, pool, NULL, FALSE, pool));
+  SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &editor_baton, revprops,
+                                    commit_callback, NULL, NULL, FALSE, pool));
 
   SVN_ERR(editor->open_root(editor_baton, head, pool, &root.baton));
   err = drive(&root, head, editor, pool);
@@ -666,6 +669,8 @@ usage(apr_pool_t *pool, int exit_val)
     "  -p, --password ARG    use ARG as the password\n"
     "  -U, --root-url ARG    interpret all action URLs are relative to ARG\n"
     "  -r, --revision ARG    use revision ARG as baseline for changes\n"
+    "  --with-revprop A[=B]  set revision property A in new revision to B\n"
+    "                        if specified, else to the empty string\n"
     "  -n, --non-interactive don't prompt the user about anything\n"
     "  -X, --extra-args ARG  append arguments from file ARG (one per line;\n"
     "                        use \"-\" to read from standard input)\n"
@@ -693,7 +698,8 @@ main(int argc, const char **argv)
   svn_error_t *err = SVN_NO_ERROR;
   apr_getopt_t *getopt;
   enum {
-    config_dir_opt = SVN_OPT_FIRST_LONGOPT_ID
+    config_dir_opt = SVN_OPT_FIRST_LONGOPT_ID,
+    with_revprop_opt
   };
   const apr_getopt_option_t options[] = {
     {"message", 'm', 1, ""},
@@ -702,19 +708,21 @@ main(int argc, const char **argv)
     {"password", 'p', 1, ""},
     {"root-url", 'U', 1, ""},
     {"revision", 'r', 1, ""},
+    {"with-revprop",  with_revprop_opt, 1, ""},
     {"extra-args", 'X', 1, ""},
     {"help", 'h', 0, ""},
     {"non-interactive", 'n', 0, ""},
     {"config-dir", config_dir_opt, 1, ""},
     {NULL, 0, 0, NULL}
   };
-  const char *message = "committed using svnmucc";
+  const char *message = NULL;
   const char *username = NULL, *password = NULL;
   const char *root_url = NULL, *extra_args_file = NULL;
   const char *config_dir = NULL;
   svn_boolean_t non_interactive = FALSE;
   svn_revnum_t base_revision = SVN_INVALID_REVNUM;
   apr_array_header_t *action_args;
+  apr_hash_t *revprops = apr_hash_make(pool);
   int i;
 
   apr_getopt_init(&getopt, pool, argc, argv);
@@ -775,6 +783,11 @@ main(int argc, const char **argv)
                                             NULL, "Invalid revision number"),
                            pool);
           }
+          break;
+        case with_revprop_opt:
+          err = svn_opt_parse_revprop(&revprops, arg, pool);
+          if (err != SVN_NO_ERROR)
+            handle_error(err, pool);
           break;
         case 'X':
           extra_args_file = apr_pstrdup(pool, arg);
@@ -954,7 +967,20 @@ main(int argc, const char **argv)
   if (! actions->nelts)
     usage(pool, EXIT_FAILURE);
 
-  if ((err = execute(actions, anchor, message, username, password,
+  if (message == NULL)
+    {
+      if (apr_hash_get(revprops, SVN_PROP_REVISION_LOG,
+                       APR_HASH_KEY_STRING) == NULL)
+        /* None of -F, -m, or --with-revprop=svn:log specified; default. */
+        apr_hash_set(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
+                     svn_string_create("committed using svnmucc", pool));
+    }
+  else
+    /* -F or -m specified; use that even if --with-revprop=svn:log. */
+    apr_hash_set(revprops, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
+                 svn_string_create(message, pool));
+
+  if ((err = execute(actions, anchor, revprops, username, password,
                      config_dir, non_interactive, base_revision, pool)))
     handle_error(err, pool);
 

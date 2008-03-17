@@ -1460,14 +1460,13 @@ svn_repos_has_capability(svn_repos_t *repos,
     {
       svn_error_t *err;
       svn_fs_root_t *root;
-      apr_hash_t *ignored_mergeoutput;
+      svn_mergeinfo_catalog_t ignored;
       apr_array_header_t *paths = apr_array_make(pool, 1,
                                                  sizeof(char *));
       
       SVN_ERR(svn_fs_revision_root(&root, repos->fs, 0, pool));
       APR_ARRAY_PUSH(paths, const char *) = "";
-      err = svn_fs_get_mergeinfo(&ignored_mergeoutput, root,
-                                 paths, FALSE, FALSE, pool);
+      err = svn_fs_get_mergeinfo(&ignored, root, paths, FALSE, FALSE, pool);
 
       if (err)
         {

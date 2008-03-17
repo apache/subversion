@@ -69,8 +69,8 @@ SVN_LIB_APRUTIL($APU_VER_REGEXES)
 
 # Either a space-separated list of allowable Neon versions, or "any" to
 # mean allow anything.
-NEON_ALLOWED_LIST="0.25.0 0.25.1 0.25.2 0.25.3 0.25.4 0.25.5 0.26.0 0.26.1 0.26.2 0.26.3 0.26.4 0.27.2"
-NEON_RECOMMENDED_VER=0.27.2
+NEON_ALLOWED_LIST="0.25.0 0.25.1 0.25.2 0.25.3 0.25.4 0.25.5 0.26.0 0.26.1 0.26.2 0.26.3 0.26.4 0.27.2 0.28.0 0.28.1 0.29.0-dev"
+NEON_RECOMMENDED_VER=0.28.1
 NEON_URL="http://www.webdav.org/neon/neon-${NEON_RECOMMENDED_VER}.tar.gz"
 dnl You can skip the neon version check only if you know what you are doing 
 AC_ARG_ENABLE(neon-version-check,
@@ -143,7 +143,7 @@ else
   sh_libtool="$abs_builddir/libtool"
   SVN_LIBTOOL="\$(SHELL) $sh_libtool"
   dnl libtoolize requires that the following line not be indented
-AC_PROG_LIBTOOL
+ifdef([LT_INIT], [LT_INIT], [AC_PROG_LIBTOOL])
 fi
 AC_SUBST(SVN_LIBTOOL)
 
@@ -592,19 +592,22 @@ fi
 
 SVN_CHECK_SWIG
 
-dnl decide whether we want to link against the RA libraries
-AC_ARG_ENABLE(dso,
-AS_HELP_STRING([--enable-dso], [Turn on DSO loading of RA libraries]),
+dnl decide whether we want to link against the RA/FS libraries
+AC_ARG_ENABLE(runtime-module-search,
+AS_HELP_STRING([--enable-runtime-module-search],
+               [Turn on dynamic loading of RA/FS libraries]),
 [
     if test "$enableval" = "yes"; then
-      enable_dso=yes
+      use_dso=yes
       if test "$enable_shared" = "no"; then
-        AC_MSG_ERROR([--enable-dso conflicts with --disable-shared])
+        AC_MSG_ERROR([--enable-runtime-module-search conflicts with --disable-shared])
       fi
+      AC_DEFINE(SVN_USE_DSO, 1,
+                [Defined if svn should try to load DSOs])
     fi
 ])
 
-if test "$enable_shared" = "no" || test "$enable_dso" != "yes"; then
+if test "$enable_shared" = "no" || test "$use_dso" != "yes"; then
   ### We want ra_local first to handle the following scenario:
   ### user has neon and db3 in /usr/local, and db4 in
   ### /usr/local/BerkeleyDB.4.0.  If libsvn_ra_neon.la comes before 

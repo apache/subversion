@@ -63,7 +63,7 @@ def import_executable(sbox):
 
   # import new files into repository
   url = sbox.repo_url
-  output, errput =   svntest.actions.run_and_verify_svn(
+  exit_code, output, errput =   svntest.actions.run_and_verify_svn(
     None, None, [], 'import',
     '-m', 'Log message for new import', xt_path, url)
 
@@ -142,7 +142,7 @@ def import_ignores(sbox):
   # import new dir into repository
   url = sbox.repo_url + '/dir'
 
-  output, errput = svntest.actions.run_and_verify_svn(
+  exit_code, output, errput = svntest.actions.run_and_verify_svn(
     None, None, [], 'import',
     '-m', 'Log message for new import',
     dir_path, url)
@@ -209,7 +209,7 @@ def import_no_ignores(sbox):
   # import new dir into repository
   url = sbox.repo_url + '/dir'
 
-  output, errput = svntest.actions.run_and_verify_svn(
+  exit_code, output, errput = svntest.actions.run_and_verify_svn(
     None, None, [], 'import',
     '-m', 'Log message for new import', '--no-ignore',
     dir_path, url)

@@ -47,7 +47,7 @@ def build_repos(sbox):
 
 def run_sync(url, expected_error=None):
   "Synchronize the mirror repository with the master"
-  output, errput = svntest.main.run_svnsync(
+  exit_code, output, errput = svntest.main.run_svnsync(
     "synchronize", url,
     "--username", svntest.main.wc_author,
     "--password", svntest.main.wc_passwd)
@@ -65,9 +65,30 @@ def run_sync(url, expected_error=None):
     # should be: ['Committed revision 1.\n', 'Committed revision 2.\n']
     raise SVNUnexpectedStdout("Missing stdout")
 
+def run_copy_revprops(url, expected_error=None):
+  "Copy revprops to the mirror repository from the master"
+  exit_code, output, errput = svntest.main.run_svnsync(
+    "copy-revprops", url,
+    "--username", svntest.main.wc_author,
+    "--password", svntest.main.wc_passwd)
+  if errput:
+    if expected_error is None:
+      raise SVNUnexpectedStderr(errput)
+    else:
+      expected_error = svntest.verify.RegexOutput(expected_error,
+                                                  match_all=False)
+      svntest.verify.compare_and_display_lines(None, "STDERR",
+                                               expected_error, errput)
+  elif expected_error is not None:
+    raise SVNExpectedStderr
+  if not output and not expected_error:
+    # should be: ['Copied properties for revision 1.\n',
+    #             'Copied properties for revision 2.\n']
+    raise SVNUnexpectedStdout("Missing stdout")
+
 def run_init(dst_url, src_url):
   "Initialize the mirror repository from the master"
-  output, errput = svntest.main.run_svnsync(
+  exit_code, output, errput = svntest.main.run_svnsync(
     "initialize", dst_url, src_url,
     "--username", svntest.main.wc_author,
     "--password", svntest.main.wc_passwd)
@@ -97,7 +118,7 @@ or another dump file."""
   build_repos(dest_sbox)
 
   # Setup the mirror repository.  Feed it the UUID of the source repository.
-  output, errput = svntest.main.run_svnlook("uuid", sbox.repo_dir)
+  exit_code, output, errput = svntest.main.run_svnlook("uuid", sbox.repo_dir)
   mirror_cfg = ["SVN-fs-dump-format-version: 2\n",
                 "UUID: " + output[0],
                 ]
@@ -112,6 +133,7 @@ or another dump file."""
   run_init(dest_sbox.repo_url, repo_url)
 
   run_sync(dest_sbox.repo_url)
+  run_copy_revprops(dest_sbox.repo_url)
 
   # Remove some SVNSync-specific housekeeping properties from the
   # mirror repository in preparation for the comparison dump.
@@ -384,11 +406,11 @@ def copy_from_unreadable_dir(sbox):
     '\n', # log message is stripped
   ]
 
-  out, err = svntest.main.run_svn(None,
-                                  'log',
-                                  '-r', '3',
-                                  '-v',
-                                  dest_sbox.repo_url)
+  exit_code, out, err = svntest.main.run_svn(None,
+                                             'log',
+                                             '-r', '3',
+                                             '-v',
+                                             dest_sbox.repo_url)
 
   if err:
     raise SVNUnexpectedStderr(err)
@@ -509,11 +531,11 @@ def copy_with_mod_from_unreadable_dir(sbox):
     '\n', # log message is stripped
   ]
 
-  out, err = svntest.main.run_svn(None,
-                                  'log',
-                                  '-r', '2',
-                                  '-v',
-                                  dest_sbox.repo_url)
+  exit_code, out, err = svntest.main.run_svn(None,
+                                             'log',
+                                             '-r', '2',
+                                             '-v',
+                                             dest_sbox.repo_url)
 
   if err:
     raise SVNUnexpectedStderr(err)
@@ -611,11 +633,11 @@ def copy_with_mod_from_unreadable_dir_and_copy(sbox):
     '\n', # log message is stripped
   ]
 
-  out, err = svntest.main.run_svn(None,
-                                  'log',
-                                  '-r', '2',
-                                  '-v',
-                                  dest_sbox.repo_url)
+  exit_code, out, err = svntest.main.run_svn(None,
+                                             'log',
+                                             '-r', '2',
+                                             '-v',
+                                             dest_sbox.repo_url)
 
   if err:
     raise SVNUnexpectedStderr(err)

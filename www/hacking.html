@@ -1592,11 +1592,9 @@ saying "New Function" --- all the details should be in the source.</p>
 that was changed.  For example, if you have made a change which
 requires trivial changes throughout the rest of the program (e.g.,
 renaming a variable), you needn't name all the functions affected, you
-can just say "All callers changed".  However, if you rename symbols
-(e.g., to add or remove a library prefix), please mention every
-affected symbol, both old and new&nbsp;&mdash;&nbsp;this is the only
-way the rename of a particular symbol would be traceable later.  See
-r20946 for an example of this.</p>
+can just say "All callers changed".  When renaming any symbol, please
+remember to mention both the old and new names, for traceability; see
+r20946 for an example.</p>
 
 <p>In general, there is a tension between making entries easy to find
 by searching for identifiers, and wasting time or producing unreadable
@@ -1645,9 +1643,11 @@ author:</p>
 separate line&nbsp;&mdash;&nbsp;making sure to start each continuation
 line with whitespace.  Non-committers should be listed by name, if
 known, and e-mail.  Committers may be listed similarly, or by their
-canonical usernames from COMMITTERS (the leftmost column).
-Additionally, "me" is an acceptable shorthand for the person actually
-committing the change.</p>
+canonical usernames from <a
+href="http://svn.collab.net/repos/svn/trunk/COMMITTERS"
+>COMMITTERS</a> (the leftmost column in that file).  Additionally,
+"me" is an acceptable shorthand for the person actually committing the
+change.</p>
 
 <pre>
    Fix issue #1729: Don't crash because of a missing file.
@@ -2012,8 +2012,10 @@ release, so urgent issues would go there):</p>
 
 <p>There are two types of commit access: full and partial.  Full means
 anywhere in the tree, partial means only in that committer's specific
-area(s) of expertise.  The COMMITTERS file lists all committers, both
-full and partial, and says the domains for each partial committer.</p>
+area(s) of expertise.  The <a
+href="http://svn.collab.net/repos/svn/trunk/COMMITTERS"
+>COMMITTERS</a> file lists all committers, both full and partial, and
+says the domains for each partial committer.</p>
 
 <div class="h3" id="full-commit-access" title="full-commit-access">
 <h3>How full commit access is granted</h3>
@@ -2480,6 +2482,9 @@ suffixes, and release candidates with "-rcN".  For example, the
 prereleases leading to 1.3.7 might look like this:</p>
 
 <pre>
+   subversion-1.3.7-alpha1.tar.gz
+   subversion-1.3.7-alpha2.tar.gz
+   subversion-1.3.7-beta1.tar.gz
    subversion-1.3.7-rc1.tar.gz
    subversion-1.3.7-rc2.tar.gz
    subversion-1.3.7-rc3.tar.gz
@@ -2489,11 +2494,17 @@ prereleases leading to 1.3.7 might look like this:</p>
 <p>The output of 'svn --version' corresponds in the obvious way:</p>
 
 <pre>
+   version 1.3.7 (Alpha 1)
+   version 1.3.7 (Alpha 2)
+   version 1.3.7 (Beta 1)
    version 1.3.7 (Release Candidate 1)
    version 1.3.7 (Release Candidate 2)
    version 1.3.7 (Release Candidate 3)
    version 1.3.7
 </pre>
+
+<p>(See <a href="#alphas-betas">this section</a> for more information
+about when and how we do alpha and beta releases.)</p>
 
 <p>When you 'make install' subversion-1.3.7-rc1, it still installs as
 though it were "1.3.7", of course.  The qualifiers are metadata on the
@@ -2505,13 +2516,13 @@ prerelease.</p>
 but 'svn --version' still produces special output:</p>
 
 <pre>
-   version 1.3.7 (dev build)
+   version 1.3.8 (dev build)
 </pre>
 
-<p>The version number is the next version that the development was
-working towards.  The important thing is to say "dev build".  This
-indicates that the build came from a working copy, which is useful in
-bug reports.</p>
+<p>The version number is the next version that project is working
+towards.  The important thing is to say "dev build".  This indicates
+that the build came from a working copy, which is useful in bug
+reports.</p>
 
 <p>We have no mechanism for releasing dated snapshots.  If we want
 code to get wider distribution than just those who build from working
@@ -2765,8 +2776,40 @@ directory.</p>
 <p>NOTE: Changes to STATUS regarding the temporary branch, including
 voting, are always kept on the main release branch.</p>
 
+<div class="h3" id="alphas-betas" title="alphas-betas">
+<h2>Alpha and beta releases</h2>
+
+<p>When we want new features to get wide testing before we enter the
+formal stabilization period described above, we'll sometimes release
+alpha and beta tarballs (as <a href="#release-numbering" >shown
+earlier</a>).  The line between alpha and beta is fuzzy, but
+basically, "alpha" means "we know or expect there are problems", and
+"beta" means "we don't expect problems".  There is no requirement to
+do any beta releases even if there were "alpha1", "alpha2", etc
+releases; we could just jump straight to "rc1".  However, there are
+circumstances where a beta can be useful: for example, if we're unsure
+of a UI decision and want to get wider user feedback before
+solidifying it into a formal release candidate.</p>
+
+<p>Alphas and betas are only for people who want to help test, and who
+understand that there may be UI- or API-incompatible changes before
+the final release.  The signature requirements are at the release
+manager's discretion.  Typically, the RM will require only 1 or 2
+signatures for each platform, and to tell signers that they can still
+sign even if their testing reveals minor failures, as long as they
+think the code is solid enough to make testing by others worthwhile.
+The RM should request that signers include a description of any errors
+along with their signatures, so the problems can be published when the
+alpha or beta release is announced.</p>
+
+<p>When the alpha or beta is publicly announced, distribtion packagers
+should be firmly warned off packaging it.  See <a
+href="http://subversion.tigris.org/servlets/ReadMsg?list=announce&msgNo=264"
+>this mail from Hyrum K. Wright</a> for a good model.</p>
+
 </div>
 
+</div>
 
 <div class="h2" id="tarball-signing">
 <h2>Signing source distribution packages (a.k.a tarballs)</h2>

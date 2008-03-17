@@ -47,17 +47,32 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.parse('commit r3 leftover'), ' leftover')
         self.assertEqual(self.result, (3,))
 
-    def test_list_dir(self):
-        self.assertRaises(svn_dav_log_parse.Error, self.parse, 'list-dir')
-        self.assertRaises(svn_dav_log_parse.Error, self.parse, 'list-dir foo')
-        self.assertRaises(svn_dav_log_parse.Error, self.parse, 'list-dir foo 3')
-        self.assertEqual(self.parse('list-dir /a/b/c r3 ...'), ' ...')
-        self.assertEqual(self.result, ('/a/b/c', 3))
-        self.assertEqual(self.parse('list-dir / r3'), '')
-        self.assertEqual(self.result, ('/', 3))
+    def test_get_dir(self):
+        self.get_dir_or_file('get-dir')
+
+    def test_get_file(self):
+        self.get_dir_or_file('get-file')
+
+    def get_dir_or_file(self, c):
+        self.assertRaises(svn_dav_log_parse.Error, self.parse, c)
+        self.assertRaises(svn_dav_log_parse.Error, self.parse, c + ' foo')
+        self.assertRaises(svn_dav_log_parse.Error, self.parse, c + ' foo 3')
+        self.assertEqual(self.parse(c + ' /a/b/c r3 ...'), ' ...')
+        self.assertEqual(self.result, ('/a/b/c', 3, False, False))
+        self.assertEqual(self.parse(c + ' / r3'), '')
+        self.assertEqual(self.result, ('/', 3, False, False))
         # path must be absolute
         self.assertRaises(svn_dav_log_parse.Error,
-                          self.parse, 'list-dir a/b/c r3')
+                          self.parse, c + ' a/b/c r3')
+        self.assertEqual(self.parse(c + ' /k r27 text'), '')
+        self.assertEqual(self.result, ('/k', 27, True, False))
+        self.assertEqual(self.parse(c + ' /k r27 props'), '')
+        self.assertEqual(self.result, ('/k', 27, False, True))
+        self.assertEqual(self.parse(c + ' /k r27 text props'), '')
+        self.assertEqual(self.result, ('/k', 27, True, True))
+        # out of order not accepted
+        self.assertEqual(self.parse(c + ' /k r27 props text'), ' text')
+        self.assertEqual(self.result, ('/k', 27, False, True))
 
     def test_lock(self):
         self.assertRaises(svn_dav_log_parse.Error, self.parse, 'lock')
@@ -67,34 +82,24 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.result, ('/foo', True))
         self.assertEqual(self.parse('lock /foo stear'), ' stear')
 
-    def test_prop_list(self):
+    def test_change_rev_prop(self):
         self.assertRaises(svn_dav_log_parse.Error,
-                          self.parse, 'prop-list')
+                          self.parse, 'change-rev-prop r3')
         self.assertRaises(svn_dav_log_parse.Error,
-                          self.parse, 'prop-list /foo')
+                          self.parse, 'change-rev-prop r svn:log')
         self.assertRaises(svn_dav_log_parse.Error,
-                          self.parse, 'prop-list /foo@bar')
-        self.assertEqual(self.parse('prop-list /foo@3 ...'), ' ...')
-        self.assertEqual(self.result, ('/foo', 3))
-
-    def test_revprop_change(self):
-        self.assertRaises(svn_dav_log_parse.Error,
-                          self.parse, 'revprop-change r3')
-        self.assertRaises(svn_dav_log_parse.Error,
-                          self.parse, 'revprop-change r svn:log')
-        self.assertRaises(svn_dav_log_parse.Error,
-                          self.parse, 'revprop-change rX svn:log')
-        self.assertEqual(self.parse('revprop-change r3 svn:log ...'), ' ...')
+                          self.parse, 'change-rev-prop rX svn:log')
+        self.assertEqual(self.parse('change-rev-prop r3 svn:log ...'), ' ...')
         self.assertEqual(self.result, (3, 'svn:log'))
 
-    def test_revprop_list(self):
+    def test_rev_proplist(self):
         self.assertRaises(svn_dav_log_parse.Error,
-                          self.parse, 'revprop-list')
+                          self.parse, 'rev-proplist')
         self.assertRaises(svn_dav_log_parse.Error,
-                          self.parse, 'revprop-list r')
+                          self.parse, 'rev-proplist r')
         self.assertRaises(svn_dav_log_parse.Error,
-                          self.parse, 'revprop-list rX')
-        self.assertEqual(self.parse('revprop-list r3 ...'), ' ...')
+                          self.parse, 'rev-proplist rX')
+        self.assertEqual(self.parse('rev-proplist r3 ...'), ' ...')
         self.assertEqual(self.result, (3,))
 
     def test_unlock(self):
@@ -105,17 +110,17 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.result, ('/foo', True))
         self.assertEqual(self.parse('unlock /foo bear'), ' bear')
 
-    def test_blame(self):
-        self.assertRaises(svn_dav_log_parse.Error, self.parse, 'blame')
+    def test_get_file_revs(self):
+        self.assertRaises(svn_dav_log_parse.Error, self.parse, 'get-file-revs')
         self.assertRaises(svn_dav_log_parse.Error,
-                          self.parse, 'blame /foo 3')
+                          self.parse, 'get-file-revs /foo 3')
         self.assertRaises(svn_dav_log_parse.Error,
-                          self.parse, 'blame /foo 3:a')
+                          self.parse, 'get-file-revs /foo 3:a')
         self.assertRaises(svn_dav_log_parse.Error,
-                          self.parse, 'blame /foo r3:a')
-        self.assertEqual(self.parse('blame /foo r3:4 ...'), ' ...')
+                          self.parse, 'get-file-revs /foo r3:a')
+        self.assertEqual(self.parse('get-file-revs /foo r3:4 ...'), ' ...')
         self.assertEqual(self.result, ('/foo', 3, 4, False))
-        self.assertEqual(self.parse('blame /foo r3:4'
+        self.assertEqual(self.parse('get-file-revs /foo r3:4'
                                     ' include-merged-revisions ...'), ' ...')
         self.assertEqual(self.result, ('/foo', 3, 4, True))
 
@@ -188,45 +193,45 @@ class TestCase(unittest.TestCase):
                          ' .')
         self.assertEqual(self.result, ('/foo', 9, svn.core.svn_depth_files))
 
-    def test_diff_or_merge_1path(self):
+    def test_diff_1path(self):
         self.assertRaises(svn_dav_log_parse.Error,
-                          self.parse, 'diff-or-merge')
-        self.assertEqual(self.parse('diff-or-merge /foo r9:10'), '')
+                          self.parse, 'diff')
+        self.assertEqual(self.parse('diff /foo r9:10'), '')
         self.assertEqual(self.result, ('/foo', 9, 10,
                                        svn.core.svn_depth_unknown, False))
-        self.assertEqual(self.parse('diff-or-merge /foo r9:10'
+        self.assertEqual(self.parse('diff /foo r9:10'
                                     ' ignore-ancestry ...'), ' ...')
         self.assertEqual(self.result, ('/foo', 9, 10,
                                        svn.core.svn_depth_unknown, True))
-        self.assertEqual(self.parse('diff-or-merge /foo r9:10 depth=files'), '')
+        self.assertEqual(self.parse('diff /foo r9:10 depth=files'), '')
         self.assertEqual(self.result, ('/foo', 9, 10,
                                        svn.core.svn_depth_files, False))
 
-    def test_diff_or_merge_2paths(self):
-        self.assertEqual(self.parse('diff-or-merge /foo@9 /bar@10'), '')
+    def test_diff_2paths(self):
+        self.assertEqual(self.parse('diff /foo@9 /bar@10'), '')
         self.assertEqual(self.result, ('/foo', 9, '/bar', 10,
                                        svn.core.svn_depth_unknown, False))
-        self.assertEqual(self.parse('diff-or-merge /foo@9 /bar@10'
+        self.assertEqual(self.parse('diff /foo@9 /bar@10'
                                     ' ignore-ancestry ...'), ' ...')
         self.assertEqual(self.result, ('/foo', 9, '/bar', 10,
                                        svn.core.svn_depth_unknown, True))
-        self.assertEqual(self.parse('diff-or-merge /foo@9 /bar@10'
+        self.assertEqual(self.parse('diff /foo@9 /bar@10'
                                     ' depth=files ignore-ancestry'), '')
         self.assertEqual(self.result, ('/foo', 9, '/bar', 10,
                                        svn.core.svn_depth_files, True))
 
-    def test_remote_status(self):
+    def test_status(self):
         self.assertRaises(svn_dav_log_parse.Error,
-                          self.parse, 'remote-status')
+                          self.parse, 'status')
         self.assertRaises(svn_dav_log_parse.Error,
-                          self.parse, 'remote-status /foo')
-        self.assertEqual(self.parse('remote-status /foo r9'), '')
+                          self.parse, 'status /foo')
+        self.assertEqual(self.parse('status /foo r9'), '')
         self.assertEqual(self.result, ('/foo', 9, svn.core.svn_depth_unknown))
         self.assertRaises(svn_dav_log_parse.BadDepthError, self.parse,
-                          'remote-status /foo r9 depth=INVALID-DEPTH')
+                          'status /foo r9 depth=INVALID-DEPTH')
         self.assertRaises(svn_dav_log_parse.BadDepthError, self.parse,
-                          'remote-status /foo r9 depth=bork')
-        self.assertEqual(self.parse('remote-status /foo r9 depth=files .'),
+                          'status /foo r9 depth=bork')
+        self.assertEqual(self.parse('status /foo r9 depth=files .'),
                          ' .')
         self.assertEqual(self.result, ('/foo', 9, svn.core.svn_depth_files))
 
@@ -277,22 +282,30 @@ if __name__ == '__main__':
         def handle_commit(self, revision):
             self.action = 'commit r%d' % (revision,)
 
-        def handle_list_dir(self, path, revision):
-            self.action = 'list-dir %s r%d' % (path, revision)
+        def handle_get_dir(self, path, revision, text, props):
+            self.action = 'get-dir %s r%d' % (path, revision)
+            if text:
+                self.action += ' text'
+            if props:
+                self.action += ' props'
+
+        def handle_get_file(self, path, revision, text, props):
+            self.action = 'get-file %s r%d' % (path, revision)
+            if text:
+                self.action += ' text'
+            if props:
+                self.action += ' props'
 
         def handle_lock(self, path, steal):
             self.action = 'lock ' + path
             if steal:
                 self.action += ' steal'
 
-        def handle_prop_list(self, path, revision):
-            self.action = 'prop-list %s@%d' % (path, revision)
+        def handle_change_rev_prop(self, revision, revprop):
+            self.action = 'change-rev-prop r%d %s' % (revision, revprop)
 
-        def handle_revprop_change(self, revision, revprop):
-            self.action = 'revprop-change r%d %s' % (revision, revprop)
-
-        def handle_revprop_list(self, revision):
-            self.action = 'revprop-list r%d' % (revision,)
+        def handle_rev_proplist(self, revision):
+            self.action = 'rev-proplist r%d' % (revision,)
 
         def handle_unlock(self, path, break_lock):
             self.action = 'unlock ' + path
@@ -301,8 +314,8 @@ if __name__ == '__main__':
 
         # reports
 
-        def handle_blame(self, path, left, right, include_merged_revisions):
-            self.action = 'blame %s r%d:%d' % (path, left, right)
+        def handle_get_file_revs(self, path, left, right, include_merged_revisions):
+            self.action = 'get-file-revs %s r%d:%d' % (path, left, right)
             if include_merged_revisions:
                 self.action += ' include-merged-revisions'
 
@@ -342,24 +355,24 @@ if __name__ == '__main__':
             self.action = 'checkout-or-export %s r%d' % (path, revision)
             self.maybe_depth(depth)
 
-        def handle_diff_or_merge_1path(self, path, left, right,
+        def handle_diff_1path(self, path, left, right,
                                        depth, ignore_ancestry):
-            self.action = 'diff-or-merge %s r%d:%d' % (path, left, right)
+            self.action = 'diff %s r%d:%d' % (path, left, right)
             self.maybe_depth(depth)
             if ignore_ancestry:
                 self.action += ' ignore-ancestry'
 
-        def handle_diff_or_merge_2paths(self, from_path, from_rev,
+        def handle_diff_2paths(self, from_path, from_rev,
                                         to_path, to_rev,
                                         depth, ignore_ancestry):
-            self.action = ('diff-or-merge %s@%d %s@%d'
+            self.action = ('diff %s@%d %s@%d'
                            % (from_path, from_rev, to_path, to_rev))
             self.maybe_depth(depth)
             if ignore_ancestry:
                 self.action += ' ignore-ancestry'
 
-        def handle_remote_status(self, path, revision, depth):
-            self.action = 'remote-status %s r%d' % (path, revision)
+        def handle_status(self, path, revision, depth):
+            self.action = 'status %s r%d' % (path, revision)
             self.maybe_depth(depth)
 
         def handle_switch(self, from_path, from_rev,

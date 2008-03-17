@@ -161,11 +161,9 @@ def forced_checkout_of_file_with_dir_obstructions(sbox):
 
   # Checkout the standard greek repos into a directory that has a dir named
   # "iota" obstructing the file "iota" in the repos.  This should fail.
-  sout, serr = svntest.actions.run_and_verify_svn("Expected error during co",
-                                                  None,
-                                                  svntest.verify.AnyOutput,
-                                                  "co", "--force",
-                                                  sbox.repo_url, other_wc)
+  exit_code, sout, serr = svntest.actions.run_and_verify_svn(
+    "Expected error during co", None, svntest.verify.AnyOutput,
+    "co", "--force", sbox.repo_url, other_wc)
 
   test_stderr(".*Failed to add file.*a non-file object of the same name " \
               "already exists", serr)
@@ -184,11 +182,9 @@ def forced_checkout_of_dir_with_file_obstructions(sbox):
 
   # Checkout the standard greek repos into a directory that has a file named
   # "A" obstructing the dir "A" in the repos.  This should fail.
-  sout, serr = svntest.actions.run_and_verify_svn("Expected error during co",
-                                                  None,
-                                                  svntest.verify.AnyOutput,
-                                                  "co", "--force",
-                                                  sbox.repo_url, other_wc)
+  exit_code, sout, serr = svntest.actions.run_and_verify_svn(
+    "Expected error during co", None, svntest.verify.AnyOutput,
+    "co", "--force", sbox.repo_url, other_wc)
 
   test_stderr(".*Failed to add directory.*a non-directory object of the " \
               "same name already exists", serr)
@@ -280,11 +276,9 @@ def forced_checkout_with_versioned_obstruction(sbox):
 
   # Checkout the first repos into "other/A".  This should fail since the
   # obstructing versioned directory points to a different URL.
-  sout, serr = svntest.actions.run_and_verify_svn("Expected error during co",
-                                                  None,
-                                                  svntest.verify.AnyOutput,
-                                                  "co", "--force",
-                                                  sbox.repo_url, other_wc_dir)
+  exit_code, sout, serr = svntest.actions.run_and_verify_svn(
+    "Expected error during co", None, svntest.verify.AnyOutput,
+    "co", "--force", sbox.repo_url, other_wc_dir)
 
   test_stderr("svn: Failed to add directory '.*A': a versioned directory " \
               "of the same name already exists", serr)
@@ -676,41 +670,33 @@ def co_with_obstructing_local_adds(sbox):
                                      omicron_path)
 
   # Try to co M's Parent.
-  sout, serr = svntest.actions.run_and_verify_svn("Checkout XPASS",
-                                                  [], svntest.verify.AnyOutput,
-                                                  'checkout',
-                                                  sbox.repo_url + '/A/D',
-                                                  D_path)
+  exit_code, sout, serr = svntest.actions.run_and_verify_svn(
+    "Checkout XPASS", [], svntest.verify.AnyOutput,
+    'checkout', sbox.repo_url + '/A/D', D_path)
 
   test_stderr("svn: Failed to add directory '.*M': a versioned " \
               "directory of the same name already exists\n", serr)
 
   # --force shouldn't help either.
-  sout, serr = svntest.actions.run_and_verify_svn("Checkout XPASS",
-                                                  [], svntest.verify.AnyOutput,
-                                                  'checkout',
-                                                  sbox.repo_url + '/A/D',
-                                                  D_path, '--force')
+  exit_code, sout, serr = svntest.actions.run_and_verify_svn(
+    "Checkout XPASS", [], svntest.verify.AnyOutput,
+    'checkout', sbox.repo_url + '/A/D', D_path, '--force')
 
   test_stderr("svn: Failed to add directory '.*M': a versioned " \
               "directory of the same name already exists\n", serr)
 
   # Try to co omicron's parent.
-  sout, serr = svntest.actions.run_and_verify_svn("Checkout XPASS",
-                                                  [], svntest.verify.AnyOutput,
-                                                  'checkout',
-                                                  sbox.repo_url + '/A/B/F',
-                                                  F_path)
+  exit_code, sout, serr = svntest.actions.run_and_verify_svn(
+    "Checkout XPASS", [], svntest.verify.AnyOutput,
+    'checkout', sbox.repo_url + '/A/B/F', F_path)
 
   test_stderr("svn: Failed to add file '.*omicron': a file of the same " \
               "name is already scheduled for addition with history\n", serr)
 
   # Again, --force shouldn't matter.
-  sout, serr = svntest.actions.run_and_verify_svn("Checkout XPASS",
-                                                  [], svntest.verify.AnyOutput,
-                                                  'checkout',
-                                                  sbox.repo_url + '/A/B/F',
-                                                  F_path, '--force')
+  exit_code, sout, serr = svntest.actions.run_and_verify_svn(
+    "Checkout XPASS", [], svntest.verify.AnyOutput,
+    'checkout', sbox.repo_url + '/A/B/F', F_path, '--force')
 
   test_stderr("svn: Failed to add file '.*omicron': a file of the same " \
               "name is already scheduled for addition with history\n", serr)

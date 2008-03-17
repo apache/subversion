@@ -247,11 +247,11 @@ def steal_lock(sbox):
 
   # attempt (and fail) to lock file
 
-  # This should give a "iota' is already locked... error.
-  svntest.actions.run_and_verify_svn(None, None,
-                                     ".*already locked",
-                                     'lock',
-                                     '-m', 'trying to break', file_path_b)
+  # This should give a "iota' is already locked... error, but exits 0.
+  svntest.actions.run_and_verify_svn2(None, None,
+                                      ".*already locked", 0,
+                                      'lock',
+                                      '-m', 'trying to break', file_path_b)
 
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [],
                                      'lock', '--force',
@@ -671,8 +671,8 @@ def lock_non_existent_file(sbox):
   fname = 'A/foo'
   file_path = os.path.join(sbox.wc_dir, fname)
 
-  output, error = svntest.main.run_svn(1, 'lock',
-                                       '-m', '', file_path)
+  exit_code, output, error = svntest.main.run_svn(1, 'lock',
+                                                  '-m', '', file_path)
 
   error_msg = "foo' is not under version control"
   for line in error:
@@ -704,11 +704,11 @@ def out_of_date(sbox):
                        '-m', '', file_path)
 
   # --- Meanwhile, in our other working copy... ---
-  svntest.actions.run_and_verify_svn(None, None,
-                                     ".*newer version of '/iota' exists",
-                                     'lock',
-                                     '--username', svntest.main.wc_author2,
-                                     '-m', '', file_path_b)
+  svntest.actions.run_and_verify_svn2(None, None,
+                                      ".*newer version of '/iota' exists", 0,
+                                      'lock',
+                                      '--username', svntest.main.wc_author2,
+                                      '-m', '', file_path_b)
 
 #----------------------------------------------------------------------
 # Tests reverting a svn:needs-lock file
@@ -940,12 +940,12 @@ def lock_and_exebit1(sbox):
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
 
   expected_err = ".*svn: warning: To turn off the svn:needs-lock property,.*"
-  svntest.actions.run_and_verify_svn(None, None, expected_err, 'ps',
-                                     'svn:needs-lock', ' ', gamma_path)
+  svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
+                                      'ps', 'svn:needs-lock', ' ', gamma_path)
 
   expected_err = ".*svn: warning: To turn off the svn:executable property,.*"
-  svntest.actions.run_and_verify_svn(None, None, expected_err, 'ps',
-                                     'svn:executable', ' ', gamma_path)
+  svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
+                                      'ps', 'svn:executable', ' ', gamma_path)
 
   # commit
   svntest.actions.run_and_verify_svn(None, None, [], 'commit',
@@ -1016,12 +1016,12 @@ def lock_and_exebit2(sbox):
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
 
   expected_err = ".*svn: warning: To turn off the svn:needs-lock property,.*"
-  svntest.actions.run_and_verify_svn(None, None, expected_err, 'ps',
-                                     'svn:needs-lock', ' ', gamma_path)
+  svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
+                                      'ps', 'svn:needs-lock', ' ', gamma_path)
 
   expected_err = ".*svn: warning: To turn off the svn:executable property,.*"
-  svntest.actions.run_and_verify_svn(None, None, expected_err, 'ps',
-                                     'svn:executable', ' ', gamma_path)
+  svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
+                                     'ps', 'svn:executable', ' ', gamma_path)
 
   # commit
   svntest.actions.run_and_verify_svn(None, None, [], 'commit',
@@ -1120,8 +1120,8 @@ def repos_lock_with_info(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Get repository lock token
-  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'info',
-                                                   file_url)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'info', file_url)
   for line in output:
     if line.find("Lock Token:") != -1:
       repos_lock_token = line[12:]
@@ -1131,8 +1131,9 @@ def repos_lock_with_info(sbox):
     raise svntest.Failure
 
   # info with revision option
-  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'info',
-                                                   file_path, '-r1')
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'info',
+                                                              file_path, '-r1')
 
   for line in output:
     if line.find("Lock Token:") != -1:
@@ -1147,8 +1148,9 @@ def repos_lock_with_info(sbox):
     raise svntest.Failure
 
   # info with peg revision
-  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'info',
-                                                   file_path + '@1')
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'info',
+                                                              file_path + '@1')
   for line in output:
     if line.find("Lock Token:") != -1:
       lock_token = line[12:]
@@ -1185,10 +1187,10 @@ def unlock_already_unlocked_files(sbox):
 
   error_msg = ".*Path '/A/B/E/alpha' is already locked by user '" + \
               svntest.main.wc_author2 + "'.*"
-  svntest.actions.run_and_verify_svn(None, None, error_msg,
-                                     'lock',
-                                     '--username', svntest.main.wc_author2,
-                                     alpha_path, gamma_path)
+  svntest.actions.run_and_verify_svn2(None, None, error_msg, 0,
+                                      'lock',
+                                      '--username', svntest.main.wc_author2,
+                                      alpha_path, gamma_path)
   expected_status.tweak('A/D/gamma', writelocked='K')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -1201,11 +1203,11 @@ def unlock_already_unlocked_files(sbox):
 
   error_msg = "(.*No lock on path '/A/B/lambda'.*)" + \
               "|(.*'A/B/lambda' is not locked.*)"
-  svntest.actions.run_and_verify_svn(None, None, error_msg,
-                                     'unlock',
-                                     '--username', svntest.main.wc_author2,
-                                     '--force',
-                                     iota_path, lambda_path, alpha_path)
+  svntest.actions.run_and_verify_svn2(None, None, error_msg, 0,
+                                      'unlock',
+                                      '--username', svntest.main.wc_author2,
+                                      '--force',
+                                      iota_path, lambda_path, alpha_path)
 
 
   expected_status.tweak('iota', 'A/B/E/alpha', writelocked=None)
@@ -1261,9 +1263,9 @@ def info_moved_path(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Get info for old iota at r1. This shouldn't give us any lock info.
-  output, errput = svntest.actions.run_and_verify_svn(None, None, [],
-                                                      'info',
-                                                      fname2, '-r1')
+  exit_code, output, errput = svntest.actions.run_and_verify_svn(
+    None, None, [], 'info', fname2, '-r1')
+
   # Since we want to make sure that there is *no* lock info, to make this
   # more robust, we also check that the info command actually output some info.
   got_url = 0
@@ -1342,10 +1344,9 @@ def unlock_wrong_token(sbox):
   # Then, unlocking the WC path should fail.
   # ### The error message returned is actually this, but let's worry about that
   # ### another day...
-  svntest.actions.run_and_verify_svn(None, None,
-                                     ".*((No lock on path)|(400 Bad Request))",
-                                     'unlock',
-                                     file_path)
+  svntest.actions.run_and_verify_svn2(
+    None, None, ".*((No lock on path)|(400 Bad Request))", 0,
+    'unlock', file_path)
 
 #----------------------------------------------------------------------
 # Verify that info shows lock info for locked files with URI-unsafe names
@@ -1397,15 +1398,16 @@ def unlocked_lock_of_other_user(sbox):
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # now try to unlock with user jconstant, should fail.
+  # now try to unlock with user jconstant, should fail but exit 0.
   if sbox.repo_url.startswith("http"):
     expected_err = ".*403 Forbidden.*"
   else:
     expected_err = "svn: warning: User '%s' is trying to use a lock owned by "\
                    "'%s'.*" % (svntest.main.wc_author2, svntest.main.wc_author)
-  svntest.actions.run_and_verify_svn(None, [], expected_err, 'unlock',
-                                     '--username', svntest.main.wc_author2,
-                                     pi_path)
+  svntest.actions.run_and_verify_svn2(None, [], expected_err, 0,
+                                      'unlock',
+                                      '--username', svntest.main.wc_author2,
+                                      pi_path)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
@@ -1445,9 +1447,10 @@ test_list = [ None,
               unlock_already_unlocked_files,
               info_moved_path,
               ls_url_encoded,
-              unlock_wrong_token,
+              XFail(unlock_wrong_token, svntest.main.is_ra_type_dav),
               examine_lock_encoded_recurse,
-              unlocked_lock_of_other_user,
+              XFail(unlocked_lock_of_other_user,
+                    svntest.main.is_ra_type_dav)
             ]
 
 if __name__ == '__main__':

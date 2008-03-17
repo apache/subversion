@@ -992,13 +992,12 @@ public interface SVNClientInterface
      * @param path          path or url
      * @param pegRevision   revision to interpret path
      * @param localPath     target local path
-     * @param force         overwrite local changes
      * @param dryRun        do not change anything
      * @throws ClientException
      * @since 1.5
      */
     void mergeReintegrate(String path, Revision pegRevision,
-                          String localPath, boolean force, boolean dryRun)
+                          String localPath, boolean dryRun)
              throws ClientException;
 
     /**

@@ -710,7 +710,7 @@ void SVNClient::merge(const char *path, Revision &pegRevision,
 }
 
 void SVNClient::mergeReintegrate(const char *path, Revision &pegRevision,
-                                 const char *localPath, bool force, bool dryRun)
+                                 const char *localPath, bool dryRun)
 {
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -728,8 +728,7 @@ void SVNClient::mergeReintegrate(const char *path, Revision &pegRevision,
     SVN_JNI_ERR(svn_client_merge_reintegrate(srcPath.c_str(),
                                              pegRevision.revision(),
                                              intLocalPath.c_str(),
-                                             force, dryRun,
-                                             NULL, ctx,
+                                             dryRun, NULL, ctx,
                                              requestPool.pool()), );
 }
 
@@ -743,7 +742,7 @@ SVNClient::getMergeinfo(const char *target, Revision &pegRevision)
     if (ctx == NULL)
         return NULL;
 
-    apr_hash_t *mergeinfo;
+    svn_mergeinfo_t mergeinfo;
     Path intLocalTarget(target);
     SVN_JNI_ERR(intLocalTarget.error_occured(), NULL);
     SVN_JNI_ERR(svn_client_mergeinfo_get_merged(&mergeinfo,
