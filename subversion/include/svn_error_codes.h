@@ -841,6 +841,10 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_RA_SERF_SSPI_INITIALISATION_FAILED,
              SVN_ERR_RA_SERF_CATEGORY_START + 0,
              "Initialization of SSPI library failed")
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED,
+             SVN_ERR_RA_SERF_CATEGORY_START + 1,
+             "Server SSL certificate untrusted")
 
   /* libsvn_auth errors */
 
