@@ -1,7 +1,21 @@
 import unittest, os
 
-from svn import core
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+from svn import core, repos, fs
 from svn.core import SubversionException
+
+from trac.versioncontrol.tests.svn_fs import REPOS_PATH
+
+class RevRange:
+  """ Proxy object for a revision range, used for comparison. """
+
+  def __init__(self, start, end):
+    self.start = start
+    self.end = end
 
 class SubversionMergeinfoTestCase(unittest.TestCase):
   """Test cases for mergeinfo"""
@@ -13,6 +27,26 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
   # Meta data used in conjunction with this mergeinfo.
   MERGEINFO_SRC = "/trunk"
   MERGEINFO_NBR_REV_RANGES = 3
+
+  def setUp(self):
+    """Load the mergeinfo-full Subversion repository.  This dumpfile is
+       created by dumping the repository generated for command line log
+       tests 16.  If it needs to be updated (mergeinfo format changes, for
+       example), we can go there to get a new version."""
+    dumpfile = open(os.path.join(os.path.split(__file__)[0],
+                                 'data', 'mergeinfo.dump'))
+    # Remove any existing repository to ensure a fresh start
+    self.tearDown()
+    self.repos = repos.svn_repos_create(REPOS_PATH, '', '', None, None)
+    repos.svn_repos_load_fs2(self.repos, dumpfile, StringIO(),
+                             repos.svn_repos_load_uuid_default, '',
+                             0, 0, None)
+    self.fs = repos.fs(self.repos)
+    self.rev = fs.youngest_rev(self.fs)
+
+  def tearDown(self):
+    if os.path.exists(REPOS_PATH):
+      repos.delete(REPOS_PATH)
 
   def test_mergeinfo_parse(self):
     """Test svn_mergeinfo_parse()"""
@@ -61,6 +95,19 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
     self.inspect_mergeinfo_dict(mergeinfo, self.MERGEINFO_SRC,
                                 self.MERGEINFO_NBR_REV_RANGES)
 
+  def test_mergeinfo_get(self):
+    mergeinfo = repos.fs_get_mergeinfo(self.repos, ['/trunk'], self.rev,
+                                       core.svn_mergeinfo_inherited,
+                                       False, None, None)
+    expected_mergeinfo = \
+      { '/trunk' :
+          { 'branches/a' : [RevRange(2, 11)],
+            'branches/b' : [RevRange(9, 13)],
+            'branches/c' : [RevRange(2, 16)],
+            'trunk'      : [RevRange(1, 9)],  },
+      }
+    self.compare_mergeinfo_catalogs(mergeinfo, expected_mergeinfo)
+
   def inspect_mergeinfo_dict(self, mergeinfo, merge_source, nbr_rev_ranges):
     rangelist = mergeinfo.get(merge_source)
     self.inspect_rangelist_tuple(rangelist, nbr_rev_ranges)
@@ -77,6 +124,33 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
                       "Unexpected revision range end: %d" % rangelist[1].start)
     self.assertEquals(rangelist[2].inheritable, False,
                       "Missing revision range 'non-inheritable' flag")
+
+  def compare_mergeinfo_catalogs(self, catalog1, catalog2):
+    keys1 = catalog1.keys()
+    keys1.sort()
+    keys2 = catalog2.keys()
+    keys2.sort()
+    self.assertEqual(keys1, keys2)
+
+    for k in catalog1.keys():
+        self.compare_mergeinfos(catalog1[k], catalog2[k])
+
+  def compare_mergeinfos(self, mergeinfo1, mergeinfo2):
+    keys1 = mergeinfo1.keys()
+    keys1.sort()
+    keys2 = mergeinfo2.keys()
+    keys2.sort()
+    self.assertEqual(keys1, keys2)
+
+    for k in mergeinfo1.keys():
+        self.compare_rangelists(mergeinfo1[k], mergeinfo2[k])
+
+  def compare_rangelists(self, rangelist1, rangelist2):
+    self.assertEqual(len(rangelist1), len(rangelist2))
+    for r1, r2 in zip(rangelist1, rangelist2):
+        self.assertEqual(r1.start, r2.start)
+        self.assertEqual(r1.end, r2.end)
+
 
 def suite():
     return unittest.makeSuite(SubversionMergeinfoTestCase, 'test')

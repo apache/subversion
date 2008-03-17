@@ -49,7 +49,7 @@ typedef struct svn_client__merge_path_t
   svn_boolean_t absent;              /* PATH is absent from the WC, probably
                                         due to authz restrictions. */
   apr_array_header_t *remaining_ranges; /* Per path remaining ranges list. */
-  apr_hash_t *pre_merge_mergeinfo;      /* mergeinfo on a path prior to a
+  svn_mergeinfo_t pre_merge_mergeinfo;  /* mergeinfo on a path prior to a
                                            merge.*/
   svn_boolean_t indirect_mergeinfo;
   svn_boolean_t scheduled_for_deletion; /* PATH is scheduled for deletion. */
@@ -77,7 +77,7 @@ typedef struct svn_client__merge_path_t
    Set *WALKED_PATH to the path climbed from WCPATH to find inherited
    mergeinfo, or "" if none was found. (ignored if NULL). */
 svn_error_t *
-svn_client__get_wc_mergeinfo(apr_hash_t **mergeinfo,
+svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
                              svn_boolean_t *inherited,
                              svn_boolean_t pristine,
                              svn_mergeinfo_inheritance_t inherit,
@@ -104,7 +104,7 @@ svn_client__get_wc_mergeinfo(apr_hash_t **mergeinfo,
    TRUE, set *TARGET_MERGEINFO to NULL. */
 svn_error_t *
 svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
-                                apr_hash_t **target_mergeinfo,
+                                svn_mergeinfo_t *target_mergeinfo,
                                 const char *rel_path,
                                 svn_revnum_t rev,
                                 svn_mergeinfo_inheritance_t inherit,
@@ -132,7 +132,7 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
    or if it was obtained from the repository, set *INDIRECT to TRUE, set it
    to FALSE *otherwise. */
 svn_error_t *
-svn_client__get_wc_or_repos_mergeinfo(apr_hash_t **target_mergeinfo,
+svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
                                       const svn_wc_entry_t *entry,
                                       svn_boolean_t *indirect,
                                       svn_boolean_t repos_only,
@@ -143,7 +143,7 @@ svn_client__get_wc_or_repos_mergeinfo(apr_hash_t **target_mergeinfo,
                                       svn_client_ctx_t *ctx,
                                       apr_pool_t *pool);
 
-/* Set *MERGEINFO_P to a hash of mergeinfo constructed solely from the
+/* Set *MERGEINFO_P to a mergeinfo constructed solely from the
    natural history of PATH_OR_URL@PEG_REVISION.  RA_SESSION is an RA
    session whose session URL maps to PATH_OR_URL's URL, or NULL.
    ADM_ACCESS is a working copy administrative access baton which can
@@ -153,7 +153,7 @@ svn_client__get_wc_or_repos_mergeinfo(apr_hash_t **target_mergeinfo,
    mergeinfo.  See svn_ra_get_location_segments() for the rules
    governing PEG_REVISION, START_REVISION, and END_REVISION.*/
 svn_error_t *
-svn_client__get_history_as_mergeinfo(apr_hash_t **mergeinfo_p,
+svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
                                      const char *path_or_url,
                                      const svn_opt_revision_t *peg_revision,
                                      svn_revnum_t range_youngest,
@@ -165,9 +165,9 @@ svn_client__get_history_as_mergeinfo(apr_hash_t **mergeinfo_p,
 
 /* Translates an array SEGMENTS (of svn_location_t *), like the one
    returned from svn_client__repos_location_segments, into a mergeinfo
-   hash *MERGEINFO_P, allocated in POOL. */
+   *MERGEINFO_P, allocated in POOL. */
 svn_error_t *
-svn_client__mergeinfo_from_segments(apr_hash_t **mergeinfo_p,
+svn_client__mergeinfo_from_segments(svn_mergeinfo_t *mergeinfo_p,
                                     apr_array_header_t *segments,
                                     apr_pool_t *pool);
 
@@ -176,7 +176,7 @@ svn_client__mergeinfo_from_segments(apr_hash_t **mergeinfo_p,
    working otherwise. If no record of any mergeinfo exists, set
    MERGEINFO to NULL.  Does not acount for inherited mergeinfo. */
 svn_error_t *
-svn_client__parse_mergeinfo(apr_hash_t **mergeinfo,
+svn_client__parse_mergeinfo(svn_mergeinfo_t *mergeinfo,
                             const svn_wc_entry_t *entry,
                             const char *wcpath,
                             svn_boolean_t pristine,
@@ -189,7 +189,7 @@ svn_client__parse_mergeinfo(apr_hash_t **mergeinfo,
    record an empty property value (e.g. ""). */
 svn_error_t *
 svn_client__record_wc_mergeinfo(const char *wcpath,
-                                apr_hash_t *mergeinfo,
+                                svn_mergeinfo_t mergeinfo,
                                 svn_wc_adm_access_t *adm_access,
                                 apr_pool_t *pool);
 
@@ -246,7 +246,7 @@ svn_client__elide_children(apr_array_header_t *children_with_mergeinfo,
                            apr_pool_t *pool);
 
 /* A wrapper which calls svn_client__elide_mergeinfo() on each child
-   in CHILDREN_WITH_MERGEINFO_HASH in depth-first. */
+   in CHILDREN_WITH_MERGEINFO in depth-first. */
 svn_error_t *
 svn_client__elide_mergeinfo_for_tree(apr_hash_t *children_with_mergeinfo,
                                      svn_wc_adm_access_t *adm_access,
@@ -255,7 +255,7 @@ svn_client__elide_mergeinfo_for_tree(apr_hash_t *children_with_mergeinfo,
 
 /* TODO(reint): Document. */
 svn_error_t *
-svn_client__elide_mergeinfo_catalog(apr_hash_t *mergeinfo_catalog,
+svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
                                     apr_pool_t *pool);
 
 

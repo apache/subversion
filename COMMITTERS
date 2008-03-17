@@ -32,7 +32,7 @@ Blanket commit access:
            mbk   Mark Benedetto King <mbk@lowlatency.com>
            epg   Eric Gillespie <epg@pretzelnet.org>
            jaa   Jani Averbach <jaa@iki.fi>
-    julianfoad   Julian Foad <julianfoad@btopenworld.com>
+    julianfoad   Julian Foad <jfoad@collab.net>
      ringstrom   Tobias Ringström <tobias@ringstrom.mine.nu>
        jpieper   Josh Pieper <jjp@pobox.com>
   jszakmeister   John Szakmeister <john@szakmeister.net>
@@ -53,6 +53,7 @@ Blanket commit access:
     vgeorgescu   Vlad Georgescu <vgeorgescu@gmail.com>
        kameshj   Kamesh Jayachandran <kamesh@collab.net>
       markphip   Mark Phippard <mphippard@collab.net>
+      arfrever   Arfrever Frehtes Taifersar Arahesis <arfrever.fta@gmail.com>
 
 Commit access for specific areas:
 
@@ -118,7 +119,6 @@ Commit access for specific areas:
       sunny256   Øyvind A. Holm <sunny@sunbase.org>          (po: nb)
         jzgoda   Jaroslaw Zgoda <jzgoda@o2.pl>               (po: pl)
       karolszk   Karol Szkudlarek <karol@mikronika.com.pl>   (po: pl)
-      arfrever   Arfrever Frehtes Taifersar Arahesis <arfrever.fta@gmail.com> (po: pl)
         plasma   Wei-Hon Chen <plasma@ms9.hinet.net>         (po: zh_TW)
        jihuang   June-Yen Huang <jihuang@iis.sinica.edu.tw>  (po: zh_TW)
        marcosc   Marcos Chaves <marcos.nospam@gmail.com>     (po: pt_BR)

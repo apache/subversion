@@ -504,7 +504,7 @@ def log_switched_file(sbox):
                        iota_path)
 
   # log switched file 'iota'
-  output, error = svntest.main.run_svn(None, 'log', iota_path)
+  exit_code, output, error = svntest.main.run_svn(None, 'log', iota_path)
   for line in output:
     if line.find("set prop on switched iota") != -1:
       break
@@ -690,20 +690,20 @@ def nonrecursive_switching(sbox):
                                      'switch', '-N', version1_url, wc2_dir)
 
   # Check the URLs of the (not switched) directories.
-  out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                'info', wc2_B_dir)
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'info', wc2_B_dir)
   if out[1].find('/A/B') == -1:
     print out[1]
     raise svntest.Failure
 
-  out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                'info', wc2_C_dir)
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'info', wc2_C_dir)
   if out[1].find('/A/C') == -1:
     print out[1]
     raise svntest.Failure
 
-  out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                'info', wc2_D_dir)
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'info', wc2_D_dir)
   if out[1].find('/A/D') == -1:
     print out[1]
     raise svntest.Failure
@@ -712,14 +712,15 @@ def nonrecursive_switching(sbox):
   # ("svn status -u" might be a better check: it fails when newfile's URL
   # is bad, and shows "S" when mu's URL is wrong.)
   # mu: not switched
-  out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                'info', wc2_mu_file)
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'info', wc2_mu_file)
   if out[2].find('/branch/version1/mu') == -1:
     print out[2]
     raise svntest.Failure
   # newfile: wrong URL
-  out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                'info', wc2_new_file)
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'info',
+                                                           wc2_new_file)
   if out[2].find('/branch/version1/newfile') == -1:
     print out[2]
     raise svntest.Failure
@@ -743,8 +744,8 @@ def failed_anchor_is_target(sbox):
 
   # This switch leaves psi unversioned, because of the local mods,
   # then fails because it tries to add a directory of the same name.
-  out, err = svntest.main.run_svn(1, 'switch',
-                                  G_url, H_path)
+  exit_code, out, err = svntest.main.run_svn(1, 'switch',
+                                             G_url, H_path)
   if not err:
     raise svntest.Failure
 
@@ -767,7 +768,8 @@ def failed_anchor_is_target(sbox):
 
   # There was a bug whereby the failed switch left the wrong URL in
   # the target directory H.  Check for that.
-  out, err = svntest.actions.run_and_verify_svn(None, None, [], 'info', H_path)
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'info', H_path)
   for line in out:
     if line.find('URL: ' + G_url) != -1:
       break
@@ -812,14 +814,14 @@ def bad_intermediate_urls(sbox):
   svntest.main.file_append(A_Z_path, 'Look, Mom, no ... switch success.')
 
   # This switch should fail for reasons of obstruction.
-  out, err = svntest.main.run_svn(1, 'switch',
-                                  C_url, wc_dir)
+  exit_code, out, err = svntest.main.run_svn(1, 'switch',
+                                             C_url, wc_dir)
   if not err:
     raise svntest.Failure
 
   # However, the URL for A should now reflect A/C/A, not something else.
-  out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                'info', A_path)
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'info', A_path)
   if out[1].find('/A/C/A') == -1:
     raise svntest.Failure
 
@@ -853,8 +855,8 @@ def obstructed_switch(sbox):
                                         None, wc_dir)
 
   svntest.main.file_append(alpha_path, "hello")
-  out, err = svntest.main.run_svn(1,
-                                  'sw', E_url2, E_path)
+  exit_code, out, err = svntest.main.run_svn(1, 'sw', E_url2, E_path)
+
   for line in err:
     if line.find("object of the same name already exists") != -1:
       break
@@ -1086,9 +1088,9 @@ def relocate_and_propset(sbox):
 
   # import the greek tree
   svntest.main.greek_state.write_to_disk(svntest.main.greek_dump_dir)
-  output, errput = svntest.main.run_svn(None, 'import',
-                                '-m', 'Log message for revision 1.',
-                                svntest.main.greek_dump_dir, sbox.repo_url)
+  exit_code, output, errput = svntest.main.run_svn(
+    None, 'import', '-m', 'Log message for revision 1.',
+    svntest.main.greek_dump_dir, sbox.repo_url)
 
   # checkout
   svntest.main.safe_rmtree(wc_dir, 1)
@@ -1259,19 +1261,18 @@ def forced_switch_failures(sbox):
 
   # Make dir A/D/H/I in repos.
   I_url = sbox.repo_url + "/A/D/H/I"
-  so, se = svntest.actions.run_and_verify_svn("Unexpected error during mkdir",
-                                              ['\n', 'Committed revision 2.\n'],
-                                              [],
-                                              "mkdir", I_url,
-                                              "-m", "Log Message")
+  exit_code, so, se = svntest.actions.run_and_verify_svn(
+    "Unexpected error during mkdir",
+    ['\n', 'Committed revision 2.\n'], [],
+    "mkdir", I_url, "-m", "Log Message")
 
   # Make A/D/G/I and co A/D/H/I into it.
   I_path = os.path.join(sbox.wc_dir, 'A', 'D', 'G', 'I')
   os.mkdir(I_path)
-  so, se = svntest.actions.run_and_verify_svn("Unexpected error during co",
-                                              ['Checked out revision 2.\n'],
-                                              [],
-                                              "co", I_url, I_path)
+  exit_code, so, se = svntest.actions.run_and_verify_svn(
+    "Unexpected error during co",
+    ['Checked out revision 2.\n'], [],
+    "co", I_url, I_path)
 
   # Try the forced switch.  A/D/G/I obstructs the dir A/D/G/I coming
   # from the repos.  Normally this isn't a problem, but A/D/G/I is already

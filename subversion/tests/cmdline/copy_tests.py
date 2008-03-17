@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import stat, os, re
+import stat, os, re, shutil
 
 # Our testing module
 import svntest
@@ -915,7 +915,7 @@ def repos_to_wc(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
 
   # Modification will only show up if timestamps differ
-  out,err = svntest.main.run_svn(None, 'diff', pi_path)
+  exit_code, out, err = svntest.main.run_svn(None, 'diff', pi_path)
   if err or not out:
     print "diff failed"
     raise svntest.Failure
@@ -1334,7 +1334,7 @@ def revision_kinds_local_source(sbox):
     expected_disk.add({ dst: Item(contents=text) })
 
     # Check that the copied-from revision == from_rev.
-    output, errput = svntest.main.run_svn(None, "info", dst_path)
+    exit_code, output, errput = svntest.main.run_svn(None, "info", dst_path)
     for line in output:
       if line.rstrip() == "Copied From Rev: " + str(from_rev):
         break
@@ -1472,9 +1472,9 @@ def wc_to_wc_copy_between_different_repos(sbox):
   wc2_dir = sbox2.wc_dir
 
   # Attempt a copy between different repositories.
-  out, err = svntest.main.run_svn(1, 'cp',
-                                  os.path.join(wc2_dir, 'A'),
-                                  os.path.join(wc_dir, 'A', 'B'))
+  exit_code, out, err = svntest.main.run_svn(1, 'cp',
+                                             os.path.join(wc2_dir, 'A'),
+                                             os.path.join(wc_dir, 'A', 'B'))
   for line in err:
     if line.find("it is not from repository") != -1:
       break
@@ -1503,9 +1503,9 @@ def wc_to_wc_copy_deleted(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Copy to schedule=delete fails
-  out, err = svntest.main.run_svn(1, 'cp',
-                                  os.path.join(B_path, 'E'),
-                                  os.path.join(B_path, 'F'))
+  exit_code, out, err = svntest.main.run_svn(1, 'cp',
+                                             os.path.join(B_path, 'E'),
+                                             os.path.join(B_path, 'F'))
   for line in err:
     if line.find("is scheduled for deletion") != -1:
       break
@@ -1542,14 +1542,15 @@ def wc_to_wc_copy_deleted(sbox):
   # Attempts to revert the schedule=delete will fail, but should not
   # break the wc.  It's very important that the directory revert fails
   # since it's a placeholder rather than a full hierarchy
-  out, err = svntest.main.run_svn(1, 'revert', '--recursive',
-                                  os.path.join(B2_path, 'F'))
+  exit_code, out, err = svntest.main.run_svn(1, 'revert', '--recursive',
+                                             os.path.join(B2_path, 'F'))
   for line in err:
     if line.find("Error restoring text") != -1:
       break
   else:
     raise svntest.Failure
-  out, err = svntest.main.run_svn(1, 'revert', os.path.join(B2_path, 'lambda'))
+  exit_code, out, err = svntest.main.run_svn(1, 'revert',
+                                             os.path.join(B2_path, 'lambda'))
   for line in err:
     if line.find("Error restoring text") != -1:
       break
@@ -1603,9 +1604,8 @@ def url_to_non_existent_url_path(sbox):
 
   # Expect failure on 'svn cp SRC DST' where one or more ancestor
   # directories of DST do not exist
-  out, err = svntest.main.run_svn(1,
-                                  'cp', dirURL1, dirURL2,
-                                  '-m', 'fooogle')
+  exit_code, out, err = svntest.main.run_svn(1, 'cp', dirURL1, dirURL2,
+                                             '-m', 'fooogle')
   for err_line in err:
     if re.match (msg, err_line):
       break
@@ -2384,10 +2384,9 @@ def move_dir_back_and_forth(sbox):
 
   # Move the moved dir: D_moved back to its starting
   # location at A/D.
-  out, err = svntest.actions.run_and_verify_svn(None, None,
-                                                svntest.verify.AnyOutput,
-                                                'mv', D_move_path,
-                                                D_path)
+  exit_code, out, err = svntest.actions.run_and_verify_svn(
+    None, None, svntest.verify.AnyOutput,
+    'mv', D_move_path, D_path)
 
   for line in err:
     if re.match('.*Cannot copy to .*as it is scheduled for deletion',
@@ -3721,6 +3720,105 @@ def allow_unversioned_parent_for_copy_src(sbox):
                                      copy_to_path)
 
 
+#----------------------------------------------------------------------
+# Issue #2986
+def replaced_local_source_for_incoming_copy(sbox):
+  "update receives copy, but local source is replaced"
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+  other_wc_dir = wc_dir + '-other'
+
+  # These paths are for regular content testing.
+  tau_path = os.path.join(wc_dir, 'A', 'D', 'G', 'tau')
+  rho_url = sbox.repo_url + '/A/D/G/rho'
+  pi_url = sbox.repo_url + '/A/D/G/pi'
+  other_G_path = os.path.join(other_wc_dir, 'A', 'D', 'G')
+  other_rho_path = os.path.join(other_G_path, 'rho')
+
+  # These paths are for properties testing.
+  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
+  chi_path = os.path.join(H_path, 'chi')
+  psi_path = os.path.join(H_path, 'psi')
+  omega_path = os.path.join(H_path, 'omega')
+  psi_url = sbox.repo_url + '/A/D/H/psi'
+  chi_url = sbox.repo_url + '/A/D/H/chi'
+  other_H_path = os.path.join(other_wc_dir, 'A', 'D', 'H')
+  other_psi_path = os.path.join(other_H_path, 'psi')
+  other_omega_path = os.path.join(other_H_path, 'omega')
+
+  # Prepare for properties testing.  If the regular content bug
+  # reappears, we still want to be able to test for the property bug
+  # independently.  That means making two files have the same content,
+  # to avoid encountering the checksum error that might reappear in a
+  # regression.  So here we do that, as well as set the marker
+  # property that we'll check for later.  The reason to set the marker
+  # property in this commit, rather than later, is so that we pass the
+  # conditional in update_editor.c:locate_copyfrom() that compares the
+  # revisions.
+  svntest.main.file_write(chi_path, "Same contents for two files.\n")
+  svntest.main.file_write(psi_path, "Same contents for two files.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+                                     'chi-prop', 'chi-val', chi_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'identicalize contents', wc_dir);
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Make the duplicate working copy.
+  svntest.main.safe_rmtree(other_wc_dir)
+  shutil.copytree(wc_dir, other_wc_dir)
+  
+  try:
+    ## Test properties. ##
+
+    # Commit a replacement from the first working copy.
+    svntest.actions.run_and_verify_svn(None, None, [], 'rm',
+                                       omega_path);
+    svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                       psi_url, omega_path);
+    svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                       '-m', 'a propset and a copy', wc_dir);
+
+    # Now schedule a replacement in the second working copy, then update
+    # to receive the replacement from the first working copy, with the
+    # source being the now-scheduled-replace file.
+    svntest.actions.run_and_verify_svn(None, None, [], 'rm',
+                                       other_psi_path);
+    svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                       chi_url, other_psi_path);
+    svntest.actions.run_and_verify_svn(None, None, [], 'up',
+                                       other_wc_dir)
+    exit_code, output, errput = svntest.main.run_svn(None, 'proplist',
+                                                     '-v', other_omega_path)
+    if len(errput):
+      raise svntest.Failure("unexpected error output: %s" % errput)
+    if len(output):
+      raise svntest.Failure("unexpected properties found on '%s': %s"
+                            % (other_omega_path, output))
+
+    ## Test regular content. ##
+
+    # Commit a replacement from the first working copy.
+    svntest.actions.run_and_verify_svn(None, None, [], 'rm',
+                                       tau_path);
+    svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                       rho_url, tau_path);
+    svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                       '-m', 'copy rho to tau', wc_dir);
+
+    # Now schedule a replacement in the second working copy, then update
+    # to receive the replacement from the first working copy, with the
+    # source being the now-scheduled-replace file.
+    svntest.actions.run_and_verify_svn(None, None, [], 'rm',
+                                       other_rho_path);
+    svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                       pi_url, other_rho_path);
+    svntest.actions.run_and_verify_svn(None, None, [], 'up',
+                                       other_wc_dir)
+
+  finally:
+    svntest.main.safe_rmtree(other_wc_dir)
+
+
 ########################################################################
 # Run the tests
 
@@ -3796,6 +3894,7 @@ test_list = [ None,
               copy_make_parents_repo_repo,
               URI_encoded_repos_to_wc,
               allow_unversioned_parent_for_copy_src,
+              replaced_local_source_for_incoming_copy,
              ]
 
 if __name__ == '__main__':

@@ -97,6 +97,9 @@ typedef struct {
 #ifdef SVN_RA_SERF_SSPI_ENABLED
   /* Optional SSPI context for this connection. */
   serf_sspi_context_t *sspi_context;
+
+  /* Optional SSPI context for the proxy on this connection. */
+  serf_sspi_context_t *proxy_sspi_context;
 #endif
 
   /* Current authorization header used for the proxy server; may be NULL */
@@ -161,6 +164,10 @@ struct svn_ra_serf__session_t {
   const svn_ra_callbacks2_t *wc_callbacks;
   void *wc_callback_baton;
 
+  /* Callback function to send info to WC */
+  svn_ra_progress_notify_func_t wc_progress_func;
+  void *wc_progress_baton;
+
   /* Error that we've received but not yet returned upstream. */
   svn_error_t *pending_error;
 
@@ -187,6 +194,10 @@ struct svn_ra_serf__session_t {
   const char *proxy_username;
   const char *proxy_password;
   int proxy_auth_attempts;
+
+  /* SSL server certificates */
+  svn_boolean_t trust_default_ca;
+  const char *ssl_authorities;
 };
 
 /*

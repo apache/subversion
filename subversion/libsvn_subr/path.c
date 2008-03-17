@@ -965,7 +965,7 @@ uri_escape(const char *path, const char table[], apr_pool_t *pool)
   apr_size_t i, copied = 0;
   int c;
 
-  retstr = svn_stringbuf_create("", pool);
+  retstr = svn_stringbuf_create_ensure(strlen(path), pool);
   for (i = 0; path[i]; i++)
     {
       c = (unsigned char)path[i];
@@ -1090,10 +1090,8 @@ svn_path_uri_decode(const char *path, apr_pool_t *pool)
   apr_size_t i;
   svn_boolean_t query_start = FALSE;
 
-  retstr = svn_stringbuf_create("", pool);
-
   /* avoid repeated realloc */
-  svn_stringbuf_ensure(retstr, strlen(path) + 1);
+  retstr = svn_stringbuf_create_ensure(strlen(path) + 1, pool);
 
   retstr->len = 0;
   for (i = 0; path[i]; i++)
@@ -1370,7 +1368,8 @@ illegal_path_escape(const char *path, apr_pool_t *pool)
   apr_size_t i, copied = 0;
   int c;
 
-  retstr = svn_stringbuf_create("", pool);
+  /* Create stringbuf with estimated buffer size. */
+  retstr = svn_stringbuf_create_ensure(strlen(path), pool);
   for (i = 0; path[i]; i++)
     {
       c = (unsigned char)path[i];

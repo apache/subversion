@@ -753,7 +753,7 @@ EOF
     ctx.merge(branch, original_rev, branch, merged_rev, trunk)
     ctx.commit(@wc_path)
 
-    mergeinfo = "#{branch_path_in_repos}:#{merged_rev}"
+    mergeinfo = Svn::Core::MergeInfo.parse("#{branch_path_in_repos}:#{merged_rev}")
     assert_equal({trunk_path_in_repos => mergeinfo},
                  @repos.mergeinfo([trunk_path_in_repos]))
     assert_equal(mergeinfo, @repos.mergeinfo(trunk_path_in_repos))

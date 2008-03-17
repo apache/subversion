@@ -233,14 +233,14 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
              particular repository; but if it was 'yes, we still must
              change it to 'no' iff the repository itself doesn't
              support mergeinfo. */
-          apr_hash_t *ignored_mergeoutput;
+          svn_mergeinfo_catalog_t ignored;
           svn_error_t *err;
           apr_array_header_t *paths = apr_array_make(pool, 1,
                                                      sizeof(char *));
           APR_ARRAY_PUSH(paths, const char *) = "";
           
-          err = svn_ra_serf__get_mergeinfo(ra_session, &ignored_mergeoutput,
-                                           paths, 0, FALSE, FALSE, pool);
+          err = svn_ra_serf__get_mergeinfo(ra_session, &ignored, paths, 0,
+                                           FALSE, FALSE, pool);
           
           if (err)
             {
@@ -365,6 +365,13 @@ load_config(svn_ra_serf__session_t *session,
                  SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME, NULL);
   svn_config_get(config, &session->proxy_password, SVN_CONFIG_SECTION_GLOBAL,
                  SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, NULL);
+  /* Load the global ssl settings, if set. */
+  SVN_ERR(svn_config_get_bool(config, &session->trust_default_ca,
+                              SVN_CONFIG_SECTION_GLOBAL,
+                              SVN_CONFIG_OPTION_SSL_TRUST_DEFAULT_CA,
+                              TRUE));
+  svn_config_get(config, &session->ssl_authorities, SVN_CONFIG_SECTION_GLOBAL,
+                 SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES, NULL);
 #endif
 
   server_group = svn_config_find_group(config,
@@ -390,6 +397,14 @@ load_config(svn_ra_serf__session_t *session,
                      SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME, NULL);
       svn_config_get(config, &session->proxy_password, server_group,
                      SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, NULL);
+
+      /* Load the group ssl settings. */
+      SVN_ERR(svn_config_get_bool(config, &session->trust_default_ca,
+                                  server_group,
+                                  SVN_CONFIG_OPTION_SSL_TRUST_DEFAULT_CA,
+                                  TRUE));
+      svn_config_get(config, &session->ssl_authorities, server_group,
+                     SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES, NULL);
 #endif
     }
 
@@ -434,6 +449,20 @@ load_config(svn_ra_serf__session_t *session,
   return SVN_NO_ERROR;
 }
 
+#if SERF_VERSION_AT_LEAST(0,1,3)
+static void
+svn_ra_serf__progress(void *progress_baton, apr_off_t read, apr_off_t written)
+{
+  const svn_ra_serf__session_t *serf_sess = progress_baton;
+  if (serf_sess->wc_progress_func)
+    {
+      serf_sess->wc_progress_func(read + written, -1,
+                                  serf_sess->wc_progress_baton,
+                                  serf_sess->pool);
+    }
+}
+#endif
+
 static svn_error_t *
 svn_ra_serf__open(svn_ra_session_t *session,
                   const char *repos_URL,
@@ -454,6 +483,8 @@ svn_ra_serf__open(svn_ra_session_t *session,
   serf_sess->cached_props = apr_hash_make(serf_sess->pool);
   serf_sess->wc_callbacks = callbacks;
   serf_sess->wc_callback_baton = callback_baton;
+  serf_sess->wc_progress_baton = callbacks->progress_baton;
+  serf_sess->wc_progress_func = callbacks->progress_func;
 
   /* todo: reuse serf context across sessions */
   serf_sess->context = serf_context_create(serf_sess->pool);
@@ -540,6 +571,12 @@ svn_ra_serf__open(svn_ra_session_t *session,
                              svn_ra_serf__conn_setup, serf_sess->conns[0],
                              svn_ra_serf__conn_closed, serf_sess->conns[0],
                              serf_sess->pool);
+
+  /* Set the progress callback. */
+#if SERF_VERSION_AT_LEAST(0,1,3)
+  serf_context_set_progress_cb(serf_sess->context, svn_ra_serf__progress,
+                               serf_sess);
+#endif
 
   serf_sess->num_conns = 1;
 

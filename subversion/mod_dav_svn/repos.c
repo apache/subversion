@@ -1226,6 +1226,7 @@ get_parentpath_resource(request_rec *r,
   repos->pool = r->pool;
   repos->xslt_uri = dav_svn__get_xslt_uri(r);
   repos->autoversioning = dav_svn__get_autoversioning_flag(r);
+  repos->bulk_updates = dav_svn__get_bulk_updates_flag(r);
   repos->base_url = ap_construct_url(r->pool, "", r);
   repos->special_uri = dav_svn__get_special_uri(r);
   repos->username = r->user;
@@ -1608,6 +1609,9 @@ get_resource(request_rec *r,
 
   /* Is autoversioning active in this repos? */
   repos->autoversioning = dav_svn__get_autoversioning_flag(r);
+
+  /* Are bulk updates allowed in this repos? */
+  repos->bulk_updates = dav_svn__get_bulk_updates_flag(r);
 
   /* Path to activities database */
   repos->activities_db = dav_svn__get_activities_db(r);
@@ -3464,7 +3468,7 @@ do_walk(walker_ctx_t *ctx, int depth)
      DAV client.  */
   dav_svn__operational_log(&ctx->info,
                            apr_psprintf(params->pool,
-                             "list-dir %s r%ld",
+                             "get-dir %s r%ld text",
                              svn_path_uri_encode(ctx->info.repos_path,
                                                  params->pool),
                              ctx->info.root.rev));

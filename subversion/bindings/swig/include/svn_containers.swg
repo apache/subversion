@@ -1,6 +1,6 @@
 /*
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -94,7 +94,8 @@
 %apply apr_hash_t **HASH_SVN_STRING {
   apr_hash_t **props,
   apr_hash_t **original_props,
-  apr_hash_t **table_p
+  apr_hash_t **table_p,
+  apr_hash_t **revprops
 };
 %apply apr_hash_t **HASH_SVN_STRING_MAYBENULL {
   /* svn_config_read_auth_data() */
@@ -111,7 +112,18 @@
   %append_output(svn_swig_rb_apr_hash_to_hash_string(*$1));
 }
 #endif
+#ifdef SWIGPYTHON
+%typemap(argout) apr_hash_t **HASH_CSTRING {
+  %append_output(svn_swig_py_stringhash_to_dict(*$1));
+}
+#endif
 
+%apply apr_hash_t **HASH_CSTRING {
+  apr_hash_t **type_map,
+  apr_hash_t **externals_old,
+  apr_hash_t **externals_new,
+  apr_hash_t **depths
+};
 
 /* -----------------------------------------------------------------------
    apr_hash_t **locations
@@ -347,6 +359,13 @@
 %typemap(argout) apr_array_header_t **OUTPUT_OF_PROP {
   %append_output(svn_swig_py_proparray_to_dict(*$1));
 }
+
+%apply apr_array_header_t **OUTPUT_OF_PROP {
+  apr_array_header_t **entry_props,
+  apr_array_header_t **wc_props,
+  apr_array_header_t **regular_props,
+  apr_array_header_t **propdiffs
+};
 #endif
 
 /* -----------------------------------------------------------------------
@@ -372,7 +391,9 @@
 %apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
   apr_array_header_t **patterns,
   apr_array_header_t **logfiles,
-  apr_array_header_t **names_p
+  apr_array_header_t **names_p,
+  apr_array_header_t **targets_p,
+  apr_array_header_t **args_p
 };
 
 /* -----------------------------------------------------------------------
@@ -689,9 +710,20 @@
                                array_header_t * <svn_merge_range_t *>>>
 */
 #ifdef SWIGRUBY
-%typemap(argout) apr_hash_t **MERGEINFO_HASH
+%typemap(argout) apr_hash_t **MERGEINFO_CATALOG
 {
   %append_output(svn_swig_rb_apr_hash_to_hash_merge_range_hash(*$1));
+}
+#endif
+#ifdef SWIGPYTHON
+%typemap(argout) apr_hash_t **MERGEINFO_CATALOG
+{
+  %append_output(svn_swig_py_mergeinfo_catalog_to_dict(*$1,
+                                            $descriptor(svn_merge_range_t *),
+                                            _global_py_pool));
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
 }
 #endif
 

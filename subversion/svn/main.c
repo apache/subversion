@@ -247,7 +247,9 @@ const apr_getopt_option_t svn_cl__options[] =
   {"summarize",     opt_summarize, 0, N_("show a summary of the results")},
   {"remove",         opt_remove, 0, N_("remove changelist association")},
   {"changelist",    opt_changelist, 1,
-                    N_("operate only on members of changelist ARG")},
+                    N_("operate only on members of changelist ARG\n"
+                       "                             "
+                       "[aliases: --cl]")},
   {"keep-changelists", opt_keep_changelists, 0,
                     N_("don't delete changelists after commit")},
   {"keep-local",    opt_keep_local, 0, N_("keep path in working copy")},
@@ -269,8 +271,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        " '" SVN_CL__ACCEPT_BASE "',"
                        /* These two are not implemented yet, so don't
                           waste the user's time with them. */
-                       /* " '" SVN_CL__ACCEPT_MINE "'," */
-                       /* " '" SVN_CL__ACCEPT_THEIRS "'," */
+                       /* " '" SVN_CL__ACCEPT_MINE_CONFLICT "'," */
+                       /* " '" SVN_CL__ACCEPT_THEIRS_CONFLICT "'," */
                        " '" SVN_CL__ACCEPT_MINE_FULL "',"
                        " '" SVN_CL__ACCEPT_THEIRS_FULL "',"
                        "\n                            "
@@ -280,6 +282,15 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("query a particular merge source URL")},
   {"reintegrate",   opt_reintegrate, 0,
                     N_("lump-merge all of source URL's unmerged changes")},
+
+  /* Long-opt Aliases
+   *
+   * These have NULL desriptions, but an option code that matches some
+   * other option (whose description should probably mention its aliases).
+  */
+
+  {"cl",            opt_changelist, 1, NULL},
+
   {0,               0, 0, 0},
 };
 
@@ -342,10 +353,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {'r'} },
 
   { "changelist", svn_cl__changelist, {"cl"}, N_
-    ("Associate (or deassociate) local paths with changelist CLNAME.\n"
+    ("Associate (or dissociate) changelist CLNAME with the named files.\n"
      "usage: 1. changelist CLNAME TARGET...\n"
      "       2. changelist --remove TARGET...\n"),
-    { 'q', opt_depth, opt_remove, opt_targets, opt_changelist} },
+    { 'q', 'R', opt_depth, opt_remove, opt_targets, opt_changelist} },
 
   { "checkout", svn_cl__checkout, {"co"}, N_
     ("Check out a working copy from a repository.\n"
@@ -583,7 +594,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     ("Apply the differences between two sources to a working copy path.\n"
      "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
      "       2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
-     "       3. merge [[-c M]... | [-r N:M]...] [SOURCE[@REV] [WCPATH]]\n"
+     "       3. merge [[-c M[,N]]... | [-r N:M]...] [SOURCE[@REV] [WCPATH]]\n"
      "\n"
      "  1. In the first form, the source URLs are specified at revisions\n"
      "     N and M.  These are the two sources to be compared.  The revisions\n"
@@ -754,7 +765,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn:externals  - A newline separated list of module specifiers,\n"
      "      each of which consists of a relative directory path, optional\n"
      "      revision flags and an URL.  The ordering of the three elements\n"
-     "      implements different behavior.  Subversion 1.4 and earler only\n"
+     "      implements different behavior.  Subversion 1.4 and earlier only\n"
      "      support the following formats and the URLs cannot have peg\n"
      "      revisions:\n"
      "        foo             http://example.com/repos/zig\n"
@@ -798,8 +809,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
                              " '" SVN_CL__ACCEPT_BASE "',"
                              /* These two are not implemented yet, so
                                 don't waste the user's time with them. */
-                             /* " '" SVN_CL__ACCEPT_MINE "'," */
-                             /* " '" SVN_CL__ACCEPT_THEIRS "'," */
+                             /* " '" SVN_CL__ACCEPT_MINE_CONFLICT "'," */
+                             /* " '" SVN_CL__ACCEPT_THEIRS_CONFLICT "'," */
                              " '" SVN_CL__ACCEPT_MINE_FULL "',"
                              " '" SVN_CL__ACCEPT_THEIRS_FULL "')")}} },
 
@@ -1015,48 +1026,6 @@ svn_cl__check_cancel(void *baton)
 }
 
 
-/* Parse REVPROP_PAIR as name[=value], adding it to *revprop_table_p, using
- * POOL for all allocations.  *REVPROP_TABLE_P may be NULL, in which case
- * it is created.. */
-static svn_error_t *
-parse_revprop(apr_hash_t **revprop_table_p,
-              const char *revprop_pair,
-              apr_pool_t *pool)
-{
-  const char *sep, *propname;
-  svn_string_t *propval;
-
-  if (! *revprop_pair)
-    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                            _("Revision property pair is empty"));
-
-  if (! *revprop_table_p)
-    *revprop_table_p = apr_hash_make(pool);
-
-  sep = strchr(revprop_pair, '=');
-  if (sep)
-    {
-      propname = apr_pstrndup(pool, revprop_pair, sep - revprop_pair);
-      SVN_ERR(svn_utf_cstring_to_utf8(&propname, propname, pool));
-      propval = svn_string_create(sep + 1, pool);
-    }
-  else
-    {
-      SVN_ERR(svn_utf_cstring_to_utf8(&propname, revprop_pair, pool));
-      propval = svn_string_create("", pool);
-    }
-
-  if (!svn_prop_name_is_valid(propname))
-    return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
-                             _("'%s' is not a valid Subversion property name"),
-                             propname);
-
-  apr_hash_set(*revprop_table_p, propname, APR_HASH_KEY_STRING, propval);
-
-  return SVN_NO_ERROR;
-}
-
-
 
 /*** Main. ***/
 
@@ -1204,41 +1173,47 @@ main(int argc, const char *argv[])
                  _("Can't specify -c with --old"));
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
-          changeno = strtol(opt_arg, &end, 10);
-          if (end == opt_arg || *end != '\0')
-            {
-              err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                     _("Non-numeric change argument "
-                                       "given to -c"));
-              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-            }
-          if (changeno == 0)
-            {
-              err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                     _("There is no change 0"));
-              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-            }
 
-          /* Figure out the range:
-                -c N  -> -r N-1:N
-                -c -N -> -r N:N-1 */
-          range = apr_palloc(pool, sizeof(*range));
-          if (changeno > 0)
+          do
             {
-              range->start.value.number = changeno - 1;
-              range->end.value.number = changeno;
-            }
-          else
-            {
-              changeno = -changeno;
-              range->start.value.number = changeno;
-              range->end.value.number = changeno - 1;
-            }
-          opt_state.used_change_arg = TRUE;
-          range->start.kind = svn_opt_revision_number;
-          range->end.kind = svn_opt_revision_number;
-          APR_ARRAY_PUSH(opt_state.revision_ranges,
-                         svn_opt_revision_range_t *) = range;
+              changeno = strtol(opt_arg, &end, 10);
+              if (end == opt_arg || !(*end == '\0' || *end == ',') )
+                {
+                  err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                         _("Non-numeric change argument "
+                                           "given to -c"));
+                  return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+                }
+
+              if (changeno == 0)
+                {
+                  err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                         _("There is no change 0"));
+                  return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+                }
+              opt_arg = end + 1;
+
+              /* Figure out the range:
+                    -c N  -> -r N-1:N
+                    -c -N -> -r N:N-1 */
+              range = apr_palloc(pool, sizeof(*range));
+              if (changeno > 0)
+                {
+                  range->start.value.number = changeno - 1;
+                  range->end.value.number = changeno;
+                }
+              else
+                {
+                  changeno = -changeno;
+                  range->start.value.number = changeno;
+                  range->end.value.number = changeno - 1;
+                }
+              opt_state.used_change_arg = TRUE;
+              range->start.kind = svn_opt_revision_number;
+              range->end.kind = svn_opt_revision_number;
+              APR_ARRAY_PUSH(opt_state.revision_ranges,
+                             svn_opt_revision_range_t *) = range;
+            } while (*end != '\0');
         }
         break;
       case 'r':
@@ -1493,7 +1468,7 @@ main(int argc, const char *argv[])
         opt_state.all_revprops = TRUE;
         break;
       case opt_with_revprop:
-        err = parse_revprop(&opt_state.revprop_table, opt_arg, pool);
+        err = svn_opt_parse_revprop(&opt_state.revprop_table, opt_arg, pool);
         if (err != SVN_NO_ERROR)
           return svn_cmdline_handle_exit_error(err, pool, "svn: ");
         break;

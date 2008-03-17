@@ -86,7 +86,8 @@ svn_cl__propset(apr_getopt_t *os,
     if (opt_state->encoding)
       return svn_error_create
         (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-         _("Bad encoding option: prop value not stored as UTF8"));
+         _("--encoding option applies only to textual"
+           " Subversion-controlled properties"));
 
   /* Suck up all the remaining arguments into a targets array */
 

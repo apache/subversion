@@ -168,13 +168,11 @@ svn_stream_readline(svn_stream_t *stream,
   apr_size_t numbytes;
   const char *match;
   char c;
-  svn_stringbuf_t *str = svn_stringbuf_create("", pool);
-
   /* Since we're reading one character at a time, let's at least
      optimize for the 90% case.  90% of the time, we can avoid the
      stringbuf ever having to realloc() itself if we start it out at
      80 chars.  */
-  svn_stringbuf_ensure(str, 80);
+  svn_stringbuf_t *str = svn_stringbuf_create_ensure(80, pool);
 
   match = eol;
   while (*match)

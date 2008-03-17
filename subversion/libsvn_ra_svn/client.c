@@ -586,7 +586,8 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
      capabilities that weren't available before now. */
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "c?c?l", &conn->uuid,
                                        &conn->repos_root, &repos_caplist));
-  SVN_ERR(svn_ra_svn_set_capabilities(conn, repos_caplist));
+  if (repos_caplist)
+    SVN_ERR(svn_ra_svn_set_capabilities(conn, repos_caplist));
 
   if (conn->repos_root)
     {
@@ -606,8 +607,14 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
 }
 
 
+#ifdef SVN_HAVE_SASL
+#define RA_SVN_DESCRIPTION \
+  N_("Module for accessing a repository using the svn network protocol.\n" \
+     "  - with Cyrus SASL authentication")
+#else
 #define RA_SVN_DESCRIPTION \
   N_("Module for accessing a repository using the svn network protocol.")
+#endif
 
 static const char *ra_svn_get_description(void)
 {
@@ -1050,7 +1057,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
 /* If REVISION is SVN_INVALID_REVNUM, no value is sent to the
    server, which defaults to youngest. */
 static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
-                                         apr_hash_t **mergeinfo,
+                                         svn_mergeinfo_catalog_t *catalog,
                                          const apr_array_header_t *paths,
                                          svn_revnum_t revision,
                                          svn_mergeinfo_inheritance_t inherit,
@@ -1063,7 +1070,6 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
   apr_array_header_t *mergeinfo_tuple;
   svn_ra_svn_item_t *elt;
   const char *path, *to_parse;
-  apr_hash_t *for_path;
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "get-mergeinfo"));
   for (i = 0; i < paths->nelts; i++)
@@ -1076,14 +1082,16 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
                                  include_descendants));
 
   SVN_ERR(handle_auth_request(sess_baton, pool));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "(?l)", &mergeinfo_tuple));
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "l", &mergeinfo_tuple));
 
-  *mergeinfo = NULL;
-  if (mergeinfo_tuple != NULL && mergeinfo_tuple->nelts > 0)
+  *catalog = NULL;
+  if (mergeinfo_tuple->nelts > 0)
     {
-      *mergeinfo = apr_hash_make(pool);
+      *catalog = apr_hash_make(pool);
       for (i = 0; i < mergeinfo_tuple->nelts; i++)
         {
+          svn_mergeinfo_t for_path;
+
           elt = &((svn_ra_svn_item_t *) mergeinfo_tuple->elts)[i];
           if (elt->kind != SVN_RA_SVN_LIST)
             return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -1091,7 +1099,7 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
           SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "cc",
                                          &path, &to_parse));
           SVN_ERR(svn_mergeinfo_parse(&for_path, to_parse, pool));
-          apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, for_path);
+          apr_hash_set(*catalog, path, APR_HASH_KEY_STRING, for_path);
         }
     }
 
@@ -2180,16 +2188,19 @@ ra_svn_replay_range(svn_ra_session_t *session,
       const svn_delta_editor_t *editor;
       void *edit_baton;
       apr_hash_t *rev_props;
-      svn_ra_svn_item_t *item;
-      
+      const char *word;
+      apr_array_header_t *list;
+
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_ra_svn_read_item(sess->conn, iterpool, &item));
-      if (item->kind != SVN_RA_SVN_LIST)
-        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                _("Revision properties not a list"));
+      SVN_ERR(svn_ra_svn_read_tuple(sess->conn, iterpool,
+                                    "wl", &word, &list));
+      if (strcmp(word, "revprops") != 0)
+        return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                 _("Expected 'revprops', found '%s'"),
+                                 word);
 
-      SVN_ERR(svn_ra_svn_parse_proplist(item->u.list, iterpool, &rev_props));
+      SVN_ERR(svn_ra_svn_parse_proplist(list, iterpool, &rev_props));
 
       SVN_ERR(revstart_func(rev, replay_baton,
                             &editor, &edit_baton,

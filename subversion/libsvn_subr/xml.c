@@ -153,7 +153,7 @@ xml_escape_attr(svn_stringbuf_t **outstr,
   const char *p = data, *q;
 
   if (*outstr == NULL)
-    *outstr = svn_stringbuf_create("", pool);
+    *outstr = svn_stringbuf_create_ensure(len, pool);
 
   while (1)
     {
@@ -560,9 +560,10 @@ svn_xml_make_open_tag_hash(svn_stringbuf_t **str,
                            apr_hash_t *attributes)
 {
   apr_hash_index_t *hi;
+  apr_size_t est_size = strlen(tagname) + 4 + apr_hash_count(attributes) * 30;
 
   if (*str == NULL)
-    *str = svn_stringbuf_create("", pool);
+    *str = svn_stringbuf_create_ensure(est_size, pool);
 
   svn_stringbuf_appendcstr(*str, "<");
   svn_stringbuf_appendcstr(*str, tagname);

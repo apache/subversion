@@ -789,6 +789,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   ssl-client-cert-file       PKCS#12 format client certificate file"
                                                                              NL
         "###   ssl-client-cert-password   Client Key password, if needed."   NL
+        "###   ssl-pkcs11-provider        Name of PKCS#11 provider to use."  NL
         "###   http-library               Which library to use for http/https"
                                                                              NL
         "###                              connections (neon or serf)"        NL

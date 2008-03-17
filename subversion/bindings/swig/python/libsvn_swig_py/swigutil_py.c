@@ -672,9 +672,9 @@ static PyObject *convert_mergeinfo_hash(void *value, void *ctx,
   return svn_swig_py_mergeinfo_to_dict(value, ctx, py_pool);
 }
 
-PyObject *svn_swig_py_mergeinfo_hash_to_dict(apr_hash_t *hash,
-                                        swig_type_info *type,
-                                        PyObject *py_pool)
+PyObject *svn_swig_py_mergeinfo_catalog_to_dict(apr_hash_t *hash,
+                                                swig_type_info *type,
+                                                PyObject *py_pool)
 {
   return convert_hash(hash, convert_mergeinfo_hash, type, py_pool);
 }
@@ -3063,7 +3063,7 @@ ra_callbacks_invalidate_wc_props(void *baton,
   svn_swig_py_acquire_py_lock();
 
   py_callback = PyObject_GetAttrString(callbacks,
-                                       (char *)"invalidate_wc_prop");
+                                       (char *)"invalidate_wc_props");
   if (py_callback == NULL)
     {
       err = callback_exception_error();

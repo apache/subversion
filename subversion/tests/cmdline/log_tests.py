@@ -617,7 +617,8 @@ def plain_log(sbox):
 
   os.chdir(sbox.wc_dir)
 
-  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log')
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log')
 
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, range(max_revision, 1 - 1, -1))
@@ -680,7 +681,7 @@ def log_with_path_args(sbox):
 
   os.chdir(sbox.wc_dir)
 
-  output, err = svntest.actions.run_and_verify_svn(
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
     None, None, [],
     'log', sbox.repo_url, 'A/D/G', 'A/D/H')
 
@@ -710,8 +711,8 @@ def log_wc_with_peg_revision(sbox):
   "'svn log wc_target@N'"
   guarantee_repos_and_wc(sbox)
   my_path = os.path.join(sbox.wc_dir, "A", "B", "E", "beta") + "@8"
-  output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                   'log', my_path)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', my_path)
   check_log_chain(parse_log_output(output), [1])
 
 #----------------------------------------------------------------------
@@ -722,8 +723,8 @@ def url_missing_in_head(sbox):
 
   my_url = sbox.repo_url + "/A/B/E/alpha" + "@8"
 
-  output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                   'log', my_url)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', my_url)
   check_log_chain(parse_log_output(output), [3, 1])
 
 #----------------------------------------------------------------------
@@ -779,40 +780,40 @@ def log_through_copyfrom_history(sbox):
                                      'up', wc_dir)
 
   # The full log for mu2 is relatively unsurprising
-  output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                   'log', mu2_path)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', mu2_path)
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [6, 5, 2, 1])
 
-  output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                   'log', mu2_URL)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', mu2_URL)
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [6, 5, 2, 1])
 
   # First "oddity", the full log for mu2 doesn't include r3, but the -r3
   # log works!
   peg_mu2_path = mu2_path + "@3"
-  output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                   'log', '-r', '3',
-                                                   peg_mu2_path)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '-r', '3',
+                                                              peg_mu2_path)
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [3])
 
   peg_mu2_URL = mu2_URL + "@3"
-  output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                   'log', '-r', '3',
-                                                   peg_mu2_URL)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '-r', '3',
+                                                              peg_mu2_URL)
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [3])
-  output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                   'log', '-r', '2',
-                                                   mu2_path)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '-r', '2',
+                                                              mu2_path)
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [2])
 
-  output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                   'log', '-r', '2',
-                                                   mu2_URL)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '-r', '2',
+                                                              mu2_URL)
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [2])
 
@@ -862,8 +863,8 @@ PROPS-END
   URL = sbox.repo_url
 
   # run log
-  output, errput = svntest.actions.run_and_verify_svn(None, None, [], 'log',
-                                                      URL)
+  exit_code, output, errput = svntest.actions.run_and_verify_svn(
+    None, None, [], 'log', URL)
 
   # Verify the output contains either the expected fuzzy escape
   # sequence, or the literal control char.
@@ -892,9 +893,9 @@ def log_xml_empty_date(sbox):
   date_re = re.compile('<date');
 
   # Ensure that we get a date before we delete the property.
-  output, errput = svntest.actions.run_and_verify_svn(None, None, [],
-                                                      'log', '--xml', '-r1',
-                                                      sbox.wc_dir)
+  exit_code, output, errput = svntest.actions.run_and_verify_svn(
+    None, None, [], 'log', '--xml', '-r1', sbox.wc_dir)
+
   matched = 0
   for line in output:
     if date_re.search(line):
@@ -907,9 +908,9 @@ def log_xml_empty_date(sbox):
                                      'pdel', '--revprop', '-r1', 'svn:date',
                                      sbox.wc_dir)
 
-  output, errput = svntest.actions.run_and_verify_svn(None, None, [],
-                                                      'log', '--xml', '-r1',
-                                                      sbox.wc_dir)
+  exit_code, output, errput = svntest.actions.run_and_verify_svn(
+    None, None, [], 'log', '--xml', '-r1', sbox.wc_dir)
+
   for line in output:
     if date_re.search(line):
       raise svntest.Failure("log contains date element when svn:date is empty")
@@ -919,33 +920,33 @@ def log_limit(sbox):
   "svn log --limit"
   guarantee_repos_and_wc(sbox)
 
-  out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                'log', '--limit', '2',
-                                                sbox.repo_url)
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'log',
+                                                           '--limit', '2',
+                                                           sbox.repo_url)
   log_chain = parse_log_output(out)
   check_log_chain(log_chain, [9, 8])
 
-  out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                'log', '--limit', '2',
-                                                sbox.repo_url,
-                                                'A/B')
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'log',
+                                                           '--limit', '2',
+                                                           sbox.repo_url,
+                                                           'A/B')
   log_chain = parse_log_output(out)
   check_log_chain(log_chain, [9, 6])
 
-  out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                'log', '--limit', '2',
-                                                '--revision', '2:HEAD',
-                                                sbox.repo_url,
-                                                'A/B')
+  exit_code, out, err = svntest.actions.run_and_verify_svn(
+    None, None, [],
+    'log', '--limit', '2', '--revision', '2:HEAD', sbox.repo_url, 'A/B')
+
   log_chain = parse_log_output(out)
   check_log_chain(log_chain, [3, 6])
 
   # Use -l instead of --limit to test both option forms.
-  out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                'log', '-l', '2',
-                                                '--revision', '1',
-                                                sbox.repo_url,
-                                                'A/B')
+  exit_code, out, err = svntest.actions.run_and_verify_svn(
+    None, None, [],
+    'log', '-l', '2', '--revision', '1', sbox.repo_url, 'A/B')
+
   log_chain = parse_log_output(out)
   check_log_chain(log_chain, [1])
 
@@ -966,8 +967,8 @@ def log_base_peg(sbox):
 
   target = os.path.join(sbox.wc_dir, 'A', 'B', 'E', 'beta') + '@BASE'
 
-  out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                'log', target)
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'log', target)
 
   log_chain = parse_log_output(out)
   check_log_chain(log_chain, [9, 1])
@@ -975,8 +976,8 @@ def log_base_peg(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'update', '-r', '1',
                                      sbox.wc_dir)
 
-  out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                'log', target)
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'log', target)
 
   log_chain = parse_log_output(out)
   check_log_chain(log_chain, [1])
@@ -986,9 +987,9 @@ def log_verbose(sbox):
   "run log with verbose output"
   guarantee_repos_and_wc(sbox)
 
-  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
-                                                   '-v',
-                                                   sbox.wc_dir)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '-v',
+                                                              sbox.wc_dir)
 
   log_chain = parse_log_output(output)
   path_counts = [2, 2, 1, 2, 2, 2, 4, 1, 20]
@@ -1110,8 +1111,10 @@ def merge_sensitive_log_single_revision(sbox):
   saved_cwd = os.getcwd()
 
   os.chdir(TRUNK_path)
-  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
-                                                   '-g', '-r14')
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '-g',
+                                                              '-r14')
+
 
   log_chain = parse_log_output(output)
   expected_merges = {
@@ -1121,8 +1124,10 @@ def merge_sensitive_log_single_revision(sbox):
 
   os.chdir(saved_cwd)
 
-  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
-                                                   '-g', '-r12', BRANCH_B_path)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '-g',
+                                                              '-r12',
+                                                              BRANCH_B_path)
   log_chain = parse_log_output(output)
   expected_merges = {
       12: [], 11 : [12],
@@ -1140,8 +1145,10 @@ def merge_sensitive_log_branching_revision(sbox):
   BRANCH_B_path = os.path.join(wc_dir, "branches", "b")
 
   # Run log on a copying revision
-  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
-                                                   '-g', '-r10', BRANCH_B_path)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '-g',
+                                                              '-r10',
+                                                              BRANCH_B_path)
 
   # Parse and check output.  There should be no extra revisions.
   log_chain = parse_log_output(output)
@@ -1159,13 +1166,15 @@ def merge_sensitive_log_non_branching_revision(sbox):
   TRUNK_path = os.path.join(sbox.wc_dir, "trunk")
 
   # Run log on a non-copying revision that adds mergeinfo
-  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
-                                                   '-g', '-r6', TRUNK_path)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '-g',
+                                                              '-r6',
+                                                              TRUNK_path)
 
   # Parse and check output.  There should be one extra revision.
   log_chain = parse_log_output(output)
   expected_merges = {
-    6: [], 4 : [6],
+    6: [], 4 : [6], 3: [6],
   }
   check_merge_results(log_chain, expected_merges)
 
@@ -1178,8 +1187,9 @@ def merge_sensitive_log_added_path(sbox):
   XI_path = os.path.join(sbox.wc_dir, "trunk", "A", "xi")
 
   # Run log on a non-copying revision that adds mergeinfo
-  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
-                                                   '-g', XI_path)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '-g',
+                                                              XI_path)
 
   # Parse and check output.  There should be one extra revision.
   log_chain = parse_log_output(output)
@@ -1205,8 +1215,9 @@ def log_single_change(sbox):
   guarantee_repos_and_wc(sbox)
   repo_url = sbox.repo_url
 
-  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
-                                                   '-c', 4, repo_url)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '-c',
+                                                              4, repo_url)
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [4])
 
@@ -1216,8 +1227,9 @@ def log_changes_range(sbox):
   guarantee_repos_and_wc(sbox)
   repo_url = sbox.repo_url
 
-  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
-                                                   '-c', '2:5', repo_url)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '-c',
+                                                              '2:5', repo_url)
 
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [2, 3, 4, 5])
@@ -1228,8 +1240,10 @@ def log_changes_list(sbox):
   guarantee_repos_and_wc(sbox)
   repo_url = sbox.repo_url
 
-  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
-                                                   '-c', '2,5,7', repo_url)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '-c',
+                                                              '2,5,7',
+                                                              repo_url)
 
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [2, 5, 7])
@@ -1371,12 +1385,12 @@ test_list = [ None,
               log_base_peg,
               log_verbose,
               log_parser,
-              XFail(SkipUnless(merge_sensitive_log_single_revision,
-                               server_has_mergeinfo)),
+              SkipUnless(merge_sensitive_log_single_revision,
+                         server_has_mergeinfo),
               SkipUnless(merge_sensitive_log_branching_revision,
                          server_has_mergeinfo),
-              XFail(SkipUnless(merge_sensitive_log_non_branching_revision,
-                               server_has_mergeinfo)),
+              SkipUnless(merge_sensitive_log_non_branching_revision,
+                         server_has_mergeinfo),
               SkipUnless(merge_sensitive_log_added_path,
                          server_has_mergeinfo),
               log_single_change,

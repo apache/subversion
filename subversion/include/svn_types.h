@@ -826,7 +826,8 @@ svn_uuid_generate(apr_pool_t *pool);
  */
 typedef struct svn_merge_range_t
 {
-  /* If the 'start' field is less than the 'end' field then 'start' is
+  /**
+   * If the 'start' field is less than the 'end' field then 'start' is
    * exclusive and 'end' inclusive of the range described.  If 'start'
    * is greater than 'end' then the opposite is true.  If 'start'
    * equals 'end' the meaning of the range is not defined.
@@ -834,8 +835,9 @@ typedef struct svn_merge_range_t
   svn_revnum_t start;
   svn_revnum_t end;
 
-  /* Whether this merge range should be inherited by treewise
-     descendants of the path to which the range applies. */
+  /**
+   * Whether this merge range should be inherited by treewise
+   * descendants of the path to which the range applies. */
   svn_boolean_t inheritable;
 } svn_merge_range_t;
 
@@ -870,13 +872,13 @@ svn_merge_range_contains_rev(svn_merge_range_t *range, svn_revnum_t rev);
  */
 typedef struct svn_location_segment_t
 {
-  /* The beginning (oldest) and ending (youngest) revisions for this
-     segment. */
+  /** The beginning (oldest) and ending (youngest) revisions for this
+      segment. */
   svn_revnum_t range_start;
   svn_revnum_t range_end;
 
-  /* The absolute (sans leading slash) path for this segment.  May be
-     NULL to indicate gaps in an object's history.  */
+  /** The absolute (sans leading slash) path for this segment.  May be
+      NULL to indicate gaps in an object's history.  */
   const char *path;
 
 } svn_location_segment_t;

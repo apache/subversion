@@ -1338,7 +1338,8 @@ def failed_commit(sbox):
                                      'commit', '-m', 'log', other_wc_dir)
 
   # Now list the txns in the repo. The list should be empty.
-  output, errput = svntest.main.run_svnadmin('lstxns', sbox.repo_dir)
+  exit_code, output, errput = svntest.main.run_svnadmin('lstxns',
+                                                        sbox.repo_dir)
   svntest.verify.compare_and_display_lines(
     "Error running 'svnadmin lstxns'.",
     'STDERR', [], errput)
@@ -1647,8 +1648,8 @@ def commit_out_of_date_deletions(sbox):
 
   # Attempt to delete omega.  This should return an (expected)
   # out-of-dateness error.
-  outlines, errlines = svntest.main.run_svn(1, 'commit', '-m', 'blah',
-                                            omega_path)
+  exit_code, outlines, errlines = svntest.main.run_svn(1, 'commit', '-m',
+                                                       'blah', omega_path)
   for line in errlines:
     if re.match(".*[Oo]ut.of.date.*", line):
       break
@@ -1657,7 +1658,8 @@ def commit_out_of_date_deletions(sbox):
 
   # Attempt to delete directory C.  This should return an (expected)
   # out-of-dateness error.
-  outlines, errlines = svntest.main.run_svn(1, 'commit', '-m', 'blah', C_path)
+  exit_code, outlines, errlines = svntest.main.run_svn(1, 'commit', '-m',
+                                                       'blah', C_path)
   for line in errlines:
     if re.match(".*[Oo]ut.of.date.*", line):
       break
@@ -1716,7 +1718,7 @@ def from_wc_top_with_bad_editor(sbox):
                                      svntest.verify.AnyOutput, [],
                                      'pset', 'fish', 'food', wc_dir)
   os.chdir(wc_dir)
-  out, err = svntest.actions.run_and_verify_svn(
+  exit_code, out, err = svntest.actions.run_and_verify_svn(
     "Commit succeeded when should have failed.",
     None, svntest.verify.AnyOutput,
     'ci', '--editor-cmd', 'no_such-editor')
@@ -1784,29 +1786,29 @@ def tab_test(sbox):
       raise svntest.Failure("Failed to find match_re in " + str(errlines))
 
   # add file to wc
-  outlines, errlines = svntest.main.run_svn(1, 'add', tab_file)
+  exit_code, outlines, errlines = svntest.main.run_svn(1, 'add', tab_file)
   match_bad_tab_path(tab_file, errlines)
 
   # add dir to wc
-  outlines, errlines = svntest.main.run_svn(1, 'add', tab_dir)
+  exit_code, outlines, errlines = svntest.main.run_svn(1, 'add', tab_dir)
   match_bad_tab_path(tab_dir, errlines)
 
   # mkdir URL
-  outlines, errlines = svntest.main.run_svn(1,
-                                            'mkdir', '-m', 'msg', tab_url)
+  exit_code, outlines, errlines = svntest.main.run_svn(1, 'mkdir',
+                                                       '-m', 'msg', tab_url)
   match_bad_tab_path(tab_dir, errlines)
 
   # copy URL
   svntest.main.run_svn(1,
                        'mkdir', '-m', 'msg', source_url)
-  outlines, errlines = svntest.main.run_svn(1,
-                                            'copy', '-m', 'msg',
-                                            source_url, tab_url)
+  exit_code, outlines, errlines = svntest.main.run_svn(1, 'copy',
+                                                       '-m', 'msg',
+                                                       source_url, tab_url)
   match_bad_tab_path(tab_dir, errlines)
 
   # mv URL
-  outlines, errlines = svntest.main.run_svn(1, 'mv', '-m', 'msg',
-                                            source_url, tab_url)
+  exit_code, outlines, errlines = svntest.main.run_svn(1, 'mv', '-m', 'msg',
+                                                       source_url, tab_url)
   match_bad_tab_path(tab_dir, errlines)
 
 #----------------------------------------------------------------------
@@ -2272,9 +2274,8 @@ sys.exit(1)"""
   svntest.main.file_append(iota_path, "More stuff in iota")
 
   # Commit, expect error code 1
-  actual_stdout, actual_stderr = svntest.main.run_svn(1,
-                                                      'ci', '--quiet',
-                                                      '-m', 'log msg', wc_dir)
+  exit_code, actual_stdout, actual_stderr = svntest.main.run_svn(
+    1, 'ci', '--quiet', '-m', 'log msg', wc_dir)
 
   # No stdout expected
   svntest.verify.compare_and_display_lines('Start-commit hook test',
@@ -2316,9 +2317,8 @@ sys.exit(1)"""
   svntest.main.file_append(iota_path, "More stuff in iota")
 
   # Commit, expect error code 1
-  actual_stdout, actual_stderr = svntest.main.run_svn(1,
-                                                      'ci', '--quiet',
-                                                      '-m', 'log msg', wc_dir)
+  exit_code, actual_stdout, actual_stderr = svntest.main.run_svn(
+    1, 'ci', '--quiet', '-m', 'log msg', wc_dir)
 
   # No stdout expected
   svntest.verify.compare_and_display_lines('Pre-commit hook test',

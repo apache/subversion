@@ -36,8 +36,9 @@ Item = svntest.wc.StateItem
 def run_svnlook(*varargs):
   """Run svnlook with VARARGS, returns stdout as list of lines.
   Raises Failure if any stderr messages."""
-  output, dummy_errput = svntest.main.run_command(svntest.main.svnlook_binary,
-      0, 0, *varargs)
+  exit_code, output, dummy_errput = svntest.main.run_command(
+    svntest.main.svnlook_binary, 0, 0, *varargs)
+
   return output
 
 
@@ -153,8 +154,9 @@ def test_misc(sbox):
     raise svntest.Failure
 
   prop_name = 'foo:bar-baz-quux'
-  output, errput = svntest.main.run_svnlook('propget', '--revprop', repo_dir,
-                                            prop_name)
+  exit_code, output, errput = svntest.main.run_svnlook('propget',
+                                                       '--revprop', repo_dir,
+                                                       prop_name)
 
   expected_err = "Property '%s' not found on revision " % prop_name
   for line in errput:
@@ -163,8 +165,9 @@ def test_misc(sbox):
   else:
     raise svntest.main.SVNUnmatchedError
 
-  output, errput = svntest.main.run_svnlook('propget', '-r1', repo_dir,
-                                            prop_name, '/')
+  exit_code, output, errput = svntest.main.run_svnlook('propget',
+                                                       '-r1', repo_dir,
+                                                       prop_name, '/')
 
   expected_err = "Property '%s' not found on path '/' in revision " % prop_name
   for line in errput:
@@ -207,7 +210,8 @@ def delete_file_in_moved_dir(sbox):
                                         None,
                                         wc_dir)
 
-  output, errput = svntest.main.run_svnlook("dirs-changed", repo_dir)
+  exit_code, output, errput = svntest.main.run_svnlook("dirs-changed",
+                                                       repo_dir)
   if errput:
     raise svntest.Failure
 
@@ -238,12 +242,10 @@ def test_print_property_diffs(sbox):
                                      'ci', '-m', 'log msg', iota_path)
 
   # Grab the diff
-  expected_output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                            'diff',
-                                                            '-r', 'PREV',
-                                                            iota_path)
+  exit_code, expected_output, err = svntest.actions.run_and_verify_svn(
+    None, None, [], 'diff', '-r', 'PREV', iota_path)
 
-  output, errput = svntest.main.run_svnlook("diff", repo_dir)
+  exit_code, output, errput = svntest.main.run_svnlook("diff", repo_dir)
   if errput:
     raise svntest.Failure
 
@@ -312,7 +314,8 @@ text
   # load dumpfile with inconsistent newlines into repos.
   svntest.actions.load_repo(sbox, dump_str=dump_str)
 
-  output, errput = svntest.main.run_svnlook("info", sbox.repo_dir, "-r1")
+  exit_code, output, errput = svntest.main.run_svnlook("info",
+                                                       sbox.repo_dir, "-r1")
   if errput:
     raise svntest.Failure
 
@@ -343,13 +346,14 @@ def changed_copy_info(sbox):
                                         None,
                                         wc_dir)
 
-  output, errput = svntest.main.run_svnlook("changed", repo_dir)
+  exit_code, output, errput = svntest.main.run_svnlook("changed", repo_dir)
   if errput:
     raise svntest.Failure
 
   expect("changed without --copy-info", ["A   A/alpha2\n"], output)
 
-  output, errput = svntest.main.run_svnlook("changed", repo_dir, "--copy-info")
+  exit_code, output, errput = svntest.main.run_svnlook("changed",
+                                                       repo_dir, "--copy-info")
   if errput:
     raise svntest.Failure
 
@@ -493,10 +497,10 @@ def diff_ignore_eolstyle(sbox):
                                           wc_dir)
 
     # Grab the diff
-    expected_output, err = \
-        svntest.actions.run_and_verify_svn(None, None, [], 'diff',
-                                           '-r', 'PREV', '-x',
-                                           '--ignore-eol-style', mu_path)
+    exit_code, expected_output, err = svntest.actions.run_and_verify_svn(
+      None, None, [],
+      'diff', '-r', 'PREV', '-x', '--ignore-eol-style', mu_path)
+
 
     output = run_svnlook('diff', '-r', str(rev + 1), '-x',
                          '--ignore-eol-style', repo_dir, '/A/mu')

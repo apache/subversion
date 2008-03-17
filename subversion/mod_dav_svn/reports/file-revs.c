@@ -167,6 +167,7 @@ file_rev_handler(void *baton,
     {
       const svn_prop_t *prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
 
+      svn_pool_clear(subpool);
       if (prop->value)
         SVN_ERR(send_prop(frb, "set-prop", prop->name, prop->value,
                           subpool));
@@ -323,7 +324,8 @@ dav_svn__file_revs_report(const dav_resource *resource,
 
   /* We've detected a 'high level' svn action to log. */
   dav_svn__operational_log(resource->info,
-                           apr_psprintf(resource->pool, "blame %s r%ld:%ld%s",
+                           apr_psprintf(resource->pool,
+                                        "get-file-revs %s r%ld:%ld%s",
                              svn_path_uri_encode(path, resource->pool),
                              start, end,
                              (include_merged_revisions

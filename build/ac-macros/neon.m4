@@ -50,14 +50,19 @@ AC_DEFUN(SVN_LIB_NEON,
       NEON_VERSION=`cat $abs_srcdir/neon/.version`
       AC_MSG_RESULT([$NEON_VERSION])
 
-      if test -n ["`echo "$NEON_VERSION" | grep '^0\.2[6-8]\.'`"] ; then
+      if test -n ["`echo "$NEON_VERSION" | grep '^0\.2[6-9]\.'`"] ; then
         AC_DEFINE_UNQUOTED([SVN_NEON_0_26], [1],
                            [Define to 1 if you have Neon 0.26 or later.])
       fi
 
-      if test -n ["`echo "$NEON_VERSION" | grep '^0\.2[7-8]\.'`"] ; then
+      if test -n ["`echo "$NEON_VERSION" | grep '^0\.2[7-9]\.'`"] ; then
         AC_DEFINE_UNQUOTED([SVN_NEON_0_27], [1],
                            [Define to 1 if you have Neon 0.27 or later.])
+      fi
+
+      if test -n ["`echo "$NEON_VERSION" | grep '^0\.2[8-9]\.'`"] ; then
+        AC_DEFINE_UNQUOTED([SVN_NEON_0_28], [1],
+                           [Define to 1 if you have Neon 0.28 or later.])
       fi
 
       for svn_allowed_neon in $NEON_ALLOWED_LIST; do
@@ -128,14 +133,19 @@ AC_DEFUN(SVN_NEON_CONFIG,
       NEON_VERSION=`$neon_config --version | sed -e 's/^neon //'`
       AC_MSG_RESULT([$NEON_VERSION])
 
-      if test -n ["`echo "$NEON_VERSION" | grep '^0\.2[6-8]\.'`"] ; then
+      if test -n ["`echo "$NEON_VERSION" | grep '^0\.2[6-9]\.'`"] ; then
         AC_DEFINE_UNQUOTED([SVN_NEON_0_26], [1],
                            [Define to 1 if you have Neon 0.26 or later.])
       fi
 
-      if test -n ["`echo "$NEON_VERSION" | grep '^0\.2[7-8]\.'`"] ; then
+      if test -n ["`echo "$NEON_VERSION" | grep '^0\.2[7-9]\.'`"] ; then
         AC_DEFINE_UNQUOTED([SVN_NEON_0_27], [1],
                            [Define to 1 if you have Neon 0.27 or later.])
+      fi
+
+      if test -n ["`echo "$NEON_VERSION" | grep '^0\.2[8-9]\.'`"] ; then
+        AC_DEFINE_UNQUOTED([SVN_NEON_0_28], [1],
+                           [Define to 1 if you have Neon 0.28 or later.])
       fi
 
       for svn_allowed_neon in $NEON_ALLOWED_LIST; do

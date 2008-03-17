@@ -44,6 +44,8 @@
 #include "svn_mergeinfo.h"
 #include "svn_user.h"
 
+#include "private/svn_mergeinfo_private.h"
+
 #include "server.h"
 
 typedef struct {
@@ -389,11 +391,10 @@ static svn_error_t *auth_request(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
 #ifdef SVN_HAVE_SASL
   if (b->use_sasl)
-    SVN_ERR(cyrus_auth_request(conn, pool, b, required, needs_username));
-  else
+    return cyrus_auth_request(conn, pool, b, required, needs_username);
 #endif
-  SVN_ERR(internal_auth_request(conn, pool, b, required, needs_username));
-  return SVN_NO_ERROR;
+
+  return internal_auth_request(conn, pool, b, required, needs_username);
 }
 
 /* Send a trivial auth notification on CONN which lists no mechanisms,
@@ -492,11 +493,7 @@ static svn_error_t *must_have_access(svn_ra_svn_conn_t *conn,
      the first time round. */
   if (b->user == NULL
       && get_access(b, AUTHENTICATED) >= req
-      && (b->tunnel_user || b->pwdb
-#ifdef SVN_HAVE_SASL
-          || b->use_sasl
-#endif
-      ))
+      && (b->tunnel_user || b->pwdb || b->use_sasl))
     SVN_ERR(auth_request(conn, pool, b, req, TRUE));
 
   /* Now that an authentication has been done get the new take of
@@ -1476,12 +1473,13 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   server_baton_t *b = baton;
   svn_revnum_t rev;
   apr_array_header_t *paths, *canonical_paths;
-  apr_hash_t *mergeinfo;
+  svn_mergeinfo_catalog_t mergeinfo;
   int i;
   apr_hash_index_t *hi;
-  const char *path, *info, *inherit_word;
+  const char *inherit_word;
   svn_mergeinfo_inheritance_t inherit;
   svn_boolean_t include_descendants;
+  apr_pool_t *iterpool;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)wb", &paths, &rev,
                                  &inherit_word, &include_descendants));
@@ -1511,23 +1509,28 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                          include_descendants,
                                          authz_check_access_cb_func(b), b,
                                          pool));
-  if (mergeinfo != NULL && apr_hash_count(mergeinfo) > 0)
+  SVN_ERR(svn_mergeinfo__remove_prefix_from_catalog(&mergeinfo, mergeinfo,
+                                                    b->fs_path->data, pool));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "success"));
+  iterpool = svn_pool_create(pool);
+  for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       void *value;
+      svn_string_t *mergeinfo_string;
 
-      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "success"));
-      for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
-        {
-          apr_hash_this(hi, &key, NULL, &value);
-          path = (const char *)key + b->fs_path->len;
-          info = value;
-          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "(cc)", path, info));
-        }
-      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
+      svn_pool_clear(iterpool);
+
+      apr_hash_this(hi, &key, NULL, &value);
+      SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_string,
+                                      (svn_mergeinfo_t) value,
+                                      iterpool));
+      SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "cs", (const char *) key,
+                                     mergeinfo_string));
     }
-  else
-    SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "()"));
+  svn_pool_destroy(iterpool);
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
+
   return SVN_NO_ERROR;
 }
 
@@ -2374,9 +2377,9 @@ static svn_error_t *replay_range(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                                  authz_check_access_cb_func(b),
                                                  b,
                                                  iterpool));
-      SVN_ERR(svn_ra_svn_start_list(conn, iterpool));
+      SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "w(!", "revprops"));
       SVN_ERR(svn_ra_svn_write_proplist(conn, iterpool, props));
-      SVN_ERR(svn_ra_svn_end_list(conn, iterpool));
+      SVN_ERR(svn_ra_svn_write_tuple(conn, iterpool, "!)"));
 
       SVN_ERR(replay_one_revision(conn, b, rev, low_water_mark,
                                   send_deltas, iterpool));
@@ -2554,11 +2557,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
      are given by the client. */
   if (get_access(b, UNAUTHENTICATED) == NO_ACCESS
       && (get_access(b, AUTHENTICATED) == NO_ACCESS
-          || (!b->tunnel_user && !b->pwdb
-#ifdef SVN_HAVE_SASL
-              && !b->use_sasl
-#endif
-              )))
+          || (!b->tunnel_user && !b->pwdb && !b->use_sasl)))
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                             "No access allowed to this repository");
   return SVN_NO_ERROR;
@@ -2596,6 +2595,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   b.authzdb = params->authzdb;
   b.realm = NULL;
   b.pool = pool;
+  b.use_sasl = FALSE;
 
   /* Send greeting.  We don't support version 1 any more, so we can
    * send an empty mechlist. */

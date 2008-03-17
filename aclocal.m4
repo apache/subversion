@@ -1,7 +1,7 @@
 # aclocal.m4: Supplementary macros used by Subversion's configure.ac
 #
-# These are here rather than directly in configure.in, since this prevents
-# comments in the macro files being copied into configure.in, producing
+# These are here rather than directly in configure.ac, since this prevents
+# comments in the macro files being copied into configure.ac, producing
 # useless bloat. (This is significant - a 12kB reduction in size!)
 
 # Include macros distributed by the APR project
@@ -23,3 +23,7 @@ sinclude(build/ac-macros/zlib.m4)
 
 # Include the libtool macros
 sinclude(build/libtool.m4)
+sinclude(build/ltoptions.m4)
+sinclude(build/ltsugar.m4)
+sinclude(build/ltversion.m4)
+sinclude(build/lt~obsolete.m4)
