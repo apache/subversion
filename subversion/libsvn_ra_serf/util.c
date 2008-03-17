@@ -42,6 +42,7 @@
 #define XML_STATUS_ERROR 0
 #endif
 
+#if SERF_VERSION_AT_LEAST(0,1,3)
 static const apr_uint32_t serf_failure_map[][2] =
 {
   { SERF_SSL_CERT_NOTYETVALID,   SVN_AUTH_SSL_NOTYETVALID },
@@ -50,7 +51,7 @@ static const apr_uint32_t serf_failure_map[][2] =
   { SERF_SSL_CERT_UNKNOWNCA,     SVN_AUTH_SSL_UNKNOWNCA }
 };
 
-/* Convert neon's SSL failure mask to our own failure mask. */
+/* Convert serf's SSL failure mask to our own failure mask. */
 static apr_uint32_t
 ssl_convert_serf_failures(int failures)
 {
@@ -180,6 +181,7 @@ ssl_server_cert(void *baton, int failures,
 
   return server_creds ? APR_SUCCESS : SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED;
 }
+#endif
 
 serf_bucket_t *
 svn_ra_serf__conn_setup(apr_socket_t *sock,
