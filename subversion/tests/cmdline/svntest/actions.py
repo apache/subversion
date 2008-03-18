@@ -896,7 +896,8 @@ def run_and_verify_patch(dir, patch_path,
     pre_disk = tree.build_tree_from_wc(dir)
     dry_run_command = patch_command + ('--dry-run',)
     dry_run_command = dry_run_command + args
-    out_dry, err_dry = main.run_svn(error_re_string, *dry_run_command)
+    exit_code, out_dry, err_dry = main.run_svn(error_re_string,
+                                               *dry_run_command)
     post_disk = tree.build_tree_from_wc(dir)
     try:
       tree.compare_trees("disk", post_disk, pre_disk)
@@ -908,7 +909,7 @@ def run_and_verify_patch(dir, patch_path,
 
   # Update and make a tree of the output.
   patch_command = patch_command + args
-  out, err = main.run_svn (error_re_string, *patch_command)
+  exit_code, out, err = main.run_svn (error_re_string, *patch_command)
 
   if (error_re_string):
     rm = re.compile(error_re_string)

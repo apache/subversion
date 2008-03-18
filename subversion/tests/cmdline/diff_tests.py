@@ -2739,8 +2739,9 @@ def diff_svnpatch(sbox):
 
   expected_svnpatch = svnpatch_encode(svnpatch)
 
-  diff_output, err =  svntest.actions.run_and_verify_svn(None, None, [],
-                                                         'diff', '--svnpatch')
+  exit_code, diff_output, err =  svntest.actions.run_and_verify_svn(
+                                   None, None, [],
+                                   'diff', '--svnpatch')
   svnpatch_output = extract_svnpatch(diff_output)
 
   if (svnpatch_output != expected_svnpatch):
@@ -2767,9 +2768,10 @@ def diff_svnpatch(sbox):
 
   expected_svnpatch_base_head = svnpatch_encode(svnpatch_output_base_head)
 
-  diff_output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                        'diff', '--svnpatch',
-                                                        '-r', 'BASE:HEAD')
+  exit_code, diff_output, err = svntest.actions.run_and_verify_svn(
+                                  None, None, [],
+                                  'diff', '--svnpatch',
+                                  '-r', 'BASE:HEAD')
 
   svnpatch_output = extract_svnpatch(diff_output)
 
@@ -2792,9 +2794,10 @@ def diff_svnpatch(sbox):
   svntest.main.run_svn(None, 'add', foo_path)
   svntest.main.run_svn(None, 'ps', 'rhoprop', 'rhoprop val', rho_path)
 
-  diff_output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                        'diff', '--svnpatch',
-                                                        '-r', 'BASE:HEAD')
+  exit_code, diff_output, err = svntest.actions.run_and_verify_svn(
+                                  None, None, [],
+                                  'diff', '--svnpatch',
+                                  '-r', 'BASE:HEAD')
 
   svnpatch_output = extract_svnpatch(diff_output)
 
@@ -2850,9 +2853,10 @@ def diff_svnpatch(sbox):
 
   expected_svnpatch_head_base = svnpatch_encode(svnpatch_output_head_base)
 
-  diff_output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                        'diff', '--svnpatch',
-                                                        '-r', 'HEAD:BASE')
+  exit_code, diff_output, err = svntest.actions.run_and_verify_svn(
+                                  None, None, [],
+                                  'diff', '--svnpatch',
+                                  '-r', 'HEAD:BASE')
 
   svnpatch_output = extract_svnpatch(diff_output)
 
@@ -2918,9 +2922,10 @@ def diff_svnpatch(sbox):
 
   expected_svnpatch_head_wc = svnpatch_encode(svnpatch_output_head_wc)
 
-  diff_output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                        'diff', '--svnpatch',
-                                                        '-r', 'HEAD')
+  exit_code, diff_output, err = svntest.actions.run_and_verify_svn(
+                                  None, None, [],
+                                  'diff', '--svnpatch',
+                                  '-r', 'HEAD')
   svnpatch_output = extract_svnpatch(diff_output)
 
   if (svnpatch_output != expected_svnpatch_head_wc):
@@ -2929,9 +2934,10 @@ def diff_svnpatch(sbox):
   # subtest 6
   # repos/repos diff, r2:r3
 
-  diff_output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                        'diff', '--svnpatch',
-                                                        '-r', '2:HEAD')
+  exit_code, diff_output, err = svntest.actions.run_and_verify_svn(
+                                  None, None, [],
+                                  'diff', '--svnpatch',
+                                  '-r', '2:HEAD')
 
   svnpatch_output = extract_svnpatch(diff_output)
 
@@ -2993,9 +2999,10 @@ def diff_svnpatch(sbox):
 
   expected_svnpatch_head_r2 = svnpatch_encode(svnpatch_output_head_r2)
   
-  diff_output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                        'diff', '--svnpatch',
-                                                        '-r', 'HEAD:2')
+  exit_code, diff_output, err = svntest.actions.run_and_verify_svn(
+                                  None, None, [],
+                                  'diff', '--svnpatch',
+                                  '-r', 'HEAD:2')
 
   svnpatch_output = extract_svnpatch(diff_output)
 
