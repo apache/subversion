@@ -243,33 +243,53 @@ def basic_mkdir_url_with_parents(sbox):
 
   sbox.build()
 
-  Y_Z_url = sbox.repo_url + '/Y/Z'
-  svntest.actions.run_and_verify_svn("erroneous mkdir URL URL/subdir",
+  X_Y_Z_url = sbox.repo_url + '/X/Y/Z'
+  X_Y_Z2_url = sbox.repo_url + '/X/Y/Z2'
+  X_T_C_url = sbox.repo_url + '/X/T/C'
+  U_V_url = sbox.repo_url + '/U/V'
+  svntest.actions.run_and_verify_svn("erroneous mkdir sans --parent",
                                      [],
                                      ".*Try 'svn mkdir --parents' instead.*",
                                      'mkdir', '-m', 'log_msg',
-                                     Y_Z_url)
+                                     X_Y_Z_url, X_Y_Z2_url, X_T_C_url, U_V_url)
 
-  svntest.actions.run_and_verify_svn("mkdir URL URL/subdir",
+  svntest.actions.run_and_verify_svn("mkdir --parents",
                                      ["\n", "Committed revision 2.\n"], [],
-                                     'mkdir', '-m', 'log_msg',
-                                     '--parents', Y_Z_url)
+                                     'mkdir', '-m', 'log_msg', '--parents',
+                                     X_Y_Z_url, X_Y_Z2_url, X_T_C_url, U_V_url)
 
   expected_output = wc.State(sbox.wc_dir, {
-    'Y'   : Item(status='A '),
-    'Y/Z' : Item(status='A '),
+    'X'      : Item(status='A '),
+    'X/Y'    : Item(status='A '),
+    'X/Y/Z'  : Item(status='A '),
+    'X/Y/Z2' : Item(status='A '),
+    'X/T'    : Item(status='A '),
+    'X/T/C'  : Item(status='A '),
+    'U'      : Item(status='A '),
+    'U/V'    : Item(status='A '),
     })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
-    'Y'   : Item(),
-    'Y/Z' : Item()
+    'X'      : Item(),
+    'X/Y'    : Item(),
+    'X/Y/Z'  : Item(),
+    'X/Y/Z2' : Item(),
+    'X/T'    : Item(),
+    'X/T/C'  : Item(),
+    'U'      : Item(),
+    'U/V'    : Item(),
     })
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 2)
   expected_status.add({
-    'Y'   : Item(status='  ', wc_rev=2),
-    'Y/Z' : Item(status='  ', wc_rev=2)
+    'X'      : Item(status='  ', wc_rev=2),
+    'X/Y'    : Item(status='  ', wc_rev=2),
+    'X/Y/Z'  : Item(status='  ', wc_rev=2),
+    'X/Y/Z2' : Item(status='  ', wc_rev=2),
+    'X/T'    : Item(status='  ', wc_rev=2),
+    'X/T/C'  : Item(status='  ', wc_rev=2),
+    'U'      : Item(status='  ', wc_rev=2),
+    'U/V'    : Item(status='  ', wc_rev=2),
     })
-
   svntest.actions.run_and_verify_update(sbox.wc_dir,
                                         expected_output,
                                         expected_disk,
