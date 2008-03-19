@@ -14,6 +14,15 @@ Status of 1.5.0:
 
 Candidate changes:
 
+  * r29962
+    Enforce the fact that 'svn merge' requires a merge source.
+    Notes:
+      Should be in 1.5, because 'svn merge' with no arguments won't
+      error otherwise, yet such an invocation is not (currently)
+      meaningful, and therefore should error. 
+    Votes:
+      +1: kfogel
+
   * r29439
     Simplify (and optimise) parsing of the DAV response header in
     ra_neon capabilities detection.
