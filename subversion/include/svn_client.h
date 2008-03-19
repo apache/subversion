@@ -4303,16 +4303,6 @@ svn_client_open_ra_session(svn_ra_session_t **session,
 
 /** @} */
 
-/** Return TRUE iff revision kind is dependent on the working copy.
- * Otherwise, return FALSE.
- *
- * @since New in 1.6.
- */
-#define SVN_CLIENT_IS_WC_DEPENDENT_REVKIND(kind)                           \
-  ((kind == svn_opt_revision_base || kind == svn_opt_revision_previous ||  \
-   kind == svn_opt_revision_working || kind == svn_opt_revision_committed) \
-   ? TRUE : FALSE)
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
