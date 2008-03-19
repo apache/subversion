@@ -147,42 +147,29 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf)
   return access_conf;
 }
 
-/* Ugly wrappers to macros apr_to(upper|lower) to get a function pointers. */
-static APR_INLINE int
-makeupper(int c)
+/* Convert TEXT to upper case if TO_UPPERCASE is TRUE, else
+   converts it to lower case. */
+static void convert_case(char *text, svn_boolean_t to_uppercase)
 {
-  return apr_toupper(c);
-}
-static APR_INLINE int
-makelower(int c)
-{
-  return apr_tolower(c);
-}
-
-/* Converts STR_TO_CONVERT to upper case if UPPER is true,
-   else converts it to lower case. */
-static void
-convert_case(char *str_to_convert, svn_boolean_t upper)
-{
-  char *c = str_to_convert;
-  int (*convert_func)(int);
-  convert_func=upper?makeupper:makelower;
-  while (*c) 
+  char *c = text;
+  while (*c)
     {
-      *c = convert_func(*c);
+      *c = (to_uppercase ? apr_toupper(*c) : apr_tolower(*c));
       ++c;
     }
 }
 
-static char *
-get_username_to_authorize(request_rec *r, authz_svn_config_rec *conf)
+/* Return the username to authorize, with case-conversion performed if
+   CONF->force_username_case is set. */
+static char* get_username_to_authorize(request_rec *r,
+                                       authz_svn_config_rec *conf)
 {
   char *username_to_authorize = r->user;
-  if (conf->force_username_case) 
+  if (conf->force_username_case)
     {
       username_to_authorize = apr_pstrdup(r->pool, r->user);
       convert_case(username_to_authorize, 
-                   (strcasecmp(conf->force_username_case, "upper") == 0));
+                   strcasecmp(conf->force_username_case, "upper") == 0);
     }
   return username_to_authorize;
 }
