@@ -326,9 +326,10 @@ svn_client_log4(const apr_array_header_t *targets,
   /* Use the passed URL, if there is one.  */
   if (svn_path_is_url(url_or_path))
     {
-      if (peg_revision->kind == svn_opt_revision_base
-          || peg_revision->kind == svn_opt_revision_committed
-          || peg_revision->kind == svn_opt_revision_previous)
+      if (SVN_CLIENT_IS_WC_DEPENDENT_REVKIND(peg_revision->kind) ||
+          SVN_CLIENT_IS_WC_DEPENDENT_REVKIND(start->kind) ||
+          SVN_CLIENT_IS_WC_DEPENDENT_REVKIND(end->kind))
+          
         return svn_error_create
           (SVN_ERR_CLIENT_BAD_REVISION, NULL,
            _("Revision type requires a working copy path, not a URL"));
@@ -432,10 +433,7 @@ svn_client_log4(const apr_array_header_t *targets,
     /* If this is a revision type that requires access to the working copy,
      * we use our initial target path to figure out where to root the RA
      * session, otherwise we use our URL. */
-    if (peg_revision->kind == svn_opt_revision_base
-        || peg_revision->kind == svn_opt_revision_committed
-        || peg_revision->kind == svn_opt_revision_previous
-        || peg_revision->kind == svn_opt_revision_working)
+    if (SVN_CLIENT_IS_WC_DEPENDENT_REVKIND(peg_revision->kind))
       SVN_ERR(svn_path_condense_targets(&ra_target, NULL, targets, TRUE, pool));
     else
       ra_target = url_or_path;
