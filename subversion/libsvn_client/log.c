@@ -387,7 +387,7 @@ svn_client_log4(const apr_array_header_t *targets,
                                          FALSE, 0, ctx->cancel_func,
                                          ctx->cancel_baton, iterpool));
           SVN_ERR(svn_wc__entry_versioned(&entry, target, adm_access, FALSE,
-                                         iterpool));
+                                          iterpool));
 
           if (! entry->url)
             return svn_error_createf
@@ -505,17 +505,17 @@ svn_client_log4(const apr_array_header_t *targets,
                                   SVN_RA_CAPABILITY_LOG_REVPROPS, pool));
     if (has_log_revprops)
       return svn_ra_get_log2(ra_session,
-                               condensed_targets,
-                               start_revnum,
-                               end_revnum,
-                               limit,
-                               discover_changed_paths,
-                               strict_node_history,
-                               include_merged_revisions,
-                               revprops,
-                               real_receiver,
-                               real_receiver_baton,
-                            pool);
+                             condensed_targets,
+                             start_revnum,
+                             end_revnum,
+                             limit,
+                             discover_changed_paths,
+                             strict_node_history,
+                             include_merged_revisions,
+                             revprops,
+                             real_receiver,
+                             real_receiver_baton,
+                             pool);
     else
       {
         /* See above pre-1.5 notes. */
@@ -533,17 +533,17 @@ svn_client_log4(const apr_array_header_t *targets,
                                                  &session_opt_rev,
                                                  ctx, pool));
         return svn_ra_get_log2(ra_session,
-                              condensed_targets,
-                              start_revnum,
-                              end_revnum,
-                              limit,
-                              discover_changed_paths,
-                              strict_node_history,
-                              include_merged_revisions,
-                              svn_compat_log_revprops_in(pool),
-                              pre_15_receiver,
-                              &rb,
-                              pool);
+                               condensed_targets,
+                               start_revnum,
+                               end_revnum,
+                               limit,
+                               discover_changed_paths,
+                               strict_node_history,
+                               include_merged_revisions,
+                               svn_compat_log_revprops_in(pool),
+                               pre_15_receiver,
+                               &rb,
+                               pool);
       }
   }
 }
