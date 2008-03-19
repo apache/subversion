@@ -136,7 +136,7 @@ href="http://subversion.tigris.org/faq.html#working-copy-format-change"
 <p>The Subversion 1.5 server works with 1.4 and older repositories,
 and it will <em>not</em> upgrade such repositories to 1.5 unless
 specifically requested to via the
-<strong><tt>svnadmin&nbsp;upgrade</tt></strong> command.  This means
+<strong><code>svnadmin&nbsp;upgrade</code></strong> command.  This means
 that some of the new 1.5 features will not become available simply by
 upgrading your server: you will also have to upgrade your
 repositories.  (We decided not to auto-upgrade repositories because we
@@ -203,28 +203,29 @@ using Cyrus SASL with Subversion.</p>
 <div class="h2" id="new-features" title="new-features">
 <h2>New Features</h2>
 
-<p>XXX: Describe each new feature.  See the 1.4 RNs for a
-"template".</p>
-
 <div class="h3" id="merge-tracking" title="merge-tracking">
 <h3>Merge tracking (foundational) (<em>client and server</em>)</h3>
 
-<p>Subversion 1.5 is the first release of Subversion with <em>merge
-tracking</em> support.  Merge tracking is a way for keeping track of
-what changes have been merged where, thereby reducing the need for
-manual bookkeeping when maintaining branches.</p>
+<p><em>Merge tracking</em> means Subversion keeps track of what
+changes have been merged where.  This reduces the overhead involved in
+maintaining branches, and gives users a way to inquire what changes
+are merged&nbsp;&mdash;&nbsp;or are available to be
+merged&nbsp;&mdash;&nbsp;on different lines of development.</p>
 
-<p>We're calling the 1.5 merge tracking support "foundational"
-because, although the most important parts are working, and much
-groundwork has been laid for the future, there are still some parts of
-our <a href="http://subversion.tigris.org/merge-tracking/" >original
-spec</a> remaining to be done (in particular, proper support for <a
+<p>The merge tracking support in Subversion 1.5 is "foundational": the
+most important parts are implemented, and groundwork has been laid for
+the future, but there are still some parts of our <a
+href="http://subversion.tigris.org/merge-tracking/" >original spec</a>
+that remain to be done (in particular, proper support for <a
 href="http://subversion.tigris.org/issues/show_bug.cgi?id=2897"
->reflective merges</a>, and better merge tracking of renamed files).
-There were other major features waiting to ship in 1.5, and we didn't
-want to delay their release because of rigid adherence to one
-feature's specifications.  So, look for further merge tracking
-improvements in Subversion 1.6 and afterwards.</p>
+>reflective merges</a>, better <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=3126"
+>change-availability reporting</a>, and better <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=3128" >
+tracking of renamed files</a>).  As there were many major features
+waiting to ship in 1.5, we didn't want to delay their release by rigid
+adherence to one feature's specifications.  Look for further merge
+tracking improvements in Subversion 1.6 and afterwards.</p>
 
 <div class="h4" id="mt-overview" title="mt-overview">
 <h4>Overview</h4>
@@ -239,7 +240,7 @@ improvements in Subversion 1.6 and afterwards.</p>
 
 <p>Each changeset is identified by its revision number, and merged
 changesets are recorded in the new
-<strong><tt>svn:mergeinfo</tt></strong> property (known colloquially
+<strong><code>svn:mergeinfo</code></strong> property (known colloquially
 as "mergeinfo") set on the destination of the merge.  Subversion keeps
 mergeinfo up-to-date automatically, but there is also a way to <a
 href="#mt-record-only" >record/unrecord merges manually</a>, since
@@ -251,34 +252,25 @@ Subversion doesn't.</p>
 <div class="h4" id="mt-ui" title="mt-ui">
 <h4>User interface</h4>
 
-<p>Mostly, mergeinfo is taken into account automatically, and you
-don't need to do anything special.</p>
+<p>Merging changes from (say) trunk to a branch no longer requires
+that you specify the revision range.  Instead, you can just do:</p>
 
-<p>However, the <strong><tt>svn&nbsp;log</tt></strong> and
-<strong><tt>svn&nbsp;blame</tt></strong> commands take a new
-<strong><tt>-g</tt></strong>
-(<strong><tt>--use-merge-history</tt></strong>) option, which tells
-them tells them to take mergeinfo into account.  Without this option,
-they won't.</p>
+<pre>   $ cd BRANCH_WORKING_COPY
+   $ svn merge URL_TO_TRUNK</pre>
 
-<p>The reason for the -g option is that it is sometimes useful to
-ignore merge history.  In blame output you sometimes want to see the
-person B who merged a change, though other times you want to see the
-person A who originally wrote the change that B later merged; use -g
-to get the latter information.  In log output, you sometimes want to
-see exactly the revisions that were committed on a given line of
-development, though other times you want to see, as part of the same
-output, the original changes that were later ported as merge
-revisions; again, -g includes the latter information (tagged with
-lines that say "<tt>Merged via: </tt>" followed by the revision number
-in which the merge took place).  See <a
-href="http://svnbook.red-bean.com/nightly/en/svn.branchmerge.advanced.html#svn.branchmerge.advanced.logblame"
->Merge-Sensitive Logs and Annotations</a> in the Subversion book for
-more details.</p>
+<p>Subversion will figure out what changes from URL_TO_TRUNK have not
+yet been merged and pull in just those changes.  When it's time to
+merge the branch back to trunk, do this:</p>
 
-<p>The <strong><tt>svn&nbsp;merge</tt></strong> command takes two new
-options: <strong><tt>--record-only</tt></strong> and
-<strong><tt>--reintegrate</tt></strong>.</p>
+<pre>   $ cd TRUNK_WORKING_COPY
+   $ svn merge --reintegrate URL_TO_BRANCH</pre>
+
+<p>Below is a more formal description of all the
+merge-tracking-related interface changes.</p>
+
+<p>The <strong><code>svn&nbsp;merge</code></strong> command takes two new
+options: <strong><code>--record-only</code></strong> and
+<strong><code>--reintegrate</code></strong>.</p>
 
 <div id="mt-record-only" title="mt-record-only">
 <p>The --record-only option works with -r and does exactly what you
@@ -303,11 +295,33 @@ the merge in a fast and efficient way.  See <a
 href="http://svnbook.red-bean.com/nightly/en/svn.branchmerge.basicmerging.html#svn.branchemerge.basicmerging.stayinsync"
 >Keeping a branch in sync</a> in the Subversion book for more.</p>
 
-<p>The new <strong><tt>svn&nbsp;mergeinfo</tt></strong> command can
+<p>The new <strong><code>svn&nbsp;mergeinfo</code></strong> command can
 show which changesets a directory has absorbed and which changesets
 it's still eligible to receive.  See <a
 href="http://svnbook.red-bean.com/nightly/en/svn.branchmerge.basicmerging.html#svn.branchmerge.basicmerging.mergeinfo"
 >Mergeinfo and Previews</a> in the Subversion book for more information.</p>
+
+<p>The <strong><code>svn&nbsp;log</code></strong> and
+<strong><code>svn&nbsp;blame</code></strong> commands take a new
+<strong><code>-g</code></strong>
+(<strong><code>--use-merge-history</code></strong>) option, which tells
+them tells them to take mergeinfo into account.  Without this option,
+they won't.</p>
+
+<p>The reason for the -g option is that it is sometimes useful to
+ignore merge history.  In blame output you sometimes want to see the
+person B who merged a change, though other times you want to see the
+person A who originally wrote the change that B later merged; use -g
+to get the latter information.  In log output, you sometimes want to
+see exactly the revisions that were committed on a given line of
+development, though other times you want to see, as part of the same
+output, the original changes that were later ported as merge
+revisions; again, -g includes the latter information (tagged with
+lines that say "<tt>Merged via: </tt>" followed by the revision number
+in which the merge took place).  See <a
+href="http://svnbook.red-bean.com/nightly/en/svn.branchmerge.advanced.html#svn.branchmerge.advanced.logblame"
+>Merge-Sensitive Logs and Annotations</a> in the Subversion book for
+more details.</p>
 
 </div>  <!-- mt-ui -->
 
@@ -354,13 +368,16 @@ itself now uses.</p>
 <div class="h3" id="sparse-checkouts" title="sparse-checkouts">
 <h3>Sparse checkouts  (<em>client and server</em>)</h3>
 
-<p>Many users have very large trees of which they only want to checkout
-certain parts.  In previous versions of Subversion, <code>checkout -N</code>
-was not today up to this task.  Subversion 1.5 introduces the
-<code>--depth</code> option to the <code>checkout</code>, <code>switch</code>,
-and <code>update</code> subcommands as a replacement for <code>-N</code>, which
-allows working copies to have very specific contents, leaving out everything
-the user does not want.</p>
+<p>Many users have very large trees of which they only want to
+checkout certain parts.  In previous versions of Subversion,
+<code>checkout -N</code> was not today up to this task.  Subversion
+1.5 introduces the <strong><code>--depth</code></strong> option to the
+<strong><code>checkout</code></strong>,
+<strong><code>switch</code></strong>, and
+<strong><code>update</code></strong> subcommands as a replacement for
+<code>-N</code>.  The new option allows users to construct working
+copies containing just what's needed, leaving out everything the user
+does not want.</p>
 
 <div class="h4" id="sc-depth" title="sc-depth">
 <h4>Depth</h4>
@@ -368,24 +385,24 @@ the user does not want.</p>
 four possible values: <tt>empty</tt>, <tt>files</tt>, <tt>immediates</tt>,
 <tt>infinity</tt>.  The values are defined as follows:</p>
 
-<table>
+<table border="1">
 <tr>
-  <td>empty</td>
+  <td><tt>empty</tt></td>
   <td>Updates will not pull in any files or subdirectories not already
     present.</td>
 </tr>
 <tr>
-  <td>files</td>
+  <td><tt>files</tt></td>
   <td>Updates will pull in any files not already present, but not
     subdirectories.</td>
 </tr>
 <tr>
-  <td>immediates</td>
+  <td><tt>immediates</tt></td>
   <td>Updates will pull in any files or subdirectories not already present;
     those subdirectories' will have depth-empty.</td>
 </tr>
 <tr>
-  <td>infinity</td>
+  <td><tt>infinity</em></td>
   <td>Updates will pull in any files or subdirectories not already present;
     those subdirectories' will have depth-infinity.  Equivalent to today's
     default update behavior.</td>
@@ -393,7 +410,7 @@ four possible values: <tt>empty</tt>, <tt>files</tt>, <tt>immediates</tt>,
 </table>
 
 <p>The <code>--depth</code> option sets depth values as it updates the working
-copy, setting any new subdirectories' depth values as described above.</p>
+copy, tweaking new subdirectories' depth values as described above.</p>
 
 </div>  <!-- sc-depth -->
 
@@ -460,7 +477,7 @@ servers.</p>
 transmit a requested depth (with "unknown" as the default).  They will also
 &mdash; for the sake of older, non-depth-aware servers (NDASs) -- transmit a
 requested recurse value derived from the requested depth:</p>
-<table>
+<table border="1">
 <tr><th>depth</th><th>recurse</th></tr>
 <tr><td>empty</td><td>no</td></tr>
 <tr><td>files</td><td>no</td></tr>
@@ -503,9 +520,20 @@ depths of "infinity" and "files", respectively.</p>
 
 </div>  <!-- sc-compat -->
 
-<p>Sparse checkouts are further described <a
-href="http://svn.collab.net/repos/svn/trunk/notes/sparse-directories.txt"
->in the repository</a>.</p>
+<div class="h4" id="sc-further-reading" title="sc-further-reading">
+<h4>Further reading</h4>
+
+<ul>
+<li>The <a
+    href="http://svnbook.red-bean.com/nightly/en/svn.advanced.sparsedirs.html"
+    >Sparse Directories</a> section in the Subversion book.
+</li>
+<li>The <a
+    href="http://svn.collab.net/repos/svn/trunk/notes/sparse-directories.txt" 
+    >design/implementation document</a> in the repository.</li>
+</ul>
+
+</div> <!-- sc-further-reading -->
 
 </div> <!-- sparse-checkouts -->
 
@@ -520,23 +548,27 @@ graphical conflict resolution program to the
 <code>update</code>/<code>switch</code>/<code>merge</code>
 sub-commands.  Example command line output:</p>
 <pre>
-    $ svn up
-    U    contrib/client-side/svnmerge/svnmerge_test.py
-    Conflict discovered in 'contrib/client-side/svnmerge/svnmerge.py'.
-    Select: (p)ostpone, (d)iff, (e)dit, (h)elp : h
-      (p)ostpone - mark the conflict to be resolved later
-      (d)iff     - show all changes made to merged file
-      (e)dit     - change merged file in an editor
-      (r)esolved - accept merged version of file
-      (m)ine     - accept my version of file
-      (t)heirs   - accept repository's version of file
-      (l)aunch   - use third-party tool to resolve conflict
-      (h)elp     - show this list
+   $ svn up
+   U    contrib/client-side/svnmerge/svnmerge_test.py
+   Conflict discovered in 'contrib/client-side/svnmerge/svnmerge.py'.
+   Select: (p) postpone, (df) diff-full, (e) edit,
+           (s) show all options: s
+     (p)  postpone    - mark the conflict to be resolved later
+     (df) diff-full   - show all changes made to merged file
+     (e)  edit        - change merged file in an editor
+     (r)  resolved    - accept merged version of file
+     (mf) mine-full   - accept my version of entire file (ignore their changes)
+     (tf) theirs-full - accept their version of entire file (lose my changes)
+     (l)  launch      - launch external tool to resolve conflict
+     (s)  show all    - show this list
 
-    Select: (p)ostpone, (d)iff, (e)dit, (h)elp : t
-    G    contrib/client-side/svnmerge/svnmerge.py
-    Updated to revision 25685.
+   Select: (p) postpone, (df) diff-full, (e) edit,
+           (s) show all options: tf
+   G    contrib/client-side/svnmerge/svnmerge.py
+   Updated to revision 25685.
+   $ 
 </pre>
+
 <p>This feature can be selectively disabled by using the --non-interactive
 option, or disabled permanently by setting '[miscellany] interactive-conflicts
  = no' in your run-time config file.</p>
@@ -555,6 +587,8 @@ callback function and the following new data types:</p>
     description indicating the type of conflict</li>
   <li><code>svn_wc_conflict_result_t</code>, returned by the callback
     as the result of any conflict resolution attempt</li>
+  <li><code>svn_wc_conflict_choice_t</code>, an enum indicating what
+    course of action the user chose</li>
 </ul>
 
 <p>Clients provide their callback function to Subversion's libraries
@@ -564,22 +598,23 @@ callback via the corresponding <code>conflict_baton</code> field.</p>
 
 </div>  <!-- interactive-conflict-resolution -->
 
-<div class="h3" id="changelists" title="changelists">
-<h3>Changelist support (<em>client</em>)</h3>
-<p>The Subversion client now contains the notion of a <em>changelist</em>:
-a group of files which are associated with a chosen name.  This becomes
-especially useful when working on several different set of files within the
-same working copy.  Instead of having to remember each file in each set,
-Subversion 1.5 will allow you to associate a changelist with each set of
-files.  Most commands which take a set of files as targets will now also
-accept the <code>--changelist</code> option, which filters those targets
-based upon the members of the changelist.  Changelist membership can be
-edited using the new <code>changelist</code> subcommand.</p>
+<div class="h3" id="changelists" title="changelists"> <h3>Changelist
+support (<em>client</em>)</h3> <p>The Subversion client now contains
+the notion of a <em>changelist</em>: a group of files which are
+associated with a chosen name.  This becomes especially useful when
+working on several different set of files within the same working
+copy.  Instead of having to remember each file in each set, Subversion
+1.5 will allow you to associate a changelist with each set of files.
+Most commands which take a set of files as targets will now also
+accept the <strong><code>--changelist</code></strong> option, which
+filters those targets based upon the members of the changelist.
+Changelist membership can be edited using the new
+<strong><code>changelist</code></strong> subcommand.</p>
 
 <p>Changelists are handled entirely by the client.  They are never sent
 to the server, and aren't visible to other users of the same repository.
 Also, the <code>--changelist</code> option is never additive; if a file
-wouldn't have been included in the list of targets with out
+wouldn't have been included in the list of targets without
 <code>--changelist</code>, it will not be added to it, regardless of membership
 in the changelist.  Currently, a file may only be in one changelist at a
 time, and directories can not be members of a changelist.</p>
@@ -597,12 +632,23 @@ subcommands:</p>
   <li><code>propdel</code></li>
   <li><code>revert</code></li>
   <li><code>status</code></li>
-  <li><code>update</code><li>
+  <li><code>update</code></li>
 </ul>
 
-<p>More information about changelists can be found <a
-href="http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt"
->here</a>.</p>
+<div class="h4" id="sc-further-reading" title="sc-further-reading">
+<h4>Further reading</h4>
+
+<ul>
+<li>The <a
+    href="http://svnbook.red-bean.com/nightly/en/svn.advanced.changelists.html"
+    >Changelists</a> section in the Subversion book.
+</li>
+<li>The <a
+    href="http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt" 
+    >design/implementation document</a> in the repository.</li>
+</ul>
+
+</div>  <!-- cl-further-reading -->
 
 </div>  <!-- changelists -->
 
@@ -613,29 +659,26 @@ href="http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt"
 <p>Two additions to the <tt>svn:externals</tt> feature</p>
   <ul>
     <li>
-      <p>
-        The URLs may include peg specifications.  Because the
-        directory a URL refers to with and without a peg revision uses
-        a different lookup and result in different contents, the
-        current format from older versions of Subversion continues to
-        not understand peg revisions.  A new format is introduced to
-        allow peg revisions in URLs.
-      </p>
-      <p>So the old format of</p>
+      <p><strong>Peg revision syntax for URLs.</strong></p>
+
+      <p><em>Compatibility and the new syntax:</em> For compatibility
+         reasons, the pre-1.5 svn:externals syntax continues to not
+         understand peg revisions.  A new format has been introduced
+         to allow peg revisions in URLs.</p>
+      <p>The old format of</p>
         <pre>
           foo             http://example.com/repos/zig
           foo/bar -r 1234 http://example.com/repos/zag
         </pre>
-        <p>does not support peg revisions.  In fact, these following
-        externals will not work unless there are directories named
-        <tt>zig@HEAD</tt> and <tt>zag@HEAD</tt>:</p>
+        <p>does not support peg revisions, and the following
+           externals will not work (unless there are directories named
+           <tt>zig@HEAD</tt> and <tt>zag@HEAD</tt>):</p>
         <pre>
           foo             http://example.com/repos/zig@HEAD
           foo/bar -r 1234 http://example.com/repos/zag@HEAD
         </pre>
-      <p>
-        The new format moves the URL first followed by the directory
-        the external is checked out or exported into</p>
+      <p>The new format moves the URL first followed by the directory
+         the external is checked out or exported into</p>
         <pre>
           http://example.com/repos/zig foo1
           -r 1234 http://example.com/repos/zag foo/bar1
@@ -646,20 +689,21 @@ href="http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt"
       </p>
     </li>
     <li>
-      <p>
-        Up to Subversion 1.4, the URLs in an <tt>svn:externals</tt>
-        specification must be absolute.  Now they can be relative.
-        Four different relative externals are supported.
+      <p><strong>Support for relative URLs.</strong></p>
+
+      <p>Prior to Subversion 1.5, the URLs in an <tt>svn:externals</tt>
+         specification must be absolute.  Now they can be relative.
+         Four different relative externals specifications are supported.
       </p>
       <p>
-        For the following example, assume we have two repositories at
-        <tt>http://example.com/svn/repos-1</tt> and
+        For the following example, assume we have two repositories:
+        one at <tt>http://example.com/svn/repos-1</tt> and another at
         <tt>http://example.com/svn/repos-2</tt>.  We have a checkout
         of <tt>http://example.com/svn/repos-1/project1/trunk</tt> and
-        the <tt>svn:external</tt> property is set on <tt>trunk</tt>.</p>
+        the <tt>svn:externals</tt> property is set on <tt>trunk</tt>.</p>
         <ul>
           <li>
-            <tt>../</tt>
+            <tt><strong>../</strong></tt>
             <br/>
             Relative to the directory with the <tt>svn:external</tt>
             property.  These URLs always begin with the string
@@ -674,7 +718,7 @@ href="http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt"
             directory where the external is written to disk.
           </li>
           <li>
-            <tt>^/</tt>
+            <tt><strong>^/</strong></tt>
             <br/>
             Relative to the repository root.
             <pre>
@@ -695,7 +739,7 @@ href="http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt"
             <tt>common/foo/trunk</tt>
           </li>
           <li>
-            <tt>//</tt>
+            <tt><strong>//</strong></tt>
             <br/>
             Relative to the scheme.  This copies the scheme of the
             checkout or export URL into the URL in the
@@ -716,7 +760,7 @@ href="http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt"
             <tt>http://example.com/svn/repos-1/project1/trunk</tt>.
           </li>
           <li>
-            <tt>/</tt>
+            <tt><strong>/</strong></tt>
             <br/>
 
             Server root relative URLs.  This copies the scheme and
@@ -734,15 +778,14 @@ href="http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt"
             <tt>http://example.com/svn/repos-1/project1/trunk</tt>.
           </li>
         </ul>
-      <p>
-        Relative URLs are supported in the old <tt>svn:externals</tt>
-        format that do not support peg revisions.
-      </p>
-      <p>
-        When Subversion sees an <tt>svn:externals</tt> without an
-        absolute URL it takes the first argument as a relative URL and
-        the second as the target directory.
-      </p>
+
+      <p>Relative URLs are supported in the old <tt>svn:externals</tt>
+         format that does not support peg revisions.</p>
+
+      <p>When Subversion sees an <tt>svn:externals</tt> without an
+         absolute URL it takes the first argument as a relative URL and
+         the second as the target directory.</p>
+
     </li>
   </ul>
 
@@ -754,7 +797,7 @@ and server</em>)</h3>
 
 <p>From <a
 href="http://en.wikipedia.org/wiki/Simple_Authentication_and_Security_Layer">
-Wikipedia</a>: SASL is a framework for authentication and data security in
+Wikipedia</a>: "SASL is a framework for authentication and data security in
 Internet protocols.  It decouples authentication mechanisms from application
 protocols, in theory allowing any authentication mechanism supported by SASL to
 be used in any application protocol that uses SASL."</p>
