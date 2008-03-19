@@ -70,10 +70,10 @@ Candidate changes:
     Votes:
       +1: arfrever
 
+Approved changes:
+
   * r29950
     Make 'svn mkdir' do the right thing when multiple to-be-created
     directories share parent directories also in need of creation.
     Votes:
-      +1: cmpilato
-
-Approved changes:
+      +1: cmpilato, hwright
