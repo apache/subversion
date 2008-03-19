@@ -1711,9 +1711,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
         ((svn_client_copy_source_t **) (sources->elts))[i];
 
       if (svn_path_is_url(source->path)
-          && (source->peg_revision->kind == svn_opt_revision_base
-              || source->peg_revision->kind == svn_opt_revision_committed
-              || source->peg_revision->kind == svn_opt_revision_previous))
+          && (SVN_CLIENT__REVKIND_NEEDS_WC(source->peg_revision->kind)))
         return svn_error_create
           (SVN_ERR_CLIENT_BAD_REVISION, NULL,
            _("Revision type requires a working copy path, not a URL"));
