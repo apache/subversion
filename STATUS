@@ -70,6 +70,11 @@ Candidate changes:
     Votes:
       +1: arfrever
 
+  * r29958
+    Fix a bug in filtering of self-referential mergeinfo.
+    Votes:
+      +1: pburba
+ 
 Approved changes:
 
   * r29950
