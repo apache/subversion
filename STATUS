@@ -72,8 +72,3 @@ Candidate changes:
       +1: arfrever
 
 Approved changes:
-
-  * r29968
-    Avoid unneccessary allocations in the loop.
-    Votes:
-      +1: kameshj, hwright
