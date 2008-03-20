@@ -413,8 +413,8 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
               for (j = 0; j < rangelist->nelts; j++)
                 {
                   svn_error_t *err;
-                  svn_opt_revision_t *start_revision, *end_revision;
-                  const char *start_url, *end_url;
+                  svn_opt_revision_t *start_revision;
+                  const char *start_url;
                   svn_opt_revision_t peg_rev, rev1_opt, rev2_opt;
                   svn_merge_range_t *range =
                     APR_ARRAY_IDX(rangelist, j, svn_merge_range_t *);
@@ -437,8 +437,8 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                      RANGE->START on the same line of history. */
                   err = svn_client__repos_locations(&start_url,
                                                     &start_revision,
-                                                    &end_url,
-                                                    &end_revision,
+                                                    NULL,
+                                                    NULL,
                                                     merge_b->ra_session2,
                                                     target_url,
                                                     &peg_rev,
