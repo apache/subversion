@@ -80,8 +80,3 @@ Candidate changes:
       +1: arfrever
 
 Approved changes:
-
-  * r29958
-    Fix a bug in filtering of self-referential mergeinfo.
-    Votes:
-      +1: pburba, kameshj

@@ -422,7 +422,10 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                   peg_rev.kind = svn_opt_revision_number;
                   peg_rev.value.number = target_entry->revision;
                   rev1_opt.kind = svn_opt_revision_number;
-                  rev1_opt.value.number = range->start;
+                  /* SVN_PROP_MERGEINFO only stores forward merges, so
+                     the start range of svn_merge_range_t RANGE is not
+                     inclusive. */
+                  rev1_opt.value.number = range->start + 1;
                   
                   /* Because the merge source normalization code
                      ensures mergeinfo refers to real locations on
