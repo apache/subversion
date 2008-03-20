@@ -149,7 +149,8 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf)
 
 /* Convert TEXT to upper case if TO_UPPERCASE is TRUE, else
    converts it to lower case. */
-static void convert_case(char *text, svn_boolean_t to_uppercase)
+static void
+convert_case(char *text, svn_boolean_t to_uppercase)
 {
   char *c = text;
   while (*c)
@@ -161,8 +162,8 @@ static void convert_case(char *text, svn_boolean_t to_uppercase)
 
 /* Return the username to authorize, with case-conversion performed if
    CONF->force_username_case is set. */
-static char* get_username_to_authorize(request_rec *r,
-                                       authz_svn_config_rec *conf)
+static char *
+get_username_to_authorize(request_rec *r, authz_svn_config_rec *conf)
 {
   char *username_to_authorize = r->user;
   if (conf->force_username_case)
