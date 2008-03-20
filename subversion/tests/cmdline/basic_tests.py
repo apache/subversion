@@ -247,7 +247,7 @@ def basic_mkdir_url_with_parents(sbox):
   X_Y_Z2_url = sbox.repo_url + '/X/Y/Z2'
   X_T_C_url = sbox.repo_url + '/X/T/C'
   U_V_url = sbox.repo_url + '/U/V'
-  svntest.actions.run_and_verify_svn("erroneous mkdir sans --parent",
+  svntest.actions.run_and_verify_svn("erroneous mkdir sans --parents",
                                      [],
                                      ".*Try 'svn mkdir --parents' instead.*",
                                      'mkdir', '-m', 'log_msg',
