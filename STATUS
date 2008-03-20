@@ -71,11 +71,6 @@ Candidate changes:
     Votes:
       +1: arfrever
 
-  * r29968
-    Avoid unneccessary allocations in the loop.
-    Votes:
-      +1: kameshj
-
 Approved changes:
 
   * r29797
@@ -85,3 +80,8 @@ Approved changes:
       script is otherwise broken.
     Votes:
       +1: dlr, arfrever
+
+  * r29968
+    Avoid unneccessary allocations in the loop.
+    Votes:
+      +1: kameshj, hwright
