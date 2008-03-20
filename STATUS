@@ -29,14 +29,6 @@ Candidate changes:
     Votes:
       +1: joe
 
-  * r29797
-    Fix sample VC6 build script.
-    Justification:
-      User-requested nomination (Masaru Tsuchiyama). I assume that the
-      script is otherwise broken.
-    Votes:
-      +1: dlr
-
   * r29858, r29859, r29876
     Fix some bugs related to merges from foreign repositories,
     including bogus attempts at recording mergeinfo, and the creation of
@@ -85,3 +77,11 @@ Candidate changes:
       +1: kameshj
 
 Approved changes:
+
+  * r29797
+    Fix sample VC6 build script.
+    Justification:
+      User-requested nomination (Masaru Tsuchiyama). I assume that the
+      script is otherwise broken.
+    Votes:
+      +1: dlr, arfrever
