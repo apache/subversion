@@ -400,12 +400,15 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
               void *value;
               const char *source_path;
               apr_array_header_t *rangelist;
+              const char *merge_source_url;
               apr_array_header_t *adjusted_rangelist =
                 apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
               
               apr_hash_this(hi, &key, NULL, &value);
               source_path = key;
               rangelist = value;
+              merge_source_url = svn_path_join(merge_source_root_url,
+                                               source_path + 1, pool);
               
               for (j = 0; j < rangelist->nelts; j++)
                 {
@@ -415,9 +418,6 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                   svn_opt_revision_t peg_rev, rev1_opt, rev2_opt;
                   svn_merge_range_t *range =
                     APR_ARRAY_IDX(rangelist, j, svn_merge_range_t *);
-                  const char *merge_source_url =
-                    svn_path_join(merge_source_root_url, 
-                                  source_path + 1, pool);
                   
                   peg_rev.kind = svn_opt_revision_number;
                   peg_rev.value.number = target_entry->revision;
