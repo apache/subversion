@@ -214,7 +214,7 @@ svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
 
 /** Merge two rangelists consisting of @c svn_merge_range_t *
  * elements, @a *rangelist and @a changes, placing the results in
- * @a *rangelist.
+ * @a *rangelist.  Either rangelist may be empty.
  *
  * When intersecting rangelists are merged, the inheritability of
  * the resulting svn_merge_range_t depends on the inheritability of the
@@ -222,7 +222,8 @@ svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
  *
  * Note: @a *rangelist and @a changes must be sorted as said by @c
  * svn_sort_compare_ranges().  @a *rangelist is guaranteed to remain
- * in sorted order.
+ * in sorted order and be compacted to the minimal number of ranges
+ * needed to represent the merged result.
  *
  * @since New in 1.5.
  */
