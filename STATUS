@@ -79,4 +79,9 @@ Candidate changes:
     Votes:
       +1: arfrever
 
+  * r29968
+    Avoid unneccessary allocations in the loop.
+    Votes:
+      +1: kameshj
+
 Approved changes:
