@@ -766,8 +766,7 @@ public class SVNClient implements SVNClientInterface
      * @since 1.5
      */
     public native void mergeReintegrate(String path, Revision pegRevision,
-                                        String localPath, boolean force,
-                                        boolean dryRun)
+                                        String localPath, boolean dryRun)
             throws ClientException;
 
     /**

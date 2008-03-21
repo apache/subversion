@@ -42,7 +42,11 @@
    authentication realm, and worst of all, this realm overrides the one that
    we pass to sasl_server_new().  If we didn't check this, a user that could
    successfully authenticate in one realm would be able to authenticate
-   in any other realm, simply by appending '@realm' to his username. */
+   in any other realm, simply by appending '@realm' to his username.
+
+   Note that the value returned in *OUT does not need to be
+   '\0'-terminated; we just need to set *OUT_LEN correctly.
+*/
 static int canonicalize_username(sasl_conn_t *conn,
                                  void *context, /* not used */
                                  const char *in, /* the username */
@@ -132,13 +136,24 @@ fail_auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool, sasl_conn_t *sasl_ctx)
   return svn_ra_svn_flush(conn, pool);
 }
 
+/* Like svn_ra_svn_write_cmd_failure, but also clears the given error
+   and sets it to SVN_NO_ERROR. */
+static svn_error_t *
+write_failure(svn_ra_svn_conn_t *conn, apr_pool_t *pool, svn_error_t **err_p)
+{
+  svn_error_t *write_err = svn_ra_svn_write_cmd_failure(conn, pool, *err_p);
+  svn_error_clear(*err_p);
+  *err_p = SVN_NO_ERROR;
+  return write_err;
+}
+
 /* Used if we run into a SASL error outside try_auth(). */
 static svn_error_t *
 fail_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool, sasl_conn_t *sasl_ctx)
 {
   svn_error_t *err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                       sasl_errdetail(sasl_ctx));
-  SVN_ERR(svn_ra_svn_write_cmd_failure(conn, pool, err));
+  SVN_ERR(write_failure(conn, pool, &err));
   return svn_ra_svn_flush(conn, pool);
 }
 
@@ -241,7 +256,7 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
   if (apr_err)
     {
       svn_error_t *err = svn_error_wrap_apr(apr_err, _("Can't get hostname"));
-      SVN_ERR(svn_ra_svn_write_cmd_failure(conn, pool, err));
+      SVN_ERR(write_failure(conn, pool, &err));
       return svn_ra_svn_flush(conn, pool);
     }
 
@@ -256,7 +271,7 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
     {
       svn_error_t *err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                           sasl_errstring(result, NULL, NULL));
-      SVN_ERR(svn_ra_svn_write_cmd_failure(conn, pool, err));
+      SVN_ERR(write_failure(conn, pool, &err));
       return svn_ra_svn_flush(conn, pool);
     }
 
@@ -310,7 +325,7 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
       svn_error_t *err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                           _("Could not obtain the list"
                                           " of SASL mechanisms"));
-      SVN_ERR(svn_ra_svn_write_cmd_failure(conn, pool, err));
+      SVN_ERR(write_failure(conn, pool, &err));
       return svn_ra_svn_flush(conn, pool);
     }
 
@@ -350,7 +365,7 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
           err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                  _("Couldn't obtain the authenticated"
                                  " username"));
-          SVN_ERR(svn_ra_svn_write_cmd_failure(conn, pool, err));
+          SVN_ERR(write_failure(conn, pool, &err));
           return svn_ra_svn_flush(conn, pool);
         }
     }

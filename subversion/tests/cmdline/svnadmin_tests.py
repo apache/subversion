@@ -70,7 +70,8 @@ Item = svntest.wc.StateItem
 def get_txns(repo_dir):
   "Get the txn names using 'svnadmin lstxns'."
 
-  output_lines, error_lines = svntest.main.run_svnadmin('lstxns', repo_dir)
+  exit_code, output_lines, error_lines = svntest.main.run_svnadmin('lstxns',
+                                                                   repo_dir)
   txns = map(output_lines.strip, output_lines)
 
   # sort, just in case
@@ -88,8 +89,7 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
   if type(dump) is type(""):
     dump = [ dump ]
 
-  output, errput = \
-          svntest.main.run_command_stdin(
+  exit_code, output, errput = svntest.main.run_command_stdin(
     svntest.main.svnadmin_binary, expected_stderr, 1, dump,
     'load', '--quiet', sbox.repo_dir, *varargs)
 
@@ -142,7 +142,7 @@ def test_create(sbox):
   repo_dir = sbox.repo_dir
   wc_dir = sbox.wc_dir
 
-  svntest.main.safe_rmtree(repo_dir)
+  svntest.main.safe_rmtree(repo_dir, 1)
   svntest.main.safe_rmtree(wc_dir)
 
   svntest.main.create_repos(repo_dir)
@@ -276,7 +276,7 @@ def dump_copied_dir(sbox):
   svntest.main.run_svn(None, 'ci', wc_dir, '--quiet',
                        '-m', 'log msg')
 
-  output, errput = svntest.main.run_svnadmin("dump", repo_dir)
+  exit_code, output, errput = svntest.main.run_svnadmin("dump", repo_dir)
   if svntest.verify.compare_and_display_lines(
     "Output of 'svnadmin dump' is unexpected.",
     'STDERR', ["* Dumped revision 0.\n",
@@ -299,14 +299,15 @@ def dump_move_dir_modify_child(sbox):
   svntest.main.file_append(os.path.join(Q_path, 'lambda'), 'hello')
   svntest.main.run_svn(None, 'ci', wc_dir, '--quiet',
                        '-m', 'log msg')
-  output, errput = svntest.main.run_svnadmin("dump", repo_dir)
+  exit_code, output, errput = svntest.main.run_svnadmin("dump", repo_dir)
   svntest.verify.compare_and_display_lines(
     "Output of 'svnadmin dump' is unexpected.",
     'STDERR', ["* Dumped revision 0.\n",
                "* Dumped revision 1.\n",
                "* Dumped revision 2.\n"], errput)
 
-  output, errput = svntest.main.run_svnadmin("dump", "-r", "0:HEAD", repo_dir)
+  exit_code, output, errput = svntest.main.run_svnadmin("dump", "-r",
+                                                        "0:HEAD", repo_dir)
   svntest.verify.compare_and_display_lines(
     "Output of 'svnadmin dump' is unexpected.",
     'STDERR', ["* Dumped revision 0.\n",
@@ -320,7 +321,8 @@ def dump_quiet(sbox):
 
   sbox.build(create_wc = False)
 
-  output, errput = svntest.main.run_svnadmin("dump", sbox.repo_dir, '--quiet')
+  exit_code, output, errput = svntest.main.run_svnadmin("dump", sbox.repo_dir,
+                                                        '--quiet')
   svntest.verify.compare_and_display_lines(
     "Output of 'svnadmin dump --quiet' is unexpected.",
     'STDERR', [], errput)
@@ -336,16 +338,20 @@ def hotcopy_dot(sbox):
   cwd = os.getcwd()
 
   os.chdir(backup_dir)
-  output, errput = svntest.main.run_svnadmin("hotcopy",
-                                             os.path.join(cwd, sbox.repo_dir),
-                                             '.')
+  exit_code, output, errput = svntest.main.run_svnadmin(
+    "hotcopy", os.path.join(cwd, sbox.repo_dir), '.')
+
   if errput:
     raise svntest.Failure
 
   os.chdir(cwd)
 
-  origout, origerr = svntest.main.run_svnadmin("dump", sbox.repo_dir, '--quiet')
-  backout, backerr = svntest.main.run_svnadmin("dump", backup_dir, '--quiet')
+  exit_code, origout, origerr = svntest.main.run_svnadmin("dump",
+                                                          sbox.repo_dir,
+                                                          '--quiet')
+  exit_code, backout, backerr = svntest.main.run_svnadmin("dump",
+                                                          backup_dir,
+                                                          '--quiet')
   if origerr or backerr or origout != backout:
     raise svntest.Failure
 
@@ -356,8 +362,9 @@ def hotcopy_format(sbox):
   sbox.build()
 
   backup_dir, backup_url = sbox.add_repo_path('backup')
-  output, errput = svntest.main.run_svnadmin("hotcopy", sbox.repo_dir,
-                                             backup_dir)
+  exit_code, output, errput = svntest.main.run_svnadmin("hotcopy",
+                                                        sbox.repo_dir,
+                                                        backup_dir)
   if errput:
     print "Error: hotcopy failed"
     raise svntest.Failure
@@ -383,9 +390,11 @@ def setrevprop(sbox):
 
   # Try a simple log property modification.
   iota_path = os.path.join(sbox.wc_dir, "iota")
-  output, errput = svntest.main.run_svnadmin("setlog", sbox.repo_dir,
-                                             "-r0", "--bypass-hooks",
-                                             iota_path)
+  exit_code, output, errput = svntest.main.run_svnadmin("setlog",
+                                                        sbox.repo_dir,
+                                                        "-r0",
+                                                        "--bypass-hooks",
+                                                        iota_path)
   if errput:
     print "Error: 'setlog' failed"
     raise svntest.Failure
@@ -401,8 +410,10 @@ def setrevprop(sbox):
   foo_path = os.path.join(sbox.wc_dir, "foo")
   svntest.main.file_write(foo_path, "foo")
 
-  output, errput = svntest.main.run_svnadmin("setrevprop", sbox.repo_dir,
-                                             "-r0", "svn:author", foo_path)
+  exit_code, output, errput = svntest.main.run_svnadmin("setrevprop",
+                                                        sbox.repo_dir,
+                                                        "-r0", "svn:author",
+                                                        foo_path)
   if errput:
     print "Error: 'setrevprop' failed"
     raise svntest.Failure
@@ -425,7 +436,8 @@ def verify_windows_paths_in_repos(sbox):
                                      'mkdir', '-m', 'log_msg',
                                      chi_url)
 
-  output, errput = svntest.main.run_svnadmin("verify", sbox.repo_dir)
+  exit_code, output, errput = svntest.main.run_svnadmin("verify",
+                                                        sbox.repo_dir)
   svntest.verify.compare_and_display_lines(
     "Error while running 'svnadmin verify'.",
     'STDERR', ["* Verified revision 0.\n",
@@ -557,7 +569,8 @@ _0.0.t1-1 add false false /A/B/E/bravo
 """)
   fp.close()
 
-  output, errput = svntest.main.run_svnadmin("verify", "-r2", sbox.repo_dir)
+  exit_code, output, errput = svntest.main.run_svnadmin("verify", "-r2",
+                                                        sbox.repo_dir)
   svntest.verify.verify_outputs(
     message=None, actual_stdout=output, actual_stderr=errput,
     expected_stdout=None,
@@ -585,7 +598,8 @@ def recover_fsfs(sbox):
             os.path.join(sbox.repo_dir, 'db','was_current'));
 
   # Run 'svnadmin recover' and check that the current file is recreated.
-  output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
+  exit_code, output, errput = svntest.main.run_svnadmin("recover",
+                                                        sbox.repo_dir)
   if errput:
     raise SVNUnexpectedStderr(errput)
 
@@ -598,7 +612,8 @@ def recover_fsfs(sbox):
   svntest.main.file_write(current_path, '2\n')
 
   # Run 'svnadmin recover' and check that the current file is fixed.
-  output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
+  exit_code, output, errput = svntest.main.run_svnadmin("recover",
+                                                        sbox.repo_dir)
   if errput:
     raise SVNUnexpectedStderr(errput)
 
@@ -611,7 +626,8 @@ def recover_fsfs(sbox):
   svntest.main.file_write(current_path, '1\n')
 
   # Run 'svnadmin recover' and check that the current file is fixed.
-  output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
+  exit_code, output, errput = svntest.main.run_svnadmin("recover",
+                                                        sbox.repo_dir)
   if errput:
     raise SVNUnexpectedStderr(errput)
 
@@ -629,7 +645,8 @@ def recover_fsfs(sbox):
   svntest.main.file_write(current_path, 'fish\n')
 
   # Run 'svnadmin recover' and check that the current file is fixed.
-  output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
+  exit_code, output, errput = svntest.main.run_svnadmin("recover",
+                                                        sbox.repo_dir)
   if errput:
     raise SVNUnexpectedStderr(errput)
 
@@ -682,7 +699,7 @@ def set_uuid(sbox):
   sbox.build(create_wc=False)
 
   # Squirrel away the original repository UUID.
-  output, errput = svntest.main.run_svnlook('uuid', sbox.repo_dir)
+  exit_code, output, errput = svntest.main.run_svnlook('uuid', sbox.repo_dir)
   if errput:
     raise SVNUnexpectedStderr(errput)
   orig_uuid = output[0].rstrip()
@@ -694,7 +711,7 @@ def set_uuid(sbox):
   # Try generating a brand new UUID.
   svntest.actions.run_and_verify_svnadmin(None, [], None,
                                           'setuuid', sbox.repo_dir)
-  output, errput = svntest.main.run_svnlook('uuid', sbox.repo_dir)
+  exit_code, output, errput = svntest.main.run_svnlook('uuid', sbox.repo_dir)
   if errput:
     raise SVNUnexpectedStderr(errput)
   new_uuid = output[0].rstrip()
@@ -705,7 +722,7 @@ def set_uuid(sbox):
   # Now, try setting the UUID back to the original value.
   svntest.actions.run_and_verify_svnadmin(None, [], None,
                                           'setuuid', sbox.repo_dir, orig_uuid)
-  output, errput = svntest.main.run_svnlook('uuid', sbox.repo_dir)
+  exit_code, output, errput = svntest.main.run_svnlook('uuid', sbox.repo_dir)
   if errput:
     raise SVNUnexpectedStderr(errput)
   new_uuid = output[0].rstrip()
@@ -779,7 +796,8 @@ def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
   
   # Verify 'svnadmin recover' fails when youngest has a revprops
   # file but no revs file.
-  output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
+  exit_code, output, errput = svntest.main.run_svnadmin("recover",
+                                                        sbox.repo_dir)
 
   if svntest.verify.verify_outputs(
     "Output of 'svnadmin recover' is unexpected.", None, errput, None,
@@ -796,7 +814,8 @@ def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
 
   # Verify 'svnadmin recover' fails when youngest has a revs file
   # but no revprops file (issue #2992).
-  output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
+  exit_code, output, errput = svntest.main.run_svnadmin("recover",
+                                                        sbox.repo_dir)
 
   if svntest.verify.verify_outputs(
     "Output of 'svnadmin recover' is unexpected.", None, errput, None,
@@ -814,7 +833,8 @@ def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
 
   # Verify 'svnadmin recover' fails when youngest has a revs file
   # but revprops file is not a file (another aspect of issue #2992).
-  output, errput = svntest.main.run_svnadmin("recover", sbox.repo_dir)
+  exit_code, output, errput = svntest.main.run_svnadmin("recover",
+                                                        sbox.repo_dir)
 
   if svntest.verify.verify_outputs(
     "Output of 'svnadmin recover' is unexpected.", None, errput, None,

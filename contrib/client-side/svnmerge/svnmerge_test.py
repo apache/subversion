@@ -20,12 +20,13 @@ import sys, os
 import types
 import re
 import unittest
-from cStringIO import StringIO
+from StringIO import StringIO
 import shutil
 import svnmerge
 import stat
 import atexit
 import getopt
+import locale
 
 ####
 # IMPORTANT NOTE TO TEST AUTHORS
@@ -48,6 +49,11 @@ try:
 except NameError:
     True, False = 1, 0
 
+class StringIOWithEncoding(StringIO):
+    def __init__(self):
+        StringIO.__init__(self)
+        self.encoding = sys.stdout.encoding
+    
 class TestCase_kwextract(unittest.TestCase):
     def test_basic(self):
         self.assertEqual(svnmerge.kwextract("$Rev: 134 rasky $"), "134 rasky")
@@ -195,7 +201,9 @@ class TestCase_SvnMerge(unittest.TestCase):
         return self.svnmerge2(cmds.split(), *args, **kwargs)
 
     def svnmerge2(self, args, error=False, match=None, nonmatch=None):
-        out = StringIO()
+        # svnmerge's get_commit_log method needs the "encoding" method of
+        # sys.stdout, which is not provided by StringIO
+        out = StringIOWithEncoding()
         sys.stdout = sys.stderr = out
         try:
             try:
@@ -909,8 +917,8 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # test-branch was copied from trunk's r6.  So non-phantom revs
         # since that point should still be available to merge from
         # trunk to test-branch:
-        self.svnmerge("avail -vv --bidirectional", match=r"\n9-10,16$")
-        self.svnmerge("merge -vv --bidirectional", match=r"svn --non-interactive merge --force -r 15:16")
+        self.svnmerge("avail -vv", match=r"\n9-10,16$")
+        self.svnmerge("merge -vv", match=r"svn --non-interactive merge --force -r 15:16")
         p = self.getproperty()
         self.assertEqual("/trunk:1-16", p)
         self.svnmerge("integrated", match=r"^3-16$")
@@ -930,13 +938,13 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         # Not using switch, so must update to get latest repository rev.
         self.launch("svn update", match=r"At revision 18")
 
-        # Ensure default is not to check for reflected revisions.
-        self.svnmerge("avail -vv", match=r"\n17-18$")
-
-        # Now check reflected revision is excluded with --bidirectional flag.
+        # Check reflected revision is excluded with --bidirectional
         self.svnmerge("avail -vv --bidirectional", match=r"\n18$")
 
-        self.svnmerge("merge -vv --bidirectional", match=r"svn --non-interactive merge --force -r 17:18")
+        # and without --bidirectional.
+        self.svnmerge("avail -vv", match=r"\n18$")
+
+        self.svnmerge("merge -vv", match=r"svn --non-interactive merge --force -r 17:18")
         p = self.getproperty()
         self.assertEqual("/branches/test-branch:1-18", p)
 
@@ -1018,13 +1026,16 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.launch("svn update", match=r"At revision 20")
 
         # Initialized revs should not be available for merge
-        self.svnmerge("avail -v --bidirectional", match=r"initialized.*17-18")
+        self.svnmerge("avail -v", match=r"initialized.*17-18")
 
         # Latest revision on trunk which was merged from test-branch2
         # should be available for test-branch with --bidirectional flag.
         self.svnmerge("avail -vv --bidirectional", match=r"merged are:\n20$")
 
-        self.svnmerge("merge -vv --bidirectional", match=r"merge --force -r 19:20")
+        # and also without the --bidirectional flag.
+        self.svnmerge("avail -vv", match=r"merged are:\n20$")
+
+        self.svnmerge("merge -vv", match=r"merge --force -r 19:20")
         p = self.getproperty()
         self.assertEqual("/trunk:1-20", p)
 
@@ -1241,6 +1252,50 @@ D    test3"""
                         match=r"Committed revision 18")
         except AssertionError:
             self.assert_(os.path.isfile("dir_conflicts.prej"))
+
+    def testCommitMessageEncoding(self):
+        """Init svnmerge, modify source head and commit with a message
+        containing non-ASCII caracters, merge, commit, and verify the commit
+        message was correctly encoded."""
+
+        # Initialize svnmerge
+        self.svnmerge2(["init", self.test_repo_url + "/trunk"])
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match = r"Committed revision 14")
+        os.remove("svnmerge-commit-message.txt")
+
+        commit_msg = u"adição no repositório"
+        input_encoding = locale.getdefaultlocale()[1]
+        output_encoding = sys.stdout.encoding
+
+        # Create a file
+        os.chdir("../trunk")
+        open("newfile", "w").close()
+
+        # Create a message containing non-ASCII caracters. The message will be
+        # kept inside a file, so we don't need to worry about Python or the OS
+        # converting the command line before it's sent to svn
+        msg_file = open('msg.txt', 'w')
+        msg_file.write(commit_msg.encode(input_encoding))
+        msg_file.close()
+
+        # Add the file and commit with the message above
+        self.launch("svn add newfile")
+        self.launch('svn commit -F msg.txt', match="Committed revision 15")
+        os.remove('msg.txt')
+        # Check the message was properly encoded by svn (this will currently
+        # only work if the user config file does not override log-encoding)
+        self.launch('svn log -r 15', match=commit_msg.encode(output_encoding))
+
+        # Merge changes into the branch commiting with the message provided by
+        # svnmerge
+        os.chdir("../test-branch")
+        self.svnmerge("merge")
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match="Committed revision 16")
+        # The procedure above should have not misencoded the message
+        self.launch('svn log -r 16', match=commit_msg.encode(output_encoding))
+
 
 if __name__ == "__main__":
     # If an existing template repository and working copy for testing

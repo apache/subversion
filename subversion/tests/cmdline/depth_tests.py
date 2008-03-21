@@ -89,7 +89,8 @@ def verify_depth(msg, depth, path="."):
   """Verifies that PATH has depth DEPTH.  MSG is the failure message."""
   if depth == "infinity":
     # Check for absence of depth line.
-    out, err = svntest.actions.run_and_verify_svn(None, None, [], "info", path)
+    exit_code, out, err = svntest.actions.run_and_verify_svn(None, None,
+                                                             [], "info", path)
     for line in out:
       if line.startswith("Depth:"):
         raise svntest.failure(msg)
@@ -1370,10 +1371,9 @@ def depthy_update_above_dir_to_be_deleted(sbox):
     "empty" : sbox.clone_dependent(copy_wc=True),
     }
 
-  output, err = \
-    svntest.actions.run_and_verify_svn(None, None, [],
-                                       "delete", "-m", "Delete A.",
-                                       sbox.repo_url + "/A")
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+    None, None, [],
+    "delete", "-m", "Delete A.", sbox.repo_url + "/A")
 
   def empty_output(wc_dir):
     return svntest.wc.State(wc_dir, { })

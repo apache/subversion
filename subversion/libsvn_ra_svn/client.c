@@ -607,8 +607,14 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
 }
 
 
+#ifdef SVN_HAVE_SASL
+#define RA_SVN_DESCRIPTION \
+  N_("Module for accessing a repository using the svn network protocol.\n" \
+     "  - with Cyrus SASL authentication")
+#else
 #define RA_SVN_DESCRIPTION \
   N_("Module for accessing a repository using the svn network protocol.")
+#endif
 
 static const char *ra_svn_get_description(void)
 {

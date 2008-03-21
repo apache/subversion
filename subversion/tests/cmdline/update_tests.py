@@ -587,7 +587,8 @@ def update_to_resolve_text_conflicts(sbox):
   # ### TODO: Can't get run_and_verify_update to work here :-( I get
   # the error "Unequal Types: one Node is a file, the other is a
   # directory". Use run_svn and then run_and_verify_status instead
-  stdout_lines, stdout_lines = svntest.main.run_svn(None, 'up', wc_backup)
+  exit_code, stdout_lines, stdout_lines = svntest.main.run_svn(None, 'up',
+                                                               wc_backup)
   if len (stdout_lines) > 0:
     print "update 2 failed"
     raise svntest.Failure
@@ -970,7 +971,7 @@ def update_receive_illegal_name(sbox):
   # Do the update twice, both should fail.  After the first failure
   # the wc will be marked "incomplete".
   for n in range(2):
-    out, err = svntest.main.run_svn(1, 'up', wc_dir)
+    exit_code, out, err = svntest.main.run_svn(1, 'up', wc_dir)
     for line in err:
       if line.find("an unversioned directory of the same " \
                    "name already exists") != -1:
@@ -980,7 +981,7 @@ def update_receive_illegal_name(sbox):
 
   # At one stage an obstructed update in an incomplete wc would leave
   # a txn behind
-  out, err = svntest.main.run_svnadmin('lstxns', sbox.repo_dir)
+  exit_code, out, err = svntest.main.run_svnadmin('lstxns', sbox.repo_dir)
   if out or err:
     raise svntest.Failure
 
@@ -1826,8 +1827,9 @@ def update_copy_of_old_rev(sbox):
   url2 = sbox.repo_url + '/A2/mu'
 
   # Remember the original text of the file
-  text_r1, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                    'cat', '-r1', url)
+  exit_code, text_r1, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                               'cat', '-r1',
+                                                               url)
 
   # Commit a different version of the file
   svntest.main.file_write(file, "Second revision of 'mu'\n")
@@ -2066,9 +2068,10 @@ def forced_update_failures(sbox):
   I_url = sbox.repo_url + "/A/C/I"
   os.remove(I_path)
   os.mkdir(I_path)
-  so, se = svntest.actions.run_and_verify_svn("Unexpected error during co",
-                                              ['Checked out revision 2.\n'],
-                                              [], "co", I_url, I_path)
+  exit_code, so, se = svntest.actions.run_and_verify_svn(
+    "Unexpected error during co",
+    ['Checked out revision 2.\n'], [],
+    "co", I_url, I_path)
 
   svntest.actions.run_and_verify_update(C_Path, None, None, None,
                                         ".*Failed to add " + \

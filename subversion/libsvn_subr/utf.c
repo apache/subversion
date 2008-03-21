@@ -471,8 +471,12 @@ convert_to_stringbuf(xlate_handle_node_t *node,
   apr_size_t destlen = buflen;
   char *destbuf;
 
-  /* Initialize *DEST to an empty stringbuf. */
-  *dest = svn_stringbuf_create("", pool);
+  /* Initialize *DEST to an empty stringbuf.
+     A 1:2 ratio of input bytes to output bytes (as assigned above)
+     should be enough for most translations, and if it turns out not
+     to be enough, we'll grow the buffer again, sizing it based on a
+     1:3 ratio of the remainder of the string. */
+  *dest = svn_stringbuf_create_ensure(buflen + 1, pool);
   destbuf = (*dest)->data;
 
   /* Not only does it not make sense to convert an empty string, but
@@ -482,13 +486,6 @@ convert_to_stringbuf(xlate_handle_node_t *node,
 
   do
     {
-      /* A 1:2 ratio of input bytes to output bytes (as assigned above)
-         should be enough for most translations, and if it turns out not
-         to be enough, we'll grow the buffer again, sizing it based on a
-         1:3 ratio of the remainder of the string. */
-
-      svn_stringbuf_ensure(*dest, buflen + 1);
-
       /* Set up state variables for xlate. */
       destlen = buflen - (*dest)->len;
 

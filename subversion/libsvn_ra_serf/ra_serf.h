@@ -97,6 +97,9 @@ typedef struct {
 #ifdef SVN_RA_SERF_SSPI_ENABLED
   /* Optional SSPI context for this connection. */
   serf_sspi_context_t *sspi_context;
+
+  /* Optional SSPI context for the proxy on this connection. */
+  serf_sspi_context_t *proxy_sspi_context;
 #endif
 
   /* Current authorization header used for the proxy server; may be NULL */
@@ -191,6 +194,10 @@ struct svn_ra_serf__session_t {
   const char *proxy_username;
   const char *proxy_password;
   int proxy_auth_attempts;
+
+  /* SSL server certificates */
+  svn_boolean_t trust_default_ca;
+  const char *ssl_authorities;
 };
 
 /*
