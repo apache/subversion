@@ -2363,7 +2363,7 @@ public class BasicTests extends SVNTests
         try
         {
             client.mergeReintegrate(branchUrl, Revision.HEAD,
-                                    thisTest.getWCPath() + "/A", true, false);
+                                    thisTest.getWCPath() + "/A", false);
             fail("reintegrate merged into a mixed-revision WC");
         }
         catch(ClientException e)
@@ -2371,7 +2371,7 @@ public class BasicTests extends SVNTests
             // update the WC (to r6) and try again
             client.update(thisTest.getWCPath(), Revision.HEAD, true);
             client.mergeReintegrate(branchUrl, Revision.HEAD,
-                                    thisTest.getWCPath() + "/A", true, false);
+                                    thisTest.getWCPath() + "/A", false);
         }
         // commit the changes so that we can verify merge
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),

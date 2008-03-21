@@ -186,6 +186,15 @@ svn_stringbuf_t *svn_stringbuf_create(const char *cstring,
 svn_stringbuf_t *svn_stringbuf_ncreate(const char *bytes,
                                        apr_size_t size,
                                        apr_pool_t *pool);
+/** Create a new empty bytestring with at least @a minimum_size bytes of
+ * space available in the memory block.
+ *
+ * (@a minimum_size should include space for the terminating NULL character.)
+ *
+ * @since New in 1.6.
+ */
+svn_stringbuf_t *svn_stringbuf_create_ensure(apr_size_t minimum_size,
+                                             apr_pool_t *pool);
 
 /** Create a new stringbuf with the contents of the given string */
 svn_stringbuf_t *svn_stringbuf_create_from_string(const svn_string_t *str,

@@ -1678,7 +1678,8 @@ svn_stringbuf_from_aprfile(svn_stringbuf_t **result,
 {
   apr_size_t len;
   svn_error_t *err;
-  svn_stringbuf_t *res = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *res = svn_stringbuf_create_ensure(SVN__STREAM_CHUNK_SIZE,
+                                                     pool);
   char *buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
 
   /* XXX: We should check the incoming data for being of type binary. */

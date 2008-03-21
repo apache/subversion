@@ -321,7 +321,7 @@ def get_props(path):
   # respecting the black-box paradigm.
 
   props = {}
-  output, errput = main.run_svn(1, "proplist", path, "--verbose")
+  exit_code, output, errput = main.run_svn(1, "proplist", path, "--verbose")
 
   first_value = 0
   for line in output:

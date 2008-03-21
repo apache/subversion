@@ -21,6 +21,7 @@
 #define APR_WANT_STRFUNC
 #include <apr.h>
 #include <apr_want.h>
+#include <apr_fnmatch.h>
 
 #include <serf.h>
 #include <serf_bucket_types.h>
@@ -41,6 +42,147 @@
 #define XML_STATUS_ERROR 0
 #endif
 
+#if SERF_VERSION_AT_LEAST(0,1,3)
+static const apr_uint32_t serf_failure_map[][2] =
+{
+  { SERF_SSL_CERT_NOTYETVALID,   SVN_AUTH_SSL_NOTYETVALID },
+  { SERF_SSL_CERT_EXPIRED,       SVN_AUTH_SSL_EXPIRED },
+  { SERF_SSL_CERT_SELF_SIGNED,   SVN_AUTH_SSL_UNKNOWNCA },
+  { SERF_SSL_CERT_UNKNOWNCA,     SVN_AUTH_SSL_UNKNOWNCA }
+};
+
+/* Convert serf's SSL failure mask to our own failure mask. */
+static apr_uint32_t
+ssl_convert_serf_failures(int failures)
+{
+  apr_uint32_t svn_failures = 0;
+  apr_size_t i;
+
+  for (i = 0; i < sizeof(serf_failure_map) / (2 * sizeof(apr_uint32_t)); ++i)
+    {
+      if (failures & serf_failure_map[i][0])
+        {
+          svn_failures |= serf_failure_map[i][1];
+          failures &= ~serf_failure_map[i][0];
+        }
+    }
+
+  /* Map any remaining failure bits to our OTHER bit. */
+  if (failures)
+    {
+      svn_failures |= SVN_AUTH_SSL_OTHER;
+    }
+
+  return svn_failures;
+}
+
+static char *
+convert_organisation_to_str(apr_hash_t *org, apr_pool_t *pool)
+{
+  char *str;
+
+  str = apr_psprintf(pool, "%s, %s, %s, %s, %s (%s)",
+                     (char*)apr_hash_get(org, "OU", APR_HASH_KEY_STRING),
+                     (char*)apr_hash_get(org, "O", APR_HASH_KEY_STRING),
+                     (char*)apr_hash_get(org, "L", APR_HASH_KEY_STRING),
+                     (char*)apr_hash_get(org, "ST", APR_HASH_KEY_STRING),
+                     (char*)apr_hash_get(org, "C", APR_HASH_KEY_STRING),
+                     (char*)apr_hash_get(org, "E", APR_HASH_KEY_STRING));
+
+  return str;
+}
+
+static apr_status_t
+ssl_server_cert(void *baton, int failures, 
+                const serf_ssl_certificate_t *cert)
+{
+  svn_ra_serf__connection_t *conn = baton;
+  apr_pool_t *subpool;
+  svn_auth_ssl_server_cert_info_t cert_info;
+  svn_auth_cred_ssl_server_trust_t *server_creds = NULL;
+  svn_auth_iterstate_t *state;
+  const char *realmstring;
+  apr_uint32_t svn_failures;
+  svn_error_t *err;
+  apr_hash_t *issuer, *subject, *serf_cert;
+  void *creds;
+
+  apr_pool_create(&subpool, conn->session->pool);
+
+  /* Construct the realmstring, e.g. https://svn.collab.net:443 */
+  realmstring = apr_uri_unparse(subpool,
+                                &conn->session->repos_url, 
+                                APR_URI_UNP_OMITPATHINFO);
+
+  /* Extract the info from the certificate */
+  subject = serf_ssl_cert_subject(cert, subpool);
+  issuer = serf_ssl_cert_issuer(cert, subpool);
+  serf_cert = serf_ssl_cert_certificate(cert, subpool);
+
+  cert_info.hostname = apr_hash_get(subject, "CN", APR_HASH_KEY_STRING);
+  cert_info.fingerprint = apr_hash_get(serf_cert, "sha1", APR_HASH_KEY_STRING);
+  if (! cert_info.fingerprint)
+    cert_info.fingerprint = apr_pstrdup(subpool, "<unknown>");
+  cert_info.valid_from = apr_hash_get(serf_cert, "notBefore",
+                         APR_HASH_KEY_STRING);
+  if (! cert_info.valid_from)
+    cert_info.valid_from = apr_pstrdup(subpool, "[invalid date]");
+  cert_info.valid_until = apr_hash_get(serf_cert, "notAfter",
+                          APR_HASH_KEY_STRING);
+  if (! cert_info.valid_until)
+    cert_info.valid_until = apr_pstrdup(subpool, "[invalid date]");
+  cert_info.issuer_dname = convert_organisation_to_str(issuer, subpool);
+  cert_info.ascii_cert = "ce"; //ascii_cert;
+
+  svn_failures = ssl_convert_serf_failures(failures);
+
+  /* Match server certificate CN with the hostname of the server */
+  if (cert_info.hostname)
+    {
+      if (apr_fnmatch(cert_info.hostname, conn->hostinfo,
+                      APR_FNM_PERIOD) == APR_FNM_NOMATCH)
+        {
+          svn_failures |= SVN_AUTH_SSL_CNMISMATCH;
+        }
+    }
+
+  svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
+                         SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
+                         &svn_failures);
+
+  svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
+                         SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO,
+                         &cert_info);
+
+  err = svn_auth_first_credentials(&creds, &state,
+                                   SVN_AUTH_CRED_SSL_SERVER_TRUST,
+                                   realmstring,
+                                   conn->session->wc_callbacks->auth_baton,
+                                   subpool);
+  if (err || ! creds)
+    {
+      svn_error_clear(err);
+    }
+  else
+    {
+      server_creds = creds;
+      err = svn_auth_save_credentials(state, subpool);
+      if (err)
+        {
+          /* It would be nice to show the error to the user somehow... */
+          svn_error_clear(err);
+        }
+    }
+
+  svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
+                         SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO, NULL);
+
+  svn_pool_destroy(subpool);
+
+  return server_creds ? APR_SUCCESS : SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED;
+}
+#endif
+
 serf_bucket_t *
 svn_ra_serf__conn_setup(apr_socket_t *sock,
                         void *baton,
@@ -70,6 +212,16 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
           serf_ssl_client_cert_password_set(conn->ssl_context,
                                             svn_ra_serf__handle_client_cert_pw,
                                             conn, conn->session->pool);
+#endif
+#if SERF_VERSION_AT_LEAST(0,1,3)
+          serf_ssl_server_cert_callback_set(conn->ssl_context,
+                                            ssl_server_cert,
+                                            conn);
+          /* See if the user wants us to trust "default" openssl CAs. */
+          if (conn->session->trust_default_ca)
+            {
+              serf_ssl_use_default_certificates(conn->ssl_context);
+            }
 #endif
         }
     }
@@ -993,6 +1145,7 @@ handle_response(serf_request_t *request,
       svn_auth_save_credentials(ctx->session->auth_state, ctx->session->pool);
       ctx->session->auth_attempts = 0;
       ctx->session->auth_state = NULL;
+      ctx->session->realm = NULL;
     }
 
   ctx->conn->last_status_code = sl.code;

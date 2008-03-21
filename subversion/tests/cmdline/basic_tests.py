@@ -189,19 +189,19 @@ def basic_update(sbox):
   # Unversioned paths, those that are not immediate children of a versioned
   # path, are skipped and do not raise an error
   xx_path = os.path.join(wc_dir, 'xx', 'xx')
-  out, err = svntest.actions.run_and_verify_svn("update xx/xx",
-                                                ["Skipped '"+xx_path+"'\n"], [],
-                                                'update', xx_path)
-  out, err = svntest.actions.run_and_verify_svn("update xx/xx",
-                                                [], [],
-                                                'update', '--quiet', xx_path)
+  exit_code, out, err = svntest.actions.run_and_verify_svn(
+    "update xx/xx", ["Skipped '"+xx_path+"'\n"], [],
+    'update', xx_path)
+  exit_code, out, err = svntest.actions.run_and_verify_svn(
+    "update xx/xx", [], [],
+    'update', '--quiet', xx_path)
 
   # URL's are also skipped.
   urls = ('http://localhost/a/b/c', 'http://localhost', 'svn://localhost')
   for url in urls:
-    out, err = svntest.actions.run_and_verify_svn("update " + url,
-                                                  ["Skipped '"+url+"'\n"], [],
-                                                  'update', url)
+    exit_code, out, err = svntest.actions.run_and_verify_svn(
+      "update " + url, ["Skipped '"+url+"'\n"], [],
+      'update', url)
 
 #----------------------------------------------------------------------
 def basic_mkdir_url(sbox):
@@ -243,33 +243,53 @@ def basic_mkdir_url_with_parents(sbox):
 
   sbox.build()
 
-  Y_Z_url = sbox.repo_url + '/Y/Z'
-  svntest.actions.run_and_verify_svn("erroneous mkdir URL URL/subdir",
+  X_Y_Z_url = sbox.repo_url + '/X/Y/Z'
+  X_Y_Z2_url = sbox.repo_url + '/X/Y/Z2'
+  X_T_C_url = sbox.repo_url + '/X/T/C'
+  U_V_url = sbox.repo_url + '/U/V'
+  svntest.actions.run_and_verify_svn("erroneous mkdir sans --parents",
                                      [],
                                      ".*Try 'svn mkdir --parents' instead.*",
                                      'mkdir', '-m', 'log_msg',
-                                     Y_Z_url)
+                                     X_Y_Z_url, X_Y_Z2_url, X_T_C_url, U_V_url)
 
-  svntest.actions.run_and_verify_svn("mkdir URL URL/subdir",
+  svntest.actions.run_and_verify_svn("mkdir --parents",
                                      ["\n", "Committed revision 2.\n"], [],
-                                     'mkdir', '-m', 'log_msg',
-                                     '--parents', Y_Z_url)
+                                     'mkdir', '-m', 'log_msg', '--parents',
+                                     X_Y_Z_url, X_Y_Z2_url, X_T_C_url, U_V_url)
 
   expected_output = wc.State(sbox.wc_dir, {
-    'Y'   : Item(status='A '),
-    'Y/Z' : Item(status='A '),
+    'X'      : Item(status='A '),
+    'X/Y'    : Item(status='A '),
+    'X/Y/Z'  : Item(status='A '),
+    'X/Y/Z2' : Item(status='A '),
+    'X/T'    : Item(status='A '),
+    'X/T/C'  : Item(status='A '),
+    'U'      : Item(status='A '),
+    'U/V'    : Item(status='A '),
     })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
-    'Y'   : Item(),
-    'Y/Z' : Item()
+    'X'      : Item(),
+    'X/Y'    : Item(),
+    'X/Y/Z'  : Item(),
+    'X/Y/Z2' : Item(),
+    'X/T'    : Item(),
+    'X/T/C'  : Item(),
+    'U'      : Item(),
+    'U/V'    : Item(),
     })
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 2)
   expected_status.add({
-    'Y'   : Item(status='  ', wc_rev=2),
-    'Y/Z' : Item(status='  ', wc_rev=2)
+    'X'      : Item(status='  ', wc_rev=2),
+    'X/Y'    : Item(status='  ', wc_rev=2),
+    'X/Y/Z'  : Item(status='  ', wc_rev=2),
+    'X/Y/Z2' : Item(status='  ', wc_rev=2),
+    'X/T'    : Item(status='  ', wc_rev=2),
+    'X/T/C'  : Item(status='  ', wc_rev=2),
+    'U'      : Item(status='  ', wc_rev=2),
+    'U/V'    : Item(status='  ', wc_rev=2),
     })
-
   svntest.actions.run_and_verify_update(sbox.wc_dir,
                                         expected_output,
                                         expected_disk,
@@ -1230,7 +1250,7 @@ def basic_import(sbox):
 
   # import new files into repository
   url = sbox.repo_url + "/dirA/dirB/new_file"
-  output, errput =   svntest.actions.run_and_verify_svn(
+  exit_code, output, errput = svntest.actions.run_and_verify_svn(
     'Cannot change node kind', None, [], 'import',
     '-m', 'Log message for new import', new_path, url)
 
@@ -1365,7 +1385,7 @@ def nonexistent_repository(sbox):
   # if someone runs this test on a system with "/nonexistent_path" in
   # the root directory, the test could fail, and that's just too bad :-).
 
-  output, errput = svntest.actions.run_and_verify_svn(
+  exit_code, output, errput = svntest.actions.run_and_verify_svn(
     None, None, svntest.verify.AnyOutput,
     'log', 'file:///nonexistent_path')
 
@@ -1432,7 +1452,7 @@ def basic_add_ignores(sbox):
   open(foo_c_path, 'w')
   open(foo_o_path, 'w')
 
-  output, err = svntest.actions.run_and_verify_svn(
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
     "No output where some expected", svntest.verify.AnyOutput, [],
     'add', dir_path)
 
@@ -1484,7 +1504,7 @@ def basic_add_no_ignores(sbox):
   open(foo_lo_path, 'w')
   open(foo_rej_path, 'w')
 
-  output, err = svntest.actions.run_and_verify_svn(
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
     "No output where some expected", svntest.verify.AnyOutput, [],
     'add', '--no-ignore', dir_path)
 
@@ -1573,7 +1593,7 @@ def basic_checkout_file(sbox):
 
   iota_url = sbox.repo_url + '/iota'
 
-  output, errput = svntest.main.run_svn(1, 'co', iota_url)
+  exit_code, output, errput = svntest.main.run_svn(1, 'co', iota_url)
 
   for line in errput:
     if line.find("refers to a file") != -1:
@@ -1601,11 +1621,11 @@ def basic_info(sbox):
   os.chdir(sbox.wc_dir)
 
   # Check that "info" works with 0, 1 and more than 1 explicit targets.
-  output, errput = svntest.main.run_svn(None, 'info')
+  exit_code, output, errput = svntest.main.run_svn(None, 'info')
   check_paths(output, ['.'])
-  output, errput = svntest.main.run_svn(None, 'info', 'iota')
+  exit_code, output, errput = svntest.main.run_svn(None, 'info', 'iota')
   check_paths(output, ['iota'])
-  output, errput = svntest.main.run_svn(None, 'info', 'iota', '.')
+  exit_code, output, errput = svntest.main.run_svn(None, 'info', 'iota', '.')
   check_paths(output, ['iota', '.'])
 
 def repos_root(sbox):
@@ -1621,17 +1641,19 @@ def repos_root(sbox):
 
   sbox.build(read_only = True)
 
-  output, errput = svntest.main.run_svn(None, "info",
-                                        sbox.wc_dir)
+  exit_code, output, errput = svntest.main.run_svn(None, "info",
+                                                   sbox.wc_dir)
   check_repos_root(output)
 
-  output, errput = svntest.main.run_svn(None, "info",
-                                        os.path.join(sbox.wc_dir, "A"))
+  exit_code, output, errput = svntest.main.run_svn(None, "info",
+                                                   os.path.join(sbox.wc_dir,
+                                                                "A"))
   check_repos_root(output)
 
-  output, errput = svntest.main.run_svn(None, "info",
-                                        os.path.join(sbox.wc_dir, "A", "B",
-                                                     "lambda"))
+  exit_code, output, errput = svntest.main.run_svn(None, "info",
+                                                   os.path.join(sbox.wc_dir,
+                                                                "A", "B",
+                                                                "lambda"))
   check_repos_root(output)
 
 def basic_peg_revision(sbox):
@@ -1651,16 +1673,16 @@ def basic_peg_revision(sbox):
                        'ci', '-m', 'secret log msg', wc_file)
 
   # Without the trailing "@", expect failure.
-  output, errlines = svntest.actions.run_and_verify_svn(\
+  exit_code, output, errlines = svntest.actions.run_and_verify_svn(
     None, None, ".*Syntax error parsing revision 'abc'", 'cat', wc_file)
-  output, errlines = svntest.actions.run_and_verify_svn(\
+  exit_code, output, errlines = svntest.actions.run_and_verify_svn(
     None, None, ".*Syntax error parsing revision 'abc'", 'cat', url)
 
   # With the trailing "@", expect success.
-  output, errlines = svntest.actions.run_and_verify_svn(None, ["xyz\n"], [],
-                                                        'cat', wc_file+'@')
-  output, errlines = svntest.actions.run_and_verify_svn(None, ["xyz\n"], [],
-                                                        'cat', url+'@')
+  exit_code, output, errlines = svntest.actions.run_and_verify_svn(
+    None, ["xyz\n"], [], 'cat', wc_file+'@')
+  exit_code, output, errlines = svntest.actions.run_and_verify_svn(
+    None, ["xyz\n"], [], 'cat', url+'@')
 
 
 def info_nonhead(sbox):
@@ -1686,9 +1708,10 @@ def info_nonhead(sbox):
                                         None,
                                         wc_dir)
   # Get info for old iota at r1.
-  output, errput = svntest.actions.run_and_verify_svn(None, None, [],
-                                                      'info',
-                                                      furl + '@1', '-r1')
+  exit_code, output, errput = svntest.actions.run_and_verify_svn(None, None,
+                                                                 [], 'info',
+                                                                 furl + '@1',
+                                                                 '-r1')
   got_url = 0
   for line in output:
     if line.find("URL:") >= 0:
@@ -2147,7 +2170,7 @@ def info_nonexisting_file(sbox):
 
   sbox.build(create_wc = False, read_only = True)
   idonotexist_url = sbox.repo_url + '/IdoNotExist'
-  output, errput = svntest.main.run_svn(1, 'info', idonotexist_url)
+  exit_code, output, errput = svntest.main.run_svn(1, 'info', idonotexist_url)
 
   # Check for the correct error message
   for line in errput:

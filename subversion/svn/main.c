@@ -263,8 +263,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        " '" SVN_CL__ACCEPT_BASE "',"
                        /* These two are not implemented yet, so don't
                           waste the user's time with them. */
-                       /* " '" SVN_CL__ACCEPT_MINE "'," */
-                       /* " '" SVN_CL__ACCEPT_THEIRS "'," */
+                       /* " '" SVN_CL__ACCEPT_MINE_CONFLICT "'," */
+                       /* " '" SVN_CL__ACCEPT_THEIRS_CONFLICT "'," */
                        " '" SVN_CL__ACCEPT_MINE_FULL "',"
                        " '" SVN_CL__ACCEPT_THEIRS_FULL "',"
                        "\n                            "
@@ -586,7 +586,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     ("Apply the differences between two sources to a working copy path.\n"
      "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
      "       2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
-     "       3. merge [[-c M]... | [-r N:M]...] [SOURCE[@REV] [WCPATH]]\n"
+     "       3. merge [-c M[,N]... | -r N:M...] SOURCE[@REV] [WCPATH]\n"
      "\n"
      "  1. In the first form, the source URLs are specified at revisions\n"
      "     N and M.  These are the two sources to be compared.  The revisions\n"
@@ -597,15 +597,14 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     be specified.\n"
      "\n"
      "  3. In the third form, SOURCE can be either a URL or a working copy\n"
-     "     path (in which case its corresponding URL is used).  If not\n"
-     "     specified, SOURCE will be the same as WCPATH.  SOURCE in revision\n"
-     "     REV is compared as it existed between revisions N and M for each\n"
-     "     revision range provided.  If REV is not specified, HEAD is\n"
-     "     assumed.  '-c M' is equivalent to '-r <M-1>:M', and '-c -M' does\n"
-     "     the reverse: '-r M:<M-1>'.  If no revision ranges are specified,\n"
-     "     the default range of 1:HEAD is used.  Multiple '-c' and/or '-r'\n"
-     "     instances may be specified, and mixing of forward and reverse\n"
-     "     ranges is allowed.\n"
+     "     path (in which case its corresponding URL is used).  SOURCE (in\n"
+     "     revision REV) is compared as it existed between revisions N and M\n"
+     "     for each revision range provided.  If REV is not specified, HEAD\n"
+     "     is assumed.  '-c M' is equivalent to '-r <M-1>:M', and '-c -M'\n"
+     "     does the reverse: '-r M:<M-1>'.  If no revision ranges are\n"
+     "     specified, the default range of 1:HEAD is used.  Multiple '-c'\n"
+     "     and/or '-r' instances may be specified, and mixing of forward\n"
+     "     and reverse ranges is allowed.\n"
      "\n"
      "  WCPATH is the working copy path that will receive the changes.\n"
      "  If WCPATH is omitted, a default value of '.' is assumed, unless\n"
@@ -786,8 +785,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
                              " '" SVN_CL__ACCEPT_BASE "',"
                              /* These two are not implemented yet, so
                                 don't waste the user's time with them. */
-                             /* " '" SVN_CL__ACCEPT_MINE "'," */
-                             /* " '" SVN_CL__ACCEPT_THEIRS "'," */
+                             /* " '" SVN_CL__ACCEPT_MINE_CONFLICT "'," */
+                             /* " '" SVN_CL__ACCEPT_THEIRS_CONFLICT "'," */
                              " '" SVN_CL__ACCEPT_MINE_FULL "',"
                              " '" SVN_CL__ACCEPT_THEIRS_FULL "')")}} },
 
@@ -1150,41 +1149,47 @@ main(int argc, const char *argv[])
                  _("Can't specify -c with --old"));
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
-          changeno = strtol(opt_arg, &end, 10);
-          if (end == opt_arg || *end != '\0')
-            {
-              err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                     _("Non-numeric change argument "
-                                       "given to -c"));
-              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-            }
-          if (changeno == 0)
-            {
-              err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                     _("There is no change 0"));
-              return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-            }
 
-          /* Figure out the range:
-                -c N  -> -r N-1:N
-                -c -N -> -r N:N-1 */
-          range = apr_palloc(pool, sizeof(*range));
-          if (changeno > 0)
+          do
             {
-              range->start.value.number = changeno - 1;
-              range->end.value.number = changeno;
-            }
-          else
-            {
-              changeno = -changeno;
-              range->start.value.number = changeno;
-              range->end.value.number = changeno - 1;
-            }
-          opt_state.used_change_arg = TRUE;
-          range->start.kind = svn_opt_revision_number;
-          range->end.kind = svn_opt_revision_number;
-          APR_ARRAY_PUSH(opt_state.revision_ranges,
-                         svn_opt_revision_range_t *) = range;
+              changeno = strtol(opt_arg, &end, 10);
+              if (end == opt_arg || !(*end == '\0' || *end == ',') )
+                {
+                  err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                         _("Non-numeric change argument "
+                                           "given to -c"));
+                  return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+                }
+
+              if (changeno == 0)
+                {
+                  err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                         _("There is no change 0"));
+                  return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+                }
+              opt_arg = end + 1;
+
+              /* Figure out the range:
+                    -c N  -> -r N-1:N
+                    -c -N -> -r N:N-1 */
+              range = apr_palloc(pool, sizeof(*range));
+              if (changeno > 0)
+                {
+                  range->start.value.number = changeno - 1;
+                  range->end.value.number = changeno;
+                }
+              else
+                {
+                  changeno = -changeno;
+                  range->start.value.number = changeno;
+                  range->end.value.number = changeno - 1;
+                }
+              opt_state.used_change_arg = TRUE;
+              range->start.kind = svn_opt_revision_number;
+              range->end.kind = svn_opt_revision_number;
+              APR_ARRAY_PUSH(opt_state.revision_ranges,
+                             svn_opt_revision_range_t *) = range;
+            } while (*end != '\0');
         }
         break;
       case 'r':

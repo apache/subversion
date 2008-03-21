@@ -1059,6 +1059,17 @@ svn_error_t *svn_client__get_revprop_table(apr_hash_t **revprop_table,
                                            svn_client_ctx_t *ctx,
                                            apr_pool_t *pool);
 
+
+/** Return TRUE iff revision kind is dependent on the working copy.
+ * Otherwise, return FALSE.
+ */
+#define SVN_CLIENT__REVKIND_NEEDS_WC(kind)                                 \
+  (((kind) == svn_opt_revision_base ||                                     \
+   (kind) == svn_opt_revision_previous ||                                  \
+   (kind) == svn_opt_revision_working ||                                   \
+   (kind) == svn_opt_revision_committed)                                   \
+   ? TRUE : FALSE)
+
 
 #ifdef __cplusplus
 }

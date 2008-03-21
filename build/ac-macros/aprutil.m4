@@ -109,7 +109,7 @@ AC_DEFUN(SVN_DOWNLOAD_APRUTIL,
   echo "get it with SVN and put it in a subdirectory of this source:"
   echo ""
   echo "   svn co \\"
-  echo "    http://svn.apache.org/repos/asf/apr/apr-util/branches/0.9.x \\"
+  echo "    http://svn.apache.org/repos/asf/apr/apr-util/branches/1.2.x \\"
   echo "    apr-util"
   echo ""
   echo "Run that right here in the top level of the Subversion tree."

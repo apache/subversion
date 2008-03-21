@@ -450,8 +450,8 @@ def revert_file_merge_replace_with_history(sbox):
   svntest.tree.compare_trees("disk", actual_disk, expected_disk.old_tree())
 
   # Make sure the revert removed the copy from information.
-  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'info',
-                                                   rho_path)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'info', rho_path)
   for line in output:
     if line.find("Copied") != -1:
       print "Error: Revert didn't get rid of copy from information"
@@ -640,8 +640,8 @@ def revert_replaced_with_history_file_1(sbox):
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
   # Remember the original text of 'mu'
-  text_r1, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                    'cat', mu_path)
+  exit_code, text_r1, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                               'cat', mu_path)
   # delete mu and replace it with a copy of iota
   svntest.main.run_svn(None, 'rm', mu_path)
   svntest.main.run_svn(None, 'mv', iota_path, mu_path)
