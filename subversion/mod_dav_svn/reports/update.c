@@ -696,7 +696,14 @@ upd_change_xxx_prop(void *baton,
               b->last_author = value ?
                 apr_pstrdup(b->pool, value->data) : NULL;
             }
-
+          else if ((strcmp(name, SVN_PROP_ENTRY_LOCK_TOKEN) == 0)
+                   && (! value))
+            {
+              /* We only support delete of lock tokens, not add/modify. */
+              if (! b->removed_props)
+                b->removed_props = apr_array_make(b->pool, 1, sizeof(name));
+              APR_ARRAY_PUSH(b->removed_props, const char *) = qname;
+            }
           return SVN_NO_ERROR;
         }
 #undef NSLEN

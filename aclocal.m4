@@ -23,3 +23,7 @@ sinclude(build/ac-macros/zlib.m4)
 
 # Include the libtool macros
 sinclude(build/libtool.m4)
+sinclude(build/ltoptions.m4)
+sinclude(build/ltsugar.m4)
+sinclude(build/ltversion.m4)
+sinclude(build/lt~obsolete.m4)
