@@ -20,8 +20,10 @@ my @ldpaths = ("$swig_builddir/perl/libsvn_swig_perl/.libs",
                map {"$svnlib_builddir/libsvn_$_/.libs"} (@modules, qw/diff subr
                                                                       ra_local
                                                                       ra_svn
-                                                                      ra_dav
+                                                                      ra_neon
+                                                                      ra_serf
                                                                       fs_base
+                                                                      fs_util
                                                                       fs_fs/));
 my @ldmodules = map {"-lsvn_$_-1"} (@modules, qw/diff subr/);
 
