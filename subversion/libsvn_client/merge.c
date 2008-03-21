@@ -516,8 +516,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
   return SVN_NO_ERROR;
 }
 
-
-/* A svn_wc_diff_callbacks2_t function.  Used for both file and directory
+/* An svn_wc_diff_callbacks3_t function.  Used for both file and directory
    property merges. */
 static svn_error_t *
 merge_props_changed(svn_wc_adm_access_t *adm_access,
@@ -632,7 +631,7 @@ conflict_resolver(svn_wc_conflict_result_t **result,
   return err;
 }
 
-/* A svn_wc_diff_callbacks2_t function. */
+/* An svn_wc_diff_callbacks3_t function. */
 static svn_error_t *
 merge_file_changed(svn_wc_adm_access_t *adm_access,
                    svn_wc_notify_state_t *content_state,
@@ -797,7 +796,7 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* A svn_wc_diff_callbacks2_t function. */
+/* An svn_wc_diff_callbacks3_t function. */
 static svn_error_t *
 merge_file_added(svn_wc_adm_access_t *adm_access,
                  svn_wc_notify_state_t *content_state,
@@ -980,7 +979,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* A svn_wc_diff_callbacks2_t function. */
+/* An svn_wc_diff_callbacks3_t function. */
 static svn_error_t *
 merge_file_deleted(svn_wc_adm_access_t *adm_access,
                    svn_wc_notify_state_t *state,
@@ -1052,7 +1051,7 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* A svn_wc_diff_callbacks2_t function. */
+/* An svn_wc_diff_callbacks3_t function. */
 static svn_error_t *
 merge_dir_added(svn_wc_adm_access_t *adm_access,
                 svn_wc_notify_state_t *state,
@@ -1181,7 +1180,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* A svn_wc_diff_callbacks2_t function. */
+/* An svn_wc_diff_callbacks3_t function. */
 static svn_error_t *
 merge_dir_deleted(svn_wc_adm_access_t *adm_access,
                   svn_wc_notify_state_t *state,
@@ -1251,8 +1250,32 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
+/* An svn_wc_diff_callbacks3_t function. */
+static svn_error_t *
+merge_dir_opened(svn_wc_adm_access_t *adm_access,
+                 const char *path,
+                 svn_revnum_t rev,
+                 void *baton)
+{
+  merge_cmd_baton_t *merge_b = baton;
+      
+  return SVN_NO_ERROR;
+}
+
+/* An svn_wc_diff_callbacks3_t function. */
+static svn_error_t *
+merge_dir_closed(svn_wc_adm_access_t *adm_access,
+                 svn_wc_notify_state_t *state,
+                 const char *path,
+                 void *baton)
+{
+  merge_cmd_baton_t *merge_b = baton;
+
+  return SVN_NO_ERROR;
+}
+
 /* The main callback table for 'svn merge'.  */
-static const svn_wc_diff_callbacks2_t
+static const svn_wc_diff_callbacks3_t
 merge_callbacks =
   {
     merge_file_changed,
@@ -1260,7 +1283,9 @@ merge_callbacks =
     merge_file_deleted,
     merge_dir_added,
     merge_dir_deleted,
-    merge_props_changed
+    merge_props_changed,
+    merge_dir_opened,
+    merge_dir_closed
   };
 
 
@@ -2273,7 +2298,7 @@ drive_merge_report_editor(const char *target_wcpath,
                           svn_depth_t depth,
                           notification_receiver_baton_t *notify_b,
                           svn_wc_adm_access_t *adm_access,
-                          const svn_wc_diff_callbacks2_t *callbacks,
+                          const svn_wc_diff_callbacks3_t *callbacks,
                           merge_cmd_baton_t *merge_b,
                           apr_pool_t *pool)
 {
