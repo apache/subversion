@@ -71,4 +71,13 @@ Candidate changes:
     Votes:
       +1: arfrever
 
+  * r29980
+    For the SWIG/Perl bindings, include the libsvn_{fs_util,ra_neon,ra_serf}
+    libtool directories for `make test', so the tests run against
+    in-tree libraries.
+    Justification:
+      Tests may otherwise fail unexpectedly due to library mismatches.
+    Votes:
+      +1: dlr
+
 Approved changes:
