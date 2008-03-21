@@ -181,6 +181,33 @@ ssl_server_cert(void *baton, int failures,
 
   return server_creds ? APR_SUCCESS : SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED;
 }
+
+static svn_error_t *
+load_authorities(svn_ra_serf__connection_t *conn, const char *authorities,
+                 apr_pool_t *pool)
+{
+  char *files, *file, *last;
+  files = apr_pstrdup(pool, authorities);
+
+  while ((file = apr_strtok(files, ";", &last)) != NULL)
+    {
+      serf_ssl_certificate_t *ca_cert;
+      apr_status_t status = serf_ssl_load_cert_file(&ca_cert, file, pool);
+      if (status == APR_SUCCESS)
+        status = serf_ssl_trust_cert(conn->ssl_context, ca_cert);
+
+      if (status != APR_SUCCESS)
+        {
+          return svn_error_createf
+            (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+             _("Invalid config: unable to load certificate file '%s'"),
+             svn_path_local_style(file, pool));
+        }
+      files = NULL;
+    }
+
+  return SVN_NO_ERROR;
+}
 #endif
 
 serf_bucket_t *
@@ -221,6 +248,19 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
           if (conn->session->trust_default_ca)
             {
               serf_ssl_use_default_certificates(conn->ssl_context);
+            }
+          /* Are there custom CAs to load? */
+          if (conn->session->ssl_authorities)
+            {
+              svn_error_t *err;
+              err = load_authorities(conn, conn->session->ssl_authorities,
+                                     conn->session->pool);
+              if (err) 
+                {
+                  /* TODO: we need a way to pass this error back to the 
+                     caller */
+                  svn_error_clear(err);
+                }
             }
 #endif
         }
