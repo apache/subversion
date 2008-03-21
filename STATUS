@@ -23,12 +23,6 @@ Candidate changes:
     Votes:
       +1: kfogel
 
-  * r29439
-    Simplify (and optimise) parsing of the DAV response header in
-    ra_neon capabilities detection.
-    Votes:
-      +1: joe
-
   * r29858, r29859, r29876
     Fix some bugs related to merges from foreign repositories,
     including bogus attempts at recording mergeinfo, and the creation of
@@ -38,11 +32,21 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
+Approved changes:
+
+  * r29439
+    Simplify (and optimise) parsing of the DAV response header in
+    ra_neon capabilities detection.
+    Votes:
+      +1: joe, kfogel
+
   * r29895
     ra_serf: Handle error contained in report XML during update to avoid an
     abort.
+    Notes: change looks good to me, but see this post for a style question:
+      http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=136267
     Votes:
-      +1: lgo
+      +1: lgo, kfogel
 
   * r29914
     Fix an old mod_dav_svn update REPORT response bug (failure to note stale
@@ -56,20 +60,20 @@ Candidate changes:
       this bug that ra_serf uses, so backport of this fix isn't super-
       high-priority.
     Votes:
-      +1: cmpilato
+      +1: cmpilato, kfogel
 
   * r29920
     Fix the ra_neon skelta-style update REPORT response handler to workaround
     the mod_dav_svn bug fixed in r29914 (but still present in old servers).
     Votes:
-      +1: cmpilato
+      +1: cmpilato, kfogel
 
   * r29801, r29925, r29930
     Support Libtool 2.2.
     Notes:
       r29801 probably isn't required, but minimizes the diff against trunk.
     Votes:
-      +1: arfrever
+      +1: arfrever, kfogel
 
   * r29980
     For the SWIG/Perl bindings, include the libsvn_{fs_util,ra_neon,ra_serf}
@@ -78,6 +82,4 @@ Candidate changes:
     Justification:
       Tests may otherwise fail unexpectedly due to library mismatches.
     Votes:
-      +1: dlr
-
-Approved changes:
+      +1: dlr, kfogel
