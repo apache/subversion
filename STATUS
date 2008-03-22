@@ -14,15 +14,6 @@ Status of 1.5.0:
 
 Candidate changes:
 
-  * r29962
-    Enforce the fact that 'svn merge' requires a merge source.
-    Notes:
-      Should be in 1.5, because 'svn merge' with no arguments won't
-      error otherwise, yet such an invocation is not (currently)
-      meaningful, and therefore should error. 
-    Votes:
-      +1: kfogel
-
   * r29858, r29859, r29876
     Fix some bugs related to merges from foreign repositories,
     including bogus attempts at recording mergeinfo, and the creation of
@@ -34,3 +25,11 @@ Candidate changes:
 
 Approved changes:
 
+  * r29962, r29997
+    Enforce the fact that 'svn merge' requires a merge source.
+    Notes:
+      Should be in 1.5, because 'svn merge' with no arguments won't
+      error otherwise, yet such an invocation is not (currently)
+      meaningful, and therefore should error. 
+    Votes:
+      +1: kfogel, arfrever
