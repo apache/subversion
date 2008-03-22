@@ -457,7 +457,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
                                       apr_pool_t *pool)
 {
   svn_stringbuf_t *buf = svn_stringbuf_create("", pool);
-  char *path;
+  const char *path;
   int i, j, len;
 
   for (i = 0; i < conflicts->nelts; i++)
@@ -465,7 +465,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
       svn_wc_conflict_description_t *conflict =
           APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description_t *);
 
-      path = (char *)conflict->victim_path;
+      path = conflict->victim_path;
       len = strlen(conflict->victim_path);
       if (len == 0)
         return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
@@ -480,8 +480,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
             {
               stringbuf_appendchar(buf, SVN_WC__TREE_CONFLICT_ESCAPE_CHAR);
             }
-          svn_stringbuf_appendbytes(buf, path, 1);
-          path++;
+          svn_stringbuf_appendbytes(buf, &(path[j]), 1);
         }
 
       stringbuf_appendchar(buf, SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR);
