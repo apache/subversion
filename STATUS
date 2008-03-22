@@ -43,5 +43,7 @@ Candidate changes:
      or IPv4-only hosts with multiple A records. See the issue for details.
    Notes: #2382 is a long-standing issue. It was rediscovered
       by Stefan Küng in http://svn.haxx.se/dev/archive-2008-03/0585.shtml
+    Votes
+      +1: epg
 
 Approved changes:
