@@ -23,4 +23,12 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
+ * r29939, r29942, r29986
+   Add validation of SSL server certificates to ra_serf.
+   Notes:
+     Requires serf 0.2 (unreleased), code doesn't get built with older
+     versions.
+   Votes:
+      +1: lgo
+
 Approved changes:
