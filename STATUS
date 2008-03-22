@@ -24,12 +24,3 @@ Candidate changes:
       +1: cmpilato
 
 Approved changes:
-
-  * r29962, r29997
-    Enforce the fact that 'svn merge' requires a merge source.
-    Notes:
-      Should be in 1.5, because 'svn merge' with no arguments won't
-      error otherwise, yet such an invocation is not (currently)
-      meaningful, and therefore should error. 
-    Votes:
-      +1: kfogel, arfrever
