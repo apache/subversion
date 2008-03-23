@@ -23,6 +23,7 @@ import time
 # Our testing module
 import svntest
 from svntest import wc
+from svntest.tree import SVNTreeUnequal
 
 # (abbreviation)
 Item = wc.StateItem
@@ -894,9 +895,12 @@ def merge_catches_nonexistent_target(sbox):
                                         None, wc_dir)
 
   # Merge the change to newfile (from r3) into G, where newfile
-  # doesn't exist.
+  # doesn't exist. This is a tree conflict (use case 4, see
+  # notes/tree-conflicts/detection.txt).
   os.chdir(G_path)
-  expected_output = wc.State('', { })
+  expected_output = wc.State('', {
+    ''         : Item(status='C '),
+    })
   expected_status = wc.State('', {
     ''     : Item(),
     'pi'   : Item(),
@@ -904,6 +908,10 @@ def merge_catches_nonexistent_target(sbox):
     'tau'  : Item(),
     })
   expected_status.tweak(status='  ', wc_rev=1)
+
+  # G_path should be marked as tree-conflicted
+  expected_status.tweak('', status='CM')
+
   expected_disk = wc.State('', {
     'pi'   : Item("This is the file 'pi'.\n"),
     'rho'  : Item("This is the file 'rho'.\n"),
@@ -10827,6 +10835,128 @@ def foreign_repos_2_url(sbox):
   svntest.actions.verify_disk(wc_dir2, expected_disk,
                               None, None, None, None, 1)
 
+#----------------------------------------------------------------------
+
+# Helper for text output.
+def verify_lines(lines, regexes):
+  """Verify that each of the given regular expressions matches exactly
+     one line in the list of lines."""
+  for regex in regexes:
+    found = 0
+    for line in lines:
+      if re.search(regex, line):
+        if found == 1:
+          print "Pattern '%s' found a second time." % regex
+          print "Line: %s" % line
+          raise SVNTreeUnequal
+        lines.remove(line)
+        found = 1
+    if found == 0:
+      print "Pattern '%s' not found." % regex
+      raise SVNTreeUnequal
+
+def tree_conflicts_in_merged_files(sbox):
+  "tree conflicts in merged files"
+
+  # Detect simple tree conflicts among files edited or deleted in a single
+  # directory.
+
+  # See use cases 4-6 in notes/tree-conflicts/use-cases.txt for background.
+  # Note that we do not try to track renames.  The only difference from
+  # the behavior of Subversion 1.4 and 1.5 is the conflicted status of the
+  # parent directory.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Set up tree conflicts in wc 2
+  wc_dir_2 = svntest.actions.set_up_tree_conflicts_for_merge(sbox)
+  j = os.path.join
+  A2 = j(wc_dir, 'A2')
+  D2 = j(wc_dir, 'A2', 'D')
+  G2 = j(wc_dir, 'A2', 'D', 'G')
+  svntest.main.run_svn(None, 'ci', '-m', 'Changes in wc 2.', A2)
+
+  # Merge a revision from url 1 into wc 2
+  expected_output = wc.State(A2, {
+    'D'         : Item(status='C '),
+    'D/sigma'   : Item(status='D '),
+    'D/G'       : Item(status='C '),
+    'D/G/rho'   : Item(status='D '),
+    })
+
+  expected_disk = wc.State('', {
+    'mu'        : Item("This is the file 'mu'.\n"),
+    'B'         : Item(),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("This is the file 'beta'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("This is the file 'psi'.\n"),
+    'D/H/omega' : Item("This is the file 'omega'.\n"),
+    })
+
+  expected_status = wc.State(A2, {
+    ''          : Item(),
+    'mu'        : Item(),
+    'B'         : Item(),
+    'B/lambda'  : Item(),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item(),
+    'B/E/beta'  : Item(),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/sigma'   : Item(),
+    'D/G'       : Item(),
+    'D/G/rho'   : Item(),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item(),
+    'D/H/psi'   : Item(),
+    'D/H/omega' : Item(),
+    })
+  expected_status.tweak(status='  ', wc_rev=3)
+  expected_status.tweak('', status=' M')
+  expected_status.tweak('D', 'D/G', status='C ')
+  expected_status.tweak('D/sigma', 'D/G/rho', status='D ', wc_rev=5)
+
+  expected_skip = wc.State(A2, {
+    'D/gamma'   : Item(),
+    'D/theta'   : Item(),
+    'D/G/pi'    : Item(),
+    'D/G/tau'   : Item(),
+    })
+
+  svntest.actions.run_and_verify_merge(A2, 3, 4,
+                                       sbox.repo_url + '/A',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip)
+
+  # Make sure all victims have been found.
+  exit_code, output, error = svntest.main.run_svn(None, 'info', D2)
+  verify_lines(output,
+               ["Tree conflicts:",
+                "The merge edited the file 'gamma'",  # use case 4
+                #"The merge deleted the file 'sigma'", # use case 5
+                "The merge deleted the file 'theta'", # use case 6
+                ])
+  exit_code, output, error = svntest.main.run_svn(None, 'info', G2)
+  verify_lines(output,
+               ["Tree conflicts:",
+                "The merge edited the file 'pi'",   # use case 4
+                #"The merge deleted the file 'rho'", # use case 5
+                "The merge deleted the file 'tau'", # use case 6
+                ])
+
+
 
 ########################################################################
 # Run the tests
@@ -10927,6 +11057,7 @@ test_list = [ None,
               merge_range_predates_history,
               foreign_repos,
               foreign_repos_2_url,
+              tree_conflicts_in_merged_files,
              ]
 
 if __name__ == '__main__':

@@ -1533,3 +1533,59 @@ def set_up_tree_conflicts(sbox, do_copy=False):
   else:
     main.run_svn(None, 'ci', '-m', 'Changes in wc 1.', wc_dir)
     return wc_dir_2
+
+def set_up_tree_conflicts_for_merge(sbox):
+  """Edit and delete files in two working copies so that tree conflicts
+  will appear.  See notes/tree-conflict/use-cases.txt for background.
+  
+  Some files are in a leaf dir others are in a parent dir, to make sure
+  the global list of tree conflicts works correctly.
+  """
+
+  wc_dir = sbox.wc_dir
+  j = os.path.join
+  A = j(wc_dir, 'A')
+  D = j(wc_dir, 'A', 'D')
+  G = j(wc_dir, 'A', 'D', 'G')
+
+  main.file_write(j(D, 'sigma'), "This is the file 'sigma'\n")
+  main.file_write(j(D, 'theta'), "This is the file 'theta'\n")
+  main.run_svn(None, 'add', j(D, 'sigma'), j(D, 'theta'))
+  main.run_svn(None, 'ci', '-m', 'Create extra test files.', wc_dir)
+  
+  # Create wc 2 as a copy of wc 1.
+  A_url  = sbox.repo_url + '/A'
+  A2_url = sbox.repo_url + '/A2'
+  main.run_svn(None, 'cp', A_url, A2_url, '-m', 'copy A to A2')
+  main.run_svn(None, 'up', wc_dir)
+  A2 = j(wc_dir, 'A2')
+  D2 = j(wc_dir, 'A2', 'D')
+  G2 = j(wc_dir, 'A2', 'D', 'G')
+
+  # Use case 4
+  # Action: Edited
+  main.file_append(j(G, 'pi'), "Edited in wc 1.\n")
+  main.file_append(j(D, 'gamma'), "Edited in wc 1.\n")
+  # Reason: Deleted
+  main.run_svn(None, 'del', j(G2, 'pi'))
+  main.run_svn(None, 'del', j(D2, 'gamma'))
+
+  # Use case 5
+  # Action: Deleted
+  main.run_svn(None, 'del', j(G, 'rho'))
+  main.run_svn(None, 'del', j(D, 'sigma'))
+  # Reason: Edited
+  main.file_append(j(G2, 'rho'), "Edited in wc 2.\n")
+  main.file_append(j(D2, 'sigma'), "Edited in wc 2.\n")
+
+  # Use case 6
+  # Action: Deleted
+  main.run_svn(None, 'del', j(G, 'tau'))
+  main.run_svn(None, 'del', j(D, 'theta'))
+  # Reason: Deleted
+  main.run_svn(None, 'del', j(G2, 'tau'))
+  main.run_svn(None, 'del', j(D2, 'theta'))
+
+  main.run_svn(None, 'ci', '-m', 'Changes in wc 1.', A)
+  main.run_svn(None, 'ci', '-m', 'Changes in wc 2.', A2)
+  return None

@@ -905,11 +905,6 @@ typedef struct svn_wc_notify_t {
       left and right sides of the merge are from the same URL.  In all
       other cases, it is @c NULL.  */
   svn_merge_range_t *merge_range;
-  /** The type of notification that is occurring about tree conflicts. 
-   *
-   * @since New in 1.6.
-   */
-  svn_wc_notify_state_t tree_state;
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
      and svn_wc_dup_notify. */
@@ -4938,6 +4933,17 @@ svn_wc_append_tree_conflict_info_xml(svn_stringbuf_t *str,
                                      svn_wc_conflict_description_t *conflict,
                                      apr_pool_t *pool);
 
+/**
+ * Add a tree conflict to the directory entry belonging to @a adm_access.
+ * Pass a description of the new tree conflict in @a conflict.
+ * Do all allocations in @a pool.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc_add_tree_conflict_data(svn_wc_conflict_description_t *conflict,
+                              svn_wc_adm_access_t *adm_access,
+                              apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

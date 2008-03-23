@@ -581,10 +581,28 @@ svn_wc__tree_conflict_exists(apr_array_header_t *conflicts,
 }
 
 svn_error_t *
-svn_wc__add_tree_conflict_data(svn_stringbuf_t *log_accum,
-                               svn_wc_conflict_description_t *conflict,
-                               svn_wc_adm_access_t *adm_access,
-                               apr_pool_t *pool)
+svn_wc_add_tree_conflict_data(svn_wc_conflict_description_t *conflict,
+                              svn_wc_adm_access_t *adm_access,
+                              apr_pool_t *pool)
+{
+  svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
+
+  SVN_ERR(svn_wc__loggy_add_tree_conflict_data(log_accum,
+                                               conflict,
+                                               adm_access,
+                                               pool));
+
+  SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
+  SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__loggy_add_tree_conflict_data(svn_stringbuf_t *log_accum,
+                                     svn_wc_conflict_description_t *conflict,
+                                     svn_wc_adm_access_t *adm_access,
+                                     apr_pool_t *pool)
 {
   const char *dir_path;
   const svn_wc_entry_t *entry;

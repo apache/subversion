@@ -1143,8 +1143,8 @@ do_entry_deletion(struct edit_baton *eb,
           conflict->action = svn_wc_conflict_action_delete;
           conflict->reason = svn_wc_conflict_reason_edited;
 
-          SVN_ERR(svn_wc__add_tree_conflict_data(log_item, conflict, 
-                                                 adm_access, pool));
+          SVN_ERR(svn_wc__loggy_add_tree_conflict_data(log_item, conflict, 
+                                                       adm_access, pool));
 
         }
     }
@@ -1173,8 +1173,8 @@ do_entry_deletion(struct edit_baton *eb,
       conflict->action = svn_wc_conflict_action_delete;
       conflict->reason = svn_wc_conflict_reason_deleted;
 
-      SVN_ERR(svn_wc__add_tree_conflict_data(log_item, conflict,
-                                             adm_access, pool));
+      SVN_ERR(svn_wc__loggy_add_tree_conflict_data(log_item, conflict,
+                                                   adm_access, pool));
     }
 
   SVN_ERR(svn_wc__loggy_delete_entry(&log_item, adm_access, full_path, pool));
@@ -1748,7 +1748,7 @@ close_directory(void *dir_baton,
                                pool);
       notify->kind = svn_node_dir;
       notify->prop_state = prop_state;
-      notify->tree_state = tree_conflicted
+      notify->content_state = tree_conflicted
           ? svn_wc_notify_state_conflicted
           : svn_wc_notify_state_unknown;
     (*db->edit_baton->notify_func)(db->edit_baton->notify_baton,
@@ -1999,8 +1999,8 @@ open_file(const char *path,
       conflict->reason = svn_wc_conflict_reason_deleted;
 
       /* Write to the parent dir's log */
-      SVN_ERR(svn_wc__add_tree_conflict_data(pb->log_accum, conflict,
-                                             adm_access, pool));
+      SVN_ERR(svn_wc__loggy_add_tree_conflict_data(pb->log_accum, conflict,
+                                                   adm_access, pool));
     }
 
  /* It is interesting to note: everything below is just validation. We
