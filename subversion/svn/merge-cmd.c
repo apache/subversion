@@ -102,7 +102,7 @@ svn_cl__merge(apr_getopt_t *os,
   if (targets->nelts < 1)
     {
       return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0,
-                              _("merge source required"));
+                              _("Merge source required"));
     }
   else  /* Parse at least one, and possible two, sources. */
     {

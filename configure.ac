@@ -31,9 +31,8 @@ AC_PROG_CPP
 # Grab target_cpu, so we can use it in the Solaris pkginfo file
 AC_CANONICAL_TARGET
 
-# Look for an extended grep, this macro appeared in autoconf-2.53b,
-# before that, the search for an EGREP was always performed.
-ifdef([AC_PROG_EGREP],[AC_PROG_EGREP],[])
+# Look for an extended grep
+AC_PROG_EGREP
 
 AC_PROG_LN_S
 
