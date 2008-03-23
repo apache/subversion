@@ -268,6 +268,9 @@ typedef struct merge_cmd_baton_t {
      merge range of requested_end_rev:requested_end_rev. */
   svn_boolean_t target_has_dummy_merge_range;
 
+  /* A list of directories containing tree conflicts. */
+  apr_array_header_t *tree_conflicted_dirs;
+
   /* Pool which has a lifetime limited to one iteration over a given
      merge source, i.e. it is cleared on every call to do_directory_merge()
      or do_file_merge() in do_merge(). */
@@ -303,6 +306,48 @@ is_path_conflicted_by_merge(merge_cmd_baton_t *merge_b)
 {
   return (merge_b->conflicted_paths &&
           apr_hash_count(merge_b->conflicted_paths) > 0);
+}
+
+/* Add the parent dir of VICTIM_PATH to the merge baton's list of 
+   tree-conflicted directories, if it isn't already in the list. */
+static void
+add_parent_to_tree_conflicted_dirs(merge_cmd_baton_t *merge_b,
+                                   const char *victim_path)
+{
+  const char *dir_path, *old_path;
+  int i;
+
+  dir_path = svn_path_dirname(victim_path, merge_b->pool);
+
+  for (i = 0; i < merge_b->tree_conflicted_dirs->nelts; i++)
+    {
+      old_path = APR_ARRAY_IDX(merge_b->tree_conflicted_dirs, i,
+                               const char *);
+      if (strcmp(old_path, dir_path) == 0)
+        return;
+    }
+
+  APR_ARRAY_PUSH(merge_b->tree_conflicted_dirs, const char *) = dir_path;
+}
+
+/* TRUE iff DIR_PATH is in the merge baton's list of tree-conflicted
+   directories. */
+static svn_boolean_t
+is_tree_conflicted_dir_p(merge_cmd_baton_t *merge_b,
+                         const char *dir_path)
+{
+  const char *old_path;
+  int i;
+
+  for (i = 0; i < merge_b->tree_conflicted_dirs->nelts; i++)
+    {
+      old_path = APR_ARRAY_IDX(merge_b->tree_conflicted_dirs, i,
+                               const char *);
+      if (strcmp(old_path, dir_path) == 0)
+        return TRUE;
+    }
+
+  return FALSE;
 }
 
 /* Set *HONOR_MERGEINFO and *RECORD_MERGEINFO (if non-NULL)
@@ -679,6 +724,30 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
 
     if ((! entry) || (kind != svn_node_file))
       {
+        if (! merge_b->record_only)
+          {
+            /* This is use case 4 described in the paper attached to issue
+             * #2282.  See also notes/tree-conflicts/detection.txt
+             */
+            char *victim_path = svn_path_basename(mine, merge_b->pool);
+
+            add_parent_to_tree_conflicted_dirs(merge_b, mine);
+            if (! merge_b->dry_run)
+              {
+                svn_wc_conflict_description_t *conflict;
+
+                conflict = apr_pcalloc(merge_b->pool, 
+                                       sizeof(svn_wc_conflict_description_t));
+                conflict->victim_path = victim_path;
+                conflict->node_kind = svn_node_file;
+                conflict->operation = svn_wc_operation_merge;
+                conflict->action = svn_wc_conflict_action_edit;
+                conflict->reason = svn_wc_conflict_reason_missing;
+                SVN_ERR(svn_wc_add_tree_conflict_data(conflict, adm_access,
+                                                      merge_b->pool));
+              }
+          }
+
         if (content_state)
           *content_state = svn_wc_notify_state_missing;
         if (prop_state)
@@ -1017,6 +1086,33 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
       svn_path_split(mine, &parent_path, NULL, subpool);
       SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
                                   subpool));
+#if 0
+      /* This might be use case 5 described in the paper attached to issue
+       * #2282.  See also notes/tree-conflicts/detection.txt
+       *
+       * TODO: Compare merge left file to target file. If they differ,
+       *       we have a tree conflict.
+       */
+      if (! merge_b->record_only)
+        {
+          add_parent_to_tree_conflicted_dirs(merge_b, mine);
+
+          if (! merge_b->dry_run)
+            {
+              svn_wc_conflict_description_t *conflict;
+
+              conflict = apr_pcalloc(merge_b->pool, 
+                                     sizeof(svn_wc_conflict_description_t));
+              conflict->victim_path = svn_path_basename(mine, merge_b->pool);
+              conflict->node_kind = svn_node_file;
+              conflict->operation = svn_wc_operation_merge;
+              conflict->action = svn_wc_conflict_action_delete;
+              conflict->reason = svn_wc_conflict_reason_edited;
+              SVN_ERR(svn_wc_add_tree_conflict_data(conflict, adm_access,
+                                                    merge_b->pool));
+            }
+        }
+#endif
       /* Passing NULL for the notify_func and notify_baton because
          repos_diff.c:delete_entry() will do it for us. */
       err = svn_client__wc_delete(mine, parent_access, merge_b->force,
@@ -1037,7 +1133,31 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
         *state = svn_wc_notify_state_obstructed;
       break;
     case svn_node_none:
-      /* file is already non-existent, this is a no-op. */
+      /* The file deleted in the diff does not exist at the current URL.
+       *
+       * This is use case 6 described in the paper attached to issue
+       * #2282.  See also notes/tree-conflicts/detection.txt
+       */
+      if (! merge_b->record_only)
+        {
+          add_parent_to_tree_conflicted_dirs(merge_b, mine);
+
+          if (! merge_b->dry_run)
+            {
+              svn_wc_conflict_description_t *conflict;
+
+              conflict = apr_pcalloc(merge_b->pool, 
+                                     sizeof(svn_wc_conflict_description_t));
+              conflict->victim_path = svn_path_basename(mine, merge_b->pool);
+              conflict->node_kind = svn_node_file;
+              conflict->operation = svn_wc_operation_merge;
+              conflict->action = svn_wc_conflict_action_delete;
+              conflict->reason = svn_wc_conflict_reason_deleted;
+              SVN_ERR(svn_wc_add_tree_conflict_data(conflict, adm_access,
+                                                    merge_b->pool));
+            }
+        }
+
       if (state)
         *state = svn_wc_notify_state_missing;
       break;
@@ -1270,6 +1390,17 @@ merge_dir_closed(svn_wc_adm_access_t *adm_access,
                  void *baton)
 {
   merge_cmd_baton_t *merge_b = baton;
+
+  if (state)
+    {
+      /* Check if we encountered any tree conflicts
+       * in this directory while visiting it.
+       */
+      if (is_tree_conflicted_dir_p(merge_b, path))
+        *state = svn_wc_notify_state_conflicted;
+      else
+        *state = svn_wc_notify_state_unknown;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -4900,6 +5031,8 @@ do_merge(apr_array_header_t *merge_sources,
         merge_cmd_baton.first_range = FALSE;
       merge_cmd_baton.ra_session1 = ra_session1;
       merge_cmd_baton.ra_session2 = ra_session2;
+      merge_cmd_baton.tree_conflicted_dirs =
+        apr_array_make(pool, 0, sizeof(const char *));
 
       /* Populate the portions of the merge context baton that require
          an RA session to set, but shouldn't be reset for each iteration. */

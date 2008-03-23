@@ -156,16 +156,16 @@
  *
  */
 
-/* Add a tree conflict to the directory entry belonging to ADM_ACCESS.
- * A command to rewrite the entry field will be append to the log
- * accumulator.  Pass a description of the new tree conflict in CONFLICT.
- * Do all allocations in POOL.
+/* Like svn_wc_add_tree_conflict_data, but also takes a log accumulator
+ * LOC_ACCUM, and does not flush the log.
+ * This function is meant to be used in the working copy library where
+ * log accumulators are usually readily available.
  */
 svn_error_t *
-svn_wc__add_tree_conflict_data(svn_stringbuf_t *log_accum,
-                               svn_wc_conflict_description_t *conflict,
-                               svn_wc_adm_access_t *adm_access,
-                               apr_pool_t *pool);
+svn_wc__loggy_add_tree_conflict_data(svn_stringbuf_t *log_accum,
+                                     svn_wc_conflict_description_t *conflict,
+                                     svn_wc_adm_access_t *adm_access,
+                                     apr_pool_t *pool);
 
 /*
  * Write tree conflicts (svn_wc_conflict_description_t)
