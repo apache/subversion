@@ -139,7 +139,9 @@ Requirements
  * Last-modified recording as a preparation for solving issue #1256 and
    as defined in this mail, also linked from the issue:
    http://svn.haxx.se/dev/archive-2006-10/0193.shtml
- * 
+ * Representing "this node is part of a replaced-with-history tree and
+   I'm *not* in the replacement tree" as well as "... and I'm deleted
+   from the replacement tree" [issues #1962 and #2690]
 
 
 Would-be-very-nice-to-have's
@@ -147,6 +149,9 @@ Would-be-very-nice-to-have's
 
  * Multiple users with a single working copy (aka shared working copy)
  * Ending up with an implementation which can use current WCs
+   (without conversion)
+ * Working copies/ metadata storages without local storage of text-bases
+   (other than a few cached ones)
 
 
 Non-goals
@@ -227,10 +232,8 @@ Problems in wc-1.0
 Possible solutions
 ==================
 
-
 Developer sanity
 ----------------
-
 Strict separation between modules should help keep code focused at one
 task.  Probably some of the required user-specific behaviours can (and
 should) be hidden behind vtables; for example: setting the file stamp
@@ -261,7 +264,6 @@ solely that specific task.
 
 Speed
 -----
-
 wc-1.0 assumes the WORKING tree and the ACTUAL tree match, but then
 goes out of its way to assure they actually do when deemed important.
 The result is a library which calls stat() a lot more often than need be.
@@ -286,12 +288,10 @@ rewritten on most wc-transformations anyway.
 
 Cross node type change representation
 -------------------------------------
-
 ####EHU To be done
 
 Flexibility of metadata storage
 -------------------------------
-
 There are 3 known models for storing metadata as requested by different
 groups of users:
 
@@ -311,7 +311,6 @@ releases).
 
 Transaction duration / memory management
 ----------------------------------------
-
 The current pool-based memory management system is very good at managing
 memory in a transaction-based processing model.  In the wc library, a
 'transaction' often spans more than one call into the library.  We either
@@ -320,7 +319,6 @@ need a different memory management strategy in wc-ng.
 
 Working copy stability
 ----------------------
-
 In light of obstructed updates it may not always be desirable to be able
 to resume the current operation (as currently is the case): in some cases
 the user may want to abort the operation, in other cases the user may
@@ -331,9 +329,7 @@ full working copy transformation, verifying prerequisites, creating
 replacement files and directories and when all that succeeds, update
 the working copy.
 
-Full workin' copy unit tests
-----------------------------
-
+Full workin' copy unit tests:
 Exactly because the working copy is such an important part of the
 Subversion experience *and* because of the 'reputation' of wc-1.0,
 we need a way to ensure wc-ng completely performs according to our
@@ -358,6 +354,8 @@ When applied to files, this can be summarized as:
 Prerequisites for a good wc implementation
 ==========================================
 
+These prerequisites are to be addressed, either as definitions
+in this document, or elsewhere in the subversion (source) tree:
  * Well defined behaviour for cross-node type updates/merges/..
    (tree conflicts in particular)
  * Well defined behaviour for special file handling
@@ -367,7 +365,8 @@ Prerequisites for a good wc implementation
      last-modified handling strategies
  * No special handling of symlinks: they are first class versioned objects
  * Well defined behaviour for property changes on updates/merges/...
-   (this is a problem which may resemble tree conflicts!)
+   (this is a problem which may resemble tree conflicts!),
+   including 'svn:' special properties
  * File name manipulation routines (availability)
  * File name comparison routines (!) (availability; which compensate
      for the different ways Unicode characters can be represented
@@ -433,6 +432,8 @@ These APIs will be implemented by these (currently known) modules:
      * tree spread ('inspired' by wc-1.0)
      * tree root (storing all metadata in the tree root (think darcs))
      * central depot (storing 'somewhere' locally, possibly $HOME)
+        this central store would open up the possibility to share
+        text bases/prop bases across checkouts
      * non-local (retrieving all text and prop-bases from the server,
         except for a number of cached ones) ###EHU: maybe this is
         orthogonal to the question where metadata is stored: in all
