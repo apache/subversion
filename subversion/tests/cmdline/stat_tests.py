@@ -1553,7 +1553,7 @@ def status_with_tree_conflicts(sbox):
                                      "status", "-v", G2)
 
   # check status of G in wc 2, with -xml
-  output, error = svntest.main.run_svn(None, 'status', G2, '--xml')
+  exit_code, output, error = svntest.main.run_svn(None, 'status', G2, '--xml')
 
   template = ["<?xml version=\"1.0\"?>\n",
               "<status>\n",
