@@ -17,11 +17,14 @@
  */
 
 
-#include "svn_types.h"
+#include "svn_checksum.h"
 #include "svn_md5.h"
 #include "svn_sha1.h"
 
 
+
+/* A useful macro:  returns the greater of its arguments. */
+#define MAX(x,y) ((x)>(y)?(x):(y))
 
 svn_checksum_t *
 svn_checksum_create(svn_checksum_kind_t kind,
@@ -47,4 +50,66 @@ svn_checksum_create(svn_checksum_kind_t kind,
   checksum->pool = pool;
 
   return checksum;
+}
+
+svn_boolean_t
+svn_checksum_match(svn_checksum_t *d1,
+                   svn_checksum_t *d2)
+{
+  if (d1->kind != d2->kind)
+    return FALSE;
+
+  switch (d1->kind)
+    {
+      case svn_checksum_md5:
+        return svn_md5_digests_match(d1->digest, d2->digest);
+      case svn_checksum_sha1:
+        return svn_sha1_digests_match(d1->digest, d2->digest);
+      default:
+        /* We really shouldn't get here, but if we do... */
+        return FALSE;
+    }
+}
+
+const char *
+svn_checksum_to_cstring_display(svn_checksum_t *checksum,
+                                apr_pool_t *pool)
+{
+  switch (checksum->kind)
+    {
+      case svn_checksum_md5:
+        return svn_md5_digest_to_cstring_display(checksum->digest, pool);
+      case svn_checksum_sha1:
+        return svn_sha1_digest_to_cstring_display(checksum->digest, pool);
+      default:
+        /* We really shouldn't get here, but if we do... */
+        return NULL;
+    }
+}
+
+const char *
+svn_checksum_to_cstring(svn_checksum_t *checksum,
+                        apr_pool_t *pool)
+{
+  switch (checksum->kind)
+    {
+      case svn_checksum_md5:
+        return svn_md5_digest_to_cstring(checksum->digest, pool);
+      case svn_checksum_sha1:
+        return svn_sha1_digest_to_cstring(checksum->digest, pool);
+      default:
+        /* We really shouldn't get here, but if we do... */
+        return NULL;
+    }
+}
+
+svn_error_t *
+svn_checksum_copy(svn_checksum_t *dest,
+                  svn_checksum_t *src)
+{
+  dest->kind = src->kind;
+  memcpy(dest->digest, src->digest, MAX(APR_MD5_DIGESTSIZE,
+                                        APR_SHA1_DIGESTSIZE));
+
+  return SVN_NO_ERROR;
 }
