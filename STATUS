@@ -45,6 +45,7 @@ Candidate changes:
       by Stefan Küng in http://svn.haxx.se/dev/archive-2008-03/0585.shtml
     Votes
       +1: epg
+      +1: stsp
 
  * r30030
    Always pass --tag=CC / --tag=CXX option to libtool. Checking if libtool
