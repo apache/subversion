@@ -30,6 +30,7 @@
 #include <apr_hash.h>
 #include <apr_tables.h>
 #include <apr_time.h>
+#include <apr_sha1.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -906,46 +907,6 @@ svn_location_segment_dup(svn_location_segment_t *segment,
                          apr_pool_t *pool);
 /** @} */
 
-
-/**
- * Various types of checksums.
- *
- * @since New in 1.5.
- */
-typedef enum
-{
-  svn_checksum_md5,
-  svn_checksum_sha1
-} svn_checksum_kind_t;
-
-/**
- * A generic checksum representation.
- *
- * @since New in 1.5.
- */
-typedef struct svn_checksum_t
-{
-  /** The bytes of the checksum. */
-  unsigned char *digest;
-
-  /** The type of the checksum.  This should never be changed by consumers
-      of the APIs. */
-  svn_checksum_kind_t kind;
-
-  /** The pool to use for new digest allocations.  It should match the
-      pool that this checksum was allocated from. */
-  apr_pool_t *pool;
-} svn_checksum_t;
-
-/**
- * Allocate, initialize and return a @c svn_checksum_t structure of type
- * @a kind.  The checksum is allocated in @a pool.
- *
- * @since New in 1.5.
- */
-svn_checksum_t *
-svn_checksum_create(svn_checksum_kind_t kind,
-                    apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
