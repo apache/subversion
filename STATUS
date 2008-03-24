@@ -46,4 +46,10 @@ Candidate changes:
     Votes
       +1: epg
 
+ * r30030
+   Always pass --tag=CC / --tag=CXX option to libtool. Checking if libtool
+   supports these options gives false results with libtool-2.2.
+   Votes
+      +1: arfrever
+
 Approved changes:
