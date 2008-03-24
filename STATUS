@@ -47,13 +47,3 @@ Candidate changes:
 
 Approved changes:
 
- * r30004
-   Fix the client-side problem described in issue #2382
-   Justification: Without this fix, clients cannot connect reliably
-     to svnserve daemons running on IPv4/IPv6 dual-stack hosts,
-     or IPv4-only hosts with multiple A records. See the issue for details.
-   Notes: #2382 is a long-standing issue. It was rediscovered
-      by Stefan Küng in http://svn.haxx.se/dev/archive-2008-03/0585.shtml
-    Votes
-      +1: epg
-      +1: stsp
