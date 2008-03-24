@@ -126,19 +126,28 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
   if (status)
     return svn_error_createf(status, NULL, _("Unknown hostname '%s'"),
                              hostname);
-
-  /* Create the socket. */
+  /* Iterate through the returned list of addresses attempting to
+   * connect to each in turn. */
+  do
+    {
+      /* Create the socket. */
 #ifdef MAX_SECS_TO_LINGER
-  /* ### old APR interface */
-  status = apr_socket_create(sock, sa->family, SOCK_STREAM, pool);
+      /* ### old APR interface */
+      status = apr_socket_create(sock, sa->family, SOCK_STREAM, pool);
 #else
-  status = apr_socket_create(sock, sa->family, SOCK_STREAM, APR_PROTO_TCP, 
-                             pool);
+      status = apr_socket_create(sock, sa->family, SOCK_STREAM, APR_PROTO_TCP,
+                                 pool);
 #endif
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't create socket"));
-
-  status = apr_socket_connect(*sock, sa);
+      if (status == APR_SUCCESS)
+        {
+          status = apr_socket_connect(*sock, sa);
+          if (status != APR_SUCCESS) 
+            apr_socket_close(*sock);
+        }
+      sa = sa->next;
+    }
+  while (status != APR_SUCCESS && sa);
+ 
   if (status)
     return svn_error_wrap_apr(status, _("Can't connect to host '%s'"),
                               hostname);
