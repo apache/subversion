@@ -47,8 +47,3 @@ Candidate changes:
       +1: epg
 
 Approved changes:
-
- * r30029
-   Fix typo in 'svn resolved' help text.
-   Votes:
-      +1: hwright, glasser.
