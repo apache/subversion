@@ -54,6 +54,7 @@ Blanket commit access:
        kameshj   Kamesh Jayachandran <kamesh@collab.net>
       markphip   Mark Phippard <mphippard@collab.net>
       arfrever   Arfrever Frehtes Taifersar Arahesis <arfrever.fta@gmail.com>
+          stsp   Stefan Sperling <stsp@elego.de>
 
 Commit access for specific areas:
 
@@ -144,8 +145,6 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
           sage   Sage LaTorra <sagelt@gmail.com>             (ctypes-python-
                                                               bindings br.)
        cacknin   Charles Acknin <charlesacknin@gmail.com>    (svnpatch-diff
-                                                                br.)
-          stsp   Stefan Sperling <stsp@elego.de>             (tree-conflicts
                                                                 br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
