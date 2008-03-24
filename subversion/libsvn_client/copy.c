@@ -67,7 +67,8 @@
    source path, combine them and return the result in
    *TARGET_MERGEINFO.  ADM_ACCESS may be NULL, if SRC_PATH_OR_URL is an
    URL.  If NO_REPOS_ACCESS is set, this function is disallowed from
-   consulting the repository about anything.  */
+   consulting the repository about anything.  RA_SESSION may be NULL but
+   only if NO_REPOS_ACCESS is true. */
 static svn_error_t *
 calculate_target_mergeinfo(svn_ra_session_t *ra_session,
                            apr_hash_t **target_mergeinfo,
@@ -161,10 +162,10 @@ extend_wc_mergeinfo(const char *target_wcpath, const svn_wc_entry_t *entry,
                                          adm_access, pool);
 }
 
-/* If WITH_MERGE_HISTORY is TRUE, propagate implied and explicit
-   mergeinfo for WC-local copy/move operations.  Otherwise, either
-   propagate PAIR->dst's explicit (only) mergeinfo, or set empty
-   mergeinfo on PAIR->dst.  Use POOL for temporary allocations. */
+/* Propagate implied and explicit mergeinfo for WC-local copy/move
+   operations.  Otherwise, either propagate PAIR->dst's explicit (only)
+   mergeinfo, or set empty mergeinfo on PAIR->dst.  Use POOL for
+   temporary allocations. */
 static svn_error_t *
 propagate_mergeinfo_within_wc(svn_client__copy_pair_t *pair,
                               svn_wc_adm_access_t *src_access,
@@ -182,12 +183,6 @@ propagate_mergeinfo_within_wc(svn_client__copy_pair_t *pair,
   if (entry->schedule == svn_wc_schedule_normal
       || (entry->schedule == svn_wc_schedule_add && entry->copied))
     {
-      svn_ra_session_t *ra_session;
-      
-      /* Obtain mergeinfo from source. */
-      SVN_ERR(svn_client__open_ra_session_internal(&ra_session, entry->url,
-                                                   "", src_access, NULL,
-                                                   TRUE, TRUE, ctx, pool));
       pair->src_revnum = entry->revision;
       
       /* ASSUMPTION: Non-numeric operative and peg revisions --
@@ -196,7 +191,7 @@ propagate_mergeinfo_within_wc(svn_client__copy_pair_t *pair,
          transformed into repository URLs (as done towards the end
          of the setup_copy() routine), and be handled by a
          different code path. */
-      SVN_ERR(calculate_target_mergeinfo(ra_session, &mergeinfo, 
+      SVN_ERR(calculate_target_mergeinfo(NULL, &mergeinfo, 
                                          src_access, pair->src, 
                                          pair->src_revnum, TRUE, 
                                          ctx, pool));
