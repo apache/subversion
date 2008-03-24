@@ -46,4 +46,11 @@ Candidate changes:
     Votes
       +1: epg
 
+ * r30020
+   Don't contact server during WC->WC moves and copies.  Some old code was still
+   kicking around that opened an RA session from the days when we supported
+   copy/move -g.
+   Votes:
+      +1: pburba
+
 Approved changes:
