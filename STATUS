@@ -36,6 +36,17 @@ Candidate changes:
    Votes:
       +1: lgo
   
+ * r30030
+   Always pass --tag=CC / --tag=CXX option to libtool.
+   Justification: Checking if libtool supports these options gives false
+     results with libtool-2.2.
+   Note: This removes support for libtool <1.5 (but a quick survey showed
+     that nobody was using it, anyway.)
+   Votes
+      +1: arfrever
+
+Approved changes:
+
  * r30004
    Fix the client-side problem described in issue #2382
    Justification: Without this fix, clients cannot connect reliably
@@ -46,11 +57,3 @@ Candidate changes:
     Votes
       +1: epg
       +1: stsp
-
- * r30030
-   Always pass --tag=CC / --tag=CXX option to libtool. Checking if libtool
-   supports these options gives false results with libtool-2.2.
-   Votes
-      +1: arfrever
-
-Approved changes:
