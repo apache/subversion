@@ -1086,33 +1086,43 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
       svn_path_split(mine, &parent_path, NULL, subpool);
       SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
                                   subpool));
-#if 0
+
       /* This might be use case 5 described in the paper attached to issue
        * #2282.  See also notes/tree-conflicts/detection.txt
-       *
-       * TODO: Compare merge left file to target file. If they differ,
-       *       we have a tree conflict.
        */
       if (! merge_b->record_only)
         {
-          add_parent_to_tree_conflicted_dirs(merge_b, mine);
-
-          if (! merge_b->dry_run)
+          /* Compare merge left file to target file. If they differ,
+           * we have a tree conflict.
+           *
+           * TODO: Would svn_stream_contents_same() from libsvn_subr
+           *       be more appropriate here? */
+          svn_diff_t *diff;
+          svn_diff_file_options_t *options;
+          options = svn_diff_file_options_create(subpool);
+          SVN_ERR(svn_diff_file_diff_2(&diff, older, mine, options, subpool));
+          if (svn_diff_contains_diffs(diff))
             {
-              svn_wc_conflict_description_t *conflict;
+              add_parent_to_tree_conflicted_dirs(merge_b, mine);
 
-              conflict = apr_pcalloc(merge_b->pool, 
-                                     sizeof(svn_wc_conflict_description_t));
-              conflict->victim_path = svn_path_basename(mine, merge_b->pool);
-              conflict->node_kind = svn_node_file;
-              conflict->operation = svn_wc_operation_merge;
-              conflict->action = svn_wc_conflict_action_delete;
-              conflict->reason = svn_wc_conflict_reason_edited;
-              SVN_ERR(svn_wc_add_tree_conflict_data(conflict, adm_access,
-                                                    merge_b->pool));
+              if (! merge_b->dry_run)
+                {
+                  svn_wc_conflict_description_t *conflict;
+
+                  conflict = apr_pcalloc(merge_b->pool, 
+                                         sizeof(svn_wc_conflict_description_t));
+                  conflict->victim_path = svn_path_basename(mine,
+                                                            merge_b->pool);
+                  conflict->node_kind = svn_node_file;
+                  conflict->operation = svn_wc_operation_merge;
+                  conflict->action = svn_wc_conflict_action_delete;
+                  conflict->reason = svn_wc_conflict_reason_edited;
+                  SVN_ERR(svn_wc_add_tree_conflict_data(conflict, adm_access,
+                                                        merge_b->pool));
+                }
             }
         }
-#endif
+
       /* Passing NULL for the notify_func and notify_baton because
          repos_diff.c:delete_entry() will do it for us. */
       err = svn_client__wc_delete(mine, parent_access, merge_b->force,

@@ -10839,21 +10839,15 @@ def foreign_repos_2_url(sbox):
 
 # Helper for text output.
 def verify_lines(lines, regexes):
-  """Verify that each of the given regular expressions matches exactly
-     one line in the list of lines."""
+  """Return True if each of the given regular expressions matches
+     exactly one line in the list of lines."""
+  num_patterns_found = 0
   for regex in regexes:
-    found = 0
     for line in lines:
       if re.search(regex, line):
-        if found == 1:
-          print "Pattern '%s' found a second time." % regex
-          print "Line: %s" % line
-          raise SVNTreeUnequal
-        lines.remove(line)
-        found = 1
-    if found == 0:
-      print "Pattern '%s' not found." % regex
-      raise SVNTreeUnequal
+        num_patterns_found += 1
+  #print "found %i patterns, expected %i" % (num_patterns_found, len(regexes))
+  return num_patterns_found == len(regexes)
 
 def tree_conflicts_in_merged_files(sbox):
   "tree conflicts in merged files"
@@ -10942,19 +10936,21 @@ def tree_conflicts_in_merged_files(sbox):
 
   # Make sure all victims have been found.
   exit_code, output, error = svntest.main.run_svn(None, 'info', D2)
-  verify_lines(output,
+  if not verify_lines(output,
                ["Tree conflicts:",
                 "The merge edited the file 'gamma'",  # use case 4
-                #"The merge deleted the file 'sigma'", # use case 5
+                "The merge deleted the file 'sigma'", # use case 5
                 "The merge deleted the file 'theta'", # use case 6
-                ])
+                ]):
+                 raise SVNTreeUnequal
   exit_code, output, error = svntest.main.run_svn(None, 'info', G2)
-  verify_lines(output,
+  if not verify_lines(output,
                ["Tree conflicts:",
                 "The merge edited the file 'pi'",   # use case 4
-                #"The merge deleted the file 'rho'", # use case 5
+                "The merge deleted the file 'rho'", # use case 5
                 "The merge deleted the file 'tau'", # use case 6
-                ])
+                ]):
+                 raise SVNTreeUnequal
 
 
 
