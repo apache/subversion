@@ -1030,8 +1030,141 @@ svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
 }
 
 
+struct filter_log_entry_baton_t
+{
+  apr_array_header_t *rangelist;
+  svn_log_entry_receiver_t log_receiver;
+  void *log_receiver_baton;
+  svn_client_ctx_t *ctx;
+};
+
+/* Implements the svn_log_entry_receiver_t interface.  BATON is a
+   `struct filter_log_entry_baton_t *' */
+static svn_error_t *
+filter_log_entry_with_rangelist(void *baton,
+                                svn_log_entry_t *log_entry,
+                                apr_pool_t *pool)
+{
+  struct filter_log_entry_baton_t *fleb = baton;
+  svn_merge_range_t *range;
+  apr_array_header_t *intersection, *this_rangelist;
+
+  if (fleb->ctx->cancel_func)
+    SVN_ERR(fleb->ctx->cancel_func(fleb->ctx->cancel_baton));
+
+  this_rangelist = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
+  range = apr_pcalloc(pool, sizeof(*range));
+  range->start = log_entry->revision - 1;
+  range->end = log_entry->revision;
+  range->inheritable = TRUE;
+  APR_ARRAY_PUSH(this_rangelist, svn_merge_range_t *) = range;
+  SVN_ERR(svn_rangelist_intersect(&intersection, fleb->rangelist, 
+                                  this_rangelist, pool));
+  if (! (intersection && intersection->nelts))
+    return SVN_NO_ERROR;
+
+  assert (intersection->nelts == 1);
+  return fleb->log_receiver(fleb->log_receiver_baton, log_entry, pool);
+}
+
+
+/* Implements the svn_log_entry_receiver_t interface.  BATON is a
+   pointer to a mergeinfo rangelist array. */
+static svn_error_t *
+append_log_rev_to_rangelist(void *baton,
+                            svn_log_entry_t *log_entry,
+                            apr_pool_t *pool)
+{
+  apr_array_header_t *rangelist = baton;
+  svn_merge_range_t *range = apr_pcalloc(rangelist->pool, sizeof(*range));
+  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
+  range->start = log_entry->revision - 1;
+  range->end = log_entry->revision;
+  range->inheritable = TRUE;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+logs_for_mergeinfo_rangelist(const char *source_url,
+                             apr_array_header_t *rangelist,
+                             svn_boolean_t discover_changed_paths,
+                             svn_log_entry_receiver_t log_receiver,
+                             void *log_receiver_baton,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *pool)
+{
+  apr_array_header_t *target;
+  svn_merge_range_t *oldest_range, *youngest_range;
+  svn_opt_revision_t oldest_rev, youngest_rev;
+  struct filter_log_entry_baton_t fleb;
+
+  if (! rangelist->nelts)
+    return SVN_NO_ERROR;
+
+  /* Build a single-member log target list using SOURCE_URL. */
+  target = apr_array_make(pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(target, const char *) = source_url;
+
+  /* Calculate and construct the bounds of our log request. */
+  youngest_range = APR_ARRAY_IDX(rangelist, rangelist->nelts - 1, 
+                                 svn_merge_range_t *);
+  youngest_rev.kind = svn_opt_revision_number;
+  youngest_rev.value.number = youngest_range->end;
+  oldest_range = APR_ARRAY_IDX(rangelist, 0, svn_merge_range_t *);
+  oldest_rev.kind = svn_opt_revision_number;
+  oldest_rev.value.number = oldest_range->start;
+
+  /* Build the log filtering callback baton. */
+  fleb.rangelist = rangelist;
+  fleb.log_receiver = log_receiver;
+  fleb.log_receiver_baton = log_receiver_baton;
+  fleb.ctx = ctx;
+
+  /* Drive the log. */
+  SVN_ERR(svn_client_log4(target, &youngest_rev, &youngest_rev, &oldest_rev, 
+                          0, discover_changed_paths, FALSE, FALSE, NULL, 
+                          filter_log_entry_with_rangelist, &fleb, ctx, pool));
+
+  /* Check for cancellation. */
+  if (ctx->cancel_func)
+    SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+
+  return SVN_NO_ERROR;
+}
+
 
 /*** Public APIs ***/
+
+svn_error_t *
+svn_client_mergeinfo_log_merged(const char *path_or_url,
+                                const svn_opt_revision_t *peg_revision,
+                                svn_log_entry_receiver_t log_receiver,
+                                void *log_receiver_baton,
+                                svn_boolean_t discover_changed_paths,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *pool)
+{
+  svn_mergeinfo_t mergeinfo;
+  apr_hash_index_t *hi;
+
+  SVN_ERR(svn_client_mergeinfo_get_merged(&mergeinfo, path_or_url,
+                                          peg_revision, ctx, pool));
+
+  if (! mergeinfo)
+    return SVN_NO_ERROR;
+
+  for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      apr_hash_this(hi, &key, NULL, &val);
+      SVN_ERR(logs_for_mergeinfo_rangelist(key, val, discover_changed_paths, 
+                                           log_receiver, log_receiver_baton, 
+                                           ctx, pool));
+    }
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_client_mergeinfo_get_merged(svn_mergeinfo_t *mergeinfo,
@@ -1073,19 +1206,23 @@ svn_client_mergeinfo_get_merged(svn_mergeinfo_t *mergeinfo,
 
 
 svn_error_t *
-svn_client_mergeinfo_get_available(apr_array_header_t **rangelist,
-                                   const char *path_or_url,
+svn_client_mergeinfo_log_available(const char *path_or_url,
                                    const svn_opt_revision_t *peg_revision,
                                    const char *merge_source_url,
+                                   svn_log_entry_receiver_t log_receiver,
+                                   void *log_receiver_baton,
+                                   svn_boolean_t discover_changed_paths,
                                    svn_client_ctx_t *ctx,
                                    apr_pool_t *pool)
 {
   svn_mergeinfo_t mergeinfo, history, source_history, available;
   apr_hash_index_t *hi;
   svn_ra_session_t *ra_session;
-  int num_ranges = 0;
   const char *repos_root;
   apr_pool_t *sesspool;
+  svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
+  apr_array_header_t *rangelist;
+  const char *log_target = NULL;
   svn_opt_revision_t head_revision;
   head_revision.kind = svn_opt_revision_head;
 
@@ -1125,21 +1262,68 @@ svn_client_mergeinfo_get_available(apr_array_header_t **rangelist,
      (SOURCE_HISTORY) the merges already present in our PATH_OR_URL. */
   SVN_ERR(svn_mergeinfo_remove(&available, mergeinfo, source_history, pool));
 
-  /* Finally, we want to provide a simple, single revision range list
-     to our caller.  Now, interestingly, if MERGE_SOURCE_URL has been
-     renamed over time, there's good chance that set of available
-     merges have different paths assigned to them.  Fortunately, we
-     know that we can't have any two paths in AVAILABLE with
-     overlapping revisions (because the original SOURCE_HISTORY also
-     had this property).  So we'll just collapse into one rangelist
-     all the rangelists across all the paths in AVAILABLE. */
-  *rangelist = apr_array_make(pool, num_ranges, sizeof(svn_merge_range_t *));
+  /* Step 3: Now, we iterate over the eligible paths/rangelists to find
+     the youngest revision (and its associated path) and the oldest
+     revision.  Because SOURCE_HISTORY had the property that a
+     revision could appear in at most one mergeinfo path, that same
+     property is true of AVAILABLE (which is a subset of
+     SOURCE_HISTORY).  We'll use this information to bound a run of
+     the logs of the source's history so we can filter out no-op merge
+     revisions.  While here, we'll collapse our rangelists into a
+     single one.  */
+  rangelist = apr_array_make(pool, 64, sizeof(svn_merge_range_t *));
   for (hi = apr_hash_first(pool, available); hi; hi = apr_hash_next(hi))
     {
+      const void *key;
       void *val;
-      apr_hash_this(hi, NULL, NULL, &val);
-      SVN_ERR(svn_rangelist_merge(rangelist, val, pool));
+      svn_merge_range_t *range;
+      apr_array_header_t *list;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      list = val;
+      range = APR_ARRAY_IDX(list, list->nelts - 1, svn_merge_range_t *);
+      if ((! SVN_IS_VALID_REVNUM(youngest_rev)) || (range->end > youngest_rev))
+        {
+          youngest_rev = range->end;
+          log_target = key;
+        }
+      SVN_ERR(svn_rangelist_merge(&rangelist, list, pool));
     }
+
+  /* Nothing eligible?  Get outta here. */
+  if (! rangelist->nelts)
+    return SVN_NO_ERROR;
+
+  qsort(rangelist->elts, rangelist->nelts, 
+        rangelist->elt_size, svn_sort_compare_ranges);
+  log_target = svn_path_url_add_component(repos_root, log_target + 1, pool);
+  return logs_for_mergeinfo_rangelist(log_target, rangelist, 
+                                      discover_changed_paths, log_receiver, 
+                                      log_receiver_baton, ctx, pool);
+}
+
+
+svn_error_t *
+svn_client_mergeinfo_get_available(apr_array_header_t **rangelist,
+                                   const char *path_or_url,
+                                   const svn_opt_revision_t *peg_revision,
+                                   const char *merge_source_url,
+                                   svn_client_ctx_t *ctx,
+                                   apr_pool_t *pool)
+{
+  apr_array_header_t *available = 
+    apr_array_make(pool, 64, sizeof(svn_merge_range_t *));
+  SVN_ERR(svn_client_mergeinfo_log_available(path_or_url, peg_revision,
+                                             merge_source_url, 
+                                             append_log_rev_to_rangelist,
+                                             available, FALSE, ctx, pool));
+  qsort(available->elts, available->nelts, 
+        available->elt_size, svn_sort_compare_ranges);
+  SVN_ERR(svn_rangelist_merge(&available,
+                              apr_array_make(pool, 0, 
+                                             sizeof(svn_merge_range_t *)),
+                              pool));
+  *rangelist = available;
   return SVN_NO_ERROR;
 }
 
