@@ -1524,7 +1524,7 @@ svn_fs_file_length(svn_filesize_t *length_p,
  * it has access to the lowest level storage forms: strings behind
  * representations.
  *
- * @since New in 1.5.
+ * @since New in 1.6.
  */
 svn_error_t *
 svn_fs_file_checksum(svn_checksum_t *checksum,
@@ -1537,7 +1537,7 @@ svn_fs_file_checksum(svn_checksum_t *checksum,
  * file @path into @a digest, which should point to @c APR_MD5_DIGESTSIZE bytes
  * of storage.
  *
- * @deprecated Provided for backward compatibility with the 1.4 API.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 svn_error_t *
 svn_fs_file_md5_checksum(unsigned char digest[],

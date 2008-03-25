@@ -402,12 +402,12 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
 
           prompt = apr_pstrcat(subpool, prompt, ",\n        ", NULL);
           prompt = apr_pstrcat(subpool, prompt,
-                               _("(h) help for more options: "),
+                               _("(s) show all options: "),
                                NULL);
 
           SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt, b->pb, subpool));
 
-          if (strcmp(answer, "h") == 0 || strcmp(answer, "?") == 0)
+          if (strcmp(answer, "s") == 0)
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
               _("  (p)  postpone    - mark the conflict to be "
@@ -421,7 +421,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                 "(lose my changes)\n"
                 "  (l)  launch      - launch external tool to "
                 "resolve conflict\n"
-                "  (h)  help        - show this list\n\n")));
+                "  (s)  show all    - show this list\n\n")));
             }
           else if (strcmp(answer, "p") == 0)
             {
@@ -553,7 +553,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                 "(ignore upstream addition)\n"
                 "  (tf) theirs-full - accept incoming item "
                 "(overwrite pre-existing item)\n"
-                "  (h)  help        - show this list\n\n")));
+                "  (h)  help        - show this help\n\n")));
             }
           if (strcmp(answer, "p") == 0)
             {

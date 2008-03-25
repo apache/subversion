@@ -185,7 +185,10 @@
 ;; Trac ticket links can be enabled in the *svn-log* buffers when using the following:
 ;; (setq svn-log-link-handlers '(trac-ticket-short))
 
+;; ---------------------------
 ;; Frequently asked questions:
+;; ---------------------------
+
 ;; Q1: I need support for user names with blanks/spaces
 ;; A1: Add the user names to svn-user-names-including-blanks and set the
 ;;     svn-pre-parse-status-hook.
@@ -193,6 +196,23 @@
 ;;     output can both contain blanks. Blanks in file names are supported.
 ;;     the svn-user-names-including-blanks list is used to replace the spaces
 ;;     in the user names with - to overcome this problem
+
+;; Q2: My svn-update command it taking a really long time. How can I
+;;     see what's going on?
+;; A2: In the *svn-status* buffer press "s".
+
+;; Q3: How do I enter a username and password?
+;; A3: In the *svn-status* buffer press "s", switch to the
+;;     *svn-process* buffer and press enter. You will be prompted for
+;;     username and password.
+
+;; Q4: What does "?", "M", and "C" in the first column of the
+;;     *svn-status* buffer mean?
+;; A4: "?" means the file(s) is not under Subversion control
+;;     "M" means you have a locally modified file
+;;     "C" means there is a conflict
+;;     "@$&#!" means someone is saying nasty things to you
+
 
 ;; Comments / suggestions and bug reports are welcome!
 
