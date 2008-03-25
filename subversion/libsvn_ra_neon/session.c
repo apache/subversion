@@ -1081,6 +1081,16 @@ svn_ra_neon__open(svn_ra_session_t *session,
             ne_set_proxy_auth(sess, proxy_auth, pab);
             ne_set_proxy_auth(sess2, proxy_auth, pab);
           }
+#ifdef SVN_NEON_0_26
+        else
+          {
+            /* Enable (only) the Negotiate scheme for proxy
+               authentication, if no username/password is
+               configured. */
+            ne_add_proxy_auth(sess, NE_AUTH_NEGOTIATE, NULL, NULL);
+            ne_add_proxy_auth(sess2, NE_AUTH_NEGOTIATE, NULL, NULL);
+          }
+#endif
       }
 
     if (!timeout)

@@ -365,6 +365,13 @@ load_config(svn_ra_serf__session_t *session,
                  SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME, NULL);
   svn_config_get(config, &session->proxy_password, SVN_CONFIG_SECTION_GLOBAL,
                  SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, NULL);
+  /* Load the global ssl settings, if set. */
+  SVN_ERR(svn_config_get_bool(config, &session->trust_default_ca,
+                              SVN_CONFIG_SECTION_GLOBAL,
+                              SVN_CONFIG_OPTION_SSL_TRUST_DEFAULT_CA,
+                              TRUE));
+  svn_config_get(config, &session->ssl_authorities, SVN_CONFIG_SECTION_GLOBAL,
+                 SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES, NULL);
 #endif
 
   server_group = svn_config_find_group(config,
@@ -390,6 +397,14 @@ load_config(svn_ra_serf__session_t *session,
                      SVN_CONFIG_OPTION_HTTP_PROXY_USERNAME, NULL);
       svn_config_get(config, &session->proxy_password, server_group,
                      SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, NULL);
+
+      /* Load the group ssl settings. */
+      SVN_ERR(svn_config_get_bool(config, &session->trust_default_ca,
+                                  server_group,
+                                  SVN_CONFIG_OPTION_SSL_TRUST_DEFAULT_CA,
+                                  TRUE));
+      svn_config_get(config, &session->ssl_authorities, server_group,
+                     SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES, NULL);
 #endif
     }
 

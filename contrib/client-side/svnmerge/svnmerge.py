@@ -217,7 +217,7 @@ def prefix_lines(prefix, lines):
     return prefix + lines[:-1].replace("\n", "\n"+prefix) + "\n"
 
 def recode_stdout_to_file(s):
-    if locale.getdefaultlocale()[1] is None:
+    if locale.getdefaultlocale()[1] is None or sys.stdout.encoding is None:
       return s
     u = s.decode(sys.stdout.encoding)
     return u.encode(locale.getdefaultlocale()[1])

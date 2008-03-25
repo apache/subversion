@@ -3,35 +3,214 @@ Version 1.5.0
 http://svn.collab.net/repos/svn/tags/1.5.0
 
  User-visible changes:
-  - New features:
-    * ...
-    * ...
-    * ...
+  - Major new features:
+    * Merge Tracking [foundational] (issue #820)
+    * Sparse checkouts (see new '--depth' option) (issue #695)
+    * Interactive conflict resolution (r25670 et al)
+    * svn:externals handles relative URLs (issue #1336) and peg URLs
+    * Changelist support
+    * WebDAV transparent write-through proxy
+    * Better support for large FSFS deployments (via sharding & partitioning)
+    * Cyrus SASL support for ra_svn and svnserve (issue #1144)
+
+  - Minor new features and improvements:
+    * 'svn move file1 file2 ... dir' now moves the files into dir (issue #747)
+    * 'svn mkdir' and 'svn copy' now take '--parents' option (issue #1776)
+    * 'svn delete' now takes '--keep-local' to not remove working copy files
+    * 'svn copy', 'move' now support peg revisions (issue #2546; also r26484)
+    * 'svn copy A B ; svn move B C' now the same as 'svn copy A C' (issue #756)
+    * 'svn copy -rBASE' now works in a working copy (issue #1643)
+    * 'svn commit' now takes '--with-revprop' option (issue #1976)
+    * 'svn import' now takes '--force' (issue #2806)
+    * 'svn status -u' now shows of locally deleted directories (issue #2420)
+    * 'svn switch' now takes '--force' (issue #2392)
+    * 'svn switch' now takes '--ignore-externals' option (issue #2189)
+    * 'svn switch' now supports peg revisions (issue #2545)
+    * 'svn checkout' now takes '--force' option (issue #1328)
+    * 'svn proplist' and 'svn propget' now support peg revisions (issue #3070)
+    * 'svn propget' now takes '--xml' option (issue #2696)
+    * 'propedit', 'propset' now support URLs (issue #2238, but see issue #2923)
+    * 'svn proplist --quiet' no longer prints extra info (issue #1547)
+    * 'svn diff --summarize' now takes '--xml' option (issue #2967)
+    * 'svn diff -x' now takes '-p' extension option (issue #2995)
+    * 'svn log' now takes '-c' option (r27933)
+    * 'svn log' now takes '-l' as short form of '--limit' (r25829)
+    * 'svn log --xml' now takes '--with-revprop' option (issue #2850)
+    * 'svn diff'/'svnlook diff' now show property actions better (issue #3019)
+    * 'svn merge' now has informative messages on reverse merges (issue #2848)
+    * 'svn merge FILE' now honors '--ignore-ancestry' (issue #2853, r25891)
+    * 'svn merge' handles multiple notifications for single items (issue #2828)
+    * 'svn merge' handles skipped path better (issue #2829)
+    * 'update', 'checkout', 'switch' now handle obstructions gracefully (r22257)
+    * 'svn update' now takes '--force' (issue #2392)
+    * 'svn update' now sometimes copies or moves local files, for efficiency
+    * 'svnadmin lslocks' now accepts path within repository (issue #2965)
+    * 'svnadmin recover' now supports FSFS repositories (issue #2992)
+    * 'svnadmin verify' now has '-q' and '-r' options (r22103)
+    * 'svnadmin setrevprop' command added (r21736)
+    * 'svnadmin setuuid' command added (r28511)
+    * 'svnsync sync' now shows commit progress like 'svn commit'
+    * 'svnsync' now takes '-q, --quiet' option (r26465)
+    * 'svnsync' now supports separate authn for source/target (issue #2717)
+    * 'svnsync copy-revprops' now supports revision ranges (r23498)
+    * 'svnsync copy-revprops' now supports "HEAD" revision alias (r23500)
+    * 'svnmucc' is new name for contrib tool formerly called 'mucc'
+    * 'svnmucc' now has propset and propdel subcommands (issue #2758)
+    * 'svnmucc' now has more authentication options
+    * 'svnmucc' now now takes '--non-interactive' option (r25977)
+    * 'svnmucc' now takes a global base revision, for extra safety (r23764)
+    * 'svnlook' now takes '--extensions' option (issue #2912)
+    * 'svnlook' now takes '-N' option (issue #2663)
+    * 'svnlook history' now takes '-l' / '--limit' option (r25843)
+    * 'svnserve' now takes '--config-file' option (r24119)
+    * 'mod_dav_svn' now uses Apache default mime-type for files (issue #2304)
+    * now accept "peg dates" (URL@{DATE}), behaving like peg revs (issue #2602)
+    * new '--accept' option for resolving conflicts batch-style (issue #2784)
+    * easier to try out experimental ra_serf http:// access module
+    * select ra_neon vs ra_serf on a site-by-site basis in config (r25535)
+    * client-side post-commit processing now more efficient (issue #2607)
+    * windows binaries now use a custom crash handler (issue #1628)
+    * add vim swap file patterns to default global-ignores (r24348)
+    * add "*.pyc" and "*.pyo" patterns to default global-ignores (issue #2415)
+    * add unix/libtool library patterns to default global-ignores (issue #2415)
+    * naming scheme for conflict files is now configurable (issue #2474)
+    * removed svn-ref.tex as it's extremely out of date (issue #2762)
+    * improved cancellation response in many situations
+    * support Neon up to 0.28
+    * character set conversion now uses native API on Windows (r25650)
+    * HTTP authn protocol now configurable (for Neon 0.26 and higher) (r21531)
+    * http:// (over Neon) supports HTTP redirection / relocation (issue #660)
+    * support PKCS#11-provided (smartcard) SSL client certs with Neon (r29421)
+    * authz now supports aliases (r21982)
+    * authz token rules for authenticated-only, anonymous, and inverse (r23750)
+    * mailer.py now supports properties in commit messages (r21684)
+    * ra_serf now supports NTLM/SSPI authentication (issue #2900)
+    * warn if try to turn off boolean property via propset/propedit (r25486)
+    * display repository basename in XML and HTML index views (r25837, r25838)
+    * config 'http-auth-type' can be overridden to force BASIC auth (r23900)
+    * translation updates for all languages, as usual
+    * Revamp mod_dav_svn logging; see tools/server-side/svn_dav_log_parse.py .
 
   - Client-side bugfixes:
-    * ...
-    * ...
-    * ...
+    * 'svn revert' of missing scheduled addition broke wc (issue #2425)
+    * 'svn export' should export svn:externals from local copies (issue #2429)
+    * 'svn status -uN' should show status of files (issue #2468)
+    * 'svn update' overwrote if local timestamp unchanged (issue #2746)
+    * 'svn update -N' errored when receiving a deletion (issue #3039)
+    * 'svn merge' would delete locally modified props (issue #2857)
+    * 'svn log --xml' could output invalid XML (issue #2866)
+    * 'svn copy' on URL with spaces made wrong WC file name (issue #2955)
+    * 'svn diff' was failing w/ large diffs on Windows (issue #1789)
+    * 'svn delete' no longer deletes locally-modified files (issue #1808)
+    * 'svn move' moved files to wrong directory on Windows (issue #1869)
+    * 'svn revert' mistakenly used leftover .svn-revert files (issue #2927)
+    * 'svn diff' output now shows relative paths (issue #2723)
+    * 'svn diff' wasn't ignoring all EOLs (issue #2920)
+    * 'svn cleanup' no longer fails on a missing .svn/tmp dir (r23370)
+    * infinite loop in UTF conversion in non-C locale (issue #2577)
+    * interrupting "svn status" could make svn crash (issue #2623)
+    * commit-email.pl date header output now RFC2822-compliant (issue #2633)
+    * authz write access to folder wasn't permitting locking (issue #2700)
+    * stop complaining just because $HOME is unreadable (issue #2363)
+    * do not display unescaped characters in error message (issue #2471)
+    * propchange received on subdir merge causes conflict (issue #2969)
+    * revert replaced-with-history files should restore checksum (issue #2928)
+    * catch improper arguments to diff (issue #2996)
+    * handle URLs like http://hostname (i.e. no path part) (issue #1851)
+    * config autoprops honored regardless of case of entry (issue #2036)
+    * "Cannot replace a directory from within" error now rarer (issue #2047)
+    * handle _svn/.svn as part of a path (issue #3026)
+    * make permissions changes on symlinks a no-op (issue #2581)
+    * error usefully if asked to update a URL (r22296)
+    * fixed infinite loop on Windows if fail to find repository root (r22483)
+    * 'svn info $REPO_ROOT' now supports pre-1.2 svn:// servers (r26264)
+    * be more resilient in the face of faulty .svn/entries files (r26482)
+    * 'svn diff -x --ignore-eol-style' failed to ignore all EOLs (r27094)
+    * rare property dataloss bug now fixed (issue #2986, see also r29538)
+    * fixed faulty status reporting for some missing directories (issue #2804)
+    * 'svn diff --summarize' showed wrong output paths (issue #2765)
+    * propset and move interaction could cause property weirdness (r25833)
+    * 'svn propget <propname> .@HEAD' now works (issue #3012)
+    * 'svnsync' had bug with replaced+modified rev over serf (issue #2904)
+    * 'svnsync --config-dir' sometimes ignored, thus tunnel agent bug (r27056)
+    * update/merge safely receives file on top of schedule-add file (r23506)
+    * http:// (over Neon) reports progress while disk-spooling delta (r26271)
+    * print "Out of memory" before dying from memory shortage (issue #2167)
+    * warn when used on old checkout without a repository root entry (r25168)
+    * merge to missing file target wrongly appeared to succeed (issue #2782)
+    * 'svn merge URL PATH -cX' could cause property corruption (issue #2781)
+    * URL parsing now consistently checks for error earlier (issue #2207)
+    * security hole: files could be created above cwd (r26047, CVE-2007-3846)
+    * local property mods to replaced-with-history file could be lost (r26364)
+    * revert of replaced-with-history path left copyfrom info (r23452)
+    * character encoding translation could hang (r23492)
+    * un-substituting keywords was buggy ($Id$ vs. $Id:$) (issue #2640)
+    * ra_neon and ra_serf lost pre-revprop-change hook output (issue #443)
+    * merge of non-empty subdir could be committed incorrectly (issue #1962)
+    * many other minor bugfixes, optimizations, plugs of memory leaks, etc
 
   - Server-side bugfixes:
-    * ...
-    * ...
-    * ...
+    * segfault in svnserve and svnversion commands fixed (issue #2757)
+    * segfault when stopping httpd (if BDB repository) fixed (issue #2732)
+    * 'svnadmin dump' had a path ordering bug (issue #2641)
+    * better FSFS support for NFS v3 and lower (r24470)
+    * better FSFS support for some buggy NFS clients (r29448)
+    * authentication and authz bugs w.r.t. anonymous access (issue #2712)
+    * inconclusive authz result should deny, not allow (r23815)
+    * better reporting of problems parsing authz files (r22329)
+    * set svn:date revprop even if dumpstream does not (issue #2729)
+    * http:// commit can now create empty files properly (r25471, r25474)
+    * squelch not-a-directory errors in both FS backends (issue #2549)
+    * segfault on update-report response without base revision (issue #3023)
+    * 'svnserve --root PATH' checks that PATH exists (r22580, r22701)
+    * 'svnlook propget -t TXN_NAME' reports errors better (r22772)
+    * make location of mod_dav_svn activity database configurable (r24873)
+    * select only paths that are proper children of requested path (r25231)
+    * http:// commit error could leave empty transactions behind (r23594)
+    * 'svn switch --relocate' now works against unreadable repos root (r23848)
+    * many other minor bugfixes too numerous to list here
 
-  - Client<->Server bugfixes:
-    * ...
-    * ...
-    * ...
-
-  - Contributed tools bugfixes:
-    * ...
-    * ...
-    * ...
+  - Contributed tools improvements and bugfixes:
+    * svn_load_dirs.pl:
+      - Support global-ignores list (issue #2470)
+      - Allow "@" in filenames (r22203, Debian bug 359145)
+      - Add -no_auto_exe option (r26399)
+    * svnmerge.py:
+      - fixed: Always get end_rev from source instead of target (issue #2863)
+      - fixed: 'init' now chooses a better default revision range (issue #2810)
+      - fixed: Consider revs changing blocking status as reflected (issue #2814)
+      - Performance inmprovement (issue #2812)
+      - initialized revisions can be excluded (issue #2851)
+    * new 'svn-populate-node-origins-index' tool (issue #3024)
+    * new 'svn-merge-vendor.py' to assist in merging vendor branches (r23030)
+    * 'svn2rss.py' is now called 'svn2feed.py'
+    * svn2cl: New release 0.9 (r24498)
+    * commit-email.pl: various improvements (r22971, r22589)
+    * commit-email.rb: various improvements
+    * psvn.el: too many improvements and new features to list them all here
+    * dsvn.el: improve XEmacs compatibility (r24337)
+    * svn-tweak-author.py: make NEWAUTHOR argument optional (r24387)
+    * And more stuff that we just didn't have time to list.  Enjoy.
 
  Developer-visible changes:
- * ...
- * ...
- * ...
+ * General:
+   - libsvn_ra_neon is new name for libsvn_ra_dav (to accommodate ra_serf)
+   - many abort() calls removed, replaced with error returns
+   - client and server now do capabilities exchange (r29358 et al)
+   - gen_win.py: auto-detect the path to the JDK on Windows (r24333)
+ * API changes:
+   - many, many new APIs and types as part of the new features in 1.5.0
+   - APIs to allow retrieving multiple revprops in one fetch (issue #2850)
+   - basic progress reporting for ra_svn (issue #901)
+   - new APIs for creating and using iterators (r26533)
+   - svn_fs_node_origin_rev finds line of history origin (issue #3017, #3024)
+   - svn_revnum_parse for parsing revision numbers (r26195)
+   - svn_path_is_canonical for validating paths (r26481)
+   - new API svn_fs_txn_root_base_revision() (r22610)
+   - pass individual arguments rather than config objects (r25182, r25190)
+   - clients can now extend HTTP User-Agent header (r28613)
+ * Bindings:
+   - Many improvements to all bindings (Java, Perl, Python, and Ruby)
 
 
 Version 1.4.6
@@ -469,6 +648,7 @@ http://svn.collab.net/repos/svn/tags/1.3.1
      - fixed: pool lifetime bug (r17992)
      - fixed: memory leak (r18230)
      - fixed: race condition during application pool initialization (r18721)
+     - fixed: Make pool parameters optional (issue #2444)
  * ruby bindings:
      - fixed: pool management issue (r17795, -811)
      - fixed: protect baton from garbage collection (r17627)
