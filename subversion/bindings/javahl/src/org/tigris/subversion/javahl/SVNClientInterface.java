@@ -723,7 +723,7 @@ public interface SVNClientInterface
     void cleanup(String path) throws ClientException;
 
     /**
-     * Removes the <i>conflicted</i> state on a WC path (or tree).
+     * Resolves the <i>conflicted</i> state on a WC path (or tree).
      * @param path The path to resolve.
      * @param depth How deep to recurse into child paths.
      * @param conflictResult Which version to choose in the event of a
@@ -731,7 +731,7 @@ public interface SVNClientInterface
      * @throws SubversionException If an error occurs.
      * @since 1.5
      */
-    void resolved(String path, int depth, int conflictResult)
+    void resolve(String path, int depth, int conflictResult)
         throws SubversionException;
 
     /**
