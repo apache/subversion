@@ -45,5 +45,10 @@ Candidate changes:
    Votes
       +1: arfrever
 
+ * r29980
+   Use in-tree libraries in check-swig-pl.
+   Votes:
+     +1: epg
+
 Approved changes:
 
