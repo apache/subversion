@@ -764,17 +764,17 @@ public class SVNClientSynchronized implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public void resolved(String path, int depth, int conflictResult)
+    public void resolve(String path, int depth, int conflictResult)
         throws SubversionException
     {
         synchronized (clazz)
         {
-            worker.resolved(path, depth, conflictResult);
+            worker.resolve(path, depth, conflictResult);
         }
     }
 
     /**
-     * @deprecated Use {@link #resolved(String, int, int)} instead.
+     * @deprecated Use {@link #resolve(String, int, int)} instead.
      * @since 1.0
      */
     public void resolved(String path, boolean recurse) throws ClientException
