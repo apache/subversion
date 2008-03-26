@@ -2809,7 +2809,7 @@ svn_client_revert(const apr_array_header_t *paths,
  */
 
 /**
- * Similar to svn_client_resolved2(), but without automatic conflict
+ * Similar to svn_client_resolve(), but without automatic conflict
  * resolution support.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -2820,9 +2820,7 @@ svn_client_resolved(const char *path,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
 
-/** Remove the 'conflicted' state on a working copy @a path.  This will
- * not semantically resolve conflicts;  it just allows @a path to be
- * committed in the future.  The implementation details are opaque.
+/** Perform automatic conflict resolution on a working copy @a path.
  *
  * If @a depth is @c svn_depth_empty, act only on @a path; if
  * @c svn_depth_files, resolve @a path and its conflicted file
@@ -2852,11 +2850,11 @@ svn_client_resolved(const char *path,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_resolved2(const char *path,
-                     svn_depth_t depth,
-                     svn_wc_conflict_choice_t conflict_choice,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool);
+svn_client_resolve(const char *path,
+                   svn_depth_t depth,
+                   svn_wc_conflict_choice_t conflict_choice,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
 
 
 /** @} */
