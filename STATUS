@@ -49,6 +49,9 @@ Candidate changes:
    Tweak the svn_client_mergeinfo_get_merged() API to not claim to
    populate an svn_mergeinfo_t * structure, since it uses full URLs
    instead of absolute repository filesystem paths in that hash.
+   Notes:
+     If we don't backport this, we'll need to rev the API on trunk
+     to enact this fix.
    Votes:
      +1: cmpilato
 
