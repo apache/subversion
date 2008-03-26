@@ -55,6 +55,14 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r30070
+   Remove the confusing conflict resolution support from 'svn
+   resolved' (which still claimed it didn't do exactly that), 
+   and add instead a new 'svn resolve' subcommand.  'svn resolved'
+   is now deprecated in favor of 'svn resolve --accept working'.
+   Votes:
+     +1: cmpilato
+
 Approved changes:
 
  * r30062, r30067
