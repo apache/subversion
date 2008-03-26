@@ -49,7 +49,7 @@ Candidate changes:
    Don't assert on 'svn commit URL'
    Justification: Asserts are bad.  User reported problem.
    Votes:
-     +1: hwright
+     +1: hwright, stsp
 
 Approved changes:
 
