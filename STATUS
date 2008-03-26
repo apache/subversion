@@ -45,6 +45,13 @@ Candidate changes:
    Votes
       +1: arfrever
 
+ * r30074
+   Follow-up to r30062: Rename resolved2 to resolve in Perl bindings.
+   Votes
+      +1: arfrever
+
+Approved changes:
+
  * r30061
    Tweak the svn_client_mergeinfo_get_merged() API to not claim to
    populate an svn_mergeinfo_t * structure, since it uses full URLs
@@ -53,9 +60,7 @@ Candidate changes:
      If we don't backport this, we'll need to rev the API on trunk
      to enact this fix.
    Votes:
-     +1: cmpilato
-
-Approved changes:
+     +1: cmpilato, arfrever
 
  * r30070
    Remove the confusing conflict resolution support from 'svn
@@ -63,4 +68,4 @@ Approved changes:
    and add instead a new 'svn resolve' subcommand.  'svn resolved'
    is now deprecated in favor of 'svn resolve --accept working'.
    Votes:
-     +1: cmpilato, epg
+     +1: cmpilato, epg, arfrever
