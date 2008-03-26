@@ -14,19 +14,19 @@ Status of 1.5.0:
 
 Candidate changes:
 
-  * r30009
-    Fix WC breakage when receiving updates on non-schedule-normal files
-    Votes
-      +1: dionisos
+ * r30009
+   Fix WC breakage when receiving updates on non-schedule-normal files
+   Votes
+     +1: dionisos
 
-  * r29858, r29859, r29876
-    Fix some bugs related to merges from foreign repositories,
-    including bogus attempts at recording mergeinfo, and the creation of
-    corrupt wcprops.
-    Notes:
-      r29859 isn't required, but minimizes the diff against trunk.
-    Votes:
-      +1: cmpilato
+ * r29858, r29859, r29876
+   Fix some bugs related to merges from foreign repositories,
+   including bogus attempts at recording mergeinfo, and the creation of
+   corrupt wcprops.
+   Notes:
+     r29859 isn't required, but minimizes the diff against trunk.
+   Votes:
+     +1: cmpilato
 
  * r29939, r29942, r29986
    Add validation of SSL server certificates to ra_serf.
