@@ -193,6 +193,11 @@ SVN_ERROR_START
              SVN_ERR_BAD_CATEGORY_START + 8,
              "Bogus UUID")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_BAD_PATH,
+             SVN_ERR_BAD_CATEGORY_START + 9,
+             "Bogus path")
+
   /* xml errors */
 
   SVN_ERRDEF(SVN_ERR_XML_ATTRIB_NOT_FOUND,
