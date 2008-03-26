@@ -64,11 +64,3 @@ Candidate changes:
      +1: cmpilato
 
 Approved changes:
-
- * r30062, r30067
-   Rename the svn_client_resolved2() API to svn_client_resolve().
-   Notes:
-     If we don't backport this, we'll need to undo (or redo) the
-     change to trunk.
-   Votes:
-     +1: cmpilato, hwright
