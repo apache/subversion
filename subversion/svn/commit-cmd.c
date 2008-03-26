@@ -61,7 +61,7 @@ svn_cl__commit(apr_getopt_t *os,
     {
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
       if (svn_path_is_url(target))
-        return svn_error_create(SVN_ERR_BAD_PATH, NULL,
+        return svn_error_create(SVN_ERR_WC_BAD_PATH, NULL,
                                 "Must give local path (not URL) as the "
                                 "target of a commit");
     }
