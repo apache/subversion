@@ -48,7 +48,7 @@ Candidate changes:
  * r29980
    Use in-tree libraries in check-swig-pl.
    Votes:
-     +1: epg
+     +1: epg, clkao
 
  * r30050
    Don't assert on 'svn commit URL'
