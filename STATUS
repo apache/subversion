@@ -45,4 +45,19 @@ Candidate changes:
    Votes
       +1: arfrever
 
+ * r30061
+   Tweak the svn_client_mergeinfo_get_merged() API to not claim to
+   populate an svn_mergeinfo_t * structure, since it uses full URLs
+   instead of absolute repository filesystem paths in that hash.
+   Votes:
+     +1: cmpilato
+
+ * r30062
+   Rename the svn_client_resolved2() API to svn_client_resolve().
+   Notes:
+     If we don't backport this, we'll need to undo (or redo) the
+     change to trunk.
+   Votes:
+     +1: cmpilato
+
 Approved changes:
