@@ -46,10 +46,3 @@ Candidate changes:
       +1: arfrever
 
 Approved changes:
-
- * r30050, r30054
-   Don't assert on 'svn commit URL'
-   Justification: Asserts are bad.  User reported problem.
-   Votes:
-     +1: hwright, stsp
-
