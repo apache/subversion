@@ -1968,16 +1968,19 @@ def automatic_conflict_resolution(sbox):
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  tau_path = os.path.join(wc_dir, 'A', 'D', 'G', 'tau')
   omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
   svntest.main.file_append(mu_path, 'Original appended text for mu\n')
   svntest.main.file_append(lambda_path, 'Original appended text for lambda\n')
   svntest.main.file_append(rho_path, 'Original appended text for rho\n')
+  svntest.main.file_append(tau_path, 'Original appended text for tau\n')
   svntest.main.file_append(omega_path, 'Original appended text for omega\n')
 
   # Make a couple of local mods to files which will be conflicted
   mu_path_backup = os.path.join(wc_backup, 'A', 'mu')
   lambda_path_backup = os.path.join(wc_backup, 'A', 'B', 'lambda')
   rho_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
+  tau_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'tau')
   omega_path_backup = os.path.join(wc_backup, 'A', 'D', 'H', 'omega')
   svntest.main.file_append(mu_path_backup,
                              'Conflicting appended text for mu\n')
@@ -1985,6 +1988,8 @@ def automatic_conflict_resolution(sbox):
                              'Conflicting appended text for lambda\n')
   svntest.main.file_append(rho_path_backup,
                              'Conflicting appended text for rho\n')
+  svntest.main.file_append(tau_path_backup,
+                             'Conflicting appended text for tau\n')
   svntest.main.file_append(omega_path_backup,
                              'Conflicting appended text for omega\n')
 
@@ -1993,14 +1998,15 @@ def automatic_conflict_resolution(sbox):
     'A/mu' : Item(verb='Sending'),
     'A/B/lambda' : Item(verb='Sending'),
     'A/D/G/rho' : Item(verb='Sending'),
+    'A/D/G/tau' : Item(verb='Sending'),
     'A/D/H/omega' : Item(verb='Sending'),
     })
 
   # Create expected status tree; all local revisions should be at 1,
   # but lambda, mu and rho should be at revision 2.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('A/mu', 'A/B/lambda', 'A/D/G/rho', 'A/D/H/omega',
-                        wc_rev=2)
+  expected_status.tweak('A/mu', 'A/B/lambda', 'A/D/G/rho', 'A/D/G/tau',
+                        'A/D/H/omega', wc_rev=2)
 
   # Commit.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
@@ -2011,20 +2017,20 @@ def automatic_conflict_resolution(sbox):
     'A/mu' : Item(status='C '),
     'A/B/lambda' : Item(status='C '),
     'A/D/G/rho' : Item(status='C '),
+    'A/D/G/tau' : Item(status='C '),
     'A/D/H/omega' : Item(status='C '),
     })
 
   # Create expected disk tree for the update.
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/B/lambda',
-                      contents="\n".join([
-    "This is the file 'lambda'.",
-    "<<<<<<< .mine",
-    "Conflicting appended text for lambda",
-    "=======",
-    "Original appended text for lambda",
-    ">>>>>>> .r2",
-    ""]))
+                      contents="\n".join(["This is the file 'lambda'.",
+                                          "<<<<<<< .mine",
+                                          "Conflicting appended text for lambda",
+                                          "=======",
+                                          "Original appended text for lambda",
+                                          ">>>>>>> .r2",
+                                          ""]))
   expected_disk.tweak('A/mu',
                       contents="\n".join(["This is the file 'mu'.",
                                           "<<<<<<< .mine",
@@ -2041,6 +2047,14 @@ def automatic_conflict_resolution(sbox):
                                           "Original appended text for rho",
                                           ">>>>>>> .r2",
                                           ""]))
+  expected_disk.tweak('A/D/G/tau',
+                      contents="\n".join(["This is the file 'tau'.",
+                                          "<<<<<<< .mine",
+                                          "Conflicting appended text for tau",
+                                          "=======",
+                                          "Original appended text for tau",
+                                          ">>>>>>> .r2",
+                                          ""]))
   expected_disk.tweak('A/D/H/omega',
                       contents="\n".join(["This is the file 'omega'.",
                                           "<<<<<<< .mine",
@@ -2052,15 +2066,17 @@ def automatic_conflict_resolution(sbox):
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_backup, '2')
-  expected_status.tweak('A/mu', 'A/B/lambda', 'A/D/G/rho', 'A/D/H/omega',
-                        status='C ')
+  expected_status.tweak('A/mu', 'A/B/lambda', 'A/D/G/rho', 'A/D/G/tau',
+                        'A/D/H/omega', status='C ')
 
   # "Extra" files that we expect to result from the conflicts.
   # These are expressed as list of regexps.  What a cool system!  :-)
   extra_files = ['mu.*\.r1', 'mu.*\.r2', 'mu.*\.mine',
                  'lambda.*\.r1', 'lambda.*\.r2', 'lambda.*\.mine',
                  'omega.*\.r1', 'omega.*\.r2', 'omega.*\.mine',
-                 'rho.*\.r1', 'rho.*\.r2', 'rho.*\.mine',]
+                 'rho.*\.r1', 'rho.*\.r2', 'rho.*\.mine',
+                 'tau.*\.r1', 'tau.*\.r2', 'tau.*\.mine',
+                 ]
 
   # Do the update and check the results in three ways.
   # All "extra" files are passed to detect_conflict_files().
@@ -2085,43 +2101,50 @@ def automatic_conflict_resolution(sbox):
     raise svntest.Failure
 
   # So now lambda, mu and rho are all in a "conflicted" state.  Run 'svn
-  # resolved' with the respective "--accept[mine|orig|repo]" flag.
+  # resolve' with the respective "--accept[mine|orig|repo]" flag.
 
   # But first, check --accept actions resolved does not accept.
   svntest.actions.run_and_verify_svn(None,
                                      # stdout, stderr
                                      None,
                                      ".*invalid 'accept' ARG",
-                                     'resolved', '--accept=postpone')
+                                     'resolve', '--accept=postpone')
   svntest.actions.run_and_verify_svn(None,
                                      # stdout, stderr
                                      None,
                                      ".*invalid 'accept' ARG",
-                                     'resolved', '--accept=edit')
+                                     'resolve', '--accept=edit')
   svntest.actions.run_and_verify_svn(None,
                                      # stdout, stderr
                                      None,
                                      ".*invalid 'accept' ARG",
-                                     'resolved', '--accept=launch')
+                                     'resolve', '--accept=launch')
   # Run 'svn resolved --accept=NOTVALID.  Using omega for the test.
-  svntest.actions.run_and_verify_svn("Resolved command", None,
+  svntest.actions.run_and_verify_svn("Resolve command", None,
                                      ".*NOTVALID' is not a valid accept value",
-                                     'resolved',
+                                     'resolve',
                                      '--accept=NOTVALID',
                                      omega_path_backup)
 
   # Resolve lambda, mu, and rho with different --accept options.
-  svntest.actions.run_and_verify_svn("Resolved command", None, [],
-                                     'resolved', '--accept=base',
+  svntest.actions.run_and_verify_svn("Resolve command", None, [],
+                                     'resolve', '--accept=base',
                                      lambda_path_backup)
-  svntest.actions.run_and_verify_svn("Resolved command", None, [],
-                                     'resolved',
+  svntest.actions.run_and_verify_svn("Resolve command", None, [],
+                                     'resolve',
                                      '--accept=mine-full',
                                      mu_path_backup)
-  svntest.actions.run_and_verify_svn("Resolved command", None, [],
-                                     'resolved',
+  svntest.actions.run_and_verify_svn("Resolve command", None, [],
+                                     'resolve',
                                      '--accept=theirs-full',
                                      rho_path_backup)
+  fp = open(tau_path_backup, 'w')
+  fp.write("Resolution text for 'tau'.\n")
+  fp.close()
+  svntest.actions.run_and_verify_svn("Resolve command", None, [],
+                                     'resolve',
+                                     '--accept=working',
+                                     tau_path_backup)
 
   # Set the expected disk contents for the test
   expected_disk = svntest.main.greek_state.copy()
@@ -2131,6 +2154,7 @@ def automatic_conflict_resolution(sbox):
                       "Conflicting appended text for mu\n")
   expected_disk.tweak('A/D/G/rho', contents="This is the file 'rho'.\n"
                       "Original appended text for rho\n")
+  expected_disk.tweak('A/D/G/tau', contents="Resolution text for 'tau'.\n")
   expected_disk.tweak('A/D/H/omega',
                       contents="\n".join(["This is the file 'omega'.",
                                           "<<<<<<< .mine",
@@ -2145,12 +2169,13 @@ def automatic_conflict_resolution(sbox):
 
   # Set the expected status for the test
   expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
-  expected_status.tweak('A/mu', 'A/B/lambda', 'A/D/G/rho', 'A/D/H/omega',
-                        wc_rev=2)
+  expected_status.tweak('A/mu', 'A/B/lambda', 'A/D/G/rho', 'A/D/G/tau',
+                        'A/D/H/omega', wc_rev=2)
 
   expected_status.tweak('A/mu', status='M ')
   expected_status.tweak('A/B/lambda', status='M ')
   expected_status.tweak('A/D/G/rho', status='  ')
+  expected_status.tweak('A/D/G/tau', status='M ')
   expected_status.tweak('A/D/H/omega', status='C ')
 
   # Set the expected output for the test
