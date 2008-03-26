@@ -50,5 +50,11 @@ Candidate changes:
    Votes:
      +1: epg
 
+ * r30050
+   Don't assert on 'svn commit URL'
+   Justification: Asserts are bad.  User reported problem.
+   Votes:
+     +1: hwright
+
 Approved changes:
 
