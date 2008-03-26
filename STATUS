@@ -45,16 +45,16 @@ Candidate changes:
    Votes
       +1: arfrever
 
- * r30050, r30054
-   Don't assert on 'svn commit URL'
-   Justification: Asserts are bad.  User reported problem.
-   Votes:
-     +1: hwright, stsp
-
 Approved changes:
 
  * r29980
    Use in-tree libraries in check-swig-pl.
    Votes:
      +1: epg, clkao
+
+ * r30050, r30054
+   Don't assert on 'svn commit URL'
+   Justification: Asserts are bad.  User reported problem.
+   Votes:
+     +1: hwright, stsp
 
