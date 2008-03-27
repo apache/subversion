@@ -51,7 +51,9 @@ static const apr_uint32_t serf_failure_map[][2] =
   { SERF_SSL_CERT_UNKNOWNCA,     SVN_AUTH_SSL_UNKNOWNCA }
 };
 
-/* Convert serf's SSL failure mask to our own failure mask. */
+/* Return a Subversion failure mask based on FAILURES, a serf SSL
+   failure mask.  If anything in FAILURES is not directly mappable to
+   Subversion failures, set SVN_AUTH_SSL_OTHER in the returned mask. */
 static apr_uint32_t
 ssl_convert_serf_failures(int failures)
 {
@@ -76,20 +78,18 @@ ssl_convert_serf_failures(int failures)
   return svn_failures;
 }
 
+/* Return a string describing ORG, formatted as an X.509 'Issuer' and
+   allocated in POOL.  ORG is as returned by serf_ssl_cert_issuer(). */
 static char *
 convert_organisation_to_str(apr_hash_t *org, apr_pool_t *pool)
 {
-  char *str;
-
-  str = apr_psprintf(pool, "%s, %s, %s, %s, %s (%s)",
-                     (char*)apr_hash_get(org, "OU", APR_HASH_KEY_STRING),
-                     (char*)apr_hash_get(org, "O", APR_HASH_KEY_STRING),
-                     (char*)apr_hash_get(org, "L", APR_HASH_KEY_STRING),
-                     (char*)apr_hash_get(org, "ST", APR_HASH_KEY_STRING),
-                     (char*)apr_hash_get(org, "C", APR_HASH_KEY_STRING),
-                     (char*)apr_hash_get(org, "E", APR_HASH_KEY_STRING));
-
-  return str;
+  return apr_psprintf(pool, "%s, %s, %s, %s, %s (%s)",
+                      (char*)apr_hash_get(org, "OU", APR_HASH_KEY_STRING),
+                      (char*)apr_hash_get(org, "O", APR_HASH_KEY_STRING),
+                      (char*)apr_hash_get(org, "L", APR_HASH_KEY_STRING),
+                      (char*)apr_hash_get(org, "ST", APR_HASH_KEY_STRING),
+                      (char*)apr_hash_get(org, "C", APR_HASH_KEY_STRING),
+                      (char*)apr_hash_get(org, "E", APR_HASH_KEY_STRING));
 }
 
 static apr_status_t
