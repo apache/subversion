@@ -33,11 +33,6 @@ Candidate changes:
 
 Approved changes:
 
- * r30074
-   Follow-up to r30062: Rename resolved2 to resolve in Perl bindings.
-   Votes
-      +1: arfrever, kfogel
-
  * r30061
    Tweak the svn_client_mergeinfo_get_merged() API to not claim to
    populate an svn_mergeinfo_t * structure, since it uses full URLs
