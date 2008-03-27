@@ -13,7 +13,7 @@ post-to-tigris.py <username> <password> <folderId> <release>
       gleaned from the URL in the file manager.  For example:
       http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=1079
       has a folderId of 1079
-    release - the full ame of the release, such as 1.5.0-beta1
+    release - the full name of the release, such as 1.5.0-beta1
 '''
 
 import sys, cookielib, urllib2, urllib
