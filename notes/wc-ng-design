@@ -75,7 +75,7 @@ In the context of the 'svn update' command:
      these trees generally represent "in transition" or "intermediary"
      state with the intent to become the final tree.
 
-Additionaly, three more trees may be related to the working copy
+Additionally, three more trees may be related to the working copy
 when considering the 'svn merge' command:
 
  * START: The tree used as the base state for the 'merge' command
@@ -113,7 +113,7 @@ Requirements
      - .svn-less working copy subtrees
      - different file-changed detection schemes
         (e.g. full tree scan as in wc-1.0 as well as 'p4 edit')
- * Gracefull (defined) fallback for non-supported operations
+ * Graceful (defined) fallback for non-supported operations
    When a checkout tries to create a symlink on an OS which supports
    them, on a filesystem which doesn't, we should cope without
    canceling the complete checkout.  Same for marking metadata read-only.
@@ -183,7 +183,7 @@ Problems in wc-1.0
    to access different parts of the working copy (incl. admin areas)
  * The code is littered with direct accesses to both wc files and
    admin area files
- * It's not always clear at which time log files are being proccessed
+ * It's not always clear at which time log files are being processed
    (ie transactions are being committed), meaning it's not always
    clear at which version of a tree one is looking at: the pre or post
    transformation versions...
@@ -193,9 +193,9 @@ Problems in wc-1.0
  * It's very hard to determine when an action needs to be written
    to a transaction or needs to be executed directly
  * All code assumes local access to admin (meta)data
- * The transaction system contains non-rerunable commands
+ * The transaction system contains non-runnable commands
  * It's possible to generate combinations of commands, each of which
-   is rerunable, but the series isn't
+   is runnable, but the series isn't
  * Long if() blocks to sort through all possible states of
    WORKING, ACTUAL and BASE, without calling it that.
  * Large if() blocks dealing with the difference between file and
