@@ -2635,9 +2635,11 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
 
 
 /**
- * Set @a *mergeinfo to the mergeinfo describing the ranges which have
- * been merged into @a path_or_url as of @a peg_revision, or @c NULL
- * if there is no mergeinfo.
+ * Set @a *mergeinfo to a hash mapping <tt>const char *</tt> merge
+ * source URLs to <tt>apr_array_header_t *</tt> rangelists (arrays of
+ * <tt>svn_merge_range_t *</tt> ranges)o describing the ranges which
+ * have been merged into @a path_or_url as of @a peg_revision, or @c
+ * NULL if there is no mergeinfo.
  *
  * Use @a pool for all necessary allocations.
  *
@@ -2645,10 +2647,14 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
  * never happen for file:// URLs), return an @c
  * SVN_ERR_UNSUPPORTED_FEATURE error.
  *
+ * @note Unlike most APIs which deal with mergeinfo, this one returns
+ * data where the keys of the hash are absolute repository URLs rather
+ * than repository filesystem paths.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_mergeinfo_get_merged(svn_mergeinfo_t *mergeinfo,
+svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
                                 const char *path_or_url,
                                 const svn_opt_revision_t *peg_revision,
                                 svn_client_ctx_t *ctx,

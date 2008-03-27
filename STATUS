@@ -33,16 +33,6 @@ Candidate changes:
 
 Approved changes:
 
- * r30061
-   Tweak the svn_client_mergeinfo_get_merged() API to not claim to
-   populate an svn_mergeinfo_t * structure, since it uses full URLs
-   instead of absolute repository filesystem paths in that hash.
-   Notes:
-     If we don't backport this, we'll need to rev the API on trunk
-     to enact this fix.
-   Votes:
-     +1: cmpilato, arfrever
-
  * r30070
    Remove the confusing conflict resolution support from 'svn
    resolved' (which still claimed it didn't do exactly that), 
