@@ -14,11 +14,6 @@ Status of 1.5.0:
 
 Candidate changes:
 
- * r30009
-   Fix WC breakage when receiving updates on non-schedule-normal files
-   Votes
-     +1: dionisos
-
  * r29858, r29859, r29876
    Fix some bugs related to merges from foreign repositories,
    including bogus attempts at recording mergeinfo, and the creation of
@@ -45,12 +40,17 @@ Candidate changes:
    Votes
       +1: arfrever
 
+Approved changes:
+
+ * r30009
+   Fix WC breakage when receiving updates on non-schedule-normal files
+   Votes
+     +1: dionisos, kfogel
+
  * r30074
    Follow-up to r30062: Rename resolved2 to resolve in Perl bindings.
    Votes
-      +1: arfrever
-
-Approved changes:
+      +1: arfrever, kfogel
 
  * r30061
    Tweak the svn_client_mergeinfo_get_merged() API to not claim to
