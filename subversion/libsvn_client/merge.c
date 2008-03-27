@@ -1092,8 +1092,8 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
        */
       if (! merge_b->record_only)
         {
-          /* Compare merge left file to target file. If they differ,
-           * we have a tree conflict.
+          /* Compare the merge left file to the file that is about
+           * to be deleted. If they differ, we have a tree conflict.
            *
            * TODO: Would svn_stream_contents_same() from libsvn_subr
            *       be more appropriate here? */
