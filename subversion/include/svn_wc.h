@@ -790,11 +790,14 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_changelist_moved,
 
   /** A merge operation (to path) has begun.  See @c merge_range in
-      @c svn_wc_notify_t.  @since New in 1.5   */
+      @c svn_wc_notify_t. @since New in 1.5. */
   svn_wc_notify_merge_begin,
 
-  /** Replace notification. */
-  svn_wc_notify_update_replace
+  /** Replace notification. @since New in 1.5. */
+  svn_wc_notify_update_replace,
+
+  /** Property updated. @since New in 1.6. */
+  svn_wc_notify_property_updated
 
 } svn_wc_notify_action_t;
 
