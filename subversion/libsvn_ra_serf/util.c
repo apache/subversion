@@ -79,7 +79,7 @@ ssl_convert_serf_failures(int failures)
 }
 
 /* Convert a hash table containing the fields (as documented in X.509) of an
-  organisation to a string ORG, allocated in POOL. ORG is as returned by 
+   organisation to a string ORG, allocated in POOL. ORG is as returned by 
    serf_ssl_cert_issuer() and serf_ssl_cert_subject(). */
 static char *
 convert_organisation_to_str(apr_hash_t *org, apr_pool_t *pool)
@@ -93,7 +93,7 @@ convert_organisation_to_str(apr_hash_t *org, apr_pool_t *pool)
                       (char*)apr_hash_get(org, "E", APR_HASH_KEY_STRING));
 }
 
-/* Callback that implements serf_ssl_need_server_cert_t. This is function is 
+/* Callback that implements serf_ssl_need_server_cert_t. This function is 
    called on receiving a ssl certificate of a server when opening a https 
    connection. It allows Subversion to override the initial validation done 
    by serf.
