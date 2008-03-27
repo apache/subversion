@@ -2619,8 +2619,10 @@ merge_file(svn_wc_notify_state_t *content_state,
   SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
                                      fb->path, &tmp_entry, flags, pool));
 
-  /* Log commands to handle text-timestamp and working-size */
-  if (!is_locally_modified)
+  /* Log commands to handle text-timestamp and working-size,
+     if the file is - or will be - unmodified and schedule-normal */
+  if (!is_locally_modified &&
+      (fb->added || entry->schedule == svn_wc_schedule_normal))
     {
       /* Adjust working copy file unless this file is an allowed
          obstruction. */

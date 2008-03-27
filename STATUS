@@ -33,11 +33,6 @@ Candidate changes:
 
 Approved changes:
 
- * r30009
-   Fix WC breakage when receiving updates on non-schedule-normal files
-   Votes
-     +1: dionisos, kfogel
-
  * r30074
    Follow-up to r30062: Rename resolved2 to resolve in Perl bindings.
    Votes
