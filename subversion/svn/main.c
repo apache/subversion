@@ -620,7 +620,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "mergeinfo", svn_cl__mergeinfo, {0}, N_
     ("Query merge-related information.\n"
-     "usage: mergeinfo [TARGET[@REV]...]\n"),
+     "usage: mergeinfo [TARGET[@REV]]\n"),
     {'r', opt_from_source} },
 
   { "mkdir", svn_cl__mkdir, {0}, N_

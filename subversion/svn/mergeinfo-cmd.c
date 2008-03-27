@@ -74,9 +74,9 @@ show_mergeinfo_for_source(const char *merge_source,
   apr_array_header_t *available_ranges;
   svn_error_t *err;
 
-  svn_cmdline_printf(pool, _("  Source path: %s\n"),
+  svn_cmdline_printf(pool, _("Source path: %s\n"),
                      relative_path(root_url, merge_source, pool));
-  svn_cmdline_printf(pool, _("    Merged ranges: "));
+  svn_cmdline_printf(pool, _("  Merged ranges: "));
   print_merge_ranges(merge_ranges, pool);
 
   /* Now fetch the available merges for this source. */
@@ -90,7 +90,7 @@ show_mergeinfo_for_source(const char *merge_source,
      ### may just mean the system has to work harder to
      ### provide that information.
   */
-  svn_cmdline_printf(pool, _("    Eligible ranges: "));
+  svn_cmdline_printf(pool, _("  Eligible ranges: "));
   err = svn_client_mergeinfo_get_available(&available_ranges,
                                            path,
                                            peg_revision,
@@ -128,8 +128,11 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  apr_pool_t *subpool = svn_pool_create(pool);
-  int i;
+  const char *target, *truepath;
+  svn_opt_revision_t peg_revision;
+  apr_hash_t *mergeinfo;
+  const char *root_url;
+  apr_hash_index_t *hi;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets, 
@@ -138,75 +141,63 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   /* Add "." if user passed 0 arguments. */
   svn_opt_push_implicit_dot_target(targets, pool);
 
-  for (i = 0; i < targets->nelts; i++)
+  if (targets->nelts > 1)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                            _("Too many arguments given"));
+
+  target = APR_ARRAY_IDX(targets, 0, const char *);      
+
+  /* Parse the path into a path and peg revision. */
+  SVN_ERR(svn_opt_parse_path(&peg_revision, &truepath, target, pool));
+
+  /* If no peg-rev was attached to a URL target, then assume HEAD. */
+  if ((peg_revision.kind == svn_opt_revision_unspecified)
+      && svn_path_is_url(target))
+    peg_revision.kind = svn_opt_revision_head;
+
+  /* If no peg-rev was attached to a non-URL target, then assume BASE. */
+  if ((peg_revision.kind == svn_opt_revision_unspecified)
+      && (! svn_path_is_url(target)))
+    peg_revision.kind = svn_opt_revision_base;
+
+  /* Get the already-merged information. */
+  SVN_ERR(svn_client_mergeinfo_get_merged(&mergeinfo, truepath,
+                                          &peg_revision, ctx, pool));
+  if (mergeinfo == NULL)
+    mergeinfo = apr_hash_make(pool);
+
+  SVN_ERR(svn_client_root_url_from_path(&root_url, truepath, ctx, pool));
+
+  if (opt_state->from_source)
     {
-      const char *target = APR_ARRAY_IDX(targets, i, const char *);
-      const char *truepath;
-      svn_opt_revision_t peg_revision;
-      apr_hash_t *mergeinfo;
-      const char *root_url;
-      apr_hash_index_t *hi;
-
-      svn_pool_clear(subpool);
-      SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
-
-      /* Parse the path into a path and peg revision. */
-      SVN_ERR(svn_opt_parse_path(&peg_revision, &truepath, target, subpool));
-
-      /* If no peg-rev was attached to a URL target, then assume HEAD. */
-      if ((peg_revision.kind == svn_opt_revision_unspecified)
-          && svn_path_is_url(target))
-        peg_revision.kind = svn_opt_revision_head;
-
-      /* If no peg-rev was attached to a non-URL target, then assume BASE. */
-      if ((peg_revision.kind == svn_opt_revision_unspecified)
-          && (! svn_path_is_url(target)))
-        peg_revision.kind = svn_opt_revision_base;
-
-      /* Get the already-merged information. */
-      SVN_ERR(svn_client_mergeinfo_get_merged(&mergeinfo, truepath,
-                                              &peg_revision, ctx, subpool));
-
-      svn_cmdline_printf(pool, _("Path: %s\n"),
-                         svn_path_local_style(truepath, pool));
-      if (mergeinfo == NULL)
-        mergeinfo = apr_hash_make(pool);
-
-      SVN_ERR(svn_client_root_url_from_path(&root_url, truepath, ctx, pool));
-
-      if (opt_state->from_source)
+      apr_array_header_t *merged_ranges = 
+        apr_hash_get(mergeinfo, opt_state->from_source, 
+                     APR_HASH_KEY_STRING);
+      if (! merged_ranges)
+        merged_ranges = apr_array_make(pool, 1, 
+                                       sizeof(svn_merge_range_t *));
+      SVN_ERR(show_mergeinfo_for_source(opt_state->from_source, 
+                                        merged_ranges, truepath, 
+                                        &peg_revision, root_url, 
+                                        ctx, pool));
+    }
+  else if (apr_hash_count(mergeinfo) > 0)
+    {
+      apr_pool_t *iterpool = svn_pool_create(pool);
+      for (hi = apr_hash_first(NULL, mergeinfo); 
+           hi; hi = apr_hash_next(hi))
         {
-          apr_array_header_t *merged_ranges = 
-            apr_hash_get(mergeinfo, opt_state->from_source, 
-                         APR_HASH_KEY_STRING);
-          if (! merged_ranges)
-            merged_ranges = apr_array_make(pool, 1, 
-                                           sizeof(svn_merge_range_t *));
-          SVN_ERR(show_mergeinfo_for_source(opt_state->from_source, 
-                                            merged_ranges, truepath, 
+          const void *key;
+          void *val;
+
+          svn_pool_clear(iterpool);
+          apr_hash_this(hi, &key, NULL, &val);
+          SVN_ERR(show_mergeinfo_for_source(key, val, truepath, 
                                             &peg_revision, root_url, 
-                                            ctx, subpool));
+                                            ctx, iterpool));
         }
-      else if (apr_hash_count(mergeinfo) > 0)
-        {
-          apr_pool_t *iterpool = svn_pool_create(subpool);
-          for (hi = apr_hash_first(NULL, mergeinfo); 
-               hi; hi = apr_hash_next(hi))
-            {
-              const void *key;
-              void *val;
-              
-              svn_pool_clear(iterpool);
-              apr_hash_this(hi, &key, NULL, &val);
-              SVN_ERR(show_mergeinfo_for_source(key, val, truepath, 
-                                                &peg_revision, root_url, 
-                                                ctx, iterpool));
-            }
-          svn_pool_destroy(iterpool);
-        }
-      svn_cmdline_printf(subpool, "\n");
+      svn_pool_destroy(iterpool);
     }
 
-  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }

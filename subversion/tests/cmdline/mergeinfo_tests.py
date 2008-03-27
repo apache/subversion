@@ -52,7 +52,7 @@ def no_mergeinfo(sbox):
 
   sbox.build(create_wc=False)
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           {sbox.repo_url : {}}, sbox.repo_url)
+                                           {}, sbox.repo_url)
 
 def mergeinfo(sbox):
   "'mergeinfo' on a path with mergeinfo"
@@ -65,7 +65,7 @@ def mergeinfo(sbox):
                                      "--record-only", sbox.repo_url + "/",
                                      wc_dir)
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           {wc_dir : {"/" : ("r0:1", None)}},
+                                           {"/" : ("r0:1", None)},
                                            wc_dir)
 
 def explicit_mergeinfo_source(sbox):
@@ -89,18 +89,15 @@ def explicit_mergeinfo_source(sbox):
 
   # Check using --from-source on each of our recorded merge sources.
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           {H_path : {'/A/B' : ("r0:1",
-                                                                "r1:2")}},
+                                           {'/A/B' : ("r0:1", None)},
                                            H_path, '--from-source', B_url)
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           {H_path : {'/A/D/G' : ("r0:1",
-                                                                  "r1:2")}},
+                                           {'/A/D/G' : ("r0:1", None)},
                                            H_path, '--from-source', G_url)
 
   # Now check on a source we haven't "merged" from.
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           {H_path : {'/A/D/H2' : (None,
-                                                                   "r1:2")}},
+                                           {'/A/D/H2' : (None, "r1:2")},
                                            H_path, '--from-source', H2_url)
   
 

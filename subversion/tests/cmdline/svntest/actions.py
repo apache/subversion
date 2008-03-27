@@ -851,7 +851,7 @@ def run_and_verify_mergeinfo(error_re_string = None,
                              *args):
   """Run 'svn mergeinfo ARGS', and compare the result against
   EXPECTED_OUTPUT, a dict of dict of tuples:
-    { path : { source path : (merged ranges, eligible ranges) } }
+    { source path : (merged ranges, eligible ranges) }
   Raise an exception if an unexpected output is encountered."""
 
   mergeinfo_command = ["mergeinfo"]
@@ -868,31 +868,24 @@ def run_and_verify_mergeinfo(error_re_string = None,
   parser = parsers.MergeinfoReportParser()
   parser.parse(out)
 
-  if len(expected_output.keys()) != len(parser.report.keys()):
-    raise verify.SVNUnexpectedStdout("Unexpected number of target paths")
+  actual_src_paths = parser.report
+  expected_src_paths = expected_output
 
-  for actual_path in parser.report.keys():
-    actual_src_paths = parser.report[actual_path]
-    expected_src_paths = expected_output[actual_path]
+  if len(actual_src_paths.keys()) != len(expected_src_paths.keys()):
+    raise verify.SVNUnexpectedStdout("Unexpected number of source paths")
 
-    if len(actual_src_paths.keys()) != len(expected_src_paths.keys()):
-      raise verify.SVNUnexpectedStdout("Unexpected number of source paths "
-                                       "for target path '%s'" % actual_path)
-
-    for src_path in actual_src_paths.keys():
-      (actual_merged, actual_eligible) = actual_src_paths[src_path]
-      (expected_merged, expected_eligible) = expected_src_paths[src_path]
-      
-      if actual_merged != expected_merged:
-        raise Exception("Unexpected merged ranges for target path '%s' and "
-                        "source path '%s': Expected '%s', got '%s'" %
-                        (actual_path, src_path, expected_merged,
-                         actual_merged))
-      if actual_eligible != expected_eligible:
-        raise Exception("Unexpected eligible ranges for target path '%s' and "
-                        "source path '%s': Expected '%s', got '%s'" %
-                        (actual_path, src_path, expected_eligible,
-                         actual_eligible))
+  for src_path in actual_src_paths.keys():
+    (actual_merged, actual_eligible) = actual_src_paths[src_path]
+    (expected_merged, expected_eligible) = expected_src_paths[src_path]
+    
+    if actual_merged != expected_merged:
+      raise Exception("Unexpected merged ranges for "
+                      "source path '%s': Expected '%s', got '%s'" %
+                      (src_path, expected_merged, actual_merged))
+    if actual_eligible != expected_eligible:
+      raise Exception("Unexpected eligible ranges for "
+                      "source path '%s': Expected '%s', got '%s'" %
+                      (src_path, expected_eligible, actual_eligible))
 
 
 def run_and_verify_switch(wc_dir_name,
