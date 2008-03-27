@@ -32,12 +32,3 @@ Candidate changes:
       +1: arfrever
 
 Approved changes:
-
- * r29858, r29859, r29876
-   Fix some bugs related to merges from foreign repositories,
-   including bogus attempts at recording mergeinfo, and the creation of
-   corrupt wcprops.
-   Notes:
-     r29859 isn't required, but minimizes the diff against trunk.
-   Votes:
-     +1: cmpilato, kfogel
