@@ -61,6 +61,8 @@ svn_cl__accept_from_word(const char *word)
     return svn_cl__accept_postpone;
   if (strcmp(word, SVN_CL__ACCEPT_BASE) == 0)
     return svn_cl__accept_base;
+  if (strcmp(word, SVN_CL__ACCEPT_WORKING) == 0)
+    return svn_cl__accept_working;
 #if 0 /* not yet implemented */
   if (strcmp(word, SVN_CL__ACCEPT_MINE_CONFLICT) == 0)
     return svn_cl__accept_mine_conflict;
@@ -214,13 +216,17 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
   switch (b->accept_which)
     {
     case svn_cl__accept_invalid:
-      /* No --accept option, fall through to prompting. */
+    case svn_cl__accept_unspecified:
+      /* No (or no valid) --accept option, fall through to prompting. */
       break;
     case svn_cl__accept_postpone:
       (*result)->choice = svn_wc_conflict_choose_postpone;
       return SVN_NO_ERROR;
     case svn_cl__accept_base:
       (*result)->choice = svn_wc_conflict_choose_base;
+      return SVN_NO_ERROR;
+    case svn_cl__accept_working:
+      (*result)->choice = svn_wc_conflict_choose_merged;
       return SVN_NO_ERROR;
     case svn_cl__accept_mine_conflict:
       (*result)->choice = svn_wc_conflict_choose_mine_conflict;

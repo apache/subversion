@@ -772,23 +772,32 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      opt_force, opt_changelist },
     {{'F', N_("read property value from file ARG")}} },
 
-  { "resolved", svn_cl__resolved, {0}, N_
-    ("Remove 'conflicted' state on working copy files or directories.\n"
-     "usage: resolved PATH...\n"
+  { "resolve", svn_cl__resolve, {0}, N_
+    ("Resolve conflicts on working copy files or directories.\n"
+     "usage: resolve [PATH...]\n"
      "\n"
-     "  Note:  this subcommand does not semantically resolve conflicts or\n"
-     "  remove conflict markers; it merely removes the conflict-related\n"
-     "  artifact files and allows PATH to be committed again.\n"),
+     "  Note:  the --accept option is currently required.\n"),
     {opt_targets, 'R', opt_depth, 'q', opt_accept},
     {{opt_accept, N_("specify automatic conflict resolution source\n"
                              "                            "
                              "('" SVN_CL__ACCEPT_BASE "',"
+                             " '" SVN_CL__ACCEPT_WORKING "',"
                              /* These two are not implemented yet, so
                                 don't waste the user's time with them. */
                              /* " '" SVN_CL__ACCEPT_MINE_CONFLICT "'," */
                              /* " '" SVN_CL__ACCEPT_THEIRS_CONFLICT "'," */
                              " '" SVN_CL__ACCEPT_MINE_FULL "',"
                              " '" SVN_CL__ACCEPT_THEIRS_FULL "')")}} },
+
+  { "resolved", svn_cl__resolved, {0}, N_
+    ("Remove 'conflicted' state on working copy files or directories.\n"
+     "usage: resolved PATH...\n"
+     "\n"
+     "  Note:  this subcommand does not semantically resolve conflicts or\n"
+     "  remove conflict markers; it merely removes the conflict-related\n"
+     "  artifact files and allows PATH to be committed again.  It has been\n"
+     "  deprecated in favor of running 'svn resolve --accept working'.\n"),
+    {opt_targets, 'R', opt_depth, 'q'} },
 
   { "revert", svn_cl__revert, {0}, N_
     ("Restore pristine working copy file (undo most local edits).\n"
@@ -1117,7 +1126,7 @@ main(int argc, const char *argv[])
     apr_array_make(pool, 0, sizeof(svn_opt_revision_range_t *));
   opt_state.depth = svn_depth_unknown;
   opt_state.set_depth = svn_depth_unknown;
-  opt_state.accept_which = svn_cl__accept_invalid;
+  opt_state.accept_which = svn_cl__accept_unspecified;
 
   /* No args?  Show usage. */
   if (argc <= 1)
@@ -1948,7 +1957,7 @@ main(int argc, const char *argv[])
                                                  we can change this. */
     svn_handle_error2(err, stderr, TRUE, "svn: ");
 
-  if ((opt_state.accept_which == svn_cl__accept_invalid
+  if ((opt_state.accept_which == svn_cl__accept_unspecified
        && (!interactive_conflicts || opt_state.non_interactive))
       || opt_state.accept_which == svn_cl__accept_postpone)
     {

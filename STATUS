@@ -33,14 +33,6 @@ Candidate changes:
 
 Approved changes:
 
- * r30070
-   Remove the confusing conflict resolution support from 'svn
-   resolved' (which still claimed it didn't do exactly that), 
-   and add instead a new 'svn resolve' subcommand.  'svn resolved'
-   is now deprecated in favor of 'svn resolve --accept working'.
-   Votes:
-     +1: cmpilato, epg, arfrever
-
  * r29858, r29859, r29876
    Fix some bugs related to merges from foreign repositories,
    including bogus attempts at recording mergeinfo, and the creation of

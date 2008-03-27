@@ -44,14 +44,20 @@ extern "C" {
 /* --accept actions */
 typedef enum
 {
-  /* invalid or unspecified accept action */
-  svn_cl__accept_invalid = -1,
+  /* invalid accept action */
+  svn_cl__accept_invalid = -2,
+
+  /* unspecified accept action */
+  svn_cl__accept_unspecified = -1,
 
   /* Leave conflicts alone, for later resolution. */
   svn_cl__accept_postpone,
 
   /* Resolve the conflict with the pre-conflict base file. */
   svn_cl__accept_base,
+
+  /* Resolve the conflict with the current working file. */
+  svn_cl__accept_working,
 
   /* Resolve the conflicted hunks by choosing the corresponding text
      from the pre-conflict working copy file.
@@ -82,6 +88,7 @@ typedef enum
 /* --accept action user input words */
 #define SVN_CL__ACCEPT_POSTPONE "postpone"
 #define SVN_CL__ACCEPT_BASE "base"
+#define SVN_CL__ACCEPT_WORKING "working"
 #define SVN_CL__ACCEPT_MINE_CONFLICT "mine-conflict"
 #define SVN_CL__ACCEPT_THEIRS_CONFLICT "theirs-conflict"
 #define SVN_CL__ACCEPT_MINE_FULL "mine-full"
@@ -220,6 +227,7 @@ svn_opt_subcommand_t
   svn_cl__proplist,
   svn_cl__propset,
   svn_cl__revert,
+  svn_cl__resolve,
   svn_cl__resolved,
   svn_cl__status,
   svn_cl__switch,
