@@ -584,7 +584,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * @deprecated Use {@link #resolved(String, int, int)} instead.
+     * @deprecated Use {@link #resolve(String, int, int)} instead.
      * @since 1.0
      */
     public void resolved(String path, boolean recurse)
@@ -592,8 +592,8 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            resolved(path, Depth.infinityOrEmpty(recurse),
-                     ConflictResult.chooseMerged);
+            resolve(path, Depth.infinityOrEmpty(recurse),
+                    ConflictResult.chooseMerged);
         }
         catch (SubversionException e)
         {
@@ -604,7 +604,7 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native void resolved(String path, int depth, int conflictResult)
+    public native void resolve(String path, int depth, int conflictResult)
         throws SubversionException;
 
     /**

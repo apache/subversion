@@ -1167,26 +1167,28 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
 
 
 svn_error_t *
-svn_client_mergeinfo_get_merged(svn_mergeinfo_t *mergeinfo,
+svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo_p,
                                 const char *path_or_url,
                                 const svn_opt_revision_t *peg_revision,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *pool)
 {
   const char *repos_root;
-  svn_mergeinfo_t full_path_mergeinfo;
+  apr_hash_t *full_path_mergeinfo;
+  svn_mergeinfo_t mergeinfo;
   
-  SVN_ERR(get_mergeinfo(mergeinfo, &repos_root, path_or_url, 
+  SVN_ERR(get_mergeinfo(&mergeinfo, &repos_root, path_or_url, 
                         peg_revision, ctx, pool));
 
   /* Copy the MERGEINFO hash items into another hash, but change
      the relative paths into full URLs. */
-  if (*mergeinfo)
+  *mergeinfo_p = NULL;
+  if (mergeinfo)
     {
       apr_hash_index_t *hi;
 
       full_path_mergeinfo = apr_hash_make(pool);
-      for (hi = apr_hash_first(pool, *mergeinfo); hi; hi = apr_hash_next(hi))
+      for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
         {
           const void *key;
           void *val;
@@ -1198,7 +1200,7 @@ svn_client_mergeinfo_get_merged(svn_mergeinfo_t *mergeinfo,
           apr_hash_set(full_path_mergeinfo, source_url, 
                        APR_HASH_KEY_STRING, val);
         }
-      *mergeinfo = full_path_mergeinfo;
+      *mergeinfo_p = full_path_mergeinfo;
     }
 
   return SVN_NO_ERROR;
@@ -1339,7 +1341,7 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
   const char *copyfrom_path;
   apr_array_header_t *list;
   svn_revnum_t copyfrom_rev;
-  svn_mergeinfo_t mergeinfo;
+  apr_hash_t *mergeinfo;
   apr_hash_index_t *hi;
 
   list = apr_array_make(pool, 1, sizeof(const char *));
