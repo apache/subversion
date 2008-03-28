@@ -1489,13 +1489,17 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
                             const apr_array_header_t *options,
                             apr_hash_t *config, apr_pool_t *pool)
 {
-  const char *diff_cmd;
+  const char *diff_cmd = NULL;
   
   /* See if there is a command. */
-  svn_config_t *cfg = apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG,
-                                   APR_HASH_KEY_STRING);
-  svn_config_get(cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS,
-                 SVN_CONFIG_OPTION_DIFF_CMD, NULL);
+  if (config)
+    {
+      svn_config_t *cfg = apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG,
+                                       APR_HASH_KEY_STRING);
+      svn_config_get(cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS,
+                     SVN_CONFIG_OPTION_DIFF_CMD, NULL);
+    }
+
   diff_cmd_baton->diff_cmd = diff_cmd;
 
   /* If there was a command, arrange options to pass to it. */
