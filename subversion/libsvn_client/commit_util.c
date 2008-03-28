@@ -337,7 +337,7 @@ harvest_committables(apr_hash_t *committables,
     {
       /* Maybe the tree-conflict test should be a separate function. */
       svn_boolean_t tc_dummy, pc_dummy;
-      svn_wc_entry_t *p_entry;
+      const svn_wc_entry_t *p_entry;
       SVN_ERR(svn_wc_entry(&p_entry, p_path, adm_access, TRUE, pool));
       SVN_ERR(svn_wc_conflicted_p2(&tc_dummy, &pc_dummy, &treec, p_path,
                                    p_entry, pool));
