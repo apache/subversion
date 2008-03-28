@@ -10828,6 +10828,97 @@ def foreign_repos_2_url(sbox):
                               None, None, None, None, 1)
 
 
+def merge_added_subtree(sbox):
+  "merge added subtree"
+
+  # The result of a subtree added by copying
+  # or merging an added subtree, should be the same on disk
+  ### with the exception of mergeinfo?!
+
+  # test for issue 1962
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  url = sbox.repo_url
+
+  # make a branch of A
+  # svn cp A A_COPY
+  A_url = url + "/A"
+  A_COPY_url = url + "/A_COPY"
+  A_path = os.path.join(wc_dir, "A")
+
+  svntest.actions.run_and_verify_svn("",["\n", "Committed revision 2.\n"], [],
+                                     "cp", "-m", "", A_url, A_COPY_url)
+  svntest.actions.run_and_verify_svn("",["\n", "Committed revision 3.\n"], [],
+                                     "cp", "-m", "",
+                                     A_COPY_url + '/D',
+                                     A_COPY_url + '/D2')
+  expected_output = wc.State(A_path, {
+    'D2'        : Item(status='A '),
+    'D2/gamma'  : Item(status='A '),
+    'D2/H/'     : Item(status='A '),
+    'D2/H/chi'  : Item(status='A '),
+    'D2/H/psi'  : Item(status='A '),
+    'D2/H/omega': Item(status='A '),
+    'D2/G/'     : Item(status='A '),
+    'D2/G/pi'   : Item(status='A '),
+    'D2/G/rho'  : Item(status='A '),
+    'D2/G/tau'  : Item(status='A ')
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/D2'        : Item(status='A ', copied='+', wc_rev='-'),
+    'A/D2/gamma'  : Item(status='  ', copied='+', wc_rev='-'),
+    'A/D2/H/'     : Item(status='  ', copied='+', wc_rev='-'),
+    'A/D2/H/chi'  : Item(status='  ', copied='+', wc_rev='-'),
+    'A/D2/H/psi'  : Item(status='  ', copied='+', wc_rev='-'),
+    'A/D2/H/omega': Item(status='  ', copied='+', wc_rev='-'),
+    'A/D2/G/'     : Item(status='  ', copied='+', wc_rev='-'),
+    'A/D2/G/pi'   : Item(status='  ', copied='+', wc_rev='-'),
+    'A/D2/G/rho'  : Item(status='  ', copied='+', wc_rev='-'),
+    'A/D2/G/tau'  : Item(status='  ', copied='+', wc_rev='-')
+    })
+  expected_status.remove('', 'iota')
+
+  expected_skip = wc.State('', {})
+  expected_disk = svntest.main.greek_state.subtree("A")
+  dest_name = ''
+  expected_disk.add({
+    dest_name + 'D2'         : Item(),
+    dest_name + 'D2/gamma'   : Item("This is the file 'gamma'.\n"),
+    dest_name + 'D2/G'       : Item(),
+    dest_name + 'D2/G/pi'    : Item("This is the file 'pi'.\n"),
+    dest_name + 'D2/G/rho'   : Item("This is the file 'rho'.\n"),
+    dest_name + 'D2/G/tau'   : Item("This is the file 'tau'.\n"),
+    dest_name + 'D2/H'       : Item(),
+    dest_name + 'D2/H/chi'   : Item("This is the file 'chi'.\n"),
+    dest_name + 'D2/H/omega' : Item("This is the file 'omega'.\n"),
+    dest_name + 'D2/H/psi'   : Item("This is the file 'psi'.\n")
+    })
+
+  # Using the above information, verify a REPO->WC copy
+  svntest.actions.run_and_verify_svn("", None, [],
+                                     "cp", A_COPY_url + '/D2',
+                                     os.path.join(A_path, "D2"))
+  actual_tree = svntest.tree.build_tree_from_wc (A_path, 0)
+  svntest.tree.compare_trees (actual_tree, expected_disk.old_tree(),
+                              None, None, None, None)
+  svntest.actions.run_and_verify_status(A_path, expected_status)
+
+  # Remove the copy artifacts
+  svntest.actions.run_and_verify_svn("", None, [],
+                                     "revert", "-R", A_path)
+  svntest.main.safe_rmtree(os.path.join(A_path, "D2"))
+
+  # Add merge-tracking differences between copying and merging
+  # Verify a merge using the otherwise unchanged disk and status trees
+  expected_status.tweak('A',status=' M')
+  svntest.actions.run_and_verify_merge(A_path, 2, 3, A_COPY_url,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+
+
 ########################################################################
 # Run the tests
 
@@ -10927,6 +11018,7 @@ test_list = [ None,
               merge_range_predates_history,
               foreign_repos,
               foreign_repos_2_url,
+              XFail(merge_added_subtree),
              ]
 
 if __name__ == '__main__':
