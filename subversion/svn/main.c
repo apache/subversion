@@ -586,7 +586,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     ("Apply the differences between two sources to a working copy path.\n"
      "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
      "       2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
-     "       3. merge [-c M[,N]... | -r N:M...] SOURCE[@REV] [WCPATH]\n"
+     "       3. merge [-c M[,N...] | -r N:M ...] SOURCE[@REV] [WCPATH]\n"
      "\n"
      "  1. In the first form, the source URLs are specified at revisions\n"
      "     N and M.  These are the two sources to be compared.  The revisions\n"
@@ -602,7 +602,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     for each revision range provided.  If REV is not specified, HEAD\n"
      "     is assumed.  '-c M' is equivalent to '-r <M-1>:M', and '-c -M'\n"
      "     does the reverse: '-r M:<M-1>'.  If no revision ranges are\n"
-     "     specified, the default range of 1:HEAD is used.  Multiple '-c'\n"
+     "     specified, the default range of 0:HEAD is used.  Multiple '-c'\n"
      "     and/or '-r' instances may be specified, and mixing of forward\n"
      "     and reverse ranges is allowed.\n"
      "\n"
@@ -611,10 +611,12 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  the sources have identical basenames that match a file within '.':\n"
      "  in which case, the differences will be applied to that file.\n"
      "\n"
-     "  NOTE:  Subversion will only internally track metadata about the\n"
-     "  merge operation if the two sources are ancestrally related -- if the\n"
+     "  NOTE:  Subversion will only record metadata to track the merge\n"
+     "  if the two sources are on the same line of history -- if the\n"
      "  first source is an ancestor of the second, or vice-versa.  This is\n"
-     "  guaranteed to be the case when using the third form listed above.\n"),
+     "  guaranteed to be the case when using the third form listed above.\n"
+     "  The --ignore-ancestry option overrides this, forcing Subversion to\n"
+     "  regard the sources as unrelated and not to track the merge.\n"),
     {'r', 'c', 'N', opt_depth, 'q', opt_force, opt_dry_run, opt_merge_cmd,
      opt_record_only, 'x', opt_ignore_ancestry, opt_accept, opt_reintegrate} },
 

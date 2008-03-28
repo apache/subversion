@@ -55,10 +55,3 @@ Candidate changes:
      +1: cmpilato
 
 Approved changes:
-
- * r30098
-   Help text improvements for "svn merge".
-   Justification: getting this right is pretty important.
-   Notes: Low risk (no functional change).
-   Votes:
-     +1: julianfoad, hwright
