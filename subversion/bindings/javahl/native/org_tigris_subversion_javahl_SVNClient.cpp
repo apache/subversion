@@ -634,10 +634,10 @@ Java_org_tigris_subversion_javahl_SVNClient_cleanup
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_resolved
+Java_org_tigris_subversion_javahl_SVNClient_resolve
 (JNIEnv *env, jobject jthis, jstring jpath, jint jdepth, jint jchoice)
 {
-  JNIEntry(SVNClient, resolved);
+  JNIEntry(SVNClient, resolve);
   SVNClient *cl = SVNClient::getCppObject(jthis);
   if (cl == NULL)
     {
@@ -648,7 +648,7 @@ Java_org_tigris_subversion_javahl_SVNClient_resolved
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->resolved(path, (svn_depth_t) jdepth, (svn_wc_conflict_choice_t) jchoice);
+  cl->resolve(path, (svn_depth_t) jdepth, (svn_wc_conflict_choice_t) jchoice);
 }
 
 JNIEXPORT jlong JNICALL

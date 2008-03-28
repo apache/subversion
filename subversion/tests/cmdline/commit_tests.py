@@ -2476,6 +2476,19 @@ def start_commit_detect_capabilities(sbox):
   if data != 'yes':
     raise svntest.Failure
 
+def commit_url(sbox):
+  "'svn commit SOME_URL' should error"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repos_url = sbox.repo_url
+
+  # Commit directly to a URL
+  svntest.actions.run_and_verify_commit(None,
+                                        None,
+                                        None,
+                                        "Must give local path",
+                                        repos_url)
+
 #----------------------------------------------------------------------
 
 # Helper for commit-failure tests
@@ -2614,6 +2627,7 @@ test_list = [ None,
               changelist_near_conflict,
               commit_out_of_date_file,
               start_commit_detect_capabilities,
+              commit_url,
               tree_conflicts_block_commit,
               tree_conflicts_resolved,
              ]
