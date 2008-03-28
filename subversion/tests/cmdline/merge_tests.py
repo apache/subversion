@@ -7099,6 +7099,7 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
   Acopy_path = os.path.join(wc_dir, 'A_copy')
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
   Acopy_gamma_path = os.path.join(wc_dir, 'A_copy', 'D', 'gamma')
+  Acopy_D_path = os.path.join(wc_dir, 'A_copy', 'D')
   A_url = sbox.repo_url + '/A'
   Acopy_url = sbox.repo_url + '/A_copy'
 
@@ -7181,8 +7182,14 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
                                      A_url + '/D/gamma' + '@4',
                                      Acopy_gamma_path)
 
-  svntest.actions.run_and_verify_svn(None, expected_merge_output([[5]],
-                                     'D    ' + Acopy_gamma_path + '\n'),
+  # This merge causes a tree conflict. Since the result of the previous
+  # merge of A/D/gamma into A_copy/D has not yet been committed, it is
+  # considered a local modification of A_Copy/D/gamma by the following
+  # merge. A delete merged ontop of a modified file is a tree conflict.
+  # See notes/tree-conflicts/detection.txt
+  svntest.actions.run_and_verify_svn(None, expected_merge_output([[5], [3,5]],
+                                     ['D    ' + Acopy_gamma_path + '\n',
+                                     'C    ' + Acopy_D_path + '\n']),
                                      [], 'merge', '-r1:5', '--force',
                                      A_url, Acopy_path)
 
