@@ -32,8 +32,14 @@ struct tree_conflict_phrases
   const char *merge_deleted;
   const char *merge_edited;
   const char *we_deleted;
-  const char *we_edited;
-  const char *does_not_exist;
+
+  /* Used during update. */
+  const char *we_edited_update;
+  const char *does_not_exist_update;
+  
+  /* Used during merge. */
+  const char *we_edited_merge;       
+  const char *does_not_exist_merge;
 };
 
 /* Return a new (possibly localised)
@@ -44,23 +50,37 @@ new_tree_conflict_phrases(apr_pool_t *pool)
   struct tree_conflict_phrases *phrases =
     apr_pcalloc(pool, sizeof(struct tree_conflict_phrases));
 
-  phrases->update_deleted = _("The update deleted the file '%s'\n"
+  phrases->update_deleted = _("The update attempted to delete the file '%s'\n"
                               "(possibly as part of a rename operation).\n");
 
-  phrases->update_edited = _("The update edited the file '%s'.\n");
+  phrases->update_edited = _("The update attempted to edit the file '%s'.\n");
 
-  phrases->merge_deleted = _("The merge deleted the file '%s'\n"
+  phrases->merge_deleted = _("The merge attempted to delete the file '%s'\n"
                              "(possibly as part of a rename operation).\n");
 
-  phrases->merge_edited = _("The merge edited the file '%s'.\n");
+  phrases->merge_edited = _("The merge attempted to edit the file '%s'.\n");
 
   phrases->we_deleted = _("You have deleted '%s' locally.\n"
                           "Maybe you renamed it?\n");
 
-  phrases->we_edited = _("You have edited '%s' locally.\n");
+  phrases->we_edited_update = _("You have edited '%s' locally.\n");
 
-  phrases->does_not_exist = _("The file '%s' does not exist locally\n"
-                              "Maybe you renamed it?\n");
+  /* This one only comes up together with merge_deleted, never with
+   * merge_edited. Otherwise we would have a text conflict. So we can
+   * provide a more detailed hint here as to what might have happened. */
+  phrases->we_edited_merge = _("Either you have edited '%s' locally,\n"
+                               "or it has been edited in the history of"
+                               " the branch you are merging into,\n"
+                               "but those edits are not present on the"
+                               " branch you are merging from.\n");
+
+  phrases->does_not_exist_update = _("The file '%s' does not exist locally.\n"
+                                     "Maybe you renamed it?\n");
+
+  phrases->does_not_exist_merge = _("The file '%s' does not exist locally.\n"
+                                    "Maybe you renamed it? Or has it been"
+                                    " renamed in the history of the branch\n"
+                                    "you are merging into?\n");
   return phrases;
 }
 
@@ -68,7 +88,8 @@ static const char *
 select_their_phrase(svn_wc_conflict_description_t *conflict,
                     struct tree_conflict_phrases *phrases)
 {
-  if (conflict->operation == svn_wc_operation_update)
+  if (conflict->operation == svn_wc_operation_update
+      || conflict->operation == svn_wc_operation_switch)
     {
       switch (conflict->action)
         {
@@ -77,7 +98,7 @@ select_their_phrase(svn_wc_conflict_description_t *conflict,
           case svn_wc_conflict_action_edit:
             return phrases->update_edited;
           default:
-            return NULL;
+            return NULL; /* Should never happen! */
         }
     }
   else if (conflict->operation == svn_wc_operation_merge)
@@ -89,10 +110,10 @@ select_their_phrase(svn_wc_conflict_description_t *conflict,
           case svn_wc_conflict_action_edit:
             return phrases->merge_edited;
           default:
-            return NULL;
+            return NULL; /* Should never happen! */
         }
     }
-  return NULL;
+  return NULL; /* Should never happen! */
 }
 
 static const char *
@@ -103,12 +124,33 @@ select_our_phrase(svn_wc_conflict_description_t *conflict,
     {
       case svn_wc_conflict_reason_deleted:
         return phrases->we_deleted;
+
       case svn_wc_conflict_reason_edited:
-        return phrases->we_edited;
+        if (conflict->operation == svn_wc_operation_update
+            || conflict->operation == svn_wc_operation_switch)
+          {
+            return phrases->we_edited_update;
+          }
+        else if (conflict->operation == svn_wc_operation_merge)
+          {
+            return phrases->we_edited_merge;
+          }
+        return NULL; /* Should never happen! */
+
       case svn_wc_conflict_reason_missing:
-        return phrases->does_not_exist;
-      default:
-        return NULL;
+        if (conflict->operation == svn_wc_operation_update
+            || conflict->operation == svn_wc_operation_switch)
+          {
+            return phrases->does_not_exist_update;
+          }
+        else if (conflict->operation == svn_wc_operation_merge)
+          {
+            return phrases->does_not_exist_merge;
+          }
+        return NULL; /* Should never happen! */
+
+     default:
+        return NULL; /* Should never happen! */
     }
 }
 

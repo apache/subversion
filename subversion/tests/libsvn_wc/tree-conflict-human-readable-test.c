@@ -53,7 +53,7 @@ test_get_one_human_readable_tree_conflict_description(const char **msg,
    * If subversion/libsvn_wc/tree_conflicts.c:new_tree_conflict_phrases()
    * is changed, don't forget to update this string!
    */
-  expected = "The update deleted the file 'Foo.c'\n"
+  expected = "The update attempted to delete the file 'Foo.c'\n"
              "(possibly as part of a rename operation).\n"
              "You have edited 'Foo.c' locally.\n";
 
@@ -146,19 +146,21 @@ static struct svn_wc_conflict_description_t write_test_descriptions[] = {
  */
 static const char* write_test_expected_output =
   /* Test 1 */
-  "The update deleted the file 'Foo.c'\n"
+  "The update attempted to delete the file 'Foo.c'\n"
   "(possibly as part of a rename operation).\n"
   "You have edited 'Foo.c' locally.\n"
   "\n"
   /* Test 2 */
-  "The update edited the file 'Foo.c'.\n"
+  "The update attempted to edit the file 'Foo.c'.\n"
   "You have deleted 'Foo.c' locally.\n"
   "Maybe you renamed it?\n"
   "\n"
   /* Test 3 */
-  "The merge edited the file 'Foo.c'.\n"
-  "The file 'Foo.c' does not exist locally\n"
-  "Maybe you renamed it?\n"
+  "The merge attempted to edit the file 'Foo.c'.\n"
+  "The file 'Foo.c' does not exist locally.\n"
+  "Maybe you renamed it? Or has it been"
+  " renamed in the history of the branch\n"
+  "you are merging into?\n"
   /* end */
   "\n";
 
@@ -195,7 +197,10 @@ test_get_multiple_human_readable_tree_conflict_descriptions(const char **msg,
     }
 
   if (strcmp(write_test_expected_output, descriptions->data) != 0)
-    return fail(pool, "Unexpected text from tree conflict");
+    return fail(pool, "Unexpected text from tree conflict:\n"
+                "expected: '%s'\nactual: '%s'\n",
+                write_test_expected_output,
+                descriptions->data);
 
   return SVN_NO_ERROR;
 }

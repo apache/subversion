@@ -10945,17 +10945,17 @@ def tree_conflicts_in_merged_files(sbox):
   exit_code, output, error = svntest.main.run_svn(None, 'info', D2)
   if not verify_lines(output,
                ["Tree conflicts:",
-                "The merge edited the file 'gamma'",  # use case 4
-                "The merge deleted the file 'sigma'", # use case 5
-                "The merge deleted the file 'theta'", # use case 6
+                "The merge attempted to edit the file 'gamma'",   # use case 4
+                "The merge attempted to delete the file 'sigma'", # use case 5
+                "The merge attempted to delete the file 'theta'", # use case 6
                 ]):
                  raise SVNTreeUnequal
   exit_code, output, error = svntest.main.run_svn(None, 'info', G2)
   if not verify_lines(output,
                ["Tree conflicts:",
-                "The merge edited the file 'pi'",   # use case 4
-                "The merge deleted the file 'rho'", # use case 5
-                "The merge deleted the file 'tau'", # use case 6
+                "The merge attempted to edit the file 'pi'",    # use case 4
+                "The merge attempted to delete the file 'rho'", # use case 5
+                "The merge attempted to delete the file 'tau'", # use case 6
                 ]):
                  raise SVNTreeUnequal
 
