@@ -994,8 +994,7 @@ repository</a>.</p>
 <h3>Copy/move-related improvements (<em>client and server</em>)</h3>
 
 <p>The abilities and behavior of <code>copy</code> and
-<code>move</code> operations has improved significantly.</p>
-
+<code>move</code> operations are significantly improved in 1.5+.</p>
 
 <div class="h4" id="leverage-copyfrom" title="leverage-copyfrom">
 <h4>Improved copy-handling during updates (<em>client and server</em>)</h4>
@@ -1003,18 +1002,20 @@ repository</a>.</p>
 <p>A common problem in older versions of Subversion was the way in
 which <code>svn update</code> handled incoming copies and moves.</p>
 
-<p>For example, suppose Harry runs <code>svn move foo bar; svn
+<p>Consider this scenario: Harry runs <code>svn move foo bar; svn
 commit</code>, and meanwhile Sally makes local changes to 'foo', and
 then runs <code>svn update</code>.  In earlier versions of Subversion,
-the server would send down a completely new file 'bar', and remove the
-file 'foo' (or rather, make it unversioned, since it has uncommitted
-changes.)  From Sally's point of view, her changes seem to be lost;
-the newly added 'bar' file has the older content.  In Subversion 1.5,
-the client and server both attempt to be smarter about this.  The
-server doesn't send a whole new file during the update, but rather
-instructions to copy something that may likely already exists in the
-working copy.  So Sally's 'foo' file is copied to 'bar' (with local
-edits intact!).</p>
+the server would send down a completely new file 'bar', and unversion
+the file 'foo' (if it had no uncommitted changes, Subversion would
+remove it entirely.)  From Sally's point of view, her changes seem to
+be lost; the newly added 'bar' file has the older content, and the
+file 'foo' has been taken out of version control.</p>
+
+<p>In Subversion 1.5, the client and server both attempt to be smarter
+about this.  The server doesn't send a whole new file during the
+update, but rather instructions to copy something that likely already
+exists in the working copy.  So Sally's 'foo' file is copied to 'bar'
+(with local edits intact!).</p>
 
 <p>In theory, this is the best-case scenario.  There are a few
 caveats: this "proper copying" of existing working-copy resources only
@@ -1022,16 +1023,23 @@ works on files, not (yet) on directories.  Also, if an incoming
 move-operation deletes 'foo' before it attempts to copy it to 'bar',
 then the copy will fail, and the client reverts to the old behavior of
 fetching a pristine copy of the file from the repository.  We hope to
-address this in svn 1.6.  For details on the this issue see <a
-href="http://subversion.tigris.org/issues/show_bug.cgi?id=503">issue
-#503</a>.</p>
+address this in svn 1.6.</p>
+
+<p>See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=503" >issue
+#503</a> for more.</p>
 
 </div> <!-- leverage-copyfrom -->
 
 <div class="h4" id="copy-peg-revs" title="copy-peg-revs">
 <h4>Peg revisions (<em>client</em>)</h4>
 
-<p>Copy operations now accept sources with peg ("@") revisions.</p>
+<p>Copy and move operations now accept sources with peg ("@")
+revisions.</p>
+
+<p>See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=2546" >issue
+#2546</a> for more.</p>
 
 </div>  <!-- copy-peg-revs -->
 
@@ -1046,6 +1054,10 @@ single object in a working copy:</p>
    svn mv path2 path3
 </pre>
 
+<p>See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=756" >issue
+#756</a> for more.</p>
+
 </div>  <!-- multi-op-copy-move -->
 
 <div class="h4" id="multi-src-copy" title="multi-src-copy">
@@ -1054,19 +1066,50 @@ single object in a working copy:</p>
 <p>Clients now accept multiple sources for copy and move operations, with 
 the ability to copy/move each of the sources to the specified directory.
 This mirrors the behavior of standard command-line copy and move tools,
-such as <code>cp</code> and <code>mv</code>.  In practice, this means
-users can take advantage of shell globbing when doing a local copy
-or move:</p>
-<blockquote><pre><code>
-svn cp *.c dir
-</code></pre></blockquote>
+such as <code>cp</code> and <code>mv</code>.  For example:</p>
+
+<pre>
+   svn mkdir new_subdir
+   svn mv foo.txt bar.txt baz.txt new_subdir
+</pre>
+
+<p>In practice, this means users can take advantage of shell globbing
+when doing a local copy or move:</p>
+
+<pre>
+   svn cp *.c dir
+</pre>
 
 <p>Multiple source copy/move also works for all previously defined
-copy/move working copy and repository combinations.  This was
-<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=747">issue
-#747</a>.</p>
+copy/move working copy and repository combinations.</p>
+
+<p>See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=747" >issue
+#747</a> for more.</p>
 
 </div>  <!-- multi-src-copy -->
+
+<div class="h4" id="cp-takes-base" title="cp-takes-base">
+<h4>Copy takes -rBASE (<em>client</em>)</h4>
+
+<p>Copy now understands the special revision "BASE" in a working copy
+(as in: "<tt>-rBASE</tt>").</p>
+
+<p>See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=1643" >issue
+#1643</a> for more.</p>
+
+</div>  <!-- cp-takes-base -->
+
+</div>  <!-- cp-mv-intermediate-dirs -->
+<div class="h4" id="cp-mv-intermediate-dirs" title="cp-mv-intermediate-dirs">
+<h4>Creation of intermediate directories with copy/move
+    (<em>client and server</em>)</h4>
+
+<p>See the section on the new <a href="#>intermediate-directories</a>"
+>--parents option</a> for more about this.</p>
+
+</div>  <!-- cp-mv-intermediate-dirs -->
 
 </div>  <!-- copy-move-improvements -->
 
@@ -1085,52 +1128,63 @@ actually stop.</p>
 <div class="h3" id="cmdline" title="cmdline">
 <h3>Command-line client improvements (<em>client</em>)</h3>
 
-<ul>
-  <li>A <code>--use-merge-history</code> option to adhere to Merge
-    Tracking meta data has been added to the following sub-commands:
-    <ul>
-      <!-- li>blame</li -->
-      <li>log</li>
-      <li>merge</li>
-    </ul>
-  </li>
+<p>There are far too many enhancements and new options to the
+command-line client to list them all here.  Aside from all the ones
+mentioned already in these release notes, below are a few more that we
+consider important, but please see the 1.5.0 section in the <a
+href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
+for a complete list.</p>
 
-  <li>A <code>--parents</code> option to create intermediate
-    directories has been added to the following sub-commands:
-    <ul>
-      <li>add</li>
-      <li>copy</li>
-      <li>move</li>
-      <li>mkdir</li>
-    </ul>
-  </li>
+<div class="h4" id="resolve" title="resolve">
+<h4>New "resolve" subcommand replaces "resolved"</h4>
 
-  <!-- ### Anticipated addition(s):
-       ### double-dash sequences inside comment changed to '++' to
-       ### avoid breaking XML rules.
-  <li><code>++merged-from</code> and <code>++merged-to</code> options
-    to report on merge info have been added to the <code>info</code>
-    sub-command.</li>
+<p>A new <strong><tt>resolve</tt></strong> subcommand replaces the
+"<tt>resolved</tt>" subcommand (the latter is deprecated, but still
+present for compatibility).  The new subcommand takes a
+<strong><tt>--accept=orig|mine|repo</tt></strong> option to select
+which version of a file to retain (which means Subversion now supports
+batch-style conflict resolution).</p>
 
-  <li>An <code>++accept=orig|mine|repo</code> option to select which
-    version of a path to retain has been added to the
-    <code>resolved</code> sub-command.</li>
-  -->
+<p>See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=2784" >issue
+#2784</a> for more.</p>
 
-  <li>A <code>--keep-local</code> option to retain paths locally has
-    been added to the <code>delete</code> sub-command.</li>
+</div>  <!-- resolve -->
 
-  <li>A <code>--depth</code> option has been added to support <a
-    href="#sparse-checkouts">sparse checkouts</a>.  <code>-N</code> is now
-    maps to one of the arguments for <code>--depth</code>, depending on
-    context.</li>
+<div class="h4" id="intermediate-directories"
+             title="intermediate-directories">
+<h4>Create intermediate directories if asked</h4>
 
-  <li>As part of the <a href="#sparse-checkouts">sparse checkouts</a> work,
-    <code>-R</code> is now just a synonym for <code>--depth=infinity</code>.
-    </li>
-</ul>
+<p>Add, mkdir, copy, and move take a new
+<strong><tt>--parents</tt></strong> option, which makes intermediate
+directories as necessary to create the destination path.</p>
 
-<p>XXX: More...</p>
+<p>See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=1776" >issue
+#1776</a> for more</p>
+
+</div>  <!-- intermediate-directories -->
+
+<div class="h4" id="keep-local" title="keep-local">
+<h4>New --keep-local option retains path after delete.</h4>
+
+<p>Delete (remove) now takes a
+<strong><code>--keep-local</code></strong> option to retain its
+targets locally, so paths will not be removed even if unmodified.</p>
+
+</div>  <!-- keep-local -->
+
+<div class="h4" id="commit-revprops" title="commit-revprops">
+<h4>Commit now takes a --with-revprop option.</h4>
+
+Commit now takes a <strong><tt>--with-revprop</tt></strong> option
+allowing one to set revision properties
+
+<p>See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=1976" >issue
+#1976</a> for more.</p>
+
+</div>  <!-- commit-revprops -->
 
 </div>  <!-- cmdline -->
 
