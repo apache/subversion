@@ -341,6 +341,11 @@ Possible values are: commit, revert."
   :type 'boolean
   :group 'psvn)
 
+(defcustom svn-status-fancy-file-state-in-modeline t
+  "*Show a color dot in the modeline that describes the state of the current file."
+  :type 'boolean
+  :group 'psvn)
+
 (defcustom svn-status-negate-meaning-of-arg-commands '()
   "*List of operations that should use a negated meaning of the prefix argument.
 The supported functions are `svn-status' and `svn-status-set-user-mark'."
@@ -4171,6 +4176,91 @@ Recommended values are ?m or ?M.")
   nil)
 
 (add-hook 'after-save-hook 'svn-status-after-save-hook)
+
+;; --------------------------------------------------------------------------------
+;; vc-svn integration
+;; --------------------------------------------------------------------------------
+(defvar svn-status-state-mark-modeline t) ; modeline mark display or not
+(defvar svn-status-state-mark-tooltip nil) ; modeline tooltip display
+
+(defun svn-status-state-mark-modeline-dot (color)
+  (propertize "    "
+              'help-echo 'svn-status-state-mark-tooltip
+              'display
+              `(image :type xpm
+                      :data ,(format "/* XPM */
+static char * data[] = {
+\"18 13 3 1\",
+\"  c None\",
+\"+ c #000000\",
+\". c %s\",
+\"                  \",
+\"       +++++      \",
+\"      +.....+     \",
+\"     +.......+    \",
+\"    +.........+   \",
+\"    +.........+   \",
+\"    +.........+   \",
+\"    +.........+   \",
+\"    +.........+   \",
+\"     +.......+    \",
+\"      +.....+     \",
+\"       +++++      \",
+\"                  \"};"
+                                     color)
+                      :ascent center)))
+
+(defun svn-status-install-state-mark-modeline (color)
+  (push `(svn-status-state-mark-modeline
+          ,(svn-status-state-mark-modeline-dot color))
+        mode-line-format)
+  (force-mode-line-update t))
+
+(defun svn-status-uninstall-state-mark-modeline ()
+  (setq mode-line-format
+        (remove-if #'(lambda (mode) (eq (car-safe mode)
+                                        'svn-status-state-mark-modeline))
+                   mode-line-format))
+  (force-mode-line-update t))
+
+(defun svn-status-update-state-mark-tooltip (tooltip)
+  (setq svn-status-state-mark-tooltip tooltip))
+
+(defun svn-status-update-state-mark (color)
+  (svn-status-uninstall-state-mark-modeline)
+  (svn-status-install-state-mark-modeline color))
+
+(defsubst svn-status-in-vc-mode? ()
+  "Is vc-svn active?"
+  (and vc-mode (string-match "^ SVN" (substring-no-properties vc-mode))))
+
+(when svn-status-fancy-file-state-in-modeline
+  (defadvice vc-find-file-hook (after svn-status-vc-svn-find-file-hook activate)
+    "vc-find-file-hook advice for synchronizing psvn with vc-svn interface"
+    (when (svn-status-in-vc-mode?) (svn-status-update-modeline)))
+
+  (defadvice vc-after-save (after svn-status-vc-svn-after-save activate)
+    "vc-after-save advice for synchronizing psvn when saving buffer"
+    (when (svn-status-in-vc-mode?) (svn-status-update-modeline))))
+
+(defun svn-status-update-modeline ()
+  "Update modeline state dot mark properly"
+  (when (and buffer-file-name (svn-status-in-vc-mode?))
+    (svn-status-update-state-mark
+     (svn-status-interprete-state-mode-color
+      (vc-svn-state buffer-file-name)))))
+
+(defsubst svn-status-interprete-state-mode-color (stat)
+  "Interpret vc-svn-state symbol to mode line color"
+  (case stat
+    ('edited "tomato"      )
+    ('up-to-date "GreenYellow" )
+    ;; what is missing here??
+    ;; ('unknown  "gray"        )
+    ;; ('added    "blue"        )
+    ;; ('deleted  "red"         )
+    ;; ('unmerged "purple"      )
+    (t "red")))
 
 ;; --------------------------------------------------------------------------------
 ;; Getting older revisions
