@@ -40,8 +40,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.5\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2008-03-27 22:38-0300\n"
-"PO-Revision-Date: 2008-03-27 22:40-0300\n"
+"POT-Creation-Date: 2008-03-29 00:00-0300\n"
+"PO-Revision-Date: 2008-03-29 00:02-0300\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Spanish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1490,12 +1490,11 @@ msgstr "El uso de dos URLs no es compatible con la modificación de la info de f
 #: ../libsvn_client/merge.c:4781 ../libsvn_client/merge.c:5064
 #, fuzzy
 msgid "Merge from foreign repository is not compatible with mergeinfo modification"
-msgstr "El uso de dos URLs no es compatible con la modificación de la info de fusión"
+msgstr "La fusión desde repositorios externos no es compatible con la modificación de la info de fusión"
 
 #: ../libsvn_client/merge.c:5372
-#, fuzzy
 msgid "Cannot reintegrate into a working copy with a switched subtree"
-msgstr "No se pueden mezclar fuentes de repositorio y copia de trabajo"
+msgstr "No se puede reintegrar hacia una copia de trabajo con un subárbol conmutado (switch)"
 
 #: ../libsvn_client/merge.c:5377
 msgid "Cannot reintegrate into a working copy not entirely at infinite depth"
@@ -1830,7 +1829,7 @@ msgstr "leer copia"
 #: ../libsvn_fs_base/bdb/node-origins-table.c:110
 #, c-format
 msgid "Node origin for '%s' exists in filesystem '%s' with a different value (%s) than what we were about to store (%s)"
-msgstr ""
+msgstr "El origen de nodo de '%s' existe en el sistema de archivos '%s' con un valor distinto (%s) que el que estábamos por almacenar (%s)"
 
 #: ../libsvn_fs_base/bdb/node-origins-table.c:120
 msgid "storing node-origins record"
@@ -2107,9 +2106,9 @@ msgid "Corrupt lock in 'locks' table for '%s' in filesystem '%s'"
 msgstr "Bloqueo corrupto en la tabla 'locks' para '%s' en el sistema de archivos '%s'"
 
 #: ../libsvn_fs_base/err.c:157
-#, fuzzy, c-format
+#, c-format
 msgid "No record in 'node-origins' table for node id '%s' in filesystem '%s'"
-msgstr "Entrada corrupta en la tabla 'copies' para '%s' en el sistema de archivos '%s'"
+msgstr "No hay un registro en la tabla 'node-origins' para el id de nodo '%s' en el sistema de archivos '%s'"
 
 #: ../libsvn_fs_base/fs.c:81
 #, c-format
@@ -2687,7 +2686,7 @@ msgstr "La recuperación encontró una representación de directorio deltificada
 #: ../libsvn_fs_fs/fs_fs.c:5900
 #, c-format
 msgid "Node origin for '%s' exists with a different value (%s) than what we were about to store (%s)"
-msgstr ""
+msgstr "El origen de nodo de '%s' existe con un valor distinto (%s) que el que estábamos por almacenar (%s)"
 
 #: ../libsvn_fs_fs/fs_fs.c:6011
 msgid "No such transaction"
@@ -2726,7 +2725,7 @@ msgstr ""
 #: ../libsvn_fs_fs/tree.c:3703
 #, c-format
 msgid "Querying mergeinfo requires version %d of the FSFS filesystem schema; filesystem '%s' uses only version %d"
-msgstr ""
+msgstr "Preguntar por info de fusión requiere la versión %d del sistema de archivos FSFS. El sistema de archivos '%s' usa sólo la versión %d"
 
 #: ../libsvn_fs_util/fs-util.c:98
 msgid "Filesystem object has not been opened yet"
@@ -2899,9 +2898,9 @@ msgid "DAV request failed; it's possible that the repository's pre-revprop-chang
 msgstr "El requerimiento DAV falló. Es posible que el script de repositorio 'pre-revprop-change' haya fallado o sea inexistente"
 
 #: ../libsvn_ra_neon/fetch.c:1420
-#, fuzzy, c-format
+#, c-format
 msgid "Missing rev attr in target-revision element"
-msgstr "Falta el atributo 'revision' en el elemento 'target-revision'"
+msgstr "Falta el atributo 'rev' en el elemento 'target-revision'"
 
 #: ../libsvn_ra_neon/fetch.c:1431 ../libsvn_ra_serf/update.c:1465
 #, c-format
@@ -3544,8 +3543,7 @@ msgstr "El servidor devolvió una raíz de repositorio imposiblemente larga"
 msgid ""
 "Module for accessing a repository using the svn network protocol.\n"
 "  - with Cyrus SASL authentication"
-msgstr "Módulo para acceder al repositorio vía el protocolo de red svn."
-"  - con autentificación via Cyrus SASL"
+msgstr "Módulo para acceder al repositorio vía el protocolo de red svn.  - con autentificación via Cyrus SASL"
 
 #: ../libsvn_ra_svn/client.c:625
 msgid "Module for accessing a repository using the svn network protocol."
@@ -3823,7 +3821,7 @@ msgstr "Ruta objetivo inválida"
 
 #: ../libsvn_repos/delta.c:243
 msgid "Delta depth 'exclude' not supported"
-msgstr ""
+msgstr "Profundidad de delta 'exclude' no admitida"
 
 #: ../libsvn_repos/delta.c:269
 msgid "Invalid editor anchoring; at least one of the input paths is not a directory and there was no source entry"
@@ -4749,9 +4747,9 @@ msgid "Unable to parse unordered revision ranges '%s' and '%s'"
 msgstr ""
 
 #: ../libsvn_subr/mergeinfo.c:447
-#, fuzzy, c-format
+#, c-format
 msgid "Mergeinfo for '%s' maps to an empty revision range"
-msgstr "'%s' no es un rango de revisiones válido"
+msgstr "La info de fusión para '%s' afecta un rango de revisiones vacío"
 
 #: ../libsvn_subr/mergeinfo.c:461
 #, c-format
@@ -6605,20 +6603,21 @@ msgstr ""
 "                             como parámetros adicionales"
 
 #: ../svn/main.c:186
-#, fuzzy
 msgid ""
 "limit operation by depth ARG ('empty', 'files',\n"
 "                            'immediates', or 'infinity')"
 msgstr ""
-"pasa profundidad ('empty', 'files', 'immediates', o\n"
-"                            'infinity') como ARG"
+"limita operación según profundiad PAR ('empty',\n"
+"                            'files', 'immediates', o 'infinity')"
 
 #: ../svn/main.c:190
-#, fuzzy
 msgid ""
 "set new working copy depth to ARG ('empty',\n"
 "                            'files', 'immediates', or 'infinity')"
-msgstr "'%s' no es una profundidad válida; pruebe 'empty', 'files', 'immediates', o 'infinity'"
+msgstr ""
+"establece la profundiad de la copia de\n"
+"                            trabajo a PAR ('empty',\n"
+"                            'files', 'immediates', o 'infinity')"
 
 #: ../svn/main.c:193
 msgid "output in XML"
@@ -6742,11 +6741,11 @@ msgid "remove changelist association"
 msgstr "eliminar asociación con lista de cambios"
 
 #: ../svn/main.c:242
-#, fuzzy
 msgid ""
 "operate only on members of changelist ARG\n"
 "                             [aliases: --cl]"
-msgstr "operar sólo en miembro de la lista de cambios PAR"
+msgstr "operar sólo en miembros de la lista de cambios PAR\n"
+"                             [alias: --cl]"
 
 #: ../svn/main.c:246
 msgid "don't delete changelists after commit"
@@ -6838,13 +6837,12 @@ msgstr ""
 "  se busca primero.\n"
 
 #: ../svn/main.c:348
-#, fuzzy
 msgid ""
 "Associate (or dissociate) changelist CLNAME with the named files.\n"
 "usage: 1. changelist CLNAME TARGET...\n"
 "       2. changelist --remove TARGET...\n"
 msgstr ""
-"Asociar (o desasociar) rutas locales con la lista de cambios NOMLIST.\n"
+"Asociar (o desasociar) a la lista de cambios NOMLIST con los archivos indicados.\n"
 "uso: 1. changelist NOMLIST OBJETIVO...\n"
 "     2. changelist --remove OBJETIVO...\n"
 
@@ -7292,7 +7290,7 @@ msgid ""
 "Apply the differences between two sources to a working copy path.\n"
 "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
 "       2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
-"       3. merge [-c M[,N]... | -r N:M...] SOURCE[@REV] [WCPATH]\n"
+"       3. merge [-c M[,N...] | -r N:M ...] SOURCE[@REV] [WCPATH]\n"
 "\n"
 "  1. In the first form, the source URLs are specified at revisions\n"
 "     N and M.  These are the two sources to be compared.  The revisions\n"
@@ -7308,7 +7306,7 @@ msgid ""
 "     for each revision range provided.  If REV is not specified, HEAD\n"
 "     is assumed.  '-c M' is equivalent to '-r <M-1>:M', and '-c -M'\n"
 "     does the reverse: '-r M:<M-1>'.  If no revision ranges are\n"
-"     specified, the default range of 1:HEAD is used.  Multiple '-c'\n"
+"     specified, the default range of 0:HEAD is used.  Multiple '-c'\n"
 "     and/or '-r' instances may be specified, and mixing of forward\n"
 "     and reverse ranges is allowed.\n"
 "\n"
@@ -7317,10 +7315,12 @@ msgid ""
 "  the sources have identical basenames that match a file within '.':\n"
 "  in which case, the differences will be applied to that file.\n"
 "\n"
-"  NOTE:  Subversion will only internally track metadata about the\n"
-"  merge operation if the two sources are ancestrally related -- if the\n"
+"  NOTE:  Subversion will only record metadata to track the merge\n"
+"  if the two sources are on the same line of history -- if the\n"
 "  first source is an ancestor of the second, or vice-versa.  This is\n"
 "  guaranteed to be the case when using the third form listed above.\n"
+"  The --ignore-ancestry option overrides this, forcing Subversion to\n"
+"  regard the sources as unrelated and not to track the merge.\n"
 msgstr ""
 "Aplica las diferencias entre dos fuentes a una ruta de copia de trabajo.\n"
 "uso: 1. merge URLfuente1[@N] URLfuente2[@M] [RUTACDT]\n"
@@ -7359,7 +7359,7 @@ msgstr ""
 "  viceversa.  Esto está garantizado en la tercera forma de uso\n"
 "  enunciada más arriba.\n"
 
-#: ../svn/main.c:622
+#: ../svn/main.c:624
 msgid ""
 "Query merge-related information.\n"
 "usage: mergeinfo [TARGET[@REV]...]\n"
@@ -7367,7 +7367,7 @@ msgstr ""
 "Pregunta información relacionada con las fusiones.\n"
 "uso: mergeinfo [OBJETIVO[@REV]...]\n"
 
-#: ../svn/main.c:627
+#: ../svn/main.c:629
 msgid ""
 "Create a new directory under version control.\n"
 "usage: 1. mkdir PATH...\n"
@@ -7399,7 +7399,7 @@ msgstr ""
 "  En ambos casos, todos los directorios intermedios deben ya existir\n"
 "  a menos que se use la opción --parents.\n"
 
-#: ../svn/main.c:644
+#: ../svn/main.c:646
 msgid ""
 "Move and/or rename something in working copy or repository.\n"
 "usage: move SRC... DST\n"
@@ -7430,7 +7430,7 @@ msgstr ""
 "    URL -> URL:  cambio de nombre en el servidor directamente.\n"
 "  Todos los ORIGs deben ser del mismo tipo.\n"
 
-#: ../svn/main.c:660
+#: ../svn/main.c:662
 msgid ""
 "Remove a property from files, dirs, or revisions.\n"
 "usage: 1. propdel PROPNAME [PATH...]\n"
@@ -7448,7 +7448,7 @@ msgstr ""
 "  2. Remueve propiedades no versionadas remotas en la revisión REV del repositorio.\n"
 "     OBJETIVO sólo se usa para determinar sobre qué repositorio operar.\n"
 
-#: ../svn/main.c:671
+#: ../svn/main.c:673
 msgid ""
 "Edit a property with an external editor.\n"
 "usage: 1. propedit PROPNAME TARGET...\n"
@@ -7470,7 +7470,7 @@ msgstr ""
 "     del repositorio.\n"
 "     OBJETIVO sólo se usa para determinar sobre qué repositorio operar.\n"
 
-#: ../svn/main.c:684
+#: ../svn/main.c:686
 msgid ""
 "Print the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propget PROPNAME [TARGET[@REV]...]\n"
@@ -7506,7 +7506,7 @@ msgstr ""
 "  embellecimientos (útil, por ejemplo, cuando se redireccionan\n"
 "  valores de propiedad binarios a un archivo).\n"
 
-#: ../svn/main.c:702
+#: ../svn/main.c:704
 msgid ""
 "List all properties on files, dirs, or revisions.\n"
 "usage: 1. proplist [TARGET[@REV]...]\n"
@@ -7527,7 +7527,7 @@ msgstr ""
 "  2. Lista propiedades remotas no versionadas en la revisión del\n"
 "     repositorio.\n"
 
-#: ../svn/main.c:713
+#: ../svn/main.c:715
 #, fuzzy
 msgid ""
 "Set the value of a property on files, dirs, or revisions.\n"
@@ -7637,11 +7637,11 @@ msgstr ""
 "  intento no recursivo fallará y un intento recursivo asignará\n"
 "  la propiedad sólo en los archivos hijos del directorio.\n"
 
-#: ../svn/main.c:773
+#: ../svn/main.c:775
 msgid "read property value from file ARG"
 msgstr "leer el valor de la propiedad del archivo PAR"
 
-#: ../svn/main.c:776
+#: ../svn/main.c:778
 msgid ""
 "Resolve conflicts on working copy files or directories.\n"
 "usage: resolve [PATH...]\n"
@@ -7649,18 +7649,16 @@ msgid ""
 "  Note:  the --accept option is currently required.\n"
 msgstr ""
 
-#: ../svn/main.c:781
-#, fuzzy
+#: ../svn/main.c:783
 msgid ""
 "specify automatic conflict resolution source\n"
 "                            ('"
 msgstr ""
 "especifica la fuente para la resolución\n"
 "                             automática de los conflictos\n"
-"                             '"
+"                             ('"
 
-#: ../svn/main.c:793
-#, fuzzy
+#: ../svn/main.c:795
 msgid ""
 "Remove 'conflicted' state on working copy files or directories.\n"
 "usage: resolved PATH...\n"
@@ -7676,9 +7674,10 @@ msgstr ""
 "  Nota:  Este subcomando no resuelve semánticamente los conflictos, ni\n"
 "  quita los demarcadores de éstos.  Simplemente elimina los archivos\n"
 "  auxiliares relacionados y permite que la RUTA pueda intervenir de\n"
-"  nuevo en un commit.\n"
+"  nuevo en un commit.  Su uso es ahora obsoleto y se recomienda usar\n"
+"  'svn resolve --accept working'.\n"
 
-#: ../svn/main.c:803
+#: ../svn/main.c:805
 msgid ""
 "Restore pristine working copy file (undo most local edits).\n"
 "usage: revert PATH...\n"
@@ -7693,7 +7692,7 @@ msgstr ""
 "  Nota:  este subcomando no requiere de acceso a la red y resuelve cualquier\n"
 "  estado de conflicto.  Sin embargo no restituye directorios eliminados.\n"
 
-#: ../svn/main.c:811
+#: ../svn/main.c:813
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -7846,7 +7845,7 @@ msgstr ""
 "                 965       687 joe          wc/zig.c\n"
 "    Estado respecto a la revisión:   981\n"
 
-#: ../svn/main.c:887
+#: ../svn/main.c:889
 #, fuzzy
 msgid ""
 "Update the working copy to a different URL.\n"
@@ -7905,7 +7904,7 @@ msgstr ""
 "  local.  Todas las propiedades del repositorio se aplicarán en la ruta\n"
 "  obstruida.\n"
 
-#: ../svn/main.c:921
+#: ../svn/main.c:923
 msgid ""
 "Unlock working copy paths or URLs.\n"
 "usage: unlock TARGET...\n"
@@ -7917,7 +7916,7 @@ msgstr ""
 "\n"
 "  Use --force para romper el bloqueo.\n"
 
-#: ../svn/main.c:928
+#: ../svn/main.c:930
 #, fuzzy
 msgid ""
 "Bring changes from the repository into the working copy.\n"
@@ -7991,84 +7990,84 @@ msgstr ""
 "  obstruida.  Las rutas obstruidas se reportan en la primera columna con\n"
 "  el código 'E'.\n"
 
-#: ../svn/main.c:1008 ../svnadmin/main.c:78 ../svnlook/main.c:329
+#: ../svn/main.c:1010 ../svnadmin/main.c:78 ../svnlook/main.c:329
 #: ../svnsync/main.c:184
 msgid "Caught signal"
 msgstr "Se atrapó una señal"
 
-#: ../svn/main.c:1027
+#: ../svn/main.c:1029
 #, fuzzy
 msgid "Revision property pair is empty"
 msgstr "La entrada de la revisión no es una lista"
 
-#: ../svn/main.c:1047 ../svn/propedit-cmd.c:60 ../svn/propget-cmd.c:180
+#: ../svn/main.c:1049 ../svn/propedit-cmd.c:60 ../svn/propget-cmd.c:180
 #: ../svn/propset-cmd.c:64
 #, c-format
 msgid "'%s' is not a valid Subversion property name"
 msgstr "'%s' no es un nombre válido para una propiedad de Subversion"
 
-#: ../svn/main.c:1172 ../svnlook/main.c:2083
+#: ../svn/main.c:1174 ../svnlook/main.c:2083
 msgid "Non-numeric limit argument given"
 msgstr "Se dio un límite no numérico"
 
-#: ../svn/main.c:1178 ../svnlook/main.c:2089
+#: ../svn/main.c:1180 ../svnlook/main.c:2089
 msgid "Argument to --limit must be positive"
 msgstr "El parámetro de --limit debe ser positivo"
 
-#: ../svn/main.c:1200 ../svn/main.c:1433
+#: ../svn/main.c:1202 ../svn/main.c:1435
 msgid "Can't specify -c with --old"
 msgstr "No se puede especificar -c conjuntamente con --old"
 
-#: ../svn/main.c:1210
+#: ../svn/main.c:1212
 msgid "Non-numeric change argument given to -c"
 msgstr "Se dio como parámetro un cambio no numérico a -c"
 
-#: ../svn/main.c:1218
+#: ../svn/main.c:1220
 msgid "There is no change 0"
 msgstr "No hay un cambio 0"
 
-#: ../svn/main.c:1254 ../svnadmin/main.c:1473
+#: ../svn/main.c:1256 ../svnadmin/main.c:1473
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "Error de sintaxis en el parámetro de revisión '%s'"
 
-#: ../svn/main.c:1327 ../svn/main.c:1346
+#: ../svn/main.c:1329 ../svn/main.c:1348
 #, c-format
 msgid "Error converting depth from locale to UTF8"
 msgstr "Error convirtiendo la profundidad desde el locale a UTF8"
 
-#: ../svn/main.c:1335 ../svn/main.c:1354
+#: ../svn/main.c:1337 ../svn/main.c:1356
 #, c-format
 msgid "'%s' is not a valid depth; try 'empty', 'files', 'immediates', or 'infinity'"
 msgstr "'%s' no es una profundidad válida; pruebe 'empty', 'files', 'immediates', o 'infinity'"
 
-#: ../svn/main.c:1461
+#: ../svn/main.c:1463
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "Error de sintaxis en el parámetro de native-eol '%s'"
 
-#: ../svn/main.c:1507
+#: ../svn/main.c:1509
 #, c-format
 msgid "'%s' is not a valid accept value"
 msgstr "'%s' no es un valor válido de aceptación"
 
-#: ../svn/main.c:1515
-#, fuzzy, c-format
+#: ../svn/main.c:1517
+#, c-format
 msgid "'%s' is not a URL"
-msgstr "La ruta '%s' no es un URL"
+msgstr "'%s' no es un URL"
 
-#: ../svn/main.c:1577 ../svndumpfilter/main.c:1314 ../svnlook/main.c:2161
+#: ../svn/main.c:1579 ../svndumpfilter/main.c:1314 ../svnlook/main.c:2161
 #, c-format
 msgid "Subcommand argument required\n"
 msgstr "El subcomando requiere un parámetro\n"
 
-#: ../svn/main.c:1596 ../svnadmin/main.c:1605 ../svndumpfilter/main.c:1333
+#: ../svn/main.c:1598 ../svnadmin/main.c:1605 ../svndumpfilter/main.c:1333
 #: ../svnlook/main.c:2180
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "Comando desconocido: '%s'\n"
 
-#: ../svn/main.c:1630
+#: ../svn/main.c:1632
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -8077,64 +8076,64 @@ msgstr ""
 "El subcomando '%s' no acepta la opción '%s'\n"
 "Tipee 'svn help %s' para ver modo de uso.\n"
 
-#: ../svn/main.c:1644
+#: ../svn/main.c:1646
 msgid "Multiple revision arguments encountered; can't specify -c twice, or both -c and -r"
 msgstr "Se encontraron múltiples indicaciones de revisiones; no se puede usar -c más de una vez, o usar -c y -r a la vez"
 
-#: ../svn/main.c:1658
+#: ../svn/main.c:1660
 msgid "-r and -c can't be used with --reintegrate"
 msgstr "-r y -c no pueden ser usdas con --reintegrate"
 
-#: ../svn/main.c:1667
+#: ../svn/main.c:1669
 msgid "--depth and --set-depth are mutually exclusive"
 msgstr "--depth y --set-depth son mutuamente excluyentes"
 
-#: ../svn/main.c:1717
+#: ../svn/main.c:1719
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr "El mensaje de log es un archivo versionado, use '--force-log' para actuar de todas formas"
 
-#: ../svn/main.c:1724
+#: ../svn/main.c:1726
 msgid "Lock comment file is a versioned file; use '--force-log' to override"
 msgstr "El mensaje de bloqueo es un archivo versionado, use '--force-log' para actuar de todas formas"
 
-#: ../svn/main.c:1744
+#: ../svn/main.c:1746
 msgid "The log message is a pathname (was -F intended?); use '--force-log' to override"
 msgstr "El mensaje de log es una ruta (¿la intención fue usar -F?); use '--force-log' para forzar la acción"
 
-#: ../svn/main.c:1751
+#: ../svn/main.c:1753
 msgid "The lock comment is a pathname (was -F intended?); use '--force-log' to override"
 msgstr "El mensaje de bloqueo es una ruta (¿la intención fue usar -F?); use '--force-log' para forzar la acción"
 
-#: ../svn/main.c:1762
+#: ../svn/main.c:1764
 msgid "--relocate and --depth are mutually exclusive"
 msgstr "--relocate y --depth son mutuamente excluyentes"
 
-#: ../svn/main.c:1838
+#: ../svn/main.c:1840
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props y --no-auto-props son mutuamente excluyentes"
 
-#: ../svn/main.c:1852
+#: ../svn/main.c:1854
 msgid "--reintegrate cannot be used with --ignore-ancestry or --record-only"
 msgstr ""
 
-#: ../svn/main.c:1860
+#: ../svn/main.c:1862
 msgid "--reintegrate cannot be used with --ignore-ancestry"
 msgstr ""
 
-#: ../svn/main.c:1868
+#: ../svn/main.c:1870
 msgid "--reintegrate cannot be used with --record-only"
 msgstr ""
 
-#: ../svn/main.c:1981 ../svn/main.c:1987
+#: ../svn/main.c:1983 ../svn/main.c:1989
 #, c-format
 msgid "--accept=%s incompatible with --non-interactive"
 msgstr "--accept=%s es incompatible con --non-interactive"
 
-#: ../svn/main.c:2014
+#: ../svn/main.c:2016
 msgid "Try 'svn help' for more info"
 msgstr "Pruebe 'svn help' para más información"
 
-#: ../svn/main.c:2024
+#: ../svn/main.c:2026
 msgid "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for details)\n"
 msgstr "svn: ejecute 'svn cleanup' para quitar locks (tipee 'svn help cleanup' para más detalles)\n"
 
@@ -8160,7 +8159,7 @@ msgstr "Se necesita una revisión explícita al fusionar con una copia de trabaj
 
 #: ../svn/merge-cmd.c:292
 msgid "--force cannot be used with --reintegrate"
-msgstr ""
+msgstr "--force no se puede usar con --reintegrate"
 
 #: ../svn/mergeinfo-cmd.c:77
 #, c-format
@@ -9205,13 +9204,13 @@ msgid "Removed lock on '%s'.\n"
 msgstr "Se removió el bloqueo sobre '%s'.\n"
 
 #: ../svnadmin/main.c:1305
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Repository lock acquired.\n"
 "Please wait; upgrading the repository may take some time...\n"
 msgstr ""
 "Lock sobre el repositorio adquirido.\n"
-"Espere por favor: la recuperación del repositorio puede llevar algún tiempo...\n"
+"Espere por favor: la actualización del repositorio puede llevar algún tiempo...\n"
 
 #: ../svnadmin/main.c:1351
 msgid "Upgrade of this repository's underlying versioned filesystem is not supported; consider dumping and loading the data elsewhere"
@@ -9226,7 +9225,8 @@ msgstr ""
 msgid ""
 "\n"
 "Upgrade completed.\n"
-msgstr "\n"
+msgstr ""
+"\n"
 "Actualización completada.\n"
 
 #: ../svnadmin/main.c:1459
