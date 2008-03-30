@@ -181,6 +181,7 @@ with its pros and cons, to be outlined below.
     we're not going to be 'clean': we'll always need path comparison
     routines.
 
+
 Solution (1) has a very strong CON: it will break all pre-existing
 MacOSX-only workshops.  Consider a client which starts sending NFC
 encoded paths in an environment where all paths have been NFD encoded
@@ -206,6 +207,11 @@ to be performed using special NFC/NFD encoding aware functions.
 Short term solution
 ===================
 
+Because of our interoperability guarantees, the client and server
+should be considered separate universes, each of which can use its own
+(internal) solution.  However, the client should at all times use the
+exact path the server sent it.  The same applies the other way around.
+
 Given the above, the short term (before 2.0) solution should be to
 use path comparison routines as stated in solution (4).
 
@@ -219,6 +225,30 @@ case, it'll no longer require the use of specialised path comparison
 routines (although that might still be desired for other design
 considerations).
 
+
+Short term solution implementation consequences
+===============================================
+
+As stated before, since we don't know whether the other side of the
+equation might be a pre-normalization-aware client or server until
+we break backward compat in 2.0, the client and server should be
+able to talk backward compatibly with a pre-NF-aware 'other side'.
+
+Hence, solving this problem means considering the client and the server
+separate universes, each of which can employ its own internal solution.
+
+
+Implementing option (4) means:
+
+ A. Comparing file names with entry paths using NFC/NFD aware comparison
+    functions. Then, when there's a match, *use the pathname from the
+    entries file* to communicate with the server; after all, the path
+    might have been added with a different encoding than we got back
+    from the disk.
+
+ B. Match working copy paths with entries-file paths using NFC/NFD aware
+    comparison functions. On a match, use the entries-file path to
+    communicate with the server.
 
 
 References
