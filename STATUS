@@ -14,24 +14,6 @@ Status of 1.5.0:
 
 Candidate changes:
 
- * r29939, r29942, r29986
-   Add validation of SSL server certificates to ra_serf.
-   Notes:
-     Requires serf 0.2 (unreleased), code doesn't get built with older
-     versions.
-   Votes:
-     +1: lgo
-  
- * r30030
-   Always pass --tag=CC / --tag=CXX option to libtool.
-   Justification: Checking if libtool supports these options gives false
-     results with libtool-2.2.
-   Notes: 
-     This removes support for libtool <1.5 (but a quick survey showed
-     that nobody was using it, anyway.)
-   Votes
-     +1: arfrever
-
  * r30086
    Fix an ancient mod_dav_svn bug that causes invalid URLs to be
    transmitted in the update REPORT response.
@@ -54,10 +36,29 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+Approved changes:
+
+ * r29939, r29942, r29986
+   Add validation of SSL server certificates to ra_serf.
+   Notes:
+     Requires serf 0.2 (unreleased), code doesn't get built with older
+     versions.
+   Votes:
+     +1: lgo, cmpilato
+  
+ * r30030
+   Always pass --tag=CC / --tag=CXX option to libtool.
+   Justification: Checking if libtool supports these options gives false
+     results with libtool-2.2.
+   Notes: 
+     This removes support for libtool <1.5 (but a quick survey showed
+     that nobody was using it, anyway.)
+   Votes
+     +1: arfrever, cmpilato
+
  * r30137
    Use the correct constant for an unknown svn_info_t::working_size, following
    the documentation change in r30130 (which has recently been back-ported).
    Votes:
-     +1: julianfoad
+     +1: julianfoad, cmpilato
 
-Approved changes:
