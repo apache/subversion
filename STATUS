@@ -54,12 +54,6 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
- * r30130
-   Doc fixes for new fields in svn_info_t.
-   See <http://svn.haxx.se/dev/archive-2008-03/0957.shtml>.
-   Votes:
-     +1: julianfoad
-
 Approved changes:
 
  * r29201
@@ -72,3 +66,9 @@ Approved changes:
    programmer error (probably even falls into the obvious fix rule).
    Votes:
      +1: cmpilato, kfogel
+
+ * r30130
+   Doc fixes for new fields in svn_info_t.
+   See <http://svn.haxx.se/dev/archive-2008-03/0957.shtml>.
+   Votes:
+     +1: julianfoad, hwright
