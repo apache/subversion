@@ -56,12 +56,6 @@ Candidate changes:
 
 Approved changes:
 
- * r30124
-   Fix a regression bug in 'svn switch' externals support.  Just a little
-   programmer error (probably even falls into the obvious fix rule).
-   Votes:
-     +1: cmpilato, kfogel
-
  * r30130
    Doc fixes for new fields in svn_info_t.
    See <http://svn.haxx.se/dev/archive-2008-03/0957.shtml>.
