@@ -147,26 +147,6 @@ ifdef([LT_INIT], [LT_INIT], [AC_PROG_LIBTOOL])
 fi
 AC_SUBST(SVN_LIBTOOL)
 
-dnl Determine if the libtool version supports --tag or not
-SVN_LT_CCTAG=
-SVN_LT_CXXTAG=
-AC_MSG_CHECKING([whether libtool accepts --tag=XXX])
-
-AC_LANG_CONFTEST([AC_LANG_PROGRAM()])
-if $sh_libtool --tag=CC --mode=compile \
-  $CC -c $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext >&5
-then
-    AC_MSG_RESULT([yes])
-    SVN_LT_CCTAG="--tag=CC"
-    SVN_LT_CXXTAG="--tag=CXX"
-else
-    AC_MSG_RESULT([no])
-fi
-rm -rf $lt_cv_objdir
-rm -f conftest.$ac_ext
-AC_SUBST(SVN_LT_CCTAG)
-AC_SUBST(SVN_LT_CXXTAG)
-
 dnl Before configuring libtool check for --enable-all-static option
 AC_ARG_ENABLE(all-static,
   AS_HELP_STRING([--enable-all-static],

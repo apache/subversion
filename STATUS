@@ -38,16 +38,6 @@ Candidate changes:
 
 Approved changes:
 
- * r30030
-   Always pass --tag=CC / --tag=CXX option to libtool.
-   Justification: Checking if libtool supports these options gives false
-     results with libtool-2.2.
-   Notes: 
-     This removes support for libtool <1.5 (but a quick survey showed
-     that nobody was using it, anyway.)
-   Votes
-     +1: arfrever, cmpilato
-
  * r30137
    Use the correct constant for an unknown svn_info_t::working_size, following
    the documentation change in r30130 (which has recently been back-ported).
