@@ -54,4 +54,10 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r30137
+   Use the correct constant for an unknown svn_info_t::working_size, following
+   the documentation change in r30130 (which has recently been back-ported).
+   Votes:
+     +1: julianfoad
+
 Approved changes:
