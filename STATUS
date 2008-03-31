@@ -54,7 +54,7 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
- * r30122
+ * r30124
    Fix a regression bug in 'svn switch' externals support.  Just a little
    programmer error (probably even falls into the obvious fix rule).
    Votes:
