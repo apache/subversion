@@ -4019,8 +4019,7 @@ svn_client_unlock(const apr_array_header_t *targets,
  * @{
  */
 
-/** The value of the size in the repository is unknown (because the info
- * was fetched for a local path, not an URL).
+/** The size of the file is unknown.
  *
  * @since New in 1.5
  */
@@ -4086,14 +4085,14 @@ typedef struct svn_info_t
   const char *conflict_new;
   const char *conflict_wrk;
   const char *prejfile;
-
-  /* @since New in 1.5. */
+  /** @since New in 1.5. */
   const char *changelist;
+  /** @since New in 1.5. */
   svn_depth_t depth;
 
   /**
    * The size of the file after being translated into its local
-   * representation, or @c SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN if
+   * representation, or @c SVN_INFO_SIZE_UNKNOWN if
    * unknown.  Not applicable for directories.
    * @since New in 1.5.
    */
