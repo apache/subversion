@@ -1,7 +1,7 @@
 dnl configure.ac: Autoconfiscation for Subversion
 dnl Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.58)
+APR_PREREQ(2.58)
 
 dnl Get the version of Subversion, using m4's esyscmd() command to do this
 dnl at m4-time, since AC_INIT() requires it then.
@@ -85,6 +85,8 @@ SVN_LIB_NEON($NEON_ALLOWED_LIST, $NEON_RECOMMENDED_VER, $NEON_URL)
 
 dnl Search for serf as an alternative to neon
 SVN_LIB_SERF
+
+SVN_LIB_UTF8PROC
 
 dnl Set up a number of directories ---------------------
 
