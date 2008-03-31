@@ -38,14 +38,6 @@ Candidate changes:
 
 Approved changes:
 
- * r29939, r29942, r29986
-   Add validation of SSL server certificates to ra_serf.
-   Notes:
-     Requires serf 0.2 (unreleased), code doesn't get built with older
-     versions.
-   Votes:
-     +1: lgo, cmpilato
-  
  * r30030
    Always pass --tag=CC / --tag=CXX option to libtool.
    Justification: Checking if libtool supports these options gives false

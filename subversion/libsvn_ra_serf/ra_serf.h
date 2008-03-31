@@ -191,6 +191,10 @@ struct svn_ra_serf__session_t {
   const char *proxy_username;
   const char *proxy_password;
   int proxy_auth_attempts;
+
+  /* SSL server certificates */
+  svn_boolean_t trust_default_ca;
+  const char *ssl_authorities;
 };
 
 /*
