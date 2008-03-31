@@ -208,7 +208,7 @@ Contents
   max-encryption higher than 56.
 
   You need a Kerberos principal for each svn server, in the form
-  "svn/${SERVER_FQDN}@${REALM}", e.g. "svn/svn1.example.com@EXAMPLE>COM".
+  "svn/${SERVER_FQDN}@${REALM}", e.g. "svn/svn1.example.com@EXAMPLE.COM".
   If you don't store it in /etc/krb5.keytab, you'll need to set the
   KRB5_KTNAME environment variable when starting svnserve, e.g.
 

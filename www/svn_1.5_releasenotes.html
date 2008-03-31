@@ -50,10 +50,10 @@ describes what is planned for the release.</p>
       >Improvements to <tt>copy</tt> and <tt>move</tt></a></li>
   <li><a href="#cancellation-improvements"
       >Speed improvements, cancellation response improvements</a></li>
-  <li><a href="#apis"
-      >API changes, improvements, and much language bindings work</a></li>
   <li><a href="#dav-modules"
       >Easier to try experimental <tt>ra_serf</tt> DAV access module</a></li>
+  <li><a href="#apis"
+      >API changes, improvements, and much language bindings work</a></li>
   <li><a href="#bug-fixes"
       >More than 150 new bug fixes, enhancements</a></li>
 </ul>
@@ -87,9 +87,7 @@ newest libraries and binaries on top of the older ones.</p>
 releases, by only adding new functions, never removing old ones.  A
 program written to the 1.0, 1.1, 1.2, 1.3, or 1.4 API can both compile
 and run using 1.5 libraries.  However, a program written for 1.5
-cannot necessarily compile or run against older libraries.  See the <a
-href="#apis" >API</a> section on some clarifications on existing
-APIs.</p>
+cannot necessarily compile or run against older libraries.</p>
 
 <div class="h3" id="wc-and-repos-format-change"
              title="wc-and-repos-format-change">
@@ -144,14 +142,15 @@ didn't want 1.5 to silently make repositories unusable by
 1.4&nbsp;&mdash;&nbsp;that step should be a conscious decision on the
 part of the repository admin.)</p>
 
-<p>After upgrading a repository, you may wish to run the <a
+<p>After running <strong><code>svnadmin&nbsp;upgrade</code></strong>,
+you may wish to also run the <a
 href="http://svn.collab.net/repos/svn/trunk/tools/server-side/svn-populate-node-origins-index.c"
->svn-populate-node-origins-index</a> program on it.  Subversion 1.5
-maintains a node-origins index for each repository, and builds the
-index lazily as the information is needed.  For old repositories with
-lots of revisions, it's better to run that tool once to create the
-index, than to have live queries be slower until the index has built
-itself.  See <a
+>svn-populate-node-origins-index</a> program on the repository.
+Subversion 1.5 maintains a node-origins index for each repository, and
+builds the index lazily as the information is needed.  But for old
+repositories with lots of revisions, it's better to create the index
+in one step, using the aforementioned tool, than to have live queries
+be slower until the index has built itself.  See <a
 href="http://subversion.tigris.org/issues/show_bug.cgi?id=3024" >issue
 #3024</a> for details.</p>
 
@@ -177,12 +176,12 @@ output.  1.5 contains the following output changes:</p>
 </div>  <!-- output-changes -->
 
 <div class="h3" id="sasl-compatibility" title="sasl-compatibility">
-<h3>SASL and <code>svn://</code> access</h3>
+<h3>SASL and <code>svn://</code> compatibility</h3>
 
 <p>All 1.x clients, with or without Cyrus SASL support, will be able to
 authenticate against all 1.x servers that do not have Cyrus SASL enabled.
 Note that the <tt>CRAM-MD5</tt> and <tt>ANONYMOUS</tt> mechanisms are
-actually built into Subversion, so you'll be able to use them even if the
+built into Subversion, so you'll be able to use them even if the
 corresponding Cyrus SASL plugins are missing.</p>
   
 <p>1.x clients without Cyrus SASL support will be able to authenticate
@@ -213,10 +212,10 @@ are merged&nbsp;&mdash;&nbsp;or are available to be
 merged&nbsp;&mdash;&nbsp;on different lines of development.</p>
 
 <p>The merge tracking support in Subversion 1.5 is "foundational": the
-most important parts are implemented, and groundwork has been laid for
-the future, but there are still some parts of our <a
-href="http://subversion.tigris.org/merge-tracking/" >original spec</a>
-that remain to be done (in particular, proper support for <a
+most important parts are implemented, but there are still some parts
+of our <a href="http://subversion.tigris.org/merge-tracking/"
+>original spec</a> that remain to be done (in particular, proper
+support for <a
 href="http://subversion.tigris.org/issues/show_bug.cgi?id=2897"
 >reflective merges</a>, better <a
 href="http://subversion.tigris.org/issues/show_bug.cgi?id=3126"
@@ -328,11 +327,9 @@ more details.</p>
 <div class="h4" id="mt-compatibility" title="mt-compatibility">
 <h4>Merge tracking and compatibility</h4>
 
-<p>As described <a href="#repos-uprgades" >earlier</a>, merge-tracking
-is not supported unless you upgrade the repository as well as the
-server.  Run
-<strong><tt>svnadmin&nbsp;upgrade&nbsp;PATH_TO_REPOS</tt></strong> to
-upgrade.</p>
+<p>As described earlier, merge-tracking is not supported unless you <a
+href="#repos-upgrades" >upgrade the repository</a> as well as the
+server.</p>
 
 <p>If you were using the <a
 href="https://svn.collab.net/repos/svn/trunk/contrib/client-side/svnmerge/"
@@ -370,17 +367,16 @@ itself now uses.</p>
 
 <p>Many users have very large trees of which they only want to
 checkout certain parts.  In previous versions of Subversion,
-<code>checkout -N</code> was not today up to this task.  Subversion
+<code>checkout -N</code> was not really up to this task.  Subversion
 1.5 introduces the <strong><code>--depth</code></strong> option to the
 <strong><code>checkout</code></strong>,
 <strong><code>switch</code></strong>, and
-<strong><code>update</code></strong> subcommands as a replacement for
-<code>-N</code>.  The new option allows users to construct working
-copies containing just what's needed, leaving out everything the user
-does not want.</p>
+<strong><code>update</code></strong> subcommands.  This option
+replaces <code>-N</code>, and allows users to construct working
+copies containing just what's needed, leaving out everything else.</p>
 
 <div class="h4" id="sc-depth" title="sc-depth">
-<h4>Depth</h4>
+<h4>Depth overview</h4>
 <p>Each directory now understands the notion of <em>depth</em>, which has
 four possible values: <tt>empty</tt>, <tt>files</tt>, <tt>immediates</tt>,
 <tt>infinity</tt>.  The values are defined as follows:</p>
@@ -429,13 +425,15 @@ copy, tweaking new subdirectories' depth values as described above.</p>
 for these commands.  This changes the existing <code>-N</code> behavior for
 these commands, but in a trivial way (see below).</p>
 
-<p><code>checkout</code> without <code>--depth</code> or <code>-N</code>
-behaves the same as it does today.  <code>switch</code> and <code>update</code>
-without <code>--depth</code> or <code>-N</code> behave the same way as today
-IFF the working copy is fully depth-infinity.  <code>switch</code> and
-<code>update</code> without <code>--depth</code> or <code>-N</code> will
-<strong>not</strong> change depth values (exception: a missing directory
-specified on the command line will be pulled in).</p>
+<p><code>checkout</code> without <code>--depth</code> or
+<code>-N</code> behaves the same as it does today.
+<code>switch</code> and <code>update</code> without
+<code>--depth</code> or <code>-N</code> behave the same way as today
+if and only if the working copy is fully depth-infinity.
+<code>switch</code> and <code>update</code> without
+<code>--depth</code> or <code>-N</code> will <em>not</em> change depth
+values (exception: a missing directory specified on the command line
+will be pulled in).</p>
    
 <p>Thus, <code>checkout</code> is identical to <code>checkout
 --depth=infinity</code>, but <code>switch</code> and <code>update</code> are
@@ -443,78 +441,46 @@ not the same as <code>switch --depth=infinity</code> and <code>update
 --depth=infinity</code>.  The former update entries according to existing depth
 values, while the latter pull in everything.</p>
    
-<p>To get started, run <code>checkout</code> with <code>--depth=empty</code>
-or <code>--depth=files</code>.  If additional files or directories are desired,
-pull them in with <code>update</code> commands using appropriate
-<code>--depth</code> options.</p>
-   
-<p>The <code>svn status</code> should list the depth status of the directories,
-in addition to whatever statuses are being currently listed.</p>
-   
-<p>The <code>svn info</code> command should list the depth, iff invoked on a
-directory whose depth is not the default (depth-infinity)</p>
+<p>To get started, run <code>checkout</code> with
+<code>--depth=empty</code> or <code>--depth=files</code>.  If
+additional files or directories are desired, pull them in with
+<code>update</code> commands using appropriate <code>--depth</code>
+options.  The <code>svn status</code> command should list the ambient
+depths of directories, in addition to whatever other statuses are
+listed.  The <code>svn info</code> command also lists ambient depth,
+when invoked on a directory whose depth is not the default
+(depth-infinity)</p>
+
+<p><strong>Note:</strong> There is currently no <em>deselection</em>
+interface for sparse checkouts&nbsp;&mdash;&nbsp;that is, there is no
+command to unselect or "fold up" a subdirectory after you've brought
+it into a sparse working copy (although there are some fairly easy
+workarounds to achieve the same effect).  See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=2843" >issue
+#2843</a> for details.</p>
 
 </div>  <!-- sc-ui -->
 
 <div class="h4" id="sc-compat" title="sc-compat">
 <h4>Compatibility with older servers</h4>
-<p>This feature introduces two new concepts into the repository access
-protocol which will not be understood by older servers:</p>
-<ul>
-  <li>Reported Depths &mdash; the depths associated with individual paths
-    included by the client in the description of its working copy state.</li>
-  <li>Requested Depth &mdash; the single depth value used to limit the
-    scope of the server's response to the client.</li>
-</ul>
 
-<p>As such, it's useful to understand how these concepts will be handled
-across the compatibility matrix of depth-aware and non-depth-aware clients and
-servers.</p>
+<p>The new <tt>--depth</tt> feature naturally requires the client to
+be 1.5+, and will work most efficiently if the server is also 1.5+.
+However, the client will still behave correctly if the server is 1.4.x
+or lower; things will just be less efficient.</p>
 
-<div class="h5" id="sc-compat-dac" title="sc-compat-dac">
-<h5>Depth-aware Clients (DACs)</h5>
-<p>DACs will transmit reported depths (with "infinity" as the default) and will 
-transmit a requested depth (with "unknown" as the default).  They will also
-&mdash; for the sake of older, non-depth-aware servers (NDASs) -- transmit a
-requested recurse value derived from the requested depth:</p>
-<table border="1">
-<tr><th>depth</th><th>recurse</th></tr>
-<tr><td>empty</td><td>no</td></tr>
-<tr><td>files</td><td>no</td></tr>
-<tr><td>unknown</td><td>yes</td></tr>
-<tr><td>immediates</td><td>yes</td></tr>
-<tr><td>infinity</td><td>yes</td></tr>
-</table>
-
-<p>When speaking to an NDAS, the requested recurse value is the only thing
-the server understands , but is obviously more "grainy" than the requested
-depth concept.  The DAC, therefore, must filter out any additional, unwanted
-data that the server transmits in its response.  (This filtering happens in
-the repository access implementation itself so the repository access APIs
-behave as expected regardless of the server's pedigree.)</p>
-
-<p>When speaking to a depth-aware server (DAS), the requested recurse value
-is ignored.  A requested depth of "unknown" means "only send information about
-the stuff in my report, depth-aware-ily".  Other requested depth values are
-honored by the server properly, and the DAC must handle the transformation of
-any working copy depths from their pre-update to their post-update depths and
-content.</p>
-
-</div>  <!-- sc-compat-dac -->
-
-<div class="h5" id="sc-compat-ndac" title="sc-compat-ndac">
-<h5>Non-depth-aware Clients (NDACs)</h5>
-
-<p>NDACs will never transmit reported depths and never transmit a requested
-depth.  But they will transmit a requested recurse value (either "yes" or "no",
-with "yes" being the default).</p>
-
-<p>When speaking to an NDAS, what happens happens.  It's the past, man &mdash;
-you don't get to define the interaction this late in the game!</p>
-
-<p>When speaking to a DAS, the not-reported depths are treated like reported
-depths of "infinity", and the reported recurse values "yes" and "no" map to
-depths of "infinity" and "files", respectively.</p>
+<p>This is because older servers do not
+understand&nbsp;&mdash;&nbsp;and therefore
+ignore&nbsp;&mdash;&nbsp;what the client tells them about "depth".  So
+when a client requests a depth shallower than depth-infinity, older
+servers will send back more data than the client wants.  However, a
+1.5+ client will know it's talking to an older server and filter out
+this extra data.  Thus, operations may take a while, because the
+server sends a lot of data over the network that the client then
+ignores, but the final result on the client side will be the same.
+(Note that older servers understand a <tt>recurse</tt> flag in the
+network protocols, and 1.5+ clients send that flag based on the depth;
+this alleviates some of the extra network traffic penalty.)</p>
 
 </div>  <!-- sc-compat-dac -->
 
@@ -541,12 +507,14 @@ depths of "infinity" and "files", respectively.</p>
              title="interactive-conflict-resolution">
 <h3>Interactive Conflict Resolution (<em>client</em>)</h3>
 
-<p>Added support for interactive conflict resolution in the command
-line client, and a corresponding callback function in the client
-library.  GUI clients can use the callback function to hook in a
-graphical conflict resolution program to the
+<p>Conflict resolution is now done interactively by the command-line
+client for the
 <code>update</code>/<code>switch</code>/<code>merge</code>
-sub-commands.  Example command line output:</p>
+subcommands, and the client library offers a callback function so
+other clients can do similarly.</p>
+
+<p>Here's an example using the command-line client:</p>
+
 <pre>
    $ svn up
    U    contrib/client-side/svnmerge/svnmerge_test.py
@@ -657,137 +625,154 @@ subcommands:</p>
     (<em>client</em>)</h3>
 
 <p>Two additions to the <tt>svn:externals</tt> feature</p>
-  <ul>
-    <li>
-      <p><strong>Peg revision syntax for URLs.</strong></p>
 
-      <p><em>Compatibility and the new syntax:</em> For compatibility
-         reasons, the pre-1.5 svn:externals syntax continues to not
-         understand peg revisions.  A new format has been introduced
-         to allow peg revisions in URLs.</p>
-      <p>The old format of</p>
-        <pre>
-          foo             http://example.com/repos/zig
-          foo/bar -r 1234 http://example.com/repos/zag
-        </pre>
-        <p>does not support peg revisions, and the following
-           externals will not work (unless there are directories named
-           <tt>zig@HEAD</tt> and <tt>zag@HEAD</tt>):</p>
-        <pre>
-          foo             http://example.com/repos/zig@HEAD
-          foo/bar -r 1234 http://example.com/repos/zag@HEAD
-        </pre>
-      <p>The new format moves the URL first followed by the directory
-         the external is checked out or exported into</p>
-        <pre>
-          http://example.com/repos/zig foo1
-          -r 1234 http://example.com/repos/zag foo/bar1
-          http://example.com/repos/zig@HEAD foo2
-          -r 1234 http://example.com/repos/zag@HEAD foo/bar2
-        </pre>
-        <p>peg specifications are allowed but not necessary.
-      </p>
-    </li>
-    <li>
-      <p><strong>Support for relative URLs.</strong></p>
+<div class="h4" id="externals-peg-revs" title="externals-peg-revs">
+<h4>Peg revision syntax for URLs</h4>
 
-      <p>Prior to Subversion 1.5, the URLs in an <tt>svn:externals</tt>
-         specification must be absolute.  Now they can be relative.
-         Four different relative externals specifications are supported.
-      </p>
-      <p>
-        For the following example, assume we have two repositories:
-        one at <tt>http://example.com/svn/repos-1</tt> and another at
-        <tt>http://example.com/svn/repos-2</tt>.  We have a checkout
-        of <tt>http://example.com/svn/repos-1/project1/trunk</tt> and
-        the <tt>svn:externals</tt> property is set on <tt>trunk</tt>.</p>
-        <ul>
-          <li>
-            <tt><strong>../</strong></tt>
-            <br/>
-            Relative to the directory with the <tt>svn:external</tt>
-            property.  These URLs always begin with the string
-            <tt>../</tt>.
-            <pre>
-              ../../project2/trunk common/project2/trunk
-            </pre>
-            This will extract
-            <tt>http://example.com/svn/repos-1/project2/trunk</tt>
-            into <tt>common/project2/trunk</tt>.  The URL is relative
-            to the directory with the <tt>svn:external</tt>, not the
-            directory where the external is written to disk.
-          </li>
-          <li>
-            <tt><strong>^/</strong></tt>
-            <br/>
-            Relative to the repository root.
-            <pre>
-              ^/project2/trunk common/project2/trunk
-            </pre>
-            This will extract
-            <tt>http://example.com/svn/repos-1/project2/trunk</tt>
-            into <tt>common/project2/trunk</tt>.
-            <br/>
+<p><em>Compatibility and the new syntax:</em> For compatibility
+reasons, the pre-1.5 svn:externals syntax continues to not understand
+peg revisions.  A new format has been introduced to allow peg
+revisions in URLs.</p>
 
-            You can also refer to other repositories easily using
-            repository root relative URLs:
-            <pre>
-              ^/../repos-2/foo/trunk common/foo/trunk
-            </pre>
-            This will extract
-            <tt>http://example.com/svn/repos-2/foo/trunk</tt> into
-            <tt>common/foo/trunk</tt>
-          </li>
-          <li>
-            <tt><strong>//</strong></tt>
-            <br/>
-            Relative to the scheme.  This copies the scheme of the
-            checkout or export URL into the URL in the
-            <tt>svn:external</tt>.  It is useful when the same
-            hostname must the accessed with different scheme's
-            depending upon network location; i.e. clients in the
-            intranet use <tt>http://</tt> while external clients use
-            <tt>svn+ssh://</tt>.
-            <pre>
-              //example.com/svn/repos-1/project2/trunk common/project2/trunk
-            </pre>
-            This will extract
-            <tt>http://example.com/svn/repos-1/project2/trunk</tt>
-            into <tt>common/project2/trunk</tt>.  If the working copy
-            was checked out from
-            <tt>svn+ssh://example.com/svn/repos-1/project1/trunk</tt>
-            then this URL would be
-            <tt>http://example.com/svn/repos-1/project1/trunk</tt>.
-          </li>
-          <li>
-            <tt><strong>/</strong></tt>
-            <br/>
+<p>The old format of</p>
+<pre>
+   foo             http://example.com/repos/zig
+   foo/bar -r 1234 http://example.com/repos/zag
+</pre>
 
-            Server root relative URLs.  This copies the scheme and
-            hostname from the checkout or export URL into the
-            <tt>svn:external</tt> URL.
-            <pre>
-              /svn/repos-1/project2/trunk common/project2/trunk
-            </pre>
-            This will extract
-            <tt>http://example.com/svn/repos-1/project2/trunk</tt>
-            into <tt>common/project2/trunk</tt>.  If the working copy
-            was checked out from
-            <tt>svn+ssh://example.com/svn/repos-1/project1/trunk</tt>
-            then this URL would be
-            <tt>http://example.com/svn/repos-1/project1/trunk</tt>.
-          </li>
-        </ul>
+<p>does not support peg revisions, and the following externals will
+not work (unless there are directories named <tt>zig@HEAD</tt> and
+<tt>zag@HEAD</tt>):</p>
 
-      <p>Relative URLs are supported in the old <tt>svn:externals</tt>
-         format that does not support peg revisions.</p>
+<pre>
+   foo             http://example.com/repos/zig@HEAD
+   foo/bar -r 1234 http://example.com/repos/zag@HEAD
+</pre>
 
-      <p>When Subversion sees an <tt>svn:externals</tt> without an
-         absolute URL it takes the first argument as a relative URL and
-         the second as the target directory.</p>
+<p>The new format moves the URL first followed by the directory the
+external is checked out or exported into; if there is an operative
+(-r) revision, it precedes the URL.  Here are four externals lines:</p>
 
-    </li>
-  </ul>
+<pre>
+   http://example.com/repos/zig foo1
+   -r 1234 http://example.com/repos/zag foo/bar1
+   http://example.com/repos/zig@HEAD foo2
+   -r 1234 http://example.com/repos/zag@HEAD foo/bar2
+</pre>
+
+<p>In other words, both operative ("-r") and peg ("@") revisions are
+allowed, but neither is required.</p>
+
+</div>  <!-- externals-peg-revisions -->
+
+<div class="h4" id="externals-relative-urls" title="externals-relative-urls">
+<h4>Support for relative URLs</h4>
+
+<p>Prior to Subversion 1.5, the URLs in an <tt>svn:externals</tt>
+specification must be absolute.  Now they can be relative.  Four
+different relative externals specifications are supported.  (In the
+following examples, assume we have two repositories: one at
+<tt>http://example.com/svn/repos-1</tt> and another at
+<tt>http://example.com/svn/repos-2</tt>.  We have a checkout of
+<tt>http://example.com/svn/repos-1/project1/trunk</tt> and the
+<tt>svn:externals</tt> property is set on <tt>trunk</tt>.)</p>
+
+<dl><dt><strong>../</strong></dt>
+<dd><p>Relative to the directory with the <tt>svn:externals</tt>
+property.  These URLs always begin with the string <tt>../</tt>, for
+example:</p>
+<pre>
+   ../../project2/trunk common/project2/trunk
+</pre>
+
+<p>This will extract
+<tt>http://example.com/svn/repos-1/project2/trunk</tt> into
+<tt>common/project2/trunk</tt>.  The external's URL is relative to the
+URL of the directory with the <tt>svn:externals</tt> property, not the
+directory where the external is written to disk.</p></dd>
+
+<dt><strong>^/</strong></dt>
+
+<dd><p>Relative to the repository root.</p>
+
+<pre>
+   ^/project2/trunk common/project2/trunk
+</pre>
+
+<p>This will extract
+<tt>http://example.com/svn/repos-1/project2/trunk</tt> into
+<tt>common/project2/trunk</tt>.</p>
+
+<p>You can also refer to other repositories easily using repository
+root relative URLs:</p>
+
+<pre>
+   ^/../repos-2/foo/trunk common/foo/trunk
+</pre>
+
+<p>This will extract <tt>http://example.com/svn/repos-2/foo/trunk</tt>
+into <tt>common/foo/trunk</tt>.</p>
+</dd>
+
+<dt><strong>//</strong></dt>
+
+<dd><p>Relative to the scheme.  This copies the scheme of the checkout
+or export URL into the URL in <tt>svn:externals</tt>.  It is useful
+when the same hostname must the accessed with different schemes
+depending upon network location; i.e. clients in the intranet use
+<tt>http://</tt> while external clients use <tt>svn+ssh://</tt>.</p>
+
+<pre>
+   //example.com/svn/repos-1/project2/trunk common/project2/trunk
+</pre>
+
+<p>This will extract
+<tt>http://example.com/svn/repos-1/project2/trunk</tt> into
+<tt>common/project2/trunk</tt>.  If the working copy was checked out
+from <tt>svn+ssh://example.com/svn/repos-1/project1/trunk</tt> then
+this URL would be
+<tt>http://example.com/svn/repos-1/project1/trunk</tt>.</p>
+</dd>
+
+<dt><strong>/</strong></dt>
+
+<dd><p>Server root relative URLs.  This copies the scheme and hostname
+from the checkout or export URL into the <tt>svn:externals</tt>
+URL.</p>
+
+<pre>
+   /svn/repos-1/project2/trunk common/project2/trunk
+</pre>
+
+<p>This will extract
+<tt>http://example.com/svn/repos-1/project2/trunk</tt> into
+<tt>common/project2/trunk</tt>.  If the working copy was checked out
+from <tt>svn+ssh://example.com/svn/repos-1/project1/trunk</tt> then
+this URL would be
+<tt>http://example.com/svn/repos-1/project1/trunk</tt>.</p>
+</dd>
+
+</dl>
+
+<p>Relative URLs are still supported in the old <tt>svn:externals</tt>
+format (that does not support peg revisions).</p>
+
+<p>When Subversion sees an <tt>svn:externals</tt> without an absolute
+URL, it takes the first argument as a relative URL and the second as
+the target directory.</p>
+
+</div>  <!-- externals-relative-urls -->
+
+<div class="h4" id="externals-further-reading"
+             title="externals-further-reading">
+<h4>Further reading</h4>
+
+<p>See The <a
+href="http://svnbook.red-bean.com/nightly/en/svn.advanced.externals.html"
+>svn:externals</a> section of the Subversion Book.  (XXX TODO: which
+needs to be updated to cover the new features!)</p>
+
+</div>  <!-- externals-further-reading -->
 
 </div>  <!-- externals -->
 
@@ -871,13 +856,13 @@ repository.</p>
     (<em>server</em>)</h3>
 
 <p>The FSFS repositories never change a revision after it is written
-to the disk.  This should allow the operating system to cache these
-files forever, but certain filesystems (e.g. NFS) prohibit such
-caching by default.  The FSFS repository layout has been changed such
-that the immutable files are confined to the directories "db/revs" and
-"db/txn-protorevs".  This allows these directories to be on a mount
-point where caching is enabled (on Linux look at the "nocto" option to
-nfs(5)).</p>
+to the disk.  Although this should allow the operating system to cache
+these files forever, certain filesystems (e.g. NFS) prohibit such
+caching by default.  Now the FSFS repository layout has been changed
+such that the immutable files are confined to the subdirectories
+"db/revs" and "db/txn-protorevs".  This allows these directories to be
+on a mount point where caching is enabled (on Linux look at the
+"nocto" option to nfs(5)).</p>
 
 <p>Since commit transactions are now built up in "db/txn-protorevs"
 instead of "db/transactions", the latter directory no longer needs to
@@ -896,11 +881,12 @@ server for the duration of the transaction.  This is typically called
 
 <p>Subversion 1.4 <a
 href="http://subversion.tigris.org/svn_1.4_releasenotes.html#svnsync">
-introduced <tt>svnsync</tt></a>&mdash;a tool which provided the ability to
-replicate repository history from one repository to another.  Though useful,
-<tt>svnsync</tt> could only pull revision history from a repository, not push
-additional commits back to the master.  Subversion 1.5 adds WebDAV proxy
-support to <tt>mod_dav_svn</tt>, effectly allowing bidirectional revision
+introduced <tt>svnsync</tt></a>&nbsp;&mdash;&nbsp;a tool which
+provided the ability to replicate repository history from one
+repository to another.  Though useful, <tt>svnsync</tt> could only
+pull revision history from a repository, not push additional commits
+back to the master.  Subversion 1.5 adds WebDAV proxy support to
+<tt>mod_dav_svn</tt>, effectively allowing bidirectional revision
 history replication between master servers and slave servers using
 <tt>mod_dav_svn</tt>.</p>
 
@@ -970,25 +956,31 @@ will still work.</p>
 
 <p>A sample synchronization script may look like this:</p>
 <pre><code>
-    #!/bin/sh
-    REPOS="$1"
-    REV="$2"
-    SLAVE_HOST=slave.example.com
-    SLAVE_PATH=/my/local/copy/of/repos
+   #!/bin/sh
+   REPOS="$1"
+   REV="$2"
+   SLAVE_HOST=slave.example.com
+   SLAVE_PATH=/my/local/copy/of/repos
 
-    # Ensure svnadmin is in your PATH on both this machine and the remote server!
-    svnadmin dump --incremental -r$2 $1 &gt; /tmp/$2.dump
-    scp /tmp/$2.dump $SLAVE_HOST:$SLAVE_PATH
-    ssh $SLAVE_HOST "svnadmin load $SLAVE_PATH &lt; $SLAVE_PATH/$2.dump"
-    ssh $SLAVE_HOST "rm $SLAVE_PATH/$2.dump"
-    rm /tmp/$2.dump
+   # Ensure svnadmin is in $PATH on both this machine and the remote server!
+   svnadmin dump --incremental -r$2 $1 &gt; /tmp/$2.dump
+   scp /tmp/$2.dump $SLAVE_HOST:$SLAVE_PATH
+   ssh $SLAVE_HOST "svnadmin load $SLAVE_PATH &lt; $SLAVE_PATH/$2.dump"
+   ssh $SLAVE_HOST "rm $SLAVE_PATH/$2.dump"
+   rm /tmp/$2.dump
 </code></pre>
 
 </div>  <!-- webdav-proxy-example -->
 
+<div class="h4" id="webdav-proxy-further-reading"
+             title="webdav-proxy-further-reading">
+<h4>Further reading</h4>
+
 <p>Additional information about WebDAV proxy support is available <a
 href="http://svn.collab.net/repos/svn/trunk/notes/webdav-proxy">in the
 repository</a>.</p>
+
+</div>  <!-- webdav-proxy-further-reading -->
 
 </div>  <!-- webdav-proxy -->
 
@@ -1002,8 +994,7 @@ repository</a>.</p>
 <h3>Copy/move-related improvements (<em>client and server</em>)</h3>
 
 <p>The abilities and behavior of <code>copy</code> and
-<code>move</code> operations has improved significantly.</p>
-
+<code>move</code> operations are significantly improved in 1.5+.</p>
 
 <div class="h4" id="leverage-copyfrom" title="leverage-copyfrom">
 <h4>Improved copy-handling during updates (<em>client and server</em>)</h4>
@@ -1011,18 +1002,20 @@ repository</a>.</p>
 <p>A common problem in older versions of Subversion was the way in
 which <code>svn update</code> handled incoming copies and moves.</p>
 
-<p>For example, suppose Harry runs <code>svn move foo bar; svn
+<p>Consider this scenario: Harry runs <code>svn move foo bar; svn
 commit</code>, and meanwhile Sally makes local changes to 'foo', and
 then runs <code>svn update</code>.  In earlier versions of Subversion,
-the server would send down a completely new file 'bar', and remove the
-file 'foo' (or rather, make it unversioned, since it has uncommitted
-changes.)  From Sally's point of view, her changes seem to be lost;
-the newly added 'bar' file has the older content.  In Subversion 1.5,
-the client and server both attempt to be smarter about this.  The
-server doesn't send a whole new file during the update, but rather
-instructions to copy something that may likely already exists in the
-working copy.  So Sally's 'foo' file is copied to 'bar' (with local
-edits intact!).</p>
+the server would send down a completely new file 'bar', and unversion
+the file 'foo' (if it had no uncommitted changes, Subversion would
+remove it entirely.)  From Sally's point of view, her changes seem to
+be lost; the newly added 'bar' file has the older content, and the
+file 'foo' has been taken out of version control.</p>
+
+<p>In Subversion 1.5, the client and server both attempt to be smarter
+about this.  The server doesn't send a whole new file during the
+update, but rather instructions to copy something that likely already
+exists in the working copy.  So Sally's 'foo' file is copied to 'bar'
+(with local edits intact!).</p>
 
 <p>In theory, this is the best-case scenario.  There are a few
 caveats: this "proper copying" of existing working-copy resources only
@@ -1030,28 +1023,40 @@ works on files, not (yet) on directories.  Also, if an incoming
 move-operation deletes 'foo' before it attempts to copy it to 'bar',
 then the copy will fail, and the client reverts to the old behavior of
 fetching a pristine copy of the file from the repository.  We hope to
-address this in svn 1.6.  For details on the this issue see <a
-href="http://subversion.tigris.org/issues/show_bug.cgi?id=503">issue
-#503</a>.</p>
+address this in svn 1.6.</p>
+
+<p>See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=503" >issue
+#503</a> for more.</p>
 
 </div> <!-- leverage-copyfrom -->
 
 <div class="h4" id="copy-peg-revs" title="copy-peg-revs">
 <h4>Peg revisions (<em>client</em>)</h4>
 
-<p>Copy operations now accept sources with peg revisions.</p>
+<p>Copy and move operations now accept sources with peg ("@")
+revisions.</p>
+
+<p>See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=2546" >issue
+#2546</a> for more.</p>
 
 </div>  <!-- copy-peg-revs -->
 
 <div class="h4" id="multi-op-copy-move" title="multi-op-copy-move">
 <h4>Multiple working copy copy/move operations (<em>client</em>)</h4>
 
-<p>Clients may now perform multiple local copy/move operations on a
+<p>Clients may now perform chained copy/move operations locally on a
 single object in a working copy:</p>
-<blockquote><pre><code>
-svn mv path1 path2
-svn mv path2 path3
-</code></pre></blockquote>
+
+<pre>
+   svn mv path1 path2
+   svn mv path2 path3
+</pre>
+
+<p>See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=756" >issue
+#756</a> for more.</p>
 
 </div>  <!-- multi-op-copy-move -->
 
@@ -1061,19 +1066,50 @@ svn mv path2 path3
 <p>Clients now accept multiple sources for copy and move operations, with 
 the ability to copy/move each of the sources to the specified directory.
 This mirrors the behavior of standard command-line copy and move tools,
-such as <code>cp</code> and <code>mv</code>.  In practice, this means
-users can take advantage of shell globbing when doing a local copy
-or move:</p>
-<blockquote><pre><code>
-svn cp *.c dir
-</code></pre></blockquote>
+such as <code>cp</code> and <code>mv</code>.  For example:</p>
+
+<pre>
+   svn mkdir new_subdir
+   svn mv foo.txt bar.txt baz.txt new_subdir
+</pre>
+
+<p>In practice, this means users can take advantage of shell globbing
+when doing a local copy or move:</p>
+
+<pre>
+   svn cp *.c dir
+</pre>
 
 <p>Multiple source copy/move also works for all previously defined
-copy/move working copy and repository combinations.  This was
-<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=747">issue
-#747</a>.</p>
+copy/move working copy and repository combinations.</p>
+
+<p>See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=747" >issue
+#747</a> for more.</p>
 
 </div>  <!-- multi-src-copy -->
+
+<div class="h4" id="cp-takes-base" title="cp-takes-base">
+<h4>Copy takes -rBASE (<em>client</em>)</h4>
+
+<p>Copy now understands the special revision "BASE" in a working copy
+(as in: "<tt>-rBASE</tt>").</p>
+
+<p>See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=1643" >issue
+#1643</a> for more.</p>
+
+</div>  <!-- cp-takes-base -->
+
+</div>  <!-- cp-mv-intermediate-dirs -->
+<div class="h4" id="cp-mv-intermediate-dirs" title="cp-mv-intermediate-dirs">
+<h4>Creation of intermediate directories with copy/move
+    (<em>client and server</em>)</h4>
+
+<p>See the section on the new <a href="#>intermediate-directories</a>"
+>--parents option</a> for more about this.</p>
+
+</div>  <!-- cp-mv-intermediate-dirs -->
 
 </div>  <!-- copy-move-improvements -->
 
@@ -1092,123 +1128,65 @@ actually stop.</p>
 <div class="h3" id="cmdline" title="cmdline">
 <h3>Command-line client improvements (<em>client</em>)</h3>
 
-<ul>
-  <li>A <code>--use-merge-history</code> option to adhere to Merge
-    Tracking meta data has been added to the following sub-commands:
-    <ul>
-      <!-- li>blame</li -->
-      <li>log</li>
-      <li>merge</li>
-    </ul>
-  </li>
+<p>There are far too many enhancements and new options to the
+command-line client to list them all here.  Aside from all the ones
+mentioned already in these release notes, below are a few more that we
+consider important, but please see the 1.5.0 section in the <a
+href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
+for a complete list.</p>
 
-  <li>A <code>--parents</code> option to create intermediate
-    directories has been added to the following sub-commands:
-    <ul>
-      <li>add</li>
-      <li>copy</li>
-      <li>move</li>
-      <li>mkdir</li>
-    </ul>
-  </li>
+<div class="h4" id="resolve" title="resolve">
+<h4>New "resolve" subcommand replaces "resolved"</h4>
 
-  <!-- ### Anticipated addition(s):
-       ### double-dash sequences inside comment changed to '++' to
-       ### avoid breaking XML rules.
-  <li><code>++merged-from</code> and <code>++merged-to</code> options
-    to report on merge info have been added to the <code>info</code>
-    sub-command.</li>
+<p>A new <strong><tt>resolve</tt></strong> subcommand replaces the
+"<tt>resolved</tt>" subcommand (the latter is deprecated, but still
+present for compatibility).  The new subcommand takes a
+<strong><tt>--accept=orig|mine|repo</tt></strong> option to select
+which version of a file to retain (which means Subversion now supports
+batch-style conflict resolution).</p>
 
-  <li>An <code>++accept=orig|mine|repo</code> option to select which
-    version of a path to retain has been added to the
-    <code>resolved</code> sub-command.</li>
-  -->
+<p>See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=2784" >issue
+#2784</a> for more.</p>
 
-  <li>A <code>--keep-local</code> option to retain paths locally has
-    been added to the <code>delete</code> sub-command.</li>
+</div>  <!-- resolve -->
 
-  <li>A <code>--depth</code> option has been added to support <a
-    href="#sparse-checkouts">sparse checkouts</a>.  <code>-N</code> is now
-    maps to one of the arguments for <code>--depth</code>, depending on
-    context.</li>
+<div class="h4" id="intermediate-directories"
+             title="intermediate-directories">
+<h4>Create intermediate directories if asked</h4>
 
-  <li>As part of the <a href="#sparse-checkouts">sparse checkouts</a> work,
-    <code>-R</code> is now just a synonym for <code>--depth=infinity</code>.
-    </li>
-</ul>
+<p>Add, mkdir, copy, and move take a new
+<strong><tt>--parents</tt></strong> option, which makes intermediate
+directories as necessary to create the destination path.</p>
 
-<p>XXX: More...</p>
+<p>See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=1776" >issue
+#1776</a> for more</p>
+
+</div>  <!-- intermediate-directories -->
+
+<div class="h4" id="keep-local" title="keep-local">
+<h4>New --keep-local option retains path after delete.</h4>
+
+<p>Delete (remove) now takes a
+<strong><code>--keep-local</code></strong> option to retain its
+targets locally, so paths will not be removed even if unmodified.</p>
+
+</div>  <!-- keep-local -->
+
+<div class="h4" id="commit-revprops" title="commit-revprops">
+<h4>Commit now takes a --with-revprop option.</h4>
+
+Commit now takes a <strong><tt>--with-revprop</tt></strong> option
+allowing one to set revision properties
+
+<p>See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=1976" >issue
+#1976</a> for more.</p>
+
+</div>  <!-- commit-revprops -->
 
 </div>  <!-- cmdline -->
-
-<div class="h3" id="apis" title="apis">
-<h3>API changes, improvements and language bindings
-    (<em>client and server</em>)</h3>
-
-<p>If you develop a 3rd-party client application that uses Subversion
-  APIs, you may want to take notice of the following changes and new
-  APIs:</p>
-
-<ul>
-  <li><tt>svn_opt_parse_path()</tt> changes
-    <ul>
-      <li>
-        Since Subversion 1.3, if a path or URL ends in an empty
-        revision suffix '@', then the returned revision type would be
-        different than an unprotected path or URL:
-        <ul>
-          <li>
-            <tt>some/path/to/foo</tt> returns
-            <tt>svn_opt_revision_unspecified</tt>
-          </li>
-          <li>
-            <tt>some/path/to/foo<b>@</b></tt> returns
-            <tt>svn_opt_revision_base</tt>
-          </li>
-          <li>
-            <tt>http://example.com/some/path/to/foo</tt> returns
-            <tt>svn_opt_revision_unspecified</tt>
-          </li>
-          <li>
-            <tt>http://example.com/some/path/to/foo@</tt> returns
-            <tt>svn_opt_revision_head</tt>
-          </li>
-        </ul>
-        Subversion 1.5 fixes this inconsistency, all the above paths
-        and URLs return <tt>svn_opt_revision_unspecified</tt>.
-      </li>
-      <li>
-        Since Subversion 1.2, <tt>svn_opt_parse_path</tt> would always
-        canonicalize the returned path or URL with
-        <tt>svn_path_canonicalize</tt>, even though this is not
-        documented in <tt>subversion/include/svn_opt.h</tt>.  For the
-        relative externals support, uncanonicalized paths need to be
-        returned, otherwise scheme relative URLs,
-        i.e. <tt>//example.com/some/path</tt> would be canonicalized
-        to server root relative URLs <tt>/example.com/some/path</tt>.
-        Users of this function now must ensure that they canonicalize
-        the result of this function if they pass it to any other
-        Subversion functions that expect a canonicalized path or URL.
-      </li>
-    </ul>
-  </li>
-
-  <li>XXX: Enumerate specific new API additions (e.g. merge info
-    retrieval?)</li>
-
-  <li>APIs backing the new <a href="#cmdline">Command-line client
-    improvements</a> section have been added.</li>
-
-  <li>Many APIs have been revised to newer versions.</li>
-
-  <li>Most APIs which formerly took a <tt>recurse</tt> parameter have been
-    updated to accept a <tt>depth</tt> parameter, to be used with the new
-    <a href="#sparse-checkouts">sparse checkouts</a> feature.</li>
-
-  <li>Language bindings expanded and improved.</li>
-</ul>
-
-</div>  <!-- apis -->
 
 <div class="h3" id="dav-modules" title="dav-modules">
 <h3>Easier to try out experimental <tt>ra_serf</tt> DAV access module
@@ -1233,13 +1211,34 @@ renamed <tt>ra_dav</tt> to <tt>ra_neon</tt>.</p>
 
 </div>  <!-- dav-modules -->
 
-<div class="h3" id="bug-fixes" title="bug-fixes">
-<h3>Other bug fixes (<em>client and server</em>)</h3>
+<div class="h3" id="apis" title="apis">
+<h3>API changes, improvements and language bindings
+    (<em>client and server</em>)</h3>
 
-<p>The usual slew of heretofore-unreleased bug fixes, more than XXX
-overall. See the
-<a href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a>
-file for full details.</p>
+<p>There are too many new and revised APIs in Subversion 1.5.0 to even
+begin to list them all here.  See the <a
+href="http://svn.collab.net/svn-doxygen/" >Subversion API
+Documentation</a> page for general API information.  If you develop a
+3rd-party client application that uses Subversion APIs, you should
+probably look at the header files for the interfaces you use and see
+what's changed.</p>
+
+<p>One general change is that most APIs that formerly took a
+<tt>recurse</tt> parameter have been upgraded to accept a
+<tt>depth</tt> parameter instead, to enable the new <a
+href="#sparse-checkouts">sparse checkouts</a> feature.</p>
+
+<p>Language bindings have mostly been updated for the new APIs, though
+some may lag more than others.</p>
+
+</div>  <!-- apis -->
+
+<div class="h3" id="bug-fixes" title="bug-fixes">
+<h3>Bug fixes (<em>client and server</em>)</h3>
+
+<p>A great many bugs have been fixed.  See the 1.5.0 section in the <a
+href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
+for details.</p>
 
 </div>  <!-- bug-fixes -->
 

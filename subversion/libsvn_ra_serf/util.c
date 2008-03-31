@@ -78,8 +78,9 @@ ssl_convert_serf_failures(int failures)
   return svn_failures;
 }
 
-/* Return a string describing ORG, formatted as an X.509 'Issuer' and
-   allocated in POOL.  ORG is as returned by serf_ssl_cert_issuer(). */
+/* Convert a hash table containing the fields (as documented in X.509) of an
+   organisation to a string ORG, allocated in POOL. ORG is as returned by 
+   serf_ssl_cert_issuer() and serf_ssl_cert_subject(). */
 static char *
 convert_organisation_to_str(apr_hash_t *org, apr_pool_t *pool)
 {
@@ -92,6 +93,13 @@ convert_organisation_to_str(apr_hash_t *org, apr_pool_t *pool)
                       (char*)apr_hash_get(org, "E", APR_HASH_KEY_STRING));
 }
 
+/* Callback that implements serf_ssl_need_server_cert_t. This function is 
+   called on receiving a ssl certificate of a server when opening a https 
+   connection. It allows Subversion to override the initial validation done 
+   by serf.
+   Serf provides us the @a baton as provided in the call to 
+   serf_ssl_server_cert_callback_set. The result of serf's initial validation
+   of the certificate @a CERT is returned as a bitmask in FAILURES. */
 static apr_status_t
 ssl_server_cert(void *baton, int failures, 
                 const serf_ssl_certificate_t *cert)
@@ -132,7 +140,7 @@ ssl_server_cert(void *baton, int failures,
   if (! cert_info.valid_until)
     cert_info.valid_until = apr_pstrdup(subpool, "[invalid date]");
   cert_info.issuer_dname = convert_organisation_to_str(issuer, subpool);
-  cert_info.ascii_cert = "ce"; //ascii_cert;
+  cert_info.ascii_cert = "ce";
 
   svn_failures = ssl_convert_serf_failures(failures);
 
