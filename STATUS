@@ -36,6 +36,14 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * 30145
+   Start recording mergeinfo for inoperative merges.  As discussed here,
+   http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=136570,
+   no-op merges now *do* record mergeinfo.  r30145 effectively reverts the
+   code and tests changes involved with fixing (now non-)issue #2883.
+   Votes:
+     +1: pburba
+
 Approved changes:
 
 
