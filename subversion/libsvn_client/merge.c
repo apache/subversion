@@ -1089,7 +1089,20 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
 
       /* This might be use case 5 described in the paper attached to issue
        * #2282.  See also notes/tree-conflicts/detection.txt
+       *
+       * In case we think we have a tree conflict, we mark the file
+       * for deletion but keep a local copy on disk. The reason is
+       * that if this delete is one half of a move operation, the other
+       * half (the 'add') will be carried out anyway. So we want the
+       * file deleted, otherwise we would transform a move into an add
+       * during this merge, which isn't desirable, to put it nicely.
+       * However, users running into this kind of tree conflict may want
+       * to be able to look at the content of the file being deleted,
+       * so that they can transfer lost content from the deleted file
+       * to the file under its new name. So we leave a copy on disk
+       * just in case.
        */
+      svn_boolean_t keep_local = FALSE;
       if (! merge_b->record_only)
         {
           /* Compare the merge left file to the file that is about
@@ -1119,6 +1132,9 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
                   conflict->reason = svn_wc_conflict_reason_edited;
                   SVN_ERR(svn_wc_add_tree_conflict_data(conflict, adm_access,
                                                         merge_b->pool));
+
+                  /* Make sure we keep a copy on disk, see above. */
+                  keep_local = TRUE;
                 }
             }
         }
@@ -1126,7 +1142,7 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
       /* Passing NULL for the notify_func and notify_baton because
          repos_diff.c:delete_entry() will do it for us. */
       err = svn_client__wc_delete(mine, parent_access, merge_b->force,
-                                  merge_b->dry_run, FALSE, NULL, NULL,
+                                  merge_b->dry_run, keep_local, NULL, NULL,
                                   merge_b->ctx, subpool);
       if (err && state)
         {
