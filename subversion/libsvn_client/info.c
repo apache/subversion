@@ -56,7 +56,7 @@ build_info_from_dirent(svn_info_t **info,
   tmpinfo->last_changed_author  = dirent->last_author;
   tmpinfo->lock                 = lock;
   tmpinfo->depth                = svn_depth_unknown;
-  tmpinfo->working_size         = SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN;
+  tmpinfo->working_size         = SVN_INFO_SIZE_UNKNOWN;
   tmpinfo->size                 = dirent->size;
 
   *info = tmpinfo;
