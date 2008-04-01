@@ -11049,6 +11049,77 @@ def tree_conflicts_in_merged_files(sbox):
                  raise SVNTreeUnequal
 
 
+def tree_conflicts_and_obstructions(sbox):
+  "tree conflicts and obstructions"
+
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3146. ##
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  trunk_url = sbox.repo_url + '/A/B/E'
+  branch_path = os.path.join(wc_dir, 'branch')
+  br_alpha_moved = os.path.join(branch_path, 'alpha-moved')
+
+  # Create a branch
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     trunk_url,
+                                     sbox.repo_url + '/branch',
+                                     '-m', "Creating the Branch")
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     trunk_url + '/alpha',
+                                     trunk_url + '/alpha-moved',
+                                     '-m', "Move alpha to alpha-moved")
+
+  # Update to revision 2.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'update', wc_dir)
+
+  svntest.main.file_write(br_alpha_moved, "I am blocking myself from trunk\n")
+
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  branch_path = os.path.join(wc_dir, "branch")
+  short_branch_path = shorten_path_kludge(branch_path)
+
+  # Merge the obstructions into the branch.
+  expected_output = svntest.wc.State(short_branch_path, {
+    ''            : Item(status='C '),
+    'alpha'       : Item(status='D '),
+    })
+  expected_disk = wc.State('', {
+    'beta'        : Item("This is the file 'beta'.\n"),
+    'alpha-moved' : Item("I am blocking myself from trunk\n"),
+    })
+  expected_status = wc.State(short_branch_path, {
+    ''            : Item(status='CM', wc_rev=3),
+    'alpha'       : Item(status='D ', wc_rev=3),
+    'beta'        : Item(status='  ', wc_rev=3),
+    'alpha-moved' : Item(status='? ', wc_rev=3),
+    })
+  expected_skip = wc.State('', { })
+
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+
+  svntest.actions.run_and_verify_merge(short_branch_path,
+                                       '1', 'HEAD', trunk_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip)
+
+  os.chdir(saved_cwd)
+
+  # Indentify the tree conflict.
+  exit_code, output, error = svntest.main.run_svn(None, 'info', branch_path)
+  if not verify_lines(output,
+               ["Tree conflicts:",
+                "The merge attempted to edit the file 'alpha-moved'",
+                ]):
+                 raise SVNTreeUnequal
+
 
 ########################################################################
 # Run the tests
@@ -11151,6 +11222,7 @@ test_list = [ None,
               foreign_repos_2_url,
               XFail(merge_added_subtree),
               tree_conflicts_in_merged_files,
+              XFail(tree_conflicts_and_obstructions),
              ]
 
 if __name__ == '__main__':
