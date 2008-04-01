@@ -279,8 +279,9 @@ static void
 erase_page(svn_cache_t *cache,
            struct cache_page *page)
 {
-  remove_page_from_list(page);
   struct cache_entry *e;
+
+  remove_page_from_list(page);
 
   for (e = page->first_entry;
        e;
