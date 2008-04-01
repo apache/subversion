@@ -44,7 +44,7 @@ extern "C" {
 
 /**
  * A function type for copying an object @a in into a different pool @pool
- *  and returning the result in @a *out. 
+ *  and returning the result in @a *out.
  *
  * @since New in 1.6.
 */
@@ -85,13 +85,13 @@ typedef struct svn_cache_t svn_cache_t;
  * @since New in 1.6.
  */
 svn_error_t *
-svn_cache_create(svn_cache_t **cache_p,
-                 svn_cache_dup_func_t *dup_func,
-                 apr_ssize_t klen,
-                 apr_int64_t pages,
-                 apr_int64_t items_per_page,
-                 svn_boolean_t thread_safe,
-                 apr_pool_t *pool);
+svn_cache_create_inprocess(svn_cache_t **cache_p,
+                           svn_cache_dup_func_t *dup_func,
+                           apr_ssize_t klen,
+                           apr_int64_t pages,
+                           apr_int64_t items_per_page,
+                           svn_boolean_t thread_safe,
+                           apr_pool_t *pool);
 
 /**
  * Fetches a value indexed by @a key from @a cache into @a *value,
