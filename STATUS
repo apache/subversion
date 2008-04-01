@@ -44,6 +44,11 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r30129
+   Fix a bug that Svn::Ra::Session#open doesn't set callback_baton correctly.
+   Votes:
+     +1: kou
+
 Approved changes:
 
 
