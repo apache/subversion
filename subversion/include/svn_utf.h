@@ -203,6 +203,54 @@ svn_error_t *svn_utf_cstring_from_utf8_string(const char **dest,
                                               const svn_string_t *src,
                                               apr_pool_t *pool);
 
+
+/** Convert a null terminated string pointed to by @a src and
+ * store the result - allocated from @a pool - in @a *dest.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t * svn_utf_cstring_to_nf(char **dest,
+                                    const char *src,
+                                    apr_pool_t *pool);
+
+
+/** Convert an svn_string_t pointed to by @a src and
+ * store the result - allocated from @a pool - in @a *dest.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t * svn_utf_string_to_nf(svn_string_t **dest,
+                                   svn_string_t *src,
+                                   apr_pool_t *pool);
+
+/** Convert an svn_stringbuf_t pointed to by @a src and
+ * store the result - allocated from @a pool - in @a *dest.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t * svn_utf_stringbuf_to_nf(svn_stringbuf_t **dest,
+                                      svn_stringbuf_t *src,
+                                      apr_pool_t *pool);
+
+/** Compare null terminated strings @a str1 and @a str2.
+ *
+ * The result - stored in @a *result - is defined as follows:
+ *   -1: str1 < str2
+ *    0: str1 = str2
+ *   +1: str1 > str2
+ *
+ * @note The routine compensates differences in Unicode character
+ *       encoding (NFC/NFD) in order to establish equality.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t * svn_utf_strcmp(int *result,
+                             const char *str1,
+                             const char *str2,
+                             apr_pool_t *pool);
+
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

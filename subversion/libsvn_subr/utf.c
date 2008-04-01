@@ -25,6 +25,8 @@
 #include <apr_lib.h>
 #include <apr_xlate.h>
 
+#include <utf8proc.h>
+
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_pools.h"
@@ -987,4 +989,95 @@ svn_utf_cstring_from_utf8_string(const char **dest,
   put_xlate_handle_node(node, SVN_UTF_UTON_XLATE_HANDLE, pool);
 
   return err;
+}
+
+static svn_error_t *
+to_utf8_nf(char **dest,
+           int *dest_len,
+           const char *source,
+           int length,
+           apr_pool_t *pool)
+{
+  int32_t *intermediate = apr_palloc(pool,
+                                     (length + 1) * sizeof(*intermediate));
+
+  int decomp_len = utf8proc_decode((uint8_t *)source, length,
+                                   intermediate, length + 1,
+                                   UTF8PROC_COMPOSE | UTF8PROC_STABLE);
+  if (decomp_len < 0)
+    /* In fact, we have an error... */
+    return svn_error_create(APR_EGENERAL, NULL, NULL);
+
+  length = utf8proc_reencode(intermediate, len,
+                             UTF8PROC_COMPOSE | UTF8PROC_STABLE);
+  if (length < 0)
+    /* In fact, we have an error... */
+    return svn_error_create(APR_EGENERAL, NULL, NULL);
+
+  if (dest_len)
+    *dest_len = length;
+  *dest = (char *)intermediate;
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_utf_cstring_to_nf(char **dest,
+                      const char *src,
+                      apr_pool_t *pool)
+{
+  return to_utf8_nf(dest, src, strlen(src)+1, /* Include terminating NUL */
+                    pool);
+}
+
+svn_error_t *
+svn_utf_string_to_nf(svn_string_t **dest,
+                     svn_string_t *src,
+                     apr_pool_t *pool)
+{
+  char *tmp_dest;
+  int dest_len;
+  SVN_ERR(to_utf8_nf(&tmp_dest, &dest_len, src->data, src->length, pool));
+
+  *dest = svn_string_ncreate(tmp_dest, dest_len, pool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_utf_stringbuf_to_nf(svn_stringbuf_t **dest,
+                        svn_stringbuf_t *src,
+                        apr_pool_t *pool)
+{
+  char *tmp_dest;
+  int dest_len;
+  SVN_ERR(to_utf8_nf(&tmp_dest, &dest_len, src->data, src->length, pool));
+
+  *dest = svn_stringbuf_create(tmp_dest, dest_len, pool);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_utf_strcmp(int *result,
+               const char *str1,
+               const char *str2,
+               apr_pool_t *pool)
+{
+  /*###TODO we can make this routine less memory hungry some time
+    by looping over the input strings and do all recoding/character
+    sorting ourselves; we would only require one composition sequence
+    to be in-memory at a time. */
+
+  const char *str1_nf;
+  const char *str2_nf;
+
+  SVN_ERR(svn_utf_cstring_to_nf(&str1_nf, str1, pool));
+  SVN_ERR(svn_utf_cstring_to_nf(&str2_nf, str2, pool));
+
+  *result = strcmp(str1, str2)
+
+  return SVN_NO_ERROR;
 }
