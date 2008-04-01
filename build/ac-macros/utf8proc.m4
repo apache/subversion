@@ -32,7 +32,7 @@ AC_DEFUN(SVN_LIB_UTF8PROC,
     saved_CPPFLAGS="$CPPFLAGS"
     
     dnl If the user doesn't specify a (valid) directory 
-    dnl (or he doesn't supply a --with-sasl option at all), we
+    dnl (or he doesn't supply a --with-utf8proc option at all), we
     dnl want to look in the default directories: /usr and /usr/local.
     dnl However, the compiler always looks in /usr/{lib,include} anyway,
     dnl so we only need to look in /usr/local
@@ -60,7 +60,7 @@ AC_DEFUN(SVN_LIB_UTF8PROC,
       AC_MSG_RESULT([no])
 
       if test "$required" = "yes"; then
-        dnl The user explicitly requested SASL, but we couldn't find it.
+        dnl The user explicitly requested utf8proc, but we couldn't find it.
         dnl Exit with an error message.
         AC_MSG_ERROR([Could not find utf8proc])
       fi
