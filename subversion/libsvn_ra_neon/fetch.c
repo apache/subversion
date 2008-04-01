@@ -1307,6 +1307,7 @@ static int validate_element(svn_ra_neon__xml_elmid parent,
           || child == ELEM_add_directory
           || child == ELEM_absent_file
           || child == ELEM_add_file
+          || child == ELEM_remove_prop
           || child == ELEM_set_prop
           || child == ELEM_SVN_prop
           || child == ELEM_checked_in)
@@ -1330,6 +1331,7 @@ static int validate_element(svn_ra_neon__xml_elmid parent,
       if (child == ELEM_checked_in
           || child == ELEM_txdelta
           || child == ELEM_set_prop
+          || child == ELEM_remove_prop
           || child == ELEM_SVN_prop)
         return child;
       else
