@@ -42,13 +42,21 @@ extern "C" {
  * @{
  */
 
-/** A function type for copying an object @a in into a different pool @pool
- *  and returning the result in @a *out. */
+/**
+ * A function type for copying an object @a in into a different pool @pool
+ *  and returning the result in @a *out. 
+ *
+ * @since New in 1.6.
+*/
 typedef svn_error_t *(svn_cache_dup_func_t)(void **out,
                                             void *in,
                                             apr_pool_t *pool);
 
-/** Opaque type for an in-memory cache. */
+/**
+ * Opaque type for an in-memory cache.
+ *
+ * @since New in 1.6.
+ */
 typedef struct svn_cache_t svn_cache_t;
 
 /**
@@ -73,6 +81,8 @@ typedef struct svn_cache_t svn_cache_t;
  * will not be called on it).
  *
  * It is not safe for @a dup_func to interact with the cache itself.
+ *
+ * @since New in 1.6.
  */
 svn_error_t *
 svn_cache_create(svn_cache_t **cache_p,
@@ -88,6 +98,8 @@ svn_cache_create(svn_cache_t **cache_p,
  * setting @a found to TRUE iff it is in the cache.  The value is
  * copied into @a pool using the copy function provided to the cache's
  * constructor.
+ *
+ * @since New in 1.6.
  */
 svn_error_t *
 svn_cache_get(void **value,
@@ -107,6 +119,8 @@ svn_cache_get(void **value,
  * the cache's copy of the previous value may not be immediately
  * cleared); it is only guaranteed to not leak for caches created with
  * @a items_per_page equal to 1.
+ *
+ * @since New in 1.6.
  */
 svn_error_t *
 svn_cache_set(svn_cache_t *cache,
@@ -131,7 +145,7 @@ svn_cache_set(svn_cache_t *cache,
  * It is not legal to perform any other cache operations on @a cache
  * inside @a func.
  *
- * @since New in 1.5.
+ * @since New in 1.6.
  */
 svn_error_t *
 svn_cache_iter(svn_boolean_t *completed,
