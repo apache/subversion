@@ -196,7 +196,7 @@ duplicate_value(void **value_p,
   return SVN_NO_ERROR;
 }
 
-/* Copies KEY into *KEY_P inside POOL, using CACHE->KLEN to figure out
+/* Return a copy of KEY inside POOL, using CACHE->KLEN to figure out
  * how. */
 static const void *
 duplicate_key(svn_cache_t *cache,
@@ -251,20 +251,17 @@ svn_cache_get(void **value_p,
               const void *key,
               apr_pool_t *pool)
 {
-  void *entry_void;
   struct cache_entry *entry;
   svn_error_t *err;
 
   SVN_ERR(lock_cache(cache));
 
-  entry_void = apr_hash_get(cache->hash, key, cache->klen);
-  if (! entry_void)
+  entry = apr_hash_get(cache->hash, key, cache->klen);
+  if (! entry)
     {
       *found = FALSE;
       return unlock_cache(cache, SVN_NO_ERROR);
     }
-
-  entry = entry_void;
 
   move_page_to_front(cache, entry->page);
 
@@ -309,7 +306,7 @@ svn_cache_set(svn_cache_t *cache,
               void *value,
               apr_pool_t *pool)
 {
-  void *existing_entry;
+  struct cache_entry *existing_entry;
   svn_error_t *err = SVN_NO_ERROR;
 
   SVN_ERR(lock_cache(cache));
@@ -323,10 +320,9 @@ svn_cache_set(svn_cache_t *cache,
       /* Special case!  ENTRY is the *only* entry on this page, so
        * why not wipe it (so as not to leak the previous value).
        */
-      struct cache_entry *entry = existing_entry;
-      struct cache_page *page = entry->page;
+      struct cache_page *page = existing_entry->page;
 
-      /* This can't be the partial page, items_per_page == NULL
+      /* This can't be the partial page: items_per_page == 1
        * *never* has a partial page (except for in the temporary state
        * that we're about to fake). */
       assert(page->next != NULL);
@@ -339,11 +335,11 @@ svn_cache_set(svn_cache_t *cache,
   /* Is it already here, and we just have to leak the old value? */
   if (existing_entry)
     {
-      struct cache_entry *entry = existing_entry;
-      struct cache_page *page = entry->page;
+      struct cache_page *page = existing_entry->page;
 
       move_page_to_front(cache, page);
-      err = duplicate_value(&(entry->value), cache, value, page->page_pool);
+      err = duplicate_value(&(existing_entry->value), cache, 
+                            value, page->page_pool);
       goto cleanup;
     }
 

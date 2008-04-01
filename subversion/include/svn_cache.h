@@ -95,9 +95,9 @@ svn_cache_create(svn_cache_t **cache_p,
 
 /**
  * Fetches a value indexed by @a key from @a cache into @a *value,
- * setting @a found to TRUE iff it is in the cache.  The value is
- * copied into @a pool using the copy function provided to the cache's
- * constructor.
+ * setting @a *found to TRUE iff it is in the cache and FALSE if it is
+ * not found.  The value is copied into @a pool using the copy
+ * function provided to the cache's constructor.
  *
  * @since New in 1.6.
  */
