@@ -237,6 +237,7 @@ dag_node_cache_invalidate(svn_fs_root_t *root,
 {
   struct fdic_baton b;
   svn_cache_t *cache;
+  apr_pool_t *iterpool;
   int i;
 
   b.path = path;
@@ -250,12 +251,16 @@ dag_node_cache_invalidate(svn_fs_root_t *root,
   SVN_ERR(svn_cache_iter(NULL, cache, find_descendents_in_cache,
                          &b, b.pool));
 
+  iterpool = svn_pool_create(b.pool);
+
   for (i = 0; i < b.list->nelts; i++)
     {
       const char *descendent = APR_ARRAY_IDX(b.list, i, const char *);
-      SVN_ERR(svn_cache_set(cache, descendent, NULL, b.pool));
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_cache_set(cache, descendent, NULL, iterpool));
     }
 
+  svn_pool_destroy(iterpool);
   svn_pool_destroy(b.pool);
   return SVN_NO_ERROR;
 }
