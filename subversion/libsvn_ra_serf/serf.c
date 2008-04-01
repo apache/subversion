@@ -374,9 +374,12 @@ load_config(svn_ra_serf__session_t *session,
                  SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES, NULL);
 #endif
 
-  server_group = svn_config_find_group(config,
-                                       session->repos_url.hostname,
-                                       SVN_CONFIG_SECTION_GROUPS, pool);
+  if (config)
+    server_group = svn_config_find_group(config,
+                                         session->repos_url.hostname,
+                                         SVN_CONFIG_SECTION_GROUPS, pool);
+  else
+    server_group = NULL;
 
   if (server_group)
     {
