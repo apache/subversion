@@ -41,12 +41,3 @@ Candidate changes:
      +1: kou
 
 Approved changes:
-
- * r30086
-   Fix an ancient mod_dav_svn bug that causes invalid URLs to be
-   transmitted in the update REPORT response.
-   Notes:
-     This bug only shows up when using ra_neon against a server that 
-     doesn't support send-all style REPORT responses.
-   Votes:
-     +1: cmpilato, pburba
