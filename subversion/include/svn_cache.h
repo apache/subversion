@@ -53,6 +53,29 @@ typedef svn_error_t *(svn_cache_dup_func_t)(void **out,
                                             apr_pool_t *pool);
 
 /**
+ * A function type for deserializing an object @a *out from the string
+ * @a data of length @a data_len in the pool @pool.
+ *
+ * @since New in 1.6.
+*/
+typedef svn_error_t *(svn_cache_deserialize_func_t)(void **out,
+                                                    const char *data,
+                                                    apr_size_t data_len,
+                                                    apr_pool_t *pool);
+
+/**
+ * A function type for serializing an object @a in into bytes.  The
+ * function should allocate the serialized value in @a pool, set @a
+ * *data to the serialized value, and set *data_len to its length.
+ *
+ * @since New in 1.6.
+*/
+typedef svn_error_t *(svn_cache_serialize_func_t)(void **out,
+                                                  const char *data,
+                                                  apr_size_t data_len,
+                                                  apr_pool_t *pool);
+
+/**
  * Opaque type for an in-memory cache.
  *
  * @since New in 1.6.
@@ -92,6 +115,30 @@ svn_cache_create_inprocess(svn_cache_t **cache_p,
                            apr_int64_t items_per_page,
                            svn_boolean_t thread_safe,
                            apr_pool_t *pool);
+/**
+ * Creates a new cache in @a *cache_p, communicating to a memcached
+ * process.  The elements in the cache will be indexed by keys of
+ * length @a klen, which may be APR_HASH_KEY_STRING if they are
+ * strings.  Values will be serialized for memcached using @a
+ * serialize_func and deserialized using @a deserialize_func.  Because
+ * the same memcached server may cache many different kinds of values,
+ * @a prefix should be specified to differentiate this cache from
+ * other caches.  @a *cache_p will be allocated in @a pool.
+ *
+ * These caches are always thread safe.
+ *
+ * These caches do not support svn_cache_iter.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_cache_create_memcache(svn_cache_t **cache_p,
+                          svn_cache_serialize_func_t *serialize_func,
+                          svn_cache_deserialize_func_t *deserialize_func,
+                          apr_ssize_t klen,
+                          const char *prefix,
+                          apr_pool_t *pool);
+
 
 /**
  * Fetches a value indexed by @a key from @a cache into @a *value,
@@ -127,7 +174,6 @@ svn_cache_set(svn_cache_t *cache,
               const void *key,
               void *value,
               apr_pool_t *pool);
-/** @} */
 
 /**
  * Iterates over the elements currently in @a cache, calling @a func
@@ -145,6 +191,9 @@ svn_cache_set(svn_cache_t *cache,
  * It is not legal to perform any other cache operations on @a cache
  * inside @a func.
  *
+ * svn_cache_iter is not supported by all cache implementations; see
+ * the svn_cache_create_* function for details.
+ *
  * @since New in 1.6.
  */
 svn_error_t *
@@ -153,6 +202,7 @@ svn_cache_iter(svn_boolean_t *completed,
                svn_iter_apr_hash_cb_t func,
                void *baton,
                apr_pool_t *pool);
+/** @} */
 
 
 #ifdef __cplusplus
