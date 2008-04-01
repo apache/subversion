@@ -32,7 +32,7 @@ AC_DEFUN(SVN_LIB_UTF8PROC,
     saved_CPPFLAGS="$CPPFLAGS"
     
     dnl If the user doesn't specify a (valid) directory 
-    dnl (or he doesn't supply a --with-utf8proc option at all), we
+    dnl (or doesn't supply a --with-utf8proc option at all), we
     dnl want to look in the default directories: /usr and /usr/local.
     dnl However, the compiler always looks in /usr/{lib,include} anyway,
     dnl so we only need to look in /usr/local
