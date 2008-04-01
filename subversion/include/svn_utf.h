@@ -239,6 +239,8 @@ svn_error_t * svn_utf_stringbuf_to_nf(svn_stringbuf_t **dest,
  *    0: str1 = str2
  *   +1: str1 > str2
  *
+ * Temporary allocations are performed in @a pool.
+ *
  * @note The routine compensates differences in Unicode character
  *       encoding (NFC/NFD) in order to establish equality.
  *
