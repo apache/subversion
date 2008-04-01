@@ -3782,9 +3782,10 @@ make_txn_root(svn_fs_root_t **root_p,
 
   /* Because this cache actually tries to invalidate elements, keep
      the number of elements per page down. */
-  SVN_ERR(svn_cache_create(&(frd->txn_node_cache),
-                           svn_fs_fs__dag_dup_for_cache, APR_HASH_KEY_STRING,
-                           32, 20, FALSE, root->pool));
+  SVN_ERR(svn_cache_create_inprocess(&(frd->txn_node_cache),
+                                     svn_fs_fs__dag_dup_for_cache,
+                                     APR_HASH_KEY_STRING,
+                                     32, 20, FALSE, root->pool));
 
   root->fsap_data = frd;
 

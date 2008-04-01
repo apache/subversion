@@ -142,21 +142,21 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
        * id_private_t + 3 strings for value, and the cache_entry); the
        * default pool size is 8192, so about a hundred should fit
        * comfortably. */
-      SVN_ERR(svn_cache_create(&(ffsc->rev_root_id_cache),
-                               dup_ids, sizeof(svn_revnum_t),
-                               1, 100, TRUE, common_pool));
+      SVN_ERR(svn_cache_create_inprocess(&(ffsc->rev_root_id_cache),
+                                         dup_ids, sizeof(svn_revnum_t),
+                                         1, 100, TRUE, common_pool));
 
       /* Rough estimate: revision DAG nodes have size around 320 bytes, so
        * let's put 16 on a page. */
-      SVN_ERR(svn_cache_create(&(ffsc->rev_node_cache),
-                               svn_fs_fs__dag_dup_for_cache,
-                               APR_HASH_KEY_STRING,
-                               1024, 16, TRUE, common_pool));
+      SVN_ERR(svn_cache_create_inprocess(&(ffsc->rev_node_cache),
+                                         svn_fs_fs__dag_dup_for_cache,
+                                         APR_HASH_KEY_STRING,
+                                         1024, 16, TRUE, common_pool));
 
       /* Very rough estimate: 1K per directory. */
-      SVN_ERR(svn_cache_create(&(ffsc->dir_cache),
-                               dup_dir_listing, APR_HASH_KEY_STRING,
-                               1024, 8, TRUE, common_pool));
+      SVN_ERR(svn_cache_create_inprocess(&(ffsc->dir_cache),
+                                         dup_dir_listing, APR_HASH_KEY_STRING,
+                                         1024, 8, TRUE, common_pool));
 
       key = apr_pstrdup(common_pool, key);
       status = apr_pool_userdata_set(ffsc, key, NULL, common_pool);

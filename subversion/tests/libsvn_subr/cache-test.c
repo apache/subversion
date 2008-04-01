@@ -57,13 +57,13 @@ test_cache_basic(const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a cache with just one entry. */
-  SVN_ERR(svn_cache_create(&cache,
-                           dup_revnum,
-                           APR_HASH_KEY_STRING,
-                           1,
-                           1,
-                           TRUE,
-                           pool));
+  SVN_ERR(svn_cache_create_inprocess(&cache,
+                                     dup_revnum,
+                                     APR_HASH_KEY_STRING,
+                                     1,
+                                     1,
+                                     TRUE,
+                                     pool));
 
   /* We use a subpool for all calls in this test and aggressively
    * clear it, to try to find any bugs where the cached values aren't
