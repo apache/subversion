@@ -45,4 +45,10 @@ Candidate changes:
    Votes:
      +1: lgo
 
+ * r30162
+   Fix a bug in which Subversion could crash or mergeinfo could get set to
+   random values when using "svn merge --ignore-ancestry" on a single file.
+   Votes:
+     +1: julianfoad, pburba
+
 Approved changes:
