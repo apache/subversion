@@ -40,4 +40,9 @@ Candidate changes:
    Votes:
      +1: kou
 
+ * r30159
+   Fix crash in opening an ra_serf session when servers config doesn't exist.
+   Votes:
+     +1: lgo
+
 Approved changes:
