@@ -2000,7 +2000,7 @@ def merge_skips_obstructions(sbox):
   # this file, to understand why we use short_wc_dir and chdir() below.
   expected_output = wc.State(short_wc_dir, { })
   expected_disk.remove('A/B/lambda')
-  expected_status.tweak('A/B/lambda', status='!M')
+  expected_status.tweak('A/B/lambda', status='! ')
   os.chdir(svntest.main.work_dir)
   expected_status.tweak('', status='  ')
   # Why do we need to --ignore-ancestry?  Because the previous merge of r4,
@@ -3314,13 +3314,11 @@ def property_merge_undo_redo(sbox):
   expected_output = wc.State(wc_dir, {'A/B/E/alpha'  : Item(status=' C'), })
 
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.add({'' : Item(props={SVN_PROP_MERGEINFO : '/:2'}), })
   expected_disk.add({'A/B/E/alpha.prej'
      : Item("Trying to create property 'foo' with value 'foo_val',\n"
             + "but it has been locally deleted.\n")})
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak('', status=' M')
   expected_status.tweak('A/B/E/alpha', status=' C')
 
   expected_skip = wc.State('', { })
