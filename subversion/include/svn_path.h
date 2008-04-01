@@ -523,6 +523,25 @@ svn_error_t *svn_path_cstring_to_utf8(const char **path_utf8,
                                       apr_pool_t *pool);
 
 
+/** Compare path @a path1 with @a path2, returning the result in @a *result.
+ *
+ * @a *result is defined as follows:
+ *  -1: path1 < path2
+ *   0: path1 = path2
+ *  +1: path1 > path2
+ *
+ * Temporary allocations are performed in @a pool.
+ *
+ * @note Although the routine currently does not do so, it may be extended
+ *       to compensate for different Unicode character encodings (NFC/NFD)
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *svn_path_strcmp(int *result,
+                             const char *path1,
+                             const char *path2,
+                             apr_pool_t *pool);
+
 /** @} */
 
 #ifdef __cplusplus

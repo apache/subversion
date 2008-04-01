@@ -1479,3 +1479,19 @@ svn_path_splitext(const char **path_root,
   if (path_ext)
     *path_ext = "";
 }
+
+
+svn_error_t *
+svn_path_strcmp(int *result,
+                const char *path1,
+                const char *path2,
+                apr_pool_t *pool)
+{
+  /*### TODO: For now, we just strcmp() here. Some day we'll want to
+    make sure we compensate unicode encodings */
+  (void) pool; /* Silence compiler warning, if any */
+
+  *result = strcmp(path1, path2);
+  return SVN_NO_ERROR;
+}
+
