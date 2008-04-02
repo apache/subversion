@@ -1,0 +1,35 @@
+
+Branch purpose
+==============
+
+The purpose of this branch is to create a client (meaning libsvn_wc,
+libsvn_client) which is NFC/NFD unicode aware for those cases where
+it matters. Currently the list of 'where it matters' consists of:
+
+ * Path names
+ * Changelist names
+
+A related subject which might become part of this branch is
+URL normalization: URLs of different byte-sequences may mean the
+same thing.  That issue is somewhat related to the NFC/NFD issue,
+because URLs may suffer from the NFC/NFD issue too.
+
+
+Items to do
+===========
+
+ * Replace strcmp() with svn_path_strcmp() for all path comparisons
+   Note: Currently, trivial comparisons, such as SVN_WC_ENTRY_THIS_DIR,
+         '.' and '..' are not replaced.
+ * Recode changelist names to NFC both when input from the command line
+   as well as when read from the entries file
+ 
+
+Items done
+==========
+
+ * Create functions to recode UTF-8 strings to the
+  "Subversion global"-Normal Form (which - at least for now - is NFC)
+ * Create a function to compare UTF-8 strings taking encoding differences
+   into account
+ * Create a function to compare UTF-8 paths
