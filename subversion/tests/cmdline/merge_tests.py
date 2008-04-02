@@ -11096,7 +11096,6 @@ def tree_conflicts_and_obstructions(sbox):
     ''            : Item(status='CM', wc_rev=3),
     'alpha'       : Item(status='D ', wc_rev=3),
     'beta'        : Item(status='  ', wc_rev=3),
-    'alpha-moved' : Item(status='? ', wc_rev=3),
     })
   expected_skip = wc.State('', { })
 
