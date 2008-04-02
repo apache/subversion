@@ -847,11 +847,10 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
 
 
 def run_and_verify_mergeinfo(error_re_string = None,
-                             expected_output = {},
+                             expected_output = [],
                              *args):
   """Run 'svn mergeinfo ARGS', and compare the result against
-  EXPECTED_OUTPUT, a dict of dict of tuples:
-    { source path : (merged ranges, eligible ranges) }
+  EXPECTED_OUTPUT, a list of revisions expected in the output.
   Raise an exception if an unexpected output is encountered."""
 
   mergeinfo_command = ["mergeinfo"]
@@ -865,27 +864,24 @@ def run_and_verify_mergeinfo(error_re_string = None,
     verify.verify_outputs(None, None, err, None, expected_err)
     return
 
-  parser = parsers.MergeinfoReportParser()
-  parser.parse(out)
+  out = filter(None, map(lambda x: int(x.rstrip()), out))
+  out.sort()
+  expected_output.sort()
 
-  actual_src_paths = parser.report
-  expected_src_paths = expected_output
-
-  if len(actual_src_paths.keys()) != len(expected_src_paths.keys()):
-    raise verify.SVNUnexpectedStdout("Unexpected number of source paths")
-
-  for src_path in actual_src_paths.keys():
-    (actual_merged, actual_eligible) = actual_src_paths[src_path]
-    (expected_merged, expected_eligible) = expected_src_paths[src_path]
-    
-    if actual_merged != expected_merged:
-      raise Exception("Unexpected merged ranges for "
-                      "source path '%s': Expected '%s', got '%s'" %
-                      (src_path, expected_merged, actual_merged))
-    if actual_eligible != expected_eligible:
-      raise Exception("Unexpected eligible ranges for "
-                      "source path '%s': Expected '%s', got '%s'" %
-                      (src_path, expected_eligible, actual_eligible))
+  extra_out = []
+  if out != expected_output:
+    exp_hash = dict.fromkeys(expected_output)
+    for rev in out:
+      if exp_hash.has_key(rev):
+        del(exp_hash[rev])
+      else:
+        extra_out.append(rev)
+    extra_exp = exp_hash.keys()
+    raise Exception("Unexpected 'svn mergeinfo' output:\n"
+                    "  expected but not found: %s\n"
+                    "  found but not expected: %s"
+                    % (', '.join(map(lambda x: str(x), extra_exp)),
+                       ', '.join(map(lambda x: str(x), extra_out))))
 
 
 def run_and_verify_switch(wc_dir_name,

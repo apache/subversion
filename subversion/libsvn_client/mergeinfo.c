@@ -1121,7 +1121,7 @@ logs_for_mergeinfo_rangelist(const char *source_url,
   fleb.ctx = ctx;
 
   /* Drive the log. */
-  SVN_ERR(svn_client_log4(target, &youngest_rev, &youngest_rev, &oldest_rev, 
+  SVN_ERR(svn_client_log4(target, &youngest_rev, &oldest_rev, &youngest_rev, 
                           0, discover_changed_paths, FALSE, FALSE, NULL, 
                           filter_log_entry_with_rangelist, &fleb, ctx, pool));
 
@@ -1138,31 +1138,47 @@ logs_for_mergeinfo_rangelist(const char *source_url,
 svn_error_t *
 svn_client_mergeinfo_log_merged(const char *path_or_url,
                                 const svn_opt_revision_t *peg_revision,
+                                const char *merge_source_url,
                                 svn_log_entry_receiver_t log_receiver,
                                 void *log_receiver_baton,
                                 svn_boolean_t discover_changed_paths,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *pool)
 {
+  const char *repos_root, *rel_source_path;
   svn_mergeinfo_t mergeinfo;
-  apr_hash_index_t *hi;
+  apr_array_header_t *rangelist;
 
-  SVN_ERR(svn_client_mergeinfo_get_merged(&mergeinfo, path_or_url,
-                                          peg_revision, ctx, pool));
+  assert(svn_path_is_url(merge_source_url));
+    
+  /* Fetch mergeinfo for PATH_OR_URL@PEG_REVISION. */
+  SVN_ERR(get_mergeinfo(&mergeinfo, &repos_root, path_or_url, 
+                        peg_revision, ctx, pool));
 
+  /* No mergeinfo?  Nothing to do. */
   if (! mergeinfo)
     return SVN_NO_ERROR;
 
-  for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      void *val;
-      apr_hash_this(hi, &key, NULL, &val);
-      SVN_ERR(logs_for_mergeinfo_rangelist(key, val, discover_changed_paths, 
-                                           log_receiver, log_receiver_baton, 
-                                           ctx, pool));
-    }
-  return SVN_NO_ERROR;
+  /* See if any of the mergeinfo we got came from our MERGE_SOURCE_URL.
+     If not, there's nothing more to do.
+
+     ### FIXME: This is rename-ignorant (multiple lines of history
+     ### could have lived at the MERGE_SOURCE_URL path over time, possibly
+     ### with revisions from several of those lines merged into TARGET).
+  */
+  SVN_ERR(svn_client__path_relative_to_root(&rel_source_path, 
+                                            merge_source_url,
+                                            repos_root, TRUE, NULL, 
+                                            NULL, pool));
+  rangelist = apr_hash_get(mergeinfo, rel_source_path, APR_HASH_KEY_STRING);
+  if (! rangelist)
+    return SVN_NO_ERROR;
+
+  /* Generate the logs for this rangelist. */
+  return logs_for_mergeinfo_rangelist(merge_source_url, rangelist, 
+                                      discover_changed_paths, 
+                                      log_receiver, log_receiver_baton, 
+                                      ctx, pool);
 }
 
 

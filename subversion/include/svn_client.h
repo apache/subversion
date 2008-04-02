@@ -2664,14 +2664,16 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
 /**
  * Similar to svn_client_mergeinfo_get_merged(), but drives a log
  * entry callbacks @c receiver / @c receiver_baton with the revisions
- * merged instead of merely returning them in a mergeinfo hash.  @c
- * discover_changed_paths is the same as for svn_client_log4().
+ * merged from @a merge_source_url instead of merely returning them in
+ * a mergeinfo hash.  @c discover_changed_paths is the same as for
+ * svn_client_log4().
  *
  * @since New in 1.6.
  */
 svn_error_t *
 svn_client_mergeinfo_log_merged(const char *path_or_url,
                                 const svn_opt_revision_t *peg_revision,
+                                const char *merge_source_url,
                                 svn_log_entry_receiver_t receiver,
                                 void *receiver_baton,
                                 svn_boolean_t discover_changed_paths,
