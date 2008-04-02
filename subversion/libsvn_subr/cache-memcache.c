@@ -70,10 +70,11 @@ build_key(memcache_t *cache,
   else
     {
       const svn_string_t *raw_string = svn_string_ncreate(raw_key,
-                                                    cache->klen,
-                                                    pool);
-      const svn_string_t *encoded_string = svn_base64_encode_string(raw_string,
-                                                                    pool);
+                                                          cache->klen,
+                                                          pool);
+      const svn_string_t *encoded_string = svn_base64_encode_string2(raw_string,
+                                                                     FALSE,
+                                                                     pool);
       suffix = encoded_string->data;
     }
 
@@ -177,11 +178,15 @@ svn_cache_create_memcache(svn_cache_t **cache_p,
   memcache_t *cache = apr_pcalloc(pool, sizeof(*cache));
   apr_status_t apr_err;
   apr_memcache_server_t *server;
+  const svn_string_t *raw_prefix = svn_string_create(prefix, pool);
+  const svn_string_t *encoded_prefix = svn_base64_encode_string2(raw_prefix,
+                                                                 FALSE,
+                                                                 pool);
 
   cache->serialize_func = serialize_func;
   cache->deserialize_func = deserialize_func;
   cache->klen = klen;
-  cache->prefix = prefix;
+  cache->prefix = encoded_prefix->data;
 
   apr_err = apr_memcache_create(pool,
                                 5, /* ### TODO: max servers */
