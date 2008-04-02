@@ -1391,6 +1391,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                  ((eq svn-process-cmd 'revert)
                   (when (member 'revert svn-status-unmark-files-after-list)
                     (svn-status-unset-all-usermarks))
+                  (svn-revert-some-buffers)
                   (svn-status-update)
                   (message "svn revert finished"))
                  ((eq svn-process-cmd 'resolved)
