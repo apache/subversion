@@ -2872,50 +2872,94 @@ get_dir_contents(apr_hash_t *entries,
 }
 
 
-svn_error_t *
-svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
-                            svn_fs_t *fs,
-                            node_revision_t *noderev,
-                            apr_pool_t *pool)
+static const char *
+unparse_dir_entry(svn_node_kind_t kind, const svn_fs_id_t *id,
+                  apr_pool_t *pool)
 {
-  fs_fs_data_t *ffd = fs->fsap_data;
-  const char *unparsed_id;
-  apr_hash_t *unparsed_entries, *parsed_entries;
+  return apr_psprintf(pool, "%s %s",
+                      (kind == svn_node_file) ? KIND_FILE : KIND_DIR,
+                      svn_fs_fs__id_unparse(id, pool)->data);
+}
+
+/* Given a hash ENTRIES of dirent structions, return a hash in
+   *STR_ENTRIES_P, that has svn_string_t as the values in the format
+   specified by the fs_fs directory contents file.  Perform
+   allocations in POOL. */
+static svn_error_t *
+unparse_dir_entries(apr_hash_t **str_entries_p,
+                    apr_hash_t *entries,
+                    apr_pool_t *pool)
+{
   apr_hash_index_t *hi;
 
-  /* Are we looking for an immutable directory?  We could try the
-   * cache. */
-  if (! svn_fs_fs__id_txn_id(noderev->id))
-    {
-      svn_boolean_t found;
+  *str_entries_p = apr_hash_make(pool);
 
-      unparsed_id = svn_fs_fs__id_unparse(noderev->id, pool)->data;
-      SVN_ERR(svn_cache_get((void **) entries_p, &found, ffd->dir_cache,
-                            unparsed_id, pool));
-      if (found)
-        return SVN_NO_ERROR;
+  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      apr_ssize_t klen;
+      void *val;
+      svn_fs_dirent_t *dirent;
+      const char *new_val;
+
+      apr_hash_this(hi, &key, &klen, &val);
+      dirent = val;
+      new_val = unparse_dir_entry(dirent->kind, dirent->id, pool);
+      apr_hash_set(*str_entries_p, key, klen,
+                   svn_string_create(new_val, pool));
     }
 
-  /* Read in the directory hash. */
-  unparsed_entries = apr_hash_make(pool);
-  SVN_ERR(get_dir_contents(unparsed_entries, fs, noderev, pool));
+  return SVN_NO_ERROR;
+}
 
-  parsed_entries = apr_hash_make(pool);
+
+svn_error_t *
+svn_fs_fs__dir_entries_serialize(char **data,
+                                 apr_size_t *data_len,
+                                 void *in,
+                                 apr_pool_t *pool)
+{
+  apr_hash_t *entries = in;
+  svn_stringbuf_t *buf = svn_stringbuf_create("", pool);
+  svn_stream_t *stream = svn_stream_from_stringbuf(buf, pool);
+
+  SVN_ERR(unparse_dir_entries(&entries, entries, pool));
+  SVN_ERR(svn_hash_write2(entries, stream, SVN_HASH_TERMINATOR, pool));
+
+  *data = buf->data;
+  *data_len = buf->len;
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Given a hash STR_ENTRIES with values as svn_string_t as specified
+   in an FSFS directory contents listing, return a hash of dirents in
+   *ENTRIES_P.  Perform allocations in POOL. */
+static svn_error_t *
+parse_dir_entries(apr_hash_t **entries_p,
+                  apr_hash_t *str_entries,
+                  apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+
+  *entries_p = apr_hash_make(pool);
 
   /* Translate the string dir entries into real entries. */
-  for (hi = apr_hash_first(pool, unparsed_entries); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, str_entries); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       void *val;
-      char *str_val;
+      svn_string_t *str_val;
       char *str, *last_str;
       svn_fs_dirent_t *dirent = apr_pcalloc(pool, sizeof(*dirent));
 
       apr_hash_this(hi, &key, NULL, &val);
-      str_val = apr_pstrdup(pool, *((char **)val));
+      str_val = val;
+      str = apr_pstrdup(pool, str_val->data);
       dirent->name = apr_pstrdup(pool, key);
 
-      str = apr_strtok(str_val, " ", &last_str);
+      str = apr_strtok(str, " ", &last_str);
       if (str == NULL)
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                                 _("Directory entry corrupt"));
@@ -2941,8 +2985,57 @@ svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
 
       dirent->id = svn_fs_fs__id_parse(str, strlen(str), pool);
 
-      apr_hash_set(parsed_entries, dirent->name, APR_HASH_KEY_STRING, dirent);
+      apr_hash_set(*entries_p, dirent->name, APR_HASH_KEY_STRING, dirent);
     }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__dir_entries_deserialize(void **out,
+                                   const char *data,
+                                   apr_size_t data_len,
+                                   apr_pool_t *pool)
+{
+  apr_hash_t *entries = apr_hash_make(pool);
+  svn_stringbuf_t *buf = svn_stringbuf_ncreate(data, data_len, pool);
+  svn_stream_t *stream = svn_stream_from_stringbuf(buf, pool);
+
+  SVN_ERR(svn_hash_read2(entries, stream, SVN_HASH_TERMINATOR, pool));
+  SVN_ERR(parse_dir_entries(&entries, entries, pool));
+
+  *out = entries;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
+                            svn_fs_t *fs,
+                            node_revision_t *noderev,
+                            apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  const char *unparsed_id;
+  apr_hash_t *unparsed_entries, *parsed_entries;
+
+  /* Are we looking for an immutable directory?  We could try the
+   * cache. */
+  if (! svn_fs_fs__id_txn_id(noderev->id))
+    {
+      svn_boolean_t found;
+
+      unparsed_id = svn_fs_fs__id_unparse(noderev->id, pool)->data;
+      SVN_ERR(svn_cache_get((void **) entries_p, &found, ffd->dir_cache,
+                            unparsed_id, pool));
+      if (found)
+        return SVN_NO_ERROR;
+    }
+
+  /* Read in the directory hash. */
+  unparsed_entries = apr_hash_make(pool);
+  SVN_ERR(get_dir_contents(unparsed_entries, fs, noderev, pool));
+  SVN_ERR(parse_dir_entries(&parsed_entries, unparsed_entries, pool));
 
   /* If this is an immutable directory, let's cache the contents. */
   if (! svn_fs_fs__id_txn_id(noderev->id))
@@ -4017,47 +4110,6 @@ svn_fs_fs__abort_txn(svn_fs_txn_t *txn,
   /* Now, purge the transaction. */
   SVN_ERR_W(svn_fs_fs__purge_txn(txn->fs, txn->id, pool),
             _("Transaction cleanup failed"));
-
-  return SVN_NO_ERROR;
-}
-
-
-static const char *
-unparse_dir_entry(svn_node_kind_t kind, const svn_fs_id_t *id,
-                  apr_pool_t *pool)
-{
-  return apr_psprintf(pool, "%s %s",
-                      (kind == svn_node_file) ? KIND_FILE : KIND_DIR,
-                      svn_fs_fs__id_unparse(id, pool)->data);
-}
-
-/* Given a hash ENTRIES of dirent structions, return a hash in
-   *STR_ENTRIES_P, that has svn_string_t as the values in the format
-   specified by the fs_fs directory contents file.  Perform
-   allocations in POOL. */
-static svn_error_t *
-unparse_dir_entries(apr_hash_t **str_entries_p,
-                    apr_hash_t *entries,
-                    apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-
-  *str_entries_p = apr_hash_make(pool);
-
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      apr_ssize_t klen;
-      void *val;
-      svn_fs_dirent_t *dirent;
-      const char *new_val;
-
-      apr_hash_this(hi, &key, &klen, &val);
-      dirent = val;
-      new_val = unparse_dir_entry(dirent->kind, dirent->id, pool);
-      apr_hash_set(*str_entries_p, key, klen,
-                   svn_string_create(new_val, pool));
-    }
 
   return SVN_NO_ERROR;
 }

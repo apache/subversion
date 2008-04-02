@@ -23,10 +23,10 @@
 
 #include "svn_private_config.h"
 
-/* Dup/serialize/deserialize functions. */
+/*** Dup/serialize/deserialize functions. ***/
 
 
-/* Duplicate FS IDs as cache values. */
+/** Caching SVN_FS_ID_T values. **/
 static svn_cache_dup_func_t dup_id;
 static svn_error_t *
 dup_id(void **out,
@@ -73,7 +73,7 @@ deserialize_id(void **out,
 }
 
 
-/* Duplicate directory listings as cache values. */
+/** Caching directory listings. **/
 static svn_cache_dup_func_t dup_dir_listing;
 static svn_error_t *
 dup_dir_listing(void **out,
@@ -189,9 +189,19 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs)
                                      1024, 16, FALSE, fs->pool));
 
   /* Very rough estimate: 1K per directory. */
-  SVN_ERR(svn_cache_create_inprocess(&(ffd->dir_cache),
-                                     dup_dir_listing, APR_HASH_KEY_STRING,
-                                     1024, 8, FALSE, fs->pool));
+  if (memcache)
+    SVN_ERR(svn_cache_create_memcache(&(ffd->dir_cache),
+                                      memcache,
+                                      svn_fs_fs__dir_entries_serialize,
+                                      svn_fs_fs__dir_entries_deserialize,
+                                      APR_HASH_KEY_STRING,
+                                      apr_pstrcat(fs->pool, prefix, "DIR",
+                                                  NULL),
+                                      fs->pool));
+  else
+    SVN_ERR(svn_cache_create_inprocess(&(ffd->dir_cache),
+                                       dup_dir_listing, APR_HASH_KEY_STRING,
+                                       1024, 8, FALSE, fs->pool));
 
   return SVN_NO_ERROR;
 }
