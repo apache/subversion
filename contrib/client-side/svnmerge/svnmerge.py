@@ -869,7 +869,7 @@ class SvnLogParser:
         def __init__(self, xmlnode):
             self.n = xmlnode
         def revision(self):
-            return self.n.getAttribute("revision")
+            return int(self.n.getAttribute("revision"))
         def author(self):
             return self.n.getElementsByTagName("author")[0].firstChild.data
         def paths(self):
@@ -1195,7 +1195,7 @@ def action_init(target_dir, target_props):
             # which created the merge source:
             report('the source "%s" is a branch of "%s"' %
                    (opts["source-url"], target_dir))
-            revision_range = "1-" + copy_committed_in_rev
+            revision_range = "1-" + str(copy_committed_in_rev)
         else:
             # If the copy source is the merge source, and
             # the copy target is the merge target, then we want to
