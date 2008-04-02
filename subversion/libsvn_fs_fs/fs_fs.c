@@ -2124,8 +2124,7 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
-  SVN_ERR(svn_cache_get((void **) root_id_p, &is_cached,
-                        ffd->shared_caches->rev_root_id_cache,
+  SVN_ERR(svn_cache_get((void **) root_id_p, &is_cached, ffd->rev_root_id_cache,
                         &rev, pool));
   if (is_cached)
     return SVN_NO_ERROR;
@@ -2148,8 +2147,7 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
 
   SVN_ERR(svn_io_file_close(revision_file, pool));
 
-  SVN_ERR(svn_cache_set(ffd->shared_caches->rev_root_id_cache, &rev, root_id, 
-                        pool));
+  SVN_ERR(svn_cache_set(ffd->rev_root_id_cache, &rev, root_id, pool));
 
   *root_id_p = root_id;
 
@@ -2892,8 +2890,8 @@ svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
       svn_boolean_t found;
 
       unparsed_id = svn_fs_fs__id_unparse(noderev->id, pool)->data;
-      SVN_ERR(svn_cache_get((void **) entries_p, &found,
-                            ffd->shared_caches->dir_cache, unparsed_id, pool));
+      SVN_ERR(svn_cache_get((void **) entries_p, &found, ffd->dir_cache,
+                            unparsed_id, pool));
       if (found)
         return SVN_NO_ERROR;
     }
@@ -2948,8 +2946,7 @@ svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
 
   /* If this is an immutable directory, let's cache the contents. */
   if (! svn_fs_fs__id_txn_id(noderev->id))
-    SVN_ERR(svn_cache_set(ffd->shared_caches->dir_cache, unparsed_id,
-                          parsed_entries, pool));
+    SVN_ERR(svn_cache_set(ffd->dir_cache, unparsed_id, parsed_entries, pool));
 
   *entries_p = parsed_entries;
   return SVN_NO_ERROR;

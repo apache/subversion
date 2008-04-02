@@ -123,35 +123,9 @@ typedef struct fs_fs_shared_txn_data_t
 } fs_fs_shared_txn_data_t;
 
 
-/* We have two different "shared between all svn_fs_t objects for the
-   same filesystem" structures, allocated in the common pool.  Why two?
-
-   It's not trivial in Subversion to tell what "the same filesystem"
-   means.  If two filesystems have different UUIDs, then they are
-   definitely different; but it's possible for two different
-   filesystems to have the same UUID, or for a single filesystem could
-   be accessed via multiple distinct paths (think symlinks).  Thus we
-   could end up "oversharing" data (thinking that distinct filesystems
-   are the same) or "undersharing" (not recognizing that two
-   filesystems are the same).
-
-   fs_fs_shared_data_t contains concurrency-control-related
-   structures.  Here, undersharing could result in two threads writing
-   to the same location at once, so we err on the side of oversharing
-   by identifying filesystems by UUID alone.  (This could
-   theoretically cause deadlock, but won't cause corruption.)
-
-   fs_fs_shared_caches_t contains caches of immutable data.
-   Undersharing just means that the cached data needs to be
-   recalcuated; oversharing would mean serving data from one
-   repository as if it were in the other.  So we err on the side of
-   undersharing, by identifying filesystems by UUID and path.
- */
-
 /* Private FSFS-specific data shared between all svn_fs_t objects that
    relate to a particular filesystem, as identified by filesystem UUID.
-   Objects of this type are allocated in the common pool.
-*/
+   Objects of this type are allocated in the common pool. */
 typedef struct
 {
   /* A list of shared transaction objects for each transaction that is
@@ -182,24 +156,6 @@ typedef struct
   apr_pool_t *common_pool;
 } fs_fs_shared_data_t;
 
-/* Private FSFS-specific caches shared between all svn_fs_t objects that
-   relate to a particular filesystem, as identified by filesystem UUID
-   *and* path. Objects of this type are allocated in the common pool.
-*/
-typedef struct
-{
-  /* A cache of revision root IDs, mapping from (svn_revnum_t *) to
-     (svn_fs_id_t *).  (Not threadsafe.) */
-  svn_cache_t *rev_root_id_cache;
-
-  /* DAG node cache for immutable nodes */
-  svn_cache_t *rev_node_cache;
-
-  /* A cache of the contents of immutable directories; maps from
-     unparsed FS ID to hash of dirents. */
-  svn_cache_t *dir_cache;
-} fs_fs_shared_caches_t;
-
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object. */
 typedef struct
 {
@@ -215,11 +171,23 @@ typedef struct
   /* The revision that was youngest, last time we checked. */
   svn_revnum_t youngest_rev_cache;
 
+  /* Caches of immutable data.  (Note that if these are created with
+     svn_cache_create_memcache, the data can be shared between
+     multiple svn_fs_t's for the same filesystem.) */
+
+  /* A cache of revision root IDs, mapping from (svn_revnum_t *) to
+     (svn_fs_id_t *).  (Not threadsafe.) */
+  svn_cache_t *rev_root_id_cache;
+
+  /* DAG node cache for immutable nodes */
+  svn_cache_t *rev_node_cache;
+
+  /* A cache of the contents of immutable directories; maps from
+     unparsed FS ID to ###x. */
+  svn_cache_t *dir_cache;
+
   /* Data shared between all svn_fs_t objects for a given filesystem. */
   fs_fs_shared_data_t *shared;
-
-  /* Caches shared between all svn_fs_t objects for a given filesystem. */
-  fs_fs_shared_caches_t *shared_caches;
 } fs_fs_data_t;
 
 
