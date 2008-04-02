@@ -71,7 +71,7 @@ build_key(memcache_t *cache,
   else
     {
       const svn_string_t *raw = svn_string_ncreate(raw_key, cache->klen, pool);
-      const svn_string_t *encoded = svn_base64_encode_string2(raw_suffix, FALSE,
+      const svn_string_t *encoded = svn_base64_encode_string2(raw, FALSE,
                                                               pool);
       encoded_suffix = encoded->data;
     }
@@ -166,6 +166,7 @@ static svn_cache__vtable_t memcache_vtable = {
 
 svn_error_t *
 svn_cache_create_memcache(svn_cache_t **cache_p,
+                          apr_memcache_t *memcache,
                           svn_cache_serialize_func_t *serialize_func,
                           svn_cache_deserialize_func_t *deserialize_func,
                           apr_ssize_t klen,
@@ -174,38 +175,12 @@ svn_cache_create_memcache(svn_cache_t **cache_p,
 {
   svn_cache_t *wrapper = apr_pcalloc(pool, sizeof(*wrapper));
   memcache_t *cache = apr_pcalloc(pool, sizeof(*cache));
-  apr_status_t apr_err;
-  apr_memcache_server_t *server;
 
   cache->serialize_func = serialize_func;
   cache->deserialize_func = deserialize_func;
   cache->klen = klen;
   cache->prefix = svn_path_uri_encode(prefix, pool);
-
-  apr_err = apr_memcache_create(pool,
-                                5, /* ### TODO: max servers */
-                                0, &(cache->memcache));
-  if (apr_err != APR_SUCCESS)
-    return svn_error_wrap_apr(apr_err,
-                              _("Unknown error creating apr_memcache_t"));
-
-  /* ### Make customizable (through the API). */
-  apr_err = apr_memcache_server_create(pool,
-                                       "localhost",
-                                       11211, /* default port */
-                                       0,  /* min connections */
-                                       5,  /* soft max connections */
-                                       10, /* hard max connections */
-                                       50, /* connection time to live (secs) */
-                                       &server);
-  if (apr_err != APR_SUCCESS)
-    return svn_error_wrap_apr(apr_err,
-                              _("Unknown error creating memcache server"));
-
-  apr_err = apr_memcache_add_server(cache->memcache, server);
-  if (apr_err != APR_SUCCESS)
-    return svn_error_wrap_apr(apr_err,
-                              _("Unknown error adding server to memcache"));
+  cache->memcache = memcache;
 
   wrapper->vtable = &memcache_vtable;
   wrapper->cache_internal = cache;

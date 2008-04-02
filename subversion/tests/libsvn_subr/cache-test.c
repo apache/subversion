@@ -157,6 +157,52 @@ test_inprocess_cache_basic(const char **msg,
   return basic_cache_test(cache, TRUE, pool);
 }
 
+
+/* ### COPIED AND PASTED FROM LIBSVN_FS_FS/CACHING.C!!!
+   ### Replace with something that reads from a config file.
+*/
+/* Return a *MEMCACHE_P for FS if it's configured to use memcached.
+   Use FS->pool for allocations. */
+svn_error_t *
+find_memcache(apr_memcache_t **memcache_p,
+              apr_pool_t *pool)
+{
+  apr_memcache_t *memcache;
+  apr_status_t apr_err;
+  apr_memcache_server_t *server;
+
+  /* ### TODO: Read from a config file. */
+
+  apr_err = apr_memcache_create(pool,
+                                5, /* ### TODO: max servers */
+                                0, /* flags */
+                                &memcache);
+  if (apr_err != APR_SUCCESS)
+    return svn_error_wrap_apr(apr_err,
+                              _("Unknown error creating apr_memcache_t"));
+
+  apr_err = apr_memcache_server_create(pool,
+                                       "localhost",
+                                       11211, /* default port */
+                                       0,  /* min connections */
+                                       5,  /* soft max connections */
+                                       10, /* hard max connections */
+                                       50, /* connection time to live (secs) */
+                                       &server);
+  if (apr_err != APR_SUCCESS)
+    return svn_error_wrap_apr(apr_err,
+                              _("Unknown error creating memcache server"));
+
+  apr_err = apr_memcache_add_server(memcache, server);
+  if (apr_err != APR_SUCCESS)
+    return svn_error_wrap_apr(apr_err,
+                              _("Unknown error adding server to memcache"));
+
+  *memcache_p = memcache;
+  return SVN_NO_ERROR;
+
+}
+
 static svn_error_t *
 test_memcache_basic(const char **msg,
                     svn_boolean_t msg_only,
@@ -164,6 +210,7 @@ test_memcache_basic(const char **msg,
                     apr_pool_t *pool)
 {
   svn_cache_t *cache;
+  apr_memcache_t *memcache;
   const char *prefix = apr_psprintf(pool,
                                     "test_memcache_basic-%" APR_TIME_T_FMT,
                                     apr_time_now());
@@ -173,8 +220,10 @@ test_memcache_basic(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  /* Create a cache with just one entry. */
+  /* Create a memcache-based cache. */
+  SVN_ERR(find_memcache(&memcache, pool));
   SVN_ERR(svn_cache_create_memcache(&cache,
+                                    memcache,
                                     serialize_revnum,
                                     deserialize_revnum,
                                     APR_HASH_KEY_STRING,
