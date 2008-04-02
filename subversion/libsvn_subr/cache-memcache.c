@@ -45,8 +45,7 @@ typedef struct {
    * the memcached. */
   const char *prefix;
 
-  /* The size of the key: either a fixed number of bytes (in which
-   * case the key will be converted to base64) or
+  /* The size of the key: either a fixed number of bytes or
    * APR_HASH_KEY_STRING. */
   apr_ssize_t klen;
 
@@ -64,21 +63,17 @@ build_key(memcache_t *cache,
           const void *raw_key,
           apr_pool_t *pool)
 {
-  const char *suffix;
-  if (cache->klen == APR_HASH_KEY_STRING)
-    suffix = raw_key;
-  else
-    {
-      const svn_string_t *raw_string = svn_string_ncreate(raw_key,
-                                                          cache->klen,
-                                                          pool);
-      const svn_string_t *encoded_string = svn_base64_encode_string2(raw_string,
-                                                                     FALSE,
-                                                                     pool);
-      suffix = encoded_string->data;
-    }
+  const svn_string_t *raw_suffix, *encoded_suffix;
 
-  return apr_pstrcat(pool, "SVN:", cache->prefix, ":", suffix, NULL);
+  if (cache->klen == APR_HASH_KEY_STRING)
+    raw_suffix = svn_string_create(raw_key, pool);
+  else
+    raw_suffix = svn_string_ncreate(raw_key, cache->klen, pool);
+
+  encoded_suffix = svn_base64_encode_string2(raw_suffix, FALSE, pool);
+
+  return apr_pstrcat(pool, "SVN:", cache->prefix, ":", encoded_suffix->data,
+                     NULL);
 }
 
 
