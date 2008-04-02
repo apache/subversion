@@ -293,6 +293,7 @@ add_directory(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   struct dir_baton *b = NULL;
+  int result;
 
   SVN_ERR(make_dir_baton(&b, path, eb, pb, pool));
   *child_baton = b;
@@ -302,7 +303,8 @@ add_directory(const char *path,
 
   /* It's not excluded, so what should we treat the ambient depth as
      being? */
-  if (strcmp(eb->target, path) == 0)
+  SVN_ERR(svn_path_strcmp(&result, eb->target, path, pool));
+  if (result == 0)
     {
       /* The target of the edit is being added, so make it
          infinity. */

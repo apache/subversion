@@ -1796,6 +1796,8 @@ typedef struct svn_wc_entry_t
 
 
 /** How an entries file's owner dir is named in the entries file. */
+/* Implementation remark: when changing this value, be sure to also
+   change all strcmp()s to svn_path_strcmp()s. */
 #define SVN_WC_ENTRY_THIS_DIR  ""
 
 

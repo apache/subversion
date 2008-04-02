@@ -1882,6 +1882,7 @@ write_entry_xml(svn_stringbuf_t **output,
   if (strcmp(name, SVN_WC_ENTRY_THIS_DIR))
     {
       /* This is NOT the "this dir" entry */
+      /*### svn_path_strcmp() */
       if (! strcmp(name, "."))
         {
           /* By golly, if this isn't recognized as the "this dir"

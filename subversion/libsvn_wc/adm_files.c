@@ -57,8 +57,28 @@ static const char *adm_dir_name = default_adm_dir_name;
 svn_boolean_t
 svn_wc_is_adm_dir(const char *name, apr_pool_t *pool)
 {
-  return (0 == strcmp(name, adm_dir_name)
-          || 0 == strcmp(name, default_adm_dir_name));
+  int result;
+  svn_error_t *err;
+
+  err = svn_path_strcmp(&result, name, adm_dir_name, pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return FALSE;
+    }
+  if (0 == result)
+    return TRUE;
+
+  err = svn_path_strcmp(&result, name, default_adm_dir_name, pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return FALSE;
+    }
+  if (0 == result)
+    return TRUE;
+
+  return FALSE;
 }
 
 
@@ -88,13 +108,20 @@ svn_wc_set_adm_dir(const char *name, apr_pool_t *pool)
 
   const char **dir_name;
   for (dir_name = valid_dir_names; *dir_name; ++dir_name)
-    if (0 == strcmp(name, *dir_name))
-      {
-        /* Use the pointer to the statically allocated string
-           constant, to avoid potential pool lifetime issues. */
-        adm_dir_name = *dir_name;
-        return SVN_NO_ERROR;
-      }
+    {
+      int result;
+
+      SVN_ERR(svn_path_strcmp(&result, name, *dir_name, pool));
+
+      if (0 == result)
+        {
+          /* Use the pointer to the statically allocated string
+             constant, to avoid potential pool lifetime issues. */
+          adm_dir_name = *dir_name;
+          return SVN_NO_ERROR;
+        }
+    }
+
   return svn_error_createf
     (SVN_ERR_BAD_FILENAME, NULL,
      _("'%s' is not a valid administrative directory name"),

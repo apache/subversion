@@ -484,6 +484,7 @@ probe(const char **dir,
          caller, as making the larger API change would be very
          destabilizing right now (just before 1.0).  See issue #1617. */
       const char *base_name = svn_path_basename(path, pool);
+      /*### svn_path_strcmp */
       if ((strcmp(base_name, "..") == 0)
           || (strcmp(base_name, ".") == 0))
         {

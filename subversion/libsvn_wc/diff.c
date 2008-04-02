@@ -747,9 +747,15 @@ directory_elements_diff(struct dir_baton *dir_baton)
          entries other than the target should not be diff'd. Running diff
          on one file in a directory should not diff other files in that
          directory. */
-      if (in_anchor_not_target
-          && strcmp(dir_baton->edit_baton->target, name))
-        continue;
+      if (in_anchor_not_target)
+        {
+          int result;
+
+          SVN_ERR(svn_path_strcmp(&result,
+                                  dir_baton->edit_baton->target, name, pool));
+          if (result)
+            continue;
+        }
 
       path = svn_path_join(dir_baton->path, name, subpool);
 
