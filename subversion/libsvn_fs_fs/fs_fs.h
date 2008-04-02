@@ -469,4 +469,9 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
                            apr_pool_t *pool);
 
 
+/* Sets up the svn_cache_t structures in FS. */
+svn_error_t *
+svn_fs_fs__initialize_caches(svn_fs_t *fs);
+
+
 #endif

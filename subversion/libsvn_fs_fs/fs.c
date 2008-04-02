@@ -34,7 +34,6 @@
 #include "tree.h"
 #include "lock.h"
 #include "id.h"
-#include "dag.h"
 #include "svn_private_config.h"
 #include "private/svn_fs_util.h"
 
@@ -159,48 +158,6 @@ static fs_vtable_t fs_vtable = {
 
 /* Creating a new filesystem. */
 
-/* Duplicate FS IDs as cache values. */
-static svn_cache_dup_func_t dup_ids;
-static svn_error_t *
-dup_ids(void **out,
-        void *in,
-        apr_pool_t *pool)
-{
-  svn_fs_id_t *id = in;
-  *out = svn_fs_fs__id_copy(id, pool);
-  return SVN_NO_ERROR;
-}
-
-/* Duplicate directory listings as cache values. */
-static svn_cache_dup_func_t dup_dir_listing;
-static svn_error_t *
-dup_dir_listing(void **out,
-                void *in,
-                apr_pool_t *pool)
-{
-  apr_hash_t *new_entries = apr_hash_make(pool), *entries = in;
-  apr_hash_index_t *hi;
-
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
-    {
-      void *val;
-      svn_fs_dirent_t *dirent, *new_dirent;
-
-      apr_hash_this(hi, NULL, NULL, &val);
-      dirent = val;
-      new_dirent = apr_palloc(pool, sizeof(*new_dirent));
-      new_dirent->name = apr_pstrdup(pool, dirent->name);
-      new_dirent->kind = dirent->kind;
-      new_dirent->id = svn_fs_fs__id_copy(dirent->id, pool);
-      apr_hash_set(new_entries, new_dirent->name, APR_HASH_KEY_STRING,
-                   new_dirent);
-    }
-
-  *out = new_entries;
-  return SVN_NO_ERROR;
-}
-
-
 /* Set up vtable and fsap_data fields in FS. */
 static svn_error_t *
 initialize_fs_struct(svn_fs_t *fs)
@@ -208,30 +165,6 @@ initialize_fs_struct(svn_fs_t *fs)
   fs_fs_data_t *ffd = apr_pcalloc(fs->pool, sizeof(*ffd));
   fs->vtable = &fs_vtable;
   fs->fsap_data = ffd;
-
-  /* Make the cache for revision roots.  For the vast majority of
-   * commands, this is only going to contain a few entries (svnadmin
-   * dump/verify is an exception here), so to reduce overhead let's
-   * try to keep it to just one page.  I estimate each entry has about
-   * 72 bytes of overhead (svn_revnum_t key, svn_fs_id_t +
-   * id_private_t + 3 strings for value, and the cache_entry); the
-   * default pool size is 8192, so about a hundred should fit
-   * comfortably. */
-  SVN_ERR(svn_cache_create_inprocess(&(ffd->rev_root_id_cache),
-                                     dup_ids, sizeof(svn_revnum_t),
-                                     1, 100, FALSE, fs->pool));
-
-  /* Rough estimate: revision DAG nodes have size around 320 bytes, so
-   * let's put 16 on a page. */
-  SVN_ERR(svn_cache_create_inprocess(&(ffd->rev_node_cache),
-                                     svn_fs_fs__dag_dup_for_cache, APR_HASH_KEY_STRING,
-                                     1024, 16, FALSE, fs->pool));
-
-  /* Very rough estimate: 1K per directory. */
-  SVN_ERR(svn_cache_create_inprocess(&(ffd->dir_cache),
-                                     dup_dir_listing, APR_HASH_KEY_STRING,
-                                     1024, 8, FALSE, fs->pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -248,6 +181,8 @@ fs_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   SVN_ERR(initialize_fs_struct(fs));
 
   SVN_ERR(svn_fs_fs__create(fs, path, pool));
+
+  SVN_ERR(svn_fs_fs__initialize_caches(fs));
   return fs_serialized_init(fs, common_pool, pool);
 }
 
@@ -266,6 +201,8 @@ fs_open(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   SVN_ERR(initialize_fs_struct(fs));
 
   SVN_ERR(svn_fs_fs__open(fs, path, pool));
+
+  SVN_ERR(svn_fs_fs__initialize_caches(fs));
   return fs_serialized_init(fs, common_pool, pool);
 }
 
@@ -306,6 +243,7 @@ fs_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   SVN_ERR(svn_fs__check_fs(fs, FALSE));
   SVN_ERR(initialize_fs_struct(fs));
   SVN_ERR(svn_fs_fs__open(fs, path, pool));
+  SVN_ERR(svn_fs_fs__initialize_caches(fs));
   SVN_ERR(fs_serialized_init(fs, common_pool, pool));
   return svn_fs_fs__upgrade(fs, pool);
 }
