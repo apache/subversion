@@ -24,6 +24,7 @@
 
 #include "svn_pools.h"
 #include "svn_base64.h"
+#include "svn_path.h"
 
 #include "svn_private_config.h"
 
@@ -42,7 +43,7 @@ typedef struct {
   apr_memcache_t *memcache;
 
   /* A prefix used to differentiate our data from any other data in
-   * the memcached. */
+   * the memcached (URI-encoded). */
   const char *prefix;
 
   /* The size of the key: either a fixed number of bytes or
@@ -63,17 +64,19 @@ build_key(memcache_t *cache,
           const void *raw_key,
           apr_pool_t *pool)
 {
-  const svn_string_t *raw_suffix, *encoded_suffix;
+  const char *encoded_suffix;
 
   if (cache->klen == APR_HASH_KEY_STRING)
-    raw_suffix = svn_string_create(raw_key, pool);
+    encoded_suffix = svn_path_uri_encode(raw_key, pool);
   else
-    raw_suffix = svn_string_ncreate(raw_key, cache->klen, pool);
+    {
+      const svn_string_t *raw = svn_string_ncreate(raw_key, cache->klen, pool);
+      const svn_string_t *encoded = svn_base64_encode_string2(raw_suffix, FALSE,
+                                                              pool);
+      encoded_suffix = encoded->data;
+    }
 
-  encoded_suffix = svn_base64_encode_string2(raw_suffix, FALSE, pool);
-
-  return apr_pstrcat(pool, "SVN:", cache->prefix, ":", encoded_suffix->data,
-                     NULL);
+  return apr_pstrcat(pool, "SVN:", cache->prefix, ":", encoded_suffix, NULL);
 }
 
 
@@ -173,15 +176,11 @@ svn_cache_create_memcache(svn_cache_t **cache_p,
   memcache_t *cache = apr_pcalloc(pool, sizeof(*cache));
   apr_status_t apr_err;
   apr_memcache_server_t *server;
-  const svn_string_t *raw_prefix = svn_string_create(prefix, pool);
-  const svn_string_t *encoded_prefix = svn_base64_encode_string2(raw_prefix,
-                                                                 FALSE,
-                                                                 pool);
 
   cache->serialize_func = serialize_func;
   cache->deserialize_func = deserialize_func;
   cache->klen = klen;
-  cache->prefix = encoded_prefix->data;
+  cache->prefix = svn_path_uri_encode(prefix, pool);
 
   apr_err = apr_memcache_create(pool,
                                 5, /* ### TODO: max servers */
