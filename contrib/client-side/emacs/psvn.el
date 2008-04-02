@@ -1483,6 +1483,8 @@ To be run after a commit, an update or a merge."
                            (string= root tree)
                            ;; buffer is modified and in the tree TREE.
                            svn-status-auto-revert-buffers)
+                  (when svn-status-fancy-file-state-in-modeline
+                    (svn-status-update-modeline))
                   ;; (message "svn-revert-some-buffers: %s %s" (buffer-file-name) (verify-visited-file-modtime (current-buffer)))
                   ;; Keep the buffer if the file doesn't exist
                   (when (and (file-exists-p file) (not (verify-visited-file-modtime (current-buffer))))
