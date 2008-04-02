@@ -258,9 +258,6 @@ typedef struct merge_cmd_baton_t {
      merge source, i.e. it is cleared on every call to do_directory_merge()
      or do_file_merge() in do_merge(). */
   apr_pool_t *pool;
-  /* Pool which has a lifetime at least as long as do_merge()'s
-     iteration over all merge sources. */
-  apr_pool_t *long_pool;
 } merge_cmd_baton_t;
 
 apr_hash_t *
@@ -2780,9 +2777,6 @@ struct get_mergeinfo_walk_baton
   svn_revnum_t revision1;
   svn_revnum_t revision2;
   
-  /* Cascaded from MERGE_CMD_BATON_T members of the same names. */
-  apr_pool_t *long_pool;
-  
   /* merge depth requested. */
   svn_depth_t depth;
   
@@ -3354,7 +3348,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
     { adm_access, children_with_mergeinfo,
       merge_src_canon_path, merge_cmd_baton->target, source_root_url,
       url1, url2, revision1, revision2,
-      merge_cmd_baton->long_pool, depth, ra_session, ctx };
+      depth, ra_session, ctx };
 
   /* Cover cases 1), 2), 6), and 8) by walking the WC to get all paths which
      have mergeinfo and/or are switched or are absent from disk or is the
@@ -4706,7 +4700,6 @@ do_merge(apr_array_header_t *merge_sources,
   merge_cmd_baton.pool = subpool;
   merge_cmd_baton.merge_options = merge_options;
   merge_cmd_baton.diff3_cmd = diff3_cmd;
-  merge_cmd_baton.long_pool = pool;
 
   /* Build the notification receiver baton. */
   notify_baton.wrapped_func = ctx->notify_func2;
