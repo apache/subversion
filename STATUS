@@ -42,10 +42,3 @@ Candidate changes:
 
 Approved changes:
 
- * r30162
-   Fix a bug in which Subversion could crash or mergeinfo could get set to
-   random values when using "svn merge --ignore-ancestry" on a single file.
-   Notes:
-     Does not merge cleanly to 1.5.x. No temporary branch created (yet).
-   Votes:
-     +1: julianfoad, pburba

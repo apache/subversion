@@ -306,7 +306,8 @@ is_path_conflicted_by_merge(merge_cmd_baton_t *merge_b)
 }
 
 /* Set *HONOR_MERGEINFO and *RECORD_MERGEINFO (if non-NULL)
-   appropriately for MERGE_B. */
+   appropriately for MERGE_B.
+   One rule is that we shan't record mergeinfo if we're not honoring it. */
 static APR_INLINE void
 mergeinfo_behavior(svn_boolean_t *honor_mergeinfo,
                    svn_boolean_t *record_mergeinfo,
@@ -322,6 +323,7 @@ mergeinfo_behavior(svn_boolean_t *honor_mergeinfo,
     *record_mergeinfo = (merge_b->mergeinfo_capable
                          && merge_b->sources_ancestral
                          && merge_b->same_repos
+                         && (! merge_b->ignore_ancestry)
                          && (! merge_b->dry_run));
 }
 
