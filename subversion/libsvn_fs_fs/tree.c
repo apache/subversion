@@ -146,7 +146,7 @@ locate_cache(svn_cache_t **cache,
   else
     {
       fs_fs_data_t *ffd = root->fs->fsap_data;
-      if (cache) *cache = ffd->shared_caches->rev_node_cache;
+      if (cache) *cache = ffd->rev_node_cache;
       if (key && path) *key = apr_psprintf(pool, "%ld%s",
                                            root->rev, path);
     }

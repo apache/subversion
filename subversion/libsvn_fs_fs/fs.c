@@ -40,13 +40,11 @@
 
 #include "../libsvn_fs/fs-loader.h"
 
-/* Prefixes for the pool userdata variables used to hold
+/* A prefix for the pool userdata variables used to hold
    per-filesystem shared data.  See fs_serialized_init. */
-#define SVN_FSFS_SHARED_USERDATA_PREFIX "svn-fsfs-shared-data-"
-#define SVN_FSFS_SHARED_CACHES_USERDATA_PREFIX "svn-fsfs-shared-caches-"
+#define SVN_FSFS_SHARED_USERDATA_PREFIX "svn-fsfs-shared-"
 
 
-static svn_cache_dup_func_t dup_ids, dup_dir_listing;
 
 static svn_error_t *
 fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
@@ -55,7 +53,6 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
   const char *key;
   void *val;
   fs_fs_shared_data_t *ffsd;
-  fs_fs_shared_caches_t *ffsc;
   apr_status_t status;
 
   /* Note that we are allocating a small amount of long-lived data for
@@ -72,9 +69,6 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
      "svnadmin load", so this is a low-priority problem, and we don't
      know of a better way of associating such data with the
      repository. */
-
-  /* See the documentation before fs_fs_shared_data_t in fs.h for why
-     there are two separate objects here. */
 
   key = apr_pstrcat(pool, SVN_FSFS_SHARED_USERDATA_PREFIX, ffd->uuid,
                     (char *) NULL);
@@ -122,50 +116,6 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
 
   ffd->shared = ffsd;
 
-  /* Now do it all again for the caches; this key contains the path. */
-  key = apr_pstrcat(pool, SVN_FSFS_SHARED_CACHES_USERDATA_PREFIX, ffd->uuid,
-                    "/", fs->path, (char *) NULL);
-  status = apr_pool_userdata_get(&val, key, common_pool);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't fetch FSFS shared caches data"));
-  ffsc = val;
-
-  if (!ffsc)
-    {
-      ffsc = apr_pcalloc(common_pool, sizeof(*ffsc));
-
-      /* Make the cache for revision roots.  For the vast majority of
-       * commands, this is only going to contain a few entries (svnadmin
-       * dump/verify is an exception here), so to reduce overhead let's
-       * try to keep it to just one page.  I estimate each entry has about
-       * 72 bytes of overhead (svn_revnum_t key, svn_fs_id_t +
-       * id_private_t + 3 strings for value, and the cache_entry); the
-       * default pool size is 8192, so about a hundred should fit
-       * comfortably. */
-      SVN_ERR(svn_cache_create_inprocess(&(ffsc->rev_root_id_cache),
-                                         dup_ids, sizeof(svn_revnum_t),
-                                         1, 100, TRUE, common_pool));
-
-      /* Rough estimate: revision DAG nodes have size around 320 bytes, so
-       * let's put 16 on a page. */
-      SVN_ERR(svn_cache_create_inprocess(&(ffsc->rev_node_cache),
-                                         svn_fs_fs__dag_dup_for_cache,
-                                         APR_HASH_KEY_STRING,
-                                         1024, 16, TRUE, common_pool));
-
-      /* Very rough estimate: 1K per directory. */
-      SVN_ERR(svn_cache_create_inprocess(&(ffsc->dir_cache),
-                                         dup_dir_listing, APR_HASH_KEY_STRING,
-                                         1024, 8, TRUE, common_pool));
-
-      key = apr_pstrdup(common_pool, key);
-      status = apr_pool_userdata_set(ffsc, key, NULL, common_pool);
-      if (status)
-        return svn_error_wrap_apr(status, _("Can't store FSFS shared caches data"));
-    }
-
-  ffd->shared_caches = ffsc;
-
   return SVN_NO_ERROR;
 }
 
@@ -210,6 +160,7 @@ static fs_vtable_t fs_vtable = {
 /* Creating a new filesystem. */
 
 /* Duplicate FS IDs as cache values. */
+static svn_cache_dup_func_t dup_ids;
 static svn_error_t *
 dup_ids(void **out,
         void *in,
@@ -221,6 +172,7 @@ dup_ids(void **out,
 }
 
 /* Duplicate directory listings as cache values. */
+static svn_cache_dup_func_t dup_dir_listing;
 static svn_error_t *
 dup_dir_listing(void **out,
                 void *in,
@@ -256,6 +208,29 @@ initialize_fs_struct(svn_fs_t *fs)
   fs_fs_data_t *ffd = apr_pcalloc(fs->pool, sizeof(*ffd));
   fs->vtable = &fs_vtable;
   fs->fsap_data = ffd;
+
+  /* Make the cache for revision roots.  For the vast majority of
+   * commands, this is only going to contain a few entries (svnadmin
+   * dump/verify is an exception here), so to reduce overhead let's
+   * try to keep it to just one page.  I estimate each entry has about
+   * 72 bytes of overhead (svn_revnum_t key, svn_fs_id_t +
+   * id_private_t + 3 strings for value, and the cache_entry); the
+   * default pool size is 8192, so about a hundred should fit
+   * comfortably. */
+  SVN_ERR(svn_cache_create_inprocess(&(ffd->rev_root_id_cache),
+                                     dup_ids, sizeof(svn_revnum_t),
+                                     1, 100, FALSE, fs->pool));
+
+  /* Rough estimate: revision DAG nodes have size around 320 bytes, so
+   * let's put 16 on a page. */
+  SVN_ERR(svn_cache_create_inprocess(&(ffd->rev_node_cache),
+                                     svn_fs_fs__dag_dup_for_cache, APR_HASH_KEY_STRING,
+                                     1024, 16, FALSE, fs->pool));
+
+  /* Very rough estimate: 1K per directory. */
+  SVN_ERR(svn_cache_create_inprocess(&(ffd->dir_cache),
+                                     dup_dir_listing, APR_HASH_KEY_STRING,
+                                     1024, 8, FALSE, fs->pool));
 
   return SVN_NO_ERROR;
 }
