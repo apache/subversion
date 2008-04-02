@@ -2635,9 +2635,11 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
 
 
 /**
- * Set @a *mergeinfo to the mergeinfo describing the ranges which have
- * been merged into @a path_or_url as of @a peg_revision, or @c NULL
- * if there is no mergeinfo.
+ * Set @a *mergeinfo to a hash mapping <tt>const char *</tt> merge
+ * source URLs to <tt>apr_array_header_t *</tt> rangelists (arrays of
+ * <tt>svn_merge_range_t *</tt> ranges)o describing the ranges which
+ * have been merged into @a path_or_url as of @a peg_revision, or @c
+ * NULL if there is no mergeinfo.
  *
  * Use @a pool for all necessary allocations.
  *
@@ -2645,10 +2647,14 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
  * never happen for file:// URLs), return an @c
  * SVN_ERR_UNSUPPORTED_FEATURE error.
  *
+ * @note Unlike most APIs which deal with mergeinfo, this one returns
+ * data where the keys of the hash are absolute repository URLs rather
+ * than repository filesystem paths.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_mergeinfo_get_merged(svn_mergeinfo_t *mergeinfo,
+svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
                                 const char *path_or_url,
                                 const svn_opt_revision_t *peg_revision,
                                 svn_client_ctx_t *ctx,
@@ -2803,7 +2809,7 @@ svn_client_revert(const apr_array_header_t *paths,
  */
 
 /**
- * Similar to svn_client_resolved2(), but without automatic conflict
+ * Similar to svn_client_resolve(), but without automatic conflict
  * resolution support.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -2814,9 +2820,7 @@ svn_client_resolved(const char *path,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
 
-/** Remove the 'conflicted' state on a working copy @a path.  This will
- * not semantically resolve conflicts;  it just allows @a path to be
- * committed in the future.  The implementation details are opaque.
+/** Perform automatic conflict resolution on a working copy @a path.
  *
  * If @a depth is @c svn_depth_empty, act only on @a path; if
  * @c svn_depth_files, resolve @a path and its conflicted file
@@ -2846,11 +2850,11 @@ svn_client_resolved(const char *path,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_resolved2(const char *path,
-                     svn_depth_t depth,
-                     svn_wc_conflict_choice_t conflict_choice,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool);
+svn_client_resolve(const char *path,
+                   svn_depth_t depth,
+                   svn_wc_conflict_choice_t conflict_choice,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
 
 
 /** @} */
@@ -4015,8 +4019,7 @@ svn_client_unlock(const apr_array_header_t *targets,
  * @{
  */
 
-/** The value of the size in the repository is unknown (because the info
- * was fetched for a local path, not an URL).
+/** The size of the file is unknown.
  *
  * @since New in 1.5
  */
@@ -4082,14 +4085,14 @@ typedef struct svn_info_t
   const char *conflict_new;
   const char *conflict_wrk;
   const char *prejfile;
-
-  /* @since New in 1.5. */
+  /** @since New in 1.5. */
   const char *changelist;
+  /** @since New in 1.5. */
   svn_depth_t depth;
 
   /**
    * The size of the file after being translated into its local
-   * representation, or @c SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN if
+   * representation, or @c SVN_INFO_SIZE_UNKNOWN if
    * unknown.  Not applicable for directories.
    * @since New in 1.5.
    */

@@ -3453,6 +3453,83 @@ def update_copied_from_replaced_and_changed(sbox):
                                         None, None, None, None, 0,
                                         wc_dir)
 
+#----------------------------------------------------------------------
+# Regression test: ra_neon assumes that you never delete a property on
+# a newly-added file, which is wrong if it's add-with-history.
+def update_copied_and_deleted_prop(sbox):
+  "updating a copied file with a deleted property"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(wc_dir, 'iota')
+  iota2_path = os.path.join(wc_dir, 'iota2')
+
+  # Add a property on iota
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'bar', iota_path)
+  # Commit that change, creating r2.
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+  expected_status_mixed = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status_mixed.tweak('iota', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status_mixed, None, wc_dir)
+
+  # Copy iota to iota2 and delete the property on it.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy', iota_path, iota2_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propdel', 'foo', iota2_path)
+
+  # Commit that change, creating r3.
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota2' : Item(verb='Adding'),
+    })
+  expected_status_mixed.add({
+    'iota2' : Item(status='  ', wc_rev=3),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status_mixed, None, wc_dir)
+
+  # Update the whole wc, verifying disk as well.
+  expected_output = svntest.wc.State(wc_dir, { })
+  expected_disk_r3 = svntest.main.greek_state.copy()
+  expected_disk_r3.add({
+    'iota2' : Item("This is the file 'iota'.\n",
+                   props={SVN_PROP_MERGEINFO: ''}),
+    })
+  expected_disk_r3.tweak('iota', props={'foo':'bar'})
+  expected_status_r3 = expected_status_mixed.copy()
+  expected_status_r3.tweak(wc_rev=3)
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk_r3,
+                                        expected_status_r3,
+                                        check_props=True)
+
+  # Now go back to r2.
+  expected_output = svntest.wc.State(wc_dir, {'iota2': Item(status='D ')})
+  expected_disk_r2 = expected_disk_r3.copy()
+  expected_disk_r2.remove('iota2')
+  expected_status_r2 = expected_status_r3.copy()
+  expected_status_r2.tweak(wc_rev=2)
+  expected_status_r2.remove('iota2')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk_r2,
+                                        expected_status_r2,
+                                        None, None, None, None, None,
+                                        True,
+                                        "-r2", wc_dir)
+
+  # And finally, back to r3, getting an add-with-history-and-property-deleted
+  expected_output = svntest.wc.State(wc_dir, {'iota2': Item(status='A ')})
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk_r3,
+                                        expected_status_r3,
+                                        check_props=True)
 
 #----------------------------------------------------------------------
 
@@ -3789,6 +3866,7 @@ test_list = [ None,
               SkipUnless(update_handles_copyfrom_with_txdeltas,
                          server_sends_copyfrom_on_update),
               update_copied_from_replaced_and_changed,
+              update_copied_and_deleted_prop,
               update_accept_conflicts,
               eof_in_interactive_conflict_resolver,
              ]
