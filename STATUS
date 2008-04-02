@@ -49,8 +49,3 @@ Approved changes:
      Does not merge cleanly to 1.5.x. No temporary branch created (yet).
    Votes:
      +1: julianfoad, pburba
-
- * r30159
-   Fix crash in opening an ra_serf session when servers config doesn't exist.
-   Votes:
-     +1: lgo, hwright
