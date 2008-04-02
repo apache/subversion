@@ -70,9 +70,9 @@ typedef svn_error_t *(svn_cache_deserialize_func_t)(void **out,
  *
  * @since New in 1.6.
 */
-typedef svn_error_t *(svn_cache_serialize_func_t)(void **out,
-                                                  const char *data,
-                                                  apr_size_t data_len,
+typedef svn_error_t *(svn_cache_serialize_func_t)(char **data,
+                                                  apr_size_t *data_len,
+                                                  void *in,
                                                   apr_pool_t *pool);
 
 /**
