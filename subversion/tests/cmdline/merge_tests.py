@@ -11116,7 +11116,7 @@ def tree_conflicts_and_obstructions(sbox):
   exit_code, output, error = svntest.main.run_svn(None, 'info', branch_path)
   if not verify_lines(output,
                ["Tree conflicts:",
-                "The merge attempted to edit the file 'alpha-moved'",
+                "The merge attempted to delete the file 'alpha-moved'",
                 ]):
                  raise SVNTreeUnequal
 
