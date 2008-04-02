@@ -103,15 +103,60 @@ dup_dir_listing(void **out,
 }
 
 
+/* Return a *MEMCACHE_P for FS if it's configured to use memcached.
+   Use FS->pool for allocations. */
+svn_error_t *
+find_memcache(apr_memcache_t **memcache_p,
+              svn_fs_t *fs)
+{
+  apr_memcache_t *memcache;
+  apr_status_t apr_err;
+  apr_memcache_server_t *server;
+
+  /* ### TODO: Read from a config file. */
+
+  apr_err = apr_memcache_create(fs->pool,
+                                5, /* ### TODO: max servers */
+                                0, /* flags */
+                                &memcache);
+  if (apr_err != APR_SUCCESS)
+    return svn_error_wrap_apr(apr_err,
+                              _("Unknown error creating apr_memcache_t"));
+
+  apr_err = apr_memcache_server_create(fs->pool,
+                                       "localhost",
+                                       11211, /* default port */
+                                       0,  /* min connections */
+                                       5,  /* soft max connections */
+                                       10, /* hard max connections */
+                                       50, /* connection time to live (secs) */
+                                       &server);
+  if (apr_err != APR_SUCCESS)
+    return svn_error_wrap_apr(apr_err,
+                              _("Unknown error creating memcache server"));
+
+  apr_err = apr_memcache_add_server(memcache, server);
+  if (apr_err != APR_SUCCESS)
+    return svn_error_wrap_apr(apr_err,
+                              _("Unknown error adding server to memcache"));
+
+  *memcache_p = memcache;
+  return SVN_NO_ERROR;
+
+}
+
+
 svn_error_t *
 svn_fs_fs__initialize_caches(svn_fs_t *fs)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-
   const char *prefix = apr_pstrcat(fs->pool,
                                    "fsfs:", ffd->uuid,
                                    "/", fs->path, ":",
                                    NULL);
+  apr_memcache_t *memcache;
+
+  SVN_ERR(find_memcache(&memcache, fs));
 
   /* Make the cache for revision roots.  For the vast majority of
    * commands, this is only going to contain a few entries (svnadmin
@@ -121,15 +166,20 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs)
    * id_private_t + 3 strings for value, and the cache_entry); the
    * default pool size is 8192, so about a hundred should fit
    * comfortably. */
-/*   SVN_ERR(svn_cache_create_inprocess(&(ffd->rev_root_id_cache), */
-/*                                      dup_ids, sizeof(svn_revnum_t), */
-/*                                      1, 100, FALSE, fs->pool)); */
-  SVN_ERR(svn_cache_create_memcache(&(ffd->rev_root_id_cache),
-                                    serialize_id,
-                                    deserialize_id,
-                                    sizeof(svn_revnum_t),
-                                    apr_pstrcat(fs->pool, prefix, "RRI", NULL),
-                                    fs->pool));
+  if (memcache)
+    SVN_ERR(svn_cache_create_memcache(&(ffd->rev_root_id_cache),
+                                      memcache,
+                                      serialize_id,
+                                      deserialize_id,
+                                      sizeof(svn_revnum_t),
+                                      apr_pstrcat(fs->pool, prefix, "RRI",
+                                                  NULL),
+                                      fs->pool));
+  else
+    SVN_ERR(svn_cache_create_inprocess(&(ffd->rev_root_id_cache),
+                                       dup_ids, sizeof(svn_revnum_t),
+                                       1, 100, FALSE, fs->pool));
+
 
   /* Rough estimate: revision DAG nodes have size around 320 bytes, so
    * let's put 16 on a page. */

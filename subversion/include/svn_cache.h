@@ -25,6 +25,7 @@
 
 #include <apr_pools.h>
 #include <apr_hash.h>
+#include <apr_memcache.h>
 
 #include "svn_types.h"
 #include "svn_error.h"
@@ -117,9 +118,9 @@ svn_cache_create_inprocess(svn_cache_t **cache_p,
                            apr_pool_t *pool);
 /**
  * Creates a new cache in @a *cache_p, communicating to a memcached
- * process.  The elements in the cache will be indexed by keys of
- * length @a klen, which may be APR_HASH_KEY_STRING if they are
- * strings.  Values will be serialized for memcached using @a
+ * process via @a memcache.  The elements in the cache will be indexed
+ * by keys of length @a klen, which may be APR_HASH_KEY_STRING if they
+ * are strings.  Values will be serialized for memcached using @a
  * serialize_func and deserialized using @a deserialize_func.  Because
  * the same memcached server may cache many different kinds of values,
  * @a prefix should be specified to differentiate this cache from
@@ -133,6 +134,7 @@ svn_cache_create_inprocess(svn_cache_t **cache_p,
  */
 svn_error_t *
 svn_cache_create_memcache(svn_cache_t **cache_p,
+                          apr_memcache_t *memcache,
                           svn_cache_serialize_func_t *serialize_func,
                           svn_cache_deserialize_func_t *deserialize_func,
                           apr_ssize_t klen,
