@@ -27,11 +27,13 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
- * 30145
+ * r30145, r30185
    Start recording mergeinfo for inoperative merges.  As discussed here,
    http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=136570,
    no-op merges now *do* record mergeinfo.  r30145 effectively reverts the
    code and tests changes involved with fixing (now non-)issue #2883.
+   Notes: r30145 is the bulk of this change, r30185 is just some follow-on
+     cleanup of some struct fields not longer required after r30185.
    Votes:
      +1: pburba
 
