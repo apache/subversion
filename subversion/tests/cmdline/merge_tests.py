@@ -11097,7 +11097,9 @@ def tree_conflicts_and_obstructions(sbox):
     'alpha'       : Item(status='D ', wc_rev=3),
     'beta'        : Item(status='  ', wc_rev=3),
     })
-  expected_skip = wc.State('', { })
+  expected_skip = wc.State(short_branch_path, {
+    'alpha-moved' : Item(),
+    })
 
   saved_cwd = os.getcwd()
   os.chdir(svntest.main.work_dir)
