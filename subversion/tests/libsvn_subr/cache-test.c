@@ -19,9 +19,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <apr_general.h>
+#include <apr_lib.h>
+#include <apr_time.h>
 
 #include "svn_cache.h"
 #include "svn_pools.h"
+
+#include "svn_private_config.h"
 
 #include "../svn_test.h"
 
@@ -40,30 +44,46 @@ dup_revnum(void **out,
   return SVN_NO_ERROR;
 }
 
+static svn_cache_serialize_func_t serialize_revnum;
 static svn_error_t *
-test_cache_basic(const char **msg,
-                 svn_boolean_t msg_only,
-                 svn_test_opts_t *opts,
+serialize_revnum(char **data,
+                 apr_size_t *data_len,
+                 void *in,
                  apr_pool_t *pool)
 {
-  svn_cache_t *cache;
+  *data_len = sizeof(svn_revnum_t);
+  *data = apr_pmemdup(pool, in, *data_len);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_cache_deserialize_func_t deserialize_revnum;
+static svn_error_t *
+deserialize_revnum(void **out,
+                   const char *data,
+                   apr_size_t data_len,
+                   apr_pool_t *pool)
+{
+  svn_revnum_t *in_rev, *out_rev;
+  if (data_len != sizeof(*in_rev))
+    return svn_error_create(SVN_ERR_REVNUM_PARSE_FAILURE, NULL,
+                            _("Bad size for revision number in cache"));
+  in_rev = (svn_revnum_t *) data;
+  out_rev = apr_palloc(pool, sizeof(*out_rev));
+  *out_rev = *in_rev;
+  *out = out_rev;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+basic_cache_test(svn_cache_t *cache,
+                 svn_boolean_t size_is_one,
+                 apr_pool_t *pool)
+{
   svn_boolean_t found;
   svn_revnum_t twenty = 20, thirty = 30, *answer;
   apr_pool_t *subpool;
-
-  *msg = "basic svn_cache test";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  /* Create a cache with just one entry. */
-  SVN_ERR(svn_cache_create_inprocess(&cache,
-                                     dup_revnum,
-                                     APR_HASH_KEY_STRING,
-                                     1,
-                                     1,
-                                     TRUE,
-                                     pool));
 
   /* We use a subpool for all calls in this test and aggressively
    * clear it, to try to find any bugs where the cached values aren't
@@ -99,14 +119,69 @@ test_cache_basic(const char **msg,
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "expected 30 but found '%ld'", *answer);
 
-  SVN_ERR(svn_cache_get((void **) &answer, &found, cache, "twenty", subpool));
-  if (found)
-    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
-                            "cache found entry for 'twenty' that should have "
-                            "expired");
+  if (size_is_one)
+    {
+      SVN_ERR(svn_cache_get((void **) &answer, &found, cache, "twenty", subpool));
+      if (found)
+        return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                                "cache found entry for 'twenty' that should have "
+                                "expired");
+    }
   svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_inprocess_cache_basic(const char **msg,
+                           svn_boolean_t msg_only,
+                           svn_test_opts_t *opts,
+                           apr_pool_t *pool)
+{
+  svn_cache_t *cache;
+
+  *msg = "basic inprocess svn_cache test";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Create a cache with just one entry. */
+  SVN_ERR(svn_cache_create_inprocess(&cache,
+                                     dup_revnum,
+                                     APR_HASH_KEY_STRING,
+                                     1,
+                                     1,
+                                     TRUE,
+                                     pool));
+
+  return basic_cache_test(cache, TRUE, pool);
+}
+
+static svn_error_t *
+test_memcache_basic(const char **msg,
+                    svn_boolean_t msg_only,
+                    svn_test_opts_t *opts,
+                    apr_pool_t *pool)
+{
+  svn_cache_t *cache;
+  const char *prefix = apr_psprintf(pool,
+                                    "test_memcache_basic-%" APR_TIME_T_FMT,
+                                    apr_time_now());
+
+  *msg = "basic memcache svn_cache test";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Create a cache with just one entry. */
+  SVN_ERR(svn_cache_create_memcache(&cache,
+                                    serialize_revnum,
+                                    deserialize_revnum,
+                                    APR_HASH_KEY_STRING,
+                                    prefix,
+                                    pool));
+
+  return basic_cache_test(cache, FALSE, pool);
 }
 
 
@@ -115,6 +190,7 @@ test_cache_basic(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(test_cache_basic),
+    SVN_TEST_PASS(test_inprocess_cache_basic),
+    SVN_TEST_PASS(test_memcache_basic),
     SVN_TEST_NULL
   };

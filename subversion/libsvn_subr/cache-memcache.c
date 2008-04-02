@@ -23,6 +23,7 @@
 #include <apr_memcache.h>
 
 #include "svn_pools.h"
+#include "svn_base64.h"
 
 #include "svn_private_config.h"
 
@@ -68,11 +69,11 @@ build_key(memcache_t *cache,
     suffix = raw_key;
   else
     {
-      svn_string_t *raw_string = svn_string_ncreate(raw_key,
+      const svn_string_t *raw_string = svn_string_ncreate(raw_key,
                                                     cache->klen,
                                                     pool);
-      svn_string_t *encoded_string = svn_base64_encode_string(raw_string,
-                                                              pool);
+      const svn_string_t *encoded_string = svn_base64_encode_string(raw_string,
+                                                                    pool);
       suffix = encoded_string->data;
     }
 
@@ -128,7 +129,8 @@ memcache_set(void *cache_void,
 {
   memcache_t *cache = cache_void;
   apr_pool_t *subpool = svn_pool_create(pool);
-  const char *data, *mc_key = build_key(cache, key, subpool);
+  char *data;
+  const char *mc_key = build_key(cache, key, subpool);
   apr_size_t data_len;
   apr_status_t apr_err;
 
