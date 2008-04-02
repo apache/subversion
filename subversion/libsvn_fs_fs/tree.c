@@ -229,7 +229,8 @@ find_descendents_in_cache(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* Invalidate cache entries for PATH and any of its children. */
+/* Invalidate cache entries for PATH and any of its children.  This
+   should *only* be called on a transaction root! */
 static svn_error_t *
 dag_node_cache_invalidate(svn_fs_root_t *root,
                           const char *path,
@@ -3781,7 +3782,10 @@ make_txn_root(svn_fs_root_t **root_p,
   root->rev = base_rev;
 
   /* Because this cache actually tries to invalidate elements, keep
-     the number of elements per page down. */
+     the number of elements per page down.
+
+     Note that since dag_node_cache_invalidate uses svn_cache_iter,
+     this *cannot* be a memcache-based cache.  */
   SVN_ERR(svn_cache_create_inprocess(&(frd->txn_node_cache),
                                      svn_fs_fs__dag_dup_for_cache,
                                      APR_HASH_KEY_STRING,
