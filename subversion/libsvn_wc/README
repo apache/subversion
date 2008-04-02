@@ -659,3 +659,9 @@ Examples:
   -M  bar.c       --> bar.c's properties have been locally modified
   UC  baz.c       --> baz.c has had both components patched, but a
                       local property change is creating a conflict.
+
+Additional remarks
+------------------
+
+Be sure to read notes/unicode-composition-for-filenames before you
+start hacking libsvn_wc.

@@ -251,6 +251,30 @@ Implementing option (4) means:
     communicate with the server.
 
 
+The above means the client has to be very carefull to preserve the
+encoding from the server and use that when talking to the server
+otherwise the server may not recognize the path as a versioned entity.
+
+Locally however, we can't be sure the filesystem enforces the encoding
+the server sent to the client, meaning there are (contrived) cases where
+a file exists in a different encoding locally than in the repository.
+Which means we have to be very carefull about how we find our files and
+to use the encoding we got from the local filesystem.
+
+Implementation details:
+
+ * The hash keys in svn_wc_adm_access_t's are hashed on the working copy
+   path encoding, not the repository path
+
+New conventions:
+ * variables containing a path as encoded in the local filesystem
+   should contain the (sub)string 'wc_path'
+ * variables containing a path as encoded in the repository should
+   contain the (sub)string 'repo_path'
+
+
+
+
 References
 ==========
 
