@@ -32,6 +32,7 @@
  *    - @c svn_path_canonicalize()
  *    - @c svn_path_is_canonical()
  *    - @c svn_path_internal_style()
+ *    - @c svn_path_uri_encode()
  *
  * For the most part, we mean what most anyone would mean when talking
  * about canonical paths, but to be on the safe side, you must run
@@ -459,7 +460,9 @@ svn_boolean_t svn_path_is_url(const char *path);
 /** Return @c TRUE iff @a path is URI-safe, @c FALSE otherwise. */
 svn_boolean_t svn_path_is_uri_safe(const char *path);
 
-/** Return a URI-encoded copy of @a path, allocated in @a pool. */
+/** Return a URI-encoded copy of @a path, allocated in @a pool.  (@a
+    path can be an arbitrary UTF-8 string and does not have to be a
+    canonical path.) */
 const char *svn_path_uri_encode(const char *path, apr_pool_t *pool);
 
 /** Return a URI-decoded copy of @a path, allocated in @a pool. */
