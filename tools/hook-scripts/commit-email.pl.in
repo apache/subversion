@@ -142,6 +142,7 @@ my %opt_to_hash_key = ('--from' => 'from_address',
                        '-m'     => '',
                        '-r'     => 'reply_to',
                        '-s'     => 'subject_prefix',
+                       '--summary' => '',
                        '--diff' => '',
                        '--stdout' => '');
 
@@ -157,7 +158,7 @@ while (@ARGV)
           }
 
         my $value;
-        if ($arg ne '--revprop-change' and $arg ne '--stdout')
+        if ($arg ne '--revprop-change' and $arg ne '--stdout' and $arg ne '--summary')
           {
             unless (@ARGV)
               {
@@ -208,6 +209,10 @@ while (@ARGV)
             elsif ($arg eq '--stdout')
               {
                 $current_project->{stdout} = 1;
+              }
+            elsif ($arg eq '--summary')
+              {
+                $current_project->{summary} = 1;
               }
             else
               {
@@ -351,6 +356,7 @@ foreach my $line (@svnlooklines)
 # Declare variables which carry information out of the inner scope of
 # the conditional blocks below.
 my $subject_base;
+my $subject_logbase;
 my @body;
 # $author - declared above for use as a command line parameter in
 #   revprop-change mode.  In commit mode, gets filled in below.
@@ -428,6 +434,9 @@ if ($mode eq 'commit')
       {
         $subject_base = "r$rev - $dirlist";
       }
+    my $summary = @log ? $log[0] : '';
+    chomp($summary);
+    $subject_logbase = "r$rev - $summary";
 
     # Put together the body of the log message.
     push(@body, "Author: $author\n");
@@ -521,10 +530,11 @@ foreach my $project (@project_settings_list)
     my $log_file        = $project->{log_file};
     my $reply_to        = $project->{reply_to};
     my $subject_prefix  = $project->{subject_prefix};
-    my $subject         = $subject_base;
+    my $summary         = $project->{summary};
     my $diff_wanted     = ($project->{show_diff} and $mode eq 'commit');
     my $stdout          = $project->{stdout};
 
+    my $subject         = $summary ? $subject_logbase : $subject_base;
     if ($subject_prefix =~ /\w/)
       {
         $subject = "$subject_prefix $subject";
@@ -674,12 +684,13 @@ sub usage
       "  $0 --revprop-change REPOS REVNUM USER PROPNAME [-d diff_file] \\\n",
       "    [[-m regex] [options] [email_addr ...]] ...\n",
       "options are:\n",
+      "  -m regex              Regular expression to match committed path\n",
       "  --from email_address  Email address for 'From:' (overrides -h)\n",
       "  -h hostname           Hostname to append to author for 'From:'\n",
       "  -l logfile            Append mail contents to this log file\n",
-      "  -m regex              Regular expression to match committed path\n",
       "  -r email_address      Email address for 'Reply-To:'\n",
       "  -s subject_prefix     Subject line prefix\n",
+      "  --summary             Use first line of commit log in subject\n",
       "  --diff y|n            Include diff in message (default: y)\n",
       "                        (applies to commit mode only)\n",
       "  --stdout              Spit the message in mbox format to stdout.\n",
@@ -691,10 +702,9 @@ sub usage
       "contains modifications to a path that matches the regular\n",
       "expression, then the action applies to the project.\n",
       "\n",
-      "Any of the following -h, -l, -r, -s and --diff command line options\n",
-      "and following email addresses are associated with this project.  The\n",
-      "next -m resets the -h, -l, -r, -s and --diff command line options\n",
-      "and the list of email addresses.\n",
+      "Any of the following email addresses and command line options\n",
+      "(other than -d) are associated with this project, until the next -m,\n",
+      "which resets the options and the list of email addresses.\n",
       "\n",
       "To support a single project conveniently, the script initializes\n",
       "itself with an implicit -m . rule that matches any modifications\n",

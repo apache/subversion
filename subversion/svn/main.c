@@ -586,7 +586,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     ("Apply the differences between two sources to a working copy path.\n"
      "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
      "       2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
-     "       3. merge [-c M[,N]... | -r N:M...] SOURCE[@REV] [WCPATH]\n"
+     "       3. merge [-c M[,N...] | -r N:M ...] SOURCE[@REV] [WCPATH]\n"
      "\n"
      "  1. In the first form, the source URLs are specified at revisions\n"
      "     N and M.  These are the two sources to be compared.  The revisions\n"
@@ -602,7 +602,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     for each revision range provided.  If REV is not specified, HEAD\n"
      "     is assumed.  '-c M' is equivalent to '-r <M-1>:M', and '-c -M'\n"
      "     does the reverse: '-r M:<M-1>'.  If no revision ranges are\n"
-     "     specified, the default range of 1:HEAD is used.  Multiple '-c'\n"
+     "     specified, the default range of 0:HEAD is used.  Multiple '-c'\n"
      "     and/or '-r' instances may be specified, and mixing of forward\n"
      "     and reverse ranges is allowed.\n"
      "\n"
@@ -611,10 +611,12 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  the sources have identical basenames that match a file within '.':\n"
      "  in which case, the differences will be applied to that file.\n"
      "\n"
-     "  NOTE:  Subversion will only internally track metadata about the\n"
-     "  merge operation if the two sources are ancestrally related -- if the\n"
+     "  NOTE:  Subversion will only record metadata to track the merge\n"
+     "  if the two sources are on the same line of history -- if the\n"
      "  first source is an ancestor of the second, or vice-versa.  This is\n"
-     "  guaranteed to be the case when using the third form listed above.\n"),
+     "  guaranteed to be the case when using the third form listed above.\n"
+     "  The --ignore-ancestry option overrides this, forcing Subversion to\n"
+     "  regard the sources as unrelated and not to track the merge.\n"),
     {'r', 'c', 'N', opt_depth, 'q', opt_force, opt_dry_run, opt_merge_cmd,
      opt_record_only, 'x', opt_ignore_ancestry, opt_accept, opt_reintegrate} },
 
@@ -772,23 +774,32 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      opt_force, opt_changelist },
     {{'F', N_("read property value from file ARG")}} },
 
-  { "resolved", svn_cl__resolved, {0}, N_
-    ("Remove 'conflicted' state on working copy files or directories.\n"
-     "usage: resolved PATH...\n"
+  { "resolve", svn_cl__resolve, {0}, N_
+    ("Resolve conflicts on working copy files or directories.\n"
+     "usage: resolve [PATH...]\n"
      "\n"
-     "  Note:  this subcommand does not semantically resolve conflicts or\n"
-     "  remove conflict markers; it merely removes the conflict-related\n"
-     "  artifact files and allows PATH to be committed again.\n"),
+     "  Note:  the --accept option is currently required.\n"),
     {opt_targets, 'R', opt_depth, 'q', opt_accept},
     {{opt_accept, N_("specify automatic conflict resolution source\n"
                              "                            "
                              "('" SVN_CL__ACCEPT_BASE "',"
+                             " '" SVN_CL__ACCEPT_WORKING "',"
                              /* These two are not implemented yet, so
                                 don't waste the user's time with them. */
                              /* " '" SVN_CL__ACCEPT_MINE_CONFLICT "'," */
                              /* " '" SVN_CL__ACCEPT_THEIRS_CONFLICT "'," */
                              " '" SVN_CL__ACCEPT_MINE_FULL "',"
                              " '" SVN_CL__ACCEPT_THEIRS_FULL "')")}} },
+
+  { "resolved", svn_cl__resolved, {0}, N_
+    ("Remove 'conflicted' state on working copy files or directories.\n"
+     "usage: resolved PATH...\n"
+     "\n"
+     "  Note:  this subcommand does not semantically resolve conflicts or\n"
+     "  remove conflict markers; it merely removes the conflict-related\n"
+     "  artifact files and allows PATH to be committed again.  It has been\n"
+     "  deprecated in favor of running 'svn resolve --accept working'.\n"),
+    {opt_targets, 'R', opt_depth, 'q'} },
 
   { "revert", svn_cl__revert, {0}, N_
     ("Restore pristine working copy file (undo most local edits).\n"
@@ -1075,7 +1086,7 @@ main(int argc, const char *argv[])
     apr_array_make(pool, 0, sizeof(svn_opt_revision_range_t *));
   opt_state.depth = svn_depth_unknown;
   opt_state.set_depth = svn_depth_unknown;
-  opt_state.accept_which = svn_cl__accept_invalid;
+  opt_state.accept_which = svn_cl__accept_unspecified;
 
   /* No args?  Show usage. */
   if (argc <= 1)
@@ -1906,7 +1917,7 @@ main(int argc, const char *argv[])
                                                  we can change this. */
     svn_handle_error2(err, stderr, TRUE, "svn: ");
 
-  if ((opt_state.accept_which == svn_cl__accept_invalid
+  if ((opt_state.accept_which == svn_cl__accept_unspecified
        && (!interactive_conflicts || opt_state.non_interactive))
       || opt_state.accept_which == svn_cl__accept_postpone)
     {
