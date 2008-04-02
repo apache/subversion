@@ -55,7 +55,22 @@ svn_stream_t *svn_base64_decode(svn_stream_t *output, apr_pool_t *pool);
 /** Encode an @c svn_stringbuf_t into base64.
  *
  * A simple interface for encoding base64 data assuming we have all of
- * it present at once.  The returned string will be allocated from @c pool.
+ * it present at once.  If @a break_lines is true, newlines will be
+ * inserted periodically; otherwise the string will only consist of
+ * base64 encoding characters.  The returned string will be allocated
+ * from @c pool.
+ *
+ * @since New in 1.6.
+ */
+const svn_string_t *svn_base64_encode_string2(const svn_string_t *str,
+                                              svn_boolean_t break_lines,
+                                              apr_pool_t *pool);
+
+/**
+ * Same as svn_base64_encode_string2, but with @a break_lines always
+ * TRUE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 const svn_string_t *svn_base64_encode_string(const svn_string_t *str,
                                              apr_pool_t *pool);
@@ -63,7 +78,9 @@ const svn_string_t *svn_base64_encode_string(const svn_string_t *str,
 /** Decode an @c svn_stringbuf_t from base64.
  *
  * A simple interface for decoding base64 data assuming we have all of
- * it present at once.  The returned string will be allocated from @c pool.
+ * it present at once.  The returned string will be allocated from @c
+ * pool.
+ *
  */
 const svn_string_t *svn_base64_decode_string(const svn_string_t *str,
                                              apr_pool_t *pool);
