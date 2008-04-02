@@ -27,11 +27,11 @@
 
 
 /* Duplicate FS IDs as cache values. */
-static svn_cache_dup_func_t dup_ids;
+static svn_cache_dup_func_t dup_id;
 static svn_error_t *
-dup_ids(void **out,
-        void *in,
-        apr_pool_t *pool)
+dup_id(void **out,
+       void *in,
+       apr_pool_t *pool)
 {
   svn_fs_id_t *id = in;
   *out = svn_fs_fs__id_copy(id, pool);
@@ -177,7 +177,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs)
                                       fs->pool));
   else
     SVN_ERR(svn_cache_create_inprocess(&(ffd->rev_root_id_cache),
-                                       dup_ids, sizeof(svn_revnum_t),
+                                       dup_id, sizeof(svn_revnum_t),
                                        1, 100, FALSE, fs->pool));
 
 
