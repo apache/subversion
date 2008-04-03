@@ -21,6 +21,8 @@
 #include "dag.h"
 #include "../libsvn_fs/fs-loader.h"
 
+#include "svn_config.h"
+
 #include "svn_private_config.h"
 
 /*** Dup/serialize/deserialize functions. ***/
@@ -104,16 +106,21 @@ dup_dir_listing(void **out,
 
 
 /* Return a *MEMCACHE_P for FS if it's configured to use memcached.
-   Use FS->pool for allocations. */
+   Use FS->pool for allocating the memcache, and POOL for temporary
+   allocations. */
 svn_error_t *
 find_memcache(apr_memcache_t **memcache_p,
-              svn_fs_t *fs)
+              svn_fs_t *fs,
+              apr_pool_t *pool)
 {
   apr_memcache_t *memcache;
   apr_status_t apr_err;
   apr_memcache_server_t *server;
+  svn_config_t *config;
 
-  /* ### TODO: Read from a config file. */
+  SVN_ERR(svn_fs_fs__get_config(&config, fs, pool));
+
+  /* ### TODO: Parse the config file. */
 
   apr_err = apr_memcache_create(fs->pool,
                                 5, /* ### TODO: max servers */
@@ -147,16 +154,17 @@ find_memcache(apr_memcache_t **memcache_p,
 
 
 svn_error_t *
-svn_fs_fs__initialize_caches(svn_fs_t *fs)
+svn_fs_fs__initialize_caches(svn_fs_t *fs,
+                             apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  const char *prefix = apr_pstrcat(fs->pool,
+  const char *prefix = apr_pstrcat(pool,
                                    "fsfs:", ffd->uuid,
                                    "/", fs->path, ":",
                                    NULL);
   apr_memcache_t *memcache;
 
-  SVN_ERR(find_memcache(&memcache, fs));
+  SVN_ERR(find_memcache(&memcache, fs, pool));
 
   /* Make the cache for revision roots.  For the vast majority of
    * commands, this is only going to contain a few entries (svnadmin
@@ -172,7 +180,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs)
                                       serialize_id,
                                       deserialize_id,
                                       sizeof(svn_revnum_t),
-                                      apr_pstrcat(fs->pool, prefix, "RRI",
+                                      apr_pstrcat(pool, prefix, "RRI",
                                                   NULL),
                                       fs->pool));
   else
@@ -189,7 +197,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs)
                                       svn_fs_fs__dag_serialize,
                                       svn_fs_fs__dag_deserialize,
                                       APR_HASH_KEY_STRING,
-                                      apr_pstrcat(fs->pool, prefix, "DAG",
+                                      apr_pstrcat(pool, prefix, "DAG",
                                                   NULL),
                                       fs->pool));
   else
@@ -205,7 +213,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs)
                                       svn_fs_fs__dir_entries_serialize,
                                       svn_fs_fs__dir_entries_deserialize,
                                       APR_HASH_KEY_STRING,
-                                      apr_pstrcat(fs->pool, prefix, "DIR",
+                                      apr_pstrcat(pool, prefix, "DIR",
                                                   NULL),
                                       fs->pool));
   else

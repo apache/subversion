@@ -39,6 +39,7 @@
 #include "svn_sorts.h"
 #include "svn_time.h"
 #include "svn_mergeinfo.h"
+#include "svn_config.h"
 
 #include "fs.h"
 #include "err.h"
@@ -980,6 +981,50 @@ svn_fs_fs__fs_supports_mergeinfo(svn_fs_t *fs)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   return ffd->format >= SVN_FS_FS__MIN_MERGEINFO_FORMAT;
+}
+
+svn_error_t *
+svn_fs_fs__get_config(svn_config_t **config,
+                      svn_fs_t *fs,
+                      apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  if (! ffd->config)
+    SVN_ERR(svn_config_read(&(ffd->config),
+                            svn_path_join(fs->path, PATH_CONFIG, pool),
+                            FALSE,
+                            fs->pool));
+
+  *config = ffd->config;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+write_config(svn_fs_t *fs,
+             apr_pool_t *pool)
+{
+#define NL APR_EOL_STR
+  static const char * const fsfs_conf_contents =
+"### This file controls the configuration of the FSFS filesystem."           NL
+""                                                                           NL
+"[memcached-servers]"                                                        NL
+"### These options name memcached servers used to cache internal FSFS"       NL
+"### data.  See http://www.danga.com/memcached/ for more information on"     NL
+"### memcached.  To use memcached with FSFS, run one or more memcached"      NL
+"### servers, and specify each of them as an option like so:"                NL
+"# first-server = 127.0.0.1:11211"                                           NL
+"# remote-memcached = mymemcached.corp.example.com:11212"                    NL
+"### The option name is ignored; the value is of the form HOST:PORT."        NL
+"### memcached servers can be shared between multiple repositories;"         NL
+"### however, if you do this, you *must* ensure that repositories have"      NL
+"### distinct UUIDs and paths, or else cached data from one repository"      NL
+"### might be used by another accidentally.  Note also that memcached has"   NL
+"### no authentication for reads or writes, so you must sure that your"      NL
+"### memcached servers are only accessible by trusted users."                NL;
+#undef NL
+  return svn_io_file_create(svn_path_join(fs->path, PATH_CONFIG, pool),
+                            fsfs_conf_contents, pool);
 }
 
 static svn_error_t *
@@ -5442,6 +5487,8 @@ svn_fs_fs__create(svn_fs_t *fs,
       SVN_ERR(svn_io_file_create(path_txn_current_lock(fs, pool),
                                  "", pool));
     }
+
+  SVN_ERR(write_config(fs, pool));
 
   /* This filesystem is ready.  Stamp it with a format number. */
   SVN_ERR(write_format(path_format(fs, pool),
