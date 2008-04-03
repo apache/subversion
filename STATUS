@@ -14,6 +14,12 @@ Status of 1.5.0:
 
 Candidate changes:
 
+ * r30237, r30239
+   Add svn:keywords to
+   contrib/client-side/svnmerge/svnmerge-migrate-history.py
+   Votes:
+     +1: blair
+
  * r29665, r29666, r29741, r29767, r29815, r29854, r30180, r30181
    Bring svnmerge.py up to date with the version in trunk.
    Votes:
