@@ -1153,11 +1153,14 @@ svn_fs_fs__dag_deserialize(void **out,
       if (data_len == 0)
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                                 _("Kindless noderev in cache"));
-      if (*data != 'F' && *data != 'D')
+      if (*data == 'F')
+        node->kind = svn_node_file;
+      else if (*data == 'D')
+        node->kind = svn_node_dir;
+      else
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                  _("Unknown kind for noderev in cache: '%c'"),
                                  *data);
-      node->kind = (*data == 'F' ? svn_node_file : svn_node_dir);
 
       data++; data_len--;
       newline = memchr(data, '\n', data_len);
@@ -1166,6 +1169,10 @@ svn_fs_fs__dag_deserialize(void **out,
                                 _("Unterminated ID in cache"));
       id_len = newline - 1 - data;
       node->id = svn_fs_fs__id_parse(data, id_len, pool);
+      if (! node->id)
+        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                 _("Bogus ID '%s' in cache"),
+                                 apr_pstrndup(pool, data, id_len));
 
       data += id_len; data_len -= id_len;
       data++; data_len--;
