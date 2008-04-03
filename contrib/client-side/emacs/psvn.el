@@ -5426,6 +5426,8 @@ Currently is the output from the svn update command known."
                            (progn (beginning-of-line) (re-search-forward ".. +") (point))
                            (line-end-position)))
                (pos))
+           (when (eq system-type 'windows-nt)
+             (setq file-name (replace-regexp-in-string "\\\\" "/" file-name)))
            (goto-char cur-pos)
            (with-current-buffer svn-status-buffer-name
              (setq pos (svn-status-get-file-name-buffer-position file-name)))
