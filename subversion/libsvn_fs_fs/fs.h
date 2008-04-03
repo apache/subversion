@@ -26,6 +26,7 @@
 
 #include "svn_fs.h"
 #include "svn_cache.h"
+#include "svn_config.h"
 #include "private/svn_fs_private.h"
 
 #ifdef __cplusplus
@@ -51,6 +52,7 @@ extern "C" {
 #define PATH_TXN_CURRENT      "txn-current"      /* File with next txn key */
 #define PATH_TXN_CURRENT_LOCK "txn-current-lock" /* Lock for txn-current */
 #define PATH_LOCKS_DIR        "locks"            /* Directory of locks */
+#define PATH_CONFIG           "fsfs.conf"        /* Configuration */
 
 /* Names of special files and file extensions for transactions */
 #define PATH_CHANGES       "changes"       /* Records changes made so far */
@@ -170,6 +172,9 @@ typedef struct
 
   /* The revision that was youngest, last time we checked. */
   svn_revnum_t youngest_rev_cache;
+
+  /* The fsfs.conf file, parsed.  Allocated in FS->pool. */
+  svn_config_t *config;
 
   /* Caches of immutable data.  (Note that if these are created with
      svn_cache_create_memcache, the data can be shared between
