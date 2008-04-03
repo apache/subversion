@@ -1354,7 +1354,7 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
      using a receiver filter to only allow revisions to pass through
      that are in our rangelist. */
   log_target = svn_path_url_add_component(repos_root, log_target + 1, pool);
-  return logs_for_mergeinfo_rangelist(repos_root, log_target, rangelist, 
+  return logs_for_mergeinfo_rangelist(log_target, rangelist, 
                                       discover_changed_paths, log_receiver, 
                                       log_receiver_baton, ctx, pool);
 }
