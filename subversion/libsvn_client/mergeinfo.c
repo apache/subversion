@@ -1067,23 +1067,6 @@ filter_log_entry_with_rangelist(void *baton,
   return fleb->log_receiver(fleb->log_receiver_baton, log_entry, pool);
 }
 
-
-/* Implements the svn_log_entry_receiver_t interface.  BATON is a
-   pointer to a mergeinfo rangelist array. */
-static svn_error_t *
-append_log_rev_to_rangelist(void *baton,
-                            svn_log_entry_t *log_entry,
-                            apr_pool_t *pool)
-{
-  apr_array_header_t *rangelist = baton;
-  svn_merge_range_t *range = apr_pcalloc(rangelist->pool, sizeof(*range));
-  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
-  range->start = log_entry->revision - 1;
-  range->end = log_entry->revision;
-  range->inheritable = TRUE;
-  return SVN_NO_ERROR;
-}
-
 static svn_error_t *
 logs_for_mergeinfo_rangelist(const char *source_url,
                              apr_array_header_t *rangelist,
@@ -1221,47 +1204,6 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
 
 
 svn_error_t *
-svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo_p,
-                                const char *path_or_url,
-                                const svn_opt_revision_t *peg_revision,
-                                svn_client_ctx_t *ctx,
-                                apr_pool_t *pool)
-{
-  const char *repos_root;
-  apr_hash_t *full_path_mergeinfo;
-  svn_mergeinfo_t mergeinfo;
-  
-  SVN_ERR(get_mergeinfo(&mergeinfo, &repos_root, path_or_url, 
-                        peg_revision, ctx, pool));
-
-  /* Copy the MERGEINFO hash items into another hash, but change
-     the relative paths into full URLs. */
-  *mergeinfo_p = NULL;
-  if (mergeinfo)
-    {
-      apr_hash_index_t *hi;
-
-      full_path_mergeinfo = apr_hash_make(pool);
-      for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
-        {
-          const void *key;
-          void *val;
-          const char *source_url;
-
-          apr_hash_this(hi, &key, NULL, &val);
-          source_url = svn_path_uri_encode(key, pool);
-          source_url = svn_path_join(repos_root, source_url + 1, pool);
-          apr_hash_set(full_path_mergeinfo, source_url, 
-                       APR_HASH_KEY_STRING, val);
-        }
-      *mergeinfo_p = full_path_mergeinfo;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
 svn_client_mergeinfo_log_eligible(const char *path_or_url,
                                   const svn_opt_revision_t *peg_revision,
                                   const char *merge_source_url,
@@ -1357,33 +1299,6 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
   return logs_for_mergeinfo_rangelist(log_target, rangelist, 
                                       discover_changed_paths, log_receiver, 
                                       log_receiver_baton, ctx, pool);
-}
-
-
-svn_error_t *
-svn_client_mergeinfo_get_available(apr_array_header_t **rangelist,
-                                   const char *path_or_url,
-                                   const svn_opt_revision_t *peg_revision,
-                                   const char *merge_source_url,
-                                   svn_client_ctx_t *ctx,
-                                   apr_pool_t *pool)
-{
-  svn_opt_revision_t head_revision;
-  apr_array_header_t *available = 
-    apr_array_make(pool, 64, sizeof(svn_merge_range_t *));
-  head_revision.kind = svn_opt_revision_head;
-  SVN_ERR(svn_client_mergeinfo_log_eligible(path_or_url, peg_revision,
-                                            merge_source_url, &head_revision,
-                                            append_log_rev_to_rangelist,
-                                            available, FALSE, ctx, pool));
-  qsort(available->elts, available->nelts, 
-        available->elt_size, svn_sort_compare_ranges);
-  SVN_ERR(svn_rangelist_merge(&available,
-                              apr_array_make(pool, 0, 
-                                             sizeof(svn_merge_range_t *)),
-                              pool));
-  *rangelist = available;
-  return SVN_NO_ERROR;
 }
 
 
