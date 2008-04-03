@@ -76,6 +76,12 @@ dag_node_t *svn_fs_fs__dag_dup(dag_node_t *node,
    prototype, and NULLing the FS field. */
 svn_cache_dup_func_t svn_fs_fs__dag_dup_for_cache;
 
+/* Serialize a DAG node. */
+svn_cache_serialize_func_t svn_fs_fs__dag_serialize;
+
+/* Deserialize a DAG node. */
+svn_cache_deserialize_func_t svn_fs_fs__dag_deserialize;
+
 /* Return the filesystem containing NODE.  */
 svn_fs_t *svn_fs_fs__dag_get_fs(dag_node_t *node);
 

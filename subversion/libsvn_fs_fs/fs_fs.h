@@ -60,6 +60,23 @@ svn_error_t *svn_fs_fs__put_node_revision(svn_fs_t *fs,
                                           svn_boolean_t fresh_txn_root,
                                           apr_pool_t *pool);
 
+/* Write the node-revision NODEREV into the stream OUTFILE.  Only write
+   mergeinfo-related metadata if INCLUDE_MERGEINFO is true.  Temporary
+   allocations are from POOL. */
+svn_error_t *
+svn_fs_fs__write_noderev(svn_stream_t *outfile,
+                         node_revision_t *noderev,
+                         svn_boolean_t include_mergeinfo,
+                         apr_pool_t *pool);
+
+/* Reads the node-revision *NODEREV from the stream STREAM.  Temporary
+   allocations are from POOL. */
+svn_error_t *
+svn_fs_fs__read_noderev(node_revision_t **noderev,
+                        svn_stream_t *stream,
+                        apr_pool_t *pool);
+
+
 /* Set *YOUNGEST to the youngest revision in filesystem FS.  Do any
    temporary allocation in POOL. */
 svn_error_t *svn_fs_fs__youngest_rev(svn_revnum_t *youngest,
