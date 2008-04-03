@@ -2000,7 +2000,7 @@ def merge_skips_obstructions(sbox):
   # this file, to understand why we use short_wc_dir and chdir() below.
   expected_output = wc.State(short_wc_dir, { })
   expected_disk.remove('A/B/lambda')
-  expected_status.tweak('A/B/lambda', status='!M')
+  expected_status.tweak('A/B/lambda', status='! ')
   os.chdir(svntest.main.work_dir)
   expected_status.tweak('', status='  ')
   # Why do we need to --ignore-ancestry?  Because the previous merge of r4,
