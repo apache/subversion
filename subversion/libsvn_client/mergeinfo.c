@@ -1398,7 +1398,7 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
   const char *copyfrom_path;
   apr_array_header_t *list;
   svn_revnum_t copyfrom_rev;
-  apr_hash_t *mergeinfo;
+  svn_mergeinfo_t mergeinfo;
   apr_hash_index_t *hi;
 
   list = apr_array_make(pool, 1, sizeof(const char *));
@@ -1420,8 +1420,8 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
   */
 
   /* ### TODO: Share ra_session batons to improve efficiency? */
-  SVN_ERR(svn_client__get_repos_root(&repos_root, path_or_url, peg_revision,
-                                     NULL, ctx, pool));
+  SVN_ERR(get_mergeinfo(&mergeinfo, &repos_root, path_or_url, 
+                        peg_revision, ctx, pool));
   SVN_ERR(svn_client__get_copy_source(path_or_url, peg_revision,
                                       &copyfrom_path, &copyfrom_rev,
                                       ctx, pool));
@@ -1434,16 +1434,18 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
       APR_ARRAY_PUSH(list, const char *) = copyfrom_path;
     }
 
-  SVN_ERR(svn_client_mergeinfo_get_merged(&mergeinfo, path_or_url,
-                                          peg_revision, ctx, pool));
   if (mergeinfo)
     {
       for (hi = apr_hash_first(NULL, mergeinfo); hi; hi = apr_hash_next(hi))
         {
-          const char *merge_path;
-          apr_hash_this(hi, (void *)(&merge_path), NULL, NULL);
-          if (copyfrom_path == NULL || strcmp(merge_path, copyfrom_path) != 0)
-            APR_ARRAY_PUSH(list, const char *) = merge_path;
+          const void *key;
+          const char *rel_path;
+
+          apr_hash_this(hi, &key, NULL, NULL);
+          rel_path = key;
+          if (copyfrom_path == NULL || strcmp(rel_path, copyfrom_path) != 0)
+            APR_ARRAY_PUSH(list, const char *) = \
+              svn_path_url_add_component(repos_root, rel_path + 1, pool);
         }
     }
 
