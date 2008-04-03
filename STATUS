@@ -33,7 +33,7 @@ Candidate changes:
    no-op merges now *do* record mergeinfo.  r30145 effectively reverts the
    code and tests changes involved with fixing (now non-)issue #2883.
    Notes: r30145 is the bulk of this change, r30185 is just some follow-on
-     cleanup of some struct fields not longer required after r30185.
+     cleanup of some struct fields not longer required after r30145.
    Votes:
      +1: pburba
 
