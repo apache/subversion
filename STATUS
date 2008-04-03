@@ -43,7 +43,7 @@ Candidate changes:
    Votes:
      +1: kou
 
- * r30215, r30221, r30225, r30226, r30230
+ * r30215, r30221, r30225, r30226, r30230, r30243
    Simplify (UI-wise) yet vastly enhance the 'svn mergeinfo' subcommand and
    underlying APIs.
    Backport Branch:
