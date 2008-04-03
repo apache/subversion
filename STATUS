@@ -32,4 +32,13 @@ Candidate changes:
    Votes:
      +1: kou
 
+ * r30215, r30221
+   Simplify (UI-wise) yet vastly enhance the 'svn mergeinfo' subcommand and
+   underlying APIs.
+   Notes:
+     I need to make a backport branch which adjusts the @since lines and
+     removes no-longer-desired interfaces.
+   Votes:
+     +1: cmpilato
+
 Approved changes:
