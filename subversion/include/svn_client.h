@@ -2643,8 +2643,7 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
  *
  * Use @a pool for all necessary allocations.
  *
- * If the server doesn't support retrieval of mergeinfo (which will
- * never happen for file:// URLs), return an @c
+ * If the server doesn't support retrieval of mergeinfo, return an @c
  * SVN_ERR_UNSUPPORTED_FEATURE error.
  *
  * @note Unlike most APIs which deal with mergeinfo, this one returns
@@ -2662,11 +2661,15 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
 
 
 /**
- * Similar to svn_client_mergeinfo_get_merged(), but drives a log
- * entry callbacks @c receiver / @c receiver_baton with the revisions
- * merged from @a merge_source_url instead of merely returning them in
- * a mergeinfo hash.  @c discover_changed_paths is the same as for
- * svn_client_log4().
+ * Drive log entry callbacks @c receiver / @c receiver_baton with the
+ * revisions merged from @a merge_source_url (as of @a
+ * src_peg_revision) into @a path_or_url (as of @a peg_revision).  @a
+ * ctx is a context used for authentication.  @c
+ * discover_changed_paths is the same as for svn_client_log4().  Use
+ * @a pool for all necessary allocations.
+ *
+ * If the server doesn't support retrieval of mergeinfo, return an @c
+ * SVN_ERR_UNSUPPORTED_FEATURE error.
  *
  * @since New in 1.6.
  */
@@ -2690,8 +2693,7 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
  *
  * Use @a pool for all necessary allocations.
  *
- * If the server doesn't support retrieval of mergeinfo (which will
- * never happen for file:// URLs), return an @c
+ * If the server doesn't support retrieval of mergeinfo, return an @c
  * SVN_ERR_UNSUPPORTED_FEATURE error.
  *
  * @since New in 1.5.
@@ -2705,10 +2707,15 @@ svn_client_mergeinfo_get_available(apr_array_header_t **rangelist,
                                    apr_pool_t *pool);
 
 /**
- * Similar to svn_client_mergeinfo_get_available() (which see for
- * parameter documentation), but drives a log entry callback @c
- * receiver / @c receiver_baton with the revisions available for merge
- * instead of merely returning them in a rangelist array.
+ * Drive log entry callbacks @c receiver / @c receiver_baton with the
+ * revisions eligible for merge from @a merge_source_url (as of @a
+ * src_peg_revision) into @a path_or_url (as of @a peg_revision).  @a
+ * ctx is a context used for authentication.  @c
+ * discover_changed_paths is the same as for svn_client_log4().  Use
+ * @a pool for all necessary allocations.
+ *
+ * If the server doesn't support retrieval of mergeinfo, return an @c
+ * SVN_ERR_UNSUPPORTED_FEATURE error.
  *
  * @since New in 1.6.
  */
