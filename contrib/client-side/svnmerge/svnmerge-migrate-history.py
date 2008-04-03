@@ -17,6 +17,11 @@
 # history and logs, available at http://subversion.tigris.org/.
 # ====================================================================
 
+# $HeadURL: http://svn.collab.net/repos/svn/trunk/contrib/client-side/svnmerge/svnmerge.py $
+# $LastChangedDate: 2008-04-02 06:48:18 -0700 (Wed, 02 Apr 2008) $
+# $LastChangedBy: rocketraman $
+# $LastChangedRevision: 30181 $
+
 import sys
 import os
 import sre
