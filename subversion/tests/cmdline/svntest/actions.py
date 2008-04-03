@@ -20,7 +20,7 @@ import difflib, pprint
 import xml.parsers.expat
 from xml.dom.minidom import parseString
 
-import main, verify, tree, wc, parsers
+import main, verify, tree, wc
 from svntest import Failure
 
 def no_sleep_for_timestamps():
