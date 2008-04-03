@@ -14,6 +14,11 @@ Status of 1.5.0:
 
 Candidate changes:
 
+ * r29665, r29666, r29741, r29767, r29815, r29854, r30180, r30181
+   Bring svnmerge.py up to date with the version in trunk.
+   Votes:
+     +1: blair
+
  * r29922
    Add a new SVNAllowBulkUpdates mod_dav_svn directive which toggles
    support for send-all style update REPORT responses (versus the
