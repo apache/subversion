@@ -183,10 +183,20 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs)
 
   /* Rough estimate: revision DAG nodes have size around 320 bytes, so
    * let's put 16 on a page. */
-  SVN_ERR(svn_cache_create_inprocess(&(ffd->rev_node_cache),
-                                     svn_fs_fs__dag_dup_for_cache,
-                                     APR_HASH_KEY_STRING,
-                                     1024, 16, FALSE, fs->pool));
+  if (memcache)
+    SVN_ERR(svn_cache_create_memcache(&(ffd->rev_node_cache),
+                                      memcache,
+                                      svn_fs_fs__dag_serialize,
+                                      svn_fs_fs__dag_deserialize,
+                                      APR_HASH_KEY_STRING,
+                                      apr_pstrcat(fs->pool, prefix, "DAG",
+                                                  NULL),
+                                      fs->pool));
+  else
+    SVN_ERR(svn_cache_create_inprocess(&(ffd->rev_node_cache),
+                                       svn_fs_fs__dag_dup_for_cache,
+                                       APR_HASH_KEY_STRING,
+                                       1024, 16, FALSE, fs->pool));
 
   /* Very rough estimate: 1K per directory. */
   if (memcache)

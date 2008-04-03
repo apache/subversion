@@ -1364,39 +1364,31 @@ svn_fs_fs__youngest_rev(svn_revnum_t *youngest_p,
   return SVN_NO_ERROR;
 }
 
-/* HEADER_CPATH lines need to be long enough to hold FSFS_MAX_PATH_LEN
- * bytes plus the stuff around them. */
-#define MAX_HEADERS_STR_LEN FSFS_MAX_PATH_LEN + sizeof(HEADER_CPATH ": \n") - 1
-
 /* Given a revision file FILE that has been pre-positioned at the
    beginning of a Node-Rev header block, read in that header block and
    store it in the apr_hash_t HEADERS.  All allocations will be from
    POOL. */
 static svn_error_t * read_header_block(apr_hash_t **headers,
-                                       apr_file_t *file,
+                                       svn_stream_t *stream,
                                        apr_pool_t *pool)
 {
   *headers = apr_hash_make(pool);
 
   while (1)
     {
-      char header_str[MAX_HEADERS_STR_LEN];
+      svn_stringbuf_t *header_str;
       const char *name, *value;
-      apr_size_t i = 0, header_len;
-      apr_size_t limit;
-      char *local_name, *local_value;
+      apr_size_t i = 0;
+      svn_boolean_t eof;
 
-      limit = sizeof(header_str);
-      SVN_ERR(svn_io_read_length_line(file, header_str, &limit, pool));
+      SVN_ERR(svn_stream_readline(stream, &header_str, "\n", &eof, pool));
 
-      if (strlen(header_str) == 0)
+      if (eof || header_str->len == 0)
         break; /* end of header block */
 
-      header_len = strlen(header_str);
-
-      while (header_str[i] != ':')
+      while (header_str->data[i] != ':')
         {
-          if (header_str[i] == '\0')
+          if (header_str->data[i] == '\0')
             return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                                     _("Found malformed header in "
                                       "revision file"));
@@ -1404,23 +1396,22 @@ static svn_error_t * read_header_block(apr_hash_t **headers,
         }
 
       /* Create a 'name' string and point to it. */
-      header_str[i] = '\0';
-      name = header_str;
+      header_str->data[i] = '\0';
+      name = header_str->data;
 
       /* Skip over the NULL byte and the space following it. */
       i += 2;
 
-      if (i > header_len)
+      if (i > header_str->len)
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                                 _("Found malformed header in "
                                   "revision file"));
 
-      value = header_str + i;
+      value = header_str->data + i;
 
-      local_name = apr_pstrdup(pool, name);
-      local_value = apr_pstrdup(pool, value);
-
-      apr_hash_set(*headers, local_name, APR_HASH_KEY_STRING, local_value);
+      /* header_str is safely in our pool, so we can use bits of it as
+         key and value. */
+      apr_hash_set(*headers, name, APR_HASH_KEY_STRING, value);
     }
 
   return SVN_NO_ERROR;
@@ -1622,9 +1613,6 @@ get_node_revision_body(node_revision_t **noderev_p,
                        apr_pool_t *pool)
 {
   apr_file_t *revision_file;
-  apr_hash_t *headers;
-  node_revision_t *noderev;
-  char *value;
   svn_error_t *err;
 
   if (svn_fs_fs__id_txn_id(id))
@@ -1653,7 +1641,22 @@ get_node_revision_body(node_revision_t **noderev_p,
       return err;
     }
 
-  SVN_ERR(read_header_block(&headers, revision_file, pool) );
+  return svn_fs_fs__read_noderev(noderev_p,
+                                 svn_stream_from_aprfile2(revision_file, FALSE,
+                                                          pool),
+                                 pool);
+}
+
+svn_error_t *
+svn_fs_fs__read_noderev(node_revision_t **noderev_p,
+                        svn_stream_t *stream,
+                        apr_pool_t *pool)
+{
+  apr_hash_t *headers;
+  node_revision_t *noderev;
+  char *value;
+
+  SVN_ERR(read_header_block(&headers, stream, pool));
 
   noderev = apr_pcalloc(pool, sizeof(*noderev));
 
@@ -1663,7 +1666,7 @@ get_node_revision_body(node_revision_t **noderev_p,
       return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                               _("Missing id field in node-rev"));
 
-  SVN_ERR(svn_io_file_close(revision_file, pool));
+  SVN_ERR(svn_stream_close(stream));
 
   noderev->id = svn_fs_fs__id_parse(value, strlen(value), pool);
 
@@ -1687,7 +1690,7 @@ get_node_revision_body(node_revision_t **noderev_p,
   if (value)
     {
       SVN_ERR(read_rep_offsets(&noderev->prop_rep, value,
-                               svn_fs_fs__id_txn_id(id), TRUE, pool));
+                               svn_fs_fs__id_txn_id(noderev->id), TRUE, pool));
     }
 
   /* Get the data location. */
@@ -1695,7 +1698,7 @@ get_node_revision_body(node_revision_t **noderev_p,
   if (value)
     {
       SVN_ERR(read_rep_offsets(&noderev->data_rep, value,
-                               svn_fs_fs__id_txn_id(id),
+                               svn_fs_fs__id_txn_id(noderev->id),
                                (noderev->kind == svn_node_dir), pool));
     }
 
@@ -1819,19 +1822,13 @@ representation_string(representation_t *rep,
                                                           pool));
 }
 
-/* Write the node-revision NODEREV into the file FILE.  Only write
-   mergeinfo-related metadata if INCLUDE_MERGEINFO is true.  Temporary
-   allocations are from POOL. */
-static svn_error_t *
-write_noderev_txn(apr_file_t *file,
-                  node_revision_t *noderev,
-                  svn_boolean_t include_mergeinfo,
-                  apr_pool_t *pool)
+
+svn_error_t *
+svn_fs_fs__write_noderev(svn_stream_t *outfile,
+                         node_revision_t *noderev,
+                         svn_boolean_t include_mergeinfo,
+                         apr_pool_t *pool)
 {
-  svn_stream_t *outfile;
-
-  outfile = svn_stream_from_aprfile(file, pool);
-
   SVN_ERR(svn_stream_printf(outfile, pool, HEADER_ID ": %s\n",
                             svn_fs_fs__id_unparse(noderev->id,
                                                   pool)->data));
@@ -1915,9 +1912,10 @@ svn_fs_fs__put_node_revision(svn_fs_t *fs,
                            APR_WRITE | APR_CREATE | APR_TRUNCATE
                            | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
-  SVN_ERR(write_noderev_txn(noderev_file, noderev,
-                            svn_fs_fs__fs_supports_mergeinfo(fs),
-                            pool));
+  SVN_ERR(svn_fs_fs__write_noderev(svn_stream_from_aprfile(noderev_file, pool),
+                                   noderev,
+                                   svn_fs_fs__fs_supports_mergeinfo(fs),
+                                   pool));
 
   SVN_ERR(svn_io_file_close(noderev_file, pool));
 
@@ -2013,7 +2011,8 @@ get_fs_id_at_offset(svn_fs_id_t **id_p,
 
   SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
 
-  SVN_ERR(read_header_block(&headers, rev_file, pool));
+  SVN_ERR(read_header_block(&headers, svn_stream_from_aprfile(rev_file, pool),
+                            pool));
 
   node_id_str = apr_hash_get(headers, HEADER_ID, APR_HASH_KEY_STRING);
 
@@ -4849,9 +4848,10 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   noderev->id = new_id;
 
   /* Write out our new node-revision. */
-  SVN_ERR(write_noderev_txn(file, noderev,
-                            svn_fs_fs__fs_supports_mergeinfo(fs),
-                            pool));
+  SVN_ERR(svn_fs_fs__write_noderev(svn_stream_from_aprfile(file, pool),
+                                   noderev,
+                                   svn_fs_fs__fs_supports_mergeinfo(fs),
+                                   pool));
 
   /* Return our ID that references the revision file. */
   *new_id_p = noderev->id;
@@ -5563,7 +5563,8 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
   apr_pool_t *iterpool;
 
   SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
-  SVN_ERR(read_header_block(&headers, rev_file, pool));
+  SVN_ERR(read_header_block(&headers, svn_stream_from_aprfile(rev_file, pool),
+                            pool));
 
   /* We're going to populate a skeletal noderev - just the id and data_rep. */
   value = apr_hash_get(headers, HEADER_ID, APR_HASH_KEY_STRING);
