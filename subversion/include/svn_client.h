@@ -2674,6 +2674,7 @@ svn_error_t *
 svn_client_mergeinfo_log_merged(const char *path_or_url,
                                 const svn_opt_revision_t *peg_revision,
                                 const char *merge_source_url,
+                                const svn_opt_revision_t *src_peg_revision,
                                 svn_log_entry_receiver_t receiver,
                                 void *receiver_baton,
                                 svn_boolean_t discover_changed_paths,
@@ -2704,23 +2705,23 @@ svn_client_mergeinfo_get_available(apr_array_header_t **rangelist,
                                    apr_pool_t *pool);
 
 /**
- * Similar to svn_client_mergeinfo_get_available(), but drives a log
- * entry callback @c receiver / @c receiver_baton with the revisions
- * available for merge instead of merely returning them in a rangelist
- * array.  @c discover_changed_paths is the same as for
- * svn_client_log4().
+ * Similar to svn_client_mergeinfo_get_available() (which see for
+ * parameter documentation), but drives a log entry callback @c
+ * receiver / @c receiver_baton with the revisions available for merge
+ * instead of merely returning them in a rangelist array.
  *
  * @since New in 1.6.
  */
 svn_error_t *
-svn_client_mergeinfo_log_available(const char *path_or_url,
-                                   const svn_opt_revision_t *peg_revision,
-                                   const char *merge_source_url,
-                                   svn_log_entry_receiver_t receiver,
-                                   void *receiver_baton,
-                                   svn_boolean_t discover_changed_paths,
-                                   svn_client_ctx_t *ctx,
-                                   apr_pool_t *pool);
+svn_client_mergeinfo_log_eligible(const char *path_or_url,
+                                  const svn_opt_revision_t *peg_revision,
+                                  const char *merge_source_url,
+                                  const svn_opt_revision_t *src_peg_revision,
+                                  svn_log_entry_receiver_t receiver,
+                                  void *receiver_baton,
+                                  svn_boolean_t discover_changed_paths,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *pool);
 
 /** @} */
 
