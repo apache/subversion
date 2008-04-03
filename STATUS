@@ -27,6 +27,12 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r30129
+   Fix a bug that Svn::Ra::Session#open doesn't set callback_baton correctly.
+   Votes:
+     +1: kou
+
+Approved changes:
  * r30145, r30185
    Start recording mergeinfo for inoperative merges.  As discussed here,
    http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=136570,
@@ -35,12 +41,15 @@ Candidate changes:
    Notes: r30145 is the bulk of this change, r30185 is just some follow-on
      cleanup of some struct fields not longer required after r30145.
    Votes:
-     +1: pburba
+     +1: pburba, kameshj
+   When we backported r30162(which is in between r30145 and r30185) from /trunk
+   we missed merging one change to merge_tests-19 i.e around line 2003
+   of subversion/tests/cmdline/merge_tests.py(post merge of r30145 and r30185).
+   This missing change causes merge_tests-19 to fail.
+   To fix that we need to apply the following pseudo patch.
 
- * r30129
-   Fix a bug that Svn::Ra::Session#open doesn't set callback_baton correctly.
-   Votes:
-     +1: kou
-
-Approved changes:
-
+   -expected_status.tweak('A/B/lambda', status='!M')
+   +expected_status.tweak('A/B/lambda', status='! ')
+   
+   Let me first merge r30145, r30185 and commit and apply the diff in the
+   subsequent commit.
