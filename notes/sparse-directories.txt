@@ -1,4 +1,4 @@
-                Implementing Sparse Directory Support in SVN
+                  Sparse Directories Support in Subversion
            (a.k.a. "sparse checkouts" / "incomplete directories")
 
 Contents
@@ -106,9 +106,13 @@ Contents
    directory.  (In the future, it will also be able to contract; see
    issue #2843.)  We disallow '--depth' and '--set-depth' together.
 
-   For most commands, '-N' is a synonym for '--depth=files'.  This
-   changes the existing -N behavior, but only in trivial ways.
-   
+   The -N option has been deprecated, but still works: it simply maps
+   to one of --depth=files, --depth=empty, or --depth=immediates,
+   depending on context, for compatibility.  For most commands, it's
+   --depth=files, but for status it's --depth=immediates, and for
+   revert and add it's --depth=empty, to be compatible with the
+   varying behaviors -N had across these commands.
+
    'svn info' lists depth, iff invoked on a directory whose depth is
    not the default (depth infinity).
    
@@ -190,23 +194,27 @@ Contents
        Awc/B/.svn/entries              this_dir    depth-infinity
                                        ...
    
-   svn up --set-depth=infinity Awc
+   svn up --set-depth=infinity Awc/D
    
-       Pull everything into Awc, resulting in a working copy that is
-       just as if it had been checked out with no --depth flag at all.
+       Pull everything into Awc/D, resulting in a subdirectory that is
+       just as if it had been pulled in with no --depth flag at all.
    
-       Awc/.svn/entries                this_dir    depth-infiniti
-   
+       Awc/.svn/entries                this_dir    depth-empty
+                                       B
+                                       D
+       Awc/D/.svn/entries              this_dir    depth-infinity
+                                       ...
+       ...
 
    ########################################################################
    #                                                                      #
-   #         ######################################################       #
-   #         ###                                                ###       #
-   #         ###  THIS IS NOT YET IMPLEMENTED, SEE ISSUE #2843  ###       #
-   #         ###                                                ###       #
-   #         ######################################################       #
+   #     ############################################################     #
+   #     ###                                                      ###     #
+   #     ###  THIS IS NOT YET FULLY IMPLEMENTED, SEE ISSUE #2843  ###     #
+   #     ###                                                      ###     #
+   #     ############################################################     #
    #                                                                      #
-   # svn up --depth=empty Awc/B/E                                         #
+   # svn up --set-depth=empty Awc/B/E                                     #
    #                                                                      #
    #     Remove everything under E, but leave E as an empty directory     #
    #     since B is depth-infinity.                                       #
@@ -218,6 +226,41 @@ Contents
    #                                     ...                              #
    #     Awc/B/E/.svn/entries            this_dir    depth-empty          #
    #     ...                                                              #
+   #                                                                      #
+   # svn up --set-depth=empty Awc/D                                       #
+   #                                                                      #
+   #     Remove everything under D, and D itself since A is depth-empty.  #
+   #                                                                      #
+   #     Awc/.svn/entries                this_dir    depth-empty          #
+   #                                     B                                #
+   #                                                                      #
+   # svn up Awc/D                                                         #
+   #                                                                      #
+   #     Bring D back at depth-infinity.                                  #
+   #                                                                      #
+   #     Awc/.svn/entries                this_dir    depth-empty          #
+   #                                     ...                              #
+   #     Awc/D/.svn/entries              this_dir    depth-infinity       #
+   #                                     ...                              #
+   #     ...                                                              #
+   #                                                                      #
+   # svn up --set-depth=immediates Awc                                    #
+   #                                                                      #
+   #     Bring in everything that's missing (C/ and mu) and empty all     #
+   #     subdirectories (and set their this_dir to depth-empty).          #
+   #                                                                      #
+   #     Awc/.svn/entries                this_dir    depth-immediates     #
+   #                                     B                                #
+   #                                     C                                #
+   #     Awc/B/.svn/entries              this_dir    depth-empty          #
+   #     Awc/C/.svn/entries              this_dir    depth-empty          #
+   #     ...                                                              #
+   #                                                                      #
+   # svn up --set-depth=files Awc                                         #
+   #                                                                      #
+   #     Remove every subdirectories under Awc. but leave the files.      #
+   #                                                                      #
+   #     Awc/.svn/entries                this_dir    depth-files          #
    #                                                                      #
    ########################################################################
 
@@ -349,9 +392,8 @@ Contents
 
    On the client side, most of the svn_client.h interfaces that
    formerly took 'svn_boolean_t recurse' have been revved and their
-   successors take 'svn_depth_t depth' instead.  (The -N option is
-   deprecated, but it still works: it simply maps to --depth=files,
-   which results in the same behavior as -N used to.)
+   successors take 'svn_depth_t depth' instead.  Each old API now
+   documents how it converts 'recurse' to 'depth'.
 
    Some of this recurse-becomes-depth change has propagated down into
    libsvn_wc, which now stores a depth field in svn_wc_entry_t (and
