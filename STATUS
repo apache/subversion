@@ -74,9 +74,10 @@ Candidate changes:
    Votes:
      +1: pburba
 
+Approved changes:
+
  * r30256
    Fix segfault when given bogus arguments to 'svnadmin setuuid'.
    Votes:
-     +1: hwright
+     +1: hwright, cmpilato
 
-Approved changes:
