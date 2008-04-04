@@ -2949,7 +2949,8 @@ def diff_wrong_extension_type(sbox):
   "'svn diff -x wc -r#' should return error"
 
   sbox.build(read_only = True)
-  expected_error = ".*svn: Invalid argument .* in diff options.*"
+  expected_error = "(.*svn: Invalid argument .* in diff options.*)|" \
+                   "(svn: '.' is not a working copy)"
   svntest.actions.run_and_verify_svn(None, [], expected_error, 
                                      'diff', '-x', sbox.wc_dir, '-r', '1')
 
