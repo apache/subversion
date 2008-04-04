@@ -76,14 +76,6 @@ Contents
 2. User interface
 =================
    
-   Affected commands:
-   
-       * checkout
-       * switch
-       * update
-       * status
-       * info
-   
    Quick start:
 
    Run checkout with --depth=empty or --depth=files.  When you need
@@ -111,8 +103,8 @@ Contents
    The --depth option never changes the depth of an existing dir.
    Instead, use the new '--set-depth=NEW_DEPTH' option for that.
    Right now, --set-depth can only extend (that is, make deeper) a
-   directory.  In the future, it will also be able to contract; see
-   issue #2843.
+   directory.  (In the future, it will also be able to contract; see
+   issue #2843.)  We disallow '--depth' and '--set-depth' together.
 
    For most commands, '-N' is a synonym for '--depth=files'.  This
    changes the existing -N behavior, but only in trivial ways.
@@ -373,8 +365,8 @@ Contents
    libsvn_repos/reporter.c.  The code that receives update reports now
    receives notice of paths that have different depths from their
    parent, and of course the overall update operation has a global
-   depth, which applies whenever not shadowed by some local depth for
-   a given path.
+   depth, which applies except when restricted by some shallower local
+   depth for a given path.
 
    The RA code on both sides knows how to send and receive depths; the
    relevant svn_ra_* APIs now take depth arguments, which sometimes
