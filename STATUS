@@ -68,6 +68,11 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r29326
+   Use an iterpool for temporary allocation in a loop.
+   Votes:
+     +1: pburba
+
 Approved changes:
 
  * r30059
