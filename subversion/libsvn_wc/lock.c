@@ -1169,7 +1169,7 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
 
   if (svn_path_is_empty(path)
       || svn_dirent_is_root(path, strlen(path))
-      || ! strcmp(base_name, ".."))
+      || ! strcmp(base_name, "..") /* svn_path_strcmp() */ )
     {
       SVN_ERR(do_open(anchor_access, NULL, path, write_lock, levels_to_lock,
                       FALSE, cancel_func, cancel_baton, pool));
@@ -1360,7 +1360,7 @@ do_close(svn_wc_adm_access_t *adm_access,
             }
 
           if (! svn_path_is_ancestor(adm_access->path, path)
-              || strcmp(adm_access->path, path) == 0)
+              || strcmp(adm_access->path, path) == 0 /* svn_path_strcmp() */)
             continue;
 
           SVN_ERR(do_close(child, preserve_lock, FALSE));

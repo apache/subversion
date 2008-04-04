@@ -490,11 +490,24 @@ complete_directory(struct edit_baton *eb,
   /* After a depth upgrade the entry must reflect the new depth.
      Upgrading to infinity changes the depth of *all* directories,
      upgrading to something else only changes the target. */
-  if (eb->depth_is_sticky &&
-      (eb->requested_depth == svn_depth_infinity
-       || (strcmp(path, svn_path_join(eb->anchor, eb->target, pool)) == 0
-           && eb->requested_depth > entry->depth)))
-    entry->depth = eb->requested_depth;
+  if (eb->depth_is_sticky)
+    {
+      if (eb->requested_depth == svn_depth_infinity)
+        entry->depth = eb->requested_depth;
+      else if (eb->requested_depth > entry->depth)
+        {
+          int result;
+
+          SVN_ERR(svn_path_strcmp(&result,
+                                  path,
+                                  svn_path_join(eb->anchor, eb->target, pool),
+                                  pool));
+          if (result == 0)
+            entry->depth = eb->requested_depth;
+        }
+    }
+
+
 
   /* Remove any deleted or missing entries. */
   subpool = svn_pool_create(pool);
@@ -800,6 +813,7 @@ prep_directory(struct dir_baton *db,
                apr_pool_t *pool)
 {
   const char *repos;
+  int cmp_result;
 
   /* Make sure the directory exists. */
   SVN_ERR(svn_wc__ensure_directory(db->path, pool));
@@ -818,9 +832,10 @@ prep_directory(struct dir_baton *db,
                              ancestor_url, repos,
                              ancestor_revision, db->ambient_depth, pool));
 
-  if (! db->edit_baton->adm_access
-      || strcmp(svn_wc_adm_access_path(db->edit_baton->adm_access),
-                db->path))
+  SVN_ERR(svn_path_strcmp(&cmp_result,
+                          svn_wc_adm_access_path(db->edit_baton->adm_access),
+                          db->path, pool));
+  if (! db->edit_baton->adm_access || cmp_result)
     {
       svn_wc_adm_access_t *adm_access;
       apr_pool_t *adm_access_pool
@@ -1114,6 +1129,7 @@ do_entry_deletion(struct edit_baton *eb,
   const svn_wc_entry_t *entry;
   const char *full_path = svn_path_join(eb->anchor, path, pool);
   svn_stringbuf_t *log_item = svn_stringbuf_create("", pool);
+  int cmp_result;
 
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                               parent_path, pool));
@@ -1125,7 +1141,8 @@ do_entry_deletion(struct edit_baton *eb,
   /* If the thing being deleted is the *target* of this update, then
      we need to recreate a 'deleted' entry, so that parent can give
      accurate reports about itself in the future. */
-  if (strcmp(path, eb->target) == 0)
+  SVN_ERR(svn_path_strcmp(&cmp_result, path, eb->target, pool));
+  if (cmp_result == 0)
     {
       svn_wc_entry_t tmp_entry;
 
@@ -1227,11 +1244,13 @@ add_directory(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   struct dir_baton *db;
   svn_node_kind_t kind;
+  int cmp_result;
 
   SVN_ERR(make_dir_baton(&db, path, eb, pb, TRUE, pool));
   *child_baton = db;
 
-  if (strcmp(eb->target, path) == 0)
+  SVN_ERR(svn_path_strcmp(&cmp_result, eb->target, path, pool));
+  if (cmp_result == 0)
     {
       /* The target of the edit is being added, give it the requested
          depth of the edit (but convert svn_depth_unknown to
