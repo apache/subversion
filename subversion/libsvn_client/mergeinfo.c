@@ -1088,6 +1088,7 @@ static svn_error_t *
 logs_for_mergeinfo_rangelist(const char *source_url,
                              apr_array_header_t *rangelist,
                              svn_boolean_t discover_changed_paths,
+                             const apr_array_header_t *revprops,
                              svn_log_entry_receiver_t log_receiver,
                              void *log_receiver_baton,
                              svn_client_ctx_t *ctx,
@@ -1126,7 +1127,7 @@ logs_for_mergeinfo_rangelist(const char *source_url,
 
   /* Drive the log. */
   SVN_ERR(svn_client_log4(target, &youngest_rev, &oldest_rev, &youngest_rev, 
-                          0, discover_changed_paths, FALSE, FALSE, NULL, 
+                          0, discover_changed_paths, FALSE, FALSE, revprops, 
                           filter_log_entry_with_rangelist, &fleb, ctx, pool));
 
   /* Check for cancellation. */
@@ -1147,6 +1148,7 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
                                 svn_log_entry_receiver_t log_receiver,
                                 void *log_receiver_baton,
                                 svn_boolean_t discover_changed_paths,
+                                const apr_array_header_t *revprops,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *pool)
 {
@@ -1215,8 +1217,9 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
      that are in our rangelist. */
   log_target = svn_path_url_add_component(repos_root, log_target + 1, pool);
   return logs_for_mergeinfo_rangelist(log_target, rangelist, 
-                                      discover_changed_paths, log_receiver, 
-                                      log_receiver_baton, ctx, pool);
+                                      discover_changed_paths, revprops,
+                                      log_receiver, log_receiver_baton,
+                                      ctx, pool);
 }
 
 
@@ -1269,6 +1272,7 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
                                   svn_log_entry_receiver_t log_receiver,
                                   void *log_receiver_baton,
                                   svn_boolean_t discover_changed_paths,
+                                  const apr_array_header_t *revprops,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *pool)
 {
@@ -1355,8 +1359,9 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
      that are in our rangelist. */
   log_target = svn_path_url_add_component(repos_root, log_target + 1, pool);
   return logs_for_mergeinfo_rangelist(log_target, rangelist, 
-                                      discover_changed_paths, log_receiver, 
-                                      log_receiver_baton, ctx, pool);
+                                      discover_changed_paths, revprops,
+                                      log_receiver, log_receiver_baton,
+                                      ctx, pool);
 }
 
 
@@ -1375,7 +1380,8 @@ svn_client_mergeinfo_get_available(apr_array_header_t **rangelist,
   SVN_ERR(svn_client_mergeinfo_log_eligible(path_or_url, peg_revision,
                                             merge_source_url, &head_revision,
                                             append_log_rev_to_rangelist,
-                                            available, FALSE, ctx, pool));
+                                            available, FALSE, NULL, 
+                                            ctx, pool));
   qsort(available->elts, available->nelts, 
         available->elt_size, svn_sort_compare_ranges);
   SVN_ERR(svn_rangelist_merge(&available,
