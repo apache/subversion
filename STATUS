@@ -46,6 +46,27 @@ Candidate changes:
      Also, this group isn't yet complete.
    Votes:
 
+ * r29633
+   Correct a bug in python tests' comparison of lists.
+   Votes:
+     +1: pburba
+
+ * r29786
+    Don't assume that we have a remaining revision range list before adding it.
+    Notes:
+      This fixes a potential segfault.
+   Votes:
+     +1: pburba
+
+ * r29852, r29857
+    Add a test for 2-URL merges from foreign repositories and some subsequent
+    tweaks.
+    Notes:
+      We've alread merged r29742-r29744, r29746 to 1.5.x which improves
+      foreign repos merging, we might as well add this test too.
+   Votes:
+     +1: pburba
+
 Approved changes:
 
  * r30129
