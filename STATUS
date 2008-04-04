@@ -74,9 +74,3 @@ Candidate changes:
      +1: pburba
 
 Approved changes:
-
- * r30059
-   Corrections to the overview comment of the svn:mergeinfo property in
-   svn_mergeinfo.h.
-   Votes:
-     +1: pburba, hwright
