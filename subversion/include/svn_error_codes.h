@@ -1149,6 +1149,11 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 26,
              "Inquiry about unknown capability")
 
+  /** @since New in 1.6. */
+  SVN_ERRDEF(SVN_ERR_TEST_SKIPPED,
+             SVN_ERR_MISC_CATEGORY_START + 27,
+             "Test skipped")
+
   /* command-line client errors */
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,
