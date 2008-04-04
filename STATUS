@@ -70,13 +70,6 @@ Candidate changes:
 
 Approved changes:
 
- * r29967
-   Clarification of svn_rangelist_merge doc string noting that it compacts
-   ranges and handles empty ranges.  Also adds some C API tests of this
-   behavior.
-   Votes:
-     +1: pburba, hwright
-
  * r30059
    Corrections to the overview comment of the svn:mergeinfo property in
    svn_mergeinfo.h.
