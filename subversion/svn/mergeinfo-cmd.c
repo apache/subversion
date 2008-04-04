@@ -112,15 +112,15 @@ svn_cl__mergeinfo(apr_getopt_t *os,
     {
       SVN_ERR(svn_client_mergeinfo_log_merged(target, &tgt_peg_revision, 
                                               source_url, &src_peg_revision,
-                                              print_log_rev,
-                                              NULL, FALSE, ctx, pool));
+                                              print_log_rev, NULL, 
+                                              FALSE, NULL, ctx, pool));
     }
   else if (opt_state->show_revs == svn_cl__show_revs_eligible)
     {
       SVN_ERR(svn_client_mergeinfo_log_eligible(target, &tgt_peg_revision,
                                                 source_url, &src_peg_revision,
-                                                print_log_rev,
-                                                NULL, FALSE, ctx, pool));
+                                                print_log_rev, NULL, 
+                                                FALSE, NULL, ctx, pool));
     }
   return SVN_NO_ERROR;
 }
