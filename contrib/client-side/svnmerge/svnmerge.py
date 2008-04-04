@@ -217,8 +217,9 @@ def prefix_lines(prefix, lines):
     return prefix + lines[:-1].replace("\n", "\n"+prefix) + "\n"
 
 def recode_stdout_to_file(s):
-    if locale.getdefaultlocale()[1] is None or sys.stdout.encoding is None:
-      return s
+    if locale.getdefaultlocale()[1] is None or not hasattr(sys.stdout, "encoding") \
+            or sys.stdout.encoding is None:
+        return s
     u = s.decode(sys.stdout.encoding)
     return u.encode(locale.getdefaultlocale()[1])
 
@@ -869,7 +870,7 @@ class SvnLogParser:
         def __init__(self, xmlnode):
             self.n = xmlnode
         def revision(self):
-            return self.n.getAttribute("revision")
+            return int(self.n.getAttribute("revision"))
         def author(self):
             return self.n.getElementsByTagName("author")[0].firstChild.data
         def paths(self):
@@ -1195,7 +1196,7 @@ def action_init(target_dir, target_props):
             # which created the merge source:
             report('the source "%s" is a branch of "%s"' %
                    (opts["source-url"], target_dir))
-            revision_range = "1-" + copy_committed_in_rev
+            revision_range = "1-" + str(copy_committed_in_rev)
         else:
             # If the copy source is the merge source, and
             # the copy target is the merge target, then we want to

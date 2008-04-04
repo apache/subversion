@@ -815,6 +815,11 @@ svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
   svn_wc_edited_externals(&externals_old, &externals_new, traversal_info);
   svn_wc_traversed_depths(&ambient_depths, traversal_info);
 
+  /* Sanity check; see r30124. */
+  if (! svn_path_is_url(from_url))
+    return svn_error_createf
+      (SVN_ERR_BAD_URL, NULL, _("'%s' is not a URL"), from_url);
+
   cb.externals_new     = externals_new;
   cb.externals_old     = externals_old;
   cb.requested_depth   = requested_depth;

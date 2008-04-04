@@ -139,6 +139,21 @@ simply deleted on both branches. But we have to mark these as tree conflicts
 due to the current lack of "true rename" support. It does not appear to be
 feasible to detect more than the double-delete aspect of the move operation.
 
+=========================
+OBSTRUCTIONS DURING MERGE
+=========================
+
+If 'svn merge' fails to apply an operation to a file because the
+file is obstructed (i.e. an unversioned item of the same name is
+in the file's place), the obstructed file is a tree conflict victim.
+
+Rationale:
+
+We want to make sure that a merge either completes successfully
+or any problems found during a merge are flagged as conflicts.
+Skipping obstructed items during merge is no longer acceptable
+behaviour, since users might not be aware of obstructions that were
+skipped when they commit the result of a merge.
 
 =========================================
 TREE CONFLICT DETECTION WITH TRUE RENAMES

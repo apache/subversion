@@ -92,6 +92,13 @@ which will place text bases in the WORKING-TARGET tree.  Also note
 that -since merge is by definition an 'edit' operation- the BASE and
 BASE-TARGET trees are not concerned with a merge.
 
+###EHU: To which trees do BASE and TARGET refer when we're in a subdir
+of a replaced tree? And which trees do they refer to in a subdir of
+a replaced tree which itself is replaced? (Preliminary answer: the
+base in a replaced subdir should probably be the base as defined by
+the parent which got copied in, not the base as was deleted, because
+otherwise it won't be possible to delete files from the replaced subdir:
+there would be no way to express a deletion against the new dir.)
 
 
 
