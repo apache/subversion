@@ -34,11 +34,6 @@ Candidate changes:
        in the JavaHL tests.
    Votes:
 
- * r29633
-   Correct a bug in python tests' comparison of lists.
-   Votes:
-     +1: pburba
-
  * r29852, r29857
     Add a test for 2-URL merges from foreign repositories and some subsequent
     tweaks.
@@ -49,6 +44,11 @@ Candidate changes:
      +1: pburba
 
 Approved changes:
+
+ * r29633
+   Correct a bug in python tests' comparison of lists.
+   Votes:
+     +1: pburba, epg
 
  * r30161
    Fix bug in copy-on-update/ra_neon which prevents updates of nodes copied
