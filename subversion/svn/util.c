@@ -1081,4 +1081,13 @@ svn_cl__changelist_paths(apr_array_header_t **paths,
   return svn_hash_keys(paths, paths_hash, pool);
 }
 
-
+svn_cl__show_revs_t
+svn_cl__show_revs_from_word(const char *word)
+{
+  if (strcmp(word, SVN_CL__SHOW_REVS_MERGED) == 0)
+    return svn_cl__show_revs_merged;
+  if (strcmp(word, SVN_CL__SHOW_REVS_ELIGIBLE) == 0)
+    return svn_cl__show_revs_eligible;
+  /* word is an invalid flavor. */
+  return svn_cl__show_revs_invalid;
+}

@@ -2621,8 +2621,10 @@ merge_file(svn_wc_notify_state_t *content_state,
   SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
                                      fb->path, &tmp_entry, flags, pool));
 
-  /* Log commands to handle text-timestamp and working-size */
-  if (!is_locally_modified)
+  /* Log commands to handle text-timestamp and working-size,
+     if the file is - or will be - unmodified and schedule-normal */
+  if (!is_locally_modified &&
+      (fb->added || entry->schedule == svn_wc_schedule_normal))
     {
       /* Adjust working copy file unless this file is an allowed
          obstruction. */
@@ -3099,8 +3101,9 @@ add_file_with_history(const char *path,
 
   if (src_path != NULL)
     {
-      /* If we copied an existing file over, we need copy its working
-         text and props too, to preserve any local mods. */
+      /* If we copied an existing file over, we need to copy its
+         working text too, to preserve any local mods.  (We already
+         read its working *props* into tfb->copied_working_props.) */
       svn_boolean_t text_changed;
 
       SVN_ERR(svn_wc_text_modified_p(&text_changed, src_path, FALSE,

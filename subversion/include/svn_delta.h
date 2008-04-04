@@ -524,6 +524,10 @@ svn_error_t *svn_txdelta_skip_svndiff_window(apr_file_t *file,
 /** A structure full of callback functions the delta source will invoke
  * as it produces the delta.
  *
+ * Note: Don't try to allocate one of these yourself.  Instead, always
+ * use svn_delta_default_editor() or some other constructor, to ensure
+ * that unused slots are filled in with no-op functions.
+ *
  * <h3>Function Usage</h3>
  *
  * Here's how to use these functions to express a tree delta.
@@ -922,6 +926,8 @@ typedef struct svn_delta_editor_t
   svn_error_t *(*abort_edit)(void *edit_baton,
                              apr_pool_t *pool);
 
+  /* Be sure to update svn_delta_get_cancellation_editor() and
+   * svn_delta_default_editor() if you add a new callback here. */
 } svn_delta_editor_t;
 
 

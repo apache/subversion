@@ -5,6 +5,7 @@ Content
 
  * Context
  * Requirements
+ * Nice-to-have's
  * Non-goals
  * Open items / discussion points
  * Problems in wc-1.0
@@ -74,7 +75,7 @@ In the context of the 'svn update' command:
      these trees generally represent "in transition" or "intermediary"
      state with the intent to become the final tree.
 
-Additionaly, three more trees may be related to the working copy
+Additionally, three more trees may be related to the working copy
 when considering the 'svn merge' command:
 
  * START: The tree used as the base state for the 'merge' command
@@ -91,6 +92,13 @@ which will place text bases in the WORKING-TARGET tree.  Also note
 that -since merge is by definition an 'edit' operation- the BASE and
 BASE-TARGET trees are not concerned with a merge.
 
+###EHU: To which trees do BASE and TARGET refer when we're in a subdir
+of a replaced tree? And which trees do they refer to in a subdir of
+a replaced tree which itself is replaced? (Preliminary answer: the
+base in a replaced subdir should probably be the base as defined by
+the parent which got copied in, not the base as was deleted, because
+otherwise it won't be possible to delete files from the replaced subdir:
+there would be no way to express a deletion against the new dir.)
 
 
 
@@ -110,7 +118,9 @@ Requirements
      - central vs local metadata storage
      - Last modified timestamp behaviours
      - .svn-less working copy subtrees
- * Gracefull (defined) fallback for non-supported operations
+     - different file-changed detection schemes
+        (e.g. full tree scan as in wc-1.0 as well as 'p4 edit')
+ * Graceful (defined) fallback for non-supported operations
    When a checkout tries to create a symlink on an OS which supports
    them, on a filesystem which doesn't, we should cope without
    canceling the complete checkout.  Same for marking metadata read-only.
@@ -136,13 +146,24 @@ Requirements
  * Last-modified recording as a preparation for solving issue #1256 and
    as defined in this mail, also linked from the issue:
    http://svn.haxx.se/dev/archive-2006-10/0193.shtml
- * 
+ * Representing "this node is part of a replaced-with-history tree and
+   I'm *not* in the replacement tree" as well as "... and I'm deleted
+   from the replacement tree" [issues #1962 and #2690]
+
+
+Would-be-very-nice-to-have's
+============================
+
+ * Multiple users with a single working copy (aka shared working copy)
+ * Ending up with an implementation which can use current WCs
+   (without conversion)
+ * Working copies/ metadata storages without local storage of text-bases
+   (other than a few cached ones)
 
 
 Non-goals
 =========
 
- * Multiple users with a single working copy (aka shared working copy)
  * Off-line commits
  * Distributed VC
 
@@ -169,7 +190,7 @@ Problems in wc-1.0
    to access different parts of the working copy (incl. admin areas)
  * The code is littered with direct accesses to both wc files and
    admin area files
- * It's not always clear at which time log files are being proccessed
+ * It's not always clear at which time log files are being processed
    (ie transactions are being committed), meaning it's not always
    clear at which version of a tree one is looking at: the pre or post
    transformation versions...
@@ -179,9 +200,9 @@ Problems in wc-1.0
  * It's very hard to determine when an action needs to be written
    to a transaction or needs to be executed directly
  * All code assumes local access to admin (meta)data
- * The transaction system contains non-rerunable commands
+ * The transaction system contains non-runnable commands
  * It's possible to generate combinations of commands, each of which
-   is rerunable, but the series isn't
+   is runnable, but the series isn't
  * Long if() blocks to sort through all possible states of
    WORKING, ACTUAL and BASE, without calling it that.
  * Large if() blocks dealing with the difference between file and
@@ -205,14 +226,21 @@ Problems in wc-1.0
    schedule==normal, but instead leave them as schedule==add, resulting in
    a double commit (through HTTP, other RA layers fold the double add, but
    that's not the point) [see issue #1962]
+ * transaction files (ie log files) are XML files, requiring correct
+   encoding of characters and other values; given the short expected
+   life-time of a log file and the fact that we're almost completely sure
+   the log file is going to be read by the WC library anyway (no interchange
+   problems), this is a waste of processing time
+ * No strict separation between public and internal APIs: many public
+   APIs also used internally, growing arguments which *should* only
+   matter for internal use
+
 
 Possible solutions
 ==================
 
-
 Developer sanity
 ----------------
-
 Strict separation between modules should help keep code focused at one
 task.  Probably some of the required user-specific behaviours can (and
 should) be hidden behind vtables; for example: setting the file stamp
@@ -243,7 +271,6 @@ solely that specific task.
 
 Speed
 -----
-
 wc-1.0 assumes the WORKING tree and the ACTUAL tree match, but then
 goes out of its way to assure they actually do when deemed important.
 The result is a library which calls stat() a lot more often than need be.
@@ -260,17 +287,18 @@ regarding the exact tree which is being operated upon.
 Most operations are I/O bound and have CPU to spare.  Consider the virtue
 of compressed text bases in order to reduce the amount of I/O required.
 
-
+Another idea to reduce I/O is to eliminate atomic-rename-into-place for
+the metadata part of the working copy: if a file is completely written,
+store the name of the base-text/prop-text in the entries file, which gets
+rewritten on most wc-transformations anyway.
 
 
 Cross node type change representation
 -------------------------------------
-
-To be done
+####EHU To be done
 
 Flexibility of metadata storage
 -------------------------------
-
 There are 3 known models for storing metadata as requested by different
 groups of users:
 
@@ -290,7 +318,6 @@ releases).
 
 Transaction duration / memory management
 ----------------------------------------
-
 The current pool-based memory management system is very good at managing
 memory in a transaction-based processing model.  In the wc library, a
 'transaction' often spans more than one call into the library.  We either
@@ -299,7 +326,6 @@ need a different memory management strategy in wc-ng.
 
 Working copy stability
 ----------------------
-
 In light of obstructed updates it may not always be desirable to be able
 to resume the current operation (as currently is the case): in some cases
 the user may want to abort the operation, in other cases the user may
@@ -310,9 +336,7 @@ full working copy transformation, verifying prerequisites, creating
 replacement files and directories and when all that succeeds, update
 the working copy.
 
-Full workin' copy unit tests
-----------------------------
-
+Full workin' copy unit tests:
 Exactly because the working copy is such an important part of the
 Subversion experience *and* because of the 'reputation' of wc-1.0,
 we need a way to ensure wc-ng completely performs according to our
@@ -323,10 +347,22 @@ as well as developer sanity: in the early stages of the wc-ng develop-
 ment process, we'll be able to assess how well the design holds up
 under more difficult 'weather'.
 
+Transactional updates
+---------------------
+
+.. where 'update' is meant as 'user command', not 'svn update' per se.
+
+When applied to files, this can be summarized as:
+
+ * Receive transformations (update, delete, add) from
+   the server,
+
 
 Prerequisites for a good wc implementation
 ==========================================
 
+These prerequisites are to be addressed, either as definitions
+in this document, or elsewhere in the subversion (source) tree:
  * Well defined behaviour for cross-node type updates/merges/..
    (tree conflicts in particular)
  * Well defined behaviour for special file handling
@@ -336,7 +372,8 @@ Prerequisites for a good wc implementation
      last-modified handling strategies
  * No special handling of symlinks: they are first class versioned objects
  * Well defined behaviour for property changes on updates/merges/...
-   (this is a problem which may resemble tree conflicts!)
+   (this is a problem which may resemble tree conflicts!),
+   including 'svn:' special properties
  * File name manipulation routines (availability)
  * File name comparison routines (!) (availability; which compensate
      for the different ways Unicode characters can be represented
@@ -359,16 +396,91 @@ recognised.  This will help prevent spaghetti code as in wc-1.0 where
 one piece of code manipulates paths to a working copy file, its URL
 *and* the path to the base file.
 
-For now, these modules can be separated:
+For now, these APIs can be separated:
 
- - tree administration (required for BASE, TARGET and WORKING)
- - tree access (required for BASE, WORKING, TARGET and ACTUAL)
- - transactional modifications (required for tree manipulation/
-    transformation processes such as update or merge)
- - delta-application (required for update/switch/merge updating
-    BASE, WORKING and ACTUAL), meaning all of tree changes, file
-    changes and metadata changes
- - 
+ - the public API (presumably not to be used by any internal
+     processing, but presents functionality to working copy users)
+ - tree administration API (required for BASE, TARGET and WORKING)
+     Admins which files are part of the tree, which ones map to
+     which repositories and which textbase / propbase files belong
+     to which local files. [should provide checkpointing functionality
+     for use with transactional tree modifications API]
+ - tree access API (required for BASE, WORKING, TARGET and ACTUAL)
+     Gives access to the content of the nodes in a tree
+       - props
+       - text bases (for files)
+       - child nodes (for directories)
+ - transactional tree modifications API (applicable to all trees,
+     ###EHU do we provide the same interface to BASE/WORKING as for ACTUAL?)
+ - tree transformation (required for update/switch/merge updating
+     BASE, WORKING and ACTUAL), meaning all of tree changes, file
+     changes and metadata changes
+ - Working-copy changedness detection API
+ - Metadata access API (used by tree administration module(s))
+ - Event hooks (in order to be able to implement different
+   timestamp-setting strategies and possibly more)
+
+These APIs will be implemented by these (currently known) modules:
+
+ - tree administration
+   * wc_adm
+ - tree access
+   * wc_acc
+ - transactional tree modifications
+   * wc_log
+ - tree transformation
+   * wc_trans
+ - working copy changedness detection
+   wc_detect vtable-based API implemented by these modules:
+     * tree crawler ('inspired' by wc-1.0)
+     * tree marker (inspired by 'p4 edit')
+ - metadata access API
+   wc_macc vtable-based API implemented by these modules:
+     * tree spread ('inspired' by wc-1.0)
+     * tree root (storing all metadata in the tree root (think darcs))
+     * central depot (storing 'somewhere' locally, possibly $HOME)
+        this central store would open up the possibility to share
+        text bases/prop bases across checkouts
+     * non-local (retrieving all text and prop-bases from the server,
+        except for a number of cached ones) ###EHU: maybe this is
+        orthogonal to the question where metadata is stored: in all
+        situations, you *could* choose not to keep local copies
+ - Event hooks for the union of all paths in (BASE, WORKING)
+   wc_hook event based single-callback API
+   for e.g. these events:
+        + props updated
+        + base text updated
+        + wc file updated
+        + update completed
+        + lock acquired
+        + lock released
+       (+ lock can't be acquired [in order to 'unprotect'
+           svn:needs-lock protected files which have been removed
+           from the repository?])
+   to be implemented by these modules:
+     * use-commit-times
+     * versioned-mtimes
+     * versioned-execute-perm
+     * versioned-other-unix-perms
+    (* versioned-windows-perms?)
+     * needs-lock-updater
+
+Justification for the large number of modules, with a modest number
+of different APIs is that the problem is really quite complex as shown
+earlier in this document.
+
+Over the years, a large number of use cases have developed around
+Subversion where different user groups have shown very valid use cases
+for conflicting behaviours.  Presumably, most of these we want to
+retain.  Some of the unimplemented ones have open issues indicating
+there's at least an active interest.  In order to prevent locking out
+some of the current use cases adding support for the open issues, we
+need a flexible modularized model.  This model will also prevent that
+we'll end up duplicating lots of code to support the different use cases.
+
+Given the assumption of 'little code duplication', the choice for
+having several modules which implement the same API (vtable) is
+justifiable.
 
 
 Implementation proposals
@@ -437,7 +549,7 @@ mechanisms, which means they don't belong in the public interface.
 Fields with no check are to become obsolete. 'schedule', 'copied' and
 'deleted' can be deducded from the difference between the BASE and WORKING
 or WORKING and ACTUAL trees.  'incomplete' should become obsolete when the
-goal of 'atomic updates' can be realised, in which case the tree won't be
+goal of 'atomic updates' can be realised, in which case the tree can't be
 in an incomplete yet locked state.  This would also invalidate issue #1879.
 
 

@@ -723,7 +723,7 @@ public interface SVNClientInterface
     void cleanup(String path) throws ClientException;
 
     /**
-     * Removes the <i>conflicted</i> state on a WC path (or tree).
+     * Resolves the <i>conflicted</i> state on a WC path (or tree).
      * @param path The path to resolve.
      * @param depth How deep to recurse into child paths.
      * @param conflictResult Which version to choose in the event of a
@@ -731,7 +731,7 @@ public interface SVNClientInterface
      * @throws SubversionException If an error occurs.
      * @since 1.5
      */
-    void resolved(String path, int depth, int conflictResult)
+    void resolve(String path, int depth, int conflictResult)
         throws SubversionException;
 
     /**
@@ -1027,6 +1027,23 @@ public interface SVNClientInterface
      */
     RevisionRange[] getAvailableMerges(String path, Revision pegRevision,
                                        String mergeSource)
+        throws SubversionException;
+
+    /**
+     * Retrieve either merged or eligible-to-be-merged revisions.
+     * @param kind                   kind of revisions to receive
+     * @param pathOrUrl              target of merge
+     * @param pegRevision            peg rev for pathOrUrl
+     * @param mergeSourceUrl         the source of the merge
+     * @param srcPegRevision         peg rev for mergeSourceUrl
+     * @param discoverChangedPaths   return paths of changed items
+     * @param callback               the object to receive the log messages
+     * @since 1.5
+     */
+    void getMergeinfoLog(int kind, String pathOrUrl,
+                         Revision pegRevision, String mergeSourceUrl,
+                         Revision srcPegRevision, boolean discoverChangedPaths,
+                         LogMessageCallback callback)
         throws SubversionException;
 
     /**

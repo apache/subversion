@@ -91,6 +91,10 @@ class SVNClient :public SVNBase
   jobject getMergeinfo(const char *target, Revision &pegRevision);
   jobjectArray getAvailableMerges(const char *target, Revision &pegRevision,
                                   const char *mergeSource);
+  void getMergeinfoLog(int type, const char *pathOrURL,
+                       Revision &pegRevision, const char *mergeSourceURL,
+                       Revision &srcPegREvision, bool discoverChangedPaths,
+                       LogMessageCallback *callback);
   jobjectArray suggestMergeSources(const char *path, Revision &pegRevision);
   void merge(const char *path1, Revision &revision1, const char *path2,
              Revision &revision2, const char *localPath, bool force,
@@ -112,8 +116,8 @@ class SVNClient :public SVNBase
                  Revision &revision, Revision &pegRevision, bool force,
                  bool ignoreExternals, svn_depth_t depth,
                  const char *nativeEOL);
-  void resolved(const char *path, svn_depth_t depth,
-                svn_wc_conflict_choice_t choice);
+  void resolve(const char *path, svn_depth_t depth,
+               svn_wc_conflict_choice_t choice);
   void cleanup(const char *path);
   void mkdir(Targets &targets, const char *message, bool makeParents);
   void move(Targets &srcPaths, const char *destPath,
