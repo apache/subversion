@@ -14,11 +14,6 @@ Status of 1.5.0:
 
 Candidate changes:
 
- * r30129
-   Fix a bug that Svn::Ra::Session#open doesn't set callback_baton correctly.
-   Votes:
-     +1: kou
-
  * r30215, r30221, r30225, r30226, r30230, r30243
    Simplify (UI-wise) yet vastly enhance the 'svn mergeinfo' subcommand and
    underlying APIs.
@@ -30,13 +25,6 @@ Candidate changes:
      it into 1.5).
    Votes:
      +1: cmpilato
-
- * r30210
-   Call abort_edit upon editor failure in the repos reporter.
-   Notes:
-     This bug has always been here; no need to hold the release for it.
-   Votes:
-     +1: epg
 
  * r30161
    Fix bug in copy-on-update/ra_neon which prevents updates of nodes copied
@@ -52,3 +40,15 @@ Candidate changes:
      +1: glasser
 
 Approved changes:
+
+ * r30129
+   Fix a bug that Svn::Ra::Session#open doesn't set callback_baton correctly.
+   Votes:
+     +1: kou, cmpilato
+
+ * r30210
+   Call abort_edit upon editor failure in the repos reporter.
+   Notes:
+     This bug has always been here; no need to hold the release for it.
+   Votes:
+     +1: epg, cmpilato
