@@ -188,3 +188,141 @@ svn_cache_create_memcache(svn_cache_t **cache_p,
   *cache_p = wrapper;
   return SVN_NO_ERROR;
 }
+
+
+/*** Creating apr_memcache_t from svn_config_t. ***/
+
+/* Baton for add_memcache_server. */
+struct ams_baton {
+  apr_memcache_t *memcache;
+  apr_pool_t *memcache_pool;
+  svn_error_t *err;
+};
+
+/* Implements svn_config_enumerator2_t. */
+static svn_boolean_t
+add_memcache_server(const char *name,
+                    const char *value,
+                    void *baton,
+                    apr_pool_t *pool)
+{
+  struct ams_baton *b = baton;
+  char *host, *scope;
+  apr_port_t port;
+  apr_status_t apr_err;
+  apr_memcache_server_t *server;
+
+  apr_err = apr_parse_addr_port(&host, &scope, &port,
+                                value, pool);
+  if (apr_err != APR_SUCCESS)
+    {
+      b->err = svn_error_wrap_apr(apr_err,
+                                  _("Error parsing memcache server '%s'"),
+                                  name);
+      return FALSE;
+    }
+
+  if (scope)
+    {
+      b->err = svn_error_createf(SVN_ERR_BAD_SERVER_SPECIFICATION, NULL,
+                                  _("Scope not allowed in memcache server "
+                                    "'%s'"),
+                                  name);
+      return FALSE;
+    }
+  if (!host || !port)
+    {
+      b->err = svn_error_createf(SVN_ERR_BAD_SERVER_SPECIFICATION, NULL,
+                                  _("Must specify host and port for memcache "
+                                    "server '%s'"),
+                                  name);
+      return FALSE;
+    }
+
+  /* Note: the four numbers here are only relevant when an
+     apr_memcache_t is being shared by multiple threads. */
+  apr_err = apr_memcache_server_create(b->memcache_pool,
+                                       host,
+                                       port,
+                                       0,  /* min connections */
+                                       5,  /* soft max connections */
+                                       10, /* hard max connections */
+                                       50, /* connection time to live (secs) */
+                                       &server);
+  if (apr_err != APR_SUCCESS)
+    {
+      b->err = svn_error_wrap_apr(apr_err,
+                                  _("Unknown error creating memcache server"));
+      return FALSE;
+    }
+
+  apr_err = apr_memcache_add_server(b->memcache, server);
+  if (apr_err != APR_SUCCESS)
+    {
+      b->err = svn_error_wrap_apr(apr_err,
+                                  _("Unknown error adding server to memcache"));
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
+/* Implements svn_config_enumerator2_t.  Just used for the
+   entry-counting return value of svn_config_enumerate2. */
+static svn_boolean_t
+nop_enumerator(const char *name,
+               const char *value,
+               void *baton,
+               apr_pool_t *pool)
+{
+  return TRUE;
+}
+
+svn_error_t *
+svn_cache_make_memcache_from_config(apr_memcache_t **memcache_p,
+                                    svn_config_t *config,
+                                    apr_pool_t *pool)
+{
+  apr_memcache_t *memcache;
+  apr_status_t apr_err;
+  apr_uint16_t server_count;
+  struct ams_baton b;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  server_count =
+    svn_config_enumerate2(config,
+                          SVN_CACHE_CONFIG_CATEGORY_MEMCACHED_SERVERS,
+                          nop_enumerator, NULL, subpool);
+
+  if (server_count == 0)
+    {
+      *memcache_p = NULL;
+      svn_pool_destroy(subpool);
+      return SVN_NO_ERROR;
+    }
+
+  apr_err = apr_memcache_create(pool,
+                                server_count,
+                                0, /* flags */
+                                &memcache);
+  if (apr_err != APR_SUCCESS)
+    return svn_error_wrap_apr(apr_err,
+                              _("Unknown error creating apr_memcache_t"));
+
+  b.memcache = memcache;
+  b.memcache_pool = pool;
+  b.err = SVN_NO_ERROR;
+  svn_config_enumerate2(config,
+                        SVN_CACHE_CONFIG_CATEGORY_MEMCACHED_SERVERS,
+                        add_memcache_server, &b,
+                        subpool);
+
+  if (b.err)
+    return b.err;
+
+  *memcache_p = memcache;
+
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
+
+}
