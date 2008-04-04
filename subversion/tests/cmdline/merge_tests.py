@@ -10749,7 +10749,25 @@ def merge_added_subtree(sbox):
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
+#----------------------------------------------------------------------
+# Issue #3138
+def merge_unknown_url(sbox):
+  "merging an unknown url should return error"
 
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # remove a path from the repo and commit.
+  iota_path = os.path.join(wc_dir, 'iota')
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', iota_path)
+  svntest.actions.run_and_verify_svn("", None, [],
+                                     "ci", wc_dir, "-m", "log message")
+
+
+  url = sbox.repo_url + "/iota"
+  expected_err = ".*File not found.*iota.*|.*iota.*path not found.*"
+  svntest.actions.run_and_verify_svn("", None, expected_err,
+                                     "merge", url, wc_dir)
 
 ########################################################################
 # Run the tests
@@ -10851,6 +10869,7 @@ test_list = [ None,
               foreign_repos,
               foreign_repos_2_url,
               XFail(merge_added_subtree),
+              merge_unknown_url,
              ]
 
 if __name__ == '__main__':
