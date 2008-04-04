@@ -41,23 +41,29 @@ svn_error_t *
 svn_test__fs_new(svn_fs_t **fs_p, apr_pool_t *pool);
 
 
-/* Create a filesystem of FS_TYPE in a subdir NAME and return a new FS
-   object which points to it.  FS_TYPE should be either "bdb" or
-   "fsfs".  Filesystem tests that are backend-specific should use
-   svn_test__create_fs instead of this. */
+/* Creates a filesystem which is always of type "bdb" in a subdir NAME
+   and return a new FS object which points to it. */
+svn_error_t *
+svn_test__create_bdb_fs(svn_fs_t **fs_p,
+                        const char *name,
+                        apr_pool_t *pool);
+
+
+/* Create a filesystem based on OPTS in a subdir NAME and return a new
+   FS object which points to it.  */
 svn_error_t *
 svn_test__create_fs(svn_fs_t **fs_p,
                     const char *name,
-                    const char *fs_type,
+                    svn_test_opts_t *opts,
                     apr_pool_t *pool);
 
 
-/* Create a repository with a filesystem of FS_TYPE in a subdir NAME
+/* Create a repository with a filesystem based on OPTS in a subdir NAME
    and return a new REPOS object which points to it.  */
 svn_error_t *
 svn_test__create_repos(svn_repos_t **repos_p,
                        const char *name,
-                       const char *fs_type,
+                       svn_test_opts_t *opts,
                        apr_pool_t *pool);
 
 
