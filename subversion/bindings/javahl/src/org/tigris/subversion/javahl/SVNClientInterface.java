@@ -1030,6 +1030,23 @@ public interface SVNClientInterface
         throws SubversionException;
 
     /**
+     * Retrieve either merged or eligible-to-be-merged revisions.
+     * @param kind                   kind of revisions to receive
+     * @param pathOrUrl              target of merge
+     * @param pegRevision            peg rev for pathOrUrl
+     * @param mergeSourceUrl         the source of the merge
+     * @param srcPegRevision         peg rev for mergeSourceUrl
+     * @param discoverChangedPaths   return paths of changed items
+     * @param callback               the object to receive the log messages
+     * @since 1.5
+     */
+    void getMergeinfoLog(int kind, String pathOrUrl,
+                         Revision pegRevision, String mergeSourceUrl,
+                         Revision srcPegRevision, boolean discoverChangedPaths,
+                         LogMessageCallback callback)
+        throws SubversionException;
+
+    /**
      * Display the differences between two paths
      * @param target1       first path or url
      * @param revision1     first revision

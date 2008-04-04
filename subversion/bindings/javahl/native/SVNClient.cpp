@@ -836,6 +836,60 @@ SVNClient::getAvailableMerges(const char *target, Revision &pegRevision,
     return makeJRevisionRangeArray(ranges);
 }
 
+void SVNClient::getMergeinfoLog(int type, const char *pathOrURL,
+                                Revision &pegRevision,
+                                const char *mergeSourceURL,
+                                Revision &srcPegRevision,
+                                bool discoverChangedPaths,
+                                LogMessageCallback *callback)
+{
+    Pool requestPool;
+    JNIEnv *env = JNIUtil::getEnv();
+
+    svn_client_ctx_t *ctx = getContext(NULL);
+    if (ctx == NULL)
+        return;
+
+    SVN_JNI_NULL_PTR_EX(pathOrURL, "path or url", );
+    Path urlPath(pathOrURL);
+    SVN_JNI_ERR(urlPath.error_occured(), );
+
+    SVN_JNI_NULL_PTR_EX(mergeSourceURL, "merge source url", );
+    Path srcURL(mergeSourceURL);
+    SVN_JNI_ERR(srcURL.error_occured(), );
+
+    switch (type)
+      {
+        case 0:
+            SVN_JNI_ERR(
+                svn_client_mergeinfo_log_eligible(urlPath.c_str(),
+                                                  pegRevision.revision(),
+                                                  srcURL.c_str(),
+                                                  srcPegRevision.revision(),
+                                                  LogMessageCallback::callback,
+                                                  callback,
+                                                  discoverChangedPaths,
+                                                  ctx,
+                                                  requestPool.pool()), );
+            return;
+
+        case 1:
+            SVN_JNI_ERR(
+                svn_client_mergeinfo_log_merged(urlPath.c_str(),
+                                                pegRevision.revision(),
+                                                srcURL.c_str(),
+                                                srcPegRevision.revision(),
+                                                LogMessageCallback::callback,
+                                                callback,
+                                                discoverChangedPaths,
+                                                ctx,
+                                                requestPool.pool()), );
+            return;
+      }
+
+    return;
+}
+
 /**
  * Get a property.
  */
