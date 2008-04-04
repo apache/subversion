@@ -2110,7 +2110,7 @@ public class BasicTests extends SVNTests
      * available merges.
      * @param expectedMergedRevs The expected revision ranges from the
      * merge history for <code>mergeSrc</code>.
-     * @param expectedMergedRevs The expected available revision
+     * @param expectedAvailableRevs The expected available revision
      * ranges from the available merges for <code>mergeSrc</code>.
      * @param targetPath The path for which to acquire mergeinfo.
      * @param mergeSrc The URL from which to consider merges.
@@ -2134,13 +2134,17 @@ public class BasicTests extends SVNTests
                      expectedMergedRevs, range.toString());
 
         // Verify expected available merges.
-        RevisionRange[] revRanges =
-            client.getAvailableMerges(targetPath, Revision.HEAD, mergeSrc);
-        assertTrue("Missing available merges on '" + targetPath + '\'',
-                   revRanges != null && revRanges.length > 0);
-        assertEquals("Unexpected first available revision range for '" +
-                     mergeSrc + "' on '" + targetPath + '\'',
-                     expectedAvailableRevs, revRanges[0].toString());
+        if (expectedAvailableRevs != null)
+            {
+                RevisionRange[] revRanges =
+                    client.getAvailableMerges(targetPath, Revision.HEAD,
+                                              mergeSrc);
+                assertTrue("Missing available merges on '" + targetPath + '\'',
+                           revRanges != null && revRanges.length > 0);
+                assertEquals("Unexpected first available revision range for '" +
+                             mergeSrc + "' on '" + targetPath + '\'',
+                            expectedAvailableRevs, revRanges[0].toString());
+            }
     }
 
     /**
@@ -2263,11 +2267,11 @@ public class BasicTests extends SVNTests
         String targetPath =
             new File(thisTest.getWCPath(), "branches/A/mu").getPath();
         final String mergeSrc = thisTest.getUrl() + "/A/mu";
-        acquireMergeinfoAndAssertEquals("2-4", "4-6", targetPath, mergeSrc);
+        acquireMergeinfoAndAssertEquals("2-4", "5-6", targetPath, mergeSrc);
 
         // Test retrieval of mergeinfo from the repository.
         targetPath = thisTest.getUrl() + "/branches/A/mu";
-        acquireMergeinfoAndAssertEquals("2-4", "4-6", targetPath, mergeSrc);
+        acquireMergeinfoAndAssertEquals("2-4", "5-6", targetPath, mergeSrc);
     }
 
     /**
@@ -2483,7 +2487,7 @@ public class BasicTests extends SVNTests
         String targetPath =
             new File(thisTest.getWCPath(), "branches/A").getPath();
         final String mergeSrc = thisTest.getUrl() + "/A";
-        acquireMergeinfoAndAssertEquals("2-4", "4-5", targetPath, mergeSrc);
+        acquireMergeinfoAndAssertEquals("2-4", null, targetPath, mergeSrc);
     }
 
     /**
