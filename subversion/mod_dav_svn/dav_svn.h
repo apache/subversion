@@ -102,6 +102,9 @@ typedef struct {
   /* Whether autoversioning is active for this repository. */
   svn_boolean_t autoversioning;
 
+  /* Whether bulk updates are allowed for this repository. */
+  svn_boolean_t bulk_updates;
+
   /* the open repository */
   svn_repos_t *repos;
 
@@ -266,6 +269,9 @@ const char *dav_svn__get_fs_parent_path(request_rec *r);
 
 /* for the repository referred to by this request, is autoversioning active? */
 svn_boolean_t dav_svn__get_autoversioning_flag(request_rec *r);
+
+/* for the repository referred to by this request, are bulk updates allowed? */
+svn_boolean_t dav_svn__get_bulk_updates_flag(request_rec *r);
 
 /* for the repository referred to by this request, are subrequests active? */
 svn_boolean_t dav_svn__get_pathauthz_flag(request_rec *r);

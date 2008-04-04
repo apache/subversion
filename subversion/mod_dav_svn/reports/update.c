@@ -954,22 +954,24 @@ dav_svn__update_report(const dav_resource *resource,
                                     SVN_DAV_ERROR_TAG);
     }
 
-  /* Look to see if client wants a report with props and textdeltas
-     inline, rather than placeholder tags that tell the client to do
-     further fetches.  Modern clients prefer inline. */
-  {
-    apr_xml_attr *this_attr;
+  /* If server configuration permits bulk updates (a report with props
+     and textdeltas inline, rather than placeholder tags that tell the
+     client to do further fetches), look to see if client requested as
+     much.  */
+  if (repos->bulk_updates)
+    {
+      apr_xml_attr *this_attr;
 
-    for (this_attr = doc->root->attr; this_attr; this_attr = this_attr->next)
-      {
-        if ((strcmp(this_attr->name, "send-all") == 0)
-            && (strcmp(this_attr->value, "true") == 0))
-          {
-            uc.send_all = TRUE;
-            break;
-          }
-      }
-  }
+      for (this_attr = doc->root->attr; this_attr; this_attr = this_attr->next)
+        {
+          if ((strcmp(this_attr->name, "send-all") == 0)
+              && (strcmp(this_attr->value, "true") == 0))
+            {
+              uc.send_all = TRUE;
+              break;
+            }
+        }
+    }
 
   for (child = doc->root->first_child; child != NULL; child = child->next)
     {
