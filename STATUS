@@ -63,6 +63,11 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r29168
+   Fix an RA session memory leak.
+   Votes:
+     +1: pburba
+
 Approved changes:
 
  * r30237, r30239
