@@ -14,12 +14,6 @@ Status of 1.5.0:
 
 Candidate changes:
 
- * r30237, r30239
-   Add svn:keywords to
-   contrib/client-side/svnmerge/svnmerge-migrate-history.py
-   Votes:
-     +1: blair
-
  * r30129
    Fix a bug that Svn::Ra::Session#open doesn't set callback_baton correctly.
    Votes:
@@ -69,30 +63,35 @@ Candidate changes:
    Votes:
      +1: pburba
 
+Approved changes:
+
+ * r30237, r30239
+   Add svn:keywords to
+   contrib/client-side/svnmerge/svnmerge-migrate-history.py
+   Votes:
+     +1: blair, hwright
+
  * r29645
    Ensure svn_mergeinfo_parse() returns always returns
    SVN_ERR_MERGEINFO_PARSE_ERROR as the topmost error in a chain as the API
    promises.
    Votes:
-     +1: pburba
+     +1: pburba, hwright
 
  * r29965
    Fix spurious Win32 failure of diff_tests.py 47.
    Votes:
-     +1: pburba
+     +1: pburba, hwright
 
  * r29967
    Clarification of svn_rangelist_merge doc string noting that it compacts
    ranges and handles empty ranges.  Also adds some C API tests of this
    behavior.
    Votes:
-     +1: pburba
+     +1: pburba, hwright
 
  * r30059
    Corrections to the overview comment of the svn:mergeinfo property in
    svn_mergeinfo.h.
    Votes:
-     +1: pburba
-
-Approved changes:
-
+     +1: pburba, hwright
