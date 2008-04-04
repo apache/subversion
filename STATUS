@@ -69,6 +69,31 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r29645
+   Ensure svn_mergeinfo_parse() returns always returns
+   SVN_ERR_MERGEINFO_PARSE_ERROR as the topmost error in a chain as the API
+   promises.
+   Votes:
+     +1: pburba
+
+ * r29965
+   Fix spurious Win32 failure of diff_tests.py 47.
+   Votes:
+     +1: pburba
+
+ * r29967
+   Clarification of svn_rangelist_merge doc string noting that it compacts
+   ranges and handles empty ranges.  Also adds some C API tests of this
+   behavior.
+   Votes:
+     +1: pburba
+
+ * r30059
+   Corrections to the overview comment of the svn:mergeinfo property in
+   svn_mergeinfo.h.
+   Votes:
+     +1: pburba
+
 Approved changes:
 
  * r29665, r29666, r29741, r29767, r29815, r29854, r30180, r30181
