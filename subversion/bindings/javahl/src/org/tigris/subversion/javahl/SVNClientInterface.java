@@ -1044,7 +1044,7 @@ public interface SVNClientInterface
                          Revision pegRevision, String mergeSourceUrl,
                          Revision srcPegRevision, boolean discoverChangedPaths,
                          LogMessageCallback callback)
-        throws SubversionException;
+        throws ClientException;
 
     /**
      * Display the differences between two paths

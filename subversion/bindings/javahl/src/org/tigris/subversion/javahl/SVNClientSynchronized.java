@@ -1039,7 +1039,7 @@ public class SVNClientSynchronized implements SVNClientInterface
                                 Revision srcPegRevision,
                                 boolean discoverChangedPaths,
                                 LogMessageCallback callback)
-        throws SubversionException
+        throws ClientException
     {
         synchronized (clazz)
         {
