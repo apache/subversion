@@ -109,11 +109,11 @@ def mergeinfo_on_unknown_url(sbox):
   svntest.actions.run_and_verify_svn("", None, [],
                                      "ci", wc_dir, "-m", "log message")
 
-
   url = sbox.repo_url + "/iota"
   expected_err = ".*File not found.*iota.*|.*iota.*path not found.*"
   svntest.actions.run_and_verify_svn("", None, expected_err,
-                                     "mergeinfo", url)
+                                     "mergeinfo", "--show-revs", "eligible", 
+                                     url, wc_dir)
 
 ########################################################################
 # Run the tests
