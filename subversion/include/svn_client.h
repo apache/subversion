@@ -2634,12 +2634,13 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
                                  apr_pool_t *pool);
 
 /**
- * Drive log entry callbacks @c receiver / @c receiver_baton with the
+ * Drive log entry callbacks @a receiver / @a receiver_baton with the
  * revisions merged from @a merge_source_url (as of @a
  * src_peg_revision) into @a path_or_url (as of @a peg_revision).  @a
- * ctx is a context used for authentication.  @c
- * discover_changed_paths is the same as for svn_client_log4().  Use
- * @a pool for all necessary allocations.
+ * ctx is a context used for authentication.
+ * 
+ * @a discover_changed_paths and @a revprops are the same as for
+ * svn_client_log4().  Use @a pool for all necessary allocations.
  *
  * If the server doesn't support retrieval of mergeinfo, return an @c
  * SVN_ERR_UNSUPPORTED_FEATURE error.
@@ -2654,16 +2655,18 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
                                 svn_log_entry_receiver_t receiver,
                                 void *receiver_baton,
                                 svn_boolean_t discover_changed_paths,
+                                const apr_array_header_t *revprops,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *pool);
 
 /**
- * Drive log entry callbacks @c receiver / @c receiver_baton with the
+ * Drive log entry callbacks @a receiver / @a receiver_baton with the
  * revisions eligible for merge from @a merge_source_url (as of @a
  * src_peg_revision) into @a path_or_url (as of @a peg_revision).  @a
- * ctx is a context used for authentication.  @c
- * discover_changed_paths is the same as for svn_client_log4().  Use
- * @a pool for all necessary allocations.
+ * ctx is a context used for authentication.
+ *
+ * @a discover_changed_paths and @a revprops are the same as for
+ * svn_client_log4().  Use @a pool for all necessary allocations.
  *
  * If the server doesn't support retrieval of mergeinfo, return an @c
  * SVN_ERR_UNSUPPORTED_FEATURE error.
@@ -2678,6 +2681,7 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
                                   svn_log_entry_receiver_t receiver,
                                   void *receiver_baton,
                                   svn_boolean_t discover_changed_paths,
+                                  const apr_array_header_t *revprops,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *pool);
 
