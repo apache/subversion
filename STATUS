@@ -75,16 +75,3 @@ Candidate changes:
      +1: pburba
 
 Approved changes:
-
- * r29922
-   Add a new SVNAllowBulkUpdates mod_dav_svn directive which toggles
-   support for send-all style update REPORT responses (versus the
-   original, and now ra_serf-employed, skelta-style ones).  This is useful
-   for security-sensitive shops that want to track the GETs of each
-   individual versioned file but can't mandate that ra_serf (which is
-   still labeled as experimental anyway) be used.
-   Notes:
-     This depends on the r30086 grouping, else it opens up the opportunity
-     for ra_neon switch operations to fail.
-   Votes:
-     +1: cmpilato, kameshj
