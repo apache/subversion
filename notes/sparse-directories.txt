@@ -1,4 +1,4 @@
-                Implementing Sparse Directory Support in SVN
+                  Sparse Directories Support in Subversion
            (a.k.a. "sparse checkouts" / "incomplete directories")
 
 Contents
@@ -106,9 +106,13 @@ Contents
    directory.  (In the future, it will also be able to contract; see
    issue #2843.)  We disallow '--depth' and '--set-depth' together.
 
-   For most commands, '-N' is a synonym for '--depth=files'.  This
-   changes the existing -N behavior, but only in trivial ways.
-   
+   The -N option has been deprecated, but still works: it simply maps
+   to one of --depth=files, --depth=empty, or --depth=immediates,
+   depending on context, for compatibility.  For most commands, it's
+   --depth=files, but for status it's --depth=immediates, and for
+   revert and add it's --depth=empty, to be compatible with the
+   varying behaviors -N had across these commands.
+
    'svn info' lists depth, iff invoked on a directory whose depth is
    not the default (depth infinity).
    
@@ -388,9 +392,8 @@ Contents
 
    On the client side, most of the svn_client.h interfaces that
    formerly took 'svn_boolean_t recurse' have been revved and their
-   successors take 'svn_depth_t depth' instead.  (The -N option is
-   deprecated, but it still works: it simply maps to --depth=files,
-   which results in the same behavior as -N used to.)
+   successors take 'svn_depth_t depth' instead.  Each old API now
+   documents how it converts 'recurse' to 'depth'.
 
    Some of this recurse-becomes-depth change has propagated down into
    libsvn_wc, which now stores a depth field in svn_wc_entry_t (and
