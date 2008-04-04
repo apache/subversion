@@ -247,6 +247,7 @@ svn_client__get_repos_root(const char **repos_root,
   const char *target_url;
   svn_boolean_t need_wc_cleanup = FALSE;
   svn_error_t *err = SVN_NO_ERROR;
+  apr_pool_t *sesspool = NULL;
 
   /* If PATH_OR_URL is a local path and PEG_REVISION keeps us looking
      locally, we'll first check PATH_OR_URL's entry for a repository
@@ -273,6 +274,7 @@ svn_client__get_repos_root(const char **repos_root,
   if (*repos_root == NULL)
     {
       svn_ra_session_t *ra_session;
+      sesspool = svn_pool_create(pool);
       if ((err = svn_client__ra_session_from_path(&ra_session,
                                                   &rev,
                                                   &target_url,
@@ -281,7 +283,7 @@ svn_client__get_repos_root(const char **repos_root,
                                                   peg_revision,
                                                   peg_revision,
                                                   ctx,
-                                                  pool)))
+                                                  sesspool)))
         goto cleanup;
 
       if ((err = svn_ra_get_repos_root(ra_session, repos_root, pool)))
@@ -289,6 +291,9 @@ svn_client__get_repos_root(const char **repos_root,
     }
 
  cleanup:
+  if (sesspool)
+    svn_pool_destroy(sesspool);
+    
   if (need_wc_cleanup)
     {
       svn_error_t *err2 = svn_wc_adm_close(adm_access);

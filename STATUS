@@ -59,11 +59,6 @@ Candidate changes:
 
 Approved changes:
 
- * r29168
-   Fix an RA session memory leak.
-   Votes:
-     +1: pburba, hwright
-
  * r29326
    Use an iterpool for temporary allocation in a loop.
    Votes:
