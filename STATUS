@@ -44,28 +44,3 @@ Candidate changes:
      +1: pburba
 
 Approved changes:
-
- * r29633
-   Correct a bug in python tests' comparison of lists.
-   Votes:
-     +1: pburba, epg
-
- * r30161
-   Fix bug in copy-on-update/ra_neon which prevents updates of nodes copied
-   with property deletion.
-   Notes:
-     Fixes serious regression, with a test.
-     Somebody more familiar with our WebDAV protocol should audit that code
-     and similar parts of serf/mod_dav_svn to make sure there aren't similar
-     problems remaining (deleting or opening nodes in a copied directory,
-     say, although current copy-on-update code doesn't send copied
-     directories).
-   Votes:
-     +1: glasser, kfogel
-
- * r30246
-   Don't discard wrapped abort_edit in cancellation editor.
-   Notes:
-     This bug has always been here; no need to hold the release for it.
-   Votes:
-     +1: epg, kfogel
