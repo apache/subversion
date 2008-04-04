@@ -70,12 +70,6 @@ Candidate changes:
 
 Approved changes:
 
- * r30237, r30239
-   Add svn:keywords to
-   contrib/client-side/svnmerge/svnmerge-migrate-history.py
-   Votes:
-     +1: blair, hwright
-
  * r29645
    Ensure svn_mergeinfo_parse() returns always returns
    SVN_ERR_MERGEINFO_PARSE_ERROR as the topmost error in a chain as the API
