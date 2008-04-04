@@ -51,10 +51,10 @@ Candidate changes:
    Votes:
      +1: glasser
 
+Approved changes:
+
  * r30249
    Fix issue #3158, Merged deletions causing non-inheritable mergeinfo in
    subsequent merges.
    Votes:
-     +1: pburba
-
-Approved changes:
+     +1: pburba,kameshj
