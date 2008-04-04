@@ -1451,6 +1451,7 @@ base_dir_entries(apr_hash_t **table_p,
                  apr_pool_t *pool)
 {
   struct dir_entries_args args;
+  apr_pool_t *iterpool;
   apr_hash_t *table;
   svn_fs_t *fs = root->fs;
   apr_hash_index_t *hi;
@@ -1461,6 +1462,8 @@ base_dir_entries(apr_hash_t **table_p,
   SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_dir_entries, &args,
                                  pool));
 
+  iterpool = svn_pool_create(pool);
+
   /* Add in the kind data. */
   for (hi = apr_hash_first(pool, table); hi; hi = apr_hash_next(hi))
     {
@@ -1468,15 +1471,19 @@ base_dir_entries(apr_hash_t **table_p,
       struct node_kind_args nk_args;
       void *val;
 
+      svn_pool_clear(iterpool);
+
       /* KEY will be the entry name in ancestor (about which we
-         simple don't care), VAL the dirent. */
+         simply don't care), VAL the dirent. */
       apr_hash_this(hi, NULL, NULL, &val);
       entry = val;
       nk_args.id = entry->id;
       SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_node_kind, &nk_args,
-                                     pool));
+                                     iterpool));
       entry->kind = nk_args.kind;
     }
+
+  svn_pool_destroy(iterpool);
 
   *table_p = table;
   return SVN_NO_ERROR;

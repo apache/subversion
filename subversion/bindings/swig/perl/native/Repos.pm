@@ -260,6 +260,7 @@ for more details.
 push @methods,
      qw( version open create delete hotcopy recover3 recover2
          recover db_logfiles path db_env conf_dir svnserve_conf
+         get_commit_editor get_commit_editor2 fs_commit_txn
          lock_dir db_lockfile db_logs_lockfile hook_dir
          pre_revprop_change_hook pre_lock_hook pre_unlock_hook
          begin_report2 begin_report link_path3 link_path2 link_path

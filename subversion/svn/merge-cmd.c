@@ -54,8 +54,57 @@ svn_cl__merge(apr_getopt_t *os,
                                                       opt_state->targets, 
                                                       pool));
 
-  /* Parse at least one, and possible two, sources. */
-  if (targets->nelts >= 1)
+  /* For now, we require at least one source.  That may change in
+     future versions of Subversion, for example if we have support for
+     negated mergeinfo.  See this IRC conversation:
+
+       <bhuvan>   kfogel: yeah, i think you are correct; we should
+                  specify the source url
+
+       <kfogel>   bhuvan: I'll change the help output and propose for
+                  backport.  Thanks.
+
+       <bhuvan>   kfogel: np; while we are at it, 'svn merge' simply
+                  returns nothing; i think we should say: """svn: Not
+                  enough arguments provided; try 'svn help' for more
+                  info""" 
+
+       <kfogel>   good idea
+
+       <kfogel>   (in the future, 'svn merge' might actually do
+                  something, but that's all the more reason to make
+                  sure it errors now)
+
+       <cmpilato> actually, i'm pretty sure 'svn merge' does something
+
+       <cmpilato> it says "please merge any unmerged changes from
+                  myself to myself."
+
+       <cmpilato> :-)
+
+       <kfogel>   har har
+
+       <cmpilato> kfogel: i was serious.
+
+       <kfogel>   cmpilato: urrr, uh.  Is that meaningful?  Is there
+                  ever a reason for a user to run it?
+
+       <cmpilato> kfogel: not while we don't have support for negated
+                  mergeinfo.
+
+       <kfogel>   cmpilato: do you concur that until it does something
+                  useful it should error?
+
+       <cmpilato> kfogel: yup.
+
+       <kfogel>   cool
+  */
+  if (targets->nelts < 1)
+    {
+      return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0,
+                              _("Merge source required"));
+    }
+  else  /* Parse at least one, and possible two, sources. */
     {
       SVN_ERR(svn_opt_parse_path(&peg_revision1, &sourcepath1,
                                  APR_ARRAY_IDX(targets, 0, const char *),
@@ -66,8 +115,8 @@ svn_cl__merge(apr_getopt_t *os,
                                    pool));
     }
 
-  /* If nothing (ie, "."), a single source, or a source URL plus WC path is
-     provided, then we don't have two distinct sources. */
+  /* We could have one or two sources.  Deliberately written to stay
+     correct even if we someday permit implied merge source. */
   if (targets->nelts <= 1)
     {
       two_sources_specified = FALSE;

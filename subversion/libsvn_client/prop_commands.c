@@ -87,6 +87,8 @@ struct propset_walk_baton
   svn_wc_adm_access_t *base_access;  /* Access for the tree being walked. */
   svn_boolean_t force;  /* True iff force was passed. */
   apr_hash_t *changelist_hash;  /* Keys are changelists to filter on. */
+  svn_wc_notify_func2_t notify_func;
+  void *notify_baton;
 };
 
 /* An entries-walk callback for svn_client_propset3.
@@ -131,6 +133,16 @@ propset_walk_cb(const char *path,
       if (err->apr_err != SVN_ERR_ILLEGAL_TARGET)
         return err;
       svn_error_clear(err);
+    }
+
+  /* Notify we updated a property value */
+  if (wb->notify_func)
+    {
+      svn_wc_notify_t *notify =
+          svn_wc_create_notify(path, svn_wc_notify_property_updated,
+                               pool);
+
+      (*wb->notify_func)(wb->notify_baton, notify, pool);
     }
 
   return SVN_NO_ERROR;
@@ -394,6 +406,8 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
           wb.propval = propval;
           wb.force = skip_checks;
           wb.changelist_hash = changelist_hash;
+          wb.notify_func = ctx->notify_func2;
+          wb.notify_baton = ctx->notify_baton2;
           SVN_ERR(svn_wc_walk_entries3(target, adm_access, &walk_callbacks, 
                                        &wb, depth, FALSE, ctx->cancel_func, 
                                        ctx->cancel_baton, pool));

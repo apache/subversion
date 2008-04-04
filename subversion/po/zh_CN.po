@@ -36,7 +36,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.5.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2008-03-09 16:01+0800\n"
+"POT-Creation-Date: 2008-03-13 14:58+0800\n"
 "PO-Revision-Date: 2008-03-09 15:37+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
@@ -1227,13 +1227,13 @@ msgstr "“%s” 已有本地修改"
 
 #: ../libsvn_client/diff.c:136
 #, c-format
-msgid "   Reverted %s:r%s%s"
-msgstr "   已恢复 %s:r%s%s"
+msgid "   Reverse-merged %s:r%s%s"
+msgstr "   已经撤销合并 %s:r%s%s"
 
 #: ../libsvn_client/diff.c:155
 #, c-format
 msgid "   Merged %s:r%s%s"
-msgstr "   已合并 %s:r%s%s"
+msgstr "   已经合并 %s:r%s%s"
 
 #: ../libsvn_client/diff.c:165 ../libsvn_diff/diff_file.c:1203
 #: ../libsvn_diff/diff_file.c:1215
@@ -1276,8 +1276,8 @@ msgstr "%s\t（工作副本）"
 msgid "Cannot display: file marked as a binary type.%s"
 msgstr "无法显示: 文件标记为二进制类型。%s"
 
-#: ../libsvn_client/diff.c:894 ../libsvn_client/merge.c:3776
-#: ../libsvn_client/merge.c:5096
+#: ../libsvn_client/diff.c:894 ../libsvn_client/merge.c:3785
+#: ../libsvn_client/merge.c:5123
 msgid "Not all required revisions are specified"
 msgstr "没有全部提供需要的版本"
 
@@ -1382,9 +1382,9 @@ msgstr "该版本没有 URL “%s”"
 msgid "No common parent found, unable to operate on disjoint arguments"
 msgstr "没有找到公共父节点，不能在分离的参数上操作"
 
-#: ../libsvn_client/locking_commands.c:261 ../libsvn_client/merge.c:5113
-#: ../libsvn_client/merge.c:5119 ../libsvn_client/merge.c:5673
-#: ../libsvn_client/merge.c:5829 ../libsvn_client/ra.c:386
+#: ../libsvn_client/locking_commands.c:261 ../libsvn_client/merge.c:5140
+#: ../libsvn_client/merge.c:5146 ../libsvn_client/merge.c:5700
+#: ../libsvn_client/merge.c:5856 ../libsvn_client/ra.c:386
 #: ../libsvn_client/ra.c:423 ../libsvn_client/ra.c:626
 #, c-format
 msgid "'%s' has no URL"
@@ -1459,11 +1459,11 @@ msgstr ".merge-left.r%ld"
 msgid ".merge-right.r%ld"
 msgstr ".merge-right.r%ld"
 
-#: ../libsvn_client/merge.c:1667
+#: ../libsvn_client/merge.c:1676
 msgid "Cannot reverse-merge a range from a path's own future history; try updating first"
 msgstr "不能从路径的未来历史中反向合并范围；请先更新"
 
-#: ../libsvn_client/merge.c:2200
+#: ../libsvn_client/merge.c:2209
 #, c-format
 msgid ""
 "One or more conflicts were produced while merging r%ld:%ld into\n"
@@ -1474,41 +1474,45 @@ msgstr ""
 "当合并 r%ld:%ld 到 “%s” 时出现了一个或更多的冲突\n"
 "请解决所有冲突后，再次运行合并，处理剩余的未合并版本"
 
-#: ../libsvn_client/merge.c:4764
+#: ../libsvn_client/merge.c:4771
 msgid "Use of two URLs is not compatible with mergeinfo modification"
 msgstr "使用两个 URL 与合并信息修改不兼容"
 
-#: ../libsvn_client/merge.c:5340
+#: ../libsvn_client/merge.c:4778 ../libsvn_client/merge.c:5061
+msgid "Merge from foreign repository is not compatible with mergeinfo modification"
+msgstr "从外部版本库合并与合并信息修改不兼容"
+
+#: ../libsvn_client/merge.c:5367
 msgid "Cannot reintegrate into a working copy with a switched subtree"
 msgstr "不能复兴到包含已经切换子目录的工作副本"
 
-#: ../libsvn_client/merge.c:5345
+#: ../libsvn_client/merge.c:5372
 msgid "Cannot reintegrate into a working copy not entirely at infinite depth"
 msgstr "不能复兴到非全部无限制深度的工作副本"
 
-#: ../libsvn_client/merge.c:5350
+#: ../libsvn_client/merge.c:5377
 msgid "Cannot reintegrate into a working copy that has local modifications"
 msgstr "不能复兴到有本地修改的工作副本"
 
-#: ../libsvn_client/merge.c:5356
+#: ../libsvn_client/merge.c:5383
 msgid "Cannot determine revision of working copy"
 msgstr "不能确定工作副本的版本"
 
-#: ../libsvn_client/merge.c:5360
+#: ../libsvn_client/merge.c:5387
 msgid "Cannot reintegrate into mixed-revision working copy; try updating first"
 msgstr "不能复兴到有混合版本的工作副本；请先更新"
 
-#: ../libsvn_client/merge.c:5427
+#: ../libsvn_client/merge.c:5454
 #, c-format
 msgid "At least one revision (r%ld) not yet merged from '%s'"
 msgstr "至少有一个版本(r%ld)没有自“%s”合并"
 
-#: ../libsvn_client/merge.c:5568 ../libsvn_client/merge.c:5732
+#: ../libsvn_client/merge.c:5595 ../libsvn_client/merge.c:5759
 #, c-format
 msgid "'%s@%ld' must be ancestrally related to '%s@%ld'"
 msgstr "“%s@%ld”必须与“%s@%ld”有祖先关系"
 
-#: ../libsvn_client/merge.c:5691
+#: ../libsvn_client/merge.c:5718
 #, c-format
 msgid "'%s' must be from the same repository as '%s'"
 msgstr "“%s”必须与“%s”在同一个版本库中"
@@ -2496,8 +2500,8 @@ msgid "Invalid revision number '%ld'"
 msgstr "无效的版本号“%ld”"
 
 #: ../libsvn_fs_fs/fs_fs.c:1465 ../libsvn_fs_fs/fs_fs.c:2145
-#: ../libsvn_fs_fs/fs_fs.c:2237 ../libsvn_repos/log.c:1421
-#: ../libsvn_repos/log.c:1425
+#: ../libsvn_fs_fs/fs_fs.c:2237 ../libsvn_repos/log.c:1422
+#: ../libsvn_repos/log.c:1426
 #, c-format
 msgid "No such revision %ld"
 msgstr "没有版本 %ld"
@@ -3234,25 +3238,25 @@ msgstr "创建网络套接字失败"
 msgid "SSL is not supported"
 msgstr "不支持 SSL"
 
-#: ../libsvn_ra_neon/session.c:1167
+#: ../libsvn_ra_neon/session.c:1177
 #, c-format
 msgid "Invalid config: unable to load certificate file '%s'"
 msgstr "无效的配置: 无法加载证书文件“%s”"
 
-#: ../libsvn_ra_neon/session.c:1195
+#: ../libsvn_ra_neon/session.c:1205
 #, c-format
 msgid "Invalid config: unable to load PKCS#11 provider '%s'"
 msgstr "无效的配置: 无法加载 PKCS#11 提供者“%s”"
 
-#: ../libsvn_ra_neon/session.c:1320 ../libsvn_ra_serf/serf.c:1107
+#: ../libsvn_ra_neon/session.c:1330 ../libsvn_ra_serf/serf.c:1107
 msgid "The UUID property was not found on the resource or any of its parents"
 msgstr "无法在本资源或其任何父项目中找到UUID属性"
 
-#: ../libsvn_ra_neon/session.c:1328
+#: ../libsvn_ra_neon/session.c:1338
 msgid "Please upgrade the server to 0.19 or later"
 msgstr "请将服务器升级至0.19或更新的版本"
 
-#: ../libsvn_ra_neon/session.c:1399
+#: ../libsvn_ra_neon/session.c:1409
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_neon"
 msgstr "不支持的 ra_neon RA 加载器版本(%d)"
@@ -3327,7 +3331,7 @@ msgstr "读取请求 %s 响应的脱机数据时出现错误"
 msgid "The %s request returned invalid XML in the response: %s (%s)"
 msgstr "%s 请求的响应返回无效XML: %s (%s)"
 
-#: ../libsvn_ra_serf/auth.c:268 ../libsvn_ra_serf/auth.c:274
+#: ../libsvn_ra_serf/auth.c:275 ../libsvn_ra_serf/auth.c:281
 msgid "Missing 'realm' attribute in Authorization header."
 msgstr "认证头丢失属性“realm”"
 
@@ -3460,7 +3464,7 @@ msgstr "不支持ra_serf RA加载器版本 %d"
 msgid "GET request failed: %d %s"
 msgstr "GET 请求失败: %d %s"
 
-#: ../libsvn_ra_serf/update.c:2296
+#: ../libsvn_ra_serf/update.c:2298
 #, c-format
 msgid "Error retrieving REPORT (%d)"
 msgstr "获取报告出错(%d)"
@@ -6193,7 +6197,7 @@ msgstr ""
 "Subversion 是版本控制工具。\n"
 "欲取得详细资料，请参阅 http://subversion.tigris.org/\n"
 
-#: ../svn/help-cmd.c:65 ../svnsync/main.c:1747
+#: ../svn/help-cmd.c:65 ../svnsync/main.c:1786
 msgid ""
 "The following repository access (RA) modules are available:\n"
 "\n"
@@ -7244,7 +7248,7 @@ msgid ""
 "Apply the differences between two sources to a working copy path.\n"
 "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
 "       2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
-"       3. merge [[-c M]... | [-r N:M]...] [SOURCE[@REV] [WCPATH]]\n"
+"       3. merge [[-c M[,N]]... | [-r N:M]...] [SOURCE[@REV] [WCPATH]]\n"
 "\n"
 "  1. In the first form, the source URLs are specified at revisions\n"
 "     N and M.  These are the two sources to be compared.  The revisions\n"
@@ -7278,7 +7282,7 @@ msgstr ""
 "将两个源差异应用至工作副本路径。\n"
 "用法: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
 "      2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
-"      3. merge [[-c M]... | [-r N:M]...] [SOURCE[@REV] [WCPATH]]\n"
+"      3. merge [[-c M[,N]]... | [-r N:M]...] [SOURCE[@REV] [WCPATH]]\n"
 "\n"
 "  1、第一种形式中，源 URL 的版本 N 与 M 作为比较的来源。如果没有指定版本，默认\n"
 "     为 HEAD。\n"
@@ -8230,7 +8234,7 @@ msgstr "删除           %s\n"
 msgid "Replacing      %s\n"
 msgstr "替换           %s\n"
 
-#: ../svn/notify.c:374 ../svnsync/main.c:901
+#: ../svn/notify.c:374 ../svnsync/main.c:906
 #, c-format
 msgid "Transmitting file data "
 msgstr "传输文件数据"
@@ -10085,57 +10089,57 @@ msgstr "当版本库有内容时不能初始化"
 msgid "Destination repository is already synchronizing from '%s'"
 msgstr "目标版本库已经与“%s”同步"
 
-#: ../svnsync/main.c:697 ../svnsync/main.c:700 ../svnsync/main.c:1566
-#: ../svnsync/main.c:1716
+#: ../svnsync/main.c:697 ../svnsync/main.c:700 ../svnsync/main.c:1605
+#: ../svnsync/main.c:1755
 #, c-format
 msgid "Path '%s' is not a URL"
 msgstr "路径“%s”不是URL"
 
-#: ../svnsync/main.c:1169
+#: ../svnsync/main.c:1208
 #, c-format
 msgid "Committed revision %ld.\n"
 msgstr "已提交版本 %ld。\n"
 
-#: ../svnsync/main.c:1210
+#: ../svnsync/main.c:1249
 msgid "Destination repository has not been initialized"
 msgstr "目标版本库没有初始化"
 
-#: ../svnsync/main.c:1223
+#: ../svnsync/main.c:1262
 #, c-format
 msgid "UUID of source repository (%s) does not match expected UUID (%s)"
 msgstr "源版本库的UUID(%s)与期望的UUID(%s)不匹配"
 
-#: ../svnsync/main.c:1374
+#: ../svnsync/main.c:1413
 #, c-format
 msgid "Commit created rev %ld but should have created %ld"
 msgstr "提交创建版本 %ld，应该创建版本 %ld"
 
-#: ../svnsync/main.c:1476
+#: ../svnsync/main.c:1515
 #, c-format
 msgid "Revision being currently copied (%ld), last merged revision (%ld), and destination HEAD (%ld) are inconsistent; have you committed to the destination without using svnsync?"
 msgstr "当前复制版本(%ld), 最后合并版本(%ld), 和目标 HEAD (%ld) 不一致；你是否使用非svnsync方法提交到目标版本库？"
 
-#: ../svnsync/main.c:1513
+#: ../svnsync/main.c:1552
 #, c-format
 msgid "Destination HEAD (%ld) is not the last merged revision (%ld); have you committed to the destination without using svnsync?"
 msgstr "目标 HEAD (%ld)不是最后合并版本(%ld)；你是否使用非 svnsync 方法提交到目标版本库？"
 
-#: ../svnsync/main.c:1609 ../svnsync/main.c:1614
+#: ../svnsync/main.c:1648 ../svnsync/main.c:1653
 #, c-format
 msgid "Cannot copy revprops for a revision (%ld) that has not been synchronized yet"
 msgstr "不能在尚未同步时复制版本(%ld)的 revprops"
 
-#: ../svnsync/main.c:1666
+#: ../svnsync/main.c:1705
 #, c-format
 msgid "'%s' is not a valid revision range"
 msgstr "“%s”不是有效的版本范围"
 
-#: ../svnsync/main.c:1680 ../svnsync/main.c:1700
+#: ../svnsync/main.c:1719 ../svnsync/main.c:1739
 #, c-format
 msgid "Invalid revision number (%ld)"
 msgstr "无效的版本号 (%ld)"
 
-#: ../svnsync/main.c:1740
+#: ../svnsync/main.c:1779
 msgid ""
 "general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
 "Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
@@ -10149,11 +10153,11 @@ msgstr ""
 "\n"
 "可用的子命令: \n"
 
-#: ../svnsync/main.c:1902
+#: ../svnsync/main.c:1941
 msgid "Cannot use --username or --password with any of --source-username, --source-password, --sync-username, or --sync-password.\n"
 msgstr "不能将 --username 或 --password 与 --source-username, --source-password, --sync-username, 或 --sync-password 一起使用。\n"
 
-#: ../svnsync/main.c:1982
+#: ../svnsync/main.c:2021
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -10162,7 +10166,7 @@ msgstr ""
 "子命令“%s”不接受选项“%s”\n"
 "使用“svnsync help %s”得到用法。\n"
 
-#: ../svnsync/main.c:2054
+#: ../svnsync/main.c:2093
 msgid "Try 'svnsync help' for more info"
 msgstr "请使用 “svnsync help” 以得到更多信息"
 

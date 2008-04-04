@@ -477,16 +477,15 @@ svn_ra_neon__unlock(svn_ra_session_t *session,
 
 
 svn_error_t *
-svn_ra_neon__get_lock(svn_ra_session_t *session,
-                      svn_lock_t **lock,
-                      const char *path,
-                      apr_pool_t *pool)
+svn_ra_neon__get_lock_internal(svn_ra_neon__session_t *ras,
+                               svn_lock_t **lock,
+                               const char *path,
+                               apr_pool_t *pool)
 {
   const char *url;
   svn_string_t fs_path;
   svn_error_t *err;
   ne_uri uri;
-  svn_ra_neon__session_t *ras = session->priv;
   lock_baton_t *lrb = apr_pcalloc(pool, sizeof(*lrb));
   svn_ra_neon__request_t *req;
   ne_xml_parser *lck_parser;
@@ -537,4 +536,14 @@ svn_ra_neon__get_lock(svn_ra_session_t *session,
  cleanup:
   svn_ra_neon__request_destroy(req);
   return err;
+}
+
+
+svn_error_t *
+svn_ra_neon__get_lock(svn_ra_session_t *session,
+                      svn_lock_t **lock,
+                      const char *path,
+                      apr_pool_t *pool)
+{
+  return svn_ra_neon__get_lock_internal(session->priv, lock, path, pool);
 }

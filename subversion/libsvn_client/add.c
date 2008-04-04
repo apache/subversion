@@ -34,6 +34,8 @@
 #include "svn_io.h"
 #include "svn_config.h"
 #include "svn_props.h"
+#include "svn_hash.h"
+#include "svn_sorts.h"
 #include "client.h"
 
 #include "svn_private_config.h"
@@ -636,6 +638,7 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
   const char *log_msg;
   apr_hash_t *revprop_table;
   apr_array_header_t *targets;
+  apr_hash_t *targets_hash;
   svn_error_t *err;
   const char *common;
   int i;
@@ -667,6 +670,8 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
 
   /* Condense our list of mkdir targets. */
   SVN_ERR(svn_path_condense_targets(&common, &targets, urls, FALSE, pool));
+  SVN_ERR(svn_hash_from_cstring_keys(&targets_hash, targets, pool));
+  SVN_ERR(svn_hash_keys(&targets, targets_hash, pool));
 
   if (! targets->nelts)
     {
@@ -702,6 +707,8 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
             }
         }
     }
+  qsort(targets->elts, targets->nelts, targets->elt_size, 
+        svn_sort_compare_paths);
 
   /* Create new commit items and add them to the array. */
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))

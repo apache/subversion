@@ -49,9 +49,9 @@ The Windows binary packages are also available:
     http://subversion.tigris.org/downloads/svn-win32-@VERSION@_pdb.zip
     http://subversion.tigris.org/downloads/svn-win32-@VERSION@_pl.zip
 
-Release notes for the 1.4.x release series may be found at:
+Release notes for the @MAJOR_MINOR@.x release series may be found at:
 
-    http://subversion.tigris.org/svn_1.4_releasenotes.html
+    http://subversion.tigris.org/svn_@MAJOR_MINOR@_releasenotes.html
 
 You can find list of changes between @VERSION@ and earlier versions at:
 
@@ -113,9 +113,9 @@ ann_html = """\
 <dd>http://subversion.tigris.org/downloads/svn-win32-@VERSION@_pl.zip</dd>
 </dl>
 
-<p>Release notes for the 1.4.x release series may be found at:</p>
+<p>Release notes for the @MAJOR_MINOR@.x release series may be found at:</p>
 
-<dl><dd>http://subversion.tigris.org/svn_1.4_releasenotes.html</dd></dl>
+<dl><dd>http://subversion.tigris.org/svn_@MAJOR_MINOR@_releasenotes.html</dd></dl>
 
 <p>You can find list of changes between @VERSION@ and earlier versions at:</p>
 
@@ -150,6 +150,8 @@ def main():
 
     ann_text = ann_text.replace('@VERSION@', version)
     ann_html = ann_html.replace('@VERSION@', version)
+    ann_text = ann_text.replace('@MAJOR_MINOR@', version[0:3])
+    ann_html = ann_html.replace('@MAJOR_MINOR@', version[0:3])
     ann_text = ann_text.replace('@MD5SUMS@', fmtsums_text(md5sums))
     ann_text = ann_text.replace('@SHA1SUMS@', fmtsums_text(sha1sums))
     ann_html = ann_html.replace('@MD5SUMS@', fmtsums_html(md5sums))

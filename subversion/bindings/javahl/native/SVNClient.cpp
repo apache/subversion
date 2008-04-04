@@ -483,8 +483,8 @@ void SVNClient::cleanup(const char *path)
     SVN_JNI_ERR(svn_client_cleanup(intPath.c_str(), ctx, requestPool.pool()),);
 }
 
-void SVNClient::resolved(const char *path, svn_depth_t depth,
-                         svn_wc_conflict_choice_t choice)
+void SVNClient::resolve(const char *path, svn_depth_t depth,
+                        svn_wc_conflict_choice_t choice)
 {
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -494,8 +494,8 @@ void SVNClient::resolved(const char *path, svn_depth_t depth,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_resolved2(intPath.c_str(), depth, choice,
-                                     ctx, requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_resolve(intPath.c_str(), depth, choice,
+                                   ctx, requestPool.pool()), );
 }
 
 jlong SVNClient::doExport(const char *srcPath, const char *destPath,
@@ -834,6 +834,60 @@ SVNClient::getAvailableMerges(const char *target, Revision &pegRevision,
 
     // Transform ranges into a Java array of RevisionRange objects.
     return makeJRevisionRangeArray(ranges);
+}
+
+void SVNClient::getMergeinfoLog(int type, const char *pathOrURL,
+                                Revision &pegRevision,
+                                const char *mergeSourceURL,
+                                Revision &srcPegRevision,
+                                bool discoverChangedPaths,
+                                LogMessageCallback *callback)
+{
+    Pool requestPool;
+    JNIEnv *env = JNIUtil::getEnv();
+
+    svn_client_ctx_t *ctx = getContext(NULL);
+    if (ctx == NULL)
+        return;
+
+    SVN_JNI_NULL_PTR_EX(pathOrURL, "path or url", );
+    Path urlPath(pathOrURL);
+    SVN_JNI_ERR(urlPath.error_occured(), );
+
+    SVN_JNI_NULL_PTR_EX(mergeSourceURL, "merge source url", );
+    Path srcURL(mergeSourceURL);
+    SVN_JNI_ERR(srcURL.error_occured(), );
+
+    switch (type)
+      {
+        case 0:
+            SVN_JNI_ERR(
+                svn_client_mergeinfo_log_eligible(urlPath.c_str(),
+                                                  pegRevision.revision(),
+                                                  srcURL.c_str(),
+                                                  srcPegRevision.revision(),
+                                                  LogMessageCallback::callback,
+                                                  callback,
+                                                  discoverChangedPaths,
+                                                  ctx,
+                                                  requestPool.pool()), );
+            return;
+
+        case 1:
+            SVN_JNI_ERR(
+                svn_client_mergeinfo_log_merged(urlPath.c_str(),
+                                                pegRevision.revision(),
+                                                srcURL.c_str(),
+                                                srcPegRevision.revision(),
+                                                LogMessageCallback::callback,
+                                                callback,
+                                                discoverChangedPaths,
+                                                ctx,
+                                                requestPool.pool()), );
+            return;
+      }
+
+    return;
 }
 
 /**
