@@ -185,6 +185,13 @@ do_test_num(const char *progname,
   /* Do test */
   err = func(&msg, msg_only || skip, opts, pool);
 
+  if (err && err->apr_err == SVN_ERR_TEST_SKIPPED)
+    {
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+      skip = TRUE;
+    }
+
   /* Failure means unexpected results -- FAIL or XPASS. */
   test_failed = ((err != SVN_NO_ERROR) != (xfail != 0));
 
