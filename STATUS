@@ -20,11 +20,6 @@ Candidate changes:
    Votes:
      +1: blair
 
- * r29665, r29666, r29741, r29767, r29815, r29854, r30180, r30181
-   Bring svnmerge.py up to date with the version in trunk.
-   Votes:
-     +1: blair
-
  * r30129
    Fix a bug that Svn::Ra::Session#open doesn't set callback_baton correctly.
    Votes:
@@ -75,3 +70,8 @@ Candidate changes:
      +1: pburba
 
 Approved changes:
+
+ * r29665, r29666, r29741, r29767, r29815, r29854, r30180, r30181
+   Bring svnmerge.py up to date with the version in trunk.
+   Votes:
+     +1: blair, cmpilato
