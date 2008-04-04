@@ -68,10 +68,3 @@ Candidate changes:
      +1: pburba
 
 Approved changes:
-
- * r30210
-   Call abort_edit upon editor failure in the repos reporter.
-   Notes:
-     This bug has always been here; no need to hold the release for it.
-   Votes:
-     +1: epg, cmpilato
