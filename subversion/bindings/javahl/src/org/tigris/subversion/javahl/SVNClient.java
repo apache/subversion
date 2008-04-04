@@ -784,6 +784,17 @@ public class SVNClient implements SVNClientInterface
         throws SubversionException;
 
     /**
+     * @since 1.5
+     */
+    public native void getMergeinfoLog(int kind, String pathOrUrl,
+                                       Revision pegRevision,
+                                       String mergeSourceUrl,
+                                       Revision srcPegRevision,
+                                       boolean discoverChangedPaths,
+                                       LogMessageCallback callback)
+        throws SubversionException;
+
+    /**
      * @deprecated Use {@link #diff(String, Revision, String, Revision,
      *                              String, String, int, boolean, boolean,
      *                              boolean)} instead.

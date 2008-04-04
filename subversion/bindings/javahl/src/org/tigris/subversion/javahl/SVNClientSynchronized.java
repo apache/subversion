@@ -1032,6 +1032,24 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * @since 1.5
+     */
+    public void getMergeinfoLog(int kind, String pathOrUrl,
+                                Revision pegRevision, String mergeSourceUrl,
+                                Revision srcPegRevision,
+                                boolean discoverChangedPaths,
+                                LogMessageCallback callback)
+        throws SubversionException
+    {
+        synchronized (clazz)
+        {
+            worker.getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
+                                   srcPegRevision, discoverChangedPaths,
+                                   callback);
+        }
+    }
+
+    /**
      * @deprecated Use {@link #diff(String, Revision, String, Revision,
      *                              String, String, int, boolean, boolean,
      *                              boolean)} instead.
