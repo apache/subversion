@@ -70,13 +70,6 @@ Candidate changes:
 
 Approved changes:
 
- * r29645
-   Ensure svn_mergeinfo_parse() returns always returns
-   SVN_ERR_MERGEINFO_PARSE_ERROR as the topmost error in a chain as the API
-   promises.
-   Votes:
-     +1: pburba, hwright
-
  * r29965
    Fix spurious Win32 failure of diff_tests.py 47.
    Votes:

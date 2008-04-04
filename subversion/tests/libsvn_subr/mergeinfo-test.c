@@ -246,7 +246,7 @@ test_parse_combine_rangeinfo(const char **msg,
 }
 
 
-#define NBR_BROKEN_MERGEINFO_VALS 35
+#define NBR_BROKEN_MERGEINFO_VALS 38
 /* Invalid mergeinfo values. */
 static const char * const broken_mergeinfo_vals[NBR_BROKEN_MERGEINFO_VALS] =
   {
@@ -292,7 +292,11 @@ static const char * const broken_mergeinfo_vals[NBR_BROKEN_MERGEINFO_VALS] =
     "/trunk:",
     "/trunk:2-9\n/branch:",
     /* No path */
-    ":1-3"
+    ":1-3",
+    /* Invalid revisions */
+    "trunk:a-3",
+    "branch:3-four",
+    "trunk:yadayadayada"
   };
 
 static svn_error_t *
@@ -313,10 +317,21 @@ test_parse_broken_mergeinfo(const char **msg,
     {
       err = svn_mergeinfo_parse(&info1, broken_mergeinfo_vals[i], pool);
       if (err == SVN_NO_ERROR)
-        return fail(pool, "svn_mergeinfo_parse (%s) failed to detect an error",
-                    broken_mergeinfo_vals[i]);
+        {
+          return fail(pool, "svn_mergeinfo_parse (%s) failed to detect an error",
+                      broken_mergeinfo_vals[i]);
+        }
+      else if (err->apr_err != SVN_ERR_MERGEINFO_PARSE_ERROR)
+        {
+          svn_error_clear(err);
+          return fail(pool, "svn_mergeinfo_parse (%s) returned some error other"
+                      " than SVN_ERR_MERGEINFO_PARSE_ERROR",
+                      broken_mergeinfo_vals[i]);
+        }
       else
-        svn_error_clear(err);
+        {
+          svn_error_clear(err);
+        }
     }
 
   return SVN_NO_ERROR;

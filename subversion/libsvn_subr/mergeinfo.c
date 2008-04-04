@@ -588,8 +588,17 @@ svn_mergeinfo_parse(svn_mergeinfo_t *mergeinfo,
                     const char *input,
                     apr_pool_t *pool)
 {
+  svn_error_t *err;
+
   *mergeinfo = apr_hash_make(pool);
-  return parse_top(&input, input + strlen(input), *mergeinfo, pool);
+  err = parse_top(&input, input + strlen(input), *mergeinfo, pool);
+
+  /* Always return SVN_ERR_MERGEINFO_PARSE_ERROR as the topmost error. */
+  if (err && err->apr_err != SVN_ERR_MERGEINFO_PARSE_ERROR)
+    err = svn_error_createf(SVN_ERR_MERGEINFO_PARSE_ERROR, err,
+                            _("Could not parse mergeinfo string '%s'"),
+                            input);
+  return err;
 }
 
 
