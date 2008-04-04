@@ -792,7 +792,7 @@ public class SVNClient implements SVNClientInterface
                                        Revision srcPegRevision,
                                        boolean discoverChangedPaths,
                                        LogMessageCallback callback)
-        throws SubversionException;
+        throws ClientException;
 
     /**
      * @deprecated Use {@link #diff(String, Revision, String, Revision,
