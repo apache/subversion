@@ -61,6 +61,13 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r30246
+   Don't discard wrapped abort_edit in cancellation editor.
+   Notes:
+     This bug has always been here; no need to hold the release for it.
+   Votes:
+     +1: epg
+
 Approved changes:
 
  * r29786
