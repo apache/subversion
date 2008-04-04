@@ -180,15 +180,6 @@ check_scheme_match(svn_wc_adm_access_t *adm_access, const char *url)
 
 /*** Repos-Diff Editor Callbacks ***/
 
-
-/* Wrapper around svn_string_t, see merge_cmd_baton_t's
-   working_mergeinfo member. */
-typedef struct {
-  /* Working mergeinfo for a path prior to a merge.  May be NULL
-     if the path has no working mergeinfo. */
-  svn_string_t *working_mergeinfo_propval;
-} working_mergeinfo_t;
-
 typedef struct merge_cmd_baton_t {
   svn_boolean_t force;
   svn_boolean_t dry_run;
@@ -4400,12 +4391,7 @@ do_directory_merge(const char *url1,
                                         pool));
     }
 
-  /* Record mergeinfo where appropriate.
-
-     NOTE: any paths in CHILDREN_WITH_MERGEINFO which were switched
-     but had no explicit working mergeinfo at the start of the call,
-     will have some at the end of it if merge is not a no-op merge.
-  */
+  /* Record mergeinfo where appropriate.*/
   iterpool = svn_pool_create(pool);
   if (record_mergeinfo)
     {
