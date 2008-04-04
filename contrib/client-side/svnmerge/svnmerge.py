@@ -68,7 +68,7 @@
 #  A "target" is generally user-specified, and may be a working copy or
 #  a URL.
 
-import sys, os, getopt, re, types, tempfile, time, popen2
+import sys, os, getopt, re, types, tempfile, time, popen2, locale
 from bisect import bisect
 from xml.dom import pulldom
 
@@ -89,8 +89,16 @@ LOG_SEPARATOR_RE = re.compile('^((%s)+)' % re.escape(LOG_SEPARATOR),
 # Each line of the embedded log messages will be prefixed by LOG_LINE_PREFIX.
 LOG_LINE_PREFIX = 2 * ' '
 
-# We expect non-localized output from SVN
-os.environ["LC_ALL"] = "C"
+# Set python to the default locale as per environment settings, same as svn
+# TODO we should really parse config and if log-encoding is specified, set
+# the locale to match that encoding
+locale.setlocale(locale.LC_ALL, '')
+
+# We want the svn output (such as svn info) to be non-localized
+# Using LC_MESSAGES should not affect localized output of svn log, for example
+if os.environ.has_key("LC_ALL"):
+    del os.environ["LC_ALL"]
+os.environ["LC_MESSAGES"] = "C"
 
 ###############################################################################
 # Support for older Python versions
@@ -207,6 +215,13 @@ def prefix_lines(prefix, lines):
     The input must be terminated by a newline."""
     assert lines[-1] == "\n"
     return prefix + lines[:-1].replace("\n", "\n"+prefix) + "\n"
+
+def recode_stdout_to_file(s):
+    if locale.getdefaultlocale()[1] is None or not hasattr(sys.stdout, "encoding") \
+            or sys.stdout.encoding is None:
+        return s
+    u = s.decode(sys.stdout.encoding)
+    return u.encode(locale.getdefaultlocale()[1])
 
 class LaunchError(Exception):
     """Signal a failure in execution of an external command. Parameters are the
@@ -748,7 +763,7 @@ def set_blocked_revs(dir, source_pathid, revs):
 
 def is_url(url):
     """Check if url is a valid url."""
-    return re.search(r"^[a-zA-Z][-+\.\w]*://", url) is not None
+    return re.search(r"^[a-zA-Z][-+\.\w]*://[^\s]+$", url) is not None
 
 def is_wc(dir):
     """Check if a directory is a working copy."""
@@ -855,7 +870,7 @@ class SvnLogParser:
         def __init__(self, xmlnode):
             self.n = xmlnode
         def revision(self):
-            return self.n.getAttribute("revision")
+            return int(self.n.getAttribute("revision"))
         def author(self):
             return self.n.getElementsByTagName("author")[0].firstChild.data
         def paths(self):
@@ -933,7 +948,7 @@ def get_commit_log(url, revnum):
     """Return the log message for a specific integer revision
     number."""
     out = launchsvn("log --incremental -r%d %s" % (revnum, url))
-    return "".join(out[1:])
+    return recode_stdout_to_file("".join(out[1:]))
 
 def construct_merged_log_message(url, revnums):
     """Return a commit log message containing all the commit messages
@@ -1009,6 +1024,17 @@ def check_old_prop_version(branch_target, branch_props):
         err_msg += 'svn propset "%s" "%s" "%s"' % \
                    (opts["prop"], format_merge_props(fixed), branch_target)
         error(err_msg)
+
+def should_find_reflected(branch_dir):
+    should_find_reflected = opts["bidirectional"]
+
+    # If the source has integration info for the target, set find_reflected
+    # even if --bidirectional wasn't specified
+    if not should_find_reflected:
+        source_props = get_merge_props(opts["source-url"])
+        should_find_reflected = source_props.has_key(target_to_pathid(branch_dir))
+
+    return should_find_reflected
 
 def analyze_revs(target_pathid, url, begin=1, end=None,
                  find_reflected=False):
@@ -1170,7 +1196,7 @@ def action_init(target_dir, target_props):
             # which created the merge source:
             report('the source "%s" is a branch of "%s"' %
                    (opts["source-url"], target_dir))
-            revision_range = "1-" + copy_committed_in_rev
+            revision_range = "1-" + str(copy_committed_in_rev)
         else:
             # If the copy source is the merge source, and
             # the copy target is the merge target, then we want to
@@ -1221,7 +1247,8 @@ def action_avail(branch_dir, branch_props):
     """Show commits available for merges."""
     source_revs, phantom_revs, reflected_revs, initialized_revs = \
                analyze_source_revs(branch_dir, opts["source-url"],
-                                   find_reflected=opts["bidirectional"])
+                                   find_reflected=
+                                       should_find_reflected(branch_dir))
     report('skipping phantom revisions: %s' % phantom_revs)
     if reflected_revs:
         report('skipping reflected revisions: %s' % reflected_revs)
@@ -1281,7 +1308,8 @@ def action_merge(branch_dir, branch_props):
 
     source_revs, phantom_revs, reflected_revs, initialized_revs = \
                analyze_source_revs(branch_dir, opts["source-url"],
-                                   find_reflected=opts["bidirectional"])
+                                   find_reflected=
+                                       should_find_reflected(branch_dir))
 
     if opts["revision"]:
         revs = RevisionSet(opts["revision"])
@@ -1846,7 +1874,8 @@ common_opts = [
     Option("-b", "--bidirectional",
            value=True,
            default=False,
-           help="remove reflected and initialized revisions from merge candidates"),
+           help="remove reflected and initialized revisions from merge candidates.  "
+                "Not required but may be specified to speed things up slightly"),
     OptionArg("-f", "--commit-file", metavar="FILE",
               default="svnmerge-commit-message.txt",
               help="set the name of the file where the suggested log message "
@@ -1899,9 +1928,8 @@ command_table = {
     forth and back: e.g., if you committed a merge of a certain
     revision of the branch into the source, you do not want that commit
     to appear as available to merged into the branch (as the code
-    originated in the branch itself!).  svnmerge can not show these
-    so-called "reflected" revisions if you specify the --bidirectional
-    or -b command line option.""",
+    originated in the branch itself!).  svnmerge will automatically
+    exclude these so-called "reflected" revisions.""",
     [
         Option("-A", "--all",
                dest="avail-showwhat",
@@ -1976,9 +2004,8 @@ command_table = {
     forth and back: e.g., if you committed a merge of a certain
     revision of the branch into the source, you do not want that commit
     to appear as available to merged into the branch (as the code
-    originated in the branch itself!).  svnmerge can skip these
-    so-called "reflected" revisions if you specify the --bidirectional
-    or -b command line option.
+    originated in the branch itself!).  svnmerge will automatically
+    exclude these so-called "reflected" revisions.
 
     When manually merging changes across branches, --record-only can
     be used to instruct %s that a manual merge of a certain revision
