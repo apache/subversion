@@ -777,6 +777,7 @@ public class SVNClient implements SVNClientInterface
                                        String mergeSourceUrl,
                                        Revision srcPegRevision,
                                        boolean discoverChangedPaths,
+                                       String[] revprops,
                                        LogMessageCallback callback)
         throws ClientException;
 

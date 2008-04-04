@@ -2171,7 +2171,7 @@ public class BasicTests extends SVNTests
     	try {
         	Callback callback = new Callback();
 			client.getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
-					srcPegRevision, false, callback);
+			                       srcPegRevision, false, null, callback);
 	    	return callback.getRevisions();
 		} catch (ClientException e) {
 			return null;

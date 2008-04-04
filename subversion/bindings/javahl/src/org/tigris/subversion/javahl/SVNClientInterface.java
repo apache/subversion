@@ -1008,13 +1008,14 @@ public interface SVNClientInterface
      * @param mergeSourceUrl         the source of the merge
      * @param srcPegRevision         peg rev for mergeSourceUrl
      * @param discoverChangedPaths   return paths of changed items
+     * @param revProps               the revprops to retrieve
      * @param callback               the object to receive the log messages
      * @since 1.5
      */
     void getMergeinfoLog(int kind, String pathOrUrl,
                          Revision pegRevision, String mergeSourceUrl,
                          Revision srcPegRevision, boolean discoverChangedPaths,
-                         LogMessageCallback callback)
+                         String[] revprops, LogMessageCallback callback)
         throws ClientException;
 
     /**
