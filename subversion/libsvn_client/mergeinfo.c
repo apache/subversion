@@ -340,7 +340,7 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
   const char *url;
   svn_revnum_t target_rev;
 
-  /* We may get an entry with abrieviated information from TARGET_WCPATH's
+  /* We may get an entry with abbreviated information from TARGET_WCPATH's
      parent if TARGET_WCPATH is missing.  These limited entries do not have
      a URL and without that we cannot get accurate mergeinfo for
      TARGET_WCPATH. */
@@ -354,12 +354,12 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
                                          inherit, entry, target_wcpath,
                                          NULL, NULL, adm_access, ctx, pool));
 
-  /* If there in no WC mergeinfo check the repository. */
+  /* If there is no WC mergeinfo check the repository. */
   if (*target_mergeinfo == NULL)
     {
       svn_mergeinfo_t repos_mergeinfo;
 
-      /* No need to check the repos is this is a local addition. */
+      /* No need to check the repos if this is a local addition. */
       if (entry->schedule != svn_wc_schedule_add)
         {
           apr_hash_t *props = apr_hash_make(pool);
@@ -518,12 +518,12 @@ svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
    i.e. if it is NULL then the caller not only walked the entire WC
    looking for inherited mergeinfo, but queried the repository if none
    was found in the WC.  This is rather important since this function
-   says empty mergeinfo mergeinfo should be elided if PARENT_MERGEINFO
-   is NULL, and we don't want to do that unless we are *certain* that
-   the empty mergeinfo on PATH isn't overriding anything.
+   says empty mergeinfo should be elided if PARENT_MERGEINFO is NULL,
+   and we don't want to do that unless we are *certain* that the empty
+   mergeinfo on PATH isn't overriding anything.
    
-   If PATH_SUFFIX and PARENT_MERGEINFO are not NULL append PATH_SUFFIX to each
-   path in PARENT_MERGEINFO before performing the comparison. */
+   If PATH_SUFFIX and PARENT_MERGEINFO are not NULL append PATH_SUFFIX
+   to each path in PARENT_MERGEINFO before performing the comparison. */
 static svn_error_t *
 should_elide_mergeinfo(svn_boolean_t *elides,
                        svn_mergeinfo_t parent_mergeinfo,
