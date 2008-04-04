@@ -73,7 +73,7 @@ dir_deltas(const char **msg,
 
   /* Create a filesystem and repository. */
   SVN_ERR(svn_test__create_repos(&repos, "test-repo-dir-deltas",
-                                 opts->fs_type, pool));
+                                 opts, pool));
   fs = svn_repos_fs(repos);
   expected_trees[revision_count].num_entries = 0;
   expected_trees[revision_count++].entries = 0;
@@ -380,7 +380,7 @@ node_tree_delete_under_copy(const char **msg,
 
   /* Create a filesystem and repository. */
   SVN_ERR(svn_test__create_repos(&repos, "test-repo-del-under-copy",
-                                 opts->fs_type, pool));
+                                 opts, pool));
   fs = svn_repos_fs(repos);
 
   /* Prepare a txn to receive the greek tree. */
@@ -520,7 +520,7 @@ revisions_changed(const char **msg,
 
   /* Create a filesystem and repository. */
   SVN_ERR(svn_test__create_repos(&repos, "test-repo-revisions-changed",
-                                 opts->fs_type, pool));
+                                 opts, pool));
   fs = svn_repos_fs(repos);
 
   /*** Testing Algorithm ***
@@ -779,7 +779,7 @@ node_locations(const char **msg,
 
   /* Create the repository with a Greek tree. */
   SVN_ERR(svn_test__create_repos(&repos, "test-repo-node-locations",
-                                 opts->fs_type, pool));
+                                 opts, pool));
   fs = svn_repos_fs(repos);
   SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
@@ -832,7 +832,7 @@ node_locations2(const char **msg,
 
   /* Create the repository. */
   SVN_ERR(svn_test__create_repos(&repos, "test-repo-node-locations2",
-                                 opts->fs_type, pool));
+                                 opts, pool));
   fs = svn_repos_fs(repos);
 
   /* Revision 1:  Add a directory /foo  */
@@ -1045,7 +1045,7 @@ rmlocks(const char **msg,
 
   /* Create a filesystem and repository. */
   SVN_ERR(svn_test__create_repos(&repos, "test-repo-rmlocks",
-                                 opts->fs_type, pool));
+                                 opts, pool));
   fs = svn_repos_fs(repos);
 
   /* Prepare a txn to receive the greek tree. */
@@ -1419,7 +1419,7 @@ commit_editor_authz(const char **msg,
 
   /* Create a filesystem and repository. */
   SVN_ERR(svn_test__create_repos(&repos, "test-repo-commit-authz",
-                                 opts->fs_type, subpool));
+                                 opts, subpool));
   fs = svn_repos_fs(repos);
 
   /* Prepare a txn to receive the greek tree. */
@@ -1637,7 +1637,7 @@ commit_continue_txn(const char **msg,
 
   /* Create a filesystem and repository. */
   SVN_ERR(svn_test__create_repos(&repos, "test-repo-commit-continue",
-                                 opts->fs_type, subpool));
+                                 opts, subpool));
   fs = svn_repos_fs(repos);
 
   /* Prepare a txn to receive the greek tree. */
@@ -1818,7 +1818,7 @@ node_location_segments(const char **msg,
 
   /* Create the repository. */
   SVN_ERR(svn_test__create_repos(&repos, "test-repo-node-location-segments",
-                                 opts->fs_type, pool));
+                                 opts, pool));
   fs = svn_repos_fs(repos);
 
   /* Revision 1: Create the Greek tree.  */
@@ -2011,7 +2011,7 @@ reporter_depth_exclude(const char **msg,
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_test__create_repos(&repos, "test-repo-reporter-depth-exclude",
-                                 opts->fs_type, pool));
+                                 opts, pool));
   fs = svn_repos_fs(repos);
 
   /* Prepare a txn to receive the greek tree. */

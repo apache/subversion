@@ -37,6 +37,8 @@ typedef struct svn_test_opts_t
 {
   /* Description of the fs backend that should be used for testing. */
   const char *fs_type;
+  /* Config file. */
+  const char *config_file;
   /* Add future "arguments" here. */
 } svn_test_opts_t;
 

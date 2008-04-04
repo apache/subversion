@@ -52,6 +52,7 @@ extern "C" {
 #define PATH_TXN_CURRENT      "txn-current"      /* File with next txn key */
 #define PATH_TXN_CURRENT_LOCK "txn-current-lock" /* Lock for txn-current */
 #define PATH_LOCKS_DIR        "locks"            /* Directory of locks */
+/* If you change this, look at tests/svn_test_fs.c(maybe_install_fsfs_conf) */
 #define PATH_CONFIG           "fsfs.conf"        /* Configuration */
 
 /* Names of special files and file extensions for transactions */
