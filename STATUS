@@ -69,11 +69,6 @@ Candidate changes:
 
 Approved changes:
 
- * r30129
-   Fix a bug that Svn::Ra::Session#open doesn't set callback_baton correctly.
-   Votes:
-     +1: kou, cmpilato
-
  * r30210
    Call abort_edit upon editor failure in the repos reporter.
    Notes:

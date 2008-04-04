@@ -2628,6 +2628,7 @@ svn_swig_rb_setup_ra_callbacks(svn_ra_callbacks2_t **callbacks,
   }
 
   *callbacks = apr_pcalloc(pool, sizeof(**callbacks));
+  *baton = (void *)rb_callbacks;
 
   (*callbacks)->open_tmp_file = ra_callbacks_open_tmp_file;
   (*callbacks)->auth_baton = auth_baton;
