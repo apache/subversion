@@ -110,6 +110,7 @@
 
 #define SVN_WC__CONFLICT_ACTION_EDITED "edited"
 #define SVN_WC__CONFLICT_ACTION_DELETED "deleted"
+#define SVN_WC__CONFLICT_ACTION_ADDED "added"
 
 /*
  *  reason:
@@ -118,6 +119,7 @@
 #define SVN_WC__CONFLICT_REASON_EDITED "edited"
 #define SVN_WC__CONFLICT_REASON_DELETED "deleted"
 #define SVN_WC__CONFLICT_REASON_MISSING "missing"
+#define SVN_WC__CONFLICT_REASON_OBSTRUCTED "obstructed"
 
 /*
  * Multiple tree conflict descriptions can be present in one entry.

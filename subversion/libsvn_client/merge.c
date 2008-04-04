@@ -313,6 +313,47 @@ add_parent_to_tree_conflicted_dirs(merge_cmd_baton_t *merge_b,
   APR_ARRAY_PUSH(merge_b->tree_conflicted_dirs, const char *) = dir_path;
 }
 
+/* Cause a tree conflict notification, and if the merge is not
+ * a dry run, also make the tree conflict persistent. Do nothing
+ * if the merge is record-only.
+ *
+ * The tree conflict, with its victim specified by VICTIM_PATH, is
+ * assumed to have happened during a merge using merge baton MERGE_B.
+ *
+ * ADM_ACCESS corresponds to the tree-conflicted directory
+ * This directory must be the victim's parent directory.
+ *
+ * NODE_KIND, ACTION, and REASON correspond to the fields
+ * of the same names in svn_wc_conflict_description_t.
+ */
+static svn_error_t*
+tree_conflict(merge_cmd_baton_t *merge_b,
+              svn_wc_adm_access_t *adm_access,
+              const char *victim_path,
+              svn_node_kind_t node_kind,
+              svn_wc_conflict_action_t action,
+              svn_wc_conflict_reason_t reason)
+{
+  svn_wc_conflict_description_t *conflict;
+
+  if (merge_b->record_only)
+    return SVN_NO_ERROR;
+ 
+  add_parent_to_tree_conflicted_dirs(merge_b, victim_path);
+
+  if (merge_b->dry_run)
+    return SVN_NO_ERROR;
+
+  conflict = apr_pcalloc(merge_b->pool, sizeof(svn_wc_conflict_description_t));
+  conflict->victim_path = svn_path_basename(victim_path, merge_b->pool);
+  conflict->node_kind = node_kind;
+  conflict->operation = svn_wc_operation_merge;
+  conflict->action = action;
+  conflict->reason = reason;
+  SVN_ERR(svn_wc_add_tree_conflict_data(conflict, adm_access, merge_b->pool));
+  return SVN_NO_ERROR;
+}
+
 /* TRUE iff DIR_PATH is in the merge baton's list of tree-conflicted
    directories. */
 static svn_boolean_t
@@ -709,30 +750,13 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
 
     if ((! entry) || (kind != svn_node_file))
       {
-        if (! merge_b->record_only)
-          {
-            /* This is use case 4 described in the paper attached to issue
-             * #2282.  See also notes/tree-conflicts/detection.txt
-             */
-            char *victim_path = svn_path_basename(mine, merge_b->pool);
-
-            add_parent_to_tree_conflicted_dirs(merge_b, mine);
-            if (! merge_b->dry_run)
-              {
-                svn_wc_conflict_description_t *conflict;
-
-                conflict = apr_pcalloc(merge_b->pool, 
-                                       sizeof(svn_wc_conflict_description_t));
-                conflict->victim_path = victim_path;
-                conflict->node_kind = svn_node_file;
-                conflict->operation = svn_wc_operation_merge;
-                conflict->action = svn_wc_conflict_action_edit;
-                conflict->reason = svn_wc_conflict_reason_missing;
-                SVN_ERR(svn_wc_add_tree_conflict_data(conflict, adm_access,
-                                                      merge_b->pool));
-              }
-          }
-
+        /* This is use case 4 described in the paper attached to issue
+         * #2282.  See also notes/tree-conflicts/detection.txt
+         */
+        SVN_ERR(tree_conflict(merge_b, adm_access, mine,
+                              svn_node_file,
+                              svn_wc_conflict_action_edit,
+                              svn_wc_conflict_reason_missing));
         if (content_state)
           *content_state = svn_wc_notify_state_missing;
         if (prop_state)
@@ -924,7 +948,19 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
         SVN_ERR(svn_wc_entry(&entry, mine, adm_access, FALSE, subpool));
         if (entry && entry->schedule != svn_wc_schedule_delete)
           {
-            /* It's versioned but missing. */
+            /* It's versioned but missing.
+             *
+             * The file add the merge wants to carry out is obstructed by
+             * something which isn't present on disk but which is recorded
+             * in meta data. So the file the merge wants to add is a tree
+             * conflict victim.
+             * See notes about obstructions in
+             * notes/tree-conflicts/detection.txt.
+             */
+            SVN_ERR(tree_conflict(merge_b, adm_access, mine,
+                                  svn_node_file,
+                                  svn_wc_conflict_action_add,
+                                  svn_wc_conflict_reason_obstructed));
             if (content_state)
               *content_state = svn_wc_notify_state_obstructed;
             svn_pool_destroy(subpool);
@@ -968,6 +1004,15 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
       }
       break;
     case svn_node_dir:
+      /* The file add the merge wants to carry out is obstructed by
+       * a directory, so the file the merge wants to add is a tree
+       * conflict victim.
+       * See notes about obstructions in notes/tree-conflicts/detection.txt.
+       */
+      SVN_ERR(tree_conflict(merge_b, adm_access, mine,
+                            svn_node_file,
+                            svn_wc_conflict_action_add,
+                            svn_wc_conflict_reason_obstructed));
       if (content_state)
         {
           /* directory already exists, is it under version control? */
@@ -992,6 +1037,16 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
            user must have recreated it, don't touch it */
         if (!entry || entry->schedule == svn_wc_schedule_delete)
           {
+            /* The file add the merge wants to carry out is obstructed by
+             * an unversioned file, so the file the merge wants to add
+             * is a tree conflict victim. See notes about obstructions in
+             * notes/tree-conflicts/detection.txt.
+             */
+            SVN_ERR(tree_conflict(merge_b, adm_access, mine,
+                                  svn_node_file,
+                                  svn_wc_conflict_action_add,
+                                  svn_wc_conflict_reason_obstructed));
+
             /* this will make the repos_editor send a 'skipped' message */
             if (content_state)
               *content_state = svn_wc_notify_state_obstructed;
@@ -1005,6 +1060,21 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
               }
             else
               {
+                /* The file add the merge wants to carry out is obstructed by
+                 * a versioned file, so the file the merge wants to add is a
+                 * tree conflict victim. See notes about obstructions in
+                 * notes/tree-conflicts/detection.txt.
+                 */
+                SVN_ERR(tree_conflict(merge_b, adm_access, mine,
+                                      svn_node_file,
+                                      svn_wc_conflict_action_add,
+                                      svn_wc_conflict_reason_obstructed));
+                /*
+                 * FIXME: The above doesn't seem to correspond to the
+                 *        following code which seems to be handling this
+                 *        as a non-conflict!
+                 */
+
                 /* Indicate that we merge because of an add to handle a
                    special case for binary files with no local mods. */
                   merge_b->add_necessitated_merge = TRUE;
@@ -1101,26 +1171,12 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
           SVN_ERR(svn_diff_file_diff_2(&diff, older, mine, options, subpool));
           if (svn_diff_contains_diffs(diff))
             {
-              add_parent_to_tree_conflicted_dirs(merge_b, mine);
-
-              if (! merge_b->dry_run)
-                {
-                  svn_wc_conflict_description_t *conflict;
-
-                  conflict = apr_pcalloc(merge_b->pool, 
-                                         sizeof(svn_wc_conflict_description_t));
-                  conflict->victim_path = svn_path_basename(mine,
-                                                            merge_b->pool);
-                  conflict->node_kind = svn_node_file;
-                  conflict->operation = svn_wc_operation_merge;
-                  conflict->action = svn_wc_conflict_action_delete;
-                  conflict->reason = svn_wc_conflict_reason_edited;
-                  SVN_ERR(svn_wc_add_tree_conflict_data(conflict, adm_access,
-                                                        merge_b->pool));
-
-                  /* Make sure we keep a copy on disk, see above. */
-                  keep_local = TRUE;
-                }
+              SVN_ERR(tree_conflict(merge_b, adm_access, mine,
+                                    svn_node_file,
+                                    svn_wc_conflict_action_delete,
+                                    svn_wc_conflict_reason_edited));
+              /* Make sure we keep a copy on disk, see above. */
+              keep_local = TRUE;
             }
         }
 
@@ -1129,10 +1185,21 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
       err = svn_client__wc_delete(mine, parent_access, merge_b->force,
                                   merge_b->dry_run, keep_local, NULL, NULL,
                                   merge_b->ctx, subpool);
-      if (err && state)
+      if (err)
         {
-          *state = svn_wc_notify_state_obstructed;
           svn_error_clear(err);
+
+          /* The file deletion the merge wanted to do could not be carried
+           * out for some reason, so the file deletion was obstructed.
+           * Hence the file merge wants to delete is a tree conflict victim.
+           * See notes about obstructions in notes/tree-conflicts/detection.txt.
+           */
+          SVN_ERR(tree_conflict(merge_b, adm_access, mine,
+                                svn_node_file,
+                                svn_wc_conflict_action_delete,
+                                svn_wc_conflict_reason_obstructed));
+          if (state)
+            *state = svn_wc_notify_state_obstructed;
         }
       else if (state)
         {
@@ -1140,6 +1207,15 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
         }
       break;
     case svn_node_dir:
+      /* The file deletion the merge wants to carry out is obstructed by
+       * a directory, so the file the merge wants to delete is a tree
+       * conflict victim.
+       * See notes about obstructions in notes/tree-conflicts/detection.txt.
+       */
+      SVN_ERR(tree_conflict(merge_b, adm_access, mine,
+                            svn_node_file,
+                            svn_wc_conflict_action_delete,
+                            svn_wc_conflict_reason_obstructed));
       if (state)
         *state = svn_wc_notify_state_obstructed;
       break;
@@ -1149,26 +1225,10 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
        * This is use case 6 described in the paper attached to issue
        * #2282.  See also notes/tree-conflicts/detection.txt
        */
-      if (! merge_b->record_only)
-        {
-          add_parent_to_tree_conflicted_dirs(merge_b, mine);
-
-          if (! merge_b->dry_run)
-            {
-              svn_wc_conflict_description_t *conflict;
-
-              conflict = apr_pcalloc(merge_b->pool, 
-                                     sizeof(svn_wc_conflict_description_t));
-              conflict->victim_path = svn_path_basename(mine, merge_b->pool);
-              conflict->node_kind = svn_node_file;
-              conflict->operation = svn_wc_operation_merge;
-              conflict->action = svn_wc_conflict_action_delete;
-              conflict->reason = svn_wc_conflict_reason_deleted;
-              SVN_ERR(svn_wc_add_tree_conflict_data(conflict, adm_access,
-                                                    merge_b->pool));
-            }
-        }
-
+      SVN_ERR(tree_conflict(merge_b, adm_access, mine,
+                            svn_node_file,
+                            svn_wc_conflict_action_delete,
+                            svn_wc_conflict_reason_deleted));
       if (state)
         *state = svn_wc_notify_state_missing;
       break;

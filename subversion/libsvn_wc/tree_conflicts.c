@@ -31,6 +31,7 @@ struct tree_conflict_phrases
   const char *update_edited;
   const char *merge_deleted;
   const char *merge_edited;
+  const char *merge_added;
   const char *we_deleted;
 
   /* Used during update. */
@@ -40,6 +41,7 @@ struct tree_conflict_phrases
   /* Used during merge. */
   const char *we_edited_merge;       
   const char *does_not_exist_merge;
+  const char *obstructed;
 };
 
 /* Return a new (possibly localised)
@@ -59,6 +61,8 @@ new_tree_conflict_phrases(apr_pool_t *pool)
                              "(possibly as part of a rename operation).\n");
 
   phrases->merge_edited = _("The merge attempted to edit the file '%s'.\n");
+
+  phrases->merge_added = _("The merge attempted to add the file '%s'.\n");
 
   phrases->we_deleted = _("You have deleted '%s' locally.\n"
                           "Maybe you renamed it?\n");
@@ -81,6 +85,9 @@ new_tree_conflict_phrases(apr_pool_t *pool)
                                     "Maybe you renamed it? Or has it been"
                                     " renamed in the history of the branch\n"
                                     "you are merging into?\n");
+
+  phrases->obstructed = _("This action was obstructed by an item"
+                           " in the working copy.\n");
   return phrases;
 }
 
@@ -109,6 +116,8 @@ select_their_phrase(svn_wc_conflict_description_t *conflict,
             return phrases->merge_deleted;
           case svn_wc_conflict_action_edit:
             return phrases->merge_edited;
+          case svn_wc_conflict_action_add:
+            return phrases->merge_added;
           default:
             return NULL; /* Should never happen! */
         }
@@ -146,6 +155,18 @@ select_our_phrase(svn_wc_conflict_description_t *conflict,
         else if (conflict->operation == svn_wc_operation_merge)
           {
             return phrases->does_not_exist_merge;
+          }
+        return NULL; /* Should never happen! */
+
+      case svn_wc_conflict_reason_obstructed:
+        if (conflict->operation == svn_wc_operation_update
+            || conflict->operation == svn_wc_operation_switch)
+          {
+            return NULL; /* Should never happen! */
+          }
+        else if (conflict->operation == svn_wc_operation_merge)
+          {
+            return phrases->obstructed;
           }
         return NULL; /* Should never happen! */
 
@@ -354,6 +375,8 @@ read_action(svn_wc_conflict_description_t *conflict,
     conflict->action = svn_wc_conflict_action_edit;
   else if (advance_on_match(start, SVN_WC__CONFLICT_ACTION_DELETED))
     conflict->action = svn_wc_conflict_action_delete;
+  else if (advance_on_match(start, SVN_WC__CONFLICT_ACTION_ADDED))
+    conflict->action = svn_wc_conflict_action_add;
   else
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
              _("Invalid 'action' field in tree conflict description"));
@@ -385,6 +408,8 @@ read_reason(svn_wc_conflict_description_t *conflict,
     conflict->reason = svn_wc_conflict_reason_deleted;
   else if (advance_on_match(start, SVN_WC__CONFLICT_REASON_MISSING))
     conflict->reason = svn_wc_conflict_reason_missing;
+  else if (advance_on_match(start, SVN_WC__CONFLICT_REASON_OBSTRUCTED))
+    conflict->reason = svn_wc_conflict_reason_obstructed;
   else
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
              _("Invalid 'reason' field in tree conflict description"));
@@ -568,6 +593,9 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
          case svn_wc_conflict_action_delete:
             svn_stringbuf_appendcstr(buf, SVN_WC__CONFLICT_ACTION_DELETED);
             break;
+         case svn_wc_conflict_action_add:
+            svn_stringbuf_appendcstr(buf, SVN_WC__CONFLICT_ACTION_ADDED);
+            break;
           default:
             return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
                 _("Bad action in tree conflict description"));
@@ -585,6 +613,9 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
             break;
           case svn_wc_conflict_reason_missing:
             svn_stringbuf_appendcstr(buf, SVN_WC__CONFLICT_REASON_MISSING);
+            break;
+          case svn_wc_conflict_reason_obstructed:
+            svn_stringbuf_appendcstr(buf, SVN_WC__CONFLICT_REASON_OBSTRUCTED);
             break;
           default:
             return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
@@ -746,6 +777,9 @@ svn_wc_append_tree_conflict_info_xml(svn_stringbuf_t *str,
         break;
       case svn_wc_conflict_reason_missing:
         tmp = SVN_WC__CONFLICT_REASON_MISSING;
+        break;
+      case svn_wc_conflict_reason_obstructed:
+        tmp = SVN_WC__CONFLICT_REASON_OBSTRUCTED;
         break;
       default:
         return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
