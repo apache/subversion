@@ -100,7 +100,7 @@ typedef enum {
   opt_with_all_revprops,
   opt_parents,
   opt_accept,
-  opt_from_source,
+  opt_show_revs,
   opt_reintegrate
 } svn_cl__longopt_t;
 
@@ -270,8 +270,11 @@ const apr_getopt_option_t svn_cl__options[] =
                        "\n                            "
                        " '" SVN_CL__ACCEPT_EDIT "',"
                        " '" SVN_CL__ACCEPT_LAUNCH "')")},
-  {"from-source",   opt_from_source, 1,
-                    N_("query a particular merge source URL")},
+  {"show-revs",     opt_show_revs, 1,
+                    N_("specify which collection of revisions to display\n"
+                       "                             "
+                       "('" SVN_CL__SHOW_REVS_MERGED "',"
+                       " '" SVN_CL__SHOW_REVS_ELIGIBLE "')")},
   {"reintegrate",   opt_reintegrate, 0,
                     N_("lump-merge all of source URL's unmerged changes")},
 
@@ -622,8 +625,14 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "mergeinfo", svn_cl__mergeinfo, {0}, N_
     ("Query merge-related information.\n"
-     "usage: mergeinfo [TARGET[@REV]...]\n"),
-    {'r', opt_from_source} },
+     "usage: mergeinfo SOURCE-URL[@REV] [TARGET[@REV]]\n"
+     "\n"
+     "  Query information related to merges (or potential merges) between\n"
+     "  SOURCE-URL and TARGET.  If the --show-revs option is not provided,\n"
+     "  display revisions which have been merged from sourceURL to TARGET.\n"
+     "  Otherwise, display the type of information specified by the\n"
+     "  --show-revs option.\n"),
+    {'r', opt_show_revs} },
 
   { "mkdir", svn_cl__mkdir, {0}, N_
     ("Create a new directory under version control.\n"
@@ -1087,6 +1096,7 @@ main(int argc, const char *argv[])
   opt_state.depth = svn_depth_unknown;
   opt_state.set_depth = svn_depth_unknown;
   opt_state.accept_which = svn_cl__accept_unspecified;
+  opt_state.show_revs = svn_cl__show_revs_merged;
 
   /* No args?  Show usage. */
   if (argc <= 1)
@@ -1467,14 +1477,14 @@ main(int argc, const char *argv[])
                                _("'%s' is not a valid accept value"), opt_arg),
              pool, "svn: ");
         break;
-      case opt_from_source:
-        err = svn_utf_cstring_to_utf8(&path_utf8, opt_arg, pool);
-        if (! svn_path_is_url(path_utf8))
+      case opt_show_revs:
+        opt_state.show_revs = svn_cl__show_revs_from_word(opt_arg);
+        if (opt_state.show_revs == svn_cl__show_revs_invalid)
           return svn_cmdline_handle_exit_error
             (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                               _("'%s' is not a URL"), opt_arg),
+                               _("'%s' is not a valid show-revs value"), 
+                               opt_arg),
              pool, "svn: ");
-        opt_state.from_source = svn_path_canonicalize(path_utf8, pool);
         break;
       case opt_reintegrate:
         opt_state.reintegrate = TRUE;
