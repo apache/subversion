@@ -263,8 +263,10 @@ to use the encoding we got from the local filesystem.
 
 Implementation details:
 
- * The hash keys in svn_wc_adm_access_t's are hashed on the working copy
-   path encoding, not the repository path
+ * The hash keys in svn_wc_adm_access_t's are hashed on the normalized
+   path encoding, not the repository path, in order to be able to
+   calculate the hash key from both the wc path as well as the repo path
+ * The same line of reasoning applies to the hash keys in the entries hash
 
 New conventions:
  * variables containing a path as encoded in the local filesystem
