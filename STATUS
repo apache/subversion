@@ -14,7 +14,7 @@ Status of 1.5.0:
 
 Candidate changes:
 
- * r30215, r30221, r30225, r30226, r30230, r30243
+ * r30215, r30221, r30225, r30226, r30230, r30243, r30286
    Simplify (UI-wise) yet vastly enhance the 'svn mergeinfo' subcommand and
    underlying APIs.
    Backport Branch:
