@@ -39,11 +39,12 @@ Candidate changes:
    Votes:
      +1: glasser
 
- * r30278, r30279, r30285
+ * r30278, r30279, r30285, r30299, r30304
    Update JavaHL bindings in light of r30215.
    Notes:
      This is dependent upon the r30215 group being merged.
-     Also, this group isn't yet complete.
+     This group is functionally complete, but there is still a test failure
+       in the JavaHL tests.
    Votes:
 
  * r29633
