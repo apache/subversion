@@ -180,15 +180,6 @@ check_scheme_match(svn_wc_adm_access_t *adm_access, const char *url)
 
 /*** Repos-Diff Editor Callbacks ***/
 
-
-/* Wrapper around svn_string_t, see merge_cmd_baton_t's
-   working_mergeinfo member. */
-typedef struct {
-  /* Working mergeinfo for a path prior to a merge.  May be NULL
-     if the path has no working mergeinfo. */
-  svn_string_t *working_mergeinfo_propval;
-} working_mergeinfo_t;
-
 typedef struct merge_cmd_baton_t {
   svn_boolean_t force;
   svn_boolean_t dry_run;
@@ -3207,10 +3198,10 @@ compare_merge_path_t_as_paths(const void *a,
   return svn_path_compare_paths(child1->path, child2->path);
 }
 
-/* Helper for get_mergeinfo_paths().  If CHILD->PATH is switched,
-   absent, or scheduled for deletion make sure its parent is marked
-   as missing a child.  Start looking up for parent from *CURR_INDEX
-   in CHILDREN_WITH_MERGEINFO.  Create the parent and insert it into
+/* Helper for get_mergeinfo_paths().  If CHILD->PATH is switched or
+   absent then make sure its parent is marked as missing a child.
+   Start looking up for parent from *CURR_INDEX in
+   CHILDREN_WITH_MERGEINFO.  Create the parent and insert it into
    CHILDREN_WITH_MERGEINFO if necessary (and increment *CURR_INDEX
    so that caller don't process the inserted element).  Also ensure
    that CHILD->PATH's siblings which are not already present in
@@ -3233,7 +3224,6 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
   int insert_index, parent_index;
 
   if (!(child->absent
-        || child->scheduled_for_deletion
           || (child->switched
               && strcmp(merge_cmd_baton->target, child->path) != 0)))
     return SVN_NO_ERROR;
@@ -3311,8 +3301,7 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
         sibling is switched, absent, schduled for deletion, or missing due to
         a sparse checkout.
      6) Path is absent from disk due to an authz restriction.
-     7) Path is scheduled for deletion.
-     8) Path is equal to MERGE_CMD_BATON->TARGET.
+     7) Path is equal to MERGE_CMD_BATON->TARGET.
 
    Store the svn_client__merge_path_t *'s in *CHILDREN_WITH_MERGEINFO in
    depth-first order based on the svn_client__merge_path_t *s path member as
@@ -3350,7 +3339,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
       url1, url2, revision1, revision2,
       depth, ra_session, ctx };
 
-  /* Cover cases 1), 2), 6), and 8) by walking the WC to get all paths which
+  /* Cover cases 1), 2), 6), and 7) by walking the WC to get all paths which
      have mergeinfo and/or are switched or are absent from disk or is the
      target of the merge. */
   if (entry->kind == svn_node_file)
@@ -3472,7 +3461,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                 }
             }
         }
-      /* Case 4, 5, and 7 are handled by the following function. */
+      /* Case 4 and 5 are handled by the following function. */
       SVN_ERR(insert_parent_and_sibs_of_sw_absent_del_entry(
         children_with_mergeinfo, merge_cmd_baton, &i, child,
         adm_access, iterpool));
@@ -4402,12 +4391,7 @@ do_directory_merge(const char *url1,
                                         pool));
     }
 
-  /* Record mergeinfo where appropriate.
-
-     NOTE: any paths in CHILDREN_WITH_MERGEINFO which were switched
-     but had no explicit working mergeinfo at the start of the call,
-     will have some at the end of it if merge is not a no-op merge.
-  */
+  /* Record mergeinfo where appropriate.*/
   iterpool = svn_pool_create(pool);
   if (record_mergeinfo)
     {
