@@ -1008,7 +1008,7 @@ write_config(svn_fs_t *fs,
   static const char * const fsfs_conf_contents =
 "### This file controls the configuration of the FSFS filesystem."           NL
 ""                                                                           NL
-"[memcached-servers]"                                                        NL
+"[" SVN_CACHE_CONFIG_CATEGORY_MEMCACHED_SERVERS "]"                          NL
 "### These options name memcached servers used to cache internal FSFS"       NL
 "### data.  See http://www.danga.com/memcached/ for more information on"     NL
 "### memcached.  To use memcached with FSFS, run one or more memcached"      NL

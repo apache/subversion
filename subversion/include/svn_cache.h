@@ -30,6 +30,7 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_iter.h"
+#include "svn_config.h"
 
 
 #ifdef __cplusplus
@@ -141,6 +142,21 @@ svn_cache_create_memcache(svn_cache_t **cache_p,
                           const char *prefix,
                           apr_pool_t *pool);
 
+
+#define SVN_CACHE_CONFIG_CATEGORY_MEMCACHED_SERVERS "memcached-servers"
+
+/**
+ * Given @a config, returns an APR memcached interface in @a
+ * *memcache_p allocated in @a pool if @a config contains entries in
+ * the SVN_CACHE_CONFIG_CATEGORY_MEMCACHED_SERVERS section describing
+ * memcached servers; otherwise, sets @a *memcache_p to NULL.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_cache_make_memcache_from_config(apr_memcache_t **memcache_p,
+                                    svn_config_t *config,
+                                    apr_pool_t *pool);
 
 /**
  * Fetches a value indexed by @a key from @a cache into @a *value,
