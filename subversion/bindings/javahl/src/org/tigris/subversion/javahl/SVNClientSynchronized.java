@@ -1011,14 +1011,14 @@ public class SVNClientSynchronized implements SVNClientInterface
                                 Revision pegRevision, String mergeSourceUrl,
                                 Revision srcPegRevision,
                                 boolean discoverChangedPaths,
-                                LogMessageCallback callback)
+                                String[] revprops, LogMessageCallback callback)
         throws ClientException
     {
         synchronized (clazz)
         {
             worker.getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
                                    srcPegRevision, discoverChangedPaths,
-                                   callback);
+                                   revprops, callback);
         }
     }
 

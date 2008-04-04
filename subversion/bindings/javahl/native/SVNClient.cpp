@@ -737,6 +737,7 @@ void SVNClient::getMergeinfoLog(int type, const char *pathOrURL,
                                 const char *mergeSourceURL,
                                 Revision &srcPegRevision,
                                 bool discoverChangedPaths,
+                                StringArray &revProps,
                                 LogMessageCallback *callback)
 {
     Pool requestPool;
@@ -765,6 +766,7 @@ void SVNClient::getMergeinfoLog(int type, const char *pathOrURL,
                                                   LogMessageCallback::callback,
                                                   callback,
                                                   discoverChangedPaths,
+                                                  revProps.array(requestPool),
                                                   ctx,
                                                   requestPool.pool()), );
             return;
@@ -778,6 +780,7 @@ void SVNClient::getMergeinfoLog(int type, const char *pathOrURL,
                                                 LogMessageCallback::callback,
                                                 callback,
                                                 discoverChangedPaths,
+                                                revProps.array(requestPool),
                                                 ctx,
                                                 requestPool.pool()), );
             return;

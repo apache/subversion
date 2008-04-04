@@ -91,7 +91,7 @@ class SVNClient :public SVNBase
   void getMergeinfoLog(int type, const char *pathOrURL,
                        Revision &pegRevision, const char *mergeSourceURL,
                        Revision &srcPegREvision, bool discoverChangedPaths,
-                       LogMessageCallback *callback);
+                       StringArray &revProps, LogMessageCallback *callback);
   jobjectArray suggestMergeSources(const char *path, Revision &pegRevision);
   void merge(const char *path1, Revision &revision1, const char *path2,
              Revision &revision2, const char *localPath, bool force,
