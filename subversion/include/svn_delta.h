@@ -922,6 +922,8 @@ typedef struct svn_delta_editor_t
   svn_error_t *(*abort_edit)(void *edit_baton,
                              apr_pool_t *pool);
 
+  /* Be sure to update svn_delta_get_cancellation_editor() and
+   * svn_delta_default_editor() if you add a new callback here. */
 } svn_delta_editor_t;
 
 
