@@ -752,7 +752,8 @@ directory_elements_diff(struct dir_baton *dir_baton)
           int result;
 
           SVN_ERR(svn_path_strcmp(&result,
-                                  dir_baton->edit_baton->target, name, pool));
+                                  dir_baton->edit_baton->target, name,
+                                  subpool));
           if (result)
             continue;
         }
