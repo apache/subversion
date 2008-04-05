@@ -172,8 +172,8 @@ class RemoteRepository(object):
            repository."""
         return self.proplist(path, rev)[name]
 
-    def log(self, start_rev, end_rev, paths=None, limit=0, verbose=FALSE,
-            stop_on_copy=FALSE):
+    def log(self, start_rev, end_rev, paths=None, limit=0, 
+            discover_changed_paths=FALSE, stop_on_copy=FALSE):
         """A generator function which returns information about the revisions
            between START_REV and END_REV. Each return value is a
            csvn.types.LogEntry object which describes a revision.
@@ -197,8 +197,8 @@ class RemoteRepository(object):
 
              If LIMIT is non-zero, only the first LIMIT logs are returned.
 
-             If VERBOSE is True, then changed_paths will contain a list of
-             paths affected by this revision.
+             If DISCOVER_CHANGED_PATHS is True, then changed_paths will contain
+             a list of paths affected by this revision.
 
              If STOP_ON_COPY is True, then this function will not cross
              copies while traversing history.
@@ -577,14 +577,14 @@ class LogEntry(object):
 
 class _LogMessageReceiver(CallbackReceiver):
 
-    def collect(self, session, start_rev, end_rev, paths, limit, verbose,
-                stop_on_copy):
-        self.verbose = verbose
+    def collect(self, session, start_rev, end_rev, paths, limit,
+                discover_changed_paths, stop_on_copy):
+        self.discover_changed_paths = discover_changed_paths
         pool = Pool()
         baton = c_void_p()
         receiver = svn_log_message_receiver_t(self.receive)
         svn_ra_get_log(session, paths, start_rev, end_rev,
-                       limit, verbose, stop_on_copy, receiver,
+                       limit, discover_changed_paths, stop_on_copy, receiver,
                        baton, pool)
 
     def receive(self, baton, changed_paths, revision, author, date, message, pool):
