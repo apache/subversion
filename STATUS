@@ -14,12 +14,6 @@ Status of 1.5.0:
 
 Candidate changes:
 
- * r30335
-   Allow NULL log messages in svn_ra_get_commit_editor2, for backwards
-   compatibility with Subversion 1.4.
-   Votes:
-     +1: djames 
-
  * r30340, r30342, r30347
    Fix linking issues on cygwin by removing circular dependencies
    between libsvn_fs_{base,fs}/libsvn_fs and libsvn_ra_neon/libsvn_ra.
@@ -28,6 +22,7 @@ Candidate changes:
      http://svn.haxx.se/dev/archive-2008-04/0277.shtml
    Votes:
      +1: djames (r30340, r30342 only)
+     +1: cmpilato
 
 Approved changes:
 
@@ -36,6 +31,13 @@ Approved changes:
    return an error when the target url isn't found in the repository.
    Votes:
      +1: lgo, kfogel
+
+ * r30335
+   Allow NULL log messages in svn_ra_get_commit_editor2, for backwards
+   compatibility with Subversion 1.4.
+   Votes:
+     +1: djames, cmpilato
+
 
 Status of 1.5.1:
 ================
