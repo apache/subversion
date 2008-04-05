@@ -14,6 +14,8 @@ Status of 1.5.0:
 
 Candidate changes:
 
+Approved changes:
+
  * r30340, r30342, r30347
    Fix linking issues on cygwin by removing circular dependencies
    between libsvn_fs_{base,fs}/libsvn_fs and libsvn_ra_neon/libsvn_ra.
@@ -21,11 +23,7 @@ Candidate changes:
    Thread:
      http://svn.haxx.se/dev/archive-2008-04/0277.shtml
    Votes:
-     +1: djames (r30340, r30342 only)
-     +1: cmpilato
-
-Approved changes:
-
+     +1: djames, cmpilato
 
 Status of 1.5.1:
 ================
