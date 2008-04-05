@@ -37,11 +37,6 @@ Approved changes:
    Votes:
      +1: lgo, kfogel
 
- * r30336
-   Say "rNNNNN" in mergeinfo output, instead of "NNNNN".
-   Votes:
-     +1: kfogel, markphip
-
 Status of 1.5.1:
 ================
 
