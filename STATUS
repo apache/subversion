@@ -36,6 +36,12 @@ Candidate changes:
    Votes:
     +1: hwright
 
+ * r30368
+    Fix a bug where --reintegrate merges can follow the wrong codepath
+    and abort.
+   Votes:
+    +1: pburba
+
 Approved changes:
 
 Status of 1.5.1:
