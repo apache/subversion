@@ -14,6 +14,11 @@ Status of 1.5.0:
 
 Candidate changes:
 
+ * r30362
+   Skip leading 'r's on rev numbers passed to -c and -r.
+   Votes:
+     +1: kfogel
+
 Approved changes:
 
  * r30340, r30342, r30347
