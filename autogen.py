@@ -136,6 +136,7 @@ def get_apr_config():
         "svn_wc-1",
         "svn_ra_local-1",
         "svn_ra_svn-1",
+        "svn_ra_neon-1",
         "svn_ra_dav-1",
         "svn_ra_serf-1",
         "svn_ra-1",
