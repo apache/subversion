@@ -20,6 +20,14 @@ Candidate changes:
    Votes:
      +1: djames 
 
+ * r30340
+   Fix linking issues on cygwin by removing a trivial circular dependency
+   between libsvn_fs_{base,fs} and libsvn_fs.
+   Thread:
+     http://svn.haxx.se/dev/archive-2008-04/0277.shtml
+   Votes:
+     +1: djames
+
 Approved changes:
 
  * r30278, r30279, r30285, r30299, r30304, r30319, r30320
