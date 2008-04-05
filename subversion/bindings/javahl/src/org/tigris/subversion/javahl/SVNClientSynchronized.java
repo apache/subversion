@@ -1007,27 +1007,18 @@ public class SVNClientSynchronized implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public Mergeinfo getMergeinfo(String path, Revision pegRevision)
-        throws SubversionException
+    public void getMergeinfoLog(int kind, String pathOrUrl,
+                                Revision pegRevision, String mergeSourceUrl,
+                                Revision srcPegRevision,
+                                boolean discoverChangedPaths,
+                                String[] revprops, LogMessageCallback callback)
+        throws ClientException
     {
         synchronized (clazz)
         {
-            return worker.getMergeinfo(path, pegRevision);
-        }
-    }
-
-    /**
-     * @since 1.5
-     */
-    public RevisionRange[] getAvailableMerges(String path,
-                                              Revision pegRevision,
-                                              String mergeSource)
-        throws SubversionException
-    {
-        synchronized (clazz)
-        {
-            return worker.getAvailableMerges(path, pegRevision,
-                                             mergeSource);
+            worker.getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
+                                   srcPegRevision, discoverChangedPaths,
+                                   revprops, callback);
         }
     }
 
