@@ -59,12 +59,13 @@ def run_svnmucc(expected_path_changes, *varargs):
   that match the list of EXPECTED_PATH_CHANGES."""
 
   # First, run svnmucc.
-  outlines, errlines = svntest.main.run_command(svnmucc_binary, 1, 0,
-                                                '-U', repos_url,
-                                                '-u', 'svnmuccuser',
-                                                '-p', 'svnmuccpass',
-                                                '--config-dir', 'dummy',
-                                                *varargs)
+  exit_code, outlines, errlines = \
+    svntest.main.run_command(svnmucc_binary, 1, 0,
+                             '-U', repos_url,
+                             '-u', 'svnmuccuser',
+                             '-p', 'svnmuccpass',
+                             '--config-dir', 'dummy',
+                             *varargs)
   if errlines:
     raise svntest.main.SVNCommitFailure(str(errlines))
   if len(outlines) != 1 or not _svnmucc_re.match(outlines[0]):
@@ -72,7 +73,8 @@ def run_svnmucc(expected_path_changes, *varargs):
 
   # Now, run 'svn log -vq -rHEAD'
   changed_paths = []
-  outlines, errlines = svntest.main.run_svn(None, 'log', '-vqrHEAD', repos_url)
+  exit_code, outlines, errlines = \
+    svntest.main.run_svn(None, 'log', '-vqrHEAD', repos_url)
   if errlines:
     raise svntest.Failure("Unable to verify commit with 'svn log': %s"
                           % (str(errlines)))
@@ -236,8 +238,9 @@ if __name__ == "__main__":
     # remove any previously existing repository, then create a new one
     if os.path.exists(repos_path):
       shutil.rmtree(repos_path)
-    outlines, errlines = svntest.main.run_svnadmin('create', '--fs-type',
-                                                   'fsfs', repos_path)
+    exit_code, outlines, errlines = \
+      svntest.main.run_svnadmin('create', '--fs-type',
+                                'fsfs', repos_path)
     if errlines:
       raise svntest.main.SVNRepositoryCreateFailure(repos_path)
     fp = open(os.path.join(repos_path, 'conf', 'svnserve.conf'), 'w')
