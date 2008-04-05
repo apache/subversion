@@ -40,6 +40,12 @@ Candidate changes:
    Votes:
      +1: arfrever
 
+ * r30281, r30297
+   Fix issue #3138: ra_serf: make get_locations and get_location_segments
+   return an error when the target url isn't found in the repository.
+   Votes:
+     +1: lgo
+
 Approved changes:
 
  * r30278, r30279, r30285, r30299, r30304, r30319, r30320
