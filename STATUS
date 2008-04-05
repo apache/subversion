@@ -38,18 +38,6 @@ Approved changes:
    Votes:
      +1: markphip, hwright
 
- * r30215, r30221, r30225, r30226, r30230, r30243, r30286
-   Simplify (UI-wise) yet vastly enhance the 'svn mergeinfo' subcommand and
-   underlying APIs.
-   Backport Branch:
-     /branches/1.5.x-r30215
-   Notes:
-     If we approve this, we'll want to merge r30238 from the
-     1.5.x-r30215 branch to trunk (to purge the APIs that never made
-     it into 1.5).
-   Votes:
-     +1: cmpilato, kfogel
-
  * r30281, r30297
    Fix issue #3138: ra_serf: make get_locations and get_location_segments
    return an error when the target url isn't found in the repository.
