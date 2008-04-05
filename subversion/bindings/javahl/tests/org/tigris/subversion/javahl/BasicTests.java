@@ -2310,9 +2310,6 @@ public class BasicTests extends SVNTests
         final String mergeSrc = thisTest.getUrl() + "/A/mu";
         acquireMergeinfoAndAssertEquals(4, 4, 6, 6, targetPath, mergeSrc);
 
-        // Test retrieval of mergeinfo from the repository.
-        targetPath = thisTest.getUrl() + "/branches/A/mu";
-        acquireMergeinfoAndAssertEquals(4, 4, 5, 6, targetPath, mergeSrc);
     }
 
     /**
