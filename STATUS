@@ -20,9 +20,10 @@ Candidate changes:
    Votes:
      +1: djames 
 
- * r30340
-   Fix linking issues on cygwin by removing a trivial circular dependency
-   between libsvn_fs_{base,fs} and libsvn_fs.
+ * r30340, r30342
+   Fix linking issues on cygwin by removing circular dependencies
+   between libsvn_fs_{base,fs}/libsvn_fs and libsvn_ra_neon/libsvn_ra.
+   (This also resolves linking issues with the ctypes python bindings.)
    Thread:
      http://svn.haxx.se/dev/archive-2008-04/0277.shtml
    Votes:
