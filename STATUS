@@ -25,6 +25,9 @@ Candidate changes:
    and the returned value is allocated in it as you might expect.
    This fixes JavaHL tests on 1.5.x branch.  Seems to be a memory corruption
    issue.
+   Notes:
+     The docstrings for the new APIs would need to be updated, since they
+     currently read as New in 1.6.
    Votes:
     +1: markphip
 
