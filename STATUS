@@ -14,11 +14,6 @@ Status of 1.5.0:
 
 Candidate changes:
 
- * r30281, r30297
-   Fix issue #3138: ra_serf: make get_locations and get_location_segments
-   return an error when the target url isn't found in the repository.
-   Votes:
-     +1: lgo
 
 Approved changes:
 
@@ -45,6 +40,12 @@ Approved changes:
    Support Neon 0.28.2.
    Votes:
      +1: arfrever, kfogel
+
+ * r30281, r30297
+   Fix issue #3138: ra_serf: make get_locations and get_location_segments
+   return an error when the target url isn't found in the repository.
+   Votes:
+     +1: lgo, kfogel
 
 Status of 1.5.1:
 ================
