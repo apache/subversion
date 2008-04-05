@@ -18,6 +18,7 @@
 #include "bdb_compat.h"
 #include "../fs.h"
 #include "../err.h"
+#include "../id.h"
 #include "dbt.h"
 #include "../trail.h"
 #include "bdb-err.h"
