@@ -26,13 +26,12 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
- * r30278, r30279, r30285, r30299, r30304
+ * r30278, r30279, r30285, r30299, r30304, r30319, r30320
    Update JavaHL bindings in light of r30215.
    Notes:
      This is dependent upon the r30215 group being merged.
-     This group is functionally complete, but there is still a test failure
-       in the JavaHL tests.
    Votes:
+     +1: markphip
 
  * r29852, r29857
     Add a test for 2-URL merges from foreign repositories and some subsequent
