@@ -7,7 +7,7 @@ SWIG=swig-1.3.31
 
 APR=apr-1.2.12
 APR_UTIL=apr-util-1.2.12
-NEON=neon-0.28.1
+NEON=neon-0.28.2
 SERF=serf-0.1.2
 ZLIB=zlib-1.2.3
 
