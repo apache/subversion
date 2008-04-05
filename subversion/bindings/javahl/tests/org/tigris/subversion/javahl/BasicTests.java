@@ -863,24 +863,29 @@ public class BasicTests extends SVNTests
 
     }
    
+    /**
+     * Tests that the passed start and end revision are contained
+     * within the array of revisions.
+     * @since 1.5
+     */
     private void assertExpectedMergeRange(long start, long end,
                                           long[] revisions)
     {
         Arrays.sort(revisions);
-    	for (int i = 0; i < revisions.length; i++) {
-			if (revisions[i] <= start) {
-				for (int j = i; j < revisions.length; j++)
+        for (int i = 0; i < revisions.length; i++) {
+            if (revisions[i] <= start) {
+                for (int j = i; j < revisions.length; j++)
                 {
-					if (end <= revisions[j])
-						return;
-				}
-				fail("End revision: " + end + " was not in range: " + revisions[0] +
-						" : " + revisions[revisions.length - 1]);
-				return;
-			}
-		}
-		fail("Start revision: " + start + " was not in range: " + revisions[0] +
-				" : " + revisions[revisions.length - 1]);
+                    if (end <= revisions[j])
+                        return;
+                }
+                fail("End revision: " + end + " was not in range: " + revisions[0] +
+                        " : " + revisions[revisions.length - 1]);
+                return;
+            }
+        }
+        fail("Start revision: " + start + " was not in range: " + revisions[0] +
+                " : " + revisions[revisions.length - 1]);
     }
 
     /**
@@ -2114,16 +2119,16 @@ public class BasicTests extends SVNTests
      * @param mergeSrc The URL from which to consider merges.
      */
     private void acquireMergeinfoAndAssertEquals(long expectedMergeStart,
-    											 long expectedMergeEnd,
-    											 long expectedAvailableStart,
+                                                 long expectedMergeEnd,
+                                                 long expectedAvailableStart,
                                                  long expectedAvailableEnd,
                                                  String targetPath,
                                                  String mergeSrc)
         throws SubversionException
     {
         // Verify expected merge history.
-    	long[] revs = getMergeinfoRevisions(MergeinfoLogKind.merged, targetPath,
-    			Revision.HEAD, mergeSrc, Revision.HEAD);
+        long[] revs = getMergeinfoRevisions(MergeinfoLogKind.merged, targetPath,
+                Revision.HEAD, mergeSrc, Revision.HEAD);
         assertNotNull("Missing merge info on '" + targetPath + '\'',
                       revs);
 
@@ -2132,9 +2137,9 @@ public class BasicTests extends SVNTests
         // Verify expected available merges.
         if (expectedAvailableStart > 0)
         {
-        	long[] availableRevs =
+            long[] availableRevs =
                     getMergeinfoRevisions(MergeinfoLogKind.eligible, targetPath,
-        			                      Revision.HEAD, mergeSrc,
+                                          Revision.HEAD, mergeSrc,
                                           Revision.HEAD);
             assertNotNull("Missing eligible merge info on '"+targetPath + '\'',
                           availableRevs);
@@ -2143,40 +2148,46 @@ public class BasicTests extends SVNTests
             }
     }
     
+    /**
+     * Calls the API to get mergeinfo revisions and returns
+     * the revision numbers in a sorted array, or null if there
+     * are no revisions to return.
+     * @since 1.5
+     */
     private long[] getMergeinfoRevisions(int kind, String pathOrUrl,
                                          Revision pegRevision,
-    		                             String mergeSourceUrl,
+                                         String mergeSourceUrl,
                                          Revision srcPegRevision) {
-    	class Callback implements LogMessageCallback {
-    		
-    		List revList = new ArrayList();
+        class Callback implements LogMessageCallback {
+            
+            List revList = new ArrayList();
 
-			public void singleMessage(ChangePath[] changedPaths, long revision,
-					String author, long timeMicros, String message,
-					boolean hasChildren) {
-				revList.add(new Long(revision));
-			}
-			
-			public long[] getRevisions() {
-				long[] revisions = new long[revList.size()];
-				int i = 0;
-				for (Iterator iter = revList.iterator(); iter.hasNext();) {
-					Long revision = (Long) iter.next();
-					revisions[i] = revision.longValue();
-					i++;
-				}
-				return revisions;
-			}
-    	}
-    	try {
-        	Callback callback = new Callback();
-			client.getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
-			                       srcPegRevision, false, null, callback);
-	    	return callback.getRevisions();
-		} catch (ClientException e) {
-			return null;
-		}
-    	
+            public void singleMessage(ChangePath[] changedPaths, long revision,
+                    String author, long timeMicros, String message,
+                    boolean hasChildren) {
+                revList.add(new Long(revision));
+            }
+            
+            public long[] getRevisions() {
+                long[] revisions = new long[revList.size()];
+                int i = 0;
+                for (Iterator iter = revList.iterator(); iter.hasNext();) {
+                    Long revision = (Long) iter.next();
+                    revisions[i] = revision.longValue();
+                    i++;
+                }
+                return revisions;
+            }
+        }
+        try {
+            Callback callback = new Callback();
+            client.getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
+                                   srcPegRevision, false, null, callback);
+            return callback.getRevisions();
+        } catch (ClientException e) {
+            return null;
+        }
+        
     }
 
     /**
@@ -2210,14 +2221,19 @@ public class BasicTests extends SVNTests
         return f;
     }
 
+    /**
+     * Retrieve svn:mergeinfo property from path.  This is used as just
+     * a sanity check for the presence of the property.
+     * @since 1.5
+     */
     private String getMergeinfo(File path, Revision rev) {
-    	try {
-			PropertyData prop = client.propertyGet(fileToSVNPath(path, false), "svn:mergeinfo", rev);
-			if (prop == null) return null;
-			else return prop.getValue();
-    	} catch (ClientException e) {
-			return null;
-		}
+        try {
+            PropertyData prop = client.propertyGet(fileToSVNPath(path, false), "svn:mergeinfo", rev);
+            if (prop == null) return null;
+            else return prop.getValue();
+        } catch (ClientException e) {
+            return null;
+        }
     }
     
     /**
