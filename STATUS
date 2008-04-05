@@ -20,11 +20,6 @@ Candidate changes:
    Votes:
      +1: djames 
 
- * r30336
-   Say "rNNNNN" in mergeinfo output, instead of "NNNNN".
-   Votes:
-     +1: kfogel
-
 Approved changes:
 
  * r30278, r30279, r30285, r30299, r30304, r30319, r30320
@@ -51,6 +46,11 @@ Approved changes:
    return an error when the target url isn't found in the repository.
    Votes:
      +1: lgo, kfogel
+
+ * r30336
+   Say "rNNNNN" in mergeinfo output, instead of "NNNNN".
+   Votes:
+     +1: kfogel, markphip
 
 Status of 1.5.1:
 ================
