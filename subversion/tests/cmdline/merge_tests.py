@@ -10559,6 +10559,107 @@ def foreign_repos(sbox):
                               None, None, None, None, 1)
 
 
+def foreign_repos_2_url(sbox):
+  "2-url merge from a foreign repository"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a copy of this repository and associated working copy.  Both
+  # should have nothing but a Greek tree in them, and the two
+  # repository UUIDs should differ.
+  sbox2 = sbox.clone_dependent(True)
+  sbox2.build()
+  wc_dir2 = sbox2.wc_dir
+
+  # Convenience variables for working copy paths.
+  Z_path = os.path.join(wc_dir, 'A', 'D', 'G', 'Z')
+  Q_path = os.path.join(wc_dir, 'A', 'Q')
+  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
+  beta_path = os.path.join(wc_dir, 'A', 'B', 'E', 'beta')
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  zeta_path = os.path.join(wc_dir, 'A', 'D', 'G', 'Z', 'zeta')
+  fred_path = os.path.join(wc_dir, 'A', 'C', 'fred')
+
+  # First, "tag" the current state of the repository.
+  svntest.main.run_svn(None, 'copy', sbox.repo_url + '/A',
+                       sbox.repo_url + '/A-tag1', '-m', 'tag1')
+                       
+  # Add new directories
+  svntest.main.run_svn(None, 'mkdir', Q_path, Z_path)
+
+  # Add new files
+  zeta_contents = "This is the file 'zeta'.\n"
+  fred_contents = "This is the file 'fred'.\n"
+  svntest.main.file_append(zeta_path, zeta_contents)
+  svntest.main.file_append(fred_path, fred_contents)
+  svntest.main.run_svn(None, 'add', zeta_path, fred_path)
+
+  # Modify existing files
+  added_contents = "This is another line of text.\n"
+  svntest.main.file_append(beta_path, added_contents)
+
+  # Delete some stuff
+  svntest.main.run_svn(None, 'delete', alpha_path, H_path)
+
+  # Commit up these changes.
+  expected_output = wc.State(wc_dir, {
+    'A/Q'          : Item(verb='Adding'),
+    'A/D/G/Z'      : Item(verb='Adding'),
+    'A/D/G/Z/zeta' : Item(verb='Adding'),
+    'A/C/fred'     : Item(verb='Adding'),
+    'A/B/E/beta'   : Item(verb='Sending'),
+    'A/B/E/alpha'  : Item(verb='Deleting'),
+    'A/D/H'        : Item(verb='Deleting'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/Q'          : Item(status='  ', wc_rev=3),
+    'A/D/G/Z'      : Item(status='  ', wc_rev=3),
+    'A/D/G/Z/zeta' : Item(status='  ', wc_rev=3),
+    'A/C/fred'     : Item(status='  ', wc_rev=3),
+    })
+  expected_status.tweak('A/B/E/beta', wc_rev=3)
+  expected_status.remove('A/B/E/alpha', 'A/D/H', 'A/D/H/chi',
+                         'A/D/H/psi', 'A/D/H/omega')
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/Q'          : Item(),
+    'A/D/G/Z'      : Item(),
+    'A/D/G/Z/zeta' : Item(contents=zeta_contents),
+    'A/C/fred'     : Item(contents=fred_contents),
+    })
+  expected_disk.remove('A/B/E/alpha', 'A/D/H', 'A/D/H/chi',
+                       'A/D/H/psi', 'A/D/H/omega')
+  expected_disk.tweak('A/B/E/beta',
+                      contents=expected_disk.desc['A/B/E/beta'].contents
+                      + added_contents)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+  svntest.actions.verify_disk(wc_dir, expected_disk,
+                              None, None, None, None, 1)
+
+  # Now, "tag" the new state of the repository.
+  svntest.main.run_svn(None, 'copy', sbox.repo_url + '/A',
+                       sbox.repo_url + '/A-tag2', '-m', 'tag2')
+
+  # Now, merge across our "tags" (copies of /A) into the /A of a
+  # working copy of another repository.  Not only should the merge
+  # succeed, but the results on disk should match those in our first
+  # working copy.
+
+  ### TODO: Use run_and_verify_merge() ###
+  svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A-tag1',
+                       sbox.repo_url + '/A-tag2',
+                       os.path.join(wc_dir2, 'A'))
+  svntest.main.run_svn(None, 'ci', '-m', 'Merge from foreign repos', wc_dir2)
+  svntest.actions.verify_disk(wc_dir2, expected_disk,
+                              None, None, None, None, 1)
+
+
 ########################################################################
 # Run the tests
 
@@ -10657,6 +10758,7 @@ test_list = [ None,
               dont_add_mergeinfo_from_own_history,
               merge_range_predates_history,
               foreign_repos,
+              foreign_repos_2_url,
              ]
 
 if __name__ == '__main__':

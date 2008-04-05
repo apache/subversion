@@ -32,15 +32,6 @@ Approved changes:
    Votes:
      +1: lgo, kfogel
 
- * r29852, r29857
-    Add a test for 2-URL merges from foreign repositories and some subsequent
-    tweaks.
-    Notes:
-      We've alread merged r29742-r29744, r29746 to 1.5.x which improves
-      foreign repos merging, we might as well add this test too.
-   Votes:
-     +1: pburba, cmpilato
-
 
 Status of 1.5.1:
 ================
