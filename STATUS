@@ -26,24 +26,29 @@ Candidate changes:
    Votes:
     +1: markphip
 
- * r30368
-    Fix a bug where --reintegrate merges can follow the wrong codepath
-    and abort.
-   Votes:
-    +1: pburba
-
- * r30373, r30375
-    Fix for issue #3167, which is a regression in 1.5 that breaks hosting a
-    repository on the root of a domain.
-    Votes:
-     +1: lgo
-
  * r30328
    Fix error messages for invalid arguments to --accept and --show-revs options.
    Votes:
     +1: arfrever
 
+ * r30378
+   Follow-up to r30221: Update svn mergeinfo usage message.
+   Votes:
+    +1: arfrever
+
 Approved changes:
+
+ * r30368
+    Fix a bug where --reintegrate merges can follow the wrong codepath
+    and abort.
+   Votes:
+    +1: pburba, arfrever
+
+ * r30373, r30375
+    Fix for issue #3167, which is a regression in 1.5 that breaks hosting a
+    repository on the root of a domain.
+    Votes:
+     +1: lgo, arfrever
 
 Status of 1.5.1:
 ================
