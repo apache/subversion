@@ -38,6 +38,11 @@ Candidate changes:
     Votes:
      +1: lgo
 
+ * r30328
+   Fix error messages for invalid arguments to --accept and --show-revs options.
+   Votes:
+    +1: arfrever
+
 Approved changes:
 
 Status of 1.5.1:
