@@ -629,7 +629,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  Query information related to merges (or potential merges) between\n"
      "  SOURCE-URL and TARGET.  If the --show-revs option is not provided,\n"
-     "  display revisions which have been merged from sourceURL to TARGET.\n"
+     "  display revisions which have been merged from SOURCE-URL to TARGET.\n"
      "  Otherwise, display the type of information specified by the\n"
      "  --show-revs option.\n"),
     {'r', opt_show_revs} },
