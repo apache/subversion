@@ -1215,6 +1215,13 @@ main(int argc, const char *argv[])
 
           do
             {
+              /* Allow any number of 'r's to prefix a revision number.
+                 ### TODO: Any reason we're not just using opt.c's
+                 ### revision-parsing code here?  Then -c could take
+                 ### "{DATE}" and the special words. */ 
+              while (*opt_arg == 'r')
+                opt_arg++;
+              
               changeno = strtol(opt_arg, &end, 10);
               if (end == opt_arg || !(*end == '\0' || *end == ',') )
                 {

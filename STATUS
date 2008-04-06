@@ -34,11 +34,6 @@ Candidate changes:
 
 Approved changes:
  
- * r30362
-   Skip leading 'r's on rev numbers passed to -c and -r.
-   Votes:
-     +1: kfogel, pburba
-
  * r30053, r30101
    Fix an intermittent problem with diff_tests 47.
    Votes:
