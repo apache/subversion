@@ -14,16 +14,6 @@ Status of 1.5.0:
 
 Candidate changes:
 
- * r30328
-   Fix error messages for invalid arguments to --accept and --show-revs options.
-   Votes:
-    +1: arfrever
-
- * r30378
-   Follow-up to r30221: Update svn mergeinfo usage message.
-   Votes:
-    +1: arfrever
-
 Approved changes:
 
  * r30368
@@ -46,6 +36,16 @@ Approved changes:
    issue.
    Votes:
     +1: markphip (only r29167)
+    +1: arfrever, kfogel
+
+ * r30328
+   Fix error messages for invalid arguments to --accept and --show-revs options.
+   Votes:
+    +1: arfrever, kfogel
+
+ * r30378
+   Follow-up to r30221: Update svn mergeinfo usage message.
+   Votes:
     +1: arfrever, kfogel
 
 Status of 1.5.1:
