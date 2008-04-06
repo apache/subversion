@@ -32,6 +32,12 @@ Candidate changes:
    Votes:
     +1: pburba
 
+ * r30373, r30375
+    Fix for issue #3167, which is a regression in 1.5 that breaks hosting a
+    repository on the root of a domain.
+    Votes:
+     +1: lgo
+
 Approved changes:
 
 Status of 1.5.1:
