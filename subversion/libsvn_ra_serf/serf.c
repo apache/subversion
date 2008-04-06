@@ -499,6 +499,9 @@ svn_ra_serf__open(svn_ra_session_t *session,
                                _("Illegal repository URL '%s'"),
                                repos_URL);
     }
+  /* Work around an issue in apr-util 1.2.12 and older */
+  if (url.path == NULL || url.path[0] == '\0')
+    url.path = apr_pstrdup(serf_sess->pool, "/");
 
   serf_sess->repos_url = url;
   serf_sess->repos_url_str = apr_pstrdup(serf_sess->pool, repos_URL);
