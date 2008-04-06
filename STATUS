@@ -14,7 +14,7 @@ Status of 1.5.0:
 
 Candidate changes:
 
- * r29167
+ * r29167, r29169, r29170, r30380
    Rev the svn_ra_get_uuid and svn_ra_get_repos_root interfaces to get a
    more natural API, where the pool you provide is actually meaningful
    and the returned value is allocated in it as you might expect.
@@ -24,7 +24,8 @@ Candidate changes:
      The docstrings for the new APIs would need to be updated, since they
      currently read as New in 1.6.
    Votes:
-    +1: markphip
+    +1: markphip (only r29167)
+    +1: arfrever
 
  * r30328
    Fix error messages for invalid arguments to --accept and --show-revs options.
