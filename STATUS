@@ -14,11 +14,6 @@ Status of 1.5.0:
 
 Candidate changes:
 
- * r30362
-   Skip leading 'r's on rev numbers passed to -c and -r.
-   Votes:
-     +1: kfogel
-
  * r29167
    Rev the svn_ra_get_uuid and svn_ra_get_repos_root interfaces to get a
    more natural API, where the pool you provide is actually meaningful
@@ -31,11 +26,6 @@ Candidate changes:
    Votes:
     +1: markphip
 
- * r30053, r30101
-   Fix an intermittent problem with diff_tests 47.
-   Votes:
-    +1: hwright
-
  * r30368
     Fix a bug where --reintegrate merges can follow the wrong codepath
     and abort.
@@ -43,6 +33,16 @@ Candidate changes:
     +1: pburba
 
 Approved changes:
+ 
+ * r30362
+   Skip leading 'r's on rev numbers passed to -c and -r.
+   Votes:
+     +1: kfogel, pburba
+
+ * r30053, r30101
+   Fix an intermittent problem with diff_tests 47.
+   Votes:
+    +1: hwright, pburba
 
 Status of 1.5.1:
 ================
