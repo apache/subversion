@@ -28,6 +28,11 @@ Status of 1.5.0:
    Votes:
      +1: cmpilato
 
+ * r30412
+   JavaHL: restore getMergeInfo method.  This goes with r30407.
+   Votes:
+     +1: markphip
+
 Candidate changes:
 
 Status of 1.5.1:
