@@ -16,12 +16,6 @@ Candidate changes:
 
 Approved changes:
 
- * r30368
-    Fix a bug where --reintegrate merges can follow the wrong codepath
-    and abort.
-   Votes:
-    +1: pburba, arfrever
-
  * r30373, r30375
     Fix for issue #3167, which is a regression in 1.5 that breaks hosting a
     repository on the root of a domain.

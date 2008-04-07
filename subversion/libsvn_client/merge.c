@@ -5314,6 +5314,7 @@ static svn_error_t *
 remove_irrelevant_ranges(svn_mergeinfo_catalog_t *catalog_p,
                          svn_mergeinfo_catalog_t catalog,
                          apr_array_header_t *segments,
+                         const char *source_repos_rel_path,
                          apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
@@ -5341,10 +5342,25 @@ remove_irrelevant_ranges(svn_mergeinfo_catalog_t *catalog_p,
                                       mergeinfo,
                                       history_as_mergeinfo,
                                       pool));
-      apr_hash_set(new_catalog,
-                   apr_pstrdup(pool, path),
-                   APR_HASH_KEY_STRING,
-                   filtered_mergeinfo);
+      /* Don't put an empty hash in the catalog for the root of the source.
+         An empty hash represents empty mergeinfo as opposed to *no*
+         mergeinfo.  We need to do this for the root of the source because
+         if calculate_left_hand_side() sees *any* mergeinfo left on the source
+         it will interpret this as coming from the target, when in fact
+         nothing has been merged from the target to the source.  This
+         ultimately causes calculate_left_hand_side() to follow the wrong code
+         path and abort.  We only do this for the root of the source however,
+         subtrees with mergeinfo cannot lose all mergeinfo as that would mean
+         they are inheriting from the root, which isn't the case.  See here
+         for more details:
+         http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=136908
+         */
+      if (apr_hash_count(filtered_mergeinfo)
+          || strcmp(source_repos_rel_path, path) != 0)
+        apr_hash_set(new_catalog,
+                     apr_pstrdup(pool, path),
+                     APR_HASH_KEY_STRING,
+                     filtered_mergeinfo);
     }
 
   *catalog_p = new_catalog;
@@ -5397,6 +5413,7 @@ calculate_left_hand_side(const char **url_left,
   SVN_ERR(remove_irrelevant_ranges(&mergeinfo_catalog,
                                    mergeinfo_catalog,
                                    segments,
+                                   source_repos_rel_path,
                                    subpool));
 
   /* Elide! */
