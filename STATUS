@@ -16,12 +16,6 @@ Candidate changes:
 
 Approved changes:
 
- * r30373, r30375
-    Fix for issue #3167, which is a regression in 1.5 that breaks hosting a
-    repository on the root of a domain.
-    Votes:
-     +1: lgo, arfrever
-
  * r29167, r29169, r29170, r30380
    Rev the svn_ra_get_uuid and svn_ra_get_repos_root interfaces to get a
    more natural API, where the pool you provide is actually meaningful
