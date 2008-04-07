@@ -20,6 +20,7 @@
 
 
 #include <limits.h> /* for UINT_MAX */
+#include <stdarg.h>
 
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
@@ -154,28 +155,32 @@ static svn_error_t *get_fs_path(const char *repos_url, const char *url,
 
 static svn_error_t *svnserve_log(server_baton_t *b,
                                  svn_ra_svn_conn_t *conn,
-                                 const char *command,
-                                 apr_pool_t *pool)
+                                 apr_pool_t *pool,
+                                 const char *fmt, ...)
 {
-  const char *buf, *remote_host, *timestr;
+  const char *remote_host, *timestr, *log, *line;
+  va_list ap;
 
   if (b->log_file == NULL)
-    return SVN_NO_ERROR;
+      return SVN_NO_ERROR;
 
   remote_host = svn_ra_svn_conn_remote_host(conn);
   timestr = svn_time_to_cstring(apr_time_now(), pool);
 
-  buf = apr_psprintf(pool, "%" APR_PID_T_FMT
-                     " %s %s %s %s\n",
-                     getpid(),
-                     (remote_host ? remote_host : "-"),
-                     (b->user ? b->user : "-"), timestr,
-                     command);
+  va_start(ap, fmt);
+  log = apr_pvsprintf(pool, fmt, ap);
+  va_end(ap);
 
-  return svn_io_file_write_full(b->log_file, buf, strlen(buf), NULL, pool);
+  line = apr_psprintf(pool, "%" APR_PID_T_FMT
+                      " %s %s %s %s\n",
+                      getpid(), timestr,
+                      (remote_host ? remote_host : "-"),
+                      (b->user ? b->user : "-"), log);
+
+  return svn_io_file_write_full(b->log_file, line, strlen(line), NULL, pool);
 }
 
-#define SLOG(command) SVN_ERR(svnserve_log(baton, conn, (command), pool))
+#define SLOG(...) SVN_ERR(svnserve_log(baton, conn, pool,  __VA_ARGS__))
 
 /* --- AUTHENTICATION AND AUTHORIZATION FUNCTIONS --- */
 
@@ -781,13 +786,14 @@ static svn_error_t *reparent(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                              apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
-  const char *url;
+  const char *encoded_url, *url;
   const char *fs_path;
 
-  SLOG("reparent");
-
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &url));
-  url = svn_path_uri_decode(svn_path_canonicalize(url, pool), pool);
+  encoded_url = svn_path_canonicalize(url, pool);
+  SLOG("reparent %s", encoded_url);
+  url = svn_path_uri_decode(encoded_url, pool);
+
   SVN_ERR(trivial_auth_request(conn, pool, b));
   SVN_CMD_ERR(get_fs_path(svn_path_uri_decode(b->repos_url, pool),
                           url, &fs_path));
