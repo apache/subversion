@@ -172,10 +172,10 @@ static svn_error_t *svnserve_log(server_baton_t *b,
   va_end(ap);
 
   line = apr_psprintf(pool, "%" APR_PID_T_FMT
-                      " %s %s %s %s\n",
+                      " %s %s %s %s %s\n",
                       getpid(), timestr,
                       (remote_host ? remote_host : "-"),
-                      (b->user ? b->user : "-"), log);
+                      (b->user ? b->user : "-"), b->repos_name, log);
 
   return svn_io_file_write_full(b->log_file, line, strlen(line), NULL, pool);
 }
@@ -2622,6 +2622,11 @@ static svn_error_t *find_repos(const char *url, const char *root,
                              svn_path_component_count(b->fs_path->data));
   b->repos_url = url_buf->data;
   b->authz_repos_name = svn_path_is_child(root, repos_root, pool);
+  if (b->authz_repos_name == NULL)
+    b->repos_name = svn_path_basename(repos_root, pool);
+  else
+    b->repos_name = b->authz_repos_name;
+  b->repos_name = svn_path_uri_encode(b->repos_name, pool);
 
   /* If the svnserve configuration files have not been loaded then
      load them from the repository. */
