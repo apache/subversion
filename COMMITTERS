@@ -146,6 +146,9 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
                                                               bindings br.)
        cacknin   Charles Acknin <charlesacknin@gmail.com>    (svnpatch-diff
                                                                 br.)
+       sbutler   Stephen Butler <sbutler@elego.de>           (tree-conflicts
+                                                              br., diff-
+                                                              callbacks3 br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 
