@@ -65,9 +65,9 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
     {
       apr_sockaddr_t *sa;
       conn->stream = svn_ra_svn__stream_from_sock(sock, pool);
-      /* ### TODO: error checking */
-      apr_socket_addr_get(&sa, APR_REMOTE, sock);
-      apr_sockaddr_ip_get(&conn->remote_ip, sa);
+      if (!(apr_socket_addr_get(&sa, APR_REMOTE, sock) == APR_SUCCESS
+            && apr_sockaddr_ip_get(&conn->remote_ip, sa) == APR_SUCCESS))
+        conn->remote_ip = NULL;
     }
   else
     {
