@@ -27,11 +27,6 @@ Candidate changes:
 Approved changes (all releases):
 ================================
 
- * r30407
-   Per list discussion, re-add the svn_client_mergeinfo_get_merged() API.
-   Votes:
-     +1: cmpilato, pburba
-
  * r30408
    Fix a buglet in svn_client_suggest_merge_sources() that caused the same
    path to be returned twice in some instances.

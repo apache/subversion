@@ -1207,6 +1207,47 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
 
 
 svn_error_t *
+svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo_p,
+                                const char *path_or_url,
+                                const svn_opt_revision_t *peg_revision,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *pool)
+{
+  const char *repos_root;
+  apr_hash_t *full_path_mergeinfo;
+  svn_mergeinfo_t mergeinfo;
+  
+  SVN_ERR(get_mergeinfo(&mergeinfo, &repos_root, path_or_url, 
+                        peg_revision, ctx, pool));
+
+  /* Copy the MERGEINFO hash items into another hash, but change
+     the relative paths into full URLs. */
+  *mergeinfo_p = NULL;
+  if (mergeinfo)
+    {
+      apr_hash_index_t *hi;
+
+      full_path_mergeinfo = apr_hash_make(pool);
+      for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
+        {
+          const void *key;
+          void *val;
+          const char *source_url;
+
+          apr_hash_this(hi, &key, NULL, &val);
+          source_url = svn_path_uri_encode(key, pool);
+          source_url = svn_path_join(repos_root, source_url + 1, pool);
+          apr_hash_set(full_path_mergeinfo, source_url, 
+                       APR_HASH_KEY_STRING, val);
+        }
+      *mergeinfo_p = full_path_mergeinfo;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_client_mergeinfo_log_eligible(const char *path_or_url,
                                   const svn_opt_revision_t *peg_revision,
                                   const char *merge_source_url,
