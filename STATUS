@@ -12,6 +12,12 @@ core code" to the entire branch.
 Status of 1.5.0:
 ================
 
+ * r30402
+   svn_repos.h(svn_repos_verify_fs) should be marked as new since 1.5,
+   not 1.6.
+   Votes:
+    +1: pburba
+
 Candidate changes:
 
 Status of 1.5.1:
