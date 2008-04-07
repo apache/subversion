@@ -360,8 +360,8 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
           const svn_wc_entry_t *target_entry;
           const char *old_url = NULL;
           
-          SVN_ERR(svn_ra_get_repos_root(merge_b->ra_session2,
-                                        &merge_source_root_url, pool));
+          SVN_ERR(svn_ra_get_repos_root2(merge_b->ra_session2,
+                                         &merge_source_root_url, pool));
           
           /* Get an entry for PATH so we can find it's base revision. */
           SVN_ERR(svn_wc__entry_versioned(&target_entry, path, adm_access, 
@@ -3963,8 +3963,8 @@ do_file_merge(const char *url1,
       SVN_ERR(svn_ra_reparent(merge_b->ra_session1, url1, pool));
 
       /* Calculate remaining merges. */
-      SVN_ERR(svn_ra_get_repos_root(merge_b->ra_session1,
-                                    &source_root_url, pool));
+      SVN_ERR(svn_ra_get_repos_root2(merge_b->ra_session1,
+                                     &source_root_url, pool));
       SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path, primary_url,
                                                 source_root_url, TRUE, NULL,
                                                 NULL, pool));
@@ -4235,7 +4235,7 @@ do_directory_merge(const char *url1,
      because they meet one or more of the criteria described in
      get_mergeinfo_paths(). Here the paths are arranged in a depth
      first order. */
-  SVN_ERR(svn_ra_get_repos_root(ra_session, &source_root_url, pool));
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &source_root_url, pool));
   SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path, primary_url,
                                             source_root_url, TRUE, NULL,
                                             NULL, pool));
@@ -5018,10 +5018,8 @@ svn_client_merge3(const char *source1,
 
   /* Get the repository root URL from one of our sessions (the other
      doesn't matter -- if it ain't the same, other stuff would fall
-     over later).  We have to dup this into our pool, since the API
-     declares that this data will live in the session's pool.  */
-  SVN_ERR(svn_ra_get_repos_root(ra_session1, &source_repos_root, sesspool));
-  source_repos_root = apr_pstrdup(pool, source_repos_root);
+     over later).  */
+  SVN_ERR(svn_ra_get_repos_root2(ra_session1, &source_repos_root, sesspool));
 
   /* Do our working copy and sources come from the same repository? */
   same_repos = (strcmp(source_repos_root, wc_repos_root) == 0) ? TRUE : FALSE;
@@ -5569,7 +5567,7 @@ svn_client_merge_reintegrate(const char *source,
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, wc_repos_root,
                                                NULL, NULL, NULL,
                                                FALSE, FALSE, ctx, pool));
-  SVN_ERR(svn_ra_get_repos_root(ra_session, &source_repos_root, pool));
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &source_repos_root, pool));
 
   /* source_repos_root and wc_repos_root are required to be the same,
      as mergeinfo doesn't come into play for cross-repository merging. */
@@ -5726,7 +5724,7 @@ svn_client_merge_peg3(const char *source,
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session,
                                                URL, NULL, NULL, NULL,
                                                FALSE, TRUE, ctx, sesspool));
-  SVN_ERR(svn_ra_get_repos_root(ra_session, &source_repos_root, pool));
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &source_repos_root, pool));
 
   /* Normalize our merge sources. */
   SVN_ERR(normalize_merge_sources(&merge_sources, source, URL,

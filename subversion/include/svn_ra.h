@@ -1374,12 +1374,20 @@ svn_ra_stat(svn_ra_session_t *session,
 
 
 /**
- * Set @a *uuid to the repository's UUID.
+ * Set @a *uuid to the repository's UUID, allocated in @a pool.
  *
- * @note The UUID has the same lifetime as the @a session.
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_ra_get_uuid2(svn_ra_session_t *session,
+                 const char **uuid,
+                 apr_pool_t *pool);
+
+/**
+ * Similar to svn_ra_get_uuid2(), but returns the value allocated in
+ * @a session's pool.
  *
- * Use @a pool for temporary memory allocation.
- *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  * @since New in 1.2.
  */
 svn_error_t *
@@ -1388,14 +1396,23 @@ svn_ra_get_uuid(svn_ra_session_t *session,
                 apr_pool_t *pool);
 
 /**
- * Set @a *url to the repository's root URL.  The value will not include
- * a trailing '/'.  The returned URL is guaranteed to be a prefix of the
- * @a session's URL.
+ * Set @a *url to the repository's root URL, allocated in @a pool.
+ * The value will not include a trailing '/'.  The returned URL is
+ * guaranteed to be a prefix of the @a session's URL.
  *
- * @note The URL has the same lifetime as the @a session.
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_ra_get_repos_root2(svn_ra_session_t *session,
+                       const char **url,
+                       apr_pool_t *pool);
+
+
+/**
+ * Similar to svn_ra_get_repos_root2(), but returns the value
+ * allocated in @a session's pool.
  *
- * Use @a pool for temporary memory allocation.
- *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  * @since New in 1.2.
  */
 svn_error_t *

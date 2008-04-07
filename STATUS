@@ -16,16 +16,6 @@ Candidate changes:
 
 Approved changes:
 
- * r29167, r29169, r29170, r30380
-   Rev the svn_ra_get_uuid and svn_ra_get_repos_root interfaces to get a
-   more natural API, where the pool you provide is actually meaningful
-   and the returned value is allocated in it as you might expect.
-   This fixes JavaHL tests on 1.5.x branch.  Seems to be a memory corruption
-   issue.
-   Votes:
-    +1: markphip (only r29167)
-    +1: arfrever, kfogel
-
 Status of 1.5.1:
 ================
 

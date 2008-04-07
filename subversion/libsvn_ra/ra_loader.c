@@ -504,7 +504,7 @@ svn_error_t *svn_ra_reparent(svn_ra_session_t *session,
 
   /* Make sure the new URL is in the same repository, so that the
      implementations don't have to do it. */
-  SVN_ERR(svn_ra_get_repos_root(session, &repos_root, pool));
+  SVN_ERR(svn_ra_get_repos_root2(session, &repos_root, pool));
   if (! svn_path_is_ancestor(repos_root, url))
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                              _("'%s' isn't in the same repository as '%s'"),
@@ -968,11 +968,29 @@ svn_error_t *svn_ra_stat(svn_ra_session_t *session,
   return session->vtable->stat(session, path, revision, dirent, pool);
 }
 
+svn_error_t *svn_ra_get_uuid2(svn_ra_session_t *session,
+                              const char **uuid,
+                              apr_pool_t *pool)
+{
+  SVN_ERR(session->vtable->get_uuid(session, uuid, pool));
+  *uuid = *uuid ? apr_pstrdup(pool, *uuid) : NULL;
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *svn_ra_get_uuid(svn_ra_session_t *session,
                              const char **uuid,
                              apr_pool_t *pool)
 {
   return session->vtable->get_uuid(session, uuid, pool);
+}
+
+svn_error_t *svn_ra_get_repos_root2(svn_ra_session_t *session,
+                                    const char **url,
+                                    apr_pool_t *pool)
+{
+  SVN_ERR(session->vtable->get_repos_root(session, url, pool));
+  *url = *url ? apr_pstrdup(pool, *url) : NULL;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *svn_ra_get_repos_root(svn_ra_session_t *session,
