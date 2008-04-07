@@ -4618,7 +4618,7 @@ base_node_origin_rev(svn_revnum_t *revision,
                      const char *path,
                      apr_pool_t *pool)
 {
-  svn_fs_t *fs = svn_fs_root_fs(root);
+  svn_fs_t *fs = root->fs;
   svn_error_t *err;
   struct get_set_node_origin_args args;
   const svn_fs_id_t *id, *origin_id;

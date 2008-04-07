@@ -343,9 +343,9 @@ path_from_url(const char *url)
     if (*p == '/' || *p == '?' || *p == '#')
       break;
 
-  /* Return a pointer to the rest of the URL, or to the empty string if there
+  /* Return a pointer to the rest of the URL, or to "/" if there
      was no next section. */
-  return p;
+  return *p == '\0' ? "/" : p;
 }
 
 svn_ra_neon__request_t *

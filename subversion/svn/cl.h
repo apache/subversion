@@ -44,14 +44,20 @@ extern "C" {
 /* --accept actions */
 typedef enum
 {
-  /* invalid or unspecified accept action */
-  svn_cl__accept_invalid = -1,
+  /* invalid accept action */
+  svn_cl__accept_invalid = -2,
+
+  /* unspecified accept action */
+  svn_cl__accept_unspecified = -1,
 
   /* Leave conflicts alone, for later resolution. */
   svn_cl__accept_postpone,
 
   /* Resolve the conflict with the pre-conflict base file. */
   svn_cl__accept_base,
+
+  /* Resolve the conflict with the current working file. */
+  svn_cl__accept_working,
 
   /* Resolve the conflicted hunks by choosing the corresponding text
      from the pre-conflict working copy file.
@@ -82,6 +88,7 @@ typedef enum
 /* --accept action user input words */
 #define SVN_CL__ACCEPT_POSTPONE "postpone"
 #define SVN_CL__ACCEPT_BASE "base"
+#define SVN_CL__ACCEPT_WORKING "working"
 #define SVN_CL__ACCEPT_MINE_CONFLICT "mine-conflict"
 #define SVN_CL__ACCEPT_THEIRS_CONFLICT "theirs-conflict"
 #define SVN_CL__ACCEPT_MINE_FULL "mine-full"
@@ -93,6 +100,23 @@ typedef enum
 svn_cl__accept_t
 svn_cl__accept_from_word(const char *word);
 
+
+/*** Mergeinfo flavors. ***/
+
+/* --show-revs values */
+typedef enum {
+  svn_cl__show_revs_invalid = -1,
+  svn_cl__show_revs_merged,
+  svn_cl__show_revs_eligible
+} svn_cl__show_revs_t;
+
+/* --show-revs user input words */
+#define SVN_CL__SHOW_REVS_MERGED   "merged"
+#define SVN_CL__SHOW_REVS_ELIGIBLE "eligible"
+
+/* Return svn_cl__show_revs_t value corresponding to word. */
+svn_cl__show_revs_t
+svn_cl__show_revs_from_word(const char *word);
 
 
 /*** Command dispatch. ***/
@@ -178,7 +202,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t parents;         /* create intermediate directories */
   svn_boolean_t use_merge_history; /* use/display extra merge information */
   svn_cl__accept_t accept_which; /* how to handle conflicts */
-  const char *from_source;       /* merge source to query (svn mergeinfo) */
+  svn_cl__show_revs_t show_revs; /* mergeinfo flavor */
   svn_depth_t set_depth;         /* new sticky ambient depth value */
   svn_boolean_t reintegrate;     /* use "reintegrate" merge-source heuristic */
 } svn_cl__opt_state_t;
@@ -220,6 +244,7 @@ svn_opt_subcommand_t
   svn_cl__proplist,
   svn_cl__propset,
   svn_cl__revert,
+  svn_cl__resolve,
   svn_cl__resolved,
   svn_cl__status,
   svn_cl__switch,

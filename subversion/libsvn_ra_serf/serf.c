@@ -374,9 +374,12 @@ load_config(svn_ra_serf__session_t *session,
                  SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES, NULL);
 #endif
 
-  server_group = svn_config_find_group(config,
-                                       session->repos_url.hostname,
-                                       SVN_CONFIG_SECTION_GROUPS, pool);
+  if (config)
+    server_group = svn_config_find_group(config,
+                                         session->repos_url.hostname,
+                                         SVN_CONFIG_SECTION_GROUPS, pool);
+  else
+    server_group = NULL;
 
   if (server_group)
     {
@@ -496,6 +499,9 @@ svn_ra_serf__open(svn_ra_session_t *session,
                                _("Illegal repository URL '%s'"),
                                repos_URL);
     }
+  /* Work around an issue in apr-util 1.2.12 and older */
+  if (url.path == NULL || url.path[0] == '\0')
+    url.path = apr_pstrdup(serf_sess->pool, "/");
 
   serf_sess->repos_url = url;
   serf_sess->repos_url_str = apr_pstrdup(serf_sess->pool, repos_URL);

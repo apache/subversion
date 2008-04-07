@@ -2293,9 +2293,7 @@ finish_report(void *report_baton,
         }
       if (status)
         {
-          svn_error_t *err = parser_ctx->error;
-
-          if (err)
+          if (parser_ctx->error)
             svn_error_clear(sess->pending_error);
 
           SVN_ERR(parser_ctx->error);
