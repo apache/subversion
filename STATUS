@@ -16,11 +16,6 @@ Candidate changes:
 
 Approved changes:
 
- * r30392
-   With --reintegrate, disallow --depth and don't suggest --force.
-   Votes:
-    +1: kfogel, kameshj
-
 Status of 1.5.1:
 ================
 
