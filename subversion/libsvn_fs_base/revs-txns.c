@@ -616,7 +616,7 @@ svn_fs_base__change_txn_props(svn_fs_txn_t *txn,
 
 /* Creating a transaction */
 
-txn_vtable_t txn_vtable = {
+static txn_vtable_t txn_vtable = {
   svn_fs_base__commit_txn,
   svn_fs_base__abort_txn,
   svn_fs_base__txn_prop,

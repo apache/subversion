@@ -17,10 +17,16 @@
 # history and logs, available at http://subversion.tigris.org/.
 # ====================================================================
 
+# $HeadURL$
+# $LastChangedDate$
+# $LastChangedBy$
+# $LastChangedRevision$
+
 import sys
 import os
 import sre
 import getopt
+import urllib
 try:
   my_getopt = getopt.gnu_getopt
 except AttributeError:
@@ -160,9 +166,9 @@ class Migrator:
       if new_mergeinfo_prop_val != mergeinfo_prop_val:
         if self.verbose:
           print "Queuing change of %s to '%s'" % \
-                (svn.core.SVN_PROP_MERGEINFO, mergeinfo_prop_val)
+                (svn.core.SVN_PROP_MERGEINFO, new_mergeinfo_prop_val)
         svn.fs.change_node_prop(root, path, svn.core.SVN_PROP_MERGEINFO,
-                                mergeinfo_prop_val)
+                                new_mergeinfo_prop_val)
 
       # Remove old property values.
       if integrated_prop_val is not None:
@@ -191,11 +197,26 @@ class Migrator:
 
   def add_to_mergeinfo(self, svnmerge_prop_val, mergeinfo_prop_val):
     if svnmerge_prop_val is not None:
+      # Convert svnmerge-* property value (which uses any whitespace
+      # for delimiting sources and stores source paths URI-encoded)
+      # into a svn:mergeinfo syntax (which is newline-separated with
+      # URI-decoded paths).
+      sources = svnmerge_prop_val.split()
+      svnmerge_prop_val = ''
+      for source in sources:
+        pieces = source.split(':')
+        if len(pieces) != 2:
+          continue
+        pieces[0] = urllib.unquote(pieces[0])
+        svnmerge_prop_val = svnmerge_prop_val + '%s\n' % (':'.join(pieces))
+
+      # If there is Subversion mergeinfo to merge with, do so.
+      # Otherwise, our svnmerge info simply becomes our new mergeinfo.
       if mergeinfo_prop_val:
         mergeinfo = svn.core.svn_mergeinfo_parse(mergeinfo_prop_val)
         to_migrate = svn.core.svn_mergeinfo_parse(svnmerge_prop_val)
-        mergeinfo = svn.core.svn_mergeinfo_merge(mergeinfo, to_migrate)
-        mergeinfo_prop_val = svn.core.svn_mergeinfo_to_string(mergeinfo)
+        mergeinfo_prop_val = svn.core.svn_mergeinfo_to_string(
+          svn.core.svn_mergeinfo_merge(mergeinfo, to_migrate))
       else:
         mergeinfo_prop_val = svnmerge_prop_val
 

@@ -606,9 +606,9 @@ static svn_error_t *close_all_dirs(report_dir_t *dir)
 
 /** Routines called when we are fetching a file */
 
-/* This function works around a bug in mod_dav_svn in that it will not
- * send remove-prop in the update report when a lock property disappears
- * when send-all is false.
+/* This function works around a bug in some older versions of
+ * mod_dav_svn in that it will not send remove-prop in the update
+ * report when a lock property disappears when send-all is false.
  *
  * Therefore, we'll try to look at our properties and see if there's
  * an active lock.  If not, then we'll assume there isn't a lock
@@ -2277,6 +2277,8 @@ finish_report(void *report_baton,
       /* Authentication protocol specific initalization. */
       if (sess->auth_protocol)
         sess->auth_protocol->init_conn_func(sess, sess->conns[i], pool);
+      if (sess->proxy_auth_protocol)
+        sess->proxy_auth_protocol->init_conn_func(sess, sess->conns[i], pool);
     }
 
   sess->cur_conn = 1;
@@ -2291,6 +2293,10 @@ finish_report(void *report_baton,
         }
       if (status)
         {
+          if (parser_ctx->error)
+            svn_error_clear(sess->pending_error);
+
+          SVN_ERR(parser_ctx->error);
           SVN_ERR(sess->pending_error);
 
           return svn_error_wrap_apr(status, _("Error retrieving REPORT (%d)"),

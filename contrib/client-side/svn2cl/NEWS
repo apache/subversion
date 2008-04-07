@@ -1,3 +1,12 @@
+changes from 0.9 to 0.10
+------------------------
+
+* add an --include-actions option that adds action labels about file
+  additions and removals
+* small fix for other XSLT processors
+* manual page improvement
+
+
 changes from 0.8 to 0.9
 -----------------------
 

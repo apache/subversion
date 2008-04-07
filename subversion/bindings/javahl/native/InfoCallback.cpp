@@ -176,7 +176,7 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jlong jworkingSize = info->working_size == SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN
+  jlong jworkingSize = info->working_size == SVN_INFO_SIZE_UNKNOWN
     ? -1 : (jlong) info->working_size;
   jlong jreposSize = info->size == SVN_INFO_SIZE_UNKNOWN
     ? -1 : (jlong) info->size;

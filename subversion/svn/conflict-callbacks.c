@@ -61,6 +61,8 @@ svn_cl__accept_from_word(const char *word)
     return svn_cl__accept_postpone;
   if (strcmp(word, SVN_CL__ACCEPT_BASE) == 0)
     return svn_cl__accept_base;
+  if (strcmp(word, SVN_CL__ACCEPT_WORKING) == 0)
+    return svn_cl__accept_working;
 #if 0 /* not yet implemented */
   if (strcmp(word, SVN_CL__ACCEPT_MINE_CONFLICT) == 0)
     return svn_cl__accept_mine_conflict;
@@ -214,13 +216,17 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
   switch (b->accept_which)
     {
     case svn_cl__accept_invalid:
-      /* No --accept option, fall through to prompting. */
+    case svn_cl__accept_unspecified:
+      /* No (or no valid) --accept option, fall through to prompting. */
       break;
     case svn_cl__accept_postpone:
       (*result)->choice = svn_wc_conflict_choose_postpone;
       return SVN_NO_ERROR;
     case svn_cl__accept_base:
       (*result)->choice = svn_wc_conflict_choose_base;
+      return SVN_NO_ERROR;
+    case svn_cl__accept_working:
+      (*result)->choice = svn_wc_conflict_choose_merged;
       return SVN_NO_ERROR;
     case svn_cl__accept_mine_conflict:
       (*result)->choice = svn_wc_conflict_choose_mine_conflict;
@@ -402,12 +408,12 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
 
           prompt = apr_pstrcat(subpool, prompt, ",\n        ", NULL);
           prompt = apr_pstrcat(subpool, prompt,
-                               _("(h) help for more options: "),
+                               _("(s) show all options: "),
                                NULL);
 
           SVN_ERR(svn_cmdline_prompt_user2(&answer, prompt, b->pb, subpool));
 
-          if (strcmp(answer, "h") == 0 || strcmp(answer, "?") == 0)
+          if (strcmp(answer, "s") == 0)
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
               _("  (p)  postpone    - mark the conflict to be "
@@ -421,7 +427,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                 "(lose my changes)\n"
                 "  (l)  launch      - launch external tool to "
                 "resolve conflict\n"
-                "  (h)  help        - show this list\n\n")));
+                "  (s)  show all    - show this list\n\n")));
             }
           else if (strcmp(answer, "p") == 0)
             {
@@ -553,7 +559,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                 "(ignore upstream addition)\n"
                 "  (tf) theirs-full - accept incoming item "
                 "(overwrite pre-existing item)\n"
-                "  (h)  help        - show this list\n\n")));
+                "  (h)  help        - show this help\n\n")));
             }
           if (strcmp(answer, "p") == 0)
             {
