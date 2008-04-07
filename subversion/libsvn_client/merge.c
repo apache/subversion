@@ -1234,8 +1234,6 @@ merge_dir_opened(svn_wc_adm_access_t *adm_access,
                  svn_revnum_t rev,
                  void *baton)
 {
-  merge_cmd_baton_t *merge_b = baton;
-      
   return SVN_NO_ERROR;
 }
 
@@ -1246,8 +1244,6 @@ merge_dir_closed(svn_wc_adm_access_t *adm_access,
                  const char *path,
                  void *baton)
 {
-  merge_cmd_baton_t *merge_b = baton;
-
   return SVN_NO_ERROR;
 }
 

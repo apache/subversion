@@ -1919,7 +1919,7 @@ svn_wc_get_diff_editor2(svn_wc_adm_access_t *anchor,
                         void **edit_baton,
                         apr_pool_t *pool)
 {
-  struct callbacks_wrapper_baton *b = apr_pcalloc(pool, sizeof(*b));
+  struct callbacks_wrapper_baton *b = apr_palloc(pool, sizeof(*b));
   b->callbacks = callbacks;
   b->baton = callback_baton;
   return svn_wc_get_diff_editor3(anchor, target, &callbacks_wrapper, b,
@@ -1998,7 +1998,7 @@ svn_wc_diff4(svn_wc_adm_access_t *anchor,
              const apr_array_header_t *changelists,
              apr_pool_t *pool)
 {
-  struct callbacks2_wrapper_baton *b = apr_pcalloc(pool, sizeof(*b));
+  struct callbacks2_wrapper_baton *b = apr_palloc(pool, sizeof(*b));
   b->callbacks = callbacks;
   b->baton = callback_baton;
   return svn_wc_diff5(anchor, target, &callbacks2_wrapper, b,

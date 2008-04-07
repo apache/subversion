@@ -1264,7 +1264,9 @@ typedef svn_error_t *(*svn_wc_conflict_resolver_func_t)
  * useful with merge, not diff; diff callbacks will probably set
  * @a *state to @c svn_wc_notify_state_unknown, since they do not change
  * the state and therefore do not bother to know the state after the
- * operation.)
+ * operation.)  By default, @a state refers to the item's content
+ * state.  Functions concerned with property state have separate
+ * @a contentstate and @a propstate arguments.
  *
  * @since New in 1.6.
  */
