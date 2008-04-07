@@ -26,8 +26,3 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
-
- * r30409
-   Fix a pool lifetime bug in get_mergeinfo().
-   Votes:
-     +1: cmpilato, pburba
