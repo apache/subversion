@@ -80,6 +80,7 @@ struct svn_ra_svn_conn_st {
   ra_svn_block_handler_t block_handler;
   void *block_baton;
   apr_hash_t *capabilities;
+  char *remote_ip;
   apr_pool_t *pool;
 };
 
