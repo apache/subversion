@@ -17,7 +17,7 @@ Candidate changes:
  * r30392
    With --reintegrate, disallow --depth and don't suggest --force.
    Votes:
-    +1: kfogel
+    +1: kfogel, kameshj
 
 Approved changes:
 
