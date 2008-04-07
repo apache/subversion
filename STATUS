@@ -21,8 +21,3 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
-
- * r30412
-   JavaHL: restore getMergeInfo method.  This goes with r30407.
-   Votes:
-     +1: markphip, pburba
