@@ -14,12 +14,12 @@ Status of 1.5.0:
 
 Candidate changes:
 
+Approved changes:
+
  * r30392
    With --reintegrate, disallow --depth and don't suggest --force.
    Votes:
     +1: kfogel, kameshj
-
-Approved changes:
 
 Status of 1.5.1:
 ================
