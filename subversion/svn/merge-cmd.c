@@ -102,7 +102,7 @@ svn_cl__merge(apr_getopt_t *os,
   if (targets->nelts < 1)
     {
       return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0,
-                              _("merge source required"));
+                              _("Merge source required"));
     }
   else  /* Parse at least one, and possible two, sources. */
     {
@@ -287,6 +287,11 @@ svn_cl__merge(apr_getopt_t *os,
 
       if (opt_state->reintegrate)
         {
+          if (opt_state->depth != svn_depth_unknown)
+            return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                    _("--depth cannot be used with "
+                                      "--reintegrate"));
+          
           if (opt_state->force)
             return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                                     _("--force cannot be used with "
@@ -328,8 +333,9 @@ svn_cl__merge(apr_getopt_t *os,
                               ctx,
                               pool);
     }
-  if (err)
+
+  if (err && (! opt_state->reintegrate))
     return svn_cl__may_need_force(err);
 
-  return SVN_NO_ERROR;
+  return err;
 }

@@ -2633,52 +2633,57 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
 
-
 /**
- * Set @a *mergeinfo to the mergeinfo describing the ranges which have
- * been merged into @a path_or_url as of @a peg_revision, or @c NULL
- * if there is no mergeinfo.
+ * Drive log entry callbacks @a receiver / @a receiver_baton with the
+ * revisions merged from @a merge_source_url (as of @a
+ * src_peg_revision) into @a path_or_url (as of @a peg_revision).  @a
+ * ctx is a context used for authentication.
+ * 
+ * @a discover_changed_paths and @a revprops are the same as for
+ * svn_client_log4().  Use @a pool for all necessary allocations.
  *
- * Use @a pool for all necessary allocations.
- *
- * If the server doesn't support retrieval of mergeinfo (which will
- * never happen for file:// URLs), return an @c
+ * If the server doesn't support retrieval of mergeinfo, return an @c
  * SVN_ERR_UNSUPPORTED_FEATURE error.
  *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_mergeinfo_get_merged(svn_mergeinfo_t *mergeinfo,
-                                const char *path_or_url,
+svn_client_mergeinfo_log_merged(const char *path_or_url,
                                 const svn_opt_revision_t *peg_revision,
+                                const char *merge_source_url,
+                                const svn_opt_revision_t *src_peg_revision,
+                                svn_log_entry_receiver_t receiver,
+                                void *receiver_baton,
+                                svn_boolean_t discover_changed_paths,
+                                const apr_array_header_t *revprops,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *pool);
 
-
 /**
- * Set @a *rangelist to a list of <tt>svn_merge_range_t *</tt>
- * items representing ranges of revisions which have not yet been
- * merged from @a merge_source_url into @a path_or_url as of @a
- * peg_revision, or @c NULL if all candidate revisions of @a
- * merge_source have already been merged.
+ * Drive log entry callbacks @a receiver / @a receiver_baton with the
+ * revisions eligible for merge from @a merge_source_url (as of @a
+ * src_peg_revision) into @a path_or_url (as of @a peg_revision).  @a
+ * ctx is a context used for authentication.
  *
- * Use @a pool for all necessary allocations.
+ * @a discover_changed_paths and @a revprops are the same as for
+ * svn_client_log4().  Use @a pool for all necessary allocations.
  *
- * If the server doesn't support retrieval of mergeinfo (which will
- * never happen for file:// URLs), return an @c
+ * If the server doesn't support retrieval of mergeinfo, return an @c
  * SVN_ERR_UNSUPPORTED_FEATURE error.
  *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_mergeinfo_get_available(apr_array_header_t **rangelist,
-                                   const char *path_or_url,
-                                   const svn_opt_revision_t *peg_revision,
-                                   const char *merge_source_url,
-                                   svn_client_ctx_t *ctx,
-                                   apr_pool_t *pool);
-
-
+svn_client_mergeinfo_log_eligible(const char *path_or_url,
+                                  const svn_opt_revision_t *peg_revision,
+                                  const char *merge_source_url,
+                                  const svn_opt_revision_t *src_peg_revision,
+                                  svn_log_entry_receiver_t receiver,
+                                  void *receiver_baton,
+                                  svn_boolean_t discover_changed_paths,
+                                  const apr_array_header_t *revprops,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *pool);
 
 /** @} */
 
@@ -2803,7 +2808,7 @@ svn_client_revert(const apr_array_header_t *paths,
  */
 
 /**
- * Similar to svn_client_resolved2(), but without automatic conflict
+ * Similar to svn_client_resolve(), but without automatic conflict
  * resolution support.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -2814,9 +2819,7 @@ svn_client_resolved(const char *path,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
 
-/** Remove the 'conflicted' state on a working copy @a path.  This will
- * not semantically resolve conflicts;  it just allows @a path to be
- * committed in the future.  The implementation details are opaque.
+/** Perform automatic conflict resolution on a working copy @a path.
  *
  * If @a depth is @c svn_depth_empty, act only on @a path; if
  * @c svn_depth_files, resolve @a path and its conflicted file
@@ -2846,11 +2849,11 @@ svn_client_resolved(const char *path,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_resolved2(const char *path,
-                     svn_depth_t depth,
-                     svn_wc_conflict_choice_t conflict_choice,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool);
+svn_client_resolve(const char *path,
+                   svn_depth_t depth,
+                   svn_wc_conflict_choice_t conflict_choice,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
 
 
 /** @} */
@@ -4015,8 +4018,7 @@ svn_client_unlock(const apr_array_header_t *targets,
  * @{
  */
 
-/** The value of the size in the repository is unknown (because the info
- * was fetched for a local path, not an URL).
+/** The size of the file is unknown.
  *
  * @since New in 1.5
  */
@@ -4082,14 +4084,14 @@ typedef struct svn_info_t
   const char *conflict_new;
   const char *conflict_wrk;
   const char *prejfile;
-
-  /* @since New in 1.5. */
+  /** @since New in 1.5. */
   const char *changelist;
+  /** @since New in 1.5. */
   svn_depth_t depth;
 
   /**
    * The size of the file after being translated into its local
-   * representation, or @c SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN if
+   * representation, or @c SVN_INFO_SIZE_UNKNOWN if
    * unknown.  Not applicable for directories.
    * @since New in 1.5.
    */

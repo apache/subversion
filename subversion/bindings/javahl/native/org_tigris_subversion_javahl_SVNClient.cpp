@@ -634,10 +634,10 @@ Java_org_tigris_subversion_javahl_SVNClient_cleanup
 }
 
 JNIEXPORT void JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_resolved
+Java_org_tigris_subversion_javahl_SVNClient_resolve
 (JNIEnv *env, jobject jthis, jstring jpath, jint jdepth, jint jchoice)
 {
-  JNIEntry(SVNClient, resolved);
+  JNIEntry(SVNClient, resolve);
   SVNClient *cl = SVNClient::getCppObject(jthis);
   if (cl == NULL)
     {
@@ -648,7 +648,7 @@ Java_org_tigris_subversion_javahl_SVNClient_resolved
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->resolved(path, (svn_depth_t) jdepth, (svn_wc_conflict_choice_t) jchoice);
+  cl->resolve(path, (svn_depth_t) jdepth, (svn_wc_conflict_choice_t) jchoice);
 }
 
 JNIEXPORT jlong JNICALL
@@ -1077,48 +1077,45 @@ Java_org_tigris_subversion_javahl_SVNClient_propertyGet
   return cl->propertyGet(jthis, path, name, revision, pegRevision);
 }
 
-JNIEXPORT jobject JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_getMergeinfo
-(JNIEnv *env, jobject jthis, jstring jtarget, jobject jpegRevision)
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_getMergeinfoLog
+(JNIEnv *env, jobject jthis, jint jkind, jstring jpathOrUrl,
+ jobject jpegRevision, jstring jmergeSourceUrl, jobject jsrcPegRevision,
+ jboolean jdiscoverChangedPaths, jobjectArray jrevProps,
+ jobject jlogMessageCallback)
 {
-  JNIEntry(SVNClient, getMergeinfo);
+  JNIEntry(SVNClient, getMergeinfoLog);
   SVNClient *cl = SVNClient::getCppObject(jthis);
   if (cl == NULL)
     {
       JNIUtil::throwError(_("bad C++ this"));
-      return NULL;
+      return;
     }
-  JNIStringHolder target(jtarget);
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
-  Revision pegRevision(jpegRevision);
-  if (JNIUtil::isExceptionThrown())
-    return NULL;
-  return cl->getMergeinfo(target, pegRevision);
-}
 
-JNIEXPORT jobjectArray JNICALL
-Java_org_tigris_subversion_javahl_SVNClient_getAvailableMerges
-(JNIEnv *env, jobject jthis, jstring jtarget, jobject jpegRevision,
- jstring jmergeSource)
-{
-  JNIEntry(SVNClient, getAvailableMerges);
-  SVNClient *cl = SVNClient::getCppObject(jthis);
-  if (cl == NULL)
-    {
-      JNIUtil::throwError(_("bad C++ this"));
-      return NULL;
-    }
-  JNIStringHolder target(jtarget);
+  Revision pegRevision(jpegRevision, true);
   if (JNIUtil::isExceptionThrown())
-    return NULL;
-  Revision pegRevision(jpegRevision);
+    return;
+
+  Revision srcPegRevision(jsrcPegRevision, true);
   if (JNIUtil::isExceptionThrown())
-    return NULL;
-  JNIStringHolder mergeSource(jmergeSource);
+    return;
+
+  JNIStringHolder pathOrUrl(jpathOrUrl);
   if (JNIUtil::isExceptionThrown())
-    return NULL;
-  return cl->getAvailableMerges(target, pegRevision, mergeSource);
+    return;
+
+  JNIStringHolder mergeSourceUrl(jmergeSourceUrl);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  StringArray revProps(jrevProps);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  LogMessageCallback callback(jlogMessageCallback);
+
+  cl->getMergeinfoLog((int)jkind, pathOrUrl, pegRevision, mergeSourceUrl,
+                      srcPegRevision, jdiscoverChangedPaths ? true : false,
+                      revProps, &callback);
 }
 
 JNIEXPORT void JNICALL

@@ -5,7 +5,7 @@
    svn2cl.xsl - xslt stylesheet for converting svn log to a normal
                 changelog
 
-   version 0.9
+   version 0.10
 
    Usage (replace ++ with two minus signs which aren't allowed
    inside xml comments):
@@ -15,6 +15,7 @@
                 ++stringparam groupbyday yes \
                 ++stringparam separate-daylogs yes \
                 ++stringparam include-rev yes \
+                ++stringparam include-actions yes \
                 ++stringparam breakbeforemsg yes/2 \
                 ++stringparam reparagraph yes \
                 ++stringparam authorsfile FILE \
@@ -56,7 +57,7 @@
 
 <!DOCTYPE xsl:stylesheet [
  <!ENTITY tab "&#9;">
- <!ENTITY newl "&#10;">
+ <!ENTITY newl "&#38;#xA;">
  <!ENTITY space "&#32;">
 ]>
 
@@ -79,7 +80,7 @@
 
  <!-- the length of a line to wrap messages at -->
  <xsl:param name="linelen" select="75" />
- 
+
  <!-- whether entries should be grouped by day -->
  <xsl:param name="groupbyday" select="'no'" />
 
@@ -88,6 +89,9 @@
 
  <!-- whether a revision number should be included -->
  <xsl:param name="include-rev" select="'no'" />
+
+ <!-- whether aaction labels should be added to files -->
+ <xsl:param name="include-actions" select="'no'" />
 
  <!-- whether the log message should start on a new line -->
  <xsl:param name="breakbeforemsg" select="'no'" />
@@ -177,7 +181,6 @@
   <!-- get paths string -->
   <xsl:variable name="paths">
    <xsl:apply-templates select="paths" />
-   <xsl:text>:&space;</xsl:text>
   </xsl:variable>
   <!-- get revision number -->
   <xsl:variable name="rev">
@@ -208,9 +211,17 @@
   <xsl:if test="$groupbyday='yes' and $separate-daylogs='yes'"><xsl:text>&newl;</xsl:text></xsl:if>
   <!-- first line is indented (other indents are done in wrap template) -->
   <xsl:text>&tab;*&space;</xsl:text>
+  <!-- set up the text to wrap -->
+  <xsl:variable name="txt">
+   <xsl:value-of select="$rev" />
+   <xsl:if test="$paths!=''">
+    <xsl:value-of select="concat($paths,':&space;')" />
+   </xsl:if>
+   <xsl:value-of select="$msg" />
+  </xsl:variable>
   <!-- print the paths and message nicely wrapped -->
   <xsl:call-template name="wrap">
-   <xsl:with-param name="txt" select="concat($rev,$paths,$msg)" />
+   <xsl:with-param name="txt" select="$txt" />
   </xsl:call-template>
  </xsl:template>
 
@@ -301,6 +312,10 @@
      <xsl:call-template name="printpath">
       <xsl:with-param name="path" select="substring(normalize-space(.),string-length($strip-prefix)+3)" />
      </xsl:call-template>
+     <!-- add the action flag -->
+     <xsl:if test="$include-actions='yes'">
+      <xsl:apply-templates select="." mode="action"/>
+     </xsl:if>
     </xsl:for-each>
    </xsl:when>
    <!-- print a simple list of all paths -->
@@ -313,8 +328,26 @@
      </xsl:if>
      <!-- print the path name -->
      <xsl:value-of select="normalize-space(.)" />
+     <!-- add the action flag -->
+     <xsl:if test="$include-actions='yes'">
+      <xsl:apply-templates select="." mode="action"/>
+     </xsl:if>
     </xsl:for-each>
    </xsl:otherwise>
+  </xsl:choose>
+ </xsl:template>
+
+ <xsl:template match="path" mode="action">
+  <xsl:choose>
+   <xsl:when test="@action='D'">
+    <xsl:text>[DEL]</xsl:text>
+   </xsl:when>
+   <xsl:when test="@copyfrom-path">
+    <xsl:text>[CPY]</xsl:text>
+   </xsl:when>
+   <xsl:when test="@action='D'">
+    <xsl:text>[ADD]</xsl:text>
+   </xsl:when>
   </xsl:choose>
  </xsl:template>
 
