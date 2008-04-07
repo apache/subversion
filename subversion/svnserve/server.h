@@ -45,6 +45,7 @@ typedef struct server_baton_t {
   svn_boolean_t read_only; /* Disallow write access (global flag) */
   svn_boolean_t use_sasl;  /* Use Cyrus SASL for authentication;
                               always false if SVN_HAVE_SASL not defined */
+  apr_file_t *log_file;    /* Log filehandle. */
   apr_pool_t *pool;
 } server_baton_t;
 
@@ -89,6 +90,9 @@ typedef struct serve_params_t {
      command line, or it was specified and it did not refer to a
      authorization database. */
   svn_authz_t *authzdb;
+
+  /* A filehandle open for writing logs to; possibly NULL. */
+  apr_file_t *log_file;
 } serve_params_t;
 
 /* Serve the connection CONN according to the parameters PARAMS. */

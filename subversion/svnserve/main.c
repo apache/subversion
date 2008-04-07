@@ -136,6 +136,7 @@ void winservice_notify_stop(void)
 #define SVNSERVE_OPT_PID_FILE    261
 #define SVNSERVE_OPT_SERVICE     262
 #define SVNSERVE_OPT_CONFIG_FILE 263
+#define SVNSERVE_OPT_LOG_FILE 264
 
 static const apr_getopt_option_t svnserve__options[] =
   {
@@ -182,6 +183,8 @@ static const apr_getopt_option_t svnserve__options[] =
      N_("run in foreground (useful for debugging)\n"
         "                             "
         "[mode: daemon]")},
+    {"log-file",         SVNSERVE_OPT_LOG_FILE, 1,
+     N_("svnserve log file")},
     {"pid-file",         SVNSERVE_OPT_PID_FILE, 1,
 #ifdef WIN32
      N_("write server process ID to file ARG\n"
@@ -374,6 +377,7 @@ int main(int argc, const char *argv[])
   int mode_opt_count = 0;
   const char *config_filename = NULL;
   const char *pid_filename = NULL;
+  const char *log_filename = NULL;
   svn_node_kind_t kind;
 
   /* Initialize the app. */
@@ -408,6 +412,7 @@ int main(int argc, const char *argv[])
   params.cfg = NULL;
   params.pwdb = NULL;
   params.authzdb = NULL;
+  params.log_file = NULL;
 
   while (1)
     {
@@ -527,6 +532,13 @@ int main(int argc, const char *argv[])
                                             pool));
           break;
 
+        case SVNSERVE_OPT_LOG_FILE:
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&log_filename, arg, pool));
+          log_filename = svn_path_internal_style(log_filename, pool);
+          SVN_INT_ERR(svn_path_get_absolute(&log_filename, log_filename,
+                                            pool));
+          break;
+
         }
     }
   if (os->ind != argc)
@@ -552,6 +564,11 @@ int main(int argc, const char *argv[])
                                config_filename, TRUE,
                                svn_path_dirname(config_filename, pool),
                                pool));
+
+  if (log_filename)
+    SVN_INT_ERR(svn_io_file_open(&params.log_file, log_filename,
+                                 APR_WRITE | APR_CREATE | APR_APPEND,
+                                 APR_OS_DEFAULT, pool));
 
   if (params.tunnel_user && run_mode != run_mode_tunnel)
     {
