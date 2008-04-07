@@ -69,6 +69,10 @@ extern "C" {
 #define PATH_REV           "rev"           /* Proto rev file */
 #define PATH_REV_LOCK      "rev-lock"      /* Proto rev (write) lock file */
 
+/* Names of sections and options in fsfs.conf. */
+#define CONFIG_SECTION_CACHES     "caches"
+#define CONFIG_OPTION_FAIL_STOP       "fail-stop"
+
 /* The format number of this filesystem.
    This is independent of the repository format number, and
    independent of any other FS back ends. */
