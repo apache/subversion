@@ -12,22 +12,6 @@ core code" to the entire branch.
 Status of 1.5.0:
 ================
 
- * r30407
-   Per list discussion, re-add the svn_client_mergeinfo_get_merged() API.
-   Votes:
-     +1: cmpilato
-
- * r30408
-   Fix a buglet in svn_client_suggest_merge_sources() that caused the same
-   path to be returned twice in some instances.
-   Votes:
-     +1: cmpilato
-
- * r30409
-   Fix a pool lifetime bug in get_mergeinfo().
-   Votes:
-     +1: cmpilato
-
  * r30412
    JavaHL: restore getMergeInfo method.  This goes with r30407.
    Votes:
@@ -42,3 +26,19 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
+
+ * r30407
+   Per list discussion, re-add the svn_client_mergeinfo_get_merged() API.
+   Votes:
+     +1: cmpilato, pburba
+
+ * r30408
+   Fix a buglet in svn_client_suggest_merge_sources() that caused the same
+   path to be returned twice in some instances.
+   Votes:
+     +1: cmpilato, pburba
+
+ * r30409
+   Fix a pool lifetime bug in get_mergeinfo().
+   Votes:
+     +1: cmpilato, pburba
