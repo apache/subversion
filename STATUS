@@ -14,6 +14,12 @@ Status of 1.5.0:
 
 Candidate changes:
 
+  * r30426
+    Include include-descendants parameter of get-mergeinfo in DAV
+    operational log (can move to 1.5.1 if we don't do another RC).
+    Votes:
+      +1: epg
+
 Status of 1.5.1:
 ================
 
