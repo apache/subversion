@@ -4,11 +4,6 @@ See "Stabilizing and maintaining releases" in trunk/www/hacking.html for
 details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Note: Because we anticipate a reasonable amount of new development
-will still be required for Subversion 1.5, we are for the time being
-applying the "somewhat looser voting system for areas that are not
-core code" to the entire branch.
-
 Status of 1.5.0:
 ================
 
