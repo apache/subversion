@@ -211,8 +211,8 @@ def add_remove_changelists(sbox):
     return expected_skips
 
   # all dirs in the Greek tree
-  expected_skips_all = dict.fromkeys([
-    os.path.join(wc_dir),
+  expected_skips_all = dict([(x, None) for x in [
+        os.path.join(wc_dir),
     os.path.join(wc_dir, 'A'),
     os.path.join(wc_dir, 'A', 'B'),
     os.path.join(wc_dir, 'A', 'B', 'E'),
@@ -221,7 +221,7 @@ def add_remove_changelists(sbox):
     os.path.join(wc_dir, 'A', 'D'),
     os.path.join(wc_dir, 'A', 'D', 'G'),
     os.path.join(wc_dir, 'A', 'D', 'H'),
-    ])
+    ]])
 
   expected_skips_wc_dir = { wc_dir : None }
 
