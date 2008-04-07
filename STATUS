@@ -18,7 +18,13 @@ Candidate changes:
     Include include-descendants parameter of get-mergeinfo in DAV
     operational log (can move to 1.5.1 if we don't do another RC).
     Votes:
-      +1: kfogel, epg (r30426 only)
+      +1: kfogel, epg
+
+  * r30431
+    Fix Python 2.2 incompatibility in test suite (can move to 1.5.1 if
+    we don't do another RC).
+    Votes:
+      +1: epg
 
 Status of 1.5.1:
 ================
