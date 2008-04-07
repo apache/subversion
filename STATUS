@@ -27,12 +27,6 @@ Candidate changes:
 Approved changes (all releases):
 ================================
 
- * r30408
-   Fix a buglet in svn_client_suggest_merge_sources() that caused the same
-   path to be returned twice in some instances.
-   Votes:
-     +1: cmpilato, pburba
-
  * r30409
    Fix a pool lifetime bug in get_mergeinfo().
    Votes:
