@@ -12,11 +12,6 @@ core code" to the entire branch.
 Status of 1.5.0:
 ================
 
- * r30412
-   JavaHL: restore getMergeInfo method.  This goes with r30407.
-   Votes:
-     +1: markphip
-
 Candidate changes:
 
 Status of 1.5.1:
@@ -26,3 +21,8 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
+
+ * r30412
+   JavaHL: restore getMergeInfo method.  This goes with r30407.
+   Votes:
+     +1: markphip, pburba
