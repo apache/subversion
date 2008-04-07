@@ -31,11 +31,12 @@ extern "C" {
 
 typedef struct server_baton_t {
   svn_repos_t *repos;
+  const char *repos_name;  /* URI-encoded name of repository (not for authz) */
   svn_fs_t *fs;            /* For convenience; same as svn_repos_fs(repos) */
   svn_config_t *cfg;       /* Parsed repository svnserve.conf */
   svn_config_t *pwdb;      /* Parsed password database */
   svn_authz_t *authzdb;    /* Parsed authz rules */
-  const char *authz_repos_name; /* The name of the repository */
+  const char *authz_repos_name; /* The name of the repository for authz */
   const char *realm;       /* Authentication realm */
   const char *repos_url;   /* URL to base of repository */
   svn_stringbuf_t *fs_path;/* Decoded base in-repos path (w/ leading slash) */
