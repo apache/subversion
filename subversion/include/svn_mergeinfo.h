@@ -45,10 +45,10 @@ extern "C" {
  * @c SVN_PROP_MERGEINFO for a path is equivalent to the
  * @c SVN_PROP_MERGEINFO for its parent, then the @c SVN_PROP_MERGEINFO on
  * the path will 'elide' (be removed) from the path as a post step to any
- * merge, switch, or update.  If a path's parent does not have any
- * @c SVN_PROP_MERGEINFO set, the path's mergeinfo can elide to its nearest
- * grand-parent, great-grand-parent, etc. that has equivalent
- * @c SVN_PROP_MERGEINFO set on it.  
+ * merge.  If a path's parent does not have any @c SVN_PROP_MERGEINFO set,
+ * the path's mergeinfo can elide to its nearest grand-parent,
+ * great-grand-parent, etc. that has equivalent @c SVN_PROP_MERGEINFO set
+ * on it.  
  *
  * If a path has no @c SVN_PROP_MERGEINFO of its own, it inherits mergeinfo
  * from its nearest parent that has @c SVN_PROP_MERGEINFO set.  The
@@ -82,14 +82,14 @@ extern "C" {
  * The PATHNAME is the source of a merge and the rangelist the revision(s)
  * merged to the path @c SVN_PROP_MERGEINFO is set on directly or indirectly
  * via inheritance.  PATHNAME must always exist at the specified rangelist
- * and thus multiple revisionlines are required to account for renames of
- * the source pathname.
+ * and thus a single merge may result in multiple revisionlines if the source
+ * was renamed.
  *
  * Rangelists must be sorted from lowest to highest revision and cannot
  * contain overlapping revisionlistelements.  REVISION1 must be less than
  * REVISION2.  Consecutive single revisions that can be represented by a
- * revisionrange are allowed (e.g. '5,6,7,8,9-12' or '5-12' are both
- * acceptable).
+ * revisionrange are allowed however (e.g. '5,6,7,8,9-12' or '5-12' are
+ * both acceptable).
  */
 
 /* Suffix for SVN_PROP_MERGEINFO revision ranges indicating a given
@@ -197,8 +197,8 @@ svn_mergeinfo_remove(svn_mergeinfo_t *mergeinfo, svn_mergeinfo_t eraser,
 
 /** Calculate the delta between two rangelists consisting of @c
  * svn_merge_range_t * elements (sorted in ascending order), @a from
- * and @a to, and place the result in @a deleted and @a added (neither
- * output argument will ever be @c NULL).
+ * and @a to, and place the result in @a *deleted and @a *added
+ * (neither output argument will ever be @c NULL).
  *
  * @a consider_inheritance determines how to account for the inheritability
  * of the two rangelist's ranges when calculating the diff,
@@ -214,7 +214,7 @@ svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
 
 /** Merge two rangelists consisting of @c svn_merge_range_t *
  * elements, @a *rangelist and @a changes, placing the results in
- * @a *rangelist.
+ * @a *rangelist.  Either rangelist may be empty.
  *
  * When intersecting rangelists are merged, the inheritability of
  * the resulting svn_merge_range_t depends on the inheritability of the
@@ -222,7 +222,8 @@ svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
  *
  * Note: @a *rangelist and @a changes must be sorted as said by @c
  * svn_sort_compare_ranges().  @a *rangelist is guaranteed to remain
- * in sorted order.
+ * in sorted order and be compacted to the minimal number of ranges
+ * needed to represent the merged result.
  *
  * @since New in 1.5.
  */

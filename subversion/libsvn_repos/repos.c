@@ -950,9 +950,7 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "### database file.  Unless you specify a path starting with a /,"           NL
 "### the file's location is relative to the directory containing"            NL
 "### this configuration file."                                               NL
-#ifdef SVN_HAVE_SASL
-"### If use-sasl is set to \"true\" below, this file will NOT be used."      NL
-#endif
+"### If SASL is enabled (see below), this file will NOT be used."            NL
 "### Uncomment the line below to use the default password file."             NL
 "# password-db = passwd"                                                     NL
 "### The authz-db option controls the location of the authorization"         NL
@@ -966,14 +964,14 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "### If two repositories have the same authentication realm, they should"    NL
 "### have the same password database, and vice versa.  The default realm"    NL
 "### is repository's uuid."                                                  NL
-#ifndef SVN_HAVE_SASL
-"# realm = My First Repository"                                              NL;
-#else
 "# realm = My First Repository"                                              NL
 ""                                                                           NL
 "[sasl]"                                                                     NL
 "### This option specifies whether you want to use the Cyrus SASL"           NL
 "### library for authentication. Default is false."                          NL
+"### This section will be ignored if svnserve is not built with Cyrus"       NL
+"### SASL support; to check, run 'svnserve --version' and look for a line"   NL
+"### reading 'Cyrus SASL authentication is available.'"                      NL
 "# use-sasl = true"                                                          NL
 "### These options specify the desired strength of the security layer"       NL
 "### that you want SASL to provide. 0 means no encryption, 1 means"          NL
@@ -982,7 +980,6 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "### encryption). The values below are the defaults."                        NL
 "# min-encryption = 0"                                                       NL
 "# max-encryption = 256"                                                     NL;
-#endif
 
     SVN_ERR_W(svn_io_file_create(svn_repos_svnserve_conf(repos, pool),
                                  svnserve_conf_contents, pool),

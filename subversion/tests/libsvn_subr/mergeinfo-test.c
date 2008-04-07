@@ -1099,7 +1099,7 @@ test_rangelist_merge(const char **msg,
     svn_merge_range_t expected_merge[6];
   };
 
-  #define SIZE_OF_RANGE_MERGE_TEST_ARRAY 52
+  #define SIZE_OF_RANGE_MERGE_TEST_ARRAY 59
   /* The actual test data. */
   struct rangelist_merge_test_data test_data[SIZE_OF_RANGE_MERGE_TEST_ARRAY] =
     {
@@ -1183,6 +1183,21 @@ test_rangelist_merge(const char **msg,
 
       {"/A: 2-17", "/A: 1-5*,7*,12-13*", 2,
        {{0, 1, FALSE}, {1, 17, TRUE}}},
+
+      /* A rangelist merged with an empty rangelist should equal the
+         non-empty rangelist but in compacted form. */
+      {"/A: 1-44,45,46,47-50",       "",  1, {{ 0, 50, TRUE }}},
+      {"/A: 1,2,3,4,5,6,7,8",        "",  1, {{ 0, 8,  TRUE }}},
+      {"/A: 6-10,12-13,14,15,16-22", "",  2,
+       {{ 5, 10, TRUE }, { 11, 22, TRUE }}},
+      {"", "/A: 1-44,45,46,47-50",        1, {{ 0, 50, TRUE }}},
+      {"", "/A: 1,2,3,4,5,6,7,8",         1, {{ 0, 8,  TRUE }}},
+      {"", "/A: 6-10,12-13,14,15,16-22",  2,
+       {{ 5, 10, TRUE }, { 11, 22, TRUE }}},
+
+      /* An empty rangelist merged with an empty rangelist is, drum-roll
+         please, an empty rangelist. */
+      {"", "", 0, {{0, 0, FALSE}}}
     };
   *msg = "merge of rangelists";
   if (msg_only)
@@ -1195,6 +1210,13 @@ test_rangelist_merge(const char **msg,
       SVN_ERR(svn_mergeinfo_parse(&info2, (test_data[i]).mergeinfo2, pool));
       rangelist1 = apr_hash_get(info1, "/A", APR_HASH_KEY_STRING);
       rangelist2 = apr_hash_get(info2, "/A", APR_HASH_KEY_STRING);
+
+      /* Create empty rangelists if necessary. */
+      if (rangelist1 == NULL)
+        rangelist1 = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
+      if (rangelist2 == NULL)
+        rangelist2 = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
+
       SVN_ERR(svn_rangelist_merge(&rangelist1, rangelist2, pool));
       child_err = verify_ranges_match(rangelist1,
                                      (test_data[i]).expected_merge,

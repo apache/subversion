@@ -18,6 +18,7 @@
 #include "bdb_compat.h"
 #include "../fs.h"
 #include "../err.h"
+#include "../id.h"
 #include "dbt.h"
 #include "../trail.h"
 #include "bdb-err.h"
@@ -73,7 +74,7 @@ svn_error_t *svn_fs_bdb__get_node_origin(const svn_fs_id_t **origin_id,
   if (db_err == DB_NOTFOUND)
     return svn_fs_base__err_no_such_node_origin(fs, node_id);
 
-  *origin_id = svn_fs_parse_id(value.data, value.size, pool);
+  *origin_id = svn_fs_base__id_parse(value.data, value.size, pool);
   return SVN_NO_ERROR;
 }
 
@@ -100,7 +101,7 @@ svn_error_t *svn_fs_bdb__set_node_origin(svn_fs_t *fs,
   svn_fs_base__track_dbt(&value, pool);
   if (db_err != DB_NOTFOUND)
     {
-      const svn_string_t *origin_id_str = svn_fs_unparse_id(origin_id, pool);
+      const svn_string_t *origin_id_str = svn_fs_base__id_unparse(origin_id, pool);
       const svn_string_t *old_origin_id_str =
         svn_string_ncreate(value.data, value.size, pool);
 

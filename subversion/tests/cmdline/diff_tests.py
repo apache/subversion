@@ -2935,6 +2935,16 @@ def diff_file_depth_empty(sbox):
   if len(out) < 4:
     raise svntest.Failure
 
+# This used to abort with ra_serf.
+def diff_wrong_extension_type(sbox):
+  "'svn diff -x wc -r#' should return error"
+
+  sbox.build(read_only = True)
+  expected_error = "(.*svn: Invalid argument .* in diff options.*)|" \
+                   "(svn: '.' is not a working copy)"
+  svntest.actions.run_and_verify_svn(None, [], expected_error, 
+                                     'diff', '-x', sbox.wc_dir, '-r', '1')
+
 ########################################################################
 #Run the tests
 
@@ -2987,6 +2997,7 @@ test_list = [ None,
               diff_backward_repos_wc_copy,
               diff_summarize_xml,
               diff_file_depth_empty,
+              diff_wrong_extension_type
               ]
 
 if __name__ == '__main__':

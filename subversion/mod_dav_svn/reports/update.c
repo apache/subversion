@@ -154,8 +154,7 @@ get_from_path_map(apr_hash_t *hash, const char *path, apr_pool_t *pool)
           /* we found a mapping ... but of one of PATH's parents.
              soooo, we get to re-append the chunks of PATH that we
              broke off to the REPOS_PATH we found. */
-          return apr_pstrcat(pool, repos_path, "/",
-                             path + my_path->len + 1, NULL);
+          return svn_path_join(repos_path, path + my_path->len + 1, pool);
         }
     }
   while (! svn_path_is_empty(my_path->data)
@@ -696,7 +695,14 @@ upd_change_xxx_prop(void *baton,
               b->last_author = value ?
                 apr_pstrdup(b->pool, value->data) : NULL;
             }
-
+          else if ((strcmp(name, SVN_PROP_ENTRY_LOCK_TOKEN) == 0)
+                   && (! value))
+            {
+              /* We only support delete of lock tokens, not add/modify. */
+              if (! b->removed_props)
+                b->removed_props = apr_array_make(b->pool, 1, sizeof(name));
+              APR_ARRAY_PUSH(b->removed_props, const char *) = qname;
+            }
           return SVN_NO_ERROR;
         }
 #undef NSLEN
@@ -948,22 +954,24 @@ dav_svn__update_report(const dav_resource *resource,
                                     SVN_DAV_ERROR_TAG);
     }
 
-  /* Look to see if client wants a report with props and textdeltas
-     inline, rather than placeholder tags that tell the client to do
-     further fetches.  Modern clients prefer inline. */
-  {
-    apr_xml_attr *this_attr;
+  /* If server configuration permits bulk updates (a report with props
+     and textdeltas inline, rather than placeholder tags that tell the
+     client to do further fetches), look to see if client requested as
+     much.  */
+  if (repos->bulk_updates)
+    {
+      apr_xml_attr *this_attr;
 
-    for (this_attr = doc->root->attr; this_attr; this_attr = this_attr->next)
-      {
-        if ((strcmp(this_attr->name, "send-all") == 0)
-            && (strcmp(this_attr->value, "true") == 0))
-          {
-            uc.send_all = TRUE;
-            break;
-          }
-      }
-  }
+      for (this_attr = doc->root->attr; this_attr; this_attr = this_attr->next)
+        {
+          if ((strcmp(this_attr->name, "send-all") == 0)
+              && (strcmp(this_attr->value, "true") == 0))
+            {
+              uc.send_all = TRUE;
+              break;
+            }
+        }
+    }
 
   for (child = doc->root->first_child; child != NULL; child = child->next)
     {
