@@ -148,7 +148,10 @@ svn_test__create_fs(svn_fs_t **fs_p,
 
   SVN_ERR(maybe_install_fsfs_conf(*fs_p, opts, &must_reopen, pool));
   if (must_reopen)
-    SVN_ERR(svn_fs_open(fs_p, name, NULL, pool));
+    {
+      SVN_ERR(svn_fs_open(fs_p, name, NULL, pool));
+      svn_fs_set_warning_func(*fs_p, fs_warning_handler, NULL);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -188,7 +191,10 @@ svn_test__create_repos(svn_repos_t **repos_p,
   SVN_ERR(maybe_install_fsfs_conf(svn_repos_fs(repos), opts, &must_reopen,
                                   pool));
   if (must_reopen)
-    SVN_ERR(svn_repos_open(&repos, name, pool));
+    {
+      SVN_ERR(svn_repos_open(&repos, name, pool));
+      svn_fs_set_warning_func(svn_repos_fs(repos), fs_warning_handler, NULL);
+    }
 
   *repos_p = repos;
   return SVN_NO_ERROR;

@@ -19,17 +19,47 @@
 #include "cache.h"
 
 svn_error_t *
+svn_cache_set_error_handler(svn_cache_t *cache,
+                            svn_cache_error_handler_t *handler,
+                            void *baton,
+                            apr_pool_t *pool)
+{
+  cache->error_handler = handler;
+  cache->error_baton = baton;
+  return SVN_NO_ERROR;
+}
+
+
+/* Give the error handler callback a chance to replace or ignore the
+   error. */
+static svn_error_t *
+handle_error(svn_cache_t *cache,
+             svn_error_t *err,
+             apr_pool_t *pool)
+{
+  if (err && cache->error_handler)
+    err = (cache->error_handler)(err, cache->error_baton, pool);
+  return err;
+}
+
+
+svn_error_t *
 svn_cache_get(void **value_p,
               svn_boolean_t *found,
               svn_cache_t *cache,
               const void *key,
               apr_pool_t *pool)
 {
-  return (cache->vtable->get)(value_p,
-                              found,
-                              cache->cache_internal,
-                              key,
-                              pool);
+  /* In case any errors happen and are quelched, make sure we start
+     out with FOUND set to false. */
+  *found = FALSE;
+  return handle_error(cache,
+                      (cache->vtable->get)(value_p,
+                                           found,
+                                           cache->cache_internal,
+                                           key,
+                                           pool),
+                      pool);
 }
 
 svn_error_t *
@@ -38,12 +68,13 @@ svn_cache_set(svn_cache_t *cache,
               void *value,
               apr_pool_t *pool)
 {
-  return (cache->vtable->set)(cache->cache_internal,
-                              key,
-                              value,
-                              pool);
+  return handle_error(cache,
+                      (cache->vtable->set)(cache->cache_internal,
+                                           key,
+                                           value,
+                                           pool),
+                      pool);
 }
-
 
 
 svn_error_t *

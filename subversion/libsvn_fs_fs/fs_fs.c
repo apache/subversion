@@ -1021,7 +1021,15 @@ write_config(svn_fs_t *fs,
 "### distinct UUIDs and paths, or else cached data from one repository"      NL
 "### might be used by another accidentally.  Note also that memcached has"   NL
 "### no authentication for reads or writes, so you must sure that your"      NL
-"### memcached servers are only accessible by trusted users."                NL;
+"### memcached servers are only accessible by trusted users."                NL
+""                                                                           NL
+"[" CONFIG_SECTION_CACHES "]"                                                NL
+"### When a cache-related error occurs, normally Subversion ignores it"      NL
+"### and continues, logging an error if the server is appropriately"         NL
+"### configured (and ignoring it with file:// access).  To make"             NL
+"### Subversion never ignore cache errors, uncomment this line."             NL
+"# " CONFIG_OPTION_FAIL_STOP " = true"                                       NL
+;
 #undef NL
   return svn_io_file_create(svn_path_join(fs->path, PATH_CONFIG, pool),
                             fsfs_conf_contents, pool);
