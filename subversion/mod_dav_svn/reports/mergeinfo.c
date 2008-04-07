@@ -220,7 +220,7 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
  cleanup:
 
   /* We've detected a 'high level' svn action to log. */
-  action = apr_psprintf(resource->pool, "get-mergeinfo (%s) %s",
+  action = apr_psprintf(resource->pool, "get-mergeinfo (%s) %s%s",
                         space_separated_paths->data,
                         svn_inheritance_to_word(inherit),
                         include_descendants ? " include-descendants" : "");
