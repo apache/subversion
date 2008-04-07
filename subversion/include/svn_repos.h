@@ -1983,7 +1983,7 @@ enum svn_repos_load_uuid
  * cancel_baton as argument to see if the caller wishes to cancel the
  * verification.
  *
- * @since New in 1.6.
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_repos_verify_fs(svn_repos_t *repos,

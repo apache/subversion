@@ -21,9 +21,3 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
-
- * r30402
-   svn_repos.h(svn_repos_verify_fs) should be marked as new since 1.5,
-   not 1.6.
-   Votes:
-    +1: pburba, hwright
