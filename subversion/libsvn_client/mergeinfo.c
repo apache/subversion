@@ -846,7 +846,7 @@ get_mergeinfo(svn_mergeinfo_t *mergeinfo,
                                                    TRUE, ctx, subpool));
       SVN_ERR(svn_client__get_revision_number(&rev, NULL, ra_session,
                                               peg_revision, "", subpool));
-      SVN_ERR(svn_ra_get_repos_root(ra_session, repos_root, pool));
+      SVN_ERR(svn_ra_get_repos_root2(ra_session, repos_root, pool));
       SVN_ERR(svn_client__path_relative_to_root(&repos_rel_path, path_or_url,
                                                 *repos_root, FALSE, NULL, 
                                                 NULL, subpool));
