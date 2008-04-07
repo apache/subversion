@@ -1523,7 +1523,8 @@ main(int argc, const char *argv[])
         if (opt_state.accept_which == svn_cl__accept_invalid)
           return svn_cmdline_handle_exit_error
             (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                               _("'%s' is not a valid accept value"), opt_arg),
+                               _("'%s' is not a valid --accept value"),
+                               opt_arg),
              pool, "svn: ");
         break;
       case opt_show_revs:
@@ -1531,7 +1532,7 @@ main(int argc, const char *argv[])
         if (opt_state.show_revs == svn_cl__show_revs_invalid)
           return svn_cmdline_handle_exit_error
             (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                               _("'%s' is not a valid show-revs value"), 
+                               _("'%s' is not a valid --show-revs value"), 
                                opt_arg),
              pool, "svn: ");
         break;

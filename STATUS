@@ -38,11 +38,6 @@ Approved changes:
     +1: markphip (only r29167)
     +1: arfrever, kfogel
 
- * r30328
-   Fix error messages for invalid arguments to --accept and --show-revs options.
-   Votes:
-    +1: arfrever, kfogel
-
 Status of 1.5.1:
 ================
 
