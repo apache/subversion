@@ -1749,6 +1749,13 @@ svn_ra_has_capability(svn_ra_session_t *session,
  */
 #define SVN_RA_CAPABILITY_PARTIAL_REPLAY "partial-replay"
 
+/**
+ * The capability of including revision properties in a commit.
+ *
+ * @since New in 1.5.
+ */
+#define SVN_RA_CAPABILITY_COMMIT_REVPROPS "commit-revprops"
+
 /*       *** PLEASE READ THIS IF YOU ADD A NEW CAPABILITY ***
  *
  * RA layers generally fetch all capabilities when asked about any
