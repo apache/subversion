@@ -21,6 +21,11 @@ Candidate changes:
     Votes:
       +1: epg
 
+  * r30444
+    Support svn_client_mergeinfo_log_merged() in the Ruby bindings.
+    Votes:
+      +1: kou
+
 Status of 1.5.1:
 ================
 
