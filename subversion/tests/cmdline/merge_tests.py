@@ -1328,11 +1328,15 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
                                        'merge', '-c', '2', 'mu')
 
   elif arg_flav == '*':
+    # Without a peg revision, the default merge range of BASE:1 (which
+    # is a no-op) will be chosen.  Let's do it both ways (no-op first,
+    # of course).
+    svntest.actions.run_and_verify_svn(None, None, [], 'merge', 'mu')
     svntest.actions.run_and_verify_svn(None,
                                        expected_merge_output([[2]],
                                                              'U    mu\n'),
                                        [],
-                                       'merge', 'mu')
+                                       'merge', 'mu@2')
 
   # sanity-check resulting file
   if (svntest.tree.get_text('mu') != orig_mu_text + added_mu_text):
