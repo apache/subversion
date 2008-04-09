@@ -26,6 +26,11 @@ Candidate changes:
     Votes:
       +1: kou, joeswatosh
 
+  * r30449
+    Fix 'svn log' usage message.
+    Votes:
+      +1: cmpilato
+
 Status of 1.5.1:
 ================
 
