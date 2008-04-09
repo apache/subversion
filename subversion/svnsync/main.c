@@ -636,9 +636,12 @@ do_initialize(svn_ra_session_t *to_session,
       if (err && err->apr_err == SVN_ERR_UNKNOWN_CAPABILITY)
         {
           svn_error_clear(err);
-          return svn_error_create(SVN_ERR_RA_PARTIAL_REPLAY_NOT_SUPPORTED, NULL, 
-                                  NULL);
+          server_supports_partial_replay = FALSE;
         }
+
+      if (!server_supports_partial_replay)
+        return svn_error_create(SVN_ERR_RA_PARTIAL_REPLAY_NOT_SUPPORTED, NULL,
+                                NULL);
     }
 
   SVN_ERR(svn_ra_change_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_URL,
