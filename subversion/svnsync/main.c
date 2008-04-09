@@ -1373,13 +1373,10 @@ replay_rev_started(svn_revnum_t revision,
   /* The actual copy is just a replay hooked up to a commit.  Include
      all the revision properties from the source repositories, except
      'svn:author' and 'svn:date', those are not guaranteed to get
-     through the editor anyway. 
-     For compatibility with older svnserve versions, check first if we
-     support adding revprops to the commit. */
-  SVN_ERR(svn_ra_has_capability(rb->to_session, 
-                                &rb->has_commit_revprops_capability,
-                                SVN_RA_CAPABILITY_COMMIT_REVPROPS,
-                                pool));
+     through the editor anyway.
+     If we're syncing to an non-commit-revprops capable server, filter
+     out all revprops except svn:log and add them later in
+     revplay_rev_finished. */
   filtered = filter_props(&filtered_count, rev_props,
                           (rb->has_commit_revprops_capability
                             ? filter_exclude_date_author_sync
@@ -1601,6 +1598,13 @@ do_synchronize(svn_ra_session_t *to_session,
      into the destination repository. */
   rb = make_replay_baton(from_session, to_session, baton, pool);
     
+  /* For compatibility with older svnserve versions, check first if we
+     support adding revprops to the commit. */
+  SVN_ERR(svn_ra_has_capability(rb->to_session, 
+                                &rb->has_commit_revprops_capability,
+                                SVN_RA_CAPABILITY_COMMIT_REVPROPS,
+                                pool));
+
   start_revision = atol(last_merged_rev->data) + 1;
   end_revision = from_latest;
   
