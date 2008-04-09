@@ -20,7 +20,15 @@ Candidate changes:
     range when a peg revision is supplied to a single-URL merge command.
     Votes:
       +1: cmpilato
-    
+
+  * r30464
+    Fix reopened issue #2821.  Fixes a bug where repeat merges can easily
+    occur when merging into subtrees with differing mergeinfo from the
+    merge target.
+    See http://subversion.tigris.org/issues/show_bug.cgi?id=2821#desc22
+    Votes:
+      +1: pburba
+
 Status of 1.5.1:
 ================
 
