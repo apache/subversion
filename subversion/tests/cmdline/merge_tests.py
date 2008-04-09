@@ -4305,8 +4305,6 @@ def avoid_repeated_merge_using_inherited_merge_info(sbox):
                                         expected_status)
   os.chdir(saved_cwd)
 
-  # Marked as XFail until
-  # http://subversion.tigris.org/issues/show_bug.cgi?id=2821#desc22 is fixed.
 def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
   "use subtree's mergeinfo to avoid repeated merge"
   # Create deep trees A/B/F/E and A/B/F/E1 and copy A/B to A/copy-of-B
@@ -10881,7 +10879,7 @@ test_list = [ None,
               merge_conflict_markers_matching_eol,
               merge_eolstyle_handling,
               avoid_repeated_merge_using_inherited_merge_info,
-              XFail(avoid_repeated_merge_on_subtree_with_merge_info),
+              avoid_repeated_merge_on_subtree_with_merge_info,
               obey_reporter_api_semantics_while_doing_subtree_merges,
               SkipUnless(mergeinfo_inheritance,
                          server_has_mergeinfo),
