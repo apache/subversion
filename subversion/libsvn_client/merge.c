@@ -345,7 +345,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
         }
       else /* Non-empty mergeinfo; filter self-referential mergeinfo out. */
         {
-          svn_mergeinfo_t mergeinfo;
+          svn_mergeinfo_t mergeinfo, filtered_mergeinfo = NULL;
           apr_hash_index_t *hi;
           const char *target_url, *merge_source_root_url;
           const svn_wc_entry_t *target_entry;
@@ -458,27 +458,33 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                     }
                 } /* for (j = 0; j < rangelist->nelts; j++) */
               
+              if (adjusted_rangelist->nelts)
+                {
+                  if (!filtered_mergeinfo)
+                    filtered_mergeinfo = apr_hash_make(pool);
+                  apr_hash_set(filtered_mergeinfo, source_path,
+                               APR_HASH_KEY_STRING, adjusted_rangelist);
+                }
+            } /* mergeinfo hash iteration */
+
           /* If only some of the ranges mapped from SOURCE_PATH were
              filtered then create a new svn_prop_t to represent
-                 this. */
-              if (adjusted_rangelist->nelts)
+             this.  Otherwise everything was filtered and we can
+             ignore the svn:merginfo props entirely. */
+          if (filtered_mergeinfo)
             {
-                  svn_string_t *adjusted_rangelist_s;
-                  svn_prop_t *adjusted_prop =
-                    apr_pcalloc(pool, sizeof(*adjusted_prop));
-
-                  SVN_ERR(svn_rangelist_to_string(&adjusted_rangelist_s,
-                                                  adjusted_rangelist,
+              /* Convert filtered_mergeinfo to a svn_prop_t and put it
+                 back in the array. */
+              svn_string_t *filtered_mergeinfo_str;
+              svn_prop_t *adjusted_prop = apr_pcalloc(pool,
+                                                      sizeof(*adjusted_prop));
+              SVN_ERR(svn_mergeinfo_to_string(&filtered_mergeinfo_str,
+                                              filtered_mergeinfo,
                                               pool));
               adjusted_prop->name = SVN_PROP_MERGEINFO;
-                  adjusted_prop->value = 
-                    svn_string_create(apr_pstrcat(pool, source_path, ":",
-                                                  adjusted_rangelist_s->data,
-                                                  NULL),
-                                      pool);
+              adjusted_prop->value = filtered_mergeinfo_str;
               APR_ARRAY_PUSH(adjusted_props, svn_prop_t) = *adjusted_prop;
             }
-            } /* mergeinfo hash iteration */
 
           /* If we reparented MERGE_B->RA_SESSION2 above, put it back
              to the original URL. */
