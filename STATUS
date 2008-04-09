@@ -15,7 +15,7 @@ Candidate changes:
     Votes:
       +1: kfogel, epg
 
-  * r30455
+  * r30455, r30460
     Use 1:PEG_REV instead of 1:HEAD as the default operative revision
     range when a peg revision is supplied to a single-URL merge command.
     Votes:
