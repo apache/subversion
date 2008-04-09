@@ -29,7 +29,8 @@ SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
-from svntest.main import SVN_PROP_MERGEINFO, server_sends_copyfrom_on_update
+from svntest.main import SVN_PROP_MERGEINFO, server_sends_copyfrom_on_update, \
+  server_has_mergeinfo
 
 ######################################################################
 # Tests
@@ -3859,7 +3860,8 @@ test_list = [ None,
               update_wc_with_replaced_file,
               update_with_obstructing_additions,
               update_conflicted,
-              mergeinfo_update_elision,
+              SkipUnless(mergeinfo_update_elision,
+                         server_has_mergeinfo),
               SkipUnless(update_handles_copyfrom,
                          server_sends_copyfrom_on_update),
               copyfrom_degrades_gracefully,
