@@ -28,8 +28,3 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
-
-  * r30449
-    Fix 'svn log' usage message.
-    Votes:
-      +1: cmpilato, hwright, pburba
