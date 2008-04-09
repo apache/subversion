@@ -196,6 +196,11 @@ svn_error_t *svn_swig_rb_log_receiver(void *baton,
                                       apr_pool_t *pool);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
+svn_error_t *svn_swig_rb_log_entry_receiver(void *baton,
+                                            svn_log_entry_t *entry,
+                                            apr_pool_t *pool);
+
+SVN_RB_SWIG_SWIGUTIL_EXPORT
 svn_error_t *svn_swig_rb_repos_authz_func(svn_boolean_t *allowed,
                                           svn_fs_root_t *root,
                                           const char *path,
