@@ -24,7 +24,7 @@ Candidate changes:
   * r30444
     Support svn_client_mergeinfo_log_merged() in the Ruby bindings.
     Votes:
-      +1: kou
+      +1: kou, joeswatosh
 
 Status of 1.5.1:
 ================
