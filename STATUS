@@ -23,11 +23,6 @@ Candidate changes:
 Approved changes (all releases):
 ================================
 
-  * r30444
-    Support svn_client_mergeinfo_log_merged() in the Ruby bindings.
-    Votes:
-      +1: kou, joeswatosh
-
   * r30449
     Fix 'svn log' usage message.
     Votes:
