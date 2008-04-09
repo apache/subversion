@@ -1274,6 +1274,7 @@ typedef struct {
   svn_ra_session_t *from_session;
   svn_ra_session_t *to_session;
   subcommand_baton_t *sb;
+  svn_boolean_t commit_with_revprops_denied;
 } replay_baton_t;
 
 /* Return a replay baton allocated from POOL and populated with
@@ -1314,6 +1315,25 @@ filter_include_date_author_sync(const char *key)
   return ! filter_exclude_date_author_sync(key);
 }
 
+
+/* Only exclude svn:log .*/
+static svn_boolean_t
+filter_exclude_log(const char *key)
+{
+  if (strcmp(key, SVN_PROP_REVISION_LOG) == 0)
+    return TRUE;
+  else
+    return FALSE;
+}
+
+/* Only include svn:log. */
+static svn_boolean_t
+filter_include_log(const char *key)
+{
+  return ! filter_exclude_log(key);
+}
+
+
 /* Callback function for svn_ra_replay_range, invoked when starting to parse
  * a replay report.
  */
@@ -1334,6 +1354,7 @@ replay_rev_started(svn_revnum_t revision,
   replay_baton_t *rb = replay_baton;
   apr_hash_t *filtered;
   int filtered_count;
+  svn_error_t *err;
 
   /* We set this property so that if we error out for some reason
      we can later determine where we were in the process of
@@ -1353,9 +1374,14 @@ replay_rev_started(svn_revnum_t revision,
   /* The actual copy is just a replay hooked up to a commit.  Include
      all the revision properties from the source repositories, except
      'svn:author' and 'svn:date', those are not guaranteed to get
-     through the editor anyway. */
+     through the editor anyway.  On the other hand, if we already know
+     that we can't commit with extra revprops, might as well not get
+     an error below. */
+ try_again:
   filtered = filter_props(&filtered_count, rev_props,
-                          filter_exclude_date_author_sync,
+                          (rb->commit_with_revprops_denied
+                            ? filter_include_log
+                            : filter_exclude_date_author_sync),
                           pool);
 
   /* svn_ra_get_commit_editor3 requires the log message to be
@@ -1367,11 +1393,23 @@ replay_rev_started(svn_revnum_t revision,
     apr_hash_set(filtered, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
                  svn_string_create("", pool));
 
-  SVN_ERR(svn_ra_get_commit_editor3(rb->to_session, &commit_editor,
-                                    &commit_baton,
-                                    filtered,
-                                    commit_callback, rb->sb,
-                                    NULL, FALSE, pool));
+  err = svn_ra_get_commit_editor3(rb->to_session, &commit_editor,
+                                  &commit_baton,
+                                  filtered,
+                                  commit_callback, rb->sb,
+                                  NULL, FALSE, pool);
+  if (err && (err->apr_err != SVN_ERR_RA_NOT_IMPLEMENTED
+              || rb->commit_with_revprops_denied))
+    return err;
+  else if (err)
+    {
+      /* We tried to commit too many revprops for the server.  Try
+         again, only with the standard props. */
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+      rb->commit_with_revprops_denied = TRUE;
+      goto try_again;
+    }
 
   /* There's one catch though, the diff shows us props we can't send
      over the RA interface, so we need an editor that's smart enough
@@ -1422,8 +1460,10 @@ replay_rev_finished(svn_revnum_t revision,
 
   /* Ok, we're done with the data, now we just need to copy the remaining 
      'svn:date' and 'svn:author' revprops and we're all set. */
-  filtered = filter_props(&filtered_count, rev_props, 
-                          filter_include_date_author_sync, 
+  filtered = filter_props(&filtered_count, rev_props,
+                          (rb->commit_with_revprops_denied
+                            ? filter_exclude_log
+                            : filter_include_date_author_sync), 
                           subpool);
   SVN_ERR(write_revprops(&filtered_count, rb->to_session, revision, filtered, 
                          subpool));
