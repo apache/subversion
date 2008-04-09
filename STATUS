@@ -15,17 +15,6 @@ Candidate changes:
     Votes:
       +1: kfogel, epg
 
-  * r30431
-    Fix Python 2.2 incompatibility in test suite (can move to 1.5.1 if
-    we don't do another RC).
-    Votes:
-      +1: epg, hwright
-
-  * r30449
-    Fix 'svn log' usage message.
-    Votes:
-      +1: cmpilato, hwright
-
 Status of 1.5.1:
 ================
 
@@ -34,7 +23,18 @@ Candidate changes:
 Approved changes (all releases):
 ================================
 
+  * r30431
+    Fix Python 2.2 incompatibility in test suite (can move to 1.5.1 if
+    we don't do another RC).
+    Votes:
+      +1: epg, hwright, pburba
+
   * r30444
     Support svn_client_mergeinfo_log_merged() in the Ruby bindings.
     Votes:
       +1: kou, joeswatosh
+
+  * r30449
+    Fix 'svn log' usage message.
+    Votes:
+      +1: cmpilato, hwright, pburba
