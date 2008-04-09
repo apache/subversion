@@ -24,9 +24,11 @@ import svntest
 from svntest.verify import SVNUnexpectedStdout, SVNUnexpectedStderr
 from svntest.verify import SVNExpectedStderr
 from svntest.main import write_restrictive_svnserve_conf
+from svntest.main import server_has_partial_replay
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
@@ -706,8 +708,10 @@ test_list = [ None,
               url_encoding,
               no_author,
               copy_revprops,
-              only_trunk,
-              only_trunk_A_with_changes,
+              SkipUnless(only_trunk,
+                         server_has_partial_replay),
+              SkipUnless(only_trunk_A_with_changes,
+                         server_has_partial_replay),
               move_and_modify_in_the_same_revision,
              ]
 
