@@ -107,7 +107,7 @@
  *  or |        cherrypicking           |    unsupported      |
  *  -r |    (svn_client_merge_peg)      |                     |
  *     +--------------------------------+---------------------+
- *  no |      mergeinfo-driven          |  mergeinfo-oblivious|
+ *  no |      mergeinfo-driven          |   mergeinfo-writing |
  *  -c |        whole-branch            |    diff-and-apply   |
  *  or |       heuristic merge          |  (svn_client_merge) |
  *  -r | (svn_client_merge_reintegrate) |                     |
