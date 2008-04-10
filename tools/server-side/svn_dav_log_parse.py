@@ -219,8 +219,9 @@ class Parser(object):
         return line[m.end():]
 
     def _parse_lock(self, line):
-        m = _match(line, pPATH, ['steal'])
-        self.handle_lock(m.group(1), m.group(2) is not None)
+        m = _match(line, pPATHS, ['steal'])
+        paths = m.group(1).split()
+        self.handle_lock(paths, m.group(2) is not None)
         return line[m.end():]
 
     def _parse_change_rev_prop(self, line):
@@ -236,8 +237,9 @@ class Parser(object):
         return line[m.end():]
 
     def _parse_unlock(self, line):
-        m = _match(line, pPATH, ['break'])
-        self.handle_unlock(m.group(1), m.group(2) is not None)
+        m = _match(line, pPATHS, ['break'])
+        paths = m.group(1).split()
+        self.handle_unlock(paths, m.group(2) is not None)
         return line[m.end():]
 
     # reports
