@@ -21,6 +21,16 @@ Candidate changes:
       +1: lgo (not r30489)
       +1: cmpilato
 
+  * r30503
+    Fixes a minor bug When filtering self-referential mergeinfo from incoming
+    property additions during a merge:  If the incoming property addition
+    was simply empty mergeinfo, then that property got discarded.  No
+    practical effect on the ultimate mergeinfo set by the merge, but the merge
+    notifications were incorrect.  See
+    http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=137120.
+    Votes:
+      +1: pburba
+
 Status of 1.5.1:
 ================
 
