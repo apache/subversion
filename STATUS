@@ -38,16 +38,24 @@ Candidate changes:
     Votes:
       +1: glasser
 
-  * r30517, r30518
+  * r30517, r30518, r30523
     Improve dav-svn operational logging and compat with svnserve logging.
     Notes:
       Revert on trunk if these don't make it into 1.5.0.
+      Probably easiest to handle these three blocks at once (tested):
+        merge -c 30474 -r30515:30523
     Votes:
       +1: epg
 
-  * r30474, r30516
-    Minor improvements in svn_dav_log_parse.py error handling.  Not at
-    all important, but if we take r30517-30518, might as well...
+  * r30474, r30516, r30520, r30521
+    Minor improvements in svn_dav_log_parse.py error handling, docs,
+    and tests.  Not at all important, but if we take r30517-...
+    Votes:
+      +1: epg
+
+  * r30522
+    Follow-up to r30426 (already back-ported): parse get-mergeinfo's
+    new include-descendants boolean.
     Votes:
       +1: epg
 
