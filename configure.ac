@@ -278,6 +278,37 @@ else
 fi
 
 
+dnl Gnome Keyring -------------------
+
+AC_CHECK_PROG(HAVE_PKG_CONFIG, pkg-config, yes)
+
+AC_ARG_ENABLE(gnome_keyring,
+  AS_HELP_STRING([--enable-gnome-keyring], 
+  [Enable use of Gnome Keyring for auth credentials]),
+  [enable_gnome_keyring=$enableval],[enable_gnome_keyring=no])
+
+AC_MSG_CHECKING([for Gnome Keyring Services])
+
+if test "$enable_gnome_keyring" = "yes"; then
+  
+  if test "x$HAVE_PKG_CONFIG" = "xyes"; then
+dnl    `pkg-config --exists gnome-keyring-1 glib-2.0`
+    CFLAGS="$CFLAGS `pkg-config --cflags gnome-keyring-1 glib-2.0`"
+    AC_CHECK_HEADER(gnome-keyring.h, enable_gnome_keyring=yes, enable_gnome_keyring=no)
+  fi
+fi
+
+if test "$enable_gnome_keyring" = "yes"; then
+  CFLAGS="$CFLAGS `pkg-config --cflags gnome-keyring-1 glib-2.0`"
+  LIBS="$LIBS `pkg-config --libs gnome-keyring-1 glib-2.0`"
+  AC_DEFINE([SVN_HAVE_GNOME_KEYRING_SERVICES], [1], 
+            [Is Gnome Keyring support enabled?])
+  AC_MSG_RESULT([yes])
+else
+  AC_MSG_RESULT([no])
+fi
+
+
 dnl I18n -------------------
 
 AC_ARG_ENABLE(nls,
