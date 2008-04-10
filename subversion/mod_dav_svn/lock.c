@@ -28,6 +28,7 @@
 #include "svn_dav.h"
 #include "svn_time.h"
 #include "svn_pools.h"
+#include "private/svn_log.h"
 
 #include "dav_svn.h"
 
@@ -759,11 +760,8 @@ append_locks(dav_lockdb *lockdb,
 
   /* Log the locking as a 'high-level' action. */
   dav_svn__operational_log(resource->info,
-                           apr_psprintf(resource->info->r->pool,
-                                        "lock %s%s",
-                                        svn_path_uri_encode(slock->path,
-                                                 resource->info->r->pool),
-                                        info->lock_steal ? " steal" : ""));
+                           svn_log__lock(slock->path, info->lock_steal,
+                                         resource->info->r->pool));
 
   return 0;
 }
@@ -847,11 +845,9 @@ remove_lock(dav_lockdb *lockdb,
 
       /* Log the unlocking as a 'high-level' action. */
       dav_svn__operational_log(resource->info,
-                               apr_psprintf(resource->info->r->pool,
-                                 "unlock %s%s",
-                                 svn_path_uri_encode(resource->info->repos_path,
-                                                     resource->info->r->pool),
-                                            info->lock_break ? " break" : ""));
+                               svn_log__unlock(resource->info->repos_path,
+                                               info->lock_break,
+                                               resource->info->r->pool));
     }
 
   return 0;
