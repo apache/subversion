@@ -48,9 +48,9 @@ General::
     commit r<N>
     get-dir <PATH> r<N> text? props?
     get-file <PATH> r<N> text? props?
-    lock <PATH> steal?
+    lock (<PATH> ...) steal?
     rev-proplist r<N>
-    unlock <PATH> break?
+    unlock (<PATH> ...) break?
 
 Reports::
 
@@ -65,7 +65,7 @@ The update report::
     diff <FROM-PATH>@<N> <TO-PATH>@<M> depth=<D>? ignore-ancestry?
     diff <PATH> r<N>:<M> depth=<D>? ignore-ancestry?
     status <PATH> r<N> depth=<D>?
-    switch <FROM-PATH>@<N> <TO-PATH>@<M> depth=<D>?
+    switch <FROM-PATH> <TO-PATH>@<N> depth=<D>?
     update <PATH> r<N> depth=<D>? send-copyfrom-args?
 """
 
