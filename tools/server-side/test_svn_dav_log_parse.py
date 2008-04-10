@@ -236,12 +236,12 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.result, ('/foo', 9, svn.core.svn_depth_files))
 
     def test_switch(self):
-        self.assertEqual(self.parse('switch /foo@9 /bar@10 ...'), ' ...')
-        self.assertEqual(self.result, ('/foo', 9, '/bar', 10,
+        self.assertEqual(self.parse('switch /foo /bar@10 ...'), ' ...')
+        self.assertEqual(self.result, ('/foo', '/bar', 10,
                                        svn.core.svn_depth_unknown))
-        self.assertEqual(self.parse('switch /foo@9 /bar@10'
+        self.assertEqual(self.parse('switch /foo /bar@10'
                                     ' depth=files'), '')
-        self.assertEqual(self.result, ('/foo', 9, '/bar', 10,
+        self.assertEqual(self.result, ('/foo', '/bar', 10,
                                        svn.core.svn_depth_files))
 
     def test_update(self):
@@ -375,10 +375,9 @@ if __name__ == '__main__':
             self.action = 'status %s r%d' % (path, revision)
             self.maybe_depth(depth)
 
-        def handle_switch(self, from_path, from_rev,
-                          to_path, to_rev, depth):
-            self.action = ('switch %s@%d %s@%d'
-                           % (from_path, from_rev, to_path, to_rev))
+        def handle_switch(self, from_path, to_path, to_rev, depth):
+            self.action = ('switch %s %s@%d'
+                           % (from_path, to_path, to_rev))
             self.maybe_depth(depth)
 
         def handle_update(self, path, revision, depth, send_copyfrom_args):

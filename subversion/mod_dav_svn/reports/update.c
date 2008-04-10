@@ -1330,26 +1330,33 @@ dav_svn__update_report(const dav_resource *resource,
     if (dst_path)
       {
         /* diff/merge don't ask for inline text-deltas. */
-        if (!uc.send_all && strcmp(spath, dst_path) == 0)
+        if (uc.send_all)
           action = apr_psprintf(resource->pool,
-                                "diff %s r%ld:%ld%s%s",
+                                "switch %s %s@%ld%s",
                                 svn_path_uri_encode(spath, resource->pool),
-                                from_revnum,
-                                revnum, log_depth,
-                                ignore_ancestry ? " ignore-ancestry" : "");
-        else
-          action = apr_psprintf(resource->pool,
-                                "%s %s@%ld %s@%ld%s%s",
-                                (uc.send_all ? "switch" : "diff"),
-                                svn_path_uri_encode(spath, resource->pool),
-                                from_revnum,
                                 svn_path_uri_encode(dst_path, resource->pool),
-                                revnum, log_depth,
-                                /* ignore-ancestry only applies to merge, and
-                                   we use uc.send_all to know if this is a
-                                   diff/merge or not. */
-                                (!uc.send_all && ignore_ancestry
-                                 ? " ignore-ancestry" : ""));
+                                revnum, log_depth);
+        else
+          {
+            if (strcmp(spath, dst_path) == 0)
+              action = apr_psprintf(resource->pool,
+                                    "diff %s r%ld:%ld%s%s",
+                                    svn_path_uri_encode(spath, resource->pool),
+                                    from_revnum,
+                                    revnum, log_depth,
+                                    ignore_ancestry ? " ignore-ancestry" : "");
+            else
+              action = apr_psprintf(resource->pool,
+                                    "diff %s@%ld %s@%ld%s%s",
+                                    svn_path_uri_encode(spath, resource->pool),
+                                    from_revnum,
+                                    svn_path_uri_encode(dst_path,
+                                                        resource->pool),
+                                    revnum, log_depth,
+                                    (ignore_ancestry
+                                     ? " ignore-ancestry"
+                                     : ""));
+          }
       }
 
     /* Otherwise, it must be checkout, export, update, or status -u. */
