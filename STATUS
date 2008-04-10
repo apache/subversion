@@ -21,7 +21,7 @@ Candidate changes:
       Sadly it did other things too.  Bad things.  Things which got it
       reverted in r30509.
     Votes:
-      +1: pburba
+      +1: pburba, epg
 
   * r30439, r30441, r30442, r30443, r30466, r30469, r30470, r30471,
      r30472, r30473
@@ -36,7 +36,7 @@ Candidate changes:
       1.5.x-checkout$ svnserve-1.4.x -d -r `pwd`/subversion/tests/cmdline &
       1.5.x-checkout$ make svncheck SERVER_MINOR_VERSION=4
     Votes:
-      +1: glasser
+      +1: glasser, epg
 
   * r30517, r30518, r30523
     Improve dav-svn operational logging and compat with svnserve logging.
