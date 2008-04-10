@@ -48,10 +48,3 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
-
-  * r30426, r30428
-    Include include-descendants parameter of get-mergeinfo in DAV
-    operational log (can move to 1.5.1 if we don't do another RC).
-    Votes:
-      +1: kfogel, epg, cmpilato
-
