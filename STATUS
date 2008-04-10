@@ -9,11 +9,6 @@ Status of 1.5.0:
 
 Candidate changes:
 
-  * r30440, r30453, r30462, r30463
-    Fix regression. Svnsync doesn't support 1.4 svnserve servers.
-    Votes:
-      +1: lgo, cmpilato
-
   * r30510
     Fixes a minor bug When filtering self-referential mergeinfo from incoming
     property additions during a merge:  If the incoming property addition
@@ -40,9 +35,6 @@ Candidate changes:
     How to test:
       1.5.x-checkout$ svnserve-1.4.x -d -r `pwd`/subversion/tests/cmdline &
       1.5.x-checkout$ make svncheck SERVER_MINOR_VERSION=4
-    Caveats:
-      Until the r30440 group is backported, svnsync test #20 fails
-      against 1.4.x.
     Votes:
       +1: glasser
 
