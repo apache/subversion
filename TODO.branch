@@ -2,3 +2,17 @@
   should use apr_file_write (and err on the side of truncated log
   entries rather than interwoven).
   -- glasser
+
+- Verify that mod_dav_svn is still logging the same stuff (I may have
+  broken something in moving some of the logic into svn_log__*).
+
+- Fix serve.c:update XXX so it distinguishes checkout-or-export from update.
+
+- tools/server-side/svn_dav_log_parse.py
+  - Rename svn_server_log_parse.py
+  - Teach about new log items dav-svn doesn't log
+  - Teach __main__ block how to parse svnserve log file as well
+
+- Document svn_log.h
+
+- Will add diagnostic logging after merging back to trunk.
