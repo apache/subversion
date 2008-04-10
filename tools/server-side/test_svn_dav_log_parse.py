@@ -14,6 +14,9 @@
 # history and logs, available at http://subversion.tigris.org/.
 # ====================================================================
 
+# Run this without arguments to run unit tests.
+# Run with a path to a davautocheck ops log to test that it can parse that.
+
 import os
 import sys
 import tempfile
