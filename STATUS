@@ -37,7 +37,7 @@ Candidate changes:
   * r30487
     Fix an error leak in single-file, multi-pass merges.
     Votes:
-      +1: cmpilato
+      +1: cmpilato, pburba
 
 Approved changes:
 
