@@ -76,11 +76,11 @@ class TestCase(unittest.TestCase):
 
     def test_lock(self):
         self.assertRaises(svn_dav_log_parse.Error, self.parse, 'lock')
-        self.parse('lock /foo')
-        self.assertEqual(self.result, ('/foo', False))
-        self.assertEqual(self.parse('lock /foo steal ...'), ' ...')
-        self.assertEqual(self.result, ('/foo', True))
-        self.assertEqual(self.parse('lock /foo stear'), ' stear')
+        self.parse('lock (/foo)')
+        self.assertEqual(self.result, (['/foo'], False))
+        self.assertEqual(self.parse('lock (/foo) steal ...'), ' ...')
+        self.assertEqual(self.result, (['/foo'], True))
+        self.assertEqual(self.parse('lock (/foo) stear'), ' stear')
 
     def test_change_rev_prop(self):
         self.assertRaises(svn_dav_log_parse.Error,
@@ -104,11 +104,11 @@ class TestCase(unittest.TestCase):
 
     def test_unlock(self):
         self.assertRaises(svn_dav_log_parse.Error, self.parse, 'unlock')
-        self.parse('unlock /foo')
-        self.assertEqual(self.result, ('/foo', False))
-        self.assertEqual(self.parse('unlock /foo break ...'), ' ...')
-        self.assertEqual(self.result, ('/foo', True))
-        self.assertEqual(self.parse('unlock /foo bear'), ' bear')
+        self.parse('unlock (/foo)')
+        self.assertEqual(self.result, (['/foo'], False))
+        self.assertEqual(self.parse('unlock (/foo) break ...'), ' ...')
+        self.assertEqual(self.result, (['/foo'], True))
+        self.assertEqual(self.parse('unlock (/foo) bear'), ' bear')
 
     def test_get_file_revs(self):
         self.assertRaises(svn_dav_log_parse.Error, self.parse, 'get-file-revs')
@@ -296,8 +296,8 @@ if __name__ == '__main__':
             if props:
                 self.action += ' props'
 
-        def handle_lock(self, path, steal):
-            self.action = 'lock ' + path
+        def handle_lock(self, paths, steal):
+            self.action = 'lock (%s)' % (' '.join(paths),)
             if steal:
                 self.action += ' steal'
 
@@ -307,8 +307,8 @@ if __name__ == '__main__':
         def handle_rev_proplist(self, revision):
             self.action = 'rev-proplist r%d' % (revision,)
 
-        def handle_unlock(self, path, break_lock):
-            self.action = 'unlock ' + path
+        def handle_unlock(self, paths, break_lock):
+            self.action = 'unlock (%s)' % (' '.join(paths),)
             if break_lock:
                 self.action += ' break'
 
