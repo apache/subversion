@@ -36,6 +36,17 @@ Candidate changes:
     Votes:
       +1: pburba
 
+  * r30440, r30453, r30462, r30463
+    Fix regression. Svnsync doesn't support 1.4 svnserve servers.
+    Votes:
+      +1: lgo
+
+  * r30480, r30482
+    Fixes for two minor issues where property names and urls weren't correctly
+    compared.
+    Votes:
+      +1: lgo
+
 Status of 1.5.1:
 ================
 
