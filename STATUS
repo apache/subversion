@@ -14,13 +14,6 @@ Candidate changes:
     Votes:
       +1: lgo, cmpilato
 
-  * r30480, r30482, r30489
-    Fixes for two minor issues where property names and urls weren't correctly
-    compared.
-    Votes:
-      +1: lgo (not r30489)
-      +1: cmpilato, pburba
-
   * r30503
     Fixes a minor bug When filtering self-referential mergeinfo from incoming
     property additions during a merge:  If the incoming property addition
@@ -38,3 +31,10 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
+  
+  * r30480, r30482, r30489
+    Fixes for two minor issues where property names and urls weren't correctly
+    compared.
+    Votes (for 1.5):
+      +1: lgo, cmpilato, pburba
+
