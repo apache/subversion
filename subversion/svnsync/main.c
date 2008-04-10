@@ -626,7 +626,7 @@ do_initialize(svn_ra_session_t *to_session,
 
   /* If we're doing a partial replay, we have to check first if the server 
      supports this. */
-  if (strcmp(root_url, baton->from_url) < 0)
+  if (svn_path_is_ancestor(root_url, baton->from_url))
     {
       svn_boolean_t server_supports_partial_replay;
       svn_error_t *err = svn_ra_has_capability(from_session,
