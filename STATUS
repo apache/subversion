@@ -13,7 +13,7 @@ Candidate changes:
     Use 1:PEG_REV instead of 1:HEAD as the default operative revision
     range when a peg revision is supplied to a single-URL merge command.
     Votes:
-      +1: cmpilato
+      +1: cmpilato, pburba
 
   * r30467
     Fix a bug which can corrupt mergeinfo when filtering self-referential
