@@ -197,6 +197,41 @@ using Cyrus SASL with Subversion.</p>
 
 </div>  <!-- sasl-compatibility -->
 
+<div class="h3" id="revprops-compatibility" title="revprops-compatibility">
+<h3>Custom revprops may now need to be examined by <tt>pre-commit</tt>
+  hooks</h3>
+
+<p>Each revision in Subversion has a set of <q>revision properties</q>
+associated with it; in addition to the standard log message, author,
+and date, arbitrary user-defined properties can be set.  These
+properties are not themselves versioned, so there is no way to revert
+changes to them.  Because of this, you cannot modify revprops on a
+committed revision without setting up a <tt>pre-revprop-change</tt>
+hook on the server.  Before Subversion 1.5, only the three standard
+revprops could be set at commit time; administrators using hooks to
+control the contents of the three standard revprops needed to check
+during <tt>pre-commit</tt> and <tt>pre-revprop-change</tt>, but for
+custom revprops, only <tt>pre-revprop-change</tt> appeared
+relevant.</p>
+
+<p>Subversion 1.5 adds
+a <a href="#commit-revprops"><tt>--with-revprop</tt> option to <tt>svn
+commit</tt></a> which allows users to specify revprops for revisions
+as they commit them.  Thus, in Subversion 1.5, it is possible for
+revproperties to be set on revisions without
+any <tt>pre-revprop-change</tt>.  The <tt>pre-commit</tt> hook can
+examine the transaction's revision properties before it is committed
+(just like many servers already use <tt>pre-commit</tt> to check for
+properly formatted log messages, e.g.).</p>
+
+<p>This means that if you previously relied
+on <tt>pre-revprop-change</tt> to control the ability to write to
+revprops (as opposed to just keeping track of their history), you may
+want to add similar controls to <tt>pre-commit</tt>.</p>
+
+</div>  <!-- revprops-compatibility -->
+
+
 </div>  <!-- compatibility -->
 
 <div class="h2" id="new-features" title="new-features">
