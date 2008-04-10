@@ -1433,8 +1433,9 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                           svn_path_uri_decode(switch_url, pool),
                           &switch_path));
 
-  /* TODO(svnserve-log): Huh, dav has a revision for each path, but we
-     only have 1 here. */
+  /* TODO(svnserve-log): Dav gets from_rev from the set_path on "",
+   * but that's as meaningless for switch as for update, for which dav
+   * doesn't log from_rev... */
   {
     const char *full_path = svn_path_join(b->fs_path->data, target, pool);
     SLOG(svn_log__switch(full_path, rev, switch_path, rev, depth, pool));
@@ -1523,8 +1524,8 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_CMD_ERR(get_fs_path(svn_path_uri_decode(b->repos_url, pool),
                           svn_path_uri_decode(versus_url, pool),
                           &versus_path));
-  /* TODO(svnserve-log): Huh, dav has a revision for each path, but we
-     only have 1 here. */
+  /* TODO(svnserve-log): Dav gets from_rev from the set_path on "";
+   * need to do that here, too. */
   {
     const char *full_path = svn_path_join(b->fs_path->data, target, pool);
     SLOG(svn_log__diff(full_path, rev, versus_path, rev, depth,
