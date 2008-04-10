@@ -485,6 +485,15 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
               adjusted_prop->value = filtered_mergeinfo_str;
               APR_ARRAY_PUSH(adjusted_props, svn_prop_t) = *adjusted_prop;
             }
+          else
+            {
+              /* If the incoming svn:mergeinfo property addition was simply
+                 for empty mergeinfo, then the filtering logic wouldn't apply
+                 (there are *no* revision ranges to filter after all).  In
+                 that case just put empty mergeinfo prop in the array. 
+                 */
+              APR_ARRAY_PUSH(adjusted_props, svn_prop_t) = *prop;
+            }
 
           /* If we reparented MERGE_B->RA_SESSION2 above, put it back
              to the original URL. */
