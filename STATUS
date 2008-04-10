@@ -9,12 +9,6 @@ Status of 1.5.0:
 
 Candidate changes:
 
-  * r30426, r30428
-    Include include-descendants parameter of get-mergeinfo in DAV
-    operational log (can move to 1.5.1 if we don't do another RC).
-    Votes:
-      +1: kfogel, epg
-
   * r30455, r30460
     Use 1:PEG_REV instead of 1:HEAD as the default operative revision
     range when a peg revision is supplied to a single-URL merge command.
@@ -28,26 +22,27 @@ Candidate changes:
     merge target.
     See http://subversion.tigris.org/issues/show_bug.cgi?id=2821#desc22
     Votes:
-      +1: pburba
-      +1: kameshj(r30448)
+      +1: pburba, cmpilato
+      +1: kameshj (r30448 only)
 
   * r30467
     Fix a bug which can corrupt mergeinfo when filtering self-referential
     mergeinfo.
     See http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=137036.
     Votes:
-      +1: pburba
+      +1: pburba, cmpilato
 
   * r30440, r30453, r30462, r30463
     Fix regression. Svnsync doesn't support 1.4 svnserve servers.
     Votes:
-      +1: lgo
+      +1: lgo, cmpilato
 
-  * r30480, r30482
+  * r30480, r30482, r30489
     Fixes for two minor issues where property names and urls weren't correctly
     compared.
     Votes:
-      +1: lgo
+      +1: lgo (not r30489)
+      +1: cmpilato
 
   * r30487
     Fix an error leak in single-file, multi-pass merges.
@@ -61,3 +56,10 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
+
+  * r30426, r30428
+    Include include-descendants parameter of get-mergeinfo in DAV
+    operational log (can move to 1.5.1 if we don't do another RC).
+    Votes:
+      +1: kfogel, epg, cmpilato
+
