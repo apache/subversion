@@ -28,10 +28,3 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
-
-  * r30467
-    Fix a bug which can corrupt mergeinfo when filtering self-referential
-    mergeinfo.
-    See http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=137036.
-    Votes:
-      +1: pburba, cmpilato, kameshj
