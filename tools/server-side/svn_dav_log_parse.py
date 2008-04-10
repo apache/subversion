@@ -115,7 +115,8 @@ class BadMergeinfoInheritanceError(Error):
         Error.__init__(self, 'bad svn_mergeinfo_inheritance_t value ' + value)
 class MatchError(Error):
     def __init__(self, pattern, line):
-        Error.__init__(self, '/%s/ does not match log line:\n' + line)
+        Error.__init__(self, '/%s/ does not match log line:\n%s'
+                             % (pattern, line))
 
 
 #
