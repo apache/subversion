@@ -22,8 +22,7 @@ Candidate changes:
     merge target.
     See http://subversion.tigris.org/issues/show_bug.cgi?id=2821#desc22
     Votes:
-      +1: pburba, cmpilato
-      +1: kameshj (r30448 only)
+      +1: pburba, cmpilato, kameshj
 
   * r30467
     Fix a bug which can corrupt mergeinfo when filtering self-referential
