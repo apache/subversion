@@ -467,26 +467,26 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                     }
                 } /* for (j = 0; j < rangelist->nelts; j++) */
               
-              /* If only some of the ranges mapped from SOURCE_PATH were
-                 filtered then create a new svn_prop_t to represent
+          /* If only some of the ranges mapped from SOURCE_PATH were
+             filtered then create a new svn_prop_t to represent
                  this. */
               if (adjusted_rangelist->nelts)
-                {
+            {
                   svn_string_t *adjusted_rangelist_s;
                   svn_prop_t *adjusted_prop =
                     apr_pcalloc(pool, sizeof(*adjusted_prop));
 
                   SVN_ERR(svn_rangelist_to_string(&adjusted_rangelist_s,
                                                   adjusted_rangelist,
-                                                  pool));
-                  adjusted_prop->name = SVN_PROP_MERGEINFO;
+                                              pool));
+              adjusted_prop->name = SVN_PROP_MERGEINFO;
                   adjusted_prop->value = 
                     svn_string_create(apr_pstrcat(pool, source_path, ":",
                                                   adjusted_rangelist_s->data,
                                                   NULL),
                                       pool);
-                  APR_ARRAY_PUSH(adjusted_props, svn_prop_t) = *adjusted_prop;
-                }
+              APR_ARRAY_PUSH(adjusted_props, svn_prop_t) = *adjusted_prop;
+            }
             } /* mergeinfo hash iteration */
 
           /* If we reparented MERGE_B->RA_SESSION2 above, put it back
@@ -2295,59 +2295,64 @@ drive_merge_report_editor(const char *target_wcpath,
             APR_ARRAY_IDX(children_with_mergeinfo, i, 
                           svn_client__merge_path_t *);
 
-          if (!child || child->absent || (child->remaining_ranges->nelts == 0))
+          if (!child || child->absent)
             continue;
 
-          range = APR_ARRAY_IDX(child->remaining_ranges, 0,
-                                svn_merge_range_t *);
-          if (range->start == default_start)
+          if (child->remaining_ranges->nelts)
             {
-              continue;
-            }
-          else
-            {
-              /* While we need to describe subtrees requiring different merge
-                 ranges than TARGET_WCPATH will have applied, we don't need to
-                 describe a subtree's subtree if that latter is having the
-                 same range applied as the former. */
-              int j;
-              svn_client__merge_path_t *parent = NULL;
-              
-              /* Does CHILD have a parent with mergeinfo other
-                 than TARGET_WCPATH? */
-              for (j = i - 1; j > 0; j--)
+              range = APR_ARRAY_IDX(child->remaining_ranges, 0,
+                                    svn_merge_range_t *);
+              if (range->start == default_start)
                 {
-                  svn_client__merge_path_t *potential_parent =
-                    APR_ARRAY_IDX(children_with_mergeinfo, j,
-                                  svn_client__merge_path_t *);
-                  if (svn_path_is_ancestor(potential_parent->path,
-                                           child->path))
-                    {
-                      parent = potential_parent;
-                      break;
-                    }
+                  continue;
                 }
-
-              /* CHILD does have a parent with mergeinfo, if CHILD's first
-                 remaining range is the same as its parent there is no need
-                 to describe it separately. */
-              if (parent && parent->remaining_ranges->nelts != 0)
+              else
                 {
-                  svn_merge_range_t *parent_range =
-                    APR_ARRAY_IDX(parent->remaining_ranges, 0,
-                                  svn_merge_range_t *);
-                  svn_merge_range_t *child_range =
-                    APR_ARRAY_IDX(child->remaining_ranges, 0,
-                                  svn_merge_range_t *);
-                  if (parent_range->start == child_range->start)
-                    continue;
+                  /* While we need to describe subtrees requiring different merge
+                     ranges than TARGET_WCPATH will have applied, we don't need to
+                     describe a subtree's subtree if that latter is having the
+                     same range applied as the former. */
+                  int j;
+                  svn_client__merge_path_t *parent = NULL;
+                  
+                  /* Does CHILD have a parent with mergeinfo other
+                     than TARGET_WCPATH? */
+                  for (j = i - 1; j > 0; j--)
+                    {
+                      svn_client__merge_path_t *potential_parent =
+                        APR_ARRAY_IDX(children_with_mergeinfo, j,
+                                      svn_client__merge_path_t *);
+                      if (svn_path_is_ancestor(potential_parent->path,
+                                               child->path))
+                        {
+                          parent = potential_parent;
+                          break;
+                        }
+                    }
+
+                  /* CHILD does have a parent with mergeinfo, if CHILD's first
+                     remaining range is the same as its parent there is no need
+                     to describe it separately. */
+                  if (parent && parent->remaining_ranges->nelts != 0)
+                    {
+                      svn_merge_range_t *parent_range =
+                        APR_ARRAY_IDX(parent->remaining_ranges, 0,
+                                      svn_merge_range_t *);
+                      svn_merge_range_t *child_range =
+                        APR_ARRAY_IDX(child->remaining_ranges, 0,
+                                      svn_merge_range_t *);
+                      if (parent_range->start == child_range->start)
+                        continue;
+                    }
                 }
             }
 
           child_repos_path = child->path +
             (target_wcpath_len ? target_wcpath_len + 1 : 0);
 
-          if ((is_rollback && (range->start < revision2))
+          if ((child->remaining_ranges->nelts == 0) /* Nothing to merge to
+                                                       this child. */
+              || (is_rollback && (range->start < revision2))
               || (!is_rollback && (range->start > revision2)))
             {
               SVN_ERR(reporter->set_path(report_baton, child_repos_path,

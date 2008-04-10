@@ -4317,6 +4317,9 @@ def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
   A_B_F_path = os.path.join(A_B_path, 'F')
   A_B_F_E_path = os.path.join(A_B_F_path, 'E')
   copy_of_B_path = os.path.join(A_path, 'copy-of-B')
+  copy_of_B_F_path = os.path.join(A_path, 'copy-of-B', 'F')
+  A_copy_of_B_F_E_alpha_path = os.path.join(A_path, 'copy-of-B', 'F',
+                                            'E', 'alpha')
 
   # Create a deeper directory structure.
   expected_status = create_deep_trees(wc_dir)
@@ -4448,6 +4451,61 @@ def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
                                        None,
                                        None,
                                        None, 1)
+  os.chdir(saved_cwd)
+
+  # Test for part of Issue #2821, see
+  # http://subversion.tigris.org/issues/show_bug.cgi?id=2821#desc22
+  #
+  # Revert all local changes.
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
+
+  # Make a text mod to A/copy-of-B/F/E/alpha
+  newer_content_for_alpha = "Conflicting content"
+  svntest.main.file_write(A_copy_of_B_F_E_alpha_path,
+                          newer_content_for_alpha)
+
+  # Re-merge r5 to A/copy-of-B/F, this *should* be a no-op as the mergeinfo
+  # on A/copy-of-B/F/E should prevent any attempt to merge r5 into that
+  # subtree.  The merge will leave a few local changes as mergeinfo is set
+  # on A/copy-of-B/F, the mergeinfo on A/copy-of-B/F/E elides to it, and
+  # the mergeinfo on A/copy-of-B/F/E1 picks up r5 from /A/B/F/E1.
+  short_copy_of_B_F_path = shorten_path_kludge(copy_of_B_F_path)
+  expected_output = wc.State(short_copy_of_B_F_path, {})
+  expected_status = wc.State(short_copy_of_B_F_path, {
+    ''         : Item(status=' M', wc_rev=8),
+    'E'        : Item(status=' M', wc_rev=8),
+    'E/alpha'  : Item(status='M ', wc_rev=8),
+    'E/beta'   : Item(status='  ', wc_rev=8),
+    'E1'       : Item(status=' M', wc_rev=8),
+    'E1/alpha' : Item(status='  ', wc_rev=8),
+    'E1/beta'  : Item(status='  ', wc_rev=8),
+    })
+  expected_disk = wc.State('', {
+    ''         : Item(props={SVN_PROP_MERGEINFO : '/A/B/F:5'}),
+    'E'        : Item(props={}),
+    'E/alpha'  : Item(newer_content_for_alpha),
+    'E/beta'   : Item("This is the file 'beta'.\n"),
+    'E1'       : Item(props={SVN_PROP_MERGEINFO :
+                               '/A/B/F/E:5\n/A/B/F/E1:5\n'}),
+    'E1/alpha' : Item(new_content_for_alpha1),
+    'E1/beta'  : Item("This is the file 'beta'.\n")
+    })
+  expected_skip = wc.State(short_copy_of_B_F_path, { })
+  saved_cwd = os.getcwd()
+
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_copy_of_B_F_path, '4', '5',
+                                       sbox.repo_url + '/A/B/F',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None,
+                                       None,
+                                       None,
+                                       None,
+                                       None, 1)
+  os.chdir(saved_cwd)
 
 def tweak_src_then_merge_to_dest(sbox, src_path, dst_path,
                                  canon_src_path, contents, cur_rev):
