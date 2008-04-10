@@ -1295,11 +1295,9 @@ make_replay_baton(svn_ra_session_t *from_session,
 static svn_boolean_t 
 filter_exclude_date_author_sync(const char *key)
 {
-  if (strncmp(key, SVN_PROP_REVISION_AUTHOR, 
-              sizeof(SVN_PROP_REVISION_AUTHOR) - 1) == 0)
+  if (strcmp(key, SVN_PROP_REVISION_AUTHOR) == 0)
     return TRUE;
-  else if (strncmp(key, SVN_PROP_REVISION_DATE, 
-                   sizeof(SVN_PROP_REVISION_DATE) - 1) == 0)
+  else if (strcmp(key, SVN_PROP_REVISION_DATE) == 0)
     return TRUE;
   else if (strncmp(key, SVNSYNC_PROP_PREFIX,
                    sizeof(SVNSYNC_PROP_PREFIX) - 1) == 0)
