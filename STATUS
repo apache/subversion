@@ -9,13 +9,6 @@ Status of 1.5.0:
 
 Candidate changes:
 
-  * r30467
-    Fix a bug which can corrupt mergeinfo when filtering self-referential
-    mergeinfo.
-    See http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=137036.
-    Votes:
-      +1: pburba, cmpilato
-
   * r30440, r30453, r30462, r30463
     Fix regression. Svnsync doesn't support 1.4 svnserve servers.
     Votes:
@@ -27,8 +20,6 @@ Candidate changes:
     Votes:
       +1: lgo (not r30489)
       +1: cmpilato
-
-Approved changes:
 
 Status of 1.5.1:
 ================
@@ -48,3 +39,11 @@ Approved changes (all releases):
     Fix an error leak in single-file, multi-pass merges.
     Votes:
       +1: cmpilato, pburba, hwright
+
+  * r30467
+    Fix a bug which can corrupt mergeinfo when filtering self-referential
+    mergeinfo.
+    See http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=137036.
+    Votes:
+      +1: pburba, cmpilato, kameshj
+
