@@ -38,6 +38,19 @@ Candidate changes:
     Votes:
       +1: glasser
 
+  * r30517, r30518
+    Improve dav-svn operational logging and compat with svnserve logging.
+    Notes:
+      Revert on trunk if these don't make it into 1.5.0.
+    Votes:
+      +1: epg
+
+  * r30474, r30516
+    Minor improvements in svn_dav_log_parse.py error handling.  Not at
+    all important, but if we take r30517-30518, might as well...
+    Votes:
+      +1: epg
+
 Status of 1.5.1:
 ================
 
