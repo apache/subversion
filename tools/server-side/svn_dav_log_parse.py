@@ -347,13 +347,12 @@ class Parser(object):
         return line[m.end():]
 
     def _parse_switch(self, line):
-        m = _match(line, pPATHREV, pPATHREV, [pDEPTH])
+        m = _match(line, pPATH, pPATHREV, [pDEPTH])
         from_path = m.group(1)
-        from_rev = int(m.group(2))
-        to_path = m.group(3)
-        to_rev = int(m.group(4))
-        depth = _parse_depth(m.group(6))
-        self.handle_switch(from_path, from_rev, to_path, to_rev, depth)
+        to_path = m.group(2)
+        to_rev = int(m.group(3))
+        depth = _parse_depth(m.group(5))
+        self.handle_switch(from_path, to_path, to_rev, depth)
         return line[m.end():]
 
     def _parse_update(self, line):
