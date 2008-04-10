@@ -1414,8 +1414,6 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
      handle that by converting recurse if necessary. */
   svn_depth_t depth = svn_depth_unknown;
 
-  SLOG("switch");
-
   /* Parse the arguments. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbc?w", &rev, &target,
                                  &recurse, &switch_url, &depth_word));
