@@ -701,6 +701,27 @@ svn_auth_get_keychain_simple_provider(svn_auth_provider_object_t **provider,
 
 #endif /* DARWIN || DOXYGEN */
 
+#if defined(SVN_HAVE_GNOME_KEYRING_SERVICES) || defined(DOXYGEN)
+/**
+ * Create and return @a *provider, an authentication provider of type @c
+ * svn_auth_cred_simple_t that gets/sets information from the user's
+ * ~/.subversion configuration directory.  Allocate @a *provider in
+ * @a pool.
+ *
+ * This is like svn_client_get_simple_provider(), except that the
+ * password is stored in the Gnome Keyring.
+ *
+ * @since New in 1.6
+ * @note This function is only available on systems with Gnome Keyring
+ * installed.
+ */
+void
+svn_auth_get_gnome_keyring_simple_provider
+    (svn_auth_provider_object_t **provider,
+     apr_pool_t *pool);
+
+#endif /* SVN_HAVE_GNOME_KEYRING_SERVICES */
+
 /** Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_username_t that gets/sets information from a user's
  * ~/.subversion configuration directory.  Allocate @a *provider in
