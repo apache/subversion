@@ -19,7 +19,7 @@ Candidate changes:
     compared.
     Votes:
       +1: lgo (not r30489)
-      +1: cmpilato
+      +1: cmpilato, pburba
 
   * r30503
     Fixes a minor bug When filtering self-referential mergeinfo from incoming
