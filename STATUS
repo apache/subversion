@@ -15,15 +15,6 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
-  * r30448, r30464
-    r30448: XFail Testcase to showcase the bug.
-    r30464: Fix reopened issue #2821.  Fixes a bug where repeat merges can
-    easily occur when merging into subtrees with differing mergeinfo from the
-    merge target.
-    See http://subversion.tigris.org/issues/show_bug.cgi?id=2821#desc22
-    Votes:
-      +1: pburba, cmpilato, kameshj
-
   * r30467
     Fix a bug which can corrupt mergeinfo when filtering self-referential
     mergeinfo.
@@ -47,6 +38,16 @@ Candidate changes:
     Fix an error leak in single-file, multi-pass merges.
     Votes:
       +1: cmpilato
+
+Approved changes:
+  * r30448, r30464
+    r30448: XFail Testcase to showcase the bug.
+    r30464: Fix reopened issue #2821.  Fixes a bug where repeat merges can
+    easily occur when merging into subtrees with differing mergeinfo from the
+    merge target.
+    See http://subversion.tigris.org/issues/show_bug.cgi?id=2821#desc22
+    Votes:
+      +1: pburba, cmpilato, kameshj
 
 Status of 1.5.1:
 ================
