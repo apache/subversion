@@ -21,13 +21,15 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
-  * r30464
-    Fix reopened issue #2821.  Fixes a bug where repeat merges can easily
-    occur when merging into subtrees with differing mergeinfo from the
+  * r30448, r30464
+    r30448: XFail Testcase to showcase the bug.
+    r30464: Fix reopened issue #2821.  Fixes a bug where repeat merges can
+    easily occur when merging into subtrees with differing mergeinfo from the
     merge target.
     See http://subversion.tigris.org/issues/show_bug.cgi?id=2821#desc22
     Votes:
-      +1: pburba
+      +1: pburba(r30464)
+      +1: kameshj(r30448)
 
   * r30467
     Fix a bug which can corrupt mergeinfo when filtering self-referential
