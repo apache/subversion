@@ -337,9 +337,10 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
       svn_prop_t *prop = &APR_ARRAY_IDX((*props), i, svn_prop_t);
 
       /* If this property isn't mergeinfo or is empty mergeinfo it
-         does not require any special handling. */
+         does not require any special handling (there is nothing to
+         filter out of empty mergeinfo). */
       if ((strcmp(prop->name, SVN_PROP_MERGEINFO) != 0)
-          || (! prop->value))
+          || (! prop->value->len))
         {
           APR_ARRAY_PUSH(adjusted_props, svn_prop_t) = *prop;
         }
