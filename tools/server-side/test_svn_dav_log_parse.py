@@ -14,6 +14,9 @@
 # history and logs, available at http://subversion.tigris.org/.
 # ====================================================================
 
+# Run this without arguments to run unit tests.
+# Run with a path to a davautocheck ops log to test that it can parse that.
+
 import os
 import sys
 import tempfile
@@ -402,9 +405,10 @@ if __name__ == '__main__':
             leading = ' '.join(words[:4])
             action = ' '.join(words[4:])
             # Parse the action and write the reconstructed action to
-            # the temporary file.
-            trailing = parser.parse(action)
-            fp.write(leading + ' ' + parser.action + trailing + '\n')
+            # the temporary file.  Ignore the returned trailing text,
+            # as we have none in the davautocheck ops log.
+            parser.parse(action)
+            fp.write(leading + ' ' + parser.action + '\n')
         fp.close()
         # Check differences between original and reconstructed files
         # (should be identical).

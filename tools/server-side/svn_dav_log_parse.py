@@ -113,6 +113,11 @@ class BadDepthError(Error):
 class BadMergeinfoInheritanceError(Error):
     def __init__(self, value):
         Error.__init__(self, 'bad svn_mergeinfo_inheritance_t value ' + value)
+class MatchError(Error):
+    def __init__(self, pattern, line):
+        Error.__init__(self, '/%s/ does not match log line:\n%s'
+                             % (pattern, line))
+
 
 #
 # Helper functions
@@ -161,7 +166,7 @@ def _match(line, *patterns):
     pattern += ''.join([r'(\s+' + x + ')?' for x in optional])
     m = re.match(pattern, line)
     if m is None:
-        raise Error
+        raise MatchError(pattern, line)
     return m
 
 

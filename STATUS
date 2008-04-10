@@ -54,15 +54,3 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
-
-  * r30474, r30516, r30520, r30521
-    Minor improvements in svn_dav_log_parse.py error handling, docs,
-    and tests.  Not at all important, but if we take r30517-...
-    Votes:
-      +1: epg, glasser
-
-  * r30522
-    Follow-up to r30426 (already back-ported): parse get-mergeinfo's
-    new include-descendants boolean.
-    Votes:
-      +1: epg, glasser
