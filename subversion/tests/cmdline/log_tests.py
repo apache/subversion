@@ -262,7 +262,7 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
 
   # Do some mergeing - r6
   os.chdir('trunk')
-  svntest.main.run_svn(None, 'merge', os.path.join('..', branch_a))
+  svntest.main.run_svn(None, 'merge', os.path.join('..', branch_a) + '@HEAD')
   svntest.main.run_svn(None, 'ci', '-m',
                        'Merged branches/a to trunk.',
                        '--username', svntest.main.wc_author2)
@@ -319,7 +319,7 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
 
   # Merge branches/a to branches/b - r12
   os.chdir(branch_b)
-  svntest.main.run_svn(None, 'merge', os.path.join('..', 'a'))
+  svntest.main.run_svn(None, 'merge', os.path.join('..', 'a') + '@HEAD')
   svntest.main.run_svn(None, 'ci', '-m',
                        "Merged branches/a to branches/b.",
                        '--username', svntest.main.wc_author2)
@@ -333,7 +333,7 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
 
   # More merging - r14
   os.chdir('trunk')
-  svntest.main.run_svn(None, 'merge', os.path.join('..', branch_b))
+  svntest.main.run_svn(None, 'merge', os.path.join('..', branch_b) + '@HEAD')
   svntest.main.run_svn(None, 'ci', '-m',
                        "Merged branches/b to trunk.",
                        '--username', svntest.main.wc_author2)
@@ -341,7 +341,8 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
 
   # Even more merging - r15
   os.chdir(branch_c)
-  svntest.main.run_svn(None, 'merge', os.path.join('..', '..', 'trunk'))
+  svntest.main.run_svn(None, 'merge',
+                       os.path.join('..', '..', 'trunk') + '@HEAD')
   svntest.main.run_svn(None, 'ci', '-m',
                        "Bring branches/c up to date with trunk.",
                        '--username', svntest.main.wc_author2)
@@ -355,7 +356,7 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
 
   # Merge branches/c to trunk, which produces a conflict - r17
   os.chdir('trunk')
-  svntest.main.run_svn(None, 'merge', os.path.join('..', branch_c))
+  svntest.main.run_svn(None, 'merge', os.path.join('..', branch_c) + '@HEAD')
   svntest.main.file_write(os.path.join('A', 'mu'),
                           "This is the file 'mu'.\n" +
                           "Don't forget to look at 'upsilon', as well.\n" +

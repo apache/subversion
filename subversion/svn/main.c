@@ -607,7 +607,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     for each revision range provided.  If REV is not specified, HEAD\n"
      "     is assumed.  '-c M' is equivalent to '-r <M-1>:M', and '-c -M'\n"
      "     does the reverse: '-r M:<M-1>'.  If no revision ranges are\n"
-     "     specified, the default range of 0:HEAD is used.  Multiple '-c'\n"
+     "     specified, the default range of 0:REV is used.  Multiple '-c'\n"
      "     and/or '-r' instances may be specified, and mixing of forward\n"
      "     and reverse ranges is allowed.\n"
      "\n"

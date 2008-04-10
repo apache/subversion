@@ -29,12 +29,6 @@ Candidate changes:
 Approved changes (all releases):
 ================================
 
-  * r30455, r30460
-    Use 1:PEG_REV instead of 1:HEAD as the default operative revision
-    range when a peg revision is supplied to a single-URL merge command.
-    Votes:
-      +1: cmpilato, pburba, hwright
-
   * r30487
     Fix an error leak in single-file, multi-pass merges.
     Votes:
