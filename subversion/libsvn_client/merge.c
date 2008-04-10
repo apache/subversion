@@ -3910,7 +3910,6 @@ do_file_merge(const char *url1,
               merge_cmd_baton_t *merge_b,
               apr_pool_t *pool)
 {
-  svn_error_t *err = SVN_NO_ERROR;
   apr_hash_t *props1, *props2;
   const char *tmpfile1, *tmpfile2;
   const char *mimetype1, *mimetype2;
@@ -3923,6 +3922,7 @@ do_file_merge(const char *url1,
   svn_merge_range_t range;
   svn_mergeinfo_t target_mergeinfo;
   const svn_wc_entry_t *entry;
+  svn_merge_range_t *conflicted_range = NULL;
   int i;
   svn_boolean_t indirect = FALSE;
   apr_pool_t *subpool;
@@ -3990,6 +3990,7 @@ do_file_merge(const char *url1,
     {
       svn_wc_notify_t *n;
       svn_boolean_t header_sent = FALSE;
+      svn_error_t *err = SVN_NO_ERROR;
 
       /* When using this merge range, account for the exclusivity of
          its low value (which is indicated by this operation being a
@@ -4087,17 +4088,15 @@ do_file_merge(const char *url1,
       if (err && ! APR_STATUS_IS_ENOENT(err->apr_err))
         return err;
       svn_error_clear(err);
-      err = SVN_NO_ERROR;
       err = svn_io_remove_file(tmpfile2, subpool);
       if (err && ! APR_STATUS_IS_ENOENT(err->apr_err))
         return err;
       svn_error_clear(err);
-      err = SVN_NO_ERROR;
 
-      if (i < remaining_ranges->nelts - 1 &&
-          is_path_conflicted_by_merge(merge_b))
+      if ((i < (remaining_ranges->nelts - 1))
+          && is_path_conflicted_by_merge(merge_b))
         {
-          err = make_merge_conflict_error(target_wcpath, r, pool);
+          conflicted_range = r;
           break;
         }
     }
@@ -4128,7 +4127,12 @@ do_file_merge(const char *url1,
   /* Sleep to ensure timestamp integrity. */
   svn_sleep_for_timestamps();
 
-  return err;
+  /* If our multi-pass merge terminated early due to conflicts, return
+     that fact as an error. */
+  if (conflicted_range)
+    return make_merge_conflict_error(target_wcpath, conflicted_range, pool);
+    
+  return SVN_NO_ERROR;
 }
 
 
