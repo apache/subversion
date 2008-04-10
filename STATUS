@@ -49,6 +49,11 @@ Candidate changes:
     Votes:
       +1: lgo
 
+  * r30487
+    Fix an error leak in single-file, multi-pass merges.
+    Votes:
+      +1: cmpilato
+
 Status of 1.5.1:
 ================
 
