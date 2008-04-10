@@ -53,9 +53,3 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
-  
-  * r30480, r30482, r30489
-    Fixes for two minor issues where property names and urls weren't correctly
-    compared.
-    Votes (for 1.5):
-      +1: lgo, cmpilato, pburba

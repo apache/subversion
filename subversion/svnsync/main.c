@@ -626,7 +626,7 @@ do_initialize(svn_ra_session_t *to_session,
 
   /* If we're doing a partial replay, we have to check first if the server 
      supports this. */
-  if (strcmp(root_url, baton->from_url) < 0)
+  if (svn_path_is_child(root_url, baton->from_url, pool))
     {
       svn_boolean_t server_supports_partial_replay;
       svn_error_t *err = svn_ra_has_capability(from_session,
@@ -1163,11 +1163,9 @@ make_replay_baton(svn_ra_session_t *from_session,
 static svn_boolean_t 
 filter_exclude_date_author_sync(const char *key)
 {
-  if (strncmp(key, SVN_PROP_REVISION_AUTHOR, 
-              sizeof(SVN_PROP_REVISION_AUTHOR) - 1) == 0)
+  if (strcmp(key, SVN_PROP_REVISION_AUTHOR) == 0)
     return TRUE;
-  else if (strncmp(key, SVN_PROP_REVISION_DATE, 
-                   sizeof(SVN_PROP_REVISION_DATE) - 1) == 0)
+  else if (strcmp(key, SVN_PROP_REVISION_DATE) == 0)
     return TRUE;
   else if (strncmp(key, SVNSYNC_PROP_PREFIX,
                    sizeof(SVNSYNC_PROP_PREFIX) - 1) == 0)
