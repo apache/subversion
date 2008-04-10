@@ -55,7 +55,7 @@ General::
 Reports::
 
     get-file-revs <PATH> r<N>:<M> include-merged-revisions?
-    get-mergeinfo (<PATH> ...) <I>
+    get-mergeinfo (<PATH> ...) <I> include-descendants?
     log (<PATH> ...) r<N>:<M> limit=<N>? discover-changed-paths? strict? include-merged-revisions? revprops=all|(<REVPROP> ...)?
     replay <PATH> r<N>
 
@@ -256,10 +256,13 @@ class Parser(object):
     def _parse_get_mergeinfo(self, line):
         # <I>
         pMERGEINFO_INHERITANCE = pWORD
-        m = _match(line, pPATHS, pMERGEINFO_INHERITANCE)
+        pINCLUDE_DESCENDANTS = pWORD
+        m = _match(line,
+                   pPATHS, pMERGEINFO_INHERITANCE, ['include-descendants'])
         paths = m.group(1).split()
         inheritance = _parse_mergeinfo_inheritance(m.group(2))
-        self.handle_get_mergeinfo(paths, inheritance)
+        include_descendants         = m.group(3) is not None
+        self.handle_get_mergeinfo(paths, inheritance, include_descendants)
         return line[m.end():]
 
     def _parse_log(self, line):

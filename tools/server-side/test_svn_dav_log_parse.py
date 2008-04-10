@@ -142,11 +142,13 @@ class TestCase(unittest.TestCase):
                           self.parse, 'get-mergeinfo (/foo) bork')
         self.assertEqual(self.parse('get-mergeinfo (/foo) explicit'), '')
         self.assertEqual(self.result, (['/foo'],
-                                       svn.core.svn_mergeinfo_explicit))
+                                       svn.core.svn_mergeinfo_explicit, False))
         self.assertEqual(self.parse('get-mergeinfo (/foo /bar) inherited ...'),
                          ' ...')
         self.assertEqual(self.result, (['/foo', '/bar'],
-                                       svn.core.svn_mergeinfo_inherited))
+                                       svn.core.svn_mergeinfo_inherited, False))
+        self.assertEqual(self.result, (['/foo', '/bar'],
+                                       svn.core.svn_mergeinfo_inherited, False))
 
     def test_log(self):
         self.assertRaises(svn_dav_log_parse.Error, self.parse, 'log')
@@ -322,10 +324,12 @@ if __name__ == '__main__':
             if include_merged_revisions:
                 self.action += ' include-merged-revisions'
 
-        def handle_get_mergeinfo(self, paths, inheritance):
+        def handle_get_mergeinfo(self, paths, inheritance, include_descendants):
             self.action = ('get-mergeinfo (%s) %s'
                            % (' '.join(paths),
                               svn.core.svn_inheritance_to_word(inheritance)))
+            if include_descendants:
+                self.action += ' include-descendants'
 
         def handle_log(self, paths, left, right, limit, discover_changed_paths,
                        strict, include_merged_revisions, revprops):
