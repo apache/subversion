@@ -25,12 +25,12 @@
 #include <apr_want.h>
 #include <apr_strings.h>
 
-#include <svn_types.h>
-#include <svn_error.h>
-#include <svn_mergeinfo.h>
-#include <svn_path.h>
-#include <svn_pools.h>
-#include <svn_string.h>
+#include "svn_types.h"
+#include "svn_error.h"
+#include "svn_mergeinfo.h"
+#include "svn_path.h"
+#include "svn_pools.h"
+#include "svn_string.h"
 
 #include "private/svn_log.h"
 
