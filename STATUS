@@ -18,10 +18,10 @@ Candidate changes:
      of the library consumer (who would potentially otherwise leak
      errors).
    Notes:
-      This is a follow-up to r28591, which is a fix for issue #3054,
-      'svn cl foo README; svn cl foo README' has unexpected output.
-    Votes
-      +1: dlr
+     This is a follow-up to r28591, which is a fix for issue #3054,
+     'svn cl foo README; svn cl foo README' has unexpected output.
+   Votes
+     +1: dlr
 
 
 Status of 1.5.1:
@@ -36,5 +36,5 @@ Approved changes (all releases):
    Fix a segfault when a merge removes explicit mergeinfo.
    Notes:
      Follow-up to r30510 which was one of the backports between RC1 and RC2. 
-    Votes
-      +1: pburba, dlr
+   Votes
+     +1: pburba, dlr
