@@ -24,10 +24,11 @@ import svntest
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
-from svntest.main import SVN_PROP_MERGEINFO
+from svntest.main import SVN_PROP_MERGEINFO, server_has_mergeinfo
 
 ### Bummer.  It would be really nice to have easy access to the URL
 ### member of our entries files so that switches could be testing by
@@ -2134,7 +2135,7 @@ test_list = [ None,
               forced_switch,
               forced_switch_failures,
               switch_scheduled_add,
-              mergeinfo_switch_elision,
+              SkipUnless(mergeinfo_switch_elision, server_has_mergeinfo),
               switch_with_obstructing_local_adds,
               switch_with_depth,
               switch_to_dir_with_peg_rev,

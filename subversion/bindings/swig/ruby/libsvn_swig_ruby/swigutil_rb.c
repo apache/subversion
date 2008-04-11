@@ -1,4 +1,4 @@
-
+/* -*- c-file-style: "ruby" -*- */
 /* Tell swigutil_rb.h that we're inside the implementation */
 #define SVN_SWIG_SWIGUTIL_RB_C
 
@@ -2054,6 +2054,29 @@ svn_swig_rb_log_receiver(void *baton,
     invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
   }
   return err;
+}
+
+svn_error_t *
+svn_swig_rb_log_entry_receiver(void *baton,
+                               svn_log_entry_t *entry,
+                               apr_pool_t *pool)
+{
+    svn_error_t *err = SVN_NO_ERROR;
+    VALUE proc, rb_pool;
+
+    svn_swig_rb_from_baton((VALUE)baton, &proc, &rb_pool);
+
+    if (!NIL_P(proc)) {
+        callback_baton_t cbb;
+
+        cbb.receiver = proc;
+        cbb.message = id_call;
+        cbb.args = rb_ary_new3(1,
+                               c2r_swig_type((void *)entry,
+                                             (void *)"svn_log_entry_t *"));
+        invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
+    }
+    return err;
 }
 
 

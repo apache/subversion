@@ -14,6 +14,9 @@
 # history and logs, available at http://subversion.tigris.org/.
 # ====================================================================
 
+# Run this without arguments to run unit tests.
+# Run with a path to a davautocheck ops log to test that it can parse that.
+
 import os
 import sys
 import tempfile
@@ -76,11 +79,11 @@ class TestCase(unittest.TestCase):
 
     def test_lock(self):
         self.assertRaises(svn_dav_log_parse.Error, self.parse, 'lock')
-        self.parse('lock /foo')
-        self.assertEqual(self.result, ('/foo', False))
-        self.assertEqual(self.parse('lock /foo steal ...'), ' ...')
-        self.assertEqual(self.result, ('/foo', True))
-        self.assertEqual(self.parse('lock /foo stear'), ' stear')
+        self.parse('lock (/foo)')
+        self.assertEqual(self.result, (['/foo'], False))
+        self.assertEqual(self.parse('lock (/foo) steal ...'), ' ...')
+        self.assertEqual(self.result, (['/foo'], True))
+        self.assertEqual(self.parse('lock (/foo) stear'), ' stear')
 
     def test_change_rev_prop(self):
         self.assertRaises(svn_dav_log_parse.Error,
@@ -104,11 +107,11 @@ class TestCase(unittest.TestCase):
 
     def test_unlock(self):
         self.assertRaises(svn_dav_log_parse.Error, self.parse, 'unlock')
-        self.parse('unlock /foo')
-        self.assertEqual(self.result, ('/foo', False))
-        self.assertEqual(self.parse('unlock /foo break ...'), ' ...')
-        self.assertEqual(self.result, ('/foo', True))
-        self.assertEqual(self.parse('unlock /foo bear'), ' bear')
+        self.parse('unlock (/foo)')
+        self.assertEqual(self.result, (['/foo'], False))
+        self.assertEqual(self.parse('unlock (/foo) break ...'), ' ...')
+        self.assertEqual(self.result, (['/foo'], True))
+        self.assertEqual(self.parse('unlock (/foo) bear'), ' bear')
 
     def test_get_file_revs(self):
         self.assertRaises(svn_dav_log_parse.Error, self.parse, 'get-file-revs')
@@ -139,11 +142,13 @@ class TestCase(unittest.TestCase):
                           self.parse, 'get-mergeinfo (/foo) bork')
         self.assertEqual(self.parse('get-mergeinfo (/foo) explicit'), '')
         self.assertEqual(self.result, (['/foo'],
-                                       svn.core.svn_mergeinfo_explicit))
+                                       svn.core.svn_mergeinfo_explicit, False))
         self.assertEqual(self.parse('get-mergeinfo (/foo /bar) inherited ...'),
                          ' ...')
         self.assertEqual(self.result, (['/foo', '/bar'],
-                                       svn.core.svn_mergeinfo_inherited))
+                                       svn.core.svn_mergeinfo_inherited, False))
+        self.assertEqual(self.result, (['/foo', '/bar'],
+                                       svn.core.svn_mergeinfo_inherited, False))
 
     def test_log(self):
         self.assertRaises(svn_dav_log_parse.Error, self.parse, 'log')
@@ -236,12 +241,12 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.result, ('/foo', 9, svn.core.svn_depth_files))
 
     def test_switch(self):
-        self.assertEqual(self.parse('switch /foo@9 /bar@10 ...'), ' ...')
-        self.assertEqual(self.result, ('/foo', 9, '/bar', 10,
+        self.assertEqual(self.parse('switch /foo /bar@10 ...'), ' ...')
+        self.assertEqual(self.result, ('/foo', '/bar', 10,
                                        svn.core.svn_depth_unknown))
-        self.assertEqual(self.parse('switch /foo@9 /bar@10'
+        self.assertEqual(self.parse('switch /foo /bar@10'
                                     ' depth=files'), '')
-        self.assertEqual(self.result, ('/foo', 9, '/bar', 10,
+        self.assertEqual(self.result, ('/foo', '/bar', 10,
                                        svn.core.svn_depth_files))
 
     def test_update(self):
@@ -296,8 +301,8 @@ if __name__ == '__main__':
             if props:
                 self.action += ' props'
 
-        def handle_lock(self, path, steal):
-            self.action = 'lock ' + path
+        def handle_lock(self, paths, steal):
+            self.action = 'lock (%s)' % (' '.join(paths),)
             if steal:
                 self.action += ' steal'
 
@@ -307,8 +312,8 @@ if __name__ == '__main__':
         def handle_rev_proplist(self, revision):
             self.action = 'rev-proplist r%d' % (revision,)
 
-        def handle_unlock(self, path, break_lock):
-            self.action = 'unlock ' + path
+        def handle_unlock(self, paths, break_lock):
+            self.action = 'unlock (%s)' % (' '.join(paths),)
             if break_lock:
                 self.action += ' break'
 
@@ -319,10 +324,12 @@ if __name__ == '__main__':
             if include_merged_revisions:
                 self.action += ' include-merged-revisions'
 
-        def handle_get_mergeinfo(self, paths, inheritance):
+        def handle_get_mergeinfo(self, paths, inheritance, include_descendants):
             self.action = ('get-mergeinfo (%s) %s'
                            % (' '.join(paths),
                               svn.core.svn_inheritance_to_word(inheritance)))
+            if include_descendants:
+                self.action += ' include-descendants'
 
         def handle_log(self, paths, left, right, limit, discover_changed_paths,
                        strict, include_merged_revisions, revprops):
@@ -375,10 +382,9 @@ if __name__ == '__main__':
             self.action = 'status %s r%d' % (path, revision)
             self.maybe_depth(depth)
 
-        def handle_switch(self, from_path, from_rev,
-                          to_path, to_rev, depth):
-            self.action = ('switch %s@%d %s@%d'
-                           % (from_path, from_rev, to_path, to_rev))
+        def handle_switch(self, from_path, to_path, to_rev, depth):
+            self.action = ('switch %s %s@%d'
+                           % (from_path, to_path, to_rev))
             self.maybe_depth(depth)
 
         def handle_update(self, path, revision, depth, send_copyfrom_args):
@@ -402,9 +408,10 @@ if __name__ == '__main__':
             leading = ' '.join(words[:4])
             action = ' '.join(words[4:])
             # Parse the action and write the reconstructed action to
-            # the temporary file.
-            trailing = parser.parse(action)
-            fp.write(leading + ' ' + parser.action + trailing + '\n')
+            # the temporary file.  Ignore the returned trailing text,
+            # as we have none in the davautocheck ops log.
+            parser.parse(action)
+            fp.write(leading + ' ' + parser.action + '\n')
         fp.close()
         # Check differences between original and reconstructed files
         # (should be identical).

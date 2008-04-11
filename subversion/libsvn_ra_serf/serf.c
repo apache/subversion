@@ -203,10 +203,18 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
                             apr_pool_t *pool)
 {
   svn_ra_serf__session_t *serf_sess = ra_session->priv;
+  const char *cap_result;
 
-  const char *cap_result = apr_hash_get(serf_sess->capabilities,
-                                        capability,
-                                        APR_HASH_KEY_STRING);
+  /* This capability doesn't rely on anything server side. */
+  if (strcmp(capability, SVN_RA_CAPABILITY_COMMIT_REVPROPS) == 0)
+    {
+      *has = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  cap_result = apr_hash_get(serf_sess->capabilities,
+                            capability,
+                            APR_HASH_KEY_STRING);
 
   /* If any capability is unknown, they're all unknown, so ask. */
   if (cap_result == NULL)
