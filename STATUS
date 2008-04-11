@@ -36,7 +36,7 @@ Approved changes (all releases):
    Notes:
      Follow-up to r30510 which was one of the backports between RC1 and RC2. 
    Votes
-     +1: pburba, dlr
+     +1: pburba, dlr, epg
 
  * r30548, r30551, r30552
    Allow just '--with-junit rather than requiring '--with-junit bogus'
