@@ -64,8 +64,7 @@ svn_log__update(const char *path, svn_revnum_t rev, svn_depth_t depth,
                 apr_pool_t *pool);
 
 const char *
-svn_log__switch(const char *path, svn_revnum_t from_revnum,
-                const char *dst_path, svn_revnum_t revnum,
+svn_log__switch(const char *path, const char *dst_path, svn_revnum_t revnum,
                 svn_depth_t depth, apr_pool_t *pool);
 
 const char *
@@ -102,10 +101,20 @@ svn_log__get_file_revs(const char *path, svn_revnum_t start, svn_revnum_t end,
                        apr_pool_t *pool);
 
 const char *
-svn_log__lock(const char *path, svn_boolean_t steal, apr_pool_t *pool);
+svn_log__lock(const apr_array_header_t *paths, svn_boolean_t steal,
+              apr_pool_t *pool);
 
 const char *
-svn_log__unlock(const char *path, svn_boolean_t break_lock, apr_pool_t *pool);
+svn_log__unlock(const apr_array_header_t *paths, svn_boolean_t break_lock,
+                apr_pool_t *pool);
+
+const char *
+svn_log__lock_one_path(const char *path, svn_boolean_t steal,
+                       apr_pool_t *pool);
+
+const char *
+svn_log__unlock_one_path(const char *path, svn_boolean_t break_lock,
+                         apr_pool_t *pool);
 
 const char *
 svn_log__replay(const char *path, svn_revnum_t rev, apr_pool_t *pool);
