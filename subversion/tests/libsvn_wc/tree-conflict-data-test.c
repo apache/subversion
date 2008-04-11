@@ -311,7 +311,7 @@ test_write_invalid_tree_conflicts(const char **msg,
 
   /* node_kind */
   conflict = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  conflict->victim_path  = "";
+  conflict->victim_path  = "Foo";
   conflict->node_kind    = svn_node_none;
   conflict->operation    = svn_wc_operation_update;
   conflict->action       = svn_wc_conflict_action_delete;
